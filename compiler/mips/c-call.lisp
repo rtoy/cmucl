@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.10 1992/03/22 17:30:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.11 1992/03/27 23:25:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.10 1992/03/22 17:30:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.11 1992/03/27 23:25:38 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -186,14 +186,26 @@
 (define-vop (alloc-number-stack-space)
   (:info amount)
   (:results (result :scs (sap-reg any-reg)))
+  (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
     (unless (zerop amount)
-      (inst addu nsp-tn nsp-tn (- (logandc2 (+ amount 7) 7))))
+      (let ((delta (logandc2 (+ amount 7) 7)))
+	(cond ((< delta (ash 1 15))
+	       (inst subu nsp-tn delta))
+	      (t
+	       (inst li temp delta)
+	       (inst subu nsp-tn temp)))))
     (move result nsp-tn)))
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:policy :fast-safe)
+  (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
     (unless (zerop amount)
-      (inst addu nsp-tn nsp-tn (logandc2 (+ amount 7) 7)))))
+      (let ((delta (logandc2 (+ amount 7) 7)))
+	(cond ((< delta (ash 1 15))
+	       (inst addu nsp-tn delta))
+	      (t
+	       (inst li temp delta)
+	       (inst addu nsp-tn temp)))))))

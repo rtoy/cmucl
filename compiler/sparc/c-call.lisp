@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.7 1992/03/22 17:30:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.8 1992/03/27 23:26:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,15 +148,26 @@
 (define-vop (alloc-number-stack-space)
   (:info amount)
   (:results (result :scs (sap-reg any-reg)))
+  (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
     (unless (zerop amount)
-      (inst add nsp-tn nsp-tn (- (logandc2 (+ amount 7) 7))))
-    (unless (location= nsp-tn result)
-      (inst add result nsp-tn number-stack-displacement))))
+      (let ((delta (logandc2 (+ amount 7) 7)))
+	(cond ((< delta (ash 1 12))
+	       (inst sub nsp-tn delta))
+	      (t
+	       (inst li temp delta)
+	       (inst sub nsp-tn temp)))))
+    (inst add result nsp-tn number-stack-displacement)))
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:policy :fast-safe)
+  (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:generator 0
     (unless (zerop amount)
-      (inst add nsp-tn nsp-tn (logandc2 (+ amount 7) 7)))))
+      (let ((delta (logandc2 (+ amount 7) 7)))
+	(cond ((< delta (ash 1 12))
+	       (inst add nsp-tn delta))
+	      (t
+	       (inst li temp delta)
+	       (inst add nsp-tn temp)))))))
