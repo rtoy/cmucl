@@ -56,20 +56,6 @@
 
 
 
-;;; APPLY-KEY saves us a function call sometimes.
-;;;    This is not in and (eval-when (compile eval) ...
-;;;    because this is used in Sort.Lisp
-(defmacro apply-key (key element)
-  `(if ,key
-       (funcall ,key ,element)
-       ,element))
-
-
-(defun identity (thing)
-  "Returns what was passed to it."
-  thing)
-
-
 (defun make-sequence-of-type (type length)
   "Returns a sequence of the given TYPE and LENGTH."
   (declare (fixnum length))
