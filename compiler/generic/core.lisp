@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.26 1993/08/25 17:04:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.27 1993/08/31 07:41:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,6 +221,8 @@
 			     (* amount vm:byte-bits))
 	   (setf fill-ptr (sap+ fill-ptr amount))))
 
+      (setf (code-header-ref code-obj vm:code-trace-table-offset-slot)
+	    nil)
       (dolist (noise xeps)
 	(let ((xep (cdr noise)))
 	  (setf (byte-function-component xep) code-obj)
