@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.21 1992/03/04 17:50:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.22 1992/03/04 18:52:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,8 @@
 	  boolean values single-float double-float system-area-pointer
 	  def-alien-type def-alien-variable sap-alien
 	  extern-alien with-alien slot deref addr cast alien-sap alien-size
-	  alien-funcall def-alien-routine make-alien free-alien))
+	  alien-funcall def-alien-routine make-alien free-alien
+	  null-alien))
 
 (in-package "ALIEN-INTERNALS")
 (in-package "ALIEN")
@@ -363,7 +364,9 @@
 
 
 (defmacro def-alien-type (name type)
-  "Define the alien type NAME to be equivalent to TYPE."
+  "Define the alien type NAME to be equivalent to TYPE.  Name may be NIL for
+   STRUCT and UNION types, in which case the name is taken from the type
+   specifier."
   (with-auxiliary-alien-types
     (let ((alien-type (parse-alien-type type)))
       `(eval-when (compile load eval)
@@ -1327,7 +1330,15 @@
 	     (sap-int (alien-value-sap value)))))
 
 
+(declaim (inline null-alien))
+(defun null-alien (x)
+  "Return true if X (which must be an Alien pointer) is null, false otherwise."
+  (zerop (sap-int (alien-sap x))))
+
+  
 (defmacro sap-alien (sap type)
+  "Convert the System-Area-Pointer SAP to an Alien of the specified Type (not
+   evaluated.)  Type must be pointer-like."
   (let ((alien-type (parse-alien-type type)))
     (if (eq (compute-alien-rep-type alien-type) 'system-area-pointer)
 	`(%sap-alien ,sap ',alien-type)
@@ -1339,6 +1350,7 @@
   (make-alien-value :sap sap :type type))
 
 (defun alien-sap (alien)
+  "Return a System-Area-Pointer pointing to Alien's data."
   (declare (type alien-value alien))
   (alien-value-sap alien))
 
@@ -1425,6 +1437,7 @@
 ;;; alien is actually a pointer, then deref it first.
 ;;; 
 (defun slot (alien slot)
+  "Extract SLOT from the Alien STRUCT or UNION ALIEN.  May be set with SETF."
   (declare (type alien-value alien)
 	   (type symbol slot)
 	   (optimize (inhibit-warnings 3)))
@@ -1530,6 +1543,9 @@
 ;;; Dereference the alien and return the results.
 ;;; 
 (defun deref (alien &rest indices)
+  "De-reference an Alien pointer or array.  If an array, the indices are used
+   as the indices of the array element to access.  If a pointer, one index can
+   optionally be specified, giving the equivalent of C pointer arithmetic."
   (declare (type alien-value alien)
 	   (type list indices)
 	   (optimize (inhibit-warnings 3)))
@@ -1653,6 +1669,8 @@
 ;;;; The ADDR macro.
 
 (defmacro addr (expr &environment env)
+  "Return an Alien pointer to the data addressed by Expr, which must be a call
+   to SLOT or DEREF, or a reference to an Alien variable."
   (let ((form (macroexpand expr env)))
     (or (typecase form
 	  (cons
@@ -1684,6 +1702,8 @@
 ;;;; The CAST macro.
 
 (defmacro cast (alien type)
+  "Convert ALIEN to an Alien of the specified TYPE (not evaluated.)  Both types
+   must be Alien array, pointer or function types."
   `(%cast ,alien ',(parse-alien-type type)))
 
 (defun %cast (alien target-type)
@@ -1753,6 +1773,8 @@
 ;;;; alien-funcall, def-alien-function
 
 (defun alien-funcall (alien &rest args)
+  "Call the foreign function ALIEN with the specified arguments.  ALIEN's
+   type specifies the argument and result types."
   (declare (type alien-value alien))
   (let ((type (alien-value-type alien)))
     (typecase type
@@ -1780,6 +1802,40 @@
        (error "~S is not an alien function." alien)))))
 
 (defmacro def-alien-routine (name result-type &rest args)
+  "Def-C-Routine Name Result-Type
+                    {(Arg-Name Arg-Type [Style])}*
+
+  Define a foreign interface function for the routine with the specified Name,
+  which may be either a string, symbol or list of the form (symbol string).
+  Return-Type is the Alien fypte for the function return value.  VOID may be
+  used to specify a function with no result.
+
+  The remaining forms specifiy individual arguments that are passed to the
+  routine.  Arg-Name is a symbol that names the argument, primarily for
+  documentation.  Arg-Type is the C-Type of the argument.  Style specifies the
+  say that the argument is passed.
+
+  :IN
+        An :In argument is simply passed by value.  The value to be passed is
+        obtained from argument(s) to the interface function.  No values are
+        returned for :In arguments.  This is the default mode.
+
+  :OUT
+        The specified argument type must be a pointer to a fixed sized object.
+        A pointer to a preallocated object is passed to the routine, and the
+        the object is accessed on return, with the value being returned from
+        the interface function.  :OUT and :IN-OUT cannot be used with pointers
+        to arrays, records or functions.
+
+  :COPY
+        Similar to :IN, except that the argument values are stored in on
+        the stack, and a pointer to the object is passed instead of
+        the values themselves.
+
+  :IN-OUT
+        A combination of :OUT and :COPY.  A pointer to the argument is passed,
+        with the object being initialized from the supplied argument and
+        the return value being determined by accessing the object on return."
   (multiple-value-bind
       (lisp-name alien-name)
       (pick-lisp-and-alien-names name)
