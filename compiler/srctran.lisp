@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.28 1991/09/03 17:35:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.29 1991/10/03 18:27:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,6 +63,7 @@
 ;;; things out.
 ;;;
 (deftransform complement ((fun) * * :node node)
+  "open code"
   (multiple-value-bind (min max)
 		       (function-type-nargs (continuation-type fun))
     (cond
@@ -76,7 +77,7 @@
       '#'(lambda (&rest args)
 	   (not (apply fun args))))
      (t
-      (give-up "Can't open-code COMPLEMENT of a non-fixed arg function.")))))
+      (give-up "Function doesn't have fixed argument count.")))))
 
 
 ;;;; List hackery:
@@ -150,6 +151,7 @@
 (defvar *extreme-nthcdr-open-code-limit* 20)
 
 (deftransform nthcdr ((n l) (unsigned-byte t) * :node node)
+  "convert NTHCDR to CAxxR"
   (unless (constant-continuation-p n) (give-up))
   (let ((n (continuation-value n)))
     (when (> n
@@ -785,6 +787,7 @@
 (deftransform %ldb ((size posn int)
 		    (fixnum fixnum integer)
 		    (unsigned-byte #.vm:word-bits))
+  "convert to inline logical ops"
   `(logand (ash int (- posn))
 	   (ash ,(1- (ash 1 vm:word-bits))
 		(- size ,vm:word-bits))))
@@ -792,6 +795,7 @@
 (deftransform %mask-field ((size posn int)
 			   (fixnum fixnum integer)
 			   (unsigned-byte #.vm:word-bits))
+  "convert to inline logical ops"
   `(logand int
 	   (ash (ash ,(1- (ash 1 vm:word-bits))
 		     (- size ,vm:word-bits))
@@ -805,6 +809,7 @@
 (deftransform %dpb ((new size posn int)
 		    *
 		    (unsigned-byte #.vm:word-bits))
+  "convert to inline logical ops"
   `(let ((mask (ldb (byte size 0) -1)))
      (logior (ash (logand new mask) posn)
 	     (logand int (lognot (ash mask posn))))))
@@ -812,6 +817,7 @@
 (deftransform %dpb ((new size posn int)
 		    *
 		    (signed-byte #.vm:word-bits))
+  "convert to inline logical ops"
   `(let ((mask (ldb (byte size 0) -1)))
      (logior (ash (logand new mask) posn)
 	     (logand int (lognot (ash mask posn))))))
@@ -819,6 +825,7 @@
 (deftransform %deposit-field ((new size posn int)
 			      *
 			      (unsigned-byte #.vm:word-bits))
+  "convert to inline logical ops"
   `(let ((mask (ash (ldb (byte size 0) -1) posn)))
      (logior (logand new mask)
 	     (logand int (lognot mask)))))
@@ -826,6 +833,7 @@
 (deftransform %deposit-field ((new size posn int)
 			      *
 			      (signed-byte #.vm:word-bits))
+  "convert to inline logical ops"
   `(let ((mask (ash (ldb (byte size 0) -1) posn)))
      (logior (logand new mask)
 	     (logand int (lognot mask)))))
@@ -870,6 +878,7 @@
 ;;; Handle the case of a constant boole-code.
 ;;;
 (deftransform boole ((op x y))
+  "convert to inline logical ops"
   (unless (constant-continuation-p op)
     (give-up "BOOLE code is not a constant."))
   (let ((control (continuation-value op)))
@@ -897,6 +906,7 @@
 ;;; If arg is a constant power of two, turn * into a shift.
 ;;;
 (deftransform * ((x y) (integer integer))
+  "convert x*2^k to shift"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -924,14 +934,17 @@
 		     `(values (ash x ,shift)
 			      (logand x ,mask))))))))
   (deftransform floor ((x y) (integer integer))
+    "convert division by 2^k to shift"
     (frob y nil))
   (deftransform ceiling ((x y) (integer integer))
+    "convert division by 2^k to shift"
     (frob y t)))
 
 
 ;;; Do the same for mod.
 ;;;
 (deftransform mod ((x y) (integer integer))
+  "convert remainder mod 2^k to LOGAND"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -946,6 +959,7 @@
 ;;; If arg is a constant power of two, turn truncate into a shift and mask.
 ;;;
 (deftransform truncate ((x y) (integer integer))
+  "convert division by 2^k to shift"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -966,6 +980,7 @@
 ;;; And the same for rem.
 ;;;
 (deftransform rem ((x y) (integer integer))
+  "convert remainder mod 2^k to LOGAND"
   (unless (constant-continuation-p y) (give-up))
   (let* ((y (continuation-value y))
 	 (y-abs (abs y))
@@ -987,6 +1002,7 @@
 ;;;; Character operations:
 
 (deftransform char-equal ((a b) (base-character base-character))
+  "open code"
   '(let* ((ac (char-code a))
 	  (bc (char-code b))
 	  (sum (logxor ac bc)))
@@ -996,6 +1012,7 @@
 	     (and (> sum 161) (< sum 213)))))))
 
 (deftransform char-upcase ((x) (base-character))
+  "open code"
   '(let ((n-code (char-code x)))
      (if (and (> n-code #o140)	; Octal 141 is #\a.
 	      (< n-code #o173))	; Octal 172 is #\z.
@@ -1003,6 +1020,7 @@
 	 x)))
 
 (deftransform char-downcase ((x) (base-character))
+  "open code"
   '(let ((n-code (char-code x)))
      (if (and (> n-code 64)	; 65 is #\A.
 	      (< n-code 91))	; 90 is #\Z.
@@ -1062,6 +1080,7 @@
 ;;;    that case, otherwise give an efficency note.
 ;;;
 (deftransform eql ((x y))
+  "convert to simpler equality predicate"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y))
 	(char-type (specifier-type 'character))
@@ -1093,6 +1112,7 @@
 ;;; be specified and identical.
 ;;; 
 (deftransform = ((x y))
+  "open code"
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y)))
     (if (and (numeric-type-p x-type) (numeric-type-p y-type)
@@ -1108,7 +1128,7 @@
 	       (and x-complexp
 		    (eq x-complexp (numeric-type-complexp y-type)))))
 	'(eql x y)
-	(give-up "Operands might not be the same type, so can't open code."))))
+	(give-up "Operands might not be the same type."))))
 
 
 ;;; Numeric-Type-Or-Lose  --  Interface
@@ -1373,6 +1393,7 @@
 ;;;
 (deftransform format ((stream control &rest args)
 		      ((or (member t) stream) simple-string &rest t))
+  "convert to output primitives"
   (unless (constant-continuation-p control)
     (give-up "Control string is not a constant."))
   (let* ((control (continuation-value control))
