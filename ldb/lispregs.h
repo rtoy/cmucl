@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/lispregs.h,v 1.2 1990/03/29 21:20:22 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/lispregs.h,v 1.3 1990/05/12 16:41:33 ch Exp $ */
 
 #ifdef LANGUAGE_ASSEMBLY
 #define REG(num) $num
@@ -7,6 +7,8 @@
 
 extern char *lisp_register_names[];
 #endif
+
+#define NREGS	(32)
 
 #define ZERO    REG(0)
 #define LIP     REG(1)
