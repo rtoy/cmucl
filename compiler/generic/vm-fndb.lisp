@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.8 1990/05/26 22:46:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.9 1990/05/27 16:51:48 ch Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -66,6 +66,10 @@
 (defknown ((setf %raw-bits)) (t fixnum (unsigned-byte 32)) (unsigned-byte 32)
   (unsafe))
 
+
+(defknown dynamic-space-free-pointer ()
+  (system-area-pointer)
+  (foldable flushable movable))
 
 
 ;;;; 32bit logical operations
