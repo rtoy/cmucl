@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.25 2002/02/25 16:23:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.26 2002/03/05 21:34:15 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1075,37 +1075,36 @@ rounding modes & do ieee round-to-integer.
 	 (exp (ldb vm:single-float-exponent-byte bits))
 	 (biased (truly-the kernel:single-float-exponent
 			    (- exp vm:single-float-bias))))
+    ;; At this point, we have the number represented as
+    ;;
+    ;; x = sign * 2^exp * frac
+    ;;
+    ;; where 0.5 <= frac < 1.0
+    ;;
+    ;; So if the exp <= 0, |x| < 1 and we know the result is 0.
+    ;;
+    ;; If exp >= (float-digits x), we know that all of the bits
+    ;; in the fraction are integer bits, so the result is x.
+    ;;
+    ;; For everything else, some of the bits in frac are
+    ;; fractional.  Figure which ones they are and set them to
+    ;; zero.
     (cond ((= exp vm:single-float-normal-exponent-max)
 	   ;; Infinity or NaN.
 	   x)
+	  ((<= biased 0)
+	   ;; Number is less than 1
+	   0f0)
+	  ((>= biased (float-digits x))
+	   ;; Number is an integer
+	   x)
 	  (t
-	   ;; At this point, we have the number represented as
-	   ;;
-	   ;; x = sign * 2^exp * frac
-	   ;;
-	   ;; where 0.5 <= frac < 1.0
-	   ;;
-	   ;; So if the exp <= 0, |x| < 1 and we know the result is 0.
-	   ;;
-	   ;; If exp >= (float-digits x), we know that all of the bits
-	   ;; in the fraction are integer bits, so the result is x.
-	   ;;
-	   ;; For everything else, some of the bits in frac are
-	   ;; fractional.  Figure which ones they are and set them to
-	   ;; zero.
-	   (cond ((<= biased 0)
-		  ;; Number is less than 1
-		  0f0)
-		 ((>= biased (float-digits x))
-		  ;; Number is an integer
-		  x)
-		 (t
-		  ;; Somewhere in between.  Zap the bits that
-		  ;; represent the fraction part.
-		  (let ((frac-bits (- (float-digits x) biased)))
-		    (declare (type (signed-byte 32) bits))
-		    (setf bits (logandc2 bits (- (ash 1 frac-bits) 1)))
-		    (kernel:make-single-float bits))))))))
+	   ;; Somewhere in between.  Zap the bits that
+	   ;; represent the fraction part.
+	   (let ((frac-bits (- (float-digits x) biased)))
+	     (declare (type (signed-byte 32) bits))
+	     (setf bits (logandc2 bits (- (ash 1 frac-bits) 1)))
+	     (kernel:make-single-float bits))))))
 
 ;; %UNARY-FTRUNCATE/DOUBLE-FLOAT
 ;;
@@ -1123,7 +1122,7 @@ rounding modes & do ieee round-to-integer.
 	     (type (unsigned-byte 32) lo))
     (cond ((= exp vm:double-float-normal-exponent-max)
 	   x)
-	  ((< biased 0)
+	  ((<= biased 0)
 	   ;; Number is less than 1
 	   0d0)
 	  ((>= biased (float-digits x))
