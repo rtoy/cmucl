@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.89 2003/03/10 13:35:12 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.90 2003/03/24 21:41:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1015,7 +1015,7 @@
       ;; has not already been partially deleted.
       (basic-combination
        (when (and (eq (basic-combination-kind node) :local)
-		  ;; Guards COMBINATION-LAMBDA agains the REF being deleted.
+		  ;; Guards COMBINATION-LAMBDA against the REF being deleted.
 		  (continuation-use (basic-combination-fun node)))
 	 (let ((fun (combination-lambda node)))
 	   ;; If our REF was the 2'nd to last ref, and has been deleted, then
@@ -1032,6 +1032,23 @@
 	   (assert (member (functional-kind lambda)
 			   '(:let :mv-let :assignment)))
 	   (delete-lambda lambda))))
+      (entry
+       ;;
+       ;; Delete stale entries from the block's home lambda, otherwise
+       ;; COMPILE-FOR-EVAL stumbles over them.  FIXME: There is still
+       ;; an IR1 inconsistency which can be seen by evaluating
+       ;;
+       ;;  (tagbody
+       ;;    (go loop)
+       ;;    (block g1472 #'(lambda () (return-from g1472 nil)))
+       ;;    loop)
+       ;;
+       ;; in the REPL with C::*CHECK-CONSISTENCY* true.  This
+       ;; inconsistency existed before.
+       (let ((lambda (block-home-lambda block)))
+	 (setf (lambda-entries lambda)
+	       (delete (block-end-cleanup block) (lambda-entries lambda)
+		       :key #'entry-cleanup))))
       (exit
        (let ((value (exit-value node))
 	     (entry (exit-entry node)))
