@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.9 1992/12/13 16:04:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.10 1993/08/21 08:16:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.9 1992/12/13 16:04:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.10 1993/08/21 08:16:06 ram Exp $
 ;;;    
 (in-package "KERNEL")
 
@@ -93,7 +93,7 @@
   "Return the SXHASH for the simple-string STRING."
   (%sxhash-simple-string string))
 
-(defun %sxhash-simple-substrubg (string length)
+(defun %sxhash-simple-substring (string length)
   "Return the SXHASH for the first LENGTH characters of the simple-string
   STRING."
   (%sxhash-simple-substring string length))
@@ -138,3 +138,9 @@
   (setf (kernel:%raw-bits object offset) value))
 
 (defsetf %raw-bits %set-raw-bits)
+
+(defun make-single-float (x) (make-single-float x))
+(defun make-double-float (hi lo) (make-double-float hi lo))
+(defun single-float-bits (x) (single-float-bits x))
+(defun double-float-high-bits (x) (double-float-high-bits x))
+(defun double-float-low-bits (x) (double-float-low-bits x))
