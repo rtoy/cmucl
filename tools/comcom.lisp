@@ -63,6 +63,7 @@
 
 (comf "target:compiler/assembler" :proceed t)
 (comf "target:compiler/disassem")
+(comf "target:compiler/new-assem")
 (comf "target:compiler/alloc")
 (comf "target:compiler/knownfun")
 (comf "target:compiler/fndb")
