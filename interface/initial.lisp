@@ -1,7 +1,22 @@
-;;;; -*- Mode: Lisp ; Package: User -*-
+;;; -*- Package: User -*-
 ;;;
-
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.2 1993/07/27 13:29:44 ram Exp $")
+;;;
+;;; **********************************************************************
+;;;
 (in-package "USER")
+
+(pushnew :motif *features*)
+
+(setf (getf ext:*herald-items* :motif)
+      `("    Motif toolkit and graphical debugger 1.0"))
 
 (defpackage "INTERFACE"
   (:use "TOOLKIT" "LISP" "PCL" "EXTENSIONS" "KERNEL")
