@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.2 1992/03/22 17:30:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.3 1993/02/26 08:42:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -147,9 +147,11 @@
    "Object is not of type COMPLEX.")
   (object-not-weak-pointer
    "Object is not a WEAK-POINTER.")
-  (object-not-structure
-   "Object is not a STRUCTURE.")
+  (object-not-instance
+   "Object is not a INSTANCE.")
   (object-not-base-char
    "Object is not of type BASE-CHAR.")
   (nil-function-returned
-   "Function with declared result type NIL returned."))
+   "Function with declared result type NIL returned.")
+  (layout-invalid
+   "Layout is invalid (instance obsolete.)"))

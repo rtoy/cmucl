@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.2 1992/09/05 02:34:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.3 1993/02/26 08:39:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -422,7 +422,8 @@
 ;;;
 (defstruct (vop-parse
 	    (:print-function %print-vop-parse)
-	    (:make-load-form-fun :just-dump-it-normally))
+	    (:make-load-form-fun :just-dump-it-normally)
+	    (:pure t))
   ;;
   ;; The name of this VOP.
   (name nil :type symbol)
@@ -528,7 +529,8 @@
 ;;;
 (defstruct (operand-parse
 	    (:print-function %print-operand-parse)
-	    (:make-load-form-fun :just-dump-it-normally))
+	    (:make-load-form-fun :just-dump-it-normally)
+	    (:pure t))
   ;;
   ;; Name of the operand (which we bind to the TN).
   (name nil :type symbol)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.53 1993/01/17 20:37:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.54 1993/02/26 08:38:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,18 @@
 
 (defknown (eq eql) (t t) boolean (movable foldable flushable))
 (defknown (equal equalp) (t t) boolean (foldable flushable recursive))
+
+
+;;;; Classes:
+
+(deftype name-for-class () 't)
+(defknown class-name (class) name-for-class (flushable))
+(defknown find-class (name-for-class &optional t lexical-environment)
+  (or class null) ())
+(defknown class-of (t) class (flushable))
+(defknown layout-of (t) layout (flushable))
+(defknown copy-structure (structure-object) structure-object
+  (flushable unsafe))
 
 
 ;;;; In the "Control Structure" chapter:
@@ -1150,7 +1162,7 @@
 ;;; into non-standard unary predicates.
 
 (defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
-	   long-float-p base-char-p %standard-char-p structurep
+	   long-float-p base-char-p %standard-char-p %instancep
 	   array-header-p)
   (t) boolean (movable foldable flushable))
 

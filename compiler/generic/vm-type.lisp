@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28 1991/12/16 10:09:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.29 1993/02/26 08:42:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28 1991/12/16 10:09:55 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -35,15 +33,6 @@
 (setf (info type kind 'short-float) :defined)
 (deftype short-float (&optional low high)
   `(single-float ,low ,high))
-
-;;; Compiled-function is the same as function in this implementation.
-;;;
-(deftype compiled-function () 'function)
-
-;;; Character is the same as base-char.
-(setf (info type builtin 'character) nil)
-(setf (info type kind 'character) :defined)
-(deftype character () 'base-char)
 
 ;;;
 ;;; An index into an integer.
@@ -86,7 +75,10 @@
 (deftype bignum-type () 'bignum)
 (deftype bignum-index () 'index)
 
+#+ns-boot
 (deftype structure-index () `(unsigned-byte ,(- vm:word-bits vm:type-bits)))
+
+(deftype instance-index () `(unsigned-byte ,(- vm:word-bits vm:type-bits)))
 
 
 ;;;; Hooks into type system:

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14 1992/04/27 19:46:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.15 1993/02/26 08:39:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,7 +137,7 @@
   (define-type-predicate simple-string-p simple-string)
   (define-type-predicate simple-vector-p simple-vector)
   (define-type-predicate stringp string)
-  (define-type-predicate structurep structure)
+  (define-type-predicate %instancep instance)
   (define-type-predicate symbolp symbol)
   (define-type-predicate vectorp vector))
 
@@ -234,7 +234,7 @@
     (cond ((unknown-type-p type)
 	   (when (policy nil (> speed brevity))
 	     (compiler-note "Can't open-code test of unknown type ~S."
-			    (specifier-type type)))
+			    (type-specifier type)))
 	   `(%typep ,object ',spec))
 	  (t
 	   (ecase (first spec)
@@ -337,42 +337,62 @@
 	`(%typep ,obj ',(type-specifier type)))))
 
 
+;;; SOURCE-TRANSFORM-INSTANCE-TYPEP  --  Internal
+;;;
+;;;    Transform a type test against some instance type.  If not properly
+;;; named, error.  If a structure, call S-T-STRUCTURE-TYPEP.  Otherwise, call
+;;; CLASS-TYPEP at run-time with the layout and class object.
+;;;
+(defun source-transform-instance-typep (obj class)
+  (let* ((name (class-name class))
+	 (layout (info type compiler-layout name)))
+    (cond
+     ((not (and name (eq (find-class name) class)))
+      (compiler-error "Can't compile TYPEP of anonymous or undefined ~
+		       class:~%  ~S"
+		      class))
+     ((and (structure-class-p class)
+	   layout
+	   (member (layout-invalid layout) '(:compiler nil)))
+      (source-transform-structure-typep obj layout))
+     (t
+      (multiple-value-bind
+	  (pred layout)
+	  (if (csubtypep class (specifier-type 'generic-function))
+	      (values 'funcallable-instance-p 'funcallable-instance-layout)
+	      (values '%instancep '%instance-layout))
+	(once-only ((object obj))
+	  `(and (,pred ,object)
+		(class-typep (,layout ,object) ',class))))))))
+
+
 ;;; SOURCE-TRANSFORM-STRUCTURE-TYPEP  --  Internal
 ;;;
-;;;    If not currently defined as a structure to the compiler (must have been
-;;; undefined) or there is no predicate, then we call STRUCTURE-TYPEP.
-;;; Otherwise, we do an EQ test for a direct type match, and if that fails,
-;;; deal with inherited types.  If the type is frozen, we can inline the
-;;; supertype check, otherwise we have to call the predicate.
+;;;    Transform a call to an actual structure type predicate with the
+;;; specified layout.  If sealed and has no subclasses, just test for
+;;; layout-EQ, otherwise do the EQ test and then a general test based on
+;;; layout-inherits.  If safety is important, then we also check if the layout
+;;; for the object is invalid and signal an error if so.
 ;;;
-(defun source-transform-structure-typep (obj desc)
-  (let* ((type (structure-type-name desc))
-	 (def (info type structure-info type)))
-    (cond
-     ((not def)
-      `(lisp::structure-typep ,obj ',type))
-     ((not (eq (dd-type def) 'structure))
-      (compiler-error "Structure type has :TYPE specified, so it can't ~
-      		       be used as an argument to TYPEP:~%  ~S"
-		      type))
-     (t
-      (let ((frozen (info type frozen type))
-	    (included (dd-included-by def))
-	    (predicate (dd-predicate def))
-	    (n-name (gensym)))
-	(if (or frozen predicate)
-	    (once-only ((object obj))
-	      `(and (structurep ,object)
-		    (let ((,n-name (structure-ref ,object 0)))
-		      (if (eq ,n-name ',type)
-			  t
-			  ,(if frozen
-			       (when included
-				 `(if (member ,n-name ',included :test #'eq)
-				      t nil))
-			       `(locally (declare (notinline ,predicate))
-				  (,predicate ,object)))))))
-	    `(lisp::structure-typep ,obj ',type)))))))
+(defun source-transform-structure-typep (obj layout)
+  (let ((class (layout-class layout))
+	(idepth (layout-inheritance-depth layout))
+	(n-layout (gensym)))
+    (once-only ((object obj))
+      `(and (%instancep ,object)
+	    (let ((,n-layout (%instance-layout ,object)))
+	      ,@(when (policy nil (>= safety speed))
+		  `((when (layout-invalid ,n-layout)
+		      (%layout-invalid-error ,object ',layout))))
+	      ,(if (and (eq (class-state class) :sealed)
+			(not (class-subclasses class)))
+		   `(eq ,n-layout ',layout)
+		   `(if (eq ,n-layout ',layout)
+			t
+			(and (> (layout-inheritance-depth ,n-layout) ,idepth)
+			     (locally (declare (optimize (safety 0)))
+			       (eq (svref (layout-inherits ,n-layout) ,idepth)
+				   ',layout))))))))))
 
 
 ;;; Source-Transform-Typep  --  Internal
@@ -406,8 +426,8 @@
 	       (source-transform-union-typep object type))
 	      (member-type
 	       `(member ,object ',(member-type-members type)))
-	      (structure-type
-	       (source-transform-structure-typep object type))
+	      (class
+	       (source-transform-instance-typep object type))
 	      (args-type
 	       (compiler-warning "Illegal type specifier for Typep: ~S."
 				 (cadr spec))

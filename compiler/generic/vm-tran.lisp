@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.28 1993/01/15 22:42:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.29 1993/02/26 08:42:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,6 +33,14 @@
 (deftransform abs ((x) (rational))
   '(if (< x 0) (- x) x))
 
+;;; For now, the layout is stored in slot 0.
+;;;
+(def-source-transform %instance-layout (x)
+  `(truly-the layout (%instance-ref ,x 0)))
+;;;
+(def-source-transform %set-instance-layout (x val)
+  `(%instance-set ,x 0 (the layout ,val)))
+
 
 ;;;; Charater support.
 
@@ -40,7 +48,6 @@
 ;;;
 (def-source-transform characterp (obj)
   `(base-char-p ,obj))
-
 
 
 ;;;; Transforms for data-vector-ref for strange array types.
@@ -111,8 +118,6 @@
   (frob simple-bit-vector 1)
   (frob (simple-array (unsigned-byte 2) (*)) 2)
   (frob (simple-array (unsigned-byte 4) (*)) 4))
-
-
 
 
 ;;;; Simple string transforms:

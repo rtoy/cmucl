@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: VM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.8 1992/12/05 22:11:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.9 1993/02/26 08:42:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.8 1992/12/05 22:11:35 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation and primitive types.
@@ -60,7 +58,7 @@
 ;;; 
 (def-primitive-type function (descriptor-reg))
 (def-primitive-type list (descriptor-reg))
-(def-primitive-type structure (descriptor-reg))
+(def-primitive-type instance (descriptor-reg))
 
 ;;; Primitive other-pointer number types.
 ;;; 
@@ -241,27 +239,26 @@
 	   (unless (eq (primitive-type-of mem) res)
 	     (return (values *any-primitive-type* nil))))))
       (named-type
-       (case (named-type-name type)
-	 ((t bignum ratio complex function structure
-	     system-area-pointer weak-pointer)
-	  (values (primitive-type-or-lose (named-type-name type) *backend*) t))
-	 ((character base-char string-char)
+       (ecase (named-type-name type)
+	 ((t *) (values *any-primitive-type* t))
+	 ((nil) (values *any-primitive-type* nil))))
+      (built-in-class
+       (case (class-name type)
+	 ((complex function generic-function instance
+		   system-area-pointer weak-pointer)
+	  (values (primitive-type-or-lose (class-name type) *backend*) t))
+	 (base-char
 	  (exactly base-char))
-	 (standard-char
-	  (part-of base-char))
 	 (cons
 	  (part-of list))
-	 ((dylan::dylan-function dylan::generic-function dylan::exit-function
-	   dylan::next-method-func dylan::method dylan::defined-method
-	   dylan::builtin-method dylan::slot-accessor-method
-	   dylan::slot-setter-method dylan::slot-getter-method)
-	  (part-of function))
 	 (t
 	  (any))))
       (function-type
        (exactly function))
-      (structure-type
-       (part-of structure))
+      (class
+       (if (csubtypep type (specifier-type 'function))
+	   (part-of function)
+	   (part-of instance)))
       (ctype
        (any)))))
 

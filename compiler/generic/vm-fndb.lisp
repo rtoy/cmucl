@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.47 1992/12/17 09:30:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.48 1993/02/26 08:42:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
 ;;; into non-standard unary predicates.
 
 (defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
-	   long-float-p base-char-p %string-char-p %standard-char-p structurep
+	   long-float-p base-char-p %string-char-p %standard-char-p %instancep
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
@@ -89,18 +89,29 @@
   (unsafe))
 
 
-(defknown make-structure (structure-index) structure
+(defknown %make-instance (index) instance
   (unsafe))
-(defknown structure-type (structure) t
+(defknown %instance-layout (instance) layout
   (foldable flushable))
-(defknown structure-length (structure) structure-index
+(defknown %set-instance-layout (instance layout) layout
+  (unsafe))
+(defknown %instance-length (instance) index
   (foldable flushable))
-(defknown structure-ref (structure structure-index) t
+(defknown %instance-ref (instance index) t
   (flushable))
-(defknown structure-set (structure structure-index t) t
+(defknown %instance-set (instance index t) t
   (unsafe))
+(defknown %layout-invalid-error (t layout) nil)
 
-
+(deftype raw-vector () '(simple-array (unsigned-byte 32) (*)))
+(defknown %raw-ref-single (raw-vector index) single-float
+  (foldable flushable))
+(defknown %raw-ref-double (raw-vector index) double-float
+  (foldable flushable))
+(defknown %raw-set-single (raw-vector index single-float) single-float
+  (unsafe))
+(defknown %raw-set-double (raw-vector index double-float) double-float
+  (unsafe))
 
 (defknown %raw-bits (t fixnum) (unsigned-byte 32)
   (foldable flushable))

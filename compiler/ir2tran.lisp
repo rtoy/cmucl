@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.45 1992/12/13 15:12:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.46 1993/02/26 08:38:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 (export '(%caller-frame-and-pc))
 (in-package "C")
 
-(export '(safe-fdefn-function return-single))
+(export '(safe-fdefn-function return-single instance-ref instance-set))
 
 
 
@@ -1600,7 +1600,7 @@
 	 (res (continuation-result-tns cont
 				       (list (backend-any-primitive-type
 					      *backend*)))))
-    (vop structure-ref node block
+    (vop instance-ref node block
 	 (continuation-tn node block str)
 	 (dsd-index
 	  (slot-accessor-slot
@@ -1612,7 +1612,7 @@
 
 (defoptimizer (%slot-setter ir2-convert) ((value str) node block)
   (let ((val (continuation-tn node block value)))
-    (vop structure-set node block
+    (vop instance-set node block
 	 (continuation-tn node block str)
 	 val
 	 (dsd-index

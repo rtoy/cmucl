@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.36 1992/09/07 16:08:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.37 1993/02/26 08:39:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -653,7 +653,8 @@
 ;;; function.
 ;;;
 (defstruct (template
-	    (:print-function %print-template))
+	    (:print-function %print-template)
+	    (:pure t))
   ;;
   ;; The symbol name of this VOP.  This is used when printing the VOP and is
   ;; also used to provide a handle for definition and translation.

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.47 1993/01/13 18:09:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.48 1993/02/26 08:38:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -835,7 +835,10 @@
 	      (unless (equal-check-table x file)
 		(dump-list x file)
 		(equal-save-object x file)))
-	     (structure
+	     (layout
+	      (dump-layout x file)
+	      (eq-save-object x file))
+	     (instance
 	      (dump-structure x file)
 	      (eq-save-object x file))
 	     (array
@@ -923,7 +926,7 @@
 ;;; overhead on types of objects that might be circular.
 ;;;
 (defun dump-object (x file)
-  (if (or (array-header-p x) (simple-vector-p x) (consp x) (structurep x))
+  (if (or (array-header-p x) (simple-vector-p x) (consp x) (%instancep x))
       (let ((*circularities-detected* ())
 	    (circ (fasl-file-circularity-table file)))
 	(clrhash circ)
@@ -1421,11 +1424,16 @@
 	     struct)))
   (note-potential-circularity struct file)
   (do ((index 0 (1+ index))
-       (length (structure-length struct))
+       (length (%instance-length struct))
        (circ (fasl-file-circularity-table file)))
       ((= index length)
        (dump-fop* length lisp::fop-small-struct lisp::fop-struct file))
-    (let* ((obj (structure-ref struct index))
+    (let* ((obj #+ns-boot
+		(if (zerop index)
+		    (%instance-layout struct)
+		    (%instance-ref struct index))
+		#-ns-boot
+		(%instance-ref struct index))
 	   (ref (gethash obj circ)))
       (cond (ref
 	     (push (make-circularity :type :struct-set
@@ -1438,3 +1446,17 @@
 	    (t
 	     (sub-dump-object obj file))))))
 
+(defun dump-layout (obj file)
+  (unless (member (layout-invalid obj) '(nil :compiler))
+    (compiler-error "Dumping reference to obsolete class: ~S"
+		    (layout-class obj)))
+  (let ((name (class-name (layout-class obj))))
+    (assert name)
+    (dump-fop 'lisp::fop-normal-load file)
+    (let ((*cold-load-dump* t))
+      (dump-object name file))
+    (dump-fop 'lisp::fop-maybe-cold-load file))
+  (sub-dump-object (layout-inherits obj) file)
+  (sub-dump-object (layout-inheritance-depth obj) file)
+  (sub-dump-object (layout-length obj) file)
+  (dump-fop 'lisp::fop-layout file))

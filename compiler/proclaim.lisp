@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.26 1992/09/15 16:10:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.27 1993/02/26 08:39:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,9 @@
 
 (in-package "EXTENSIONS")
 (export '(inhibit-warnings freeze-type optimize-interface constant-function))
+(in-package "KERNEL")
+(export '(note-name-defined define-function-name undefine-function-name
+			    *type-system-initialized* %note-type-defined))
 (in-package "LISP")
 (export '(declaim proclaim))
 (in-package "C")
@@ -219,8 +222,8 @@
        (when for
 	 (compiler-warning
 	  "Undefining structure type:~%  ~S~@
-	  so that this slot accessor can be redefined:~%  ~S"
-	  (dd-name for) name)
+	   so that this slot accessor can be redefined:~%  ~S"
+	  (class-name for) name)
 	 (undefine-structure for)
 	 (setf (info function kind name) :function))))
     (:macro
@@ -344,8 +347,8 @@
       (freeze-type
        (dolist (type args)
 	 (specifier-type type); Give undefined type warnings...
-	 (when (eq (info type kind type) :structure)
-	   (freeze-structure-type type))))
+	 (when (eq (info type kind type) :instance)
+	   (setf (class-state (find-class type)) :sealed))))
       (function
        ;;
        ;; Handle old-style FUNCTION declaration, which is a shorthand for
@@ -389,189 +392,6 @@
   (undefined-value))
 ;;;
 (setf (symbol-function 'proclaim) #'%proclaim)
-
-
-;;; UNDEFINE-STRUCTURE  --  Interface
-;;;
-;;;    Blow away all the compiler info for the structure described by Info.
-;;; This recursively descends the inheritance hierarchy.
-;;; 
-(defun undefine-structure (info)
-  (declare (type defstruct-description info))
-  (let* ((name (dd-name info))
-	 (all-types (cons name (dd-included-by info))))
-    ;;
-    ;; Iterate over this type and all subtypes, clearing the compiler structure
-    ;; type info, and undefining all the associated functions.
-    (dolist (type all-types)
-      (let ((this-info (info type structure-info type)))
-	(setf (info type kind type) nil)
-	(setf (info type structure-info type) nil)
-	(setf (info type frozen type) nil)
-	(undefine-function-name (dd-copier this-info))
-	(undefine-function-name (dd-predicate this-info))
-	(dolist (slot (dd-slots this-info))
-	  (let ((fun (dsd-accessor slot)))
-	    (undefine-function-name fun)
-	    (unless (dsd-read-only slot)
-	      (undefine-function-name `(setf ,fun)))))))
-    ;;
-    ;; Iterate over all types that include this type, removing this type and
-    ;; all subtypes from the list of subtypes of the included type.  We copy
-    ;; the DD and included list so that we don't clobber the type in the
-    ;; compiler's Lisp.
-    (dolist (include (dd-includes info))
-      (let ((new (copy-defstruct-description
-		  (info type structure-info include))))
-	(setf (dd-included-by new)
-	      (set-difference (dd-included-by new) all-types))
-	(setf (info type structure-info include) new))))
-  ;;
-  ;; Clear out the SPECIFIER-TYPE cache so that subsequent references are
-  ;; unknown types.
-  (values-specifier-type-cache-clear)
-  (undefined-value))
-
-
-;;; DEFINE-DEFSTRUCT-NAME  --  Internal
-;;;
-;;;    Like DEFINE-FUNCTION-NAME, but we also set the kind to :DECLARED and
-;;; blow away any ASSUMED-TYPE.  Also, if the thing is a slot accessor
-;;; currently, quietly unaccessorize it.  And if there are any undefined
-;;; warnings, we nuke them.
-;;;
-(defun define-defstruct-name (name)
-  (when name
-    (when (info function accessor-for name)
-      (setf (info function accessor-for name) nil))
-    (define-function-name name)
-    (note-name-defined name :function)
-    (setf (info function where-from name) :declared)
-    (when (info function assumed-type name)
-      (setf (info function assumed-type name) nil)))
-  (undefined-value))
-
-
-;;; FREEZE-STRUCTURE-TYPE  --  Internal
-;;;
-;;;    Freeze the named structure type and all its inferiors.
-;;;
-(defun freeze-structure-type (name)
-  (let ((def (info type structure-info name)))
-    (when def
-      (setf (info type frozen name) t)
-      (dolist (incl (dd-included-by def))
-	(setf (info type frozen incl) t))))
-  (undefined-value))
-
-
-;;; CHECK-FOR-STRUCTURE-REDEFINITION  --  Internal
-;;;
-;;;    Called when we process a DEFSTRUCT for a type that is already defined
-;;; for a structure.  We check for incompatible redefinition and undefine the
-;;; old structure if so.  We ignore the structures that DEFSTRUCT is built out
-;;; of, since they have to be hackishly defined in type-boot.  If the structure
-;;; is not incompatibly redefined, then we copy the old INCLUDED-BY into the
-;;; new structure.
-;;;
-(defun check-for-structure-redefinition (info)
-  (declare (type defstruct-description info))
-  (let* ((name (dd-name info))
-	 (old (info type structure-info name)))
-    (cond ((member name
-		   '(defstruct-description defstruct-slot-description)))
-	  ((and (equal (dd-includes old) (dd-includes info))
-		(equalp (dd-slots old) (dd-slots info)))
-	   (setf (dd-included-by info) (dd-included-by old)))
-	  (t
-	   (compiler-warning
-	    "Incompatibly redefining structure ~S.~@
-	    Removing the old definition~:[.~;~:* and these subtypes:~%  ~S~]"
-	    name (dd-included-by old))
-	   (undefine-structure old))))
-  (undefined-value))
-
-
-;;; ADD-NEW-SUBTYPE  --  Internal
-;;;
-;;;    Add a new subtype NAME to the structure type INC.  INFO is INC's current
-;;; info.
-;;;
-(defun add-new-subtype (name inc info)
-  (let ((new (copy-defstruct-description info)))
-    (setf (info type structure-info inc) new)
-    (push name (dd-included-by new))
-    (when (info type frozen inc)
-      (compiler-warning "Adding new subtype ~S to frozen type ~S.~@
-      			 Unfreezing this type and its inferiors.~@
-			 Previously compiled type tests must be recompiled."
-			name inc)
-      (setf (info type frozen inc) nil)
-      (dolist (subtype (dd-included-by info))
-	(setf (info type frozen subtype) nil)))))
-
-
-;;; %%Compiler-Defstruct  --  Interface
-;;;
-;;;    This function updates the global compiler information to represent the
-;;; definition of the the structure described by Info.  In addition to defining
-;;; all the functions and slots, we also update the INCLUDED-BY info in the
-;;; compiler's environment.  Note that at the first time the DEFSTRUCT is
-;;; loaded, STRUCTURE-INFO is EQ to DEFINED-STRUCTURE-INFO, so the name will
-;;; already be in INCLUDED-BY.  When we do update this info, we copy the
-;;; defstruct description so that the type definition in the compiler's Lisp
-;;; isn't trashed.
-;;;
-(defun %%compiler-defstruct (info)
-  (declare (type defstruct-description info))
-  (let ((name (dd-name info)))
-    (ecase (info type kind name)
-      ((nil))
-      (:structure
-       (check-for-structure-redefinition info))
-      (:primitive
-       (compiler-error "Illegal to redefine standard type ~S." name))
-      (:defined
-       (compiler-warning "Redefining DEFTYPE type to be a DEFSTRUCT: ~S."
-			 name)
-       (setf (info type expander name) nil)))
-    
-    (dolist (inc (dd-includes info))
-      (let ((info (info type structure-info inc)))
-	(unless info
-	  (error "Structure type ~S is included by ~S but not defined."
-		 inc name))
-	(unless (member name (dd-included-by info))
-	  (add-new-subtype name inc info))))
-    
-    (setf (info type kind name) :structure)
-    (setf (info type structure-info name) info)
-    (%note-type-defined name)
-    
-    (let ((copier (dd-copier info)))
-      (when copier
-	(%proclaim `(ftype (function (,name) ,name) ,copier))))
-    
-    (let ((pred (dd-predicate info)))
-      (when pred
-	(define-defstruct-name pred)
-	(setf (info function inlinep pred) :inline)
-	(setf (info function inline-expansion pred)
-	      `(lambda (x) (typep x ',name))))))
-
-  (dolist (slot (dd-slots info))
-    (let* ((fun (dsd-accessor slot))
-	   (setf-fun `(setf ,fun)))
-      (when fun
-      (define-defstruct-name fun)
-      (setf (info function accessor-for fun) info)
-      (unless (dsd-read-only slot)
-	(define-defstruct-name setf-fun)
-	(setf (info function accessor-for setf-fun) info)))))
-  (undefined-value))
-
-(setf (symbol-function '%compiler-defstruct) #'%%compiler-defstruct)
-
 
 ;;; %NOTE-TYPE-DEFINED  --  Interface
 ;;;

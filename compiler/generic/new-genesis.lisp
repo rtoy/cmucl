@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.3 1992/12/17 09:29:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.4 1993/02/26 08:42:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,7 +176,7 @@
 	    (high (descriptor-high des))
 	    (low (descriptor-low des)))
 	(when (or (eql lowtag vm:function-pointer-type)
-		  (eql lowtag vm:structure-pointer-type)
+		  (eql lowtag vm:instance-pointer-type)
 		  (eql lowtag vm:list-pointer-type)
 		  (eql lowtag vm:other-pointer-type))
 	  (dolist (space (list *dynamic* *static* *read-only*)
@@ -463,6 +463,18 @@
   "Generates code to push the THING onto the given cold load LIST."
   `(setq ,list (allocate-cons *dynamic* ,thing ,list)))
 
+;;; COLD-VECTOR  --  Internal
+;;;
+;;;    Make a simple-vector that holds the specified Objects and return its
+;;; decriptor.
+;;;
+(defun cold-vector (&rest objects)
+  (let* ((size (length objects))
+	 (result (allocate-vector-object *dynamic* vm:word-bits size
+					 vm:simple-vector-type)))
+    (dotimes (index size)
+      (write-indexed result (+ index vm:vector-data-offset) (pop objects)))
+    result))
 
 
 ;;;; Symbol magic.
@@ -627,6 +639,8 @@
 
     (frob *free-interrupt-context-index* (make-fixnum-descriptor 0))
 
+    (frob *initial-layouts* (list-all-layouts))
+
     (let ((res *nil-descriptor*))
       (dolist (cpkg *cold-packages*)
 	(let* ((pkg (car cpkg))
@@ -667,8 +681,6 @@
     (frob *initial-fdefn-objects* (list-all-fdefn-objects))
 
     (frob *lisp-initialization-functions* *current-init-functions-cons*)
-
-    
 
     ;; Nothing should be allocated after this.
     ;;
@@ -802,6 +814,86 @@
 	     *fdefn-objects*)
     result))
 
+
+;;;; Layouts & type system pre-initialization:
+;;;
+;;; Since we want to be able to dump structure constants and predicates with
+;;; reference layouts, we need to create layouts at cold-load time.  We use the
+;;; name to intern layouts by, and dump a list of all cold layouts in
+;;; *INITIAL-LAYOUTS* so that type-system initialization can find them.  The
+;;; only thing that's tricky is initializing layout's layout, which must point
+;;; to itself.
+
+;;; Table mapping from class names to descriptors for their layouts.
+;;;
+(defvar *cold-layouts* (make-hash-table :test #'equal))
+
+;;; The descriptor for layout's layout, which we need when making layouts.
+;;;
+(defvar *layout-layout*)
+
+(defparameter target-layout-length 16)
+
+(defun make-cold-layout (name length inherits depth)
+  (let ((result (allocate-boxed-object *dynamic* (1+ target-layout-length)
+				       vm:instance-pointer-type)))
+    (write-memory result (make-other-immediate-descriptor
+			  target-layout-length vm:instance-header-type))
+    (write-indexed result vm:instance-slots-offset *layout-layout*)
+    (let ((base (+ vm:instance-slots-offset
+		   kernel:layout-hash-length
+		   1)))
+      ;0 class uninitialized
+      (write-indexed result (+ base 1) *nil-descriptor*); invalid
+      (write-indexed result (+ base 2) inherits)
+      (write-indexed result (+ base 3) depth)
+      (write-indexed result (+ base 4) length)
+      (write-indexed result (+ base 5) *nil-descriptor*); info
+      (write-indexed result (+ base 6) *nil-descriptor*)); pure
+    (setf (gethash name *cold-layouts*) result)
+    result))
+
+
+;;; INITIALIZE-LAYOUTS  --  Internal
+;;;
+;;;    Clear the layout table and set *layout-layout*.  We initially create
+;;; LAYOUT with NIL as the LAYOUT and INHERITS, then back-patch with itself and
+;;; the correct INHERITS vector (which includes T, INSTANCE and
+;;; STRUCTURE-OBJECT).
+;;;
+(defun initialize-layouts ()
+  (clrhash *cold-layouts*)
+  (setq *layout-layout* *nil-descriptor*)
+  (setq *layout-layout*
+	(make-cold-layout 'layout (number-to-core target-layout-length)
+			  *nil-descriptor* (number-to-core 3)))
+  (write-indexed *layout-layout* vm:instance-slots-offset *layout-layout*)
+  (let* ((t-layout
+	  (make-cold-layout 't (number-to-core 0)
+			    (cold-vector) (number-to-core 0)))
+	 (inst-layout
+	  (make-cold-layout 'instance (number-to-core 0)
+			    (cold-vector t-layout) (number-to-core 1)))
+	 (so-layout
+	  (make-cold-layout 'structure-object (number-to-core 1)
+			    (cold-vector t-layout inst-layout)
+			    (number-to-core 2))))
+    (write-indexed *layout-layout*
+		   (+ vm:instance-slots-offset layout-hash-length 1 2)
+		   (cold-vector t-layout inst-layout so-layout))))
+
+
+;;; LIST-ALL-LAYOUTS  --  Internal
+;;;
+;;;    Return a cold alist that we're going to store in *INITIAL-LAYOUTS*.
+;;;
+(defun list-all-layouts ()
+  (let ((result *nil-descriptor*))
+    (maphash #'(lambda (key value)
+		 (cold-push (allocate-cons *dynamic* (cold-intern key) value)
+			    result))
+	     *cold-layouts*)
+    result))
 
 
 ;;;; Reading FASL files.
@@ -872,14 +964,22 @@
 		(fop-small-struct)
   (let* ((size (clone-arg))
 	 (result (allocate-boxed-object *dynamic* (1+ size)
-					vm:structure-pointer-type)))
+					vm:instance-pointer-type)))
     (write-memory result (make-other-immediate-descriptor
-			  size vm:structure-header-type))
+			  size vm:instance-header-type))
     (do ((index (1- size) (1- index)))
 	((minusp index))
       (declare (fixnum index))
-      (write-indexed result (+ index vm:structure-slots-offset) (pop-stack)))
+      (write-indexed result (+ index vm:instance-slots-offset) (pop-stack)))
     result))
+
+(define-cold-fop (fop-layout)
+  (let ((length (pop-stack))
+	(depth (pop-stack))
+	(inherits (pop-stack))
+	(name (pop-stack)))
+    (or (gethash name *cold-layouts*)
+	(make-cold-layout name length inherits depth))))
 
 
 ;;; Loading symbols...
@@ -1193,7 +1293,7 @@
     (write-indexed obj
 		   (+ idx
 		      (ecase (descriptor-lowtag obj)
-			(#.vm:structure-pointer-type 1)
+			(#.vm:instance-pointer-type 1)
 			(#.vm:other-pointer-type 2)))
 		   (pop-stack))))
 
@@ -1775,6 +1875,7 @@
 	  (let ((version (load-foreign-symbol-table symbol-table)))
 	    (initialize-spaces)
 	    (initialize-symbols)
+	    (initialize-layouts)
 	    (setf *current-init-functions-cons* *nil-descriptor*)
 	    (initialize-static-fns)
 	    (dolist (file (if (listp file-list)
@@ -1838,17 +1939,29 @@
 			   (push (cons name (descriptor-bits addr))
 				 funs)))))
 	       *fdefn-objects*)
-      (format t "~2%Initially defined functions:~2%")
+      (format t "~%~|~%Initially defined functions:~2%")
       (dolist (info (sort funs #'< :key #'cdr))
 	(format t "#x~8,'0X: ~S~%" (cdr info) (car info)))
-      (format t "~2%Undefined function references:~2%")
+      (format t "~%~|~%Undefined function references:~2%")
       (labels ((key (name)
 		 (etypecase name
 		   (symbol (symbol-name name))
 		   (integer (prin1-to-string name))
 		   (list (key (second name))))))
 	(dolist (fun (sort undefs #'string< :key #'key))
-	  (format t "~S~%" fun)))))
+	  (format t "~S~%" fun)))
+
+      (format t "~%~|~%Layout names:~2%")
+      (collect ((stuff))
+	(maphash #'(lambda (name desc)
+		     (stuff (cons (logior (ash (descriptor-high desc)
+					       descriptor-low-bits)
+					  (descriptor-low desc))
+				  name)))
+		 *cold-layouts*)
+	(dolist (x (sort (stuff) #'< :key #'car))
+	  (format t "~8,'0X: ~S~%" (car x) (cdr x))))))
+	      
   (undefined-value))
 
 

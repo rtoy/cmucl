@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.26 1992/09/22 00:02:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.27 1993/02/26 08:39:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,8 +36,9 @@
 				     lambda cleanup cookie
 				     interface-cookie options)))
   ;;
-  ;; Alist (name . what), where What is either a Functional (a local function)
-  ;; or a list (MACRO . <function>) (a local macro, with the specifier
+  ;; Alist (name . what), where What is either a Functional (a local function),
+  ;; a DEFINED-FUNCTION, representing an INLINE/NOTINLINE declaration, or
+  ;; a list (MACRO . <function>) (a local macro, with the specifier
   ;; expander.)    Note that Name may be a (SETF <name>) function.
   (functions nil :type list)
   ;;
@@ -699,7 +700,7 @@
   kind)
 
 
-;;; The Slot-Accessor structure represents defstruct slot accessors.  It is a
+;;; The Slot-Accessor structure represents slot accessor functions.  It is a
 ;;; subtype of Global-Var to make it look more like a normal function.
 ;;;
 (defstruct (slot-accessor (:include global-var
@@ -708,10 +709,12 @@
 			  (:print-function %print-slot-accessor))
   ;;
   ;; The description of the structure that this is an accessor for.
-  (for (required-argument) :type defstruct-description)
+  (for (required-argument)
+       :type #+ns-boot (or class defstruct-description)
+       #-ns-boot class)
   ;;
   ;; The slot description of the slot.
-  (slot (required-argument) :type defstruct-slot-description))
+  (slot (required-argument)))
 
 (defprinter slot-accessor
   name

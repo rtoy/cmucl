@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26 1992/12/17 11:31:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.27 1993/02/26 08:38:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -526,6 +526,7 @@
 ;;;
 (defstruct (compact-info-env
 	    (:include info-env)
+	    (:pure t)
 	    (:print-function %print-info-environment))
   ;;
   ;; If this value is EQ to the name we want to look up, then the cache hit
@@ -1038,9 +1039,12 @@
 ;;; function.
 (define-info-type function ir1-transform (or function null))
 
-;;; If a function is a defstruct slot accessor or setter, then this is the
-;;; defstruct-definition for the structure that it belongs to.
-(define-info-type function accessor-for (or defstruct-description null)
+;;; If a function is a slot accessor or setter, then this is the class that it
+;;; accesses slots of.
+;;;
+(define-info-type function accessor-for
+  #+ns-boot (or c::defstruct-description class null)
+  #-ns-boot (or class null)
   nil)
 
 ;;; If a function is "known" to the compiler, then this is FUNCTION-INFO
@@ -1091,36 +1095,16 @@
 
 (define-info-class type)
 
-;;; The kind of type described.  We return :Structure for standard types that
+;;; The kind of type described.  We return :Instance for standard types that
 ;;; are implemented as structures.
 ;;;
-(define-info-type type kind (member :primitive :defined :structure nil)
-  (if (or (info type builtin name)
-	  (info type translator name))
-      :primitive
-      nil))
+(define-info-type type kind (member :primitive :defined :instance
+				    #+ns-boot :structure
+				    nil)
+  nil)
 
 ;;; Expander function for a defined type.
 (define-info-type type expander (or function null) nil)
-
-;;; Print function for a type.
-(define-info-type type printer (or function symbol null) nil)
-
-;;; Make-load-form function for a type.
-(define-info-type type load-form-maker (or function symbol null) nil)
-
-;;; Defstruct description information for a structure type.  DEFINED is the
-;;; current global definition, and is not shadowed by compilation of
-;;; structure definitions.
-;;;
-(define-info-type type structure-info (or defstruct-description null) nil)
-(define-info-type type defined-structure-info (or defstruct-description null)
-  nil)
-
-;;; True if this type has been frozen with the FREEZE-TYPE declaration.  Only
-;;; interesting for structure types.
-;;;
-(define-info-type type frozen boolean nil)
 
 (define-info-type type documentation (or string null))
 
@@ -1128,10 +1112,38 @@
 ;;;
 (define-info-type type translator (or function null) nil)
 
-;;; If true, then the type coresponding to this name.
+;;; If true, then the type coresponding to this name.  Note that if this is a
+;;; built-in class with a translation, then this is the translation, not the
+;;; class object.  This info type keeps track of random atomic types (NIL etc.)
+;;; and also serves as a cache to ensure that common standard types (atomic and
+;;; otherwise) are only consed once.
 ;;;
 (define-info-type type builtin (or ctype null) nil)
 
+;;; If this type is a class name, then this is the corresponding class.  Note
+;;; that for built-in classes, the kind may be :PRIMITIVE and not :INSTANCE.
+;;;
+(define-info-type type class (or class null) nil)
+
+;;; Layout for this type being used by the compiler.
+;;;
+(define-info-type type compiler-layout (or layout null)
+  (let ((class (info type class name)))
+    (when class (class-layout class))))
+
+#+ns-boot
+(define-info-type type printer (or function symbol null) nil)
+#+ns-boot
+(define-info-type type load-form-maker (or function symbol null) nil)
+
+#+ns-boot
+(define-info-type type structure-info (or defstruct-description null) nil)
+#+ns-boot
+(define-info-type type defined-structure-info (or defstruct-description null)
+  nil)
+
+(define-info-class typed-structure)
+(define-info-type typed-structure info t nil)
 
 (define-info-class declaration)
 (define-info-type declaration recognized boolean)

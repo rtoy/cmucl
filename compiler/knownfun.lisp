@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.17 1992/12/13 07:32:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.18 1993/02/26 08:38:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,7 +82,8 @@
   explicit-check)
 
 (defstruct (function-info
-	    (:print-function %print-function-info))
+	    (:print-function %print-function-info)
+	    (:pure t))
   ;;
   ;; Boolean attributes of this function.
   (attributes (required-argument) :type attributes)

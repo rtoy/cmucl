@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83 1992/12/10 16:48:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.84 1993/02/26 08:38:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,12 +141,33 @@
 		     :where-from where)))
 
 
-;;; Find-Slot-Accessor  --  Internal
+;;; Find-Structure-Slot-Accessor  --  Internal
 ;;;
 ;;;    Return a Slot-Accessor structure usable for referencing the slot
-;;; accessor Name.  Info is the structure definition.
+;;; accessor Name.  Class is the structure class.
 ;;;
-(defun find-slot-accessor (info name)
+(defun find-structure-slot-accessor (class name)
+  (declare (type class class))
+  (let* ((info (layout-info
+		(or (info type compiler-layout (class-name class))
+		    (class-layout class))))
+	 (accessor (if (listp name) (cadr name) name))
+	 (slot (find accessor (kernel:dd-slots info)
+		     :key #'kernel:dsd-accessor))
+	 (type (kernel:dd-name info))
+	 (slot-type (kernel:dsd-type slot)))
+    (assert slot () "Can't find slot ~S." type)
+    (make-slot-accessor
+     :name name
+     :type (specifier-type
+	    (if (listp name)
+		`(function (,slot-type ,type) ,slot-type)
+		`(function (,type) ,slot-type)))
+     :for class
+     :slot slot)))
+
+#+ns-boot
+(defun find-old-slot-accessor (info name)
   (declare (type defstruct-description info))
   (let* ((accessor (if (listp name) (cadr name) name))
 	 (slot (find accessor (dd-slots info)
@@ -188,14 +209,28 @@
 	       (inlinep (info function inlinep name)))
 	   (setf (gethash name *free-functions*)
 		 (if (or expansion inlinep)
-		     (make-defined-function :name name
-					    :inline-expansion expansion
-					    :inlinep inlinep
-					    :type (info function type name))
+		     (make-defined-function
+		      :name name
+		      :inline-expansion expansion
+		      :inlinep inlinep
+		      :where-from (info function where-from name)
+		      :type (info function type name))
 		     (let ((info (info function accessor-for name)))
-		       (if info
-			   (find-slot-accessor info name)
-			   (find-free-really-function name))))))))))
+		       (etypecase info
+			 (null
+			  (find-free-really-function name))
+			 (structure-class
+			  #+ns-boot
+			  (if (layout-info (info type compiler-layout
+						 (class-name info)))
+			      (find-structure-slot-accessor info name)
+			      (find-free-really-function name))
+			  #-ns-boot
+			  (find-structure-slot-accessor info name))
+			 #+ns-boot
+			 (defstruct-description
+			  (find-old-slot-accessor info name)))))))))))
+
 
 ;;; Find-Lexically-Apparent-Function  --  Internal
 ;;;
@@ -302,10 +337,10 @@
 		 ((array t)
 		  (dotimes (i (array-total-size value))
 		    (grovel (row-major-aref value i))))
-		 (structure
+		 (instance
 		  (when (emit-make-load-form value)
-		    (dotimes (i (structure-length value))
-		      (grovel (structure-ref value i)))))
+		    (dotimes (i (%instance-length value))
+		      (grovel (%instance-ref value i)))))
 		 (t
 		  (compiler-error
 		   "Cannot dump objects of type ~S into fasl files."
@@ -1254,7 +1289,7 @@
 			  (supplied-var (varify-lambda-arg supplied-p (names-so-far))))
 		     (setf (arg-info-supplied-p info) supplied-var)
 		     (names-so-far supplied-p)
-		     (when (> (length spec) 3)
+		     (when (> (length (the list spec)) 3)
 		       (compiler-error "Arg specifier is too long: ~S." spec)))))))
 	
 	(dolist (name required)
@@ -1303,7 +1338,7 @@
 	      (parse-default spec info)))
 	   (t
 	    (let ((head (first spec)))
-	      (unless (= (length head) 2)
+	      (unless (= (length (the list head)) 2)
 		(error "Malformed keyword arg specifier: ~S." spec))
 	      (let* ((name (second head))
 		     (var (varify-lambda-arg name (names-so-far)))
@@ -1352,7 +1387,8 @@
       (ir1-convert-progn-body start cont body)
       (let ((fun-cont (make-continuation))
 	    (fun (ir1-convert-lambda-body body (list (first aux-vars))
-					  (rest aux-vars) (rest aux-vals))))
+					  (rest aux-vars) (rest aux-vals)
+					  interface)))
 	(reference-leaf start fun-cont fun)
 	(let ((*lexical-environment*
 	       (if interface
@@ -1376,12 +1412,13 @@
 ;;; being the innermost one.  We force Cont to start a block outside of this
 ;;; cleanup, causing cleanup code to be emitted when the scope is exited.
 ;;;
-(defun ir1-convert-special-bindings (start cont body aux-vars aux-vals svars)
+(defun ir1-convert-special-bindings (start cont body aux-vars aux-vals
+					   interface svars)
   (declare (type continuation start cont)
 	   (list body aux-vars aux-vals svars))
   (cond
    ((null svars)
-    (ir1-convert-aux-bindings start cont body aux-vars aux-vals t))
+    (ir1-convert-aux-bindings start cont body aux-vars aux-vals interface))
    (t
     (continuation-starts-block cont)
     (let ((cleanup (make-cleanup :kind :special-bind))
@@ -1394,7 +1431,8 @@
       (let ((*lexical-environment* (make-lexenv :cleanup cleanup)))
 	(ir1-convert next-cont nnext-cont '(%cleanup-point))
 	(ir1-convert-special-bindings nnext-cont cont body aux-vars aux-vals
-				      (rest svars)))))))
+				      interface (rest svars))))))
+  (undefined-value))
 
 
 ;;; IR1-Convert-Lambda-Body  --  Internal
@@ -1415,9 +1453,11 @@
 ;;;
 ;;; Aux-Vars is a list of Var structures for variables that are to be
 ;;; sequentially bound.  Each Aux-Val is a form that is to be evaluated to get
-;;; the initial value for the corresponding Aux-Var.
+;;; the initial value for the corresponding Aux-Var.  Interface is a flag as T
+;;; when there are real aux values (see let* and ir1-convert-aux-bindings.)
 ;;;
-(defun ir1-convert-lambda-body (body vars &optional aux-vars aux-vals result)
+(defun ir1-convert-lambda-body (body vars &optional aux-vars aux-vals
+				     interface result)
   (declare (list body vars aux-vars aux-vals)
 	   (type (or continuation null) result))
   (let* ((bind (make-bind))
@@ -1448,7 +1488,7 @@
 	  (prev-link bind cont1)
 	  (use-continuation bind cont2)
 	  (ir1-convert-special-bindings cont2 result body aux-vars aux-vals
-					(svars)))
+					interface (svars)))
 
 	(let ((block (continuation-block result)))
 	  (when block
@@ -1747,6 +1787,7 @@
     (let* ((main-entry (ir1-convert-lambda-body body (main-vars)
 						(append (bind-vars) aux-vars)
 						(append (bind-vals) aux-vals)
+						t
 						cont))
 	   (last-entry (convert-optional-entry main-entry default-vars
 					       (main-vals) ())))
@@ -1811,7 +1852,7 @@
 			       nil vars supplied-p-p body aux-vars
 			       aux-vals cont)
 	     (let ((fun (ir1-convert-lambda-body body (reverse default-vars)
-						 aux-vars aux-vals cont)))
+						 aux-vars aux-vals t cont)))
 	       (setf (optional-dispatch-main-entry res) fun)
 	       (push (if supplied-p-p
 			 (convert-optional-entry fun entry-vars entry-vals ())
@@ -1909,7 +1950,8 @@
       (let* ((context-decls
 	      (and parent-form
 		   (loop for fun in *context-declarations*
-		         append (funcall fun name parent-form))))
+		         append (funcall (the function fun)
+					 name parent-form))))
 	     (cont (make-continuation))
 	     (*lexical-environment*
 	      (process-declarations (append context-decls decls)
@@ -1920,7 +1962,7 @@
 						allow-other-keys
 						aux-vars aux-vals cont)
 		      (ir1-convert-lambda-body body vars aux-vars aux-vals
-					       cont))))
+					       t cont))))
 	(setf (functional-inline-expansion res) form)
 	(setf (functional-arg-documentation res) (cadr form))
 	(setf (leaf-name res) name)
@@ -2586,7 +2628,7 @@
 				      form)))))
 	  
 	  (unless ignore
-	    (funcall #'%proclaim form))
+	    (%proclaim form))
 	  (if ignore
 	      (ir1-convert start cont nil)
 	      (ir1-convert start cont `(%proclaim ,what)))))
@@ -2596,20 +2638,23 @@
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
 ;;;
 ;;;    This is a frob that DEFMACRO expands into to establish the compiler
-;;; semantics.  %%COMPILER-DEFSTRUCT does most of the work, we just clear all
-;;; of the functions out of *FREE-FUNCTIONS* to keep things in synch.
+;;; semantics.  The other code in the expansion and %%COMPILER-DEFSTRUCT do
+;;; most of the work, we just clear all of the functions out of
+;;; *FREE-FUNCTIONS* to keep things in synch.  %%COMPILER-DEFSTRUCT is also
+;;; called at load-time.
 ;;;
-(def-ir1-translator %compiler-defstruct ((info) start cont :kind :function)
+(def-ir1-translator kernel:%compiler-defstruct
+		    ((info) start cont :kind :function)
   (let* ((info (eval info)))
-    (funcall #'%%compiler-defstruct info)
-    (dolist (slot (dd-slots info))
-      (let ((fun (dsd-accessor slot)))
+    (kernel:%%compiler-defstruct info)
+    (dolist (slot (kernel:dd-slots info))
+      (let ((fun (kernel:dsd-accessor slot)))
 	(remhash fun *free-functions*)
-	(unless (dsd-read-only slot)
+	(unless (kernel:dsd-read-only slot)
 	  (remhash `(setf ,fun) *free-functions*))))
-    (remhash (dd-predicate info) *free-functions*)
-    (remhash (dd-copier info) *free-functions*)
-    (ir1-convert start cont `(%%compiler-defstruct ',info))))
+    (remhash (kernel:dd-predicate info) *free-functions*)
+    (remhash (kernel:dd-copier info) *free-functions*)
+    (ir1-convert start cont `(kernel:%%compiler-defstruct ',info))))
 
 
 ;;;; Let and Let*:

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.23 1992/12/16 21:36:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.24 1993/02/26 08:42:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 (export '(lowtag-bits lowtag-mask lowtag-limit type-bits type-mask
 	  target-most-positive-fixnum target-most-negative-fixnum
 	  even-fixnum-type function-pointer-type other-immediate-0-type
-	  list-pointer-type odd-fixnum-type structure-pointer-type
+	  list-pointer-type odd-fixnum-type instance-pointer-type
 	  other-immediate-1-type other-pointer-type bignum-type ratio-type
 	  single-float-type double-float-type complex-type
 	  simple-array-type simple-string-type simple-bit-vector-type
@@ -38,7 +38,7 @@
 	  dylan-function-header-type
 	  value-cell-header-type symbol-header-type base-char-type
 	  sap-type unbound-marker-type weak-pointer-type
-	  structure-header-type funcallable-instance-header-type
+	  instance-header-type funcallable-instance-header-type
 	  fdefn-type vector-normal-subtype
 	  vector-valid-hashing-subtype vector-must-rehash-subtype
 	  forwarding-pointer-type scavenger-hook-type))
@@ -93,7 +93,7 @@
   other-immediate-0
   list-pointer
   odd-fixnum
-  structure-pointer
+  instance-pointer
   other-immediate-1
   other-pointer)
 
@@ -141,7 +141,7 @@
   sap
   unbound-marker
   weak-pointer
-  structure-header
+  instance-header
   fdefn
   #+gengc scavenger-hook
   )
@@ -163,9 +163,9 @@
   (car :ref-trans car :set-trans c::%rplaca :init :arg)
   (cdr :ref-trans cdr :set-trans c::%rplacd :init :arg))
 
-(define-primitive-object (structure :lowtag structure-pointer-type
-				    :header structure-header-type
-				    :alloc-trans make-structure)
+(define-primitive-object (instance :lowtag instance-pointer-type
+				    :header instance-header-type
+				    :alloc-trans %make-instance)
   (slots :rest-p t))
 
 (define-primitive-object (bignum :lowtag other-pointer-type
