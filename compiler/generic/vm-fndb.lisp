@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.6 1990/05/14 01:59:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.7 1990/05/23 06:07:34 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -129,3 +129,28 @@
 (defknown (bignum::%ashl bignum::%ashr)
 	  (bignum-element-type (mod 32)) bignum-element-type
   (foldable flushable movable))
+
+
+
+;;;; Bit-bashing routines.
+
+(defknown copy-to-system-area
+	  ((simple-unboxed-array (*)) index system-area-pointer index index)
+  null
+  ())
+
+(defknown copy-from-system-area
+	  (system-area-pointer index (simple-unboxed-array (*)) index index)
+  null
+  ())
+
+(defknown system-area-copy
+	  (system-area-pointer index system-area-pointer index index)
+  null
+  ())
+
+(defknown bit-bash-copy
+	  ((simple-unboxed-array (*)) index
+	   (simple-unboxed-array (*)) index index)
+  null
+  ())
