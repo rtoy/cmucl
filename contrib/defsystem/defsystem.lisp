@@ -1050,7 +1050,7 @@
     "./"
     #+:lucid                (working-directory)
     #+(or :allegro ACLPC)   (current-directory)
-    #+:cmu                  (default-directory)
+    #+:cmu                  (ext:default-directory)
     #+:lispworks 
     ,(multiple-value-bind (major minor) (system::lispworks-version)
        (if (or (> major 3) 
