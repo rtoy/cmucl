@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.7 1997/02/05 18:08:03 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.8 2001/03/13 15:49:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -557,7 +557,7 @@
 	     (setf ,cleanup-p nil))
 	 (when ,cleanup-p (random-typeout-cleanup ,stream))))))
 
-(proclaim '(special *random-typeout-ml-fields* *buffer-names*))
+(declaim (special *random-typeout-ml-fields* *buffer-names*))
 
 (defvar *random-typeout-buffers* () "A list of random-typeout buffers.")
 
@@ -607,7 +607,7 @@
 
 ;;;; Error handling stuff.
 
-(proclaim '(special *echo-area-stream*))
+(declaim (special *echo-area-stream*))
 
 ;;; LISP-ERROR-ERROR-HANDLER is in Macros.Lisp instead of Rompsite.Lisp because
 ;;; it uses WITH-POP-UP-DISPLAY, and Macros is compiled after Rompsite.  It

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ed-integrity.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ed-integrity.lisp,v 1.5 2001/03/13 15:49:52 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,11 +24,11 @@
 (in-package "ED")
 
 
-(proclaim '(special hemlock-internals::*debugging-tty-redisplay*
-		    hemlock-internals::*testing-delete-queue*
-		    hemlock-internals::*testing-insert-queue*
-		    hemlock-internals::*testing-moved*
-		    hemlock-internals::*testing-writes*))
+(declaim (special hemlock-internals::*debugging-tty-redisplay*
+		  hemlock-internals::*testing-delete-queue*
+		  hemlock-internals::*testing-insert-queue*
+		  hemlock-internals::*testing-moved*
+		  hemlock-internals::*testing-writes*))
 
 
 (defcommand "Setup Tty Buffer" (p)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/edit-defs.lisp,v 1.6 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/edit-defs.lisp,v 1.7 2001/03/13 15:49:52 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,7 +86,7 @@
   (new-search-pattern :string-insensitive :forward " "))
 
 (defvar *last-go-to-def-string* "")
-(proclaim '(simple-string *last-go-to-def-string*))
+(declaim (simple-string *last-go-to-def-string*))
   
 ;;; GET-DEFINITION-PATTERN takes a type and a name.  It returns a search
 ;;; pattern for finding the defining form for name using

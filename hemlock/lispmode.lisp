@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.9 1998/09/05 23:21:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.10 2001/03/13 15:49:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -847,6 +847,7 @@
 (defindent "compiler-let" 1)
 (defindent "ctypecase" 1)
 (defindent "defconstant" 1)
+(defindent "define-compiler-macro" 2)
 (defindent "define-setf-method" 2)
 (defindent "destructuring-bind" 2)
 (defindent "defmacro" 2)

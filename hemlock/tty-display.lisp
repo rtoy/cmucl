@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.5 2001/03/13 15:50:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 (defvar *currently-selected-hunk* nil)
 (defvar *hunk-top-line*)
 
-(proclaim '(fixnum *hunk-top-line*))
+(declaim (fixnum *hunk-top-line*))
 
 (eval-when (compile eval)
 (defmacro select-hunk (hunk)

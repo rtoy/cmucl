@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/buffer.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/buffer.lisp,v 1.5 2001/03/13 15:49:51 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,7 +56,7 @@
   sense)
 
 
-(proclaim '(inline buffer-name buffer-pathname buffer-region))
+(declaim (inline buffer-name buffer-pathname buffer-region))
 
 (defun buffer-region (buffer)
   "Return the region which contains Buffer's text."
@@ -72,7 +72,7 @@
   "Return Buffer's string name."
   (buffer-%name buffer))
 
-(proclaim '(special *buffer-names*))
+(declaim (special *buffer-names*))
 
 (defun %set-buffer-name (buffer name)
   (multiple-value-bind (entry foundp) (getstring name *buffer-names*)
@@ -248,7 +248,7 @@
   (with-mode-and-buffer (name nil buffer)
     (not (null (memq mode (buffer-mode-objects buffer))))))
     
-(proclaim '(special *mode-names*))
+(declaim (special *mode-names*))
 
 ;;; %SET-BUFFER-MINOR-MODE  --  Public
 ;;;
@@ -315,7 +315,7 @@
 
 ;;;; CURRENT-BUFFER, CURRENT-POINT, and buffer using setup and cleanup.
 
-(proclaim '(inline current-buffer))
+(declaim (inline current-buffer))
 
 (defun current-buffer () "Return the current buffer object." *current-buffer*)
 
@@ -372,7 +372,7 @@
 
 (defvar *in-a-recursive-edit* nil "True if we are in a recursive edit.")
 
-(proclaim '(inline in-recursive-edit))
+(declaim (inline in-recursive-edit))
 
 (defun in-recursive-edit ()
   "Returns whether the calling point is dynamically within a recursive edit

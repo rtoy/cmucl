@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispbuf.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispbuf.lisp,v 1.4 2001/03/13 15:49:54 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,7 @@
 
 ;;;; Eval Mode Interaction.
 
-(proclaim '(special * ** *** - + ++ +++ / // /// *prompt*))
+(declaim (special * ** *** - + ++ +++ / // /// *prompt*))
 
 (defun setup-eval-mode (buffer)
   (let ((point (buffer-point buffer)))

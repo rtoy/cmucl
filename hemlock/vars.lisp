@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/vars.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/vars.lisp,v 1.4 2001/03/13 15:50:01 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -194,7 +194,7 @@
   (intern (nsubstitute #\- #\space (the simple-string (string-upcase string)))
 	  (find-package "HEMLOCK")))
 
-(proclaim '(special *global-variable-names*))
+(declaim (special *global-variable-names*))
 
 ;;; DEFHVAR  --  Public
 ;;;

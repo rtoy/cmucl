@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.14 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.15 2001/03/13 15:49:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,7 +94,7 @@
 ;;; beside the other modeline variables.  This DEFVAR would live in
 ;;; Morecoms.Lisp, but it is compiled and loaded after this file.
 ;;;
-(proclaim '(special ed::*recursive-edit-count*))
+(declaim (special ed::*recursive-edit-count*))
 ;;;
 (make-modeline-field
  :name :edit-level :width 15
@@ -109,7 +109,7 @@
 ;;; beside the other modeline variables.  This DEFVAR would live in
 ;;; Completion.Lisp, but it is compiled and loaded after this file.
 ;;;
-(proclaim '(special ed::*completion-mode-possibility*))
+(declaim (special ed::*completion-mode-possibility*))
 ;;; Hack for now until completion mode is added.
 (defvar ed::*completion-mode-possibility* "")
 ;;;

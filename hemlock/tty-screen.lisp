@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.8 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.9 2001/03/13 15:50:01 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 
 ;;;; Terminal screen initialization
 
-(proclaim '(special *parse-starting-mark*))
+(declaim (special *parse-starting-mark*))
 
 (defun init-tty-screen-manager (tty-name)
   (setf *line-wrap-char* #\!)

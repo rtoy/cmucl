@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.23 2000/12/19 14:26:29 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.24 2001/03/13 15:49:46 pw Exp $")
 
 (in-package :pcl)
 
@@ -74,13 +74,12 @@ work during bootstrapping.
 
 |#
 
-(proclaim '(notinline make-a-method
-		      add-named-method		      
-		      ensure-generic-function-using-class
-
-		      add-method
-		      remove-method
-		      ))
+(declaim (notinline make-a-method
+		    add-named-method		      
+		    ensure-generic-function-using-class
+		    add-method
+		    remove-method
+		    ))
 
 (defvar *early-functions*
 	'((make-a-method early-make-a-method

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.7 2001/01/27 14:22:20 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.8 2001/03/13 15:49:53 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,7 +92,7 @@
 (defvar *key-event-history* nil
   "This ring holds the last 60 key-events read by the command interpreter.")
 
-(proclaim '(special *input-transcript*))
+(declaim (special *input-transcript*))
 
 ;;; DQ-EVENT is used in editor stream methods for popping off input.
 ;;; If there is an event not yet read in Stream, then pop the queue
@@ -160,7 +160,7 @@
   "This keeps us from undefined nasties like re-entering Hemlock stream
    input methods from input hooks and scheduled events.")
 
-(proclaim '(special *screen-image-trashed*))
+(declaim (special *screen-image-trashed*))
 
 ;;; These are the characters GET-KEY-EVENT notices when it pays attention
 ;;; to aborting input.  This happens via EDITOR-INPUT-METHOD-MACRO.
@@ -440,7 +440,7 @@
 	   (random-typeout-cleanup stream)
 	   (throw 'more-punt nil)))))
 
-(proclaim '(special *more-prompt-action*))
+(declaim (special *more-prompt-action*))
 
 (defun maybe-keep-random-typeout-window (stream)
   (let* ((window (random-typeout-stream-window stream))

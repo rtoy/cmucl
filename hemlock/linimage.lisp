@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.4 2001/03/13 15:49:54 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,7 +78,7 @@
 
 
 
-(proclaim '(special *character-attributes*))
+(declaim (special *character-attributes*))
 
 ;;; %init-line-image  --  Internal
 ;;;

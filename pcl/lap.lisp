@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/lap.lisp,v 1.8 1999/05/30 23:14:01 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/lap.lisp,v 1.9 2001/03/13 15:49:48 pw Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -81,7 +81,7 @@
 ;;;  OPCODE
 ;;;  OPERAND
 ;;; 
-(proclaim '(special *generating-lap*))		;CAR   - alist of free registers
+(declaim '(special *generating-lap*))		;CAR   - alist of free registers
 						;CADR  - alist of allocated registers
 						;CADDR - max reg number allocated
 						;
@@ -383,7 +383,7 @@
   (compile 'make-lap-test-closure-1)
   (compile 'make-lap-test-closure-2))
 
-(proclaim '(special lap-win lap-lose))
+(declaim (special lap-win lap-lose))
 (eval-when (load eval)
   (setq lap-win (make-lap-test-closure-1 'win)
 	lap-lose (make-lap-test-closure-1 'lose)))

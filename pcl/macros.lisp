@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.14 1999/05/30 23:14:03 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.15 2001/03/13 15:49:48 pw Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -37,22 +37,22 @@
 
 (in-package :pcl)
 
-(proclaim '(declaration
-	    values ;;I use this so that Zwei can remind
-	           ;;me what values a function returns.
+(declaim (declaration
+	  values ;;I use this so that Zwei can remind
+	         ;;me what values a function returns.
 	     
-	    arglist ;;Tells me what the pretty arglist
-	            ;;of something (which probably takes
-		    ;;&rest args) is.
+	  arglist ;;Tells me what the pretty arglist
+	          ;;of something (which probably takes
+		  ;;&rest args) is.
 
-	    indentation     ;;Tells ZWEI how to indent things
-			    ;;like defclass.
-	     class
-	     variable-rebinding
-	     pcl-fast-call
-	     method-name
-	     method-lambda-list
-	     ))
+	  indentation     ;;Tells ZWEI how to indent things
+		          ;;like defclass.
+	  class
+	  variable-rebinding
+	  pcl-fast-call
+	  method-name
+	  method-lambda-list
+	  ))
 
 ;;; Age old functions which CommonLisp cleaned-up away.  They probably exist
 ;;; in other packages in all CommonLisp implementations, but I will leave it

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.4 1996/05/08 14:56:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.5 2001/03/13 15:49:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,7 +56,7 @@
 ;;;
 (defvar *names-to-keysyms*)
 
-(proclaim '(inline name-keysym keysym-names keysym-preferred-name))
+(declaim (inline name-keysym keysym-names keysym-preferred-name))
 
 (defun name-keysym (name)
   "This returns the keysym named name.  If name is unknown, this returns nil."

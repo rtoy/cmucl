@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.18 2000/08/03 16:58:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.19 2001/03/13 15:49:47 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -396,7 +396,7 @@
 (defun early-class-direct-subclasses (class)
   (bootstrap-get-slot 'class class 'direct-subclasses))
 
-(proclaim '(notinline load-defclass))
+(declaim (notinline load-defclass))
 (defun load-defclass (name metaclass supers canonical-slots canonical-options)
   (setq supers  (copy-tree supers)
 	canonical-slots   (copy-tree canonical-slots)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.12 1998/06/16 06:58:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.13 2001/03/13 15:49:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,7 @@
 ;;; *key-event-history* is defined in input.lisp, but it needs to be set in
 ;;; SITE-INIT, since MAKE-RING doesn't exist at load time for this file.
 ;;;
-(proclaim '(special *key-event-history*))
+(declaim (special *key-event-history*))
 
 ;;; SITE-INIT  --  Internal
 ;;;
@@ -219,15 +219,15 @@
 
 
 #+clx
-(proclaim '(special ed::*open-paren-highlight-font*
-		    ed::*active-region-highlight-font*))
+(declaim (special ed::*open-paren-highlight-font*
+		  ed::*active-region-highlight-font*))
 
 #+clx
 (defparameter lisp-fonts-pathnames '("library:fonts/"))
 
-(proclaim '(special *editor-input* *real-editor-input*))
+(declaim (special *editor-input* *real-editor-input*))
 
-(proclaim '(special *editor-input* *real-editor-input*))
+(declaim (special *editor-input* *real-editor-input*))
 
 ;;; INIT-RAW-IO  --  Internal
 ;;;
@@ -255,8 +255,8 @@
 ;;; Stop flaming from compiler due to CLX macros expanding into illegal
 ;;; declarations.
 ;;;
-(proclaim '(declaration values))
-(proclaim '(special *default-font-family*))
+(declaim (declaration values))
+(declaim (special *default-font-family*))
 
 ;;; font-map-size should be defined in font.lisp, but SETUP-FONT-FAMILY would
 ;;; assume it to be special, issuing a nasty warning.
@@ -332,7 +332,7 @@
   (when (variable-value 'ed::bell-style)
     (unix:unix-write 1 *editor-bell* 0 1)))
 
-(proclaim '(special *current-window*))
+(declaim (special *current-window*))
 
 ;;; BITMAP-BEEP is used in Hemlock for beeping when running under windowed
 ;;; input.
@@ -361,7 +361,7 @@
        ))))
 
 #+clx
-(proclaim '(special *foreground-background-xor*))
+(declaim (special *foreground-background-xor*))
 
 #+clx
 (defun flash-window-border (window)
@@ -488,7 +488,7 @@
 (defun standard-device-exit ()
   (reset-input))
 
-(proclaim '(special *echo-area-window*))
+(declaim (special *echo-area-window*))
 
 ;;; Maybe bury/unbury hemlock window when we go to and from Lisp.
 ;;; This should do something more sophisticated when we know what that is.
@@ -776,7 +776,7 @@
 ;;; 
 
 #+clx
-(proclaim '(special *default-foreground-pixel* *default-background-pixel*))
+(declaim (special *default-foreground-pixel* *default-background-pixel*))
 
 #+clx
 (defvar *hemlock-cursor* nil "Holds cursor for Hemlock windows.")

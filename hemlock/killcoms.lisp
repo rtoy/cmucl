@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/killcoms.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/killcoms.lisp,v 1.4 2001/03/13 15:49:54 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
   "This is a list of command types that permit the current region to be active
    for the immediately following command.")
 
-(proclaim '(inline activate-region deactivate-region region-active-p))
+(declaim (inline activate-region deactivate-region region-active-p))
 
 (defun activate-region ()
   "Make the current region active."
@@ -204,7 +204,7 @@
 
 ;;;; KILL-REGION and KILL-CHARACTERS primitives.
 
-(proclaim '(special *delete-char-region*))
+(declaim (special *delete-char-region*))
 
 ;;; KILL-REGION first checks for any characters that may need to be added to
 ;;; the region.  If there are some, we possibly push a region onto *kill-ring*,

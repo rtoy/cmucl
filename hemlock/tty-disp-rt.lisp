@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.5 1998/10/04 08:28:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.6 2001/03/13 15:50:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,10 +97,10 @@
 
 (defvar *redisplay-output-buffer*
   (make-string redisplay-output-buffer-length))
-(proclaim '(simple-string *redisplay-output-buffer*))
+(declaim (simple-string *redisplay-output-buffer*))
 
 (defvar *redisplay-output-buffer-index* 0)
-(proclaim '(fixnum *redisplay-output-buffer-index*))
+(declaim (fixnum *redisplay-output-buffer-index*))
 
 ;;; WRITE-AND-MAYBE-WAIT  --  Internal
 ;;;

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/plap.lisp,v 1.9 1999/05/30 23:14:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/plap.lisp,v 1.10 2001/03/13 15:49:49 pw Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -245,7 +245,7 @@
 ;;; one or more of these to get the compiler to produce better code.  That
 ;;; is why they are split out.
 ;;; 
-(proclaim '(declaration pcl-fast-call))
+(declaim (declaration pcl-fast-call))
 
 (defmacro RUNTIME\ FUNCALL (fn &rest args)
   `(funcall (the function ,fn) ,.args))
