@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.16 2003/03/23 21:23:41 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.17 2004/05/19 22:37:40 cwang Exp $
  *
  */
 
@@ -82,7 +82,7 @@ void os_init(void)
 
   os_vm_page_size = getpagesize();
 
-#ifdef i386
+#if defined(i386) || defined(__x86_64)
   setfpucw(0x1372|4|8|16|32); /* No interrupts */
 #endif
 }
@@ -104,6 +104,28 @@ int sc_reg(struct sigcontext_struct *c, int offset)
     case 10: return c->ebp;
     case 12: return c->esi;
     case 14: return c->edi;
+    }
+  return 0;
+}
+#endif
+
+#ifdef __x86_64
+#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
+int sc_reg(struct sigcontext *c, int offset)
+#else
+int sc_reg(struct sigcontext_struct *c, int offset)
+#endif
+{
+  switch(offset)
+    {
+    case  0: return c->rax;
+    case  2: return c->rcx;
+    case  4: return c->rdx;
+    case  6: return c->rbx;
+    case  8: return c->rsp;
+    case 10: return c->rbp;
+    case 12: return c->rsi;
+    case 14: return c->rdi;
     }
   return 0;
 }
@@ -231,7 +253,11 @@ void sigsegv_handler(HANDLER_ARGS)
     return;
   }
 
+#if defined(__x86_64)
+  DPRINTF(0,(stderr,"sigsegv: rip: %p\n",context->rip));
+#else
   DPRINTF(0,(stderr,"sigsegv: eip: %p\n",context->eip));
+#endif
   interrupt_handle_now(signal, contextstruct);
 }
 #else
@@ -269,12 +295,12 @@ static void sigsegv_handler(HANDLER_ARGS)
 
 static void sigbus_handler(HANDLER_ARGS)
 {
-#ifdef i386
+#if defined(i386) || defined(__x86_64)
   GET_CONTEXT
 #endif
 
   DPRINTF(1, (stderr, "sigbus:\n")); /* there is no sigbus in linux??? */
-#ifdef i386
+#if defined(i386) || defined(__x86_64)
   interrupt_handle_now(signal, contextstruct);
 #else
   interrupt_handle_now(signal, code, context);
