@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.89 2000/08/24 14:23:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.90 2001/03/13 16:34:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,10 +119,7 @@
 (defknown makunbound (symbol) symbol)
 (defknown fmakunbound ((or symbol cons)) (or symbol cons)
   (unsafe explicit-check))
-(defknown (get-setf-method get-setf-method-multiple-value)
-  ((or list symbol) &optional lexical-environment)
-  (values list list list form form)
-  (flushable))
+
 (defknown apply (callable t &rest t) *) ; ### Last arg must be List...
 (defknown funcall (callable &rest t) *)
 
