@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.31 1998/07/24 17:22:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.32 1999/11/11 16:10:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,6 +22,18 @@
 ;;;
 
 (in-package :x86)
+
+
+
+;;; Popping the FP stack.
+;;;
+;;; The default is to use a store and pop, fstp fr0.
+;;; For the AMD Athlon, using ffreep fr0 is faster.
+;;;
+(defun fp-pop ()
+  (if (backend-featurep :athlon)
+      (inst ffreep fr0-tn)
+      (inst fstp fr0-tn)))
 
 
 (macrolet ((ea-for-xf-desc (tn slot)
@@ -101,7 +113,7 @@
 ;;; Using a Pop then load.
 (defun copy-fp-reg-to-fr0 (reg)
   (assert (not (zerop (tn-offset reg))))
-  (inst fstp fr0-tn)
+  (fp-pop)
   (inst fld (make-random-tn :kind :normal
 			    :sc (sc-or-lose 'double-reg *backend*)
 			    :offset (1- (tn-offset reg)))))
@@ -804,7 +816,7 @@
 			  (unless (zerop (tn-offset y))
 				  (copy-fp-reg-to-fr0 y)))
 			 ((single-stack descriptor-reg)
-			  (inst fstp fr0)
+			  (fp-pop)
 			  (if (sc-is y single-stack)
 			      (inst fld (ea-for-sf-stack y))
 			    (inst fld (ea-for-sf-desc y)))))
@@ -832,7 +844,7 @@
 			 (unless (zerop (tn-offset x))
 				 (copy-fp-reg-to-fr0 x)))
 			((single-stack descriptor-reg)
-			 (inst fstp fr0)
+			 (fp-pop)
 			 (if (sc-is x single-stack)
 			     (inst fld (ea-for-sf-stack x))
 			   (inst fld (ea-for-sf-desc x)))))
@@ -874,10 +886,10 @@
 	           (single-reg
 		    (copy-fp-reg-to-fr0 x))
 		   (single-stack
-		    (inst fstp fr0)
+		    (fp-pop)
 		    (inst fld (ea-for-sf-stack x)))
 		   (descriptor-reg
-		    (inst fstp fr0)
+		    (fp-pop)
 		    (inst fld (ea-for-sf-desc x))))
 		 ;; ST0 = ST0 op y
 		 (sc-case y
@@ -950,7 +962,7 @@
 			  (unless (zerop (tn-offset y))
 				  (copy-fp-reg-to-fr0 y)))
 			 ((double-stack descriptor-reg)
-			  (inst fstp fr0)
+			  (fp-pop)
 			  (if (sc-is y double-stack)
 			      (inst fldd (ea-for-df-stack y))
 			    (inst fldd (ea-for-df-desc y)))))
@@ -978,7 +990,7 @@
 			  (unless (zerop (tn-offset x))
 				  (copy-fp-reg-to-fr0 x)))
 			 ((double-stack descriptor-reg)
-			  (inst fstp fr0)
+			  (fp-pop)
 			  (if (sc-is x double-stack)
 			      (inst fldd (ea-for-df-stack x))
 			    (inst fldd (ea-for-df-desc x)))))
@@ -1020,10 +1032,10 @@
 	           (double-reg
 		    (copy-fp-reg-to-fr0 x))
 		   (double-stack
-		    (inst fstp fr0)
+		    (fp-pop)
 		    (inst fldd (ea-for-df-stack x)))
 		   (descriptor-reg
-		    (inst fstp fr0)
+		    (fp-pop)
 		    (inst fldd (ea-for-df-desc x))))
 		 ;; ST0 = ST0 op y
 		 (sc-case y
@@ -1253,7 +1265,7 @@
   (:info target not-p)
   (:policy :fast-safe)
   (:note "inline float comparison")
-  (:ignore temp)
+  (:ignore temp fr0)
   (:generator 3
     ;; Handle a few special cases
     (cond
@@ -1277,7 +1289,7 @@
 	  (unless (zerop (tn-offset x))
 		  (copy-fp-reg-to-fr0 x)))
 	 ((single-stack descriptor-reg)
-	  (inst fstp fr0)
+	  (fp-pop)
 	  (if (sc-is x single-stack)
 	      (inst fld (ea-for-sf-stack x))
 	    (inst fld (ea-for-sf-desc x)))))
@@ -1304,7 +1316,7 @@
   (:info target not-p)
   (:policy :fast-safe)
   (:note "inline float comparison")
-  (:ignore temp)
+  (:ignore temp fr0)
   (:generator 3
     ;; Handle a few special cases
     (cond
@@ -1328,7 +1340,7 @@
 	  (unless (zerop (tn-offset x))
 		  (copy-fp-reg-to-fr0 x)))
 	 ((double-stack descriptor-reg)
-	  (inst fstp fr0)
+	  (fp-pop)
 	  (if (sc-is x double-stack)
 	      (inst fldd (ea-for-df-stack x))
 	    (inst fldd (ea-for-df-desc x)))))
@@ -1391,7 +1403,7 @@
   (:info target not-p)
   (:policy :fast-safe)
   (:note "inline float comparison")
-  (:ignore temp)
+  (:ignore temp fr0)
   (:generator 3
     ;; Handle a few special cases
     (cond
@@ -1416,7 +1428,7 @@
 	  (unless (zerop (tn-offset x))
 		  (copy-fp-reg-to-fr0 x)))
 	 ((single-stack descriptor-reg)
-	  (inst fstp fr0)
+	  (fp-pop)
 	  (if (sc-is x single-stack)
 	      (inst fld (ea-for-sf-stack x))
 	    (inst fld (ea-for-sf-desc x)))))
@@ -1442,7 +1454,7 @@
   (:info target not-p)
   (:policy :fast-safe)
   (:note "inline float comparison")
-  (:ignore temp)
+  (:ignore temp fr0)
   (:generator 3
     ;; Handle a few special cases
     (cond
@@ -1467,7 +1479,7 @@
 	  (unless (zerop (tn-offset x))
 		  (copy-fp-reg-to-fr0 x)))
 	 ((double-stack descriptor-reg)
-	  (inst fstp fr0)
+	  (fp-pop)
 	  (if (sc-is x double-stack)
 	      (inst fldd (ea-for-df-stack x))
 	    (inst fldd (ea-for-df-desc x)))))
@@ -2178,16 +2190,17 @@
   (:note "inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:ignore fr0)
   (:generator 5
     (note-this-location vop :internal-error)
     (case (tn-offset x)
        (0 
 	(inst fstp fr1))
        (1
-	(inst fstp fr0))
+	(fp-pop))
        (t
-	(inst fstp fr0)
-	(inst fstp fr0)
+	(fp-pop)
+	(fp-pop)
 	(inst fldd (make-random-tn :kind :normal
 				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
@@ -2274,10 +2287,10 @@
        (0 
 	(inst fstp fr1))
        (1
-	(inst fstp fr0))
+	(fp-pop))
        (t
-	(inst fstp fr0)
-	(inst fstp fr0)
+	(fp-pop)
+	(fp-pop)
 	(inst fldd (make-random-tn :kind :normal
 				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
@@ -2336,7 +2349,7 @@
 		  (inst and ah-tn #x04)		 ; C2
 		  (inst jmp :z DONE)
 		  ;; Else x was out of range so reduce it; ST0 is unchanged.
-		  (inst fstp fr0)                ; Load 0.0
+		  (fp-pop)			; Load 0.0
 		  (inst fldz)
 		  DONE
 		  (unless (zerop (tn-offset y))
@@ -2368,10 +2381,10 @@
        (0 
 	(inst fstp fr1))
        (1
-	(inst fstp fr0))
+	(fp-pop))
        (t
-	(inst fstp fr0)
-	(inst fstp fr0)
+	(fp-pop)
+	(fp-pop)
 	(inst fldd (make-random-tn :kind :normal
 				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
@@ -2420,11 +2433,11 @@
 		(inst fmul fr1))
 	       (t
 		;; x is in a FP reg, not fr0
-		(inst fstp fr0)
+		(fp-pop)
 		(inst fldl2e)
 		(inst fmul x))))
 	((double-stack descriptor-reg)
-	 (inst fstp fr0)
+	 (fp-pop)
 	 (inst fldl2e)
 	 (if (sc-is x double-stack)
 	     (inst fmuld (ea-for-df-stack x))
@@ -2473,15 +2486,15 @@
      (inst fxam)
      (inst fnstsw)
      (inst sahf)
-     (inst jmp :nc NOINFNAN)            ; Neither Inf or NaN.
-     (inst jmp :np NOINFNAN)            ; NaN gives NaN? Continue.
-     (inst and ah-tn #x02)              ; Test sign of Inf.
-     (inst jmp :z DONE)                 ; +Inf gives +Inf.
-     (inst fstp fr0)                    ; -Inf gives 0
+     (inst jmp :nc NOINFNAN)	; Neither Inf or NaN.
+     (inst jmp :np NOINFNAN)	; NaN gives NaN? Continue.
+     (inst and ah-tn #x02)	; Test sign of Inf.
+     (inst jmp :z DONE)		; +Inf gives +Inf.
+     (fp-pop)			; -Inf gives 0
      (inst fldz)
      (inst jmp-short DONE)
      NOINFNAN
-     (inst fstp fr1)
+     (fp-pop)
      (inst fldl2e)
      (inst fmul fr1)
      ;; Now fr0=x log2(e)
@@ -2529,18 +2542,18 @@
      (inst fxam)
      (inst fnstsw)
      (inst sahf)
-     (inst jmp :nc NOINFNAN)            ; Neither Inf or NaN.
-     (inst jmp :np NOINFNAN)            ; NaN gives NaN? Continue.
-     (inst and ah-tn #x02)              ; Test sign of Inf.
-     (inst jmp :z DONE)                 ; +Inf gives +Inf.
-     (inst fstp fr0)                    ; -Inf gives -1.0
+     (inst jmp :nc NOINFNAN)	; Neither Inf or NaN.
+     (inst jmp :np NOINFNAN)	; NaN gives NaN? Continue.
+     (inst and ah-tn #x02)	; Test sign of Inf.
+     (inst jmp :z DONE)		; +Inf gives +Inf.
+     (fp-pop)			; -Inf gives -1.0
      (inst fld1)
      (inst fchs)
      (inst jmp-short DONE)
      NOINFNAN
      ;; Free two stack slots leaving the argument on top.
      (inst fstp fr2)
-     (inst fstp fr0)
+     (fp-pop)
      (inst fldl2e)
      (inst fmul fr1)	; Now fr0 = x log2(e)
      (inst fst fr1)
@@ -2586,21 +2599,21 @@
 	     (inst fxch fr1))
 	    (1
 	     ;; x is in fr1
-	     (inst fstp fr0)
+	     (fp-pop)
 	     (inst fldln2)
 	     (inst fxch fr1))
 	    (t
 	     ;; x is in a FP reg, not fr0 or fr1
-	     (inst fstp fr0)
-	     (inst fstp fr0)
+	     (fp-pop)
+	     (fp-pop)
 	     (inst fldln2)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (1- (tn-offset x))))))
 	 (inst fyl2x))
 	((double-stack descriptor-reg)
-	 (inst fstp fr0)
-	 (inst fstp fr0)
+	 (fp-pop)
+	 (fp-pop)
 	 (inst fldln2)
 	 (if (sc-is x double-stack)
 	     (inst fldd (ea-for-df-stack x))
@@ -2637,21 +2650,21 @@
 	     (inst fxch fr1))
 	    (1
 	     ;; x is in fr1
-	     (inst fstp fr0)
+	     (fp-pop)
 	     (inst fldlg2)
 	     (inst fxch fr1))
 	    (t
 	     ;; x is in a FP reg, not fr0 or fr1
-	     (inst fstp fr0)
-	     (inst fstp fr0)
+	     (fp-pop)
+	     (fp-pop)
 	     (inst fldlg2)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (1- (tn-offset x))))))
 	 (inst fyl2x))
 	((double-stack descriptor-reg)
-	 (inst fstp fr0)
-	 (inst fstp fr0)
+	 (fp-pop)
+	 (fp-pop)
 	 (inst fldlg2)
 	 (if (sc-is x double-stack)
 	     (inst fldd (ea-for-df-stack x))
@@ -2693,10 +2706,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc x)))))
       ;; x in fr0; y not in fr1
       ((and (sc-is x double-reg) (zerop (tn-offset x)))
@@ -2706,10 +2719,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc y))))
        (inst fxch fr1))
       ;; x in fr1; y not in fr1
@@ -2719,10 +2732,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc y))))
        (inst fxch fr1))
       ;; y in fr0;
@@ -2733,16 +2746,16 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc x)))))
       ;; Neither x or y are in either fr0 or fr1
       (t
        ;; Load y then x
-       (inst fstp fr0)
-       (inst fstp fr0)
+       (fp-pop)
+       (fp-pop)
        (sc-case y
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
@@ -2807,7 +2820,7 @@
 	      (inst fild y)))
 	   (inst fxch fr1))
 	  (1
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (sc-case y
 	     (signed-reg
 	      (inst mov temp y)
@@ -2816,8 +2829,8 @@
 	      (inst fild y)))
 	   (inst fxch fr1))
 	  (t
-	   (inst fstp fr0)
-	   (inst fstp fr0)
+	   (fp-pop)
+	   (fp-pop)
 	   (sc-case y
 	     (signed-reg
 	      (inst mov temp y)
@@ -2828,8 +2841,8 @@
 				     :sc (sc-or-lose 'double-reg *backend*)
 				     :offset (1- (tn-offset x)))))))
        ((double-stack descriptor-reg)
-	(inst fstp fr0)
-	(inst fstp fr0)
+	(fp-pop)
+	(fp-pop)
 	(sc-case y
           (signed-reg
 	   (inst mov temp y)
@@ -2872,10 +2885,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc x)))))
       ;; x in fr0; y not in fr1
       ((and (sc-is x double-reg) (zerop (tn-offset x)))
@@ -2885,10 +2898,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc y))))
        (inst fxch fr1))
       ;; x in fr1; y not in fr1
@@ -2898,10 +2911,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc y))))
        (inst fxch fr1))
       ;; y in fr0;
@@ -2912,16 +2925,16 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc x)))))
       ;; Neither x or y are in either fr0 or fr1
       (t
        ;; Load y then x
-       (inst fstp fr0)
-       (inst fstp fr0)
+       (fp-pop)
+       (fp-pop)
        (sc-case y
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
@@ -2964,8 +2977,8 @@
   (:ignore temp)
   (:generator 5
      ;; x is in a FP reg, not fr0, fr1.
-     (inst fstp fr0)
-     (inst fstp fr0)
+     (fp-pop)
+     (fp-pop)
      (inst fldd (make-random-tn :kind :normal
 				:sc (sc-or-lose 'double-reg *backend*)
 				:offset (- (tn-offset x) 2)))
@@ -3029,20 +3042,20 @@
 	     (inst fxch fr1))
 	    (1
 	     ;; x is in fr1
-	     (inst fstp fr0)
+	     (fp-pop)
 	     (inst fldln2)
 	     (inst fxch fr1))
 	    (t
 	     ;; x is in a FP reg, not fr0 or fr1
-	     (inst fstp fr0)
-	     (inst fstp fr0)
+	     (fp-pop)
+	     (fp-pop)
 	     (inst fldln2)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (1- (tn-offset x)))))))
 	((double-stack descriptor-reg)
-	 (inst fstp fr0)
-	 (inst fstp fr0)
+	 (fp-pop)
+	 (fp-pop)
 	 (inst fldln2)
 	 (if (sc-is x double-stack)
 	     (inst fldd (ea-for-df-stack x))
@@ -3077,17 +3090,17 @@
 	     (inst fstp fr1))
 	    (1
 	     ;; x is in fr1
-	     (inst fstp fr0))
+	     (fp-pop))
 	    (t
 	     ;; x is in a FP reg, not fr0 or fr1
-	     (inst fstp fr0)
-	     (inst fstp fr0)
+	     (fp-pop)
+	     (fp-pop)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (- (tn-offset x) 2))))))
 	((double-stack descriptor-reg)
-	 (inst fstp fr0)
-	 (inst fstp fr0)
+	 (fp-pop)
+	 (fp-pop)
 	 (if (sc-is x double-stack)
 	     (inst fldd (ea-for-df-stack x))
 	   (inst fldd (ea-for-df-desc x)))))
@@ -3122,12 +3135,12 @@
        (inst fstp fr1))
       ;; x in fr1
       ((and (sc-is x double-reg) (= 1 (tn-offset x)))
-       (inst fstp fr0))
+       (fp-pop))
       ;; x not in fr0 or fr1
       (t
        ;; Load x then 1.0
-       (inst fstp fr0)
-       (inst fstp fr0)
+       (fp-pop)
+       (fp-pop)
        (sc-case x
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
@@ -3174,10 +3187,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc y)))))
       ;; y in fr0; x not in fr1
       ((and (sc-is y double-reg) (zerop (tn-offset y)))
@@ -3187,10 +3200,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc x))))
        (inst fxch fr1))
       ;; y in fr1; x not in fr1
@@ -3200,10 +3213,10 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc x))))
        (inst fxch fr1))
       ;; x in fr0;
@@ -3214,16 +3227,16 @@
           (double-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (double-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldd (ea-for-df-desc y)))))
       ;; Neither y or x are in either fr0 or fr1
       (t
        ;; Load x then y
-       (inst fstp fr0)
-       (inst fstp fr0)
+       (fp-pop)
+       (fp-pop)
        (sc-case x
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
@@ -3314,16 +3327,17 @@
   (:note "inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:ignore fr0)
   (:generator 5
     (note-this-location vop :internal-error)
     (case (tn-offset x)
        (0 
 	(inst fstp fr1))
        (1
-	(inst fstp fr0))
+	(fp-pop))
        (t
-	(inst fstp fr0)
-	(inst fstp fr0)
+	(fp-pop)
+	(fp-pop)
 	(inst fldd (make-random-tn :kind :normal
 				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
@@ -3410,10 +3424,10 @@
        (0 
 	(inst fstp fr1))
        (1
-	(inst fstp fr0))
+	(fp-pop))
        (t
-	(inst fstp fr0)
-	(inst fstp fr0)
+	(fp-pop)
+	(fp-pop)
 	(inst fldd (make-random-tn :kind :normal
 				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
@@ -3460,7 +3474,7 @@
 		(:note "inline sin/cos function")
 		(:vop-var vop)
 		(:save-p :compute-only)
-	        (:ignore eax)
+	        (:ignore eax fr0)
 		(:generator 5
 		  (note-this-location vop :internal-error)
 		  (unless (zerop (tn-offset x))
@@ -3472,7 +3486,7 @@
 		  (inst and ah-tn #x04)		 ; C2
 		  (inst jmp :z DONE)
 		  ;; Else x was out of range so reduce it; ST0 is unchanged.
-		  (inst fstp fr0)                ; Load 0.0
+		  (fp-pop)			; Load 0.0
 		  (inst fldz)
 		  DONE
 		  (unless (zerop (tn-offset y))
@@ -3497,17 +3511,17 @@
   (:note "inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
-  (:ignore eax)
+  (:ignore eax fr0)
   (:generator 5
     (note-this-location vop :internal-error)
     (case (tn-offset x)
        (0 
 	(inst fstp fr1))
        (1
-	(inst fstp fr0))
+	(fp-pop))
        (t
-	(inst fstp fr0)
-	(inst fstp fr0)
+	(fp-pop)
+	(fp-pop)
 	(inst fldd (make-random-tn :kind :normal
 				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
@@ -3562,7 +3576,7 @@
      (inst jmp :np NOINFNAN)            ; NaN gives NaN? Continue.
      (inst and ah-tn #x02)              ; Test sign of Inf.
      (inst jmp :z DONE)                 ; +Inf gives +Inf.
-     (inst fstp fr0)                    ; -Inf gives 0
+     (fp-pop)                    ; -Inf gives 0
      (inst fldz)
      (inst jmp-short DONE)
      NOINFNAN
@@ -3603,7 +3617,7 @@
   (:note "inline expm1 function")
   (:vop-var vop)
   (:save-p :compute-only)
-  (:ignore temp)
+  (:ignore temp fr0)
   (:generator 5
      (note-this-location vop :internal-error)
      (unless (zerop (tn-offset x))
@@ -3618,14 +3632,14 @@
      (inst jmp :np NOINFNAN)            ; NaN gives NaN? Continue.
      (inst and ah-tn #x02)              ; Test sign of Inf.
      (inst jmp :z DONE)                 ; +Inf gives +Inf.
-     (inst fstp fr0)                    ; -Inf gives -1.0
+     (fp-pop)                    ; -Inf gives -1.0
      (inst fld1)
      (inst fchs)
      (inst jmp-short DONE)
      NOINFNAN
      ;; Free two stack slots leaving the argument on top.
      (inst fstp fr2)
-     (inst fstp fr0)
+     (fp-pop)
      (inst fldl2e)
      (inst fmul fr1)	; Now fr0 = x log2(e)
      (inst fst fr1)
@@ -3671,21 +3685,21 @@
 	     (inst fxch fr1))
 	    (1
 	     ;; x is in fr1
-	     (inst fstp fr0)
+	     (fp-pop)
 	     (inst fldln2)
 	     (inst fxch fr1))
 	    (t
 	     ;; x is in a FP reg, not fr0 or fr1
-	     (inst fstp fr0)
-	     (inst fstp fr0)
+	     (fp-pop)
+	     (fp-pop)
 	     (inst fldln2)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (1- (tn-offset x))))))
 	 (inst fyl2x))
 	((long-stack descriptor-reg)
-	 (inst fstp fr0)
-	 (inst fstp fr0)
+	 (fp-pop)
+	 (fp-pop)
 	 (inst fldln2)
 	 (if (sc-is x long-stack)
 	     (inst fldl (ea-for-lf-stack x))
@@ -3722,21 +3736,21 @@
 	     (inst fxch fr1))
 	    (1
 	     ;; x is in fr1
-	     (inst fstp fr0)
+	     (fp-pop)
 	     (inst fldlg2)
 	     (inst fxch fr1))
 	    (t
 	     ;; x is in a FP reg, not fr0 or fr1
-	     (inst fstp fr0)
-	     (inst fstp fr0)
+	     (fp-pop)
+	     (fp-pop)
 	     (inst fldlg2)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (1- (tn-offset x))))))
 	 (inst fyl2x))
 	((long-stack descriptor-reg)
-	 (inst fstp fr0)
-	 (inst fstp fr0)
+	 (fp-pop)
+	 (fp-pop)
 	 (inst fldlg2)
 	 (if (sc-is x long-stack)
 	     (inst fldl (ea-for-lf-stack x))
@@ -3778,10 +3792,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc x)))))
       ;; x in fr0; y not in fr1
       ((and (sc-is x long-reg) (zerop (tn-offset x)))
@@ -3791,10 +3805,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc y))))
        (inst fxch fr1))
       ;; x in fr1; y not in fr1
@@ -3804,10 +3818,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc y))))
        (inst fxch fr1))
       ;; y in fr0;
@@ -3818,16 +3832,16 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc x)))))
       ;; Neither x or y are in either fr0 or fr1
       (t
        ;; Load y then x
-       (inst fstp fr0)
-       (inst fstp fr0)
+       (fp-pop)
+       (fp-pop)
        (sc-case y
           (long-reg
 	   (inst fldd (make-random-tn :kind :normal
@@ -3877,6 +3891,7 @@
   (:result-types long-float)
   (:policy :fast-safe)
   (:note "inline scalbn function")
+  (:ignore fr0)
   (:generator 5
      ;; Setup x in fr0 and y in fr1
      (sc-case x
@@ -3892,7 +3907,7 @@
 	      (inst fild y)))
 	   (inst fxch fr1))
 	  (1
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (sc-case y
 	     (signed-reg
 	      (inst mov temp y)
@@ -3901,8 +3916,8 @@
 	      (inst fild y)))
 	   (inst fxch fr1))
 	  (t
-	   (inst fstp fr0)
-	   (inst fstp fr0)
+	   (fp-pop)
+	   (fp-pop)
 	   (sc-case y
 	     (signed-reg
 	      (inst mov temp y)
@@ -3913,8 +3928,8 @@
 				     :sc (sc-or-lose 'double-reg *backend*)
 				     :offset (1- (tn-offset x)))))))
        ((long-stack descriptor-reg)
-	(inst fstp fr0)
-	(inst fstp fr0)
+	(fp-pop)
+	(fp-pop)
 	(sc-case y
           (signed-reg
 	   (inst mov temp y)
@@ -3943,6 +3958,7 @@
   (:note "inline scalb function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:ignore fr0)
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr0 and y in fr1
@@ -3957,10 +3973,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc x)))))
       ;; x in fr0; y not in fr1
       ((and (sc-is x long-reg) (zerop (tn-offset x)))
@@ -3970,10 +3986,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc y))))
        (inst fxch fr1))
       ;; x in fr1; y not in fr1
@@ -3983,10 +3999,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc y))))
        (inst fxch fr1))
       ;; y in fr0;
@@ -3997,16 +4013,16 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc x)))))
       ;; Neither x or y are in either fr0 or fr1
       (t
        ;; Load y then x
-       (inst fstp fr0)
-       (inst fstp fr0)
+       (fp-pop)
+       (fp-pop)
        (sc-case y
           (long-reg
 	   (inst fldd (make-random-tn :kind :normal
@@ -4049,8 +4065,8 @@
   (:ignore temp)
   (:generator 5
      ;; x is in a FP reg, not fr0, fr1.
-     (inst fstp fr0)
-     (inst fstp fr0)
+     (fp-pop)
+     (fp-pop)
      (inst fldd (make-random-tn :kind :normal
 				:sc (sc-or-lose 'double-reg *backend*)
 				:offset (- (tn-offset x) 2)))
@@ -4111,20 +4127,20 @@
 	     (inst fxch fr1))
 	    (1
 	     ;; x is in fr1
-	     (inst fstp fr0)
+	     (fp-pop)
 	     (inst fldln2)
 	     (inst fxch fr1))
 	    (t
 	     ;; x is in a FP reg, not fr0 or fr1
-	     (inst fstp fr0)
-	     (inst fstp fr0)
+	     (fp-pop)
+	     (fp-pop)
 	     (inst fldln2)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (1- (tn-offset x)))))))
 	((long-stack descriptor-reg)
-	 (inst fstp fr0)
-	 (inst fstp fr0)
+	 (fp-pop)
+	 (fp-pop)
 	 (inst fldln2)
 	 (if (sc-is x long-stack)
 	     (inst fldl (ea-for-lf-stack x))
@@ -4149,6 +4165,7 @@
   (:note "inline logb function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:ignore fr0)
   (:generator 5
      (note-this-location vop :internal-error)
      (sc-case x
@@ -4159,17 +4176,17 @@
 	     (inst fstp fr1))
 	    (1
 	     ;; x is in fr1
-	     (inst fstp fr0))
+	     (fp-pop))
 	    (t
 	     ;; x is in a FP reg, not fr0 or fr1
-	     (inst fstp fr0)
-	     (inst fstp fr0)
+	     (fp-pop)
+	     (fp-pop)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (- (tn-offset x) 2))))))
 	((long-stack descriptor-reg)
-	 (inst fstp fr0)
-	 (inst fstp fr0)
+	 (fp-pop)
+	 (fp-pop)
 	 (if (sc-is x long-stack)
 	     (inst fldl (ea-for-lf-stack x))
 	   (inst fldl (ea-for-lf-desc x)))))
@@ -4204,12 +4221,12 @@
        (inst fstp fr1))
       ;; x in fr1
       ((and (sc-is x long-reg) (= 1 (tn-offset x)))
-       (inst fstp fr0))
+       (fp-pop))
       ;; x not in fr0 or fr1
       (t
        ;; Load x then 1.0
-       (inst fstp fr0)
-       (inst fstp fr0)
+       (fp-pop)
+       (fp-pop)
        (sc-case x
           (long-reg
 	   (inst fldd (make-random-tn :kind :normal
@@ -4256,10 +4273,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc y)))))
       ;; y in fr0; x not in fr1
       ((and (sc-is y long-reg) (zerop (tn-offset y)))
@@ -4269,10 +4286,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc x))))
        (inst fxch fr1))
       ;; y in fr1; x not in fr1
@@ -4282,10 +4299,10 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 x))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack x)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc x))))
        (inst fxch fr1))
       ;; x in fr0;
@@ -4296,16 +4313,16 @@
           (long-reg
 	   (copy-fp-reg-to-fr0 y))
 	  (long-stack
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-stack y)))
 	  (descriptor-reg
-	   (inst fstp fr0)
+	   (fp-pop)
 	   (inst fldl (ea-for-lf-desc y)))))
       ;; Neither y or x are in either fr0 or fr1
       (t
        ;; Load x then y
-       (inst fstp fr0)
-       (inst fstp fr0)
+       (fp-pop)
+       (fp-pop)
        (sc-case x
           (long-reg
 	   (inst fldd (make-random-tn :kind :normal

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.10 1999/09/15 15:15:34 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.11 1999/11/11 16:11:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -225,28 +225,17 @@
 	  (t
 	   ;; Setup the NPX for C; all the FP registers need to be
 	   ;; empty; pop them all.
-	   (inst fstp fr0-tn)
-	   (inst fstp fr0-tn)
-	   (inst fstp fr0-tn)
-	   (inst fstp fr0-tn)
-	   (inst fstp fr0-tn)
-	   (inst fstp fr0-tn)
-	   (inst fstp fr0-tn)
-	   (inst fstp fr0-tn)
-	   
+	   (dotimes (i 8)
+	     (fp-pop))
+
 	   (inst call function)
 	   ;; To give the debugger a clue. XX not really internal-error?
 	   (note-this-location vop :internal-error)
-	   
-	   ;; Restore the NPX for lisp.
-	   (inst fldz) ; insure no regs are empty
-	   (inst fldz)
-	   (inst fldz)
-	   (inst fldz)
-	   (inst fldz)
-	   (inst fldz)
-	   (inst fldz)
-	   
+
+	   ;; Restore the NPX for lisp; insure no regs are empty.
+	   (dotimes (i 7)
+	     (inst fldz))
+
 	   (if (and results
 		    (location= (tn-ref-tn results) fr0-tn))
 	       ;; The return result is in fr0.
