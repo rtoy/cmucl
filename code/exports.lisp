@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.53 1990/11/12 14:00:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.54 1990/11/13 23:22:48 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -287,6 +287,12 @@
 	  simple-array-single-float-p simple-array-double-float-p
 	  array-header-p signed-byte-32-p unsigned-byte-32-p
 
+	  %set-sap-ref-sap %set-sap-ref-32 %set-sap-ref-16 %set-sap-ref-8
+	  %set-sap-ref-single %set-sap-ref-double
+	  make-single-float make-double-float single-float-bits
+	  double-float-high-bits double-float-low-bits
+	  %raw-bits %set-raw-bits %sp-set-definition
+
 	  ))
 
 
@@ -493,9 +499,7 @@
 	  single-float-normal-exponent-max single-float-normal-exponent-min
 	  double-float-normal-exponent-max double-float-normal-exponent-min
 	  single-float-hidden-bit double-float-hidden-bit
-	  float-sign-shift make-single-float make-double-float
-	  single-float-bits double-float-low-bits double-float-high-bits
-	  single-float-digits double-float-digits
+	  float-sign-shift single-float-digits double-float-digits
 	  register-save-penalty symbol-raw-function-addr-slot
 	  symbol-setf-function-slot structure-header-type
 	  alloc-g-vector allocate-vector alloc-string sxhash-simple-string
@@ -515,8 +519,6 @@
 	  %charset
 	  %primitive
 	  %put
-	  %raw-bits
-	  %set-raw-bits
 	  %rplaca
 	  %rplacd
 	  %sbitset
@@ -525,12 +527,6 @@
 	  %set-fdefinition
 	  %set-fill-pointer
 	  %set-row-major-aref
-	  %set-sap-ref-sap
-	  %set-sap-ref-32
-	  %set-sap-ref-16
-	  %set-sap-ref-8
-	  %set-sap-ref-single
-	  %set-sap-ref-double
 	  %setelt
 	  %setnth
 	  %sp-set-plist
@@ -653,8 +649,6 @@
 	  %charset
 	  %primitive
 	  %put
-	  %raw-bits
-	  %set-raw-bits
 	  %rplaca
 	  %rplacd
 	  %sbitset
@@ -663,16 +657,9 @@
 	  %set-fdefinition
 	  %set-fill-pointer
 	  %set-row-major-aref
-	  %set-sap-ref-sap
-	  %set-sap-ref-32
-	  %set-sap-ref-16
-	  %set-sap-ref-8
-	  %set-sap-ref-single
-	  %set-sap-ref-double
 	  %setelt
 	  %setnth
 	  %sp-set-plist
-	  %sp-set-definition
 	  %standard-char-p
 	  %string-char-p
 	  %svset
