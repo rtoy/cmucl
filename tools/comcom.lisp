@@ -101,8 +101,8 @@
     (:optimize '(optimize (safety 0) (debug-info 1)))
 
 (when (string= (old-c:backend-name old-c:*backend*) "PMAX")
-  (comf "target:compiler/mips/mips-insts")
-  (comf "target:compiler/mips/mips-macs" :load *load-stuff*)
+  (comf "target:compiler/mips/insts")
+  (comf "target:compiler/mips/macros" :load *load-stuff*)
   (comf "target:compiler/mips/vm")
   (comf "target:compiler/generic/primtype")
   (comf "target:assembly/mips/support" :load *load-stuff*)
