@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.16 2000/11/04 17:10:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.17 2001/03/30 11:01:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -862,15 +862,21 @@
 (defmacro sxhash-string (sequence)
   (let ((data (gensym))
 	(start (gensym))
-	(end (gensym)))
-    `(with-array-data ((,data (the (values string &rest t) ,sequence))
-		       (,start)
-		       (,end))
-       (if (zerop ,start)
-	   (%sxhash-simple-substring ,data ,end)
-	   (sxhash-simple-string (coerce (the (values string &rest t)
-					      ,sequence)
-					 'simple-string))))))
+	(end (gensym))
+	(fill-end (gensym)))
+    (once-only ((n-sequence sequence))
+      `(let ((,fill-end (if (array-has-fill-pointer-p ,n-sequence)
+			    (fill-pointer ,n-sequence)
+			    nil)))
+	 (with-array-data ((,data (the (values string &rest t) ,n-sequence))
+			   (,start)
+			   (,end ,fill-end))
+	   (if (zerop ,start)
+	       (%sxhash-simple-substring ,data ,end)
+	       (sxhash-simple-string (coerce (the (values string &rest t)
+					       ,n-sequence)
+					     'simple-string))))))))
+
 
 (defmacro sxhash-list (sequence depth &key (equalp nil))
   `(if (= ,depth sxhash-max-depth)
