@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.58 1992/09/07 15:59:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.59 1992/09/19 16:03:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1101,9 +1101,9 @@
 ;;; source, and emit a note if so.
 ;;;
 ;;;    If the block was in a lambda is now deleted, then we ignore the whole
-;;; block, since this case is picked off in DELETE-LAMBDA.  We also ignore the
-;;; deletion of CRETURN nodes, since it is somewhat reasonable for a function
-;;; to not return, and there is a different note for that case anyway.
+;;; block, since this case is picked off in DELETE-LAMBDA.  We also ignore
+;;; the deletion of CRETURN nodes, since it is somewhat reasonable for a
+;;; function to not return, and there is a different note for that case anyway.
 ;;;
 ;;;    If the actual source is an atom, then we use a bunch of heuristics to
 ;;; guess whether this reference really appeared in the original source:
@@ -1247,7 +1247,7 @@
   (dolist (fun (component-lambdas component))
     (setf (functional-kind fun) nil)
     (setf (leaf-refs fun) nil)
-    (delete-lambda fun))
+    (delete-functional fun))
   (do-blocks (block component)
     (delete-block block))
   (undefined-value))
