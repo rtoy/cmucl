@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.47 2003/05/26 20:20:31 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.48 2003/06/14 10:58:10 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2459,14 +2459,14 @@
        ((or (null main) (null sub) (= (the fixnum end1) jndex))
 	t)
      (declare (fixnum jndex))
-     (compare-elements (car main) (car sub))))
+     (compare-elements (car sub) (car main))))
 
 (defmacro search-compare-list-vector (main sub)
   `(do ((main ,main (cdr main))
 	(index start1 (1+ index)))
        ((or (null main) (= index (the fixnum end1))) t)
      (declare (fixnum index))
-     (compare-elements (car main) (aref ,sub index))))
+     (compare-elements (aref ,sub index) (car main))))
 
 (defmacro search-compare-vector-list (main sub index)
   `(do ((sub (nthcdr start1 ,sub) (cdr sub))
@@ -2474,14 +2474,14 @@
 	(index ,index (1+ index)))
        ((or (= (the fixnum end1) jndex) (null sub)) t)
      (declare (fixnum jndex index))
-     (compare-elements (aref ,main index) (car sub))))
+     (compare-elements (car sub) (aref ,main index))))
 
 (defmacro search-compare-vector-vector (main sub index)
   `(do ((index ,index (1+ index))
 	(sub-index start1 (1+ sub-index)))
        ((= sub-index (the fixnum end1)) t)
      (declare (fixnum sub-index index))
-     (compare-elements (aref ,main index) (aref ,sub sub-index))))
+     (compare-elements (aref ,sub sub-index) (aref ,main index))))
 
 (defmacro search-compare (main-type main sub index)
   (if (eq main-type 'list)
