@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.79 1992/05/18 18:15:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.80 1992/05/18 19:18:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,13 +367,12 @@
              "DEFINE-RANDOM-RESOURCES" "DEFINE-REGISTER-FILE"
              "DEFINE-RESOURCES" "DELAYED-BRANCH" "DELAYED-LOAD" "DUMP-SEGMENT"
              "EMIT-CODE-VECTOR" "EMIT-LABEL" "EXPAND-PSEUDO-INSTRUCTIONS"
-             "FINALIZE-SEGMENT" "FIXUP" "FIXUP-FLAVOR" "FIXUP-NAME"
-             "FIXUP-OFFSET" "FIXUP-P" "GEN-LABEL" "INSERT-SEGMENT" "INST"
+             "FINALIZE-SEGMENT" "GEN-LABEL" "INSERT-SEGMENT" "INST"
              "INSTRUCTION-ARGUMENT-ONE" "INSTRUCTION-ARGUMENT-THREE"
              "INSTRUCTION-ARGUMENT-TWO" "INSTRUCTION-ARGUMENT-ZERO"
              "INSTRUCTION-CONSTANT-ONE" "INSTRUCTION-CONSTANT-TWO"
              "INSTRUCTION-CONSTANT-ZERO" "INSTRUCTION-RESULT-ZERO" "LABEL"
-             "LABEL-ID" "LABEL-POSITION" "MAKE-FIXUP" "MAKE-SEGMENT" "NOP"
+             "LABEL-POSITION" "MAKE-FIXUP" "MAKE-SEGMENT" "NOP"
              "NUKE-SEGMENT" "OPTIMIZE-SEGMENT" "RELATIVE-BRANCH"
              "SEGMENT-CHECK-REGISTERS" "UNCONDITIONAL-BRANCH"))
 (dolist (name '("CHAR" "FLOAT")) (intern name "LISP"))
@@ -1291,7 +1290,9 @@
              "UNKNOWN-KEYWORD-ARGUMENT-ERROR" "UNSAFE" "UNWIND" "UWP-ENTRY"
              "VALUE-CELL-REF" "VALUE-CELL-SET" "VALUES-LIST"
              "VERIFY-ARGUMENT-COUNT" "WRITE-PACKED-BIT-VECTOR"
-             "WRITE-VAR-INTEGER" "WRITE-VAR-STRING" "XEP-ALLOCATE-FRAME"))
+             "WRITE-VAR-INTEGER" "WRITE-VAR-STRING" "XEP-ALLOCATE-FRAME"
+	     "LABEL-ID" "FIXUP" "FIXUP-FLAVOR" "FIXUP-NAME" "FIXUP-OFFSET"
+	     "FIXUP-P"))
 (defpackage "DIRED"
             (:export "*CLOBBER-DEFAULT*" "*ERROR-FUNCTION*"
              "*RECURSIVE-DEFAULT*" "*REPORT-FUNCTION*" "*UPDATE-DEFAULT*"
