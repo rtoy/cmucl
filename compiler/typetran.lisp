@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.6 1990/09/24 18:10:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.7 1990/10/03 12:53:00 wlott Exp $
 ;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
@@ -124,7 +124,6 @@
 ; No atom.  Use (not cons) deftype.
 (define-type-predicate bit-vector-p bit-vector)
 (define-type-predicate characterp character)
-(define-type-predicate commonp common)
 (define-type-predicate compiled-function-p compiled-function)
 (define-type-predicate complexp complex)
 (define-type-predicate consp cons)
