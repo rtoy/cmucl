@@ -61,24 +61,27 @@
 (proclaim '(inline ir2-block-environment))
 (defun ir2-block-environment (2block)
   (declare (type ir2-block 2block))
-  (lambda-environment (block-lambda (ir2-block-block 2block))))
+  (block-environment (ir2-block-block 2block)))
 
 
 ;;; COMPUTE-LIVE-VARS  --  Internal
 ;;;
 ;;;    Given a local conflicts vector and an IR2 block to represent the set of
 ;;; live TNs, and the Var-Locs hashtable representing the variables dumped,
-;;; compute a bit-vector representing the set of live variables.
+;;; compute a bit-vector representing the set of live variables.  If the TN is
+;;; environment-live, we only mark it as live when it is in scope at Node.
 ;;;
-(defun compute-live-vars (live block var-locs)
+(defun compute-live-vars (live node block var-locs)
   (declare (type ir2-block block) (type local-tn-bit-vector live)
-	   (type hash-table var-locs))
+	   (type hash-table var-locs) (type node node))
   (let ((res (make-array (logandc2 (+ (hash-table-count var-locs) 7) 7)
 			 :element-type 'bit
 			 :initial-element 0)))
     (do-live-tns (tn live block)
       (let ((leaf (tn-leaf tn)))
-	(when (lambda-var-p leaf)
+	(when (and (lambda-var-p leaf)
+		   (or (not (eq (tn-kind tn) :environment))
+		       (rassoc leaf (lexenv-variables (node-lexenv node)))))
 	  (let ((num (gethash leaf var-locs)))
 	    (when num
 	      (setf (sbit res num) 1))))))
@@ -109,12 +112,13 @@
   (let ((loc (label-location label)))
     (write-var-integer (- loc *previous-location*) *byte-buffer*)
     (setq *previous-location* loc))
+
+  (let ((path (node-source-path node)))
+    (unless tlf-num
+      (write-var-integer (source-path-tlf-number path) *byte-buffer*))
+    (write-var-integer (source-path-form-number path) *byte-buffer*))
   
-  (unless tlf-num
-    (write-var-integer (node-tlf-number node) *byte-buffer*))
-  (write-var-integer (first (node-source-path node)) *byte-buffer*)
-  
-  (write-packed-bit-vector (compute-live-vars live block var-locs)
+  (write-packed-bit-vector (compute-live-vars live node block var-locs)
 			   *byte-buffer*)
   
   (undefined-value))
@@ -146,19 +150,24 @@
 ;;;
 (defun find-tlf-and-block-numbers (fun)
   (declare (type clambda fun))
-  (let ((res (node-tlf-number (lambda-bind fun)))
+  (let ((res (source-path-tlf-number (node-source-path (lambda-bind fun))))
 	(num 0))
     (do-environment-ir2-blocks (2block (lambda-environment fun))
       (let ((block (ir2-block-block 2block)))
 	(when (eq (block-info block) 2block)
 	  (setf (block-flag block) num)
 	  (incf num)
-	  (unless (eql (node-tlf-number (continuation-next (block-start block)))
+	  (unless (eql (source-path-tlf-number
+			(node-source-path
+			 (continuation-next
+			  (block-start block))))
 		       res)
 	    (setq res nil)))
 	
 	(dolist (loc (ir2-block-locations 2block))
-	  (unless (eql (node-tlf-number (vop-node (location-info-vop loc)))
+	  (unless (eql (source-path-tlf-number
+			(node-source-path
+			 (vop-node (location-info-vop loc))))
 		       res)
 	    (setq res nil)))))
     res))
@@ -194,8 +203,7 @@
 	 (valid-succ
 	  (if (and succ
 		   (or (eq (car succ) tail)
-		       (not (eq (lambda-environment (block-lambda (car succ)))
-				env))))
+		       (not (eq (block-environment (car succ)) env))))
 	      ()
 	      succ)))
     (vector-push-extend
@@ -277,7 +285,7 @@
 		       (setf (debug-source-from res) name)
 		       (when (eq name :lisp)
 			 (setf (debug-source-name res)
-			       (cadr (aref (file-info-forms x) 0))))))
+			       (aref (file-info-forms x) 0)))))
 		res))
 	  (source-info-files info)))
 
@@ -306,7 +314,7 @@
 	(coerce seq 'simple-vector))))
 
 
-;;;; Locations:
+;;;; Variables:
 
 ;;; TN-SC-OFFSET  --  Internal
 ;;;
@@ -324,8 +332,9 @@
 ;;; makes Var's name unique in the function.  Buffer is the vector we stick the
 ;;; result in.
 ;;;
-(defun dump-1-variable (var tn id buffer)
-  (declare (type lambda-var var) (type tn tn) (type unsigned-byte id))
+(defun dump-1-variable (fun var tn id buffer)
+  (declare (type lambda-var var) (type tn tn) (type unsigned-byte id)
+	   (type clambda fun))
   (let* ((name (leaf-name var))
 	 (package (symbol-package name))
 	 (package-p (and package (not (eq package *package*))))
@@ -335,7 +344,8 @@
       (setq flags (logior flags compiled-debug-variable-uninterned)))
     (when package-p
       (setq flags (logior flags compiled-debug-variable-packaged)))
-    (when (eq (tn-kind tn) :environment)
+    (when (and (eq (tn-kind tn) :environment)
+	       (eq (lambda-var-home var) fun))
       (setq flags (logior flags compiled-debug-variable-environment-live)))
     (when save-tn
       (setq flags (logior flags compiled-debug-variable-save-loc-p)))
@@ -397,7 +407,7 @@
 		 (incf id))
 		(t
 		 (setq id 0  prev-name name)))
-	  (dump-1-variable var (cdr x) id *byte-buffer*)
+	  (dump-1-variable fun var (cdr x) id *byte-buffer*)
 	  (setf (gethash var var-locs) i))
 	(incf i)))
 
