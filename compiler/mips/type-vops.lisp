@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.8 1990/03/23 21:43:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.9 1990/03/28 23:21:28 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -17,12 +17,6 @@
 ;;; Converted for the MIPS R2000 by Christopher Hoover.
 ;;;
 (in-package "C")
-
-;;; ### These belong in compiler/fndb.lisp
-;;; 
-(defknown realp (t) boolean (movable foldable flushable))
-(defknown system-area-pointer-p (t) boolean (movable foldable flushable))
-(defknown simple-array-p (t) boolean (movable foldable flushable))
 
 
 ;;;; Simple type checking and testing:
