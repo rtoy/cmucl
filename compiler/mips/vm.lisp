@@ -26,7 +26,7 @@
 ;;;
 ;;; Objects that can be stored in any register (immediate objects)
 (define-storage-class any-reg 0 registers
-  :locations (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23))
+  :locations (2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23))
 
 ;;;
 ;;; Objects that must be seen by GC (pointer objects)
@@ -36,17 +36,17 @@
 ;;;
 ;;; Objects that must not be seen by GC (unboxed objects)
 (define-storage-class non-descriptor-reg 2 registers
-  :locations (1 2 3 4 5 6 7))
+  :locations (2 3 4 5 6 7))
 
 ;;;
 ;;; Unboxed string-chars
 (define-storage-class string-char-reg 3 registers
-  :locations (1 2 3 4 5 6 7))
+  :locations (2 3 4 5 6 7))
 
 ;;;
 ;;; Unboxed SAP's (arbitrary pointers into address space)
 (define-storage-class sap-reg 4 registers
-  :locations (1 2 3 4 5 6 7))
+  :locations (2 3 4 5 6 7))
 
 ;;;
 ;;; Stack for descriptor objects (scanned by GC)
@@ -196,6 +196,8 @@
 (def-primitive-type simple-array-single-float (descriptor-reg control-stack))
 (def-primitive-type simple-array-double-float (descriptor-reg control-stack))
 
+(def-primitive-type random (non-descriptor-reg))
+
 ;;;
 #|
 (def-primitive complex-string (descriptor-reg control-stack))
@@ -310,6 +312,13 @@
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
 		  :offset 0))
+
+;;; 
+;;; Lisp Interior Pointer
+(defparameter lip-tn
+  (make-random-tn :kind :normal
+		  :sc (sc-or-lose 'any-reg)
+		  :offset 1))
 
 ;;; 
 ;;; Binding stack pointer
@@ -449,7 +458,7 @@
 
 ;;; The number of arguments/return values passed in registers.
 ;;;
-(defconstant register-arg-count #.(length register-arg-offsets))
+(defconstant register-arg-count 6)
 
 ); Eval-When (Compile Load Eval)
 
