@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.111 2003/04/23 20:05:05 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.112 2003/04/26 19:34:52 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -605,7 +605,7 @@
 (defknown copy-alist (list) list (flushable))
 (defknown copy-tree (t) t (flushable))
 (defknown revappend (list t) t (flushable))
-(defknown nconc (&rest list) list ())
+(defknown nconc (&rest t) t ())
 (defknown nreconc (list t) list ())
 (defknown butlast (list &optional index) list (flushable))
 (defknown nbutlast (list &optional index) list ())
