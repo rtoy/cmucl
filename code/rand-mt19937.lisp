@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.7 1998/12/19 16:10:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.8 1999/01/20 12:01:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,7 +142,8 @@
 ;;;
 #-x86
 (defun random-chunk (state)
-  (declare (type random-state state))
+  (declare (type random-state state)
+	   (optimize (speed 3) (safety 0)))
   (let* ((state (random-state-state state))
 	 (k (aref state 2)))
     (declare (type (mod 628) k))
