@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.26 1993/02/11 14:05:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.27 1993/03/14 14:05:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1142,8 +1142,11 @@
 	       (elen (if e (max (length estr) e) (length estr)))
 	       (fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
 	       (fmin (if (minusp k) (- 1 k) nil))
-	       (spaceleft (if w (- w 2 elen) nil)))
-	  (when (or atsign (minusp number)) (decf spaceleft))
+	       (spaceleft (if w
+			      (- w 2 elen
+				 (if (or atsign (minusp number))
+				     1 0))
+			      nil)))
 	  (if (and w ovf e (> elen e)) ;exponent overflow
 	      (dotimes (i w) (write-char ovf stream))
 	      (multiple-value-bind
