@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.41 1993/10/25 14:26:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.42 1993/11/23 14:10:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -534,7 +534,7 @@
     ;; Default any slots with non-constant defaults now.
     (dolist (hslot (condition-class-hairy-slots class))
       (when (dolist (initarg (condition-slot-initargs hslot) t)
-	      (unless (eq (getf initarg args *empty-slot*) *empty-slot*)
+	      (unless (eq (getf args initarg *empty-slot*) *empty-slot*)
 		(return nil)))
 	(setf (getf (condition-assigned-slots res) (condition-slot-name hslot))
 	      (find-slot-default class hslot))))
