@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.6 2003/07/25 17:57:01 gerd Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.7 2003/07/28 13:31:46 gerd Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -278,13 +278,24 @@ print_entry_name (lispobj name)
   if (TypeOf (*object) == type_SymbolHeader)
     {
       struct symbol *symbol = (struct symbol *) object;
+      struct vector *string;
+
+      if (symbol->package != NIL)
+	{
+	  struct instance *pkg = (struct instance *) PTR (symbol->package);
+	  lispobj pkg_name = pkg->slots[2];
+	  string = (struct vector *) PTR (pkg_name);
+	  printf ("%s::", (char *) string->data);
+	}
+      
       object = (lispobj *) PTR (symbol->name);
+      string = (struct vector *) object;
+      printf ("%s", (char *) string->data);
     }
-  
-  if (TypeOf (*object) == type_SimpleString)
+  else if (TypeOf (*object) == type_SimpleString)
     {
       struct vector *string = (struct vector *) object;
-      printf ("%s", (char *) string->data);
+      printf ("\"%s\"", (char *) string->data);
     }
   else
     printf ("<??? type %d>", TypeOf (*object));
