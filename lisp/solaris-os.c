@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.10 2003/10/06 17:33:50 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.11 2004/01/09 04:39:06 toy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -484,6 +484,7 @@ void make_holes(void)
     }
   os_protect(hole, HOLE_SIZE, 0);
 
+#ifndef GENCGC
   hole = dynamic_space_size + (os_vm_address_t) dynamic_1_space;
   if (os_validate(hole, HOLE_SIZE) == NULL)
     {
@@ -494,6 +495,7 @@ void make_holes(void)
       exit(1);
     }
   os_protect(hole, HOLE_SIZE, 0);
+#endif
 }
 
 void *os_dlsym(const char *sym_name, lispobj lib_list)
