@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.24 1991/03/14 22:00:04 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.25 1991/04/27 22:40:48 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -17,7 +17,7 @@
 #include "interrupt.h"
 #include "validate.h"
 
-#define crap_out(msg) do { write(2, msg, sizeof(msg)); abort(); } while (0)
+#define crap_out(msg) do { write(2, msg, sizeof(msg)); exit(1); } while (0)
 
 #define FIXNUM_VALUE(lispobj) (((int)lispobj)>>2)
 
@@ -143,6 +143,17 @@ static void skip_instruction(context)
 #ifdef sparc
     context->sc_pc = context->sc_npc;
     context->sc_npc += 4;
+#endif
+#ifdef ibmrt
+    unsigned long pc = context->sc_iar;
+    unsigned long prev_inst = ((unsigned long *)pc)[-1];
+
+    if ((prev_inst >> 24) == 0x89) {
+	short offset = prev_inst & 0xffff;
+	context->sc_pc = pc - 4 + offset;
+    }
+    else
+	context->sc_pc = pc + 4;
 #endif
 }
 
@@ -489,6 +500,42 @@ static sigemt_handler(signal, code, context)
 #endif
 
 /****************************************************************\
+* RT Specific Signal Handlers                                    *
+\****************************************************************/
+
+#ifdef ibmrt
+static sigtrap_handler(signal, code, context)
+     int signal, code;
+     struct sigcontext *context;
+{
+    switch ((*(unsigned long *)context->sc_iar) & 0xffff) {
+      case trap_PendingInterrupt:
+	handle_pending_interrupt(context);
+	break;
+
+      case trap_Halt:
+	crap_out("%primitive halt called; the party is over.\n");
+
+      case trap_Error:
+      case trap_Cerror:
+	internal_error(signal, code, context, code==trap_Cerror);
+	break;
+
+      case trap_Breakpoint:
+	sigsetmask(context->sc_mask);
+	fake_foreign_function_call(context);
+	handle_breakpoint(signal, code, context);
+	undo_fake_foreign_function_call(context);
+	break;
+
+      default:
+	handle_now(signal, code, context);
+	break;
+    }
+}
+#endif
+
+/****************************************************************\
 * Stuff to detect and handle hitting the gc trigger.             *
 \****************************************************************/
 
@@ -611,21 +658,19 @@ int (*handler)();
         sv.sv_handler = sigtrap_handler;
     else if (signal == SIGFPE)
         sv.sv_handler = sigfpe_handler;
-    else if (signal == SIGBUS || signal == SIGSEGV)
-        sv.sv_handler = sigbus_handler;
 #endif
 #ifdef sparc
     if (signal == SIGILL)
 	sv.sv_handler = sigill_handler;
     else if (signal == SIGEMT)
 	sv.sv_handler = sigemt_handler;
-    else if (signal == SIGBUS)
-        sv.sv_handler = sigbus_handler;
 #endif
 #ifdef ibmrt
-    if (0)
-	;
+    if (signal == SIGTRAP)
+	sv.sv_handler = sigtrap_handler;
 #endif
+    else if (signal == SIGBUS || signal == SIGSEGV)
+        sv.sv_handler = sigbus_handler;
     else if (handler == SIG_DFL || handler == SIG_IGN)
         sv.sv_handler = handler;
     else if (sigmask(signal)&BLOCKABLE)
