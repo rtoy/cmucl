@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.23 1991/11/09 13:20:14 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.24 1991/12/20 00:03:13 ram Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -211,7 +211,8 @@
 	    (setf pathname new-name))))))
   (cond
    ((and (not always-overwrite-p)
-	 (probe-file pathname) (ext:file-writable pathname))
+	 (let ((pn (probe-file pathname)))
+	   (and pn (ext:file-writable pn))))
     ;; File exists and is writable so check and see if the user really
     ;; wants to check it out.
     (command-case (:prompt
@@ -453,7 +454,7 @@
     (if (probe-file rcs-file)
 	;; This is an RCS file
 	(let ((probe-file (probe-file pathname)))
-	  (cond ((and probe-file (file-writable pathname))
+	  (cond ((and probe-file (file-writable probe-file))
 		 :locked)
 		((or (not probe-file)
 		     (< (file-write-date pathname)
