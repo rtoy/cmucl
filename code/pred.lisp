@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.17 1991/03/19 18:51:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.18 1991/07/25 15:44:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.17 1991/03/19 18:51:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.18 1991/07/25 15:44:24 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -53,6 +53,7 @@
       bignump
       bit-vector-p
       characterp
+      code-component-p
       consp
       compiled-function-p
       complexp
@@ -63,12 +64,14 @@
       integerp
       listp
       long-float-p
+      lra-p
       not
       null
       numberp
       rationalp
       ratiop
       realp
+      scavenger-hook-p
       short-float-p
       simple-array-p
       simple-bit-vector-p
@@ -151,6 +154,9 @@
     (array (type-specifier (ctype-of object)))
     (system-area-pointer 'system-area-pointer)
     (weak-pointer 'weak-pointer)
+    (code-component 'code-component)
+    (lra 'lra)
+    (scavenger-hook 'scavenger-hook)
     (t
      (warn "Can't figure out the type of ~S" object)
      t)))
@@ -211,6 +217,9 @@
 		 (symbol-package :foo))))
        (system-area-pointer (system-area-pointer-p object))
        (weak-pointer (weak-pointer-p object))
+       (code-component (code-component-p object))
+       (lra (lra-p object))
+       (scavenger-hook (scavenger-hook-p object))
        (structure (structurep object))))
     (numeric-type
      (and (numberp object)
