@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.16 1998/07/17 00:36:10 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.17 1998/10/22 00:32:30 dtc Exp $")
 
 (in-package :pcl)
 
@@ -174,18 +174,7 @@ work during bootstrapping.
     (flet ((duplicate-option (name)
 	     (error 'kernel:simple-program-error
 		    :format-control "The option ~S appears more than once."
-		    :format-arguments (list name)))
-	   (define-method(gf-name q-a-b)
-	     (let* ((arg-pos (position-if #'listp q-a-b))
-		    (arglist (elt q-a-b arg-pos))
-		    (qualifiers (subseq q-a-b 0 arg-pos))
-		    (body (nthcdr (1+ arg-pos) q-a-b)))
-	       (when (not (equal (cadr (getf initargs :method-combination))
-				 qualifiers))
-		 (error "Bad method specification in defgeneric ~a~%~
-			 -- qualifier mismatch for lamda list ~a"
-			gf-name arglist))
-	       `(defmethod ,gf-name ,@qualifiers ,arglist ,@body))))
+		    :format-arguments (list name))))
       ;;
       ;; INITARG takes this screwy new argument to get around a bad
       ;; interaction between lexical macros and setf in the Lucid
@@ -221,7 +210,8 @@ work during bootstrapping.
 		  (duplicate-option :method-class)
 		  (initarg :method-class `',(cadr option))))
 	    (:method
-	     (push (cdr option) methods))
+	     (push `(defmethod ,function-specifier ,@(cdr option))
+		   methods))
 	    (t ;unsuported things must get a 'program-error
 	     (error 'kernel:simple-program-error
 		    :format-control "Unsupported option ~S."
@@ -235,9 +225,7 @@ work during bootstrapping.
 	 `(defgeneric ,function-specifier)
 	 *defgeneric-times*
 	 `(load-defgeneric ',function-specifier ',lambda-list ,@initargs))
-       ,@(mapcar #'(lambda(m)(define-method `,function-specifier m))
-		 `,methods)
-
+       ,@methods
        `,(function ,function-specifier)))))
 
 (defun load-defgeneric (function-specifier lambda-list &rest initargs)
