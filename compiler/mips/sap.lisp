@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.1 1990/03/12 23:48:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.2 1990/03/22 23:50:34 ch Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -76,7 +76,7 @@
   (:args (sap :scs (sap-reg) :target int))
   (:results (int :scs (any-reg descriptor-reg)))
   (:arg-types system-area-pointer)
-  (:translate char-code)
+  (:translate sap-int)
   (:policy :fast-safe)
   (:generator 0
     ;; ### Need to check for fixnum overflow.
@@ -85,7 +85,7 @@
 (define-vop (int-sap)
   (:args (int :scs (any-reg descriptor-reg) :target sap))
   (:results (sap :scs (sap-reg)))
-  (:translate code-char)
+  (:translate int-sap)
   (:policy :fast-safe)
   (:generator 0
     ;; ### Need to check to see if it is a bignum.
