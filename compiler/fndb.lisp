@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68 1997/01/18 14:31:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.69 1997/06/11 18:48:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -383,16 +383,16 @@
 (defknown elt (sequence index) t (foldable flushable))
 
 (defknown subseq (sequence index &optional sequence-end) consed-sequence
-  (foldable flushable)
+  (flushable)
   :derive-type (sequence-result-nth-arg 1))
 
-(defknown copy-seq (sequence) consed-sequence (foldable flushable)
+(defknown copy-seq (sequence) consed-sequence (flushable)
   :derive-type #'result-type-first-arg)
 
 
 (defknown length (sequence) index (foldable flushable))
 
-(defknown reverse (sequence) consed-sequence (foldable flushable)
+(defknown reverse (sequence) consed-sequence (flushable)
   :derive-type #'result-type-first-arg)
 
 (defknown nreverse (sequence) sequence ()
@@ -403,7 +403,7 @@
   :derive-type (result-type-specifier-nth-arg 1))
 
 (defknown concatenate (type-specifier &rest sequence) consed-sequence
-  (foldable flushable)
+  (flushable)
   :derive-type (result-type-specifier-nth-arg 1))
 
 (defknown map (type-specifier callable sequence &rest sequence) consed-sequence
