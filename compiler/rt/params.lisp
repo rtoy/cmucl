@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.11 1991/10/22 16:41:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.12 1992/03/10 08:57:55 wlott Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -196,8 +196,8 @@
     ;; Interrupt Handling
     lisp::*pseudo-atomic-atomic*
     lisp::*pseudo-atomic-interrupted*
-    mach::*interrupts-enabled*
-    mach::*interrupt-pending*
+    unix::*interrupts-enabled*
+    unix::*interrupt-pending*
     lisp::*free-interrupt-context-index*
 
     ;; Static functions.
