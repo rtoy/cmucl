@@ -1,0 +1,51 @@
+R4 changes:
+
+o Numerous bug fixes
+
+o Multiprocess locking and error reporting made more robust
+
+o Event queue consing reduced
+
+o ICCCM support
+
+R4.1 changes:
+
+o Fix reported bugs and to include the vendor-specific
+  bug-fixing and performance-improving patches that I recently received.
+
+o Code compiled with the R4 CLX will work with the R4.1X CLX, but code
+  compiled with the R4.1X CLX will NOT work with the R4 CLX.  I made an effort
+  to ensure backward binary compatibility with R4 CLX so that old code doesn't
+  have to be recompiled to still work.  It does have to be recompiled to fix
+  an event-queue bug, since the fix involved a change to the event-loop macro.
+
+R4.2 changes:
+
+o Atoms and visuals are now correctly maintained in a separate namespace from 
+  windows, pixmaps, cursors, fonts, gcontexts, and colormaps.
+
+o I have made an attempt to make socket code work for kcl and ibcl.  I have
+  akcl here, but not kcl and ibcl, so it's only guesswork that kcl and ibcl 
+  works.
+
+o compile-clx and load-clx do more pathname merging to work around problems
+  in some lisp implementations. *default-pathname-defaults* is never bound 
+  anymore.
+
+o Some ansi common lisp stuff.  If you have :ansi-common-lisp on *features*,
+  CLX will:
+
+  - Use the common-lisp package instead of the lisp package.
+
+  - Use the common lisp condition system, being careful not to stomp on 
+    define-condition and type-error.
+
+  - Use declaim instead of proclaim.
+
+  - Use the dynamic-extent declaration for rest args and closures.
+
+  - Use print-unreadable-object.
+
+o Code compiled with the R4 and R4.1 CLX will work with the R4.2 CLX, provided
+  you don't have :ansi-common-lisp on your features list.  Code compiled with 
+  the R4.2 CLX will NOT work with the R4 CLX.

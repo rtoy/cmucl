@@ -1,0 +1,133 @@
+# 
+#  Makefile for CLX
+#  (X11 R4 release, Franz Allegro Common Lisp version)
+#
+
+# *************************************************************************
+# * Change the next line to point to where you have Common Lisp installed *
+# *        (make sure the Lisp doesn't already have CLX loaded in)        *
+# *************************************************************************
+CL	= /usr/local/bin/cl
+
+RM	= /bin/rm
+SHELL	= /bin/sh
+ECHO	= /bin/echo
+TAGS	= /usr/local/lib/emacs/etc/etags
+
+# Name of dumped lisp
+CLX	= CLX
+
+CLOPTS	= -qq
+
+# Use this one for Suns
+CFLAGS	= -O -DUNIXCONN
+# Use this one for Silicon Graphics & Mips Inc MIPS based machines
+# CFLAGS = -O -G 0 -I/usr/include/bsd
+# Use this one for DEC MIPS based machines
+# CFLAGS = -O -G 0 -DUNIXCONN
+# Use this one for HP machines
+# CFLAGS = -O -DSYSV -DUNIXCONN
+
+
+# Lisp optimization for compiling
+SPEED	= 3
+SAFETY	= 0
+
+
+C_SRC	= excldep.c socket.c
+C_OBJS	= excldep.o socket.o
+
+L_OBJS	= excldep.fasl defsystem.fasl depdefs.fasl clx.fasl dependent.fasl \
+	  exclcmac.fasl macros.fasl bufmac.fasl buffer.fasl display.fasl \
+	  gcontext.fasl requests.fasl input.fasl fonts.fasl graphics.fasl \
+	  text.fasl attributes.fasl translate.fasl keysyms.fasl manager.fasl \
+	  image.fasl resource.fasl
+
+L_NOMACROS_OBJS	= excldep.fasl depdefs.fasl clx.fasl dependent.fasl \
+	buffer.fasl display.fasl gcontext.fasl \
+	requests.fasl input.fasl fonts.fasl graphics.fasl text.fasl \
+	attributes.fasl translate.fasl keysyms.fasl manager.fasl image.fasl \
+	resource.fasl
+
+L_SRC	= defsystem.cl depdefs.cl clx.cl dependent.cl exclcmac.cl \
+	  macros.cl bufmac.cl buffer.cl display.cl gcontext.cl \
+	  requests.cl input.cl fonts.cl graphics.cl text.cl \
+	  attributes.cl translate.cl keysyms.cl manager.cl image.cl \
+	  resource.cl
+
+
+all:	$(C_OBJS) compile-CLX cat
+
+clos:	$(C_OBJS) compile-closified-CLX cat
+
+CLX:	$(C_OBJS) compile-CLX load-CLX
+
+
+c:	$(C_OBJS)
+
+
+lisp:	compile-CLX
+
+
+compile-CLX:	$(C_OBJS)
+	$(ECHO) " \
+		(set-case-mode :case-sensitive-lower) \
+		(proclaim '(optimize (speed $(SPEED)) (safety $(SAFETY)))) \
+		(compile-file-if-needed \"excldep\") \
+		(compile-file-if-needed \"defsystem\") \
+		(load \"defsystem\") \
+		#+allegro (compile-system :clx) \
+		#-allegro (xlib::compile-clx) \
+		#+allegro (compile-system :clx-debug)" \
+		| $(CL) $(CLOPTS) -batch
+
+
+compile-closified-CLX:	$(C_OBJS)
+	$(ECHO) " \
+		(proclaim '(optimize (speed $(SPEED)) (safety $(SAFETY)))) \
+		(setq excl::*print-nickname* t) \
+		(unless (or (find-package 'clos) (find-package 'pcl)) \
+		  (let ((spread (sys:gsgc-parameter :generation-spread))) \
+		    (setf (sys:gsgc-parameter :generation-spread) 1) \
+		    (require :pcl) \
+		    (provide :pcl) \
+		    (gc) (gc) \
+		    (setf (sys:gsgc-parameter :generation-spread) spread))) \
+		(compile-file-if-needed \"excldep\") \
+		(compile-file-if-needed \"defsystem\") \
+		(load \"defsystem\") \
+		#+allegro (compile-system :clx) \
+		#-allegro (xlib::compile-clx) \
+		#+allegro (compile-system :clx-debug)" \
+		| $(CL) $(CLOPTS) -batch
+
+
+cat:
+	-cat $(L_NOMACROS_OBJS) > CLX.fasl
+
+
+load-CLX:
+	$(ECHO)  '(load "defsystem")' \
+		 "(let (#+allegro (spread (sys:gsgc-parameter :generation-spread)))" \
+		 "  #+allegro (setf (sys:gsgc-parameter :generation-spread) 1)" \
+		 "  #+allegro (load-system :clx)" \
+		 "  #-allegro (xlib::load-clx)" \
+		 "  #+allegro (gc :tenure)" \
+		 "  #+allegro (setf (sys:gsgc-parameter :generation-spread) spread)" \
+		 ")" \
+		 '#+allegro (gc t)' \
+		 '(dumplisp :name "$(CLX)" #+allegro :checkpoint #+allegro nil)' \
+		 '(exit)' | $(CL) $(CLOPTS)
+
+
+clean:
+	$(RM) -f *.fasl debug/*.fasl $(CLX) core $(C_OBJS)
+
+
+install:
+	mv CLX.fasl $(DEST)/clx.fasl
+	mv *.o $(DEST)
+
+
+tags:
+	$(TAGS) $(L_SRC) $(C_SRC)
