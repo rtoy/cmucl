@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.110 1997/02/11 00:14:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.111 1997/02/11 16:09:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1357,7 +1357,7 @@
 	   "%ARRAY-DISPLACEMENT" "%ARRAY-FILL-POINTER"
 	   "%ARRAY-FILL-POINTER-P" "%ASIN" "%ASINH" "%ATAN" "%ATAN2" "%ATANH"
 	   "%CALLER-FRAME-AND-PC" "%CHECK-BOUND" "%CLOSURE-FUNCTION"
-	   "%CLOSURE-INDEX-REF" "%COS" #+x86 "%COS-QUICK" "%COSH" "%DEPOSIT-FIELD"
+	   "%CLOSURE-INDEX-REF" "%COS" "%COS-QUICK" "%COSH" "%DEPOSIT-FIELD"
 	   "%DOUBLE-FLOAT" "%DPB" "%EXP" "%FUNCTION-HEADER-ARGLIST"
 	   "%FUNCTION-HEADER-NAME" "%FUNCTION-HEADER-TYPE" "%HYPOT" "%LDB"
 	   "%LOG" "%LOGB" "%LOG10" "%LOG1P" "%LOG1P-LIMITED" "%MAKE-COMPLEX"
@@ -1366,10 +1366,10 @@
 	   "%SET-FUNCALLABLE-INSTANCE-INFO" "%SET-RAW-BITS" "%SET-SAP-REF-16"
 	   "%SET-SAP-REF-32" "%SET-SAP-REF-8" "%SET-SAP-REF-DOUBLE"
 	   "%SET-SAP-REF-SAP" "%SET-SAP-REF-SINGLE" "%SET-STACK-REF" "%SIN"
-	   #+x86 "%SIN-QUICK"
+	   "%SIN-QUICK"
 	   "%SINGLE-FLOAT" "%SINH" "%SP-SET-DEFINITION" "%SP-SET-PLIST"
 	   "%SQRT" "%SXHASH-SIMPLE-STRING" "%SXHASH-SIMPLE-SUBSTRING" "%TAN"
-	   #+x86 "%TAN-QUICK"
+	   "%TAN-QUICK"
 	   "%TANH" "%UNARY-ROUND" "%UNARY-TRUNCATE" "%WITH-ARRAY-DATA"
 	   "*CURRENT-LEVEL*" "*EMPTY-TYPE*" "*EVAL-STACK-TOP*" "*NULL-TYPE*"
 	   "*PRETTY-PRINTER*" "*UNIVERSAL-TYPE*"
