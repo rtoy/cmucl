@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.100 1994/01/05 16:33:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.101 1994/02/10 23:20:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -358,6 +358,26 @@
       (policy nil (zerop speed) (<= debug 1))
       (and *byte-compile* *byte-compiling*)))
 
+
+;;; DELETE-IF-NO-ENTRIES  --  Internal
+;;;
+;;;    Delete components with no external entry points before we try to
+;;; generate code.  Unreachable closures can cause IR2 conversion to puke on
+;;; itself, since it is the reference to the closure which normally causes the
+;;; components to be combined.  This doesn't really cover all cases...
+;;;
+(defun delete-if-no-entries (component)
+  (dolist (fun (component-lambdas component)
+	       (delete-component component))
+    (case (functional-kind fun)
+      (:top-level (return))
+      (:external
+       (unless (every #'(lambda (ref)
+			  (eq (block-component (node-block ref))
+			      component))
+		      (leaf-refs fun))
+	 (return))))))
+
   
 ;;; COMPILE-COMPONENT -- internal.
 ;;;
@@ -390,6 +410,8 @@
     (maybe-mumble "Env ")
     (environment-analyze component)
     (dfo-as-needed component)
+
+    (delete-if-no-entries component)
 
     (unless (eq (block-next (component-head component))
 		(component-tail component))
