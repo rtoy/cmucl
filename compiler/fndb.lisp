@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.113 2003/04/27 13:58:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.114 2003/04/29 12:25:21 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1197,7 +1197,7 @@
   (or string null)
   ())
 (defknown %setnth (index list t) t (unsafe))
-(defknown %set-fill-pointer (vector index) (unsafe))
+(defknown %set-fill-pointer (vector index) index (unsafe))
 
 
 ;;;; Internal type predicates:
