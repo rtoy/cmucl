@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.34 1990/07/26 00:57:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.35 1990/10/02 18:08:29 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -685,6 +685,48 @@
 
       (emit-label done)
       (move result res))))
+
+(define-vop (bignum-mult-and-add-3-arg)
+  (:translate bignum::%multiply-and-add)
+  (:policy :fast-safe)
+  (:args (x :scs (unsigned-reg))
+	 (y :scs (unsigned-reg))
+	 (carry-in :scs (unsigned-reg) :to :save))
+  (:arg-types unsigned-num unsigned-num unsigned-num)
+  (:temporary (:scs (unsigned-reg) :from (:argument 1)) temp)
+  (:results (hi :scs (unsigned-reg))
+	    (lo :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:generator 6
+    (inst multu x y)
+    (inst mflo temp)
+    (inst addu lo temp carry-in)
+    (inst sltu temp lo carry-in)
+    (inst mfhi hi)
+    (inst addu hi temp)))
+
+(define-vop (bignum-mult-and-add-4-arg)
+  (:translate bignum::%multiply-and-add)
+  (:policy :fast-safe)
+  (:args (x :scs (unsigned-reg))
+	 (y :scs (unsigned-reg))
+	 (prev :scs (unsigned-reg))
+	 (carry-in :scs (unsigned-reg) :to :save))
+  (:arg-types unsigned-num unsigned-num unsigned-num unsigned-num)
+  (:temporary (:scs (unsigned-reg) :from (:argument 2)) temp)
+  (:results (hi :scs (unsigned-reg))
+	    (lo :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:generator 9
+    (inst multu x y)
+    (inst addu lo prev carry-in)
+    (inst sltu temp lo carry-in)
+    (inst mfhi hi)
+    (inst addu hi temp)
+    (inst mflo temp)
+    (inst addu lo temp)
+    (inst sltu temp lo temp)
+    (inst addu hi temp)))
 
 (define-vop (bignum-mult)
   (:translate bignum::%multiply)
