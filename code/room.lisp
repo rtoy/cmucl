@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.32 2004/04/13 13:21:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.33 2004/06/18 17:44:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -187,10 +187,15 @@
 			 (space-bounds space)
       (declare (type system-area-pointer start end))
       (declare (optimize (speed 3) (safety 0)))
-      (let ((current start)
-	    #+nil
-	    (prev nil))
-	(loop
+      (iterate step ((current start))
+	(flet ((next (size)
+		 (let ((c (etypecase size
+			    (fixnum (sap+ current size))
+			    (memory-size (sap+ current size)))))
+		   (cond ((sap< c end)
+			  (step c))
+			 (t
+			  (assert (sap= c end)))))))
 	  (let* ((header (sap-ref-32 current 0))
 		 (header-type (logand header #xFF))
 		 (info (svref *room-info* header-type)))
@@ -203,7 +208,7 @@
 						list-pointer-type))
 			 list-pointer-type
 			 size)
-		(setq current (sap+ current size))))
+		(next size)))
 	     ((eql header-type closure-header-type)
 	      (let* ((obj (make-lisp-obj (logior (sap-int current)
 						 function-pointer-type)))
@@ -211,7 +216,7 @@
 			    (* (the fixnum (1+ (get-closure-length obj)))
 			       word-bytes))))
 		(funcall fun obj header-type size)
-		(setq current (sap+ current size))))
+		(next size)))
 	     ((eq (room-info-kind info) :instance)
 	      (let* ((obj (make-lisp-obj
 			   (logior (sap-int current) instance-pointer-type)))
@@ -224,7 +229,7 @@
 		(when (> size 200000) (break "Implausible size, prev ~S" prev))
 		#+nil
 		(setq prev current)
-		(setq current (sap+ current size))))
+		(next size)))
 	     (t
 	      (let* ((obj (make-lisp-obj
 			   (logior (sap-int current) other-pointer-type)))
@@ -254,10 +259,7 @@
 		  (break "Implausible size, prev ~S" prev))
 		#+nil
 		(setq prev current)
-		(setq current (sap+ current size))))))
-	  (unless (sap< current end)
-	    (assert (sap= current end))
-	    (return)))
+		(next size))))))
 
 	#+nil
 	prev))))
