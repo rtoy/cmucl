@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.87 1998/10/01 16:01:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.88 1998/10/03 05:18:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -353,11 +353,29 @@
   (make-interval :low (bound-value (interval-low x))
 		 :high (bound-value (interval-high x))))
 
+(defun signed-zero->= (x y)
+  (declare (real x y))
+  (or (> x y)
+      (and (= x y)
+	   (>= (float-sign (float x))
+	       (float-sign (float y))))))
+
 ;;; INTERVAL-RANGE-INFO
 ;;;
 ;;; For an interval X, if X >= POINT, return '+.  If X <= POINT, return
 ;;; '-. Otherwise return NIL.
 ;;;
+#+nil
+(defun interval-range-info (x &optional (point 0))
+  (declare (type interval x))
+  (let ((lo (interval-low x))
+	(hi (interval-high x)))
+    (cond ((and lo (signed-zero->= (bound-value lo) point))
+	   '+)
+	  ((and hi (signed-zero->= point (bound-value hi)))
+	   '-)
+	  (t
+	   nil))))
 (defun interval-range-info (x &optional (point 0))
   (declare (type interval x))
   (labels ((signed->= (x y)
@@ -468,41 +486,15 @@
 ;;;
 (defun interval-intersect-p (x y &optional closed-intervals-p)
   (declare (type interval x y))
-  (let ((x-lo (interval-low x))
-	(x-hi (interval-high x))
-	(y-lo (interval-low y))
-	(y-hi (interval-high y)))
-    (labels ((test-number (p int)
-	       ;; Test if P is in the interval.
-	       (when (interval-contains-p (bound-value p)
-					  (interval-closure int))
-		 (let ((lo (interval-low int))
-		       (hi (interval-high int)))
-		   ;; Check for endpoints
-		   (cond ((or (null lo) (null hi))
-			  t)
-			 ((= (bound-value p) (bound-value lo))
-			  (or closed-intervals-p
-			      (not (and (consp p) (numberp lo)))))
-			 ((= (bound-value p) (bound-value hi))
-			  (or closed-intervals-p
-			      (not (and (numberp p) (consp hi)))))
-			 (t t)))))
-	     (test-lower-bound (p int)
-	       ;; P is a lower bound of an interval.
-	       (if p
-		   (test-number p int)
-		   (not (interval-bounded-p int 'below))))
-	     (test-upper-bound (p int)
-	       ;; P is an upper bound of an interval
-	       (if p
-		   (test-number p int)
-		   (not (interval-bounded-p int 'above))))
-	     )
-      (or (test-lower-bound x-lo y)
-	  (test-upper-bound x-hi y)
-	  (test-lower-bound y-lo x)
-	  (test-upper-bound y-hi x)))))
+  (multiple-value-bind (intersect diff)
+      (interval-intersection/difference (if closed-intervals-p
+					    (interval-closure x)
+					    x)
+					(if closed-intervals-p
+					    (interval-closure y)
+					    y))
+    (declare (ignore diff))
+    intersect))
 
 ;;; Are the two intervals adjacent?  That is, is there a number
 ;;; between the two intervals that is not an element of either
@@ -538,8 +530,7 @@
 ;;;
 (defun interval-intersection/difference (x y)
   (declare (type interval x y))
-  (let ((closed-intervals-p nil)
-	(x-lo (interval-low x))
+  (let ((x-lo (interval-low x))
 	(x-hi (interval-high x))
 	(y-lo (interval-low y))
 	(y-hi (interval-high y)))
@@ -557,14 +548,10 @@
 	     (let ((lo (interval-low int))
 		   (hi (interval-high int)))
 	       ;; Check for endpoints
-	       (cond ((or (null lo) (null hi))
-		      t)
-		     ((= (bound-value p) (bound-value lo))
-		      (or closed-intervals-p
-			  (not (and (consp p) (numberp lo)))))
-		     ((= (bound-value p) (bound-value hi))
-		      (or closed-intervals-p
-			  (not (and (numberp p) (consp hi)))))
+	       (cond ((and lo (= (bound-value p) (bound-value lo)))
+		      (not (and (consp p) (numberp lo))))
+		     ((and hi (= (bound-value p) (bound-value hi)))
+		      (not (and (numberp p) (consp hi))))
 		     (t t)))))
 	 (test-lower-bound (p int)
 	   ;; P is a lower bound of an interval.
