@@ -6,7 +6,7 @@
 ;;; Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.1 1997/11/01 23:08:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.2 1997/12/11 17:44:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -108,6 +108,7 @@
 (defconstant mt19937-b #x9D2C5680)
 (defconstant mt19937-c #xEFC60000)
 ;;;
+#-x86
 (defun random-mt19937-update (state)
   (declare (type (simple-array (unsigned-byte 32) (627)) state)
 	   (optimize (speed 3) (safety 0)))
@@ -135,6 +136,7 @@
 		  (ash y -1) (aref state (logand y 1)))))
   (values))
 ;;;
+#-x86
 (defun random-chunk (state)
   (declare (type random-state state))
   (let* ((state (random-state-state state))
@@ -153,7 +155,7 @@
       y)))
 
 ;;; Using inline VOP support, only available on the x86 so far.
-#+nil
+#+x86
 (defun random-chunk (state)
   (declare (type random-state state))
   (vm::random-mt19937 (random-state-state state)))
