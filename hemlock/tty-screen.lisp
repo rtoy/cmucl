@@ -7,12 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.4 1991/05/22 15:53:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.5 1991/07/26 21:56:28 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Written by Bill Chiles, except for the code that implements random typeout,
-;;; which was done by Blaine Burks and Bill Chiles.
+;;; which was done by Blaine Burks and Bill Chiles.  The code for splitting
+;;; windows was rewritten by Blaine Burks to allow more than a 50/50 split.
 ;;;
 ;;; Terminal device screen management functions.
 ;;;
@@ -117,7 +118,7 @@
     (setf (device-finish-output device) #'tty-finish-output)
     (setf (device-beep device) #'tty-beep)
     ;;
-    ;; Do we have insert/delete line?
+    ;; A few useful values.
     (setf (tty-device-dumbp device)
 	  (not (and (termcap :open-line termcap)
 		    (termcap :delete-line termcap))))
@@ -246,48 +247,48 @@
 ;;;; Making a window
 
 (defun tty-make-window (device start modelinep window font-family
-			       ask-user x y width height)
+			       ask-user x y width height proportion)
   (declare (ignore window font-family ask-user x y width height))
-  (let* ((victim (tty-find-biggest-hunk device))
+  (let* ((old-window (current-window))
+	 (victim (window-hunk old-window))
 	 (text-height (tty-hunk-text-height victim))
 	 (availability (if modelinep (1- text-height) text-height)))
-      (when (> availability 1)
-	(let* ((new-lines (truncate availability 2))
-	       (old-lines (- availability new-lines))
-	       (pos (device-hunk-position victim))
-	       (new-height (if modelinep (1+ new-lines) new-lines))
-	       (new-text-pos (if modelinep (1- pos) pos))
-	       (new-hunk (make-tty-hunk :position pos
-					:height new-height
-					:text-position new-text-pos
-					:text-height new-lines
-					:device device))
-	       (new-window (internal-make-window :hunk new-hunk))
-	       (old-window (device-hunk-window victim)))
-	  (declare (fixnum new-lines old-lines pos new-height new-text-pos))
-	  (setf (device-hunk-window new-hunk) new-window)
-	  (let* ((old-text-pos-diff (- pos (tty-hunk-text-position victim)))
-		 (old-win-new-pos (- pos new-height)))
-	    (declare (fixnum old-text-pos-diff old-win-new-pos))
-	    (setf (device-hunk-height victim)
-		  (- (device-hunk-height victim) new-height))
-	    (setf (tty-hunk-text-height victim) old-lines)
-	    (setf (device-hunk-position victim) old-win-new-pos)
-	    (setf (tty-hunk-text-position victim)
-		  (- old-win-new-pos old-text-pos-diff)))
-	  (setup-window-image start new-window new-lines
-			      (window-width old-window))
-	  (prepare-window-for-redisplay new-window)
-	  (when modelinep
-	    (setup-modeline-image (line-buffer (mark-line start)) new-window))
-	  (change-window-image-height old-window old-lines)
-	  (shiftf (device-hunk-previous new-hunk)
-		  (device-hunk-previous (device-hunk-next victim))
-		  new-hunk)
-	  (shiftf (device-hunk-next new-hunk) (device-hunk-next victim) new-hunk)
-	  (setf *currently-selected-hunk* nil)
-	  (setf *screen-image-trashed* t)
-	  new-window))))
+    (when (> availability 1)
+      (let* ((new-lines (truncate (* availability proportion)))
+	     (old-lines (- availability new-lines))
+	     (pos (device-hunk-position victim))
+	     (new-height (if modelinep (1+ new-lines) new-lines))
+	     (new-text-pos (if modelinep (1- pos) pos))
+	     (new-hunk (make-tty-hunk :position pos
+				      :height new-height
+				      :text-position new-text-pos
+				      :text-height new-lines
+				      :device device))
+	     (new-window (internal-make-window :hunk new-hunk)))
+	(declare (fixnum new-lines old-lines pos new-height new-text-pos))
+	(setf (device-hunk-window new-hunk) new-window)
+	(let* ((old-text-pos-diff (- pos (tty-hunk-text-position victim)))
+	       (old-win-new-pos (- pos new-height)))
+	  (declare (fixnum old-text-pos-diff old-win-new-pos))
+	  (setf (device-hunk-height victim)
+		(- (device-hunk-height victim) new-height))
+	  (setf (tty-hunk-text-height victim) old-lines)
+	  (setf (device-hunk-position victim) old-win-new-pos)
+	  (setf (tty-hunk-text-position victim)
+		(- old-win-new-pos old-text-pos-diff)))
+	(setup-window-image start new-window new-lines
+			    (window-width old-window))
+	(prepare-window-for-redisplay new-window)
+	(when modelinep
+	  (setup-modeline-image (line-buffer (mark-line start)) new-window))
+	(change-window-image-height old-window old-lines)
+	(shiftf (device-hunk-previous new-hunk)
+		(device-hunk-previous (device-hunk-next victim))
+		new-hunk)
+	(shiftf (device-hunk-next new-hunk) (device-hunk-next victim) new-hunk)
+	(setf *currently-selected-hunk* nil)
+	(setf *screen-image-trashed* t)
+	new-window))))
 
 (defun tty-find-biggest-hunk (device)
   (let* ((top-hunk (device-hunks device))
