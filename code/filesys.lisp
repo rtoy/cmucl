@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.77 2004/01/09 04:11:07 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.78 2004/01/09 15:09:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -791,7 +791,7 @@
       (error 'simple-file-error 
 	     :pathname pathname
 	     :format-control "Bad place for a wild pathname.")
-      (let ((namestring (unix-namestring pathname t)))
+      (let ((namestring (unix-namestring (merge-pathnames pathname) t)))
 	(when (and namestring (unix:unix-file-kind namestring))
 	  (let ((truename (unix:unix-resolve-links
 			   (unix:unix-maybe-prepend-current-directory
