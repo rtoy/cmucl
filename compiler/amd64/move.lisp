@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/move.lisp,v 1.2 2004/06/10 01:43:01 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/move.lisp,v 1.3 2004/07/06 20:19:58 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,11 @@
 
 (define-move-function (load-constant 5) (vop x y)
   ((constant) (descriptor-reg any-reg))
-  (inst mov y x))
+  (inst mov-imm y (make-fixup nil
+			      :code-object
+			      (- (* (tn-offset x) word-bytes)
+				 other-pointer-type)))
+  (inst mov y (make-ea :qword :base y)))
 
 (define-move-function (load-stack 5) (vop x y)
   ((control-stack) (any-reg descriptor-reg)
@@ -101,7 +105,7 @@
 	    (character
 	     (inst mov y (logior (ash (char-code val) type-bits)
 				 base-char-type)))))
-      (move y x))))
+	(move y x))))
 
 (define-move-vop move :move
   (any-reg descriptor-reg immediate)
