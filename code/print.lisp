@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.86 2003/08/12 21:33:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.87 2004/04/15 01:34:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1720,7 +1720,9 @@
   (if (or *print-escape* *print-readably*)
       (let ((name (char-name char)))
 	(write-string "#\\" stream)
-	(if name
+	;; CLHS 22.1.3.2 says graphic characters are not printed using
+	;; the character name.
+	(if (and name (not (graphic-char-p char)))
 	    (quote-string name stream)
 	    (write-char char stream)))
       (write-char char stream)))

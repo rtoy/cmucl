@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.76 2004/04/06 08:43:29 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.77 2004/04/15 01:34:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1690,12 +1690,15 @@
 
 (defun file-string-length (stream object)
   (declare (type (or string character) object)
-	   (type (or file-stream stream:simple-stream) stream))
+	   (type (or file-stream broadcast-stream stream:simple-stream) stream))
   "Return the delta in Stream's FILE-POSITION that would be caused by writing
    Object to Stream.  Non-trivial only in implementations that support
    international character sets."
   (typecase stream
     (stream:simple-stream (stream::%file-string-length stream object))
+    (broadcast-stream
+     ;; CLHS says we must return 1 in this case
+     1)
     (t
      (etypecase object
        (character 1)

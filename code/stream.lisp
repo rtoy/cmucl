@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.74 2004/04/14 17:06:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.75 2004/04/15 01:34:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,10 +213,13 @@
     ;; simple-stream
     (stream::%input-stream-p stream)
     ;; lisp-stream
-    (and (not (eq (lisp-stream-in stream) #'closed-flame))
-	 (or (not (eq (lisp-stream-in stream) #'ill-in))
-	     (not (eq (lisp-stream-bin stream) #'ill-bin))
-	     (not (eq (lisp-stream-n-bin stream) #'ill-n-bin))))))
+    (let ((stream (if (synonym-stream-p stream)
+		      (symbol-value (synonym-stream-symbol stream))
+		      stream)))
+      (and (not (eq (lisp-stream-in stream) #'closed-flame))
+	   (or (not (eq (lisp-stream-in stream) #'ill-in))
+	       (not (eq (lisp-stream-bin stream) #'ill-bin))
+	       (not (eq (lisp-stream-n-bin stream) #'ill-n-bin)))))))
 
 (defun output-stream-p (stream)
   "Returns non-nil if the given Stream can perform output operations."
@@ -227,9 +230,12 @@
     ;; simple-stream
     (stream::%output-stream-p stream)
     ;; lisp-stream
-    (and (not (eq (lisp-stream-in stream) #'closed-flame))
-	 (or (not (eq (lisp-stream-out stream) #'ill-out))
-	     (not (eq (lisp-stream-bout stream) #'ill-bout))))))
+    (let ((stream (if (synonym-stream-p stream)
+		      (symbol-value (synonym-stream-symbol stream))
+		      stream)))
+      (and (not (eq (lisp-stream-in stream) #'closed-flame))
+	   (or (not (eq (lisp-stream-out stream) #'ill-out))
+	       (not (eq (lisp-stream-bout stream) #'ill-bout)))))))
 
 (defun open-stream-p (stream)
   "Return true if Stream is not closed."
@@ -1458,7 +1464,7 @@ output to Output-stream"
 	   (type index start)
 	   (type (or index null) end))
   (internal-make-string-input-stream (coerce string 'simple-string)
-				     start end))
+				     start (or end (length string))))
 
 ;;;; String Output Streams:
 
@@ -1534,7 +1540,9 @@ output to Output-stream"
 		(fixnum index count))
        (if (char= (schar string index) #\newline)
 	   (return count))))
-    (:element-type 'base-char)))
+    (:element-type 'base-char)
+    (:close
+     (set-closed-flame stream))))
 
 (defun get-output-stream-string (stream)
   "Returns a string of all the characters sent to a stream made by
