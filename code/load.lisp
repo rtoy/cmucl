@@ -7,16 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.11 1990/10/23 02:51:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.12 1990/10/24 01:39:46 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
 (in-package "LISP")
 (export '(load *load-verbose*))
-
-(in-package "SYSTEM")
-(export 'resolve-loaded-assembler-references)
 
 (in-package "EXTENSIONS")
 (export '*load-if-source-newer*)
@@ -35,8 +32,6 @@
 (defvar *current-code-format*
   "The code format that we think we are loading.")
 
-(defvar *in-cold-load* nil)	; True if we are in the cold loader.
-
 (defvar *load-if-source-newer* :load-object
   "The value of *load-if-source-newer* determines what happens when the
   source file is newer than the object file.  The possible values are:
@@ -44,7 +39,6 @@
   file, :compile - compile the source and then load the object file, or
   :query - ask the user if he wants to load the source or object file.")
 
-(proclaim '(special cold-fop-functions))
 
 ;;;; The Fop-Table:
 ;;;
@@ -476,10 +470,6 @@
 (define-fop (fop-short-character 69)
   (code-char (read-arg 1)))
 
-;;; ### Left for compatablility.
-(define-fop (fop-structure 79)
-  (c::structurify (pop-stack)))
-
 (clone-fop (fop-struct 48)
 	   (fop-small-struct 49)
   (let* ((size (clone-arg))
@@ -495,14 +485,12 @@
 (define-fop (fop-end-header 255)
   (error "Fop-End-Header was executed???"))
 
+;;; In the normal loader, we just ignore these.  Genesis overwrites
+;;; fop-maybe-cold-load with something that knows when to revert to
+;;; cold-loading or not.
+;;; 
 (define-fop (fop-normal-load 81 :nope))
-(define-fop (fop-maybe-cold-load 82 :nope)
-  (when *in-cold-load*
-    (setq fop-functions cold-fop-functions)))
-
-(define-fop (fop-static-heap 60 :nope))
-(define-fop (fop-dynamic-heap 61 :nope))
-(define-fop (fop-read-only-heap 67 :nope))
+(define-fop (fop-maybe-cold-load 82 :nope))
 
 (define-fop (fop-verify-table-size 62 :nope)
   (if (/= *current-fop-table-index* (read-arg 4))
@@ -584,21 +572,6 @@
 (define-fop (fop-complex 71)
   (let ((im (pop-stack)))
     (%make-complex (pop-stack) im)))
-
-(define-fop (fop-float 45)
-  (let* ((n (read-arg 1))
-	 (exponent (load-s-integer (ceiling n 8)))
-	 (m (read-arg 1))
-	 (mantissa (load-s-integer (ceiling m 8)))
-	 (number (if (or (not (<= vm:single-float-normal-exponent-min
-				  (+ exponent vm:single-float-bias)
-				  vm:single-float-normal-exponent-max))
-			 (> m (1+ vm:single-float-digits)))
-		     (coerce mantissa 'double-float)
-		     (coerce mantissa 'single-float))))
-    (multiple-value-bind (f ex s) (decode-float number)
-      (declare (ignore ex))
-      (* s (scale-float f exponent)))))
 
 (define-fop (fop-single-float 46)
   (vm:make-single-float (load-s-integer 4)))
@@ -719,24 +692,6 @@
       (make-array n :element-type `(unsigned-byte ,size)
 		  :initial-element value))))
 
-(define-fop (fop-alter 52 nil)
-  (let ((index (read-arg 1))
-	(newval (pop-stack))
-	(object (pop-stack)))
-    (declare (fixnum index))
-    (typecase object
-      (list (case index
-	      (0 (rplaca object newval))
-	      (1 (rplacd object newval))
-	      (t (error "~S: Bad index for FaslOP Alter.  Bug!"))))
-      (symbol (case index
-		(0 (set object newval))
-		(1 (setf (symbol-function object) newval))
-		(2 (setf (symbol-plist object) newval))
-		(t (error "~S: Bad index for FaslOP Alter.  Bug!"))))
-      (array (setf (aref object index) newval))
-      (t (error "~S: Bad object for FaslOP Alter.  Bug!")))))
-
 (define-fop (fop-eval 53)
   (let ((result (eval (pop-stack))))
     (when *load-print-stuff*
@@ -806,14 +761,14 @@
 	 (unless (= implementation #.vm:target-fasl-file-implementation)
 	   (error "~A was compiled for a ~A, but this is a ~A"
 		  *Fasl-file*
-		  (or (elt implementation vm:fasl-file-implementations)
+		  (or (elt vm:fasl-file-implementations implementation)
 		      "unknown machine")
-		  (or (elt #.vm:target-fasl-file-implementation
-			   vm:fasl-file-implementations)
+		  (or (elt vm:fasl-file-implementations
+			   #.vm:target-fasl-file-implementation)
 		      "unknown machine")))
 	 (unless (= version #.vm:target-fasl-file-version)
-	   (error "~A was compiled for a fasl-file version ~A, ~
-	           but this is a version ~A"
+	   (error "~A was compiled for fasl-file version ~A, ~
+	           but this is version ~A"
 	    *Fasl-file* version #.vm:target-fasl-file-version))
 	 (let ((box-num ,nitems)
 	       (code-length ,size))
@@ -929,4 +884,4 @@
 
 
 
-(proclaim '(notinline read-byte))
+(proclaim '(maybeinline read-byte))
