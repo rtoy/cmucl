@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.36 2003/10/20 01:25:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.37 2003/10/27 16:58:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,7 +96,7 @@
   (:args (x :target r :scs (any-reg zero)))
   (:info y)
   (:arg-types tagged-num
-	      (:constant (and (signed-byte 11) (not (integer 0 0)))))
+	      (:constant (and (signed-byte #.(- 13 vm:fixnum-tag-bits)) (not (integer 0 0)))))
   (:results (r :scs (any-reg)))
   (:result-types tagged-num)
   (:note "inline fixnum arithmetic"))
@@ -823,7 +823,7 @@
 
 (define-vop (fast-conditional-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg zero)))
-  (:arg-types tagged-num (:constant (signed-byte 11)))
+  (:arg-types tagged-num (:constant (signed-byte #.(- 13 vm:fixnum-tag-bits))))
   (:info target not-p y))
 
 (define-vop (fast-conditional/signed fast-conditional)
@@ -907,7 +907,7 @@
   (:args (x :scs (any-reg descriptor-reg zero)))
   ;; This is a signed-byte 11 because after fixnum shifting, we get a
   ;; 13-bit number, and that's the largest immediate allowed.
-  (:arg-types tagged-num (:constant (signed-byte 11)))
+  (:arg-types tagged-num (:constant (signed-byte #.(- 13 vm:fixnum-tag-bits))))
   (:info target not-p y)
   (:translate eql)
   (:generator 2
@@ -918,7 +918,7 @@
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
   ;; This is a signed-byte 11 because after fixnum shifting, we get a
   ;; 13-bit number, and that's the largest immediate allowed.
-  (:arg-types * (:constant (signed-byte 11)))
+  (:arg-types * (:constant (signed-byte #.(- 13 vm:fixnum-tag-bits))))
   (:variant-cost 6))
 
 
@@ -1962,7 +1962,7 @@
 (define-vop (fast-conditional-c/64-fixnum fast-conditional)
   (:args (x :scs (signed64-reg unsigned-reg signed-reg zero)))
   (:arg-types (:or signed64-num unsigned-num signed-num)
-	      (:constant (signed-byte 11)))
+	      (:constant (signed-byte #.(- 13 vm:fixnum-tag-bits))))
   (:info target not-p y))
 	      
 (define-vop (fast-conditional/signed64 fast-conditional)
