@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.15 1999/11/19 14:59:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.16 1999/12/08 15:53:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -305,7 +305,7 @@
 
 ;;; Multiply and Divide.
 
-(define-vop (fast-*/fixnum=>fixnum fast-fixnum-binop)
+(define-vop (fast-v8-*/fixnum=>fixnum fast-fixnum-binop)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:translate *)
   (:guard (backend-featurep :sparc-v8))
@@ -313,13 +313,13 @@
     (inst sra temp y 2)
     (inst smul r x temp)))
 
-(define-vop (fast-*/signed=>signed fast-signed-binop)
+(define-vop (fast-v8-*/signed=>signed fast-signed-binop)
   (:translate *)
   (:guard (backend-featurep :sparc-v8))
   (:generator 3
     (inst smul r x y)))
 
-(define-vop (fast-*/unsigned=>unsigned fast-unsigned-binop)
+(define-vop (fast-v8-*/unsigned=>unsigned fast-unsigned-binop)
   (:translate *)
   (:guard (backend-featurep :sparc-v8))
   (:generator 3
@@ -327,7 +327,7 @@
 
 ;; The smul and umul instructions are deprecated on the Sparc V9.  Use
 ;; mulx instead.
-(define-vop (fast-*/fixnum=>fixnum fast-fixnum-binop)
+(define-vop (fast-v9-*/fixnum=>fixnum fast-fixnum-binop)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:translate *)
   (:guard (backend-featurep :sparc-v9))
@@ -335,13 +335,13 @@
     (inst sra temp y 2)
     (inst mulx r x temp)))
 
-(define-vop (fast-*/signed=>signed fast-signed-binop)
+(define-vop (fast-v9-*/signed=>signed fast-signed-binop)
   (:translate *)
   (:guard (backend-featurep :sparc-v9))
   (:generator 3
     (inst mulx r x y)))
 
-(define-vop (fast-*/unsigned=>unsigned fast-unsigned-binop)
+(define-vop (fast-v9-*/unsigned=>unsigned fast-unsigned-binop)
   (:translate *)
   (:guard (backend-featurep :sparc-v9))
   (:generator 3
@@ -755,7 +755,7 @@
   (:generator 1
     (inst sra digit fixnum 2)))
 
-(define-vop (bignum-floor)
+(define-vop (bignum-floor-v8)
   (:translate bignum::%floor)
   (:policy :fast-safe)
   (:args (div-high :scs (unsigned-reg) :target rem)
@@ -780,7 +780,7 @@
 	  (inst addx rem rem))))
     (inst not quo)))
 
-(define-vop (bignum-floor)
+(define-vop (bignum-floor-v9)
   (:translate bignum::%floor)
   (:policy :fast-safe)
   (:args (div-high :scs (unsigned-reg))
