@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.5 2000/08/24 15:00:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.6 2000/08/25 09:54:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1454,7 +1454,7 @@
 			     *standard-output*))
   (setf *error-output* (make-synonym-stream '*stderr*))
   (setf *query-io* (make-synonym-stream '*terminal-io*))
-  (setf *debug-io* (make-synonym-stream '*tty*))
+  (setf *debug-io* *query-io*)
   (setf *trace-output* *standard-output*)
   nil)
 
