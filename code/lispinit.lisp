@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.14 1990/10/22 02:23:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.15 1990/10/23 02:04:37 wlott Exp $
 ;;;
 ;;; Initialization stuff for CMU Common Lisp, plus some other random functions
 ;;; that we don't have any better place for.
@@ -52,14 +52,12 @@
 
 ;;; Random information:
 
-(defvar compiler-version "???")
 (defvar *lisp-implementation-version* "4.0(?)")
 
 (defvar *in-the-compiler* nil
   "Bound to T while running code inside the compiler.  Macros may test this to
   see where they are being expanded.")
 
-(defparameter %fasl-code-format #.vm:target-fasl-code-format)
 
 ;;; Must be initialized in %INITIAL-FUNCTION before the DEFVAR runs...
 (proclaim '(special *gc-inhibit* *already-maybe-gcing*
