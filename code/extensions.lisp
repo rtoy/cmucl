@@ -16,7 +16,8 @@
 
 (export '(letf* letf dovector deletef indenting-further file-comment
 		read-char-no-edit listen-skip-whitespace concat-pnames
-		iterate once-only collect do-anonymous undefined-value))
+		iterate once-only collect do-anonymous undefined-value
+		define-hash-cache defun-cached cache-hash-eq))
 
 (import 'lisp::whitespace-char-p)
 
@@ -361,3 +362,192 @@
   of the DO."
   (lisp::do-do-body varlist endlist body decls 'let 'psetq
 		    'do-anonymous (gensym)))
+
+
+;;;; Hash cache utility:
+
+;;; DEFINE-HASH-CACHE  --  Public
+;;;
+(defmacro define-hash-cache (name args &key hash-function hash-bits default
+				  (values 1))
+  "DEFINE-HASH-CACHE Name ({(Arg-Name Test-Function)}*) {Key Value}*
+  Define a hash cache that associates some number of argument values to a
+  result value.  The Test-Function paired with each Arg-Name is used to compare
+  the value for that arg in a cache entry with a supplied arg.  The
+  Test-Function must not error when passed NIL as its first arg, but need not
+  return any particular value.  Test-Function may be any thing that can be
+  place in CAR position.
+
+  Name is used to define functions these functions:
+
+  <name>-CACHE-LOOKUP Arg*
+      See if there is an entry for the specified Args in the cache.  The if not
+      present, the :DEFAULT keyword (default NIL) determines the result(s).
+
+  <name>-CACHE-ENTER Arg* Value*
+      Encache the association of the specified args with Value.
+
+  <name>-CACHE-FLUSH-<arg-name> Arg
+      Flush all entries from the cache that have the value Arg for the named
+      arg.
+
+  <name>-CACHE-CLEAR
+      Reinitialize the cache, invalidating all entries and allowing the
+      arguments and result values to be GC'd.
+
+  These other keywords are defined:
+
+  :HASH-BITS <n>
+      The size of the cache as a power of 2.
+
+  :HASH-FUNCTION function
+      Some thing that can be placed in CAR position which will compute a value
+      between 0 and (1- (expt 2 <hash-bits>)).
+
+  :VALUES <n>
+      The number of values cached."
+      
+  (let* ((var-name (symbolicate "*" name "-CACHE-VECTOR*"))
+	 (nargs (length args))
+	 (entry-size (+ nargs values))
+	 (size (ash 1 hash-bits))
+	 (total-size (* entry-size size))
+	 (default-values (if (and (consp default) (eq (car default) 'values))
+			     (cdr default)
+			     (list default)))
+	 (n-index (gensym))
+	 (n-cache (gensym)))
+
+    (unless (= (length default-values) values)
+      (error "Number of default values ~S differs from :VALUES ~D."
+	     default values))
+
+    (collect ((inlines)
+	      (forms)
+	      (tests)
+	      (sets)
+	      (arg-vars)
+	      (values-indices)
+	      (values-names))
+      (dotimes (i values)
+	(values-indices `(+ ,n-index ,(+ nargs i)))
+	(values-names (gensym)))
+
+      (let ((n 0))
+	(dolist (arg args)
+	  (unless (= (length arg) 2)
+	    (error "Bad arg spec: ~S." arg))
+	  (let ((arg-name (first arg))
+		(test (second arg)))
+	    (arg-vars arg-name)
+	    (tests `(,test (svref ,n-cache (+ ,n-index ,n)) ,arg-name))
+	    (sets `(setf (svref ,n-cache (+ ,n-index ,n)) ,arg-name))
+	    
+	    (let ((fun-name (symbolicate name "-CACHE-FLUSH-" arg-name)))
+	      (forms
+	       `(defun ,fun-name (,arg-name)
+		  (do ((,n-index ,(+ (- total-size entry-size) n)
+				 (- ,n-index ,entry-size))
+		       (,n-cache ,var-name))
+		      ((minusp ,n-index))
+		    (when (,test (svref ,n-cache ,n-index) ,arg-name)
+		      (let ((,n-index (- ,n-index ,n)))
+			,@(mapcar #'(lambda (i val)
+				      `(setf (svref ,n-cache ,i) ,val))
+				  (values-indices)
+				  default-values))))
+		  (undefined-value)))))
+	  (incf n)))
+	
+      (let ((fun-name (symbolicate name "-CACHE-LOOKUP")))
+	(inlines fun-name)
+	(forms
+	 `(defun ,fun-name ,(arg-vars)
+	    (let ((,n-index (* (,hash-function ,@(arg-vars)) ,entry-size))
+		  (,n-cache ,var-name))
+	      (if (and ,@(tests))
+		  (values ,@(mapcar #'(lambda (x) `(svref ,n-cache ,x))
+				    (values-indices)))
+		  ,default)))))
+
+      (let ((fun-name (symbolicate name "-CACHE-ENTER")))
+	(inlines fun-name)
+	(forms
+	 `(defun ,fun-name (,@(arg-vars) ,@(values-names))
+	    (let ((,n-index (* (,hash-function ,@(arg-vars)) ,entry-size))
+		  (,n-cache ,var-name))
+	      ,@(sets)
+	      ,@(mapcar #'(lambda (i val)
+			    `(setf (svref ,n-cache ,i) ,val))
+			(values-indices)
+			(values-names))
+	      (undefined-value)))))
+
+      (let ((fun-name (symbolicate name "-CACHE-CLEAR")))
+	(forms
+	 `(defun ,fun-name ()
+	    (do ((,n-index ,(- total-size entry-size) (- ,n-index ,entry-size))
+		 (,n-cache ,var-name))
+		((minusp ,n-index))
+	      ,@(collect ((arg-sets))
+		  (dotimes (i nargs)
+		    (arg-sets `(setf (svref ,n-cache (+ ,n-index ,i)) nil)))
+		  (arg-sets))
+	      ,@(mapcar #'(lambda (i val)
+			    `(setf (svref ,n-cache ,i) ,val))
+			(values-indices)
+			default-values)))
+	    (undefined-value))
+	(forms `(,fun-name)))
+      
+      `(progn
+	 (defvar ,var-name (make-array ,total-size))
+	 (proclaim '(type (simple-vector ,total-size) ,var-name))
+	 (proclaim '(inline ,@(inlines)))
+	 ,@(forms)
+	 ',name))))
+
+
+;;; DEFUN-CACHED  --  Public
+;;;
+(defmacro defun-cached ((name &rest options &key (values 1) default
+			      &allow-other-keys)
+			args &body (body decls doc))
+  "DEFUN-CACHED (Name {Key Value}*) ({(Arg-Name Test-Function)}*) Form*
+  Some syntactic sugar for defining a function whose values are cached by
+  DEFINE-HASH-CACHE."
+  (let ((default-values (if (and (consp default) (eq (car default) 'values))
+			    (cdr default)
+			    (list default)))
+	(arg-names (mapcar #'car args)))
+    (collect ((values-names))
+      (dotimes (i values)
+	(values-names (gensym)))
+      `(progn
+	 (define-hash-cache ,name ,args ,@options)
+	 (defun ,name ,arg-names
+	   ,@decls
+	   ,doc
+	   (multiple-value-bind
+	       ,(values-names)
+	       (,(symbolicate name "-CACHE-LOOKUP") ,@arg-names)
+	     (if (and ,@(mapcar #'(lambda (val def)
+				    `(eq ,val ,def))
+				(values-names) default-values))
+		 (multiple-value-bind ,(values-names)
+				      (progn ,@body)
+		   (,(symbolicate name "-CACHE-ENTER") ,@arg-names
+		    ,@(values-names))
+		   (values ,@(values-names)))
+		 (values ,@(values-names)))))))))
+
+
+;;; CACHE-HASH-EQ  -- Public
+;;;
+(proclaim '(inline cache-hash-eq))
+(defun cache-hash-eq (x)
+  "Return an EQ hash of X.  The value of this hash for any given object can (of
+  course) change at arbitary times."
+  (the fixnum (ash (the fixnum (%primitive make-fixnum x))
+		   -3)))
+
