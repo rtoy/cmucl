@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.51 1992/01/24 07:49:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.52 1992/02/23 17:41:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 (in-package "C")
 (export '(*compiler-notification-function*))
 (in-package "EXTENSIONS")
-(export '(*error-print-level* *error-print-length*
+(export '(*error-print-level* *error-print-length* *error-print-lines*
 	  def-source-context *undefined-warning-limit*
 	  *enclosing-source-cutoff*))
 (in-package "C")
@@ -496,8 +496,10 @@
 ;;;
 (defun add-to-dfo (block after)
   (declare (type cblock block after))
-  (let ((next (block-next after)))
-    (setf (block-component block) (block-component after))
+  (let ((next (block-next after))
+	(comp (block-component after)))
+    (assert (not (eq (component-kind comp) :deleted)))
+    (setf (block-component block) comp)
     (setf (block-next after) block)
     (setf (block-prev block) after)
     (setf (block-next block) next)
@@ -551,7 +553,8 @@
 	 (last (block-last block))
 	 (last-cont (node-cont last)))
     (unless (eq last node)
-      (assert (eq (continuation-kind start) :inside-block))
+      (assert (and (eq (continuation-kind start) :inside-block)
+		   (not (block-delete-p block))))
       (let* ((succ (block-succ block))
 	     (new-block
 	      (make-block-key :start start
@@ -1186,6 +1189,7 @@
 (defun delete-component (component)
   (declare (type component component))
   (assert (null (component-new-functions component)))
+  (setf (component-kind component) :deleted)
   (do-blocks (block component)
     (setf (block-delete-p block) t))
   (dolist (fun (component-lambdas component))
@@ -1419,13 +1423,14 @@
 ;;; dump huge amounts of garbage.
 ;;;
 (proclaim '(type (or unsigned-byte null) *error-print-level*
-		 *error-print-length*))
+		 *error-print-length* *error-print-lines*))
 
 (defvar *error-print-level* 3
   "The value for *Print-Level* when printing compiler error messages.")
 (defvar *error-print-length* 5
   "The value for *Print-Length* when printing compiler error messages.")
-
+(defvar *error-print-lines* 5
+  "The value for *Print-Lines* when printing compiler error messages.")
 
 (defvar *enclosing-source-cutoff* 1
   "The maximum number of enclosing non-original source forms (i.e. from
@@ -1589,6 +1594,7 @@
 (defun stringify-form (form &optional (pretty t))
   (let ((*print-level* (or *error-print-level* *print-level*))
 	(*print-length* (or *error-print-length* *print-length*))
+	(*print-lines* (or *error-print-lines* *print-lines*))
 	(*print-pretty* pretty))
     (if pretty
 	(format nil "  ~S~%" form)
@@ -1738,6 +1744,7 @@
 	   (list format-args))
   (let* ((*print-level* (or *error-print-level* *print-level*))
 	 (*print-length* (or *error-print-length* *print-length*))
+	 (*print-lines* (or *error-print-lines* *print-lines*))
 	 (stream *compiler-error-output*)
 	 (context (find-error-context format-args)))
     (cond
