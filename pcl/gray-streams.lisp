@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.4 2001/03/27 20:26:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.5 2001/10/28 14:38:07 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,6 +188,10 @@
 (defmethod stream-clear-input ((stream fundamental-character-input-stream))
   nil)
 
+(defgeneric stream-read-sequence (seq stream &optional start end)
+  (:documentation
+   "Implements READ-SEQUENCE for the stream."))
+
 
 ;;; Character output streams.
 ;;;
@@ -318,6 +322,10 @@
 	(dotimes (i fill)
 	  (stream-write-char stream #\Space)))
       T)))
+
+(defgeneric stream-write-sequence (seq stream &optional start end)
+  (:documentation
+   "Implements WRITE-SEQUENCE for the stream."))
 
 
 ;;; Binary streams.
