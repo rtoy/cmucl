@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.16 1991/09/05 13:13:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.17 1991/09/23 14:17:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
   (declare (type component component))
   (assert (not (component-new-functions component)))
   (dolist (fun (component-lambdas component))
-    (get-lambda-environment fun))
+    (reinit-lambda-environment fun))
   (dolist (fun (component-lambdas component))
     (compute-closure fun)
     (dolist (let (lambda-lets fun))
@@ -67,27 +67,45 @@
 
 ;;; GET-LAMBDA-ENVIRONMENT  --  Internal
 ;;;
-;;;    If Fun has an environment, return it, otherwise assign one.  We clean
-;;; any deleted variables out of an existing environments closure.  This is
-;;; necessary because pre-analysis is done before optimization.
+;;;    If Fun has an environment, return it, otherwise assign one.
 ;;;
 (defun get-lambda-environment (fun)
   (declare (type clambda fun))
   (let* ((fun (lambda-home fun))
 	 (env (lambda-environment fun)))
-    (cond (env
-	   (setf (environment-closure env)
+    (or env
+	(let ((res (make-environment :function fun)))
+	  (setf (lambda-environment fun) res)
+	  (dolist (lambda (lambda-lets fun))
+	    (setf (lambda-environment lambda) res))
+	  res))))
+
+
+;;; REINIT-LAMBDA-ENVIRONMENT  --  Internal
+;;;
+;;;    If Fun has no environment, assign one, otherwise clean up variables that
+;;; have no sets or refs.  If a var has no references, we remove it from the
+;;; closure.  If it has no sets, we clear the INDIRECT flag.  This is
+;;; necessary because pre-analysis is done before optimization.
+;;;
+(defun reinit-lambda-environment (fun)
+  (let ((old (lambda-environment (lambda-home fun))))
+    (cond (old
+	   (setf (environment-closure old)
 		 (delete-if #'(lambda (x)
 				(and (lambda-var-p x)
 				     (null (leaf-refs x))))
-			    (environment-closure env)))
-	   env)
+			    (environment-closure old)))
+	   (flet ((clear (fun)
+		    (dolist (var (lambda-vars fun))
+		      (unless (lambda-var-sets var)
+			(setf (lambda-var-indirect var) nil)))))
+	     (clear fun)
+	     (dolist (let (lambda-lets fun))
+	       (clear let))))
 	  (t
-	   (let ((res (make-environment :function fun)))
-	     (setf (lambda-environment fun) res)
-	     (dolist (lambda (lambda-lets fun))
-	       (setf (lambda-environment lambda) res))
-	     res)))))
+	   (get-lambda-environment fun))))
+  (undefined-value))
 
 
 ;;; GET-NODE-ENVIRONMENT  --  Internal
