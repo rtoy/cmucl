@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.23 1991/04/08 12:44:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.24 1991/05/23 18:15:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -581,13 +581,10 @@
 		 (compute-minimal-variables fun))
 	   (setf (compiled-debug-function-arguments dfun) :minimal))
 	  (t
-	   (when (>= level 1)
-	     (setf (compiled-debug-function-variables dfun)
-		   (compute-variables fun level var-locs)))
-	   
-	   (unless (= level 0)
-	     (setf (compiled-debug-function-arguments dfun)
-		   (compute-arguments fun var-locs)))))
+	   (setf (compiled-debug-function-variables dfun)
+		 (compute-variables fun level var-locs))
+	   (setf (compiled-debug-function-arguments dfun)
+		 (compute-arguments fun var-locs))))
     
     (when (>= level 2)
       (multiple-value-bind (blocks tlf-num)
