@@ -806,6 +806,57 @@
 );#+gclisp
 
 
+;;;; CMU Common Lisp version of environment frobbing stuff.
+
+;;; In CMU Common Lisp, the environment (well, the function/macro part of
+;;; the environment) is represented as a list of entries, with each entry
+;;; being of the form (name type . fn) where type is either macro or
+;;; function.
+
+#+:CMU
+(progn
+
+(defmacro with-augmented-environment
+	  ((new-env old-env &key functions macros) &body body)
+  `(let ((,new-env (with-augmented-environment-internal ,old-env
+							,functions
+							,macros)))
+     ,@body))
+
+(defun with-augmented-environment-internal (env functions macros)
+  ;; Note: In order to record the correct function definition, we would
+  ;; have to create an interpreted closure, but the with-new-definition
+  ;; macro down below makes no distinction between flet and labels, so
+  ;; we have no idea what to use for the environment.  So we just blow it
+  ;; off, 'cause anything real we do would be wrong.  We still have to
+  ;; make an entry so we can tell functions from macros.
+  (let ((c::*lexical-environment* (or env (c::make-null-environment))))
+    (c::make-lexenv
+     :functions
+     (append (mapcar #'(lambda (f)
+			 (list (car f) 'function))
+		     functions)
+	     (mapcar #'(lambda (m)
+			 (list* (car m) 'lisp::macro (cadr m)))
+		     macros)))))
+
+(defun environment-function (env fn)
+  (when env
+    (let ((entry (assoc fn (c::lexenv-functions env) :test #'eq)))
+      (and entry 
+	   (eq (cadr entry) 'function)
+	   (cddr entry)))))
+
+(defun environment-macro (env macro)
+  (when env
+    (let ((entry (assoc macro (c::lexenv-functions env) :test #'eq)))
+      (and entry 
+	   (eq (cadr entry) 'lisp::macro)
+	   (cddr entry)))))
+
+); end of #+:CMU
+
+
 
 (defmacro with-new-definition-in-environment
 	  ((new-env old-env macrolet/flet/labels-form) &body body)
@@ -946,9 +997,7 @@
   #+(and dec vax common)        (get symbol 'system::globally-special)
   #+(or KCL IBCL)               (si:specialp symbol)
   #+excl                        (get symbol 'excl::.globally-special.)
-  #+:CMU			(or (get symbol 'lisp::globally-special)
-				    (get symbol
-					 'clc::globally-special-in-compiler))
+  #+:CMU			(eq (ext:info variable kind symbol) :special)
   #+HP-HPLabs                   (member (get symbol 'impl:vartype)
 					'(impl:fluid impl:global)
 					:test #'eq)
@@ -1260,7 +1309,11 @@
         (SET
           (walk-form-internal form :SET env))
         ((LAMBDA CALL)
-	 (cond ((symbolp form) form)
+	 (cond ((or (symbolp form)
+		    (and (listp form)
+			 (= (length form) 2)
+			 (eq (car form) 'setf)))
+		form)
 	       #+Lispm
 	       ((sys:validate-function-spec form) form)
 	       (t (walk-form-internal form context env)))))

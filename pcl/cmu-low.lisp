@@ -1,7 +1,7 @@
-;;;-*-Mode:LISP; Package:(PCL LISP 1000); Base:10; Syntax:Common-lisp -*-
+;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 ;;;
 ;;; *************************************************************************
-;;; Copyright (c) 1985, 1986, 1987, 1988, 1989, 1990 Xerox Corporation.
+;;; Copyright (c) 1985, 1986, 1987, 1988 Xerox Corporation.
 ;;; All rights reserved.
 ;;;
 ;;; Use and copying of this software and preparation of derivative works
@@ -33,27 +33,49 @@
 ;;;;;; Cache No's
   ;;  
 
-;;; Abuse the type declaration, but it generates great code.
-
-;(defun symbol-cache-no (symbol mask)
-;  (logand (the fixnum (system:%primitive lisp::make-immediate-type
-;					 symbol
-;					 system::%+-fixnum-type))
-;	  (the fixnum mask)))
-;
-;(clc::deftransform symbol-cache-no symbol-cache-no-transform (symbol mask)
-;  `(logand (the fixnum (system:%primitive lisp::make-immediate-type
-;					  ,symbol
-;					  system::%+-fixnum-type))
-;	   (the fixnum ,mask)))
+(proclaim '(inline object-cache-no))
 
 (defun object-cache-no (symbol mask)
-  (logand (the fixnum (system:%primitive lisp::make-immediate-type
-					 symbol
-					 system::%+-fixnum-type))
+  (logand (ext:truly-the fixnum (system:%primitive make-fixnum symbol))
 	  (the fixnum mask)))
 
-(clc::deftransform object-cache-no object-cache-no-transform (symbol mask)
-  `(logand (the fixnum (system:%primitive lisp::make-immediate-type
-					  ,symbol
-					  system::%+-fixnum-type))
+
+
+(defun function-arglist (fcn)
+  "Returns the argument list of a compiled function, if possible."
+  (cond ((symbolp fcn)
+	 (when (fboundp fcn)
+	   (function-arglist (symbol-function fcn))))
+	((eval:interpreted-function-p fcn)
+	 (eval:interpreted-function-name fcn))
+	((functionp fcn)
+	 (let ((lambda-expr (function-lambda-expression fcn)))
+	   (if lambda-expr
+	       (cadr lambda-expr)
+	       (let ((function (kernel:%closure-function fcn)))
+		 (values (read-from-string
+			  (kernel:%function-header-arglist function)))))))))
+
+
+;;; We have this here and in fin.lisp, 'cause PCL wants to compile this
+;;; file first.
+;;; 
+(defsetf funcallable-instance-name set-funcallable-instance-name)
+
+(defun set-function-name (fcn new-name)
+  "Set the name of a compiled function object."
+  (cond ((symbolp fcn)
+	 (set-function-name (symbol-function fcn) new-name))
+	((funcallable-instance-p fcn)
+	 (setf (funcallable-instance-name fcn) new-name)
+	 fcn)
+	(t
+	 (let ((header (kernel:%closure-function fcn)))
+	   (system:%primitive c::set-function-name header
+			      (if (symbolp new-name)
+				  new-name
+				  (let ((*package* *the-pcl-package*)
+					(*print-case* :upcase)
+					(*print-gensym* 't))
+				    (prin1-to-string new-name)))))
+	 fcn)))

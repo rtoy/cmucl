@@ -106,11 +106,15 @@ explicitly marked saying who wrote it.
 ;;;       This must be SETF'able.
 ;;;       
 
+(eval-when (compile eval load)
+
 (defconstant funcallable-instance-data
              '(wrapper slots)
   "These are the 'data-slots' which funcallable instances have so that
    the meta-class funcallable-standard-class can store class, and static
    slots in them.")
+
+); eval-when (compile eval load)
 
 (defmacro funcallable-instance-data-position (data)
   (if (and (consp data)
@@ -965,44 +969,61 @@ explicitly marked saying who wrote it.
 
 ;;; Implementation of funcallable instances for CMU Common Lisp.
 ;;;
-;;; Similiar to the code for VAXLISP implementation.
+
 #+:CMU
 (progn
 
+(defstruct funcallable-instance-info
+  (function #'(lambda (&rest args) (declare (ignore args))
+		(called-fin-without-function))
+	    :type function)
+  (name "Unnamed funcallable instance")
+  . #.funcallable-instance-data)
+
+(proclaim '(inline funcallable-instance-info funcallable-instance-p))
+
+
+(defun funcallable-instance-info (fin)
+  (system:find-if-in-closure #'funcallable-instance-info-p fin))
+
+
 (defun allocate-funcallable-instance-1 ()
-  `(lisp::%compiled-closure%
-     ()
-     ,#'(lambda (&rest args)
-	  (declare (ignore args))
-	  (called-fin-without-function))
-     ,(make-array (length funcallable-instance-data))))
+  (let ((info (make-funcallable-instance-info)))
+    #'(lambda (&rest args)
+	(apply (funcallable-instance-info-function info) args))))
 
-(proclaim '(inline funcallable-instance-p))
-(defun funcallable-instance-p (x)
-  (and (consp x)
-       (eq (car x) 'lisp::%compiled-closure%)
-       (not (null (cdddr x)))))
 
-(defun set-funcallable-instance-function (fin func)
-  (cond ((not (funcallable-instance-p fin))
-	 (error "~S is not a funcallable-instance" fin))
-	((not (functionp func))
-	 (error "~S is not a function" func))
-	((and (consp func) (eq (car func) 'lisp::%compiled-closure%))
-	 (setf (cadr fin) (cadr func)
-	       (caddr fin) (caddr func)))
-	(t (set-funcallable-instance-function fin
-					      (make-trampoline func)))))
+(defun funcallable-instance-p (thing)
+  (and (functionp thing)
+       (= (kernel:get-type thing) vm:closure-header-type)
+       (funcallable-instance-info thing)
+       t))
 
-(defun make-trampoline (function)
-  #'(lambda (&rest args)
-      (apply function args)))
 
-(eval-when (eval) (compile 'make-trampoline))
+(defun set-funcallable-instance-function (fin new-value)
+  (setf (funcallable-instance-info-function (funcallable-instance-info fin))
+	new-value))
 
-(defmacro funcallable-instance-data-1 (instance data)
-  `(svref (cadddr ,instance)
-	  (funcallable-instance-data-position ,data)))
+
+(defun funcallable-instance-name (fin)
+  (funcallable-instance-info-name (funcallable-instance-info fin)))
+
+(defun set-funcallable-instance-name (fin new-value)
+  (setf (funcallable-instance-info-name (funcallable-instance-info fin))
+	new-value))
+
+(defsetf funcallable-instance-name set-funcallable-instance-name)
+
+
+(defmacro funcallable-instance-data-1 (fin slot)
+  (unless (and (listp slot) (eq (car slot) 'quote))
+    (error "Non-constant name for funcallable-instance-data-1: ~S" slot))
+  `(,(intern (concatenate 'simple-string
+			  "FUNCALLABLE-INSTANCE-INFO-"
+			  (string (cadr slot)))
+	     *the-pcl-package*)
+    (funcallable-instance-info ,fin)))
+
 
 ); End of :CMU
 

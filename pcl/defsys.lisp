@@ -269,7 +269,7 @@ and load your system with:
              #+(and Lucid MIPS)                  ("lisp"  . "mbin")
              #+(and Lucid PRISM)                 ("lisp"  . "abin")
 	     #+excl                              ("cl"    . "fasl")
-             #+:CMU                              ("slisp" . "sfasl")
+             #+:CMU ("lisp" . #+pmax "mips-fasl" #-(or pmax) "fasl")
              #+HP                                ("l"     . "b")
              #+TI ("lisp" . #.(string (si::local-binary-file-type)))
              #+:gclisp                           ("LSP"   . "F2S")
@@ -395,7 +395,8 @@ and load your system with:
     (let ((*system-directory* (funcall (car system)))
 	  (modules (cadr system))
 	  (transformations ()))
-      (labels ((load-source (name pathname)
+      (labels (#+nil ;; This isn't used?
+	       (load-source (name pathname)
 		 (format t "~&Loading source of ~A..." name)
 		 (or print-only (load pathname)))
 	       (load-binary (name pathname)
@@ -557,11 +558,7 @@ and load your system with:
     ;;
     #+LUCID (or lucid::*source-pathname* (bad-time))))
 
-(defvar *pcl-directory*
-	(or (load-truename t)
-	    (error "Because load-truename is not implemented in this port~%~
-                    of PCL, you must manually edit the definition of the~%~
-                    variable *pcl-directory* in the file defsys.lisp.")))
+(defvar *pcl-directory* (pathname "pcl:"))
 
 
 (defsystem pcl	   

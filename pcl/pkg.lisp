@@ -40,6 +40,10 @@
 	  defmethod)
 	*the-pcl-package*)
 
+#+CMU
+(shadow '(destructuring-bind)
+	*the-pcl-package*)
+
 #+GCLisp
 (shadow '(string-append memq assq delq neq make-instance)
 	*the-pcl-package*)
@@ -117,7 +121,7 @@
 );eval-when 
 
 #-(or KCL IBCL)
-(export *exports* *the-pcl-package*)
+(export '#.*exports* *the-pcl-package*)
 
 #+(or KCL IBCL)
 (mapc 'export (list *exports*) (list *the-pcl-package*))
