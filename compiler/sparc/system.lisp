@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.9 1992/10/11 10:54:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.10 1993/04/01 15:07:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,34 +35,39 @@
 (define-vop (get-type)
   (:translate get-type)
   (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:temporary (:scs (non-descriptor-reg)) ndescr)
-  (:results (result :scs (unsigned-reg)))
+  (:args (object :scs (descriptor-reg) :to (:eval 1)))
+  (:results (result :scs (unsigned-reg) :from (:eval 0)))
   (:result-types positive-fixnum)
   (:generator 6
-    (let ((other-ptr (gen-label))
-	  (function-ptr (gen-label))
-	  (done (gen-label)))
-      (test-type object ndescr other-ptr nil vm:other-pointer-type)
-      (test-type object ndescr function-ptr nil vm:function-pointer-type)
-      (inst andcc result object
-	    (logand vm:other-immediate-0-type vm:other-immediate-1-type))
-      (inst b :eq done)
-      (inst nop)
+    ;; Grab the lowtag.
+    (inst andcc result object lowtag-mask)
+    ;; Check for various pointer types.
+    (inst cmp result list-pointer-type)
+    (inst b :eq done)
+    (inst cmp result other-pointer-type)
+    (inst b :eq other-pointer)
+    (inst cmp result function-pointer-type)
+    (inst b :eq function-pointer)
+    (inst cmp result instance-pointer-type)
+    (inst b :eq done)
+    ;; Okay, it is an immediate.  If fixnum, we want zero.  Otherwise,
+    ;; we want the low 8 bits.
+    (inst andcc result object #b11)
+    (inst b :eq done)
+    (inst nop)
+    ;; It wasn't a fixnum, so get the low 8 bits.
+    (inst b done)
+    (inst and result object type-mask)
+    
+    FUNCTION-POINTER
+    (inst b done)
+    (load-type result object (- function-pointer-type))
 
-      (inst b done)
-      (inst and result object vm:type-mask)
+    OTHER-POINTER
+    (load-type result object (- other-pointer-type))
 
-      (emit-label function-ptr)
-      (load-type result object (- vm:function-pointer-type))
-      (inst b done)
-      (inst nop)
+    DONE))
 
-      (emit-label other-ptr)
-      (load-type result object (- vm:other-pointer-type))
-      (inst nop)
-      
-      (emit-label done))))
 
 (define-vop (function-subtype)
   (:translate function-subtype)
