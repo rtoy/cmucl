@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.5 1992/05/22 15:32:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.6 1992/08/04 08:24:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,9 @@
   vops)
 
 (defun setup-dynamic-count-info (component)
-  (assert (not (backend-featurep :new-assembler)))
+  (declare (ignore component))
+  (error "Dynamic statistic collection not implemented for the new-assembler.")
+  #+nil
   (let* ((info (ir2-component-dyncount-info (component-info component)))
 	 (vops (dyncount-info-vops info)))
     (when (producing-fasl-file)
@@ -84,5 +86,5 @@
 		   (incf (svref counts (+ i (if elsewherep 3 2))) bytes)
 		   (return)))))))
      *code-segment*
-     *elsewhere*)
-    (undefined-value)))
+     *elsewhere*))
+  (undefined-value))
