@@ -70,7 +70,7 @@ New in this release:
        index. 
      - Lisp binary will also look at the PATH envvar to find out it's
        own location which is used to find other needed files.
-
+ 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
        ANSI test suite have been fixed.
@@ -186,6 +186,9 @@ New in this release:
        Default is to stack-allocate if speed >= safety.  Be warned
        that all bets are off if a stack-allocated object or parts of
        it escape; CMUCL might crash or format your hard disk.
+     - Generation GC (gencgc) available for Sparc/Solaris on an
+       experimental basis.  Despite the name and feature, it is not
+       conservative. 
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
