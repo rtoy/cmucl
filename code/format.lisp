@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.12 1991/11/30 22:38:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.13 1991/11/30 22:55:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,7 +270,8 @@
        ,(expand-control-string control-string)
        args)))
 
-(defvar *current-directive-offset* nil)
+(eval-when (compile load eval)
+  (defvar *current-directive-offset* nil))
 
 (defun expand-control-string (string)
   (let* ((string (etypecase string
