@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.4 1990/11/03 17:22:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.5 1990/11/23 08:43:43 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -165,3 +165,175 @@
   (inst move fp-tn csp-tn)
 
   DONE)
+
+
+
+;;;; Comparison routines.
+
+(macrolet
+    ((define-cond-assem-rtn (name translate static-fn cmp not-p)
+       `(define-assembly-routine (,name
+				  (:cost 10)
+				  (:return-style :full-call)
+				  (:policy :safe)
+				  (:translate ,translate)
+				  (:return-style :full-call))
+				 ((:arg x (descriptor-reg any-reg) a0-offset)
+				  (:arg y (descriptor-reg any-reg) a1-offset)
+				  
+				  (:res res descriptor-reg a0-offset)
+				  
+				  (:temp temp non-descriptor-reg nl0-offset)
+				  (:temp lip interior-reg lip-offset)
+				  (:temp lra descriptor-reg lra-offset)
+				  (:temp nargs any-reg nargs-offset)
+				  (:temp cname descriptor-reg cname-offset)
+				  (:temp ocfp any-reg old-fp-offset))
+	  (inst and temp x 3)
+	  (inst bne temp DO-STATIC-FN)
+	  (inst and temp y 3)
+	  (inst beq temp DO-COMPARE)
+	  ,cmp
+	  
+	  DO-STATIC-FN
+	  (load-symbol cname ',static-fn)
+	  (inst li nargs (fixnum 2))
+	  (inst lw lip cname
+		(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
+		   vm:other-pointer-type))
+	  (inst move ocfp fp-tn)
+	  (inst j lip)
+	  (inst move fp-tn csp-tn)
+	  
+	  DO-COMPARE
+	  (inst ,(if not-p 'bne 'beq) done)
+	  (inst move res null-tn)
+	  (load-symbol res t)
+	  DONE)))
+
+  (define-cond-assem-rtn generic-< < two-arg-< (inst slt temp x y) nil)
+  (define-cond-assem-rtn generic-<= <= two-arg-<= (inst slt temp y x) t)
+  (define-cond-assem-rtn generic-> > two-arg-> (inst slt temp y x) nil)
+  (define-cond-assem-rtn generic->= >= two-arg->= (inst slt temp x y) t))
+
+
+(define-assembly-routine (generic-eql
+			  (:cost 10)
+			  (:return-style :full-call)
+			  (:policy :safe)
+			  (:translate eql)
+			  (:return-style :full-call))
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
+			  
+			  (:res res descriptor-reg a0-offset)
+			  
+			  (:temp temp non-descriptor-reg nl0-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp lra descriptor-reg lra-offset)
+			  (:temp nargs any-reg nargs-offset)
+			  (:temp cname descriptor-reg cname-offset)
+			  (:temp ocfp any-reg old-fp-offset))
+  (inst beq x y RETURN-T)
+  (inst and temp x 3)
+  (inst beq temp RETURN-NIL)
+  (inst and temp y 3)
+  (inst bne temp DO-STATIC-FN)
+  (inst nop)
+
+  RETURN-NIL
+  (inst move res null-tn)
+  (lisp-return lra lip :offset 2)
+
+  DO-STATIC-FN
+  (load-symbol cname 'eql)
+  (inst li nargs (fixnum 2))
+  (inst lw lip cname
+	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
+	   vm:other-pointer-type))
+  (inst move ocfp fp-tn)
+  (inst j lip)
+  (inst move fp-tn csp-tn)
+
+  RETURN-T
+  (load-symbol res t))
+
+(define-assembly-routine (generic-=
+			  (:cost 10)
+			  (:return-style :full-call)
+			  (:policy :safe)
+			  (:translate =)
+			  (:return-style :full-call))
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
+			  
+			  (:res res descriptor-reg a0-offset)
+			  
+			  (:temp temp non-descriptor-reg nl0-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp lra descriptor-reg lra-offset)
+			  (:temp nargs any-reg nargs-offset)
+			  (:temp cname descriptor-reg cname-offset)
+			  (:temp ocfp any-reg old-fp-offset))
+  (inst beq x y RETURN-T)
+  (inst and temp x 3)
+  (inst bne temp DO-STATIC-FN)
+  (inst and temp y 3)
+  (inst bne temp DO-STATIC-FN)
+  (inst nop)
+
+  (inst move res null-tn)
+  (lisp-return lra lip :offset 2)
+
+  DO-STATIC-FN
+  (load-symbol cname 'two-arg-=)
+  (inst li nargs (fixnum 2))
+  (inst lw lip cname
+	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
+	   vm:other-pointer-type))
+  (inst move ocfp fp-tn)
+  (inst j lip)
+  (inst move fp-tn csp-tn)
+
+  RETURN-T
+  (load-symbol res t))
+
+(define-assembly-routine (generic-/=
+			  (:cost 10)
+			  (:return-style :full-call)
+			  (:policy :safe)
+			  (:translate /=)
+			  (:return-style :full-call))
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
+			  
+			  (:res res descriptor-reg a0-offset)
+			  
+			  (:temp temp non-descriptor-reg nl0-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp lra descriptor-reg lra-offset)
+			  (:temp nargs any-reg nargs-offset)
+			  (:temp cname descriptor-reg cname-offset)
+			  (:temp ocfp any-reg old-fp-offset))
+  (inst beq x y RETURN-NIL)
+  (inst and temp x 3)
+  (inst bne temp DO-STATIC-FN)
+  (inst and temp y 3)
+  (inst bne temp DO-STATIC-FN)
+  (inst nop)
+
+  (load-symbol res t)
+  (lisp-return lra lip :offset 2)
+
+  DO-STATIC-FN
+  (load-symbol cname 'two-arg-=)
+  (inst li nargs (fixnum 2))
+  (inst lw lip cname
+	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
+	   vm:other-pointer-type))
+  (inst move ocfp fp-tn)
+  (inst j lip)
+  (inst move fp-tn csp-tn)
+
+  RETURN-NIL
+  (inst move res null-tn))
