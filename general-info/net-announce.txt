@@ -1,0 +1,513 @@
+	    Release notes for CMU Common Lisp 17e, 11 March 94
+
+17e is primarily a bug-fix release.  This release is also available on
+Hewlett-Packard 700-series workstations running HP/UX version 9.x.  The main
+missing features on HP/UX are LOAD-FOREIGN and the Motif interface.
+
+
+Distribution:
+
+CMU Common Lisp is only available via anonymous FTP.  We don't have the
+manpower to make tapes.  These are our distribution machines:
+    lisp-sun1.slisp.cs.cmu.edu (128.2.250.58)
+    lisp-rt1.slisp.cs.cmu.edu (128.2.217.9)
+    lisp-rt2.slisp.cs.cmu.edu (128.2.217.10)
+
+Log in with the user "anonymous" and "username@host" as password (i.e. your
+EMAIL address.)  When you log in, cd to /pub (a symbolic link to the CMU CL
+release area.)  If you have any trouble with FTP access, please send mail to
+slisp@cs.cmu.edu.
+
+The release area holds compressed tar files with names of the form:
+    <version>-<machine>_<os>.tar.Z
+    <version>-extra-<machine>_<os>.tar.Z
+
+FTP compressed tar archives in binary mode.  To extract, "cd" to the
+directory that is to be the root of the tree, then type:
+    uncompress <file.tar.Z | tar xf - .
+
+As of 11/11/93, the latest SunOS Sparc release is:
+    17e-sunos.tar.Z (6.6 meg)
+    17e-extra-sunos.tar.Z (3.9 meg)
+This version works with all the versions of SunOS we've tried it on, but does
+*NOT* work under Solaris.
+
+The first file holds binaries and documentation for the basic Lisp system,
+while the second `-extra' file contains the Hemlock editor, the Motif toolkit,
+the graphical debugger and the CLX interface to X11.  The basic configuration
+takes 15 megabytes of disk space; adding the extras takes another 8 megabytes.
+For installation directions, see the section "site initialization".
+
+If poor network connections make it difficult to transfer a 7 meg file, the
+release is also available split into 2 megabyte chunks, suffixed `.0', `.1',
+etc.  To extract from multiple files, use:
+    cat file.tar.Z.* | uncompress | tar xf - .
+
+The release area also contains source distributions and other binary
+distributions.  A listing of the current contents of the release area is in
+FILES.  Major release announcements will be made to comp.lang.lisp.
+
+Source availability:
+
+Lisp and documentation sources are available via anonymous FTP ftp to any CMU
+CS machine.  [See the "Distribution" section for FTP instructions.]  All CMU
+written code is public domain, but CMU CL also makes use of two imported
+packages: PCL and CLX.  Although these packages are copyrighted, they may be
+freely distributed without any licensing agreement or fee.
+
+The release area contains a source distribution, which is an image of all the
+".lisp" source files used to build version 17e:
+    17e-source.tar.Z (4.9 meg)
+
+________________________________________________________________
+
+			    DETAILED RELEASE NOTES
+
+[Notes are also in doc/release-notes.txt]
+
+BASIC COMMON LISP SUPPORT CODE:
+
+Enhancements:
+ -- The function EXT:PURIFY is now exported.  This was formerly only
+    documented as usable via the :PURIFY argument to SAVE-LISP.  Great
+    improvements in GC runtime and memory use can be obtained when PURIFY is
+    called after loading in large amounts of code or creating large
+    datastructures that are unlikely to become garbage.
+ -- EXT:PURIFY (and thus (EXT:SAVE-LISP ... :PURIFY T) now compact the
+    hashtables representing the global namespace.  Formerly this feature was
+    undocumented and only used during the initial system build.
+ -- There is now a "runtime" version of the Lisp image which omits the
+    compiler and loads some other code byte compiled, giving a 60% size
+    reduction.  See README file, "Runtime distribution" section.
+ -- Changed the byte-function and byte-closure funcallable-instances to use
+    &more args instead of a &rest arg (eliminating the main source of
+    grautitous consing in byte code.)
+ -- Allow pretty-printer to work without compiler loaded.
+ -- Improved (and thus changed) the SXHASH of lists and other composite
+    objects.
+ -- Added to *FEATURES* all of the ANSI CL features that seemed plausible.
+    Any non-ANSI compliance is now a bug, not a feature...
+ -- Picked up Miles' changes to apropos and apropos-list that allows one to
+    supply NIL for the package, meaning all packages.
+
+Bug fixes:
+ -- In SIGNAL, bind *break-on-signals* to NIL even before doing the type test
+    so that we don't wedge the error system if the type is malformed or
+    undefined. 
+ -- Fix arg ordering for GETF in new condition support.  Default the name
+    slot in DEFMACRO-LAMBDA-LIST-BIND-ERRORS to NIL (instead of leaving it
+    unbound.)
+ -- In READ-N-BYTES, only signal EOF when we read and got 0 bytes, not
+    whenever read returns less than we wanted.  Also, fix the case of small
+    reads with an empty buffer not to leave garbled buffer pointers if we have
+    to do more than one read.  These bugs mostly affect the X interface and
+    its users (Garnet was having problems.)
+ -- Changed YES-OR-NO-P and Y-OR-N-P to force output.
+ -- Fixed COUNT :TEST-NOT to actually negate the test.
+ -- Fixed COERCE to call type-expand so that people can coerce to deftypes.
+ -- Rename STEP to DEBUG::SET-STEP-BREAKPOINT because step is supposed to be
+    the exported step macro, not some internal routine.
+ -- Fixed DEFPACKAGE to combine multiple use, export, and import options
+    correctly.  Fixed the warning about no longer using some packages to
+    actually work.
+ -- Fixed GCD to correctly handle MOST-NEGATIVE-FIXNUM.
+ -- Flush Hemlock font change hack in default site-init.lisp, since it was
+    causing problems.
+
+CLOS (PCL):
+ -- Add some hacks for coercing lisp:class objects to pcl:class.
+ -- Export MAKE-LOAD-FORM-SAVING-SLOTS, not MAKE-LOAD-FORM-DUMPING-SLOTS.
+ -- Fix some problems with the LISP:CLASS class-precedence-list suddenly
+    becoming empty when a class is redefined.
+ -- Fixed SIMPLE-STRING to list STRING in the inherits list.
+ -- Fix to update-instance-for-different-class.
+
+
+COMPILER:
+
+Enhancements:
+ -- Added a type inference method for LOG's result type.
+ -- Added support for "more args" which are like rest args, but don't cons.
+    This is used for calling into annd out of byte-compiled core and in the
+    PROFILE package.
+ -- Increase *inline-expansion-limit* from 50 to 200.  Change "inline
+    expansion count exceeded" warning to be a note.  Don't inline expand in
+    interpreted code.
+
+Bug fixes:
+ -- Allow stream arg to compile-file.
+ -- Changed assert-definition-type to quietly ignore non function-types.
+ -- Allow stream arg to compile-file.
+ -- Deleted incorrect type declaration in process-1-ftype-proclamation.
+    Deleted test for function-type-p around call to assert-definition-type,
+    since this is now folded into the function.  Previously several calls
+    weren't doing this necessary check.
+ -- Fix a problem where spurious argument types could be inferred for optional
+    arguments in byte-compiled code (caused yes-or-no-p to fail.)
+ -- Fixed an internal error related to tail local calls.
+ -- Fixed assertion failure about COMPONENT-NEW-FUNCTIONS with some inline
+    expansions. 
+ -- Fixed (TYPEP X '(REAL ...)) to actually test against REAL, not NUMBER.
+ -- Fixed a problem where top-level MULTIPLE-VALUE-CALL forms could cause an
+    assertion falure. 
+ -- Don't try to compile flow-graph components that are unreachable.  This
+    avoids some internal errors when unreachable local functions are
+    deleted.
+ -- Fix problem with byte-compiling PROGV getting an internal compiler error.
+
+
+EXTENSIONS:
+
+Misc extensions:
+ -- Added an executable-only optional to EXT:UNIX-NAMESTRING so that we can
+    expand path:foo into the first executable in the path named foo, not just
+    the first file
+ -- Changed RUN-PROGRAM to only try to run executables, and to flame out if it
+    can't be found in path:.
+ -- Profile: use &more instead of &rest to avoid consing the &rest arg list.
+    Fixed PROFILE:REPORT-TIME to not choke if any of the function names are
+    not symbols (e.g. setf functions).
+
+[NOTE: Motif server doesn't work on HP yet.]
+Motif interface:
+ -- Added an optional STYLE arg to the graphical inspector to make the
+    function consistent with its doc string (as well as the old inspector).
+ -- Tried to make starting the Motif server more robust, or at least give some
+    intelligible error message.
+ -- Added some extra protection against recursive invocation of the windowing
+    debugger.
+ -- Don't try to invoke motif debugger if we didn't succeed in opening a
+    connection. 
+ -- Print warning in status hook when server dies.
+ -- Made server fflush after all output so that we see output when it is run
+    on a pipe.
+
+Hemlock:
+ -- Add window-buffer-hook for echo area buffer to make absolutely sure we
+    can't change the eacho area window to point to another buffer.
+ -- Give a sensible error message if we can't find the slave utility (e.g.
+    lisp) to run.
+ -- Restored the behavior of scribe-file to cd to the directory of the .mss
+    file before running scribe.
+ -- Change default fonts to be courier, flushing all mention of 8x13.
+    Remove font-setting in default site-init file, since it was causing
+    problems.
+ -- Add FILE-POSITION method for region streams so that the compiler's read
+    error recovery works for "Editor Compile Defun", etc.
+ -- When reading a file, set BUFFER-WRITABLE to T before doing anything so
+    that we don't get spurious read-only errors.
+
+
+________________________________________________________________
+
+Sun Release 4.1                                                 1
+
+CMUCL(1)                 USER COMMANDS                   CMUCL(1)
+
+
+
+NAME
+     CMU Common Lisp
+
+
+DESCRIPTION
+     CMU Common Lisp is public domain "industrial strength"  Com-
+     mon Lisp programming environment.  Many of the X3j13 changes
+     have been incorporated into CMU CL.  Wherever possible, this
+     has  been  done  so  as to transparently allow use of either
+     CLtL1 or proposed ANSI CL.  Probably the new  features  most
+     interesting  to users are SETF functions, LOOP and the WITH-
+     COMPILATION-UNIT macro.
+
+
+HARDWARE REQUIREMENTS
+     CMU CL is currently available for Sparcstations and  DECsta-
+     tions (pmaxes) running Mach (or OSF/1).  We are beta-testing
+     a SunOS SPARC version and an IBM RT Mach version.  At  least
+     16  megabytes  of  memory and 25 megabytes of disk space are
+     recommended.  As usual, more is better.
+
+
+OVERVIEW
+     When compared other Common Lisp implementations, CMU CL  has
+     two broad advantages:
+
+     -- The new CMU CL compiler (Python)  is  more  sophisticated
+        than  other  Common  Lisp  compilers.   It  both produces
+        better code and is easier to use.
+
+     -- The programming environment based on the  Hemlock  editor
+        is  better  integrated than gnu-emacs based environments.
+        (Though you can still use GNU if you want.)
+
+     CMU CL also has significant non-technical advantages:
+
+     -- It has good local support for  CMU  users,  and  is  well
+        integrated with the CMU CS environment.
+
+     -- It is public domain, and is freely available  to  non-CMU
+        sites  that  aren't  able  to afford a site-license for a
+        commercial Lisp.
+
+
+
+COMPILER FEATURES
+     The `Advanced Compiler' chapter of the User's manual  exten-
+     sively  discusses  Python's  optimization  capabilities (See
+     DOCUMENTATION below.)  Here are a few high points:
+
+     -- Good efficiency and type-checking at the same time.  Com-
+        piling code safe gives a 2x speed reduction at worst.
+
+     -- In safe code, type declarations  are  verified,  allowing
+        declarations to be debugged in safe code.  When you go to
+        compile unsafe, you know the declarations are right.
+
+     -- Full source level debugging of compiled  code,  including
+        display of the exact call that got an error.
+
+     -- Good efficiency notes that  tell  you  why  an  operation
+        can't  be open coded or where you are number-consing, and
+        that provide unprecedented source context
+
+     -- Block compilation, partial evaluation, lightweight  func-
+        tions  and  proper  tail-recursion  allow low-cost use of
+        function call abstraction.
+
+TYPE SUPPORT
+     Important note: Even  debugged  programs  may  contain  type
+     errors that remain undetected by other compilers.  When com-
+     piled with type checking suppressed  using  the  CMU  Common
+     Lisp  compiler,  these  type  errors may cause said debugged
+     programs  to  die  strangely.   If  type  checking  is   not
+     suppressed,  these  programs  will die with an explicit type
+     error.
+
+     The most visible way in which Python differs  from  previous
+     Common  Lisp  compilers  is  that it has a greater knowledge
+     about types and a different approach to type  checking.   In
+     particular, Python implements type checking which is `eager'
+     and `precise':
+
+     -- Eager in the sense that type checking is done immediately
+        whenever  there  is  a  declaration,  rather  than  being
+        delayed until the the value is actually used.  For  exam-
+        ple:
+            (let ((x ...))
+              (declare (fixnum x))
+              ...)
+        Here, the type of the initial value of X must be a FIXNUM
+        or an error will be signalled.
+
+     -- Precise in the sense that the  exact  type  specified  is
+        checked.  For example, if a variable is declared to be of
+        type (integer 3 7), then the  value  must  always  be  an
+        integer between 3 and 7.
+
+     Since Python does more type  checking,  programs  that  work
+     fine  when compiled with other compilers may get type errors
+     when compiled with Python.  It  is  important  to  initially
+     compile  programs  with  the default (safe) policy, and then
+     test this version.  If a program with an erroneous  declara-
+     tion  is  compiled with type checking suppressed (due to the
+     SAFETY optimize quality being reduced), then the type  error
+     may  cause obscure errors or infinite looping.  See the sec-
+     tion `Getting Existing Programs to Run' (6.6)  in  the  com-
+     piler chapter of the user manual.
+
+     CMU CL adheres to the X3J13  function  type  cleanup,  which
+     means that quoted lambda-lists are not of type FUNCTION, and
+     are no longer directly callable.  Use COERCE with the  FUNC-
+     TION result type.
+
+
+OPTIMIZATION
+     Python does many optimizations that are absent or less  gen-
+     eral  in other Common Lisp compilers: Proper tail recursion,
+     lightweight  function  call,   block   compilation,   inter-
+     procedural  type  inference,  global  flow analysis, dynamic
+     type inference, global  register  allocation,  stack  number
+     allocation,  control  optimization,  integer range analysis,
+     enhanced inline expansion, multiple value  optimization  and
+     source-to-source transforms.
+
+     Optimization and type-checking are controlled by the  OPTIM-
+     IZE  declaration.   The  default compilation policy is type-
+     safe.
+
+
+NUMERIC SUPPORT
+     Python is particular good at number crunching:
+
+     -- Good inline coding of float and  32  bit  integer  opera-
+        tions,  with  no  number  consing.  This includes all the
+        hardware primitives ROUND, TRUNCATE, COERCE, as  well  as
+        important   library  routines  such  as  SCALE-FLOAT  and
+        DECODE-FLOAT.  Results that don't fit in registers go  on
+        a special number stack.
+
+     -- Full support for IEEE single and  double  (denorms,  +-0,
+        etc.)
+
+     -- In block compiled code, numbers are  passed  as  function
+        arguments  and  return  values  in registers (and without
+        number consing.)
+
+     -- Calls to library functions (SIN, ...) are optimized to  a
+        direct  call  to  the  C  library routine (with no number
+        consing.)  On hardware with direct support for such func-
+        tions, these operations can easily be open-coded.
+
+     --  Substantially better bignum performance than  commercial
+        implementations  (2x-4x).   Bignums  implemented  in lisp
+        using word integers, so you can roll your own.
+
+     Python's compiler warnings and efficiency  notes  are  espe-
+     cially  valuable  in  numeric  code.   50+ pages in the user
+     manual describe Python's capabilities in more detail.
+
+
+
+THE DEBUGGER
+     In addition to a basic command-line interface, the  debugger
+     also has several powerful new features:
+
+     -- The "source" and "vsource" commands print  the  *precise*
+        original source form responsible for the error or pending
+        function call.  It is no longer necessary to guess  which
+        call to CAR caused some "not a list" error.
+
+     -- Variables in compiled code can be accessed  by  name,  so
+        the  debugger  always  evaluates  forms  in  the  lexical
+        environment of the current frame.  This  variable  access
+        is  robust  in  the presence of compiler optimization ---
+        although higher levels of optimization may make  variable
+        values  unavailable  at  some locations in the variable's
+        scope, the debugger always errs on the  side  of  discre-
+        tion, refusing to display possibly incorrect values.
+
+     -- Integration with the Hemlock editor.   In  a  slave,  the
+        "edit"  command causes the editor edit the source for the
+        current code location.  The editor  can  also  send  non-
+        line-mode  input  to  the  debugger using C-M-H bindings.
+        Try apropos "debug" in Hemlock.
+
+     See the  debugger  chapter  in  the  user  manual  for  more
+     details.   We  are  working on integrating the debugger with
+     Hemlock and X windows.
+
+
+THE INTERPRETER
+     As far as Common Lisp semantics are concerned, there  is  no
+     interpreter;  this is effectively a compile-only implementa-
+     tion.  Forms typed to the read-eval-print loop or passed  to
+     EVAL  are in effect compiled before being run.  In implemen-
+     tation, there is an interpreter,  but  it  operates  on  the
+     internal representation produced by the compiler's font-end.
+
+     It is not recommended that programs be debugged  by  running
+     the whole program interpreted, since Python and the debugger
+     eliminate the main reasons for debugging  using  the  inter-
+     preter:
+
+     -- Compiled code does much more error checking  than  inter-
+        preted code.
+
+     -- It is as easy to debug compiled code as interpreted code.
+
+     Note that the debugger does not  currently  support  single-
+     stepping.  Also, the interpreter's pre-processing freezes in
+     the macro definitions in effect at the time  an  interpreted
+     function  is  defined.   Until we implement automatic repro-
+     cessing when macros are redefined, it is  necessary  to  re-
+     evaluate  the definition of an interpreted function to cause
+     new macro definitions to be noticed.
+
+
+DOCUMENTATION
+     The CMU CL documentation is printed as tech reports, and  is
+     available (at CMU) in the document room:
+
+
+       CMU Common Lisp User's Manual
+       Hemlock User's Manual
+       Hemlock Command Implementor's Manual
+
+     Non-CMU users may get documentation from the doc/  directory
+     in the binary distribution:
+
+     cmu-user.info
+               CMU CL User's Manual  in  Gnu  Info  format.   The
+               ``cmu-user.info-<N>'' files are subfiles.  You can
+               either have your EMACS maintainer install this  in
+               the   info   root,   or   you  can  use  the  info
+               ``g(...whatever.../doc/cmu-user.info)'' command.
+
+     cmu-user.ps
+               The CMU CL User's Manual (148 pages) in postscript
+               format.   LaTeX  source  and DVI versions are also
+               available.
+
+     release-notes.txt
+               Information on the changes between releases.
+
+     hemlock-user.ps
+               Postscript version of the  Hemlock  User's  Manual
+               (124 pages.)
+
+     hemlock-cim.ps
+               Postscript  version   of   the   Hemlock   Command
+               Implementor's Manual (96 pages).
+
+SUPPORT
+     Bug reports should be sent to cmucl-bugs@cs.cmu.edu.  Please
+     consult  your  local CMU CL maintainer or Common Lisp expert
+     to verify that the problem really is a bug before sending to
+     this list.
+
+     We have insufficient staffing to provide  extensive  support
+     to people outside of CMU.  We are looking for university and
+     industrial affiliates to help us with  porting  and  mainte-
+     nance  for  hardware and software that is not widely used at
+     CMU.
+
+
+DISTRIBUTION
+     CMU Common Lisp is a public domain implementation of  Common
+     Lisp.  Both sources and executables are freely available via
+     anonymous FTP; this software is "as is", and has no warranty
+     of  any  kind.  CMU and the authors assume no responsibility
+     for the consequences of any use of this software.   See  the
+     README file in the distribution for FTP instructions.
+
+
+ABOUT THE CMU COMMON LISP PROJECT
+     Organizationally, CMU Common Lisp is a small,  mostly  auto-
+     nomous  part  within the Mach operating system project.  CMU
+     CL is more of a tool development effort than a research pro-
+     ject.  The project started out as Spice Lisp, which provided
+     a modern Lisp implementation for use in the  CMU  community.
+     CMU CL has been under continuous development since the early
+     1980's (concurrent  with  the  Common  Lisp  standardization
+     effort.)
+
+     CMU CL is funded by DARPA under CMU's "Research on  Parallel
+     Computing"  contract.   Rather  than  doing pure research on
+     programming languages and  environments,  our  emphasis  has
+     been  on  developing practical programming tools.  Sometimes
+     this has required new technology, but much of the  work  has
+     been in creating a Common Lisp environment that incorporates
+     state-of-the-art features from existing systems  (both  Lisp
+     and non-Lisp.)
+
+     Because sources are freely available, CMU  Common  Lisp  has
+     been  ported  to  experimental hardware, and used as a basis
+     for research in programming language  and  environment  con-
+     struction.
+
+
+SEE ALSO
+     lisp(1), README
+     The ``CMU Common Lisp User's Manual'',
+     the ``Hemlock User's Manual'', and
+     the ``Hemlock Command Implementor's Manual''
