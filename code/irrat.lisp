@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.7 1991/02/08 13:33:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.8 1991/09/04 14:26:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.7 1991/02/08 13:33:39 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.8 1991/09/04 14:26:37 ram Exp $
 ;;;
 ;;; This file contains all the irrational functions.  Actually, most of the
 ;;; work is done by calling out to C...
@@ -153,9 +153,9 @@
 	(number-dispatch ((base number) (power number))
 	  (((foreach fixnum (or bignum ratio) (complex rational)) integer)
 	   (intexp base power))
-	  (((foreach single-float double-float) integer)
+	  (((foreach single-float double-float) rational)
 	   (real-expt base power '(dispatch-type base)))
-	  (((foreach fixnum (or bignum ratio) single-float)
+	  (((foreach fixnum (or bignum ratio))
 	    (foreach ratio single-float))
 	   (real-expt base power 'single-float))
 	  (((foreach fixnum (or bignum ratio) single-float double-float)
