@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.8 1998/01/06 16:48:52 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.9 1998/01/17 05:47:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski, Spring-95.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
 ;;;
 (in-package :x86)
 
@@ -128,7 +128,7 @@
 		(or (= offset eax-offset) (= offset ebx-offset)
 		    (= offset ecx-offset) (= offset edx-offset)))
 	   (inst test (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'byte-reg)
+				      :sc (sc-or-lose 'byte-reg *backend*)
 				      :offset offset)
 		 3))
 	  ((sc-is value control-stack)
@@ -155,7 +155,7 @@
 		(or (= offset eax-offset) (= offset ebx-offset)
 		    (= offset ecx-offset) (= offset edx-offset)))
 	   (inst cmp (make-random-tn :kind :normal
-				     :sc (sc-or-lose 'byte-reg)
+				     :sc (sc-or-lose 'byte-reg *backend*)
 				     :offset offset)
 		 immediate))
 	  (t

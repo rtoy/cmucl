@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.19 1998/01/12 16:54:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.20 1998/01/17 05:47:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,7 +86,7 @@
      (assert (not (zerop (tn-offset ,reg))))
      (inst fstp fr0-tn)
      (inst fld (make-random-tn :kind :normal
-			       :sc (sc-or-lose 'double-reg)
+			       :sc (sc-or-lose 'double-reg *backend*)
 			       :offset (1- (tn-offset ,reg))))))
 ;;;
 ;;; Using Fxch then Fst to restore the original reg contents.
@@ -154,57 +154,63 @@
 #+complex-float
 (progn
 
+(defun complex-single-reg-real-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
+		  :offset (tn-offset x)))
+(defun complex-single-reg-imag-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
+		  :offset (1+ (tn-offset x))))
+
+(defun complex-double-reg-real-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (tn-offset x)))
+(defun complex-double-reg-imag-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (1+ (tn-offset x))))
+
 ;;; x is source, y is destination
 (define-move-function (load-complex-single 2) (vop x y)
   ((complex-single-stack) (complex-single-reg))
-  (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				 :offset (tn-offset y))))
+  (let ((real-tn (complex-single-reg-real-tn y)))
     (with-empty-tn@fp-top (real-tn)
       (inst fld (ea-for-csf-real-stack x))))
-  (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				 :offset (1+ (tn-offset y)))))
+  (let ((imag-tn (complex-single-reg-imag-tn y)))
     (with-empty-tn@fp-top (imag-tn)
       (inst fld (ea-for-csf-imag-stack x)))))
 
 (define-move-function (store-complex-single 2) (vop x y)
   ((complex-single-reg) (complex-single-stack))
-  (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				 :offset (tn-offset x))))
+  (let ((real-tn (complex-single-reg-real-tn x)))
     (cond ((zerop (tn-offset real-tn))
 	   (inst fst (ea-for-csf-real-stack y)))
 	  (t
 	   (inst fxch real-tn)
 	   (inst fst (ea-for-csf-real-stack y))
 	   (inst fxch real-tn))))
-  (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				 :offset (1+ (tn-offset x)))))
+  (let ((imag-tn (complex-single-reg-imag-tn x)))
     (inst fxch imag-tn)
     (inst fst (ea-for-csf-imag-stack y))
     (inst fxch imag-tn)))
 
 (define-move-function (load-complex-double 2) (vop x y)
   ((complex-double-stack) (complex-double-reg))
-  (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				 :offset (tn-offset y))))
+  (let ((real-tn (complex-double-reg-real-tn y)))
     (with-empty-tn@fp-top(real-tn)
       (inst fldd (ea-for-cdf-real-stack x))))
-  (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				 :offset (1+ (tn-offset y)))))
+  (let ((imag-tn (complex-double-reg-imag-tn y)))
     (with-empty-tn@fp-top(imag-tn)
       (inst fldd (ea-for-cdf-imag-stack x)))))
 
 (define-move-function (store-complex-double 2) (vop x y)
   ((complex-double-reg) (complex-double-stack))
-  (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				 :offset (tn-offset x))))
+  (let ((real-tn (complex-double-reg-real-tn x)))
     (cond ((zerop (tn-offset real-tn))
 	   (inst fstd (ea-for-cdf-real-stack y)))
 	  (t
 	   (inst fxch real-tn)
 	   (inst fstd (ea-for-cdf-real-stack y))
 	   (inst fxch real-tn))))
-  (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				 :offset (1+ (tn-offset x)))))
+  (let ((imag-tn (complex-double-reg-imag-tn x)))
     (inst fxch imag-tn)
     (inst fstd (ea-for-cdf-imag-stack y))
     (inst fxch imag-tn)))
@@ -254,10 +260,8 @@
      (unless (location= x y)
        ;; Note the complex-float-regs are aligned to every second
        ;; float register so there is not need to worry about overlap.
-       (let ((x-real (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				     :offset (tn-offset x)))
-	     (y-real (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				     :offset (tn-offset y))))
+       (let ((x-real (complex-double-reg-real-tn x))
+	     (y-real (complex-double-reg-real-tn y)))
 	 (cond ((zerop (tn-offset y-real))
 		(copy-fp-reg-to-fr0 x-real))
 	       ((zerop (tn-offset x-real))
@@ -266,10 +270,8 @@
 		(inst fxch x-real)
 		(inst fstd y-real)
 		(inst fxch x-real))))
-       (let ((x-imag (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				     :offset (1+ (tn-offset x))))
-	     (y-imag (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				     :offset (1+ (tn-offset y)))))
+       (let ((x-imag (complex-double-reg-imag-tn x))
+	     (y-imag (complex-double-reg-imag-tn y)))
 	 (inst fxch x-imag)
 	 (inst fstd y-imag)
 	 (inst fxch x-imag)))))
@@ -371,14 +373,10 @@
   (:generator 13
      (with-fixed-allocation (y vm:complex-single-float-type
 			       vm:complex-single-float-size node)
-       (let ((real-tn (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg)
-				      :offset (tn-offset x))))
+       (let ((real-tn (complex-single-reg-real-tn x)))
 	 (with-tn@fp-top(real-tn)
 	   (inst fst (ea-for-csf-real-desc y))))
-       (let ((imag-tn (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'single-reg)
-				      :offset (1+ (tn-offset x)))))
+       (let ((imag-tn (complex-single-reg-imag-tn x)))
 	 (with-tn@fp-top(imag-tn)
 	   (inst fst (ea-for-csf-imag-desc y)))))))
 (define-move-vop move-from-complex-single :move
@@ -392,14 +390,10 @@
   (:generator 13
      (with-fixed-allocation (y vm:complex-double-float-type
 			       vm:complex-double-float-size node)
-       (let ((real-tn (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (tn-offset x))))
+       (let ((real-tn (complex-double-reg-real-tn x)))
 	 (with-tn@fp-top(real-tn)
 	   (inst fstd (ea-for-cdf-real-desc y))))
-       (let ((imag-tn (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
-				      :offset (1+ (tn-offset x)))))
+       (let ((imag-tn (complex-double-reg-imag-tn x)))
 	 (with-tn@fp-top(imag-tn)
 	   (inst fstd (ea-for-cdf-imag-desc y)))))))
 (define-move-vop move-from-complex-double :move
@@ -415,17 +409,12 @@
 		  (:results (y :scs (,sc)))
 		  (:note "pointer to complex float coercion")
 		  (:generator 2
-		    (let ((real-tn (make-random-tn :kind :normal
-						   :sc (sc-or-lose 'double-reg)
-						   :offset (tn-offset y))))
+		    (let ((real-tn (complex-double-reg-real-tn y)))
 		      (with-empty-tn@fp-top(real-tn)
 			,@(if double-p
 			      '((inst fldd (ea-for-cdf-real-desc x)))
 			      '((inst fld (ea-for-csf-real-desc x))))))
-		    (let ((imag-tn 
-			   (make-random-tn :kind :normal
-					   :sc (sc-or-lose 'double-reg)
-					   :offset (1+ (tn-offset y)))))
+		    (let ((imag-tn (complex-double-reg-imag-tn y)))
 		      (with-empty-tn@fp-top(imag-tn)
 			,@(if double-p
 			      '((inst fldd (ea-for-cdf-imag-desc x)))
@@ -499,14 +488,8 @@
 		    (sc-case y
 		      (,sc
 		       (unless (location= x y)
-			 (let ((x-real
-				(make-random-tn :kind :normal
-						:sc (sc-or-lose 'double-reg)
-						:offset (tn-offset x)))
-			       (y-real
-				(make-random-tn :kind :normal
-						:sc (sc-or-lose 'double-reg)
-						:offset (tn-offset y))))
+			 (let ((x-real (complex-double-reg-real-tn x))
+			       (y-real (complex-double-reg-real-tn y)))
 			   (cond ((zerop (tn-offset y-real))
 				  (copy-fp-reg-to-fr0 x-real))
 				 ((zerop (tn-offset x-real))
@@ -515,22 +498,13 @@
 				  (inst fxch x-real)
 				  (inst fstd y-real)
 				  (inst fxch x-real))))
-			 (let ((x-imag
-				(make-random-tn :kind :normal
-						:sc (sc-or-lose 'double-reg)
-						:offset (1+ (tn-offset x))))
-			       (y-imag
-				(make-random-tn :kind :normal
-						:sc (sc-or-lose 'double-reg)
-						:offset (1+ (tn-offset y)))))
+			 (let ((x-imag (complex-double-reg-imag-tn x))
+			       (y-imag (complex-double-reg-imag-tn y)))
 			   (inst fxch x-imag)
 			   (inst fstd y-imag)
 			   (inst fxch x-imag))))
 		      (,stack-sc
-		       (let ((real-tn
-			      (make-random-tn :kind :normal
-					      :sc (sc-or-lose 'double-reg)
-					      :offset (tn-offset x))))
+		       (let ((real-tn (complex-double-reg-real-tn x)))
 			 (cond ((zerop (tn-offset real-tn))
 				,@(if double-p
 				      '((inst fstd (ea-for-cdf-real-stack y)))
@@ -541,10 +515,7 @@
 				      '((inst fstd (ea-for-cdf-real-stack y)))
 				      '((inst fst (ea-for-csf-real-stack y))))
 				(inst fxch real-tn))))
-		       (let ((imag-tn
-			      (make-random-tn :kind :normal
-					      :sc (sc-or-lose 'double-reg)
-					      :offset (1+ (tn-offset x)))))
+		       (let ((imag-tn (complex-double-reg-imag-tn x)))
 			 (inst fxch imag-tn)
 			 ,@(if double-p
 			       '((inst fstd (ea-for-cdf-imag-stack y)))
@@ -1717,7 +1688,7 @@
 	(inst fstp fr0)
 	(inst fstp fr0)
 	(inst fldd (make-random-tn :kind :normal
-				   :sc (sc-or-lose 'double-reg)
+				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
     (inst fptan)
     ;; Result is in fr1
@@ -1807,7 +1778,7 @@
 	(inst fstp fr0)
 	(inst fstp fr0)
 	(inst fldd (make-random-tn :kind :normal
-				   :sc (sc-or-lose 'double-reg)
+				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
     (inst fptan)
     (inst fnstsw)			 ; status word to %ea
@@ -1901,7 +1872,7 @@
 	(inst fstp fr0)
 	(inst fstp fr0)
 	(inst fldd (make-random-tn :kind :normal
-				   :sc (sc-or-lose 'double-reg)
+				   :sc (sc-or-lose 'double-reg *backend*)
 				   :offset (- (tn-offset x) 2)))))
     (inst fptan)
     (inst fnstsw)			 ; status word to %ea
@@ -2061,7 +2032,7 @@
 	     (inst fstp fr0)
 	     (inst fldln2)
 	     (inst fldd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'double-reg)
+					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (1- (tn-offset x))))))
 	 (inst fyl2x))
 	((double-stack descriptor-reg)
@@ -2112,7 +2083,7 @@
 	     (inst fstp fr0)
 	     (inst fldlg2)
 	     (inst fldd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'double-reg)
+					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (1- (tn-offset x))))))
 	 (inst fyl2x))
 	((double-stack descriptor-reg)
@@ -2212,7 +2183,7 @@
        (sc-case y
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
+				      :sc (sc-or-lose 'double-reg *backend*)
 				      :offset (- (tn-offset y) 2))))
 	  (double-stack
 	   (inst fldd (ea-for-df-stack y)))
@@ -2222,7 +2193,7 @@
        (sc-case x
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
+				      :sc (sc-or-lose 'double-reg *backend*)
 				      :offset (1- (tn-offset x)))))
 	  (double-stack
 	   (inst fldd (ea-for-df-stack x)))
@@ -2291,7 +2262,7 @@
 	     (signed-stack
 	      (inst fild y)))
 	   (inst fld (make-random-tn :kind :normal
-				     :sc (sc-or-lose 'double-reg)
+				     :sc (sc-or-lose 'double-reg *backend*)
 				     :offset (1- (tn-offset x)))))))
        ((double-stack descriptor-reg)
 	(inst fstp fr0)
@@ -2391,7 +2362,7 @@
        (sc-case y
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
+				      :sc (sc-or-lose 'double-reg *backend*)
 				      :offset (- (tn-offset y) 2))))
 	  (double-stack
 	   (inst fldd (ea-for-df-stack y)))
@@ -2401,7 +2372,7 @@
        (sc-case x
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
+				      :sc (sc-or-lose 'double-reg *backend*)
 				      :offset (1- (tn-offset x)))))
 	  (double-stack
 	   (inst fldd (ea-for-df-stack x)))
@@ -2450,7 +2421,7 @@
 	     (inst fstp fr0)
 	     (inst fldln2)
 	     (inst fldd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'double-reg)
+					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (- (tn-offset x) 2)))))
 	 (inst fyl2xp1))
 	((double-stack descriptor-reg)
@@ -2496,7 +2467,7 @@
 	     (inst fstp fr0)
 	     (inst fstp fr0)
 	     (inst fldd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'double-reg)
+					:sc (sc-or-lose 'double-reg *backend*)
 					:offset (- (tn-offset x) 2))))))
 	((double-stack descriptor-reg)
 	 (inst fstp fr0)
@@ -2544,7 +2515,7 @@
        (sc-case x
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
+				      :sc (sc-or-lose 'double-reg *backend*)
 				      :offset (- (tn-offset x) 2))))
 	  (double-stack
 	   (inst fldd (ea-for-df-stack x)))
@@ -2640,7 +2611,7 @@
        (sc-case x
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
+				      :sc (sc-or-lose 'double-reg *backend*)
 				      :offset (- (tn-offset x) 2))))
 	  (double-stack
 	   (inst fldd (ea-for-df-stack x)))
@@ -2650,7 +2621,7 @@
        (sc-case y
           (double-reg
 	   (inst fldd (make-random-tn :kind :normal
-				      :sc (sc-or-lose 'double-reg)
+				      :sc (sc-or-lose 'double-reg *backend*)
 				      :offset (1- (tn-offset y)))))
 	  (double-stack
 	   (inst fldd (ea-for-df-stack y)))
@@ -2675,8 +2646,7 @@
   (:results (r :from (:argument 0)))
   (:policy :fast-safe)
   (:generator 5
-    (let ((r-real (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				  :offset (tn-offset r))))
+    (let ((r-real (complex-double-reg-real-tn r)))
       (unless (location= x r-real)
 	(cond ((zerop (tn-offset r-real))
 	       (copy-fp-reg-to-fr0 x))
@@ -2686,8 +2656,7 @@
 	       (inst fxch x)
 	       (inst fstd r-real)
 	       (inst fxch x)))))
-    (let ((r-imag (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				  :offset (1+ (tn-offset r)))))
+    (let ((r-imag (complex-double-reg-imag-tn r)))
       (unless (location= y r-imag)
 	(cond ((zerop (tn-offset y))
 	       (inst fstd r-imag))
@@ -2722,7 +2691,8 @@
   (:generator 3
     (cond ((sc-is x complex-single-reg complex-double-reg)
 	   (let ((value-tn
-		  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+		  (make-random-tn :kind :normal
+				  :sc (sc-or-lose 'double-reg *backend*)
 				  :offset (+ offset (tn-offset x)))))
 	     (unless (location= value-tn r)
 	       (cond ((zerop (tn-offset r))

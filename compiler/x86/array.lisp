@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.9 1997/11/19 03:00:33 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.10 1998/01/17 05:47:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
 ;;;
 (in-package :x86)
 
@@ -502,14 +502,12 @@
   (:results (value :scs (complex-single-reg)))
   (:result-types complex-single-float)
   (:generator 5
-    (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				   :offset (tn-offset value))))
+    (let ((real-tn (complex-single-reg-real-tn value)))
       (with-empty-tn@fp-top (real-tn)
 	(inst fld (make-ea :dword :base object :index index :scale 2
 			   :disp (- (* vm:vector-data-offset vm:word-bytes)
 				    vm:other-pointer-type)))))
-    (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				   :offset (1+ (tn-offset value)))))
+    (let ((imag-tn (complex-single-reg-imag-tn value)))
       (with-empty-tn@fp-top (imag-tn)
 	(inst fld (make-ea :dword :base object :index index :scale 2
 			   :disp (- (* (1+ vm:vector-data-offset)
@@ -526,15 +524,13 @@
   (:results (value :scs (complex-single-reg)))
   (:result-types complex-single-float)
   (:generator 4
-    (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				   :offset (tn-offset value))))
+    (let ((real-tn (complex-single-reg-real-tn value)))
       (with-empty-tn@fp-top (real-tn)
 	(inst fld (make-ea :dword :base object
 			   :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
 				       (* 8 index))
 				    vm:other-pointer-type)))))
-    (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				   :offset (1+ (tn-offset value)))))
+    (let ((imag-tn (complex-single-reg-imag-tn value)))
       (with-empty-tn@fp-top (imag-tn)
 	(inst fld (make-ea :dword :base object
 			   :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
@@ -553,12 +549,8 @@
   (:results (result :scs (complex-single-reg)))
   (:result-types complex-single-float)
   (:generator 5
-    (let ((value-real
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-			   :offset (tn-offset value)))
-	  (result-real
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-			   :offset (tn-offset result))))
+    (let ((value-real (complex-single-reg-real-tn value))
+	  (result-real (complex-single-reg-real-tn result)))
       (cond ((zerop (tn-offset value-real))
 	     ;; Value is in ST0
 	     (inst fst (make-ea :dword :base object :index index :scale 2
@@ -583,12 +575,8 @@
 		    (unless (location= value-real result-real)
 		      (inst fst result-real))
 		    (inst fxch value-real))))))
-    (let ((value-imag
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-			   :offset (1+ (tn-offset value))))
-	  (result-imag
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-			   :offset (1+ (tn-offset result)))))
+    (let ((value-imag (complex-single-reg-imag-tn value))
+	  (result-imag (complex-single-reg-imag-tn result)))
       (inst fxch value-imag)
       (inst fst (make-ea :dword :base object :index index :scale 2
 			 :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
@@ -610,12 +598,8 @@
   (:results (result :scs (complex-single-reg)))
   (:result-types complex-single-float)
   (:generator 4
-    (let ((value-real
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-			   :offset (tn-offset value)))
-	  (result-real
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-			   :offset (tn-offset result))))
+    (let ((value-real (complex-single-reg-real-tn value))
+	  (result-real (complex-single-reg-real-tn result)))
       (cond ((zerop (tn-offset value-real))
 	     ;; Value is in ST0
 	     (inst fst (make-ea :dword :base object
@@ -642,12 +626,8 @@
 		    (unless (location= value-real result-real)
 		      (inst fst result-real))
 		    (inst fxch value-real))))))
-    (let ((value-imag
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-			   :offset (1+ (tn-offset value))))
-	  (result-imag
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-			   :offset (1+ (tn-offset result)))))
+    (let ((value-imag (complex-single-reg-imag-tn value))
+	  (result-imag (complex-single-reg-imag-tn result)))
       (inst fxch value-imag)
       (inst fst (make-ea :dword :base object
 			 :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
@@ -668,14 +648,12 @@
   (:results (value :scs (complex-double-reg)))
   (:result-types complex-double-float)
   (:generator 7
-    (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				   :offset (tn-offset value))))
+    (let ((real-tn (complex-double-reg-real-tn value)))
       (with-empty-tn@fp-top (real-tn)
 	(inst fldd (make-ea :dword :base object :index index :scale 4
 			    :disp (- (* vm:vector-data-offset vm:word-bytes)
 				     vm:other-pointer-type)))))
-    (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				   :offset (1+ (tn-offset value)))))
+    (let ((imag-tn (complex-double-reg-imag-tn value)))
       (with-empty-tn@fp-top (imag-tn)
 	(inst fldd (make-ea :dword :base object :index index :scale 4
 			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
@@ -692,15 +670,13 @@
   (:results (value :scs (complex-double-reg)))
   (:result-types complex-double-float)
   (:generator 6
-    (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				   :offset (tn-offset value))))
+    (let ((real-tn (complex-double-reg-real-tn value)))
       (with-empty-tn@fp-top (real-tn)
 	(inst fldd (make-ea :dword :base object
 			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
 					(* 16 index))
 				     vm:other-pointer-type)))))
-    (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				   :offset (1+ (tn-offset value)))))
+    (let ((imag-tn (complex-double-reg-imag-tn value)))
       (with-empty-tn@fp-top (imag-tn)
 	(inst fldd (make-ea :dword :base object
 			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
@@ -719,12 +695,8 @@
   (:results (result :scs (complex-double-reg)))
   (:result-types complex-double-float)
   (:generator 20
-    (let ((value-real
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset (tn-offset value)))
-	  (result-real
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset (tn-offset result))))
+    (let ((value-real (complex-double-reg-real-tn value))
+	  (result-real (complex-double-reg-real-tn result)))
       (cond ((zerop (tn-offset value-real))
 	     ;; Value is in ST0
 	     (inst fstd (make-ea :dword :base object :index index :scale 4
@@ -749,12 +721,8 @@
 		    (unless (location= value-real result-real)
 		      (inst fstd result-real))
 		    (inst fxch value-real))))))
-    (let ((value-imag
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset (1+ (tn-offset value))))
-	  (result-imag
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset (1+ (tn-offset result)))))
+    (let ((value-imag (complex-double-reg-imag-tn value))
+	  (result-imag (complex-double-reg-imag-tn result)))
       (inst fxch value-imag)
       (inst fstd (make-ea :dword :base object :index index :scale 4
 			  :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
@@ -776,12 +744,8 @@
   (:results (result :scs (complex-double-reg)))
   (:result-types complex-double-float)
   (:generator 19
-    (let ((value-real
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset (tn-offset value)))
-	  (result-real
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset (tn-offset result))))
+    (let ((value-real (complex-double-reg-real-tn value))
+	  (result-real (complex-double-reg-real-tn result)))
       (cond ((zerop (tn-offset value-real))
 	     ;; Value is in ST0
 	     (inst fstd (make-ea :dword :base object
@@ -808,12 +772,8 @@
 		    (unless (location= value-real result-real)
 		      (inst fstd result-real))
 		    (inst fxch value-real))))))
-    (let ((value-imag
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset (1+ (tn-offset value))))
-	  (result-imag
-	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset (1+ (tn-offset result)))))
+    (let ((value-imag (complex-double-reg-imag-tn value))
+	  (result-imag (complex-double-reg-imag-tn result)))
       (inst fxch value-imag)
       (inst fstd (make-ea :dword :base object
 			  :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
