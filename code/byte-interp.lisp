@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.37 2003/05/26 20:20:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.38 2003/07/15 19:12:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1358,7 +1358,7 @@
 	  ((typep xep 'simple-byte-function)
 	   (unless (eql (simple-byte-function-num-args xep) num-args)
 	     (with-debugger-info (old-component ret-pc old-fp)
-	       (error "Wrong number of arguments.")))
+	       (error 'simple-program-error "Wrong number of arguments.")))
 	   (simple-byte-function-entry-point xep))
 	  (t
 	   (let ((min (hairy-byte-function-min-args xep))
@@ -1366,12 +1366,12 @@
 	     (cond
 	      ((< num-args min)
 	       (with-debugger-info (old-component ret-pc old-fp)
-		 (error "Not enough arguments.")))
+		 (error 'simple-program-error "Not enough arguments.")))
 	      ((<= num-args max)
 	       (nth (- num-args min) (hairy-byte-function-entry-points xep)))
 	      ((null (hairy-byte-function-more-args-entry-point xep))
 	       (with-debugger-info (old-component ret-pc old-fp)
-		 (error "Too many arguments.")))
+		 (error 'simple-program-error "Too many arguments.")))
 	      (t
 	       (let* ((more-args-supplied (- num-args max))
 		      (sp (current-stack-pointer))
@@ -1398,7 +1398,8 @@
 		  (t
 		   (unless (evenp more-args-supplied)
 		     (with-debugger-info (old-component ret-pc old-fp)
-		       (error "Odd number of keyword arguments.")))
+		       (error 'simple-program-error
+			      "Odd number of keyword arguments.")))
 		   ;;
 		   ;; If there are keyword args, then we need to leave the
 		   ;; defaulted and supplied-p values where the more args
@@ -1461,7 +1462,8 @@
 					  (incf target))))))))
 		       (when (and bogus-key-p (not allow))
 			 (with-debugger-info (old-component ret-pc old-fp)
-			   (error "Unknown keyword: ~S" bogus-key))))
+			   (error 'simple-program-error
+				  "Unknown keyword: ~S" bogus-key))))
 		     (setf (current-stack-pointer) new-sp)))))
 	       (hairy-byte-function-more-args-entry-point xep))))))))
     (declare (type pc entry-point))
