@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.19 1992/03/22 22:05:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.20 1992/03/24 17:40:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -247,7 +247,7 @@
 
 (defun backend-featurep (feature)
   "Same as EXT:FEATUREP, except use the features found in *BACKEND*."
-  (let ((*features* (backend-features *target-backend*)))
+  (let ((*features* (backend-features *backend*)))
     (featurep feature)))
 
 (defun native-featurep (feature)
