@@ -12,7 +12,13 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
+(export '(*compiler-notification-function*))
+(in-package "EXTENSIONS")
+(export '(*error-print-level* *error-print-length*
+	  *source-context-take-car-forms* *undefined-warning-limit*
+	  *enclosing-source-cutoff*))
+(in-package "C")
 
 
 ;;;; Cleanup hackery:
@@ -1085,6 +1091,17 @@ inlines
     (change-ref-leaf ref new-leaf))
   (undefined-value))
 
+;;; SUBSTITUTE-LEAF-IF  --  Interface
+;;;
+;;;    Like SUBSITIUTE-LEAF, only there is a predicate on the Ref to tell
+;;; whether to substitute.
+;;;
+(defun substitute-leaf-if (test new-leaf old-leaf)
+  (declare (type leaf new-leaf old-leaf) (type function test))
+  (dolist (ref (leaf-refs old-leaf))
+    (when (funcall test ref)
+      (change-ref-leaf ref new-leaf)))
+  (undefined-value))
 
 ;;; Find-Constant  --  Interface
 ;;;
@@ -1233,8 +1250,8 @@ inlines
 (proclaim '(type unsigned-byte *enclosing-source-cutoff*))
 
 
-(defparameter *defmumble-take-car-forms* '(defstruct)
-  "A list of \"DEFxxx\" forms for which we should we should compute the source
+(defparameter *source-context-take-car-forms* '(defstruct function)
+  "A list of form names for which we should we should compute the source
   context by taking the CAR of the first arg when it is a list.")
 
 
@@ -1264,8 +1281,17 @@ inlines
   (original-source nil :type simple-string)
   ;;
   ;; A list of prefixes of "interesting" forms that enclose original-source.
-  (context nil :type list))
-
+  (context nil :type list)
+  ;;
+  ;; The FILE-INFO-NAME for the relevant FILE-INFO.
+  (file-name nil :type (or pathname (member :lisp :stream)))
+  ;;
+  ;; The file position at which the top-level form starts, if applicable.
+  (file-position nil :type (or index null))
+  ;;
+  ;; The original source part of the source path.
+  (original-source-path nil :type list))
+  
   
 ;;; If true, this is the node which is used as context in compiler warning
 ;;; messages.
@@ -1275,6 +1301,25 @@ inlines
 (defvar *compiler-error-context* nil)
 
 
+;;; SOURCE-FORM-CONTEXT  --  Internal
+;;;
+;;;    Return the first two elements of Form if Form is a list.  Take the car
+;;; of the second form if appropriate.
+;;;
+(defun source-form-context (form)
+  (cond ((atom form) nil)
+	((>= (length form) 2)
+	 (let ((head (first form))
+	       (next (second form)))
+	   (list head
+		 (if (and (listp next)
+			  (member head *source-context-take-car-forms*))
+		     (car next)
+		     next))))
+	(t
+	 form)))
+
+  
 ;;; Find-Original-Source  --  Internal
 ;;;
 ;;;    Given a source path, return the original source form and a description
@@ -1292,7 +1337,8 @@ inlines
 (defun find-original-source (path)
   (declare (list path))
   (let* ((rpath (reverse (source-path-original-source path)))
-	 (root (find-source-root (first rpath) *source-info*)))
+	 (tlf (first rpath))
+	 (root (find-source-root tlf *source-info*)))
     (collect ((context))
       (let ((form root)
 	    (current (rest rpath)))
@@ -1304,25 +1350,15 @@ inlines
 	    (when (symbolp head)
 	      (let ((name (symbol-name head)))
 		(when (and (>= (length name) 3) (string= name "DEF" :end1 3))
-		  (if (>= (length form) 2)
-		      (let ((next (second form)))
-			(context
-			 (list head
-			       (if (and (listp next)
-					(member head
-						*defmumble-take-car-forms*))
-				   (car next)
-				   next))))
-		      (context (list head)))))))
+		  (context (source-form-context form))))))
 	  (when (null current) (return))
 	  (setq form (nth (pop current) form)))
 	
 	(cond ((context)
 	       (values form (context)))
 	      ((and path root)
-	       (if (listp root)
-		   (values form (list (subseq root 0 (min 2 (length root)))))
-		   (values form ())))
+	       (let ((c (source-form-context root)))
+		 (values form (if c (list c) nil))))
 	      (t
 	       (values '(unable to locate source)
 		       '((some strange place)))))))))
@@ -1334,8 +1370,8 @@ inlines
 ;;; compiler warnings.
 ;;;
 (defun stringify-form (form &optional (pretty t))
-  (let ((*print-level* *error-print-level*)
-	(*print-length* *error-print-length*)
+  (let ((*print-level* (or *error-print-level* *print-level*))
+	(*print-length* (or *error-print-length* *print-length*))
 	(*print-pretty* pretty))
     (if pretty
 	(format nil "  ~S~%" form)
@@ -1374,12 +1410,22 @@ inlines
 					       nil))
 			(full (stringify-form src)))
 		    (incf n)))
-		
-		(make-compiler-error-context
-		 :enclosing-source (short)
-		 :source (full)
-		 :original-source (stringify-form form)
-		 :context src-context))))))))
+
+		(let* ((tlf (source-path-tlf-number path))
+		       (file (find-file-info tlf *source-info*)))
+		  (make-compiler-error-context
+		   :enclosing-source (short)
+		   :source (full)
+		   :original-source (stringify-form form)
+		   :context src-context
+		   :file-name (file-info-name file)
+		   :file-position
+		   (multiple-value-bind (ignore pos)
+					(find-source-root tlf *source-info*)
+		     (declare (ignore ignore))
+		     pos)
+		   :original-source-path
+		   (source-path-original-source path))))))))))
 
 
 ;;;; Printing error messages:
@@ -1415,6 +1461,36 @@ inlines
 (defvar *last-message-count* 0)
 (proclaim '(type index *last-message-count*))
 
+(defvar *compiler-notification-function* nil
+  "This is the function called by the compiler to specially note a warning,
+   comment, or error.  The function must take four arguments, the severity
+   a string for context, the file namestring, and the file position.  The
+   severity is one of :note, :warning, or :error.  Except for the severity, all
+   of these can be NIL if unavailable or inapplicable.")
+
+
+;;; COMPILER-NOTIFICATION  --  Internal
+;;;
+;;;    Call any defined notification function.
+;;;
+(defun compiler-notification (severity context)
+  (declare (type (member :note :warning :error) severity)
+	   (type (or compiler-error-context null) context))
+  (when *compiler-notification-function*
+    (if context
+	(let ((*print-level* 2)
+	      (*print-pretty* nil)
+	      (name (compiler-error-context-file-name context)))
+	  (funcall *compiler-notification-function* severity 
+		   (format nil "~{~{~S~^ ~}~^ => ~}"
+			   (compiler-error-context-context context))
+		   (when (typep name 'pathname)
+		     (namestring name))
+		   (compiler-error-context-file-position context)))
+	(funcall *compiler-notification-function* severity nil nil nil)))
+  (undefined-value))
+
+
 ;;; Note-Message-Repeats  --  Internal
 ;;;
 ;;;    If the last message was given more than once, then print out an
@@ -1442,18 +1518,28 @@ inlines
 ;;; the number of times that the message is repeated.
 ;;;
 (defun print-error-message (what format-string format-args)
-  (declare (string what format-string) (list format-args))
-  (let* ((*print-level* *error-print-level*)
-	 (*print-length* *error-print-length*)
+  (declare (type (member :error :warning :note) what) (string format-string)
+	   (list format-args))
+  (let* ((*print-level* (or *error-print-level* *print-level*))
+	 (*print-length* (or *error-print-length* *print-length*))
 	 (stream *compiler-error-output*)
 	 (context (find-error-context format-args)))
     (cond
      (context
-      (let ((in (compiler-error-context-context context))
+      (let ((file (compiler-error-context-file-name context))
+	    (in (compiler-error-context-context context))
 	    (form (compiler-error-context-original-source context))
 	    (enclosing (compiler-error-context-enclosing-source context))
 	    (source (compiler-error-context-source context))
 	    (last *last-error-context*))
+	(compiler-notification what context)
+
+	(unless (and last
+		     (equal file (compiler-error-context-file-name last)))
+	  (when (typep file 'pathname)
+	    (note-message-repeats)
+	    (setq last nil)
+	    (format stream "~2&File: ~A~%" (namestring file))))
 	
 	(unless (and last
 		     (equal in (compiler-error-context-context last)))
@@ -1485,6 +1571,7 @@ inlines
 	      (write-line "==>" stream)
 	      (write-string src stream))))))
      (t
+      (compiler-notification what nil)
       (note-message-repeats)
       (setq *last-format-string* nil)
       (format stream "~2&")))
@@ -1496,7 +1583,7 @@ inlines
       (note-message-repeats nil)
       (setq *last-format-string* format-string)
       (setq *last-format-args* format-args)
-      (format stream "~&~A: ~?~&" what format-string format-args)))
+      (format stream "~&~:(~A~): ~?~&" what format-string format-args)))
   
   (incf *last-message-count*)
   (undefined-value))
@@ -1523,24 +1610,24 @@ inlines
 ;;;
 (defun compiler-error (format-string &rest format-args)
   (incf *compiler-error-count*)
-  (print-error-message "Error" format-string format-args)
+  (print-error-message :error format-string format-args)
   (funcall *compiler-error-bailout*)
   (error "*Compiler-Error-Bailout* returned?"))
 ;;;
 (defun compiler-error-message (format-string &rest format-args)
   (incf *compiler-error-count*)
-  (print-error-message "Error" format-string format-args))
+  (print-error-message :error format-string format-args))
 ;;;
 (defun compiler-warning (format-string &rest format-args)
   (incf *compiler-warning-count*)
-  (print-error-message "Warning" format-string format-args))
+  (print-error-message :warning format-string format-args))
 ;;;
 (defun compiler-note (format-string &rest format-args)
   (incf *compiler-note-count*)
   (unless (if *compiler-error-context*
 	      (policy *compiler-error-context* (= brevity 3))
 	      (policy nil (= brevity 3)))
-    (print-error-message "Note" format-string format-args)))
+    (print-error-message :note format-string format-args)))
 
 
 ;;; Compiler-Mumble  --  Interface
@@ -1640,7 +1727,8 @@ inlines
 ;;; value to indicate this.  Node is used as the error context for any error
 ;;; message, and Context is a string that is spliced into the warning.
 ;;;
-(proclaim '(function careful-call (function list node string) (values list boolean)))
+(proclaim '(function careful-call ((or symbol function) list node string)
+		     (values list boolean)))
 (defun careful-call (function args node context)
   (values
    (multiple-value-list
