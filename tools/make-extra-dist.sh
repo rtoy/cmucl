@@ -1,5 +1,18 @@
 #!/bin/sh
 
+while getopts "G:O:bgh?" arg
+do
+    case $arg in
+	G) GROUP="-g $OPTARG" ;;
+	O) OWNER="-o $OPTARG" ;;
+	b) ENABLE_BZIP=-b ;;
+	g) ENABLE_GZIP=-g  ;;
+	h | \?) usage; exit 1 ;;
+    esac
+done
+
+shift `expr $OPTIND - 1`
+
 if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" ]
 then
 	echo "Usage: $0 target-directory version arch os"
@@ -40,31 +53,37 @@ echo Cleaning $DESTDIR
 [ -d $DESTDIR ] && rm -rf $DESTDIR
 
 echo Installing extra components
-install -d -g bin -o root -m 0755 $DESTDIR/lib/cmucl/lib
-install -d -g bin -o root -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
-install -g bin -o root -m 0644 $TARGET/clx/clx-library.$FASL \
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
+install ${GROUP} ${OWNER} -m 0644 $TARGET/clx/clx-library.$FASL \
 	$DESTDIR/lib/cmucl/lib/subsystems/
-install -g bin -o root -m 0644 $TARGET/hemlock/hemlock-library.$FASL \
+install ${GROUP} ${OWNER} -m 0644 $TARGET/hemlock/hemlock-library.$FASL \
 	$DESTDIR/lib/cmucl/lib/subsystems/
-# install -d -g bin -o root -m 0755 $DESTDIR/lib/cmucl/lib/fonts/
-# install -g bin -o root -m 0644 misc/8x13u.snf misc/fonts.dir \
+# install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/fonts/
+# install ${GROUP} ${OWNER} -m 0644 misc/8x13u.snf misc/fonts.dir \
 #	$DESTDIR/lib/cmucl/lib/fonts/
-install -g bin -o root -m 0644 src/hemlock/XKeysymDB \
+install ${GROUP} ${OWNER} -m 0644 src/hemlock/XKeysymDB \
 	src/hemlock/hemlock11.cursor src/hemlock/hemlock11.mask \
 	$TARGET/hemlock/spell-dictionary.bin \
 	$DESTDIR/lib/cmucl/lib/
-install -g bin -o root -m 0755 src/hemlock/mh-scan $DESTDIR/lib/cmucl/lib/
-install -g bin -o root -m 0644 $TARGET/interface/clm-library.$FASL  \
+install ${GROUP} ${OWNER} -m 0755 src/hemlock/mh-scan $DESTDIR/lib/cmucl/lib/
+install ${GROUP} ${OWNER} -m 0644 $TARGET/interface/clm-library.$FASL  \
 	$DESTDIR/lib/cmucl/lib/subsystems/
-install -g bin -o root -m 0755 $TARGET/motif/server/motifd \
+install ${GROUP} ${OWNER} -m 0755 $TARGET/motif/server/motifd \
 	$DESTDIR/lib/cmucl/lib/
 
 sync ; sleep 1 ; sync ; sleep 1 ; sync
 echo Tarring extra components
-( cd $DESTDIR ; tar cf - lib ) | \
+if [ -n "$ENABLE_GZIP" ]; then
+    echo "  Compressing with gzip"
+    ( cd $DESTDIR ; tar cf - lib ) | \
 	gzip -c > cmucl-$VERSION-$ARCH-$OS.extra.tar.gz
-( cd $DESTDIR ; tar cf - lib ) | \
+fi
+if [ -n "$ENABLE_BZIP" ]; then
+    echo "  Compressing with bzip"
+    ( cd $DESTDIR ; tar cf - lib ) | \
 	bzip2 -c > cmucl-$VERSION-$ARCH-$OS.extra.tar.bz2
+fi
 
 echo Cleaning $DESTDIR
 [ -d $DESTDIR ] && rm -rf $DESTDIR
