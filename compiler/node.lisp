@@ -53,10 +53,11 @@
   (blocks nil :type list)
   (tags nil :type list)
   ;;
-  ;; An alist (Leaf . CType) which is used to keep track of "pervasive" type
-  ;; declarations.  A pervasive type declaration is a type declaration that
-  ;; pertains to the type in a syntactic extent which does not correspond to a
-  ;; binding of the affected name.
+  ;; An alist (Thing . CType) which is used to keep track of "pervasive" type
+  ;; declarations.  When Thing is a leaf, this is for type declarations that
+  ;; pertain to the type in a syntactic extent which does not correspond to a
+  ;; binding of the affected name.  When Thing is a continuation, this is used
+  ;; to track the innermost THE type declaration.
   (type-restrictions nil :type list)
   ;;
   ;; An alist (Leaf . Inlinep) describing local inline declarations.
