@@ -248,15 +248,6 @@
 	  (declare (type component res))))))))
 
 
-		      (not (find :external funs :key #'functional-kind))
-		      (not (find-if #'(lambda (x)
-					(let ((entries (lambda-entries x)))
-					  (and entries
-					       (find-if #'entry-exits
-							entries))))
-				    funs)))
-
-
 ;;; HAS-XEP-OR-NLX  --  Internal
 ;;;
 ;;;    Return true if Fun is either an XEP or has EXITS to some of its ENTRIES.
