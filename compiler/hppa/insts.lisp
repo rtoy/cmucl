@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.7 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.8 2002/01/23 19:03:20 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,8 +25,7 @@
 ;;;; Utility functions.
 
 (defun reg-tn-encoding (tn)
-  (declare (type tn tn)
-	   (values (unsigned-byte 5)))
+  (declare (type tn tn))
   (sc-case tn
     (null null-offset)
     (zero zero-offset)
@@ -35,8 +34,7 @@
      (tn-offset tn))))
 
 (defun fp-reg-tn-encoding (tn)
-  (declare (type tn tn)
-	   (values (unsigned-byte 5) (member t nil)))
+  (declare (type tn tn))
   (sc-case tn
     (fp-single-zero (values 0 nil))
     (single-reg (values (tn-offset tn) nil))
@@ -50,8 +48,7 @@
   `(member nil ,@compare-conditions))
 
 (defun compare-condition (cond)
-  (declare (type compare-condition cond)
-	   (values (unsigned-byte 3) (member t nil)))
+  (declare (type compare-condition cond))
   (if cond
       (let ((result (or (position cond compare-conditions :test #'eq)
 			(error "Bogus Compare/Subtract condition: ~S" cond))))
@@ -66,8 +63,7 @@
   `(member nil ,@add-conditions))
 
 (defun add-condition (cond)
-  (declare (type add-condition cond)
-	   (values (unsigned-byte 3) (member t nil)))
+    (declare (type add-condition cond))
   (if cond
       (let ((result (or (position cond add-conditions :test #'eq)
 			(error "Bogus Add condition: ~S" cond))))
@@ -82,8 +78,7 @@
   `(member nil ,@(remove nil logical-conditions)))
 
 (defun logical-condition (cond)
-  (declare (type logical-condition cond)
-	   (values (unsigned-byte 3) (member t nil)))
+    (declare (type logical-condition cond))
   (if cond
       (let ((result (or (position cond logical-conditions :test #'eq)
 			(error "Bogus Logical condition: ~S" cond))))
@@ -98,8 +93,7 @@
   `(member nil ,@(remove nil unit-conditions)))
 
 (defun unit-condition (cond)
-  (declare (type unit-condition cond)
-	   (values (unsigned-byte 3) (member t nil)))
+  (declare (type unit-condition cond))
   (if cond
       (let ((result (or (position cond unit-conditions :test #'eq)
 			(error "Bogus Unit condition: ~S" cond))))
@@ -114,8 +108,7 @@
   `(member nil ,@extract/deposit-conditions))
 
 (defun extract/deposit-condition (cond)
-  (declare (type extract/deposit-condition cond)
-	   (values (unsigned-byte 3) (member t nil)))
+  (declare (type extract/deposit-condition cond))
   (if cond
       (or (position cond extract/deposit-conditions :test #'eq)
 	  (error "Bogus Extract/Deposit condition: ~S" cond))
@@ -123,8 +116,7 @@
 
 
 (defun space-encoding (space)
-  (declare (type (unsigned-byte 3) space)
-	   (values (unsigned-byte 3)))
+  (declare (type (unsigned-byte 3) space))
   (dpb (ldb (byte 2 0) space)
        (byte 2 1)
        (ldb (byte 1 2) space)))
@@ -518,7 +510,7 @@
 	      (byte 13 1)
 	      (ldb (byte 1 13) disp)))))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-load-inst (name opcode)
     `(define-instruction ,name (segment disp base reg)
        (:declare (type tn reg base)
@@ -554,7 +546,7 @@
   (byte 6 26) (byte 5 21) (byte 5 16) (byte 2 14) (byte 1 13)
   (byte 3 10) (byte 4 6) (byte 1 5) (byte 5 0))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-load-indexed-inst (name opcode)
     `(define-instruction ,name (segment index base reg &key modify scale)
        (:declare (type tn reg base index)
@@ -575,8 +567,7 @@
 (define-load-indexed-inst ldcwx 7)
 
 (defun short-disp-encoding (segment disp)
-  (declare (type (or fixup (signed-byte 5)) disp)
-	   (values (unsigned-byte 5)))
+  (declare (type (or fixup (signed-byte 5)) disp))
   (cond ((fixup-p disp)
 	 (note-fixup segment :load-short disp)
 	 (assert (or (null (fixup-offset disp)) (zerop (fixup-offset disp))))
@@ -586,7 +577,7 @@
 	      (byte 4 1)
 	      (ldb (byte 1 4) disp)))))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-load-short-inst (name opcode)
     `(define-instruction ,name (segment base disp reg &key modify)
        (:declare (type tn base reg)
@@ -662,8 +653,7 @@
   (byte 21 0))
 
 (defun immed-21-encoding (segment value)
-  (declare (type (or fixup (signed-byte 21) (unsigned-byte 21)) value)
-	   (values (unsigned-byte 21)))
+  (declare (type (or fixup (signed-byte 21) (unsigned-byte 21)) value))
   (cond ((fixup-p value)
 	 (note-fixup segment :hi value)
 	 (assert (or (null (fixup-offset value)) (zerop (fixup-offset value))))
@@ -699,8 +689,7 @@
   (byte 11 2) (byte 1 1) (byte 1 0))
 
 (defun label-relative-displacement (label posn &optional delta-if-after)
-  (declare (type label label) (type index posn)
-	   (values integer))
+   (declare (type label label) (type index posn))
   (ash (- (if delta-if-after
 	      (label-position label posn delta-if-after)
 	      (label-position label))
@@ -804,12 +793,12 @@
 
 (defun im5-encoding (value)
   (declare (type (signed-byte 5) value)
-	   (values (unsigned-byte 5)))
+	   #+nil (values (unsigned-byte 5)))
   (dpb (ldb (byte 4 0) value)
        (byte 4 1)
        (ldb (byte 1 4) value)))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-branch-inst (r-name r-opcode i-name i-opcode cond-kind)
     (let* ((conditional (symbolicate cond-kind "-CONDITION"))
 	   (false-conditional (symbolicate conditional "-FALSE")))
@@ -881,7 +870,7 @@
   (byte 6 26) (byte 5 21) (byte 5 16) (byte 3 13)
   (byte 1 12) (byte 7 5) (byte 5 0))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-r3-inst (name cond-kind opcode)
     `(define-instruction ,name (segment r1 r2 res &optional cond)
        (:declare (type tn res r1 r2))
@@ -939,12 +928,12 @@
 
 (defun im11-encoding (value)
   (declare (type (signed-byte 11) value)
-	   (values (unsigned-byte 11)))
+	   #+nil (values (unsigned-byte 11)))
   (dpb (ldb (byte 10 0) value)
        (byte 10 1)
        (ldb (byte 1 10) value)))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-imm-inst (name cond-kind opcode subcode)
     `(define-instruction ,name (segment imm src dst &optional cond)
        (:declare (type tn dst src)
@@ -994,7 +983,7 @@
 				 2 (- 31 count)
 				 (reg-tn-encoding res))))))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-extract-inst (name opcode)
     `(define-instruction ,name (segment src posn len res &optional cond)
        (:declare (type tn res src)
@@ -1021,7 +1010,7 @@
 (define-extract-inst extru 6)
 (define-extract-inst extrs 7)
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-deposit-inst (name opcode)
     `(define-instruction ,name (segment src posn len res &optional cond)
        (:declare (type tn res)
@@ -1111,7 +1100,7 @@
 
 (defun control-reg (reg)
   (declare (type control-reg reg)
-	   (values (unsigned-byte 32)))
+	   #+nil (values (unsigned-byte 32)))
   (if (typep reg '(unsigned-byte 5))
       reg
       (ecase reg
@@ -1260,7 +1249,7 @@
 				      (error "Bogus FUNOP: ~S" op)))
 			     (if to-double-p 1 0) 0 0 0 to-encoding)))))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
   (defmacro define-class-1-fp-inst (name subcode)
     `(define-instruction ,name (segment from to)
        (:declare (type tn from to))
