@@ -26,36 +26,10 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.8 1999/05/30 23:14:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.9 2002/08/13 21:13:58 pmai Exp $")
 ;;;
 
 (in-package :pcl)
-
-(defmacro slot-symbol (slot-name type)
-  `(if (and (symbolp ,slot-name) (symbol-package ,slot-name))
-       (or (get ,slot-name ',(ecase type
-			       (reader 'reader-symbol)
-			       (writer 'writer-symbol)
-			       (boundp 'boundp-symbol)))
-	   (intern (format nil "~A ~A slot ~a" 
-			   (package-name (symbol-package ,slot-name))
-			   (symbol-name ,slot-name)
-			   ,(symbol-name type))
-	           *slot-accessor-name-package*))
-       (progn 
-	 (error "non-symbol and non-interned symbol slot name accessors~
-                 are not yet implemented")
-	 ;;(make-symbol (format nil "~a ~a" ,slot-name ,type))
-	 )))
-
-(defun slot-reader-symbol (slot-name)
-  (slot-symbol slot-name reader))
-
-(defun slot-writer-symbol (slot-name)
-  (slot-symbol slot-name writer))
-
-(defun slot-boundp-symbol (slot-name)
-  (slot-symbol slot-name boundp))
 
 (defmacro asv-funcall (sym slot-name type &rest args)
   (declare (ignore type))

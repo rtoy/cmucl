@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.19 2001/03/13 15:49:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.20 2002/08/13 21:13:58 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -87,6 +87,40 @@
   (declare (indentation 2 4 3 1))
   (expand-defclass name direct-superclasses direct-slots options))
 
+;;; The following functions were moved here from slots-boot.lisp
+;;; because expand-defclass now depends on them to generate ftype
+;;; declarations that inform the compiler about the existence of 
+;;; the relevant GFs at run-time, in order to squelch spurious
+;;; warnings.
+
+(defmacro slot-symbol (slot-name type)
+  `(if (and (symbolp ,slot-name) (symbol-package ,slot-name))
+       (or (get ,slot-name ',(ecase type
+			       (reader 'reader-symbol)
+			       (writer 'writer-symbol)
+			       (boundp 'boundp-symbol)))
+	   (intern (format nil "~A ~A slot ~a" 
+			   (package-name (symbol-package ,slot-name))
+			   (symbol-name ,slot-name)
+			   ,(symbol-name type))
+	           *slot-accessor-name-package*))
+       (progn 
+	 (error "non-symbol and non-interned symbol slot name accessors~
+                 are not yet implemented")
+	 ;;(make-symbol (format nil "~a ~a" ,slot-name ,type))
+	 )))
+
+(defun slot-reader-symbol (slot-name)
+  (slot-symbol slot-name reader))
+
+(defun slot-writer-symbol (slot-name)
+  (slot-symbol slot-name writer))
+
+(defun slot-boundp-symbol (slot-name)
+  (slot-symbol slot-name boundp))
+
+;;; The defclass expander proper
+
 (defun expand-defclass (name supers slots options)
   (declare (special *defclass-times* *boot-state* *the-class-structure-class*))
   (setq supers  (nsubstitute 'standard-class 'lisp:standard-class
@@ -117,8 +151,9 @@
 
     (let ((*initfunctions* ())
           (*readers* ())
-          (*writers* ()))
-      (declare (special *initfunctions* *readers* *writers*))
+          (*writers* ())
+	  (*slots* ()))
+      (declare (special *initfunctions* *readers* *writers* *slots*))
       (let ((canonical-slots
 	      (mapcar #'(lambda (spec)
 			  (canonicalize-slot-specification name spec))
@@ -142,6 +177,13 @@
 		      ,@(mapcar #'(lambda (x)
 				    `(declaim (ftype (function (t t) t) ,x)))
 				*writers*)
+		      ,@(mapcar #'(lambda (x)
+		                    `(declaim (ftype (function (t) t)
+				                     ,(slot-reader-symbol x)
+						     ,(slot-boundp-symbol x))
+					      (ftype (function (t t) t)
+					             ,(slot-writer-symbol x))))
+				*slots*)
 		      (let ,(mapcar #'cdr *initfunctions*)
 			(load-defclass ',name
 				       ',metaclass
@@ -187,14 +229,16 @@
 	   (cadr entry)))))
 
 (defun canonicalize-slot-specification (class-name spec)
-  (declare (special *readers* *writers*))
+  (declare (special *readers* *writers* *slots*))
   (cond ((and (symbolp spec)
 	      (not (keywordp spec))
 	      (not (memq spec '(t nil))))		   
+	 (push spec *slots*)
 	 `'(:name ,spec))
 	((not (consp spec))
 	 (error "~S is not a legal slot specification." spec))
 	((null (cdr spec))
+	 (push (car spec) *slots*)
 	 `'(:name ,(car spec)))
 	((null (cddr spec))
 	 (error "In DEFCLASS ~S, the slot specification ~S is obsolete.~%~
@@ -207,6 +251,7 @@
 		(initargs ())
 		(unsupplied (list nil))
 		(initform (getf spec :initform unsupplied)))
+	   (push name *slots*)
 	   (doplist (key val) spec
 	     (case key
 	       (:accessor (push val readers)
