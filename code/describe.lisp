@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.27 1993/08/17 22:31:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.28 1993/08/21 00:25:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,22 +318,6 @@
 
 
 (defun describe-function-byte-compiled (x kind name)
-  (unless (eq kind :macro)
-    (etypecase x
-      (c::simple-byte-function
-       (format t "~&Function may be called with ~R argument~:P."
-	       (c::simple-byte-function-num-args x)))
-      (c::hairy-byte-function
-       (let ((min (c::hairy-byte-function-min-args x))
-	     (max (c::hairy-byte-function-max-args x)))
-	 (format t "~&Function may be called with ~R~:[~*~; to ~R~] ~
-		    positional arguments~
-		    ~:[~;,~%  any number of &rest arguments~]~
-		    ~:[~*~;, and these keywords:~%  ~S~]."
-		 min (/= min max) max
-		 (c::hairy-byte-function-rest-arg-p x)
-		 (c::hairy-byte-function-keywords-p x)
-		 (mapcar #'first (c::hairy-byte-function-keywords x)))))))
 
   (let ((name (or name (c::byte-function-name x))))
     (desc-doc name 'function kind)
