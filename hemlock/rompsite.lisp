@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.17 1992/02/14 23:51:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.18 1992/02/15 01:04:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -908,12 +908,11 @@
       (incf i))))
 
 (defun editor-tty-listen (stream)
-  (with-stack-alien (nc (signed-byte 32) 32)
+  (alien:with-alien (nc c-call:int)
     (and (unix:unix-ioctl (tty-editor-input-fd stream)
 			  unix::FIONREAD
-			  (alien-sap (alien-value nc)))
-	 (> (alien-access (alien-value nc)) 0))))
-
+			  (alien:alien-sap (alien:addr nc)))
+	 (> nc 0))))
 
 (defvar old-flags)
 
