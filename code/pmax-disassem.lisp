@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.15 1990/11/18 07:02:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.16 1990/11/18 09:00:24 wlott Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -100,8 +100,7 @@
     (cond ((and (zerop rs) (or (string= name "ADDI") (string= name "ADDIU")))
 	   (format stream "~16,8TLOADI~8,8T~A, #x~X~%"
 		   (register-name rt) immed))
-	  ((and (= rs null-offset) (string= name "ADDI")
-		(eq register-name-style :lisp))
+	  ((and (= rs null-offset) (string= name "ADDI"))
 	   ;; Major hack ...
 	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~48,8T; ~S~%"
 		   name (register-name rt) (register-name rs) immed
