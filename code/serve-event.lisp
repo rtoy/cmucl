@@ -282,7 +282,7 @@
   seconds) and then return, otherwise it will wait until something happens.
   Server returns T if something happened and NIL otherwise."
   ;; First, check any X displays for any pending events.
-  #+nil
+  #+clx
   (dolist (d/h *display-event-handlers*)
     (let ((d (car d/h)))
       (when (xlib::event-listen d)
