@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.22 1994/03/10 16:31:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.23 1994/09/30 15:18:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,13 +153,13 @@
       (purify :root-structures root-structures
 	      :environment-name environment-name)
       (gc))
+  (dolist (f *before-save-initializations*) (funcall f))
   (flet
       ((restart-lisp ()
 	 (catch '%end-of-the-world
 	   (with-simple-restart (abort "Skip remaining initializations.")
 	     (catch 'top-level-catcher
 	       (reinit)
-	       (dolist (f *before-save-initializations*) (funcall f))
 	       (dolist (f *after-save-initializations*) (funcall f))
 	       (environment-init)
 	       (when site-init
