@@ -24,6 +24,7 @@ struct machine_state {
     lispobj *fp;
     lispobj *bsp;
     long flags;
+    char *number_stack_start;
 
     long sigcontext_page;
     long control_stack_page;
