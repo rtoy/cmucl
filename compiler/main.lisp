@@ -859,17 +859,7 @@
 ;;; source path.
 ;;;
 (defun preprocessor-macroexpand (form)
-  (handler-case #+new-compiler (macroexpand-1 form *lexical-environment*)
-                #-new-compiler
-                (let ((fenv (lexenv-functions *lexical-environment*)))
-		  (if (consp form)
-		      (let* ((name (car form))
-			     (exp (or (cddr (assoc name fenv))
-				      (info function macro-function name))))
-			(if exp
-			    (funcall exp form fenv)
-			    form))
-		      form))
+  (handler-case (macroexpand-1 form *lexical-environment*)
     (error (condition)
        (compiler-error "(during macroexpansion)~%~A" condition))))
 
@@ -1110,7 +1100,10 @@
 	   (*last-source-form* nil)
 	   (*last-format-string* nil)
 	   (*last-format-args* nil)
-	   (*last-message-count* 0))
+	   (*last-message-count* 0)
+	   (*info-environment*
+	    (or (backend-info-environment *backend*)
+		*info-environment*)))
       (with-compilation-unit ()
 	(loop
 	  (multiple-value-bind (form tlf eof-p)
@@ -1178,7 +1171,8 @@
         If true, then function names will be resolved at compile time.
   :Source-Info
         Some object to be placed in the DEBUG-SOURCE-INFO."
-  (let ((info (make-stream-source-info stream)))
+  (let ((info (make-stream-source-info stream))
+	(*backend* *native-backend*))
     (unwind-protect
 	(let ((won (sub-compile-file info (make-core-object) source-info)))
 	  (values (not (null won))
@@ -1393,7 +1387,11 @@
   (with-compilation-unit ()
     (with-ir1-namespace
       (clear-stuff)
-      (let* ((start-errors *compiler-error-count*)
+      (let* ((*backend* *native-backend*)
+	     (*info-environment*
+	      (or (backend-info-environment *backend*)
+		  *info-environment*))
+	     (start-errors *compiler-error-count*)
 	     (start-warnings *compiler-warning-count*)
 	     (start-notes *compiler-note-count*)
 	     (*lexical-environment* (make-null-environment))
