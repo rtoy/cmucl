@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.12 1998/01/16 07:22:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.13 1998/02/19 10:52:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,8 +293,7 @@
       (#.edx-offset (slot scp 'sc-edx))
       (#.ebx-offset (slot scp 'sc-ebx))
       (#.esp-offset (slot scp 'sc-sp))
-#-linux      (#.ebp-offset (slot scp 'sc-fp))
-#+linux      (#.ebp-offset (slot scp 'ebp))
+      (#.ebp-offset (slot scp #-linux 'sc-fp #+linux 'ebp))
       (#.esi-offset (slot scp 'sc-esi))
       (#.edi-offset (slot scp 'sc-edi)))))
 
@@ -308,8 +307,7 @@
       (#.edx-offset (setf (slot scp 'sc-edx) new))
       (#.ebx-offset (setf (slot scp 'sc-ebx) new))
       (#.esp-offset (setf (slot scp 'sc-sp)  new))
-#-linux      (#.ebp-offset (setf (slot scp 'sc-fp)  new))
-#+linux      (#.ebp-offset (setf (slot scp 'ebp)  new))
+      (#.ebp-offset (setf (slot scp #-linux 'sc-fp #+linux 'ebp)  new))
       (#.esi-offset (setf (slot scp 'sc-esi) new))
       (#.edi-offset (setf (slot scp 'sc-edi) new))))
   new)
@@ -321,48 +319,23 @@
 ;;;
 ;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
 ;;; Format is the type of float to return.
-;;; XXX
-#-linux
-(defun sigcontext-float-register (scp index format)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
-    ;; fp regs not in sigcontext -- need new vop or c support
-    (let ((sap #+nil (alien-sap (slot scp 'sc-fpregs))))
-      (declare (ignore sap))
-      index
-      (ecase format
-	(single-float 0s0
-	 #+nil (system:sap-ref-single sap (* index vm:word-bytes)))
-	(double-float 0d0
-	 #+nil(system:sap-ref-double sap (* index vm:word-bytes)))))))
-
+;;;
 #+linux
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    ;; fp regs in sigcontext !!!
     (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
-					    'fpreg)
+					   'fpreg)
 				     index))))
-      (ecase format
-        (single-float
-          (system:sap-ref-single reg-sap 0))
-        (double-float 
-          (system:sap-ref-double reg-sap 0))))))
+      (coerce (sys:sap-ref-long reg-sap 0) format))))
 
-;;;
-#-linux
-(defun %set-sigcontext-float-register (scp index format new-value)
-  (declare (type (alien (* sigcontext)) scp))
-  scp index format new-value
-  #+nil
-  (with-alien ((scp (* sigcontext) scp))
-    (let ((sap (alien-sap (slot scp 'fpregs))))
-      (ecase format
-	(single-float
-	 (setf (sap-ref-single sap (* index vm:word-bytes)) new-value))
-	(double-float
-	 (setf (sap-ref-double sap (* index vm:word-bytes)) new-value))))))
+;;; Not supported on FreeBSD because the floating point state is not
+;;; saved.
+#+FreeBSD
+(defun sigcontext-float-register (scp index format)
+  (declare (ignore scp index))
+  (coerce 0l0 format))
+
 #+linux
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (type (alien (* sigcontext)) scp))
@@ -370,14 +343,17 @@
     (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
 					    'fpreg)
 				     index))))
-      (ecase format
-        (single-float
-         (setf (system:sap-ref-single reg-sap 0) new-value))
-        (double-float
-         (setf (system:sap-ref-double reg-sap 0)new-value))))))
+      #+not-yet
+      (setf (sys:sap-ref-long reg-sap 0) (coerce new-value 'long-float))
+      (coerce new-value format))))
+
+;;; Not supported on FreeBSD.
+#+FreeBSD
+(defun %set-sigcontext-float-register (scp index format new-value)
+  (declare (ignore scp index))
+  (coerce new-value format))
 
 ;;;
-
 (defsetf sigcontext-float-register %set-sigcontext-float-register)
 
 ;;; SIGCONTEXT-FLOATING-POINT-MODES  --  Interface

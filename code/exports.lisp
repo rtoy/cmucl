@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.140 1998/02/05 18:51:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.141 1998/02/19 10:52:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1242,8 +1242,9 @@
              "REMOVE-PORT-OBJECT" "REMOVE-XWINDOW-OBJECT"
              "RESOLVE-LOADED-ASSEMBLER-REFERENCES" "SAP+" "SAP-" "SAP-INT"
              "SAP-REF-16" "SAP-REF-32" "SAP-REF-8" "SAP-REF-DESCRIPTOR"
-             "SAP-REF-DOUBLE" "SAP-REF-SAP" "SAP-REF-SINGLE" "SAP<" "SAP<="
-             "SAP=" "SAP>" "SAP>=" "SCRUB-CONTROL-STACK" "SERVE-ALL-EVENTS"
+             "SAP-REF-DOUBLE" "SAP-REF-LONG" "SAP-REF-SAP" "SAP-REF-SINGLE"
+	     "SAP<" "SAP<=" "SAP=" "SAP>" "SAP>="
+	     "SCRUB-CONTROL-STACK" "SERVE-ALL-EVENTS"
              "SERVE-EVENT" "SERVER" "SERVER-MESSAGE" "SHORT-FLOAT-RADIX"
              "SIGNED-SAP-REF-16" "SIGNED-SAP-REF-32" "SIGNED-SAP-REF-8"
              "SINGLE-FLOAT-RADIX" "SYMBOL-MACRO-LET" "SYSTEM-AREA-POINTER"

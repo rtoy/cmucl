@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.6 1997/11/19 03:00:39 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.7 1998/02/19 10:52:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -440,6 +440,32 @@
 		  (unless (location= value result)
 			  (inst fst result))
 		  (inst fxch value)))))))
+
+
+;;; Sap-Ref-Long
+(define-vop (sap-ref-long)
+  (:translate sap-ref-long)
+  (:policy :fast-safe)
+  (:args (sap :scs (sap-reg))
+	 (offset :scs (signed-reg)))
+  (:arg-types system-area-pointer signed-num)
+  (:results (result :scs (#+long-float long-reg #-long-float double-reg)))
+  (:result-types #+long-float long-float #-long-float double-float)
+  (:generator 5
+     (with-empty-tn@fp-top(result)
+        (inst fldl (make-ea :dword :base sap :index offset)))))
+
+(define-vop (sap-ref-long-c)
+  (:translate sap-ref-long)
+  (:policy :fast-safe)
+  (:args (sap :scs (sap-reg)))
+  (:arg-types system-area-pointer (:constant (signed-byte 32)))
+  (:info offset)
+  (:results (result :scs (#+long-float long-reg #-long-float double-reg)))
+  (:result-types #+long-float long-float #-long-float double-float)
+  (:generator 4
+     (with-empty-tn@fp-top(result)
+        (inst fldl (make-ea :dword :base sap :disp offset)))))
 
 
 ;;; Noise to convert normal lisp data objects into SAPs.
