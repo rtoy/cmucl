@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.32 1992/08/03 13:55:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.33 1992/09/05 19:42:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -610,7 +610,8 @@ See the CMU Common Lisp User's Manual for more information.
 	    (di:code-location-debug-block loc)
 	    (format t "~%Source: ")
 	    (print-code-location-source-form loc 0))
-	(di:debug-condition (ignore) ignore)))))
+	(di:debug-condition (ignore) ignore)
+	(error (cond) (format t "Error finding source: ~A" cond))))))
 
 
 ;;;; Invoke-debugger.
