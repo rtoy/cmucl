@@ -7,47 +7,11 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.18 1990/07/06 20:49:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.19 1990/09/18 00:35:43 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
 
-
-
-;;;; The undefined-function.
-
-;;; Just signal an undefined-symbol error.  Note: this must look like a
-;;; function, because it magically gets called in place of a function when
-;;; there is no real function to call.
-
-(eval-when (eval)
-
-(define-assembly-routine (undefined-function
-			  ()
-			  (:temp cname any-reg cname-offset)
-			  (:temp lexenv any-reg lexenv-offset)
-			  (:temp function any-reg code-offset)
-			  (:temp nargs any-reg nargs-offset)
-			  (:temp lip interior-reg lip-offset)
-			  (:temp temp non-descriptor-reg nl0-offset))
-  ;; Allocate function header.
-  (align vm:lowtag-bits)
-  (inst word vm:function-header-type)
-  (dotimes (i (1- vm:function-header-code-offset))
-    (inst word 0))
-  ;; Cause the error.
-  (cerror-call nil continue undefined-symbol-error cname)
-
-  continue
-
-  (let ((not-sym (generate-cerror-code nil object-not-symbol-error cname)))
-    (test-simple-type cname temp not-sym t vm:symbol-header-type))
-
-  (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
-  (loadw function lexenv vm:closure-function-slot vm:function-pointer-type)
-  (lisp-jump function lip))
-
-); eval-when (eval)
 
 
 ;;;; Non-local exit noise.
