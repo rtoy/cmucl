@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.21 1997/02/08 15:20:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.22 1997/03/13 22:19:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -203,15 +203,15 @@
 ;;; 
 (defun process-close (proc)
   "Close all streams connected to PROC and stop maintaining the status slot."
-  (macrolet ((frob (stream)
-	       `(when ,stream (close ,stream))))
-    (frob (process-pty proc))
-    (frob (process-input proc))
-    (frob (process-output proc))
-    (frob (process-error proc))
-    (system:without-interrupts
-      (setf *active-processes* (delete proc *active-processes*)))
-    proc))
+  (macrolet ((frob (stream abort)
+	       `(when ,stream (close ,stream :abort ,abort))))
+    (frob (process-pty    proc)   t) ; Don't FLUSH-OUTPUT to dead process.
+    (frob (process-input  proc)   t) ; 'cause it will generate SIGPIPE.
+    (frob (process-output proc) nil)
+    (frob (process-error  proc) nil))
+  (system:without-interrupts
+   (setf *active-processes* (delete proc *active-processes*)))
+  proc)
 
 ;;; SIGCHLD-HANDLER -- Internal.
 ;;;
