@@ -1,3 +1,59 @@
+3/23/92 to 3/29/92
+
+Code:
+
+Adjust-array has been updated to be ANSI compliant by allowing arrays which
+were not created with :adjustable non-nil to be adjusted to new dimensions.
+
+Adjustable-array-p has been updated to ANSI standards. It returns T if adjust
+ADJUST-ARRAY would return an EQ array.
+
+Fixed DESCRIBE of alien variables.
+
+Fixed EVAL of alien variables.  We just hand it off to the real
+interpreter.
+
+Fixed DEFINE-CONDITION to clean up the slot description before handing it
+to defstruct now that defstruct is less forgiving.
+
+Added EXT:BYTES-CONSED-BETWEEN-GCS, a function that returns (and sets when 
+used with setf) *BYTES-CONSED-BETWEEN-GCS*.  Additionally, it changes
+*GC-TRIGGER* immediately to reflect the new values of *bytes-consed...*.
+
+Added GC-INIT to facilitate making sure set-auto-gc-trigger.
+
+Changed ROOM-MINIMAL-INFO to print everything that doesn't use
+map-allocated-objects and also to indicate whether or not the garbage
+collector is currenty on or off.
+
+Fixed FIND-INTERRUPTED-FRAME to FLUSH-FRAMES-ABOVE before returning the
+frame.
+
+Changed PURIFY to bind *INTERNAL-GC* and then invoke the garbage collector
+so all the auxiliary stuff (hooks, etc.) gets handled correctly.
+
+Removed the :ENABLE-GC option from SAVE-LISP, as it's no longer needed.
+
+
+Compiler:
+
+Rewrote the way pseudo-atomic works for the SPARCs.  Hence, all sparc fasl
+files will have to be recompiled.  An error will be signaled if you try to
+load an old fasl file.  [SPARC only]
+
+Fixed {alloc,dealloc}-number-stack-space to work with large amounts.
+
+Changed CONVERT-AND-MAYBE-COMPILE to temporarily increate *bytes-consed-
+between-gcs* by a factor of 4 instead of turning off all garbage
+collection.
+
+Rewrote the ub-32 logcount vop.  The new version uses an O(log2 32) algo.
+resulting in 30 cycles (no branches).  The old version used an O(n) algo.
+where n was the integer-length of the argument, resulting in somewhere
+between 4 and 130 cycles.  [MIPS only]
+
+
+
 3/7/92 to 3/23/92
 
 Code:
