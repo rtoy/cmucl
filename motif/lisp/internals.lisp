@@ -125,7 +125,7 @@
 	    (:constructor make-widget (id)))
   (id          0 :type (unsigned-byte 32))
   (type      nil :type symbol)
-  (parent    nil :type widget)
+  (parent    nil :type (or null widget))
   (children  nil :type list)
   (callbacks nil :type list)
   (protocols nil :type list)

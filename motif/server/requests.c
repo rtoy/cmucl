@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/requests.c,v 1.3 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/requests.c,v 1.4 1996/05/08 14:15:40 ram Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -156,6 +156,7 @@ void reply_with_string(message_t message,String s)
 void process_request(message_t message,int socket)
 {
   int request_op;
+  Boolean old_must_confirm = must_confirm;
   request_f handler;
 
   processing_depth++;
@@ -168,11 +169,15 @@ void process_request(message_t message,int socket)
     printf("Dispatching request for %d\n",request_op);
     fflush(stdout);}
   (*handler)(message);
+  if( global_will_trace ) {
+    printf("Request for %d dispatched, must_confirm: %d\n",request_op,must_confirm);
+    fflush(stdout);}
   if( must_confirm )
     send_confirmation(message,socket);
   processing_depth--;
   if( !processing_depth )
     cleanup_garbage();
+  must_confirm = old_must_confirm;
 }
 
 int QuitServer(message_t message)

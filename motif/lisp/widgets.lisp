@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/widgets.lisp,v 1.2 1994/10/31 04:54:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/widgets.lisp,v 1.3 1996/05/08 14:15:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,10 +119,12 @@
   "Destroys the specified widget and all its descendents."
   (declare (type widget widget))
   (let ((parent (widget-parent widget)))
-    (setf (widget-children parent)
-	  (delete widget (widget-children parent))))
-  (internal-destroy-widget widget)
-  (%destroy-widget widget))
+   (when parent
+      (setf (widget-children parent)
+            (delete widget (widget-children parent)))))
+  (%destroy-widget widget)              ;do this first because callbacks
+                                        ;require our state to still be around
+  (internal-destroy-widget widget))
 
 (declaim (inline manage-children unmanage-children))
 (defun manage-children (&rest widgets)

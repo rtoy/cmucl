@@ -170,7 +170,9 @@
   "Unrealizes the given widget."
   ((widget widget)) ())
 
-(def-toolkit-request "XtDestroyWidget" %destroy-widget :no-confirm
+;; Confirm because we rely on callbacks having been called by the time it
+;; returns so we can blithely free our copies of the widget(s)
+(def-toolkit-request "XtDestroyWidget" %destroy-widget :confirm
   ""
   ((widget widget)) ())
 
