@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.7 1997/11/18 16:55:52 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.8 1997/11/19 02:47:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -187,15 +187,17 @@
 				   :foreign))))))))
   (values))
 
-(defmacro fixed-allocation (result-tn type-code size &optional inline)
+(defmacro with-fixed-allocation ((result-tn type-code size &optional inline)
+				 &rest forms)
   "Allocate an other-pointer object of fixed Size with a single
    word header having the specified Type-Code.  The result is placed in
    Result-TN."
-  `(progn
+  `(pseudo-atomic
     (allocation ,result-tn (pad-data-block ,size) ,inline)
     (storew (logior (ash (1- ,size) vm:type-bits) ,type-code) ,result-tn)
     (inst lea ,result-tn
-     (make-ea :byte :base ,result-tn :disp other-pointer-type))))
+     (make-ea :byte :base ,result-tn :disp other-pointer-type))
+    ,@forms))
 
 
 ;;;; Error Code
@@ -282,27 +284,45 @@
 
 ;;;; PSEUDO-ATOMIC.
 
+(defvar *enable-pseudo-atomic* t)
+
 ;;; PSEUDO-ATOMIC -- Internal Interface.
 ;;;
 (defmacro pseudo-atomic (&rest forms)
   (let ((label (gensym "LABEL-")))
     `(let ((,label (gen-label)))
-      (store-symbol-value 0 lisp::*pseudo-atomic-interrupted*)
-      ;; Note: we just use cfp as some not-zero value.
-      (store-symbol-value ebp-tn lisp::*pseudo-atomic-atomic*)
+      (when *enable-pseudo-atomic*
+	(inst mov (make-ea :byte :disp (+ nil-value
+					  (static-symbol-offset
+					   'lisp::*pseudo-atomic-interrupted*)
+					  (ash symbol-value-slot word-shift)
+					  (- other-pointer-type)))
+	      0)
+	(inst mov (make-ea :byte :disp (+ nil-value
+					  (static-symbol-offset
+					   'lisp::*pseudo-atomic-atomic*)
+					  (ash symbol-value-slot word-shift)
+					  (- other-pointer-type)))
+	      (fixnum 1)))
       ,@forms
-      (store-symbol-value 0 lisp::*pseudo-atomic-atomic*)
-      (inst cmp (make-ea :dword
-		 :disp (+ nil-value
-			  (static-symbol-offset
-			   'lisp::*pseudo-atomic-interrupted*)
-			  (ash symbol-value-slot word-shift)
-			  (- other-pointer-type)))
-       0)
-      (inst jmp :eq ,label)
-      (inst int 3)
-      (inst byte pending-interrupt-trap)
-      (emit-label ,label))))
+      (when *enable-pseudo-atomic*
+	(inst mov (make-ea :byte :disp (+ nil-value
+					  (static-symbol-offset
+					   'lisp::*pseudo-atomic-atomic*)
+					  (ash symbol-value-slot word-shift)
+					  (- other-pointer-type)))
+	      0)
+	(inst cmp (make-ea :byte
+			   :disp (+ nil-value
+				    (static-symbol-offset
+				     'lisp::*pseudo-atomic-interrupted*)
+				    (ash symbol-value-slot word-shift)
+				    (- other-pointer-type)))
+	      0)
+	(inst jmp :eq ,label)
+	(inst int 3)
+	(inst byte pending-interrupt-trap)
+	(emit-label ,label)))))
 
 
 ;;;; Indexed references:
