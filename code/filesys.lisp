@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.5 1990/11/09 23:37:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.6 1990/11/17 05:40:13 wlott Exp $
 ;;;
 ;;; Ugly pathname functions for Spice Lisp.
 ;;;    these functions are part of the standard Spice Lisp environment.
@@ -998,9 +998,12 @@
   We look in the directory specified by Defaults as well as looking down
   the search list."
   (directory (concatenate 'string
-			  (namestring (merge-pathnames pathname defaults))
-			  "*")
-	     :check-for-subdirs nil))
+			  (namestring
+			   (merge-pathnames pathname
+					    (make-pathname :defaults defaults
+							   :name nil
+							   :type nil)))
+			  "*")))
 
 
 ;;; File-writable -- exported from extensions.
