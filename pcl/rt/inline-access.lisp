@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/inline-access.lisp,v 1.2 2003/03/22 16:15:14 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/inline-access.lisp,v 1.3 2003/05/20 20:21:26 gerd Rel $")
 
 (in-package "PCL-TEST")
 
@@ -49,73 +49,73 @@
      ,@values))
 
 (define-declaration-test slot-declaration.0
-    (declare (pcl:slots (slot-boundp xx)))
+    (declare (ext:slots (slot-boundp xx)))
   (pcl::slot-declaration env 'slot-boundp 'xx)
   :values ((t)))
 
 (define-declaration-test slot-declaration.1
-    (declare (pcl:slots (inline xx)))
+    (declare (ext:slots (inline xx)))
   (pcl::slot-declaration env 'inline 'xx)
   :values ((t)))
 
 (define-declaration-test slot-declaration.2
-    (declare (pcl:slots (inline (xx))))
+    (declare (ext:slots (inline (xx))))
   (pcl::slot-declaration env 'inline 'xx)
   :values ((t)))
 
 (define-declaration-test slot-declaration.3
-    (declare (pcl:slots (inline (xx a))))
+    (declare (ext:slots (inline (xx a))))
   (pcl::slot-declaration env 'inline 'xx 'a)
   :values ((t)))
 
 (define-declaration-test slot-declaration.4
-    (declare (pcl:slots (inline (xx a))))
+    (declare (ext:slots (inline (xx a))))
   (pcl::slot-declaration env 'inline 'xx 'b)
   :values ((nil)))
 
 (define-declaration-test slot-declaration.5
-    (declare (pcl:slots (inline (xx a) yy)))
+    (declare (ext:slots (inline (xx a) yy)))
   (pcl::slot-declaration env 'inline 'yy)
   :values ((t)))
 
 (define-declaration-test slot-declaration.6
-    (declare (pcl:slots (inline (xx a) (yy a))))
+    (declare (ext:slots (inline (xx a) (yy a))))
   (pcl::slot-declaration env 'inline 'yy 'a)
   :values ((t)))
 
 (define-declaration-test slot-declaration.7
-    (declare (pcl:slots (inline (xx a) (yy a))))
+    (declare (ext:slots (inline (xx a) (yy a))))
   (pcl::slot-declaration env 'inline 'yy 'b)
   :values ((nil)))
 
 (deftest global-slot-declaration.0
     (progn
-      (proclaim '(pcl:slots (slot-boundp gsd)))
+      (proclaim '(ext:slots (slot-boundp gsd)))
       (not (null (pcl::slot-declaration nil 'slot-boundp 'gsd))))
   t)
 
 (deftest global-slot-declaration.1
     (progn
-      (proclaim '(pcl:slots (inline (gsd gsd-a))))
+      (proclaim '(ext:slots (inline (gsd gsd-a))))
       (not (null (pcl::slot-declaration nil 'inline 'gsd 'gsd-a))))
   t)
 
 (deftest auto-compile-declaration.0
     (progn
-      (proclaim '(pcl:auto-compile acd))
+      (proclaim '(ext:auto-compile acd))
       (pcl::auto-compile-p 'acd nil nil))
   t)
 
 (deftest auto-compile-declaration.1
     (progn
-      (proclaim '(pcl:auto-compile acd))
+      (proclaim '(ext:auto-compile acd))
       (pcl::auto-compile-p 'acd '(:around) '(t t)))
   t)
 
 (deftest auto-compile-declaration.2
     (progn
-      (proclaim '(pcl:not-auto-compile acd))
-      (proclaim '(pcl:auto-compile (acd :around (t t))))
+      (proclaim '(ext:not-auto-compile acd))
+      (proclaim '(ext:auto-compile (acd :around (t t))))
       (values (pcl::auto-compile-p 'acd nil nil)
 	      (pcl::auto-compile-p 'acd nil '(t t))
 	      (pcl::auto-compile-p 'acd '(:around) '(t t))))
@@ -123,8 +123,8 @@
 
 (deftest auto-compile-declaration.3
     (progn
-      (proclaim '(pcl:auto-compile acd))
-      (proclaim '(pcl:not-auto-compile (acd :around (t t))))
+      (proclaim '(ext:auto-compile acd))
+      (proclaim '(ext:not-auto-compile (acd :around (t t))))
       (values (pcl::auto-compile-p 'acd nil nil)
 	      (pcl::auto-compile-p 'acd nil '(t t))
 	      (pcl::auto-compile-p 'acd '(:around) '(t t))))
@@ -132,8 +132,8 @@
 
 (deftest auto-compile-declaration.4
     (progn
-      (proclaim '(pcl:auto-compile))
-      (proclaim '(pcl:not-auto-compile acd))
+      (proclaim '(ext:auto-compile))
+      (proclaim '(ext:not-auto-compile acd))
       (values (pcl::auto-compile-p 'foo nil nil)
 	      (pcl::auto-compile-p 'acd nil '(t t))
 	      (pcl::auto-compile-p 'acd '(:around) '(t t))))
@@ -141,12 +141,12 @@
 
 (deftest auto-compile-declaration.5
     (progn
-      (proclaim '(pcl:auto-compile (setf acd)))
+      (proclaim '(ext:auto-compile (setf acd)))
       (pcl::auto-compile-p '(setf acd) '(:around) '(t t)))
   t)
 
 
-(declaim (pcl:slots (inline sacc.0)))
+(declaim (ext:slots (inline sacc.0)))
 
 (defclass sacc.0 ()
   ((a :initform 0 :initarg :a :accessor sacc.0-a)))
