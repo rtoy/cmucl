@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.203 2003/03/22 16:15:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.204 2003/03/23 21:23:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1510,6 +1510,7 @@
   (:import-from "C-CALL" "VOID")
   (:export "%CLASS-LAYOUT" "%CLASS-STATE" "%CLASS-DIRECT-SUPERCLASSES"
 	   "%CLASS-SUBCLASSES" "%CLASS-PCL-CLASS"
+	   "RED-ZONE-HIT" "YELLOW-ZONE-HIT" "STACK-OVERFLOW"
 	   "*ANSI-DEFSTRUCT-OPTIONS-P*"
 	   "%ACOS" "%ACOSH" "%ARRAY-AVAILABLE-ELEMENTS"
 	   "%ARRAY-DATA-VECTOR" "%ARRAY-DIMENSION" "%ARRAY-DISPLACED-P"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.67 2002/08/23 17:08:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.68 2003/03/23 21:23:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -495,6 +495,11 @@
 
 ;;;; SCRUB-CONTROL-STACK
 
+#+stack-checking
+(alien:def-alien-routine "os_guard_control_stack" c-call:void
+  (zone   c-call:int)
+  (guardp c-call:int))
+
 
 (defconstant bytes-per-scrub-unit 2048)
 
@@ -544,7 +549,16 @@
 (defun scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."
-  (scrub-control-stack))
+  ;;
+  ;; The guard zone of the control stack is used by Lisp sometimes,
+  ;; so I think it should be zero'd out, too.
+  #+stack-checking (os-guard-control-stack 0 0)
+  (%scrub-control-stack)
+  #+stack-checking (os-guard-control-stack 0 1))
+
+#+x86
+(defun %scrub-control-stack ()
+  (%scrub-control-stack))
 
 
 ;;;; TOP-LEVEL loop.

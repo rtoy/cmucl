@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.8 2002/10/24 20:41:25 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.9 2003/03/23 21:23:41 gerd Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -245,7 +245,7 @@ unsigned long os_link_one_symbol(long entry)
 	undefined_foreign_symbol_trap((lispobj)data_vector->data[table_index]);
     }
     arch_make_linkage_entry(entry, target_addr, type);
-    return target_addr;
+    return (unsigned long) target_addr;
 #else
     return 0;
 #endif /* LINKAGE_TABLE */
@@ -262,3 +262,174 @@ unsigned long lazy_resolve_linkage(unsigned long retaddr)
     return 0;
 #endif /* LINKAGE_TABLE */
 }
+
+static int
+os_stack_grows_down_1 (int *local_var_address)
+{
+  int dummy;
+  return &dummy < local_var_address;
+}
+
+/* Value is true if the processor stack grows down.  */
+
+int
+os_stack_grows_down (void)
+{
+  int dummy;
+  return os_stack_grows_down_1 (&dummy);
+}
+
+
+#ifdef RED_ZONE_HIT
+
+/* The end of the control stack contains two guard zones:
+
+   +----------+ stack start (stack growing down)
+   |          |
+       ...
+   |          |
+   +----------+
+   |          | yellow zone
+   +----------+
+   |          | red zove
+   +----------+				CONTROL_STACK_START
+
+   Both the yellow zone and the red zone are write-protected.
+
+   When entering the yellow zone, we unprotect the yellow zone and
+   make Lisp signal a control stack exhausted error, with stack
+   contents left intact for the debugger, which is entered.
+
+   When hitting the red zone we arrange for calling a function that
+   throws back to the top-level.  */
+
+#ifndef YELLOW_ZONE_SIZE
+#define YELLOW_ZONE_SIZE 0x8000	/* 32K */
+#endif
+
+#ifndef RED_ZONE_SIZE
+#define RED_ZONE_SIZE YELLOW_ZONE_SIZE
+#endif
+
+/* Return the start addresses of the yellow and red zones in
+   *YELLOW_START and *RED_START.  */
+
+static void
+guard_zones (char **yellow_start, char **red_start)
+{
+  if (os_stack_grows_down ())
+    {
+      char *end = (char *) CONTROL_STACK_START;
+      *red_start = end;
+      *yellow_start = *red_start + RED_ZONE_SIZE;
+    }
+  else
+    {
+      char *end = (char *) CONTROL_STACK_START + CONTROL_STACK_SIZE;
+      *red_start = end - RED_ZONE_SIZE;
+      *yellow_start = *red_start - YELLOW_ZONE_SIZE;
+    }
+}
+
+/* Return the guard zone FAULT_ADDR is in or 0 if not in a guard
+   zone.  */
+
+static int
+control_stack_zone (void *fault_addr)
+{
+  char *yellow_start, *red_start;
+  char *p = (char *) fault_addr;
+  
+  guard_zones (&yellow_start, &red_start);
+
+  if (p >= yellow_start && p < yellow_start + YELLOW_ZONE_SIZE)
+    return YELLOW_ZONE;
+  else if (p >= red_start && p < red_start + RED_ZONE_SIZE)
+    return RED_ZONE;
+  else
+    return 0;
+}
+
+/* Protect/unprotect the guard zone ZONE of the control stack.  */
+
+void
+os_guard_control_stack (int zone, int guard)
+{
+  char *yellow_start, *red_start;
+  int flags;
+
+  guard_zones (&yellow_start, &red_start);
+
+  if (guard)
+    flags = OS_VM_PROT_READ | OS_VM_PROT_EXECUTE;
+  else
+    flags = OS_VM_PROT_ALL;
+
+  if (zone == YELLOW_ZONE)
+    os_protect ((os_vm_address_t) yellow_start, YELLOW_ZONE_SIZE, flags);
+  else if (zone == RED_ZONE)
+    os_protect ((os_vm_address_t) red_start, RED_ZONE_SIZE, flags);
+  else
+    {
+      char *start = red_start < yellow_start ? red_start : yellow_start;
+      os_protect ((os_vm_address_t) start, RED_ZONE_SIZE + YELLOW_ZONE_SIZE,
+		  flags);
+    }
+}
+
+/* Handle a possible guard zone hit at FAULT_ADDR.  Value is
+   non-zero if FAULT_ADDR is in a guard zone.  */
+
+int
+os_control_stack_overflow (void *fault_addr, struct sigcontext *context)
+{
+  int zone;
+
+  zone = control_stack_zone (fault_addr);
+  
+  if (zone == YELLOW_ZONE || zone == RED_ZONE)
+    {
+      lispobj error;
+
+      /* Unprotect the stack, giving us some room on the stack for
+	 error handling in Lisp.  Fake a stack frame for this
+	 interruption.  */
+      os_guard_control_stack (zone, 0);
+      fake_foreign_function_call (context);
+
+      /* The protection violation signal is delivered on a signal
+	 stack different from the normal stack, so that we don't
+	 trample on the guard pages of the normal stack while handling
+	 the signal.  To get a Lisp function called when the signal
+	 handler returns, we change the return address of the signal
+	 context to the address of the function we want to be
+	 called.  */
+      if (zone == RED_ZONE)
+	error = SymbolFunction (RED_ZONE_HIT);
+      else
+	error = SymbolFunction (YELLOW_ZONE_HIT);
+
+#ifdef i386
+      /* ECX is the argument count.  */
+      context->sc_eip = (int) ((struct function *) PTR (error))->code;
+      context->sc_ecx = 0;
+#else
+#error os_control_stack_overflow not implemented for this system
+#endif
+      
+      return 1;
+    }
+  
+  return 0;
+}
+
+#else /* not RED_ZONE_HIT */
+
+/* Dummy for bootstrapping.  */
+
+void
+os_guard_control_stack (int zone, int guard)
+{
+}
+
+#endif /* not RED_ZONE_HIT */

@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.9 2002/08/28 07:16:38 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.10 2003/03/23 21:23:41 gerd Exp $
  *
  */
 
@@ -34,9 +34,6 @@
 #include <sys/proc.h>
 #include <dlfcn.h>
 #include "validate.h"
-vm_size_t os_vm_page_size;
-
-#define DPRINTF(t,a) {if (t) fprintf a;}
 
 #if defined GENCGC
 #include "gencgc.h"
@@ -48,13 +45,18 @@ vm_size_t os_vm_page_size;
 #undef errno
 int errno;
 #endif
+
+vm_size_t os_vm_page_size;
+
 
-void os_init(void)
+void
+os_init (void)
 {
-  os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
+  os_vm_page_size = getpagesize ();
 }
 
-int sc_reg(struct sigcontext *c, int offset)
+int
+sc_reg (struct sigcontext *c, int offset)
 {
   switch(offset)
     {
@@ -67,21 +69,24 @@ int sc_reg(struct sigcontext *c, int offset)
     case 12: return c->sc_esi;
     case 14: return c->sc_edi;
     }
+  
   return 0;
 }
 
-void os_save_context(void)
+void
+os_save_context (void)
 {
-  /*
-   * Called from interrupt handlers so C stuff knows things set in Lisp.
-   */
+  /* Called from interrupt handlers so C stuff knows things set in
+     Lisp.  */
 }
 
-void os_set_context(void)
+void
+os_set_context (void)
 {
 }
 
-os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
+os_vm_address_t
+os_validate (os_vm_address_t addr, os_vm_size_t len)
 {
   int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
@@ -90,139 +95,150 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
   else
     flags |= MAP_VARIABLE;
 
-  DPRINTF(0, (stderr, "os_validate %x %d => ", addr, len));
-
-  addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
+  addr = mmap (addr, len, OS_VM_PROT_ALL, flags, -1, 0);
 
   if (addr == (os_vm_address_t) -1)
     {
-      perror("mmap");
+      perror ("mmap");
       return NULL;
     }
 
-  DPRINTF(0, (stderr, "%x\n", addr));
-
   return addr;
 }
 
-void os_invalidate(os_vm_address_t addr, os_vm_size_t len)
+void
+os_invalidate (os_vm_address_t addr, os_vm_size_t len)
 {
-  DPRINTF(0, (stderr, "os_invalidate %x %d\n", addr, len));
-
-  if (munmap(addr, len) == -1)
-    perror("munmap");
+  if (munmap (addr, len) == -1)
+    perror ("munmap");
 }
 
-os_vm_address_t os_map(int fd, int offset, os_vm_address_t addr,
-		       os_vm_size_t len)
+os_vm_address_t
+os_map (int fd, int offset, os_vm_address_t addr,
+	os_vm_size_t len)
 {
-  addr = mmap(addr, len,
-	      OS_VM_PROT_ALL,
-	      MAP_PRIVATE | MAP_FILE | MAP_FIXED,
-	      fd, (off_t) offset);
+  addr = mmap (addr, len, OS_VM_PROT_ALL,
+	       MAP_PRIVATE | MAP_FILE | MAP_FIXED,
+	       fd, (off_t) offset);
 
   if (addr == (os_vm_address_t) -1)
-    perror("mmap");
+    perror ("mmap");
 
   return addr;
 }
 
-void os_flush_icache(os_vm_address_t address, os_vm_size_t length)
+void
+os_flush_icache (os_vm_address_t address, os_vm_size_t length)
 {
 }
 
-void os_protect(os_vm_address_t address, os_vm_size_t length,
-		os_vm_prot_t prot)
+void
+os_protect (os_vm_address_t address, os_vm_size_t length,
+	    os_vm_prot_t prot)
 {
-  if (mprotect(address, length, prot) == -1)
-    perror("mprotect");
+  if (mprotect (address, length, prot) == -1)
+    perror ("mprotect");
 }
 
 
 
-static boolean in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
+static boolean
+in_range_p (os_vm_address_t a, lispobj sbeg, size_t slen)
 {
-  char* beg = (char*) sbeg;
-  char* end = (char*) sbeg + slen;
-  char* adr = (char*) a;
-  return (adr >= beg && adr < end);
+  char *beg = (char *) sbeg;
+  char *end = (char *) sbeg + slen;
+  char *adr = (char *) a;
+  return adr >= beg && adr < end;
 }
 
-boolean valid_addr(os_vm_address_t addr)
+boolean
+valid_addr (os_vm_address_t addr)
 {
   int ret;
   os_vm_address_t newaddr;
-  newaddr = os_trunc_to_page(addr);
+  newaddr = os_trunc_to_page (addr);
 
-  if (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
-      || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
-      || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size  )
-      || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size  )
-      || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
-      || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ))
+  if (in_range_p (addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
+      || in_range_p (addr, STATIC_SPACE_START , STATIC_SPACE_SIZE)
+      || in_range_p (addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
+#ifndef GENCGC
+      || in_range_p (addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
+#endif
+      || in_range_p (addr, CONTROL_STACK_START, CONTROL_STACK_SIZE)
+      || in_range_p (addr, BINDING_STACK_START, BINDING_STACK_SIZE))
     return TRUE;
   return FALSE;
 }
 
 
-static void sigbus_handler(int signal, int code, struct sigcontext *context,
-			   void *fault_addr)
+static void
+sigbus_handler (int signal, int code, struct sigcontext *context,
+		void *fault_addr)
 {
-#if defined GENCGC
-  int  page_index = find_page_index(fault_addr);
-
-#if SIGBUS_VERBOSE
-  fprintf(stderr,"Signal %d, fault_addr=%x, page_index=%d:\n",
-	  signal, fault_addr, page_index);
+  int page_index;
+  
+#ifdef RED_ZONE_HIT
+  if (os_control_stack_overflow (fault_addr, context))
+    return;
 #endif
+    
+#if defined GENCGC
+  page_index = find_page_index(fault_addr);
 
   /* Check if the fault is within the dynamic space. */
-  if (page_index != -1) {
-    /* Un-protect the page */
+  if (page_index != -1)
+    {
+      /* Un-protect the page */
 
-    /* The page should have been marked write protected */
-    if (!PAGE_WRITE_PROTECTED(page_index))
-      fprintf(stderr, "*** Sigbus in page not marked as write protected\n");
+      /* The page should have been marked write protected */
+      if (!PAGE_WRITE_PROTECTED (page_index))
+	fprintf (stderr, "*** Sigbus in page not marked as write protected\n");
 
-    os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
+      os_protect (page_address (page_index), 4096, OS_VM_PROT_ALL);
+      page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
+      page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
-    return;
+      return;
     }
-#endif
+#endif /* GENCGC */
 
-  DPRINTF(0, (stderr, "sigbus:\n"));
-  interrupt_handle_now(signal, code, context);
+  interrupt_handle_now (signal, code, context);
 }
 
-static void sigsegv_handler(int signal, int code, struct sigcontext *context)
+static void
+sigsegv_handler (int signal, int code, struct sigcontext *context)
 {
-  DPRINTF(0, (stderr, "os_sigsegv\n"));
-  interrupt_handle_now(signal, code, context);
+  interrupt_handle_now (signal, code, context);
 }
 
-void os_install_interrupt_handlers(void)
+void
+os_install_interrupt_handlers (void)
 {
-  interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
-  interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
+  interrupt_install_low_level_handler
+    (SIGSEGV, (void (*) (HANDLER_ARGS)) sigsegv_handler);
+  interrupt_install_low_level_handler
+    (SIGBUS, (void (*) (HANDLER_ARGS)) sigbus_handler);
 }
 
-void *os_dlsym(const char *sym_name, lispobj lib_list)
+void *
+os_dlsym (const char *sym_name, lispobj lib_list)
 {
-    if (lib_list != NIL) {
-	lispobj lib_list_head;
+  if (lib_list != NIL)
+    {
+      lispobj lib_list_head;
 
-	for (lib_list_head = lib_list;
-	     lib_list_head != NIL;
-	     lib_list_head = (CONS(lib_list_head))->cdr) {
-	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
-	    struct sap *dlhandle = (struct sap *)PTR(lib_cons->car);
-	    void *sym_addr = dlsym((void *)dlhandle->pointer, sym_name);
+      for (lib_list_head = lib_list;
+	   lib_list_head != NIL;
+	   lib_list_head = CONS (lib_list_head)->cdr)
+	{
+	  struct cons *lib_cons = CONS (CONS (lib_list_head)->car);
+	  struct sap *dlhandle = (struct sap *) PTR (lib_cons->car);
+	  void *sym_addr = dlsym ((void *) dlhandle->pointer, sym_name);
 
-	    if (sym_addr)
-		return sym_addr;
+	  if (sym_addr)
+	    return sym_addr;
 	}
     }
-    return dlsym(RTLD_DEFAULT, sym_name);
+  
+  return dlsym (RTLD_DEFAULT, sym_name);
 }

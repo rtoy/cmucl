@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.39 2002/08/28 13:29:26 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.40 2003/03/23 21:23:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,8 @@
 
 (in-package "KERNEL")
 
-(export '(infinite-error-protect find-caller-name *maximum-error-depth*))
+(export '(infinite-error-protect find-caller-name *maximum-error-depth*
+	  red-zone-hit yellow-zone-hit))
 
 
 
@@ -620,4 +621,38 @@
 				       arguments))))
 		 (t
 		  (funcall handler name fp scp arguments)))))))))
+
+;;;
+;;; Called from C when the yellow control stack guard zone is hit.
+;;; The yellow zone is unprotected in the C code prior to calling this
+;;; function, to give some room for debugging.  The red zone is still
+;;; protected.
+;;;
+#+stack-checking
+(defun yellow-zone-hit ()
+  (let ((debug:*stack-top-hint* nil))
+    (format *error-output*
+	    "~2&~@<A control stack overflow has occurred: ~
+            the program has entered the yellow control stack guard zone.  ~
+            Please note that you will be returned to the Top-Level if you ~
+            enter the red control stack guard zone while debugging.~@:>~2%")
+    (infinite-error-protect (error 'stack-overflow))))
+
+;;;
+;;; Called from C when the red control stack guard zone is hit.  We
+;;; could ABORT here, which would usually take us back to the debugger
+;;; or top-level, and add code to the restarts re-protecting the red
+;;; zone (which can't be done here because we're still in the red
+;;; zone).  Using ABORT is too dangerous because users may be using
+;;; abort restarts which don't do the necessary re-protecting of the
+;;; red zone, and would thus render CMUCL unprotected.
+;;;
+#+stack-checking
+(defun red-zone-hit ()
+  (format *error-output*
+	  "~2&~@<Fatal control stack overflow.  You have entered ~
+           the red control stack guard zone while debugging.  ~
+           Returning to Top-Level.~@:>~2%")
+  (throw 'lisp::top-level-catcher nil))
+
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.23 2003/03/21 20:53:03 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.24 2003/03/23 21:23:41 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -254,6 +254,8 @@
       lisp::%initial-function
       lisp::maybe-gc
       kernel::internal-error
+      #+stack-checking kernel::yellow-zone-hit
+      #+stack-checking kernel::red-zone-hit
       di::handle-breakpoint
       lisp::fdefinition-object
 

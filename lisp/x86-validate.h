@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.16 2002/08/27 22:18:34 moore Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.17 2003/03/23 21:23:41 gerd Exp $
  *
  */
 
@@ -54,8 +54,10 @@
 #define BINDING_STACK_START	(0x38000000)
 #define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
 
-#define CONTROL_STACK_START	(0x40000000)
-#define CONTROL_STACK_SIZE	(0x08000000) /* 128MB */
+#define CONTROL_STACK_START	0x40000000
+#define CONTROL_STACK_SIZE	0x07fd8000   /* 128MB - SIGSTKSZ */
+#define SIGNAL_STACK_START	0x47fd8000
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(0x48000000)
 #ifdef GENCGC
@@ -104,8 +106,10 @@
 #define BINDING_STACK_START	(0x20000000)
 #define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
 
-#define CONTROL_STACK_START	(0x38000000)
-#define CONTROL_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
+#define CONTROL_STACK_START	0x38000000
+#define CONTROL_STACK_SIZE	(0x07fff000 - 8192) 
+#define SIGNAL_STACK_START	CONTROL_STACK_END
+#define SIGNAL_STACK_SIZE	8192
 
 #define DYNAMIC_0_SPACE_START	(0x48000000)
 #ifdef GENCGC

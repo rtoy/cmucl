@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.13 2000/10/21 12:40:56 dtc Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.14 2003/03/23 21:23:41 gerd Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -9,6 +9,7 @@
 */
 
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/signal.h>
@@ -105,6 +106,7 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_ebp ebp
 #define sc_esi esi
 #define sc_edi edi
+#define sc_eip eip
 
 #endif /* i386 */
 
@@ -115,3 +117,5 @@ typedef struct sigcontext_struct sigcontext;
 #ifndef sa_sigaction
 #define sa_sigaction	sa_handler
 #endif
+
+#define PROTECTION_VIOLATION_SIGNAL SIGSEGV

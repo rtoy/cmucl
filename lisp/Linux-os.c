@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.15 2002/08/28 13:29:25 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.16 2003/03/23 21:23:41 gerd Exp $
  *
  */
 
@@ -203,8 +203,8 @@ boolean valid_addr(os_vm_address_t addr)
 }
 
 
-
 #if defined GENCGC
+
 void sigsegv_handler(HANDLER_ARGS)
 {
   GET_CONTEXT
@@ -212,7 +212,12 @@ void sigsegv_handler(HANDLER_ARGS)
   int  fault_addr = ((struct sigcontext_struct *) (&contextstruct))->cr2;
   int  page_index = find_page_index((void *) fault_addr);
 
-  /* Check if the fault is within the dynamic space. */
+#ifdef RED_ZONE_HIT
+  if (os_control_stack_overflow (fault_addr, &contextstruct))
+    return;
+#endif
+
+  /* check if the fault is within the dynamic space. */
   if (page_index != -1) {
     /* Un-protect the page */
 

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.26 2001/12/06 19:15:45 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.27 2003/03/23 21:23:41 gerd Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -501,29 +501,49 @@ boolean interrupt_maybe_gc(HANDLER_ARGS)
 * Noise to install handlers.                                     *
 \****************************************************************/
 
-void interrupt_install_low_level_handler
-    (int signal,
-     void handler(HANDLER_ARGS))
+void
+interrupt_install_low_level_handler (int signal, void handler (HANDLER_ARGS))
 {
 #ifdef POSIX_SIGS
-    struct sigaction sa;
+  struct sigaction sa;
 
-    sa.sa_sigaction = handler;
-    sigemptyset(&sa.sa_mask);
-    FILLBLOCKSET(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | USE_SA_SIGINFO;
+  sa.sa_sigaction = handler;
+  sigemptyset (&sa.sa_mask);
+  FILLBLOCKSET (&sa.sa_mask);
+  sa.sa_flags = SA_RESTART | USE_SA_SIGINFO;
 
-    sigaction(signal, &sa, NULL);
-#else
-    struct sigvec sv;
+  /* Deliver protection violations on a dedicated signal stack,
+     because, when we get that signal because of hitting a control
+     stack guard zone, it's not a good idea to use more of the
+     control stack for handling the signal.  */
+#ifdef RED_ZONE_HIT
+  if (signal == PROTECTION_VIOLATION_SIGNAL)
+    {
+      stack_t sigstack;
+      sigstack.ss_sp = (void *) SIGNAL_STACK_START;
+      sigstack.ss_flags = 0;
+      sigstack.ss_size = SIGNAL_STACK_SIZE;
+      if (sigaltstack (&sigstack, 0) == -1)
+	perror ("sigaltstack");
+      sa.sa_flags |= SA_ONSTACK;
+    }
+#endif /* RED_ZONE_HIT */
 
-    sv.sv_handler = handler;
-    sv.sv_mask = BLOCKABLE;
-    sv.sv_flags = 0;
-    sigvec(signal, &sv, NULL);
-#endif    
-    interrupt_low_level_handlers[signal] =
-      (handler == (void (*)(HANDLER_ARGS)) SIG_DFL) ? 0 : handler;
+  sigaction (signal, &sa, NULL);
+    
+#else /* not POSIX_SIGNALS */
+  struct sigvec sv;
+
+  sv.sv_handler = handler;
+  sv.sv_mask = BLOCKABLE;
+  sv.sv_flags = 0;
+  sigvec (signal, &sv, NULL);
+#endif /* not POSIX_SIGNALS */
+
+  if (handler == (void (*)(HANDLER_ARGS)) SIG_DFL)
+    interrupt_low_level_handlers[signal] = 0;
+  else
+    interrupt_low_level_handlers[signal] = handler;
 }
 
 unsigned long install_handler(int signal,

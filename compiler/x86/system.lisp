@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.12 2003/02/25 15:54:56 emarsden Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.13 2003/03/23 21:23:41 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -313,16 +313,16 @@
 
 
 
-(defknown sys:scrub-control-stack () (values))
+(defknown lisp::%scrub-control-stack () (values))
 
 ;;; Scrub the control stack.
 ;;;
 ;;; On the x86 port the stack grows downwards, and to support grow on
 ;;; demand stacks the stack must be decreased as it is scrubbed.
 ;;;
-(define-vop (scrub-control-stack)
+(define-vop (%scrub-control-stack)
   (:policy :fast-safe)
-  (:translate sys:scrub-control-stack)
+  (:translate lisp::%scrub-control-stack)
   (:args)
   (:results)
   (:temporary (:sc unsigned-reg) count)
