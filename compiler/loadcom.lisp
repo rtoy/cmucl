@@ -121,7 +121,7 @@
 ); #+RT-TARGET PROGN
 
 #+pmax(progn
-(load "mips:dump")
+(load "c:dump")
 (load "mips:core")
 ;(load "mips:genesis")
 
