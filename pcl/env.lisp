@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.21 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.22 2003/05/17 16:20:36 gerd Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -275,6 +275,14 @@
 (export '(cl::make-load-form cl::make-load-form-saving-slots) "CL")
 
 (defgeneric make-load-form (object &optional environment))
+
+(macrolet ((define-default-method (class)
+	     `(defmethod make-load-form ((object ,class) &optional env)
+		(declare (ignore env))
+		(error "~@<Default ~s method for ~s called.~@>"
+		       'make-load-form object))))
+  (define-default-method condition)
+  (define-default-method standard-object))
 
 (defmethod make-load-form ((object structure-object) &optional environment)
   (declare (ignore environment))
