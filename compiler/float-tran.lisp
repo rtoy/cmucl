@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.43 1997/12/04 04:02:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.44 1997/12/05 16:32:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1141,16 +1141,45 @@
 	    (t
 	     (imagpart-derive type))))))
 
-(defoptimizer (complex derive-type) ((re im))
-  (let* ((re-type (continuation-type re))
-	 (im-type (continuation-type im))
-	 (element-type (numeric-contagion re-type im-type)))
-    ;; Need to check to make sure numeric-contagion returns the right
-    ;; type for what we want here.
-    (make-numeric-type :class (numeric-type-class element-type)
-		       :format (numeric-type-format element-type)
-		       :complexp :complex)))
-			      
+(defoptimizer (complex derive-type) ((re &optional im))
+  (if im
+      (let ((re-type (continuation-type re))
+	    (im-type (continuation-type im)))
+	(if (and (numeric-type-p re-type)
+		 (numeric-type-p im-type))
+	    ;; Need to check to make sure numeric-contagion returns
+	    ;; the right type for what we want here.
+
+	    ;; Also, what about rational canonicalization, like
+	    ;; (complex 5 0) is 5?  So, if the result must be complex,
+	    ;; we make it so.  If the result might be complex, which
+	    ;; happens only if the arguments are rational, we make it
+	    ;; a union type of (or rational (complex rational)).
+	    (let* ((element-type (numeric-contagion re-type im-type))
+		   (rat-result-p (csubtypep element-type
+					    (specifier-type 'rational))))
+	      (if rat-result-p
+		  (make-union-type
+		   (list element-type
+			 (specifier-type `(complex ,(numeric-type-class element-type)))))
+		  (make-numeric-type :class (numeric-type-class element-type)
+				     :format (numeric-type-format element-type)
+				     :complexp (if rat-result-p
+						   :real
+						   :complex))))
+	    (specifier-type 'complex)))
+      (let ((re-type (continuation-type re)))
+	(if (numeric-type-p re-type)
+	    (make-numeric-type :class (numeric-type-class re-type)
+			       :format (numeric-type-format re-type)
+			       :complexp (if (csubtypep re-type
+							(specifier-type 'rational))
+					     :real
+					     :complex)
+			       :low (numeric-type-low re-type)
+			       :high (numeric-type-high re-type))
+	    (specifier-type 'complex)))))
+
 (macrolet ((frob (op type)
 	     `(progn
 	       (deftransform ,op ((w z) ((complex ,type) (complex ,type))
@@ -1267,10 +1296,7 @@
    (constantly t)
    #'(lambda (lo hi)
        (declare (ignore lo hi))
-       (values -1d0 1d0))
-   ;; 
-   (float-or-complex-type (continuation-type num)
-			  -1d0 1d0)))
+       (values -1d0 1d0))))
        
 (defoptimizer (cos derive-type) ((num))
   (elfun-derive-type-union
@@ -1278,9 +1304,7 @@
    (constantly t)
    #'(lambda (lo hi)
        (declare (ignore lo hi))
-       (values -1d0 1d0))
-   (float-or-complex-type (continuation-type num)
-			  -1d0 1d0)))
+       (values -1d0 1d0))))
 
 (defoptimizer (tan derive-type) ((num))
   (elfun-derive-type-union
