@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.23 2001/10/03 16:02:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.24 2005/02/07 23:23:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -222,7 +222,7 @@
   object-not-weak-pointer-error vm:weak-pointer-type)
 
 (def-type-vops scavenger-hook-p nil nil nil
-  0)
+  #-gencgc 0 #+gencgc scavenger-hook-type)
 
 (def-type-vops code-component-p nil nil nil
   vm:code-header-type)
