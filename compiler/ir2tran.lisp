@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.12 1990/04/30 10:25:01 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.13 1990/05/07 10:56:40 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -194,7 +194,7 @@
 ;;;
 (defun ir2-convert-closure (node block leaf res)
   (declare (type ref node) (type ir2-block block)
-	   (type clambda leaf) (type tn res))
+	   (type functional leaf) (type tn res))
   (let ((entry (make-load-time-constant-tn :entry leaf)))
     (cond ((and (lambda-p leaf)
 		(environment-closure (lambda-environment leaf)))
