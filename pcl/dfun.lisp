@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.19 2003/03/25 11:40:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.20 2003/03/25 13:37:54 gerd Exp $")
 
 (in-package :pcl)
 
@@ -723,28 +723,13 @@ And so, we are saved.
 
 	      ((and (eq *boot-state* 'complete)
 		    (compute-applicable-methods-emf-std-p gf))
-	       (let* ((caching-p (use-caching-dfun-p gf))
-		      ;;
-		      ;; FIXME: I believe the call to P-E-M below is a
-		      ;; relict of the unused, and meanwhile removed,
-		      ;; *LAZY-DFUN-COMPUTE-P* code in the original PCL.
-		      ;; The call also caused problems before the
-		      ;; introduction of FINALIZE-SPECIALIZERS.  Example:
-		      ;;
-		      ;; (defclass foo () ())
-		      ;; (defclass bar (forward) ())
-		      ;; (defmethod baz ((x bar)) x)
-		      ;; (defmethod baz ((x foo)) x)
-		      ;; 
-		      ;; This signaled an error because of the unfinalized
-		      ;; class BAR, which P-E-M trampled on.
-		      ;;
-		      ;; When removing the call doesn't cause unforeseen
-		      ;; problems, remove the P-E-M function.
-		      ;;
-		      ;; Gerd, 2003-03-18
-		      #+nil
-		      (classes-list (precompute-effective-methods gf caching-p)))
+	       (let* ((caching-p (use-caching-dfun-p gf)))
+		 ;;
+		 ;; The call to PRECOMPUTE-EFFECTIVE-METHODS should
+		 ;; not be removed, because effective method
+		 ;; computation will detect invalid methods (invalid
+		 ;; qualifiers) early, which is desirable.
+		 (precompute-effective-methods gf caching-p)
 		 (cond ((use-dispatch-dfun-p gf caching-p)
 			(values initial-dfun nil (make-initial-dispatch-dfun-info)))
 		       (caching-p

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.24 2003/03/22 16:15:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.25 2003/03/25 13:37:54 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1008,7 +1008,6 @@
         (class-eq (cadr type))
         (class (cadr type)))))
 
-#+nil
 (defun precompute-effective-methods (gf caching-p)
   (let* ((arg-info (gf-arg-info gf))
 	 (methods (generic-function-methods gf))
