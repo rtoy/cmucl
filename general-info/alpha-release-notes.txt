@@ -1,4 +1,224 @@
-2/4/93 to 2/9/92:
+
+Interface: [note, not loaded in this release, because of PCL]
+The debugger will now reuse old debugging panes rather than creating
+new ones all the time.  In addition, the stack backtrace is no longer
+displayed by default.
+
+Replaced uses of Motif gadgets with corresponding widgets.  This
+also fixes the problem with warnings about 'alignment' not being
+a valid resource.
+
+Invoking LISP-CONTROL-PANEL from the TTY now works correctly and
+QUIT will kill off any Motif servers that you have started.
+The "Edit Source" button now works.
+A new button, "Dump Backtrace" has been added.  This is for dumping
+a copy of the stack backtrace for use in bug reports.  At the moment,
+it just prints a copy of the backtrace on the standard output stream.
+
+Added support for deleting all active inspection panes.
+Added comments and descriptions on how to implement inspector
+display methods for view customization.
+
+
+3/1/93 to 3/15/93 [PMAX only, no PCL]
+
+New & improved support for funcallable instances so that we can easily define
+generic function classes for Dylan & CLOS.  Also, fixed some bugs in the new
+structure type stuff:
+ -- Redefinition failing or resulting in spurious errors, #<foo> is not a FOO
+    errors, etc.
+ -- Fixed BOA constructors to ignore package when determining if a slot appears
+    as an arg.
+ -- Fixed CIRCLE-SUBST to not bother looking down the instance-layout slot so
+    that splicing structures into the read input doesn't result in CIRCLE-SUBST
+    searching though the entire type system for places to fix up #n#'s.
+
+Fixed a bug introduced by tuning (was breaking TTY redisplay):
+ -- Fixed type decls in FILE-POSITION to allow :START and :END for positions.
+
+Misc bug fixes:
+ -- Fixed FORMAT-EXP-AUX to correctly handle variable width fields when the
+    argument is negative.
+ -- Fixed info-hash to work again on weird (not SETF) lists.
+
+Misc enhancements:
+ -- Improved usefulness of VM:CODE-BREAKDOWN :HOW :FILE by subdividing the
+    files by package.
+ -- Most of the support for Sean's block-counting profiler is in this core,
+    but it's not all there yet. 
+
+Compiler:
+ -- Fixed a bug in type inference which seems to have generally prevented
+    anything from being inferred about function result types of user-defined
+    functions.
+ -- CTYPE-OF now extracts the function type from function objects, rather than
+    just returning FUNCTION.
+ -- Added FUNCTIONAL-PLIST slot for adding random annotations to functions
+    within the compiler (such as this function is destined to be a funcallable
+    instance.)
+ -- Improved type predicate compilation for sealed classes in general (not just
+    structure classes.)
+
+
+2/27/93 to 3/1/93 [PMAX only, no PCL]
+
+Fixed load to not always consider files with NIL type to be source files.  If
+the file exists as specified, then look at the header instead of trying to
+default the type.  If :CONTENTS is specified, then don't try defaulting types.
+
+Replaced ISQRT with the fast version discussed on the net many moons ago.
+
+Removed ROOM's load-time dependence on the compiler.  Add
+LIST-ALLOCATED-OBJECTS and LIST-REFERENCING-OBJECTS for finding out why stuff
+isn't being GC'd.
+
+Fixed type system to recognize the codes for internal BUILT-IN-CLASSes such as
+CODE-COMPONENT.  Ripped out NS-BOOT conditionals.
+
+Load the byte compiler and interpreter.  They don't really work yet, but will
+be easier to debug if they're in the core.
+
+The compiler now has an event counter for compiling a MAKE-VALUE-CELL op.
+
+Reduced the size of static space (and the total core) by 1meg by clobbering the
+hash-table vectors of the obsolete VOLATILE-INFO-ENVs in worldload.lisp.  For
+some reason (probably residual stack or register pointers), the
+VOLATILE-INFO-ENV doesn't get reclaimed by purify.  This meant that much static
+space was being wasted by the unused SIMPLE-VECTORs and alists, even though the
+compact version was the one actually being referenced.  This was exacerbated by
+the change to multiple purifies, but has always been present in the
+new-compiler systems.  Also, the Hemlock/CLX info environment wasn't being
+compacted before the purify at all.
+
+
+2/9/93 to 2/26/93 [PMAX only, no PCL]
+
+New structure format and class support in the type system.  Some I/O tuning.
+New fasl file format (you must recompile.)  This core does not contain PCL or
+the GUI (which depends on PCL.)  The old core and startup code are in
+    /afs/cs/project/clisp-3/alphas/olisp.core, olisp.
+
+Structures & classes:
+
+ANSI changes:
+ -- Default defstruct keyword constructors can no longer reference argument
+    values in slot init forms.  BOA constructors can still do this, so defining
+    a BOA constructor with all keyword args will have the old effect.
+ -- Class objects are now implemented, see FIND-CLASS, CLASS-NAME, TYPEP,
+    CLASS-OF.  TYPE-OF is now based on CLASS-OF, and returns slightly different
+    results than before.
+ -- STRUCTURE-CLASSes now exist.  See also the STRUCTURE-OBJECT type.
+ -- BUILT-IN-CLASSes also exist.  In some cases CLASS-OF (legally) returns
+    non-standard subclasses of the standard class, e.g. for a float vector, the
+    result is KERNEL::SIMPLE-ARRAY-SINGLE-FLOAT.  STANDARD-CHAR and KEYWORD are
+    now DEFTYPEs.
+
+Bug fix:
+ -- Typed structures now have the correct (though rather odd) semantics of
+    :offset and :named when inclusion is done.
+
+Raw slots:
+ -- Structure slots of subtypes of SINGLE-FLOAT, DOUBLE-FLOAT and
+    (UNSIGNED-BYTE 32) are now allocated in non-descriptor storage, and can be
+    read/written without number-consing overhead.
+
+Type tests:
+ -- The default (non-frozen) structure type predicate is now significantly more
+    faster (no function call) in the case where the argument is a structure
+    of another type or the type is a supertype of the object's type.  The code
+    is also somewhat smaller.
+
+Redefinition:
+ -- Handing of structure redefinition is now much more comprehensive.
+ -- Definitions are only considered incompatible when slots have moved or been
+    added, slot types are changed to a type that is not a subtype of the old
+    type, or the inheritance structure has changed.  Previously any change at
+    all would produce a warning.
+ -- When a change is compatible, the default restart (CONTINUE) invalidates old
+    instances, constructors and predicate uses.  When speed <= safety, a
+    LAYOUT-INVALID error will be signalled when obsolete instances are passed
+    to a type test (e.g. for type checking.)  Use of old code on new instances
+    or old instances when speed > safety > 0 will result in type errors.
+    Other restarts allow you to ignore the redefinition or to clobber the
+    existing information, preserving the old code (in case the change is really
+    compatible.)
+ -- If the structure length or inheritance structure has changed, an error
+    is signalled when you load code that was compiled with a different
+    structure definition than the one currently in effect.
+
+Internals:
+ -- VM:STRUCTURE-USAGE renamed to VM:INSTANCE-USAGE.  Internally, the structure
+    type and accessors have also been renamed, e.g. 
+    STRUCTURE-REF => %INSTANCE-REF.
+ -- The non-standard STRUCTURE type has become has become EXT:INSTANCE.  To
+    (portably) test whether something is really a structure object, do 
+    (TYPEP X 'STRUCTURE-OBJECT)
+
+
+Misc changes:
+
+ANSI changes:
+ -- #S readed no longer forces keywords into the keyword package. (ANSI)
+ -- Added OPEN-STREAM-P.
+
+Added EXT:DO-HASH.
+
+Stream internals:
+ -- Deleted read-line methods.  For simplicity, this rather unimportant
+    operation is now implemented using read-char.
+ -- READ-N-BYTES eof-error-p nil is now mostly non-blocking (it only reads what
+    is in the buffer, or what unix-read returns if the buffer is empty.)  To be
+    sure it won't block, you must guard it with a LISTEN.
+
+
+Misc bug-fixes:
+
+Compiler:
+ -- Weaken (not (component-new-functions component)) assertion to allow
+    deleted functions.
+ -- Fixed LET* to correctly use the internal policy (not the interface policy)
+    for all bindings, not just the first.
+ -- Fixed a problem with functions losing their type declaration info when
+    there is an inline expansion available.
+ -- In local call VOPs, must load CALLEE-NFP with MAYBE-LOAD-STACK-TN, since it
+    might not be in a register. [mips]
+
+Debugger:
+ -- Changed HANDLE-BREAKPOINT to allow breakpoints that nobody wants.  This
+    can happen if a function-end breakpoint was deactivated while the function
+    was on the stack, because there is no way to convert the bogus-lra back
+    into the real lra.
+
+Misc:
+ -- Fixed a type error in DEFPACKAGE's detection of defining a package which is
+    really a nickname.  Improved handling of deleted packages (most operations
+    signal an error.)
+
+
+Tuning:
+
+ -- Added declarations from efficiency notes in load, package, reader, char and
+    hash. 
+ -- Revived the support for FAST-READ-CHAR and the STREAM-IN-BUFFER, which
+    allows READ-CHAR and READ-BYTE to be done with 0 function calls rather than
+    2.
+ -- Because of above two changes, both the reader and the fasloader are now
+    significantly faster (reader 2x.)
+ -- Default (non-frozen) structure type tests are now significantly faster (no
+    function calls), and somewhat smaller.  This and the reader improvement
+    have sped up the compiler somewhat.
+ -- Many debug-info and compiler data structures are now annotated as pure,
+    alloing them to be put in read-only space.  This reduces the amound of
+    stuff in static space, speeding GC.
+ -- Real-valued hash-table parameters (rehash-threshold etc.) are
+    canonicalized to single-floats. 
+ -- serve-event now uses UNIX-FAST-SELECT, so it can can handle >32 file
+    descriptors and is more efficient.
+ -- Changed UNIX-FAST-SELECT to a macro so that it can be efficient.  Changed 
+    FD-SET stuff to be efficiently compilable.
+
+
+2/4/93 to 2/9/93:
 
 Code:
 
