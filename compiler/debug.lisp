@@ -759,8 +759,7 @@
      "~%TNs: ~D local, ~D temps, ~D constant, ~D env, ~D comp, ~D global.~@
        Wired: ~D, Unused: ~D.  ~D block~:P, ~D global conflict~:P.~%"
        local temps const environment comp global wired unused
-       (1+ (ir2-block-number
-	    (block-info (block-next (component-head component)))))
+       (ir2-block-count component)
        confs))
   (undefined-value))
 
