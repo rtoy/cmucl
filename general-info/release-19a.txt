@@ -229,6 +229,13 @@ New in this release:
      - When constructing logical pathnames, all components will be
        automatically upcased.  Needed for print/read consistency, and
        fixes an issue with ASDF and logical pathnames.
+     - Handle things like [abc] in namestrings better to match
+       Unix-style usage.
+     - ATANH was incorrectly computing the value of 1+i*y.
+     - SOFTWARE-VERSION would hang on some Linux 2.6 kernels because
+       it was waiting forever reading /proc files.  Hopefully fixed
+       for all kernels.
+     - Reloading of shared libraries happened in the wrong order.
        
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
