@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.14 1992/12/10 01:08:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.15 1992/12/11 15:56:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -500,7 +500,7 @@
 			   (:print-function %print-synonym-stream)
 			   (:constructor make-synonym-stream (symbol)))
   ;; This is the symbol, the value of which is the stream we are synonym to.
-  (symbol :type symbol :read-only t))
+  (symbol nil :type symbol :read-only t))
 
 (defun %print-synonym-stream (s stream d)
   (declare (ignore d))
