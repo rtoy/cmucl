@@ -1,9 +1,7 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.13 1991/03/24 23:20:11 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.14 1991/05/24 18:36:03 wlott Exp $ */
 
-
-#include <mach.h>
 #include <stdio.h>
 
 #include "lisp.h"
