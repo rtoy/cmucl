@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.18 1991/06/10 13:24:20 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.19 1991/06/12 17:24:18 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1961,17 +1961,12 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 		   (setf (%bignum-ref res i) (%bignum-ref x i)))
 		 (values 0 res)))
 	      (t
-	       ;; SHIFT-AND-STORE-TRUNCATE-BUFFERS relies on this routine
-	       ;; starting these buffers at five or greater.  I think that's
-	       ;; what Rob meant. ???
-	       (with-bignum-buffers ((*truncate-x* 5)
-				     (*truncate-y* 5))
-		 (let ((y-shift (shift-y-for-truncate y)))
-		   (multiple-value-bind (len-x len-y)
-					(shift-and-store-truncate-buffers
-					 x len-x y len-y y-shift)
-		     (declare (type bignum-index len-x len-y))
-		     (values (do-truncate len-x len-y)
+	       (let ((len-x+1 (1+ len-x)))
+		 (with-bignum-buffers ((*truncate-x* len-x+1)
+				       (*truncate-y* (1+ len-y)))
+		   (let ((y-shift (shift-y-for-truncate y)))
+		     (shift-and-store-truncate-buffers x len-x y len-y y-shift)
+		     (values (do-truncate len-x+1 len-y)
 			     ;; DO-TRUNCATE must execute first.
 			     (cond
 			      ((zerop y-shift)
@@ -2201,58 +2196,18 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 ;;; SHIFT-AND-STORE-TRUNCATE-BUFFERS -- Internal.
 ;;;
 ;;; Stores two bignums into the truncation bignum buffers, shifting them on the
-;;; way in.  This first makes sure the buffers are big enough and that the last
-;;; element possibly needed is zero, in case we never store there.  This
-;;; assumes x and y are positive and at least two in length.  Return the number
-;;; of pertinent digits in each buffer, but make sure *truncate-x* has at least
-;;; three digits.  We also check for x and y having the same length because
-;;; similar lengths make TRY-BIGNUM-TRUNCATE-GUESS index below 0 in x when
-;;; doing the subtraction; just make sure x is one greater.
+;;; way in.  This assumes x and y are positive and at least two in length, and
+;;; it assumes *truncate-x* and *truncate-y* are one digit longer than x and y.
 ;;;
 (defun shift-and-store-truncate-buffers (x len-x y len-y shift)
   (declare (type bignum-index len-x len-y)
 	   (type (integer 0 (#.digit-size)) shift))
-  (macrolet ((frob (var len)
-	       `(progn
-		  (when (< (%bignum-length ,var) ,len)
-		    (setf ,var (%allocate-bignum ,len)))
-		  (setf (%bignum-ref ,var (1- ,len)) 0))))
-    (multiple-value-bind
-	(buf-len-x buf-len-y)
-	(cond ((zerop shift)
-	       (frob *truncate-x* len-x)
-	       (frob *truncate-y* len-y)
-	       (bignum-replace *truncate-x* x :end1 len-x)
-	       (bignum-replace *truncate-y* y :end1 len-y)
-	       (values len-x len-y))
-	      (t
-	       (let ((len-x+1 (1+ len-x))
-		     (len-y+1 (1+ len-y)))
-		 (declare (type bignum-index len-x+1 len-y+1))
-		 (frob *truncate-x* len-x+1)
-		 (frob *truncate-y* len-y+1)
-		 (values (bignum-ashift-left-unaligned x 0 shift len-x+1
-						       *truncate-x*)
-			 (bignum-ashift-left-unaligned y 0 shift len-y+1
-						       *truncate-y*)))))
-      (declare (type bignum-index buf-len-x buf-len-y))
-      (when (< buf-len-x 3)
-	;; These two lines work because BIGNUM-TRUNCATE ensures
-	;; *truncate-x* starts with at least five elements.  I think
-	;; that's what Rob meant. ???
-	(assert (= buf-len-x 2))
-	(setf (%bignum-ref *truncate-x* 2) 0)
-	(setf buf-len-x 3))
-      (if (= buf-len-x buf-len-y)
-	  (let ((buf-len-x+1 (1+ buf-len-x)))
-	    (declare (type bignum-index buf-len-x+1))
-	    (when (< (%bignum-length *truncate-x*) buf-len-x+1)
-	      (let ((old-x *truncate-x*))
-		(setf *truncate-x* (%allocate-bignum buf-len-x+1))
-		(bignum-replace *truncate-x* old-x :end1 buf-len-x)))
-	    (setf (%bignum-ref *truncate-x* buf-len-x) 0)
-	    (values buf-len-x+1 buf-len-y))
-	  (values buf-len-x buf-len-y)))))
+  (cond ((zerop shift)
+	 (bignum-replace *truncate-x* x :end1 len-x)
+	 (bignum-replace *truncate-y* y :end1 len-y))
+	(t
+	 (bignum-ashift-left-unaligned x 0 shift (1+ len-x) *truncate-x*)
+	 (bignum-ashift-left-unaligned y 0 shift (1+ len-y) *truncate-y*))))
 
 
 
