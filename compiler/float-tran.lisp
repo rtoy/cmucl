@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.16 1993/05/11 13:50:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.17 1993/05/11 20:56:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -227,7 +227,7 @@
 ;;; has a precise representation as a float (such as 0).
 ;;;
 (macrolet ((frob (op)
-	     `(deftransform ,op ((x y) (float rational) :when :both)
+	     `(deftransform ,op ((x y) (float rational) * :when :both)
 		(unless (constant-continuation-p y)
 		  (give-up "Can't open-code float to rational comparison."))
 		(let ((val (continuation-value y)))
