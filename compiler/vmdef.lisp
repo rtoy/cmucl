@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.38 1991/10/02 18:11:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.39 1991/12/15 08:27:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -502,7 +502,8 @@
 ;;; meta-compile time.
 ;;;
 (defstruct (vop-parse
-	    (:print-function %print-vop-parse))
+	    (:print-function %print-vop-parse)
+	    (:make-load-form-fun :just-dump-it-normally))
   ;;
   ;; The name of this VOP.
   (name nil :type symbol)
