@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.2 1991/04/03 00:54:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.3 1992/03/11 21:28:59 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the SPARC port.
 ;;;
@@ -37,37 +37,35 @@
 	   (move result (tn-ref-tn things)))
 	  (t
 	   (macrolet
-	       ((store-car (tn list &optional (slot cons-car-slot))
-		  `(let ((reg
-			  (sc-case ,tn
-			    ((any-reg descriptor-reg zero null)
-			     ,tn)
-			    (control-stack
-			     (load-stack-tn temp ,tn)
-			     temp))))
-		     (storew reg ,list ,slot list-pointer-type))))
-	     (let ((cons-cells (if star (1- num) num)))
-	       (pseudo-atomic (ndescr)
-		 (inst add res alloc-tn list-pointer-type)
-		 (inst add alloc-tn alloc-tn
-		       (* (pad-data-block cons-size) cons-cells))
+	       ((maybe-load (tn)
+		  (once-only ((tn tn))
+		    `(sc-case ,tn
+		       ((any-reg descriptor-reg zero null)
+			,tn)
+		       (control-stack
+			(load-stack-tn temp ,tn)
+			temp)))))
+	     (let* ((cons-cells (if star (1- num) num))
+		    (alloc (* (pad-data-block cons-size) cons-cells)))
+	       (pseudo-atomic (:extra alloc)
+		 (inst andn res alloc-tn lowtag-mask)
+		 (inst or res alloc-tn list-pointer-type)
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
-		   (store-car (tn-ref-tn things) ptr)
+		   (storew (maybe-load (tn-ref-tn things)) ptr
+			   cons-car-slot list-pointer-type)
 		   (setf things (tn-ref-across things))
 		   (inst add ptr ptr (pad-data-block cons-size))
 		   (storew ptr ptr
 			   (- cons-cdr-slot cons-size)
 			   list-pointer-type))
-		 (store-car (tn-ref-tn things) ptr)
-		 (cond (star
-			(setf things (tn-ref-across things))
-			(store-car (tn-ref-tn things) ptr cons-cdr-slot))
-		       (t
-			(storew null-tn ptr
-				cons-cdr-slot list-pointer-type)))
-		 (assert (null (tn-ref-across things)))
-		 (move result res))))))))
+		 (storew (maybe-load (tn-ref-tn things)) ptr
+			 cons-car-slot list-pointer-type)
+		 (storew (if star
+			     (maybe-load (tn-ref-tn (tn-ref-across things)))
+			     null-tn)
+			 ptr cons-cdr-slot list-pointer-type))
+	       (move result res)))))))
 
 (define-vop (list list-or-list*)
   (:variant nil))
@@ -91,8 +89,11 @@
     (inst srl unboxed unboxed-arg word-shift)
     (inst add unboxed lowtag-mask)
     (inst and unboxed (lognot lowtag-mask))
-    (pseudo-atomic (ndescr)
-      (inst add result alloc-tn other-pointer-type)
+    (pseudo-atomic ()
+      ;; Note: we don't have to subtract off the 4 that was added by
+      ;; pseudo-atomic, because oring in other-pointer-type just adds
+      ;; it right back.
+      (inst or result alloc-tn other-pointer-type)
       (inst add alloc-tn boxed)
       (inst add alloc-tn unboxed)
       (inst sll ndescr boxed (- type-bits word-shift))
@@ -102,23 +103,15 @@
       (storew null-tn result code-entry-points-slot other-pointer-type)
       (storew null-tn result code-debug-info-slot other-pointer-type))))
 
-(define-vop (make-symbol)
+(define-vop (make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (result :scs (descriptor-reg) :from :argument))
   (:policy :fast-safe)
-  (:translate make-symbol)
+  (:translate make-fdefn)
   (:generator 37
-    (with-fixed-allocation (result temp symbol-header-type symbol-size)
-      (inst li temp unbound-marker-type)
-      (storew temp result symbol-value-slot other-pointer-type)
-      (storew temp result symbol-function-slot other-pointer-type)
-      (storew temp result symbol-setf-function-slot other-pointer-type)
+    (with-fixed-allocation (result temp fdefn-type fdefn-size)
       (inst li temp (make-fixup "_undefined_tramp" :foreign))
-      (storew temp result symbol-raw-function-addr-slot
-	      other-pointer-type)
-      (storew null-tn result symbol-plist-slot other-pointer-type)
-      (storew name result symbol-name-slot other-pointer-type)
-      (storew null-tn result symbol-package-slot other-pointer-type))))
-
-
+      (storew name result fdefn-name-slot other-pointer-type)
+      (storew null-tn result fdefn-function-slot other-pointer-type)
+      (storew temp result fdefn-raw-addr-slot other-pointer-type))))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.13 1992/02/25 07:09:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.14 1992/03/11 21:29:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,7 +33,7 @@
 (setf (backend-fasl-file-type *target-backend*) "sparcf")
 (setf (backend-fasl-file-implementation *target-backend*)
       sparc-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 2)
+(setf (backend-fasl-file-version *target-backend*) 3)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :big-endian)
 
@@ -167,14 +167,15 @@
 
 ;;;; Static symbols.
 
-(export '(static-symbols exported-static-symbols))
+(export '(static-symbols static-functions))
 
 ;;; These symbols are loaded into static space directly after NIL so
 ;;; that the system can compute their address by adding a constant
 ;;; amount to NIL.
 ;;;
-;;; The exported static symbols are a subset of the static symbols that get
-;;; exported to the C header file.
+;;; The fdefn objects for the static functions are loaded into static
+;;; space directly after the static symbols.  That way, the raw-addr
+;;; can be loaded directly out of them by indirecting relative to NIL.
 ;;;
 (defparameter static-symbols
   '(t
@@ -182,12 +183,14 @@
     ;; The C startup code must fill these in.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
+    lisp::*initial-fdefn-objects*
 
     ;; Functions that the C code needs to call
     lisp::%initial-function
     lisp::maybe-gc
     kernel::internal-error
     di::handle-breakpoint
+    lisp::fdefinition-object
 
     ;; Free Pointers.
     lisp::*read-only-space-free-pointer*
@@ -201,21 +204,17 @@
 
     ;; Interrupt Handling
     lisp::*free-interrupt-context-index*
-    lisp::*pseudo-atomic-atomic*
-    lisp::*pseudo-atomic-interrupted*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
+    ))
 
-    ;; Static functions.
-    length
+(defparameter static-functions
+  '(length
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
     two-arg-<= two-arg->= two-arg-/= eql %negate
     two-arg-and two-arg-ior two-arg-xor
     two-arg-gcd two-arg-lcm
     ))
-
-(defparameter exported-static-symbols
-  (subseq static-symbols 0 (position 'length static-symbols)))
 
 
 

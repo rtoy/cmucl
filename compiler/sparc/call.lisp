@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.8 1992/03/06 11:03:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.9 1992/03/11 21:29:04 wlott Exp $
 ;;;
 ;;; This file contains the VM definition of function call for the SPARC.
 ;;;
@@ -793,14 +793,12 @@ default-value-8
 		     (control-stack
 		      (loadw name-pass cfp-tn (tn-offset name))
 		      (do-next-filler))
-		     (immediate
-		      (load-symbol name-pass (tn-value name)))
 		     (constant
 		      (loadw name-pass code-tn (tn-offset name)
 			     vm:other-pointer-type)
 		      (do-next-filler)))
-		   (loadw function name-pass vm:symbol-raw-function-addr-slot
-			  vm:other-pointer-type)
+		   (loadw function name-pass fdefn-raw-addr-slot
+			  other-pointer-type)
 		   (do-next-filler))
 		 `((sc-case arg-fun
 		     (descriptor-reg (move lexenv arg-fun))
@@ -1112,7 +1110,7 @@ default-value-8
   (:temporary (:scs (any-reg) :from (:argument 0)) context)
   (:temporary (:scs (any-reg) :from (:argument 1)) count)
   (:temporary (:scs (descriptor-reg) :from :eval) temp)
-  (:temporary (:scs (non-descriptor-reg) :from :eval) ndescr dst)
+  (:temporary (:scs (non-descriptor-reg) :from :eval) dst)
   (:results (result :scs (descriptor-reg)))
   (:translate %listify-rest-args)
   (:policy :safe)
@@ -1128,13 +1126,14 @@ default-value-8
       (move result null-tn)
 
       ;; We need to do this atomically.
-      (pseudo-atomic (ndescr)
+      (pseudo-atomic ()
 	;; Allocate a cons (2 words) for each item.
-	(inst add result alloc-tn vm:list-pointer-type)
+	(inst andn result alloc-tn lowtag-mask)
+	(inst or result list-pointer-type)
 	(move dst result)
-	(inst add alloc-tn alloc-tn count)
+	(inst sll temp count 1)
 	(inst b enter)
-	(inst add alloc-tn alloc-tn count)
+	(inst add alloc-tn temp)
 
 	;; Store the current cons in the cdr of the previous cons.
 	(emit-label loop)

@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.1 1990/11/30 17:05:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.2 1992/03/11 21:29:20 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -26,7 +26,6 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
-  (:temporary (:sc descriptor-reg :offset cname-offset) cname)
   (:temporary (:scs (descriptor-reg)) func)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
   (:temporary (:sc any-reg :offset ocfp-offset) old-fp)
@@ -87,11 +86,8 @@
 	   (let ((lra-label (gen-label))
 		 (cur-nfp (current-nfp-tn vop)))
 	     ,@(moves (temp-names) (arg-names))
+	     (inst ld func null-tn (static-function-offset symbol))
 	     (inst li nargs (fixnum ,num-args))
-	     (load-symbol cname symbol)
-	     (inst ld func cname
-		   (- (ash symbol-raw-function-addr-slot word-shift)
-		      other-pointer-type))
 	     (when cur-nfp
 	       (store-stack-tn nfp-save cur-nfp))
 	     (inst move old-fp cfp-tn)

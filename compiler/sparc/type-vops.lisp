@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.9 1991/11/09 02:38:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.10 1992/03/11 21:29:23 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the SPARC.
@@ -171,6 +171,9 @@
 
 (def-type-vops lra-p nil nil nil
   vm:return-pc-header-type)
+
+(def-type-vops fdefn-p nil nil nil
+  vm:fdefn-type)
 
 (def-type-vops funcallable-instance-p nil nil nil
   vm:funcallable-instance-header-type)
@@ -411,61 +414,3 @@
       (test-type value temp error t vm:list-pointer-type)
       (move result value))))
 
-
-;;;; Function Coercion
-
-;;; If not a function, get the symbol value and test for that being a
-;;; function.  Since we test for a function rather than the unbound
-;;; marker, this works on NIL.
-;;;
-(define-vop (coerce-to-function)
-  (:args (object :scs (descriptor-reg)
-		 :target result))
-  (:results (result :scs (descriptor-reg)))
-  (:temporary (:type random  :scs (non-descriptor-reg)) nd-temp)
-  (:temporary (:scs (descriptor-reg)) saved-object)
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:generator 0
-    (let ((not-function-label (gen-label))
-	  (not-coercable-label (gen-label))
-	  (done-label (gen-label)))
-      (test-type object nd-temp not-function-label t
-		 vm:function-pointer-type)
-      (move result object)
-      (emit-label done-label)
-
-      (assemble (*elsewhere*)
-	(emit-label not-function-label)
-	(test-type object nd-temp not-coercable-label t
-		   vm:symbol-header-type)
-	(move saved-object object)
-	(loadw result object vm:symbol-function-slot vm:other-pointer-type)
-	(test-type result nd-temp done-label nil
-		   vm:function-pointer-type)
-	(error-call vop undefined-symbol-error saved-object)
-	
-	(emit-label not-coercable-label)
-	(error-call vop object-not-coercable-to-function-error object)))))
-
-(define-vop (fast-safe-coerce-to-function)
-  (:args (object :scs (descriptor-reg)
-		 :target result))
-  (:results (result :scs (descriptor-reg)))
-  (:temporary (:type random  :scs (non-descriptor-reg)) nd-temp)
-  (:temporary (:scs (descriptor-reg)) saved-object)
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:generator 10
-    (let ((not-function-label (gen-label))
-	  (done-label (gen-label)))
-      (test-type object nd-temp not-function-label t vm:function-pointer-type)
-      (move result object)
-      (emit-label done-label)
-
-      (assemble (*elsewhere*)
-	(emit-label not-function-label)
-	(move saved-object object)
-	(loadw result object vm:symbol-function-slot vm:other-pointer-type)
-	(test-type result nd-temp done-label nil vm:function-pointer-type)
-	(error-call vop undefined-symbol-error saved-object)))))

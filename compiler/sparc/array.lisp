@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.6 1991/11/09 02:38:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.7 1992/03/11 21:29:01 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
@@ -28,13 +28,11 @@
   (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
   (:results (result :scs (descriptor-reg)))
   (:generator 0
-    (pseudo-atomic (ndescr)
-      (inst add header alloc-tn vm:other-pointer-type)
-      (inst add alloc-tn
-	    (+ (* vm:array-dimensions-offset vm:word-bytes)
-	       vm:lowtag-mask))
-      (inst add alloc-tn rank)
-      (inst and alloc-tn (lognot vm:lowtag-mask))
+    (pseudo-atomic ()
+      (inst or header other-pointer-type)
+      (inst add ndescr rank (* (1+ array-dimensions-offset) vm:word-bytes))
+      (inst andn ndescr rank 4)
+      (inst add alloc-tn ndescr)
       (inst add ndescr rank (fixnum (1- vm:array-dimensions-offset)))
       (inst sll ndescr ndescr vm:type-bits)
       (inst or ndescr ndescr type)

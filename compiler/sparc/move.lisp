@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.3 1992/01/14 16:08:19 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.4 1992/03/11 21:29:13 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -254,16 +254,15 @@
   (:generator 20
     (move x arg)
     (let ((done (gen-label))
-	  (one-word (gen-label)))
+	  (one-word (gen-label))
+	  (initial-alloc (pad-data-block (1+ bignum-digits-offset))))
       (inst sra temp x 29)
       (inst cmp temp)
       (inst b :eq done)
       (inst sll y x 2)
       
-      (pseudo-atomic (temp)
-	(inst add y alloc-tn other-pointer-type)
-	(inst add alloc-tn
-	      (pad-data-block (1+ bignum-digits-offset)))
+      (pseudo-atomic (:extra initial-alloc)
+	(inst or y alloc-tn other-pointer-type)
 	(inst cmp x)
 	(inst b :ge one-word)
 	(inst li temp (logior (ash 1 type-bits) bignum-type))

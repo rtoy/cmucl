@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.4 1991/11/09 02:38:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.5 1992/03/11 21:29:11 wlott Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -151,13 +151,13 @@
   Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
   by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
   initializes the object."
-  `(pseudo-atomic (,temp-tn)
-     (inst add ,result-tn alloc-tn other-pointer-type)
-     (inst add alloc-tn alloc-tn (pad-data-block ,size))
-     (inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
-     (storew ,temp-tn ,result-tn 0 other-pointer-type)
-     ,@body))
-
+  (once-only ((result-tn result-tn) (temp-tn temp-tn)
+	      (type-code type-code) (size size))
+    `(pseudo-atomic (:extra (pad-data-block ,size))
+       (inst or ,result-tn alloc-tn other-pointer-type)
+       (inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
+       (storew ,temp-tn ,result-tn 0 other-pointer-type)
+       ,@body)))
 
 
 ;;;; Type testing noise.
@@ -428,20 +428,9 @@
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
-(defmacro pseudo-atomic ((ndescr-temp) &rest forms)
-  (let ((label (gensym "LABEL-")))
-    `(let ((,label (gen-label)))
-       (store-symbol-value zero-tn lisp::*pseudo-atomic-interrupted*)
-       ;; Note: we just use cfp as some not-zero value.
-       (store-symbol-value cfp-tn lisp::*pseudo-atomic-atomic*)
+(defmacro pseudo-atomic ((&key (extra 0)) &rest forms)
+  (let ((n-extra (gensym)))
+    `(let ((,n-extra ,extra))
+       (inst add alloc-tn 4)
        ,@forms
-       (store-symbol-value zero-tn lisp::*pseudo-atomic-atomic*)
-       (load-symbol-value ,ndescr-temp lisp::*pseudo-atomic-interrupted*)
-       (inst cmp ,ndescr-temp)
-       (inst b :eq ,label)
-       (inst nop)
-       (inst unimp pending-interrupt-trap)
-       (emit-label ,label))))
-
-
-
+       (inst taddcctv alloc-tn (- ,extra 4)))))
