@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.32 1992/01/02 23:44:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.33 1992/01/26 07:36:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,7 +178,8 @@
 (defun pprint (object &optional stream)
   "Prettily outputs the Object preceded by a newline."
   (let ((*print-pretty* t)
-	(*print-escape* t))
+	(*print-escape* t)
+	(stream (out-synonym-of stream)))
     (terpri stream)
     (output-object object stream))
   (values))
