@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.31 1998/01/17 05:52:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.32 1998/02/15 15:34:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2140,7 +2140,7 @@
   (setq *current-init-functions-cons* *nil-descriptor*)
   (let ((*load-time-value-counter* 0)
 	*static* *dynamic* *read-only* *cold-assembler-routines*
-	*cold-assembler-fixups*)
+	*cold-assembler-fixups* *load-time-code-fixups*)
     (unwind-protect
 	(progn
 	  (clrhash *fdefn-objects*)
