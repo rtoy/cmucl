@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.11 1991/02/20 14:59:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.12 1991/11/05 19:26:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.11 1991/02/20 14:59:36 ram Exp $
 ;;;
 ;;;    This file contains optimizers for list and sequence functions.
 ;;;
@@ -104,27 +102,6 @@
 			,(frob (cdr els)))
 		   'nil)))
       (frob val))))
-
-
-#|Inline expansion is available...
-
-;;; For Adjoin, just turn into a member and let the member transform
-;;; worry about it.
-;;;
-(deftransform adjoin ((item list &key (key #'identity) test test-not))
-  `(if (member (funcall key item) list
-	       ,@(when test '(:test test))
-	       ,@(when test-not '(:test-not test-not))
-	       :key key)
-       list
-       (cons item list)))
-|#
-
-
-#|
-member map concatenate position find
-|#
-
 
 ;;; Names of predicates that compute the same value as CHAR= when applied to
 ;;; characters.
@@ -426,61 +403,58 @@ member map concatenate position find
 ;;; version.  This is an IR1 transform so that we don't have to worry about
 ;;; changing the order of evaluation.
 ;;;
-(macrolet ((frob (pred pred*)
-	     `(deftransform ,pred ((string1 string2 &key (start1 0) end1
-					    (start2 0) end2))
-		'(,pred* string1 string2 start1 end1 start2 end2))))
+(loop for (fun pred*) in
+      '((string< string<*)
+	(string> string>*)
+	(string<= string<=*)
+	(string>= string>=*)
+	(string= string=*)
+	(string/= string/=*)) do
+  (deftransform fun ((string1 string2 &key (start1 0) end1
+			      (start2 0) end2)
+		     * * :eval-name t)
+    `(,pred* string1 string2 start1 end1 start2 end2)))
 
-  (frob string< string<*)
-  (frob string> string>*)
-  (frob string<= string<=*)
-  (frob string>= string>=*)
-  (frob string= string=*)
-  (frob string/= string/=*))
 
-
-;;; STRING<>=-BODY  --  Internal
+;;; STRING-xxx* transform  --  Internal
 ;;;
 ;;;    Return a form that tests the free variables STRING1 and STRING2 for the
 ;;; ordering relationship specified by Lessp and Equalp.  The start and end are
 ;;; also gotten from the environment.  Both strings must be simple strings.
 ;;;
-(defun string<>=-body (lessp equalp)
-  `(let* ((end1 (if (not end1) (length string1) end1))
-	  (end2 (if (not end2) (length string2) end2))
-	  (index (lisp::%sp-string-compare
-		  string1 start1 end1 string2 start2 end2)))
-     (if index
-	 (cond ((= index ,(if lessp 'end1 'end2)) index)
-	       ((= index ,(if lessp 'end2 'end1)) nil)
-	       ((,(if lessp 'char< 'char>)
-		 (schar string1 index)
-		 (schar string2
-			(truly-the index
-				   (+ index (truly-the fixnum
-						       (- start2 start1))))))
-		index)
-	       (t nil))
-	 ,(if equalp 'end1 'nil))))
+(loop for (name lessp equalp) in
+      '((string<* t nil)
+	(string<=* t t)
+	(string>* nil nil)
+	(string>=* nil t)) do
+  (deftransform name ((string1 string2 start1 end1 start2 end2)
+		      (simple-string simple-string t t t t) *
+		      :eval-name t)
+    `(let* ((end1 (if (not end1) (length string1) end1))
+	    (end2 (if (not end2) (length string2) end2))
+	    (index (lisp::%sp-string-compare
+		    string1 start1 end1 string2 start2 end2)))
+       (if index
+	   (cond ((= index ,(if lessp 'end1 'end2)) index)
+		 ((= index ,(if lessp 'end2 'end1)) nil)
+		 ((,(if lessp 'char< 'char>)
+		   (schar string1 index)
+		   (schar string2
+			  (truly-the index
+				     (+ index (truly-the fixnum
+							 (- start2 start1))))))
+		  index)
+		 (t nil))
+	   ,(if equalp 'end1 'nil)))))
 
 
-(macrolet ((frob (name lessp equalp)
-	     `(deftransform ,name ((string1 string2 start1 end1 start2 end2)
-				   (simple-string simple-string t t t t))
-		(string<>=-body ,lessp ,equalp))))
-  (frob string<* t nil)
-  (frob string<=* t t)
-  (frob string>* nil nil)
-  (frob string>=* nil t))
-
-
-(macrolet ((frob (name result-fun)
-	     `(deftransform ,name
-			    ((string1 string2 start1 end1 start2 end2)
-			     (simple-string simple-string t t t t))
-		'(,result-fun
-		  (lisp::%sp-string-compare
-		   string1 start1 (or end1 (length string1))
-		   string2 start2 (or end2 (length string2)))))))
-  (frob string=* not)
-  (frob string/=* identity))
+(loop for (name result-fun) in
+      '((string=* not)
+	(string/=* identity)) do
+  (deftransform name ((string1 string2 start1 end1 start2 end2)
+		      (simple-string simple-string t t t t) *
+		      :eval-name t)
+    `(,result-fun
+      (lisp::%sp-string-compare
+       string1 start1 (or end1 (length string1))
+       string2 start2 (or end2 (length string2))))))
