@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.5 1990/12/16 14:17:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.6 1991/04/09 17:39:51 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -170,31 +170,35 @@
 ;;; Special case fixnum + and - that trap on overflow.  Useful when we
 ;;; don't know that the output type is a fixnum.
 
-(define-vop (fast-+/fixnum fast-+/fixnum=>fixnum)
+(define-vop (+/fixnum fast-+/fixnum=>fixnum)
+  (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
   (:result-types *)
-  (:note nil)
+  (:note "safe inline fixnum arithmetic")
   (:generator 4
     (inst taddcctv r x y)))
 
-(define-vop (fast-+-c/fixnum fast-+-c/fixnum=>fixnum)
+(define-vop (+-c/fixnum fast-+-c/fixnum=>fixnum)
+  (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
   (:result-types *)
-  (:note nil)
+  (:note "safe inline fixnum arithmetic")
   (:generator 3
     (inst taddcctv r x (fixnum y))))
 
-(define-vop (fast--/fixnum fast--/fixnum=>fixnum)
+(define-vop (-/fixnum fast--/fixnum=>fixnum)
+  (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
   (:result-types *)
-  (:note nil)
+  (:note "safe inline fixnum arithmetic")
   (:generator 4
     (inst tsubcctv r x y)))
 
-(define-vop (fast---c/fixnum fast---c/fixnum=>fixnum)
+(define-vop (--c/fixnum fast---c/fixnum=>fixnum)
+  (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
   (:result-types *)
-  (:note nil)
+  (:note "safe inline fixnum arithmetic")
   (:generator 3
     (inst tsubcctv r x (fixnum y))))
 
@@ -448,15 +452,61 @@
   (:generator 1
     (inst and r x y)))
 
+(deftransform 32bit-logical-nand ((x y) (* *))
+  '(32bit-logical-not (32bit-logical-and x y)))
+
 (define-vop (32bit-logical-or 32bit-logical)
   (:translate 32bit-logical-or)
   (:generator 1
     (inst or r x y)))
 
+(deftransform 32bit-logical-nor ((x y) (* *))
+  '(32bit-logical-not (32bit-logical-or x y)))
+
 (define-vop (32bit-logical-xor 32bit-logical)
   (:translate 32bit-logical-xor)
   (:generator 1
     (inst xor r x y)))
+
+(define-vop (32bit-logical-eqv 32bit-logical)
+  (:translate 32bit-logical-eqv)
+  (:generator 1
+    (inst xnor r x y)))
+
+(define-vop (32bit-logical-orc2 32bit-logical)
+  (:translate 32bit-logical-orc2)
+  (:generator 1
+    (inst orn r x y)))
+
+(deftransform 32bit-logical-orc1 ((x y) (* *))
+  '(32bit-logical-orc2 y x))
+
+(define-vop (32bit-logical-andc2 32bit-logical)
+  (:translate 32bit-logical-andc2)
+  (:generator 1
+    (inst andn r x y)))
+
+(deftransform 32bit-logical-andc1 ((x y) (* *))
+  '(32bit-logical-andc2 y x))
+
+
+(define-vop (shift-towards-someplace)
+  (:policy :fast-safe)
+  (:args (num :scs (unsigned-reg))
+	 (amount :scs (signed-reg)))
+  (:arg-types unsigned-num fixnum)
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num))
+
+(define-vop (shift-towards-start shift-towards-someplace)
+  (:translate shift-towards-start)
+  (:generator 1
+    (inst sll r num amount)))
+
+(define-vop (shift-towards-end shift-towards-someplace)
+  (:translate shift-towards-end)
+  (:generator 1
+    (inst srl r num amount)))
 
 
 
