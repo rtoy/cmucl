@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.49 1997/02/15 23:53:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.50 1997/04/21 00:18:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -262,8 +262,44 @@
 ;;; The basic interval type.  It can handle open and closed intervals.
 ;;; A bound is open if it is a list containing a number, just like
 ;;; Lisp says.  NIL means unbounded.
-(defstruct interval
+(defstruct (interval
+	     (:constructor %make-interval))
   low high)
+
+(defun make-interval (&key low high)
+  (labels ((normalize-bound (val)
+	     (cond ((and (floatp val)
+			 (float-infinity-p val))
+		    ;; Handle infinities
+		    nil)
+		   ((or (numberp val)
+			(eq val nil))
+		    ;; Handle any closed bounds
+		    val)
+		   ((listp val)
+		    ;; We have an open bound.  Normalize the numeric
+		    ;; bound.  If the normalized bound is still a number
+		    ;; (not nil), keep the bound open.  Otherwise, the
+		    ;; bound is really unbounded, so drop the openness.
+		    (let ((new-val (normalize-bound (first val))))
+		      (when new-val
+			;; Bound exists, so keep it open still
+			(list new-val))))
+		   (t
+		    (error "Unknown bound type in make-interval!")))))
+    (%make-interval :low (normalize-bound low)
+		    :high (normalize-bound high))))
+
+(defmacro without-over/under-flow-traps (&body body)
+  "Executes BODY with traps on overflow, underflow, and divide-by-zero
+turned off"
+  (let ((modes (gensym)))
+    `(let ((,modes (ext:get-floating-point-modes)))
+      (unwind-protect
+	   (progn
+	     (ext:set-floating-point-modes :traps '(:invalid))
+	     ,@body)
+	(apply #'ext:set-floating-point-modes ,modes)))))
 
 (proclaim '(inline bound-value set-bound bound-func))
 
@@ -280,16 +316,18 @@
 ;;; the result will be open.  IF X is NIL, the result is NIL.
 (defun bound-func (f x)
   (and x
-        (set-bound (funcall f (bound-value x)) (consp x))))
+       (without-over/under-flow-traps
+        (set-bound (funcall f (bound-value x)) (consp x)))))
 
 ;;; Apply a binary operator OP to two bounds X and Y.  The result is
 ;;; NIL if either is NIL.  Otherwise bound is computed and the result
 ;;; is open if either X or Y is open.
 (defmacro bound-binop (op x y)
   `(and ,x ,y
-        (set-bound (,op (bound-value ,x)
-		        (bound-value ,y))
-	           (or (consp ,x) (consp ,y)))))
+        (without-over/under-flow-traps
+	 (set-bound (,op (bound-value ,x)
+			 (bound-value ,y))
+	            (or (consp ,x) (consp ,y))))))
 
 ;;; NUMERIC-TYPE->INTERVAL
 ;;;
@@ -1285,13 +1323,14 @@
 (progn
 (defun truncate-carefully (x y)
   (handler-case (truncate x y)
-    (arithmetic-error ()
-      '*)))
+    (arithmetic-error () '*)
+    ;; Until a better fix for integer-decode-float signalling error on inf
+    (error            () '*)))
 
 (defun negative-truncate-carefully (x y)
   (handler-case (- (truncate x y))
-    (arithmetic-error ()
-      '*)))
+    (arithmetic-error () '*)
+    (error            () '*)))
 
 (defun integer-truncate-derive-type
     (number-low number-high divisor-low divisor-high
