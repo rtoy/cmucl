@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.34 1991/11/17 17:08:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.35 1991/11/26 23:00:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.34 1991/11/17 17:08:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.35 1991/11/26 23:00:36 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -54,11 +54,19 @@
     (null null-offset)
     (t (tn-offset tn))))
 
+(defconstant reg-name-vec
+  (map 'vector
+       #'(lambda (name)
+	   (cond ((null name) nil)
+		 (t (make-symbol name))))
+       *register-names*))
+
 (define-argument-type register
   :type '(satisfies register-p)
   :function tn-register-number
-  :disassem-printer #'(lambda (value stream)
-			(format stream "$~A" (aref *register-names* value))))
+  :disassem-printer #'(lambda (value stream dstate)
+			(declare (ignore dstate))
+			(format stream "$~A" (aref reg-name-vec value))))
 
 (defun fp-reg-p (object)
   (and (tn-p object)
@@ -68,8 +76,7 @@
 (define-argument-type fp-reg
   :type '(satisfies fp-reg-p)
   :function tn-offset
-  :disassem-printer #'(lambda (value stream)
-			(format stream "$~A~D" 'f value)))
+  :disassem-printer "$f~D")
 
 (define-argument-type odd-fp-reg
   :type '(satisfies fp-reg-p)
@@ -78,7 +85,8 @@
 
 (define-argument-type control-register
   :type '(unsigned-byte 5)
-  :function identity)
+  :function identity
+  :disassem-printer "{CR:#x~X}")
 
 (defun label-offset (label)
   (1- (ash (- (label-position label) *current-position*) -2)))
@@ -89,7 +97,8 @@
   :sign-extend t
   :disassem-use-label #'(lambda (value dstate)
 			  (declare (type disassem:disassem-state dstate))
-			  (+ (ash value 2) (disassem:dstate-curpos dstate))))
+			  (+ (ash (1+ value) 2)
+			     (disassem:dstate-curpos dstate))))
 
 (defun float-format-value (format)
   (ecase format
@@ -99,13 +108,23 @@
 
 (define-argument-type float-format
   :type '(member :s :single :d :double :w :word)
-  :function float-format-value)
-
+  :function float-format-value
+  :disassem-printer #'(lambda (value stream dstate)
+			(declare (ignore dstate)
+				 (stream stream)
+				 (fixnum value))
+			(princ (case value
+				 (0 's)
+				 (1 'd)
+				 (4 'w)
+				 (t '?))
+			       stream)))
+			
 
 (defconstant compare-kinds
   '(:f :un :eq :ueq :olt :ult :ole :ule :sf :ngle :seq :ngl :lt :nge :le :ngt))
 (defconstant compare-kinds-vec
-  (map 'vector #'symbol-name compare-kinds))
+  (apply #'vector compare-kinds))
 
 (defun compare-kind (kind)
   (or (position kind compare-kinds)
@@ -121,7 +140,7 @@
 
 (defconstant float-operations '(+ - * /))
 (defconstant float-operations-vec
-  (map 'vector #'symbol-name float-operations))
+  (apply #'vector float-operations))
 
 (defun float-operation (op)
   (or (position op float-operations)
@@ -134,8 +153,8 @@
   :function float-operation
   :disassem-printer float-operations-vec)
 
-(define-fixup-type :jump)
-(define-fixup-type :lui)
+(define-fixup-type :jump :disassem-use-label t)
+(define-fixup-type :lui :disassem-printer "#x~4,'0X")
 (define-fixup-type :addi)
 
 
@@ -149,12 +168,16 @@
 (defconstant cop2-op #b010010)
 (defconstant cop3-op #b010011)
 
+(defconstant immed-printer
+  '(:name :tab rt (:unless (:same-as rt) ", " rs) ", " immediate))
+
+;;; for things that use rt=0 as a nop
+(defconstant immed-zero-printer
+  '(:name :tab rt (:unless (:constant 0) ", " rs) ", " immediate))
+
 
 (define-format (immediate 32
-		:disassem-printer '(:name :tab
-				    rt ", "
-				    (:unless (:same-as rt) rs ", ")
-				    immediate))
+		:disassem-printer immed-printer)
   (op (byte 6 26))
   (rs (byte 5 21) :read t :default-type register)
   (rt (byte 5 16) :write t :default-type register)
@@ -165,10 +188,10 @@
   (op (byte 6 26))
   (target (byte 26 0)))
 
-(define-format (register 32
-		:disassem-printer '(:name :tab rd ", "
-				    (:unless (:same-as rd) rs ", ")
-				    rt))
+(defconstant reg-printer
+  '(:name :tab rd (:unless (:same-as rd) ", " rs) ", " rt))
+
+(define-format (register 32 :disassem-printer reg-printer)
   (op (byte 6 26))
   (rs (byte 5 21) :read t)
   (rt (byte 5 16) :read t)
@@ -186,13 +209,24 @@
   (funct (byte 6 0) :default #b001101))
 
 
-(define-format (coproc-branch 32 :use (float-status))
+(define-format (coproc-branch 32
+		:use (float-status)
+		:disassem-printer '(:name :tab offset))
   (op (byte 6 26))
   (funct (byte 10 16))
   (offset (byte 16 0)))
 
+(defconstant float-printer
+  '(:name (:unless :constant funct)
+	  (:choose (:unless :constant sub-funct) nil)
+	  "." format
+	  :tab
+	  fd
+	  (:unless (:same-as fd) ", " fs)
+	  ", " ft))
+
 (define-format (float 32 :use (float-status) :clobber (float-status)
-		:disassem-printer '(name :tab fd ", " fs "," ft))
+		:disassem-printer float-printer)
   (op (byte 6 26) :default #b010001)
   (filler (byte 1 25) :default #b1)
   (format (byte 4 21))
@@ -201,7 +235,8 @@
   (fd (byte 5 6) :write t)
   (funct (byte 6 0)))
 
-(define-format (float-aux 32 :use (float-status) :clobber (float-status))
+(define-format (float-aux 32 :use (float-status) :clobber (float-status)
+			  :disassem-printer float-printer)
   (op (byte 6 26) :default #b010001)
   (filler-1 (byte 1 25) :default #b1)
   (format (byte 4 21))
@@ -270,6 +305,17 @@
 (define-math-inst slt #b101010 #b001010 :signed)
 (define-math-inst sltu #b101011 #b001011 :signed)
 
+(disassem:specialize (add
+		      :disassem-control
+		        #'(lambda (chunk inst stream dstate)
+			    (when stream
+			      (disassem:maybe-note-nil-indexed-object
+			       (disassem:arg-value 'immediate chunk inst)
+			       dstate))))
+  immediate
+  (rs :constant null-offset))
+
+
 (define-instruction (beq :pinned t
 			 :attributes (relative-branch delayed-branch))
   (immediate (op :constant #b000100)
@@ -292,43 +338,52 @@
 	     (rt :argument register :read t :write nil)
 	     (immediate :argument relative-label)))
 
+(defconstant cond-branch-printer
+  '(:name :tab rs ", " immediate))
+
 (define-instruction (blez :pinned t
-			  :attributes (relative-branch delayed-branch))
+			  :attributes (relative-branch delayed-branch)
+			  :disassem-printer cond-branch-printer)
   (immediate (op :constant #b000110)
 	     (rs :argument register)
 	     (rt :constant 0)
 	     (immediate :argument relative-label)))
 
 (define-instruction (bgtz :pinned t
-			  :attributes (relative-branch delayed-branch))
+			  :attributes (relative-branch delayed-branch)
+			  :disassem-printer cond-branch-printer)
   (immediate (op :constant #b000111)
 	     (rs :argument register)
 	     (rt :constant 0)
 	     (immediate :argument relative-label)))
 
 (define-instruction (bltz :pinned t
-			  :attributes (relative-branch delayed-branch))
+			  :attributes (relative-branch delayed-branch)
+			  :disassem-printer cond-branch-printer)
   (immediate (op :constant bcond-op)
 	     (rs :argument register)
 	     (rt :constant #b00000)
 	     (immediate :argument relative-label)))
 
 (define-instruction (bgez :pinned t
-			  :attributes (relative-branch delayed-branch))
+			  :attributes (relative-branch delayed-branch)
+			  :disassem-printer cond-branch-printer)
   (immediate (op :constant bcond-op)
 	     (rs :argument register)
 	     (rt :constant #b00001)
 	     (immediate :argument relative-label)))
 
 (define-instruction (bltzal :pinned t
-			    :attributes (relative-branch delayed-branch))
+			    :attributes (relative-branch delayed-branch)
+			    :disassem-printer cond-branch-printer)
   (immediate (op :constant bcond-op)
 	     (rs :argument register)
 	     (rt :constant #b01000)
 	     (immediate :argument relative-label)))
 
 (define-instruction (bgezal :pinned t
-			    :attributes (relative-branch delayed-branch))
+			    :attributes (relative-branch delayed-branch)
+			    :disassem-printer cond-branch-printer)
   (immediate (op :constant bcond-op)
 	     (rs :argument register)
 	     (rt :constant #b01001)
@@ -351,14 +406,16 @@
   (break (code :argument (unsigned-byte 10))
 	 (subcode :argument (unsigned-byte 10))))
 
-(define-instruction (div :clobber (low high))
+(defconstant divmul-printer '(:name :tab rs ", " rt))
+
+(define-instruction (div :clobber (low high) :disassem-printer divmul-printer)
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :argument register)
 	    (rd :constant 0)
 	    (funct :constant #b011010)))
 
-(define-instruction (divu :clobber (low high))
+(define-instruction (divu :clobber (low high) :disassem-printer divmul-printer)
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :argument register)
@@ -366,7 +423,8 @@
 	    (funct :constant #b011011)))
 
 (define-instruction (j :pinned t
-		       :attributes (unconditional-branch delayed-branch))
+		       :attributes (unconditional-branch delayed-branch)
+		       :disassem-printer '(:name :tab (:choose rs target)))
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :constant 0)
@@ -376,7 +434,11 @@
 	(target :argument jump-fixup)))
 
 (define-instruction (jal :pinned t
-			 :attributes (delayed-branch assembly-call))
+			 :attributes (delayed-branch assembly-call)
+			 :disassem-printer
+			 '(:name :tab
+			   ;(:unless (:constant 31) rd ", ")
+			   (:choose rs target)))
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :constant 0)
@@ -390,12 +452,18 @@
   (jump (op :constant #b000011)
 	(target :argument jump-fixup)))
 
+(defconstant load-store-printer 
+  '(:name :tab
+	  rt ", "
+	  rs
+	  (:unless (:constant 0) "[" immediate "]")))
 
 (defmacro define-load/store-instruction (name read-p op
 					      &optional (rt-kind 'register))
   `(define-instruction (,name ,@(if read-p
 				    '(:use (memory) :attributes (delayed-load))
-				    '(:clobber (memory))))
+				    '(:clobber (memory)))
+			      :disassem-printer load-store-printer)
      (immediate (op :constant ,op)
 		(rt :argument ,rt-kind ,@(unless read-p
 					   '(:read t :write nil)))
@@ -429,6 +497,37 @@
 (define-load/store-instruction swc1 nil #o71 fp-reg)
 (define-load/store-instruction swc1-odd nil #o71 odd-fp-reg)
 
+(disassem:specialize (lw
+		      :disassem-control
+		        #'(lambda (chunk inst stream dstate)
+			    (when stream
+			      (disassem:note-code-constant
+			       (disassem:arg-value 'immediate chunk inst)
+			       dstate))))
+  immediate
+  (rs :constant code-offset))
+
+(disassem:specialize (lw
+		      :disassem-control
+		        #'(lambda (chunk inst stream dstate)
+			    (when stream
+			      (disassem:maybe-note-nil-indexed-symbol-slot-ref
+			       (disassem:arg-value 'immediate chunk inst)
+			       dstate))))
+  immediate
+  (rs :constant null-offset))
+
+(disassem:specialize (st
+		      :disassem-control
+		        #'(lambda (chunk inst stream dstate)
+			    (when stream
+			      (disassem:maybe-note-nil-indexed-symbol-slot-ref
+			       (disassem:arg-value 'immediate chunk inst)
+ 			       dstate))))
+  immediate
+  (rs :constant null-offset))
+
+
 (define-instruction (lui)
   (immediate (op :constant #b001111)
 	     (rs :constant 0)
@@ -440,28 +539,30 @@
 	     (immediate :argument lui-fixup)))
 
 
-(define-instruction (mfhi :use (high))
+(defconstant mvsreg-printer '(:name :tab rd))
+
+(define-instruction (mfhi :use (high) :disassem-printer mvsreg-printer)
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :constant 0)
 	    (rt :constant 0)
 	    (funct :constant #b010000)))
 
-(define-instruction (mthi :clobber (high))
+(define-instruction (mthi :clobber (high) :disassem-printer mvsreg-printer)
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :constant 0)
 	    (rt :constant 0)
 	    (funct :constant #b010001)))
 
-(define-instruction (mflo :use (low))
+(define-instruction (mflo :use (low) :disassem-printer mvsreg-printer)
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :constant 0)
 	    (rt :constant 0)
 	    (funct :constant #b010010)))
 
-(define-instruction (mtlo :clobber (low))
+(define-instruction (mtlo :clobber (low) :disassem-printer mvsreg-printer)
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :constant 0)
@@ -469,21 +570,29 @@
 	    (funct :constant #b010011)))
 
 
-(define-instruction (mult :clobber (low high))
+(define-instruction (mult :clobber (low high) :disassem-printer divmul-printer)
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :argument register)
 	    (rd :constant 0)
 	    (funct :constant #b011000)))
 
-(define-instruction (multu :clobber (low high))
+(define-instruction (multu :clobber (low high)
+			   :disassem-printer divmul-printer)
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :argument register)
 	    (rd :constant 0)
 	    (funct :constant #b011001)))
 
-(define-instruction (sll)
+(defconstant shift-printer
+  '(:name :tab
+	  rd
+	  (:unless (:same-as rd) ", " rt)
+	  ", " (:cond ((rs :constant 0) shamt)
+		      (t rs))))
+
+(define-instruction (sll :disassem-printer shift-printer)
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rt :argument register)
@@ -507,7 +616,7 @@
 	    (rs :argument register)
 	    (funct :constant #b000100)))
 
-(define-instruction (sra)
+(define-instruction (sra :disassem-printer shift-printer)
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rt :argument register)
@@ -531,7 +640,7 @@
 	    (rs :argument register)
 	    (funct :constant #b000111)))
 
-(define-instruction (srl)
+(define-instruction (srl :disassem-printer shift-printer)
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rt :argument register)
@@ -555,7 +664,7 @@
 	    (rs :argument register)
 	    (funct :constant #b000110)))
 
-(define-instruction (syscall :pinned t)
+(define-instruction (syscall :pinned t :disassem-printer '(:name))
   (register (op :constant special-op)
 	    (rd :constant 0)
 	    (rt :constant 0)
@@ -602,7 +711,7 @@
 	    (funct :constant 0)))
 
 (define-instruction (float-op)
-  (float (funct :argument float-operation)
+  (float (funct :argument float-operation :mask #b11)
 	 (format :argument float-format)
 	 (fd :argument fp-reg)
 	 (fs :argument fp-reg)
@@ -654,7 +763,11 @@
 ;;;; Pseudo-instructions
 
 (define-instruction (move
-		     :disassem-printer '(:name :tab rd ", " rs))
+		     :disassem-printer
+		     '(:name
+		       :tab
+		       (:choose rd fd) ", "
+		       (:choose rs fs)))
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :argument register)
@@ -762,6 +875,7 @@
 		    (rt :argument register)
 		    (rs :same-as rt)
 		    (immediate :argument label
+
 			       :function (lambda (label)
 					   (logand ,calculation #xffff)))))
        (define-pseudo-instruction ,name 96 (dst src label temp)
