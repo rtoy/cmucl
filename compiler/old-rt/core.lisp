@@ -139,7 +139,11 @@
 	     (ecase (car const)
 	       (:entry
 		(%primitive header-set code-obj i
-			    (core-function-or-lose (cdr const) object))))))))))
+			    (core-function-or-lose (cdr const) object)))
+	       (:label
+		(%primitive header-set code-obj i
+			    (+ (label-location (cdr entry))
+				clc::i-vector-header-size))))))))))
   (undefined-value))
 
 
