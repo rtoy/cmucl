@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.42 1991/04/23 16:23:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.43 1991/04/23 18:01:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3135,7 +3135,7 @@
 ;;; Also, emit top-level code to install the definition.
 ;;;
 ;;; This is one of the major places where the semantics of block compilation is
-;;; handled.  Substituion for global names is titally inhibited if
+;;; handled.  Substituion for global names is totally inhibited if
 ;;; *block-compile* it NIL.  And if *block-compile* us true and entry points
 ;;; are specified, then we don't install global definitions for non-entry
 ;;; functions (effectively turning them into local lexical functions.)
@@ -3214,9 +3214,10 @@
 	   :error-function (if for-real #'compiler-warning #'compiler-note)
 	   :really-assert
 	   (and for-real
-		(or (not function-info)
-		    (ir1-attributep (function-info-attributes function-info)
-				    explicit-check)))
+		(not (and function-info
+			  (ir1-attributep
+			   (function-info-attributes function-info)
+			   explicit-check))))
 	   :where (if for-real "declaration" "definition"))))
 
       (ir1-convert
