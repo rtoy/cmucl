@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.11 1991/02/20 14:57:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.12 1991/11/12 16:07:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.11 1991/02/20 14:57:29 ram Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -226,7 +224,28 @@
   (frob =))
 
 
-;;;; Irrational stuff:
+;;;; Irrational derive-type methods:
+
+;;; Derive the result to be float for argument types in the appropriate domain.
+;;;
+;;;### These should really be REAL, not FLOAT...
+(loop for (name type) in
+  '((asin (float (-1.0) (1.0)))
+    (acos (float (-1.0) (1.0)))
+    (acosh (float 1.0))
+    (atanh (float (-1.0) (1.0)))
+    (sqrt (float 0.0))) do
+  (let ((type (specifier-type type)))
+    (setf (function-info-derive-type (function-info-or-lose name))
+	  #'(lambda (call)
+	      (declare (type combination call))
+	      (when (csubtypep (continuation-type
+				(first (combination-args call)))
+			       type)
+		(specifier-type 'float))))))
+
+
+;;;; Irrational transforms:
 
 (defknown (%sin %cos %tan %asin %acos %atan %sinh %cosh %tanh %asinh
 		%acosh %atanh %exp %expm1 %log %log10 %log1p %cbrt %sqrt)
@@ -237,41 +256,37 @@
 	  (double-float double-float) double-float
   (movable foldable flushable))
 
+(loop for (name prim rtype) in
+  '((exp %exp *)
+    (log %log float)
+    (sqrt %sqrt float)
+    (sin %sin *)
+    (cos %cos *)
+    (tan %tan *)
+    (asin %asin float)
+    (acos %acos float)
+    (atan %atan *)
+    (sinh %sinh *)
+    (cosh %cosh *)
+    (tanh %tanh *)
+    (asinh %asinh *)
+    (acosh %acosh float)
+    (atanh %atanh float)) do
+  (deftransform name ((x) '(single-float) rtype :eval-name t)
+    `(coerce (,prim (coerce x 'double-float)) 'single-float))
+  (deftransform name ((x) '(double-float) rtype :eval-name t)
+    `(,prim x)))
 
-(defmacro def-irrat-transforms (name prim args &optional assert-result)
-  (flet ((frob (type)
-	   (mapcar #'(lambda (x)
-		       (declare (ignore x))
-		       type)
-		   args)))
-    (let ((rtype (when assert-result '(float))))
-      `(progn
-	 (deftransform ,name (,args ,(frob 'single-float) ,@rtype)
-	   '(coerce (,prim ,@(mapcar #'(lambda (arg)
-					 `(coerce ,arg 'double-float))
-				     args))
-		    'single-float))
-	 (deftransform ,name (,args ,(frob 'double-float) ,@rtype)
-	   '(,prim ,@args))))))
-
-(def-irrat-transforms exp %exp (x))
-(def-irrat-transforms expt %pow (x y) t)
-(def-irrat-transforms log %log (x) t)
+(loop for (name prim rtype) in
+  '((expt %pow (x y) t)
+    (atan %atan2 (x y) t)) do
+  (deftransform name ((x y) '(single-float) rtype :eval-name t)
+    `(coerce (,prim (coerce x 'double-float)
+		    (coerce y 'double-float))
+	     'single-float))
+  (deftransform name ((x y) '(double-float) rtype :eval-name t)
+    `(,prim x y)))
 
 (deftransform log ((x y) (float float) float)
   '(/ (log x) (log y)))
 
-(def-irrat-transforms sqrt %sqrt (x) t)
-(def-irrat-transforms sin %sin (x))
-(def-irrat-transforms cos %cos (x))
-(def-irrat-transforms tan %tan (x))
-(def-irrat-transforms asin %asin (x) t)
-(def-irrat-transforms acos %acos (x) t)
-(def-irrat-transforms atan %atan (x) t)
-(def-irrat-transforms atan %atan2 (x y) t)
-(def-irrat-transforms sinh %sinh (x))
-(def-irrat-transforms cosh %cosh (x))
-(def-irrat-transforms tanh %tanh (x))
-(def-irrat-transforms asinh %asinh (x))
-(def-irrat-transforms acosh %acosh (x) t)
-(def-irrat-transforms atanh %atanh (x) t)
