@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.1.1.6 1991/10/25 23:10:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.1.1.7 1993/08/24 19:30:31 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 (defhvar "Ignore File Types"
   "File types to ignore when trying to complete a filename."
   :value
-  (list "fasl" "pmaxf" "sparcf" "rtf" "err" ; Lisp
+  (list "fasl" "pmaxf" "sparcf" "rtf" "hpf" "axpf" "err" ; Lisp
 	"BAK" "CKP"			    ; Backups & Checkpoints
 	"PS" "ps" "press" "otl" "dvi" "toc" ; Formatting
 	"bbl" "lof" "idx" "lot" "aux"	    ; Formatting
