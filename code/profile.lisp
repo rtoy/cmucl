@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.7 1992/09/07 16:11:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.8 1993/07/25 21:16:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -461,7 +461,7 @@
 ;;;
 (proclaim '(notinline compute-time-overhead-aux))
 (defun compute-time-overhead-aux (x)
-  (declare (ext:optimize-interface (debug-info 2)))
+  (declare (ext:optimize-interface (debug 2)))
   (declare (ignore x)))
 
 
