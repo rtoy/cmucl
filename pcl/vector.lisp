@@ -881,12 +881,12 @@
 
 (defvar *variable-declarations-without-argument*
   '(ignore ignorable special dynamic-extent
-    array atom base-char bignum bit bit-vector character common compiled-function
+    array atom base-char bignum bit bit-vector character compiled-function
     complex cons double-float extended-char fixnum float function hash-table integer
     keyword list long-float nil null number package pathname random-state ratio
     rational readtable sequence short-float signed-byte simple-array
     simple-bit-vector simple-string simple-vector single-float standard-char
-    stream symbol t unsigned-byte vector))
+    stream string symbol t unsigned-byte vector))
 
 (defun split-declarations (body args calls-next-method-p)
   (let ((inner-decls nil) (outer-decls nil) decl)
