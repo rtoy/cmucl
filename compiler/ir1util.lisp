@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.95 2003/10/02 19:23:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.96 2003/10/09 13:25:25 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1046,10 +1046,26 @@
        ;;
        ;; in the REPL with C::*CHECK-CONSISTENCY* true.  This
        ;; inconsistency existed before.
-       (let ((lambda (block-home-lambda block)))
-	 (setf (lambda-entries lambda)
-	       (delete (block-end-cleanup block) (lambda-entries lambda)
-		       :key #'entry-cleanup))))
+       ;;
+       ;; Note that we can't delete :unwind-protect cleanups if not
+       ;; converting for interpretation.  If we do, the following
+       ;; fails with an assertion failure in %unwind-protect/ir2-convert:
+       ;;
+       ;; (compile nil '(lambda (a)
+       ;;	(declare (type (integer -30078003 47403) a))
+       ;;	(unwind-protect
+       ;;	    (if (ldb-test (byte 6 23) 828450)
+       ;;		(logandc1 -1 (min -34 (block b2 a)))
+       ;;	      a))))
+       ;;
+       ;; because the %entry-function of the %unwind-protect is not
+       ;; NLX-converted.  Needs more investigation.  --gerd 2003-10-09
+       (when *converting-for-interpreter*
+	 (let ((lambda (block-home-lambda block))
+	       (cleanup (block-end-cleanup block)))
+	   (setf (lambda-entries lambda)
+		 (delete cleanup (lambda-entries lambda)
+			 :key #'entry-cleanup)))))
       (exit
        (let ((value (exit-value node))
 	     (entry (exit-entry node)))
