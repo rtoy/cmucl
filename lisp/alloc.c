@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.3 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.4 1997/11/08 15:33:48 dtc Exp $ */
 
 #include "lisp.h"
 #include "internals.h"
@@ -27,7 +27,7 @@
 /****************************************************************
 Allocation Routines.
 ****************************************************************/
-#if defined WANT_CGC
+#if defined(WANT_CGC) || defined(GENCGC)
 extern lispobj *alloc(int bytes);
 #else
 static lispobj *alloc(int bytes)
