@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.72 1993/08/31 12:50:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.73 1993/11/16 18:17:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1503,10 +1503,10 @@
     (cond ((> expanded *inline-expansion-limit*) nil)
 	  ((= expanded *inline-expansion-limit*)
 	   (let ((*compiler-error-context* node))
-	     (compiler-warning "*Inline-Expansion-Limit* (~D) exceeded, ~
-				probably trying to~%  ~
-				inline a recursive function."
-			       *inline-expansion-limit*))
+	     (compiler-note "*Inline-Expansion-Limit* (~D) exceeded, ~
+			     probably trying to~%  ~
+			     inline a recursive function."
+			    *inline-expansion-limit*))
 	   nil)
 	  (t t))))
 
