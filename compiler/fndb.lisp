@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.15 1991/01/02 19:14:51 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.16 1991/01/30 23:20:13 ram Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -145,27 +145,31 @@
 (defknown make-symbol (string) symbol (flushable))
 (defknown copy-symbol (symbol &optional t) symbol (flushable))
 (defknown gensym (&optional (or string unsigned-byte)) symbol ())
-(defknown gentemp (&optional string package) symbol)
 (defknown symbol-package (symbol) (or package null) (flushable))
 (defknown keywordp (t) boolean (flushable))	  ; If someone uninterns it...
 
 
 ;;;; In the "Packages" chapter:
 
+
 (deftype packagelike () '(or stringlike package))
 (deftype symbols () '(or list symbol))
+
+;;; Should allow a package name, I think, tho CLtL II doesn't say so...
+(defknown gentemp (&optional string packagelike) symbol)
+
 (defknown make-package (stringlike &key (use list) (nicknames list)
 				   ;; ### Extensions...
 				   (internal-symbols index) (external-symbols index))
 	  package)
-(defknown in-package (stringlike &key (nicknames list) (use list)) void)
+(defknown in-package (stringlike &key (nicknames list) (use list)) package)
 (defknown find-package (stringlike) (or package null) (flushable))
-(defknown package-name (package) simple-string (flushable))
-(defknown package-nicknames (package) list (flushable))
-(defknown rename-package (package stringlike &optional list) void)
-(defknown package-use-list (package) list (flushable))
-(defknown package-used-by-list (package) list (flushable))
-(defknown package-shadowing-symbols (package) list (flushable))
+(defknown package-name (packagelike) simple-string (flushable))
+(defknown package-nicknames (packagelike) list (flushable))
+(defknown rename-package (packagelike stringlike &optional list) package)
+(defknown package-use-list (packagelike) list (flushable))
+(defknown package-used-by-list (packagelike) list (flushable))
+(defknown package-shadowing-symbols (packagelike) list (flushable))
 (defknown list-all-packages () list (flushable))
 (defknown intern (string &optional packagelike)
   (values symbol (member :internal :external :inherited))
@@ -925,6 +929,9 @@
 
 (defknown identity (t) t (movable foldable flushable unsafe)
   #|:derive-type 'result-type-arg1|#)
+
+(defknown constantly (t &rest t) function (movable flushable))
+(defknown complement (function) function (movable flushable))
 
 
 ;;;; Magical compiler frobs:
