@@ -2,7 +2,7 @@
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.7 1991/10/03 13:55:08 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.8 1991/11/07 22:58:41 wlott Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -12,7 +12,7 @@ else
 	set features = ()
 endif
 
-set lisp = /afs/cs/project/clisp/new-compiler/@sys/$subdir
+set lisp = /afs/cs/project/clisp/build/@sys/$subdir
 
 if (-e $lisp/ldb/kernel.core) then
 	set core = $lisp/ldb/kernel.core
@@ -20,7 +20,7 @@ else
 	if (-e /usr/tmp/kernel.core) then
 		set core = /usr/tmp/kernel.core
 	else
-		echo 'Can\'t find the kernel.core'
+		echo Can\'t find the kernel.core
 	endif
 endif
 
@@ -28,6 +28,10 @@ if (-e $lisp/VERSION) then
 	set version = `cat $lisp/VERSION`
 else
 	set version = `/bin/date | awk '{print $3 "-" $2 "-" $6}'`
+endif
+
+if (-e $lisp/FEATURES) then
+	set features = ($features `cat $lisp/FEATURES`)
 endif
 
 # set a bunch of random env vars to fill up space.
@@ -48,7 +52,7 @@ setenv GORP2 $FOO
 echo Building lisp.core dated $version from the \`\`$subdir\'\' subdir.
 
 $lisp/ldb/ldb -core $core << EOF
-(setf *features* (append '($features) *features*))
+(setf *features* (list* $features *features*))
 (setf (search-list "lisp:") '("$lisp/"))
 (in-package "USER")
 (load (open "lisp:tools/worldload.lisp"))
