@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.34 1993/08/03 10:57:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.35 1993/08/03 12:56:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,7 +301,7 @@
 			  :start-positions
 			  (coerce-to-smallest-eltype
 			   (file-info-positions x))))
-		    (name (file-info-name info)))
+		    (name (file-info-name x)))
 		(etypecase name
 		  ((member :stream)
 		   (setf (debug-source-from res) name)
