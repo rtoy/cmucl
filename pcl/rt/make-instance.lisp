@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/make-instance.lisp,v 1.2 2003/03/22 16:15:14 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/make-instance.lisp,v 1.3 2003/04/22 13:16:35 gerd Rel $")
 
 (in-package "PCL-TEST")
 
@@ -387,5 +387,15 @@
       (f)
       *m30*)
   t)
+
+(defclass mi13 ()
+  ((s1 :initarg :s1a :initarg :s1b :reader s1)
+   (s2 :initarg :s2 :reader s2)))
+
+(define-mi-test make-instance.32
+    (with-slots (s1 s2) 
+	(make-instance 'mi13 :s2 'a :s1a 'b :s2 'x :s1a 'y :s1b 'z)
+      (values s1 s2))
+  :values (b a))
 
 ;; (setf find-class), class redefinitions
