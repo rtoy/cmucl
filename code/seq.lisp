@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.28 1998/04/03 03:45:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.29 1998/05/09 22:15:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,7 +80,24 @@
       (t
        (error "~S is a bad type specifier for sequence functions." type)))))
 
-  
+(define-condition index-too-large-error (type-error)
+  ()
+  (:report
+   (lambda(condition stream)
+     (format stream "Error in ~S: ~S: Index too large."
+	     (condition-function-name condition)
+	     (type-error-datum condition)))))
+
+(defun signal-index-too-large-error (sequence index)
+  (let* ((length (length sequence))
+	 (max-index (and (plusp length)(1- length))))
+    (error 'index-too-large-error
+	   :datum index
+	   :expected-type (if max-index
+			      `(integer 0 ,max-index)
+			      ;; This seems silly, is there something better?
+			      '(integer (0) (0))))))
+
 (defun make-sequence-of-type (type length)
   "Returns a sequence of the given TYPE and LENGTH."
   (declare (fixnum length))
@@ -103,13 +120,14 @@
     (list
      (do ((count index (1- count))
 	  (list sequence (cdr list)))
-	 ((= count 0) (car list))
-       (declare (fixnum count))
-       (when (endp list)
-	 (error "~S: index too large." index))))
+	 ((= count 0)
+	  (if (endp list)
+	      (signal-index-too-large-error sequence index)
+	      (car list)))
+       (declare (type (integer 0) count))))
     (vector
      (when (>= index (length sequence))
-       (error "~S: index too large." index))
+       (signal-index-too-large-error sequence index))
      (aref sequence index))))
 
 (defun %setelt (sequence index newval)
@@ -121,11 +139,11 @@
  	 ((= count 0) (rplaca seq newval) newval)
        (declare (fixnum count))
        (if (atom (cdr seq))
-	   (error "~S: index too large." index)
+	   (signal-index-too-large-error sequence index)
 	   (setq seq (cdr seq)))))
     (vector
      (when (>= index (length sequence))
-       (error "~S: index too large." index))
+       (signal-index-too-large-error sequence index))
      (setf (aref sequence index) newval))))
 
 
