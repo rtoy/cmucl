@@ -322,12 +322,13 @@
   (declare (optimize speed))
   (let ((type (type-expand type)))
     (if (symbolp type)
-	(let ((def (info type defined-structure-info obj-name)))
-	  (if def
+	(let ((info (info type defined-structure-info type)))
+	  (if info
 	      (and (structurep object)
 		   (let ((obj-name (%primitive header-ref object 0)))
 		     (or (eq obj-name type)
-			 (not (null (memq type (c::dd-includes def)))))))
+			 (if (memq obj-name (c::dd-included-by info))
+			     t nil))))
 	      (error "~S is an unknown type specifier." type)))
 	(error "~S is an unknown type specifier." type))))
 
