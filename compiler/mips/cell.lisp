@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.63 1992/12/16 14:01:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.64 1992/12/16 14:11:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,7 +137,7 @@
       (inst xor type function-header-type)
       (inst beq type zero-tn normal-fn)
       (inst addu lip function
-	    (- (ash function-header-code-offset word-shift)
+	    (- (ash function-code-offset word-shift)
 	       function-pointer-type))
       (inst li lip (make-fixup "closure_tramp" :foreign))
       (emit-label normal-fn)
@@ -185,7 +185,7 @@
   (:generator 0
     (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
     (loadw value bsp-tn (- binding-value-slot binding-size))
-    (#+gengc storew-and-remember-slot #-gengc
+    (#+gengc storew-and-remember-slot #-gengc storew
 	     value symbol symbol-value-slot other-pointer-type)
     (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
     (inst addu bsp-tn bsp-tn (* -2 word-bytes))))
@@ -206,7 +206,7 @@
       (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
       (inst beq symbol zero-tn skip)
       (loadw value bsp-tn (- binding-value-slot binding-size))
-      (#+gengc storew-and-remember-slot #-gengc
+      (#+gengc storew-and-remember-slot #-gengc storew
 	       value symbol symbol-value-slot other-pointer-type)
       (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
 
