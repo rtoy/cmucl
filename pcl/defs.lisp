@@ -535,7 +535,7 @@
     :initform nil
     :initarg :from-defclass-p)))
      
-(defclass condition-class (pcl-class) ())
+(defclass condition-class (slot-class) ())
 
 (defclass specializer-with-object (specializer) ())
 
@@ -650,6 +650,9 @@ was inherited."
      :initarg :internal-writer-function
      :accessor slot-definition-internal-writer-function)))
 
+(defclass condition-slot-definition (standard-slot-definition)
+  ())
+
 (defclass direct-slot-definition (slot-definition)
   ())
 
@@ -669,7 +672,7 @@ was inherited."
 
 (defclass standard-effective-slot-definition (standard-slot-definition
 					      effective-slot-definition)
-  ((location ; nil, a fixnum, a cons: (slot-name . value)
+  ((location
     :initform nil
     :accessor slot-definition-location)))
 
@@ -677,7 +680,15 @@ was inherited."
 					    direct-slot-definition)
   ())
 
+(defclass condition-direct-slot-definition (condition-slot-definition
+					    direct-slot-definition)
+  ())
+
 (defclass structure-effective-slot-definition (structure-slot-definition
+					       effective-slot-definition)
+  ())
+
+(defclass condition-effective-slot-definition (condition-slot-definition
 					       effective-slot-definition)
   ())
 

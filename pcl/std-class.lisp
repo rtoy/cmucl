@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.62 2003/05/08 17:29:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.63 2003/05/10 19:09:01 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1580,18 +1580,19 @@
 ;;;
 ;;; Conditions
 ;;;
-(defmethod class-direct-slots ((class condition-class)) ())
-(defmethod class-slots ((class condition-class)) ())
 (defmethod class-default-initargs ((class condition-class)) ())
 (defmethod class-direct-default-initargs ((class condition-class)) ())
 
 (defmethod shared-initialize :after ((class condition-class) slot-names
-				     &key direct-superclasses)
+				     &key direct-slots direct-superclasses)
   (declare (ignore slot-names))
   (let ((kernel-class (kernel::find-class (class-name class))))
     (with-slots (wrapper class-precedence-list prototype predicate-name
 			 (direct-supers direct-superclasses))
 	class
+      (setf (slot-value class 'direct-slots)
+	    (mapcar (lambda (pl) (make-direct-slotd class pl))
+		    direct-slots))
       (setf (slot-value class 'finalized-p) t)
       (setf (kernel:%class-pcl-class kernel-class) class)
       (setq direct-supers direct-superclasses)
@@ -1600,5 +1601,27 @@
       (setq prototype (make-condition (class-name class)))
       (add-direct-subclasses class direct-superclasses)
       (setq predicate-name (make-class-predicate-name (class-name class)))
-      (make-class-predicate class predicate-name))))
+      (make-class-predicate class predicate-name)
+      (setf (slot-value class 'slots) (compute-slots class)))))
 				     
+(defmethod direct-slot-definition-class
+    ((class condition-class) &rest initargs)
+  (declare (ignore initargs))
+  (find-class 'condition-direct-slot-definition))
+
+(defmethod effective-slot-definition-class
+    ((class condition-class) &rest initargs)
+  (declare (ignore initargs))
+  (find-class 'condition-effective-slot-definition))
+
+(defmethod finalize-inheritance ((class condition-class))
+  nil)
+
+(defmethod compute-slots ((class condition-class))
+  (mapcan (lambda (superclass)
+	    (mapcar (lambda (dslotd)
+		      (compute-effective-slot-definition
+		       class (slot-definition-name dslotd) (list dslotd)))
+		    (class-direct-slots superclass)))
+	  (reverse (slot-value class 'class-precedence-list))))
+

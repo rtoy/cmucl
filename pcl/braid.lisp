@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.35 2003/05/04 13:11:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.36 2003/05/10 19:09:02 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -529,13 +529,28 @@
 		     ,(structure-slotd-writer-function slotd)))
 	       :type ,(or (structure-slotd-type slotd) t)
 	       :initform ,(structure-slotd-init-form slotd)
-	       :initfunction ,(eval-form (structure-slotd-init-form slotd))))))
+	       :initfunction ,(eval-form (structure-slotd-init-form slotd)))))
+	 (slot-initargs-from-condition-slotd (slot)
+	   `(:name ,(conditions::condition-slot-name slot)
+	     :initargs ,(conditions::condition-slot-initargs slot)
+	     :readers ,(conditions::condition-slot-readers slot)
+	     :writers ,(conditions::condition-slot-writers slot)
+	     ,@(when (conditions::condition-slot-initform-p slot)
+		 (let ((form-or-fn (conditions::condition-slot-initform slot)))
+		   (if (functionp form-or-fn)
+		       `(:initfunction ,form-or-fn)
+		       `(:initform ,form-or-fn))))
+	     :allocation ,(conditions::condition-slot-allocation slot)
+	     :documentation ,(conditions::condition-slot-documentation slot))))
     (cond ((structure-type-p name)
 	   (ensure 'structure-class
 		   (mapcar #'slot-initargs-from-structure-slotd
 			   (structure-type-slot-description-list name))))
 	  ((condition-type-p name)
-	   (ensure 'condition-class))
+	   (let ((class (kernel::find-class name)))
+	     (ensure 'condition-class
+		     (mapcar #'slot-initargs-from-condition-slotd
+			     (conditions::condition-class-slots class)))))
 	  (t
 	   (error "~@<~S is not the name of a class.~@:>" name)))))
 
