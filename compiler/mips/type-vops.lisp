@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.26 1991/02/20 15:15:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.27 1991/04/19 16:27:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.26 1991/02/20 15:15:19 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.27 1991/04/19 16:27:16 ram Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -143,6 +143,8 @@
       (inst and temp value #x3)
       (inst bne temp zero-tn err-lab)
       (move result value t))))
+
+(primitive-type-vop check-fixnum (:check) fixnum)
 
 (define-vop (fixnump simple-type-predicate)
   (:ignore type-code)
