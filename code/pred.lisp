@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.32 1993/03/14 17:19:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.33 1993/07/17 00:50:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,12 +18,12 @@
 
 (in-package "KERNEL")
 (export '(%instancep instance fixnump bignump bitp ratiop weak-pointer-p
-		     %typep class-typep))
+		     %typep class-cell-typep))
 
 (in-package "SYSTEM")
 (export '(system-area-pointer system-area-pointer-p))
 
-(in-package "LISP" :use "KERNEL")
+(in-package "LISP")
 
 (export '(typep null symbolp atom consp listp numberp integerp rationalp
 	  floatp complexp characterp stringp bit-vector-p vectorp
@@ -150,13 +150,17 @@
 ;;; 
 (defun subtypep (type1 type2)
   "Return two values indicating the relationship between type1 and type2:
-  T and T: type1 definatly is a subtype of type2.
-  NIL and T: type1 definatly is not a subtype of type2.
+  T and T: type1 definitely is a subtype of type2.
+  NIL and T: type1 definitely is not a subtype of type2.
   NIL and NIL: who knows?"
   (csubtypep (specifier-type type1) (specifier-type type2)))
 
 
-;;;; TYPEP -- public.
+;;;; TYPEP:
+
+(declaim (start-block typep %typep class-cell-typep))
+
+;;; TYPEP -- public.
 ;;;
 ;;; Just call %typep
 ;;; 
@@ -164,12 +168,6 @@
   "Return T iff OBJECT is of type TYPE."
   (%typep object type))
 
-(eval-when (compile eval)
-  (defmacro only-if-bound (name object)
-    `(and (fboundp ',name)
-	  (let ((object ,object))
-	    (declare (optimize (inhibit-warnings 3)))
-	    (,name object)))))
   
 ;;; %TYPEP -- internal.
 ;;;
@@ -204,14 +202,14 @@
 		 ((nil) (floatp num))))
 	      ((nil) t)))
 	  (flet ((bound-test (val)
-			     (let ((low (numeric-type-low type))
-				   (high (numeric-type-high type)))
-			       (and (cond ((null low) t)
-					  ((listp low) (> val (car low)))
-					  (t (>= val low)))
-				    (cond ((null high) t)
-					  ((listp high) (< val (car high)))
-					  (t (<= val high)))))))
+		   (let ((low (numeric-type-low type))
+			 (high (numeric-type-high type)))
+		     (and (cond ((null low) t)
+				((listp low) (> val (car low)))
+				(t (>= val low)))
+			  (cond ((null high) t)
+				((listp high) (< val (car high)))
+				(t (<= val high)))))))
 	    (ecase (numeric-type-complexp type)
 	      ((nil) t)
 	      (:complex
@@ -286,6 +284,17 @@
 	    (type-specifier type)))))
 
 
+;;; CLASS-CELL-TYPEP  --  Interface
+;;;
+;;;    Do type test from a class cell, allowing forward reference and
+;;; redefinition.
+;;;
+(defun class-cell-typep (obj-layout cell)
+  (let ((class (class-cell-class cell)))
+    (unless class
+      (error "Class has not yet been defined: ~S" (class-cell-name cell)))
+    (class-typep obj-layout class)))
+
 
 ;;; CLASS-TYPEP  --  Internal
 ;;;
@@ -296,15 +305,16 @@
   (when (layout-invalid obj-layout)
     (error "TYPEP on obsolete object (was class ~S)."
 	   (class-proper-name (layout-class obj-layout))))
-  (let* ((layout (class-layout class))
-	 (subclasses (class-subclasses class)))
+  (let ((layout (class-layout class))
+	(obj-inherits (layout-inherits obj-layout)))
     (when (layout-invalid layout)
       (error "Class is currently invalid: ~S" class))
-    (if (or (eq obj-layout layout)
-	    (and subclasses
-		 (gethash (layout-class obj-layout) subclasses)))
-	t
-	nil)))
+    (or (eq obj-layout layout)
+	(dotimes (i (length obj-inherits) nil)
+	  (when (eq (svref obj-inherits i) layout)
+	    (return t))))))
+
+(declaim (end-block))
 
 
 ;;;; Equality predicates.
