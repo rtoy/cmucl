@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.15 2003/08/03 11:27:45 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.16 2003/09/11 11:39:07 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -321,14 +321,16 @@
   (:result-types unsigned-num)
   (:note "inline (unsigned-byte 32) arithmetic")
   (:generator 4
-    (cond ((and (sc-is x unsigned-reg) (sc-is r unsigned-reg)
-		(not (location= x r)))
+    (cond ((and (sc-is x unsigned-reg)
+		(sc-is r unsigned-reg)
+		(not (location= x r))
+		(valid-displacement-p y))
 	   (inst lea r (make-ea :dword :base x :disp y)))
 	  (t
 	   (move r x)
 	   (if (= y 1)
 	       (inst inc r)
-	     (inst add r y))))))
+	       (inst add r y))))))
 
 
 ;;;; Special logand cases: (logand signed unsigned) => unsigned

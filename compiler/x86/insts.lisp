@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.30 2003/04/26 12:53:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.31 2003/09/11 11:39:07 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,6 +88,9 @@
   (index nil :type (or tn null))
   (scale 1 :type (member 1 2 4 8))
   (disp 0 :type (or (signed-byte 32) fixup)))
+
+(defun valid-displacement-p (x)
+  (typep x '(or (signed-byte 32) fixup)))
 
 (defun %print-ea (ea stream depth)
   (declare (ignore depth))
