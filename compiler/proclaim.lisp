@@ -194,7 +194,9 @@
 	(setf (dd-included-by info) (dd-included-by old))))
 
     (setf (info type kind name) :structure)
-    (setf (info type structure-info name) info))
+    (setf (info type structure-info name) info)
+    (when (info type expander name)
+      (setf (info type expander name) nil)))
 
   (dolist (inc (dd-includes info))
     (pushnew (dd-name info)
