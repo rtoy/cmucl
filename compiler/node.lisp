@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.18 1991/11/05 14:38:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.19 1991/11/09 22:08:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -325,8 +325,11 @@
 		   (:copier copy-block))
   ;;
   ;; A list of all the blocks that are predecessors/successors of this block.
-  ;; In well-formed IR1, most blocks will have one or two successors.  The only
-  ;; exceptions are component head blocks and block with DELETE-P set.
+  ;; In well-formed IR1, most blocks will have one successors.  The only
+  ;; exceptions are:
+  ;;  1] component head blocks (any number)
+  ;;  2] blocks ending in an IF (1 or 2)
+  ;;  3] blocks with DELETE-P set (zero)
   (pred nil :type list)
   (succ nil :type list)
   ;;
