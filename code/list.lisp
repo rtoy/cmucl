@@ -34,8 +34,8 @@
 	  nset-difference set-exclusive-or nset-exclusive-or subsetp
 	  acons pairlis
 	  assoc assoc-if assoc-if-not
-	  rassoc rassoc-if rassoc-if-not))
-
+	  rassoc rassoc-if rassoc-if-not
+	  complement constantly))
 
 (proclaim '(maybe-inline
 	    tree-equal list-length nth %setnth nthcdr last make-list append
@@ -775,6 +775,39 @@
   "Returns what was passed to it."
   thing)
 
+
+(defun complement (function)
+  "Builds a new function that returns T whenever FUNCTION returns NIL and
+   NIL whenever FUNCTION returns T."
+  #'(lambda (&optional (arg0 nil arg0-p) (arg1 nil arg1-p) (arg2 nil arg2-p)
+		       &rest more-args)
+      (not (cond (more-args (apply function arg0 arg1 arg2 more-args))
+		 (arg2-p (funcall function arg0 arg1 arg2))
+		 (arg1-p (funcall function arg0 arg1))
+		 (arg0-p (funcall function arg0))
+		 (t (funcall function))))))
+
+
+(defun constantly (value &optional (val1 nil val1-p) (val2 nil val2-p)
+			 &rest more-values)
+  "Builds a function that always returns VALUE, and posisbly MORE-VALUES."
+  (cond (more-values
+	 (let ((list (list* value val1 val2 more-values)))
+	   #'(lambda ()
+	       (declare (optimize (speed 3) (safety 0)))
+	       (values-list list))))
+	(val2-p
+	 #'(lambda ()
+	     (declare (optimize (speed 3) (safety 0)))
+	     (values value val1 val2)))
+	(val1-p
+	 #'(lambda ()
+	     (declare (optimize (speed 3) (safety 0)))
+	     (values value val1)))
+	(t
+	 #'(lambda ()
+	     (declare (optimize (speed 3) (safety 0)))
+	     value))))
 
 
 ;;; Functions that operate on association lists
