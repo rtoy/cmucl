@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.8 2002/08/08 15:28:54 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.9 2002/10/02 17:29:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -425,7 +425,8 @@
 (defun merge (result-type sequence1 sequence2 predicate &key key)
   "The sequences Sequence1 and Sequence2 are destructively merged into
    a sequence of type Result-Type using the Predicate to order the elements."
-  (if (eq result-type 'list)
+  (if (or (eq result-type 'list)
+	  (subtypep result-type 'list))
       (let ((result (merge-lists* (coerce sequence1 'list)
 				  (coerce sequence2 'list)
 				  predicate key)))
