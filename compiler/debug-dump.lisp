@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.39 1993/09/10 19:09:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.40 1994/02/10 22:38:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -343,7 +343,7 @@
 	      (frob)))))
     
     (if max
-	(coerce seq `(simple-array (integer 0 ,max)))
+	(coerce seq `(simple-array (integer 0 ,max) (*)))
 	(coerce seq 'simple-vector))))
 
 
