@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.2 1992/05/28 23:40:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.3 1992/06/12 05:39:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1148,22 +1148,40 @@
 ;;; out of sync with the lexical value.  Unless some bozo closes over it,
 ;;; but nobody does anything like that...
 ;;;
-(defmacro assemble ((&optional segment vop) &body body)
+(defmacro assemble ((&optional segment vop &key labels) &body body
+		    &environment env)
   "Execute BODY (as a progn) with SEGMENT as the current segment."
   (flet ((label-name-p (thing)
 	   (and thing (symbolp thing))))
-    (let ((seg-var (gensym "SEGMENT-"))
-	  (vop-var (gensym "VOP-"))
-	  (label-names (remove-if-not #'label-name-p body)))
+    (let* ((seg-var (gensym "SEGMENT-"))
+	   (vop-var (gensym "VOP-"))
+	   (visable-labels (remove-if-not #'label-name-p body))
+	   (inherited-labels
+	    (multiple-value-bind
+		(expansion expanded)
+		(macroexpand '..inherited-labels.. env)
+	      (if expanded expansion nil)))
+	   (new-labels (append labels
+			       (set-difference visable-labels
+					       inherited-labels)))
+	   (nested-labels (set-difference (append inherited-labels new-labels)
+					  visable-labels)))
+      (when (intersection labels inherited-labels)
+	(error "Duplicate nested labels: ~S"
+	       (intersection labels inherited-labels)))
       `(let* ((,seg-var ,(or segment '*current-segment*))
 	      (,vop-var ,(or vop '*current-vop*))
-	      (*current-segment* ,seg-var)
-	      (*current-vop* ,vop-var)
+	      ,@(when segment
+		  `((*current-segment* ,seg-var)))
+	      ,@(when vop
+		  `((*current-vop* ,vop-var)))
 	      ,@(mapcar #'(lambda (name)
 			    `(,name (gen-label)))
-			label-names))
+			new-labels))
 	 (symbol-macrolet ((*current-segment* ,seg-var)
-			   (*current-vop* ,vop-var))
+			   (*current-vop* ,vop-var)
+			   ,@(when (or inherited-labels nested-labels)
+			       `((..inherited-labels.. ,nested-labels))))
 	   ,@(mapcar #'(lambda (form)
 			 (if (label-name-p form)
 			     `(emit-label ,form)
@@ -1418,9 +1436,9 @@
 	       (:big-endian forms))
 	   ',name)))))
 
-(defun grovel-lambda-list (lambda-list)
+(defun grovel-lambda-list (lambda-list vop-var)
   (let ((segment-name (car lambda-list))
-	(vop-var (gensym "VOP-")))
+	(vop-var (or vop-var (gensym "VOP-"))))
     (ext:collect ((new-lambda-list))
       (new-lambda-list segment-name)
       (new-lambda-list vop-var)
@@ -1485,6 +1503,7 @@
 (defmacro define-instruction (name lambda-list &rest options)
   (let* ((sym-name (symbol-name name))
 	 (defun-name (ext:symbolicate sym-name "-INST-EMITTER"))
+	 (vop-var nil)
 	 (postits (gensym "POSTITS-"))
 	 (emitter nil)
 	 (decls nil)
@@ -1493,42 +1512,46 @@
 	 (writes nil)
 	 (delay nil)
 	 (pinned nil))
+    (dolist (option-spec options)
+      (multiple-value-bind
+	  (option args)
+	  (if (consp option-spec)
+	      (values (car option-spec) (cdr option-spec))
+	      (values option-spec nil))
+	(case option
+	  (:emitter
+	   (when emitter
+	     (error "Can only specify one emitter per instruction."))
+	   (setf emitter args))
+	  (:declare
+	   (setf decls (append decls args)))
+	  (:attributes
+	   (setf attributes (append attributes args)))
+	  (:reads
+	   (when reads
+	     (error
+	      "Can only specify one reads expression per instruction."))
+	   (setf reads args))
+	  (:writes
+	   (when writes
+	     (error
+	      "Can only specify one writes expression per instruction."))
+	   (setf writes args))
+	  (:delay
+	   (when delay
+	     (error "Can only specify delay once per instruction."))
+	   (setf delay args))
+	  (:pinned
+	   (setf pinned t))
+	  (:vop-var
+	   (if vop-var
+	       (error "Can only specify :vop-var once.")
+	       (setf vop-var (car args))))
+	  (t
+	   (error "Unknown option: ~S" (car option))))))
     (multiple-value-bind
 	(new-lambda-list segment-name vop-name arg-reconstructor)
-	(grovel-lambda-list lambda-list)
-      (dolist (option-spec options)
-	(multiple-value-bind
-	    (option args)
-	    (if (consp option-spec)
-		(values (car option-spec) (cdr option-spec))
-		(values option-spec nil))
-	  (case option
-	    (:emitter
-	     (when emitter
-	       (error "Can only specify one emitter per instruction."))
-	     (setf emitter args))
-	    (:declare
-	     (setf decls (append decls args)))
-	    (:attributes
-	     (setf attributes (append attributes args)))
-	    (:reads
-	     (when reads
-	       (error
-		"Can only specify one reads expression per instruction."))
-	     (setf reads args))
-	    (:writes
-	     (when writes
-	       (error
-		"Can only specify one writes expression per instruction."))
-	     (setf writes args))
-	    (:delay
-	     (when delay
-	       (error "Can only specify delay once per instruction."))
-	     (setf delay args))
-	    (:pinned
-	     (setf pinned t))
-	    (t
-	     (error "Unknown option: ~S" (car option))))))
+	(grovel-lambda-list lambda-list vop-var)
       (push `(let ((hook (segment-inst-hook ,segment-name)))
 	       (when hook
 		 (funcall hook ,segment-name ,vop-name ,sym-name
@@ -1564,8 +1587,12 @@
 	       `((declare ,@decls)))
 	   (let ((,postits (segment-postits ,segment-name)))
 	     (setf (segment-postits ,segment-name) nil)
-	     (symbol-macrolet ((*current-segment* ,segment-name)
-			       (*current-vop* ,vop-name))
+	     (symbol-macrolet
+		 ((*current-segment*
+		   (macrolet ((lose ()
+				(error "Can't use INST without an ASSEMBLE ~
+					inside emitters.")))
+		     (lose))))
 	       ,@emitter))
 	   (ext:undefined-value))
 	 (eval-when (compile load eval)
@@ -1581,11 +1608,11 @@
 	(lisp::parse-defmacro lambda-list whole body name 'instruction-macro
 			      :environment env)
       `(eval-when (compile load eval)
-	 (%define-instruction ',name
+	 (%define-instruction ,(symbol-name name)
 			      #'(lambda (,whole ,env)
 				  ,@local-defs
 				  (block ,name
-				    ,@body)))))))
+				    ,body)))))))
 
 (defun %define-instruction (name defun)
   (setf (gethash name
@@ -1593,3 +1620,4 @@
 		  (c:backend-assembler-params c:*target-backend*)))
 	defun)
   name)
+
