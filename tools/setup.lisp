@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.31 2001/03/15 18:01:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.32 2003/05/13 15:22:48 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,39 @@
 (in-package "KERNEL")
 (defparameter *ansi-defstruct-options-p* nil)
 
+
+;; Disable package locks while rebuilding CMUCL. This variable is
+;; enabled upon startup from the function PACKAGE-LOCKS-INIT.
+(in-package "LISP")
+(defparameter *enable-package-locked-errors* nil)
+
+
 (in-package "USER")
+
+
+;; these forward declarations are only intended to avoid compiler
+;; warnings about undefined functions when building CMUCL.
+(proclaim '(ftype (function * *)
+            c::assemble-file
+            pcl::class-direct-subclasses
+            pcl::class-direct-superclasses
+            pcl::specializer-direct-methods
+            pcl::class-slots
+            pcl::slot-boundp-using-class
+            pcl::slot-definition-name
+            pcl::slot-value-using-class
+            debug::all-method-functions-in-package
+            profile::reinitialize-method-function
+            cl::make-instance
+            cl::class-of
+            cl::sxhash-instance
+            hemlock::ts-stream-p
+            hemlock::ts-stream-wire
+            ext::call-display-event-handler
+            ext::disable-clx-event-handling
+            ext::flush-display-events
+            xlib::display-input-stream
+            xlib::event-listen))
 
 
 
@@ -264,3 +296,4 @@
 			  :error t))
 	    (t
 	     (format t "~S up to date.~%" (namestring output-file)))))))
+
