@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.11 1991/08/21 19:05:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.12 1991/11/06 13:07:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,8 +44,11 @@
 	"EVAL")
 (import '(eval::*eval-stack-top*))
 
-(in-package 'system)
+(in-package "SYSTEM")
 (export '(parse-body find-if-in-closure))
+
+(in-package "EXTENSIONS")
+(export '(*top-level-auto-declare*))
 
 (in-package "LISP")
 
@@ -82,6 +85,17 @@
 ;;; This needs to be initialized in the cold load, since the top-level catcher
 ;;; will always restore the initial value.
 (defvar *eval-stack-top* 0)
+
+(declaim (type (member :warn t nil) *top-level-auto-declare*))
+
+(defvar *top-level-auto-declare* :warn
+  "This variable controls whether assignments to unknown variables at top-level
+   (or in any other call to EVAL of SETQ) will implicitly declare the variable
+   SPECIAL.  These values are meaningful:
+     :WARN  -- Print a warning, but declare the variable special (the default.)
+      T     -- Quietly declare the variable special.
+      NIL   -- Never declare the variable, giving warnings on each use.")
+  
 
 ;;; EVAL  --  Public
 ;;;
@@ -127,7 +141,13 @@
 			(set (first args) (eval (second args))))
 		     (set (first args) (eval (second args)))))
 		(unless (eq (info variable kind (first name)) :special)
-		  (return (eval:internal-eval original-exp))))))
+		  (case *top-level-auto-declare*
+		    (:warn
+		     (warn "Declaring ~S special." (first name)))
+		    ((t))
+		    ((nil)
+		     (return (eval:internal-eval original-exp))))
+		  (proclaim `(special ,(first name)))))))
 	   ((progn)
 	    (when (> args 0)
 	      (dolist (x (butlast (rest exp)) (eval (car (last exp))))
