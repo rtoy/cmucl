@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.14 1990/05/06 05:22:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.15 1990/05/15 01:17:07 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -130,12 +130,11 @@
 (def-data-vector-frobs simple-vector word-index)
 
 (def-data-vector-frobs simple-array-unsigned-byte-8 byte-index
-  fixnum unsigned-reg)
+  positive-fixnum unsigned-reg)
 (def-data-vector-frobs simple-array-unsigned-byte-16 halfword-index
-  fixnum unsigned-reg)
-;; ### The type for this needs to be fixed.
+  positive-fixnum unsigned-reg)
 (def-data-vector-frobs simple-array-unsigned-byte-32 word-index
-  * unsigned-reg)
+  unsigned-num unsigned-reg)
 
 
 
