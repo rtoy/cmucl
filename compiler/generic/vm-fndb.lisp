@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.24 1990/10/02 05:40:29 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.25 1990/10/02 18:07:52 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -152,6 +152,12 @@
 (defknown (bignum::%add-with-carry bignum::%subtract-with-borrow)
 	  (bignum-element-type bignum-element-type (mod 2))
   (values bignum-element-type (mod 2))
+  (foldable flushable movable))
+
+(defknown bignum::%multiply-and-add
+	  (bignum-element-type bignum-element-type bignum-element-type
+			       &optional bignum-element-type)
+  (values bignum-element-type bignum-element-type)
   (foldable flushable movable))
 
 (defknown bignum::%multiply (bignum-element-type bignum-element-type)
