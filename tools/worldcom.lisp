@@ -140,8 +140,10 @@
 (comf "target:code/serve-event")
 (pushnew :serve-event *features*)
 (comf "target:code/fd-stream")
-(comf "target:code/pathname")
-(comf "target:code/filesys")
+(with-compilation-unit ; Until this code is shaken down more...
+  (:optimize '(optimize (safety 2) (debug 2)))
+  (comf "target:code/pathname")
+  (comf "target:code/filesys"))
 (comf "target:code/load")
 
 (comf "target:code/eval")
