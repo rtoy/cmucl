@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.35 1997/08/23 16:00:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.36 1997/11/04 15:39:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,7 +161,15 @@
 	   (trace-table-bits (* trace-table-len tt-bits-per-entry))
 	   (total-length (+ length (ceiling trace-table-bits vm:byte-bits)))
 	   (box-num (- (length constants) vm:code-trace-table-offset-slot))
-	   (code-obj (%primitive allocate-code-object box-num total-length))
+	   #+x86
+	   (code-obj
+	    (if (and (boundp lisp::*enable-dynamic-space-code*)
+		     lisp::*enable-dynamic-space-code*)
+		(%primitive allocate-dynamic-code-object box-num total-length)
+	      (%primitive allocate-code-object box-num total-length)))
+	   #-x86
+	   (code-obj
+	    (%primitive allocate-code-object box-num total-length))
 	   (fill-ptr (code-instructions code-obj)))
       (declare (type index box-num total-length))
 
