@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.48 2004/04/07 02:47:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.49 2004/04/13 17:17:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -513,3 +513,171 @@
                 result)
             adds
             shifts)))
+
+
+;;; Support routines for division by multiplication.
+
+;; Truncating division by multiplication
+;;
+;; This is taken from Hacker's Delight, by Henry S. Warren.  This
+;; book describes how to do a truncating division by doing a
+;; multiplication instead.
+;;
+;; We refer the reader to that book for a full description and proof
+;; of the algorithm.  We summarize the basic ideas here.
+;;
+;; Let W be the word size in bits and d be the known divisor, 2 <= d
+;; < 2^(W-1).  We wish to find the least integer m and integer p such
+;; that
+;;
+;;   floor(m*n/2^p) = floor(n/d) for 0 <= n < 2^(W-1)
+;;
+;; and
+;;
+;;   floor(m*n/2^p) + 1 = floor(n/d) for -2^(W-1) <= n <= -1
+;;
+;; for 0 <= m < 2^W and p >= W.
+;;
+;; This is found by the following algorithm.
+;;
+;; Compute
+;;
+;;   nc = floor(2^(W-1)/d)*d - 1 = 2^(W-1) - rem(2^(W-1), d) - 1.
+;;
+;; Then find p >= W such that
+;;
+;;   2^p > nc * (d - rem(2^p, d)
+;;
+;; This gives
+;;
+;;   m = (2^p - d - rem(2^p, d))/d
+;;
+;; From m we compute the desired multiplier, M, because in some cases
+;; m will not fit in a signed W-bit word.  Hence,
+;;
+;;       { m,        if 0 <= m < 2^(W-1)
+;;   M = {
+;;       { m - 2^W,  if 2^(W-1) <= m < 2^W
+;;
+;; Then the basic algorithm is to compute
+;;
+;;   floor(m*n/2^p) = floor((m*n/2^W)/2^(p-W))
+;;
+;; When m is too large, we compute
+;;
+;;   (m*n/2^W) = ((m - 2^W + 2^W)*n/2^W)
+;;             = (m - 2^W)*n/2^W + n
+;;             = M*n/2^W + n
+;; and (m - 2^W) fits in a W-bit word.
+;;
+;; And we're done.
+;;
+;; For example:
+;;
+;;   d      M          s = p - W
+;; ------------------------------------
+;;   3   #x55555556       0
+;;   5   #x66666667       1
+;;   7   #x-6DB6DB6D      2
+;; 100   #x51EB851F       5
+;;
+;; Finally, we note that if n is negative, we can easily add 1 to
+;; floor(m*n/p) without branches.  Let t = n >> (- (W - 1)).  That
+;; is, t = -1 if n is negative and t = 0 if n is positive.
+;;
+;; Then subtract t from floor(m*n/p).  (Note that the example machine
+;; code in Hacker's delight is wrong.  It adds t instead of
+;; subtracting t.
+
+
+;; Find the magic number for the divisor DIVISOR assuming a word size
+;; of WORD-WIDTH bits.  We return the (signed) magic number M and s =
+;; p - W.
+(defun find-signed-reciprocal (divisor &optional (word-width vm:word-bits))
+  (let ((nc (1- (* divisor (floor (ash 1 (1- word-width)) divisor)))))
+    ;; Find p
+    (do ((p word-width (1+ p)))
+        ((> (ash 1 p)
+            (* nc (- divisor (rem (ash 1 p) divisor))))
+         (let ((m (/ (- (+ (ash 1 p) divisor)
+                               (rem (ash 1 p) divisor))
+                            divisor)))
+           (values (if (< m (ash 1 (1- word-width)))
+                       m
+                       (- m (ash 1 word-width)))
+                   (- p word-width))))
+      )))
+
+;; Unsigned division is a bit more complicated.  We can't just use
+;; the above results to get the correct unsigned division.
+;;
+;; Using the same notation, we want to find m and p such that
+;;
+;;   floor(m*n/2^p) = floor(n/d) for 0 <= n < 2^W.
+;;
+;; with 0 <= m < 2^(W+1) and p >= W.
+;;
+;; First compute
+;;
+;;   nc = floor(2^W/d)*d - 1 = 2^W - rem(2^W,d) - 1
+;;
+;; Then find p such that
+;;
+;;   2^p > nc * (d - 1 - rem(2^p - 1, d))
+;;
+;; and m is
+;;
+;;   m = (2^p + d - 1 - rem(2^p - 1, d))/d
+;;
+;; If m fits in a word, the multiplier M = m.  However, if m cannot
+;; fit in a word, we set the multiplier M to be m - 2^W, which needs
+;; to be adjusted.
+;;
+;; So,
+;;   floor(m*n/2^W/2^s) = floor((m - 2^W + 2^W)*n/2^W/2^s)
+;;                      = floor([(m - 2^W)*n/2^W + n]/2^s)
+;;                      = floor([M*n/2^W + n]/2^s)
+;;
+;; We would be done, except the sum can overflow.  If the architecture
+;; has an instruction that can shift the carry bit into the MSB during
+;; a right shift, then we are done.  If the architecture does not, we
+;; can use the following approach.
+;;
+;;   floor((q+n)/2^p) = floor(z/2^(p-1)), p >= 1
+;;
+;; where
+;;
+;;   z = floor((n-q)/2) + q
+;;
+;; This requires that p >= 1, but it can be shown that if d > 1, and
+;; if m >= 2^W, then p >= 1.
+;;
+;; Some examples
+;;
+;;   d      M          s = p - W   overflow
+;; ------------------------------------
+;;   3   #xaaaaaaab       1         NIL
+;;   5   #xcccccccd       2         NIL
+;;   7   #x24924925       3          T
+;; 100   #x51eb851f       5         NIL
+;;
+;; where the overflow column indicates if we m is too large to fit in
+;; a word
+
+;; Compute M, s, and overflow as indicated above.      
+(defun find-unsigned-reciprocal (divisor &optional (word-width vm:word-bits))
+  (let ((nc (1- (* divisor (floor (ash 1 word-width) divisor)))))
+    ;; Find p
+    (do ((p word-width (1+ p)))
+        ((> (ash 1 p)
+            (* nc (- divisor 1 (rem (1- (ash 1 p)) divisor))))
+         (let* ((m (/ (- (+ (ash 1 p) divisor)
+                         (rem (ash 1 p) divisor))
+                      divisor))
+                (overflowp (>= m (ash 1 word-width))))
+           (values (if overflowp
+                       (- m (ash 1 word-width))
+                       m)
+                   (- p word-width)
+                   overflowp))))))
+
