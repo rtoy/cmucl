@@ -119,8 +119,12 @@
 (comf "c:codegen")
 (comf "c:debug")
 
-(unless *new-compile* ; Until this is fixed up to compile properly...
+#-new-compiler
+(unless *new-compile* 
   (comf "c:rt/genesis"))
+
+#+new-compiler
+(comf "c:rt/genesis")
 
 (unless *new-compile*
   (comf "ncode:defstruct")
