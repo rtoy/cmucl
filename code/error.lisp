@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.10 1991/02/08 13:32:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.11 1991/09/12 11:24:01 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,9 +18,6 @@
 
 (in-package "CONDITIONS")
 (use-package "EXTENSIONS")
-#-new-compiler
-(eval-when (compile)
-  (setq lisp::*bootstrap-defmacro* t))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -583,7 +580,6 @@ The previous version is uglier, but it sets up unique run-time tags.
 ;;;
 (defvar *finding-caller* nil)
 
-#+new-compiler
 ;;; FIND-CALLER-NAME  --  Internal
 ;;;
 (defun find-caller-name ()
@@ -605,7 +601,6 @@ The previous version is uglier, but it sets up unique run-time tags.
 (define-condition error (serious-condition)
   ((function-name nil)))
 
-#+new-compiler
 (defun error (datum &rest arguments)
   "Invokes the signal facility on a condition formed from datum and arguments.
    If the condition is not handled, the debugger is invoked."
@@ -616,7 +611,6 @@ The previous version is uglier, but it sets up unique run-time tags.
      (signal condition)
      (invoke-debugger condition))))
 
-#+new-compiler
 ;;; CERROR must take care to no use arguments when datum is already a condition
 ;;; object.  Furthermore, we must set ERROR-FUNCTION-NAME here instead of
 ;;; letting ERROR do it, so we get the correct function name.
@@ -633,7 +627,6 @@ The previous version is uglier, but it sets up unique run-time tags.
       (error condition)))
   nil)
 
-#+new-compiler
 (defun break (&optional (format-string "Break") &rest format-arguments)
   "Prints a message and invokes the debugger without allowing any possibility
    of condition handling occurring."
@@ -649,7 +642,6 @@ The previous version is uglier, but it sets up unique run-time tags.
 (defvar *break-on-warnings* ()
   "If non-NIL, then WARN will enter a break loop before returning.")
 
-#+new-compiler
 (defun warn (datum &rest arguments)
   "Warns about a situation by signalling a condition formed by datum and
    arguments.  Before signalling, if *break-on-warnings* is set, then BREAK
@@ -1007,7 +999,3 @@ The previous version sets up unique run-time tags.
 (defun error-init ()
   (setq *error-system-initialized* t))
 
-
-#-new-compiler
-(eval-when (compile)
-  (setq lisp::*bootstrap-defmacro* nil))
