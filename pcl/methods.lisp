@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.41 2003/07/29 12:13:24 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.42 2003/08/27 09:02:00 gerd Exp $")
 
 (in-package :pcl)
 
@@ -521,8 +521,7 @@
 (defmethod initialize-instance :after ((gf standard-generic-function)
 				       &key (lambda-list nil lambda-list-p)
 				       argument-precedence-order)
-  (with-slots (arg-info)
-    gf
+  (with-slots (arg-info) gf
     (if lambda-list-p
 	(set-arg-info gf 
 		      :lambda-list lambda-list
@@ -531,24 +530,34 @@
     (when (arg-info-valid-p arg-info)
       (update-dfun gf))))
 
-(defmethod reinitialize-instance :after ((gf standard-generic-function)
-					 &rest args
-					 &key (lambda-list nil lambda-list-p)
-					 (argument-precedence-order 
-					  nil argument-precedence-order-p))
-  (with-slots (arg-info) gf
-    (if lambda-list-p
-	(if argument-precedence-order-p
-	    (set-arg-info gf 
-			  :lambda-list lambda-list
-			  :argument-precedence-order argument-precedence-order)
-	    (set-arg-info gf 
-			  :lambda-list lambda-list))
-	(set-arg-info gf))
-    (when (and (arg-info-valid-p arg-info)
-	       args
-	       (or lambda-list-p (cddr args)))
-      (update-dfun gf))))
+(defmethod reinitialize-instance :around
+    ((gf standard-generic-function) &rest args &key
+     (lambda-list nil lambda-list-p)
+     (argument-precedence-order nil argument-precedence-order-p))
+  (let ((old-mc (generic-function-method-combination gf)))
+    (prog1 (call-next-method)
+      ;;
+      ;; Remove cached emf entries if the method combination might
+      ;; have changed in a way that makes re-computing emfs necesasry.
+      ;; EQ catches more cases than strictly necessary, but it is good
+      ;; enough.
+      (unless (eq old-mc (generic-function-method-combination gf))
+	(flush-effective-method-cache gf))
+      ;;
+      ;; Update the gf's arg-info.
+      (if lambda-list-p
+	  (if argument-precedence-order-p
+	      (set-arg-info gf :lambda-list lambda-list
+			    :argument-precedence-order
+			    argument-precedence-order)
+	      (set-arg-info gf :lambda-list lambda-list))
+	  (set-arg-info gf))
+      ;;
+      ;; Update the gf's dfun, if possible.
+      (when (and (arg-info-valid-p (gf-arg-info gf))
+		 (not (null args))
+		 (or lambda-list-p (cddr args)))
+	  (update-dfun gf))))))
 
 
 (defun compute-applicable-methods-function (gf arguments)

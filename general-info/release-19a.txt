@@ -237,6 +237,8 @@ New in this release:
        warning is printed at method load time.  An error is
        signaled if the generic function is called with arguments such
        that the method is used.
+     - Redefining a generic function with a different method
+       combination now recomputes effective methods.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
