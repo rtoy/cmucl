@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.14 1994/03/14 17:57:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.15 1994/05/12 20:01:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -520,7 +520,7 @@
 (ext:serve-reparent-notify *hemlock-windows* #'hunk-ignore-event)
 (ext:serve-gravity-notify *hemlock-windows* #'hunk-ignore-event)
 (ext:serve-circulate-notify *hemlock-windows* #'hunk-ignore-event)
-
+(ext:serve-client-message *hemlock-windows* #'hunk-ignore-event)
 
 
 ;;;; Interface to X input events.
