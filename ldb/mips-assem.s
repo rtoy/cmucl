@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.5 1990/05/24 17:44:00 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.6 1990/05/26 01:21:53 ch Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -193,6 +193,7 @@ call_into_c:
 	addu	CSP, CONT, 32
 	sw	OLDCONT, 0(CONT)
 	sw	LRA, 4(CONT)
+	sw	CODE, 8(CONT)
 
 	/* Note: the C stack is already set up. */
 
@@ -270,6 +271,10 @@ call_into_c:
 1:
 
 	.set	reorder
+
+	/* Restore LRA & CODE (they may have been GC'ed) */
+	lw	CODE, 8(CONT)
+	lw	LRA, 4(CONT)
 
 	/* Reset the lisp stack. */
 	/* Note: OLDCONT and CONT are in saved regs. */
