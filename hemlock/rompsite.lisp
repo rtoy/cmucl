@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.9 1997/01/18 14:31:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.10 1997/08/24 16:54:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -975,7 +975,9 @@
 	      (logand (alien:slot tios 'unix:c-iflag)
 		      (lognot (logior unix:tty-icrnl unix:tty-ixon))))
 	(setf (alien:slot tios 'unix:c-oflag)
-	      (logand (alien:slot tios 'unix:c-oflag) (lognot unix:tty-ocrnl)))
+	      (logand (alien:slot tios 'unix:c-oflag)
+		      (lognot #-freebsd unix:tty-ocrnl
+			      #+freebsd unix:tty-onlcr)))
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp) #xff)
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:veof) #xff)
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)

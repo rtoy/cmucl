@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.51 1997/08/23 16:22:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.52 1997/08/24 16:54:11 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1493,7 +1493,7 @@
   ;; special control characters
   #+(or hpux svr4 linux) (def-enum + 0 vintr vquit verase vkill veof
                                    #-linux veol #-linux veol2)
-  #+freebsd (def-enum + 0 veof veol veol2 verase nil vkill nil vintr vquit)
+  #+freebsd (def-enum + 0 veof veol veol2 verase nil vkill nil nil vintr vquit)
   #+linux (defconstant veol 11)
   #+linux (defconstant veol2 16)
   
@@ -1508,7 +1508,7 @@
   (defconstant vsusp 10)
   (defconstant vstart 12)
   (defconstant vstop 13)
-  (defconstant vdsusp 21))
+  (defconstant vdsusp 11))
 
 #+hpux
 (progn
