@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.3 1990/11/16 04:40:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.4 1990/11/21 16:21:48 ram Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -34,7 +34,8 @@
 	  closure-function-header-type return-pc-header-type
 	  value-cell-header-type symbol-header-type base-character-type
 	  sap-type unbound-marker-type weak-pointer-type
-	  structure-header-type vector-normal-subtype
+	  structure-header-type funcallable-instance-header-type
+	  vector-normal-subtype
 	  vector-valid-hashing-subtype vector-must-rehash-subtype
 	  primitive-object primitive-object-p
 	  primitive-object-name primitive-object-header
@@ -44,6 +45,10 @@
 	  slot-offset slot-length slot-options *primitive-objects*
 	  define-for-each-primitive-object))
 
+(in-package "KERNEL")
+(export '(%set-funcallable-instance-function %make-funcallable-instance))
+
+(in-package "VM")
 
 
 ;;;; Type based constants:
@@ -132,7 +137,8 @@
   sap
   unbound-marker
   weak-pointer
-  structure-header)
+  structure-header
+  funcallable-instance-header)
 
 
 ;;; The different vector subtypes.
@@ -368,6 +374,15 @@
 	    :ref-known (flushable)
 	    :ref-trans %closure-function)
   (info :rest-p t :set-vop c::closure-init :ref-vop c::closure-ref))
+
+(define-primitive-object (funcallable-instance
+			  :lowtag function-pointer-type
+			  :header funcallable-instance-header-type
+			  :alloc-trans %make-funcallable-instance)
+  (function :init :arg
+	    :set-vop set-funcallable-instance-function
+	    :set-trans %set-funcallable-instance-function)
+  (info :rest-p t))
 
 (define-primitive-object (value-cell :lowtag other-pointer-type
 				     :header value-cell-header-type
