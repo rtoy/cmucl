@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.110 2002/05/01 16:31:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.111 2002/08/26 16:40:53 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3260,22 +3260,23 @@
 ;;; Source-Transform-Transitive  --  Internal
 ;;;
 ;;;    Do source transformations for transitive functions such as +.  One-arg
-;;; cases are replaced with the arg and zero arg cases with the identity.  If
-;;; Leaf-Fun is true, then replace two-arg calls with a call to that function. 
+;;; cases are replaced with the arg and zero arg cases with the identity.
 ;;;
-(defun source-transform-transitive (fun args identity &optional leaf-fun)
+;;; However for the one-arg case, we assert the type of the arg to
+;;; catch type errors instead of silently returning the single arg.
+;;; Result-type tells us the expected type.
+;;;
+(defun source-transform-transitive (fun args identity &optional (result-type 'integer))
   (declare (symbol fun leaf-fun) (list args))
   (case (length args)
     (0 identity)
-    (1 `(values ,(first args)))
-    (2 (if leaf-fun
-	   `(,leaf-fun ,(first args) ,(second args))
-	   (values nil t)))
+    (1 `(values (the ,result-type ,(first args))))
+    (2 (values nil t))
     (t
      (associate-arguments fun (first args) (rest args)))))
 
-(def-source-transform + (&rest args) (source-transform-transitive '+ args 0))
-(def-source-transform * (&rest args) (source-transform-transitive '* args 1))
+(def-source-transform + (&rest args) (source-transform-transitive '+ args 0 'number))
+(def-source-transform * (&rest args) (source-transform-transitive '* args 1 'number))
 (def-source-transform logior (&rest args) (source-transform-transitive 'logior args 0))
 (def-source-transform logxor (&rest args) (source-transform-transitive 'logxor args 0))
 (def-source-transform logand (&rest args) (source-transform-transitive 'logand args -1))
