@@ -26,7 +26,7 @@ echo Building lisp.core dated $date from the \`\`$subdir\'\' subdir.
 (setf (search-list "lisp:")
       '("/afs/cs/project/clisp/new-compiler/@sys/$subdir/"))
 (in-package "USER")
-(load (open "lisp:code/worldload.lisp"))
+(load (open "lisp:tools/worldload.lisp"))
 $date
 $date
 $date
