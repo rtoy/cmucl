@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.152 2004/08/03 00:12:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.153 2004/08/16 18:09:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2485,10 +2485,10 @@
 (defun logxor-derive-type-aux (x y &optional same-leaf)
   (declare (ignore same-leaf))
   (multiple-value-bind
-      (x-len x-pos x-neg)
+	(x-len x-pos x-neg)
       (integer-type-length x)
     (multiple-value-bind
-	(y-len y-pos y-neg)
+	  (y-len y-pos y-neg)
 	(integer-type-length y)
       (cond
 	((and (not x-neg) (not y-neg))
@@ -2506,7 +2506,7 @@
 					    ,(max-xor xlo xhi ylo yhi)))))
 	       (t
 		(specifier-type `(unsigned-byte ,(max x-len y-len))))))
-	((and x-neg y-neg)
+	((and (not x-pos) (not y-pos))
 	 ;; Both are negative.  The result will be positive, and as
 	 ;; long as the longer.
 	 (if (and x-len y-len (zerop x-len) (zerop y-len))
