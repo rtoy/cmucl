@@ -311,7 +311,7 @@
   ;; Reset Gensym.
   (setq lisp:*gensym-counter* 0))
 
-
+
 ;;; PRINT-SUMMARY  --  Interface
 ;;;
 ;;;    This function is called by WITH-COMPILATION-UNIT at the end of a
@@ -355,7 +355,7 @@
    *compiler-warning-count*
    *compiler-note-count*))
    
-   
+   
 ;;; Describe-Component  --  Internal
 ;;;
 ;;;    Print out some useful info about Component to Stream.
@@ -382,49 +382,6 @@
   (terpri)
   
   (undefined-value))
-
-
-;;; Compile-Top-Level  --  Internal
-;;;
-;;;    Compile Lambdas (a list of the lambdas for top-level forms) into the
-;;; Object file.
-;;;
-(defun compile-top-level (lambdas object)
-  (declare (list lambdas) (type object object))
-  (maybe-mumble "Local call analyze")
-  (dolist (lambda lambdas)
-    (let* ((component (block-component (node-block (lambda-bind lambda))))
-	   (*all-components* (list component)))
-      (local-call-analyze component)))
-  (maybe-mumble ".~%")
-  
-  (maybe-mumble "Find components")
-  (let* ((components (find-initial-dfo lambdas))
-	 (*all-components* components))
-    
-    (when *check-consistency*
-      (maybe-mumble "[Check]~%")
-      (check-ir1-consistency components))
-    
-    (dolist (component components)
-      (compile-component component object)
-      (clear-ir2-info component))
-
-    (etypecase object
-      (fasl-file
-       (dolist (lambda lambdas)
-	 (fasl-dump-top-level-lambda-call lambda object)))
-      (core-object
-       (dolist (lambda lambdas)
-	 (core-call-top-level-lambda lambda object)))
-      (null))
-    
-    (when *check-consistency*
-      (maybe-mumble "[Check]~%")
-      (check-ir1-consistency components))
-    
-    (ir1-finalize)
-    (undefined-value)))
 
 
 ;;;; File reading:
@@ -825,6 +782,85 @@
 
 ;;;; COMPILE-FILE and COMPILE-FROM-STREAM: 
 
+;;; We build a list of top-level lambdas, and then periodically smash them
+;;; together into a single component and compile it.
+;;;
+(defvar *pending-top-level-lambdas*)
+
+;;; The maximum number of top-level lambdas we put in a single top-level
+;;; component.
+;;;
+(defparameter top-level-lambda-max 20)
+
+
+;;; COMPILE-TOP-LEVEL-LAMBDAS  --  Internal
+;;;
+;;;    Add Lambdas to the pending lambdas.  If this leaves more than
+;;; TOP-LEVEL-LAMBDA-MAX lambdas in the list, or if Force-P is true, then smash
+;;; the lambdas into a single component, compile it, and call the resulting
+;;; function.
+;;;
+(defun compile-top-level-lambdas (lambdas force-p object)
+  (declare (list lambdas) (type object object))
+  (setq *pending-top-level-lambdas*
+	(append *pending-top-level-lambdas* lambdas))
+  (let ((pending *pending-top-level-lambdas*))
+    (when (and pending
+	       (or (> (length pending) top-level-lambda-max)
+		   force-p))
+      (multiple-value-bind (component tll)
+			   (merge-top-level-lambdas pending)
+	(setq *pending-top-level-lambdas* ())
+	(compile-component component object)
+	(clear-ir2-info component)
+	(etypecase object
+	  (fasl-file
+	   (fasl-dump-top-level-lambda-call tll object))
+	  (core-object
+	   (core-call-top-level-lambda tll object))
+	  (null)))))
+  (undefined-value))
+
+
+;;; Compile-Top-Level  --  Internal
+;;;
+;;;    Compile Lambdas (a list of the lambdas for top-level forms) into the
+;;; Object file.
+;;;
+(defun compile-top-level (lambdas object)
+  (declare (list lambdas) (type object object))
+  (maybe-mumble "Local call analyze")
+  (dolist (lambda lambdas)
+    (let* ((component (block-component (node-block (lambda-bind lambda))))
+	   (*all-components* (list component)))
+      (local-call-analyze component)))
+  (maybe-mumble ".~%")
+  
+  (maybe-mumble "Find components")
+  (multiple-value-bind (components top-components)
+		       (find-initial-dfo lambdas)
+    (let ((*all-components* (append components top-components)))
+      (when *check-consistency*
+	(maybe-mumble "[Check]~%")
+	(check-ir1-consistency *all-components*))
+      
+      (dolist (component top-components)
+	(pre-environment-analyze-top-level component))
+      
+      (dolist (component components)
+	(compile-component component object)
+	(clear-ir2-info component))
+      
+      (when *check-consistency*
+	(maybe-mumble "[Check]~%")
+	(check-ir1-consistency *all-components*))
+      
+      (compile-top-level-lambdas lambdas nil object)))
+    
+  (ir1-finalize)
+  (undefined-value))
+
+
 ;;; Sub-Compile-File  --  Internal
 ;;;
 ;;;    Read all forms from Info and compile them, with output to Object.  If
@@ -848,6 +884,7 @@
 	   (*fenv* ())
 	   (*source-info* info)
 	   (*top-level-lambdas* ())
+	   (*pending-top-level-lambdas* ())
 	   (*compiler-error-bailout*
 	    #'(lambda ()
 		(compiler-mumble
@@ -871,6 +908,8 @@
 	(when *block-compile*
 	  (compile-top-level (nreverse *top-level-lambdas*) object)
 	  (clear-stuff))
+
+	(compile-top-level-lambdas () t object)
 	
 	(etypecase object
 	  (fasl-file (fasl-dump-source-info info object))
