@@ -128,11 +128,19 @@
   (declare (ignore stuff))
   (error "Can't funcall the SYMBOL-FUNCTION of special forms."))
 
-;;; SPECIAL-FORM-ARG-COUNT-ERROR
+;;; CONVERT-CONDITION-INTO-COMPILER-ERROR  --  Internal
 ;;;
-(defun special-form-arg-count-error (name kind continue string &rest args)
-  (declare (ignore continue))
-  (compiler-error "While expanding ~A ~S:~%  ~?" kind name string args))
+;;; Passed to parse-defmacro when we want compiler errors instead of real
+;;; errors.
+;;;
+(proclaim '(inline convert-condition-into-compiler-error))
+(defun convert-condition-into-compiler-error (datum &rest stuff)
+  (if (stringp datum)
+      (apply #'compiler-error datum stuff)
+      (compiler-error "~A"
+		      (if (symbolp datum)
+			  (apply #'make-condition datum stuff)
+			  datum))))
 
 ;;; Def-IR1-Translator  --  Interface
 ;;;
@@ -158,7 +166,7 @@
 	(lisp::parse-defmacro lambda-list n-form body name "special form"
 			      :doc-string-allowed t
 			      :environment n-env
-			      :error-fun 'special-form-arg-count-error)
+			      :error-fun 'convert-condition-into-compiler-error)
       `(progn
 	 (proclaim '(function ,fn-name (continuation continuation t) void))
 	 (defun ,fn-name (,start-var ,cont-var ,n-form)
@@ -213,12 +221,6 @@
 	 (setf (info function source-transform ',name) #',fn-name)))))
 
 
-;;; PRIMITIVE-ARG-COUNT-ERROR
-;;;
-(defun primitive-arg-count-error (name kind continue string &rest args)
-  (declare (ignore continue))
-  (compiler-error "While expanding ~A ~S:~%  ~?" kind name string args))
-
 (defmacro def-primitive-translator (name lambda-list &body body)
   "Def-Primitive-Translator Name Lambda-List Form*
   Define a function that converts a use of (%PRIMITIVE Name ...) into Lisp
@@ -230,7 +232,7 @@
 	(body decls)
 	(lisp::parse-defmacro lambda-list n-form body name "%primitive"
 			      :environment n-env
-			      :error-fun 'primitive-arg-count-error)
+			      :error-fun 'convert-condition-into-compiler-error)
       `(progn
 	 (defun ,fn-name (,n-form)
 	   (let ((,n-env *lexical-environment*))
