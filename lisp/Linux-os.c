@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.18 2004/05/20 00:32:24 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.19 2004/06/07 15:24:08 rtoy Exp $
  *
  */
 
@@ -227,6 +227,11 @@ boolean valid_addr(os_vm_address_t addr)
 
 #if defined GENCGC
 
+static sigsegv_handle_now(HANDLER_ARGS)
+{
+  interrupt_handle_now(signal, contextstruct);
+}
+
 void sigsegv_handler(HANDLER_ARGS)
 {
   GET_CONTEXT
@@ -262,7 +267,7 @@ void sigsegv_handler(HANDLER_ARGS)
 #else
   DPRINTF(0,(stderr,"sigsegv: eip: %p\n",context->eip));
 #endif
-  interrupt_handle_now(signal, contextstruct);
+  sigsegv_handle_now(signal, contextstruct);
 }
 #else
 static void sigsegv_handler(HANDLER_ARGS)

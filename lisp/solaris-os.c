@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.13 2004/05/04 12:39:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.14 2004/06/07 15:24:08 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -204,6 +204,12 @@ valid_addr(os_vm_address_t addr)
  * Running into the gc trigger page will end up here...
  */
 #if defined(GENCGC)
+
+void segv_handle_now(HANDLER_ARGS)
+{
+  interrupt_handle_now(signal, code, context);
+}
+
 void segv_handler(HANDLER_ARGS)
 {
   caddr_t addr = code->si_addr;
@@ -273,7 +279,7 @@ void segv_handler(HANDLER_ARGS)
   /* a *real* protection fault */
   fprintf(stderr, "segv_handler: Real protection violation: 0x%08x\n",
           addr);
-  interrupt_handle_now(signal, code, context);
+  segv_handle_now(signal, code, context);
 }
 #else
 void
