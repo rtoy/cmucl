@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.18 1991/05/28 17:54:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.19 1991/11/08 15:23:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -325,10 +325,14 @@
 	     (error "Declared functional type is not a function type: ~S."
 		    (first args)))
 	   (dolist (name (rest args))
-	     (define-function-name name)
-	     (note-name-defined name :function)
-	     (setf (info function type name) type)
-	     (setf (info function where-from name) :declared)))))
+	     (cond ((info function accessor-for name)
+		    (warn "Ignoring FTYPE declaration for slot accesor:~%  ~S"
+			  name))
+		   (t
+		    (define-function-name name)
+		    (note-name-defined name :function)
+		    (setf (info function type name) type)
+		    (setf (info function where-from name) :declared)))))))
       (freeze-type
        (dolist (type args)
 	 (specifier-type type); Give undefined type warnings...
