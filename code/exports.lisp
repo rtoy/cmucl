@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.148 1998/03/26 13:18:35 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.149 1998/03/26 14:07:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -328,7 +328,7 @@
              "ATOM" "BASE-CHAR" "BASE-STRING" "BIGNUM"
              "BIT" "BIT-AND" "BIT-ANDC1" "BIT-ANDC2" "BIT-EQV" "BIT-IOR"
              "BIT-NAND" "BIT-NOR" "BIT-NOT" "BIT-ORC1" "BIT-ORC2"
-             "BIT-VECTOR" "BIT-VECTOR-P" "BIT-XOR" "BLOCK" "BOOLE" "BOOLEAN"
+             "BIT-VECTOR" "BIT-VECTOR-P" "BIT-XOR" "BLOCK" "BOOLE" #|"BOOLEAN"|#
              "BOOLE-1" "BOOLE-2" "BOOLE-AND" "BOOLE-ANDC1" "BOOLE-ANDC2"
              "BOOLE-C1" "BOOLE-C2" "BOOLE-CLR" "BOOLE-EQV" "BOOLE-IOR"
              "BOOLE-NAND" "BOOLE-NOR" "BOOLE-ORC1" "BOOLE-ORC2" "BOOLE-SET"
