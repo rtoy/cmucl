@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.7 1990/06/17 22:25:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.8 1990/06/18 14:47:11 wlott Exp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;
@@ -84,28 +84,28 @@
 ;;; to a descriptor passing location.
 ;;;
 (define-move-vop move-argument :move-argument
-  (base-character-reg) (any-reg))
+  (base-character-reg) (any-reg descriptor-reg))
 
 
 
 ;;;; Other operations:
 
 (define-vop (char-code)
-  (:args (ch :scs (base-character-reg) :target res))
-  (:results (res :scs (any-reg descriptor-reg)))
-  (:arg-types base-character)
   (:translate char-code)
   (:policy :fast-safe)
-  (:generator 0
+  (:args (ch :scs (base-character-reg) :target res))
+  (:arg-types base-character)
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:generator 1
     (inst sll res ch 2)))
 
 (define-vop (code-char)
+  (:translate code-char)
+  (:policy :fast-safe)
   (:args (code :scs (any-reg descriptor-reg) :target res))
   (:results (res :scs (base-character-reg)))
   (:result-types base-character)
-  (:translate code-char)
-  (:policy :fast-safe)
-  (:generator 0
+  (:generator 1
     (inst srl res code 2)))
 
 

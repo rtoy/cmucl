@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.18 1990/06/16 15:34:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.19 1990/06/18 14:47:07 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -124,7 +124,8 @@
        (:args (object :scs (descriptor-reg))
 	      (index :scs (any-reg zero immediate unsigned-immediate))
 	      (value :scs ,scs))
-       (:results (result :scs ,scs)))))
+       (:results (result :scs ,scs))
+       (:result-types ,element-type))))
 
 (def-data-vector-frobs simple-string byte-index
   base-character base-character-reg)
@@ -144,15 +145,18 @@
   (:note "raw-bits VOP")
   (:translate %raw-bits)
   (:results (value :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:variant 0 vm:other-pointer-type))
 
 (define-vop (set-raw-bits word-index-set)
   (:note "setf raw-bits VOP")
   (:translate (setf %raw-bits))
   (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg descriptor-reg immediate unsigned-immediate))
+	 (index :scs (any-reg zero immediate unsigned-immediate))
 	 (value :scs (unsigned-reg)))
+  (:arg-types * positive-fixnum unsigned-num)
   (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:variant 0 vm:other-pointer-type))
 
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.13 1990/06/17 22:25:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.14 1990/06/18 14:47:18 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -99,8 +99,9 @@
 
 (define-vop (sap-int)
   (:args (sap :scs (sap-reg) :target int))
-  (:results (int :scs (unsigned-reg)))
   (:arg-types system-area-pointer)
+  (:results (int :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:translate sap-int)
   (:policy :fast-safe)
   (:generator 1
@@ -108,7 +109,9 @@
 
 (define-vop (int-sap)
   (:args (int :scs (unsigned-reg) :target sap))
+  (:arg-types unsigned-num)
   (:results (sap :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:translate int-sap)
   (:policy :fast-safe)
   (:generator 1
@@ -124,6 +127,7 @@
 	 (offset :scs (signed-reg immediate)))
   (:arg-types system-area-pointer signed-num)
   (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:policy :fast-safe)
   (:generator 1
     (sc-case offset
@@ -139,6 +143,7 @@
   (:arg-types system-area-pointer system-area-pointer)
   (:policy :fast-safe)
   (:results (res :scs (signed-reg)))
+  (:result-types signed-num)
   (:generator 1
     (inst subu res ptr1 ptr2)))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.24 1990/06/17 22:26:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.25 1990/06/18 14:47:22 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -163,6 +163,7 @@
 
 (define-vop (dynamic-space-free-pointer)
   (:results (int :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:translate dynamic-space-free-pointer)
   (:policy :fast-safe)
   (:generator 1
@@ -170,6 +171,7 @@
 
 (define-vop (binding-stack-pointer-sap)
   (:results (int :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:translate binding-stack-pointer-sap)
   (:policy :fast-safe)
   (:generator 1
@@ -177,6 +179,7 @@
 
 (define-vop (control-stack-pointer-sap)
   (:results (int :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:translate control-stack-pointer-sap)
   (:policy :fast-safe)
   (:generator 1
@@ -189,6 +192,7 @@
   (:args (code :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:results (sap :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:generator 10
     (loadw ndescr code 0 vm:other-pointer-type)
     (inst srl ndescr vm:type-bits)

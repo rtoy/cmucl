@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.26 1990/06/17 22:24:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.27 1990/06/18 14:46:35 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -253,6 +253,7 @@
   (:args (arg :scs (signed-reg) :target shift))
   (:arg-types signed-num)
   (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift)
   (:generator 30
     (let ((loop (gen-label))
@@ -277,6 +278,7 @@
   (:args (arg :scs (unsigned-reg) :target shift))
   (:arg-types unsigned-num)
   (:results (res :scs (any-reg)))
+  (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift temp)
   (:generator 30
     (let ((loop (gen-label))
@@ -523,9 +525,11 @@
   (:args (shift :scs (signed-reg unsigned-reg))
 	 (prev :scs (unsigned-reg))
 	 (next :scs (unsigned-reg)))
+  (:arg-types tagged-num unsigned-num unsigned-num)
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
   (:temporary (:scs (unsigned-reg) :to (:result 0) :target result) res)
   (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:policy :fast-safe)
   (:generator 4
     (let ((done (gen-label)))
@@ -541,12 +545,15 @@
 (define-vop (32bit-logical)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg)))
+  (:arg-types unsigned-num unsigned-num)
   (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:policy :fast-safe))
 
 (define-vop (32bit-logical-not 32bit-logical)
   (:translate 32bit-logical-not)
   (:args (x :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
   (:generator 1
     (inst nor r x zero-tn)))
 
@@ -592,7 +599,7 @@
   (:variant vm:bignum-digits-offset vm:other-pointer-type)
   (:translate bignum::%bignum-set)
   (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg immediate zero unsigned-immediate))
+	 (index :scs (any-reg immediate zero negative-immediate))
 	 (value :scs (unsigned-reg)))
   (:arg-types t positive-fixnum unsigned-num)
   (:results (result :scs (unsigned-reg)))
