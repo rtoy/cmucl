@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.69 2001/09/25 21:24:39 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.70 2002/11/21 21:51:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1426,15 +1426,26 @@ compilation policy")
    start cont
    (if (or *converting-for-interpreter* (byte-compiling))
        `(%progv ,vars ,vals #'(lambda () ,@body))
-       (once-only ((n-save-bs '(%primitive current-binding-pointer)))
-	 `(unwind-protect
-	      (progn
-		(mapc #'(lambda (var val)
-			  (%primitive bind val var))
-		      ,vars
-		      ,vals)
-		,@body)
-	    (%primitive unbind-to-here ,n-save-bs))))))
+       (let ((bind (gensym "BIND"))
+	     (unbind (gensym "UNBIND")))
+	 (once-only ((n-save-bs '(%primitive current-binding-pointer)))
+	   `(unwind-protect
+		 (progn
+		   (labels ((,unbind (vars)
+			      (declare (optimize (speed 2) (debug 0)))
+			      (dolist (var vars)
+				(%primitive bind nil var)
+				(makunbound var)))
+			    (,bind (vars vals)
+			      (declare (optimize (speed 2) (debug 0)))
+			      (cond ((null vars))
+				    ((null vals) (,unbind vars))
+				    (t (%primitive bind (car vals) (car vars))
+				       (,bind (cdr vars) (cdr vals))))))
+		     (,bind ,vars ,vals))
+		   nil
+		   ,@body)
+	      (%primitive unbind-to-here ,n-save-bs)))))))
 
 
 ;;;; Non-local exit:
