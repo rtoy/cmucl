@@ -37,6 +37,7 @@
 ;;;
 ;;;    Make a function entry, filling in slots from the ENTRY-INFO.
 ;;;
+#+new-compiler
 (defun make-function-entry (entry code-obj object)
   (declare (type entry-info entry) (type core-object object))
   (let ((offset (label-position (entry-info-offset entry))))
@@ -60,6 +61,7 @@
 ;;;
 ;;;    Get the function for a function entry that has been dumped to core.
 ;;;
+#+new-compiler
 (defun core-function-or-lose (fun object)
   (declare (type clambda fun) (type core-object object))
   (let ((res (gethash (leaf-info fun) (core-object-entry-table object))))
@@ -71,6 +73,7 @@
 ;;;
 ;;;    Do "load-time" fixups on the code vector.
 ;;;
+#+new-compiler
 (defun do-core-fixups (code fixups)
   (declare (list fixups))
   (dolist (info fixups)
@@ -111,6 +114,7 @@
 ;;;    Dump a component to core.  We pass in the assembler fixups, code vector
 ;;; and node info.
 ;;;
+#+new-compiler
 (defun make-core-component (component segment length object)
   (declare (type component component)
 	   (type index length)
@@ -156,6 +160,7 @@
 ;;;    Call the top-level lambda function dumped for Entry, returning the
 ;;; values.
 ;;;
+#+new-compiler
 (defun core-call-top-level-lambda (entry object)
   (declare (type clambda entry) (type core-object object))
   (funcall (core-function-or-lose entry object)))
@@ -166,6 +171,7 @@
 ;;;    Backpatch all the DEBUG-INFOs dumped so far with the specified
 ;;; SOURCE-INFO list.
 ;;;
+#+new-compiler
 (defun fix-core-source-info (info object)
   (declare (type source-info info) (type core-object object))
   (let ((res (debug-source-for-info info)))
@@ -177,6 +183,7 @@
 
 ;;;; Code-instruction-streams
 
+#+new-compiler
 (defstruct (code-instruction-stream
 	    (:print-function %print-code-inst-stream)
 	    (:include stream
@@ -196,11 +203,13 @@
   current
   end)
 
+#+new-compiler
 (defun %print-code-inst-stream (code-inst-stream stream depth)
   (declare (ignore depth))
   (format stream "#<Code Instruction Stream for ~S>"
 	  (code-instruction-stream-code-object code-inst-stream)))
 
+#+new-compiler
 (defun code-inst-stream-sout (stream string start end)
   (let* ((start (or start 0))
 	 (end (or end (length string)))
@@ -216,6 +225,7 @@
 			 (* length vm:byte-bits))
     (setf (code-instruction-stream-current stream) new)))
 
+#+new-compiler
 (defun code-inst-stream-misc (stream method &optional arg1 arg2)
   (declare (ignore arg1 arg2))
   (case method
