@@ -282,7 +282,7 @@
 	((= i len))
       (setf (svref *eval-stack* i) nil)))
 
-  (let ((num (- (length *intepreted-function-cache*)
+  (let ((num (- (length *interpreted-function-cache*)
 		*interpreted-function-cache-minimum-size*)))
     (when (plusp num)
       (setq *interpreted-function-cache*
@@ -424,16 +424,13 @@
 	    name args (c::cont-num (c::node-cont node)))))
 
 
-;;; MAYBE-DO-FUNNY-FUNCTION -- Internal.
+;;; DO-FUNNY-FUNCTION -- Internal.
 ;;;
 ;;; This implements the intention of the virtual function name.  This is a
 ;;; macro because some of these actions must occur without a function call.
 ;;; For example, calling a dispatch function to implement special binding would
 ;;; be a no-op because returning from that function would cause the system to
 ;;; undo any special bindings it established.
-;;;
-;;; The otherwise case is calling a function known to the compiler, but the
-;;; interpreter doesn't do anything special with these calls.
 ;;;
 ;;; NOTE: update C:ANNOTATE-COMPONENT-FOR-EVAL and/or c::undefined-funny-funs
 ;;; if you add or remove branches in this routine.
@@ -442,10 +439,10 @@
 ;;; args, closure, block, and last-cont.  It also assumes a block named
 ;;; internal-apply-loop.
 ;;;
-(defmacro maybe-do-funny-function (funny-fun-name otherwise)
+(defmacro do-funny-function (funny-fun-name)
   (let ((name (gensym)))
     `(let ((,name ,funny-fun-name))
-       (case ,name
+       (ecase ,name
 	 (c::%special-bind
 	  (let ((value (eval-stack-pop))
 		(global-var (eval-stack-pop)))
@@ -576,8 +573,8 @@
 	  ;; c::entry branch of INTERNAL-APPLY-LOOP.
 	  (maybe-trace-funny-fun node ,name)
 	  (return-from internal-apply-loop
-		       (values :fell-through block node cont last-cont)))
-	 (t ,otherwise)))))
+		       (values :fell-through block node cont last-cont)))))))
+
 
 ;;; COMBINATION-NODE -- Internal.
 ;;;
@@ -602,6 +599,7 @@
 ;;;
 (defmacro combination-node (type)
   (let* ((kind (gensym))
+	 (fun (gensym))
 	 (lambda (gensym))
 	 (letp (gensym))
 	 (letp-bind (ecase type
@@ -617,20 +615,20 @@
 	     `(if ,letp
 		  (store-let-vars ,lambda frame-ptr)
 		  (do-combination :local ,lambda ,type))))))
-    `(let ((,kind (c::basic-combination-kind node)))
+    `(let ((,kind (c::basic-combination-kind node))
+	   (,fun (c::basic-combination-fun node)))
        (cond ((eq ,kind :full)
 	      (do-combination :full nil ,type))
 	     ((eq ,kind :local)
-	      (let* ((,lambda (c::ref-leaf
-			       (c::continuation-use
-				(c::basic-combination-fun node))))
+	      (let* ((,lambda (c::ref-leaf (c::continuation-use fun)))
 		     ,@letp-bind)
 		,local-branch))
+	     ((eq (c::continuation-info fun) :unused)
+	      (assert (typep ,kind 'c::function-info))
+	      (do-funny-function (c::continuation-function-name fun)))
 	     (t
 	      (assert (typep ,kind 'c::function-info))
-	      (maybe-do-funny-function
-	       (c::continuation-function-name (c::basic-combination-fun node))
-	       (do-combination :full nil ,type)))))))
+	      (do-combination :full nil ,type))))))
 
 
 (defun trace-eval (on)
