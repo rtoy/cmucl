@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.7 1994/07/05 16:10:16 hallgren Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.8 1994/10/24 20:06:27 ram Exp $
  *
  */
 
@@ -20,11 +20,11 @@
 #include "vars.h"
 #include "globals.h"
 #include "os.h"
+#include "interrupt.h"
 #include "arch.h"
 #include "gc.h"
 #include "monitor.h"
 #include "validate.h"
-#include "interrupt.h"
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
@@ -37,8 +37,10 @@
 
 /* SIGINT handler that invokes the monitor. */
 
-static void sigint_handler(int signal, int code, struct sigcontext *context)
+static void sigint_handler(HANDLER_ARGS)
 {
+    SAVE_CONTEXT();
+
     printf("\nSIGINT hit at 0x%08X\n", SC_PC(context));
     ldb_monitor();
 }
@@ -84,6 +86,9 @@ void main(int argc, char *argv[], char *envp[])
 
 #ifdef MACH
     mach_init();
+#endif
+#ifdef SVR4
+    tzset();
 #endif
 
     set_lossage_handler(ldb_monitor);
