@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.12 1998/12/20 04:30:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.13 1999/01/12 17:51:08 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -142,18 +142,24 @@
 
 (defun expand-defclass (name supers slots options)
   (declare (special *defclass-times* *boot-state* *the-class-structure-class*))
-  (setq supers  (copy-tree supers)
+  (setq supers  (nsubstitute 'standard-class 'lisp:standard-class
+			     (copy-tree supers))
 	slots   (copy-tree slots)
 	options (copy-tree options))
   (let ((metaclass 'standard-class))
+    ;; TBD - ANSI compliant class and slot option checking.
     (dolist (option options)
       (if (not (listp option))
-          (error "~S is not a legal defclass option." option)
+          (error 'simple-program-error
+		 :format-control "~S is not a legal defclass option."
+		 :format-arguments (list option))
           (when (eq (car option) ':metaclass)
             (unless (legal-class-name-p (cadr option))
-              (error "The value of the :metaclass option (~S) is not a~%~
-                      legal class name."
-                     (cadr option)))
+              (error 'simple-program-error
+		     :format-control 
+		     "The value of the :metaclass option (~S) is not a~%~
+		      legal class name."
+		     :format-arguments (list (cadr option))))
 	    #-cmu17
             (setq metaclass (cadr option))
 	    #+cmu17
