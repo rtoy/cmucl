@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/float.lisp,v 1.6 1998/03/04 16:42:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/float.lisp,v 1.7 1998/03/10 18:18:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,7 +114,6 @@
 	      :load-if (not (sc-is y single-reg double-reg))))
   (:results (y))
   (:note "float argument move")
-  (:temporary (:scs (any-reg) :from (:argument 0) :to (:result 0)) index)
   (:generator 1
     (sc-case y
       ((single-reg double-reg)
@@ -146,16 +145,16 @@
 		  :offset (tn-offset x)))
 (defun complex-double-reg-imag-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
-		  :offset (+ (tn-offset x) 2)))
+		  :offset (1+ (tn-offset x))))
 
 
 (define-move-function (load-complex-single 2) (vop x y)
   ((complex-single-stack) (complex-single-reg))
   (let ((real-tn (complex-single-reg-real-tn y)))
-    (ld-float (* (tn-offset x) word-bytes)) (current-nfp-tn vop) real-tn)
+    (ld-float (* (tn-offset x) word-bytes) (current-nfp-tn vop) real-tn))
   (let ((imag-tn (complex-single-reg-imag-tn y)))
     (ld-float (* (1+ (tn-offset x)) word-bytes) (current-nfp-tn vop)
-		imag-tn)))
+	      imag-tn)))
 
 (define-move-function (store-complex-single 2) (vop x y)
   ((complex-single-reg) (complex-single-stack))
@@ -868,7 +867,7 @@
 	(inst funop :copy x r-real)))
     (let ((r-imag (complex-double-reg-imag-tn r)))
       (unless (location= y r-imag)
-	(inst funop :copy y r-imag y)))))
+	(inst funop :copy y r-imag)))))
 
 
 (define-vop (complex-single-float-value)

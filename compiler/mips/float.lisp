@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.23 1998/03/04 16:41:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.24 1998/03/10 18:20:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -227,7 +227,7 @@
     (let ((real-tn (complex-double-reg-real-tn x)))
       (str-double real-tn nfp offset))
     (let ((imag-tn (complex-double-reg-imag-tn x)))
-      (str-double real-tn nfp (+ offset (* 2 word-bytes))))))
+      (str-double imag-tn nfp (+ offset (* 2 word-bytes))))))
 
 ;;;
 ;;; Complex float register to register moves.
@@ -278,18 +278,19 @@
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
+  #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:note "complex single float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm:complex-single-float-type
-			       vm:complex-single-float-size))
-     (let ((real-tn (complex-single-reg-real-tn x)))
-       (swc1 real-tn y (- (* vm:complex-single-float-real-slot
-			     vm:word-bytes)
-			  vm:other-pointer-type)))
-     (let ((imag-tn (complex-single-reg-imag-tn x)))
-       (swc1 imag-tn y (- (* vm:complex-single-float-imag-slot
-			     vm:word-bytes)
-			  vm:other-pointer-type)))))
+    (with-fixed-allocation (y pa-flag ndescr vm:complex-single-float-type
+			      vm:complex-single-float-size)
+      (let ((real-tn (complex-single-reg-real-tn x)))
+	(inst swc1 real-tn y (- (* vm:complex-single-float-real-slot
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+      (let ((imag-tn (complex-single-reg-imag-tn x)))
+	(inst swc1 imag-tn y (- (* vm:complex-single-float-imag-slot
+				   vm:word-bytes)
+				vm:other-pointer-type))))))
 ;;;
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
@@ -298,18 +299,19 @@
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
+  #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:note "complex double float to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y ndescr vm:complex-double-float-type
-			       vm:complex-double-float-size))
-     (let ((real-tn (complex-double-reg-real-tn x)))
-       (str-double real-tn y (- (* vm:complex-double-float-real-slot
-				   vm:word-bytes)
-				vm:other-pointer-type)))
-     (let ((imag-tn (complex-double-reg-imag-tn x)))
-       (str-double imag-tn y (- (* vm:complex-double-float-imag-slot
-				   vm:word-bytes)
-				vm:other-pointer-type)))))
+    (with-fixed-allocation (y pa-flag ndescr vm:complex-double-float-type
+			      vm:complex-double-float-size)
+      (let ((real-tn (complex-double-reg-real-tn x)))
+	(str-double real-tn y (- (* vm:complex-double-float-real-slot
+				    vm:word-bytes)
+				 vm:other-pointer-type)))
+      (let ((imag-tn (complex-double-reg-imag-tn x)))
+	(str-double imag-tn y (- (* vm:complex-double-float-imag-slot
+				    vm:word-bytes)
+				 vm:other-pointer-type))))))
 ;;;
 (define-move-vop move-from-complex-double :move
   (complex-double-reg) (descriptor-reg))
@@ -368,9 +370,9 @@
       (complex-single-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-single-reg-real-tn x)))
-	   (inst stc1 real-tn nfp offset))
+	   (inst swc1 real-tn nfp offset))
 	 (let ((imag-tn (complex-single-reg-imag-tn x)))
-	   (inst stc1 imag-tn nfp (+ offset word-bytes))))))))
+	   (inst swc1 imag-tn nfp (+ offset word-bytes))))))))
 (define-move-vop move-complex-single-float-argument :move-argument
   (complex-single-reg descriptor-reg) (complex-single-reg))
 
