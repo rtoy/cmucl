@@ -30,21 +30,26 @@
 ;;; Generate-Code  --  Interface
 ;;;
 (defun generate-code (component)
-  (do-ir2-blocks (block component)
-    (let ((1block (ir2-block-block block)))
-      (when (eq (block-info 1block) block)
-	(emit-label (block-label 1block))))
+  (let ((prev-env nil))
+    (do-ir2-blocks (block component)
+      (let* ((1block (ir2-block-block block))
+	     (lambda (block-lambda 1block)))
+	(when (and (eq (block-info 1block) block) lambda)
+	  (emit-label (block-label 1block))
+	  (let ((env (lambda-environment lambda)))
+	    (unless (eq env prev-env)
+	      (let ((lab (gen-label)))
+		(setf (ir2-environment-elsewhere-start (environment-info env))
+		      lab)
+		(emit-label-elsewhere lab))
+	      (setq prev-env env)))))
 
-    (do ((vop (ir2-block-start-vop block) (vop-next vop)))
-	((null vop))
-      (let ((gen (vop-info-generator-function (vop-info vop))))
-	(if gen 
-	    (funcall gen vop)
-	    (format t "Missing generator for ~S.~%"
-		    (template-name (vop-info vop)))))))
+      (do ((vop (ir2-block-start-vop block) (vop-next vop)))
+	  ((null vop))
+	(let ((gen (vop-info-generator-function (vop-info vop))))
+	  (if gen 
+	      (funcall gen vop)
+	      (format t "Missing generator for ~S.~%"
+		      (template-name (vop-info vop))))))))
 
   (finish-assembly))
-
-
-;;;; Post-assembly:
-;;;
