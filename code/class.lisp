@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.49 2002/09/19 17:51:14 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.50 2002/11/13 17:45:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -395,7 +395,7 @@
 		  name (class-name old) (class-name new)))))
        (:primitive
 	(error "Illegal to redefine standard type ~S." name))
-       (xdefined
+       (:defined
 	(warn "Redefining DEFTYPE type to be a class: ~S."
 	      name)
 	(setf (info type expander name) nil)))
