@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.46 1998/03/21 08:12:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.47 1998/04/06 02:44:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -332,8 +332,7 @@
 ;;;    Do type test from a class cell, allowing forward reference and
 ;;; redefinition.
 ;;;
-;;; 2-Feb-97 add third arg optional for back compatibility and boot
-(defun class-cell-typep (obj-layout cell &optional object)
+(defun class-cell-typep (obj-layout cell object)
   (let ((class (class-cell-class cell)))
     (unless class
       (error "Class has not yet been defined: ~S" (class-cell-name cell)))
