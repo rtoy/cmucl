@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.18 2002/09/07 13:16:49 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.19 2002/10/02 17:26:12 toy Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -114,7 +114,8 @@
 	    (dolist (table-entry entry)
 	      (setf (gethash (car table-entry) new-table-table)
 		    (cdr table-entry)))
-	    (setf (gethash ref *pv-key-to-pv-table-table*) new-table-table)))
+	    (setf (gethash ref *pv-key-to-pv-table-table*) new-table-table)
+	    (setq entry new-table-table)))
 	(when (listp entry)
 	  (if (null table-entry)
 	      (let ((new (cons pv-table pv-offset)))
