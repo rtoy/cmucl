@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.22 1991/09/13 06:21:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.23 1991/09/13 06:24:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.22 1991/09/13 06:21:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.23 1991/09/13 06:24:09 wlott Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -1345,10 +1345,10 @@
 		     (write-string "Bogus Code Object" stream))
 		    (t
 		     (write-string "Code Object" stream)
-		     (when dinfo)
-		     (write-char #\space stream)
-		     (output-object (c::compiled-debug-info-name dinfo)
-				    stream)))))
+		     (when dinfo
+		       (write-char #\space stream)
+		       (output-object (c::compiled-debug-info-name dinfo)
+				      stream))))))
 	   ((#.vm:function-header-type #.vm:closure-function-header-type)
 	    (output-function-object object stream))
 	   (#.vm:return-pc-header-type
