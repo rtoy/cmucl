@@ -1,4 +1,4 @@
-;;; -*- Mode: completion; Log: debug.log; Package: debug-internals -*-
+;;; -*- Mode: completion; Log: code.log; Package: debug-internals -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -32,11 +32,11 @@
 	  frame-code-location eval-in-frame return-from-frame frame-catches
 	  frame-number frame frame-p
 
-	  do-blocks debug-function-lambda-list do-debug-function-variables
-	  debug-function-symbol-variables ambiguous-debug-variables
-	  preprocess-for-eval function-debug-function debug-function-function
-	  debug-function-kind debug-function-name debug-function
-	  debug-function-p
+	  do-blocks debug-function-lambda-list debug-variable-info-available
+	  do-debug-function-variables debug-function-symbol-variables
+	  ambiguous-debug-variables preprocess-for-eval function-debug-function
+	  debug-function-function debug-function-kind debug-function-name
+	  debug-function debug-function-p
 
 	  do-debug-block-locations debug-block-successors debug-block
 	  debug-block-p debug-block-elsewhere-p
@@ -326,7 +326,7 @@
   ;;
   ;; Cached Debug-variable information.  (unexported).
   ;; These are sorted by their name.
-  (debug-vars :unparsed :type (or simple-vector (member :unparsed)))
+  (debug-vars :unparsed :type (or simple-vector null (member :unparsed)))
   ;;
   ;; Cached Debug-block information.  This is nil when we have tried to parse
   ;; the packed binary info, but none is available.
@@ -550,19 +550,15 @@
 (proclaim '(inline pointer+offset pointer- stack-ref env-valid-p
 		   cstack-pointer-valid-p %set-stack-ref))
 
+;;;
+;;; These are only used by stack parsing and making frame objects.
+;;;
+
 (defun pointer- (next previous)
   (system:%primitive pointer- next previous))
 
 (defun pointer+offset (x y)
   (system:%primitive sap+ x (ash y 2)))
-
-(defun stack-ref (s n)
-  (system:%primitive read-control-stack (pointer+offset s n)))
-
-(defun %set-stack-ref (s n value)
-  (system:%primitive write-control-stack (pointer+offset s n) value))
-;;;
-(defsetf stack-ref %set-stack-ref)
 
 (defun env-valid-p (env)
   (and (functionp env)
@@ -574,6 +570,19 @@
        (not (system:%primitive pointer< x
 			       (system:%primitive make-immediate-type 0
 						  system:%control-stack-type)))))
+
+
+;;;
+;;; STACK-REF needs to exist on MIPS and future implementations.
+;;;
+
+(defun stack-ref (s n)
+  (system:%primitive read-control-stack (pointer+offset s n)))
+
+(defun %set-stack-ref (s n value)
+  (system:%primitive write-control-stack (pointer+offset s n) value))
+;;;
+(defsetf stack-ref %set-stack-ref)
 
 
 ;;; These are the names of all the functions that the system could have called
@@ -743,35 +752,6 @@
 		 (error "Escaping frame ENV invalid?"))))
 	(values env fp nil))))
 
-#|
-;;; FP-ENV -- Internal.
-;;;
-;;; This takes a frame pointer and returns its saved environment, taking care
-;;; if fp points to an escape frame.  As multiple values, this returns the
-;;; environment, the appropriate frame pointer for the environment, and whether
-;;; fp referenced an escape.  If fp is an escape frame, then we return fp as
-;;; the last value for convenience in accessing data saved in the escape frame.
-;;;
-(defun fp-env (fp)
-  (let ((env (stack-ref fp c::env-save-offset)))
-    (if (eql env 0)
-	;; Get the env of the interrupted frame.
-	(let ((env (escape-register fp c::env-offset)))
-	  (cond ((eql (system:%primitive get-type env) system:%trap-type)
-		 ;; Just ignore these for frame handling.
-		 )
-		((env-valid-p env)
-		 (values env
-			 ;; This is valid since the escape frame must be
-			 ;; preceded by some frame.
-			 (stack-ref fp c::old-fp-save-offset)
-			 fp))
-		(t
-		 (error "Escaping frame ENV invalid?"))))
-	(values env fp nil))))
-
-|#
-
 ;;;
 ;;; Frame utilities.
 ;;;
@@ -899,10 +879,12 @@
   (let ((vars (gensym))
 	(i (gensym)))
     `(let ((,vars (debug-function-debug-variables ,debug-function)))
-       (declare (simple-vector ,vars))
-       (dotimes (,i (length ,vars) ,result)
-	 (let ((,var (svref ,vars ,i)))
-	   ,@body)))))
+       (declare (type (or null simple-vector) ,vars))
+       (if ,vars
+	   (dotimes (,i (length ,vars) ,result)
+	     (let ((,var (svref ,vars ,i)))
+	       ,@body))
+	   ,result))))
 
 ;;; DEBUG-FUNCTION-FUNCTION -- Public.
 ;;;
@@ -951,6 +933,12 @@
     (interpreted-debug-function
      (error "We don't debug interpreted functions now."))))
 
+;;; DEBUG-VARIABLE-INFO-AVAILABLE -- Public.
+;;;
+(defun debug-variable-info-available (debug-function)
+  "Returns whether there is any variable information for debug-function."
+  (not (not (debug-function-debug-variables debug-function))))
+
 ;;; DEBUG-FUNCTION-SYMBOL-VARIABLES -- Public.
 ;;;
 (defun debug-function-symbol-variables (debug-function symbol)
@@ -980,28 +968,29 @@
     limited to the availability of variable information in debug-function; for
     example, possibly debug-function only knows about its arguments."
   (declare (simple-string name-prefix-string))
-  (let* ((variables (debug-function-debug-variables debug-function))
-	 (len (length variables))
-	 (prefix-len (length name-prefix-string))
-	 (pos (find-variable name-prefix-string variables len))
-	 (res nil))
-    (declare (simple-vector variables))
-    (when pos
-      ;; Find names from pos to variable's len that contain prefix.
-      (do ((i pos (1+ i)))
-	  ((= i len))
-	(let* ((var (svref variables i))
-	       (name (debug-variable-name var))
-	       (name-len (length name)))
-	  (declare (simple-string name))
-	  (when (/= (or (string/= name-prefix-string name
-				  :end1 prefix-len :end2 name-len)
-			prefix-len)
-		    prefix-len)
-	    (return))
-	  (push var res)))
-      (setq res (nreverse res)))
-    res))
+  (let ((variables (debug-function-debug-variables debug-function)))
+    (declare (type (or null simple-vector) variables))
+    (if variables
+	(let* ((len (length variables))
+	       (prefix-len (length name-prefix-string))
+	       (pos (find-variable name-prefix-string variables len))
+	       (res nil))
+	  (when pos
+	    ;; Find names from pos to variable's len that contain prefix.
+	    (do ((i pos (1+ i)))
+		((= i len))
+	      (let* ((var (svref variables i))
+		     (name (debug-variable-name var))
+		     (name-len (length name)))
+		(declare (simple-string name))
+		(when (/= (or (string/= name-prefix-string name
+					:end1 prefix-len :end2 name-len)
+			      prefix-len)
+			  prefix-len)
+		  (return))
+		(push var res)))
+	    (setq res (nreverse res)))
+	  res))))
 
 ;;; FIND-VARIABLE -- Internal.
 ;;;
@@ -1020,75 +1009,6 @@
 			  (and (>= y-len name-len)
 			       (string= x y :end1 name-len :end2 name-len))))
 	      :end (or end (length variables)))))
-
-#|
-    (multiple-value-bind (pos found)
-			 (find-variable name-prefix-string variables len)
-      (declare (ignore found))
-      ;;
-      ;; Find names from pos to variable's len that contain prefix.
-      (do ((i pos (1+ i)))
-	  ((= i len))
-	(let* ((var (svref variables i))
-	       (name (debug-variable-name var))
-	       (name-len (length name)))
-	  (declare (simple-string name))
-	  (when (/= (or (string/= name-prefix-string name
-				  :end1 prefix-len :end2 name-len)
-			prefix-len)
-		    prefix-len)
-	    (return))
-	  (push var res)))
-      (setq res (nreverse res))
-      ;;
-      ;; Find names from pos to initial variable containing prefix.
-      (do ((i (1- pos) (1- i)))
-	  ((minusp i))
-	(let* ((var (svref variables i))
-	       (name (debug-variable-name var))
-	       (name-len (length name)))
-	  (declare (simple-string name))
-	  (when (/= (or (string/= name-prefix-string name
-				  :end1 prefix-len :end2 name-len)
-			prefix-len)
-		    prefix-len)
-	    (return))
-	  (push var res))))
-
-;;; FIND-VARIABLE -- Internal.
-;;;
-;;; This does a binary search on variables for the one containing name as an
-;;; initial substring.  End is the length of variables if supplied.  This
-;;; returns two values: the position of the entry, and whether it was found.
-;;; When it wasn't found, the position is where to insert a new entry.
-;;;
-(defun find-variable (name variables &optional end)
-  (declare (simple-vector variables)
-	   (simple-string name))
-  (let ((low 0)
-	(high (or end (length variables)))
-	(mid 0)
-	(name-len (length name)))
-    (declare (fixnum low high mid name-len))
-    (loop
-      (when (< high low) (return (values low nil)))
-      (setf mid (+ (the fixnum (ash (the fixnum (- high low)) -1)) low))
-      (let* ((test-name (debug-variable-name (svref variables mid)))
-	     (test-name-len (length test-name)))
-	(declare (simple-string test-name) (fixnum test-name-len))
-	(let ((res (string/= name test-name
-			     :end1 name-len :end2 test-name-len)))
-	  (declare (type (or null fixnum) res))
-	  (cond ((null res)
-		 (return (values mid t)))
-		((= res name-len)
-		 (setf high (1- mid)))
-		((= res test-name-len)
-		 (setf low (1+ mid)))
-		((char< (schar name res) (schar test-name res))
-		 (setf high (1- mid)))
-		(t (setf low (1+ mid)))))))))
-|#
 
 ;;; DEBUG-FUNCTION-LAMBDA-LIST -- Public.
 ;;;
@@ -1140,6 +1060,8 @@
 ;;; DEBUG-FUNCTION-LAMBDA-LIST calls this when a compiled-debug-function has no
 ;;; lambda-list information cached.  It returns the lambda-list as the first
 ;;; value and whether there was any argument information as the second value.
+;;; Therefore, nil and t means there were no arguments, but nil and nil means
+;;; there was no argument information.
 ;;;
 (defun compiled-debug-function-lambda-list (debug-function)
   (let ((args (c::compiled-debug-function-arguments
@@ -1152,7 +1074,7 @@
 	      (i 0)
 	      (len (length args))
 	      (res nil))
-	  (declare (simple-vector vars))
+	  (declare (type (or null simple-vector) vars))
 	  (loop
 	    (when (>= i len) (return))
 	    (let ((ele (aref args i)))
@@ -1299,11 +1221,10 @@
 ;;;
 (defun parse-debug-blocks (debug-function)
   (let* ((debug-fun (compiled-debug-function-compiler-debug-fun debug-function))
-	 (var-count (length (the simple-vector (debug-function-debug-variables
-						debug-function))))
+	 (var-count (length (debug-function-debug-variables debug-function)))
 	 (blocks (c::compiled-debug-function-blocks debug-fun))
 	 ;; 8 is a hard-wired constant in the compiler for the element size of
-	 ;; of the packed binary form of the blocks data.
+	 ;; the packed binary representation of the blocks data.
 	 (live-set-len (ceiling var-count 8))
 	 (tlf-number (c::compiled-debug-function-tlf-number debug-fun)))
     (unless blocks (return-from parse-debug-blocks nil))
@@ -1358,8 +1279,10 @@
 
 ;;; DEBUG-FUNCTION-DEBUG-VARIABLES -- Internal Interface.
 ;;;
-;;; The argument is a debug internals structure.  The resulting vector may be
-;;; empty.
+;;; The argument is a debug internals structure.  This returns nil if there is
+;;; no variable information.  It returns an empty simple-vector if there were
+;;; no locals in the function.  Otherwise it returns a simple-vector of
+;;; debug-variables.
 ;;;
 (defun debug-function-debug-variables (debug-function)
   (etypecase debug-function
@@ -1382,7 +1305,10 @@
 	 (packed-vars (c::compiled-debug-function-variables debug-fun))
 	 (default-package (c::compiled-debug-info-package
 			   (debug-function-debug-info debug-function))))
-    (when (or (not packed-vars) (zerop (length packed-vars)))
+    (unless packed-vars
+      (return-from parse-debug-variables nil))
+    (when (zerop (length packed-vars))
+      ;; Return a simple-vector not whatever packed-vars may be.
       (return-from parse-debug-variables '#()))
     (let ((i 0)
 	  (len (length packed-vars)))
