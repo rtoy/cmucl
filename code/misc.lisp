@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.4 1990/10/17 03:38:02 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.5 1990/10/23 14:44:57 wlott Exp $
 ;;;
 ;;; Assorted miscellaneous functions for Spice Lisp.
 ;;;
@@ -55,7 +55,7 @@
 		 (info random-documentation stuff name))))))
   string)
 
-(defvar *features* '(:common :cmu :mach :decstation-3100 :pmax :new-compiler)
+(defvar *features* '(:common :cmu :mach :new-compiler)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 
