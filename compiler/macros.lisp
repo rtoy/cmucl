@@ -697,7 +697,8 @@
   `(let ((*free-variables* (make-hash-table :test #'eq))
 	 (*free-functions* (make-hash-table :test #'equal))
 	 (*constants* (make-hash-table :test #'equal))
-	 (*source-paths* (make-hash-table :test #'eq)))
+	 (*source-paths* (make-hash-table :test #'eq))
+	 (*failed-optimizations* (make-hash-table :test #'eq)))
      ,@forms))
 
 
