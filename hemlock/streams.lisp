@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.6 1992/02/15 01:02:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.7 1993/02/26 08:49:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,90 +165,13 @@
     (push mark (line-marks start-line)))
   stream)
 
-(defun region-readline (stream eof-errorp eof-value)
-  (close-line)
-  (let ((mark (hemlock-region-stream-mark stream))
-	(end (region-end (hemlock-region-stream-region stream))))
-    (cond ((mark>= mark end)
-	   (if eof-errorp
-	       (error "~A hit end of file." stream)
-	       (values eof-value nil)))
-	  ((eq (mark-line mark) (mark-line end))
-	   (let* ((limit (mark-charpos end))
-		  (charpos (mark-charpos mark))
-		  (dst-end (- limit charpos))
-		  (result (make-string dst-end)))
-	     (declare (simple-string result))
-	     (%sp-byte-blt (line-chars (mark-line mark)) charpos
-			   result 0 dst-end)
-	     (setf (mark-charpos mark) limit)
-	     (values result t)))
-	  ((= (mark-charpos mark) 0)
-	   (let* ((line (mark-line mark))
-		  (next (line-next line)))
-	     (always-change-line mark next)
-	     (values (line-chars line) nil)))
-	  (t
-	   (let* ((line (mark-line mark))
-		  (chars (line-chars line))
-		  (next (line-next line))
-		  (charpos (mark-charpos mark))
-		  (dst-end (- (length chars) charpos))
-		  (result (make-string dst-end)))
-	     (declare (simple-string chars result))
-	     (%sp-byte-blt chars charpos result 0 dst-end)
-	     (setf (mark-charpos mark) 0)
-	     (always-change-line mark next)
-	     (values result nil))))))
-
 (defun region-in (stream eof-errorp eof-value)
-  (close-line)
-  (let* ((mark (hemlock-region-stream-mark stream))
-	 (charpos (mark-charpos mark))
-	 (line (mark-line mark))
-	 (chars (line-chars line))
-	 (length (length chars))
-	 (last (region-end (hemlock-region-stream-region stream)))
-	 (last-line (mark-line last))
-	 (buffer (lisp::stream-in-buffer stream))
-	 (start 0)
-	 (len 0))
-    (declare (fixnum length charpos start len)
-	     (simple-string chars))
-    (cond 
-     ((eq line last-line)
-      (let ((last-charpos (mark-charpos last)))
-	(setq len (- last-charpos charpos))
-	(cond
-	 ((>= charpos last-charpos)
-	  (if eof-errorp
-	      (error "~A hit end of file." stream) 
-	      (return-from region-in eof-value)))
-	 ((> len lisp::in-buffer-length)       
-	  (%sp-byte-blt chars charpos buffer 0 lisp::in-buffer-length)
-	  (setq start 0  len lisp::in-buffer-length))
-	 (t
-	  (setq start (- lisp::in-buffer-length len))
-	  (%sp-byte-blt chars charpos buffer start lisp::in-buffer-length)))))
-     ((line> line last-line)
-      (if eof-errorp
-	  (error "~a hit end of file." stream) 
-	  (return-from region-in eof-value)))
-     (t
-      (setq len (- length charpos))
-      (cond
-       ((< len lisp::in-buffer-length)
-	(let ((end (1- lisp::in-buffer-length)))
-	  (setq start (- lisp::in-buffer-length len 1))
-	  (%sp-byte-blt chars charpos buffer start end)
-	  (setf (schar buffer end) #\newline))
-	(incf len))
-       (t
-	(%sp-byte-blt chars charpos buffer 0 lisp::in-buffer-length)
-	(setq start 0  len lisp::in-buffer-length)))))
-    (setf (lisp::stream-in-index stream) (1+ start))
-    (character-offset mark len)
-    (schar buffer start)))
+  (let ((mark (hemlock-region-stream-mark stream)))
+    (cond ((mark< mark
+		  (region-end (hemlock-region-stream-region stream)))
+	   (prog1 (next-character mark) (mark-after mark)))
+	  (eof-errorp (error "~A hit end of file." stream)) 
+	  (t eof-value))))
 
 (defun region-misc (stream operation &optional arg1 arg2)
   (case operation
