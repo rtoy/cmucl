@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.38 1999/04/30 15:19:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.39 1999/09/09 16:31:08 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1835,7 +1835,10 @@
 
 ;; FreeBSD wants C language symbols prefixed with "_" including all the
 ;; syscalls and Unix library things. Linux doesn't or maybe does
-;; depending on things I don't know about yet?
+;; depending on things I don't know about yet? FreeBSD version 3
+;; is ELF based and looks more like the other systems.
+;; Maybe these x86 hacks can be fixed when the non-elf's are obsoleted.
+
 (defun lookup-maybe-prefix-foreign-symbol (name)
   (lookup-foreign-symbol
    (concatenate 'string
@@ -1852,9 +1855,10 @@
 		       ""
 		       "_"))
 		  (#.c:x86-fasl-file-implementation
-		   (if (c:backend-featurep :freebsd)
-		       "_" ; FreeBSD
-		       "")) ; Linux
+		   (if (and (c:backend-featurep :freebsd)
+			    (not (c:backend-featurep :elf)))
+		       "_" ; older FreeBSD
+		       "")) ; Linux and FreeBSD V3+
 		  )
 		name)))
 
