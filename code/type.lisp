@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.47 2002/12/04 17:25:55 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.48 2002/12/07 16:54:54 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1060,6 +1060,13 @@
 			       :list-first t)
 		  (values t t)
 		  (values nil nil))))
+	   ((and (consp hairy-spec)
+		 (equal hairy-spec '(satisfies keywordp))
+		 (type= type2 (specifier-type 'symbol)))
+	    ;; A gross hack to make (subtypep 'keyword 'symbol) work.
+	    ;; Perhaps we should think about implementing
+	    ;; intersection-type that SBCL uses for these kinds of things.
+	    (values t t))
 	   ((and (consp hairy-spec) (eq (car hairy-spec) 'not))
 	    ;; You may not believe this. I couldn't either. But then I
 	    ;; sat down and drew lots of Venn diagrams. Comments
@@ -2096,6 +2103,10 @@
 ;;;
 (define-type-method (member :complex-subtypep-arg2) (type1 type2)
   (cond ((not (type-enumerable type1)) (values nil t))
+	((type= type2 (specifier-type 'null))
+	 ;; Nothing is a subtype of NULL, except NULL, which is
+	 ;; handled elsewhere.
+	 (values nil t))
 	((types-intersect type1 type2) (values nil nil))
 	(t
 	 (values nil t))))
