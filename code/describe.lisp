@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.9 1991/02/08 13:32:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.10 1991/05/23 17:02:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -250,8 +250,10 @@
 
 (defun describe-function-compiled (x macro-p)
   (let ((args (%function-header-arglist x)))
-    (describe-function-arg-list
-     *current-describe-object* (string= args "()") (write-string args)))
+    (if args
+	(describe-function-arg-list
+	 *current-describe-object* (string= args "()") (write-string args))
+	(format t "~&No argument information available.")))
 
   (unless macro-p
     (let ((name (%function-header-name x)))
