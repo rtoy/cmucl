@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.41 1992/02/14 23:46:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.42 1992/02/24 05:52:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,22 +99,28 @@
 
 ;;; Load the compiler.
 #-no-compiler
-(load "c:loadcom.lisp")
-#-no-compiler
-;;; Depends on backend definition for object format info...
-(load "code:room")
-#-no-compiler
-(set 'compiler-version
-     (concatenate 'string compiler-version
-		  "(" *lisp-implementation-version* ")"))
-#-no-compiler
 (progn
+  (load "c:loadcom.lisp")
+  (set 'compiler-version
+       (concatenate 'string compiler-version
+		    "(" *lisp-implementation-version* ")"))
   (setq *info-environment*
 	(list* (make-info-environment)
 	       (compact-info-environment (first *info-environment*)
 					 :name "Compiler")
 	       (rest *info-environment*)))
+  (load "c:loadbackend.lisp")
+  (setq *info-environment*
+	(list* (make-info-environment)
+	       (compact-info-environment
+		(first *info-environment*)
+		(concatenate 'string (c:backend-name c:*backend*) " backend"))
+	       (rest *info-environment*)))
   (purify :root-structures '(compile-file)))
+
+#-no-compiler
+;;; Depends on backend definition for object format info...
+(load "code:room")
 
 ;;; The pretty printer is part of the kernel core, but we can't turn in on
 ;;; until after the compiler is loaded because it compiles some lambdas
