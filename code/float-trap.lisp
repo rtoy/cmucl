@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.18 2002/01/13 18:25:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.19 2002/01/14 21:25:52 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,6 +49,7 @@
 	(cons :positive-infinity float-round-to-positive)
 	(cons :negative-infinity float-round-to-negative)))
 
+#+x86
 (defconstant precision-control-alist
   (list (cons :24-bit float-precision-24-bit)
 	(cons :53-bit float-precision-53-bit)
