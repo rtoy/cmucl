@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.18 1993/08/12 19:58:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.19 1993/08/12 20:28:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -507,7 +507,7 @@
 	  (inits `(setq ,n-miss 0))
 	  (forms `(defvar ,n-probe))
 	  (forms `(defvar ,n-miss))
-	  (forms `(declaim (type index ,n-miss ,n-probe)))))
+	  (forms `(declaim (fixnum ,n-miss ,n-probe)))))
 
       (let ((fun-name (symbolicate name "-CACHE-LOOKUP")))
 	(inlines fun-name)
