@@ -36,6 +36,7 @@
 	  assoc assoc-if assoc-if-not
 	  rassoc rassoc-if rassoc-if-not))
 
+
 (proclaim '(maybe-inline
 	    tree-equal list-length nth %setnth nthcdr last make-list append
 	    copy-list copy-alist copy-tree revappend nconc nreconc butlast
@@ -291,35 +292,41 @@
        (result y (cons (car top) result)))
       ((endp top) result)))
 
-;;; NCONC finds the first non-null list, so it can make splice point
-;;; to a cons.  After finding the first cons element, it holds it in
-;;; a result variable while running down successive elements tacking
-;;; them together.  While tacking lists together, if we encounter a
-;;; null list, we set the previous list's last cdr to nil just in case
-;;; it wasn't already nil, and it could have been dotted while the null
-;;; list was the last argument to NCONC.  The manipulation of splice (that
-;;; is starting it out on a first cons, setting LAST of splice, and
-;;; setting splice to ele) inherently handles (nconc x x), and it avoids
-;;; running down the last argument to NCONC which allows the last argument
-;;; to be circular.
-;;; 
+;;; NCONC finds the first non-null list, so it can make splice point to a cons.
+;;; After finding the first cons element, it holds it in a result variable
+;;; while running down successive elements tacking them together.  While
+;;; tacking lists together, if we encounter a null list, we set the previous
+;;; list's last cdr to nil just in case it wasn't already nil, and it could
+;;; have been dotted while the null list was the last argument to NCONC.  The
+;;; manipulation of splice (that is starting it out on a first cons, setting
+;;; LAST of splice, and setting splice to ele) inherently handles (nconc x x),
+;;; and it avoids running down the last argument to NCONC which allows the last
+;;; argument to be circular.
+;;;
 (defun nconc (&rest lists)
   "Concatenates the lists given as arguments (by changing them)"
   (do ((top lists (cdr top)))
       ((null top) nil)
-    (typecase (car top)
-      (cons
-       (let* ((result (car top))
-	      (splice result))
-	 (dolist (ele (cdr top))
-	   (typecase ele
-	     (cons (rplacd (last splice) ele)
-		   (setf splice ele))
-	     (null (rplacd (last splice) nil))
-	     (t (error "Argument is not a list -- ~S." ele))))
-	 (return result)))
-      (null)
-      (t (error "Argument is not a list -- ~S." (car top))))))
+    (let ((top-of-top (car top)))
+      (typecase top-of-top
+	(cons
+	 (let* ((result top-of-top)
+		(splice result))
+	   (do ((elements (cdr top) (cdr elements)))
+	       ((endp elements))
+	     (let ((ele (car elements)))
+	       (typecase ele
+		 (cons (rplacd (last splice) ele)
+		       (setf splice ele))
+		 (null (rplacd (last splice) nil))
+		 (atom (if (cdr elements)
+			   (error "Argument is not a list -- ~S." ele)
+			   (rplacd (last splice) ele)))
+		 (t (error "Argument is not a list -- ~S." ele)))))
+	   (return result)))
+	(null)
+	(atom (return top-of-top))
+	(t (error "Argument is not a list -- ~S." top-of-top))))))
 
 (defun nreconc (x y)
   "Returns (nconc (nreverse x) y)"
@@ -553,7 +560,7 @@
       (s tree))))
 
 
-;;; Functions for using lists as sets
+;;;; Functions for using lists as sets
 
 (defun member (item list &key (key #'identity) (test #'eql testp)
 		    (test-not nil notp))
@@ -595,40 +602,47 @@
 	  (member (funcall key item) list :test test :key key))
       list
       (cons item list)))
-
-(defun union (list1 list2  &key (key #'identity)
-			       (test #'eql testp) (test-not nil notp))
+
+
+;;; UNION -- Public.
+;;;
+;;; This function assumes list2 is the result, adding to it from list1 as
+;;; necessary.  List2 must initialize the result value, so the call to MEMBER
+;;; will apply the test to the elements from list1 and list2 in the correct
+;;; order.
+;;;
+(defun union (list1 list2 &key
+		    (key #'identity) (test #'eql testp) (test-not nil notp))
   "Returns the union of list1 and list2."
-  (if (and testp notp)
-      (error "Test and test-not both supplied."))
-  (let ((res list1))
-    (dolist (elt list2)
-      (if (not (with-set-keys (member (funcall key elt) list1)))
-	  (push elt res)))
+  (when (and testp notp) (error "Test and test-not both supplied."))
+  (let ((res list2))
+    (dolist (elt list1)
+      (unless (with-set-keys (member (funcall key elt) list2))
+	(push elt res)))
     res))
 
-;;; Destination and source are setf-able and many-evaluable.
-;;; Sets the source to the cdr, and "conses" the 1st elt of source to destination.
+;;; Destination and source are setf-able and many-evaluable.  Sets the source
+;;; to the cdr, and "conses" the 1st elt of source to destination.
+;;;
 (defmacro steve-splice (source destination)
   `(let ((temp ,source))
-     (setf ,source (Cdr ,source)
+     (setf ,source (cdr ,source)
 	   (cdr temp) ,destination
 	   ,destination temp)))
 
-(Defun nunion (list1 list2 &key (key #'identity)
+(defun nunion (list1 list2 &key (key #'identity)
 		     (test #'eql testp) (test-not nil notp))
   "Destructively returns the union list1 and list2."
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (let ((res list1))
-    (do () ((endp list2))
-      (if (not (with-set-keys (member (funcall key (car list2)) list1)))
-	  (steve-splice list2 res)
-	  (Setq list2 (cdr list2))))
+  (let ((res list2))
+    (do ()
+	((endp list1))
+      (if (not (with-set-keys (member (funcall key (car list1)) list2)))
+	  (steve-splice list1 res)
+	  (setf list1 (cdr list1))))
     res))
   
-
-
 
 (defun intersection (list1 list2  &key (key #'identity)
 			       (test #'eql testp) (test-not nil notp))
@@ -679,7 +693,7 @@
 	  (setq list1 (cdr list1))))
     res))
 
-
+
 (defun set-exclusive-or (list1 list2 &key (key #'identity)
 			       (test #'eql testp) (test-not nil notp))
   "Returns new list of elements appearing exactly once in list1 and list2."
@@ -735,6 +749,28 @@
       (return-from subsetp nil)))
   T)
 
+
+
+;;;; :key arg optimization to save funcall of IDENTITY.
+
+;;; We should move this earlier in this file and make other functions use it as
+;;; well.
+;;;
+
+;;; APPLY-KEY saves us a function call sometimes.
+;;;    This is not in and (eval-when (compile eval) ...
+;;;    because this is used in seq.lisp and sort.lisp.
+;;;
+(defmacro apply-key (key element)
+  `(if ,key
+       (funcall ,key ,element)
+       ,element))
+
+(defun identity (thing)
+  "Returns what was passed to it."
+  thing)
+
+
 
 ;;; Functions that operate on association lists
 
@@ -751,47 +787,57 @@
 	(error "The lists of keys and data are of unequal length."))
     (setq alist (acons (car x) (car y) alist))))
 
-
 ;;; In run-time environment, since these guys can be inline expanded.
 (defmacro assoc-guts (test-guy)
   `(do ((alist alist (cdr alist)))
        ((endp alist))
      (if (car alist)
 	 (if ,test-guy (return (car alist))))))
+) ;eval-when
 
 
-(defun assoc (item alist &key (key #'identity) test test-not)
+(defun assoc (item alist &key key test test-not)
   "Returns the cons in alist whose car is equal (by a given test or EQL) to
    the Item."
-  (cond (test (assoc-guts (funcall test item (funcall key (caar alist)))))
-	(test-not (assoc-guts (not (funcall test-not item (funcall key (caar alist))))))
-	(t (assoc-guts (eql item (funcall key (caar alist)))))))
+  (cond (test (assoc-guts (funcall test item (apply-key key (caar alist)))))
+	(test-not (assoc-guts (not (funcall test-not item
+					    (apply-key key (caar alist))))))
+	(t (assoc-guts (eql item (apply-key key (caar alist)))))))
 
-(defun assoc-if (predicate alist)
-  "Returns the first cons in alist whose car satisfies the Predicate."
-  (assoc-guts (funcall predicate (caar alist))))
+(defun assoc-if (predicate alist &key key)
+  "Returns the first cons in alist whose car satisfies the Predicate.  If
+   key is supplied, apply it to the car of each cons before testing."
+  (assoc-guts (funcall predicate (apply-key key (caar alist)))))
 
-(defun assoc-if-not (predicate alist)
-  "Returns the first cons in alist whose car does not satisfy the Predicate."
-  (assoc-guts (not (funcall predicate (caar alist)))))
+(defun assoc-if-not (predicate alist &key key)
+  "Returns the first cons in alist whose car does not satisfiy the Predicate.
+  If key is supplied, apply it to the car of each cons before testing."
+  (assoc-guts (not (funcall predicate (apply-key key (caar alist))))))
 
 
-(defun rassoc (item alist &key (key #'identity) test test-not)
+(defun rassoc (item alist &key key test test-not)
   (declare (list alist))
   "Returns the cons in alist whose cdr is equal (by a given test or EQL) to
    the Item."
-  (cond (test (assoc-guts (funcall test item (funcall key (cdar alist)))))
-	(test-not (assoc-guts (not (funcall test-not item (funcall key (cdar alist))))))
-	(t (assoc-guts (eql item (funcall key (cdar alist)))))))
+  (cond (test (assoc-guts (funcall test item (apply-key key (cdar alist)))))
+	(test-not (assoc-guts (not (funcall test-not item
+					    (apply-key key (cdar alist))))))
+	(t (assoc-guts (eql item (apply-key key (cdar alist)))))))
 
-(defun rassoc-if (predicate alist)
-  "Returns the cons in alist whose cdr satisfies the Predicate."
-  (assoc-guts (funcall predicate (cdar alist))))
+(defun rassoc-if (predicate alist &key key)
+  "Returns the first cons in alist whose cdr satisfies the Predicate.  If key
+  is supplied, apply it to the cdr of each cons before testing."
+  (assoc-guts (funcall predicate (apply-key key (cdar alist)))))
 
-(defun rassoc-if-not (predicate alist)
-  "Returns the first cons in alist whose cdr does not satisfy the Predicate."
-  (assoc-guts (not (funcall predicate (cdar alist)))))
+(defun rassoc-if-not (predicate alist &key key)
+  "Returns the first cons in alist whose cdr does not satisfy the Predicate.
+  If key is supplied, apply it to the cdr of each cons before testing."
+  (assoc-guts (not (funcall predicate (apply-key key (cdar alist))))))
+
+
 
+;;;; Mapping functions.
+
 (defun map1 (function original-arglists accumulate take-car)
   "This function is called by mapc, mapcar, mapcan, mapl, maplist, and mapcon.
   It Maps function over the arglists in the appropriate way. It is done when any
