@@ -137,7 +137,7 @@
 ;;;
 ;;;    Write Bits out to Vec.  Bits must be an eight-bit multiple.
 ;;;
-(defmacro write-packed-bit-vector (bits vec)
+(defun write-packed-bit-vector (bits vec)
   (declare (type simple-bit-vector bits))
   (let ((len (ash (length bits) -3))
 	(start (fill-pointer vec)))
@@ -306,7 +306,7 @@
   ;;
   ;; The file-positions of each truly top-level form read from this file (if
   ;; applicable).  The vector element type will be chosen to hold the largest
-  ;; element.
+  ;; element.  May be null to save space.
   (start-positions nil :type (or (simple-array * (*)) null)))
 
 
