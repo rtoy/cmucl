@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.31 2004/04/16 04:47:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.32 2004/05/14 14:50:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.31 2004/04/16 04:47:58 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.32 2004/05/14 14:50:18 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -159,7 +159,7 @@
      (let ((offset (tn-offset stack)))
        (sc-case stack
 	 ((control-stack)
-	  (loadw reg cfp-tn offset))))))
+	  (loadw reg cfp-tn offset 0 gtemp-tn))))))
 
 (defmacro store-stack-tn (stack reg)
   `(let ((stack ,stack)
@@ -167,7 +167,7 @@
      (let ((offset (tn-offset stack)))
        (sc-case stack
 	 ((control-stack)
-	  (storew reg cfp-tn offset))))))
+	  (storew reg cfp-tn offset 0 gtemp-tn))))))
 
 
 ;;; MAYBE-LOAD-STACK-TN  --  Interface
