@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.27 1990/11/10 18:40:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.28 1990/11/21 16:22:37 ram Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -17,7 +17,10 @@
 
 (import '(lisp::%raw-bits lisp::simple-array-p))
 
+(in-package "KERNEL")
+(export '(%funcallable-instance-info-set funcallable-instance-p))
 
+(in-package "C")
 
 
 ;;;; Internal type predicates:
@@ -32,7 +35,7 @@
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
 	   simple-array-single-float-p simple-array-double-float-p
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
-	   weak-pointer-p)
+	   weak-pointer-p funcallable-instance-p)
   (t) boolean (movable foldable flushable))
 
 ;;; Introduce these predicates into the old compiler.  This is necessary
@@ -73,6 +76,7 @@
 (defknown %closure-index-ref (function index) t
   (flushable))
 
+(defknown %set-funcallable-instance-info (function index t) t (unsafe))
 
 (defknown vector-sap ((simple-unboxed-array (*))) system-area-pointer
   (flushable))
