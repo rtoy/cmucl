@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.22 1993/08/24 13:01:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.23 1993/09/01 10:00:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -975,9 +975,7 @@
 	 `(progn ,@(compile-printer-list source funstate)))))
 
 ;;; ----------------------------------------------------------------
-;;; Note that these things are compiled with (speed 3) (safety 0) more
-;;; for the resulting size of the code than for actual speed (compiling
-;;; with space>speed usually increases the size of the code!)...
+;;; Note that these things are compiled byte compiled to save space.
 
 (defun make-printer-defun (source funstate function-name)
   (let ((printer-form (compile-printer-list source funstate))
@@ -987,7 +985,8 @@
 		(type instruction inst)
 		(type stream stream)
 		(type disassem-state dstate)
-		(optimize (speed 3) (safety 0) (debug 0)))
+		#+small (declare (optimize (speed 0) (safety 0) (debug 0))))
+
        (macrolet ((local-format-arg (arg fmt)
 		    `(funcall (formatter ,fmt) stream ,arg)))
 	 (flet ((local-tab-to-arg-column ()
@@ -1224,7 +1223,8 @@
 	       (declare (type list labels)
 			(type dchunk chunk)
 			(type disassem-state dstate)
-			(optimize (speed 3) (safety 0) (debug 0)))
+			#+small
+			(declare (optimize (speed 0) (safety 0) (debug 0))))
 	       (flet ((local-filtered-value (offset)
 			(declare (type filtered-value-index offset))
 			(aref (dstate-filtered-values dstate) offset))
@@ -1260,7 +1260,8 @@
 	    `(defun ,name (chunk dstate)
 	       (declare (type dchunk chunk)
 			(type disassem-state dstate)
-			(optimize (speed 3) (safety 0) (debug 0)))
+			#+small
+			(optimize (speed 0) (safety 0) (debug 0)))
 		 (flet (((setf local-filtered-value) (value offset)
 			  (declare (type filtered-value-index offset))
 			  (setf (aref (dstate-filtered-values dstate) offset)
@@ -1609,7 +1610,7 @@
 	      (,format-var (format-or-lose ',format-name ,(format-table-name)))
 	      (args ,(gen-args-def-form field-defs format-var evalp))
 	      (funcache ,(function-cache-name)))
-	 #+small (declare (optimize (speed 0)))
+	 #+small (declare (optimize (speed 0) (safety 0) (debug 0)))
 	 (multiple-value-bind (printer-fun printer-defun)
 	     (find-printer-fun ,(if (eq printer-form :default)
 				     `(format-default-printer ,format-var)
