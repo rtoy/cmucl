@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.29.2.3 2000/08/06 19:13:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.29.2.4 2000/08/09 12:59:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -428,7 +428,7 @@
 ;;; for the object is invalid and signal an error if so.  Otherwise, look up
 ;;; the indirect class-cell and call CLASS-CELL-TYPEP at runtime.
 ;;;
-(deftransform %instance-typep ((object spec) (* *) * :when :both)
+(deftransform %instance-typep ((object spec) (* *) * :node node :when :both)
   (assert (constant-continuation-p spec))
   (let* ((spec (continuation-value spec))
 	 (class (specifier-type spec))
@@ -448,6 +448,8 @@
 			class:~%  ~S"
 		       class))
       (t
+       ;; Delay the type transform to give type propagation a chance.
+       (delay-transform node :constraint)
        ;; Otherwise transform the type test.
        (multiple-value-bind
 	     (pred get-layout)
@@ -488,7 +490,8 @@
 	   ((and layout (>= (layout-inheritance-depth layout) 0))
 	    ;; Hierarchical layout depths.
 	    (let ((idepth (layout-inheritance-depth layout))
-		  (n-layout (gensym)))
+		  (n-layout (gensym))
+		  (n-inherits (gensym)))
 	      `(and (,pred object)
 		    (let ((,n-layout (,get-layout object)))
 		      ,@(when (policy nil (>= safety speed))
@@ -496,10 +499,10 @@
 				  (%layout-invalid-error object ',layout))))
 		      (if (eq ,n-layout ',layout)
 			  t
-			  (and (> (length (layout-inherits ,n-layout)) ,idepth)
-			       (locally (declare (optimize (safety 0)))
-				 (eq (svref (layout-inherits ,n-layout) 
-					    ,idepth)
+			  (let ((,n-inherits (layout-inherits ,n-layout)))
+			    (declare (optimize (safety 0)))
+			    (and (> (length ,n-inherits) ,idepth)
+				 (eq (svref ,n-inherits ,idepth)
 				     ',layout))))))))
 	   (t
 	    `(and (,pred object)
