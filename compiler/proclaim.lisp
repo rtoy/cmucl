@@ -202,6 +202,16 @@
     (pushnew (dd-name info)
 	     (dd-included-by (info type structure-info inc))))
 
+  ;;; ### Should declare arg/result types. 
+  (let ((copier (dd-copier info)))
+    (when copier
+      (define-function-name copier)))
+
+  ;;; ### Should make a known type predicate.
+  (let ((predicate (dd-predicate info)))
+    (when predicate
+      (define-function-name predicate)))
+
   (dolist (slot (dd-slots info))
     (let ((fun (dsd-accessor slot)))
       (define-function-name fun)
