@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.49 2003/02/03 15:19:38 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.50 2003/03/18 05:35:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2430,7 +2430,7 @@
 	   (make-cons-type :car-type car-type1
 			   :cdr-type (type-union cdr-type1 cdr-type2)))
 	  ((type= cdr-type1 cdr-type2)
-	   (make-cons-type :car-type (type-union cdr-type1 cdr-type2)
+	   (make-cons-type :car-type (type-union car-type1 car-type2)
 			   :cdr-type cdr-type1)))))
 
 (define-type-method (cons :simple-intersection) (type1 type2)
