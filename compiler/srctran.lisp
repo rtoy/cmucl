@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.111 2002/08/26 16:40:53 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.112 2002/09/06 18:22:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3267,7 +3267,7 @@
 ;;; Result-type tells us the expected type.
 ;;;
 (defun source-transform-transitive (fun args identity &optional (result-type 'integer))
-  (declare (symbol fun leaf-fun) (list args))
+  (declare (symbol fun) (list args))
   (case (length args)
     (0 identity)
     (1 `(values (the ,result-type ,(first args))))
