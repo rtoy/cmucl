@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.25 1990/05/18 22:34:46 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.26 1990/06/02 16:42:37 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -410,18 +410,18 @@
 	  make-fd-stream make-indenting-stream make-object-set map-port
 	  map-xwindow naturalize-boolean naturalize-integer
 	  null-terminated-string object-set-operation output-raw-bytes
-	  parse-body perq-string pointer port primep read-n-bytes
-	  record-size remove-fd-handler remove-port-death-handler
-	  remove-port-object remove-xwindow-object
-	  resolve-loaded-assembler-references sap+ sap- sap-int sap-ref-16
-	  sap-ref-32 sap-ref-8 sap-ref-sap serve-all-events serve-event
-	  server server-message short-float-radix signed-sap-ref-16
-	  signed-sap-ref-32 signed-sap-ref-8 single-float-radix
-	  symbol-macro-let system-area-pointer system-area-pointer-p
-	  unproclaim unstructured wait-until-fd-usable
-	  with-enabled-interrupts with-fd-handler with-interrupts
-	  with-reply-port with-stack-alien without-gcing without-hemlock
-	  without-interrupts words))
+	  parse-body perq-string pointer pointer< pointer> port primep
+	  read-n-bytes record-size remove-fd-handler
+	  remove-port-death-handler remove-port-object
+	  remove-xwindow-object resolve-loaded-assembler-references sap+
+	  sap- sap-int sap-ref-16 sap-ref-32 sap-ref-8 sap-ref-sap
+	  serve-all-events serve-event server server-message
+	  short-float-radix signed-sap-ref-16 signed-sap-ref-32
+	  signed-sap-ref-8 single-float-radix symbol-macro-let
+	  system-area-pointer system-area-pointer-p unproclaim unstructured
+	  wait-until-fd-usable with-enabled-interrupts with-fd-handler
+	  with-interrupts with-reply-port with-stack-alien without-gcing
+	  without-hemlock without-interrupts words))
 
 
 (in-package "USER")
