@@ -1,4 +1,4 @@
-========================== C M U C L  18 e =============================
+========================== C M U C L  19 a =============================
 
 [--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
 
@@ -151,6 +151,8 @@ New in this release:
      - A DEFTRANSFORM for array bounds checking had an off-by-1 error.
 
   * Other changes:
+     - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
+       argument. 
      - Removed obsolete alias from MAKE-VECTOR to MAKE-ARRAY
      - the signature of *COMPILER-NOTIFICATION-FUNCTION* has changed;
        it now has an extra argument that describes the nature of the

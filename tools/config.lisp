@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.6 2003/06/18 09:23:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.7 2003/07/20 13:57:24 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -81,13 +81,10 @@
     (when load-gray-streams
       (load "library:subsystems/gray-streams-library"))
     (when load-clx
-      (setf *features* (delete :no-clx *features* :test #'eq))
       (load "library:subsystems/clx-library"))
     (when load-clm
-      (setf *features* (delete :no-clm *features* :test #'eq))
       (load "library:subsystems/clm-library"))
     (when load-hemlock
-      (setf *features* (delete :no-hemlock *features* :test #'eq))
       (load "library:subsystems/hemlock-library"))
     (dolist (f other) (load f))
     

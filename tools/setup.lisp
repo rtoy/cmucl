@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.37 2003/06/18 11:07:40 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.38 2003/07/20 13:57:24 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,6 +72,7 @@
             stream::%read-char
             stream::%read-line
             stream::%read-sequence
+            stream::%read-vector
             stream::%stream-external-format
             stream::%unread-char
             stream::%write-char
