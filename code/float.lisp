@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.14 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.15 1997/03/05 04:19:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -120,11 +120,11 @@
 (defconstant most-negative-short-float most-negative-single-float)
 (defconstant most-positive-double-float
   (double-from-bits 0 vm:double-float-normal-exponent-max
-		    (ldb vm:double-float-significand-byte -1)))
+		    (ldb (byte vm:double-float-digits 0) -1)))
 (defconstant most-positive-long-float most-positive-double-float)
 (defconstant most-negative-double-float
   (double-from-bits 1 vm:double-float-normal-exponent-max
-		    (ldb vm:double-float-significand-byte -1)))
+		    (ldb (byte vm:double-float-digits 0) -1)))
 (defconstant most-negative-long-float most-negative-double-float)
 
 (defconstant single-float-positive-infinity
