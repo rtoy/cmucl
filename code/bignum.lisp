@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.38 2004/08/20 13:35:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.39 2004/08/22 15:21:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -460,12 +460,17 @@
 ;;; results, such as GCD, use this.  It assumes Result is big enough for the
 ;;; result.
 ;;;
-(defun subtract-bignum-buffers (a len-a b len-b result)
+(defun subtract-bignum-buffers-with-len (a len-a b len-b result len-res)
   (declare (type bignum-type a b)
 	   (type bignum-index len-a len-b))
-  (let ((len-res (max len-a len-b)))
-    (subtract-bignum-loop a len-a b len-b result len-res
-			  %normalize-bignum-buffer)))
+  (subtract-bignum-loop a len-a b len-b result len-res
+			%normalize-bignum-buffer))
+
+(defun subtract-bignum-buffers (a len-a b len-b result)
+  (declare (type bignum-type a b)
+	   (type bignum-index len-a len-b))  
+  (subtract-bignum-loop a len-a b len-b result (max len-a len-b)
+			%normalize-bignum-buffer))
 
 
 
@@ -1150,6 +1155,7 @@ down to individual words.")
 
 ;;;; GCD.
 
+#+nil
 (defun bignum-gcd (a b)
   (declare (type bignum-type a b))
   (let* ((a (if (%bignum-0-or-plusp a (%bignum-length a))
@@ -1175,7 +1181,143 @@ down to individual words.")
 	       (setf a rem))
 	   (rotatef a b)))
     a))
-  
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; The asserts in the GCD implementation are way too expensive to
+  ;; check in normal use, and are disabled here.
+  (defmacro gcd-assert (&rest args)
+    (if nil
+	`(assert ,@args)))
+  ;; We'll be doing a lot of modular arithmetic.
+  (defmacro M (form)
+    `(logand all-ones-digit ,form))
+  )
+
+;; When the larger number is less than this many bignum digits long, revert
+;; to old algorithm. 
+(defparameter *accelerated-gcd-cutoff* 3)
+
+;;; Alternate between k-ary reduction with the help of
+;;; REDUCED-RATIO-MOD and digit modulus reduction via DMOD. Once the
+;;; arguments get small enough, drop through to BIGNUM-MOD-GCD (since
+;;; k-ary reduction can introduce spurious factors, which need to be
+;;; filtered out). Reference: Kenneth Weber, "The accelerated integer
+;;; GCD algorithm", ACM Transactions on Mathematical Software, volume
+;;; 21, number 1, March 1995, epp. 111-122.
+(defun bignum-gcd (u0 v0)
+  (declare (type bignum-type u0 v0))
+  (let* ((u1 (if (%bignum-0-or-plusp u0 (%bignum-length u0))
+		 u0
+		 (negate-bignum u0 nil)))
+	 (v1 (if (%bignum-0-or-plusp v0 (%bignum-length v0))
+		 v0
+		 (negate-bignum v0 nil))))
+    (if (zerop v1)
+	(return-from bignum-gcd u1))	
+    (when (> u1 v1)
+      (rotatef u1 v1))
+    (let ((n (mod v1 u1)))
+      (setf v1 (if (fixnump n)
+		   (make-small-bignum n)
+		   n)))
+    (if (and (= 1 (%bignum-length v1))
+	     (zerop (%bignum-ref v1 0)))
+	(return-from bignum-gcd (%normalize-bignum u1
+						   (%bignum-length u1))))
+    (let* ((buffer-len (+ 2 (%bignum-length u1)))
+	   (u (%allocate-bignum buffer-len))
+	   (u-len (%bignum-length u1))
+	   (v (%allocate-bignum buffer-len))
+	   (v-len (%bignum-length v1))
+	   (tmp1 (%allocate-bignum buffer-len))
+	   (tmp1-len 0)
+	   (tmp2 (%allocate-bignum buffer-len))
+	   (tmp2-len 0)
+	   (factors-of-two
+	    (bignum-factors-of-two u1 (%bignum-length u1)
+				   v1 (%bignum-length v1))))
+      (declare (type (or null bignum-index)
+		     buffer-len u-len v-len tmp1-len tmp2-len))
+      (bignum-replace u u1)
+      (bignum-replace v v1)
+      (setf u-len
+	    (make-gcd-bignum-odd u
+				 (bignum-buffer-ashift-right u u-len
+							     factors-of-two)))
+      (setf v-len
+	    (make-gcd-bignum-odd v
+				 (bignum-buffer-ashift-right v v-len
+							     factors-of-two)))
+      (loop until (or (< u-len *accelerated-gcd-cutoff*)
+		      (not v-len)
+		      (zerop v-len)
+		      (and (= 1 v-len)
+			   (zerop (%bignum-ref v 0))))	
+	do
+	(gcd-assert (= buffer-len (%bignum-length u)
+		       (%bignum-length v)
+		       (%bignum-length tmp1)
+		       (%bignum-length tmp2)))
+	(if (> (bignum-buffer-integer-length u u-len)
+	       (+ #.(truncate vm:word-bits 4)
+		  (bignum-buffer-integer-length v v-len)))
+	    (setf u-len (dmod u u-len
+			      v v-len
+			      tmp1))
+	    (multiple-value-bind (n d) (reduced-ratio-mod u v)
+	      (setf tmp1-len
+		    (multiply-bignum-buffer-and-smallnum-to-buffer v v-len
+								   n tmp1))
+	      (setf tmp2-len
+		    (multiply-bignum-buffer-and-smallnum-to-buffer u u-len
+								   d tmp2))
+	      (gcd-assert (= (copy-bignum tmp2 tmp2-len)
+			     (* (copy-bignum u u-len) d)))
+	      (gcd-assert (= (copy-bignum tmp1 tmp1-len)
+			     (* (copy-bignum v v-len) n)))
+	      (setf u-len
+		    (subtract-bignum-buffers-with-len tmp1 tmp1-len
+						      tmp2 tmp2-len
+						      u
+						      (1+ (max tmp1-len
+							       tmp2-len))))
+	      (gcd-assert (or (zerop (- (copy-bignum tmp1 tmp1-len)
+					(copy-bignum tmp2 tmp2-len)))
+			      (= (copy-bignum u u-len)
+				 (- (copy-bignum tmp1 tmp1-len)
+				    (copy-bignum tmp2 tmp2-len)))))
+	      (bignum-abs-buffer u u-len)
+	      (gcd-assert (zerop (M u)))))
+	(setf u-len (make-gcd-bignum-odd u u-len))
+	(rotatef u v)	
+	(rotatef u-len v-len))
+      (setf u (copy-bignum u u-len))
+      (let ((n (bignum-mod-gcd v1 u)))	
+	(ash (bignum-mod-gcd u1 (if (fixnump n)
+				    (make-small-bignum n)
+				    n))
+	     factors-of-two)))))
+
+(defun bignum-mod-gcd (a b)
+  (declare (type bignum-type a b))
+  (when (< a b)
+    (rotatef a b))
+  ;; While the length difference of A and B is sufficiently large,
+  ;; reduce using MOD (slowish, but it should equalize the sizes of
+  ;; A and B pretty quickly). After that, use the binary GCD
+  ;; algorithm to handle the rest.
+  (loop until (and (= (%bignum-length b) 1) (zerop (%bignum-ref b 0))) do
+	(when (<= (%bignum-length a) (1+ (%bignum-length b)))
+	  (return-from bignum-mod-gcd (bignum-binary-gcd a b)))
+	(let ((rem (mod a b)))
+	  (if (fixnump rem)
+	      (setf a (make-small-bignum rem))
+	      (setf a rem))
+	  (rotatef a b)))
+  (if (= (%bignum-length a) 1)
+      (%normalize-bignum a 1)
+      a))
+
 (defun bignum-binary-gcd (a b)
   (declare (type bignum-type a b))
   (let* ((len-a (%bignum-length a))
@@ -1202,8 +1344,7 @@ down to individual words.")
 	      (len-y len-b)
 	      (z res-buffer))
 	  (loop
-	    (multiple-value-bind
-		(u v len-v r len-r)
+	    (multiple-value-bind (u v len-v r len-r)
 		(bignum-gcd-order-and-subtract x len-x y len-y z)
 	      (declare (type bignum-index len-v len-r))
 	      (when (and (= len-r 1) (zerop (%bignum-ref r 0)))
@@ -1270,6 +1411,129 @@ down to individual words.")
 		    ((oddp or-digits) (+ (* i digit-size) j))
 		  (declare (type (mod 32) j))))))))
 
+;;; Multiply a bignum buffer with a fixnum or a digit, storing the
+;;; result in another bignum buffer, and without using any
+;;; temporaries. Inlined to avoid boxing smallnum if it's actually a
+;;; digit. Needed by GCD, should possibly OAOO with
+;;; MULTIPLY-BIGNUM-AND-FIXNUM.
+(declaim (inline multiply-bignum-buffer-and-smallnum-to-buffer))
+(defun multiply-bignum-buffer-and-smallnum-to-buffer (bignum bignum-len
+							     smallnum res)
+  (declare (type bignum-type bignum))
+  (let* ((bignum-plus-p (%bignum-0-or-plusp bignum bignum-len))
+	 (smallnum-plus-p (not (minusp smallnum)))
+	 (smallnum (if smallnum-plus-p smallnum (- smallnum)))
+	 (carry-digit 0)) 
+    (declare (type bignum-type bignum res)
+	     (type bignum-index bignum-len)
+	     (type bignum-element-type smallnum carry-digit))
+    (unless bignum-plus-p
+      (negate-bignum-buffer-in-place bignum bignum-len))
+    (dotimes (index bignum-len)
+      (declare (type bignum-index index))
+      (multiple-value-bind (next-digit low)
+	  (%multiply-and-add (%bignum-ref bignum index)
+			     smallnum
+			     carry-digit)
+	(declare (type bignum-element-type next-digit low))
+	(setf carry-digit next-digit)
+	(setf (%bignum-ref res index) low)))
+    (setf (%bignum-ref res bignum-len) carry-digit)
+    (unless bignum-plus-p
+      (negate-bignum-buffer-in-place bignum bignum-len))
+    (let ((res-len (%normalize-bignum-buffer res (1+ bignum-len))))
+      (unless (eq bignum-plus-p smallnum-plus-p)
+	(negate-bignum-buffer-in-place res res-len))
+      res-len)))
+
+;;; Given U and V, return U / V mod 2^32. Implements the algorithm in the
+;;; paper, but uses some clever bit-twiddling nicked from Nickle to do it.
+(declaim (inline bmod))
+(defun bmod (u v)
+  (let ((ud (%bignum-ref u 0))
+	(vd (%bignum-ref v 0))
+	(umask 0)
+	(imask 1)
+	(m 0))
+    (declare (type (unsigned-byte #.vm:word-bits) ud vd umask imask m))
+    (dotimes (i digit-size)
+      (setf umask (logior umask imask))
+      (unless (zerop (logand ud umask))
+	(setf ud (M (- ud vd)))
+	(setf m (M (logior m imask))))
+      (setf imask (M (%ashl imask 1)))
+      (setf vd (M (%ashl vd 1))))
+    m))
+
+(defun dmod (u u-len v v-len tmp1)
+  (loop while (> (bignum-buffer-integer-length u u-len)
+		 (+ (bignum-buffer-integer-length v v-len)
+		    digit-size))
+    do
+    (unless (zerop (%bignum-ref u 0))
+      (let* ((bmod (bmod u v))
+	     (tmp1-len (multiply-bignum-buffer-and-smallnum-to-buffer v v-len
+								      bmod
+								      tmp1)))
+	(setf u-len (subtract-bignum-buffers u u-len
+					     tmp1 tmp1-len
+					     u))
+	(bignum-abs-buffer u u-len)))
+    (gcd-assert (zerop (%bignum-ref u 0)))
+    (setf u-len (bignum-buffer-ashift-right u u-len digit-size)))
+  (let* ((d (+ 1 (- (bignum-buffer-integer-length u u-len)
+		    (bignum-buffer-integer-length v v-len))))
+	 (n (1- (ash 1 d))))
+    (declare (type (unsigned-byte #.(integer-length #.vm:word-bits)) d)
+	     (type (unsigned-byte #.vm:word-bits) n))
+    (gcd-assert (>= d 0))
+    (unless (zerop (logand (%bignum-ref u 0) n))
+      (let ((tmp1-len
+	     (multiply-bignum-buffer-and-smallnum-to-buffer v v-len
+							    (logand n (bmod u
+									    v))
+							    tmp1)))
+	(setf u-len (subtract-bignum-buffers u u-len
+					     tmp1 tmp1-len
+					     u))
+	(bignum-abs-buffer u u-len)))
+    u-len))
+
+(defconstant lower-ones-digit (1- (ash 1 (truncate vm:word-bits 2))))
+  
+;;; Find D and N such that (LOGAND ALL-ONES-DIGIT (- (* D X) (* N Y))) is 0,
+;;; (< 0 N LOWER-ONES-DIGIT) and (< 0 (ABS D) LOWER-ONES-DIGIT).
+(defun reduced-ratio-mod (x y)
+  (let* ((c (bmod x y))
+	 (n1 c)
+	 (d1 1)
+	 (n2 (M (- n1)) #+nil(M (1+ (M (lognot n1)))))
+	 (d2 (M -1)))
+    (declare (type (unsigned-byte #.vm:word-bits) n1 d1 n2 d2))
+    (loop while (> n2 (expt 2 (truncate digit-size 2))) do
+	  (loop for i of-type (signed-byte 5)
+	     downfrom (- (integer-length n1) (integer-length n2))
+	     while (>= n1 n2)
+	     do
+	     (let ((i i))
+	       (declare (type (mod #.vm:word-bits) i))
+	       (when (>= n1 (M (%ashl n2 i)))
+		 (psetf n1 (M (- n1 (%ashl n2 i)))
+			d1 (M (- d1 (%ashl d2 i)))))))
+	  (psetf n1 n2
+		 d1 d2
+		 n2 n1
+		 d2 d1))
+    (values n2 (if (>= d2 (expt 2 (1- digit-size)))
+		   (lognot (logand most-positive-fixnum (lognot d2)))
+		   (logand lower-ones-digit d2)))))
+
+
+(defun copy-bignum (a &optional (len (%bignum-length a)))
+  (let ((b (%allocate-bignum len)))
+    (bignum-replace b a)
+    (%bignum-set-length b len)
+    b))
 
 ;;;; Negation
 
@@ -1335,9 +1599,17 @@ down to individual words.")
 ;;; This assumes bignum is positive; that is, the result of negating it will
 ;;; stay in the provided allocated bignum.
 ;;;
-(defun negate-bignum-in-place (bignum)
-  (bignum-negate-loop bignum (%bignum-length bignum) bignum)
+(defun negate-bignum-buffer-in-place (bignum bignum-len)
+  (bignum-negate-loop bignum bignum-len bignum)
   bignum)
+
+(defun negate-bignum-in-place (bignum)
+  (declare (inline negate-bignum-buffer-in-place))
+  (negate-bignum-buffer-in-place bignum (%bignum-length bignum)))
+
+(defun bignum-abs-buffer (bignum len)
+  (unless (%bignum-0-or-plusp bignum len)
+    (negate-bignum-buffer-in-place bignum len)))
 
 
 
@@ -1698,6 +1970,7 @@ down to individual words.")
 
 ;;;; Integer length and logcount
 
+#+nil
 (defun bignum-integer-length (bignum)
   (declare (type bignum-type bignum))
   (let* ((len (%bignum-length bignum))
@@ -1707,6 +1980,19 @@ down to individual words.")
 	     (type bignum-element-type digit))
     (+ (integer-length (%fixnum-digit-with-correct-sign digit))
        (* len-1 digit-size))))
+
+(defun bignum-buffer-integer-length (bignum len)
+  (declare (type bignum-type bignum))
+  (let* ((len-1 (1- len))
+	 (digit (%bignum-ref bignum len-1)))
+    (declare (type bignum-index len len-1)
+	     (type bignum-element-type digit))
+    (+ (integer-length (%fixnum-digit-with-correct-sign digit))
+       (* len-1 digit-size))))
+
+(defun bignum-integer-length (bignum)
+  (declare (type bignum-type bignum))
+  (bignum-buffer-integer-length bignum (%bignum-length bignum)))
 
 (defun bignum-logcount (bignum)
   (declare (type bignum-type bignum))
