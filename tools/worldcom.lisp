@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.48 1993/02/26 09:00:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.49 1993/03/01 19:07:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,6 +97,7 @@
 (comf "target:code/sap")
 
 (comf "target:code/bit-bash")
+(comf "target:code/byte-interp")
 (comf "target:code/array")
 (comf "target:code/hash")
 
