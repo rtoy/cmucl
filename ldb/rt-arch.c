@@ -47,7 +47,7 @@ static sigtrap_handler(signal, code, context)
 {
     switch (*((unsigned short *)context->sc_iar+1)) {
       case trap_PendingInterrupt:
-	interrput_handle_pending(context);
+	interrupt_handle_pending(context);
 	break;
 
       case trap_Halt:
