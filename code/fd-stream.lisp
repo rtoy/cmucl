@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.12 1991/05/18 19:06:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.13 1991/05/21 18:37:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -643,6 +643,11 @@
 	     eof-value))
      eof)))
 
+#|
+This version waits using server.  I changed to the non-server version because
+it allows this method to be used by CLX w/o confusing serve-event.  The
+non-server method is also significantly more efficient for large reads.
+  -- Ram
 
 ;;; FD-STREAM-READ-N-BYTES -- internal
 ;;;
@@ -685,6 +690,115 @@
 		  (- requested (/ bytes elsize))
 		  (* elsize 8)
 		  requested)))))
+|#
+
+
+;;; FD-STREAM-READ-N-BYTES -- internal
+;;;
+;;;    The N-Bin method for FD-STREAMs.  This doesn't using SERVER; it blocks
+;;; in UNIX-READ.  This allows the method to be used to implementing reading
+;;; for CLX.  It is generally used where there is a definite amount of reading
+;;; to be done, so it blocking isn't too problematical.
+;;;
+;;;    We copy buffered data into the buffer.  If there is enough, just return.
+;;; Otherwise, we see if the amount of additional data needed will fit in the
+;;; stream buffer.  If not, inhibit GCing (so we can have a SAP into the Buffer
+;;; argument), and read directly into the user supplied buffer.  Otherwise,
+;;; read a buffer-full into the stream buffer and then copy the amount we need
+;;; out.
+;;;
+;;;    We loop doing the reads until we either get enough bytes or hit EOF.  We
+;;; must loop because some streams (like pipes) may return a partial amount
+;;; without hitting EOF.
+;;; 
+(defun fd-stream-read-n-bytes (stream buffer start requested eof-error-p)
+  (declare (type stream stream) (type index start requested))
+  (let* ((sap (fd-stream-ibuf-sap stream))
+	 (elsize (fd-stream-element-size stream))
+	 (offset (* elsize start))
+	 (requested-bytes (* elsize requested))
+	 (head (fd-stream-ibuf-head stream))
+	 (tail (fd-stream-ibuf-tail stream))
+	 (available (- tail head))
+	 (copy (min requested-bytes available)))
+    (declare (type index elsize offset requested-bytes head tail available
+		   copy))
+    (unless (zerop copy)
+      (if (typep buffer 'system-area-pointer)
+	  (system-area-copy sap (* head vm:byte-bits)
+			    buffer (* offset vm:byte-bits)
+			    (* copy vm:byte-bits))
+	  (copy-from-system-area sap (* head vm:byte-bits)
+				 buffer (+ (* offset vm:byte-bits)
+					   (* vm:vector-data-offset
+					      vm:word-bits))
+				 (* copy vm:byte-bits)))
+      (incf (fd-stream-ibuf-head stream) copy))
+    (cond
+     ((> requested-bytes available)
+      (setf (fd-stream-ibuf-head stream) 0)
+      (setf (fd-stream-ibuf-tail stream) 0)
+      (setf (fd-stream-listen stream) nil)
+      (let ((now-needed (- requested-bytes copy))
+	    (len (fd-stream-ibuf-length stream)))
+	(declare (type index now-needed len))
+	(cond
+	 ((> now-needed len)
+	  (system:without-gcing
+	    (loop
+	      (multiple-value-bind
+		  (count err)
+		  (mach:unix-read (fd-stream-fd stream)
+				  (sap+ (if (typep buffer 'system-area-pointer)
+					    buffer
+					    (vector-sap buffer))
+					(+ offset copy))
+				  now-needed)
+		(declare (type (or index null) count))
+		(unless count
+		  (error "Error reading ~S: ~A" stream
+			 (mach:get-unix-error-msg err)))
+		(when (zerop count)
+		  (if eof-error-p
+		      (error "Unexpected eof on ~S." stream)
+		      (return (- requested (/ now-needed elsize)))))
+		(decf now-needed count)
+		(when (zerop now-needed) (return requested))
+		(incf offset count)))))
+	 (t
+	  (loop
+	    (multiple-value-bind
+		(count err)
+		(mach:unix-read (fd-stream-fd stream) sap len)
+	      (declare (type (or index null) count))
+	      (unless count
+		(error "Error reading ~S: ~A" stream
+		       (mach:get-unix-error-msg err)))
+	      (incf (fd-stream-ibuf-tail stream) count)
+	      (when (zerop count)
+		(if eof-error-p
+		    (error "Unexpected eof on ~S." stream)
+		    (return (- requested (/ now-needed elsize)))))
+	      (let* ((copy (min now-needed count))
+		     (copy-bits (* copy vm:byte-bits))
+		     (buffer-start-bits
+		      (* (+ offset available) vm:byte-bits)))
+		(declare (type index copy copy-bits buffer-start-bits))
+		(if (typep buffer 'system-area-pointer)
+		    (system-area-copy sap 0
+				      buffer buffer-start-bits
+				      copy-bits)
+		    (copy-from-system-area sap 0 
+					   buffer (+ buffer-start-bits
+						     (* vm:vector-data-offset
+							vm:word-bits))
+					   copy-bits))
+		(incf (fd-stream-ibuf-head stream) copy)
+		(decf now-needed copy)
+		(when (zerop now-needed) (return requested))
+		(incf offset copy))))))))
+     (t
+      requested))))
 
 
 ;;;; Utility functions (misc routines, etc)
@@ -793,11 +907,12 @@
 		   (fd-stream-ibuf-tail stream)))
 	 (fd-stream-listen stream)
 	 (setf (fd-stream-listen stream)
-	       (not (zerop (mach:unix-select (1+ (fd-stream-fd stream))
-					     (ash 1 (fd-stream-fd stream))
-					     0
-					     0
-					     0))))))
+	       (eql (mach:unix-select (1+ (fd-stream-fd stream))
+				      (ash 1 (fd-stream-fd stream))
+				      0
+				      0
+				      0)
+		    1))))
     (:unread
      (setf (fd-stream-unread stream) arg1)
      (setf (fd-stream-listen stream) t))
@@ -854,11 +969,9 @@
      (setf (fd-stream-ibuf-head stream) 0)
      (setf (fd-stream-ibuf-tail stream) 0)
      (loop
-       (multiple-value-bind
-	   (count errno)
-	   (mach:unix-select (1+ (fd-stream-fd stream))
-			     (ash 1 (fd-stream-fd stream))
-			     0 0 0)
+       (let ((count (mach:unix-select (1+ (fd-stream-fd stream))
+				      (ash 1 (fd-stream-fd stream))
+				      0 0 0)))
 	 (cond ((eql count 1)
 		(do-input stream)
 		(setf (fd-stream-ibuf-head stream) 0)
