@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.9 1990/02/20 23:10:11 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.10 1990/02/21 19:35:32 ch Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -124,13 +124,12 @@
     (cond ((and (zerop rs) (or (string= name "ADDI") (string= name "ADDIU")))
 	   (format stream "~16,8TLOADI~8,8T~A, #x~X~%"
 		   (register-name rt) immed))
-	  ;; I'm not proud of this ...
 	  ((and (= rs c::null-offset) (string= name "ADDI")
 		(eq register-name-style :lisp))
+	   ;; Major hack ...
 	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~48,8T; ~S~%"
 		   name (register-name rt) (register-name rs) immed
-		   (nth (1- (floor immed vm:symbol-size))
-			vm:initial-symbols)))
+		   (vm:offset-initial-symbol immed)))
 	  (t
 	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~%"
 		   name (register-name rt) (register-name rs) immed)))))
@@ -234,7 +233,7 @@
 	    name (register-name rd) (register-name rt) (register-name rs))))
 
 (def-mips-instruction-type (:break-type)
-  (let ((code (ldb (byte 20 6) word))) ; sandro's adb uses (byte 10 16)
+  (let ((code (ldb (byte 20 6) word))) ; MIPS assembler uses (byte 10 16)
     (format stream "~16,8T~A~8,8T#x~X~%" name code)))
 
 (def-mips-instruction-type (:syscall-type)
