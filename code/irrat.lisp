@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.38 2004/05/12 02:52:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.39 2004/06/04 13:25:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -923,24 +923,24 @@ Z may be any number, but the result is always a complex."
       (cond ((or (> x theta)
 		 (> (abs y) theta))
 	     ;; To avoid overflow...
-	     (setf eta (float-sign y half-pi))
-	     ;; nu is real part of 1/(x + iy).  This is x/(x^2+y^2),
+	     (setf nu (float-sign y half-pi))
+	     ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
 	     ;; which can cause overflow.  Arrange this computation so
 	     ;; that it won't overflow.
-	     (setf nu (let* ((x-bigger (> x (abs y)))
-			     (r (if x-bigger (/ y x) (/ x y)))
-			     (d (+ 1.0d0 (* r r))))
-			(if x-bigger
-			    (/ (/ x) d)
-			    (/ (/ r y) d)))))
+	     (setf eta (let* ((x-bigger (> x (abs y)))
+			      (r (if x-bigger (/ y x) (/ x y)))
+			      (d (+ 1.0d0 (* r r))))
+			 (if x-bigger
+			     (/ (/ x) d)
+			     (/ (/ r y) d)))))
 	    ((= x 1.0d0)
 	     ;; Should this be changed so that if y is zero, eta is set
 	     ;; to +infinity instead of approx 176?  In any case
 	     ;; tanh(176) is 1.0d0 within working precision.
 	     (let ((t1 (+ 4d0 (square y)))
 		   (t2 (+ (abs y) rho)))
-	       (setf eta (log (/ (sqrt (sqrt t1)))
-			      (sqrt t2)))
+	       (setf eta (log (/ (sqrt (sqrt t1))
+				 (sqrt t2))))
 	       (setf nu (* 0.5d0
 			   (float-sign y
 				       (+ half-pi (atan (* 0.5d0 t2))))))))
