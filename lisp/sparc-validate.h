@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.19 2005/01/13 19:55:00 fgilham Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.20 2005/02/03 15:08:41 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -110,7 +110,17 @@
 #define DYNAMIC_1_SPACE_START	(0x80000000)
 
 /* The default dynamic space to allocate */
+/*
+ * On Solaris 10, Martin Rydstrom reports that subtracting off
+ * SPARSE_BLOCK_SIZE causes CMUCL not to work (GC lossage).  But
+ * specifying -dynamic-space-size 256 works fine.  I don't understand
+ * how that can be, but we lets not subtract it off.
+ */
+#if 0
 #define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x10000000 - SPARSE_BLOCK_SIZE) /* 256 MB - 32 KB */
+#else
+#define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x10000000) /* 256 MB */
+#endif
 
 /* The maximum dynamic space that we can allocate */
 #ifdef GENCGC
