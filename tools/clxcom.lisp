@@ -7,6 +7,8 @@
   
   (make-package "XLIB" :use '("LISP")))
 
+(pushnew :clx-ansi-common-lisp *features*)
+
 (with-compiler-log-file
     ("target:compile-clx.log"
      :optimize
