@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.28 1993/09/10 19:09:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.29 1994/03/05 14:32:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -745,7 +745,8 @@
 		   ((:error-function *error-function*) #'compiler-warning)
 		   warning-function
 		   (where "previous declaration"))
-  (declare (type functional functional) (type function *error-function*)
+  (declare (type functional functional) (type function-type type)
+	   (type function *error-function*)
 	   (string where))
   (let ((*lossage-detected* nil))
     (multiple-value-bind
