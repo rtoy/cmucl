@@ -87,7 +87,10 @@
       
       (dolist (thing (environment-closure env))
 	(let ((ptype (etypecase thing
-		       (lambda-var (primitive-type (leaf-type thing)))
+		       (lambda-var
+			(if (lambda-var-indirect thing)
+			    *any-primitive-type*
+			    (primitive-type (leaf-type thing))))
 		       (nlx-info *any-primitive-type*))))
 	  (unless xep-p 
 	    (args (make-normal-tn ptype)))
