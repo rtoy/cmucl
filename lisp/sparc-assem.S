@@ -55,7 +55,7 @@ _call_into_lisp:
         /* Save the return address. */
         st      %i7, [%fp-4]
 
-        /* Clear the descriptor regs. */
+        /* Clear the descriptor regs. (See sparc/vm.lisp) */
         mov     reg_ZERO, reg_A0
         mov     reg_ZERO, reg_A1
         mov     reg_ZERO, reg_A2
@@ -64,7 +64,6 @@ _call_into_lisp:
         mov     reg_ZERO, reg_A5
         mov     reg_ZERO, reg_OCFP
         mov     reg_ZERO, reg_LRA
-        mov     reg_ZERO, reg_L2
         mov     reg_ZERO, reg_CODE
 
         /* Establish NIL */
@@ -161,11 +160,13 @@ _call_into_c:
 	st	reg_L0, [reg_CFP+4]
 
         /* Store LISP state */
-	andn	reg_ALLOC, 7, reg_L1
-        store(reg_L1,_current_dynamic_space_free_pointer)
         store(reg_BSP,_current_binding_stack_pointer)
         store(reg_CSP,_current_control_stack_pointer)
         store(reg_CFP,_current_control_frame_pointer)
+	/* Use reg_CFP as a work register, and restore it */
+	andn	reg_ALLOC, 7, reg_CFP
+        store(reg_CFP,_current_dynamic_space_free_pointer)
+		load(_current_control_frame_pointer, reg_CFP)
 
         /* No longer in Lisp. */
         store(reg_CSP,_foreign_function_call_active)
@@ -561,3 +562,9 @@ save_context:
 	SET_SIZE(save_context)
 
 #endif
+/*
+ * Local variables:
+ * tab-width: 8
+ * End:
+ */						
+		
