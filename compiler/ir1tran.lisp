@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.103 1993/09/14 23:18:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.104 1994/02/04 14:08:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -135,10 +135,9 @@
     (setf (info function kind name) :function)
     (setf (info function where-from name) :assumed))
   
-  (when (eq (info function where-from name) :assumed)
-    (note-undefined-reference name :function))
-  
   (let ((where (info function where-from name)))
+    (when (eq where :assumed)
+      (note-undefined-reference name :function))
     (make-global-var :kind :global-function  :name name
 		     :type (if (or *derive-function-types*
 				   (eq where :declared))
