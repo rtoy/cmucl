@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.7 1990/05/10 04:40:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.8 1990/05/11 06:49:32 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -400,13 +400,13 @@ default-value-5
   (:generator 5
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
-      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
       (move fp-tn fp)
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
       (inst b target)
       (inst nop)
       (emit-return-pc label)
@@ -433,13 +433,13 @@ default-value-5
   (:generator 20
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
-      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
       (move fp-tn fp)
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
       (inst b target)
       (inst nop)
       (emit-return-pc label)
@@ -468,13 +468,13 @@ default-value-5
   (:generator 5
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
-      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
       (move fp-tn fp)
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
+      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
       (inst b target)
       (inst nop)
       (note-this-location vop :known-return)
