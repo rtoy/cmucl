@@ -4,7 +4,7 @@
 
 The CMUCL project is pleased to announce the release of CMUCL 18e.
 This is a major release which contains numerous enhancements and
-bugfixes from the 18e release.
+bugfixes from the 18d release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
@@ -46,6 +46,8 @@ New in this release:
      - the ECASE and CCASE macros are allowed to use T and OTHERWISE
        as regular keys, instead of as the otherwise clause. CMUCL
        prints a warning about this being poor style.
+     - the type (complex (eql 0)) is accepted now instead of
+       generating an error.
 
   * Numerous bugfixes:
      - READ-BYTE on certain types of multi-byte elements was incorrect
@@ -86,6 +88,14 @@ New in this release:
        argument is an input or output stream, as appropriate
      - numerous error conditions are signalled using a more specific
        condition type than a generic error
+     - many (all?) cases where the unused labels functions were
+       causing a compiler assertion error.
+     - some cases where the compiler was incorrectly deriving the
+       types of functions have been fixed.
+     - error reporting in many areas have been improved to be more
+       specific and/or ANSI compliant. 
+     - error detection of defclass options in line with ANSI
+       requirements. 
 
   * Other changes:
      - the function PROFILE:REPORT-TIME no longer prints out a long
@@ -94,6 +104,7 @@ New in this release:
        PROFILE::*NO-CALLS-LIMIT*.
      - reinstated the ability to build small runtime images (excluding
        the compiler)
+     - DESCRIBE will print a note if a symbol names a type-specifier
   
   * Code cleanups:
 
