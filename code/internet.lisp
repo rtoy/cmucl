@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.5 2000/09/15 14:43:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.6 2000/09/20 00:35:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,9 +207,11 @@ struct in_addr {
 	   (collect ((results))
 	     (iterate repeat ((index 0))
 	       (declare (type kernel:index index))
-	       (cond ((zerop (deref (cast (slot hostent 'aliases)
-					  (* (unsigned #-alpha 32 #+alpha 64)))
-				    index))
+	       (cond ((or (zerop (sap-int (alien-sap (slot hostent 'aliases))))
+			  (zerop (deref (cast (slot hostent 'aliases)
+					      (* (unsigned #-alpha 32
+							   #+alpha 64)))
+					index)))
 		      (results))
 		     (t
 		      (results (deref (slot hostent 'aliases) index))
