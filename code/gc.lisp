@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.29 2002/11/07 16:07:23 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.30 2002/11/19 12:38:55 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,31 +185,25 @@
 	   (setq *last-bytes-in-use* bytes))))
   *total-bytes-consed*)
 
-#+(or cgc gencgc)
-(defun get-bytes-consed ()
-  "Returns the number of bytes consed since the first time this function
-  was called.  The first time it is called, it returns zero."
-  (dfixnum:dfixnum-integer (get-bytes-consed-dfixnum)))
-
 #-(or cgc gencgc)
-(defun get-bytes-consed ()
+(defun get-bytes-consed-dfixnum ()
   "Returns the number of bytes consed since the first time this function
   was called.  The first time it is called, it returns zero."
   (declare (optimize (speed 3) (safety 0)(inhibit-warnings 3)))
   (cond ((null *last-bytes-in-use*)
          (setq *last-bytes-in-use* (dynamic-usage))
-         (setq *total-bytes-consed* 0))
+         (setq *total-bytes-consed* (dfixnum:make-dfixnum)))
         (t
          (let ((bytes (dynamic-usage)))
-           (incf *total-bytes-consed*
-                 (the index (- bytes *last-bytes-in-use*)))
+           (dfixnum:dfixnum-inc-hf *total-bytes-consed*
+			    (the index (- bytes *last-bytes-in-use*)))
            (setq *last-bytes-in-use* bytes))))
   *total-bytes-consed*)
 
-#-(or cgc gencgc)
-(defun get-bytes-consed-dfixnum ()
-  ;; A plug until a direct implementation is available.
-  (dfixnum:dfixnum-make-from-number (get-bytes-consed)))
+(defun get-bytes-consed ()
+  "Returns the number of bytes consed since the first time this function
+  was called.  The first time it is called, it returns zero."
+  (dfixnum:dfixnum-integer (get-bytes-consed-dfixnum)))
     
 
 ;;;; Variables and Constants.
