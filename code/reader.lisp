@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.9 1991/12/12 16:18:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.10 1992/02/04 16:21:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,11 +17,11 @@
 ;;; Runs in the standard Spice Lisp environment.
 ;;;
 (in-package 'lisp)
-(export '(readtable readtablep *read-base* *readtable* copy-readtable 
-	  set-syntax-from-char set-macro-character get-macro-character
-	  make-dispatch-macro-character set-dispatch-macro-character
-	  get-dispatch-macro-character
-	  read *read-default-float-format* read-preserving-whitespace
+(export '(readtable readtable-case readtablep *read-base* *readtable*
+	  copy-readtable set-syntax-from-char set-macro-character
+	  get-macro-character make-dispatch-macro-character
+	  set-dispatch-macro-character get-dispatch-macro-character read
+	  *read-default-float-format* read-preserving-whitespace
 	  read-delimited-list parse-integer read-from-string *read-suppress*))
 
 ;;;Random global variables
@@ -66,13 +66,18 @@
 (defstruct (readtable
 	    (:conc-name nil)
 	    (:predicate readtablep)
-	    (:copier nil))
+	    (:copier nil)
+	    (:print-function
+	     (lambda (s stream d)
+	       (declare (ignore d))
+	       (print-unreadable-object (s stream :identity t)
+		 (prin1 'readtable stream)))))
   "Readtable is a data structure that maps characters into syntax
    types for the Common Lisp expression reader."
   (character-attribute-table (make-character-attribute-table) :type simple-vector)
   (character-macro-table (make-character-macro-table) :type simple-vector)
-  (dispatch-tables () :type list))
-
+  (dispatch-tables () :type list)
+  (readtable-case :upcase :type (member :upcase :downcase :preserve :invert)))
 
 
 ;;;; Constants for character attributes.  These are all as in the manual.
@@ -635,17 +640,58 @@
 
 ;;;; Token fetching.
 
-#|
-(defmacro backup-char (char stream)
-  `(if ,char (unread-char ,char ,stream)))
-|#
-
 (defvar *read-suppress* nil 
   "Suppresses most interpreting of the reader when T")
 
 (defvar *read-base* 10
   "The radix that Lisp reads numbers in.")
 
+;;; CASIFY-READ-BUFFER  --  Internal
+;;;
+;;;    Modify the read-buffer according to READTABLE-CASE, ignoring escapes.
+;;; ESCAPES is a list of the escaped indices, in reverse order. 
+;;;
+(defun casify-read-buffer (escapes)
+  (let ((case (readtable-case *readtable*)))
+    (cond
+     ((and (null escapes) (eq case :upcase))
+      (dotimes (i ouch-ptr)
+	(setf (schar read-buffer i) (char-upcase (schar read-buffer i)))))
+     ((eq case :preserve))
+     (t
+      (macrolet ((skip-esc (&body body)
+		   `(do ((i (1- ouch-ptr) (1- i))
+			 (escapes escapes))
+			((minusp i))
+		      (declare (fixnum i))
+		      (when (or (null escapes)
+				(let ((esc (first escapes)))
+				  (declare (fixnum esc))
+				  (cond ((< esc i) t)
+					(t
+					 (assert (= esc i))
+					 (pop escapes)
+					 nil))))
+			(let ((ch (schar read-buffer i)))
+			  ,@body)))))
+	(flet ((lower-em ()
+		 (skip-esc (setf (schar read-buffer i) (char-downcase ch))))
+	       (raise-em ()
+		 (skip-esc (setf (schar read-buffer i) (char-upcase ch)))))
+	  (ecase case
+	    (:upcase (raise-em))
+	    (:downcase (lower-em))
+	    (:invert
+	     (let ((all-upper t)
+		   (all-lower t))
+	       (skip-esc
+		 (when (both-case-p ch)
+		   (if (upper-case-p ch)
+		       (setq all-lower nil)
+		       (setq all-upper nil))))
+	       (cond (all-lower (raise-em))
+		     (all-upper (lower-em))))))))))))
+  
 (defun read-token (stream firstchar)
   "This function is just an fsm that recognizes numbers and symbols."
   ;;check explicitly whether firstchar has entry for non-terminating
@@ -655,13 +701,14 @@
   ;;read in the longest possible string satisfying the bnf for
   ;;"unqualified-token".  Leave the result in the READ-BUFFER.
   ;;Return next char after token (last char read).
-  (if *read-suppress*
-      (internal-read-extended-token stream firstchar)
+  (when *read-suppress*
+    (return-from read-token (internal-read-extended-token stream firstchar)))
   (let ((attribute-table (character-attribute-table *readtable*))
 	(package *package*)
 	(colons 0)
 	(possibly-rational t)
-	(possibly-float t))
+	(possibly-float t)
+	(escapes ()))
     (reset-read-buffer)
     (prog ((char firstchar))
       (case (char-class3 char attribute-table)
@@ -690,7 +737,7 @@
 	(t (go SYMBOL)))
      LEFTDIGIT
       ;;saw "[sign] {digit}+"
-      (ouch-read-buffer (char-upcase char))
+      (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-integer)))
       (case (char-class3 char attribute-table)
@@ -760,7 +807,7 @@
 	(#.package-delimiter (go COLON))
 	(t (go SYMBOL)))
      EXPONENT
-      (ouch-read-buffer (char-upcase char))
+      (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
       (case (char-class char attribute-table)
@@ -809,7 +856,7 @@
 	(t (go SYMBOL)))
      RATIODIGIT
       ;;saw "[sign] {digit}+ slash {digit}+"
-      (ouch-read-buffer (char-upcase char))
+      (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (make-ratio)))
       (case (char-class2 char attribute-table)
@@ -836,7 +883,7 @@
       (prepare-for-fast-read-char stream
 	(prog ()
 	 SYMBOL-LOOP
-	  (ouch-read-buffer (char-upcase char))
+	  (ouch-read-buffer char)
 	  (setq char (fast-read-char nil nil))
 	  (unless char (go RETURN-SYMBOL))
 	  (case (char-class char attribute-table)
@@ -855,9 +902,10 @@
       ;;don't put the escape in the read-buffer.
       ;;read-next char, put in buffer (no case conversion).
       (let ((nextchar (read-char stream nil nil)))
-	(if nextchar
-	    (ouch-read-buffer nextchar)
-	    (error "End-of-file after escape character.")))
+	(unless nextchar
+	  (error "End-of-file after escape character."))
+	(push ouch-ptr escapes)
+	(ouch-read-buffer nextchar))
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
       (case (char-class char attribute-table)
@@ -870,6 +918,7 @@
       (do ((char (read-char stream t) (read-char stream t)))
 	  ((multiple-escape-p char))
 	(if (escapep char) (setq char (read-char stream t)))
+	(push ouch-ptr escapes)
 	(ouch-read-buffer char))
       (setq char (read-char stream nil nil))
       (unless char (go RETURN-SYMBOL))
@@ -880,6 +929,7 @@
 	(#.package-delimiter (go COLON))
 	(t (go SYMBOL)))
       COLON
+      (casify-read-buffer escapes)
       (cond ((zerop colons)
 	     (setq colons 1)
 	     (setq package (find-package (read-buffer-to-string)))
@@ -911,6 +961,7 @@
 				    (package-name package)))
 	(t (go SYMBOL)))
       RETURN-SYMBOL
+      (casify-read-buffer escapes)
       (if (or (zerop colons) (= colons 2) (eq package *keyword-package*))
 	  (return (intern* read-buffer ouch-ptr package))
 	  (multiple-value-bind (symbol test)
@@ -1003,7 +1054,7 @@
 	 (let* ((ch (inch-read-buffer)))
 	   (cond ((or (eofp ch) (char= ch #\.))
 		  (return-from make-integer
-			       (let ((Res
+			       (let ((res
 				      (if (zerop number) num
 					  (+ num (* number
 						    (expt base digit))))))
@@ -1022,7 +1073,8 @@
 	(divisor 1)
 	(negative-exponent nil)
 	(exponent 0)
-	(float-char ()) (char (inch-read-buffer)))
+	(float-char ())
+	(char (inch-read-buffer)))
     (if (cond ((char= char #\+) t)
 	      ((char= char #\-) (setq negative-fraction t)))
 	;;flush it
@@ -1065,7 +1117,7 @@
 		(setq exponent (if negative-exponent (- exponent) exponent)))
 	       (setq exponent (+ (* exponent 10) dig)))
 	   ;;generate and return the float, depending on float-char:
-	   (let* ((float-format (case float-char
+	   (let* ((float-format (case (char-upcase float-char)
 				  (#\E *read-default-float-format*)
 				  (#\S 'short-float)
 				  (#\F 'single-float)
