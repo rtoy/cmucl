@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.31 1991/12/13 10:08:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.32 1992/01/02 23:44:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -942,16 +942,16 @@
 
 (defun output-vector (vector stream)
   (declare (vector vector))
-  (if (or *print-array* *print-readably*)
-      (typecase vector
-	(bit-vector
-	 (write-string "#*" stream)
-	 (dotimes (i (length vector))
-	   (output-object (aref vector i) stream)))
-	(string
+  (cond ((stringp vector)
 	 (if (or *print-escape* *print-readably*)
 	     (quote-string vector stream)
 	     (write-string vector stream)))
+	((not (or *print-array* *print-readably*))
+	 (output-terse-array vector stream))
+	((bit-vector-p vector)
+	 (write-string "#*" stream)
+	 (dotimes (i (length vector))
+	   (output-object (aref vector i) stream)))
 	(t
 	 (when (and *print-readably*
 		    (not (eq (array-element-type vector) 't)))
@@ -963,8 +963,7 @@
 	       (write-char #\space stream))
 	     (punt-if-too-long i stream)
 	     (output-object (aref vector i) stream))
-	   (write-string ")" stream))))
-      (output-terse-array vector stream)))
+	   (write-string ")" stream)))))
 
 ;;; QUOTE-STRING -- Internal.
 ;;;
