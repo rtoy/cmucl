@@ -304,9 +304,20 @@
     (nop)))
 
 
-(define-static-function two-arg-plus (x y) :translate +)
-(define-static-function two-arg-minus (x y) :translate -)
-(define-static-function two-arg-times (x y) :translate *)
-(define-static-function two-arg-divide (x y) :translate /)
+
+
+;;;; Static functions.
+
+(define-static-function two-arg-+ (x y) :translate +)
+(define-static-function two-arg-- (x y) :translate -)
+(define-static-function two-arg-* (x y) :translate *)
+(define-static-function two-arg-/ (x y) :translate /)
+
+(define-static-function two-arg-< (x y) :translate <)
+(define-static-function two-arg-<= (x y) :translate <=)
+(define-static-function two-arg-> (x y) :translate >)
+(define-static-function two-arg->= (x y) :translate >=)
+(define-static-function two-arg-= (x y) :translate =)
+(define-static-function two-arg-/= (x y) :translate /=)
 
 (define-static-function negate (x) :translate -)
