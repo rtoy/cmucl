@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.1 1990/06/17 02:08:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.2 1990/06/25 21:00:16 wlott Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.
@@ -133,11 +133,17 @@
 
 
 (defun print-herald ()
-  (write-string "CMU Common Lisp ")
-  (write-line (lisp-implementation-version))
-  (write-string "Hemlock ")
-  (write-string *hemlock-version*)
-  (write-string ", Compiler ")
-  (write-line #+nil compiler-version #-nil "What compiler?")
-  (write-line "Send bug reports and questions to Gripe.")
+  (macrolet ((frob (variable)
+	       `(if (boundp ',variable)
+		    ,variable
+		    "<not loaded>")))
+    (write-string "CMU Common Lisp ")
+    (write-string (lisp-implementation-version))
+    (write-string ", running on ")
+    (write-line (machine-instance))
+    (write-string "Hemlock ")
+    (write-string (frob *hemlock-version*))
+    (write-string ", Compiler ")
+    (write-line (frob compiler-version))
+    (write-line "Send bug reports and questions to Gripe."))
   (values))
