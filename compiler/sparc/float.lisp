@@ -1,15 +1,17 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.9 1992/02/25 07:07:18 wlott Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.8 1992/01/16 16:34:24 ram Exp $
-;;;
-;;;    This file contains floating point support for the MIPS.
+;;; This file contains floating point support for the MIPS.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;; Sparc conversion by William Lott.
@@ -480,41 +482,6 @@
 	 (double-reg
 	  (inst stf-odd float (current-nfp-tn vop)
 		(* (tn-offset lo-bits) vm:word-bytes))))))))
-
-
-;;;; SAP accessors/setters
-
-(define-vop (sap-ref-single sap-ref)
-  (:translate sap-ref-single)
-  (:results (result :scs (single-reg)))
-  (:result-types single-float)
-  (:variant :single nil))
-
-(define-vop (sap-set-single sap-set)
-  (:translate %set-sap-ref-single)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (any-reg signed-reg zero immediate))
-	 (value :scs (single-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum single-float)
-  (:results (result :scs (single-reg)))
-  (:result-types single-float)
-  (:variant :single))
-
-(define-vop (sap-ref-double sap-ref)
-  (:translate sap-ref-double)
-  (:results (result :scs (double-reg)))
-  (:result-types double-float)
-  (:variant :double nil))
-
-(define-vop (sap-set-double sap-set)
-  (:translate %set-sap-ref-double)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (signed-reg any-reg zero immediate))
-	 (value :scs (double-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum double-float)
-  (:results (result :scs (double-reg)))
-  (:result-types double-float)
-  (:variant :double))
 
 
 ;;;; Float mode hackery:
