@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.18 1992/12/11 00:56:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.19 1992/12/14 14:39:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -433,7 +433,8 @@
 	;; Do the select.
 	(unix:unix-select count read-mask write-mask except-mask
 			  to-sec to-usec))
-    (declare (type (unsigned-byte 32) readable writeable))
+    (declare (type (unsigned-byte 32) readable)
+	     (type (or (unsigned-byte 32) null) writeable))
     ;; Now see what it was (if anything)
     (cond ((fixnump value)
 	   (unless (zerop value)
