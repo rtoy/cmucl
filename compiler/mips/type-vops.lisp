@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.27 1991/04/19 16:27:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.28 1991/04/24 12:26:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.27 1991/04/19 16:27:16 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.28 1991/04/24 12:26:50 ram Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -204,9 +204,6 @@
   (frob array-header-p nil nil
     vm:simple-array-type vm:complex-string-type vm:complex-bit-vector-type
     vm:complex-vector-type vm:complex-array-type)
-  
-  (frob nil check-function-or-symbol object-not-function-or-symbol-error
-    vm:function-pointer-type vm:symbol-header-type)
 
   (frob stringp check-string object-not-string-error
     vm:simple-string-type vm:complex-string-type)
