@@ -139,5 +139,5 @@ struct sigcontext *context;
 void arch_install_interrupt_handlers()
 {
     interrupt_install_low_level_handler(SIGTRAP,sigtrap_handler);
-    interrupt_install_low_level_handler(SIGEMT,sigfpe_handler);
+    interrupt_install_low_level_handler(SIGFPE,sigfpe_handler);
 }
