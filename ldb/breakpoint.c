@@ -117,9 +117,27 @@ lispobj code;
 }
 
 handle_breakpoint(signal, subcode, scp)
-     struct sigcontext *scp;
+int signal, subcode;
+struct sigcontext *scp;
 {
-    internal_handle_breakpoint(scp, scp->sc_regs[CODE]);
+    lispobj code = scp->sc_regs[CODE];
+    lispobj header = *(lispobj *)PTR(code);
+
+    switch (TypeOf(header)) {
+      case type_CodeHeader:
+	break;
+      case type_ReturnPcHeader:
+	code = code - HeaderValue(header)*4;
+	break;
+      case type_FunctionHeader:
+      case type_ClosureFunctionHeader:
+	code = code - type_FunctionPointer - HeaderValue(header)*4
+	     + type_OtherPointer;
+	break;
+      default:
+	crap_out("Strange thing in $CODE at breakpoint.");
+    }
+    internal_handle_breakpoint(scp, code);
 }
 
 handle_function_end_breakpoint(signal, subcode, scp)
