@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.44 1994/01/06 18:07:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.45 1994/02/10 21:18:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -353,12 +353,12 @@
 
 ;;; Convert-Call-If-Possible  --  Interface
 ;;;
-;;;    Dispatch to the appropriate function to attempt to convert a call.  This
-;;; is called in IR1 optimize as well as in local call analysis.  If the call
-;;; is is already :Local, we do nothing.  If the call is already scheduled for
-;;; deletion, also do nothing (in addition to saving time, this also avoids
-;;; some problems with optimizing collections of functions that are partially
-;;; deleted.)
+;;;    Dispatch to the appropriate function to attempt to convert a call.  Ref
+;;; most be a reference to a FUNCTIONAL.  This is called in IR1 optimize as
+;;; well as in local call analysis.  If the call is is already :Local, we do
+;;; nothing.  If the call is already scheduled for deletion, also do nothing
+;;; (in addition to saving time, this also avoids some problems with optimizing
+;;; collections of functions that are partially deleted.)
 ;;;
 ;;;    This is called both before and after FIND-INITIAL-DFO runs.  When called
 ;;; on a :INITIAL component, we don't care whether the caller and callee are in
@@ -378,9 +378,12 @@
   (let* ((block (node-block call))
 	 (component (block-component block))
 	 (original-fun (ref-leaf ref)))
+    (assert (functional-p original-fun))
     (unless (or (member (basic-combination-kind call) '(:local :error))
 		(block-delete-p block)
 		(eq (functional-kind (block-home-lambda block)) :deleted)
+		(member (functional-kind original-fun)
+			'(:top-level-xep :deleted))
 		(not (or (eq (component-kind component) :initial)
 			 (eq (block-component
 			      (node-block
