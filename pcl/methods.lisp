@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.19 2002/12/18 00:57:05 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.20 2002/12/18 16:29:06 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -67,12 +67,6 @@
 ;;;
 ;;;
 ;;;
-(defmethod shared-initialize :after ((slotd standard-slot-definition) slot-names &key)
-  (declare (ignore slot-names))
-  (with-slots (allocation class)
-    slotd
-    (setq allocation (if (eq allocation :class) class allocation))))
-
 (defmethod shared-initialize :after ((slotd structure-slot-definition) slot-names 
 				     &key (allocation :instance))
   (declare (ignore slot-names))

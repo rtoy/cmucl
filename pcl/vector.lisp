@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.25 2002/12/18 00:57:05 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.26 2002/12/18 16:29:07 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -639,7 +639,7 @@
 	 (standard-class-p class)
 	 (not (eq class *the-class-t*)) ; shouldn't happen, though.
 	 (let ((slotd (find-slot-definition class slot-name)))
-	   (and slotd (classp (slot-definition-allocation slotd)))))))
+	   (and slotd (eq :class (slot-definition-allocation slotd)))))))
 
 (defun skip-fast-slot-access-p (class-form slot-name-form type)
   (let ((class (and (constantp class-form) (eval class-form)))

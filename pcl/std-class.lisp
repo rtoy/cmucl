@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.37 2002/10/29 16:20:45 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.38 2002/12/18 16:29:06 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -475,7 +475,7 @@
   (setf (plist-value class 'class-slot-cells)
 	(let ((collected ()))
 	  (dolist (dslotd direct-slots (nreverse collected))
-	    (when (eq (slot-definition-allocation dslotd) class)
+	    (when (eq (slot-definition-allocation dslotd) :class)
 	      (let ((initfunction (slot-definition-initfunction dslotd)))
 		(push (cons (slot-definition-name dslotd)
 			    (if initfunction 
@@ -703,9 +703,9 @@
   (let ((instance-slots ())
 	(class-slots    ()))
     (dolist (eslotd eslotds)
-      (let ((alloc (slot-definition-allocation eslotd)))
-	(cond ((eq alloc :instance) (push eslotd instance-slots))
-	      ((classp alloc)       (push eslotd class-slots)))))
+      (ecase (slot-definition-allocation eslotd)
+	(:instance (push eslotd instance-slots))
+	(:class    (push eslotd class-slots))))
     ;;
     ;; If there is a change in the shape of the instances then the
     ;; old class is now obsolete.
@@ -748,8 +748,8 @@
 (defun compute-class-slots (eslotds)
   (loop for eslotd in eslotds
 	for name = (slot-definition-name eslotd)
-	and allocation = (slot-definition-allocation eslotd)
-	collect (assoc name (class-slot-cells allocation))))
+	and class = (slot-definition-class eslotd)
+	collect (assoc name (class-slot-cells class))))
 
 (defun compute-layout (cpl instance-eslotds)
   (let* ((names (loop for eslotd in instance-eslotds
@@ -851,9 +851,9 @@
 	(instance-slots ())
 	(class-slots    ()))
     (dolist (eslotd eslotds)
-      (let ((alloc (slot-definition-allocation eslotd)))
-	(cond ((eq alloc :instance) (push eslotd instance-slots))
-	      ((classp alloc)       (push eslotd class-slots)))))
+      (ecase (slot-definition-allocation eslotd)
+	(:instance (push eslotd instance-slots))
+	(:class    (push eslotd class-slots))))
     (let ((nlayout (compute-layout cpl instance-slots)))
       (dolist (eslotd instance-slots)
 	(setf (slot-definition-location eslotd) 
@@ -861,7 +861,7 @@
     (dolist (eslotd class-slots)
       (setf (slot-definition-location eslotd) 
 	    (assoc (slot-definition-name eslotd)
-		   (class-slot-cells (slot-definition-allocation eslotd)))))
+		   (class-slot-cells (slot-definition-class eslotd)))))
     (mapc #'initialize-internal-slot-functions eslotds)
     eslotds))
 
