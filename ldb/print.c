@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.9 1990/04/05 00:47:42 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.10 1990/05/10 17:48:34 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -119,13 +119,13 @@ char *label;
 static void brief_fixnum(obj)
 lispobj obj;
 {
-    printf("%d", obj>>2);
+    printf("%d", ((long)obj)>>2);
 }
 
 static void print_fixnum(obj)
 lispobj obj;
 {
-    printf(": %d", obj>>2);
+    printf(": %d", ((long)obj)>>2);
 }
 
 static void brief_otherimm(obj)
