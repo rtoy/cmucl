@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.8 1997/09/29 04:35:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.9 1997/09/29 04:47:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -522,22 +522,13 @@
 	      word-width))))
 
 (defun offset-next (value dstate)
-  (declare #|(type integer value)|#
+  (declare (type integer value)
 	   (type disassem:disassem-state dstate))
-  ;; XXX dtc; a hack to stop the disassembler causing a fatal error;
-  ;; probably caused by out of bounds offsets?
-  (if (or (null value)
-	  (and (listp value) (null (car value))))
-      0
-    (+ (disassem:dstate-next-addr dstate) (if (listp value) (car value) value))))
+  (+ (disassem:dstate-next-addr dstate) value))
 
 (defun read-address (value dstate)
   (declare (ignore value))		; always nil anyway
   (disassem:read-suffix (width-bits *default-address-size*) dstate))
-
-(defun read-signed-imm-dword (value dstate)
-  (declare (ignore value))		; always nil anyway
-  (disassem:read-signed-suffix 32 dstate))
 
 (defun width-bits (width)
   (ecase width
@@ -602,7 +593,9 @@
 		 (disassem:read-signed-suffix 8 dstate)))
 
 (disassem:define-argument-type signed-imm-dword
-  :prefilter #'read-signed-imm-dword)
+  :prefilter #'(lambda (value dstate)
+		 (declare (ignore value))		; always nil anyway
+		 (disassem:read-signed-suffix 32 dstate)))
 
 (disassem:define-argument-type imm-word
   :prefilter #'(lambda (value dstate)
@@ -1707,14 +1700,20 @@
   (cc	 :field (byte 4 8) :type 'condition-code)
   ;; The disassembler currently doesn't let you have an instruction > 32 bits
   ;; long, so we fake it by using a prefilter to read the offset.
-  (label :type 'displacement :prefilter #'read-signed-imm-dword))
+  (label :type 'displacement
+	 :prefilter #'(lambda (value dstate)
+			(declare (ignore value))   ; always nil anyway
+			(disassem:read-signed-suffix 32 dstate))))
 
 (disassem:define-instruction-format (near-jump 8
 				     :default-printer '(:name :tab label))
   (op    :field (byte 8 0))
   ;; The disassembler currently doesn't let you have an instruction > 32 bits
   ;; long, so we fake it by using a prefilter to read the address.
-  (label :type 'displacement :prefilter #'read-signed-imm-dword))
+  (label :type 'displacement
+	 :prefilter #'(lambda (value dstate)
+			(declare (ignore value))   ; always nil anyway
+			(disassem:read-signed-suffix 32 dstate))))
 
 
 (define-instruction call (segment where)
