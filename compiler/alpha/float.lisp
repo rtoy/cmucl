@@ -6,7 +6,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/float.lisp,v 1.6 1998/01/26 15:54:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/float.lisp,v 1.7 1998/01/26 18:15:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,12 +289,16 @@
 		  (:results (y :scs (,sc)))
 		  (:note "pointer to complex float coercion")
 		  (:generator 2
-		    (let ((real-tn (complex-double-reg-real-tn y)))
+		    (let ((real-tn ,(if double-p
+					'(complex-double-reg-real-tn y)
+					'(complex-single-reg-real-tn y))))
 		      (inst ,(if double-p 'ldt 'lds) real-tn
 			    (- (* ,real-value vm:word-bytes)
 			       vm:other-pointer-type)
 			    x))
-		    (let ((imag-tn (complex-double-reg-imag-tn y)))
+		    (let ((imag-tn ,(if double-p
+					'(complex-double-reg-imag-tn y)
+					'(complex-single-reg-imag-tn y))))
 		      (inst ,(if double-p 'ldt 'lds) imag-tn
 			    (- (* ,imag-value vm:word-bytes)
 			       vm:other-pointer-type)
