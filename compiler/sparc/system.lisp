@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.15 2003/10/27 18:30:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.16 2003/11/06 22:20:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,9 +50,9 @@
     (inst b :eq done)
     ;; Okay, it is an immediate.  If fixnum, we want zero.  Otherwise,
     ;; we want the low 8 bits.
-    (inst andcc zero-tn object #b11)
+    (inst andcc zero-tn object vm:fixnum-tag-mask)
     (inst b :eq done)
-    (inst li result 0)
+    (inst li result 0)			; Watch out!  LI in branch delay slot!
     ;; It wasn't a fixnum, so get the low 8 bits.
     (inst b done)
     (inst and result object type-mask)
@@ -85,7 +85,10 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 6
-    (inst stb type function (- 3 function-pointer-type))
+    ;; Sparc is big-endian, and the type bits are in the least
+    ;; significant byte of the word, which means the type bits are at
+    ;; the highest byte.
+    (inst stb type function (- (- vm:word-bytes 1) function-pointer-type))
     (move result type)))
 
 (define-vop (get-header-data)
