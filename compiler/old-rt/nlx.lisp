@@ -88,7 +88,7 @@
 ;;;; Unwind block hackery:
 
 ;;; Compute the address of the catch block from its TN, then store into the
-;;; block the current Cont, Env, Unwind-Protect, and the entry PC.
+;;; block the current Fp, Env, Unwind-Protect, and the entry PC.
 ;;;
 (define-vop (make-unwind-block)
   (:args (tn)
@@ -100,7 +100,7 @@
     (inst ai result fp-tn (* (tn-offset tn) 4))
     (load-global temp clc::current-unwind-protect-block)
     (storew temp result system:%unwind-block-current-uwp)
-    (storew fp-tn result system:%unwind-block-current-cont)
+    (storew fp-tn result system:%unwind-block-current-fp)
     (storew env-tn result system:%unwind-block-current-env)
     (storew entry-offset result system:%unwind-block-entry-pc)
     (unless (location= result block)
@@ -121,7 +121,7 @@
     (inst ai result fp-tn (* (tn-offset tn) 4))
     (load-global temp clc::current-unwind-protect-block)
     (storew temp result system:%unwind-block-current-uwp)
-    (storew fp-tn result system:%unwind-block-current-cont)
+    (storew fp-tn result system:%unwind-block-current-fp)
     (storew env-tn result system:%unwind-block-current-env)
     (storew entry-offset result system:%unwind-block-entry-pc)
 
