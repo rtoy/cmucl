@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.20 1991/04/23 13:29:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.21 1991/04/25 00:47:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,7 @@
 
 (in-package "KERNEL")
 
-(export '(%caller-frame-and-pc))
+(export '(%caller-frame-and-pc %with-array-data))
 
 (in-package 'c)
 
@@ -68,7 +68,7 @@
 
 (defknown coerce (t type-specifier) t
 	  (movable foldable)			  ; Is defined to signal errors. 
-  #|:derive-type 'type-spec-arg2|#)
+  :derive-type (result-type-specifier-nth-arg 2))
 
 (defknown type-of (t) t (foldable flushable))
 
@@ -99,7 +99,7 @@
 (defknown fboundp ((or symbol cons)) boolean (flushable))
 (defknown special-form-p (symbol) t (movable foldable flushable)) ; They never change...
 (defknown set (symbol t) t (unsafe)
-  #|:derive-type 'result-type-arg2|#)
+  :derive-type #'result-type-last-arg)
 (defknown fdefinition ((or symbol cons)) function)
 (defknown %set-fdefinition ((or symbol cons) function) function)
 (defknown makunbound (symbol) symbol)
@@ -307,24 +307,28 @@
 (defknown elt (sequence index) t (foldable flushable))
 
 (defknown subseq (sequence index &optional sequence-end) consed-sequence
-  (foldable flushable) #|:derive-type 'result-type-arg1|#)
+  (foldable flushable)
+  :derive-type (sequence-result-nth-arg 1))
 
 (defknown copy-seq (sequence) consed-sequence (foldable flushable)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type #'result-type-first-arg)
+
 
 (defknown length (sequence) index (foldable flushable))
 
 (defknown reverse (sequence) consed-sequence (foldable flushable)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type #'result-type-first-arg)
 
 (defknown nreverse (sequence) sequence ()
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type #'result-type-first-arg)
 
 (defknown make-sequence (type-specifier index &key (initial-element t)) consed-sequence
-  (movable flushable unsafe) #|:derive-type 'type-spec-arg1|#)
+  (movable flushable unsafe)
+  :derive-type (result-type-specifier-nth-arg 1))
 
 (defknown concatenate (type-specifier &rest sequence) consed-sequence
-  (foldable flushable) #|:derive-type 'type-spec-arg1|#)
+  (foldable flushable)
+  :derive-type (result-type-specifier-nth-arg 1))
 
 (defknown map (type-specifier callable sequence &rest sequence) consed-sequence
   (flushable call)
@@ -346,12 +350,12 @@
 
 (defknown fill (sequence t &key (start index) (end sequence-end)) sequence
   (unsafe)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type #'result-type-first-arg)
 
 (defknown replace (sequence sequence &key (start1 index) (end1 sequence-end)
 			    (start2 index) (end2 sequence-end))
   consed-sequence ()
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type #'result-type-first-arg)
 
 (defknown remove
   (t sequence &key (from-end t) (test callable)
@@ -359,7 +363,7 @@
      (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  #|:derive-type 'result-type-arg2|#)
+  :derive-type (sequence-result-nth-arg 2))
 
 (defknown substitute
   (t t sequence &key (from-end t) (test callable)
@@ -367,21 +371,21 @@
      (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  #|:derive-type 'result-type-arg3|#)
+  :derive-type (sequence-result-nth-arg 3))
 
 (defknown (remove-if remove-if-not)
   (callable sequence &key (from-end t) (start index) (end sequence-end)
 	    (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  #|:derive-type 'result-type-arg2|#)
+  :derive-type (sequence-result-nth-arg 2))
 
 (defknown (substitute-if substitute-if-not)
   (t callable sequence &key (from-end t) (start index) (end sequence-end)
      (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  #|:derive-type 'result-type-arg3|#)
+  :derive-type (sequence-result-nth-arg 3))
 
 (defknown delete
   (t sequence &key (from-end t) (test callable)
@@ -389,7 +393,7 @@
      (count sequence-end) (key callable))
   sequence
   (flushable call)
-  #|:derive-type 'result-type-arg2|#)
+  :derive-type (sequence-result-nth-arg 2))
 
 (defknown nsubstitute
   (t t sequence &key (from-end t) (test callable)
@@ -397,35 +401,35 @@
      (count sequence-end) (key callable))
   sequence
   (flushable call)
-  #|:derive-type 'result-type-arg3|#)
+  :derive-type (sequence-result-nth-arg 3))
 
 (defknown (delete-if delete-if-not)
   (callable sequence &key (from-end t) (start index) (end sequence-end)
 	    (count sequence-end) (key callable))
   sequence
   (flushable call)
-  #|:derive-type 'result-type-arg2|#)
+  :derive-type (sequence-result-nth-arg 2))
 
 (defknown (nsubstitute-if nsubstitute-if-not)
   (t callable sequence &key (from-end t) (start index) (end sequence-end)
      (count sequence-end) (key callable))
   sequence
   (flushable call)
-  #|:derive-type 'result-type-arg3|#)
+  :derive-type (sequence-result-nth-arg 3))
 
 (defknown remove-duplicates
   (sequence &key (test callable) (test-not callable) (start index) (from-end t)
 	    (end sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type (sequence-result-nth-arg 1))
 
 (defknown delete-duplicates
   (sequence &key (test callable) (test-not callable) (start index) (from-end t)
 	    (end sequence-end) (key callable))
   sequence
   (flushable call)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type (sequence-result-nth-arg 1))
 
 (defknown find (t sequence &key (test callable) (test-not callable)
 		  (start index) (from-end t) (end sequence-end) (key callable))
@@ -472,13 +476,13 @@
 ;;; Not flushable, since vector sort guaranteed in-place...
 (defknown (stable-sort sort) (sequence callable &key (key callable)) sequence
   (call)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type (sequence-result-nth-arg 1))
 
 (defknown merge (type-specifier sequence sequence callable
 				&key (key callable))
   sequence
   (flushable call)
-  #|:derive-type 'type-spec-arg1|#)
+  :derive-type (result-type-specifier-nth-arg 1))
 
 
 ;;;; In the "Manipulating List Structure" chapter:
@@ -618,12 +622,12 @@
   ((array bit) (array bit) &optional (or (array bit) (member t)))
   (array bit)
   (foldable)
-  #|:derive-type 'result-type-arg1|#)
+  #|:derive-type #'result-type-last-arg|#
 
 (defknown bit-not ((array bit) &optional (or (array bit) (member t)))
   (array bit)
   (foldable)
-  #|:derive-type 'result-type-arg1|#)
+  #|:derive-type #'result-type-last-arg|#)
 
 (defknown array-has-fill-pointer-p (array) boolean (movable foldable flushable))
 (defknown fill-pointer (vector) index (foldable flushable))
@@ -645,8 +649,10 @@
 (defknown char (string index) character (foldable flushable))
 (defknown schar (simple-string index) character (foldable flushable))
 
+(deftype stringable () '(or character string symbol))
+
 (defknown (string= string-equal)
-  (stringlike stringlike &key (start1 index) (end1 sequence-end)
+  (stringable stringable &key (start1 index) (end1 sequence-end)
 	      (start2 index) (end2 sequence-end))
   boolean
   (foldable flushable))
@@ -654,7 +660,7 @@
 (defknown (string< string> string<= string>= string/= string-lessp
 		   string-greaterp string-not-lessp string-not-greaterp
 		   string-not-equal)
-  (stringlike stringlike &key (start1 index) (end1 sequence-end)
+  (stringable stringable &key (start1 index) (end1 sequence-end)
 	      (start2 index) (end2 sequence-end))
   (or index null)
   (foldable flushable))
@@ -663,28 +669,29 @@
   simple-string (flushable))
 
 (defknown (string-trim string-left-trim string-right-trim)
-  (sequence stringlike) simple-string (flushable))
+  (sequence stringable) simple-string (flushable))
 
 (defknown (string-upcase string-downcase string-capitalize)
-  (stringlike &key (start index) (end sequence-end))
+  (stringable &key (start index) (end sequence-end))
   simple-string (flushable))
 
 (defknown (nstring-upcase nstring-downcase nstring-capitalize)
   (string &key (start index) (end sequence-end))
   string ())
 
-(defknown string ((or character string symbol)) string (flushable))
+(defknown string (stringable) string
+  (flushable explicit-check))
 
 
 ;;; Internal non-keyword versions of string predicates:
 
 (defknown (string<* string>* string<=* string>=* string/=*)
-  (stringlike stringlike index sequence-end index sequence-end)
+  (stringable stringable index sequence-end index sequence-end)
   (or index null)
   (foldable flushable))
 
 (defknown string=*
-  (stringlike stringlike index sequence-end index sequence-end)
+  (stringable stringable index sequence-end index sequence-end)
   boolean
   (foldable flushable))
 
@@ -773,10 +780,10 @@
      (circle t) (pretty t) (level (or unsigned-byte null))
      (length (or unsigned-byte null)) (case t) (array t) (gensym t)) t
   (any explicit-check)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type #'result-type-first-arg)
 
 (defknown (prin1 print princ) (t &optional streamlike) t (any explicit-check)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type #'result-type-first-arg)
 
 ;;; xxx-TO-STRING not foldable because they depend on the dynamic environment. 
 (defknown write-to-string
@@ -947,7 +954,7 @@
   () simple-string (flushable))
 
 (defknown identity (t) t (movable foldable flushable unsafe)
-  #|:derive-type 'result-type-arg1|#)
+  :derive-type #'result-type-first-arg)
 
 (defknown constantly (t &rest t) function (movable flushable))
 (defknown complement (function) function (movable flushable))
@@ -989,7 +996,9 @@
 (defknown data-vector-ref (array index) t (foldable flushable explicit-check))
 (defknown data-vector-set (array index t) t (unsafe explicit-check))
 (defknown kernel:%caller-frame-and-pc () (values t t) (flushable))
-
+(defknown kernel:%with-array-data (array index (or index null))
+  (values (simple-array * (*)) index index index)
+  (foldable flushable))
 
 ;;; Structure slot accessors or setters are magically "known" to be these
 ;;; functions, although the var remains the Slot-Accessor describing the actual
