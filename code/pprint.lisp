@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.17 1994/02/12 12:46:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.18 1994/02/12 14:21:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1500,4 +1500,3 @@
   (setf *pretty-printer* #'output-pretty-object)
   (setf *print-pretty* t))
 
-(pprint-init)
