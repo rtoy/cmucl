@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.4 1990/03/08 17:30:04 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.5 1990/03/18 15:17:00 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -222,7 +222,7 @@ lispobj obj;
             print_obj(NULL, cons->car);
             obj = cons->cdr;
             space = TRUE;
-            if (obj == NULL)
+            if (obj == NIL)
                 break;
         }
         if (obj != NIL) {
