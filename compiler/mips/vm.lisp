@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.23 1990/04/24 07:00:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.24 1990/05/06 05:32:32 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -189,16 +189,27 @@
 (def-primitive-type t (descriptor-reg))
 (defvar *any-primitive-type* (primitive-type-or-lose 't))
 
-;;; Primitive integer types.
+;;; Primitive integer types that fit in registers.
 ;;;
-(def-primitive-type fixnum (any-reg))
-#| ### Rob needs to think about this more.
-(def-primitive-type positive-fixnum (any-reg signed-reg unsigned-reg))
-(def-primitive-type negative-fixnum (any-reg signed-reg))
-(def-primitive-type negative-signed-byte-32 (signed-reg))
-(def-primitive-type unsigned-byte-31 (signed-reg unsigned-reg))
-(def-primitive-type unsigned-byte-32 (unsigned-reg))
-|#
+(def-primitive-type positive-fixnum (any-reg signed-reg unsigned-reg)
+  :type (unsigned-byte 29))
+(def-primitive-type unsigned-byte-31 (signed-reg unsigned-reg)
+  :type (unsigned-byte 31))
+(def-primitive-type unsigned-byte-32 (unsigned-reg)
+  :type (unsigned-byte 32))
+(def-primitive-type fixnum (any-reg signed-reg)
+  :type (signed-byte 30))
+(def-primitive-type signed-byte-32 (signed-reg)
+  :type (signed-byte 32))
+
+(def-primitive-type-alias tagged-num (:or positive-fixnum fixnum))
+(def-primitive-type-alias unsigned-num (:or unsigned-byte-32
+					    unsigned-byte-31
+					    positive-fixnum))
+(def-primitive-type-alias signed-num (:or signed-byte-32
+					  fixnum
+					  unsigned-byte-31
+					  positive-fixnum))
 
 ;;; Other primitive immediate types.
 (def-primitive-type base-character (base-character-reg any-reg))
@@ -304,12 +315,24 @@
 	   (:real
 	    (case (numeric-type-class type)
 	      (integer
-	       (cond ((and hi lo
-			   (>= lo most-negative-fixnum)
-			   (<= hi most-positive-fixnum))
-		      (values (primitive-type-or-lose 'fixnum)
-			      (and (= lo most-negative-fixnum)
-				   (= hi most-positive-fixnum))))
+	       (cond ((and hi lo)
+		      (dolist (spec
+			       '((positive-fixnum 0 #.(1- (ash 1 29)))
+				 (unsigned-byte-31 0 #.(1- (ash 1 31)))
+				 (unsigned-byte-32 0 #.(1- (ash 1 32)))
+				 (fixnum #.(ash -1 29) #.(1- (ash 1 29)))
+				 (signed-byte-32 #.(ash -1 31)
+						 #.(1- (ash 1 31))))
+			       (if (or (< hi (ash -1 29))
+				       (> lo (1- (ash 1 29))))
+				   (part-of bignum)
+				   (any)))
+			(let ((type (car spec))
+			      (min (cadr spec))
+			      (max (caddr spec)))
+			  (when (<= min lo hi max)
+			    (return (values (primitive-type-or-lose type)
+					    (and (= lo min) (= hi max))))))))
 		     ((or (and hi (< hi most-negative-fixnum))
 			  (and lo (> lo most-positive-fixnum)))
 		      (part-of bignum))
@@ -497,7 +520,7 @@
      (if (vm:static-symbol-p value)
 	 (sc-number-or-lose 'random-immediate)
 	 nil))
-    ((signed-byte 29) #+nil (or (signed-byte 32) (unsigned-byte 32))
+    ((or (signed-byte 32) (unsigned-byte 32))
      (sc-number-or-lose 'random-immediate))
     #+new-compiler
     (system-area-pointer
