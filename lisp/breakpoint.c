@@ -4,6 +4,7 @@
 #include "lisp.h"
 #include "os.h"
 #include "internals.h"
+#include "interrupt.h"
 #include "arch.h"
 #include "lispregs.h"
 #include "globals.h"
