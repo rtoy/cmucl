@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.24 1993/05/29 07:00:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.25 1993/06/23 19:32:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -396,7 +396,7 @@
   ;; Describe the function cell.
   (cond ((macro-function x)
 	 (describe-function (macro-function x) :macro x))
-	((special-form-p x)
+	((special-operator-p x)
 	 (desc-doc x 'function "Special form"))
 	((fboundp x)
 	 (describe-function (fdefinition x) :function x)))

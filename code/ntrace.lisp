@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.10 1992/12/08 20:10:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.11 1993/06/23 19:33:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,7 +141,7 @@
       (res named-p)
       (typecase x
 	(symbol
-	 (cond ((special-form-p x)
+	 (cond ((special-operator-p x)
 		(error "Can't trace special form ~S." x))
 	       ((macro-function x))
 	       (t
