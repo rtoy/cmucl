@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.16 1992/05/21 14:36:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.17 1992/05/21 22:35:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -297,9 +297,9 @@ default-value-8
 	   (type unsigned-byte nvals) (type tn move-temp temp))
   (if (<= nvals 1)
       (progn
+	(note-this-location vop :single-value-return)
 	(move csp-tn ocfp-tn)
 	(inst nop)
-	(note-this-location vop :single-value-return)
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label))

@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.47 1992/05/21 14:36:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.48 1992/05/21 22:34:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.47 1992/05/21 14:36:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.48 1992/05/21 22:34:26 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -299,11 +299,14 @@ default-value-8
 	   (type unsigned-byte nvals) (type tn move-temp temp))
   (if (<= nvals 1)
       (progn
+	;; Note that this is a single-value return point.  This is actually
+	;; the multiple-value entry point for a single desired value, but
+	;; the code location has to be here, or the debugger backtrace
+	;; gets confused.
+	(note-this-location vop :single-value-return)
 	(move csp-tn old-fp-tn)
 	(inst nop)
 	(inst entry-point)
-	;; Note that this is a single-value return point.
-	(note-this-location vop :single-value-return)
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label))
