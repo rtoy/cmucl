@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.18 1993/08/06 13:06:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.19 1994/09/29 14:41:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -718,9 +718,13 @@
 				      element-type () initial-element
 				      initial-element-p)
 				     old-data)))
-		   (zap-array-data old-data (array-dimensions array) old-start
-				   new-data dimensions new-length element-type
-				   initial-element initial-element-p)
+		   (if (or (zerop old-length) (zerop new-length))
+		       (when initial-element-p (fill new-data initial-element))
+		       (zap-array-data old-data (array-dimensions array)
+				       old-start
+				       new-data dimensions new-length
+				       element-type initial-element
+				       initial-element-p))
 		   (set-array-header array new-data new-length
 				     new-length 0 dimensions nil)))))))))
 
