@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.1 1997/01/18 14:31:19 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.2 1997/02/11 16:16:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996.
 ;;;
 
 (in-package :x86)
@@ -277,11 +278,6 @@
   (:generator 1
     (inst int 3)
     (inst byte halt-trap)))
-
-;;; bootstrapping
-(in-package :kernel)
-(export 'float-wait)
-(in-package  :x86)
 
 (defknown float-wait () (values))
 (define-vop (float-wait)
