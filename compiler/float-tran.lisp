@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.2 1990/07/05 11:00:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.3 1990/09/28 06:41:54 ram Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -90,18 +90,9 @@
 
 ;;;; DECODE-FLOAT, INTEGER-DECODE-FLOAT, SCALE-FLOAT:
 ;;;
-;;;    Convert these operations to format specific versions when the format it
+;;;    Convert these operations to format specific versions when the format is
 ;;; known.
 ;;;
-
-
-(deftype single-float-exponent ()
-  `(integer ,(- single-float-normal-exponent-min single-float-bias)
-	    ,(- single-float-normal-exponent-max single-float-bias)))
-
-(deftype double-float-exponent ()
-  `(integer ,(- double-float-normal-exponent-min double-float-bias)
-	    ,(- double-float-normal-exponent-max double-float-bias)))
 
 (defconstant single-float-digits
   (1+ (byte-size single-float-significand-byte)))
@@ -111,15 +102,26 @@
 			vm:word-bits
 			1))
 
-(deftype single-float-int-exponent ()
+(deftype single-float-exponent ()
   `(integer ,(- single-float-normal-exponent-min single-float-bias
 		single-float-digits)
+	    ,(- single-float-normal-exponent-max single-float-bias)))
+
+(deftype double-float-exponent ()
+  `(integer ,(- double-float-normal-exponent-min double-float-bias
+		double-float-digits)
+	    ,(- double-float-normal-exponent-max double-float-bias)))
+
+
+(deftype single-float-int-exponent ()
+  `(integer ,(- single-float-normal-exponent-min single-float-bias
+		(* single-float-digits 2))
 	    ,(- single-float-normal-exponent-max single-float-bias
 		single-float-digits)))
 
 (deftype double-float-int-exponent ()
   `(integer ,(- double-float-normal-exponent-min double-float-bias
-		double-float-digits)
+		(* double-float-digits 2))
 	    ,(- double-float-normal-exponent-max double-float-bias
 		double-float-digits)))
 
