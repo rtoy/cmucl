@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.52 2003/09/05 10:49:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.53 2003/09/05 11:04:59 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -443,7 +443,7 @@
 			   (,op (imagpart x) (imagpart y))))
        (((foreach bignum fixnum ratio single-float double-float
 		  #+long-float long-float) complex)
-	(complex (,op x (realpart y)) (,op (imagpart y))))
+	(,op (complex x) y))
        ((complex (or rational float))
 	(complex (,op (realpart x) y) (imagpart x)))
        
