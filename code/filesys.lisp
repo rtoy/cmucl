@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.6 1990/11/17 05:40:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.7 1990/11/23 08:36:30 wlott Exp $
 ;;;
 ;;; Ugly pathname functions for Spice Lisp.
 ;;;    these functions are part of the standard Spice Lisp environment.
@@ -737,8 +737,6 @@
 
 ;;;; Printing directories.
 
-#|
-
 ;;; PRINT-DIRECTORY is exported from the EXTENSIONS package.
 ;;; 
 (defun print-directory (pathname &optional stream &key all verbose return-list)
@@ -754,61 +752,65 @@
 	(print-directory-formatted pathname all return-list))))
 
 (defun print-directory-verbose (pathname all return-list)
-  (multiple-value-bind (dir pattern) (find-directory pathname)
-    (declare (ignore dir))
-    (format t "Directory of ~A :~%" pattern)
-    (let ((dir-name (directory-namestring pattern))
-	  (result ()))
-      (do-directory (name etype pattern all (nreverse result))
-	(let ((slash-name (if (eq etype :entry_file)
-			      name
-			      (concatenate 'simple-string name "/"))))
-	  (declare (simple-string slash-name))
+  (let ((contents (directory pathname :all all :check-for-subdirs nil))
+	(result nil))
+    (format t "Directory of ~A :~%" (namestring pathname))
+    (dolist (file contents)
+      (let* ((namestring (unix-namestring file))
+	     (tail (subseq namestring
+			   (1+ (or (position #\/ namestring
+					     :from-end t
+					     :test #'char=)
+				   -1)))))
+	(multiple-value-bind 
+	    (reslt dev-or-err ino mode nlink uid gid rdev size atime mtime)
+	    (mach:unix-stat namestring)
+	  (declare (ignore ino gid rdev atime)
+		   (fixnum uid mode))
+	  (cond (reslt
+		 ;;
+		 ;; Print characters for file modes.
+		 (macrolet ((frob (bit name &optional sbit sname negate)
+			      `(if ,(if negate
+					`(not (logbitp ,bit mode))
+					`(logbitp ,bit mode))
+				   ,(if sbit
+					`(if (logbitp ,sbit mode)
+					     (write-char ,sname)
+					     (write-char ,name))
+					`(write-char ,name))
+				   (write-char #\-))))
+		   (frob 15 #\d nil nil t)
+		   (frob 8 #\r)
+		   (frob 7 #\w)
+		   (frob 6 #\x 11 #\s)
+		   (frob 5 #\r)
+		   (frob 4 #\w)
+		   (frob 3 #\x 10 #\s)
+		   (frob 2 #\r)
+		   (frob 1 #\w)
+		   (frob 0 #\x))
+		 ;;
+		 ;; Print the rest.
+		 (multiple-value-bind (sec min hour date month year)
+				      (get-decoded-time)
+		   (declare (ignore sec min hour date month))
+		   (format t "~2D ~8A ~8D ~12A ~A~@[/~]~%"
+			   nlink
+			   (or (lookup-login-name uid) uid)
+			   size
+			   (decode-universal-time-for-files mtime year)
+			   tail
+			   (= (logand mode mach::s_ifmt) mach::s_ifdir))))
+		(t (format t "Couldn't stat ~A -- ~A.~%"
+			   tail
+			   (mach:get-unix-error-msg dev-or-err))))
 	  (when return-list
-	    (push (pathname (concatenate 'simple-string dir-name slash-name))
-		  result))
-	  (multiple-value-bind 
-	      (reslt dev-or-err ino mode nlink uid gid rdev size atime mtime)
-	      (mach:unix-stat (concatenate 'simple-string dir-name name))
-	    (declare (ignore ino gid rdev atime)
-		     (fixnum uid mode))
-	    (cond (reslt
-		   ;;
-		   ;; Print characters for file modes.
-		   (macrolet ((frob (bit name &optional sbit sname negate)
-				`(if ,(if negate
-					  `(not (logbitp ,bit mode))
-					  `(logbitp ,bit mode))
-				     ,(if sbit
-					  `(if (logbitp ,sbit mode)
-					       (write-char ,sname)
-					       (write-char ,name))
-					  `(write-char ,name))
-				     (write-char #\-))))
-		     (frob 15 #\d nil nil t)
-		     (frob 8 #\r)
-		     (frob 7 #\w)
-		     (frob 6 #\x 11 #\s)
-		     (frob 5 #\r)
-		     (frob 4 #\w)
-		     (frob 3 #\x 10 #\s)
-		     (frob 2 #\r)
-		     (frob 1 #\w)
-		     (frob 0 #\x))
-		   ;;
-		   ;; Print the rest.
-		   (multiple-value-bind (sec min hour date month year)
-					(get-decoded-time)
-		     (declare (ignore sec min hour date month))
-		     (format t "~2D ~8A ~8D ~12A ~A~%"
-			     nlink
-			     (or (lookup-login-name uid) uid)
-			     size
-			     (decode-universal-time-for-files mtime year)
-			     slash-name)))
-		  (t (format t "Couldn't stat ~A -- ~A.~%"
-			     slash-name
-			     (mach:get-unix-error-msg dev-or-err))))))))))
+	    (push (if (= (logand mode mach::s_ifmt) mach::s_ifdir)
+		      (pathname (concatenate 'string namestring "/"))
+		      file)
+		  result)))))
+    (nreverse result)))
 
 (defun decode-universal-time-for-files (time current-year)
   (multiple-value-bind (sec min hour day month year)
@@ -825,50 +827,51 @@
 	(names ())
 	(cnt 0)
 	(max-len 0)
-	(result ()))
+	(result (directory pathname :all all)))
     (declare (list names) (fixnum max-len cnt))
     ;;
     ;; Get the data.
-    (multiple-value-bind (dir pattern) (find-directory pathname)
-      (declare (ignore dir))
-      (do-directory (name etype pattern all)
-	(let* ((slash-name (if (eql etype :entry_file)
-			       name
-			       (concatenate 'simple-string name "/")))
-	       (len (length slash-name)))
-	  (declare (simple-string slash-name)
-		   (fixnum len))
-	  (when return-list
-	    (push (pathname (concatenate 'simple-string
-					 (directory-namestring pattern)
-					 slash-name))
-		  result))
-	  
-	  (if (> len max-len) (setq max-len len))
-	  (incf cnt)
-	  (push slash-name names)))
-      (setq names (nreverse names))
-      ;;
-      ;; Do the output.
-      (let* ((col-width (1+ max-len))
-	     (cols (max (truncate width col-width) 1))
-	     (lines (ceiling cnt cols)))
-	(declare (fixnum cols lines))
-	(format t "Directory of ~A :~%" pattern)
-	(dotimes (i lines)
-	  (declare (fixnum i))
-	  (dotimes (j cols)
-	    (declare (fixnum j))
-	    (let ((name (nth (+ i (the fixnum (* j lines))) names)))
-	      (when name
-		(write-string name)
-		(unless (eql j (1- cols))
-		  (tab-over 
-		   (- col-width (length (the simple-string name))))))))
-	  (terpri))))
-    (when return-list (nreverse result))))
+    (dolist (file result)
+      (let* ((name (unix-namestring file))
+	     (length (length name))
+	     (end (if (and (plusp length)
+			   (char= (schar name (1- length)) #\/))
+		      (1- length)
+		      length))
+	     (slash-name (subseq name
+				 (1+ (or (position #\/ name
+						   :from-end t
+						   :end end
+						   :test #'char=)
+					 -1))))
+	     (len (length slash-name)))
+	(declare (simple-string slash-name)
+		 (fixnum len))
+	(if (> len max-len) (setq max-len len))
+	(incf cnt)
+	(push slash-name names)))
+    (setq names (nreverse names))
+    ;;
+    ;; Do the output.
+    (let* ((col-width (1+ max-len))
+	   (cols (max (truncate width col-width) 1))
+	   (lines (ceiling cnt cols)))
+      (declare (fixnum cols lines))
+      (format t "Directory of ~A :~%" (namestring pathname))
+      (dotimes (i lines)
+	(declare (fixnum i))
+	(dotimes (j cols)
+	  (declare (fixnum j))
+	  (let ((name (nth (+ i (the fixnum (* j lines))) names)))
+	    (when name
+	      (write-string name)
+	      (unless (eql j (1- cols))
+		(tab-over 
+		 (- col-width (length (the simple-string name))))))))
+	(terpri)))
+    (when return-list
+      result)))
 
-|#
 
 
 ;;;; Translating uid's and gid's.
