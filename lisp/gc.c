@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.10 1997/02/05 18:01:13 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.11 1997/02/17 09:17:15 dtc Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -361,6 +361,8 @@ void collect_garbage(void)
 
 /* Scavenging */
 
+#define DIRECT_SCAV 0
+
 static void
 scavenge(lispobj *start, long nwords)
 {
@@ -376,7 +378,7 @@ scavenge(lispobj *start, long nwords)
 		       (unsigned long) start, (unsigned long) object, type);
 #endif
 
-#if 0
+#if DIRECT_SCAV
 		words_scavenged = (scavtab[type])(start, object);
 #else
                 if (Pointerp(object)) {
@@ -589,6 +591,7 @@ void print_garbage(lispobj *from_space, lispobj *from_space_free_pointer)
 static lispobj trans_function_header(lispobj object);
 static lispobj trans_boxed(lispobj object);
 
+#if DIRECT_SCAV
 static int
 scav_function_pointer(lispobj *where, lispobj object)
 {
@@ -631,6 +634,45 @@ scav_function_pointer(lispobj *where, lispobj object)
 	}
 	return 1;
 }
+#else
+static int
+scav_function_pointer(lispobj *where, lispobj object)
+{
+  lispobj  *first_pointer;
+  lispobj copy;
+  lispobj first;
+  int type;
+
+  gc_assert(Pointerp(object));
+      
+  /* object is a pointer into from space. Not a FP */
+  first_pointer = (lispobj *) PTR(object);
+  first = *first_pointer;
+		
+  /* must transport object -- object may point */
+  /* to either a function header, a closure */
+  /* function header, or to a closure header. */
+  
+  type = TypeOf(first);
+  switch (type) {
+  case type_FunctionHeader:
+  case type_ClosureFunctionHeader:
+    copy = trans_function_header(object);
+    break;
+  default:
+    copy = trans_boxed(object);
+    break;
+  }
+  
+  first = *first_pointer = copy;
+
+  gc_assert(Pointerp(first));
+  gc_assert(!from_space_p(first));
+
+  *where = first;
+  return 1;
+}
+#endif
 
 static struct code *
 trans_code(struct code *code)
@@ -865,6 +907,7 @@ trans_function_header(lispobj object)
 
 /* Instances */
 
+#if DIRECT_SCAV
 static int
 scav_instance_pointer(lispobj *where, lispobj object)
 {
@@ -882,12 +925,26 @@ scav_instance_pointer(lispobj *where, lispobj object)
     }
     return 1;
 }
+#else
+static int
+scav_instance_pointer(lispobj *where, lispobj object)
+{
+  lispobj  *first_pointer;
+  
+  /* object is a pointer into from space.  Not a FP */
+  first_pointer = (lispobj *) PTR(object);
+  
+  *where = *first_pointer = trans_boxed(object);
+  return 1;
+}
+#endif
 
 
 /* Lists and Conses */
 
 static lispobj trans_list(lispobj object);
 
+#if DIRECT_SCAV
 static int
 scav_list_pointer(lispobj *where, lispobj object)
 {
@@ -911,6 +968,26 @@ scav_list_pointer(lispobj *where, lispobj object)
 	}
 	return 1;
 }
+#else
+static int
+scav_list_pointer(lispobj *where, lispobj object)
+{
+  lispobj first, *first_pointer;
+
+  gc_assert(Pointerp(object));
+
+  /* object is a pointer into from space.  Not a FP. */
+  first_pointer = (lispobj *) PTR(object);
+  
+  first = *first_pointer = trans_list(object);
+  
+  gc_assert(Pointerp(first));
+  gc_assert(!from_space_p(first));
+  
+  *where = first;
+  return 1;
+}
+#endif
 
 static lispobj
 trans_list(lispobj object)
@@ -966,6 +1043,7 @@ trans_list(lispobj object)
 
 /* Scavenging and Transporting Other Pointers */
 
+#if DIRECT_SCAV
 static int
 scav_other_pointer(lispobj *where, lispobj object)
 {
@@ -990,6 +1068,25 @@ scav_other_pointer(lispobj *where, lispobj object)
 	}
 	return 1;
 }
+#else
+static int
+scav_other_pointer(lispobj *where, lispobj object)
+{
+  lispobj first, *first_pointer;
+
+  gc_assert(Pointerp(object));
+
+  /* Object is a pointer into from space - not a FP */
+  first_pointer = (lispobj *) PTR(object);
+  first = *first_pointer = (transother[TypeOf(*first_pointer)])(object);
+
+  gc_assert(Pointerp(first));
+  gc_assert(!from_space_p(first));
+
+  *where = first;
+  return 1;
+}
+#endif
 
 
 /* Immediate, Boxed, and Unboxed Objects */
@@ -1772,7 +1869,7 @@ void gc_init(void)
 	transother[type_Sap] = trans_unboxed;
 	transother[type_UnboundMarker] = trans_immediate;
 	transother[type_WeakPointer] = trans_weak_pointer;
-        transother[type_InstanceHeader] = trans_vector;
+        transother[type_InstanceHeader] = trans_boxed;
 	transother[type_Fdefn] = trans_boxed;
 
 	/* Size table */
@@ -1826,7 +1923,7 @@ void gc_init(void)
 	sizetab[type_Sap] = size_unboxed;
 	sizetab[type_UnboundMarker] = size_immediate;
 	sizetab[type_WeakPointer] = size_weak_pointer;
-        sizetab[type_InstanceHeader] = size_vector;
+        sizetab[type_InstanceHeader] = size_boxed;
 	sizetab[type_Fdefn] = size_boxed;
 }
 
