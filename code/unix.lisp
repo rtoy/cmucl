@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.47 1997/05/29 20:49:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48 1997/06/04 14:45:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -931,11 +931,14 @@
 (defun unix-creat (name mode)
   "Unix-creat accepts a file name and a mode (same as those for
    unix-chmod) and creates a file by that name with the specified
-   permission mode.  It returns T on success, or NIL and an error
-   number otherwise."
+   permission mode.  It returns a file descriptor on success,
+   or NIL and an error  number otherwise.
+
+   This interface is made obsolete by UNIX-OPEN."
+  
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (void-syscall ("creat" c-string int) name mode))
+  (int-syscall ("creat" c-string int) name mode))
 
 ;;; Unix-dup returns a duplicate copy of the existing file-descriptor
 ;;; passed as an argument.
