@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.16 1994/02/04 15:25:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.17 1994/02/05 11:41:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -807,15 +807,15 @@
      ((eq output-type-spec 'function)
       (eval `#',object))
      ((numberp object)
-      (case output-type-spec
-	((short-float single-float float)
-	 (%single-float object))
-	((double-float long-float)
-	 (%double-float object))
-	(complex
-	 (complex object))
-	(t
-	 (error "~S can't be converted to type ~S." object output-type-spec))))
+      (cond
+       ((subtypep output-type-spec 'single-float)
+	(%single-float object))
+       ((subtypep output-type-spec 'double-float)
+	(%double-float object))
+       ((subtypep output-type-spec 'complex)
+	(complex object))
+       (t
+	(error "~S can't be converted to type ~S." object output-type-spec))))
      (t
       (typecase object
 	(list
