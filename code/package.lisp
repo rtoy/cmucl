@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.47 1998/05/11 18:18:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.48 1998/05/15 11:43:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,9 +159,15 @@
 	(t
 	 (let ((thing (package-namify thing)))
 	   (cond ((gethash thing *package-names*))
-		 (t ; @@@ fixme. This must be TYPE-ERROR -- not SIMPLE-ERROR
-		  (cerror "Make this package."
-			  "~S is not the name of a package." thing)
+		 (t
+		  ;; ANSI spec's TYPE-ERROR where this is called. But,
+		  ;; but the resulting message is somewhat unclear.
+		  ;; May need a new condition type?
+		  (with-simple-restart
+		      (continue "Make this package.")
+		    (error 'type-error
+			   :datum thing
+			   :expected-type 'package))
 		  (make-package thing)))))))
 
 
@@ -827,11 +833,12 @@
       (find-symbol name package)
     (cond (how
 	   symbol)
-	  (t ; @@@ This should be a correctable PACKAGE-ERROR
-	   (cerror "INTERN it."
-		   "~A does not contain a symbol ~A"
-		   (package-name package)
-		   name)
+	  (t
+	   (with-simple-restart (continue "INTERN it.")
+	     (error 'package-error
+		    :package package
+		    :format-control "~A does not contain a symbol ~A"
+		    :format-arguments (list (package-name package) name)))
 	   (intern name package)))))
 
 
@@ -851,13 +858,16 @@
 	     (push n (package-%nicknames package)))
 	    ((eq found package))
 	    ((string= (the string (package-%name found)) n)
-	     (cerror "Ignore this nickname."
-		     "~S is a package name, so it cannot be a nickname for ~S."
-		     n (package-%name package)))
+	     (with-simple-restart (continue "Ignore this nickname.")
+	       (error 'program-error
+		      :format-control
+		      "~S is a package name, so it cannot be a nickname for ~S."
+		      :format-arguments (list n (package-%name package)))))
 	    (t
-	     (cerror "Redefine this nickname."
-		     "~S is already a nickname for ~S."
-		     n (package-%name found))
+	     (with-simple-restart (continue  "Redefine this nickname.")
+	       (error 'program-error
+		      :format-control "~S is already a nickname for ~S."
+		      :format-arguments (list n (package-%name found))))
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))))))
 
@@ -876,8 +886,8 @@
   estimates for the number of internal and external symbols which
   will ultimately be present in the package."
   (when (find-package name)
-    ;; @@@ this is supposed to be a correctable error @@@
-    (error "A package named ~S already exists" name))
+    (cerror "Leave existing package alone."
+	    "A package named ~S already exists" name))
   (let* ((name (package-namify name))
 	 (package (internal-make-package
 		   :%name name
@@ -922,7 +932,15 @@
 	 `(%in-package ',(stringify-name package "package")))))
 ;;;
 (defun %in-package (name)
-  (setf *package* (package-or-lose name)))
+  (let ((package (find-package name)))
+    (unless package
+      (with-simple-restart (continue "Make this package.")
+	(error 'package-error
+	       :package name
+	       :format-control "The package named ~S doesn't exist."
+	       :format-arguments (list name)))
+      (setq package (make-package name)))
+    (setf *package* package)))
 
 ;;; Rename-Package  --  Public
 ;;;
@@ -953,15 +971,25 @@
 		     package-or-name
 		     (find-package package-or-name))))
     (cond ((not package)
-	   (cerror "Return NIL" "No package of name ~S." package-or-name)
+	   (with-simple-restart (continue "Return NIL")
+	     (error 'package-error
+		    :package package-or-name
+		    :format-control "No package of name ~S."
+		    :format-arguments (list package-or-name)))
 	   nil)
 	  ((not (package-name package)) nil)
 	  (t
 	   (let ((use-list (package-used-by-list package)))
 	     (when use-list
-	       (cerror "Remove dependency in other packages."
-		       "Package ~S is used by package(s):~%  ~S"
-		       (package-name package) (mapcar #'package-name use-list))
+	       (with-simple-restart
+		   (continue "Remove dependency in other packages.")
+		 (error 'package-error
+			:package package
+			:format-control
+			"Package ~S is used by package(s):~%  ~S"
+			:format-arguments
+			(list (package-name package)
+			      (mapcar #'package-name use-list))))
 	       (dolist (p use-list)
 		 (unuse-package package p))))
 	   (dolist (used (package-use-list package))
@@ -1218,9 +1246,15 @@
 	  (cond ((not (and w (eq s sym))) (push sym missing))
 		((eq w :inherited) (push sym imports)))))
       (when missing
-	(cerror "Import these symbols into the ~A package."
-		"These symbols are not accessible in the ~A package:~%~S"
-		(package-%name package) missing)
+	(with-simple-restart
+	    (continue "Import these symbols into the ~A package."
+	      (package-%name package))
+	  (error 'package-error
+		 :package package
+		 :format-control
+		 "These symbols are not accessible in the ~A package:~%~S"
+		 :format-arguments
+		 (list (package-%name package) missing)))
 	(import missing package))
       (import imports package))
     ;;
@@ -1281,10 +1315,14 @@
 	      ((not (eq s sym)) (push sym cset))
 	      ((eq w :inherited) (push sym syms)))))
     (when cset
-      (cerror
-       "Import these symbols with Shadowing-Import."
-       "Importing these symbols into the ~A package causes a name conflict:~%~S"
-       (package-%name package) cset))
+      (with-simple-restart
+	  (continue "Import these symbols with Shadowing-Import.")
+	(error 'package-error
+	       :package package
+	       :format-control
+	       "Importing these symbols into the ~A package ~
+		causes a name conflict:~%~S"
+	       :format-arguments (list (package-%name package) cset))))
     ;;
     ;; Add the new symbols to the internal hashtable.
     (let ((internal (package-internal-symbols package)))
@@ -1400,7 +1438,7 @@
 	  
 	  (when cset
 	    (cerror
-	     "unintern the conflicting symbols in the ~2*~A package."
+	     "Unintern the conflicting symbols in the ~2*~A package."
 	     "Use'ing package ~A results in name conflicts for these symbols:~%~S"
 	     (package-%name pkg) cset (package-%name package))
 	    (dolist (s cset) (moby-unintern s package))))
