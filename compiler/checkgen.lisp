@@ -109,7 +109,8 @@
 	       (when (and (csubtypep type stype)
 			  (not (union-type-p stype))) ;Not #!% COMMON type.
 		 (let ((stype-cost (type-test-cost stype)))
-		   (when (< stype-cost min-cost)
+		   (when (or (< stype-cost min-cost)
+			     (type= stype type))
 		     (setq found-super t)
 		     (setq min-type stype  min-cost stype-cost))))))
 	   (if found-super
