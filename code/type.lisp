@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.63 2003/07/03 12:14:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.64 2003/08/04 17:30:03 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1538,8 +1538,17 @@
   (values nil nil))
 
 (define-type-method (hairy :complex-=) (type1 type2)
-  (declare (ignore type1 type2))
-  (values nil nil))
+  (if (and (unknown-type-p type2)
+           (let* ((specifier2 (unknown-type-specifier type2))
+                  (name2 (if (consp specifier2)
+                             (car specifier2)
+                             specifier2)))
+             (info type kind name2)))
+      (let ((type2 (specifier-type (unknown-type-specifier type2))))
+        (if (unknown-type-p type2)
+            (values nil nil)
+            (type= type1 type2)))
+  (values nil nil)))
 
 (define-type-method (hairy :simple-intersection :complex-intersection) 
     (type1 type2)
