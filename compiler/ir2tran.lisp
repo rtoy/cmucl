@@ -1471,7 +1471,7 @@
   (ir1-convert
    start cont
    (if *converting-for-interpreter*
-       `(%progv vars vals #'(lambda () ,@body))
+       `(%progv ,vars ,vals #'(lambda () ,@body))
        (once-only ((n-save-bs '(%primitive current-binding-pointer)))
 	 `(unwind-protect
 	      (progn
