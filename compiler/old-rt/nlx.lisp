@@ -14,6 +14,14 @@
 ;;;
 (in-package 'c)
 
+
+;;; MAKE-NLX-SP-TN  --  Interface
+;;;
+;;;    Make an environment-live stack TN for saving the SP for NLX entry.
+;;;
+(defun make-nlx-sp-tn (env)
+  (environment-live-tn (make-representation-tn stack-arg-scn) env))
+  
 
 ;;; Save and restore dynamic environment.
 ;;;
@@ -89,10 +97,10 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
   (:generator 22
-    (inst ai result cont-tn (* (tn-offset tn) 4))
+    (inst ai result fp-tn (* (tn-offset tn) 4))
     (load-global temp clc::current-unwind-protect-block)
     (storew temp result system:%unwind-block-current-uwp)
-    (storew cont-tn result system:%unwind-block-current-cont)
+    (storew fp-tn result system:%unwind-block-current-cont)
     (storew env-tn result system:%unwind-block-current-env)
     (storew entry-offset result system:%unwind-block-entry-pc)
     (unless (location= result block)
@@ -110,10 +118,10 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
   (:generator 44
-    (inst ai result cont-tn (* (tn-offset tn) 4))
+    (inst ai result fp-tn (* (tn-offset tn) 4))
     (load-global temp clc::current-unwind-protect-block)
     (storew temp result system:%unwind-block-current-uwp)
-    (storew cont-tn result system:%unwind-block-current-cont)
+    (storew fp-tn result system:%unwind-block-current-cont)
     (storew env-tn result system:%unwind-block-current-env)
     (storew entry-offset result system:%unwind-block-entry-pc)
 
@@ -133,7 +141,7 @@
   (:args (tn))
   (:temporary (:scs (descriptor-reg)) temp new-uwp)
   (:generator 7
-    (inst ai new-uwp cont-tn (* (tn-offset tn) 4))
+    (inst ai new-uwp fp-tn (* (tn-offset tn) 4))
     (store-global new-uwp clc::current-unwind-protect-block temp)))
 
 
