@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.42 1991/09/28 12:38:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.43 1991/11/05 17:36:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -516,10 +516,11 @@
 ;;; VOP.  We must find the VOP in the same IR1 block.
 ;;;
 (defun reverse-find-vop (name vop)
-  (do ((block (vop-block vop) (ir2-block-prev block)))
-      (nil)
+  (do* ((block (vop-block vop) (ir2-block-prev block))
+	(last vop (ir2-block-last-vop block)))
+       (nil)
     (assert (eq (ir2-block-block block) (ir2-block-block (vop-block vop))))
-    (do ((current vop (vop-prev current)))
+    (do ((current last (vop-prev current)))
 	((null current))
       (when (eq (vop-info-name (vop-info current)) name)
 	(return-from reverse-find-vop current)))))
