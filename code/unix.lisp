@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.6 1992/01/28 07:33:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.7 1992/01/28 08:06:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,7 @@
 
 	  unix-pathname unix-file-mode unix-fd unix-pid unix-uid unix-gid
 
-	  unix-accept r_ok w_ok x_ok f_ok unix-chdir unix-chmod setuidexec
+	  unix-access r_ok w_ok x_ok f_ok unix-chdir unix-chmod setuidexec
 	  setgidexec savetext readown writeown execown readgrp writegrp
 	  execgrp readoth writeoth execoth unix-fchmod unix-chown unix-fchown
 	  unix-getdtablesize unix-close unix-creat unix-dup unix-dup2
