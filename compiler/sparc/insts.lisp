@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.49 2004/03/29 18:37:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.50 2004/09/13 00:41:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1139,8 +1139,8 @@ about function addresses and register values.")
 (define-f3-inst ldx #b11 #b001011 :load-store :load) ; v9
 
 (define-f3-inst ldf #b11 #b100000 :dest-kind fp-reg :load-store :load)
-(define-f3-inst lddf #b11 #b100011 :dest-kind fp-reg :load-store :load)
-(define-f3-inst ldqf #b11 #b100010 :dest-kind fp-reg :load-store :load)	; v9
+(define-f3-inst lddf #b11 #b100011 :dest-kind fp-ext-reg :load-store :load )
+(define-f3-inst ldqf #b11 #b100010 :dest-kind fp-ext-reg :load-store :load)	; v9
 (define-f3-inst stb #b11 #b000101 :load-store :store)
 (define-f3-inst sth #b11 #b000110 :load-store :store)
 (define-f3-inst st #b11 #b000100 :load-store :store)
@@ -1151,8 +1151,8 @@ about function addresses and register values.")
 (define-f3-inst stx #b11 #b001110 :load-store :store) ; v9
 
 (define-f3-inst stf #b11 #b100100 :dest-kind fp-reg :load-store :store)
-(define-f3-inst stdf #b11 #b100111 :dest-kind fp-reg :load-store :store)
-(define-f3-inst stqf #b11 #b100110 :dest-kind fp-reg :load-store :store) ; v9
+(define-f3-inst stdf #b11 #b100111 :dest-kind fp-ext-reg :load-store :store)
+(define-f3-inst stqf #b11 #b100110 :dest-kind fp-ext-reg :load-store :store) ; v9
 (define-f3-inst ldstub #b11 #b001101 :load-store t)
 
 ;; swap is deprecated on the Sparc V9
