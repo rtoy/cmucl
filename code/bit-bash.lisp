@@ -74,7 +74,6 @@
     (:big-endian `(byte ,count (- unit-bits ,where ,count)))))
 
 
-
 (defmacro bit-bash-bindings (&body guts)
   `(let* ((final-bits (mod (+ len dst-bit-offset) unit-bits))
 	  (interior (floor (- len final-bits) unit-bits)))
@@ -104,25 +103,30 @@
 		     (incf src-2-word-offset)))))))
 
 
-(defmacro bit-bash-loop (kind ref-fn function &optional update)
+(defmacro bit-bash-loop (kind ref-fn set-fn function &optional update)
   `(progn
      (unless (zerop dst-bit-offset)
        (bind-srcs (,kind t ,ref-fn)
-	 (setf (ldb (end-bits (- unit-bits dst-bit-offset))
-		    (,ref-fn dst dst-word-offset))
-	       ,function)
+	 (setf (,set-fn dst dst-word-offset)
+	       (the unit
+		    (dpb ,function
+			 (end-bits (the (integer (0) (#.unit-bits))
+					(- unit-bits dst-bit-offset)))
+			 (,set-fn dst dst-word-offset))))
 	 ,update))
      (dotimes (count interior)
        (declare (type word-offset count))
        (bind-srcs (,kind t ,ref-fn)
-	 (setf (,ref-fn dst dst-word-offset) ,function)
+	 (setf (,set-fn dst dst-word-offset) ,function)
 	 ,update))
      (unless (zerop final-bits)
        (bind-srcs (,kind nil ,ref-fn)
-	 (setf (ldb (start-bits final-bits)
-		    (,ref-fn dst dst-word-offset))
-	       (ldb (start-bits final-bits)
-		    ,function))))))
+	 (setf (,set-fn dst dst-word-offset)
+	       (the unit
+		    (dpb ,function
+			 (start-bits (the (integer (0) (#.unit-bits))
+					  final-bits))
+			 (,set-fn dst dst-word-offset))))))))
 
 
 (defun pick-args (op kind arg1 arg2)
@@ -134,30 +138,35 @@
     (:binary
      (list op arg1 arg2))))
 
-(defmacro def-bit-basher (name op &optional (kind :binary) (ref-fn '%raw-bits))
+(defmacro def-bit-basher (name op &optional (kind :binary) (ref-fn '%raw-bits)
+			       (set-fn ref-fn))
   (let ((form
 	 `(cond
 	   ((<= (+ dst-bit-offset len) unit-bits)
 	    ;; It's narrow.
-	    (setf (ldb (middle-bits len dst-bit-offset)
-		       (,ref-fn dst dst-word-offset))
-		  ,(pick-args op kind
-			      `(the unit
-				    (ldb (middle-bits (the bit-offset len)
-						      src-1-bit-offset)
-					 (,ref-fn src-1 src-1-word-offset)))
-			      `(the unit
-				    (ldb (middle-bits (the bit-offset len)
-						      src-2-bit-offset)
-					 (,ref-fn src-2
-						  src-2-word-offset))))))
+	    (setf (,set-fn dst dst-word-offset)
+		  (the unit
+		       (dpb (the unit
+				 ,(pick-args op kind
+				    `(the unit
+					  (ldb (middle-bits (the bit-offset len)
+							    src-1-bit-offset)
+					       (,ref-fn src-1
+							src-1-word-offset)))
+				    `(the unit
+					  (ldb (middle-bits (the bit-offset len)
+							    src-2-bit-offset)
+					       (,ref-fn src-2
+							src-2-word-offset)))))
+			    (middle-bits len dst-bit-offset)
+			    (,set-fn dst dst-word-offset)))))
 	   (,(ecase kind
 	       (:constant t)
 	       (:unary '(= src-1-bit-offset dst-bit-offset))
-	       (:binary '(= src-1-bit-offset src-2-bit-offset dst-bit-offset )))
+	       (:binary '(= src-1-bit-offset src-2-bit-offset dst-bit-offset)))
 	    ;; Everything is aligned evenly.
 	    (bit-bash-bindings
-	     (bit-bash-loop ,kind ,ref-fn
+	     (bit-bash-loop ,kind ,ref-fn ,set-fn
 	       ,(pick-args op kind 'next-1 'next-2))))
 	   ,@(when (eq kind :binary)
 	       `(((= src-1-bit-offset dst-bit-offset)
@@ -171,7 +180,7 @@
 		     (declare (type bit-offset src-2-shift))
 		     (declare (type unit prev-2))
 		     (incf src-2-word-offset)
-		     (bit-bash-loop ,kind ,ref-fn
+		     (bit-bash-loop ,kind ,ref-fn ,set-fn
 		       (,op next-1 (merge-bits src-2-shift prev-2 next-2))
 		       (setf prev-2 next-2)))))
 		 ((= src-2-bit-offset
@@ -186,7 +195,7 @@
 		     (declare (type bit-offset src-1-shift))
 		     (declare (type unit prev-1))
 		     (incf src-1-word-offset)
-		     (bit-bash-loop ,kind ,ref-fn
+		     (bit-bash-loop ,kind ,ref-fn ,set-fn
 		       (,op (merge-bits src-1-shift prev-1 next-1) next-2)
 		       (setf prev-1 next-1)))))))
 	   ,@(unless (eq kind :constant)
@@ -213,7 +222,7 @@
 		     (incf src-1-word-offset)
 		     ,@(when (eq kind :binary)
 			 '((incf src-2-word-offset)))
-		     (bit-bash-loop ,kind ,ref-fn
+		     (bit-bash-loop ,kind ,ref-fn ,set-fn
 		       ,(pick-args op kind
 				   '(merge-bits src-1-shift prev-1 next-1)
 				   '(merge-bits src-2-shift prev-2 next-2))
@@ -272,6 +281,8 @@
 
 ;;; These are not supported as primitives.
 
+#|
+
 (proclaim '(inline 32bit-logical-eqv 32bit-logical-nand 32bit-logical-andc1
 		   32bit-logical-andc2 32bit-logical-orc1 32bit-logical-orc2))
 
@@ -299,12 +310,10 @@
 
 (proclaim '(optimize (speed 3) (safety 0)))
 
-
 (def-bit-basher bit-bash-clear 0 :constant)
 (def-bit-basher bit-bash-set (1- (ash 1 unit-bits)) :constant)
 
 (def-bit-basher bit-bash-not 32bit-logical-not :unary)
-(def-bit-basher bit-bash-copy identity :unary)
 
 (def-bit-basher bit-bash-and 32bit-logical-and)
 (def-bit-basher bit-bash-ior 32bit-logical-or)
@@ -321,4 +330,32 @@
 ;;; Sap-ref-32 can be used to index into SAP objects.
 
 (def-bit-basher system-area-clear 0 :constant sap-ref-32)
-(def-bit-basher system-area-copy identity :unary sap-ref-32)
+
+|#
+
+
+;;;; Copy routines.
+
+;;; These are written in assembler.
+
+(defun copy-to-system-area (src src-offset dst dst-offset length)
+  (declare (type (simple-unboxed-array (*)) src)
+	   (type system-area-pointer dst)
+	   (type index src-offset dst-offset length))
+  (copy-to-system-area src src-offset dst dst-offset length))
+
+(defun copy-from-system-area (src src-offset dst dst-offset length)
+  (declare (type system-area-pointer src)
+	   (type (simple-unboxed-array (*)) dst)
+	   (type index src-offset dst-offset length))
+  (copy-from-system-area src src-offset dst dst-offset length))
+
+(defun system-area-copy (src src-offset dst dst-offset length)
+  (declare (type system-area-pointer src dst)
+	   (type index src-offset dst-offset length))
+  (system-area-copy src src-offset dst dst-offset length))
+
+(defun bit-bash-copy (src src-offset dst dst-offset length)
+  (declare (type (simple-unboxed-array (*)) src dst)
+	   (type index src-offset dst-offset length))
+  (bit-bash-copy src src-offset dst dst-offset length))
