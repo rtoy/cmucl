@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.14 2003/07/01 14:49:39 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.15 2003/07/01 16:32:41 gerd Exp $")
 
 (in-package "PCL")
 
@@ -110,6 +110,10 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (define-function-name-syntax ctor (name)
+    (when (symbolp (cadr name))
+      (values t (cadr name))))
+  
+  (define-function-name-syntax make-instance (name)
     (when (symbolp (cadr name))
       (values t (cadr name)))))
 
@@ -240,16 +244,19 @@
 (defvar *the-system-si-method* nil)
 
 (defun install-optimized-constructor (ctor)
-   (flet ((install (optimized-p)
-	    (without-package-locks
-	     (multiple-value-bind (lambda fn)
-		 (if optimized-p
-		     (constructor-function-form ctor)
-		     (fallback-generator ctor))
-	       (setf (kernel:funcallable-instance-function ctor)
-		     (or fn
-			 (letf (((compiler-macro-function 'make-instance) nil))
-			   (compile-lambda lambda))))))))
+   (labels ((lambda-name (ctor)
+	      (cons 'make-instance
+		    (cdr (ctor-function-name ctor))))
+	    (install (optimized-p)
+	      (without-package-locks
+	       (multiple-value-bind (lambda fn)
+		   (if optimized-p
+		       (constructor-function-form ctor)
+		       (fallback-generator ctor))
+		 (setf (kernel:funcallable-instance-function ctor)
+		       (or fn
+			   (letf (((compiler-macro-function 'make-instance) nil))
+			     (compile-lambda lambda :name (lambda-name ctor)))))))))
      (let ((class (find-class (ctor-class-name ctor) nil)))
        (setf (ctor-class ctor) class)
        (cond ((null class)
