@@ -19,6 +19,16 @@ over the Internet, and is mostly in the public domain.
 New in this release:
        
   * Feature enhancements:
+     - Karatsuba multiplier added to give faster multiplication for
+       big bignums.
+     - The sparc port has experimental support for native 64-bit
+       integers (unsigned-byte 64) and (signed-byte 64) on sparc v9
+       (64-bit) architectures.  Enabled if the feature :sparc-v8plus
+       is set.
+     - The x86 port better support for linking foreign libraries.  You
+       can now dump cores with foreign libraries and reload the core
+       without having to reload the libraries.  Available if the feature
+       :linkage-table is set.
 
   * Numerous ANSI compliance fixes:
      - SYMBOL-MACROLET signals an error when an attempt is made to
@@ -48,6 +58,9 @@ New in this release:
        prints a warning about this being poor style.
      - the type (complex (eql 0)) is accepted now instead of
        generating an error.
+     - the sequence functions check to make sure sequences are
+       specified and that, if lengths are given, the result matches
+       the given length.
 
   * Numerous bugfixes:
      - READ-BYTE on certain types of multi-byte elements was incorrect
