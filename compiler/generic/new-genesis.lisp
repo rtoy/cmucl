@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.61 2003/10/09 19:02:40 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.62 2003/10/13 21:51:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2229,7 +2229,8 @@
 	    (test-tail "-SC-NUMBER" "sc_" 5)
 	    (test-head "TARGET-FOREIGN-" "" 6)
 	    (test-head "PSEUDO-ATOMIC-" "pseudo_atomic_" 7)
-	    (test-head "LOWTAG-" "lowtag" 8)))))
+	    (test-head "LOWTAG-" "lowtag_" 8)
+	    (test-head "TYPE-" "type_" 9)))))
     (setf constants
 	  (sort constants
 		#'(lambda (const1 const2)
