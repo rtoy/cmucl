@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.24 2000/07/06 04:31:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.25 2000/07/06 05:41:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -265,7 +265,7 @@
      (multiple-value-bind (q r)
 			  (truncate (coerce timeout 'single-float))
        (declare (type index q) (single-float r))
-       (values q (the index (values (truncate (* r 1f6)))))))
+       (values q (the (values index t) (truncate (* r 1f6))))))
     (t
      (error "Timeout is not a real number or NIL: ~S" timeout))))
 
