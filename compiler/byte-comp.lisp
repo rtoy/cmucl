@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.4 1992/09/07 15:33:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.5 1993/05/11 14:55:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,14 +19,33 @@
 ;;;
 
 (in-package "C")
+(export '(disassem-byte-component
+	  disassem-byte-fun
+	  backend-byte-fasl-file-type
+	  backend-byte-fasl-file-implementation
+	  byte-fasl-file-version))
 
 ;;; ### Remaining work:
 ;;;
 ;;; - add more inline operations & calls to two-arg functions.  structure slots
 ;;; - Breakpoints/debugging info.
-;;; - The XEP needs to have the name, arglist, etc. in it. (?)
-;;;   compact small integer XEP slots into fixnum sub-fields.
+;;; - The XEP needs to have the arglist, etc. in it. (?)
 ;;;
+
+
+;;;; Fasl file format:
+
+(defconstant byte-fasl-file-version 0)
+
+(defun backend-byte-fasl-file-type (backend)
+  (ecase (backend-byte-order backend)
+    (:big-endian "bytef")
+    (:little-endian "lbytef")))
+
+(defun backend-byte-fasl-file-type (backend)
+  (ecase (backend-byte-order backend)
+    (:big-endian big-endian-fasl-file-implementation)
+    (:little-endian litten-endian-fasl-file-implementation)))
 
 
 ;;;; Stuff to emit noise.
@@ -144,16 +163,6 @@
 	 (output-byte segment (ldb (byte 8 16) target))
 	 (output-byte segment (ldb (byte 8 8) target))
 	 (output-byte segment (ldb (byte 8 0) target))))))
-
-;;; BYTE-OUTPUT-LENGTH -- internal interface.
-;;;
-;;; Called by the dumping stuff to find out exactly how much noise it needs
-;;; to dump.
-;;;
-(defun byte-output-length (segment)
-  (declare (type new-assem:segment segment))
-  (new-assem:finalize-segment segment))
-
 
 
 ;;;; System constants, Xops, and inline functions.
@@ -368,13 +377,16 @@
 
 (defun annotate-local-call (call)
   (annotate-basic-combination-args call)
-  (annotate-continuation (basic-combination-fun call) 0))
+  (annotate-continuation (basic-combination-fun call) 0)
+  (when (node-tail-p call)
+    (set-tail-local-call-successor call)))
 
 ;;; ANNOTATE-FULL-CALL  --  Internal
 ;;;
 ;;;    Annotate the values for any :full combination.  This includes inline
 ;;; functions, multiple value calls & throw.  If a real full call, clear any
-;;; type-check annotations.
+;;; type-check annotations.  When we are done, remove jump to return for tail
+;;; calls.
 ;;;
 (defun annotate-full-call (call)
   (let* ((fun (basic-combination-fun call))
@@ -402,6 +414,14 @@
 	   (annotate-continuation
 	    fun
 	    (if (continuation-function-name fun) :fdefinition 1)))))
+
+  ;; If this is (still) a tail-call, then blow away the return.
+  (when (node-tail-p call)
+    (node-ends-block call)
+    (let ((block (node-block call)))
+      (unlink-blocks block (first (block-succ block)))
+      (link-blocks block (component-tail (block-component block)))))
+
   (undefined-value))
 
 (defun annotate-known-call (call)
@@ -429,12 +449,6 @@
 	 (setf (basic-combination-kind call) :full)
 	 (annotate-full-call call)))))
 
-  ;; If this is (still) a tail-call, then blow away the return.
-  (when (node-tail-p call)
-    (node-ends-block call)
-    (let ((block (node-block call)))
-      (unlink-blocks block (first (block-succ block)))
-      (link-blocks block (component-tail (block-component block)))))
   (undefined-value))
 
 (defun annotate-if (if)
@@ -486,13 +500,14 @@
 
 ;;;; Stack analysis.
 
+(defvar *byte-continuation-counter*)
+
 (defun compute-produces-and-consumes (block)
   (let ((stack nil)
 	(consumes nil)
 	(total-consumes (make-sset))
 	(nlx-entries nil)
-	(nlx-entry-p nil)
-	(counter 0))
+	(nlx-entry-p nil))
     (labels ((interesting (cont)
 	       (and cont
 		    (let ((info (continuation-info cont)))
@@ -505,12 +520,14 @@
 		      (assert (eq (car stack) cont))
 		      (pop stack))
 		     (t
-		      (let ((info (continuation-info cont)))
-			(unless (byte-continuation-info-number info)
-			  (setf (byte-continuation-info-number info)
-				(incf counter)))
-			(sset-adjoin info total-consumes))
-		      (push cont consumes)))))
+		      (adjoin-cont cont total-consumes)
+		      (push cont consumes))))
+	     (adjoin-cont (cont sset)
+	       (let ((info (continuation-info cont)))
+		 (unless (byte-continuation-info-number info)
+		   (setf (byte-continuation-info-number info)
+			 (incf *byte-continuation-counter*)))
+		 (sset-adjoin info sset))))
       (do-nodes (node cont block)
 	(etypecase node
 	  (bind)
@@ -542,20 +559,21 @@
 	   (when (exit-value node)
 	     (consume (exit-value node)))))
 	(when (and (not (exit-p node)) (interesting cont))
-	  (push cont stack))))
+	  (push cont stack)))
+    
       (setf (block-info block)
-	    (make-byte-block-info block
-				  :produces stack
-				  :produces-sset
-				  (let ((result (make-sset)))
-				    (dolist (product stack)
-				      (sset-adjoin (continuation-info product)
-						   result))
-				    result)
-				  :consumes (reverse consumes)
-				  :total-consumes total-consumes
-				  :nlx-entries nlx-entries
-				  :nlx-entry-p nlx-entry-p)))
+	    (make-byte-block-info
+	     block
+	     :produces stack
+	     :produces-sset (let ((res (make-sset)))
+			      (dolist (product stack)
+				(adjoin-cont product res))
+			      res)
+	     :consumes (reverse consumes)
+	     :total-consumes total-consumes
+	     :nlx-entries nlx-entries
+	     :nlx-entry-p nlx-entry-p))))
+
   (undefined-value))
 
 (defun walk-successors (block stack)
@@ -632,11 +650,12 @@
 
 (defun byte-stack-analyze (component)
   (let ((head nil))
-    (do-blocks (block component)
-      (when (block-interesting block)
-	(compute-produces-and-consumes block)
-	(push block head)
-	(setf (byte-block-info-already-queued (block-info block)) t)))
+    (let ((*byte-continuation-counter* 0))
+      (do-blocks (block component)
+	(when (block-interesting block)
+	  (compute-produces-and-consumes block)
+	  (push block head)
+	  (setf (byte-block-info-already-queued (block-info block)) t))))
     (let ((tail (last head)))
       (labels ((maybe-enqueue (block)
 		 (when (block-interesting block)
@@ -658,6 +677,7 @@
 	  (let* ((block (pop head))
 		 (info (block-info block))
 		 (total-consumes (byte-block-info-total-consumes info))
+		 (produces-sset (byte-block-info-produces-sset info))
 		 (did-anything nil))
 	    (setf (byte-block-info-already-queued info) nil)
 	    (dolist (succ (block-succ block))
@@ -666,7 +686,7 @@
 		  (when (sset-union-of-difference
 			 total-consumes
 			 (byte-block-info-total-consumes succ-info)
-			 (byte-block-info-produces-sset succ-info))
+			 produces-sset)
 		    (setf did-anything t)))))
 	    (when did-anything
 	      (maybe-enqueue-predecessors block)))))))
@@ -939,7 +959,9 @@
 		(output-byte segment (ldb (byte 8 8) frame-size))
 		(output-byte segment (ldb (byte 8 0) frame-size))))
 	 (loop
-	   for argnum upfrom 0
+	   for argnum downfrom (1- (+ (length (lambda-vars lambda))
+				      (length (environment-closure
+					       (lambda-environment lambda)))))
 	   for var in (lambda-vars lambda)
 	   for info = (lambda-var-info var)
 	   do (unless (or (null info) (byte-lambda-var-info-argp info))
@@ -1360,10 +1382,13 @@
 	     (when (exit-entry node)
 	       (generate-byte-code-for-exit segment node cont)))))
 	(let* ((succ (block-succ block))
-	       (first-succ (car succ)))
+	       (first-succ (car succ))
+	       (last (block-last block)))
 	  (unless (or (cdr succ)
 		      (eq (byte-block-info-block next) first-succ)
-		      (eq (component-tail component) first-succ))
+		      (eq (component-tail component) first-succ)
+		      (and (basic-combination-p last)
+			   (node-tail-p last)))
 	    (output-branch segment
 			   byte-branch-always
 			   (byte-block-info-label
@@ -1540,49 +1565,9 @@
   (output-do-xop segment 'breakup))
 
 
-;;;; XEP descriptions.
-
-(defstruct (byte-xep
-	    (:print-function %print-byte-xep))
-  ;;
-  ;; The component that this XEP is an entry point into.  NIL until
-  ;; LOAD or MAKE-CORE-BYTE-COMPONENT fills it in.  We also allow
-  ;; cons so that the dumper can stick in a unique cons cell to
-  ;; identify what component it is trying to dump.  What a hack.
-  (component nil :type (or null kernel:code-component cons))
-  ;;
-  ;; The minimum and maximum number of args, ignoring &rest and &key.
-  (min-args 0 :type (integer 0 #.call-arguments-limit))
-  (max-args 0 :type (integer 0 #.call-arguments-limit))
-  ;;
-  ;; List of the entry points for min-args, min-args+1, ... max-args.
-  (entry-points nil :type list)
-  ;;
-  ;; The entry point to use when there are more than max-args.  Only filled
-  ;; in where okay.  In other words, only when &rest or &key is specified.
-  (more-args-entry-point nil :type (or null (unsigned-byte 24)))
-  ;;
-  ;; The number of ``more-arg'' args.
-  (num-more-args 0 :type (integer 0 #.call-arguments-limit))
-  ;;
-  ;; True if there is a rest-arg.
-  (rest-arg-p nil :type (member t nil))
-  ;;
-  ;; True if there are keywords.  Note: keywords might still be NIL because
-  ;; having &key with no keywords is valid and should result in
-  ;; allow-other-keys processing.  If :allow-others, then allow other keys.
-  (keywords-p nil :type (member t nil :allow-others))
-  ;;
-  ;; List of keyword arguments.  Each element is a list of:
-  ;;   key, default, supplied-p.
-  (keywords nil :type list))
-
-(defprinter byte-xep)
-
-
 ;;; MAKE-XEP-FOR -- internal
 ;;;
-;;; Make a byte-xep for LAMBDA.
+;;; Make a byte-function for LAMBDA.
 ;;; 
 (defun make-xep-for (lambda)
   (flet ((entry-point-for (entry)
@@ -1606,12 +1591,11 @@
 		    (keywords (list (arg-info-keyword arg-info)
 				    (arg-info-default arg-info)
 				    (if (arg-info-supplied-p arg-info) t)))))))
-	     (make-byte-xep
+	     (make-hairy-byte-function
+	      :name (leaf-name entry)
 	      :min-args (optional-dispatch-min-args entry)
 	      :max-args (optional-dispatch-max-args entry)
 	      :entry-points
-	      ;; ### Some of these entry points are :Deleted.  This needs to
-	      ;; be fixed somehow.
 	      (mapcar #'entry-point-for (optional-dispatch-entry-points entry))
 	      :more-args-entry-point
 	      (entry-point-for (optional-dispatch-main-entry entry))
@@ -1623,10 +1607,10 @@
 	      :keywords (keywords)))))
 	(clambda
 	 (let ((args (length (lambda-vars entry))))
-	   (make-byte-xep
-	    :min-args args
-	    :max-args args
-	    :entry-points (list (entry-point-for entry)))))))))
+	   (make-simple-byte-function
+	    :name (leaf-name entry)
+	    :num-args args
+	    :entry-point (entry-point-for entry))))))))
 
 (defun generate-xeps (component)
   (let ((xeps nil))
@@ -1634,7 +1618,6 @@
       (when (member (lambda-kind lambda) '(:external :top-level))
 	(push (cons lambda (make-xep-for lambda)) xeps)))
     xeps))
-
 
 
 ;;;; Noise to actually do the compile.
@@ -1745,19 +1728,22 @@
 	(progn
 	  (setf segment (new-assem:make-segment :name "Byte Output"))
 	  (generate-byte-code segment component)
-	  (let ((xeps (generate-xeps component))
+	  (let ((code-length (new-assem:finalize-segment segment))
+		(xeps (generate-xeps component))
 		(constants (byte-component-info-constants
 			    (component-info component))))
 	    (when *compiler-trace-output*
-	      (describe-component component *compiler-trace-output*))
+	      (describe-component component *compiler-trace-output*)
+	      (describe-byte-component component xeps segment
+				       *compiler-trace-output*))
 	    (etypecase *compile-object*
 	      (fasl-file
 	       (maybe-mumble "FASL")
-	       (fasl-dump-byte-component segment constants xeps
+	       (fasl-dump-byte-component segment code-length constants xeps
 					 *compile-object*))
 	      (core-object
 	       (maybe-mumble "Core")
-	       (make-core-byte-component segment constants xeps
+	       (make-core-byte-component segment code-length constants xeps
 					 *compile-object*))
 	      (null))))
       (when segment
@@ -1767,6 +1753,8 @@
 
 
 ;;;; Extra stuff for debugging.
+
+;(declaim (optimize (inhibit-warnings 3)))
 
 (defun dump-stack-info (component)
   (do-blocks (block component)
@@ -1789,16 +1777,259 @@
 	   (format t "no info~%")))))))
 
 
-
-;;;; Hacks until we want to recompile everything.
+;;; DESCRIBE-BYTE-COMPONENT  --  Internal
+;;;
+;;;    Generate trace-file output for the byte compiler back-end.
+;;;
+(defun describe-byte-component (component xeps segment *standard-output*)
+  (format t "~|~%;;;; Byte component ~S~2%" (component-name component))
+  (format t ";;; Functions:~%")
+  (dolist (fun (component-lambdas component))
+    (when (leaf-name fun)
+      (let ((info (leaf-info fun)))
+	(when info
+	  (format t "~6D: ~S~%"
+		  (new-assem:label-position (byte-lambda-info-label info))
+		  (leaf-name fun))))))
 
-#+nil
-(defun block-label (block)
-  (declare (type cblock block))
-  (let ((info (block-info block)))
-    (etypecase info
-      (ir2-block
-       (or (ir2-block-%label info)
-	   (setf (ir2-block-%label info) (gen-label))))
-      (byte-block-info
-       (byte-block-info-label info)))))
+  (format t "~%;;;Disassembly:~2%")
+  (collect ((eps)
+	    (chunks))
+    (dolist (x xeps)
+      (let ((xep (cdr x)))
+	(etypecase xep
+	  (simple-byte-function
+	   (eps (simple-byte-function-entry-point xep)))
+	  (hairy-byte-function
+	   (dolist (ep (hairy-byte-function-entry-points xep))
+	     (eps ep))
+	       (when (hairy-byte-function-more-args-entry-point xep)
+		 (eps (hairy-byte-function-more-args-entry-point xep)))))))
+
+    (new-assem:segment-map-output
+     segment
+     #'(lambda (sap bytes) (chunks (cons sap bytes))))
+    (let* ((total-bytes (reduce #'+ (mapcar #'cdr (chunks))))
+	   (buf (allocate-system-memory total-bytes)))
+      (let ((offset 0))
+	(dolist (chunk (chunks))
+	  (let ((sap (car chunk))
+		(bits (* (cdr chunk) vm:byte-bits)))
+	    (system-area-copy sap 0 buf offset bits)
+	    (incf offset bits))))
+
+      (disassem-byte-sap buf total-bytes
+			 (map 'vector
+			      #'(lambda (x)
+				  (if (constant-p x)
+				      (constant-value x)
+				      x))
+			      (byte-component-info-constants
+			       (component-info component)))
+			 (sort (eps) #'<))
+      (terpri)
+      (deallocate-system-memory buf total-bytes)
+      (values))))
+
+
+;;; DISASSEM-BYTE-FUN  --  Interface
+;;;
+;;;    Given a byte-compiled function, disassemble it to standard output.
+;;;
+(defun disassem-byte-fun (fun)
+  (declare (optimize (inhibit-warnings 3)))
+  (let ((xep (system:find-if-in-closure #'byte-function-p fun)))
+    (disassem-byte-component
+     (byte-function-component xep)
+     (etypecase xep
+       (simple-byte-function
+	(list (simple-byte-function-entry-point xep)))
+       (hairy-byte-function
+	(sort (copy-list
+	       (if (hairy-byte-function-more-args-entry-point xep)
+		   (cons (hairy-byte-function-more-args-entry-point xep)
+			 (hairy-byte-function-entry-points xep))
+		   (hairy-byte-function-entry-points xep)))
+	      #'<))))))
+	 
+
+;;; DISASSEM-BYTE-COMPONENT  --  Interface
+;;; 
+;;;    Given a byte-compiled component, disassemble it to standard output.
+;;; EPS is a list of the entry points.
+;;;
+(defun disassem-byte-component (component &optional (eps '(0)))
+  (let* ((bytes (* (code-header-ref component vm:code-code-size-slot)
+		   vm:word-bytes))
+	 (num-consts (- (get-header-data component) vm:code-constants-offset))
+	 (consts (make-array num-consts)))
+    (dotimes (i num-consts)
+      (setf (aref consts i)
+	    (code-header-ref component (+ i vm:code-constants-offset))))
+    (without-gcing
+      (disassem-byte-sap (code-instructions component) bytes
+			 consts eps))
+    (values)))
+
+
+;;; DISASSEM-BYTE-SAP  --  Internal
+;;;
+;;;    Disassemble byte code from a SAP and constants vector.
+;;;
+(defun disassem-byte-sap (sap bytes constants eps)
+  (declare (optimize (inhibit-warnings 3)))
+  (let ((index 0))
+    (labels ((newline ()
+	       (format t "~&~4D:" index))
+	     (next-byte ()
+	       (let ((byte (sap-ref-8 sap index)))
+		 (format t " ~2,'0X" byte)
+		 (incf index)
+		 byte))
+	     (extract-24-bits ()
+	       (logior (ash (next-byte) 16)
+		       (ash (next-byte) 8)
+		       (next-byte)))
+	     (extract-extended-op ()
+	       (let ((byte (next-byte)))
+		 (if (= byte 255)
+		     (extract-24-bits)
+		     byte)))       
+	     (extract-4-bit-op (byte)
+	       (let ((4-bits (ldb (byte 4 0) byte)))
+		 (if (= 4-bits 15)
+		     (extract-extended-op)
+		     4-bits)))
+	     (extract-3-bit-op (byte)
+	       (let ((3-bits (ldb (byte 3 0) byte)))
+		 (if (= 3-bits 7)
+		     :var
+		     3-bits)))
+	     (extract-branch-target (byte)
+	       (if (logbitp 0 byte)
+		   (let ((disp (next-byte)))
+		     (if (logbitp 7 disp)
+			 (+ index disp -256)
+			 (+ index disp)))
+		   (extract-24-bits)))
+	     (note (string &rest noise)
+	       (format t "~12T~?" string noise))
+	     (get-constant (index)
+	       (if (< -1 index (length constants))
+		   (aref constants index)
+		   "<bogus index>")))
+      (loop
+	(unless (< index bytes)
+	  (return))
+
+	(when (eql index (first eps))
+	  (newline)
+	  (pop eps)
+	  (let ((frame-size
+		 (let ((byte (next-byte)))
+		   (if (< byte 255)
+		       (* byte 2)
+		       (logior (ash (next-byte) 16)
+			       (ash (next-byte) 8)
+			       (next-byte))))))
+	    (note "Entry point, frame-size=~D~%" frame-size)))
+
+	(newline)
+	(let ((byte (next-byte)))
+	  (macrolet ((dispatch (&rest clauses)
+		       `(cond ,@(mapcar #'(lambda (clause)
+					    `((= (logand byte ,(caar clause))
+						 ,(cadar clause))
+					      ,@(cdr clause)))
+					clauses))))
+	    (dispatch
+	     ((#b11110000 #b00000000)
+	      (let ((op (extract-4-bit-op byte)))
+		(note "push-local ~D" op)))
+	     ((#b11110000 #b00010000)
+	      (let ((op (extract-4-bit-op byte)))
+		(note "push-arg ~D" op)))
+	     ((#b11110000 #b00100000)
+	      (let ((*print-level* 3)
+		    (*print-lines* 2))
+		(note "push-const ~S" (get-constant (extract-4-bit-op byte)))))
+	     ((#b11110000 #b00110000)
+	      (let ((op (extract-4-bit-op byte))
+		    (*print-level* 3)
+		    (*print-lines* 2))
+		(note "push-sys-const ~S"
+		      (svref system-constants op))))
+	     ((#b11110000 #b01000000)
+	      (let ((op (extract-4-bit-op byte)))
+		(note "push-int ~D" op)))
+	     ((#b11110000 #b01010000)
+	      (let ((op (extract-4-bit-op byte)))
+		(note "push-neg-int ~D" (- (1+ op)))))
+	     ((#b11110000 #b01100000)
+	      (let ((op (extract-4-bit-op byte)))
+		(note "pop-local ~D" op)))
+	     ((#b11110000 #b01110000)
+	      (let ((op (extract-4-bit-op byte)))
+		(note "pop-n ~D" op)))
+	     ((#b11110000 #b10000000)
+	      (let ((op (extract-3-bit-op byte)))
+		(note "~:[~;named-~]call, ~D args"
+		      (logbitp 3 byte) op)))
+	     ((#b11110000 #b10010000)
+	      (let ((op (extract-3-bit-op byte)))
+		(note "~:[~;named-~]tail-call, ~D args"
+		      (logbitp 3 byte) op)))
+	     ((#b11110000 #b10100000)
+	      (let ((op (extract-3-bit-op byte)))
+		(note "~:[~;named-~]multiple-call, ~D args"
+		      (logbitp 3 byte) op)))
+	     ((#b11111000 #b10110000)
+	      ;; local call
+	      (let ((op (extract-3-bit-op byte))
+		    (target (extract-24-bits)))
+		(note "local call ~D, ~D args" target op)))
+	     ((#b11111000 #b10111000)
+	      ;; local tail-call
+	      (let ((op (extract-3-bit-op byte))
+		    (target (extract-24-bits)))
+		(note "local tail-call ~D, ~D args" target op)))
+	     ((#b11111000 #b11000000)
+	      ;; local-multiple-call
+	      (let ((op (extract-3-bit-op byte))
+		    (target (extract-24-bits)))
+		(note "local multiple-call ~D, ~D args" target op)))
+	     ((#b11111000 #b11001000)
+	      ;; return
+	      (let ((op (extract-3-bit-op byte)))
+		(note "return, ~D vals" op)))
+	     ((#b11111110 #b11010000)
+	      ;; branch
+	      (note "branch ~D" (extract-branch-target byte)))
+	     ((#b11111110 #b11010010)
+	      ;; if-true
+	      (note "if-true ~D" (extract-branch-target byte)))
+	     ((#b11111110 #b11010100)
+	      ;; if-false
+	      (note "if-false ~D" (extract-branch-target byte)))
+	     ((#b11111110 #b11010110)
+	      ;; if-eq
+	      (note "if-eq ~D" (extract-branch-target byte)))
+	     ((#b11111000 #b11011000)
+	      ;; XOP
+	      (let* ((low-3-bits (extract-3-bit-op byte))
+		     (xop (nth (if (eq low-3-bits :var) (next-byte) low-3-bits)
+			       *xop-names*)))
+		(note "xop ~A~@[ ~D~]"
+		      xop
+		      (case xop
+			((catch go unwind-protect)
+			 (extract-24-bits))
+			(type-check
+			 (get-constant (extract-extended-op)))))))
+			 
+	     ((#b11100000 #b11100000)
+	      ;; inline
+	      (note "inline ~A"
+		    (inline-function-info-function
+		     (nth (ldb (byte 5 0) byte) *inline-functions*)))))))))))
+
