@@ -1336,20 +1336,22 @@
 ;;;; With-XXX
 
 (defmacro with-open-file ((var &rest open-args) &body (forms decls))
-  "Bindspec is of the form (Stream File-Name . Options).  The file whose name
-  is File-Name is opened using the Options and bound to the variable Stream.
-  The Forms are executed, and when they terminate, normally or otherwise,
-  the file is closed."
+  "Bindspec is of the form (Stream File-Name . Options).  The file whose
+   name is File-Name is opened using the Options and bound to the variable
+   Stream.  If the call to open is unsuccessful, the forms are not
+   evaluated.  The Forms are executed, and when they terminate, normally or
+   otherwise, the file is closed."
   (let ((abortp (gensym)))
     `(let ((,var (open ,@open-args))
 	   (,abortp t))
        ,@decls
-       (unwind-protect
-	 (multiple-value-prog1
-	  (progn ,@forms)
-	  (setq ,abortp nil))
-	 (when ,var
+       (when ,var
+	 (unwind-protect
+	     (multiple-value-prog1
+		 (progn ,@forms)
+	       (setq ,abortp nil))
 	   (close ,var :abort ,abortp))))))
+
 
 
 (defmacro with-open-stream ((var stream) &body (forms decls))
@@ -1383,8 +1385,9 @@
 
 
 (defmacro with-output-to-string ((var &optional string) &body (forms decls))
-  "Binds the Var to a string output stream that puts characters into String
-  and executes the body.  See manual for details."
+  "If *string* is specified, it must be a string with a fill pointer; 
+   the output is incrementally appended to the string (as if by use of
+   VECTOR-PUSH-EXTEND)."
   (if string
       `(let ((,var (make-fill-pointer-output-stream ,string)))
 	 ,@decls
