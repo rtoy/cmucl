@@ -623,10 +623,9 @@
     (if setfs
 	`(multiple-value-bind (,gc ,saved-state ,temp-mask ,temp-gc)
 	     (copy-gcontext-local-state ,gcontext ',indexes ,@extension-indexes)
-	   (declare (type gcontext ,gc)
+	   (declare (type gcontext ,gc ,temp-gc)
 		    (type gcontext-state ,saved-state)
-		    (type xgcmask ,temp-mask)
-		    (type (or null resource-id) ,temp-gc))
+		    (type xgcmask ,temp-mask))
 	   (with-gcontext-bindings (,gc ,saved-state
 					,(append indexes extension-indexes)
 				    ,ts-index ,temp-mask ,temp-gc)
