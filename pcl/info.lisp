@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.6 2003/05/20 20:08:04 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.7 2003/05/27 11:49:57 gerd Exp $")
 
 (in-package "PCL")
 
@@ -521,15 +521,73 @@
 	  (setq body (cdr body)))
     (values outer-decls inner-decls body)))
 
-;;;
-;;; Set up SLOTS, AUTO-COMPILE, and NOT-AUTO-COMPILE as a recognizable
-;;; declaration.
-;;;
-(declaim (declaration slots auto-compile not-auto-compile))
+
+;;;; ********************************
+;;;; Adding New Declarations  *******
+;;;; ********************************
+
+(eval-when (compile load eval)
+  (defvar *declaration-handlers* ())
+  
+  (defun %define-declaration (decl-name handler-name)
+    (let ((entry (assoc decl-name *declaration-handlers*)))
+      (if entry
+	  (setf (cdr entry) handler-name)
+	  (setq *declaration-handlers*
+		(acons decl-name handler-name *declaration-handlers*))))))
+
+(defmacro define-declaration (decl-name lambda-list &body body)
+  (let ((handler-name (symbolicate 'handle- decl-name '-declaration)))
+    `(eval-when (compile load eval)
+       (declaim (declaration ,decl-name))
+       (defun ,handler-name ,lambda-list ,@body)
+       (%define-declaration ',decl-name ',handler-name))))
+
+(defun proclamation-hook (form)
+  (when (consp form)
+    (let ((handler (cdr (assoc (car form) *declaration-handlers*))))
+      (when handler
+	(funcall handler form)))))
+
+(pushnew 'proclamation-hook c::*proclamation-hooks*)
+
+
+;;;; ***************************
+;;;; SLOTS declaration  ********
+;;;; ***************************
+
 (pushnew 'slots *variable-declarations-with-argument*)
 (pushnew 'slots walker:*variable-declarations*)
 
-(defvar *auto-compile-global-default* nil)
+(define-declaration slots (form)
+  (flet ((invalid (&optional subform)
+	   (if subform
+	       (warn "~@<Invalid slot access specifier ~s in ~s.~@:>"
+		     subform form)
+	       (warn "~@<Invalid slot access declaration ~s.~@:>"
+		     form))))
+    (dolist (specifier (cdr form))
+      (if (and (consp specifier)
+	       (memq (car specifier) *slots-qualities*))
+	  (dolist (class-entry (cdr specifier))
+	    (let (class slots)
+	      (typecase class-entry
+		(symbol
+		 (setq class class-entry))
+		(cons
+		 (setq class (car class-entry))
+		 (setq slots (cdr class-entry)))
+		(t
+		 (invalid specifier)))
+	      (when class
+		(let* ((info (class-info-or-make class))
+		       (entry (assoc (car specifier)
+				     (class-info-slot-access info))))
+		  (if entry
+		      (setf (cdr entry) slots)
+		      (push (list* (car specifier) slots)
+			    (class-info-slot-access info)))))))
+	  (invalid)))))
 
 ;;;
 ;;; True if there is a slot optimization declaration DECLARATION in
@@ -589,42 +647,40 @@
 	     (null (cdr spec))
 	     (memq slot-name (cdr spec))))))
     
-(defun proclamation-hook (form)
-  (when (consp form)
-    (case (car form)
-      (slots (slot-access-proclamation form))
-      (auto-compile (auto-compile-proclamation form t))
-      (not-auto-compile (auto-compile-proclamation form nil)))))
+(defun class-has-a-forward-referenced-superclass-p (class)
+  (or (forward-referenced-class-p class)
+      (some #'class-has-a-forward-referenced-superclass-p
+	    (class-direct-superclasses class))))	 
+      
+;;;
+;;; Return true if class CLASS-NAME should be defined at compile time.
+;;; Called from EXPAND-DEFCLASS.  ENV is the environment in which the
+;;; DEFCLASS of CLASS-NAME appears.  SUPERS is the list of superclass
+;;; names for CLASS-NAME.
+;;;
+(defun define-class-at-compile-time-p (env class-name &optional supers)
+  (or (slot-declaration env 'inline class-name)
+      (some (lambda (super)
+	      (let ((class (find-class super nil)))
+		(and class
+		     (not (class-has-a-forward-referenced-superclass-p class))
+		     (some (lambda (c)
+			     (slot-declaration env 'inline c))
+			   (class-precedence-list class)))))
+	    supers)))
 
-(defun slot-access-proclamation (form)
-  (flet ((invalid (&optional subform)
-	   (if subform
-	       (warn "~@<Invalid slot access specifier ~s in ~s.~@:>"
-		     subform form)
-	       (warn "~@<Invalid slot access declaration ~s.~@:>"
-		     form))))
-    (dolist (specifier (cdr form))
-      (if (and (consp specifier)
-	       (memq (car specifier) *slots-qualities*))
-	  (dolist (class-entry (cdr specifier))
-	    (let (class slots)
-	      (typecase class-entry
-		(symbol
-		 (setq class class-entry))
-		(cons
-		 (setq class (car class-entry))
-		 (setq slots (cdr class-entry)))
-		(t
-		 (invalid specifier)))
-	      (when class
-		(let* ((info (class-info-or-make class))
-		       (entry (assoc (car specifier)
-				     (class-info-slot-access info))))
-		  (if entry
-		      (setf (cdr entry) slots)
-		      (push (list* (car specifier) slots)
-			    (class-info-slot-access info)))))))
-	  (invalid)))))
+
+;;;; *********************************
+;;;; AUTO-COMPILE declaration  *******
+;;;; *********************************
+
+(define-declaration auto-compile (form)
+  (auto-compile-proclamation form t))
+
+(define-declaration not-auto-compile (form)
+  (auto-compile-proclamation form nil))
+
+(defvar *auto-compile-global-default* nil)
 
 (defun auto-compile-proclamation (form compilep)
   (flet ((invalid (&optional subform)
@@ -659,30 +715,6 @@
 				    (gf-info-auto-compile info))))))
 		(t
 		 (invalid specifier)))))))
-
-(pushnew 'proclamation-hook c::*proclamation-hooks*)
-
-(defun class-has-a-forward-referenced-superclass-p (class)
-  (or (forward-referenced-class-p class)
-      (some #'class-has-a-forward-referenced-superclass-p
-	    (class-direct-superclasses class))))	 
-      
-;;;
-;;; Return true if class CLASS-NAME should be defined at compile time.
-;;; Called from EXPAND-DEFCLASS.  ENV is the environment in which the
-;;; DEFCLASS of CLASS-NAME appears.  SUPERS is the list of superclass
-;;; names for CLASS-NAME.
-;;;
-(defun define-class-at-compile-time-p (env class-name &optional supers)
-  (or (slot-declaration env 'inline class-name)
-      (some (lambda (super)
-	      (let ((class (find-class super nil)))
-		(and class
-		     (not (class-has-a-forward-referenced-superclass-p class))
-		     (some (lambda (c)
-			     (slot-declaration env 'inline c))
-			   (class-precedence-list class)))))
-	    supers)))
 
 ;;;
 ;;; Return true if method with the given name, qualifiers, and
