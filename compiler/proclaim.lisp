@@ -15,6 +15,11 @@
 ;;;
 (in-package 'c)
 
+;;; True if the type system has been properly initialized, and thus is o.k. to
+;;; use.
+;;;
+(defvar *type-system-initialized* nil)
+
 ;;; The Cookie holds information about the compilation environment for a node.
 ;;; See the Node definition for a description of how it is used.
 ;;;
@@ -133,7 +138,7 @@
 	 (clear-info variable constant-value name)
 	 (setf (info variable kind name) :special)))
       (type
-       (when (fboundp 'specifier-type)
+       (when *type-system-initialized*
 	 (let ((type (specifier-type (first args))))
 	   (dolist (name (rest args))
 	     (unless (symbolp name)
@@ -141,7 +146,7 @@
 	     (setf (info variable type name) type)
 	     (setf (info variable where-from name) :declared)))))
       (ftype
-       (when (fboundp 'specifier-type)
+       (when *type-system-initialized*
 	 (let ((type (specifier-type (first args))))
 	   (unless (csubtypep type (specifier-type 'function))
 	     (error "Declared functional type is not a function type: ~S."
@@ -151,7 +156,7 @@
 	     (setf (info function type name) type)
 	     (setf (info function where-from name) :declared)))))
       (function
-       (when (fboundp 'specifier-type)
+       (when *type-system-initialized*
 	 (%proclaim `(ftype (function . ,(rest args)) ,(first args)))))
       (optimize
        (setq *default-cookie*
