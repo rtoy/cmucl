@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.104 1994/08/21 15:19:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.105 1994/09/30 01:42:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,10 +83,17 @@
 ;;; :Block-Compile and :Entry-Points arguments that COMPILE-FILE was called
 ;;; with.  Subsequent START-BLOCK or END-BLOCK declarations alter the values.
 ;;;
+;;; *Block-Compile-Argument* holds the original value of the :block-compile
+;;; argument, which overrides any internal declarations.
+;;;
 (defvar *block-compile*)
-(declaim (type (member nil t :specified) *block-compile*))
+(defvar *block-compile-argument*)
+(declaim (type (member nil t :specified)
+	       *block-compile* *block-compile-argument*))
 (defvar *entry-points*)
 (declaim (list *entry-points*))
+
+;;;
 
 ;;; When block compiling, used by PROCESS-FORM to accumulate top-level lambdas
 ;;; resulting from compiling subforms.  (In reverse order.)
@@ -1045,12 +1052,13 @@
 ;;;
 ;;;    If a special block compilation delimiter, then start or end the block as
 ;;; appropriate.  Otherwise, just convert-and-maybe-compile the form.  If
-;;; *BLOCK-COMPILE* is NIL, then we ignore block declarations.
+;;; :block-compile was T or NIL, then we ignore any start/end block
+;;; declarations.
 ;;;
 (defun process-proclaim (form path)
   (if (and (eql (length form) 2) (constantp (cadr form)))
       (let ((spec (eval (cadr form))))
-	(if (and (consp spec) (eq *block-compile* :specified))
+	(if (and (consp spec) (eq *block-compile-argument* :specified))
 	    (case (first spec)
 	      (start-block
 	       (finish-block-compilation)
@@ -1477,7 +1485,8 @@
 (defun sub-compile-file (info &optional d-s-info)
   (declare (type source-info info))
   (with-ir1-namespace
-    (let* ((start-errors *compiler-error-count*)
+    (let* ((*block-compile* *block-compile-argument*)
+	   (start-errors *compiler-error-count*)
 	   (start-warnings *compiler-warning-count*)
 	   (start-notes *compiler-note-count*)
 	   (*package* *package*)
@@ -1564,7 +1573,8 @@
 	       ((:verbose *compile-verbose*) *compile-verbose*)
 	       ((:print *compile-print*) *compile-print*)
 	       ((:progress *compile-progress*) *compile-progress*)
-	       ((:block-compile *block-compile*) *block-compile-default*)
+	       ((:block-compile *block-compile-argument*)
+		*block-compile-default*)
 	       ((:entry-points *entry-points*) nil)
 	       ((:byte-compile *byte-compile*) *byte-compile-default*)
 	       source-info
@@ -1652,7 +1662,7 @@
 			    ((:verbose *compile-verbose*) *compile-verbose*)
 			    ((:print *compile-print*) *compile-print*)
 			    ((:progress *compile-progress*) *compile-progress*)
-			    ((:block-compile *block-compile*)
+			    ((:block-compile *block-compile-argument*)
 			     *block-compile-default*)
 			    ((:entry-points *entry-points*) nil)
 			    ((:byte-compile *byte-compile*)
