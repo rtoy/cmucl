@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.78 1994/06/22 16:21:15 hallgren Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.79 1994/10/02 23:35:31 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,6 +132,10 @@
 	  :environment-name (concatenate 'string (c:backend-name c:*backend*)
 					 " backend")))
 
+;;; PCL.
+;;;
+#-(or no-pcl runtime) (maybe-byte-load "pcl:pclload")
+
 ;;; CLX.
 ;;;
 #-(or no-clx runtime)
@@ -141,11 +145,6 @@
 ;;;
 #-(or no-hemlock runtime)
 (maybe-byte-load "target:hemlock/hemlock-library")
-
-;;; PCL.
-;;;
-#-(or no-pcl runtime) (maybe-byte-load "pcl:pclload")
-; #+(and no-clm (not (or no-pcl no-clx))) (maybe-byte-load "code:inspect")
 
 ;;; CLM.
 ;;;
