@@ -143,7 +143,8 @@
 	(start (fill-pointer vec)))
     (dotimes (i len)
       (vector-push-extend 0 vec))
-    (lisp::with-array-data ((data vec))
+    (lisp::with-array-data ((data vec) (ig1) (ig2))
+      (declare (ignore ig1 ig2))
       (%primitive byte-blt bits 0 data start (+ start len))))
   (undefined-value))
 
