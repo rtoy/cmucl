@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.4 1991/02/08 13:35:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.5 1991/02/14 18:41:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,14 +16,12 @@
 ;;; Runs in the standard Spice Lisp environment.
 ;;; This uses the special std-lisp-readtable, which is internal to READER.LISP
 ;;;
-;;; ****************************************************************
-(in-package 'lisp)
+(in-package "LISP")
 
 
 ;;; declared in READ.LISP
 
 (proclaim '(special *read-suppress* std-lisp-readtable *bq-vector-flag*))
-
 
 (defun sharp-backslash (stream backslash ignore)
   (declare (ignore ignore))
@@ -177,8 +175,7 @@
 		  retval)
 	       (setq denval (+ (* denval radix) dig))))
 	    ;;it's bogus
-	    (t (error
-		       "Illegal digits ~S for radix ~S" token radix)))))))
+	    (t (error "Illegal digits ~S for radix ~S" token radix))))))
 
 (defun sharp-B (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
@@ -203,10 +200,9 @@
 	   dimensions))
   (if (> dimensions 0)
       (let ((dlist (make-list dimensions))
-	    (init-list
-	     (if (char= (read-char stream t) #\( #|)|#)
-		 (read-list stream nil)
-		 (error "Array values must be a list."))))
+	    (init-list (if (char= (read-char stream t) #\()
+			   (read-list stream nil)
+			   (error "Array values must be a list."))))
 	(do ((dl dlist (cdr dl))
 	     (il init-list (car il)))
 	    ;; I think the nreverse is causing the problem.
@@ -226,24 +222,25 @@
   (when *read-suppress*
 	(read stream () () t)
 	(return-from sharp-S nil))
-  (let ((body
-	 (if (char= (read-char stream t) #\( )
-	     (read-list stream nil)
-	     (error "Non-list following #S"))))
+  (let ((body (if (char= (read-char stream t) #\( )
+		  (read-list stream nil)
+		  (error "Non-list following #S"))))
     (cond ((listp body)
 	   (unless (symbolp (car body))
 	     (error "Structure type is not a symbol: ~S" (car body)))
 	   (let ((defstruct (info type defined-structure-info (car body))))
 	     (unless defstruct
 	       (error "~S is not a defined structure type." (car body)))
-	     (unless (c::dd-constructor defstruct)
-	       (error "The ~S structure does not have a default constructor." (car body)))
+	     (unless (c::dd-constructors defstruct)
+	       (error "The ~S structure does not have a default constructor."
+		      (car body)))
 	     (do ((arg (cdr body) (cddr arg))
 		  (res ()))
-		 ((endp arg) (apply (c::dd-constructor defstruct) res))
+		 ((endp arg)
+		  (apply (car (c::dd-constructors defstruct)) res))
 	       (push (cadr arg) res)
 	       (push (intern (string (car arg)) *keyword-package*) res))))
-	  (t (error "Non-list following #S: ~S" body))))))
+	  (t (error "Non-list following #S: ~S" body)))))
 
 (defmacro int-subst-array (new old array rank var-list)
   (if (> rank (array-rank array))
