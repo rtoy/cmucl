@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.12 1990/05/31 00:25:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.13 1990/06/03 16:29:40 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -110,8 +110,9 @@
   (loadw tag catch vm:catch-block-tag-slot)
   (inst beq tag target exit)
   (inst nop)
-  (inst b loop)
   (loadw catch catch vm:catch-block-previous-catch-slot)
+  (inst b loop)
+  (inst nop)
   
   exit
   
