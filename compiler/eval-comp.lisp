@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.23 1993/01/17 20:59:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.24 1993/05/19 08:37:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -299,10 +299,6 @@
 
 (defun %unknown-keyword-argument-error (keyword)
   (error "Unknown keyword argument -- ~S." keyword))
-
-(defun %progv (vars vals fun)
-  (progv vars vals
-    (funcall fun)))
 
 (defun %cleanup-point ())
 
