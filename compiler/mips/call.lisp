@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.59 1993/05/27 01:33:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.60 1993/05/27 01:48:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -805,7 +805,7 @@ default-value-8
 					     word-shift)))))
 			      (:load-return-pc
 			       (sc-case return-pc
-				 (descriptor-reg
+				 (#-gengc descriptor-reg #+gengc any-reg
 				  (inst move return-pc-pass return-pc))
 				 (control-stack
 				  (inst lw return-pc-pass cfp-tn
