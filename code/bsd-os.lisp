@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.5 2002/01/28 20:17:08 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.6 2002/11/18 13:52:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,5 +71,9 @@
 ;;;    Return the system page size.
 ;;;
 (defun get-page-size ()
-  ;; probably should call getpagesize()
-  4096)
+  (multiple-value-bind (val err)
+      (unix:unix-getpagesize)
+    (unless val
+      (error "Getpagesize failed: ~A" (unix:get-unix-error-msg err)))
+    val))
+

@@ -5,13 +5,14 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.9 1998/01/29 07:22:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.10 2002/11/18 13:52:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; OS interface functions for CMU CL under Mach.  From Miles Bader and David
+;;; OS interface functions for CMUCL under SunOS.  From Miles Bader and David
 ;;; Axmark.
 ;;;
+
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
 (export '(get-system-info get-page-size os-init))
