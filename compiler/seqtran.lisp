@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.9 1990/08/24 18:29:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.10 1990/10/09 14:21:38 ram Exp $
 ;;;
 ;;;    This file contains optimizers for list and sequence functions.
 ;;;
@@ -70,13 +70,13 @@
 (def-source-transform mapcon (function list &rest more-lists)
   (mapper-transform function (cons list more-lists) :nconc nil))
 
-(deftransform elt ((s i) (vector *))
+(deftransform elt ((s i) ((simple-array * (*)) *))
   '(aref s i))
 
 (deftransform elt ((s i) (list *))
   '(nth i s))
 
-(deftransform %setelt ((s i v) (vector * *))
+(deftransform %setelt ((s i v) ((simple-array * (*)) * *))
   '(%aset s i v))
 
 (deftransform %setelt ((s i v) (list * *))
