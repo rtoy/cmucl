@@ -21,7 +21,7 @@
 
 (eval-when (compile load eval)
 
-(defconstant unit-bits 16
+(defconstant unit-bits 32
   "The number of bits to process at a time.")
 
 (defconstant max-bits (ash most-positive-fixnum -2)
@@ -29,7 +29,7 @@
 
 
 (deftype unit ()
-  `(signed-byte ,unit-bits))
+  `(unsigned-byte ,unit-bits))
 
 (deftype offset ()
   `(integer 0 ,max-bits))
@@ -72,15 +72,6 @@
   (ecase vm:target-byte-order
     (:little-endian `(byte ,count ,where))
     (:big-endian `(byte ,count (- unit-bits ,where ,count)))))
-
-
-
-(defmacro merge-bits (shift prev next)
-  "Return (ldb (byte 32 0) (ash (logior (ash prev 32) next) shift)) but stay
-  out of bignum land."
-  `(logior (the unit (ash (ldb (byte (- unit-bits ,shift) 0) ,prev)
-			  (- unit-bits ,shift)))
-	   (ash ,next (- ,shift))))
 
 
 
@@ -258,39 +249,76 @@
 ); eval when
 
 
+;;;; Support routines.
+
+;;; These are compiler primitives.
+
+(defun %raw-bits (object offset)
+  (declare (type index offset))
+  (%raw-bits object offset))
+
+(defun (setf %raw-bits) (object offset value)
+  (declare (type index offset)
+	   (type unit value))
+  (setf (%raw-bits object offset) value))
+
+(defun merge-bits (shift prev next)
+  "Return (ldb (byte 32 0) (ash (logior (ash prev 32) next) (- shift))) but
+  stay out of bignum land."
+  (declare (type bit-offset shift)
+	   (type unit prev next))
+  (merge-bits shift prev next))
+
+
+;;; These are not supported as primitives.
+
+(proclaim '(inline 32bit-logical-eqv 32bit-logical-nand 32bit-logical-andc1
+		   32bit-logical-andc2 32bit-logical-orc1 32bit-logical-orc2))
+
+(defun 32bit-logical-eqv (x y)
+  (32bit-logical-not (32bit-logical-xor x y)))
+
+(defun 32bit-logical-nand (x y)
+  (32bit-logical-not (32bit-logical-and x y)))
+
+(defun 32bit-logical-andc1 (x y)
+  (32bit-logical-and (32bit-logical-not x) y))
+
+(defun 32bit-logical-andc2 (x y)
+  (32bit-logical-and x (32bit-logical-not y)))
+
+(defun 32bit-logical-orc1 (x y)
+  (32bit-logical-or (32bit-logical-not x) y))
+
+(defun 32bit-logical-orc2 (x y)
+  (32bit-logical-or x (32bit-logical-not y)))
+
+
+
 ;;;; The actual bashers.
 
 (proclaim '(optimize (speed 3) (safety 0)))
 
 
-;;; %raw-bits can be used to index into other-pointer objects.
-
-(defun %raw-bits (object offset)
-  (%raw-bits object offset))
-
-(defun (setf %raw-bits) (object offset value)
-  (setf (%raw-bits object offset) value))
-
-
 (def-bit-basher bit-bash-clear 0 :constant)
 (def-bit-basher bit-bash-set (1- (ash 1 unit-bits)) :constant)
 
-(def-bit-basher bit-bash-not lognot :unary)
+(def-bit-basher bit-bash-not 32bit-logical-not :unary)
 (def-bit-basher bit-bash-copy identity :unary)
 
-(def-bit-basher bit-bash-and logand)
-(def-bit-basher bit-bash-ior logior)
-(def-bit-basher bit-bash-xor logxor)
-(def-bit-basher bit-bash-eqv logeqv)
-(def-bit-basher bit-bash-nand lognand)
-(def-bit-basher bit-bash-nor lognor)
-(def-bit-basher bit-bash-andc1 logandc1)
-(def-bit-basher bit-bash-andc2 logandc2)
-(def-bit-basher bit-bash-orc1 logorc1)
-(def-bit-basher bit-bash-orc2 logorc2)
+(def-bit-basher bit-bash-and 32bit-logical-and)
+(def-bit-basher bit-bash-ior 32bit-logical-or)
+(def-bit-basher bit-bash-xor 32bit-logical-xor)
+(def-bit-basher bit-bash-eqv 32bit-logical-eqv)
+(def-bit-basher bit-bash-nand 32bit-logical-nand)
+(def-bit-basher bit-bash-nor 32bit-logical-nor)
+(def-bit-basher bit-bash-andc1 32bit-logical-andc1)
+(def-bit-basher bit-bash-andc2 32bit-logical-andc2)
+(def-bit-basher bit-bash-orc1 32bit-logical-orc1)
+(def-bit-basher bit-bash-orc2 32bit-logical-orc2)
 
 
-;;; Sap-ref-16 can be used to index into SAP objects.
+;;; Sap-ref-32 can be used to index into SAP objects.
 
-(def-bit-basher system-area-clear 0 :constant sap-ref-16)
-(def-bit-basher system-area-copy identity :unary sap-ref-16)
+(def-bit-basher system-area-clear 0 :constant sap-ref-32)
+(def-bit-basher system-area-copy identity :unary sap-ref-32)
