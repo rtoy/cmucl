@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.21 1991/01/08 01:21:21 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.22 1991/01/28 12:58:16 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -594,7 +594,7 @@ int (*handler)();
         sv.sv_handler = sigtrap_handler;
     else if (signal == SIGFPE)
         sv.sv_handler = sigfpe_handler;
-    else if (signal == SIGBUS)
+    else if (signal == SIGBUS || signal == SIGSEGV)
         sv.sv_handler = sigbus_handler;
 #endif
 #ifdef sparc
