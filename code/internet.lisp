@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.39 2003/05/05 11:53:40 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.40 2004/04/23 12:42:04 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -334,6 +334,95 @@ struct in_addr {
 	       (unix:get-unix-error-msg)))
       socket)))
 
+;; An attempt to rewrite connect-to-inet-socket in such a way that
+;; connection attempts that take a long time will not be stuck in the
+;; connect(2) system call preventing CMUCL from running other lisp
+;; threads.
+;;
+;; The strategy here is to put the socket in non-blocking mode, and
+;; then call connect, which should immediately return.  Then there are
+;; three cases to handle:
+;;
+;;   I.   The connect failed immediately.
+;;   II.  The connect succeeded immediately.
+;;   III. The connect returned without finishing.
+;;
+;; Cases I and II are simple enough, we just return the socket or
+;; signal an error.
+;;
+;; In case III, we call SYSTEM:WAIT-UNTIL-FD-IS-USABLE to block just
+;; the current thread until the socket is writeable (which signals
+;; that the connect has finished, one way or the other).
+;;
+;; Once WAIT-UNTIL-FD-IS-USABLE returns, we put the socket back into
+;; blocking mode and try to determine whether the connect succeeded or
+;; failed (and why it failed).  We use an approach described at
+;; <http://cr.yp.to/docs/connect.html>, which is attributed to Douglas
+;; C. Schmidt and Ken Keys.
+;;
+;; First call getpeername, and if it returns 0 the connect succeeded,
+;; otherwise it failed. If it failed, we try to read a single
+;; character from the socket. We know it can't work, but it should
+;; cause errno set to the real reason for the failure.
+
+(defun connect-to-inet-socket/non-blocking (host port &optional (kind :stream))
+   "The host may be an address string or an IP address in host order."
+   (let ((addr (if (stringp host)
+                 (host-entry-addr (or (lookup-host-entry host)
+                                      (error "Unknown host: ~S." host)))
+                 host))
+         (socket (create-inet-socket kind)))
+     (labels ((set-blocking (socket)
+                (unix:unix-fcntl socket unix:f-setfl
+                                 (logior (unix:unix-fcntl socket unix:f-getfl 0)
+                                         unix:fndelay)))
+              (unset-blocking (socket)
+                (unix:unix-fcntl socket unix:f-setfl
+                                 (logandc2 (unix:unix-fcntl socket unix:f-getfl 0)
+                                           unix:fndelay)))
+              (dotted-quad (ipaddr)
+                (let ((naddr (htonl addr)))
+                  (format nil "~D.~D.~D.~D"
+                          (ldb (byte 8 0) naddr)
+                          (ldb (byte 8 8) naddr)
+                          (ldb (byte 8 16) naddr)
+                          (ldb (byte 8 24) naddr))))
+              (connect-error (addr reason)
+                (error "Error connecting socket to [~A:~A]: ~A"
+                       addr port reason)))
+       (set-blocking socket)
+       (with-alien ((sockaddr inet-sockaddr)
+                    (length (alien:array unsigned 1)))
+         (setf (slot sockaddr 'family) af-inet)
+         (setf (slot sockaddr 'port) (htons port))
+         (setf (slot sockaddr 'addr) (htonl addr))
+         (let ((retval (unix:unix-connect socket
+                                          (alien-sap sockaddr)
+                                          (alien-size inet-sockaddr :bytes))))
+           (cond ((< retval -1)
+                  ;; connect failed
+                  (let ((reason (unix:get-unix-error-msg)))
+                    (unix:unix-close socket)
+                    (connect-error (if (stringp host) host (dotted-quad addr)) reason)))
+                 ((= retval -1)
+                  ;; connect is in progress
+                  (system:wait-until-fd-usable socket :output)
+                  (unset-blocking socket)
+                  ;; OK, it's done, check whether it worked
+                  (when (minusp
+                         (unix:unix-getpeername socket (alien-sap sockaddr)
+                                                (alien-sap length)))
+                    (unix:unix-close socket)
+                    ;; It didn't, so let's find out why
+                    (unix:unix-read socket (alien-sap length) 1)
+                    (connect-error (if (stringp host) host (dotted-quad addr))
+                                   (unix:get-unix-error-msg)))
+                  socket)
+                 (t
+                  ;; connect succeeded
+                  (unset-blocking socket)
+                  socket)))))))
+
 ;;; Socket levels.
 (defconstant sol-socket #+linux 1 #+(or solaris bsd hpux irix) #xffff)
 
@@ -484,12 +573,12 @@ struct in_addr {
 ;;;
 ;;;   First, check to see if we already have any handlers for this file
 ;;; descriptor. If so, just add this handler to them. If not, add this
-;;; file descriptor to *oob-handlers*, make sure our interupt handler is
+;;; file descriptor to *OOB-HANDLERS*, make sure our interrupt handler is
 ;;; installed, and that the given file descriptor is "owned" by us (so sigurg
 ;;; will be delivered.)
 
 (defun add-oob-handler (fd char handler)
-  "Arange to funcall HANDLER when CHAR shows up out-of-band on FD."
+  "Arrange to funcall HANDLER when CHAR shows up out-of-band on FD."
   (declare (integer fd)
 	   (base-char char))
   (let ((handlers (assoc fd *oob-handlers*)))
