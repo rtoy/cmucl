@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.59 2004/12/15 04:03:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.60 2004/12/15 16:20:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1946,11 +1946,12 @@
 		      (eql ,arg1 ,arg2)
 		      (eql ,arg1 0))))
 	    (t (expand-bind-defaults ((arg1 nil) (arg2 nil) (arg3 nil)) params
-		 `(if ,arg2
-		      (if ,arg3
-			  (<= ,arg1 ,arg2 ,arg3)
-			  (eql ,arg1 ,arg2))
-		      (eql ,arg1 0)))))
+		 `(if ,arg3
+		      (<= ,arg1 ,arg2 ,arg3)
+		      (if ,arg2
+			  (eql ,arg1 ,arg2)
+			  ;; Duplicate the case of 1 arg?
+			  (eql ,arg1 0))))))
      ,(if colonp
 	  '(return-from outside-loop nil)
 	  '(return))))
@@ -1987,14 +1988,12 @@
 		   ;; Should we duplicate the previous case here?
 		   (eql arg1 0))))
 	  (t (interpret-bind-defaults ((arg1 nil) (arg2 nil) (arg3 nil)) params
-	       (if arg2
-		   (if arg3
-		       (<= arg1 arg2 arg3)
-		       ;; Duplicate 2 arg case here?
-		       (eql arg1 arg2))
-		   ;; What if arg2 is nil and arg3 is not?  Does that
-		   ;; mean this becomes 2 arg case instead?
-		   (eql arg1 0)))))
+	       (if arg3
+		   (<= arg1 arg2 arg3)
+		   (if arg2
+		       (eql arg1 arg2)
+		       ;; Duplicate the case of 1 arg?
+		       (eql arg1 0))))))
     (throw (if colonp 'up-up-and-out 'up-and-out)
 	   args)))
 
