@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.2 1991/05/06 13:34:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.3 1992/01/30 17:04:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,7 +97,7 @@
     (let* ((function (fdefinition name)))
       (if (eql (kernel:get-type function) vm:function-header-type)
 	  (let ((type (kernel:%function-header-type function)))
-	    (if type
+	    (if (consp type)
 		(let* ((args (cadr type))
 		       (pos (position-if
 			     #'(lambda (x)
@@ -491,6 +491,7 @@
 ;;;
 (proclaim '(notinline compute-time-overhead-aux))
 (defun compute-time-overhead-aux (x)
+  (declare (optimize (debug-info 2))) ; Make sure we have arglist info...
   (declare (ignore x)))
 
 
