@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.69 2001/01/23 17:21:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.70 2001/02/22 20:31:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -536,22 +536,23 @@
 ;;; From <errno.h>
 ;;; 
 (def-unix-error ESUCCESS 0 "Successful")
-(def-unix-error EPERM 1 #-linux "Not owner" #+linux "Operation not permitted")
+(def-unix-error EPERM 1 "Operation not permitted")
 (def-unix-error ENOENT 2 "No such file or directory")
 (def-unix-error ESRCH 3 "No such process")
 (def-unix-error EINTR 4 "Interrupted system call")
 (def-unix-error EIO 5 "I/O error")
-(def-unix-error ENXIO 6 "No such device or address")
+(def-unix-error ENXIO 6 "Device not configured"
 (def-unix-error E2BIG 7 "Arg list too long")
 (def-unix-error ENOEXEC 8 "Exec format error")
-(def-unix-error EBADF 9 "Bad file number")
-(def-unix-error ECHILD 10 "No children")
-(def-unix-error EAGAIN 11 #-linux "No more processes" #+linux "Try again")
-(def-unix-error ENOMEM 12 #-linux "Not enough core" #+linux "Out of memory")
+(def-unix-error EBADF 9 "Bad file descriptor")
+(def-unix-error ECHILD 10 "No child process")
+#+bsd(def-unix-error EDEADLK 11 "Resource deadlock avoided")
+#-bsd(def-unix-error EAGAIN 11 #-linux "No more processes" #+linux "Try again")
+(def-unix-error ENOMEM 12 "Out of memory")
 (def-unix-error EACCES 13 "Permission denied")
 (def-unix-error EFAULT 14 "Bad address")
 (def-unix-error ENOTBLK 15 "Block device required")
-(def-unix-error EBUSY 16 #-linux "Mount device busy" #+linux "Device or resource busy")
+(def-unix-error EBUSY 16 "Device or resource busy")
 (def-unix-error EEXIST 17 "File exists")
 (def-unix-error EXDEV 18 "Cross-device link")
 (def-unix-error ENODEV 19 "No such device")
@@ -560,7 +561,7 @@
 (def-unix-error EINVAL 22 "Invalid argument")
 (def-unix-error ENFILE 23 "File table overflow")
 (def-unix-error EMFILE 24 "Too many open files")
-(def-unix-error ENOTTY 25 "Not a typewriter")
+(def-unix-error ENOTTY 25 "Inappropriate ioctl for device")
 (def-unix-error ETXTBSY 26 "Text file busy")
 (def-unix-error EFBIG 27 "File too large")
 (def-unix-error ENOSPC 28 "No space left on device")
@@ -570,14 +571,15 @@
 (def-unix-error EPIPE 32 "Broken pipe")
 ;;; 
 ;;; Math
-(def-unix-error EDOM 33 #-linux "Argument too large" #+linux "Math argument out of domain")
+(def-unix-error EDOM 33 "Numerical argument out of domain")
 (def-unix-error ERANGE 34 #-linux "Result too large" #+linux "Math result not representable")
 ;;; 
 #-(or linux svr4)
 (progn
 ;;; non-blocking and interrupt i/o
 (def-unix-error EWOULDBLOCK 35 "Operation would block")
-(def-unix-error EDEADLK 35 "Operation would block") ; Ditto
+#-bsd(def-unix-error EDEADLK 35 "Operation would block") ; Ditto
+#+bsd(def-unix-error EAGAIN 35 "Resource temporarily unavailable")
 (def-unix-error EINPROGRESS 36 "Operation now in progress")
 (def-unix-error EALREADY 37 "Operation already in progress")
 ;;;
