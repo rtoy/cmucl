@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.24 1992/05/21 22:50:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.24.1.1 1993/02/23 11:47:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,7 +240,9 @@
 
 (defstruct debug-function)
 
-(defstruct (compiled-debug-function (:include debug-function))
+(defstruct (compiled-debug-function
+	    (:include debug-function)
+	    (:pure t))
   ;;
   ;; The name of this function.  If from a DEFUN, etc., then this is the
   ;; function name, otherwise it is a descriptive string.
@@ -418,7 +420,7 @@ function (which would be useful info anyway).
 
 ;;;; Debug source:
 
-(defstruct debug-source
+(defstruct (debug-source (:pure t))
   ;;
   ;; This slot indicates where the definition came from:
   ;;    :File - from a file (Compile-File)
@@ -458,7 +460,9 @@ function (which would be useful info anyway).
 
 (defstruct debug-info)
 
-(defstruct (compiled-debug-info (:include debug-info))
+(defstruct (compiled-debug-info
+	    (:include debug-info)
+	    (:pure t))
   ;;
   ;; Some string describing something about the code in this component.
   (name (required-argument) :type simple-string)
