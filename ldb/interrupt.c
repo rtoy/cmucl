@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.22 1991/01/28 12:58:16 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.23 1991/02/16 01:00:26 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -42,8 +42,10 @@ static void fake_foreign_function_call(context)
     lispobj oldcont;
     
     /* Get current LISP state from context */
+#ifndef ibmrt
     current_dynamic_space_free_pointer = (lispobj *) context->sc_regs[ALLOC];
     current_binding_stack_pointer = (lispobj *) context->sc_regs[BSP];
+#endif
 #ifdef mips
     current_flags_register = context->sc_regs[FLAGS]|(1<<flag_Atomic);
 #endif
@@ -76,6 +78,7 @@ static void fake_foreign_function_call(context)
         oldcont = (lispobj)context->sc_regs[CFP];
     
     current_control_stack_pointer = current_control_frame_pointer + 8;
+
     current_control_frame_pointer[0] = oldcont;
     current_control_frame_pointer[1] = NIL;
     current_control_frame_pointer[2] = (lispobj)context->sc_regs[CODE];
@@ -116,9 +119,11 @@ static void undo_fake_foreign_function_call(context)
     /* ### Do I really need to unbind_to_here()? */
     unbind();
     
+#ifndef ibmrt
     /* Put the dynamic space free pointer back into the context. */
     context->sc_regs[ALLOC] =
         (unsigned long) current_dynamic_space_free_pointer;
+#endif
 }
 
 #define call_maybe_gc() \
@@ -213,7 +218,6 @@ struct sigcontext *context;
     union interrupt_handler handler;
     lispobj *args;
     lispobj callname, function;
-    long mask;
     
     handler = interrupt_handlers[signal];
     were_in_lisp = !foreign_function_call_active;
@@ -228,6 +232,8 @@ struct sigcontext *context;
     
     /* Allow signals again. */
     sigsetmask(context->sc_mask);
+
+    write(1, "Calling handler.\n", 17);
 
     if (LowtagOf(handler.lisp) == type_EvenFixnum ||
         LowtagOf(handler.lisp) == type_OddFixnum)
@@ -535,6 +541,12 @@ static boolean gc_trigger_hit(context)
 	badaddr = (lispobj *)(context->sc_regs[rs1] + context->sc_regs[rs2]);
     }
 #endif
+
+#ifdef ibmrt
+    /* ### Don't know where to look on the RT. */
+    badaddr = NULL;
+#endif
+
     return (badaddr >= current_auto_gc_trigger &&
 	    badaddr < current_dynamic_space + DYNAMIC_SPACE_SIZE);
 }
@@ -604,6 +616,10 @@ int (*handler)();
 	sv.sv_handler = sigemt_handler;
     else if (signal == SIGBUS)
         sv.sv_handler = sigbus_handler;
+#endif
+#ifdef ibmrt
+    if (0)
+	;
 #endif
     else if (handler == SIG_DFL || handler == SIG_IGN)
         sv.sv_handler = handler;

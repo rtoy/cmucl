@@ -1,10 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.6 1990/10/23 00:04:06 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.7 1991/02/16 01:00:19 wlott Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
 #include <stdio.h>
 
 #include "lisp.h"
+#include "ldb.h"
 #include "globals.h"
 
 char *number_stack_start;
@@ -18,7 +19,9 @@ unsigned long current_flags_register;
 
 lispobj *current_control_stack_pointer;
 lispobj *current_control_frame_pointer;
+#ifndef ibmrt
 lispobj *current_binding_stack_pointer;
+#endif
 
 lispobj *read_only_space;
 lispobj *static_space;
@@ -28,7 +31,9 @@ lispobj *control_stack;
 lispobj *binding_stack;
 
 lispobj *current_dynamic_space;
+#ifndef ibmrt
 lispobj *current_dynamic_space_free_pointer;
+#endif
 lispobj *current_auto_gc_trigger;
 
 globals_init()
@@ -53,5 +58,7 @@ globals_init()
 	/* Initialize the current lisp state. */
 	current_control_stack_pointer = control_stack;
 	current_control_frame_pointer = (lispobj *)0;
+#ifndef ibmrt
 	current_binding_stack_pointer = binding_stack;
+#endif
 }

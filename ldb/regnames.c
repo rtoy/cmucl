@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/regnames.c,v 1.3 1990/10/23 00:02:53 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/regnames.c,v 1.4 1991/02/16 01:00:50 wlott Exp $ */
 
 #include "lispregs.h"
 
@@ -35,7 +35,7 @@ char *lisp_register_names[] = {
 	"L2",
 	"NSP",
 	"CODE",
-	"LIP"
+	"LIP",
 #endif
 #ifdef sparc
         "ZERO",
@@ -69,10 +69,25 @@ char *lisp_register_names[] = {
         "L2",
         "CODE",
         "???",
-        "LIP"
+        "LIP",
 #endif
+#ifdef ibmrt
+	"NARGS",
+	"NSP",
+	"NL0",
+	"OCFP",
+	"NFP",
+	"CSP",
+	"CFP",
+	"CODE",
+	"NULL",
+	"CNAME",
+	"LEXENV",
+	"LRA",
+	"A0",
+	"A1",
+	"A2",
+	"LIP",
+#endif
+	0
 };
-
-		
-   
-   

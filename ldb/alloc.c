@@ -1,8 +1,19 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.5 1990/10/13 04:48:16 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.6 1991/02/16 00:59:03 wlott Exp $ */
 #include "lisp.h"
 #include "ldb.h"
 #include "alloc.h"
 #include "globals.h"
+
+#ifdef ibmrt
+#define GET_FREE_POINTER() ((lispobj *)SymbolValue(ALLOCATION_POINTER))
+#define SET_FREE_POINTER(new_value) \
+    (SetSymbolValue(ALLOCATION_POINTER,(lispobj)(new_value)))
+#else
+#define GET_FREE_POINTER() current_dynamic_space_free_pointer
+#define SET_FREE_POINTER(new_value) \
+    (current_dynamic_space_free_pointer = (new_value))
+#endif
+
 
 
 /****************************************************************
@@ -17,14 +28,14 @@ int bytes;
     /* Round to dual word boundry. */
     bytes = (bytes + lowtag_Mask) & ~lowtag_Mask;
 
-    result = current_dynamic_space_free_pointer;
-    current_dynamic_space_free_pointer += (bytes / sizeof(lispobj));
+    result = GET_FREE_POINTER();
+    SET_FREE_POINTER(result + (bytes / sizeof(lispobj)));
 
     if (current_auto_gc_trigger &&
-        current_dynamic_space_free_pointer > current_auto_gc_trigger) {
+        GET_FREE_POINTER() > current_auto_gc_trigger) {
         /* We can't GC while in C land, so just dink the trigger. */
         clear_auto_gc_trigger();
-        set_auto_gc_trigger((char *)current_dynamic_space_free_pointer -
+        set_auto_gc_trigger((char *)GET_FREE_POINTER() -
                             (char *)current_dynamic_space);
     }
 

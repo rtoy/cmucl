@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.10 1990/10/23 00:05:51 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.11 1991/02/16 01:00:31 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -86,6 +86,10 @@ char *envp[];
     globals_init();
 
     restore_state = load_core_file(core);
+
+#ifdef ibmrt
+    SetSymbolValue(BINDING_STACK_POINTER, (lispobj)binding_stack);
+#endif
 
     interrupt_init();
 

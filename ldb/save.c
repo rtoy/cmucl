@@ -78,7 +78,7 @@ lispobj *addr, *end;
 static long write_stack(name, start, end)
 char *name, *start, *end;
 {
-    long data, len;
+    long len;
 
     start = (char *)trunc_page((vm_address_t)start);
     end = (char *)round_page((vm_address_t)end);
@@ -93,8 +93,6 @@ char *name, *start, *end;
 static void output_machine_state(context)
 struct sigcontext *context;
 {
-    int data, stacklen;
-    char *stack;
     struct machine_state ms;
 
     putw(CORE_MACHINE_STATE, save_file);
@@ -102,15 +100,25 @@ struct sigcontext *context;
 
     ms.csp = current_control_stack_pointer;
     ms.fp = current_control_frame_pointer;
+#ifndef ibmrt
     ms.bsp = current_binding_stack_pointer;
+#else
+    ms.bsp = (lispobj *)SymbolValue(BINDING_STACK_POINTER);
+#endif
     ms.number_stack_start = number_stack_start;
     ms.sigcontext_page = write_bytes((char *)context, sizeof(struct sigcontext));
     ms.control_stack_page = write_stack("Control",
        (char *)control_stack,
        (char *)current_control_stack_pointer);
+#ifndef ibmrt
     ms.binding_stack_page = write_stack("Binding",
        (char *)binding_stack,
        (char *)current_binding_stack_pointer);
+#else
+    ms.binding_stack_page = write_stack("Binding",
+       (char *)binding_stack,
+       (char *)SymbolValue(BINDING_STACK_POINTER));
+#endif
     ms.number_stack_page = write_stack("Number",
        (char *)(context->sc_regs[NSP]),
        number_stack_start);
@@ -138,7 +146,12 @@ struct sigcontext *context;
 
     output_space(READ_ONLY_SPACE_ID, read_only_space, (lispobj *)SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
     output_space(STATIC_SPACE_ID, static_space, (lispobj *)SymbolValue(STATIC_SPACE_FREE_POINTER));
+#ifndef ibmrt
     output_space(DYNAMIC_SPACE_ID, current_dynamic_space, current_dynamic_space_free_pointer);
+#else
+    output_space(DYNAMIC_SPACE_ID, current_dynamic_space, (lispobj *)SymbolValue(ALLOCATION_POINTER));
+#endif
+
 
     output_machine_state(context);
 
@@ -236,7 +249,11 @@ struct machine_state *ms;
 {
     current_control_stack_pointer = ms->csp;
     current_control_frame_pointer = ms->fp;
+#ifndef ibmrt
     current_binding_stack_pointer = ms->bsp;
+#else
+    SetSymbolValue(BINDING_STACK_POINTER, (lispobj)ms->bsp);
+#endif
 
     if (ms->number_stack_start > number_stack_start) {
         fprintf(stderr, "Your environment is too large.  Use ``unsetenv''\n");
@@ -257,7 +274,11 @@ struct machine_state *ms;
 
     map_stack(fd,
               (vm_address_t)binding_stack,
+#ifndef ibmrt
               (vm_address_t)current_binding_stack_pointer,
+#else
+	      (vm_address_t)SymbolValue(BINDING_STACK_POINTER),
+#endif
               ms->binding_stack_page,
               "Binding");
 
@@ -274,8 +295,6 @@ struct sigcontext *old_context;
 {
     vm_size_t len;
     vm_address_t nsp;
-    kern_return_t res;
-
 
     /* We have to move the number stack into place. */
     nsp = trunc_page((vm_address_t)context.sc_regs[NSP]);
@@ -287,9 +306,13 @@ struct sigcontext *old_context;
 
     vm_deallocate(task_self(), number_stack, round_page(len));
 
+#ifndef ibmrt
     sigreturn(&context);
 
     /* We should not get here. */
+#else
+    bcopy(&context, old_context, sizeof(context));
+#endif
 }
 
 

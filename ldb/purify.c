@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.11 1990/12/18 23:26:42 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.12 1991/02/16 01:00:44 wlott Exp $ */
 
 
 #include <mach.h>
@@ -648,7 +648,7 @@ static lispobj *pscav(addr, nwords, constant)
 
 
 int purify(static_roots, read_only_roots)
-lispobj static_roots;
+lispobj static_roots, read_only_roots;
 {
     lispobj *clean;
     int count, i;
@@ -695,7 +695,11 @@ lispobj static_roots;
     printf(" bindings");
     fflush(stdout);
 #endif
+#ifndef ibmrt
     pscav(binding_stack, current_binding_stack_pointer - binding_stack, FALSE);
+#else
+    pscav(binding_stack, (lispobj *)SymbolValue(BINDING_STACK_POINTER) - binding_stack, FALSE);
+#endif
 
 #ifdef PRINTNOISE
     printf(" static");
@@ -741,7 +745,11 @@ lispobj static_roots;
                             ((current_control_stack_pointer - control_stack) *
                              sizeof(lispobj))));
 
+#ifndef ibmrt
     current_dynamic_space_free_pointer = current_dynamic_space;
+#else
+    SetSymbolValue(ALLOCATION_POINTER, (lispobj)current_dynamic_space);
+#endif
     SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj)read_only_free);
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj)static_free);
 

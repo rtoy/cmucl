@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.13 1990/11/25 08:43:40 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.14 1991/02/16 01:00:36 wlott Exp $ */
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -122,10 +122,14 @@ char **ptr;
 {
     printf("CSP\t=\t0x%08x\n", current_control_stack_pointer);
     printf("FP\t=\t0x%08x\n", current_control_frame_pointer);
+#ifndef ibmrt
     printf("BSP\t=\t0x%08x\n", current_binding_stack_pointer);
+#endif
 
     printf("DYNAMIC\t=\t0x%08x\n", current_dynamic_space);
+#ifndef ibmrt
     printf("ALLOC\t=\t0x%08x\n", current_dynamic_space_free_pointer);
+#endif
     printf("TRIGGER\t=\t0x%08x\n", current_auto_gc_trigger);
     printf("STATIC\t=\t0x%08x\n", SymbolValue(STATIC_SPACE_FREE_POINTER));
     printf("RDONLY\t=\t0x%08x\n", SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
@@ -200,7 +204,7 @@ char **ptr;
     extern lispobj call_into_lisp();
 
     lispobj call_name = parse_lispobj(ptr);
-    lispobj function, result, arg, *args;
+    lispobj function, result, *args;
     int numargs;
 
     if (LowtagOf(call_name) == type_OtherPointer) {
@@ -253,7 +257,7 @@ char **ptr;
     lispobj args[16];
 
     lispobj call_name = parse_lispobj(ptr);
-    lispobj function, result, arg, *argptr;
+    lispobj function, result, *argptr;
     int numargs;
     struct timeval start_tv, stop_tv;
     struct rusage start_rusage, stop_rusage;
@@ -357,7 +361,7 @@ struct sigcontext *context;
 {
 	int i;
 
-	for (i = 0; i < 32; i++) {
+	for (i = 0; i < NREGS; i++) {
 		printf("%s:\t", lisp_register_names[i]);
 		brief_print((lispobj) context->sc_regs[i]);
 	}
@@ -454,7 +458,6 @@ static void sub_monitor()
     struct cmd *cmd, *found;
     char *line, *ptr, *token;
     int ambig;
-    lispobj *new;
 
     while (!done) {
         printf("ldb> ");

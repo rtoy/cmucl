@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.6 1990/10/22 12:26:54 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.7 1991/02/16 00:59:39 wlott Exp $ */
 #include <stdio.h>
 #include <mach.h>
 #include <sys/types.h>
@@ -44,7 +44,11 @@ long *ptr;
                     if (addr != (vm_address_t)dynamic_0_space && addr != (vm_address_t)dynamic_1_space)
                         printf("Strange ... dynamic space lossage.\n");
                     current_dynamic_space = (lispobj *)addr;
+#ifdef ibmrt
+		    SetSymbolValue(ALLOCATION_POINTER, (lispobj)free_pointer);
+#else
                     current_dynamic_space_free_pointer = free_pointer;
+#endif
                     break;
 		case STATIC_SPACE_ID:
 			static_space = (lispobj *) addr;

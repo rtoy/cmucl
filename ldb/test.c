@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.10 1990/11/24 07:52:32 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.11 1991/02/16 01:01:36 wlott Exp $ */
 /* Extra random routines for testing stuff. */
 
 #include <signal.h>
@@ -46,6 +46,23 @@ static char *errors[] = ERRORS;
 #define double_float_reg_sc 20
 #endif
 
+#ifdef ibmrt
+#define any_reg_sc 10
+#define descriptor_reg_sc 11
+#define base_char_reg_sc 12
+#define sap_reg_sc 13
+#define signed_reg_sc 14
+#define unsigned_reg_sc 15
+#define non_descr_reg_sc 16
+#define word_pointer_reg_sc 17
+#define interior_reg_sc 18
+#define single_68881_reg_sc 19
+#define double_68881_reg_sc 20
+#define single_fpa_reg_sc 21
+#define double_fpa_reg_sc 22
+#define single_afpa_reg_sc 23
+#define double_afpa_reg_sc 24
+#endif
 
 signal_handler(signal, code, context)
 int signal, code;
@@ -63,8 +80,7 @@ struct sigcontext *context;
         ptr = (unsigned long *)(context->sc_pc + 4);
     else
         ptr = (unsigned long *)(context->sc_pc);
-#endif
-#ifdef sparc
+#else
     ptr = (unsigned long *)(context->sc_pc);
 #endif
 
@@ -82,6 +98,22 @@ struct sigcontext *context;
 #ifdef sparc
     if ((bad_inst & 0xc1c00000) == 0) {
         switch (bad_inst & 0x3fffff) {
+#if 0
+        }
+    }
+#endif
+#endif
+#ifdef ibmrt
+    if ((bad_inst & 0xffff0000) == 0xcc700000) {
+	switch (bad_inst & 0xffff) {
+#if 0
+	}
+    }
+#endif
+#endif
+#if !defined(mips) && !defined(sparc) && !defined(ibmrt)
+    if (0) {
+	switch (0) {
 #endif
             case trap_Halt:
                 printf("%primitive halt called; the party is over.\n");
@@ -144,6 +176,9 @@ struct sigcontext *context;
                         }
                         break;
                       case sap_reg_sc:
+#ifdef ibmrt
+		      case word_pointer_reg_sc:
+#endif
                         printf("\t0x%08x\n", context->sc_regs[offset]);
                         break;
                       case signed_reg_sc:
@@ -156,6 +191,7 @@ struct sigcontext *context;
                       case interior_reg_sc:
                         printf("\t???\n");
                         break;
+#ifndef ibmrt
                       case single_float_reg_sc:
                         printf("\t%g\n",
                                *(float *)&context->sc_fpregs[offset]);
@@ -164,6 +200,7 @@ struct sigcontext *context;
                         printf("\t%g\n",
                                *(double *)&context->sc_fpregs[offset]);
                         break;
+#endif
                       default:
                         printf("\t???\n");
                         break;
@@ -202,7 +239,7 @@ struct sigcontext *context;
 test_init()
 {
     install_handler(SIGINT, signal_handler);
-#ifdef mips
+#if defined(mips)||defined(ibmrt)
     install_handler(SIGTRAP, signal_handler);
 #endif
 #ifdef sparc

@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.24 1991/01/28 09:21:55 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.25 1991/02/16 01:00:04 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -163,7 +163,11 @@ collect_garbage()
 	/* Set up from space and new space pointers. */
 
 	from_space = current_dynamic_space;
+#ifndef ibmrt
 	from_space_free_pointer = current_dynamic_space_free_pointer;
+#else
+	from_space_free_pointer = (lispobj *)SymbolValue(ALLOCATION_POINTER);
+#endif
 
 	if (current_dynamic_space == dynamic_0_space)
 		new_space = dynamic_1_space;
@@ -201,7 +205,12 @@ collect_garbage()
 #endif
 	scavenge(control_stack, control_stack_size);
 
+#ifndef ibmrt
 	binding_stack_size = current_binding_stack_pointer - binding_stack;
+#else
+	binding_stack_size =
+	    (lispobj *)SymbolValue(BINDING_STACK_POINTER) - binding_stack;
+#endif
 #ifdef PRINTNOISE
 	printf("Scavenging the binding stack (%d bytes) ...\n",
 	       binding_stack_size * sizeof(lispobj));
@@ -244,7 +253,11 @@ collect_garbage()
 		(os_vm_size_t) DYNAMIC_SPACE_SIZE);
 
 	current_dynamic_space = new_space;
+#ifndef ibmrt
 	current_dynamic_space_free_pointer = new_space_free_pointer;
+#else
+	SetSymbolValue(ALLOCATION_POINTER, (lispobj)new_space_free_pointer);
+#endif
 
 #ifdef PRINTNOISE
 	size_discarded = (from_space_free_pointer - from_space) * sizeof(lispobj);
@@ -410,6 +423,12 @@ static int boxed_registers[] = {
 };
 #endif
 
+#ifdef ibmrt
+static int boxed_registers[] = {
+    CODE, CNAME, LEXENV, LRA, A0, A1, A2
+};
+#endif
+
 scavenge_interrupt_context(context)
 struct sigcontext *context;
 {
@@ -470,10 +489,14 @@ struct sigcontext *context;
 	/* Scanvenge all boxed registers in the context. */
 	for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
 		int index;
+#if defined(DEBUG_SCAVENGE_REGISTERS)
 		unsigned long reg;
+#endif
 
 		index = boxed_registers[i];
+#if defined(DEBUG_SCAVENGE_REGISTERS)
 		reg = context->sc_regs[index];
+#endif
 		scavenge((lispobj *) &(context->sc_regs[index]), 1);
 #if defined(DEBUG_SCAVENGE_REGISTERS)
 		printf("Scavenged R%d: was 0x%08x now 0x%08x\n",
@@ -680,11 +703,10 @@ struct code *code;
 
 	while (fheaderl != NIL) {
 		struct function_header *fheaderp, *nfheaderp;
-		lispobj nfheaderl, header;
+		lispobj nfheaderl;
 		
 		fheaderp = (struct function_header *) PTR(fheaderl);
-		header = fheaderp->header;
-		gc_assert(TypeOf(header) == type_FunctionHeader);
+		gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
 
 		/* calcuate the new function pointer and the new */
 		/* function header */
@@ -736,11 +758,8 @@ lispobj *where, object;
 	/* code data block */
 	fheaderl = code->entry_points;
 	while (fheaderl != NIL) {
-		lispobj header;
-		
 		fheaderp = (struct function_header *) PTR(fheaderl);
-		header = fheaderp->header;
-		gc_assert(TypeOf(header) == type_FunctionHeader);
+		gc_assert(TypeOf(fheaderp->header) == type_FunctionHeader);
 		
 #if defined(DEBUG_CODE_GC)
 		printf("Scavenging boxed section of entry point located at 0x%08x.\n",
@@ -1030,6 +1049,7 @@ lispobj object;
 {
 	fprintf(stderr, "GC lossage.  Trying to transport an immediate!?\n");
 	gc_lose();
+	return NIL;
 }
 
 static
@@ -1216,7 +1236,6 @@ lispobj object;
 {
 	struct vector *vector;
 	int length, nwords;
-	int subtype;
 
 	gc_assert(Pointerp(object));
 
@@ -1623,7 +1642,6 @@ static lispobj
 trans_weak_pointer(object)
 lispobj object;
 {
-	int nwords;
 	lispobj copy;
 	struct weak_pointer *wp;
 
@@ -1705,6 +1723,7 @@ lispobj object;
 	fprintf(stderr, "GC lossage.  No scavenge function for object 0x%08x\n",
 		(unsigned long) object);
 	gc_lose();
+	return 0;
 }
 
 static lispobj
@@ -1714,6 +1733,7 @@ lispobj object;
 	fprintf(stderr, "GC lossage.  No transport function for object 0x%08x\n",
 		(unsigned long) object);
 	gc_lose();
+	return NIL;
 }
 
 static

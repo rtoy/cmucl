@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/dynbind.c,v 1.2 1990/03/29 21:13:23 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/dynbind.c,v 1.3 1991/02/16 00:59:56 wlott Exp $
  * 
  * Support for dynamic binding from C.
  */
@@ -8,6 +8,14 @@
 #include "lisp.h"
 #include "globals.h"
 
+#ifdef ibmrt
+#define GetBSP() ((struct binding *)SymbolValue(BINDING_STACK_POINTER))
+#define SetBSP(value) SetSymbolValue(BINDING_STACK_POINTER, (lispobj)(value))
+#else
+#define GetBSP() ((struct binding *)current_binding_stack_pointer)
+#define SetBSP(value) (current_binding_stack_pointer=(lispobj *)(value))
+#endif
+
 bind_variable(symbol, value)
 lispobj symbol, value;
 {
@@ -15,8 +23,9 @@ lispobj symbol, value;
 	struct binding *binding;
 
 	old_value = SymbolValue(symbol);
-	binding = (struct binding *) current_binding_stack_pointer;
-	current_binding_stack_pointer += (sizeof(struct binding) / sizeof(lispobj));
+	binding = GetBSP();
+	SetBSP(binding+1);
+
 	binding->value = old_value;
 	binding->symbol = symbol;
 	SetSymbolValue(symbol, value);
@@ -27,7 +36,7 @@ unbind()
 	struct binding *binding;
 	lispobj symbol;
 	
-	binding = ((struct binding *) current_binding_stack_pointer) - 1;
+	binding = GetBSP() - 1;
 		
 	symbol = binding->symbol;
 
@@ -35,26 +44,26 @@ unbind()
 
 	binding->symbol = 0;
 
-	current_binding_stack_pointer -= (sizeof(struct binding) / sizeof(lispobj));
+	SetBSP(binding);
 }
 
 unbind_to_here(bsp)
 lispobj *bsp;
 {
-	while (bsp > current_binding_stack_pointer) {
-		struct binding *binding;
-		lispobj symbol;
+    struct binding *target = (struct binding *)bsp;
+    struct binding *binding = GetBSP();
+    lispobj symbol;
 
-		binding = ((struct binding *) current_binding_stack_pointer) - 1;
-		
-		symbol = binding->symbol;
+    while (target < binding) {
+	binding--;
 
-		if (symbol) {
-			SetSymbolValue(symbol, binding->value);
-			binding->symbol = 0;
-		}
+	symbol = binding->symbol;
 
-		current_binding_stack_pointer -=
-			(sizeof(struct binding) / sizeof(lispobj));
+	if (symbol) {
+	    SetSymbolValue(symbol, binding->value);
+	    binding->symbol = 0;
 	}
+
+    }
+    SetBSP(binding);
 }

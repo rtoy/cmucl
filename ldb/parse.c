@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.5 1990/08/30 16:38:11 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.6 1991/02/16 01:00:41 wlott Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -238,7 +238,11 @@ lispobj *result;
 
     /* Search dynamic space */
     *result = (lispobj) current_dynamic_space;
+#ifndef ibmrt
     count = current_dynamic_space_free_pointer - current_dynamic_space;
+#else
+    count = (lispobj *)SymbolValue(ALLOCATION_POINTER) - current_dynamic_space;
+#endif
     if (search_for_symbol(name, result, &count)) {
         *result |= type_OtherPointer;
         return TRUE;

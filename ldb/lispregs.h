@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/lispregs.h,v 1.6 1990/11/24 07:47:01 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/lispregs.h,v 1.7 1991/02/16 01:00:33 wlott Exp $ */
 
 #ifdef LANGUAGE_ASSEMBLY
 #ifdef mips
@@ -7,15 +7,17 @@
 #ifdef sparc
 #define REG(num) %num
 #endif
+#ifdef ibmrt
+#define REG(num) r/**/num
+#endif
 #else
 #define REG(num) num
 
 extern char *lisp_register_names[];
 #endif
 
-#define NREGS	(32)
-
 #ifdef mips
+#define NREGS	(32)
 #define ZERO    REG(0)
 #define NL3     REG(1)
 #define NL4     REG(2)
@@ -50,6 +52,7 @@ extern char *lisp_register_names[];
 
 
 #ifdef sparc
+#define NREGS	(32)
 #define ZERO REG(0)
 #define ALLOC REG(1)
 #define NULLREG REG(2)
@@ -81,4 +84,25 @@ extern char *lisp_register_names[];
 #define L2 REG(28)
 #define CODE REG(29)
 #define LIP REG(31)
+#endif
+
+
+#ifdef ibmrt
+#define NREGS	(16)
+#define NARGS REG(0)
+#define NSP REG(1)
+#define NL0 REG(2)
+#define OCFP REG(3)
+#define NFP REG(4)
+#define CSP REG(5)
+#define CFP REG(6)
+#define CODE REG(7)
+#define NULLREG REG(8)
+#define CNAME REG(9)
+#define LEXENV REG(10)
+#define LRA REG(11)
+#define A0 REG(12)
+#define A1 REG(13)
+#define A2 REG(14)
+#define LIP REG(15)
 #endif
