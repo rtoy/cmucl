@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/macros.lisp,v 1.1 1992/07/13 03:48:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/macros.lisp,v 1.2 1992/10/13 13:18:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -319,84 +319,83 @@
 
 (defmacro define-partial-reffer (name type size signed offset lowtag scs
 				      el-type &optional translate)
-  `(progn
-     (define-vop (,name)
-		 ,@(when translate
-		     `((:translate ,translate)))
-       (:policy :fast-safe)
-       (:args (object :scs (descriptor-reg) :to (:eval 0))
-	      (index :scs (unsigned-reg)))
-       (:arg-types ,type positive-fixnum)
-       (:results (value :scs ,scs))
-       (:result-types ,el-type)
-       (:temporary (:scs (interior-reg)) lip)
-       (:generator 5
-	 (inst ,(ecase size (:byte 'add) (:short 'sh1add))
-	       index object lip)
-	 (inst ,(ecase size (:byte 'ldb) (:short 'ldh))
-	       (- (* ,offset word-bytes) ,lowtag) lip value)
-	 ,@(when signed
-	     `((inst extrs value 31 ,(ecase size (:byte 8) (:short 16))
-		     value)))))
-     (define-vop (,(symbolicate name "-C"))
-		 ,@(when translate
-		     `((:translate ,translate)))
-       (:policy :fast-safe)
-       (:args (object :scs (descriptor-reg)))
-       (:info index)
-       (:arg-types ,type
-		   (:constant (load/store-index ,(ecase size
-						   (:byte 1)
-						   (:short 2))
-						,(eval lowtag)
-						,(eval offset))))
-       (:results (value :scs ,scs))
-       (:result-types ,el-type)
-       (:generator 5
-	 (inst ,(ecase size (:byte 'ldb) (:short 'ldh))
-	       (- (* (+ ,offset index) word-bytes) ,lowtag) object value)
-	 ,@(when signed
-	     `((inst extrs value 31 ,(ecase size (:byte 8) (:short 16))
-		     value)))))))
+  (let ((scale (ecase size (:byte 1) (:short 2))))
+    `(progn
+       (define-vop (,name)
+	 ,@(when translate
+	     `((:translate ,translate)))
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg) :to (:eval 0))
+		(index :scs (unsigned-reg)))
+	 (:arg-types ,type positive-fixnum)
+	 (:results (value :scs ,scs))
+	 (:result-types ,el-type)
+	 (:temporary (:scs (interior-reg)) lip)
+	 (:generator 5
+	   (inst ,(ecase size (:byte 'add) (:short 'sh1add))
+		 index object lip)
+	   (inst ,(ecase size (:byte 'ldb) (:short 'ldh))
+		 (- (* ,offset word-bytes) ,lowtag) lip value)
+	   ,@(when signed
+	       `((inst extrs value 31 ,(* scale byte-bits) value)))))
+       (define-vop (,(symbolicate name "-C"))
+	 ,@(when translate
+	     `((:translate ,translate)))
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg)))
+	 (:info index)
+	 (:arg-types ,type
+		     (:constant (load/store-index ,scale
+						  ,(eval lowtag)
+						  ,(eval offset))))
+	 (:results (value :scs ,scs))
+	 (:result-types ,el-type)
+	 (:generator 5
+	   (inst ,(ecase size (:byte 'ldb) (:short 'ldh))
+		 (- (+ (* ,offset word-bytes) (* index ,scale)) ,lowtag)
+		 object value)
+	   ,@(when signed
+	       `((inst extrs value 31 ,(* scale byte-bits) value))))))))
 
 (defmacro define-partial-setter (name type size offset lowtag scs el-type
 				      &optional translate)
-  `(progn
-     (define-vop (,name)
-		 ,@(when translate
-		     `((:translate ,translate)))
-       (:policy :fast-safe)
-       (:args (object :scs (descriptor-reg))
-	      (index :scs (unsigned-reg))
-	      (value :scs ,scs :target result))
-       (:arg-types ,type positive-fixnum ,el-type)
-       (:temporary (:scs (interior-reg)) lip)
-       (:results (result :scs ,scs))
-       (:result-types ,el-type)
-       (:generator 5
-	 (inst ,(ecase size (:byte 'add) (:short 'sh1add))
-	       index object lip)
-	 (inst ,(ecase size (:byte 'stb) (:short 'sth))
-	       value (- (* ,offset word-bytes) ,lowtag) lip)
-	 (move value result)))
-     (define-vop (,(symbolicate name "-C"))
-		 ,@(when translate
-		     `((:translate ,translate)))
-       (:policy :fast-safe)
-       (:args (object :scs (descriptor-reg))
-	      (value :scs ,scs :target result))
-       (:info index)
-       (:arg-types ,type
-		   (:constant (load/store-index ,(ecase size
-						   (:byte 1)
-						   (:short 2))
-						,(eval lowtag)
-						,(eval offset)))
-		   ,el-type)
-       (:results (result :scs ,scs))
-       (:result-types ,el-type)
-       (:generator 5
-	 (inst ,(ecase size (:byte 'stb) (:short 'sth))
-	       value (- (* (+ ,offset index) word-bytes) ,lowtag) object)
-	 (move value result)))))
+  (let ((scale (ecase size (:byte 1) (:short 2))))
+    `(progn
+       (define-vop (,name)
+	 ,@(when translate
+	     `((:translate ,translate)))
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg))
+		(index :scs (unsigned-reg))
+		(value :scs ,scs :target result))
+	 (:arg-types ,type positive-fixnum ,el-type)
+	 (:temporary (:scs (interior-reg)) lip)
+	 (:results (result :scs ,scs))
+	 (:result-types ,el-type)
+	 (:generator 5
+	   (inst ,(ecase size (:byte 'add) (:short 'sh1add))
+		 index object lip)
+	   (inst ,(ecase size (:byte 'stb) (:short 'sth))
+		 value (- (* ,offset word-bytes) ,lowtag) lip)
+	   (move value result)))
+       (define-vop (,(symbolicate name "-C"))
+	 ,@(when translate
+	     `((:translate ,translate)))
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg))
+		(value :scs ,scs :target result))
+	 (:info index)
+	 (:arg-types ,type
+		     (:constant (load/store-index ,scale
+						  ,(eval lowtag)
+						  ,(eval offset)))
+		     ,el-type)
+	 (:results (result :scs ,scs))
+	 (:result-types ,el-type)
+	 (:generator 5
+	   (inst ,(ecase size (:byte 'stb) (:short 'sth))
+		 value
+		 (- (+ (* ,offset word-bytes) (* index ,scale)) ,lowtag)
+		 object)
+	   (move value result))))))
 
