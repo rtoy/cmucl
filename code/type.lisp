@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.44 2002/10/22 13:09:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.45 2002/10/23 00:47:38 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -726,8 +726,7 @@
 	     (eq type1 *empty-type*)
 	     (eq type2 *wild-type*))
 	 (values t t))
-	((or (eq type1 *wild-type*)
-	     (eq type2 *empty-type*))
+	((eq type1 *wild-type*)
 	 (values nil t))
 	(t
 	 (invoke-type-method :simple-subtypep :complex-subtypep-arg2
