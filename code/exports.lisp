@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.217 2003/06/26 13:27:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.218 2003/07/02 21:45:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1885,7 +1885,9 @@
 	   "DATA-VECTOR-REF" "DATA-VECTOR-SET" "DECODE-DOUBLE-FLOAT"
 	   "DECODE-LONG-FLOAT" "DECODE-SINGLE-FLOAT" "DESCEND-INTO"
 	   "DIVISION-BY-ZERO-ERROR"
-	   "DOUBLE-FLOAT-EXPONENT" "DOUBLE-FLOAT-HIGH-BITS"
+	   "DOUBLE-FLOAT-EXPONENT"
+	   #+sparc "DOUBLE-FLOAT-BITS"
+	   "DOUBLE-FLOAT-HIGH-BITS"
 	   "DOUBLE-FLOAT-LOW-BITS" "DOUBLE-FLOAT-P" "FLOAT-WAIT"
 	   "DYNAMIC-SPACE-FREE-POINTER" "ERROR-NUMBER-OR-LOSE" "FILENAME"
 	   "FLOAT-DIGITS" "FLOAT-EXPONENT" "FLOAT-FORMAT-DIGITS"

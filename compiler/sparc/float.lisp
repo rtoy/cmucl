@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.38 2003/04/01 21:22:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.39 2003/07/02 21:45:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1176,6 +1176,37 @@
        (inst ld lo-bits (current-nfp-tn vop)
 	     (* (1+ (tn-offset float)) vm:word-bytes)))
       (descriptor-reg
+       (loadw lo-bits float (1+ vm:double-float-value-slot)
+	      vm:other-pointer-type)))))
+
+(define-vop (double-float-bits)
+  (:args (float :scs (double-reg descriptor-reg)
+		:load-if (not (sc-is float double-stack))))
+  (:results (hi-bits :scs (signed-reg))
+	    (lo-bits :scs (unsigned-reg)))
+  (:temporary (:scs (double-stack)) stack-temp)
+  (:arg-types double-float)
+  (:result-types signed-num unsigned-num)
+  (:translate kernel::double-float-bits)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 5
+    (sc-case float
+      (double-reg
+       (inst stdf float (current-nfp-tn vop)
+	     (* (tn-offset stack-temp) vm:word-bytes))
+       (inst ld hi-bits (current-nfp-tn vop)
+	     (* (tn-offset stack-temp) vm:word-bytes))
+       (inst ld lo-bits (current-nfp-tn vop)
+	     (* (1+ (tn-offset stack-temp)) vm:word-bytes)))
+      (double-stack
+       (inst ld hi-bits (current-nfp-tn vop)
+	     (* (tn-offset stack-temp) vm:word-bytes))
+       (inst ld lo-bits (current-nfp-tn vop)
+	     (* (1+ (tn-offset float)) vm:word-bytes)))
+      (descriptor-reg
+       (loadw hi-bits float vm:double-float-value-slot
+	      vm:other-pointer-type)
        (loadw lo-bits float (1+ vm:double-float-value-slot)
 	      vm:other-pointer-type)))))
 
