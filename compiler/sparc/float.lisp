@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.20 1998/03/10 21:42:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.21 1998/03/10 21:53:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 (defun move-double-reg (dst src)
   (cond ((backend-featurep :sparc-v9)
 	 ;; May need to re-map of the register numbers?
-	 (inst fmovd dst-tn src-tn))
+	 (inst fmovd dst src))
 	(t
 	 (inst fmovs dst src)
 	 (inst fmovs-odd dst src))))
