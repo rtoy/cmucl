@@ -45,7 +45,6 @@
 (load "c:srctran" :verbose t)
 (load "c:seqtran" :verbose t)
 (load "c:typetran" :verbose t)
-(load "c:vm-tran" :verbose t)
 (load "c:locall" :verbose t)
 (load "c:dfo" :verbose t)
 (load "c:ir1opt" :verbose t)
@@ -112,6 +111,7 @@
 ); #+RT-TARGET PROGN
 
 (load "c:pseudo-vops" :verbose t)
+(load "c:vm-tran" :verbose t)
 (load "c:debug" :verbose t)
 (load "c:represent" :verbose t)
 
