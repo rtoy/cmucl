@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.48 1993/02/26 08:38:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.49 1993/03/12 15:32:33 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -642,6 +642,10 @@
   (dump-fop 'lisp::fop-verify-empty-stack file)
   (dump-fop 'lisp::fop-verify-table-size file)
   (dump-unsigned-32 (fasl-file-table-free file) file)
+
+  (let ((info (ir2-component-dyncount-info (component-info component))))
+    (when info
+      (fasl-validate-structure info file)))
 
   (let ((code-handle (dump-code-object component code-segment
 				       length trace-table fixups file))
