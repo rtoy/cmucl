@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.27 1992/03/10 15:21:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.28 1992/03/10 15:30:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,15 +76,18 @@
 (declaim (type list *possible-breakpoints*))
 
 ;;; A list of the made and active breakpoints, each is a breakpoint-info
+;;; structure.
 ;;;
 (defvar *breakpoints* nil)
 (declaim (type list *breakpoints*))
 
 ;;; A list of breakpoint-info structures of the made and active step
 ;;; breakpoints.
-  ABORT    returns to the previous abort restart case.
 ;;;
 (defvar *step-breakpoints* nil)  
+(declaim (type list *step-breakpoints*))
+
+;;; Number of times left to step.
 ;;;
 (defvar *number-of-steps* 1)
 (declaim (type integer *number-of-steps*))
@@ -249,7 +252,6 @@
 			       (verbosity 1)
 			       (number nil))
   (let ((*print-length* (or *debug-print-length* print-length))
-(defvar *debug-abort*)
 	(*print-level* (or *debug-print-level* print-level)))
     (cond
      ((zerop verbosity)
@@ -262,7 +264,6 @@
       (print-frame-call-1 frame)))
     (when (>= verbosity 2)
       (let ((loc (di:frame-code-location frame)))
-	 (*debug-abort* (find-restart 'abort))
 	(handler-case
 	    (progn
 	      (di:code-location-debug-block loc)
@@ -342,13 +343,15 @@
 				    (invoke-debugger condition))))
 (defun internal-debug ()
   (let ((*in-the-debugger* t)
-	    (let ((level *debug-command-level*))
+	(*read-suppress* nil))
+    (unless (typep *debug-condition* 'step-condition)
       (clear-input *debug-io*)
       (format *debug-io* "~2&Debug  (type H for help)~2%"))
     (debug-loop)))
 
 
-					 (ext:stream-command-name input))))
+
+;;;; Debug-loop.
 
 (defvar *flush-debug-errors* t
   "When set, avoid calling INVOKE-DEBUGGER recursively when errors occur while
@@ -358,7 +361,7 @@
   (let* ((*debug-command-level* (1+ *debug-command-level*))
 	 (*real-stack-top* (di:top-frame))
 	 (*stack-top* (or *stack-top-hint* *real-stack-top*))
-				(cmd-fun (debug-command-p exp)))
+	 (*stack-top-hint* nil)
 	 (*current-frame* *stack-top*))
     (handler-bind ((di:debug-condition #'(lambda (condition)
 					   (princ condition *debug-io*)
@@ -597,9 +600,12 @@
 (defvar *debug-commands* nil)
 
 ;;; DEF-DEBUG-COMMAND -- Internal.
-(defun debug-command-p (form)
-  (if (symbolp form)
-      (let* ((name (symbol-name form))
+;;;
+;;; Interface to *debug-commands*.  No required arguments in args are
+;;; permitted.
+;;;
+(defmacro def-debug-command (name args &rest body)
+  (let ((fun-name (intern (concatenate 'simple-string name "-DEBUG-COMMAND"))))
     `(progn
        (when (assoc ,name *debug-commands* :test #'string=)
 	 (warn "Redefining ~S debugger command." ,name)
@@ -607,17 +613,19 @@
 	       (remove ,name *debug-commands* :key #'car :test #'string=)))
        (defun ,fun-name ,args
 	 (unless *in-the-debugger*
-	(dolist (ele *debug-commands*)
-	  (let* ((str (car ele))
-		 (str-len (length str)))
-	    (declare (simple-string str)
-		     (fixnum str-len))
-	    (cond ((< str-len len))
-		  ((= str-len len)
-		   (when (string= name str :end1 len :end2 len)
-		     (return-from debug-command-p (cdr ele))))
-		  ((string= name str :end1 len :end2 len)
-		   (push ele res)))))
+	   (error "Invoking debugger command while outside the debugger."))
+	 ,@body)
+       (push (cons ,name #',fun-name) *debug-commands*)
+       ',fun-name)))
+
+;;; DEF-DEBUG-COMMAND-ALIAS -- Internal.
+;;;
+(defun def-debug-command-alias (new-name existing-name)
+  (let ((pair (assoc existing-name *debug-commands* :test #'string=)))
+    (unless pair (error "Unknown debug command name -- ~S" existing-name))
+    (push (cons new-name (cdr pair)) *debug-commands*))
+  new-name)
+
 ;;; DEBUG-COMMAND-P -- Internal.
 ;;;
 ;;; This takes a symbol and uses its name to find a debugger command, using
@@ -628,7 +636,30 @@
 ;;; match, we return that command function immediately.
 ;;;
 (defun debug-command-p (form &optional other-commands)
+  (if (or (symbolp form) (integerp form))
       (let* ((name
+	      (if (symbolp form)
+		  (symbol-name form)
+		  (format nil "~d" form)))
+	     (len (length name))
+	     (res nil))
+	(declare (simple-string name)
+		 (fixnum len)
+		 (list res))
+	;;
+	;; Find matching commands, punting if exact match.
+	(flet ((match-command (ele)
+	         (let* ((str (car ele))
+			(str-len (length str)))
+		   (declare (simple-string str)
+			    (fixnum str-len))
+		   (cond ((< str-len len))
+			 ((= str-len len)
+			  (when (string= name str :end1 len :end2 len)
+			    (return-from debug-command-p (cdr ele))))
+			 ((string= name str :end1 len :end2 len)
+			  (push ele res))))))
+	  (mapc #'match-command *debug-commands*)
 	  (mapc #'match-command other-commands))
 	;;
 	;; Return the right value.
@@ -712,10 +743,6 @@
 	   (print-frame-call
 	    (setf *current-frame*
 		  (do ((prev *current-frame* lead)
-
-(def-debug-command "ABORT" ()
-  ;; There's always at least one abort restart due to the top-level one.
-  (invoke-restart *debug-abort*))
 		       (lead (di:frame-down *current-frame*)
 			     (di:frame-down lead)))
 		      ((null lead)
