@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.15 1999/03/26 15:57:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.16 2000/04/12 17:41:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,7 +56,7 @@
         (status unsigned-long)))
 
 ;;; for FreeBSD
-#+freebsd
+#+(and freebsd (not freebsd4))
 (def-alien-type sigcontext
     (struct nil
 	(sc-onstack unsigned-int)
@@ -76,6 +76,32 @@
 	(sc-edx	    unsigned-int)
 	(sc-ecx	    unsigned-int)
 	(sc-eax	    unsigned-int)))
+
+;;; FreeBSD 4.0 has a sigcontext that looks more like Linux.
+#+freebsd4
+(def-alien-type sigcontext
+    (struct nil
+	(sc-mask    (array unsigned-int 4))
+	(sc-onstack unsigned-int)
+	(sc-gs      unsigned-int)
+	(sc-fs      unsigned-int)
+	(sc-es	    unsigned-int)
+	(sc-ds	    unsigned-int)
+	(sc-edi	    unsigned-int)
+	(sc-esi	    unsigned-int)
+	(sc-fp	    unsigned-int)
+	(sc-isp     unsigned-int)	
+	(sc-ebx	    unsigned-int)
+	(sc-edx	    unsigned-int)
+	(sc-ecx	    unsigned-int)
+	(sc-eax	    unsigned-int)
+	(trapno     unsigned-int)
+	(err        unsigned-int)
+	(sc-pc      unsigned-int)
+	(sc-cs	    unsigned-int)
+	(sc-efl     unsigned-int)		; sc_ps
+	(sc-sp      unsigned-int)	
+	(sc-ss	    unsigned-int)))
 
 ;; For Linux...
 #+linux
