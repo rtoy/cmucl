@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.14 1990/11/17 05:43:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.15 1990/11/18 07:02:18 wlott Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -236,7 +236,7 @@
 (defconstant mips-instruction-bits 6)
 
 (defvar *mips-instructions*
-  (make-array (ash 1 mips-instruction-bits)))
+  (make-array (ash 1 mips-instruction-bits) :initial-element nil))
 (proclaim '(type simple-vector *mips-instructions*))
 
 (defmacro def-mips-instr (name op-code type)
@@ -252,7 +252,7 @@
 (defconstant mips-special-instruction-bits 6)
 
 (defvar *mips-special-instructions*
-  (make-array (ash 1 mips-special-instruction-bits)))
+  (make-array (ash 1 mips-special-instruction-bits) :initial-element nil))
 (proclaim '(type simple-vector *mips-special-instructions*))
 
 (defmacro def-mips-special-instr (name op-code type)
@@ -268,7 +268,7 @@
 (defconstant mips-bcond-instruction-bits 6)
 
 (defvar *mips-bcond-instructions*
-  (make-array (ash 1 mips-bcond-instruction-bits)))
+  (make-array (ash 1 mips-bcond-instruction-bits) :initial-element nil))
 (proclaim '(type simple-vector *mips-bcond-instructions*))
 
 (defmacro def-mips-bcond-instr (name op-code type)
