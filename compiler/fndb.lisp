@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.77 1997/12/04 04:05:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.78 1997/12/20 19:52:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -286,7 +286,7 @@
 #+propagate-fun-type
 (progn
 (defknown (sin cos) (number)
-  irrational
+  (or (float -1.0 1.0) (complex float))
   (movable foldable flushable explicit-check recursive))
 
 (defknown atan
