@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.19 2003/03/22 16:15:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.20 2003/03/26 17:15:22 gerd Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -104,12 +104,19 @@
 
 (defvar *describe-metaobjects-as-objects-p* nil)
 
+(defun method-specialized-lambda-list (method)
+  (loop with specializers = (unparse-specializers method)
+	for elt in (method-lambda-list method)
+	collect (if specializers
+		    (list elt (pop specializers))
+		    elt)))
+
 (defmethod describe-object ((gf standard-generic-function) stream)
   (format stream "~A is a generic function.~%" gf)
   (let* ((gf-name (generic-function-name gf))
 	 (doc (documentation gf-name 'function)))
-    (format stream "Its arguments are:~%  ~S~%"
-	    (generic-function-pretty-arglist gf))
+    (format stream "Its lambda-list is:~%  ~S~%"
+	    (generic-function-lambda-list gf))
     (when doc
       (format stream "Generic function documentation:~%  ~s~%" doc))
     (format stream "Its methods are:~%")
@@ -117,7 +124,7 @@
 	  as doc = (plist-value method 'documentation) do
 	    (format stream "  ~d: ~a ~@[~{~s ~}~]~:s~%"
 		    i gf-name (method-qualifiers method)
-		    (unparse-specializers method))
+		    (method-specialized-lambda-list method))
 	    (when doc
 	      (format stream "    Method documentation: ~s~%" doc)))
     (when *describe-metaobjects-as-objects-p*

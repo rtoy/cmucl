@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.24 2003/03/25 16:42:24 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.25 2003/03/26 17:15:21 gerd Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 
@@ -118,7 +118,8 @@
 	   "EQL-SPECIALIZER"
 	   "FORWARD-REFERENCED-CLASS"
 	   "FUNCALLABLE-STANDARD-CLASS"
-	   "FUNCALLABLE-STANDARD-OBJECT")
+	   "FUNCALLABLE-STANDARD-OBJECT"
+	   "METAOBJECT")
 
   ;;*chapter-6-exports*
   (:export "ADD-DEPENDENT"
@@ -256,7 +257,7 @@
 	   "MAKE-INSTANCE"
 	   "MAKE-METHOD-LAMBDA"
 	   "MAP-DEPENDENTS"
-	   ;"METAOBJECT"
+	   "METAOBJECT"
 	   "METHOD-FUNCTION"
 	   "METHOD-GENERIC-FUNCTION"
 	   "METHOD-LAMBDA-LIST"
@@ -287,7 +288,9 @@
 	   "STANDARD-ACCESSOR-METHOD" 
 	   "STANDARD-DIRECT-SLOT-DEFINITION" 
 	   "STANDARD-EFFECTIVE-SLOT-DEFINITION" 
+	   "STANDARD-GENERIC-FUNCTION"
 	   "STANDARD-INSTANCE-ACCESS"
+	   "STANDARD-METHOD"
 	   "STANDARD-READER-METHOD" 
 	   "STANDARD-SLOT-DEFINITION" 
 	   "STANDARD-WRITER-METHOD" 

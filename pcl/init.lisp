@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.15 2003/03/22 16:15:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.16 2003/03/26 17:15:22 gerd Exp $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
@@ -81,9 +81,8 @@
   (apply #'shared-initialize instance nil initargs)
   instance)
 
-(defmethod update-instance-for-different-class ((previous std-object)
-						(current std-object)
-						&rest initargs)
+(defmethod update-instance-for-different-class
+    ((previous standard-object) (current standard-object) &rest initargs)
   ;; First we must compute the newly added slots.  The spec defines
   ;; newly added slots as "those local slots for which no slot of
   ;; the same name exists in the previous class."
@@ -101,11 +100,12 @@
 	   (list* 'shared-initialize current added-slots initargs)))
     (apply #'shared-initialize current added-slots initargs)))
 
-(defmethod update-instance-for-redefined-class ((instance std-object)
-						added-slots
-						discarded-slots
-						property-list
-						&rest initargs)
+(defmethod update-instance-for-redefined-class
+    ((instance standard-object)
+     added-slots
+     discarded-slots
+     property-list
+     &rest initargs)
   (check-initargs
    (class-of instance) initargs
    (list (list* 'update-instance-for-redefined-class

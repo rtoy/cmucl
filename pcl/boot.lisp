@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.48 2003/03/22 16:15:18 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.49 2003/03/26 17:15:22 gerd Exp $")
 
 (in-package :pcl)
 
@@ -2052,16 +2052,19 @@ work during bootstrapping.
 ;;; the 'real' arguments.  This is where the syntax of defmethod is really
 ;;; implemented.
 ;;; 
-(defun parse-defmethod (cdr-of-form)
-  (declare (list cdr-of-form))
-  (let ((name (pop cdr-of-form))
-	(qualifiers ())
-	(spec-ll ()))
-    (loop (if (and (car cdr-of-form) (atom (car cdr-of-form)))
-	      (push (pop cdr-of-form) qualifiers)
-	      (return (setq qualifiers (nreverse qualifiers)))))
-    (setq spec-ll (pop cdr-of-form))
-    (values name qualifiers spec-ll cdr-of-form)))
+(defun parse-defmethod (form)
+  (declare (list form))
+  (loop with original-form = form and name = (pop form)
+	while (and (car form) (atom (car form)))
+	  collect (pop form) into qualifiers
+	finally
+	  (let ((lambda-list (pop form)))
+	    (when (and (null lambda-list)
+		       (consp (car form))
+		       (consp (caar form)))
+	      (error "~@<Qualifiers must be non-null atoms: ~s~@:>"
+		     original-form))
+	    (return (values name qualifiers lambda-list form)))))
 
 (defun parse-specializers (specializers)
   (declare (list specializers))

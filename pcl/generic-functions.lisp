@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.19 2003/03/25 12:40:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.20 2003/03/26 17:15:22 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -408,9 +408,6 @@
 (defgeneric generic-function-lambda-list (gf))
 ;          (generic-function)
 
-(defgeneric generic-function-pretty-arglist (generic-function))
-;          (standard-generic-function)
-
 (defgeneric gf-fast-method-function-p (gf))
 ;          (standard-generic-function)
 
@@ -427,9 +424,6 @@
 
 (defgeneric method-lambda-list (m))
 ;          (traced-method)
-;          (standard-method)
-
-(defgeneric method-pretty-arglist (method))
 ;          (standard-method)
 
 (defgeneric method-qualifiers (m))
@@ -686,19 +680,13 @@
 ;          (t effective-slot-definition t)
 
 (defgeneric slot-boundp-using-class (class object slotd))
-;          (std-class std-object standard-effective-slot-definition)
-;          (structure-class structure-object structure-effective-slot-definition)
 
 (defgeneric slot-makunbound-using-class (class object slotd))
-;          (std-class std-object standard-effective-slot-definition)
-;          (structure-class structure-object structure-effective-slot-definition)
 
 (defgeneric slot-unbound (class instance slot-name))
 ;          (t t t)
 
 (defgeneric slot-value-using-class (class object slotd))
-;          (std-class std-object standard-effective-slot-definition)
-;          (structure-class structure-object structure-effective-slot-definition)
 
 
 ;;; 4 arguments 
@@ -706,8 +694,6 @@
 ;          (standard-generic-function standard-method t t)
 
 (defgeneric (setf slot-value-using-class) (new-value class object slotd))
-;          (t std-class std-object standard-effective-slot-definition)
-;          (t structure-class structure-object structure-effective-slot-definition)
 
 
 ;;; 5 arguments 
@@ -784,10 +770,8 @@
 (defgeneric update-dependent (metaobject dependent &rest initargs))
 
 (defgeneric update-instance-for-different-class (previous current &rest initargs))
-;          (std-object std-object)
 
 (defgeneric update-instance-for-redefined-class (instance added-slots discarded-slots property-list &rest initargs))
-;          (std-object t t t)
 
 (defgeneric writer-method-class (class direct-slot &rest initargs))
 ;          (slot-class t)

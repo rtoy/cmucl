@@ -88,15 +88,14 @@
 
 		  *the-class-slot-object*
 		  *the-class-structure-object*
-		  *the-class-std-object*
 		  *the-class-standard-object*
 		  *the-class-funcallable-standard-object*
 		  *the-class-class*
 		  *the-class-generic-function*
 		  *the-class-built-in-class*
 		  *the-class-slot-class*
-		  *the-class-structure-class*
 		  *the-class-std-class*
+		  *the-class-structure-class*
 		  *the-class-standard-class*
 		  *the-class-funcallable-standard-class*
 		  *the-class-method*
@@ -421,42 +420,33 @@
 (defstruct (dead-beef-structure-object
 	     (:constructor |STRUCTURE-OBJECT class constructor|)))
 
+(defclass standard-object (slot-object) ())
+(defclass metaobject (standard-object) ())
 
-(defclass std-object (slot-object) ()
-  (:metaclass std-class))
-
-(defclass standard-object (std-object kernel:instance) ())
-
-(defclass funcallable-standard-object (std-object
+(defclass funcallable-standard-object (standard-object
 				       kernel:funcallable-instance)
   ()
   (:metaclass funcallable-standard-class))
 
-(defclass specializer (standard-object) 
+(defclass specializer (metaobject) 
   ((type
     :initform nil
     :reader specializer-type)))
 
-(defclass definition-source-mixin (std-object)
+(defclass definition-source-mixin (standard-object)
   ((source
     :initform *load-pathname*
     :reader definition-source
-    :initarg :definition-source))
-  (:metaclass std-class))
+    :initarg :definition-source)))
 
-(defclass plist-mixin (std-object)
+(defclass plist-mixin (standard-object)
   ((plist
     :initform ()
-    :accessor object-plist))
-  (:metaclass std-class))
+    :accessor object-plist)))
 
-(defclass documentation-mixin (plist-mixin)
-  ()
-  (:metaclass std-class))
+(defclass documentation-mixin (plist-mixin) ())
 
-(defclass dependent-update-mixin (plist-mixin)
-  ()
-  (:metaclass std-class))
+(defclass dependent-update-mixin (plist-mixin) ())
 
 ;;;
 ;;; The class CLASS is a specified basic class.  It is the common superclass
@@ -592,7 +582,7 @@
 ;;;
 ;;; Slot definitions.
 ;;;
-(defclass slot-definition (standard-object) 
+(defclass slot-definition (metaobject) 
   ((name
     :initform nil
     :initarg :name
@@ -687,7 +677,7 @@ was inherited."
 					       effective-slot-definition)
   ())
 
-(defclass method (standard-object) ())
+(defclass method (metaobject) ())
 
 (defclass standard-method (definition-source-mixin documentation-mixin
 			      method)
@@ -729,6 +719,7 @@ was inherited."
 (defclass generic-function (dependent-update-mixin
 			    definition-source-mixin
 			    documentation-mixin
+			    metaobject
 			    funcallable-standard-object)
   ()
   (:metaclass funcallable-standard-class))
@@ -764,7 +755,7 @@ was inherited."
   (:default-initargs :method-class *the-class-standard-method*
     :method-combination *standard-method-combination*))
 
-(defclass method-combination (standard-object) ())
+(defclass method-combination (metaobject) ())
 
 (defclass standard-method-combination
     (definition-source-mixin method-combination)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.17 2003/03/22 16:15:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.18 2003/03/26 17:15:21 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -154,7 +154,7 @@
   (%slot-ref (fsc-instance-slots instance) location))
 
 (defmethod slot-value-using-class ((class std-class)
-                                   (object std-object)
+                                   (object standard-object)
                                    (slotd standard-effective-slot-definition))
   (check-obsolete-instance object)
   (let* ((location (slot-definition-location slotd))
@@ -178,7 +178,7 @@
 
 (defmethod (setf slot-value-using-class)
 	   (new-value (class std-class)
-		      (object std-object)
+		      (object standard-object)
 		      (slotd standard-effective-slot-definition))
   (check-obsolete-instance object)
   (let ((location (slot-definition-location slotd)))
@@ -198,7 +198,7 @@
 
 (defmethod slot-boundp-using-class
 	   ((class std-class) 
-	    (object std-object) 
+	    (object standard-object) 
 	    (slotd standard-effective-slot-definition))
   (check-obsolete-instance object)
   (let* ((location (slot-definition-location slotd))
@@ -220,7 +220,7 @@
 
 (defmethod slot-makunbound-using-class
 	   ((class std-class)
-	    (object std-object) 
+	    (object standard-object) 
 	    (slotd standard-effective-slot-definition))
   (check-obsolete-instance object)
   (let ((location (slot-definition-location slotd)))

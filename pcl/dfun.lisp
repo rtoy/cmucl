@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.20 2003/03/25 13:37:54 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.21 2003/03/26 17:15:22 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1146,7 +1146,7 @@ And so, we are saved.
 		      (if (consp meth)
 			  (and (early-method-standard-accessor-p meth)
 			       (early-method-standard-accessor-slot-name meth))
-			  (and (member *the-class-std-object*
+			  (and (member *the-class-standard-object*
 				       (cpl-maybe-early accessor-class))
 			       (if early-p
 				   (not (eq *the-class-standard-method*
@@ -1198,7 +1198,7 @@ And so, we are saved.
 			((reader boundp) (car specializers))
 			(writer (cadr specializers))))
 	       (specl-cpl (precedence specl))
-	       (so-p (member *the-class-std-object* specl-cpl))
+	       (so-p (member *the-class-standard-object* specl-cpl))
 	       (slot-name (slot-name method)))
 	  (when (or (null specl-cpl)
 		    (member *the-class-structure-object* specl-cpl))
@@ -1207,7 +1207,8 @@ And so, we are saved.
 		     (let ((cpl (precedence class)))
 		       (when (memq specl cpl)
 			 (unless (and (or so-p
-					  (member *the-class-std-object* cpl))
+					  (member *the-class-standard-object*
+						  cpl))
 				      (or early-p
 					  (slot-accessor-std-p slotd type)))
 			   (return-from make-accessor-table nil))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.25 2003/03/25 13:37:54 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.26 2003/03/26 17:15:21 gerd Exp $")
 
 (in-package :pcl)
 
@@ -828,7 +828,7 @@
 	(cond ((and (eq (class-name (car specls))
 			'std-class)
 		    (eq (class-name (cadr specls)) 
-			'std-object)
+			'standard-object)
 		    (eq (class-name (caddr specls)) 
 			'standard-effective-slot-definition))
 	       (set-standard-svuc-method type method))
@@ -846,7 +846,6 @@
 	     precompute-p
 	     (not (or (eq spec *the-class-t*)
 		      (eq spec *the-class-slot-object*)
-		      (eq spec *the-class-std-object*)
 		      (eq spec *the-class-standard-object*)
 		      (eq spec *the-class-structure-object*)))
 	     (let ((sc (class-direct-subclasses spec)))
@@ -910,8 +909,6 @@
 	 t)
 	((eq class *the-class-slot-object*)
 	 `(not (lisp:typep (kernel::class-of ,arg) 'kernel::built-in-class)))
-	((eq class *the-class-std-object*)
-	 `(or (std-instance-p ,arg) (fsc-instance-p ,arg)))
 	((eq class *the-class-standard-object*)
 	 `(std-instance-p ,arg))
 	((eq class *the-class-funcallable-standard-object*)
@@ -1462,66 +1459,4 @@
 			       (method-lambda-list method)))
     (declare (ignore nreq nopt keysp restp))
     (values keywords allow-other-keys-p)))
-
-
-;;;
-;;; This is based on the rules of method lambda list congruency defined in
-;;; the spec.  The lambda list it constructs is the pretty union of the
-;;; lambda lists of all the methods.  It doesn't take method applicability
-;;; into account at all yet.
-;;; 
-(defmethod generic-function-pretty-arglist
-	   ((gf standard-generic-function))
-  (let ((methods (generic-function-methods gf))
-	(arglist ()))      
-    (when methods
-      (multiple-value-bind (required optional rest key allow-other-keys)
-	  (method-pretty-arglist (car methods))
-	(dolist (m (cdr methods))
-	  (multiple-value-bind (method-key-keywords
-				method-allow-other-keys
-				method-key)
-	      (function-keywords m)
-	    ;; we've modified function-keywords to return what we want as
-	    ;;  the third value, no other change here.
-	    (declare (ignore method-key-keywords))
-	    (setq key (union key method-key))
-	    (setq allow-other-keys (or allow-other-keys
-				       method-allow-other-keys))))
-	(when allow-other-keys
-	  (setq arglist '(&allow-other-keys)))
-	(when key
-	  (setq arglist (nconc (list '&key) key arglist)))
-	(when rest
-	  (setq arglist (nconc (list '&rest rest) arglist)))
-	(when optional
-	  (setq arglist (nconc (list '&optional) optional arglist)))
-	(nconc required arglist)))))
-  
-
-(defmethod method-pretty-arglist ((method standard-method))
-  (let ((required ())
-	(optional ())
-	(rest nil)
-	(key ())
-	(allow-other-keys nil)
-	(state 'required)
-	(arglist (method-lambda-list method)))
-    (dolist (arg arglist)
-      (cond ((eq arg '&optional)         (setq state 'optional))
-	    ((eq arg '&rest)             (setq state 'rest))
-	    ((eq arg '&key)              (setq state 'key))
-	    ((eq arg '&allow-other-keys) (setq allow-other-keys t))
-	    ((memq arg lambda-list-keywords))
-	    (t
-	     (ecase state
-	       (required (push arg required))
-	       (optional (push arg optional))
-	       (key      (push arg key))
-	       (rest     (setq rest arg))))))
-    (values (nreverse required)
-	    (nreverse optional)
-	    rest
-	    (nreverse key)
-	    allow-other-keys)))
 

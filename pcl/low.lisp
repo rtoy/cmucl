@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.22 2003/03/22 16:15:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.23 2003/03/26 17:15:22 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -186,16 +186,15 @@ the compiler as completely as possible.  Currently this means that
   (movable foldable flushable explicit-check))
 
 (deftransform pcl::pcl-instance-p ((object))
-  (let* ((otype (continuation-type object))
-	 (std-obj (specifier-type 'pcl::std-object)))
-    ;; Flush tests whose result is known at compile time.
-    (cond ((csubtypep otype std-obj)
-	   't)
-	  ((not (types-intersect otype std-obj))
-	   'nil)
-	  ((and (kernel::standard-class-p otype)
-		(pcl::info-std-class-p (kernel:%class-name otype)))
-	   't)
+  (let* ((object-type (continuation-type object))
+	 (standard-object (specifier-type 'standard-object)))
+    (cond ((csubtypep object-type standard-object)
+	   t)
+	  ((not (types-intersect object-type standard-object))
+	   nil)
+	  ((and (kernel::standard-class-p object-type)
+		(pcl::info-std-class-p (kernel:%class-name object-type)))
+	   t)
 	  (t
 	   `(typep (kernel:layout-of object) 'pcl::wrapper)))))
 

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.24 2003/03/22 16:15:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.25 2003/03/26 17:15:22 gerd Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -630,7 +630,6 @@
 ;;;  
 (defun raise-metatype (metatype new-specializer)
   (let ((slot      (find-class 'slot-class))
-	(std       (find-class 'std-class))
 	(standard  (find-class 'standard-class))
 	(fsc       (find-class 'funcallable-standard-class))
 	(structure (find-class 'structure-class))
@@ -642,7 +641,6 @@
 			 (class-of (specializer-class x))
 			 (class-of x))))
 	       (cond ((eq x *the-class-t*) t)
-		     ((*subtypep meta-specializer std)  'standard-instance)
 		     ((*subtypep meta-specializer standard)  'standard-instance)
 		     ((*subtypep meta-specializer fsc)       'standard-instance)
 		     ((*subtypep meta-specializer condition) 'condition-instance)
