@@ -1212,8 +1212,17 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	      (size :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
-	`(sap-ref-sap ,sap ,offset)
-	`(setf (sap-ref-sap ,sap ,offset) ,value))))
+	`(error "Cannot reference pointer aliens")
+	(let ((n-value (gensym)))
+	  `(setf (sap-ref-sap ,sap ,offset)
+		 (let ((,n-value ,value))
+		   (etypecase ,n-value
+		     (null (int-sap 0))
+		     (system-area-pointer ,n-value)
+		     ((or simple-string
+			  simple-bit-vector
+			  (simple-array unsigned-byte (*)))
+		      (%primitive c::vector-sap ,n-value)))))))))
 
 
 ;;;; Enumeration Alien access:
