@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.3 1990/08/24 18:12:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.4 1990/09/06 19:38:45 wlott Exp $
 ;;;
 ;;; Spice Lisp Reader 
 ;;; Written by David Dill
@@ -1229,25 +1229,23 @@
 
 ;;;; PARSE-INTEGER.
 
-(defun parse-integer (string &key (start 0) (end (length string))
-			     (radix 10) junk-allowed)
+(defun parse-integer (string &key (start 0) end (radix 10) junk-allowed)
   "Examine the substring of string delimited by start and end
    (default to the beginning and end of the string)  It skips over
    whitespace characters and then tries to parse an integer.  The
    radix parameter must be between 2 and 36."
-  (declare (fixnum end))
-  (if (null end) (setq end (length string)))
-  (let ((index (do ((i start (1+ i)))
-		   ((= i end)
-		    (if junk-allowed
-			(return-from parse-integer (values nil end))
-			(error "No non-whitespace characters in number.")))
-		 (declare (fixnum i))
-		 (unless (whitespacep (char string i)) (return i))))
-	(minusp nil)
-	(found-digit nil)
-	(result 0))
-    (declare (fixnum index))
+  (let* ((end (or end (length string)))
+	 (index (do ((i start (1+ i)))
+		    ((= i end)
+		     (if junk-allowed
+			 (return-from parse-integer (values nil end))
+			 (error "No non-whitespace characters in number.")))
+		  (declare (fixnum i))
+		  (unless (whitespacep (char string i)) (return i))))
+	  (minusp nil)
+	  (found-digit nil)
+	  (result 0))
+    (declare (fixnum end index))
     (let ((char (char string index)))
       (cond ((char= char #\-)
 	     (setq minusp t)
@@ -1255,23 +1253,23 @@
 	    ((char= char #\+)
 	     (incf index))))
     (loop
-     (when (= index end) (return nil))
-     (let* ((char (char string index))
-	    (weight (digit-char-p char radix)))
-       (cond (weight
-	      (setq result (+ weight (* result radix))
-		    found-digit t))
-	     (junk-allowed (return nil))
-	     ((whitespacep char)
-	      (do ((jndex (1+ index) (1+ jndex)))
-		  ((= jndex end))
-		(declare (fixnum jndex))
-		(unless (whitespacep (char string jndex))
-		  (error "There's junk in this string: ~S." string)))
-	      (return nil))
-	     (t
-	      (error "There's junk in this string: ~S." string))))
-     (incf index))
+      (when (= index end) (return nil))
+      (let* ((char (char string index))
+	     (weight (digit-char-p char radix)))
+	(cond (weight
+	       (setq result (+ weight (* result radix))
+		     found-digit t))
+	      (junk-allowed (return nil))
+	      ((whitespacep char)
+	       (do ((jndex (1+ index) (1+ jndex)))
+		   ((= jndex end))
+		 (declare (fixnum jndex))
+		 (unless (whitespacep (char string jndex))
+		   (error "There's junk in this string: ~S." string)))
+	       (return nil))
+	      (t
+	       (error "There's junk in this string: ~S." string))))
+      (incf index))
     (values
      (if found-digit
 	 (if minusp (- result) result)
