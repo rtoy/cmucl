@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.41 1999/04/12 12:39:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.42 2001/06/17 19:10:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -602,10 +602,11 @@
     (write-string string stream))
   (dotimes (i minpad)
     (write-char padchar stream))
-  (do ((chars (+ (length string) minpad) (+ chars colinc)))
-      ((>= chars mincol))
-    (dotimes (i colinc)
-      (write-char padchar stream)))
+  (and mincol minpad colinc
+       (do ((chars (+ (length string) minpad) (+ chars colinc)))
+	   ((>= chars mincol))
+	 (dotimes (i colinc)
+	   (write-char padchar stream))))
   (when padleft
     (write-string string stream)))
 
