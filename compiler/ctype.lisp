@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.19 1991/05/16 16:37:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.20 1991/05/21 22:29:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -507,7 +507,7 @@
       ((null types))
     (let ((decl-type (or (car arg) rest)))
       (unless decl-type (return))
-      (check-approximate-arg-type (car types) decl-type "~R" n))))
+      (check-approximate-arg-type (car types) decl-type "~:R" n))))
 
 
 ;;; Check-Approximate-Arg-Type  --  Internal
