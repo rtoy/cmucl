@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.73 2003/11/03 16:50:28 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.74 2003/11/05 16:47:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -355,6 +355,13 @@
   (let ((start (or start 0))
 	(end (or end (length (the (simple-array * (*)) thing)))))
     (declare (type index start end))
+    ;;
+    ;; If there is any input read from UNIX but not
+    ;; supplied to the user of the stream, reposition
+    ;; to the real file position as seen from Lisp.
+    (when (> (fd-stream-ibuf-tail stream)
+	     (fd-stream-ibuf-head stream))
+      (file-position stream (file-position stream)))
     (let* ((len (fd-stream-obuf-length stream))
 	   (tail (fd-stream-obuf-tail stream))
 	   (space (- len tail))
