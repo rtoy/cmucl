@@ -142,18 +142,19 @@
 ;;; whether it is cheaper to then difference between the the proven type and
 ;;; the corresponding type in Types.  If so, we opt for a :HAIRY check with
 ;;; that test negated.  Otherwise, we try to do a simple test, and if that is
-;;; impossible, we do a hairy test with non-negated types.
+;;; impossible, we do a hairy test with non-negated types.  If true,
+;;; Force-Hairy forces a hairy type check.
 ;;;
 ;;;    When doing a non-negated hairy check, we call MAYBE-WEAKEN-CHECK to
 ;;; weaken the test to a convenient supertype (conditional on policy.)
 ;;;
-(defun maybe-negate-check (cont types)
+(defun maybe-negate-check (cont types force-hairy)
   (declare (type continuation cont) (list types))
   (multiple-value-bind
       (ptypes count)
       (no-function-values-types (continuation-proven-type cont))
     (if (eq count :unknown)
-	(if (every #'type-check-template types)
+	(if (and (every #'type-check-template types) (not force-hairy))
 	    (values :simple types)
 	    (values :hairy
 		    (mapcar #'(lambda (x)
@@ -169,7 +170,8 @@
 				     (list nil weak c))))
 			   ptypes types)))
 	  (if (and (not (find-if #'first res))
-		   (every #'type-check-template types))
+		   (every #'type-check-template types)
+		   (not force-hairy))
 	      (values :simple types)
 	      (values :hairy res))))))
 	    
@@ -187,6 +189,13 @@
 ;;; is simply checkable if all the type assertions have a TYPE-CHECK-TEMPLATE.
 ;;; In this :SIMPLE case, the second value is a list of the type restrictions
 ;;; specified for the leading positional values.
+;;;
+;;; We force a check to be hairy even when there are fixed values if we are in
+;;; a context where we may be forced to use the unknown values convention
+;;; anyway.  This is because IR2tran can't generate type checks for unknown
+;;; values continuations but people could still be depending on the check being
+;;; done.  We only care about EXIT and RETURN (not MV-COMBINATION) since these
+;;; are the only contexts where the ultimate values receiver 
 ;;;
 ;;; In the :HAIRY case, the second value is a list of triples of the form:
 ;;;    (Not-P Type Original-Type)
@@ -209,11 +218,19 @@
     (multiple-value-bind (types count)
 			 (no-function-values-types type)
       (cond ((not (eq count :unknown))
-	     (maybe-negate-check cont types))
+	     (if (or (exit-p dest)
+		     (and (return-p dest)
+			  (multiple-value-bind
+			      (ignore count)
+			      (values-types (return-result-type dest))
+			    (declare (ignore ignore))
+			    (eq count :unknown))))
+		 (maybe-negate-check cont types t)
+		 (maybe-negate-check cont types nil)))
 	    ((and (mv-combination-p dest)
 		  (eq (basic-combination-kind dest) :local))
 	     (assert (values-type-p type))
-	     (maybe-negate-check cont (args-type-optional type)))
+	     (maybe-negate-check cont (args-type-optional type) nil))
 	    (t
 	     (values :too-hairy nil))))))
 
@@ -235,13 +252,22 @@
 ;;; since if we pass up this chance to do the check, it will be too late.  The
 ;;; penalty for being too conservative is duplicated type checks.
 ;;;
-;;; We always return true if there is a compile-time type error on the
-;;; continuation, so that this error will be signalled at runtime as well.
+;;; If there is a compile-time type error, then we always return true unless
+;;; the DEST is a full call.  With a full call, the theory is that the type
+;;; error is probably from a declaration in (or on) the callee, so the callee
+;;; should be able to do the check.  We want to let the callee do the check,
+;;; because it is possible that the error is really in the callee, not the
+;;; caller.  We don't want to make people recompile all calls to a function
+;;; when they were originally compiled with a bad declaration (or an old type
+;;; assertion derived from a definition appearing after the call.)
 ;;;
 (defun probable-type-check-p (cont)
   (declare (type continuation cont))
   (let ((dest (continuation-dest cont)))
-    (cond ((eq (continuation-type-check cont) :error))
+    (cond ((eq (continuation-type-check cont) :error)
+	   (if (and (combination-p dest) (eq (combination-kind dest) :full))
+	       nil
+	       t))
 	  ((or (not dest)
 	       (policy dest (zerop safety)))
 	   nil)
@@ -370,6 +396,65 @@
   (undefined-value))
 
 
+;;; DO-TYPE-WARNING  --  Internal
+;;;
+;;;    Emit a type warning for Node.  If the value of node is being used for a
+;;; variable binding, we figure out which one for source context.  If the value
+;;; is a constant, we print it specially.  We also print forms known to be of
+;;; type NIL specially.
+;;;
+(defun do-type-warning (node)
+  (declare (type node node))
+  (let* ((*compiler-error-context* node)
+	 (cont (node-cont node))
+	 (atype-spec (type-specifier (continuation-asserted-type cont)))
+	 (dtype (node-derived-type node))
+	 (dest (continuation-dest cont))
+	 (what (when (and (combination-p dest)
+			  (eq (combination-kind dest) :local))
+		 (let ((lambda (combination-lambda dest))
+		       (pos (position cont (combination-args dest))))
+		   (format nil "~:[A possible~;The~] binding of ~S"
+			   (and (continuation-use cont)
+				(eq (functional-kind lambda) :let))
+			   (leaf-name (elt (lambda-vars lambda) pos)))))))
+    (cond ((and (ref-p node) (constant-p (ref-leaf node)))
+	   (compiler-warning "~:[This~;~:*~A~] is not a ~S:~%  ~S"
+			     what atype-spec (constant-value (ref-leaf node))))
+	   ((eq dtype *empty-type*)
+	    (if what
+		(compiler-warning "~A is an expression that does not return."
+				  what)
+		(compiler-warning "Expression that does not return when ~
+				   expecting a value of type:~%  ~S."
+				  atype-spec)))
+	   (t
+	    (compiler-warning "~:[Result~;~:*~A~] is a ~S, ~<~%~:;not a ~S.~>"
+			      what (type-specifier dtype) atype-spec))))
+  (undefined-value))
+
+
+;;; MARK-ERROR-CONTINUATION  --  Internal
+;;;
+;;;    Mark Cont as being a continuation with a manifest type error.  We set
+;;; the kind to :ERROR, and clear any FUNCTION-INFO if the continuation is an
+;;; argument to a known call.  The last is done so that the back end doesn't
+;;; have to worry about type errors in arguments to known functions.  This
+;;; clearing is inhibited for things with IR2-CONVERT methods, since we can't
+;;; do a full call to funny functions.
+;;;
+(defun mark-error-continuation (cont)
+  (declare (type continuation cont))
+  (setf (continuation-%type-check cont) :error)
+  (let ((dest (continuation-dest cont)))
+    (when (and (combination-p dest)
+	       (let ((info (basic-combination-kind dest)))
+		 (and (function-info-p info)
+		      (not (function-info-ir2-convert info)))))
+      (setf (basic-combination-kind dest) :full)))
+  (undefined-value))
+
+
 ;;; Generate-Type-Checks  --  Interface
 ;;;
 ;;;    Loop over all blocks in Component that have TYPE-CHECK set, looking for
@@ -377,11 +462,10 @@
 ;;; compile-time type errors and determine if and how to do run-time type
 ;;; checks.
 ;;;
-;;;    If there is a compile-time type error, then we mark the continuation
-;;; with a :ERROR kind, emit a warning if appropriate, and clear any
-;;; FUNCTION-INFO if the continuation is an argument to a known call.  The last
-;;; is done so that the back end doesn't have to worry about type errors in
-;;; arguments to known functions.
+;;;    If there is a compile-time type error, then we mark the continuation and
+;;; emit a warning if appropriate.  This part loops over all the uses of the
+;;; continuation, since after we convert the check, the :DELETED kind will
+;;; inhibit warnings about the types of other uses.
 ;;;
 ;;;    If a continuation is too complex to be checked by the back end, or is
 ;;; better checked with explicit code, then convert to an explicit test.
@@ -400,25 +484,15 @@
     (when (block-type-check block)
       (do-nodes (node cont block)
 	(let ((type-check (continuation-type-check cont)))
-	  (unless (member type-check '(nil :error))
-	    (let ((dtype (node-derived-type node))
-		  (atype (continuation-asserted-type cont)))
-	      (unless (values-types-intersect dtype atype)
-		(setf (continuation-%type-check cont) :error)
-		(let ((dest (continuation-dest cont)))
-		  (when (and (combination-p dest)
-			     (function-info-p (basic-combination-kind dest)))
-		    (setf (basic-combination-kind dest) :full)))
-		(unless (policy node (= brevity 3))
-		  (let ((*compiler-error-context* node))
-		    (if (and (ref-p node) (constant-p (ref-leaf node)))
-			(compiler-warning "This is not a ~S:~%  ~S"
-					  (type-specifier atype)
-					  (constant-value (ref-leaf node)))
-			(compiler-warning "Result is a ~S, not a ~S."
-					  (type-specifier dtype)
-					  (type-specifier atype))))))))
-	  
+	  (unless (member type-check '(nil :error :deleted))
+	    (let ((atype (continuation-asserted-type cont)))
+	      (do-uses (use cont)
+		(unless (values-types-intersect (node-derived-type use)
+						atype)
+		  (mark-error-continuation cont)
+		  (unless (policy node (= brevity 3))
+		    (do-type-warning use))))))
+
 	  (when (eq type-check t)
 	    (let ((check-p (probable-type-check-p cont)))
 	      (multiple-value-bind (check types)
