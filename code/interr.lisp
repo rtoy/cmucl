@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.11 1990/10/03 09:57:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.12 1990/11/07 01:47:24 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -478,7 +478,7 @@
 		      (info (and (< -1 error-number (length *internal-errors*))
 				 (svref *internal-errors* error-number)))
 		      (fp (int-sap (di::escape-register (alien-value sc)
-							c::fp-offset))))
+							vm::fp-offset))))
 		 (collect ((sc-offsets))
 		   (loop
 		     (when (>= index length)
