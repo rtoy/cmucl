@@ -76,7 +76,7 @@ os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 	    os_invalidate(addr+len,-len_diff);
 	else{
 	    if(len_diff!=0){
-	      new=os_allocate(len);
+	      os_vm_address_t new=os_allocate(len);
 
 	      if(new!=NULL){
 		bcopy(addr,new,old_len);
