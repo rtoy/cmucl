@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.52 2002/11/21 20:02:26 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.53 2003/04/19 12:31:31 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -627,7 +627,7 @@
       (collect ((call-args))
 	(do ((var arglist (cdr var))
 	     (temp (temps) (cdr temp)))
-	    (())
+	    ((null var))
 	  (let ((info (lambda-var-arg-info (car var))))
 	    (if info
 		(ecase (arg-info-kind info)
