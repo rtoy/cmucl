@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.103 1994/02/12 09:38:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.104 1994/08/21 15:19:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1050,13 +1050,12 @@
 (defun process-proclaim (form path)
   (if (and (eql (length form) 2) (constantp (cadr form)))
       (let ((spec (eval (cadr form))))
-	(if (consp spec)
+	(if (and (consp spec) (eq *block-compile* :specified))
 	    (case (first spec)
 	      (start-block
-	       (when *block-compile*
-		 (finish-block-compilation)
-		 (setq *block-compile* t)
-		 (setq *entry-points* (rest spec))))
+	       (finish-block-compilation)
+	       (setq *block-compile* t)
+	       (setq *entry-points* (rest spec)))
 	      (end-block
 	       (finish-block-compilation))
 	      (t
