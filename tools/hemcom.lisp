@@ -33,7 +33,16 @@
 (pushnew :command-bits *features*)
 (pushnew :buffered-lines *features*)
 
-
+#-clx
+;;; If CLX has not been loaded, but has been compiled, then load it.
+;;;
+(when (probe-file (make-pathname :defaults "target:clx/defsystem"
+				 :type (c:backend-fasl-file-type c:*backend*)))
+  (setf (search-list "clx:") '("target:clx/"))
+  (load "clx:defsystem")
+  (xlib::load-clx (pathname "clx:"))
+  (load "target:code/clx-ext"))
+  
 (with-compiler-log-file
     ("target:compile-hemlock.log"
      :optimize
