@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.12 1997/09/07 23:34:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.13 1997/09/07 23:40:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -203,17 +203,23 @@
   "Execute BODY with the floating point exceptions listed in TRAPS
   masked (disabled).  TRAPS should be a list of possible exceptions
   which includes :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
-  :DIVIDE-BY-ZERO."
-  (let ((trap-mask (dpb (lognot (float-trap-mask traps))
+  :DIVIDE-BY-ZERO and on the X86 :DENORMALIZED-OPERAND. The respective
+  accrued exceptions are cleared at the start of the body to support
+  their testing within and restored on exit."
+  (let ((traps (dpb (float-trap-mask traps) float-traps-byte 0))
+	(exceptions (dpb (float-trap-mask traps) float-sticky-bits 0))
+	(trap-mask (dpb (lognot (float-trap-mask traps))
 			float-traps-byte #xffffffff))
 	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
-			     float-exceptions-byte #xffffffff)))
+			     float-sticky-bits #xffffffff)))
     `(let ((orig-modes (floating-point-modes)))
       (unwind-protect
 	   (progn
-	     (setf (floating-point-modes) (logand orig-modes ,trap-mask))
+	     (setf (floating-point-modes)
+		   (logand orig-modes ,(logand trap-mask exception-mask)))
 	     ,@body)
+	;; Restore the original traps and exceptions.
 	(setf (floating-point-modes)
-	      (logand (logior (floating-point-modes)
-			      (mask-field float-traps-byte orig-modes))
-		      ,exception-mask))))))
+	      (logior (logand orig-modes ,(logior traps exceptions))
+		      (logand (floating-point-modes)
+			      ,(logand trap-mask exception-mask))))))))
