@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.67 2003/03/23 21:23:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.68 2003/04/13 13:44:54 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -506,13 +506,16 @@
 		(slot (find-slot (condition-class-cpl class) name)))
 	    (unless slot
 	      (error "Slot ~S of ~S missing." name condition))
-	    (dolist (initarg (condition-slot-initargs slot))
-	      (let ((val (getf actual-initargs initarg *empty-slot*)))
-		(unless (eq val *empty-slot*)
-		  (return-from condition-reader-function
-			       (setf (getf (condition-assigned-slots condition)
-					   name)
-				     val)))))
+	    ;;
+	    ;; Loop over actual initargs because the order of
+	    ;; actual initargs determines how slots are initialized.
+	    (loop with slot-initargs = (condition-slot-initargs slot)
+		  for (initarg init-value) on actual-initargs by #'cddr
+		  if (member initarg slot-initargs) do
+		    (return-from condition-reader-function
+		      (setf (getf (condition-assigned-slots condition)
+				  name)
+			    init-value)))
 	    (setf (getf (condition-assigned-slots condition) name)
 		  (find-slot-default class slot)))
 	  val))))
@@ -604,7 +607,7 @@
 ;;;
 (defun compute-effective-slots (class)
   (collect ((res (copy-list (condition-class-slots class))))
-    (dolist (sclass (condition-class-cpl class))
+    (dolist (sclass (cdr (condition-class-cpl class)))
       (dolist (sslot (condition-class-slots sclass))
 	(let ((found (find (condition-slot-name sslot) (res)
 			   :test #'eq)))
