@@ -14,7 +14,7 @@
 (in-package 'c)
 
 (define-vop (reset-stack-pointer)
-  (:args (ptr :scs (any-reg)))
+  (:args (ptr :scs (any-reg descriptor-reg)))
   (:generator 1
     (inst lr sp-tn ptr)))
 
