@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.38 1997/10/08 19:41:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.39 1997/10/09 05:56:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -468,18 +468,14 @@
   `(%atan2 x y))
 
 (deftransform expt ((x y) ((single-float 0f0) single-float) *)
-  "convert to inline float expt"
   `(coerce (%pow (coerce x 'double-float) (coerce y 'double-float))
     'single-float))
 (deftransform expt ((x y) ((double-float 0d0) double-float) * :when :both)
-  "convert to inline float expt"
   `(%pow x y))
 (deftransform expt ((x y) ((single-float 0f0) (signed-byte 32)) *)
-  "convert to inline float expt"
   `(coerce (%pow (coerce x 'double-float) (coerce y 'double-float))
     'single-float))
 (deftransform expt ((x y) ((double-float 0d0) (signed-byte 32)) * :when :both)
-  "convert to inline float expt"
   `(%pow x (coerce y 'double-float)))
 
 ;;; ANSI says log with base zero returns zero.
