@@ -7,15 +7,15 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.7 1991/04/23 01:25:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.8 1992/04/21 04:23:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.7 1991/04/23 01:25:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.8 1992/04/21 04:23:03 wlott Exp $
 ;;;    
 (in-package "KERNEL")
 
-(export '(allocate-vector make-array-header))
+(export '(allocate-vector make-array-header function-subtype))
 
 
 (defun get-header-data (x)
@@ -60,6 +60,13 @@
 (defun c::control-stack-pointer-sap ()
   "Return a System-Area-Pointer pointing to the end of the control stack."
   (c::control-stack-pointer-sap))
+
+(defun function-subtype (function)
+  "Return the header typecode for FUNCTION.  Can be set with SETF."
+  (function-subtype function))
+
+(defun (setf function-subtype) (type function)
+  (setf (function-subtype function) type))
 
 (defun %function-header-arglist (func)
   "Extracts the arglist from the function header FUNC."
