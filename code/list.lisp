@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.11 1992/05/15 17:54:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.12 1992/05/15 19:25:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,13 +208,13 @@
 	   (cons arg others))))
 
 (defun make-list (size &key initial-element)
-  (declare (fixnum size))
   "Constructs a list with size elements each set to value"
-  (if (< size 0) (error "~S is an illegal size for MAKE-LIST." size)
-      (do ((count size (1- count))
-	   (result '() (cons initial-element result)))
-	  ((zerop count) result)
-	(declare (fixnum count)))))
+  (declare (type index size))
+  (do ((count size (1- count))
+       (result '() (cons initial-element result)))
+      ((zerop count) result)
+    (declare (type index count))))
+
 
 ;;; The outer loop finds the first non-null list and the result is started.
 ;;; The remaining lists in the arguments are tacked to the end of the result
@@ -254,7 +254,6 @@
 
 ;;; List Copying Functions
 
-
 ;;; The list is copied correctly even if the list is not terminated by ()
 ;;; The new list is built by cdr'ing splice which is always at the tail
 ;;; of the new list
@@ -262,26 +261,25 @@
 (defun copy-list (list)
   "Returns a new list EQUAL but not EQ to list"
   (if (atom list)
-      (if list
-	  (error "~S is not a list." list))
-      (let ((result (cons (car list) '()) ))
+      list
+      (let ((result (list (car list))))
 	(do ((x (cdr list) (cdr x))
 	     (splice result
 		     (cdr (rplacd splice (cons (car x) '() ))) ))
-	    ((atom x) (unless (null x)
-			      (rplacd splice x))
-		      result)))))
+	    ((atom x)
+	     (unless (null x)
+	       (rplacd splice x))))
+	result)))
 
 (defun copy-alist (alist)
   "Returns a new association list equal to alist, constructed in space"
   (if (atom alist)
-      (if alist
-	  (error "~S is not a list." alist))
+      alist
       (let ((result
 	     (cons (if (atom (car alist))
 		       (car alist)
 		       (cons (caar alist) (cdar alist)) )
-		   '() )))	      
+		   nil)))
 	(do ((x (cdr alist) (cdr x))
 	     (splice result
 		     (cdr (rplacd splice
@@ -289,16 +287,19 @@
 				   (if (atom (car x)) 
 				       (car x)
 				       (cons (caar x) (cdar x)))
-				   '() ))) ))
-;;; Non-null terminated alist done here.
-	    ((atom x) (unless (null x)
-			      (rplacd splice x))
-		      result)))))
+				   nil)))))
+	    ;; Non-null terminated alist done here.
+	    ((atom x)
+	     (unless (null x)
+	       (rplacd splice x))))
+	result)))
 
 (defun copy-tree (object)
   "Copy-Tree recursively copys trees of conses."
-  (cond ((not (consp object)) object)
-	(T (cons (copy-tree (car object)) (copy-tree (cdr object)))) ))
+  (if (consp object)
+      (cons (copy-tree (car object)) (copy-tree (cdr object)))
+      object))
+
 
 ;;; More Commonly-used List Functions
 
@@ -539,18 +540,18 @@
   "Substitutes from alist into tree nondestructively."
   (declare (inline assoc))
   (labels ((s (subtree)
-	      (let ((assoc
-		     (if notp
-			 (assoc (funcall key subtree) alist :test-not test-not)
-			 (assoc (funcall key subtree) alist :test test))))
-		(cond (assoc (cdr assoc))
-		      ((atom subtree) subtree)
-		      (t (let ((car (s (car subtree)))
-			       (cdr (s (cdr subtree))))
-			   (if (and (eq car (car subtreE))
-				    (eq cdr (cdr subtree)))
-			       subtree
-			       (cons car cdr))))))))
+	     (let ((assoc
+		    (if notp
+			(assoc (funcall key subtree) alist :test-not test-not)
+			(assoc (funcall key subtree) alist :test test))))
+	       (cond (assoc (cdr assoc))
+		     ((atom subtree) subtree)
+		     (t (let ((car (s (car subtree)))
+			      (cdr (s (cdr subtree))))
+			  (if (and (eq car (car subtreE))
+				   (eq cdr (cdr subtree)))
+			      subtree
+			      (cons car cdr))))))))
     (s tree)))
 
 ;;; In run-time env, since can be referenced in line expansions.
@@ -594,8 +595,6 @@
 
 (defun member-if (test list &key (key #'identity))
   "Returns tail of list beginning with first element satisfying test(element)"
-  (unless (listp list)
-    (error "~S is not a list." list))
   (do ((list list (Cdr list)))
       ((endp list) nil)
     (if (funcall test (funcall key (car list)))
@@ -603,8 +602,6 @@
 
 (defun member-if-not (test list &key (key #'identity))
   "Returns tail of list beginning with first element not satisfying test(el)"
-  (unless (listp list)
-    (error "~S is not a list." list))
   (do ((list list (cdr list)))
       ((endp list) ())
     (if (not (funcall test (funcall key (car list))))
