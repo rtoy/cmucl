@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.75 1994/02/08 14:29:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.76 1994/02/10 23:16:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1257,6 +1257,7 @@
     (setf (block-delete-p block) t))
   (dolist (fun (component-lambdas component))
     (setf (functional-kind fun) nil)
+    (setf (functional-entry-function fun) nil)
     (setf (leaf-refs fun) nil)
     (delete-functional fun))
   (do-blocks (block component)
