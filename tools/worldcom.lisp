@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.43 1992/07/28 22:06:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.44 1992/08/06 03:41:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,7 +166,6 @@
 
 (comf "target:code/query")
 (comf "target:code/rand")
-(comf "target:code/trace")
 (comf "target:code/ntrace")
 (comf "target:code/profile")
 (comf "target:code/sort")
