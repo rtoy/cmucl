@@ -476,7 +476,10 @@
   (save-sp nil :type tn)
   ;;
   ;; The list of dynamic state save TNs.
-  (dynamic-state (make-dynamic-state-tns) :type list))
+  (dynamic-state (make-dynamic-state-tns) :type list)
+  ;;
+  ;; The target label for NLX entry.
+  (target (gen-label) :type label))
 
 
 (defprinter ir2-nlx-info
