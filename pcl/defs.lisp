@@ -423,8 +423,7 @@
 
 (defclass standard-object (std-object kernel:instance) ())
 
-(defclass funcallable-standard-object (std-object
-				       kernel:funcallable-instance)
+(defclass funcallable-standard-object (std-object kernel:funcallable-instance)
      ()
   (:metaclass funcallable-standard-class))
 
