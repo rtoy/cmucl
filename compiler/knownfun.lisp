@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.10 1991/04/25 00:49:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.11 1991/10/03 18:29:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,9 +87,7 @@
   ;; Boolean attributes of this function.
   (attributes (required-argument) :type attributes)
   ;;
-  ;; The transforms for this function.  An alist of (Function-Type . Function),
-  ;; where Function-Type is the type that the call must have for Function to be
-  ;; an applicable transform.
+  ;; A list of Transform structures describing transforms for this function.
   (transforms () :type list)
   ;;
   ;; A function which computes the derived type for a call to this function by
@@ -134,19 +132,39 @@
 
 ;;;; Interfaces to defining macros:
 
+;;; The TRANSFORM structure represents an IR1 transform.
+;;;
+(defstruct (transform (:print-function %print-transform))
+  ;;
+  ;; The function-type which enables this transform.
+  (type (required-argument) :type ctype)
+  ;;
+  ;; The transformation function.  Takes the Combination node and Returns a
+  ;; lambda, or throws out.
+  (function (required-argument) :type function)
+  ;;
+  ;; String used in efficency notes.
+  (note (required-argument) :type string))
+
+(defprinter transform type note)
+
+
 ;;; %Deftransform  --  Internal
 ;;;
 ;;;    Grab the Function-Info and enter the function, replacing any old one
 ;;; with the same type.
 ;;;
-(proclaim '(function %deftransform (t list function)))
-(defun %deftransform (name type fun)
+(proclaim '(function %deftransform
+		     (t list function &optional (or string null))))
+(defun %deftransform (name type fun &optional note)
   (let* ((ctype (specifier-type type))
+	 (note (or note "optimize"))
 	 (info (function-info-or-lose name))
-	 (old (assoc ctype (function-info-transforms info) :test #'type=)))
+	 (old (find ctype (function-info-transforms info) :test #'type=)))
     (if old
-	(setf (cdr old) fun)
-	(push (cons ctype fun) (function-info-transforms info)))
+	(setf (transform-function old) fun  (transform-note old) note)
+	(push (make-transform :type ctype :function fun :note note)
+	      (function-info-transforms info)))
     name))
 
 
