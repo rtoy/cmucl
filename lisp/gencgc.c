@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.53 2004/05/11 14:36:10 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.54 2004/05/18 22:59:08 cwang Exp $
  *
  */
 
@@ -323,7 +323,7 @@ unsigned dynamic_space_pages;
 
 /*
  * An array of page structures is statically allocated.
- * This helps quickly map between an address its page structure.
+ * This helps quickly map between an address and its page structure.
  */
 struct page *page_table;
 
@@ -401,7 +401,7 @@ struct generation {
 
   /*
    * The cumulative sum of the bytes allocated to this generation. It
-   * is cleared after a GC on this generations, and update before new
+   * is cleared after a GC on this generation, and update before new
    * objects are added from a GC of a younger generation. Dividing by
    * the bytes_allocated will give the average age of the memory in
    * this generation since its last GC.
@@ -978,7 +978,7 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
  * If the record_new_objects flag is 2 then all new regions created
  * are recorded.
  *
- * If it's 1 then then it is only recorded if the first page of the
+ * If it's 1 then it is only recorded if the first page of the
  * current region is <= new_areas_ignore_page. This helps avoid
  * unnecessary recording when doing full scavenge pass.
  *
@@ -2393,7 +2393,7 @@ static int scav_function_pointer(lispobj *where, lispobj object)
 
 #ifdef i386
 /*
- * Scan a x86 compiled code objected, looking for possible fixups that
+ * Scan an x86 compiled code object, looking for possible fixups that
  * have been missed after a move.
  *
  * Two types of fixups are needed:
