@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.9 1992/02/12 01:44:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.10 1992/07/10 17:47:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,24 +184,24 @@
     (read stream t nil t)
     (return-from sharp-A nil))
   (unless dimensions (%reader-error stream "No dimensions argument to #A."))
-  (if (> dimensions 0)
-      (let ((dlist (make-list dimensions))
-	    (init-list
-	     (if (char= (read-char stream t) #\()
-		 (read-list stream nil)
-		 (%reader-error stream "Array values must be a list."))))
-	(do ((dl dlist (cdr dl))
-	     (il init-list (car il)))
-	    ;; I think the nreverse is causing the problem.
-	    ((null dl))
-	  (if (listp il)
-	      (rplaca dl (length il))
-	      (%reader-error
-	       stream
-	       "Initial contents for #A is inconsistent with ~
-		dimensions: #~SA~S" dimensions init-list)))
-	(make-array dlist :initial-contents init-list))
-      (make-array nil :initial-element (read stream t nil t))))
+  (collect ((dims))
+    (let* ((contents (read stream t nil t))
+	   (seq contents))
+      (dotimes (axis dimensions
+		     (make-array (dims) :initial-contents contents))
+	(unless (typep seq 'sequence)
+	  (%reader-error stream
+			 "#~DA axis ~D is not a sequence:~%  ~S"
+			 dimensions axis seq))
+	(let ((len (length seq)))
+	  (dims len)
+	  (unless (= axis (1- dimensions))
+	    (when (zerop len)
+	      (%reader-error stream
+			     "#~DA axis ~D is empty, but is not ~
+			      the last dimension."
+			     dimensions axis))
+	    (setq seq (elt seq 0))))))))
 
 
 (defun sharp-S (stream sub-char numarg)
