@@ -144,7 +144,7 @@ lra:
 	add	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 
         /* Store LISP state */
-	andn	reg_ALLOC, lowtagMask, reg_NL1
+	andn	reg_ALLOC, lowtag_Mask, reg_NL1
         store(reg_NL1,_current_dynamic_space_free_pointer)
         store(reg_BSP,_current_binding_stack_pointer)
         store(reg_CSP,_current_control_stack_pointer)
@@ -198,7 +198,7 @@ _call_into_c:
         store(reg_CFP,_current_control_frame_pointer)
 
 	/* Use reg_CFP as a work register, and restore it */
-	andn	reg_ALLOC, lowtagMask, reg_CFP
+	andn	reg_ALLOC, lowtag_Mask, reg_CFP
         store(reg_CFP,_current_dynamic_space_free_pointer)
 		load(_current_control_frame_pointer, reg_CFP)
 

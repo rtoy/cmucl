@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.15 2003/10/09 19:04:28 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.16 2003/10/13 21:56:55 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -428,7 +428,7 @@ static void sigill_handler(HANDLER_ARGS)
                to fixup up alloc-tn to remove the interrupted flag,
                skip over the trap instruction, and then handle the
                pending interrupt(s). */
-            SC_REG(context, reg_ALLOC) &= ~lowtagMask;
+            SC_REG(context, reg_ALLOC) &= ~lowtag_Mask;
             arch_skip_instruction(context);
             interrupt_handle_pending(context);
           }
@@ -483,7 +483,7 @@ static void sigemt_handler(HANDLER_ARGS)
 	    result = op1 - op2;
 	else
 	    result = op1 + op2;
-	SC_REG(context, reg_ALLOC) = result & ~lowtagMask;
+	SC_REG(context, reg_ALLOC) = result & ~lowtag_Mask;
 	arch_skip_instruction(context);
 	interrupt_handle_pending(context);
 	return;
