@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.8 1990/04/01 18:08:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.9 1990/04/04 22:37:59 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -184,7 +184,7 @@
     (loadw t1 x 0 vm:other-pointer-type)
     (loadi t2 vm:type-mask)
     (inst and t1 t1 t2)
-    (inst sra t2 subtype 2)
+    (inst sll t2 subtype (- vm:type-bits 2))
     (inst or t1 t1 t2)
     (storew t1 x 0 vm:other-pointer-type)
     (move res x)))
