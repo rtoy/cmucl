@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.6 1991/02/14 22:40:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.7 1991/04/25 01:29:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.6 1991/02/14 22:40:34 ram Exp $
 ;;;
 ;;; Spice Lisp Reader 
 ;;; Written by David Dill
@@ -1197,79 +1195,82 @@
   "A resource of string streams for Read-From-String.")
 
 (defun read-from-string (string &optional eof-error-p eof-value
-				&key (start 0) (end (length string))
+				&key (start 0) end
 				preserve-whitespace)
   "The characters of string are successively given to the lisp reader
    and the lisp object built by the reader is returned.  Macro chars
    will take effect."
   (declare (string string))
-  (if (null end) (setq end (length string)))
-  (unless read-from-string-spares
-    (push (internal-make-string-input-stream "" 0 0) read-from-string-spares))
-  (let ((stream (pop read-from-string-spares)))
-    (setf (string-input-stream-string stream) (coerce string 'simple-string))
-    (setf (string-input-stream-current stream) start)
-    (setf (string-input-stream-end stream) end)
-    (unwind-protect
-      (values (if preserve-whitespace
-		  (read-preserving-whitespace stream eof-error-p eof-value)
-		  (read stream eof-error-p eof-value))
-	      (string-input-stream-current stream))
-      (push stream read-from-string-spares))))
-
+  (with-array-data ((string string)
+		    (start start)
+		    (end (or end (length string))))
+    (unless read-from-string-spares
+      (push (internal-make-string-input-stream "" 0 0)
+	    read-from-string-spares))
+    (let ((stream (pop read-from-string-spares)))
+      (setf (string-input-stream-string stream) string)
+      (setf (string-input-stream-current stream) start)
+      (setf (string-input-stream-end stream) end)
+      (unwind-protect
+	  (values (if preserve-whitespace
+		      (read-preserving-whitespace stream eof-error-p eof-value)
+		      (read stream eof-error-p eof-value))
+		  (string-input-stream-current stream))
+	(push stream read-from-string-spares)))))
 
 
 ;;;; PARSE-INTEGER.
 
 (defun parse-integer (string &key (start 0) end (radix 10) junk-allowed)
   "Examine the substring of string delimited by start and end
-   (default to the beginning and end of the string)  It skips over
-   whitespace characters and then tries to parse an integer.  The
-   radix parameter must be between 2 and 36."
-  (let* ((end (or end (length string)))
-	 (index (do ((i start (1+ i)))
-		    ((= i end)
-		     (if junk-allowed
-			 (return-from parse-integer (values nil end))
-			 (error "No non-whitespace characters in number.")))
-		  (declare (fixnum i))
-		  (unless (whitespacep (char string i)) (return i))))
+  (default to the beginning and end of the string)  It skips over
+  whitespace characters and then tries to parse an integer.  The
+  radix parameter must be between 2 and 36."
+  (with-array-data ((string string)
+		    (start start)
+		    (end (or end (length string))))
+    (let ((index (do ((i start (1+ i)))
+		     ((= i end)
+		      (if junk-allowed
+			  (return-from parse-integer (values nil end))
+			  (error "No non-whitespace characters in number.")))
+		   (declare (fixnum i))
+		   (unless (whitespacep (char string i)) (return i))))
 	  (minusp nil)
 	  (found-digit nil)
 	  (result 0))
-    (declare (fixnum end index))
-    (let ((char (char string index)))
-      (cond ((char= char #\-)
-	     (setq minusp t)
-	     (incf index))
-	    ((char= char #\+)
-	     (incf index))))
-    (loop
-      (when (= index end) (return nil))
-      (let* ((char (char string index))
-	     (weight (digit-char-p char radix)))
-	(cond (weight
-	       (setq result (+ weight (* result radix))
-		     found-digit t))
-	      (junk-allowed (return nil))
-	      ((whitespacep char)
-	       (do ((jndex (1+ index) (1+ jndex)))
-		   ((= jndex end))
-		 (declare (fixnum jndex))
-		 (unless (whitespacep (char string jndex))
-		   (error "There's junk in this string: ~S." string)))
-	       (return nil))
-	      (t
-	       (error "There's junk in this string: ~S." string))))
-      (incf index))
-    (values
-     (if found-digit
-	 (if minusp (- result) result)
-	 (if junk-allowed
-	     nil
-	     (error "There's no digits in this string: ~S" string)))
-     index)))
-
+      (declare (fixnum index))
+      (let ((char (char string index)))
+	(cond ((char= char #\-)
+	       (setq minusp t)
+	       (incf index))
+	      ((char= char #\+)
+	       (incf index))))
+      (loop
+	(when (= index end) (return nil))
+	(let* ((char (char string index))
+	       (weight (digit-char-p char radix)))
+	  (cond (weight
+		 (setq result (+ weight (* result radix))
+		       found-digit t))
+		(junk-allowed (return nil))
+		((whitespacep char)
+		 (do ((jndex (1+ index) (1+ jndex)))
+		     ((= jndex end))
+		   (declare (fixnum jndex))
+		   (unless (whitespacep (char string jndex))
+		     (error "There's junk in this string: ~S." string)))
+		 (return nil))
+		(t
+		 (error "There's junk in this string: ~S." string))))
+	(incf index))
+      (values
+       (if found-digit
+	   (if minusp (- result) result)
+	   (if junk-allowed
+	       nil
+	       (error "There's no digits in this string: ~S" string)))
+       index))))
 
 
 ;;;; Reader initialization code.
