@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.13 1990/05/16 18:48:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.14 1990/06/03 19:01:00 ch Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -126,7 +126,10 @@
     vm:base-character-type di:object-not-base-character-error)
 
   (frob system-area-pointer-p check-system-area-pointer system-area-pointer
-    vm:sap-type di:object-not-sap-error))
+    vm:sap-type di:object-not-sap-error)
+
+  (frob weak-pointer-p check-weak-pointer weak-pointer
+    vm:weak-pointer-type di:object-not-weak-pointer-error))
 
 
 ;;; Slightly tenser versions for FIXNUM's

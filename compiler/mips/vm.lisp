@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.28 1990/05/23 06:10:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.29 1990/06/03 18:56:47 ch Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -254,6 +254,7 @@
 ;;; Other primitive other-pointer types.
 ;;; 
 (def-primitive-type system-area-pointer (sap-reg descriptor-reg))
+(def-primitive-type weak-pointer (descriptor-reg))
 
 ;;; Random primitive types that don't exist at the LISP level.
 ;;; 
@@ -384,7 +385,7 @@
 	     (return (values *any-primitive-type* nil))))))
       (named-type
        (case (named-type-name type)
-	 ((t bignum ratio complex function system-area-pointer)
+	 ((t bignum ratio complex function system-area-pointer weak-pointer)
 	  (values (primitive-type-or-lose (named-type-name type)) t))
 	 ((character base-character string-char)
 	  (exactly base-character))

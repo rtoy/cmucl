@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.9 1990/05/27 16:51:48 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.10 1990/06/03 18:57:12 ch Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -30,7 +30,8 @@
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
 	   simple-array-single-float-p simple-array-double-float-p
-	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p)
+	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
+	   weak-pointer-p)
   (t) boolean (movable foldable flushable))
 
 ;;; Introduce these predicates into the old compiler.  This is necessary
@@ -50,7 +51,8 @@
   (frob system-area-pointer-p system-area-pointer)
   (frob realp real)
   (frob unsigned-byte-32-p (unsigned-byte 32))
-  (frob signed-byte-32-p (signed-byte 32))) 
+  (frob signed-byte-32-p (signed-byte 32))
+  (frob weak-pointer-p weak-pointer))
 
 
 ;;;; Miscellaneous "sub-primitives":
