@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.136 2003/09/25 02:40:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.137 2003/09/26 02:26:38 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2337,32 +2337,45 @@
 
 
 (defun signum-derive-type-aux (type)
-  ;; The signum of a complex number is a complex number of the same type.
-  ;; The signum of a real number is 0, 1, or -1, of the same type.
+  ;; The signum of a complex number is a complex number of the same
+  ;; type, except complex rationals become complex single-floats. The
+  ;; signum of a real number is 0, 1, or -1, of the same type.
   (if (eq (numeric-type-complexp type) :complex)
-      type
+      (if (eq (numeric-type-class type) 'rational)
+	  (specifier-type '(complex single-float))
+	  type)
       (let* ((type-interval (numeric-type->interval type))
 	     (range-info (interval-range-info type-interval))
 	     (contains-0-p (interval-contains-p 0 type-interval))
+	     (num-plus1 (coerce 1 (or (numeric-type-format type) 'real)))
+	     (num-minus1 (coerce -1 (or (numeric-type-format type) 'real)))
 	     (plus (make-numeric-type :class (numeric-type-class type)
 				      :format (numeric-type-format type)
-				      :low 1 :high 1))
+				      :low num-plus1 :high num-plus1))
 	     (minus (make-numeric-type :class (numeric-type-class type)
 				       :format (numeric-type-format type)
-				       :low -1 :high -1))
-	     (zero (make-numeric-type :class (numeric-type-class type)
-				      :format (numeric-type-format type)
-				      :low 0 :high 0)))
-	(cond ((eq range-info '+)
-	       (if contains-0-p
-		   (make-union-type (list plus zero))
-		   plus))
-	      ((eq range-info '-)
-	       (if contains-0-p
-		   (make-union-type (list minus zero))
-		   minus))
-	      (t
-	       (make-union-type (list minus plus zero)))))))
+				       :low num-minus1 :high num-minus1))
+	     ;; We need to handle signed zeroes because (signum -0.0)
+	     ;; is -0.0.
+	     (zero (if (eq (numeric-type-class type) 'float)
+		       (case (numeric-type-format type)
+			 (single-float
+			  (specifier-type '(single-float -0.0 0.0)))
+			 (double-float
+			  (specifier-type '(double-float -0d0 0d0)))
+			 ((nil)
+			  (specifier-type '(float -0d0 0d0))))
+		       (list (specifier-type '(eql 0))))))
+	(case range-info
+	  (+ (if contains-0-p
+	       (type-union zero plus)
+	       plus))
+	  (-
+	   (if contains-0-p
+	       (type-union zero minus)
+	       minus))
+	  (t
+	   (type-union zero plus minus))))))
 
 	
 (defoptimizer (signum derive-type) ((num))
