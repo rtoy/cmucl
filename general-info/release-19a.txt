@@ -47,6 +47,10 @@ New in this release:
        by destructuring patterns.  The previous behavior of &BODY
        when followed by (<body> <declarations> <doc>) is available
        through the new lambda-list keyword EXT:&PARSE-BODY.
+     - ELT now signals an error in safe code when used on lists
+       with an out-of-bounds index.
+     - Accessing arrays in compiled code with out-of-bounds indices
+       now signals a TYPE-ERROR.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR implemented in terms of SET-EXCLUSIVE-OR
