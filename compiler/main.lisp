@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.83 1993/05/12 11:22:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.84 1993/05/12 11:26:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -355,7 +355,7 @@
 (defun byte-compiling ()
   (if (eq *byte-compiling* :maybe)
       (policy nil (zerop speed) (<= debug 1))
-      *byte-compiling*))
+      (and *byte-compile* *byte-compiling*)))
 
   
 ;;; COMPILE-COMPONENT -- internal.
