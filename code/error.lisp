@@ -382,7 +382,8 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 ) ;eval-when
 
-(defmacro define-condition (name (parent-type) slot-specs &rest options)
+(defmacro define-condition (name (parent-type) &optional slot-specs
+				 &rest options)
   "(DEFINE-CONDITION name (parent-type)
    ( {slot-name | (slot-name) | (slot-name default-value)}*)
    options)"
