@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.6 1990/10/13 04:54:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.7 1990/10/14 19:08:58 ram Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -230,7 +230,6 @@
 (define-signal-handler sigill-handler "Illegal Instruction")
 (define-signal-handler sigiot-handler "SIGIOT")
 (define-signal-handler sigemt-handler "SIGEMT")
-(define-signal-handler sigfpe-handler "SIGFPE")
 (define-signal-handler sigbus-handler "Bus Error")
 (define-signal-handler sigsegv-handler "Segmentation Violation")
 (define-signal-handler sigsys-handler "Bad Argument to a System Call")
@@ -249,7 +248,7 @@
   (enable-interrupt :sigtrap #'kernel::internal-error)
   (enable-interrupt :sigiot #'sigiot-handler)
   (enable-interrupt :sigemt #'sigemt-handler)
-  (enable-interrupt :sigfpe #'sigfpe-handler)
+  (enable-interrupt :sigfpe #'vm:sigfpe-handler)
   (enable-interrupt :sigbus #'sigbus-handler)
   (enable-interrupt :sigsegv #'sigsegv-handler)
   (enable-interrupt :sigsys #'sigsys-handler)
