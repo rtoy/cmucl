@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.25 1992/09/07 15:26:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.26 1992/09/22 00:02:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -477,7 +477,12 @@
   ;; transform that failed, and Args is either a list of format arguments for
   ;; the note, or the FUNCTION-TYPE that would have enabled the transformation
   ;; but failed to match.
-  (failed-optimizations (make-hash-table :test #'eq) :type hash-table))
+  (failed-optimizations (make-hash-table :test #'eq) :type hash-table)
+  ;;
+  ;; Similar to NEW-FUNCTIONS, but is used when a function has already been
+  ;; analyzed, but new references have been added by inline expansion.  Unlike
+  ;; NEW-FUNCTIONS, this is not disjoint from COMPONENT-LAMBDAS.
+  (reanalyze-functions nil :type list))
 
 (defprinter component
   name
