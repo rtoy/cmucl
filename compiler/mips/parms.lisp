@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.81 1990/11/16 04:29:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.82 1990/11/23 08:42:19 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -158,7 +158,9 @@
 
     ;; Auto GC interface.
     lisp::maybe-gc
-    ))
+
+    ;; More static functions.
+    eql))
 
 (defparameter exported-static-symbols
   '(t
