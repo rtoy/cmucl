@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.32 2003/05/17 19:38:57 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.33 2003/05/25 17:28:04 gerd Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -960,6 +960,14 @@
 			   #'line-valid-p #'location-valid-p
 			   #'line-distance #'next-line #'next-location
 			   #'line-primary #'line-primary-location))
+       ;;
+       ;; This does nothing but ensure that LEAF-EVER-USED for the
+       ;; inline function INVALID-WRAPPER-P is true, even if the local
+       ;; function above using it is deleted.  In other words it's
+       ;; only for getting rid of some disturbing compiler notes, and
+       ;; it should really be fixed in the compiler, if anywhere.  I'm
+       ;; not in the mood, at present.
+       #'invalid-wrapper-p
        ,@body)))
 
 
