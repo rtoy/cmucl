@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.5 1990/05/25 12:24:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.6 1990/05/25 20:03:03 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -89,7 +89,7 @@
     (inst srl unboxed unboxed-arg vm:word-shift)
     (inst addu unboxed unboxed vm:lowtag-mask)
     (inst and unboxed ndescr)
-    (pseudo-atomic (ndesrc)
+    (pseudo-atomic (ndescr)
       (inst addu result alloc-tn vm:other-pointer-type)
       (inst addu alloc-tn boxed)
       (inst addu alloc-tn unboxed)
