@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.8 1990/11/13 23:36:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.9 1990/11/18 17:09:54 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -615,11 +615,11 @@
       (macrolet ((low-byte ()
 			   (ecase (c:backend-byte-order c:*backend*)
 			     (:little-endian 'offset)
-			     (:bit-endian '(1+ offset))))
+			     (:big-endian '(1+ offset))))
 		 (high-byte ()
 			    (ecase (c:backend-byte-order c:*backend*)
 			      (:little-endian '(1+ offset))
-			      (:bit-endian 'offset))))
+			      (:big-endian 'offset))))
 	(let* ((high-bits (- 32 bit-offset))
 	       (low-bits (- size high-bits))
 	       (value (logior (ash (ldb (byte high-bits 0)
@@ -663,11 +663,11 @@
       (macrolet ((low-byte ()
 			   (ecase (c:backend-byte-order c:*backend*)
 			     (:little-endian 'offset)
-			     (:bit-endian '(1+ offset))))
+			     (:big-endian '(1+ offset))))
 		 (high-byte ()
 			    (ecase (c:backend-byte-order c:*backend*)
 			      (:little-endian '(1+ offset))
-			      (:bit-endian 'offset))))
+			      (:big-endian 'offset))))
 	(let* ((high-bits (- 32 r))
 	       (low-bits (- size high-bits)))
 	  (setf (ldb (byte high-bits 0)
