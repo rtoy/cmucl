@@ -101,7 +101,7 @@ struct sigcontext *context;
 	    fake_foreign_function_call(context);
 	    handle_breakpoint(signal, code, context);
 	    undo_fake_foreign_function_call(context);
-	    scp->sc_npc = scp->sc_pc + 4;
+	    context->sc_npc = context->sc_pc + 4;
 	    break;
 
 	  default:
