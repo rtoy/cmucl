@@ -184,7 +184,7 @@
 	  (unless (or (eq tn :more)
 		      (tn-global-conflicts tn)
 		      (zerop (sbit live i)))
-	    (convert-to-global tn)))))))
+	    (convert-to-global tn))))))
   
   (undefined-value))
 
@@ -269,7 +269,7 @@
 	  (setf (tn-local tn)
 		(if conf
 		    (global-conflicts-block conf)
-		    nil)))))))
+		    nil))))))
   
   (undefined-value))
 
@@ -550,13 +550,15 @@
 ;;;
 ;;;    Compute a bit vector of the TNs live after VOP that aren't results.
 ;;;
-(defun compute-save-set (vop block live-bits)
-  (declare (type vop vop) (type ir2-block block)
-	   (type local-tn-bit-vector live-list))
+(defun compute-save-set (vop live-bits)
+  (declare (type vop vop) (type local-tn-bit-vector live-list))
   (let ((live (bit-vector-copy live-bits)))
     (do ((r (vop-results vop) (tn-ref-across r)))
 	((null r))
-      (setf (sbit live (tn-local-number (tn-ref-tn r))) 0))
+      (let ((tn (tn-ref-tn r)))
+	(ecase (tn-kind tn)
+	  (:normal (setf (sbit live (tn-local-number tn)) 0))
+	  (:environment))))
     live))
 
 
@@ -637,7 +639,7 @@
 	
 	(let ((save-p (vop-info-save-p (vop-info vop))))
 	  (when save-p
-	    (let ((ss (compute-save-set vop block live-bits)))
+	    (let ((ss (compute-save-set vop live-bits)))
 	      (setf (vop-save-set vop) ss)
 	      (when (eq save-p :force-to-stack)
 		(do-live-tns (tn ss block)
