@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.4 1991/04/17 21:36:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.5 1991/05/04 18:46:52 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
@@ -193,6 +193,7 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp)
 	 (:generator 15
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
+	     (setf extra (logxor extra (1- ,elements-per-word)))
 	     (let ((offset (- (* (+ word vm:vector-data-offset) vm:word-bytes)
 			      vm:other-pointer-type)))
 	       (cond ((typep offset '(signed-byte 13))
@@ -203,7 +204,7 @@
 	     (unless (zerop extra)
 	       (inst srl result
 		     (logxor (* extra ,bits) ,(1- elements-per-word))))
-	     (unless (zerop extra)
+	     (unless (= extra ,(1- elements-per-word))
 	       (inst and result ,(1- (ash 1 bits)))))))
        (define-vop (,(symbolicate 'data-vector-set/ type))
 	 (:note "inline array store")
