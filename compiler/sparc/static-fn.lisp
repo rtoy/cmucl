@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.2 1992/03/11 21:29:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.3 1992/05/21 02:20:24 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -93,11 +93,11 @@
 	     (inst move old-fp cfp-tn)
 	     (inst move cfp-tn csp-tn)
 	     (inst compute-lra-from-code lra code-tn lra-label temp)
+	     (note-this-location vop :call-site)
 	     (inst j func (- (ash function-header-code-offset word-shift)
 			     function-pointer-type))
 	     (inst move code-tn func)
 	     (emit-return-pc lra-label)
-	     (note-this-location vop :unknown-return)
 	     ,(collect ((bindings) (links))
 		(do ((temp (temp-names) (cdr temp))
 		     (name 'values (gensym))
@@ -110,7 +110,7 @@
 		    (links `(setf (tn-ref-across ,prev) ,name))))
 		`(let ,(bindings)
 		   ,@(links)
-		   (default-unknown-values
+		   (default-unknown-values vop
 		       ,(if (zerop num-results) nil 'values)
 		       ,num-results move-temp temp lra-label)))
 	     (when cur-nfp
