@@ -1,14 +1,17 @@
 ;;; -*- Mode: Lisp; Package: LISP; Log: code.log -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (Scott.Fahlman@CS.CMU.EDU). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.6 1991/03/17 14:25:29 wlott Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.5 1990/10/13 04:51:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.6 1991/03/17 14:25:29 wlott Exp $
 ;;; 
 ;;; Garbage collection and allocation related code.
 ;;;
@@ -325,26 +328,27 @@
 		   (carefully-funcall *gc-inhibit-hook* pre-gc-dyn-usage))
 	  (return-from sub-gc nil))
 	(setf *gc-inhibit* nil) ; Reset *GC-INHIBIT*
-	(let ((*standard-output* *terminal-io*))
-	  (when verbose-p
-	    (carefully-funcall *gc-notify-before* pre-gc-dyn-usage))
-	  (dolist (hook *before-gc-hooks*)
-	    (carefully-funcall hook))
-	  (when *gc-trigger*
-	    (clear-auto-gc-trigger))
-	  (funcall *internal-gc*)
-	  (let* ((post-gc-dyn-usage (dynamic-usage))
-		 (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
-	    (setf *need-to-collect-garbage* nil)
-	    (setf *gc-trigger*
-		  (+ post-gc-dyn-usage *bytes-consed-between-gcs*))
-	    (set-auto-gc-trigger *gc-trigger*)
-	    (dolist (hook *after-gc-hooks*)
-	      (carefully-funcall hook))
-	    (when verbose-p
-	      (carefully-funcall *gc-notify-after*
-				 post-gc-dyn-usage bytes-freed
-				 *gc-trigger*)))))))
+	(without-interrupts
+	 (let ((*standard-output* *terminal-io*))
+	   (when verbose-p
+	     (carefully-funcall *gc-notify-before* pre-gc-dyn-usage))
+	   (dolist (hook *before-gc-hooks*)
+	     (carefully-funcall hook))
+	   (when *gc-trigger*
+	     (clear-auto-gc-trigger))
+	   (funcall *internal-gc*)
+	   (let* ((post-gc-dyn-usage (dynamic-usage))
+		  (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
+	     (setf *need-to-collect-garbage* nil)
+	     (setf *gc-trigger*
+		   (+ post-gc-dyn-usage *bytes-consed-between-gcs*))
+	     (set-auto-gc-trigger *gc-trigger*)
+	     (dolist (hook *after-gc-hooks*)
+	       (carefully-funcall hook))
+	     (when verbose-p
+	       (carefully-funcall *gc-notify-after*
+				  post-gc-dyn-usage bytes-freed
+				  *gc-trigger*))))))))
   nil)
 
 ;;;
