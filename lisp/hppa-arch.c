@@ -105,7 +105,10 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 
     sigsetmask(scp->sc_mask);
 
-    printf("sigtrap_handler, pc=0x%08x\n", scp->sc_pcoqh);
+#if 0
+    printf("sigtrap_handler, pc=0x%08x, alloc=0x%08x\n", scp->sc_pcoqh,
+	   SC_REG(scp,reg_ALLOC));
+#endif
 
     bad_inst = *(unsigned long *)(scp->sc_pcoqh & ~3);
 
@@ -160,6 +163,11 @@ static void sigfpe_handler(int signal, int code, struct sigcontext *scp)
     unsigned long badinst;
     int opcode, r1, r2, t;
     long op1, op2, res;
+
+#if 0
+    printf("sigfpe_handler, pc=0x%08x, alloc=0x%08x\n", scp->sc_pcoqh,
+	   SC_REG(scp,reg_ALLOC));
+#endif
 
     switch (code) {
       case I_OVFLO:
@@ -219,9 +227,9 @@ static void sigfpe_handler(int signal, int code, struct sigcontext *scp)
 	    /* add stripping off the pseudo-atomic-interrupted bit, and then */
 	    /* tell the machine-independent code to process the pseudo- */
 	    /* atomic. */
-	    int immed = (badinst>>1)&0xf;
+	    int immed = (badinst>>1)&0x3ff;
 	    if (badinst & 1)
-		immed |= -1<<4;
+		immed |= -1<<10;
 	    SC_REG(scp,reg_ALLOC) += (immed-1);
 	    arch_skip_instruction(scp);
 	    interrupt_handle_pending(scp);
