@@ -400,8 +400,8 @@
 ;;;
 ;;;    Emit a type warning for Node.  If the value of node is being used for a
 ;;; variable binding, we figure out which one for source context.  If the value
-;;; is a constant, we print it specially.  We also print forms known to be of
-;;; type NIL specially.
+;;; is a constant, we print it specially.  We ignore nodes whose type is NIL,
+;;; since they are supposed to never return.
 ;;;
 (defun do-type-warning (node)
   (declare (type node node))
@@ -418,19 +418,14 @@
 			   (and (continuation-use cont)
 				(eq (functional-kind lambda) :let))
 			   (leaf-name (elt (lambda-vars lambda) pos)))))))
-    (cond ((and (ref-p node) (constant-p (ref-leaf node)))
-	   (compiler-warning "~:[This~;~:*~A~] is not a ~S:~%  ~S"
+    (cond ((eq dtype *empty-type*))
+	  ((and (ref-p node) (constant-p (ref-leaf node)))
+	   (compiler-warning "~:[This~;~:*~A~] is not a ~<~%~9T~:;~S:~>~%  ~S"
 			     what atype-spec (constant-value (ref-leaf node))))
-	   ((eq dtype *empty-type*)
-	    (if what
-		(compiler-warning "~A is an expression that does not return."
-				  what)
-		(compiler-warning "Expression that does not return when ~
-				   expecting a value of type:~%  ~S."
-				  atype-spec)))
-	   (t
-	    (compiler-warning "~:[Result~;~:*~A~] is a ~S, ~<~%~:;not a ~S.~>"
-			      what (type-specifier dtype) atype-spec))))
+	  (t
+	   (compiler-warning
+	    "~:[Result~;~:*~A~] is a ~S, ~<~%~9T~:;not a ~S.~>"
+	    what (type-specifier dtype) atype-spec))))
   (undefined-value))
 
 
