@@ -913,12 +913,12 @@
 (defun format-princ (colon atsign parms)
   (let ((arg (pop-format-arg)))
     (if (null parms)
-	(if arg (princ arg) (write-string (if colon "()" "NIL")))
+	(if (or arg (not colon)) (princ arg) (write-string "()"))
 	(with-format-parameters parms
 	   ((mincol 0) (colinc 1) (minpad 0) (padchar #\space))
-	   (format-write-field (if arg
+	   (format-write-field (if (or arg (not colon))
 				   (princ-to-string arg)
-				   (if colon "()" "NIL"))
+				   "()")
 			       mincol colinc minpad padchar atsign)))))
 
 
@@ -928,12 +928,12 @@
 (defun format-prin1 (colon atsign parms)
   (let ((arg (pop-format-arg)))
     (if (null parms)
-	(if arg (prin1 arg) (write-string (if colon "()" "NIL")))
+	(if (or arg (not colon)) (prin1 arg) (write-string "()"))
 	(with-format-parameters parms
 	   ((mincol 0) (colinc 1) (minpad 0) (padchar #\space))
-	   (format-write-field (if arg
+	   (format-write-field (if (or arg (not colon))
 				   (prin1-to-string arg)
-				   (if colon "()" "NIL"))
+				   "()")
 			       mincol colinc minpad padchar atsign)))))
 
 
