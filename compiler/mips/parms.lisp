@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.87 1991/01/09 02:07:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.88 1991/02/11 17:33:08 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -179,16 +179,3 @@
 
 (defparameter exported-static-symbols
   (subseq static-symbols 0 (position 'two-arg-+ static-symbols)))
-
-
-
-;;;; Assembler parameters:
-
-;;; The number of bits per element in the assemblers code vector.
-;;;
-(defparameter *assembly-unit-length* 8)
-
-
-
-;;;; Other parameters:
-
