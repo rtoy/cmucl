@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.5 1990/03/19 17:17:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.6 1990/03/29 16:25:41 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -231,7 +231,9 @@
 			   :offset ,(reg-spec-offset temp)))))
 		  regs))
 	   ,@insts
-	   (lisp-return lra-tn lip-tn)))
+	   (inst addiu lip-tn lra-tn (- vm:word-bytes vm:other-pointer-type))
+	   (inst jr lip-tn)
+	   (nop)))
        (format t "~S assembled~%" ',name))))
 
 (defun arg-or-res-spec (reg)
