@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.24 2002/08/25 19:01:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.25 2002/10/15 16:36:51 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,50 +158,51 @@
      (add-complement-constraints if 'typep (ok-ref-lambda-var use)
 				 *null-type* t))
     (combination
-     (let ((name (continuation-function-name
-		  (basic-combination-fun use)))
-	   (args (basic-combination-args use)))
-       (case name
-	 ((%typep %instance-typep)
-	  (let ((type (second args)))
-	    (when (constant-continuation-p type)
-	      (let ((val (continuation-value type)))
-	      (add-complement-constraints if 'typep
-					  (ok-cont-lambda-var (first args))
-					  (if (ctype-p val)
-					      val
-					      (specifier-type val))
-					  nil)))))
-	 ((eq eql)
-	  (let* ((var1 (ok-cont-lambda-var (first args)))
-		 (arg2 (second args))
-		 (var2 (ok-cont-lambda-var arg2)))
-	    (cond ((not var1))
-		  (var2
-		   (add-complement-constraints if 'eql var1 var2 nil))
-		  ((constant-continuation-p arg2)
-		   (add-complement-constraints if 'eql var1
-					       (ref-leaf
-						(continuation-use arg2))
-					       nil)))))
-	 ((< >)
-	  (let* ((arg1 (first args))
-		 (var1 (ok-cont-lambda-var arg1))
-		 (arg2 (second args))
-		 (var2 (ok-cont-lambda-var arg2)))
-	    (when var1
-	      (add-complement-constraints if name var1 (continuation-type arg2)
-					  nil))
-	    (when var2
-	      (add-complement-constraints if (if (eq name '<) '> '<)
-					  var2 (continuation-type arg1)
-					  nil))))
-	 (t
-	  (let ((ptype (gethash name (backend-predicate-types *backend*))))
-	    (when ptype
-	      (add-complement-constraints if 'typep
-					  (ok-cont-lambda-var (first args))
-					  ptype nil))))))))
+     (unless (eq (combination-kind use) :error)
+       (let ((name (continuation-function-name
+		    (basic-combination-fun use)))
+	     (args (basic-combination-args use)))
+	 (case name
+	   ((%typep %instance-typep)
+	    (let ((type (second args)))
+	      (when (constant-continuation-p type)
+		(let ((val (continuation-value type)))
+		  (add-complement-constraints if 'typep
+					      (ok-cont-lambda-var (first args))
+					      (if (ctype-p val)
+						  val
+						  (specifier-type val))
+					      nil)))))
+	   ((eq eql)
+	    (let* ((var1 (ok-cont-lambda-var (first args)))
+		   (arg2 (second args))
+		   (var2 (ok-cont-lambda-var arg2)))
+	      (cond ((not var1))
+		    (var2
+		     (add-complement-constraints if 'eql var1 var2 nil))
+		    ((constant-continuation-p arg2)
+		     (add-complement-constraints if 'eql var1
+						 (ref-leaf
+						  (continuation-use arg2))
+						 nil)))))
+	   ((< >)
+	    (let* ((arg1 (first args))
+		   (var1 (ok-cont-lambda-var arg1))
+		   (arg2 (second args))
+		   (var2 (ok-cont-lambda-var arg2)))
+	      (when var1
+		(add-complement-constraints if name var1 (continuation-type arg2)
+					    nil))
+	      (when var2
+		(add-complement-constraints if (if (eq name '<) '> '<)
+					    var2 (continuation-type arg1)
+					    nil))))
+	   (t
+	    (let ((ptype (gethash name (backend-predicate-types *backend*))))
+	      (when ptype
+		(add-complement-constraints if 'typep
+					    (ok-cont-lambda-var (first args))
+					    ptype nil)))))))))
   (undefined-value))
 
 	      
