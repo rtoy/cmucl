@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.59 1993/07/05 01:06:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.60 1993/07/22 00:08:57 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,7 +156,7 @@
 ;;; PCL.
 ;;;
 #-no-pcl (load "pcl:pclload")
-#+(and no-clm (not (or no-pcl no-clx))) (load "code:inspect")
+; #+(and no-clm (not (or no-pcl no-clx))) (load "code:inspect")
 
 ;;; CLM.
 ;;;
