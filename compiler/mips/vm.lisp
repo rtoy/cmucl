@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.22 1990/04/23 16:45:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.23 1990/04/24 07:00:20 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -31,12 +31,21 @@
 ;;; we insert a new storage class.
 ;;; 
 (defmacro define-storage-classes (&rest classes)
-  `(progn
-     ,@(let ((index -1))
-	 (mapcar #'(lambda (class)
-		     `(define-storage-class ,(car class) ,(incf index)
-			,@(cdr class)))
-		 classes))))
+  (do ((forms '(progn)
+	      (let* ((class (car classes))
+		     (sc-name (car class))
+		     (constant-name (intern (concatenate 'simple-string
+							 (string sc-name)
+							 "-SC-NUMBER"))))
+		(list* `(define-storage-class ,sc-name ,index
+			  ,@(cdr class))
+		       `(defconstant ,constant-name ,index)
+		       `(export ',constant-name)
+		       forms)))
+       (index 0 (1+ index))
+       (classes classes (cdr classes)))
+      ((null classes)
+       (nreverse forms))))
 
 (define-storage-classes
 
