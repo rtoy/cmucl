@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.94 1993/08/17 22:42:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.95 1993/08/19 12:43:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1115,6 +1115,8 @@
 			 (lexenv-interface-cookie res))))
     (type
      (process-type-declaration (cdr spec) res vars))
+    (pcl::class
+     (process-type-declaration (list (third spec) (second spec)) res vars))
     (values
      (if *suppress-values-declaration*
 	 res
