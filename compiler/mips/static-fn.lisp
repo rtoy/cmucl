@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.1 1990/03/08 11:57:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.2 1990/03/29 16:29:12 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -28,7 +28,7 @@
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
   (:temporary (:sc descriptor-reg :offset cname-offset) cname)
   (:temporary (:sc descriptor-reg :offset lexenv-offset) lexenv)
-  (:temporary (:sc descriptor-reg :offset code-offset) code)
+  (:temporary (:scs (descriptor-reg)) function)
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:temporary (:sc any-reg :offset nargs-offset) nargs))
 
@@ -89,10 +89,10 @@
 	     (loadi nargs (fixnum ,num-args))
 	     (load-symbol cname symbol)
 	     (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
-	     (inst compute-lra-from-code lra code lra-label)
-	     (loadw code lexenv vm:closure-function-slot
+	     (inst compute-lra-from-code lra code-tn lra-label)
+	     (loadw function lexenv vm:closure-function-slot
 		    vm:function-pointer-type)
-	     (lisp-jump code lip)
+	     (lisp-jump function lip)
 	     (emit-return-pc lra-label)
 	     (unassemble
 	      ,(collect ((bindings) (links))
