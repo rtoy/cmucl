@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.1 1997/01/18 14:31:21 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.2 1997/02/08 21:57:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996.
 ;;;
 (in-package :x86)
 
@@ -1004,7 +1005,8 @@
 		
 		;; Push the return address for backward compatability.
 		#+x86-lra
-		(inst push (make-ea :dword :base new-fp :disp -8))
+		(inst push (make-fixup nil :code-object return))
+;		(inst push (make-ea :dword :base new-fp :disp -8))
 		))
 	     )
   
@@ -1118,20 +1120,13 @@
   (:temporary (:sc dword-reg) ofp)
   (:temporary (:sc dword-reg) ret)
   (:ignore value)
-  (:node-var node)
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
     (move ret return-pc)
     ;; Clear the control stack
     (move ofp old-fp)
     ;; Adjust the return address for the single value return.
-    (cond ((policy node (> speed space))
-	   ;; This takes 2 cycles, and 5 or 6 bytes.
-	   (inst add ret 2))
-	  (t
-	   ;; This takes 4 cycles and 2 bytes.
-	   (inst inc ret)
-	   (inst inc ret)))
+    (inst add ret 2)
     ;; Restore the frame pointer.
     (move esp-tn ebp-tn)
     (move ebp-tn ofp)
@@ -1239,13 +1234,7 @@
 	(move esp-tn ebp-tn)
 	(move ebp-tn old-fp-temp)
 	;; Fix the return-pc to point at the single-value entry point.
-	(cond ((policy node (> speed space))
-	       ;; This takes 2 cycles, and 5 bytes.
-	       (inst add eax 2))
-	      (t
-	       ;; This takes 4 cycles and 2 bytes.
-	       (inst inc eax)
-	       (inst inc eax)))
+	(inst add eax 2)
 	;; Out of here.
 	(inst jmp eax)
 	
@@ -1325,18 +1314,16 @@
     ;; Save the original count of args.
     (inst mov ebx-tn ecx-tn)
     
-    (if (< fixed register-arg-count)
-	(progn 
-	  ;; We must stop when we run out of stack args, not when we
-	  ;; run out of more args.
-	  ;; Number to copy = nargs-3
-	  (inst sub ecx-tn (fixnum register-arg-count))
-	  ;; Everything of interest in registers.
-	  (inst jmp :be do-regs)
-	  )
-      ;; Number to copy = nargs-fixed
-      (inst sub ecx-tn (fixnum fixed))
-      )
+    (cond ((< fixed register-arg-count)
+	   ;; We must stop when we run out of stack args, not when we
+	   ;; run out of more args.
+	   ;; Number to copy = nargs-3
+	   (inst sub ecx-tn (fixnum register-arg-count))
+	   ;; Everything of interest in registers.
+	   (inst jmp :be do-regs))
+	  (t
+	   ;; Number to copy = nargs-fixed
+	   (inst sub ecx-tn (fixnum fixed))))
     
     ;; Save edi and esi register args.
     (inst push edi-tn)
@@ -1510,28 +1497,10 @@
 			       :index count :scale 1
 			       :disp (- (+ (fixnum fixed) 4))))
     (unless (zerop fixed)
-      (inst sub count (fixnum fixed)))
-    ))
+      (inst sub count (fixnum fixed)))))
 
 ;;; Signal wrong argument count error if Nargs isn't = to Count.
 ;;;
-#|
-(define-vop (verify-argument-count)
-  (:policy :fast-safe)
-  (:translate c::%verify-argument-count)
-  (:args (nargs :scs (unsigned-reg))) 
-  (:arg-types positive-fixnum (:constant t))
-  (:info count)
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:generator 3
-    (let ((err-lab
-	   (generate-error-code vop invalid-argument-count-error nargs)))
-      (inst shl nargs 2)
-      (inst cmp nargs (fixnum count))
-      (inst jmp :ne err-lab))))
-|#
-
 (define-vop (verify-argument-count)
   (:policy :fast-safe)
   (:translate c::%verify-argument-count)
