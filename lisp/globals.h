@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.6 2002/05/02 21:10:53 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.7 2004/05/18 22:27:56 cwang Exp $ */
 
 #if !defined(_INCLUDE_GLOBALS_H_)
 #define _INCLUDED_GLOBALS_H_
@@ -22,7 +22,7 @@ extern lispobj *dynamic_1_space;
 extern unsigned dynamic_space_size;
 extern lispobj *control_stack;
 extern lispobj *binding_stack;
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 extern lispobj *control_stack_end;
 #endif
 extern lispobj *current_dynamic_space;
