@@ -706,7 +706,7 @@
   mentioned in a particular efficency note.  NIL means no limit.")
 (proclaim '(type (or index null) *efficency-note-limit*))
 
-(defvar *efficency-note-cost-threshold* 1
+(defvar *efficency-note-cost-threshold* 5
   "This is the minumum cost difference between the chosen implementation and
   the next alternative that justifies an efficency note.")
 (proclaim '(type index *efficency-note-cost-threshold*))
