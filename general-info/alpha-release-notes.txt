@@ -1,4 +1,65 @@
-2/2/92 to 2/4/93:
+2/4/93 to 2/9/92:
+
+Code:
+
+Moved foreign-segment-{start,size} from mumble-os.lisp into foreign.lisp,
+and changed it on the sparc to no longer conflict with read-only space.
+
+Changed software-version to use /usr/bin/uname instead of stringing the
+kernel.  [SunOS only]
+
+Don't try the (SETF (APPLY ...)) hack for functions with non-fixed args, since
+it doesn't do anything useful (just converts to a call to the (SETF FUNCTION).
+
+
+Compiler:
+
+Fixed listify-rest-arg.  It was leaving a tagged pointer to unallocated
+memory in a descriptor register, which would confuse the garbage collector
+if this value was still around.
+
+Added all the info for the scheduler to the instruction files.
+
+Redefined li on the sparc with define-instruction-macro.  This allows the
+schedular to do a better job because the li gets broken up into the
+seperate component instructions earlier.
+
+Fixed make-array-header on the pmax to not seg fault.
+
+Fixed the call to note-assembler-routine on the pmax.  This was breaking
+DISASSEMBLE.
+
+Changed more occurrences of function-header-code-offset to
+function-code-offset.  (should have them all by now...)
+
+
+PCL:
+
+Changed definition of *subtypep to speed up method definition
+using code provided by Richard Harris.
+
+Updated definition of *pcl-system-date* as recommended by Richard Harris.
+
+Changed the definition of force-cache-flushes by removing unnecessary
+call to update-constructors, as suggested by Richard Harris.
+
+
+HP support:
+
+Fixed the stuff to emulate the ``addit imm,ALLOC,ALLOC'' instruction at the
+end of pseudo-atomic to use all 11 bits of the immediate field instead of
+just 5.
+
+
+Graphical Interface:
+
+The inspector/debugger was not behaving properly in the absence of
+the DISPLAY environment variable.  It now correctly senses the lack
+of X and quietly uses the TTY.
+
+
+
+2/2/93 to 2/4/93:
 
 Compiler:
 
