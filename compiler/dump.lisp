@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.47.1.2 1993/01/23 14:38:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.47.1.3 1993/01/27 12:53:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -926,7 +926,7 @@
 ;;; overhead on types of objects that might be circular.
 ;;;
 (defun dump-object (x file)
-  (if (or (array-header-p x) (simple-vector-p x) (consp x) (instancep x))
+  (if (or (array-header-p x) (simple-vector-p x) (consp x) (%instancep x))
       (let ((*circularities-detected* ())
 	    (circ (fasl-file-circularity-table file)))
 	(clrhash circ)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.48.1.1 1993/01/23 14:04:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.48.1.2 1993/01/27 12:52:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -465,7 +465,7 @@
 	   (print-it stream))
 	  ((or *circularity-hash-table*
 	       (consp object)
-	       (instancep object)
+	       (%instancep object)
 	       (typep object '(array t *)))
 	   ;; If we have already started circularity detection, this object
 	   ;; might be a sharded reference.  If we have not, then if it is
