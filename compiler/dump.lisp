@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.47.1.3 1993/01/27 12:53:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.47.1.4 1993/02/17 13:35:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1428,7 +1428,12 @@
        (circ (fasl-file-circularity-table file)))
       ((= index length)
        (dump-fop* length lisp::fop-small-struct lisp::fop-struct file))
-    (let* ((obj (%instance-ref struct index))
+    (let* ((obj #+ns-boot
+		(if (zerop index)
+		    (%instance-layout struct)
+		    (%instance-ref struct index))
+		#-ns-boot
+		(%instance-ref struct index))
 	   (ref (gethash obj circ)))
       (cond (ref
 	     (push (make-circularity :type :struct-set
