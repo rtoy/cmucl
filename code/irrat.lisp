@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.36 2003/01/10 17:19:22 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.37 2003/01/29 18:51:48 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -383,7 +383,7 @@
 	 (if (minusp number)
 	     (complex (coerce (log (- number)) 'single-float)
 		      (coerce pi 'single-float))
-	     (coerce (/ (log2 number) #.(log (exp 1) 2d0)) 'single-float)))
+	     (coerce (/ (log2 number) #.(log (exp 1d0) 2d0)) 'single-float)))
 	((ratio)
 	 (if (minusp number)
 	     (complex (coerce (log (- number)) 'single-float)
@@ -394,17 +394,22 @@
 		   (bot (denominator number)))
 	       ;; If the number of bits in the numerator and
 	       ;; denominator are different, just use the fact
-	       ;; log(x/y) = log(x) - log(y).  However, if they have
-	       ;; the same number of bits, implying the quotient is
-	       ;; near one, we use log1p(x) = log(1+x).  Since the
-	       ;; number is rational, we don't lose precision
-	       ;; subtracting 1 from it, and converting it to
-	       ;; double-float is accurate.
+	       ;; log(x/y) = log(x) - log(y).  But to preserve
+	       ;; accuracy, we actually do
+	       ;; (log2(x)-log2(y))/log2(e)).
+	       ;;
+	       ;; However, if the numerator and denominator have the
+	       ;; same number of bits, implying the quotient is near
+	       ;; one, we use log1p(x) = log(1+x). Since the number is
+	       ;; rational, we don't lose precision subtracting 1 from
+	       ;; it, and converting it to double-float is accurate.
 	       (if (= (integer-length top)
 		      (integer-length bot))
 		   (coerce (%log1p (coerce (- number 1) 'double-float))
 			   'single-float)
-		   (coerce (- (log top) (log bot)) 'single-float)))))
+		   (coerce (/ (- (log2 top) (log2 bot))
+			      #.(log (exp 1d0) 2d0))
+			   'single-float)))))
 	(((foreach single-float double-float))
 	 ;; Is (log -0) -infinity (libm.a) or -infinity + i*pi (Kahan)?
 	 ;; Since this doesn't seem to be an implementation issue
