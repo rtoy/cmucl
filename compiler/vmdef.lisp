@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.47 1993/08/20 00:00:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.48 1993/08/20 00:13:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 (in-package :c)
 
 (export '(template-or-lose sc-or-lose sb-or-lose sc-number-or-lose
+	  meta-sc-or-lose meta-sb-or-lose meta-sc-number-or-lose
 	  primitive-type-or-lose note-this-location note-next-instruction))
 
 ;;; Template-Or-Lose  --  Internal
@@ -49,11 +50,25 @@
 (defun sc-number-or-lose (x &optional (backend *target-backend*))
   (the sc-number (sc-number (sc-or-lose x backend))))
 
-;;; Define the meta-ops to be the same as the non-meta, so that we can load
-;;; uses of meta-vmdef macros without meta-vmdef being loaded.
+
+;;; META-SC-OR-LOSE, META-SB-OR-LOSE, META-SC-NUMBER-OR-LOSE  --  Internal
 ;;;
-(setf (fdefinition 'meta-sc-or-lose) (fdefinition 'sc-or-lose))
-(setf (fdefinition 'meta-sb-or-lose) (fdefinition 'sb-or-lose))
+;;;    Like the non-meta versions, but go for the meta-compile-time info.
+;;; These should not be used after load time, since compiling the compiler
+;;; changes the definitions.
+;;;
+(defun meta-sc-or-lose (x)
+  (the sc
+       (or (gethash x (backend-meta-sc-names *target-backend*))
+	   (error "~S is not a defined storage class." x))))
+;;;
+(defun meta-sb-or-lose (x)
+  (the sb
+       (or (gethash x (backend-meta-sb-names *target-backend*))
+	   (error "~S is not a defined storage base." x))))
+;;;
+(defun meta-sc-number-or-lose (x)
+  (the sc-number (sc-number (meta-sc-or-lose x))))
 
 
 ;;;; Side-Effect Classes
