@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.46 1997/12/06 20:12:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.47 1997/12/12 15:19:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,7 +72,7 @@
   (frob %random-single-float single-float)
   (frob %random-double-float double-float))
 
-#-new-random
+#-(or new-random random-mt19937)
 (deftransform random ((num &optional state)
 		      ((integer 1 #.random-fixnum-max) &optional *))
   "use inline fixnum operations"
@@ -94,6 +94,38 @@
   #-x86 "use inline (signed-byte 32) operations"
   '(values (truncate (%random-double-float (coerce num 'double-float)
 		      (or state *random-state*)))))
+
+#+random-mt19937
+(deftransform random ((num &optional state)
+		      ((integer 1 #.(expt 2 32)) &optional *))
+  "use inline (unsigned-byte 32) operations"
+  (let ((num-high (numeric-type-high (continuation-type num))))
+    (when (null num-high)
+      (give-up))
+    (cond ((constant-continuation-p num)
+	   ;; Check the worst case sum abs error for the random number
+	   ;; expectations.
+	   (let ((rem (rem (expt 2 32) num-high)))
+	     (unless (< (/ (* 2 rem (- num-high rem)) num-high (expt 2 32))
+			(expt 2 (- kernel::random-integer-extra-bits)))
+	       (give-up "The random number expectations are inaccurate."))
+	     (if (= num-high (expt 2 32))
+		 '(random-chunk (or state *random-state*))
+		 #-x86 '(rem (random-chunk (or state *random-state*)) num)
+		 #+x86
+		 ;; Use multiplication which is faster.
+		 '(values (bignum::%multiply 
+			   (random-chunk (or state *random-state*))
+			   num)))))
+	  ((> num-high random-fixnum-max)
+	   (give-up "The range is too large to assure an accurate result."))
+	  #+x86
+	  ((< num-high (expt 2 32))
+	   '(values (bignum::%multiply (random-chunk (or state *random-state*))
+		     num)))
+	  (t
+	   '(rem (random-chunk (or state *random-state*)) num)))))
+
 
 ;;;; Float accessors:
 
