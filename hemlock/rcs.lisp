@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.21 1991/11/07 22:56:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.22 1991/11/08 18:20:20 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -158,6 +158,9 @@
 	 (rcs-filename (concatenate 'simple-string
 				    "./RCS/" filename ",v"))
 	 (keep-working-copy (or keep-lock
+				(not (hemlock-bound-p
+				      'rcs-keep-around-after-unlocking
+				      :buffer buffer))
 				(variable-value
 				 'rcs-keep-around-after-unlocking
 				 :buffer buffer))))
