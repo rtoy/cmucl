@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.32 1991/03/05 00:17:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.33 1991/03/11 17:15:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -155,9 +155,8 @@
 	(event reoptimize-maxed-out)
 	(return))
       (incf loop-count)))
-  
-  (maphash #'note-failed-optimization *failed-optimizations*)
-  (clrhash *failed-optimizations*)
+
+  (ir1-finalize component)
   (undefined-value))
 
 
@@ -978,8 +977,7 @@
       (when *check-consistency*
 	(dolist (component components)
 	  (clear-ir1-info component)))))
-    
-  (maphash #'check-free-function *free-functions*)
+
   (undefined-value))
 
 
