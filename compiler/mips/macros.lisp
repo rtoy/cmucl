@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.14 1990/02/22 16:59:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.15 1990/02/23 20:22:09 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -73,6 +73,10 @@
 		(inst ori ,n-reg ,n-reg low))))
 	   (t
 	    (error "Constant ~D cannot be loaded." ,n-const)))))
+
+(defmacro load-symbol (reg symbol)
+  `(inst addi ,reg null-tn (initial-symbol-offset ,symbol)))
+
 
 
 ;;; Load-Stack-TN, Store-Stack-TN  --  Interface
@@ -458,13 +462,12 @@
 (defmacro pseudo-atomic ((ndescr-temp) &rest forms)
   (let ((label (gensym "LABEL-")))
     `(let ((,label (gen-label)))
+       (inst andi flags-tn flags-tn (lognot (ash 1 interrupted-flag)))
        (inst ori flags-tn flags-tn (ash 1 atomic-flag))
        ,@forms
        (inst andi flags-tn flags-tn (lognot (ash 1 atomic-flag)))
        (inst andi ,ndescr-temp flags-tn (ash 1 interrupted-flag))
        (inst beq ,ndescr-temp zero-tn ,label)
        (nop)
-       (inst load-foreign-address ,ndescr-temp "interrupt_resumer")
-       (inst jr ,ndescr-temp)
-       (nop)
+       (inst break vm:pending-interrupt-trap)
        (emit-label ,label))))
