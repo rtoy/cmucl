@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.6 1991/11/08 15:28:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.7 1991/11/08 22:20:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,6 +53,10 @@
 ;;; numbers.  Beats me if this is in general optimal, but it works in simple
 ;;; cases.
 ;;;
+;;; This optimization is inhibited in functions with NLX EPs, since it is hard
+;;; to do this without possibly messing up the special-case walking from NLX
+;;; EPs described in CONTROL-ANALYZE-1-FUN.
+;;;
 (defun find-rotated-loop-head (block)
   (declare (type cblock block))
   (let* ((num (block-number block))
@@ -63,7 +67,7 @@
 			    (< (block-number pred) num))
 		   (return pred)))))
     (cond
-     (pred
+     ((and pred (not (environment-nlx-info env)))
       (let ((current pred)
 	    (current-num (block-number pred)))
 	(block DONE
