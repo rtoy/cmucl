@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.3 1990/03/18 15:30:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.4 1990/04/23 20:44:36 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -76,7 +76,7 @@
 
   do-exit
       
-  (loadw cont-tn cur-uwp vm:unwind-block-current-cont-slot)
+  (loadw fp-tn cur-uwp vm:unwind-block-current-cont-slot)
   (loadw code-tn cur-uwp vm:unwind-block-current-code-slot)
   (loadw lra cur-uwp vm:unwind-block-entry-pc-slot)
   (lisp-return lra lip)
