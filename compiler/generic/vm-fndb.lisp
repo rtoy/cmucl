@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.47 1992/12/17 09:30:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.47.1.1 1993/01/14 21:02:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
 ;;; into non-standard unary predicates.
 
 (defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
-	   long-float-p base-char-p %string-char-p %standard-char-p structurep
+	   long-float-p base-char-p %string-char-p %standard-char-p %instancep
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
@@ -89,18 +89,26 @@
   (unsafe))
 
 
-(defknown make-structure (structure-index) structure
+(defknown %make-instance (instance-index) instance
   (unsafe))
-(defknown structure-type (structure) t
+(defknown %instance-layout (instance) layout
   (foldable flushable))
-(defknown structure-length (structure) structure-index
+(defknown %instance-length (instance) instance-index
   (foldable flushable))
-(defknown structure-ref (structure structure-index) t
+(defknown %instance-ref (instance instance-index) t
   (flushable))
-(defknown structure-set (structure structure-index t) t
+(defknown (setf %instance-ref) (t instance instance-index) t
   (unsafe))
 
 
+(defknown %raw-ref-single (t index) single-float
+  (foldable flushable))
+(defknown %raw-ref-double (t index) double-float
+  (foldable flushable))
+(defknown %raw-set-single (t index single-float) single-float
+  (unsafe))
+(defknown %raw-set-double (t index double-float) double-float
+  (unsafe))
 
 (defknown %raw-bits (t fixnum) (unsigned-byte 32)
   (foldable flushable))

@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28 1991/12/16 10:09:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28.1.1 1993/01/14 21:02:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28 1991/12/16 10:09:55 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -86,7 +84,7 @@
 (deftype bignum-type () 'bignum)
 (deftype bignum-index () 'index)
 
-(deftype structure-index () `(unsigned-byte ,(- vm:word-bits vm:type-bits)))
+(deftype instance-index () `(unsigned-byte ,(- vm:word-bits vm:type-bits)))
 
 
 ;;;; Hooks into type system:

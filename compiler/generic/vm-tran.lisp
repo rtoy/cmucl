@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27 1992/10/20 23:38:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27.1.1 1993/01/14 21:02:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27 1992/10/20 23:38:21 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -35,6 +33,13 @@
 (deftransform abs ((x) (rational))
   '(if (< x 0) (- x) x))
 
+;;; For now, the layout is stored in slot 0.
+;;;
+(def-source-transform %instance-layout (x)
+  `(truly-the layout (%instance-ref ,x 0)))
+;;;
+(def-source-transform %set-instance-layout (x val)
+  `(%instance-set ,x 0 (the layout ,val)))
 
 
 (macrolet ((frob (name primitive)
@@ -50,23 +55,6 @@
 (def-source-transform %verify-argument-count (&rest foo)
   `(%primitive verify-argument-count ,@foo))
 
-
-
-;;; Let these pass for now.
-
-(def-primitive-translator header-ref (obj slot)
-  (warn "Someone used HEADER-REF.")
-  `(%primitive data-vector-ref/simple-vector ,obj ,slot))
-
-(def-primitive-translator header-set (obj slot value)
-  (warn "Someone used HEADER-SET.")
-  `(%primitive data-vector-set/simple-vector ,obj ,slot ,value))
-
-(def-primitive-translator header-length (obj)
-  (warn "Someone used HEADER-LENGTH.")
-  `(%primitive vector-length ,obj))
-
-
 
 ;;;; Charater support.
 
@@ -74,14 +62,6 @@
 ;;;
 (def-source-transform characterp (obj)
   `(base-char-p ,obj))
-
-;;; Keep this around in case someone uses it.
-;;;
-(def-source-transform %string-char-p (obj)
-  (warn "Someone used %string-char-p.")
-  `(base-char-p ,obj))
-
-
 
 
 ;;;; Transforms for data-vector-ref for strange array types.
@@ -152,8 +132,6 @@
   (frob simple-bit-vector 1)
   (frob (simple-array (unsigned-byte 2) (*)) 2)
   (frob (simple-array (unsigned-byte 4) (*)) 4))
-
-
 
 
 ;;;; Simple string transforms:
