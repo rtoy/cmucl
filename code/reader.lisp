@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.19 1993/08/30 21:20:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.20 1993/08/30 21:59:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,7 @@
 	       (simple-condition-format-control condition)
 	       (simple-condition-format-arguments condition))))))
 
-(define-condition reader-package-error (reader-error))
+(define-condition reader-package-error (reader-error) ())
 
 ;;; %READ-ERROR  --  Interface
 ;;;
