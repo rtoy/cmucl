@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.12 1990/05/25 20:11:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.13 1990/05/26 22:55:36 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -1164,23 +1164,27 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	      (str (gensym))
 	      (ptr (gensym))
 	      (start (gensym)))
-	  `(do ((,ptr ,n-sap (sap+ ,ptr 1))
-		(,start ,n-sap))
+	  `(do* ((,start (sap+ ,n-sap ,n-offset))
+		 (,ptr ,start (sap+ ,ptr 1)))
 	       ((zerop (sap-ref-8 ,ptr 0))
 		(let* ((,size (sap- ,ptr ,start))
 		       (,str (make-string ,size)))
-		  (%primitive byte-blt ,start ,n-offset
-			      (%primitive vector-sap ,str)
-			      0 ,size)
-		  ,str))))
-	(let ((len (gensym))
-	      (end (gensym)))
-	  `(let* ((,len (the fixnum (1+ (length (the simple-string
-						     ,n-value)))))
-		  (,end (the fixnum (+ (the fixnum ,len) ,n-offset))))
-	     (declare (fixnum ,len ,end))
+		  (declare (fixnum ,size)
+			   (type simple-base-string ,str))
+		  (copy-from-system-area ,start 0
+					 ,str (* vm:vector-data-offset
+						 vm:word-bits)
+					 (* ,size vm:byte-bits))
+		  ,str))
+	     (declare (type system-area-pointer ,start ,ptr))))
+	(let ((len (gensym)))
+	  `(let ((,len (the fixnum (1+ (length (the simple-string
+						    ,n-value))))))
+	     (declare (fixnum ,len))
 	     (check<= ,len ,(cadr type))
-	     (%primitive byte-blt ,n-value 0 ,n-sap ,n-offset (1+ ,end)))))))
+	     (copy-to-system-area ,n-value (* vm:vector-data-offset
+					      vm:word-bits)
+				  ,n-sap ,n-offset ,len))))))
 
 
 ;;;; Pointer alien access:
