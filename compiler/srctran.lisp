@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.138 2003/09/26 03:52:25 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.139 2003/10/10 09:29:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2608,7 +2608,22 @@
 ;;; by the bit position of the last set bit.  We can't use this second method
 ;;; when the high order bit is bit 31 because shifting by 32 doesn't work
 ;;; too well.
-;;; 
+;;;
+
+;;; This is commented out because its uses of TRULY-THE for vop
+;;; selection lie to the compiler, leading to internal
+;;; inconsistencies, which in turn lead to incorrect code being
+;;; generated.  Example:
+;;;
+;;; (funcall (compile nil
+;;; 	'(lambda () (flet ((%f2 () 288213285))
+;;; 		      (+ (%f2) (* 13 (%f2)))))))
+;;;  => segmentation violation
+;;;
+;;; The right fix for this is probably to port SBCL's modular
+;;; functions implementation.
+
+#+nil
 (deftransform * ((x y)
 		 ((unsigned-byte 32) (unsigned-byte 32))
 		 (unsigned-byte 32))
