@@ -1121,6 +1121,9 @@
       (let ((form root)
 	    (current (rest rpath)))
 	(loop
+	  (when (atom form)
+	    (assert (null current))
+	    (return))
 	  (let ((head (first form)))
 	    (when (symbolp head)
 	      (let ((name (symbol-name head)))
