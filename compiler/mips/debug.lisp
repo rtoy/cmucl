@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.9 1991/03/12 20:19:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.10 1991/03/14 14:22:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.9 1991/03/12 20:19:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.10 1991/03/14 14:22:04 ram Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -19,23 +19,6 @@
 ;;; 
 (in-package "MIPS")
 
-(in-package "DI")
-(import '(stack-ref %set-stack-ref lra-code-header function-code-header
-	  make-lisp-obj get-lisp-obj-address function-word-offset)
-	(find-package "MIPS"))
-
-(in-package "MIPS")
-
-
-(defknown current-sp () system-area-pointer (movable flushable))
-(defknown current-fp () system-area-pointer (movable flushable))
-(defknown stack-ref (system-area-pointer index) t (flushable))
-(defknown %set-stack-ref (system-area-pointer index t) t (unsafe))
-(defknown lra-code-header (t) t (movable flushable))
-(defknown function-code-header (t) t (movable flushable))
-(defknown make-lisp-obj ((unsigned-byte 32)) t (movable flushable))
-(defknown get-lisp-obj-address (t) (unsigned-byte 32) (movable flushable))
-(defknown function-word-offset (function) index (movable flushable))
 
 (define-vop (debug-cur-sp)
   (:translate current-sp)
