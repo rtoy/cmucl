@@ -102,8 +102,6 @@ struct sigcontext *context;
     ms.fp = current_control_frame_pointer;
 #ifndef ibmrt
     ms.bsp = current_binding_stack_pointer;
-#else
-    ms.bsp = (lispobj *)SymbolValue(BINDING_STACK_POINTER);
 #endif
     ms.number_stack_start = number_stack_start;
     ms.sigcontext_page = write_bytes((char *)context, sizeof(struct sigcontext));
@@ -251,8 +249,6 @@ struct machine_state *ms;
     current_control_frame_pointer = ms->fp;
 #ifndef ibmrt
     current_binding_stack_pointer = ms->bsp;
-#else
-    SetSymbolValue(BINDING_STACK_POINTER, (lispobj)ms->bsp);
 #endif
 
     if (ms->number_stack_start > number_stack_start) {
