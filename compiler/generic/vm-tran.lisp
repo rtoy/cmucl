@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.2 1990/03/07 18:46:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.3 1990/03/08 21:39:31 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -48,6 +48,14 @@
   (frob %odd-keyword-arguments-error odd-keyword-arguments-error)
   (frob %unknown-keyword-argument-error unknown-keyword-argument-error)
   (frob %argument-count-error argument-count-error))
+
+
+(def-source-transform %more-arg-context (&rest foo)
+  `(%primitive more-arg-context ,@foo))
+;;;
+(def-source-transform %verify-argument-count (&rest foo)
+  `(%primitive verify-argument-count ,@foo))
+
 
 
 ;;; Let these pass for now.
