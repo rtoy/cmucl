@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.16 1990/02/24 16:55:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.17 1990/02/24 17:02:50 ch Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -44,7 +44,8 @@
 	  closure-header-type value-cell-header-type symbol-header-type
 	  character-type SAP-type unbound-marker-type atomic-flag
 	  interrupted-flag pending-interrupt-trap error-trap cerror-trap
-	  fixnum initial-symbols initial-symbol-offset offset-initial-symbol
+	  fixnum static-symbols static-symbol-offset offset-static-symbol
+	  static-symbol-p
 	  *assembly-unit-length* target-fasl-code-format vm-version))
 	  
 
@@ -211,19 +212,19 @@
   cerror)
 
 
-;;;; Initial symbols.
+;;;; Static symbols.
 
 ;;; These symbols are loaded into static space directly after NIL so that
 ;;; the system can compute their address by adding a constant amount to NIL.
 ;;;
 
-(defparameter initial-symbols
+(defparameter static-symbols
   '(t
 
     ;; Random stuff needed for initialization.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
-    lisp::*initial-symbols*
+    lisp::*static-symbols*
     lisp::*lisp-initialization-functions*
     lisp::%initial-function
 
@@ -233,32 +234,30 @@
     lisp::*saved-control-stack-pointer*
     lisp::*saved-binding-stack-pointer*
     lisp::*saved-allocation-pointer*
-    lisp::*saved-flags-register*
+    lisp::*saved-flags-register*))
 
-    ))
+(defun static-symbol-p (symbol)
+  (member symbol static-symbols))
 
-
-
-(defun initial-symbol-offset (symbol)
-  "Return the byte offset of SYMBOL from NIL."
-  (let ((posn (position symbol initial-symbols)))
-    (unless posn
-      (error "~S isn't one of the initial symbols." symbol))
+(defun static-symbol-offset (symbol)
+  "Returns the byte offset of the static symbol Symbol."
+  (let ((posn (position symbol static-symbols)))
+    (unless posn (error "~S is not a static symbol." symbol))
     (+ (* posn (pad-data-block symbol-size))
        (pad-data-block (1- symbol-size))
        other-pointer-type
        (- list-pointer-type))))
 
-(defun offset-initial-symbol (offset)
-  "Given a byte offset returns the initial symbol."
+(defun offset-static-symbol (offset)
+  "Given a byte offset, Offset, returns the appropriate static symbol."
   (multiple-value-bind
       (n rem)
       (truncate (+ offset list-pointer-type (- other-pointer-type)
 		   (- (pad-data-block (1- symbol-size))))
 		(pad-data-block symbol-size))
-    (unless (and (zerop rem) (<= 0 n (1- (length initial-symbols))))
+    (unless (and (zerop rem) (<= 0 n (1- (length static-symbols))))
       (error "Byte offset, ~D, is not correct." offset))
-    (elt initial-symbols n)))
+    (elt static-symbols n)))
 
 
 ;;;; Handy routine for making fixnums:
