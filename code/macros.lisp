@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.94 2003/06/18 09:23:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.95 2003/07/09 08:14:52 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -357,13 +357,18 @@
 	    (info function inline-expansion name))
     (setf (info function inline-expansion name) inline-expansion))
   name)
-;;;
+
 (defun c::%defun (name def doc source)
   (declare (ignore source))
   (assert (eval:interpreted-function-p def))
   (setf (eval:interpreted-function-name def) name)
-  (c::%%defun name def doc))
-
+  (let ((inline-expansion nil))
+    (when (memq (info function inlinep name) '(:inline :maybe-inline))
+      (multiple-value-bind (lambda-expression closure-p)
+	  (function-lambda-expression def)
+	(unless closure-p
+	  (setq inline-expansion lambda-expression))))
+    (c::%%defun name def doc inline-expansion)))
 
 ;;; DEFCONSTANT  --  Public
 ;;;
