@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.23 1991/08/30 14:59:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.24 1991/11/29 22:58:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -523,7 +523,6 @@
 
   (print-and-call stream-init)
   (print-and-call loader-init)
-  (print-and-call format-init)
   (print-and-call package-init)
   (print-and-call kernel::signal-init)
   (setf (alien-access (alien-value internal_errors_enabled)) t)
