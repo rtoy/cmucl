@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.12 1991/02/20 14:57:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.13 1991/03/11 17:13:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,36 +28,14 @@
 ;;;  1] Make an Environment structure for each non-let lambda, assigning the
 ;;;     lambda-environment for all lambdas.
 ;;;  2] Find all values that need to be closed over by each environment.
-;;;  3] Do summary analysis of this function:
-;;;      -- Record the derived result type before the back-end trashes the
-;;;         flow graph.
-;;;      -- Note if the function doesn't return.
-;;;  4] Scan the blocks in the component closing over non-local-exit
+;;;  3] Scan the blocks in the component closing over non-local-exit
 ;;;     continuations.
-;;;  5] Compute a function type for each "real" function.  This is done now
-;;;     because tail uses of the result continuation may be blown away by the
-;;;     back end.
 ;;;
 (defun environment-analyze (component)
   (declare (type component component))
   (assert (not (component-new-functions component)))
   (dolist (fun (component-lambdas component))
-    (let* ((ef (functional-entry-function fun))
-	   (kind (functional-kind fun))
-	   (f (cond ((eq (functional-kind fun) :external)
-		     (when (optional-dispatch-p ef) ef))
-		    ((null kind) fun))))
-      (when f
-	(let* ((dtype (definition-type f))
-	       (node (lambda-bind fun)))
-	  (setf (leaf-type f) dtype)
-	  (when (and (eq (function-type-returns dtype) *empty-type*)
-		     (policy node (zerop brevity)))
-	    (let ((*compiler-error-context* node))
-	      (compiler-note "Function does not return."))))))
-
     (get-lambda-environment fun))
-  
   (dolist (fun (component-lambdas component))
     (compute-closure fun)
     (dolist (let (lambda-lets fun))
@@ -65,7 +43,6 @@
   
   (find-non-local-exits component)
   (find-cleanup-points component)
-  (tail-annotate component)
   (undefined-value))
 
 
@@ -337,27 +314,4 @@
 				  (cleanup-mess-up cleanup2))
 				 cleanup1)))
 	      (emit-cleanups block1 block2)))))))
-  (undefined-value))
-
-
-;;; Tail-Annotate  --  Internal
-;;;
-;;;    Mark all tail-recursive uses of function result continuations with the
-;;; corresponding tail-set.  Nodes whose type is NIL (i.e. don't return) such
-;;; as calls to ERROR are never annotated as tail, so as to preserve debugging
-;;; information.
-;;;
-(defun tail-annotate (component)
-  (declare (type component component))
-  (dolist (fun (component-lambdas component))
-    (let ((ret (lambda-return fun)))
-      (when ret
-	(let ((result (return-result ret))
-	      (tails (lambda-tail-set fun)))
-	  (do-uses (use result)
-	    (when (and (immediately-used-p result use)
-		       (or (not (eq (node-derived-type use) *empty-type*))
-			   (not (basic-combination-p use))
-			   (eq (basic-combination-kind use) :local)))
-	      (setf (node-tail-p use) tails)))))))
   (undefined-value))
