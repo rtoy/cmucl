@@ -496,8 +496,8 @@
 	      ,@(mapcar #'(lambda (i val)
 			    `(setf (svref ,n-cache ,i) ,val))
 			(values-indices)
-			default-values)))
-	    (undefined-value))
+			default-values))
+	    (undefined-value)))
 	(forms `(,fun-name)))
       
       `(progn
