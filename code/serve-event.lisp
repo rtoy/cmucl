@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.20 1993/02/26 08:26:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.21 1993/10/20 13:54:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,7 +364,6 @@
 
 ;;; Check for any X displays with pending events.
 ;;;
-#+clx
 (defun handle-queued-clx-event ()
   (dolist (d/h *display-event-handlers*)
     (let* ((d (car d/h))
@@ -448,7 +447,6 @@
 ;;;    Takes timeout broken into seconds and microseconds.
 ;;;
 (defun sub-serve-event (to-sec to-usec)
-  #+clx
   (when (handle-queued-clx-event) (return-from sub-serve-event t))
   
   ;; Next, wait for something to happen.
