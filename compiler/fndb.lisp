@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.11 1990/10/03 09:51:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.12 1990/10/11 17:32:59 ram Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -59,111 +59,7 @@
 
 (export '(%caller-frame-and-pc))
 
-
 (in-package 'c)
-
-#| Something to convert the old FNDEFS database into our format:
-
-(defun convert-defs (fin fout)
-  (with-open-file (sin fin)
-    (with-open-file (sout fout :direction :output :if-exists :new-version)
-      (loop
-       (do ((ch (read-char sin nil nil) (read-char sin nil nil)))
-	   ((or (not ch)
-		(not (or (char= ch #\tab) (char= ch #\newline) (char= ch #\space)
-			 (char= ch #\;))))
-	    (when ch
-	      (unread-char ch sin)))
-	 (when (char= ch #\;)
-	   (write-char ch sout)
-	   (write-line (read-line sin) sout)))
-       
-       (let ((form (read sin nil '*eof*)))
-	(when (eq form '*eof*) (return))
-	(if (atom form)
-	    (format t "Ignoring ~S~%" form)
-	    (case (car form)
-	      (built-in-sf)
-	      (built-in-fn
-	       (let* ((args (mapcar 'eval (rest form)))
-		      (name (first args))
-		      (nargs (second args))
-		      (flushable (third args))
-		      (result-type (fourth args))
-		      (result-fun (fifth args))
-		      (multiple (sixth args))
-		      (foldable (member 'clc::fold-transform
-					(get name 'clc::clc-transforms))))
-		 (unless (eq (symbol-package name) (symbol-package 'cons))
-		   (format t "~S not in Lisp package.~%" name))
-		 (format sout "(defknown ~S (" #|))|# name)
-		 (block punt
-		   (unless (fboundp name)
-		     (format t "~S not fbound.~%" name)
-		     (return-from punt))
-		   (let ((def (symbol-function name)))
-		     (unless (compiled-function-p def)
-		       (format t "~S not compiled." name)
-		       (return-from punt))
-		     (let ((arglist (read-from-string
-				     (%primitive header-ref def system:%function-arg-names-slot))))
-		       (multiple-value-bind (req opt restp ig1 keyp keys)
-					    (parse-lambda-list arglist)
-			 (declare (ignore ig1))
-			 (let* ((dmin (length req))
-				(dmax (if (or restp keyp) nil
-					  (+ dmin (length opt)))))
-			   (unless (eql dmin (if (listp nargs) (car nargs) nargs))
-			     (format t "~S: actual min-args ~D, defined ~S.~%"
-				     name dmin nargs))
-			   (unless (eql dmax (if (listp nargs) (cadr nargs) nargs))
-			     (format t "~S: actual max-args ~D, defined ~S.~%"
-				     name dmax nargs))
-			   (dotimes (i (length req))
-			     (format sout "t "))
-			   (when opt
-			     (format sout "&optional ")
-			     (dotimes (i (length opt))
-			       (format sout "t ")))
-			   (when restp
-			     (format sout "&rest t "))
-			   (when keyp
-			     (format sout "&key ")
-			     (dolist (key keys)
-			       (format sout "(~A t) "
-				       (cond ((symbolp key) key)
-					     ((symbolp (car key)) (car key))
-					     ((symbolp (caar key)) (caar key))
-					     (t
-					      (format t "Bizzare keyword spec: ~S~%" key)))))))))))
-		 (unless (eql nargs 0)
-		   (file-position sout (1- (file-position sout))))
-		 (format sout #|(|# ")" sout)
-
-		 (let ((rtype (if (eq result-type 'predicate)
-				  'boolean result-type)))
-		   (if multiple
-		       (format sout " (values ~S &rest t)" rtype)
-		       (format sout " ~S" rtype)))
-
-		 (cond
-		  (flushable
-		   (cond (foldable
-			  (write-string " (flushable foldable unsafe)" sout))
-			 (t
-			  (write-string " (flushable unsafe)" sout))))
-		  (t
-		   (when foldable
-		     (format t "Foldable but not flushable: ~S." name))))
-
-		 (when result-fun
-		   (format sout "~%  :derive-type '~S" result-fun))
-		 (format sout #|(|# ")~%")))
-	      (built-in-special)
-	      (t
-	       (format t "Ignoring ~S~%" form)))))))))
-
-|#
 
 
 ;;;; Information for known functions:
@@ -210,16 +106,16 @@
   ((or list symbol) &optional lexical-environment)
   (values list list list form form)
   (flushable))
-(defknown apply (callable t &rest t) *)		  ; ### Last arg must be List...
+(defknown apply (callable t &rest t) *) ; ### Last arg must be List...
 (defknown funcall (callable &rest t) *)
 
-(defknown (mapcar maplist mapcan mapcon) (callable list &rest list) list (call))
+(defknown (mapcar maplist mapcan mapcon) (callable list &rest list) list
+  (call))
 
-(defknown (mapc mapl) (callable list &rest list) list
-  (foldable call unsafe))				    ; Returns arg...
+(defknown (mapc mapl) (callable list &rest list) list (foldable call))
 
 (defknown values (&rest t) * (movable foldable flushable unsafe))
-(defknown values-list (list) * (movable foldable flushable unsafe))
+(defknown values-list (list) * (movable foldable flushable))
 
 
 ;;;; In the "Macros" chapter:
@@ -288,16 +184,11 @@
 (defknown (oddp evenp) (integer) boolean (movable foldable flushable))
 (defknown (= /=) (number &rest number) boolean (movable foldable flushable))
 (defknown (< > <= >=) (real &rest real) boolean (movable foldable flushable))
-(defknown (max min) (real &rest real) real (movable foldable flushable)
-  #|:derive-type 'numeric-result-type|#)
-(defknown + (&rest number) number (movable foldable flushable)
-  #|:derive-type 'numeric-result-type|#)
-(defknown - (number &rest number) number (movable foldable flushable)
-  #|:derive-type 'numeric-result-type|#)
-(defknown * (&rest number) number (movable foldable flushable)
-  #|:derive-type 'numeric-result-type|#)
-(defknown / (number &rest number) number (movable foldable flushable)
-  #|:derive-type '/-result-type|#)
+(defknown (max min) (real &rest real) real (movable foldable flushable))
+(defknown + (&rest number) number (movable foldable flushable))
+(defknown - (number &rest number) number (movable foldable flushable))
+(defknown * (&rest number) number (movable foldable flushable))
+(defknown / (number &rest number) number (movable foldable flushable))
 (defknown (1+ 1-) (number) number (movable foldable flushable))
 (defknown conjugate (number) number (movable foldable flushable))
 (defknown gcd (&rest integer) unsigned-byte (movable foldable flushable)
@@ -314,10 +205,10 @@
 (defknown atan (number &optional real) irrational (movable foldable flushable))
 (defknown (sin cos tan asin acos sinh cosh tanh asinh acosh atanh)
   (number) irrational (movable foldable flushable))
-(defknown float (real &optional float) float (movable foldable flushable)
-  #|:derive-type 'float-result-type|#)
+(defknown float (real &optional float) float (movable foldable flushable))
 (defknown (rational rationalize) (real) rational (movable foldable flushable))
-(defknown (numerator denominator) (rational) integer (movable foldable flushable))
+(defknown (numerator denominator) (rational) integer
+  (movable foldable flushable))
 (defknown (floor ceiling truncate round)
   (real &optional real) (values integer real) (movable foldable flushable))
 (defknown (mod rem) (real real) real (movable foldable flushable))
@@ -326,14 +217,15 @@
 
 
 
-(defknown decode-float (float) (values float float-exponent float) (movable foldable flushable)
-;  :derive-type 'result-type-arg1   But not really...
-)
-(defknown scale-float (float float-exponent) float (movable foldable flushable)
-  #|:derive-type 'result-type-arg1|#)
+(defknown decode-float (float) (values float float-exponent float)
+  (movable foldable flushable))
+(defknown scale-float (float float-exponent) float
+  (movable foldable flushable))
 (defknown float-radix (float) float-radix (movable foldable flushable))
-(defknown float-sign (float &optional float) float (movable foldable flushable))
-(defknown (float-digits float-precision) (float) float-digits (movable foldable flushable))
+(defknown float-sign (float &optional float) float
+  (movable foldable flushable))
+(defknown (float-digits float-precision) (float) float-digits
+  (movable foldable flushable))
 (defknown integer-decode-float (float)
 	  (values integer float-exponent (member -1 1))
 	  (movable foldable flushable))
@@ -346,8 +238,7 @@
   (movable foldable flushable))
 
 (defknown boole (t t boole-code) integer (movable foldable flushable))
-(defknown lognot (integer) t (movable foldable flushable)
-  #|:derive-type 'boolean-result-type|#)
+(defknown lognot (integer) t (movable foldable flushable))
 (defknown logtest (t integer) boolean (movable foldable flushable))
 (defknown logbitp (bit-index integer) boolean (movable foldable flushable))
 (defknown ash (integer ash-index) integer (movable foldable flushable))
@@ -386,12 +277,15 @@
 (defknown character (t) character (movable foldable flushable))
 (defknown char-code (character) char-code (movable foldable flushable))
 (defknown code-char (char-code) base-character (movable foldable flushable))
-(defknown (char-upcase char-downcase) (character) character (movable foldable flushable))
+(defknown (char-upcase char-downcase) (character) character
+  (movable foldable flushable))
 (defknown digit-char (integer &optional integer char-bits)
   (or character null) (movable foldable flushable))
 (defknown char-int (character) char-code (movable foldable flushable))
-(defknown char-name (character) (or simple-string null) (movable foldable flushable))
-(defknown name-char (stringable) (or character null) (movable foldable flushable))
+(defknown char-name (character) (or simple-string null)
+  (movable foldable flushable))
+(defknown name-char (stringable) (or character null)
+  (movable foldable flushable))
 
 
 ;;;; In the "Sequences" chapter:
@@ -409,7 +303,7 @@
 (defknown reverse (sequence) consed-sequence (foldable flushable)
   #|:derive-type 'result-type-arg1|#)
 
-(defknown nreverse (sequence) sequence (unsafe)
+(defknown nreverse (sequence) sequence ()
   #|:derive-type 'result-type-arg1|#)
 
 (defknown make-sequence (type-specifier index &key (initial-element t)) consed-sequence
@@ -442,7 +336,7 @@
 
 (defknown replace (sequence sequence &key (start1 index) (end1 sequence-end)
 			    (start2 index) (end2 sequence-end))
-  consed-sequence (unsafe)
+  consed-sequence ()
   #|:derive-type 'result-type-arg1|#)
 
 (defknown remove
@@ -459,7 +353,7 @@
      (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  #|:derive-type 'result-type-arg2|#)
+  #|:derive-type 'result-type-arg3|#)
 
 (defknown (remove-if remove-if-not)
   (callable sequence &key (from-end t) (start index) (end sequence-end)
@@ -473,14 +367,14 @@
      (count sequence-end) (key callable))
   consed-sequence
   (flushable call)
-  #|:derive-type 'result-type-arg2|#)
+  #|:derive-type 'result-type-arg3|#)
 
 (defknown delete
   (t sequence &key (from-end t) (test callable)
      (test-not callable) (start index) (end sequence-end)
      (count sequence-end) (key callable))
   sequence
-  (flushable call unsafe)
+  (flushable call)
   #|:derive-type 'result-type-arg2|#)
 
 (defknown nsubstitute
@@ -488,21 +382,21 @@
      (test-not callable) (start index) (end sequence-end)
      (count sequence-end) (key callable))
   sequence
-  (flushable call unsafe)
+  (flushable call)
   #|:derive-type 'result-type-arg3|#)
 
 (defknown (delete-if delete-if-not)
   (callable sequence &key (from-end t) (start index) (end sequence-end)
 	    (count sequence-end) (key callable))
   sequence
-  (flushable call unsafe)
+  (flushable call)
   #|:derive-type 'result-type-arg2|#)
 
 (defknown (nsubstitute-if nsubstitute-if-not)
   (t callable sequence &key (from-end t) (start index) (end sequence-end)
      (count sequence-end) (key callable))
   sequence
-  (flushable call unsafe)
+  (flushable call)
   #|:derive-type 'result-type-arg3|#)
 
 (defknown remove-duplicates
@@ -516,7 +410,7 @@
   (sequence &key (test callable) (test-not callable) (start index) (from-end t)
 	    (end sequence-end) (key callable))
   sequence
-  (flushable call unsafe)
+  (flushable call)
   #|:derive-type 'result-type-arg1|#)
 
 (defknown find (t sequence &key (test callable) (test-not callable)
@@ -582,17 +476,18 @@
 	       rest)
   (list) t (foldable flushable))
 
-(defknown cons (t t) cons (flushable unsafe))
+(defknown cons (t t) cons (movable flushable unsafe))
 
 (defknown tree-equal (t t &key (test callable) (test-not callable)) boolean
   (foldable flushable call))
 (defknown endp (t) boolean (foldable flushable movable))
 (defknown list-length (list) (or index null) (foldable flushable))
-(defknown (nth nthcdr) (index list) t (foldable flushable unsafe))
-(defknown last (list) list (foldable flushable unsafe))
-(defknown list (&rest t) list (flushable unsafe))
-(defknown list* (t &rest t) t (flushable unsafe))
-(defknown make-list (index &key (initial-element t)) list (flushable unsafe))
+(defknown (nth nthcdr) (index list) t (foldable flushable))
+(defknown last (list) list (foldable flushable))
+(defknown list (&rest t) list (movable flushable unsafe))
+(defknown list* (t &rest t) t (movable flushable unsafe))
+(defknown make-list (index &key (initial-element t)) list
+  (movable flushable unsafe))
 
 ;;;
 ;;; All but last must be list...
@@ -601,46 +496,61 @@
 (defknown copy-list (list) list (flushable))
 (defknown copy-alist (list) list (flushable))
 (defknown copy-tree (t) t (flushable))
-(defknown revappend (list t) t (flushable unsafe))
-(defknown nconc (&rest list) list (unsafe))
-(defknown nreconc (list list) list (unsafe))
+(defknown revappend (list t) t (flushable))
+(defknown nconc (&rest list) list ())
+(defknown nreconc (list list) list ())
 (defknown butlast (list &optional index) list (flushable))
-(defknown nbutlast (list &optional index) list (unsafe))
+(defknown nbutlast (list &optional index) list ())
 (defknown ldiff (list list) list (flushable))
 (defknown (rplaca rplacd) (cons t) list (unsafe))
 
-;;; ---------  clean pointer #########
+(defknown (nsubst subst) (t t t &key (key callable) (test callable)
+			    (test-not callable))
+  list (flushable unsafe call))
 
-(defknown subst (t t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown subst-if (t t t &key (key t)) list (flushable unsafe))
-(defknown subst-if-not (t t t &key (key t)) list (flushable unsafe))
-(defknown nsubst (t t t &key (key t) (test t) (test-not t)) list)
-(defknown nsubst-if (t t t &key (key t)) list)
-(defknown nsubst-if-not (t t t &key (key t)) list)
-(defknown sublis (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown nsublis (t t &key (key t) (test t) (test-not t)) list)
-(defknown member (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown member-if (t t &key (key t)) list (flushable unsafe))
-(defknown member-if-not (t t &key (key t)) list (flushable unsafe))
-(defknown tailp (t t) boolean (flushable unsafe))
-(defknown adjoin (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown union (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown intersection (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown set-difference (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown set-exclusive-or (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown nunion (t t &key (key t) (test t) (test-not t)) list)
-(defknown nintersection (t t &key (key t) (test t) (test-not t)) list)
-(defknown nset-difference (t t &key (key t) (test t) (test-not t)) list)
-(defknown nset-exclusive-or (t t &key (test t) (test-not t) (key t)) list)
-(defknown subsetp (t t &key (key t) (test t) (test-not t)) boolean (flushable unsafe))
-(defknown acons (t t t) list (flushable unsafe))
+(defknown (subst-if subst-if-not nsubst-if nsubst-if-not)
+	  (t t t &key (key callable))
+  list (flushable unsafe call))
+
+(defknown (sublis nsublis) (list t &key (key callable) (test callable)
+				 (test-not callable))
+  list (flushable unsafe call))
+
+(defknown member (t list &key (key callable) (test callable)
+		    (test-not callable))
+  list (foldable flushable call))
+(defknown (member-if member-if-not) (callable list &key (key callable))
+  list (foldable flushable call))
+
+(defknown tailp (list list) boolean (foldable flushable))
+
+(defknown adjoin (t list &key (key callable) (test callable)
+		    (test-not callable))
+  list (foldable flushable unsafe call))
+
+(defknown (union intersection set-difference set-exclusive-or)
+	  (list list &key (key callable) (test callable) (test-not callable))
+  list
+  (foldable flushable call))
+
+(defknown (nunion nintersection nset-difference nset-exclusive-or)
+	  (list list &key (key callable) (test callable) (test-not callable))
+  list
+  (foldable flushable call))
+
+(defknown subsetp 
+	  (list list &key (key callable) (test callable) (test-not callable))
+  boolean
+  (foldable flushable call))
+
+(defknown acons (t t t) list (movable flushable unsafe))
 (defknown pairlis (t t &optional t) list (flushable unsafe))
-(defknown assoc (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown assoc-if (t t) list (flushable unsafe))
-(defknown assoc-if-not (t t) list (flushable unsafe))
-(defknown rassoc (t t &key (key t) (test t) (test-not t)) list (flushable unsafe))
-(defknown rassoc-if (t t) list (flushable unsafe))
-(defknown rassoc-if-not (t t) list (flushable unsafe))
+
+(defknown (rassoc assoc)
+	  (t list &key (key callable) (test callable) (test-not callable))
+  list (foldable flushable call))
+(defknown (assoc-if-not assoc-if rassoc-if rassoc-if-not)
+	  (callable list) list (foldable flushable call))
 
 
 ;;;; In the "Hash Tables" chapter:
@@ -747,9 +657,9 @@
 
 (defknown (nstring-upcase nstring-downcase nstring-capitalize)
   (string &key (start index) (end sequence-end))
-  string (unsafe))
+  string ())
 
-(defknown string (t) string (flushable unsafe))
+(defknown string ((or character string symbol)) string (flushable))
 
 
 ;;; Internal non-keyword versions of string predicates:
@@ -773,11 +683,11 @@
 
 ;;;; In the "Streams" chapter:
 
-(defknown make-synonym-stream (symbol) stream (flushable unsafe))
-(defknown make-broadcast-stream (&rest stream) stream (flushable unsafe))
-(defknown make-concatenated-stream (&rest stream) stream (flushable unsafe))
-(defknown make-two-way-stream (stream stream) stream (flushable unsafe))
-(defknown make-echo-stream (stream stream) stream (flushable unsafe))
+(defknown make-synonym-stream (symbol) stream (flushable))
+(defknown make-broadcast-stream (&rest stream) stream (flushable))
+(defknown make-concatenated-stream (&rest stream) stream (flushable))
+(defknown make-two-way-stream (stream stream) stream (flushable))
+(defknown make-echo-stream (stream stream) stream (flushable))
 (defknown make-string-input-stream (string &optional index index) stream (flushable unsafe))
 (defknown make-string-output-stream () stream (flushable))
 (defknown get-output-stream-string (stream) simple-string ())
@@ -794,18 +704,21 @@
 ;;; code motion over I/O operations is particularly confusing and not very
 ;;; important for efficency.
 
-(defknown copy-readtable (&optional (or readtable null) readtable) readtable (unsafe))
+(defknown copy-readtable (&optional (or readtable null) readtable) readtable
+  ())
 (defknown readtablep (t) boolean (movable foldable flushable))
 
 (defknown set-syntax-from-char
   (character character &optional (or readtable null) readtable) void
-  (unsafe))
+  ())
 
-(defknown set-macro-character (character callable &optional t readtable) void (unsafe))
+(defknown set-macro-character (character callable &optional t readtable) void
+  (unsafe))
 (defknown get-macro-character (character &optional readtable)
   (values callable boolean) (flushable))
 
-(defknown make-dispatch-macro-character (character &optional t readtable) void (unsafe))
+(defknown make-dispatch-macro-character (character &optional t readtable)
+  void ())
 (defknown set-dispatch-macro-character
   (character character callable &optional readtable) void
   (unsafe))
@@ -875,33 +788,34 @@
 
 ;;;; In the "File System Interface" chapter:
 
-(defknown pathname (pathnamelike) pathname (foldable flushable unsafe))
-(defknown truename (pathnamelike) pathname (unsafe))
+(defknown pathname (pathnamelike) pathname (foldable flushable))
+(defknown truename (pathnamelike) pathname ())
 
 (defknown parse-namestring
   (pathnamelike &optional (or string null) pathnamelike  &key (start index)
 		(end sequence-end) (junk-allowed t))
   (values (or pathname null) index)
-  (unsafe))
+  ())
 
 (defknown merge-pathnames (pathnamelike &optional pathnamelike) pathname
   (foldable flushable))
 
-;;; Sooo many kindsof garbage can be specified, that I don't feel like figuring
-;;; out what legal args are...
 (defknown make-pathname
- (&key (defaults pathnamelike) (host t) (device t) (directory t) (name t)
-       (type t) (version t))
-  pathname (foldable flushable unsafe))
+ (&key (defaults pathnamelike) (host pathname-host) (device pathname-device)
+       (directory (or pathname-directory string)) (name pathname-name)
+       (type pathname-type) (version pathname-version))
+  pathname (foldable flushable))
 
 (defknown pathnamep (t) boolean (movable foldable flushable))
 
 (defknown pathname-host (pathnamelike) pathname-host (foldable flushable))
 (defknown pathname-device (pathnamelike) pathname-device (foldable flushable))
-(defknown pathname-directory (pathnamelike) pathname-directory (foldable flushable))
+(defknown pathname-directory (pathnamelike) pathname-directory
+  (foldable flushable))
 (defknown pathname-name (pathnamelike) pathname-name (foldable flushable))
 (defknown pathname-type (pathnamelike) pathname-type (foldable flushable))
-(defknown pathname-version (pathnamelike) pathname-version (foldable flushable))
+(defknown pathname-version (pathnamelike) pathname-version
+  (foldable flushable))
 
 (defknown (namestring file-namestring directory-namestring host-namestring)
   (pathnamelike) simple-string
@@ -926,7 +840,7 @@
 (defknown delete-file (pathnamelike) t)
 (defknown probe-file (pathnamelike) (or pathname null) (flushable))
 (defknown file-write-date (pathnamelike) (or unsigned-byte null) (flushable))
-(defknown file-author (pathnamelike) (or simple-string null) (flushable unsafe))
+(defknown file-author (pathnamelike) (or simple-string null) (flushable))
 
 (defknown file-position (stream &optional
 				(or unsigned-byte (member :start :end)))
@@ -953,10 +867,10 @@
 
 ;;; ### Compiler interface non-standard...
 (defknown compile (symbol &optional (or list function null))
-  (values (or function null) boolean boolean))
+  (values (or function symbol) boolean boolean))
 (defknown compile-file
   ((or filename list) &key (output-file filename) (error-file filename)
-   (trace-file filename) (errors-output t) (load t) (block-compile t))
+   (trace-file filename) (error-output t) (load t) (block-compile t))
   (values (or pathname null) boolean boolean))
 (defknown disassemble (callable &optional stream) void)
 
@@ -1045,7 +959,7 @@
 ;;; functions, although the var remains the Slot-Accessor describing the actual
 ;;; function called.
 ;;;
-(defknown %slot-accessor (t) t (foldable flushable unsafe))
+(defknown %slot-accessor (t) t (foldable flushable))
 (defknown %slot-setter (t t) t (unsafe))
 
 
@@ -1067,7 +981,7 @@
 (defknown %set-documentation
 	  (symbol (member variable function structure type setf)
 		  (or string null))
-  (unsafe))
+  ())
 (defknown %setnth (index list t) t (unsafe))
 (defknown %set-fill-pointer (vector index) (unsafe))
 
