@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.72 1992/04/14 17:28:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.73 1992/05/28 23:13:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -796,7 +796,7 @@
   (let ((type (specifier-type spec)))
     (collect ((res nil cons))
       (dolist (name names)
-	(let ((found (find name fvars :key #'leaf-name)))
+	(let ((found (find name fvars :key #'leaf-name :test #'equal)))
 	  (cond
 	   (found
 	    (setf (leaf-type found) type)
@@ -855,7 +855,7 @@
 		   (notinline :notinline)
 		   (maybe-inline :maybe-inline))))
       (dolist (name (rest spec))
-	(let* ((var (or (find name fvars :key #'leaf-name)
+	(let* ((var (or (find name fvars :key #'leaf-name :test #'equal)
 			(find-lexically-apparent-function
 			 name
 			 "in an inline or notinline declaration")))
@@ -880,7 +880,7 @@
 	(unless (eq wot 'function)
 	  (compiler-error "Unrecognizable function or variable name: ~S"
 			  name))
-	(find fn-name fvars :key #'leaf-name))
+	(find fn-name fvars :key #'leaf-name :test #'equal))
       (find-in-bindings vars name)))
 
 
