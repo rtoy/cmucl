@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.21 1993/08/20 18:32:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.22 1993/08/24 13:01:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1609,6 +1609,7 @@
 	      (,format-var (format-or-lose ',format-name ,(format-table-name)))
 	      (args ,(gen-args-def-form field-defs format-var evalp))
 	      (funcache ,(function-cache-name)))
+	 #+small (declare (optimize (speed 0)))
 	 (multiple-value-bind (printer-fun printer-defun)
 	     (find-printer-fun ,(if (eq printer-form :default)
 				     `(format-default-printer ,format-var)
