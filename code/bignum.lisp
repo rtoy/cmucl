@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.35 2004/06/01 22:42:06 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.36 2004/06/29 15:17:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1855,6 +1855,11 @@ down to individual words.")
 FOR NOW WE DON'T USE LDB OR DPB.  WE USE SHIFTS AND MASKS IN NUMBERS.LISP WHICH
 IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 
+Not really.  It doesn't handle negative numbers very well and still
+needs work.  Having said that, I (RLT) think bignum-load-byte and
+friends is working.
+
+|#
 
 (defconstant maximum-fixnum-bits #+ibm-rt-pc 27 #-ibm-rt-pc 30)
 
@@ -1867,6 +1872,16 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
     (if (< byte-len maximum-fixnum-bits)
 	(bignum-ldb-fixnum-res bignum byte-len byte-pos)
 	(bignum-ldb-bignum-res bignum byte-len byte-pos))))
+
+;;; Create a 32-bit word containing the specified number of 1 bits,
+;;; right-justified in the 32-bit word.
+(declaim (inline %make-ones))
+(defun %make-ones (len)
+  (declare (type (integer 0 #.digit-size) len)
+	   (optimize (speed 3) (safety 0)))
+  (if (< len digit-size)
+      (1- (ash 1 len))
+      #.(1- (ash 1 digit-size))))
 
 ;;; BIGNUM-LDB-FIXNUM-RES -- Internal.
 ;;;
@@ -1887,8 +1902,11 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 ;;; we only cross one digit boundary if any.
 ;;;
 (defun bignum-ldb-fixnum-res (bignum byte-len byte-pos)
+  (declare (type (integer 0 29) byte-len)
+	   (type (and fixnum unsigned-byte) byte-pos)
+	   (optimize (speed 3) (safety 0)))
   (multiple-value-bind (skipped-digits pos)
-		       (truncate byte-pos digit-size)
+      (truncate byte-pos digit-size)
     (let ((bignum-len (%bignum-length bignum))
 	  (s-digits+1 (1+ skipped-digits)))
       (declare (type bignum-index bignum-len s-digits+1))
@@ -1898,37 +1916,34 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 	      (%make-ones byte-len))
 	  (let ((end (+ pos byte-len)))
 	    (cond ((<= end digit-size)
-		   (logand (ash (%bignum-ref bignum skipped-digits) (- pos))
-			   ;; Must LOGAND after shift here.
+		   ;; The desired byte is completely contained in the
+		   ;; current digit.  Extract it out.
+		   (logand (%ashr (%bignum-ref bignum skipped-digits) pos)
 			   (%make-ones byte-len)))
 		  ((>= s-digits+1 bignum-len)
+		   ;; The desired byte is in the bignum digit
+		   ;; containing the sign.  Just extract out the
+		   ;; desired part, being careful with the sign.
 		   (let* ((available-bits (- digit-size pos))
-			  (res (logand (ash (%bignum-ref bignum skipped-digits)
-					    (- pos))
-				       ;; LOGAND should be unnecessary here
-				       ;; with a logical right shift or a
-				       ;; correct unsigned-byte-32 one.
-				       (%make-ones available-bits))))
+			  (res (%digit-logical-shift-right (%bignum-ref bignum skipped-digits) pos)))
 		     (if (%bignum-0-or-plusp bignum bignum-len)
 			 res
 			 (logior (%ashl (%make-ones (- end digit-size))
 					available-bits)
 				 res))))
 		  (t
+		   ;; Ok, the desired byte is contained in two digits.
+		   ;; Extract out the desired pieces from the two
+		   ;; digits and merge them into one.
 		   (let* ((high-bits-in-first-digit (- digit-size pos))
-			  (high-mask (%make-ones high-bits-in-first-digit))
 			  (low-bits-in-next-digit (- end digit-size))
 			  (low-mask (%make-ones low-bits-in-next-digit)))
-		     (declare (type bignum-element-type high-mask low-mask))
+		     (declare (type bignum-element-type low-mask))
 		     (logior (%ashl (logand (%bignum-ref bignum s-digits+1)
 					    low-mask)
 				    high-bits-in-first-digit)
-			     (logand (ash (%bignum-ref bignum skipped-digits)
-					  (- pos))
-				     ;; LOGAND should be unnecessary here with
-				     ;; a logical right shift or a correct
-				     ;; unsigned-byte-32 one.
-				     high-mask))))))))))
+			     (%digit-logical-shift-right (%bignum-ref bignum skipped-digits)
+							 pos))))))))))
 
 ;;; BIGNUM-LDB-BIGNUM-RES -- Internal.
 ;;;
@@ -1947,8 +1962,12 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 ;;;       and reference lots of local variables this macro establishes.
 ;;;
 (defun bignum-ldb-bignum-res (bignum byte-len byte-pos)
+  (declare (type bignum bignum)
+	   (type (and fixnum (integer 33)) byte-len)
+	   (type (and fixnum unsigned-byte) byte-pos)
+	   (optimize (speed 3)))
   (multiple-value-bind (skipped-digits pos)
-		       (truncate byte-pos digit-size)
+      (truncate byte-pos digit-size)
     (let ((bignum-len (%bignum-length bignum)))
       (declare (type bignum-index bignum-len))
       (cond
@@ -1972,6 +1991,9 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 ;;; all zero or one depending on the sign of the bignum.
 ;;;
 (defun make-bignum-virtual-ldb-bits (bignum bignum-len byte-len)
+  (declare (type bignum bignum)
+	   (type fixnum bignum-len byte-len)
+	   (optimize speed))
   (if (%bignum-0-or-plusp bignum bignum-len)
       0
       (multiple-value-bind (res-len-1 extra)
@@ -1995,6 +2017,9 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 ;;; bignum is negative.
 ;;;
 (defun make-aligned-ldb-bignum (bignum bignum-len byte-len skipped-digits)
+  (declare (type bignum bignum)
+	   (type fixnum bignum-len byte-len skipped-digits)
+	   (optimize speed))
   (multiple-value-bind (res-len-1 extra)
 		       (truncate byte-len digit-size)
     (declare (type bignum-index res-len-1))
@@ -2025,48 +2050,62 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 ;;; lots of local variables established by it.
 ;;;
 (defun make-unaligned-ldb-bignum (bignum bignum-len byte-len skipped-digits pos)
+  (declare (type bignum bignum)
+	   (type fixnum bignum-len byte-len skipped-digits)
+	   (type (integer 0 32) pos)
+	   (optimize speed))
   (multiple-value-bind (res-len-1 extra)
-		       (truncate byte-len digit-size)
-    (shift-right-unaligned
-     bignum skipped-digits pos (1+ res-len-1)
-     ((or (= j res-len-1) (= i+1 bignum-len))
-      (cond ((= j res-len-1)
-	     (cond
-	      ((< extra high-bits-in-first-digit)
-	       (setf (%bignum-ref res j)
-		     (logand (ash (%bignum-ref bignum i) minus-start-pos)
-			     ;; Must LOGAND after shift here.
-			     (%make-ones extra))))
+      (truncate byte-len digit-size)
+    (let* ((low-mask (%make-ones pos)
+	     #+nil (1- (ash 1 pos))))
+      (shift-right-unaligned
+       bignum skipped-digits pos (1+ res-len-1)
+       ((or (= j res-len-1) (= i+1 bignum-len))
+	(cond ((= j res-len-1)
+	       ;; We're here if the bignum result is basically done.
+	       (cond
+		 ((< extra high-bits-in-first-digit)
+		  (setf (%bignum-ref res j)
+			(logand (%digit-logical-shift-right (%bignum-ref bignum i) pos)
+				(%make-ones extra))))
+		 ((= i+1 bignum-len)
+		  ;; If we're at the last digit of the bignum,
+		  ;; we need to merge in the sign correctly.
+		  (setf (%bignum-ref res j)
+			(logand
+			 (%digit-logical-shift-right (%bignum-ref bignum i) pos)
+			 (%make-ones extra)))
+		  (unless (%bignum-0-or-plusp bignum bignum-len)
+		    (setf (%bignum-ref res j)
+			  (logior (%bignum-ref res j)
+				  (%ashl (%make-ones
+					  (- extra high-bits-in-first-digit))
+					 high-bits-in-first-digit)))))
+		 (t
+		  ;; We're not at the last digit, so just grab
+		  ;; bits from the current digit, and the next
+		  ;; to get the desired result.
+		  (setf (%bignum-ref res j)
+			(logand
+			 (logior
+			  (%digit-logical-shift-right (%bignum-ref bignum i) pos)
+			  (%ashl (%bignum-ref bignum i+1) high-bits-in-first-digit))
+			 (%make-ones extra))))))
 	      (t
 	       (setf (%bignum-ref res j)
-		     (logand (ash (%bignum-ref bignum i) minus-start-pos)
-			     ;; LOGAND should be unnecessary here with a logical
-			     ;; right shift or a correct unsigned-byte-32 one.
-			     high-mask))
-	       (when (%bignum-0-or-plusp bignum bignum-len)
+		     (%digit-logical-shift-right (%bignum-ref bignum i) pos))
+	       (unless (%bignum-0-or-plusp bignum bignum-len)
+		 ;; Fill in upper half of this result digit with 1's.
 		 (setf (%bignum-ref res j)
 		       (logior (%bignum-ref res j)
-			       (%ashl (%make-ones
-				       (- extra high-bits-in-first-digit))
-				      high-bits-in-first-digit)))))))
-	    (t
-	     (setf (%bignum-ref res j)
-		   (logand (ash (%bignum-ref bignum i) minus-start-pos)
-			   ;; LOGAND should be unnecessary here with a logical
-			   ;; right shift or a correct unsigned-byte-32 one.
-			   high-mask))
-	     (unless (%bignum-0-or-plusp bignum bignum-len)
-	       ;; Fill in upper half of this result digit with 1's.
-	       (setf (%bignum-ref res j)
-		     (logior (%bignum-ref res j)
-			     (%ashl low-mask high-bits-in-first-digit)))
-	       ;; Fill in any extra 1's we need to be byte-len long.
-	       (do ((j (1+ j) (1+ j)))
-		   ((>= j res-len-1)
-		    (setf (%bignum-ref res j) (%make-ones extra)))
-		 (setf (%bignum-ref res j) all-ones-digit)))))
-      (%normalize-bignum res res-len))
-     res)))
+			       (%ashl low-mask high-bits-in-first-digit)))
+		 ;; Fill in any extra 1's we need to be byte-len long.
+		 (do ((j (1+ j) (1+ j)))
+		     ((>= j res-len-1)
+		      (setf (%bignum-ref res j) (%make-ones extra)))
+		   (setf (%bignum-ref res j) all-ones-digit)))))
+	(%normalize-bignum res res-len))
+       res))))
 
 
 
@@ -2082,12 +2121,18 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 	 (res-len (1+ (max (ceiling byte-end digit-size) bignum-len)))
 	 (res (%allocate-bignum res-len)))
     (declare (type bignum-index bignum-len res-len))
+    (format t "BIGNUM-DEPOSIT-BYTE~%")
+    (format t "bignum-len = ~A~%" bignum-len)
+    (format t "res-len = ~A~%" res-len)
     ;;
     ;; Fill in an extra sign digit in case we set what would otherwise be the
     ;; last digit's last bit.  Normalize at the end in case this was
     ;; unnecessary.
     (unless bignum-plusp
-      (setf (%bignum-ref res (1- res-len)) all-ones-digit))
+      ;; Actually, we need to fill all words past the end of the
+      ;; bignum with sign digits.
+      (dotimes (k (- res-len bignum-len))
+	(setf (%bignum-ref res (+ k bignum-len)) all-ones-digit)))
     (multiple-value-bind (end-digit end-bits)
 			 (truncate byte-end digit-size)
       (declare (type bignum-index end-digit))
@@ -2099,13 +2144,25 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 	(do ((i 0 (1+ i))
 	     (end (min pos-digit bignum-len)))
 	    ((= i end)
+	     ;;(format t "end = ~A (min ~A ~A)~%" end pos-digit bignum-len)
 	     (cond ((< i bignum-len)
+		    #|
+		    (format t "bignum-dpb:  i < bignum-len ~A ~A~%" i bignum-len)
+		    (format t "  pos-bits = ~A~%" pos-bits)
+		    (format t "  res = ~:,,,8X~%"
+			    (ldb (byte (* (%bignum-length res) 32) 0) res))
+		    |#
 		    (unless (zerop pos-bits)
 		      (setf (%bignum-ref res i)
 			    (logand (%bignum-ref bignum i)
-				    (%make-ones pos-bits)))))
+				    (%make-ones pos-bits))))
+		    #+nil
+		    (format t "  res = ~:,,,8X~%"
+			    (ldb (byte (* (%bignum-length res) 32) 0) res))
+		    )
 		   (bignum-plusp)
 		   (t
+		    ;;(format t "bignum-dpb:  T~%")
 		    (do ((i i (1+ i)))
 			((= i pos-digit)
 			 (unless (zerop pos-bits)
@@ -2121,7 +2178,8 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 				 end-digit end-bits res)))
       ;;
       ;; Fill in remaining bits from bignum after byte-spec.
-      (when (< end-digit bignum-len)
+      (Format t "end-digit bignum-len = ~A ~A~%" end-digit bignum-len)
+      (when (<= end-digit bignum-len)
 	(setf (%bignum-ref res end-digit)
 	      (logior (logand (%bignum-ref bignum end-digit)
 			      (%ashl (%make-ones (- digit-size end-bits))
@@ -2131,7 +2189,7 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 		      ;; we don't need to mask out unwanted high bits.
 		      (%bignum-ref res end-digit)))
 	(do ((i (1+ end-digit) (1+ i)))
-	    ((= i bignum-len))
+	    ((>= i bignum-len))
 	  (setf (%bignum-ref res i) (%bignum-ref bignum i)))))
     (%normalize-bignum res res-len)))
 
@@ -2160,13 +2218,20 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 	(new-byte-digit (%fixnum-to-digit new-byte)))
     (declare (type bignum-element-type new-byte-digit))
     (cond ((< byte-len maximum-fixnum-bits)
+	   (format t "deposit-fixnum-bits:  byte-len < maximum-fixnum-bits~%")
 	   (deposit-fixnum-digit new-byte-digit byte-len pos-digit pos-bits
 				 other-bits result
 				 (- byte-len other-bits)))
+	  ;; Can't do this because what happens if new-byte is a
+	  ;; fixnum, but the byte-spec is larger than a fixnum?  Some
+	  ;; of the higher bits may not be set properly.
+	  #+nil
 	  ((or (plusp new-byte) (zerop new-byte))
+	   (format t "deposit-fixnum-bits:  new-byte >= 0~%")
 	   (deposit-fixnum-digit new-byte-digit byte-len pos-digit pos-bits
 				 other-bits result pos-bits))
 	  (t
+	   (format t "deposit-fixnum-bits:  T~%")
 	   (multiple-value-bind
 	       (digit bits)
 	       (deposit-fixnum-digit new-byte-digit byte-len pos-digit pos-bits
@@ -2204,28 +2269,75 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 (defun deposit-fixnum-digit (new-byte-digit byte-len pos-digit pos-bits
 			     other-bits result next-digit-bits-needed)
   (declare (type bignum-index pos-digit)
-	   (type bignum-element-type new-byte-digit next-digit-mask))
+	   (type bignum-element-type new-byte-digit))
   (cond ((<= byte-len other-bits)
 	 ;; Bits from new-byte fit in the current result digit.
-	 (setf (%bignum-ref result pos-digit)
-	       (logior (%bignum-ref result pos-digit)
-		       (%ashl (logand new-byte-digit (%make-ones byte-len))
-			      pos-bits)))
+	 (format t "dep-fixnum: byte-len < other-bits~%")
+	 (format t " pos-digit = ~A~%" pos-digit)
+	 (format t " result = ~:,,,8x~%"
+		 (ldb (byte (* 32 (%bignum-length result)) 0) result))
+	 (Format t " new-byte-digit = ~X~%" new-byte-digit)
+	 (Format t "  pos-bits      = ~A~%" pos-bits)
+	 (format t "  byte-len      = ~A~%" byte-len)
+	 (let ((word (logior (logandc2 (%bignum-ref result pos-digit)
+				       (%ashl (%make-ones byte-len) pos-bits))
+			     (%ashl (logand new-byte-digit (%make-ones byte-len))
+				    pos-bits))))
+	   ;;(format t " new word = ~:,,,8x~%" word)
+	   (setf (%bignum-ref result pos-digit) word))
 	 (if (= byte-len other-bits)
 	     (values (1+ pos-digit) 0)
 	     (values pos-digit (+ byte-len pos-bits))))
 	(t
 	 ;; Some of new-byte's bits go in current result digit.
+	 (format t "dep-fixnum: T~%")
 	 (setf (%bignum-ref result pos-digit)
 	       (logior (%bignum-ref result pos-digit)
 		       (%ashl (logand new-byte-digit (%make-ones other-bits))
 			      pos-bits)))
+
+	 (Format t "  result = ~:,,,8X~%" result)
+	 (Format t "  result = ~:,,,8X~%" (ldb (byte (* (%bignum-length result) 32) 0) result))
+
 	 (let ((pos-digit+1 (1+ pos-digit)))
+
+	   (format t "  pos-digit = ~A~%" pos-digit)
+	   (format t "  other-bits = ~A~%" other-bits)
+	   (format t "  new-byte-digit = ~X~%" new-byte-digit)
+	   (format t "  Merge in       = ~X~%" (logand (%ashr new-byte-digit other-bits)
+						       ;; Must LOGAND after shift here.
+						       (%make-ones next-digit-bits-needed)))
+
 	   ;; The rest of new-byte's bits go in the next result digit.
+
+	   (format t "  next-digit-bits-needed = ~A~%" next-digit-bits-needed)
+	   (format t "  current digit = ~X~%" (%bignum-ref result pos-digit))
+	   (format t "  next-digit = ~X~%" (%bignum-ref result pos-digit+1))
+	   (format t "  next-digit+1 = ~X~%" (%bignum-ref result (1+ pos-digit+1)))
+
+	   #+nil
+	   (setf (%bignum-ref result pos-digit+1)
+		 (logior (logandc2 (%bignum-ref result pos-digit+1)
+				 (%make-ones next-digit-bits-needed))
+			 (logand (%ashr new-byte-digit other-bits)
+				 ;; Must LOGAND after shift here.
+				 (%make-ones next-digit-bits-needed))))
+	   #+nil
 	   (setf (%bignum-ref result pos-digit+1)
 		 (logand (ash new-byte-digit (- other-bits))
 			 ;; Must LOGAND after shift here.
 			 (%make-ones next-digit-bits-needed)))
+	   (setf (%bignum-ref result pos-digit+1)
+		 (logior (logandc2 (%bignum-ref result pos-digit+1)
+				 (%make-ones next-digit-bits-needed))
+			 (logand (ash new-byte-digit (- other-bits))
+				 ;; Must LOGAND after shift here.
+				 (%make-ones next-digit-bits-needed))))
+	   #||
+	   (Format t "  result = ~:,,,8X~%" result)
+	   (Format t "  result = ~:,,,8X~%" (ldb (byte (* (%bignum-length result) 32) 0) result))
+	   (format t "  next-digit-bits-needed, digit-size = ~A ~A~%" next-digit-bits-needed digit-size)
+	   ||#
 	   (if (= next-digit-bits-needed digit-size)
 	       (values (1+ pos-digit+1) 0)
 	       (values pos-digit+1 next-digit-bits-needed))))))
@@ -2243,18 +2355,25 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 (defun deposit-bignum-bits (bignum-byte byte-len pos-digit pos-bits 
 			    end-digit end-bits result)
   (declare (type bignum-index pos-digit end-digit))
+  (format t "deposit-bignum-bits: result = ~:,,,8X~%"
+	  (ldb (byte (* 32 (%bignum-length result)) 0) result))
+  (format t "deposit-bignum-bits: result = ~:,,,8X~%" result)
   (cond ((zerop pos-bits)
+	 (format t " cond: pos-bits = 0~%")
 	 (deposit-aligned-bignum-bits bignum-byte pos-digit end-digit end-bits
 				      result))
 	((or (= end-digit pos-digit)
 	     (and (= end-digit (1+ pos-digit))
 		  (zerop end-bits)))
+	 (format t " cond: mid~%")
 	 (setf (%bignum-ref result pos-digit)
 	       (logior (%bignum-ref result pos-digit)
 		       (%ashl (logand (%bignum-ref bignum-byte 0)
 				      (%make-ones byte-len))
 			      pos-bits))))
-	(t (deposit-unaligned-bignum-bits bignum-byte pos-digit pos-bits
+	(t
+	 (format t " cond: T~%")
+	 (deposit-unaligned-bignum-bits bignum-byte pos-digit pos-bits
 					  end-digit end-bits result))))
 
 ;;; DEPOSIT-ALIGNED-BIGNUM-BITS -- Internal.
@@ -2274,15 +2393,26 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 	 (j pos-digit (1+ j)))
 	((or (= j end-digit) (= i bignum-len))
 	 (cond ((= j end-digit)
+		(format t "  deposit-aligned: j = end-digit (~A)~%" j)
+		(format t "    i, bignum-len = ~A ~A~%" i bignum-len)
 		(cond ((< i bignum-len)
-		       (setf (%bignum-ref result j)
-			     (logand (%bignum-ref bignum-byte i)
-				     (%make-ones end-bits))))
+		       (format t "      result[~A] = ~:,,,8x~%" j (%bignum-ref result j))
+		       (let ((word
+			      #+nil
+			       (logand (%bignum-ref bignum-byte i)
+				       (%make-ones end-bits))
+			       (logior (logandc2 (%bignum-ref result j)
+						 (%make-ones end-bits))
+				       (logand (%bignum-ref bignum-byte i)
+					       (%make-ones end-bits)))))
+		       (format t "      new = ~:,,,8x~%" word)
+		       (setf (%bignum-ref result j) word)))
 		      (bignum-plusp)
 		      (t
 		       (setf (%bignum-ref result j) (%make-ones end-bits)))))
 	       (bignum-plusp)
 	       (t
+		(format t "  deposit-aligned: cond T~%")
 		(do ((j j (1+ j)))
 		    ((= j end-digit)
 		     (setf (%bignum-ref result j) (%make-ones end-bits)))
@@ -2300,36 +2430,148 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 	 (bignum-plusp (%bignum-0-or-plusp bignum-byte bignum-len))
 	 (low-mask (%make-ones pos-bits))
 	 (bits-past-pos-bits (- digit-size pos-bits))
-	 (high-mask (%make-ones bits-past-pos-bits))
-	 (minus-high-bits (- bits-past-pos-bits)))
+	 (high-mask (%make-ones bits-past-pos-bits)))
     (declare (type bignum-element-type low-mask high-mask)
 	     (type bignum-index bignum-len))
+    (format t " deposit-unaligned: start result = ~:,,,8X~%"
+	    (ldb (byte (* 32 (%bignum-length result)) 0) result))
+    (format t "   pos-digit = ~A~%" pos-digit)
+    (format t "   pos-bits  = ~A~%" pos-bits)
+    (format t "   end-digit = ~A~%" end-digit)
+    (format t "   end-bits  = ~A~%" end-bits)
+    ;; i is the word index to bignum-byte
+    ;; j is the word index to the result
     (do ((i 0 (1+ i))
 	 (j pos-digit j+1)
 	 (j+1 (1+ pos-digit) (1+ j+1)))
-	((or (= j end-digit) (= i bignum-len))
+	((or (= j+1 end-digit) (= i bignum-len))
+	 (format t "  deposit-unaligned: result = ~:,,,8X~%"
+		 (ldb (byte (* 32 (%bignum-length result)) 0) result))
+	 (format t "  deposit-unaligned: result = ~:,,,8X~%" result)
 	 (cond
-	  ((= j end-digit)
-	   (setf (%bignum-ref result j)
-		 (cond
-		  ((>= pos-bits end-bits)
-		   (logand (%bignum-ref result j) (%make-ones end-bits)))
-		  ((< i bignum-len)
-		   (logior (%bignum-ref result j)
-			   (%ashl (logand (%bignum-ref bignum-byte i)
-					  (%make-ones (- end-bits pos-bits)))
-				  pos-bits)))
-		  (bignum-plusp
-		   (logand (%bignum-ref result j)
-			   ;; 0's between pos-bits and end-bits positions.
-			   (logior (%ashl (%make-ones (- digit-size end-bits))
-					  end-bits)
-				   low-mask)))
-		  (t (logior (%bignum-ref result j)
-			     (%ashl (%make-ones (- end-bits pos-bits))
-				    pos-bits))))))
+	   ((= j+1 end-digit)
+	    (format t "  cond: j = end-digit - 1: ~A ~A-1~%" j end-digit)
+	    (format t "        pos-bits, end-bits ~A ~A~%" pos-bits end-bits)
+	    (setf (%bignum-ref result j+1)
+		  (cond
+		    ((>= pos-bits end-bits)
+		     (format t "   cond: pos-bits >= end-bits ~A ~A~%" pos-bits end-bits)
+		     (format t "         res-digit = ~:,,,8X~%" (%bignum-ref result j+1))
+		     (let* ((digit (%bignum-ref bignum-byte i))
+			    (word
+			     (logior (logandc2 (%bignum-ref result j+1)
+					       (%make-ones end-bits))
+				     (%digit-logical-shift-right digit bits-past-pos-bits))))
+		       ;; Update previous word too
+		       (setf (%bignum-ref result j)
+			     (logior (logandc2 (%bignum-ref result j)
+					       (%ashl high-mask pos-bits))
+				     (%ashl (logand digit high-mask) pos-bits)))
+		       (format t "         word      = ~:,,,8X~%" word)
+		       word))
+		    #+nil
+		    ((< i bignum-len)
+		     ;; We've reached the end of the result, but we
+		     ;; haven't used all of the bignum-byte digits
+		     ;; yet.  Do so now.
+		     
+		     (format t "   cond: i < bignum-len ~A ~A~%" i bignum-len)
+		     (Format t "    j = ~A~%" j)
+		     (format t "    bignum-byte = ~:,,,8X~%" bignum-byte)
+		     (format t "    end-bits, pos-bits = ~A ~A~%" end-bits pos-bits)
+		     (format t "    word = ~:,,,8X~%"
+			     (%ashl (logand (%bignum-ref bignum-byte i)
+					    (%make-ones (- end-bits pos-bits)))
+				    pos-bits))
+		     (format t "    res word = ~:,,,8X~%" (%bignum-ref result j))
+		     (format t "    result = ~:,,,8X~%"
+			     (ldb (byte (* 32 (%bignum-length result)) 0) result))
+		     (let* ((mask (%make-ones (- end-bits pos-bits)))
+			    (word
+			     (logior (logandc2 (%bignum-ref result j+1)
+					       (%make-ones end-bits))
+				     (%digit-logical-shift-right (%bignum-ref bignum-byte i) bits-past-pos-bits))))
+		       (format t "    new word = ~:,,,8X~%" word)
+		       (format t "    result = ~:,,,8X~%"
+			       (ldb (byte (* 32 (%bignum-length result)) 0) result))
+		       ;; Adjust previous word too
+		       (setf (%bignum-ref result j)
+			     (logior (logandc2 (%bignum-ref result j)
+					       (%ashl high-mask pos-bits))
+				     (%ashl (logand (%bignum-ref bignum-byte i) high-mask) pos-bits)))
+		       word)
+		     )
+		    ((< i bignum-len)
+		     ;; We've reached the end of the result, but we
+		     ;; haven't used all of the bignum-byte digits
+		     ;; yet.  Do so now.
+		     ;;
+		     ;; For i to bignum-len - 1
+		     ;;   merge bignum-byte[i] into result j, j+1
+		     ;; merge bignum-byte[bignum-len - 1] into result 
+		     
+		     (format t "   cond: i < bignum-len ~A ~A~%" i bignum-len)
+		     (Format t "    j = ~A~%" j)
+		     (format t "    bignum-byte = ~:,,,8X~%" bignum-byte)
+		     (format t "    end-bits, pos-bits = ~A ~A~%" end-bits pos-bits)
+		     (do ((i i (1+ i))
+			  (j j j+1)
+			  (j+1 j+1 (1+ j+1)))
+			 ((>= i (1- bignum-len))
+			  (let* ((mask (%make-ones (- end-bits pos-bits)))
+				 (word
+				  (logior (logandc2 (%bignum-ref result j)
+						    (%ashl mask pos-bits))
+					  (%ashl (logand (%bignum-ref bignum-byte (1- bignum-len))
+							 mask) pos-bits))
+				   ))
+			    (format t "       bignum-byte[~A] = ~:8,,,8x~%" (1- bignum-len)
+				    (%bignum-ref bignum-byte (1- bignum-len)))
+			    (format t "       result[~A] = ~:8,,,8X~%" j (%bignum-ref result j))
+			    (format t "        end-bits, pos-bits = ~A ~A~%" end-bits pos-bits)
+			    (format t "        res mask  = ~:8,,,8X~%" (%ashl (%make-ones end-bits) pos-bits))
+			    (format t "        or in     = ~:8,,,8X~%" (%ashl (logand (%bignum-ref bignum-byte (1- bignum-len))
+										      high-mask) pos-bits))
+			    (format t "       Final result[~A] = ~:8,,,8x~%" j word)
+
+			    word))
+		       (let ((word 0)
+			     (digit (%bignum-ref bignum-byte i)))
+			 (format t "      i, j = ~A ~A~%" i j)
+			 (format t "      digit = ~@8X~%" digit)
+			 ;; Set the top bits of the current result digit with the low
+			 ;; bits from the new-byte.
+			 (setf word
+			       (logior (logandc2 (%bignum-ref result j)
+						 (%ashl high-mask pos-bits))
+				       (%ashl (logand digit high-mask) pos-bits)))
+			 (format t "       Set result[~A] = ~:8,,,8x~%" j word)
+			 (setf (%bignum-ref result j) word)
+
+		       
+			 ;; Set the low bits of the next result digit with the high
+			 ;; bits from the new-byte.
+			 (setf word
+			       (logior (logandc2 (%bignum-ref result j+1)
+						 low-mask)
+				       (%digit-logical-shift-right digit bits-past-pos-bits)))
+			 (format t "       Set result[~A] = ~:8,,,8x~%" j+1 word)
+			 (setf (%bignum-ref result j+1) word))))
+		    (bignum-plusp
+		     (format t "   cond: bignum-plusp~%")
+		     (logand (%bignum-ref result j)
+			     ;; 0's between pos-bits and end-bits positions.
+			     (logior (%ashl (%make-ones (- digit-size end-bits))
+					    end-bits)
+				     low-mask)))
+		    (t
+		     (format t "   cond: T~%")
+		     (logior (%bignum-ref result j)
+			       (%ashl (%make-ones (- end-bits pos-bits))
+				      pos-bits))))))
 	  (bignum-plusp)
 	  (t
+	   (format t "  cond: T~%")
 	   (setf (%bignum-ref result j)
 		 (%ashl (%make-ones bits-past-pos-bits) pos-bits))
 	   (do ((j j+1 (1+ j)))
@@ -2338,18 +2580,41 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 	     (declare (type bignum-index j))
 	     (setf (%bignum-ref result j) all-ones-digit)))))
       (declare (type bignum-index i j j+1))
-      (let ((digit (%bignum-ref bignum-byte i)))
+      (let ((digit (%bignum-ref bignum-byte i))
+	    (word 0))
 	(declare (type bignum-element-type digit))
-	(setf (%bignum-ref result j)
-	      (logior (%bignum-ref result j)
+	;; Set the top bits of the current result digit with the low
+	;; bits from the new-byte.
+	(setf word
+	      (logior (logandc2 (%bignum-ref result j)
+				(%ashl high-mask pos-bits))
 		      (%ashl (logand digit high-mask) pos-bits)))
-	(setf (%bignum-ref result j+1)
+	(format t "    Set ~A (~:,,,8x) to ~:,,,8x~%"
+		j (%bignum-ref result j) word)
+	(format t "     mask = ~:,,,8x~%" high-mask)
+	(setf (%bignum-ref result j) word)
+
+	(Format t "     bits-post-post-bits = ~A~%" bits-past-pos-bits)
+	;; Set the low bits of the next result digit with the high
+	;; bits from the new-byte.
+	(setf word
+	      #+nil
 	      (logand (ash digit minus-high-bits)
 		      ;; LOGAND should be unnecessary here with a logical right
 		      ;; shift or a correct unsigned-byte-32 one.
-		      low-mask))))))
+		      low-mask)
+	      (logior (logandc2 (%bignum-ref result j+1)
+				low-mask)
+		      (%digit-logical-shift-right digit bits-past-pos-bits)))
+	(Format t "     low mask = ~x~%" low-mask)
+	(format t "    Set next ~A (~:,,,8x) to ~:,,,8x~%"
+		j+1 (%bignum-ref result j+1) word)
+	(format t "    result[j+1]   = ~:,,,8x~%" (%bignum-ref result j+1))
+	(format t "    shifted digit = ~:,,,8x~%" (%digit-logical-shift-right digit bits-past-pos-bits))
 
-|#
+	(setf (%bignum-ref result j+1) word)))))
+
+;;|#
 
 
 ;;;; TRUNCATE.
