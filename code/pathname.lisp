@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.68 2004/09/07 15:13:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.69 2004/09/09 17:13:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -120,7 +120,7 @@
 	       (format stream "#P~S" namestring)
 	       (format stream "~A" namestring)))
 	  (*print-readably*
-	   (error "~S Cannot be printed readably." pathname))
+	   (error 'print-not-readable :object pathname))
 	  (t
 	   (funcall (formatter "#<Unprintable pathname, Host=~S, Device=~S, ~
 				Directory=~S, Name=~S, Type=~S, Version=~S>")
@@ -185,7 +185,7 @@
 	       (format stream "#P~S" namestring)
 	       (format stream "~A" namestring)))
 	  (*print-readably*
-	   (error "~S Cannot be printed readably." pathname))
+	   (error 'print-not-readable :object pathname))
 	  (t
 	   (funcall (formatter "#<Unprintable pathname, Host=~S,  ~
 				Directory=~S, File=~S, Name=~S, Version=~S>")
