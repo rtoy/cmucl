@@ -46,7 +46,7 @@ os_vm_address_t os_allocate_at(addr,len)
 os_vm_address_t addr;
 os_vm_size_t len;
 {
-    return os_validate(&addr, len);
+    return os_validate(addr, len);
 }
 
 void os_deallocate(addr,len)
