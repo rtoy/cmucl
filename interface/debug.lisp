@@ -563,7 +563,7 @@
       (funcall hook condition hook)))
   (unix:unix-sigsetmask 0)
   (let* ((*debug-condition* condition)
-	 (*debug-restarts* (compute-restarts))
+	 (*debug-restarts* (compute-restarts condition))
 	 (*standard-input* *debug-io*)          ;in case of setq
 	 (*standard-output* *debug-io*)         ;''  ''  ''  ''
 	 (*error-output* *debug-io*)
