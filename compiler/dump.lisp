@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.28 1990/12/08 19:57:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.29 1991/01/20 15:04:13 ram Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -34,6 +34,11 @@
 
 ;;;; Fasl dumper state:
 
+;;; We do some buffering in front of the stream that represents the output file
+;;; so as to speed things up a bit.
+;;;
+(defconstant fasl-buffer-size 2048)
+
 ;;; The Fasl-File structure represents everything we need to know about dumping
 ;;; to a fasl file.  We need to objectify the state, since the fasdumper must
 ;;; be reentrant.
@@ -41,12 +46,21 @@
 (defstruct (fasl-file
 	    (:print-function
 	     (lambda (s stream d)
-	       (declare (ignore d))
+	       (declare (ignore d) (stream stream))
 	       (format stream "#<Fasl-File ~S>"
 		       (namestring (fasl-file-stream s))))))
   ;;
   ;; The stream we dump to.
   (stream (required-argument) :type stream)
+  ;;
+  ;; The buffer we accumulate output in before blasting it out to the stream
+  ;; with SYS:OUTPUT-RAW-BYTES.
+  (buffer (make-array fasl-buffer-size :element-type '(unsigned-byte 8))
+	  :type (simple-array (unsigned-byte 8) (*)))
+  ;;
+  ;; The index of the first free byte in Buffer.  Note that there is always at
+  ;; least one byte free.
+  (buffer-index 0 :type index)
   ;;
   ;; Hashtables we use to keep track of dumped constants so that we can get
   ;; them from the table rather than dumping them again.  The EQUAL-TABLE is
@@ -58,7 +72,7 @@
   (eq-table (make-hash-table :test #'eq) :type hash-table)
   ;;
   ;; The table's current free pointer: the next offset to be used.
-  (table-free 0 :type unsigned-byte)
+  (table-free 0 :type index)
   ;;
   ;; Alist (Package . Offset) of the table offsets for each package we have
   ;; currently located.
@@ -80,10 +94,10 @@
   ;; information when the compilation is complete.
   (debug-info () :type list)
   ;;
-  ;; Used to keep track of objects that we are in the process of dumping so that
-  ;; circularities can be preserved.  The key is the object that we have
-  ;; previously seen, and the value is the object that we reference in the table
-  ;; to find this previously seen object.  (The value is never NIL.)
+  ;; Used to keep track of objects that we are in the process of dumping so
+  ;; that circularities can be preserved.  The key is the object that we have
+  ;; previously seen, and the value is the object that we reference in the
+  ;; table to find this previously seen object.  (The value is never NIL.)
   ;;
   ;; Except with list objects, the key and the value are always the same.  In a
   ;; list, the key will be some tail of the value.
@@ -101,7 +115,7 @@
   object
   ;;
   ;; Index in object for circularity.
-  (index (required-argument) :type unsigned-byte)
+  (index (required-argument) :type index)
   ;;
   ;; The object to be stored at Index in Object.  This is that the key that we
   ;; were using when we discovered the circularity.
@@ -127,27 +141,114 @@
 
 ;;;; Utilities:
 
+;;; FLUSH-FASL-FILE-BUFFER  --  Internal
+;;;
+;;;    Write out the contents of File's buffer to its stream.
+;;;
+(defun flush-fasl-file-buffer (file)
+  (system:output-raw-bytes (fasl-file-stream file)
+			   (fasl-file-buffer file)
+			   0
+			   (fasl-file-buffer-index file))
+  (setf (fasl-file-buffer-index file) 0)
+  (undefined-value))
+
+
 ;;; Dump-Byte  --  Internal
 ;;;
 ;;;    Write the byte B to the specified fasl-file stream.
 ;;;
-(proclaim '(inline dump-byte))
+(declaim (maybe-inline dump-byte))
 (defun dump-byte (b file)
-  (declare (type (unsigned-byte 8) b) (type fasl-file file))
-  (write-byte b (fasl-file-stream file))
+  (declare (type (unsigned-byte 8) b) (type fasl-file file)
+	   (optimize (speed 3) (safety 0)))
+  (let ((idx (fasl-file-buffer-index file))
+	(buf (fasl-file-buffer file)))
+    (setf (aref buf idx) b)
+    (let ((new (1+ idx)))
+      (setf (fasl-file-buffer-index file) new)
+      (when (= new fasl-buffer-size)
+	(flush-fasl-file-buffer file))))
   (undefined-value))
 
+
+;;; DUMP-UNSIGNED-32  --  Internal
+;;;
+;;;    Dump a 4 byte unsigned integer.
+;;;
+(defun dump-unsigned-32 (num file)
+  (declare (type (unsigned-byte 32) num) (type fasl-file file)
+	   (optimize (speed 3) (safety 0)))
+  (let* ((idx (fasl-file-buffer-index file))
+	 (buf (fasl-file-buffer file))
+	 (new (+ idx 4)))
+    (when (>= new fasl-buffer-size)
+      (flush-fasl-file-buffer file)
+      (setq idx 0  new 4))
+    (setf (aref buf (+ idx 0)) (ldb (byte 8 0) num))
+    (setf (aref buf (+ idx 1)) (ldb (byte 8 8) num))
+    (setf (aref buf (+ idx 2)) (ldb (byte 8 16) num))
+    (setf (aref buf (+ idx 3)) (ldb (byte 8 24) num))
+    (setf (fasl-file-buffer-index file) new))
+  (undefined-value))
+
+
+;;; Dump-Var-Signed   --  Internal
+;;;
+;;;    Dump Num to the fasl stream, represented by the specified number of
+;;; bytes.
+;;;
+(defun dump-var-signed  (num bytes file)
+  (declare (integer num) (type index bytes) (type fasl-file file)
+	   (inline dump-byte))
+  (do ((n num (ash n -8))
+       (i bytes (1- i)))
+      ((= i 0))
+    (declare (type index i))
+    (dump-byte (logand n #xFF) file))
+  (undefined-value))
+
+
+;;; DUMP-BYTES  --  Internal
+;;;
+;;;    Dump the first N bytes in Vec out to File.  Vec is some sort of unboxed
+;;; vector-like thing that we can BLT from.
+;;;
+(defun dump-bytes (vec n file)
+  (declare (type index n) (type fasl-file file)
+	   (optimize (speed 3) (safety 0)))
+  (let* ((idx (fasl-file-buffer-index file))
+	 (buf (fasl-file-buffer file))
+	 (new (+ idx n)))
+    (cond ((< new fasl-buffer-size)
+	   (bit-bash-copy vec vector-data-bit-offset
+			  buf
+			  (+ vector-data-bit-offset
+			     (the index (* idx vm:byte-bits)))
+			  (* n vm:byte-bits))
+	   (setf (fasl-file-buffer-index file) new))
+	  (t
+	   (flush-fasl-file-buffer file)
+	   (cond ((>= n fasl-buffer-size)
+		  (system:output-raw-bytes (fasl-file-stream file)
+					   vec 0 n))
+		 (t
+		  (bit-bash-copy vec vector-data-bit-offset
+				 buf vector-data-bit-offset
+				 (* n vm:byte-bits))
+		  (setf (fasl-file-buffer-index file) n))))))
+  (undefined-value))
+      
 
 ;;; Dump-FOP  --  Internal
 ;;;
 ;;;    Dump the FOP code for the named FOP to the specified fasl-file.
 ;;;
-(defun dump-fop (fs file)
-  (declare (symbol fs) (type fasl-file file))
-  (let ((val (get fs 'lisp::fop-code)))
+(defmacro dump-fop (fs file)
+  (let* ((fs (eval fs))
+	 (val (get fs 'lisp::fop-code)))
     (assert val () "Compiler bug: ~S not a legal fasload operator." fs)
-    (dump-byte val file))
-  (undefined-value))
+    `(dump-byte ',val ,file)))
 
 
 ;;; Dump-FOP*  --  Internal
@@ -163,22 +264,7 @@
 	    (dump-byte ,n-n ,n-file))
 	   (t
 	    (dump-fop ',word-fop ,n-file)
-	    (quick-dump-number ,n-n 4 ,n-file)))))
-
-
-;;; Quick-Dump-Number  --  Internal
-;;;
-;;;    Dump Num to the fasl stream, represented by the specified number of
-;;; bytes.
-;;;
-(defun quick-dump-number (num bytes file)
-  (declare (integer num) (type unsigned-byte bytes) (type fasl-file file))
-  (let ((stream (fasl-file-stream file)))
-    (do ((n num (ash n -8))
-	 (i bytes (1- i)))
-	((= i 0))
-      (write-byte (logand n #xFF) stream)))
-  (undefined-value))
+	    (dump-unsigned-32 ,n-n ,n-file)))))
 
 
 ;;; Dump-Push  --  Internal
@@ -186,7 +272,7 @@
 ;;;    Push the object at table offset Handle on the fasl stack.
 ;;;
 (defun dump-push (handle file)
-  (declare (type unsigned-byte handle) (type fasl-file file))
+  (declare (type index handle) (type fasl-file file))
   (dump-fop* handle lisp::fop-byte-push lisp::fop-push file)
   (undefined-value))
 
@@ -324,8 +410,9 @@
   (assert (zerop (hash-table-count (fasl-file-patch-table file))))
   (dump-fop 'lisp::fop-verify-empty-stack file)
   (dump-fop 'lisp::fop-verify-table-size file)
-  (quick-dump-number (fasl-file-table-free file) 4 file)
+  (dump-unsigned-32 (fasl-file-table-free file) file)
   (dump-fop 'lisp::fop-end-group file)
+  (flush-fasl-file-buffer file)
   (close (fasl-file-stream file) :abort abort-p)
   (undefined-value))
 
@@ -348,7 +435,8 @@
 ;;; actually filled in by the loader.
 ;;;
 (defun dump-code-object (component code-segment code-length file)
-  (declare (type component component) (type fasl-file file))
+  (declare (type component component) (type fasl-file file)
+	   (type index code-length))
   (let* ((2comp (component-info component))
 	 (constants (ir2-component-constants 2comp))
 	 (num-consts (length constants)))
@@ -391,12 +479,13 @@
 	(cond ((and (< num-consts #x100) (< code-length #x10000))
 	       (dump-fop 'lisp::fop-small-code file)
 	       (dump-byte num-consts file)
-	       (quick-dump-number code-length 2 file))
+	       (dump-var-signed code-length 2 file))
 	      (t
 	       (dump-fop 'lisp::fop-code file)
-	       (quick-dump-number num-consts 4 file)
-	       (quick-dump-number code-length 4 file))))
-      
+	       (dump-unsigned-32 num-consts file)
+	       (dump-unsigned-32 code-length file))))
+
+      (flush-fasl-file-buffer file)
       (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment))
 	    (handle (dump-pop file)))
 	(dump-fixups handle fixups file)
@@ -408,7 +497,8 @@
 
 (defun dump-assembler-routines (code-segment length routines file)
   (dump-fop 'lisp::fop-assembler-code file)
-  (quick-dump-number length 4 file)
+  (dump-unsigned-32 length file)
+  (flush-fasl-file-buffer file)
   (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment)))
     (dolist (routine routines)
       (dump-fop 'lisp::fop-normal-load file)
@@ -416,7 +506,7 @@
 	(dump-object (car routine) file))
       (dump-fop 'lisp::fop-maybe-cold-load file)
       (dump-fop 'lisp::fop-assembler-routine file)
-      (quick-dump-number (label-position (cdr routine)) 4 file))
+      (dump-unsigned-32 (label-position (cdr routine)) file))
     (let ((handle (dump-pop file)))
       (dump-fixups handle fixups file)
       handle)))
@@ -428,7 +518,7 @@
 ;;; using miscop numbers other than a minor load-time efficiency win.
 ;;;
 (defun dump-fixups (code-handle fixups file)
-  (declare (type unsigned-byte code-handle) (list fixups)
+  (declare (type index code-handle) (list fixups)
 	   (type fasl-file file))
   (when fixups
     (dump-push code-handle file)
@@ -458,7 +548,7 @@
 	     (dump-byte len file)
 	     (dotimes (i len)
 	       (dump-byte (char-code (schar name i)) file)))))
-	(quick-dump-number offset 4 file)))
+	(dump-unsigned-32 offset file)))
     (dump-fop 'lisp::fop-pop-for-effect file))
   (undefined-value))
 
@@ -473,17 +563,15 @@
 ;;; references to functions in top-level forms.
 ;;;
 (defun dump-one-entry (entry code-handle file)
-  (declare (type entry-info entry) (type unsigned-byte code-handle)
+  (declare (type entry-info entry) (type index code-handle)
 	   (type fasl-file file))
   (let ((name (entry-info-name entry)))
-    ;; ### Do something special for closure functions?
     (dump-push code-handle file)
     (dump-object name file)
     (dump-object (entry-info-arguments entry) file)
     (dump-object (entry-info-type entry) file)
     (dump-fop 'lisp::fop-function-entry file)
-    (quick-dump-number (label-position (entry-info-offset entry))
-		       4 file)
+    (dump-unsigned-32 (label-position (entry-info-offset entry)) file)
     (let ((handle (dump-pop file)))
       (when (and name (symbolp name))
 	(dump-object name file)
@@ -497,6 +585,7 @@
 ;;; storing the object referenced by Entry-Handle.
 ;;;
 (defun alter-code-object (code-handle offset entry-handle file)
+  (declare (type index code-handle entry-handle offset) (type fasl-file file))
   (dump-push code-handle file)
   (dump-push entry-handle file)
   (dump-fop* offset lisp::fop-byte-alter-code lisp::fop-alter-code file)
@@ -513,7 +602,7 @@
 
   (dump-fop 'lisp::fop-verify-empty-stack file)
   (dump-fop 'lisp::fop-verify-table-size file)
-  (quick-dump-number (fasl-file-table-free file) 4 file)
+  (dump-unsigned-32 (fasl-file-table-free file) file)
 
   (let ((code-handle (dump-code-object component code-segment length file))
 	(2comp (component-info component)))
@@ -560,8 +649,8 @@
       (dolist (info-handle (fasl-file-debug-info file))
 	(dump-push res-handle file)
 	(dump-fop 'lisp::fop-svset file)
-	(quick-dump-number info-handle 4 file)
-	(quick-dump-number 2 4 file))))
+	(dump-unsigned-32 info-handle file)
+	(dump-unsigned-32 2 file))))
 
   (setf (fasl-file-debug-info file) ())
   (undefined-value))
@@ -593,21 +682,27 @@
 	     (structure
 	      (dump-structure x file)
 	      (eq-save-object x file))
-	     (vector
-	      (cond ((stringp x)
-		     (unless (equal-check-table x file)
-		       (dump-string x file)
-		       (equal-save-object x file)))
-		    ((subtypep (array-element-type x)
-			       '(unsigned-byte 32))
-		     (dump-i-vector x file)
-		     (eq-save-object x file))
-		    (t
-		     (dump-vector x file)
-		     (eq-save-object x file))))
 	     (array
-	      (dump-array x file)
-	      (eq-save-object x file))
+	      (cond
+	       ((array-header-p x)
+		(dump-array x file)
+		(eq-save-object x file))
+	       (t
+		(typecase x
+		  (simple-base-string 
+		   (unless (equal-check-table x file)
+		     (dump-simple-string x file)
+		     (equal-save-object x file)))
+		  (simple-vector
+		   (dump-simple-vector x file)
+		   (eq-save-object x file))
+		  ((or (simple-array single-float (*))
+		       (simple-array double-float (*)))
+		   (dump-simple-vector (coerce x 'simple-vector) file)
+		   (eq-save-object x file))
+		  (t
+		   (dump-i-vector x file)
+		   (eq-save-object x file))))))
 	     (number
 	      (unless (equal-check-table x file)
 		(etypecase x
@@ -616,11 +711,6 @@
 		  (float (dump-float x file))
 		  (integer (dump-integer x file)))
 		(equal-save-object x file)))
-#|
-	     (compiled-function
-	      (dump-function x file)
-	      (eq-save-object x file))
-|#
 	     (t
 	      ;;
 	      ;; This probably never happens, since bad things are detected
@@ -654,10 +744,6 @@
 	     (dump-non-immediate-object x file)))
 	((fixnump x) (dump-integer x file))
 	((characterp x) (dump-character x file))
-#| Probably a bug to ever dump a trap object...
-	((lisp::trap-object-p x)
-	 (dump-fop 'lisp::fop-misc-trap file))
-|#
 	(t
 	 (dump-non-immediate-object x file))))
 
@@ -680,15 +766,15 @@
 	       (i 0 (1+ i)))
 	      ((eq current value)
 	       (dump-fop 'lisp::fop-nthcdr file)
-	       (quick-dump-number i 4 file)))))
+	       (dump-unsigned-32 i file))
+	    (declare (type index i)))))
       
-      (dump-fop (ecase (circularity-type info)
-		  (:rplaca 'lisp::fop-rplaca)
-		  (:rplacd 'lisp::fop-rplacd)
-		  ((:svset :struct-set) 'lisp::fop-svset))
-		file)
-      (quick-dump-number (gethash (circularity-object info) table) 4 file)
-      (quick-dump-number (circularity-index info) 4 file))))
+      (ecase (circularity-type info)
+	(:rplaca (dump-fop 'lisp::fop-rplaca file))
+	(:rplacd (dump-fop 'lisp::fop-rplacd file))
+	((:svset :struct-set) (dump-fop 'lisp::fop-svset file)))
+      (dump-unsigned-32 (gethash (circularity-object info) table) file)
+      (dump-unsigned-32 (circularity-index info) file))))
 
 
 ;;; Dump-Object  -- Interface
@@ -702,7 +788,7 @@
 ;;; overhead on types of objects that might be circular.
 ;;;
 (defun dump-object (x file)
-  (if (or (arrayp x) (consp x) (structurep x))
+  (if (or (array-header-p x) (simple-vector-p x) (consp x) (structurep x))
       (let ((*circularities-detected* ())
 	    (circ (fasl-file-circularity-table file)))
 	(clrhash circ)
@@ -745,41 +831,35 @@
   (dump-fop 'lisp::fop-complex file))
 
 
-;;; Compute how many bytes it will take to represent signed integer N.
-
-(defun compute-bytes (n)
-  (ceiling (1+ (integer-length n)) 8))
-
 ;;; Dump an integer.
 
 (defun dump-integer (n file)
-  (let* ((bytes (compute-bytes n)))
-    (cond ((= bytes 1)
-	   (dump-fop 'lisp::fop-byte-integer file)
-	   (dump-byte (logand #xFF n) file))
-	  ((< bytes 5)
-	   (dump-fop 'lisp::fop-word-integer file)
-	   (quick-dump-number n 4 file))
-	  ((< bytes 256)
-	   (dump-fop 'lisp::fop-small-integer file)
-	   (dump-byte bytes file)
-	   (quick-dump-number n bytes file))
-	  (t (dump-fop 'lisp::fop-integer file)
-	     (quick-dump-number bytes 4 file)
-	     (quick-dump-number n bytes file)))))
-
+  (typecase n
+    ((signed-byte 8)
+     (dump-fop 'lisp::fop-byte-integer file)
+     (dump-byte (logand #xFF n) file))
+    ((unsigned-byte 31)
+     (dump-fop 'lisp::fop-word-integer file)
+     (dump-unsigned-32 n file))
+    ((signed-byte 32)
+     (dump-fop 'lisp::fop-word-integer file)
+     (dump-var-signed n 4 file))
+    (t
+     (let ((bytes (ceiling (1+ (integer-length n)) 8)))
+       (dump-fop* bytes lisp::fop-small-integer lisp::fop-integer file)
+       (dump-var-signed n bytes file)))))
 
 (defun dump-float (x file)
   (etypecase x
     (single-float
      (dump-fop 'lisp::fop-single-float file)
-     (quick-dump-number (single-float-bits x) 4 file))
+     (dump-var-signed (single-float-bits x) 4 file))
     (double-float
      (dump-fop 'lisp::fop-double-float file)
      (let ((x x))
        (declare (double-float x))
-       (quick-dump-number (double-float-low-bits x) 4 file)
-       (quick-dump-number (double-float-high-bits x) 4 file)))))
+       (dump-unsigned-32 (double-float-low-bits x) file)
+       (dump-var-signed (double-float-high-bits x) 4 file)))))
 
 
 ;;;; Symbol Dumping:
@@ -791,11 +871,13 @@
 ;;; we can do the package lookup at cold load time.
 ;;;
 (defun dump-package (pkg file)
-  (cond ((cdr (assoc pkg (fasl-file-packages file))))
+  (declare (type package pkg) (type fasl-file file) (values index)
+	   (inline assoc))
+  (cond ((cdr (assoc pkg (fasl-file-packages file) :test #'eq)))
 	(t
 	 (unless *cold-load-dump*
 	   (dump-fop 'lisp::fop-normal-load file))
-	 (dump-string (package-name pkg) file)
+	 (dump-simple-string (package-name pkg) file)
 	 (dump-fop 'lisp::fop-package file)
 	 (unless *cold-load-dump*
 	   (dump-fop 'lisp::fop-maybe-cold-load file))
@@ -837,9 +919,9 @@
 	   (dump-fop* (dump-package pkg file)
 		      lisp::fop-symbol-in-byte-package-save
 		      lisp::fop-symbol-in-package-save file)
-	   (quick-dump-number pname-length 4 file)))
+	   (dump-unsigned-32 pname-length file)))
 
-    (write-string pname (fasl-file-stream file))
+    (dump-bytes pname (length pname) file)
 
     (unless *cold-load-dump*
       (setf (gethash s (fasl-file-eq-table file)) (fasl-file-table-free file)))
@@ -881,7 +963,7 @@
 	      (t
 	       (sub-dump-object l file)
 	       (terminate-dotted-list n file))))
-
+    (declare (type index n))
     (let ((ref (gethash l circ)))
       (when ref
 	(push (make-circularity :type :rplacd  :object list  :index (1- n)
@@ -905,6 +987,7 @@
 
 
 (defun terminate-dotted-list (n file)
+  (declare (type index n) (type fasl-file file))
   (case n
     (1 (dump-fop 'lisp::fop-list*-1 file))
     (2 (dump-fop 'lisp::fop-list*-2 file))
@@ -918,36 +1001,46 @@
 	   ((< nn 256)
 	    (dump-fop 'lisp::fop-list* file)
 	    (dump-byte nn file))
+	 (declare (type index nn))
 	 (dump-fop 'lisp::fop-list* file)
 	 (dump-byte 255 file)))))
 
 ;;; If N > 255, must build list with one list operator, then list* operators.
 
 (defun terminate-undotted-list (n file)
-    (case n
-      (1 (dump-fop 'lisp::fop-list-1 file))
-      (2 (dump-fop 'lisp::fop-list-2 file))
-      (3 (dump-fop 'lisp::fop-list-3 file))
-      (4 (dump-fop 'lisp::fop-list-4 file))
-      (5 (dump-fop 'lisp::fop-list-5 file))
-      (6 (dump-fop 'lisp::fop-list-6 file))
-      (7 (dump-fop 'lisp::fop-list-7 file))
-      (8 (dump-fop 'lisp::fop-list-8 file))
-      (T (cond ((< n 256)
-		(dump-fop 'lisp::fop-list file)
-		(dump-byte n file))
-	       (t (dump-fop 'lisp::fop-list file)
-		  (dump-byte 255 file)
-		  (do ((nn (- n 255) (- nn 255)))
-		      ((< nn 256)
-		       (dump-fop 'lisp::fop-list* file)
-		       (dump-byte nn file))
-		    (dump-fop 'lisp::fop-list* file)
-		    (dump-byte 255 file)))))))
+  (declare (type index n) (type fasl-file file))
+  (case n
+    (1 (dump-fop 'lisp::fop-list-1 file))
+    (2 (dump-fop 'lisp::fop-list-2 file))
+    (3 (dump-fop 'lisp::fop-list-3 file))
+    (4 (dump-fop 'lisp::fop-list-4 file))
+    (5 (dump-fop 'lisp::fop-list-5 file))
+    (6 (dump-fop 'lisp::fop-list-6 file))
+    (7 (dump-fop 'lisp::fop-list-7 file))
+    (8 (dump-fop 'lisp::fop-list-8 file))
+    (T (cond ((< n 256)
+	      (dump-fop 'lisp::fop-list file)
+	      (dump-byte n file))
+	     (t (dump-fop 'lisp::fop-list file)
+		(dump-byte 255 file)
+		(do ((nn (- n 255) (- nn 255)))
+		    ((< nn 256)
+		     (dump-fop 'lisp::fop-list* file)
+		     (dump-byte nn file))
+		  (declare (type index nn))
+		  (dump-fop 'lisp::fop-list* file)
+		  (dump-byte 255 file)))))))
+
 
 ;;;; Array dumping:
 
-(defun dump-vector (v file)
+
+;;; DUMP-SIMPLE-VECTOR  --  Internal
+;;;
+;;;    Dump a SIMPLE-VECTOR, handling any circularities.
+;;;
+(defun dump-simple-vector (v file)
+  (declare (type simple-vector v) (type fasl-file file))
   (note-potential-circularity v file)
   (do ((index 0 (1+ index))
        (length (length v))
@@ -964,13 +1057,18 @@
 	    (t
 	     (sub-dump-object obj file))))))
 
-;;; Dump a string.
 
-(defun dump-string (s file)
+;;; DUMP-SIMPLE-STRING  --  Internal
+;;;
+;;;    Dump a SIMPLE-BASE-STRING.
+;;;
+(defun dump-simple-string (s file)
+  (declare (type simple-base-string s))
   (let ((length (length s)))
     (dump-fop* length lisp::fop-small-string lisp::fop-string file)
-    (dotimes (i length)
-      (dump-byte (char-code (char s i)) file))))
+    (dump-bytes s length file))
+  (undefined-value))
+
 
 ;;; Dump-Array  --  Internal
 ;;;
@@ -991,7 +1089,8 @@
 		     (lisp::%array-data-vector array)
 		     file)
     (dump-fop 'lisp::fop-array file)
-    (quick-dump-number rank 4 file)))
+    (dump-unsigned-32 rank file)))
+
 
 ;;; DUMP-I-VECTOR  --  Internal
 ;;;
@@ -1003,11 +1102,8 @@
 ;;; and write the vector one element at a time.
 ;;;
 (defun dump-i-vector (vec file)
-  (let* ((vec (if #-new-compiler (%primitive complex-array-p vec)
-		  #+new-compiler (array-header-p vec)
-		  (coerce vec 'simple-array)
-		  vec))
-	 (ac #-new-compiler
+  (declare (type (simple-array * (*)) vec))
+  (let* ((ac #-new-compiler
 	     (%primitive get-vector-access-code vec)
 	     #+new-compiler
 	     (etypecase vec
@@ -1019,34 +1115,46 @@
 	       ((simple-array (unsigned-byte 32) (*)) 5)))
 	 (len (length vec))
 	 (size (ash 1 ac))
-	 (bytes (ash (+ (ash len ac) 7) -3)))
-		    
+	 (bytes (ash (+ (the index (ash len ac)) 7) -3)))
+    (declare (type index ac len size bytes))
+    
     (dump-fop 'lisp::fop-int-vector file)
-    (quick-dump-number len 4 file)
+    (dump-unsigned-32 len file)
     (dump-byte size file)
     (cond ((or (eq (backend-byte-order *backend*)
 		   (backend-byte-order *native-backend*))
 	       (= size 8))
-	   (system:output-raw-bytes (fasl-file-stream file) vec 0 bytes))
+	   (dump-bytes vec bytes file))
 	  ((> size 8)
 	   (ecase (backend-byte-order *backend*)
 	     (:little-endian
 	      (dotimes (i len)
 		(let ((int (aref vec i)))
-		  (quick-dump-number int (ash size -3) file))))
+		  (dump-var-signed int (ash size -3) file))))
 	     (:big-endian
 	      (dotimes (i len)
+		(declare (type index i))
 		(let ((int (aref vec i)))
+		  (declare (type (unsigned-byte 32) int))
 		  (do ((shift (- 8 size) (+ shift 8)))
 		      ((plusp shift))
-		    (dump-byte (logand (ash int shift) #xFF) file)))))))
+		    (declare (type fixnum shift))
+		    (dump-byte (logand (the (unsigned-byte 32)
+					    (ash int shift))
+				       #xFF)
+			       file)))))))
 	  (t
 	   (macrolet ((frob (initial step done)
 			`(let ((shift ,initial)
 			       (byte 0))
+			   (declare (type fixnum shift byte))
 			   (dotimes (i len)
 			     (let ((int (aref vec i)))
-			       (setq byte (logior byte (ash int shift)))
+			       (declare (type (unsigned-byte 8) int))
+			       (setq byte
+				     (logior byte
+					     (the (unsigned-byte 8)
+						  (ash int shift))))
 			       (,step shift size))
 			     (when ,done
 			       (dump-byte byte file)
