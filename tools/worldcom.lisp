@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.39 1992/04/30 19:43:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.40 1992/05/22 17:37:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,8 +160,6 @@
 
 ;;; Later so that miscellaneous structures are defined (not crucial, but nice.)
 (comf "target:code/describe")
-#+(and clx (not no-hemlock) pcl)
-(comf "target:code/inspect")
 (comf "target:code/tty-inspect")
 
 (comf "target:code/format-time")
@@ -169,9 +167,6 @@
 (comf "target:code/run-program")
 
 (comf "target:code/loop")
-
-#+clx
-(comf "target:code/clx-ext")
 
 (comf "target:code/foreign")
 (comf "target:code/internet")
