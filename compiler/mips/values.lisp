@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.8 1990/06/04 05:23:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.9 1990/06/16 15:35:37 wlott Exp $
 ;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -36,8 +36,8 @@
   (:args
    (vals :more t))
   (:results
-   (start :scs (descriptor-reg))
-   (count :scs (any-reg descriptor-reg)))
+   (start :scs (any-reg))
+   (count :scs (any-reg)))
   (:info nvals)
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg)
@@ -68,8 +68,8 @@
   (:args (arg :scs (descriptor-reg) :target list))
   (:arg-types list)
   (:policy :fast-safe)
-  (:results (start :scs (any-reg descriptor-reg))
-	    (count :scs (descriptor-reg)))
+  (:results (start :scs (any-reg))
+	    (count :scs (any-reg)))
   (:temporary (:scs (descriptor-reg) :type list :from (:argument 0)) list)
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (non-descriptor-reg) :type random) ndescr)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.1 1990/06/03 19:11:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.2 1990/06/16 15:34:52 wlott Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -51,17 +51,18 @@
   (:translate stack-ref)
   (:policy :fast-safe)
   (:results (result :scs (descriptor-reg)))
+  (:result-types *)
   (:variant :long nil))
 
 (define-vop (write-control-stack sap-set)
   (:translate %set-stack-ref)
   (:policy :fast-safe)
   (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (descriptor-reg any-reg negative-immediate
-				      zero immediate))
+	 (offset :scs (any-reg negative-immediate zero immediate))
 	 (value :scs (descriptor-reg) :target result))
   (:arg-types system-area-pointer positive-fixnum *)
   (:results (result :scs (descriptor-reg)))
+  (:result-types *)
   (:variant :long))
 
 (define-vop (code-from-mumble)

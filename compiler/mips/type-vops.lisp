@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.17 1990/06/04 06:13:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.18 1990/06/16 15:35:31 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -474,3 +474,25 @@
 	
 	(emit-label not-coercable-label)
 	(error-call object-not-coercable-to-function-error object)))))
+
+(define-vop (fast-safe-coerce-to-function)
+  (:args (object :scs (descriptor-reg)
+		:target result))
+  (:results (result :scs (descriptor-reg)))
+  (:temporary (:type random  :scs (non-descriptor-reg)) nd-temp)
+  (:temporary (:scs (descriptor-reg)) saved-object)
+  (:generator 0
+    (let ((not-function-label (gen-label))
+	  (done-label (gen-label)))
+      (test-simple-type object nd-temp not-function-label t
+			vm:function-pointer-type)
+      (move result object)
+      (emit-label done-label)
+
+      (assemble (*elsewhere*)
+	(emit-label not-function-label)
+	(move saved-object object)
+	(loadw result object vm:symbol-function-slot vm:other-pointer-type)
+	(test-simple-type result nd-temp done-label nil
+			  vm:function-pointer-type)
+	(error-call undefined-symbol-error saved-object)))))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.18 1990/06/10 20:22:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.19 1990/06/16 15:34:44 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -28,8 +28,11 @@
 (defun standard-argument-location (n)
   (declare (type unsigned-byte n))
   (if (< n register-arg-count)
-      (make-wired-tn register-arg-scn (elt register-arg-offsets n))
-      (make-wired-tn control-stack-arg-scn n)))
+      (make-wired-tn *any-primitive-type*
+		     register-arg-scn
+		     (elt register-arg-offsets n))
+      (make-wired-tn *any-primitive-type*
+		     control-stack-arg-scn n)))
 
 
 ;;; Make-Return-PC-Passing-Location  --  Interface
@@ -41,8 +44,8 @@
 ;;;
 (defun make-return-pc-passing-location (standard)
   (if standard
-      (make-wired-tn register-arg-scn lra-offset)
-      (make-restricted-tn register-arg-scn)))
+      (make-wired-tn *any-primitive-type* register-arg-scn lra-offset)
+      (make-restricted-tn *any-primitive-type* register-arg-scn)))
 
 
 ;;; Make-Old-FP-Passing-Location  --  Interface
@@ -54,8 +57,8 @@
 ;;;
 (defun make-old-fp-passing-location (standard)
   (if standard
-      (make-wired-tn register-arg-scn old-fp-offset)
-      (make-normal-tn *any-primitive-type*)))
+      (make-wired-tn *fixnum-primitive-type* immediate-arg-scn old-fp-offset)
+      (make-normal-tn *fixnum-primitive-type*)))
 
 ;;; Make-Old-FP-Save-Location, Make-Return-PC-Save-Location  --  Interface
 ;;;
@@ -65,12 +68,14 @@
 ;;;
 (defun make-old-fp-save-location (env)
   (environment-live-tn
-   (make-wired-tn (sc-number-or-lose 'control-stack) old-fp-save-offset)
+   (make-wired-tn *fixnum-primitive-type*
+		  control-stack-arg-scn
+		  old-fp-save-offset)
    env))
 ;;;
 (defun make-return-pc-save-location (env)
   (environment-live-tn
-   (make-wired-tn (sc-number-or-lose 'control-stack) lra-save-offset)
+   (make-wired-tn *any-primitive-type* control-stack-arg-scn lra-save-offset)
    env))
 
 ;;; Make-Argument-Count-Location  --  Interface
@@ -80,7 +85,7 @@
 ;;; are using non-standard conventions.
 ;;;
 (defun make-argument-count-location ()
-  (make-wired-tn register-arg-scn nargs-offset))
+  (make-wired-tn *fixnum-primitive-type* immediate-arg-scn nargs-offset))
 
 
 ;;; MAKE-NFP-TN  --  Interface
@@ -90,7 +95,26 @@
 ;;;
 (defun make-nfp-tn ()
   (component-live-tn
-   (make-wired-tn (sc-number-or-lose 'any-reg) args-offset)))
+   (make-wired-tn *fixnum-primitive-type* immediate-arg-scn nfp-offset)))
+
+;;; MAKE-STACK-POINTER-TN ()
+;;; 
+(defun make-stack-pointer-tn ()
+  (make-normal-tn *fixnum-primitive-type*))
+
+;;; MAKE-NUMBER-STACK-POINTER-TN ()
+;;; 
+(defun make-number-stack-pointer-tn ()
+  (make-normal-tn *fixnum-primitive-type*))
+
+;;; Make-Unknown-Values-Locations  --  Interface
+;;;
+;;;    Return a list of TNs that can be used to represent an unknown-values
+;;; continuation within a function.
+;;;
+(defun make-unknown-values-locations ()
+  (list (make-stack-pointer-tn)
+	(make-normal-tn *fixnum-primitive-type*)))
 
 
 ;;; Select-Component-Format  --  Interface
@@ -113,7 +137,7 @@
 ;;; Used for setting up the Old-FP in local call.
 ;;;
 (define-vop (current-fp)
-  (:results (val :scs (any-reg descriptor-reg)))
+  (:results (val :scs (any-reg)))
   (:generator 1
     (move val fp-tn)))
 
@@ -121,7 +145,7 @@
 ;;; works assuming there is no variable size stuff on the nstack.
 ;;;
 (define-vop (compute-old-nfp)
-  (:results (val :scs (any-reg descriptor-reg)))
+  (:results (val :scs (any-reg)))
   (:vop-var vop)
   (:generator 1
     (let ((nfp (current-nfp-tn vop)))
@@ -152,7 +176,7 @@
 	(move nfp-tn nsp-tn)))))
 
 (define-vop (allocate-frame)
-  (:results (res :scs (any-reg descriptor-reg))
+  (:results (res :scs (any-reg))
 	    (nfp :scs (any-reg)))
   (:info callee)
   (:generator 2
@@ -171,7 +195,7 @@
 ;;;
 (define-vop (allocate-full-call-frame)
   (:info nargs)
-  (:results (res :scs (any-reg descriptor-reg)))
+  (:results (res :scs (any-reg)))
   (:generator 2
     (when (> nargs register-arg-count)
       (move res csp-tn)
@@ -220,12 +244,12 @@ regs-defaulted
 
 	bltz temp default-value-4	; jump to default code
         addu temp temp -1
-	loadw move-temp args-tn 3	; Move value to correct location.
+	loadw move-temp old-fp-tn 3	; Move value to correct location.
 	store-stack-tn val4-tn move-temp
 
 	bltz temp default-value-5
         addu temp temp -1
-	loadw move-temp args-tn 4
+	loadw move-temp old-fp-tn 4
 	store-stack-tn val5-tn move-temp
 
 	...
@@ -289,11 +313,11 @@ default-value-5
 		       
 		       (inst bltz temp default-lab)
 		       (inst addu temp temp (fixnum -1))
-		       (loadw move-temp args-tn i)
+		       (loadw move-temp old-fp-tn i)
 		       (store-stack-tn tn move-temp)))
 		   
 		   (emit-label defaulting-done)
-		   (move csp-tn args-tn)
+		   (move csp-tn old-fp-tn)
 		   
 		   (assemble (*elsewhere*)
 		     (dolist (def (defaults))
@@ -358,8 +382,8 @@ default-value-5
 ;;;
 (define-vop (unknown-values-receiver)
   (:results
-   (start :scs (descriptor-reg))
-   (count :scs (descriptor-reg)))
+   (start :scs (any-reg))
+   (count :scs (any-reg)))
   (:temporary (:sc descriptor-reg :offset old-fp-offset
 		   :from :eval :to (:result 0))
 	      values-start)
@@ -386,8 +410,8 @@ default-value-5
 ;;; Nvals is the number of values received.
 ;;;
 (define-vop (call-local)
-  (:args (fp :scs (any-reg descriptor-reg))
-	 (nfp :scs (any-reg descriptor-reg))
+  (:args (fp :scs (any-reg))
+	 (nfp :scs (any-reg))
 	 (args :more t))
   (:results (values :more t))
   (:save-p t)
@@ -422,8 +446,8 @@ default-value-5
 ;;; glob and the number of values received.
 ;;;
 (define-vop (multiple-call-local unknown-values-receiver)
-  (:args (fp :scs (any-reg descriptor-reg))
-	 (nfp :scs (any-reg descriptor-reg))
+  (:args (fp :scs (any-reg))
+	 (nfp :scs (any-reg))
 	 (args :more t))
   (:save-p t)
   (:move-args :local-call)
@@ -456,8 +480,8 @@ default-value-5
 ;;; just like argument passing in local call.
 ;;;
 (define-vop (known-call-local)
-  (:args (fp :scs (any-reg descriptor-reg))
-	 (nfp :scs (any-reg descriptor-reg))
+  (:args (fp :scs (any-reg))
+	 (nfp :scs (any-reg))
 	 (args :more t))
   (:results (res :more t))
   (:move-args :local-call)
@@ -488,7 +512,7 @@ default-value-5
 ;;; restore FP and CSP and jump to the Return-PC.
 ;;;
 (define-vop (known-return)
-  (:args (old-fp :scs (descriptor-reg))
+  (:args (old-fp :scs (any-reg))
 	 (return-pc :scs (descriptor-reg))
 	 (vals :more t))
   (:temporary (:scs (interior-reg) :type interior) lip)
@@ -557,14 +581,14 @@ default-value-5
 		    '(unknown-values-receiver)))
      (:args
       ,@(unless (eq return :tail)
-	  '((new-fp :scs (descriptor-reg) :to :eval)))
+	  '((new-fp :scs (any-reg) :to :eval)))
 
       ,(if named
 	   '(name :scs (descriptor-reg) :target name-pass)
 	   '(arg-fun :scs (descriptor-reg) :target lexenv :to :eval))
       
       ,@(when (eq return :tail)
-	  '((old-fp :scs (descriptor-reg) :target old-fp-pass)
+	  '((old-fp :scs (any-reg) :target old-fp-pass)
 	    (return-pc :scs (descriptor-reg) :target return-pc-pass)))
       
       ,@(unless variable '((args :more t))))
@@ -717,9 +741,9 @@ default-value-5
 (expand
  `(define-vop (tail-call-variable)
     (:args
-     (args :scs (descriptor-reg) :to (:result 0))
+     (args :scs (any-reg) :to (:result 0))
      (function-arg :scs (descriptor-reg) :target lexenv)
-     (old-fp-arg :scs (descriptor-reg) :target old-fp)
+     (old-fp-arg :scs (any-reg) :target old-fp)
      (return-pc-arg :scs (descriptor-reg) :target return-pc))
     (:temporary (:sc any-reg :offset lexenv-offset :from (:argument 0))
 		lexenv)
@@ -883,10 +907,10 @@ default-value-5
 			    register-arg-names)))
    `(define-vop (return-multiple)
       (:args
-       (old-fp :scs (descriptor-reg) :to (:eval 1))
+       (old-fp :scs (any-reg) :to (:eval 1))
        (return-pc :scs (descriptor-reg) :to (:eval 1))
-       (start :scs (descriptor-reg any-reg) :target src)
-       (nvals :scs (descriptor-reg any-reg) :target nargs))
+       (start :scs (any-reg) :target src)
+       (nvals :scs (any-reg) :target nargs))
       (:temporary (:sc any-reg :offset nargs-offset :from (:argument 3)) nargs)
       ,@(mapcar #'(lambda (name offset)
 		    `(:temporary (:sc descriptor-reg :offset ,offset
@@ -1076,13 +1100,13 @@ default-value-5
 ;;; Turn more arg (context, count) into a list.
 ;;;
 (define-vop (listify-rest-args)
-  (:args (context-arg :target context :scs (any-reg descriptor-reg))
-	 (count-arg :target count :scs (any-reg descriptor-reg)))
+  (:args (context-arg :target context :scs (descriptor-reg))
+	 (count-arg :target count :scs (any-reg)))
   (:temporary (:scs (any-reg) :from (:argument 0)) context)
   (:temporary (:scs (any-reg) :from (:argument 1)) count)
   (:temporary (:scs (descriptor-reg) :from :eval) temp)
   (:temporary (:scs (non-descriptor-reg) :from :eval) ndescr dst)
-  (:results (result :scs (any-reg descriptor-reg)))
+  (:results (result :scs (descriptor-reg)))
   (:translate %listify-rest-args)
   (:policy :safe)
   (:generator 20
@@ -1137,11 +1161,11 @@ default-value-5
 ;;;
 (define-vop (more-arg-context)
   (:args
-   (supplied :scs (any-reg descriptor-reg)))
+   (supplied :scs (any-reg)))
   (:info fixed)
   (:results
    (context :scs (descriptor-reg))
-   (count :scs (any-reg descriptor-reg)))
+   (count :scs (any-reg)))
   (:generator 5
     (inst addu count supplied (fixnum (- fixed)))
     (inst subu context csp-tn count)))
@@ -1151,7 +1175,7 @@ default-value-5
 ;;;
 (define-vop (verify-argument-count)
   (:args
-   (nargs :scs (any-reg descriptor-reg)))
+   (nargs :scs (any-reg)))
   (:temporary (:scs (any-reg) :type fixnum) temp)
   (:info count)
   (:generator 3

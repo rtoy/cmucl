@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.17 1990/06/04 05:21:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.18 1990/06/16 15:34:40 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -99,7 +99,7 @@
 
 ;;;; Accessors/Setters
 
-(defmacro def-data-vector-frobs (type variant &optional (element-type t) sc)
+(defmacro def-data-vector-frobs (type variant element-type &rest scs)
   `(progn
      (define-vop (,(intern (concatenate 'simple-string
 					"DATA-VECTOR-REF/"
@@ -109,10 +109,9 @@
 					"-REF")))
        (:variant vm:vector-data-offset vm:other-pointer-type)
        (:translate data-vector-ref)
-       (:arg-types ,type *)
-       ,@(when sc
-	   `((:results (value :scs (,sc)))
-	     (:result-types ,element-type))))
+       (:arg-types ,type positive-fixnum)
+       (:results (value :scs ,scs))
+       (:result-types ,element-type))
      (define-vop (,(intern (concatenate 'simple-string
 					"DATA-VECTOR-SET/"
 					(string type)))
@@ -121,17 +120,16 @@
 					"-SET")))
        (:variant vm:vector-data-offset vm:other-pointer-type)
        (:translate data-vector-set)
-       (:arg-types ,type * ,element-type)
-       ,@(when sc
-	   `((:args (object :scs (descriptor-reg))
-		    (index :scs (any-reg descriptor-reg
-					 immediate unsigned-immediate))
-		    (value :scs (,sc)))
-	     (:results (result :scs (,sc))))))))
+       (:arg-types ,type positive-fixnum ,element-type)
+       (:args (object :scs (descriptor-reg))
+	      (index :scs (any-reg zero immediate unsigned-immediate))
+	      (value :scs ,scs))
+       (:results (result :scs ,scs)))))
 
 (def-data-vector-frobs simple-string byte-index
   base-character base-character-reg)
-(def-data-vector-frobs simple-vector word-index)
+(def-data-vector-frobs simple-vector word-index
+  * descriptor-reg any-reg)
 
 (def-data-vector-frobs simple-array-unsigned-byte-8 byte-index
   positive-fixnum unsigned-reg)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.9 1990/06/03 19:02:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.10 1990/06/16 15:35:21 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -21,8 +21,9 @@
 ;;;    Make an environment-live stack TN for saving the SP for NLX entry.
 ;;;
 (defun make-nlx-sp-tn (env)
-  (environment-live-tn (make-representation-tn (sc-number-or-lose 'any-reg))
-		       env))
+  (environment-live-tn
+   (make-representation-tn *fixnum-primitive-type* immediate-arg-scn)
+   env))
 
 
 
@@ -116,7 +117,7 @@
 (define-vop (make-unwind-block)
   (:args (tn))
   (:info entry-label)
-  (:results (block :scs (descriptor-reg)))
+  (:results (block :scs (any-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
   (:generator 22
@@ -137,7 +138,7 @@
   (:args (tn)
 	 (tag :scs (descriptor-reg)))
   (:info entry-label)
-  (:results (block :scs (descriptor-reg)))
+  (:results (block :scs (any-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
   (:generator 44
@@ -169,7 +170,7 @@
 
 
 (define-vop (unlink-catch-block)
-  (:temporary (:scs (descriptor-reg)) block)
+  (:temporary (:scs (any-reg)) block)
   (:policy :fast-safe)
   (:translate %catch-breakup)
   (:generator 17
@@ -178,7 +179,7 @@
     (store-symbol-value block lisp::*current-catch-block*)))
 
 (define-vop (unlink-unwind-protect)
-  (:temporary (:scs (descriptor-reg)) block)
+  (:temporary (:scs (any-reg)) block)
   (:policy :fast-safe)
   (:translate %unwind-protect-breakup)
   (:generator 17

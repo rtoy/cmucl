@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.11 1990/05/14 07:15:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.12 1990/06/16 15:35:25 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -150,10 +150,9 @@
   (:policy :fast-safe)
   (:variant-vars size signed)
   (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (descriptor-reg any-reg negative-immediate zero
-				      immediate unsigned-immediate)))
+	 (offset :scs (any-reg negative-immediate zero immediate)))
   (:arg-types system-area-pointer positive-fixnum)
-  (:results (result :scs (signed-reg unsigned-reg)))
+  (:results (result))
   (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
@@ -195,11 +194,11 @@
   (:policy :fast-safe)
   (:variant-vars size)
   (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (descriptor-reg any-reg negative-immediate
-				      zero immediate))
+	 (offset :scs (any-reg negative-immediate zero immediate))
 	 (value :scs (signed-reg unsigned-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum *)
+  (:arg-types system-area-pointer positive-fixnum (:or signed-num unsigned-num))
   (:results (result :scs (signed-reg unsigned-reg)))
+  (:result-types (:or signed-num unsigned-num))
   (:temporary (:scs (sap-reg) :from (:argument 0))
 	      sap)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -238,56 +237,73 @@
 (define-vop (sap-system-ref sap-ref)
   (:translate sap-ref-sap)
   (:results (result :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:variant :long nil))
 
 (define-vop (sap-system-set sap-set)
   (:translate %set-sap-ref-sap)
   (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (descriptor-reg any-reg negative-immediate
-				      zero immediate))
+	 (offset :scs (any-reg negative-immediate zero immediate))
 	 (value :scs (sap-reg) :target result))
   (:arg-types system-area-pointer positive-fixnum system-area-pointer)
   (:results (result :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:variant :long))
 
 
 
 (define-vop (32bit-system-ref sap-ref)
   (:translate sap-ref-32)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:variant :long nil))
 
 (define-vop (signed-32bit-system-ref sap-ref)
   (:translate signed-sap-ref-32)
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
   (:variant :long t))
 
 (define-vop (32bit-system-set sap-set)
   (:translate %set-sap-ref-32)
+  (:arg-types system-area-pointer positive-fixnum
+	      (:or unsigned-num signed-num))
   (:variant :long))
 
 
 (define-vop (16bit-system-ref sap-ref)
   (:translate sap-ref-16)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
   (:variant :short nil))
 
 (define-vop (signed-16bit-system-ref sap-ref)
   (:translate signed-sap-ref-16)
+  (:results (result :scs (signed-reg)))
+  (:result-types tagged-num)
   (:variant :short t))
 
 (define-vop (16bit-system-set sap-set)
   (:translate %set-sap-ref-16)
+  (:arg-types system-area-pointer positive-fixnum tagged-num)
   (:variant :short))
 
 
 (define-vop (8bit-system-ref sap-ref)
   (:translate sap-ref-8)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
   (:variant :byte nil))
 
 (define-vop (signed-8bit-system-ref sap-ref)
   (:translate signed-sap-ref-8)
+  (:results (result :scs (signed-reg)))
+  (:result-types tagged-num)
   (:variant :byte t))
 
 (define-vop (8bit-system-set sap-set)
   (:translate %set-sap-ref-8)
+  (:arg-types system-area-pointer positive-fixnum tagged-num)
   (:variant :byte))
 
 

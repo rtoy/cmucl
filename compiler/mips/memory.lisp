@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.7 1990/04/24 02:56:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.8 1990/06/16 15:35:14 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions of some general purpose memory
 ;;; reference VOPs inherited by basic memory reference operations.
@@ -108,7 +108,7 @@
 (defmacro define-indexer (name write-p op shift)
   `(define-vop (,name)
      (:args (object :scs (descriptor-reg))
-	    (index :scs (any-reg descriptor-reg immediate negative-immediate))
+	    (index :scs (any-reg zero immediate negative-immediate))
 	    ,@(when write-p
 		'((value :scs (any-reg descriptor-reg) :target result))))
      (:temporary (:scs (interior-reg) :type interior) lip)
@@ -120,9 +120,11 @@
      (:policy :fast-safe)
      (:generator 5
        (sc-case index
-	 ((immediate negative-immediate)
+	 ((immediate zero negative-immediate)
 	  (inst ,op value object
-		(- (+ (ash (tn-value index) (- word-shift ,shift))
+		(- (+ (if (sc-is index zero)
+			  0
+			  (ash (tn-value index) (- word-shift ,shift)))
 		      (ash offset word-shift))
 		   lowtag))
 	  ,(if write-p

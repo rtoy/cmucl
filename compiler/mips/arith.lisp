@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.24 1990/06/12 02:29:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.25 1990/06/16 15:33:18 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -68,10 +68,10 @@
 ;;; Assume that any constant operand is the second arg...
 
 (define-vop (fast-fixnum-binop)
-  (:args (x :target r :scs (any-reg descriptor-reg))
-	 (y :target r :scs (any-reg descriptor-reg)))
+  (:args (x :target r :scs (any-reg))
+	 (y :target r :scs (any-reg)))
   (:arg-types tagged-num tagged-num)
-  (:results (r :scs (any-reg descriptor-reg)))
+  (:results (r :scs (any-reg)))
   (:result-types tagged-num)
   (:note "inline fixnum arithmetic")
   (:effects)
@@ -108,9 +108,9 @@
 					"/FIXNUM=>FIXNUM"))
 		  fast-fixnum-binop)
        (:args (x :target r
-		 :scs (any-reg descriptor-reg))
+		 :scs (any-reg))
 	      (y :target r
-		 :scs (any-reg descriptor-reg immediate zero
+		 :scs (any-reg immediate zero
 			       ,(if unsigned
 				    'unsigned-immediate
 				    'negative-immediate))))
@@ -118,7 +118,7 @@
        (:generator ,cost
 	 (inst ,op r x
 	       (sc-case y
-		 ((any-reg descriptor-reg) y)
+		 (any-reg y)
 		 (zero zero-tn)
 		 ((immediate
 		   ,(if unsigned 'unsigned-immediate 'negative-immediate))
@@ -176,23 +176,25 @@
 ;;; know the output type is a fixnum.
 
 (define-vop (fast-+/fixnum fast-+/fixnum=>fixnum)
-  (:result-types *)
+  (:results (r :scs (any-reg descriptor-reg)))
+  (:result-types (:or signed-num unsigned-num))
   (:note nil)
   (:generator 1
     (inst add r x
 	  (sc-case y
-	    ((any-reg descriptor-reg) y)
+	    (any-reg y)
 	    (zero zero-tn)
 	    ((immediate negative-immediate)
 	     (fixnum (tn-value y)))))))
 
 (define-vop (fast--/fixnum fast--/fixnum=>fixnum)
-  (:result-types *)
+  (:results (r :scs (any-reg descriptor-reg)))
+  (:result-types (:or signed-num unsigned-num))
   (:note nil)
   (:generator 1
     (inst sub r x
 	  (sc-case y
-	    ((any-reg descriptor-reg) y)
+	    (any-reg y)
 	    (zero zero-tn)
 	    ((immediate negative-immediate)
 	     (fixnum (tn-value y)))))))
@@ -204,7 +206,7 @@
   (:note "inline ASH")
   (:args (number :scs (signed-reg unsigned-reg))
 	 (amount :scs (signed-reg immediate negative-immediate)))
-  (:arg-types (:or signed-num unsigned-num) *)
+  (:arg-types (:or signed-num unsigned-num) signed-num)
   (:results (result :scs (signed-reg unsigned-reg)))
   (:result-types (:or signed-num unsigned-num))
   (:translate ash)
@@ -339,7 +341,7 @@
 	 (y :target r :scs (signed-reg)))
   (:results (q :scs (signed-reg))
 	    (r :scs (signed-reg)))
-  (:result-types * *)
+  (:result-types signed-num signed-num)
   (:generator 11
     (let ((zero (generate-error-code division-by-zero-error x y)))
       (inst beq y zero-tn zero))
@@ -352,7 +354,7 @@
   (:args (x :target r :scs (signed-reg))
 	 (y :target r :scs (signed-reg)))
   (:results (r :scs (signed-reg)))
-  (:result-types *)
+  (:result-types signed-num)
   (:generator 10
     (let ((zero (generate-error-code division-by-zero-error x y)))
       (inst beq y zero-tn zero))
@@ -377,6 +379,7 @@
   (:arg-types tagged-num tagged-num)
   (:note "inline fixnum comparison"))
 
+#+nil
 (define-vop (fast-conditional-c/fixnum fast-conditional/fixnum)
   (:arg-types tagged-num (:constant (signed-byte 14)))
   (:info target not-p y))
@@ -387,6 +390,7 @@
   (:arg-types signed-num signed-num)
   (:note "inline (signed-byte 32) comparison"))
 
+#+nil
 (define-vop (fast-conditional-c/signed fast-conditional/signed)
   (:arg-types tagged-num (:constant (signed-byte 16)))
   (:info target not-p y))
@@ -397,6 +401,7 @@
   (:arg-types unsigned-num unsigned-num)
   (:note "inline (unsigned-byte 32) comparison"))
 
+#+nil
 (define-vop (fast-conditional-c/unsigned fast-conditional/unsigned)
   (:arg-types tagged-num (:constant (unsigned-byte 15)))
   (:info target not-p y))
@@ -586,8 +591,7 @@
   (:variant vm:bignum-digits-offset vm:other-pointer-type)
   (:translate bignum::%bignum-set)
   (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg descriptor-reg
-			      immediate unsigned-immediate))
+	 (index :scs (any-reg immediate unsigned-immediate))
 	 (value :scs (unsigned-reg)))
   (:results (result :scs (unsigned-reg))))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.16 1990/06/04 05:23:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.17 1990/06/16 15:35:17 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -118,7 +118,7 @@
 (define-vop (move-argument)
   (:args (x :target y
 	    :scs (any-reg descriptor-reg))
-	 (fp :scs (descriptor-reg)
+	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y any-reg descriptor-reg))))
   (:results (y))
   (:generator 0
@@ -265,7 +265,7 @@
 (define-vop (move-signed/unsigned-argument)
   (:args (x :target y
 	    :scs (signed-reg unsigned-reg))
-	 (fp :scs (any-reg descriptor-reg)
+	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y sap-reg))))
   (:results (y))
   (:generator 0

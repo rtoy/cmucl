@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.29 1990/06/03 18:56:47 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.30 1990/06/16 15:36:02 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -201,6 +201,8 @@
   :type (signed-byte 30))
 (def-primitive-type signed-byte-32 (signed-reg descriptor-reg)
   :type (signed-byte 32))
+
+(defvar *fixnum-primitive-type* (primitive-type-or-lose 'fixnum))
 
 (def-primitive-type-alias tagged-num (:or positive-fixnum fixnum))
 (def-primitive-type-alias unsigned-num (:or unsigned-byte-32
@@ -418,7 +420,7 @@
   (defconstant a5-offset 13)
   (defconstant cname-offset 14)
   (defconstant lexenv-offset 15)
-  (defconstant args-offset 16)
+  (defconstant nfp-offset 16)
   (defconstant old-fp-offset 17)
   (defconstant lra-offset 18)
   (defconstant l0-offset 19)
@@ -558,6 +560,7 @@
 ;;; The SC numbers for register and stack arguments/return values.
 ;;;
 (defconstant register-arg-scn (sc-number-or-lose 'descriptor-reg))
+(defconstant immediate-arg-scn (sc-number-or-lose 'any-reg))
 (defconstant control-stack-arg-scn (sc-number-or-lose 'control-stack))
 
 (eval-when (compile load eval)
@@ -574,11 +577,6 @@
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
 		  :offset nargs-offset))
-
-(defparameter args-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'descriptor-reg)
-		  :offset args-offset))
 
 (defparameter old-fp-tn
   (make-random-tn :kind :normal

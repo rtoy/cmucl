@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.12 1990/06/15 12:35:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.13 1990/06/16 15:35:44 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -25,7 +25,8 @@
 (def-source-transform structurep (x)
   (once-only ((n-x x))
     `(and (simple-vector-p ,n-x)
-	  (eql (%primitive get-vector-subtype ,n-x)
+	  (eql (truly-the (unsigned-byte 24)
+			  (%primitive get-vector-subtype ,n-x))
 	       system:%g-vector-structure-subtype))))
 
 (def-source-transform compiled-function-p (x)
@@ -51,7 +52,7 @@
 
 
 (def-source-transform %more-arg-context (&rest foo)
-  `(%primitive more-arg-context ,@foo))
+  `(truly-the (values t fixnum) (%primitive more-arg-context ,@foo)))
 ;;;
 (def-source-transform %verify-argument-count (&rest foo)
   `(%primitive verify-argument-count ,@foo))
