@@ -146,10 +146,13 @@
 (proclaim '(function %defknown (list list attributes &key (derive-type function)
 				     (optimizer function))))
 (defun %defknown (names type attributes &key derive-type optimizer)
+  (declare (ignore derive-type))
   (let ((ctype (specifier-type type))
 	(info (make-function-info :attributes attributes
 ;				  :derive-type derive-type  Until database is fixed...
-				  :optimizer optimizer)))
+				  :optimizer optimizer))
+	(*info-environment* (or (backend-info-environment *target-backend*)
+				*info-environment*)))
     (dolist (name names)
       (setf (info function type name) ctype)
       (setf (info function where-from name) :declared)
@@ -167,6 +170,8 @@
 ;;;
 (proclaim '(function function-info-or-lose (t) function-info))
 (defun function-info-or-lose (name)
-  (let ((old (info function info name)))
-    (unless old (error "~S is not a known function." name))
-    (setf (info function info name) (copy-function-info old))))
+  (let ((*info-environment* (or (backend-info-environment *target-backend*)
+				*info-environment*)))
+    (let ((old (info function info name)))
+      (unless old (error "~S is not a known function." name))
+      (setf (info function info name) (copy-function-info old)))))
