@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.91 2003/08/31 09:35:38 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.92 2004/03/24 13:26:19 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3033,7 +3033,7 @@
 
 #+solaris
 (defun unix-endpwent ()
-  (void-syscall ("getpwent")))
+  (void-syscall ("endpwent")))
 
 #+solaris
 (defun unix-getpwent ()
