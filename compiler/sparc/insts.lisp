@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.31 2001/05/14 14:00:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.32 2001/06/25 16:49:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -313,9 +313,11 @@ about function addresses and register values.")
      ;; A reference to a code constant (reg = %CODE)
      (disassem:note-code-constant immed-val dstate))
     (2
-     ;; A reference to a static symbol (reg = %NULL)
-     (disassem:maybe-note-nil-indexed-symbol-slot-ref immed-val
-						      dstate))
+     ;; A reference to a static symbol or static function (reg =
+     ;; %NULL)
+     (or (disassem:maybe-note-nil-indexed-symbol-slot-ref immed-val
+						      dstate)
+	 (disassem:maybe-note-static-function immed-val dstate)))
     (t
      (let ((sethi (assoc rs1 *note-sethi-inst*)))
        (when sethi
