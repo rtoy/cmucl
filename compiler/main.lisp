@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.115 2000/04/05 17:27:01 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.116 2000/04/06 11:05:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1781,7 +1781,7 @@
 		(or (probe-file output-file-name) output-file-name)
 		nil)
 	    (not (null error-severity))
-	    (if (eq error-severity :error) t nil))))
+	    (if (member error-severity '(:warning :error)) t nil))))
 
 ;;;; COMPILE and UNCOMPILE:
 
