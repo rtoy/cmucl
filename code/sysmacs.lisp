@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.14 1993/06/24 13:49:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.15 1993/08/06 13:02:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,12 +43,14 @@
 	      (n-evalue `(the (or index null) ,evalue)))
     `(multiple-value-bind
 	 (,data-var ,start-var ,end-var ,offset-var)
-	 (if (typep ,n-array '(simple-array * (*)))
-	     ,(once-only ((n-len `(length ,n-array))
-			  (n-end `(or ,n-evalue ,n-len)))
-		`(if (<= ,n-svalue ,n-end ,n-len)
-		     (values ,n-array ,n-svalue ,n-end 0)
-		     (%with-array-data ,n-array ,n-svalue ,n-evalue)))
+	 (if (not (array-header-p ,n-array))
+	     (let ((,n-array ,n-array))
+	       (declare (type (simple-array * (*)) ,n-array))
+	       ,(once-only ((n-len `(length ,n-array))
+			    (n-end `(or ,n-evalue ,n-len)))
+		  `(if (<= ,n-svalue ,n-end ,n-len)
+		       (values ,n-array ,n-svalue ,n-end 0)
+		       (%with-array-data ,n-array ,n-svalue ,n-evalue))))
 	     (%with-array-data ,n-array ,n-svalue ,n-evalue))
        (declare (ignorable ,offset-var))
        ,@forms)))
