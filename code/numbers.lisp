@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.10 1990/07/21 15:32:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.11 1990/08/14 16:00:20 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -720,17 +720,7 @@
 	 (,op x (coerce 0 '(dispatch-type x)))
 	 (,op (rational x) y)))
     (((foreach bignum fixnum ratio) float)
-     (,op x (rational y)))
-
-    ((complex complex)
-     (and (,op (realpart x) (realpart y))
-	  (,op (imagpart x) (imagpart y))))
-    (((foreach fixnum bignum ratio single-float double-float) complex)
-     (and (,op x (realpart y))
-	  (,op 0 (imagpart y))))
-    ((complex (or float rational))
-     (and (,op (realpart x) y)
-	  (,op (imagpart x) 0)))))
+     (,op x (rational y)))))
 
 
 (defmacro two-arg-</> (name op ratio-arg1 ratio-arg2 &rest cases)
@@ -781,7 +771,17 @@
     ((ratio integer) nil)
     ((ratio ratio)
      (and (eql (numerator x) (numerator y))
-	  (eql (denominator x) (denominator y))))))
+	  (eql (denominator x) (denominator y))))
+
+    ((complex complex)
+     (and (= (realpart x) (realpart y))
+	  (= (imagpart x) (imagpart y))))
+    (((foreach fixnum bignum ratio single-float double-float) complex)
+     (and (= x (realpart y))
+	  (zerop (imagpart y))))
+    ((complex (or float rational))
+     (and (= (realpart x) y)
+	  (zerop (imagpart x))))))
 
 
 ;;; EQL -- Public
