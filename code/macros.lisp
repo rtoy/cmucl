@@ -126,7 +126,8 @@
   ;; environment, but is read with the NEW-COMPILER feature.
   (when (fboundp 'eval:interpreted-function-p)
     (assert (eval:interpreted-function-p definition))
-    (setf (eval:interpreted-function-name definition) name)
+    (setf (eval:interpreted-function-name definition)
+	  (format nil "DEFMACRO ~S" name))
     (setf (eval:interpreted-function-arglist definition) lambda-list))
   (c::%%defmacro name definition doc))
 ;;;
@@ -267,6 +268,10 @@
 ;;;
 (defun c::%defun (name def doc source)
   (declare (ignore source))
+  #+new-compiler
+  (assert (eval:interpreted-function-p def))
+  #+new-compiler
+  (setf (eval:interpreted-function-name def) name)
   (c::%%defun name def doc))
 
 
