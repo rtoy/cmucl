@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.57 2005/01/25 14:50:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.58 2005/01/29 22:39:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -390,43 +390,40 @@
 (deftransform count ((item sequence) (bit simple-bit-vector) *
                      :policy (>= speed space))
   `(let ((length (length sequence)))
-    (if (zerop length)
-        0
-        (do ((index vm:vector-data-offset (1+ index))
-             (count 0)
-             (end-1 (+ vm:vector-data-offset
-                       (truncate (truly-the index (1- length))
-                                 vm:word-bits))))
-            ((= index end-1)
-             (let* ((extra (mod length vm:word-bits))
-		    (mask (1- (ash 1 extra)))
-		    (bits (logand (ash mask
-				       ,(ecase (c:backend-byte-order c:*target-backend*)
-					       (:little-endian 0)
-					       (:big-endian
-						'(- vm:word-bits extra))))
-				  (%raw-bits sequence index))))
-               (declare (type (mod #.vm:word-bits) extra))
-               (declare (type (unsigned-byte #.vm:word-bits) mask bits))
-               ;; could consider LOGNOT for the zero case instead of
-               ;; doing the subtraction...
-               (incf count ,(if (constant-continuation-p item)
-                                (if (zerop (continuation-value item))
-                                    '(- extra (logcount bits))
-                                    '(logcount bits))
-                                '(if (zerop item)
-                                     (- extra (logcount bits))
-                                     (logcount bits))))))
-          (declare (type index index count end-1)
-		   (optimize (speed 3) (safety 0)))
-          (incf count ,(if (constant-continuation-p item)
-                           (if (zerop (continuation-value item))
-                               '(- vm:word-bits (logcount (%raw-bits sequence index)))
-                               '(logcount (%raw-bits sequence index)))
-                           '(if (zerop item)
-                             (- vm:word-bits (logcount (%raw-bits sequence index)))
-                             (logcount (%raw-bits sequence index)))))))))
-
+     (if (zerop length)
+	 0
+	 (multiple-value-bind (nwords extra)
+	     (truncate (truly-the index length) vm:word-bits)
+	   ;; This loop counts the number of 1 bits in whole words
+	   (do ((index vm:vector-data-offset (1+ index))
+		(count 0)
+		(end (+ vm:vector-data-offset nwords)))
+	       ((= index end)
+		(let ((ones
+		       ;; Count the number of one bits in the last
+		       ;; word, if any, masking off any junk bits.
+		       (if (zerop extra)
+			   count
+			   (let* ((bits (ldb (byte extra
+						   ,(ecase (c:backend-byte-order c:*target-backend*)
+							   (:little-endian 0)
+							   (:big-endian
+							    '(- vm:word-bits extra))))
+					     (%raw-bits sequence index))))
+			     (incf count (logcount bits))))))
+		  ;; If we're counting ones, the we're done.  If we're
+		  ;; counting zeroes, we need to subtract the number
+		  ;; of ones from the length, obviously.
+		  ,(if (constant-continuation-p item)
+		       (if (zerop (continuation-value item))
+			   '(- length ones)
+			   'ones)
+		       '(if (zerop item)
+			  (- length ones)
+			  ones))))
+	     (declare (type index index count end)
+		      (optimize (speed 3) (safety 0)))
+	     (incf count (logcount (%raw-bits sequence index))))))))
 
 ;;;; Primitive translator for byte-blt
 
