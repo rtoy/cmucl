@@ -46,13 +46,22 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.16 2003/09/03 10:17:22 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.17 2004/08/06 17:21:54 rtoy Exp $")
 
 (in-package "PCL")
 
 ;;; ******************
 ;;; Utilities  *******
 ;;; ******************
+
+(defun quote-plist-keys (plist)
+  (loop for (key . more) on plist by #'cddr
+	if (null more) do
+	  (error "Not a property list: ~S" plist)
+	else
+	  collect `(quote ,key)
+	  and collect (car more)))
+
 
 (defun plist-keys (plist &key test)
   (loop for (key . more) on plist by #'cddr
@@ -402,9 +411,11 @@
 		       collect `(funcall (truly-the function ,fn) ,args ()))))
 	  (values
 	   `(let (,@(when (or ii-before ii-after)
-		     `((.ii-args. (list .instance. ,@initargs))))
+		    `((.ii-args.
+		       (list .instance. ,@(quote-plist-keys initargs)))))
 		  ,@(when (or si-before si-after)
-		     `((.si-args. (list .instance. t ,@initargs)))))
+		    `((.si-args.
+		       (list .instance. t ,@(quote-plist-keys initargs))))))
 	      ,@(method-calls ii-before '.ii-args.)
 	      ,@(method-calls si-before '.si-args.)
 	      ,slot-inits
