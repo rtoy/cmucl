@@ -1,0 +1,48 @@
+;;; -*- Package: RT -*-
+;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public
+;;; domain.  If you want to use this code or any part of CMU Common
+;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
+;;; **********************************************************************
+;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/print.lisp,v 1.1 1991/02/18 15:08:08 chiles Exp $
+;;;
+;;; This file contains temporary printing utilities and similar noise.
+;;;
+;;; Written by William Lott.
+;;;
+
+(in-package "RT")
+
+
+(define-vop (print)
+  (:args (object :scs (descriptor-reg)))
+  (:results (result :scs (descriptor-reg)))
+  (:save-p t)
+  (:temporary (:sc any-reg :offset nl0-offset) nl0)
+  (:temporary (:sc any-reg :offset lra-offset) lra)
+  (:temporary (:sc any-reg :offset code-offset) code)
+  (:temporary (:scs (sap-reg)) temp)
+  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
+  (:vop-var vop)
+  (:generator 0
+    (let ((lra-label (gen-label))
+	  (cur-nfp (current-nfp-tn vop)))
+      (when cur-nfp
+	(store-stack-tn cur-nfp nfp-save))
+      (inst cal nsp-tn nsp-tn -16)
+      (storew object nsp-tn)
+      (inst compute-lra-from-code lra code lra-label)
+      (inst cai nl0 (make-fixup "_debug_print" :foreign))
+      (inst cai temp (make-fixup "call_into_c" :foreign))
+      (inst b temp)
+
+      (align vm:lowtag-bits)
+      (emit-label lra-label)
+      (inst lra-header-word)
+      (inst cal nsp-tn nsp-tn 16)
+      (when cur-nfp
+	(load-stack-tn cur-nfp nfp-save))
+      (move result nl0))))
