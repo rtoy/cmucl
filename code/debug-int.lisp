@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.81 1997/12/07 17:46:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.82 1997/12/15 06:42:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3073,6 +3073,8 @@
 		     ;; Character
 		     (and (zerop (logand ,val #xffff0000)) ; Top bits zero
 		      (= (logand ,val #xff) vm:base-char-type)) ; Char tag
+		     ;; Unbound marker.
+		     (= ,val vm:unbound-marker-type)
 		     ;; Pointer
 		     (and (logand ,val 1)
 		      ;; Check that the pointer is valid. XX Should do
