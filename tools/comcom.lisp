@@ -225,7 +225,9 @@
     (:optimize '(optimize (debug-info 2) (safety 1)))
   (comf "target:compiler/pack"))
 (comf "target:compiler/codegen")
-(comf "target:compiler/debug")
+(with-compilation-unit
+    (:optimize '(optimize (debug-info 2) (safety 2)))
+  (comf "target:compiler/debug"))
 (comf "target:compiler/assem-check")
 (comf "target:compiler/statcount")
 (comf "target:compiler/dyncount")
