@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.33 1992/07/21 17:27:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.34 1992/07/21 18:45:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -374,6 +374,8 @@
 ;;;    We also use variable types for the called function to construct an
 ;;; assertion for the values continuation.
 ;;;
+;;; See CONVERT-CALL for additional notes on MERGE-TAIL-SETS, etc.
+;;;
 (defun convert-mv-call (ref call fun)
   (declare (type ref ref) (type mv-combination call) (type functional fun))
   (when (and (looks-like-an-mv-bind fun)
@@ -383,8 +385,8 @@
     (let ((ep (car (last (optional-dispatch-entry-points fun)))))
       (setf (basic-combination-kind call) :local)
       (pushnew ep (lambda-calls (node-home-lambda call)))
+      (merge-tail-sets call ep)
       (change-ref-leaf ref ep)
-      (merge-tail-sets call)
       
       (assert-continuation-type
        (first (basic-combination-args call))
