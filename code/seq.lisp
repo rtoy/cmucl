@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.7 2000/06/12 13:10:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.8 2000/09/27 18:26:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -618,59 +618,110 @@
 
 ;;; Map:
 
-(eval-when (compile eval)
+(declaim (start-block map))
 
-(defmacro map-to-list (function sequences)
-  `(do ((seqs more-sequences (cdr seqs))
-	(min-length (length first-sequence)))
-       ((null seqs)
-	(let ((result (list nil)))
-	  (do ((index 0 (1+ index))
-	       (splice result))
-	      ((= index min-length) (cdr result))
-	    (declare (fixnum index))
-	    (setq splice
-		  (cdr (rplacd splice
-			       (list (apply ,function (elt-slice ,sequences
-								 index)))))))))
-     (declare (fixnum min-length))
-     (let ((length (length (car seqs))))
-       (declare (fixnum length))
-       (if (< length min-length)
-	   (setq min-length length)))))
+(defun map-for-effect (function sequences)
+  (declare (list sequences))
+  (let ((min-length (1- most-positive-fixnum))
+	(args (make-list (length sequences))))
+    (declare (type index min-length))
+    (dolist (seq sequences)
+      (when (vectorp seq)
+	(let ((length (length seq)))
+	  (when (< length min-length)
+	    (setf min-length length)))))
+    (do ((index 0 (1+ index)))
+	((>= index min-length))
+      (declare (type index index))
+      (do-anonymous ((rem-slice sequences (rest rem-slice))
+		     (rem-args args (rest rem-args)))
+		    ((endp rem-slice))
+	(let ((seq (first rem-slice)))
+	  (etypecase seq
+	    (null (return))
+	    (list
+	     (setf (first rem-args) (first seq))
+	     (setf (first rem-slice) (rest seq)))
+	    (vector
+	     (setf (first rem-args) (aref seq index))))))
+      (apply function args))))
 
-(defmacro map-to-simple (output-type-spec function sequences)
-  `(do ((seqs more-sequences (cdr seqs))
-	(min-length (length first-sequence)))
-       ((null seqs)
-	(do ((index 0 (1+ index))
-	     (result (make-sequence-of-type ,output-type-spec min-length)))
-	    ((= index min-length) result)
-	  (declare (fixnum index))
-	  (setf (aref result index)
-		(apply ,function (elt-slice ,sequences index)))))
-     (declare (fixnum min-length))
-     (let ((length (length (car seqs))))
-       (declare (fixnum length))
-       (if (< length min-length)
-	   (setq min-length length)))))
+(defun map-to-list (function sequences)
+  (declare (list sequences))
+  (let ((min-length (1- most-positive-fixnum))
+	(args (make-list (length sequences))))
+    (declare (type index min-length))
+    (dolist (seq sequences)
+      (when (vectorp seq)
+	(let ((length (length seq)))
+	  (when (< length min-length)
+	    (setf min-length length)))))
+    (collect ((result))
+      (do ((index 0 (1+ index)))
+	  ((>= index min-length))
+	(declare (type index index))
+	(do-anonymous ((rem-slice sequences (rest rem-slice))
+		       (rem-args args (rest rem-args)))
+		      ((endp rem-slice))
+	  (let ((seq (first rem-slice)))
+	    (etypecase seq
+	      (null (return))
+	      (list
+	       (setf (first rem-args) (first seq))
+	       (setf (first rem-slice) (rest seq)))
+	      (vector
+	       (setf (first rem-args) (aref seq index))))))
+	(result (apply function args)))
+      (result))))
 
-(defmacro map-for-effect (function sequences)
-  `(do ((seqs more-sequences (cdr seqs))
-	(min-length (length first-sequence)))
-       ((null seqs)
-	(do ((index 0 (1+ index)))
-	    ((= index min-length) nil)
-	  (apply ,function (elt-slice ,sequences index))))
-     (declare (fixnum min-length))
-     (let ((length (length (car seqs))))
-       (declare (fixnum length))
-       (if (< length min-length)
-	   (setq min-length length)))))
+(defun map-to-simple (output-type-spec function sequences)
+  (declare (list sequences))
+  (flet ((seqlen (sequences)
+	   (declare (list sequences))
+	   (let ((min-length (1- most-positive-fixnum))
+		 (lists nil))
+	     (declare (type index min-length))
+	     (dolist (seq sequences)
+	       (etypecase seq
+		 (list
+		  (push seq lists))
+		 (vector
+		  (let ((length (length seq)))
+		    (when (< length min-length)
+		      (setf min-length length))))))
+	     (cond (lists
+		    (do ((index 0 (1+ index)))
+			((>= index min-length) min-length)
+		      (declare (type index index))
+		      (do-anonymous ((rem lists (rest rem)))
+				    ((endp rem))
+			(let ((next (first rem)))
+			  (when (endp next)
+			    (return index))
+			  (setf (first rem) (rest next))))))
+		   (t
+		    min-length)))))
+    (let* ((args (make-list (length sequences)))
+	   (min-length (seqlen sequences))
+	   (result (make-sequence-of-type output-type-spec min-length)))
+      (declare (type index min-length))
+      (do ((index 0 (1+ index)))
+	  ((>= index min-length))
+	(declare (type index index))
+	(do-anonymous ((rem-slice sequences (rest rem-slice))
+		       (rem-args args (rest rem-args)))
+		      ((endp rem-slice))
+	  (let ((seq (first rem-slice)))
+	    (etypecase seq
+	      (null (return))
+	      (list
+	       (setf (first rem-args) (first seq))
+	       (setf (first rem-slice) (rest seq)))
+	      (vector
+	       (setf (first rem-args) (aref seq index))))))
+	(setf (aref result index) (apply function args)))
+      result)))
 
-
-)
-
 (defun map (output-type-spec function first-sequence &rest more-sequences)
   "FUNCTION must take as many arguments as there are sequences provided.  The 
    result is a sequence such that element i is the result of applying FUNCTION
@@ -680,11 +731,14 @@
       ((nil) (map-for-effect function sequences))
       (list (map-to-list function sequences))
       ((simple-vector simple-string vector string array simple-array
-		    bit-vector simple-bit-vector base-string simple-base-string)
+		   bit-vector simple-bit-vector base-string simple-base-string)
        (map-to-simple output-type-spec function sequences))
       (t
        (apply #'map (result-type-or-lose output-type-spec t)
 	      function sequences)))))
+
+(declaim (end-block))
+
 
 (defun map-into (result-sequence function &rest sequences)
   (let* ((fp-result
@@ -713,20 +767,32 @@
 (defmacro defquantifier (name doc-string every-result abort-sense abort-value)
   `(defun ,name (predicate first-sequence &rest more-sequences)
      ,doc-string
-     (do ((seqs more-sequences (cdr seqs))
-	  (length (length first-sequence))
-	  (sequences (cons first-sequence more-sequences)))
-	 ((null seqs)
-	  (do ((index 0 (1+ index)))
-	      ((= index length) ,every-result)
-	    (declare (fixnum index))
-	    (let ((result (apply predicate (elt-slice sequences index))))
-	      (if ,(if abort-sense 'result '(not result))
-		  (return ,abort-value)))))
-       (declare (fixnum length))
-       (let ((this (length (car seqs))))
-	 (declare (fixnum this))
-	 (if (< this length) (setq length this))))))
+     (let* ((sequences (cons first-sequence more-sequences))
+	    (min-length (1- most-positive-fixnum))
+	    (args (make-list (length sequences))))
+       (declare (type index min-length))
+       (dolist (seq sequences)
+	 (when (vectorp seq)
+	   (let ((length (length seq)))
+	     (when (< length min-length)
+	       (setf min-length length)))))
+       (do ((index 0 (1+ index)))
+	   ((>= index min-length) ,every-result)
+	 (declare (type index index))
+	 (do-anonymous ((rem-slice sequences (rest rem-slice))
+			(rem-args args (rest rem-args)))
+		       ((endp rem-slice))
+	   (let ((seq (first rem-slice)))
+	     (etypecase seq
+	       (null (return ,every-result))
+	       (list
+		(setf (first rem-args) (first seq))
+		(setf (first rem-slice) (rest seq)))
+	       (vector
+		(setf (first rem-args) (aref seq index))))))
+	 (let ((result (apply predicate args)))
+	   (if ,(if abort-sense 'result '(not result))
+	       (return ,abort-value)))))))
 ) ; eval-when
 
 (defquantifier some
