@@ -22,7 +22,7 @@
 ;;;
 (import '(c::debug-source-from c::debug-source-name c::debug-source-created
 	  c::debug-source-compiled c::debug-source-start-positions
-	  c::debug-source c::debug-source-p))
+	  c::make-debug-source c::debug-source c::debug-source-p))
 
 (export '(debug-variable-name debug-variable-package debug-variable-symbol
 	  debug-variable-id debug-variable-value debug-variable-validity
@@ -48,7 +48,7 @@
 	  code-location-debug-function code-location-debug-block
 	  code-location-top-level-form-offset code-location-form-number
 	  code-location-debug-source code-location code-location-p
-	  unknown-code-location unknown-code-location-p
+	  code-location-unknown-p code-location=
 
 	  debug-source-from debug-source-name debug-source-created
 	  debug-source-compiled debug-source-root-number
@@ -59,7 +59,10 @@
 	  no-debug-blocks lambda-list-unavailable
 
 	  debug-error unhandled-condition invalid-control-stack-pointer
-	  unknown-code-location unknown-debug-variable invalid-value))
+	  unknown-code-location unknown-debug-variable invalid-value
+	  ambiguous-variable-name frame-function-mismatch
+
+	  *debugging-interpreter*))
 
 
 
@@ -116,6 +119,13 @@
 	     (format stream "~S has no debug-block information."
 		     (no-debug-blocks-debug-function condition)))))
 
+(define-condition no-debug-variables (debug-condition)
+  (debug-function)
+  (:documentation "The debug-function has no debug-variable information.")
+  (:report (lambda (condition stream)
+	     (format stream "~S has no debug-variable information."
+		     (no-debug-variables-debug-function condition)))))
+
 (define-condition lambda-list-unavailable (debug-condition)
   (debug-function)
   (:documentation
@@ -125,6 +135,21 @@
 	     (format stream "~S has no lambda-list information available."
 		     (lambda-list-unavailable-debug-function condition)))))
 
+(define-condition invalid-value (debug-condition)
+  ((debug-variable)
+   (frame))
+  (:report (lambda (condition stream)
+	     (format stream "~S has :invalid or :unknown value in ~S."
+		     (invalid-value-debug-variable condition)
+		     (invalid-value-frame condition)))))
+
+(define-condition ambiguous-variable-name (debug-condition)
+  ((name)
+   (frame))
+  (:report (lambda (condition stream)
+	     (format stream "~S names more than one valid variable in ~S."
+		     (ambiguous-variable-name-name condition)
+		     (ambiguous-variable-name-frame condition)))))
 
 
 ;;;; Errors and DEBUG-SIGNAL.
@@ -168,13 +193,16 @@
 		     (unknown-debug-variable-debug-variable condition)
 		     (unknown-debug-variable-debug-function condition)))))
 
-(define-condition invalid-value (debug-error)
-  ((debug-variable)
-   (frame))
+(define-condition frame-function-mismatch (debug-error)
+  ((code-location)
+   (frame)
+   (form))
   (:report (lambda (condition stream)
-	     (format stream "~S has :invalid or :unknown value in ~S."
-		     (invalid-value-debug-variable condition)
-		     (invalid-value-frame condition)))))
+	     (format stream
+		     "Form was preprocessed for ~S,~% but called on ~S:~%  ~S"
+		     (frame-function-mismatch-code-location condition)
+		     (frame-function-mismatch-frame condition)
+		     (frame-function-mismatch-form condition)))))
 
 
 ;;; DEBUG-SIGNAL -- Internal.
@@ -206,10 +234,7 @@
 ;;; These exist for caching data stored in packed binary form in compiler
 ;;; debug-functions.  Debug-functions store these.
 ;;;
-(defstruct (debug-variable (:print-function print-debug-variable)
-			   (:constructor make-debug-variable
-					 (name package id alive-p sc-offset
-					  save-sc-offset)))
+(defstruct (debug-variable (:print-function print-debug-variable))
   ;;
   ;; String name of variable.
   (name nil :type simple-string)
@@ -222,17 +247,11 @@
   (id 0 :type c::index)
   ;;
   ;; Whether the variable always has a valid value.
-  (alive-p nil :type c::boolean)
-  ;;
-  ;; Storage class and offset.  (unexported).
-  (sc-offset nil :type c::sc-offset)
-  ;;
-  ;; Storage class and offset when saved somewhere.
-  (save-sc-offset nil :type (or c::sc-offset null)))
+  (alive-p nil :type c::boolean))
 
 (defun print-debug-variable (obj str n)
   (declare (ignore n))
-  (format str "#<Debug-variable ~A:~A:~A>"
+  (format str "#<Debug-Variable ~A:~A:~A>"
 	  (debug-variable-package obj)
 	  (debug-variable-name obj)
 	  (debug-variable-id obj)))
@@ -249,16 +268,34 @@
   "Returns the integer that makes debug-variable's name and package name unique
    with respect to other debug-variable's in the same function.")
 
+
+(defstruct (compiled-debug-variable
+	    (:include debug-variable)
+	    (:constructor make-compiled-debug-variable
+			  (name package id alive-p sc-offset save-sc-offset)))
+  ;;
+  ;; Storage class and offset.  (unexported).
+  (sc-offset nil :type c::sc-offset)
+  ;;
+  ;; Storage class and offset when saved somewhere.
+  (save-sc-offset nil :type (or c::sc-offset null)))
+
+(defstruct (interpreted-debug-variable
+	    (:include debug-variable
+		      (alive-p t))
+	    (:constructor make-interpreted-debug-variable
+			  (name package ir1-var)))
+  ;;
+  ;; This is the IR1 structure that holds information about interpreted vars.
+  (ir1-var nil :type c::lambda-var))
+
 ;;;
 ;;; Frames
 ;;;
 
 ;;; These represents call-frames on the stack.
 ;;;
-(defstruct (frame (:print-function print-frame)
-		  (:constructor make-frame
-				(pointer up debug-function code-location number
-				 &optional escaped)))
+(defstruct frame
   ;;
   ;; Next frame up.  Null when top frame.
   (up nil :type (or frame null))
@@ -279,20 +316,11 @@
   (%catches :unparsed :type (or list (member :unparsed)))
   ;;
   ;; Pointer to frame on control stack.  (unexported)
+  ;; When is an interpreted-frame, this is an index into the interpreter's stack.
   pointer
-  ;;
-  ;; Indicates whether someone interrupted frame.  (unexported).
-  ;; If escaped, this is a pointer to the escape frame on the control stack.
-  escaped
   ;;
   ;; This is the frame's number for prompt printing.  Top is zero.
   number)
-
-(defun print-frame (obj str n)
-  (declare (ignore n))
-  (format str "#<Frame ~S~:[~;, interrupted~]>"
-	  (debug-function-name (frame-debug-function obj))
-	  (frame-escaped obj)))
 
 (setf (documentation 'frame-up 'function)
   "Returns the frame immediately above frame on the stack.  When frame is
@@ -305,6 +333,43 @@
   "Returns the code-location where the frame's debug-function will continue
    running when program execution returns to this frame.  If someone
    interrupted this frame, the result could be an unknown code-location.")
+
+
+(defstruct (compiled-frame
+	    (:include frame)
+	    (:print-function print-compiled-frame)
+	    (:constructor make-compiled-frame
+			  (pointer up debug-function code-location number
+			   &optional escaped)))
+  ;;
+  ;; Indicates whether someone interrupted frame.  (unexported).
+  ;; If escaped, this is a pointer to the escape frame on the control stack.
+  escaped)
+
+(defun print-compiled-frame (obj str n)
+  (declare (ignore n))
+  (format str "#<Compiled-Frame ~S~:[~;, interrupted~]>"
+	  (debug-function-name (frame-debug-function obj))
+	  (compiled-frame-escaped obj)))
+
+
+(defstruct (interpreted-frame
+	    (:include frame)
+	    (:print-function print-interpreted-frame)
+	    (:constructor make-interpreted-frame
+			  (pointer up debug-function code-location number
+			   real-frame closure)))
+  ;;
+  ;; This points to the compiled-frame for EVAL:INTERNAL-APPLY-LOOP.
+  (real-frame nil :type compiled-frame)
+  ;;
+  ;; This is the closed over data used by the interpreter.
+  (closure nil :type simple-vector))
+
+(defun print-interpreted-frame (obj str n)
+  (declare (ignore n))
+  (format str "#<Interpreted-Frame ~S>"
+	  (debug-function-name (frame-debug-function obj))))
 
 ;;;
 ;;; Debug-functions
@@ -324,11 +389,11 @@
   ;; NOTE: must parse vars before parsing arg list stuff.
   (%lambda-list :unparsed)
   ;;
-  ;; Cached Debug-variable information.  (unexported).
+  ;; Cached debug-variable information.  (unexported).
   ;; These are sorted by their name.
   (debug-vars :unparsed :type (or simple-vector null (member :unparsed)))
   ;;
-  ;; Cached Debug-block information.  This is nil when we have tried to parse
+  ;; Cached debug-block information.  This is nil when we have tried to parse
   ;; the packed binary info, but none is available.
   (blocks :unparsed :type (or simple-vector null (member :unparsed)))
   ;;
@@ -337,7 +402,11 @@
 
 (defun print-debug-function (obj str n)
   (declare (ignore n))
-  (format str "#<Debug-function ~S>" (debug-function-name obj)))
+  (format str "#<~A-Debug-Function ~S>"
+	  (etypecase obj
+	    (compiled-debug-function "Compiled")
+	    (interpreted-debug-function "Interpreted"))
+	  (debug-function-name obj)))
 
 
 (defstruct (compiled-debug-function
@@ -370,7 +439,20 @@
 	    (%make-compiled-debug-function compiler-debug-fun component))))
 
 
-(defstruct (interpreted-debug-function (:include debug-function)))
+(defstruct (interpreted-debug-function
+	    (:include debug-function)
+	    (:constructor %make-interpreted-debug-function (ir1-lambda)))
+  ;;
+  ;; This is the ir1 lambda this debug-function represents.
+  (ir1-lambda nil :type c::clambda))
+
+(defvar *ir1-lambda-debug-function* (make-hash-table :test #'eq))
+
+(defun make-interpreted-debug-function (ir1-lambda)
+  (let ((home-lambda (c::lambda-home ir1-lambda)))
+    (or (gethash home-lambda *ir1-lambda-debug-function*)
+	(setf (gethash home-lambda *ir1-lambda-debug-function*)
+	      (%make-interpreted-debug-function home-lambda)))))
 
 ;;;
 ;;; Debug-blocks.
@@ -379,25 +461,24 @@
 ;;; These exist for caching data stored in packed binary form in compiler
 ;;; debug-blocks.
 ;;;
-(defstruct (debug-block (:print-function print-debug-block)
-			(:constructor make-debug-block
-				      (code-locations successors elsewhere-p)))
-  ;;
-  ;; Code-location information for the block.
-  (code-locations nil :type simple-vector)
+(defstruct (debug-block (:print-function print-debug-block))
   ;;
   ;; Code-locations where execution continues after this block.
   (successors nil :type list)
   ;;
-  ;; This notes the block as a special glob of code shared by various functions
-  ;; and tucked away elsewhere in a component.  This kind of block has not
-  ;; start code-location.
+  ;; This indicates whether the block is a special glob of code shared by
+  ;; various functions and tucked away elsewhere in a component.  This kind of
+  ;; block has no start code-location.  In an interpreted-debug-block, this is
+  ;; always nil.  This slot is in all debug-blocks since it is an exported
+  ;; interface.
   (elsewhere-p nil :type c::boolean))
 
 (defun print-debug-block (obj str n)
   (declare (ignore n))
-  (format str "#<Debug-block ~S>"
-	  ;; Fix up, for now assuming always have a code-location in 0.
+  (format str "#<~A-Debug-Block ~S>"
+	  (etypecase obj
+	    (compiled-debug-block "Compiled")
+	    (interpreted-debug-block "Interpreted"))
 	  (debug-block-function-name obj)))
 
 (setf (documentation 'debug-block-successors 'function)
@@ -406,6 +487,62 @@
 
 (setf (documentation 'debug-block-elsewhere-p 'function)
   "Returns whether debug-block represents elsewhere code.")
+
+
+(defstruct (compiled-debug-block (:include debug-block)
+				 (:constructor
+				  make-compiled-debug-block
+				  (code-locations successors elsewhere-p)))
+  ;;
+  ;; Code-location information for the block.
+  (code-locations nil :type simple-vector))
+
+(defstruct (interpreted-debug-block (:include debug-block
+					      (elsewhere-p nil))
+				    (:constructor %make-interpreted-debug-block
+						  (ir1-block)))
+  ;;
+  ;; This is the IR1 block this debug-block represents.
+  (ir1-block nil :type c::cblock)
+  ;;
+  ;; Code-location information for the block.
+  (locations :unparsed :type (or (member :unparsed) simple-vector)))
+
+(defvar *ir1-block-debug-block* (make-hash-table :test #'eq))
+
+;;; MAKE-INTERPRETED-DEBUG-BLOCK -- Internal.
+;;;
+;;; This makes a debug-block for the interpreter's ir1-block.  If we have it in
+;;; the cache, return it.  If we need to make it, then first make debug-blocks
+;;; for all the ir1-blocks in ir1-block's home lambda; this makes sure all the
+;;; successors of ir1-block have debug-blocks.  We need this to fill in the
+;;; resulting debug-block's successors list with debug-blocks, not ir1-blocks.
+;;; After making all the possible debug-blocks we'll need to reference, go back
+;;; over the list of new debug-blocks and fill in their successor slots with
+;;; lists of debug-blocks.  Then look up our argument ir1-block to find its
+;;; debug-block since we know we have it now.
+;;;
+(defun make-interpreted-debug-block (ir1-block)
+  (check-type ir1-block c::cblock)
+  (let ((res (gethash ir1-block *ir1-block-debug-block*)))
+    (or res
+	(let ((lambda (c::block-home-lambda ir1-block)))
+	  (c::do-blocks (block (c::block-component ir1-block))
+	    (when (eq lambda (c::block-home-lambda block))
+	      (push (setf (gethash block *ir1-block-debug-block*)
+			  (%make-interpreted-debug-block block))
+		    res)))
+	  (dolist (block res)
+	    (let ((successors nil))
+	      (dolist (succ (c::block-succ
+			     (interpreted-debug-block-ir1-block block)))
+		(let ((dblock (gethash succ *ir1-block-debug-block*)))
+		  (unless dblock
+		    (error "Block ~S has successor ~S in different lambda."
+			   (interpreted-debug-block-ir1-block block) succ))
+		  (push dblock successors)))
+	      (setf (debug-block-successors block) (nreverse successors))))
+	  (gethash ir1-block *ir1-block-debug-block*)))))
 
 ;;;
 ;;; Breakpoints.
@@ -434,17 +571,7 @@
 ;;; Code-locations.
 ;;;
 
-(defstruct (code-location (:print-function print-code-location)
-			  (:constructor make-code-location
-					(pc debug-function &optional
-					 %tlf-offset %form-number %live-set kind
-					 ;; Any optional means it's known.
-					 (%unknown-p (not kind))))
-			  (:constructor make-unknown-code-location
-					(pc debug-function &aux (%unknown-p t))))
-  ;;
-  ;; This is an index into debug-function's component slot.
-  (pc nil :type c::index)
+(defstruct (code-location (:print-function print-code-location))
   ;;
   ;; This is the debug-function containing code-location.
   (debug-function nil :type debug-function)
@@ -469,7 +596,35 @@
   ;;
   ;; This is the depth-first number of the node that begins code-location
   ;; within its top-level form.
-  (%form-number :unparsed :type (or c::index (member :unparsed)))
+  (%form-number :unparsed :type (or c::index (member :unparsed))))
+
+(defun print-code-location (obj str n)
+  (declare (ignore n))
+  (format str "#<~A ~S>"
+	  (ecase (code-location-unknown-p obj)
+	    ((nil) (etypecase obj
+		     (compiled-code-location "Compiled-Code-Location")
+		     (interpreted-code-location "Interpreted-Code-Location")))
+	    ((t) "Unknown-Code-Location"))
+	  (debug-function-name (code-location-debug-function obj))))
+
+(setf (documentation 'code-location-debug-function 'function)
+  "Returns the debug-function representing information about the function
+   corresponding to the code-location.")
+
+
+(defstruct (compiled-code-location
+	    (:include code-location)
+	    (:constructor make-compiled-code-location
+			  (pc debug-function &optional
+			      %tlf-offset %form-number %live-set kind
+			      ;; Any optional means it's known.
+			      (%unknown-p (not kind))))
+	    (:constructor make-unknown-code-location
+			  (pc debug-function &aux (%unknown-p :unsure))))
+  ;;
+  ;; This is an index into debug-function's component slot.
+  (pc nil :type c::index)
   ;;
   ;; This is a bit-vector indexed by a variable's position in
   ;; DEBUG-FUNCTION-DEBUG-VARS indicating whether the variable has a valid
@@ -480,17 +635,15 @@
   (kind :unparsed :type (member :unparsed :unknown-return :known-return
 				:internal-error :non-local-exit :block-start)))
 
-(defun print-code-location (obj str n)
-  (declare (ignore n))
-  (format str "#<~A ~S>"
-	  (ecase (code-location-unknown-p obj)
-	    ((nil) "Code-Location")
-	    ((t) "Unknown-Code-Location"))
-	  (debug-function-name (code-location-debug-function obj))))
-
-(setf (documentation 'code-location-debug-function 'function)
-  "Returns the debug-function representing information about the function
-   corresponding to the code-location.")
+(defstruct (interpreted-code-location
+	    (:include code-location
+		      (%unknown-p nil))
+	    (:constructor make-interpreted-code-location
+			  (ir1-node debug-function)))
+  ;;
+  ;; This is an index into debug-function's component slot.
+  (ir1-node nil :type c::node))
+  
 
 ;;;
 ;;; Debug-sources
@@ -528,20 +681,13 @@
   "Returns the time someone compiled the source.  This is nil if the source
    is uncompiled.")
 
+(setf (documentation 'c::debug-source-start-positions 'function)
+  "This function returns the file position of each top-level form as an array
+   if debug-source is from a :file.  If DEBUG-SOURCE-FROM is :lisp or :stream,
+   this returns nil.")
+
 (setf (documentation 'c::debug-source-p 'function)
   "Returns whether object is a debug-source.")
-
-;;;
-;;; Interpreted-debug-infos.
-;;;
-
-(defstruct (interpreted-debug-info
-	    (:print-function print-interpreted-debug-info))
-  )
-
-(defun print-interpreted-debug-info (obj str n)
-  (declare (ignore n obj))
-  (write-string "#<Interpreted-Debug-Info>" str))
 
 
 
@@ -585,27 +731,80 @@
 (defsetf stack-ref %set-stack-ref)
 
 
-;;; These are the names of all the functions that the system could have called
-;;; while interpreting.  We need to detect these when parsing the stack and
-;;; make frames representing the code the intepreter is evaluating.
-;;;
-(defconstant interpreter-function-names nil)
-
 ;;; TOP-FRAME -- Public.
 ;;;
 (defun top-frame ()
   "Returns the top frame of the control stack as it was before calling this
    function."
-  (compute-calling-frame (system:%primitive current-fp) nil))
+  (possibly-an-interpreted-frame
+   (compute-calling-frame (system:%primitive current-fp) nil)
+   nil))
 
+;;; FRAME-DOWN -- Public.
+;;;
 (defun frame-down (frame)
   "Returns the frame immediately below frame on the stack.  When frame is
    the bottom of the stack, this returns nil."
   (let ((down (frame-%down frame)))
     (if (eq down :unparsed)
 	(setf (frame-%down frame)
-	      (compute-calling-frame (frame-pointer frame) frame))
+	      (possibly-an-interpreted-frame
+	       (etypecase frame
+		 (compiled-frame
+		  (compute-calling-frame (frame-pointer frame) frame))
+		 (interpreted-frame
+		  (compute-calling-frame
+		   (frame-pointer (interpreted-frame-real-frame frame))
+		   frame)))
+	       frame))
 	down)))
+
+(defvar *debugging-interpreter* nil
+  "When set, the debugger foregoes making interpreted-frames, so you can
+   debug the functions that manifest the interpreter.")
+
+;;; POSSIBLY-AN-INTERPRETED-FRAME -- Internal.
+;;;
+;;; This takes a newly computed frame, frame, and the frame above it on the
+;;; stack, up-frame, which is possibly nil.  Frame is nil when we hit the
+;;; bottom of the control stack.  When frame represents a call to
+;;; EVAL::INTERNAL-APPLY-LOOP, we make an interpreted frame to replace frame.
+;;; The interpreted frame points to frame.
+;;;
+(defun possibly-an-interpreted-frame (frame up-frame)
+  (if (or (not frame)
+	  (not (eq (debug-function-name (frame-debug-function frame))
+		   'eval::internal-apply-loop))
+	  *debugging-interpreter*
+	  (compiled-frame-escaped frame))
+      frame
+      (flet ((get-var (name location)
+	       (let ((vars (di:ambiguous-debug-variables
+			    (di:frame-debug-function frame) name)))
+		 (when (or (null vars) (> (length vars) 1))
+		   (error "Zero or more than one ~A variable in ~
+			   EVAL::INTERNAL-APPLY-LOOP?"
+			  (string-downcase name)))
+		 (if (eq (debug-variable-validity (car vars) location)
+			 :valid)
+		     (car vars)))))
+	(let* ((code-loc (frame-code-location frame))
+	       (ptr-var (get-var "FRAME-PTR" code-loc))
+	       (node-var (get-var "NODE" code-loc))
+	       (closure-var (get-var "CLOSURE" code-loc)))
+	  (if (and ptr-var node-var closure-var)
+	      (let* ((node (debug-variable-value node-var frame))
+		     (d-fun (make-interpreted-debug-function
+			     (c::block-home-lambda (c::node-block node)))))
+		(make-interpreted-frame
+		 (debug-variable-value ptr-var frame)
+		 up-frame
+		 d-fun
+		 (make-interpreted-code-location node d-fun)
+		 (frame-number frame)
+		 frame
+		 (debug-variable-value closure-var frame)))
+	      frame)))))
 
 ;;; COMPUTE-CALLING-FRAME -- Internal.
 ;;;
@@ -625,33 +824,28 @@
       (return-from compute-calling-frame nil))
     (multiple-value-bind (env env-fp escaped)
 			 (fp-env caller current-fp)
-      (cond (escaped
-	     ;; If env-fp is escaped, then caller is the escape frame.
-	     (multiple-value-bind
-		 (env pc)
-		 (pc-offset (escape-register caller c::return-pc-offset)
-			    env up-frame)
-	       (let ((d-fun (debug-function-from-pc env pc)))
-		 (make-frame env-fp up-frame d-fun
-			     (code-location-from-pc d-fun pc)
-			     (if up-frame (1+ (frame-number up-frame)) 0)
-			     escaped))))
-	  #|((member (system:%primitive header-ref env
-					system:%function-name-slot)
-		     interpreter-function-names)
-	     ;; Just print calls within the interpreter as ... uh ... real calls
-	     ;; for now
-	     )|#
-	  (t
-	   (multiple-value-bind
-	       (env pc)
-	       (pc-offset (stack-ref current-fp c::return-pc-save-offset)
-			  env up-frame)
-	     (let ((d-fun (debug-function-from-pc env pc)))
-	       ;; env-fp = caller.
-	       (make-frame env-fp up-frame d-fun
-			   (code-location-from-pc d-fun pc)
-			   (if up-frame (1+ (frame-number up-frame)) 0)))))))))
+      (if escaped
+	  ;; If env-fp is escaped, then caller is the escape frame.
+	  (multiple-value-bind
+	      (env pc)
+	      (pc-offset (escape-register caller c::return-pc-offset)
+			 env up-frame)
+	    (let ((d-fun (debug-function-from-pc env pc)))
+	      (make-compiled-frame env-fp up-frame d-fun
+				   (code-location-from-pc d-fun pc escaped)
+				   (if up-frame (1+ (frame-number up-frame)) 0)
+				   escaped)))
+	  (multiple-value-bind
+	      (env pc)
+	      (pc-offset (stack-ref current-fp c::return-pc-save-offset)
+			 env up-frame)
+	    (let ((d-fun (debug-function-from-pc env pc)))
+	      ;; env-fp = caller.
+	      (make-compiled-frame env-fp up-frame d-fun
+				   (code-location-from-pc d-fun pc escaped)
+				   (if up-frame
+				       (1+ (frame-number up-frame))
+				       0))))))))
 
 ;;; PC-OFFSET -- Internal.
 ;;;
@@ -826,6 +1020,7 @@
     (#.system:%function-constants-subtype
      fun)))
 
+
 ;;; CODE-LOCATION-FROM-PC -- Internal.
 ;;;
 ;;; This returns a code-location for the compiled-debug-function, debug-fun,
@@ -833,26 +1028,32 @@
 ;;; the code-location is known by making a default one.  It may later prove
 ;;; to be unknown as :unparsed slots are accessed.
 ;;;
-(defun code-location-from-pc (debug-fun pc)
+(defun code-location-from-pc (debug-fun pc escaped)
   ;; For now, and this might be right:
-  (if (c::compiled-debug-function-blocks
-       (compiled-debug-function-compiler-debug-fun
-	debug-fun))
-      (make-code-location pc debug-fun)
+  (if (and (c::compiled-debug-function-blocks
+	    (compiled-debug-function-compiler-debug-fun debug-fun))
+	   (not escaped))
+      (make-compiled-code-location pc debug-fun)
       (make-unknown-code-location pc debug-fun)))
 
+
+;;; FRAME-CATCHES -- Public.
+;;;
 (defun frame-catches (frame)
   "Returns an a-list mapping catch tags to code-locations.  These are
    code-locations at which execution would continue with frame as the top
    frame if someone threw to the corresponding tag."
   (let ((catch (system:%primitive active-catch-frame))
 	(res nil)
-	(fp (frame-pointer frame)))
+	(fp (etypecase frame
+	      (compiled-frame (frame-pointer frame))
+	      (interpreted-frame (frame-pointer
+				  (interpreted-frame-real-frame frame))))))
     (loop
       (when (eql catch 0) (return (nreverse res)))
       (when (eq fp (stack-ref catch system:%unwind-block-current-fp))
 	(push (cons (stack-ref catch system:%catch-block-tag)
-		    (make-code-location
+		    (make-compiled-code-location
 		     (- (stack-ref catch system:%unwind-block-entry-pc)
 			clc::i-vector-header-size)
 		     (frame-debug-function frame)))
@@ -910,9 +1111,13 @@
     (compiled-debug-function
      (setf (debug-function-%function debug-function) nil))
     (interpreted-debug-function
-     (error "Can't currently debug interpreted functions."))))
+     (c::lambda-eval-info-function
+      (c::leaf-info (interpreted-debug-function-ir1-lambda debug-function))))))
 
 ;;; DEBUG-FUNCTION-NAME -- Public.
+;;;
+;;; NOTE: This doesn't cache the name making the the DEBUG-FUNCTION-%FUNCTION
+;;; slot useless.
 ;;;
 (defun debug-function-name (debug-function)
   "Returns the name of the function represented by debug-function.  This may
@@ -922,16 +1127,21 @@
      (c::compiled-debug-function-name
       (compiled-debug-function-compiler-debug-fun debug-function)))
     (interpreted-debug-function
-     (error "Can't get interpreted-debug-function names now."))))
+     (c::lambda-name (interpreted-debug-function-ir1-lambda debug-function)))))
 
 ;;; FUNCTION-DEBUG-FUNCTION -- Public.
 ;;;
 (defun function-debug-function (fun)
   "Returns a debug-function that represents debug information for function."
-  (debug-function-from-pc
-   fun
-   (- (system:%primitive header-ref fun system:%function-offset-slot)
-      clc::i-vector-header-size)))
+  (if (eval:interpreted-function-p fun)
+      (let ((eval-fun (eval::get-eval-function fun)))
+	(make-interpreted-debug-function
+	 (or (eval::eval-function-definition eval-fun)
+	     (eval::convert-eval-fun eval-fun))))
+      (debug-function-from-pc
+       fun
+       (- (system:%primitive header-ref fun system:%function-offset-slot)
+	  clc::i-vector-header-size))))
 
 ;;; DEBUG-FUNCTION-KIND -- Public.
 ;;;
@@ -943,7 +1153,7 @@
      (c::compiled-debug-function-kind
       (compiled-debug-function-compiler-debug-fun debug-function)))
     (interpreted-debug-function
-     (error "We don't debug interpreted functions now."))))
+     (c::lambda-kind (interpreted-debug-function-ir1-lambda debug-function)))))
 
 ;;; DEBUG-VARIABLE-INFO-AVAILABLE -- Public.
 ;;;
@@ -1038,22 +1248,96 @@
        (:keyword keyword-symbol var10)
        ...
       )
-   Each VARi is a debug-variable."
+   Each VARi is a debug-variable; however it may be the symbol :deleted it
+   is unreferenced in debug-function.  This signals a lambda-list-unavaliable
+   condition when there is no argument list information."
+  (etypecase debug-function
+    (compiled-debug-function
+     (compiled-debug-function-lambda-list debug-function))
+    (interpreted-debug-function
+     (interpreted-debug-function-lambda-list debug-function))))
+
+;;; INTERPRETED-DEBUG-FUNCTION-LAMBDA-LIST -- Internal.
+;;; 
+;;; The hard part is when the lambda-list is unparsed.  If it is unparsed,
+;;; and all the arguments are required, this is still pretty easy; just
+;;; whip the appropriate debug-variables into a list.  Otherwise, we have
+;;; to pick out the funny arguments including any suppliedp variables.  In
+;;; this situation, the ir1-lambda is an external entry point that takes
+;;; arguments users really pass in.  It looks at those and computes defaults
+;;; and suppliedp variables, ultimately passing everything defined as a
+;;; a parameter to the real function as final arguments.  If this has to
+;;; compute the lambda list, it caches it in debug-function.
+;;;
+(defun interpreted-debug-function-lambda-list (debug-function)
+  (let ((lambda-list (debug-function-%lambda-list debug-function))
+	(debug-vars (debug-function-debug-variables debug-function))
+	(ir1-lambda (interpreted-debug-function-ir1-lambda debug-function))
+	(res nil))
+    (if (eq lambda-list :unparsed)
+	(flet ((frob (v debug-vars)
+		 (if (c::lambda-var-refs v)
+		     (find v debug-vars
+			   :key #'interpreted-debug-variable-ir1-var)
+		     :deleted)))
+	  (let ((xep-args (c::lambda-optional-dispatch ir1-lambda)))
+	    (if (and xep-args
+		     (eq (c::optional-dispatch-main-entry xep-args) ir1-lambda))
+		;;
+		;; There are rest, optional, keyword, and suppliedp vars.
+		(let ((final-args (c::lambda-vars ir1-lambda)))
+		  (dolist (xep-arg (c::optional-dispatch-arglist xep-args))
+		    (let ((info (c::lambda-var-arg-info xep-arg))
+			  (final-arg (pop final-args)))
+		      (cond (info
+			     (case (c::arg-info-kind info)
+			       (:required
+				(push (frob final-arg debug-vars) res))
+			       (:keyword
+				(push (list :keyword
+					    (c::arg-info-keyword info)
+					    (frob final-arg debug-vars))
+				      res))
+			       (:rest
+				(push (list :rest (frob final-arg debug-vars))
+				      res))
+			       (:optional
+				(push (list :optional
+					    (frob final-arg debug-vars))
+				      res)))
+			     (when (c::arg-info-supplied-p info)
+			       (nconc
+				(car res)
+				(list (frob (pop final-args) debug-vars)))))
+			    (t
+			     (push (frob final-arg debug-vars) res)))))
+		  (setf (debug-function-%lambda-list debug-function)
+			(nreverse res)))
+		;;
+		;; All required args, so return them in a list.
+		(dolist (v (c::lambda-vars ir1-lambda)
+			   (setf (debug-function-%lambda-list debug-function)
+				 (nreverse res)))
+		  (push (frob v debug-vars) res)))))
+	;;
+	;; Everything's unparsed and cached, so return it.
+	lambda-list)))
+
+;;; COMPILED-DEBUG-FUNCTION-LAMBDA-LIST -- Internal.
+;;;
+;;; If this has to compute the lambda list, it caches it in debug-function.
+;;;
+(defun compiled-debug-function-lambda-list (debug-function)
   (let ((lambda-list (debug-function-%lambda-list debug-function)))
     (cond ((eq lambda-list :unparsed)
-	   (etypecase debug-function
-	     (compiled-debug-function
-	      (multiple-value-bind
-		  (args argsp)
-		  (compiled-debug-function-lambda-list debug-function)
-		(setf (debug-function-%lambda-list debug-function) args)
-		(if argsp
-		    args
-		    (debug-signal 'lambda-list-unavailable
-				  :debug-function debug-function))))
-	     (interpreted-debug-function
-	      (error "Can't get lambda-lists for interpreted-debug-functions ~
-		      currently."))))
+	   (multiple-value-bind
+	       (args argsp)
+	       (parse-compiled-debug-function-lambda-list debug-function)
+	     (setf (debug-function-%lambda-list debug-function) args)
+	     (if argsp
+		 args
+		 (debug-signal 'lambda-list-unavailable
+			       :debug-function debug-function))))
 	  (lambda-list)
 	  ((c::compiled-debug-function-arguments
 	    (compiled-debug-function-compiler-debug-fun
@@ -1067,15 +1351,15 @@
 	   (debug-signal 'lambda-list-unavailable
 			 :debug-function debug-function)))))
 
-;;; COMPILED-DEBUG-FUNCTION-LAMBDA-LIST -- Internal.
+;;; PARSE-COMPILED-DEBUG-FUNCTION-LAMBDA-LIST -- Internal.
 ;;;
-;;; DEBUG-FUNCTION-LAMBDA-LIST calls this when a compiled-debug-function has no
-;;; lambda-list information cached.  It returns the lambda-list as the first
-;;; value and whether there was any argument information as the second value.
-;;; Therefore, nil and t means there were no arguments, but nil and nil means
-;;; there was no argument information.
+;;; COMPILED-DEBUG-FUNCTION-LAMBDA-LIST calls this when a
+;;; compiled-debug-function has no lambda-list information cached.  It returns
+;;; the lambda-list as the first value and whether there was any argument
+;;; information as the second value.  Therefore, nil and t means there were no
+;;; arguments, but nil and nil means there was no argument information.
 ;;;
-(defun compiled-debug-function-lambda-list (debug-function)
+(defun parse-compiled-debug-function-lambda-list (debug-function)
   (let ((args (c::compiled-debug-function-arguments
 	       (compiled-debug-function-compiler-debug-fun
 		debug-function))))
@@ -1141,17 +1425,12 @@
 	  ((eq ele 'c::deleted) :deleted)
 	  (t (error "Malformed arguments description.")))))
 
-;;; DEBUG-FUNCTION-DEBUG-INFO -- Internal Interface.
+;;; COMPILED-DEBUG-FUNCTION-DEBUG-INFO -- Internal.
 ;;;
-(defun debug-function-debug-info (debug-fun)
-  (etypecase debug-fun
-    (compiled-debug-function
-     (system:%primitive header-ref
-			(compiled-debug-function-component debug-fun)
-			system:%function-constants-debug-info-slot))
-    (interpreted-debug-function
-     (error "Can't currently get the debug-info for an ~
-	     interpreted-debug-function."))))
+(defun compiled-debug-function-debug-info (debug-fun)
+  (system:%primitive header-ref
+		     (compiled-debug-function-component debug-fun)
+		     system:%function-constants-debug-info-slot))
 
 
 
@@ -1202,36 +1481,43 @@
 ) ;eval-when
 
 
-;;; DEBUG-FUNCTION-DEBUG-BLOCKS -- Internal Interface.
+;;; DEBUG-FUNCTION-DEBUG-BLOCKS -- Internal.
 ;;;
 ;;; The argument is a debug internals structure.  This returns the debug-blocks
 ;;; for debug-function, regardless of whether we have unpacked them yet.  It
 ;;; signals a no-debug-blocks condition if it can't return the blocks.
 ;;;
 (defun debug-function-debug-blocks (debug-function)
-  (etypecase debug-function
-    (compiled-debug-function
-     (let ((blocks (debug-function-blocks debug-function)))
-       (cond ((eq blocks :unparsed)
-	      (setf (debug-function-blocks debug-function)
-		    (parse-debug-blocks debug-function))
-	      (unless (debug-function-blocks debug-function)
-		(debug-signal 'no-debug-blocks
-			      :debug-function debug-function))
-	      (debug-function-blocks debug-function))
-	     (blocks)
-	     (t
-	      (debug-signal 'no-debug-blocks
-			    :debug-function debug-function)))))
-    (interpreted-debug-function
-     (error "We don't currently support interpreted-debug-functions."))))
+  (let ((blocks (debug-function-blocks debug-function)))
+    (cond ((eq blocks :unparsed)
+	   (setf (debug-function-blocks debug-function)
+		 (parse-debug-blocks debug-function))
+	   (unless (debug-function-blocks debug-function)
+	     (debug-signal 'no-debug-blocks
+			   :debug-function debug-function))
+	   (debug-function-blocks debug-function))
+	  (blocks)
+	  (t
+	   (debug-signal 'no-debug-blocks
+			 :debug-function debug-function)))))
 
 ;;; PARSE-DEBUG-BLOCKS -- Internal.
 ;;;
-;;; Debug-fun is a c::compiled-debug-function.  Var-count is how many variables
-;;; the live-set data in packed binary form represents.
+;;; This returns a simple-vector of debug-blocks or nil.  Nil indicates there
+;;; was no basic block information.
 ;;;
 (defun parse-debug-blocks (debug-function)
+  (etypecase debug-function
+    (compiled-debug-function
+     (parse-compiled-debug-blocks debug-function))
+    (interpreted-debug-block
+     (parse-interpreted-debug-blocks debug-function))))
+
+;;; PARSE-COMPILED-DEBUG-BLOCKS -- Internal.
+;;;
+;;; This does some of the work of PARSE-DEBUG-BLOCKS.
+;;;
+(defun parse-compiled-debug-blocks (debug-function)
   (let* ((debug-fun (compiled-debug-function-compiler-debug-fun debug-function))
 	 (var-count (length (debug-function-debug-variables debug-function)))
 	 (blocks (c::compiled-debug-function-blocks debug-fun))
@@ -1239,7 +1525,7 @@
 	 ;; the packed binary representation of the blocks data.
 	 (live-set-len (ceiling var-count 8))
 	 (tlf-number (c::compiled-debug-function-tlf-number debug-fun)))
-    (unless blocks (return-from parse-debug-blocks nil))
+    (unless blocks (return-from parse-compiled-debug-blocks nil))
     (macrolet ((aref+ (a i) `(prog1 (aref ,a ,i) (incf ,i))))
       (with-parsing-buffer (blocks-buffer locations-buffer)
 	(let ((i 0)
@@ -1265,12 +1551,12 @@
 			      (form-number (c::read-var-integer blocks i))
 			      (live-set (c::read-packed-bit-vector
 					 live-set-len blocks i)))
-			  (vector-push-extend (make-code-location
+			  (vector-push-extend (make-compiled-code-location
 					       pc debug-function tlf-offset
 					       form-number live-set kind)
 					      locations-buffer)
 			  (setf last-pc pc))))
-		     (block (make-debug-block
+		     (block (make-compiled-debug-block
 			     locations successors
 			     (not (zerop (logand
 					  c::compiled-debug-block-elsewhere-p
@@ -1289,7 +1575,21 @@
 	      (setf (debug-block-successors block) succs)))
 	  res)))))
 
-;;; DEBUG-FUNCTION-DEBUG-VARIABLES -- Internal Interface.
+;;; PARSE-INTERPRETED-DEBUG-BLOCKS -- Internal.
+;;;
+;;; This does some of the work of PARSE-DEBUG-BLOCKS.
+;;;
+(defun parse-interpreted-debug-blocks (debug-function)
+  (let ((ir1-lambda (interpreted-debug-function-ir1-lambda debug-function)))
+    (with-parsing-buffer (buffer)
+      (c::do-blocks (block (c::block-component
+			    (c::node-block (c::lambda-bind ir1-lambda))))
+	(when (eq ir1-lambda (c::block-home-lambda block))
+	  (vector-push-extend (make-interpreted-debug-block block) buffer)))
+      (result buffer))))
+
+
+;;; DEBUG-FUNCTION-DEBUG-VARIABLES -- Internal.
 ;;;
 ;;; The argument is a debug internals structure.  This returns nil if there is
 ;;; no variable information.  It returns an empty simple-vector if there were
@@ -1297,31 +1597,80 @@
 ;;; debug-variables.
 ;;;
 (defun debug-function-debug-variables (debug-function)
-  (etypecase debug-function
-    (compiled-debug-function
-     (let ((vars (debug-function-debug-vars debug-function)))
-       (if (eq vars :unparsed)
-	   (setf (debug-function-debug-vars debug-function)
-		 (parse-debug-variables debug-function))
-	   vars)))
-    (interpreted-debug-function
-     (error "We don't currently support interpreted-debug-functions."))))
+  (let ((vars (debug-function-debug-vars debug-function)))
+    (if (eq vars :unparsed)
+	(setf (debug-function-debug-vars debug-function)
+	      (etypecase debug-function
+		(compiled-debug-function
+		 (parse-compiled-debug-variables debug-function))
+		(interpreted-debug-function
+		 (parse-interpreted-debug-variables debug-function))))
+	vars)))
 
-;;; PARSE-DEBUG-VARIABLES -- Internal.
+;;; PARSE-INTERPRETED-DEBUG-VARIABLES -- Internal.
+;;;
+;;; This grabs all the variables from debug-fun's ir1-lambda, from the IR1
+;;; lambda vars, and all of it's LET's.  Each LET is an IR1 lambda.  For each
+;;; variable, we make an interpreted-debug-variable.  We then SORT all the
+;;; variables by name.  Then we go through, and for any duplicated names we
+;;; distinguish the interpreted-debug-variables by setting their id slots to a
+;;; distinct number.
+;;;
+(defun parse-interpreted-debug-variables (debug-fun)
+  (let* ((ir1-lambda (interpreted-debug-function-ir1-lambda debug-fun))
+	 (vars (flet ((frob (ir1-lambda buf)
+			(dolist (v (c::lambda-vars ir1-lambda))
+			  (vector-push-extend
+			   (let ((id (c::leaf-name v)))
+			     (make-interpreted-debug-variable
+			      (symbol-name id)
+			      (package-name (symbol-package id))
+			      v))
+			   buf))))
+		 (with-parsing-buffer (buf)
+		   (frob ir1-lambda buf)
+		   (dolist (let-lambda (c::lambda-lets ir1-lambda))
+		     (frob let-lambda buf))
+		   (result buf)))))
+    (declare (simple-vector vars))
+    (sort vars #'string< :key #'debug-variable-name)
+    (let ((len (length vars)))
+      (when (> len 1)
+	(let ((i 0)
+	      (j 1))
+	  (loop
+	    (let* ((var-i (svref vars i))
+		   (var-j (svref vars j))
+		   (name (debug-variable-name var-i)))
+	      (when (string= name (debug-variable-name var-j))
+		(let ((count 1))
+		  (loop 
+		    (setf (debug-variable-id var-j) count)
+		    (when (= (incf j) len) (return))
+		    (setf var-j (svref vars j))
+		    (when (string/= name (debug-variable-name var-j))
+		      (return))
+		    (incf count))))
+	      (setf i j)
+	      (incf j)
+	      (when (= j len) (return)))))))
+    vars))
+
+;;; PARSE-COMPILED-DEBUG-VARIABLES -- Internal.
 ;;;
 ;;; This parses the packed binary representation of debug-variables from
 ;;; debug-function's c::compiled-debug-function.
 ;;;
-(defun parse-debug-variables (debug-function)
+(defun parse-compiled-debug-variables (debug-function)
   (let* ((debug-fun (compiled-debug-function-compiler-debug-fun debug-function))
 	 (packed-vars (c::compiled-debug-function-variables debug-fun))
 	 (default-package (c::compiled-debug-info-package
-			   (debug-function-debug-info debug-function))))
+			   (compiled-debug-function-debug-info debug-function))))
     (unless packed-vars
-      (return-from parse-debug-variables nil))
+      (return-from parse-compiled-debug-variables nil))
     (when (zerop (length packed-vars))
       ;; Return a simple-vector not whatever packed-vars may be.
-      (return-from parse-debug-variables '#()))
+      (return-from parse-compiled-debug-variables '#()))
     (let ((i 0)
 	  (len (length packed-vars)))
       (with-parsing-buffer (buffer)
@@ -1353,7 +1702,7 @@
 				      nil
 				      (c::read-var-integer packed-vars i))))
 	      (vector-push-extend
-	       (make-debug-variable
+	       (make-compiled-debug-variable
 		name package id
 		(not (zerop (logand c::compiled-debug-variable-environment-live
 				    flags)))
@@ -1389,84 +1738,100 @@
 
 ;;; CODE-LOCATION-DEBUG-BLOCK -- Public.
 ;;;
-;;; We don't use CODE-LOCATION= since the code-location may be unknown, but
-;;; even when it is, we can determine the block.  To do this we have to check
-;;; pc ranges for the blocks.  We use DEBUG-FUNCTION-DEBUG-BLOCKS to make sure
-;;; any block info is unparsed and to signal a no-debug-blocks condition when
-;;; appropriate.
-;;;
-;;; If there's only one block, it must be it.  If there's more than one, we
-;;; skip the first one and find the first block whose first code-location is
-;;; greater than we want.  Then we know we want the previous block.  The last
-;;; block is special since it may represent elsewhere code which has no start
-;;; code-location.  If it is elsewhere code, it starts where the
-;;; c::compiled-debug-function tells us the elsewhere code starts.
-;;;
-;;; ??? How to write this for interpreted code-locations.
-;;;
 (defun code-location-debug-block (basic-code-location)
   "Returns the debug-block containing code-location if it is available.  Some
    debug policies inhibit debug-block information, and if none is available,
    then this signals a no-debug-blocks condition."
   (let ((block (code-location-%debug-block basic-code-location)))
     (if (eq block :unparsed)
-	(let* ((pc (code-location-pc basic-code-location))
-	       (debug-function (code-location-debug-function
-				basic-code-location))
-	       (blocks (debug-function-debug-blocks debug-function))
-	       (len (length blocks)))
-	  (declare (simple-vector blocks))
-	  (setf
-	   (code-location-%debug-block basic-code-location)
-	   (if (= len 1)
-	       (svref blocks 0)
-	       (do ((i 1 (1+ i))
-		    (end (1- len)))
-		   ((= i end)
-		    (let ((last (svref blocks end)))
-		      (cond
-		       ((debug-block-elsewhere-p last)
-			(if (< pc
-			       (c::compiled-debug-function-elsewhere-pc
-				(compiled-debug-function-compiler-debug-fun
-				 debug-function)))
-			    (svref blocks (1- end))
-			    last))
-		       ((< pc
-			   (code-location-pc
-			    (svref (debug-block-code-locations last)
-				   0)))
-			(svref blocks (1- end)))
-		       (t last))))
-		 (declare (type c::index i end))
-		 (when (< pc
-			  (code-location-pc
-			   (svref (debug-block-code-locations (svref blocks i))
-				  0)))
-		   (return (svref blocks (1- i))))))))
+	(etypecase basic-code-location
+	  (compiled-code-location
+	   (compute-compiled-code-location-debug-block basic-code-location))
+	  (interpreted-code-location
+	   (setf (code-location-%debug-block basic-code-location)
+		 (make-interpreted-debug-block
+		  (c::node-block
+		   (interpreted-code-location-ir1-node basic-code-location))))))
 	block)))
+
+;;; COMPUTE-COMPILED-CODE-LOCATION-DEBUG-BLOCK -- Internal.
+;;;
+;;; This stores and returns basic-code-location's debug-block.  It determines
+;;; the correct one using the code-location's pc.  This uses
+;;; DEBUG-FUNCTION-DEBUG-BLOCKS to return the cached block information or
+;;; signal a 'no-debug-blocks condition.  The blocks are sorted by their first
+;;; code-location's pc, in ascending order.  Therefore, as soon as we find a
+;;; block that starts with a pc greater than basic-code-location's pc, we know
+;;; the previous block contains the pc.  If we get to the last block, then the
+;;; code-location is either in the second to last block or the last block, and
+;;; we have to be careful in determining this since the last block could be
+;;; random code at the end of the function.  We have to check for the last
+;;; block being random code first to see how to compare the code-location's pc.
+;;;
+(defun compute-compiled-code-location-debug-block (basic-code-location)
+  (let* ((pc (compiled-code-location-pc basic-code-location))
+	 (debug-function (code-location-debug-function
+			  basic-code-location))
+	 (blocks (debug-function-debug-blocks debug-function))
+	 (len (length blocks)))
+    (declare (simple-vector blocks))
+    (setf (code-location-%debug-block basic-code-location)
+	  (if (= len 1)
+	      (svref blocks 0)
+	      (do ((i 1 (1+ i))
+		   (end (1- len)))
+		  ((= i end)
+		   (let ((last (svref blocks end)))
+		     (cond
+		      ((debug-block-elsewhere-p last)
+		       (if (< pc
+			      (c::compiled-debug-function-elsewhere-pc
+			       (compiled-debug-function-compiler-debug-fun
+				debug-function)))
+			   (svref blocks (1- end))
+			   last))
+		      ((< pc
+			  (compiled-code-location-pc
+			   (svref (compiled-debug-block-code-locations last)
+				  0)))
+		       (svref blocks (1- end)))
+		      (t last))))
+		(declare (type c::index i end))
+		(when (< pc
+			 (compiled-code-location-pc
+			  (svref (compiled-debug-block-code-locations
+				  (svref blocks i))
+				 0)))
+		  (return (svref blocks (1- i)))))))))
 
 ;;; CODE-LOCATION-DEBUG-SOURCE -- Public.
 ;;;
 (defun code-location-debug-source (code-location)
   "Returns the code-location's debug-source."
-  (let ((info (debug-function-debug-info
-	       (code-location-debug-function code-location))))
-    (etypecase info
-      (c::compiled-debug-info
-       (let* ((sources (c::compiled-debug-info-source info))
-	      (len (length sources)))
+  (etypecase code-location
+    (compiled-code-location
+     (let* ((info (compiled-debug-function-debug-info
+		   (code-location-debug-function code-location)))
+	    (sources (c::compiled-debug-info-source info))
+	    (len (length sources)))
 	 (declare (list sources))
 	 (if (= len 1)
 	     (car sources)
-	     (do ((prev (car sources) src)
+	     (do ((prev sources src)
 		  (src (cdr sources) (cdr src))
 		  (offset (code-location-top-level-form-offset code-location)))
 		 ((null src) (car prev))
 	       (when (< offset (c::debug-source-source-root (car src)))
-		 (car prev))))))
-      (interpreted-debug-info
-       (error "Can't handle interpreted-debug-infos.")))))
+		 (return (car prev)))))))
+    (interpreted-code-location
+     (first
+      (let ((c::*lexical-environment* (c::make-null-environment)))
+	(c::debug-source-for-info
+	 (c::component-source-info
+	  (c::block-component
+	   (c::node-block
+	    (interpreted-code-location-ir1-node code-location))))))))))
+
 
 ;;; CODE-LOCATION-TOP-LEVEL-FORM-OFFSET -- Public.
 ;;;
@@ -1479,11 +1844,18 @@
     (error 'unknown-code-location :code-location code-location))
   (let ((tlf-offset (code-location-%tlf-offset code-location)))
     (cond ((eq tlf-offset :unparsed)
-	   (unless (fill-in-code-location code-location)
-	     ;; This check should be unnecessary.  We're missing debug info
-	     ;; the compiler should have dumped.
-	     (error "Unknown code location?  It should be known."))
-	   (code-location-%tlf-offset code-location))
+	   (etypecase code-location
+	     (compiled-code-location
+	      (unless (fill-in-code-location code-location)
+		;; This check should be unnecessary.  We're missing debug info
+		;; the compiler should have dumped.
+		(error "Unknown code location?  It should be known."))
+	      (code-location-%tlf-offset code-location))
+	     (interpreted-code-location
+	      (setf (code-location-%tlf-offset code-location)
+		    (c::source-path-tlf-number
+		     (c::node-source-path
+		      (interpreted-code-location-ir1-node code-location)))))))
 	  (t tlf-offset))))
 
 ;;; CODE-LOCATION-FORM-NUMBER -- Public.
@@ -1496,46 +1868,60 @@
     (error 'unknown-code-location :code-location code-location))
   (let ((form-num (code-location-%form-number code-location)))
     (cond ((eq form-num :unparsed)
-	   (unless (fill-in-code-location code-location)
-	     ;; This check should be unnecessary.  We're missing debug info
-	     ;; the compiler should have dumped.
-	     (error "Unknown code location?  It should be known."))
-	   (code-location-%form-number code-location))
+	   (etypecase code-location
+	     (compiled-code-location
+	      (unless (fill-in-code-location code-location)
+		;; This check should be unnecessary.  We're missing debug info
+		;; the compiler should have dumped.
+		(error "Unknown code location?  It should be known."))
+	      (code-location-%form-number code-location))
+	     (interpreted-code-location
+	      (setf (code-location-%form-number code-location)
+		    (c::source-path-form-number
+		     (c::node-source-path
+		      (interpreted-code-location-ir1-node code-location)))))))
 	  (t form-num))))
 
-;;; CODE-LOCATION-LIVE-SET -- Internal Interface.
+;;; COMPILED-CODE-LOCATION-LIVE-SET -- Internal.
 ;;;
 ;;; This returns the code-location's live-set if it is available.  If there
 ;;; is no debug-block information, this returns nil.
 ;;;
-(defun code-location-live-set (code-location)
+(defun compiled-code-location-live-set (code-location)
   (if (code-location-unknown-p code-location)
       nil
-      (let ((live-set (code-location-%live-set code-location)))
+      (let ((live-set (compiled-code-location-%live-set code-location)))
 	(cond ((eq live-set :unparsed)
 	       (unless (fill-in-code-location code-location)
 		 ;; This check should be unnecessary.  We're missing debug info
 		 ;; the compiler should have dumped.
 		 (error "Unknown code location?  It should be known."))
-	       (code-location-%live-set code-location))
+	       (compiled-code-location-%live-set code-location))
 	      (t live-set)))))
 
 ;;; CODE-LOCATION= -- Public.
 ;;;
 (defun code-location= (obj1 obj2)
   "Returns whether obj1 and obj2 are the same place in the code."
-  (let ((d-fun1 (code-location-debug-function obj1))
-	(d-fun2 (code-location-debug-function obj2)))
-    (and (eq d-fun1 d-fun2)
-	 (sub-code-location= d-fun1 obj1 obj2))))
-
-(defun sub-code-location= (d-fun1 obj1 obj2)
-  (etypecase d-fun1
-    (compiled-debug-function
-     (= (code-location-pc obj1) (code-location-pc obj2)))
-    (interpreted-debug-function
-     ;; ??? compare IR1 nodes?
-     (error "Cannot compare interpreted-debug-functions currently."))))
+  (etypecase obj1
+    (compiled-code-location
+     (etypecase obj2
+       (compiled-code-location
+	(and (eq (code-location-debug-function obj1)
+		 (code-location-debug-function obj2))
+	     (sub-compiled-code-location= obj1 obj2)))
+       (interpreted-code-location
+	nil)))
+    (interpreted-code-location
+     (etypecase obj2
+       (compiled-code-location
+	nil)
+       (interpreted-code-location
+	(eq (interpreted-code-location-ir1-node obj1)
+	    (interpreted-code-location-ir1-node obj2)))))))
+;;;
+(defun sub-compiled-code-location= (obj1 obj2)
+  (= (compiled-code-location-pc obj1) (compiled-code-location-pc obj2)))
 
 ;;; FILL-IN-CODE-LOCATION -- Internal.
 ;;;
@@ -1551,20 +1937,20 @@
     (declare (simple-vector blocks))
     (dotimes (i (length blocks) nil)
       (let* ((block (svref blocks i))
-	     (locations (debug-block-code-locations block)))
+	     (locations (compiled-debug-block-code-locations block)))
 	(declare (simple-vector locations))
 	(dotimes (j (length locations))
 	  (let ((loc (svref locations j)))
-	    (when (sub-code-location= debug-function code-location loc)
+	    (when (sub-compiled-code-location= code-location loc)
 	      (setf (code-location-%debug-block code-location) block)
 	      (setf (code-location-%tlf-offset code-location)
 		    (code-location-%tlf-offset loc))
 	      (setf (code-location-%form-number code-location)
 		    (code-location-%form-number loc))
-	      (setf (code-location-%live-set code-location)
-		    (code-location-%live-set loc))
-	      (setf (code-location-kind code-location)
-		    (code-location-kind loc))
+	      (setf (compiled-code-location-%live-set code-location)
+		    (compiled-code-location-%live-set loc))
+	      (setf (compiled-code-location-kind code-location)
+		    (compiled-code-location-kind loc))
 	      (return-from fill-in-code-location t))))))))
 
 
@@ -1590,11 +1976,44 @@
 (defun debug-block-function-name (debug-block)
   "Returns the name of the function represented by debug-function.  This may
    be a string or a cons; do not assume it is a symbol."
-  (let ((code-locs (debug-block-code-locations debug-block)))
-    (declare (simple-vector code-locs))
-    (when (zerop (length code-locs))
-      (error "No code-locations in debug-block? -- ~S." debug-block))
-    (debug-function-name (code-location-debug-function (svref code-locs 0)))))
+  (etypecase debug-block
+    (compiled-debug-block
+     (let ((code-locs (compiled-debug-block-code-locations debug-block)))
+       (declare (simple-vector code-locs))
+       (if (zerop (length code-locs))
+	   "??? Can't get name of debug-block's function."
+	   (debug-function-name
+	    (code-location-debug-function (svref code-locs 0))))))
+    (interpreted-debug-block
+     (c::lambda-name (c::block-home-lambda
+		      (interpreted-debug-block-ir1-block debug-block))))))
+
+
+;;; DEBUG-BLOCK-CODE-LOCATIONS -- Internal.
+;;;
+(defun debug-block-code-locations (debug-block)
+  (etypecase debug-block
+    (compiled-debug-block
+     (compiled-debug-block-code-locations debug-block))
+    (interpreted-debug-block
+     (interpreted-debug-block-code-locations debug-block))))
+
+;;; INTERPRETED-DEBUG-BLOCK-CODE-LOCATIONS -- Internal.
+;;;
+(defun interpreted-debug-block-code-locations (debug-block)
+  (let ((code-locs (interpreted-debug-block-locations debug-block)))
+    (if (eq code-locs :unparsed)
+	(with-parsing-buffer (buf)
+	  (c::do-nodes (node cont (interpreted-debug-block-ir1-block
+				   debug-block))
+	    (vector-push-extend (make-interpreted-code-location
+				 node
+				 (make-interpreted-debug-function
+				  (c::block-home-lambda (c::node-block node))))
+				buf))
+	  (setf (interpreted-debug-block-locations debug-block)
+		(result buf)))
+	code-locs)))
 
 
 
@@ -1625,24 +2044,43 @@
 (defun debug-variable-value (debug-var frame)
   "Returns the value stored for debug-variable in frame.  The value may be
    invalid."
-  (let ((res (access-debug-var-slot debug-var frame)))
-    (if (indirect-value-cell-p res)
-	(system:%primitive header-ref res
-			   system:%function-value-cell-value-slot)
-	res)))
-    
-(defun access-debug-var-slot (debug-var frame)
-  (let ((escaped (frame-escaped frame)))
+  (etypecase debug-var
+    (compiled-debug-variable
+     (check-type frame compiled-frame)
+     (let ((res (access-compiled-debug-var-slot debug-var frame)))
+       (if (indirect-value-cell-p res)
+	   (system:%primitive header-ref res
+			      system:%function-value-cell-value-slot)
+	   res)))
+    (interpreted-debug-variable
+     (check-type frame interpreted-frame)
+     (eval::leaf-value-lambda-var
+      (interpreted-code-location-ir1-node (frame-code-location frame))
+      (interpreted-debug-variable-ir1-var debug-var)
+      (frame-pointer frame)
+      (interpreted-frame-closure frame)))))
+
+
+;;; ACCESS-COMPILED-DEBUG-VAR-SLOT -- Internal.
+;;;
+;;; This returns what is stored for the variable represented by debug-var
+;;; relative to the frame.  This may be an indirect value cell if the
+;;; variable is both closed over and set.
+;;;
+(defun access-compiled-debug-var-slot (debug-var frame)
+  (let ((escaped (compiled-frame-escaped frame)))
     (if escaped
 	(sub-access-debug-var-slot
 	 (frame-pointer frame)
-	 (debug-variable-sc-offset debug-var)
+	 (compiled-debug-variable-sc-offset debug-var)
 	 escaped)
 	(sub-access-debug-var-slot
 	 (frame-pointer frame)
-	 (or (debug-variable-save-sc-offset debug-var)
-	     (debug-variable-sc-offset debug-var))))))
+	 (or (compiled-debug-variable-save-sc-offset debug-var)
+	     (compiled-debug-variable-sc-offset debug-var))))))
 
+;;; SUB-ACCESS-DEBUG-VAR-SLOT -- Internal.
+;;;
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (ecase (c::sc-offset-scn sc-offset)
     ((0 1) ;; Any register or descriptor register.
@@ -1662,27 +2100,58 @@
     (5 ;; String-chars on the stack (w/o tag bits).
      (code-char (stack-ref fp (c::sc-offset-offset sc-offset))))))
 
-(defun %set-debug-variable-value (debug-var frame value)
-  (let ((current-value (access-debug-var-slot debug-var frame)))
-    (if (indirect-value-cell-p current-value)
-	(system:%primitive header-set current-value
-			   system:%function-value-cell-value-slot
-			   value)
-	(set-debug-variable-slot debug-var frame value))))
 
-(defun set-debug-variable-slot (debug-var frame value)
-  (let ((escaped (frame-escaped frame)))
+;;; %SET-DEBUG-VARIABLE-VALUE -- Internal.
+;;;
+;;; This stores value as the value of debug-var in frame.  In the
+;;; compiled-debug-variable case, access the current value to determine if it
+;;; is an indirect value cell.  This occurs when the variable is both closed
+;;; over and set.  For interpreted-debug-variables just call
+;;; EVAL::SET-LEAF-VALUE-LAMBDA-VAR with the right interpreter objects.
+;;;
+(defun %set-debug-variable-value (debug-var frame value)
+  (etypecase debug-var
+    (compiled-debug-variable
+     (check-type frame compiled-frame)
+     (let ((current-value (access-compiled-debug-var-slot debug-var frame)))
+       (if (indirect-value-cell-p current-value)
+	   (system:%primitive header-set current-value
+			      system:%function-value-cell-value-slot
+			      value)
+	   (set-compiled-debug-variable-slot debug-var frame value))))
+    (interpreted-debug-variable
+     (check-type frame interpreted-frame)
+     (eval::set-leaf-value-lambda-var
+      (interpreted-code-location-ir1-node (frame-code-location frame))
+      (interpreted-debug-variable-ir1-var debug-var)
+      (frame-pointer frame)
+      (interpreted-frame-closure frame)
+      value)))
+  value)
+;;;
+(defsetf debug-variable-value %set-debug-variable-value)
+
+;;; SET-COMPILED-DEBUG-VARIABLE-SLOT -- Internal.
+;;;
+;;; This stores value for the variable represented by debug-var relative to the
+;;; frame.  This assumes the location directly contains the variable's value;
+;;; that is, there is no indirect value cell currently there in case the
+;;; variable is both closed over and set.
+;;;
+(defun set-compiled-debug-variable-slot (debug-var frame value)
+  (let ((escaped (compiled-frame-escaped frame)))
     (if escaped
 	(sub-set-debug-var-slot (frame-pointer frame)
 				(debug-variable-sc-offset debug-var)
-				value
-				escaped)
+				value escaped)
 	(sub-set-debug-var-slot
 	 (frame-pointer frame)
 	 (or (debug-variable-save-sc-offset debug-var)
 	     (debug-variable-sc-offset debug-var))
 	 value))))
 
+;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
+;;;
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (ecase (c::sc-offset-scn sc-offset)
     ((0 1) ;; Any register or descriptor register.
@@ -1705,8 +2174,14 @@
     (5 ;; String-chars on the stack (w/o tag bits).
      (setf (stack-ref fp (c::sc-offset-offset sc-offset))
 	   (char-code value)))))
-(defsetf debug-variable-value %set-debug-variable-value)
 
+
+;;; INDIRECT-VALUE-CELL-P -- Internal.
+;;;
+;;; The method for setting and accessing compiled-debug-variable values use
+;;; this to determine if the value stored is the actual value or an indirection
+;;; cell.
+;;;
 (defun indirect-value-cell-p (x)
   (and (functionp x)
        (eql (system:%primitive get-vector-subtype x)
@@ -1726,17 +2201,32 @@
       :valid    The value is known to be available.
       :invalid  The value is known to be unavailable.
       :unknown  The value's availability is unknown."
+  (etypecase debug-var
+    (compiled-debug-variable
+     (compiled-debug-variable-validity debug-var basic-code-loc))
+    (interpreted-debug-variable
+     (check-type basic-code-loc interpreted-code-location)
+     (let ((validp (rassoc (interpreted-debug-variable-ir1-var debug-var)
+			   (c::lexenv-variables
+			    (c::node-lexenv
+			     (interpreted-code-location-ir1-node
+			      basic-code-loc))))))
+       (if validp :valid :invalid)))))
+
+;;; COMPILED-DEBUG-VARIABLE-VALIDITY -- Internal.
+;;;
+;;; This is the method for DEBUG-VARIABLE-VALIDITY for compiled-debug-variables.
+;;; For safety, make sure basic-code-loc is what we think.
+;;;
+(defun compiled-debug-variable-validity (debug-var basic-code-loc)
+  (check-type basic-code-loc compiled-code-location)
   (cond ((debug-variable-alive-p debug-var)
 	 (let ((debug-fun (code-location-debug-function basic-code-loc)))
-	   (etypecase debug-fun
-	     (compiled-debug-function
-	      (if (>= (code-location-pc basic-code-loc)
-		      (c::compiled-debug-function-start-pc
-		       (compiled-debug-function-compiler-debug-fun debug-fun)))
-		  :valid
-		  :invalid))
-	     (interpreted-debug-function
-	      (error "Don't do interpreted debug-variable validity now.")))))
+	   (if (>= (compiled-code-location-pc basic-code-loc)
+		   (c::compiled-debug-function-start-pc
+		    (compiled-debug-function-compiler-debug-fun debug-fun)))
+	       :valid
+	       :invalid)))
 	((code-location-unknown-p basic-code-loc) :unknown)
 	(t
 	 (let ((pos (position debug-var
@@ -1748,7 +2238,8 @@
 		    :debug-function
 		    (code-location-debug-function basic-code-loc)))
 	   ;; There must be live-set info since basic-code-loc is known.
-	   (if (zerop (sbit (code-location-live-set basic-code-loc) pos))
+	   (if (zerop (sbit (compiled-code-location-live-set basic-code-loc)
+			    pos))
 	       :invalid
 	       :valid)))))
 
@@ -1856,3 +2347,70 @@
 		     (nconc (subseq form 0 n)
 			    (cons res (nthcdr (1+ n) form)))))))
       (frob form path context))))
+
+
+;;;; PREPROCESS-FOR-EVAL and EVAL-IN-FRAME.
+
+;;; PREPROCESS-FOR-EVAL  --  Public.
+;;;
+;;; Create a SYMBOL-MACRO-LET for each variable valid at the location which
+;;; accesses that variable from the frame argument.
+;;;
+(defun preprocess-for-eval (form loc)
+  "Return a function of one argument that will evaluate Form in the lexical
+   context of the Basic-Code-Location Loc.  The function take the frame to get
+   values from as its argument, and returns the values of Form."
+  (declare (type code-location loc))
+  (let ((n-frame (gensym))
+	(fun (code-location-debug-function loc)))
+    (unless (debug-variable-info-available fun)
+      (debug-signal 'no-debug-variables :debug-function fun))
+
+    (ext:collect ((binds)
+		  (specs))
+      (do-debug-function-variables (var fun)
+	(let ((validity (debug-variable-validity var loc)))
+	  (unless (eq validity :invalid)
+	    (let* ((sym (debug-variable-symbol var))
+		   (found (assoc sym (binds))))
+	      (if found
+		  (setf (second found) :ambiguous)
+		  (binds (list sym validity var)))))))
+
+      (dolist (bind (binds))
+	(let ((name (first bind))
+	      (var (third bind)))
+	  (ecase (second bind)
+	    (:valid
+	     (specs `(,name (debug-variable-value ',var ,n-frame))))
+	    (:unknown
+	     (specs `(,name
+		      (debug-signal 'invalid-value
+				    :debug-variable ',var
+				    :frame ,n-frame))))
+	    (:ambiguous
+	     (specs `(,name
+		      (debug-signal 'ambiguous-variable-name
+				    :name ',name
+				    :frame ,n-frame)))))))
+
+      (let ((res (coerce `(lambda (,n-frame)
+			    (declare (ext:ignorable ,n-frame))
+			    (symbol-macro-let ,(specs)
+			      ,form))
+			 'function)))
+	#'(lambda (frame)
+	    (unless (code-location= (frame-code-location frame)
+				    loc)
+	      (debug-signal 'frame-function-mismatch
+			    :code-location loc  :form form  :frame frame))
+	    (funcall res frame))))))
+
+
+;;; EVAL-IN-FRAME  --  Public.
+;;;
+(defun eval-in-frame (frame form)
+  (declare (type frame frame))
+  "Evaluate Form in the lexical context of Frame's current code location,
+   returning the results of the evaluation."
+  (funcall (preprocess-for-eval form (frame-code-location frame)) frame))
