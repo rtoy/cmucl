@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.40 2003/09/08 09:36:06 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.41 2003/09/08 17:34:25 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1511,46 +1511,50 @@
   (default to the beginning and end of the string)  It skips over
   whitespace characters and then tries to parse an integer.  The
   radix parameter must be between 2 and 36."
-  (with-array-data ((string string)
-		    (start start)
-		    (end (or end (length string))))
-    (let ((index start)
-	  (sign 1)
-	  (any-digits nil)
-	  (result 0))
-      (declare (type index index)
-	       (type (member 1 -1) sign)
-	       (type boolean any-digits)
-	       (integer result))
-      (flet ((skip-whitespace ()
-	       (loop while (< index end)
-		     while (whitespacep (char string index)) do
-		       (incf index))))
-	(declare (inline skip-whitespace))
-	(skip-whitespace)
-	(when (< index end)
-	  (case (char string index)
-	    (#\+ (incf index))
-	    (#\- (incf index) (setq sign -1))))
-	(loop while (< index end)
-	      for weight = (digit-char-p (char string index) radix)
-	      while weight do
+  (let ((orig-start start))
+    (with-array-data ((string string)
+		      (start start)
+		      (end (or end (length string))))
+      (let ((index start)
+	    (sign 1)
+	    (any-digits nil)
+	    (result 0))
+	(declare (type index index)
+		 (type (member 1 -1) sign)
+		 (type boolean any-digits)
+		 (integer result))
+	(flet ((skip-whitespace ()
+		 (loop while (< index end)
+		       while (whitespacep (char string index)) do
+			 (incf index))))
+	  (declare (inline skip-whitespace))
+	  (skip-whitespace)
+	  (when (< index end)
+	    (case (char string index)
+	      (#\+ (incf index))
+	      (#\- (incf index) (setq sign -1))))
+	  (loop while (< index end)
+		for weight = (digit-char-p (char string index) radix)
+		while weight do
 		(incf index)
 		(setq any-digits t)
 		(setq result (+ (* radix result) weight)))
-	(skip-whitespace)
-	(cond ((not any-digits)
-	       (if junk-allowed
-		   (values nil index)
-		   (error 'simple-parse-error
-			  :format-control "There are no digits in this string: ~S"
-			  :format-arguments (list string))))
-	      ((and (< index end) (not junk-allowed))
-	       (error 'simple-parse-error
-		      :format-control "There's junk in this string: ~S."
-		      :format-arguments (list string)))
-	      (t
-	       (values (* sign result) index)))))))
+	  (skip-whitespace)
+	  ;;
+	  ;; May be /= index if string is displaced.
+	  (let ((real-index (+ (- index start) orig-start)))
+	    (cond ((not any-digits)
+		   (if junk-allowed
+		       (values nil real-index)
+		     (error 'simple-parse-error
+			    :format-control "There are no digits in this string: ~S"
+			    :format-arguments (list string))))
+		((and (< index end) (not junk-allowed))
+		 (error 'simple-parse-error
+			:format-control "There's junk in this string: ~S."
+			:format-arguments (list string)))
+		(t
+		 (values (* sign result) real-index)))))))))
 
 
 ;;;; Reader initialization code.
