@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.11 1991/03/12 19:07:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.12 1991/03/16 01:44:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,27 +86,28 @@
 (defun finalize-xep-definition (fun)
   (let* ((leaf (functional-entry-function fun))
 	 (name (leaf-name leaf))
-	 (where (info function where-from name))
-	 (dtype (definition-type leaf))
-	 (*compiler-error-context* (lambda-bind (main-entry leaf)))
-	 (global-p (eq leaf (gethash name *free-functions*))))
+	 (dtype (definition-type leaf)))
     (setf (leaf-type leaf) dtype)
-    (when name
-      (note-name-defined name :function)
-      (when global-p
-	(remhash name *free-functions*))
-      (ecase where
-	(:assumed
-	 (let ((approx-type (info function assumed-type name)))
-	   (when (and approx-type (function-type-p dtype))
-	     (valid-approximate-type approx-type dtype))
-	   (setf (info function type name) dtype)
-	   (setf (info function assumed-type name) nil))
-	 (setf (info function where-from name) :defined))
-	(:declared); Just keep declared type.
-	(:defined
-	 (setf (info function type name)
-	       (if global-p dtype (specifier-type 'function)))))))
+    (when (or (and name (symbolp name))
+	      (and (consp name) (eq (car name) 'setf)))
+      (let ((where (info function where-from name))
+	    (*compiler-error-context* (lambda-bind (main-entry leaf)))
+	    (global-p (eq leaf (gethash name *free-functions*))))
+	(note-name-defined name :function)
+	(when global-p
+	  (remhash name *free-functions*))
+	(ecase where
+	  (:assumed
+	   (let ((approx-type (info function assumed-type name)))
+	     (when (and approx-type (function-type-p dtype))
+	       (valid-approximate-type approx-type dtype))
+	     (setf (info function type name) dtype)
+	     (setf (info function assumed-type name) nil))
+	   (setf (info function where-from name) :defined))
+	  (:declared); Just keep declared type.
+	  (:defined
+	   (setf (info function type name)
+		 (if global-p dtype (specifier-type 'function))))))))
   (undefined-value))
       
 
