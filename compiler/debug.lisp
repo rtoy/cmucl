@@ -1039,8 +1039,7 @@
 	   (format t "return c~D " (cont-num (return-result node)))
 	   (print-leaf (return-lambda node)))
 	  (entry
-	   (format t "entry")
-	   (mapc #'print-continuation (entry-exits node)))
+	   (format t "entry ~S" (entry-exits node)))
 	  (exit
 	   (let ((value (exit-value node)))
 	     (cond (value
