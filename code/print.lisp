@@ -710,11 +710,10 @@
 ;;; code.
 
 (defun output-structure (structure currlevel)
-  (let ((info (info type structure-info (svref structure 0))))
-    (if info
-	(funcall (c::dd-print-function info) structure *standard-output*
-		 currlevel)
-	(write-string "#<Bizarre illegal thing that looks like a structure>"))))
+  (funcall (or (info type printer (svref structure 0))
+	       #'c::default-structure-print)
+	   structure *standard-output* currlevel))
+
 
 ;; Helping functions for printing strings.
 
