@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.14 1990/04/26 20:13:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.15 1990/04/27 19:21:45 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -459,12 +459,12 @@
 (define-format (short-format 16)
   (data (byte 16 0)))
 (define-instruction (short)
-  (word-format (data :argument (or (unsigned-byte 16) (signed-byte 16)))))
+  (short-format (data :argument (or (unsigned-byte 16) (signed-byte 16)))))
 
 (define-format (byte-format 8)
   (data (byte 8 0)))
 (define-instruction (byte)
-  (word-format (data :argument (or (unsigned-byte 8) (signed-byte 8)))))
+  (byte-format (data :argument (or (unsigned-byte 8) (signed-byte 8)))))
 
 
 
