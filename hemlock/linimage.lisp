@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.1.1.4 1991/02/08 16:35:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.1.1.5 1993/08/02 17:31:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,11 +95,12 @@
     on the screen.  If the value is a string this string is literally
     displayed.  If it is a function, then that function is called with
     the current X position to get the string to display.")
-  (setq *print-representation-vector* (make-array char-code-limit))
+  (setq *print-representation-vector*
+	(make-array char-code-limit :initial-element nil))
   (setf (attribute-descriptor-vector
 	 (gethash :print-representation *character-attributes*))
 	*print-representation-vector*)
-  (do ((code syntax-char-code-limit (1+ code))
+  (do ((code 128 (1+ code))
        (str (make-string 4) (make-string 4)))
       ((= code char-code-limit))
     (setf (aref *losing-character-mask* code) losing-char)
