@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.26 1991/02/01 21:51:55 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.27 1991/02/14 20:46:51 ram Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -149,7 +149,7 @@
 ;;; possible arg SCs (control-stack) overlap with possible bignum arg SCs.
 ;;;
 (define-vop (move-to-word/fixnum)
-  (:args (x :scs (any-reg)))
+  (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (signed-reg unsigned-reg)))
   (:arg-types tagged-num)
   (:note "fixnum untagging")
