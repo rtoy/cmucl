@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.27 1990/03/29 16:24:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.28 1990/04/05 23:53:30 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -154,22 +154,40 @@
 ;;;    Move a stack TN to a register and vice-versa.
 ;;;
 (defmacro load-stack-tn (reg stack)
-  (once-only ((n-reg reg)
-	      (n-stack stack))
-    `(sc-case ,n-reg
-       ((any-reg descriptor-reg base-character-reg sap-reg)
-	(sc-case ,n-stack
-	  ((control-stack number-stack base-character-stack sap-stack)
-	   (loadw ,n-reg cont-tn (tn-offset ,n-stack))))))))
+  `(let ((reg ,reg)
+	 (stack ,stack))
+     (let ((offset (tn-offset stack)))
+       (sc-case stack
+	 ((control-stack)
+	  (loadw reg cont-tn offset))
+	 ((number-stack base-character-stack sap-stack)
+	  (multiple-value-bind (cs-size ns-size)
+			       (current-frame-size)
+	    (declare (ignore cs-size))
+	    (unless (< (* offset vm:word-bytes) ns-size)
+	      (cerror "Go ahead."
+		      "~S is ~D words offset in the number stack, but ~
+		      the number stack is only ~D words long."
+		      stack offset (/ ns-size 4)))
+	    (loadw reg nsp-tn (- offset (/ ns-size vm:word-bytes)))))))))
 
 (defmacro store-stack-tn (stack reg)
-  (once-only ((n-stack stack)
-	      (n-reg reg))
-    `(sc-case ,n-reg
-       ((any-reg descriptor-reg base-character-reg sap-reg)
-	(sc-case ,n-stack
-	  ((control-stack number-stack base-character-stack sap-stack)
-	   (storew ,n-reg cont-tn (tn-offset ,n-stack))))))))
+  `(let ((stack ,stack)
+	 (reg ,reg))
+     (let ((offset (tn-offset stack)))
+       (sc-case stack
+	 ((control-stack)
+	  (storew reg cont-tn offset))
+	 ((number-stack base-character-stack sap-stack)
+	  (multiple-value-bind (cs-size ns-size)
+			       (current-frame-size)
+	    (declare (ignore cs-size))
+	    (unless (< (* offset vm:word-bytes) ns-size)
+	      (cerror "Go ahead."
+		      "~S is ~D words offset in the number stack, but ~
+		      the number stack is only ~D words long."
+		      stack offset (/ ns-size 4)))
+	    (storew reg nsp-tn (- offset (/ ns-size vm:word-bytes)))))))))
 
 
 ;;;; Three Way Comparison
