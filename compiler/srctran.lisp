@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.107 2001/09/24 15:26:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.108 2002/02/28 22:28:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1676,6 +1676,13 @@
   (one-arg-derive-type number
 		       #'%unary-truncate-derive-type-aux
 		       #'%unary-truncate))
+
+(defoptimizer (%unary-ftruncate derive-type) ((number))
+  (let ((divisor (specifier-type '(integer 1 1))))
+    (one-arg-derive-type number
+			 #'(lambda (n)
+			     (ftruncate-derive-type-quot-aux n divisor nil))
+			 #'%unary-ftruncate)))
 
 ;;; Define optimizers for floor and ceiling
 (macrolet
