@@ -3,11 +3,9 @@
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of CMU Common Lisp, please contact
-;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.26 1993/11/30 18:02:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.27 1994/10/31 04:27:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;

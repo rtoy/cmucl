@@ -3,11 +3,9 @@
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of CMU Common Lisp, please contact
-;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.39 1993/08/12 20:21:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.40 1994/10/31 04:27:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
