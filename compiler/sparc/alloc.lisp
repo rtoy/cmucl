@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.5 1992/10/11 10:54:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.6 1992/12/13 15:23:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -117,3 +117,69 @@
       (storew name result fdefn-name-slot other-pointer-type)
       (storew null-tn result fdefn-function-slot other-pointer-type)
       (storew temp result fdefn-raw-addr-slot other-pointer-type))))
+
+
+(define-vop (make-closure)
+  (:args (function :to :save))
+  (:info length)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 10
+    (let ((size (+ length closure-info-offset)))
+      (pseudo-atomic (:extra (pad-data-block size))
+	(inst or result alloc-tn function-pointer-type)
+	(inst li temp (logior (ash (1- size) type-bits) closure-header-type))
+	(storew temp result 0 function-pointer-type)))
+    (storew function result closure-function-slot function-pointer-type)))
+
+;;; The compiler likes to be able to directly make value cells.
+;;; 
+(define-vop (make-value-cell)
+  (:args (value :to :save))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 10
+    (with-fixed-allocation
+	(result temp value-cell-header-type value-cell-size))
+    (storew value result value-cell-value-slot other-pointer-type)))
+
+
+
+;;;; Automatic allocators for primitive objects.
+
+(define-vop (make-unbound-marker)
+  (:args)
+  (:results (result :scs (any-reg)))
+  (:generator 1
+    (inst li result unbound-marker-type)))
+
+(define-vop (fixed-alloc)
+  (:args)
+  (:info name words type lowtag)
+  (:ignore name)
+  (:results (result :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:generator 4
+    (pseudo-atomic (:extra (pad-data-block words))
+      (inst or result alloc-tn lowtag)
+      (when type
+	(inst li temp (logior (ash (1- words) type-bits) type))
+	(storew temp result 0 lowtag)))))
+
+(define-vop (var-alloc)
+  (:args (extra :scs (any-reg)))
+  (:arg-types positive-fixnum)
+  (:info name words type lowtag)
+  (:ignore name)
+  (:results (result :scs (descriptor-reg)))
+  (:temporary (:scs (any-reg)) temp1 temp2)
+  (:generator 6
+    (pseudo-atomic (pa-flag)
+      (inst or result alloc-tn lowtag)
+      (inst add temp1 extra (fixnum (1- words)))
+      (inst sll temp2 temp2 (- type-bits 2))
+      (inst or temp2 temp2 type)
+      (storew temp2 result 0 lowtag)
+      (inst li temp2 (lognot lowtag-mask))
+      (inst and temp1 temp1 temp2)
+      (inst add alloc-tn alloc-tn temp1))))
