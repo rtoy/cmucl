@@ -125,16 +125,16 @@
 ;;; Finds the current foreground process group id.
 ;;; 
 (defun find-current-foreground-process (proc)
-  (mach:with-trap-arg-block mach::int1 pgrp
+  (system:with-stack-alien (result (unsigned-byte 32) (long-words 1))
     (multiple-value-bind
 	(wonp error)
 	(mach:unix-ioctl (system:fd-stream-fd (ext:process-pty proc))
 			 mach:TIOCGPGRP
-			 (lisp::alien-value-sap mach::int1))
+			 (system:alien-sap (system:alien-value result)))
       (unless wonp
 	(error "TIOCPGRP ioctl failed: ~S"
 	       (mach:get-unix-error-msg error)))
-      (system:alien-access (mach::int1-int (system:alien-value pgrp))))))
+      (system:alien-access (system:alien-value result)))))
 
 ;;; PROCESS-KILL -- public
 ;;;
@@ -196,11 +196,7 @@
 
 ;;; SIGCHLD-HANDLER -- Internal.
 ;;;
-;;; This should be the handler for sigchld signals that RUN-PROGRAM establishes.
-;;;
-;;; Since interrupts are so broken in the current RT system, we don't turn on
-;;; sigchld signals for now.  We call this by hand whenever we need to check
-;;; the status of a process.
+;;; This is the handler for sigchld signals that RUN-PROGRAM establishes.
 ;;;
 (defun sigchld-handler (ignore1 ignore2 ignore3)
   (declare (ignore ignore1 ignore2 ignore3))
@@ -260,28 +256,28 @@
 					   #o666)))
 	    (when slave-fd
 	      ; Maybe put a vhangup here?
-	      (mach:unix-ioctl slave-fd
-			       mach:TIOCGETP
-			       (system:alien-sap mach:sgtty))
-	      (setf (system:alien-access (mach::sgtty-flags mach:sgtty))
-		    #o6300) ; XTABS|EVENP|ODDP
-	      (mach:unix-ioctl slave-fd
-			       mach:TIOCSETP
-			       (system:alien-sap mach:sgtty))
-	      (mach:unix-ioctl master-fd
-			       mach:TIOCGETP
-			       (system:alien-sap mach:sgtty))
-	      (setf (system:alien-access (mach::sgtty-flags mach:sgtty))
-		    (logand (system:alien-access (mach::sgtty-flags mach:sgtty))
-			    (lognot 8))) ; ~ECHO
-	      (mach:unix-ioctl master-fd
-			       mach:TIOCSETP
-			       (system:alien-sap mach:sgtty))
+	      (with-stack-alien (stuff mach:sgtty (record-size 'mach:sgtty))
+		(let ((sap (system:alien-sap (system:alien-value stuff))))
+		  (mach:unix-ioctl slave-fd mach:TIOCGETP sap)
+		  (setf (system:alien-access
+			 (mach::sgtty-flags
+			  (system:alien-value stuff)))
+			#o6300) ; XTABS|EVENP|ODDP
+		  (mach:unix-ioctl slave-fd mach:TIOCSETP sap)
+		  (mach:unix-ioctl master-fd mach:TIOCGETP sap)
+		  (setf (system:alien-access
+			 (mach::sgtty-flags
+			  (system:alien-value stuff)))
+			(logand (system:alien-access
+				 (mach::sgtty-flags
+				  (system:alien-value stuff)))
+				(lognot 8))) ; ~ECHO
+		  (mach:unix-ioctl master-fd mach:TIOCSETP sap)))
 	      (return-from find-a-pty
 			   (values master-fd
 				   slave-fd
-				   slave-name))))
-	  (mach:unix-close master-fd)))))
+				   slave-name)))
+	  (mach:unix-close master-fd))))))
   (error "Could not find a pty."))
 
 ;;; OPEN-PTY -- internal
@@ -348,8 +344,8 @@
 
 ;;; RUN-PROGRAM -- public
 ;;;
-;;;   RUN-PROGRAM uses fork and execve to run a different program. Strange stuff
-;;; happens to keep the unix state of the world coherent.
+;;;   RUN-PROGRAM uses fork and execve to run a different program. Strange
+;;; stuff happens to keep the unix state of the world coherent.
 ;;;
 ;;; The child process needs to get it's input from somewhere, and send it's
 ;;; output (both standard and error) to somewhere. We have to do different
@@ -444,7 +440,7 @@
         process just before turning it into the specified program."
 
   ;; Make sure the interrupt handler is installed.
-  ;(system:enable-interrupt mach:sigchld #'sigchld-handler)
+  (system:enable-interrupt mach:sigchld #'sigchld-handler)
   ;; Make sure all the args are okay.
   (unless (every #'simple-string-p args)
     (error "All args to program must be simple strings -- ~S." args))
@@ -454,7 +450,8 @@
   ;; info.  Also, establish proc at this level so we can return it.
   (let (*close-on-error* *close-in-parent* *handlers-installed* proc)
     (unwind-protect
-	(let ((pfile (namestring (truename (merge-pathnames program "path:")))))
+	(let ((pfile
+	       (namestring (truename (merge-pathnames program "path:")))))
 	  (multiple-value-bind
 	      (stdin input-stream)
 	      (get-descriptor-for input :direction :input
@@ -481,7 +478,7 @@
 			     ;; We are the child. Note: setup-child NEVER returns
 			     (setup-child pfile args env stdin stdout stderr
 					  pty-name before-execve))
-			    ((null child-pid)
+			    ((minusp child-pid)
 			     ;; This should only happen if the bozo has too
 			     ;; many running procs.
 			     (error "Could not fork child process: ~A"
