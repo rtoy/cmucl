@@ -199,6 +199,21 @@
 		  (c::assemble-file src :output-file obj)
 		  (apply #'compile-file src :allow-other-keys t keys))))))))))
 
+
+;;; VMDIR  --  Interface
+;;;
+(defun vmdir (f)
+  (merge-pathnames
+   (make-pathname :directory nil :defaults f)
+   (merge-pathnames
+    (cond ((c:target-featurep :pmax) "mips/")
+	  ((c:target-featurep :rt) "rt/")
+	  ((c:target-featurep :hppa) "hppa/")
+	  ((c:target-featurep :sparc) "sparc/")
+	  ((c:target-featurep :x86) "x86/")
+	  (t
+	   (error "What machine is this?")))
+    (make-pathname :directory (pathname-directory f)))))
 
 
 ;;; CAT-IF-ANYTHING-CHAGNED
