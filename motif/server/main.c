@@ -42,7 +42,7 @@ void close_sockets()
   unlink(socket_path);
 }
 
-void shutdown()
+void server_shutdown()
 {
   fprintf(stderr,"Caught signal.\n");
   close_sockets();
@@ -197,9 +197,9 @@ main(int argc, char **argv)
   start_server(port, socket_path);
 
   /* Catch signals and remove our sockets before going away. */
-  signal(SIGHUP, shutdown);
-  signal(SIGINT, shutdown);
-  signal(SIGQUIT, shutdown);
+  signal(SIGHUP, server_shutdown);
+  signal(SIGINT, server_shutdown);
+  signal(SIGQUIT, server_shutdown);
 
   printf("Waiting for connection.\n");
 
