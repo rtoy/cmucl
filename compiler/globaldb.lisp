@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.12 1990/08/24 18:29:19 wlott Exp $
+;;;
 ;;;    This file provides a functional interface to global information about
 ;;; named things in the system.  Information is considered to be global if it
 ;;; must persist between invocations of the compiler.  The use of a functional
@@ -301,7 +303,7 @@
     #-new-compiler
     (the fixnum (%primitive sxhash-simple-string (symbol-name x)))
     #+new-compiler
-    (truly-the index (%primitive sxhash-simple-string (symbol-name x))))
+    (%sxhash-simple-string (symbol-name x)))
    ((and (listp x)
 	 (eq (car x) 'setf))
     (let ((next (cdr x)))
@@ -314,9 +316,7 @@
 				      (%primitive sxhash-simple-string
 						  (symbol-name name)))
 				 #+new-compiler
-				 (truly-the index
-					    (%primitive sxhash-simple-string
-							(symbol-name name)))
+				 (%sxhash-simple-string (symbol-name name))
 				 110680597))))))
     (sxhash x))
    (t
@@ -628,7 +628,7 @@
 ;;; Exact density (modulo rounding) of the hashtable in a compact info
 ;;; environment in names/bucket.
 ;;;
-(defconstant compact-info-environment-density 0.65)
+(defconstant compact-info-environment-density 65)
 
 
 ;;; COMPACT-INFO-ENVIRONMENT  --  Public
@@ -652,10 +652,8 @@
     
     (let* ((table-size
 	    (primify
-	     (+
-	      (truncate
-	       (/ name-count compact-info-environment-density))
-	      3)))
+	     (+ (truncate (* name-count 100) compact-info-environment-density)
+		3)))
 	   (table (make-array table-size :initial-element 0))
 	   (index (make-array table-size
 			      :element-type 'compact-info-entries-index))
@@ -849,7 +847,7 @@
 
 ;;; The maximum density of the hashtable in a volatile env (in names/bucket).
 ;;;
-(defconstant volatile-info-environment-density 0.5)
+(defconstant volatile-info-environment-density 50)
 
 
 ;;; MAKE-INFO-ENVIRONMENT  --  Public
@@ -859,9 +857,7 @@
 (defun make-info-environment (&key (size 42) (name "Unknown"))
   (declare (type (integer 1) size))
   (let ((table-size
-	 (primify
-	  (truncate
-	   (/ size volatile-info-environment-density)))))
+	 (primify (truncate (* size 100) volatile-info-environment-density))))
     (make-volatile-info-env
      :name name
      :table (make-array table-size :initial-element nil)
@@ -993,13 +989,9 @@
 (define-info-type function type ctype
   #+new-compiler
   (if (fboundp name)
-      (let ((def (fdefinition name)))
-	(let ((entry (if (eql (%primitive get-vector-subtype def)
-			      %function-closure-subtype)
-			 (%primitive header-ref def %function-name-slot)
-			 def)))
-	  (specifier-type
-	   (%primitive header-ref entry %function-entry-type-slot))))
+      (specifier-type (%primitive function-type
+				  (%primitive closure-function
+					      (fdefinition name))))
       (specifier-type 'function))
   #-new-compiler
   (specifier-type 'function))
@@ -1028,22 +1020,18 @@
 ;;; A macro-like function which transforms a call to this function into some
 ;;; other Lisp form.  This expansion is inhibited if inline expansion is
 ;;; inhibited.
-(define-info-type function source-transform (or function null
-						#-new-compiler list))
+(define-info-type function source-transform (or function null list))
 
 ;;; The macroexpansion function for this macro.
-(define-info-type function macro-function (or function null
-					      #-new-compiler list)
+(define-info-type function macro-function (or function null list)
   nil)
 
 ;;; A function which converts this special form into IR1.
-(define-info-type function ir1-convert (or function null
-					   #-new-compiler list))
+(define-info-type function ir1-convert (or function null list))
 
 ;;; A function which gets a chance to do stuff to the IR1 for any call to this
 ;;; function.
-(define-info-type function ir1-transform (or function null
-					     #-new-compiler list))
+(define-info-type function ir1-transform (or function null list))
 
 ;;; If a function is an alien-operator, then this is the Alien-Info.
 (define-info-type function alien-operator (or lisp::alien-info null) nil)
@@ -1117,12 +1105,10 @@
       nil))
 
 ;;; Expander function for a defined type.
-(define-info-type type expander (or function null
-				    #-new-compiler list) nil)
+(define-info-type type expander (or function null list) nil)
 
 ;;; Print function for a type.
-(define-info-type type printer (or function symbol null
-				   #-new-compiler list) nil)
+(define-info-type type printer (or function symbol null list) nil)
 
 ;;; Defstruct description information for a structure type.  DEFINED is the
 ;;; current global definition, and is not shadowed by compilation of
@@ -1158,8 +1144,7 @@
 
 (define-info-type setf documentation (or string null) nil)
 
-(define-info-type setf expander (or function null 
-				    #-new-compiler list) nil)
+(define-info-type setf expander (or function null list) nil)
 
 ;;; Used for storing random documentation types.  The stuff is an alist
 ;;; translating documentation kinds to values.

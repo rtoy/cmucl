@@ -32,6 +32,5 @@
   (:info name)
   (:vop-var vop)
   (:generator 0
-    (unassemble
-      (funcall (symbol-function name) vop x y))))
+    (funcall (symbol-function name) vop x y)))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.11 1990/06/01 15:41:29 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.12 1990/08/24 18:29:38 wlott Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -16,7 +16,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 ;;; Source transform for Not, Null  --  Internal
 ;;;
@@ -261,6 +261,10 @@
 			    (* x-high y-high)
 			    nil))))))))
 
+(defoptimizer (/ derive-type) ((x y))
+  (numeric-contagion (continuation-type x) (continuation-type y)))
+
+
 (defoptimizer (ash derive-type) ((n shift))
   (or (let ((n-type (continuation-type n)))
 	(when (numeric-type-p n-type)
@@ -269,7 +273,12 @@
 	    (if (constant-continuation-p shift)
 		(let ((shift (continuation-value shift)))
 		  (make-numeric-type :class 'integer  :complexp :real
-				     :low (when n-low (ash n-low shift))
+				     :low (when n-low
+					    #+new-compiler
+					    (ash n-low shift)
+					    ;; ### fuckin' bignum bug.
+					    #-new-compiler
+					    (* n-low (ash 1 shift)))
 				     :high (when n-high (ash n-high shift))))
 		(let ((s-type (continuation-type shift)))
 		  (when (numeric-type-p s-type)
@@ -370,21 +379,216 @@
   (defoptimizer (lognot derive-type) ((int))
     (derive-integer-type int int (frob lognot))))
 
+
+(defoptimizer (abs derive-type) ((num))
+  (let ((type (continuation-type num)))
+    (if (and (numeric-type-p type)
+	     (eq (numeric-type-class type) 'integer)
+	     (eq (numeric-type-complexp type) :real))
+	(let ((lo (numeric-type-low type))
+	      (hi (numeric-type-high type)))
+	  (make-numeric-type :class 'integer :complexp :real
+			     :low (cond ((and hi (minusp hi))
+					 (abs hi))
+					(lo
+					 (max 0 lo))
+					(t
+					 0))
+			     :high (if (and hi lo)
+				       (max (abs hi) (abs lo))
+				       nil)))
+	(numeric-contagion type type))))
+
+
+(defoptimizer (truncate derive-type) ((number divisor))
+  (let ((number-type (continuation-type number))
+	(divisor-type (continuation-type divisor))
+	(integer-type (specifier-type 'integer)))
+    (if (and (numeric-type-p number-type)
+	     (csubtypep number-type integer-type)
+	     (numeric-type-p divisor-type)
+	     (csubtypep divisor-type integer-type))
+	(let ((number-low (numeric-type-low number-type))
+	      (number-high (numeric-type-high number-type))
+	      (divisor-low (numeric-type-low divisor-type))
+	      (divisor-high (numeric-type-high divisor-type)))
+	  (values-specifier-type
+	   `(values ,(integer-truncate-derive-type number-low number-high
+						   divisor-low divisor-high)
+		    ,(integer-rem-derive-type number-low number-high
+					      divisor-low divisor-high))))
+	*universal-type*)))
+
+;;; NUMERIC-RANGE-INFO  --  internal.
+;;;
+;;; Derive useful information about the range.  Returns three values:
+;;; - '+ if its positive, '- negative, or nil if it overlaps 0.
+;;; - The abs of the minimal value (i.e. closest to 0) in the range.
+;;; - The abs of the maximal value if there is one, or nil if it is unbounded.
+;;; 
+(defun numeric-range-info (low high)
+  (cond ((and low (not (minusp low)))
+	 (values '+ low high))
+	((and high (not (plusp high)))
+	 (values '- (- high) (if low (- low) nil)))
+	(t
+	 (values nil 0 (and low high (max (- low) high))))))
+
+;;; INTEGER-TRUNCATE-DERIVE-TYPE -- internal
+;;; 
+(defun integer-truncate-derive-type
+       (number-low number-high divisor-low divisor-high)
+  ;; The result cannot be larger in magnitude than the number, but the sign
+  ;; might change.  If we can determine the sign of either the number or
+  ;; the divisor, we can eliminate some of the cases.
+  (multiple-value-bind
+      (number-sign number-min number-max)
+      (numeric-range-info number-low number-high)
+    (multiple-value-bind
+	(divisor-sign divisor-min divisor-max)
+	(numeric-range-info divisor-low divisor-high)
+      (when (and divisor-max (zerop divisor-max))
+	;; We've got a problem: guarenteed division by zero.
+	(return-from integer-truncate-derive-type t))
+      (when (zerop divisor-min)
+	;; We'll assume that they arn't going to divide by zero.
+	(incf divisor-min))
+      (cond ((and number-sign divisor-sign)
+	     ;; We know the sign of both.
+	     (if (eq number-sign divisor-sign)
+		 ;; Same sign, so the result will be positive.
+		 `(integer ,(if divisor-max
+				(truncate number-min divisor-max)
+				0)
+			   ,(if number-max
+				(truncate number-max divisor-min)
+				'*))
+		 ;; Different signs, the result will be negative.
+		 `(integer ,(if number-max
+				(- (truncate number-max divisor-min))
+				'*)
+			   ,(if divisor-max
+				(- (truncate number-min divisor-max))
+				0))))
+	    ((eq divisor-sign '+)
+	     ;; The divisor is positive.  Therefore, the number will just
+	     ;; become closer to zero.
+	     `(integer ,(if number-low
+			    (truncate number-low divisor-min)
+			    '*)
+		       ,(if number-high
+			    (truncate number-high divisor-min)
+			    '*)))
+	    ((eq divisor-sign '-)
+	     ;; The divisor is negative.  Therefore, the absolute value of
+	     ;; the number will become closer to zero, but the sign will also
+	     ;; change.
+	     `(integer ,(if number-high
+			    (- (truncate number-high divisor-min))
+			    '*)
+		       ,(if number-low
+			    (- (truncate number-low divisor-min))
+			    '*)))
+	    ;; The divisor could be either positive or negative.
+	    (number-max
+	     ;; The number we are dividing has a bound.  Divide that by the
+	     ;; smallest posible divisor.
+	     (let ((bound (truncate number-max divisor-min)))
+	       `(integer ,(- bound) ,bound)))
+	    (t
+	     ;; The number we are dividing is unbounded, so we can't tell
+	     ;; anything about the result.
+	     'integer)))))
+	  
+(defun integer-rem-derive-type
+       (number-low number-high divisor-low divisor-high)
+  (if (and divisor-low divisor-high)
+      ;; We know the range of the divisor, and the remainder must be smaller
+      ;; than the divisor.  We can tell the sign of the remainer if we know
+      ;; the sign of the number.
+      (let ((divisor-max (1- (max (abs divisor-low) (abs divisor-high)))))
+	`(integer ,(if (or (null number-low)
+			   (minusp number-low))
+		       (- divisor-max)
+		       0)
+		  ,(if (or (null number-high)
+			   (plusp number-high))
+		       divisor-max
+		       0)))
+      ;; The divisor is potentially either very positive or very negative.
+      ;; Therefore, the remainer is unbounded, but we might be able to tell
+      ;; something about the sign from the number.
+      `(integer ,(if (and number-low (not (minusp number-low)))
+		     ;; The number we are dividing is positive.  Therefore,
+		     ;; the remainder must be positive.
+		     0
+		     '*)
+		,(if (and number-high (not (plusp number-high)))
+		     ;; The number we are dividing is negative.  Therefore,
+		     ;; the remainder must be negative.
+		     0
+		     '*))))
+
 
 ;;;; Array derive-type optimizers:
 
+(defoptimizer (array-in-bounds-p derive-type) ((array &rest indices))
+  (assert-continuation-type
+   array
+   (specifier-type `(array * ,(make-list (length indices)
+					 :initial-element '*))))
+  *universal-type*)
+
 (defoptimizer (aref derive-type) ((array &rest indices))
+  (assert-continuation-type
+   array
+   (specifier-type `(array * ,(make-list (length indices)
+					 :initial-element '*))))
+  (let ((type (continuation-type array)))
+    (when (array-type-p type)
+      (array-type-element-type type))))
+
+(defoptimizer (data-vector-ref derive-type) ((array index))
   (let ((type (continuation-type array)))
     (when (array-type-p type)
       (array-type-element-type type))))
 
 (defoptimizer (%aset derive-type) ((array &rest stuff))
+  (assert-continuation-type
+   array
+   (specifier-type `(array * ,(make-list (1- (length stuff))
+					 :initial-element '*))))
   (let ((type (continuation-type array)))
     (when (array-type-p type)
       (let ((val (car (last stuff)))
 	    (eltype (array-type-element-type type)))
 	(assert-continuation-type val eltype)
 	(continuation-type val)))))
+
+(defoptimizer (data-vector-set derive-type) ((array index new-value))
+  (let ((type (continuation-type array)))
+    (when (array-type-p type)
+      (let ((eltype (array-type-element-type type)))
+	(assert-continuation-type new-value eltype)
+	(continuation-type new-value)))))
+
+(defoptimizer (array-row-major-index derive-type) ((array &rest indices))
+  (assert-continuation-type
+   array
+   (specifier-type `(array * ,(make-list (length indices)
+					 :initial-element '*))))
+  *universal-type*)
+
+(defoptimizer (row-major-aref derive-type) ((array index))
+  (let ((type (continuation-type array)))
+    (when (array-type-p type)
+      (array-type-element-type type))))
+  
+(defoptimizer (%set-row-major-aref derive-type) ((array index new-value))
+  (let ((type (continuation-type array)))
+    (when (array-type-p type)
+      (assert-continuation-type new-value (array-type-element-type type))
+      (continuation-type new-value))))
 
 
 ;;; Unsupplied-Or-NIL  --  Internal
@@ -428,7 +632,7 @@
 
 
 (defoptimizer (code-char derive-type) ((code))
-  (specifier-type 'string-char))
+  (specifier-type 'base-character))
 
 
 (defoptimizer (values derive-type) ((&rest values))
@@ -436,6 +640,7 @@
    `(values ,@(mapcar #'(lambda (x)
 			  (type-specifier (continuation-type x)))
 		      values))))
+
 
 
 ;;;; Byte operations:
@@ -489,59 +694,128 @@
     `(%deposit-field ,newbyte ,size ,pos ,int)))
 
 
-;;; Check-Fixnum-Byte  --  Internal
-;;;
-;;;    If the continuations Size and Pos are constant, and represent a field
-;;; that fits into a fixnum, then return the size and position as values,
-;;; otherwise Give-Up.
-;;;
-(defun check-fixnum-byte (size pos)
-  (unless (and (constant-continuation-p size)
-	       (constant-continuation-p pos))
-    (give-up))
-  (let ((size (continuation-value size))
-	(pos (continuation-value pos)))
-    (when (> (+ size pos) (integer-length most-positive-fixnum))
-      (give-up))
-    (values size pos)))
+(defoptimizer (%ldb derive-type) ((size posn num))
+  (let ((size (continuation-type size)))
+    (if (and (numeric-type-p size)
+	     (csubtypep size (specifier-type 'integer)))
+	(let ((size-high (numeric-type-high size)))
+	  (if (and size-high (<= size-high vm:word-bits))
+	      (specifier-type `(unsigned-byte ,size-high))
+	      (specifier-type 'unsigned-byte)))
+	*universal-type*)))
 
-(defun max-value (cont)
-  (if (constant-continuation-p cont)
-      (continuation-value cont)
-      (let ((type (continuation-type cont)))
-	(or (and (numeric-type-p type)
-		 (numeric-type-high type))
-	    (give-up
-	     "Size is not constant and its upper bound is not known.")))))
+(defoptimizer (%mask-field derive-type) ((size posn num))
+  (let ((size (continuation-type size))
+	(posn (continuation-type posn)))
+    (if (and (numeric-type-p size)
+	     (csubtypep size (specifier-type 'integer))
+	     (numeric-type-p posn)
+	     (csubtypep posn (specifier-type 'integer)))
+	(let ((size-high (numeric-type-high size))
+	      (posn-high (numeric-type-high posn)))
+	  (if (and size-high posn-high
+		   (<= (+ size-high posn-high) vm:word-bits))
+	      (specifier-type `(unsigned-byte ,(+ size-high posn-high)))
+	      (specifier-type 'unsigned-byte)))
+	*universal-type*)))
 
-(deftransform %ldb ((size pos int) (fixnum fixnum integer))
-  (let ((size-len (max-value size)))
-    (unless (<= size-len (integer-length most-positive-fixnum))
-      (give-up "result might be up to ~D bits, can't open code %ldb." size-len))
-    (if (zerop size-len)
-	0
-	`(logand (ash int (- pos))
-		 (ash ,(1- (ash 1 (integer-length most-positive-fixnum)))
-		      (- size ,(integer-length most-positive-fixnum)))))))
+(defoptimizer (%dpb derive-type) ((newbyte size posn int))
+  (let ((size (continuation-type size))
+	(posn (continuation-type posn))
+	(int (continuation-type int)))
+    (if (and (numeric-type-p size)
+	     (csubtypep size (specifier-type 'integer))
+	     (numeric-type-p posn)
+	     (csubtypep posn (specifier-type 'integer))
+	     (numeric-type-p int)
+	     (csubtypep int (specifier-type 'integer)))
+	(let ((size-high (numeric-type-high size))
+	      (posn-high (numeric-type-high posn))
+	      (high (numeric-type-high int))
+	      (low (numeric-type-low int)))
+	  (if (and size-high posn-high high low
+		   (<= (+ size-high posn-high) vm:word-bits))
+	      (specifier-type
+	       (list (if (minusp low) 'signed-byte 'unsigned-byte)
+		     (max (integer-length high)
+			  (integer-length low)
+			  (+ size-high posn-high))))
+	      *universal-type*))
+	*universal-type*)))
 
-(deftransform %dpb ((new size pos int) (t t t fixnum))
-  (multiple-value-bind (size pos)
-		       (check-fixnum-byte size pos)
-    `(logior (ash (logand new ,(ldb (byte size 0) -1))
-		  pos)
-	     (logand int ,(lognot (ash (ldb (byte size 0) -1) pos))))))
+(defoptimizer (%deposit-field derive-type) ((newbyte size posn int))
+  (let ((size (continuation-type size))
+	(posn (continuation-type posn))
+	(int (continuation-type int)))
+    (if (and (numeric-type-p size)
+	     (csubtypep size (specifier-type 'integer))
+	     (numeric-type-p posn)
+	     (csubtypep posn (specifier-type 'integer))
+	     (numeric-type-p int)
+	     (csubtypep int (specifier-type 'integer)))
+	(let ((size-high (numeric-type-high size))
+	      (posn-high (numeric-type-high posn))
+	      (high (numeric-type-high int))
+	      (low (numeric-type-low int)))
+	  (if (and size-high posn-high high low
+		   (<= (+ size-high posn-high) vm:word-bits))
+	      (specifier-type
+	       (list (if (minusp low) 'signed-byte 'unsigned-byte)
+		     (max (integer-length high)
+			  (integer-length low)
+			  (+ size-high posn-high))))
+	      *universal-type*))
+	*universal-type*)))
 
-(deftransform %mask-field ((size pos int) (t t fixnum))
-  (multiple-value-bind (size pos)
-		       (check-fixnum-byte size pos)
-    `(logand int ,(ash (ldb (byte size 0) -1) pos))))
 
-(deftransform %deposit-field ((new size pos int) (t t t fixnum))
-  (multiple-value-bind (size pos)
-		       (check-fixnum-byte size pos)
-    (let ((mask (ash (ldb (byte size 0) -1) pos)))
-      `(logior (logand new ,mask)
-	       (logand int ,(lognot mask))))))
+
+(deftransform %ldb ((size posn int)
+		    (fixnum fixnum integer)
+		    (unsigned-byte #.vm:word-bits))
+  `(logand (ash int (- posn))
+	   (ash ,(1- (ash 1 vm:word-bits))
+		(- size ,vm:word-bits))))
+
+(deftransform %mask-field ((size posn int)
+			   (fixnum fixnum integer)
+			   (unsigned-byte #.vm:word-bits))
+  `(logand int
+	   (ash (ash ,(1- (ash 1 vm:word-bits))
+		     (- size ,vm:word-bits))
+		posn)))
+
+;;; Note: for %dpb and %deposit-field, we can't use (or (signed-byte n)
+;;; (unsigned-byte n)) as the result type, as that would allow result types
+;;; that cover the range -2^(n-1) .. 1-2^n, instead of allowing result types
+;;; of (unsigned-byte n) and result types of (signed-byte n).
+
+(deftransform %dpb ((new size posn int)
+		    *
+		    (unsigned-byte #.vm:word-bits))
+  `(let ((mask (ldb (byte size 0) -1)))
+     (logior (ash (logand new mask) posn)
+	     (logand int (lognot (ash mask posn))))))
+
+(deftransform %dpb ((new size posn int)
+		    *
+		    (signed-byte #.vm:word-bits))
+  `(let ((mask (ldb (byte size 0) -1)))
+     (logior (ash (logand new mask) posn)
+	     (logand int (lognot (ash mask posn))))))
+
+(deftransform %deposit-field ((new size posn int)
+			      *
+			      (unsigned-byte #.vm:word-bits))
+  `(let ((mask (ash (ldb (byte size 0) -1) posn)))
+     (logior (logand new mask)
+	     (logand int (lognot mask)))))
+
+(deftransform %deposit-field ((new size posn int)
+			      *
+			      (signed-byte #.vm:word-bits))
+  `(let ((mask (ash (ldb (byte size 0) -1) posn)))
+     (logior (logand new mask)
+	     (logand int (lognot mask)))))
 
 
 ;;;; Funny function stubs:
@@ -551,14 +825,34 @@
 ;;; definition to allow constant folding.
 ;;;
 
+#-new-compiler
+(progn
+
 (defun %negate (x) (%primitive negate x))
 (defun %ldb (s p i) (%primitive ldb s p i))
 (defun %dpb (n s p i) (%primitive dpb n s p i))
 (defun %mask-field (s p i) (%primitive mask-field s p i))
 (defun %deposit-field (n s p i) (%primitive deposit-field n s p i))
 
+); #-new-compiler progn
+
 
 ;;; Miscellanous numeric transforms:
+
+
+;;; COMMUTATIVE-ARG-SWAP  --  Internal
+;;;
+;;;    If a constant appears as the first arg, swap the args.
+;;;
+(deftransform commutative-arg-swap ((x y) * * :defun-only t :node node)
+  (if (and (constant-continuation-p x)
+	   (not (constant-continuation-p y)))
+      `(,(continuation-function-name (basic-combination-fun node)) y x)
+      (give-up)))
+
+(dolist (x '(= char= + * logior logand logxor))
+  (%deftransform x '(function * *) #'commutative-arg-swap))
+
 
 ;;; Handle the case of a constant boole-code.
 ;;;
@@ -600,20 +894,27 @@
 	`(ash x ,len))))
 
 ;;; If arg is a constant power of two, turn floor into a shift and mask.
-;;; 
-(deftransform floor ((x y) (integer integer))
-  (unless (constant-continuation-p y) (give-up))
-  (let* ((y (continuation-value y))
-	 (y-abs (abs y))
-	 (len (1- (integer-length y-abs))))
-    (unless (= y-abs (ash 1 len)) (give-up))
-    (let ((shift (- len))
-	  (mask (1- y-abs)))
-      (if (minusp y)
-	  `(values (ash (- x) ,shift)
-		   (- (logand (- x) ,mask)))
-	  `(values (ash x ,shift)
-		   (logand x ,mask))))))
+;;; If ceiling, add in (1- (abs y)) and then do floor.
+;;;
+(flet ((frob (y ceil-p)
+	 (unless (constant-continuation-p y) (give-up))
+	 (let* ((y (continuation-value y))
+		(y-abs (abs y))
+		(len (1- (integer-length y-abs))))
+	   (unless (= y-abs (ash 1 len)) (give-up))
+	   (let ((shift (- len))
+		 (mask (1- y-abs)))
+	     `(let ,(when ceil-p `((x (+ x ,(1- y-abs)))))
+		,(if (minusp y)
+		     `(values (ash (- x) ,shift)
+			      (- (logand (- x) ,mask)))
+		     `(values (ash x ,shift)
+			      (logand x ,mask))))))))
+  (deftransform floor ((x y) (integer integer))
+    (frob y nil))
+  (deftransform ceiling ((x y) (integer integer))
+    (frob y t)))
+
 
 ;;; Do the same for mod.
 ;;;
@@ -662,10 +963,17 @@
 	   (- (logand (- x) ,mask))
 	   (logand x ,mask)))))
 
+
+;;; Flush calls to random arith functions that convert to the identity
+;;; function.
+;;; 
+(deftransform ash ((x y) (* (constant-argument (member 0))))
+  'x)
+
 
 ;;;; Character operations:
 
-(deftransform char-equal ((a b) (string-char string-char))
+(deftransform char-equal ((a b) (base-character base-character))
   '(let* ((ac (char-code a))
 	  (bc (char-code b))
 	  (sum (logxor ac bc)))
@@ -674,14 +982,14 @@
 	   (let ((sum (+ ac bc)))
 	     (and (> sum 161) (< sum 213)))))))
 
-(deftransform char-upcase ((x) (string-char))
+(deftransform char-upcase ((x) (base-character))
   '(let ((n-code (char-code x)))
      (if (and (> n-code #o140)	; Octal 141 is #\a.
 	      (< n-code #o173))	; Octal 172 is #\z.
 	 (code-char (logxor #x20 n-code))
 	 x)))
 
-(deftransform char-downcase ((x) (string-char))
+(deftransform char-downcase ((x) (base-character))
   '(let ((n-code (char-code x)))
      (if (and (> n-code 64)	; 65 is #\A.
 	      (< n-code 91))	; 90 is #\Z.
@@ -715,10 +1023,10 @@
 (deftransform simple-equality-transform ((x y) * * :defun-only t)
   (cond ((same-leaf-ref-p x y)
 	 't)
-	((types-intersect (continuation-type x) (continuation-type y))
-	 (give-up))
+	((not (types-intersect (continuation-type x) (continuation-type y)))
+	 'nil)
 	(t
-	 'nil)))
+	 (give-up))))
 
 (dolist (x '(eq char= equal))
   (%deftransform x '(function * *) #'simple-equality-transform))
@@ -728,22 +1036,19 @@
 ;;;
 ;;;    Similar to SIMPLE-EQUALITY-PREDICATE, except that we also try to convert
 ;;; to a type-specific predicate or EQ:
-;;;
 ;;; -- If both args are characters, convert to CHAR=.  This is better than just
 ;;;    converting to EQ, since CHAR= may have special compilation strategies
 ;;;    for non-standard representations, etc.
-;;; -- If both args are the "same" numeric type, then convert to =.  This
-;;;    allows all of ='s expertise to come into play.  "Same" means either both
-;;;    rational or both floats of the same format.  Complexp must also be
-;;;    specified and identical.
 ;;; -- If either arg is definitely not a number, then we can compare with EQ.
-;;; -- If either arg is definitely a fixnum, then we can compare with EQ.
+;;; -- Otherwise, we try to put the arg we know more about second.  If X is
+;;;    constant then we put it second.  If X is a subtype of Y, we put it
+;;;    second.  These rules make it easier for the back end to match these
+;;;    interesting cases.
 ;;;
 (deftransform eql ((x y))
   (let ((x-type (continuation-type x))
 	(y-type (continuation-type y))
 	(char-type (specifier-type 'character))
-	(fixnum-type (specifier-type 'fixnum))
 	(number-type (specifier-type 'number)))
     (cond ((same-leaf-ref-p x y)
 	   't)
@@ -752,27 +1057,42 @@
 	  ((and (csubtypep x-type char-type)
 		(csubtypep y-type char-type))
 	   '(char= x y))
-	  ((and (numeric-type-p x-type) (numeric-type-p y-type)
-		(let ((x-class (numeric-type-class x-type))
-		      (y-class (numeric-type-class y-type))
-		      (x-format (numeric-type-format x-type)))
-		  (or (and (eq x-class 'float) (eq y-class 'float)
-			   x-format
-			   (eq x-format (numeric-type-format y-type)))
-		      (and (member x-class '(rational integer))
-			   (member y-class '(rational integer)))))
-		(let ((x-complexp (numeric-type-complexp x-type)))
-		  (and x-complexp
-		       (eq x-complexp (numeric-type-complexp y-type)))))
-	   '(= x y))
 	  ((or (not (types-intersect x-type number-type))
 	       (not (types-intersect y-type number-type)))
 	   '(eq x y))
-	  ((or (csubtypep x-type fixnum-type)
-	       (csubtypep y-type fixnum-type))
-	   '(eq x y))
+	  ((and (not (constant-continuation-p y))
+		(or (constant-continuation-p x)
+		    (and (csubtypep x-type y-type)
+			 (not (csubtypep y-type x-type)))))
+	   '(eql y x))
 	  (t
 	   (give-up "Not enough type information to open-code.")))))
+
+
+;;; = IR1 Transform  --  Internal
+;;;
+;;;    Convert to EQL if both args are the "same" numeric type.  This allows
+;;; all of EQL's type-specific expertise to come into play.  "Same" means
+;;; either both rational or both floats of the same format.  Complexp must also
+;;; be specified and identical.
+;;; 
+(deftransform = ((x y))
+  (let ((x-type (continuation-type x))
+	(y-type (continuation-type y)))
+    (if (and (numeric-type-p x-type) (numeric-type-p y-type)
+	     (let ((x-class (numeric-type-class x-type))
+		   (y-class (numeric-type-class y-type))
+		   (x-format (numeric-type-format x-type)))
+	       (or (and (eq x-class 'float) (eq y-class 'float)
+			x-format
+			(eq x-format (numeric-type-format y-type)))
+		   (and (member x-class '(rational integer))
+			(member y-class '(rational integer)))))
+	     (let ((x-complexp (numeric-type-complexp x-type)))
+	       (and x-complexp
+		    (eq x-complexp (numeric-type-complexp y-type)))))
+	'(eql x y)
+	(give-up "Operands might not be the same type, so can't open code."))))
 
 
 ;;; Numeric-Type-Or-Lose  --  Interface
@@ -791,30 +1111,34 @@
 ;;;
 ;;;    See if we can statically determine (< X Y) using type information.  If
 ;;; X's high bound is < Y's low, then X < Y.  Similarly, if X's low is >= to
-;;; Y's high, the X >= Y (so return NIL).
+;;; Y's high, the X >= Y (so return NIL).  If not, at least make sure any
+;;; constant arg is second.
 ;;;
-(defun ir1-transform-< (x y)
+(defun ir1-transform-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
-      (let* ((x (numeric-type-or-lose x))
-	     (x-lo (numeric-type-low x))
-	     (x-hi (numeric-type-high x))
-	     (y (numeric-type-or-lose y))
-	     (y-lo (numeric-type-low y))
-	     (y-hi (numeric-type-high y)))
+      (let* ((x-type (numeric-type-or-lose x))
+	     (x-lo (numeric-type-low x-type))
+	     (x-hi (numeric-type-high x-type))
+	     (y-type (numeric-type-or-lose y))
+	     (y-lo (numeric-type-low y-type))
+	     (y-hi (numeric-type-high y-type)))
 	(cond ((and x-hi y-lo (< x-hi y-lo))
 	       't)
 	      ((and y-hi x-lo (>= x-lo y-hi))
 	       'nil)
+	      ((and (constant-continuation-p first)
+		    (not (constant-continuation-p second)))
+	       `(,inverse y x))
 	      (t
 	       (give-up))))))
 	      
 
 (deftransform < ((x y) (integer integer))
-  (ir1-transform-< x y))
+  (ir1-transform-< x y x y '>))
 
 (deftransform > ((x y) (integer integer))
-  (ir1-transform-< y x))
+  (ir1-transform-< y x x y '<))
 
 
 ;;;; Converting N-arg comparisons:
@@ -970,6 +1294,23 @@
 (def-source-transform logeqv (&rest args)
   (source-transform-transitive 'logeqv args -1 'logeqv-two-arg))
 
+;;; Note: we can't use source-transform-transitive for GCD and LCM because when
+;;; they are given one argument, they return it's absolute value.
+
+(def-source-transform gcd (&rest args)
+  (case (length args)
+    (0 0)
+    (1 `(abs (the integer ,(first args))))
+    (2 (values nil t))
+    (t (associate-arguments 'gcd (first args) (rest args)))))
+
+(def-source-transform lcm (&rest args)
+  (case (length args)
+    (0 1)
+    (1 `(abs (the integer ,(first args))))
+    (2 (values nil t))
+    (t (associate-arguments 'lcm (first args) (rest args)))))
+
 
 ;;; Source-Transform-Intransitive  --  Internal
 ;;;
@@ -1041,16 +1382,23 @@
     (cond ((csubtypep type (specifier-type 'simple-string))
 	   (when initial-element
 	     (give-up "Can't hack initial elements in strings."))
-	   `(truly-the ,spec (%primitive alloc-string length)))
+	   `(truly-the ,spec (%primitive alloc-string (the index length))))
 	  ((csubtypep type (specifier-type 'simple-bit-vector))
 	   (unless (or (not initial-element)
 		       (and (constant-continuation-p initial-element)
 			    (eql (continuation-value initial-element) 0)))
 	     (give-up "Can't hack non-zero initial-elements in bit-vectors."))
-	   `(truly-the ,spec (%primitive alloc-bit-vector length)))
+	   `(truly-the ,spec
+		       (%primitive allocate-vector
+				   vm:simple-bit-vector-type
+				   (the index length)
+				   (the index
+					(ceiling length vm:word-bits)))))
 	  ((csubtypep type (specifier-type 'simple-vector))
 	   `(truly-the ,spec
-		       (%primitive alloc-g-vector length initial-element)))
+		       (%primitive alloc-g-vector
+				   (the index length)
+				   initial-element)))
 	  (t
 	   (give-up "Can't open-code creation of ~S."
 		    (type-specifier type))))))
@@ -1062,13 +1410,167 @@
 ;;; MAKE-ARRAY.
 ;;;
 (def-source-transform make-string (length)
-  `(make-array ,length :element-type 'string-char))
+  `(make-array ,length :element-type 'base-character))
 
 
-(deftransform array-dimension ((array dim)
-			       ((simple-array * (*)) (integer 0 0)))
-  '(length array))
-			       
+;;; Transforms for various random array properties.  If the property is know
+;;; at compile time because of a type spec, use that constant value.
+
+(deftransform array-rank ((array))
+  (let ((array-type (continuation-type array)))
+    (unless (array-type-p array-type)
+      (give-up))
+    (let ((dims (array-type-dimensions array-type)))
+      (if (not (listp dims))
+	  (give-up)
+	  (length dims)))))
+
+(deftransform array-dimension ((array axis)
+			       (array index))
+  (unless (constant-continuation-p axis)
+    (give-up "Axis not constant."))
+  (let ((array-type (continuation-type array))
+	(axis (continuation-value axis)))
+    (unless (array-type-p array-type)
+      (give-up))
+    (let ((dims (array-type-dimensions array-type)))
+      (unless (listp dims)
+	(give-up
+	 "Array dimensions unknown, must call array-dimension at runtime."))
+      (unless (> (length dims) axis)
+	(abort-transform "Array has dimensions ~S, ~D is too large."
+			 dims axis))
+      (let ((dim (nth axis dims)))
+	(cond ((integerp dim)
+	       dim)
+	      ((= (length dims) 1)
+	       (ecase (array-type-complexp array-type)
+		 ((t)
+		  '(%array-dimension array 0))
+		 ((nil)
+		  '(length array))
+		 (*
+		  (give-up "Can't tell if ~S is simple" array))))
+	      (t
+	       '(%array-dimension array axis)))))))
+
+(deftransform length ((vector)
+		      ((simple-array * (*))))
+  (let ((type (continuation-type vector)))
+    (unless (array-type-p type)
+      (give-up))
+    (let ((dims (array-type-dimensions type)))
+      (unless (and (listp dims) (integerp (car dims)))
+	(give-up "Vector length unknown, must call length at runtime."))
+      (car dims))))
+
+(deftransform length ((vector) (vector))
+  '(vector-length vector))
+
+(deftransform array-total-size ((array)
+				(array))
+  (let ((array-type (continuation-type array)))
+    (unless (array-type-p array-type)
+      (give-up))
+    (let ((dims (array-type-dimensions array-type)))
+      (unless (listp dims)
+	(give-up)
+	(if (member '* dims)
+	    (do ((form 1 `(truly-the index
+				     (* (truly-the index
+						   (array-dimension array ,i))
+					,form)))
+		 (i 0 (1+ i)))
+		((= i (length dims)) form))
+	    (reduce #'* dims))))))
+
+(deftransform array-has-fill-pointer-p ((array))
+  (let ((array-type (continuation-type array)))
+    (unless (array-type-p array-type)
+      (give-up))
+    (let ((dims (array-type-dimensions array-type)))
+      (if (and (listp dims) (not (= (length dims) 1)))
+	  nil
+	  (ecase (array-type-complexp array-type)
+	    ((t)
+	     t)
+	    ((nil)
+	     nil)
+	    (*
+	     (give-up "Array type ambiguous; must call ~
+	              array-has-fill-pointer-p at runtime.")))))))
+
+;;; Primitive used to verify indicies into arrays.  If we can tell at
+;;; compile-time or we are generating unsafe code, don't bother with the VOP.
+
+(deftransform %check-bound ((array dimension index))
+  (unless (constant-continuation-p dimension)
+    (give-up))
+  (let ((dim (continuation-value dimension)))
+    `(the (integer 0 ,dim) index)))
+
+(deftransform %check-bound ((array dimension index) * *
+			    :policy (and (> speed safety) (= safety 0)))
+  'index)
+
+;;; Array accessor/setter transforms.
+
+(defmacro with-row-major-index ((array indices index &optional new-value)
+				&rest body)
+  `(let (n-indices dims)
+     (dotimes (i (length ,indices))
+       (push (make-symbol (format nil "INDEX-~D" i)) n-indices)
+       (push (make-symbol (format nil "DIM-~D" i)) dims))
+     (setf n-indices (nreverse n-indices))
+     (setf dims (nreverse dims))
+     `(lambda (,',array ,@n-indices ,@',(when new-value (list new-value)))
+	(let* (,@(let ((,index -1))
+		   (mapcar #'(lambda (name)
+			       `(,name (array-dimension ,',array
+							,(incf ,index))))
+			   dims))
+	       (,',index
+		,(if (null dims)
+		     0
+		     (do* ((dims dims (cdr dims))
+			   (indices n-indices (cdr indices))
+			   (last-dim nil (car dims))
+			   (form `(%check-bound ,',array
+						,(car dims)
+						,(car indices))
+				 `(truly-the index
+					     (+ (truly-the index
+							   (* ,form
+							      ,last-dim))
+						(%check-bound
+						 ,',array
+						 ,(car dims)
+						 ,(car indices))))))
+			  ((null (cdr dims)) form)))))
+	  ,',@body))))
+
+(deftransform array-row-major-index ((array &rest indices))
+  (with-row-major-index (array indices index)
+    index))
+
+(deftransform aref ((array &rest indices))
+  (with-row-major-index (array indices index)
+    (data-vector-ref array index)))
+
+(deftransform %aset ((array &rest stuff))
+  (let ((indices (butlast stuff)))
+    (with-row-major-index (array indices index new-value)
+      (data-vector-set array index new-value))))
+
+(deftransform row-major-aref ((array index))
+  `(data-vector-ref array (%check-bound array (array-total-size array) index)))
+
+(deftransform %set-row-major-aref ((array index new-value))
+  `(data-vector-set array
+		    (%check-bound array (array-total-size array) index)
+		    new-value))
+
+
 
 ;;;; Apply:
 ;;;

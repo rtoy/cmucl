@@ -12,4 +12,12 @@
 	    *meta-sc-numbers* *primitive-type-names* *move-costs* *save-scs*
 	    *save-costs* *restore-costs* *parsed-vops*
 	    *compiler-error-context* *word-length* target-byte-order
-	    *undefined-warnings* *meta-sb-names* *meta-sc-names*))
+	    *undefined-warnings* *meta-sb-names* *meta-sc-names*
+	    *code-segment* *elsewhere*))
+
+(defconstant native-byte-order target-byte-order
+  "The byte order we are running under.")
+
+(eval-when (compile)
+  (format t "foo!")
+  (setf (info variable constant-value 'native-byte-order) target-byte-order))

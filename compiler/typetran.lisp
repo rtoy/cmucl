@@ -7,13 +7,15 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.5 1990/08/24 18:30:08 wlott Exp $
+;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
 ;;; simpler code that can be compiled inline.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 
 ;;;; Type predicate translation:
@@ -94,6 +96,7 @@
 ;;;    Flush %Typep tests whose result is known at compile time.
 ;;;
 (deftransform %typep ((object type))
+  (unless (constant-continuation-p type) (give-up))
   (ir1-transform-type-predicate
    object
    (specifier-type (continuation-value type))))
@@ -150,28 +153,6 @@
   `(not (consp ,x)))
 
 
-;;;; Internal predicates:
-;;;
-;;;    These type predicates are used to implement simple cases of typep.  They
-;;; shouldn't be used explicitly.
-
-;;; Numeric type predicates:
-;;;
-(define-type-predicate bignump bignum)
-(define-type-predicate double-float-p double-float)
-(define-type-predicate fixnump fixnum)
-(define-type-predicate long-float-p long-float)
-(define-type-predicate ratiop ratio)
-(define-type-predicate short-float-p short-float)
-(define-type-predicate single-float-p single-float)
-
-;;; Character type predicates.  Unlike the un-%'ed versions, these are true
-;;; type predicates, accepting any type object.
-;;;
-(define-type-predicate %string-char-p string-char)
-(define-type-predicate %standard-char-p standard-char)
-
-
 ;;;; Typep source transform:
 
 ;;; Transform-Numeric-Bound-Test  --  Internal
@@ -217,16 +198,11 @@
 ;;;
 (defun source-transform-numeric-typep (object type)
   (let* ((class (numeric-type-class type))
-	 (low (numeric-type-low type))
-	 (high (numeric-type-high type))
 	 (base (ecase class
-		 (integer
-		  (if (and low (>= low most-negative-fixnum)
-			   high (<= high most-positive-fixnum))
-		      'fixnum
-		      'integer))
+		 (integer (containing-integer-type type))
 		 (rational 'rational)
-		 (float (or (numeric-type-format type) 'float)))))
+		 (float (or (numeric-type-format type) 'float))
+		 ((nil) 'number))))
     (once-only ((n-object object))
       (ecase (numeric-type-complexp type)
 	(:real
@@ -236,11 +212,14 @@
 	 `(and (complexp ,n-object)
 	       ,(once-only ((n-real `(realpart (the complex ,n-object)))
 			    (n-imag `(imagpart (the complex ,n-object))))
-		  `(and (typep ,n-real ',base)
-			,@(unless (eq class 'float) `((typep ,n-imag ',base)))
-			,(transform-numeric-bound-test n-real type base)
-			,(transform-numeric-bound-test n-imag type
-						       base)))))))))
+		  `(progn
+		     ,n-imag ; ignorable
+		     (and (typep ,n-real ',base)
+			  ,@(when (eq class 'integer)
+			      `((typep ,n-imag ',base)))
+			  ,(transform-numeric-bound-test n-real type base)
+			  ,(transform-numeric-bound-test n-imag type
+							 base))))))))))
 
 
 ;;; Source-Transform-Hairy-Typep  --  Internal

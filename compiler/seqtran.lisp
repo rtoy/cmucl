@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.9 1990/08/24 18:29:34 wlott Exp $
+;;;
 ;;;    This file contains optimizers for list and sequence functions.
 ;;;
 ;;; Written by Rob MacLachlan.  Some code adapted from the old seqtran file,
@@ -119,65 +121,6 @@
 member map concatenate position find
 |#
 
-
-;;;; Simple string transforms:
-
-
-(deftransform subseq ((string start &optional (end nil))
-		      (simple-string t &optional t))
-  '(let* ((length (- (or end (length string))
-		     start))
-	  (result (make-string length)))
-     (%primitive byte-blt string start result 0 length)
-     result))
-
-
-(deftransform copy-seq ((seq) (simple-string))
-  '(let* ((length (length seq))
-	  (res (make-string length)))
-     (%primitive byte-blt seq 0 res 0 length)
-     res))
-
-
-(deftransform replace ((string1 string2 &key (start1 0) (start2 0)
-				end1 end2)
-		       (simple-string simple-string &rest t))
-  '(progn
-     (%primitive byte-blt string2 start2 string1 start1
-		 (+ start1
-		    (min (- (or end1 (length string1))
-			    start1)
-			 (- (or end2 (length string2))
-			    start2))))
-     string1))
-
-
-(deftransform concatenate ((rtype &rest sequences)
-			   (t &rest simple-string)
-			   simple-string)
-  (collect ((lets)
-	    (forms)
-	    (all-lengths)
-	    (args))
-    (dolist (seq sequences)
-      (declare (ignore seq))
-      (let ((n-seq (gensym))
-	    (n-length (gensym)))
-	(args n-seq)
-	(lets `(,n-length (length ,n-seq)))
-	(all-lengths n-length)
-	(forms `(setq start end  end (+ start ,n-length)))
-	(forms `(%primitive byte-blt ,n-seq 0 res start end))))
-    `(lambda (rtype ,@(args))
-       (declare (ignore rtype))
-       (let* (,@(lets)
-	      (res (make-string (+ ,@(all-lengths))))
-	      (start 0)
-	      (end 0))
-	 (declare (type index start end))
-	 ,@(forms)
-	 res))))
-
 
 ;;; Names of predicates that compute the same value as CHAR= when applied to
 ;;; characters.
@@ -190,10 +133,10 @@ member map concatenate position find
   (unless (or (not test)
 	      (continuation-function-is test char=-functions))
     (give-up))
-  `(and (typep item 'string-char)
-	(,@(if (constant-value-or-lose from-end)
-	       '(lisp::%sp-reverse-find-character)
-	       '(%primitive find-character))
+  `(and (typep item 'character)
+	(,(if (constant-value-or-lose from-end)
+	      'lisp::%sp-reverse-find-character
+	      'lisp::%sp-find-character)
 	 sequence start (or end (length sequence))
 	 item)))
 
