@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.25 2003/02/25 15:54:56 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.26 2003/03/11 02:20:30 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -423,14 +423,15 @@
 	  (unless (or firstp (minusp offset))
 	    (write-char #\+ stream))
 	  (if firstp
-	      (progn
-		(disassem:princ16 offset stream)
-		(or (minusp offset)
-		    (nth-value 1
-			       (disassem::note-code-constant-absolute offset
+	      (let ((unsigned-offset (if (minusp offset)
+					 (+ #x100000000 offset)
+					 offset)))
+		(disassem:princ16 unsigned-offset stream)
+		(or (nth-value 1
+			       (disassem::note-code-constant-absolute unsigned-offset
 								      dstate))
-		    (disassem:maybe-note-assembler-routine offset
-							   nil
+		    (disassem:maybe-note-assembler-routine unsigned-offset
+							   stream
 							   dstate)
 		    (let ((offs (- offset disassem::nil-addr)))
 		      (when (typep offs 'disassem::offset)
@@ -447,7 +448,10 @@
 	(format stream "~A" value))
     (when (typep offset 'disassem::offset)
       (or (disassem::maybe-note-nil-indexed-object offset dstate)
-	  (disassem::maybe-note-assembler-routine value stream dstate)
+	  (let ((unsigned-offset (if (and (numberp value) (minusp value))
+				     (+ value #x100000000)
+				     value)))
+	    (disassem::maybe-note-assembler-routine unsigned-offset stream dstate))
 	  (nth-value 1
 		     (disassem::note-code-constant-absolute offset
 							    dstate))))))
@@ -1724,7 +1728,10 @@
   :sign-extend t
   :use-label #'offset-next
   :printer #'(lambda (value stream dstate)
-	       (disassem:maybe-note-assembler-routine value nil dstate)
+	       (let ((unsigned-val (if (and (numberp value) (minusp value))
+				       (+ value #x100000000)
+				       value)))
+		 (disassem:maybe-note-assembler-routine unsigned-val stream dstate))
 	       (print-label value stream dstate)))
 
 (disassem:define-instruction-format (short-cond-jump 16)
