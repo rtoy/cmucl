@@ -211,21 +211,33 @@
   (apply #'xlib:make-event-mask
 	 (append input/boundary-xevents-selection-keys
 		 '(:exposure :structure-notify))))
-(defconstant group-interesting-xevents
-  '(:structure-notify))
+
+#+clx
+(eval-when (compile load eval)
+  (defconstant group-interesting-xevents
+    '(:structure-notify)))
+
+#+clx
 (defconstant group-interesting-xevents-mask
   (apply #'xlib:make-event-mask group-interesting-xevents))
 
 #+clx
-(defconstant child-interesting-xevents
-  '(:key-press :button-press :button-release :structure-notify :exposure
-    :enter-window :leave-window))
+(eval-when (compile load eval)
+  (defconstant child-interesting-xevents
+    '(:key-press :button-press :button-release :structure-notify :exposure
+		 :enter-window :leave-window)))
+
+#+clx
 (defconstant child-interesting-xevents-mask
   (apply #'xlib:make-event-mask child-interesting-xevents))
 
-(defconstant random-typeout-xevents
-  '(:key-press :button-press :button-release :enter-window :leave-window
-    :exposure))
+#+clx
+(eval-when (compile load eval)
+  (defconstant random-typeout-xevents
+    '(:key-press :button-press :button-release :enter-window :leave-window
+		 :exposure)))
+
+#+clx
 (defconstant random-typeout-xevents-mask
   (apply #'xlib:make-event-mask random-typeout-xevents))
 
