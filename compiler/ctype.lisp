@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.18 1991/05/08 17:52:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.19 1991/05/16 16:37:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -749,6 +749,7 @@
 (defun assert-definition-type
        (functional type &key (really-assert t)
 		   ((:error-function *error-function*) #'compiler-warning)
+		   warning-function
 		   (where "declaration"))
   (declare (type functional functional) (type function *error-function*)
 	   (string where))
@@ -779,8 +780,15 @@
 	  (when atype
 	    (assert-continuation-type (return-result return) atype))
 	  (loop for var in vars and type in types do
-	    (unless (basic-var-sets var)
-	      (setf (leaf-type var) type)
-	      (dolist (ref (leaf-refs var))
-		(derive-node-type ref type))))
+	    (cond ((basic-var-sets var)
+		   (when warning-function
+		     (funcall warning-function
+			      "Assignment to argument: ~S~%  ~
+			       prevents use of assertion from function ~
+			       type ~A:~%  ~S~%"
+			      (leaf-name var) where (type-specifier type))))
+		  (t
+		   (setf (leaf-type var) type)
+		   (dolist (ref (leaf-refs var))
+		     (derive-node-type ref type)))))
 	  t))))))
