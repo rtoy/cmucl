@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.35 1997/04/20 21:31:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.36 1997/05/02 20:40:21 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1162,7 +1162,7 @@
 	(let* ((expt (- expt k))
 	       (estr (decimal-string (abs expt)))
 	       (elen (if e (max (length estr) e) (length estr)))
-	       (fdig (if d (if (plusp k) (1+ (- d k)) d) 1))
+	       (fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
 	       (fmin (if (minusp k) (- 1 k) nil))
 	       (spaceleft (if w
 			      (- w 2 elen
