@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.38 1992/08/05 00:27:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.39 1992/12/13 15:18:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,25 +213,25 @@
 (def-source-transform numerator (num)
   (once-only ((n-num `(the rational ,num)))
     `(if (ratiop ,n-num)
-	 (%primitive numerator ,n-num)
+	 (%numerator ,n-num)
 	 ,n-num)))
 ;;;
 (def-source-transform denominator (num)
   (once-only ((n-num `(the rational ,num)))
     `(if (ratiop ,n-num)
-	 (%primitive denominator ,n-num)
+	 (%denominator ,n-num)
 	 1)))
 ;;;
 (def-source-transform realpart (num)
   (once-only ((n-num num))
     `(if (complexp ,n-num)
-	 (%primitive realpart ,n-num)
+	 (%realpart ,n-num)
 	 ,n-num)))
 ;;;
 (def-source-transform imagpart (num)
   (once-only ((n-num num))
     `(cond ((complexp ,n-num)
-	    (%primitive imagpart ,n-num))
+	    (%imagpart ,n-num))
 	   ((floatp ,n-num)
 	    (float 0 ,n-num))
 	   (t
@@ -852,25 +852,6 @@
   `(let ((mask (ash (ldb (byte size 0) -1) posn)))
      (logior (logand new mask)
 	     (logand int (lognot mask)))))
-
-
-;;;; Funny function stubs:
-;;;
-;;;    These functions are the result of compiler transformations.  We never
-;;; actually compile a call to these functions, but we need to have a
-;;; definition to allow constant folding.
-;;;
-
-#-new-compiler
-(progn
-
-(defun %negate (x) (%primitive negate x))
-(defun %ldb (s p i) (%primitive ldb s p i))
-(defun %dpb (n s p i) (%primitive dpb n s p i))
-(defun %mask-field (s p i) (%primitive mask-field s p i))
-(defun %deposit-field (n s p i) (%primitive deposit-field n s p i))
-
-); #-new-compiler progn
 
 
 ;;; Miscellanous numeric transforms:
