@@ -429,14 +429,14 @@
      (etypecase s-expr
        (integer (ldb sxhash-bits-byte s-expr))
        (single-float
-	(let ((bits (vm:single-float-bits s-expr)))
+	(let ((bits (single-float-bits s-expr)))
 	  (ldb sxhash-bits-byte
 	       (logxor (ash bits (- sxmash-rotate-bits))
 		       bits))))
        (double-float
 	(let* ((val s-expr)
-	       (lo (vm:double-float-low-bits val))
-	       (hi (vm:double-float-high-bits val)))
+	       (lo (double-float-low-bits val))
+	       (hi (double-float-high-bits val)))
 	  (ldb sxhash-bits-byte
 	       (logxor (ash lo (- sxmash-rotate-bits))
 		       (ash hi (- sxmash-rotate-bits))
