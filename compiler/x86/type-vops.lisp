@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.3 1997/11/01 22:58:45 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.4 1997/11/04 15:05:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -17,6 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski, Spring-95.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
 
@@ -406,7 +407,7 @@
   object-not-weak-pointer-error weak-pointer-type)
 
 (def-type-vops scavenger-hook-p nil nil nil
-  0)
+  #-gencgc 0 #+gencgc scavenger-hook-type)
 
 (def-type-vops code-component-p nil nil nil
   code-header-type)

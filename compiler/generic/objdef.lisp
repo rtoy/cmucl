@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.40 1997/11/04 09:10:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.41 1997/11/04 15:05:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,7 +156,7 @@
   weak-pointer
   instance-header
   fdefn
-  #+gengc scavenger-hook
+  #+(or gengc gencgc) scavenger-hook
   )
 
 
@@ -370,7 +370,7 @@
 	  :init :null)
   (next :c-type #-alpha "struct weak_pointer *" #+alpha "u32"))
 
-#+gengc
+#+(or gengc gencgc)
 (define-primitive-object (scavenger-hook :type scavenger-hook
 					 :lowtag other-pointer-type
 					 :header scavenger-hook-type

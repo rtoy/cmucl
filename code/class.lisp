@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.37 1997/11/01 22:58:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.38 1997/11/04 15:05:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -500,7 +500,8 @@
 	  
 	  (system-area-pointer :codes (#.vm:sap-type))
 	  (weak-pointer :codes (#.vm:weak-pointer-type))
-	  (scavenger-hook #+gengc :codes #+gengc (#.vm:scavenger-hook-type))
+	  (scavenger-hook #+(or gengc gencgc) :codes
+			  #+(or gengc gencgc) (#.vm:scavenger-hook-type))
 	  (code-component :codes (#.vm:code-header-type))
 	  #-gengc (lra :codes (#.vm:return-pc-header-type))
 	  (fdefn :codes (#.vm:fdefn-type))

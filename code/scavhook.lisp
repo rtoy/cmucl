@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/scavhook.lisp,v 1.3 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/scavhook.lisp,v 1.4 1997/11/04 15:05:37 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 (export '(scavenger-hook scavenger-hook-p make-scavenger-hook
 	  scavenger-hook-value scavenger-hook-function))
 
-#+gengc
+#+(or gengc gencgc)
 (progn
 
 (defun scavenger-hook-p (object)
@@ -56,7 +56,7 @@
 
 ); #+gengc progn
 
-#-gengc
+#-(or gengc gencgc)
 (progn
 
 (defstruct (scavhook
