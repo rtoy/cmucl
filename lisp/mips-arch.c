@@ -69,6 +69,7 @@ void arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 }
 
 static unsigned long *skipped_break_addr, displaced_after_inst;
+static int orig_sigmask;
 
 void arch_do_displaced_inst(struct sigcontext *scp,
 				   unsigned long orig_inst)
@@ -78,6 +79,9 @@ void arch_do_displaced_inst(struct sigcontext *scp,
     unsigned long next_inst;
     int opcode;
     struct sigcontext tmp;
+
+    orig_sigmask = scp->sc_mask;
+    scp->sc_mask = BLOCKABLE;
 
     /* Figure out where the breakpoint is, and what happens next. */
     if (scp->sc_cause & CAUSE_BD) {
@@ -98,7 +102,7 @@ void arch_do_displaced_inst(struct sigcontext *scp,
     if (opcode == 1 || ((opcode & 0x3c) == 0x4) || ((next_inst & 0xf00e0000) == 0x80000000)) {
 	tmp = *scp;
 	emulate_branch(&tmp, next_inst);
-        next_pc = (unsigned long *)scp->sc_pc;
+        next_pc = (unsigned long *)tmp.sc_pc;
     }
     else
 	next_pc = pc+1;
@@ -111,6 +115,10 @@ void arch_do_displaced_inst(struct sigcontext *scp,
 
 static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 {
+    /* Don't disallow recursive breakpoint traps.  Otherwise, we can't */
+    /* use debugger breakpoints anywhere in here. */
+    sigsetmask(scp->sc_mask);
+
     switch (code) {
       case trap_PendingInterrupt:
 	interrupt_handle_pending(scp);
@@ -126,23 +134,18 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 	break;
 
       case trap_Breakpoint:
-	sigsetmask(scp->sc_mask);
-	fake_foreign_function_call(scp);
 	handle_breakpoint(signal, code, scp);
-	undo_fake_foreign_function_call(scp);
 	break;
 
       case trap_FunctionEndBreakpoint:
-	sigsetmask(scp->sc_mask);
-	fake_foreign_function_call(scp);
-	handle_function_end_breakpoint(signal, code, scp);
-	undo_fake_foreign_function_call(scp);
+	scp->sc_pc = (int)handle_function_end_breakpoint(signal, code, scp);
 	break;
 
       case trap_AfterBreakpoint:
 	*skipped_break_addr = (trap_Breakpoint << 16) | 0xd;
 	skipped_break_addr = NULL;
 	*(unsigned long *)scp->sc_pc = displaced_after_inst;
+	scp->sc_mask = orig_sigmask;
 	break;
 
       default:
