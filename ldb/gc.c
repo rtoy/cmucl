@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.22 1990/12/18 00:59:59 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.23 1990/12/18 23:26:27 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -368,26 +368,14 @@ long nwords;
 static
 scavenge_newspace()
 {
-	lispobj *here;
+    lispobj *here, *next;
 
-	here = new_space;
-	while (here < new_space_free_pointer) {
-		lispobj object;
-		int type, words_scavenged;
-
-		object = *here;
-		type = TypeOf(object);
-
-#if defined(DEBUG_SCAVENGE_VERBOSE)
-		printf("Scavenging object at 0x%08x, object = 0x%08x, type = %d\n",
-		       (unsigned long) here, (unsigned long) object, type);
-#endif
-
-		words_scavenged = (scavtab[type])(here, object);
-
-		here += words_scavenged;
-	}
-	gc_assert(here == new_space_free_pointer);
+    here = new_space;
+    while (here < new_space_free_pointer) {
+	next = new_space_free_pointer;
+	scavenge(here, next - here);
+	here = next;
+    }
 }
 
 
@@ -892,13 +880,19 @@ static
 scav_structure_pointer(where, object)
 lispobj *where, object;
 {
-	if (from_space_p(object)) {
-		/* ### I don't know how to transport these! */
+    if (from_space_p(object)) {
+	lispobj first, *first_pointer;
 
-		fprintf(stderr, "GC lossage.  Cannot scavenge structure pointer in from space!\n");
-		gc_lose();
-	} else
-		return 1;
+	/* object is a pointer into from space.  check to see */
+	/* if it has been forwarded */
+	first_pointer = (lispobj *) PTR(object);
+	first = *first_pointer;
+		
+	if (!(Pointerp(first) && new_space_p(first)))
+	    first = *first_pointer = trans_boxed(object);
+	*where = first;
+    }
+    return 1;
 }
 
 

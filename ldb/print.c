@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.14 1990/11/08 22:46:22 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.15 1990/12/18 23:25:34 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -269,13 +269,23 @@ lispobj obj;
 static void brief_struct(obj)
 lispobj obj;
 {
-	printf("structure");
+    printf("#<ptr to ");
+    print_obj(NULL, ((struct structure *)PTR(obj))->slots[0]);
+    printf(" structure>");
 }
 
 static void print_struct(obj)
 lispobj obj;
 {
-	printf("Structure mumble mumble.");
+    struct structure *structure = (struct structure *)PTR(obj);
+    int i;
+    char buffer[16];
+
+    print_obj("type: ", structure->slots[0]);
+    for (i = 1; i < HeaderValue(structure->header); i++) {
+	sprintf(buffer, "slot %d: ", i);
+	print_obj(buffer, structure->slots[i]);
+    }
 }
 
 static void brief_otherptr(obj)

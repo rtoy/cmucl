@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.10 1990/12/01 22:50:38 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.11 1990/12/18 23:26:42 wlott Exp $ */
 
 
 #include <mach.h>
@@ -397,15 +397,6 @@ static lispobj ptrans_list(thing, constant)
     return ((lispobj)orig) | type_ListPointer;
 }
 
-static lispobj ptrans_struct(thing, header, constant)
-     lispobj thing, header;
-     boolean constant;
-{
-    /* Shouldn't be any structures in dynamic space. */
-    gc_abort();
-    return NIL;
-}
-
 static lispobj ptrans_otherptr(thing, header, constant)
      lispobj thing, header;
      boolean constant;
@@ -439,7 +430,6 @@ static lispobj ptrans_otherptr(thing, header, constant)
         return ptrans_vector(thing, 1, 0, FALSE, constant);
 
       case type_SimpleVector:
-      case type_StructureHeader:
         return ptrans_vector(thing, 32, 0, TRUE, constant);
 
       case type_SimpleArrayUnsignedByte2:
@@ -536,7 +526,7 @@ static lispobj *pscav(addr, nwords, constant)
                         break;
                     
                       case type_StructurePointer:
-                        thing = ptrans_struct(thing, header, constant);
+                        thing = ptrans_boxed(thing, header, constant);
                         break;
                     
                       case type_OtherPointer:
