@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.5 1991/08/03 02:32:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.6 1992/03/12 16:28:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,8 +149,8 @@
 
 
 (define-assembly-routine
-    (set-symbol-function)
-    ((:arg symbol descriptor-reg a0-offset)
+    (set-fdefn-function)
+    ((:arg fdefn descriptor-reg a0-offset)
      (:arg function descriptor-reg a1-offset)
 
      (:temp nl0 non-descriptor-reg nl0-offset)
@@ -179,8 +179,9 @@
   ;; The write into memory and the write into the write-list have to be atomic.
   (start-pseudo-atomic)
 
-  ;; First, check to see if we don't need to make a write-list entry.
-  (inst srl nl0 symbol 30)
+  ;; First, check to see if we don't need to make a write-list entry because
+  ;; the fdefn object is ephemeral.
+  (inst srl nl0 fdefn 30)
   (inst bne nl0 zero-tn just-do-write)
   (inst nop)
 
@@ -199,7 +200,7 @@
   ;; we end up collecting garbage while in C.
 
   ;; Save all lisp regs on the stack, so the garbage collector can find them.
-  (save-regs-on-stack (symbol function a2 a3 a4 a5 cname lexenv
+  (save-regs-on-stack (fdefn function a2 a3 a4 a5 cname lexenv
 		       l0 l1 l2 l3 nfp ocfp code-tn lra null-tn)
 
     ;; Convert the return address into an offset.  We don't have to save l0
@@ -272,7 +273,7 @@
 
   SPACE-AVAILABLE
 
-  (inst subu nl1 symbol other-pointer-type)
+  (inst subu nl1 fdefn other-pointer-type)
   (inst sw nl1 nl0)
   (inst addu nl0 4)
   (inst sw nl0 mutator-tn (* mutator-write-list-fill-pointer-slot word-bytes))
@@ -297,7 +298,7 @@
   (inst li nl1 (make-fixup "closure_tramp" :foreign))
 
   NORMAL-FN
-  (storew function symbol symbol-function-slot other-pointer-type)
-  (storew nl1 symbol symbol-raw-function-addr-slot other-pointer-type)
+  (storew function fdefn fdefn-function-slot other-pointer-type)
+  (storew nl1 fdefn fdefn-raw-addr-slot other-pointer-type)
 
   (end-pseudo-atomic nl0))
