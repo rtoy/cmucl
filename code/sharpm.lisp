@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.14 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.15 1998/02/11 10:03:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -378,7 +378,9 @@
 
 (defun sharp-P (stream sub-char numarg)
   (ignore-numarg sub-char numarg)
-  (parse-namestring (read stream t nil t)))
+  (let ((namestring (read stream t nil t)))
+    (unless *read-suppress*
+      (parse-namestring namestring))))
 
 (make-dispatch-macro-character #\# t)
 (set-dispatch-macro-character #\# #\\ #'sharp-backslash)
