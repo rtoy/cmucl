@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.127 2001/10/31 13:16:37 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.128 2002/01/27 18:29:23 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3349,37 +3349,31 @@
 
 ;;; Update the global environment to correspond to the new definition.
 ;;;
-(def-ir1-translator %defconstant ((name value doc) start cont
-				  :kind :function)
-  (let ((name (eval name))
-	(newval (eval value)))
-    (unless (symbolp name)
-      (compiler-error "Constant name is not a symbol: ~S." name))
-    (when (eq name t)
-      (compiler-error "Can't change T."))
-    (when (eq name nil)
-      (compiler-error "Nihil ex nihil (Can't change NIL)."))
-    (when (keywordp name)
-      (compiler-error "Can't change the value of keywords."))
+(defun do-defconstant-compile-time (name value doc)
+  (unless (symbolp name)
+    (compiler-error "Constant name is not a symbol: ~S." name))
+  (when (eq name t)
+    (compiler-error "Can't change T."))
+  (when (eq name nil)
+    (compiler-error "Nihil ex nihil (Can't change NIL)."))
+  (when (keywordp name)
+    (compiler-error "Can't change the value of keywords."))
 
-    (let ((kind (info variable kind name)))
-      (case kind
-	(:constant
-	 (unless (equalp newval (info variable constant-value name))
-	   (compiler-warning "Redefining constant ~S as:~%  ~S"
-			     name newval)))
-	(:global)
-	(t
-	 (compiler-warning "Redefining ~(~A~) ~S to be a constant."
-			   kind name))))
+  (let ((kind (info variable kind name)))
+    (case kind
+      (:constant
+       (unless (equalp value (info variable constant-value name))
+	 (compiler-warning "Redefining constant ~S as:~%  ~S"
+			   name value)))
+      (:global)
+      (t
+       (compiler-warning "Redefining ~(~A~) ~S to be a constant."
+			 kind name))))
 
-    (setf (info variable kind name) :constant)
-    (setf (info variable where-from name) :defined)
-    (setf (info variable constant-value name) newval)
-    (remhash name *free-variables*))
-
-  (ir1-convert start cont `(%%defconstant ,name ,value ,doc)))
-
+  (setf (info variable kind name) :constant)
+  (setf (info variable where-from name) :defined)
+  (setf (info variable constant-value name) value)
+  (remhash name *free-variables*))
 
 ;;;; Defining global functions:
 

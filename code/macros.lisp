@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.71 2001/12/04 22:27:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.72 2002/01/27 18:29:23 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -344,7 +344,11 @@
   value is constant and may be compiled into code.  If the variable already has
   a value, and this is not equal to the init, an error is signalled.  The third
   argument is an optional documentation string for the variable."
-  `(c::%defconstant ',var ,val ',doc))
+  `(progn
+     (eval-when (:compile-toplevel)
+       (c::do-defconstant-compile-time ',var ,val ',doc))
+     (eval-when (:load-toplevel :execute)
+       (c::%%defconstant ',var ,val ',doc))))
 
 ;;; %Defconstant, %%Defconstant  --  Internal
 ;;;
