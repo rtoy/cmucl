@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.24 1998/01/05 22:34:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.25 1998/01/08 23:47:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1247,16 +1247,36 @@
 ;;; NUMERIC-TYPES-ADJACENT  --  Internal
 ;;;
 ;;;    If the high bound of Low is adjacent to the low bound of High, then
-;;; return T, otherwise NIL.
+;;; return True, otherwise NIL.
 ;;;
 (defun numeric-types-adjacent (low high)
   (let ((low-bound (numeric-type-high low))
 	(high-bound (numeric-type-low high)))
     (cond ((not (and low-bound high-bound)) nil)
+	  ((and (consp low-bound) (consp high-bound)) nil)
 	  ((consp low-bound)
-	   (eql (car low-bound) high-bound))
+	   #-negative-zero-is-not-zero
+	   (let ((low-value (car low-bound)))
+	     (or (eql low-value high-bound)
+		 (and (eql low-value -0f0) (eql high-bound 0f0))
+		 (and (eql low-value 0f0) (eql high-bound -0f0))
+		 (and (eql low-value -0d0) (eql high-bound 0d0))
+		 (and (eql low-value 0d0) (eql high-bound -0d0))))
+	   #+negative-zero-is-not-zero
+	   (eql (car low-value) high-bound))
 	  ((consp high-bound)
-	   (eql (car high-bound) low-bound))
+	   #-negative-zero-is-not-zero
+	   (let ((high-value (car high-bound)))
+	     (or (eql high-value low-bound)
+		 (and (eql high-value -0f0) (eql low-bound 0f0))
+		 (and (eql high-value 0f0) (eql low-bound -0f0))
+		 (and (eql high-value -0d0) (eql low-bound 0d0))
+		 (and (eql high-value 0d0) (eql low-bound -0d0))))
+	   #+negative-zero-is-not-zero
+	   (eql (car high-value) low-bound))
+	  #+negative-zero-is-not-zero
+	  ((or (and (eql low-bound -0f0) (eql high-bound 0f0))
+	       (and (eql low-bound -0d0) (eql high-bound 0d0))))
 	  ((and (eq (numeric-type-class low) 'integer)
 		(eq (numeric-type-class high) 'integer))
 	   (eql (1+ low-bound) high-bound))
