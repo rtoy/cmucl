@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.30 2000/05/12 20:54:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.31 2000/05/13 12:28:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,7 +351,8 @@
 				    `(,atype
 				      (data-vector-set (the ,atype vector)
 						       index
-						       (the ,type new-value)))))
+						       (the ,type new-value))
+				      new-value)))
 			      stuff))))
       (dispatch
        t
