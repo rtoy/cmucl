@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.94 2004/07/15 13:46:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.95 2004/07/15 16:26:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1359,6 +1359,7 @@
 (defconstant l_incr 1 "increment the file pointer")
 (defconstant l_xtnd 2 "extend the file size")
 
+#-solaris
 (defun unix-lseek (fd offset whence)
   "Unix-lseek accepts a file descriptor and moves the file pointer ahead
    a certain offset for that file.  Whence can be any of the following:
@@ -1371,6 +1372,26 @@
 	   (type file-offset offset)
 	   (type (integer 0 2) whence))
   (off-t-syscall ("lseek" (int off-t int)) fd offset whence))
+
+#+solaris
+(defun unix-lseek (fd offset whence)
+  "Unix-lseek accepts a file descriptor and moves the file pointer ahead
+   a certain offset for that file.  Whence can be any of the following:
+
+   l_set        Set the file pointer.
+   l_incr       Increment the file pointer.
+   l_xtnd       Extend the file size.
+  "
+  (declare (type unix-fd fd)
+	   (type file-offset64 offset)
+	   (type (integer 0 2) whence))
+  (let ((result (alien-funcall
+                 (extern-alien "lseek64" (function off64-t int off64-t int))
+                 fd offset whence)))
+    (if (minusp result)
+        (progn
+          (values nil unix-errno))
+        (values result 0))))
 
 ;;; Unix-mkdir accepts a name and a mode and attempts to create the
 ;;; corresponding directory with mode mode.
