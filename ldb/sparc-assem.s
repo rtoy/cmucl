@@ -51,7 +51,7 @@ NAME(call_into_lisp):
 
         /* Load the rest of lisp state. */
         load(current_dynamic_space_free_pointer, NL0)
-	add	NL0, ALLOC
+	add	NL0, ALLOC, ALLOC
         load(current_binding_stack_pointer, BSP)
         load(current_control_stack_pointer, CSP)
         load(current_control_frame_pointer, OCFP)
@@ -159,7 +159,7 @@ _call_into_c:
 
         /* Load the rest of lisp state. */
         load(current_dynamic_space_free_pointer, NL1)
-	add	NL1, ALLOC
+	add	NL1, ALLOC, ALLOC
         load(current_binding_stack_pointer, BSP)
         load(current_control_stack_pointer, CSP)
         load(current_control_frame_pointer, CFP)
