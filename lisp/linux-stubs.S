@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.4 1997/10/02 17:10:32 dtc Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.5 1997/10/02 17:42:21 dtc Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -168,7 +168,6 @@ PVE_stub_ ## fct: ;\
  doe(fclose)
  doe(fcntl)
  doe(fcvt)
- doe(fdatasync)
  doe(fdopen)
  doe(feof)
  doe(ferror)
@@ -426,7 +425,6 @@ PVE_stub_ ## fct: ;\
  doe(munlock)
  doe(munlockall)
  doe(munmap)
- doe(nanosleep)
  doe(nice)
  doe(nl_langinfo)
  doe(nrand48)
@@ -557,14 +555,6 @@ PVE_stub_ ## fct: ;\
  doe(sbrk)
  doe(scandir)
  doe(scanf)
- doe(sched_get_priority_max)
- doe(sched_get_priority_min)
- doe(sched_getparam)
- doe(sched_getscheduler)
- doe(sched_rr_get_interval)
- doe(sched_setparam)
- doe(sched_setscheduler)
- doe(sched_yield)
  doe(seed48)
  doe(seekdir)
  doe(select)
@@ -731,7 +721,6 @@ PVE_stub_ ## fct: ;\
  doe(syscall_readv)
  doe(syscall_writev)
  doe(sysconf)
- doe(sysctl)
  doe(sysinfo)
  doe(syslog)
  doe(system)
