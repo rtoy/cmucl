@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.51 2004/12/21 17:59:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.52 2005/02/25 18:21:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,7 +77,9 @@
 		  :format-control
 		  "NIL output type invalid for this sequence function."
 		  :format-arguments ())))
-      ((or (union-type-p type) (member-type-p type))
+      ((or (union-type-p type)
+	   (and (member-type-p type)
+		(not (eq type kernel:*null-type*))))
        (error 'simple-type-error
 	      :datum type
 	      :exptected-type 'sequence
