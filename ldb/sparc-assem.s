@@ -309,7 +309,12 @@ __sigtramp:
 #define SIGNUMOFF SCOFF+SCSIZE
 #define CODEOFF SCOFF+SCSIZE+4
 #define ADDROFF SCOFF+SCSIZE+12
+
+#ifdef MACH
 #define OSCOFF ADDROFF
+#else
+#define OSCOFF SCOFF+SCSIZE+16
+#endif
 
         ! Allocate space for our sigcontext.
         sub     %sp, SCSIZE+SA(MINFRAME)-64, %sp
@@ -319,10 +324,10 @@ __sigtramp:
         ! been trashed.  But luckly, they have been saved on the stack.
         ! So we need to extract the saved stack pointer from the sigcontext
         ! to determine where they are.
-        std     %0, [%sp+IREGSOFF]
-        std     %2, [%sp+IREGSOFF+8]
-        std     %4, [%sp+IREGSOFF+16]
-        std     %6, [%sp+IREGSOFF+24]
+        std     %g0, [%sp+IREGSOFF]
+        std     %g2, [%sp+IREGSOFF+8]
+        std     %g4, [%sp+IREGSOFF+16]
+        std     %g6, [%sp+IREGSOFF+24]
         std     %o0, [%sp+IREGSOFF+32]
         ld      [%sp + OSCOFF+8], %o0
         std     %o2, [%sp+IREGSOFF+40]
@@ -330,22 +335,22 @@ __sigtramp:
         st      %o0, [%sp+IREGSOFF+56]
         st      %o7, [%sp+IREGSOFF+60]
 
-        ldd     [%o0], %16
-        ldd     [%o0+8], %18
-        ldd     [%o0+16], %20
-        ldd     [%o0+24], %22
-        ldd     [%o0+32], %24
-        ldd     [%o0+40], %26
-        ldd     [%o0+48], %28
-        ldd     [%o0+56], %30
-        std     %16, [%sp+IREGSOFF+64]
-        std     %18, [%sp+IREGSOFF+72]
-        std     %20, [%sp+IREGSOFF+80]
-        std     %22, [%sp+IREGSOFF+88]
-        std     %24, [%sp+IREGSOFF+96]
-        std     %26, [%sp+IREGSOFF+104]
-        std     %28, [%sp+IREGSOFF+112]
-        std     %30, [%sp+IREGSOFF+120]
+        ldd     [%o0], %l0
+        ldd     [%o0+8], %l2
+        ldd     [%o0+16], %l4
+        ldd     [%o0+24], %l6
+        ldd     [%o0+32], %i0
+        ldd     [%o0+40], %i2
+        ldd     [%o0+48], %i4
+        ldd     [%o0+56], %i6
+        std     %l0, [%sp+IREGSOFF+64]
+        std     %l2, [%sp+IREGSOFF+72]
+        std     %l4, [%sp+IREGSOFF+80]
+        std     %l6, [%sp+IREGSOFF+88]
+        std     %i0, [%sp+IREGSOFF+96]
+        std     %i2, [%sp+IREGSOFF+104]
+        std     %i4, [%sp+IREGSOFF+112]
+        std     %i6, [%sp+IREGSOFF+120]
 
         ! Copy the original sigcontext down to our sigcontext.
         ld      [%sp + OSCOFF], %l0
@@ -439,32 +444,32 @@ _sigreturn:
 	! The locals and in are restored from the stack, so we have to put
 	! them there.
 	ld	[%o0 + 8], %o1
-        ldd     [%o0 + 32+(16*4)], %16
-        ldd     [%o0 + 32+(18*4)], %18
-        ldd     [%o0 + 32+(20*4)], %20
-        ldd     [%o0 + 32+(22*4)], %22
-        ldd     [%o0 + 32+(24*4)], %24
-        ldd     [%o0 + 32+(26*4)], %26
-        ldd     [%o0 + 32+(28*4)], %28
-        ldd     [%o0 + 32+(30*4)], %30
-	std	%16, [%o1 + (0*4)]
-	std	%18, [%o1 + (2*4)]
-	std	%20, [%o1 + (4*4)]
-	std	%22, [%o1 + (6*4)]
-	std	%24, [%o1 + (8*4)]
-	std	%26, [%o1 + (10*4)]
-	std	%28, [%o1 + (12*4)]
-	std	%30, [%o1 + (14*4)]
+        ldd     [%o0 + 32+(16*4)], %l0
+        ldd     [%o0 + 32+(18*4)], %l2
+        ldd     [%o0 + 32+(20*4)], %l4
+        ldd     [%o0 + 32+(22*4)], %l6
+        ldd     [%o0 + 32+(24*4)], %i0
+        ldd     [%o0 + 32+(26*4)], %i2
+        ldd     [%o0 + 32+(28*4)], %i4
+        ldd     [%o0 + 32+(30*4)], %i6
+	std	%l0, [%o1 + (0*4)]
+	std	%l2, [%o1 + (2*4)]
+	std	%l4, [%o1 + (4*4)]
+	std	%l6, [%o1 + (6*4)]
+	std	%i0, [%o1 + (8*4)]
+	std	%i2, [%o1 + (10*4)]
+	std	%i4, [%o1 + (12*4)]
+	std	%i6, [%o1 + (14*4)]
 
         ! Restore the globals and outs.  Don't restore %g1, %o0, or %sp
 	! 'cause they get restored from the sigcontext.
-        ldd     [%o0 + 32+(2*4)], %2
-        ldd     [%o0 + 32+(4*4)], %4
-        ldd     [%o0 + 32+(6*4)], %6
-        ld      [%o0 + 32+(9*4)], %9
-        ldd     [%o0 + 32+(10*4)], %10
-        ldd     [%o0 + 32+(12*4)], %12
-        ld      [%o0 + 32+(15*4)], %15
+        ldd     [%o0 + 32+(2*4)], %g2
+        ldd     [%o0 + 32+(4*4)], %g4
+        ldd     [%o0 + 32+(6*4)], %g6
+        ld      [%o0 + 32+(9*4)], %o1
+        ldd     [%o0 + 32+(10*4)], %o2
+        ldd     [%o0 + 32+(12*4)], %o4
+        ld      [%o0 + 32+(15*4)], %o7
 
 	set	139, %g1		! sigcleanup system call
 	t	0

@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <signal.h>
 #include <sys/file.h>
-#include <mach.h>
 
-#include "lisp.h"
 #include "ldb.h"
+#include "os.h"
+#include "lisp.h"
 #include "core.h"
 #include "globals.h"
 #include "lispregs.h"
@@ -71,7 +71,7 @@ lispobj *addr, *end;
     data = write_bytes((char *)addr, bytes);
 
     putw(data, save_file);
-    putw((vm_address_t)addr / CORE_PAGESIZE, save_file);
+    putw((os_vm_address_t)((long)addr / CORE_PAGESIZE), save_file);
     putw((bytes + CORE_PAGESIZE - 1) / CORE_PAGESIZE, save_file);
 }
 
@@ -80,8 +80,8 @@ char *name, *start, *end;
 {
     long len;
 
-    start = (char *)trunc_page((vm_address_t)start);
-    end = (char *)round_page((vm_address_t)end);
+    start = (char *)os_trunc_to_page((os_vm_address_t)start);
+    end = (char *)os_round_up_to_page((os_vm_address_t)end);
 
     len = end-start;
 
@@ -124,7 +124,7 @@ struct sigcontext *context;
     fwrite(&ms, sizeof(ms), 1, save_file);
 }
 
-static save_handler(signal, code, context)
+static void save_handler(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
@@ -209,33 +209,31 @@ char *filename;
 /* State that must be preserved between load and restore. */
 
 static struct sigcontext context;
-static vm_address_t number_stack;
+static os_vm_address_t number_stack;
 
 
-static vm_address_t map_stack(fd, start, end, data_page, name)
+static os_vm_address_t map_stack(fd, start, end, data_page, name)
 int fd;
-vm_address_t start, end;
+os_vm_address_t start, end;
 long data_page;
 char *name;
 {
-    vm_size_t len;
-    kern_return_t res;
+    os_vm_size_t len;
 
-    start = trunc_page(start);
-    len = round_page(end) - start;
+    start = os_trunc_to_page(start);
+    len = os_round_up_to_page(end) - start;
 
     if (len != 0) {
         if (start == NULL) {
-            res = vm_allocate(task_self(), &start, len, TRUE);
-            if (res != KERN_SUCCESS) {
-                fprintf(stderr, "Could not allocate stageing area for the %s stack: %s.\n", name, mach_error_string(res));
-            }
+            start = os_validate(start, len);
+	    if(start==NULL)
+                fprintf(stderr, "Could not allocate stageing area for the %s stack.\n", name);
         }
 
 #ifdef PRINTNOISE
         printf("Mapping %d bytes onto the %s stack at 0x%08x.\n", len, name, start);
 #endif
-        os_map(fd, (1+data_page)*CORE_PAGESIZE, start, len);
+        start=os_map(fd, (1+data_page)*CORE_PAGESIZE, start, len);
     }
 
     return start;
@@ -263,44 +261,44 @@ struct machine_state *ms;
     read(fd, &context, sizeof(context));
 
     map_stack(fd,
-              (vm_address_t)control_stack,
-              (vm_address_t)current_control_stack_pointer,
+              (os_vm_address_t)control_stack,
+              (os_vm_address_t)current_control_stack_pointer,
               ms->control_stack_page,
               "Control");
 
     map_stack(fd,
-              (vm_address_t)binding_stack,
+              (os_vm_address_t)binding_stack,
 #ifndef ibmrt
-              (vm_address_t)current_binding_stack_pointer,
+              (os_vm_address_t)current_binding_stack_pointer,
 #else
-	      (vm_address_t)SymbolValue(BINDING_STACK_POINTER),
+	      (os_vm_address_t)SymbolValue(BINDING_STACK_POINTER),
 #endif
               ms->binding_stack_page,
               "Binding");
 
     number_stack = map_stack(fd,
-                             (vm_address_t)NULL,
-                             round_page((vm_address_t)number_stack_start) - (vm_address_t)context.sc_regs[NSP],
+                             (os_vm_address_t)NULL,
+                             os_round_up_to_page((os_vm_address_t)number_stack_start) - (os_vm_address_t)context.sc_regs[NSP],
                              ms->number_stack_page,
                              "Number");
 }
 
-static restore_handler(signal, code, old_context)
+static void restore_handler(signal, code, old_context)
 int signal, code;
 struct sigcontext *old_context;
 {
-    vm_size_t len;
-    vm_address_t nsp;
+    os_vm_size_t len;
+    os_vm_address_t nsp;
 
     /* We have to move the number stack into place. */
-    nsp = trunc_page((vm_address_t)context.sc_regs[NSP]);
-    len = (vm_address_t)number_stack_start - nsp;
+    nsp = os_trunc_to_page((os_vm_address_t)context.sc_regs[NSP]);
+    len = (os_vm_address_t)number_stack_start - nsp;
 #ifdef PRINTNOISE
     printf("Moving the number stack from 0x%08x to 0x%08x.\n", number_stack, nsp);
 #endif
     bcopy(number_stack, nsp, len);
 
-    vm_deallocate(task_self(), number_stack, round_page(len));
+    os_invalidate(number_stack, os_round_up_to_page(len));
 
 #ifndef ibmrt
     sigreturn(&context);
