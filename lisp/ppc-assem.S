@@ -397,6 +397,10 @@ lra:
 	.globl _undefined_tramp
 	.byte 0,0,0,type_FunctionHeader
 
+	/*
+	 * The next 4 bytes are the encoding for a PPC jump instruction.
+	 * The jump should go to the twllei instruction below.
+	 */
 	.byte 18<<2
 _undefined_tramp:	
 	.byte 0,0,24
@@ -406,11 +410,18 @@ _undefined_tramp:
 	.long NIL
 	.long NIL
 	twllei reg_ZERO,trap_Cerror
+        /* Number of argument bytes */
 	.byte 4
 	.byte UNDEFINED_SYMBOL_ERROR
+        /* Escape to create 16bit number from following two bytes, 
+	   in little-endian order */
 	.byte 254
+	.byte SC_OFFSET_LO(sc_DescriptorReg, reg_FDEFN_NUM)
+	.byte SC_OFFSET_HI(sc_DescriptorReg, reg_FDEFN_NUM)
+	/*
 	.byte sc_DescriptorReg+0x40
 	.byte 1
+	*/
 	.align 2
 #ifdef PPC_FUN_HACK_MAYBE
 1:	lwz reg_CODE,FDEFN_RAW_ADDR_OFFSET(reg_CNAME)

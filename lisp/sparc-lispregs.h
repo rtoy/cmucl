@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.6 2002/11/13 17:14:18 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.7 2004/07/30 00:53:41 rtoy Exp $ */
 
 
 
@@ -106,13 +106,6 @@
 #define reg_CODE_NUM	IREG_NUM(5)
 #define reg_LIP		IREG(7)
 #define reg_LIP_NUM	IREG_NUM(7)
-
-/*
- * Macros to compute the SC_OFFSET value.  See read-var-integer and
- * sc-offset and friends in debug-info.lisp
- */
-#define	SC_OFFSET_HI(sc, reg)	((SC_OFFSET(sc,reg)) >> 8)
-#define	SC_OFFSET_LO(sc, reg)	((SC_OFFSET(sc,reg)) & 0xff)
 
 #define REGNAMES \
 	"ZERO",		"ALLOC",	"NULL",		"CSP", \
