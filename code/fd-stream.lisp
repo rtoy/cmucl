@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.59 2002/04/03 18:30:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.60 2002/08/02 14:43:08 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -857,7 +857,13 @@
 		  (eql size 4))
 	  ;; Support for n-byte operations on 8-, 16-, and 32-bit streams
 	  (setf (fd-stream-n-bin stream) #'fd-stream-read-n-bytes)
-	  (when (and buffer-p (eql size 1))
+	  (when (and buffer-p (eql size 1)
+		     (or (eq type 'unsigned-byte)
+			 (eq type :default)))
+	    ;; We only create this buffer for streams of type
+	    ;; (unsigned-byte 8).  Because there's no buffer, the
+	    ;; other element-types will dispatch to the appropriate
+	    ;; input (output) routine in fast-read-byte.
 	    (setf (lisp-stream-in-buffer stream)
 		  (make-array in-buffer-length
 			      :element-type '(unsigned-byte 8)))))
