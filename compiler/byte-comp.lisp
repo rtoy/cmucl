@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.8 1993/05/14 09:11:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.9 1993/05/14 10:20:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -350,7 +350,7 @@
        (when arg
 	 (annotate-continuation arg 1))))
     (mv-combination
-     ;; Annoate the args.  We allow initial args to supply a fixed number of
+     ;; annotate the args.  We allow initial args to supply a fixed number of
      ;; values, but everything after the first :unknown arg must also be
      ;; unknown.  This picks off most of the standard uses (i.e. calls to
      ;; apply), but still is easy to implement.
@@ -376,7 +376,10 @@
   (undefined-value))
 
 (defun annotate-local-call (call)
-  (annotate-basic-combination-args call)
+  (if (mv-combination-p call)
+      (annotate-continuation (first (basic-combination-args call))
+			     (length (lambda-vars (combination-lambda call))))
+      (annotate-basic-combination-args call))
   (annotate-continuation (basic-combination-fun call) 0)
   (when (node-tail-p call)
     (set-tail-local-call-successor call)))
@@ -1128,23 +1131,23 @@
 		       7)
 		      (t
 		       num-args))))
-	   ;; ### :call-site
-	   (output-byte segment
-			(logior (cond ((node-tail-p call)
-				       byte-local-tail-call)
-				      ((member results '(0 1))
-				       byte-local-call)
-				      (t
-				       byte-local-multiple-call))
-				operand)))
-	 ;; Emit a reference to the label.
-	 (output-reference segment
-			   (byte-lambda-info-label (lambda-info lambda)))
-	 ;; ### :unknown-return
-	 ;; Fix up the results.
-	 (unless (node-tail-p call)
-	   (checked-canonicalize-values segment cont
-					(if (eql results 0) 1 results)))))))
+	   (multiple-value-bind
+	       (opcode ret-vals)
+	       (cond ((node-tail-p call)
+		      (values byte-local-tail-call 0))
+		     ((member results '(0 1))
+		      (values byte-local-call 1))
+		     (t
+		      (values byte-local-multiple-call :unknown)))
+	     ;; ### :call-site
+	     (output-byte segment (logior opcode operand))
+	     ;; Emit a reference to the label.
+	     (output-reference segment
+			       (byte-lambda-info-label (lambda-info lambda)))
+	     ;; ### :unknown-return
+	     ;; Fix up the results.
+	     (unless (node-tail-p call)
+	       (checked-canonicalize-values segment cont ret-vals))))))))
   (undefined-value))
 
 (defun generate-byte-code-for-full-call (segment call cont num-args)
@@ -1188,16 +1191,15 @@
 	 ((node-tail-p call)
 	  (output-byte segment (logior byte-tail-call operand)))
 	 (t
-	  (output-byte segment
-		       (logior
-			(case results
-			  (:unknown byte-multiple-call)
-			  ((0 1) byte-call)
-			  (t byte-multiple-call))
-			operand))
+	  (multiple-value-bind
+	      (opcode ret-vals)
+	      (case results
+		(:unknown (values byte-multiple-call :unknown))
+		((0 1) (values byte-call 1))
+		(t (values byte-multiple-call :unknown)))
+	  (output-byte segment (logior opcode operand))
 	  ;; ### :unknown-return
-	  (checked-canonicalize-values segment cont
-				       (if (eql results 0) 1 results)))))))))
+	  (checked-canonicalize-values segment cont ret-vals)))))))))
 
 
 (defun generate-byte-code-for-known-call (segment call cont num-args)
