@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.2 1990/12/01 16:33:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.3 1991/01/20 22:46:52 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -251,47 +251,41 @@
 
 
 (define-vop (nlx-entry-multiple)
-  (:args (top :target dst) (start :target src) (count :target num))
+  (:args (top :target result) (src) (count))
   ;; Again, no SC restrictions for the args, 'cause the loading would
   ;; happen before the entry label.
   (:info label)
-  (:temporary (:scs (any-reg) :from (:argument 0)) dst)
-  (:temporary (:scs (any-reg) :from (:argument 1)) src)
-  (:temporary (:scs (any-reg) :from (:argument 2)) num)
+  (:temporary (:scs (any-reg)) dst)
   (:temporary (:scs (descriptor-reg)) temp)
-  (:results (new-start) (new-count))
+  (:results (result :scs (any-reg) :from (:argument 0))
+	    (num :scs (any-reg) :from (:argument 0)))
   (:save-p :force-to-stack)
   (:generator 30
     (emit-return-pc label)
     (let ((loop (gen-label))
 	  (done (gen-label)))
 
-      ;; Copy args.
-      (load-stack-tn dst top)
-      (move src start)
-      (move num count)
-
-      ;; Establish results.
-      (sc-case new-start
-	(any-reg (move new-start dst))
-	(control-stack (store-stack-tn new-start dst)))
-      (inst cmp num)
+      ;; Setup results, and test for the zero value case.
+      (load-stack-tn result top)
+      (inst cmp count)
       (inst b :eq done)
-      (sc-case new-count
-	(any-reg (inst move new-count num))
-	(control-stack (store-stack-tn new-count num)))
+      (inst li num 0)
 
-      ;; Copy stuff on stack.
+      ;; Compute dst as one slot down from result, because we inc the index
+      ;; before we use it.
+      (inst sub dst result 4)
+
+      ;; Copy stuff down the stack.
       (emit-label loop)
-      (loadw temp src)
-      (inst add src src vm:word-bytes)
-      (storew temp dst)
-      (inst subcc num (fixnum 1))
-      (inst b :ge loop)
-      (inst add dst dst vm:word-bytes)
+      (inst ld temp src num)
+      (inst add num (fixnum 1))
+      (inst cmp num count)
+      (inst b :ne loop)
+      (inst st temp dst num)
 
+      ;; Reset the CSP.
       (emit-label done)
-      (inst move csp-tn dst))))
+      (inst add csp-tn result num))))
 
 
 ;;; This VOP is just to force the TNs used in the cleanup onto the stack.
