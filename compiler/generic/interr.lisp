@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.9 1998/03/21 07:55:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.10 1998/07/24 17:22:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -140,16 +140,12 @@
    "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 16) (*)).")
   (object-not-simple-array-unsigned-byte-32
    "Object is not of type (SIMPLE-ARRAY (UNSIGNED-BYTE 32) (*)).")
-  #+signed-array 
   (object-not-simple-array-signed-byte-8
    "Object is not of type (SIMPLE-ARRAY (SIGNED-BYTE 8) (*)).")
-  #+signed-array 
   (object-not-simple-array-signed-byte-16
    "Object is not of type (SIMPLE-ARRAY (SIGNED-BYTE 16) (*)).")
-  #+signed-array 
   (object-not-simple-array-signed-byte-30
    "Object is not of type (SIMPLE-ARRAY FIXNUM (*)).")
-  #+signed-array 
   (object-not-simple-array-signed-byte-32
    "Object is not of type (SIMPLE-ARRAY (SIGNED-BYTE 32) (*)).")
   (object-not-simple-array-single-float
@@ -159,30 +155,24 @@
   #+long-float
   (object-not-simple-array-long-float
    "Object is not of type (SIMPLE-ARRAY LONG-FLOAT (*)).")
-  #+complex-float
   (object-not-simple-array-complex-single-float
    "Object is not of type (SIMPLE-ARRAY (COMPLEX SINGLE-FLOAT) (*)).")
-  #+complex-float
   (object-not-simple-array-complex-double-float
    "Object is not of type (SIMPLE-ARRAY (COMPLEX DOUBLE-FLOAT) (*)).")
-  #+(and complex-float long-float)
+  #+long-float
   (object-not-simple-array-complex-long-float
    "Object is not of type (SIMPLE-ARRAY (COMPLEX LONG-FLOAT) (*)).")
   (object-not-complex
    "Object is not of type COMPLEX.")
-  #+complex-float
   (object-not-complex-rational
    "Object is not of type (COMPLEX RATIONAL).")
-  #+complex-float
   (object-not-complex-float
    "Object is not of type (COMPLEX FLOAT).")
-  #+complex-float
   (object-not-complex-single-float
    "Object is not of type (COMPLEX SINGLE-FLOAT).")
-  #+complex-float
   (object-not-complex-double-float
    "Object is not of type (COMPLEX DOUBLE-FLOAT).")
-  #+(and complex-float long-float)
+  #+long-float
   (object-not-complex-long-float
    "Object is not of type (COMPLEX LONG-FLOAT).")
   (object-not-weak-pointer

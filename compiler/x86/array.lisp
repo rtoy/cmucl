@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.14 1998/07/24 15:21:29 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.15 1998/07/24 17:22:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,9 +133,7 @@
 (def-full-data-vector-frobs simple-vector * descriptor-reg any-reg)
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
-#+signed-array 
 (def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num any-reg)
-#+signed-array 
 (def-full-data-vector-frobs simple-array-signed-byte-32 signed-num signed-reg)
 
 ;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
@@ -608,8 +606,6 @@
 		  (inst fxch value)))))))
 
 ;;; Complex float variants.
-#+complex-float
-(progn
 (define-vop (data-vector-ref/simple-array-complex-single-float)
   (:note "inline array access")
   (:translate data-vector-ref)
@@ -1058,8 +1054,6 @@
 	(inst fstd result-imag))
       (inst fxch value-imag))))
 
-) ; complex-float
-
 
 ;;;;
 ;;;; dtc expanded and fixed the following:
@@ -1293,8 +1287,6 @@
 	 value)
    (move result value)))
 
-#+signed-array 
-(progn
 
 ;;; signed-byte-8
 
@@ -1440,7 +1432,6 @@
 	  ax-tn)
     (move result eax)))
 
-) ; end signed-array
 
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
@@ -1496,8 +1487,6 @@
 	      long-float))
 
 ;;;; Complex-float raw structure slot accessors.
-#+complex-float
-(progn
 
 (define-vop (raw-ref-complex-single
 	     data-vector-ref/simple-array-complex-single-float)
@@ -1561,8 +1550,6 @@
   (:translate %raw-set-complex-long)
   (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
 	      complex-long-float))
-
-) ; end progn complex-float
 
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of

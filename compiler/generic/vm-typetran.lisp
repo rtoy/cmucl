@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.15 1998/03/21 07:55:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.16 1998/07/24 17:22:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,11 +27,9 @@
 
 (define-type-predicate base-char-p base-char)
 (define-type-predicate bignump bignum)
-#+complex-float
 (define-type-predicate complex-double-float-p (complex double-float))
-#+complex-float
 (define-type-predicate complex-single-float-p (complex single-float))
-#+(and complex-float long-float)
+#+long-float
 (define-type-predicate complex-long-float-p (complex long-float))
 (define-type-predicate double-float-p double-float)
 (define-type-predicate fixnump fixnum)
@@ -50,16 +48,12 @@
 		       (simple-array (unsigned-byte 16) (*)))
 (define-type-predicate simple-array-unsigned-byte-32-p
 		       (simple-array (unsigned-byte 32) (*)))
-#+signed-array 
 (define-type-predicate simple-array-signed-byte-8-p
 		       (simple-array (signed-byte 8) (*)))
-#+signed-array 
 (define-type-predicate simple-array-signed-byte-16-p
 		       (simple-array (signed-byte 16) (*)))
-#+signed-array 
 (define-type-predicate simple-array-signed-byte-30-p
 		       (simple-array (signed-byte 30) (*)))
-#+signed-array 
 (define-type-predicate simple-array-signed-byte-32-p
 		       (simple-array (signed-byte 32) (*)))
 (define-type-predicate simple-array-single-float-p
@@ -69,13 +63,11 @@
 #+long-float
 (define-type-predicate simple-array-long-float-p
 		       (simple-array long-float (*)))
-#+complex-float
 (define-type-predicate simple-array-complex-single-float-p
 		       (simple-array (complex single-float) (*)))
-#+complex-float
 (define-type-predicate simple-array-complex-double-float-p
 		       (simple-array (complex double-float) (*)))
-#+(and complex-float long-float)
+#+long-float
 (define-type-predicate simple-array-complex-long-float-p
 		       (simple-array (complex long-float) (*)))
 (define-type-predicate system-area-pointer-p system-area-pointer)

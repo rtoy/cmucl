@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.26 1998/03/21 08:08:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.27 1998/07/24 17:22:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -209,15 +209,15 @@
     ((unsigned-byte 8) 0 8 vm:simple-array-unsigned-byte-8-type)
     ((unsigned-byte 16) 0 16 vm:simple-array-unsigned-byte-16-type)
     ((unsigned-byte 32) 0 32 vm:simple-array-unsigned-byte-32-type)
-    #+signed-array ((signed-byte 8) 0 8 vm:simple-array-signed-byte-8-type)
-    #+signed-array ((signed-byte 16) 0 16 vm:simple-array-signed-byte-16-type)
-    #+signed-array ((signed-byte 30) 0 32 vm:simple-array-signed-byte-30-type)
-    #+signed-array ((signed-byte 32) 0 32 vm:simple-array-signed-byte-32-type)
-    #+complex-float ((complex single-float) #C(0.0s0 0.0s0) 64
-		     vm:simple-array-complex-single-float-type)
-    #+complex-float ((complex double-float) #C(0.0d0 0.0d0) 128
-		     vm:simple-array-complex-double-float-type)
-    #+(and complex-float long-float)
+    ((signed-byte 8) 0 8 vm:simple-array-signed-byte-8-type)
+    ((signed-byte 16) 0 16 vm:simple-array-signed-byte-16-type)
+    ((signed-byte 30) 0 32 vm:simple-array-signed-byte-30-type)
+    ((signed-byte 32) 0 32 vm:simple-array-signed-byte-32-type)
+    ((complex single-float) #C(0.0s0 0.0s0) 64
+     vm:simple-array-complex-single-float-type)
+    ((complex double-float) #C(0.0d0 0.0d0) 128
+     vm:simple-array-complex-double-float-type)
+    #+long-float
     ((complex long-float) #C(0.0l0 0.0l0) #+x86 192 #+sparc 256
      vm:simple-array-complex-long-float-type)
     (t 0 32 vm:simple-vector-type)))

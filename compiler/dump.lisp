@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.70 1998/03/21 08:08:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.71 1998/07/24 17:22:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1086,7 +1086,6 @@
 	   
 ;;; Or a complex...
 
-#+complex-float
 (defun dump-complex (x file)
   (typecase x
     ((complex single-float)
@@ -1112,13 +1111,6 @@
      (sub-dump-object (realpart x) file)
      (sub-dump-object (imagpart x) file)
      (dump-fop 'lisp::fop-complex file))))
-
-#-complex-float
-(defun dump-complex (x file)
-  (sub-dump-object (realpart x) file)
-  (sub-dump-object (imagpart x) file)
-  (dump-fop 'lisp::fop-complex file))
-
 
 ;;; Dump an integer.
 
@@ -1365,15 +1357,13 @@
       ((simple-array long-float (*))
        (dump-long-float-vector simple-version file)
        (eq-save-object x file))
-      #+complex-float
       ((simple-array (complex single-float) (*))
        (dump-complex-single-float-vector simple-version file)
        (eq-save-object x file))
-      #+complex-float
       ((simple-array (complex double-float) (*))
        (dump-complex-double-float-vector simple-version file)
        (eq-save-object x file))
-      #+(and complex-float long-float)
+      #+long-float
       ((simple-array (complex long-float) (*))
        (dump-complex-long-float-vector simple-version file)
        (eq-save-object x file))
@@ -1423,27 +1413,6 @@
 ;;; then just write the bits.  Otherwise, dispatch off of the target byte order
 ;;; and write the vector one element at a time.
 ;;;
-#-signed-array
-(defun dump-i-vector (vec file &optional data-only)
-  (declare (type (simple-array * (*)) vec))
-  (let* ((ac (etypecase vec
-	       (simple-bit-vector 0)
-	       ((simple-array (unsigned-byte 2) (*)) 1)
-	       ((simple-array (unsigned-byte 4) (*)) 2)
-	       ((simple-array (unsigned-byte 8) (*)) 3)
-	       ((simple-array (unsigned-byte 16) (*)) 4)
-	       ((simple-array (unsigned-byte 32) (*)) 5)))
-	 (len (length vec))
-	 (size (ash 1 ac))
-	 (bytes (ash (+ (the index (ash len ac)) 7) -3)))
-    (declare (type index ac len size bytes))
-    (unless data-only
-      (dump-fop 'lisp::fop-int-vector file)
-      (dump-unsigned-32 len file)
-      (dump-byte size file))
-    (dump-data-maybe-byte-swapping vec bytes size file)))
-
-#+signed-array
 (defun dump-i-vector (vec file &optional data-only)
   (declare (type (simple-array * (*)) vec))
   (let ((len (length vec)))
@@ -1512,7 +1481,6 @@
 
 ;;; DUMP-COMPLEX-SINGLE-FLOAT-VECTOR  --  internal.
 ;;; 
-#+complex-float
 (defun dump-complex-single-float-vector (vec file)
   (let ((length (length vec)))
     (dump-fop 'lisp::fop-complex-single-float-vector file)
@@ -1522,7 +1490,6 @@
 
 ;;; DUMP-COMPLEX-DOUBLE-FLOAT-VECTOR  --  internal.
 ;;; 
-#+complex-float
 (defun dump-complex-double-float-vector (vec file)
   (let ((length (length vec)))
     (dump-fop 'lisp::fop-complex-double-float-vector file)
@@ -1532,7 +1499,7 @@
 
 ;;; DUMP-COMPLEX-LONG-FLOAT-VECTOR  --  internal.
 ;;; 
-#+(and complex-float long-float)
+#+long-float
 (defun dump-complex-long-float-vector (vec file)
   (let ((length (length vec)))
     (dump-fop 'lisp::fop-complex-long-float-vector file)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.9 1998/03/21 07:54:41 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.10 1998/07/24 17:22:44 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,11 +176,9 @@
   (double-stack stack :element-size 2)	; double-floats.
   #+long-float
   (long-stack stack :element-size 3)	; long-floats.
-  #+complex-float
   (complex-single-stack stack :element-size 2)	; complex-single-floats
-  #+complex-float
   (complex-double-stack stack :element-size 4)	; complex-double-floats
-  #+(and complex-float long-float)
+  #+long-float
   (complex-long-stack stack :element-size 6)	; complex-long-floats
 
   ;; **** Magic SCs.
@@ -282,7 +280,6 @@
 	    :save-p t
 	    :alternate-scs (long-stack))
 
-  #+complex-float
   (complex-single-reg float-registers
 		      :locations (0 2 4 6)
 		      :element-size 2
@@ -290,7 +287,6 @@
 		      :save-p t
 		      :alternate-scs (complex-single-stack))
 
-  #+complex-float
   (complex-double-reg float-registers
 		      :locations (0 2 4 6)
 		      :element-size 2
@@ -298,7 +294,7 @@
 		      :save-p t
 		      :alternate-scs (complex-double-stack))
 
-  #+(and complex-float long-float)
+  #+long-float
   (complex-long-reg float-registers
 		    :locations (0 2 4 6)
 		    :element-size 2

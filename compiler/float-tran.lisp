@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.69 1998/04/15 01:29:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.70 1998/07/24 17:22:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1032,14 +1032,10 @@
 
 ) ;end progn for propagate-fun-type
 
-#+complex-float
-(progn
-
 (deftransform realpart ((x) ((complex rational)) *)
   '(kernel:%realpart x))
 (deftransform imagpart ((x) ((complex rational)) *)
   '(kernel:%imagpart x))
-) ;end progn complex-float
 
 ;;; Make REALPART and IMAGPART return the appropriate types.  This
 ;;; should help a lot in optimized code.

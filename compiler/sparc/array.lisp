@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.20 1998/03/21 08:05:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.21 1998/07/24 17:22:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,10 +148,8 @@
 (def-data-vector-frobs simple-array-unsigned-byte-32 word-index
   unsigned-num unsigned-reg)
 
-#+signed-array
 (def-data-vector-frobs simple-array-signed-byte-30 word-index
   tagged-num any-reg)
-#+signed-array
 (def-data-vector-frobs simple-array-signed-byte-32 word-index
   signed-num signed-reg)
 
@@ -447,7 +445,6 @@
 
 
 ;;;
-#+signed-array
 (define-vop (data-vector-ref/simple-array-signed-byte-8 signed-byte-index-ref)
   (:note "inline array access")
   (:variant vm:vector-data-offset vm:other-pointer-type)
@@ -455,7 +452,7 @@
   (:arg-types simple-array-signed-byte-8 positive-fixnum)
   (:results (value :scs (signed-reg)))
   (:result-types tagged-num))
-#+signed-array
+
 (define-vop (data-vector-set/simple-array-signed-byte-8 byte-index-set)
   (:note "inline array store")
   (:variant vm:vector-data-offset vm:other-pointer-type)
@@ -467,7 +464,7 @@
   (:results (result :scs (signed-reg)))
   (:result-types tagged-num))
 
-#+signed-array
+
 (define-vop (data-vector-ref/simple-array-signed-byte-16
 	     signed-halfword-index-ref)
   (:note "inline array access")
@@ -476,7 +473,7 @@
   (:arg-types simple-array-signed-byte-16 positive-fixnum)
   (:results (value :scs (signed-reg)))
   (:result-types tagged-num))
-#+signed-array
+
 (define-vop (data-vector-set/simple-array-signed-byte-16 halfword-index-set)
   (:note "inline array store")
   (:variant vm:vector-data-offset vm:other-pointer-type)
@@ -490,8 +487,6 @@
 
 
 ;;; Complex float arrays.
-#+complex-float
-(progn
 
 (define-vop (data-vector-ref/simple-array-complex-single-float)
   (:note "inline array access")
@@ -639,8 +634,6 @@
       (unless (location= result-imag value-imag)
 	(move-long-reg result-imag value-imag)))))
 
-) ; end progn complex-float
-
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
 ;;; data is an unsigned-32 vector.
@@ -671,8 +664,6 @@
   (:translate %raw-set-long)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum long-float))
 
-#+complex-float
-(progn
 (define-vop (raw-ref-complex-single
 	     data-vector-ref/simple-array-complex-single-float)
   (:translate %raw-ref-complex-single)
@@ -708,7 +699,6 @@
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum
 	      complex-long-float))
 
-) ; end progn complex-float
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of
 ;;; what type of vector it is.

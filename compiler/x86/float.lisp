@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.30 1998/03/31 18:29:20 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.31 1998/07/24 17:22:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,22 +36,18 @@
   (defun ea-for-lf-desc (tn)
     (ea-for-xf-desc tn vm:long-float-value-slot))
   ;; Complex floats
-  #+complex-float
   (defun ea-for-csf-real-desc (tn)
     (ea-for-xf-desc tn vm:complex-single-float-real-slot))
-  #+complex-float
   (defun ea-for-csf-imag-desc (tn)
     (ea-for-xf-desc tn vm:complex-single-float-imag-slot))
-  #+complex-float
   (defun ea-for-cdf-real-desc (tn)
     (ea-for-xf-desc tn vm:complex-double-float-real-slot))
-  #+complex-float
   (defun ea-for-cdf-imag-desc (tn)
     (ea-for-xf-desc tn vm:complex-double-float-imag-slot))
-  #+(and long-float complex-float)
+  #+long-float
   (defun ea-for-clf-real-desc (tn)
     (ea-for-xf-desc tn vm:complex-long-float-real-slot))
-  #+(and long-float complex-float)
+  #+long-float
   (defun ea-for-clf-imag-desc (tn)
     (ea-for-xf-desc tn vm:complex-long-float-imag-slot)))
 
@@ -70,7 +66,6 @@
     (ea-for-xf-stack tn :long)))
 
 ;;; Complex float stack EAs
-#+complex-float
 (macrolet ((ea-for-cxf-stack (tn kind slot &optional base)
 	     `(make-ea
 	       :dword :base ,base
@@ -205,8 +200,6 @@
 
 
 ;;;; Complex float move functions
-#+complex-float
-(progn
 
 (defun complex-single-reg-real-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
@@ -303,8 +296,6 @@
     (store-long-float (ea-for-clf-imag-stack y))
     (inst fxch imag-tn)))
 
-) ; complex-float
-
 
 ;;;; Move VOPs:
 
@@ -343,8 +334,6 @@
 #+long-float
 (define-move-vop long-move :move (long-reg) (long-reg))
 
-#+complex-float
-(progn
 ;;;
 ;;; Complex float register to register moves.
 ;;;
@@ -394,8 +383,6 @@
 #+long-float
 (define-move-vop complex-long-move :move
   (complex-long-reg) (complex-long-reg))
-
-) ; complex-float
 
 
 ;;;
@@ -501,8 +488,6 @@
 (define-move-vop move-to-long :move (descriptor-reg) (long-reg))
 
 
-#+complex-float
-(progn
 ;;;
 ;;; Move from complex float to a descriptor reg. allocating a new
 ;;; complex float object in the process.
@@ -589,7 +574,6 @@
 	  (frob move-to-complex-double complex-double-reg :double)
 	  #+long-float
 	  (frob move-to-complex-double complex-long-reg :long))
-) ; complex-float
 
 
 ;;;
@@ -651,7 +635,6 @@
   (frob move-long-float-argument long-reg long-stack :long))
 
 ;;;; Complex float move-argument vop
-#+complex-float
 (macrolet ((frob (name sc stack-sc format)
 	     `(progn
 		(define-vop (,name)
@@ -731,8 +714,7 @@
 
 (define-move-vop move-argument :move-argument
   (single-reg double-reg #+long-float long-reg
-   #+complex-float complex-single-reg #+complex-float complex-double-reg
-   #+(and complex-float long-float) complex-long-reg)
+   complex-single-reg complex-double-reg #+long-float complex-long-reg)
   (descriptor-reg))
 
 
@@ -4356,9 +4338,6 @@
 
 ;;;; Complex float VOPs
 
-#+complex-float
-(progn
-
 (define-vop (make-complex-single-float)
   (:translate complex)
   (:args (real :scs (single-reg) :to :result :target r
@@ -4614,8 +4593,6 @@
   (:result-types long-float)
   (:note "complex float imagpart")
   (:variant 1))
-
-) ; complex-float
 
 
 ;;; A hack dummy VOP to bias the representation selection of its

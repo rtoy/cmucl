@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/float.lisp,v 1.8 1998/03/11 17:15:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/float.lisp,v 1.9 1998/07/24 17:22:33 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,8 +130,6 @@
 
 
 ;;;; Complex float move functions
-#+complex-float
-(progn
 
 (defun complex-single-reg-real-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
@@ -358,12 +356,9 @@
 (define-move-vop move-complex-double-float-argument :move-argument
   (complex-double-reg descriptor-reg) (complex-double-reg))
 
-) ; end progn complex-float
-
 
 (define-move-vop move-argument :move-argument
-  (single-reg double-reg
-   #+complex-float complex-single-reg #+complex-float complex-double-reg)
+  (single-reg double-reg complex-single-reg complex-double-reg)
   (descriptor-reg))
 
 
@@ -834,9 +829,6 @@
 
 ;;;; Complex float VOPs
 
-#+complex-float
-(progn
-
 (define-vop (make-complex-single-float)
   (:translate complex)
   (:args (real :scs (single-reg) :target r)
@@ -953,5 +945,3 @@
   (:translate imagpart)
   (:note "complex double float imagpart")
   (:variant :imag))
-
-) ; progn complex-float

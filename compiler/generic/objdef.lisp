@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.43 1998/03/21 07:55:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.44 1998/07/24 17:22:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,9 +116,9 @@
   double-float
   #+long-float long-float
   complex
-  #+complex-float complex-single-float
-  #+complex-float complex-double-float
-  #+(and complex-float long-float) complex-long-float
+  complex-single-float
+  complex-double-float
+  #+long-float complex-long-float
   
   simple-array
   simple-string
@@ -129,16 +129,16 @@
   simple-array-unsigned-byte-8
   simple-array-unsigned-byte-16
   simple-array-unsigned-byte-32
-  #+signed-array simple-array-signed-byte-8
-  #+signed-array simple-array-signed-byte-16
-  #+signed-array simple-array-signed-byte-30
-  #+signed-array simple-array-signed-byte-32
+  simple-array-signed-byte-8
+  simple-array-signed-byte-16
+  simple-array-signed-byte-30
+  simple-array-signed-byte-32
   simple-array-single-float
   simple-array-double-float
   #+long-float simple-array-long-float
-  #+complex-float simple-array-complex-single-float
-  #+complex-float simple-array-complex-double-float
-  #+(and complex-float long-float) simple-array-complex-long-float
+  simple-array-complex-single-float
+  simple-array-complex-double-float
+  #+long-float simple-array-complex-long-float
   complex-string
   complex-bit-vector
   complex-vector
@@ -485,14 +485,12 @@
 	   :set-trans %set-symbol-package
 	   :init :null))
 
-#+complex-float
 (define-primitive-object (complex-single-float
 			  :lowtag other-pointer-type
 			  :header complex-single-float-type)
   (real :c-type "float")
   (imag :c-type "float"))
 
-#+complex-float
 (define-primitive-object (complex-double-float
 			  :lowtag other-pointer-type
 			  :header complex-double-float-type)
@@ -500,7 +498,7 @@
   (real :c-type "double" :length 2)
   (imag :c-type "double" :length 2))
 
-#+(and complex-float long-float)
+#+long-float
 (define-primitive-object (complex-long-float
 			  :lowtag other-pointer-type
 			  :header complex-long-float-type)

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.35 1998/06/11 21:27:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.36 1998/07/24 17:22:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -455,7 +455,6 @@
 	  (error "Long-Float not supported")))
        des))))
 
-#+complex-float
 (defun complex-single-float-to-core (num)
   (declare (type (complex single-float) num))
   (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
@@ -467,7 +466,6 @@
 		   (make-random-descriptor (single-float-bits (imagpart num))))
     des))
 
-#+complex-float
 (defun complex-double-float-to-core (num)
   (declare (type (complex double-float) num))
   (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
@@ -504,11 +502,9 @@
     (ratio (number-pair-to-core (number-to-core (numerator number))
 				(number-to-core (denominator number))
 				vm:ratio-type))
-    #+complex-float
     ((complex single-float) (complex-single-float-to-core number))
-    #+complex-float
     ((complex double-float) (complex-double-float-to-core number))
-    #+(and complex-float long-float)
+    #+long-float
     ((complex long-float)
      (error "~S isn't a cold-loadable number at all!" number))
     (complex (number-pair-to-core (number-to-core (realpart number))
@@ -1333,9 +1329,9 @@
     result))
 
 #+long-float (not-cold-fop fop-long-float-vector)
-#+complex-float (not-cold-fop fop-complex-single-float-vector)
-#+complex-float (not-cold-fop fop-complex-double-float-vector)
-#+(and complex-float long-float) (not-cold-fop fop-complex-long-float-vector)
+(not-cold-fop fop-complex-single-float-vector)
+(not-cold-fop fop-complex-double-float-vector)
+#+long-float (not-cold-fop fop-complex-long-float-vector)
 
 (define-cold-fop (fop-array)
   (let* ((rank (read-arg 4))
@@ -1380,8 +1376,8 @@
 (cold-number fop-small-integer)
 (cold-number fop-word-integer)
 (cold-number fop-byte-integer)
-#+complex-float (cold-number fop-complex-single-float)
-#+complex-float (cold-number fop-complex-double-float)
+(cold-number fop-complex-single-float)
+(cold-number fop-complex-double-float)
 
 #+long-float
 (define-cold-fop (fop-long-float)
@@ -1415,7 +1411,7 @@
 	 (write-indexed des (+ 3 vm:long-float-value-slot) low-bits)
 	 des)))))
 
-#+(and complex-float long-float)
+#+long-float
 (define-cold-fop (fop-complex-long-float)
   (ecase (c:backend-fasl-file-implementation c:*backend*)
     (#.c:x86-fasl-file-implementation		; 80 bit long-float format.

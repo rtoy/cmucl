@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.23 1998/03/21 08:05:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.24 1998/07/24 17:22:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -260,8 +260,6 @@
 
 
 ;;;; Complex float move functions
-#+complex-float
-(progn
 
 (defun complex-single-reg-real-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
@@ -597,13 +595,10 @@
 (define-move-vop move-complex-long-float-argument :move-argument
   (complex-long-reg descriptor-reg) (complex-long-reg))
 
-) ; progn complex-float
-
 
 (define-move-vop move-argument :move-argument
   (single-reg double-reg #+long-float long-reg
-   #+complex-float complex-single-reg #+complex-float complex-double-reg
-   #+(and complex-float long-float) complex-long-reg)
+   complex-single-reg complex-double-reg #+long-float complex-long-reg)
   (descriptor-reg))
 
 
@@ -1302,9 +1297,6 @@
 
 ;;;; Complex float VOPs
 
-#+complex-float
-(progn
-
 (define-vop (make-complex-single-float)
   (:translate complex)
   (:args (real :scs (single-reg) :target r
@@ -1488,5 +1480,3 @@
   (:translate imagpart)
   (:note "complex long float imagpart")
   (:variant :imag))
-
-) ; progn complex-float

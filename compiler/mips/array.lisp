@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.49 1998/03/10 18:20:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.50 1998/07/24 17:22:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,19 +170,15 @@
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
 
-#+signed-array
 (def-partial-data-vector-frobs simple-array-signed-byte-8 tagged-num
   :byte t signed-reg)
 
-#+signed-array
 (def-partial-data-vector-frobs simple-array-signed-byte-16 tagged-num
   :short t signed-reg)
 
-#+signed-array
 (def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num
   any-reg)
 
-#+signed-array
 (def-full-data-vector-frobs simple-array-signed-byte-32 signed-num
   signed-reg)
 
@@ -466,8 +462,6 @@
 
 
 ;;; Complex float arrays.
-#+complex-float
-(progn
 
 (define-vop (data-vector-ref/simple-array-complex-single-float)
   (:note "inline array access")
@@ -574,8 +568,6 @@
       (unless (location= result-imag value-imag)
 	(inst fmove :double result-imag value-imag)))))
 
-) ; end progn complex-float
-
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
 ;;; data is an unsigned-32 vector.
@@ -596,8 +588,6 @@
   (:translate %raw-set-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
 
-#+complex-float
-(progn
 (define-vop (raw-ref-complex-single
 	     data-vector-ref/simple-array-complex-single-float)
   (:translate %raw-ref-complex-single)
@@ -619,7 +609,6 @@
   (:translate %raw-set-complex-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum
 	      complex-double-float))
-) ; end progn complex-float
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of
 ;;; what type of vector it is.

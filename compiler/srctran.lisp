@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.84 1998/03/21 08:08:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.85 1998/07/24 17:22:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -218,23 +218,6 @@
     `(if (ratiop ,n-num)
 	 (%denominator ,n-num)
 	 1)))
-;;;
-#-complex-float
-(def-source-transform realpart (num)
-  (once-only ((n-num num))
-    `(if (complexp ,n-num)
-	 (%realpart ,n-num)
-	 ,n-num)))
-;;;
-#-complex-float
-(def-source-transform imagpart (num)
-  (once-only ((n-num num))
-    `(cond ((complexp ,n-num)
-	    (%imagpart ,n-num))
-	   ((floatp ,n-num)
-	    (float 0 ,n-num))
-	   (t
-	    0))))
 
 
 ;;;; Interval arithmetic for computing bounds
