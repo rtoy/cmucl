@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.6 1992/07/24 03:31:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.7 1992/07/27 13:45:15 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1558,12 +1558,12 @@
 	   (when (or reads (cdr args))
 	     (error
 	      "Can only specify one reads expression per instruction."))
-	   (setf reads args))
+	   (setf reads (car args)))
 	  (:writes
 	   (when (or writes (cdr args))
 	     (error
 	      "Can only specify one writes expression per instruction."))
-	   (setf writes args))
+	   (setf writes (car args)))
 	  (:delay
 	   (when delay
 	     (error "Can only specify delay once per instruction."))
