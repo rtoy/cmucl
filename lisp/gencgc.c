@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.34 2003/08/27 16:00:35 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.35 2003/09/13 14:21:30 gerd Exp $
  *
  */
 
@@ -29,31 +29,48 @@
 			__FILE__, __LINE__)
 
 #if defined(i386)
-#define set_alloc_pointer(value)  SetSymbolValue(ALLOCATION_POINTER, value)
-#define get_alloc_pointer()       SymbolValue(ALLOCATION_POINTER)
-#define get_binding_stack_pointer()     SymbolValue(BINDING_STACK_POINTER)
-#define get_pseudo_atomic_atomic()      SymbolValue(PSEUDO_ATOMIC_ATOMIC)
-#define set_pseudo_atomic_atomic()      SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
-#define clr_pseudo_atomic_atomic()      SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(1));
-#define get_pseudo_atomic_interrupted() SymbolValue(PSEUDO_ATOMIC_INTERRUPTED)
-#define clr_pseudo_atomic_interrupted() SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0))
-#elif defined(sparc)
-#define set_alloc_pointer(value)  (current_dynamic_space_free_pointer = (value))
-#define get_alloc_pointer()       (current_dynamic_space_free_pointer)
-#define get_binding_stack_pointer()     (current_binding_stack_pointer)
+
+#define set_alloc_pointer(value) \
+  SetSymbolValue (ALLOCATION_POINTER, (value))
+#define get_alloc_pointer() \
+  SymbolValue (ALLOCATION_POINTER)
+#define get_binding_stack_pointer() \
+  SymbolValue (BINDING_STACK_POINTER)
 #define get_pseudo_atomic_atomic() \
-     ((unsigned long)current_dynamic_space_free_pointer & 4)
+  SymbolValue (PSEUDO_ATOMIC_ATOMIC)
 #define set_pseudo_atomic_atomic() \
-     (current_dynamic_space_free_pointer \
-       = (lispobj*) ((unsigned long)current_dynamic_space_free_pointer | 4))
+  SetSymbolValue (PSEUDO_ATOMIC_ATOMIC, make_fixnum (1))
 #define clr_pseudo_atomic_atomic() \
-     (current_dynamic_space_free_pointer \
-       = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~4))
-#define get_pseudo_atomic_interrupted() ((unsigned long) current_dynamic_space_free_pointer & 1)
+  SetSymbolValue (PSEUDO_ATOMIC_ATOMIC, make_fixnum (0))
+#define get_pseudo_atomic_interrupted() \
+  SymbolValue (PSEUDO_ATOMIC_INTERRUPTED)
 #define clr_pseudo_atomic_interrupted() \
-     (current_dynamic_space_free_pointer \
-       = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~1))
+  SetSymbolValue (PSEUDO_ATOMIC_INTERRUPTED, make_fixnum (0))
+
+#elif defined(sparc)
+
+#define set_alloc_pointer(value) \
+  (current_dynamic_space_free_pointer = (value))
+#define get_alloc_pointer() \
+  (current_dynamic_space_free_pointer)
+#define get_binding_stack_pointer() \
+  (current_binding_stack_pointer)
+#define get_pseudo_atomic_atomic() \
+  ((unsigned long)current_dynamic_space_free_pointer & 4)
+#define set_pseudo_atomic_atomic() \
+  (current_dynamic_space_free_pointer \
+   = (lispobj*) ((unsigned long)current_dynamic_space_free_pointer | 4))
+#define clr_pseudo_atomic_atomic() \
+  (current_dynamic_space_free_pointer \
+   = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~4))
+#define get_pseudo_atomic_interrupted() \
+  ((unsigned long) current_dynamic_space_free_pointer & 1)
+#define clr_pseudo_atomic_interrupted() \
+  (current_dynamic_space_free_pointer \
+   = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~1))
+
 #else
+#error gencgc is not supported on this platform
 #endif
 
 /*
@@ -6710,9 +6727,6 @@ void	gencgc_pickup_dynamic(void)
 
 
 
-
-void do_pending_interrupt(void);
-
 /*
  * Alloc is the external interface for memory allocation. It allocates
  * to generations0.  It is not called from within the garbage
@@ -6732,130 +6746,69 @@ void do_pending_interrupt(void);
  * while within a pseudo atomic context.
  */
 
-int alloc_entered = 0;
+void do_pending_interrupt (void);
 
 char *
-alloc(int nbytes)
+alloc (int nbytes)
 {
-  /* Check for alignment allocation problems. */
-  gc_assert(((unsigned) SymbolValue(CURRENT_REGION_FREE_POINTER) & 0x7) == 0
-	    && (nbytes & 0x7) == 0);
+  gc_assert (((unsigned) SymbolValue (CURRENT_REGION_FREE_POINTER) & 0x7) == 0);
+  gc_assert ((nbytes & 0x7) == 0);
+  gc_assert (get_pseudo_atomic_atomic ());
 
   bytes_allocated_sum += nbytes;
 
-  if (get_pseudo_atomic_atomic()) {
-    /* Already within a pseudo atomic. */
-    void *new_free_pointer;
-
-  retry1:
-    if (alloc_entered++)
-      fprintf(stderr,"* Alloc re-entered\n");
-
-    /* Check if there is room in the current region. */
-    new_free_pointer = (void *) (SymbolValue(CURRENT_REGION_FREE_POINTER) + nbytes);
-
-    if (new_free_pointer <= boxed_region.end_addr) {
-      /* If so then allocate from the current region. */
-      void  *new_obj = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
-      SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) new_free_pointer);
-      alloc_entered--;
-      return (void *) new_obj;
-    }
-
-    if(bytes_allocated > auto_gc_trigger) {
-      /* Double the trigger. */
-      auto_gc_trigger *= 2;
-      alloc_entered--;
-      /* Exit the pseudo atomic */
-      clr_pseudo_atomic_atomic();
-      if (get_pseudo_atomic_interrupted() != 0)
-	/* Handle any interrupts that occurred during gc_alloc */
-	do_pending_interrupt();
-      funcall0(SymbolFunction(MAYBE_GC));
-      /* Re-enter the pseudo atomic. */
-      clr_pseudo_atomic_interrupted();
-      set_pseudo_atomic_atomic();
-      goto retry1;
-    }
-    /* Call gc_alloc */
-    boxed_region.free_pointer = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
+  for (;;)
     {
-      void *new_obj = gc_alloc(nbytes);
-      SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
-      SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
-      alloc_entered--;
-      return new_obj;
+      void *new_obj;
+      void *new_free_pointer
+  	= (void *) (SymbolValue (CURRENT_REGION_FREE_POINTER) + nbytes);
+	  
+      if (new_free_pointer <= boxed_region.end_addr)
+	{
+	  /* Allocate from the current region. */
+	  new_obj = (void *) SymbolValue (CURRENT_REGION_FREE_POINTER);
+	  SetSymbolValue (CURRENT_REGION_FREE_POINTER,
+			  (lispobj) new_free_pointer);
+	  return new_obj;
+	}
+      else if (bytes_allocated <= auto_gc_trigger)
+	{
+	  /* Call gc_alloc.  */
+	  boxed_region.free_pointer
+	    = (void *) SymbolValue (CURRENT_REGION_FREE_POINTER);
+	  new_obj = gc_alloc (nbytes);
+	  SetSymbolValue (CURRENT_REGION_FREE_POINTER,
+			  (lispobj) boxed_region.free_pointer);
+	  SetSymbolValue (CURRENT_REGION_END_ADDR,
+			  (lispobj) boxed_region.end_addr);
+	  return new_obj;
+	}
+      else
+	{
+	  /* Run GC and try again.  */
+	  auto_gc_trigger *= 2;
+	  clr_pseudo_atomic_atomic ();
+	  if (get_pseudo_atomic_interrupted ())
+	    do_pending_interrupt ();
+	  funcall0 (SymbolFunction (MAYBE_GC));
+	  clr_pseudo_atomic_interrupted ();
+	  set_pseudo_atomic_atomic ();
+	}
     }
-  } else {
-    void *result;
-    void *new_free_pointer;
+}
 
-#if 0
-    /*
-     * Check that the interrupts are masked, else there could be
-     * trouble if the allocation is interrupted.
-     */
-    sigset_t mask;
-    sigprocmask(0, NULL, &mask);
-    if (!sigismember(&mask, SIGINT) || !sigismember(&mask, SIGALRM))
-      fprintf(stderr, "* Alloc non-atomic %x\n", mask);
-#endif      
+char *
+alloc_pseudo_atomic (int nbytes)
+{
+  char *result;
 
-  retry2:
-    /* At least wrap this allocation in a pseudo atomic to prevent
-       gc_alloc from being re-entered. */
-    clr_pseudo_atomic_interrupted();
-    set_pseudo_atomic_atomic();
-
-    if (alloc_entered++)
-      fprintf(stderr,"* Alloc re-entered\n");
-
-    /* Check if there is room in the current region. */
-    new_free_pointer = (void *) (SymbolValue(CURRENT_REGION_FREE_POINTER) + nbytes);
-
-    if (new_free_pointer <= boxed_region.end_addr) {
-      /* If so then allocate from the current region. */
-      void *new_obj = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
-      SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) new_free_pointer);
-
-      alloc_entered--;
-      clr_pseudo_atomic_atomic();
-      if (get_pseudo_atomic_interrupted()) {
-	/* Handle any interrupts that occurred during gc_alloc */
-	do_pending_interrupt();
-	goto retry2;
-      }
-      return (void *) new_obj;
-    }
-
-    if(bytes_allocated > auto_gc_trigger) {
-      /* Double the trigger. */
-      auto_gc_trigger *= 2;
-      alloc_entered--;
-      /* Exit the pseudo atomic */
-      clr_pseudo_atomic_atomic();
-      if (get_pseudo_atomic_interrupted() != 0)
-	/* Handle any interrupts that occurred during gc_alloc */
-	do_pending_interrupt();
-      funcall0(SymbolFunction(MAYBE_GC));
-      goto retry2;
-    }
-
-    /* Else call gc_alloc */
-    boxed_region.free_pointer = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
-    result = gc_alloc(nbytes);
-    SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
-    SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
-
-    alloc_entered--;
-    clr_pseudo_atomic_atomic();
-    if (get_pseudo_atomic_interrupted() != 0) {
-      /* Handle any interrupts that occurred during gc_alloc */
-      do_pending_interrupt();
-      goto retry2;
-    }
-    return result;
-  }
+  clr_pseudo_atomic_interrupted ();
+  set_pseudo_atomic_atomic ();
+  result = alloc (nbytes);
+  clr_pseudo_atomic_atomic ();
+  if (get_pseudo_atomic_interrupted ())
+    do_pending_interrupt (); 
+  return result; 
 }
 
 
