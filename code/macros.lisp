@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.64 2000/10/06 15:11:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.65 2000/10/06 15:19:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1526,11 +1526,6 @@
 
 
 ;;;; Miscellaneous macros:
-
-#+nil
-(defmacro locally (&rest forms)
-  "A form providing a container for locally-scoped variables."
-  `(let () ,@forms))
 
 (defmacro psetq (&rest pairs)
   (do ((lets nil)
