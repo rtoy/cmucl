@@ -121,6 +121,9 @@
   (:info n)
   (:translate ash)
   (:generator 1
+    (unless (location= i r)
+      (inst lr r i))
+
     (cond ((plusp n)
 	   (if (> n 15)
 	       (inst sli16 r (- n 16))
@@ -129,10 +132,7 @@
 	   (let ((n (- n)))
 	     (if (> n 15)
 		 (inst sari16 r (- n 16))
-		 (inst sari r n)))))
-
-    (unless (location= i r)
-      (inst lr r i))))
+		 (inst sari r n)))))))
 
 
 (define-miscop-variants effectless-unaffected-two-arg-miscop
