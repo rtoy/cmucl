@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.26 1991/10/03 15:19:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.27 1991/10/28 20:21:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,7 +174,7 @@
 (defknown package-shadowing-symbols (packagelike) list (flushable))
 (defknown list-all-packages () list (flushable))
 (defknown intern (string &optional packagelike)
-  (values symbol (member :internal :external :inherited))
+  (values symbol (member :internal :external :inherited nil))
   ())
 (defknown find-symbol (string &optional packagelike)
 	  (values symbol (member :internal :external :inherited nil))
