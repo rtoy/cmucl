@@ -1860,6 +1860,35 @@ way to browse the library.
 
 \section{CLOS}
 
+\subsection{Primary Method Errors}
+\cindex{primary method}
+
+The standard requires that an error is signaled when a generic
+function is called and
+
+\begin{itemize}
+\item no primary method is applicable to the generic function's actual
+  arguments, and
+\item the generic function's method combination is either the standard
+  method combination or a method combination defined with the short
+  form of \code{define-method-combination}.  The latter includes the
+  standardized method combinations like \code{progn}, \code{and}, etc.
+\end{itemize}
+
+\begin{defgeneric}{pcl:}{no-primary-method}{gf \&rest args}
+  In \cmucl, this generic function is called in the above erroneous
+  cases.  The parameter \code{gf} is the generic function being
+  called, and \code{args} is a list of actual arguments in the generic
+  function call.
+\end{defgeneric}
+
+\begin{defmethod}{pcl:}{no-primary-method}{%
+    (gf standard-generic-function) \&rest args}
+  This method signals a continuable error of type
+  \code{pcl:no-primary-method-error}.
+\end{defmethod}
+
+
 \subsection{Slot Type Checking}
 \cindex{slot type checking}
 

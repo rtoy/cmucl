@@ -130,6 +130,34 @@
   \par\fnindexbold{#2}\label{FN:#2}%
   \layout[#1]{#2}{#3}{Function}}
 
+%% Define a generic function
+%%
+%% \begin{defgeneric}{pkg}{name}{params}
+%%   \defgenericx[pkg]{name}{params}
+%%   description of function
+%% \end{defgeneric}
+\newenvironment{defgeneric}[3]{%
+  \par\defunvspace\fnindexbold{#2}\label{FN:#2}%
+  \layout[#1]{#2}{#3}{Generic Function}
+  }{}
+\newcommand{\defgenericx}[3][\mbox{}]{%
+  \par\fnindexbold{#2}\label{FN:#2}%
+  \layout[#1]{#2}{#3}{Generic Function}}
+
+%% Define a method
+%%
+%% \begin{defmethod}{pkg}{name}{params}
+%%   \defmethod[pkg]{name}{params}
+%%   description of function
+%% \end{defmethod}
+\newenvironment{defmethod}[3]{%
+  \par\defunvspace\fnindexbold{#2}\label{FN:#2}%
+  \layout[#1]{#2}{#3}{Method}
+  }{}
+\newcommand{\defmethodx}[3][\mbox{}]{%
+  \par\fnindexbold{#2}\label{FN:#2}%
+  \layout[#1]{#2}{#3}{Method}}
+
 %% Define a macro
 %%
 %% \begin{defmac}{pkg}{name}{params}
