@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.54 1993/02/27 01:31:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.55 1993/02/27 01:51:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,7 +99,7 @@
 	     (compact-info-environment (first *info-environment*)
 				       :name "Kernel")
 	     (rest *info-environment*)))
-(funcall #'(setf c::volatile-info-env-table) #() *old-ie*)
+(lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
 (setq *old-ie* nil)
 
 (purify :root-structures
@@ -115,7 +115,7 @@
 	       (compact-info-environment (first *info-environment*)
 					 :name "Compiler")
 	       (rest *info-environment*)))
-  (funcall #'(setf c::volatile-info-env-table) #() *old-ie*)
+  (lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
 
   (load "c:loadbackend.lisp")
   ;; If we want a small core, blow away the meta-compile time VOP info.
@@ -131,7 +131,7 @@
 		(concatenate 'string (c:backend-name c:*backend*) " backend"))
 	       (rest *info-environment*)))
 
-  (funcall #'(setf c::volatile-info-env-table) #() *old-ie*)
+  (lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
   (setq *old-ie* nil))
 
 (purify :root-structures '(compile-file)))
@@ -197,7 +197,7 @@
 	     (compact-info-environment (first *info-environment*)
 				       :name "Auxiliary")
 	     (rest *info-environment*)))
-(funcall #'(setf c::volatile-info-env-table) #() *old-ie*)
+(lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
 (setq *old-ie* nil)
 
 ;;; Okay, build the thing!
