@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.29 1993/02/26 08:42:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.30 1993/08/04 13:28:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,10 +63,12 @@
 (deftype pathname-host () '(or lisp::host null))
 (deftype pathname-device () '(member nil :unspecific))
 (deftype pathname-directory () 'list)
-(deftype pathname-name () '(or simple-string lisp::pattern null))
+(deftype pathname-name ()
+  '(or simple-string lisp::pattern (member nil :unspecific :wild)))
 (deftype pathname-type ()
-  '(or simple-string lisp::pattern (member nil :unspecific)))
-(deftype pathname-version () '(or integer (member nil :newest :wild)))
+  '(or simple-string lisp::pattern (member nil :unspecific :wild)))
+(deftype pathname-version ()
+  '(or integer (member nil :newest :wild :unspecific)))
 ;;;
 ;;; Internal time format.  Not a fixnum (blag...)
 (deftype internal-time () 'unsigned-byte)
