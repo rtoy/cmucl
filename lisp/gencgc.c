@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.4 1997/12/01 16:44:57 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.5 1997/12/02 02:50:45 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -2748,7 +2748,7 @@ scav_vector(lispobj *where, lispobj object)
     fprintf(stderr,"* Not hash table pointer? %x\n",where[2]);
     return 3;
   }
-  hash_table = PTR(where[2]);
+  hash_table = (lispobj *)PTR(where[2]);
   /* fprintf(stderr,"* hash_table = %x\n", hash_table);*/
   if (!(TypeOf(hash_table[0]) == type_InstanceHeader)) {
     fprintf(stderr,"* Hash table not instance? %x\n",hash_table[0]);
@@ -2774,7 +2774,7 @@ scav_vector(lispobj *where, lispobj object)
   scavenge(hash_table,16);
 
   /* Cross check the kv_vector. */
-  if (where != PTR(hash_table[9])) {
+  if (where != (lispobj *)PTR(hash_table[9])) {
     fprintf(stderr,"* hash_table table!=this table? %x\n",hash_table[9]);
     return 4;
   }
@@ -3466,28 +3466,26 @@ void scan_weak_pointers(void)
 	CEILING((sizeof(struct weak_pointer) / sizeof(lispobj)), 2)
 
 static int
-scav_scavenger_hook(lispobj*where, lispobj object)
+scav_scavenger_hook(lispobj *where, lispobj object)
 {
-  struct scavenger_hook *scav_hook = (struct scavanger_hook *)where;
-  lispobj *old_value = scav_hook->value;
+  struct scavenger_hook *scav_hook = (struct scavenger_hook *)where;
+  lispobj old_value = scav_hook->value;
 
   /*  fprintf(stderr,"scav scav_hook %x; value %x\n",where,old_value);*/
 
   /* Scavenge the value */
   scavenge(where+1, 1);
 
-  {
-    if (scav_hook->value != old_value) {
-      /* value object has moved */
-      /*      fprintf(stderr,"   value object moved to %x\n",scav_hook->value);*/
+  if (scav_hook->value != old_value) {
+    /* Value object has moved */
+    /* fprintf(stderr,"   value object moved to %x\n",scav_hook->value);*/
       
-      /* Check if this hook is already noted. */
-      /*      fprintf(stderr,"   next=%x sh hooks=%x\n",scav_hook->next,scavenger_hooks);*/
-      if (scav_hook->next == NULL) {
-	  /*	  fprintf(stderr,"   adding to scavenger_hooks\n");*/
-	  scav_hook->next = scavenger_hooks;
-	  scavenger_hooks = (int)where | type_OtherPointer;
-	}
+    /* Check if this hook is already noted. */
+    /* fprintf(stderr,"   next=%x sh hooks=%x\n",scav_hook->next,scavenger_hooks); */
+    if (scav_hook->next == NULL) {
+      /*  fprintf(stderr,"   adding to scavenger_hooks\n");*/
+      scav_hook->next = scavenger_hooks;
+      scavenger_hooks = (int)where | type_OtherPointer;
     }
   }
       
@@ -5495,8 +5493,9 @@ collect_garbage(unsigned last_gen)
   /* Call the scavenger hook functions */
   {
     struct scavenger_hook *sh;
-    for (sh = PTR((int)scavenger_hooks); sh != PTR(NIL);) {
-      struct scavenger_hook *sh_next = PTR((int)sh->next);
+    for (sh = (struct scavenger_hook *)PTR((int)scavenger_hooks);
+	 sh != (struct scavenger_hook *)PTR(NIL);) {
+      struct scavenger_hook *sh_next = (struct scavenger_hook *)PTR((int)sh->next);
       /* fprintf(stderr,"Scav hook %x; next %x; calling scav hook fn %x\n",
 	      sh,sh_next,sh->function);*/
       funcall0(sh->function);
