@@ -143,6 +143,7 @@
 			   (parse-body ,path ,env-arg-name
 				       ,(not (null doc-string-name))))
 			 t)
+			(setf env-arg-used t)
 			(when body-name
 			  (push-let-binding body-name
 					    `(car ,parse-body-values) nil))
