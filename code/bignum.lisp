@@ -11,6 +11,28 @@
 ;;;
 
 (in-package "BIGNUM")
+(use-package "KERNEL")
+
+;;; These symbols define the interface to the number code.
+
+(export '(add-bignums multiply-bignums negate-bignum subtract-bignum
+	  multiply-bignum-and-fixnum multiply-fixnums
+	  bignum-ashift-right bignum-ashift-left bignum-gcd
+	  bignum-to-float float-bignum-ratio bignum-integer-length
+	  bignum-logical-and bignum-logical-ior bignum-logical-xor
+	  bignum-logical-not bignum-load-byte bignum-deposit-byte
+	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
+	  bignum-logcount))
+
+;;; These symbols define the interface to the compiler.
+
+(export '(bignum-type bignum-element-type bignum-index %allocate-bignum
+	  %bignum-length %bignum-set-length %bignum-ref %bignum-set
+	  %digit-0-or-plusp %add-with-carry %subtract-with-borrow
+	  %multiply-and-add %multiply %lognot %logand %logior %logxor
+	  %fixnum-to-digit %floor %fixnum-digit-with-correct-sign %ashl
+	  %ashr %digit-logical-shift-right))
+
 
 
 ;;;; Notes.
@@ -1027,26 +1049,26 @@
 (defun single-float-from-bits (bits exp plusp)
   (declare (fixnum exp))
   (let ((res (dpb exp
-		  single-float-exponent-byte
+		  vm:single-float-exponent-byte
 		  (logandc2 (ext:truly-the (unsigned-byte 31)
 					   (%bignum-ref bits 1))
-			    single-float-hidden-bit))))
+			    vm:single-float-hidden-bit))))
     (make-single-float
      (if plusp
 	 res
-	 (logior res (ash -1 float-sign-shift))))))
+	 (logior res (ash -1 vm:float-sign-shift))))))
 ;;;
 (defun double-float-from-bits (bits exp plusp)
   (declare (fixnum exp))
   (let ((hi (dpb exp
-		 double-float-exponent-byte
+		 vm:double-float-exponent-byte
 		 (logandc2 (ext:truly-the (unsigned-byte 31)
 					  (%bignum-ref bits 2))
-			   double-float-hidden-bit))))
+			   vm:double-float-hidden-bit))))
     (make-double-float
      (if plusp
 	 hi
-	 (logior hi (ash -1 float-sign-shift)))
+	 (logior hi (ash -1 vm:float-sign-shift)))
      (%bignum-ref bits 1))))
 
 
@@ -1079,14 +1101,14 @@
 		 (single-float
 		  (single-float-from-bits
 		   bits
-		   (check-exponent len single-float-bias
-		                   single-float-normal-exponent-max)
+		   (check-exponent len vm:single-float-bias
+		                   vm:single-float-normal-exponent-max)
 		   plusp))
 		 (double-float
 		  (double-float-from-bits
 		   bits
-		   (check-exponent len double-float-bias
-		                   double-float-normal-exponent-max)
+		   (check-exponent len vm:double-float-bias
+		                   vm:double-float-normal-exponent-max)
 		   plusp))))
 	     (check-exponent (exp bias max)
 	       (let ((exp (+ exp bias)))
