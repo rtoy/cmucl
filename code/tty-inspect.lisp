@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.20 2001/11/21 22:58:34 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.21 2003/02/05 12:34:08 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,6 +123,7 @@
   (write-line "  R           -  recompute current object." s)
   (write-line "  D           -  redisplay current object." s)
   (write-line "  U           -  Move upward through the object stack." s)
+  (write-line "  <number>    -  Inspect this slot." s)
   (write-line "  Q, E        -  Quit TTY-INSPECTOR." s)
   (write-line "  ?, H, Help  -  Show this help." s))
 
