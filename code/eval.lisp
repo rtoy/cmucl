@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.10 1991/05/08 14:33:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.11 1991/08/21 19:05:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,10 @@
   (declare (optimize (safety 1)))
   (let ((exp (macroexpand original-exp)))
     (typecase exp
-      (symbol (symbol-value exp))
+      (symbol
+       (if (eq (info variable kind exp) :constant)
+	   (values (info variable constant-value exp))
+	   (symbol-value exp)))
       (list
        (let ((name (first exp))
 	     (args (1- (length exp))))
