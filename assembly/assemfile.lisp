@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.30 1992/05/22 18:05:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.31 1992/06/12 03:55:28 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -39,10 +39,20 @@
 	 (won nil)
 	 (*code-segment* nil)
 	 (*elsewhere* nil)
+	 (*assembly-optimize* nil)
+	 (*compiler-trace-output* nil)
 	 (*fixups* nil))
     (unwind-protect
 	(progn
 	  (pushnew :assembler *features*)
+	  (when (and (target-featurep :new-assembler) trace-file)
+	    (setf *compiler-trace-output*
+		  (open (if (eq trace-file t)
+			    (make-pathname :defaults name
+					   :type "trace")
+			    trace-file)
+			:direction :output
+			:if-exists :supersede)))
 	  (init-assembler)
 	  (load (merge-pathnames name (make-pathname :type "lisp")))
 	  (fasl-dump-cold-load-form `(in-package ,(package-name *package*))
@@ -78,6 +88,8 @@
 	(new-assem:release-segment *code-segment*)
 	(when *elsewhere*
 	  (new-assem:release-segment *elsewhere*)))
+      (when *compiler-trace-output*
+	(close *compiler-trace-output*))
       (close-fasl-file *lap-output-file* (not won)))
     won))
 
@@ -116,22 +128,28 @@
 
 (defun emit-assemble (name options regs code)
   (if (backend-featurep :new-assembler)
-      `(let (,@(mapcar
-		#'(lambda (reg)
-		    `(,(reg-spec-name reg)
-		      (make-random-tn
-		       :kind :normal
-		       :sc (sc-or-lose ',(reg-spec-sc reg))
-		       :offset ,(reg-spec-offset reg))))
-		regs))
-	 (new-assem:assemble (*code-segment* ',name)
-	   ,name
-	   (push (cons ',name ,name) *assembler-routines*)
-	   ,@code
-	   ,@(generate-return-sequence
-	      (or (cadr (assoc :return-style options)) :raw)))
-	 (when *compile-print*
-	   (format *error-output* "~S assembled~%" ',name)))
+      (collect ((decls))
+	(loop
+	  (if (and (consp code) (consp (car code)) (eq (caar code) 'declare))
+	      (decls (pop code))
+	      (return)))
+	`(let (,@(mapcar
+		  #'(lambda (reg)
+		      `(,(reg-spec-name reg)
+			(make-random-tn
+			 :kind :normal
+			 :sc (sc-or-lose ',(reg-spec-sc reg))
+			 :offset ,(reg-spec-offset reg))))
+		  regs))
+	   ,@(decls)
+	   (new-assem:assemble (*code-segment* ',name)
+	     ,name
+	     (push (cons ',name ,name) *assembler-routines*)
+	     ,@code
+	     ,@(generate-return-sequence
+		(or (cadr (assoc :return-style options)) :raw)))
+	   (when *compile-print*
+	     (format *error-output* "~S assembled~%" ',name))))
       (let* ((labels nil)
 	     (insts (mapcar #'(lambda (inst)
 				(cond ((symbolp inst)
