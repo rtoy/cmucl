@@ -214,7 +214,9 @@ static void sigfpe_handler(int signal, int code, struct sigcontext *scp)
 	    /* add stripping off the pseudo-atomic-interrupted bit, and then */
 	    /* tell the machine-independent code to process the pseudo- */
 	    /* atomic. */
-	    int immed = ((int)(badinst<<21))>>21;
+	    int immed = (badinst>>1)&0xf;
+	    if (badinst & 1)
+		immed |= -1<<4;
 	    SC_REG(scp,reg_ALLOC) += (immed-1);
 	    arch_skip_instruction(scp);
 	    interrupt_handle_pending(scp);
