@@ -54,6 +54,8 @@ New in this release:
        now signals a TYPE-ERROR.
      - DECLARE no longer being a special operator.
      - DEFINE-CONDITION accepts slot option :DOCUMENTATION.
+     - Behavior of (... &KEY &ALLOW-OTHER-KEYS) fixed for 
+       DESTRUCTURING-BIND and macros.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR

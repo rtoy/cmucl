@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.25 2003/04/19 20:52:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.26 2003/05/03 21:15:38 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,6 +85,7 @@
 	(maximum 0)
 	(minimum 0)
 	(keys ())
+	(key-seen nil)
 	rest-name restp allow-other-keys-p env-arg-used)
     ;; This really strange way to test for '&whole is neccessary because member
     ;; does not have to work on dotted lists, and dotted lists are legal
@@ -207,6 +208,7 @@
 	       (setf rest-name (gensym "KEYWORDS-"))
 	       (push rest-name *ignorable-vars*)
 	       (setf restp t)
+	       (setq key-seen t)
 	       (push-let-binding rest-name path t))
 	      ((eq var '&allow-other-keys)
 	       (setf allow-other-keys-p t))
@@ -295,20 +297,20 @@
 				 :minimum ,minimum
 				 ,@(unless restp `(:maximum ,maximum))))))
 	     *arg-tests*))
-    (if keys
-	(let ((problem (gensym "KEY-PROBLEM-"))
-	      (info (gensym "INFO-")))
-	  (push `(multiple-value-bind
+    (when key-seen
+      (let ((problem (gensym "KEY-PROBLEM-"))
+	    (info (gensym "INFO-")))
+	(push `(multiple-value-bind
 		     (,problem ,info)
-		     (verify-keywords ,rest-name ',keys ',allow-other-keys-p)
-		   (when ,problem
-		     (,error-fun
-		      'defmacro-ll-broken-key-list-error
-		      :kind ',error-kind
-		      ,@(when name `(:name ',name))
-		      :problem ,problem
-		      :info ,info)))
-		*arg-tests*)))
+		   (verify-keywords ,rest-name ',keys ',allow-other-keys-p)
+		 (when ,problem
+		   (,error-fun
+		    'defmacro-ll-broken-key-list-error
+		    :kind ',error-kind
+		    ,@(when name `(:name ',name))
+		    :problem ,problem
+		    :info ,info)))
+	      *arg-tests*)))
     (values env-arg-used minimum (if (null restp) maximum nil))))
 
 ;;; We save space in macro definitions by callig this function.
