@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.196 2002/12/13 03:23:56 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.197 2003/01/26 22:09:38 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -888,7 +888,8 @@
              "INTERNAL-DEBUG" "VAR" "*PRINT-LOCATION-KIND*"
 	     "*ONLY-BLOCK-START-LOCATIONS*" "*STACK-TOP-HINT*"
 	     "*TRACE-VALUES*" "DO-DEBUG-COMMAND"
-	     "*TRACE-ENCAPSULATE-DEFAULT*"))
+	     "*TRACE-ENCAPSULATE-DEFAULT*"
+	     "*DEFAULT-PRINT-FRAME-CALL-VERBOSITY*"))
 
 (intern "CHAR" "LISP")
 (defpackage "EXTENSIONS"
@@ -1465,7 +1466,8 @@
 	     "*DEFAULT-REPORT-TIME-PRINTFUNCTION*" "*INSERT-SPACEREPORTS*"
 	     "*TIMED-FUNCTIONS*" "DELETE-SPACEREPORTS" "PRINT-SPACEREPORTS"
 	     "PROFILE" "PROFILE-ALL" "REPORT-TIME" "REPORT-TIME-CUSTOM"
-	     "RESET-SPACEREPORTS" "RESET-TIME" "UNPROFILE" "WITH-SPACEREPORT"))
+	     "RESET-SPACEREPORTS" "RESET-TIME" "UNPROFILE" "WITH-SPACEREPORT"
+	     "*NO-CALLS-LIMIT*" "*NO-CALLS*"))
 (dolist
     (name
      '("ARRAY-RANK" "ARRAY-TOTAL-SIZE" "BOOLEAN" "CHAR-INT" "FLOAT-DIGITS"
