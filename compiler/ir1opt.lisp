@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.65.2.2 2000/05/23 16:37:11 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.65.2.3 2000/07/06 06:58:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1236,6 +1236,8 @@
 ;;; -- either continuation has a funky TYPE-CHECK annotation.
 ;;; -- the continuations have incompatible assertions, so the new asserted type
 ;;;    would be NIL.
+;;; -- CONT's assertion is incompatbile with the proven type of ARG's, such as
+;;;    when ARG returns multiple values and CONT has a single value assertion.
 ;;; -- the var's DEST has a different policy than the ARG's (think safety).
 ;;;
 ;;;    We change the Ref to be a reference to NIL with unused value, and let it
@@ -1256,8 +1258,10 @@
 	       (member (continuation-type-check arg) '(t nil))
 	       (member (continuation-type-check cont) '(t nil))
 	       (not (eq (values-type-intersection
-			 cont-atype
-			 (continuation-asserted-type arg))
+			 cont-atype (continuation-asserted-type arg))
+			*empty-type*))
+	       (not (eq (values-type-intersection
+			 cont-atype (continuation-proven-type arg))
 			*empty-type*))
 	       (eq (lexenv-cookie (node-lexenv dest))
 		   (lexenv-cookie (node-lexenv (continuation-dest arg)))))
@@ -1308,8 +1312,8 @@
 ;;; over top-level lambda vars.  In such cases, the references may have already
 ;;; been compiled, and thus can't be retroactively modified.
 ;;;
-;;;    If all of the variables are deleted (have no references) when we are
-;;; done, then we delete the let.
+;;;    If all of the variables are deleted (have no references or sets) when
+;;; we are done, then we delete the let.
 ;;;
 ;;;    Note that we are responsible for clearing the Continuation-Reoptimize
 ;;; flags.
@@ -1348,7 +1352,8 @@
        (t
 	(propagate-to-refs var (continuation-type arg))))))
   
-  (when (every #'null (combination-args call))
+  (when (and (every #'null (combination-args call))
+	     (notany #'lambda-var-sets (lambda-vars fun)))
     (delete-let fun))
 
   (undefined-value))
@@ -1659,17 +1664,48 @@
 ;;;
 ;;;    If VALUES appears in a non-MV context, then effectively convert it to a
 ;;; PROG1.  This allows the computation of the additional values to become dead
-;;; code.
+;;; code.  Some attempt is made to correct the node derived type, setting it to
+;;; the received single-value-type. The node continuation asserted type must
+;;; also be adjusted, taking care when the continuation has multiple uses.
 ;;;
 (deftransform values ((&rest vals) * * :node node)
-  (when (typep (continuation-dest (node-cont node))
-	       '(or creturn exit mv-combination))
-    (give-up))
-  (setf (node-derived-type node) *wild-type*)
-  (if vals
-      (let ((dummies (loop repeat (1- (length vals))
-		       collect (gensym))))
-	`(lambda (val ,@dummies)
-	   (declare (ignore ,@dummies))
-	   val))
-      'nil))
+  (let ((cont (node-cont node)))
+    (when (typep (continuation-dest cont) '(or creturn exit mv-combination))
+      (give-up))
+    (flet ((first-value-type (type)
+	     (declare (type ctype type))
+	     (cond ((values-type-p type)
+		    (let ((required (args-type-required type)))
+		      (if required
+			  (first required)
+			  (let ((otype (args-type-optional type)))
+			    (cond (otype (first otype))
+				  ((or (args-type-keyp type)
+				       (args-type-allowp type))
+				   *universal-type*)
+				  ((args-type-rest type))
+				  (t *null-type*))))))
+		   ((eq type *wild-type*)
+		    *universal-type*)
+		   (t
+		    type))))
+      (cond ((= (length (find-uses cont)) 1)
+	     (setf (node-derived-type node)
+		   (single-value-type (node-derived-type node)))
+	     (setf (continuation-asserted-type cont)
+		   (first-value-type (continuation-asserted-type cont))))
+	    (t
+	     (setf (node-derived-type node)
+		   (single-value-type (node-derived-type node)))
+	     (setf (continuation-asserted-type cont)
+		   (values-type-union (continuation-asserted-type cont)
+				      (first-value-type
+				       (continuation-asserted-type cont)))))))
+    (reoptimize-continuation cont)
+    (if vals
+	(let ((dummies (loop repeat (1- (length vals))
+			     collect (gensym))))
+	  `(lambda (val ,@dummies)
+	     (declare (ignore ,@dummies))
+	     val))
+	'nil)))
