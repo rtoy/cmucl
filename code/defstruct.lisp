@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.42 1993/03/13 13:36:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.43 1993/03/13 14:38:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,6 +76,9 @@
 
 (defun %set-instance-layout (instance new-value)
   (%set-instance-layout instance new-value))
+
+(defun %make-funcallable-instance (len layout)
+   (%make-funcallable-instance len layout))
 
 (defun funcallable-instance-p (x) (funcallable-instance-p x))
 
@@ -428,20 +431,21 @@
 	      (t
 	       (error "Unrecognized DEFSTRUCT option: ~S" option))))
 
-      (cond
-       ((class-structure-p defstruct)
-	(when (dd-offset defstruct)
-	  (error "Can't specify :OFFSET unless :TYPE is specified."))
-	(unless (dd-include defstruct)
-	  (incf (dd-length defstruct))))
-       (t
-	(when (dd-print-function defstruct)
-	  (warn "Silly to specify :PRINT-FUNCTION with :TYPE."))
-	(when (dd-make-load-form-fun defstruct)
-	  (warn "Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE."))
-	(when (dd-named defstruct) (incf (dd-length defstruct)))
-	(let ((offset (dd-offset defstruct)))
-	  (when offset (incf (dd-length defstruct) offset)))))
+      (case (dd-type defstruct)
+	(structure
+	 (when (dd-offset defstruct)
+	   (error "Can't specify :OFFSET unless :TYPE is specified."))
+	 (unless (dd-include defstruct)
+	   (incf (dd-length defstruct))))
+	(funcallable-structure)
+	(t
+	 (when (dd-print-function defstruct)
+	   (warn "Silly to specify :PRINT-FUNCTION with :TYPE."))
+	 (when (dd-make-load-form-fun defstruct)
+	   (warn "Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE."))
+	 (when (dd-named defstruct) (incf (dd-length defstruct)))
+	 (let ((offset (dd-offset defstruct)))
+	   (when offset (incf (dd-length defstruct) offset)))))
 
       (when (dd-include defstruct)
 	(do-inclusion-stuff defstruct))
