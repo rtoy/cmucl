@@ -33,25 +33,24 @@ FTP compressed tar archives in binary mode.  To extract, "cd" to the
 directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
-As of 12/11/92, the latest SunOS Sparc release is:
-    17b-sun4c_41.tar.Z (6.8 meg)
-    17b-extra-sun4c_41.tar.Z (3.6 meg)
+As of 11/11/93, the latest SunOS Sparc release is:
+    17c-sunos.tar.Z (6.6 meg)
+    17c-extra-sunos.tar.Z (3.9 meg)
 
 The first file holds binaries and documentation for the basic Lisp system,
 while the second `-extra' file contains the Hemlock editor, the Motif toolkit,
 the graphical debugger and the CLX interface to X11.  The basic configuration
-takes 16 megabytes of disk space; adding the extras takes another 8 megabytes.
+takes 15 megabytes of disk space; adding the extras takes another 8 megabytes.
 For installation directions, see the section "site initialization".
 
-If poor network connections make it difficult to transfer a 10 meg file, the
+If poor network connections make it difficult to transfer a 7 meg file, the
 release is also available split into 2 megabyte chunks, suffixed `.0', `.1',
 etc.  To extract from multiple files, use:
     cat file.tar.Z.* | uncompress | tar xf - .
 
 The release area also contains source distributions and other binary
 distributions.  A listing of the current contents of the release area is in
-FILES.  Major release announcements will be made to comp.lang.lisp until there
-is enough volume to warrant a comp.lang.lisp.cmu.
+FILES.  Major release announcements will be made to comp.lang.lisp.
 
 SunOS credit:
 
@@ -74,6 +73,68 @@ to load and where to save the result.  The default output is to overwrite
 library:lisp.core.  To avoid overwriting the running Lisp image, any existing
 image is renamed to `lisp.core.BAK'; this file may be manually deleted to save
 disk space.
+
+Note: In order to use Motif (and the graphical debugger) with X servers from
+non-OSF vendors (like Sun) you may need to set the environment variable
+XKEYSYMDB to point to the file lib/XKeySymDB.  Otherwise, you will get many
+error messages every time a new connection is opened to the CMU CL motifd.
+This file is read by the X11R5 Xt in order to augment the keysym database with
+certain OSF vendor keysyms that Motif wants to use.  If you get errors about
+being unable to start the Motif server, try setting DISPLAY to the full
+hostname, like:
+    lisp-rt1.slisp.cs.cmu.edu:0
+
+and delete any .motif-socket-* files in /tmp.
+
+
+Installation example (assuming the distribution files are in the cwd):
+
+    % mkdir cmucl
+    % cd cmucl
+    % zcat ../17c-sunos.tar.Z | tar xf -
+    % zcat ../17c-extra-sunos.tar.Z | tar xf -
+    % cd lib
+    % setenv CMUCLLIB `pwd`
+    % setenv XKEYSYMDB `pwd`
+    % cd ../bin
+    % setenv PATH $PATH":"`pwd`
+
+Now you can run the basic Lisp:
+    % lisp
+    CMU Common Lisp 17c, running on lisp-sun1.slisp.cs.cmu.edu
+    Send bug reports and questions to your local CMU CL maintainer, or to
+    cmucl-bugs@cs.cmu.edu.
+    Loaded subsystems:
+	Python 1.0, target SPARCstation/Sun 4
+	CLOS based on PCL version:  September 16 92 PCL (f)
+    common-lisp-user> (quit)
+
+Use config to load optional subsystems:
+    % ../lib/config
+    ; Loading #p"library:config.lisp".
+     1: specify result file (currently "library:lisp.core")
+     2: toggle loading of the CLX X library, currently enabled.
+     3: toggle loading of Motif and the graphical debugger, currently enabled.
+     4: toggle loading the Hemlock editor, currently enabled.
+     5: specify some site-specific file to load.
+     6: configure according to current options.
+     7: abort the configuration process.
+
+    Option number: 6
+
+    ;; Loading #p".../lib/subsystems/clx-library.sparcf".
+    ;; Loading #p".../lib/subsystems/clm-library.sparcf".
+    ;; Loading #p".../lib/subsystems/hemlock-library.sparcf".
+    Saved ".../foo/lib/lisp.core" as ".../foo/lib/lisp.core.BAK".
+    [Doing purification: Done.]
+    [Undoing binding stack... done]
+    [Saving current lisp image into .../foo/lib/lisp.core:
+    Writing 14804416 bytes from the Read-Only space at 0x00200000.
+    Writing 3542680 bytes from the Static space at 0x0C000000.
+    Writing 1464 bytes from the Dynamic space at 0x10000000.
+    done.]
+    % 
+
 
 SunOS/SPARC Notes:
 
@@ -108,8 +169,8 @@ packages: PCL and CLX.  Although these packages are copyrighted, they may be
 freely distributed without any licensing agreement or fee.
 
 The release area contains a source distribution, which is an image of all the
-".lisp" source files used to build version 17b:
-    17b-source.tar.Z (4.9 meg)
+".lisp" source files used to build version 17c:
+    17c-source.tar.Z (4.9 meg)
 
 All of our files (including the release area) are actually in the AFS file
 system.  On the release machines, the FTP server's home is the release
