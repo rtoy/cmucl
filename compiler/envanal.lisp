@@ -39,10 +39,7 @@
 		 (functional-entry-function fun)
 		 fun)))
       (setf (leaf-type f) (definition-type f)))
-    (let ((res (make-environment :function fun)))
-      (setf (lambda-environment fun) res)
-      (dolist (lambda (lambda-lets fun))
-	(setf (lambda-environment lambda) res))))
+    (get-lambda-environment fun))
   
   (dolist (fun (component-lambdas component))
     (compute-closure fun)
@@ -55,6 +52,48 @@
   (undefined-value))
 
 
+;;; PRE-ENVIRONMENT-ANALYZE-TOP-LEVEL  --  Interface
+;;;
+;;;    Called on top-level components before the compilation of the associated
+;;; non-top-level code to detect closed over top-level variables.  We just do
+;;; COMPUTE-CLOSURE on all the lambdas.  This will pre-allocate environments
+;;; for all the functions with closed-over top-level variables.  The post-pass
+;;; will use the existing structure, rather than allocating a new one.
+;;;
+(defun pre-environment-analyze-top-level (component)
+  (declare (type component component))
+  (assert (eq (component-kind component) :top-level))
+  (dolist (lambda (component-lambdas component))
+    (compute-closure lambda)
+    (dolist (let (lambda-lets lambda))
+      (compute-closure let)))
+  (undefined-value))
+
+
+;;; GET-LAMBDA-ENVIRONMENT  --  Internal
+;;;
+;;;    If Fun has an environment, return it, otherwise assign one.
+;;;
+(defun get-lambda-environment (fun)
+  (declare (type clambda fun))
+  (let ((fun (lambda-home fun)))
+    (or (lambda-environment fun)
+	(let ((res (make-environment :function fun)))
+	  (setf (lambda-environment fun) res)
+	  (dolist (lambda (lambda-lets fun))
+	    (setf (lambda-environment lambda) res))
+	  res))))
+
+
+;;; GET-NODE-ENVIRONMENT  --  Internal
+;;;
+;;;    Get node's environment, assigning one if necessary.
+;;; 
+(defun get-node-environment (node)
+  (declare (type node node))
+  (get-lambda-environment (block-lambda (node-block node))))
+
+
 ;;; Compute-Closure  --  Internal
 ;;;
 ;;;    Find any variables in Fun with references outside of the home
@@ -65,23 +104,24 @@
 ;;;
 (defun compute-closure (fun)
   (declare (type clambda fun))
-  (let ((env (lambda-environment fun)))
+  (let ((env (get-lambda-environment fun)))
     (dolist (var (lambda-vars fun))
       (unless (or (leaf-ever-used var)
 		  (lambda-var-ignorep var))
 	(let ((*compiler-error-context* (lambda-bind fun)))
 	  (compiler-warning "Variable ~S defined but never used."
-			    (leaf-name var))))
+			    (leaf-name var))
+	  (setf (leaf-ever-used var) t)))
       
       (dolist (ref (leaf-refs var))
-	(let ((ref-env (node-environment ref)))
+	(let ((ref-env (get-node-environment ref)))
 	  (unless (eq ref-env env)
 	    (when (lambda-var-sets var)
 	      (setf (lambda-var-indirect var) t))
 	    (close-over var ref-env env))))
       
       (dolist (set (basic-var-sets var))
-	(let ((set-env (node-environment set)))
+	(let ((set-env (get-node-environment set)))
 	  (unless (eq set-env env)
 	    (setf (lambda-var-indirect var) t)
 	    (close-over var set-env env))))))
@@ -103,9 +143,11 @@
 	(t
 	 (push thing (environment-closure ref-env))
 	 (dolist (call (leaf-refs (environment-function ref-env)))
-	   (close-over thing (node-environment call) home-env))))
+	   (close-over thing (get-node-environment call) home-env))))
   (undefined-value))
 
+
+;;;; Non-local exit:
 
 ;;; Find-NLX-Cleanup  --  Internal
 ;;;
@@ -238,6 +280,8 @@
 
   (undefined-value))
 
+
+;;;; Cleanup emission:
 
 ;;; Emit-Cleanups  --  Internal
 ;;;
@@ -309,7 +353,7 @@
 		(emit-cleanups block1 block2))))))))
   (undefined-value))
 
-
+
 ;;; Tail-Annotate  --  Internal
 ;;;
 ;;;    Mark all tail-recursive uses of function result continuations with the
