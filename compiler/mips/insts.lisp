@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.42 1992/07/12 20:41:20 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.43 1992/07/23 16:25:22 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,8 +15,6 @@
 ;;;
 ;;; Written by William Lott
 ;;;
-
-
 (in-package "MIPS")
 
 (use-package "NEW-ASSEM")
@@ -27,7 +25,7 @@
     :scheduler-p nil)
 
 
-;;;; Functions to convert TN's and random symbolic things into values.
+;;;; Constants, types, conversion functions, some disassembler stuff.
 
 (defun reg-tn-encoding (tn)
   (declare (type tn tn))
@@ -45,6 +43,54 @@
     (error "~S isn't a floating-point register." tn))
   (tn-offset tn))
 
+(disassem:set-disassem-params :instruction-alignment 32)
+
+(defvar *disassem-use-lisp-reg-names* t)
+
+(defconstant reg-symbols
+  (map 'vector
+       #'(lambda (name)
+	   (cond ((null name) nil)
+		 (t (make-symbol (concatenate 'string "$" name)))))
+       *register-names*))
+
+(disassem:define-argument-type reg
+  :printer #'(lambda (value stream dstate)
+	       (declare (stream stream) (fixnum value))
+	       (let ((regname (aref reg-symbols value)))
+		 (princ regname stream)
+		 (disassem:maybe-note-associated-storage-ref
+		  value
+		  'registers
+		  regname
+		  dstate))))
+
+(defconstant float-reg-symbols
+  (coerce 
+   (loop for n from 0 to 31 collect (make-symbol (format nil "$F~d" n)))
+   'vector))
+
+(disassem:define-argument-type fp-reg
+  :printer #'(lambda (value stream dstate)
+	       (declare (stream stream) (fixnum value))
+	       (let ((regname (aref float-reg-symbols value)))
+		 (princ regname stream)
+		 (disassem:maybe-note-associated-storage-ref
+		  value
+		  'float-registers
+		  regname
+		  dstate))))
+
+(disassem:define-argument-type control-reg
+  :printer "(CR:#x~X)")
+
+(disassem:define-argument-type relative-label
+  :sign-extend t
+  :use-label #'(lambda (value dstate)
+		 (declare (type (signed-byte 16) value)
+			  (type disassem:disassem-state dstate))
+		 (+ (ash (1+ value) 2) (disassem:dstate-cur-addr dstate))))
+
 (deftype float-format ()
   '(member :s :single :d :double :w :word))
 
@@ -54,8 +100,23 @@
     ((:d :double) 1)
     ((:w :word) 4)))
 
+(disassem:define-argument-type float-format
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate)
+			(stream stream)
+			(fixnum value))
+	       (princ (case value
+			(0 's)
+			(1 'd)
+			(4 'w)
+			(t '?))
+		      stream)))
+
 (defconstant compare-kinds
   '(:f :un :eq :ueq :olt :ult :ole :ule :sf :ngle :seq :ngl :lt :nge :le :ngt))
+
+(defconstant compare-kinds-vec
+  (apply #'vector compare-kinds))
 
 (deftype compare-kind ()
   `(member ,@compare-kinds))
@@ -66,17 +127,126 @@
 	     kind
 	     compare-kinds)))
 
+(disassem:define-argument-type compare-kind
+  :printer compare-kinds-vec)
 
 (defconstant float-operations '(+ - * /))
 
 (deftype float-operation ()
   `(member ,@float-operations))
 
+(defconstant float-operation-names
+  ;; this gets used for output only
+  #(add sub mul div))
+
 (defun float-operation (op)
   (or (position op float-operations)
       (error "Unknown floating point operation: ~S~%Must be one of: ~S"
 	     op
 	     float-operations)))
+
+(disassem:define-argument-type float-operation
+  :printer float-operation-names)
+
+
+
+;;;; Constants used by instruction emitters.
+
+(defconstant special-op #b000000)
+(defconstant bcond-op #b000001)
+(defconstant cop0-op #b010000)
+(defconstant cop1-op #b010001)
+(defconstant cop2-op #b010010)
+(defconstant cop3-op #b010011)
+
+
+
+;;;; dissassem:define-instruction-formats
+
+(defconstant immed-printer
+  '(:name :tab rt (:unless (:same-as rt) ", " rs) ", " immediate))
+
+;;; for things that use rt=0 as a nop
+(defconstant immed-zero-printer
+  '(:name :tab rt (:unless (:constant 0) ", " rs) ", " immediate))
+
+(disassem:define-instruction-format
+    (immediate 32 :default-printer immed-printer)
+  (op :field (byte 6 26))
+  (rs :field (byte 5 21) :type 'reg)
+  (rt :field (byte 5 16) :type 'reg)
+  (immediate :field (byte 16 0) :sign-extend t))
+
+(defconstant jump-printer
+  #'(lambda (value stream dstate)
+      (let ((addr (ash value 2)))
+	(disassem:maybe-note-assembler-routine addr dstate)
+	(write addr :base 16 :radix t :stream stream))))
+
+(disassem:define-instruction-format
+    (jump 32 :default-printer '(:name :tab target))
+  (op :field (byte 6 26))
+  (target :field (byte 26 0) :printer jump-printer))
+
+(defconstant reg-printer
+  '(:name :tab rd (:unless (:same-as rd) ", " rs) ", " rt))
+
+(disassem:define-instruction-format
+    (register 32 :default-printer reg-printer)
+  (op :field (byte 6 26))
+  (rs :field (byte 5 21) :type 'reg)
+  (rt :field (byte 5 16) :type 'reg)
+  (rd :field (byte 5 11) :type 'reg)
+  (shamt :field (byte 5 6) :value 0)
+  (funct :field (byte 6 0)))
+
+(disassem:define-instruction-format
+    (break 32 :default-printer
+	   '(:name :tab code (:unless (:constant 0) subcode)))
+  (op :field (byte 6 26) :value special-op)
+  (code :field (byte 10 16))
+  (subcode :field (byte 10 6) :value 0)
+  (funct :field (byte 6 0) :value #b001101))
+
+(disassem:define-instruction-format
+    (coproc-branch 32 :default-printer '(:name :tab offset))
+  (op :field (byte 6 26))
+  (funct :field (byte 10 16))
+  (offset :field (byte 16 0)))
+
+(defconstant float-fmt-printer
+  '((:unless :constant funct)
+    (:choose (:unless :constant sub-funct) nil)
+    "." format))
+
+(defconstant float-printer
+  `(:name ,@float-fmt-printer
+	  :tab
+	  fd
+	  (:unless (:same-as fd) ", " fs)
+	  ", " ft))
+
+(disassem:define-instruction-format
+    (float 32 :default-printer float-printer)
+  (op :field (byte 6 26) :value cop1-op)
+  (filler :field (byte 1 25) :value 1)
+  (format :field (byte 4 21) :type 'float-format)
+  (ft :field (byte 5 16) :value 0)
+  (fs :field (byte 5 11) :type 'fp-reg)
+  (fd :field (byte 5 6) :type 'fp-reg)
+  (funct :field (byte 6 0)))
+
+(disassem:define-instruction-format
+    (float-aux 32 :default-printer float-printer)
+  (op :field (byte 6 26) :value cop1-op)
+  (filler-1 :field (byte 1 25) :value 1)
+  (format :field (byte 4 21) :type 'float-format)
+  (ft :field (byte 5 16) :type 'fp-reg)
+  (fs :field (byte 5 11) :type 'fp-reg)
+  (fd :field (byte 5 6) :type 'fp-reg)
+  (funct :field (byte 2 4))
+  (sub-funct :field (byte 4 0)))
+
 
 
 ;;;; Primitive emitters.
@@ -96,24 +266,12 @@
 (define-emitter emit-register-inst 32
   (byte 6 26) (byte 5 21) (byte 5 16) (byte 5 11) (byte 5 6) (byte 6 0))
 
-
 (define-emitter emit-break-inst 32
   (byte 6 26) (byte 10 16) (byte 10 6) (byte 6 0))
 
 (define-emitter emit-float-inst 32
   (byte 6 26) (byte 1 25) (byte 4 21) (byte 5 16)
   (byte 5 11) (byte 5 6) (byte 6 0))
-
-
-
-;;;; Constants used by instruction emitters.
-
-(defconstant special-op #b000000)
-(defconstant bcond-op #b000001)
-(defconstant cop0-op #b010000)
-(defconstant cop1-op #b010001)
-(defconstant cop2-op #b010010)
-(defconstant cop3-op #b010011)
 
 
 
@@ -142,6 +300,8 @@
 (define-instruction add (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (signed-byte 16) null) src1 src2))
+  (:printer register ((op special-op) (funct #b100000)))
+  (:printer immediate ((op #b001000)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -150,6 +310,8 @@
 (define-instruction addu (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (signed-byte 16) fixup null) src1 src2))
+  (:printer register ((op special-op) (funct #b100001)))
+  (:printer immediate ((op #b001001)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -159,6 +321,7 @@
   (:declare
    (type tn dst)
    (type (or tn (integer #.(- 1 (ash 1 15)) #.(ash 1 15)) null) src1 src2))
+  (:printer register ((op special-op) (funct #b100010)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -174,6 +337,7 @@
    (type tn dst)
    (type
     (or tn (integer #.(- 1 (ash 1 15)) #.(ash 1 15)) fixup null) src1 src2))
+  (:printer register ((op special-op) (funct #b100011)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -187,6 +351,8 @@
 (define-instruction and (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (unsigned-byte 16) null) src1 src2))
+  (:printer register ((op special-op) (funct #b100100)))
+  (:printer immediate ((op #b001100) (immediate nil :sign-extend nil)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -195,6 +361,8 @@
 (define-instruction or (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (unsigned-byte 16) null) src1 src2))
+  (:printer register ((op special-op) (funct #b100101)))
+  (:printer immediate ((op #b001101)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -203,6 +371,8 @@
 (define-instruction xor (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (unsigned-byte 16) null) src1 src2))
+  (:printer register ((op special-op) (funct #b100110)))
+  (:printer immediate ((op #b001110)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -210,6 +380,7 @@
 
 (define-instruction nor (segment dst src1 &optional src2)
   (:declare (type tn dst src1) (type (or tn null) src2))
+  (:printer register ((op special-op) (funct #b100111)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -218,6 +389,8 @@
 (define-instruction slt (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (signed-byte 16) null) src1 src2))
+  (:printer register ((op special-op) (funct #b101010)))
+  (:printer immediate ((op #b001010)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -226,15 +399,20 @@
 (define-instruction sltu (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (signed-byte 16) null) src1 src2))
+  (:printer register ((op special-op) (funct #b101011)))
+  (:printer immediate ((op #b001011)))
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
    (emit-math-inst segment dst src1 src2 #b101011 #b001011)))
 
+(defconstant divmul-printer '(:name :tab rs ", " rt))
+
 (define-instruction div (segment src1 src2)
   (:declare (type tn src1 src2))
+  (:printer register ((op special-op) (rd 0) (funct #b011010)) divmul-printer)
   (:reads (list src1 src2))
-  (:writes :hi-and-lo-regs)
+  (:writes (list :hi-reg :low-reg))
   (:delay 1)
   (:emitter
    (emit-register-inst segment special-op (reg-tn-encoding src1)
@@ -242,8 +420,10 @@
 
 (define-instruction divu (segment src1 src2)
   (:declare (type tn src1 src2))
+  (:printer register ((op special-op) (rd 0) (funct #b011011))
+	    divmul-printer)
   (:reads (list src1 src2))
-  (:writes :hi-and-low-regs)
+  (:writes (list :hi-reg :low-reg))
   (:delay 1)
   (:emitter
    (emit-register-inst segment special-op (reg-tn-encoding src1)
@@ -251,8 +431,9 @@
 
 (define-instruction mult (segment src1 src2)
   (:declare (type tn src1 src2))
+  (:printer register ((op special-op) (rd 0) (funct #b011000)) divmul-printer)
   (:reads (list src1 src2))
-  (:writes :hi-and-low-regs)
+  (:writes (list :hi-reg :low-reg))
   (:delay 1)
   (:emitter
    (emit-register-inst segment special-op (reg-tn-encoding src1)
@@ -260,8 +441,9 @@
 
 (define-instruction multu (segment src1 src2)
   (:declare (type tn src1 src2))
+  (:printer register ((op special-op) (rd 0) (funct #b011001)))
   (:reads (list src1 src2))
-  (:writes :hi-and-low-regs)
+  (:writes :hi-reg :low-reg)
   (:delay 1)
   (:emitter
    (emit-register-inst segment special-op (reg-tn-encoding src1)
@@ -280,9 +462,19 @@
      (emit-register-inst segment special-op 0 (reg-tn-encoding src1)
 			 (reg-tn-encoding dst) src2 opcode))))
 
+(defconstant shift-printer
+  '(:name :tab
+          rd
+          (:unless (:same-as rd) ", " rt)
+          ", " (:cond ((rs :constant 0) shamt)
+                      (t rs))))
+
 (define-instruction sll (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (unsigned-byte 5) null) src1 src2))
+  (:printer register ((op special-op) (rs 0) (shamt nil) (funct #b000000))
+	    shift-printer)
+  (:printer register ((op special-op) (funct #b000100)) shift-printer)
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -291,6 +483,9 @@
 (define-instruction sra (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (unsigned-byte 5) null) src1 src2))
+  (:printer register ((op special-op) (rs 0) (shamt nil) (funct #b000011))
+	    shift-printer)
+  (:printer register ((op special-op) (funct #b000111)) shift-printer)
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -299,6 +494,9 @@
 (define-instruction srl (segment dst src1 &optional src2)
   (:declare (type tn dst)
 	    (type (or tn (unsigned-byte 5) null) src1 src2))
+  (:printer register ((op special-op) (rs 0) (shamt nil) (funct #b000010))
+	    shift-printer)
+  (:printer register ((op special-op) (funct #b000110)) shift-printer)
   (:reads (if src2 (list src1 src2) (list dst src1)))
   (:writes dst)
   (:emitter
@@ -318,8 +516,12 @@
 		    (fp-reg-tn-encoding src2) (fp-reg-tn-encoding src1)
 		    (fp-reg-tn-encoding dst) (float-operation operation))))
 
+(defconstant float-unop-printer
+  `(:name ,@float-fmt-printer :tab fd (:unless (:same-as fd) ", " fs)))
+
 (define-instruction fabs (segment format dst &optional (src dst))
   (:declare (type float-format format) (type tn dst src))
+;  (:printer float ((funct #b000101)) float-unop-printer)
   (:reads src)
   (:writes dst)
   (:emitter
@@ -329,6 +531,7 @@
 
 (define-instruction fneg (segment format dst &optional (src dst))
   (:declare (type float-format format) (type tn dst src))
+;  (:printer float ((funct #b000111)) float-unop-printer)
   (:reads src)
   (:writes dst)
   (:emitter
@@ -338,6 +541,8 @@
   
 (define-instruction fcvt (segment format1 format2 dst src)
   (:declare (type float-format format1 format2) (type tn dst src))
+  (:printer float-aux ((funct #b10) (sub-funct nil :type 'float-format))
+	   `(:name "." sub-funct "." format :tab fd ", " fs))
   (:reads src)
   (:writes dst)
   (:emitter
@@ -349,8 +554,11 @@
   (:declare (type compare-kind operation)
 	    (type float-format format)
 	    (type tn fs ft))
+  (:printer float-aux ((fd 0) (funct #b11) (sub-funct nil :type 'compare-kind))
+	    `(:name "-" sub-funct "." format :tab fs ", " ft))
   (:reads (list fs ft))
   (:writes :float-status)
+  (:delay 1)
   (:emitter
    (emit-float-inst segment cop1-op 1 (float-format-value format) 
 		    (fp-reg-tn-encoding ft) (fp-reg-tn-encoding fs) 0
@@ -376,6 +584,9 @@
 
 (define-instruction b (segment target)
   (:declare (type label target))
+  (:printer immediate ((op #b000100) (rs 0) (rt 0)
+		       (immediate nil :type 'relative-label))
+	    '(:name :tab immediate))
   (:attributes branch)
   (:delay 1)
   (:emitter
@@ -386,6 +597,7 @@
   (:declare (type tn r1)
 	    (type (or tn fixnum label) r2-or-target)
 	    (type (or label null) target))
+  (:printer immediate ((op #b000100) (immediate nil :type 'relative-label)))
   (:attributes branch)
   (:delay 1)
   (:reads (list r1 r2-or-target))
@@ -399,6 +611,7 @@
   (:declare (type tn r1)
 	    (type (or tn fixnum label) r2-or-target)
 	    (type (or label null) target))
+  (:printer immediate ((op #b000101) (immediate nil :type 'relative-label)))
   (:attributes branch)
   (:delay 1)
   (:reads (list r1 r2-or-target))
@@ -408,8 +621,14 @@
      (setf r2-or-target 0))
    (emit-relative-branch segment #b000101 r1 r2-or-target target)))
 
+(defconstant cond-branch-printer
+  '(:name :tab rs ", " immediate))
+
 (define-instruction blez (segment reg target)
   (:declare (type label target) (type tn reg))
+  (:printer
+   immediate ((op #b000110) (rt 0) (immediate nil :type 'relative-label))
+	    cond-branch-printer)
   (:attributes branch)
   (:delay 1)
   (:reads reg)
@@ -418,6 +637,9 @@
 
 (define-instruction bgtz (segment reg target)
   (:declare (type label target) (type tn reg))
+  (:printer
+   immediate ((op #b000111) (rt 0) (immediate nil :type 'relative-label))
+	    cond-branch-printer)
   (:attributes branch)
   (:delay 1)
   (:reads reg)
@@ -426,6 +648,9 @@
 
 (define-instruction bltz (segment reg target)
   (:declare (type label target) (type tn reg))
+  (:printer
+   immediate ((op bcond-op) (rt 0) (immediate nil :type 'relative-label))
+	    cond-branch-printer)
   (:attributes branch)
   (:delay 1)
   (:reads reg)
@@ -434,6 +659,9 @@
 
 (define-instruction bgez (segment reg target)
   (:declare (type label target) (type tn reg))
+  (:printer
+   immediate ((op bcond-op) (rt 1) (immediate nil :type 'relative-label))
+	    cond-branch-printer)
   (:attributes branch)
   (:delay 1)
   (:reads reg)
@@ -442,6 +670,9 @@
 
 (define-instruction bltzal (segment reg target)
   (:declare (type label target) (type tn reg))
+  (:printer
+   immediate ((op bcond-op) (rt #b01000) (immediate nil :type 'relative-label))
+	    cond-branch-printer)
   (:attributes branch)
   (:delay 1)
   (:reads reg)
@@ -451,6 +682,9 @@
 
 (define-instruction bgezal (segment reg target)
   (:declare (type label target) (type tn reg))
+  (:printer
+   immediate ((op bcond-op) (rt #b01001) (immediate nil :type 'relative-label))
+	    cond-branch-printer)
   (:attributes branch)
   (:delay 1)
   (:reads reg)
@@ -458,8 +692,13 @@
   (:emitter
    (emit-relative-branch segment bcond-op reg #b01001 target)))
 
+(defconstant j-printer
+ '(:name :tab (:choose rs target)))
+
 (define-instruction j (segment target)
   (:declare (type (or tn fixup) target))
+  (:printer register ((op special-op) (rt 0) (rd 0) (funct #b001000)) j-printer)
+  (:printer jump ((op #b000010)) j-printer)
   (:attributes branch)
   (:delay 1)
   (:emitter
@@ -474,9 +713,11 @@
 (define-instruction jal (segment reg-or-target &optional target)
   (:declare (type (or null tn fixup) target)
 	    (type (or tn fixup (integer -16 31)) reg-or-target))
+  (:printer register ((op special-op) (rt 0) (funct #b001001)) j-printer)
+  (:printer jump ((op #b000011)) j-printer)
   (:attributes branch)
   (:delay 1)
-  (:writes (if target (reg-tn-location reg-or-target) :r31))
+  (:writes (if target reg-or-target :r31))  ; ### fix this
   (:emitter
    (unless target
      (setf target reg-or-target)
@@ -491,6 +732,8 @@
 
 (define-instruction bc1f (segment target)
   (:declare (type label target))
+  (:printer coproc-branch ((op cop1-op) (funct #x100)
+			   (offset nil :type 'relative-label)))
   (:reads :float-status)
   (:attributes branch)
   (:delay 1)
@@ -499,6 +742,8 @@
 
 (define-instruction bc1t (segment target)
   (:declare (type label target))
+  (:printer coproc-branch ((op cop1-op) (funct #x101)
+			   (offset nil :type 'relative-label)))
   (:reads :float-status)
   (:attributes branch)
   (:delay 1)
@@ -509,10 +754,15 @@
 
 ;;;; Random movement instructions.
 
+(eval-when (compile load eval)
+  (defun lui-arg-printer (value stream dstate)
+    (declare (ignore dstate))
+    (format stream "#x~4,'0X" value)))
+
 (define-instruction lui (segment reg value)
   (:declare (type tn reg)
 	    (type (or fixup (signed-byte 16) (unsigned-byte 16)) value))
-  (:reads)
+  (:printer immediate ((op #b001111) (immed nil :printer #'lui-arg-printer)))
   (:writes reg)
   (:emitter
    (when (fixup-p value)
@@ -520,41 +770,54 @@
      (setf value 0))
    (emit-immediate-inst segment #b001111 0 (reg-tn-encoding reg) value)))
 
+(defconstant mvsreg-printer '(:name :tab rd))
+
 (define-instruction mfhi (segment reg)
   (:declare (type tn reg))
-  (:reads :hi-and-low-regs)
+  (:printer register ((op special-op) (rs 0) (rt 0) (funct #b010000))
+	    mvsreg-printer)
+  (:reads :hi-reg)
   (:writes reg)
+  (:delay 2)
   (:emitter
    (emit-register-inst segment special-op 0 0 (reg-tn-encoding reg) 0
 			#b010000)))
 
 (define-instruction mthi (segment reg)
   (:declare (type tn reg))
+  (:printer register ((op special-op) (rs 0) (rt 0) (funct #b010001))
+	    mvsreg-printer)
   (:reads reg)
-  (:writes :hi-and-low-regs)
-  (:delay 1) ;; ### Is there a delay here?
+  (:writes :hi-reg)
   (:emitter
    (emit-register-inst segment special-op 0 0 (reg-tn-encoding reg) 0
 			#b010001)))
 
 (define-instruction mflo (segment reg)
   (:declare (type tn reg))
-  (:reads :hi-and-low-regs)
+  (:printer register ((op special-op) (rs 0) (rt 0) (funct #b010010))
+	    mvsreg-printer)
+  (:reads :low-reg)
   (:writes reg)
+  (:delay 2)
   (:emitter
    (emit-register-inst segment special-op 0 0 (reg-tn-encoding reg) 0
 			#b010010)))
 
 (define-instruction mtlo (segment reg)
   (:declare (type tn reg))
-  (:writes :hi-and-low-regs)
-  (:delay 1) ;; ### Is there a delay here?
+  (:printer register ((op special-op) (rs 0) (rt 0) (funct #b010011))
+	    mvsreg-printer)
+  (:reads reg)
+  (:writes :low-reg)
   (:emitter
    (emit-register-inst segment special-op 0 0 (reg-tn-encoding reg) 0
 			#b010011)))
 
 (define-instruction move (segment dst src)
   (:declare (type tn dst src))
+  (:printer register ((op special-op) (rt 0) (funct #b100001))
+	    '(:name :tab rd ", " rs))
   (:reads src)
   (:writes dst)
   (:attributes flushable)
@@ -564,6 +827,7 @@
 
 (define-instruction fmove (segment format dst src)
   (:declare (type float-format format) (type tn dst src))
+  (:printer float ((funct #b000110)) '(:name :tab fd ", " fs))
   (:reads src)
   (:writes dst)
   (:attributes flushable)
@@ -588,11 +852,14 @@
 (define-instruction-macro li (reg value)
   `(%li ,reg ,value))
 
+(defconstant sub-op-printer '(:name :tab rd ", " rt))
+
 (define-instruction mtc1 (segment to from)
   (:declare (type tn to from))
+  (:printer register ((op cop1-op) (rs #b00100) (funct 0)) sub-op-printer)
   (:reads from)
   (:writes to)
-  (:delay 1) ;; ### Is this delay correct?
+  (:delay 1)
   (:emitter
    (emit-register-inst segment cop1-op #b00100 (reg-tn-encoding from)
 		       (fp-reg-tn-encoding to) 0 0)))
@@ -601,16 +868,17 @@
   (:declare (type tn to from))
   (:reads from)
   (:writes to)
-  (:delay 1) ;; ### Is this delay correct?
+  (:delay 1)
   (:emitter
    (emit-register-inst segment cop1-op #b00100 (reg-tn-encoding from)
 		       (1+ (fp-reg-tn-encoding to)) 0 0)))
 
 (define-instruction mfc1 (segment to from)
   (:declare (type tn to from))
+  (:printer register ((op cop1-op) (rs 0) (rd nil :type 'fp-reg) (funct 0))
+	    sub-op-printer)
   (:reads from)
   (:writes to)
-  (:delay 1) ;; ### Is this delay correct?
   (:emitter
    (emit-register-inst segment cop1-op #b00000 (reg-tn-encoding to)
 		       (fp-reg-tn-encoding from) 0 0)))
@@ -619,21 +887,26 @@
   (:declare (type tn to from))
   (:reads from)
   (:writes to)
-  (:delay 1) ;; ### Is this delay correct?
   (:emitter
    (emit-register-inst segment cop1-op #b00000 (reg-tn-encoding to)
 		       (1+ (fp-reg-tn-encoding from)) 0 0)))
 
 (define-instruction cfc1 (segment reg cr)
   (:declare (type tn reg) (type (unsigned-byte 5) cr))
-  ;; ### reads/writes for this?
+  (:printer register ((op cop1-op) (rs #b00010) (rd nil :type 'control-reg)
+		      (funct 0)) sub-op-printer)
+  (:reads nil) ;; ### fix this
+  (:writes reg)
   (:emitter
    (emit-register-inst segment cop1-op #b00000 (reg-tn-encoding reg)
 		       cr 0 0)))
 
 (define-instruction ctc1 (segment reg cr)
   (:declare (type tn reg) (type (unsigned-byte 5) cr))
-  ;; ### reads/writes for this?
+  (:printer register ((op cop1-op) (rs #b00110) (rd nil :type 'control-reg)
+		      (funct 0)) sub-op-printer)
+  (:reads reg)
+  (:writes nil) ;; ### fix this
   (:emitter
    (emit-register-inst segment cop1-op #b00110 (reg-tn-encoding reg)
 		       cr 0 0)))
@@ -648,19 +921,83 @@
 (define-emitter emit-break-inst 32
   (byte 6 26) (byte 10 16) (byte 10 6) (byte 6 0))
 
+(defun snarf-error-junk (sap offset &optional length-only)
+  (let* ((length (system:sap-ref-8 sap offset))
+         (vector (make-array length :element-type '(unsigned-byte 8))))
+    (declare (type system:system-area-pointer sap)
+             (type (unsigned-byte 8) length)
+             (type (simple-array (unsigned-byte 8) (*)) vector))
+    (cond (length-only
+           (values 0 (1+ length) nil nil))
+          (t
+           (kernel:copy-from-system-area sap (* mips:byte-bits (1+ offset))
+                                         vector (* mips:word-bits
+                                                   mips:vector-data-offset)
+                                         (* length mips:byte-bits))
+           (collect ((sc-offsets)
+                     (lengths))
+             (lengths 1)                ; the length byte
+             (let* ((index 0)
+                    (error-number (c::read-var-integer vector index)))
+               (lengths index)
+               (loop
+                 (when (>= index length)
+                   (return))
+                 (let ((old-index index))
+                   (sc-offsets (c::read-var-integer vector index))
+                   (lengths (- index old-index))))
+               (values error-number
+                       (1+ length)
+                       (sc-offsets)
+                       (lengths))))))))
+
+(defmacro break-cases (breaknum &body cases)
+  (let ((bn-temp (gensym)))
+    (collect ((clauses))
+      (dolist (case cases)
+        (clauses `((= ,bn-temp ,(car case)) ,@(cdr case))))
+      `(let ((,bn-temp ,breaknum))
+         (cond ,@(clauses))))))
+
+(defun break-control (chunk inst stream dstate)
+  (declare (ignore inst))
+  (flet ((nt (x) (if stream (disassem:note x dstate))))
+    (case (break-code chunk dstate)
+      (#.vm:error-trap
+       (nt "Error trap")
+       (disassem:handle-break-args #'snarf-error-junk stream dstate))
+      (#.vm:cerror-trap
+       (nt "Cerror trap")
+       (disassem:handle-break-args #'snarf-error-junk stream dstate))
+      (#.vm:breakpoint-trap
+       (nt "Breakpoint trap"))
+      (#.vm:pending-interrupt-trap
+       (nt "Pending interrupt trap"))
+      (#.vm:halt-trap
+       (nt "Halt trap"))
+      (#.vm:function-end-breakpoint-trap
+       (nt "Function end breakpoint trap"))
+    )))
+
 (define-instruction break (segment code &optional (subcode 0))
   (:declare (type (unsigned-byte 10) code subcode))
+  (:printer break ((op special-op) (funct #b001101))
+	    '(:name :tab code (:unless (:constant 0) subcode))
+	    :control #'break-control )
   :pinned
   (:emitter
    (emit-break-inst segment special-op code subcode #b001101)))
 
 (define-instruction syscall (segment)
   :pinned
+  (:printer register ((op special-op) (rd 0) (rt 0) (rs 0) (funct #b001100))
+	    '(:name))
   (:emitter
    (emit-register-inst segment special-op 0 0 0 0 #b001100)))
 
 (define-instruction nop (segment)
   (:attributes flushable)
+  (:printer register ((op 0) (rd 0) (rd 0) (rs 0) (funct 0)) '(:name))
   (:emitter
    (emit-word segment 0)))
 
@@ -770,9 +1107,16 @@
   (emit-immediate-inst segment opcode (reg-tn-encoding reg)
 		       (reg-tn-encoding base) index))
 
+(defconstant load-store-printer
+  '(:name :tab
+          rt ", "
+          rs
+          (:unless (:constant 0) "[" immediate "]")))
+
 (define-instruction lb (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b100000)) load-store-printer)
   (:reads (list base :memory))
   (:writes reg)
   (:delay 1)
@@ -782,6 +1126,7 @@
 (define-instruction lh (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b100001)) load-store-printer)
   (:reads (list base :memory))
   (:writes reg)
   (:delay 1)
@@ -791,6 +1136,7 @@
 (define-instruction lwl (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b100010)) load-store-printer)
   (:reads (list base :memory))
   (:writes reg)
   (:delay 1)
@@ -800,6 +1146,7 @@
 (define-instruction lw (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b100011)) load-store-printer)
   (:reads (list base :memory))
   (:writes reg)
   (:delay 1)
@@ -809,6 +1156,7 @@
 (define-instruction lbu (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b100100)) load-store-printer)
   (:reads (list base :memory))
   (:writes reg)
   (:delay 1)
@@ -818,6 +1166,7 @@
 (define-instruction lhu (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b100101)) load-store-printer)
   (:reads (list base :memory))
   (:writes reg)
   (:delay 1)
@@ -827,6 +1176,7 @@
 (define-instruction lwr (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b100110)) load-store-printer)
   (:reads (list base :memory))
   (:writes reg)
   (:delay 1)
@@ -836,6 +1186,7 @@
 (define-instruction sb (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b101000)) load-store-printer)
   (:reads base reg)
   (:writes :memory)
   (:emitter
@@ -844,6 +1195,7 @@
 (define-instruction sh (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b101001)) load-store-printer)
   (:reads base reg)
   (:writes :memory)
   (:emitter
@@ -852,6 +1204,7 @@
 (define-instruction swl (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b101010)) load-store-printer)
   (:reads base reg)
   (:writes :memory)
   (:emitter
@@ -860,6 +1213,7 @@
 (define-instruction sw (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b101011)) load-store-printer)
   (:reads base reg)
   (:writes :memory)
   (:emitter
@@ -868,6 +1222,7 @@
 (define-instruction swr (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b101110)) load-store-printer)
   (:reads base reg)
   (:writes :memory)
   (:emitter
@@ -884,6 +1239,7 @@
 (define-instruction lwc1 (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b110001) (rt nil :type 'fp-reg)) load-store-printer)
   (:reads base :memory)
   (:writes reg)
   (:delay 1)
@@ -902,6 +1258,7 @@
 (define-instruction swc1 (segment reg base &optional (index 0))
   (:declare (type tn reg base)
 	    (type (or (signed-byte 16) fixup) index))
+  (:printer immediate ((op #b111001) (rt nil :type 'fp-reg)) load-store-printer)
   (:reads base reg)
   (:writes :memory)
   (:emitter
@@ -914,4 +1271,3 @@
   (:writes :memory)
   (:emitter
    (emit-fp-load/store-inst segment #b111001 reg 1 base index)))
-
