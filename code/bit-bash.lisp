@@ -266,7 +266,7 @@
   (declare (type index offset))
   (%raw-bits object offset))
 
-(defun (setf %raw-bits) (object offset value)
+(defun %set-raw-bits (object offset value)
   (declare (type index offset)
 	   (type unit value))
   (setf (%raw-bits object offset) value))
