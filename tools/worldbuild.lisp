@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.26 1993/08/19 12:51:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.27 1993/08/19 16:18:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,7 +78,6 @@
     "target:code/float-trap"
     "target:code/irrat"
     "target:code/bignum"
-    "target:code/defmacro"
     "target:code/list"
     "target:code/hash"
     "target:code/macros"
@@ -94,7 +93,6 @@
    
     "target:code/rand"
     "target:code/save"
-    "target:code/extensions"
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/sap"
@@ -114,8 +112,6 @@
     "target:code/format"
     "target:code/package"
     "target:code/reader"
-    "target:code/backq"
-    "target:code/sharpm"
     "target:code/load"
     ,@(when (c:backend-featurep :pmax)
 	'("target:code/pmax-vm"))
