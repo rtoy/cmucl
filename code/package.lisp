@@ -254,7 +254,7 @@
 	    (,len (length ,vec))
 	    (,h2 (1+ (the fixnum (rem (the fixnum ,sxhash)
 				      (the fixnum (- ,len 2)))))))
-       (declare (type (simple-array (unsigned-byte 8)) ,hash)
+       (declare (type (simple-array (unsigned-byte 8) (*)) ,hash)
 		(simple-vector ,vec)
 		(fixnum ,len ,h2))
        (prog ((,index-var (rem (the fixnum ,sxhash) ,len))
@@ -565,8 +565,8 @@
   (multiple-value-bind (symbol where) (find-symbol* name length package)
     (if where
 	(values symbol where)
-	(let ((symbol (%primitive alloc-symbol (subseq name 0 length))))
-	  (%primitive set-package symbol package)
+	(let ((symbol (make-symbol (subseq name 0 length))))
+	  (%primitive c::set-package symbol package)
 	  (cond ((eq package *keyword-package*)
 		 (add-symbol (package-external-symbols package) symbol)
 		 (set symbol symbol))
@@ -668,7 +668,7 @@
 			      (package-external-symbols package))
 			  name)
 	     (if (eq (symbol-package symbol) package)
-		 (%primitive set-package symbol nil))
+		 (%primitive c::set-package symbol nil))
 	     t)
 	    (t nil)))))
 
@@ -829,7 +829,7 @@
     ;;
     ;; If any of the symbols are uninterned, make them be owned by Package.
     (dolist (sym symbols)
-      (unless (symbol-package sym) (%primitive set-package sym package)))
+      (unless (symbol-package sym) (%primitive c::set-package sym package)))
     (shadowing-import cset package)))
 
 ;;; Shadowing-Import  --  Public
@@ -872,8 +872,8 @@
       (let ((name (symbol-name sym)))
 	(multiple-value-bind (s w) (find-symbol name package)
 	  (when (or (not w) (eq w :inherited))
-	    (setq s (%primitive alloc-symbol name))
-	    (%primitive set-package s package)
+	    (setq s (make-symbol name))
+	    (%primitive c::set-package s package)
 	    (add-symbol internal s))
 	  (pushnew s (package-shadowing-symbols package))))))
   t)
@@ -1066,12 +1066,12 @@
 	;; Put internal symbols in the internal hashtable and set package.
 	(dolist (symbol (second spec))
 	  (add-symbol internal symbol)
-	  (%primitive set-package symbol pkg))
+	  (%primitive c::set-package symbol pkg))
 	;;
 	;; External symbols same, only go in external table.
 	(dolist (symbol (third spec))
 	  (add-symbol external symbol)
-	  (%primitive set-package symbol pkg))
+	  (%primitive c::set-package symbol pkg))
 	;;
 	;; Don't set package for Imported symbols.
 	(dolist (symbol (fourth spec))
