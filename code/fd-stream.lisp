@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.31 1993/08/30 21:19:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.32 1994/01/06 19:50:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -724,6 +724,11 @@ non-server method is also significantly more efficient for large reads.
 	(declare (type index now-needed len))
 	(cond
 	 ((> now-needed len)
+	  ;;
+	  ;; If the desired amount is greater than the stream buffer size, then
+	  ;; read directly into the destination, incrementing the start
+	  ;; accordingly.  In this case, we never leave anything in the stream
+	  ;; buffer.
 	  (system:without-gcing
 	    (loop
 	      (multiple-value-bind
@@ -738,13 +743,17 @@ non-server method is also significantly more efficient for large reads.
 		(unless count
 		  (error "Error reading ~S: ~A" stream
 			 (unix:get-unix-error-msg err)))
-		(when (< count now-needed)
+		(when (zerop count)
 		  (return (eof-or-lose stream eof-error-p
 				       (- requested now-needed))))
 		(decf now-needed count)
 		(when (zerop now-needed) (return requested))
 		(incf offset count)))))
 	 (t
+	  ;;
+	  ;; If we want less than the buffer size, then loop trying to fill the
+	  ;; stream buffer and copying what we get into the destination.  When
+	  ;; we have enough, we leave what's left in the stream buffer.
 	  (loop
 	    (multiple-value-bind
 		(count err)
@@ -753,8 +762,7 @@ non-server method is also significantly more efficient for large reads.
 	      (unless count
 		(error "Error reading ~S: ~A" stream
 		       (unix:get-unix-error-msg err)))
-	      (incf (fd-stream-ibuf-tail stream) count)
-	      (when (< count now-needed)
+	      (when (zerop count)
 		(return (eof-or-lose stream eof-error-p
 				     (- requested now-needed))))
 	      (let* ((copy (min now-needed count))
@@ -771,9 +779,12 @@ non-server method is also significantly more efficient for large reads.
 						     (* vm:vector-data-offset
 							vm:word-bits))
 					   copy-bits))
-		(incf (fd-stream-ibuf-head stream) copy)
+
 		(decf now-needed copy)
-		(when (zerop now-needed) (return requested))
+		(when (zerop now-needed)
+		  (setf (fd-stream-ibuf-head stream) copy)
+		  (setf (fd-stream-ibuf-tail stream) count)
+		  (return requested))
 		(incf offset copy)))))))))))
 
 
