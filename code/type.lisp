@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.21.2.4 2000/06/27 16:32:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.21.2.5 2000/07/06 07:01:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -197,6 +197,8 @@
 	    (:include args-type
 		      (:class-info (type-class-or-lose 'values)))
 	    (:print-function %print-type)))
+
+(declaim (freeze-type values-type))
 
 (define-type-method (values :unparse) (type)
   (cons 'values (unparse-args-types type)))
@@ -413,16 +415,27 @@
 ;;; Single-Value-Type  --  Interface
 ;;;
 ;;;    Return the type of the first value indicated by Type.  This is used by
-;;; people who don't want to have to deal with values types.
+;;; people who don't want to have to deal with values types. If the first
+;;; values is an optional or rest argument then return the union with the null
+;;; type. If the first values is a keyword then give up and return the
+;;; universal type.
 ;;;
-(declaim (freeze-type values-type) (inline single-value-type))
 (defun single-value-type (type)
   (declare (type ctype type))
   (cond ((values-type-p type)
-	 (or (car (args-type-required type))
-	     (car (args-type-optional type))
-	     (args-type-rest type)
-	     *universal-type*))
+	 (let ((required (args-type-required type)))
+	   (if required
+	       (first required)
+	       (let ((otype (args-type-optional type)))
+		 (cond (otype
+			(type-union (first otype) *null-type*))
+		       ((or (args-type-keyp type) (args-type-allowp type))
+			*universal-type*)
+		       (t
+			(let ((rest (args-type-rest type)))
+			  (if rest
+			      (type-union rest *null-type*)
+			      *null-type*))))))))
 	((eq type *wild-type*)
 	 *universal-type*)
 	(t
