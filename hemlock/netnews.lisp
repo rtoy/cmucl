@@ -223,16 +223,16 @@
   :value :from-end)
 
 (defhvar "Netnews Start Over Threshold"
-  "If you have read a group before, and the number of new messages exceeds this
-   number, Hemlock asks whether you want to start reading from the end of this
-   group.  The default is 300."
+  "If you have read a group before, and the number of new messages exceeds
+   this number, Hemlock asks whether you want to start reading from the end
+   of this group.  The default is 300."
   :value 300)
 
 (defcommand "Netnews" (p &optional group-name from-end-p browse-buf (updatep t))
-  "Enter a headers buffer and read groups from \"Netnews Group File\".  With
-   an argument prompts for a group and reads it."
-  "Enter a headers buffer and read groupss from \"Netnews Group File\".  With
-   an argument prompts for a group and reads it."
+  "Enter a headers buffer and read groups from \"Netnews Group File\".
+   With an argument prompts for a group and reads it."
+  "Enter a headers buffer and read groups from \"Netnews Group File\".
+   With an argument prompts for a group and reads it."
   (cond
    ((and *nn-headers-buffer* (not p) (not group-name))
     (change-to-buffer *nn-headers-buffer*))
@@ -1774,10 +1774,10 @@
 ;;; 
 (defun nn-reply-cleanup-split-windows (post-buffer)
   (let* ((post-info (variable-value 'post-info :buffer post-buffer))
-	 (reply-window (post-info-reply-window post-info)))
-    (when (and (member (post-info-message-window post-info) *window-list*)
-	       (member reply-window *window-list*))
-      (delete-window reply-window))))
+	 (message-window (post-info-message-window post-info)))
+    (when (and (member (post-info-reply-window post-info) *window-list*)
+	       (member message-window *window-list*))
+      (delete-window message-window))))
 
 (defcommand "Netnews Reply to Group" (p)
   "Set up a POST buffer and insert the proper newgroups: and subject: fields.
@@ -1803,12 +1803,8 @@
   (let ((*netnews-post-frob-windows-hook* #'nn-reply-in-other-window-hook))
     (nn-reply-to-message)))
 
-(defcommand "Netnews Forward Message" (p)
-  "Creates a Draft buffer and places a copy of the current message in
-   it, delimited by forwarded message markers."
-  "Creates a Draft buffer and places a copy of the current message in
-   it, delimited by forwarded message markers."
-  (declare (ignore p))
+
+(defun nn-setup-for-reply-by-mail ()
   (let* ((headers-buffer (nn-get-headers-buffer))
 	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
 	 (message-buffer (nn-info-buffer nn-info))
@@ -1830,6 +1826,17 @@
     (defhvar "Message Buffer"
       "This is bound in draft buffers to their associated message buffer."
       :value message-buffer :buffer draft-buffer)
+    (values draft-buffer message-buffer)))
+
+
+(defcommand "Netnews Forward Message" (p)
+  "Creates a Draft buffer and places a copy of the current message in
+   it, delimited by forwarded message markers."
+  "Creates a Draft buffer and places a copy of the current message in
+   it, delimited by forwarded message markers."
+  (declare (ignore p))
+  (multiple-value-bind (draft-buffer message-buffer)
+		       (nn-setup-for-reply-by-mail)
     (with-mark ((mark (buffer-point draft-buffer) :left-inserting))
       (buffer-end mark)
       (insert-string mark (format nil "~%------- Forwarded Message~%~%"))
@@ -1839,49 +1846,55 @@
     (nn-reply-using-current-window nil draft-buffer)))
 
 
+(defun nn-reply-to-sender ()
+  (let* ((headers-buffer (nn-get-headers-buffer))
+	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
+	 (article (if (and (hemlock-bound-p 'netnews-info)
+			   (minusp (nn-info-current-displayed-message
+				    nn-info)))
+		      (nn-put-article-in-buffer nn-info headers-buffer)
+		      (nn-info-current-displayed-message nn-info))))
+    (multiple-value-bind (draft-buffer message-buffer)
+			 (nn-setup-for-reply-by-mail)
+      (let ((point (buffer-point draft-buffer))
+	    (to-field (or (nn-get-one-field nn-info "Reply-To" article)
+			  (nn-get-one-field nn-info "From" article))))
+	(insert-string-after-pattern point
+				     *draft-to-pattern*
+				     to-field
+				     :end (1- (length to-field)))
+	(let ((subject-field (nn-subject-replyify
+			      (nn-get-one-field nn-info "Subject" article))))
+	  (insert-string-after-pattern point
+				       *draft-subject-pattern*
+				       subject-field
+				       :end (1- (length subject-field)))))
+      (nn-reply-using-current-window nil draft-buffer)
+      (values draft-buffer message-buffer))))
+
 (defcommand "Netnews Reply to Sender" (p)
   "Reply to the sender of a message via mail using the Hemlock mailer."
   "Reply to the sender of a message via mail using the Hemlock mailer."
   (declare (ignore p))
-  (let* ((headers-buffer (nn-get-headers-buffer))
-	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
-	 (article (if (and (hemlock-bound-p 'netnews-info)
-			   (minusp (nn-info-current-displayed-message nn-info)))
-		      (nn-put-article-in-buffer nn-info headers-buffer)
-		      (nn-info-current-displayed-message nn-info)))
-	 (message-buffer (nn-info-buffer nn-info))
-	 (nm-info (variable-value 'netnews-message-info :buffer message-buffer))
-	 (draft-buffer (sub-setup-message-draft "comp" :to-field))
-	 (dinfo (variable-value 'draft-information :buffer draft-buffer)))
-    (setf (buffer-delete-hook draft-buffer)
-	  (list #'cleanup-netnews-draft-buffer))
-    (when (nm-info-draft-buffer nm-info)
-      (delete-variable 'message-buffer :buffer (nm-info-draft-buffer nm-info)))
-    (setf (nm-info-draft-buffer nm-info) draft-buffer)
-    (when headers-buffer
-      (defhvar "Headers Buffer"
-	"This is bound in message and draft buffers to their associated
-	headers-buffer"
-	:value headers-buffer :buffer draft-buffer))
-    (setf (draft-info-headers-mark dinfo)
-	  (copy-mark (buffer-point headers-buffer)))
-    (defhvar "Message Buffer"
-      "This is bound in draft buffers to their associated message buffer."
-      :value message-buffer :buffer draft-buffer)
-    (let ((point (buffer-point draft-buffer))
-	  (to-field (or (nn-get-one-field nn-info "Reply-To" article)
-			(nn-get-one-field nn-info "From" article))))
-      (insert-string-after-pattern point
-				   *draft-to-pattern*
-				   to-field
-				   :end (1- (length to-field)))
-      (let ((subject-field (nn-subject-replyify
-			    (nn-get-one-field nn-info "Subject" article))))
-	(insert-string-after-pattern point
-				     *draft-subject-pattern*
-				     subject-field
-				     :end (1- (length subject-field)))))
-    (nn-reply-using-current-window nil draft-buffer)))
+  (nn-reply-to-sender))
+
+(defcommand "Netnews Reply to Sender in Other Window" (p)
+  "Reply to the sender of a message via mail using the Hemlock mailer.  The
+   screen will be split in half, displaying the post and the draft being
+   composed."
+  "Reply to the sender of a message via mail using the Hemlock mailer.  The
+   screen will be split in half, displaying the post and the draft being
+   composed."
+  (declare (ignore p))
+  (multiple-value-bind (draft-buffer message-buffer)
+		       (nn-reply-to-sender)
+    (let* ((message-window (current-window))
+	   (reply-window (make-window (buffer-start-mark draft-buffer))))
+      (defhvar "Split Window Draft"
+	"Indicates window needs to be cleaned up for draft."
+	:value t :buffer draft-buffer)
+      (setf (window-buffer message-window) message-buffer
+	    (current-window) reply-window))))
 
 ;;; CLEANUP-NETNEWS-DRAFT-BUFFER replaces the normal draft buffer delete hook
 ;;; because the generic one tries to set some slots in the related message-info
@@ -2138,15 +2151,29 @@
 (defparameter *nntp-port* 119
   "The nntp port number for NNTP as specified in RFC977.")
 
-(defparameter *nntp-server* "netnews.srv.cs.cmu.edu"
-  "The hostname of the nntp server to use.")
+(defhvar "Netnews NNTP Server"
+  "The hostname of the NNTP server to use for reading Netnews."
+  :value "netnews.srv.cs.cmu.edu")
 
-(defun connect-to-nntp ()
+(defhvar "Netnews NNTP Timeout Period"
+  "The number of seconds to wait before timing out when trying to connect
+   to the NNTP server."
+  :value 30)
+
+(defun raw-connect-to-nntp ()
   (let ((stream (system:make-fd-stream
-		 (ext:connect-to-inet-socket *nntp-server* *nntp-port*)
-		 :input t :output t :buffering :line :name "NNTP")))
+		 (ext:connect-to-inet-socket (value netnews-nntp-server)
+					     *nntp-port*)
+		 :input t :output t :buffering :line :name "NNTP"
+		 :timeout (value netnews-nntp-timeout-period))))
     (process-status-response stream)
     stream))
+
+(defun connect-to-nntp ()
+  (handler-case
+      (raw-connect-to-nntp)
+    (io-timeout ()
+      (editor-error "Connection to NNTP timed out.  Try again later."))))
 
 (defvar *nn-last-command-type* nil
   "Used to recover from a nntp timeout.")
@@ -2175,17 +2202,17 @@
 ;;; then just return what NNTP returned to us for parsing later.
 ;;;
 (defun process-status-response (stream &optional note)
-  (let ((string (read-line stream)))
-    (if (member (schar string 0) nntp-error-codes :test #'char=)
-	(let ((error-handler (cdr (assoc string *nntp-error-handlers*
+  (let ((str (read-line stream)))
+    (if (member (schar str 0) nntp-error-codes :test #'char=)
+	(let ((error-handler (cdr (assoc str *nntp-error-handlers*
 					 :test #'(lambda (string1 string2)
 						   (string= string1 string2
 							    :end1 3
 							    :end2 3))))))
 	  (unless error-handler
-	    (error "NNTP error -- ~A" (subseq string 4 (1- (length string)))))
+	    (error "NNTP error -- ~A" (subseq str 4 (1- (length str)))))
 	  (funcall error-handler note))
-	string)))
+	str)))
 
 (defun nn-recover-from-timeout (nn-info)
   (message "NNTP timed out, attempting to reconnect and continue...")
