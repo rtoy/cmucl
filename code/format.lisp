@@ -15,10 +15,9 @@
 ;;;
 ;;; FORMAT is part of the standard Spice Lisp environment.
 ;;;
-;;; **********************************************************************
+(in-package "LISP")
 
-(in-package 'lisp)
-(export 'format)
+(export '(format))
 
 ;;; Special variables local to FORMAT
 
@@ -54,7 +53,7 @@
 
 
 
-;;; ERRORS
+;;;; ERRORS
 
 ;;; Since errors may occur while an indirect control string is being
 ;;; processed, i.e. by ~? or ~{~:}, some sort of backtrace is necessary
@@ -105,6 +104,7 @@
 	       error))))))
 
 
+;;;; WITH-FORMAT-PARAMETERS, and other useful macros.
 ;;; This macro rebinds collects output to the standard output stream
 ;;; in a string.  For efficiency, we avoid consing a new stream on
 ;;; every call.  A stack of string streams is maintained in order to
@@ -116,11 +116,11 @@
 	      (pop *format-stream-stack*)
 	      (make-string-output-stream))))
      (unwind-protect
-      (progn ,@forms
-	     (prog1
-	      (get-output-stream-string *standard-output*)
-	      (push *standard-output* *format-stream-stack*)))
-      (get-output-stream-string *standard-output*))))
+	 (progn ,@forms
+	   (prog1
+	       (get-output-stream-string *standard-output*)
+	     (push *standard-output* *format-stream-stack*)))
+       (get-output-stream-string *standard-output*))))
 
 
 
@@ -155,7 +155,7 @@
 
 
 
-;;; CONTROL STRING PARSING 
+;;;; Control String Parsing 
 
 ;;; The current control string is kept in *format-control-string*. 
 ;;; The variable *format-index* is the position of the last character
@@ -226,27 +226,39 @@
     (t nil)))
 
 
-;;; Parses a format directive, including flags and parameters.  On entry,
-;;; *format-index* should point to the "~" preceding the command.  On
-;;; exit, *format-index* points to the command character itself.
-;;; Returns the list of parameters, the ":" flag, the "@" flag, and the
-;;; command character as multiple values.  Explicitly defaulted parameters
-;;; appear in the list of parameters as NIL.  Omitted parameters are simply 
-;;; not included in the list at all.
+;;;; Parsing the directives to FORMAT.
 
+;;; PARSE-FORMAT-OPERATION parses a format directive, including flags and
+;;; parameters.  On entry, *format-index* should point to the "~" preceding the
+;;; command.  On exit, *format-index* points to the command character itself.
+;;; Returns the list of parameters, the ":" flag, the "@" flag, and the command
+;;; character as multiple values.  Explicitly defaulted parameters appear in
+;;; the list of parameters as NIL.  Omitted parameters are simply not included
+;;; in the list at all.
+;;;
+(defmacro parse-format-operation-modifier ()
+  `(let ((temp (format-peek)))
+     (cond ((char= temp #\:)
+	    (nextchar)
+	    (setf colon-p t))
+	   ((char= temp #\@)
+	    (nextchar)
+	    (setf atsign-p t)))))
+;;;
 (defun parse-format-operation ()
-  (let ((ch (nextchar)))
-    (values (if (or (digit-char-p ch)
-		    (member ch '(#\, #\# #\V #\v #\' #\+ #\-) :test #'char=))
-		(do ((parms (list (format-get-parameter))
-			    (cons (format-get-parameter) parms)))
-		    ((char/= (format-peek) #\,) (nreverse parms))
-		  (declare (list parms))
-		  (nextchar))
-		'())
-	    (if (char= (format-peek) #\:) (nextchar) nil)
-	    (if (char= (format-peek) #\@) (nextchar) nil)
-	    (format-peek))))
+  (let* ((ch (nextchar))
+	 (parms (if (or (digit-char-p ch)
+			(member ch '(#\, #\# #\V #\v #\' #\+ #\-) :test #'char=))
+		    (do ((parms (list (format-get-parameter))
+				(cons (format-get-parameter) parms)))
+			((char/= (format-peek) #\,) (nreverse parms))
+		      (declare (list parms))
+		      (nextchar))
+		    '()))
+	 colon-p atsign-p)
+    (parse-format-operation-modifier)
+    (parse-format-operation-modifier)
+    (values parms colon-p atsign-p (format-peek))))
 
 
 
@@ -300,7 +312,7 @@
 
  
 
-;;; This is the FORMAT top-level function.
+;;;; This is the FORMAT top-level function.
 
 (defun format (destination control-string &rest format-arguments)
   "Provides various facilities for formatting output.
@@ -372,6 +384,8 @@
 	    (error "~%~:{~@?~%~}" (nreverse errorp))))
 	nil)))))
 
+;;;; SUB-FORMAT, the real work of FORMAT.
+
 ;;; This function does the real work of format.  The segment of the control
 ;;; string between indiced START (inclusive) and END (exclusive) is processed
 ;;; as follows: Text not part of a directive is output without further
@@ -379,7 +393,7 @@
 ;;; and the appropriate handlers invoked with the arguments COLON, ATSIGN, and
 ;;; PARMS. 
 ;;;
-;;; Implementation Note: FORMAT-FIND-CHAR uses the POSITION sequence operation
+;;; Implementation Note: FORMAT-FIND-CHAR uses the POSITION stream operation
 ;;; for speed.  This is potentially faster than character-at-a-time searching.
 
 (defun sub-format (start end)
@@ -410,7 +424,7 @@
 
 
 
-;;; Conditional case conversion  ~( ... ~)
+;;;; Conditional case conversion  ~( ... ~)
 
 (defun format-capitalization (colon atsign parms)
   (when parms
@@ -462,7 +476,7 @@
     (throw (if colon 'format-colon-escape 'format-escape) nil)))
 
 
-;;; Conditional expression  ~[ ... ]
+;;;; Conditional expression  ~[ ... ]
 
 
 ;;; ~[ 
@@ -556,7 +570,7 @@
 	(t (format-untagged-condition))))
 
 
-;;; Iteration  ~{ ... ~}
+;;;; Iteration  ~{ ... ~}
 
 (defun format-iteration (colon atsign parms)
   (with-format-parameters parms ((max-iter -1))
@@ -616,7 +630,7 @@
   
 
 
-;;; Justification  ~< ... ~>
+;;;; Justification  ~< ... ~>
 
 ;;; Parses a list of clauses delimited by ~; and terminated by ~>.
 ;;; Recursively invoke SUB-FORMAT to process them, and return a list
@@ -669,11 +683,13 @@
 
    
 
+;;;; Padding functions for Justification.
+
 ;;; Given the total number of SPACES needed for padding, and the number
 ;;; of padding segments needed (PADDINGS), returns a list of such segments.
 ;;; We try to allocate the spaces equally to each segment.  When this is
 ;;; not possible, allocate any left over spaces to the first segment.
-
+;;;
 (defun make-pad-segs (spaces padding-segs)
   (do* ((extra-space () (and (plusp extra-spaces)
 			     extra-inc
@@ -696,7 +712,7 @@
 ;;; characters according to the following rule:  If WIDTH is less than or
 ;;; equal to MINCOL, use WIDTH as the actual width.  Otherwise, round up 
 ;;; to MINCOL + k * COLINC for the smallest possible positive integer k.
-
+;;;
 (defun format-round-columns (width mincol colinc)
   (if (> width mincol)
       (multiple-value-bind
@@ -748,7 +764,7 @@
 		 (dotimes (i (car spcs)) (write-char padchar))
 		 (write-string (car segs)))))))))
 
-;;; Newline  ~&
+;;;; Newline  ~&
 
 (defun format-terpri (colon atsign parms)
   (when (or colon atsign)
@@ -806,7 +822,7 @@
 	(t (format-eat-whitespace))))
 
 
-;;; Pluralize word  ~P
+;;;; Pluralize word (~P) and Skip Arguments (~*)
 
 (defun format-plural (colon atsign parms)
   (when parms
@@ -851,7 +867,7 @@
 
   
 
-;;; Indirection  ~?
+;;;; Indirection  ~?
 
 (defun format-indirection (colon atsign parms)
   (if (or colon parms) (format-error "Colon flag or parameters not allowed"))
@@ -892,7 +908,7 @@
 		      :start 0
 		      :end 40)))))
 
-;;; Ascii  ~A
+;;;; Ascii  ~A
 
 (defun format-princ (colon atsign parms)
   (let ((arg (pop-format-arg)))
@@ -929,9 +945,15 @@
     (let ((char (pop-format-arg)))
       (unless (characterp char)
 	(format-error "Argument must be a character"))
-      (cond ((and atsign (not colon)) (prin1 char))
-	    (t (format-print-named-character char colon))))))
-
+      (cond ((not colon)
+	     (cond (atsign
+		    (prin1 char))
+		   ((zerop (char-bits char))
+		    (write-char char))
+		   (t
+		    (format-print-named-character char nil))))
+	    (t
+	     (format-print-named-character char t))))))
 
 (defun format-print-named-character (char longp)
   (when (char-bit char :control) 
@@ -954,8 +976,7 @@
 
 
 
-;;; NUMERIC PRINTING
-
+;;;; NUMERIC PRINTING
 
 ;;; Insert commas after every third digit, scanning from right to left.
 
@@ -1001,9 +1022,9 @@
 	   (dotimes (i (- width strlen)) (write-char padchar))))))
 
 
-;;; This functions does most of the work for the numeric printing
+;;; FORMAT-PRINT-NUMBER does most of the work for the numeric printing
 ;;; directives.  The parameters are interpreted as defined for ~D.
-
+;;;
 (defun format-print-number (number radix print-commas-p print-sign-p parms)
   (with-format-parameters parms
     ((mincol 0) (padchar #\space) (commachar #\,))
@@ -1022,7 +1043,7 @@
 	  (write-string text)))))
 
 
-;;; Print a cardinal number in English
+;;;; Print a cardinal number in English
 
 
 ;;; The following are initialized in FORMAT-INIT to get around cold-loader
@@ -1079,7 +1100,7 @@
       (write-string (svref cardinal-periods period)))))
 
 
-;;; Print an ordinal number in English
+;;;; Print an ordinal number in English
 
 
 (defvar ordinal-ones () "Table of ordinal ones-place digits in English")
@@ -1149,6 +1170,8 @@
 
 
 
+;;;; Format Radix Options (~D ~B ~O ~X ~R).
+
 ;;; Decimal  ~D
 
 (defun format-print-decimal (colon atsign parms)
@@ -1188,11 +1211,10 @@
 		(format-print-cardinal number))))))
 
 
-;;; FLOATING-POINT NUMBERS
-
+;;;; FLOATING-POINT NUMBERS
 
 ;;; Fixed-format floating point  ~F
-
+;;;
 (defun format-fixed (colon atsign parms)
   (when colon
     (format-error "Colon flag not allowed"))
@@ -1246,7 +1268,7 @@
 		   (when tpoint (write-char #\0))))))))
 
 
-;;; Exponential-format floating point  ~E
+;;;; Exponential-format floating point  ~E
 
 
 (defun format-exponential (colon atsign parms)
@@ -1328,7 +1350,7 @@
 
 
 
-;;; General Floating Point -  ~G
+;;;; General Floating Point -  ~G
 
 (defun format-general-float (colon atsign parms)
   (when colon
@@ -1395,6 +1417,8 @@
 	    (format-write-field (princ-to-string number) w 1 0 #\space t))))))
 
 
+;;;; Some stuff for Compiler, MACLISP interaction.
+
 ;;; The following crock simulates some Common Lisp functions in the
 ;;; cross-compiler's MACLISP environment for the benefit of the hairy
 ;;; dispatch-table initialization macro. The internal representation
@@ -1426,7 +1450,7 @@
     (list '**character** code)))
 |#
 
-;;; INITIALIZATION
+;;;; INITIALIZATION
 
 
 ;;; Hairy dispatch-table initialization macro.  Takes a list of two-element
@@ -1466,25 +1490,25 @@
 ;;; cold loader.
 
 (defun format-init ()
-  (setq cardinal-ones
+  (setf cardinal-ones
 	'#(nil "one" "two" "three" "four" "five" "six" "seven" "eight" "nine"))
-  (setq cardinal-tens
+  (setf cardinal-tens
 	'#(nil nil "twenty" "thirty" "forty"
 	       "fifty" "sixty" "seventy" "eighty" "ninety"))
-  (setq cardinal-teens
+  (setf cardinal-teens
 	'#("ten" "eleven" "twelve" "thirteen" "fourteen"  ;;; RAD
 	       "fifteen" "sixteen" "seventeen" "eighteen" "nineteen"))
-  (setq cardinal-periods
+  (setf cardinal-periods
 	'#("" " thousand" " million" " billion" " trillion" " quadrillion"
 	   " quintillion" " sextillion" " septillion" " octillion" " nonillion"
 	   " decillion"))
-  (setq ordinal-ones
+  (setf ordinal-ones
 	'#(nil "first" "second" "third" "fourth"
 	       "fifth" "sixth" "seventh" "eighth" "ninth"))
-  (setq ordinal-tens 
+  (setf ordinal-tens 
 	'#(nil "tenth" "twentieth" "thirtieth" "fortieth"
 	       "fiftieth" "sixtieth" "seventieth" "eightieth" "ninetieth"))
-  (setq *format-dispatch-table*
+  (setf *format-dispatch-table*
 	(make-dispatch-vector
 	 (#\B #'format-print-binary)
 	 (#\O #'format-print-octal)
