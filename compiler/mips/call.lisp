@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.9 1990/05/11 17:49:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.10 1990/05/13 19:16:41 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -797,7 +797,7 @@ default-value-5
 (expand
  `(define-vop (return)
     (:args
-     (old-fp :scs (any-reg) :load-if (not (sc-is old-fp control-stack)))
+     (old-fp :scs (any-reg))
      (return-pc :scs (descriptor-reg) :to (:eval 1))
      (values :more t))
     (:ignore values)
@@ -813,29 +813,27 @@ default-value-5
     (:vop-var vop)
     (:generator 6
       (cond ((= nvals 1)
+	     ;; Clear the stacks.
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
 		 (move nsp-tn cur-nfp)))
-	     (sc-case old-fp
-	       (any-reg
-		(move fp-tn old-fp))
-	       (control-stack
-		(load-stack-tn fp-tn old-fp)))
 	     (move csp-tn fp-tn)
+	     ;; Reset the frame pointer.
+	     (move fp-tn old-fp)
+	     ;; Out of here.
 	     (inst addu lip return-pc (- (* 3 word-bytes) other-pointer-type))
 	     (inst j lip)
 	     (move code-tn return-pc))
 	    (t
 	     (inst li nargs (fixnum nvals))
+	     ;; Clear the number stack.
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
 		 (move nsp-tn cur-nfp)))
 	     (move val-ptr fp-tn)
-	     (sc-case old-fp
-	       (any-reg
-		(move fp-tn old-fp))
-	       (control-stack
-		(load-stack-tn fp-tn old-fp)))
+	     ;; Reset the frame pointer.
+	     (move fp-tn old-fp)
+	     
 	     (inst addu csp-tn val-ptr (* nvals word-bytes))
 	     
 	     ,@(let ((index 0))
