@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.18 2002/12/04 01:37:00 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.19 2003/02/20 16:39:50 gerd Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -927,8 +927,7 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
 		     ((eq fn 'function)
 		      ;;This skirts the issue of implementationally-defined lambda macros
 		      ;; by recognizing CL function names and nothing else.
-		      (if (or (symbolp (cadr x))
-			      (and (consp (cadr x)) (eq (caadr x) 'setf)))
+		      (if (ext:valid-function-name-p (cadr x))
 			  1
 			  (throw 'duplicatable-code-p nil)))
 		     ((eq fn 'multiple-value-setq) (f (length (second x)) (cddr x)))
