@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.22 1992/09/15 17:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.23 1993/02/23 11:56:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,10 @@
 ;;;
 (defun environment-analyze (component)
   (declare (type component component))
-  (assert (not (component-new-functions component)))
+  (assert (every #'(lambda (x)
+		     (eq (functional-kind x) :deleted))
+		 (component-new-functions component)))
+  (setf (component-new-functions component) ())
   (dolist (fun (component-lambdas component))
     (reinit-lambda-environment fun))
   (dolist (fun (component-lambdas component))
