@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.28 2000/07/06 18:37:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.29 2002/10/15 21:23:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,7 @@
   (let ((type (continuation-type array)))
     (when (array-type-p type)
       (assert-continuation-optional-type new-value
-					 (array-type-element-type type))))
+					 (array-type-specialized-element-type type))))
   (continuation-type new-value))
 
 ;;; Unsupplied-Or-NIL  --  Internal
@@ -87,7 +87,7 @@
   ;; If the node continuation has a single use then assert its type.
   (let ((cont (node-cont node)))
     (when (= (length (find-uses cont)) 1)
-      (assert-continuation-type cont (extract-element-type array))))
+      (assert-continuation-type cont (extract-upgraded-element-type array))))
   (extract-upgraded-element-type array))
 
 ;;; %ASET  --  derive-type optimizer.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.45 2002/08/08 15:37:38 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.46 2002/10/15 21:23:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,7 @@
     (let ((dims (array-type-dimensions array-type)))
       (when (and (consp dims) (= (length dims) 1))
 	(give-up))
-      (let* ((el-type (array-type-element-type array-type))
+      (let* ((el-type (array-type-specialized-element-type array-type))
 	     (total-size (if (or (atom dims) (member '* dims))
 			     '*
 			     (reduce #'* dims)))
@@ -84,7 +84,7 @@
       (give-up))
     (delay-transform node :optimize)
     (let* ((dims (array-type-dimensions array-type))
-	   (el-type (array-type-element-type array-type))
+	   (el-type (array-type-specialized-element-type array-type))
 	   (total-size (if (or (atom dims) (member '* dims))
 			   '*
 			   (reduce #'* dims)))
