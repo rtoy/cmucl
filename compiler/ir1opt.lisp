@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.26 1991/03/11 00:38:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.27 1991/05/16 00:25:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1056,6 +1056,7 @@
 ;;; -- CONT receives multiple values, or
 ;;; -- the reference is in a different environment from the variable, or
 ;;; -- either continuation has a funky TYPE-CHECK annotation.
+;;; -- the var's DEST has a different policy than the ARG's (think safety).
 ;;;
 ;;;    We change the Ref to be a reference to NIL with unused value, and let it
 ;;; be flushed as dead code.  A side-effect of this substitution is to delete
@@ -1072,7 +1073,9 @@
 	       (eq (node-home-lambda ref)
 		   (lambda-home (lambda-var-home var)))
 	       (member (continuation-type-check arg) '(t nil))
-	       (member (continuation-type-check cont) '(t nil)))
+	       (member (continuation-type-check cont) '(t nil))
+	       (eq (lexenv-cookie (node-lexenv dest))
+		   (lexenv-cookie (node-lexenv (continuation-dest arg)))))
       (assert (member (continuation-kind arg)
 		      '(:block-start :deleted-block-start :inside-block)))
       (assert-continuation-type arg (continuation-asserted-type cont))
