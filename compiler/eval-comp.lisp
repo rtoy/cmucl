@@ -186,7 +186,7 @@
 	     (refp (typep node 'ref))
 	     (leaf (if refp (ref-leaf node))))
 	(setf (continuation-info cont)
-	      (cond ((and refp dest (typep dest 'combination)
+	      (cond ((and refp dest (typep dest 'basic-combination)
 			  (eq (combination-kind dest) :local)
 			  (eq (combination-fun dest) cont))
 		     :unused)
