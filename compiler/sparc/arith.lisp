@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.22 2001/01/03 08:45:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.23 2001/01/03 15:07:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1270,7 +1270,6 @@
 ;; direction of the shift at run-time.
 (in-package "C")
 
-#+nil
 (deftransform ash ((num shift) (integer integer))
   (let ((num-type (continuation-type num))
 	(shift-type (continuation-type shift)))
@@ -1285,11 +1284,11 @@
     ;; s-expr and depend on other parts of the compiler to delete the
     ;; unreachable parts, if any?)
     (cond ((csubtypep num-type (specifier-type '(signed-byte #.vm:word-bits)))
+	   ;; A right shift by 31 is the same as a right shift by
+	   ;; larger amount.  We get just the sign.
 	   (if (csubtypep shift-type (specifier-type '(integer #.(- 1 vm:word-bits) 0)))
 	       `(sparc::ash-right-signed num (- shift))
-	       `(if (<= shift #.(- vm:word-bits))
-		 -1
-		 (sparc::ash-right-signed num (- shift)))))
+	       `(sparc::ash-right-signed num (min (- shift) #.(1- vm:word-bits)))))
 	  ((csubtypep num-type (specifier-type '(unsigned-byte #.vm:word-bits)))
 	   (if (csubtypep shift-type (specifier-type '(integer #.(- 1 vm:word-bits) 0)))
 	       `(sparc::ash-right-unsigned num (- shift))
