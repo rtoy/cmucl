@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.38 2003/02/05 11:08:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.39 2003/02/05 12:33:12 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -325,6 +325,8 @@
 (defun %declaim (x)
   (proclaim x))
 
+(defvar *proclamation-hooks* nil)
+
 ;;; PROCLAIM  --  Public
 ;;;
 ;;;    This function is the guts of proclaim, since it does the global
@@ -333,6 +335,10 @@
 (defun proclaim (form)
   (unless (consp form)
     (error "Malformed PROCLAIM spec: ~S." form))
+
+  (when (boundp '*proclamation-hooks*)
+    (dolist (hook *proclamation-hooks*)
+      (funcall hook form)))
   
   (let ((kind (first form))
 	(args (rest form)))
