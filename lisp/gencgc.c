@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.15 1999/08/25 14:25:06 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.16 1999/09/16 15:25:18 dtc Exp $
  *
  */
 
@@ -6379,8 +6379,8 @@ char *alloc(int nbytes)
      * trouble if the allocation is interrupted.
      */
     sigset_t mask;
-    sigprocmask(0,NULL,&mask);
-    if (!mask)
+    sigprocmask(0, NULL, &mask);
+    if (!sigismember(&mask, SIGINT) || !sigismember(&mask, SIGALRM))
       fprintf(stderr, "* Alloc non-atomic %x\n", mask);
 #endif      
 
