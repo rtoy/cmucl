@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.2 1992/01/24 05:07:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.3 1992/01/24 07:10:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -889,13 +889,6 @@
 ;;; Unix-ioctl is used to change parameters of devices in a device
 ;;; dependent way.
 
-(eval-when (compile load eval)
-  (defconstant iocparm-mask #x7f)
-  (defconstant ioc_void #x20000000)
-  (defconstant ioc_out #x40000000)
-  (defconstant ioc_in #x80000000)
-  (defconstant ioc_inout (logior ioc_in ioc_out))
-)
 
 (defconstant terminal-speeds
   '#(nil 50 75 110 nil 150 200 300 600 1200 1800 2400 4800 9600 nil nil))
@@ -909,37 +902,45 @@
 
 (eval-when (compile load eval)
 
+(defconstant iocparm-mask #x7f)
+(defconstant ioc_void #x20000000)
+(defconstant ioc_out #x40000000)
+(defconstant ioc_in #x80000000)
+(defconstant ioc_inout (logior ioc_in ioc_out))
+
 (defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
-  (declare (fixnum cmd))
-  (let* ((rsize (get arg 'record-size))
-	 (ptype (case parm-type
+  (let* ((ptype (ecase parm-type
 		  (:void ioc_void)
 		  (:in ioc_in)
 		  (:out ioc_out)
-		  (:inout ioc_inout)
-		  (t (error "Parameter type ~A is illegal." parm-type))))
-	 (code (logior (the fixnum (ash (char-code dev) 8)) cmd ptype)))
-    (if (null rsize) (setq rsize 0))
+		  (:inout ioc_inout)))
+	 (code (logior (ash (char-code dev) 8) cmd ptype)))
+    (when arg
+      (setf code
+	    `(logior (ash (logand (alien-size ,arg :bytes)
+				  ,iocparm-mask)
+			  16)
+		     ,code)))
     `(eval-when (eval load compile)
-       (defconstant ,name ,(logior (ash (logand (truncate rsize 8)
-						iocparm-mask) 16) code)))))
+       (defconstant ,name ,code))))
+
 )
 
 ;;; TTY ioctl commands.
 
-(define-ioctl-command TIOCGETP #\t 8 sgtty :out)
-(define-ioctl-command TIOCSETP #\t 9 sgtty :in)
-(define-ioctl-command TIOCFLUSH #\t 16 int1 :in)
-(define-ioctl-command TIOCSETC #\t 17 tchars :in)
-(define-ioctl-command TIOCGETC #\t 18 tchars :out)
-(define-ioctl-command TIOCGWINSZ #\t 104 winsize :out)
-(define-ioctl-command TIOCSWINSZ #\t 103 winsize :in)
+(define-ioctl-command TIOCGETP #\t 8 (struct sgttyb) :out)
+(define-ioctl-command TIOCSETP #\t 9 (struct sgttyb) :in)
+(define-ioctl-command TIOCFLUSH #\t 16 int :in)
+(define-ioctl-command TIOCSETC #\t 17 (struct tchars) :in)
+(define-ioctl-command TIOCGETC #\t 18 (struct tchars) :out)
+(define-ioctl-command TIOCGWINSZ #\t 104 (struct winsize) :out)
+(define-ioctl-command TIOCSWINSZ #\t 103 (struct winsize) :in)
 
 (define-ioctl-command TIOCNOTTY #\t 113 nil :void)
 (define-ioctl-command TIOCSLTC #\t 117 ltchars :in)
 (define-ioctl-command TIOCGLTC #\t 116 ltchars :out)
-(define-ioctl-command TIOCSPGRP #\t 118 int1 :in)
-(define-ioctl-command TIOCGPGRP #\t 119 int1 :out)
+(define-ioctl-command TIOCSPGRP #\t 118 int :in)
+(define-ioctl-command TIOCGPGRP #\t 119 int :out)
 
 ;;; Keyboard iotctl commands.
 (define-ioctl-command KBDCGET #\k 0 kbdarg :inout)
@@ -947,12 +948,12 @@
 (define-ioctl-command KBDCRESET #\k 2 nil :void)
 (define-ioctl-command KBDCRST #\k 3 nil :void)
 (define-ioctl-command KBDCSSTD #\k 4 nil :void)
-(define-ioctl-command KBDSGET #\k 5 int1 :out)
-(define-ioctl-command KBDGCLICK #\k 6 int1 :out)
-(define-ioctl-command KBDSCLICK #\k 7 int1 :in)
+(define-ioctl-command KBDSGET #\k 5 int :out)
+(define-ioctl-command KBDGCLICK #\k 6 int :out)
+(define-ioctl-command KBDSCLICK #\k 7 int :in)
 
 ;;; File ioctl commands.
-(define-ioctl-command FIONREAD #\f 127 int1 :out)
+(define-ioctl-command FIONREAD #\f 127 int :out)
 
 
 (defun unix-ioctl (fd cmd arg)
