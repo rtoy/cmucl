@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.35 1991/12/15 08:09:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.36 1991/12/15 14:59:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1009,7 +1009,7 @@
 	(setf (combination-kind call) :full))
        ((= (length values) 1)
 	(with-ir1-environment call
-	  (make-emit-make-load-forms (first values))
+	  (maybe-emit-make-load-forms (first values))
 	  (let* ((leaf (find-constant (first values)))
 		 (node (make-ref (leaf-type leaf)
 				 leaf
