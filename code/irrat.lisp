@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.1 1990/07/20 23:52:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.2 1990/07/21 15:33:08 wlott Exp $
 ;;;
 ;;; This file contains all the irrational functions.  Actually, most of the
 ;;; work is done by calling out to C...
@@ -21,7 +21,7 @@
 ;;;; Random constants, utility functions, and macros.
 
 (defconstant pi 3.14159265358979323846264338327950288419716939937511L0)
-(defconstant e 2.71828182845904523536028747135266249775724709369996L0)
+;(defconstant e 2.71828182845904523536028747135266249775724709369996L0)
 
 (defmacro def-math-rtn (name num-args)
   (let ((function (intern (concatenate 'simple-string
@@ -187,7 +187,23 @@
 
 ;;;; Trigonometic and Related Functions
 
-;;; ABS is in numbers.lisp
+(defun abs (number)
+  "Returns the absolute value of the number."
+  (number-dispatch ((number number))
+    (((foreach single-float double-float fixnum rational))
+     (abs number))
+    ((complex)
+     (let ((rx (realpart number))
+	   (ix (imagpart number)))
+       (etypecase rx
+	 (rational
+	  (sqrt (+ (* rx rx) (* ix ix))))
+	 (single-float
+	  (coerce (%hypot (coerce rx 'double-float)
+			  (coerce ix 'double-float))
+		  'single-float))
+	 (double-float
+	  (%hypot rx ix)))))))
 
 (defun phase (number)
   "Returns the angle part of the polar representation of a complex number.
@@ -236,7 +252,11 @@
        (if (zerop denom) (error "~S undefined tangent." number)
 	   (/ num denom))))))
 
-;;; CIS is in numbers.lisp
+(defun cis (theta)
+  "Return cos(Theta) + i sin(Theta), aka exp(i Theta)."
+  (if (complexp theta)
+      (error "Argument to CIS is complex: ~S" theta)
+      (complex (cos theta) (sin theta))))
 
 #+nil
 (defun in-asin-domain (z)
