@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.37 2002/10/19 14:32:42 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.38 2002/10/19 14:46:24 pmai Exp $")
 
 (in-package :pcl)
 
@@ -1190,47 +1190,22 @@ work during bootstrapping.
 (defun analyze-lambda-list (lambda-list)
   ;;(declare (values nrequired noptional keysp restp allow-other-keys-p
   ;;                 keywords keyword-parameters))
-  (flet ((parse-keyword-argument (arg)
-	   (if (listp arg)
-	       (if (listp (car arg))
-		   (caar arg)
-		   (make-keyword (car arg)))
-	       (make-keyword arg))))
-    (let ((nrequired 0)
-	  (noptional 0)
-	  (keysp nil)
-	  (restp nil)
-	  (allow-other-keys-p nil)
-	  (keywords ())
-	  (keyword-parameters ())
-	  (state 'required))
-      (dolist (x lambda-list)
-	(if (memq x lambda-list-keywords)
-	    (case x
-	      (&optional         (setq state 'optional))
-	      (&key              (setq keysp t
-				       state 'key))
-	      (&allow-other-keys (setq allow-other-keys-p t))
-	      (&rest             (setq restp t
-				       state 'rest))
-	      (&aux              (return t))
-	      (otherwise
-		(error "Encountered the non-standard lambda list keyword ~S." x)))
-	    (ecase state
-	      (required  (incf nrequired))
-	      (optional  (incf noptional))
-	      (key       (push (parse-keyword-argument x) keywords)
-			 (push x keyword-parameters))
-	      (rest      ()))))
-      (values nrequired noptional keysp restp allow-other-keys-p
-	      (reverse keywords)
-	      (reverse keyword-parameters)))))
-
-(defun keyword-spec-name (x)
-  (let ((key (if (atom x) x (car x))))
-    (if (atom key)
-	(intern (symbol-name key) (find-package "KEYWORD"))
-	(car key))))
+  (multiple-value-bind (required optional restp rest keyp keys
+				 allow-other-keys-p aux morep
+				 more-context more-count)
+      (kernel:parse-lambda-list lambda-list)
+    (declare (ignore rest aux more-context more-count))
+    (when morep
+      (simple-program-error "Lambda list keyword &MORE not allowed here"))
+    (flet ((keyword-parameter-keyword (x)
+	     (let ((key (if (atom x) x (car x))))
+	       (if (atom key)
+		   (make-keyword key)
+		   (car key)))))
+      (values (length required) (length optional)
+	      keyp restp allow-other-keys-p
+	      (mapcar #'keyword-parameter-keyword keys)
+	      keys))))
 
 (defun ftype-declaration-from-lambda-list (lambda-list name)
   (multiple-value-bind (nrequired noptional keysp restp allow-other-keys-p
@@ -1245,7 +1220,7 @@ work during bootstrapping.
 				  (c::function-type-keywords old-ftype))))
 	   (old-keysp (and old-ftype (c::function-type-keyp old-ftype)))
 	   (old-allowp (and old-ftype (c::function-type-allowp old-ftype)))
-	   (keywords (union old-keys (mapcar #'keyword-spec-name keywords))))
+	   (keywords (union old-keys keywords)))
       `(function ,(append (make-list nrequired :initial-element t)
 			  (when (plusp noptional)
 			    (append '(&optional)
