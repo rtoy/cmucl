@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.3 1990/02/23 23:54:53 wlott Exp $
+;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
 ;;; Written by Rob MacLachlan
@@ -62,6 +64,31 @@
 ;;; Push a list of values on the stack, returning Start and Count as used in
 ;;; unknown values continuations.
 ;;;
-#+nil
-(define-vop (values-list one-arg-two-value-miscop)
-  (:variant 'clc::values-list))
+(define-vop (values-list)
+  (:args (arg :scs (descriptor-reg) :target list))
+  (:arg-types list)
+  (:policy :fast-safe)
+  (:results (start :scs (any-reg descriptor-reg))
+	    (count :scs (descriptor-reg)))
+  (:temporary (:scs (descriptor-reg) :type list :from (:argument 0)) list)
+  (:temporary (:scs (descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:generator 0
+    (let ((loop (gen-label))
+	  (done (gen-label)))
+
+      (move list arg)
+      (move start csp-tn)
+
+      (emit-label loop)
+      (inst beq list null-tn done)
+      (loadw temp list vm:cons-car-slot vm:list-pointer-type)
+      (loadw list list vm:cons-cdr-slot vm:list-pointer-type)
+      (inst addiu csp-tn csp-tn vm:word-bytes)
+      (storew temp csp-tn -1)
+      (test-simple-type list ndescr loop nil vm:list-pointer-type)
+      (error-call 34 list)
+
+      (emit-label done)
+      (inst sub count csp-tn start))))
+
