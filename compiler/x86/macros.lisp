@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.4.2.2 2000/05/23 16:38:01 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.4.2.3 2000/08/20 14:44:06 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -439,6 +439,7 @@
 		    :from (:argument 2) :to :result :target result) eax)
        (:results (result :scs ,scs))
        (:result-types ,el-type)
+       (:guard (backend-featurep :i486))
        (:generator 5
 	 (move eax old-value)
 	 (inst cmpxchg (make-ea :dword :base object :index index :scale 1
@@ -458,6 +459,7 @@
 		    :from (:argument 1) :to :result :target result)  eax)
        (:results (result :scs ,scs))
        (:result-types ,el-type)
+       (:guard (backend-featurep :i486))
        (:generator 4
 	 (move eax old-value)
 	 (inst cmpxchg (make-ea :dword :base object
