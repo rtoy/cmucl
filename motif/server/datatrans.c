@@ -4,6 +4,10 @@
 #include <X11/StringDefs.h>
 #include <Xm/Xm.h>
 
+#ifdef SVR4
+#define bzero(a,n) memset(a, 0, n)
+#endif
+
 #include "global.h"
 #include "types.h"
 #include "datatrans.h"

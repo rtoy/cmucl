@@ -11,12 +11,18 @@
 
 #include <sys/wait.h>
 
+#ifdef SVR4
+#define bzero(a,n) memset(a, 0, n)
+#endif
+
 #define PORT 8000
 
 #define MAX(x,y) ((x<y)?y:x)
 
 /* Some things (ie. RT) don't define this in errno.h.  Go figure.  */
+#ifndef SVR4
 extern int errno;
+#endif
 
 extern void serve_client(int socket);
 
@@ -145,7 +151,11 @@ main(int argc, char **argv)
   fd_set rfds;
   int nfound,nfds,i;
   int port = PORT;
+#ifdef SVR4
+  int status;
+#else
   union wait status;
+#endif
 
   /* This is so resources can be passed to the servers on the command line */
   global_argc = argc;
@@ -230,6 +240,10 @@ main(int argc, char **argv)
       establish_client(inet_socket);
     }
     /* Prevent zombie children under Mach */
+#ifdef SVR4
+    waitpid(-1, &status, WNOHANG);
+#else
     wait3(&status,WNOHANG,NULL);
+#endif
   }
 }
