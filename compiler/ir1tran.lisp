@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.36 1991/02/20 14:57:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.37 1991/03/10 18:28:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1556,22 +1556,27 @@
 (proclaim '(function find-free-function (t string) (values global-var inlinep)))
 (defun find-free-function (name context)
   (let ((found (gethash name *free-functions*)))
-    (if found
-	(values found (leaf-inlinep found))
-	(ecase (info function kind name)
-	  (:macro
-	   (compiler-error "Found macro name ~S ~A." name context))
-	  (:special-form
-	   (compiler-error "Found special-form name ~S ~A." name context))
-	  ((:function nil)
-	   (check-function-name name)
-	   (note-if-setf-function-and-macro name)
-	   (let ((info (info function accessor-for name)))
-	     (values (setf (gethash name *free-functions*)
-			   (if info
-			       (find-slot-accessor info name)
-			       (find-free-really-function name)))
-		     (info function inlinep name))))))))
+    (cond
+     (found
+      (assert (not (and (typep found 'functional)
+			(member (functional-kind found)
+				'(:deleted :let :mv-let)))))
+      (values found (leaf-inlinep found)))
+     (t
+      (ecase (info function kind name)
+	(:macro
+	 (compiler-error "Found macro name ~S ~A." name context))
+	(:special-form
+	 (compiler-error "Found special-form name ~S ~A." name context))
+	((:function nil)
+	 (check-function-name name)
+	 (note-if-setf-function-and-macro name)
+	 (let ((info (info function accessor-for name)))
+	   (values (setf (gethash name *free-functions*)
+			 (if info
+			     (find-slot-accessor info name)
+			     (find-free-really-function name)))
+		   (info function inlinep name)))))))))
 
 
 ;;; IR1-Convert-Variable  --  Internal
