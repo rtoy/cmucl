@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.27 1991/11/09 02:40:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28 1991/12/16 10:09:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.27 1991/11/09 02:40:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.28 1991/12/16 10:09:55 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -71,12 +71,13 @@
 (deftype char-int () 'char-code)
 ;;;
 ;;; Pathname pieces, as returned by the PATHNAME-xxx functions.
-(deftype pathname-host () '(or simple-string null)); Host not really supported...
-(deftype pathname-device () '(or simple-string (member :absolute nil)))
-(deftype pathname-directory () '(or simple-vector null))
-(deftype pathname-name () '(or simple-string null))
-(deftype pathname-type () '(or simple-string null))
-(deftype pathname-version () '(or simple-string (member nil :newest)))
+(deftype pathname-host () '(or lisp::host null))
+(deftype pathname-device () '(member nil :unspecific))
+(deftype pathname-directory () 'list)
+(deftype pathname-name () '(or simple-string lisp::pattern null))
+(deftype pathname-type ()
+  '(or simple-string lisp::pattern (member nil :unspecific)))
+(deftype pathname-version () '(or integer (member nil :newest :wild)))
 ;;;
 ;;; Internal time format.  Not a fixnum (blag...)
 (deftype internal-time () 'unsigned-byte)
