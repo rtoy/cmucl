@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.27 1991/12/14 18:16:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.28 1992/05/21 22:48:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 
 (deftype location-kind ()
   '(member :unknown-return :known-return :internal-error :non-local-exit
-	   :block-start :call-site :single-value-return))
+	   :block-start :call-site :single-value-return :non-local-entry))
 
 
 ;;; The Location-Info structure holds the information what we need about
@@ -39,7 +39,7 @@
   (kind nil :type location-kind)
   ;;
   ;; The label pointing to the interesting code location.
-  (label nil :type label)
+  (label nil :type (or label index))
   ;;
   ;; The VOP that emitted this location (for node, save-set, ir2-block, etc.)
   (vop nil :type vop))
@@ -52,7 +52,8 @@
 ;;; thus want debug info.
 ;;;
 (defun note-debug-location (vop label kind)
-  (declare (type vop vop) (type label label) (type location-kind kind))
+  (declare (type vop vop) (type (or label index) label)
+	   (type location-kind kind))
   (setf (ir2-block-locations (vop-block vop))
 	(nconc (ir2-block-locations (vop-block vop))
 	       (list (make-location-info kind label vop))))
@@ -193,14 +194,18 @@
 ;;;
 (defun dump-block-locations (block locations tlf-num var-locs)
   (declare (type cblock block) (list locations))
-  (write-var-integer (1+ (length locations)) *byte-buffer*)
-  (let ((2block (block-info block)))
-    (dump-1-location (continuation-next (block-start block))
-		     2block :block-start tlf-num
-		     (ir2-block-%label 2block)
-		     (ir2-block-live-out 2block)
-		     var-locs
-		     nil))
+  (if (and locations
+	   (eq (location-kind (first locations))
+	       :non-local-entry))
+      (write-var-integer (length locations) *byte-buffer*)
+      (let ((2block (block-info block)))
+	(write-var-integer (+ (length locations) 1) *byte-buffer*)
+	(dump-1-location (continuation-next (block-start block))
+			 2block :block-start tlf-num
+			 (ir2-block-%label 2block)
+			 (ir2-block-live-out 2block)
+			 var-locs
+			 nil)))
   (dolist (loc locations)
     (dump-location-from-info loc tlf-num var-locs))
   (undefined-value))
