@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.4 1992/09/08 20:16:06 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.5 1993/07/27 15:14:57 hallgren Exp $
 
 all: lisp.nm
 
@@ -6,7 +6,7 @@ CC = gcc
 
 include Config
 
-SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c os-common.c \
+SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c gc.c globals.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
 	socket.c undefineds.c ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC}
@@ -17,13 +17,12 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRCS)))
 %: RCS/%,v
 
 lisp.nm: lisp
-	echo -n 'Map file for lisp version ' > ,lisp.nm
-	cat version >> ,lisp.nm
+	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
 	$(NM) lisp >> ,lisp.nm
 	mv ,lisp.nm lisp.nm
 
 lisp: ${OBJS} version
-	echo -n '1 + ' | cat - version | bc > ,version
+	echo '1 + ' `cat version` | bc > ,version
 	mv ,version version
 	$(CC) ${CFLAGS} -DVERSION=`cat version` -c version.c
 	$(CC) $(CFLAGS) ${OS_LINK_FLAGS} -o ,lisp \
