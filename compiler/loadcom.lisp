@@ -21,6 +21,7 @@
 (load "c:ir1tran")
 (load "c:ir1final")
 (load "c:srctran")
+(load "c:array-tran")
 (load "c:seqtran")
 (load "c:typetran")
 (load "vm:vm-typetran")
