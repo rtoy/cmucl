@@ -1,3 +1,220 @@
+10/14/91 to 11/19/91
+
+CLX: updated to CLX R5.  Please report any new X lossage.  X applications
+should probably be recompiled.
+
+PCL: merged with the lastest PCL version.  PCL/CLOS applications must be
+recompiled.
+
+Note: although some problems with the existing Alien code have been fixed,
+many problems remain.  In particular, interpreted Alien code doesn't work.
+We are currently implementing a new Alien interface with much greater
+functionality (as well as fewer bugs.)
+
+Cleanups:
+ -- The types BASE-CHARACTER and EXTENDED-CHARACTER have been renamed to
+    BASE-CHAR and EXTENDED-CHAR as per the CHARACTER-VS-CHAR cleanup.
+ -- Added syntax checking on the DEFSTRUCT :CONC-NAME option, and also, allow
+    it to be a string as well as a symbol.
+
+Enhancements:
+ -- Modified DESCRIBE-FUNCTION-COMPILED to better output function documentation
+    relative to displaying arguments.  The format now is as follows:
+
+       Function:
+	 <printed representation of function object>
+       Function Arguments:
+	 <printed representation of function object>
+       Function Documentation:
+	 ...
+ -- Added EXT:*TOP-LEVEL-AUTO-DECLARE*.  This variable allows control over how
+    the interpreter treats SETQ's of undeclared variables.
+ -- Modified EXT:COMPLETE-FILE to correctly complete files relative to the
+    defaults.  This fixes a long standing Hemlock problem: you could find files
+    relative to the defaults with subdirectory specs, but you could not
+    complete them.
+ -- Added definition of SYSTEM:FOREIGN-SYMBOL-ADDRESS, which returns the SAP
+    corresponding to a loaded foreign symbol.
+ -- NTH-VALUE now no longer cones for it now doesn't cons for non-constant N
+    less than 3.
+ -- Added :UNIX to the features list.
+
+Bug fixes:
+ -- Changed inspector font specs to use point size instead of pixel size so
+    that they will work on 100dpi devices.
+ -- FDEFINITION should now signal undefined function errors when appropriate,
+    instead of returning a trap object.
+ -- EXPT now handles the SINGLE-FLOAT x SINGLE-FLOAT arg type combination.
+ -- TRUNCATE now handles the single-float/double-float case.
+ -- Bignum printing now works with base 36.
+ -- Fixed DIRECTORY to no longer signal errors.  It's job is to return a list
+    of files matching its argument, and it should return nil when the spec is
+    inaccurate.
+
+Debug Internals interface:
+    Changed name of DI:DO-BLOCKS to DI:DO-DEBUG-FUNCTION-BLOCKS.
+
+    Wrote DI:FUNCTION-END-COOKIE-VALID-P which takes a frame and a
+    function-end-cookie.  It returns whether the cookie is still valid.  This
+    provides a way for function-end breakpoint users to detect that the
+    function end breakpoint was never run due to a THROW (or other non-local
+    exit.)
+
+    Wrote DEBUG-FUNCTION-START-LOCATION which takes a debug-function; it
+    returns a code-location before the body of a function and after all the
+    arguments are in place.  If this cannot determine that location due to a
+    lack of debug information, it returns nil.
+
+Fdefinition.lisp is all new, and it contains the following interface routines:
+   EXT:ENCAPSULATED-DEFINITION
+      Returns whatever definition is stored for name, regardless of whether it
+      is encapsulated.  This is SETF'able.
+   EXT:ENCAPSULATE
+      Replaces the definition of name with a function that binds name's
+      arguments a variable named argument-list, binds name's definition to a
+      variable named basic-definition, and EVAL's body in that context.  Type
+      is whatever you would like to associate with this encapsulation for
+      identification in case you need multiple encapsuations of the same name.
+   EXT:UNENCAPSULATE
+      Removes name's most recent encapsulation of the specified type.
+   EXT:ENCAPSULATED-P
+      Returns t if name has an encapsulation of the given type, otherwise nil.
+
+The old encapsulation-based tracer has been replaced with a new one based on
+breakpoints.  The new traced is exported from DEBUG, using the same name and
+interface as the old one.  The old tracer is still exported from EXTENSIONS as:
+   ext:*old-trace-print-level*
+   ext:*old-trace-print-length*
+   ext:*old-traced-function-list*
+   ext:*max-old-trace-indentation*
+   EXT:OLD-TRACE
+   EXT:OLD-UNTRACE
+
+Miles's retargetable disassebler should now be available on the SPARC.
+
+
+Compiler:
+
+The compiler now recognizes function calls that never return, and takes this
+into consideration when determining the possible control flows.  A function can
+be declared not to return by declaring its result type to be NIL (not to be
+confused with NULL).  If a function declared NIL does return, and error will be
+signalled.
+
+Optimizations:
+ -- Fixed some problems where the compiler would unnecessarily number-cons
+    because it wasn't taking into consideration the advantages of keeping a
+    descriptor representation.
+ -- The CLOS FUNCALLABLE-INSTANCE-P is now a primitive predicate.
+ -- Loop rotation is now done, eliminating the unconditional branch at the
+    bottom of while loops.
+ -- Control flow determination now recognizes code that doesn't return (error
+    traps, throws, etc.) so as to minimize unconditional branches in code
+    containing error checks.
+ -- Added derive-type methods for ASIN, ACOS, ACOSH, ATANH and SQRT which figure
+    out whether the result type is real on the basis of the argument range.  
+    Added inference methods on irrational functions whose result is real
+    when the args are.
+ -- Many previously defined optimizations are now being triggered more
+    consistently when they are applicable.
+ -- Improved inline expansion of the set functions by causing implicit MEMBER
+    calls to be inlined as well.
+
+Enhancements/big fixes:
+ -- Suppress argument assignment warning if the function type doesn't give us
+    any new information.
+ -- The compiler now recognizes that the second value of INTERN can be NIL.
+ -- Lambdas with &key but no specified keywords are now correctly parsed.
+ -- Fixed a block compilation / FTYPE declaration interaction.
+ -- Fixed TAGBODY not to consider NIL to be a tag.
+ -- PCL defmethods now have qualifiers and specializers in their names.
+ -- Fixed a number of problems with dead code deletion, now that more dead code
+    is being detected.
+ -- FTYPE proclamations on structure accessors are now quietly ignored, instead
+    of causing the structure to be undefined.
+ -- Added a RANDOM derive-type method.
+ -- Added multiplier recoding for ub-32 * ub-32 => ub-32.
+
+SPARC:
+ -- Fixed decode-float for long-floats (fixing long float printing, etc.)
+ -- CHECK-STRUCTURE now uses a conditional trap, reducing code size.
+
+
+Hemlock:
+
+Modified CREATE-WINDOW-WITH-PROPERTIES to supply :input :on to allow silly
+OpenLook pseudo-X11 Sun servers to do the right thing.
+
+Added termcap parsing for things like begin/end bold, underline, etc.
+
+Fixed a redisplay problem  that often caused subprocess output to not be
+displayed until some input event came along.
+
+There's a new "Buffer Modified Hook" function that raises the "Echo Area"
+window when it becomes modified.  You can control this with the Hemlock
+variable: "Raise Echo Area When Modified".  It isn't good enough to set "Set
+Window Autoraise" to :echo-only because output appears in the echo area at
+times when the echo area is not set as the current window.  The only
+malfunction of setting this new variable is sometimes Hemlock clears the echo
+area, which modifies it, and then does not output any text; in this situation,
+Hemlock would raise the echo area, but it doesn't need to do so.  This cannot
+be eliminated due to the nature of the "Buffer Modified Hook".
+
+Fixed the :file branch of "Help on Parse" to trim leading directory
+components off the pathname if it wouldn't otherwise fit on the screen.
+
+Before doing directory translations, try a probe-file of the source file
+first.  This way, you don't have to have 400 different translations
+for ever conceivable source path.
+
+Fixed "Load File" to correspond with the manual by making it regard "Remote
+Compile File".  It was always going through RFS when it should do so
+conditionally.
+
+Generalized FLET-style indentation to reference the variable
+"Lisp Indentation Local Definers", and also to recognize LABELS (as well as
+MACROLET and FLET.)
+
+Added DEFINDENT's for the "WIRE" package.
+
+Fixed name of mail drop MH profile component from mail-drop to MailDrop
+
+"Insert Message Buffers" now handles multiple windows appropriately when
+inserting text into a Netnews Post buffer.
+
+Changed Hemlock window flashing to be less spastic in the presence of net delays.
+
+Netnews:
+
+The binding #k"r" has changed to "Netnews Reply to Sender in Other Window" in
+"News-Headers" and "News-Message modes.
+
+The binding #k"R" has changed to "Netnews Reply to Group in Other Window" in
+"News-Headers" and "News-Message" modes.
+
+Changed NN-REPLY-CLEANUP-SPLIT-WINDOWS to delete the message-window instead of
+the reply-window.
+
+Split CONNECT-TO-NNTP into two: RAW-CONNECT-TO-NNTP and CONNECT-TO-NNTP.  The
+first is the same as the original with the addition of specifying a timeout
+value to MAKE-FD-STREAM.  The second binds a handler for the IO-TIMEOUT
+condition and gives the user an error message.
+
+Added Hemlock variable "Netnews NNTP Timeout Period" to control how long
+Netnews will wait (while connecting to NNTP) before timing out.
+
+Changed *nntp-server* into Hemlock variable "Netnews NNTP Server".
+
+Added command "Netnews Reply to Sender in Other Window".
+
+Added functions NN-SETUP-FOR-REPLY-BY-MAIL and NN-REPLY-TO-SENDER to hold
+common code for "Netnews Forward Message", "Netnews Reply to Sender", and
+"Netnews Reply to Sender in Other Window".
+
+Changed default bindings to use "Netnews Reply to Group in Other Window" and
+"Netnews Reply to Sender in Other Window"
+
+
 10/8/91 to 10/14/91
 
 This is version 15b (destined for beta release.)
