@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.41 2001/03/04 20:12:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.42 2005/01/25 15:49:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -924,16 +924,16 @@
 	      (count 1))))
 
 	(let ((*compiler-error-context* call))
-	  (compiler-note "~{~?~^~&~6T~}"
-			 (if template
-			     `("Forced to do ~A (cost ~D)."
-			       (,(or (template-note template)
-				     (template-name template))
-				,(template-cost template))
-			       . ,(messages))
-			     `("Forced to do full call."
-			       nil
-			       . ,(messages))))))))
+	  (efficiency-note "~{~?~^~&~6T~}"
+			   (if template
+			       `("Forced to do ~A (cost ~D)."
+				 (,(or (template-note template)
+				       (template-name template))
+				   ,(template-cost template))
+				 . ,(messages))
+			       `("Forced to do full call."
+				 nil
+				 . ,(messages))))))))
   (undefined-value))
 
 
