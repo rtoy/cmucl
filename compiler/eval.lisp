@@ -10,8 +10,9 @@
 ;;; This file contains the interpreter.  We first convert to the compiler's
 ;;; IR1 and interpret that.
 ;;;
-;;; Written by Bill Chiles.
+;;; Written by Rob MacLachlan and Bill Chiles.
 ;;;
+
 (in-package "EVAL")
 
 (export '(internal-eval *eval-stack-trace* *internal-apply-node-trace*
@@ -212,6 +213,10 @@
 			       (eval-function-converted-once eval-fun))))))
     (setf (eval-function-definition eval-fun) new)
     (setf (eval-function-converted-once eval-fun) t)
+    (let ((name (eval-function-name eval-fun)))
+      (setf (c::leaf-name new) name)
+      (setf (c::leaf-name (c::main-entry (c::functional-entry-function new)))
+	    name))
     (push eval-fun *interpreted-function-cache*)
     new))
 
@@ -229,10 +234,11 @@
 	(let ((fun (c::functional-entry-function
 		    (eval-function-definition eval-fun))))
 	  (values (c::functional-inline-expansion fun)
-		  (if (or (c::functional-fenv fun)
-			  (c::functional-venv fun)
-			  (c::functional-benv fun)
-			  (c::functional-tenv fun))
+		  (if (let ((env (c::functional-lexenv fun)))
+			(or (c::lexenv-functions env)
+			    (c::lexenv-variables env)
+			    (c::lexenv-blocks env)
+			    (c::lexenv-tags env)))
 		      t nil)
 		  (or (eval-function-name eval-fun)
 		      (c::component-name
@@ -249,7 +255,13 @@
     res))
 ;;;
 (defun (setf interpreted-function-name) (x val)
-  (setf (eval-function-name (get-eval-function x)) val))
+  (let* ((eval-fun (get-eval-function x))
+	 (def (eval-function-definition eval-fun)))
+    (when def
+      (setf (c::leaf-name def) val)
+      (setf (c::leaf-name (c::main-entry (c::functional-entry-function def)))
+	    val))
+    (setf (eval-function-name eval-fun) val)))
 ;;;
 (defun interpreted-function-arglist (x)
   (eval-function-arglist (get-eval-function x)))
@@ -571,6 +583,9 @@
 	  ;; of INTERNAL-APPLY-LOOP which happens to be running in the
 	  ;; c::entry branch of INTERNAL-APPLY-LOOP.
 	  (maybe-trace-funny-fun node ,name)
+	  ;;
+	  ;; Discard the NLX-INFO arg...
+	  (eval-stack-pop)
 	  (return-from internal-apply-loop
 		       (values :fell-through block node cont last-cont)))))))
 
@@ -650,8 +665,8 @@
   (let ((res (c:compile-for-eval form quietly)))
     (if lisp::*already-evaled-this*
 	(let ((lisp::*already-evaled-this* nil))
-	  (internal-apply res nil nil))
-	(internal-apply res nil nil))))
+	  (internal-apply res nil '#()))
+	(internal-apply res nil '#()))))
 
 
 ;;; MAKE-INDIRECT-VALUE-CELL -- Internal.
@@ -742,6 +757,7 @@
 ;;; closure, block, last-cont, and set-block-p.
 ;;;
 (defun internal-apply-loop (first frame-ptr lambda args closure)
+  (declare (optimize (debug-info 2)))
   (let* ((block (c::node-block first))
 	 (last-cont (c::node-cont (c::block-last block)))
 	 (node first)
@@ -793,9 +809,6 @@
 		     ;; Non-local lexical exit (someone closed over a
 		     ;; GO tag or BLOCK name).
 		     (let ((unique-tag (cons nil nil))
-			   ;; Ultimately CATCH will handle the stack top
-			   ;; cleanup.
-			   (stack-top *eval-stack-top*)
 			   values)
 		       (setf (eval-stack-local frame-ptr tag) unique-tag)
 		       (if (eq cont last-cont)
@@ -806,40 +819,36 @@
 			   (catch unique-tag
 			     (internal-apply-loop node frame-ptr
 						  lambda args closure)))
-			 (cond ((eq values :fell-through)
-				;; Interpreting state is set with MV-SETQ above.
-				;; Just get out of this branch and go on.
-				(return))
-			       ((eq values :non-local-go)
-				;; Ultimately do nothing here since CATCH would
-				;; have cleaned up the stack for us.
-				(eval-stack-set-top stack-top)
-				(setf node (c::continuation-next
-					    (car (c::block-succ block)))))
-			       (t
-				;; We know we're non-locally exiting from a
-				;; BLOCK with values (saw a RETURN-FROM).
-				;;
-				;; Ultimately do nothing here since CATCH would
-				;; have cleaned up the stack for us.
-				(eval-stack-set-top stack-top)
-				(ecase (c::continuation-info cont)
-				  (:single
-				   (eval-stack-push (car values)))
-				  ((:multiple :return)
-				   (eval-stack-push values))
-				  (:unused))
-				(setf cont last-cont)
-				(return))))))))))
+			 
+			 (when (eq values :fell-through)
+			   ;; We hit a %LEXICAL-EXIT-BREAKUP.
+			   ;; Interpreting state is set with MV-SETQ above.
+			   ;; Just get out of this branch and go on.
+			   (return))
+			 
+			 (unless (eq values :non-local-go)
+			   ;; We know we're non-locally exiting from a
+			   ;; BLOCK with values (saw a RETURN-FROM).
+			   (ecase (c::continuation-info cont)
+			     (:single
+			      (eval-stack-push (car values)))
+			     ((:multiple :return)
+			      (eval-stack-push values))
+			     (:unused)))
+			 ;;
+			 ;; Start interpreting again at the target, skipping
+			 ;; the %NLX-ENTRY block.
+			 (setf node
+			       (c::continuation-next
+				(c::block-start
+				 (car (c::block-succ block))))))))))))
 	    (c::exit
 	     (maybe-trace-nodes node)
 	     (let* ((incoming-values (c::exit-value node))
 		    (values (if incoming-values (eval-stack-pop))))
 	       (cond
 		((eq (c::lambda-environment lambda)
-		     (c::lambda-environment
-		      (c::block-lambda
-		       (c::continuation-block cont))))
+		     (c::block-environment (c::continuation-block cont)))
 		 ;; Local exit.
 		 ;; Fixup stack top and massage values for destination.
 		 (eval-stack-set-top
@@ -875,6 +884,10 @@
 	    (c::mv-combination
 	     (maybe-trace-nodes node)
 	     (combination-node :mv-call)))
+	  ;; See function doc below.
+	  (reference-this-var-to-keep-it-alive node)
+	  (reference-this-var-to-keep-it-alive frame-ptr)
+	  (reference-this-var-to-keep-it-alive closure)
 	  (cond ((not (eq cont last-cont))
 		 (setf node (c::continuation-next cont)))
 		;; Currently only the last node in a block causes this loop to
@@ -886,7 +899,21 @@
 		 ;; Cif nodes set the block for us, but other last nodes do not.
 		 (change-blocks (car (c::block-succ block)))))))
     (eval-stack-set-top frame-ptr)))
-	
+
+;;; REFERENCE-THIS-VAR-TO-KEEP-IT-ALIVE -- Internal.
+;;;
+;;; This function allows a reference to a variable that the compiler cannot
+;;; easily eliminate as unnecessary.  We use this at the end of the node
+;;; dispatch in INTERNAL-APPLY-LOOP to make sure the node variable has a
+;;; valid value.  Each node branch tends to reference it at the beginning,
+;;; and then there is no reference but a set at the end; the compiler then
+;;; kills the variable between the reference in the dispatch branch and when
+;;; we set it at the end.  The problem is that most error will occur in the
+;;; interpreter within one of these node dispatch branches.
+;;;
+(defun reference-this-var-to-keep-it-alive (node)
+  node)
+
 
 ;;; SET-LEAF-VALUE -- Internal.
 ;;;
@@ -903,9 +930,16 @@
       (c::global-var
        (setf (symbol-value (c::global-var-name var)) value))
       (c::lambda-var
-       (let ((env (c::node-environment node)))
-	 (cond
-	  ((not (eq (c::lambda-environment (c::lambda-var-home var))
+       (set-leaf-value-lambda-var node var frame-ptr closure value)))))
+
+;;; SET-LEAF-VALUE-LAMBDA-VAR -- Internal Interface.
+;;;
+;;; This does SET-LEAF-VALUE for a lambda-var leaf.  The debugger tools'
+;;; internals uses this also to set interpreted local variables.
+;;;
+(defun set-leaf-value-lambda-var (node var frame-ptr closure value)
+  (let ((env (c::node-environment node)))
+    (cond ((not (eq (c::lambda-environment (c::lambda-var-home var))
 		    env))
 	   (setf (indirect-value
 		  (svref closure
@@ -918,8 +952,7 @@
 		 value))
 	  (t
 	   (setf (eval-stack-local frame-ptr (c::lambda-var-info var))
-		 value))))))))
-
+		 value)))))
 
 ;;; LEAF-VALUE -- Internal.
 ;;;
@@ -963,24 +996,15 @@
 		 (fdefinition name)))
 	   (symbol-value (c::global-var-name leaf))))
       (c::lambda-var
-       (let* ((env (c::node-environment node))
-	      (temp
-	       (if (eq (c::lambda-environment (c::lambda-var-home leaf))
-		       env)
-		   (eval-stack-local frame-ptr (c::lambda-var-info leaf))
-		   (svref closure
-			  (position leaf (c::environment-closure env)
-				    :test #'eq)))))
-	 (if (c::lambda-var-indirect leaf)
-	     (indirect-value temp)
-	     temp)))
+       (leaf-value-lambda-var node leaf frame-ptr closure))
       (c::functional
        (let* ((calling-closure (compute-closure node leaf frame-ptr closure))
 	      (real-fun (c::functional-entry-function leaf))
 	      (arg-doc (c::functional-arg-documentation real-fun)))
 	 (cond ((c:lambda-eval-info-function (c::leaf-info leaf)))
 	       ((and (zerop (length calling-closure))
-		     (null (c::functional-fenv real-fun)))
+		     (null (c::lexenv-functions
+			    (c::functional-lexenv real-fun))))
 		(let* ((res (make-interpreted-function
 			     (c::functional-inline-expansion real-fun)))
 		       (eval-fun (get-eval-function res)))
@@ -1002,6 +1026,23 @@
 				      (cons (length args) args)
 				      calling-closure))))))))))
 
+;;; LEAF-VALUE-LAMBDA-VAR -- Internal Interface.
+;;;
+;;; This does LEAF-VALUE for a lambda-var leaf.  The debugger tools' internals
+;;; uses this also to reference interpreted local variables.
+;;;
+(defun leaf-value-lambda-var (node leaf frame-ptr closure)
+  (let* ((env (c::node-environment node))
+	 (temp
+	  (if (eq (c::lambda-environment (c::lambda-var-home leaf))
+		  env)
+	      (eval-stack-local frame-ptr (c::lambda-var-info leaf))
+	      (svref closure
+		     (position leaf (c::environment-closure env)
+			       :test #'eq)))))
+    (if (c::lambda-var-indirect leaf)
+	(indirect-value temp)
+	temp)))
 
 ;;; COMPUTE-CLOSURE -- Internal.
 ;;;
@@ -1049,15 +1090,13 @@
 			    (position ele current-closure-vars
 				      :test #'eq))))
 		(c::nlx-info
-		 (if (eq (c::lambda-environment
-			  (c::block-lambda (c::nlx-info-target ele)))
+		 (if (eq (c::block-environment (c::nlx-info-target ele))
 			 current-env)
 		     (eval-stack-local
 		      frame-ptr
 		      (c:entry-node-info-nlx-tag
 		       (cdr (assoc ;; entry node for non-local extent
-			     (c::continuation-use
-			      (c::cleanup-start (c::nlx-info-cleanup ele)))
+			     (c::cleanup-mess-up (c::nlx-info-cleanup ele))
 			     (c::lambda-eval-info-entries
 			      (c::lambda-info
 			       ;; lambda INTERNAL-APPLY-LOOP tosses around.
@@ -1106,7 +1145,6 @@
 (defun eval-stack-args (arg-count)
   (let ((args nil))
     (dotimes (i arg-count args)
-      (declare (ignore i))
       (push (eval-stack-pop) args))))
 
 ;;; MV-EVAL-STACK-ARGS -- Internal.
