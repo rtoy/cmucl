@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.13 1992/02/24 01:21:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.14 1992/02/25 03:41:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,7 +137,10 @@
 	      (do ((name (cdr exp) (cddr name)))
 		  ((null name)
 		   (do ((args (cdr exp) (cddr args)))
-		       ((null args))
+		       ((null (cddr args))
+			;; We duplicate the call to SET so that the correct
+			;; value gets returned.
+			(set (first args) (eval (second args))))
 		     (set (first args) (eval (second args)))))
 		(let ((symbol (first name)))
 		  (case (info variable kind symbol)
