@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.23.2.2 2000/05/23 16:36:11 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.23.2.3 2000/07/07 09:34:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -989,9 +989,8 @@
 ;;; This compares two bignums returning -1, 0, or 1, depending on whether a
 ;;; is less than, equal to, or greater than b.
 ;;;
-(proclaim '(function bignum-compare (bignum bignum) (integer -1 1)))
 (defun bignum-compare (a b)
-  (declare (type bignum-type a b))
+  (declare (type bignum-type a b) (values (integer -1 1)))
   (let* ((len-a (%bignum-length a))
 	 (len-b (%bignum-length b))
 	 (a-plusp (%bignum-0-or-plusp a len-a))

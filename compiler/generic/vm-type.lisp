@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.32.2.2 2000/05/23 16:37:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.32.2.3 2000/07/07 09:34:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,8 +119,8 @@
 ;;;
 ;;;    Return the symbol that describes the format of Float.
 ;;;
-(proclaim '(function float-format-name (float) symbol))
 (defun float-format-name (x)
+  (declare (float x) (values symbol))
   (etypecase x
     (single-float 'single-float)
     (double-float 'double-float)
@@ -132,8 +132,8 @@
 ;;; array will actually be implemented.  We set the Specialized-Element-Type to
 ;;; correspond to the actual specialization used in this implementation.
 ;;;
-(proclaim '(function specialize-array-type (array-type) array-type))
 (defun specialize-array-type (type)
+  (declare (type array-type type) (values array-type))
   (let ((eltype (array-type-element-type type)))
 
     (setf (array-type-specialized-element-type type)

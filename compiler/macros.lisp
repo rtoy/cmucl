@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.41.2.1 2000/05/23 16:37:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.41.2.2 2000/07/07 09:34:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -111,6 +111,7 @@
 ;;;
 (proclaim '(function symbolicate (&rest (or string symbol)) symbol))
 (defun symbolicate (&rest things)
+  (declare (values symbol))
   (values (intern (reduce #'(lambda (x y)
 			      (concatenate 'string (string x) (string y)))
 			  things))))
@@ -267,8 +268,8 @@
 ;;; bound.  We make the variables IGNORABLE so that we don't have to manually
 ;;; declare them Ignore if their only purpose is to make the syntax work.
 ;;;
-(proclaim '(function parse-deftransform (list list symbol t) list))
 (defun parse-deftransform (lambda-list body args error-form)
+  (declare (list lambda-list body) (symbol args))
   (multiple-value-bind (req opt restp rest keyp keys allowp)
 		       (parse-lambda-list lambda-list)
     (let* ((min-args (length req))
@@ -322,11 +323,7 @@
 			       `((check-transform-keys ,n-keys ',(keywords))))))
 		,error-form)
 	      (let ,(binds)
-		;;; ### Bootstrap hack...
-		#+new-compiler
 		(declare (ignorable ,@(vars)))
-		#-new-compiler
-		(progn ,@(vars))
 		,@body))
 	   (vars)))))))
 
@@ -768,10 +765,8 @@
 ;;;    These functions are called by the expansion of the Defprinter
 ;;; macro to do the actual printing.
 ;;;
-(proclaim '(ftype (function (symbol t stream &optional t) void)
-		  defprinter-prin1 defprinter-princ))
 (defun defprinter-prin1 (name value stream &optional indent)
-  (declare (ignore indent))
+  (declare (symbol name) (stream stream) (ignore indent))
   (write-string "  " stream)
   (when *print-pretty*
     (pprint-newline :linear stream))
@@ -780,7 +775,7 @@
   (prin1 value stream))
 ;;;
 (defun defprinter-princ (name value stream &optional indent)
-  (declare (ignore indent))
+  (declare (symbol name) (stream stream) (ignore indent))
   (write-string "  " stream)
   (when *print-pretty*
     (pprint-newline :linear stream))
@@ -971,8 +966,8 @@
 	(logand ,@(mapcar #'(lambda (x) `(the attributes ,x)) attributes))))
 ;;;
 (proclaim '(inline attributes=))
-(proclaim '(function attributes= (attributes attributes) boolean))
 (defun attributes= (attr1 attr2)
+  (declare (type attributes attr1 attr2))
   "Returns true if the attributes present in Attr1 are indentical to those in
   Attr2."
   (eql attr1 attr2))
@@ -1012,8 +1007,8 @@
 ;;;
 ;;;    Return the event info for Name or die trying.
 ;;;
-(proclaim '(function event-info-or-lose (t) event-info))
 (defun event-info-or-lose (name)
+  (declare (values event-info))
   (let ((res (gethash name *event-info*)))
     (unless res
       (error "~S is not the name of an event." name))
@@ -1024,34 +1019,36 @@
 
 ;;; Event-Count, Event-Action, Event-Level  --  Interface
 ;;;
-(proclaim '(function event-count (symbol) fixnum))
 (defun event-count (name)
   "Return the number of times that Event has happened."
+  (declare (symbol name) (values fixnum))
   (event-info-count (event-info-or-lose name)))
 ;;;
-(proclaim '(function event-action (symbol) (or function null)))
 (defun event-action (name)
   "Return the function that is called when Event happens.  If this is null,
   there is no action.  The function is passed the node to which the event
   happened, or NIL if there is no relevant node.  This may be set with SETF."
+  (declare (symbol name) (values (or function null)))
   (event-info-action (event-info-or-lose name)))
 ;;;
-(proclaim '(function %set-event-action (symbol (or function null)) (or function null)))
 (defun %set-event-action (name new-value)
+  (declare (symbol name) (type (or function null) new-value)
+	   (values (or function null)))
   (setf (event-info-action (event-info-or-lose name))
 	new-value))
 ;;;
 (defsetf event-action %set-event-action)
 ;;;
-(proclaim '(function event-level (symbol) unsigned-byte))
 (defun event-level (name)
   "Return the non-negative integer which represents the level of significance
   of the event Name.  This is used to determine whether to print a message when
   the event happens.  This may be set with SETF."
+  (declare (symbol name) (values unsigned-byte))
   (event-info-level (event-info-or-lose name)))
 ;;;
-(proclaim '(function %set-event-level (symbol unsigned-byte) unsigned-byte))
 (defun %set-event-level (name new-value)
+  (declare (symbol name) (type unsigned-byte new-value)
+	   (values unsigned-byte))
   (setf (event-info-level (event-info-or-lose name))
 	new-value))
 ;;;
@@ -1096,8 +1093,8 @@
 
 ;;; Event-Statistics, Clear-Statistics  --  Interface
 ;;;
-(proclaim '(function event-statistics (&optional unsigned-byte stream) void))
 (defun event-statistics (&optional (min-count 1) (stream *standard-output*))
+  (declare (type unsigned-byte min-count) (stream stream) (values))
   "Print a listing of events and their counts, sorted by the count.  Events
   that happened fewer than Min-Count times will not be printed.  Stream is the
   stream to write to."
@@ -1112,8 +1109,8 @@
 	      (event-info-description event)))
     (values)))
 ;;;
-(proclaim '(function clear-statistics () void))
 (defun clear-statistics ()
+  (declare (values))
   (maphash #'(lambda (k v)
 	       (declare (ignore k))
 	       (setf (event-info-count v) 0))

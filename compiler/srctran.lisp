@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51.2.6 2000/06/21 17:02:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51.2.7 2000/07/07 09:34:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3402,8 +3402,8 @@
 ;;; degenerate one-arg call, then we transform to code that returns true.
 ;;; Otherwise, we bind all the arguments and expand into a bunch of IFs.
 ;;;
-(proclaim '(function multi-compare (symbol list boolean)))
 (defun multi-compare (predicate args not-p)
+  (declare (symbol predicate) (list args) (type boolean not-p))
   (let ((nargs (length args)))
     (cond ((< nargs 1) (values nil t))
 	  ((= nargs 1) `(progn ,@args t))
@@ -3451,8 +3451,8 @@
 ;;; there are more than two args, then we expand into the appropriate n^2
 ;;; comparisons only when speed is important.
 ;;;
-(proclaim '(function multi-not-equal (symbol list)))
 (defun multi-not-equal (predicate args)
+  (declare (symbol predicate) (list args))
   (let ((nargs (length args)))
     (cond ((< nargs 1) (values nil t))
 	  ((= nargs 1) `(progn ,@args t))
@@ -3620,8 +3620,8 @@
 ;;;
 ;;;    Left-associate First-Arg and More-Args using Function.
 ;;;
-(proclaim '(function associate-arguments (symbol t list) list))
 (defun associate-arguments (function first-arg more-args)
+  (declare (symbol function) (list more-args) (values list))
   (let ((next (rest more-args))
 	(arg (first more-args)))
     (if (null next)
@@ -3680,8 +3680,8 @@
 ;;; With one arg, we form the inverse.  With two args we pass.  Otherwise we
 ;;; associate into two-arg calls.
 ;;;
-(proclaim '(function source-transform-intransitive (symbol list t) list))
 (defun source-transform-intransitive (function args inverse)
+  (declare (symbol function) (list args) (values list &optional t))
   (case (length args)
     ((0 2) (values nil t))
     (1 `(,@inverse ,(first args)))

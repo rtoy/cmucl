@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34.2.2 2000/07/06 06:56:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34.2.3 2000/07/07 09:34:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,13 +132,13 @@
 ;;;
 ;;;    Return the info structure for an info class or type, or die trying.
 ;;;
-(proclaim '(function class-info-or-lose (string) class-info))
 (defun class-info-or-lose (class)
+  (declare (string class) (values class-info))
   (or (gethash class *info-classes*)
       (error "~S is not a defined info class." class)))
 ;;;
-(proclaim '(function type-info-or-lose (string string) type-info))
 (defun type-info-or-lose (class type)
+  (declare (string class type) (values type-info))
   (or (find-type-info type (class-info-or-lose class))
       (error "~S is not a defined info type." type)))
 
@@ -163,8 +163,8 @@
 ;;;
 ;;;    If there is no info for the class, then create it, otherwise do nothing.
 ;;;
-(proclaim '(function %define-info-class (string) void))
 (defun %define-info-class (class)
+  (declare (string class))
   (unless (gethash class *info-classes*)
     (setf (gethash class *info-classes*) (make-class-info class))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.4 2000/06/19 16:46:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.5 2000/07/07 09:34:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,8 +219,8 @@
 ;;;    Return the Leaf structure for the lexically apparent function definition
 ;;; of Name.
 ;;;
-(proclaim '(function find-lexically-apparent-function (t string) leaf))
 (defun find-lexically-apparent-function (name context)
+  (declare (string context) (values leaf))
   (let ((var (lexenv-find name functions :test #'equal)))
     (cond (var
 	   (unless (leaf-p var)
@@ -530,8 +530,8 @@
 ;;; creation using backquote of forms that contain leaf references, without
 ;;; having to introduce dummy names into the namespace.
 ;;;
-(proclaim '(function ir1-convert (continuation continuation t) void))
 (defun ir1-convert (start cont form)
+  (declare (type continuation start cont))
   (ir1-error-bailout (start cont form)
     (let ((*current-path* (or (gethash form *source-paths*)
 			      (cons form *current-path*))))
@@ -702,8 +702,8 @@
 ;;;    Convert a bunch of forms, discarding all the values except the last.
 ;;; If there aren't any forms, then translate a NIL.
 ;;;
-(proclaim '(function ir1-convert-progn-body (continuation continuation list) void))
 (defun ir1-convert-progn-body (start cont body)
+  (declare (type continuation start cont) (list body))
   (if (endp body)
       (reference-constant start cont nil)
       (let ((this-start start)
@@ -725,10 +725,9 @@
 ;;;    Convert a function call where the function (Fun) is a Leaf.  We return
 ;;; the Combination node so that we can poke at it if we want to.
 ;;;
-(proclaim '(function ir1-convert-combination
-		     (continuation continuation list leaf)
-		     combination))
 (defun ir1-convert-combination (start cont form fun)
+  (declare (type continuation start cont) (list form) (type leaf fun)
+	   (values combination))
   (let ((fun-cont (make-continuation)))
     (reference-leaf start fun-cont fun)
     (ir1-convert-combination-args fun-cont cont (cdr form))))
@@ -864,8 +863,8 @@
 ;;; variable with that name, since let* bindings may be duplicated, and
 ;;; declarations always apply to the last.
 ;;;
-(proclaim '(function find-in-bindings (list symbol) (or lambda-var list)))
 (defun find-in-bindings (vars name)
+  (declare (list vars) (symbol name) (values (or lambda-var list)))
   (let ((found nil))
     (dolist (var vars)
       (cond ((leaf-p var)
@@ -1221,9 +1220,9 @@
 ;;; which have previously been bound.  If the name is in this list, then we
 ;;; error out.
 ;;;
-(proclaim '(function varify-lambda-arg (t list) lambda-var))
 (defun varify-lambda-arg (name names-so-far)
-  (declare (inline member))
+  (declare (list names-so-far) (values lambda-var)
+	   (inline member))
   (unless (symbolp name)
     (compiler-error "Lambda-variable is not a symbol: ~S." name))
   (when (member name names-so-far :test #'eq)
@@ -1246,8 +1245,8 @@
 ;;; already used by one of the Vars.  We also check that the keyword isn't the
 ;;; magical :allow-other-keys.
 ;;;
-(proclaim '(function make-keyword (symbol list t) keyword))
 (defun make-keyword (symbol vars keywordify)
+  (declare (symbol symbol) (list vars) (values keyword))
   (let ((key (if (and keywordify (not (keywordp symbol)))
 		 (intern (symbol-name symbol) "KEYWORD")
 		 symbol)))
@@ -1277,9 +1276,8 @@
 ;;;  4] A list of the &aux variables.
 ;;;  5] A list of the &aux values.
 ;;;
-(proclaim '(function find-lambda-vars (list)
-		     (values list boolean boolean list list)))
 (defun find-lambda-vars (list)
+  (declare (list list) (values list boolean boolean list list))
   (multiple-value-bind
       (required optional restp rest keyp keys allowp aux
 		morep more-context more-count)
@@ -2524,8 +2522,8 @@
 ;;;    Look up some symbols in *free-variables*, returning the var structures
 ;;; for any which exist.  If any of the names aren't symbols, we complain.
 ;;;
-(proclaim '(function get-old-vars (list) list))
 (defun get-old-vars (names)
+  (declare (list names) (values list))
   (collect ((vars))
     (dolist (name names (vars))
       (unless (symbolp name)
@@ -2544,8 +2542,8 @@
 ;;; declarations, since we assume a redefinition semantics rather than an
 ;;; intersection semantics.
 ;;;
-(proclaim '(function process-type-proclamation (t list) void))
 (defun process-type-proclamation (spec names)
+  (declare (list names))
   (let ((type (specifier-type spec)))
     (unless (policy nil (= brevity 3))
       (dolist (name names)
@@ -2597,8 +2595,8 @@
 
 ;;; Process-Ftype-Proclamation  --  Internal
 ;;;
-(proclaim '(function process-ftype-proclamation (t list) void))
 (defun process-ftype-proclamation (spec names)
+  (declare (list names))
   (let ((type (specifier-type spec)))
     (unless (csubtypep type (specifier-type 'function))
       (compiler-error
@@ -2736,9 +2734,8 @@
 ;;; are marked as such.  Context is the name of the form, for error reporting
 ;;; purposes.
 ;;;
-(proclaim '(function extract-let-variables (list symbol)
-		     (values list list list)))
 (defun extract-let-variables (bindings context)
+  (declare (list bindings) (symbol context) (values list list list))
   (collect ((vars)
 	    (vals)
 	    (names))
@@ -2803,8 +2800,8 @@
 ;;; The function names are checked for legality.  Context is the name of the
 ;;; form, for error reporting.
 ;;;
-(proclaim '(function extract-flet-variables (list symbol) (values list list)))
 (defun extract-flet-variables (definitions context)
+  (declare (list definitions) (symbol context) (values list list))
   (collect ((names)
 	    (defs))
     (dolist (def definitions)

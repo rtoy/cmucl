@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sset.lisp,v 1.6 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sset.lisp,v 1.6.2.1 2000/07/07 09:34:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,8 +51,8 @@
 ;;;    Destructively add Element to Set.  If Element was not in the set, then
 ;;; we return true, otherwise we return false.
 ;;;
-(proclaim '(function sset-adjoin (sset-element sset) boolean))
 (defun sset-adjoin (element set)
+  (declare (type sset-element element) (type sset set) (values boolean))
   (let ((number (sset-element-number element))
 	(elements (sset-elements set)))
     (do ((prev elements current)
@@ -73,8 +73,8 @@
 ;;;    Destructively remove Element from Set.  If element was in the set,
 ;;; then return true, otherwise return false.
 ;;;
-(proclaim '(function sset-delete (sset-element sset) boolean))
 (defun sset-delete (element set)
+  (declare (type sset-element element) (type sset set) (values boolean))
   (let ((elements (sset-elements set)))
     (do ((prev elements current)
 	 (current (cdr elements) (cdr current)))
@@ -88,9 +88,9 @@
 ;;;
 ;;;    Return true if Element is in Set, false otherwise.
 ;;;
-(proclaim '(function sset-member (sset-element sset) boolean))
 (defun sset-member (element set)
-  (declare (inline member))
+  (declare (type sset-element element) (type sset set) (values boolean)
+	   (inline member))
   (not (null (member element (cdr (sset-elements set)) :test #'eq))))
 
 
@@ -98,8 +98,8 @@
 ;;;
 ;;;    Return true if Set contains no elements, false otherwise.
 ;;;
-(proclaim '(function sset-empty (sset) boolean))
 (defun sset-empty (set)
+  (declare (type sset set) (values boolean))
   (null (cdr (sset-elements set))))
 
 
@@ -108,8 +108,8 @@
 ;;;    If Set contains exactly one element, then return it, otherwise return
 ;;; NIL.
 ;;;
-(proclaim '(function sset-singleton (sset) (or sset-element null)))
 (defun sset-singleton (set)
+  (declare (type sset set) (values (or sset-element null)))
   (let ((elements (cdr (sset-elements set))))
     (if (and elements (not (cdr elements)))
 	(car elements)
@@ -121,8 +121,8 @@
 ;;;    If Set1 is a (not necessarily proper) subset of Set2, then return true,
 ;;; otherwise return false.
 ;;;
-(proclaim '(function sset-subsetp (sset sset) boolean))
 (defun sset-subsetp (set1 set2)
+  (declare (type sset set1 set2) (values boolean))
   (let ((el2 (cdr (sset-elements set2))))
     (do ((el1 (cdr (sset-elements set1)) (cdr el1)))
 	((null el1) t)
@@ -139,8 +139,8 @@
 ;;;
 ;;;    Return true if Set1 and Set2 contain the same elements, false otherwise.
 ;;;
-(proclaim '(function sset-equal (sset sset) boolean))
 (defun sset-equal (set1 set2)
+  (declare (type sset set1 set2) (values boolean))
   (do ((el1 (cdr (sset-elements set1)) (cdr el1))
        (el2 (cdr (sset-elements set2)) (cdr el2)))
       (())
@@ -153,8 +153,8 @@
 ;;;
 ;;;    Return a new copy of Set.
 ;;;
-(proclaim '(function copy-sset (sset) sset))
 (defun copy-sset (set)
+  (declare (type sset set) (values sset))
   (let ((res (make-sset)))
     (setf (sset-elements res) (copy-list (sset-elements set)))
     res))
@@ -165,9 +165,8 @@
 ;;; Perform the appropriate set operation on Set1 and Set2 by destructively
 ;;; modifying Set1.  We return true if Set1 was modified, false otherwise.
 ;;;
-(proclaim '(ftype (function (sset sset) boolean) sset-union sset-intersection
-		  sset-difference))
 (defun sset-union (set1 set2)
+  (declare (type sset set1 set2) (values boolean))
   (let* ((prev-el1 (sset-elements set1))
 	 (el1 (cdr prev-el1))
 	 (changed nil))
@@ -190,6 +189,7 @@
 	    (shiftf prev-el1 el1 (cdr el1))))))))
 ;;;
 (defun sset-intersection (set1 set2)
+  (declare (type sset set1 set2) (values boolean))
   (let* ((prev-el1 (sset-elements set1))
 	 (el1 (cdr prev-el1))
 	 (changed nil))
@@ -213,6 +213,7 @@
 	    (setq changed t)))))))
 ;;;
 (defun sset-difference (set1 set2)
+  (declare (type sset set1 set2) (values boolean))
   (let* ((prev-el1 (sset-elements set1))
 	 (el1 (cdr prev-el1))
 	 (changed nil))
@@ -237,8 +238,8 @@
 ;;;    Destructively modify Set1 to include its union with the difference of
 ;;; Set2 and Set3.  We return true if Set1 was modified, false otherwise.
 ;;;
-(proclaim '(function sset-union-of-difference (sset sset sset) boolean))
 (defun sset-union-of-difference (set1 set2 set3)
+  (declare (type sset set1 set2 set3) (values boolean))
   (let* ((prev-el1 (sset-elements set1))
 	 (el1 (cdr prev-el1))
 	 (el3 (cdr (sset-elements set3)))
