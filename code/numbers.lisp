@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.46 2003/01/29 02:16:30 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.47 2003/08/07 10:31:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -824,6 +824,8 @@
 
 (defun = (number &rest more-numbers)
   "Returns T if all of its arguments are numerically equal, NIL otherwise."
+  (declare (optimize (safety 2)) (number number)
+	   (dynamic-extent more-numbers))
   (do ((nlist more-numbers (cdr nlist)))
       ((atom nlist) T)
      (declare (list nlist))
@@ -831,10 +833,12 @@
 
 (defun /= (number &rest more-numbers)
   "Returns T if no two of its arguments are numerically equal, NIL otherwise."
+  (declare (optimize (safety 2)) (number number)
+	   (dynamic-extent more-numbers))
   (do* ((head number (car nlist))
 	(nlist more-numbers (cdr nlist)))
        ((atom nlist) t)
-     (declare (list nlist))
+     (declare (list nlist) (number head))
      (unless (do* ((nl nlist (cdr nl)))
 		  ((atom nl) T)
 	       (declare (list nl))
@@ -843,46 +847,57 @@
 
 (defun < (number &rest more-numbers)
   "Returns T if its arguments are in strictly increasing order, NIL otherwise."
+  (declare (optimize (safety 2)) (real number)
+	   (dynamic-extent more-numbers))
   (do* ((n number (car nlist))
 	(nlist more-numbers (cdr nlist)))
        ((atom nlist) t)
-     (declare (list nlist))
+     (declare (list nlist) (real n))
      (if (not (< n (car nlist))) (return nil))))
 
 (defun > (number &rest more-numbers)
   "Returns T if its arguments are in strictly decreasing order, NIL otherwise."
+  (declare (optimize (safety 2)) (real number)
+	   (dynamic-extent more-numbers))
   (do* ((n number (car nlist))
 	(nlist more-numbers (cdr nlist)))
        ((atom nlist) t)
-     (declare (list nlist))
+     (declare (list nlist) (real n))
      (if (not (> n (car nlist))) (return nil))))
 
 (defun <= (number &rest more-numbers)
   "Returns T if arguments are in strictly non-decreasing order, NIL otherwise."
+  (declare (optimize (safety 2)) (real number)
+	   (dynamic-extent more-numbers))
   (do* ((n number (car nlist))
 	(nlist more-numbers (cdr nlist)))
        ((atom nlist) t)
-     (declare (list nlist))
+     (declare (list nlist) (real n))
      (if (not (<= n (car nlist))) (return nil))))
 
 (defun >= (number &rest more-numbers)
   "Returns T if arguments are in strictly non-increasing order, NIL otherwise."
+  (declare (optimize (safety 2)) (real number)
+	   (dynamic-extent more-numbers))
   (do* ((n number (car nlist))
 	(nlist more-numbers (cdr nlist)))
        ((atom nlist) t)
-     (declare (list nlist))
+     (declare (list nlist) (real n))
      (if (not (>= n (car nlist))) (return nil))))
 
 (defun max (number &rest more-numbers)
   "Returns the greatest of its arguments."
-  (do ((nlist more-numbers (cdr nlist))
-       (result (the real number)))
-      ((null nlist) (return result))
-     (declare (list nlist))
-     (if (> (car nlist) result) (setq result (car nlist)))))
+  (declare (optimize (safety 2)) (real number)
+	   (dynamic-extent more-numbers))
+  (dolist (real more-numbers)
+    (when (> (the real real) number)
+      (setq number real)))
+  (the real number))
 
 (defun min (number &rest more-numbers)
   "Returns the least of its arguments."
+  (declare (optimize (safety 2)) (real number)
+	   (dynamic-extent more-numbers))
   (do ((nlist more-numbers (cdr nlist))
        (result (the real number)))
       ((null nlist) (return result))
