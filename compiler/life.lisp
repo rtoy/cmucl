@@ -947,7 +947,7 @@
 		       (setf (global-conflicts-tn-next oprev) conf)
 		       (setf (tn-global-conflicts original) conf))
 		   (change-global-conflicts-tn conf original)
-		   (shiftf conf (global-conflicts-tn-next conf) oconf))
+		   (shiftf oprev conf (global-conflicts-tn-next conf) oconf))
 		  (t
 		   (merge-alias-block-conflicts conf oconf)
 		   (shiftf oprev oconf (global-conflicts-tn-next oconf))
