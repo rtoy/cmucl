@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.60 1991/11/25 13:08:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.61 1991/12/03 17:09:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,11 +21,11 @@
 (export '(*compile-time-define-macros* *converting-for-interpreter*
 	  *suppress-values-declaration*))
 
-(in-package 'ext)
-(export '(ignorable truly-the maybe-inline *derive-function-types*))
+(in-package "EXT")
+(export '(truly-the maybe-inline *derive-function-types*))
 
 (in-package "LISP")
-(export '(symbol-macrolet))
+(export '(ignorable symbol-macrolet))
 
 (in-package 'c)
 
@@ -840,19 +840,36 @@
     (make-lexenv :default res  :inlines (new-inlines))))
 
 
+;;; FIND-IN-BINDINGS-OR-FBINDINGS  --  Internal
+;;;
+;;;    Like FIND-IN-BINDINGS, but looks for #'foo in the fvars.
+;;;
+(defun find-in-bindings-or-fbindings (name vars fvars)
+  (declare (list vars fvars))
+  (if (consp name)
+      (destructuring-bind (wot fn-name) name
+	(unless (eq wot 'function)
+	  (compiler-error "Unrecognizable function or variable name: ~S"
+			  name))
+	(find fn-name fvars :key #'leaf-name))
+      (find-in-bindings vars name)))
+
+
 ;;; PROCESS-IGNORE-DECLARATION  --  Internal
 ;;;
 ;;;    Process an ignore/ignorable declaration, checking for variious losing
 ;;; conditions.
 ;;;
-(defun process-ignore-declaration (spec vars)
-  (declare (list spec vars))
+(defun process-ignore-declaration (spec vars fvars)
+  (declare (list spec vars fvars))
   (dolist (name (rest spec))
-    (let ((var (find-in-bindings vars name)))
+    (let ((var (find-in-bindings-or-fbindings name vars fvars)))
       (cond
        ((not var)
 	(compiler-warning
 	 "Ignore declaration for unknown variable ~S." name))
+       ((functional-p var)
+	(setf (leaf-ever-used var) t))
        ((lambda-var-specvar var)
 	(compiler-warning
 	 "Declaring special variable ~S to be ignored." name))
@@ -894,7 +911,7 @@
     ((inline notinline maybe-inline)
      (process-inline-declaration spec res fvars))
     ((ignore ignorable)
-     (process-ignore-declaration spec vars)
+     (process-ignore-declaration spec vars fvars)
      res)
     (optimize
      (make-lexenv
