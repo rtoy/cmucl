@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.57 1998/09/26 18:24:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.58 1999/12/04 16:02:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -425,10 +425,8 @@
     (set-floating-point-modes :traps
 			      '(:overflow #-x86 :underflow :invalid
 					  :divide-by-zero))
-    ;; Clear pseudo atomic in case it this core wasn't compiled with
-    ;; support.
+    ;; Clear pseudo atomic in case this core wasn't compiled with support.
     #+x86 (setf lisp::*pseudo-atomic-atomic* 0))))
-
 
 
 ;;;; Miscellaneous external functions:
@@ -465,6 +463,8 @@
 
 (defconstant bytes-per-scrub-unit 2048)
 
+;;; Scrub-control-stack.
+;;;
 #-x86
 (defun scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not

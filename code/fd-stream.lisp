@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.49 1999/09/04 19:44:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.50 1999/12/04 16:02:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -651,16 +651,17 @@
     string))
 
 #|
-This version waits using server.  I changed to the non-server version because
-it allows this method to be used by CLX w/o confusing serve-event.  The
-non-server method is also significantly more efficient for large reads.
-  -- Ram
-
 ;;; FD-STREAM-READ-N-BYTES -- internal
+;;;
+;;; This version waits using server.  I changed to the non-server version
+;;; because it allows this method to be used by CLX w/o confusing serve-event.
+;;; The non-server method is also significantly more efficient for large
+;;; reads. -- Ram
 ;;;
 ;;; The n-bin routine.
 ;;; 
 (defun fd-stream-read-n-bytes (stream buffer start requested eof-error-p)
+  (declare (type stream stream) (type index start requested))
   (let* ((sap (fd-stream-ibuf-sap stream))
 	 (elsize (fd-stream-element-size stream))
 	 (offset (* elsize start))
@@ -695,7 +696,7 @@ non-server method is also significantly more efficient for large reads.
 
 ;;; FD-STREAM-READ-N-BYTES -- internal
 ;;;
-;;;    The N-Bin method for FD-STREAMs.  This doesn't using SERVER; it blocks
+;;;    The N-Bin method for FD-STREAMs.  This doesn't use the SERVER; it blocks
 ;;; in UNIX-READ.  This allows the method to be used to implementing reading
 ;;; for CLX.  It is generally used where there is a definite amount of reading
 ;;; to be done, so blocking isn't too problematical.

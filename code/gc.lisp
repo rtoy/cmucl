@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.23 1997/11/04 16:00:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.24 1999/12/04 16:02:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -437,7 +437,7 @@
 (defun gc (&key (verbose *gc-verbose*) (gen 0) (full nil))
   "Initiates a garbage collection.  The keyword :VERBOSE, which
    defaults to the value of the variable *GC-VERBOSE* controls whether or
-   not GC statistics are printed. The keyword :GEN defaluts to 0, and
+   not GC statistics are printed. The keyword :GEN defaults to 0, and
    controls the number of generations to garbage collect."
   (sub-gc :verbose-p verbose :force-p t :gen (if full 6 gen)))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.4 1998/07/31 08:31:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.5 1999/12/04 16:02:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,7 +364,7 @@
 		 (setf (aref new-index-vector index) i)))
 	      (t
 	       ;; EQ base hash.
-	       ;; Enamble GC tricks.
+	       ;; Enable GC tricks.
 	       (set-header-data new-kv-vector vm:vector-valid-hashing-subtype)
 	       (let* ((hashing (pointer-hash key))
 		      (index (rem hashing new-length))
