@@ -14,6 +14,9 @@
 
 ;;; Texas Instruments Incorporated provides this document "as is" without
 ;;; express or implied warranty.
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/doc.lisp,v 1.3.2.1 2000/05/23 16:35:57 pw Exp $")
 
 ;; Version 4
 

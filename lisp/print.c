@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.4.2.2 1998/06/23 11:25:04 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.4.2.3 2000/05/23 16:38:30 pw Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -139,7 +139,7 @@ static boolean continue_p(boolean newline)
             printf("More? [y] ");
             fflush(stdout);
 
-            gets(buffer);
+            fgets(buffer, sizeof(buffer), stdin);
 
             if (buffer[0] == 'n' || buffer[0] == 'N')
                 throw_to_monitor();
@@ -412,8 +412,13 @@ static void print_otherptr(lispobj obj)
         int count, type, index;
         char *cptr, buffer[16];
 
+#ifndef alpha
 	ptr = (unsigned long *) PTR(obj);
 	if (ptr == (unsigned long *) NULL) {
+#else
+	ptr = (u32 *) PTR(obj);
+	if (ptr == (u32 *) NULL) {
+#endif
 		printf(" (NULL Pointer)");
 		return;
 	}

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/vm.lisp,v 1.2.2.1 1998/06/23 11:23:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/vm.lisp,v 1.2.2.2 2000/05/23 16:37:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,9 +156,7 @@
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
-  #+complex-float
   (complex-single-stack non-descriptor-stack :element-size 2)
-  #+complex-float
   (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
 
@@ -231,7 +229,6 @@
    :save-p t
    :alternate-scs (double-stack))
 
-  #+complex-float
   (complex-single-reg float-registers
    :locations #.(loop for i from 4 to 28 by 2 collect i)
    :element-size 2
@@ -239,7 +236,6 @@
    :save-p t
    :alternate-scs (complex-single-stack))
 
-  #+complex-float
   (complex-double-reg float-registers
    :locations #.(loop for i from 4 to 28 by 2 collect i)
    :element-size 2

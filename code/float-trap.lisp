@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9.2.5 1998/06/23 11:21:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9.2.6 2000/05/23 16:36:28 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,7 +173,7 @@
 		    stream))))))
 
 (defun sigfpe-handler (signal code scp)
-  (declare (ignore signal code #+FreeBSD scp)
+  (declare (ignore signal code)
 	   (type system-area-pointer scp))
   (let* ((modes (sigcontext-floating-point-modes
 		 (alien:sap-alien scp (* unix:sigcontext))))

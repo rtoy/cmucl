@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25.2.2 1998/07/19 01:06:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25.2.3 2000/05/23 16:36:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -347,8 +347,8 @@
 (defun peek-char (&optional (peek-type nil) (stream *standard-input*)
 			    (eof-errorp t) eof-value recursive-p)
   "Peeks at the next character in the input Stream.  See manual for details."
-  (declare (ignore recursive-p))
-  (let ((stream (in-synonym-of stream)))
+  (let ((stream (in-synonym-of stream))
+	(eof-errorp (or eof-errorp recursive-p)))
     (if (lisp-stream-p stream)
 	(let ((char (read-char stream eof-errorp eof-value)))
 	  (cond ((eq char eof-value) char)
@@ -631,7 +631,8 @@
 
 (defun write-byte (integer stream)
   "Outputs the Integer to the binary Stream."
-  (with-out-stream stream (lisp-stream-bout integer) (stream-write-byte))
+  (with-out-stream stream (lisp-stream-bout integer)
+		   (stream-write-byte integer))
   integer)
 
 
@@ -896,13 +897,10 @@
 		      (bin #'concatenated-bin)
 		      (misc #'concatenated-misc))
 	    (:print-function %print-concatenated-stream)
-	    (:constructor
-	     make-concatenated-stream (&rest streams &aux (current streams))))
-  ;; The car of this is the stream we are reading from now.
-  current
-  ;; This is a list of all the streams.  We need to remember them so that
-  ;; we can close them.
-  (streams nil :type list :read-only t))
+	    (:constructor make-concatenated-stream (&rest streams)))
+  ;; This is a list of all the streams. The car of this is the stream
+  ;; we are reading from now.
+  (streams nil :type list))
 
 (defun %print-concatenated-stream (s stream d)
   (declare (ignore d))
@@ -915,18 +913,19 @@
 
 (macrolet ((in-fun (name fun)
 	     `(defun ,name (stream eof-errorp eof-value)
-		(do ((current (concatenated-stream-current stream) (cdr current)))
+		(do ((current (concatenated-stream-streams stream)
+			      (cdr current)))
 		    ((null current)
 		     (eof-or-lose stream eof-errorp eof-value))
 		  (let* ((stream (car current))
 			 (result (,fun stream nil nil)))
 		    (when result (return result)))
-		  (setf (concatenated-stream-current stream) current)))))
+		  (setf (concatenated-stream-streams stream) (cdr current))))))
   (in-fun concatenated-in read-char)
   (in-fun concatenated-bin read-byte))
 
 (defun concatenated-misc (stream operation &optional arg1 arg2)
-  (let ((left (concatenated-stream-current stream)))
+  (let ((left (concatenated-stream-streams stream)))
     (when left
       (let* ((current (car left)))
 	(case operation
@@ -938,9 +937,9 @@
 			      (stream-misc-dispatch current :listen))))
 	       (cond ((eq stuff :eof)
 		      ;; Advance current, and try again.
-		      (pop (concatenated-stream-current stream))
+		      (pop (concatenated-stream-streams stream))
 		      (setf current
-			    (car (concatenated-stream-current stream)))
+			    (car (concatenated-stream-streams stream)))
 		      (unless current
 			;; No further streams.  EOF.
 			(return :eof)))
@@ -971,20 +970,21 @@
   unread-stuff)
 
 
-(macrolet ((in-fun (name fun out-slot stream-method &rest args)
-	     `(defun ,name (stream ,@args)
+(macrolet ((in-fun (name fun out-slot stream-method)
+	     `(defun ,name (stream eof-errorp eof-value)
 		(or (pop (echo-stream-unread-stuff stream))
 		    (let* ((in (echo-stream-input-stream stream))
 			   (out (echo-stream-output-stream stream))
-			   (result (,fun in ,@args)))
-		      (if (lisp-stream-p out)
-			  (funcall (,out-slot out) out result)
-			  (,stream-method out result))
-		      result)))))
-  (in-fun echo-in read-char lisp-stream-out stream-write-char
-	  eof-errorp eof-value)
-  (in-fun echo-bin read-byte lisp-stream-bout stream-write-byte
-	  eof-errorp eof-value))
+			   (result (,fun in nil :eof)))
+		      (cond ((eq result :eof)
+			     (eof-or-lose stream eof-errorp eof-value))
+			    (t
+			     (if (lisp-stream-p out)
+				 (funcall (,out-slot out) out result)
+				 (,stream-method out result))
+			     result)))))))
+  (in-fun echo-in read-char lisp-stream-out stream-write-char)
+  (in-fun echo-bin read-byte lisp-stream-bout stream-write-byte))
 
 (defun echo-misc (stream operation &optional arg1 arg2)
   (let* ((in (two-way-stream-input-stream stream))
@@ -1683,7 +1683,7 @@
        (with-array-data ((data seq) (offset-start start) (offset-end end))
 	 (typecase data
 	   ((or (simple-array (unsigned-byte 8) (*))
-		#+signed-array (simple-array (signed-byte 8) (*))
+		(simple-array (signed-byte 8) (*))
 		simple-string)
 	    (let* ((numbytes (- end start))
 		   (bytes-read (system:read-n-bytes

@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.9.2.4 2000/05/23 16:39:01 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 (defmethod slot-accessor-function ((slotd effective-slot-definition) type)
@@ -95,7 +99,6 @@
 	(if (eq *boot-state* 'complete)
 	    (get-accessor-method-function gf type class slotd)
 	    (get-optimized-std-accessor-method-function class slotd type))
-      #+kcl (si:turbo-closure function)
       (setf (slot-accessor-std-p slotd type) std-p)
       (setf (slot-accessor-function slotd type) function))
     (when (and old-slotd (not (eq old-std-p (slot-accessor-std-p slotd 'all))))
@@ -155,7 +158,7 @@
   (with-slots (prototype wrapper defstruct-constructor) class
     (or prototype 
 	(setq prototype 
-	      (if #-new-kcl-wrapper defstruct-constructor #+new-kcl-wrapper nil 
+	      (if defstruct-constructor 
 		  (allocate-instance class)
 		  (allocate-standard-instance wrapper))))))
 
@@ -316,8 +319,7 @@
 
 
 
-(defun real-load-defclass (name metaclass-name supers slots other accessors)
-  (do-standard-defsetfs-for-defclass accessors)	                ;***
+(defun real-load-defclass (name metaclass-name supers slots other)
   (let ((res (apply #'ensure-class name :metaclass metaclass-name
 		    :direct-superclasses supers
 		    :direct-slots slots
@@ -328,8 +330,7 @@
     ;; have a wrapper. RES is the incomplete PCL class. The Lisp class
     ;; does not yet exist. Maybe should return NIL in that case as RES
     ;; is not useful to the user?
-    #+cmu17 (and (class-wrapper res)(kernel:layout-class (class-wrapper res)))
-    #-cmu17 res))
+    (and (class-wrapper res)(kernel:layout-class (class-wrapper res)))))
 
 (setf (gdefinition 'load-defclass) #'real-load-defclass)
 
@@ -463,8 +464,9 @@
   (setf (slot-value class 'class-eq-specializer)
 	(make-instance 'class-eq-specializer :class class)))
 
-(defmethod reinitialize-instance :before ((class slot-class) &key)
-  (remove-direct-subclasses class (class-direct-superclasses class))
+(defmethod reinitialize-instance :before ((class slot-class)
+					  &key direct-superclasses)
+  (remove-direct-subclasses class direct-superclasses)
   (remove-slot-accessors    class (class-direct-slots class)))
 
 (defmethod reinitialize-instance :after ((class slot-class)
@@ -553,7 +555,7 @@
 	(unless (structure-type-p name) (eval defstruct-form))
 	(mapc #'(lambda (dslotd reader-name writer-name)
 		  (let* ((reader (gdefinition reader-name))
-			 (writer (when (gboundp writer-name)
+			 (writer (when (fboundp writer-name)
 				   (gdefinition writer-name))))
 		    (setf (slot-value dslotd 'internal-reader-function) reader)
 		    (setf (slot-value dslotd 'internal-writer-function) writer)))
@@ -564,17 +566,9 @@
   (setf (slot-value class 'class-precedence-list) 
 	(compute-class-precedence-list class))
   (setf (slot-value class 'slots) (compute-slots class))
-  #-(or cmu17 new-kcl-wrapper)
-  (unless (slot-value class 'wrapper) 
-    (setf (slot-value class 'wrapper) (make-wrapper 0 class)))
-  #+cmu17
- (let ((lclass (lisp:find-class (class-name class))))
+  (let ((lclass (lisp:find-class (class-name class))))
     (setf (kernel:class-pcl-class lclass) class)
     (setf (slot-value class 'wrapper) (kernel:class-layout lclass)))
-  #+new-kcl-wrapper
-  (let ((wrapper (get (class-name class) 'si::s-data)))
-    (setf (slot-value class 'wrapper) wrapper)
-    (setf (wrapper-class wrapper) class))
   (update-pv-table-cache-info class)
   (setq predicate-name (if predicate-name-p
 			   (setf (slot-value class 'predicate-name)
@@ -710,9 +704,6 @@
 		   (class-wrapper class)))))
 
       (with-slots (wrapper slots) class
-	#+new-kcl-wrapper
-	(setf (si::s-data-name nwrapper) (class-name class))
-	#+cmu17
 	(update-lisp-class-layout class nwrapper)
 	(setf slots eslotds
 	      (wrapper-instance-slots-layout nwrapper) nlayout
@@ -1048,7 +1039,6 @@
 	(setf (wrapper-class-slots nwrapper)
 	      (wrapper-class-slots owrapper))
 	(without-interrupts
-	  #+cmu17
 	  (update-lisp-class-layout class nwrapper)
 	  (setf (slot-value class 'wrapper) nwrapper)
 	  (invalidate-wrapper owrapper ':flush nwrapper))))))
@@ -1073,7 +1063,6 @@
       (setf (wrapper-class-slots nwrapper)
 	    (wrapper-class-slots owrapper))
       (without-interrupts
-	#+cmu17
 	(update-lisp-class-layout class nwrapper)
 	(setf (slot-value class 'wrapper) nwrapper)
 	(invalidate-wrapper owrapper ':obsolete nwrapper)
@@ -1115,7 +1104,6 @@
 (defvar *the-wrapper-of-structure-object* 
   (class-wrapper (find-class 'structure-object)))
 
-#+cmu17
 (define-condition obsolete-structure (error)
   ((datum :reader obsolete-structure-datum :initarg :datum))
   (:report
@@ -1128,18 +1116,10 @@
 	     (type-of (obsolete-structure-datum condition))))))
 
 (defun obsolete-instance-trap (owrapper nwrapper instance)
-  (if (not #-(or cmu17 new-kcl-wrapper)
-           (or (std-instance-p instance) (fsc-instance-p instance))
-	   #+cmu17
-           (pcl-instance-p instance)
-           #+new-kcl-wrapper
-           nil)
+  (if (not (pcl-instance-p instance))
       (if *in-obsolete-instance-trap*
           *the-wrapper-of-structure-object* 
            (let ((*in-obsolete-instance-trap* t))
-	     #-cmu17
-             (error "The structure ~S is obsolete." instance)
-	     #+cmu17
 	     (error 'obsolete-structure :datum instance)))
       (let* ((class (wrapper-class* nwrapper))
 	     (copy (allocate-instance class)) ;??? allocate-instance ???
@@ -1204,16 +1184,13 @@
 ;;;
 ;;;
 (defmacro copy-instance-internal (instance)
-  `(#+new-kcl-wrapper if #-new-kcl-wrapper progn
-			 #+new-kcl-wrapper (not (std-instance-p ,instance))
+  `(progn
       (let* ((class (class-of instance))
 	     (copy (allocate-instance class)))
 	 (if (std-instance-p ,instance)
 	     (setf (std-instance-slots ,instance) (std-instance-slots ,instance))
 	     (setf (fsc-instance-slots ,instance) (fsc-instance-slots ,instance)))
-	 copy)
-      #+new-kcl-wrapper
-      (copy-structure-header ,instance)))
+	 copy)))
 
 (defun change-class-internal (instance new-class)
   (let* ((old-class (class-of instance))
@@ -1300,7 +1277,7 @@
 (defmethod class-default-initargs        ((class built-in-class)) ())
 
 (defmethod validate-superclass ((c class) (s built-in-class))
-  (or (eq s *the-class-t*) #+cmu (eq s *the-class-stream*)))
+  (or (eq s *the-class-t*) (eq s *the-class-stream*)))
 
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.39.2.2 1998/06/23 11:21:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.39.2.3 2000/05/23 16:36:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -639,12 +639,12 @@
 	    (8 'signed-sap-ref-8)
 	    (16 'signed-sap-ref-16)
 	    (32 'signed-sap-ref-32)
-	    #+alpha (64 'signed-sap-ref-64))
+	    (64 'signed-sap-ref-64))
 	  (case (alien-integer-type-bits type)
 	    (8 'sap-ref-8)
 	    (16 'sap-ref-16)
 	    (32 'sap-ref-32)
-	    #+alpha (64 'sap-ref-64)))))
+	    (64 'sap-ref-64)))))
     (if ref-fun
 	`(,ref-fun ,sap (/ ,offset vm:byte-bits))
 	(error "Cannot extract ~D bit integers."

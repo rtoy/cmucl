@@ -24,6 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.3.2.1 2000/05/23 16:38:51 pw Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 
@@ -907,12 +910,10 @@
 ;This optimization applys only when the first argument and all the even 
 ;numbered arguments are constants evaluating to interned symbols.
 
-#+cmu
 (declaim (ftype (function (t) symbol) get-make-instance-function-symbol))
 
 ; Use this definition in any CL implementation supporting 
 ; both define-compiler-macro and load-time-value.
-#+cmu
 (define-compiler-macro make-instance (&whole form &rest args)
   (declare (ignore args))
   (let* ((*make-instance-function-keys* nil)

@@ -19,6 +19,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.1.2.1 2000/05/23 16:39:03 pw Exp $")
+;;;
+
 (in-package 'pcl)
 
 ;;;   This file builds on the PCL-USER-INSTANCES feature of July 92 PCL
@@ -125,7 +129,7 @@
 (defmacro get-user-instance-slots (x)
   `(user-vector-instance-slots ,x))
 
-(eval-when (eval #+cmu load)
+(eval-when (eval load)
   (force-compile 'user-instance-p)
   (force-compile 'user-instance-slots)
   (force-compile 'user-instance-wrapper)

@@ -24,6 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.7.2.2 2000/05/23 16:38:57 pw Exp $")
+;;;
 ;;; This file contains portable versions of low-level functions and macros
 ;;; which are ripe for implementation specific customization.  None of the
 ;;; code in this file *has* to be customized for a particular Common Lisp
@@ -109,46 +113,12 @@
 ;;;
 ;;;  Very Low-Level representation of instances with meta-class standard-class.
 ;;;
-#-new-kcl-wrapper
-(progn
-#-cmu17
-(defstruct (std-instance (:predicate std-instance-p)
-			 (:conc-name %std-instance-)
-			 (:constructor %%allocate-instance--class ())
-			 (:print-function print-std-instance))
-  (wrapper nil)
-  (slots nil))
 
 (defmacro %instance-ref (slots index)
   `(%svref ,slots ,index))
 
 (defmacro instance-ref (slots index)
   `(svref ,slots ,index))
-)
-
-#+new-kcl-wrapper
-(progn
-(defvar *init-vector* (make-array 40 :fill-pointer 1 :adjustable t 
-				  :initial-element nil))
-
-(defun get-init-list (i)
-  (declare (fixnum i)(special *slot-unbound*))
-  (loop (when (< i (fill-pointer *init-vector*))
-	  (return (aref *init-vector* i)))
-	(vector-push-extend 
-	 (cons *slot-unbound*
-	       (aref *init-vector* (1- (fill-pointer *init-vector*))))
-	 *init-vector*)))
-
-(defmacro %std-instance-wrapper (instance)
-  `(structure-def ,instance))
-
-(defmacro %std-instance-slots (instance)
-  instance)
-
-(defmacro std-instance-p (x)
-  `(structurep ,x))
-)
 
 (defmacro std-instance-wrapper (x) `(%std-instance-wrapper ,x))
 (defmacro std-instance-slots   (x) `(%std-instance-slots ,x))
@@ -194,11 +164,7 @@
 (defconstant *slot-unbound* '..slot-unbound..)
 
 (defmacro %allocate-static-slot-storage--class (no-of-slots)
-  #+new-kcl-wrapper (declare (ignore no-of-slots))
-  #-new-kcl-wrapper
-  `(make-array ,no-of-slots :initial-element *slot-unbound*)
-  #+new-kcl-wrapper
-  (error "don't call this"))
+  `(make-array ,no-of-slots :initial-element *slot-unbound*))
 
 (defmacro std-instance-class (instance)
   `(wrapper-class* (std-instance-wrapper ,instance)))
@@ -290,17 +256,11 @@
 ;;;
 (defvar *compiler-present-p* t)
 
-(defvar *compiler-speed*
-	#+(or KCL IBCL GCLisp CMU) :slow
-	#-(or KCL IBCL GCLisp CMU) :fast)
+(defvar *compiler-speed* :slow)
 
-(defvar *compiler-reentrant-p*
-	#+(and (not XKCL) (or KCL IBCL)) nil
-	#-(and (not XKCL) (or KCL IBCL)) t)
+(defvar *compiler-reentrant-p* t)
 
 (defun in-the-compiler-p ()
-  #+(and (not xkcl) (or KCL IBCL))compiler::*compiler-in-use*
-  #+gclisp (typep (eval '(function (lambda ()))) 'lexical-closure)
   )
 
 (defvar *compile-lambda-break-p* nil)
@@ -358,7 +318,7 @@
 (defun doctor-dfun-for-the-debugger (gf dfun) (declare (ignore gf)) dfun)
 
 ;; From braid.lisp
-#-new-kcl-wrapper
+
 (defmacro built-in-or-structure-wrapper (x)
   (once-only (x)
     (if (structure-functions-exist-p) ; otherwise structurep is too slow for this

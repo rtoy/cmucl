@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.3.2.2 2000/05/23 16:38:50 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 ;;; This file is (almost) functionally equivalent to dlap.lisp,
@@ -104,7 +108,7 @@
 	 (lambda `(lambda ,closure-variables
 		    ,@(when (member 'miss-fn closure-variables)
 			`((declare (type function miss-fn))))
-		    #'(#+cmu kernel:instance-lambda #-cmu lambda ,args
+		    #'(kernel:instance-lambda ,args
 			#+copy-&rest-arg
 			,@(when rest
 			    `((setq .lap-rest-arg.
@@ -372,10 +376,9 @@
   `(let ((wrapper-cache-no (wrapper-cache-number-vector-ref ,wrapper field)))
      (declare (fixnum wrapper-cache-no))
      (when (zerop wrapper-cache-no) (go ,miss-label))
-     ,(let ((form `(#+lucid %logand #-lucid logand
+     ,(let ((form `(logand
 		    mask wrapper-cache-no)))
-	#+lucid form
-	#-lucid `(the fixnum ,form))))
+	`(the fixnum ,form))))
 
 (defun emit-n-wrapper-compute-primary-cache-location (wrappers miss-label)
   (declare (type list wrappers))
@@ -394,10 +397,8 @@
 			    (when (or (zerop (mod adds wrapper-cache-number-adds-ok))
 				      (eql adds len))
 			      `((setq primary
-				      ,(let ((form `(#+lucid %logand #-lucid logand
-						     primary mask)))
-					 #+lucid form
-					 #-lucid `(the fixnum ,form))))))))
+				      ,(let ((form `(logand primary mask)))
+					 `(the fixnum ,form))))))))
 		 wrappers))))
      
 ;;; cmu17 note: since std-instance-p is weakened, that branch may run
@@ -408,7 +409,7 @@
 ;;;
 (defun emit-fetch-wrapper (metatype argument miss-label &optional slot)
   (ecase metatype
-    ((standard-instance #+new-kcl-wrapper structure-instance)
+    ((standard-instance)
      `(cond ((std-instance-p ,argument)
 	     ,@(when slot `((setq ,slot (std-instance-slots ,argument))))
 	     (std-instance-wrapper ,argument))
@@ -420,9 +421,8 @@
     (class
      (when slot (error "Can't do a slot reg for this metatype."))
      `(wrapper-of-macro ,argument))
-    ((built-in-instance #-new-kcl-wrapper structure-instance)
+    ((built-in-instance structure-instance)
      (when slot (error "Can't do a slot reg for this metatype."))
-     `(#+new-kcl-wrapper built-in-wrapper-of
-       #-new-kcl-wrapper built-in-or-structure-wrapper
+     `(built-in-or-structure-wrapper
        ,argument))))
 

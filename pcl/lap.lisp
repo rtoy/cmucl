@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/lap.lisp,v 1.6.2.1 2000/05/23 16:38:56 pw Exp $")
+;;;
+
 (in-package 'pcl)
 
 ;;;
@@ -218,7 +222,6 @@
     `(progn
        (eval-when (load eval) (load-defopcode ',name ',fn-name))
        (defun ,fn-name ,lambda-list
-	 #+Genera (declare (sys:function-parent ,name defopcode))
 	 (defopcode-1 ',name ',types ,@lambda-list)))))
 
 (defmacro defoperand (name types)
@@ -228,7 +231,6 @@
     `(progn
        (eval-when (load eval) (load-defoperand ',name ',fn-name))
        (defun ,fn-name ,lambda-list
-	 #+Genera (declare (sys:function-parent ,name defoperand))
 	 (defoperand-1 ',name ',types ,@lambda-list)))))
 
 (defun load-defopcode (name fn-name)

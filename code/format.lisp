@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.36.2.3 1998/07/12 21:51:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.36.2.4 2000/05/23 16:36:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -741,7 +741,7 @@
 			     (t commaed))))
 	  ;; colinc = 1, minpad = 0, padleft = t
 	  (format-write-field stream signed mincol 1 0 padchar t))
-	(princ number))))
+	(princ number stream))))
 
 (defun format-add-commas (string commachar commainterval)
   (let ((length (length string)))

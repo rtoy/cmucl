@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.54.2.1 1998/06/23 11:23:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.54.2.2 2000/05/23 16:37:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,26 +48,22 @@
 
 (defknown (fixnump bignump ratiop
 	   short-float-p single-float-p double-float-p long-float-p
-	   #+complex-float complex-rational-p #+complex-float complex-float-p
-	   #+complex-float complex-single-float-p
-	   #+complex-float complex-double-float-p
-	   #+(and complex-float long-float) complex-long-float-p
+	   complex-rational-p complex-float-p complex-single-float-p
+	   complex-double-float-p #+long-float complex-long-float-p
 	   base-char-p %standard-char-p %instancep
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
-	   #+signed-array simple-array-signed-byte-8-p
-	   #+signed-array simple-array-signed-byte-16-p
-	   #+signed-array simple-array-signed-byte-30-p
-	   #+signed-array simple-array-signed-byte-32-p
+	   simple-array-signed-byte-8-p simple-array-signed-byte-16-p
+	   simple-array-signed-byte-30-p simple-array-signed-byte-32-p
 	   simple-array-single-float-p simple-array-double-float-p
 	   #+long-float simple-array-long-float-p
-	   #+complex-float simple-array-complex-single-float-p
-	   #+complex-float simple-array-complex-double-float-p
-	   #+(and complex-float long-float) simple-array-complex-long-float-p
+	   simple-array-complex-single-float-p
+	   simple-array-complex-double-float-p
+	   #+long-float simple-array-complex-long-float-p
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
 	   weak-pointer-p scavenger-hook-p code-component-p lra-p
-	   funcallable-instance-p dylan::dylan-function-p)
+	   funcallable-instance-p)
   (t) boolean (movable foldable flushable))
 
 
@@ -134,8 +130,6 @@
 (defknown %raw-set-long (raw-vector index long-float) long-float
   (unsafe))
 
-#+complex-float
-(progn
 (defknown %raw-ref-complex-single (raw-vector index) (complex single-float)
   (foldable flushable))
 (defknown %raw-ref-complex-double (raw-vector index) (complex double-float)
@@ -153,7 +147,6 @@
 (defknown %raw-set-complex-long (raw-vector index (complex long-float))
   (complex long-float)
   (unsafe))
-) ; end progn complex-float
 
 (defknown %raw-bits (t fixnum) (unsigned-byte 32)
   (foldable flushable))

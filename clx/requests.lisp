@@ -15,6 +15,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/requests.lisp,v 1.3.2.2 2000/05/23 16:36:06 pw Exp $")
 
 (in-package :xlib)
 

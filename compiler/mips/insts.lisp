@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.50.2.1 1998/06/23 11:23:37 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.50.2.2 2000/05/23 16:37:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -566,7 +566,7 @@
 (define-instruction fneg (segment format dst &optional (src dst))
   (:declare (type float-format format) (type tn dst src))
   (:printer float ((funct #b000111)) float-unop-printer)
-  (:dependencies (reads src) (reads dst))
+  (:dependencies (reads src) (writes dst))
   (:delay 0)
   (:emitter
    (emit-float-inst segment cop1-op 1 (float-format-value format)

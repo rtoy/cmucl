@@ -17,6 +17,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.1.2.1 2000/05/23 16:38:51 pw Exp $")
+;;;
+
 (in-package 'pcl)
 
 (eval-when (compile load eval)
@@ -487,10 +491,6 @@
             variable-accessors))
        ,@body))))
 
-
-#-(or KCL IBCL)
 (export *extensions-exports* *the-pcl-package*)
 
-#+(or KCL IBCL)
-(mapc 'export (list *extensions-exports*) (list *the-pcl-package*))
 

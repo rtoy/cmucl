@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.3.2.1 1998/06/23 11:24:13 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.3.2.2 2000/05/23 16:38:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996, 1997, 1998.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
 ;;;
 
 (in-package :x86)
@@ -312,6 +312,45 @@
 				other-pointer-type)))))
 
 
+
+(defknown sys:scrub-control-stack () (values))
+
+;;; Scrub the control stack.
+;;;
+;;; On the x86 port the stack grows downwards, and to support grow on
+;;; demand stacks the stack must be decreased as it is scrubbed.
+;;;
+(define-vop (scrub-control-stack)
+  (:policy :fast-safe)
+  (:translate sys:scrub-control-stack)
+  (:args)
+  (:results)
+  (:temporary (:sc unsigned-reg) count)
+  (:temporary (:sc any-reg) stack-save zero)
+  (:generator 25
+    (inst mov stack-save esp-tn)
+    (inst mov zero 0)
+    (inst push zero)
+    ;; Scrub the stack.
+    SCRUB
+    (inst add esp-tn 4)
+    (inst mov count 2048)
+    SCRUB-LOOP
+    (inst dec count)
+    (inst push zero)
+    (inst jmp :nz SCRUB-LOOP)
+    ;; Look for a clear stack unit.
+    (inst mov count 2048)
+    LOOK-LOOP
+    (inst sub esp-tn 4)
+    (inst cmp (make-ea :dword :base esp-tn) zero)
+    (inst jmp :ne SCRUB)
+    (inst dec count)
+    (inst jmp :nz LOOK-LOOP)
+    ;; Done, restore the stack pointer.
+    (inst mov esp-tn stack-save)))
+
+
 ;;;; Primitive multi-thread support.
 
 (export 'control-stack-fork)
@@ -520,4 +559,3 @@
     ;; Pop the frame pointer, and resume at the return address.
     (inst pop ebp-tn)
     (inst ret)))
-

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.71.2.1 1998/06/23 11:21:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.71.2.2 2000/05/23 16:36:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -838,6 +838,16 @@
 ;;;
 (defsetf kernel:stack-ref kernel:%set-stack-ref)
 
+;;; DESCRIPTOR-SAP -- internal
+;;;
+;;; Convert the descriptor into a SAP.  The bits all stay the same, we just
+;;; change our notion of what we think they are.
+;;; 
+(declaim (inline descriptor-sap))
+(defun descriptor-sap (x)
+  (system:int-sap (kernel:get-lisp-obj-address x)))
+
+
 (declaim (inline cstack-pointer-valid-p))
 (defun cstack-pointer-valid-p (x)
   (declare (type system:system-area-pointer x))
@@ -850,9 +860,9 @@
        (zerop (logand (system:sap-int x) #b11)))
   #+:x86 ;; stack grows to low address values
   (and (system:sap>= x (kernel:current-sp))
-       (system:sap>   (alien:alien-sap
-		       (alien:extern-alien "control_stack_end" (* t)))
-		      x)
+       (system:sap> (alien:alien-sap
+		     (alien:extern-alien "control_stack_end" (* t)))
+		    x)
        (zerop (logand (system:sap-int x) #b11))))
 
 #+(or gengc x86)
@@ -871,6 +881,7 @@
 #+x86
 (progn
 
+;;; Note this function should be called with garbage collect inhibited.
 (defun compute-lra-data-from-pc (pc)
   (declare (type system-area-pointer pc))
   (let ((component-ptr (component-ptr-from-pc pc)))
@@ -972,15 +983,6 @@
 ) ; end progn x86
 
 
-;;; DESCRIPTOR-SAP -- internal
-;;;
-;;; Convert the descriptor into a SAP.  The bits all stay the same, we just
-;;; change our notion of what we think they are.
-;;; 
-(declaim (inline descriptor-sap))
-(defun descriptor-sap (x)
-  (system:int-sap (kernel:get-lisp-obj-address x)))
-
 ;;; TOP-FRAME -- Public.
 ;;;
 (defun top-frame ()
@@ -1043,9 +1045,11 @@
 		   (let ((fp (frame-pointer real)))
 		     (when (cstack-pointer-valid-p fp)
 		       #+x86
-		        (multiple-value-bind (ra ofp) (x86-call-context fp)
-			  (compute-calling-frame ofp ra frame))
-			#-x86
+		       (multiple-value-bind (ra ofp)
+			   (x86-call-context fp)
+			 (when (and ra ofp)
+			   (compute-calling-frame ofp ra frame)))
+		       #-x86
 		       (compute-calling-frame
 			#-alpha
 			(system:sap-ref-sap fp (* vm::ocfp-save-offset
@@ -1253,8 +1257,9 @@
 		 (assert code)))
 	      (t
 	       ;; Not escaped
-	       (multiple-value-setq (pc-offset code)
-		 (compute-lra-data-from-pc ra))
+	       (system:without-gcing
+		(multiple-value-setq (pc-offset code)
+		  (compute-lra-data-from-pc ra)))
 ;	       (format t "ccf4 ~s ~s~%" code pc-offset)
 	       (unless code
 		 (setf code :foreign-function
@@ -1337,7 +1342,7 @@
 		   (component-ptr-from-pc (vm:sigcontext-program-counter scp)))
 		  (code (if (sap= component-ptr (int-sap #x0))
 			    nil
-			  (component-from-component-ptr component-ptr))))
+			    (component-from-component-ptr component-ptr))))
 	     (when (null code)
 	       (return (values code 0 scp)))
 	     (let* ((code-header-len (* (kernel:get-header-data code)
@@ -3016,7 +3021,6 @@
       #+long-float
       (#.vm:long-reg-sc-number
        (escaped-float-value long-float))
-      #+complex-float
       (#.vm:complex-single-reg-sc-number
        (if escaped
 	   (complex
@@ -3025,7 +3029,6 @@
 	    (vm:sigcontext-float-register
 	     escaped (1+ (c:sc-offset-offset sc-offset)) 'single-float))
 	   :invalid-value-for-unescaped-register-storage))
-      #+complex-float
       (#.vm:complex-double-reg-sc-number
        (if escaped
 	   (complex
@@ -3035,7 +3038,7 @@
 	     escaped (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
 	     'double-float))
 	   :invalid-value-for-unescaped-register-storage))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-reg-sc-number
        (if escaped
 	   (complex
@@ -3058,7 +3061,6 @@
        (with-nfp (nfp)
 	 (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
 				     vm:word-bytes))))
-      #+complex-float
       (#.vm:complex-single-stack-sc-number
        (with-nfp (nfp)
 	 (complex
@@ -3066,7 +3068,6 @@
 					vm:word-bytes))
 	  (system:sap-ref-single nfp (* (1+ (c:sc-offset-offset sc-offset))
 					vm:word-bytes)))))
-      #+complex-float
       (#.vm:complex-double-stack-sc-number
        (with-nfp (nfp)
 	 (complex
@@ -3074,7 +3075,7 @@
 					vm:word-bytes))
 	  (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-stack-sc-number
        (with-nfp (nfp)
 	 (complex
@@ -3116,7 +3117,6 @@
 		 (vm:sigcontext-float-register
 		  escaped (c:sc-offset-offset sc-offset) ',format)
 		 :invalid-value-for-unescaped-register-storage))
-	     #+complex-float
 	     (escaped-complex-float-value (format)
 	       `(if escaped
 		 (complex
@@ -3140,9 +3140,16 @@
 		     (= ,val vm:unbound-marker-type)
 		     ;; Pointer
 		     (and (logand ,val 1)
-		      ;; Check that the pointer is valid. XX Should do
-		      ;; a better job.
-		      (< (lisp::read-only-space-start) ,val #x11000000)))
+		      ;; Check that the pointer is valid. X Could do a
+		      ;; better job.
+		      (or (< (lisp::read-only-space-start) ,val
+			     (* lisp::*read-only-space-free-pointer*
+				vm:word-bytes))
+			  (< (lisp::static-space-start) ,val
+			     (* lisp::*static-space-free-pointer*
+				vm:word-bytes))
+			  (< (lisp::current-dynamic-space-start) ,val
+			     (sap-int (kernel:dynamic-space-free-pointer))))))
 		 (kernel:make-lisp-obj ,val)
 		 :invalid-object)))
     (ecase (c:sc-offset-scn sc-offset)
@@ -3171,13 +3178,11 @@
       #+long-float
       (#.vm:long-reg-sc-number
        (escaped-float-value long-float))
-      #+complex-float
       (#.vm:complex-single-reg-sc-number
        (escaped-complex-float-value single-float))
-      #+complex-float
       (#.vm:complex-double-reg-sc-number
        (escaped-complex-float-value double-float))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-reg-sc-number
        (escaped-complex-float-value long-float))
       (#.vm:single-stack-sc-number
@@ -3190,21 +3195,19 @@
       (#.vm:long-stack-sc-number
        (system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
 				     vm:word-bytes))))
-      #+complex-float
       (#.vm:complex-single-stack-sc-number
        (complex
 	(system:sap-ref-single fp (- (* (1+ (c:sc-offset-offset sc-offset))
 					vm:word-bytes)))
 	(system:sap-ref-single fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))))
-      #+complex-float
       (#.vm:complex-double-stack-sc-number
        (complex
 	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))
 	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 4)
 					vm:word-bytes)))))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-stack-sc-number
        (complex
 	(system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
@@ -3335,7 +3338,6 @@
       #+long-float
       (#.vm:long-reg-sc-number
        (set-escaped-float-value long-float value))
-      #+complex-float
       (#.vm:complex-single-reg-sc-number
        (when escaped
 	 (setf (vm:sigcontext-float-register
@@ -3346,7 +3348,6 @@
 		'single-float)
 	       (imagpart value)))
        value)
-      #+complex-float
       (#.vm:complex-double-reg-sc-number
        (when escaped
 	 (setf (vm:sigcontext-float-register
@@ -3358,7 +3359,7 @@
 		'double-float)
 	       (imagpart value)))
        value)
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-reg-sc-number
        (when escaped
 	 (setf (vm:sigcontext-float-register
@@ -3386,7 +3387,6 @@
 	 (setf (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
 					   vm:word-bytes))
 	       (the long-float value))))
-      #+complex-float
       (#.vm:complex-single-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-single
@@ -3395,7 +3395,6 @@
 	 (setf (system:sap-ref-single
 		nfp (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes))
 	       (the single-float (realpart value)))))
-      #+complex-float
       (#.vm:complex-double-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-double
@@ -3404,7 +3403,7 @@
 	 (setf (system:sap-ref-double
 		nfp (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes))
 	       (the double-float (realpart value)))))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-long
@@ -3482,7 +3481,6 @@
        (setf (system:sap-ref-long
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 3) vm:word-bytes)))
 	     (the long-float value)))
-      #+complex-float
       (#.vm:complex-single-stack-sc-number
        (setf (system:sap-ref-single
 	      fp (- (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes)))
@@ -3490,7 +3488,6 @@
        (setf (system:sap-ref-single
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes)))
 	     (imagpart (the (complex single-float) value))))
-      #+complex-float
       (#.vm:complex-double-stack-sc-number
        (setf (system:sap-ref-double
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes)))
@@ -3498,7 +3495,7 @@
        (setf (system:sap-ref-double
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 4) vm:word-bytes)))
 	     (imagpart (the (complex double-float) value))))
-      #+(and complex-float long-float)
+      #+long-float
       (#.vm:complex-long-stack-sc-number
        (setf (system:sap-ref-long
 	      fp (- (* (+ (c:sc-offset-offset sc-offset) 3) vm:word-bytes)))
@@ -3928,7 +3925,7 @@
     (do ((frame frame (frame-down frame)))
 	((not frame) nil)
       (when (and (compiled-frame-p frame)
-		 (eq lra
+		 (#-x86 eq #+x86 sys:sap= lra
 		     (get-context-value frame
 					#-gengc vm::lra-save-offset
 					#+gengc vm::ra-save-offset

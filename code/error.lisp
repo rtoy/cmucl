@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.46.2.2 1998/07/19 01:06:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.46.2.3 2000/05/23 16:36:22 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,8 +19,9 @@
 (use-package "KERNEL")
 
 (in-package "KERNEL")
-(export '(layout-invalid simple-style-warning condition-function-name
-			 simple-program-error simple-file-error))
+(export '(layout-invalid condition-function-name simple-control-error
+	  simple-file-error simple-program-error simple-style-warning
+	  simple-undefined-function))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -193,7 +194,7 @@
    non-nil restart name, then a control-error is signalled."
   (let ((real-restart (find-restart restart)))
     (unless real-restart
-      (error 'control-error
+      (error 'simple-control-error
 	     :format-control "Restart ~S is not active."
 	     :format-arguments (list restart)))
     (apply (restart-function real-restart) values)))
@@ -204,7 +205,7 @@
    currently active non-nil restart name, then a control-error is signalled."
   (let ((real-restart (find-restart restart)))
     (unless real-restart
-      (error 'control-error
+      (error 'simple-control-error
 	     :format-control "Restart ~S is not active."
 	     :format-arguments (list restart)))
     (apply (restart-function real-restart)
@@ -522,9 +523,17 @@
 	 (class (typecase thing
 		  (condition-class thing)
 		  (class
-		   (error "~S is not a condition class." thing))
+		   (error 'simple-type-error
+			  :datum thing
+			  :expected-type 'condition-class
+			  :format-control "~S is not a condition class."
+			  :format-arguments (list thing)))
 		  (t
-		   (error "Bad thing for class arg:~%  ~S" thing))))
+		   (error 'simple-type-error
+			  :datum thing
+			  :expected-type 'condition-class
+			  :format-control "Bad thing for class arg:~%  ~S"
+			  :format-arguments (list thing)))))
 	 (res (make-condition-object args)))
     (setf (%instance-layout res) (class-layout class))
     ;;
@@ -906,8 +915,16 @@
   ((pathname :reader file-error-pathname :initarg :pathname)))
 
 ;;; INTERNAL
-(define-condition simple-file-error   (simple-condition file-error)())
-(define-condition simple-program-error(simple-condition program-error)())
+(define-condition simple-program-error (simple-condition program-error)())
+(define-condition simple-control-error (simple-condition control-error)())
+
+(define-condition simple-file-error (simple-condition file-error) ()
+  (:report
+   (lambda (condition stream)
+     (format stream "~&~@<File-error in function ~S:  ~3i~:_~?~:>"
+	     (condition-function-name condition)
+	     (simple-condition-format-control condition)
+	     (simple-condition-format-arguments condition)))))
 
 (define-condition package-error (error)
   ((package :reader package-error-package :initarg :package)))
@@ -930,6 +947,9 @@
 	     "Error in ~S:  the function ~S is undefined."
 	     (condition-function-name condition)
 	     (cell-error-name condition)))))
+
+(define-condition simple-undefined-function (simple-condition
+					     undefined-function) ())
 
 (define-condition arithmetic-error (error)
   ((operation :reader arithmetic-error-operation :initarg :operation

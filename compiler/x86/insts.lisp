@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.6.2.2 1998/06/23 11:24:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.6.2.3 2000/05/23 16:38:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1152,7 +1152,7 @@
      ((integerp src)
       (cond ((and (not (eq size :byte)) (<= -128 src 127))
 	     (emit-byte segment #b10000011)
-	     (emit-ea segment dst opcode)
+	     (emit-ea segment dst opcode allow-constants)
 	     (emit-byte segment src))
 	    ((accumulator-p dst)
 	     (emit-byte segment
@@ -1164,7 +1164,7 @@
 	     (emit-sized-immediate segment size src))
 	    (t
 	     (emit-byte segment (if (eq size :byte) #b10000000 #b10000001))
-	     (emit-ea segment dst opcode)
+	     (emit-ea segment dst opcode allow-constants)
 	     (emit-sized-immediate segment size src))))
      ((register-p src)
       (emit-byte segment
@@ -1851,6 +1851,30 @@
    (emit-byte-displacement-backpatch segment target)))
 
 
+;;; Conditional move.
+
+(disassem:define-instruction-format (cond-move 24
+				     :default-printer
+				        '('cmov cond :tab reg ", " reg/mem))
+  (prefix  :field (byte 8 0)	:value #b00001111)
+  (op      :field (byte 4 12)	:value #b0100)
+  (cond    :field (byte 4 8)	:type 'condition-code)
+  (reg/mem :fields (list (byte 2 22) (byte 3 16))
+	   			:type 'reg/mem)
+  (reg     :field (byte 3 19)	:type 'reg))
+
+(define-instruction cmov (segment cond dst src)
+  (:printer cond-move ())
+  (:emitter
+   (assert (register-p dst))
+   (let ((size (matching-operand-size dst src)))
+     (assert (or (eq size :word) (eq size :dword)))
+     (maybe-emit-operand-size-prefix segment size))
+   (emit-byte segment #b00001111)
+   (emit-byte segment (dpb (conditional-opcode cond) (byte 4 0) #b01000000))
+   (emit-ea segment src (reg-tn-encoding dst))))
+
+
 ;;;; Conditional byte set.
 
 (disassem:define-instruction-format (cond-set 24
@@ -2500,6 +2524,14 @@
   (:emitter
    (emit-byte segment #b11011101)
    (emit-fp-op segment dest #b000)))
+;;;
+;;; Free fp register and pop the stack.
+;;;
+(define-instruction ffreep (segment dest)
+  (:printer floating-point-fp ((op '(#b111 #b000))))
+  (:emitter 
+   (emit-byte segment #b11011111)
+   (emit-fp-op segment dest #b000)))
 
 (define-instruction fabs (segment)
   (:printer floating-point-no ((op #b00001)))
@@ -2622,6 +2654,18 @@
    (emit-byte segment #b11011001)))
 
 ;;;
+;;; Compare ST(i) to ST0 and update the flags.
+;;;
+;;; Intel syntal: FCOMI ST, ST(i)
+;;;
+(define-instruction fcomi (segment src)
+  (:printer floating-point ((op '(#b011 #b110))))
+  (:emitter
+   (assert (fp-reg-tn-p src))
+   (emit-byte segment #b11011011)
+   (emit-fp-op segment src #b110)))
+
+;;;
 ;;; Unordered comparison
 ;;;
 (define-instruction fucom (segment src)
@@ -2631,12 +2675,41 @@
    (assert (fp-reg-tn-p src))
    (emit-byte segment #b11011101)
    (emit-fp-op segment src #b100)))
+;;;
+;;; Unordered compare ST(i) to ST0 and update the flags.
+;;;
+;;; Intel syntal: FUCOMI ST, ST(i)
+;;;
+(define-instruction fucomi (segment src)
+  ;; XX Printer conflicts with fldl due to the mod bits.
+  #+nil (:printer floating-point ((op '(#b011 #b101))))
+  (:emitter
+   (assert (fp-reg-tn-p src))
+   (emit-byte segment #b11011011)
+   (emit-fp-op segment src #b101)))
 
 (define-instruction ftst (segment)
   (:printer floating-point-no ((op #b00100)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11100100)))
+
+;;; Compare and move ST(i) to ST0.
+;;;
+;;; Intel syntal: FCMOVcc ST, ST(i)
+;;;
+(define-instruction fcmov (segment cond src)
+  #+nil (:printer floating-point ((op '(#b01? #b???))))
+  (:emitter
+   (assert (fp-reg-tn-p src))
+   (emit-byte segment (ecase cond
+			((:b :e :be :u) #b11011010)
+			((:nb :ne :nbe :nu) #b11011011)))
+   (emit-fp-op segment src (ecase cond
+			     ((:b :nb) #b000)
+			     ((:e :ne) #b000)
+			     ((:be :nbe) #b000)
+			     ((:u nu) #b000)))))
 
 ;;;
 ;;; 80387 Specials

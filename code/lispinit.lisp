@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.2 1998/06/23 11:22:04 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.3 2000/05/23 16:36:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -425,10 +425,8 @@
     (set-floating-point-modes :traps
 			      '(:overflow #-x86 :underflow :invalid
 					  :divide-by-zero))
-    ;; Clear pseudo atomic in case it this core wasn't compiled with
-    ;; support.
+    ;; Clear pseudo atomic in case this core wasn't compiled with support.
     #+x86 (setf lisp::*pseudo-atomic-atomic* 0))))
-
 
 
 ;;;; Miscellaneous external functions:
@@ -453,19 +451,20 @@
             Must be a non-negative, non-complex number."
 	   n))
   (multiple-value-bind (sec usec)
-		       (if (integerp n)
-			   (values n 0)
-			   (values (truncate n)
-				   (truncate (* n 1000000))))
+    (if (integerp n)
+	(values n 0)
+	(multiple-value-bind (sec frac)(truncate n)
+	  (values sec(truncate frac 1e-6))))
     (unix:unix-select 0 0 0 0 sec usec))
   nil)
-
 
 ;;;; SCRUB-CONTROL-STACK
 
 
 (defconstant bytes-per-scrub-unit 2048)
 
+;;; Scrub-control-stack.
+;;;
 #-x86
 (defun scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
@@ -500,47 +499,17 @@
       (scrub (int-sap (- csp initial-offset))
 	     (* (floor initial-offset vm:word-bytes) vm:word-bytes)
 	     0))))
-
-#+x86 ;; Stack grows downwards
+
+;;; Scrub-control-stack.
+;;;
+;;; On the x86 port the stack grows downwards, and to support grow on
+;;; demand stacks the stack must be decreased as it is scrubbed.
+;;;
+#+x86
 (defun scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."
-  (declare (optimize (speed 3) (safety 0))
-	   (values (unsigned-byte 20)))
-  (labels
-      ((scrub (ptr offset count)
-	 (declare (type system-area-pointer ptr)
-		  (type (unsigned-byte 16) offset)
-		  (type (unsigned-byte 20) count)
-		  (values (unsigned-byte 20)))
-	 (let ((loc (int-sap (- (sap-int ptr) (+ offset vm:word-bytes)))))
-	   (cond ((= offset bytes-per-scrub-unit)
-		  (look (int-sap (- (sap-int ptr) bytes-per-scrub-unit))
-			0 count))
-		 (t ;; need to fix bug in %set-stack-ref
-		  (setf (sap-ref-32 loc 0) 0)
-		  (scrub ptr (+ offset vm:word-bytes) count)))))
-       (look (ptr offset count)
-	 (declare (type system-area-pointer ptr)
-		  (type (unsigned-byte 16) offset)
-		  (type (unsigned-byte 20) count)
-		  (values (unsigned-byte 20)))
-	 (let ((loc (int-sap (- (sap-int ptr) offset))))
-	   (cond ((= offset bytes-per-scrub-unit)
-		  count)
-		 ((zerop (kernel::get-lisp-obj-address (stack-ref loc 0)))
-;		 ((zerop (stack-ref loc 0))
-		  (look ptr (+ offset vm:word-bytes) count))
-		 (t
-		  (scrub ptr offset (+ count vm:word-bytes)))))))
-    (let* ((csp (sap-int (c::control-stack-pointer-sap)))
-	   (initial-offset (logand csp (1- bytes-per-scrub-unit))))
-      (declare (type (unsigned-byte 32) csp))
-      (scrub (int-sap (+ csp initial-offset))
-	     (* (floor initial-offset vm:word-bytes) vm:word-bytes)
-	     0))))
-
-
+  (scrub-control-stack))
 
 
 ;;;; TOP-LEVEL loop.

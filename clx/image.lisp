@@ -17,6 +17,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/image.lisp,v 1.4.2.2 2000/05/23 16:36:01 pw Exp $")
 
 (in-package :xlib)
 
@@ -2430,8 +2433,7 @@
 		 (kintern
 		   (substitute
 		     #\- #\_
-		     (#-excl string-upcase
-		      #+excl correct-case
+		     (string-upcase
 		      (subseq line start end))
 		     :test #'char=))))
 	  (when (null name)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.29.2.1 1998/06/23 11:23:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.29.2.2 2000/05/23 16:37:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -134,8 +134,8 @@
   (define-type-predicate characterp character)
   (define-type-predicate compiled-function-p compiled-function)
   (define-type-predicate complexp complex)
-  #+complex-float (define-type-predicate complex-rational-p (complex rational))
-  #+complex-float (define-type-predicate complex-float-p (complex float))
+  (define-type-predicate complex-rational-p (complex rational))
+  (define-type-predicate complex-float-p (complex float))
   (define-type-predicate consp cons)
   (define-type-predicate floatp float)
   (define-type-predicate functionp function)
@@ -333,6 +333,29 @@
 			    types)))))))
 
 
+;;; Source-Transform-Cons-Typep  --  Internal
+;;;
+;;; If necessary recurse to check the cons type.
+;;;
+(defun source-transform-cons-typep (object type)
+  (let* ((car-type (cons-type-car-type type))
+	 (cdr-type (cons-type-cdr-type type)))
+    (let ((car-test-p (not (or (type= car-type *wild-type*)
+			       (type= car-type (specifier-type t)))))
+	  (cdr-test-p (not (or (type= cdr-type *wild-type*)
+			       (type= cdr-type (specifier-type t))))))
+      (if (and (not car-test-p) (not cdr-test-p))
+	  `(consp ,object)
+	  (once-only ((n-obj object))
+	    `(and (consp ,n-obj)
+		  ,@(if car-test-p
+			`((typep (car ,n-obj)
+				 ',(type-specifier car-type))))
+		  ,@(if cdr-test-p
+			`((typep (cdr ,n-obj)
+				 ',(type-specifier cdr-type))))))))))
+
+
 ;;; FIND-SUPERTYPE-PREDICATE  --  Internal
 ;;;
 ;;;    Return the predicate and type from the most specific entry in
@@ -405,7 +428,7 @@
 ;;; for the object is invalid and signal an error if so.  Otherwise, look up
 ;;; the indirect class-cell and call CLASS-CELL-TYPEP at runtime.
 ;;;
-(deftransform %instance-typep ((object spec))
+(deftransform %instance-typep ((object spec) (* *) * :when :both)
   (assert (constant-continuation-p spec))
   (let* ((spec (continuation-value spec))
 	 (class (specifier-type spec))
@@ -512,6 +535,8 @@
 		    `(%instance-typep ,object ,spec))
 		   (array-type
 		    (source-transform-array-typep object type))
+		   (cons-type
+		    (source-transform-cons-typep object type))
 		   (t nil)))
 	    `(%typep ,object ,spec)))
       (values nil t)))

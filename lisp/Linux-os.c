@@ -1,6 +1,6 @@
 /*
  * Linux-os.c. 
- * Form FreeBSD-os.c
+ * From FreeBSD-os.c
  * From osf1-os.c,v 1.1 94/03/27 15:30:51 hallgren Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
@@ -13,8 +13,9 @@
  * Much hacked by Paul Werkowski
  * Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
  * GENCGC support by Douglas Crosher, 1996, 1997.
+ * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.2.2.1 1998/06/23 11:24:46 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.2.2.2 2000/05/23 16:38:12 pw Exp $
  *
  */
 
@@ -38,20 +39,14 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <netdb.h>
 
-#include "x86-validate.h"
+#include "validate.h"
 size_t os_vm_page_size;
 
-#define DPRINTF(t,a) {if(t)fprintf a;}
-
-#undef HAVE_SIGVEC		/* defined  - now obsolete */
-#undef HAVE_SIGACTION		/* replacement for SIGVEC          */
-/* SIGSTKSZ == 40Kb */
-#define SIG_STACK_SIZE (SIGSTKSZ/sizeof(double))
-/* make sure the stack is 8 byte aligned */
-#if defined USE_SIG_STACK
-static double estack_buf[SIG_STACK_SIZE];
-#endif
+#define DPRINTF(t,a) {if (t) fprintf a;}
 
 #if defined GENCGC
 #include "gencgc.h"
@@ -69,42 +64,32 @@ void update_errno (void)
 #endif
 
 
-void
-os_init(void)
+void os_init(void)
 {
   struct utsname name;
 
   uname(&name);
 
-/* we need this for mmap */
+  /* We need this for mmap */
 
-  if ((name.release[0]) < '2')
+  if (name.release[0] < '2')
    {
     printf("Linux version must be later then 2.0.0!\n");
     exit(2);
   }
 
-#if defined USE_SIG_STACK
-  static struct sigaltstack estack;
-  estack.ss_base = (char*)estack_buf; /* this should be ss_sp */
-  estack.ss_size = SIGSTKSZ;
-  estack.ss_flags = 0;
-  if (sigaltstack(&estack, 0) < 0)
-    perror("sigaltstack");
+  os_vm_page_size = getpagesize();
+
+#ifdef i386
+  setfpucw(0x1372|4|8|16|32); /* No interrupts */
 #endif
-#if 0
-  os_vm_page_size=OS_VM_DEFAULT_PAGESIZE;
-#else
-  os_vm_page_size=getpagesize();
-#endif
-__setfpucw(0x1372|4|8|16|32); /*no interrupts */
 }
 
-int
+#ifdef i386
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
-sc_reg(struct sigcontext *c, int offset)
+int sc_reg(struct sigcontext *c, int offset)
 #else
-sc_reg(struct sigcontext_struct *c, int offset)
+int sc_reg(struct sigcontext_struct *c, int offset)
 #endif
 {
   switch(offset)
@@ -120,126 +105,98 @@ sc_reg(struct sigcontext_struct *c, int offset)
     }
   return 0;
 }
+#endif
 
-void
-os_save_context(void)
+void os_save_context(void)
 {
-  /* Called from interrupt handlers so C stuff knows things set in Lisp
+  /*
+   * Called from interrupt handlers so C stuff knows things set in Lisp.
    */
 }
 
-void
-os_set_context(void)
+void os_set_context(void)
 {
 }
 
-int do_mmap(os_vm_address_t *addr, os_vm_size_t len,
-	     int flags)
+os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
-  /* we _must_ have the memory where we want it...*/
-  os_vm_address_t old_addr=*addr;
+  int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
 
-  *addr=mmap(*addr,len,OS_VM_PROT_ALL,flags,-1,0);
-  if (((old_addr != NULL) && (*addr != old_addr)) || 
-	(*addr == (os_vm_address_t) -1)) 
-    {
-      fprintf(stderr, "Error in allocating memory, do you have more then 16MB of memory+swap?\n");
-      perror("mmap");
-      return 1;
-    }
- return 0;
-}
-
-os_vm_address_t
-os_validate(os_vm_address_t addr, os_vm_size_t len)
-{
-  int flags = MAP_PRIVATE|MAP_ANONYMOUS;
-  int oa=addr,olen=len;
-
-  if(addr) flags|=MAP_FIXED;
-  else flags|=MAP_VARIABLE;
-
-  DPRINTF(0,(stderr,"os_validate %x %d => ",addr,len));
   if (addr)
-    {
-      do {
-	if (len <= 0x1000000 )
-	  {
-	    if (do_mmap(&addr,len,flags))
-	      return NULL;
-	    len=0;
-	  }
-	else
-	  {
-	    len = len-0x1000000;
-	    if (do_mmap(&addr,0x1000000,flags))
-		return NULL;
-	    addr+=0x1000000;
-	  }
-      }
-      while (len>0);
-    }
+    flags |= MAP_FIXED;
   else
+    flags |= MAP_VARIABLE;
+
+  DPRINTF(0, (stderr, "os_validate %x %d => ", addr, len));
+
+  addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
+
+  if(addr == (os_vm_address_t) -1)
     {
-      if(do_mmap(&addr,len,flags))
-	  return NULL;
-      return addr;
+      perror("mmap");
+      return NULL;
     }
-  DPRINTF(0,(stderr,"%x\n",addr));
-  return oa;
-}
 
-void
-os_invalidate(os_vm_address_t addr, os_vm_size_t len)
-{
-  DPRINTF(0,(stderr,"os_invalidate %x %d\n",addr,len));
-  if(munmap(addr,len) == -1)
-    perror("munmap");
-}
+  DPRINTF(0, (stderr, "%x\n", addr));
 
-os_vm_address_t
-os_map(int fd, int offset, os_vm_address_t addr, os_vm_size_t len)
-{
-  if((addr=mmap(addr,len,OS_VM_PROT_ALL,MAP_PRIVATE|MAP_FILE|MAP_FIXED,fd,
-		(off_t) offset)) == (os_vm_address_t) -1)
-    perror("mmap");
-  
   return addr;
 }
 
-void
-os_flush_icache(os_vm_address_t address, os_vm_size_t length)
+void os_invalidate(os_vm_address_t addr, os_vm_size_t len)
+{
+  DPRINTF(0, (stderr, "os_invalidate %x %d\n", addr, len));
+
+  if (munmap(addr, len) == -1)
+    perror("munmap");
+}
+
+os_vm_address_t os_map(int fd, int offset, os_vm_address_t addr,
+		       os_vm_size_t len)
+{
+  addr = mmap(addr, len,
+	      OS_VM_PROT_ALL,
+	      MAP_PRIVATE | MAP_FILE | MAP_FIXED,
+	      fd, (off_t) offset);
+
+  if (addr == (os_vm_address_t) -1)
+    perror("mmap");
+
+  return addr;
+}
+
+void os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 {
 }
 
-void
-os_protect(os_vm_address_t address, os_vm_size_t length, os_vm_prot_t prot)
+void os_protect(os_vm_address_t address, os_vm_size_t length,
+		os_vm_prot_t prot)
 {
-  if(mprotect(address, length, prot) == -1)
+  if (mprotect(address, length, prot) == -1)
     perror("mprotect");
 }
+
 
-static boolean
-in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
+
+static boolean in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 {
-  char* beg = (char*)sbeg;
-  char* end = (char*)sbeg + slen;
-  char* adr = (char*)a;
+  char* beg = (char*) sbeg;
+  char* end = (char*) sbeg + slen;
+  char* adr = (char*) a;
   return (adr >= beg && adr < end);
 }
-boolean
-valid_addr(os_vm_address_t addr)
+
+boolean valid_addr(os_vm_address_t addr)
 {
   int ret;
   os_vm_address_t newaddr;
-  newaddr=os_trunc_to_page(addr);
+  newaddr = os_trunc_to_page(addr);
 
-  if(   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
-     || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
-     || in_range_p(addr, DYNAMIC_0_SPACE_START, DYNAMIC_SPACE_SIZE  )
-     || in_range_p(addr, DYNAMIC_1_SPACE_START, DYNAMIC_SPACE_SIZE  )
-     || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
-     || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ))
+  if (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
+      || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
+      || in_range_p(addr, DYNAMIC_0_SPACE_START, DYNAMIC_SPACE_SIZE  )
+      || in_range_p(addr, DYNAMIC_1_SPACE_START, DYNAMIC_SPACE_SIZE  )
+      || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
+      || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ))
     return TRUE;
   return FALSE;
 }
@@ -251,68 +208,75 @@ void sigsegv_handler(HANDLER_ARGS)
 {
   GET_CONTEXT
 
-  int  fault_addr = ((struct sigcontext_struct *)(&contextstruct))->cr2;
-  int  page_index = find_page_index(fault_addr);
-
-  /*signal(sig,sigsegv_handler);  /* Re-install; necessary? */
+  int  fault_addr = ((struct sigcontext_struct *) (&contextstruct))->cr2;
+  int  page_index = find_page_index((void *) fault_addr);
 
   /* Check if the fault is within the dynamic space. */
-  if ( page_index!=-1 ) {
+  if (page_index != -1) {
     /* Un-protect the page */
-    /* The page should have been marked write_protected */
-    if (page_table[page_index].write_protected != 1)
-      fprintf(stderr,"*** Sigsegv in page not marked as write protected");
+
+    /* The page should have been marked write protected */
+    if (!PAGE_WRITE_PROTECTED(page_index))
+      fprintf(stderr, "*** Sigsegv in page not marked as write protected\n");
     os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-    page_table[page_index].write_protected = 0;
-    page_table[page_index].write_protected_cleared = 1;
+    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
+    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
+
     return;
   }
 
   DPRINTF(0,(stderr,"sigsegv: eip: %p\n",context->eip));
   interrupt_handle_now(signal, contextstruct);
-  return;
 }
 #else
-static void
-sigsegv_handler(HANDLER_ARGS)
+static void sigsegv_handler(HANDLER_ARGS)
 {
-  GET_CONTEXT
+  os_vm_address_t addr;
 
-  DPRINTF(1,(stderr,"sigsegv\n"));
-  interrupt_handle_now(signal,contextstruct);
+#ifdef i386
+  GET_CONTEXT
+#endif
+
+  DPRINTF(0, (stderr, "sigsegv\n"));
+#ifdef i386
+  interrupt_handle_now(signal, contextstruct);
+#else
+#define CONTROL_STACK_TOP (((char*) CONTROL_STACK_START) + CONTROL_STACK_SIZE)
+
+  addr = arch_get_bad_addr(signal,code,context);
+
+  if (addr != NULL && context->sc_regs[reg_ALLOC] & (1 << 63)) {
+    context->sc_regs[reg_ALLOC] -= (1 << 63);
+    interrupt_handle_pending(context);
+  } else if (addr > CONTROL_STACK_TOP && addr < BINDING_STACK_START) {
+    fprintf(stderr, "Possible stack overflow at 0x%08lX!\n", addr);
+    /* try to fix control frame pointer */
+    while (!(CONTROL_STACK_START <= *current_control_frame_pointer &&
+	     *current_control_frame_pointer <= CONTROL_STACK_TOP))
+      ((char*) current_control_frame_pointer) -= sizeof(lispobj);
+    ldb_monitor();
+  } else if (!interrupt_maybe_gc(signal, code, context))
+    interrupt_handle_now(signal, code, context);
+#endif
 }
 #endif
 
-static void
-sigbus_handler(HANDLER_ARGS)
+static void sigbus_handler(HANDLER_ARGS)
 {
+#ifdef i386
   GET_CONTEXT
-
-  DPRINTF(1,(stderr,"sigbus:\n")); /* there is no sigbus in linux??? */
-  interrupt_handle_now(signal,contextstruct);
-}
-
-void 
-os_install_interrupt_handlers(void)
-{
-  interrupt_install_low_level_handler(SIGSEGV,sigsegv_handler);
-  interrupt_install_low_level_handler(SIGBUS,sigbus_handler);
-}
-
-#if 0
-/* functions that disapear ! */
-#define Force_Fct(fct) int * Force_ ## fct (void) {return &fct;}
-
-Force_Fct(select)
-Force_Fct(stat)
-Force_Fct(lstat)
-Force_Fct(fstat)
-Force_Fct(socket)
-Force_Fct(connect)
-Force_Fct(listen)
-Force_Fct(recv)
-Force_Fct(accept)
-Force_Fct(bind)
 #endif
 
+  DPRINTF(1, (stderr, "sigbus:\n")); /* there is no sigbus in linux??? */
+#ifdef i386
+  interrupt_handle_now(signal, contextstruct);
+#else
+  interrupt_handle_now(signal, code, context);
+#endif  
+}
 
+void os_install_interrupt_handlers(void)
+{
+  interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
+  interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
+}

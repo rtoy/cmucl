@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.3 1998/06/23 11:22:37 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.4 2000/05/23 16:36:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,6 +70,8 @@
           #+(or hpux svr4 linux freebsd) vsusp
 	  #+(or hpux svr4 linux freebsd) c-cflag
 	  #+(or hpux svr4 linux freebsd) c-cc
+	  #+(or bsd osf1) c-ispeed
+	  #+(or bsd osf1) c-ospeed
           #+(or hpux svr4 linux freebsd) tty-icanon
 	  #+(or hpux svr4 linux freebsd) vmin
           #+(or hpux svr4 linux freebsd) vtime
@@ -155,6 +157,7 @@
 	  #-hpux unix-utimes #-(or svr4 hpux) unix-setreuid
 	  #-(or svr4 hpux) unix-setregid
 	  unix-getpid unix-getppid
+	  #+(or svr4 freebsd)unix-setpgid
 	  unix-getgid unix-getegid unix-getpgrp unix-setpgrp unix-getuid
 	  unix-getpagesize unix-gethostname unix-gethostid unix-fork
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
@@ -1544,6 +1547,15 @@
   (defconstant tty-cs7 #o40)
   (defconstant tty-cs8 #o60))
 
+#+freebsd
+(progn
+  ;; control modes
+  (defconstant tty-csize #x300)
+  (defconstant tty-cs5 #x000)
+  (defconstant tty-cs6 #x100)
+  (defconstant tty-cs7 #x200)
+  (defconstant tty-cs8 #x300))
+
 #+svr4
 (progn
   (defconstant tcsanow #x540e)
@@ -1644,6 +1656,7 @@
 
   ;; XXX rest of functions in this progn probably are present in linux, but
   ;; not verified.
+  #-freebsd
   (defun unix-cfgetospeed (termios)
     "Get terminal output speed."
     (multiple-value-bind (speed errno)
@@ -1652,12 +1665,24 @@
           (values (svref terminal-speeds speed) 0)
           (values speed errno))))
 
+  #+freebsd
+  (defun unix-cfgetospeed (termios)
+    "Get terminal output speed."
+    (int-syscall ("cfgetospeed" (* (struct termios))) termios))
+
+  #-freebsd
   (defun unix-cfsetospeed (termios speed)
     "Set terminal output speed."
     (let ((baud (or (position speed terminal-speeds)
                     (error "Bogus baud rate ~S" speed))))
       (void-syscall ("cfsetospeed" (* (struct termios)) int) termios baud)))
   
+  #+freebsd
+  (defun unix-cfsetospeed (termios speed)
+    "Set terminal output speed."
+    (void-syscall ("cfsetospeed" (* (struct termios)) int) termios speed))
+  
+  #-freebsd
   (defun unix-cfgetispeed (termios)
     "Get terminal input speed."
     (multiple-value-bind (speed errno)
@@ -1665,12 +1690,23 @@
       (if speed
           (values (svref terminal-speeds speed) 0)
           (values speed errno))))
+
+  #+freebsd
+  (defun unix-cfgetispeed (termios)
+    "Get terminal input speed."
+    (int-syscall ("cfgetispeed" (* (struct termios))) termios))
   
+  #-freebsd
   (defun unix-cfsetispeed (termios speed)
     "Set terminal input speed."
     (let ((baud (or (position speed terminal-speeds)
                     (error "Bogus baud rate ~S" speed))))
       (void-syscall ("cfsetispeed" (* (struct termios)) int) termios baud)))
+
+  #+freebsd
+  (defun unix-cfsetispeed (termios speed)
+    "Set terminal input speed."
+    (void-syscall ("cfsetispeed" (* (struct termios)) int) termios speed))
 
   (defun unix-tcsendbreak (fd duration)
     "Send break"
@@ -2019,23 +2055,30 @@
   "Unix-getegid returns the effective group-id of the current process.")
 
 ;;; Unix-getpgrp returns the group-id associated with the
-;;; process whose process-id is specified as an argument.
-;;; As usual, if the process-id is 0, it refers to the current
-;;; process.
+;;; current process.
 
-(defun unix-getpgrp (pid)
-  "Unix-getpgrp returns the group-id of the process associated
-   with pid."
-  (int-syscall ("getpgrp" int) pid))
+(defun unix-getpgrp ()
+  "Unix-getpgrp returns the group-id of the calling process."
+  (int-syscall ("getpgrp")))
 
-;;; Unix-setpgrp sets the group-id of the process specified by 
+;;; Unix-setpgid sets the group-id of the process specified by 
 ;;; "pid" to the value of "pgrp".  The process must either have
 ;;; the same effective user-id or be a super-user process.
 
+;;; setpgrp(int int)[freebsd] is identical to setpgid and is retained
+;;; for backward compatibility. setpgrp(void)[solaris] is being phased
+;;; out in favor of setsid().
+
 (defun unix-setpgrp (pid pgrp)
   "Unix-setpgrp sets the process group on the process pid to
-   pgrp.  NIL and an error number is returned upon failure."
+   pgrp.  NIL and an error number are returned upon failure."
   (void-syscall (#-svr4 "setpgrp" #+svr4 "setpgid" int int) pid pgrp))
+
+(defun unix-setpgid (pid pgrp)
+  "Unix-setpgid sets the process group of the process pid to
+   pgrp. If pgid is equal to pid, the process becomes a process
+   group leader. NIL and an error number are returned upon failure."
+  (void-syscall ("setpgid" int int) pid pgrp))
 
 (def-alien-routine ("getuid" unix-getuid) int
   "Unix-getuid returns the real user-id associated with the

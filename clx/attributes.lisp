@@ -17,6 +17,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/attributes.lisp,v 1.3.2.2 2000/05/23 16:35:51 pw Exp $")
 
 ;;;	The special variable *window-attributes* is an alist containg:
 ;;;	(drawable attributes attribute-changes geometry geometry-changes)
@@ -349,8 +352,6 @@
 	(t (x-type-error background '(or (member :none :parent-relative) integer pixmap))))
   background)
 
-#+Genera (eval-when (compile) (compiler:function-defined 'window-background))
-
 (defsetf window-background set-window-background)
 
 (defun set-window-border (window border)
@@ -363,8 +364,6 @@
 	 (change-window-attribute window 3 border))
 	(t (x-type-error border '(or (member :copy) integer pixmap))))
   border)
-
-#+Genera (eval-when (compile) (compiler:function-defined 'window-border))
 
 (defsetf window-border set-window-border)
 
@@ -630,8 +629,6 @@
     (when sibling
       (change-drawable-geometry window 5 (encode-type window sibling))))
   mode)
-
-#+Genera (eval-when (compile) (compiler:function-defined 'window-priority))
 
 (defsetf window-priority (window &optional sibling) (mode)
   ;; A bit strange, but retains setf form.

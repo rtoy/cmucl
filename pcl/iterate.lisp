@@ -23,6 +23,10 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
+;;;
+
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/iterate.lisp,v 1.4.2.2 2000/05/23 16:38:55 pw Exp $")
 ;;; 
 ;;; Original source {pooh/n}<pooh>vanmelle>lisp>iterate;4 created 27-Sep-88 12:35:33
 
@@ -294,16 +298,7 @@ NIL => never; :USER => those resulting from user code; T => always, even if it's
                  (generator (second clause)))
                 (setq
                  let-bindings
-                 (list (list gvar
-                             (cond
-			      #-cmu ; Python thinks this is unreachable.
-			      (leftover-body
-                                               ; Have to use this up
-                               `(progn ,@(prog1 leftover-body (setq 
-                                                                  leftover-body
-                                                                    nil))
-                                       generator))
-                              (t generator)))))
+                 (list (list gvar generator)))
                 (setq let-body `(funcall ,gvar #'(lambda nil ,finish-form)))))
            (push (mv-setq (copy-list vars)
                         let-body)

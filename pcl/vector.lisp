@@ -24,6 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.7.2.2 2000/05/23 16:39:04 pw Exp $")
+;;;
 ;;; Permutation vectors.
 ;;;
 
@@ -53,7 +57,6 @@
   (slot-name-lists nil :type list)
   (call-list nil :type list))
 
-#+cmu
 (declaim (ext:freeze-type pv-table))
 
 (defvar *initial-pv-table* (make-pv-table-internal nil nil))
@@ -173,8 +176,7 @@
 	    (iterate ((slot-names (list-elements slot-name-lists)))
 	      (when slot-names
 		(let* ((wrapper     (pop wrappers))
-		       (std-p #+cmu17 (typep wrapper 'wrapper)
-			      #-cmu17 t)
+		       (std-p (typep wrapper 'wrapper))
 		       (class       (wrapper-class* wrapper))
 		       (class-slots (and std-p (wrapper-class-slots wrapper))))
 		  (dolist (slot-name (cdr slot-names))
@@ -277,7 +279,7 @@
 
 (defun update-all-pv-table-caches (class slot-names)
   (let* ((cwrapper (class-wrapper class))
-	 (std-p #+cmu17 (typep cwrapper 'wrapper) #-cmu17 t)
+	 (std-p (typep cwrapper 'wrapper))
 	 (class-slots (and std-p (wrapper-class-slots cwrapper)))
 	 (class-slot-p-cell (list nil))
 	 (new-values (mapcar #'(lambda (slot-name)
@@ -356,9 +358,7 @@
 (defun maybe-expand-accessor-form (form required-parameters slots env)
   (let* ((fname (car form))
 	 #||(len (length form))||#
-	 (gf (if (symbolp fname)
-		 (unencapsulated-fdefinition fname)
-		 (gdefinition fname))))
+	 (gf (gdefinition fname)))
     (macrolet ((maybe-optimize-reader ()
 		 `(let ((parameter
 			 (can-optimize-access1 (cadr form)
@@ -410,11 +410,7 @@
       (maybe-expand-accessor-form form required-parameters slots env)
       (let* ((fname (car form))
 	     (len (length form))
-	     (gf (if (symbolp fname)
-		     (and (fboundp fname)
-			  (unencapsulated-fdefinition fname))
-		     (and (gboundp fname)
-			  (gdefinition fname))))
+	     (gf (and (fboundp fname) (gdefinition fname)))
 	     (gf-name (and (fsc-instance-p gf)
 			   (if (early-gf-p gf)
 			       (early-gf-name gf)
@@ -703,11 +699,7 @@
   (declare (ignore class))
   `(instance-write-internal .pv. ,(slot-vector-symbol position)
     ,pv-offset ,new-value
-    (,(if (consp gf-name)
-	  (get-setf-function-name gf-name)
-	  gf-name)
-     (instance-accessor-parameter ,parameter)
-     ,new-value)
+    (,gf-name (instance-accessor-parameter ,parameter) ,new-value)
     :instance))
 
 (defmacro instance-boundp-internal (pv slots pv-offset default
@@ -872,7 +864,7 @@
      ,@forms))
 
 (defvar *non-variable-declarations*
-  '(#+cmu values method-name method-lambda-list
+  '(values method-name method-lambda-list
     optimize ftype inline notinline))
 
 (defvar *variable-declarations-with-argument*
@@ -1044,17 +1036,7 @@
 	 w (w-t pv-wrappers))
     (dolist (arg args)
       (setq w
-	    #+cmu17 (wrapper-of arg)
-	    #-cmu17
-	    (cond ((std-instance-p arg)
-		   (std-instance-wrapper arg))
-		  ((fsc-instance-p arg)
-		   (fsc-instance-wrapper arg))
-		  (t
-		   #+new-kcl-wrapper
-		   (built-in-wrapper-of arg)
-		   #-new-kcl-wrapper
-		   (built-in-or-structure-wrapper arg))))
+	    (wrapper-of arg))
       (unless (eq 't (wrapper-state w))
 	(setq w (check-wrapper-validity arg)))
       (setf (car w-t) w))

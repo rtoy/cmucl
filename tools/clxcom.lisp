@@ -1,3 +1,12 @@
+;;; -*- Package: USER -*-
+;;;
+;;; **********************************************************************
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.24.2.2 2000/05/23 16:39:06 pw Exp $")
+;;;
+;;; **********************************************************************
+;;;
 (in-package "USER")
 
 #+bootstrap

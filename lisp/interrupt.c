@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.9.2.1 1998/06/23 11:24:59 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.9.2.2 2000/05/23 16:38:26 pw Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -164,7 +164,7 @@ void
 interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 {
     lispobj context_sap;
-#ifdef __linux__
+#if ( defined( __linux__ ) && defined( i386 ) )
     GET_CONTEXT
 #endif
 
@@ -176,18 +176,18 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 
 #ifdef POSIX_SIGS
 #if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
-    sigprocmask(SIG_SETMASK,&context->uc_sigmask, 0);
+    sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
 #else
     {
       sigset_t temp;
       sigemptyset(&temp);
       temp.__val[0] = context->uc_sigmask;
-      sigprocmask(SIG_SETMASK,&temp, 0);
+      sigprocmask(SIG_SETMASK, &temp, 0);
     }
 #endif
 #else
     sigsetmask(context->sc_mask);
-#endif
+#endif /* POSIX_SIGS */
 
     if (internal_errors_enabled)
 	funcall2(SymbolFunction(INTERNAL_ERROR), context_sap,
@@ -229,7 +229,7 @@ interrupt_handle_pending(struct sigcontext *context)
 #else
     context->sc_mask = pending_mask;
     pending_mask = 0;
-#endif
+#endif /* POSIX_SIGS */
 
     if (pending_signal) {
 	int signal;
@@ -242,8 +242,8 @@ interrupt_handle_pending(struct sigcontext *context)
 	code = pending_code;
 	pending_signal = 0;
 	/* pending_code = 0; */
-#ifdef __linux__
-        interrupt_handle_now(signal,*context);
+#if ( defined( __linux__ ) && defined( i386 ) )
+        interrupt_handle_now(signal, *context);
 #else
 	interrupt_handle_now(signal, PASSCODE(code), context);
 #endif
@@ -259,20 +259,24 @@ interrupt_handle_pending(struct sigcontext *context)
 void 
 interrupt_handle_now(HANDLER_ARGS)
 {
-#ifdef __linux__
-  GET_CONTEXT
+#if defined(__linux__) && defined(i386)
+    GET_CONTEXT
 #endif
 
     int were_in_lisp;
     union interrupt_handler handler;
 
-#ifdef __linux__
-    __setfpucw(contextstruct.fpstate->cw);
+#if defined(__linux__) && defined(i386)
+    /*
+     * Restore the FPU control word, setting the rounding mode to nearest.
+     */
+
+    setfpucw(contextstruct.fpstate->cw & ~0xc00);
 #endif
-    
+
     handler = interrupt_handlers[signal];
 
-    if(handler.c==SIG_IGN)
+    if(handler.c == (void (*)(HANDLER_ARGS)) SIG_IGN)
 	return;
 
     SAVE_CONTEXT(); /**/
@@ -283,7 +287,7 @@ interrupt_handle_now(HANDLER_ARGS)
 #endif
         fake_foreign_function_call(context);
     
-    if (handler.c==SIG_DFL)
+    if (handler.c == (void (*)(HANDLER_ARGS)) SIG_DFL)
 	/* This can happen if someone tries to ignore or default on of the */
 	/* signals we need for runtime support, and the runtime support */
 	/* decides to pass on it.  */
@@ -301,13 +305,13 @@ interrupt_handle_now(HANDLER_ARGS)
 	{
 	  sigset_t temp;
 	  sigemptyset(&temp);
-	  temp.__val[0] = &context->uc_sigmask;
-	  sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+	  temp.__val[0] = context->uc_sigmask;
+	  sigprocmask(SIG_SETMASK, &temp, 0);
 	}
 #endif
 #else
         sigsetmask(context->sc_mask);
-#endif
+#endif /* POSIX_SIGS */
       
 #if 1
         funcall3(handler.lisp, make_fixnum(signal), make_fixnum(CODE(code)),
@@ -325,15 +329,15 @@ interrupt_handle_now(HANDLER_ARGS)
 	{
 	  sigset_t temp;
 	  sigemptyset(&temp);
-	  temp.__val[0] = &context->uc_sigmask;
-	  sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+	  temp.__val[0] = context->uc_sigmask;
+	  sigprocmask(SIG_SETMASK, &temp, 0);
 	}
 #endif
 #else
         sigsetmask(context->sc_mask);
-#endif
+#endif /* POSIX_SIGS */
       
-#ifdef __linux__
+#if ( defined( __linux__ ) && defined( i386 ) )
         (*handler.c)(signal, contextstruct);
 #else
         (*handler.c)(signal, code, context);
@@ -349,14 +353,18 @@ interrupt_handle_now(HANDLER_ARGS)
 static void 
 maybe_now_maybe_later(HANDLER_ARGS)
 {
-#ifdef __linux__
-  GET_CONTEXT
+#if defined(__linux__) && defined(i386)
+    GET_CONTEXT
 #endif
 
     SAVE_CONTEXT(); /**/
 
-#ifdef __linux__
-    __setfpucw(contextstruct.fpstate->cw);
+#if defined(__linux__) && defined(i386)
+    /*
+     * Restore the FPU control word, setting the rounding mode to nearest.
+     */
+
+    setfpucw(contextstruct.fpstate->cw & ~0xc00);
 #endif
 
     if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
@@ -381,7 +389,8 @@ maybe_now_maybe_later(HANDLER_ARGS)
 #else
         pending_mask = context->sc_mask;
         context->sc_mask |= BLOCKABLE;
-#endif
+#endif /* POSIX_SIGS */
+
         SetSymbolValue(INTERRUPT_PENDING, T);
     } else if (
 #ifndef i386
@@ -407,11 +416,12 @@ maybe_now_maybe_later(HANDLER_ARGS)
 #else
         pending_mask = context->sc_mask;
         context->sc_mask |= BLOCKABLE;
-#endif
+#endif /* POSIX_SIGS */
+
 	arch_set_pseudo_atomic_interrupted(context);
     } else
-#ifdef __linux__
-        interrupt_handle_now(signal,contextstruct);
+#if ( defined( __linux__ ) && defined( i386 ) )
+        interrupt_handle_now(signal, contextstruct);
 #else
         interrupt_handle_now(signal, code, context);
 #endif
@@ -451,12 +461,24 @@ boolean interrupt_maybe_gc(HANDLER_ARGS)
 	    maybe_gc_pending = TRUE;
 	    if (pending_signal == 0) {
 #ifdef POSIX_SIGS
-		pending_mask = context->uc_sigmask;
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
+	        pending_mask = context->uc_sigmask;
 		FILLBLOCKSET(&context->uc_sigmask);
+#else
+		{
+		  sigset_t temp;
+		  sigemptyset(&temp);
+		  pending_mask.__val[0] = context->uc_sigmask;
+		  temp.__val[0] = context->uc_sigmask;
+		  FILLBLOCKSET(&temp);
+
+		  context->uc_sigmask = temp.__val[0];
+		}
+#endif
 #else
 		pending_mask = context->sc_mask;
 		context->sc_mask |= BLOCKABLE;
-#endif
+#endif /* POSIX_SIGS */
 	    }
 	    arch_set_pseudo_atomic_interrupted(context);
 	}
@@ -467,7 +489,7 @@ boolean interrupt_maybe_gc(HANDLER_ARGS)
 	}
 
 	return TRUE;
-    }else
+    } else
 	return FALSE;
 }
 #endif
@@ -483,43 +505,22 @@ void interrupt_install_low_level_handler
 #ifdef POSIX_SIGS
     struct sigaction sa;
 
-    sa.sa_sigaction=handler;
+    sa.sa_sigaction = handler;
     sigemptyset(&sa.sa_mask);
     FILLBLOCKSET(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | SA_SIGINFO;
+    sa.sa_flags = SA_RESTART | USE_SA_SIGINFO;
 
     sigaction(signal, &sa, NULL);
 #else
-#if defined __FreeBSD__ && 0	/* hack in progress */
-/* sort of like POSIX -- maybe fixed in new release */
-#define FILLBLOCKSET(s) (sigaddset(s,SIGHUP), sigaddset(s,SIGINT), \
-		   sigaddset(s,SIGQUIT), sigaddset(s,SIGPIPE), \
-		   sigaddset(s,SIGALRM), sigaddset(s,SIGURG), \
-		   sigaddset(s,SIGTSTP), sigaddset(s,SIGCHLD), \
-		   sigaddset(s,SIGIO), sigaddset(s,SIGXCPU), \
-                   sigaddset(s,SIGXFSZ), sigaddset(s,SIGVTALRM), \
-		   sigaddset(s,SIGPROF), sigaddset(s,SIGWINCH), \
-		   sigaddset(s,SIGUSR1), sigaddset(s,SIGUSR2))
-
-    struct sigaction sa;
-    sa.sa_handler = handler;
-    sigemptyset(&sa.sa_mask);
-    FILLBLOCKSET(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | SA_SIGINFO;
-    sa.sa_flags |= SA_ONSTACK;
-#else
     struct sigvec sv;
 
-    sv.sv_handler=handler;
-    sv.sv_mask=BLOCKABLE;
-    sv.sv_flags=0;
-#if defined USE_SIG_STACK
-    sv.sv_flags |= SV_ONSTACK;	/* use separate stack */
-#endif
-    sigvec(signal,&sv,NULL);
-#endif
+    sv.sv_handler = handler;
+    sv.sv_mask = BLOCKABLE;
+    sv.sv_flags = 0;
+    sigvec(signal, &sv, NULL);
 #endif    
-    interrupt_low_level_handlers[signal]=(handler==SIG_DFL ? 0 : handler);
+    interrupt_low_level_handlers[signal] =
+      (handler == (void (*)(HANDLER_ARGS)) SIG_DFL) ? 0 : handler;
 }
 
 unsigned long install_handler(int signal,
@@ -538,7 +539,8 @@ unsigned long install_handler(int signal,
     FILLBLOCKSET(&new);
 
     if(interrupt_low_level_handlers[signal]==0){
-	if(handler==SIG_DFL || handler==SIG_IGN)
+	if(handler == (void (*)(HANDLER_ARGS)) SIG_DFL
+	   || handler == (void (*)(HANDLER_ARGS)) SIG_IGN)
 	    sa.sa_sigaction = handler;
 	else if (sigismember(&new, signal))
 	    sa.sa_sigaction = maybe_now_maybe_later;
@@ -547,7 +549,7 @@ unsigned long install_handler(int signal,
 
 	sigemptyset(&sa.sa_mask);
 	FILLBLOCKSET(&sa.sa_mask);
-	sa.sa_flags = SA_SIGINFO | SA_RESTART;
+	sa.sa_flags = USE_SA_SIGINFO | SA_RESTART;
 
 	sigaction(signal, &sa, NULL);
     }
@@ -557,7 +559,7 @@ unsigned long install_handler(int signal,
 
     sigprocmask(SIG_SETMASK, &old, 0);
 
-    return (unsigned long)oldhandler.lisp;
+    return (unsigned long) oldhandler.lisp;
 }
 #else
 {
@@ -568,18 +570,16 @@ unsigned long install_handler(int signal,
     oldmask = sigblock(sigmask(signal));
 
     if(interrupt_low_level_handlers[signal]==0){
-	if(handler==SIG_DFL || handler==SIG_IGN)
+	if(handler == (void (*)(HANDLER_ARGS)) SIG_DFL
+	   || handler == (void (*)(HANDLER_ARGS)) SIG_IGN)
 	    sv.sv_handler = handler;
-	else if (sigmask(signal)&BLOCKABLE)
+	else if (sigmask(signal) & BLOCKABLE)
 	    sv.sv_handler = maybe_now_maybe_later;
 	else
 	    sv.sv_handler = interrupt_handle_now;
 
 	sv.sv_mask = BLOCKABLE;
 	sv.sv_flags = 0;
-#if defined USE_SIG_STACK
-	sv.sv_flags = SV_ONSTACK;
-#endif
 	sigvec(signal, &sv, NULL);
     }
 
@@ -588,7 +588,7 @@ unsigned long install_handler(int signal,
 
     sigsetmask(oldmask);
 
-    return (unsigned long)oldhandler.lisp;
+    return (unsigned long) oldhandler.lisp;
 }
 #endif
 
@@ -597,5 +597,5 @@ void interrupt_init(void)
     int i;
 
     for (i = 0; i < NSIG; i++)
-        interrupt_handlers[i].c = SIG_DFL;
+        interrupt_handlers[i].c = (void (*)(HANDLER_ARGS)) SIG_DFL;
 }

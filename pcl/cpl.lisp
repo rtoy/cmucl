@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.7.2.1 2000/05/23 16:38:45 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 ;;;

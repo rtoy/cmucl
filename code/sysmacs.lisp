@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.17.2.1 1998/06/23 11:22:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.17.2.2 2000/05/23 16:36:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,19 +113,24 @@
 ;;;
 (defmacro with-in-stream (stream (slot &rest args) &optional stream-dispatch)
   `(let ((stream (in-synonym-of ,stream)))
-    (if (lisp-stream-p stream)
-	(funcall (,slot stream) stream ,@args)
-	,@(when stream-dispatch
-            `(,(destructuring-bind (function &rest args) stream-dispatch
-	         `(,function stream ,@args)))))))
+    ,(if stream-dispatch
+	 `(if (lisp-stream-p stream)
+	      (funcall (,slot stream) stream ,@args)
+	      ,@(when stream-dispatch
+		  `(,(destructuring-bind (function &rest args) stream-dispatch
+					 `(,function stream ,@args)))))
+	 `(funcall (,slot stream) stream ,@args))))
+
 
 (defmacro with-out-stream (stream (slot &rest args) &optional stream-dispatch)
   `(let ((stream (out-synonym-of ,stream)))
-    (if (lisp-stream-p stream)
-	(funcall (,slot stream) stream ,@args)
-	,@(when stream-dispatch
-	     `(,(destructuring-bind (function &rest args) stream-dispatch
-	          `(,function stream ,@args)))))))
+    ,(if stream-dispatch
+	 `(if (lisp-stream-p stream)
+	      (funcall (,slot stream) stream ,@args)
+	      ,@(when stream-dispatch
+		  `(,(destructuring-bind (function &rest args) stream-dispatch
+					 `(,function stream ,@args)))))
+	 `(funcall (,slot stream) stream ,@args))))
 
 
 ;;;; These are hacks to make the reader win.

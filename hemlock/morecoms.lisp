@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/morecoms.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/morecoms.lisp,v 1.4.2.1 2000/05/23 16:38:08 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,22 +127,33 @@
     (when (minusp n)
       (editor-error "Delete Previous Character Expanding Tabs only accepts ~
                      positive arguments."))
-    (let ((errorp nil))
-      (with-mark ((mark point :left-inserting))
+    ;; Pre-calculate the number of characters that need to be deleted
+    ;; and any remaining white space filling, allowing modification to
+    ;; be avoided if there are not enough characters to delete.
+    (let ((errorp nil)
+	  (del 0)
+	  (fill 0))
+      (with-mark ((mark point))
 	(dotimes (i n)
-	  (cond ((char= (previous-character mark) #\tab)
-		 (let ((pos (mark-column mark)))
-		   (delete-characters mark -1)
-		   (dotimes (i (- pos (mark-column mark)))
-		     (insert-character mark #\space))
-		   (mark-before mark)))
-		((mark-before mark))
-		(t
-		 (setq errorp t)
-		 (return)))))
-      (kill-characters point (- n))
-      (when errorp
-	(editor-error "There were not ~D characters before point." n)))))
+	  (if (> fill 0)
+	      (decf fill)
+	      (let ((prev (previous-character mark)))
+		(cond ((and prev (char= prev #\tab))
+		       (let ((pos (mark-column mark)))
+			 (mark-before mark)
+			 (incf fill (- pos (mark-column mark) 1)))
+		       (incf del))
+		      ((mark-before mark)
+		       (incf del))
+		      (t
+		       (setq errorp t)
+		       (return)))))))
+      (cond ((and (not errorp) (kill-characters point (- del)))
+	     (with-mark ((mark point :left-inserting))
+	       (dotimes (i fill)
+		 (insert-character mark #\space))))
+	    (t
+	     (editor-error "There were not ~D characters before point." n))))))
 
 
 (defvar *scope-table*

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66.2.3 1998/07/12 21:51:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66.2.4 2000/05/23 16:36:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -605,12 +605,12 @@
       (let ((package (symbol-package object))
 	    (name (symbol-name object)))
 	(cond
-	 ;; If the symbol's home package is the current one, then a
-	 ;; prefix is never necessary.
-	 ((eq package *package*))
 	 ;; If the symbol is in the keyword package, output a colon.
 	 ((eq package *keyword-package*)
 	  (write-char #\: stream))
+	 ;; If the symbol's home package is the current one, then a
+	 ;; prefix is never necessary.
+	 ((eq package *package*))
 	 ;; Uninterned symbols print with a leading #:.
 	 ((null package)
 	  (when (or *print-gensym* *print-readably*)
@@ -1021,10 +1021,10 @@
 	 (write-string "#*" stream)
 	 (dotimes (i (length vector))
 	   (output-object (aref vector i) stream)))
+	((and *print-readably*
+	      (not (eq (array-element-type vector) 't)))
+	 (output-array vector stream))
 	(t
-	 (when (and *print-readably*
-		    (not (eq (array-element-type vector) 't)))
-	   (error 'print-not-readable :object vector))
 	 (descend-into (stream)
 	   (write-string "#(" stream)
 	   (dotimes (i (length vector))
@@ -1064,16 +1064,24 @@
 ;;; Master function for outputing the #A form of an array
 ;;;
 (defun output-array-guts (array stream)
-  (when (and *print-readably*
-	     (not (eq (array-element-type array) t)))
-    (error 'print-not-readable :object array))
-  (write-char #\# stream)
-  (let ((*print-base* 10))
-    (output-integer (array-rank array) stream))
-  (write-char #\A stream)
   (with-array-data ((data array) (start) (end))
     (declare (ignore end))
-    (sub-output-array-guts data (array-dimensions array) stream start)))
+    (cond ((and *print-readably*
+		(not (eq (array-element-type array) t)))
+	   (write-string "#A(" stream)
+	   (output-object (array-element-type array) stream)
+	   (write-char #\Space)
+	   (output-object (array-dimensions array) stream)
+	   (write-char #\Space)
+	   (sub-output-array-guts data (array-dimensions array) stream start)
+	   (write-char #\)))
+	  (t
+	   (write-char #\# stream)
+	   (let ((*print-base* 10))
+	     (output-integer (array-rank array) stream))
+	   (write-char #\A stream)
+	   (sub-output-array-guts data (array-dimensions array) stream
+				  start)))))
 
 (defun sub-output-array-guts (array dimensions stream index)
   (declare (type (simple-array * (*)) array) (fixnum index))
@@ -1099,10 +1107,6 @@
   (let ((*print-level* nil)
 	(*print-length* nil))
     (print-unreadable-object (array stream :type t :identity t))))
-
-
-(declaim (ftype function dylan::%print-dylan-instance
-		dylan::dylan-instance-p))
 
 ;;; Instance Printing.  If it's a structure, call the structure printer.
 ;;; Otherwise, call PCL if it's loaded.  If not, print unreadably.
@@ -1736,8 +1740,6 @@
 	(t
 	 (write-string "Closure Over " stream)
 	 (output-function-object (%closure-function function) stream))))
-      (#.vm:dylan-function-header-type
-       (write-string "Dylan Function" stream))
       (t
        (write-string "Unknown Function" stream)))))
 

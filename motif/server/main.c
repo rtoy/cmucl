@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.8.2.2 1998/07/12 21:51:47 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.8.2.3 2000/05/23 16:38:37 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -252,7 +252,7 @@ main(int argc, char **argv)
   signal(SIGQUIT, server_shutdown);
 #if defined BSD
   signal(SIGCHLD, bury_zombie);
-#elif defined(hpux)
+#elif defined(hpux) || defined(SVR4)
   signal(SIGCHLD, SIG_IGN);
 #endif
 

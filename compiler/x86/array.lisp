@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.4.2.1 1998/06/23 11:23:56 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.4.2.2 2000/05/23 16:37:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
 ;;;
 (in-package :x86)
 
@@ -84,12 +84,15 @@
 
 ;;;; Bounds checking routine.
 
+;;; Note that the immediate SC for the index argument is disabled
+;;; because it is not possible to generate a valid error code SC for
+;;; an immediate value.
 (define-vop (check-bound)
   (:translate %check-bound)
   (:policy :fast-safe)
   (:args (array :scs (descriptor-reg))
 	 (bound :scs (any-reg descriptor-reg))
-	 (index :scs (any-reg descriptor-reg immediate) :target result))
+	 (index :scs (any-reg descriptor-reg #+nil immediate) :target result))
   (:arg-types * positive-fixnum tagged-num)
   (:results (result :scs (any-reg descriptor-reg)))
   (:result-types positive-fixnum)
@@ -130,9 +133,7 @@
 (def-full-data-vector-frobs simple-vector * descriptor-reg any-reg)
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
-#+signed-array 
 (def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num any-reg)
-#+signed-array 
 (def-full-data-vector-frobs simple-array-signed-byte-32 signed-num signed-reg)
 
 ;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
@@ -605,8 +606,6 @@
 		  (inst fxch value)))))))
 
 ;;; Complex float variants.
-#+complex-float
-(progn
 (define-vop (data-vector-ref/simple-array-complex-single-float)
   (:note "inline array access")
   (:translate data-vector-ref)
@@ -1055,8 +1054,6 @@
 	(inst fstd result-imag))
       (inst fxch value-imag))))
 
-) ; complex-float
-
 
 ;;;;
 ;;;; dtc expanded and fixed the following:
@@ -1290,8 +1287,6 @@
 	 value)
    (move result value)))
 
-#+signed-array 
-(progn
 
 ;;; signed-byte-8
 
@@ -1437,7 +1432,6 @@
 	  ax-tn)
     (move result eax)))
 
-) ; end signed-array
 
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
@@ -1493,8 +1487,6 @@
 	      long-float))
 
 ;;;; Complex-float raw structure slot accessors.
-#+complex-float
-(progn
 
 (define-vop (raw-ref-complex-single
 	     data-vector-ref/simple-array-complex-single-float)
@@ -1559,8 +1551,6 @@
   (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
 	      complex-long-float))
 
-) ; end progn complex-float
-
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of
 ;;; what type of vector it is.
@@ -1569,6 +1559,18 @@
   unsigned-num %raw-bits)
 (define-full-setter set-raw-bits * 0 other-pointer-type (unsigned-reg)
   unsigned-num %set-raw-bits)
+
+
+;;;; Conditional setters.
+
+(export 'kernel::data-vector-set-conditional "KERNEL")
+(defknown data-vector-set-conditional (array index t t) t
+  (unsafe c::explicit-check))
+
+(define-full-conditional-setter data-vector-set-conditional/simple-vector
+  simple-vector vector-data-offset other-pointer-type
+  (descriptor-reg any-reg) *
+  data-vector-set-conditional)
 
 
 ;;;; Misc. Array VOPs.

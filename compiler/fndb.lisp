@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68.2.6 1998/06/23 11:22:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68.2.7 2000/05/23 16:37:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -584,13 +584,11 @@
 
 (defknown read-sequence (sequence stream &key (:start index)
 				  (:end sequence-end))
-  (index)
-  (flushable))
+  (index) ())
 
 (defknown write-sequence (sequence stream &key (:start index)
 				   (:end sequence-end))
-  (sequence)
-  ()
+  (sequence) ()
   :derive-type (sequence-result-nth-arg 1))
 
 
@@ -848,7 +846,8 @@
 ;;; code motion over I/O operations is particularly confusing and not very
 ;;; important for efficency.
 
-(defknown copy-readtable (&optional (or readtable null) readtable) readtable
+(defknown copy-readtable (&optional (or readtable null) (or readtable null))
+  readtable
   ())
 (defknown readtablep (t) boolean (movable foldable flushable))
 
@@ -858,7 +857,7 @@
 
 (defknown set-macro-character (character callable &optional t readtable) void
   (unsafe))
-(defknown get-macro-character (character &optional readtable)
+(defknown get-macro-character (character &optional (or readtable null))
   (values callable boolean) (flushable))
 
 (defknown make-dispatch-macro-character (character &optional t readtable)
@@ -867,7 +866,7 @@
   (character character callable &optional readtable) void
   (unsafe))
 (defknown get-dispatch-macro-character
-  (character character &optional readtable) callable
+  (character character &optional (or readtable null)) callable
   (flushable))
 
 ;;; May return any type due to eof-value...
@@ -1007,7 +1006,7 @@
   pathname-version (flushable))
 
 (defknown (namestring file-namestring directory-namestring host-namestring)
-  (pathnamelike) simple-string
+  (pathnamelike) (or null simple-string)
   (flushable))
 
 (defknown enough-namestring (pathnamelike &optional pathnamelike)

@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.7.2.1 2000/05/23 16:38:45 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 ;;;
@@ -371,7 +375,10 @@
   (loop (cond ((and (null pattern) (null qualifiers))
 	       (return t))
 	      ((eq pattern '*) (return t))
-	      ((and pattern qualifiers (eq (car pattern) (car qualifiers)))
+	      ((and pattern qualifiers
+		    (let ((element (car pattern)))
+		      (or (eq element (car qualifiers))
+			  (eq element '*))))
 	       (pop pattern)
 	       (pop qualifiers))	      
 	      (t (return nil)))))

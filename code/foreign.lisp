@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.22.2.2 1998/06/23 11:21:57 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.22.2.3 2000/05/23 16:36:29 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,10 +25,10 @@
 #+hppa (defconstant foreign-segment-start #x10C00000)
 #+hppa (defconstant foreign-segment-size  #x00400000)
 
-#+(and (not linux) x86)
- (defconstant foreign-segment-start #x7000000) ; just an unused space
-#+(and (not linux) x86) 
- (defconstant foreign-segment-size  #x00400000)
+#+(and freebsd x86)
+(defconstant foreign-segment-start #x0E000000)
+#+(and freebsd x86) 
+(defconstant foreign-segment-size  #x02000000)
 
 (defvar *previous-linked-object-file* nil)
 #-(or linux irix)
@@ -57,7 +57,7 @@
 		(t
 		 (incf code))))))))
 
-#+(or FreeBSD (and sparc (not svr4)))
+#+(or (and FreeBSD (not elf)) (and sparc (not svr4)))
 (alien:def-alien-type exec
   (alien:struct nil
     (magic c-call:unsigned-long)
@@ -81,10 +81,156 @@
     (allocate-system-memory-at addr memory-needed)
     addr))
 
+
+;;;
+;;;  Elf object file loading for statically linked CMUCL under
+;;;  FreeBSD.
+;;;
+;;; The following definitions are taken from
+;;; /usr/include/sys/elf_common.h and /usr/include/sys/elf32.h.
+;;;
+#+(and FreeBSD elf)
+(progn
+(alien:def-alien-type elf-address      (alien:unsigned 32))
+(alien:def-alien-type elf-half-word    (alien:unsigned 16))
+(alien:def-alien-type elf-offset       (alien:unsigned 32))
+(alien:def-alien-type elf-signed-word  (alien:integer  32))
+(alien:def-alien-type elf-word         (alien:unsigned 32))
+(alien:def-alien-type elf-size         (alien:unsigned 32))
+
+(alien:def-alien-type eheader
+    ;;"Elf file header."
+  (alien:struct nil
+    (elf-ident                      (alien:array (alien:unsigned 8) 16))
+    (elf-type                        elf-half-word)
+    (elf-machine                     elf-half-word)
+    (elf-version                     elf-word)
+    (elf-entry                       elf-address)
+    (elf-program-header-offset       elf-offset)
+    (elf-section-header-offset       elf-offset)
+    (elf-flags                       elf-word)
+    (elf-header-size                 elf-half-word)
+    (elf-program-header-entry-size   elf-half-word)
+    (elf-program-header-count        elf-half-word)
+    (elf-section-header-entry-size   elf-half-word)
+    (elf-section-header-count        elf-half-word)
+    (elf-section-name-strings        elf-half-word)))
+
+;; values for elf-type
+(defconstant et-relocatable   1)
+(defconstant et-executable    2)
+(defconstant et-shared-object 3)
+(defconstant et-core-file     4)
+
+(alien:def-alien-type pheader
+;;"Program header."
+  (alien:struct nil
+    (p-type             elf-word)      ; Entry type.
+    (p-offset           elf-offset)    ; File offset of contents.
+    (p-virtual-address  elf-address)   ; Virtual address in mem. image.
+    (p-physical-address elf-address)   ; Physical address (not used).
+    (p-file-size        elf-size)      ; Size of contents in file.
+    (p-memory-size      elf-size)      ; Size of contents in memory.
+    (p-flags            elf-word)      ; Access permission flags.
+    (p-alignment        elf-size)))    ; Alignment in memory and file.
+
+(defconstant +elf-magic+
+  (make-array 4 :element-type '(unsigned-byte 8)
+	        :initial-contents '(127 69 76 70))) ; 0x7f-E-L-F
+(defun elf-p (h)
+  "Make sure the header starts with the ELF magic value."
+  (dotimes (i 4 t)
+    (unless (= (alien:deref h i) (aref +elf-magic+ i))
+      (return nil))))
+
+(defun elf-brand (h)
+  "Return the `brand' in the padding of the ELF file."
+  (let ((return (make-string 8 :initial-element #\space)))
+    (dotimes (i 8 return)
+      (let ((code (alien:deref h (+ i 8))))
+	(unless (= code 0)
+	  (setf (aref return i) (code-char code)))))))
+
+(defun elf-executable-p (n)
+  "Given a file type number, determine if the file is executable."
+  (= n et-executable))
+
+(defun load-object-file (name)
+  ;; NAME designates a tempory file created by ld via "load-foreign.csh".
+  ;; Its contents are in a form suitable for stuffing into memory for
+  ;; execution. This function extracts the location and size of the
+  ;; relevant bits and reads them into memory.
+
+  #|| library:load-foreign.csh
+  #!/bin/csh -fx
+  ld -N -R $argv[1] -Ttext $argv[2] -o $argv[3] $argv[5-]
+  if ($status != 0) exit 1
+
+  nm -gp $argv[3] > $argv[4]
+  if ($status != 0) exit 2
+  exit 0
+  ||#
+
+  (format t ";;; Loading object file...~%")
+  (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
+    (unless fd
+      (error "Could not open ~S: ~A" name (unix:get-unix-error-msg errno)))
+    (unwind-protect
+	(alien:with-alien ((header eheader))
+	  (unix:unix-read fd
+			  (alien:alien-sap header)
+			  (alien:alien-size eheader :bytes))
+	  (unless (elf-p (alien:slot header 'elf-ident))
+	      (error (format nil "~A is not an ELF file." name)))
+
+	  (let ((brand (elf-brand (alien:slot header 'elf-ident))))
+	    (unless (string= brand "FreeBSD" :end1 6 :end2 6)
+	      (error (format nil "~A is not a FreeBSD executable. Brand: ~A"
+			     name brand))))
+
+	  (unless (elf-executable-p (alien:slot header 'elf-type))
+	    (error (format nil "~A is not executable." name)))
+	  
+	  (alien:with-alien ((program-header pheader))
+	    (unix:unix-read fd
+			    (alien:alien-sap program-header)
+			    (alien:alien-size pheader :bytes))
+	    (let* ((addr (system::allocate-space-in-foreign-segment
+			  (alien:slot program-header 'p-memory-size))))
+	      (unix:unix-lseek
+	       fd (alien:slot program-header 'p-offset) unix:l_set)
+	      (unix:unix-read
+	       fd addr (alien:slot program-header 'p-file-size)))))      
+      (unix:unix-close fd))))
+
+(defun parse-symbol-table (name)
+  "Parse symbol table file created by load-foreign script.  Modified
+to skip undefined symbols which don't have an address."
+  (format t ";;; Parsing symbol table...~%")
+  (let ((symbol-table (make-hash-table :test #'equal)))
+    (with-open-file (file name)
+      (loop
+	(let ((line (read-line file nil nil)))
+	  (unless line
+	    (return))
+	  (unless (eql (aref line 0) #\space)   ; Skip undefined symbols....
+	    (let* ((symbol (subseq line 11))
+		   (address (parse-integer line :end 8 :radix 16))
+		   #+FreeBSD (kind (aref line 9))	; filter out .o file names
+		   (old-address (gethash symbol lisp::*foreign-symbols*)))
+	      (unless (or (null old-address) (= address old-address)
+			  #+FreeBSD (char= kind #\F))
+		(warn "~S moved from #x~8,'0X to #x~8,'0X.~%"
+		      symbol old-address address))
+	      (setf (gethash symbol symbol-table) address))))))
+    (setf lisp::*foreign-symbols* symbol-table)))
+)
+
+
 ;;; pw-- This seems to work for FreeBSD. The MAGIC field is not tested
 ;;; for correct file format so it may croak if ld fails to produce the
 ;;; expected results. It is probably good enough for now.
-#+(or FreeBSD (and sparc (not svr4)))
+#+(or (and FreeBSD (not ELF)) (and sparc (not svr4)))
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
@@ -102,6 +248,7 @@
 		 (addr (allocate-space-in-foreign-segment memory-needed)))
 	    (unix:unix-read fd addr len-of-text-and-data)))
       (unix:unix-close fd))))
+
 
 #+pmax
 (alien:def-alien-type filehdr
@@ -288,7 +435,7 @@
             ))
       (unix:unix-close fd))))
 
-#-(or linux solaris irix)
+#-(or linux solaris irix (and FreeBSD elf))
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.4 1998/07/19 01:06:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.5 2000/05/23 16:36:37 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -985,9 +985,7 @@
 (defsetf signed-sap-ref-16 %set-signed-sap-ref-16)
 (defsetf sap-ref-32 %set-sap-ref-32)
 (defsetf signed-sap-ref-32 %set-signed-sap-ref-32)
-#+alpha
 (defsetf sap-ref-64 %set-sap-ref-64)
-#+alpha
 (defsetf signed-sap-ref-64 %set-signed-sap-ref-64)
 (defsetf sap-ref-sap %set-sap-ref-sap)
 (defsetf sap-ref-single %set-sap-ref-single)
@@ -1148,12 +1146,6 @@
 ;;; RESTART-CASE allowing keyform to be set and retested.
 ;;;
 (defun case-body (name keyform cases multi-p test errorp proceedp)
-  (when (null cases)
-    (error 'simple-type-error
-	   :datum cases
-	   :expected-type 'list
-	   :format-control "~S was called without any clauses."
-	   :format-arguments (list name)))
   (let ((keyform-value (gensym))
 	(clauses ())
 	(keys ()))
@@ -1515,7 +1507,7 @@
        (setqs nil)
        (pairs pairs (cddr pairs)))
       ((atom (cdr pairs))
-       `(let ,(nreverse lets) (setq ,@(nreverse setqs))))
+       `(let ,(nreverse lets) (setq ,@(nreverse setqs)) nil))
     (let ((gen (gensym)))
       (push `(,gen ,(cadr pairs)) lets)
       (push (car pairs) setqs)

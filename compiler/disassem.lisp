@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.27 1997/02/14 18:01:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.27.2.1 2000/05/23 16:37:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2777,16 +2777,18 @@
 		       (let ((debug-var-num
 			      (typecase used-by
 				(fixnum
-				 (and (not
+				 (and (< used-by (length currently-valid))
+				      (not
 				       (zerop (bit currently-valid used-by)))
 				      used-by))
 				(list
-				 (some #'(lambda (num)
-					   (and (not
-						 (zerop
-						  (bit currently-valid num)))
-						num))
-				       used-by)))))
+				 (some
+				  #'(lambda (num)
+				      (and (< num (length currently-valid))
+					   (not
+					    (zerop (bit currently-valid num)))
+					   num))
+				  used-by)))))
 			 (and debug-var-num
 			      (progn
 				;; Found a valid storage reference!

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.4.2.1 1998/06/23 11:24:08 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.4.2.2 2000/05/23 16:38:01 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
 ;;;
 (in-package :x86)
 
@@ -119,7 +119,7 @@
 
 ;;; For GENCGC it is possible to inline object allocation, to permit
 ;;; this set the following variable to True.
-(defvar *maybe-use-inline-allocation* t)
+(defparameter *maybe-use-inline-allocation* t)
 
 ;;;; Call into C.
 (defun allocation (alloc-tn size &optional inline)
@@ -253,46 +253,31 @@
 
 ;;;; Error Code
 
-(defvar *adjustable-vectors* nil)
-
-(defmacro with-adjustable-vector ((var) &rest body)
-  `(let ((,var (or (pop *adjustable-vectors*)
-		   (make-array 16
-			       :element-type '(unsigned-byte 8)
-			       :fill-pointer 0
-			       :adjustable t))))
-     (setf (fill-pointer ,var) 0)
-     (unwind-protect
-	 (progn
-	   ,@body)
-       (push ,var *adjustable-vectors*))))
-
 (eval-when (compile load eval)
   (defun emit-error-break (vop kind code values)
-    (let ((vector (gensym)))
+    (let ((vector (gensym))
+	  (length (gensym)))
       `((inst int 3)				; i386 breakpoint instruction
 	;; The return PC points here; note the location for the debugger.
 	(let ((vop ,vop))
   	  (when vop
 		(note-this-location vop :internal-error)))
 	(inst byte ,kind)			; eg trap_Xyyy
-	(with-adjustable-vector (,vector)	; interr arguments
+	(let ((,vector (make-array 8 :element-type '(unsigned-byte 8)
+				   :fill-pointer 0 :adjustable t)))
 	  (write-var-integer (error-number-or-lose ',code) ,vector)
 	  ,@(mapcar #'(lambda (tn)
 			`(let ((tn ,tn))
 			   (write-var-integer
-			    (make-sc-offset (sc-number
-					     (tn-sc tn))
-			     ;; zzzzz jrd here.  tn-offset
-			     ;; is zero for constant tns.
-			     ;; (tn-offset tn)
-			     (or (tn-offset tn) 0)
-			     )
+			    (make-sc-offset (sc-number (tn-sc tn))
+			     ;; tn-offset is zero for constant tns.
+			     (or (tn-offset tn) 0))
 			    ,vector)))
 		    values)
-	  (inst byte (length ,vector))
-	  (dotimes (i (length ,vector))
-	    (inst byte (aref ,vector i))))))))
+	  (let ((,length (length ,vector)))
+	    (inst byte ,length)
+	    (dotimes (i ,length)
+	      (inst byte (aref ,vector i)))))))))
 
 (defmacro error-call (vop error-code &rest values)
   "Cause an error.  ERROR-CODE is the error to cause."
@@ -335,7 +320,7 @@
 
 ;;;; PSEUDO-ATOMIC.
 
-(defvar *enable-pseudo-atomic* t)
+(defparameter *enable-pseudo-atomic* t)
 
 ;;; PSEUDO-ATOMIC -- Internal Interface.
 ;;;
@@ -438,3 +423,45 @@
 	       value)
 	 (move result value)))))
 
+(defmacro define-full-conditional-setter (name type offset lowtag scs el-type
+					  &optional translate)
+  `(progn
+     (define-vop (,name)
+       ,@(when translate
+	   `((:translate ,translate)))
+       (:policy :fast-safe)
+       (:args (object :scs (descriptor-reg) :to :result)
+	      (index :scs (any-reg) :to :result)
+	      (old-value :scs ,scs :target eax)
+	      (new-value :scs ,scs))
+       (:arg-types ,type tagged-num ,el-type ,el-type)
+       (:temporary (:sc ,(first scs) :offset eax-offset
+		    :from (:argument 2) :to :result :target result) eax)
+       (:results (result :scs ,scs))
+       (:result-types ,el-type)
+       (:generator 5
+	 (move eax old-value)
+	 (inst cmpxchg (make-ea :dword :base object :index index :scale 1
+				:disp (- (* ,offset word-bytes) ,lowtag))
+	       new-value)
+	 (move result eax)))
+     (define-vop (,(symbolicate name "-C"))
+       ,@(when translate
+	   `((:translate ,translate)))
+       (:policy :fast-safe)
+       (:args (object :scs (descriptor-reg) :to :result)
+	      (old-value :scs ,scs :target eax)
+	      (new-value :scs ,scs))
+       (:info index)
+       (:arg-types ,type (:constant (signed-byte 30)) ,el-type ,el-type)
+       (:temporary (:sc ,(first scs) :offset eax-offset
+		    :from (:argument 1) :to :result :target result)  eax)
+       (:results (result :scs ,scs))
+       (:result-types ,el-type)
+       (:generator 4
+	 (move eax old-value)
+	 (inst cmpxchg (make-ea :dword :base object
+				:disp (- (* (+ ,offset index) word-bytes)
+					 ,lowtag))
+	       new-value)
+	 (move result eax)))))

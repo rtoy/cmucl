@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/transport.lisp,v 1.2 1994/10/31 04:54:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/transport.lisp,v 1.2.2.1 2000/05/23 16:38:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,7 +110,8 @@
 			      (4 'system:sap-ref-32)))
 		   (bits (* size 8)))
 	       `(defun ,name (packet data)
-		  (declare (type (signed-byte ,bits) data))
+		  (declare (type (or (signed-byte ,bits)
+		                     (unsigned-byte ,bits)) data))
 		  (let ((fill (system:sap+ (packet-head packet)
 					   (packet-fill packet))))
 		    (setf (,sap-ref fill 0) data)
@@ -126,7 +127,8 @@
 		  (let* ((fill (system:sap+ (packet-head packet)
 					    (packet-fill packet)))
 			 (data (,sap-ref fill 0)))
-		    (declare (type (signed-byte ,bits) data))
+		    (declare (type (or (signed-byte ,bits)
+		                       (unsigned-byte ,bits)) data))
 		    (incf (packet-fill packet) ,size)
 		    data)))))
   (def-packet-writer packet-put-byte 1)
@@ -149,6 +151,7 @@
 (defun destroy-message (message)
   (dolist (packet (message-packet-list message))
     (destroy-packet packet)))
+
 
 (defun message-add-packet (message)
   (let ((packet (create-packet)))
@@ -273,23 +276,40 @@
   (warn "Cannot yet handle killing deferred messages."))
 
 (defun defer-packet (packet)
-  (declare (ignore packet))
-  (warn "Cannot yet handle deferring packets."))
+  (let* ((serial (packet-serial packet))
+	 (found (assoc serial *pending-msgs*))
+	 (message (or (cdr found) (make-message serial))))
+    (push packet (message-packet-list message))
+    (incf (message-packet-count message))
+    (cond ((= (message-packet-count message)(packet-sequence-length packet))
+	   (setq *pending-msgs* (delete found *pending-msgs*))
+	   (setf (message-packet-list message)
+		 ;; this can be nreverse if messages really arrive in order
+		 (sort (message-packet-list message) #'<
+		       :key (lambda(pkt)(packet-sequence-number pkt))))
+	   (setf (message-fill-packet message)
+		 (first (message-packet-list message)))
+	   message)
+	  (t (unless found
+	       (setq *pending-msgs* (acons serial message *pending-msgs*)))
+	     nil))))
 
 (defun receive-message (socket)
-  (let* ((first (receive-packet socket))
-	 (count (packet-sequence-length first)))
-    (cond
-     ((zerop count) (kill-deferred-message first))
-     ((= count 1)
-      (let ((message (make-message (packet-serial first))))
-	(setf (message-packet-count message) 1)
-	(push first (message-packet-list message))
-	(setf (message-fill-packet message) first)
-	message))
-     (t
-      (defer-packet first)))))
-
+  (loop
+    (let* ((first (receive-packet socket))
+	   (count (packet-sequence-length first)))
+      (cond
+       ((zerop count) (kill-deferred-message first))
+       ((= count 1)
+	(let ((message (make-message (packet-serial first))))
+	  (setf (message-packet-count message) 1)
+	  (push first (message-packet-list message))
+	  (setf (message-fill-packet message) first)
+	  (return message)))
+       (t
+	(let ((message (defer-packet first)))
+	  (when message
+	    (return message))))))))
 
 
 ;;;; Functions for handling requests

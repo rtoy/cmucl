@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.3.2.1 1998/06/23 11:24:47 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.3.2.2 2000/05/23 16:38:12 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -8,6 +8,7 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "lisp.h"
 #include "globals.h"
@@ -75,11 +76,13 @@ boolean arch_pseudo_atomic_atomic(struct sigcontext *scp)
   return (scp->sc_regs[reg_ALLOC] & 1);
 }
 
-#define PSEUDO_ATOMIC_INTERRUPTED_BIAS 0x7f000000
-
 void arch_set_pseudo_atomic_interrupted(struct sigcontext *scp)
 {
+#ifdef __linux__
+  scp->sc_regs[reg_ALLOC] |= (1<<63);
+#else
   scp->sc_regs[reg_ALLOC] |= 2;
+#endif
 }
 
 unsigned long arch_install_breakpoint(void *pc)
@@ -102,7 +105,12 @@ void arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 
 static unsigned int *skipped_break_addr, displaced_after_inst,
      after_breakpoint;
+
+#ifdef POSIX_SIGS
+static sigset_t orig_sigmask;
+#else
 static int orig_sigmask;
+#endif
 
 unsigned int
 emulate_branch(struct sigcontext *scp,unsigned long orig_inst)
@@ -183,8 +191,25 @@ void arch_do_displaced_inst(struct sigcontext *scp,
   unsigned int next_inst;
   int op = orig_inst >> 26;;
   
+#ifdef POSIX_SIGS
+#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
+  orig_sigmask = context->uc_sigmask;
+  FILLBLOCKSET(&context->uc_sigmask);
+#else
+  {
+    sigset_t temp;
+    sigemptyset(&temp);
+    orig_sigmask.__val[0] = scp->uc_sigmask;
+    temp.__val[0] = scp->uc_sigmask;
+    FILLBLOCKSET(&temp);
+    
+    scp->uc_sigmask = temp.__val[0];
+  }
+#endif
+#else
   orig_sigmask = scp->sc_mask;
   scp->sc_mask = BLOCKABLE;
+#endif
 
   /* Figure out where the displaced inst is going */
   if(op == 0x1a || op&0xf == 0x30) /* branch...ugh */
@@ -252,7 +277,15 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 	skipped_break_addr = NULL;
 	*(unsigned int *)scp->sc_pc = displaced_after_inst;
 	os_flush_icache((os_vm_address_t)scp->sc_pc, sizeof(unsigned long));
+#ifdef POSIX_SIGS
+#if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
+        scp->sc_mask = orig_sigmask;
+#else
+	scp->sc_mask = orig_sigmask.__val[0];
+#endif
+#else
 	scp->sc_mask = orig_sigmask;
+#endif
         after_breakpoint=NULL;
 	break;
 

@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.18.2.1 1998/06/23 11:25:09 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.18.2.2 2000/05/23 16:38:32 pw Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -116,7 +116,7 @@ F(setpgrp)
 #if !defined(SVR4) ||  defined(SOLARIS25)
 F(setpriority)
 #endif
-#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(SUNOS) && !defined(osf1) && !defined(irix)
+#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(SUNOS) && !defined(osf1) && !defined(irix) && !defined(hpux) && !(defined(linux) && defined(alpha))
 F(setquota)
 #endif
 #if !defined(hpux) && !defined(SVR4) ||  defined(SOLARIS25)
@@ -243,4 +243,14 @@ F(ttyname)
 
 #ifdef irix
 F(_getpty)
+#endif
+
+#if ( defined(alpha) && defined(linux) )
+F(dlopen)
+F(dlsym)
+F(dlclose)
+F(dlerror)
+F(cfgetospeed)
+F(cfgetispeed)
+F(cfsetispeed)
 #endif

@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.6.2.2 2000/05/23 16:39:01 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 ;;; ANSI CL condition for unbound slots.
@@ -57,30 +61,15 @@
 
 (defun set-wrapper (inst new)
   (cond ((std-instance-p inst)
-	 #+new-kcl-wrapper
-	 (set-structure-def inst new)
-	 #-new-kcl-wrapper
 	 (setf (std-instance-wrapper inst) new))
 	((fsc-instance-p inst)
 	 (setf (fsc-instance-wrapper inst) new))
 	(t
 	 (error "What kind of instance is this?"))))
 
-#+ignore ; can't do this when using #+new-kcl-wrapper
-(defun set-slots (inst new)
-  (cond ((std-instance-p inst)
-	 (setf (std-instance-slots inst) new))
-	((fsc-instance-p inst)
-	 (setf (fsc-instance-slots inst) new))
-	(t
-	 (error "What kind of instance is this?"))))
-
 (defun swap-wrappers-and-slots (i1 i2)
   (without-interrupts
    (cond ((std-instance-p i1)
-	  #+new-kcl-wrapper
-	  (swap-structure-contents i1 i2)
-	  #-new-kcl-wrapper
 	  (let ((w1 (std-instance-wrapper i1))
 		(s1 (std-instance-slots i1)))
 	    (setf (std-instance-wrapper i1) (std-instance-wrapper i2))
@@ -157,7 +146,7 @@
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
     (if (null slot-definition)
-	(slot-missing class object slot-name 'setf)
+	(slot-missing class object slot-name 'setf new-value)
 	(setf (slot-value-using-class class object slot-definition) 
 	      new-value))))
 
@@ -320,7 +309,7 @@
      (slotd structure-effective-slot-definition))
   (let* ((function (slot-definition-internal-reader-function slotd))
 	 (value (funcall function object)))
-    #+cmu (declare (type function function))
+    (declare (type function function))
     (if (eq value *slot-unbound*)
 	(slot-unbound class object (slot-definition-name slotd))
 	value)))
@@ -330,19 +319,14 @@
 	       (object structure-object)
 	       (slotd structure-effective-slot-definition))
   (let ((function (slot-definition-internal-writer-function slotd)))
-    #+cmu (declare (type function function))
+    (declare (type function function))
     (funcall function new-value object)))
 
 (defmethod slot-boundp-using-class
 	   ((class structure-class) 
 	    (object structure-object)
 	    (slotd structure-effective-slot-definition))
-  #-new-kcl-wrapper t
-  #+new-kcl-wrapper
-  (let* ((function (slot-definition-internal-reader-function slotd))
-	 (value (funcall function object)))
-    #+cmu (declare (type function function))
-    (not (eq value *slot-unbound*))))
+	   t)
 
 (defmethod slot-makunbound-using-class
 	   ((class structure-class)
@@ -384,12 +368,9 @@
 
 (defmethod allocate-instance ((class structure-class) &rest initargs)
   (declare (ignore initargs))
-  #-new-kcl-wrapper
   (let ((constructor (class-defstruct-constructor class)))
     (if constructor
 	(funcall constructor)
-	(error "Can't allocate an instance of class ~S" (class-name class))))
-  #+new-kcl-wrapper
-  (allocate-standard-instance (class-wrapper class)))
+	(error "Can't allocate an instance of class ~S" (class-name class)))))
 
 

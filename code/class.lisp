@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.36.2.1 1998/06/23 11:21:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.36.2.2 2000/05/23 16:36:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -605,7 +605,6 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
-	  #+signed-array 
 	  (simple-array-signed-byte-8
 	   :translation (simple-array (signed-byte 8) (*))
 	   :codes (#.vm:simple-array-signed-byte-8-type)
@@ -613,7 +612,6 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
-	  #+signed-array 
 	  (simple-array-signed-byte-16
 	   :translation (simple-array (signed-byte 16) (*))
 	   :codes (#.vm:simple-array-signed-byte-16-type)
@@ -621,7 +619,6 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
-	  #+signed-array 
 	  (simple-array-signed-byte-30
 	   :translation (simple-array (signed-byte 30) (*))
 	   :codes (#.vm:simple-array-signed-byte-30-type)
@@ -629,7 +626,6 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
-	  #+signed-array 
 	  (simple-array-signed-byte-32
 	   :translation (simple-array (signed-byte 32) (*))
 	   :codes (#.vm:simple-array-signed-byte-32-type)
@@ -659,7 +655,6 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
-	  #+complex-float
 	  (simple-array-complex-single-float
 	   :translation (simple-array (complex single-float) (*))
 	   :codes (#.vm:simple-array-complex-single-float-type)
@@ -667,7 +662,6 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
-	  #+complex-float
 	  (simple-array-complex-double-float
 	   :translation (simple-array (complex double-float) (*))
 	   :codes (#.vm:simple-array-complex-double-float-type)
@@ -675,7 +669,7 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
-	  #+(and complex-float long-float)
+	  #+long-float
 	  (simple-array-complex-long-float
 	   :translation (simple-array (complex long-float) (*))
 	   :codes (#.vm:simple-array-complex-long-float-type)
@@ -704,17 +698,15 @@
 	  (number :translation number :inherits (generic-number))
 	  (complex :translation complex :inherits (number generic-number)
 		   :codes (#.vm:complex-type))
-	  #+complex-float
 	  (complex-single-float
 	   :translation (complex single-float)
 	   :inherits (complex number generic-number)
 	   :codes (#.vm:complex-single-float-type))
-	  #+complex-float
 	  (complex-double-float
 	   :translation (complex double-float)
 	   :inherits (complex number generic-number)
 	   :codes (#.vm:complex-double-float-type))
-	  #+(and complex-float long-float)
+	  #+long-float
 	  (complex-long-float
 	   :translation (complex long-float)
 	   :inherits (complex number generic-number)
@@ -750,14 +742,15 @@
 	   :inherits (integer rational real number generic-number)
 	   :codes (#.vm:even-fixnum-type #.vm:odd-fixnum-type))
 	  (bignum
-	   :translation (and integer (not fixnum))
+	   :translation (or (integer * (#.vm:target-most-negative-fixnum))
+			    (integer (#.vm:target-most-positive-fixnum) *))
 	   :inherits (integer rational real number generic-number)
 	   :codes (#.vm:bignum-type))
 	  
 	  (list :translation (or cons (member nil))
 		:inherits (sequence mutable-sequence mutable-collection
 			   generic-sequence collection))
-	  (cons :codes (#.vm:list-pointer-type)
+	  (cons :translation cons :codes (#.vm:list-pointer-type)
 		:inherits (list sequence mutable-sequence mutable-collection
 			   generic-sequence collection))
 	  (null :translation (member nil)

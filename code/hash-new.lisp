@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.2.2.2 1998/07/02 11:11:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.2.2.3 2000/05/23 16:36:31 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,7 @@
 ;;; Originally written by Skef Wholey.
 ;;; Everything except SXHASH rewritten by William Lott.
 ;;; Hash table functions rewritten by Douglas Crosher, 1997.
+;;; Equalp hashing by William Newman, Cadabra Inc, and Douglas Crosher, 2000.
 ;;;
 (in-package :common-lisp)
 
@@ -139,6 +140,10 @@
   (declare (values hash (member t nil)))
   (values (sxhash key) nil))
 
+(defun equalp-hash (key)
+  (declare (values hash (member t nil)))
+  (values (internal-equalp-hash key 0) nil))
+
 
 (defun almost-primify (num)
   (declare (type index num))
@@ -179,8 +184,8 @@
 (defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 1.5)
 			     (rehash-threshold 1) (weak-p nil))
   "Creates and returns a new hash table.  The keywords are as follows:
-     :TEST -- Indicates what kind of test to use.  Only EQ, EQL, and EQUAL
-       are currently supported.
+     :TEST -- Indicates what kind of test to use.  Only EQ, EQL, EQUAL,
+       and EQUALP are currently supported.
      :SIZE -- A hint as to how many elements will be put in this hash
        table.
      :REHASH-SIZE -- Indicates how to expand the table when it fills up.
@@ -208,6 +213,8 @@
 	       (values 'eql #'eql #'eql-hash))
 	      ((or (eq test #'equal) (eq test 'equal))
 	       (values 'equal #'equal #'equal-hash))
+	      ((or (eq test #'equalp) (eq test 'equalp))
+	       (values 'equalp #'equalp #'equalp-hash))
 	      (t
 	       (dolist (info *hash-table-tests*
 			     (error "Unknown :TEST for MAKE-HASH-TABLE: ~S"
@@ -259,6 +266,7 @@
 	  table)))))
 
 
+(declaim (inline hash-table-count))
 (defun hash-table-count (hash-table)
   "Returns the number of entries in the given HASH-TABLE."
   (declare (type hash-table hash-table)
@@ -271,6 +279,7 @@
 (setf (documentation 'hash-table-rehash-threshold 'function)
       "Return the rehash-threshold HASH-TABLE was created with.")
 
+(declaim (inline hash-table-size))
 (defun hash-table-size (hash-table)
   "Return a size that can be used with MAKE-HASH-TABLE to create a hash
    table that can hold however many entries HASH-TABLE can hold without
@@ -364,7 +373,7 @@
 		 (setf (aref new-index-vector index) i)))
 	      (t
 	       ;; EQ base hash.
-	       ;; Enamble GC tricks.
+	       ;; Enable GC tricks.
 	       (set-header-data new-kv-vector vm:vector-valid-hashing-subtype)
 	       (let* ((hashing (pointer-hash key))
 		      (index (rem hashing new-length))
@@ -793,18 +802,20 @@
 (defmacro with-hash-table-iterator ((function hash-table) &body body)
   "WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)
    provides a method of manually looping over the elements of a hash-table.
-   function is bound to a generator-macro that, withing the scope of the
-   invocation, returns three values.  First, whether there are any more objects
-   in the hash-table, second, the key, and third, the value."
+   FUNCTION is bound to a generator-macro that, withing the scope of the
+   invocation, returns one or three values. The first value tells whether
+   any objects remain in the hash table. When the first value is non-NIL, 
+   the second and third values are the key and the value of the next object."
   (let ((n-function (gensym "WITH-HASH-TABLE-ITERRATOR-")))
     `(let ((,n-function
 	    (let* ((table ,hash-table)
 		   (length (length (hash-table-next-vector table)))
 		   (index 1))
+              (declare (type (integer 0 #.(1- (floor most-positive-fixnum 2))) index))
 	      (labels
 		  ((,function ()
-		     ;; Grab the table again on each itteration just
-		     ;; in-case it was rehashed by a puthash.
+		     ;; Grab the table again on each iteration just
+		     ;; in case it was rehashed by a PUTHASH.
 		     (let ((kv-vector (hash-table-table table)))
 		       (do ()
 			   ((>= index length) (values nil))
@@ -827,9 +838,9 @@
 
 (eval-when (compile eval)
 
-(defconstant sxhash-bits-byte (byte 23 0))
-(defconstant sxmash-total-bits 26)
-(defconstant sxmash-rotate-bits 7)
+(defconstant sxhash-bits-byte (byte 29 0))
+(defconstant sxmash-total-bits 29)
+(defconstant sxmash-rotate-bits 9)
 
 (defmacro sxmash (place with)
   `(setf ,place
@@ -860,23 +871,27 @@
 	   (sxhash-simple-string (coerce (the string ,sequence)
 					 'simple-string))))))
 
-(defmacro sxhash-list (sequence depth)
+(defmacro sxhash-list (sequence depth &key (equalp nil))
   `(if (= ,depth sxhash-max-depth)
        0
        (do ((sequence ,sequence (cdr (the list sequence)))
 	    (index 0 (1+ index))
-	    (hash 2))
+	    (hash 2)
+	    (,depth (1+ ,depth)))
 	   ((or (atom sequence) (= index sxhash-max-len)) hash)
 	 (declare (fixnum hash index))
-	 (sxmash hash (internal-sxhash (car sequence) (1+ ,depth))))))
+	 (sxmash hash (,(if equalp 'internal-equalp-hash 'internal-sxhash)
+			(car sequence) ,depth)))))
 
+(defmacro sxhash-bit-vector (vector)
+  `(let* ((length (length ,vector))
+	  (hash length))
+     (declare (type index length) (type hash hash))
+     (dotimes (index (min length sxhash-max-len) hash)
+       (declare (type index index))
+       (sxmash hash (bit ,vector index)))))
 
 ); eval-when (compile eval)
-
-
-(defun sxhash (s-expr)
-  "Computes a hash code for S-EXPR and returns it as an integer."
-  (internal-sxhash s-expr 0))
 
 
 (defun internal-sxhash (s-expr depth)
@@ -884,7 +899,8 @@
   (typecase s-expr
     ;; The pointers and immediate types.
     (list (sxhash-list s-expr depth))
-    (fixnum (logand s-expr (1- most-positive-fixnum)))
+    (fixnum (ldb sxhash-bits-byte s-expr))
+    (character (char-code (char-upcase s-expr)))
     (instance
      (if (typep s-expr 'structure-object)
 	 (internal-sxhash (class-name (layout-class (%instance-layout s-expr)))
@@ -899,29 +915,26 @@
        (single-float
 	(let ((bits (single-float-bits s-expr)))
 	  (ldb sxhash-bits-byte
-	       (logxor (ash bits (- sxmash-rotate-bits))
-		       bits))))
+	       (logxor (ash bits (- sxmash-rotate-bits)) bits))))
        (double-float
-	(let* ((val s-expr)
-	       (lo (double-float-low-bits val))
-	       (hi (ldb sxhash-bits-byte (double-float-high-bits val))))
+	(let ((lo (double-float-low-bits s-expr))
+	      (hi (double-float-high-bits s-expr)))
 	  (ldb sxhash-bits-byte
-	       (logxor (ash lo (- sxmash-rotate-bits))
-		       (ash hi (- sxmash-rotate-bits))
-		       lo hi))))
+	       (logxor (ash lo (- sxmash-rotate-bits)) lo
+		       (ldb sxhash-bits-byte
+			    (logxor (ash hi (- sxmash-rotate-bits)) hi))))))
        #+long-float
        (long-float
-	(let* ((val s-expr)
-	       (lo (long-float-low-bits val))
-	       #+sparc (mid (long-float-mid-bits val))
-	       (hi (long-float-high-bits val))
-	       (exp (long-float-exp-bits val)))
+	(let ((lo (long-float-low-bits s-expr))
+	      #+sparc (mid (long-float-mid-bits s-expr))
+	      (hi (long-float-high-bits s-expr))
+	      (exp (long-float-exp-bits s-expr)))
 	  (ldb sxhash-bits-byte
-	       (logxor (ash lo (- sxmash-rotate-bits))
-		       #+sparc (ash mid (- sxmash-rotate-bits))
-		       (ash hi (- sxmash-rotate-bits))
-		       (ash exp (- sxmash-rotate-bits))
-		       lo hi exp))))
+	       (logxor (ash lo (- sxmash-rotate-bits)) lo
+		       #+sparc (ash mid (- sxmash-rotate-bits)) #+sparc mid
+		       (ash hi (- sxmash-rotate-bits)) hi
+		       (ldb sxhash-bits-byte
+			    (logxor (ash exp (- sxmash-rotate-bits)) exp))))))
        (ratio (logxor (internal-sxhash (numerator s-expr) 0)
 		      (internal-sxhash (denominator s-expr) 0)))
        (complex (logxor (internal-sxhash (realpart s-expr) 0)
@@ -929,7 +942,119 @@
     (array
      (typecase s-expr
        (string (sxhash-string s-expr))
+       (simple-bit-vector (sxhash-bit-vector
+			   (truly-the simple-bit-vector s-expr)))
+       (bit-vector (sxhash-bit-vector (truly-the bit-vector s-expr)))
        (t (array-rank s-expr))))
+    ;; Everything else.
+    (t 42)))
+
+(defun sxhash (s-expr)
+  "Computes a hash code for S-EXPR and returns it as an integer."
+  (internal-sxhash s-expr 0))
+
+
+;;;; Equalp hash.
+
+(eval-when (compile eval)
+
+(defmacro hash-table-equalp-hash (table)
+  `(let ((hash (hash-table-count ,table)))
+     (declare (type hash hash))
+     (sxmash hash (sxhash (hash-table-test ,table)))
+     hash))
+
+(defmacro structure-equalp-hash (structure depth)
+  `(if (= ,depth sxhash-max-depth)
+       0
+       (let* ((layout (%instance-layout ,structure))
+	      (length (min (1- (layout-length layout)) sxhash-max-len))
+	      (hash (internal-sxhash (class-name (layout-class layout))
+				     depth))
+	      (,depth (+ ,depth 1)))
+	 (declare (type index length) (type hash hash))
+	 (do ((index 1 (1+ index)))
+	     ((= index length) hash)
+	   (declare (type index index))
+	   (sxmash hash (internal-equalp-hash
+			 (%instance-ref ,structure index) ,depth))))))
+
+(defmacro vector-equalp-hash (vector depth)
+  `(if (= ,depth sxhash-max-depth)
+       0
+       (let* ((length (length ,vector))
+	      (hash length)
+	      (,depth (+ ,depth 1)))
+	 (declare (type index length) (type hash hash))
+	 (dotimes (index (min length sxhash-max-len) hash)
+	   (declare (type index index))
+	   (sxmash hash (internal-equalp-hash (aref ,vector index) ,depth))))))
+
+(defmacro array-equalp-hash (array depth)
+  `(if (= ,depth sxhash-max-depth)
+       0
+       (let* ((size (array-total-size ,array))
+	      (hash size)
+	      (,depth (+ ,depth 1)))
+	 (declare (type hash hash))
+	 (dotimes (index (min sxhash-max-len size) hash)
+	   (sxmash hash (internal-equalp-hash
+			 (row-major-aref ,array index) ,depth))))))
+
+); eval-when (compile eval)
+
+
+(defun internal-equalp-hash (s-expr depth)
+  (declare (type index depth) (values hash))
+  (typecase s-expr
+    ;; The pointers and immediate types.
+    (list (sxhash-list s-expr depth :equalp t))
+    (fixnum (ldb sxhash-bits-byte s-expr))
+    (character (char-code (char-upcase s-expr)))
+    (instance
+     (typecase s-expr
+       (hash-table (hash-table-equalp-hash s-expr))
+       (structure-object (structure-equalp-hash s-expr depth))
+       (t 42)))
+    ;; Other-pointer types.
+    (simple-string (vector-equalp-hash (truly-the simple-string s-expr) depth))
+    (symbol (sxhash-simple-string (symbol-name s-expr)))
+    (number
+     (etypecase s-expr
+       (integer (sxhash s-expr))
+       (float
+	(macrolet ((frob (val type)
+		     (let ((lo (coerce most-negative-fixnum type))
+			   (hi (coerce most-positive-fixnum type)))
+		       `(if (<= ,lo ,val ,hi)
+			    (multiple-value-bind (q r)
+				(truncate ,val)
+			      (if (zerop r)
+				  (sxhash q)
+				  (sxhash (coerce ,val 'long-float))))
+			    (multiple-value-bind (q r)
+				(truncate ,val)
+			      (if (zerop r)
+				  (sxhash q)
+				  (sxhash (coerce ,val 'long-float))))))))
+	  (etypecase s-expr
+	    (single-float (frob s-expr single-float))
+	    (double-float (frob s-expr double-float))
+	    #+long-float (long-float (frob s-expr long-float)))))
+       (ratio
+	(let ((float (coerce s-expr 'long-float)))
+	  (if (= float s-expr)
+	      (sxhash float)
+	      (sxhash s-expr))))
+       (complex (if (zerop (imagpart s-expr))
+		    (internal-equalp-hash (realpart s-expr) 0)
+		    (logxor (internal-equalp-hash (realpart s-expr) 0)
+			    (internal-equalp-hash (realpart s-expr) 0))))))
+    (array
+     (typecase s-expr
+       (simple-vector (vector-equalp-hash (truly-the simple-vector s-expr) depth))
+       (vector (vector-equalp-hash s-expr depth))
+       (t (array-equalp-hash s-expr depth))))
     ;; Everything else.
     (t 42)))
 

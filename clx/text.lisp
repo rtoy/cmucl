@@ -17,6 +17,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/text.lisp,v 1.3.2.2 2000/05/23 16:36:08 pw Exp $")
 
 (in-package :xlib)
 
@@ -31,8 +34,6 @@
 ;; returned.
 
 (deftype translation-function ()
-  #+explorer t
-  #-explorer
   '(function (sequence array-index array-index (or null font) vector array-index)
 	     (values array-index (or null int16 font) (or null int32))))
 
@@ -110,10 +111,7 @@
   (declare (type sequence sequence)
 	   (type (or font gcontext) font))
   (declare (type (or null translation-function) translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg #+Genera * #-Genera translate))
+	   (dynamic-extent translate))
   (declare (clx-values width ascent descent left right
 		  font-ascent font-descent direction
 		  (or null array-index)))
@@ -217,10 +215,7 @@
 	   (type array-index start)
 	   (type (or null array-index) end))
   (declare (type (or null translation-function) translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg #+Genera * #-Genera translate))
+	   (dynamic-extent translate))
   (declare (clx-values integer (or null integer)))
   (when (type? font 'gcontext)
     (force-gcontext-changes font)
@@ -461,10 +456,7 @@
 	   (type (or null int32) width)
 	   (type index-size size))
   (declare (type (or null translation-function) translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg #+Genera * #-Genera translate))
+	   (dynamic-extent translate))
   (declare (clx-values generalized-boolean (or null int32)))
   (let* ((display (gcontext-display gcontext))
 	 (result t)
@@ -512,10 +504,7 @@
 	   (type (or null int32) width)
 	   (type index-size size))
   (declare (type (or null translation-function) translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg #+Genera * #-Genera translate))
+	   (dynamic-extent translate))
   (declare (clx-values (or null array-index) (or null int32)))
   (unless end (setq end (length sequence)))
   (ecase size
@@ -536,10 +525,7 @@
 	   (type (or null int32) width))
   (declare (clx-values (or null array-index) (or null int32)))
   (declare (type translation-function translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg translate)) 
+	   (dynamic-extent translate)) 
   (let* ((src-start start)
 	 (src-end (or end (length sequence)))
 	 (next-start nil)
@@ -639,10 +625,7 @@
 	   (type (or null int32) width))
   (declare (clx-values (or null array-index) (or null int32)))
   (declare (type translation-function translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg translate))
+	   (dynamic-extent translate))
   (let* ((src-start start)
 	 (src-end (or end (length sequence)))
 	 (next-start nil)
@@ -742,10 +725,7 @@
 	   (type (or null int32) width)
 	   (type index-size size))
   (declare (type (or null translation-function) translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg #+Genera * #-Genera translate))
+	   (dynamic-extent translate))
   (declare (clx-values generalized-boolean (or null int32)))
   (let* ((display (gcontext-display gcontext))
 	 (result t)
@@ -798,10 +778,7 @@
 	   (type (or null int32) width)
 	   (type index-size size))
   (declare (type (or null translation-function) translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg #+Genera * #-Genera translate))
+	   (dynamic-extent translate))
   (declare (clx-values (or null array-index) (or null int32)))
   (setf end (index-min (index+ start 255) (or end (length sequence))))
   (ecase size
@@ -826,10 +803,7 @@
 	   (type (or null array-index) end)
 	   (type (or null int32) width)) 
   (declare (type (or null translation-function) translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg translate))
+	   (dynamic-extent translate))
   (declare (clx-values (or null array-index) (or null int32)))
   (do* ((display (gcontext-display gcontext))
 	(length (index- end start))
@@ -892,10 +866,7 @@
 	   (type (or null array-index) end)
 	   (type (or null int32) width))
   (declare (type (or null translation-function) translate)
-	   #+clx-ansi-common-lisp
-	   (dynamic-extent translate)
-	   #+(and lispm (not clx-ansi-common-lisp))
-	   (sys:downward-funarg translate))
+	   (dynamic-extent translate))
   (declare (clx-values (or null array-index) (or null int32)))
   (do* ((display (gcontext-display gcontext))
 	(length (index- end start))

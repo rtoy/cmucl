@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23.2.1 1998/06/23 11:23:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23.2.2 2000/05/23 16:37:31 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -455,7 +455,6 @@
 	  (error "Long-Float not supported")))
        des))))
 
-#+complex-float
 (defun complex-single-float-to-core (num)
   (declare (type (complex single-float) num))
   (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
@@ -467,7 +466,6 @@
 		   (make-random-descriptor (single-float-bits (imagpart num))))
     des))
 
-#+complex-float
 (defun complex-double-float-to-core (num)
   (declare (type (complex double-float) num))
   (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
@@ -504,11 +502,9 @@
     (ratio (number-pair-to-core (number-to-core (numerator number))
 				(number-to-core (denominator number))
 				vm:ratio-type))
-    #+complex-float
     ((complex single-float) (complex-single-float-to-core number))
-    #+complex-float
     ((complex double-float) (complex-double-float-to-core number))
-    #+(and complex-float long-float)
+    #+long-float
     ((complex long-float)
      (error "~S isn't a cold-loadable number at all!" number))
     (complex (number-pair-to-core (number-to-core (realpart number))
@@ -758,6 +754,29 @@
 
     (frob *lisp-initialization-functions* *current-init-functions-cons*)
 
+    (when (c:backend-featurep :x86)
+      (macrolet ((frob (name pkg value)
+		   `(cold-setq (cold-intern (intern ,name ,pkg)) ,value)))
+	(frob "*FP-CONSTANT-0D0*" "X86" (number-to-core 0d0))
+	(frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
+	(frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
+	(frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
+	#+long-float
+	(when (c:backend-featurep :long-float)
+	  (frob "*FP-CONSTANT-0L0*" "X86" (number-to-core 0l0))
+	  (frob "*FP-CONSTANT-1L0*" "X86" (number-to-core 1l0))
+	  (frob "*FP-CONSTANT-PI*" "X86" (number-to-core pi))
+	  (frob "*FP-CONSTANT-L2T*" "X86" (number-to-core (log 10l0 2l0)))
+	  (frob "*FP-CONSTANT-L2E*" "X86"
+		(number-to-core
+		 (log 2.718281828459045235360287471352662L0 2l0)))
+	  (frob "*FP-CONSTANT-LG2*" "X86" (number-to-core (log 2l0 10l0)))
+	  (frob "*FP-CONSTANT-LN2*" "X86"
+		(number-to-core
+		 (log 2l0 2.718281828459045235360287471352662L0))))
+	(when (c:backend-featurep :gencgc)
+	  (frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil)))))
+
     ;; Nothing should be allocated after this.
     ;;
     (frob *read-only-space-free-pointer*
@@ -765,29 +784,7 @@
     (frob *static-space-free-pointer*
       (allocate-descriptor *static* 0 vm:even-fixnum-type))
     (frob *initial-dynamic-space-free-pointer*
-      (allocate-descriptor *dynamic* 0 vm:even-fixnum-type)))
-
-  (when (c:backend-featurep :x86)
-    (macrolet ((frob (name pkg value)
-		 `(cold-setq (cold-intern (intern ,name ,pkg)) ,value)))
-      (frob "*FP-CONSTANT-0D0*" "X86" (number-to-core 0d0))
-      (frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
-      (frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
-      (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
-      #+long-float
-      (when (c:backend-featurep :long-float)
-	(frob "*FP-CONSTANT-0L0*" "X86" (number-to-core 0l0))
-	(frob "*FP-CONSTANT-1L0*" "X86" (number-to-core 1l0))
-	(frob "*FP-CONSTANT-PI*" "X86" (number-to-core pi))
-	(frob "*FP-CONSTANT-L2T*" "X86" (number-to-core (log 10l0 2l0)))
-	(frob "*FP-CONSTANT-L2E*" "X86"
-	      (number-to-core (log 2.718281828459045235360287471352662L0 2l0)))
-	(frob "*FP-CONSTANT-LG2*" "X86" (number-to-core (log 2l0 10l0)))
-	(frob "*FP-CONSTANT-LN2*" "X86"
-	      (number-to-core
-	       (log 2l0 2.718281828459045235360287471352662L0))))
-      (when (c:backend-featurep :gencgc)
-	(frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil))))))
+      (allocate-descriptor *dynamic* 0 vm:even-fixnum-type))))
 
 ;;; Make-Make-Package-Args  --  Internal
 ;;;
@@ -1333,9 +1330,9 @@
     result))
 
 #+long-float (not-cold-fop fop-long-float-vector)
-#+complex-float (not-cold-fop fop-complex-single-float-vector)
-#+complex-float (not-cold-fop fop-complex-double-float-vector)
-#+(and complex-float long-float) (not-cold-fop fop-complex-long-float-vector)
+(not-cold-fop fop-complex-single-float-vector)
+(not-cold-fop fop-complex-double-float-vector)
+#+long-float (not-cold-fop fop-complex-long-float-vector)
 
 (define-cold-fop (fop-array)
   (let* ((rank (read-arg 4))
@@ -1380,8 +1377,8 @@
 (cold-number fop-small-integer)
 (cold-number fop-word-integer)
 (cold-number fop-byte-integer)
-#+complex-float (cold-number fop-complex-single-float)
-#+complex-float (cold-number fop-complex-double-float)
+(cold-number fop-complex-single-float)
+(cold-number fop-complex-double-float)
 
 #+long-float
 (define-cold-fop (fop-long-float)
@@ -1415,7 +1412,7 @@
 	 (write-indexed des (+ 3 vm:long-float-value-slot) low-bits)
 	 des)))))
 
-#+(and complex-float long-float)
+#+long-float
 (define-cold-fop (fop-complex-long-float)
   (ecase (c:backend-fasl-file-implementation c:*backend*)
     (#.c:x86-fasl-file-implementation		; 80 bit long-float format.
@@ -1838,7 +1835,10 @@
 
 ;; FreeBSD wants C language symbols prefixed with "_" including all the
 ;; syscalls and Unix library things. Linux doesn't or maybe does
-;; depending on things I don't know about yet?
+;; depending on things I don't know about yet? FreeBSD version 3
+;; is ELF based and looks more like the other systems.
+;; Maybe these x86 hacks can be fixed when the non-elf's are obsoleted.
+
 (defun lookup-maybe-prefix-foreign-symbol (name)
   (lookup-foreign-symbol
    (concatenate 'string
@@ -1855,9 +1855,10 @@
 		       ""
 		       "_"))
 		  (#.c:x86-fasl-file-implementation
-		   (if (c:backend-featurep :freebsd)
-		       "_" ; FreeBSD
-		       "")) ; Linux
+		   (if (and (c:backend-featurep :freebsd)
+			    (not (c:backend-featurep :elf)))
+		       "_" ; older FreeBSD
+		       "")) ; Linux and FreeBSD V3+
 		  )
 		name)))
 
@@ -1929,15 +1930,18 @@
        (ecase kind
 	 (:jump
 	  (assert (zerop (ash value -28)))
-	  (setf (ldb (byte 26 0) (sap-ref-32 sap 0))
-		(ash value -2)))
+	  (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
+	    (setf (ldb (byte 26 0) inst) (ash value -2))
+	    (setf (sap-ref-32 sap 0) (maybe-byte-swap inst))))
 	 (:lui
 	  (setf (sap-ref-16 sap 0)
-		(+ (ash value -16)
-		   (if (logbitp 15 value) 1 0))))
+		(maybe-byte-swap-short
+		 (+ (ash value -16)
+		    (if (logbitp 15 value) 1 0)))))
 	 (:addi
 	  (setf (sap-ref-16 sap 0)
-		(ldb (byte 16 0) value)))))
+		(maybe-byte-swap-short
+		 (ldb (byte 16 0) value))))))
       (#.c:sparc-fasl-file-implementation
        (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
 	 (ecase kind
@@ -2060,15 +2064,18 @@
        (ecase kind
 	 (:jump
 	  (assert (zerop (ash value -28)))
-	  (setf (ldb (byte 26 0) (sap-ref-32 sap 0))
-		(ash value -2)))
+	  (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
+	    (setf (ldb (byte 26 0) inst) (ash value -2))
+	    (setf (sap-ref-32 sap 0) (maybe-byte-swap inst))))
 	 (:lui
 	  (setf (sap-ref-16 sap 2)
-		(+ (ash value -16)
-		   (if (logbitp 15 value) 1 0))))
+		(maybe-byte-swap-short
+		 (+ (ash value -16)
+		    (if (logbitp 15 value) 1 0)))))
 	 (:addi
 	  (setf (sap-ref-16 sap 2)
-		(ldb (byte 16 0) value)))))))
+		(maybe-byte-swap-short
+		 (ldb (byte 16 0) value))))))))
   (undefined-value))
 
 (defun linkage-info-to-core ()

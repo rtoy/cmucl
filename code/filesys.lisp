@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.43.2.2 1998/07/19 01:06:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.43.2.3 2000/05/23 16:36:27 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -271,6 +271,13 @@
 	    (unless (= tail-start tail-end)
 	      (setf pieces (butlast pieces))
 	      (extract-name-type-and-version namestr tail-start tail-end)))
+	;; PVE: Make sure there are no illegal characters in the name
+	;; such as #\Null and #\/.
+	(when (and (stringp name)
+                   (find-if #'(lambda (x)
+				(or (char= x #\Null) (char= x #\/)))
+			    name))
+	  (error 'parse-error))
 	;; Now we have everything we want.  So return it.
 	(values nil ; no host for unix namestrings.
 		nil ; no devices for unix namestrings.
@@ -405,7 +412,7 @@
 	(strings (if (eq version :wild)
 		     ".*"
 		     (format nil ".~D" version)))))
-    (apply #'concatenate 'simple-string (strings))))
+    (and (strings) (apply #'concatenate 'simple-string (strings)))))
 
 (defun unparse-unix-namestring (pathname)
   (declare (type pathname pathname))
@@ -631,7 +638,10 @@
 ;;; 
 (defun unix-namestring (pathname &optional (for-input t) executable-only)
   "Convert PATHNAME into a string that can be used with UNIX system calls.
-   Search-lists and wild-cards are expanded."
+   Search-lists and wild-cards are expanded. If optional argument
+   FOR-INPUT is true and PATHNAME doesn't exist, NIL is returned.
+   If optional argument EXECUTABLE-ONLY is true, NIL is returned
+   unless an executable version of PATHNAME exists."
   ;; toy@rtp.ericsson.se: Let unix-namestring also handle logical
   ;; pathnames too.
   (let ((path (let ((lpn (pathname pathname)))
@@ -649,7 +659,9 @@
       (let ((names (names)))
 	(when names
 	  (when (cdr names)
-	    (error "~S is ambiguous:~{~%  ~A~}" pathname names))
+	    (error 'simple-file-error
+		   :format-control "~S is ambiguous:~{~%  ~A~}"
+		   :format-arguments (list pathname names)))
 	  (return (car names))))))))
 
 

@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp3.lisp,v 1.2.2.2 2000/05/23 16:38:50 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 (eval-when (compile load eval)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.46.2.1 1998/06/23 11:23:01 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.46.2.2 2000/05/23 16:37:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -949,7 +949,8 @@
 	       (not (functional-entry-function fun)))
       (let* ((ref-cont (node-cont (first refs)))
 	     (dest (continuation-dest ref-cont)))
-	(when (and (basic-combination-p dest)
+	(when (and dest
+		   (basic-combination-p dest)
 		   (eq (basic-combination-fun dest) ref-cont)
 		   (eq (basic-combination-kind dest) :local)
 		   (not (block-delete-p (node-block dest)))
@@ -1050,7 +1051,9 @@
 	  (call-fun nil))
       (when (and (dolist (ref (leaf-refs fun) t)
 		   (let ((dest (continuation-dest (node-cont ref))))
-		     (when (block-delete-p (node-block dest)) (return nil))
+		     (when (or (not dest)
+			       (block-delete-p (node-block dest)))
+		       (return nil))
 		     (let ((home (node-home-lambda ref)))
 		       (unless (eq home fun)
 			 (when call-fun (return nil))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.47.2.1 1998/06/23 11:23:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.47.2.2 2000/05/23 16:37:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,19 +170,15 @@
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
 
-#+signed-array
 (def-partial-data-vector-frobs simple-array-signed-byte-8 tagged-num
   :byte t signed-reg)
 
-#+signed-array
 (def-partial-data-vector-frobs simple-array-signed-byte-16 tagged-num
   :short t signed-reg)
 
-#+signed-array
 (def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num
   any-reg)
 
-#+signed-array
 (def-full-data-vector-frobs simple-array-signed-byte-32 signed-num
   signed-reg)
 
@@ -466,8 +462,6 @@
 
 
 ;;; Complex float arrays.
-#+complex-float
-(progn
 
 (define-vop (data-vector-ref/simple-array-complex-single-float)
   (:note "inline array access")
@@ -486,8 +480,7 @@
       (inst lwc1 real-tn lip (- (* vector-data-offset word-bytes)
 				other-pointer-type)))
     (let ((imag-tn (complex-single-reg-imag-tn value)))
-      (inst addu lip word-bytes)
-      (inst lwc1 imag-tn lip (- (* vector-data-offset word-bytes)
+      (inst lwc1 imag-tn lip (- (* (1+ vector-data-offset) word-bytes)
 				other-pointer-type)))
     (inst nop)))
 
@@ -515,8 +508,7 @@
 	(inst fmove :single result-real value-real)))
     (let ((value-imag (complex-single-reg-imag-tn value))
 	  (result-imag (complex-single-reg-imag-tn result)))
-      (inst addu lip word-bytes)
-      (inst swc1 value-imag lip (- (* vector-data-offset word-bytes)
+      (inst swc1 value-imag lip (- (* (1+ vector-data-offset) word-bytes)
 				   other-pointer-type))
       (unless (location= result-imag value-imag)
 	(inst fmove :single result-imag value-imag)))))
@@ -526,21 +518,20 @@
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg)))
+	 (index :scs (any-reg) :target shift))
   (:arg-types simple-array-complex-double-float positive-fixnum)
   (:results (value :scs (complex-double-reg)))
   (:result-types complex-double-float)
   (:temporary (:scs (interior-reg)) lip)
-  (:generator 7
-    (inst addu lip object index)
-    (inst addu lip index)
-    (inst addu lip index)
+  (:temporary (:scs (any-reg) :from (:argument 1)) shift)
+  (:generator 6
+    (inst sll shift index 2)
+    (inst addu lip object shift)
     (let ((real-tn (complex-double-reg-real-tn value)))
       (ld-double real-tn lip (- (* vector-data-offset word-bytes)
 				other-pointer-type)))
     (let ((imag-tn (complex-double-reg-imag-tn value)))
-      (inst addu lip (* 2 word-bytes))
-      (ld-double imag-tn lip (- (* vector-data-offset word-bytes)
+      (ld-double imag-tn lip (- (* (+ vector-data-offset 2) word-bytes)
 				other-pointer-type)))
     (inst nop)))
 
@@ -549,17 +540,17 @@
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg))
+	 (index :scs (any-reg) :target shift)
 	 (value :scs (complex-double-reg) :target result))
   (:arg-types simple-array-complex-double-float positive-fixnum
 	      complex-double-float)
   (:results (result :scs (complex-double-reg)))
   (:result-types complex-double-float)
   (:temporary (:scs (interior-reg)) lip)
-  (:generator 20
-    (inst addu lip object index)
-    (inst addu lip index)
-    (inst addu lip index)
+  (:temporary (:scs (any-reg) :from (:argument 1)) shift)
+  (:generator 6
+    (inst sll shift index 2)
+    (inst addu lip object shift)  
     (let ((value-real (complex-double-reg-real-tn value))
 	  (result-real (complex-double-reg-real-tn result)))
       (str-double value-real lip (- (* vector-data-offset word-bytes)
@@ -568,13 +559,10 @@
 	(inst fmove :double result-real value-real)))
     (let ((value-imag (complex-double-reg-imag-tn value))
 	  (result-imag (complex-double-reg-imag-tn result)))
-      (inst addu lip (* 2 word-bytes))
-      (str-double value-imag lip (- (* vector-data-offset word-bytes)
+      (str-double value-imag lip (- (* (+ vector-data-offset 2) word-bytes)
 				    other-pointer-type))
       (unless (location= result-imag value-imag)
 	(inst fmove :double result-imag value-imag)))))
-
-) ; end progn complex-float
 
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
@@ -596,8 +584,6 @@
   (:translate %raw-set-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
 
-#+complex-float
-(progn
 (define-vop (raw-ref-complex-single
 	     data-vector-ref/simple-array-complex-single-float)
   (:translate %raw-ref-complex-single)
@@ -619,7 +605,6 @@
   (:translate %raw-set-complex-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum
 	      complex-double-float))
-) ; end progn complex-float
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of
 ;;; what type of vector it is.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.13 1994/10/31 04:57:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.13.2.1 2000/05/23 16:35:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -139,19 +139,34 @@
   ;; Remove the tag from one arg so that the result will have the correct
   ;; fixnum tag.
   (inst sra temp x 2)
-  (inst wry temp)
-  (inst andcc hi zero-tn)
-  (inst nop)
-  (inst nop)
-  (dotimes (i 32)
-    (inst mulscc hi y))
-  (inst mulscc hi zero-tn)
-  (inst cmp x)
-  (inst b :ge MULTIPLIER-POSITIVE)
-  (inst nop)
-  (inst sub hi y)
-  MULTIPLIER-POSITIVE
-  (inst rdy lo)
+  ;; Compute the produce temp * y and return the double-word product
+  ;; in hi:lo.
+  (cond ((backend-featurep :sparc-64)
+	 ;; Sign extend y to a full 64-bits.  temp was already
+	 ;; sign-extended by the sra instruction above.
+	 (inst sra y 0)
+	 (inst mulx hi temp y)
+	 (inst move lo hi)
+	 (inst srax hi 32))
+	((or (backend-featurep :sparc-v8)
+	     (backend-featurep :sparc-v9))
+	 (inst smul lo temp y)
+	 (inst rdy hi))
+	(t
+	 (let ((MULTIPLIER-POSITIVE (gen-label)))
+	   (inst wry temp)
+	   (inst andcc hi zero-tn)
+	   (inst nop)
+	   (inst nop)
+	   (dotimes (i 32)
+	     (inst mulscc hi y))
+	   (inst mulscc hi zero-tn)
+	   (inst cmp x)
+	   (inst b :ge MULTIPLIER-POSITIVE)
+	   (inst nop)
+	   (inst sub hi y)
+	   (emit-label MULTIPLIER-POSITIVE)
+	   (inst rdy lo))))
 
   ;; Check to see if the result will fit in a fixnum.  (I.e. the high word
   ;; is just 32 copies of the sign bit of the low word).
@@ -209,14 +224,23 @@
 				  (:temp temp ,sc nl2-offset))
 	  ,@(when (eq type 'tagged-num)
 	      `((inst sra x 2)))
-	  (inst wry x)
-	  (inst andcc temp zero-tn)
-	  (inst nop)
-	  (inst nop)
-	  (dotimes (i 32)
-	    (inst mulscc temp y))
-	  (inst mulscc temp zero-tn)
-	  (inst rdy res))))
+	 (cond ((backend-featurep :sparc-64)
+		;; Sign extend, then multiply
+		(inst sra x 0)
+		(inst sra y 0)
+		(inst mulx res x y))
+	       ((or (backend-featurep :sparc-v8)
+		    (backend-featurep :sparc-v9))
+		(inst smul res x y))
+	       (t
+		(inst wry x)
+		(inst andcc temp zero-tn)
+		(inst nop)
+		(inst nop)
+		(dotimes (i 32)
+		  (inst mulscc temp y))
+		(inst mulscc temp zero-tn)
+		(inst rdy res))))))
   (frob unsigned-* "unsigned *" 40 unsigned-num unsigned-reg)
   (frob signed-* "unsigned *" 41 signed-num signed-reg)
   (frob fixnum-* "fixnum *" 30 tagged-num any-reg))
@@ -466,12 +490,12 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst cmp x y)
-  (inst b :eq RETURN-T)
   (inst andcc zero-tn x 3)
   (inst b :ne DO-STATIC-FN)
   (inst andcc zero-tn y 3)
   (inst b :ne DO-STATIC-FN)
+  (inst cmp x y)
+  (inst b :eq RETURN-T)
   (inst nop)
 
   (inst move res null-tn)

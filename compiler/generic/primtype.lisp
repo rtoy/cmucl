@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.15.2.1 1998/06/23 11:23:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.15.2.2 2000/05/23 16:37:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,13 +86,11 @@
 (def-primitive-type double-float (double-reg descriptor-reg))
 #+long-float
 (def-primitive-type long-float (long-reg descriptor-reg))
-#+complex-float
 (def-primitive-type complex-single-float (complex-single-reg descriptor-reg)
   :type (complex single-float))
-#+complex-float
 (def-primitive-type complex-double-float (complex-double-reg descriptor-reg)
   :type (complex double-float))
-#+(and complex-float long-float)
+#+long-float
 (def-primitive-type complex-long-float (complex-long-reg descriptor-reg)
   :type (complex long-float))
 
@@ -111,16 +109,12 @@
   :type (simple-array (unsigned-byte 16) (*)))
 (def-primitive-type simple-array-unsigned-byte-32 (descriptor-reg)
   :type (simple-array (unsigned-byte 32) (*)))
-#+signed-array 
 (def-primitive-type simple-array-signed-byte-8 (descriptor-reg)
   :type (simple-array (signed-byte 8) (*)))
-#+signed-array 
 (def-primitive-type simple-array-signed-byte-16 (descriptor-reg)
   :type (simple-array (signed-byte 16) (*)))
-#+signed-array 
 (def-primitive-type simple-array-signed-byte-30 (descriptor-reg)
   :type (simple-array (signed-byte 30) (*)))
-#+signed-array 
 (def-primitive-type simple-array-signed-byte-32 (descriptor-reg)
   :type (simple-array (signed-byte 32) (*)))
 (def-primitive-type simple-array-single-float (descriptor-reg)
@@ -130,13 +124,11 @@
 #+long-float
 (def-primitive-type simple-array-long-float (descriptor-reg)
   :type (simple-array long-float (*)))
-#+complex-float
 (def-primitive-type simple-array-complex-single-float (descriptor-reg)
   :type (simple-array (complex single-float) (*)))
-#+complex-float
 (def-primitive-type simple-array-complex-double-float (descriptor-reg)
   :type (simple-array (complex double-float) (*)))
-#+(and complex-float long-float)
+#+long-float
 (def-primitive-type simple-array-complex-long-float (descriptor-reg)
   :type (simple-array (complex long-float) (*)))
 
@@ -177,18 +169,16 @@
     ((unsigned-byte 8) . simple-array-unsigned-byte-8)
     ((unsigned-byte 16) . simple-array-unsigned-byte-16)
     ((unsigned-byte 32) . simple-array-unsigned-byte-32)
-    #+signed-array ((signed-byte 8) . simple-array-signed-byte-8)
-    #+signed-array ((signed-byte 16) . simple-array-signed-byte-16)
-    #+signed-array (fixnum . simple-array-signed-byte-30)
-    #+signed-array ((signed-byte 32) . simple-array-signed-byte-32)
+    ((signed-byte 8) . simple-array-signed-byte-8)
+    ((signed-byte 16) . simple-array-signed-byte-16)
+    (fixnum . simple-array-signed-byte-30)
+    ((signed-byte 32) . simple-array-signed-byte-32)
     (single-float . simple-array-single-float)
     (double-float . simple-array-double-float)
     #+long-float (long-float . simple-array-long-float)
-    #+complex-float
     ((complex single-float) . simple-array-complex-single-float)
-    #+complex-float
     ((complex double-float) . simple-array-complex-double-float)
-    #+(and complex-float long-float)
+    #+long-float
     ((complex long-float) . simple-array-complex-long-float)
     (t . simple-vector))
   "An a-list for mapping simple array element types to their
@@ -309,7 +299,6 @@
 		(t
 		 (any))))
 	     (:complex
-	      #+complex-float
 	      (if (eq (numeric-type-class type) 'float)
 		  (let ((exact (and (null lo) (null hi))))
 		    (case (numeric-type-format type)
@@ -328,9 +317,7 @@
 			       exact))
 		      (t
 		       (part-of complex))))
-		  (part-of complex))
-	      #-complex-float
-	      (part-of complex))
+		  (part-of complex)))
 	     (t
 	      (any)))))
 	(array-type
@@ -385,12 +372,12 @@
 	    (part-of function))
 	   (base-char
 	    (exactly base-char))
-	   (cons
-	    (part-of list))
 	   (t
 	    (any))))
 	(function-type
 	 (exactly function))
+	(cons-type
+	 (part-of list))
 	(class
 	 (if (csubtypep type (specifier-type 'function))
 	     (part-of function)

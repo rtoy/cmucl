@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.38.2.2 1998/06/23 11:23:02 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.38.2.3 2000/05/23 16:37:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -101,7 +101,7 @@
 	   (etypecase leaf
 	     (lambda-var (if (null (lambda-var-sets leaf)) leaf nil))
 	     (constant (if (legal-immediate-constant-p leaf) leaf nil))
-	     ((or functional global-var dylan-var) nil))))))
+	     ((or functional global-var) nil))))))
 
 
 ;;; Annotate-1-Value-Continuation  --  Internal

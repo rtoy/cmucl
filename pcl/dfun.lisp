@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.7.2.2 2000/05/23 16:38:47 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 #|
@@ -326,7 +330,6 @@ And so, we are saved.
 	 (declare (pcl-fast-call))
 	 (accessor-miss gf new arg dfun-info)))))
 
-#+cmu
 (declaim (ext:freeze-type dfun-info))
 
 
@@ -652,7 +655,6 @@ And so, we are saved.
 	   *secondary-dfun-call-cost*
 	   0))))
 
-#+cmu
 (progn
   (setq *non-built-in-typep-cost* 100)
   (setq *structure-typep-cost* 15)
@@ -738,7 +740,7 @@ And so, we are saved.
 
 (defun make-initial-dfun (gf)
   (let ((initial-dfun 
-	 #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+	 #'(kernel:instance-lambda (&rest args)
 	     #+copy-&rest-arg (setq args (copy-list args))
 	     (initial-dfun gf args))))
     (multiple-value-bind (dfun cache info)
@@ -773,11 +775,11 @@ And so, we are saved.
   (let* ((methods (early-gf-methods gf))
 	 (slot-name (early-method-standard-accessor-slot-name (car methods))))
     (ecase type
-      (reader #'(#+cmu kernel:instance-lambda #-cmu lambda (instance)
+      (reader #'(kernel:instance-lambda (instance)
 		  (let* ((class (class-of instance))
 			 (class-name (bootstrap-get-slot 'class class 'name)))
 		    (bootstrap-get-slot class-name instance slot-name))))
-      (writer #'(#+cmu kernel:instance-lambda #-cmu lambda (new-value instance)
+      (writer #'(kernel:instance-lambda (new-value instance)
 		  (let* ((class (class-of instance))
 			 (class-name (bootstrap-get-slot 'class class 'name)))
 		    (bootstrap-set-slot class-name instance slot-name new-value)))))))
@@ -864,7 +866,7 @@ And so, we are saved.
 	specls all-same-p)
     (cond ((null methods)
 	   (values
-	    #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+	    #'(kernel:instance-lambda (&rest args)
 		(apply #'no-applicable-method gf args))
 	    nil
 	    (no-methods-dfun-info)))
@@ -921,11 +923,7 @@ And so, we are saved.
 	       (caching))
 	      ((or invalidp
 		   (null nindex)))
-	      ((not #-cmu17
-		    (or (std-instance-p object)
-			(fsc-instance-p object))
-		    #+cmu17
-		    (pcl-instance-p object))
+	      ((not (pcl-instance-p object))
 	       (caching))
 	      ((or (neq ntype otype) (listp wrappers))
 	       (caching))
@@ -1480,7 +1478,7 @@ And so, we are saved.
       (if function-p
           #'(lambda (method-alist wrappers)
 	      (declare (ignore method-alist wrappers))
-	      #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+	      #'(kernel:instance-lambda (&rest args)
 	          (apply #'no-applicable-method gf args)))
 	  #'(lambda (method-alist wrappers)
 	      (declare (ignore method-alist wrappers))
@@ -1551,9 +1549,9 @@ And so, we are saved.
       (unless (eq 'default-method-only (type-of info))
 	(setq dfun (doctor-dfun-for-the-debugger 
 		    generic-function
-		    #+cmu dfun #-cmu (set-function-name dfun gf-name))))
+		    dfun)))
       (set-funcallable-instance-function generic-function dfun)
-      #+cmu (set-function-name generic-function gf-name)
+      (set-function-name generic-function gf-name)
       (when (and ocache (not (eq ocache cache))) (free-cache ocache))
       dfun)))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.2.2.1 1998/06/23 11:23:59 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.2.2.2 2000/05/23 16:37:54 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1999.
 ;;; 
 
 (in-package :x86)
@@ -106,6 +106,14 @@
   (:variant symbol-value-slot other-pointer-type)
   (:policy :fast)
   (:translate symbol-value))
+
+(export 'kernel::set-symbol-value-conditional "KERNEL")
+(defknown kernel::set-symbol-value-conditional (symbol t t) t (unsafe))
+
+(define-vop (set-symbol-value-conditional cell-set-conditional)
+  (:translate kernel::set-symbol-value-conditional)
+  (:variant symbol-value-slot other-pointer-type)
+  (:policy :fast-safe))
 
 (defknown fast-symbol-value-xadd (symbol fixnum) fixnum ())
 (define-vop (fast-symbol-value-xadd cell-xadd)
@@ -200,7 +208,8 @@
 (define-vop (bind)
   (:args (val :scs (any-reg descriptor-reg))
 	 (symbol :scs (descriptor-reg)))
-  (:temporary (:sc unsigned-reg) temp bsp)
+  (:temporary (:sc descriptor-reg) temp)
+  (:temporary (:sc any-reg) bsp)
   (:generator 5
     (load-symbol-value bsp *binding-stack-pointer*)
     (loadw temp symbol symbol-value-slot other-pointer-type)
@@ -211,7 +220,8 @@
     (storew val symbol symbol-value-slot other-pointer-type)))
 
 (define-vop (unbind)
-  (:temporary (:sc unsigned-reg) symbol value bsp)
+  (:temporary (:sc descriptor-reg) symbol value)
+  (:temporary (:sc any-reg) bsp)
   (:generator 0
     (load-symbol-value bsp *binding-stack-pointer*)
     (loadw symbol bsp (- binding-symbol-slot binding-size))
@@ -224,7 +234,8 @@
 
 (define-vop (unbind-to-here)
   (:args (where :scs (descriptor-reg any-reg)))
-  (:temporary (:sc unsigned-reg) symbol value bsp)
+  (:temporary (:sc descriptor-reg) symbol value)
+  (:temporary (:sc any-reg) bsp)
   (:generator 0
     (load-symbol-value bsp *binding-stack-pointer*)
     (inst cmp where bsp)
@@ -270,6 +281,7 @@
 
 (define-vop (closure-init slot-set)
   (:variant closure-info-offset function-pointer-type))
+
 
 
 ;;;; Value Cell hackery.
@@ -326,20 +338,18 @@
   (:args (object :scs (descriptor-reg) :to :eval)
 	 (slot :scs (any-reg) :to :result)
 	 (old-value :scs (descriptor-reg any-reg) :target eax)
-	 (new-value :scs (descriptor-reg any-reg) :target temp))
+	 (new-value :scs (descriptor-reg any-reg)))
   (:arg-types instance positive-fixnum * *)
   (:temporary (:sc descriptor-reg :offset eax-offset
-		   :from (:argument 1) :to :result :target result)  eax)
-  (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
-  (:results (result :scs (descriptor-reg)))
+		   :from (:argument 2) :to :result :target result)  eax)
+  (:results (result :scs (descriptor-reg any-reg)))
   (:policy :fast-safe)
   (:generator 5
     (move eax old-value)
-    (move temp new-value)
     (inst cmpxchg (make-ea :dword :base object :index slot :scale 1
 			   :disp (- (* instance-slots-offset word-bytes)
 				    instance-pointer-type))
-	  temp)
+	  new-value)
     (move result eax)))
 
 (defknown %instance-xadd (instance index fixnum) fixnum ())
@@ -358,5 +368,25 @@
 (define-full-setter code-header-set * 0 other-pointer-type
   (any-reg descriptor-reg) * code-header-set)
 
+
+;;;; Cons conditional setters.
 
+(export 'kernel::rplaca-conditional "KERNEL")
+(defknown kernel::rplaca-conditional (cons t t) t
+  (unsafe))
 
+(define-vop (rplaca-conditional cell-set-conditional)
+  (:policy :fast-safe)
+  (:translate kernel::rplaca-conditional)
+  (:variant cons-car-slot list-pointer-type)
+  (:arg-types list * *))
+
+(export 'kernel::rplacd-conditional "KERNEL")
+(defknown kernel::rplacd-conditional (cons t t) t
+  (unsafe))
+
+(define-vop (rplacd-conditional cell-set-conditional)
+  (:policy :fast-safe)
+  (:translate kernel::rplacd-conditional)
+  (:variant cons-cdr-slot list-pointer-type)
+  (:arg-types list * *))

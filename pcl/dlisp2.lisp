@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.3.2.2 2000/05/23 16:38:50 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 (defun emit-reader/writer-function (reader/writer 1-or-2-class class-slot-p)
@@ -91,7 +95,7 @@
   (if cached-emf-p
       #'(lambda (cache miss-fn)
 	  (declare (type function miss-fn))
-	  #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+	  #'(kernel:instance-lambda (&rest args)
 	      (declare #.*optimize-speed*)
 	      #+copy-&rest-arg (setq args (copy-list args))
 	      (with-dfun-wrappers (args metatypes)
@@ -107,7 +111,7 @@
 			      (invoke-emf emf args))))))))
       #'(lambda (cache emf miss-fn)
 	  (declare (type function miss-fn))
-	  #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+	  #'(kernel:instance-lambda (&rest args)
 	      (declare #.*optimize-speed*)
 	      #+copy-&rest-arg (setq args (copy-list args))
 	      (with-dfun-wrappers (args metatypes)

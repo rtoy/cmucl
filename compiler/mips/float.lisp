@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.20.2.1 1998/06/23 11:23:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.20.2.2 2000/05/23 16:37:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,7 +115,7 @@
 		  (:results (y :scs (,sc)))
 		  (:note "pointer to float coercion")
 		  (:generator 2
-		    ,@(ecase (backend-byte-order *backend*)
+		    ,@(ecase (backend-byte-order *target-backend*)
 			(:big-endian
 			 (cond 
 			  (double-p
@@ -154,7 +154,7 @@
 			 (inst fmove ,format y x)))
 		      (,stack-sc
 		       (let ((offset (* (tn-offset y) word-bytes)))
-			 ,@(ecase (backend-byte-order *backend*)
+			 ,@(ecase (backend-byte-order *target-backend*)
 			     (:big-endian
 			      (cond
 			       (double-p
@@ -174,8 +174,6 @@
 
 
 ;;;; Complex float move functions
-#+complex-float
-(progn
 
 (defun complex-single-reg-real-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
@@ -402,12 +400,9 @@
 (define-move-vop move-complex-double-float-argument :move-argument
   (complex-double-reg descriptor-reg) (complex-double-reg))
 
-) ; progn complex-float
-
 
 (define-move-vop move-argument :move-argument
-  (single-reg double-reg
-   #+complex-float complex-single-reg #+complex-float complex-double-reg)
+  (single-reg double-reg complex-single-reg complex-double-reg)
   (descriptor-reg))
 
 
@@ -759,9 +754,6 @@
 
 ;;;; Complex float VOPs
 
-#+complex-float
-(progn
-
 (define-vop (make-complex-single-float)
   (:translate complex)
   (:args (real :scs (single-reg) :target r)
@@ -880,5 +872,3 @@
   (:translate imagpart)
   (:note "complex double float imagpart")
   (:variant :imag))
-
-) ; progn complex-float

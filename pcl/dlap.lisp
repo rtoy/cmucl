@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/dlap.lisp,v 1.6.2.1 2000/05/23 16:38:49 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 
@@ -60,16 +64,14 @@
     (generating-lap closure-variables
 		    arglist
        (with-lap-registers ((inst t)				   ;reg for the instance
-			    (wrapper #-structure-wrapper vector	   ;reg for the wrapper
-				     #+structure-wrapper t)
-			    #+structure-wrapper (cnv fixnum-vector)
+			    (wrapper t)
+			    (cnv fixnum-vector)
 			    (cache-no index))			   ;reg for the cache no
 	  (let ((index cache-no)				   ;This register is used
 								   ;for different values at
 								   ;different times.
 		(slots (and (null class-slot-p)
-			    (allocate-register #-new-kcl-wrapper 'vector
-					       #+new-kcl-wrapper t)))
+			    (allocate-register 'vector)))
 		(csv   (and class-slot-p
 			    (allocate-register t))))
 	    (prog1 (flatten-lap
@@ -90,11 +92,7 @@
 			  (opcode :move (operand :std-slots inst) slots))
 
 		     (opcode :label 'have-wrapper)
-		     #-structure-wrapper
-		     (opcode :move (operand :cref wrapper field) cache-no)
-		     #+structure-wrapper
 		     (opcode :move (emit-wrapper-cache-number-vector wrapper) cnv)
-		     #+structure-wrapper
 		     (opcode :move (operand :cref cnv field) cache-no)
 		     (opcode :izerop cache-no 'trap)		   ;obsolete wrapper?
 
@@ -125,7 +123,7 @@
   (let ((arglist (list (dfun-arg-symbol 0))))
     (generating-lap '(field cache-vector mask size index miss-fn)
 		    arglist
-      (with-lap-registers ((slots #-new-kcl-wrapper vector #+new-kcl-wrapper t))
+      (with-lap-registers ((slots vector))
 	(emit-dlap  arglist
 		    '(standard-instance)
 		    'trap
@@ -145,7 +143,7 @@
   (let ((arglist (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))))
     (generating-lap '(field cache-vector mask size index miss-fn)
 		    arglist
-      (with-lap-registers ((slots #-new-kcl-wrapper vector #+new-kcl-wrapper t))
+      (with-lap-registers ((slots vector))
 	(emit-dlap arglist
 		   '(t standard-instance)
 		   'trap
@@ -167,7 +165,7 @@
   (let ((arglist (list (dfun-arg-symbol 0))))
     (generating-lap '(field cache-vector mask size miss-fn)
 		    arglist
-      (with-lap-registers ((slots #-new-kcl-wrapper vector #+new-kcl-wrapper t)
+      (with-lap-registers ((slots vector)
 			   (index index))
 	(emit-dlap arglist
 		   '(standard-instance)
@@ -183,7 +181,7 @@
   (let ((arglist (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))))
     (generating-lap '(field cache-vector mask size miss-fn)
 		    arglist
-      (with-lap-registers ((slots #-new-kcl-wrapper vector #+new-kcl-wrapper t)
+      (with-lap-registers ((slots vector)
 			   (index index))
 	(flatten-lap
 	  (emit-dlap arglist
@@ -200,21 +198,15 @@
 
 (defun emit-checking (metatypes applyp)
   (let ((dlap-lambda-list (make-dlap-lambda-list metatypes applyp)))
-    (generating-lap '(field cache-vector mask size 
-		      #-excl-sun4 emf #+excl-sun4 function 
-		      miss-fn)
+    (generating-lap '(field cache-vector mask size emf miss-fn)
 		    dlap-lambda-list
       (emit-dlap (remove '&rest dlap-lambda-list)
 		 metatypes		 
 		 'trap
-		 (with-lap-registers ((#-excl-sun4 emf #+excl-sun4 function t))
+		 (with-lap-registers ((emf t))
 		   (flatten-lap
-		     (opcode :move (operand :cvar 
-					    #-excl-sun4 'emf #+excl-sun4 'function)
-			     #-excl-sun4 emf 
-			     #+excl-sun4 function)
-		     #-excl-sun4 (opcode :emf-call emf)
-		     #+excl-sun4 (opcode :jmp function)))
+		     (opcode :move (operand :cvar 'emf) emf)
+		     (opcode :emf-call emf)))
 		 (with-lap-registers ((miss-function t))
 		   (flatten-lap
 		     (opcode :label 'trap)
@@ -226,19 +218,18 @@
   (let ((dlap-lambda-list (make-dlap-lambda-list metatypes applyp)))
     (generating-lap '(field cache-vector mask size miss-fn)
 		    dlap-lambda-list
-      (with-lap-registers ((#-excl-sun4 emf #+excl-sun4 function t))
+      (with-lap-registers ((emf t))
 	(emit-dlap (remove '&rest dlap-lambda-list)
 		   metatypes
 		   'trap
 		   (flatten-lap
-		    #-excl-sun4 (opcode :emf-call emf)
-		    #+excl-sun4 (opcode :jmp function))
+		    (opcode :emf-call emf))
 		   (with-lap-registers ((miss-function t))
 		     (flatten-lap
 		       (opcode :label 'trap)
 		       (opcode :move (operand :cvar 'miss-fn) miss-function)
 		       (opcode :jmp miss-function)))
-		   #-excl-sun4 emf #+excl-sun4 function)))))
+		   emf)))))
 
 (defun emit-constant-value (metatypes)
   (let ((dlap-lambda-list (make-dlap-lambda-list metatypes nil)))
@@ -260,15 +251,13 @@
 
 
 (defun emit-check-1-class-wrapper (wrapper cwrapper-0 miss-label)
-  (with-lap-registers ((cwrapper #-structure-wrapper vector
-				 #+structure-wrapper t))
+  (with-lap-registers ((cwrapper t))
     (flatten-lap
      (opcode :move (operand :cvar cwrapper-0) cwrapper)
      (opcode :neq wrapper cwrapper miss-label))))		;wrappers not eq, trap
 
 (defun emit-check-2-class-wrapper (wrapper cwrapper-0 cwrapper-1 miss-label)
-  (with-lap-registers ((cwrapper #-structure-wrapper vector
-				 #+structure-wrapper t))
+  (with-lap-registers ((cwrapper t))
     (flatten-lap
      (opcode :move (operand :cvar cwrapper-0) cwrapper)		;This is an OR.  Isn't
      (opcode :eq wrapper cwrapper 'hit-internal)		;assembly code fun
@@ -316,8 +305,7 @@
 
 (defun dlap-wrappers (metatypes)
   (mapcar #'(lambda (x) (and (neq x 't)
-			     (allocate-register #-structure-wrapper 'vector
-						#+structure-wrapper t)))
+			     (allocate-register t)))
 	  metatypes))
 
 (defun dlap-wrapper-moves (wrappers args metatypes miss-label slot-regs)
@@ -470,8 +458,7 @@
 (defun emit-check-1-wrapper-in-cache (cache-vector location wrapper hit-code)
   (let ((exit-emit-check-1-wrapper-in-cache 
 	  (make-symbol "exit-emit-check-1-wrapper-in-cache")))
-    (with-lap-registers ((cwrapper #-structure-wrapper vector
-				   #+structure-wrapper t))
+    (with-lap-registers ((cwrapper  t))
       (flatten-lap
 	(opcode :move (emit-cache-vector-ref cache-vector location) cwrapper)
 	(opcode :neq cwrapper wrapper exit-emit-check-1-wrapper-in-cache)
@@ -479,8 +466,7 @@
 	(opcode :label exit-emit-check-1-wrapper-in-cache)))))
 
 (defun emit-check-cache-entry (cache-vector location wrapper hit-label)
-  (with-lap-registers ((cwrapper #-structure-wrapper vector
-				 #+structure-wrapper t))
+  (with-lap-registers ((cwrapper t))
     (flatten-lap
       (opcode :move (emit-cache-vector-ref cache-vector location) cwrapper)
       (opcode :eq cwrapper wrapper hit-label))))
@@ -490,8 +476,7 @@
 	  (flatten-lap
 	    (gathering1 (flattening-lap)
 	      (iterate ((wrapper (list-elements wrappers)))
-		(with-lap-registers ((cwrapper #-structure-wrapper vector
-					       #+structure-wrapper t))
+		(with-lap-registers ((cwrapper t))
 		  (gather1
 		    (flatten-lap
 		      (opcode :move (emit-cache-vector-ref cache-vector location) cwrapper)
@@ -540,16 +525,12 @@
 
 (defun emit-1-wrapper-compute-primary-cache-location (wrapper primary wrapper-cache-no)
   (with-lap-registers ((mask index) 
-		       #+structure-wrapper (cnv fixnum-vector))
+		       (cnv fixnum-vector))
     (let ((field wrapper-cache-no))
       (flatten-lap
         (opcode :move (operand :cvar 'mask) mask)
         (opcode :move (operand :cvar 'field) field)
-	#-structure-wrapper
-        (opcode :move (emit-wrapper-ref wrapper field) wrapper-cache-no)
-	#+structure-wrapper
 	(opcode :move (emit-wrapper-cache-number-vector wrapper) cnv)
-	#+structure-wrapper
 	(opcode :move (emit-cache-number-vector-ref cnv field) wrapper-cache-no)
         (opcode :move (operand :ilogand wrapper-cache-no mask) primary)))))
 
@@ -563,13 +544,10 @@
 			 (i (interval :from 1)))
 		 (gather1
 		  (with-lap-registers ((wrapper-cache-no index)
-				       #+structure-wrapper (cnv fixnum-vector))
+				       (cnv fixnum-vector))
 		    (flatten-lap
-		     #-structure-wrapper
 		     (opcode :move (emit-wrapper-ref wrapper field) wrapper-cache-no)
-		     #+structure-wrapper
 		     (opcode :move (emit-wrapper-cache-number-vector wrapper) cnv)
-		     #+structure-wrapper
 		     (opcode :move (emit-cache-number-vector-ref cnv field)
 			     wrapper-cache-no)
 		     (opcode :izerop wrapper-cache-no miss-label)
@@ -588,7 +566,7 @@
   (let ((exit-emit-fetch-wrapper (make-symbol "exit-emit-fetch-wrapper")))
     (with-lap-registers ((arg t))
       (ecase metatype
-	((standard-instance #+new-kcl-wrapper structure-instance)
+	((standard-instance)
 	  (let ((get-std-inst-wrapper (make-symbol "get-std-inst-wrapper"))
 		(get-fsc-inst-wrapper (make-symbol "get-fsc-inst-wrapper")))
 	    (flatten-lap
@@ -614,10 +592,7 @@
 	      (opcode :move (operand :arg argument) arg)
 	      (opcode :std-instance-p arg get-std-inst-wrapper)
 	      (opcode :fsc-instance-p arg get-fsc-inst-wrapper)
-	      #-new-kcl-wrapper
 	      (opcode :move (operand :built-in-or-structure-wrapper arg) dest)
-	      #+new-kcl-wrapper
-	      (opcode :move (operand :built-in-wrapper arg) dest)
 	      (opcode :go exit-emit-fetch-wrapper)
 	      (opcode :label get-fsc-inst-wrapper)
 	      (opcode :move (operand :fsc-wrapper arg) dest)
@@ -625,15 +600,12 @@
 	      (opcode :label get-std-inst-wrapper)
 	      (opcode :move (operand :std-wrapper arg) dest)
 	      (opcode :label exit-emit-fetch-wrapper))))
-	((built-in-instance #-new-kcl-wrapper structure-instance)
+	((built-in-instance structure-instance)
 	  (when slot (error "Can't do a slot reg for this metatype."))
 	  (let ()
 	    (flatten-lap
 	      (opcode :move (operand :arg argument) arg)
 	      (opcode :std-instance-p arg miss-label)
 	      (opcode :fsc-instance-p arg miss-label)
-	      #-new-kcl-wrapper
-	      (opcode :move (operand :built-in-or-structure-wrapper arg) dest)
-	      #+new-kcl-wrapper
-	      (opcode :move (operand :built-in-wrapper arg) dest))))))))
+	      (opcode :move (operand :built-in-or-structure-wrapper arg) dest))))))))
 

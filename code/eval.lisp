@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.26.2.1 1998/06/23 11:21:48 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.26.2.2 2000/05/23 16:36:23 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 	  macroexpand-1 macroexpand block return-from
 	  compiler-macro-function
 	  return function setq psetq apply funcall
-	  compiler-let progv flet labels macrolet
+	  progv flet labels macrolet
 	  mapcar maplist mapc mapl mapcan mapcon
 	  tagbody prog prog* go 
 	  values multiple-values-limit
@@ -175,20 +175,40 @@
 	 (case name
 	   (function
 	    (unless (= args 1)
-	      (error "Wrong number of args to FUNCTION:~% ~S." exp))
+	      (error 'simple-program-error
+		     :format-control "Wrong number of args to FUNCTION:~% ~S."
+		     :format-arguments (list exp)))
 	    (let ((name (second exp)))
-	      (if (or (atom name)
-		      (and (consp name)
-			   (eq (car name) 'setf)))
-		  (fdefinition name)
-		  (eval:make-interpreted-function name))))
+	      (cond ((consp name)
+		     (if (eq (car name) 'setf)
+			 (fdefinition name)
+			 (eval:make-interpreted-function name)))
+		    ((macro-function name)
+		     (error 'simple-type-error
+			    :datum name
+			    :expected-type '(not (satisfies macro-function))
+			    :format-control "~S is a macro."
+			    :format-arguments (list name)))
+		    ((special-operator-p name)
+		     (error 'simple-type-error
+			    :datum name
+			    :expected-type '(not
+					     (satisfies special-operator-p))
+			    :format-control "~S is a special operator."
+			    :format-arguments (list name)))
+		    (t
+		     (fdefinition name)))))
 	   (quote
 	    (unless (= args 1)
-	      (error "Wrong number of args to QUOTE:~% ~S." exp))
+	      (error 'simple-program-error
+		     :format-control "Wrong number of args to QUOTE:~% ~S."
+		     :format-arguments (list exp)))
 	    (second exp))
 	   (setq
 	    (unless (evenp args)
-	      (error "Odd number of args to SETQ:~% ~S." exp))
+	      (error 'simple-program-error
+		     :format-control "Odd number of args to SETQ:~% ~S."
+		     :format-arguments (list exp)))
 	    (unless (zerop args)
 	      (do ((name (cdr exp) (cddr name)))
 		  ((null name)
@@ -360,7 +380,9 @@
   (setf (info function macro-function symbol) function)
   (setf (symbol-function symbol)
 	#'(lambda (&rest args) (declare (ignore args))
-	    (error "Cannot funcall macro functions.")))
+	    (error 'simple-undefined-function
+		   :name symbol
+		   :format-control "Cannot funcall macro functions.")))
   function)
 
 ;;; Macroexpand-1  --  Public

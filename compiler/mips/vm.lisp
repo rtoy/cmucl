@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.49.2.1 1998/06/23 11:23:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.49.2.2 2000/05/23 16:37:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,10 +145,8 @@
   (sap-stack non-descriptor-stack) ; System area pointers.
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack :element-size 2) ; double floats.
-  #+complex-float
   ;; complex-single-floats
   (complex-single-stack non-descriptor-stack :element-size 2)
-  #+complex-float
   ;; complex-double-floats.
   (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
@@ -233,7 +231,6 @@
    :save-p t
    :alternate-scs (double-stack))
 
-  #+complex-float
   (complex-single-reg float-registers
    :locations (0 4 8 12 16 20 24 28)
    :element-size 4
@@ -242,7 +239,6 @@
    :save-p t
    :alternate-scs (complex-single-stack))
 
-  #+complex-float
   (complex-double-reg float-registers
    :locations (0 4 8 12 16 20 24 28)
    :element-size 4

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.32.2.1 1998/06/23 11:23:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.32.2.2 2000/05/23 16:37:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,27 +94,23 @@
 (defparameter specialized-array-element-types
   '(bit (unsigned-byte 2) (unsigned-byte 4) (unsigned-byte 8)
     (unsigned-byte 16) (unsigned-byte 32)
-    #+signed-array (signed-byte 8) #+signed-array (signed-byte 16)
-    #+signed-array (signed-byte 30) #+signed-array (signed-byte 32)
-    #+complex-float (complex single-float)
-    #+complex-float (complex double-float)
-    #+(and complex-float long-float) (complex long-float)
+    (signed-byte 8) (signed-byte 16) (signed-byte 30) (signed-byte 32)
+    (complex single-float) (complex double-float)
+    #+long-float (complex long-float)
     base-char single-float double-float
     #+long-float long-float))
 
 (deftype unboxed-array (&optional dims)
   (collect ((types (list 'or)))
     (dolist (type specialized-array-element-types)
-      (when (subtypep type '(or integer character float
-			     #+complex-float (complex float)))
+      (when (subtypep type '(or integer character float (complex float)))
 	(types `(array ,type ,dims))))
     (types)))
 
 (deftype simple-unboxed-array (&optional dims)
   (collect ((types (list 'or)))
     (dolist (type specialized-array-element-types)
-      (when (subtypep type '(or integer character float
-			     #+complex-float (complex float)))
+      (when (subtypep type '(or integer character float (complex float)))
 	(types `(simple-array ,type ,dims))))
     (types)))
 
@@ -161,6 +157,7 @@
   (dolist (type '(fixnum
 		  (signed-byte 32)
 		  (unsigned-byte 32)
+		  bignum
 		  integer)
 		(error "~S isn't an integer type?" subtype))
     (when (csubtypep subtype (specifier-type type))
@@ -175,11 +172,6 @@
 (defun hairy-type-check-template (type)
   (declare (type ctype type))
   (typecase type
-    (named-type
-     (case (named-type-name type)
-       (cons 'c:check-cons)
-       (symbol 'c:check-symbol)
-       (t nil)))
     (numeric-type
      (cond ((type= type (specifier-type 'fixnum))
 	    'c:check-fixnum)
@@ -188,6 +180,17 @@
 	   ((type= type (specifier-type '(unsigned-byte 32)))
 	    'c:check-unsigned-byte-32)
 	   (t nil)))
+    (union-type
+     (if (type= type (specifier-type 'bignum))
+	 'c:check-bignum
+	 nil))
+    (cons-type
+     (if (type= type (specifier-type 'cons))
+	  'c:check-cons
+	   nil))
+    (built-in-class
+     (case (class-name type)
+       (symbol 'c:check-symbol)))
     (function-type
      'c:check-function)
     (t

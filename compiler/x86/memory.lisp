@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.2.2.1 1998/06/23 11:24:09 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.2.2.2 2000/05/23 16:38:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1999.
 ;;; 
 
 (in-package :x86)
@@ -84,6 +84,21 @@
 	     ,@(when set-trans
 		 `((:translate ,set-trans))))))))
 
+(define-vop (cell-set-conditional)
+  (:args (object :scs (descriptor-reg) :to :eval)
+	 (old-value :scs (descriptor-reg any-reg) :target eax)
+	 (new-value :scs (descriptor-reg any-reg)))
+  (:temporary (:sc descriptor-reg :offset eax-offset
+		   :from (:argument 1) :to :result :target result)  eax)
+  (:variant-vars offset lowtag)
+  (:results (result :scs (descriptor-reg any-reg)))
+  (:generator 4
+    (move eax old-value)
+    (inst cmpxchg (make-ea :dword :base object
+			   :disp (- (* offset word-bytes) lowtag))
+	  new-value)
+    (move result eax)))
+
 ;;; X86 special
 (define-vop (cell-xadd)
   (:args (object :scs (descriptor-reg) :to :result)
@@ -140,19 +155,17 @@
 (define-vop (slot-set-conditional)
   (:args (object :scs (descriptor-reg) :to :eval)
 	 (old-value :scs (descriptor-reg any-reg) :target eax)
-	 (new-value :scs (descriptor-reg any-reg) :target temp))
+	 (new-value :scs (descriptor-reg any-reg)))
   (:temporary (:sc descriptor-reg :offset eax-offset
 		   :from (:argument 1) :to :result :target result)  eax)
-  (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
   (:variant-vars base lowtag)
-  (:results (result :scs (descriptor-reg)))
+  (:results (result :scs (descriptor-reg any-reg)))
   (:info offset)
   (:generator 4
     (move eax old-value)
-    (move temp new-value)
     (inst cmpxchg (make-ea :dword :base object
 			   :disp (- (* (+ base offset) word-bytes) lowtag))
-	  temp)
+	  new-value)
     (move result eax)))
 
 ;;; X86 special

@@ -1,4 +1,12 @@
-
+;;; -*- Package: USER -*-
+;;;
+;;; **********************************************************************
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.12.2.4 2000/05/23 16:39:07 pw Exp $")
+;;;
+;;; **********************************************************************
+;;;
 (in-package "USER")
 
 (when (find-package "PCL")

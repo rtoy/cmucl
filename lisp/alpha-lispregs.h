@@ -1,9 +1,15 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-lispregs.h,v 1.1.2.1 1997/06/27 14:34:44 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-lispregs.h,v 1.1.2.3 2000/05/23 16:38:13 pw Exp $ */
 
 #define NREGS	(32)
 
 #ifdef LANGUAGE_ASSEMBLY
+#ifdef __linux__
+#define R(s) $ ## s
+#define REG(num) $##num
+#else
+#define R(s) s
 #define REG(num) $/**/num
+#endif
 #else
 #define REG(num) num
 #endif

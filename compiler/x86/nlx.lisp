@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.4.2.2 1998/06/23 11:24:10 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.4.2.3 2000/05/23 16:38:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,7 +152,7 @@
     (store-symbol-value block lisp::*current-catch-block*)))
 
 (define-vop (unlink-unwind-protect)
-    (:temporary (:sc unsigned-reg) block)
+  (:temporary (:sc unsigned-reg) block)
   (:policy :fast-safe)
   (:translate %unwind-protect-breakup)
   (:generator 17

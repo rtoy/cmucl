@@ -1,17 +1,19 @@
-vpath %.h /usr/dtc2/cmucl/p86/lisp:/usr/dtc2/cmucl/src/lisp
-vpath %.c /usr/dtc2/cmucl/p86/lisp:/usr/dtc2/cmucl/src/lisp
-vpath %.S /usr/dtc2/cmucl/p86/lisp
-CPPFLAGS = -I. -I/usr/dtc2/cmucl/p86/lisp -I/usr/dtc2/cmucl/src/lisp -I- -I/usr/X11R6/include
-CC = gcc # -Wall -Wstrict-prototypes -Wmissing-prototypes
+PATH1 = ../../src/lisp
+PATH2 = ../../p86/lisp
+vpath %.h $(PATH2):$(PATH1)
+vpath %.c $(PATH2):$(PATH1)
+vpath %.S $(PATH2):$(PATH1)
+CPPFLAGS = -I. -I$(PATH2) -I$(PATH1) -I- -I/usr/X11R6/include
+CC = gcc
 LD = ld
 CPP = cpp
-CFLAGS =  -g -O2 -DGENCGC
+CFLAGS = -Wstrict-prototypes -Wall -O2 -g -DGENCGC
 ASFLAGS = -g -DGENCGC
 NM = nm -gp
-UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S
 ARCH_SRC = x86-arch.c
 OS_SRC = FreeBSD-os.c os-common.c undefineds.c
-OS_LINK_FLAGS=-static
-OS_LIBS=
-GC_SRC= gencgc.c
+OS_LINK_FLAGS = -static
+OS_LIBS =
+GC_SRC = gencgc.c

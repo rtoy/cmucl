@@ -30,10 +30,6 @@
 (fix-early-generic-functions)
 (setq *boot-state* 'complete)
 
-#+Lispm
-(eval-when (load eval)
-  (si:record-source-file-name 'print-std-instance 'defun 't))
-
 (defun print-std-instance (instance stream depth)
   (declare (ignore depth))
   (print-object instance stream))

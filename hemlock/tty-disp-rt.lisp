@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.3.2.1 1998/06/23 11:24:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.3.2.2 2000/05/23 16:38:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,7 @@
 ;;;; Get terminal attributes:
 
 (defvar *terminal-baud-rate* nil)
-(declaim (type (or (unsigned-byte 16) null) *terminal-baud-rate*))
+(declaim (type (or (unsigned-byte 24) null) *terminal-baud-rate*))
 
 ;;; GET-TERMINAL-ATTRIBUTES  --  Interface
 ;;;
@@ -61,13 +61,17 @@
 ;;;
 (defun get-terminal-attributes (&optional (fd 1))
   (alien:with-alien ((winsize (alien:struct unix:winsize))
-                     #-glibc2 
-		     (sgtty (alien:struct unix:sgttyb)))
+                     #-(or glibc2 freebsd)
+		     (sgtty (alien:struct unix:sgttyb))
+                     #+freebsd ; termios
+		     (tios (alien:struct unix:termios)))
     (let ((size-win (unix:unix-ioctl fd unix:TIOCGWINSZ
 				     (alien:alien-sap winsize)))
-          #-glibc2
+          #-(or glibc2 freebsd)
 	  (speed-win (unix:unix-ioctl fd unix:TIOCGETP
-				      (alien:alien-sap sgtty))))
+				      (alien:alien-sap sgtty)))
+	  #+freebsd
+	  (speed-win (unix:unix-tcgetattr fd (alien:alien-sap tios))))
       (flet ((frob (val)
 	       (if (and size-win (not (zerop val)))
 		   val
@@ -75,13 +79,17 @@
 	(values
 	 (frob (alien:slot winsize 'unix:ws-row))
 	 (frob (alien:slot winsize 'unix:ws-col))
-         #+glibc2
-         4800
-         #-glibc2
+         #-(or glibc2 freebsd)
 	 (and speed-win
 	      (setq *terminal-baud-rate*
 		    (svref unix:terminal-speeds
-			   (alien:slot sgtty 'unix:sg-ospeed)))))))))
+			   (alien:slot sgtty 'unix:sg-ospeed))))
+	 #+freebsd
+	 (and speed-win
+	      (setq *terminal-baud-rate* (unix:unix-cfgetospeed tios)))
+         #+glibc2
+         4800)))))
+
 
 ;;;; Output routines and buffering.
 

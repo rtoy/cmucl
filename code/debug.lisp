@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.45.2.1 1998/06/23 11:21:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.45.2.2 2000/05/23 16:36:19 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 
 (export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
 	  *debug-print-level* *debug-print-length* *debug-prompt*
-	  *help-line-scroll-count* *stack-top-hint*
+	  *debug-readtable* *help-line-scroll-count* *stack-top-hint*
 
 	  *auto-eval-in-frame* var arg
 	  *only-block-start-locations* *print-location-kind*
@@ -712,12 +712,17 @@ See the CMU Common Lisp User's Manual for more information.
   "When set, avoid calling INVOKE-DEBUGGER recursively when errors occur while
    executing in the debugger.  The 'flush' command toggles this.")
 
+(defvar *debug-readtable* nil
+  "When non-NIL, becomes the system *READTABLE* in the debugger
+   read-eval-print loop")
+
 (defun debug-loop ()
   (let* ((*debug-command-level* (1+ *debug-command-level*))
 	 (*real-stack-top* (di:top-frame))
 	 (*stack-top* (or *stack-top-hint* *real-stack-top*))
 	 (*stack-top-hint* nil)
-	 (*current-frame* *stack-top*))
+	 (*current-frame* *stack-top*)
+	 (*readtable* (or *debug-readtable* *readtable*)))
     (handler-bind ((di:debug-condition #'(lambda (condition)
 					   (princ condition *debug-io*)
 					   (throw 'debug-loop-catcher nil))))

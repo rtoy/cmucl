@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.31.2.1 1998/06/23 11:22:17 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.31.2.2 2000/05/23 16:36:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,7 +63,7 @@
 		       #'(lambda (x) (logical-host-name (%pathname-host x))))
 		      (:unparse-directory #'unparse-logical-directory)
 		      (:unparse-file #'unparse-unix-file)
-		      (:unparse-enough #'identity)
+		      (:unparse-enough #'unparse-enough-namestring)
 		      (:customary-case :upper)))
   (name "" :type simple-base-string)
   (translations nil :type list)
@@ -107,7 +107,9 @@
   (let ((namestring (handler-case (namestring pathname)
 		      (error nil))))
     (cond (namestring
-	   (format stream "#p~S" namestring))
+	   (if (or *print-escape* *print-readably*)
+	       (format stream "#p~S" namestring)
+	       (format stream "~A" namestring)))
 	  (*print-readably*
 	   (error "~S Cannot be printed readably." pathname))
 	  (t
@@ -165,7 +167,9 @@
   (let ((namestring (handler-case (namestring pathname)
 		      (error nil))))
     (cond (namestring
-	   (format stream "#.(logical-pathname ~S)" namestring))
+	   (if (or *print-escape* *print-readably*)
+	       (format stream "#.(logical-pathname ~S)" namestring)
+	       (format stream "~A" namestring)))
 	  (*print-readably*
 	   (error "~S Cannot be printed readably." pathname))
 	  (t
@@ -308,25 +312,30 @@
 
 ;;; DIRECTORY-COMPONENTS-MATCH  --  Internal
 ;;;
-;;;    Pathname-match-p for directory components.
+;;;    Pathname-match-p for directory components. If thing is empty
+;;; then it matches :wild, (:absolute :wild-inferiors), or (:relative
+;;; :wild-inferiors).
 ;;;
 (defun directory-components-match (thing wild)
   (or (eq thing wild)
       (eq wild :wild)
       (and (consp wild)
 	   (let ((wild1 (first wild)))
-	     (if (eq wild1 :wild-inferiors)
-		 (let ((wild-subdirs (rest wild)))
-		   (or (null wild-subdirs)
-		       (loop
-			 (when (directory-components-match thing wild-subdirs)
-			   (return t))
-			 (pop thing)
-			 (unless thing (return nil)))))
-		 (and (consp thing)
-		      (components-match (first thing) wild1)
-		      (directory-components-match (rest thing)
-						  (rest wild))))))))
+	     (cond ((and (null thing) (member wild1 '(:absolute :relative)))
+		    (equal (rest wild) '(:wild-inferiors)))
+		   ((eq wild1 :wild-inferiors)
+		    (let ((wild-subdirs (rest wild)))
+		      (or (null wild-subdirs)
+			  (loop
+			   (when (directory-components-match thing
+							     wild-subdirs)
+			     (return t))
+			   (pop thing)
+			   (unless thing (return nil))))))
+		   ((consp thing)
+		    (and (components-match (first thing) wild1)
+			 (directory-components-match (rest thing)
+						     (rest wild)))))))))
 
 
 ;;; COMPONENTS-MATCH -- Internal
@@ -954,7 +963,7 @@ a host-structure or string."
 	     (wild-pathname-p pathname :type)
 	     (wild-pathname-p pathname :version)))
 	(:host (frob (%pathname-host pathname)))
-	(:device (frob (%pathname-host pathname)))
+	(:device (frob (%pathname-device pathname)))
 	(:directory (some #'frob (%pathname-directory pathname)))
 	(:name (frob (%pathname-name pathname)))
 	(:type (frob (%pathname-type pathname)))
@@ -1146,14 +1155,37 @@ a host-structure or string."
 ;;;    Called by TRANSLATE-PATHNAME on the directory components of its argument
 ;;; pathanames to produce the result directory component.  If any leaves the
 ;;; directory NIL, we return the source directory.  The :RELATIVE or :ABSOLUTE
-;;; is always taken from the source directory.
+;;; is taken from the source directory, except if TO is :ABSOLUTE, in which
+;;; case the result will be :ABSOLUTE.
 ;;;
 (defun translate-directories (source from to diddle-case)
   (if (not (and source to from))
-      (or to
-	  (mapcar #'(lambda (x) (maybe-diddle-case x diddle-case)) source))
+      (let ((source (mapcar #'(lambda (x) (maybe-diddle-case x diddle-case))
+			    source)))
+	(if (null to)
+	    source
+	    (collect ((res))
+	      (res (cond ((null source) (first to))
+			 ((eq (first to) :absolute) :absolute)
+			 (t (first source))))
+	      (let ((match (rest source)))
+		(dolist (to-part (rest to))
+		  (cond ((eq to-part :wild)
+			 (when match
+			   (res (first match))
+			   (setf match nil)))
+			((eq to-part :wild-inferiors)
+			 (when match
+			   (dolist (src-part match)
+			     (res src-part))
+			   (setf match nil)))
+			(t
+			 (res to-part)))))
+	      (res))))
       (collect ((res))
-	(res (first source))
+	(res (if (eq (first to) :absolute)
+		 :absolute
+		 (first source)))
 	(let ((subs-left (compute-directory-substitutions (rest source)
 							  (rest from))))
 	  (dolist (to-part (rest to))
@@ -1458,7 +1490,10 @@ a host-structure or string."
 			   *logical-hosts*)))
        (if (or found (not errorp))
 	   found
-	   (error "Logical host not yet defined: ~S" thing))))
+	   (error 'simple-file-error
+		  :pathname thing
+		  :format-control "Logical host not yet defined: ~S"
+		  :format-arguments (list thing)))))
     (logical-host thing)))
 
 
@@ -1701,6 +1736,36 @@ a host-structure or string."
 		  (t (error "Invalid keyword: ~S" piece))))))
        (apply #'concatenate 'simple-string (strings))))))
 
+;;; UNPARSE-ENOUGH-NAMESTRING -- Internal
+;;;
+(defun unparse-enough-namestring (pathname defaults)
+  (let* ((path-dir (pathname-directory pathname))
+        (def-dir (pathname-directory defaults))
+        (enough-dir
+         ;; Go down the directory lists to see what matches.  What's
+         ;; left is what we want, more or less.
+         (cond ((and (eq (first path-dir) (first def-dir))
+                     (eq (first path-dir) :absolute))
+                ;; Both paths are :absolute, so find where the common
+                ;; parts end and return what's left
+                (do* ((p (rest path-dir) (rest p))
+                      (d (rest def-dir) (rest d)))
+                     ((or (endp p) (endp d)
+                          (not (equal (first p) (first d))))
+                      `(:relative ,@p))))
+               (t
+                ;; At least one path is :relative, so just return the
+                ;; original path.  If the original path is :relative,
+                ;; then that's the right one.  If PATH-DIR is
+                ;; :absolute, we want to return that except when
+                ;; DEF-DIR is :absolute, as handled above. so return
+                ;; the original directory.
+                path-dir))))
+    (make-pathname :host (pathname-host pathname)
+                  :directory enough-dir
+                  :name (pathname-name pathname)
+                  :type (pathname-type pathname)
+                  :version (pathname-version pathname))))
 
 ;;; UNPARSE-LOGICAL-NAMESTRING -- Internal
 ;;;
@@ -1795,7 +1860,10 @@ a host-structure or string."
   (typecase pathname
     (logical-pathname
      (dolist (x (logical-host-canon-transls (%pathname-host pathname))
-		(error "No translation for ~S" pathname))
+		(error 'simple-file-error
+		       :pathname pathname
+		       :format-control "No translation for ~S"
+		       :format-arguments (list pathname)))
        (destructuring-bind (from to) x
 	 (when (pathname-match-p pathname from)
 	   (return (translate-logical-pathname

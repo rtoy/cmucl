@@ -23,7 +23,11 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;; 
+;;;
+
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.14.2.1 2000/05/23 16:39:04 pw Exp $")
+;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
 ;;;   Moon's Common Lisp code walker
@@ -123,718 +127,7 @@
           This most likely source of this error is a program which tries to~%~
           to use the PCL portable code walker to build its own evaluator."))
 
-
-;;;
-;;; In Coral Common Lisp, the macroexpansion environment is just a list
-;;; of environment entries.  The cadr of each element specifies the type
-;;; of the element.  The only types that interest us are CCL::MACRO and
-;;; FUNCTION.  In these cases the element is interpreted as follows.
-;;;
-;;;   (<function-name> CCL::MACRO . macroexpansion-function)
-;;;   
-;;;   (<function-name> FUNCTION . <fn>)
-;;;   
-;;;   When in the compiler, <fn> is a gensym which will be
-;;;   a variable which bound at run-time to the function.
-;;;   When in the interpreter, <fn> is the actual function.
-;;;   
-;;;
-#+:Coral
-(progn
 
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)
-  `(let ((,new-env (with-augmented-environment-internal ,old-env
-							,functions
-							,macros)))
-     ,@body))
-
-(defun with-augmented-environment-internal (env functions macros)
-  (dolist (f functions)
-    (push (list* f 'function (gensym)) env))
-  (dolist (m macros)
-    (push (list* (car m) 'ccl::macro (cadr m)) env))
-  env)
-
-(defun environment-function (env fn)
-  (let ((entry (assoc fn env :test #'equal)))
-    (and entry
-	 (eq (cadr entry) 'function)
-	 (cddr entry))))
-
-(defun environment-macro (env macro)
-  (let ((entry (assoc macro env :test #'equal)))
-    (and entry
-	 (eq (cadr entry) 'ccl::macro)
-	 (cddr entry))))
-
-);#+:Coral
-
-
-;;;
-;;; Franz Common Lisp is a lot like Coral Lisp.  The macroexpansion
-;;; environment is just a list of entries.  The cadr of each element
-;;; specifies the type of the element.  The types that interest us
-;;; are FUNCTION, EXCL::MACRO, and COMPILER::FUNCTION-VALUE.  These
-;;; are interpreted as follows:
-;;;
-;;;   (<function-name> FUNCTION . <a lexical closure>)
-;;;
-;;;      This happens in the interpreter with lexically
-;;;      bound functions.
-;;;
-;;;   (<function-name> COMPILER::FUNCTION-VALUE . <gensym>)
-;;;
-;;;      This happens in the compiler.  The gensym represents
-;;;      a variable which will be bound at run time to the
-;;;      function object.
-;;;
-;;;   (<function-name> EXCL::MACRO . <a lambda>)
-;;;
-;;;      In both interpreter and compiler, this is the
-;;;      representation used for macro definitions.
-;;;   
-;;;
-#+:ExCL
-(progn
-
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)
-  `(let ((,new-env (with-augmented-environment-internal ,old-env
-							,functions
-							,macros)))
-     ,@body))
-
-(defun with-augmented-environment-internal (env functions macros)
-  (let (#+allegro-v4.1 (env-tail (cdr env)) #+allegro-v4.1 (env (car env)))
-    (dolist (f functions)
-      (push (list* f 'function #'unbound-lexical-function) env))
-    (dolist (m macros)
-      (push (list* (car m) 'excl::macro (cadr m)) env))
-    #-allegro-v4.1 env #+allegro-v4.1 (cons env env-tail)))
-
-(defun environment-function (env fn)
-  (let* (#+allegro-v4.1 (env (car env))
-	 (entry (assoc fn env :test #'equal)))
-    (and entry
-	 (or (eq (cadr entry) 'function)
-	     (eq (cadr entry) 'compiler::function-value))
-	 (cddr entry))))
-
-(defun environment-macro (env macro)
-  (let* (#+allegro-v4.1 (env (car env))
-	 (entry (assoc macro env :test #'equal)))
-    (and entry
-	 (eq (cadr entry) 'excl::macro)
-	 (cddr entry))))
-
-);#+:ExCL
-
-
-#+Lucid
-(progn
-  
-(proclaim '(inline
-	    %alphalex-p
-	    add-contour-to-env-shape
-	    make-function-variable
-	    make-sfc-contour
-	    sfc-contour-type
-	    sfc-contour-elements
-	    add-sfc-contour
-	    add-function-contour
-	    add-macrolet-contour
-	    find-variable-in-contour
-	    find-alist-element-in-contour
-	    find-macrolet-in-contour))
-
-(defun %alphalex-p (object)
-  #-Prime
-  (eq (cadddr (cddddr object)) 'lucid::%alphalex)
-  #+Prime
-  (eq (caddr (cddddr object)) 'lucid::%alphalex))
-
-#+Prime 
-(defun lucid::augment-lexenv-fvars-dummy (lexical vars)
-  (lucid::augment-lexenv-fvars-aux lexical vars '() '() 'flet '()))
-
-(defconstant function-contour 1)
-(defconstant macrolet-contour 5)
-
-(defstruct lucid::contour
-  type
-  elements)
-
-(defun add-contour-to-env-shape (contour-type elements env-shape)
-  (cons (make-contour :type contour-type
-		      :elements elements)
-	env-shape))
-
-(defstruct (variable (:constructor make-variable (name source-type)))
-  name
-  (identifier nil)
-  source-type)
-
-(defconstant function-sfc-contour 1)
-(defconstant macrolet-sfc-contour 8)
-(defconstant function-variable-type 1)
-
-(defun make-function-variable (name)
-  (make-variable name function-variable-type))
-
-(defun make-sfc-contour (type elements)
-  (cons type elements))
-
-(defun sfc-contour-type (sfc-contour)
-  (car sfc-contour))
-
-(defun sfc-contour-elements (sfc-contour)
-  (cdr sfc-contour))
-
-(defun add-sfc-contour (element-list environment type)
-  (cons (make-sfc-contour type element-list) environment))
-
-(defun add-function-contour (variable-list environment)
-  (add-sfc-contour variable-list environment function-sfc-contour))
-
-(defun add-macrolet-contour (alist environment)
-  (add-sfc-contour alist environment macrolet-sfc-contour))
-
-(defun find-variable-in-contour (name contour)
-  (dolist (element (sfc-contour-elements contour) nil)
-    (when (eq (variable-name element) name)
-      (return element))))
-
-(defun find-alist-element-in-contour (name contour)
-  (cdr (assoc name (sfc-contour-elements contour))))
-
-(defun find-macrolet-in-contour (name contour)
-  (find-alist-element-in-contour name contour))
-
-(defmacro do-sfc-contours ((contour-var environment &optional result)
-			   &body body)
-  `(dolist (,contour-var ,environment ,result) ,@body))
-
-
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)     
-  `(let* ((,new-env (with-augmented-environment-internal ,old-env
-							 ,functions
-							 ,macros)))
-     ,@body))
-
-;;;
-;;; with-augmented-environment-internal is where the real work of augmenting
-;;; the environment happens.
-;;; 
-(defun with-augmented-environment-internal (env functions macros)
-  (let ((function-names (mapcar #'first functions))
-	(macro-names (mapcar #'first macros))
-	(macro-functions (mapcar #'second macros)))
-    (cond ((or (null env)
-	       (contour-p (first env)))
-	   (when function-names
-	     (setq env (add-contour-to-env-shape function-contour
-						 function-names
-						 env)))
-	   (when macro-names
-	     (setq env (add-contour-to-env-shape macrolet-contour
-						 (pairlis macro-names
-							  macro-functions)
-						 env))))
-	  ((%alphalex-p env)
-	   (when function-names
-	     (setq env (lucid::augment-lexenv-fvars-dummy env function-names)))
-	   (when macro-names
-	     (setq env (lucid::augment-lexenv-mvars env
-						    macro-names
-						    macro-functions))))
-	  (t
-	   (when function-names
-	     (setq env (add-function-contour
-			 (mapcar #'make-function-variable function-names)
-			 env)))
-	   (when macro-names
-	     (setq env (add-macrolet-contour
-			 (pairlis macro-names macro-functions)
-			 env)))))
-    env))
-	 
-
-(defun environment-function (env fn)
-  (cond ((null env) nil)
-	((contour-p (first env))
-	 (if (lucid::find-lexical-function fn env)
-	     t
-	     nil))
-	((%alphalex-p env)
-	 (if (lucid::lexenv-fvar fn env)
-	     t
-	     nil))
-	(t (do-sfc-contours (contour env nil)
-	     (let ((type (sfc-contour-type contour)))
-	       (cond ((eql type function-sfc-contour)
-		      (when (find-variable-in-contour fn contour)
-			(return t)))
-		     ((eql type macrolet-sfc-contour)
-		      (when (find-macrolet-in-contour fn contour)
-			(return nil)))))))))
-		      
-(defun environment-macro (env macro)
-  (cond ((null env) nil)
-	((contour-p (first env))
-	 (lucid::find-lexical-macro macro env))
-	((%alphalex-p env)
-	 (lucid::lexenv-mvar macro env))
-	(t (do-sfc-contours (contour env nil)
-	     (let ((type (sfc-contour-type contour)))
-	       (cond ((eql type function-sfc-contour)
-		      (when (find-variable-in-contour macro contour)
-			(return nil)))
-		     ((eql type macrolet-sfc-contour)
-		      (let ((fn (find-macrolet-in-contour macro contour)))
-			(when fn
-			  (return fn))))))))))
-  
-
-);#+Lucid
-
-
-
-;;;
-;;; On the 3600, the documentation for how the environments are represented
-;;; is in sys:sys;eval.lisp.  That total information is not repeated here.
-;;; The important points are that:
-;;;    si:env-variables returns a list of which each element is:
-;;;
-;;;		(symbol value)
-;;;	     or (symbol . locative)
-;;;
-;;;	The first form is for lexical variables, the second for
-;;;	special and instance variables.  In either case CADR of
-;;;	the entry is the value and SETF of CADR is used to change
-;;;	the value.  Variables are looked up with ASSQ.
-;;;
-;;;    si:env-functions returns a list of which each element is:
-;;;     
-;;;		(symbol definition)
-;;;
-;;;	where definition is anything that could go in a function cell.
-;;;	This is used for both local functions and local macros.
-;;;
-;;; The 3600 stack conses its environments (at least in the interpreter).
-;;; This means that code written using this walker and running on the 3600
-;;; must not hold on to the environment after the walk-function returns.
-;;; No code in this walker or in PCL does that.
-;;;
-#+Genera
-(progn
-
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)
-  (let ((funs (make-symbol "FNS"))
-	(macs (make-symbol "MACROS"))
-	(new  (make-symbol "NEW")))
-    `(let ((,funs ,functions)
-	   (,macs ,macros)
-	   (,new ()))
-       (dolist (f ,funs)
-	 (push `(,(car f) ,#'unbound-lexical-function) ,new))
-       (dolist (m ,macs)
-	 (push `(,(car m) (special ,(cadr m))) ,new))
-       (let* ((.old-env. ,old-env)
-	      (.old-vars. (pop .old-env.))
-	      (.old-funs. (pop .old-env.))
-	      (.old-blks. (pop .old-env.))
-	      (.old-tags. (pop .old-env.))
-	      (.old-dcls. (pop .old-env.)))
-	 (si:with-interpreter-environment (,new-env
-					   .old-env.
-					   .old-vars.
-					   (append ,new .old-funs.)
-					   .old-blks.
-					   .old-tags.
-					   .old-dcls.)
-	   ,@body)))))
-  
-
-(defun environment-function (env fn)
-  (if (null env)
-      (values nil nil)
-      (let ((entry (assoc fn (si:env-functions env) :test #'equal)))
-	(if (and entry
-		 (or (not (listp (cadr entry)))
-		     (not (eq (caadr entry) 'special))))
-	    (values (cadr entry) t)
-	    (environment-function (si:env-parent env) fn)))))
-
-(defun environment-macro (env macro)
-  (if (null env)
-      (values nil nil)
-      (let ((entry (assoc macro (si:env-functions env) :test #'equal)))
-	(if (and entry
-		 (listp (cadr entry))
-		 (eq (caadr entry) 'special))
-	    (values (cadadr entry) t)
-	    (environment-macro (si:env-parent env) macro)))))
-
-);#+Genera
-
-#+Cloe-Runtime
-(progn
-
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)
-  `(let ((,new-env (with-augmented-environment-internal ,old-env ,functions ,macros)))
-     ,@body))
-
-(defun with-augmented-environment-internal (env functions macros)
-  functions
-  (dolist (m macros)
-    (setf env `(,(first m) (compiler::macro . ,(second m)) ,@env)))
-  env)
-
-(defun environment-function (env fn)
-  nil)
-
-(defun environment-macro (env macro)
-  (let ((entry (getf env macro)))
-    (if (and (consp entry)
-	     (eq (car entry) 'compiler::macro))
-	(values (cdr entry) t)
-	(values nil nil))))
-
-);#+Cloe-Runtime
-
-
-;;;
-;;; In Xerox Lisp, the compiler and interpreter use different structures for
-;;; the environment.  This doesn't cause a serious problem, the parts of the
-;;; environments we are concerned with are fairly similar.
-;;; 
-#+:Xerox
-(progn
-
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)     
-  `(let* ((,new-env (with-augmented-environment-internal ,old-env
-							 ,functions
-							 ,macros)))
-     ,@body))
-
-;;;
-;;; with-augmented-environment-internal is where the real work of augmenting
-;;; the environment happens.  Before it gets there, env had better not be NIL
-;;; anymore because we have to know what kind of environment we are supposed
-;;; to be building up.  This is probably never a real concern in practice.
-;;; It better not be because we don't do anything about it.
-;;; 
-(defun with-augmented-environment-internal (env functions macros)
-  (cond
-     ((compiler::env-p env)
-	(dolist (f functions)
-	   (setq env (compiler::copy-env-with-function
-		       env f :function)))
-	(dolist (m macros)
-	   (setq env (compiler::copy-env-with-function
-	 	  env (car m) :macro (cadr m)))))
-     (t (setq env (if (il:environment-p env)
-		    (il:\\copy-environment env)
-		    (il:\\make-environment)))
-	;; The functions field of the environment is a plist of function names
-	;; and conses like (:function . fn) or (:macro . expansion-fn).
-	;; Note that we can't smash existing entries in this plist since these
-	;; are likely shared with older environments.
-	(dolist (f functions)
-	  (setf (il:environment-functions env)
-		(list* f (cons :function #'unbound-lexical-function)
-		       (il:environment-functions env))))
-	(dolist (m macros)
-	  (setf (il:environment-functions env)
-		(list* (car m) (cons :macro (cadr m))
-		       (il:environment-functions env))))))
-  env)
-
-(defun environment-function (env fn)
-  (cond ((compiler::env-p env) (eq (compiler:env-fboundp env fn) :function))
-	((il:environment-p env) (eq (getf (il:environment-functions env) fn)
-				    :function))
-	(t nil)))
-
-(defun environment-macro (env macro) 
-  (cond ((compiler::env-p env)
-	 (multiple-value-bind (type def)
-	     (compiler:env-fboundp env macro)
-	   (when (eq type :macro) def)))
-	((il:environment-p env)
-	 (xcl:destructuring-bind (type . def)
-	     (getf (il:environment-functions env) macro)
-	   (when (eq type :macro) def)))
-	(t nil)))
-
-);#+:Xerox
-
-
-;;;
-;;; In IBUKI Common Lisp, the macroexpansion environment is a three element
-;;; list.  The second element describes lexical functions and macros.  The 
-;;; function entries in this list have the form 
-;;;     (<name> . (FUNCTION . (<function-value> . nil))
-;;; The macro entries have the form 
-;;;     (<name> . (MACRO . (<macro-value> . nil)).
-;;;
-;;;
-#+(or KCL IBCL)
-(progn
-
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)
-	  `(let ((,new-env (with-augmented-environment-internal ,old-env
-								,functions
-								,macros)))
-	     ,@body))
-
-(defun with-augmented-environment-internal (env functions macros)
-  (let ((first (first env))
-	(lexicals (second env))
-	(third (third env)))
-    (dolist (f functions)
-      (push `(,(car f) .  (function  . (,#'unbound-lexical-function . nil)))
-	    lexicals))
-    (dolist (m macros)
-      (push `(,(car m)  .  (macro . ( ,(cadr m) . nil))) 
-	    lexicals))
-    (list first lexicals third)))
-
-(defun environment-function (env fn)
-  (when env
-	(let ((entry (assoc fn (second env))))
-	  (and entry
-	       (eq (cadr entry) 'function)
-	       (caddr entry)))))
-
-(defun environment-macro (env macro)
-  (when env
-	(let ((entry (assoc macro (second env))))
-	  (and entry
-	       (eq (cadr entry) 'macro)
-	       (caddr entry)))))
-);#+(or KCL IBCL)
-
-
-;;;   --- TI Explorer --
-
-;;; An environment is a two element list, whose car we can ignore and
-;;; whose cadr is list of the local-definitions-frames. Each
-;;; local-definitions-frame holds either macros or functions, but not
-;;; both.  Each frame is a plist of <name> <def> <name> <def> ...  where
-;;; <name> is a locative to the function cell of the symbol that names
-;;; the function or macro, and <def> is the new def or NIL if this is function
-;;; redefinition or (cons 'ticl:macro <macro-expansion-function>) if this is a macro
-;;; redefinition.
-;;;
-;;; Here's an example.  For the form:
-;;; (defun foo ()
-;;;   (macrolet ((bar (a b) (list a b))
-;;;	         (bar2 (a b) (list a b)))
-;;;     (flet ((some-local-fn (c d) (print (list c d)))
-;;;	       (another (c d) (print (list c d))))
-;;;       (bar (some-local-fn 1 2) 3))))
-
-;;; the environment arg to macroexpand-1 when called on
-;;; (bar (some-local-fn 1 2) 3)
-;;;is 
-;;;(NIL ((#<DTP-LOCATIVE 4710602> NIL
-;;;       #<DTP-LOCATIVE 4710671> NIL)
-;;;      (#<DTP-LOCATIVE 7346562>
-;;;       (TICL:MACRO TICL:NAMED-LAMBDA (BAR (:DESCRIPTIVE-ARGLIST (A B)))
-;;;		   (SYS::*MACROARG* &OPTIONAL SYS::*MACROENVIRONMENT*)
-;;;		   (BLOCK BAR ....))
-;;;       #<DTP-LOCATIVE 4710664>
-;;;       (TICL:MACRO TICL:NAMED-LAMBDA (BAR2 (:DESCRIPTIVE-ARGLIST (A B)))
-;;;		   (SYS::*MACROARG* &OPTIONAL SYS::*MACROENVIRONMENT*)
-;;;		   (BLOCK BAR2 ....))))
-#+TI
-(progn 
-
-;;; from sys:site;macros.lisp
-(eval-when (compile load eval)
-  
-(DEFMACRO MACRO-DEF? (thing)
-  `(AND (CONSP ,thing) (EQ (CAR ,thing) 'TICL::MACRO)))
-
-;; the following macro generates code to check the 'local' environment
-;; for a macro definition for THE SYMBOL <name>. Such a definition would
-;; be set up only by a MACROLET. If a macro definition for <name> is
-;; found, its expander function is returned.
-
-(DEFMACRO FIND-LOCAL-DEFINITION (name local-function-environment)
-  `(IF ,local-function-environment
-       (LET ((vcell (ticl::LOCF (SYMBOL-FUNCTION ,name))))
-	 (DOLIST (frame  ,local-function-environment)
-	   ;; <value> is nil or a locative
-	   (LET ((value (sys::GET-LOCATION-OR-NIL (ticl::LOCF frame)
-						  vcell))) 
-	     (When value (RETURN (CAR value))))))
-       nil)))
-
- 
-;;;Edited by Reed Hastings         13 Jan 88  16:29
-(defun environment-macro (env macro)
-  "returns what macro-function would, ie. the expansion function"
-  ;;some code picked off macroexpand-1
-  (let* ((local-definitions (cadr env))
-	 (local-def (find-local-definition macro local-definitions)))
-    (if (macro-def? local-def)
-	(cdr local-def))))
-
-;;;Edited by Reed Hastings         13 Jan 88  16:29
-;;;Edited by Reed Hastings         7 Mar 88  19:07
-(defun environment-function (env fn)
-  (let* ((local-definitions (cadr env)))
-    (dolist (frame local-definitions)
-      (let ((val (getf frame
-		       (ticl::locf (symbol-function fn))
-		       :not-found-marker)))
-	(cond ((eq val :not-found-marker))
-	      ((functionp val) (return t))
-	      ((and (listp val)
-		    (eq (car val) 'ticl::macro))
-	       (return nil))
-	      (t
-	       (error "we are confused")))))))
-	     
-
-;;;Edited by Reed Hastings         13 Jan 88  16:29
-;;;Edited by Reed Hastings         7 Mar 88  19:07
-(defun with-augmented-environment-internal (env functions macros)
-  (let ((local-definitions (cadr env))
-	(new-local-fns-frame
-	  (mapcan #'(lambda (fn)
-		      (list (ticl:locf (symbol-function (car fn)))
-			    #'unbound-lexical-function))
-		  functions))
-	 (new-local-macros-frame
-	   (mapcan #'(lambda (m)
-		       (list (ticl:locf (symbol-function (car m))) (cons 'ticl::macro (cadr m))))
-		   macros)))
-    (when new-local-fns-frame 
-      (push new-local-fns-frame local-definitions))
-    (when new-local-macros-frame
-      (push new-local-macros-frame local-definitions))   
-    `(,(car env) ,local-definitions)))
-
-
-;;;Edited by Reed Hastings         7 Mar 88  19:07
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)
-  `(let ((,new-env (with-augmented-environment-internal ,old-env
-							,functions
-							,macros)))
-     ,@body))
-
-);#+TI
-
-
-#+(and dec vax common)
-(progn
-
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)
-  `(let ((,new-env (with-augmented-environment-internal ,old-env
-							,functions
-							,macros)))
-     ,@body))
-
-(defun with-augmented-environment-internal (env functions macros)
-  #'(lambda (op &optional (arg nil arg-p))
-      (cond ((eq op :macro-function) 
-	     (unless arg-p (error "Invalid environment use."))
-	     (lookup-macro-function arg env functions macros))
-            (arg-p
-	     (error "Invalid environment operation: ~S ~S" op arg))
-            (t
-	     (lookup-macro-function op env functions macros)))))
-
-(defun lookup-macro-function (name env fns macros)
-  (let ((m (assoc name macros)))
-    (cond (m                (cadr m))
-          ((assoc name fns) :function)
-          (env              (funcall env name))
-          (t                nil))))
-
-(defun environment-macro (env macro)
-  (let ((m (and env (funcall env macro))))
-    (and (not (eq m :function)) 
-         m)))
-
-;;; Nobody calls environment-function.  What would it return, anyway?
-);#+(and dec vax common)
-
-
-;;;
-;;; In Golden Common Lisp, the macroexpansion environment is just a list
-;;; of environment entries.  Unless the car of the list is :compiler-menv 
-;;; it is an interpreted environment.  The cadr of each element specifies 
-;;; the type of the element.  The only types that interest us are GCL:MACRO
-;;; and FUNCTION.  In these cases the element is interpreted as follows.
-;;;
-;;; Compiled:
-;;;   (<function-name> <gensym> macroexpansion-function)
-;;;   (<function-name> <fn>)
-;;;   
-;;; Interpreted:
-;;;   (<function-name> GCL:MACRO macroexpansion-function)
-;;;   (<function-name> <fn>)
-;;;   
-;;;   When in the compiler, <fn> is a gensym which will be
-;;;   a variable which bound at run-time to the function.
-;;;   When in the interpreter, <fn> is the actual function.
-;;;   
-;;;
-#+gclisp
-(progn
-
-(defmacro with-augmented-environment
-	  ((new-env old-env &key functions macros) &body body)
-  `(let ((,new-env (with-augmented-environment-internal ,old-env
-							,functions
-							,macros)))
-     ,@body))
-
-(defun with-augmented-environment-internal (env functions macros)
-  (let ((new-entries nil))
-    (dolist (f functions)
-      (push (cons (car f) nil) new-entries))
-    (dolist (m macros)
-      (push (cons (car m)
-		  (if (eq :compiler-menv (car env))
-		      (if (eq (caadr m) 'lisp::lambda)
-			  `(,(gensym) ,(cadr m))
-			`(,(gensym) ,@(cadr m)))
-		    `(gclisp:MACRO ,@(cadr m))))
-	      new-entries))
-    (if (eq :compiler-menv (car env))
-	`(:compiler-menv ,@new-entries ,@(cdr env))
-      (append new-entries env))))
-
-(defun environment-function (env fn)
-  (let ((entry (lisp::lexical-function fn env)))
-    (and entry 
-	 (eq entry 'lisp::lexical-function)
-	 fn)))
-
-(defun environment-macro (env macro)
-  (let ((entry (assoc macro (if (eq :compiler-menv (first env))
-				 (rest env)
-			       env))))
-    (and entry
-	 (consp entry)
-	 (symbolp (car entry))			;name
-	 (symbolp (cadr entry))			;gcl:macro or gensym
-	 (nthcdr 2 entry))))
-
-);#+gclisp
 
 
 ;;;; CMU Common Lisp version of environment frobbing stuff.
@@ -846,8 +139,6 @@
 ;;; or a list (MACRO . <function>) (a local macro, with the specifier
 ;;; expander.)    Note that Name may be a (SETF <name>) function.
 
-#+:CMU
-(progn
 
 (defmacro with-augmented-environment
 	  ((new-env old-env &key functions macros) &body body)
@@ -889,8 +180,6 @@
 	   (eq (cadr entry) 'c::macro)
 	   (function-lambda-expression (cddr entry))))))
 
-); end of #+:CMU
-
 
 
 (defmacro with-new-definition-in-environment
@@ -914,20 +203,11 @@
 	      (,new-env ,old-env :functions ,functions :macros ,macros)
 	 ,@body))))
 
-#-Genera
 (defun convert-macro-to-lambda (llist body &optional (name "Dummy Macro"))
   (let ((gensym (make-symbol name)))
     (eval `(defmacro ,gensym ,llist ,@body))
     (macro-function gensym)))
 
-#+Genera
-(defun convert-macro-to-lambda (llist body &optional (name "Dummy Macro"))
-  (si:defmacro-1
-    'sys:named-lambda 'sys:special (make-symbol name) llist body))
-
-
-
-
 
 ;;;
 ;;; Now comes the real walker.
@@ -1024,36 +304,9 @@
 ;;; Common Lisp nit:
 ;;;   variable-globally-special-p should be defined in Common Lisp.
 ;;;
-#-(or Genera Cloe-Runtime Lucid Xerox Excl KCL IBCL (and dec vax common) :CMU HP-HPLabs
-      GCLisp TI pyramid)
-(defvar *globally-special-variables* ())
 
 (defun variable-globally-special-p (symbol)
-  #+Genera                      (si:special-variable-p symbol)
-  #+Cloe-Runtime		(compiler::specialp symbol)
-  #+Lucid                       (lucid::proclaimed-special-p symbol)
-  #+TI                          (get symbol 'special)
-  #+Xerox                       (il:variable-globally-special-p symbol)
-  #+(and dec vax common)        (get symbol 'system::globally-special)
-  #+(or KCL IBCL)               (si:specialp symbol)
-  #+excl                        (get symbol 'excl::.globally-special.)
-  #+:CMU			(eq (ext:info variable kind symbol) :special)
-  #+HP-HPLabs                   (member (get symbol 'impl:vartype)
-					'(impl:fluid impl:global)
-					:test #'eq)
-  #+:GCLISP                     (gclisp::special-p symbol)
-  #+pyramid			(or (get symbol 'lisp::globally-special)
-				    (get symbol
-					 'clc::globally-special-in-compiler))
-  #+:CORAL                      (ccl::proclaimed-special-p symbol)
-  #-(or Genera Cloe-Runtime Lucid Xerox Excl KCL IBCL (and dec vax common) :CMU HP-HPLabs
-	GCLisp TI pyramid :CORAL)
-  (or (not (null (member symbol *globally-special-variables* :test #'eq)))
-      (when (eval `(flet ((ref () ,symbol))
-		     (let ((,symbol '#,(list nil)))
-		       (and (boundp ',symbol) (eq ,symbol (ref))))))
-	(push symbol *globally-special-variables*)
-	t)))
+  (eq (ext:info variable kind symbol) :special))
 
 
   ;;   
@@ -1164,7 +417,7 @@
 (define-walker-template SYMBOL-MACROLET      walk-symbol-macrolet)
 (define-walker-template TAGBODY              walk-tagbody)
 (define-walker-template THE                  (NIL QUOTE EVAL))
-#+cmu(define-walker-template EXT:TRULY-THE   (NIL QUOTE EVAL))
+(define-walker-template EXT:TRULY-THE        (NIL QUOTE EVAL))
 (define-walker-template THROW                (NIL EVAL EVAL))
 (define-walker-template UNWIND-PROTECT       (NIL RETURN REPEAT (EVAL)))
 
@@ -1179,36 +432,6 @@
 (define-walker-template PROG    walk-prog)
 (define-walker-template PROG*   walk-prog*)
 (define-walker-template COND    (NIL REPEAT ((TEST REPEAT (EVAL)))))
-
-#+Genera
-(progn
-  (define-walker-template zl::named-lambda walk-named-lambda)
-  (define-walker-template SCL:LETF walk-let)
-  (define-walker-template SCL:LETF* walk-let*)
-  )
-
-#+Lucid
-(progn
-  (define-walker-template #+LCL3.0 lucid-common-lisp:named-lambda
-			  #-LCL3.0 sys:named-lambda walk-named-lambda)
-  )
-
-#+(or KCL IBCL)
-(progn
-  (define-walker-template lambda-block walk-named-lambda);Not really right,
-							 ;we don't hack block
-						         ;names anyways.
-  )
-
-#+TI
-(progn
-  (define-walker-template TICL::LET-IF walk-let-if)
-  )
-
-#+:Coral
-(progn
-  (define-walker-template ccl:%stack-block walk-let)
-  )
 
 
 
@@ -1352,10 +575,7 @@
 			  newnewnewform)))
 		   ((and (symbolp fn)
 			 (not (fboundp fn))
-			 #+cmu17
-			 (special-operator-p fn)
-			 #-cmu17
-			 (special-form-p fn))
+			 (special-operator-p fn))
 		    (error
 		     "~S is a special form, not defined in the CommonLisp.~%~
 		      manual This code walker doesn't know how to walk it.~%~
@@ -1382,8 +602,6 @@
 			 (= (length form) 2)
 			 (eq (car form) 'setf)))
 		form)
-	       #+Lispm
-	       ((sys:validate-function-spec form) form)
 	       (t (walk-form-internal form context env)))))
       (case (car template)
         (REPEAT

@@ -1,17 +1,19 @@
-vpath %.h /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
-vpath %.c /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
-vpath %.S /usr/src/cmucl/cmucl/p86/lisp:/usr/src/cmucl/cmucl/src/lisp
-CPPFLAGS = -I. -I/usr/src/cmucl/cmucl/src/lisp -I- -I/usr/X11R6/include
-CC = gcc  -Wstrict-prototypes -O2 -fno-strength-reduce # -Wall
+PATH1 = ../../src/lisp
+PATH2 = ../../p86/lisp
+vpath %.h $(PATH2):$(PATH1)
+vpath %.c $(PATH2):$(PATH1)
+vpath %.S $(PATH2):$(PATH1)
+CPPFLAGS = -I. -I$(PATH2) -I$(PATH1) -I- -I/usr/X11R6/include
+CC = gcc
 LD = ld
 CPP = cpp
-CFLAGS =  -g -O2 -DGENCGC
+CFLAGS = -Wstrict-prototypes -Wall -O2 -g -DGENCGC
 ASFLAGS = -g -DGENCGC
-NM = nm -p
-UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
+NM = $(PATH1)/linux-nm
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S linux-stubs.S
 ARCH_SRC = x86-arch.c
 OS_SRC = Linux-os.c os-common.c
-OS_LINK_FLAGS=
-OS_LIBS= -ldl
-GC_SRC= gencgc.c
+OS_LINK_FLAGS = -Xlinker --export-dynamic
+OS_LIBS = -ldl
+GC_SRC = gencgc.c

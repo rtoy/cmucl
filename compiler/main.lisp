@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.110 1997/02/15 15:32:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.110.2.1 2000/05/23 16:37:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,6 @@
 (proclaim '(special *constants* *free-variables* *compile-component*
 		    *code-vector* *next-location* *result-fixups*
 		    *free-functions* *source-paths*
-		    *seen-blocks* *seen-functions* *list-conflicts-table*
 		    *continuation-number* *continuation-numbers*
 		    *number-continuations* *tn-id* *tn-ids* *id-tns*
 		    *label-ids* *label-id* *id-labels*
@@ -263,7 +262,8 @@
 ;;;
 (defun native-compile-component (component)
   (let ((*code-segment* nil)
-	(*elsewhere* nil))
+	(*elsewhere* nil)
+	(*elsewhere-label* nil))
     (maybe-mumble "GTN ")
     (gtn-analyze component)
     (maybe-mumble "LTN ")
@@ -310,7 +310,7 @@
 	  (when *check-consistency*
 	    (maybe-mumble "CheckL ")
 	    (check-life-consistency component))
-	  
+
 	  (maybe-mumble "Pack ")
 	  (pack component)
 	  
@@ -326,7 +326,7 @@
 	  (multiple-value-bind
 	      (length trace-table fixups)
 	      (generate-code component)
-	    
+
 	    (when (and *compiler-trace-output*
 		       (backend-disassem-params *backend*))
 	      (format *compiler-trace-output*
@@ -347,7 +347,7 @@
 				    length trace-table fixups
 				    *compile-object*))
 	      (null))))
-	    
+
       (when *code-segment*
 	(new-assem:release-segment *code-segment*))
       (when *elsewhere*
@@ -503,11 +503,6 @@
     (clrhash *free-functions*)
     (clrhash *free-variables*)
     (clrhash *constants*))
-  ;;
-  ;; Clear debug counters and tables.
-  (clrhash *seen-blocks*)
-  (clrhash *seen-functions*)
-  (clrhash *list-conflicts-table*)
 
   (when debug-too
     (clrhash *continuation-numbers*)
@@ -664,7 +659,7 @@
   (positions (make-array 10 :fill-pointer 0 :adjustable t) :type (vector t))
   ;;
   ;; Language to use.  Normally Lisp, but sometimes Dylan.
-  (language :lisp :type (member :lisp :dylan)))
+  (language :lisp :type (member :lisp #+nil :dylan)))
 
 ;;; The Source-Info structure provides a handle on all the source information
 ;;; for an entire compilation.
@@ -700,11 +695,7 @@
 		     (make-file-info :name (truename x)
 				     :untruename x
 				     :write-date (file-write-date x)
-				     :language
-				     (if (string-equal (pathname-type x)
-						       "dylan")
-					 :dylan
-					 :lisp)))
+				     :language :lisp))
 		 files)))
 
     (make-source-info :files file-info
@@ -729,7 +720,7 @@
 ;;;    Return a SOURCE-INFO which will read from Stream.
 ;;;
 (defun make-stream-source-info (stream language)
-  (declare (type (member :lisp :dylan) language))
+  (declare (type (member :lisp #+nil :dylan) language))
   (let ((files (list (make-file-info :name :stream :language language))))
     (make-source-info
      :files files
@@ -902,21 +893,7 @@
 		 (clrhash *source-paths*)
 		 (find-source-paths form current-idx)
 		 (process-form form
-			       `(original-source-start 0 ,current-idx)))))))
-      (:dylan
-       (setf *coalesce-constants* nil)
-       (let ((*error-output* *compiler-error-output*))
-	 (dylan::parse-and-convert
-	  stream
-	  #'(lambda (form start-position)
-	      (let* ((forms (file-info-forms file))
-		     (current-idx (+ (fill-pointer forms)
-				     (file-info-source-root file))))
-		(vector-push-extend form forms)
-		(vector-push-extend start-position (file-info-positions file))
-		(clrhash *source-paths*)
-		(process-form form
-			      `(original-source-start 0 ,current-idx))))))))
+			       `(original-source-start 0 ,current-idx))))))))
     (when (advance-source-file info)
       (process-sources info))))
 
@@ -1104,7 +1081,7 @@
 	  (case (car form)
 	    ((make-package shadow shadowing-import export
 	      unexport use-package unuse-package import
-	      old-in-package %in-package)
+	      old-in-package %in-package %defpackage)
 	     (process-cold-load-form form path t))
 	    ((error cerror break signal)
 	     (process-cold-load-form form path nil))
@@ -1525,22 +1502,23 @@
 	    (or (backend-info-environment *backend*)
 		*info-environment*))
 	   (*gensym-counter* 0))
-      (clear-stuff)
-      (with-compilation-unit ()
-	(process-sources info)
+      (with-debug-counters
+	(clear-stuff)
+	(with-compilation-unit ()
+	  (process-sources info)
 
-	(finish-block-compilation)
-	(compile-top-level-lambdas () t)
-	(let ((object *compile-object*))
-	  (etypecase object
-	    (fasl-file (fasl-dump-source-info info object))
-	    (core-object (fix-core-source-info info object d-s-info))
-	    (null)))
-    
-	(cond ((> *compiler-error-count* start-errors) :error)
-	      ((> *compiler-warning-count* start-warnings) :warning)
-	      ((> *compiler-note-count* start-notes) :note)
-	      (t nil))))))
+	  (finish-block-compilation)
+	  (compile-top-level-lambdas () t)
+	  (let ((object *compile-object*))
+	    (etypecase object
+	      (fasl-file (fasl-dump-source-info info object))
+	      (core-object (fix-core-source-info info object d-s-info))
+	      (null)))
+
+	  (cond ((> *compiler-error-count* start-errors) :error)
+		((> *compiler-warning-count* start-warnings) :warning)
+		((> *compiler-note-count* start-notes) :note)
+		(t nil)))))))
 
 
 ;;; Verify-Source-Files  --  Internal
@@ -1567,7 +1545,6 @@
 			   (try-with-type x "LISP" t))
 			  ((probe-file x) x)
 			  ((try-with-type x "lisp"  nil))
-			  ((try-with-type x "dylan" nil))
 			  ((try-with-type x "lisp"  t)))))
 	      stuff))))
 
@@ -1603,10 +1580,8 @@
   :Source-Info
         Some object to be placed in the DEBUG-SOURCE-INFO.
   :Byte-Compile {T, NIL, :MAYBE}
-        If true, then may compile to interpreted byte code.
-  :Language {:LISP, :DYLAN}
-      The source language to compile.  Defaults to LISP."
-  (declare (type (member :lisp :dylan) language))
+        If true, then may compile to interpreted byte code."
+  (declare (type (member :lisp #+nil :dylan) language))
   (let ((info (make-stream-source-info stream language))
 	(*backend* *native-backend*))
     (unwind-protect
@@ -1883,35 +1858,36 @@
 	     (*last-message-count* 0)
 	     (*compile-object* (make-core-object))
 	     (*gensym-counter* 0))
-	(clear-stuff)
-	(find-source-paths form 0)
-	(let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
-	  
-	  (compile-fix-function-name lambda name)
-	  (let* ((component
-		  (block-component (node-block (lambda-bind lambda))))
-		 (*all-components* (list component)))
-	    (local-call-analyze component))
-	  
-	  (multiple-value-bind (components top-components)
-			       (find-initial-dfo (list lambda))
-	    (let ((*all-components* (append components top-components)))
-	      (dolist (component *all-components*)
-		(compile-component component))))
-	  
-	  (let* ((res (core-call-top-level-lambda lambda *compile-object*))
-		 (return (or name res)))
-	    (fix-core-source-info *source-info* *compile-object* res)
-	    (when name
-	      (setf (fdefinition name) res))
-	    
-	    (cond ((or (> *compiler-error-count* start-errors)
-		       (> *compiler-warning-count* start-warnings))
-		   (values return t t))
-		  ((> *compiler-note-count* start-notes)
-		   (values return t nil))
-		  (t
-		   (values return nil nil)))))))))
+	(with-debug-counters
+	  (clear-stuff)
+	  (find-source-paths form 0)
+	  (let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
+
+	    (compile-fix-function-name lambda name)
+	    (let* ((component
+		    (block-component (node-block (lambda-bind lambda))))
+		   (*all-components* (list component)))
+	      (local-call-analyze component))
+
+	    (multiple-value-bind (components top-components)
+		(find-initial-dfo (list lambda))
+	      (let ((*all-components* (append components top-components)))
+		(dolist (component *all-components*)
+		  (compile-component component))))
+
+	    (let* ((res (core-call-top-level-lambda lambda *compile-object*))
+		   (return (or name res)))
+	      (fix-core-source-info *source-info* *compile-object* res)
+	      (when name
+		(setf (fdefinition name) res))
+
+	      (cond ((or (> *compiler-error-count* start-errors)
+			 (> *compiler-warning-count* start-warnings))
+		     (values return t t))
+		    ((> *compiler-note-count* start-notes)
+		     (values return t nil))
+		    (t
+		     (values return nil nil))))))))))
 
 ;;; UNCOMPILE  --  Public
 ;;;

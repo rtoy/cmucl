@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.26 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.26.2.1 2000/05/23 16:37:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,12 +63,12 @@
 ;;; *Seen-Blocks* is a hashtable with true values for all blocks which appear
 ;;; in the DFO for one of the specified components.
 ;;;
-(defvar *seen-blocks* (make-hash-table :test #'eq))
+(defvar *seen-blocks*)
 
 ;;; *Seen-Functions* is similar, but records all the lambdas we reached by
 ;;; recursing on top-level functions.
 ;;;
-(defvar *seen-functions* (make-hash-table :test #'eq))
+(defvar *seen-functions*)
 
 
 ;;; Check-Node-Reached  --  Internal
@@ -97,77 +97,75 @@
 ;;;
 (proclaim '(function check-ir1-consistency (list) void))
 (defun check-ir1-consistency (components)
-  (clrhash *seen-blocks*)
-  (clrhash *seen-functions*)
-  (dolist (c components)
-    (let* ((head (component-head c))
-	   (tail (component-tail c)))
-      (unless (and (null (block-pred head)) (null (block-succ tail)))
-	(barf "~S malformed." c))
+  (let ((*seen-blocks* (make-hash-table :test #'eq))
+	(*seen-functions* (make-hash-table :test #'eq)))
+    (dolist (c components)
+      (let* ((head (component-head c))
+	     (tail (component-tail c)))
+	(unless (and (null (block-pred head)) (null (block-succ tail)))
+	  (barf "~S malformed." c))
 
-      (do ((prev nil block)
-	   (block head (block-next block)))
-	  ((null block)
-	   (unless (eq prev tail)
-	     (barf "Wrong Tail for DFO, ~S in ~S." prev c)))
-	(setf (gethash block *seen-blocks*) t)
-	(unless (eq (block-prev block) prev)
-	  (barf "Bad Prev for ~S, should be ~S." block prev))
-	(unless (or (eq block tail)
-		    (eq (block-component block) c))
-	  (barf "~S is not in ~S." block c)))
+	(do ((prev nil block)
+	     (block head (block-next block)))
+	    ((null block)
+	     (unless (eq prev tail)
+	       (barf "Wrong Tail for DFO, ~S in ~S." prev c)))
+	  (setf (gethash block *seen-blocks*) t)
+	  (unless (eq (block-prev block) prev)
+	    (barf "Bad Prev for ~S, should be ~S." block prev))
+	  (unless (or (eq block tail)
+		      (eq (block-component block) c))
+	    (barf "~S is not in ~S." block c)))
 #|
-      (when (or (loop-blocks c) (loop-inferiors c))
-	(do-blocks (block c :both)
-	  (setf (block-flag block) nil))
-	(check-loop-consistency c nil)
-	(do-blocks (block c :both)
-	  (unless (block-flag block)
-	    (barf "~S was not in any loop." block))))
+	(when (or (loop-blocks c) (loop-inferiors c))
+	  (do-blocks (block c :both)
+	    (setf (block-flag block) nil))
+	  (check-loop-consistency c nil)
+	  (do-blocks (block c :both)
+	    (unless (block-flag block)
+	      (barf "~S was not in any loop." block))))
 |#
-    ))
+	))
 
-  (check-function-consistency components)
+    (check-function-consistency components)
 
-  (dolist (c components)
-    (do ((block (block-next (component-head c)) (block-next block)))
-	((null (block-next block)))
-      (check-block-consistency block)))
+    (dolist (c components)
+      (do ((block (block-next (component-head c)) (block-next block)))
+	  ((null (block-next block)))
+	(check-block-consistency block)))
 
-      
-  (maphash #'(lambda (k v)
-	       (declare (ignore k))
-	       (unless (or (constant-p v)
-			   (and (global-var-p v)
-				(member (global-var-kind v)
-					'(:global :special :constant))))
-		 (barf "Strange *free-variables* entry: ~S." v))
-	       (dolist (n (leaf-refs v))
-		 (check-node-reached n))
-	       (when (basic-var-p v)
-		 (dolist (n (basic-var-sets v))
-		   (check-node-reached n))))
-	   *free-variables*)
 
-  (maphash #'(lambda (k v)
-	       (declare (ignore k))
-	       (unless (constant-p v)
-		 (barf "Strange *constants* entry: ~S." v))
-	       (dolist (n (leaf-refs v))
-		 (check-node-reached n)))
-	   *constants*)
+    (maphash #'(lambda (k v)
+		 (declare (ignore k))
+		 (unless (or (constant-p v)
+			     (and (global-var-p v)
+				  (member (global-var-kind v)
+					  '(:global :special :constant))))
+		   (barf "Strange *free-variables* entry: ~S." v))
+		 (dolist (n (leaf-refs v))
+		   (check-node-reached n))
+		 (when (basic-var-p v)
+		   (dolist (n (basic-var-sets v))
+		     (check-node-reached n))))
+	     *free-variables*)
 
-  (maphash #'(lambda (k v)
-	       (declare (ignore k))
-	       (unless (or (functional-p v)
-			   (and (global-var-p v)
-				(eq (global-var-kind v) :global-function)))
-		 (barf "Strange *free-functions* entry: ~S." v))
-	       (dolist (n (leaf-refs v))
-		 (check-node-reached n)))
-	   *free-functions*)
-  (clrhash *seen-functions*)
-  (clrhash *seen-blocks*)
+    (maphash #'(lambda (k v)
+		 (declare (ignore k))
+		 (unless (constant-p v)
+		   (barf "Strange *constants* entry: ~S." v))
+		 (dolist (n (leaf-refs v))
+		   (check-node-reached n)))
+	     *constants*)
+
+    (maphash #'(lambda (k v)
+		 (declare (ignore k))
+		 (unless (or (functional-p v)
+			     (and (global-var-p v)
+				  (eq (global-var-kind v) :global-function)))
+		   (barf "Strange *free-functions* entry: ~S." v))
+		 (dolist (n (leaf-refs v))
+		   (check-node-reached n)))
+	     *free-functions*))
   (values))
 
 
@@ -967,12 +965,14 @@
 ;;; Continuation-Number, Number-Continuation, ID-TN, TN-ID  --  Interface
 ;;;
 ;;;    When we print Continuations and TNs, we assign them small numeric IDs so
-;;; that we can get a handle on anonymous objects given a printout.
+;;; that we can get a handle on anonymous objects given a printout. Note that
+;;; the variables are bound by the with-debug-counters macro which needs to be
+;;; consistent with the definitions here.
 ;;;
 (macrolet ((frob (counter vto vfrom fto ffrom)
 	     `(progn
-		(defvar ,vto (make-hash-table :test #'eq))
-		(defvar ,vfrom (make-hash-table :test #'eql))
+		(defvar ,vto)
+		(defvar ,vfrom)
 		(proclaim '(hash-table ,vto ,vfrom))
 		(defvar ,counter 0)
 		(proclaim '(fixnum ,counter))
@@ -1006,8 +1006,6 @@
     (constant (format stream "'~S" (constant-value leaf)))
     (global-var
      (format stream "~S {~A}" (leaf-name leaf) (global-var-kind leaf)))
-    (dylan-var
-     (format stream "~A ~A" (leaf-name leaf) (dylan-var-module-name leaf)))
     (clambda
       (format stream "lambda ~S ~S" (leaf-name leaf)
 	      (mapcar #'leaf-name (lambda-vars leaf))))
@@ -1254,7 +1252,7 @@
   (values))
 
 
-(defvar *list-conflicts-table* (make-hash-table :test #'eq))
+(defvar *list-conflicts-table*)
 
 ;;; Add-Always-Live-TNs  --  Internal
 ;;;
@@ -1296,7 +1294,6 @@
 		 (when k
 		   (res k)))
 	     *list-conflicts-table*)
-    (clrhash *list-conflicts-table*)
     (res)))
   
 
@@ -1308,20 +1305,21 @@
   (assert (member (tn-kind tn) '(:normal :environment :debug-environment)))
   (let ((confs (tn-global-conflicts tn)))
     (cond (confs
-	   (clrhash *list-conflicts-table*)
-	   (do ((conf confs (global-conflicts-tn-next conf)))
-	       ((null conf))
-	     (let ((block (global-conflicts-block conf)))
-	       (add-always-live-tns block tn)
-	       (if (eq (global-conflicts-kind conf) :live)
-		   (add-all-local-tns block)
-		   (let ((bconf (global-conflicts-conflicts conf))
-			 (ltns (ir2-block-local-tns block)))
-		     (dotimes (i (ir2-block-local-tn-count block))
-		       (when (/= (sbit bconf i) 0)
-			 (setf (gethash (svref ltns i) *list-conflicts-table*)
-			       t)))))))
-	   (listify-conflicts-table))
+	   (let ((*list-conflicts-table* (make-hash-table :test #'eq)))
+	     (do ((conf confs (global-conflicts-tn-next conf)))
+		 ((null conf))
+	       (let ((block (global-conflicts-block conf)))
+		 (add-always-live-tns block tn)
+		 (if (eq (global-conflicts-kind conf) :live)
+		     (add-all-local-tns block)
+		     (let ((bconf (global-conflicts-conflicts conf))
+			   (ltns (ir2-block-local-tns block)))
+		       (dotimes (i (ir2-block-local-tn-count block))
+			 (when (/= (sbit bconf i) 0)
+			   (setf (gethash (svref ltns i)
+					  *list-conflicts-table*)
+				 t)))))))
+	     (listify-conflicts-table)))
 	  (t
 	   (let* ((block (tn-local tn))
 		  (ltns (ir2-block-local-tns block))

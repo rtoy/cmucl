@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.72.2.1 1998/06/23 11:25:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.72.2.2 2000/05/23 16:39:07 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,10 @@
 
 ;;; Assembly files.
 
+#-bootstrap
 (comf "target:assembly/assemfile")
+#+bootstrap
+(comf "target:assembly/assemfile" :byte-compile t)
 (when (eq c:*backend* c:*native-backend*)
   (load "target:assembly/assemfile"))
 

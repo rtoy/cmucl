@@ -5,12 +5,13 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.2.2.1 1998/07/02 11:22:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.2.2.2 2000/05/23 16:36:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the UNIX low-level support for glibc2.  Based
-;;; on unix.lisp 1.56, converted for glibc2 by Peter Van Eynde (1998)
+;;; on unix.lisp 1.56, converted for glibc2 by Peter Van Eynde (1998).
+;;; Alpha support by Julian Dolby, 1999.
 ;;;
 ;;; All the functions with #+nil in front are work in progress,
 ;;; and mostly don't work.
@@ -134,7 +135,7 @@
 	  KBDSCLICK FIONREAD	  unix-exit unix-stat unix-lstat unix-fstat
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
-	  unix-utimes unix-setreuid
+	  unix-utimes unix-sched-yield unix-setreuid
 	  unix-setregid
 	  unix-getpid unix-getppid
 	  unix-getgid unix-getegid unix-getpgrp unix-setpgrp unix-getuid
@@ -257,12 +258,11 @@
 (def-alien-type daddr-t int)
 (def-alien-type caddr-t (* char))
 (def-alien-type swblk-t long)
-(def-alien-type size-t unsigned-int)
+(def-alien-type size-t #-alpha unsigned-int #+alpha long)
 (def-alien-type time-t long)
 (def-alien-type clock-t long)
 (def-alien-type uid-t unsigned-int)
-(def-alien-type ssize-t int)
-(def-alien-type fd-mask unsigned-long)
+(def-alien-type ssize-t #-alpha int #+alpha long)
 (def-alien-type key-t int)
 (def-alien-type int8-t char)
 (def-alien-type u-int8-t unsigned-char)
@@ -272,27 +272,30 @@
 (def-alien-type u-int32-t unsigned-int)
 (def-alien-type int64-t #+nil long-long #-nil (array long 2))
 (def-alien-type u-int64-t #+nil unsigned-long-long #-nil (array unsigned-long 2))
-(def-alien-type register-t int)
+(def-alien-type register-t #-alpha int #+alpha long)
 
 
-(def-alien-type dev-t uquad-t)
+(def-alien-type dev-t #-alpha uquad-t #+alpha unsigned-long)
 (def-alien-type uid-t unsigned-int)
 (def-alien-type gid-t unsigned-int)
-(def-alien-type ino-t unsigned-long)
+(def-alien-type ino-t #-alpha unsigned-long #+alpha unsigned-int)
 (def-alien-type mode-t unsigned-int)
 (def-alien-type nlink-t unsigned-int)
 (def-alien-type off-t long)
 (def-alien-type loff-t quad-t)
 (def-alien-type pid-t int)
-(def-alien-type ssize-t int)
+(def-alien-type ssize-t #-alpha int #+alpha long)
 
 (def-alien-type fsid-t (array int 2))
 
-(defconstant fd-setsize 1024)
+(def-alien-type fd-mask #-alpha unsigned-long #+alpha unsigned-int)
 
+(defconstant fd-setsize 1024)
+(defconstant nfdbits 32)
+  
 (def-alien-type nil
   (struct fd-set
-	  (fds-bits (array fd-mask #.(/ fd-setsize 32)))))
+	  (fds-bits (array fd-mask #.(/ fd-setsize nfdbits)))))
 
 (def-alien-type key-t int)
 
@@ -465,36 +468,72 @@
 (defconstant o_wronly  1 "Write-only flag.")
 (defconstant o_rdwr    2 "Read-write flag.")
 (defconstant o_accmode 3 "Access mode mask.")
-(defconstant o_creat   #o100 "Create if nonexistant flag. (not fcntl)") 
-(defconstant o_excl    #o200 "Error if already exists. (not fcntl)")
-(defconstant o_noctty  #o400 "Don't assign controlling tty. (not fcntl)")
-(defconstant o_trunc   #o1000 "Truncate flag. (not fcntl)")
-(defconstant o_append  #o2000 "Append flag.")
-(defconstant o_ndelay  #o4000 "Non-blocking I/O")
-(defconstant o_nonblock #o4000 "Non-blocking I/O")
-(defconstant o_ndelay  o_nonblock)
-(defconstant o_sync    #o10000 "Synchronous writes (on ext2)")
-(defconstant o_fsync    o_sync)
-(defconstant o_async   #o20000 "Asynchronous I/O")
+
+#-alpha
+(progn
+  (defconstant o_creat   #o100 "Create if nonexistant flag. (not fcntl)") 
+  (defconstant o_excl    #o200 "Error if already exists. (not fcntl)")
+  (defconstant o_noctty  #o400 "Don't assign controlling tty. (not fcntl)")
+  (defconstant o_trunc   #o1000 "Truncate flag. (not fcntl)")
+  (defconstant o_append  #o2000 "Append flag.")
+  (defconstant o_ndelay  #o4000 "Non-blocking I/O")
+  (defconstant o_nonblock #o4000 "Non-blocking I/O")
+  (defconstant o_ndelay  o_nonblock)
+  (defconstant o_sync    #o10000 "Synchronous writes (on ext2)")
+  (defconstant o_fsync    o_sync)
+  (defconstant o_async   #o20000 "Asynchronous I/O"))
+#+alpha
+(progn
+  (defconstant o_creat   #o1000 "Create if nonexistant flag. (not fcntl)") 
+  (defconstant o_trunc   #o2000 "Truncate flag. (not fcntl)")
+  (defconstant o_excl    #o4000 "Error if already exists. (not fcntl)")
+  (defconstant o_noctty  #o10000 "Don't assign controlling tty. (not fcntl)")
+  (defconstant o_nonblock #o4 "Non-blocking I/O")
+  (defconstant o_append  #o10 "Append flag.")
+  (defconstant o_ndelay  o_nonblock)
+  (defconstant o_sync    #o40000 "Synchronous writes (on ext2)")
+  (defconstant o_fsync    o_sync)
+  (defconstant o_async   #o20000 "Asynchronous I/O"))
 
 (defconstant f-dupfd    0  "Duplicate a file descriptor")
 (defconstant f-getfd    1  "Get file desc. flags")
 (defconstant f-setfd    2  "Set file desc. flags")
 (defconstant f-getfl    3  "Get file flags")
 (defconstant f-setfl    4  "Set file flags")
-(defconstant f-getlk    5   "Get lock")
-(defconstant f-setlk    6   "Set lock")
-(defconstant f-setlkw   7   "Set lock, wait for release")
-(defconstant f-setown   8  "Set owner (for sockets)")
-(defconstant f-getown   9  "Get owner (for sockets)")
+
+#-alpha
+(progn
+  (defconstant f-getlk    5   "Get lock")
+  (defconstant f-setlk    6   "Set lock")
+  (defconstant f-setlkw   7   "Set lock, wait for release")
+  (defconstant f-setown   8  "Set owner (for sockets)")
+  (defconstant f-getown   9  "Get owner (for sockets)"))
+#+alpha
+(progn
+  (defconstant f-getlk    7   "Get lock")
+  (defconstant f-setlk    8   "Set lock")
+  (defconstant f-setlkw   9   "Set lock, wait for release")
+  (defconstant f-setown   5  "Set owner (for sockets)")
+  (defconstant f-getown   6  "Get owner (for sockets)"))
+
+
 
 (defconstant F-CLOEXEC 1 "for f-getfl and f-setfl")
 
-(defconstant F-RDLCK 0 "for fcntl and lockf")
-(defconstant F-WDLCK 1 "for fcntl and lockf")
-(defconstant F-UNLCK 2 "for fcntl and lockf")
-(defconstant F-EXLCK 4 "old bsd flock (depricated)")
-(defconstant F-SHLCK 8 "old bsd flock (depricated)")
+#-alpha
+(progn
+  (defconstant F-RDLCK 0 "for fcntl and lockf")
+  (defconstant F-WDLCK 1 "for fcntl and lockf")
+  (defconstant F-UNLCK 2 "for fcntl and lockf")
+  (defconstant F-EXLCK 4 "old bsd flock (depricated)")
+  (defconstant F-SHLCK 8 "old bsd flock (depricated)"))
+#+alpha
+(progn
+  (defconstant F-RDLCK 1 "for fcntl and lockf")
+  (defconstant F-WDLCK 2 "for fcntl and lockf")
+  (defconstant F-UNLCK 8 "for fcntl and lockf")
+  (defconstant F-EXLCK 16 "old bsd flock (depricated)")
+  (defconstant F-SHLCK 32 "old bsd flock (depricated)"))
 
 (defconstant F-LOCK-SH 1 "Shared lock for bsd flock")
 (defconstant F-LOCK-EX 2 "Exclusive lock for bsd flock")
@@ -1172,10 +1211,9 @@ length LEN and type TYPE."
     (declare (type system-area-pointer result))
     (if (zerop (sap-int result))
 	nil
-      result)))
+	result)))
 
 ;;; resourcebits.h
-
 
 (def-alien-type nil
   (struct rlimit
@@ -1245,8 +1283,7 @@ length LEN and type TYPE."
   (int-syscall ("sched_getscheduler" pid-t)
 		pid))
 
-#+nil
-(defun unix-sched_yield ()
+(defun unix-sched-yield ()
   "Retrieve scheduling algorithm for a particular purpose."
   (int-syscall ("sched_yield")))
 
@@ -1370,25 +1407,30 @@ length LEN and type TYPE."
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
-    (st-pad1 unsigned-short)
+    #-alpha (st-pad1 unsigned-short)
     (st-ino ino-t)
     (st-mode mode-t)
     (st-nlink  nlink-t)
     (st-uid  uid-t)
     (st-gid  gid-t)
     (st-rdev dev-t)
-    (st-pad2  unsigned-short)
+    #-alpha (st-pad2  unsigned-short)
+    #+alpha (st-pad2  unsigned-int)
     (st-size off-t)
-    (st-blksize unsigned-long)
-    (st-blocks unsigned-long)
+    #-alpha (st-blksize unsigned-long)
+    #-alpha (st-blocks unsigned-long)
     (st-atime time-t)
-    (unused-1 unsigned-long)
+    #-alpha (unused-1 unsigned-long)
     (st-mtime time-t)
-    (unused-2 unsigned-long)
+    #-alpha (unused-2 unsigned-long)
     (st-ctime time-t)
-    (unused-3 unsigned-long)
-    (unused-4 unsigned-long)
-    (unused-5 unsigned-long)))
+    #+alpha (st-blksize unsigned-int)
+    #+alpha (st-blocks int)
+    #+alpha (st-flags unsigned-int)
+    #+alpha (st-gen unsigned-int)
+    #-alpha (unused-3 unsigned-long)
+    #-alpha (unused-4 unsigned-long)
+    #-alpha (unused-5 unsigned-long)))
 
 ;; Encoding of the file mode.
 
@@ -1424,7 +1466,7 @@ length LEN and type TYPE."
 	    (f-bsize int)
 	    (f-blocks int)
 	    (f-bfree int)
-	    (f-babail int)
+	    (f-bavail int)
 	    (f-files int)
 	    (f-ffree int)
 	    (f-fsid fsid-t)
@@ -1621,8 +1663,8 @@ length LEN and type TYPE."
 ;; microsecond but also has a range of years.  
 (def-alien-type nil
   (struct timeval
-	  (tv-sec time-t)		; seconds
-	  (tv-usec time-t)))		; and microseconds
+	  (tv-sec #-alpha time-t #+alpha int)		; seconds
+	  (tv-usec #-alpha time-t #+alpha int)))	; and microseconds
 
 ;;; unistd.h
 
@@ -1875,23 +1917,30 @@ length LEN and type TYPE."
   "Unix-getppid returns the process-id of the parent of the current process.")
 
 ;;; Unix-getpgrp returns the group-id associated with the
-;;; process whose process-id is specified as an argument.
-;;; As usual, if the process-id is 0, it refers to the current
-;;; process.
+;;; current process.
 
-(defun unix-getpgrp (pid)
-  "Unix-getpgrp returns the group-id of the process associated
-   with pid."
-  (int-syscall ("getpgrp" int) pid))
+(defun unix-getpgrp ()
+  "Unix-getpgrp returns the group-id of the calling process."
+  (int-syscall ("getpgrp")))
 
-;;; Unix-setpgrp sets the group-id of the process specified by 
+;;; Unix-setpgid sets the group-id of the process specified by 
 ;;; "pid" to the value of "pgrp".  The process must either have
 ;;; the same effective user-id or be a super-user process.
 
+;;; setpgrp(int int)[freebsd] is identical to setpgid and is retained
+;;; for backward compatibility. setpgrp(void)[solaris] is being phased
+;;; out in favor of setsid().
+
 (defun unix-setpgrp (pid pgrp)
   "Unix-setpgrp sets the process group on the process pid to
-   pgrp.  NIL and an error number is returned upon failure."
-  (void-syscall ( "setpgrp" int int) pid pgrp))
+   pgrp.  NIL and an error number are returned upon failure."
+  (void-syscall ("setpgid" int int) pid pgrp))
+
+(defun unix-setpgid (pid pgrp)
+  "Unix-setpgid sets the process group of the process pid to
+   pgrp. If pgid is equal to pid, the process becomes a process
+   group leader. NIL and an error number are returned upon failure."
+  (void-syscall ("setpgid" int int) pid pgrp))
 
 #+nil
 (defun unix-setsid ()
@@ -2334,20 +2383,23 @@ in at a time in poll.")
 
 ;;; sys/resource.h
 
-#+nil
-(defun unix-getrlimit (resource rlimits)
-  "Put the soft and hard limits for RESOURCE in *RLIMITS.
-   Returns 0 if successful, -1 if not (and sets errno)."
-  (int-syscall ("getrlimit" int (* (struct rlimit)))
-	       resource rlimits))
+(defun unix-getrlimit (resource)
+  "Get the soft and hard limits for RESOURCE."
+  (with-alien ((rlimits (struct rlimit)))
+    (syscall ("getrlimit" int (* (struct rlimit)))
+	     (values t
+		     (slot rlimits 'rlim-cur)
+		     (slot rlimits 'rlim-max))
+	     resource (addr rlimits))))
 
-#+nil
-(defun unix-setrlimit (resource rlimits)
-  "Set the soft and hard limits for RESOURCE to *RLIMITS.
-   Only the super-user can increase hard limits.
-   Return 0 if successful, -1 if not (and sets errno)."
-  (int-syscall ("setrlimit" int (* (struct rlimit)))
-	       resource rlimits))
+(defun unix-setrlimit (resource current maximum)
+  "Set the current soft and hard maximum limits for RESOURCE.
+   Only the super-user can increase hard limits."
+  (with-alien ((rlimits (struct rlimit)))
+    (setf (slot rlimits 'rlim-cur) current)
+    (setf (slot rlimits 'rlim-max) maximum)
+    (void-syscall ("setrlimit" int (* (struct rlimit)))
+		  resource (addr rlimits))))
 
 (declaim (inline unix-fast-getrusage))
 (defun unix-fast-getrusage (who)
@@ -2505,19 +2557,19 @@ in at a time in poll.")
   `(if (fixnump ,num)
        (progn
 	 (setf (deref (slot ,fdset 'fds-bits) 0) ,num)
-	 ,@(loop for index upfrom 1 below (/ fd-setsize 32)
+	 ,@(loop for index upfrom 1 below (/ fd-setsize nfdbits)
 	     collect `(setf (deref (slot ,fdset 'fds-bits) ,index) 0)))
        (progn
-	 ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+	 ,@(loop for index upfrom 0 below (/ fd-setsize nfdbits)
 	     collect `(setf (deref (slot ,fdset 'fds-bits) ,index)
-			    (ldb (byte 32 ,(* index 32)) ,num))))))
+			    (ldb (byte nfdbits ,(* index nfdbits)) ,num))))))
 
 (defmacro fd-set-to-num (nfds fdset)
-  `(if (<= ,nfds 32)
+  `(if (<= ,nfds nfdbits)
        (deref (slot ,fdset 'fds-bits) 0)
-       (+ ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+       (+ ,@(loop for index upfrom 0 below (/ fd-setsize nfdbits)
 	      collect `(ash (deref (slot ,fdset 'fds-bits) ,index)
-			    ,(* index 32))))))
+			    ,(* index nfdbits))))))
 
 (defun unix-select (nfds rdfds wrfds xpfds to-secs &optional (to-usecs 0))
   "Unix-select examines the sets of descriptors passed as arguments
@@ -2555,9 +2607,9 @@ in at a time in poll.")
 
 (defmacro extract-stat-results (buf)
   `(values T
-           #+nil
+           #+alpha
 	   (slot ,buf 'st-dev)
-           #-nil
+           #-alpha
            (+ (deref (slot ,buf 'st-dev) 0)
 	      (* (+ +max-u-long+  1)
 	         (deref (slot ,buf 'st-dev) 1)))   ;;; let's hope this works..
@@ -2566,9 +2618,9 @@ in at a time in poll.")
 	   (slot ,buf 'st-nlink)
 	   (slot ,buf 'st-uid)
 	   (slot ,buf 'st-gid)
-           #+nil
+           #+alpha
 	   (slot ,buf 'st-rdev)
-           #-nil
+           #-alpha
            (+ (deref (slot ,buf 'st-rdev) 0)
 	      (* (+ +max-u-long+  1)
 	         (deref (slot ,buf 'st-rdev) 1)))   ;;; let's hope this works..
@@ -3088,28 +3140,53 @@ in at a time in poll.")
 
 (eval-when (compile load eval)
 
-(defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
-  (declare (ignore arg parm-type))
-  `(eval-when (eval load compile)
-     (defconstant ,name ,(logior (ash (- (char-code dev) #x20) 8) cmd)))))
+(defconstant iocparm-mask #x3fff)
+(defconstant ioc_void #x00000000)
+(defconstant ioc_out #x40000000)
+(defconstant ioc_in #x80000000)
+(defconstant ioc_inout (logior ioc_in ioc_out))
+
+(defmacro define-ioctl-command (name dev cmd &optional arg parm-type)
+  "Define an ioctl command. If the optional ARG and PARM-TYPE are given
+  then ioctl argument size and direction are included as for ioctls defined
+  by _IO, _IOR, _IOW, or _IOWR. If DEV is a character then the ioctl type
+  is the characters code, else DEV may be an integer giving the type."
+  (let* ((type (if (characterp dev)
+		   (char-code dev)
+		   dev))
+	 (code (logior (ash type 8) cmd)))
+    (when arg
+      (setf code `(logior (ash (logand (alien-size ,arg :bytes) ,iocparm-mask)
+			       16)
+			  ,code)))
+    (when parm-type
+      (let ((dir (ecase parm-type
+		   (:void ioc_void)
+		   (:in ioc_in)
+		   (:out ioc_out)
+		   (:inout ioc_inout))))
+	(setf code `(logior ,dir ,code))))
+    `(eval-when (eval load compile)
+       (defconstant ,name ,code))))
+
+)
 
 ;;; TTY ioctl commands.
 
-(define-ioctl-command TIOCGWINSZ #\t #x13 (struct winsize) :out)
-(define-ioctl-command TIOCSWINSZ #\t #x14 (struct winsize) :in)
-(define-ioctl-command TIOCNOTTY  #\t #x22 nil :void)
-(define-ioctl-command TIOCSPGRP  #\t #x10 int :in)
-(define-ioctl-command TIOCGPGRP  #\t #x0F int :out)
+(define-ioctl-command TIOCGWINSZ #\T #x13)
+(define-ioctl-command TIOCSWINSZ #\T #x14)
+(define-ioctl-command TIOCNOTTY  #\T #x22)
+(define-ioctl-command TIOCSPGRP  #\T #x10)
+(define-ioctl-command TIOCGPGRP  #\T #x0F)
 
 ;;; File ioctl commands.
-(define-ioctl-command FIONREAD #\t #x1B int :out)
+(define-ioctl-command FIONREAD #\T #x1B)
 
 ;;; asm/sockios.h
 
 ;;; Socket options.
 
-;;; should be #x8902
-(define-ioctl-command SIOCSPGRP #.(code-char #x89) #x02 int :in)
+(define-ioctl-command SIOCSPGRP #x89 #x02)
 
 (defun siocspgrp (fd pgrp)
   "Set the socket process-group for the unix file-descriptor FD to PGRP."
@@ -3378,7 +3455,7 @@ in at a time in poll.")
 (defmacro fd-set (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
-    `(multiple-value-bind (,word ,bit) (floor ,offset 32)
+    `(multiple-value-bind (,word ,bit) (floor ,offset nfdbits)
        (setf (deref (slot ,fd-set 'fds-bits) ,word)
 	     (logior (truly-the (unsigned-byte 32) (ash 1 ,bit))
 		     (deref (slot ,fd-set 'fds-bits) ,word))))))
@@ -3387,7 +3464,7 @@ in at a time in poll.")
 (defmacro fd-clr (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
-    `(multiple-value-bind (,word ,bit) (floor ,offset 32)
+    `(multiple-value-bind (,word ,bit) (floor ,offset nfdbits)
        (setf (deref (slot ,fd-set 'fds-bits) ,word)
 	     (logand (deref (slot ,fd-set 'fds-bits) ,word)
 		     (32bit-logical-not
@@ -3397,13 +3474,13 @@ in at a time in poll.")
 (defmacro fd-isset (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
-    `(multiple-value-bind (,word ,bit) (floor ,offset 32)
+    `(multiple-value-bind (,word ,bit) (floor ,offset nfdbits)
        (logbitp ,bit (deref (slot ,fd-set 'fds-bits) ,word)))))
 
 ;; not checked for linux...
 (defmacro fd-zero (fd-set)
   `(progn
-     ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+     ,@(loop for index upfrom 0 below (/ fd-setsize nfdbits)
 	 collect `(setf (deref (slot ,fd-set 'fds-bits) ,index) 0))))
 
 

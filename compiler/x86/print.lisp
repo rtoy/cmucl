@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.1.2.1 1998/06/23 11:24:11 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.1.2.2 2000/05/23 16:38:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,8 +22,7 @@
 (define-vop (print)
   (:args (object :scs (descriptor-reg any-reg)))
   (:temporary (:sc unsigned-reg :offset eax-offset :target result
-		   :from :eval :to (:result 0))
-	      eax)
+		   :from :eval :to :result) eax)
   (:results (result :scs (descriptor-reg)))
   (:save-p t)
   (:generator 100

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.4 1997/04/19 20:13:24 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.4.2.1 2000/05/23 16:38:37 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -53,10 +53,12 @@ void message_add_packet(message_t message) {
 
   message->packets = new;
 }
-
+
 
 void message_insert_packet(message_t message, packet_t new) {
   packet_t scan=message->packets;
+
+  /* Inserts in reverse order of sequence number (->current) */
 
   if( !scan )
     message->packets = new;
@@ -70,10 +72,24 @@ void message_insert_packet(message_t message, packet_t new) {
       new->next = scan->next;
       scan->next = new;
     }
-
   message->packet_count++;
 }
 
+packet_t nreverse_packet_list (packet_t list)
+{
+  packet_t this = list->next;
+  packet_t next = list;
+  packet_t last = NULL;
+  while (this) {
+    next->next = last;
+    last = next;
+    next = this;
+    this = (this == list)? NULL : this->next;
+  }
+  list->next = last;
+  return last;
+}
+
 unsigned char message_get_byte(message_t message) {
   packet_t packet=message->packets;
 
@@ -134,18 +150,21 @@ void message_put_dblword(message_t message, long dword) {
     packet_put_dblword(message->packets, dword);
   }
 }
-
+
 void message_send(int socket, message_t message){
-  int total = message->packet_count;
-  packet_t first = message->packets->next;
-  packet_t current = first;
+  message->packets = nreverse_packet_list(message->packets);
+  {
+    int total = message->packet_count;
+    packet_t first = message->packets;
+    packet_t current = first;
 
-  do {
-    current->total = total;
-    packet_send(socket, current);
-
-    current = current->next;
-  } while( current != first );
+    do {
+      current->total = total;
+      packet_send(socket, current);
+      
+      current = current->next;
+    } while( current != first );
+  }
 }
 
 
@@ -167,6 +186,7 @@ void kill_deferred_message(long serial) {
 
   target->next = NULL;
 }
+
 
 /*
 * The given packet needs to be held over and joined with it's friends.
@@ -202,6 +222,7 @@ message_t message_defer_packet(packet_t packet) {
       current->next = target->next;
     }
     target->next = NULL;
+    target->packets = nreverse_packet_list(target->packets);
     return target;
   } else
     return NULL;
@@ -209,21 +230,28 @@ message_t message_defer_packet(packet_t packet) {
 
 message_t message_read(int socket) {
   message_t new;
-  packet_t first = packet_new(0,1); /* The given serial is of course bogus */
   int count;
 
-  packet_read(socket,first);
-  count=first->total;
-  if( !count && !first->current ) {
-    kill_deferred_message(first->serial);
-    if( global_will_trace ) {
-      printf("Got cancellation for serial %d\n",first->serial);
-      fflush(stdout); }
-  } else if( count == 1 ) {
-    new = message_new(next_serial++);
-    new->packets = first;
-    new->packet_count = 1;
-    return new;
-  } else
-    return message_defer_packet(first);
+  while (1) {
+    packet_t first = packet_new(0,1); /* The given serial is of course bogus */
+    packet_read(socket,first);
+    count=first->total;
+    if( !first->total && !first->current ) {
+      /* There is no client support for getting here yet! */
+      kill_deferred_message(first->serial);
+      if( global_will_trace ) {
+	printf("Got cancellation for serial %d\n",first->serial);
+	fflush(stdout);
+	continue;}
+    }
+    if( count == 1 ) {
+      new = message_new(next_serial++);
+      new->packets = first;
+      new->packet_count = 1;
+      return new;
+    }
+    if(new = message_defer_packet(first)) /* intential assignment */
+      return new;
+  }
 }
+

@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/structure-class.lisp,v 1.1.2.1 2000/05/23 16:39:02 pw Exp $")
+;;;
+
 (in-package 'pcl)
 
 (defmethod initialize-internal-slot-functions :after
@@ -90,9 +94,7 @@
          (conc-name
            (or (if defstruct-form (defstruct-form-conc-name defstruct-form))
                (slot-value class 'defstruct-conc-name)
-               (format nil #-excl "~s structure class "
-                           #+excl "~s_STRUCTURE.CLASS_"
-                           name)))
+               (format nil "~s structure class " name)))
          (defstruct-predicate
            (if defstruct-form (defstruct-form-predicate-name defstruct-form)))
          (pred-name  ;; Predicate name for class

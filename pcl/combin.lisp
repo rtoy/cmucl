@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.6.2.2 2000/05/23 16:38:43 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 (defun get-method-function (method &optional method-alist wrappers)

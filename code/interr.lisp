@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.30.2.1 1998/06/23 11:22:02 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.30.2.2 2000/05/23 16:36:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,14 +232,16 @@
 	 :expected-type 'coercable-to-function))
 
 (deferr invalid-argument-count-error (nargs)
-  (error 'simple-error
+  (error 'simple-program-error
 	 :function-name name
 	 :format-control "Invalid number of arguments: ~S"
 	 :format-arguments (list nargs)))
 
 (deferr bogus-argument-to-values-list-error (list)
-  (error 'simple-error
+  (error 'simple-type-error
 	 :function-name name
+	 :datum list
+	 :expected-type 'list
 	 :format-control "Attempt to use VALUES-LIST on a dotted-list:~%  ~S"
 	 :format-arguments (list list)))
 
@@ -259,19 +261,19 @@
 	 :expected-type 'system-area-pointer))
 
 (deferr invalid-unwind-error ()
-  (error 'control-error
+  (error 'simple-control-error
 	 :function-name name
 	 :format-control
 	 "Attempt to RETURN-FROM a block or GO to a tag that no longer exists"))
 
 (deferr unseen-throw-tag-error (tag)
-  (error 'control-error
+  (error 'simple-control-error
 	 :function-name name
 	 :format-control "Attempt to THROW to a tag that does not exist: ~S"
 	 :format-arguments (list tag)))
 
 (deferr nil-function-returned-error (function)
-  (error 'control-error
+  (error 'simple-control-error
 	 :function-name name
 	 :format-control
 	 "Function with declared result type NIL returned:~%  ~S"
@@ -299,12 +301,13 @@
 	 :expected-type (layout-class layout)))
 
 (deferr odd-keyword-arguments-error ()
-  (error 'simple-error
+  (error 'simple-type-error
 	 :function-name name
+	 :datum nil :expected-type nil
 	 :format-control "Odd number of keyword arguments."))
 
 (deferr unknown-keyword-argument-error (key)
-  (error 'simple-error
+  (error 'simple-program-error
 	 :function-name name
 	 :format-control "Unknown keyword: ~S"
 	 :format-arguments (list key)))
@@ -313,7 +316,12 @@
   (error 'simple-error
 	 :function-name name
 	 :format-control
-	 "Invalid array index, ~D for ~S.  Should have been less than ~D"
+	 (cond ((zerop bound)
+		"Invalid array index, ~D for ~S.  Array has no elements.")
+	       ((minusp index)
+		"Invalid array index, ~D for ~S.  Should have greater than or equal to 0.")
+	       (t
+		"Invalid array index, ~D for ~S.  Should have been less than ~D"))
 	 :format-arguments (list index array bound)))
 
 (deferr object-not-simple-array-error (object)
@@ -364,28 +372,24 @@
 	 :datum object
 	 :expected-type '(simple-array (unsigned-byte 32) (*))))
 
-#+signed-array 
 (deferr object-not-simple-array-signed-byte-8-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (signed-byte 8) (*))))
 
-#+signed-array 
 (deferr object-not-simple-array-signed-byte-16-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (signed-byte 16) (*))))
 
-#+signed-array 
 (deferr object-not-simple-array-signed-byte-30-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (signed-byte 30) (*))))
 
-#+signed-array 
 (deferr object-not-simple-array-signed-byte-32-error (object)
   (error 'type-error
 	 :function-name name
@@ -404,21 +408,19 @@
 	 :datum object
 	 :expected-type '(simple-array double-float (*))))
 
-#+complex-float
 (deferr object-not-simple-array-complex-single-float-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (complex single-float) (*))))
 
-#+complex-float
 (deferr object-not-simple-array-complex-double-float-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(simple-array (complex double-float) (*))))
 
-#+(and complex-float long-float)
+#+long-float
 (deferr object-not-simple-array-complex-long-float-error (object)
   (error 'type-error
 	 :function-name name
@@ -431,28 +433,25 @@
 	 :datum object
 	 :expected-type 'complex))
 
-#+complex-float
 (deferr object-not-complex-rational-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(complex rational)))
 
-#+complex-float
 (deferr object-not-complex-single-float-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(complex single-float)))
 
-#+complex-float
 (deferr object-not-complex-double-float-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type '(complex double-float)))
 
-#+(and complex-float long-float)
+#+long-float
 (deferr object-not-complex-long-float-error (object)
   (error 'type-error
 	 :function-name name

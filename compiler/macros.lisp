@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.41 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.41.2.1 2000/05/23 16:37:19 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,15 +25,7 @@
 
 (proclaim '(special *wild-type* *universal-type* *compiler-error-context*))
 
-(declaim (ftype function (setf dylan::value-datum) dylan::find-module
-		dylan::lookup-varinfo-value 
-		dylan::parse-and-convert dylan::value-datum))
-
 ;;;; Deftypes:
-
-;;;
-;;; Should be standard:
-(deftype boolean () '(member t nil))
 
 ;;;
 ;;; Inlinep is used to determine how a function is called.  The values have
@@ -744,6 +736,25 @@
     `(if ,n-res
 	 (values (cdr ,n-res) t)
 	 (values nil nil))))
+
+
+
+;;; With-debug-counters  --  Interface
+;;;
+;;;    Bind the hashtables and counters used for keeping track of
+;;; continuation, TN, and label IDs for the debug dumping routines.
+;;;
+(defmacro with-debug-counters (&body forms)
+  `(let ((*continuation-numbers* (make-hash-table :test #'eq))
+	 (*number-continuations* (make-hash-table :test #'eql))
+	 (*continuation-number* 0)
+	 (*tn-ids* (make-hash-table :test #'eq))
+	 (*id-tns* (make-hash-table :test #'eql))
+	 (*tn-id* 0)
+	 (*id-labels* (make-hash-table :test #'eq))
+	 (*label-ids* (make-hash-table :test #'eql))
+	 (*label-id* 0))
+     ,@forms))
 
 
 ;;;; The Defprinter macro:

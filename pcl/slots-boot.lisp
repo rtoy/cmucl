@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.3.2.2 2000/05/23 16:39:01 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 (defmacro slot-symbol (slot-name type)
@@ -55,7 +59,7 @@
 
 (defmacro asv-funcall (sym slot-name type &rest args)
   (declare (ignore type))
-  `(if (#-akcl fboundp #+akcl %fboundp ',sym)
+  `(if (fboundp ',sym)
        (,sym ,@args)
        (no-slot ',sym ',slot-name)))
 
@@ -110,7 +114,6 @@
 	 (fun #'(lambda (object)
 		  (not (eq (funcall reader object) *slot-unbound*)))))
     (declare (type function reader))
-    #+(and kcl turbo-closure) (si:turbo-closure fun)
     fun))		    
 
 (defun get-optimized-std-accessor-method-function (class slotd name)
@@ -193,7 +196,7 @@
    `(boundp ,slot-name)))
 
 (defun make-optimized-structure-slot-value-using-class-method-function (function)
-  #+cmu (declare (type function function))
+  (declare (type function function))
   #'(lambda (class object slotd)
       (let ((value (funcall function object)))
 	(if (eq value *slot-unbound*)
@@ -201,13 +204,13 @@
 	    value))))	    
 
 (defun make-optimized-structure-setf-slot-value-using-class-method-function (function)
-  #+cmu (declare (type function function))
+  (declare (type function function))
   #'(lambda (nv class object slotd)
       (declare (ignore class slotd))
       (funcall function nv object)))
 
 (defun make-optimized-structure-slot-boundp-using-class-method-function (function)
-  #+cmu (declare (type function function))
+  (declare (type function function))
   #'(lambda (class object slotd)
       (declare (ignore class slotd))
       (not (eq (funcall function object) *slot-unbound*))))
@@ -234,7 +237,7 @@
 		 #'make-optimized-std-setf-slot-value-using-class-method-function)
 		(boundp 
 		 #'make-optimized-std-slot-boundp-using-class-method-function))))
-	#+cmu (declare (type function function))
+	(declare (type function function))
 	(values (funcall function fsc-p slot-name index) index))))
 
 (defun make-optimized-std-slot-value-using-class-method-function

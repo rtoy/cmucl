@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.3.2.2 1998/06/23 11:25:10 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.3.2.3 2000/05/23 16:38:33 pw Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -17,15 +17,19 @@
 #define LANGUAGE_ASSEMBLY
 #include "internals.h"
 
+#if defined __FreeBSD__
+#include <osreldate.h>
+#endif
+
 /* Minimize conditionalization for different OS naming schemes */
-#if defined __linux__
+#if defined (__linux__) || (__FreeBSD_version >= 300000)
 #define GNAME(var) var
 #else
 #define GNAME(var) _##var
 #endif
 
 /* Get the right type of alignment.  Linux wants alignment in bytes. */
-#ifdef	__linux__
+#if defined (__linux__) || (__FreeBSD_version >= 300000)
 #define align_4byte   4
 #define       align_8byte     8
 #define       align_16byte    16
@@ -139,7 +143,11 @@ GNAME(call_into_lisp):
 
 	movl	(%esp),%eax	# Load NPX control word
 	andl	$0xfffff3ff,%eax	# Set rounding mode to nearest
+#ifdef type_LongFloat
 	orl	$0x00000300,%eax	# Set precision to 64 bits
+#else
+	orl	$0x00000200,%eax	# Set precision to 53 bits
+#endif	
 	pushl	%eax
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
@@ -277,7 +285,7 @@ GNAME(undefined_tramp):
 	.type	GNAME(closure_tramp),@function
 GNAME(closure_tramp):
 	movl	FDEFN_FUNCTION_OFFSET(%eax),%eax
-	jmp	CLOSURE_FUNCTION_OFFSET(%eax)
+	jmp	*CLOSURE_FUNCTION_OFFSET(%eax)
 	.size	GNAME(closure_tramp), .-GNAME(closure_tramp)
 
 /*

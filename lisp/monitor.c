@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.6.2.1 1998/06/23 11:25:03 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.6.2.2 2000/05/23 16:38:29 pw Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -436,7 +436,7 @@ static void sub_monitor(void)
     while (!done) {
         printf("ldb> ");
         fflush(stdout);
-        line = gets(buf);
+        line = fgets(buf, sizeof(buf), stdin);
         if (line == NULL) {
 	    if (isatty(0)) {
 		putchar('\n');

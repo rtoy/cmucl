@@ -41,6 +41,9 @@
 ;;;	lisps will have problems.  Fortunately, most other lisps don't care,
 ;;;	because they don't run in a multi-processing shared-address space
 ;;;	environment.
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/gcontext.lisp,v 1.4.2.2 2000/05/23 16:36:00 pw Exp $")
 
 (in-package :xlib)
 

@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.6.2.1 1998/06/23 11:22:23 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.6.2.2 2000/05/23 16:36:46 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,8 +36,10 @@
 ;;;  2:     Index k.
 ;;;  3-626: State.
 
-;;; Generate and initialise a new random-state array. Index is
-;;; initialised to 1 and the states to 32bit integers excluding zero.
+;;; Generate and initialise a new random-state array. The states are
+;;; initialised to 32bit integers excluding zero, and the index is
+;;; initialised to mt19937-n forcing an update when the first number
+;;; is generated.
 ;;;
 ;;; Seed - A 32bit number, not zero.
 ;;;
@@ -49,7 +51,7 @@
   (let ((state (or state (make-array 627 :element-type '(unsigned-byte 32)))))
     (declare (type (simple-array (unsigned-byte 32) (627)) state))
     (setf (aref state 1) #x9908b0df)
-    (setf (aref state 2) 1)
+    (setf (aref state 2) mt19937-n)
     (setf (aref state 3) seed)
     (do ((k 1 (1+ k)))
 	((>= k 624))
@@ -142,7 +144,8 @@
 ;;;
 #-x86
 (defun random-chunk (state)
-  (declare (type random-state state))
+  (declare (type random-state state)
+	   (optimize (speed 3) (safety 0)))
   (let* ((state (random-state-state state))
 	 (k (aref state 2)))
     (declare (type (mod 628) k))
@@ -300,16 +303,16 @@
   (declare (inline %random-single-float %random-double-float
 		   #+long-float %long-float))
   (cond
-    ((and (fixnump arg) (<= arg random-fixnum-max))
+    ((and (fixnump arg) (<= arg random-fixnum-max) (> arg 0))
      (rem (random-chunk state) arg))
-    ((typep arg 'single-float)
+    ((and (typep arg 'single-float) (> arg 0.0F0))
      (%random-single-float arg state))
-    ((typep arg 'double-float)
+    ((and (typep arg 'double-float) (> arg 0.0D0))
      (%random-double-float arg state))
     #+long-float
-    ((typep arg 'long-float)
+    ((and (typep arg 'long-float) (> arg 0.0L0))
      (%random-long-float arg state))
-    ((integerp arg)
+    ((and (integerp arg) (> arg 0))
      (%random-integer arg state))
     (t
      (error 'simple-type-error

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.31 1997/02/08 21:44:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.31.2.1 2000/05/23 16:37:07 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -912,15 +912,7 @@
       (c::lambda-var
        (set-leaf-value-lambda-var node var frame-ptr closure value))
       (c::global-var
-       (setf (symbol-value (c::global-var-name var)) value))
-      (c::dylan-var
-       (locally
-	 (declare (optimize (ext:inhibit-warnings 3)))
-	 (setf (dylan::value-datum
-		(dylan::lookup-variable-value (c::dylan-var-name var)
-					      (c::dylan-var-module-name var)
-					      t))
-	       value))))))
+       (setf (symbol-value (c::global-var-name var)) value)))))
 
 ;;; SET-LEAF-VALUE-LAMBDA-VAR -- Internal Interface.
 ;;;
@@ -951,7 +943,6 @@
 ;;; types:
 ;;;    constant   -- It knows its own value.
 ;;;    global-var -- It's either a value or function reference.  Get it right.
-;;;    dylan-var  -- Global dylan variable.  Just ask dylan.
 ;;;    local-var  -- This may on the stack or in the current closure, the
 ;;; 		     environment for the lambda INTERNAL-APPLY is currently
 ;;;		     executing.  If the leaf's home environment is the same
@@ -987,13 +978,6 @@
 		   (symbol-function name)
 		   (fdefinition name)))
 	     (symbol-value (c::global-var-name leaf)))))
-      (c::dylan-var
-       (locally
-	 (declare (optimize (ext:inhibit-warnings 3)))
-	 (dylan::value-datum
-	  (dylan::lookup-variable-value (c::dylan-var-name leaf)
-					(c::dylan-var-module-name leaf)
-					t))))
       (c::lambda-var
        (leaf-value-lambda-var node leaf frame-ptr closure))
       (c::functional

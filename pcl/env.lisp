@@ -24,61 +24,23 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.9.2.1 2000/05/23 16:38:50 pw Exp $")
+;;;
 ;;; Basic environmental stuff.
 ;;;
 
 (in-package :pcl)
 
-#+Lucid
-(progn
-
-(defun pcl-arglist (function &rest other-args)
-  (let ((defn nil))
-    (cond ((and (fsc-instance-p function)
-		(generic-function-p function))
-	   (generic-function-pretty-arglist function))
-	  ((and (symbolp function)
-		(fboundp function)
-		(setq defn (symbol-function function))
-		(fsc-instance-p defn)
-		(generic-function-p defn))
-	   (generic-function-pretty-arglist defn))
-	  (t (apply (original-definition 'sys::arglist)
-		    function other-args)))))
-
-(redefine-function 'sys::arglist 'pcl-arglist)
-
-)
-
-
 ;;;
 ;;;
 ;;;
 
 (defgeneric describe-object (object stream))
 
-#-Genera
-(progn
-
-(defun pcl-describe (object #+Lispm &optional #+Lispm no-complaints)
-  (let (#+Lispm (*describe-no-complaints* no-complaints))
-    #+Lispm (declare (special *describe-no-complaints*))
-    (describe-object object *standard-output*)
-    (values)))
-
 (defmethod describe-object (object stream)
-  #-cmu
-    (cond ((or #+kcl (packagep object))
-	   (describe-package object stream))
-	  (t
-	   (funcall (original-definition 'describe) object)))
-  #+cmu
   (describe object stream))
-
-#-cmu
-(redefine-function 'describe 'pcl-describe)
-
-)
 
 (defmethod describe-object ((object slot-object) stream)
   (let* ((class (class-of object))
@@ -180,21 +142,12 @@
     (when nick
       (format stream "You can also call it~@[ ~{~S~^, ~} or~] ~S.~%"
 	      (butlast nick) (first (last nick)))))  
-  (let* (#+cmu (internal (lisp::package-internal-symbols object))
-	 (internal-count #+cmu (- (lisp::package-hashtable-size internal)
-				  (lisp::package-hashtable-free internal))
-			 #-cmu 0)
-	 #+cmu (external (lisp::package-external-symbols object))
-	 (external-count #+cmu (- (lisp::package-hashtable-size external)
-				  (lisp::package-hashtable-free external))
-			 #-cmu 0))
-    #-cmu (do-external-symbols (sym object)
-	    (declare (ignore sym))
-	    (incf external-count))
-    #-cmu (do-symbols (sym object)
-	    (declare (ignore sym))
-	    (incf internal-count))
-    #-cmu (decf internal-count external-count)
+  (let* ((internal (lisp::package-internal-symbols object))
+	 (internal-count (- (lisp::package-hashtable-size internal)
+				  (lisp::package-hashtable-free internal)))
+	 (external (lisp::package-external-symbols object))
+	 (external-count (- (lisp::package-hashtable-size external)
+				  (lisp::package-hashtable-free external))))
     (format stream "It has ~D internal and ~D external symbols (~D total).~%"
 	    internal-count external-count (+ internal-count external-count)))
   (let ((used (package-use-list object)))
@@ -206,16 +159,13 @@
       (format stream "It is used by the packages ~{~S~^, ~}.~%"
 	      (mapcar #'package-name users)))))
 
-#+cmu
 (defmethod describe-object ((object package) stream)
   (describe-package object stream))
 
-#+cmu
 (defmethod describe-object ((object hash-table) stream)
   (format stream "~&~S is an ~a hash table."
 	  object
-	  #-cmu17 (lisp::hash-table-kind object)
-	  #+cmu17 (lisp::hash-table-test object))
+	  (lisp::hash-table-test object))
   (format stream "~&Its size is ~d buckets."
 	  (lisp::hash-table-size object))
   (format stream "~&Its rehash-size is ~d."
@@ -317,7 +267,6 @@
 ;    (setf (method-function method) (symbol-function name))))
 
 (defmacro undefmethod (&rest args)
-  #+(or (not :lucid) :lcl3.0)
   (declare (arglist name {method-qualifier}* specializers))
   `(undefmethod-1 ',args))
 
@@ -333,7 +282,6 @@
 (pushnew :portable-commonloops *features*)
 (pushnew :pcl-structures *features*)
 
-#+cmu
 (when (find-package "OLD-PCL")
   (setf (symbol-function (find-symbol "PRINT-OBJECT" :old-pcl))
         (symbol-function 'pcl::print-object)))
@@ -341,52 +289,45 @@
 
 ;;;; MAKE-LOAD-FORM
 
-#+cmu17
 (export '(cl::make-load-form cl::make-load-form-saving-slots) "CL")
 
-#+cmu17
-(progn
-  (defgeneric make-load-form (object &optional environment))
+(defgeneric make-load-form (object &optional environment))
 
-  (defmethod make-load-form ((object structure-object) &optional environment)
-    (declare (ignore environment))
-    (kernel:make-structure-load-form object))
+(defmethod make-load-form ((object structure-object) &optional environment)
+  (declare (ignore environment))
+  (kernel:make-structure-load-form object))
 
-  (defmethod make-load-form ((object wrapper) &optional env)
-    (declare (ignore env))
-    (let ((pname (kernel:class-proper-name (kernel:layout-class object))))
-      (unless pname
-	(error "Can't dump wrapper for anonymous class:~%  ~S"
-	       (kernel:layout-class object)))
-      `(kernel:class-layout (lisp:find-class ',pname))))
+(defmethod make-load-form ((object wrapper) &optional env)
+  (declare (ignore env))
+  (let ((pname (kernel:class-proper-name (kernel:layout-class object))))
+    (unless pname
+      (error "Can't dump wrapper for anonymous class:~%  ~S"
+	     (kernel:layout-class object)))
+    `(kernel:class-layout (lisp:find-class ',pname))))
 
-  (defun make-load-form-saving-slots (object &key slot-names environment)
-    (declare (ignore environment))
-    (when slot-names
-      (warn ":SLOT-NAMES MAKE-LOAD-FORM option not implemented, dumping all ~
-	     slots:~%  ~S"
-	    object))
-    :just-dump-it-normally))
+(defun make-load-form-saving-slots (object &key slot-names environment)
+  (declare (ignore environment))
+  (when slot-names
+    (warn ":SLOT-NAMES MAKE-LOAD-FORM option not implemented, dumping all ~
+	   slots:~%  ~S"
+	  object))
+  :just-dump-it-normally)
 
 
 ;;; The following are hacks to deal with CMU CL having two different CLASS
 ;;; classes.
 ;;;
-#+cmu17
 (defun coerce-to-pcl-class (class)
   (if (typep class 'lisp:class)
       (or (kernel:class-pcl-class class)
 	  (find-structure-class (lisp:class-name class)))
       class))
 
-#+cmu17
-(progn
-  (defmethod make-instance ((class lisp:class) &rest stuff)
-    (apply #'make-instance (coerce-to-pcl-class class) stuff))
-  (defmethod change-class (instance (class lisp:class))
-    (apply #'change-class instance (coerce-to-pcl-class class))))
+(defmethod make-instance ((class lisp:class) &rest stuff)
+  (apply #'make-instance (coerce-to-pcl-class class) stuff))
+(defmethod change-class (instance (class lisp:class))
+  (apply #'change-class instance (coerce-to-pcl-class class)))
 
-#+cmu17
 (macrolet ((frob (&rest names)
 	     `(progn
 		,@(mapcar #'(lambda (name)

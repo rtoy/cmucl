@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.12.2.1 1998/06/23 11:23:48 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.12.2.2 2000/05/23 16:37:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
 ;;;
 (defun load-long-reg (reg base offset &optional (restore-offset t))
   (if (backend-featurep :sparc-v9)
-      (inst ldxf reg base offset)
+      (inst ldqf reg base offset)
       (let ((reg0 (make-random-tn :kind :normal
 				  :sc (sc-or-lose 'double-reg *backend*)
 				  :offset (tn-offset reg)))
@@ -75,7 +75,7 @@
 ;;;
 (defun store-long-reg (reg base offset &optional (restore-offset t))
   (if (backend-featurep :sparc-v9)
-      (inst stxf reg base offset)
+      (inst stqf reg base offset)
       (let ((reg0 (make-random-tn :kind :normal
 				  :sc (sc-or-lose 'double-reg *backend*)
 				  :offset (tn-offset reg)))
@@ -121,7 +121,7 @@
 ;;; on the :sparc-v9 feature.
 (defun move-long-reg (dst src)
   (cond ((backend-featurep :sparc-v9)
-	 (inst fmovx dst src))
+	 (inst fmovq dst src))
 	(t
 	 (dotimes (i 4)
 	   (let ((dst (make-random-tn :kind :normal
@@ -260,8 +260,6 @@
 
 
 ;;;; Complex float move functions
-#+complex-float
-(progn
 
 (defun complex-single-reg-real-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
@@ -597,13 +595,10 @@
 (define-move-vop move-complex-long-float-argument :move-argument
   (complex-long-reg descriptor-reg) (complex-long-reg))
 
-) ; progn complex-float
-
 
 (define-move-vop move-argument :move-argument
   (single-reg double-reg #+long-float long-reg
-   #+complex-float complex-single-reg #+complex-float complex-double-reg
-   #+(and complex-float long-float) complex-long-reg)
+   complex-single-reg complex-double-reg #+long-float complex-long-reg)
   (descriptor-reg))
 
 
@@ -650,10 +645,10 @@
 		  (:translate ,op)
 		  (:generator ,lcost
 		    (inst ,linst r x y)))))
-  (frob + faddx +/long-float 2)
-  (frob - fsubx -/long-float 2)
-  (frob * fmulx */long-float 6)
-  (frob / fdivx //long-float 20))
+  (frob + faddq +/long-float 2)
+  (frob - fsubq -/long-float 2)
+  (frob * fmulq */long-float 6)
+  (frob / fdivq //long-float 20))
 
 
 (macrolet ((frob (name inst translate sc type)
@@ -673,6 +668,36 @@
   (frob abs/single-float fabss abs single-reg single-float)
   (frob %negate/single-float fnegs %negate single-reg single-float))
 
+(defun negate-double-reg (dst src)
+  (cond ((backend-featurep :sparc-v9)
+	 (inst fnegd dst src))
+	(t
+	 ;; Negate the MS part of the numbers, then copy over the rest
+	 ;; of the bits.
+	 (inst fnegs dst src)
+	 (let ((dst-odd (make-random-tn :kind :normal
+					:sc (sc-or-lose 'single-reg *backend*)
+					:offset (+ 1 (tn-offset dst))))
+	       (src-odd (make-random-tn :kind :normal
+					:sc (sc-or-lose 'single-reg *backend*)
+					:offset (+ 1 (tn-offset src)))))
+	   (inst fmovs dst-odd src-odd)))))
+
+(defun abs-double-reg (dst src)
+  (cond ((backend-featurep :sparc-v9)
+	 (inst fabsd dst src))
+	(t
+	 ;; Abs the MS part of the numbers, then copy over the rest
+	 ;; of the bits.
+	 (inst fabss dst src)
+	 (let ((dst-2 (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'single-reg *backend*)
+				      :offset (+ 1 (tn-offset dst))))
+	       (src-2 (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'single-reg *backend*)
+				      :offset (+ 1 (tn-offset src)))))
+	   (inst fmovs dst-2 src-2)))))
+
 (define-vop (abs/double-float)
   (:args (x :scs (double-reg)))
   (:results (y :scs (double-reg)))
@@ -685,17 +710,7 @@
   (:save-p :compute-only)
   (:generator 1
     (note-this-location vop :internal-error)
-    (cond ((backend-featurep :sparc-v9)
-	   (inst fabsd y x))
-	  (t
-	   (inst fabss y x)
-	   (let ((y-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset y))))
-		 (x-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset x)))))
-	     (inst fmovs y-odd x-odd))))))
+    (abs-double-reg y x)))
 
 (define-vop (%negate/double-float)
   (:args (x :scs (double-reg)))
@@ -709,17 +724,7 @@
   (:save-p :compute-only)
   (:generator 1
     (note-this-location vop :internal-error)
-    (cond ((backend-featurep :sparc-v9)
-	   (inst fnegd y x))
-	  (t
-	   (inst fnegs y x)
-	   (let ((y-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset y))))
-		 (x-odd (make-random-tn :kind :normal
-					:sc (sc-or-lose 'single-reg *backend*)
-					:offset (+ 1 (tn-offset x)))))
-	     (inst fmovs y-odd x-odd))))))
+    (negate-double-reg y x)))
 
 #+long-float
 (define-vop (abs/long-float)
@@ -735,7 +740,7 @@
   (:generator 1
     (note-this-location vop :internal-error)
     (cond ((backend-featurep :sparc-v9)
-	   (inst fabsx y x))
+	   (inst fabsq y x))
 	  (t
 	   (inst fabss y x)
 	   (dotimes (i 3)
@@ -763,7 +768,7 @@
   (:generator 1
     (note-this-location vop :internal-error)
     (cond ((backend-featurep :sparc-v9)
-	   (inst fnegx y x))
+	   (inst fnegq y x))
 	  (t
 	   (inst fnegs y x)
 	   (dotimes (i 3)
@@ -794,8 +799,11 @@
     (ecase format
       (:single (inst fcmps x y))
       (:double (inst fcmpd x y))
-      (:long (inst fcmpx x y)))
-    (inst nop)
+      (:long (inst fcmpq x y)))
+    ;; The SPARC V9 doesn't need an instruction between a
+    ;; floating-point compare and a floating-point branch.
+    (unless (backend-featurep :sparc-v9)
+      (inst nop))
     (inst fb (if not-p nope yep) target)
     (inst nop)))
 
@@ -867,7 +875,7 @@
   (frob %single-float/signed %single-float fitos single-reg single-float)
   (frob %double-float/signed %double-float fitod double-reg double-float)
   #+long-float
-  (frob %long-float/signed %long-float fitox long-reg long-float))
+  (frob %long-float/signed %long-float fitoq long-reg long-float))
 
 (macrolet ((frob (name translate inst from-sc from-type to-sc to-type)
 	     `(define-vop (,name)
@@ -886,18 +894,18 @@
   (frob %single-float/double-float %single-float fdtos
     double-reg double-float single-reg single-float)
   #+long-float
-  (frob %single-float/long-float %single-float fxtos
+  (frob %single-float/long-float %single-float fqtos
     long-reg long-float single-reg single-float)
   (frob %double-float/single-float %double-float fstod
     single-reg single-float double-reg double-float)
   #+long-float
-  (frob %double-float/long-float %double-float fxtod
+  (frob %double-float/long-float %double-float fqtod
     long-reg long-float double-reg double-float)
   #+long-float
-  (frob %long-float/single-float %long-float fstox
+  (frob %long-float/single-float %long-float fstoq
     single-reg single-float long-reg long-float)
   #+long-float
-  (frob %long-float/double-float %long-float fdtox
+  (frob %long-float/double-float %long-float fdtoq
     double-reg double-float long-reg long-float))
 
 (macrolet ((frob (trans from-sc from-type inst)
@@ -929,7 +937,7 @@
   (frob %unary-truncate single-reg single-float fstoi)
   (frob %unary-truncate double-reg double-float fdtoi)
   #+long-float
-  (frob %unary-truncate long-reg long-float fxtoi)
+  (frob %unary-truncate long-reg long-float fqtoi)
   #-sun4
   (frob %unary-round single-reg single-float fstoir)
   #-sun4
@@ -1250,6 +1258,24 @@
       (loadw res nfp (tn-offset temp))
       (inst nop))))
 
+#+nil
+(define-vop (floating-point-modes)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate floating-point-modes)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:temporary (:sc double-stack) temp)
+  (:generator 3
+    (let* ((nfp (current-nfp-tn vop))
+	   (offset (* 4 (tn-offset temp))))
+      (inst stxfsr nfp offset)
+      ;; The desired FP mode data is in the least significant 32
+      ;; bits, which is stored at the next higher word in memory.
+      (loadw res nfp (+ offset 4))
+      ;; Is this nop needed? (toy@rtp.ericsson.se)
+      (inst nop))))
+
 (define-vop (set-floating-point-modes)
   (:args (new :scs (unsigned-reg) :target res))
   (:results (res :scs (unsigned-reg)))
@@ -1265,6 +1291,57 @@
       (inst ldfsr nfp (* word-bytes (tn-offset temp)))
       (move res new))))
 
+#+nil
+(define-vop (set-floating-point-modes)
+  (:args (new :scs (unsigned-reg) :target res))
+  (:results (res :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:result-types unsigned-num)
+  (:translate (setf floating-point-modes))
+  (:policy :fast-safe)
+  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc unsigned-reg) my-fsr)
+  (:vop-var vop)
+  (:generator 3
+    (let ((nfp (current-nfp-tn vop))
+	  (offset (* word-bytes (tn-offset temp))))
+      (pseudo-atomic ()
+        ;; Get the current FSR, so we can get the new %fcc's
+        (inst stxfsr nfp offset)
+	(inst ldx my-fsr nfp offset)
+	;; Carefully merge in the new mode bits with the rest of the
+	;; FSR.  This is only needed if we care about preserving the
+	;; high 32 bits of the FSR, which contain the additional
+	;; %fcc's on the sparc V9.  If not, we don't need this, but we
+	;; do need to make sure that the unused bits are written as
+	;; zeroes, according the the V9 architecture manual.
+	(inst sra new 0)
+	(inst srlx my-fsr 32)
+	(inst sllx my-fsr 32)
+	(inst or my-fsr new)
+	;; Save it back and load it into the fsr register
+	(inst stx my-fsr nfp offset)
+	(inst ldxfsr nfp offset)
+	(move res new)))))
+
+#+nil
+(define-vop (set-floating-point-modes)
+  (:args (new :scs (unsigned-reg) :target res))
+  (:results (res :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:result-types unsigned-num)
+  (:translate (setf floating-point-modes))
+  (:policy :fast-safe)
+  (:temporary (:sc double-stack) temp)
+  (:temporary (:sc unsigned-reg) my-fsr)
+  (:vop-var vop)
+  (:generator 3
+    (let ((nfp (current-nfp-tn vop))
+	  (offset (* word-bytes (tn-offset temp))))
+      (inst stx new nfp offset)
+      (inst ldxfsr nfp offset)
+      (move res new))))
+
 
 ;;;; Special functions.
 
@@ -1274,7 +1351,9 @@
   (:results (y :scs (double-reg)))
   (:translate %sqrt)
   (:policy :fast-safe)
-  (:guard (backend-featurep :sparc-v7))
+  (:guard (or (backend-featurep :sparc-v7)
+	      (backend-featurep :sparc-v8)
+	      (backend-featurep :sparc-v9)))
   (:arg-types double-float)
   (:result-types double-float)
   (:note "inline float arithmetic")
@@ -1285,7 +1364,7 @@
     (inst fsqrtd y x)))
 
 #+long-float
-(define-vop (fsqrt)
+(define-vop (fsqrt-long)
   (:args (x :scs (long-reg)))
   (:results (y :scs (long-reg)))
   (:translate %sqrt)
@@ -1297,13 +1376,10 @@
   (:save-p :compute-only)
   (:generator 1
     (note-this-location vop :internal-error)
-    (inst fsqrtx y x)))
+    (inst fsqrtq y x)))
 
 
 ;;;; Complex float VOPs
-
-#+complex-float
-(progn
 
 (define-vop (make-complex-single-float)
   (:translate complex)
@@ -1489,4 +1565,935 @@
   (:note "complex long float imagpart")
   (:variant :imag))
 
-) ; progn complex-float
+
+
+;;;; Complex float arithmetic
+
+#+complex-fp-vops
+(progn
+
+;; Negate a complex
+(macrolet
+    ((frob (float-type fneg cost)
+       (let* ((vop-name (symbolicate "%NEGATE/COMPLEX-" float-type))
+	      (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	      (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	      (real-tn (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	      (imag-tn (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,complex-reg)))
+	    (:arg-types ,c-type)
+	    (:results (r :scs (,complex-reg)))
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float arithmetic")
+	    (:translate %negate)
+	    (:generator ,cost
+	      (let ((xr (,real-tn x))
+		    (xi (,imag-tn x))
+		    (rr (,real-tn r))
+		    (ri (,imag-tn r)))
+		(,@fneg rr xr)
+		(,@fneg ri xi)))))))
+  (frob single (inst fnegs) 4)
+  (frob double (negate-double-reg) 4))
+
+;; Add and subtract for two complex arguments
+(macrolet
+    ((frob (op inst float-type cost)
+       (let* ((vop-name (symbolicate (symbol-name op) "/COMPLEX-" float-type "-FLOAT"))
+	      (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	      (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	      (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	      (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	   (:args (x :scs (,complex-reg)) (y :scs (,complex-reg)))
+	   (:results (r :scs (,complex-reg)))
+	   (:arg-types ,c-type ,c-type)
+	   (:result-types ,c-type)
+	   (:policy :fast-safe)
+	   (:note "inline complex float arithmetic")
+	   (:translate ,op)
+	   (:generator ,cost
+	    (let ((xr (,real-part x))
+		  (xi (,imag-part x))
+		  (yr (,real-part y))
+		  (yi (,imag-part y))
+		  (rr (,real-part r))
+		  (ri (,imag-part r)))
+	      (inst ,inst rr xr yr)
+	      (inst ,inst ri xi yi)))))))
+  (frob + fadds single 4)
+  (frob + faddd double 4)
+  (frob - fsubs single 4)
+  (frob - fsubd double 4))
+
+;; Add and subtract a complex and a float
+
+(macrolet
+    ((frob (size op fop fmov cost)
+       (let ((vop-name (symbolicate "COMPLEX-" size "-FLOAT-"
+				    op
+				    "-" size "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
+	     (real-reg (symbolicate size "-REG"))
+	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
+	     (r-type (symbolicate size "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	      (:args (x :scs (,complex-reg))
+	             (y :scs (,real-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,c-type ,r-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float/float arithmetic")
+	    (:translate ,op)
+	    (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (rr (,real-part r))
+		    (ri (,imag-part r)))
+		(inst ,fop rr xr y)
+		(unless (location= ri xi)
+		  (,@fmov ri xi))))))))
+  
+  (frob single + fadds (inst fmovs) 2)
+  (frob single - fsubs (inst fmovs) 2)
+  (frob double + faddd (move-double-reg) 4)
+  (frob double - fsubd (move-double-reg) 4))
+
+;; Add a float and a complex
+(macrolet
+    ((frob (size fop fmov cost)
+       (let ((vop-name
+	      (symbolicate size "-FLOAT-+-COMPLEX-" size "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
+	     (real-reg (symbolicate size "-REG"))
+	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
+	     (r-type (symbolicate size "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	      (:args (y :scs (,real-reg))
+	             (x :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,r-type ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float/float arithmetic")
+	    (:translate +)
+	    (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (rr (,real-part r))
+		    (ri (,imag-part r)))
+		(inst ,fop rr xr y)
+		(unless (location= ri xi)
+		  (,@fmov ri xi))))))))
+  (frob single fadds (inst fmovs) 1)
+  (frob double faddd (move-double-reg) 2))
+
+;; Subtract a complex from a float
+
+(macrolet
+    ((frob (size fop fneg cost)
+       (let ((vop-name (symbolicate size "-FLOAT---COMPLEX-" size "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
+	     (real-reg (symbolicate size "-REG"))
+	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
+	     (r-type (symbolicate size "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
+	 `(define-vop (single-float---complex-single-float)
+	      (:args (x :scs (,real-reg)) (y :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,r-type ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float/float arithmetic")
+	    (:translate -)
+	    (:generator ,cost
+	       (let ((yr (,real-part y))
+		     (yi (,imag-part y))
+		     (rr (,real-part r))
+		     (ri (,imag-part r)))
+		 (inst ,fop rr x yr)
+		 (,@fneg ri yi))))
+       ))
+
+  (frob single fsubs (inst fnegs) 2)
+  (frob double fsubd (negate-double-reg) 2)))
+
+;; Multiply two complex numbers
+
+#+nil
+(macrolet
+    ((frob (size fmul fadd fsub cost)
+       (let ((vop-name (symbolicate "*/COMPLEX-" size "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
+	     (real-reg (symbolicate size "-REG"))
+	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,complex-reg))
+	           (y :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,c-type ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float multiplication")
+	    (:translate *)
+	    (:temporary (:scs (,real-reg)) prod-1 prod-2 prod-3 prod-4)
+	    (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (yr (,real-part y))
+		    (yi (,imag-part y))
+		    (rr (,real-part r))
+		    (ri (,imag-part r)))
+		;; All of the temps are needed in case the result TN happens to
+		;; be the same as one of the arg TN's
+		(inst ,fmul prod-1 xr yr)
+		(inst ,fmul prod-2 xi yi)
+		(inst ,fmul prod-3 xr yi)
+		(inst ,fmul prod-4 xi yr)
+		(inst ,fsub rr prod-1 prod-2)
+		(inst ,fadd ri prod-3 prod-4)))))))
+
+  (frob single fmuls fadds fsubs 6)
+  (frob double fmuld faddd fsubd 6))
+
+(macrolet
+    ((frob (size fmul fadd fsub cost)
+       (let ((vop-name (symbolicate "*/COMPLEX-" size "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
+	     (real-reg (symbolicate size "-REG"))
+	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,complex-reg))
+	           (y :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,c-type ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float multiplication")
+	    (:translate *)
+	    (:temporary (:scs (,real-reg)) p1 p2)
+	    (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (yr (,real-part y))
+		    (yi (,imag-part y))
+		    (rr (,real-part r))
+		    (ri (,imag-part r)))
+		(cond ((location= r x)
+		       (inst ,fmul p1 xr yr)
+		       (inst ,fmul p2 xr yi)
+		       (inst ,fmul rr xi yi)
+		       (inst ,fsub rr p1 xr)
+		       (inst ,fmul p1 xi yr)
+		       (inst ,fadd ri p2 p1))
+		      ((location= r y)
+		       (inst ,fmul p1 yr xr)
+		       (inst ,fmul p2 yr xi)
+		       (inst ,fmul rr yi xi)
+		       (inst ,fsub rr p1 rr)
+		       (inst ,fmul p1 yi xr)
+		       (inst ,fadd ri p2 p1))
+		      (t
+		       (inst ,fmul rr yr xr)
+		       (inst ,fmul ri xi yi)
+		       (inst ,fsub rr rr ri)
+		       (inst ,fmul p1 xr yi)
+		       (inst ,fmul ri xi yr)
+		       (inst ,fadd ri ri p1)))))))))
+
+  (frob single fmuls fadds fsubs 6)
+  (frob double fmuld faddd fsubd 6))
+
+;; Multiply a complex by a float.  The case of float * complex is
+;; handled by a deftransform to convert it to the complex*float case.
+(macrolet
+    ((frob (float-type fmul mov cost)
+       (let* ((vop-name (symbolicate "COMPLEX-"
+				     float-type
+				     "-FLOAT-*-"
+				     float-type
+				     "-FLOAT"))
+	      (vop-name-r (symbolicate float-type
+				       "-FLOAT-*-COMPLEX-"
+				       float-type
+				       "-FLOAT"))
+	      (complex-sc-type (symbolicate "COMPLEX-" float-type "-REG"))
+	      (real-sc-type (symbolicate float-type "-REG"))
+	      (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	      (r-type (symbolicate float-type "-FLOAT"))
+	      (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	      (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(progn
+	   ;; Complex * float
+	   (define-vop (,vop-name)
+	     (:args (x :scs (,complex-sc-type))
+	            (y :scs (,real-sc-type)))
+	     (:results (r :scs (,complex-sc-type)))
+	     (:arg-types ,c-type ,r-type)
+	     (:result-types ,c-type)
+	     (:policy :fast-safe)
+	     (:note "inline complex float arithmetic")
+	     (:translate *)
+	     (:temporary (:scs (,real-sc-type)) temp)
+	     (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (rr (,real-part r))
+		    (ri (,imag-part r)))
+		(cond ((location= y rr)
+		       (inst ,fmul temp xr y) ; xr * y
+		       (inst ,fmul ri xi y) ; xi * yi
+		       (,@mov rr temp))
+		      (t
+		       (inst ,fmul rr xr y)
+		       (inst ,fmul ri xi y))))))
+	   ;; Float * complex
+	   (define-vop (,vop-name-r)
+	     (:args (y :scs (,real-sc-type))
+	            (x :scs (,complex-sc-type)))
+	     (:results (r :scs (,complex-sc-type)))
+	     (:arg-types ,r-type ,c-type)
+	     (:result-types ,c-type)
+	     (:policy :fast-safe)
+	     (:note "inline complex float arithmetic")
+	     (:translate *)
+	     (:temporary (:scs (,real-sc-type)) temp)
+	     (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (rr (,real-part r))
+		    (ri (,imag-part r)))
+		(cond ((location= y rr)
+		       (inst ,fmul temp xr y) ; xr * y
+		       (inst ,fmul ri xi y) ; xi * yi
+		       (,@mov rr temp))
+		      (t
+		       (inst ,fmul rr xr y)
+		       (inst ,fmul ri xi y))))))))))
+  (frob single fmuls (inst fmovs) 4)
+  (frob double fmuld (move-double-reg) 4))
+
+
+;; Divide a complex by a complex
+
+;; Here's how we do a complex division
+;;
+;; Compute (xr + i*xi)/(yr + i*yi)
+;;
+;; Assume |yi| < |yr|.  Then
+;;
+;; (xr + i*xi)      (xr + i*xi)
+;; ----------- = -----------------
+;; (yr + i*yi)   yr*(1 + i*(yi/yr))
+;;
+;;               (xr + i*xi)*(1 - i*(yi/yr))
+;;             = ---------------------------
+;;                   yr*(1 + (yi/yr)^2)
+;;
+;;               (xr + (yi/yr)*xi) + i*(xi - (yi/yr)*xr)
+;;             = --------------------------------------
+;;                        yr + (yi/yr)*yi
+;;
+;;
+;; We do the similar thing when |yi| > |yr|.  The result is
+;;
+;;     
+;; (xr + i*xi)      (xr + i*xi)
+;; ----------- = -----------------
+;; (yr + i*yi)   yi*((yr/yi) + i)
+;;
+;;               (xr + i*xi)*((yr/yi) - i)
+;;             = -------------------------
+;;                  yi*((yr/yi)^2 + 1)
+;;
+;;               (xr*(yr/yi) + xi) + i*(xi*(yr/yi) - xr)
+;;             = ---------------------------------------
+;;                       yi + (yr/yi)*yr
+;;
+
+#+nil
+(macrolet
+    ((frob (float-type fcmp fadd fsub fmul fdiv fabs fmov cost)
+       (let ((vop-name (symbolicate "//COMPLEX-" float-type "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	     (real-reg (symbolicate float-type "-REG"))
+	     (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,complex-reg))
+		   (y :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,c-type ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float division")
+	    (:translate /)
+	    (:temporary (:sc ,real-reg) ratio)
+	    (:temporary (:sc ,real-reg) den)
+	    (:temporary (:sc ,real-reg) temp-r)
+	    (:temporary (:sc ,real-reg) temp-i)
+	    (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (yr (,real-part y))
+		    (yi (,imag-part y))
+		    (rr (,real-part r))
+		    (ri (,imag-part r))
+		    (bigger (gen-label))
+		    (done (gen-label)))
+		(,@fabs ratio yr)
+		(,@fabs den yi)
+		(inst ,fcmp ratio den)
+		(unless (backend-featurep :sparc-v9)
+		  (inst nop))
+		(inst fb :ge bigger)
+		(inst nop)
+		;; The case of |yi| <= |yr|
+		(inst ,fdiv ratio yi yr) ; ratio = yi/yr
+		(inst ,fmul den ratio yi)
+		(inst ,fadd den den yr) ; den = yr + (yi/yr)*yi
+
+		(inst ,fmul temp-r ratio xi)
+		(inst ,fadd temp-r temp-r xr) ; temp-r = xr + (yi/yr)*xi
+		(inst ,fdiv temp-r temp-r den)
+
+		(inst ,fmul temp-i ratio xr)
+		(inst ,fsub temp-i xi temp-i) ; temp-i = xi - (yi/yr)*xr
+		(inst b done)
+		(inst ,fdiv temp-i temp-i den)
+
+		(emit-label bigger)
+		;; The case of |yi| > |yr|
+		(inst ,fdiv ratio yr yi) ; ratio = yr/yi
+		(inst ,fmul den ratio yr)
+		(inst ,fadd den den yi) ; den = yi + (yr/yi)*yr
+
+		(inst ,fmul temp-r ratio xr)
+		(inst ,fadd temp-r temp-r xi) ; temp-r = xi + xr*(yr/yi)
+		(inst ,fdiv temp-r temp-r den)
+
+		(inst ,fmul temp-i ratio xi)
+		(inst ,fsub temp-i temp-i xr) ; temp-i = xi*(yr/yi) - xr
+		(inst ,fdiv temp-i temp-i den)
+
+		(emit-label done)
+		(unless (location= temp-r rr)
+		  (,@fmov rr temp-r))
+		(unless (location= temp-i ri)
+		  (,@fmov ri temp-i))
+		))))))
+
+  (frob single fcmps fadds fsubs fmuls fdivs (inst fabss) (inst fmovs) 15)
+  (frob double fcmpd faddd fsubd fmuld fdivd (abs-double-reg) (move-double-reg) 15))
+
+(macrolet
+    ((frob (float-type fcmp fadd fsub fmul fdiv fabs cost)
+       (let ((vop-name (symbolicate "//COMPLEX-" float-type "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	     (real-reg (symbolicate float-type "-REG"))
+	     (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,complex-reg))
+		   (y :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,c-type ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float division")
+	    (:translate /)
+	    (:temporary (:sc ,real-reg) ratio)
+	    (:temporary (:sc ,real-reg) den)
+	    (:temporary (:sc ,real-reg) temp-r)
+	    (:temporary (:sc ,real-reg) temp-i)
+	    (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (yr (,real-part y))
+		    (yi (,imag-part y))
+		    (rr (,real-part r))
+		    (ri (,imag-part r))
+		    (bigger (gen-label))
+		    (done (gen-label)))
+		(,@fabs ratio yr)
+		(,@fabs den yi)
+		(inst ,fcmp ratio den)
+		(unless (backend-featurep :sparc-v9)
+		  (inst nop))
+		(inst fb :ge bigger)
+		(inst nop)
+		;; The case of |yi| <= |yr|
+		(inst ,fdiv ratio yi yr) ; ratio = yi/yr
+		(inst ,fmul den ratio yi)
+		(inst ,fmul temp-r ratio xi)
+		(inst ,fmul temp-i ratio xr)
+
+		(inst ,fadd den den yr) ; den = yr + (yi/yr)*yi
+		(inst ,fadd temp-r temp-r xr) ; temp-r = xr + (yi/yr)*xi
+		(inst b done)
+		(inst ,fsub temp-i xi temp-i) ; temp-i = xi - (yi/yr)*xr
+
+
+		(emit-label bigger)
+		;; The case of |yi| > |yr|
+		(inst ,fdiv ratio yr yi) ; ratio = yr/yi
+		(inst ,fmul den ratio yr)
+		(inst ,fmul temp-r ratio xr)
+		(inst ,fmul temp-i ratio xi)
+
+		(inst ,fadd den den yi) ; den = yi + (yr/yi)*yr
+		(inst ,fadd temp-r temp-r xi) ; temp-r = xi + xr*(yr/yi)
+
+		(inst ,fsub temp-i temp-i xr) ; temp-i = xi*(yr/yi) - xr
+
+		(emit-label done)
+
+		(inst ,fdiv rr temp-r den)
+		(inst ,fdiv ri temp-i den)
+		))))))
+
+  (frob single fcmps fadds fsubs fmuls fdivs (inst fabss) 15)
+  (frob double fcmpd faddd fsubd fmuld fdivd (abs-double-reg) 15))
+
+
+;; Divide a complex by a real
+(macrolet
+    ((frob (float-type fdiv cost)
+       (let* ((vop-name (symbolicate "COMPLEX-" float-type "-FLOAT-/-" float-type "-FLOAT"))
+	      (complex-sc-type (symbolicate "COMPLEX-" float-type "-REG"))
+	      (real-sc-type (symbolicate float-type "-REG"))
+	      (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	      (r-type (symbolicate float-type "-FLOAT"))
+	      (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	      (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	   (:args (x :scs (,complex-sc-type)) (y :scs (,real-sc-type)))
+	   (:results (r :scs (,complex-sc-type)))
+	   (:arg-types ,c-type ,r-type)
+	   (:result-types ,c-type)
+	   (:policy :fast-safe)
+	   (:note "inline complex float arithmetic")
+	   (:translate /)
+	   (:generator ,cost
+	    (let ((xr (,real-part x))
+		  (xi (,imag-part x))
+		  (rr (,real-part r))
+		  (ri (,imag-part r)))
+	      (inst ,fdiv rr xr y)	; xr * y
+	      (inst ,fdiv ri xi y)	; xi * yi
+	      ))))))
+  (frob single fdivs 2)
+  (frob double fdivd 2))
+
+;; Divide a real by a complex
+
+(macrolet
+    ((frob (float-type fcmp fadd fmul fdiv fneg fabs cost)
+       (let ((vop-name (symbolicate float-type "-FLOAT-/-COMPLEX-" float-type "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	     (real-reg (symbolicate float-type "-REG"))
+	     (r-type (symbolicate float-type "-FLOAT"))
+	     (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	     (real-tn (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	     (imag-tn (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,real-reg))
+		   (y :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,r-type ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex float division")
+	    (:translate /)
+	    (:temporary (:sc ,real-reg) ratio)
+	    (:temporary (:sc ,real-reg) den)
+	    (:temporary (:sc ,real-reg) temp)
+	    (:generator ,cost
+	      (let ((yr (,real-tn y))
+		    (yi (,imag-tn y))
+		    (rr (,real-tn r))
+		    (ri (,imag-tn r))
+		    (bigger (gen-label))
+		    (done (gen-label)))
+		(,@fabs ratio yr)
+		(,@fabs den yi)
+		(inst ,fcmp ratio den)
+		(unless (backend-featurep :sparc-v9)
+		  (inst nop))
+		(inst fb :ge bigger)
+		(inst nop)
+		;; The case of |yi| <= |yr|
+		(inst ,fdiv ratio yi yr) ; ratio = yi/yr
+		(inst ,fmul den ratio yi)
+		(inst ,fadd den den yr) ; den = yr + (yi/yr)*yi
+
+		(inst ,fmul temp ratio x) ; temp = (yi/yr)*x
+		(inst ,fdiv rr x den)	; rr = x/den
+		(inst b done)
+		(inst ,fdiv temp temp den) ; temp = (yi/yr)*x/den
+
+		(emit-label bigger)
+		;; The case of |yi| > |yr|
+		(inst ,fdiv ratio yr yi) ; ratio = yr/yi
+		(inst ,fmul den ratio yr)
+		(inst ,fadd den den yi) ; den = yi + (yr/yi)*yr
+
+		(inst ,fmul temp ratio x) ; temp = (yr/yi)*x
+		(inst ,fdiv rr temp den) ; rr = (yr/yi)*x/den
+		(inst ,fdiv temp x den) ; temp = x/den
+		(emit-label done)
+
+		(,@fneg ri temp)))))))
+
+  (frob single fcmps fadds fmuls fdivs (inst fnegs) (inst fabss) 10)
+  (frob double fcmpd faddd fmuld fdivd (negate-double-reg) (abs-double-reg) 10))
+
+;; Conjugate of a complex number
+
+(macrolet
+    ((frob (float-type fneg fmov cost)
+       (let ((vop-name (symbolicate "CONJUGATE/COMPLEX-" float-type "-FLOAT"))
+	     (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	     (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,complex-reg)))
+	    (:results (r :scs (,complex-reg)))
+	    (:arg-types ,c-type)
+	    (:result-types ,c-type)
+	    (:policy :fast-safe)
+	    (:note "inline complex conjugate")
+	    (:translate conjugate)
+	    (:generator ,cost
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (rr (,real-part r))
+		    (ri (,imag-part r)))
+		(,@fneg ri xi)
+		(unless (location= rr xr)
+		  (,@fmov rr xr))))))))
+
+  (frob single (inst fnegs) (inst fmovs) 4)
+  (frob double (negate-double-reg) (move-double-reg) 4))
+
+;; Compare a float with a complex or a complex with a float
+#+nil
+(macrolet
+    ((frob (name name-r f-type c-type)
+       `(progn
+	 (defknown ,name (,f-type ,c-type) t)
+	 (defknown ,name-r (,c-type ,f-type) t)
+	 (defun ,name (x y)
+	   (declare (type ,f-type x)
+		    (type ,c-type y))
+	   (,name x y))
+	 (defun ,name-r (x y)
+	   (declare (type ,c-type x)
+		    (type ,f-type y))
+	   (,name-r x y))
+	 )))
+  (frob %compare-complex-single-single %compare-single-complex-single
+	single-float (complex single-float))
+  (frob %compare-complex-double-double %compare-double-complex-double
+	double-float (complex double-float)))
+	   
+#+nil
+(macrolet
+    ((frob (trans-1 trans-2 float-type fcmp fsub)
+       (let ((vop-name
+	      (symbolicate "COMPLEX-" float-type "-FLOAT-"
+			   float-type "-FLOAT-COMPARE"))
+	     (vop-name-r
+	      (symbolicate float-type "-FLOAT-COMPLEX-"
+			   float-type "-FLOAT-COMPARE"))
+	     (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	     (real-reg (symbolicate float-type "-REG"))
+	     (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	     (r-type (symbolicate float-type "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(progn
+	    ;; (= float complex)
+	    (define-vop (,vop-name)
+	      (:args (x :scs (,real-reg))
+		     (y :scs (,complex-reg)))
+	      (:arg-types ,r-type ,c-type)
+	      (:translate ,trans-1)
+	      (:conditional)
+	      (:info target not-p)
+	      (:policy :fast-safe)
+	      (:note "inline complex float/float comparison")
+	      (:vop-var vop)
+	      (:save-p :compute-only)
+	      (:temporary (:sc ,real-reg) fp-zero)
+	      (:guard (not (backend-featurep :sparc-v9)))
+	      (:generator 6
+	       (note-this-location vop :internal-error)
+	       (let ((yr (,real-part y))
+		     (yi (,imag-part y)))
+		 ;; Set fp-zero to zero
+		 (inst ,fsub fp-zero fp-zero fp-zero)
+		 (inst ,fcmp x yr)
+		 (inst nop)
+		 (inst fb (if not-p :ne :eq) target #+sparc-v9 :fcc0 #+sparc-v9 :pn)
+		 (inst ,fcmp yi fp-zero)
+		 (inst nop)
+		 (inst fb (if not-p :ne :eq) target #+sparc-v9 :fcc0 #+sparc-v9 :pn)
+		 (inst nop))))
+	    ;; (= complex float)
+	    (define-vop (,vop-name-r)
+	      (:args (y :scs (,complex-reg))
+	             (x :scs (,real-reg)))
+	      (:arg-types ,c-type ,r-type)
+	      (:translate ,trans-2)
+	      (:conditional)
+	      (:info target not-p)
+	      (:policy :fast-safe)
+	      (:note "inline complex float/float comparison")
+	      (:vop-var vop)
+	      (:save-p :compute-only)
+	      (:temporary (:sc ,real-reg) fp-zero)
+	      (:guard (not (backend-featurep :sparc-v9)))
+	      (:generator 6
+	       (note-this-location vop :internal-error)
+	       (let ((yr (,real-part y))
+		     (yi (,imag-part y)))
+		 ;; Set fp-zero to zero
+		 (inst ,fsub fp-zero fp-zero fp-zero)
+		 (inst ,fcmp x yr)
+		 (inst nop)
+		 (inst fb (if not-p :ne :eq) target #+sparc-v9 :fcc0 #+sparc-v9 :pn)
+		 (inst ,fcmp yi fp-zero)
+		 (inst nop)
+		 (inst fb (if not-p :ne :eq) target #+sparc-v9 :fcc0 #+sparc-v9 :pn)
+		 (inst nop))))))))
+  (frob %compare-complex-single-single %compare-single-complex-single
+	single fcmps fsubs)
+  (frob %compare-complex-double-double %compare-double-complex-double
+	double fcmpd fsubd))
+
+;; Compare two complex numbers for equality
+(macrolet
+    ((frob (float-type fcmp)
+       (let ((vop-name
+	      (symbolicate "COMPLEX-" float-type "-FLOAT-COMPARE"))
+	     (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	     (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,complex-reg))
+		   (y :scs (,complex-reg)))
+	    (:arg-types ,c-type ,c-type)
+	    (:translate =)
+	    (:conditional)
+	    (:info target not-p)
+	    (:policy :fast-safe)
+	    (:note "inline complex float comparison")
+	    (:vop-var vop)
+	    (:save-p :compute-only)
+	    (:guard (not (backend-featurep :sparc-v9)))
+	    (:generator 6
+	      (note-this-location vop :internal-error)
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (yr (,real-part y))
+		    (yi (,imag-part y)))
+		(inst ,fcmp xr yr)
+		(inst nop)
+		(inst fb (if not-p :ne :eq) target #+sparc-v9 :fcc0 #+sparc-v9 :pn)
+		(inst ,fcmp xi yi)
+		(inst nop)
+		(inst fb (if not-p :ne :eq) target #+sparc-v9 :fcc0 #+sparc-v9 :pn)
+		(inst nop)))))))
+  (frob single fcmps)
+  (frob double fcmpd))
+
+;; Compare a complex with a complex, for V9
+(macrolet
+    ((frob (float-type fcmp)
+       (let ((vop-name
+	      (symbolicate "V9-COMPLEX-" float-type "-FLOAT-COMPARE"))
+	     (complex-reg (symbolicate "COMPLEX-" float-type "-REG"))
+	     (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
+	     (real-part (symbolicate "COMPLEX-" float-type "-REG-REAL-TN"))
+	     (imag-part (symbolicate "COMPLEX-" float-type "-REG-IMAG-TN")))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,complex-reg))
+		   (y :scs (,complex-reg)))
+	    (:arg-types ,c-type ,c-type)
+	    (:translate =)
+	    (:conditional)
+	    (:info target not-p)
+	    (:policy :fast-safe)
+	    (:note "inline complex float comparison")
+	    (:vop-var vop)
+	    (:save-p :compute-only)
+	    (:temporary (:sc descriptor-reg) true)
+	    (:guard (backend-featurep :sparc-v9))
+	    (:generator 6
+	      (note-this-location vop :internal-error)
+	      (let ((xr (,real-part x))
+		    (xi (,imag-part x))
+		    (yr (,real-part y))
+		    (yi (,imag-part y)))
+		;; Assume comparison is true
+		(load-symbol true t)
+		(inst ,fcmp xr yr)
+		(inst cmove (if not-p :eq :ne) true null-tn :fcc0)
+		(inst ,fcmp xi yi)
+		(inst cmove (if not-p :eq :ne) true null-tn :fcc0)
+		(inst cmp true null-tn)
+		(inst b (if not-p :eq :ne) target :icc :pt)
+		(inst nop)))))))
+  (frob single fcmps)
+  (frob double fcmpd))
+
+) ; end progn complex-fp-vops
+
+#+sparc-v9
+(progn
+
+#+nil
+(macrolet
+    ((frob (op type)
+       (let ((name (symbolicate op "-" type)))
+       `(progn
+	 (defknown ,name (,type ,type)
+	   ,type
+	   (movable foldable flushable))
+	 (defun ,name (x y)
+	   (declare (,type x y))
+	   (,name x y))))))
+  (frob %max single-float)
+  (frob %max double-float)
+  (frob %min double-float)
+  (frob %min single-float))
+
+(defknown (%%max %%min) ((or (unsigned-byte 32) (signed-byte 32)
+			     single-float double-float)
+			 (or (unsigned-byte 32) (signed-byte 32)
+			     single-float double-float))
+  (or (unsigned-byte 32) (signed-byte 32)
+      single-float double-float)
+  (movable foldable flushable))
+
+(defun %%max (x y)
+  (declare (type (or (unsigned-byte 32) (signed-byte 32)
+		     single-float double-float) x y))
+  (%%max x y))
+
+(defun %%min (x y)
+  (declare (type (or (unsigned-byte 32) (signed-byte 32)
+		     single-float double-float) x y))
+  (%%min x y))
+
+
+(macrolet
+    ((frob (name sc-type type compare cmov cost cc max min note)
+       (let ((vop-name (symbolicate name "-" type "=>" type))
+	     (trans-name (symbolicate "%%" name)))
+	 `(define-vop (,vop-name)
+	    (:args (x :scs (,sc-type))
+		   (y :scs (,sc-type)))
+	    (:results (r :scs (,sc-type)))
+	    (:arg-types ,type ,type)
+	    (:result-types ,type)
+	    (:policy :fast-safe)
+	    (:note ,note)
+	    (:translate ,trans-name)
+	    (:guard (backend-featurep :sparc-v9))
+	    (:generator ,cost
+	      (inst ,compare x y)
+	      (cond ((location= r x)
+		     ;; If x < y, need to move y to r, otherwise r already has
+		     ;; the max.
+		     (inst ,cmov ,min r y ,cc))
+		    ((location= r y)
+		     ;; If x > y, need to move x to r, otherwise r already has
+		     ;; the max.
+		     (inst ,cmov ,max r x ,cc))
+		    (t
+		     ;; It doesn't matter what R is, just copy the min to R.
+		     (inst ,cmov ,max r x ,cc)
+		     (inst ,cmov ,min r y ,cc))))))))
+  (frob max single-reg single-float fcmps cfmovs 3
+	:fcc0 :ge :l "inline float max")
+  (frob max double-reg double-float fcmpd cfmovd 3
+	:fcc0 :ge :l "inline float max")
+  (frob min single-reg single-float fcmps cfmovs 3
+	:fcc0 :l :ge "inline float min")
+  (frob min double-reg double-float fcmpd cfmovd 3
+	:fcc0 :l :ge "inline float min")
+  ;; Strictly speaking these aren't float ops, but it's convenient to
+  ;; do them here.
+  ;;
+  ;; The cost is here is the worst case number of instructions.  For
+  ;; 32-bit integer operands, we add 2 more to account for the
+  ;; untagging of fixnums, if necessary.
+  (frob max signed-reg signed-num cmp cmove 5
+	:icc :ge :lt "inline (signed-byte 32) max")
+  (frob max unsigned-reg unsigned-num cmp cmove 5
+	:icc :ge :lt "inline (unsigned-byte 32) max")
+  ;; For fixnums, make the cost lower so we don't have to untag the
+  ;; numbers.
+  (frob max any-reg tagged-num cmp cmove 3
+	:icc :ge :lt "inline fixnum max")
+  (frob min signed-reg signed-num cmp cmove 5
+	:icc :lt :ge "inline (signed-byte 32) min")
+  (frob min unsigned-reg unsigned-num cmp cmove 5
+	:icc :lt :ge "inline (unsigned-byte 32) min")
+  ;; For fixnums, make the cost lower so we don't have to untag the
+  ;; numbers.
+  (frob min any-reg tagged-num cmp cmove 3
+	:icc :lt :ge "inline fixnum min"))
+	   
+#+nil
+(define-vop (max-boxed-double-float=>boxed-double-float)
+  (:args (x :scs (descriptor-reg))
+	 (y :scs (descriptor-reg)))
+  (:results (r :scs (descriptor-reg)))
+  (:arg-types double-float double-float)
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:note "inline float max/min")
+  (:translate %max-double-float)
+  (:temporary (:scs (double-reg)) xval)
+  (:temporary (:scs (double-reg)) yval)
+  (:guard (backend-featurep :sparc-v9))
+  (:vop-var vop)
+  (:generator 3
+    (let ((offset (- (* vm:double-float-value-slot vm:word-bytes)
+		     vm:other-pointer-type)))
+      (inst lddf xval x offset)
+      (inst lddf yval y offset)
+      (inst fcmpd xval yval)
+      (cond ((location= r x)
+	     ;; If x < y, need to move y to r, otherwise r already has
+	     ;; the max.
+	     (inst cmove :l r y :fcc0))
+	    ((location= r y)
+	     ;; If x > y, need to move x to r, otherwise r already has
+	     ;; the max.
+	     (inst cmove :ge r x :fcc0))
+	    (t
+	     ;; It doesn't matter what R is, just copy the min to R.
+	     (inst cmove :ge r x :fcc0)
+	     (inst cmove :l r y :fcc0))))))
+    
+)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/callbacks.lisp,v 1.3 1994/10/31 04:54:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/callbacks.lisp,v 1.3.2.1 2000/05/23 16:38:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,7 +213,7 @@
 	    (:include any-callback)
 	    (:print-function print-callback)
 	    (:constructor make-button-callback (reason event click-count)))
-  (click-count 0 :type fixnum))
+  (click-count 0 :type (unsigned-byte 32))) ; Not always valid data here.
 
 (defstruct (drawing-area-callback
 	    (:include any-callback)
@@ -227,7 +227,7 @@
 	    (:constructor make-drawn-button-callback
 			  (reason event window click-count)))
   window
-  (click-count 0 :type fixnum))
+  (click-count 0 :type (unsigned-byte 32))) ; Not always valid data here.
 
 ;;; RowColumnCallbackStruct is weird and probably not necessary
 

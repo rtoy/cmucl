@@ -1,9 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.3.2.1 1998/06/23 11:24:47 pw Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.3.2.2 2000/05/23 16:38:12 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
  Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
+ Alpha support by Julian Dolby, 1999.
+
 */
 
 #include <stdlib.h>
@@ -32,8 +34,12 @@ typedef int os_vm_prot_t;        /* like hpux */
 #define OS_VM_PROT_READ PROT_READ    /* like hpux */
 #define OS_VM_PROT_WRITE PROT_WRITE  /* like hpux */
 #define OS_VM_PROT_EXECUTE PROT_EXEC /* like hpux */
-     
+
+#ifndef __alpha__     
 #define OS_VM_DEFAULT_PAGESIZE	4096 /* like hpux */ 
+#else
+#define OS_VM_DEFAULT_PAGESIZE	8192 /* like hpux */ 
+#endif
 
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 int sc_reg(struct sigcontext *,int);
@@ -52,6 +58,17 @@ typedef struct sigcontext_struct sigcontext;
 
 #define POSIX_SIGS
 
+/* Don't want the SIGINFO flag on linux as it causes the creation
+   of real-time interrupt frames.
+*/
+#define USE_SA_SIGINFO 0
+
+/* Alpha uses OSF/1 signals which are the defaults in os.h,
+   so there is no need to define the following for Alpha 
+   Linux 
+*/
+#ifdef i386
+
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define HANDLER_ARGS int signal, struct sigcontext contextstruct
 #define GET_CONTEXT int code=0; struct sigcontext *context=&contextstruct;
@@ -59,6 +76,8 @@ typedef struct sigcontext_struct sigcontext;
 #define HANDLER_ARGS int signal, struct sigcontext_struct contextstruct
 #define GET_CONTEXT int code=0; struct sigcontext_struct *context=&contextstruct;
 #endif
+
+#define setfpucw(cw)	asm("fldcw %0" : : "m" (cw));
 
 #define sigvec          sigaction
 #define sv_mask         sa_mask
@@ -76,8 +95,6 @@ typedef struct sigcontext_struct sigcontext;
 #else
 #define sigcontext	sigcontext_struct 
 #endif
-#define sa_sigaction	sa_handler
-#define SA_SIGINFO	0
 #define sc_efl		eflags
 
 #define sc_eax eax
@@ -88,3 +105,13 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_ebp ebp
 #define sc_esi esi
 #define sc_edi edi
+
+#endif /* i386 */
+
+#ifdef alpha
+#define uc_sigmask	sc_mask
+#endif /* alpha */
+
+#ifndef sa_sigaction
+#define sa_sigaction	sa_handler
+#endif

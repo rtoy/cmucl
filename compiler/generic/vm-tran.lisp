@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.35.2.1 1998/06/23 11:23:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.35.2.2 2000/05/23 16:37:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,16 +57,23 @@
     (unless (array-type-p array-type)
       (give-up))
     (let ((dims (array-type-dimensions array-type)))
-      (when (or (atom dims) (= (length dims) 1))
+      (when (and (consp dims) (= (length dims) 1))
 	(give-up))
-      (let ((el-type (array-type-element-type array-type))
-	    (total-size (if (member '* dims)
-			    '*
-			    (reduce #'* dims))))
-	`(data-vector-ref (truly-the (simple-array ,(type-specifier el-type)
-						   (,total-size))
-				     (%array-data-vector array))
-			  index)))))
+      (let* ((el-type (array-type-element-type array-type))
+	     (total-size (if (or (atom dims) (member '* dims))
+			     '*
+			     (reduce #'* dims)))
+	     (vector-type `(simple-array ,(type-specifier el-type)
+					 (,total-size))))
+	(if (atom dims)
+	    `(data-vector-ref (truly-the ,vector-type
+					 (if (array-header-p array)
+					     (%array-data-vector array)
+					     array))
+			      index)
+	    `(data-vector-ref (truly-the ,vector-type
+					 (%array-data-vector array))
+			      index))))))
 
 (deftransform data-vector-set ((array index new-value)
 			       (simple-array t t))
@@ -74,17 +81,25 @@
     (unless (array-type-p array-type)
       (give-up))
     (let ((dims (array-type-dimensions array-type)))
-      (when (or (atom dims) (= (length dims) 1))
+      (when (and (consp dims) (= (length dims) 1))
 	(give-up))
-      (let ((el-type (array-type-element-type array-type))
-	    (total-size (if (member '* dims)
-			    '*
-			    (reduce #'* dims))))
-	`(data-vector-set (truly-the (simple-array ,(type-specifier el-type)
-						   (,total-size))
-				     (%array-data-vector array))
-			  index
-			  new-value)))))
+      (let* ((el-type (array-type-element-type array-type))
+	     (total-size (if (or (atom dims) (member '* dims))
+			     '*
+			     (reduce #'* dims)))
+	     (vector-type `(simple-array ,(type-specifier el-type)
+					 (,total-size))))
+	(if (atom dims)
+	    `(data-vector-set (truly-the ,vector-type
+					 (if (array-header-p array)
+					     (%array-data-vector array)
+					     array))
+			      index
+			      new-value)
+	    `(data-vector-set (truly-the ,vector-type
+					 (%array-data-vector array))
+			      index
+			      new-value))))))
 
 
 ;;; Transforms for getting at arrays of unsigned-byte n when n < 8.
@@ -300,9 +315,9 @@
 
 ;;; Should be in VM:
 
-(defconstant sxhash-bits-byte (byte 23 0))
-(defconstant sxmash-total-bits 26)
-(defconstant sxmash-rotate-bits 7)
+(defconstant sxhash-bits-byte (byte 29 0))
+(defconstant sxmash-total-bits 29)
+(defconstant sxmash-rotate-bits 9)
 
 (deftransform sxhash ((s-expr) (integer))
   '(ldb sxhash-bits-byte s-expr))
@@ -316,18 +331,28 @@
 (deftransform sxhash ((s-expr) (single-float))
   '(let ((bits (single-float-bits s-expr)))
      (ldb sxhash-bits-byte
-	  (logxor (ash bits (- sxmash-rotate-bits))
-		  bits))))
+	  (logxor (ash bits (- sxmash-rotate-bits)) bits))))
 
 (deftransform sxhash ((s-expr) (double-float))
-  '(let* ((val s-expr)
-	  (lo (double-float-low-bits val))
-	  (hi (double-float-high-bits val)))
+  '(let* ((lo (double-float-low-bits s-expr))
+	  (hi (double-float-high-bits s-expr)))
      (ldb sxhash-bits-byte
-	  (logxor (ash lo (- sxmash-rotate-bits))
-		  (ash hi (- sxmash-rotate-bits))
-		  lo hi))))
+	  (logxor (ash lo (- sxmash-rotate-bits)) lo
+		  (ldb sxhash-bits-byte
+		       (logxor (ash hi (- sxmash-rotate-bits)) hi))))))
 
+#+long-float
+(deftransform sxhash ((s-expr) (long-float))
+  '(let* ((lo (long-float-low-bits s-expr))
+	  #+sparc (mid (long-float-mid-bits s-expr))
+	  (hi (long-float-high-bits s-expr))
+	  (exp (long-float-exp-bits s-expr)))
+     (ldb sxhash-bits-byte
+	  (logxor (ash lo (- sxmash-rotate-bits)) lo
+		  #+sparc (ash mid (- sxmash-rotate-bits)) #+sparc mid
+		  (ash hi (- sxmash-rotate-bits)) hi
+		  (ldb sxhash-bits-byte
+		       (logxor (ash exp (- sxmash-rotate-bits)) exp))))))
 
 
 ;;;; Float EQL transforms.

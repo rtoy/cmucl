@@ -1049,7 +1049,7 @@
   `(;; Current directory
     "./"
     #+:lucid                (working-directory)
-    #+(or :allegro ACLPC)   (current-directory)
+    #+(or :allegro ACLPC)   (excl:current-directory)
     #+:cmu                  (ext:default-directory)
     #+:lispworks 
     ,(multiple-value-bind (major minor) (system::lispworks-version)
@@ -1559,7 +1559,7 @@ s/^[^M]*IRIX Execution Environment 1, *[a-zA-Z]* *\\([^ ]*\\)/\\1/p\\
 	 (rel-directory (directory-to-list (pathname-directory rel-dir)))
 	 (rel-keyword (when (keywordp (car rel-directory))
 			(pop rel-directory)))
-	 (rel-file (file-namestring rel-dir))
+	 (rel-file (or (file-namestring rel-dir) ""))
 	 (directory nil))
     ;; TI Common Lisp pathnames can return garbage for file names because
     ;; of bizarreness in the merging of defaults.  The following code makes

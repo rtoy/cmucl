@@ -24,6 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.7.2.2 2000/05/23 16:38:57 pw Exp $")
+;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
 ;;;
@@ -34,15 +38,15 @@
 (in-package :pcl)
 
 (proclaim '(declaration
-	     #-Genera values          ;I use this so that Zwei can remind
-				      ;me what values a function returns.
+	    values ;;I use this so that Zwei can remind
+	           ;;me what values a function returns.
 	     
-	     #-Genera arglist	      ;Tells me what the pretty arglist
-				      ;of something (which probably takes
-				      ;&rest args) is.
+	    arglist ;;Tells me what the pretty arglist
+	            ;;of something (which probably takes
+		    ;;&rest args) is.
 
-	     #-Genera indentation     ;Tells ZWEI how to indent things
-			              ;like defclass.
+	    indentation     ;;Tells ZWEI how to indent things
+			    ;;like defclass.
 	     class
 	     variable-rebinding
 	     pcl-fast-call
@@ -160,10 +164,6 @@
 	(return-from get-declaration (cdr form))))))
 
 
-#+Lucid
-(eval-when (compile load eval)
-  (eval `(defstruct ,(intern "FASLESCAPE" (find-package 'lucid)))))
-
 (defvar *keyword-package* (find-package 'keyword))
 
 (defun make-keyword (symbol)
@@ -256,18 +256,15 @@
 	  ((null pat) ())
 	(if (symbolp (setq var (car pat)))
 	    (progn
-	      #-:coral (unless (memq var '(nil ignore))
-			 (push var *destructure-vars*))
-	      #+:coral (push var *destructure-vars*)	      
+	      (unless (memq var '(nil ignore))
+			 (push var *destructure-vars*))	      
 	      (cond ((null (cdr pat))
 		     (push (make-pop var form ()) setqs))
 		    ((symbolp (cdr pat))
 		     (push (make-pop var form (cdr pat)) setqs)
 		     (push (cdr pat) *destructure-vars*)
 		     (return ()))
-		    #-:coral
 		    ((memq var '(nil ignore)) (incf pending-pops))
-		    #-:coral
 		    ((memq (cadr pat) '(nil ignore))
 		     (push (make-pop var form ()) setqs)
 		     (incf pending-pops 1))
@@ -331,18 +328,7 @@
 ;;; Similar to printing-random-object in the lisp machine but much simpler
 ;;; and machine independent.
 (defmacro printing-random-thing ((thing stream) &body body)
-  #+cmu17
-  `(print-unreadable-object (,thing ,stream :identity t) ,@body)
-  #-cmu17
-  (once-only (thing stream)
-    `(progn
-       (when *print-readably*
-	 (error "~S cannot be printed readably." thing))
-       (format ,stream "#<")
-       ,@body
-       (format ,stream " ")
-       (printing-random-thing-internal ,thing ,stream)
-       (format ,stream ">"))))
+  `(print-unreadable-object (,thing ,stream :identity t) ,@body))
 
 (defun printing-random-thing-internal (thing stream)
   (declare (ignore thing stream))
@@ -372,23 +358,6 @@
 	     (unless dashes-p (setf (elt string i) #\space)))
 	    (t (setq flag nil))))))
 
-#-(or lucid kcl)
-(eval-when (compile load eval)
-;(warn "****** Things will go faster if you fix define-compiler-macro")
-)
-
-#-cmu
-(defmacro define-compiler-macro (name arglist &body body)
-  #+(or lucid kcl)
-  `(#+lucid lcl:def-compiler-macro #+kcl si::define-compiler-macro
-	    ,name ,arglist
-	    ,@body)
-  #-(or kcl lucid)
-  (declare (ignore name arglist body))
-  #-(or kcl lucid)
-  nil)
-
-
 ;;;
 ;;; FIND-CLASS
 ;;;
@@ -396,18 +365,9 @@
 ;;;
 (defvar *find-class* (make-hash-table :test #'eq))
 
-(defun make-constant-function (value)
-  #'(lambda (object)
-      (declare (ignore object))
-      value))
-
 (defun function-returning-nil (x)
   (declare (ignore x))
   nil)
-
-(defun function-returning-t (x)
-  (declare (ignore x))
-  t)
 
 (defmacro find-class-cell-class (cell)
   `(car ,cell))
@@ -452,9 +412,12 @@
        (not (keywordp x))))
 
 (defun find-class (symbol &optional (errorp t) environment)
+  "Returns the PCL class metaobject named by SYMBOL. An error of type
+   SIMPLE-ERROR is signaled if the class does not exist unless ERRORP
+   is NIL in which case NIL is returned. SYMBOL cannot be a keyword."
   (declare (ignore environment))
   (find-class-from-cell
-   symbol (find-class-cell symbol errorp) errorp))
+   symbol (find-class-cell symbol t) errorp))
 
 (defun find-class-predicate (symbol &optional (errorp t) environment)
   (declare (ignore environment))
@@ -465,7 +428,7 @@
 
 ; Use this definition in any CL implementation supporting 
 ; both define-compiler-macro and load-time-value.
-#+cmu ; Note that in CMU, lisp:find-class /= pcl:find-class
+; Note that in CMU, lisp:find-class /= pcl:find-class
 (define-compiler-macro find-class (&whole form
 				   symbol &optional (errorp t) environment)
   (declare (ignore environment))
@@ -478,9 +441,6 @@
 	    (class-cell (make-symbol "CLASS-CELL")))	
 	`(let ((,class-cell (load-time-value (find-class-cell ',symbol))))
 	   (or (find-class-cell-class ,class-cell)
-	       #-cmu17
-	       (find-class-from-cell ',symbol ,class-cell ,errorp)
-	       #+cmu17
 	       ,(if errorp
 		    `(find-class-from-cell ',symbol ,class-cell t)
 		    `(and (kernel:class-cell-class 
@@ -488,12 +448,7 @@
 			  (find-class-from-cell ',symbol ,class-cell nil))))))
       form))
 
-#-setf
-(defsetf find-class (symbol &optional (errorp t) environment) (new-value)
-  (declare (ignore errorp environment))
-  `(SETF\ PCL\ FIND-CLASS ,new-value ,symbol))
-
-(defun #-setf SETF\ PCL\ FIND-CLASS #+setf (setf find-class) (new-value symbol)
+(defun (setf find-class) (new-value symbol)
   (if (legal-class-name-p symbol)
       (let ((cell (find-class-cell symbol)))
 	(setf (find-class-cell-class cell) new-value)
@@ -511,50 +466,16 @@
 	new-value)
       (error "~S is not a legal class name." symbol)))
 
-#-setf
-(defsetf find-class-predicate (symbol &optional (errorp t) environment) (new-value)
-  (declare (ignore errorp environment))
-  `(SETF\ PCL\ FIND-CLASS-PREDICATE ,new-value ,symbol))
-
-(defun #-setf SETF\ PCL\ FIND-CLASS-PREDICATE #+setf (setf find-class-predicate)
-          (new-value symbol)
+(defun (setf find-class-predicate) (new-value symbol)
   (if (legal-class-name-p symbol)
       (setf (find-class-cell-predicate (find-class-cell symbol)) new-value)
       (error "~S is not a legal class name." symbol)))
-
-(defun find-wrapper (symbol)
-  (class-wrapper (find-class symbol)))
-
-#|| ; Anything that used this should use eval instead.
-(defun reduce-constant (old)
-  (let ((new (eval old)))
-    (if (eq new old)
-	new
-	(if (constantp new)
-	    (reduce-constant new)
-	    new))))
-||#
 
 (defmacro gathering1 (gatherer &body body)
   `(gathering ((.gathering1. ,gatherer))
      (macrolet ((gather1 (x) `(gather ,x .gathering1.)))
        ,@body)))
 
-;;;
-;;; 
-;;; 
-(defmacro vectorizing (&key (size 0))
-  `(let* ((limit ,size)
-	  (result (make-array limit))
-	  (index 0))
-     (values #'(lambda (value)
-		 (if (= index limit)
-		     (error "vectorizing more elements than promised.")
-		     (progn
-		       (setf (svref result index) value)
-		       (incf index)
-		       value)))
-	     #'(lambda () result))))
 
 ;;;
 ;;; These are augmented definitions of list-elements and list-tails from
@@ -578,188 +499,12 @@
 	         (setq tail (funcall ,by tail))))))
 
 (defmacro function-funcall (form &rest args)
-  #-cmu `(funcall ,form ,@args)
-  #+cmu `(funcall (the function ,form) ,@args))
+  `(funcall (the function ,form) ,@args))
 
 (defmacro function-apply (form &rest args)
-  #-cmu `(apply ,form ,@args)
-  #+cmu `(apply (the function ,form) ,@args))
+  `(apply (the function ,form) ,@args))
 
 
-;;;
-;;; Convert a function name to its standard setf function name.  We have to
-;;; do this hack because not all Common Lisps have yet converted to having
-;;; setf function specs.
-;;;
-;;; In a port that does have setf function specs you can use those just by
-;;; making the obvious simple changes to these functions.  The rest of PCL
-;;; believes that there are function names like (SETF <foo>), this is the
-;;; only place that knows about this hack.
-;;;
-(eval-when (compile load eval)
-; In 15e (and also 16c), using the built in setf mechanism costs 
-; a hash table lookup every time a setf function is called.
-; Uncomment the next line to use the built in setf mechanism.
-;#+cmu (pushnew :setf *features*) 
-)
-
-(eval-when (compile load eval)
-
-#-setf
-(defvar *setf-function-names* (make-hash-table :size 200 :test #'eq))
-
-(defun get-setf-function-name (name)
-  #+setf `(setf ,name)
-  #-setf
-  (or (gethash name *setf-function-names*)
-      (setf (gethash name *setf-function-names*)
-	    (let ((pkg (symbol-package name)))
-	      (if pkg
-		  (intern (format nil
-				  "SETF ~A ~A"
-				  (package-name pkg)
-				  (symbol-name name))
-			  *the-pcl-package*)
-		  (make-symbol (format nil "SETF ~A" (symbol-name name))))))))
-
-;;;
-;;; Call this to define a setf macro for a function with the same behavior as
-;;; specified by the SETF function cleanup proposal.  Specifically, this will
-;;; cause: (SETF (FOO a b) x) to expand to (|SETF FOO| x a b).
-;;;
-;;; do-standard-defsetf                  A macro interface for use at top level
-;;;                                      in files.  Unfortunately, users may
-;;;                                      have to use this for a while.
-;;;                                      
-;;; do-standard-defsetfs-for-defclass    A special version called by defclass.
-;;; 
-;;; do-standard-defsetf-1                A functional interface called by the
-;;;                                      above, defmethod and defgeneric.
-;;;                                      Since this is all a crock anyways,
-;;;                                      users are free to call this as well.
-;;;
-(defmacro do-standard-defsetf (&rest function-names)
-  `(eval-when (compile load eval)
-     (dolist (fn-name ',function-names) (do-standard-defsetf-1 fn-name))))
-
-(defun do-standard-defsetfs-for-defclass (accessors)
-  (dolist (name accessors) (do-standard-defsetf-1 name)))
-
-(defun do-standard-defsetf-1 (function-name)
-  #+setf
-  (declare (ignore function-name))
-  #+setf nil
-  #-setf
-  (unless (and (setfboundp function-name)
-	       (get function-name 'standard-setf))
-    (setf (get function-name 'standard-setf) t)
-    (let* ((setf-function-name (get-setf-function-name function-name)))
-    
-      #+Genera
-      (let ((fn #'(lambda (form)
-		    (lt::help-defsetf
-		      '(&rest accessor-args) '(new-value) function-name 'nil
-		      `(`(,',setf-function-name ,new-value .,accessor-args))
-		      form))))
-	(setf (get function-name 'lt::setf-method) fn
-	      (get function-name 'lt::setf-method-internal) fn))
-
-      #+Lucid
-      (lucid::set-simple-setf-method 
-	function-name
-	#'(lambda (form new-value)
-	    (let* ((bindings (mapcar #'(lambda (x) `(,(gensym) ,x))
-				     (cdr form)))
-		   (vars (mapcar #'car bindings)))
-	      ;; This may wrap spurious LET bindings around some form,
-	      ;;   but the PQC compiler will unwrap then.
-	      `(LET (,.bindings)
-		 (,setf-function-name ,new-value . ,vars)))))
-      
-      #+kcl
-      (let ((helper (gensym)))
-	(setf (macro-function helper)
-	      #'(lambda (form env)
-		  (declare (ignore env))
-		  (let* ((loc-args (butlast (cdr form)))
-			 (bindings (mapcar #'(lambda (x) `(,(gensym) ,x)) loc-args))
-			 (vars (mapcar #'car bindings)))
-		    `(let ,bindings
-		       (,setf-function-name ,(car (last form)) ,@vars)))))
-	(eval `(defsetf ,function-name ,helper)))
-      #+Xerox
-      (flet ((setf-expander (body env)
-	       (declare (ignore env))
-	       (let ((temps
-		       (mapcar #'(lambda (x) (declare (ignore x)) (gensym))
-			       (cdr body)))
-		     (forms (cdr body))
-		     (vars (list (gensym))))
-		 (values temps
-			 forms
-			 vars
-			 `(,setf-function-name ,@vars ,@temps)
-			 `(,function-name ,@temps)))))
-	(let ((setf-method-expander (intern (concatenate 'string
-						         (symbol-name function-name)
-						         "-setf-expander")
-				     (symbol-package function-name))))
-	  (setf (get function-name :setf-method-expander) setf-method-expander
-		(symbol-function setf-method-expander) #'setf-expander)))
-      
-      #-(or Genera Lucid kcl Xerox)
-      (eval `(defsetf ,function-name (&rest accessor-args) (new-value)
-	       (let* ((bindings (mapcar #'(lambda (x) `(,(gensym) ,x)) accessor-args))
-		      (vars (mapcar #'car bindings)))
-		  `(let ,bindings
-		      (,',setf-function-name ,new-value ,@vars)))))
-      
-      )))
-
-(defun setfboundp (symbol)
-  #+Genera (not (null (get-properties (symbol-plist symbol)
-				      'lt::(derived-setf-function trivial-setf-method
-					    setf-equivalence setf-method))))
-  #+Lucid  (locally
-	     (declare (special lucid::*setf-inverse-table*
-			       lucid::*simple-setf-method-table*
-			       lucid::*setf-method-expander-table*))
-	     (or (gethash symbol lucid::*setf-inverse-table*)
-		 (gethash symbol lucid::*simple-setf-method-table*)
-		 (gethash symbol lucid::*setf-method-expander-table*)))
-  #+kcl    (or (get symbol 'si::setf-method)
-	       (get symbol 'si::setf-update-fn)
-	       (get symbol 'si::setf-lambda))
-  #+Xerox  (or (get symbol :setf-inverse)
-	       (get symbol 'il:setf-inverse)
-	       (get symbol 'il:setfn)
-	       (get symbol :shared-setf-inverse)
-	       (get symbol :setf-method-expander)
-	       (get symbol 'il:setf-method-expander))
-  #+:coral (or (get symbol 'ccl::setf-inverse)
-	       (get symbol 'ccl::setf-method-expander))
-  #+cmu (fboundp `(setf ,symbol))
-  #-(or Genera Lucid KCL Xerox :coral cmu) nil)
-
-);eval-when
-
-
-;;;
-;;; PCL, like user code, must endure the fact that we don't have a properly
-;;; working setf.  Many things work because they get mentioned by a defclass
-;;; or defmethod before they are used, but others have to be done by hand.
-;;; 
-(do-standard-defsetf
-  class-wrapper                                 ;***
-  generic-function-name
-  method-function-plist
-  method-function-get
-  plist-value
-  object-plist
-  gdefinition
-  slot-value-using-class
-  )
-
 (defsetf slot-value set-slot-value)
 
 (defvar *redefined-functions* nil)

@@ -24,6 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.7.2.2 2000/05/23 16:38:55 pw Exp $")
 ;;;
 ;;; This file defines the initialization and related protocols.
 ;;; 
@@ -168,11 +171,7 @@
   ;;
   (let* ((class (class-of instance))
 	 (slotds (class-slots class))
-	 #-new-kcl-wrapper
-	 (std-p #+cmu17
-		(pcl-instance-p instance)
-		#-cmu17
-		(or (std-instance-p instance) (fsc-instance-p instance))))
+	 (std-p (pcl-instance-p instance)))
     (dolist (slotd slotds)
       (let ((slot-name (slot-definition-name slotd))
 	    (slot-initargs (slot-definition-initargs slotd)))
@@ -188,7 +187,7 @@
 	  (if (and slot-names
 		   (or (eq slot-names 't)
 		       (memq slot-name slot-names))
-		   (or #-new-kcl-wrapper (and (not std-p) (eq slot-names 't))
+		   (or (and (not std-p) (eq slot-names 't))
 		       (not (slot-boundp-using-class class instance slotd))))
 	      (let ((initfunction (slot-definition-initfunction slotd)))
 		(when initfunction

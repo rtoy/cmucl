@@ -1,10 +1,11 @@
+;;; -*- Mode: Lisp; Package: Multiprocessing -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.29.2.1 1998/06/23 11:22:11 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.29.2.2 2000/05/23 16:36:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -768,8 +769,11 @@
   (let ((state (process-state process)))
     (or (eq state :active) (eq state :inactive))))
 
-(declaim (type (or null process) *current-process*))
-(defvar *current-process* nil)
+;;; A dummy initial process is defined so that locks will work before
+;;; multi-processing has been started.
+(declaim (type process *current-process*))
+(defvar *current-process*
+  (%make-process :name "Startup" :state :inactive :stack-group nil))
 
 ;;; Current-Process  --  Public
 ;;;
@@ -1085,7 +1089,7 @@
 
 ;;; Run-Idle-Process-P  --  Internal.
 ;;;
-;;; Decide when the allow the idle process to run.
+;;; Decide when to allow the idle process to run.
 ;;;
 (defun run-idle-process-p ()
   ;; Check if there are any other runnable processes.
@@ -1102,40 +1106,41 @@
   chance to unwinding, before shutting down multi-processing. This is
   currently necessary before a purify and is performed before a save-lisp.
   Multi-processing can be restarted by calling init-multi-processing."
-  (assert (eq *current-process* *initial-process*) ()
-	  "Only the *initial-process* can shutdown multi-processing")
+  (when *initial-process*
+    (assert (eq *current-process* *initial-process*) ()
+	    "Only the *initial-process* can shutdown multi-processing")
 
-  (let ((destroyed-processes nil))
-    (do ((cnt 0 (1+ cnt)))
-	((> cnt 10))
-      (declare (type kernel:index cnt))
-      (dolist (process *all-processes*)
-	(when (and (not (eq process *current-process*))
-		   (process-active-p process)
-		   (not (member process destroyed-processes)))
-	  (destroy-process process)
-	  (push process destroyed-processes)))
-      (unless (rest *all-processes*)
-	(return))
-      (format t "Destroyed ~d process~:P; remaining ~d~%"
-	      (length destroyed-processes) (length *all-processes*))
-      (process-yield)))
+    (let ((destroyed-processes nil))
+      (do ((cnt 0 (1+ cnt)))
+	  ((> cnt 10))
+	(declare (type kernel:index cnt))
+	(dolist (process *all-processes*)
+	  (when (and (not (eq process *current-process*))
+		     (process-active-p process)
+		     (not (member process destroyed-processes)))
+	    (destroy-process process)
+	    (push process destroyed-processes)))
+	(unless (rest *all-processes*)
+	  (return))
+	(format t "Destroyed ~d process~:P; remaining ~d~%"
+		(length destroyed-processes) (length *all-processes*))
+	(process-yield)))
 
-  (start-sigalrm-yield 0 0)	; Off with the interrupts.
-  ;; Reset the multi-processing state.
-  (setf *inhibit-scheduling* t)
-  (setf *initial-process* nil)
-  (setf *idle-process* nil)
-  (setf *current-process* nil)
-  (setf *all-processes* nil)
-  (setf *remaining-processes* nil)
-  ;; Cleanup the stack groups.
-  (setf x86::*control-stacks*
-	(make-array 0 :element-type '(or null (unsigned-byte 32))
-		    :initial-element nil))
-  (setf *current-stack-group* nil)
-  (setf *initial-stack-group* nil))
-
+    (start-sigalrm-yield 0 0)	; Off with the interrupts.
+    ;; Reset the multi-processing state.
+    (setf *inhibit-scheduling* t)
+    (setf *initial-process* nil)
+    (setf *idle-process* nil)
+    (setf *current-process*
+	  (%make-process :name "Startup" :state :inactive :stack-group nil))
+    (setf *all-processes* nil)
+    (setf *remaining-processes* nil)
+    ;; Cleanup the stack groups.
+    (setf x86::*control-stacks*
+	  (make-array 0 :element-type '(or null (unsigned-byte 32))
+		      :initial-element nil))
+    (setf *current-stack-group* nil)
+    (setf *initial-stack-group* nil)))
 
 ;;; Idle-Process-Loop  --  Internal
 ;;;
@@ -1162,6 +1167,8 @@
   ;; Ensure the *idle-process* is setup.
   (unless *idle-process*
     (setf *idle-process* *current-process*))
+  ;; Adjust the process name.
+  (setf (process-name *current-process*) "Idle Loop")
   (do ()
       (*quitting-lisp*)
     ;; Calculate the wait period.
@@ -1449,22 +1456,28 @@
       ;; Other processes use process-wait.
       (flet ((fd-usable-for-input ()
 	       (declare (optimize (speed 3) (safety 1)))
-	       (not (eql (alien:with-alien ((read-fds
-					     (alien:struct unix:fd-set)))
-			   (unix:fd-zero read-fds)
-			   (unix:fd-set fd read-fds)
-			   (unix:unix-fast-select
-			    (1+ fd) (alien:addr read-fds) nil nil 0 0))
-			 0)))
+	       (alien:with-alien ((read-fds (alien:struct unix:fd-set)))
+		 (unix:fd-zero read-fds)
+		 (unix:fd-set fd read-fds)
+		 (multiple-value-bind (value err)
+		     (unix:unix-fast-select
+		      (1+ fd) (alien:addr read-fds) nil nil 0 0)
+		   ;; Return true when input is available or there is
+		   ;; an error other than an interrupt.
+		   (and (not (eql value 0))
+			(or value (not (eql err unix:eintr)))))))
 	     (fd-usable-for-output ()
 	       (declare (optimize (speed 3) (safety 1)))
-	       (not (eql (alien:with-alien ((write-fds
-					     (alien:struct unix:fd-set)))
-			   (unix:fd-zero write-fds)
-			   (unix:fd-set fd write-fds)
-			   (unix:unix-fast-select
-			    (1+ fd) nil (alien:addr write-fds) nil 0 0))
-			 0))))
+	       (alien:with-alien ((write-fds (alien:struct unix:fd-set)))
+		 (unix:fd-zero write-fds)
+		 (unix:fd-set fd write-fds)
+		 (multiple-value-bind (value err)
+		     (unix:unix-fast-select
+		      (1+ fd) nil (alien:addr write-fds) nil 0 0)
+		   ;; Return true when ready for output or there is an
+		   ;; error other than an interrupt.
+		   (and (not (eql value 0))
+			(or value (not (eql err unix:eintr))))))))
 
 	(ecase direction
 	  (:input
@@ -1516,12 +1529,41 @@
 	 (multiple-value-bind (sec usec)
 	     (if (integerp n)
 		 (values n 0)
-		 (values (truncate n)
-			 (truncate (* n 1000000))))
+		 (multiple-value-bind (sec frac)(truncate n)
+		   (values sec (truncate frac 1e-6))))
 	   (unix:unix-select 0 0 0 0 sec usec))
 	 nil)
 	(t
 	 (process-wait-with-timeout "Sleep" n (constantly nil)))))
+
+
+
+;;; With-Timeout-Internal  --  Internal
+;;;
+(defun with-timeout-internal (timeout function timeout-function)
+  (catch 'timer-interrupt
+    (let* ((current-process mp:*current-process*)
+	   (timer-process (mp:make-process
+			   #'(lambda ()
+			       (sleep timeout)
+			       (mp:process-interrupt
+				current-process
+				#'(lambda () (throw 'timer-interrupt nil))))
+			   :name "Timeout timer")))
+      (unwind-protect
+	   (return-from with-timeout-internal (funcall function))
+	(mp:destroy-process timer-process))))
+   (funcall timeout-function))
+
+;;; With-Timeout  --  Public
+;;;
+(defmacro with-timeout ((timeout &body timeout-forms) &body body)
+  "Executes body and returns the values of the last form in body. However, if
+  the execution takes longer than timeout seconds, abort it and evaluate
+  timeout-forms, returning the values of last form."
+  `(flet ((fn () . ,body)
+	  (tf () . ,timeout-forms))
+    (with-timeout-internal ,timeout #'fn #'tf)))
 
 
 ;;; Show-Processes  --  Public
@@ -1533,7 +1575,7 @@
   (fresh-line)
   (dolist (process *all-processes*)
     (when (eq process *current-process*)
-      (format t "* "))
+      (format t "-> "))
     (format t "~s ~s ~a~%" process (process-whostate process) 
 	    (process-state process))
     (when verbose
@@ -1553,7 +1595,7 @@
 	(magic-eof-cookie (cons :eof nil)))
     (loop
       (with-simple-restart (abort "Return to Top-Level.")
-	(catch 'top-level-catcher
+	(catch 'lisp::top-level-catcher
 	  (unix:unix-sigsetmask 0)
 	  (let ((lisp::*in-top-level-catcher* t))
 	    (loop
@@ -1573,6 +1615,22 @@
 			   (prin1 result))))
 		      (t
 		       (throw '%end-of-the-process nil)))))))))))
+
+;;; Startup-Idle-and-Top-Level-Loops -- Internal
+;;;
+(defun startup-idle-and-top-level-loops ()
+  "Enter the idle loop, starting a new process to run the top level loop.
+  The awaking of sleeping processes is timed better with the idle loop process
+  running, and starting a new process for the top level loop supports a
+  simultaneous interactive session. Such an initialisation will likely be the
+  default when there is better MP debug support etc."
+  (assert (eq *current-process* *initial-process*) ()
+	  "Only the *initial-process* is intended to run the idle loop")
+  (init-multi-processing)	; Initialise in case MP had been shutdown.
+  ;; Start a new Top Level loop.
+  (make-process #'top-level :name "Top Level Loop") 
+  ;; Enter the idle loop.
+  (idle-process-loop))
 
 ;;; Start-Lisp-Connection-Listener
 ;;;
@@ -1672,15 +1730,31 @@
 
 ;;;
 (defstruct (lock
-	     (:constructor make-lock (&optional name))
+	     (:constructor nil)
 	     (:print-function %print-lock))
   (name nil :type (or null simple-base-string))
   (process nil :type (or null process)))
 
+(defstruct (recursive-lock
+	     (:include lock)
+	     (:constructor make-recursive-lock (&optional name))))
+
+(defstruct (error-check-lock
+	     (:include lock)
+	     (:constructor make-error-check-lock (&optional name))))
+
+(defun make-lock (&optional name &key (kind :recursive))
+  (ecase kind
+    (:recursive (make-recursive-lock name))
+    (:error-check (make-error-check-lock name))))
+
 (defun %print-lock (lock stream depth)
   (declare (type lock lock) (stream stream) (ignore depth))
   (print-unreadable-object (lock stream :identity t)
-    (write-string "Lock" stream)
+    (write-string (etypecase lock
+		    (recursive-lock "Recursive-lock")
+		    (error-check-lock "Error-Check-lock"))
+		  stream)
     (let ((name (lock-name lock)))
       (when name
 	(format stream " ~a" name)))
@@ -1739,35 +1813,48 @@
 
 ;;; With-Lock-Held  --  Public
 ;;;
-(defmacro with-lock-held ((lock &optional (whostate "Lock Wait") &key timeout)
+(defmacro with-lock-held ((lock &optional (whostate "Lock Wait")
+				&key (wait t) timeout)
 			  &body body)
-
   "Execute the body with the lock held. If the lock is held by another
-  process then the current process waits until the lock is released or a
-  optional timeout is reached - recursive locks are allowed. The
-  optional wait timeout is a time in seconds acceptable to
-  process-wait-with-timeout.  The results of the body are return upon
-  success and NIL is return if the timeout is reached."
+  process then the current process waits until the lock is released or
+  an optional timeout is reached. The optional wait timeout is a time in
+  seconds acceptable to process-wait-with-timeout.  The results of the
+  body are return upon success and NIL is return if the timeout is
+  reached. When the wait key is NIL and the lock is held by another
+  process then NIL is return immediately without processing the body."
   (let ((have-lock (gensym)))
     `(let ((,have-lock (eq (lock-process ,lock) *current-process*)))
       (unwind-protect
-	   ,(if timeout
-		`(when (cond (,have-lock)
-			     #+i486 ((null (kernel:%instance-set-conditional
-					    ,lock 2 nil *current-process*)))
-			     #-i486 ((seize-lock ,lock))
-			     ((null ,timeout)
-			      (lock-wait ,lock ,whostate))
-			     ((lock-wait-with-timeout
-			       ,lock ,whostate ,timeout)))
-		  ,@body)
-		`(progn
-		  (unless (or ,have-lock
+	   ,(cond ((and timeout wait)
+		   `(progn
+		      (when (and (error-check-lock-p ,lock) ,have-lock)
+			(error "Dead lock"))
+		      (when (or ,have-lock
+				 #+i486 (null (kernel:%instance-set-conditional
+					       ,lock 2 nil *current-process*))
+				 #-i486 (seize-lock ,lock)
+				 (if ,timeout
+				     (lock-wait-with-timeout
+				      ,lock ,whostate ,timeout)
+				     (lock-wait ,lock ,whostate)))
+			,@body)))
+		  (wait
+		   `(progn
+		      (when (and (error-check-lock-p ,lock) ,have-lock)
+		        (error "Dead lock"))
+		      (unless (or ,have-lock
+				 #+i486 (null (kernel:%instance-set-conditional
+					       ,lock 2 nil *current-process*))
+				 #-i486 (seize-lock ,lock))
+			(lock-wait ,lock ,whostate))
+		      ,@body))
+		  (t
+		   `(when (or (and (recursive-lock-p ,lock) ,have-lock)
 			      #+i486 (null (kernel:%instance-set-conditional
 					    ,lock 2 nil *current-process*))
 			      #-i486 (seize-lock ,lock))
-		    (lock-wait ,lock ,whostate))
-		  ,@body))
+		      ,@body)))
 	(unless ,have-lock
 	  #+i486 (kernel:%instance-set-conditional
 		  ,lock 2 *current-process* nil)

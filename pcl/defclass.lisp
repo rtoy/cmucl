@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.10.2.2 2000/05/23 16:38:45 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 ;;;
@@ -50,62 +54,9 @@
 		       (capitalize-words (car name) ()) (cdr name))
 	       (format nil "~S" name))))
     (definition-name)
-    #+Genera
-    (progn
-      #-Genera-Release-8
-      (let ((thunk-name (gensym "TOP-LEVEL-FORM")))
-	`(eval-when ,times
-	   (defun ,thunk-name ()
-	     (declare (sys:function-parent
-			,(cond ((listp name)
-				(case (first name)
-				  (defmethod `(method ,@(rest name)))
-				  (otherwise (second name))))
-			       (t name))
-			,(cond ((listp name)
-				(case (first name)
-				  ((defmethod defgeneric) 'defun)
-				  ((defclass) 'defclass)
-				  (otherwise (first name))))
-			       (t 'defun))))
-	     ,form)
-	   (,thunk-name)))
-      #+Genera-Release-8
-      `(compiler-let ((compiler:default-warning-function ',name))
-	 (eval-when ,times
-	   (funcall #'(lambda ()
-			(declare ,(cond ((listp name)
-					 (case (first name)
-					   ((defclass)
-					    `(sys:function-parent ,(second name) defclass))
-					   ((defmethod)
-					    `(sys:function-name (method ,@(rest name))))
-					   ((defgeneric)
-					    `(sys:function-name ,(second name)))
-					   (otherwise
-					     `(sys:function-name ,name))))
-					(t
-					 `(sys:function-name ,name))))
-			,form)))))
-    #+LCL3.0
-    `(compiler-let ((lucid::*compiler-message-string*
-		      (or lucid::*compiler-message-string*
-			  ,(definition-name))))
-       (eval-when ,times ,form))
-    #+cmu
     (if (member 'compile times)
         `(eval-when ,times ,form)
-        form)
-    #+kcl
-    (let* ((*print-pretty* nil)
-           (thunk-name (gensym (definition-name))))
-      (gensym "G") ; set the prefix back to something less confusing.
-      `(eval-when ,times
-         (defun ,thunk-name ()
-           ,form)
-         (,thunk-name)))
-    #-(or Genera LCL3.0 cmu kcl)
-    (make-progn `',name `(eval-when ,times ,form))))
+        form)))
 
 (defun make-progn (&rest forms)
   (let ((progn-form nil))
@@ -138,21 +89,24 @@
 
 (defun expand-defclass (name supers slots options)
   (declare (special *defclass-times* *boot-state* *the-class-structure-class*))
-  (setq supers  (copy-tree supers)
+  (setq supers  (nsubstitute 'standard-class 'lisp:standard-class
+			     (copy-tree supers))
 	slots   (copy-tree slots)
 	options (copy-tree options))
   (let ((metaclass 'standard-class))
+    ;; TBD - ANSI compliant class and slot option checking.
     (dolist (option options)
       (if (not (listp option))
-          (error "~S is not a legal defclass option." option)
+          (error 'simple-program-error
+		 :format-control "~S is not a legal defclass option."
+		 :format-arguments (list option))
           (when (eq (car option) ':metaclass)
             (unless (legal-class-name-p (cadr option))
-              (error "The value of the :metaclass option (~S) is not a~%~
-                      legal class name."
-                     (cadr option)))
-	    #-cmu17
-            (setq metaclass (cadr option))
-	    #+cmu17
+              (error 'simple-program-error
+		     :format-control 
+		     "The value of the :metaclass option (~S) is not a~%~
+		      legal class name."
+		     :format-arguments (list (cadr option))))
 	    (setq metaclass
 		  (case (cadr option)
 		    (lisp:standard-class 'standard-class)
@@ -162,10 +116,9 @@
 	    (return t))))
 
     (let ((*initfunctions* ())
-          (*accessors* ())                         ;Truly a crock, but we got
-          (*readers* ())                           ;to have it to live nicely.
+          (*readers* ())
           (*writers* ()))
-      (declare (special *initfunctions* *accessors* *readers* *writers*))
+      (declare (special *initfunctions* *readers* *writers*))
       (let ((canonical-slots
 	      (mapcar #'(lambda (spec)
 			  (canonicalize-slot-specification name spec))
@@ -179,19 +132,16 @@
 				(and mclass
 				     (*subtypep mclass 
 						*the-class-structure-class*))))))
-	(do-standard-defsetfs-for-defclass *accessors*)
         (let ((defclass-form 
                  (make-top-level-form `(defclass ,name)
                    (if defstruct-p '(load eval) *defclass-times*)
 		   `(progn
 		      ,@(mapcar #'(lambda (x)
 				    `(declaim (ftype (function (t) t) ,x)))
-				#+cmu *readers* #-cmu nil)
+				*readers*)
 		      ,@(mapcar #'(lambda (x)
-				    #-setf (when (consp x)
-					     (setq x (get-setf-function-name (cadr x))))
 				    `(declaim (ftype (function (t t) t) ,x)))
-				#+cmu *writers* #-cmu nil)
+				*writers*)
 		      (let ,(mapcar #'cdr *initfunctions*)
 			(load-defclass ',name
 				       ',metaclass
@@ -200,8 +150,7 @@
 				       (list ,@(apply #'append 
 						      (when defstruct-p
 							'(:from-defclass-p t))
-						      other-initargs))
-				       ',*accessors*))))))
+						      other-initargs))))))))
           (if defstruct-p
               (progn
                 (eval defclass-form) ; define the class now, so that
@@ -235,7 +184,7 @@
 	   (cadr entry)))))
 
 (defun canonicalize-slot-specification (class-name spec)
-  (declare (special *accessors* *readers* *writers*))
+  (declare (special *readers* *writers*))
   (cond ((and (symbolp spec)
 	      (not (keywordp spec))
 	      (not (memq spec '(t nil))))		   
@@ -257,8 +206,7 @@
 		(initform (getf spec :initform unsupplied)))
 	   (doplist (key val) spec
 	     (case key
-	       (:accessor (push val *accessors*)
-			  (push val readers)
+	       (:accessor (push val readers)
 			  (push `(setf ,val) writers))
 	       (:reader   (push val readers))
 	       (:writer   (push val writers))
@@ -446,12 +394,10 @@
   (bootstrap-get-slot 'class class 'direct-subclasses))
 
 (proclaim '(notinline load-defclass))
-(defun load-defclass
-       (name metaclass supers canonical-slots canonical-options accessor-names)
+(defun load-defclass (name metaclass supers canonical-slots canonical-options)
   (setq supers  (copy-tree supers)
 	canonical-slots   (copy-tree canonical-slots)
 	canonical-options (copy-tree canonical-options))
-  (do-standard-defsetfs-for-defclass accessor-names)
   (when (eq metaclass 'standard-class)
     (inform-type-system-about-std-class name))
   (let ((ecd

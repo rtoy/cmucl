@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.6.2.1 2000/05/23 16:38:54 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 ;;;

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3 1997/03/17 20:28:02 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3.2.1 2000/05/23 16:37:27 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3 1997/03/17 20:28:02 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3.2.1 2000/05/23 16:37:27 pw Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -169,14 +169,13 @@
 
 ;;; Shifting
 
-
-(define-vop (fast-ash)
+(define-vop (fast-ash/unsigned=>unsigned)
   (:note "inline ASH")
-  (:args (number :scs (signed-reg unsigned-reg) :to :save)
+  (:args (number :scs (unsigned-reg) :to :save)
 	 (amount :scs (signed-reg)))
-  (:arg-types (:or signed-num unsigned-num) signed-num)
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:arg-types unsigned-num signed-num)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:translate ash)
   (:policy :fast-safe)
   (:temporary (:sc non-descriptor-reg) ndesc)
@@ -185,13 +184,9 @@
     (inst bge amount positive)
     (inst subq zero-tn amount ndesc)
     (inst cmplt ndesc 31 temp)
-    (sc-case number
-      (signed-reg (inst sra number ndesc result))
-      (unsigned-reg (inst srl number ndesc result)))
+    (inst srl number ndesc result)
     (inst bne temp done)
-    (sc-case number
-      (signed-reg (inst sra number 31 result))
-      (unsigned-reg (inst srl number 31 result)))
+    (inst srl number 31 result)
     (inst br zero-tn done)
       
     POSITIVE
@@ -200,21 +195,65 @@
       
     DONE))
 
-(define-vop (fast-ash-c)
+(define-vop (fast-ash/signed=>signed)
+  (:note "inline ASH")
+  (:args (number :scs (signed-reg) :to :save)
+	 (amount :scs (signed-reg)))
+  (:arg-types signed-num signed-num)
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:temporary (:sc non-descriptor-reg :to :eval) temp)
+  (:generator 3
+    (inst bge amount positive)
+    (inst subq zero-tn amount ndesc)
+    (inst cmplt ndesc 31 temp)
+    (inst sra number ndesc result)
+    (inst bne temp done)
+    (inst sra number 31 result)
+    (inst br zero-tn done)
+      
+    POSITIVE
+    ;; The result-type assures us that this shift will not overflow.
+    (inst sll number amount result)
+      
+    DONE))
+
+(define-vop (fast-ash-c/unsigned=>unsigned)
   (:policy :fast-safe)
   (:translate ash)
   (:note nil)
-  (:args (number :scs (signed-reg unsigned-reg)))
+  (:args (number :scs (unsigned-reg)))
   (:info count)
-  (:arg-types (:or signed-num unsigned-num) (:constant integer))
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:arg-types unsigned-num (:constant integer))
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:generator 1
     (cond ((< count 0)
 	   ;; It is a right shift.
-	   (sc-case number
-	     (signed-reg (inst sra number (- count) result))
-	     (unsigned-reg (inst srl number (- count) result))))
+	   (inst srl number (- count) result))
+	  ((> count 0)
+	   ;; It is a left shift.
+	   (inst sll number count result))
+	  (t
+	   ;; Count=0?  Shouldn't happen, but it's easy:
+	   (move number result)))))
+
+(define-vop (fast-ash-c/signed=>signed)
+  (:policy :fast-safe)
+  (:translate ash)
+  (:note nil)
+  (:args (number :scs (signed-reg)))
+  (:info count)
+  (:arg-types signed-num (:constant integer))
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
+  (:generator 1
+    (cond ((< count 0)
+	   ;; It is a right shift.
+	   (inst sra number (- count) result))
 	  ((> count 0)
 	   ;; It is a left shift.
 	   (inst sll number count result))

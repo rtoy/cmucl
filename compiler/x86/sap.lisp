@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.2.2.1 1998/06/23 11:24:11 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.2.2.2 2000/05/23 16:38:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
 ;;;
 (in-package :x86)
 
@@ -510,3 +510,23 @@
     (move sap vector)
     (inst add sap (- (* vector-data-offset word-bytes) other-pointer-type))))
 
+
+;;; Transforms for 64-bit SAP accessors.
+
+(deftransform sap-ref-64 ((sap offset) (* *))
+  '(logior (sap-ref-32 sap offset)
+	   (ash (sap-ref-32 sap (+ offset 4)) 32)))
+
+(deftransform signed-sap-ref-64 ((sap offset) (* *))
+  '(logior (sap-ref-32 sap offset)
+	   (ash (signed-sap-ref-32 sap (+ offset 4)) 32)))
+
+(deftransform %set-sap-ref-64 ((sap offset value) (* * *))
+  '(progn
+     (%set-sap-ref-32 sap offset (logand value #xffffffff))
+     (%set-sap-ref-32 sap (+ offset 4) (ash value -32))))
+
+(deftransform %set-signed-sap-ref-64 ((sap offset value) (* * *))
+  '(progn
+     (%set-sap-ref-32 sap offset (logand value #xffffffff))
+     (%set-signed-sap-ref-32 sap (+ offset 4) (ash value -32))))

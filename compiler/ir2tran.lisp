@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.61.2.1 1998/06/23 11:23:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.61.2.2 2000/05/23 16:37:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,21 +174,7 @@
 	    (let ((fdefn-tn (make-load-time-constant-tn :fdefinition name)))
 	      (if unsafe
 		  (vop fdefn-function node block fdefn-tn res)
-		  (vop safe-fdefn-function node block fdefn-tn res)))))))
-      (dylan-var
-       (let* ((arg (standard-argument-location 0))
-	      (res (standard-argument-location 0))
-	      (value (make-load-time-constant-tn
-		      :dylan-varinfo-value
-		      (cons name (dylan-var-module-name leaf))))
-	      (fun (make-load-time-constant-tn :fdefinition
-					       'dylan::value-datum))
-	      (fp (make-stack-pointer-tn)))
-	 (emit-move node block value arg)
-	 (vop allocate-full-call-frame node block 1 fp)
-	 (vop* call-named node block (fp fun arg nil) (res nil) (list arg)
-	       1 1)
-	 (move-continuation-result node block (list res) (node-cont node)))))
+		  (vop safe-fdefn-function node block fdefn-tn res))))))))
 
     (move-continuation-result node block locs cont))
   (undefined-value))
@@ -264,25 +250,7 @@
        (ecase (global-var-kind leaf)
 	 ((:special :global)
 	  (assert (symbolp (leaf-name leaf)))
-	  (vop set node block (emit-constant (leaf-name leaf)) val))))
-      (dylan-var
-       (let* ((val-arg (standard-argument-location 0))
-	      (value-arg (standard-argument-location 1))
-	      (res (standard-argument-location 0))
-	      (value (make-load-time-constant-tn
-		      :dylan-varinfo-value
-		      (cons (dylan-var-name leaf)
-			    (dylan-var-module-name leaf))))
-	      (fun (make-load-time-constant-tn :fdefinition
-					       '(setf dylan::value-datum)))
-	      (fp (make-stack-pointer-tn)))
-	 (emit-move node block val val-arg)
-	 (emit-move node block value value-arg)
-	 (vop allocate-full-call-frame node block 2 fp)
-	 (vop* call-named node block (fp fun val-arg value-arg nil) (res nil)
-	       (list val-arg value-arg)
-	       2 1)
-	 (move-continuation-result node block (list res) (node-cont node)))))
+	  (vop set node block (emit-constant (leaf-name leaf)) val)))))
 
     (when locs
       (emit-move node block val (first locs))

@@ -59,120 +59,22 @@
 
 
 ;;;
-;;; This is like fdefinition on the Lispm.  If Common Lisp had something like
-;;; function specs I wouldn't need this.  On the other hand, I don't like the
-;;; way this really works so maybe function specs aren't really right either?
-;;; 
-;;; I also don't understand the real implications of a Lisp-1 on this sort of
-;;; thing.  Certainly some of the lossage in all of this is because these
-;;; SPECs name global definitions.
-;;;
-;;; Note that this implementation is set up so that an implementation which
-;;; has a 'real' function spec mechanism can use that instead and in that way
-;;; get rid of setf generic function names.
-;;;
-(defmacro parse-gspec (spec
-		       (non-setf-var . non-setf-case)
-		       (setf-var . setf-case))
-  (declare (indentation 1 1))
-  #+setf (declare (ignore setf-var setf-case))
-  (once-only (spec)
-    `(cond (#-setf (symbolp ,spec) #+setf t
-	    (let ((,non-setf-var ,spec)) ,@non-setf-case))
-	   #-setf
-	   ((and (listp ,spec)
-		 (eq (car ,spec) 'setf)
-		 (symbolp (cadr ,spec)))
-	    (let ((,setf-var (cadr ,spec))) ,@setf-case))
-	   #-setf
-	   (t
-	    (error
-	      "Can't understand ~S as a generic function specifier.~%~
-               It must be either a symbol which can name a function or~%~
-               a list like ~S, where the car is the symbol ~S and the cadr~%~
-               is a symbol which can name a generic function."
-	      ,spec '(setf <foo>) 'setf)))))
-
-;;;
 ;;; If symbol names a function which is traced or advised, return the
 ;;; unadvised, traced etc. definition.  This lets me get at the generic
 ;;; function object even when it is traced.
 ;;;
-(defun unencapsulated-fdefinition (symbol)
-  #+Lispm (si:fdefinition (si:unencapsulate-function-spec symbol))
-  #+Lucid (lucid::get-unadvised-procedure (symbol-function symbol))
-  #+excl  (or (excl::encapsulated-basic-definition symbol)
-	      (symbol-function symbol))
-  #+xerox (il:virginfn symbol)
-  #+setf (fdefinition symbol)
-  #+kcl (symbol-function
-	  (let ((sym (get symbol 'si::traced)) first-form)
-	    (if (and sym
-		     (consp (symbol-function symbol))
-		     (consp (setq first-form (nth 3 (symbol-function symbol))))
-		     (eq (car first-form) 'si::trace-call))
-		sym
-		symbol)))
-  #-(or Lispm Lucid excl Xerox setf kcl) (symbol-function symbol))
+(declaim (inline gdefinition))
+(defun gdefinition (symbol)
+  (fdefinition symbol))
 
 ;;;
 ;;; If symbol names a function which is traced or advised, redefine
 ;;; the `real' definition without affecting the advise.
 ;;;
-(defun fdefine-carefully (name new-definition)
-  #+Lispm (si:fdefine name new-definition t t)
-  #+Lucid (let ((lucid::*redefinition-action* nil))
-	    (setf (symbol-function name) new-definition))
-  #+excl  (setf (symbol-function name) new-definition)
-  #+xerox (let ((advisedp (member name il:advisedfns :test #'eq))
-                (brokenp (member name il:brokenfns :test #'eq)))
-	    ;; In XeroxLisp (late of envos) tracing is implemented
-	    ;; as a special case of "breaking".  Advising, however,
-	    ;; is treated specially.
-            (xcl:unadvise-function name :no-error t)
-            (xcl:unbreak-function name :no-error t)
-            (setf (symbol-function name) new-definition)
-            (when brokenp (xcl:rebreak-function name))
-            (when advisedp (xcl:readvise-function name)))
-  #+(and setf (not cmu)) (setf (fdefinition name) new-definition)
-  #+kcl (setf (symbol-function 
-	       (let ((sym (get name 'si::traced)) first-form)
-		 (if (and sym
-			  (consp (symbol-function name))
-			  (consp (setq first-form
-				       (nth 3 (symbol-function name))))
-			  (eq (car first-form) 'si::trace-call))
-		     sym
-		     name)))
-	      new-definition)
-  #+cmu (progn
-	  (c::%%defun name new-definition nil)
-	  (c::note-name-defined name :function)
-	  new-definition)
-  #-(or Lispm Lucid excl Xerox setf kcl cmu)
-  (setf (symbol-function name) new-definition))
-
-(defun gboundp (spec)
-  (parse-gspec spec
-    (name (fboundp name))
-    (name (fboundp (get-setf-function-name name)))))
-
-(defun gmakunbound (spec)
-  (parse-gspec spec
-    (name (fmakunbound name))
-    (name (fmakunbound (get-setf-function-name name)))))
-
-(defun gdefinition (spec)
-  (parse-gspec spec
-    (name (or #-setf (macro-function name)		;??
-	      (unencapsulated-fdefinition name)))
-    (name (unencapsulated-fdefinition (get-setf-function-name name)))))
-
-(defun #-setf SETF\ PCL\ GDEFINITION #+setf (setf gdefinition) (new-value spec)
-  (parse-gspec spec
-    (name (fdefine-carefully name new-value))
-    (name (fdefine-carefully (get-setf-function-name name) new-value))))
-
+(defun (setf gdefinition) (new-definition name)
+  (c::%%defun name new-definition nil)
+  (c::note-name-defined name :function)
+  new-definition)
 
 (proclaim '(special *the-class-t* 
 	            *the-class-vector* *the-class-symbol*
@@ -239,7 +141,6 @@
 					 :object (coerce-to-class (car args))))
 	       (class-eq (class-eq-specializer (coerce-to-class (car args))))
 	       (eql      (intern-eql-specializer (car args))))))
-	#+cmu17
 	((and (null args) (typep type 'lisp:class))
 	 (or (kernel:class-pcl-class type)
 	     (find-structure-class (lisp:class-name type))))
@@ -304,20 +205,6 @@
 (defun make-eql-predicate (eql-object)
   #'(lambda (object) (eql eql-object object)))
 
-#|| ; The argument to satisfies must be a symbol.  
-(deftype class (&optional class)
-  (if class
-      `(satisfies ,(class-predicate class))
-      `(satisfies ,(class-predicate 'class))))
-
-(deftype class-eq (class)
-  `(satisfies ,(make-class-eq-predicate class)))
-||#
-
-#-(or excl cmu17)
-(deftype eql (type-object)
-  `(member ,type-object))
-
 
 ;;; Internal to this file.
 ;;;
@@ -343,47 +230,17 @@
         (t
          (error "~s is not a type" type))))
 
-;;; Not used...
-#+nil
-(defun unparse-type-list (tlist)
-  (mapcar #'unparse-type tlist))
-
-;;; Not used...
-#+nil
-(defun unparse-type (type)
-  (if (atom type)
-      (if (specializerp type)
-          (unparse-type (specializer-type type))
-          type)
-      (case (car type)
-        (eql type)
-        (class-eq `(class-eq ,(class-name (cadr type))))
-        (class (class-name (cadr type)))
-        (t `(,(car type) ,@(unparse-type-list (cdr type)))))))
-
 ;;; internal to this file...
 (defun convert-to-system-type (type)
   (case (car type)
     ((not and or) `(,(car type) ,@(mapcar #'convert-to-system-type
 					  (cdr type))))
     ((class class-eq) ; class-eq is impossible to do right
-     #-cmu17 (class-name (cadr type))
-     #+cmu17 (kernel:layout-class (class-wrapper (cadr type))))
+     (kernel:layout-class (class-wrapper (cadr type))))
     (eql type)
     (t (if (null (cdr type))
 	   (car type)
 	   type))))
-
-;;; not used...
-#+nil
-(defun *typep (object type)
-  (setq type (*normalize-type type))
-  (cond ((member (car type) '(eql wrapper-eq class-eq class))
-         (specializer-applicable-using-type-p type `(eql ,object)))
-        ((eq (car type) 'not)
-         (not (*typep object (cadr type))))
-        (t
-         (typep object (convert-to-system-type type)))))
 
 
 ;;; *SUBTYPEP  --  Interface
@@ -417,29 +274,7 @@
 			 (convert-to-system-type type2))))))))
 
 (defun do-satisfies-deftype (name predicate)
-  #+cmu17 (declare (ignore name predicate))
-  #+(or :Genera (and :Lucid (not :Prime)) ExCL :coral)
-  (let* ((specifier `(satisfies ,predicate))
-	 (expand-fn #'(lambda (&rest ignore)
-			(declare (ignore ignore))
-			specifier)))
-    ;; Specific ports can insert their own way of doing this.  Many
-    ;; ports may find the expand-fn defined above useful.
-    ;;
-    (or #+:Genera
-	(setf (get name 'deftype) expand-fn)
-	#+(and :Lucid (not :Prime))
-	(system::define-macro `(deftype ,name) expand-fn nil)
-	#+ExCL
-	(setf (get name 'excl::deftype-expander) expand-fn)
-	#+:coral
-	(setf (get name 'ccl::deftype-expander) expand-fn)))
-  #-(or :Genera (and :Lucid (not :Prime)) ExCL :coral cmu17)
-  ;; This is the default for ports for which we don't know any
-  ;; better.  Note that for most ports, providing this definition
-  ;; should just speed up class definition.  It shouldn't have an
-  ;; effect on performance of most user code.
-  (eval `(deftype ,name () '(satisfies ,predicate))))
+  (declare (ignore name predicate)))
 
 (defun make-type-predicate-name (name &optional kind)
   (if (symbol-package name)
@@ -526,7 +361,7 @@
 (defun plist-value (object name)
   (getf (object-plist object) name))
 
-(defun #-setf SETF\ PCL\ PLIST-VALUE #+setf (setf plist-value) (new-value object name)
+(defun (setf plist-value) (new-value object name)
   (if new-value
       (setf (getf (object-plist object) name) new-value)
       (progn
@@ -575,7 +410,6 @@
 		 list)     ()                       (symbol list sequence t)
      nil)))
 
-#+cmu17
 (labels ((direct-supers (class)
 	   (if (typep class 'lisp:built-in-class)
 	       (kernel:built-in-class-direct-superclasses class)
@@ -616,37 +450,35 @@
 (defclass t () ()
   (:metaclass built-in-class))
 
-#+cmu17
-(progn
-  (defclass kernel:instance (t) ()
-    (:metaclass built-in-class))
-  
-  (defclass function (t) ()
-    (:metaclass built-in-class))
+(defclass kernel:instance (t) ()
+  (:metaclass built-in-class))
 
-  (defclass kernel:funcallable-instance (function) ()
-    (:metaclass built-in-class))
+(defclass function (t) ()
+  (:metaclass built-in-class))
 
-  (defclass stream (t) ()
-    (:metaclass built-in-class)))
+(defclass kernel:funcallable-instance (function) ()
+  (:metaclass built-in-class))
+
+(defclass stream (t) ()
+  (:metaclass built-in-class))
 
 (defclass slot-object (t) ()
   (:metaclass slot-class))
 
-(defclass structure-object (slot-object #+cmu17 kernel:instance) ()
+(defclass structure-object (slot-object kernel:instance) ()
   (:metaclass structure-class))
 
-(defstruct (#-cmu17 structure-object #+cmu17 dead-beef-structure-object
+(defstruct (dead-beef-structure-object
 	     (:constructor |STRUCTURE-OBJECT class constructor|)))
 
 
 (defclass std-object (slot-object) ()
   (:metaclass std-class))
 
-(defclass standard-object (std-object #+cmu17 kernel:instance) ())
+(defclass standard-object (std-object kernel:instance) ())
 
 (defclass funcallable-standard-object (std-object
-				       #+cmu17 kernel:funcallable-instance)
+				       kernel:funcallable-instance)
      ()
   (:metaclass funcallable-standard-class))
 

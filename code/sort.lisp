@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.4.2.1 1998/07/19 01:06:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.4.2.2 2000/05/23 16:36:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,6 +152,45 @@
 ;;; Stable Sorting Lists
 
 
+;;; APPLY-PRED saves us a function call sometimes.
+(eval-when (compile eval)
+  (defmacro apply-pred (one two pred key)
+    `(if ,key
+	 (funcall ,pred (funcall ,key ,one)
+		  (funcall ,key  ,two))
+	 (funcall ,pred ,one ,two)))
+) ; eval-when
+
+
+;;; MERGE-LISTS*   originally written by Jim Large.
+;;; 		   modified to return a pointer to the end of the result
+;;; 		      and to not cons header each time its called.
+;;; It destructively merges list-1 with list-2.  In the resulting
+;;; list, elements of list-2 are guaranteed to come after equal elements
+;;; of list-1.
+(defun merge-lists* (list-1 list-2 pred key
+			    &optional (merge-lists-header (list :header)))
+  (do* ((result merge-lists-header)
+	(P result))                            ; P points to last cell of result
+       ((or (null list-1) (null list-2))       ; done when either list used up	
+	(if (null list-1)                      ; in which case, append the
+	    (rplacd p list-2)                  ;   other list
+	    (rplacd p list-1))
+	(do ((drag p lead)
+	     (lead (cdr p) (cdr lead)))
+	    ((null lead)
+	     (values (prog1 (cdr result)       ; return the result sans header
+			    (rplacd result nil)) ; (free memory, be careful)
+		     drag))))		       ; and return pointer to last element
+    (cond ((apply-pred (car list-2) (car list-1) pred key)
+	   (rplacd p list-2)           ; append the lesser list to last cell of
+	   (setq p (cdr p))            ;   result.  Note: test must bo done for
+	   (pop list-2))               ;   list-2 < list-1 so merge will be
+	  (T (rplacd p list-1)         ;   stable for list-1
+	     (setq p (cdr p))
+	     (pop list-1)))))
+
+
 ;;; SORT-LIST uses a bottom up merge sort.  First a pass is made over
 ;;; the list grabbing one element at a time and merging it with the next one
 ;;; form pairs of sorted elements.  Then n is doubled, and elements are taken
@@ -167,7 +206,8 @@
 	unsorted		    ; unsorted is the remaining list to be
 				    ;   broken into n size lists and merged
 	list-1			    ; list-1 is one length n list to be merged
-	last)			    ; last points to the last visited cell
+	last			    ; last points to the last visited cell
+	(merge-lists-header (list :header)))
     (declare (fixnum n))
     (loop
      ;; start collecting runs of n at the first element
@@ -191,7 +231,8 @@
 		       ;; the second run goes off the end of the list
 		       (t (setf unsorted nil)))
 		 (multiple-value-bind (merged-head merged-last)
-				      (merge-lists* list-1 list-2 pred key)
+				      (merge-lists* list-1 list-2 pred key
+						    merge-lists-header)
 		   (setf (cdr last) merged-head)
 		   (setf last merged-last))
 		 (if (null unsorted) (return)))
@@ -204,45 +245,6 @@
        ;; into one list.  This may waste one outer iteration to realize.
        (if (eq list-1 (cdr head))
 	   (return list-1))))))
-
-
-;;; APPLY-PRED saves us a function call sometimes.
-(eval-when (compile eval)
-  (defmacro apply-pred (one two pred key)
-    `(if ,key
-	 (funcall ,pred (funcall ,key ,one)
-		  (funcall ,key  ,two))
-	 (funcall ,pred ,one ,two)))
-) ; eval-when
-
-(defvar *merge-lists-header* (list :header))
-
-;;; MERGE-LISTS*   originally written by Jim Large.
-;;; 		   modified to return a pointer to the end of the result
-;;; 		      and to not cons header each time its called.
-;;; It destructively merges list-1 with list-2.  In the resulting
-;;; list, elements of list-2 are guaranteed to come after equal elements
-;;; of list-1.
-(defun merge-lists* (list-1 list-2 pred key)
-  (do* ((result *merge-lists-header*)
-	(P result))                            ; P points to last cell of result
-       ((or (null list-1) (null list-2))       ; done when either list used up	
-	(if (null list-1)                      ; in which case, append the
-	    (rplacd p list-2)                  ;   other list
-	    (rplacd p list-1))
-	(do ((drag p lead)
-	     (lead (cdr p) (cdr lead)))
-	    ((null lead)
-	     (values (prog1 (cdr result)       ; return the result sans header
-			    (rplacd result nil)) ; (free memory, be careful)
-		     drag))))		       ; and return pointer to last element
-    (cond ((apply-pred (car list-2) (car list-1) pred key)
-	   (rplacd p list-2)           ; append the lesser list to last cell of
-	   (setq p (cdr p))            ;   result.  Note: test must bo done for
-	   (pop list-2))               ;   list-2 < list-1 so merge will be
-	  (T (rplacd p list-1)         ;   stable for list-1
-	     (setq p (cdr p))
-	     (pop list-1)))))
 
 
 
@@ -304,19 +306,17 @@
   (let ((vector-len (gensym)) 		(n (gensym))
 	(direction (gensym)) 		(unsorted (gensym))
 	(start-1 (gensym)) 		(end-1 (gensym))
-	(end-2 (gensym)) 		(temp-len (gensym))
-	(i (gensym)))
-    `(let ((,vector-len (length (the vector ,vector)))
-	   (,n 1)         ; bottom-up size of contiguous runs to be merged
-	   (,direction t) ; t vector --> temp    nil temp --> vector
-	   (,temp-len (length (the simple-vector *merge-sort-temp-vector*)))
-	   (,unsorted 0)  ; unsorted..vector-len are the elements that need
-			  ; to be merged for a given n
-	   (,start-1 0))  ; one n-len subsequence to be merged with the next
-       (declare (fixnum ,vector-len ,n ,temp-len ,unsorted ,start-1))
-       (if (> ,vector-len ,temp-len)
-	   (setf *merge-sort-temp-vector*
-		 (make-array (max ,vector-len (+ ,temp-len ,temp-len)))))
+	(end-2 (gensym))		(i (gensym))
+	(temp-vector (gensym)))
+    `(let* ((,vector-len (length (the vector ,vector)))
+	    (,n 1)         ; bottom-up size of contiguous runs to be merged
+	    (,direction t) ; t vector --> temp    nil temp --> vector
+	    (,temp-vector (make-array ,vector-len))
+	    (,unsorted 0)  ; unsorted..vector-len are the elements that need
+			   ; to be merged for a given n
+	    (,start-1 0))  ; one n-len subsequence to be merged with the next
+       (declare (fixnum ,vector-len ,n ,unsorted ,start-1)	
+		(type simple-vector ,temp-vector))
        (loop
 	;; for each n, we start taking n-runs from the start of the vector
 	(setf ,unsorted 0)
@@ -332,10 +332,10 @@
 		    (setf ,unsorted ,end-2)
 		    (if ,direction
 			(stable-sort-merge-vectors*
-			 ,vector *merge-sort-temp-vector*
+			 ,vector ,temp-vector
 			 ,start-1 ,end-1 ,end-2 ,pred ,key ,vector-ref svref)
 			(stable-sort-merge-vectors*
-			 *merge-sort-temp-vector* ,vector
+			 ,temp-vector ,vector
 			 ,start-1 ,end-1 ,end-2 ,pred ,key svref ,vector-ref))
 		    (if (= ,unsorted ,vector-len) (return))))
 		 ;; if there is only one run, copy those elements to the end
@@ -343,13 +343,13 @@
 			(do ((,i ,start-1 (1+ ,i)))
 			    ((= ,i ,vector-len))
 			  (declare (fixnum ,i))
-			  (setf (svref *merge-sort-temp-vector* ,i)
+			  (setf (svref ,temp-vector ,i)
 				(,vector-ref ,vector ,i)))
 			(do ((,i ,start-1 (1+ ,i)))
 			    ((= ,i ,vector-len))
 			  (declare (fixnum ,i))
 			  (setf (,vector-ref ,vector ,i)
-				(svref *merge-sort-temp-vector* ,i))))
+				(svref ,temp-vector ,i))))
 		    (return)))))
 	;; If the inner loop only executed once, then there were only enough
 	;; elements for two subsequences given n, so all the elements have
@@ -360,19 +360,13 @@
 	      ;; to the given vector.
 	      (dotimes (,i ,vector-len)
 		(setf (,vector-ref ,vector ,i)
-		      (svref *merge-sort-temp-vector* ,i))))
+		      (svref ,temp-vector ,i))))
 	  (return ,vector))
 	(setf ,n (ash ,n 1)) ; (* 2 n)
 	(setf ,direction (not ,direction))))))
 
 ) ; eval-when
 
-
-;;; Temporary vector for stable sorting vectors.
-(defvar *merge-sort-temp-vector*
-  (make-array 50))
-
-(proclaim '(simple-vector *merge-sort-temp-vector*))
 
 (defun stable-sort-simple-vector (vector pred key)
   (declare (simple-vector vector))

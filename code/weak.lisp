@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.4 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.4.2.1 2000/05/23 16:36:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.4 1994/10/31 04:11:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.4.2.1 2000/05/23 16:36:57 pw Exp $
 ;;;
 ;;; Weak Pointer Support.
 ;;;
@@ -39,3 +39,14 @@
   (let ((value (c::%weak-pointer-value weak-pointer))
 	(broken (c::%weak-pointer-broken weak-pointer)))
     (values value (not broken))))
+
+;;; For the interpreter..
+
+(defun c::%weak-pointer-value (w)
+  (declare (type weak-pointer w))
+  (c::%weak-pointer-value w))
+
+(defun c::%weak-pointer-broken (w)
+  (declare (type weak-pointer w))
+  (c::%weak-pointer-broken w))
+

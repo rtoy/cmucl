@@ -25,6 +25,10 @@
 ;;; *************************************************************************
 ;;;
 
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.8.2.3 2000/05/23 16:38:58 pw Exp $")
+;;;
+
 (in-package :pcl)
 
 (defmethod print-object (instance stream)
@@ -1029,7 +1033,7 @@
 		  (mec-all-class-lists (method-specializers method) precompute-p))))
       cache)))
 
-#+cmu
+
 (defmacro class-test (arg class)
   (cond ((eq class *the-class-t*)
 	 't)
@@ -1041,9 +1045,6 @@
 	 `(std-instance-p ,arg))
 	((eq class *the-class-funcallable-standard-object*)
 	 `(fsc-instance-p ,arg))
-	#-cmu17
-	((eq class *the-class-structure-object*)
-	 `(memq ',class (class-precedence-list (class-of ,arg))))
 	;; TYPEP is now sometimes faster than doing memq of the cpl
 	(t
 	 `(typep ,arg ',(class-name class)))))
@@ -1182,8 +1183,6 @@
 	    new-type
 	    `(and ,new-type ,@so-far)))))
 
-#+lcl3.0 (dont-use-production-compiler)
-
 (defun generate-discrimination-net-internal 
     (gf methods types methods-function test-function type-function)
   (let* ((arg-info (gf-arg-info gf))
@@ -1241,8 +1240,6 @@
 			       (t (funcall test-function position type 
 					   (do-if t) (do-if nil))))))))))
       (do-column precedence methods ()))))
-
-#+lcl3.0 (use-previous-compiler)
 
 (defun compute-secondary-dispatch-function (generic-function net &optional 
 					    method-alist wrappers)
@@ -1386,10 +1383,9 @@
 			(make-fast-method-call-lambda-list metatypes applyp))))
       (multiple-value-bind
 	  (cfunction constants)
-	  (get-function1 `(#+cmu ,(if function-p
-				      'kernel:instance-lambda
-				      'lambda)
-			   #-cmu lambda
+	  (get-function1 `(,(if function-p
+				'kernel:instance-lambda
+				'lambda)			   
 			   ,arglist
 				 ,@(unless function-p
 				     `((declare (ignore .pv-cell.

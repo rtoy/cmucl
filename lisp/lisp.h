@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.3.2.2 1998/06/23 11:25:02 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.3.2.3 2000/05/23 16:38:29 pw Exp $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_

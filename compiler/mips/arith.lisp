@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.52.2.1 1998/06/23 11:23:32 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.52.2.2 2000/05/23 16:37:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.52.2.1 1998/06/23 11:23:32 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.52.2.2 2000/05/23 16:37:38 pw Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -206,14 +206,13 @@
 
 ;;; Shifting
 
-
-(define-vop (fast-ash)
+(define-vop (fast-ash/unsigned=>unsigned)
   (:note "inline ASH")
-  (:args (number :scs (signed-reg unsigned-reg) :to :save)
+  (:args (number :scs (unsigned-reg) :to :save)
 	 (amount :scs (signed-reg)))
-  (:arg-types (:or signed-num unsigned-num) signed-num)
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:arg-types unsigned-num signed-num)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:translate ash)
   (:policy :fast-safe)
   (:temporary (:sc non-descriptor-reg) ndesc)
@@ -223,35 +222,76 @@
     (inst subu ndesc zero-tn amount)
     (inst slt temp ndesc 31)
     (inst bne temp zero-tn done)
-    (sc-case number
-      (signed-reg (inst sra result number ndesc))
-      (unsigned-reg (inst srl result number ndesc)))
+    (inst srl result number ndesc)
     (inst b done)
-    (sc-case number
-      (signed-reg (inst sra result number 31))
-      (unsigned-reg (inst srl result number 31)))
-      
+    (inst srl result number 31)
+
     POSITIVE
     ;; The result-type assures us that this shift will not overflow.
     (inst sll result number amount)
-      
+
     DONE))
 
-(define-vop (fast-ash-c)
+(define-vop (fast-ash/signed=>signed)
+  (:note "inline ASH")
+  (:args (number :scs (signed-reg) :to :save)
+	 (amount :scs (signed-reg)))
+  (:arg-types signed-num signed-num)
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:temporary (:sc non-descriptor-reg :to :eval) temp)
+  (:generator 3
+    (inst bgez amount positive)
+    (inst subu ndesc zero-tn amount)
+    (inst slt temp ndesc 31)
+    (inst bne temp zero-tn done)
+    (inst sra result number ndesc)
+    (inst b done)
+    (inst sra result number 31)
+
+    POSITIVE
+    ;; The result-type assures us that this shift will not overflow.
+    (inst sll result number amount)
+
+    DONE))
+
+
+(define-vop (fast-ash-c/unsigned=>unsigned)
   (:policy :fast-safe)
   (:translate ash)
-  (:note nil)
-  (:args (number :scs (signed-reg unsigned-reg)))
+  (:note "inline ASH")
+  (:args (number :scs (unsigned-reg)))
   (:info count)
-  (:arg-types (:or signed-num unsigned-num) (:constant integer))
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:arg-types unsigned-num (:constant integer))
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:generator 1
     (cond ((< count 0)
 	   ;; It is a right shift.
-	   (sc-case number
-	     (signed-reg (inst sra result number (min (- count) 31)))
-	     (unsigned-reg (inst srl result number (min (- count) 31)))))
+	   (inst srl result number (min (- count) 31)))
+	  ((> count 0)
+	   ;; It is a left shift.
+	   (inst sll result number (min count 31)))
+	  (t
+	   ;; Count=0?  Shouldn't happen, but it's easy:
+	   (move result number)))))
+
+(define-vop (fast-ash-c/signed=>signed)
+  (:policy :fast-safe)
+  (:translate ash)
+  (:note "inline ASH")
+  (:args (number :scs (signed-reg)))
+  (:info count)
+  (:arg-types signed-num (:constant integer))
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
+  (:generator 1
+    (cond ((< count 0)
+	   ;; It is a right shift.
+	   (inst sra result number (min (- count) 31)))
 	  ((> count 0)
 	   ;; It is a left shift.
 	   (inst sll result number (min count 31)))

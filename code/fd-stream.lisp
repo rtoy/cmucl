@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.2 1998/07/19 01:06:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.3 2000/05/23 16:36:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -481,18 +481,14 @@
 	  (unix:fd-zero read-fds)
 	  (unix:fd-set fd read-fds)
 	  (unix:unix-fast-select (1+ fd) (alien:addr read-fds) nil nil 0 0))
-      (case count
-	(1)
-	(0
-	 (unless #-mp (system:wait-until-fd-usable
-		       fd :input (fd-stream-timeout stream))
-		 #+mp (mp:process-wait-until-fd-usable
-		       fd :input (fd-stream-timeout stream))
-	   (error 'io-timeout :stream stream :direction :read)))
-	(t
-	 (error "Problem checking to see if ~S is readable: ~A"
-		stream
-		(unix:get-unix-error-msg errno)))))
+      ;; Wait if input is not available or if interrupted.
+      (when (or (eql count 0)
+		(and (not count) (eql errno unix:eintr)))
+	(unless #-mp (system:wait-until-fd-usable
+		      fd :input (fd-stream-timeout stream))
+		#+mp (mp:process-wait-until-fd-usable
+		      fd :input (fd-stream-timeout stream))
+	  (error 'io-timeout :stream stream :direction :read))))
     (multiple-value-bind
 	  (count errno)
 	(unix:unix-read fd
@@ -655,16 +651,17 @@
     string))
 
 #|
-This version waits using server.  I changed to the non-server version because
-it allows this method to be used by CLX w/o confusing serve-event.  The
-non-server method is also significantly more efficient for large reads.
-  -- Ram
-
 ;;; FD-STREAM-READ-N-BYTES -- internal
+;;;
+;;; This version waits using server.  I changed to the non-server version
+;;; because it allows this method to be used by CLX w/o confusing serve-event.
+;;; The non-server method is also significantly more efficient for large
+;;; reads. -- Ram
 ;;;
 ;;; The n-bin routine.
 ;;; 
 (defun fd-stream-read-n-bytes (stream buffer start requested eof-error-p)
+  (declare (type stream stream) (type index start requested))
   (let* ((sap (fd-stream-ibuf-sap stream))
 	 (elsize (fd-stream-element-size stream))
 	 (offset (* elsize start))
@@ -699,7 +696,7 @@ non-server method is also significantly more efficient for large reads.
 
 ;;; FD-STREAM-READ-N-BYTES -- internal
 ;;;
-;;;    The N-Bin method for FD-STREAMs.  This doesn't using SERVER; it blocks
+;;;    The N-Bin method for FD-STREAMs.  This doesn't use the SERVER; it blocks
 ;;; in UNIX-READ.  This allows the method to be used to implementing reading
 ;;; for CLX.  It is generally used where there is a definite amount of reading
 ;;; to be done, so blocking isn't too problematical.
@@ -767,11 +764,11 @@ non-server method is also significantly more efficient for large reads.
 		(unless count
 		  (error "Error reading ~S: ~A" stream
 			 (unix:get-unix-error-msg err)))
+		(decf now-needed count)
 		(if eof-error-p
 		    (when (zerop count)
 		      (error 'end-of-file :stream stream))
 		    (return (- requested now-needed)))
-		(decf now-needed count)
 		(when (zerop now-needed) (return requested))
 		(incf offset count)))))
 	 (t
@@ -996,16 +993,18 @@ non-server method is also significantly more efficient for large reads.
      (setf (fd-stream-ibuf-tail stream) 0)
      (catch 'eof-input-catcher
        (loop
-	(let ((count (alien:with-alien ((read-fds (alien:struct unix:fd-set)))
-		       (unix:fd-zero read-fds)
-		       (unix:fd-set (fd-stream-fd stream) read-fds)
-		       (unix:unix-fast-select (1+ (fd-stream-fd stream))
-					      (alien:addr read-fds) nil nil
-					      0 0))))
+	(multiple-value-bind
+	      (count errno)
+	    (alien:with-alien ((read-fds (alien:struct unix:fd-set)))
+	      (unix:fd-zero read-fds)
+	      (unix:fd-set (fd-stream-fd stream) read-fds)
+	      (unix:unix-fast-select (1+ (fd-stream-fd stream))
+				     (alien:addr read-fds) nil nil 0 0))
 	  (cond ((eql count 1)
 		 (do-input stream)
 		 (setf (fd-stream-ibuf-head stream) 0)
 		 (setf (fd-stream-ibuf-tail stream) 0))
+		((and (not count) (eql errno unix:eintr)))
 		(t
 		 (return t)))))))
     (:force-output
@@ -1261,7 +1260,7 @@ non-server method is also significantly more efficient for large reads.
    :if-does-not-exist - one of :error, :create or nil
   See the manual for details."
   (declare (ignore external-format))
-
+  
   ;; First, make sure that DIRECTION is valid. Allow it to be changed if not.
   (setf direction
 	(assure-one-of direction
