@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.18 1991/01/30 14:06:31 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.19 1991/01/31 02:09:17 wlott Exp $
 ;;;
 ;;; Initialization stuff for CMU Common Lisp, plus some other random functions
 ;;; that we don't have any better place for.
@@ -680,6 +680,7 @@
     (loop
      (with-simple-restart (abort "Return to Top-Level.")
        (catch 'top-level-catcher
+	 (mach:unix-sigsetmask 0)
 	 (let ((*in-top-level-catcher* t))
 	   (loop
 	     (fresh-line)
