@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.6 1990/03/15 19:38:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.7 1990/03/22 00:21:20 ch Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -18,10 +18,11 @@
 ;;;
 (in-package "C")
 
-;;; ### These belongs in compiler/fndb.lisp
+;;; ### These belong in compiler/fndb.lisp
 ;;; 
 (defknown realp (t) boolean (movable foldable flushable))
 (defknown system-area-pointer-p (t) boolean (movable foldable flushable))
+(defknown simple-array-p (t) boolean (movable foldable flushable))
 
 
 ;;;; Simple type checking and testing:
@@ -173,13 +174,11 @@
 			    (move res obj)))))))))
 
   (frob array-header-p nil nil
-    vm:simple-array-type (vm:complex-string-type vm:complex-array-type))
-
+    vm:simple-array-type vm:complex-string-type vm:complex-bit-vector-type
+    vm:complex-vector-type vm:complex-array-type)
+  
   (frob nil check-function-or-symbol di:object-not-function-or-symbol-error
     vm:function-pointer-type vm:symbol-header-type)
-
-  (frob vectorp check-vector di:object-not-vector-error
-    (vm:simple-string-type vm:simple-array-double-float-type))
 
   (frob stringp check-string di:object-not-string-error
     vm:simple-string-type vm:complex-string-type)
@@ -187,29 +186,47 @@
   (frob bit-vector-p check-bit-vector di:object-not-bit-vector-error
     vm:simple-bit-vector-type vm:complex-bit-vector-type)
 
-  (frob arrayp check-array di:object-not-array-error
-    (vm:simple-array-type vm:complex-array-type))
+  (frob vectorp check-vector di:object-not-vector-error
+    vm:simple-string-type vm:simple-bit-vector-type vm:simple-vector-type
+    vm:simple-array-unsigned-byte-2-type vm:simple-array-unsigned-byte-4-type
+    vm:simple-array-unsigned-byte-8-type vm:simple-array-unsigned-byte-16-type
+    vm:simple-array-unsigned-byte-32-type vm:simple-array-single-float-type
+    vm:simple-array-double-float-type vm:complex-string-type
+    vm:complex-bit-vector-type vm:complex-vector-type)
 
+  (frob simple-array-p check-simple-array di:object-not-simple-array-error
+    vm:simple-array-type vm:simple-string-type vm:simple-bit-vector-type
+    vm:simple-vector-type vm:simple-array-unsigned-byte-2-type
+    vm:simple-array-unsigned-byte-4-type vm:simple-array-unsigned-byte-8-type
+    vm:simple-array-unsigned-byte-16-type vm:simple-array-unsigned-byte-32-type
+    vm:simple-array-single-float-type vm:simple-array-double-float-type)
+
+  (frob arrayp check-array di:object-not-array-error
+    vm:simple-array-type vm:simple-string-type vm:simple-bit-vector-type
+    vm:simple-vector-type vm:simple-array-unsigned-byte-2-type
+    vm:simple-array-unsigned-byte-4-type vm:simple-array-unsigned-byte-8-type
+    vm:simple-array-unsigned-byte-16-type vm:simple-array-unsigned-byte-32-type
+    vm:simple-array-single-float-type vm:simple-array-double-float-type
+    vm:complex-string-type vm:complex-bit-vector-type vm:complex-vector-type
+    vm:complex-array-type)
+    
   (frob numberp check-number di:object-not-number-error
-    vm:even-fixnum-type vm:odd-fixnum-type
-    (vm:bignum-type vm:complex-type))
+    vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type vm:ratio-type
+    vm:single-float-type vm:double-float-type vm:complex-type)
 
   (frob rationalp check-rational di:object-not-rational-error
-    vm:even-fixnum-type vm:odd-fixnum-type
-    vm:ratio-type vm:bignum-type)
+    vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type)
 
   (frob floatp check-float di:object-not-float-error
     vm:single-float-type vm:double-float-type)
 
   (frob realp check-real di:object-not-real-error
-    vm:even-fixnum-type vm:odd-fixnum-type
-    vm:ratio-type vm:bignum-type
+    vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type
     vm:single-float-type vm:double-float-type)
   
   ;; ### May want to make this more tense.
   (frob integerp check-integer di:object-not-integer-error
-    vm:even-fixnum-type vm:odd-fixnum-type
-    vm:bignum-type))
+    vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type))
 
 
 ;;;; List/symbol types:
