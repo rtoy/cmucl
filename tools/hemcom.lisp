@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemcom.lisp,v 1.9 1999/01/09 11:05:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemcom.lisp,v 1.10 2003/02/25 15:21:43 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,6 +179,7 @@
 (comf "target:hemlock/debug" :byte-compile t)
 (comf "target:hemlock/netnews" :byte-compile t)
 (comf "target:hemlock/rcs" :byte-compile t)
+(comf "target:hemlock/dabbrev" :byte-compile t)
 
 ) ;WITH-COMPILATION-UNIT for commands
 
@@ -294,4 +295,5 @@
  "target:hemlock/debug"
  "target:hemlock/netnews"
  "target:hemlock/rcs"
+ "target:hemlock/dabbrev"
  "target:hemlock/bindings")
