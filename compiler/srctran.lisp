@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.102 2000/09/12 07:37:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.103 2000/09/26 15:13:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3497,117 +3497,6 @@
 		  (arg2 `(min ,@more-args)))
 	`(if (< ,arg1 ,arg2)
 	     ,arg1 ,arg2))))
-
-)
-
-#+sparc-v9
-(progn
-
-;;; The sparc-v9 architecture has conditional move instructions that
-;;; can be used.  This should be faster than using the obvious if
-;;; expression since we don't have to do branches.
-  
-;; Tell the compiler about these functions.
-(defknown %max (real real)
-  real
-  (movable foldable flushable))
-(defknown %min (real real)
-  real
-  (movable foldable flushable))
-
-;; Needed for the byte-compiled stuff and constant folding since we've
-;; declared these as foldable functions.
-(defun %max (x y)
-  (%max x y))
-(defun %min (x y)
-  (%min x y))
-
-;; Convert max/min of many args into the obvious set of nested max/min's.
-(def-source-transform max (arg &rest more-args)
-  (cond ((null more-args)
-	 `(values ,arg))
-	(t
-	 `(%max ,arg (max ,@more-args)))))
-
-(def-source-transform min (arg &rest more-args)
-  (cond ((null more-args)
-	 `(values ,arg))
-	(t
-	 `(%min ,arg (min ,@more-args)))))
-
-;; Derive the types of %max and %min
-(defoptimizer (%max derive-type) ((x y))
-  (multiple-value-bind (definitely-< definitely->=)
-      (ir1-transform-<-helper x y)
-    (cond (definitely-<
-	      (continuation-type y))
-	  (definitely->=
-	      (continuation-type x))
-	  (t
-	   (make-canonical-union-type (list (continuation-type x)
-					    (continuation-type y)))))))
-
-(defoptimizer (%min derive-type) ((x y))
-  (multiple-value-bind (definitely-< definitely->=)
-      (ir1-transform-<-helper x y)
-    (cond (definitely-<
-	      (continuation-type x))
-	  (definitely->=
-	      (continuation-type y))
-	  (t
-	   (make-canonical-union-type (list (continuation-type x)
-					    (continuation-type y)))))))
-
-(deftransform %max ((x y) (real real) * :when :both)
-  (let ((x-type (continuation-type x))
-	(y-type (continuation-type y))
-	(signed (specifier-type '(signed-byte 32)))
-	(unsigned (specifier-type '(unsigned-byte 32)))
-	(d-float (specifier-type 'double-float))
-	(s-float (specifier-type 'single-float)))
-    ;; Use %%max if both args are good types of the same type.  As a
-    ;; last resort, use the obvious comparison to select the desired
-    ;; element.
-    (cond ((or (and (csubtypep x-type signed)
-		    (csubtypep y-type signed))
-	       (and (csubtypep x-type unsigned)
-		    (csubtypep y-type unsigned))
-	       (and (csubtypep x-type d-float)
-		    (csubtypep y-type d-float))
-	       (and (csubtypep x-type s-float)
-		    (csubtypep y-type s-float)))
-	   `(sparc::%%max x y))
-	  (t
-	   (let ((arg1 (gensym))
-		 (arg2 (gensym)))
-	     `(let ((,arg1 x)
-		    (,arg2 y))
-		(if (> ,arg1 ,arg2)
-		    ,arg1 ,arg2)))))))
-
-(deftransform %min ((x y) (real real) * :when :both)
-  (let ((x-type (continuation-type x))
-	(y-type (continuation-type y))
-	(signed (specifier-type '(signed-byte 32)))
-	(unsigned (specifier-type '(unsigned-byte 32)))
-	(d-float (specifier-type 'double-float))
-	(s-float (specifier-type 'single-float)))
-    (cond ((or (and (csubtypep x-type signed)
-		    (csubtypep y-type signed))
-	       (and (csubtypep x-type unsigned)
-		    (csubtypep y-type unsigned))
-	       (and (csubtypep x-type d-float)
-		    (csubtypep y-type d-float))
-	       (and (csubtypep x-type s-float)
-		    (csubtypep y-type s-float)))
-	   `(sparc::%%min x y))
-	  (t
-	   (let ((arg1 (gensym))
-		 (arg2 (gensym)))
-	     `(let ((,arg1 x)
-		    (,arg2 y))
-		(if (< ,arg1 ,arg2)
-		    ,arg1 ,arg2)))))))
 
 )
 
