@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.1 1992/08/25 17:45:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.2 1992/09/05 02:34:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -840,6 +840,43 @@
 		 sc-name load-p (operand-parse-name op))))))
     (funs)))
 
+;;; CALL-MOVE-FUNCTION  --  Internal
+;;;
+;;;    Return a form to load/save the specified operand when it has a load TN.
+;;; For any given SC that we can load from, there must be a unique load
+;;; function.  If all SCs we can load from have the same move function, then we
+;;; just call that when there is a load TN.  If there are multiple possible
+;;; move functions, then we dispatch off of the operand TN's type to see which
+;;; move function to use.
+;;;
+(defun call-move-function (parse op load-p)
+  (let ((funs (find-move-functions op load-p))
+	(load-tn (operand-parse-load-tn op)))
+    (if funs
+	(let* ((tn `(tn-ref-tn ,(operand-parse-temp op)))
+	       (n-vop (or (vop-parse-vop-var parse)
+			  (setf (vop-parse-vop-var parse) (gensym))))
+	       (form (if (rest funs)
+			 `(sc-case ,tn
+			    ,@(mapcar #'(lambda (x)
+					  `(,(mapcar #'sc-name (car x))
+					    ,(if load-p
+						 `(,(cdr x) ,n-vop ,tn
+						   ,load-tn)
+						 `(,(cdr x) ,n-vop ,load-tn
+						   ,tn))))
+				      funs))
+			 (if load-p
+			     `(,(cdr (first funs)) ,n-vop ,tn ,load-tn)
+			     `(,(cdr (first funs)) ,n-vop ,load-tn ,tn)))))
+	  (if (eq (operand-parse-load op) t)
+	      `(when ,load-tn ,form)
+	      `(when (eq ,load-tn ,(operand-parse-name op))
+		 ,form)))
+	`(when ,load-tn
+	   (error "Load TN allocated, but no move function?~@
+	           VM definition inconsistent, recompile and try again.")))))
+
 ;;; DECIDE-TO-LOAD  --  Internal
 ;;;
 ;;;    Return the TN that we should bind to the operand's var in the generator
@@ -867,7 +904,6 @@
 		      ,load))
 	       ,load-tn
 	       (tn-ref-tn ,temp))))))
-
 
 ;;; Make-Generator-Function  --  Internal
 ;;;
@@ -1454,6 +1490,29 @@
 
 
 ;;;; Function translation stuff.
+
+;;; Set-Up-Function-Translation  --  Internal
+;;;
+;;;    Return forms to establish this VOP as a IR2 translation template for the
+;;; :Translate functions specified in the VOP-Parse.  We also set the
+;;; Predicate attribute for each translated function when the VOP is
+;;; conditional, causing IR1 conversion to ensure that a call to the translated
+;;; is always used in a predicate position.
+;;;
+(defun set-up-function-translation (parse n-template)
+  (declare (type vop-parse parse))
+  (mapcar #'(lambda (name)
+	      `(let ((info (function-info-or-lose ',name)))
+		 (setf (function-info-templates info)
+		       (adjoin-template ,n-template
+					(function-info-templates info)))
+		 ,@(when (vop-parse-conditional-p parse)
+		     '((setf (function-info-attributes info)
+			     (attributes-union
+			      (ir1-attributes predicate)
+			      (function-info-attributes info)))))))
+	  (vop-parse-translate parse)))
+
 
 ;;; Make-Operand-Type  --  Internal
 ;;;
