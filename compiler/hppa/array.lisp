@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/array.lisp,v 1.2 1992/08/18 04:47:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/array.lisp,v 1.3 1992/10/13 13:14:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,7 +33,7 @@
     (pseudo-atomic ()
       (inst move alloc-tn header)
       (inst dep other-pointer-type 31 3 header)
-      (inst addi (* (1+ array-dimensions-offset) word-bytes) ndescr rank)
+      (inst addi (* (1+ array-dimensions-offset) word-bytes) rank ndescr)
       (inst dep 0 31 3 ndescr)
       (inst add alloc-tn ndescr alloc-tn)
       (inst addi (fixnum (1- array-dimensions-offset)) rank ndescr)
