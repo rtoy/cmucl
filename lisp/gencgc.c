@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.28 2002/11/05 22:45:48 cracauer Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.29 2003/01/29 02:23:49 toy Exp $
  *
  */
 
@@ -404,7 +404,7 @@ static double gen_av_mem_age(int gen)
  * The verbose argument controls how much to print out:
  * 0 for normal level of detail; 1 for debugging.
  */
-static void print_generation_stats(int  verbose)
+void print_generation_stats(int  verbose)
 {
   int i, gens;
   int fpu_state[27];
