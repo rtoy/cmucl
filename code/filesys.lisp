@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.65 2001/12/13 13:45:08 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.66 2002/02/19 15:48:25 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -674,8 +674,9 @@
 	     (unless (or (null type) (eq type :unspecific))
 	       (setf file (concatenate 'string file "." type)))
 	     (unless (member version '(nil :newest :wild))
-	       (setf file (concatenate 'string file "."
-				       (quick-integer-to-string version))))
+	       (setf file (concatenate 'string file ".~"
+				       (quick-integer-to-string version)
+				       "~")))
 	     (when (or (not verify-existance)
 		       (unix:unix-file-kind file t))
 	       (funcall function file)))))))
