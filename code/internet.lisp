@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.4 2000/08/07 13:55:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.5 2000/09/15 14:43:21 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,11 +68,14 @@
 (defconstant msg-proxy 16)
 
 (defvar *internet-protocols*
-  (list (list :stream 6 sock-stream)
-	(list :data-gram 17 sock-dgram))
+  '((:stream    6 #.sock-stream)
+    (:datagram 17 #.sock-dgram))
   "AList of socket kinds and protocol values.")
 
 (defun internet-protocol (kind)
+  (when (eq kind :data-gram) ; Sep-2000. Remove someday.
+    (warn "Internet protocol :DATA-GRAM is depreciated. Using :DATAGRAM")
+    (setq kind :datagram))
   (let ((entry (assoc kind *internet-protocols*)))
     (unless entry
       (error "Invalid kind (~S) for internet domain sockets." kind))
@@ -305,7 +308,11 @@ struct in_addr {
 	(values nil unix:unix-errno)
 	(values optval 0))))
 
-(defun create-inet-listener (port &optional (kind :stream) &key reuse-address)
+(defun create-inet-listener (port &optional (kind :stream)
+				  &key
+				  reuse-address
+				  (backlog 5)
+				  )
   (let ((socket (create-inet-socket kind)))
     (when reuse-address
       (multiple-value-bind (optval errno)
@@ -324,7 +331,7 @@ struct in_addr {
 	       port
 	       (unix:get-unix-error-msg))))
     (when (eq kind :stream)
-      (when (minusp (unix:unix-listen socket 5))
+      (when (minusp (unix:unix-listen socket backlog))
 	(unix:unix-close socket)
 	(error "Error listening to socket: ~A" (unix:get-unix-error-msg))))
     socket))
