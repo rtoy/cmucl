@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.22 1990/11/26 22:52:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.23 1990/12/02 15:57:04 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -65,7 +65,7 @@
 ;;; Worst case values for float attributes.
 ;;;
 (deftype float-exponent () 'double-float-exponent)
-(deftype float-digits () `(integer 0 ,double-float-digits))
+(deftype float-digits () `(integer 0 ,vm:double-float-digits))
 (deftype float-radix () '(integer 2 2))
 ;;;
 ;;; A code for Boole.
