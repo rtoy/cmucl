@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.35 1990/03/28 23:03:20 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.36 1990/03/29 15:15:39 ch Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -493,6 +493,9 @@
     lisp::*current-catch-block*
     lisp::*current-unwind-protect-block*
     lisp::*eval-stack-top*
+
+    ;; Interrupt Handling
+    lisp::*free-interrupt-context-index*
 
     ;; Static functions.
     c::two-arg-plus c::two-arg-minus c::two-arg-times c::two-arg-divide
