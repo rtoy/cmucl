@@ -44,6 +44,9 @@
 (when (find-package  "SLOT-ACCESSOR-NAME")
   (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
 
+(when (find-package "CLOS-MOP")
+  (rename-package "CLOS-MOP" "OLD-CLOS-MOP"))
+
 (setf c:*suppress-values-declaration* t)
 (pushnew :setf *features*)
 
