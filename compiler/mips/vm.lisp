@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.18 1990/04/05 23:43:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.19 1990/04/10 20:02:24 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -145,7 +145,15 @@
    ;; lui/ori pair.
    (2 sap-reg))
 
-  ((any-reg descriptor-reg)
+  ((any-reg)
+   ;; No conversion necessary for these.
+   (1 any-reg descriptor-reg)
+   ;; Must shift and addiu the type code.
+   (2 base-character-reg)
+   ;; No type conversion, but we have to write it on the stack.
+   (5 control-stack))
+
+  ((descriptor-reg)
    ;; No conversion necessary for these.
    (1 any-reg descriptor-reg)
    ;; Must shift and addiu the type code.
@@ -153,7 +161,7 @@
    ;; Must indirect the src ptr.
    (5 sap-reg)
    ;; No type conversion, but we have to write it on the stack.
-   (5 control-stack number-stack))
+   (5 control-stack))
 
   ((base-character-reg)
    ;; Just move.
@@ -171,9 +179,9 @@
    ;; Must store it.
    (5 sap-stack))
 
-  ((control-stack number-stack constant)
+  ((control-stack constant)
    ;; Must indirect the stack/code pointer.
-   (5 any-reg descriptor-reg non-descriptor-reg))
+   (5 any-reg descriptor-reg))
 
   ((base-character-stack)
    ;; Just indirect.
