@@ -23,10 +23,11 @@
 (in-package 'c)
 
 
-;;; Propagate-To-Args  --  Internal
+;;; Propagate-To-Args  --  Interface
 ;;;
 ;;;    This function propagates information from the variables in the function
-;;; Fun to the actual arguments in Call.
+;;; Fun to the actual arguments in Call.  This is also called by the VALUES IR1
+;;; optimizer when it sleazily converts MV-BINDs to LETs.
 ;;;
 ;;;    We flush all arguments to Call that correspond to unreferenced variables
 ;;; in Fun.  We leave NILs in the Combination-Args so that the remaining args
@@ -444,6 +445,7 @@
 	 (arglist (optional-dispatch-arglist fun))
 	 (args (combination-args call))
 	 (keys (nthcdr max args))
+	 (flame (policy call (or (> speed brevity) (> space brevity))))
 	 (loser nil))
     (collect ((temps)
 	      (ignores)
@@ -455,6 +457,9 @@
 	  (when info
 	    (ecase (arg-info-kind info)
 	      (:rest
+	       (when flame
+		 (compiler-note
+		  "Rest arg prevents use of local call convention."))
 	       (setf (ref-inlinep ref) :notinline)
 	       (return-from convert-keyword-call))
 	      (:keyword
@@ -468,7 +473,7 @@
 	  ((null key))
 	(let ((cont (first key)))
 	  (unless (constant-continuation-p cont)
-	    (when (policy call (or (> speed brevity) (> space brevity)))
+	    (when flame
 	      (compiler-note "Non-constant keyword in keyword call."))
 	    (setf (ref-inlinep ref) :notinline)
 	    (return-from convert-keyword-call))
@@ -593,6 +598,7 @@
 ;;;
 (defun insert-let-body (fun call)
   (declare (type clambda fun) (type basic-combination call))
+  (setf (lambda-call-lexenv fun) (node-lexenv call))
   (let* ((call-block (node-block call))
 	 (bind-block (node-block (lambda-bind fun)))
 	 (component (block-component call-block)))
