@@ -8,7 +8,9 @@
   (make-package "XLIB" :use '("LISP")))
 
 #+(and (not pcl) (not no-pcl-clx))
-(load "target:pcl/pclload")
+(progn
+  (load "target:pcl/pclload")
+  (ext:purify))
 
 (pushnew :clx-ansi-common-lisp *features*)
 
