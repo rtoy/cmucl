@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.10 1991/04/24 23:51:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.11 1991/06/05 10:58:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.10 1991/04/24 23:51:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.11 1991/06/05 10:58:50 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -130,25 +130,26 @@
 (defoptimizer (make-array derive-type)
 	      ((dims &key initial-element element-type initial-contents
 		adjustable fill-pointer displaced-index-offset displaced-to))
-  (specifier-type
-   `(,(if (and (unsupplied-or-nil adjustable)
-	       (unsupplied-or-nil displaced-to)
-	       (unsupplied-or-nil fill-pointer))
-	  'simple-array
-	  'array)
-     ,(cond ((not element-type) 't)
-	    ((constant-continuation-p element-type)
-	     (continuation-value element-type))
-	    (t
-	     '*))
-     ,(cond ((constant-continuation-p dims)
-	     (let ((val (continuation-value dims)))
-	       (if (listp val) val (list val))))
-	    ((csubtypep (continuation-type dims)
-			(specifier-type 'integer))
-	     '(*))
-	    (t
-	     '*)))))
+  (let ((simple (and (unsupplied-or-nil adjustable)
+		     (unsupplied-or-nil displaced-to)
+		     (unsupplied-or-nil fill-pointer))))
+    (specifier-type
+     `(,(if simple 'simple-array 'array)
+       ,(cond ((not element-type) 't)
+	      ((constant-continuation-p element-type)
+	       (continuation-value element-type))
+	      (t
+	       '*))
+       ,(cond ((not simple)
+	       '*)
+	      ((constant-continuation-p dims)
+	       (let ((val (continuation-value dims)))
+		 (if (listp val) val (list val))))
+	      ((csubtypep (continuation-type dims)
+			  (specifier-type 'integer))
+	       '(*))
+	      (t
+	       '*))))))
 
 
 ;;;; Constructors.
