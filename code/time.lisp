@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.11 1992/02/20 00:59:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.12 1992/03/14 13:46:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -366,7 +366,7 @@
 		 ~S second~:P of real time~%  ~
 		 ~S second~:P of user run time~%  ~
 		 ~S second~:P of system run time~%  ~
-		 ~:[~;[Run times include ~S second~:P GC run time]~%  ~]~
+		 ~@[[Run times include ~S second~:P GC run time]~%  ~]~
 		 ~S page fault~:P and~%  ~
 		 ~S bytes consed.~%"
 		(max (/ (- new-real-time old-real-time)
@@ -374,7 +374,8 @@
 		     0.0)
 		(max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
 		(max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
-		(not (zerop gc-run-time))
-		(/ (float gc-run-time) (float internal-time-units-per-second))
+		(unless (zerop gc-run-time)
+		  (/ (float gc-run-time)
+		     (float internal-time-units-per-second)))
 		(max (- new-page-faults old-page-faults) 0)
 		(max (- new-bytes-consed old-bytes-consed) 0)))))))
