@@ -64,9 +64,6 @@
 ;;; specifiers are just passed through untouched.  If something is wrong, we
 ;;; use Compiler-Error, aborting compilation to the last recovery point.
 ;;;
-;;; [Eventually this should go into the code sources, since it is used in
-;;; various random places such as the function type parsing.]
-;;;
 (proclaim '(function parse-lambda-list (list)
 		     (values list list boolean t boolean list boolean list)))
 (defun parse-lambda-list (list)
@@ -142,18 +139,53 @@
      (compiler-error "Illegal function name: ~S." name))))
 
 
+;;; NOTE-IF-SETF-FUNCTION-AND-MACRO  --  Interface
+;;;
+;;;    Called to do something about SETF functions that overlap with setf
+;;; macros.  Perhaps we should interact with the user to see if the macro
+;;; should be blown away, but for now just give a warning.  Due to the weak
+;;; semantics of the (SETF FUNCTION) name, we can't assume that they aren't
+;;; just naming a function (SETF FOO) for the heck of it.  Name is already
+;;; known to be well-formed.
+;;;
+(defun note-if-setf-function-and-macro (name)
+  (when (consp name)
+    (when (or (info setf inverse name)
+	      (info setf expander name))
+      (compiler-warning
+       "Defining as a SETF function a name that already has a SETF macro:~
+       ~%  ~S"
+       name)))
+  (undefined-value))
+
+
 ;;; Define-Function-Name  --  Interface
 ;;;
-;;;    Check the legality of a function name that is being introduced.  If it
-;;; names a macro, then give a warning and blast the macro information.
+;;;    Check the legality of a function name that is being introduced.
+;;; -- If it names a macro, then give a warning and blast the macro
+;;;    information.
+;;; -- If it is a structure slot accessor, give a warning and blast the
+;;;    structure. 
+;;; -- Check for conflicting setf macros.
 ;;;
 (proclaim '(function define-function-name (t) void))
 (defun define-function-name (name)
   (check-function-name name)
   (ecase (info function kind name)
-    (:function)
-    (:special-from
-     (compiler-error "~S names a special form, so cannot be a function." name))
+    (:function
+     (let ((for (info function accessor-for name)))
+       (when for
+	 (compiler-warning
+	  "Undefining structure type:~%  ~S~@
+	  so that this slot accessor can be redefined:~%  ~S"
+	  (dd-name for) name)
+	 (undefine-structure for)
+	 (setf (info function kind name) :function)))
+     (when (info function alien-operator name)
+       (compiler-warning "Redefining alien operator as normal function:~%  ~S"
+			 name)
+       (setf (info function alien-operator name) nil)
+       (setf (info function source-transform name) nil)))
     (:macro
      (compiler-warning "~S previously defined as a macro." name)
      (setf (info function kind name) :function)
@@ -161,7 +193,32 @@
      (clear-info function macro-function name))
     ((nil)
      (setf (info function kind name) :function)))
+  
+
+  (note-if-setf-function-and-macro name)
   name)
+
+
+;;; UNDEFINE-FUNCTION-NAME  --  Interface
+;;;
+;;;    Make Name no longer be a function name: clear everything back to the
+;;; default.
+;;;
+(defun undefine-function-name (name)
+  (when name
+    (macrolet ((frob (type &optional val)
+		 `(unless (eq (info function ,type name) ,val)
+		    (setf (info function ,type name) ,val))))
+      (frob type (specifier-type 'function))
+      (frob where-from :assumed)
+      (frob inlinep)
+      (frob kind)
+      (frob accessor-for)
+      (frob inline-expansion)
+      (frob alien-operator)
+      (frob source-transform)
+      (frob assumed-type)))
+  (undefined-value))
 
 
 ;;; Process-Optimize-Declaration  --  Interface
@@ -270,6 +327,53 @@
 (setf (symbol-function 'proclaim) #'%proclaim)
 
 
+;;; UNDEFINE-STRUCTURE  --  Interface
+;;;
+;;;    Blow away all the compiler info for the structure described by Info.
+;;; This recursively descends the inheritance hierarchy.
+;;; 
+(defun undefine-structure (info)
+  (declare (type defstruct-description info))
+  (let ((name (dd-name info)))
+    (setf (info type kind name) nil)
+    (setf (info type structure-info name) nil)
+    (undefine-function-name (dd-copier info))
+    (undefine-function-name (dd-predicate info))
+    
+    (dolist (include (dd-includes info))
+      (let ((iinfo (info type structure-info include)))
+	(when iinfo
+	  (setf (dd-included-by iinfo)
+		(delete name (dd-included-by iinfo)))))))
+
+  (dolist (included (dd-included-by info))
+    (let ((iinfo (info type structure-info included)))
+      (when iinfo
+	(undefine-structure iinfo))))
+      
+  (dolist (slot (dd-slots info))
+    (let ((fun (dsd-accessor slot)))
+      (undefine-function-name fun)
+      (unless (dsd-read-only slot)
+	(undefine-function-name `(setf ,fun)))))
+
+  (undefined-value))
+
+
+;;; DEFINE-DEFSTRUCT-NAME  --  Internal
+;;;
+;;;    Like DEFINE-FUNCTION-NAME, but we also set the kind to :DECLARED and
+;;; blow away any ASSUMED-TYPE.
+;;;
+(defun define-defstruct-name (name)
+  (when name
+    (define-function-name name)
+    (setf (info function where-from name) :declared)
+    (when (info function assumed-type name)
+      (setf (info function assumed-type name) nil)))
+  (undefined-value))
+
+  
 ;;; %%Compiler-Defstruct  --  Interface
 ;;;
 ;;;    This function updates the global compiler information to represent the
@@ -277,51 +381,46 @@
 ;;;
 (defun %%compiler-defstruct (info)
   (declare (type defstruct-description info))
-
   (let ((name (dd-name info)))
-    (dolist (inc (dd-includes info))
-      (let ((info (info type structure-info inc)))
-	(unless info
-	  (error "Structure type ~S is included by ~S but not defined."
-		 inc name))
-	(pushnew name (dd-included-by info))))
+    (ecase (info type kind name)
+      ((nil :structure))
+      (:primitive
+       (compiler-error "Illegal to redefine standard type ~S." name))
+      (:defined
+       (compiler-warning "Redefining DEFTYPE type to be a DEFSTRUCT: ~S."
+			 name)
+       (setf (info type expander name) nil)))
 
     (let ((old (info type structure-info name)))
       (when old
-	(setf (dd-included-by info) (dd-included-by old))))
+	(setf (dd-included-by info) (copy-list (dd-included-by old)))
+	(undefine-structure old))
+      (dolist (inc (dd-includes info))
+	(let ((info (info type structure-info inc)))
+	  (unless info
+	    (error "Structure type ~S is included by ~S but not defined."
+		   inc name))
+	  (pushnew name (dd-included-by info)))))
 
     (setf (info type kind name) :structure)
     (setf (info type structure-info name) info)
-    (when (info type expander name)
-      (setf (info type expander name) nil))
-    (%note-type-defined name))
-
-  ;;; ### Should declare arg/result types. 
-  (let ((copier (dd-copier info)))
-    (when copier
-      (define-function-name copier)
-      (setf (info function where-from copier) :defined)))
+    (%note-type-defined name)
+    
+    (let ((copier (dd-copier info)))
+      (when copier
+	(%proclaim `(ftype (function (,name) ,name) ,copier)))))
 
   ;;; ### Should make a known type predicate.
-  (let ((predicate (dd-predicate info)))
-    (when predicate
-      (define-function-name predicate)
-      (setf (info function where-from predicate) :defined)))
+  (define-defstruct-name (dd-predicate info))
 
   (dolist (slot (dd-slots info))
-    (let ((fun (dsd-accessor slot)))
-      (define-function-name fun)
+    (let* ((fun (dsd-accessor slot))
+	   (setf-fun `(setf ,fun)))
+      (define-defstruct-name fun)
       (setf (info function accessor-for fun) info)
-      ;;
-      ;; ### Bootstrap hack...
-      ;; This blows away any inverse that has been loaded into the bootstrap
-      ;; environment.  Probably this should be more general (expanders, etc.),
-      ;; and also perhaps done on other functions.
-      (when (info setf inverse fun)
-	(setf (info setf inverse fun) nil))
-      
       (unless (dsd-read-only slot)
-	(setf (info function accessor-for `(setf ,fun)) info))))
+	(define-defstruct-name setf-fun)
+	(setf (info function accessor-for setf-fun) info))))
   (undefined-value))
 
 (setf (symbol-function '%compiler-defstruct) #'%%compiler-defstruct)
