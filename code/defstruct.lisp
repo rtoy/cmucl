@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.6 1993/02/13 13:30:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.7 1993/02/13 19:10:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -215,8 +215,8 @@
   (let ((res (info type compiler-layout name)))
     (cond ((not res)
 	   (error "Class not yet defined or was undefined: ~S" name))
-	  ((not (defstruct-description-p (layout-info res)))
-	   (error "Inherited class is not a STRUCTURE-CLASS: ~S" name))
+	  ((not (typep (layout-class res) 'structure-class))
+	   (error "Class is not a STRUCTURE-CLASS: ~S" name))
 	  (t res))))
 
 
