@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.53 1993/08/22 22:21:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.54 1993/08/30 15:10:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1058,26 +1058,50 @@
 ;;; (not raw.)
 ;;;
 (defun structure-slot-accessor (layout dsd)
-  #'(lambda (structure)
-      (declare (optimize (speed 3) (safety 0)))
-      (unless (typep-to-layout structure layout)
-	(error "Structure for accessor ~S is not a ~S:~% ~S"
-	       (dsd-accessor dsd) (class-name (layout-class layout))
-	       structure))
-      (%instance-ref structure (dsd-index dsd))))
+  (let ((class (layout-class layout)))
+    (if (typep class 'basic-structure-class)
+	#'(lambda (structure)
+	    (declare (optimize (speed 3) (safety 0)))
+	    (unless (typep-to-layout structure layout)
+	      (error "Structure for accessor ~S is not a ~S:~% ~S"
+		     (dsd-accessor dsd) (class-name (layout-class layout))
+		     structure))
+	    (%instance-ref structure (dsd-index dsd)))
+	#'(lambda (structure)
+	    (declare (optimize (speed 3) (safety 0)))
+	    (unless (%typep structure class)
+	      (error "Structure for accessor ~S is not a ~S:~% ~S"
+		     (dsd-accessor dsd) class
+		     structure))
+	    (%instance-ref structure (dsd-index dsd))))))
 ;;;
 (defun structure-slot-setter (layout dsd)
-  #'(lambda (new-value structure)
-      (declare (optimize (speed 3) (safety 0)))
-      (unless (typep-to-layout structure layout)
-	(error "Structure for setter ~S is not a ~S:~% ~S"
-	       `(setf ,(dsd-accessor dsd)) (class-name (layout-class layout))
-	       structure))
-      (unless (typep new-value (dsd-type dsd))
-	(error "New-Value for setter ~S is not a ~S:~% ~S."
-	       `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
-	       new-value))
-      (setf (%instance-ref structure (dsd-index dsd)) new-value)))
+  (let ((class (layout-class layout)))
+    (if (typep class 'basic-structure-class)
+	#'(lambda (new-value structure)
+	    (declare (optimize (speed 3) (safety 0)))
+	    (unless (typep-to-layout structure layout)
+	      (error "Structure for setter ~S is not a ~S:~% ~S"
+		     `(setf ,(dsd-accessor dsd))
+		     (class-name (layout-class layout))
+		     structure))
+	    (unless (%typep new-value (dsd-type dsd))
+	      (error "New-Value for setter ~S is not a ~S:~% ~S."
+		     `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
+		     new-value))
+	    (setf (%instance-ref structure (dsd-index dsd)) new-value))
+	#'(lambda (new-value structure)
+	    (declare (optimize (speed 3) (safety 0)))
+	    (unless (%typep structure class)
+	      (error "Structure for setter ~S is not a ~S:~% ~S"
+		     `(setf ,(dsd-accessor dsd))
+		     (class-name class)
+		     structure))
+	    (unless (%typep new-value (dsd-type dsd))
+	      (error "New-Value for setter ~S is not a ~S:~% ~S."
+		     `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
+		     new-value))
+	    (setf (%instance-ref structure (dsd-index dsd)) new-value)))))
 
 
 ;;; %Defstruct  --  Internal
@@ -1277,25 +1301,26 @@
 
 ;;; UNDEFINE-STRUCTURE  --  Interface
 ;;;
-;;;    Blow away all the compiler info for the structure described by Info.
+;;;    Blow away all the compiler info for the structure CLASS.
 ;;; Iterate over this type, clearing the compiler structure
 ;;; type info, and undefining all the associated functions.
 ;;; 
-(defun undefine-structure (info)
-  (when (defstruct-description-p info)
-    (let ((type (dd-name info)))
-      (setf (info type compiler-layout type) nil)
-      (undefine-function-name (dd-copier info))
-      (undefine-function-name (dd-predicate info))
-      (dolist (slot (dd-slots info))
-	(let ((fun (dsd-accessor slot)))
-	  (undefine-function-name fun)
-	  (unless (dsd-read-only slot)
-	    (undefine-function-name `(setf ,fun))))))
-    ;;
-    ;; Clear out the SPECIFIER-TYPE cache so that subsequent references are
-    ;; unknown types.
-    (values-specifier-type-cache-clear))
+(defun undefine-structure (class)
+  (let ((info (layout-info (class-layout class))))
+    (when (defstruct-description-p info)
+      (let ((type (dd-name info)))
+	(setf (info type compiler-layout type) nil)
+	(undefine-function-name (dd-copier info))
+	(undefine-function-name (dd-predicate info))
+	(dolist (slot (dd-slots info))
+	  (let ((fun (dsd-accessor slot)))
+	    (undefine-function-name fun)
+	    (unless (dsd-read-only slot)
+	      (undefine-function-name `(setf ,fun))))))
+      ;;
+      ;; Clear out the SPECIFIER-TYPE cache so that subsequent references are
+      ;; unknown types.
+      (values-specifier-type-cache-clear)))
   (undefined-value))
 
 
@@ -1366,7 +1391,8 @@
 		 (not (eq layout old-layout)))
 	(collect ((subs))
 	  (do-hash (class layout (class-subclasses class))
-	    (undefine-structure (layout-info layout))
+	    (declare (ignore layout))
+	    (undefine-structure class)
 	    (subs (class-proper-name class)))
 	  (when (subs)
 	    (warn "Removing old subclasses of ~S:~%  ~S"
