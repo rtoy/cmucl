@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.31 1992/03/11 21:23:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.32 1992/06/02 19:42:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,16 +163,19 @@
 (defun annotate-function-continuation (cont policy &optional (delay t))
   (declare (type continuation cont) (type policies policy))
   (unless (policy-safe-p policy) (flush-type-check cont))
-  (let* ((ptype (primitive-type
-		 (if (member (continuation-type-check cont) '(:deleted nil))
-		     (continuation-type cont)
-		     (single-value-type (continuation-proven-type cont)))))
+  (let* ((ptype (primitive-type (continuation-type cont)))
+	 (tn-ptype (if (member (continuation-type-check cont) '(:deleted nil))
+		       ptype
+		       (primitive-type
+			(single-value-type
+			 (continuation-proven-type cont)))))
 	 (info (make-ir2-continuation ptype)))
     (setf (continuation-info cont) info)
     (let ((name (continuation-function-name cont t)))
       (if (and delay name)
 	  (setf (ir2-continuation-kind info) :delayed)
-	  (setf (ir2-continuation-locs info) (list (make-normal-tn ptype))))))
+	  (setf (ir2-continuation-locs info)
+		(list (make-normal-tn tn-ptype))))))
   (undefined-value))
 
 
@@ -802,8 +805,7 @@
        (funcall frob "Argument primitive types:~%  ~S"
 		(mapcar #'(lambda (x)
 			    (primitive-type-name
-			     (ir2-continuation-primitive-type
-			      (continuation-info x))))
+			     (continuation-ptype x)))
 			(combination-args call)))
        (funcall frob "Argument type assertions:~%  ~S"
 		(mapcar #'(lambda (x)
