@@ -68,6 +68,10 @@
 (load "code:pprint")
 (load "code:run-program")
 (load "code:query")
+(load "code:loop")
+(load "code:internet")
+(load "code:wire")
+(load "code:remote")
 
 ;;; Load the compiler.
 (load "c:loadcom.lisp")
@@ -87,19 +91,6 @@
 (xlib:load-clx (pathname "clx:"))
 #-no-clx
 (load "code:clx-ext")
-
-#|
-;;; A hack to fix a bug in the X11 R3 server.  This should go away when
-;;; the server is fixed.
-;;;
-(load "/afs/cs/project/clisp/systems-work/font-patch")
-|#
-
-;;; Stick these before Hemlock.
-;;;
-(load "code:internet")
-(load "code:wire")
-(load "code:remote")
 
 ;;; Hemlock.
 ;;;
