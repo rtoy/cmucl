@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.55 1998/06/16 06:37:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.57 1998/07/16 13:30:48 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -824,25 +824,18 @@
 	      `(let* ,(nreverse let-list)
 		 ,setter)))))))
 
-
-
 (defmacro push (obj place &environment env)
   "Takes an object and a location holding a list.  Conses the object onto
-  the list, returning the modified list."
+  the list, returning the modified list.  OBJ is evaluated before PLACE."
   (if (symbolp place)
       `(setq ,place (cons ,obj ,place))
       (multiple-value-bind (dummies vals newval setter getter)
-			   (get-setf-method place env)
-	(do* ((d dummies (cdr d))
-	      (v vals (cdr v))
-	      (let-list nil))
-	     ((null d)
-	      (push (list (car newval) `(cons ,obj ,getter))
-		    let-list)
-	      `(let* ,(nreverse let-list)
-		 ,setter))
-	  (push (list (car d) (car v)) let-list)))))
-
+	  (get-setf-method place env)
+	(let ((g (gensym)))
+	  `(let* ((,g ,obj)
+		  ,@(mapcar #'list dummies vals)
+		  (,(car newval) (cons ,g ,getter)))
+	    ,setter)))))
 
 (defmacro pushnew (obj place &rest keys &environment env)
   "Takes an object and a location holding a list.  If the object is already
@@ -1139,6 +1132,12 @@
 ;;; RESTART-CASE allowing keyform to be set and retested.
 ;;;
 (defun case-body (name keyform cases multi-p test errorp proceedp)
+  (when (null cases)
+    (error 'simple-type-error
+	   :datum cases
+	   :expected-type 'list
+	   :format-control "~S was called without any clauses."
+	   :format-arguments (list name)))
   (let ((keyform-value (gensym))
 	(clauses ())
 	(keys ()))
@@ -1500,7 +1499,7 @@
        (setqs nil)
        (pairs pairs (cddr pairs)))
       ((atom (cdr pairs))
-       `(let ,(nreverse lets) (setq ,@(nreverse setqs)) nil))
+       `(let ,(nreverse lets) (setq ,@(nreverse setqs))))
     (let ((gen (gensym)))
       (push `(,gen ,(cadr pairs)) lets)
       (push (car pairs) setqs)

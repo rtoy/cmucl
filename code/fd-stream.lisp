@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.43 1998/05/04 01:27:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.44 1998/07/14 18:12:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1260,7 +1260,9 @@ non-server method is also significantly more efficient for large reads.
                        :overwrite, :append, :supersede or nil
    :if-does-not-exist - one of :error, :create or nil
   See the manual for details."
-  (declare (ignore external-format))
+
+  (unless (eq external-format :default)
+    (error "Only :DEFAULT is acceptable for :EXTERNAL-FORMAT."))
 
   ;; First, make sure that DIRECTION is valid. Allow it to be changed if not.
   (setf direction
@@ -1398,9 +1400,11 @@ non-server method is also significantly more efficient for large reads.
 		   (case if-does-not-exist
 		     (:error
 		      (cerror "Return NIL."
-			      "Error opening ~S, ~A."
-			      pathname
-			      (unix:get-unix-error-msg errno)))
+			      'simple-file-error
+			      :pathname pathname
+			      :format-control "Error opening ~S, ~A."
+			      :format-arguments
+			      (list pathname (unix:get-unix-error-msg errno))))
 		     (:create
 		      (cerror "Return NIL."
 			      "Error creating ~S, path does not exist."
@@ -1409,9 +1413,11 @@ non-server method is also significantly more efficient for large reads.
 		  ((eql errno unix:eexist)
 		   (unless (eq nil if-exists)
 		     (cerror "Return NIL."
-			     "Error opening ~S, ~A."
-			     pathname
-			     (unix:get-unix-error-msg errno)))
+			     'simple-file-error
+			     :pathname pathname
+			     :format-control "Error opening ~S, ~A."
+			     :format-arguments
+			     (list pathname (unix:get-unix-error-msg errno))))
 		   (return nil))
 		  ((eql errno unix:eacces)
 		   (cerror "Try again."

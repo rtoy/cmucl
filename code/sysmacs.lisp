@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.20 1998/05/15 01:01:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.21 1998/07/14 18:12:22 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,6 +97,12 @@
        (cond ((null ,svar) *standard-input*)
 	     ((eq ,svar t) *terminal-io*)
 	     (T ,@(if check-type `((check-type ,svar ,check-type)))
+		(unless (input-stream-p ,svar)
+		  (error 'simple-type-error
+			 :datum stream
+			 :expected-type '(satisfies input-stream-p)
+			 :format-control "~S isn't an input stream."
+			 :format-arguments ,(list svar)))
 		,svar)))))
 
 (defmacro out-synonym-of (stream &optional check-type)
@@ -105,6 +111,12 @@
        (cond ((null ,svar) *standard-output*)
 	     ((eq ,svar t) *terminal-io*)
 	     (T ,@(if check-type `((check-type ,svar ,check-type)))
+		(unless (output-stream-p ,svar)
+		  (error 'simple-type-error
+			 :datum stream
+			 :expected-type '(satisfies output-stream-p)
+			 :format-control "~S isn't an output stream."
+			 :format-arguments ,(list svar)))
 		,svar)))))
 
 ;;; With-Mumble-Stream calls the function in the given Slot of the

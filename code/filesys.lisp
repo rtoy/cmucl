@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.51 1998/07/13 17:44:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.53 1998/07/16 13:30:47 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,11 +27,6 @@
 (export '(print-directory complete-file ambiguous-files default-directory
 			  file-writable unix-namestring))
 (in-package "LISP")
-
-;;; A condition type of type FILE-ERROR that uses the simple-error
-;;; reporting format.
-
-(define-condition simple-file-error (simple-condition file-error)())
 
 
 ;;;; Unix pathname host support.

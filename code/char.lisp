@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.10 1997/09/16 17:15:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.12 1998/07/16 13:30:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,19 +116,25 @@
 
 (defun character (object)
   "Coerces its argument into a character object if possible.  Accepts
-  characters, strings and symbols of length 1, and integers."
-  (typecase object
-    (character object)
-    (char-code (code-char object))
-    (string (if (= 1 (length (the string object)))
-		(char object 0)
-		(error "String is not of length one: ~S" object)))
-    (symbol (if (= 1 (length (symbol-name object)))
-		(schar (symbol-name object) 0)
-		(error "Symbol name is not of length one: ~S" object)))
-    (t
-     (error "~S cannot be coerced to a character."))))
-
+  characters, strings and symbols of length 1."
+  (flet ((do-error (control args)
+	   (error 'simple-type-error
+		  :datum object
+		  ;;?? how to express "symbol with name of length 1"?
+		  :expected-type '(or character (string 1))
+		  :format-control control
+		  :format-arguments args)))
+    (typecase object
+      (character object)
+      (string (if (= 1 (length (the string object)))
+		  (char object 0)
+		  (do-error
+		   "String is not of length one: ~S" (list object))))
+      (symbol (if (= 1 (length (symbol-name object)))
+		  (schar (symbol-name object) 0)
+		  (do-error
+		   "Symbol name is not of length one: ~S" (list object))))
+      (t (do-error "~S cannot be coerced to a character." (list object))))))
 
 
 (defun char-name (char)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.4 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.6 1998/07/16 13:30:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -93,5 +93,8 @@
   (typecase name
     (string name)
     (symbol (string-downcase (symbol-name name)))
-    (t (error "Module name must be a string or symbol -- ~S."
-              name))))
+    (t (error 'simple-type-error
+	      :datum name
+	      :expected-type '(or string symbol)
+	      :format-control "Module name must be a string or symbol -- ~S."
+              :format-arguments (list name)))))

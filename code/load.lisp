@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.70 1998/05/04 01:27:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.72 1998/07/16 13:30:47 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -549,7 +549,10 @@
      internal-load
      (ecase if-does-not-exist
        (:error
-	(restart-case (error "~S does not exist." (namestring pathname))
+	(restart-case (error 'simple-file-error
+			     :pathname pathname
+			     :format-control "~S does not exist."
+			     :format-arguments (list (namestring pathname)))
 	  (check-again () :report "See if it exists now."
 	    (load pathname))
 	  (use-value () :report "Prompt for a new name."

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.49 1998/07/13 17:44:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.51 1998/07/16 13:30:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -862,13 +862,15 @@
 	    ((eq found package))
 	    ((string= (the string (package-%name found)) n)
 	     (with-simple-restart (continue "Ignore this nickname.")
-	       (error 'program-error
+	       (error 'simple-package-error
+		      :package package
 		      :format-control
 		      "~S is a package name, so it cannot be a nickname for ~S."
 		      :format-arguments (list n (package-%name package)))))
 	    (t
 	     (with-simple-restart (continue  "Redefine this nickname.")
-	       (error 'program-error
+	       (error 'simple-package-error
+		      :package package
 		      :format-control "~S is already a nickname for ~S."
 		      :format-arguments (list n (package-%name found))))
 	     (setf (gethash n *package-names*) package)

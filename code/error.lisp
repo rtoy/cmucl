@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.48 1998/07/13 17:44:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.49 1998/07/14 18:12:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,9 @@
 (use-package "KERNEL")
 
 (in-package "KERNEL")
-(export '(layout-invalid simple-style-warning condition-function-name))
+(export '(layout-invalid simple-style-warning condition-function-name
+			 ;;simple-program-error simple-file-error
+			 ))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -513,13 +515,15 @@
 
 (defun make-condition (thing &rest args)
   "Make an instance of a condition object using the specified initargs."
+  ;; Note: ANSI specifies no exceptional situations in this function.
+  ;; signalling simple-type-error would not be wrong.
   (let* ((thing (if (symbolp thing)
 		    (find-class thing)
 		    thing))
 	 (class (typecase thing
 		  (condition-class thing)
 		  (class
-		   (error "~S is not a condition class."))
+		   (error "~S is not a condition class." thing))
 		  (t
 		   (error "Bad thing for class arg:~%  ~S" thing))))
 	 (res (make-condition-object args)))
@@ -901,6 +905,10 @@
 
 (define-condition file-error (error)
   ((pathname :reader file-error-pathname :initarg :pathname)))
+
+;;; INTERNAL
+(define-condition simple-file-error   (simple-condition file-error)())
+(define-condition simple-program-error(simple-condition program-error)())
 
 (define-condition package-error (error)
   ((package :reader package-error-package :initarg :package)))

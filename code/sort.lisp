@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.4 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.6 1998/07/16 13:30:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,11 @@
 	 (sort-vector sequence predicate key)
 	 sequence))
     (t
-     (error "~S is not a sequence." sequence))))
+     (error 'simple-type-error
+	    :datum sequence
+	    :expected-type 'sequence
+	    :format-control "~S is not a sequence."
+	    :format-arguments (list sequence)))))
 
 
 
@@ -138,7 +142,11 @@
     (vector
      (stable-sort-vector sequence predicate key))
     (t
-     (error "~S is not a sequence." sequence))))
+     (error 'simple-type-error
+	    :datum sequence
+	    :expected-type 'sequence
+	    :format-control "~S is not a sequence."
+	    :format-arguments (list sequence)))))
 
 
 ;;; Stable Sorting Lists
