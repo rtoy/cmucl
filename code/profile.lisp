@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.6 1992/02/25 14:17:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.7 1992/09/07 16:11:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,38 +66,20 @@
 ;;; is the number of required arguments, and the second is T iff there are any
 ;;; non-required arguments (e.g. &optional, &rest, &key).
 
-#+cmu (progn
-(defun required-arguments-aux (name function)
-  (let ((type (kernel:%function-header-type function)))
-    (typecase type
-      (cons
-       (let* ((args (cadr type))
-	      (pos (position-if
-		    #'(lambda (x)
-			(and (symbolp x)
-			     (let ((name (symbol-name x)))
-			       (and (>= (length name) 1)
-				    (char= (schar name 0) #\&)))))
-		    args)))
-	 (if pos
-	     (values pos t)
-	     (values (length args) nil))))
-      (t
-       (warn "No argument count information available for:~%  ~S~@
-	      Allow for &rest arg consing."
-	     name)
-       (values 0 t)))))
-
+#+cmu 
 (defun required-arguments (name)
-  (let* ((function (fdefinition name)))
-    (case (kernel:get-type function)
-      (#.vm:function-header-type (required-arguments-aux name function))
-      ((#.vm:closure-header-type #.vm:funcallable-instance-header-type)
-       (required-arguments-aux name (kernel:%closure-function function)))
-      (t
-       (values 0 t)))))
-
-); #+cmu progn
+  (let ((type (ext:info function type name)))
+    (cond ((not (kernel:function-type-p type))
+	   (warn "No argument count information available for:~%  ~S~@
+		  Allow for &rest arg consing."
+		 name)
+	   (values 0 t))
+	  (t
+	   (values (length (kernel:function-type-required type))
+		   (if (or (kernel:function-type-optional type)
+			   (kernel:function-type-keyp type)
+			   (kernel:function-type-rest type))
+		       t nil))))))
 
 #-cmu
 (progn
