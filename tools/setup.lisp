@@ -5,6 +5,15 @@
 ;;;
 (in-package "USER")
 
+;;; ### Patch...
+(in-package "LISP")
+(defun keyword-argument (keyword key-list)
+  "If keyword is present in the keylist, return it's associated value."
+  (do ((keys key-list (cddr keys)))
+      ((endp keys))
+    (when (eq (car keys) keyword)
+      (return (cadr keys)))))
+
 #+new-compiler
 (proclaim '(optimize (debug-info 2)))
 
@@ -267,13 +276,8 @@
 	 (obj (if output-file
 		  (pathname output-file)
 		  (make-pathname :defaults src
-				 :type (if *new-compile*
-					   vm:target-fasl-file-type
-					   "fasl"))))
-	 (compiler #+new-compiler #'compile-file
-		   #-new-compiler (if *new-compile*
-				      #'c::ncompile-file
-				      #'compile-file))
+				 :type (c:backend-fasl-file-type
+					c:*target-backend*))))
 	 (obj-pn (probe-file obj)))
 
     (unless (and obj-pn
@@ -291,7 +295,7 @@
 	      name)
       (cond
        (*interactive*
-	(funcall compiler src  :error-file nil  :output-file obj)
+	(compile-file src  :error-file nil  :output-file obj)
 	(when load
 	  (load name :verbose t)))
        (t
@@ -310,7 +314,7 @@
 				      (format t "Error in backtrace!~%")))
 				  (format t "Error abort.~%")
 				  (return-from comf))))
-	  (funcall compiler src  :error-file nil  :output-file obj)
+	  (compile-file src  :error-file nil  :output-file obj)
 	  (when load
 	    (load name :verbose t)))))
       (setf (gethash src *compiled-files*) t))
