@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.16 1992/07/17 18:16:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.17 1992/09/09 17:45:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -317,7 +317,11 @@
 			  (and (= sec stop-sec) (>= usec stop-usec)))
 		  (return nil))
 		(setq to-sec (- stop-sec sec))
-		(setq to-usec (- stop-usec usec))))))))))
+		(cond ((> usec stop-usec)
+		       (decf to-sec)
+		       (setq to-usec (- (+ stop-usec 1000000) usec)))
+		      (t
+		       (setq to-usec (- stop-usec usec))))))))))))
 
 
 (defvar *display-event-handlers* nil
