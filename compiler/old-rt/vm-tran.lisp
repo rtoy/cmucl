@@ -43,6 +43,7 @@
 (define-vop (structure-vector-p simple-vector-p)
   (:translate structure-vector-p))
 
+#-new-compiler
 (set 'lisp::type-pred-alist
      (adjoin (cons 'structure-vector 'simple-vector-p)
 	     (symbol-value 'lisp::type-pred-alist)
