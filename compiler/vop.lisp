@@ -956,7 +956,12 @@
   (number-stack-p nil :type boolean)
   ;;
   ;; Alignment restriction.  The offset must be an even multiple of this.
-  (alignment 1 :type (and index (integer 1))))
+  (alignment 1 :type (and index (integer 1)))
+  ;;
+  ;; A list of locations that we avoid packing in during normal register
+  ;; allocation to ensure that these locations will be free for operand
+  ;; loading.  This prevents load-TN packing from thrashing by spilling a lot.
+  (reserve-locations nil :type list))
 
 (defprinter sc
   name)
