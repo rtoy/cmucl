@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.2 1991/02/20 15:17:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.3 1992/03/12 15:25:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.2 1991/02/20 15:17:25 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.3 1992/03/12 15:25:02 wlott Exp $
 ;;;
 ;;; Utility functions needed by the back end to generate code.
 ;;;
@@ -20,7 +20,8 @@
 
 (in-package "VM")
 
-(export '(fixnum static-symbol-p static-symbol-offset offset-static-symbol))
+(export '(fixnum static-symbol-p static-symbol-offset offset-static-symbol
+		 static-function-offset))
 
 
 
@@ -59,3 +60,15 @@
       (error "Byte offset, ~D, is not correct." offset))
     (elt static-symbols n)))
 
+(defun static-function-offset (name)
+  "Return the (byte) offset from NIL to the start of the fdefn object
+   for the static function NAME."
+  (let ((static-syms (length static-symbols))
+	(static-function-index (position name static-functions)))
+    (unless static-function-index
+      (error "~S isn't a static function." name))
+    (+ (* static-syms (pad-data-block symbol-size))
+       (pad-data-block (1- symbol-size))
+       (- list-pointer-type)
+       (* static-function-index (pad-data-block fdefn-size))
+       (* fdefn-raw-addr-slot word-bytes))))
