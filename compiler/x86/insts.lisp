@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.9 1997/09/29 04:47:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.10 1997/09/29 16:51:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1374,6 +1374,17 @@
   (:emitter
    (maybe-emit-operand-size-prefix segment :dword)
    (emit-byte segment #b10011001)))
+
+(define-instruction xadd (segment dst src)
+  ;; Register/Memory with Register.
+  (:printer ext-reg-reg/mem ((op #b1100000)) '(:name :tab reg/mem ", " reg))
+  (:emitter
+   (assert (register-p src))
+   (let ((size (matching-operand-size src dst)))
+     (maybe-emit-operand-size-prefix segment size)
+     (emit-byte segment #b00001111)
+     (emit-byte segment (if (eq size :byte) #b11000000 #b11000001))
+     (emit-ea segment dst (reg-tn-encoding src)))))
 
 
 ;;;; Logic.
