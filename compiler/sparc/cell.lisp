@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.12 1992/12/13 15:24:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.13 1992/12/16 14:49:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,6 +96,9 @@
 
 
 ;;;; Fdefinition (fdefn) objects.
+
+(define-vop (fdefn-function cell-ref)
+  (:variant fdefn-function-slot other-pointer-type))
 
 (define-vop (safe-fdefn-function)
   (:args (object :scs (descriptor-reg) :target obj-temp))
