@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/array.lisp,v 1.2 1994/10/31 04:55:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/array.lisp,v 1.3 2003/08/03 11:27:52 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,13 +131,13 @@
 
   test
 
-  (inst subq length (fixnum 4) length)
+  (inst subq length (fixnumize 4) length)
   (inst ldl data 0 lip)
   (inst bge length loop)
 
-  (inst addq length (fixnum 3) length)
+  (inst addq length (fixnumize 3) length)
   (inst beq length one-more)
-  (inst subq length (fixnum 1) length)
+  (inst subq length (fixnumize 1) length)
   (inst beq length two-more)
   (inst bne length done)
 
@@ -148,11 +148,11 @@
   (inst srl accum 27 accum)
   (inst mskll accum 4 accum)
   (inst bis accum byte accum)
-  (inst addq length (fixnum 1) length)
+  (inst addq length (fixnumize 1) length)
 
   two-more
 
-  (inst subq length (fixnum 1) length)
+  (inst subq length (fixnumize 1) length)
   (inst srl data 8 byte)
   (inst and byte #xff byte)
   (inst xor accum byte accum)
@@ -160,11 +160,11 @@
   (inst srl accum 27 accum)
   (inst mskll accum 4 accum)
   (inst bis accum byte accum)
-  (inst addq length (fixnum 1) length)
+  (inst addq length (fixnumize 1) length)
 
   one-more
 
-  (inst subq length (fixnum 1) length)
+  (inst subq length (fixnumize 1) length)
   (inst and data #xff byte)
   (inst xor accum byte accum)
   (inst sll accum 5 byte)

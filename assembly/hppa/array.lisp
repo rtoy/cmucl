@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/array.lisp,v 1.5 1994/10/31 04:56:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/array.lisp,v 1.6 2003/08/03 11:27:51 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,10 +93,10 @@
 
   TEST
   (inst ldwx offset string data)
-  (inst addib :>= (fixnum -4) length loop)
-  (inst addi (fixnum 1) offset offset)
+  (inst addib :>= (fixnumize -4) length loop)
+  (inst addi (fixnumize 1) offset offset)
 
-  (inst addi (fixnum 4) length length)
+  (inst addi (fixnumize 4) length length)
   (inst comb := zero-tn length done :nullify t)
   (inst sub zero-tn length length)
   (inst sll length 1 length)

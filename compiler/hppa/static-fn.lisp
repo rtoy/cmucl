@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/static-fn.lisp,v 1.2 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/static-fn.lisp,v 1.3 2003/08/03 11:27:48 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,7 +84,7 @@
 	   (let ((lra-label (gen-label))
 		 (cur-nfp (current-nfp-tn vop)))
 	     ,@(moves (arg-names) (temp-names))
-	     (inst li (fixnum ,num-args) nargs)
+	     (inst li (fixnumize ,num-args) nargs)
 	     (inst ldw (static-function-offset symbol) null-tn lip)
 	     (when cur-nfp
 	       (store-stack-tn nfp-save cur-nfp))

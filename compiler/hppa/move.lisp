@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/move.lisp,v 1.2 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/move.lisp,v 1.3 2003/08/03 11:27:48 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
   (let ((val (tn-value x)))
     (etypecase val
       (integer
-       (inst li (fixnum val) y))
+       (inst li (fixnumize val) y))
       (null
        (move null-tn y))
       (symbol

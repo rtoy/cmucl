@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.30 2002/05/10 14:48:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.31 2003/08/03 11:27:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -340,7 +340,7 @@ default-value-8
 	  (note-this-location vop :unknown-return)
 	  (inst b regs-defaulted)
 	  (if (> nvals register-arg-count)
-	      (inst subcc temp nargs-tn (fixnum register-arg-count))
+	      (inst subcc temp nargs-tn (fixnumize register-arg-count))
 	      (move csp-tn ocfp-tn)))
 	
 	;; Do the single value calse.
@@ -368,7 +368,7 @@ default-value-8
 		
 		(inst b :le default-lab)
 		(inst ld move-temp ocfp-tn (* i vm:word-bytes))
-		(inst subcc temp (fixnum 1))
+		(inst subcc temp (fixnumize 1))
 		(store-stack-tn tn move-temp)))
 	    
 	    (emit-label defaulting-done)
@@ -425,7 +425,7 @@ default-value-8
     (inst add csp-tn 4)
     (storew (first register-arg-tns) csp-tn -1)
     (inst sub start csp-tn 4)
-    (inst li count (fixnum 1))
+    (inst li count (fixnumize 1))
     
     (emit-label done)
     
@@ -791,7 +791,7 @@ default-value-8
 					       `(loadw ,name new-fp
 						       ,(incf index)))
 					   register-arg-names)))
-			     '((inst li nargs-pass (fixnum nargs)))))
+			     '((inst li nargs-pass (fixnumize nargs)))))
 		      ,@(if (eq return :tail)
 			    '((:load-old-fp
 			       (sc-case old-fp
@@ -1002,7 +1002,7 @@ default-value-8
 	  (t
 	   ;; Establish the values pointer and values count.
 	   (move val-ptr cfp-tn)
-	   (inst li nargs (fixnum nvals))
+	   (inst li nargs (fixnumize nvals))
 	   ;; restore the frame pointer and clear as much of the control
 	   ;; stack as possible.
 	   (move cfp-tn old-fp)
@@ -1048,7 +1048,7 @@ default-value-8
 		   number-stack-displacement))))
 
       ;; Check for the single case.
-      (inst cmp nvals-arg (fixnum 1))
+      (inst cmp nvals-arg (fixnumize 1))
       (inst b :ne not-single)
       (inst ld a0 vals-arg)
 
@@ -1118,14 +1118,14 @@ default-value-8
 	     (inst b :eq done)
 	     (inst add csp-tn csp-tn nargs-tn))
 	    (t
-	     (inst subcc count nargs-tn (fixnum fixed))
+	     (inst subcc count nargs-tn (fixnumize fixed))
 	     (inst b :le done)
 	     (inst nop)
 	     (inst add csp-tn csp-tn count)))
       (when (< fixed register-arg-count)
 	;; We must stop when we run out of stack args, not when we run out of
 	;; more args.
-	(inst subcc count nargs-tn (fixnum register-arg-count))
+	(inst subcc count nargs-tn (fixnumize register-arg-count))
 	;; Everything of interest in registers.
 	(inst b :le do-regs))
       ;; Initialize dst to be end of stack.
@@ -1136,7 +1136,7 @@ default-value-8
       (emit-label loop)
       ;; *--dst = *--src, --count
       (inst add src src (- vm:word-bytes))
-      (inst subcc count count (fixnum 1))
+      (inst subcc count count (fixnumize 1))
       (loadw temp src)
       (inst add dst dst (- vm:word-bytes))
       (inst b :gt loop)
@@ -1145,12 +1145,12 @@ default-value-8
       (emit-label do-regs)
       (when (< fixed register-arg-count)
 	;; Now we have to deposit any more args that showed up in registers.
-	(inst subcc count nargs-tn (fixnum fixed))
+	(inst subcc count nargs-tn (fixnumize fixed))
 	(do ((i fixed (1+ i)))
 	    ((>= i register-arg-count))
 	  ;; Don't deposit any more than there are.
 	  (inst b :eq done)
-	  (inst subcc count (fixnum 1))
+	  (inst subcc count (fixnumize 1))
 	  ;; Store it relative to the pointer saved at the start.
 	  (storew (nth i register-arg-tns) result (- i fixed))))
       (emit-label done))))
@@ -1206,7 +1206,7 @@ default-value-8
 	(inst add context context vm:word-bytes)
 
 	;; Dec count, and if != zero, go back for more.
-	(inst subcc count (fixnum 1))
+	(inst subcc count (fixnumize 1))
 	(inst b :gt loop)
 
 	;; Store the value into the car of the current cons (in the delay
@@ -1239,7 +1239,7 @@ default-value-8
   (:result-types t tagged-num)
   (:note "more-arg-context")
   (:generator 5
-    (inst sub count supplied (fixnum fixed))
+    (inst sub count supplied (fixnumize fixed))
     (inst sub context csp-tn count)))
 
 
@@ -1256,7 +1256,7 @@ default-value-8
   (:generator 3
     (let ((err-lab
 	   (generate-error-code vop invalid-argument-count-error nargs)))
-      (inst cmp nargs (fixnum count))
+      (inst cmp nargs (fixnumize count))
       ;; Assume we don't take the branch
       (inst b :ne err-lab #+sparc-v9 :pn)
       (inst nop))))

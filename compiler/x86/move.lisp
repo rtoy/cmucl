@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.7 1998/02/19 19:34:59 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.8 2003/08/03 11:27:45 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
       (integer
        (if (zerop val)
 	   (inst xor y y)
-	 (inst mov y (fixnum val))))
+	 (inst mov y (fixnumize val))))
       (symbol
        (load-symbol y val))
       (character
@@ -89,7 +89,7 @@
 	    (integer
 	     (if (and (zerop val) (sc-is y any-reg descriptor-reg))
 		 (inst xor y y)
-	       (inst mov y (fixnum val))))
+	       (inst mov y (fixnumize val))))
 	    (symbol
 	     (inst mov y (+ nil-value (static-symbol-offset val))))
 	    (character
@@ -130,7 +130,7 @@
 	      (integer
 	       (if (zerop val)
 		   (inst xor y y)
-		 (inst mov y (fixnum val))))
+		 (inst mov y (fixnumize val))))
 	      (symbol
 	       (load-symbol y val))
 	      (character
@@ -144,7 +144,7 @@
 		 ;; C-call
 		 (etypecase val
 	           (integer
-		    (storew (fixnum val) fp (tn-offset y)))
+		    (storew (fixnumize val) fp (tn-offset y)))
 		   (symbol
 		    (storew (+ nil-value (static-symbol-offset val))
 			    fp (tn-offset y)))
@@ -155,7 +155,7 @@
 	       ;; Lisp stack
 	       (etypecase val
 		 (integer
-		  (storew (fixnum val) fp (- (1+ (tn-offset y)))))
+		  (storew (fixnumize val) fp (- (1+ (tn-offset y)))))
 		 (symbol
 		  (storew (+ nil-value (static-symbol-offset val))
 			  fp (- (1+ (tn-offset y)))))

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.6 2002/05/10 14:48:23 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.7 2003/08/03 11:27:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.6 2002/05/10 14:48:23 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.7 2003/08/03 11:27:50 gerd Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -104,11 +104,11 @@
 
   TEST
 
-  (inst subcc length (fixnum 4))
+  (inst subcc length (fixnumize 4))
   (inst b :ge loop)
   (inst ld data string offset)
 
-  (inst addcc length (fixnum 4))
+  (inst addcc length (fixnumize 4))
   (inst b :eq done)
   (inst neg length)
   (inst sll length 1)

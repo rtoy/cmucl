@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.16 1998/08/05 09:03:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.17 2003/08/03 11:27:51 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 
   DO-STATIC-FUN
   (inst lw lip null-tn (static-function-offset 'two-arg-+))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn))
@@ -89,7 +89,7 @@
 
   DO-STATIC-FUN
   (inst lw lip null-tn (static-function-offset 'two-arg--))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn))
@@ -198,7 +198,7 @@
 
   DO-STATIC-FUN
   (inst lw lip null-tn (static-function-offset 'two-arg-*))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn)
@@ -234,7 +234,7 @@
 	  
 	  DO-STATIC-FN
 	  (inst lw lip null-tn (static-function-offset ',static-fn))
-	  (inst li nargs (fixnum 2))
+	  (inst li nargs (fixnumize 2))
 	  (inst move ocfp cfp-tn)
 	  (inst j lip)
 	  (inst move cfp-tn csp-tn)
@@ -285,7 +285,7 @@
 
   DO-STATIC-FN
   (inst lw lip null-tn (static-function-offset 'eql))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn)
@@ -328,7 +328,7 @@
 
   DO-STATIC-FN
   (inst lw lip null-tn (static-function-offset 'two-arg-=))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn)
@@ -371,7 +371,7 @@
 
   DO-STATIC-FN
   (inst lw lip null-tn (static-function-offset 'two-arg-=))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.1 2001/02/11 14:21:52 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.2 2003/08/03 11:27:51 gerd Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -95,11 +95,11 @@
 
   TEST
 
-  (inst subic. length length (fixnum 4))
+  (inst subic. length length (fixnumize 4))
   (inst lwzx data string offset)
   (inst bge loop)
 
-  (inst addic. length length (fixnum 4))
+  (inst addic. length length (fixnumize 4))
   (inst neg length length)
   (inst beq done)
   (inst slwi length length 1)

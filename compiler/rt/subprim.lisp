@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/subprim.lisp,v 1.2 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/subprim.lisp,v 1.3 2003/08/03 11:27:46 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/subprim.lisp,v 1.2 1994/10/31 04:45:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/subprim.lisp,v 1.3 2003/08/03 11:27:46 gerd Rel $
 ;;;
 ;;; Linkage information for standard static functions, and random vops.
 ;;;
@@ -50,7 +50,7 @@
       (test-type ptr temp not-list t vm:list-pointer-type)
 
       (loadw ptr ptr vm:cons-cdr-slot vm:list-pointer-type)
-      (inst inc count (fixnum 1))
+      (inst inc count (fixnumize 1))
       (test-type ptr temp loop nil vm:list-pointer-type)
 
       (cerror-call vop done object-not-list-error ptr)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/array.lisp,v 1.7 1998/07/24 17:22:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/array.lisp,v 1.8 2003/08/03 11:27:49 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
       (inst addi (* (1+ array-dimensions-offset) word-bytes) rank ndescr)
       (inst dep 0 31 3 ndescr)
       (inst add alloc-tn ndescr alloc-tn)
-      (inst addi (fixnum (1- array-dimensions-offset)) rank ndescr)
+      (inst addi (fixnumize (1- array-dimensions-offset)) rank ndescr)
       (inst sll ndescr type-bits ndescr)
       (inst or ndescr type ndescr)
       (inst srl ndescr 2 ndescr)

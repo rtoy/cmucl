@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.17 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.18 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,7 +58,7 @@
 	   (load-stack-tn temp tn)
 	   (storew temp start-temp i)))))
     (move start start-temp)
-    (inst li count (fixnum nvals))))
+    (inst li count (fixnumize nvals))))
 
 
 ;;; Push a list of values on the stack, returning Start and Count as used in

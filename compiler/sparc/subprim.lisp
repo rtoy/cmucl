@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/subprim.lisp,v 1.3 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/subprim.lisp,v 1.4 2003/08/03 11:27:46 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
       (test-type ptr temp not-list t vm:list-pointer-type)
 
       (loadw ptr ptr vm:cons-cdr-slot vm:list-pointer-type)
-      (inst add count count (fixnum 1))
+      (inst add count count (fixnumize 1))
       (test-type ptr temp loop nil vm:list-pointer-type)
 
       (cerror-call vop done object-not-list-error ptr)

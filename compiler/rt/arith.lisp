@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.11 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.12 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.11 1994/10/31 04:45:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.12 2003/08/03 11:27:47 gerd Rel $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -55,7 +55,7 @@
 	      temp)
   (:translate lognot)
   (:generator 2
-    (inst li temp (fixnum -1))
+    (inst li temp (fixnumize -1))
     (inst x temp x)
     (move res temp)))
 
@@ -122,7 +122,7 @@
 	    (move r x)
 	    (inst ,op r y))
 	   (immediate
-	    (let ((value (fixnum (tn-value y))))
+	    (let ((value (fixnumize (tn-value y))))
 	      ,@imm-body)))))
      (define-vop (,(intern (concatenate 'simple-string
 					"FAST-"
@@ -351,7 +351,7 @@
       (inst s temp 1)
       (inst n number temp)
       (inst bncx :eq loop)
-      (inst a res (fixnum 1))
+      (inst a res (fixnumize 1))
       ;; We're done and res already has result.
       (emit-label done))))      
 
@@ -415,7 +415,7 @@
 			(:generator ,cost
 			  (let* ((signed ,signed)
 				 (-c/fixnum ,(eq suffix '-c/fixnum))
-				 (y (if -c/fixnum (fixnum y) y)))
+				 (y (if -c/fixnum (fixnumize y) y)))
 			    ,@generator)))))
 	       '(/fixnum -c/fixnum /signed -c/signed /unsigned -c/unsigned)
 	       ;; All these really take six cycles, but we decrease the -c/...
@@ -474,7 +474,7 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 3
-    (inst c x (fixnum y))
+    (inst c x (fixnumize y))
     (if not-p
 	(inst bnc :eq target)
 	(inst bc :eq target))))

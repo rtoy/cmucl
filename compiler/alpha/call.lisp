@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/call.lisp,v 1.3 1998/01/26 15:54:27 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/call.lisp,v 1.4 2003/08/03 11:27:49 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -320,7 +320,7 @@ default-value-8
 	  (note-this-location vop :unknown-return)
 	  ;; If there are no stack results, clear the stack now.
 	  (if (> nvals register-arg-count)
-	      (inst subq nargs-tn (fixnum register-arg-count) temp)
+	      (inst subq nargs-tn (fixnumize register-arg-count) temp)
 	      (move ocfp-tn csp-tn))
 	  ;; Branch off to the MV case.
 	  (inst br zero-tn regs-defaulted))
@@ -353,7 +353,7 @@ default-value-8
 		
 		(inst blt temp default-lab)
 		(inst ldl move-temp (* i word-bytes) ocfp-tn)
-		(inst subq temp (fixnum 1) temp)
+		(inst subq temp (fixnumize 1) temp)
 		(store-stack-tn tn move-temp)))
 	    
 	    (emit-label defaulting-done)
@@ -412,7 +412,7 @@ default-value-8
     (inst addq csp-tn 4 csp-tn)
     (storew (first register-arg-tns) csp-tn -1)
     (inst subq csp-tn 4 start)
-    (inst li (fixnum 1) count)
+    (inst li (fixnumize 1) count)
     
     (emit-label done)
     
@@ -777,7 +777,7 @@ default-value-8
 							    word-shift)
 						      new-fp))
 					   register-arg-names)))
-			     '((inst li (fixnum nargs) nargs-pass))))
+			     '((inst li (fixnumize nargs) nargs-pass))))
 		      ,@(if (eq return :tail)
 			    '((:load-ocfp
 			       (sc-case ocfp
@@ -1011,7 +1011,7 @@ default-value-8
 	      nsp-tn)))
     ;; Establish the values pointer and values count.
     (move cfp-tn val-ptr)
-    (inst li (fixnum nvals) nargs)
+    (inst li (fixnumize nvals) nargs)
     ;; restore the frame pointer and clear as much of the control
     ;; stack as possible.
     (move ocfp cfp-tn)
@@ -1060,7 +1060,7 @@ default-value-8
 		nsp-tn)))
 
       ;; Check for the single case.
-      (inst li (fixnum 1) a0)
+      (inst li (fixnumize 1) a0)
       (inst cmpeq nvals-arg a0 temp)
       (inst ldl a0 0 vals-arg)
       (inst beq temp not-single)
@@ -1130,13 +1130,13 @@ default-value-8
 	     (inst addq csp-tn nargs-tn csp-tn)
 	     (inst beq nargs-tn done))
 	    (t
-	     (inst subq nargs-tn (fixnum fixed) count)
+	     (inst subq nargs-tn (fixnumize fixed) count)
 	     (inst ble count done)
 	     (inst addq csp-tn count csp-tn)))
       (when (< fixed register-arg-count)
 	;; We must stop when we run out of stack args, not when we run out of
 	;; more args.
-	(inst subq nargs-tn (fixnum register-arg-count) count))
+	(inst subq nargs-tn (fixnumize register-arg-count) count))
       ;; Initialize dst to be end of stack.
       (move csp-tn dst)
       ;; Everything of interest in registers.
@@ -1147,7 +1147,7 @@ default-value-8
       (emit-label loop)
       ;; *--dst = *--src, --count
       (inst subq src word-bytes src)
-      (inst subq count (fixnum 1) count)
+      (inst subq count (fixnumize 1) count)
       (loadw temp src)
       (inst subq dst word-bytes dst)
       (storew temp dst)
@@ -1158,7 +1158,7 @@ default-value-8
 	;; Now we have to deposit any more args that showed up in registers.
 	;; We know there is at least one more arg, otherwise we would have
 	;; branched to done up at the top.
-	(inst subq nargs-tn (fixnum (1+ fixed)) count)
+	(inst subq nargs-tn (fixnumize (1+ fixed)) count)
 	(do ((i fixed (1+ i)))
 	    ((>= i register-arg-count))
 	  ;; Store it relative to the pointer saved at the start.
@@ -1166,7 +1166,7 @@ default-value-8
 	  ;; Is this the last one?
 	  (inst beq count done)
 	  ;; Decrement count.
-	  (inst subq count (fixnum 1) count)))
+	  (inst subq count (fixnumize 1) count)))
       (emit-label done))))
 
 
@@ -1221,7 +1221,7 @@ default-value-8
 	(storew temp dst 0 list-pointer-type)
 
 	;; Dec count, and if != zero, go back for more.
-	(inst subq count (fixnum 1) count)
+	(inst subq count (fixnumize 1) count)
 	(inst bne count loop)
 
 	;; NIL out the last cons.
@@ -1249,7 +1249,7 @@ default-value-8
   (:result-types t tagged-num)
   (:note "more-arg-context")
   (:generator 5
-    (inst subq supplied (fixnum fixed) count)
+    (inst subq supplied (fixnumize fixed) count)
     (inst subq csp-tn count context)))
 
 
@@ -1270,7 +1270,7 @@ default-value-8
       (cond ((zerop count)
 	     (inst bne nargs err-lab))
 	    (t
-	     (inst subq nargs (fixnum count) temp)
+	     (inst subq nargs (fixnumize count) temp)
 	     (inst bne temp err-lab))))))
 
 ;;; Various other error signalers.

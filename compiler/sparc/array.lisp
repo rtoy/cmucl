@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.27 2003/07/19 15:47:36 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.28 2003/08/03 11:27:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
       (inst add ndescr rank (* (1+ array-dimensions-offset) vm:word-bytes))
       (inst andn ndescr 4)
       (allocation header ndescr other-pointer-type)
-      (inst add ndescr rank (fixnum (1- vm:array-dimensions-offset)))
+      (inst add ndescr rank (fixnumize (1- vm:array-dimensions-offset)))
       (inst sll ndescr ndescr vm:type-bits)
       (inst or ndescr ndescr type)
       ;; Remove the extraneous fixnum tag bits because TYPE and RANK
@@ -360,7 +360,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:result-types single-float)
   (:generator 3
-    (let ((offset (+ (fixnum index)
+    (let ((offset (+ (fixnumize index)
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))))
       (if (typep offset '(signed-byte 13))
@@ -403,7 +403,7 @@
   (:result-types single-float)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 2
-    (let ((offset (+ (fixnum index)
+    (let ((offset (+ (fixnumize index)
 		     (- (* vm:vector-data-offset vm:word-bytes)
 			vm:other-pointer-type))))
       (if (typep offset '(signed-byte 13))

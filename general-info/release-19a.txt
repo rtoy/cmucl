@@ -135,6 +135,7 @@ New in this release:
        are now equivalent to (X &REST Y).
      - LAST, BUTLAST, NBUTLAST accepting bignum counts.
      - WITH-OUTPUT-TO-STRING accepting :ELEMENT-TYPE.
+     - FIXNUM no longer naming a function.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR

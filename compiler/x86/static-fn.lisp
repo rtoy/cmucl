@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.5 1998/06/16 18:20:45 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.6 2003/08/03 11:27:45 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,18 +96,18 @@
 		(inst push ebp-tn)
 		;; Ensure that at least three slots are available; one
 		;; above, two more needed.
-		(inst sub esp-tn (fixnum 2))
+		(inst sub esp-tn (fixnumize 2))
 		(inst mov ebp-tn ebx))
 	       (t
-		(inst enter (fixnum 2))
+		(inst enter (fixnumize 2))
 		;; The enter instruction pushes EBP and then copies
 		;; ESP into EBP.  We want the new EBP to be the
 		;; original ESP, so we fix it up afterwards.
-		(inst add ebp-tn (fixnum 1))))
+		(inst add ebp-tn (fixnumize 1))))
 	 
 	 ,(if (zerop num-args)
 	      '(inst xor ecx ecx)
-	      `(inst mov ecx (fixnum ,num-args)))
+	      `(inst mov ecx (fixnumize ,num-args)))
 	 
 	 (note-this-location vop :call-site)
 	 ;; Static-function-offset gives the offset from the start of

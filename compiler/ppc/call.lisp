@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.2 2001/02/11 16:43:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.3 2003/08/03 11:27:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -314,7 +314,7 @@ default-value-8
 	(new-assem:without-scheduling ()
 	  (note-this-location vop :unknown-return)
 	  (if (> nvals register-arg-count)
-	      (inst addic. temp nargs-tn (- (fixnum register-arg-count)))
+	      (inst addic. temp nargs-tn (- (fixnumize register-arg-count)))
 	      (move csp-tn ocfp-tn))
 	  (inst b regs-defaulted))
 	
@@ -343,7 +343,7 @@ default-value-8
 		
 		(inst lwz move-temp ocfp-tn (* i vm:word-bytes))
 		(inst ble default-lab)
-		(inst addic. temp temp (- (fixnum 1)))
+		(inst addic. temp temp (- (fixnumize 1)))
 		(store-stack-tn tn move-temp)))
 	    
 	    (emit-label defaulting-done)
@@ -400,7 +400,7 @@ default-value-8
     (inst addi csp-tn csp-tn 4)
     (storew (first register-arg-tns) csp-tn -1)
     (inst subi start csp-tn 4)
-    (inst li count (fixnum 1))
+    (inst li count (fixnumize 1))
     
     (emit-label done)
     
@@ -762,7 +762,7 @@ default-value-8
 					       `(loadw ,name new-fp
 						       ,(incf index)))
 					   register-arg-names)))
-			     '((inst lr nargs-pass (fixnum nargs)))))
+			     '((inst lr nargs-pass (fixnumize nargs)))))
 		      ,@(if (eq return :tail)
 			    '((:load-old-fp
 			       (sc-case old-fp
@@ -974,7 +974,7 @@ default-value-8
 	  (t
 	   ;; Establish the values pointer and values count.
 	   (move val-ptr cfp-tn)
-	   (inst lr nargs (fixnum nvals))
+	   (inst lr nargs (fixnumize nvals))
 	   ;; restore the frame pointer and clear as much of the control
 	   ;; stack as possible.
 	   (move cfp-tn old-fp)
@@ -1019,7 +1019,7 @@ default-value-8
 		   number-stack-displacement))))
 
       ;; Check for the single case.
-      (inst cmpwi nvals-arg (fixnum 1))
+      (inst cmpwi nvals-arg (fixnumize 1))
       (inst lwz a0 vals-arg 0)
       (inst bne not-single)
 
@@ -1088,13 +1088,13 @@ default-value-8
 	     (inst add csp-tn csp-tn nargs-tn)
 	     (inst beq done))
 	    (t
-	     (inst addic. count nargs-tn (- (fixnum fixed)))
+	     (inst addic. count nargs-tn (- (fixnumize fixed)))
 	     (inst ble done)
 	     (inst add csp-tn csp-tn count)))
       (when (< fixed register-arg-count)
 	;; We must stop when we run out of stack args, not when we run out of
 	;; more args.
-	(inst addic. count nargs-tn (- (fixnum register-arg-count)))
+	(inst addic. count nargs-tn (- (fixnumize register-arg-count)))
 	;; Everything of interest is in registers.
 	(inst ble do-regs))
       ;; Initialize dst to be end of stack.
@@ -1105,7 +1105,7 @@ default-value-8
       (emit-label loop)
       ;; *--dst = *--src, --count
       (inst addi src src (- vm:word-bytes))
-      (inst addic. count count (- (fixnum 1)))
+      (inst addic. count count (- (fixnumize 1)))
       (loadw temp src)
       (inst addi dst dst (- vm:word-bytes))
       (storew temp dst)
@@ -1114,12 +1114,12 @@ default-value-8
       (emit-label do-regs)
       (when (< fixed register-arg-count)
 	;; Now we have to deposit any more args that showed up in registers.
-	(inst subic. count nargs-tn (fixnum fixed))
+	(inst subic. count nargs-tn (fixnumize fixed))
 	(do ((i fixed (1+ i)))
 	    ((>= i register-arg-count))
 	  ;; Don't deposit any more than there are.
 	  (inst beq done)
-	  (inst subic. count count (fixnum 1))
+	  (inst subic. count count (fixnumize 1))
 	  ;; Store it relative to the pointer saved at the start.
 	  (storew (nth i register-arg-tns) result (- i fixed))))
       (emit-label done))))
@@ -1177,7 +1177,7 @@ default-value-8
 	(inst addi context context vm:word-bytes)
 
 	;; Dec count, and if != zero, go back for more.
-	(inst addic. count count (- (fixnum 1)))
+	(inst addic. count count (- (fixnumize 1)))
 	;; Store the value into the car of the current cons (in the delay
 	;; slot).
 	(storew temp dst 0 vm:list-pointer-type)
@@ -1210,7 +1210,7 @@ default-value-8
   (:result-types t tagged-num)
   (:note "more-arg-context")
   (:generator 5
-    (inst subi count supplied (fixnum fixed))
+    (inst subi count supplied (fixnumize fixed))
     (inst sub context csp-tn count)))
 
 
@@ -1228,7 +1228,7 @@ default-value-8
   (:generator 3
     (let ((err-lab
 	   (generate-error-code vop invalid-argument-count-error nargs)))
-      (inst cmpwi nargs (fixnum count))
+      (inst cmpwi nargs (fixnumize count))
       (inst bne err-lab))))
 |#
 (define-vop (verify-argument-count)
@@ -1240,7 +1240,7 @@ default-value-8
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 3
-   (inst twi :ne nargs (fixnum count))))
+   (inst twi :ne nargs (fixnumize count))))
 
 
 ;;; Signal various errors.

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.1 2001/02/11 14:22:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.2 2003/08/03 11:27:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,7 +87,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
   (:generator 100
-    (inst addi boxed boxed-arg (fixnum (1+ code-trace-table-offset-slot)))
+    (inst addi boxed boxed-arg (fixnumize (1+ code-trace-table-offset-slot)))
     (inst clrrwi boxed boxed lowtag-bits)
     (inst srwi unboxed unboxed-arg word-shift)
     (inst addi unboxed unboxed lowtag-mask)

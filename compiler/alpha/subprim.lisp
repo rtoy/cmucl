@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/subprim.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/subprim.lisp,v 1.3 2003/08/03 11:27:49 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
     (inst bne temp not-list)
     
     (loadw ptr ptr cons-cdr-slot list-pointer-type)
-    (inst addq count (fixnum 1) count)
+    (inst addq count (fixnumize 1) count)
     (inst br zero-tn loop)
     
     NOT-LIST

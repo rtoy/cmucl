@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/assem-rtns.lisp,v 1.5 1994/10/31 04:56:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/assem-rtns.lisp,v 1.6 2003/08/03 11:27:51 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,17 +45,17 @@
 
   (inst movb := nvals count default-a0-and-on :nullify t)
   (loadw a0 vals 0)
-  (inst addib := (fixnum -1) count default-a1-and-on :nullify t)
+  (inst addib := (fixnumize -1) count default-a1-and-on :nullify t)
   (loadw a1 vals 1)
-  (inst addib := (fixnum -1) count default-a2-and-on :nullify t)
+  (inst addib := (fixnumize -1) count default-a2-and-on :nullify t)
   (loadw a2 vals 2)
-  (inst addib := (fixnum -1) count default-a3-and-on :nullify t)
+  (inst addib := (fixnumize -1) count default-a3-and-on :nullify t)
   (loadw a3 vals 3)
-  (inst addib := (fixnum -1) count default-a4-and-on :nullify t)
+  (inst addib := (fixnumize -1) count default-a4-and-on :nullify t)
   (loadw a4 vals 4)
-  (inst addib := (fixnum -1) count default-a5-and-on :nullify t)
+  (inst addib := (fixnumize -1) count default-a5-and-on :nullify t)
   (loadw a5 vals 5)
-  (inst addib := (fixnum -1) count done :nullify t)  
+  (inst addib := (fixnumize -1) count done :nullify t)  
 
   ;; Copy the remaining args to the top of the stack.
   (inst addi (* 6 word-bytes) vals src)
@@ -63,7 +63,7 @@
 
   LOOP
   (inst ldwm 4 src temp)
-  (inst addib :> (fixnum -1) count loop)
+  (inst addib :> (fixnumize -1) count loop)
   (inst stwm temp 4 dst)
 
   (inst b done :nullify t)
@@ -134,7 +134,7 @@
   (loadw a5 args 5)
 
   ;; Calc SRC, DST, and COUNT
-  (inst addi (fixnum (- register-arg-count)) nargs count)
+  (inst addi (fixnumize (- register-arg-count)) nargs count)
   (inst comb :<= count zero-tn done :nullify t)
   (inst addi (* word-bytes register-arg-count) args src)
   (inst addi (* word-bytes register-arg-count) cfp-tn dst)
@@ -142,7 +142,7 @@
   LOOP
   ;; Copy one arg.
   (inst ldwm 4 src temp)
-  (inst addib :> (fixnum -1) count loop)
+  (inst addib :> (fixnumize -1) count loop)
   (inst stwm temp 4 dst)
 	
   DONE

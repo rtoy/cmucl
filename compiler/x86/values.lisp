@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.4 1998/02/19 19:35:10 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.5 2003/08/03 11:27:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
 	((null val))
       (inst push (tn-ref-tn val)))
     (move start temp)
-    (inst mov count (fixnum nvals))))
+    (inst mov count (fixnumize nvals))))
 
 ;;; Push a list of values on the stack, returning Start and Count as used in
 ;;; unknown values continuations.

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.5 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.6 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.5 1994/10/31 04:45:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.6 2003/08/03 11:27:47 gerd Rel $
 ;;;
 ;;; Allocation VOPs for the IBM RT port.
 ;;;
@@ -98,7 +98,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
     (inst li ndescr (lognot lowtag-mask))
-    (inst cal boxed boxed-arg (fixnum (1+ vm:code-trace-table-offset-slot)))
+    (inst cal boxed boxed-arg (fixnumize (1+ vm:code-trace-table-offset-slot)))
     (inst n boxed ndescr)
     (move unboxed unboxed-arg)
     (inst sr unboxed word-shift)

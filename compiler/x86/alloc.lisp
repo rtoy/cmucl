@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.8 2002/08/27 22:18:28 moore Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.9 2003/08/03 11:27:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,7 +89,7 @@
   (:temporary (:sc unsigned-reg :from (:argument 1)) unboxed)
   (:generator 100
     (move boxed boxed-arg)
-    (inst add boxed (fixnum (1+ code-trace-table-offset-slot)))
+    (inst add boxed (fixnumize (1+ code-trace-table-offset-slot)))
     (inst and boxed (lognot lowtag-mask))
     (move unboxed unboxed-arg)
     (inst shr unboxed word-shift)
@@ -120,7 +120,7 @@
   (:node-var node)
   (:generator 100
     (move boxed boxed-arg)
-    (inst add boxed (fixnum (1+ code-trace-table-offset-slot)))
+    (inst add boxed (fixnumize (1+ code-trace-table-offset-slot)))
     (inst and boxed (lognot lowtag-mask))
     (move unboxed unboxed-arg)
     (inst shr unboxed word-shift)

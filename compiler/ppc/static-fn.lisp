@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/static-fn.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/static-fn.lisp,v 1.2 2003/08/03 11:27:47 gerd Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -87,7 +87,7 @@
 		 (cur-nfp (current-nfp-tn vop)))
 	     ,@(moves (temp-names) (arg-names))
 	     (inst lwz func null-tn (static-function-offset symbol))
-	     (inst lr nargs (fixnum ,num-args))
+	     (inst lr nargs (fixnumize ,num-args))
 	     (when cur-nfp
 	       (store-stack-tn nfp-save cur-nfp))
 	     (inst mr old-fp cfp-tn)

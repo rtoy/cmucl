@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/values.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/values.lisp,v 1.2 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,7 @@
 	  (control-stack
 	   (load-stack-tn temp tn)
 	   (storew temp start i)))))
-    (inst lr count (fixnum nvals))))
+    (inst lr count (fixnumize nvals))))
 
 ;;; Push a list of values on the stack, returning Start and Count as used in
 ;;; unknown values continuations.

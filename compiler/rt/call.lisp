@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/call.lisp,v 1.12 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/call.lisp,v 1.13 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -368,7 +368,7 @@ default-value-5
 	    (let ((default-lab (gen-label))
 		  (tn (tn-ref-tn val)))
 	      (defaults (cons default-lab tn))
-	      (inst c nargs-tn (fixnum i))
+	      (inst c nargs-tn (fixnumize i))
 	      (inst bnbx :gt default-lab)
 	      (loadw move-temp ocfp-tn i)
 	      (store-stack-tn move-temp tn)))
@@ -423,7 +423,7 @@ default-value-5
     (inst inc csp-tn vm:word-bytes)
     (storew (first register-arg-tns) csp-tn -1)
     (inst cal start csp-tn -4)
-    (inst li count (fixnum 1))
+    (inst li count (fixnumize 1))
     
     (emit-label done)
     
@@ -754,7 +754,7 @@ default-value-5
 		     (mapcar #'(lambda (name)
 				 `(loadw ,name new-fp ,(incf index)))
 			     register-arg-names)))
-	       `((inst li nargs-pass (fixnum nargs))))
+	       `((inst li nargs-pass (fixnumize nargs))))
  
 
 	 ,@(if named
@@ -901,7 +901,7 @@ default-value-5
 	   (inst bx lip)
 	   (move code-tn return-pc))
 	  (t
-	   (inst li nargs (fixnum nvals))
+	   (inst li nargs (fixnumize nvals))
 	   ;; Clear the number stack.
 	   (let ((cur-nfp (current-nfp-tn vop)))
 	     (when cur-nfp
@@ -957,7 +957,7 @@ default-value-5
 		(component-non-descriptor-stack-usage))))
       
       ;; Single case?
-      (inst c nvals-arg (fixnum 1))
+      (inst c nvals-arg (fixnumize 1))
       (inst bnc :eq not-single)
       
       ;; Return with one value.
@@ -1027,12 +1027,12 @@ default-value-5
   (:generator 20
     (let ((do-more-args (gen-label))
 	  (done-more-args (gen-label)))
-      (inst c nargs-tn (fixnum fixed))
+      (inst c nargs-tn (fixnumize fixed))
       (inst bc :gt do-more-args)
       (assemble (*elsewhere*)
 	(emit-label do-more-args)
 	;; Jump to assembler routine passing fixed at cname-offset.
-	(inst li temp (fixnum fixed))
+	(inst li temp (fixnumize fixed))
 	(inst bala (make-fixup 'really-copy-more-args :assembly-routine))
 	(inst b done-more-args))
       (emit-label done-more-args))))
@@ -1093,7 +1093,7 @@ default-value-5
 	(storew temp dst 0 vm:list-pointer-type)
 
 	;; Dec count, and if != zero, go back for more.
-	(inst s count (fixnum 1))
+	(inst s count (fixnumize 1))
 	(inst bncx :eq loop)
 	(inst inc dst (* 2 vm:word-bytes))
 
@@ -1123,7 +1123,7 @@ default-value-5
    (context :scs (descriptor-reg))
    (count :scs (any-reg)))
   (:generator 5
-    (inst s count supplied (fixnum fixed))
+    (inst s count supplied (fixnumize fixed))
     (move context csp-tn)
     (inst s context count)))
 
@@ -1139,7 +1139,7 @@ default-value-5
   (:generator 3
     (let ((err-lab
 	   (generate-error-code vop invalid-argument-count-error nargs)))
-      (inst c nargs (fixnum count))
+      (inst c nargs (fixnumize count))
       (inst bnc :eq err-lab))))
 
 ;;; Signal an argument count error.

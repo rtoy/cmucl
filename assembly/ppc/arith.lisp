@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.1 2001/02/11 14:21:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.2 2003/08/03 11:27:51 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,7 +58,7 @@
 
   DO-STATIC-FUN
   (inst lwz code-tn null-tn (static-function-offset 'two-arg-+))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
   (inst j code-tn
@@ -106,7 +106,7 @@
 
   DO-STATIC-FUN
   (inst lwz code-tn null-tn (static-function-offset 'two-arg--))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
   (inst j code-tn
@@ -186,7 +186,7 @@
 
   DO-STATIC-FUN
   (inst lwz code-tn null-tn (static-function-offset 'two-arg-*))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
   (inst j code-tn
@@ -318,7 +318,7 @@
 	  
 	  DO-STATIC-FN
 	  (inst lwz code-tn null-tn (static-function-offset ',static-fn))
-	  (inst li nargs (fixnum 2))
+	  (inst li nargs (fixnumize 2))
 	  (inst mr ocfp cfp-tn)
 	  (inst mr cfp-tn csp-tn)
 	  (inst j code-tn
@@ -363,7 +363,7 @@
 
   DO-STATIC-FN
   (inst lwz code-tn null-tn (static-function-offset 'eql))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
   (inst j code-tn
@@ -399,7 +399,7 @@
 
   DO-STATIC-FN
   (inst lwz code-tn null-tn (static-function-offset 'two-arg-=))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
   (inst j code-tn
@@ -433,7 +433,7 @@
 
   DO-STATIC-FN
   (inst lwz code-tn null-tn (static-function-offset 'two-arg-=))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.28 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.29 2003/08/03 11:27:48 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -108,7 +108,7 @@
   (:generator 100
     (inst li ndescr (lognot lowtag-mask))
     (inst addu boxed boxed-arg
-	  (fixnum (1+ code-trace-table-offset-slot)))
+	  (fixnumize (1+ code-trace-table-offset-slot)))
     (inst and boxed ndescr)
     (inst srl unboxed unboxed-arg word-shift)
     (inst addu unboxed unboxed lowtag-mask)
@@ -142,9 +142,9 @@
   (:ignore ra)
   (:generator 100
     (inst li lowtag (lognot lowtag-mask))
-    (inst addu words boxed (fixnum (1+ code-debug-info-slot)))
+    (inst addu words boxed (fixnumize (1+ code-debug-info-slot)))
     (inst and words lowtag)
-    (inst addu first-word unboxed (fixnum 1))
+    (inst addu first-word unboxed (fixnumize 1))
     (inst and first-word lowtag)
     (inst sll header words (- type-bits 2))
     (inst or header code-header-type)
@@ -270,7 +270,7 @@
   (:temporary (:sc any-reg :offset ra-offset :from (:eval 0) :to (:eval 1)) ra)
   (:ignore name nl2 ra)
   (:generator 10
-    (inst addu nargs extra (fixnum words))
+    (inst addu nargs extra (fixnumize words))
     (inst sll nl1 nargs (- type-bits word-shift))
     (inst addu nl1 (+ (ash -1 type-bits) type))
     (inst jal (make-fixup 'var-alloc :assembly-routine))

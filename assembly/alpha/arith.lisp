@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/arith.lisp,v 1.4 1998/08/05 09:03:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/arith.lisp,v 1.5 2003/08/03 11:27:52 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -69,7 +69,7 @@
 
   DO-STATIC-FUN
   (inst ldl lip (static-function-offset 'two-arg-+) null-tn)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst move csp-tn cfp-tn)
   (inst jmp zero-tn lip))
@@ -126,7 +126,7 @@
 
   DO-STATIC-FUN
   (inst ldl lip (static-function-offset 'two-arg--) null-tn)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst move csp-tn cfp-tn)
   (inst jmp zero-tn lip))
@@ -204,7 +204,7 @@
 
   DO-STATIC-FUN
   (inst ldl lip (static-function-offset 'two-arg-*) null-tn)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst move csp-tn cfp-tn)
   (inst jmp zero-tn lip)
@@ -300,7 +300,7 @@
 	  
 	  DO-STATIC-FN
 	  (inst ldl lip (static-function-offset ',static-fn) null-tn)
-	  (inst li (fixnum 2) nargs)
+	  (inst li (fixnumize 2) nargs)
 	  (inst move cfp-tn ocfp)
 	  (inst move csp-tn cfp-tn)
 	  (inst jmp zero-tn lip)
@@ -345,7 +345,7 @@
 
   DO-STATIC-FN
   (inst ldl lip (static-function-offset 'eql) null-tn)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst move csp-tn cfp-tn)
   (inst jmp zero-tn lip)
@@ -381,7 +381,7 @@
 
   DO-STATIC-FN
   (inst ldl lip (static-function-offset 'two-arg-=) null-tn)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst move csp-tn cfp-tn)
   (inst jmp zero-tn lip)
@@ -417,7 +417,7 @@
 
   DO-STATIC-FN
   (inst ldl lip (static-function-offset 'two-arg-=) null-tn)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst move csp-tn cfp-tn)
   (inst jmp zero-tn lip)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/values.lisp,v 1.5 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/values.lisp,v 1.6 2003/08/03 11:27:48 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 	  (control-stack
 	   (load-stack-tn temp tn)
 	   (storew temp start i)))))
-    (inst li (fixnum nvals) count)))
+    (inst li (fixnumize nvals) count)))
 
 
 ;;; Push a list of values on the stack, returning Start and Count as used in

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.2 2001/02/11 16:43:18 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.3 2003/08/03 11:27:47 gerd Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -55,7 +55,7 @@
 (define-vop (fast-lognot/fixnum fixnum-unop)
   (:translate lognot)
   (:generator 2
-    (inst xori res x (fixnum -1))))
+    (inst xori res x (fixnumize -1))))
 
 (define-vop (fast-lognot/signed signed-unop)
   (:translate lognot)
@@ -176,7 +176,7 @@
 		  fast-fixnum-binop-c)
        (:translate ,translate)
        (:generator 1
-	 (inst ,op r x (fixnum y))))
+	 (inst ,op r x (fixnumize y))))
      (define-vop (,(symbolicate 'fast- translate '-c/signed=>signed)
 		  fast-signed-binop-c)
        (:translate ,translate)
@@ -195,7 +195,7 @@
 		  fast-fixnum-logop-c)
        (:translate ,translate)
        (:generator 1
-	 (inst ,op r x (fixnum y))))
+	 (inst ,op r x (fixnumize y))))
      (define-vop (,(symbolicate 'fast- translate '-c/signed=>signed)
 		  fast-signed-logop-c)
        (:translate ,translate)
@@ -355,7 +355,7 @@
       (inst cntlzw shift shift)
       (emit-label nonneg)
       (inst slwi shift shift 2)
-      (inst subfic res  shift (fixnum 32)))))
+      (inst subfic res  shift (fixnumize 32)))))
 
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
@@ -376,7 +376,7 @@
       (emit-label loop)
       (inst subi temp shift 1)
       (inst and. shift shift temp)
-      (inst addi res res (fixnum 1))
+      (inst addi res res (fixnumize 1))
       (inst bne loop)
 
       (emit-label done))))
@@ -442,7 +442,7 @@
 (define-vop (fast-if-<-c/fixnum fast-conditional-c/fixnum)
   (:translate <)
   (:generator 3
-    (inst cmpwi x (fixnum y))
+    (inst cmpwi x (fixnumize y))
     (inst b? (if not-p :ge :lt) target)))
 
 (define-vop (fast-if-</signed fast-conditional/signed)
@@ -478,7 +478,7 @@
 (define-vop (fast-if->-c/fixnum fast-conditional-c/fixnum)
   (:translate >)
   (:generator 3
-    (inst cmpwi x (fixnum y))
+    (inst cmpwi x (fixnumize y))
     (inst b? (if not-p :le :gt) target)))
 
 (define-vop (fast-if->/signed fast-conditional/signed)
@@ -560,7 +560,7 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 2
-    (inst cmpwi x (fixnum y))
+    (inst cmpwi x (fixnumize y))
     (inst b? (if not-p :ne :eq) target)))
 ;;;
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)

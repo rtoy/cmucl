@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.10 1998/02/19 19:37:26 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.11 2003/08/03 11:27:50 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,9 +51,9 @@
     (inst pop eax)
     (inst push ebp-tn)
     (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-    (inst sub esp-tn (fixnum 2))
+    (inst sub esp-tn (fixnumize 2))
     (inst push eax)			; callers return addr
-    (inst mov ecx (fixnum 2))		; arg count
+    (inst mov ecx (fixnumize 2))	; arg count
     (inst jmp (make-ea :dword
 	       	       :disp (+ nil-value (static-function-offset
 					   ',(symbolicate "TWO-ARG-" fun)))))
@@ -146,9 +146,9 @@
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 2))
+  (inst sub esp-tn (fixnumize 2))
   (inst push eax)
-  (inst mov ecx (fixnum 1))		; arg count
+  (inst mov ecx (fixnumize 1))		; arg count
   (inst jmp (make-ea :dword
 		     :disp (+ nil-value (static-function-offset '%negate))))
   
@@ -193,9 +193,9 @@
     (inst pop eax)
     (inst push ebp-tn)
     (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-    (inst sub esp-tn (fixnum 2))
+    (inst sub esp-tn (fixnumize 2))
     (inst push eax)
-    (inst mov ecx (fixnum 2))
+    (inst mov ecx (fixnumize 2))
     (inst jmp (make-ea :dword
 	       	       :disp (+ nil-value
 				(static-function-offset ',static-fn))))
@@ -246,9 +246,9 @@
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 2))
+  (inst sub esp-tn (fixnumize 2))
   (inst push eax)
-  (inst mov ecx (fixnum 2))
+  (inst mov ecx (fixnumize 2))
   (inst jmp (make-ea :dword
 		     :disp (+ nil-value (static-function-offset 'eql))))
   
@@ -285,9 +285,9 @@
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 2))
+  (inst sub esp-tn (fixnumize 2))
   (inst push eax)
-  (inst mov ecx (fixnum 2))
+  (inst mov ecx (fixnumize 2))
   (inst jmp (make-ea :dword
 		     :disp (+ nil-value (static-function-offset 'two-arg-=))))
   

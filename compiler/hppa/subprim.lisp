@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/subprim.lisp,v 1.2 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/subprim.lisp,v 1.3 2003/08/03 11:27:48 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,7 @@
     (loadw ptr ptr vm:cons-cdr-slot vm:list-pointer-type)
 
     LOOP
-    (inst addi (fixnum 1) count count)
+    (inst addi (fixnumize 1) count count)
     (inst comb := ptr null-tn done :nullify t)
     (inst extru ptr 31 3 temp)
     (inst comib := list-pointer-type temp loop :nullify t)

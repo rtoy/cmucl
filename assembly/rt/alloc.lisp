@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.6 1994/10/31 04:57:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.7 2003/08/03 11:27:50 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.6 1994/10/31 04:57:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.7 2003/08/03 11:27:50 gerd Rel $
 ;;;
 ;;; Stuff to handle allocating simple objects.
 ;;;
@@ -70,12 +70,12 @@
 	     (load-symbol-value alloc *allocation-pointer*)
 	     (inst cal result alloc ,lowtag)
 	     ,@(cond ((and header variable-length)
-		      `((inst cal temp extra-words (fixnum (1- ,size)))
+		      `((inst cal temp extra-words (fixnumize (1- ,size)))
 			(inst cas alloc temp alloc)
 			(inst sl temp (- type-bits word-shift))
 			(inst oil temp ,header)
 			(storew temp result 0 ,lowtag)
-			(inst cal alloc alloc (+ (fixnum 1) lowtag-mask))
+			(inst cal alloc alloc (+ (fixnumize 1) lowtag-mask))
 			(inst li temp (lognot lowtag-mask))
 			(inst n alloc temp)))
 		     (variable-length

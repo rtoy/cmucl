@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.7 1994/10/31 04:57:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.8 2003/08/03 11:27:50 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.7 1994/10/31 04:57:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.8 2003/08/03 11:27:50 gerd Rel $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -63,7 +63,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg-+)
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
   (move ocfp cfp-tn)
   ;; Tail call TWO-ARG-+.
@@ -118,7 +118,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg--)
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
   (move ocfp cfp-tn)
   ;; Tail call TWO-ARG-+.
@@ -214,7 +214,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg-*)
-  (inst li nargs/high (fixnum 2))
+  (inst li nargs/high (fixnumize 2))
   (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
   (move ocfp/low cfp-tn)
   (inst bx lip)
@@ -253,9 +253,9 @@
   ;; Make sure y is not 0, 1, or -1.
   (inst c y 0)
   (inst bcx :eq zero-divisor)
-  (inst c y (fixnum 1))
+  (inst c y (fixnumize 1))
   (inst bcx :eq one-divisor)
-  (inst c y (fixnum -1))
+  (inst c y (fixnumize -1))
   (inst bc :eq neg-one-divisor)
 
   ;; Do the division.
@@ -291,7 +291,7 @@
   ;; Add 1 to quotient and subtract divisor from remainder.
   (inst mfmqscr temp1)
   (inst sl temp1 2)
-  (inst a quo temp1 (fixnum 1))
+  (inst a quo temp1 (fixnumize 1))
   ;; Since rem and y are the same register, this subtracts the divisor from
   ;; the remainder, putting the result in our rem result register.
   (inst sf y nargs/high)
@@ -309,7 +309,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'truncate)
-  (inst li nargs/high (fixnum 2))
+  (inst li nargs/high (fixnumize 2))
   (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
   (move ocfp/temp2 cfp-tn)
   ;; Get out of here, doing a tail call.
@@ -381,7 +381,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg-<)
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
   (move ocfp cfp-tn)
   ;; Tail call TWO-ARG->.
@@ -424,7 +424,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg->)
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
   (move ocfp cfp-tn)
   ;; Tail call TWO-ARG->.
@@ -468,7 +468,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg-=)
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
   (move ocfp cfp-tn)
   ;; Tail call TWO-ARG-=.

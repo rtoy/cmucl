@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.54 2000/01/17 16:42:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.55 2003/08/03 11:27:48 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.54 2000/01/17 16:42:24 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.55 2003/08/03 11:27:48 gerd Rel $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -55,7 +55,7 @@
 	      temp)
   (:translate lognot)
   (:generator 2
-    (inst li temp (fixnum -1))
+    (inst li temp (fixnumize -1))
     (inst xor res x temp)))
 
 (define-vop (fast-lognot/signed signed-unop)
@@ -147,7 +147,7 @@
 		       (:arg-types tagged-num (:constant ,tagged-type))
 	     (:translate ,translate)
 	     (:generator ,cost
-			 (inst ,op r x (fixnum y))))))
+			 (inst ,op r x (fixnumize y))))))
      ,@(when untagged-type
 	 `((define-vop (,(symbolicate "FAST-" translate "-C/SIGNED=>SIGNED")
 			fast-signed-c-binop)
@@ -187,7 +187,7 @@
   (:result-types (:or signed-num unsigned-num))
   (:note nil)
   (:generator 3
-    (inst add r x (fixnum y))))
+    (inst add r x (fixnumize y))))
 
 (define-vop (fast--/fixnum fast--/fixnum=>fixnum)
   (:results (r :scs (any-reg descriptor-reg)))
@@ -201,7 +201,7 @@
   (:result-types (:or signed-num unsigned-num))
   (:note nil)
   (:generator 3
-    (inst sub r x (fixnum y))))
+    (inst sub r x (fixnumize y))))
 
 
 ;;; Shifting
@@ -318,7 +318,7 @@
       (inst nor shift shift)
 
       (emit-label loop)
-      (inst add res (fixnum 1))
+      (inst add res (fixnumize 1))
       
       (emit-label test)
       (inst bne shift loop)
@@ -503,7 +503,7 @@
 			(:generator ,cost
 			  (let* ((signed ,signed)
 				 (-c/fixnum ,(eq suffix '-c/fixnum))
-				 (y (if -c/fixnum (fixnum y) y)))
+				 (y (if -c/fixnum (fixnumize y) y)))
 			    (declare (optimize (inhibit-warnings 3)))
 			    ,@generator)))))
 	       '(/fixnum -c/fixnum /signed -c/signed /unsigned -c/unsigned)
@@ -530,7 +530,7 @@
 	     (inst blez x target)
 	     (inst bgtz x target)))
 	((integerp y)
-	 (let ((y (+ y (if -c/fixnum (fixnum 1) 1))))
+	 (let ((y (+ y (if -c/fixnum (fixnumize 1) 1))))
 	   (if signed
 	       (inst slt temp x y)
 	       (inst sltu temp x y))
@@ -592,7 +592,7 @@
   (:generator 2
     (let ((y (cond ((eql y 0) zero-tn)
 		   (t
-		    (inst li temp (fixnum y))
+		    (inst li temp (fixnumize y))
 		    temp))))
       (if not-p
 	  (inst bne x y target)

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.5 2000/10/23 16:21:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.6 2003/08/03 11:27:49 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.5 2000/10/23 16:21:54 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.6 2003/08/03 11:27:49 gerd Rel $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -143,7 +143,7 @@
 		       (:arg-types tagged-num (:constant ,tagged-type))
 	     (:translate ,translate)
 	     (:generator ,cost
-			 (inst ,op x (fixnum y) r)))))
+			 (inst ,op x (fixnumize y) r)))))
      ,@(when untagged-type
 	 `((define-vop (,(symbolicate "FAST-" translate "-C/SIGNED=>SIGNED")
 			fast-signed-c-binop)
@@ -276,7 +276,7 @@
     (inst subq zero-tn 4 res)
     (inst sll shift 1 shift)
     LOOP
-    (inst addq res (fixnum 1) res)
+    (inst addq res (fixnumize 1) res)
     (inst srl shift 1 shift)
     (inst bne shift loop)))
 
@@ -406,7 +406,7 @@
 			(:generator ,cost
 			  (let* ((signed ,signed)
 				 (-c/fixnum ,(eq suffix '-c/fixnum))
-				 (y (if -c/fixnum (fixnum y) y)))
+				 (y (if -c/fixnum (fixnumize y) y)))
 			    (declare (optimize (inhibit-warnings 3)))
 			    ,@generator)))))
 	       '(/fixnum -c/fixnum /signed -c/signed /unsigned -c/unsigned)
@@ -432,7 +432,7 @@
 	     (inst ble x target)
 	     (inst bgt x target)))
 	((integerp y)
-	 (let ((y (+ y (if -c/fixnum (fixnum 1) 1))))
+	 (let ((y (+ y (if -c/fixnum (fixnumize 1) 1))))
 	   (if signed
 	       (inst cmplt x y temp)
 	       (inst cmpult x y temp))
@@ -499,7 +499,7 @@
   (:generator 2
     (let ((y (cond ((eql y 0) zero-tn)
 		   (t
-		    (inst li (fixnum y) temp)
+		    (inst li (fixnumize y) temp)
 		    temp))))
       (inst cmpeq x y temp)
       (if not-p

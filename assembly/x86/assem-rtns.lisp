@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.5 1998/02/19 19:37:29 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.6 2003/08/03 11:27:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -43,11 +43,11 @@
      
   ;; Pick off the cases where everything fits in register args.
   (inst jecxz zero-values)
-  (inst cmp ecx (fixnum 1))
+  (inst cmp ecx (fixnumize 1))
   (inst jmp :e one-value)
-  (inst cmp ecx (fixnum 2))
+  (inst cmp ecx (fixnumize 2))
   (inst jmp :e two-values)
-  (inst cmp ecx (fixnum 3))
+  (inst cmp ecx (fixnumize 3))
   (inst jmp :e three-values)
 
   ;; Save the count, because the loop is going to destroy it.
@@ -140,7 +140,7 @@
   (inst sub ecx esp-tn)
 
   ;; Check for all the args fitting the the registers.
-  (inst cmp ecx (fixnum 3))
+  (inst cmp ecx (fixnumize 3))
   (inst jmp :le REGISTER-ARGS)
 
   ;; Save the OLD-FP and RETURN-PC because the blit it going to trash
@@ -155,7 +155,7 @@
   (inst shr ecx 2)			; fixnum to raw words
   (inst std)				; count down
   (inst lea edi (make-ea :dword :base ebp-tn :disp (- word-bytes)))
-  (inst sub esi (fixnum 1))
+  (inst sub esi (fixnumize 1))
   (inst rep)
   (inst movs :dword)
 

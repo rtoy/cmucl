@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.2 2001/02/11 16:43:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.3 2003/08/03 11:27:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
       (inst addi ndescr rank (* (1+ array-dimensions-offset) vm:word-bytes))
       (inst clrrwi ndescr ndescr lowtag-bits)
       (inst add alloc-tn alloc-tn ndescr)
-      (inst addi ndescr rank (fixnum (1- vm:array-dimensions-offset)))
+      (inst addi ndescr rank (fixnumize (1- vm:array-dimensions-offset)))
       (inst slwi ndescr ndescr vm:type-bits)
       (inst or ndescr ndescr type)
       (inst srwi ndescr ndescr 2)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.17 1999/03/08 00:57:32 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.18 2003/08/03 11:27:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,7 @@
 			    lowtag-mask)))
     (inst and bytes (lognot lowtag-mask))
     (inst lea header (make-ea :dword :base rank
-			      :disp (fixnum (1- array-dimensions-offset))))
+			      :disp (fixnumize (1- array-dimensions-offset))))
     (inst shl header type-bits)
     (inst or  header type)
     (inst shr header 2)
@@ -101,7 +101,7 @@
   (:generator 5
     (let ((error (generate-error-code vop invalid-array-index-error
 				      array bound index))
-	  (index (if (sc-is index immediate) (fixnum (tn-value index)) index)))
+	  (index (if (sc-is index immediate) (fixnumize (tn-value index)) index)))
       (inst cmp bound index)
       ;; We use below-or-equal even though it's an unsigned test, because
       ;; negative indexes appear as real large unsigned numbers.  Therefore,

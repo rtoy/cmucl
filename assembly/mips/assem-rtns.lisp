@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.32 1994/10/31 04:56:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.33 2003/08/03 11:27:51 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,19 +44,19 @@
   ;; assume that we are never called with nvals == 1 and that a0 has already
   ;; been loaded.
   (inst blez nvals default-a0-and-on)
-  (inst subu count nvals (fixnum 2))
+  (inst subu count nvals (fixnumize 2))
   (inst blez count default-a2-and-on)
   (inst lw a1 vals (* 1 vm:word-bytes))
-  (inst subu count (fixnum 1))
+  (inst subu count (fixnumize 1))
   (inst blez count default-a3-and-on)
   (inst lw a2 vals (* 2 vm:word-bytes))
-  (inst subu count (fixnum 1))
+  (inst subu count (fixnumize 1))
   (inst blez count default-a4-and-on)
   (inst lw a3 vals (* 3 vm:word-bytes))
-  (inst subu count (fixnum 1))
+  (inst subu count (fixnumize 1))
   (inst blez count default-a5-and-on)
   (inst lw a4 vals (* 4 vm:word-bytes))
-  (inst subu count (fixnum 1))
+  (inst subu count (fixnumize 1))
   (inst blez count done)
   (inst lw a5 vals (* 5 vm:word-bytes))
 
@@ -68,7 +68,7 @@
   (inst lw temp vals)
   (inst addu vals vm:word-bytes)
   (inst sw temp dst)
-  (inst subu count (fixnum 1))
+  (inst subu count (fixnumize 1))
   (inst bne count zero-tn loop)
   (inst addu dst vm:word-bytes)
 		
@@ -147,7 +147,7 @@
   (inst lw a5 args (* 5 vm:word-bytes))
 
   ;; Calc SRC, DST, and COUNT
-  (inst addu count nargs (fixnum (- register-arg-count)))
+  (inst addu count nargs (fixnumize (- register-arg-count)))
   (inst blez count done)
   (inst addu src args (* vm:word-bytes register-arg-count))
   (inst addu dst cfp-tn (* vm:word-bytes register-arg-count))
@@ -157,7 +157,7 @@
   (inst lw temp src)
   (inst addu src src vm:word-bytes)
   (inst sw temp dst)
-  (inst addu count (fixnum -1))
+  (inst addu count (fixnumize -1))
   (inst bgtz count loop)
   (inst addu dst dst vm:word-bytes)
 	

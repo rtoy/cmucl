@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/move.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/move.lisp,v 1.2 2003/08/03 11:27:47 gerd Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -24,7 +24,7 @@
   (let ((val (tn-value x)))
     (etypecase val
       (integer
-       (inst lr y (fixnum val)))
+       (inst lr y (fixnumize val)))
       (null
        (move y null-tn))
       (symbol

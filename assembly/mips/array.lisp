@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.24 1994/10/31 04:56:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.25 2003/08/03 11:27:51 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,16 +125,16 @@
 
   test
 
-  (inst addu length length (fixnum -4))
+  (inst addu length length (fixnumize -4))
   (inst lw data lip 0)
   (inst bgez length loop)
   (inst nop)
 
-  (inst addu length length (fixnum 3))
+  (inst addu length length (fixnumize 3))
   (inst beq length zero-tn one-more)
-  (inst addu length length (fixnum -1))
+  (inst addu length length (fixnumize -1))
   (inst beq length zero-tn two-more)
-  (inst addu length length (fixnum -1))
+  (inst addu length length (fixnumize -1))
   (inst bne length zero-tn done)
   (inst nop)
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/pred.lisp,v 1.3 1997/11/18 10:53:24 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/pred.lisp,v 1.4 2003/08/03 11:27:45 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,7 +55,7 @@
 	  (integer
 	   (if (and (zerop val) (sc-is x any-reg descriptor-reg))
 	       (inst test x x) ; smaller
-	     (inst cmp x (fixnum val))))
+	     (inst cmp x (fixnumize val))))
 	  (symbol
 	   (inst cmp x (+ nil-value (static-symbol-offset val))))
 	  (character
@@ -68,7 +68,7 @@
 	  (integer
 	   (if (and (zerop val) (sc-is y any-reg descriptor-reg))
 	       (inst test y y) ; smaller
-	     (inst cmp y (fixnum val))))
+	     (inst cmp y (fixnumize val))))
 	  (symbol
 	   (inst cmp y (+ nil-value (static-symbol-offset val))))
 	  (character

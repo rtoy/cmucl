@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/assem-rtns.lisp,v 1.1 2001/02/11 14:21:52 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/assem-rtns.lisp,v 1.2 2003/08/03 11:27:51 gerd Exp $
 ;;;
 ;;;
 (in-package "PPC")
@@ -43,23 +43,23 @@
   ;; been loaded.
   (inst cmpwi nvals 0)
   (inst ble default-a0-and-on)
-  (inst cmpwi nvals (fixnum 2))
+  (inst cmpwi nvals (fixnumize 2))
   (inst lwz a1 vals (* 1 vm:word-bytes))
   (inst ble default-a2-and-on)
-  (inst cmpwi nvals (fixnum 3))
+  (inst cmpwi nvals (fixnumize 3))
   (inst lwz a2 vals (* 2 vm:word-bytes))
   (inst ble default-a3-and-on)
-  (inst cmpwi nvals (fixnum 4))
+  (inst cmpwi nvals (fixnumize 4))
   (inst lwz a3 vals (* 3 vm:word-bytes))
   (inst ble done)
 
   ;; Copy the remaining args to the top of the stack.
   (inst addi src vals (* 4 vm:word-bytes))
   (inst addi dst cfp-tn (* 4 vm:word-bytes))
-  (inst addic. count nvals (- (fixnum 4)))
+  (inst addic. count nvals (- (fixnumize 4)))
 
   LOOP
-  (inst subic. count count (fixnum 1))
+  (inst subic. count count (fixnumize 1))
   (inst lwz temp src 0)
   (inst addi src src vm:word-bytes)
   (inst stw temp dst 0)
@@ -125,7 +125,7 @@
   (inst lwz a3 args (* 3 vm:word-bytes))
 
   ;; Calc SRC, DST, and COUNT
-  (inst addic. count nargs (fixnum (- register-arg-count)))
+  (inst addic. count nargs (fixnumize (- register-arg-count)))
   (inst addi src args (* vm:word-bytes register-arg-count))
   (inst ble done)
   (inst addi dst cfp-tn (* vm:word-bytes register-arg-count))
@@ -135,7 +135,7 @@
   (inst lwz temp src 0)
   (inst addi src src vm:word-bytes)
   (inst stw temp dst 0)
-  (inst addic. count count (fixnum -1))
+  (inst addic. count count (fixnumize -1))
   (inst addi dst dst vm:word-bytes)
   (inst bgt loop)
 	

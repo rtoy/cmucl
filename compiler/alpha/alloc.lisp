@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/alloc.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/alloc.lisp,v 1.3 2003/08/03 11:27:49 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,7 +87,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
     (inst li (lognot lowtag-mask) ndescr)
-    (inst lda boxed (fixnum (1+ code-trace-table-offset-slot))
+    (inst lda boxed (fixnumize (1+ code-trace-table-offset-slot))
 	  boxed-arg)
     (inst and boxed ndescr boxed)
     (inst srl unboxed-arg word-shift unboxed)

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.5 1994/10/31 04:57:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.6 2003/08/03 11:27:50 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.5 1994/10/31 04:57:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.6 2003/08/03 11:27:50 gerd Rel $
 ;;;
 ;;; This file contains the support routines for arrays and vectors.
 ;;;
@@ -103,10 +103,10 @@
   (inst o accum temp)
   (inst inc lip 4)
   TEST
-  (inst s length (fixnum 4))
+  (inst s length (fixnumize 4))
   (inst bncx :lt loop)
   (loadw data lip)
-  (inst a length (fixnum 4))
+  (inst a length (fixnumize 4))
   (inst bc :eq done)
   (inst neg length)
   (inst sl length 1)

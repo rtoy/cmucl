@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/nlx.lisp,v 1.4 1998/03/04 14:53:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/nlx.lisp,v 1.5 2003/08/03 11:27:48 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,7 +196,7 @@
 		     (tn (tn-ref-tn tn-ref)))
 		 (defaults (cons default-lab tn))
 
-		 (inst bci := nil (fixnum i) count default-lab)
+		 (inst bci := nil (fixnumize i) count default-lab)
 		 (sc-case tn
 		   ((descriptor-reg any-reg)
 		    (loadw tn start i))
@@ -258,7 +258,7 @@
     ;; Copy stuff on stack.
     LOOP
     (inst stwm temp word-bytes dst)
-    (inst addib :<> (fixnum -1) num loop :nullify t)
+    (inst addib :<> (fixnumize -1) num loop :nullify t)
     (inst ldwm word-bytes src temp)
 
     DONE

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/subprim.lisp,v 1.4 1998/05/13 04:01:12 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/subprim.lisp,v 1.5 2003/08/03 11:27:45 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
     LOOP
     ;; Get the CDR and boost the count.
     (loadw ptr ptr cons-cdr-slot list-pointer-type)
-    (inst add count (fixnum 1))
+    (inst add count (fixnumize 1))
     ;; If we hit NIL, then we are done.
     (inst cmp ptr nil-value)
     (inst jmp :e done)
@@ -82,7 +82,7 @@
     ;; Indirect the next cons cell, and boost the count.
     LOOP
     (loadw ptr ptr cons-cdr-slot list-pointer-type)
-    (inst add count (fixnum 1))
+    (inst add count (fixnumize 1))
     ;; If we arn't done, go back for more.
     (inst cmp ptr nil-value)
     (inst jmp :ne loop)

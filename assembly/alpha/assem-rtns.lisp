@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/assem-rtns.lisp,v 1.3 1994/10/31 04:55:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/assem-rtns.lisp,v 1.4 2003/08/03 11:27:51 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,19 +44,19 @@
   ;; been loaded.
   (inst ble nvals default-a0-and-on)
   (inst ldl a1 (* 1 vm:word-bytes) vals)
-  (inst subq nvals (fixnum 2) count)
+  (inst subq nvals (fixnumize 2) count)
   (inst ble count default-a2-and-on)
   (inst ldl a2 (* 2 vm:word-bytes) vals)
-  (inst subq nvals (fixnum 3) count)
+  (inst subq nvals (fixnumize 3) count)
   (inst ble count default-a3-and-on)
   (inst ldl a3 (* 3 vm:word-bytes) vals)
-  (inst subq nvals (fixnum 4) count)
+  (inst subq nvals (fixnumize 4) count)
   (inst ble count default-a4-and-on)
   (inst ldl a4 (* 4 vm:word-bytes) vals)
-  (inst subq nvals (fixnum 5) count)
+  (inst subq nvals (fixnumize 5) count)
   (inst ble count default-a5-and-on)
   (inst ldl a5 (* 5 vm:word-bytes) vals)
-  (inst subq nvals (fixnum 6) count)
+  (inst subq nvals (fixnumize 6) count)
   (inst ble count done)
 
   ;; Copy the remaining args to the top of the stack.
@@ -67,7 +67,7 @@
   (inst ldl temp 0 vals)
   (inst addq vals vm:word-bytes vals)
   (inst stl temp 0 dst)
-  (inst subq count (fixnum 1) count)
+  (inst subq count (fixnumize 1) count)
   (inst addq dst vm:word-bytes dst)
   (inst bne count loop)
 		
@@ -140,7 +140,7 @@
   (inst ldl a5 (* 5 vm:word-bytes) args)
 
   ;; Calc SRC, DST, and COUNT
-  (inst subq nargs (fixnum register-arg-count) count)
+  (inst subq nargs (fixnumize register-arg-count) count)
   (inst addq args (* vm:word-bytes register-arg-count) src)
   (inst ble count done)
   (inst addq cfp-tn (* vm:word-bytes register-arg-count) dst)
@@ -150,7 +150,7 @@
   (inst ldl temp 0 src)
   (inst addq src vm:word-bytes src)
   (inst stl temp 0 dst)
-  (inst subq count (fixnum 1) count)
+  (inst subq count (fixnumize 1) count)
   (inst addq dst vm:word-bytes dst)
   (inst bgt count loop)
 	

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.6 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.7 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.6 1994/10/31 04:45:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.7 2003/08/03 11:27:47 gerd Rel $
 ;;;
 ;;; This file contains the IBM RT VM definition of operand loading/saving and the
 ;;; Move VOP.
@@ -28,7 +28,7 @@
   (let ((val (tn-value x)))
     (etypecase val
       (integer
-       (inst li y (fixnum val)))
+       (inst li y (fixnumize val)))
       (null
        (move y null-tn))
       (symbol

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.14 2001/11/29 16:45:35 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.15 2003/08/03 11:27:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -192,7 +192,7 @@
 		     (tn (tn-ref-tn tn-ref)))
 		 (defaults (cons default-lab tn))
 		 
-		 (inst cmp count (fixnum i))
+		 (inst cmp count (fixnumize i))
 		 (inst jmp :le default-lab)
 		 (sc-case tn
 		   ((descriptor-reg any-reg)

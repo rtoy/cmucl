@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.219 2003/07/03 02:13:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.220 2003/08/03 11:27:49 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1045,6 +1045,7 @@
 	   #+sparc "PSEUDO-ATOMIC-TRAP"
 	   #+sparc "GET-FP-OPERANDS"
 	   "CALLBACK-ACCESSOR-FORM" "MAKE-CALLBACK-TRAMPOLINE"
+	   "FIXNUMIZE"
 	   ))
 
 (defpackage "CONDITIONS")

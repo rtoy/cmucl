@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.2 1994/10/31 04:57:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.3 2003/08/03 11:27:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.2 1994/10/31 04:57:20 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.3 2003/08/03 11:27:50 gerd Exp $
 ;;;
 ;;;
 (in-package "SPARC")
@@ -47,26 +47,26 @@
   ;; been loaded.
   (inst cmp nvals)
   (inst b :le default-a0-and-on)
-  (inst cmp nvals (fixnum 2))
+  (inst cmp nvals (fixnumize 2))
   (inst b :le default-a2-and-on)
   (inst ld a1 vals (* 1 vm:word-bytes))
-  (inst cmp nvals (fixnum 3))
+  (inst cmp nvals (fixnumize 3))
   (inst b :le default-a3-and-on)
   (inst ld a2 vals (* 2 vm:word-bytes))
-  (inst cmp nvals (fixnum 4))
+  (inst cmp nvals (fixnumize 4))
   (inst b :le default-a4-and-on)
   (inst ld a3 vals (* 3 vm:word-bytes))
-  (inst cmp nvals (fixnum 5))
+  (inst cmp nvals (fixnumize 5))
   (inst b :le default-a5-and-on)
   (inst ld a4 vals (* 4 vm:word-bytes))
-  (inst cmp nvals (fixnum 6))
+  (inst cmp nvals (fixnumize 6))
   (inst b :le done)
   (inst ld a5 vals (* 5 vm:word-bytes))
 
   ;; Copy the remaining args to the top of the stack.
   (inst add src vals (* 6 vm:word-bytes))
   (inst add dst cfp-tn (* 6 vm:word-bytes))
-  (inst subcc count nvals (fixnum 6))
+  (inst subcc count nvals (fixnumize 6))
 
   LOOP
   (inst ld temp src)
@@ -74,7 +74,7 @@
   (inst st temp dst)
   (inst add dst vm:word-bytes)
   (inst b :gt loop)
-  (inst subcc count (fixnum 1))
+  (inst subcc count (fixnumize 1))
 		
   (inst b done)
   (inst nop)
@@ -144,7 +144,7 @@
   (inst ld a5 args (* 5 vm:word-bytes))
 
   ;; Calc SRC, DST, and COUNT
-  (inst addcc count nargs (fixnum (- register-arg-count)))
+  (inst addcc count nargs (fixnumize (- register-arg-count)))
   (inst b :le done)
   (inst add src args (* vm:word-bytes register-arg-count))
   (inst add dst cfp-tn (* vm:word-bytes register-arg-count))
@@ -154,7 +154,7 @@
   (inst ld temp src)
   (inst add src src vm:word-bytes)
   (inst st temp dst)
-  (inst addcc count (fixnum -1))
+  (inst addcc count (fixnumize -1))
   (inst b :gt loop)
   (inst add dst dst vm:word-bytes)
 	

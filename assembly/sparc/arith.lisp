@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.17 2001/10/05 15:13:51 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.18 2003/08/03 11:27:50 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,7 +54,7 @@
 
   DO-STATIC-FUN
   (inst ld code-tn null-tn (static-function-offset 'two-arg-+))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
@@ -98,7 +98,7 @@
 
   DO-STATIC-FUN
   (inst ld code-tn null-tn (static-function-offset 'two-arg--))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
@@ -201,7 +201,7 @@
 
   DO-STATIC-FUN
   (inst ld code-tn null-tn (static-function-offset 'two-arg-*))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
@@ -271,7 +271,7 @@
 	     (emit-label label-1)
 	     (inst b :gtu label-2)
 	     (inst sll quo 1)
-	     (inst add quo (if tagged (fixnum 1) 1))
+	     (inst add quo (if tagged (fixnumize 1) 1))
 	     (inst sub rem divisor)
 	     (emit-label label-2))))))
     (do-loop (if tagged 30 32))))
@@ -422,7 +422,7 @@
 	  
 	  DO-STATIC-FN
 	  (inst ld code-tn null-tn (static-function-offset ',static-fn))
-	  (inst li nargs (fixnum 2))
+	  (inst li nargs (fixnumize 2))
 	  (inst move ocfp cfp-tn)
 	  (inst j code-tn
 		(- (* function-code-offset word-bytes) function-pointer-type))
@@ -468,7 +468,7 @@
 
   DO-STATIC-FN
   (inst ld code-tn null-tn (static-function-offset 'eql))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
@@ -504,7 +504,7 @@
 
   DO-STATIC-FN
   (inst ld code-tn null-tn (static-function-offset 'two-arg-=))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))
@@ -540,7 +540,7 @@
 
   DO-STATIC-FN
   (inst ld code-tn null-tn (static-function-offset 'two-arg-=))
-  (inst li nargs (fixnum 2))
+  (inst li nargs (fixnumize 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
 	(- (* function-code-offset word-bytes) function-pointer-type))

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.6 1994/10/31 04:57:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.7 2003/08/03 11:27:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.6 1994/10/31 04:57:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.7 2003/08/03 11:27:50 gerd Exp $
 ;;;
 
 (in-package "RT")
@@ -113,24 +113,24 @@
   (inst c nvals 0)
   (inst bc :eq default-a0-and-on)
   (loadw a0 src 0)
-  (inst c nvals (fixnum 1))
+  (inst c nvals (fixnumize 1))
   (inst bc :eq default-a1-and-on)
   (loadw a1 src 1)
-  (inst c nvals (fixnum 2))
+  (inst c nvals (fixnumize 2))
   (inst bc :eq default-a2-and-on)
   (loadw a2 src 2)
   ;;
   ;; Copy the remaining args to the top of the stack.
   (inst inc src (* word-bytes register-arg-count))
   (inst cal dst cfp-tn (* word-bytes register-arg-count))
-  (inst s count nvals (fixnum 3))
+  (inst s count nvals (fixnumize 3))
   (inst bnc :gt done)
   LOOP
   (loadw temp src)
   (inst inc src word-bytes)
   (storew temp dst)
   (inst inc dst word-bytes)
-  (inst s count (fixnum 1))
+  (inst s count (fixnumize 1))
   (inst bc :gt loop)
   (inst b done)
   ;;
@@ -242,19 +242,19 @@
   (inst bnc :lt CMA-LOOP)
   
   ;; Figure out which argument registers may be more args.
-  (inst c fixedargs (fixnum 2))
+  (inst c fixedargs (fixnumize 2))
   (inst bc :eq two-fixed-args)
-  (inst c fixedargs (fixnum 1))
+  (inst c fixedargs (fixnumize 1))
   (inst bc :eq one-fixed-arg)
   
   ;; Copy register more args being careful to stop before running out of args.
   (storew a0 ocsp)
-  (inst c nargs-tn (fixnum 1))
+  (inst c nargs-tn (fixnumize 1))
   (inst bc :eq CMA-DONE)
   (inst inc ocsp word-bytes)
   ONE-FIXED-ARG
   (storew a1 ocsp)
-  (inst c nargs-tn (fixnum 2))
+  (inst c nargs-tn (fixnumize 2))
   (inst bc :eq CMA-DONE)
   (inst inc ocsp word-bytes)
   TWO-FIXED-ARGS
@@ -294,13 +294,13 @@
   (loadw a1 args 1)
   (loadw a2 args 2)
   ;; Are we done?
-  (inst c nargs (fixnum register-arg-count))
+  (inst c nargs (fixnumize register-arg-count))
   (inst bnc :gt done)
   ;; Calc DST and COUNT after saving those registers.
   (inst inc csp-tn (* word-bytes 2))
   (storew count csp-tn -1)
   (storew dst csp-tn -2)
-  (inst a count nargs (fixnum (- register-arg-count)))
+  (inst a count nargs (fixnumize (- register-arg-count)))
   (inst a args (* vm:word-bytes register-arg-count))
   (inst a dst cfp-tn (* vm:word-bytes register-arg-count))
   LOOP
@@ -308,7 +308,7 @@
   (loadw temp args)
   (inst inc args vm:word-bytes)
   (storew temp dst)
-  (inst s count (fixnum 1))
+  (inst s count (fixnumize 1))
   (inst bcx :gt loop)
   (inst inc dst vm:word-bytes)
   ;; Restore

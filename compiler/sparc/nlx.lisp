@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.11 2002/02/19 15:46:09 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.12 2003/08/03 11:27:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -214,7 +214,7 @@
 	     (emit-label no-values)))
 	  (t
 	   (collect ((defaults))
-	     (inst subcc count (fixnum 1))
+	     (inst subcc count (fixnumize 1))
 	     (do ((i 0 (1+ i))
 		  (tn-ref values (tn-ref-across tn-ref)))
 		 ((null tn-ref))
@@ -223,7 +223,7 @@
 		 (defaults (cons default-lab tn))
 		 
 		 (inst b :lt default-lab)
-		 (inst subcc count (fixnum 1))
+		 (inst subcc count (fixnumize 1))
 		 (sc-case tn
 			  ((descriptor-reg any-reg)
 			   (loadw tn start i))
@@ -279,7 +279,7 @@
       ;; Copy stuff down the stack.
       (emit-label loop)
       (inst ld temp src num)
-      (inst add num (fixnum 1))
+      (inst add num (fixnumize 1))
       (inst cmp num count)
       (inst b :ne loop)
       (inst st temp dst num)

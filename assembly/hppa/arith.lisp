@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.8 1994/10/31 04:56:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.9 2003/08/03 11:27:51 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,7 +130,7 @@
 
   DO-STATIC-FUN
   (inst ldw (static-function-offset 'two-arg-+) null-tn lip)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst bv lip)
   (inst move csp-tn cfp-tn))
@@ -159,7 +159,7 @@
 
   DO-STATIC-FUN
   (inst ldw (static-function-offset 'two-arg--) null-tn lip)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst bv lip)
   (inst move csp-tn cfp-tn))
@@ -197,7 +197,7 @@
 
 	  DO-STATIC-FN
 	  (inst ldw (static-function-offset ',static-fn) null-tn lip)
-	  (inst li (fixnum 2) nargs)
+	  (inst li (fixnumize 2) nargs)
 	  (inst move cfp-tn ocfp)
 	  (inst bv lip)
 	  (inst move csp-tn cfp-tn))))
@@ -235,7 +235,7 @@
 
   DO-STATIC-FN
   (inst ldw (static-function-offset 'eql) null-tn lip)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst bv lip)
   (inst move csp-tn cfp-tn)
@@ -271,7 +271,7 @@
 
   DO-STATIC-FN
   (inst ldw (static-function-offset 'two-arg-=) null-tn lip)
-  (inst li (fixnum 2) nargs)
+  (inst li (fixnumize 2) nargs)
   (inst move cfp-tn ocfp)
   (inst bv lip)
   (inst move csp-tn cfp-tn)

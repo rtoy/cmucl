@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/arith.lisp,v 1.5 2000/01/17 16:42:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/arith.lisp,v 1.6 2003/08/03 11:27:49 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,7 +51,7 @@
 	      temp)
   (:translate lognot)
   (:generator 2
-    (inst li (fixnum -1) temp)
+    (inst li (fixnumize -1) temp)
     (inst xor x temp res)))
 
 (define-vop (fast-lognot/signed signed-unop)
@@ -152,7 +152,7 @@
        (:arg-types tagged-num (:constant ,tagged-type))
        (:translate ,translate)
        (:generator ,cost
-	 (let ((y (fixnum y)))
+	 (let ((y (fixnumize y)))
 	   ,inst)))
      (define-vop (,(symbolicate "FAST-" translate "-C/SIGNED=>SIGNED")
 		  fast-signed-c-binop)
@@ -189,7 +189,7 @@
   (:result-types (:or signed-num unsigned-num))
   (:note nil)
   (:generator 3
-    (inst addio (fixnum y) x r)))
+    (inst addio (fixnumize y) x r)))
 
 (define-vop (fast--/fixnum fast--/fixnum=>fixnum)
   (:results (r :scs (any-reg descriptor-reg)))
@@ -203,7 +203,7 @@
   (:result-types (:or signed-num unsigned-num))
   (:note nil)
   (:generator 3
-    (inst addio (- (fixnum y)) x r)))
+    (inst addio (- (fixnumize y)) x r)))
 
 ;;; Shifting
 
@@ -315,7 +315,7 @@
     LOOP
     (inst srl shift 1 shift)
     (inst comb :<> shift zero-tn loop)
-    (inst addi (fixnum 1) res res)
+    (inst addi (fixnumize 1) res res)
     DONE))
 
 (define-vop (unsigned-byte-32-count)
@@ -527,7 +527,7 @@
 				,(if signed signed-cond unsigned-cond)
 				not-p
 				,(if (eq suffix '-c/fixnum)
-				     '(fixnum y)
+				     '(fixnumize y)
 				     'y)
 				x
 				target)))))
@@ -571,7 +571,7 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 2
-    (inst bci := not-p (fixnum y) x target)))
+    (inst bci := not-p (fixnumize y) x target)))
 ;;;
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
   (:arg-types * (:constant (signed-byte 9)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.11 1998/03/04 14:53:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.12 2003/08/03 11:27:48 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -348,7 +348,7 @@ default-value-8
 	  (let ((default-lab (gen-label))
 		(tn (tn-ref-tn val)))
 	    (defaults (cons default-lab tn))
-	    (inst bci :>= nil (fixnum i) nargs-tn default-lab)
+	    (inst bci :>= nil (fixnumize i) nargs-tn default-lab)
 	    (loadw move-temp ocfp-tn i)
 	    (store-stack-tn tn move-temp)))
 	
@@ -401,7 +401,7 @@ default-value-8
     (inst compute-code-from-lra code-tn lra-label temp code-tn)
     (inst move csp-tn start)
     (inst stwm (first register-arg-tns) word-bytes csp-tn)
-    (inst li (fixnum 1) count)
+    (inst li (fixnumize 1) count)
     
     DONE
     
@@ -767,7 +767,7 @@ default-value-8
 					     `(loadw ,name new-fp
 						     ,(incf index)))
 					 register-arg-names)))
-			   '((inst li (fixnum nargs) nargs-pass))))
+			   '((inst li (fixnumize nargs) nargs-pass))))
 		    ,@(if (eq return :tail)
 			  '((:load-ocfp
 			     (sc-case ocfp
@@ -964,7 +964,7 @@ default-value-8
 	(inst move cur-nfp nsp-tn)))
     ;; Establish the values pointer and values count.
     (move cfp-tn val-ptr)
-    (inst li (fixnum nvals) nargs)
+    (inst li (fixnumize nvals) nargs)
     ;; restore the frame pointer and clear as much of the control
     ;; stack as possible.
     (move old-fp cfp-tn)
@@ -1008,7 +1008,7 @@ default-value-8
 
     (unless (policy node (> space speed))
       ;; Check for the single case.
-      (inst comib :<> (fixnum 1) nvals-arg not-single)
+      (inst comib :<> (fixnumize 1) nvals-arg not-single)
       (loadw a0 vals-arg)
 
       ;; Return with one value.
@@ -1066,7 +1066,7 @@ default-value-8
   (:generator 20
     ;; Figure out how many things we are going to copy.
     (unless (zerop fixed)
-      (inst addi (- (fixnum fixed)) nargs-tn count))
+      (inst addi (- (fixnumize fixed)) nargs-tn count))
 
     ;; Blow out of here if is nothing to copy.
     (inst comb :<= (if (zerop fixed) nargs-tn count) zero-tn done :nullify t)
@@ -1082,7 +1082,7 @@ default-value-8
     (when (< fixed register-arg-count)
       ;; We must stop when we run out of stack args, not when we run out of
       ;; args in general.
-      (inst addi (fixnum (- register-arg-count)) nargs-tn count)
+      (inst addi (fixnumize (- register-arg-count)) nargs-tn count)
       ;; Everything of interest in registers.
       (inst comb :<= count zero-tn do-regs))
     ;; Initialize dst to be end of stack.
@@ -1094,7 +1094,7 @@ default-value-8
     LOOP
     ;; *--dst = *--src, --count
     (inst ldwm (- word-bytes) src temp)
-    (inst addib :> (fixnum -1) count loop)
+    (inst addib :> (fixnumize -1) count loop)
     (inst stwm temp (- word-bytes) dst)
 
     DO-REGS
@@ -1102,11 +1102,11 @@ default-value-8
       ;; Now we have to deposit any more args that showed up in registers.
       ;; We know there is at least one more arg, otherwise we would have
       ;; branched to done up at the top.
-      (inst addi (fixnum (- fixed)) nargs-tn count)
+      (inst addi (fixnumize (- fixed)) nargs-tn count)
       (do ((i fixed (1+ i)))
 	  ((>= i register-arg-count))
 	;; Is this the last one?
-	(inst addib :<= (fixnum -1) count done)
+	(inst addib :<= (fixnumize -1) count done)
 	;; Store it relative to the pointer saved at the start.
 	(storew (nth i register-arg-tns) result (- i fixed))))
     DONE))
@@ -1154,7 +1154,7 @@ default-value-8
 	
 	;; Dec count, and if != zero, go back for more.
 	(inst addi (* 2 vm:word-bytes) dst dst)
-	(inst addib :> (fixnum -1) count loop :nullify t)
+	(inst addib :> (fixnumize -1) count loop :nullify t)
 	(storew dst dst -1 list-pointer-type)
 	
 	;; NIL out the last cons.
@@ -1186,7 +1186,7 @@ default-value-8
   (:result-types t tagged-num)
   (:note "more-arg-context")
   (:generator 5
-    (inst addi (fixnum (- fixed)) supplied count)
+    (inst addi (fixnumize (- fixed)) supplied count)
     (inst sub csp-tn count context)))
 
 
@@ -1206,7 +1206,7 @@ default-value-8
       (cond ((zerop count)
 	     (inst bc :<> nil nargs zero-tn err-lab))
 	    (t
-	     (inst bci :<> nil (fixnum count) nargs err-lab))))))
+	     (inst bci :<> nil (fixnumize count) nargs err-lab))))))
 
 ;;; Signal an argument count error.
 ;;;

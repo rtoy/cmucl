@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.8 2000/08/20 14:44:23 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.9 2003/08/03 11:27:45 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,7 +138,7 @@
 	      (inst mov
 		    (make-ea :dword :base object
 			     :disp (- (* (+ base offset) word-bytes) lowtag))
-		    (fixnum val)))
+		    (fixnumize val)))
 	     (symbol
 	      (inst mov
 		    (make-ea :dword :base object

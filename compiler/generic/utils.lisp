@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.6 2001/06/25 16:48:22 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.7 2003/08/03 11:27:49 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,14 +16,14 @@
 
 (in-package "VM")
 
-(export '(fixnum static-symbol-p static-symbol-offset offset-static-symbol
-		 static-function-offset))
+(export '(fixnumize static-symbol-p static-symbol-offset offset-static-symbol
+	  static-function-offset))
 
 
 
 ;;;; Handy routine for making fixnums:
 
-(defun fixnum (num)
+(defun fixnumize (num)
   "Make a fixnum out of NUM.  (i.e. shift by two bits if it will fit.)"
   (if (<= #x-20000000 num #x1fffffff)
       (ash num 2)

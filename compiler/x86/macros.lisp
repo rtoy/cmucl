@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.16 2002/08/27 22:18:28 moore Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.17 2003/08/03 11:27:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -346,7 +346,7 @@
 					   'lisp::*pseudo-atomic-atomic*)
 					  (ash symbol-value-slot word-shift)
 					  (- other-pointer-type)))
-	      (fixnum 1)))
+	      (fixnumize 1)))
       ,@forms
       (when *enable-pseudo-atomic*
 	(inst mov (make-ea :byte :disp (+ nil-value

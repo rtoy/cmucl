@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.4 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.5 2003/08/03 11:27:46 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.4 1994/10/31 04:45:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.5 2003/08/03 11:27:46 gerd Rel $
 ;;;
 ;;; This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -63,7 +63,7 @@
 	   (load-stack-tn temp tn)
 	   (storew temp start-temp i)))))
     (move start start-temp)
-    (inst li count (fixnum nvals))))
+    (inst li count (fixnumize nvals))))
 
 
 ;;; VALUES-LIST -- VOP.

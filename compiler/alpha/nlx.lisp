@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/nlx.lisp,v 1.4 1998/01/26 15:54:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/nlx.lisp,v 1.5 2003/08/03 11:27:49 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -211,7 +211,7 @@
 		 (defaults (cons default-lab tn))
 		 
 		 (inst move count temp)
-		 (inst lda count (fixnum -1) count)
+		 (inst lda count (fixnumize -1) count)
 		 (inst beq temp default-lab)
 		 (sc-case tn
 			  ((descriptor-reg any-reg)
@@ -274,7 +274,7 @@
       (loadw temp src)
       (inst lda src vm:word-bytes src)
       (storew temp dst)
-      (inst lda num (fixnum -1) num)
+      (inst lda num (fixnumize -1) num)
       (inst lda dst vm:word-bytes dst)
       (inst bne num loop)
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.17 2002/08/01 13:06:06 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.18 2003/08/03 11:27:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -350,7 +350,7 @@
 		(tn (tn-ref-tn val)))
 	    (defaults (cons default-lab tn))
 
-	    (inst cmp ecx-tn (fixnum i))
+	    (inst cmp ecx-tn (fixnumize i))
 	    (inst jmp :be default-lab)
 	    (loadw edx-tn ebx-tn (- (1+ i)))
 	    (inst mov tn edx-tn)))
@@ -407,13 +407,13 @@
       (storew edi-tn ebx-tn (- (1+ 1)))
       ;; Compute the number of stack arguments, and if it's zero or less,
       ;; don't copy any stack arguments.
-      (inst sub ecx-tn (fixnum register-arg-count))
+      (inst sub ecx-tn (fixnumize register-arg-count))
       (inst jmp :le no-stack-args)
 
       ;; Throw away any unwanted args.
-      (inst cmp ecx-tn (fixnum (- nvals register-arg-count)))
+      (inst cmp ecx-tn (fixnumize (- nvals register-arg-count)))
       (inst jmp :be count-okay)
-      (inst mov ecx-tn (fixnum (- nvals register-arg-count)))
+      (inst mov ecx-tn (fixnumize (- nvals register-arg-count)))
       (emit-label count-okay)
       ;; Save the number of stack values.
       (inst mov eax-tn ecx-tn)
@@ -434,7 +434,7 @@
       ;; Restore ESI.
       (loadw esi-tn ebx-tn (- (1+ 2)))
       ;; Now we have to default the remaining args.  Find out how many.
-      (inst sub eax-tn (fixnum (- nvals register-arg-count)))
+      (inst sub eax-tn (fixnumize (- nvals register-arg-count)))
       (inst neg eax-tn)
       ;; If none, then just blow out of here.
       (inst jmp :le restore-edi)
@@ -483,7 +483,7 @@
     
     (inst mov start esp-tn)
     (inst push (first register-arg-tns))
-    (inst mov count (fixnum 1))
+    (inst mov count (fixnumize 1))
     (inst jmp done)
 
     (emit-label variable-values)
@@ -912,7 +912,7 @@
 		    (noise))
 	   '((if (zerop nargs)
 		 (inst xor ecx ecx)
-	       (inst mov ecx (fixnum nargs)))))
+	       (inst mov ecx (fixnumize nargs)))))
      ,@(cond ((eq return :tail)
 	      '(;; Python has figured out what frame we should return
 		;; to so might as well use that clue. This seems
@@ -953,7 +953,7 @@
 		;; there are at least 3 slots. This hack just adds 3
 		;; more.
 		,(if variable
-		     '(inst sub esp-tn (fixnum 3)))
+		     '(inst sub esp-tn (fixnumize 3)))
 
 		;; Save the fp
 		(storew ebp-tn new-fp (- (1+ ocfp-save-offset)))
@@ -1089,7 +1089,7 @@
     (move ebx ebp-tn)
     (if (zerop nvals)
 	(inst xor ecx ecx) ; smaller
-      (inst mov ecx (fixnum nvals)))
+      (inst mov ecx (fixnumize nvals)))
     ;; restore the frame pointer.
     (move ebp-tn old-fp)
     ;; clear as much of the stack as possible, but not past the return
@@ -1153,7 +1153,7 @@
     (unless (policy node (> space speed))
       ;; Check for the single case.
       (let ((not-single (gen-label)))
-	(inst cmp nvals (fixnum 1))
+	(inst cmp nvals (fixnumize 1))
 	(inst jmp :ne not-single)
 	
 	;; Return with one value.
@@ -1226,14 +1226,14 @@
     (cond ((zerop fixed)
 	   (inst jecxz just-alloc-frame))
 	  (t
-	   (inst cmp ecx-tn (fixnum fixed))
+	   (inst cmp ecx-tn (fixnumize fixed))
 	   (inst jmp :be just-alloc-frame)))
     
     ;; Allocate the space on the stack.
     ;; stack = ebp - (max 3 frame-size) - (nargs - fixed)
     (inst lea ebx-tn
 	  (make-ea :dword :base ebp-tn
-		   :disp (- (fixnum fixed)
+		   :disp (- (fixnumize fixed)
 			    (* vm:word-bytes
 			       (max 3 (sb-allocated-size 'stack))))))
     (inst sub ebx-tn ecx-tn)  ; Got the new stack in ebx
@@ -1248,12 +1248,12 @@
 	   ;; We must stop when we run out of stack args, not when we
 	   ;; run out of more args.
 	   ;; Number to copy = nargs-3
-	   (inst sub ecx-tn (fixnum register-arg-count))
+	   (inst sub ecx-tn (fixnumize register-arg-count))
 	   ;; Everything of interest in registers.
 	   (inst jmp :be do-regs))
 	  (t
 	   ;; Number to copy = nargs-fixed
-	   (inst sub ecx-tn (fixnum fixed))))
+	   (inst sub ecx-tn (fixnumize fixed))))
     
     ;; Save edi and esi register args.
     (inst push edi-tn)
@@ -1304,7 +1304,7 @@
 	      ;; Don't deposit any more than there are.
 	      (if (zerop i)
 		  (inst test ecx-tn ecx-tn)
-		(inst cmp ecx-tn (fixnum i)))
+		(inst cmp ecx-tn (fixnumize i)))
 	      (inst jmp :eq done)))
 
     (inst jmp done)
@@ -1425,9 +1425,9 @@
     ;; Point to the first more-arg, not above it.
     (inst lea context (make-ea :dword :base esp-tn
 			       :index count :scale 1
-			       :disp (- (+ (fixnum fixed) 4))))
+			       :disp (- (+ (fixnumize fixed) 4))))
     (unless (zerop fixed)
-      (inst sub count (fixnum fixed)))))
+      (inst sub count (fixnumize fixed)))))
 
 ;;; Signal wrong argument count error if Nargs isn't = to Count.
 ;;;
@@ -1444,7 +1444,7 @@
 	   (generate-error-code vop invalid-argument-count-error nargs)))
       (if (zerop count)
 	  (inst test nargs nargs)  ; smaller instruction
-	(inst cmp nargs (fixnum count)))
+	(inst cmp nargs (fixnumize count)))
       (inst jmp :ne err-lab))))
 
 ;;; Various other error signallers.

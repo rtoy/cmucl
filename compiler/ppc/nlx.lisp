@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/nlx.lisp,v 1.2 2001/02/11 16:43:19 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/nlx.lisp,v 1.3 2003/08/03 11:27:47 gerd Rel $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -197,7 +197,7 @@
 	     (emit-label no-values)))
 	  (t
 	   (collect ((defaults))
-	     (inst addic. count count (- (fixnum 1)))
+	     (inst addic. count count (- (fixnumize 1)))
 	     (do ((i 0 (1+ i))
 		  (tn-ref values (tn-ref-across tn-ref)))
 		 ((null tn-ref))
@@ -205,7 +205,7 @@
 		     (tn (tn-ref-tn tn-ref)))
 		 (defaults (cons default-lab tn))
 		 
-		 (inst subi count count (fixnum 1))
+		 (inst subi count count (fixnumize 1))
 		 (inst blt default-lab)
 		 (sc-case tn
 			  ((descriptor-reg any-reg)
@@ -262,7 +262,7 @@
       ;; Copy stuff down the stack.
       (emit-label loop)
       (inst lwzx temp src num)
-      (inst addi num num (fixnum 1))
+      (inst addi num num (fixnumize 1))
       (inst cmpw num count)
       (inst stwx temp dst num)
       (inst bne loop)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/subprim.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/subprim.lisp,v 1.2 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,7 @@
       (test-type ptr temp not-list t vm:list-pointer-type)
 
       (loadw ptr ptr vm:cons-cdr-slot vm:list-pointer-type)
-      (inst addi count count (fixnum 1))
+      (inst addi count count (fixnumize 1))
       (test-type ptr temp loop nil vm:list-pointer-type)
 
       (cerror-call vop done object-not-list-error ptr)

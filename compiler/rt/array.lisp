@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.11 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.12 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.11 1994/10/31 04:45:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.12 2003/08/03 11:27:47 gerd Rel $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -47,7 +47,7 @@
       (inst cas alloc rank alloc)
       (inst nilo alloc (logand #xFFFF (lognot vm:lowtag-mask)))
       (store-symbol-value alloc *allocation-pointer*)
-      (inst cal ndescr rank (fixnum (1- vm:array-dimensions-offset)))
+      (inst cal ndescr rank (fixnumize (1- vm:array-dimensions-offset)))
       ;; Shift the fixnum representation of the length, then OR in the fixnum
       ;; rep of the type code, and then shift off the two extra fixnum zeros.
       (inst sl ndescr vm:type-bits)

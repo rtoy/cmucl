@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.63 1998/03/04 14:53:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.64 2003/08/03 11:27:48 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -325,7 +325,7 @@ default-value-8
 	  (inst b regs-defaulted)
 	  ;; If there are no stack results, clear the stack now.
 	  (if (> nvals register-arg-count)
-	      (inst addu temp nargs-tn (fixnum (- register-arg-count)))
+	      (inst addu temp nargs-tn (fixnumize (- register-arg-count)))
 	      (move csp-tn ocfp-tn)))
 	
 	;; Do the single value calse.
@@ -356,7 +356,7 @@ default-value-8
 		
 		(inst blez temp default-lab)
 		(inst lw move-temp ocfp-tn (* i word-bytes))
-		(inst addu temp temp (fixnum -1))
+		(inst addu temp temp (fixnumize -1))
 		(store-stack-tn tn move-temp)))
 	    
 	    (emit-label defaulting-done)
@@ -415,7 +415,7 @@ default-value-8
     (inst addu csp-tn csp-tn 4)
     (storew (first register-arg-tns) csp-tn -1)
     (inst addu start csp-tn -4)
-    (inst li count (fixnum 1))
+    (inst li count (fixnumize 1))
     
     (emit-label done)
     
@@ -792,7 +792,7 @@ default-value-8
 						      ,(ash (incf index)
 							    word-shift)))
 					   register-arg-names)))
-			     '((inst li nargs-pass (fixnum nargs)))))
+			     '((inst li nargs-pass (fixnumize nargs)))))
 		      ,@(if (eq return :tail)
 			    '((:load-ocfp
 			       (sc-case ocfp
@@ -1027,7 +1027,7 @@ default-value-8
 	      (bytes-needed-for-non-descriptor-stack-frame))))
     ;; Establish the values pointer and values count.
     (move val-ptr cfp-tn)
-    (inst li nargs (fixnum nvals))
+    (inst li nargs (fixnumize nvals))
     ;; restore the frame pointer and clear as much of the control
     ;; stack as possible.
     (move cfp-tn ocfp)
@@ -1081,7 +1081,7 @@ default-value-8
 		(bytes-needed-for-non-descriptor-stack-frame))))
 
       ;; Check for the single case.
-      (inst li a0 (fixnum 1))
+      (inst li a0 (fixnumize 1))
       (inst bne nvals-arg a0 not-single)
       (inst lw a0 vals-arg)
 
@@ -1158,14 +1158,14 @@ default-value-8
 	     (inst beq nargs-tn done)
 	     (inst addu csp-tn csp-tn nargs-tn))
 	    (t
-	     (inst addu count nargs-tn (fixnum (- fixed)))
+	     (inst addu count nargs-tn (fixnumize (- fixed)))
 	     (inst blez count done)
 	     (inst nop)
 	     (inst addu csp-tn csp-tn count)))
       (when (< fixed register-arg-count)
 	;; We must stop when we run out of stack args, not when we run out of
 	;; more args.
-	(inst addu count nargs-tn (fixnum (- register-arg-count))))
+	(inst addu count nargs-tn (fixnumize (- register-arg-count))))
       ;; Everything of interest in registers.
       (inst blez count do-regs)
       ;; Initialize dst to be end of stack.
@@ -1176,7 +1176,7 @@ default-value-8
       (emit-label loop)
       ;; *--dst = *--src, --count
       (inst addu src src (- word-bytes))
-      (inst addu count count (fixnum -1))
+      (inst addu count count (fixnumize -1))
       (loadw temp src)
       (inst addu dst dst (- word-bytes))
       (inst bgtz count loop)
@@ -1187,7 +1187,7 @@ default-value-8
 	;; Now we have to deposit any more args that showed up in registers.
 	;; We know there is at least one more arg, otherwise we would have
 	;; branched to done up at the top.
-	(inst subu count nargs-tn (fixnum (1+ fixed)))
+	(inst subu count nargs-tn (fixnumize (1+ fixed)))
 	(do ((i fixed (1+ i)))
 	    ((>= i register-arg-count))
 	  ;; Is this the last one?
@@ -1195,7 +1195,7 @@ default-value-8
 	  ;; Store it relative to the pointer saved at the start.
 	  (storew (nth i register-arg-tns) result (- i fixed))
 	  ;; Decrement count.
-	  (inst subu count (fixnum 1))))
+	  (inst subu count (fixnumize 1))))
       (emit-label done))))
 
 
@@ -1249,7 +1249,7 @@ default-value-8
 	(inst addu context context word-bytes)
 
 	;; Dec count, and if != zero, go back for more.
-	(inst addu count count (fixnum -1))
+	(inst addu count count (fixnumize -1))
 	(inst bne count zero-tn loop)
 
 	;; Store the value in the car (in delay slot)
@@ -1331,7 +1331,7 @@ default-value-8
   (:result-types t tagged-num)
   (:note "more-arg-context")
   (:generator 5
-    (inst addu count supplied (fixnum (- fixed)))
+    (inst addu count supplied (fixnumize (- fixed)))
     (inst subu context csp-tn count)))
 
 
@@ -1353,7 +1353,7 @@ default-value-8
 	     (inst bne nargs zero-tn err-lab)
 	     (inst nop))
 	    (t
-	     (inst li temp (fixnum count))
+	     (inst li temp (fixnumize count))
 	     (inst bne nargs temp err-lab)
 	     (inst nop))))))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.7 1998/02/19 19:37:27 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.8 2003/08/03 11:27:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,7 +104,7 @@
   ;; First, check to see how many of them there are.  If zero, blow out of
   ;; here.  Otherwise, multiply by 8.
   (inst mov ecx length)
-  (inst and ecx (fixnum 3))
+  (inst and ecx (fixnumize 3))
   (inst jecxz done)
   (inst shl ecx 1)
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.8 1994/10/31 04:56:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/alloc.lisp,v 1.9 2003/08/03 11:27:51 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
      (:res result descriptor-reg a0-offset))
 
   ;; Is it a large object?
-  (inst slt ndescr words (1+ (fixnum large-object-cutoff)))
+  (inst slt ndescr words (1+ (fixnumize large-object-cutoff)))
   (inst beq ndescr large-alloc-entry)
   (inst nop)
 
@@ -72,7 +72,7 @@
   (inst addu words (* vector-data-offset word-bytes))
 
   ;; Is it a large object?
-  (inst slt ndescr words (1+ (fixnum large-object-cutoff)))
+  (inst slt ndescr words (1+ (fixnumize large-object-cutoff)))
   (inst beq ndescr large-alloc-entry)
   ;; Load ndescr with other-pointer-type because if we take the branch, we
   ;; need nl0 loaded with the desired lowtag.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.32 2003/03/31 17:48:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.33 2003/08/03 11:27:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,7 +56,7 @@
 (define-vop (fast-lognot/fixnum fixnum-unop)
   (:translate lognot)
   (:generator 2
-    (inst xor res x (fixnum -1))))
+    (inst xor res x (fixnumize -1))))
 
 (define-vop (fast-lognot/signed signed-unop)
   (:translate lognot)
@@ -132,7 +132,7 @@
 		  fast-fixnum-binop-c)
        (:translate ,translate)
        (:generator 1
-	 (inst ,op r x (fixnum y))))
+	 (inst ,op r x (fixnumize y))))
      (define-vop (,(symbolicate "FAST-" translate "/SIGNED=>SIGNED")
 		  fast-signed-binop)
        (:translate ,translate)
@@ -200,7 +200,7 @@
   (:result-types tagged-num)
   (:note "safe inline fixnum arithmetic")
   (:generator 3
-    (inst taddcctv r x (fixnum y))))
+    (inst taddcctv r x (fixnumize y))))
 
 (define-vop (-/fixnum fast--/fixnum=>fixnum)
   (:policy :safe)
@@ -216,7 +216,7 @@
   (:result-types tagged-num)
   (:note "safe inline fixnum arithmetic")
   (:generator 3
-    (inst tsubcctv r x (fixnum y))))
+    (inst tsubcctv r x (fixnumize y))))
 
 )
 
@@ -677,7 +677,7 @@
       (inst not shift)
 
       (emit-label loop)
-      (inst add res (fixnum 1))
+      (inst add res (fixnumize 1))
       
       (emit-label test)
       (inst cmp shift)
@@ -862,7 +862,7 @@
 			(:translate ,tran)
 			(:generator ,cost
 			  (inst cmp x
-				,(if (eq suffix '-c/fixnum) '(fixnum y) 'y))
+				,(if (eq suffix '-c/fixnum) '(fixnumize y) 'y))
 			  (inst b (if not-p
 				      ,(if signed not-cond not-unsigned)
 				      ,(if signed cond unsigned))
@@ -911,7 +911,7 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 2
-    (inst cmp x (fixnum y))
+    (inst cmp x (fixnumize y))
     (inst b (if not-p :ne :eq) target)
     (inst nop)))
 ;;;

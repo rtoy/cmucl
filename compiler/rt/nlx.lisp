@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.5 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.6 2003/08/03 11:27:47 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.5 1994/10/31 04:45:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.6 2003/08/03 11:27:47 gerd Rel $
 ;;;
 ;;; This file contains the definitions of VOPs used for non-local exit (throw,
 ;;; lexical exit, etc.)
@@ -224,7 +224,7 @@
 		 (defaults (cons default-lab tn))
 		 
 		 (inst bc :eq default-lab)
-		 (inst s count (fixnum 1))
+		 (inst s count (fixnumize 1))
 		 (sc-case tn
 		   ((descriptor-reg any-reg)
 		    (loadw tn start i))
@@ -285,7 +285,7 @@
       (loadw temp src)
       (inst inc src vm:word-bytes)
       (storew temp dst)
-      (inst s num num (fixnum 1))
+      (inst s num num (fixnumize 1))
       (inst bncx :eq loop)
       (inst inc dst vm:word-bytes)
 

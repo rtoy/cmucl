@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.14 2001/11/03 22:27:01 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.15 2003/08/03 11:27:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,7 @@
   (:translate lognot)
   (:generator 2
     (move res x)
-    (inst xor res (fixnum -1))))
+    (inst xor res (fixnumize -1))))
 
 (define-vop (fast-lognot/signed signed-unop)
   (:translate lognot)
@@ -166,7 +166,7 @@
        (:translate ,translate)
        (:generator 1
 	 (move r x)
-	 (inst ,op r (fixnum y))))
+	 (inst ,op r (fixnumize y))))
      (define-vop (,(symbolicate "FAST-" translate "/SIGNED=>SIGNED")
 		  fast-signed-binop)
        (:translate ,translate)
@@ -240,10 +240,10 @@
   (:note "inline fixnum arithmetic")
   (:generator 1
     (cond ((and (sc-is x any-reg) (sc-is r any-reg) (not (location= x r)))
-	   (inst lea r (make-ea :dword :base x :disp (fixnum y))))
+	   (inst lea r (make-ea :dword :base x :disp (fixnumize y))))
 	  (t
 	   (move r x)
-	   (inst add r (fixnum y))))))
+	   (inst add r (fixnumize y))))))
 
 (define-vop (fast-+/signed=>signed fast-safe-arith-op)
   (:translate +)
@@ -481,7 +481,7 @@
   (:generator 30
     (move eax x)
     (inst cdq)
-    (inst mov y-arg (fixnum y))
+    (inst mov y-arg (fixnumize y))
     (inst idiv eax y-arg)
     (if (location= quo eax)
 	(inst shl eax 2)
@@ -951,7 +951,7 @@
 	       (:translate ,tran)
 	       (:generator ,cost
 		 (inst cmp x
-		       ,(if (eq suffix '-c/fixnum) '(fixnum y) 'y))
+		       ,(if (eq suffix '-c/fixnum) '(fixnumize y) 'y))
 		 (inst jmp (if not-p
 			       ,(if signed not-cond not-unsigned)
 			     ,(if signed cond unsigned))
@@ -1033,7 +1033,7 @@
     (cond ((and (sc-is x any-reg descriptor-reg) (zerop y))
 	   (inst test x x))  ; Smaller instruction
 	  (t
-	   (inst cmp x (fixnum y))))
+	   (inst cmp x (fixnumize y))))
     (inst jmp (if not-p :ne :e) target)))
 ;;;
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)

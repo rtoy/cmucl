@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.15 1997/10/25 16:31:46 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.16 2003/08/03 11:27:51 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.15 1997/10/25 16:31:46 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.16 2003/08/03 11:27:51 gerd Rel $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
@@ -40,7 +40,7 @@
      (compute-bit/word-offsets dst dst-offset dst-bit-offset)
      
      (inst addu temp1 dst-bit-offset length)
-     (inst subu temp1 (fixnum 32))
+     (inst subu temp1 (fixnumize 32))
      (inst bgez temp1 wide-copy)
      (inst sltu ntemp1 src dst)
 
@@ -64,7 +64,7 @@
 
 (defmacro compute-bit/word-offsets (ptr offset bit)
   `(progn
-     (inst and ,bit ,offset (fixnum 31))
+     (inst and ,bit ,offset (fixnumize 31))
      (inst sra ntemp1 ,offset 7)
      (inst sll ntemp1 2)
      (inst addu ,ptr ntemp1)))
@@ -80,7 +80,7 @@
      ;; It's not aligned, so get the source bits and align them.
      (inst sra ntemp2 src-bit-offset 2)
      (inst add temp1 src-bit-offset length)
-     (inst sub temp1 (fixnum 32))
+     (inst sub temp1 (fixnumize 32))
      (inst blez temp1 only-one-src-word)
      (inst srl ntemp1 ntemp2)
 
@@ -125,7 +125,7 @@
 
      ;; Calc src-shift
      (inst subu src-shift dst-offset src-offset)
-     (inst and src-shift (fixnum 31))
+     (inst and src-shift (fixnumize 31))
 
      (macrolet
 	 ((middle (&rest before-last-inst)
@@ -198,7 +198,7 @@
      (emit-label left-aligned)
 
      (inst addu final-bits length dst-bit-offset)
-     (inst and final-bits (fixnum 31))
+     (inst and final-bits (fixnumize 31))
      (inst subu ntemp1 length final-bits)
      (inst srl ntemp1 7)
      (inst beq ntemp1 check-right)
@@ -234,7 +234,7 @@
 	 (final-bits temp1))
      ;; Compute final-bits, the number of bits in the final dst word.
      (inst addu ntemp3 dst-bit-offset length)
-     (inst and final-bits ntemp3 (fixnum 31))
+     (inst and final-bits ntemp3 (fixnumize 31))
 
      ;; Increase src and dst so they point to the end of the buffers instead
      ;; of the beginning.
@@ -254,7 +254,7 @@
 
      ;; Calc src-shift
      (inst subu src-shift dst-bit-offset src-bit-offset)
-     (inst and src-shift (fixnum 31))
+     (inst and src-shift (fixnumize 31))
 
      (macrolet
 	 ((merge (&rest before-last-inst)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.9 2003/07/21 12:57:19 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.10 2003/08/03 11:27:49 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 	  bytes)
     (inst li (lognot lowtag-mask) header)
     (inst and bytes header bytes)
-    (inst addq rank (fixnum (1- array-dimensions-offset)) header)
+    (inst addq rank (fixnumize (1- array-dimensions-offset)) header)
     (inst sll header type-bits header)
     (inst bis header type header)
     (inst srl header 2 header)
