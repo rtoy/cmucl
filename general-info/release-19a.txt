@@ -113,6 +113,7 @@ New in this release:
      - With (DEFGENERIC FOO (&REST X &KEY)) (DEFMETHOD FOO (&REST X) X),
        (FOO 1) now signals an error.
      - Methods with &OPTIONAL arguments detecting too many args.
+     - DEFMETHOD and DEFGENERIC detecting doubled lambda variables.
      - DEFGENERIC :ARGUMENT-PRECEDENCE-ORDER option checking.
      - SLOT-VALUE, (SETF SLOT-VALUE), SLOT-BOUNDP working with conditions.
 
