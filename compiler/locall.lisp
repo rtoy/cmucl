@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.42 1993/09/10 19:09:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.43 1993/11/16 18:28:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -329,6 +329,7 @@
 (defun maybe-expand-local-inline (fun ref call)
   (if (and (policy call (>= speed space) (>= speed cspeed))
 	   (not (eq (functional-kind (node-home-lambda call)) :external))
+	   (not *converting-for-interpreter*)
 	   (inline-expansion-ok call))
       (with-ir1-environment call
 	(let* ((*lexical-environment* (functional-lexenv fun))
