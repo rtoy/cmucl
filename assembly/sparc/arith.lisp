@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.2 1990/11/24 19:20:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.3 1990/11/30 10:16:07 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -117,6 +117,7 @@
 
 ;;;; Multiplication
 
+
 (define-assembly-routine (generic-*
 			  (:cost 50)
 			  (:return-style :full-call)
@@ -145,15 +146,27 @@
   ;; Remove the tag from one arg so that the result will have the correct
   ;; fixnum tag.
   (inst sra temp x 2)
-  (emit-multiply temp y hi res :signed)
+  (inst wry temp)
+  (inst andcc hi zero-tn)
+  (inst nop)
+  (inst nop)
+  (dotimes (i 32)
+    (inst mulscc hi y))
+  (inst mulscc hi zero-tn)
+  (inst cmp x)
+  (inst b :ge MULTIPLIER-POSITIVE)
+  (inst nop)
+  (inst sub hi y)
+  MULTIPLIER-POSITIVE
+  (inst rdy lo)
+
   ;; Check to see if the result will fit in a fixnum.  (I.e. the high word
   ;; is just 32 copies of the sign bit of the low word).
-  (inst sra temp res 31)
+  (inst sra temp lo 31)
   (inst xorcc temp hi)
-  (inst b :eq DONE)
-  ;; Shift the double word hi:res down two bits into hi:low to get rid of the
-  ;; fixnum tag.
-  (inst srl lo res 2)
+  (inst b :eq LOW-FITS-IN-FIXNUM)
+  ;; Shift the double word hi:lo down two bits to get rid of the fixnum tag.
+  (inst srl lo 2)
   (inst sll temp hi 30)
   (inst or lo temp)
   (inst sra hi 2)
@@ -189,7 +202,8 @@
 	   vm:function-pointer-type))
   (inst move cfp-tn csp-tn)
 
-  DONE)
+  LOW-FITS-IN-FIXNUM
+  (move res lo))
 
 (macrolet
     ((frob (name note cost type sc)
@@ -206,7 +220,14 @@
 				  (:temp temp ,sc nl2-offset))
 	  ,@(when (eq type 'tagged-num)
 	      `((inst sra x 2)))
-	  (emit-multiply x y temp res :unsigned))))
+	  (inst wry x)
+	  (inst andcc temp zero-tn)
+	  (inst nop)
+	  (inst nop)
+	  (dotimes (i 32)
+	    (inst mulscc temp y))
+	  (inst mulscc temp zero-tn)
+	  (inst rdy res))))
   (frob unsigned-* "unsigned *" 40 unsigned-num unsigned-reg)
   (frob signed-* "unsigned *" 41 signed-num signed-reg)
   (frob fixnum-* "fixnum *" 30 tagged-num any-reg))
