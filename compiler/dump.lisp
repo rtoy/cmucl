@@ -7,17 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.2 1990/02/09 18:37:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.3 1990/02/09 21:06:34 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
 (in-package "C")
 
 (proclaim '(special compiler-version))
-
-(import '(system:%primitive system:%array-data-slot
-			    system:%array-displacement-slot
-			    system:%g-vector-structure-subtype))
 
 
 
@@ -402,18 +398,29 @@
 (defun dump-fixups (code-handle fixups file)
   (declare (type unsigned-byte code-handle) (list fixups)
 	   (type fasl-file file))
-  (dump-push code-handle file)
-  (dolist (fixup fixups)
-    (let ((offset (second fixup))
-	  (value (third fixup)))
-      (ecase (first fixup)
-	(:miscop
-	 (assert (symbolp value))
-	 (dump-object value file)
-	 (dump-fop 'lisp::fop-user-miscop-fixup file)
-	 (quick-dump-number offset 4 file)))))
-
-  (dump-fop 'lisp::fop-pop-for-effect file)
+  (when fixups
+    (dump-push code-handle file)
+    (dolist (fixup fixups)
+      (let ((offset (second fixup))
+	    (value (third fixup)))
+	(ecase (first fixup)
+	  #+nil
+	  (:miscop
+	   (assert (symbolp value))
+	   (dump-object value file)
+	   (dump-fop 'lisp::fop-user-miscop-fixup file)
+	   (quick-dump-number offset 4 file))
+	  (:foreign
+	   (assert (symbolp value))
+	   (dump-fop 'lisp::fop-foreign-fixup file)
+	   (quick-dump-number offset 4 file)
+	   (let* ((str (symbol-name value))
+		  (len (length str)))
+	     (assert (< len 256))
+	     (quick-dump-number len 1 file)
+	     (dotimes (i len)
+	       (dump-byte (char-code (schar str i)))))))))
+    (dump-fop 'lisp::fop-pop-for-effect file))
   (undefined-value))
 
 
@@ -430,30 +437,24 @@
   (declare (type entry-info entry) (type unsigned-byte code-handle)
 	   (type fasl-file file))
   (let ((name (entry-info-name entry)))
-    (dump-push code-handle file)
-    (dump-object (if (entry-info-closure-p entry)
-		     system:%function-closure-entry-subtype
-		     system:%function-entry-subtype)
-		 file)
-
-    (dump-object name file)
-    (dump-fop 'lisp::fop-misc-trap file)
-    (dump-object (+ (label-location (entry-info-offset entry))
-		    clc::i-vector-header-size)
-		 file)
-    (dump-fop 'lisp::fop-misc-trap file)
-    (dump-object (entry-info-arguments entry) file)
-    (dump-object (entry-info-type entry) file)
-    (dump-fop 'lisp::fop-function-entry file)
-    (dump-byte 6 file)
-
+    (cond ((entry-info-closure-p entry)
+	   ;; ### Need to fix this.
+	   (compiler-error "Cannot dump closures. Oh no.")
+	   (dump-fop 'lisp::fop-misc-trap file))
+	  (t
+	   (dump-push code-handle file)
+	   (dump-object name file)
+	   (dump-object (entry-info-arguments entry) file)
+	   (dump-object (entry-info-type entry) file)
+	   (dump-fop 'lisp::fop-function-entry file)
+	   (quick-dump-number (label-location (entry-info-offset entry))
+			      4 file)))
     (let ((handle (dump-pop file)))
       (when (and name (symbolp name))
 	(dump-object name file)
 	(dump-push handle file)
 	(dump-fop 'lisp::fop-fset file))
       handle)))
-
 
 ;;; Alter-Code-Object  --  Internal
 ;;;
@@ -562,6 +563,8 @@
 	      (unless (equal-check-table x file)
 		(dump-list x file)
 		(equal-save-object x file)))
+	     (structure
+	      (dump-structure x file))
 	     (vector
 	      (cond ((stringp x)
 		     (unless (equal-check-table x file)
@@ -936,18 +939,7 @@
 
 ;;;; Array dumping:
 
-;;; Named G-vectors get their subtype field set at load time.
-
-(defun dump-vector (obj file)
-  (cond ((and (simple-vector-p obj)
-	      (= (%primitive get-vector-subtype obj)
-		 %g-vector-structure-subtype))
-	 (normal-dump-vector obj file)
-	 (dump-fop 'lisp::fop-structure file))
-	(t
-	 (normal-dump-vector obj file))))
-
-(defun normal-dump-vector (v file)
+(defun dump-vector (v file)
   (note-potential-circularity v file)
   (do ((index 0 (1+ index))
        (length (length v))
@@ -978,6 +970,12 @@
 ;;; a displaced array looks like, we can fix this.
 ;;;
 (defun dump-array (array file)
+  (declare (ignore array file))
+  (compiler-error "Can't dump arrays, bozo.")
+  (dump-fop 'lisp::fop-misc-trap file))
+
+#|
+(
   (unless (zerop (%primitive header-ref array %array-displacement-slot))
     (compiler-error
      "Attempt to dump an array with a displacement, you lose big."))
@@ -988,11 +986,18 @@
     (dump-fop 'lisp::fop-array file)
     (quick-dump-number rank 4 file)))
 
+|#
+
 ;;; Dump-I-Vector  --  Internal  
 ;;;
 ;;;    Dump an I-Vector using the Guy Steele memorial fasl-operation.
 ;;;
 (defun dump-i-vector (vec file)
+  (declare (ignore vec file))
+  (compiler-error "Can't dump i-vectors, bozo.")
+  (dump-fop 'lisp::fop-misc-trap file))
+
+#|
   (let* ((len (length vec))
 	 (ac (%primitive get-vector-access-code
 			 (if #-new-compiler (%primitive complex-array-p vec)
@@ -1028,6 +1033,8 @@
 	(dotimes (i len)
 	  (declare (fixnum i))
 	  (quick-dump-number (aref vec i) count file)))))
+|#
+
 
 ;;; Dump a character.
 
@@ -1041,3 +1048,11 @@
     (dump-byte (char-code ch) file)
     (dump-byte (char-bits ch) file)
     (dump-byte (char-font ch) file))))
+
+
+;;; Dump a structure.
+
+(defun dump-structure (obj file)
+  (normal-dump-vector obj file)
+  (dump-fop 'lisp::fop-structure file))
+
