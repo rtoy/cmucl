@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.84 2002/08/21 17:55:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.85 2002/08/25 19:03:57 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -526,7 +526,12 @@
 		      `(when (eq (,slot last) old)
 			 (setf (,slot last) new))))
 	   (frob if-consequent)
-	   (frob if-alternative))))
+	   (frob if-alternative)
+	   (when (eq (if-consequent last)
+		     (if-alternative last))
+	     ;; Allow IR1-OPTIMIZE to perform (IF test exp exp) =>
+	     ;; (PROGN test exp) optimization, if it can.
+	     (setf (component-reoptimize comp) t)))))
       (t
        (unless (member new (block-succ block) :test #'eq)
 	 (link-blocks block new)))))
