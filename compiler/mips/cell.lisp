@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.71 1993/05/18 19:23:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.72 1993/05/18 23:39:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,7 +114,7 @@
     ;; the symbol-hash slot of NIL holds NIL because it is also the cdr
     ;; slot, so we have to strip off the two low bits to make sure it is
     ;; a fixnum.
-    (inst lw res symbol symbol-hash-slot other-pointer-type)
+    (loadw res symbol symbol-hash-slot other-pointer-type)
     (inst li temp (lognot #b11))
     (inst and res res temp)))
 
