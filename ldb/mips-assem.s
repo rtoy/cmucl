@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.6 1990/05/26 01:21:53 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.7 1990/07/01 04:36:11 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -38,7 +38,7 @@ set_global_pointer:
 	.globl	call_into_lisp
 	.ent	call_into_lisp
 call_into_lisp:
-#define framesize 11*4
+#define framesize 12*4
 	subu	sp, framesize
 	.frame	sp, framesize, ra
 	/* Save all the C regs. */
