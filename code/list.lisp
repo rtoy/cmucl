@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.7 1991/02/25 23:58:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.8 1991/11/05 14:18:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,10 +174,12 @@
   (cdr list))
 
 (defun nthcdr (n list)
+  (declare (type index n))
   "Performs the cdr function n times on a list."
   (do ((i n (1- i))
        (result list (cdr result)))
-      ((not (plusp i)) result)))
+      ((not (plusp i)) result)
+      (declare (type index i))))
 
 (defun last (list &optional (n 1))
   "Returns the last N conses (not the last element!) of a list."
@@ -352,32 +354,32 @@
 
 (defun butlast (list &optional (n 1))
   "Returns a new list the same as List without the N last elements."
-  (declare (list list) (type integer n))
-  (if (< n 0) (setq n 0))
+  (declare (list list) (type index n))
   (let ((length (1- (length list))))
-    (declare (fixnum length))
+    (declare (type index length))
     (if (< length n)
-	()
-	(do* ((top (cdr list) (cdr top))
-	      (result (list (car list)))
-	      (splice result)
-	      (count length (1- count)))
-	     ((= count n) result)
-	  (setq splice (cdr (rplacd splice (list (car top)))))))))
+        ()
+        (do* ((top (cdr list) (cdr top))
+              (result (list (car list)))
+              (splice result)
+              (count length (1- count)))
+             ((= count n) result)
+          (declare (type index count))
+          (setq splice (cdr (rplacd splice (list (car top)))))))))
 
 (defun nbutlast (list &optional (n 1))
   "Modifies List to remove the last N elements."
-  (declare (list list) (type integer n))
-  (if (< n 0) (setq n 0))
+  (declare (list list) (type index n))
   (let ((length (1- (length list))))
-    (declare (fixnum length))
+    (declare (type index length))
     (if (< length n) ()
-	(do ((1st (cdr list) (cdr 1st))
-	     (2nd list 1st)
-	     (count length (1- count)))
-	    ((= count n)
-	     (rplacd 2nd ())
-	     list)))))
+        (do ((1st (cdr list) (cdr 1st))
+             (2nd list 1st)
+             (count length (1- count)))
+            ((= count n)
+             (rplacd 2nd ())
+             list)
+          (declare (type index count))))))
 
 (defun ldiff (list sublist)
   "Returns a new list, whose elements are those of List that appear before
