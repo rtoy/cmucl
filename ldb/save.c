@@ -251,8 +251,8 @@ struct machine_state *ms;
 #endif
 
     if (ms->number_stack_start > number_stack_start) {
-        fprintf(stderr, "Your environment is too large.  Use ``unsetenv''\n");
-        fprintf(stderr, "to get rid of any unnecessary variables and try again.\n");
+        fprintf(stderr, "Can't allocate number stack --- probably this is a Sparc 10.\n");
+        fprintf(stderr, "If not, your environment is real big...\n");
         exit(1);
     }
     else
