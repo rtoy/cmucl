@@ -10,7 +10,6 @@
 (load "c:backend")
 #-rt (load "vm:parms")
 #+rt (load "vm:params")
-(load 
 (load "vm:objdef")
 (load "c:macros")
 (load "c:sset")
