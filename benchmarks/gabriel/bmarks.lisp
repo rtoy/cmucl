@@ -16,8 +16,14 @@
 ;;;; Suggestions or problems to PW@SAIL.
 
 (in-package "USER")
+#+proclaim-unsafe
 (proclaim '(optimize (safety 0) (speed 3) (space 0)))
+(proclaim '(inline assoc member))
+#-cmu
+(proclaim '(declaration start-block end-block))
+
 
+(proclaim '(start-block boyer))
 ;;; BOYER -- Logic programming benchmark, originally written by Bob Boyer.
 ;;; Fairly CONS intensive.
 
@@ -558,6 +564,7 @@
 (defun time-boyer ()
   (time (boyer)))
 
+(proclaim '(start-block browse))
 ;;; BROWSE -- Benchmark to create and browse through an AI-like data base of units.
 
 ;;; n is # of symbols
@@ -684,6 +691,7 @@
 (defun time-browse ()
   (time (browse)))
 
+(proclaim '(start-block ctak))
 ;;; CTAK -- A version of the TAKeuchi function that uses the CATCH/THROW facility.
 
 (defun ctak (x y z)
@@ -709,8 +717,10 @@
 			 y))))))
 
 (defun time-ctak ()
-  (time (ctak 18 12 6)))
+  (format t "Note: 10 iterations.~%")
+  (time (dotimes (i 10) (ctak 18 12 6))))
 
+(proclaim '(start-block dderiv-run))
 ;;; DDERIV -- The Common Lisp version of a symbolic derivative benchmark, written
 ;;; by Vaughn Pratt.
 
@@ -779,6 +789,7 @@
 (defun time-dderiv ()
   (time (dderiv-run)))
 
+(proclaim '(start-block deriv-run))
 ;;; DERIV -- This is the Common Lisp version of a symbolic derivative benchmark
 ;;; written by Vaughn Pratt.  It uses a simple subset of Lisp and does a lot of 
 ;;; CONSing. 
@@ -827,6 +838,7 @@ Why, pray tell?
 (defun time-deriv ()
   (time (deriv-run)))
 
+(proclaim '(start-block destructive))
 ;;; DESTRU -- Destructive operation benchmark
 
 (defun destructive (n m)
@@ -873,6 +885,8 @@ Why, pray tell?
 (defun time-destructive ()
   (time (destructive 600 50)))
 
+(proclaim '(start-block div2-test-1 div2-test-2))
+
 ;;; DIV2 -- Benchmark which divides by 2 using lists of n ()'s.
 ;;; This file contains a recursive as well as an iterative test.
 
@@ -917,7 +931,8 @@ Why, pray tell?
 (defun time-recursive-div2 ()
   (time (div2-test-2 div2-l)))
 
-#|
+(proclaim '(start-block fft))
+
 ;;; FFT -- This is an FFT benchmark written by Harry Barrow.  It tests a
 ;;; variety of floating point operations, including array references.
 
@@ -1017,9 +1032,9 @@ Why, pray tell?
 
 (defun time-fft ()
   (time (fft-bench)))
-|#
 
 
+(proclaim '(end-block))
 ;;; FPRINT -- Benchmark to print to a file.
 
 (defvar test-atoms '(abcdef12 cdefgh23 efghij34 ghijkl45 ijklmn56 klmnop67 
@@ -1066,20 +1081,14 @@ Why, pray tell?
 (defun time-fread ()
   (time (fread)))
 
-#|
+(proclaim '(start-block pexptsq))
+
 ;;; FRPOLY -- Benchmark from Berkeley based on polynomial arithmetic.
 ;;; Originally writen in Franz Lisp by Richard Fateman.
 ;;; PDIFFER1 appears in the code, but is not defined; is not called for in this
 ;;; test, however.
 
-(defvar ans)
-(defvar coef)
-(defvar f)
-(defvar inc)
-(defvar i)
-(defvar qq)
-(defvar ss)
-(defvar v)
+(defvar *frpoly-v*)
 (defvar *x*)
 (defvar *alpha*)
 (defvar *a*)
@@ -1091,13 +1100,9 @@ Why, pray tell?
 (defvar u*)
 (defvar *var)
 (defvar *y*)
-(defvar r)
-(defvar r2)
-(defvar r3)
-(defvar start)
-(defvar res1)
-(defvar res2)
-(defvar res3)
+(defvar frpoly-r)
+(defvar frpoly-r2)
+(defvar frpoly-r3)
 
 (defmacro pointergp (x y) `(> (get ,x 'order)(get ,y 'order)))
 (defmacro pcoefp (e) `(atom ,e))
@@ -1187,8 +1192,8 @@ Why, pray tell?
 	 (psimp (car y) (pctimes1 x (cdr y))))))
 
 (defun ptimes1 (*x* y) 
-  (prog (u* v)
-	(setq v (setq u* (ptimes2 y)))
+  (prog (u* *frpoly-v*)
+	(setq *frpoly-v* (setq u* (ptimes2 y)))
      a  
 	(setq *x* (cddr *x*))
 	(if (null *x*)
@@ -1212,21 +1217,21 @@ Why, pray tell?
 	(cond ((pzerop c)
 	       (setq y (cddr y)) 
 	       (go a1))
-	      ((or (null v) (> e (car v)))
-	       (setq u* (setq v (pplus1 u* (list e c))))
+	      ((or (null *frpoly-v*) (> e (car *frpoly-v*)))
+	       (setq u* (setq *frpoly-v* (pplus1 u* (list e c))))
 	       (setq y (cddr y))
 	       (go a1))
-	      ((= e (car v))
-	       (setq c (pplus c (cadr v)))
+	      ((= e (car *frpoly-v*))
+	       (setq c (pplus c (cadr *frpoly-v*)))
 	       (if (pzerop c) 			; never true, evidently
-		   (setq u* (setq v (pdiffer1 u* (list (car v) (cadr v)))))
-		   (rplaca (cdr v) c))
+		   (setq u* (setq *frpoly-v* (pdiffer1 u* (list (car *frpoly-v*) (cadr *frpoly-v*)))))
+		   (rplaca (cdr *frpoly-v*) c))
 	       (setq y (cddr y))
 	       (go a1)))
-     a  (cond ((and (cddr v) (> (caddr v) e))
-	       (setq v (cddr v))
+     a  (cond ((and (cddr *frpoly-v*) (> (caddr *frpoly-v*) e))
+	       (setq *frpoly-v* (cddr *frpoly-v*))
 	       (go a)))
-	(setq u (cdr v))
+	(setq u (cdr *frpoly-v*))
      b  (if (or (null (cdr u)) (< (cadr u) e))
 	    (rplacd u (cons e (cons c (cdr u)))) (go e))
 	(cond ((pzerop (setq c (pplus (caddr u) c)))
@@ -1256,17 +1261,26 @@ Why, pray tell?
   (setf (get 'x 'order) 1)
   (setf (get 'y 'order) 2)
   (setf (get 'z 'order) 3)
-  (setq r (pplus '(x 1 1 0 1) (pplus '(y 1 1) '(z 1 1)))	; r= x+y+z+1
-	r2 (ptimes r 100000)				 	; r2 = 100000*r
-	r3 (ptimes r 1.0)))					; r3 = r with floating point coefficients	
+  (defparameter frpoly-r
+    (pplus '(x 1 1 0 1) (pplus '(y 1 1) '(z 1 1)))) ; r= x+y+z+1)
+  (defparameter frpoly-r2 (ptimes frpoly-r 100000)) ; r2 = 100000*r
+  (defparameter frpoly-r3 (ptimes frpoly-r 1.0))) ; r3 = r with floating point coefficients	
 
-;;; four sets of three tests, call:  (pexptsq r 2) (pexptsq r2 2) (pexptsq r3 2)
-;				     (pexptsq r 5) (pexptsq r2 5) (pexptsq r3 5)
-;				     (pexptsq r 10) (pexptsq r2 10) (pexptsq r3 10)
-;				     (pexptsq r 15) (pexptsq r2 15) (pexptsq r3 15)
-;
-|#
+(defun time-frpoly-fixnum ()
+  (time (dolist (exp '(2 5 10 15))
+	  (pexptsq frpoly-r exp))))
+
+(defun time-frpoly-bignum ()
+  (time (dolist (exp '(2 5 10 15))
+	  (pexptsq frpoly-r2 exp))))
+
+(defun time-frpoly-float ()
+  (time (dolist (exp '(2 5 10 15))
+	  (pexptsq frpoly-r3 exp))))
+
 
+(proclaim '(start-block puzzle))
+
 ;;; PUZZLE -- Forest Baskett's Puzzle benchmark, originally written in Pascal.
 
 (eval-when (compile load eval)
@@ -1444,6 +1458,8 @@ Why, pray tell?
 (defun time-puzzle ()
   (time (puzzle)))
 
+(proclaim '(start-block tak trtak))
+
 ;;; TAK -- A vanilla version of the TAKeuchi function and one with tail recursion
 ;;; removed.
 
@@ -1469,11 +1485,15 @@ Why, pray tell?
 	  (go tak)))))
 
 (defun time-tak ()
-  (time (tak 18 12 6)))
+  (format t "Note: 10 iterations.~%")
+  (time (dotimes (i 10) (tak 18 12 6))))
 
 (defun time-rtak ()
-  (time (trtak 18 12 6)))
+  (format t "Note: 10 iterations.~%")
+  (time (dotimes (i 10) (trtak 18 12 6))))
 
+(proclaim '(start-block mas))
+
 ;;; TAKL -- The TAKeuchi function using lists as counters.
 
 (defun listn (n)
@@ -1502,7 +1522,8 @@ Why, pray tell?
 		       (cdr y)))))
 
 (defun time-takl ()
-  (time (mas l18 l12 l6)))
+  (format t "Note: 10 iterations.~%")
+  (time (dotimes (i 10) (mas l18 l12 l6))))
 
 #|
 ;;; TAKR  -- 100 function (count `em) version of TAK that tries to defeat cache
@@ -2114,6 +2135,7 @@ Why, pray tell?
   (time (tak0 18 12 6)))
 |#
 
+(proclaim '(start-block stak))
 ;;; STAK -- The TAKeuchi function with special variables instead of parameter
 ;;; passing.
 
@@ -2142,8 +2164,10 @@ Why, pray tell?
 	(stak-aux))))
 
 (defun time-stak ()
-  (time (stak 18 12 6)))
+  (format t "Note: 10 iterations.~%")
+  (time (dotimes (i 10) (stak 18 12 6))))
 
+(proclaim '(end-block))
 ;;; TPRINT -- Benchmark to print and read to the terminal.
 
 (defvar test-atoms '(abc1 cde2 efg3 ghi4 ijk5 klm6 mno7 opq8 qrs9
@@ -2171,6 +2195,8 @@ Why, pray tell?
 (defun time-tprint ()
   (time (print test-pattern)))
 
+(proclaim '(start-block init-traverse run-traverse))
+
 ;;; TRAVERSE --  Benchmark which creates and traverses a tree structure.
 
 (defstruct node
@@ -2300,12 +2326,14 @@ Why, pray tell?
 (defun time-run-traverse ()
   (time (run-traverse)))
 
+(proclaim '(start-block triangle))
+
 ;;; TRIANG -- Board game benchmark.  
 
 (defvar board (make-array 16. :initial-element 1))
 (setf (aref board 5) 0)
 
-(defvar sequence (make-array 14. :initial-element 0))
+(defvar triang-sequence (make-array 14. :initial-element 0))
 (defvar triang-a (make-array 37. :initial-contents '(1 2 4 3 5 6 1 3 6 2 5 4 11. 12. 13. 7 8. 4 4 7 11 8 12
 						13. 6 10. 15. 9. 14. 13. 13. 14. 15. 9. 10. 6 6)))
 (defvar triang-b (make-array 37. :initial-contents  '(2 4 7 5 8. 9. 3 6 10. 5 9. 8. 12. 13. 14. 8. 9. 5
@@ -2315,7 +2343,7 @@ Why, pray tell?
 (defvar answer)
 (defvar final)
 
-(proclaim '(type simple-vector board sequence triang-a triang-b triang-c))
+(proclaim '(type simple-vector board triang-sequence triang-a triang-b triang-c))
 
 (defun last-position ()
   (do ((i 1 (1+ i)))
@@ -2330,7 +2358,7 @@ Why, pray tell?
 	 (let ((lp (last-position)))
 	   (unless (member lp final)
 	     (push lp final)))
-	 (push (cdr (coerce (the simple-vector sequence) 'list))
+	 (push (cdr (coerce (the simple-vector triang-sequence) 'list))
 	       answer) t)	; this is a hack to replace LISTARRAY
 	((and (= 1 (the fixnum (aref board (aref triang-a i))))
 	      (= 1 (the fixnum (aref board (aref triang-b i))))
@@ -2338,7 +2366,7 @@ Why, pray tell?
 	 (setf (aref board (aref triang-a i)) 0)
 	 (setf (aref board (aref triang-b i)) 0)
 	 (setf (aref board (aref triang-c i)) 1)
-	 (setf (aref sequence depth) i)
+	 (setf (aref triang-sequence depth) i)
 	 (do ((j 0 (1+ j))
 	      (depth (1+ depth)))
 	     ((or (= j 36.)
