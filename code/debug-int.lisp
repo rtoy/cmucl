@@ -794,7 +794,7 @@
 		      (compute-calling-frame
 		       (int-sap (* (get-context-value
 				    real
-				    c::old-fp-save-offset
+				    vm::old-fp-save-offset
 				    (c::compiled-debug-function-old-fp c-d-f))
 				   vm:word-bytes))
 		       (get-context-value
@@ -2166,50 +2166,50 @@
 				(sap-ref-sap fp c::nfp-save-offset))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
-      ((#.c:any-reg-sc-number #.c:descriptor-reg-sc-number)
+      ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
        (system:without-gcing
 	(with-escaped-value (val)
 	  (make-lisp-obj val))))
-      (#.c:base-character-reg-sc-number
+      (#.vm:base-character-reg-sc-number
        (with-escaped-value (val)
 	 (code-char val)))
-      (#.c:sap-reg-sc-number
+      (#.vm:sap-reg-sc-number
        (with-escaped-value (val)
 	 (int-sap val)))
-      (#.c:signed-reg-sc-number
+      (#.vm:signed-reg-sc-number
        (with-escaped-value (val)
 	 (if (logbitp (1- vm:word-bits) val)
 	     (logior val (ash -1 vm:word-bits))
 	     val)))
-      (#.c:unsigned-reg-sc-number
+      (#.vm:unsigned-reg-sc-number
        (with-escaped-value (val)
 	 val))
-      (#.c:non-descriptor-reg-sc-number
+      (#.vm:non-descriptor-reg-sc-number
        (error "Local non-descriptor register access?"))
-      (#.c:interior-reg-sc-number
+      (#.vm:interior-reg-sc-number
        (error "Local interior register access?"))
-      (#.c:single-reg-sc-number
+      (#.vm:single-reg-sc-number
        (escaped-float-value single-float))
-      (#.c:double-reg-sc-number
+      (#.vm:double-reg-sc-number
        (escaped-float-value double-float))
-      (#.c:single-stack-sc-number
+      (#.vm:single-stack-sc-number
        (with-nfp (nfp)
-	 (sap-ref-single nfp (c::sc-offset-offset sc-offset))))
-      (#.c:double-stack-sc-number
+	 (sap-ref-single nfp (vm::sc-offset-offset sc-offset))))
+      (#.vm:double-stack-sc-number
        (with-nfp (nfp)
 	 (sap-ref-double nfp (c::sc-offset-offset sc-offset))))
-      (#.c:control-stack-sc-number
+      (#.vm:control-stack-sc-number
        (stack-ref fp (c::sc-offset-offset sc-offset)))
-      (#.c:base-character-stack-sc-number
+      (#.vm:base-character-stack-sc-number
        (with-nfp (nfp)
 	 (code-char (sap-ref-32 nfp (c::sc-offset-offset sc-offset)))))
-      (#.c:unsigned-stack-sc-number
+      (#.vm:unsigned-stack-sc-number
        (with-nfp (nfp)
 	 (sap-ref-32 nfp (c::sc-offset-offset sc-offset))))
-      (#.c:signed-stack-sc-number
+      (#.vm:signed-stack-sc-number
        (with-nfp (nfp)
 	 (signed-sap-ref-32 nfp (c::sc-offset-offset sc-offset))))
-      (#.c:sap-stack-sc-number
+      (#.vm:sap-stack-sc-number
        (with-nfp (nfp)
 	 (sap-ref-sap nfp (c::sc-offset-offset sc-offset)))))))
 
@@ -2281,53 +2281,53 @@
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(int-sap (escape-register escaped
-							  c::nfp-offset))
-				(sap-ref-sap fp c::nfp-save-offset))))
+							  vm::nfp-offset))
+				(sap-ref-sap fp vm::nfp-save-offset))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
-      ((#.c:any-reg-sc-number #.c:descriptor-reg-sc-number)
+      ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
        (system:without-gcing
 	(set-escaped-value
 	  (get-lisp-obj-address value))))
-      (#.c:base-character-reg-sc-number
+      (#.vm:base-character-reg-sc-number
        (set-escaped-value (char-code value)))
-      (#.c:sap-reg-sc-number
+      (#.vm:sap-reg-sc-number
        (set-escaped-value (sap-int value)))
-      (#.c:signed-reg-sc-number
+      (#.vm:signed-reg-sc-number
        (set-escaped-value (logand value (1- (ash 1 vm:word-bits)))))
-      (#.c:unsigned-reg-sc-number
+      (#.vm:unsigned-reg-sc-number
        (set-escaped-value value))
-      (#.c:non-descriptor-reg-sc-number
+      (#.vm:non-descriptor-reg-sc-number
        (error "Local non-descriptor register access?"))
-      (#.c:interior-reg-sc-number
+      (#.vm:interior-reg-sc-number
        (error "Local interior register access?"))
-      (#.c:single-reg-sc-number
+      (#.vm:single-reg-sc-number
        (set-escaped-float-value single-float value))
-      (#.c:double-reg-sc-number
+      (#.vm:double-reg-sc-number
        (set-escaped-float-value double-float value))
-      (#.c:single-stack-sc-number
+      (#.vm:single-stack-sc-number
        (with-nfp (nfp)
 	 (setf (sap-ref-single nfp (c::sc-offset-offset sc-offset))
 	       (the single-float value))))
-      (#.c:double-stack-sc-number
+      (#.vm:double-stack-sc-number
        (with-nfp (nfp)
 	 (setf (sap-ref-double nfp (c::sc-offset-offset sc-offset))
 	       (the double-float value))))
-      (#.c:control-stack-sc-number
+      (#.vm:control-stack-sc-number
        (setf (stack-ref fp (c::sc-offset-offset sc-offset)) value))
-      (#.c:base-character-stack-sc-number
+      (#.vm:base-character-stack-sc-number
        (with-nfp (nfp)
 	 (setf (sap-ref-32 nfp (c::sc-offset-offset sc-offset))
 	       (char-code (the character value)))))
-      (#.c:unsigned-stack-sc-number
+      (#.vm:unsigned-stack-sc-number
        (with-nfp (nfp)
 	 (setf (sap-ref-32 nfp (c::sc-offset-offset sc-offset))
 	       (the (unsigned-byte 32) value))))
-      (#.c:signed-stack-sc-number
+      (#.vm:signed-stack-sc-number
        (with-nfp (nfp)
 	 (setf (signed-sap-ref-32 nfp (c::sc-offset-offset sc-offset))
 	       (the (signed-byte 32) value))))
-      (#.c:sap-stack-sc-number
+      (#.vm:sap-stack-sc-number
        (with-nfp (nfp)
 	 (setf (sap-ref-sap nfp (c::sc-offset-offset sc-offset))
 	       (the system-area-pointer value)))))))
