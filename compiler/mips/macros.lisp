@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.24 1990/03/12 23:47:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.25 1990/03/21 19:58:26 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -114,9 +114,9 @@
 	      (n-offset offset))
     (ecase vm:target-byte-order
       (:little-endian
-       `(inst lb ,n-target ,n-source ,n-offset ))
+       `(inst lbu ,n-target ,n-source ,n-offset ))
       (:big-endian
-       `(inst lb ,n-target ,n-source (+ ,n-offset 3))))))
+       `(inst lbu ,n-target ,n-source (+ ,n-offset 3))))))
 
 
 ;;; Macros to handle the fact that we cannot use the machine native call and
