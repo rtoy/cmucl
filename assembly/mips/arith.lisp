@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.12 1993/05/07 07:37:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.13 1993/06/13 07:10:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,12 +289,11 @@
 			  #+gengc (:temp ra any-reg ra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst beq x y RETURN-T)
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FN)
   (inst and temp y 3)
   (inst bne temp DO-STATIC-FN)
-  (inst nop)
+  (inst beq x y RETURN-T)
 
   (inst move res null-tn)
   #+gengc
@@ -332,12 +331,11 @@
 			  #+gengc (:temp ra any-reg ra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst beq x y RETURN-NIL)
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FN)
   (inst and temp y 3)
   (inst bne temp DO-STATIC-FN)
-  (inst nop)
+  (inst beq x y RETURN-NIL)
 
   (load-symbol res t)
   #+gengc
