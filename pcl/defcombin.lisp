@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.18 2002/10/19 14:56:02 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.19 2003/01/02 13:11:57 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -145,7 +145,8 @@
 				 ,*load-pathname*)))
     (when old-method
       (remove-method #'find-method-combination old-method))
-    (add-method #'find-method-combination new-method)))
+    (add-method #'find-method-combination new-method)
+    type))
 
 (defun make-short-method-combination (type options operator ioa method doc)
   (cond ((null options) (setq options '(:most-specific-first)))
@@ -280,7 +281,8 @@
 			      ,*load-pathname*))))
     (setf (gethash type *long-method-combination-functions*) function)
     (when old-method (remove-method #'find-method-combination old-method))
-    (add-method #'find-method-combination new-method)))
+    (add-method #'find-method-combination new-method)
+    type))
 
 (defmethod compute-discriminating-function :around
     ((gf standard-generic-function))
