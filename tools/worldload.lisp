@@ -7,12 +7,22 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.29 1991/06/10 16:33:43 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.30 1991/07/11 14:58:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file loads the parts of the system that aren't cold loaded and saves
 ;;; the resulting core image.  It writes "lisp.core" in the DEFAULT-DIRECTORY.
+;;;
+;;; ####### NOTE: HACK ALERT!!!!
+;;; 
+;;; This file must be loaded by:
+;;;    (load (open "...worldload.lisp"))
+;;;
+;;; The OPEN call is needed to prevent the stream buffer from the previous
+;;; incarnation (which is no longer valid) from being added to the stream
+;;; buffer freelist.  If you don't do this, you will probably get a memory
+;;; access violation when you first try to do file I/O in the new core.
 ;;;
 
 ;;; Define a bunch of search lists relative to lisp:
