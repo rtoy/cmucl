@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.36 2003/03/22 16:15:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.37 2003/05/26 20:20:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,8 +119,8 @@
   ;; The number of ``more-arg'' args.
   (num-more-args 0 :type (integer 0 #.call-arguments-limit))
   ;;
-  ;; True if there is a rest-arg.
-  (rest-arg-p nil :type (member t nil))
+  ;; True if there is a rest-arg, :MORE if there is &MORE.
+  (rest-arg-p nil :type (member t nil :more))
   ;;
   ;; True if there are keywords.  Note: keywords might still be NIL because
   ;; having &key with no keywords is valid and should result in
@@ -465,7 +465,7 @@
   `(let ((x ,x))
      (unless (listp x)
        (with-debugger-info (component pc fp)
-	 (error 'simple-type-error :item x :expected-type 'list
+	 (error 'simple-type-error :datum x :expected-type 'list
 		:format-control "Non-list argument to CAR: ~S"
 		:format-arguments (list x))))
      (car x)))
@@ -474,7 +474,7 @@
   `(let ((x ,x))
      (unless (listp x)
        (with-debugger-info (component pc fp)
-	 (error 'simple-type-error :item x :expected-type 'list
+	 (error 'simple-type-error :datum x :expected-type 'list
 		:format-control "Non-list argument to CDR: ~S"
 		:format-arguments (list x))))
      (cdr x)))
@@ -1390,7 +1390,11 @@
 		  ((not (hairy-byte-function-keywords-p xep))
 		   (assert restp)
 		   (setf (current-stack-pointer) (1+ more-args-start))
-		   (setf (eval-stack-ref more-args-start) rest))
+		   (setf (eval-stack-ref more-args-start) rest)
+		   (when (eq :more restp)
+		     (incf (current-stack-pointer))
+		     (setf (eval-stack-ref (1+ more-args-start))
+			   (length rest))))
 		  (t
 		   (unless (evenp more-args-supplied)
 		     (with-debugger-info (old-component ret-pc old-fp)
@@ -1414,7 +1418,11 @@
 		     (stack-copy temp more-args-start more-args-supplied)
 		     (when restp
 		       (setf (eval-stack-ref more-args-start) rest)
-		       (incf more-args-start))
+		       (incf more-args-start)
+		       (when (eq :more restp)
+			 (setf (eval-stack-ref (1+ more-args-start))
+			       (length rest))
+			 (incf more-args-start)))
 		     (let ((index more-args-start))
 		       (dolist (keyword keywords)
 			 (setf (eval-stack-ref index) (cadr keyword))

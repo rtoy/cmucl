@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.46 2003/01/23 21:05:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.47 2003/05/26 20:20:31 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -970,6 +970,8 @@
   "Coerces the Object to an object of type Output-Type-Spec."
   (labels ((coerce-error ()
 	     (error 'simple-type-error
+		    :expected-type output-type-spec
+		    :datum object
 		    :format-control "~S can't be converted to type ~S."
 		    :format-arguments (list object output-type-spec)))
 	   (check-seq-len (type length)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.33 2003/04/11 15:38:45 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.34 2003/05/26 20:20:31 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1921,7 +1921,11 @@
 				      (if (constantp default)
 					  (eval default)
 					  nil)
-				      (if s-p t nil))))))))
+				      (if s-p t nil)))))
+		   (:more-context
+		    (incf num-more 2)
+		    (setf rest-arg-p :more))
+		   (:more-count))))
 	     (make-hairy-byte-function
 	      :name (leaf-name entry)
 	      :min-args (optional-dispatch-min-args entry)

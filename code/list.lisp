@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.30 2003/04/22 16:49:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.31 2003/05/26 20:20:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -366,6 +366,8 @@
       ((atom 2nd)
        (if 2nd
 	   (error 'simple-type-error
+		  :datum x
+		  :expected-type 'list
 		  :format-control "First argument is not a proper list."
 		  :format-arguments nil)
 	   3rd))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.33 2003/03/17 16:07:08 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.34 2003/05/26 20:20:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1610,6 +1610,7 @@ down to individual words.")
 	       (let ((exp (+ exp bias)))
 		 (when (> exp max)
 		   (error 'simple-type-error
+			  :datum x
                           :format-control "Too large to be represented as a ~S:~%  ~S"
 			  :format-arguments (list format x)
                           :expected-type format))
