@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.37 1991/12/07 00:54:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.38 1991/12/13 05:45:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,10 +102,10 @@
      (concatenate 'string compiler-version
 		  "(" *lisp-implementation-version* ")"))
 
-;;; Load the pretty printer after the compiler, 'cause it compiles stuff
-;;; at load time.
-#-no-pp
-(load "code:pprint")
+;;; The pretty printer is part of the kernel core, but we can't turn in on
+;;; until after the compiler is loaded because it compiles some lambdas
+;;; to help with the dispatching.
+;;; 
 #-no-pp
 (pp::pprint-init)
 
