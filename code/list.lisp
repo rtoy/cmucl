@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.24 2001/03/04 20:12:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.25 2001/03/04 21:32:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -861,6 +861,7 @@
 (defmacro assoc-guts (test-guy)
   `(do ((alist alist (cdr alist)))
        ((endp alist))
+     (declare (optimize (inhibit-warnings 3)))
      (if (car alist)
 	 (if ,test-guy (return (car alist))))))
 
