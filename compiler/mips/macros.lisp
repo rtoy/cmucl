@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.5 1990/02/06 12:33:14 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.6 1990/02/06 23:26:24 ch Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -20,11 +20,12 @@
   "Emit a nop."
   '(inst or zero-tn zero-tn zero-tn))
 
-(defmacro move (dst src)
-  "Move SRC into DST (unless they are already the same)."
+(defmacro move (dst src &optional (always-emit-code-p nil))
+  "Move SRC into DST (unless they are location= and ALWAYS-EMIT-CODE-P
+  is nil)."
   (once-only ((n-dst dst)
 	      (n-src src))
-    `(unless (location= ,n-dst ,n-src)
+    `(unless (and (location= ,n-dst ,n-src) (not always-emit-code-p))
        (inst or ,n-dst ,n-src zero-tn))))
 
 (defmacro b (label)
