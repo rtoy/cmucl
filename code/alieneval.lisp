@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.11 1991/05/21 22:18:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.12 1991/11/06 15:47:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1161,6 +1161,12 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 
 ;;;; Strings accesses:
 
+;;; Can't use length, because it may be less than the limit.
+;;;
+(deftype perq-string (&optional length)
+  (declare (ignore length))
+  'simple-base-string)
+
 ;;; Alien-Access expert for String  --  Internal
 ;;;
 ;;;    Read a Perq-String into a string or write a string out into
@@ -1189,6 +1195,12 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	     (%primitive byte-blt ,n-value 0 ,n-sap ,1+off
 			 (+ ,1+off ,len)))))))
 
+
+;;; Can't use length, because it may be less than the limit.
+;;;
+(deftype null-terminated-string (&optional length)
+  (declare (ignore length))
+  'simple-base-string)
 
 ;;; Alien-Access expert for null terminated string  --  Internal
 ;;;
@@ -1275,6 +1287,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	`(setf (sap-ref-sap ,sap ,offset)
 	       (alien-value-sap ,value)))))))
 
+
 ;;; Alien-Access expert for (Pointer xxx)  --  Internal
 ;;;
 ;;;    We can't read pointers, and can only store pointers to unboxed
@@ -1298,7 +1311,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 		     ((or simple-string
 			  simple-bit-vector
 			  (simple-array unsigned-byte (*)))
-		      (%primitive c::vector-sap ,n-value)))))))))
+		      (vector-sap ,n-value)))))))))
 
 
 ;;;; Enumeration Alien access:
