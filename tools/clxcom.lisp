@@ -1,12 +1,5 @@
 (in-package "USER")
 
-;;; Hide CLOS from CLX, so objects stay implemented as structures.
-;;;
-(when (find-package "CLOS")
-  (rename-package (find-package "CLOS") "NO-CLOS-HERE"))
-(when (find-package "PCL")
-  (rename-package (find-package "PCL") "NO-PCL-HERE"))
-
 #+bootstrap
 (unless (find-package "OLD-XLIB")
   (when (find-package "XLIB")
