@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.51 2001/05/18 13:50:04 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.52 2001/05/27 15:17:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,7 +57,8 @@
 ;;;
 (defun %print-host (host stream depth)
   (declare (ignore depth))
-  (print-unreadable-object (host stream :type t :identity t)))
+  (print-unreadable-object (host stream :type t)
+    (prin1 (logical-host-name host) stream)))
 
 (defstruct (logical-host
 	    (:include host
