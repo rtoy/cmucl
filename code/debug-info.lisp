@@ -270,7 +270,7 @@
   ;; :Fixed
   ;;    The function returns using the a fixed-values convention, but we
   ;;    elected not to store a vector to save space.
-  (returns nil :type (or (simple-array * (*)) (member :standard :fixed)))
+  (returns :fixed :type (or (simple-array * (*)) (member :standard :fixed)))
   ;;
   ;; SC-Offsets describing where the return PC and return CONT are kept.
   (return-pc nil :type sc-offset)
