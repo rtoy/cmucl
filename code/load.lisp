@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.23 1991/01/11 22:39:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.24 1991/01/25 21:44:44 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -740,6 +740,11 @@
     (if (structurep obj)
 	(setf (c::structure-ref obj idx) val)
 	(setf (svref obj idx) val))))
+
+(define-fop (fop-structset 204 nil)
+  (setf (c::structure-ref (svref *current-fop-table* (read-arg 4))
+			  (read-arg 4))
+	(pop-stack)))
 
 (define-fop (fop-nthcdr 203 t)
   (nthcdr (read-arg 4) (pop-stack)))
