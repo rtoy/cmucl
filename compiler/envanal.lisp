@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.20 1991/12/11 16:52:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.21 1992/08/01 14:00:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,9 @@
 ;;;     continuations.
 ;;;  4] Delete all non-top-level functions with no references.  This should
 ;;;     only get functions with non-NULL kinds, since normal functions are
-;;;     deleted when their references go to zero.
+;;;     deleted when their references go to zero.  If *byte-compiling*, then
+;;;     don't delete optional entries with no references, since the byte
+;;;     interpreter wants to call entries that the XEP doesn't.
 ;;;
 (defun environment-analyze (component)
   (declare (type component component))
@@ -51,7 +53,8 @@
   (dolist (fun (component-lambdas component))
     (when (null (leaf-refs fun))
       (let ((kind (functional-kind fun)))
-	(unless (eq kind :top-level)
+	(unless (or (eq kind :top-level)
+		    (and *byte-compiling* (eq kind :optional)))
 	  (assert (member kind '(:optional :cleanup :escape)))
 	  (setf (functional-kind fun) nil)
 	  (delete-lambda fun)))))
