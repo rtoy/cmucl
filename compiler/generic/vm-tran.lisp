@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.44 2002/05/02 03:35:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.45 2002/08/08 15:37:38 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -250,7 +250,8 @@
 
 (deftransform concatenate ((rtype &rest sequences)
 			   (t &rest simple-string)
-			   simple-string)
+			   simple-string
+			   :policy (< safety 3))
   (collect ((lets)
 	    (forms)
 	    (all-lengths)
