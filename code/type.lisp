@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.46 2002/11/13 19:47:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.47 2002/12/04 17:25:55 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -972,9 +972,13 @@
   (values (eq type1 *empty-type*) t))
 
 (define-type-method (named :complex-subtypep-arg2) (type1 type2)
-  (if (hairy-type-p type1)
-      (values nil nil)
-      (values (not (eq type2 *empty-type*)) t)))
+  (cond ((eq type2 *universal-type*)
+	 (values t t))
+	((hairy-type-p type1)
+	 ;; This obviously needs more work!
+	 (values nil nil))
+	(t
+	 (values (not (eq type2 *empty-type*)) t))))
 
 (define-type-method (named :complex-intersection) (type1 type2)
   (vanilla-intersection type1 type2))
@@ -1049,7 +1053,14 @@
 ;; This is the implementation used in SBCL.
 (define-type-method (hairy :complex-subtypep-arg1) (type1 type2)
   (let ((hairy-spec (hairy-type-specifier type1)))
-     (cond ((and (consp hairy-spec) (eq (car hairy-spec) 'not))
+     (cond ((and (consp hairy-spec) (eq (car hairy-spec) 'and))
+	    (block PUNT
+	      (if (any-type-op csubtypep type2
+			       (mapcar #'specifier-type (cdr hairy-spec))
+			       :list-first t)
+		  (values t t)
+		  (values nil nil))))
+	   ((and (consp hairy-spec) (eq (car hairy-spec) 'not))
 	    ;; You may not believe this. I couldn't either. But then I
 	    ;; sat down and drew lots of Venn diagrams. Comments
 	    ;; involving a and b refer to the call (subtypep '(not a)
