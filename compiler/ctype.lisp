@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.25 1991/12/11 23:49:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.26 1993/01/14 18:04:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -659,7 +659,8 @@
 			(kinfo (find key keys :key #'key-info-name)))
 		   (cond
 		    (kinfo
-		     (res (type-union (key-info-type kinfo) def-type)))
+		     (res (type-union (key-info-type kinfo)
+				      (or def-type (specifier-type 'null)))))
 		    (t
 		     (note-lossage
 		      "Defining a ~S keyword not present in ~A."
@@ -667,8 +668,7 @@
 		     (res *universal-type*)))))
 		(:required (res (pop req)))
 		(:optional
-		 (res (type-union (pop opt)
-				  (or def-type *universal-type*))))
+		 (res (type-union (pop opt) (or def-type *universal-type*))))
 		(:rest
 		 (when (function-type-rest type)
 		   (res (specifier-type 'list)))))
