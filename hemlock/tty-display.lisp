@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.9 1991/09/23 09:27:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.10 1991/10/30 08:22:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,7 +243,9 @@
 	      (i (+ *hunk-top-line* i) (1+ i)))
 	     ((> i last))
 	   (declare (fixnum i last))
-	   (setf (si-line-length (si-line screen-image i)) 0)))
+	   (let ((si-line (si-line screen-image i)))
+	     (setf (si-line-length si-line) 0)
+	     (setf (si-line-fonts si-line) nil))))
       (tty-dumb-line-redisplay device hunk (car dl) i))
     (setf (window-first-changed window) the-sentinel
 	  (window-last-changed window) first)
@@ -515,6 +517,7 @@
 	      (declare (fixnum ,insert-index ,free-lines-index ,n))
 	      (let ((,temp (si-line *screen-image-temp* ,free-lines-index)))
 		(setf (si-line-length ,temp) 0)
+		(setf (si-line-fonts ,temp) nil)
 		(setf (si-line ,do-screen-image ,insert-index) ,temp)))
 	    (decf ,fsil ,num))
 	 (declare (fixnum ,target-terminus ,source-index ,target-index))
@@ -773,7 +776,8 @@
       (let ((si-line (si-line screen-image si-idx)))
 	(unless (zerop (si-line-length si-line))
 	  (funcall clear-to-eol hunk 0 y)
-	  (setf (si-line-length si-line) 0))))))
+	  (setf (si-line-length si-line) 0)
+	  (setf (si-line-fonts si-line) nil))))))
 
 ;;; NOTE-LINE-MOVES  --  Internal
 ;;;
