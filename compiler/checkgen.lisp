@@ -231,10 +231,11 @@
 		   ((function-info-ir2-convert kind) t)
 		   (t
 		    (dolist (template (function-info-templates kind) nil)
-		      (when (and (eq (template-policy template) :fast-safe)
-				 (valid-function-use dest
-						     (template-type template)))
-			(return t)))))))
+		      (when (eq (template-policy template) :fast-safe)
+			(multiple-value-bind
+			    (val win)
+			    (valid-function-use dest (template-type template))
+			  (when (or val (not win)) (return t)))))))))
 	  (t t))))
 
 
