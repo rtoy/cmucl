@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.11 1991/08/22 16:03:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.12 1991/09/03 20:44:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -548,24 +548,13 @@
 
 ;;; User-Homedir-Pathname  --  Public
 ;;;
-;;;    If the user wants a meaningful homedir, she has to define Home:.
-;;; Someday, login may do this for us.  Since we must always return something,
-;;; we just return Default: if it isn't defined.
+;;;    Return Home:, which is set up for us at initialization time.
 ;;;
 (defun user-homedir-pathname (&optional host)
   "Returns the home directory of the logged in user as a pathname.
-  This is obtained from the logical name \"home:\".  If this is not defined,
-  then we return \"default:\""
+  This is obtained from the logical name \"home:\"."
   (declare (ignore host))
-  (let ((home (cdr (assoc :home *environment-list* :test #'eq))))
-    (if home
-	(pathname (if (string-equal home "/") "/"
-		      (concatenate 'simple-string home "/")))
-	(let ((expansion (if (search-list "home:")
-			     (resolve-search-list "home" t))))
-	  (if expansion
-	      (car expansion)
-	      (make-pathname :device "default"))))))
+  #p"home:")
 
 ;;; File-Write-Date  --  Public
 ;;;
