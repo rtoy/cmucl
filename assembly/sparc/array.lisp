@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.1 1990/11/22 11:50:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.2 1990/11/30 16:45:44 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -54,18 +54,16 @@
 			 ((:arg string descriptor-reg a0-offset)
 			  (:res result any-reg a0-offset)
 
-			  (:temp lip interior-reg lip-offset)
 			  (:temp length any-reg a1-offset)
 			  (:temp accum non-descriptor-reg nl0-offset)
 			  (:temp data non-descriptor-reg nl1-offset)
-			  (:temp byte non-descriptor-reg nl2-offset)
-			  (:temp retaddr non-descriptor-reg nl3-offset))
+			  (:temp temp non-descriptor-reg nl2-offset)
+			  (:temp offset non-descriptor-reg nl3-offset))
 
-  (declare (ignore result lip accum data byte retaddr))
+  (declare (ignore result accum data temp offset))
 
-  (loadw length string vm:vector-length-slot vm:other-pointer-type)
   (inst b sxhash-simple-substring-entry)
-  (inst nop))
+  (loadw length string vm:vector-length-slot vm:other-pointer-type))
 
 
 (define-assembly-routine (sxhash-simple-substring
@@ -77,95 +75,38 @@
 			  (:arg length any-reg a1-offset)
 			  (:res result any-reg a0-offset)
 
-			  (:temp lip interior-reg lip-offset)
 			  (:temp accum non-descriptor-reg nl0-offset)
 			  (:temp data non-descriptor-reg nl1-offset)
-			  (:temp byte non-descriptor-reg nl2-offset)
-			  (:temp retaddr non-descriptor-reg nl3-offset))
+			  (:temp temp non-descriptor-reg nl2-offset)
+			  (:temp offset non-descriptor-reg nl3-offset))
   (emit-label sxhash-simple-substring-entry)
 
-  ;; Save the return address.
-  (inst sub retaddr lip code-tn)
-
-  (inst add lip string
-	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
+  (inst li offset (- (* vector-data-offset word-bytes) other-pointer-type))
   (inst b test)
   (move accum zero-tn)
 
   LOOP
 
-  (inst and byte data #xff)
-  (inst xor accum accum byte)
-  (inst sll byte accum 5)
-  (inst srl accum accum 27)
-  (inst or accum accum byte)
-
-  (inst srl byte data 8)
-  (inst and byte byte #xff)
-  (inst xor accum accum byte)
-  (inst sll byte accum 5)
-  (inst srl accum accum 27)
-  (inst or accum accum byte)
-
-  (inst srl byte data 16)
-  (inst and byte byte #xff)
-  (inst xor accum accum byte)
-  (inst sll byte accum 5)
-  (inst srl accum accum 27)
-  (inst or accum accum byte)
-
-  (inst srl byte data 24)
-  (inst xor accum accum byte)
-  (inst sll byte accum 5)
-  (inst srl accum accum 27)
-  (inst or accum accum byte)
-
-  (inst add lip lip 4)
+  (inst xor accum data)
+  (inst sll temp accum 27)
+  (inst srl accum 5)
+  (inst or accum temp)
+  (inst add offset 4)
 
   TEST
 
   (inst subcc length (fixnum 4))
   (inst b :ge loop)
-  (inst ld data lip 0)
+  (inst ld data string offset)
 
-  (inst addcc length (fixnum 3))
-  (inst b :eq one-more)
-  (inst subcc length (fixnum 1))
-  (inst b :eq two-more)
-  (inst subcc length (fixnum 1))
-  (inst b :ne done)
-  (inst nop)
-
-  (inst srl byte data 16)
-  (inst and byte byte #xff)
-  (inst xor accum accum byte)
-  (inst sll byte accum 5)
-  (inst srl accum accum 27)
-  (inst or accum accum byte)
-
-  TWO-MORE
-
-  (inst srl byte data 8)
-  (inst and byte byte #xff)
-  (inst xor accum accum byte)
-  (inst sll byte accum 5)
-  (inst srl accum accum 27)
-  (inst or accum accum byte)
-
-  ONE-MORE
-
-  (inst and byte data #xff)
-  (inst xor accum accum byte)
-  (inst sll byte accum 5)
-  (inst srl accum accum 27)
-  (inst or accum accum byte)
+  (inst addcc length (fixnum 4))
+  (inst b :eq done)
+  (inst neg length)
+  (inst sll length 1)
+  (inst srl data length)
+  (inst xor accum data)
 
   DONE
 
   (inst sll result accum 5)
-  (inst srl result result 3)
-
-  ;; Restore the return address.
-  (inst add lip retaddr code-tn))
-
-
+  (inst srl result result 3))
