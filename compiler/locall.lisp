@@ -205,6 +205,11 @@
 ;;; there is hairy stuff such as conditionals in the expression that computes
 ;;; the function.
 ;;;
+;;;    We don't attempt to convert calls that appear in a top-level lambda
+;;; unless there is only one reference.  This ensures that top-level components
+;;; will contain only load-time code: any references to run-time functions will
+;;; be as closures.
+;;;
 ;;;    If we cannot convert a reference, then we mark the referenced function
 ;;; as an entry-point, creating a new XEP if necessary.
 ;;;
@@ -214,21 +219,27 @@
 ;;;
 (defun local-call-analyze-1 (fun)
   (declare (type functional fun))
-  (dolist (ref (leaf-refs fun))
-    (let* ((cont (node-cont ref))
-	   (dest (continuation-dest cont)))
-      (cond ((and (basic-combination-p dest)
-		  (eq (basic-combination-fun dest) cont)
-		  (eq (continuation-use cont) ref))
-	     (ecase (ref-inlinep ref)
-	       ((nil :inline)
-		(convert-call-if-possible ref dest))
-	       ((:notinline)))
-
-	     (unless (eq (basic-combination-kind dest) :local)
-	       (reference-entry-point ref)))
-	    (t
-	     (reference-entry-point ref)))))
+  (let ((refs (leaf-refs fun)))
+    (dolist (ref refs)
+      (let* ((cont (node-cont ref))
+	     (dest (continuation-dest cont)))
+	(cond ((and (basic-combination-p dest)
+		    (eq (basic-combination-fun dest) cont)
+		    (eq (continuation-use cont) ref)
+		    (or (null (rest refs))
+			(not (eq (functional-kind
+				  (lambda-home
+				   (block-lambda (node-block ref))))
+				 :top-level))))
+	       (ecase (ref-inlinep ref)
+		 ((nil :inline)
+		  (convert-call-if-possible ref dest))
+		 ((:notinline)))
+	       
+	       (unless (eq (basic-combination-kind dest) :local)
+		 (reference-entry-point ref)))
+	      (t
+	       (reference-entry-point ref))))))
 
   (undefined-value))
 
@@ -545,15 +556,18 @@
 (defun merge-cleanups-and-lets (fun call)
   (declare (type clambda fun) (type basic-combination call))
   (let* ((prev (node-prev call))
-	 (home (lambda-home (block-lambda (continuation-block prev)))))
+	 (home (lambda-home (block-lambda (continuation-block prev))))
+	 (home-env (lambda-environment home)))
     (push fun (lambda-lets home))
     (setf (lambda-home fun) home)
+    (setf (lambda-environment fun) home-env)
     
     (let ((cleanup (find-enclosing-cleanup
 		    (block-end-cleanup (continuation-block prev))))
 	  (lets (lambda-lets fun)))
       (dolist (let lets)
-	(setf (lambda-home let) home))
+	(setf (lambda-home let) home)
+	(setf (lambda-environment let) home-env))
       (when cleanup
 	(dolist (let lets)
 	  (unless (lambda-cleanup let)
