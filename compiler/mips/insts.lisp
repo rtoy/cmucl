@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.52 1999/04/30 11:54:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.53 2002/08/27 16:20:06 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -950,7 +950,7 @@
   (:dependencies (reads :ctrl-stat-reg) (writes reg))
   (:delay 1)
   (:emitter
-   (emit-register-inst segment cop1-op #b00000 (reg-tn-encoding reg)
+   (emit-register-inst segment cop1-op #b00010 (reg-tn-encoding reg)
 		       cr 0 0)))
 
 (define-instruction ctc1 (segment reg cr)
