@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.12 1991/11/06 13:07:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.13 1992/02/24 01:21:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,17 +137,21 @@
 	      (do ((name (cdr exp) (cddr name)))
 		  ((null name)
 		   (do ((args (cdr exp) (cddr args)))
-		       ((null (cddr args))
-			(set (first args) (eval (second args))))
+		       ((null args))
 		     (set (first args) (eval (second args)))))
-		(unless (eq (info variable kind (first name)) :special)
-		  (case *top-level-auto-declare*
-		    (:warn
-		     (warn "Declaring ~S special." (first name)))
-		    ((t))
-		    ((nil)
-		     (return (eval:internal-eval original-exp))))
-		  (proclaim `(special ,(first name)))))))
+		(let ((symbol (first name)))
+		  (case (info variable kind symbol)
+		    (:special)
+		    (:global
+		     (case *top-level-auto-declare*
+		       (:warn
+			(warn "Declaring ~S special." symbol))
+		       ((t))
+		       ((nil)
+			(return (eval:internal-eval original-exp))))
+		     (proclaim `(special ,symbol)))
+		    (t
+		     (return (eval:internal-eval original-exp))))))))
 	   ((progn)
 	    (when (> args 0)
 	      (dolist (x (butlast (rest exp)) (eval (car (last exp))))
