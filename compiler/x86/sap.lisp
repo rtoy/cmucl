@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.2 1997/02/08 22:09:34 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.3 1997/10/05 16:44:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
 
@@ -130,27 +130,30 @@
 
 (define-vop (pointer+)
   (:translate sap+)
-  (:args (ptr :scs (sap-reg) :target res)
-	 (offset :scs (signed-reg)))
+  (:args (ptr :scs (sap-reg) :target res
+	      :load-if (not (location= ptr res)))
+	 (offset :scs (signed-reg immediate)))
   (:arg-types system-area-pointer signed-num)
-  (:results (res :scs (sap-reg) :from (:argument 0)))
+  (:results (res :scs (sap-reg) :from (:argument 0)
+		 :load-if (not (location= ptr res))))
   (:result-types system-area-pointer)
   (:policy :fast-safe)
   (:generator 1
-    (move res ptr)
-    (inst add res offset)))
-
-(define-vop (pointer+-c)
-  (:translate sap+)
-  (:args (ptr :scs (sap-reg) :target res))
-  (:info offset)
-  (:arg-types system-area-pointer (:constant (signed-byte 32)))
-  (:results (res :scs (sap-reg)))
-  (:result-types system-area-pointer)
-  (:policy :fast-safe)
-  (:generator 1
-    (move res ptr)
-    (inst add res offset)))
+    (cond ((and (sc-is ptr sap-reg) (sc-is res sap-reg)
+		(not (location= ptr res)))
+	   (sc-case offset
+	     (signed-reg
+	      (inst lea res (make-ea :dword :base ptr :index offset :scale 1)))
+	     (immediate
+	      (inst lea res (make-ea :dword :base ptr
+				     :disp (tn-value offset))))))
+	  (t
+	   (move res ptr)
+	   (sc-case offset
+	     (signed-reg
+	      (inst add res offset))
+	     (immediate
+	      (inst add res (tn-value offset))))))))
 
 (define-vop (pointer-)
   (:translate sap-)
