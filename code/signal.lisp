@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.4 1990/07/23 18:54:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.5 1990/09/09 20:36:24 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -180,7 +180,7 @@
 ;;;; C routines that actually do all the work of establishing signal handlers.
 
 (def-c-routine ("install_handler" install-handler)
-	       (int)
+	       (unsigned-long)
   (signal int)
   (handler unsigned-long))
 
@@ -190,17 +190,22 @@
 ;;;; Interface to enabling and disabling signal handlers.
 
 (defun enable-interrupt (signal handler)
+  (declare (type (or function (member :default :ignore)) handler))
   (without-gcing
-   (install-handler (unix-signal-number signal)
-		    (di::get-lisp-obj-address handler))))
+   (let ((result (install-handler (unix-signal-number signal)
+				  (case handler
+				    (:default sig_dfl)
+				    (:ignore sig_ign)
+				    (t (di::get-lisp-obj-address handler))))))
+     (cond ((= result sig_dfl) :default)
+	   ((= result sig_ign) :ignore)
+	   (t (the function (di::make-lisp-obj result)))))))
 
 (defun default-interrupt (signal)
-  (declare (ignore signal))
-  (warn "Can't default interrupts yet."))
+  (enable-interrupt signal :ignore))
 
 (defun ignore-interrupt (signal)
-  (declare (ignore signal))
-  (warn "Can't ignore interrupts yet."))
+  (enable-interrupt signal :default))
 
 
 
@@ -236,7 +241,6 @@
   (declare (ignore signal code scp))
   (throw 'lisp::top-level-catcher nil))
 
-
 (defun signal-init ()
   "Enable all the default signals that Lisp knows how to deal with."
   #+nil (enable-interrupt :sigint #'sigint-handler)
@@ -252,3 +256,69 @@
   (enable-interrupt :sigpipe #'sigpipe-handler)
   (enable-interrupt :sigalrm #'sigalrm-handler)
   nil)
+
+
+
+;;;; Macros for dynamically enabling and disabling signal handling.
+
+;;; Notes on how the without-interrupts/with-interrupts stuff works.
+;;;
+;;; Before invoking the supplied handler for any of the signals that can be
+;;; blocked, the C interrupt support code checks to see if *interrupts-enabled*
+;;; has been bound to NIL.  If so, it saves the signal number and the value of
+;;; the signal mask (from the sigcontext), sets the signal mask to block all
+;;; blockable signals, sets *interrupt-pending* and returns without handling
+;;; the signal.
+;;;
+;;; When we drop out the without interrupts, we check to see if
+;;; *interrupt-pending* has been set.  If so, we call do-pending-interrupt,
+;;; which generates a SIGTRAP.  The C code invokes the handler for the saved
+;;; signal instead of the SIGTRAP after replacing the signal mask in the
+;;; sigcontext with the saved value.  When that hander returns, the original
+;;; signal mask is installed, allowing any other pending signals to be handled.
+;;;
+;;; This means that the cost of without-interrupts is just a special binding in
+;;; the case when no signals are delivered (the normal case).  It's only when
+;;; a signal is actually delivered that we use any system calls, and by then
+;;; the cost of the extra system calls are lost in the noise when compared
+;;; with the cost of delivering the signal in the first place.
+;;;
+
+(defvar *interrupts-enabled* t)
+(defvar *interrupt-pending* nil)
+
+;;; DO-PENDING-INTERRUPT  --  internal
+;;;
+;;; Magically converted by the compiler into a break instruction.
+;;; 
+(defun do-pending-interrupt ()
+  (do-pending-interrupt))
+
+;;; WITHOUT-INTERRUPTS  --  puiblic
+;;; 
+(defmacro without-interrupts (&body body)
+  "Execute BODY in a context impervious to interrupts."
+  (let ((name (gensym)))
+    `(flet ((,name () ,@body))
+       (if *interrupts-enabled*
+	   (unwind-protect
+	       (let ((*interrupts-enabled* nil))
+		 (,name))
+	     (when *interrupt-pending*
+	       (do-pending-interrupt)))
+	   (,name)))))
+
+;;; WITH-INTERRUPTS  --  puiblic
+;;;
+(defmacro with-interrupts (&body body)
+  "Allow interrupts while executing BODY.  As interrupts are normally allowed,
+  this is only useful inside a WITHOUT-INTERRUPTS."
+  (let ((name (gensym)))
+    `(flet ((,name () ,@body))
+       (if *interrupts-enabled*
+	   (,name)
+	   (let ((*interrupts-enabled* t))
+	     (when *interrupt-pending*
+	       (do-pending-interrupt))
+	     (,name))))))
+
