@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.7 1997/11/25 17:59:15 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.8 1997/11/28 14:58:23 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -34,22 +34,11 @@
 #define	align_8byte	3
 #define	align_16byte	4	
 #endif			
+
 	.text
-	.global	GNAME(sigtrap_handler)
 	.global	GNAME(foreign_function_call_active)
-	.global	GNAME(purify)
-	.global GNAME(collect_garbage)
-	.global	GNAME(current_control_stack_pointer)
-	.global GNAME(call_into_c)
-	.type	GNAME(call_into_c),@function
-	.data
-
-Cstack:	.long	0
-Purify:	.long	GNAME(purify)
-
-	.text
+	
 
-
 /*
  * The C function will preserve ebx, esi, edi, and ebp across its
  * function call - ebx is used to save the return lisp address.
@@ -127,81 +116,14 @@ Lfp_rtn_value:
 	jmp	*%ebx
 
 	.size	GNAME(call_into_c), . - GNAME(call_into_c)
+
 
-#ifdef WANT_CGC
-	.align	align_16byte,0x90
-	.type prep_mind_warp,@function
-/* Purify wants to mess with the control stack and I can't really
- * do that if I am also running on that stack. So I will transfer
- * to the stack that was left at initial call_into_lisp time.
- */
-prep_mind_warp:
-	movl	%esp,GNAME(current_control_stack_pointer)
-	movl	%esp,%ecx	# temp
-	xchgl	%esp,Cstack	# now on C stack
-	pushl	8(%ecx)		# arg 2
-	pushl	4(%ecx)		# arg 1
-	call	*%eax		# purify
-	addl	$8,%esp		# pop 2 args
-	xchgl	%esp,Cstack	# back to lisp stack
-
-/* Purify does not return a fp value, so don't need to check,
- * just setup the lisp stack for Lisp */
-	fldz			# insure no regs are not empty
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-	fldz
-
-	movl	$0,GNAME(foreign_function_call_active)
-/* Return */	
-	jmp	%ebx
-	.size	prep_mind_warp, . - prep_mind_warp
-
-	
-	.type	GNAME(do_purify),@function
-	.global	GNAME(do_purify)
-/* This is called from save to purge dynamic memory.
- * 
- * dtc: We are now on the lisp stack, but got here via a call_into_c so we
- * are in foreign_function land. Since a lisp image is being saved and
- * lisp will not be returned to it's not important to preserve
- * state which is not significant to saving an image.
- *
- * Need to see where any dynamic objects end up.
- * This seems like an incredible hack. Maybe I can fix purify.
- */
-GNAME(do_purify):
-	movl	%esp,GNAME(current_control_stack_pointer)
-
-	movl	%esp,%ecx	# temp
-	xchgl	%esp,Cstack	# now on C stack
-
-	pushl	%ebp		# save old frame pointer
-	movl	%esp,%ebp	# establish new frame
-
-	pushl	8(%ecx)		# arg 2
-	pushl	4(%ecx)		# arg 1
-	call	GNAME(purify)	# purify
-	addl	$8,%esp		# pop 2 args
-	
-	popl	%ebp
-
-	xchgl	%esp,Cstack	# back to lisp stack
-	
-	ret
-	.size	GNAME(do_purify), . - GNAME(do_purify)
-#endif
-
+	.text	
 	.global GNAME(call_into_lisp)
 	.type  GNAME(call_into_lisp),@function
 		
 /* The C conventions require that ebx, esi, edi, and ebp be preserved
 	across function calls. */
-	
 /* The *alien-stack* pointer is setup on the first call_into_lisp when
    the stack changes. */
 	
