@@ -733,33 +733,25 @@
 ;;;    These functions are called by the expansion of the Defprinter
 ;;; macro to do the actual printing.
 ;;;
-(proclaim '(ftype (function (symbol t stream (or null fixnum)) void)
+(proclaim '(ftype (function (symbol t stream) void)
 		  defprinter-prin1 defprinter-princ))
-(defun defprinter-prin1 (name value stream indent)
-  (if *defprint-pretty*
-      (format stream "~&~VT  ~A:~%~VT    ~S" indent name indent value)
-      (format stream "  ~A= ~S" name value)))
-;;;
-(defun defprinter-princ (name value stream indent)
-  (if *defprint-pretty*
-      (format stream "~&~VT  ~A:~%~VT    ~A" indent name indent value)
-      (format stream "  ~A= ~A" name value)))
-
-;;; Start-Defprinter, Finish-Defprinter  --  Internal
-;;;
-;;;    Start and finish the the printing of a defprinter function.
-;;;
-(defun start-defprinter (name stream indent object)
-  (declare (symbol name) (stream stream) (type (or index null) indent))
+(defun defprinter-prin1 (name value stream &optional indent)
   (declare (ignore indent))
-  (format stream "#<~S ~X" name (system:%primitive make-fixnum object)))
+  (write-string "  " stream)
+  (when *print-pretty*
+    (xp:pprint-newline :linear stream))
+  (princ name stream)
+  (write-string "= " stream)
+  (prin1 value stream))
 ;;;
-(defun finish-defprinter (name stream indent)
-  (declare (symbol name) (stream stream) (type (or index null) indent))
-  (declare (ignore name))
-  (if (and *defprint-pretty* indent)
-      (format stream ">~%~VT" indent)
-      (format stream ">")))
+(defun defprinter-princ (name value stream &optional indent)
+  (declare (ignore indent))
+  (write-string "  " stream)
+  (when *print-pretty*
+    (xp:pprint-newline :linear stream))
+  (princ name stream)
+  (write-string "= " stream)
+  (princ value stream))
 
 (defmacro defprinter (name &rest slots)
   "Defprinter Name Slot-Desc*
@@ -781,42 +773,60 @@
   The structure being printed is bound to Structure and the stream is bound to
   Stream."
   
-  (let ((n-indent (gensym)))
-    (flet ((sref (slot) `(,(symbolicate name "-" slot) structure)))
-      (collect ((prints))
-	(dolist (slot slots)
-	  (if (atom slot)
-	      (prints `(defprinter-prin1 ',slot ,(sref slot) stream ,n-indent))
-	      (let ((sname (first slot))
-		    (test t))
-		(collect ((stuff))
-		  (do ((option (rest slot) (cddr option)))
-		      ((null option)
-		       (prints		
-			`(let ((,sname ,(sref sname)))
-			   (when ,test
-			     ,@(or (stuff)
-				   `((defprinter-prin1 ',sname ,sname
-				       stream ,n-indent)))))))
-		    (case (first option)
-		      (:prin1
-		       (stuff `(defprinter-prin1 ',sname ,(second option)
-				 stream ,n-indent)))
-		      (:princ
-		       (stuff `(defprinter-princ ',sname ,(second option)
-				 stream ,n-indent)))
-		      (:test (setq test (second option)))
-		      (t
-		       (error "Losing Defprinter option: ~S." (first option)))))))))
-	
-	`(defun ,(symbolicate "%PRINT-" name) (structure stream depth)
-	   (let ((,n-indent (lisp::charpos stream)))
-	     (start-defprinter ',name stream ,n-indent structure)
-	     (let ((*print-level* (if *print-level* (- *print-level* depth 1))))
-	       (unless (and *print-level* (<= *print-level* 0))
-		 ,@(prints))
-	     (finish-defprinter ',name stream ,n-indent)
-	     nil)))))))
+  (flet ((sref (slot) `(,(symbolicate name "-" slot) structure)))
+    (collect ((prints))
+      (dolist (slot slots)
+	(if (atom slot)
+	    (prints `(defprinter-prin1 ',slot ,(sref slot) stream))
+	    (let ((sname (first slot))
+		  (test t))
+	      (collect ((stuff))
+		(do ((option (rest slot) (cddr option)))
+		    ((null option)
+		     (prints		
+		      `(let ((,sname ,(sref sname)))
+			 (when ,test
+			   ,@(or (stuff)
+				 `((defprinter-prin1 ',sname ,sname
+				     stream)))))))
+		  (case (first option)
+		    (:prin1
+		     (stuff `(defprinter-prin1 ',sname ,(second option)
+			       stream)))
+		    (:princ
+		     (stuff `(defprinter-princ ',sname ,(second option)
+			       stream)))
+		    (:test (setq test (second option)))
+		    (t
+		     (error "Losing Defprinter option: ~S."
+			    (first option)))))))))
+	     
+	     `(defun ,(symbolicate "%PRINT-" name) (structure stream depth)
+		(flet ((do-prints ()
+			 ,@(prints)))
+		  (cond (*print-pretty*
+			 (xp:pprint-logical-block
+			     (stream nil :prefix "#<" :suffix ">")
+			   (prin1 ',name stream)
+			   (write-char #\space stream)
+			   (xp:pprint-indent :current 0 stream)
+			   (let ((*print-base* 16)
+				 (*print-radix* t))
+			     (prin1 (system:%primitive make-fixnum structure)
+				    stream))
+			   (unless (and *print-level*
+					(<= *print-level* (1+ depth)))
+			     (do-prints))))
+			(t
+			 (format stream "#<~S ~X"
+				 ',name
+				 (system:%primitive make-fixnum structure))
+			 (let ((*print-level*
+				(if *print-level* (- *print-level* depth 1))))
+			   (unless (and *print-level* (<= *print-level* 0))
+			     (do-prints)))
+			 (format stream ">"))))
+		nil))))
 
 
 ;;;; Boolean attribute utilities:
