@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.40 1991/08/01 10:44:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.41 1991/11/25 00:00:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.40 1991/08/01 10:44:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.41 1991/11/25 00:00:58 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -131,7 +131,8 @@
   (flushable movable))
 (defknown %make-ratio (rational rational) ratio
   (flushable movable))
-
+(defknown make-value-cell (t) t
+  (flushable movable))
 
 (defknown (dynamic-space-free-pointer binding-stack-pointer-sap
 				      control-stack-pointer-sap)  ()
