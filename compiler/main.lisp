@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.66 1992/07/22 22:48:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.67 1992/07/28 20:23:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -320,9 +320,6 @@
 	    (t
 	     (assem:nuke-segment *code-segment*)))))
 
-  (when *compile-print*
-    (compiler-mumble "~&"))
-
   ;; We are done, so don't bother keeping anything around.
   (clear-ir2-info component)
   
@@ -361,6 +358,9 @@
     (if *byte-compiling*
 	(byte-compile-component component)
 	(native-compile-component component)))
+
+  (when *compile-print*
+    (compiler-mumble "~&"))
 
   (undefined-value))
 
