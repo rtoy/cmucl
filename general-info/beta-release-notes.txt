@@ -13,37 +13,26 @@ command.  Many thanks to Mike Clarkson (the LaTeXinfo maintainer) who
 volunteered to convert our Scribe documents.
 
 Changes:
-
-Improved recursive error handling.  Errors during reporting of errors are
-detected and suppressed.  Other recursive errors are eventually detected, and
-hopefully recovered from.  This should eliminate some "recursive map failure
-(stack overflow?)" errors.
-
-Fixed a bad declaration In CLX which caused array an index error on font
-attribute queries (such as CHAR-WIDTH.)
-
-Changed NCONC to signal an error if a non-null ATOM appears other than as the
-last argument.
-
-Changed FEATUREP to signal an error if it is passed a list form with a strange
-CAR.
-
-Fixed interpreted (typep x '(and ...)) to not always return NIL.
-
-Fixed PROFILE to work again, now that argument count information may be
-missing. 
-
-Do type checking on the arguments to %PUTHASH so that 
-(setf (gethash foo 'bar) x) doesn't get a bus error.
-
-Changed LET* and &AUX to allow duplicate variable names.
-
-Fixed DEFTYPE to properly invalidate type system caches so that type
-redefinitions predictably take effect.
-
-Improvements to MIPS disassembler database.
-
-Fixed interpreted CLOS methods to work once again.
+ -- Improved recursive error handling.  Errors during reporting of errors are
+    detected and suppressed.  Other recursive errors are eventually detected,
+    and hopefully recovered from.  This should eliminate some "recursive map
+    failure (stack overflow?)" errors.
+ -- Fixed a bad declaration in CLX which caused an array index error on
+    font attribute queries (such as CHAR-WIDTH.)
+ -- Fixed interpreted (typep x '(and ...)) to not always return NIL.
+ -- Fixed interpreted CLOS methods to work once again.
+ -- Fixed PROFILE to work again, now that argument count information may be
+    missing.
+ -- Changed NCONC to signal an error if a non-null ATOM appears other than
+    as the last argument.
+ -- Changed FEATUREP to signal an error if it is passed a list form with a
+    strange CAR.
+ -- Do type checking on the arguments to %PUTHASH so that
+    (setf (gethash foo 'bar) x) doesn't get a bus error.
+ -- Changed LET* and &AUX to allow duplicate variable names.
+ -- Fixed DEFTYPE to properly invalidate type system caches so that type
+    redefinitions predictably take effect.
+ -- Improvements to MIPS disassembler database.
 
 
 	    Release notes for CMU Common Lisp 15d, 2 February 92
