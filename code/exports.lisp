@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.21 1990/05/11 17:51:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.22 1990/05/15 01:25:09 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -259,11 +259,11 @@
 
 (export '(%array-fill-pointer %array-available-elements %array-data-vector
 	  %array-displacement %array-displaced-p %array-dimension
-	  %check-bound %negate *empty-type* *eval-stack-top* *null-type*
-	  *universal-type* *wild-type* 32bit-logical-not 32bit-logical-nor
-	  32bit-logical-and 32bit-logical-or 32bit-logical-xor
-	  always-subtypep args-type args-type-allowp args-type-keyp
-	  args-type-keywords args-type-optional args-type-p
+	  %check-bound %dpb %ldb %negate *empty-type* *eval-stack-top*
+	  *null-type* *universal-type* *wild-type* 32bit-logical-not
+	  32bit-logical-nor 32bit-logical-and 32bit-logical-or
+	  32bit-logical-xor always-subtypep args-type args-type-allowp
+	  args-type-keyp args-type-keywords args-type-optional args-type-p
 	  args-type-required args-type-rest array-rank array-total-size
 	  array-type array-type-complexp array-type-dimensions
 	  array-type-element-type array-type-p
@@ -292,12 +292,12 @@
 	  numeric-type-p parse-unknown-type parse-unknown-type-specifier
 	  pathname-device pathname-directory pathname-host pathname-name
 	  pathname-type pathname-version pathnamelike sequence-end
-	  single-value-type specifier-type streamlike stringable stringlike
-	  structure-type structure-type-name structure-type-p truth
-	  type-expand type-init two-arg-* two-arg-+ two-arg-- two-arg-/
-	  two-arg-/= two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->=
-	  two-arg-and two-arg-ior two-arg-xor type-difference
-	  type-intersect type-intersection type-specifier
+	  simple-unboxed-array single-value-type specifier-type streamlike
+	  stringable stringlike structure-type structure-type-name
+	  structure-type-p truth type-expand type-init two-arg-* two-arg-+
+	  two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<= two-arg-=
+	  two-arg-> two-arg->= two-arg-and two-arg-ior two-arg-xor
+	  type-difference type-intersect type-intersection type-specifier
 	  type-specifier-symbols type-union type/= type= types-intersect
 	  unboxed-array union-type union-type-p union-type-types
 	  unknown-type unknown-type-p unknown-type-specifier
