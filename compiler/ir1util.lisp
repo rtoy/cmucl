@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.74 1993/11/16 18:28:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.75 1994/02/08 14:29:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1395,9 +1395,10 @@
 ;;;
 (proclaim '(function main-entry (functional) clambda))
 (defun main-entry (functional)
-  (if (lambda-p functional)
-      functional
-      (optional-dispatch-main-entry functional)))
+  (etypecase functional
+    (clambda functional)
+    (optional-dispatch
+     (optional-dispatch-main-entry functional))))
 
 ;;; Looks-Like-An-MV-Bind  --  Interface
 ;;;
