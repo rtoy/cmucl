@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.21 2004/07/01 16:25:12 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.22 2004/07/07 18:07:53 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -23,6 +23,9 @@
 #include "lispregs.h"
 #include "signal.h"
 #include "interrupt.h"
+#include "gencgc.h"
+#include "breakpoint.h"
+#include "interr.h"
 
 char *arch_init()
 {
@@ -31,7 +34,7 @@ char *arch_init()
 
 os_vm_address_t arch_get_bad_addr(HANDLER_ARGS)
 {
-    unsigned long badinst;
+    unsigned int badinst;
     int rs1;
 
     /* On the sparc, we have to decode the instruction. */
@@ -46,7 +49,7 @@ os_vm_address_t arch_get_bad_addr(HANDLER_ARGS)
 	      current_dynamic_space + dynamic_space_size)))
 	return 0;
 
-    badinst = *(unsigned long *)SC_PC(context);
+    badinst = *(unsigned int *)SC_PC(context);
 
     if ((badinst >> 30) != 3)
 	/* All load/store instructions have op = 11 (binary) */
@@ -97,20 +100,20 @@ void arch_set_pseudo_atomic_interrupted(struct sigcontext *scp)
 
 unsigned long arch_install_breakpoint(void *pc)
 {
-    unsigned long *ptr = (unsigned long *)pc;
-    unsigned long result = *ptr;
+    unsigned int *ptr = (unsigned int *)pc;
+    unsigned int result = *ptr;
     *ptr = trap_Breakpoint;
-    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
+    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
     return result;
 }
 
 void arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-    *(unsigned long *)pc = orig_inst;
-    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
+  *(unsigned int *)pc = (unsigned int) orig_inst;
+  os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
 }
 
-static unsigned long *skipped_break_addr, displaced_after_inst;
+static unsigned int *skipped_break_addr, displaced_after_inst;
 #ifdef POSIX_SIGS
 static sigset_t orig_sigmask;
 #else
@@ -120,8 +123,8 @@ static int orig_sigmask;
 void arch_do_displaced_inst(struct sigcontext *scp,
 				   unsigned long orig_inst)
 {
-    unsigned long *pc = (unsigned long *)SC_PC(scp);
-    unsigned long *npc = (unsigned long *)SC_NPC(scp);
+    unsigned int *pc = (unsigned int *)SC_PC(scp);
+    unsigned int *npc = (unsigned int *)SC_NPC(scp);
 
 #ifdef POSIX_SIGS
     orig_sigmask = scp->uc_sigmask;
@@ -133,11 +136,11 @@ void arch_do_displaced_inst(struct sigcontext *scp,
 #endif
 
     *pc = orig_inst;
-    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
+    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
     skipped_break_addr = pc;
     displaced_after_inst = *npc;
     *npc = trap_AfterBreakpoint;
-    os_flush_icache((os_vm_address_t) npc, sizeof(unsigned long));
+    os_flush_icache((os_vm_address_t) npc, sizeof(unsigned int));
 
 #ifdef SOLARIS
     /* XXX never tested */
@@ -283,11 +286,13 @@ void handle_allocation_trap(struct sigcontext *context)
   int target;
   int size;
   int immed;
-  int context_index;
   boolean were_in_lisp;
   char* memory;
   sigset_t block;
 
+  target = 0;
+  size = 0;
+  
   /*
    * Block all blockable signals.  Need to do this because
    * sigill_handler enables the signals.  When the handler returns,
@@ -380,7 +385,7 @@ void handle_allocation_trap(struct sigcontext *context)
 
   memory = (char *) alloc(size);
   SC_REG(context, target) = (unsigned long) memory;
-  SC_REG(context, reg_ALLOC) = current_dynamic_space_free_pointer;
+  SC_REG(context, reg_ALLOC) = (unsigned long) current_dynamic_space_free_pointer;
 
   if (were_in_lisp)
     {
@@ -438,11 +443,11 @@ static void sigill_handler(HANDLER_ARGS)
 	    break;
 
 	  case trap_Breakpoint:
-	    handle_breakpoint(signal, code, context);
+	    handle_breakpoint(signal, CODE(code), context);
 	    break;
 
 	  case trap_FunctionEndBreakpoint:
-	    SC_PC(context)=(int)handle_function_end_breakpoint(signal, code, context);
+	    SC_PC(context)=(long)handle_function_end_breakpoint(signal, CODE(code), context);
 	    SC_NPC(context)=SC_PC(context) + 4;
 	    break;
 

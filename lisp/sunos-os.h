@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.4 2003/05/29 22:03:01 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.5 2004/07/07 18:07:53 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -54,6 +54,10 @@ typedef int os_vm_prot_t;
 
 #define bcopy(a,b,n) memmove(b,a,n)
 #define bzero(a,n) memset(a,0,n)
+
+extern void flush_icache(unsigned int*, unsigned int);
+extern void save_context(void);
+
 #endif /* SOLARIS */
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.14 2004/06/07 15:24:08 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.15 2004/07/07 18:07:53 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -41,6 +41,8 @@
 
 #include "os.h"
 
+#include "interrupt.h"
+
 /* To get dynamic_0_space and friends */
 #include "globals.h"
 /* To get memory map */
@@ -60,6 +62,7 @@
 #define GROW_MAX_SEGS 16
 
 extern char *getenv();
+
 
 /* ---------------------------------------------------------------- */
 
@@ -91,7 +94,7 @@ os_init(void)
     os_vm_page_size = os_real_page_size = sysconf(_SC_PAGESIZE);
 
     if(os_vm_page_size>OS_VM_DEFAULT_PAGESIZE){
-	fprintf(stderr,"os_init: Pagesize too large (%d > %d)\n",
+	fprintf(stderr,"os_init: Pagesize too large (%ld > %d)\n",
 		os_vm_page_size,OS_VM_DEFAULT_PAGESIZE);
 	exit(1);
     }else{
@@ -144,6 +147,7 @@ void
 os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 {
   static int flushit = -1;
+  
   /*
    * On some systems, iflush needs to be emulated in the kernel
    * On those systems, it isn't necessary
@@ -158,8 +162,8 @@ os_flush_icache(os_vm_address_t address, os_vm_size_t length)
       traceit = getenv("CMUCL_TRACE_SPARC_IFLUSH") != 0;
     
     if (traceit)
-      fprintf(stderr,";;;iflush %p - %x\n", address,length);
-    flush_icache(address,length);
+      fprintf(stderr,";;;iflush %p - %lx\n", (void*)address, length);
+    flush_icache((unsigned int*) address, length);
   }
 }
 
@@ -231,7 +235,7 @@ void segv_handler(HANDLER_ARGS)
     /* The page should have been marked write protected */
     if (!PAGE_WRITE_PROTECTED(page_index))
       fprintf(stderr, "*** Sigsegv in page not marked as write protected\n");
-    os_protect((void*)page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
+    os_protect((os_vm_address_t)page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
     page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
     page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
@@ -277,7 +281,7 @@ void segv_handler(HANDLER_ARGS)
   }
     
   /* a *real* protection fault */
-  fprintf(stderr, "segv_handler: Real protection violation: 0x%08x\n",
+  fprintf(stderr, "segv_handler: Real protection violation: %p\n",
           addr);
   segv_handle_now(signal, code, context);
 }
@@ -507,7 +511,7 @@ void make_holes(void)
     
       if (os_validate(hole, HOLE_SIZE) == NULL) {
         fprintf(stderr,
-                "ensure_space: Failed to validate hole of %ld bytes at 0x%08X\n",
+                "ensure_space: Failed to validate hole of %d bytes at 0x%08lX\n",
                 HOLE_SIZE,
                 (unsigned long)hole);
         exit(1);
@@ -525,7 +529,7 @@ void make_holes(void)
   if (os_validate(hole, HOLE_SIZE) == NULL)
     {
       fprintf(stderr,
-              "ensure_space: Failed to validate hold of %ld bytes at 0x%08X\n",
+              "ensure_space: Failed to validate hold of %d bytes at 0x%08lX\n",
               HOLE_SIZE,
               (unsigned long)hole);
       exit(1);
