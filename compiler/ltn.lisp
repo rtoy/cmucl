@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.35 1993/05/08 00:45:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.36 1993/08/19 23:13:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,7 +103,7 @@
 	   (etypecase leaf
 	     (lambda-var (if (null (lambda-var-sets leaf)) leaf nil))
 	     (constant (if (legal-immediate-constant-p leaf) leaf nil))
-	     ((or functional global-var) nil))))))
+	     ((or functional global-var dylan-var) nil))))))
 
 
 ;;; Annotate-1-Value-Continuation  --  Internal
