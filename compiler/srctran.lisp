@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.41 1993/05/11 13:50:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.42 1993/05/12 11:13:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,7 +86,7 @@
 ;;; Translate CxxR into car/cdr combos.
 
 (defun source-transform-cxr (form)
-  (if (or *byte-compiling* (/= (length form) 2))
+  (if (or (byte-compiling) (/= (length form) 2))
       (values nil t)
       (let ((name (symbol-name (car form))))
 	(do ((i (- (length name) 2) (1- i))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.19 1993/05/11 13:50:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.20 1993/05/12 11:12:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -446,7 +446,7 @@
 				 (cadr spec))
 	       `(%typep ,object ,spec))
 	      (t nil))
-	    (and (not *byte-compiling*)
+	    (and (not (byte-compiling))
 		 (typecase type
 		   (numeric-type
 		    (source-transform-numeric-typep object type))
