@@ -234,7 +234,8 @@
 ;;;
 (define-vop (allocate-full-call-frame)
   (:info nargs)
-  (:results (res :scs (word-pointer-reg)))
+  (:results (res :scs (word-pointer-reg)
+		 :load-if (> nargs register-arg-count)))
   (:generator 2
     (when (> nargs register-arg-count)
       (move res csp-tn)
