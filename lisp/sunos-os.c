@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.1 1992/09/08 20:32:23 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.2 1994/10/24 19:17:10 ram Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -32,7 +32,8 @@
 #define EMPTYFILE "/tmp/empty"
 #define ZEROFILE "/dev/zero"
 
-#define MAX_SEGS 64
+#define INITIAL_MAX_SEGS 32
+#define GROW_MAX_SEGS 16
 
 extern char *getenv();
 
@@ -48,14 +49,23 @@ static struct segment {
     long file_offset;
     short mapped_fd;
     short protection;
-} addr_map[MAX_SEGS];
+} *segments;
 
-static int n_segments=0;
+static int n_segments=0, max_segments=0;
 
 static int zero_fd=(-1), empty_fd=(-1);
 
 static os_vm_address_t last_fault=0;
 static os_vm_size_t real_page_size_difference=0;
+
+static void os_init_bailout(arg)
+char *arg;
+{
+    char buf[500];
+    sprintf(buf,"os_init: %s",arg);
+    perror(buf);
+    exit(1);
+}
 
 void os_init()
 {
@@ -65,11 +75,23 @@ void os_init()
 	empty_file=EMPTYFILE;
 
     empty_fd=open(empty_file,O_RDONLY|O_CREAT);
+    if(empty_fd<0)
+	os_init_bailout(empty_file);
     unlink(empty_file);
 
     zero_fd=open(ZEROFILE,O_RDONLY);
+    if(zero_fd<0)
+	os_init_bailout(ZEROFILE);
 
     os_vm_page_size=getpagesize();
+
+    max_segments=INITIAL_MAX_SEGS;
+    segments=(struct segment *)malloc(sizeof(struct segment)*max_segments);
+    if(segments==NULL){
+	fprintf(stderr,"os_init: Couldn't allocate %d segment descriptors\n",
+		max_segments);
+	exit(1);
+    }
 
     if(os_vm_page_size>OS_VM_DEFAULT_PAGESIZE){
 	fprintf(stderr,"os_init: Pagesize too large (%d > %d)\n",
@@ -120,14 +142,28 @@ int mapped_fd;
     if(len==0)
 	return NULL;
 
-    if(n_segments==MAX_SEGS){
-	fprintf(stderr,"seg_create_nomerge: Out of segments\n");
-	return NULL;
+    if(n_segments==max_segments){
+	struct segment *new_segs;
+
+	max_segments+=GROW_MAX_SEGS;
+
+	new_segs=(struct segment *)
+	    realloc(segments,max_segments*sizeof(struct segment));
+
+	if(new_segs==NULL){
+	    fprintf(stderr,
+		    "seg_create_nomerge: Couldn't grow segment descriptor table to %s segments\n",
+		    max_segments);
+	    max_segments-=GROW_MAX_SEGS;
+	    return NULL;
+	}
+	    
+	segments=new_segs;
     }
 
-    for(n=n_segments, seg=addr_map; n>0; n--, seg++)
+    for(n=n_segments, seg=segments; n>0; n--, seg++)
 	if(addr<seg->start){
-	    seg=(&addr_map[n_segments]);
+	    seg=(&segments[n_segments]);
 	    while(n-->0){
 		seg[0]=seg[-1];
 		seg--;
@@ -146,6 +182,7 @@ int mapped_fd;
     return seg;
 }
 
+#if 1
 /* returns the first segment containing addr */
 static struct segment *seg_find(addr)
 os_vm_address_t addr;
@@ -153,12 +190,35 @@ os_vm_address_t addr;
     int n;
     struct segment *seg;
 
-    for(n=n_segments, seg=addr_map; n>0; n--, seg++)
+    for(n=n_segments, seg=segments; n>0; n--, seg++)
 	if(seg->start<=addr && seg->start+seg->length>addr)
 	    return seg;
 
     return NULL;
 }
+#else
+/* returns the first segment containing addr */
+static struct segment *seg_find(addr)
+os_vm_address_t addr;
+{
+    /* does a binary search */
+    struct segment *lo=segments, *hi=segments+n_segments;
+
+    while(hi>lo){
+	struct segment *mid=lo+((hi-lo)>>1);
+	os_vm_address_t start=mid->start;
+
+	if(addr>=start && addr<start+mid->length)
+	    return mid;
+	else if(addr<start)
+	    hi=mid;
+	else
+	    lo=mid+1;
+    }
+
+    return NULL;
+}
+#endif
 
 /* returns TRUE if the range from addr to addr+len intersects with any segment */
 static boolean collides_with_seg_p(addr,len)
@@ -169,7 +229,7 @@ os_vm_size_t len;
     struct segment *seg;
     os_vm_address_t end=addr+len;
 
-    for(n=n_segments, seg=addr_map; n>0; n--, seg++)
+    for(n=n_segments, seg=segments; n>0; n--, seg++)
 	if(seg->start>=end)
 	    return FALSE;
 	else if(seg->start+seg->length>addr)
@@ -178,7 +238,7 @@ os_vm_size_t len;
     return FALSE;
 }
 
-#define seg_last_p(seg) (((seg)-addr_map)>=n_segments-1)
+#define seg_last_p(seg) (((seg)-segments)>=n_segments-1)
 
 static void seg_destroy(seg)
 struct segment *seg;
@@ -186,7 +246,7 @@ struct segment *seg;
     if(seg!=NULL){
 	int n;
 
-	for(n=seg-addr_map+1; n<n_segments; n++){
+	for(n=seg-segments+1; n<n_segments; n++){
 	    seg[0]=seg[1];
 	    seg++;
 	}
@@ -236,7 +296,7 @@ struct segment *seg;
 {
     if(!seg_last_p(seg))
 	seg_try_merge_next(seg);
-    if(seg>addr_map)
+    if(seg>segments)
 	seg_try_merge_next(seg-1);
 }
 
