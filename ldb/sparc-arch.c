@@ -147,7 +147,7 @@ static void sigemt_handler(signal, code, context)
 	else
 	    result = op1 + op2;
 	context->sc_regs[ALLOC] = result;
-	interrupt_handle_pending(signal, code, context);
+	interrupt_handle_pending(context);
 	return;
     }
 
