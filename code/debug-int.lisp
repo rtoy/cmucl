@@ -865,6 +865,7 @@
 		      (- (get-lisp-obj-address code) vm:other-pointer-type)
 		      code-header-len)))
 	     ;; Check to see if we were executing in a branch delay slot.
+	     #+pmax  ; pmax only
 	     (when (logbitp 31 (alien-access
 				(mach:sigcontext-cause (alien-value sc))))
 	       (incf pc-offset vm:word-bytes))
