@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.32 1991/11/14 05:51:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.33 1992/02/02 22:43:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -882,12 +882,14 @@
 (deftransform commutative-arg-swap ((x y) * * :defun-only t :node node)
   (if (and (constant-continuation-p x)
 	   (not (constant-continuation-p y)))
-      `(,(continuation-function-name (basic-combination-fun node)) y x)
+      `(,(continuation-function-name (basic-combination-fun node))
+	y
+	,(continuation-value x))
       (give-up)))
 
 (dolist (x '(= char= + * logior logand logxor))
-  (%deftransform x '(function * *) #'commutative-arg-swap))
-
+  (%deftransform x '(function * *) #'commutative-arg-swap
+		 "place constant arg last."))
 
 ;;; Handle the case of a constant boole-code.
 ;;;
@@ -916,6 +918,8 @@
       (t
        (abort-transform "~S illegal control arg to BOOLE." control)))))
 
+
+;;;; Convert multiply/divide to shifts.
 
 ;;; If arg is a constant power of two, turn * into a shift.
 ;;;
@@ -943,35 +947,39 @@
 (deftransform * ((x y)
 		 ((unsigned-byte 32) (unsigned-byte 32))
 		 (unsigned-byte 32))
+  "recode as shift and add"
   (unless (constant-continuation-p y)
     (give-up))
   (let ((y (continuation-value y))
 	(result nil)
 	(first-one nil))
-    (flet ((add (next-factor)
-	     (setf result
-		   (if result
-		       `(+ ,next-factor ,result)
-		       next-factor))))
+    (labels ((tub32 (x) `(truly-the (unsigned-byte 32) ,x))
+	     (add (next-factor)
+	       (setf result
+		     (tub32
+		      (if result
+			  `(+ ,(tub32 next-factor)
+			      ,result)
+			  next-factor)))))
       (declare (inline add))
       (dotimes (bitpos 32)
 	(if first-one
-	  (when (not (logbitp bitpos y))
-	    (add (if (= (1+ first-one) bitpos)
-		     ;; There is only a single bit in the string.
-		     `(ash x ,first-one)
-		     ;; There are at least two.
-		     `(- (ash x ,bitpos)
-			 (ash x ,first-one))))
-	    (setf first-one nil))
-	  (when (logbitp bitpos y)
-	    (setf first-one bitpos))))
+	    (when (not (logbitp bitpos y))
+	      (add (if (= (1+ first-one) bitpos)
+		       ;; There is only a single bit in the string.
+		       `(ash x ,first-one)
+		       ;; There are at least two.
+		       `(- ,(tub32 `(ash x ,bitpos))
+			   ,(tub32 `(ash x ,first-one)))))
+	      (setf first-one nil))
+	    (when (logbitp bitpos y)
+	      (setf first-one bitpos))))
       (when first-one
 	(cond ((= first-one 31))
 	      ((= first-one 30)
 	       (add '(ash x 30)))
 	      (t
-	       (add `(- (ash x 31) (ash x ,first-one)))))
+	       (add `(- ,(tub32 '(ash x 31)) ,(tub32 `(ash x ,first-one))))))
 	(add '(ash x 31))))
     (or result 0)))
 
@@ -1050,12 +1058,87 @@
 	   (- (logand (- x) ,mask))
 	   (logand x ,mask)))))
 
-
+
+;;;; Arithmetic and logical identity operation elimination:
+;;;
 ;;; Flush calls to random arith functions that convert to the identity
-;;; function.
-;;; 
-(deftransform ash ((x y) (* (constant-argument (member 0))))
-  'x)
+;;; function or a constant.
+
+
+(loop for (name identity result) in
+  '((ash 0 x)
+    (logand -1 x)
+    (logand 0 0)
+    (logior 0 x)
+    (logior -1 -1)
+    (logxor -1 (lognot x))
+    (logxor 0 x)) do
+  (deftransform name ((x y) `(* (constant-argument (member ,identity))) '*
+		      :eval-name t)
+    "fold identity operations"
+    result))
+
+
+;;; NOT-MORE-CONTAGIOUS  --  Interface
+;;;
+;;;    Return T if in an arithmetic op including continuations X and Y, the
+;;; result type is not affected by the type of X.  That is, Y is at least as
+;;; contagious as X.
+;;;
+(defun not-more-contagious (x y)
+  (declare (type continuation x y))
+  (let ((x (continuation-type x))
+	(y (continuation-type y)))
+    (values (type= (numeric-contagion x y)
+		   (numeric-contagion y y)))))
+
+
+;;; OK-ZERO-OR-LOSE  --  Interface
+;;;
+;;;    If y is not constant, not zerop, or is -0.0, or is contagious, then give
+;;; up.  We throw out negative zero because it is likely to cause sign changes,
+;;; and is not likely to appear in places where we actually case about
+;;; optimizing identities.
+;;;
+(defun ok-zero-or-lose (x y)
+  (unless (constant-continuation-p y) (give-up))
+  (let ((val (continuation-value y)))
+    (unless (and (zerop val)
+		 (not (and (floatp val) (minusp (float-sign val))))
+		 (not-more-contagious y x))
+	(give-up))))
+
+(deftransform - ((x y))
+  "convert (- 0 x) to negate"
+  (ok-zero-or-lose y x)
+  '(%negate y))
+
+;;; Fold (OP x 0).
+;;;
+(loop for (name result) in
+  '((* 0)
+    (+ x)
+    (- x)
+    (expt 1)) do
+  (deftransform name ((x y) '* '* :eval-name t)
+    "fold zero arg"
+    (ok-zero-or-lose x y)
+    result))
+
+;;; Fold (OP x +/-1)
+;;;
+(loop for (name result minus-result) in
+  '((* x (%negate x))
+    (/ x (%negate x))
+    (expt x (/ 1 x))) do
+  (deftransform name ((x y) '* '* :eval-name t)
+    "fold identity operations"
+    (unless (constant-continuation-p y) (give-up))
+    (let ((val (continuation-value y)))
+      (unless (and (= (abs val) 1)
+		   (not-more-contagious y x))
+	(give-up))
+      (if (minusp val) minus-result result))))
 
 
 ;;;; Character operations:
@@ -1425,10 +1508,6 @@
 (def-source-transform - (&rest args) (source-transform-intransitive '- args 0))
 (def-source-transform / (&rest args) (source-transform-intransitive '/ args 1))
 
-(deftransform - ((x y))
-  (unless (and (constant-continuation-p x) (zerop (continuation-value x)))
-    (give-up))
-  '(%negate y))
 
 
 ;;;; Apply:
