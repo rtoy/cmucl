@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.50 2001/05/31 16:42:06 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.51 2001/06/01 12:49:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1481,15 +1481,11 @@
 	`(%sap-alien ,sap ',alien-type)
 	(error "Cannot make aliens of type ~S out of SAPs" type))))
 
-(declaim (maybe-inline %sap-alien))
 (defun %sap-alien (sap type)
   (declare (type system-area-pointer sap)
 	   (type alien-type type))
   (make-alien-value :sap sap :type type))
 
-;; Don't make this an inline function.  You may not be able to get a
-;; working core. (RLT)
-(declaim (maybe-inline alien-sap))
 (defun alien-sap (alien)
   "Return a System-Area-Pointer pointing to Alien's data."
   (declare (type alien-value alien))
