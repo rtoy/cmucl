@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.26 2004/03/26 18:22:54 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.27 2004/04/08 14:00:03 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -397,6 +397,12 @@
 ;;; Initialize the fd-sets for UNIX-SELECT and return the active descriptor
 ;;; count.
 ;;;
+;;; Ideally we would mask out descriptors whose handler is already
+;;; active, since handler functions may not be reentrant.
+;;; Unfortunately, this would not be compatible with the way that
+;;; Hemlock's slave lisp mechanism interacts with the WIRE facility:
+;;; requests sent to the slave lisp may require a call to the master
+;;; lisp over the same wire. 
 (defmacro calc-masks ()
   '(progn 
      (unix:fd-zero read-fds)
@@ -404,7 +410,7 @@
      (let ((count 0))
        (declare (type index count))
        (dolist (handler *descriptor-handlers*)
-	 (unless (or (handler-active handler)
+	 (unless (or ; (handler-active handler)
 		     (handler-bogus handler))
 	   (let ((fd (handler-descriptor handler)))
 	     (ecase (handler-direction handler)
