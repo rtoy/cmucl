@@ -97,4 +97,5 @@
        (storew x fp (tn-offset y))))))
 ;;;
 (define-move-vop move-argument :move-argument
-  (any-reg descriptor-reg) (any-reg descriptor-reg))
+  (any-reg descriptor-reg)
+  (any-reg descriptor-reg))
