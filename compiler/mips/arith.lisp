@@ -243,3 +243,11 @@
 	  (inst bne x foo target)
 	  (inst beq x foo target)))
     (nop)))
+
+
+(define-static-function two-arg-+ (x y) :translate +)
+(define-static-function two-arg-- (x y) :translate -)
+(define-static-function two-arg-* (x y) :translate *)
+(define-static-function two-arg-/ (x y) :translate /)
+
+(define-static-function negate (x) :translate -)
