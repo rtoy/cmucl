@@ -185,7 +185,7 @@
 		 (:required
 		  (let ((sub-list-name (gensym "SUBLIST-")))
 		    (push-sub-list-binding sub-list-name `(car ,path) var
-					   name error-kind)
+					   name error-kind error-fun)
 		    (parse-defmacro-lambda-list var sub-list-name name
 						error-kind error-fun))
 		  (setf path `(cdr ,path))
@@ -220,9 +220,9 @@
 		    (push keyword keys)))
 		 (:auxs (push-let-binding (car var) (cadr var) nil)))))))
     (push `(unless (<= ,minimum
-		       (length ,(if top-level
-				    `(cdr ,arg-list-name)
-				    arg-list-name))
+		       (length (the list ,(if top-level
+					      `(cdr ,arg-list-name)
+					      arg-list-name)))
 		       ,@(unless restp
 			   (list maximum)))
 	     (,error-fun 'defmacro-ll-arg-count-error
@@ -251,13 +251,18 @@
 		*arg-tests*)))
     (values env-arg-used minimum (if (null restp) maximum nil))))
 
-(defun push-sub-list-binding (variable path object name error-kind)
-  (push `(,variable (if (consp ,path)
-			,path
-			(error "Error in ~S ~S.  ~S should have been a list ~
-			        to match ~S."
-			       ',error-kind ',name ,path ',object)))
-	*system-lets*))
+(defun push-sub-list-binding (variable path object name error-kind error-fun)
+  (let ((var (gensym "TEMP-")))
+    (push `(,variable
+	    (let ((,var ,path))
+	      (if (listp ,var)
+		  ,var
+		  (,error-fun 'defmacro-bogus-sublist-error
+			      :kind ',error-kind
+			      ,@(when name `(:name ',name))
+			      :object ,var
+			      :lambda-list ',object))))
+	  *system-lets*)))
 
 (defun push-let-binding (variable path systemp &optional condition
 				  (init-form *default-default*))
@@ -275,7 +280,9 @@
   (push-let-binding supplied-var condition t)
   (cond ((consp value-var)
 	 (let ((whole-thing (gensym "OPTIONAL-SUBLIST-")))
-	   (push-let-binding whole-thing path t supplied-var init-form)
+	   (push-sub-list-binding whole-thing
+				  `(if ,supplied-var ,path ,init-form)
+				  value-var name error-kind error-fun)
 	   (parse-defmacro-lambda-list value-var whole-thing name
 				       error-kind error-fun)))
 	((symbolp value-var)
@@ -350,6 +357,17 @@
 	      "Error while parsing arguments to ~A ~S:~%"
 	      (defmacro-lambda-list-bind-error-kind condition)
 	      (defmacro-lambda-list-bind-error-name condition))))
+
+(define-condition defmacro-bogus-sublist-error
+		  (defmacro-lambda-list-bind-error)
+  (object lambda-list)
+  (:report
+   (lambda (condition stream)
+     (print-defmacro-ll-bind-error-intro condition stream)
+     (format stream
+	     "Bogus sublist:~%  ~S~%to satisfy lambda-list:~%  ~:S~%"
+	     (defmacro-bogus-sublist-error-object condition)
+	     (defmacro-bogus-sublist-error-lambda-list condition)))))
 
 (define-condition defmacro-ll-arg-count-error (defmacro-lambda-list-bind-error)
   (argument lambda-list minimum maximum)
