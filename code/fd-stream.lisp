@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.46 1998/12/19 16:02:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.47 1999/01/15 09:27:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1260,9 +1260,7 @@ non-server method is also significantly more efficient for large reads.
                        :overwrite, :append, :supersede or nil
    :if-does-not-exist - one of :error, :create or nil
   See the manual for details."
-
-  (unless (eq external-format :default)
-    (error "The only recognised external format is :default."))
+  (declare (ignore external-format))
   
   ;; First, make sure that DIRECTION is valid. Allow it to be changed if not.
   (setf direction
