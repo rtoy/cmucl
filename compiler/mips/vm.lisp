@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.24 1990/05/06 05:32:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.25 1990/05/07 14:32:16 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -193,13 +193,13 @@
 ;;;
 (def-primitive-type positive-fixnum (any-reg signed-reg unsigned-reg)
   :type (unsigned-byte 29))
-(def-primitive-type unsigned-byte-31 (signed-reg unsigned-reg)
+(def-primitive-type unsigned-byte-31 (signed-reg unsigned-reg descriptor-reg)
   :type (unsigned-byte 31))
-(def-primitive-type unsigned-byte-32 (unsigned-reg)
+(def-primitive-type unsigned-byte-32 (unsigned-reg descriptor-reg)
   :type (unsigned-byte 32))
 (def-primitive-type fixnum (any-reg signed-reg)
   :type (signed-byte 30))
-(def-primitive-type signed-byte-32 (signed-reg)
+(def-primitive-type signed-byte-32 (signed-reg descriptor-reg)
   :type (signed-byte 32))
 
 (def-primitive-type-alias tagged-num (:or positive-fixnum fixnum))
