@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.15 1990/06/04 05:23:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.16 1990/06/04 06:07:54 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -31,18 +31,13 @@
   (:results
    (result :scs (any-reg descriptor-reg)))
   (:variant-vars type-code error-code)
-  (:temporary (:type random :scs (non-descriptor-reg)) temp)
-  (:generator 4
-    (let ((err-lab (generate-error-code error-code value)))
-      (test-simple-type value temp err-lab t type-code)
-      (move result value))))
+  (:temporary (:type random :scs (non-descriptor-reg)) temp))
 
 (define-vop (simple-type-predicate)
   (:args
    (value :scs (any-reg descriptor-reg)))
   (:conditional)
   (:info target not-p)
-  (:variant-vars type-code)
   (:policy :fast-safe)
   (:temporary (:type random :scs (non-descriptor-reg)) temp)
   (:generator 4
@@ -54,7 +49,10 @@
 		  (:variant ,type-code)
 		  (:translate ,pred-name))
 		(define-vop (,check-name check-simple-type)
-		  (:variant ,type-code ,error-code))
+		  (:generator 4
+		    (let ((err-lab (generate-error-code ,error-code value)))
+		      (test-simple-type value temp err-lab t ,type-code)
+		      (move result value))))
 		(primitive-type-vop ,check-name (:check) ,ptype))))
 
   ;; ### Want to tweek costs so that checks that do dereferences are
@@ -135,7 +133,6 @@
 ;;; Slightly tenser versions for FIXNUM's
 ;;; 
 (define-vop (check-fixnum check-simple-type)
-  (:ignore type-code error-code)
   (:generator 3
     (let ((err-lab (generate-error-code object-not-fixnum-error value)))
       (inst and temp value #x3)
