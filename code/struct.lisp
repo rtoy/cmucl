@@ -16,13 +16,6 @@
 
 (in-package 'c)
 
-#+new-compiler
-(defun structurify (vec)
-  "Frobs a vector to turn it into a named structure.  Returns the vector."
-  (declare (simple-vector vec))
-  (structurify vec))
-
-
 (defstruct (defstruct-description
              (:conc-name dd-)
              (:print-function print-defstruct-description))
