@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.30 1991/11/09 02:42:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.31 1991/11/12 16:01:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -505,6 +505,20 @@
 		     ;; the remainder must be negative.
 		     0
 		     '*))))
+
+(defoptimizer (random derive-type) ((bound &optional state))
+  (let ((type (continuation-type bound)))
+    (when (numeric-type-p type)
+      (let ((class (numeric-type-class type))
+	    (high (numeric-type-high type)))
+	(make-numeric-type
+	 :class class
+	 :format (numeric-type-format type)
+	 :low (coerce 0 class)
+	 :high (cond ((not high) nil)
+		     ((eq class 'integer) (max (1- high) 0))
+		     ((or (consp high) (zerop high)) high)
+		     (t `(,high))))))))
 
 
 ;;;; Logical derive-type methods:
