@@ -168,25 +168,26 @@ char *filename;
     }
     printf("[Saving current lisp image into %s:\n", filename);
 
-    oldmask = sigblock(sigmask(SIGUSR1));
+    oldmask = sigblock(sigmask(SIGTERM));
 
     /* Install the save handler */
     newsv.sv_handler = save_handler;
     newsv.sv_mask = 0;
     newsv.sv_flags = SV_ONSTACK;
-    sigvec(SIGUSR1, &newsv, &oldsv);
+    sigvec(SIGTERM, &newsv, &oldsv);
     
     /* Set up the signal stack. */
-    newss.ss_sp = signal_stack + STACK_SIZE;
+    newss.ss_sp = (char *)(((unsigned)signal_stack + STACK_SIZE) & ~7);
     newss.ss_onstack = 0;
     sigstack(&newss, &oldss);
 
     /* Deliver the signal and wait for it to be delivered. */
-    kill(getpid(), SIGUSR1);
+    kill(getpid(), SIGTERM);
+
     sigpause(oldmask);
 
     /* Restore the state of the world. */
-    sigvec(SIGUSR1, &oldsv, NULL);
+    sigvec(SIGTERM, &oldsv, NULL);
     sigstack(&oldss, NULL);
     sigsetmask(oldmask);
 
@@ -311,25 +312,25 @@ extern void restore()
     return_value = 0;
 
     /* Block the signal. */
-    oldmask = sigblock(sigmask(SIGUSR1));
+    oldmask = sigblock(sigmask(SIGTERM));
 
     /* Install the handler */
     newsv.sv_handler = restore_handler;
     newsv.sv_mask = 0;
     newsv.sv_flags = SV_ONSTACK;
-    sigvec(SIGUSR1, &newsv, &oldsv);
+    sigvec(SIGTERM, &newsv, &oldsv);
     
     /* Set up the signal stack. */
-    newss.ss_sp = signal_stack + STACK_SIZE;
+    newss.ss_sp = (char *)(((unsigned)signal_stack + STACK_SIZE) & ~7);
     newss.ss_onstack = 0;
     sigstack(&newss, &oldss);
 
     /* Deliver the signal and wait for it to be delivered. */
-    kill(getpid(), SIGUSR1);
+    kill(getpid(), SIGTERM);
     sigpause(oldmask);
 
     /* We should never get here. */
-    sigvec(SIGUSR1, &oldsv, NULL);
+    sigvec(SIGTERM, &oldsv, NULL);
     sigstack(&oldss, NULL);
     sigsetmask(oldmask);
 
