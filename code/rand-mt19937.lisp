@@ -6,7 +6,7 @@
 ;;; Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.2 1997/12/11 17:44:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.3 1997/12/12 15:16:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,8 +24,6 @@
 
 (in-package "KERNEL")
 (export '(%random-single-float %random-double-float random-chunk))
-
-(pushnew :random-mt19937 *features*)
 
 
 ;;;; Random state hackery:
@@ -48,7 +46,7 @@
 (defun init-random-state (&optional (seed 4357) state)
   (declare (type (integer 1 #xffffffff) seed))
   (let ((state (or state (make-array 627 :element-type '(unsigned-byte 32)))))
-    (declare (type (simple-array (unsigned-byte 32) (627))) state)
+    (declare (type (simple-array (unsigned-byte 32) (627)) state))
     (setf (aref state 1) #x9908b0df)
     (setf (aref state 2) 1)
     (setf (aref state 3) seed)
@@ -198,6 +196,7 @@
 ;;;
 ;;; 53bit version.
 ;;;
+#-x86
 (defun %random-double-float (arg state)
   (declare (type (double-float (0d0)) arg)
 	   (type random-state state))
@@ -210,6 +209,22 @@
 	      (lisp::double-float-high-bits 1d0))
 	 (random-chunk state))
 	1d0)))
+
+;;; Using a faster inline VOP.
+#+x86
+(defun %random-double-float (arg state)
+  (declare (type (double-float (0d0)) arg)
+	   (type random-state state))
+  (let ((state-vector (random-state-state state)))
+    (* arg
+       (- (lisp::make-double-float
+	   (dpb (ash (vm::random-mt19937 state-vector)
+		     (- vm:double-float-digits random-chunk-length
+			vm:word-bits))
+		vm:double-float-significand-byte
+		(lisp::double-float-high-bits 1d0))
+	   (vm::random-mt19937 state-vector))
+	  1d0))))
 
 
 ;;;; Random integers:
