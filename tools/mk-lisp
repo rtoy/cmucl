@@ -1,8 +1,8 @@
-#!/bin/csh -fx
+#!/bin/csh -f
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.13 1992/03/23 22:55:04 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.14 1992/03/24 00:42:35 wlott Exp $
 
 if ($#argv) then
     if ($argv[1] == "-now") then
