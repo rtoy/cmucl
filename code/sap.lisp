@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.8 1992/02/21 23:13:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.9 1992/03/02 02:23:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,8 +18,8 @@
 (export '(system-area-pointer sap-ref-8 sap-ref-16 sap-ref-32 sap-ref-sap
 	  signed-sap-ref-8 signed-sap-ref-16 signed-sap-ref-32
 	  sap+ sap- sap< sap<= sap= sap>= sap>
-	  allocate-system-memory reallocate-system-memory
-	  deallocate-system-memory))
+	  allocate-system-memory allocate-system-memory-at
+	  reallocate-system-memory deallocate-system-memory))
 
 (in-package "KERNEL")
 (export '(%set-sap-ref-sap %set-sap-ref-single %set-sap-ref-double
@@ -195,6 +195,11 @@
 
 (alien:def-alien-routine ("os_allocate" allocate-system-memory)
 			 system-area-pointer
+  (bytes c-call:unsigned-long))
+
+(alien:def-alien-routine ("os_allocate_at" allocate-system-memory-at)
+			 system-area-pointer
+  (address system-area-pointer)
   (bytes c-call:unsigned-long))
 
 (alien:def-alien-routine ("os_reallocate" reallocate-system-memory)
