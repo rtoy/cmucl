@@ -132,12 +132,12 @@
 
     (dolist (entry menu-spec)
       (if (and entry (listp entry))
-	  (let ((widget (create-push-button-gadget pulldown "menuEntry"
+	  (let ((widget (create-push-button pulldown "menuEntry"
 						   :label-string (car entry))))
 	    (when (cdr entry)
 	      (apply #'add-callback widget :activate-callback (cdr entry)))
 	    (push widget widgets))
-	  (let ((widget (create-separator-gadget pulldown "menuSeparator")))
+	  (let ((widget (create-separator pulldown "menuSeparator")))
 	    (push widget widgets))))
     (apply #'manage-children widgets)
     cascade))
@@ -149,7 +149,7 @@
   (create-interface-menu menu-bar name menu-spec))
 
 (defun create-highlight-button (parent name label)
-  (create-push-button-gadget parent name
+  (create-push-button parent name
 			     :label-string label
 			     :highlight-on-enter t
 			     :shadow-thickness 0))
@@ -180,14 +180,14 @@
 				:margin-height 0
 				:margin-width 0
 				:orientation :horizontal))
-	 (label (create-label-gadget rc "valueLabel"
+	 (label (create-label rc "valueLabel"
 				     :font-list *header-font*
 				     :label-string name))
 	 (button (if activep
 		     (create-highlight-button rc "valueObject"
 					      (print-for-widget-display
 					       "~S" value))
-		     (create-label-gadget rc "valueObject"
+		     (create-label rc "valueObject"
 					  :font-list *italic-font*
 					  :label-string
 					  (format nil "~A" value)))))
@@ -205,13 +205,13 @@
 
 (defun set-value-box (vbox name value &key callback client-data)
   (with-widget-children (child vbox)
-    (:push-button-gadget
+    (:push-button
      (set-values child :label-string
 		 (print-for-widget-display "~S" value))
      (remove-all-callbacks child :activate-callback)
      (when callback
        (add-callback child :activate-callback callback (or client-data value))))
-    (:label-gadget
+    (:label
      (set-values child :label-string name))))
 
 
@@ -442,7 +442,7 @@
       (text-set-string widget "")
       (multiple-value-bind (form shell)
 			   (create-form-dialog pane "aproposDialog")
-	(let* ((done (create-push-button-gadget form "aproposDone"
+	(let* ((done (create-push-button form "aproposDone"
 						:left-attachment :attach-form
 						:right-attachment :attach-form
 						:label-string "Done"))
@@ -526,12 +526,12 @@
 				    (c::cookie-cspeed cookie)))
 	     (brevity (create-policy rc "Inhibit Warnings"
 				     (c::cookie-brevity cookie)))
-	     (sep (create-separator-gadget form "separator"
+	     (sep (create-separator form "separator"
 					   :top-attachment :attach-widget
 					   :top-widget rc
 					   :left-attachment :attach-form
 					   :right-attachment :attach-form))
-	     (done (create-push-button-gadget form "done"
+	     (done (create-push-button form "done"
 					    :label-string "Done"
 					    :top-attachment :attach-widget
 					    :top-widget sep
@@ -593,7 +593,7 @@
 				 :bottom-attachment :attach-form
 				 :right-attachment :attach-position
 				 :right-position 50))
-	 (prompt (create-label-gadget form "inspectPrompt"
+	 (prompt (create-label form "inspectPrompt"
 				      :top-attachment :attach-widget
 				      :top-widget menu-bar
 				      :font-list *header-font*
@@ -606,7 +606,7 @@
 			     :left-attachment :attach-form
 			     :right-attachment :attach-widget
 			     :right-widget vsep))
-	 (hlabel (create-label-gadget form "inspectHistoryLabel"
+	 (hlabel (create-label form "inspectHistoryLabel"
 				      :top-attachment :attach-widget
 				      :top-widget entry
 				      :font-list *header-font*
@@ -622,7 +622,7 @@
 				      :right-attachment :attach-widget
 				      :right-widget vsep
 				      :bottom-attachment :attach-form))
-	 (flabel (create-label-gadget form "filesLabel"
+	 (flabel (create-label form "filesLabel"
 				      :left-attachment :attach-widget
 				      :left-widget vsep
 				      :top-attachment :attach-widget
@@ -638,13 +638,13 @@
 				 :top-widget flabel
 				 :right-attachment :attach-form
 				 :right-offset 4))
-	 (add (create-push-button-gadget frc "fileAdd"
+	 (add (create-push-button frc "fileAdd"
 					 :label-string "Add File"))
-	 (remove (create-push-button-gadget frc "fileRemove"
+	 (remove (create-push-button frc "fileRemove"
 					    :label-string "Remove Files"))
-	 (load (create-push-button-gadget frc "fileLoad"
+	 (load (create-push-button frc "fileLoad"
 					  :label-string "Load Files"))
-	 (compile (create-push-button-gadget frc "fileCompile"
+	 (compile (create-push-button frc "fileCompile"
 					     :label-string "Compile Files"))
 	 (apropos (create-text form "apropos"
 			       :left-attachment :attach-widget
@@ -654,14 +654,14 @@
 			       :left-offset 4
 			       :right-offset 4
 			       :bottom-offset 4))
-	 (alabel (create-label-gadget form "aproposLabel"
+	 (alabel (create-label form "aproposLabel"
 				      :label-string "Apropos:"
 				      :font-list *header-font*
 				      :left-attachment :attach-widget
 				      :left-widget vsep
 				      :bottom-attachment :attach-widget
 				      :bottom-widget apropos))
-	 (hsep (create-separator-gadget form "separator"
+	 (hsep (create-separator  form "separator"
 					:left-attachment :attach-widget
 					:left-widget vsep
 					:right-attachment :attach-form
