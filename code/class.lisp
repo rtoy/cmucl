@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.15 1993/03/13 14:36:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.16 1993/03/13 14:52:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,9 @@
 		 class-proper-name class-layout class-state class-subclasses
 		 class-init
 		 basic-structure-class funcallable-instance
-		 funcallable-structure-class))
+		 funcallable-structure-class
+		 make-funcallable-structure-class
+		 funcallable-structure-class-p))
 
 (in-package "LISP")
 (export '(class structure-class class-name find-class class-of built-in-class))
