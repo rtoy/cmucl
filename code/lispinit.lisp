@@ -78,7 +78,8 @@
 ;;; Must be initialized in %INITIAL-FUNCTION before the DEFVAR runs...
 (proclaim '(special *gc-inhibit* *already-maybe-gcing*
 		    *need-to-collect-garbage* *gc-verbose*
-		    *before-gc-hooks* *after-gc-hooks*))
+		    *before-gc-hooks* *after-gc-hooks*
+		    c::*type-system-initialized*))
 
 ;;;; Global ports:
  
@@ -764,6 +765,7 @@
   (setq *before-gc-hooks* ())
   (setq *after-gc-hooks* ())
   (setq %sp-interrupts-inhibited nil)
+  (setq c::*type-system-initialized* nil)
   (%primitive print "In initial-function, and running.")
 
   ;; Many top-level forms call INFO, (SETF INFO).
