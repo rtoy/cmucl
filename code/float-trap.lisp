@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.6 1992/02/14 23:46:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.7 1992/12/10 01:26:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,7 +164,7 @@
     (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))
 	   (error 'division-by-zero))
 	  ((not (zerop (logand float-invalid-trap-bit traps)))
-	   (error 'ext:floating-point-invalid))
+	   (error 'floating-point-invalid-operation))
 	  ((not (zerop (logand float-overflow-trap-bit traps)))
 	   (error 'floating-point-overflow))
 	  ((not (zerop (logand float-underflow-trap-bit traps)))
