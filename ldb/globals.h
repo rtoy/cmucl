@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.h,v 1.3 1990/09/08 11:00:49 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.h,v 1.4 1990/09/21 05:56:46 wlott Exp $ */
 
 #if !defined(_INCLUDE_GLOBALS_H_)
 #define _INCLUDED_GLOBALS_H_
@@ -6,6 +6,8 @@
 #include "lisp.h"
 
 #if !defined(LANGUAGE_ASSEMBLY)
+
+extern char *number_stack_start;
 
 extern int foreign_function_call_active;
 

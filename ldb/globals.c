@@ -1,9 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.3 1990/09/08 11:00:32 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.4 1990/09/21 05:56:31 wlott Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
 #include "lisp.h"
 #include "globals.h"
+
+char *number_stack_start;
 
 int foreign_function_call_active;
 
