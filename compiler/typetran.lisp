@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.21 1993/07/17 01:00:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.22 1993/07/20 15:38:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,6 +114,17 @@
     (assert ctype)
     (ir1-transform-type-predicate object ctype)))
 
+
+;;; FIND-CLASS IR1 Transform  --  Internal
+;;;
+;;;    If FIND-CLASS is called on a constant class, locate the CLASS-CELL at
+;;; load time.
+;;; 
+(deftransform find-class ((name) ((constant-argument symbol)))
+  (let* ((name (continuation-value name))
+	 (cell (find-class-cell name)))
+    `(or (class-cell-class ',cell)
+	 (error "Class not yet defined: ~S" ',name))))
 
 ;;;; Standard type predicates:
 
@@ -370,9 +381,8 @@
        (t
 	(once-only ((object obj))
 	  `(and (,pred ,object)
-		(class-cell-typep
-		 (,get-layout ,object)
-		 (load-time-value (find-class-cell ',name))))))))))
+		(class-cell-typep (,get-layout ,object)
+				  ',(find-class-cell name)))))))))
 
 
 ;;; SOURCE-TRANSFORM-STRUCTURE-TYPEP  --  Internal
