@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.7 1993/05/13 18:10:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.8 1993/05/13 18:20:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1435,7 +1435,6 @@
     code-object))
 
 (define-cold-fop (fop-assembler-code)
-  (cold-verify-code-format)
   (let* ((length (read-arg 4))
 	 (header-size
 	  ;; Note: we round the number of constants up to assure that
