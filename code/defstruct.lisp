@@ -17,11 +17,11 @@
 ;;; the subtype field set to 1.  The first element is used to hold the name of
 ;;; the structure.  This piece of implementation-dependency resides in the
 ;;; macros defined here.
-
-(compiler-let ((lisp::*bootstrap-defmacro* t))
-  (defmacro structurify (structure)
-    "Frobs a vector to turn it into a named structure.  Returns the vector."
-    `(%primitive set-vector-subtype ,structure %g-vector-structure-subtype)))
+;;;
+(proclaim '(inline structurify))
+(defun structurify (structure)
+  "Frobs a vector to turn it into a named structure.  Returns the vector."
+  (%primitive set-vector-subtype structure %g-vector-structure-subtype))
 
 
 ;;; This version of Defstruct is implemented using Defstruct, and is free of
