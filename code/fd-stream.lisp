@@ -1,5 +1,5 @@
 ;;; -*- Log: code.log; Package: LISP -*-
-
+;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.10 1991/02/08 13:32:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.11 1991/05/18 13:38:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.10 1991/02/08 13:32:31 ram Exp $
 ;;;
 ;;; Streams for UNIX file descriptors.
 ;;;
@@ -1081,7 +1079,6 @@
 	(:probe (values t nil mach:o_rdonly)))
     (let* ((pathname (pathname filename))
 	   (namestring (unix-namestring pathname input)))
-      
       ;; Process if-exists argument if we are doing any output.
       (cond (output
 	     (unless if-exists-given
@@ -1244,8 +1241,10 @@
 (defun stream-init ()
   (stream-reinit)
   (setf *terminal-io* (make-synonym-stream '*tty*))
-  (setf *standard-input* (make-synonym-stream '*stdin*))
   (setf *standard-output* (make-synonym-stream '*stdout*))
+  (setf *standard-input*
+	(make-two-way-stream (make-synonym-stream '*stdin*)
+			     *standard-output*))
   (setf *error-output* (make-synonym-stream '*stderr*))
   (setf *query-io* (make-synonym-stream '*terminal-io*))
   (setf *debug-io* *query-io*)
