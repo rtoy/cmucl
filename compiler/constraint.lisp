@@ -161,11 +161,13 @@
 	 (%typep
 	  (let ((type (second args)))
 	    (when (constant-continuation-p type)
+	      (let ((val (continuation-value type)))
 	      (add-complement-constraints if 'typep
 					  (ok-cont-lambda-var (first args))
-					  (specifier-type
-					   (continuation-value type))
-					  nil))))
+					  (if (type-p val)
+					      val
+					      (specifier-type))
+					  nil)))))
 	 ((eq eql)
 	  (let* ((var1 (ok-cont-lambda-var (first args)))
 		 (arg2 (second args))
