@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.40 2003/10/08 16:49:34 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.41 2003/10/09 19:04:28 toy Exp $
  *
  */
 
@@ -55,24 +55,25 @@
  * This value better not have any bits set there either!
  */
 #define set_alloc_pointer(value) \
-  (current_dynamic_space_free_pointer = (value) | ((unsigned long) current_dynamic_space_free_pointer & 7))
+  (current_dynamic_space_free_pointer = (value) \
+         | ((unsigned long) current_dynamic_space_free_pointer & lowtagMask))
 #define get_alloc_pointer() \
   (current_dynamic_space_free_pointer)
 #define get_binding_stack_pointer() \
   (current_binding_stack_pointer)
 #define get_pseudo_atomic_atomic() \
-  ((unsigned long)current_dynamic_space_free_pointer & 4)
+  ((unsigned long)current_dynamic_space_free_pointer & pseudo_atomic_Value)
 #define set_pseudo_atomic_atomic() \
   (current_dynamic_space_free_pointer \
-   = (lispobj*) ((unsigned long)current_dynamic_space_free_pointer | 4))
+   = (lispobj*) ((unsigned long)current_dynamic_space_free_pointer | pseudo_atomic_Value))
 #define clr_pseudo_atomic_atomic() \
   (current_dynamic_space_free_pointer \
-   = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~4))
+   = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~pseudo_atomic_Value))
 #define get_pseudo_atomic_interrupted() \
-  ((unsigned long) current_dynamic_space_free_pointer & 1)
+  ((unsigned long) current_dynamic_space_free_pointer & pseudo_atomic_InterruptedValue)
 #define clr_pseudo_atomic_interrupted() \
   (current_dynamic_space_free_pointer \
-   = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~1))
+   = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~pseudo_atomic_InterruptedValue))
 
 #else
 #error gencgc is not supported on this platform
@@ -6861,8 +6862,8 @@ void do_pending_interrupt (void);
 char *
 alloc (int nbytes)
 {
-  gc_assert (((unsigned) SymbolValue (CURRENT_REGION_FREE_POINTER) & 0x7) == 0);
-  gc_assert ((nbytes & 0x7) == 0);
+  gc_assert (((unsigned) SymbolValue (CURRENT_REGION_FREE_POINTER) & lowtagMask) == 0);
+  gc_assert ((nbytes & lowtagMask) == 0);
   gc_assert (get_pseudo_atomic_atomic ());
 
   bytes_allocated_sum += nbytes;

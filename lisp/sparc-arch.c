@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.14 2003/08/27 16:45:56 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.15 2003/10/09 19:04:28 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -87,12 +87,12 @@ unsigned char *arch_internal_error_arguments(struct sigcontext *scp)
 
 boolean arch_pseudo_atomic_atomic(struct sigcontext *scp)
 {
-    return (SC_REG(scp, reg_ALLOC) & 4);
+    return (SC_REG(scp, reg_ALLOC) & pseudo_atomic_Value);
 }
 
 void arch_set_pseudo_atomic_interrupted(struct sigcontext *scp)
 {
-    SC_REG(scp, reg_ALLOC) |= 1;
+    SC_REG(scp, reg_ALLOC) |= pseudo_atomic_InterruptedValue;
 }
 
 unsigned long arch_install_breakpoint(void *pc)
@@ -203,13 +203,13 @@ static int pseudo_atomic_trap_p(struct sigcontext *context)
       previnst = pc[-1];
       /*
        * Check to see if the previous instruction was an andcc alloc-tn,
-       * 3, zero-tn instruction.
+       * pseudo_atomic_InterruptedValue, zero-tn instruction.
        */
       if (((previnst >> 30) == 2) && (((previnst >> 19) & 0x3f) == 0x11)
           && (((previnst >> 14) & 0x1f) == reg_ALLOC)
           && (((previnst >> 25) & 0x1f) == reg_ZERO)
           && (((previnst >> 13) & 1) == 1)
-          && ((previnst & 0x1fff) == 3))
+          && ((previnst & 0x1fff) == pseudo_atomic_InterruptedValue))
         {
           result = 1;
         }
@@ -428,7 +428,7 @@ static void sigill_handler(HANDLER_ARGS)
                to fixup up alloc-tn to remove the interrupted flag,
                skip over the trap instruction, and then handle the
                pending interrupt(s). */
-            SC_REG(context, reg_ALLOC) &= ~7;
+            SC_REG(context, reg_ALLOC) &= ~lowtagMask;
             arch_skip_instruction(context);
             interrupt_handle_pending(context);
           }
@@ -483,7 +483,7 @@ static void sigemt_handler(HANDLER_ARGS)
 	    result = op1 - op2;
 	else
 	    result = op1 + op2;
-	SC_REG(context, reg_ALLOC) = result & ~7;
+	SC_REG(context, reg_ALLOC) = result & ~lowtagMask;
 	arch_skip_instruction(context);
 	interrupt_handle_pending(context);
 	return;

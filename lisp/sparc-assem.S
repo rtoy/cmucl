@@ -51,7 +51,6 @@
 #define store(reg, sym) \
         sethi %hi(sym), reg_L0; st reg, [reg_L0+%lo(sym)]
 
-
 /*
  * Our frame size needs to be large enough to hold our window, 
  * the structure return pointer, and some temp space.  The temp space
@@ -92,7 +91,7 @@ _call_into_lisp:
         set     NIL, reg_NIL
 
 	/* Set the pseudo-atomic flag. */
-	set	4, reg_ALLOC
+	set	pseudo_atomic_Value, reg_ALLOC
 
 	/* Turn off foreign function call. */
         sethi   %hi(_foreign_function_call_active), reg_NL0
@@ -106,8 +105,8 @@ _call_into_lisp:
         load(_current_control_frame_pointer, reg_OCFP)
 
         /* No longer atomic, and check for interrupt. */
-	sub	reg_ALLOC, 4, reg_ALLOC
-	andcc	reg_ALLOC, 3, reg_ZERO
+	sub	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
 	tne	trap_PseudoAtomic
 
         /* Pass in the args. */
@@ -142,10 +141,10 @@ lra:
         mov     reg_A0, %i0
 
         /* Turn on pseudo_atomic */
-	add	reg_ALLOC, 4, reg_ALLOC
+	add	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 
         /* Store LISP state */
-	andn	reg_ALLOC, 7, reg_NL1
+	andn	reg_ALLOC, lowtagMask, reg_NL1
         store(reg_NL1,_current_dynamic_space_free_pointer)
         store(reg_BSP,_current_binding_stack_pointer)
         store(reg_CSP,_current_control_stack_pointer)
@@ -155,8 +154,8 @@ lra:
         store(reg_NL1,_foreign_function_call_active)
 
         /* Were we interrupted? */
-	sub	reg_ALLOC, 4, reg_ALLOC
-	andcc	reg_ALLOC, 3, reg_ZERO
+	sub	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
 	tne	trap_PseudoAtomic
 
         /* Back to C we go. */
@@ -186,7 +185,7 @@ _call_into_c:
         st      reg_CODE, [reg_CFP+8]
 
         /* Turn on pseudo-atomic. */
-	add	reg_ALLOC, 4, reg_ALLOC
+	add	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
 
 	/* Convert the return address to an offset and save it on the stack. */
 	sub	reg_LIP, reg_CODE, reg_L0
@@ -199,7 +198,7 @@ _call_into_c:
         store(reg_CFP,_current_control_frame_pointer)
 
 	/* Use reg_CFP as a work register, and restore it */
-	andn	reg_ALLOC, 7, reg_CFP
+	andn	reg_ALLOC, lowtagMask, reg_CFP
         store(reg_CFP,_current_dynamic_space_free_pointer)
 		load(_current_control_frame_pointer, reg_CFP)
 
@@ -207,8 +206,8 @@ _call_into_c:
         store(reg_CSP,_foreign_function_call_active)
 
         /* Were we interrupted? */
-	sub	reg_ALLOC, 4, reg_ALLOC
-	andcc	reg_ALLOC, 3, reg_ZERO
+	sub	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
 	tne	trap_PseudoAtomic
 
         /* Into C we go. */
@@ -225,7 +224,7 @@ _call_into_c:
         set     NIL, reg_NIL
 
 	/* Atomic. */
-	set	4, reg_ALLOC
+	set	pseudo_atomic_Value, reg_ALLOC
 
         /* No longer in foreign function call. */
         sethi   %hi(_foreign_function_call_active), reg_NL2
@@ -245,8 +244,8 @@ _call_into_c:
 	sub	reg_LIP, type_OtherPointer, reg_LIP
 
         /* No longer atomic. */
-	sub	reg_ALLOC, 4, reg_ALLOC
-	andcc	reg_ALLOC, 3, reg_ZERO
+	sub	reg_ALLOC, pseudo_atomic_Value, reg_ALLOC
+	andcc	reg_ALLOC, pseudo_atomic_InterruptedValue, reg_ZERO
 	tne	trap_PseudoAtomic
 
         /* Reset the lisp stack. */

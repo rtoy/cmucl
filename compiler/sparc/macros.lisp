@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.25 2003/09/22 13:28:26 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.26 2003/10/09 19:04:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.25 2003/09/22 13:28:26 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.26 2003/10/09 19:04:28 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -570,18 +570,20 @@
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
 (defmacro pseudo-atomic ((&key (extra 0)) &rest forms)
-  (let ((n-extra (gensym)))
-    `(let ((,n-extra ,extra))
-       ;; Set the pseudo-atomic flag
-       (without-scheduling ()
-	 (inst add alloc-tn 4))
-       ,@forms
-       ;; Reset the pseudo-atomic flag
-       (without-scheduling ()
-	;; Remove the pseudo-atomic flag
-	(inst add alloc-tn (- ,n-extra 4))
-	;; Check to see if pseudo-atomic interrupted flag is set (bit 0 = 1)
-	(inst andcc zero-tn alloc-tn 3)
-	;; The C code needs to process this correctly and fixup alloc-tn.
-	(inst t :ne pseudo-atomic-trap)
-	))))
+  (declare (ignore extra))
+  `(progn
+     ;; Set the pseudo-atomic flag
+     (without-scheduling ()
+       (inst add alloc-tn pseudo-atomic-value))
+     ,@forms
+     ;; Reset the pseudo-atomic flag
+     (without-scheduling ()
+       ;; Remove the pseudo-atomic flag.  (Could do subtraction here,
+       ;; but the disassembler prints some notes based on the add
+       ;; instruction.)
+       (inst add alloc-tn (- pseudo-atomic-value))
+       ;; Check to see if pseudo-atomic interrupted flag is set (bit 0 = 1)
+       (inst andcc zero-tn alloc-tn pseudo-atomic-interrupted-value)
+       ;; The C code needs to process this correctly and fixup alloc-tn.
+       (inst t :ne pseudo-atomic-trap)
+       )))
