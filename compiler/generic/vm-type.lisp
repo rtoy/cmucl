@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.38 2000/01/10 14:47:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.39 2000/04/30 03:48:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,11 +172,6 @@
 (defun hairy-type-check-template (type)
   (declare (type ctype type))
   (typecase type
-    (named-type
-     (case (named-type-name type)
-       (cons 'c:check-cons)
-       (symbol 'c:check-symbol)
-       (t nil)))
     (numeric-type
      (cond ((type= type (specifier-type 'fixnum))
 	    'c:check-fixnum)
@@ -189,6 +184,10 @@
      (if (type= type (specifier-type 'bignum))
 	 'c:check-bignum
 	 nil))
+    (built-in-class
+     (case (class-name type)
+       (symbol 'c:check-symbol)
+       (cons 'c:check-cons)))
     (function-type
      'c:check-function)
     (t
