@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.73 2004/09/08 02:10:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.74 2004/09/21 11:59:52 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,9 @@
 	  (ash (space-free-pointer space) 2)))
 
 (eval-when (compile eval load)
+
+(defvar *nil-descriptor* nil
+  "Handle on Nil.")
 
 (defconstant descriptor-low-bits 16
   "Number of bits in the low half of the descriptor")
@@ -273,9 +276,6 @@
 (defparameter unbound-marker
   (make-other-immediate-descriptor 0 vm:unbound-marker-type)
   "Handle on the trap object.")
-
-(defvar *nil-descriptor* nil
-  "Handle on Nil.")
 
 (defvar *current-init-functions-cons* nil
   "Head of list of functions to be called when the Lisp starts up.")
@@ -1915,6 +1915,8 @@
       version)))
 
 (defun lookup-foreign-symbol (name &optional (link-type :code))
+  #-linkage-table
+  (declare (ignore link-type))
   (flet ((lookup-sym (name)
 	   #-linkage-table
 	   (gethash name *cold-foreign-symbol-table* nil)
