@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.5 1991/03/13 22:55:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.6 1991/06/14 20:01:48 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,8 @@
     (defhvar "Process Output Stream"
       "The process structure for this buffer."
       :buffer buffer
-      :value (make-hemlock-output-stream mark :full))
+      :value (make-shell-filter-stream
+	      buffer (make-hemlock-output-stream mark :full)))
     (defhvar "Interactive History"
       "A ring of the regions input to an interactive mode (Eval or Typescript)."
       :buffer buffer
@@ -212,6 +213,10 @@
 						(declare (ignore process))
 						(update-process-buffer buffer))
 			       :input t :output t))
+    (defhvar "Current Working Directory"
+      "The pathname of the current working directory for this buffer."
+      :buffer buffer
+      :value (default-directory))
     (setf (getstring buffer-name *shell-names*) buffer)
     (update-process-buffer buffer)
     (when (and (not (value current-shell)) set-current-shell-p)
