@@ -18,7 +18,8 @@
      :optimize-interface '(optimize-interface (safety #-small 2 #+small 1)
 					      (debug-info .5))
      :context-declarations
-     '(((:or :external (:and (:match "%") (:match "SET")))
+     '(((:or :external (:and (:match "%") (:match "SET"))
+	     (:member lisp::%put lisp::%rplaca lisp::%rplacd lisp::%puthash))
 	(declare (optimize-interface (safety 2) (debug-info 1))
 		 (optimize (debug-info 1))))
        ((:or (:and :external :macro)
