@@ -25,7 +25,7 @@ static char elf_magic_string[] = {ELFMAG0, ELFMAG1, ELFMAG2, ELFMAG3};
 /* Note: FreeBSD has nice macros that let you use Elf_Ehdr
    etc. declarations; unfortunately Linux doesn't have this so you
    have to do Elf32_Ehdr etc.  Bad for moving to 64 bits.... */
-#ifdef __linux__
+#if defined(__linux__) || defined(sparc)
 typedef Elf32_Ehdr Elf_Ehdr;
 typedef Elf32_Shdr Elf_Shdr;
 #endif
