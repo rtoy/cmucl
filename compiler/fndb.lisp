@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.13 1990/10/13 05:08:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.14 1990/10/17 04:04:59 ram Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -196,7 +196,7 @@
 (defknown lcm (&rest integer) unsigned-byte (movable foldable flushable))
 
 (defknown exp (number) irrational (movable foldable flushable))
-(defknown expt (number real) number (movable foldable flushable))
+(defknown expt (number number) number (movable foldable flushable))
 (defknown log (number &optional real) irrational (movable foldable flushable))
 (defknown sqrt (number) irrational (movable foldable flushable))
 (defknown isqrt (unsigned-byte) unsigned-byte (movable foldable flushable))
@@ -215,8 +215,6 @@
 (defknown (ffloor fceiling fround ftruncate)
   (real &optional real) (values float float) (movable foldable flushable))
 
-
-
 (defknown decode-float (float) (values float float-exponent float)
   (movable foldable flushable))
 (defknown scale-float (float float-exponent) float
@@ -232,14 +230,18 @@
 (defknown complex (real &optional real) number (movable foldable flushable))
 (defknown (realpart imagpart) (number) real (movable foldable flushable))
 
-(defknown (logior logxor logand logeqv lognand lognor logandc1 logandc2 logorc1
-		  logorc2)
-  (&rest integer) t
+(defknown (logior logxor logand logeqv) (&rest integer) integer
   (movable foldable flushable))
 
-(defknown boole (t t boole-code) integer (movable foldable flushable))
-(defknown lognot (integer) t (movable foldable flushable))
-(defknown logtest (t integer) boolean (movable foldable flushable))
+(defknown (lognand lognor logandc1 logandc2 logorc1 logorc2)
+	  (integer integer) integer
+  (movable foldable flushable))
+
+(defknown boole (integer integer boole-code) integer
+  (movable foldable flushable))
+
+(defknown lognot (integer) integer (movable foldable flushable))
+(defknown logtest (integer integer) boolean (movable foldable flushable))
 (defknown logbitp (bit-index integer) boolean (movable foldable flushable))
 (defknown ash (integer ash-index) integer (movable foldable flushable))
 (defknown (logcount integer-length) (integer) bit-index
@@ -279,7 +281,7 @@
 (defknown code-char (char-code) base-character (movable foldable flushable))
 (defknown (char-upcase char-downcase) (character) character
   (movable foldable flushable))
-(defknown digit-char (integer &optional integer char-bits)
+(defknown digit-char (integer &optional integer)
   (or character null) (movable foldable flushable))
 (defknown char-int (character) char-code (movable foldable flushable))
 (defknown char-name (character) (or simple-string null)
@@ -550,7 +552,7 @@
 	  (t list &key (key callable) (test callable) (test-not callable))
   list (foldable flushable call))
 (defknown (assoc-if-not assoc-if rassoc-if rassoc-if-not)
-	  (callable list) list (foldable flushable call))
+	  (callable list &key (:key callable)) list (foldable flushable call))
 
 
 ;;;; In the "Hash Tables" chapter:
@@ -619,7 +621,7 @@
 
 (defknown adjust-array
   (array (or index list) &key (element-type type-specifier)
-	 (initial-element t) (initial-contents list) (adjustable t)
+	 (initial-element t) (initial-contents list)
 	 (fill-pointer t) (displaced-to (or array null))
 	 (displaced-index-offset index))
   array (unsafe))
@@ -972,15 +974,15 @@
 (defknown %put (symbol t t) t (unsafe))
 (defknown %setelt (sequence index t) t (unsafe))
 (defknown %svset (simple-vector index t) t (unsafe))
-(defknown %bitset (bit-vector index bit) bit (unsafe))
-(defknown %sbitset (simple-bit-vector index bit) bit (unsafe))
+(defknown %bitset (bit-vector &rest index) bit (unsafe))
+(defknown %sbitset (simple-bit-vector &rest index) bit (unsafe))
 (defknown %charset (string index character) character (unsafe))
 (defknown %scharset (simple-string index character) character (unsafe))
 (defknown %sp-set-definition (symbol function) function (unsafe))
 (defknown %sp-set-plist (symbol t) t (unsafe))
 (defknown %set-documentation
-	  (symbol (member variable function structure type setf)
-		  (or string null))
+  (symbol (member variable function structure type setf) (or string null))
+  (or string null)
   ())
 (defknown %setnth (index list t) t (unsafe))
 (defknown %set-fill-pointer (vector index) (unsafe))
