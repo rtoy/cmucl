@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.25 2001/04/10 13:44:12 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.26 2003/02/25 17:22:06 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -421,7 +421,7 @@
 ;;;   RUN-PROGRAM uses fork and execve to run a different program. Strange
 ;;; stuff happens to keep the unix state of the world coherent.
 ;;;
-;;; The child process needs to get it's input from somewhere, and send it's
+;;; The child process needs to get its input from somewhere, and send its
 ;;; output (both standard and error) to somewhere. We have to do different
 ;;; things depending on where these somewheres really are.
 ;;;
@@ -456,12 +456,12 @@
 		    &key (env *environment-list*) (wait t) pty input
 		    if-input-does-not-exist output (if-output-exists :error)
 		    (error :output) (if-error-exists :error) status-hook)
-  "Run-program creates a new process and runs the unix progam in the
-   file specified by the simple-string program.  Args are the standard
+  "RUN-PROGRAM creates a new process and runs the unix program in the
+   file specified by the simple-string PROGRAM.  ARGS are the standard
    arguments that can be passed to a Unix program, for no arguments
    use NIL (which means just the name of the program is passed as arg 0).
 
-   Run program will either return NIL or a PROCESS structure.  See the CMU
+   RUN-PROGRAM will either return NIL or a PROCESS structure.  See the CMU
    Common Lisp Users Manual for details about the PROCESS structure.
 
    The keyword arguments have the following meanings:
@@ -495,7 +495,7 @@
 	all the output from the process is written to this stream. If
 	:STREAM, the PROCESS-OUTPUT slot is filled in with a stream that can
 	be read to get the output. Defaults to NIL.
-     :if-output-exists (when :input is the name of a file) -
+     :if-output-exists (when :output is the name of a file) -
         can be one of:
            :error (default) - generates an error if the file already exists.
            :supersede - output from the program supersedes the file.
@@ -531,12 +531,14 @@
 	    (multiple-value-bind
 		(stdout output-stream)
 		(get-descriptor-for output cookie :direction :output
+                                    :if-does-not-exist :create
 				    :if-exists if-output-exists)
 	      (multiple-value-bind
 		  (stderr error-stream)
 		  (if (eq error :output)
 		      (values stdout output-stream)
 		      (get-descriptor-for error cookie :direction :output
+                                          :if-does-not-exist :create
 					  :if-exists if-error-exists))
 		(multiple-value-bind (pty-name pty-stream)
 				     (open-pty pty cookie)
