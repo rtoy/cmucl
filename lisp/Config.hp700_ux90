@@ -6,11 +6,12 @@ NM = hpux-nm
 CFLAGS = -O
 ASFLAGS = -O -DNEW_FORMAT
 UNDEFSYMPATTERN=-u &
-ASSEM_SRC = hppa-assem.S
+ASSEM_SRC = hppa-assem.s
 ARCH_SRC = hppa-arch.c
 OS_SRC = hpux-os.c
 OS_LINK_FLAGS= -Wl,-a,archive
 OS_LIBS= -lBSD
 
-%.o: %.S
-	$(PREPROCESS.S) $< | as -o $@
+%.o: %.s
+	cc -Dparisc -c $< -o $@
+
