@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.19 1993/03/14 14:35:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.20 1993/04/04 10:06:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -404,8 +404,6 @@
 	  (base-char :enumerable t :inherits (character)
 		     :codes (#.vm:base-char-type))
 	  
-	  (sequence :translation (or cons (member nil) vector)
-		    :hierarchical nil)
 	  (symbol :codes (#.vm:symbol-header-type))
 	  
 	  (instance :state :read-only)
@@ -426,58 +424,122 @@
 	   :state :read-only)
 	  (funcallable-instance :inherits (function)  :state :read-only)
 	  
-	  (array :translation array
-		 :hierarchical nil  :codes (#.vm:complex-array-type))
-	  (simple-array :translation simple-array  :inherits (array)
-			:hierarchical nil  :codes (#.vm:simple-array-type))
-	  (vector :translation vector :inherits (array sequence)
-		  :hierarchical nil  :codes (#.vm:complex-vector-type))
-	  (simple-vector :translation simple-vector
-			 :inherits (vector simple-array array sequence)
-			 :hierarchical nil  :codes (#.vm:simple-vector-type))
+	  (collection :hierarchical nil)
+	  (explicit-key-collection :inherits (collection))
+	  (mutable-collection :inherits (collection))
+	  (generic-sequence :inherits (collection))
+	  (mutable-explicit-key-collection
+	   :inherits (explicit-key-collection mutable-collection collection))
+	  (mutable-sequence
+	   :inherits (mutable-collection generic-sequence collection))
+	  (sequence
+	   :translation (or cons (member nil) vector)
+	   :inherits (mutable-sequence mutable-collection generic-sequence
+		      collection))
+	  (generic-array
+	   :inherits (mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
+	  (array
+	   :translation array :codes (#.vm:complex-array-type)
+	   :inherits (generic-array mutable-explicit-key-collection
+		      explicit-key-collection mutable-collection collection))
+	  (simple-array
+	   :translation simple-array  :codes (#.vm:simple-array-type)
+	   :inherits (array generic-array mutable-explicit-key-collection
+		      explicit-key-collection mutable-collection collection))
+	  (generic-vector
+	   :inherits (generic-array mutable-explicit-key-collection
+		      explicit-key-collection mutable-sequence
+		      mutable-collection generic-sequence collection))
+	  (vector
+	   :translation vector  :codes (#.vm:complex-vector-type)
+	   :inherits (generic-vector array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      sequence mutable-sequence mutable-collection
+		      generic-sequence collection))
+	  (simple-vector
+	   :translation simple-vector  :codes (#.vm:simple-vector-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
 	  (bit-vector
-	   :translation bit-vector  :inherits (vector array sequence)
-	   :hierarchical nil  :codes (#.vm:complex-bit-vector-type))
+	   :translation bit-vector  :codes (#.vm:complex-bit-vector-type)
+	   :inherits (vector generic-vector array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      sequence mutable-sequence mutable-collection
+		      generic-sequence collection))
 	  (simple-bit-vector
-	   :translation simple-bit-vector
-	   :inherits (bit-vector vector simple-array array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-bit-vector-type))
+	   :translation simple-bit-vector  :codes (#.vm:simple-bit-vector-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
 	  (simple-array-unsigned-byte-2
 	   :translation (simple-array (unsigned-byte 2) (*))
-	   :inherits (vector array simple-array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-2-type))
+	   :codes (#.vm:simple-array-unsigned-byte-2-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
 	  (simple-array-unsigned-byte-4
 	   :translation (simple-array (unsigned-byte 4) (*))
-	   :inherits (vector array simple-array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-4-type))
+	   :codes (#.vm:simple-array-unsigned-byte-4-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
 	  (simple-array-unsigned-byte-8
 	   :translation (simple-array (unsigned-byte 8) (*))
-	   :inherits (vector array simple-array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-8-type))
+	   :codes (#.vm:simple-array-unsigned-byte-8-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
 	  (simple-array-unsigned-byte-16
 	   :translation (simple-array (unsigned-byte 16) (*))
-	   :inherits (vector array simple-array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-16-type))
+	   :codes (#.vm:simple-array-unsigned-byte-16-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
 	  (simple-array-unsigned-byte-32
 	   :translation (simple-array (unsigned-byte 32) (*))
-	   :inherits (vector array simple-array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-32-type))
+	   :codes (#.vm:simple-array-unsigned-byte-32-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
 	  (simple-array-single-float
 	   :translation (simple-array single-float (*))
-	   :inherits (vector array simple-array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-array-single-float-type))
+	   :codes (#.vm:simple-array-single-float-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
 	  (simple-array-double-float
 	   :translation (simple-array double-float (*))
-	   :inherits (vector array simple-array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-array-double-float-type))
+	   :codes (#.vm:simple-array-double-float-type)
+	   :inherits (vector generic-vector sequence mutable-sequence
+		      generic-sequence simple-array array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      mutable-collection collection))
+	  (generic-string
+	   :inherits (mutable-sequence mutable-collection generic-sequence
+		      collection))
 	  (string
-	   :translation string  :inherits (vector array sequence)
-	   :hierarchical nil  :codes (#.vm:complex-string-type))
+	   :translation string  :codes (#.vm:complex-string-type)
+	   :inherits (generic-vector array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      sequence mutable-sequence mutable-collection
+		      generic-sequence collection))
 	  (simple-string
-	   :translation simple-string
-	   :inherits (string vector simple-array array sequence)
-	   :hierarchical nil  :codes (#.vm:simple-string-type))
-	  
+	   :translation simple-string  :codes (#.vm:simple-string-type)
+	   :inherits (string generic-vector array generic-array
+		      mutable-explicit-key-collection explicit-key-collection
+		      sequence mutable-sequence mutable-collection
+		      generic-sequence collection))
+
 	  (generic-number :state :read-only)
 	  (number :translation number)
 	  (complex :translation complex :inherits (number generic-number)
@@ -506,12 +568,15 @@
 	   :inherits (integer rational number generic-number)
 	   :codes (#.vm:bignum-type))
 	  
-	  (list :translation (or cons (member nil)) :inherits (sequence)
-		:hierarchical nil)
-	  (cons :inherits (list sequence) :hierarchical nil
-		:codes (#.vm:list-pointer-type))
-	  (null :translation (member nil) :inherits (symbol list sequence)
-		:hierarchical nil))))
+	  (list :translation (or cons (member nil))
+		:inherits (sequence mutable-sequence mutable-collection
+			   generic-sequence collection))
+	  (cons :codes (#.vm:list-pointer-type)
+		:inherits (list sequence mutable-sequence mutable-collection
+			   generic-sequence collection))
+	  (null :translation (member nil)
+		:inherits (list sequence mutable-sequence mutable-collection
+			   generic-sequence collection symbol)))))
 
 ;;; See also type-init.lisp where we finish setting up the translations for
 ;;; built-in types.
