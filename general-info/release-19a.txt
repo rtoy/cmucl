@@ -21,7 +21,7 @@ New in this release:
   * Feature enhancements:
      - Stack overflow checking added for FreeBSD/x86 and Linux/x86.
      - LISP:FIND-CLASS and LISP:CLASS-OF now return CLOS classes.  The
-       symbols LISP:STARDARD-CLASS, LISP:BUILT-IN-CLASS, and
+       symbols LISP:STANDARD-CLASS, LISP:BUILT-IN-CLASS, and
        LISP:STRUCTURE-CLASS name CLOS classes.  It is no longer
        necessary to SHADOWING-IMPORT these from PCL when doing MOP
        programming, and it fixes some non-compliances as well.
@@ -69,6 +69,7 @@ New in this release:
      - Compiler eliminating some type checks in safe code.
 
   * Other changes:
+     - Removed obsolete alias from MAKE-VECTOR to MAKE-ARRAY
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/

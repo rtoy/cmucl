@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.34 2003/02/24 10:07:00 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.35 2003/05/05 12:04:26 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -106,7 +106,7 @@
 
 ;;;; MAKE-ARRAY
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
 
 (defmacro pick-type (type &rest specs)
   `(cond ,@(mapcar #'(lambda (spec)
@@ -300,11 +300,6 @@
 			  (dotimes (i (length contents))
 			    (frob (1+ axis) (cdr dims) (aref contents i))))))))
       (frob 0 dimensions initial-contents))))
-
-
-;;; Some people out there are still calling MAKE-VECTOR:
-;;;
-(setf (symbol-function 'make-vector) #'make-array)
 
 
 (defun vector (&rest objects)
