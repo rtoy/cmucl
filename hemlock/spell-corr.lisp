@@ -168,6 +168,8 @@
 
 ;;;; Some Constants
 
+(eval-when (compile load eval)
+
 ;;; The next number (using 6 bits) is 63, and that's pretty silly because
 ;;; "supercalafragalistic" is less than 31 characters long.
 ;;;
@@ -213,6 +215,8 @@
 (defconstant stored-index-high-byte (byte 2 14))
 (defconstant stored-length-byte (byte 5 0))
 
+
+); eval-when (compile load eval)
 
 
 ;;;; Some Specials and Accesses
