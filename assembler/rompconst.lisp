@@ -772,7 +772,6 @@
 (defconstant nil-16 (get-address-16 type-list static-space))
 (defconstant t-16 (get-address-16 type-symbol static-space))
 (defconstant trap-16 (ash type-trap type-shift-16))
-(defconstant catch-all-16 (ash type-catch-all type-shift-16))
 
 (defconstant interruptable-16 (get-type-mask-16 type-interruptable))
 (defconstant interrupted-16 (+ (get-type-mask-16 type-interruptable) 1))
