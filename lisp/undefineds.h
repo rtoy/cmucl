@@ -1,11 +1,13 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.1 1992/09/08 20:19:21 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.2 1993/07/27 15:11:19 hallgren Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
 access,
 acct,
+#ifndef hpux
 adjtime,
+#endif
 bind,
 brk,
 chdir,
@@ -22,12 +24,16 @@ exit,
 fchmod,
 fchown,
 fcntl,
+#ifndef hpux
 flock,
+#endif
 fork,
 fstat,
 fsync,
 ftruncate,
+#ifndef hpux
 getdtablesize,
+#endif
 getegid,
 geteuid,
 getgid,
@@ -35,14 +41,18 @@ getgroups,
 gethostid,
 gethostname,
 getitimer,
+#ifndef hpux
 getpagesize,
+#endif
 getpeername,
 getpgrp,
 getpid,
 getppid,
 getpriority,
 getrlimit,
+#ifndef hpux
 getrusage,
+#endif
 getsockname,
 getsockopt,
 gettimeofday,
@@ -89,15 +99,17 @@ setpriority,
 #if !defined(SUNOS) && !defined(parisc)
 setquota,
 #endif
+#ifndef hpux
 setregid,
 setreuid,
+#endif
 setrlimit,
 setsockopt,
 settimeofday,
 shutdown,
 sigblock,
 sigpause,
-#ifndef ibmrt
+#if !defined(ibmrt) && !defined(hpux)
 sigreturn,
 #endif
 sigsetmask,
@@ -110,13 +122,22 @@ swapon,
 symlink,
 sync,
 syscall,
+#ifdef hpux
+closedir,
+opendir,
+readdir,
+tcgetattr,
+tcsetattr,
+#endif
 truncate,
 umask,
 #if !defined(SUNOS) && !defined(parisc)
 umount,
 #endif
 unlink,
+#ifndef hpux
 utimes,
+#endif
 vfork,
 vhangup,
 wait,
@@ -135,16 +156,24 @@ atan2,
 sinh,
 cosh,
 tanh,
+#ifndef hpux
 asinh,
 acosh,
 atanh,
+#endif
 exp,
+#ifndef hpux
 expm1,
+#endif
 log,
 log10,
+#ifndef hpux
 log1p,
+#endif
 pow,
+#ifndef hpux
 cbrt,
+#endif
 sqrt,
 hypot,
 
