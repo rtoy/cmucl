@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.14 1991/02/20 15:14:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.15 1991/08/19 22:48:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.14 1991/02/20 15:14:53 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.15 1991/08/19 22:48:31 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -47,18 +47,16 @@
 ;;; use with the Save/Restore-Dynamic-Environment VOPs.
 ;;;
 (def-vm-support-routine make-dynamic-state-tns ()
-  (make-n-tns 5 *any-primitive-type*))
+  (make-n-tns 4 *any-primitive-type*))
 
 (define-vop (save-dynamic-state)
   (:results (catch :scs (descriptor-reg))
-	    (special :scs (descriptor-reg))
 	    (nfp :scs (descriptor-reg))
 	    (nsp :scs (descriptor-reg))
 	    (eval :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 13
     (load-symbol-value catch lisp::*current-catch-block*)
-    (move special bsp-tn)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(move nfp cur-nfp)))
@@ -67,39 +65,17 @@
 
 (define-vop (restore-dynamic-state)
   (:args (catch :scs (descriptor-reg))
-	 (special :scs (descriptor-reg))
 	 (nfp :scs (descriptor-reg))
 	 (nsp :scs (descriptor-reg))
 	 (eval :scs (descriptor-reg)))
-  (:temporary (:scs (descriptor-reg)) symbol value)
   (:vop-var vop)
   (:generator 10
-    (let ((done (gen-label))
-	  (skip (gen-label))
-	  (loop (gen-label)))
-
-      (store-symbol-value catch lisp::*current-catch-block*)
-      (store-symbol-value eval lisp::*eval-stack-top*)
-      (let ((cur-nfp (current-nfp-tn vop)))
-	(when cur-nfp
-	  (move cur-nfp nfp)))
-      (move nsp-tn nsp)
-      
-      (inst beq special bsp-tn done)
-      (inst nop)
-
-      (emit-label loop)
-      (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
-      (inst beq symbol zero-tn skip)
-      (loadw value bsp-tn (- binding-value-slot binding-size))
-      (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
-      (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
-      (emit-label skip)
-      (inst addu bsp-tn bsp-tn (* -2 vm:word-bytes))
-      (inst bne bsp-tn special loop)
-      (inst nop)
-
-      (emit-label done))))
+    (store-symbol-value catch lisp::*current-catch-block*)
+    (store-symbol-value eval lisp::*eval-stack-top*)
+    (let ((cur-nfp (current-nfp-tn vop)))
+      (when cur-nfp
+	(move cur-nfp nfp)))
+    (move nsp-tn nsp)))
 
 (define-vop (current-stack-pointer)
   (:results (res :scs (any-reg descriptor-reg)))
