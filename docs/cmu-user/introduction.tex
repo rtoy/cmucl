@@ -91,9 +91,17 @@ switches:
   disables the printing of the startup banner.
 
 \item[\code{-core}] requires an argument that should be the name of a
-  core file.  Rather than using the default core file
-  (\file{lib/lisp.core}), the specified core file is loaded.
+  core file.  Rather than using the default core file, which is searched
+  in a number of places, according to the initial value of the
+  \code{library:} search-list, the specified core file is loaded.  This
+  switch overrides the value of the \code{CMUCLCORE} environment variable,
+  if present.
   
+\item[\code{-lib}] requires an argument that should be the path to the
+  CMUCL library directory, which is going to be used to initialize the
+  \code{library:} search-list, among other things.  This switch overrides
+  the value of the \code{CMUCLLIB} environment variable, if present.
+
 \item[\code{-dynamic-space-size}] requires an argument that should be
   the number of megabytes (1048576 bytes) that should be allocated to
   the heap.  If not specified, a platform-specific default is used.
@@ -132,6 +140,7 @@ switches:
 \item[\code{-nositeinit}] accepts no arguments and specifies that the
   site init file should not be loaded during the normal start up
   sequence. 
+
 \item[\code{-load}] accepts an argument which should be the name of a
   file to load into Lisp before entering Lisp's read-eval-print loop.
   
