@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.70 1990/09/17 23:44:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.71 1990/09/19 22:01:51 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -67,22 +67,21 @@
 
 (defconstant float-sign-shift 31)
 
-;;; The exponent min/max values are wrong, I think.  The denorm, infinity, etc.
-;;; info must go in there somewhere.
-
 (defconstant single-float-bias 126)
 (defconstant single-float-exponent-byte (byte 8 23))
 (defconstant single-float-significand-byte (byte 23 0))
-(defconstant single-float-normal-exponent-min 0)
-(defconstant single-float-normal-exponent-max 255)
+(defconstant single-float-normal-exponent-min 1)
+(defconstant single-float-normal-exponent-max 254)
 (defconstant single-float-hidden-bit (ash 1 23))
+(defconstant single-float-trapping-nan-bit (ash 1 22))
 
 (defconstant double-float-bias 1022)
 (defconstant double-float-exponent-byte (byte 11 20))
 (defconstant double-float-significand-byte (byte 20 0))
-(defconstant double-float-normal-exponent-min 0)
-(defconstant double-float-normal-exponent-max #x7FF)
+(defconstant double-float-normal-exponent-min 1)
+(defconstant double-float-normal-exponent-max #x7FE)
 (defconstant double-float-hidden-bit (ash 1 20))
+(defconstant double-float-trapping-nan-bit (ash 1 19))
 
 (defconstant single-float-digits
   (+ (byte-size single-float-significand-byte) 1))
