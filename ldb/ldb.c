@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.1 1990/02/24 19:37:18 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.2 1990/03/10 20:38:58 ch Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -51,7 +51,7 @@ char *argp[];
     while ((arg = *++argptr) != NULL) {
         if (strcmp(arg, "-core") == 0) {
             if (core != NULL) {
-                fprintf(stderr, "can only spesify one core file.\n");
+                fprintf(stderr, "can only specify one core file.\n");
                 exit(1);
             }
             core = *++argptr;
