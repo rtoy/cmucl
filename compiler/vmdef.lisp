@@ -1915,31 +1915,31 @@
 	(n-bod (gensym))
 	(i (gensym))
 	(ltns (gensym)))
-      (once-only ((n-live live)
-		  (n-block block))
-	`(block nil
-	   (flet ((,n-bod (,tn-var) ,@body))
-	     ;;
-	     ;; Do environment-live TNs.
-	     (dolist (,tn-var (ir2-environment-live-tns
-			       (environment-info
-				(ir2-block-environment ,n-block))))
-	       (,n-bod ,tn-var))
-	     ;;
-	     ;; Do TNs always-live in this block.
-	     (do ((,n-conf (ir2-block-global-tns ,n-block)
-			   (global-conflicts-next ,n-conf)))
-		 ((null ,n-conf))
-	       (when (eq (global-conflicts-kind ,n-conf) :always-live)
-		 (,n-bod (global-conflicts-tn ,n-conf))))
-	     ;;
-	     ;; Do TNs locally live in the designated live set.
-	     (let ((,ltns (ir2-block-local-tns ,n-block)))
-	       (dotimes (,i (ir2-block-local-tn-count ,n-block) ,result)
-		 (unless (zerop (sbit ,n-live ,i))
-		   (let ((,tn-var (svref ,ltns ,i)))
-		     (unless (eq ,tn-var :more)
-		       (,n-bod ,tn-var)))))))))))
+    (once-only ((n-live live)
+		(n-block block))
+      `(block nil
+	 (flet ((,n-bod (,tn-var) ,@body))
+	   ;;
+	   ;; Do environment-live TNs.
+	   (dolist (,tn-var (ir2-environment-live-tns
+			     (environment-info
+			      (ir2-block-environment ,n-block))))
+	     (,n-bod ,tn-var))
+	   ;;
+	   ;; Do TNs always-live in this block.
+	   (do ((,n-conf (ir2-block-global-tns ,n-block)
+			 (global-conflicts-next ,n-conf)))
+	       ((null ,n-conf))
+	     (when (eq (global-conflicts-kind ,n-conf) :always-live)
+	       (,n-bod (global-conflicts-tn ,n-conf))))
+	   ;;
+	   ;; Do TNs locally live in the designated live set.
+	   (let ((,ltns (ir2-block-local-tns ,n-block)))
+	     (dotimes (,i (ir2-block-local-tn-count ,n-block) ,result)
+	       (unless (zerop (sbit ,n-live ,i))
+		 (let ((,tn-var (svref ,ltns ,i)))
+		   (when (and ,tn-var (not (eq ,tn-var :more)))
+		     (,n-bod ,tn-var)))))))))))
 
 
 ;;; DO-ENVIRONMENT-IR2-BLOCKS  --  Interface
@@ -1949,11 +1949,31 @@
   "DO-ENVIRONMENT-IR2-BLOCKS (Block-Var Env [Result]) Form*
   Iterate over all the IR2 blocks in the environment Env, in emit order."
   (once-only ((n-env env))
-    `(do ((,block-var (block-info (node-block (lambda-bind fun)))
-		      (ir2-block-next ,block-var)))
-	((not (eq (ir2-block-environment ,block-var) ,n-env))
-	 ,result)
-       ,@body)))
+    (once-only ((n-tail `(block-info
+			  (component-tail
+			   (block-component
+			    (node-block
+			     (lambda-bind (environment-function ,n-env))))))))
+      `(do ((,block-var (block-info (node-block (lambda-bind fun)))
+			(ir2-block-next ,block-var)))
+	   ((or (eq ,block-var ,n-tail)
+		(not (eq (ir2-block-environment ,block-var) ,n-env)))
+	    ,result)
+	 ,@body))))
+
+
+;;; NOTE-THIS-LOCATION  --  Interface
+;;;
+(defmacro note-this-location (vop kind)
+  "NOTE-THIS-LOCATION VOP Kind
+  Node that the current code location is an interesting (to the debugger)
+  location of the specified Kind.  VOP is the VOP responsible for this code.
+  This VOP must specify some non-null :SAVE-P value (perhaps :COMPUTE-ONLY) so
+  that the live set is computed."
+  (once-only ((n-lab '(gen-label)))
+    `(progn
+       (emit-label ,n-lab)
+       (note-debug-location ,vop ,n-lab ,kind))))
 
 
 ;;;; Utilities for defining miscops:
