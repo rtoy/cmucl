@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.40 1993/03/13 12:17:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.41 1993/03/13 13:07:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -826,7 +826,7 @@
       (funcall creator defstruct (first boa)
 	       (arglist) (vars) (types)
 	       (mapcar #'(lambda (slot)
-			   (or (find (dsd-name slot) (vars))
+			   (or (find (dsd-name slot) (vars) :test #'string=)
 			       (dsd-default slot)))
 		       (dd-slots defstruct))))))
 
