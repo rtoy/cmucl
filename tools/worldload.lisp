@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.57 1993/05/04 22:29:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.58 1993/06/18 06:15:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,7 @@
 
 (load "code:format-time")
 (load "code:parse-time")
-(load "code:purify")
+#-gengc (load "code:purify")
 (load "code:commandline")
 (load "code:sort")
 (load "code:time")
