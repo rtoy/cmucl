@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.9 1991/07/14 04:09:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.10 1992/03/08 18:35:13 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -32,7 +32,6 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FUN)
@@ -43,11 +42,8 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
-  (load-symbol cname 'two-arg-+)
+  (inst lw lip null-tn (static-function-offset 'two-arg-+))
   (inst li nargs (fixnum 2))
-  (inst lw lip cname
-	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
-	   vm:other-pointer-type))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn))
@@ -68,7 +64,6 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FUN)
@@ -79,11 +74,8 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
-  (load-symbol cname 'two-arg--)
+  (inst lw lip null-tn (static-function-offset 'two-arg--))
   (inst li nargs (fixnum 2))
-  (inst lw lip cname
-	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
-	   vm:other-pointer-type))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn))
@@ -106,7 +98,6 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   ;; If either arg is not a fixnum, call the static function.
   (inst and temp x 3)
@@ -155,11 +146,8 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
-  (load-symbol cname 'two-arg-*)
+  (inst lw lip null-tn (static-function-offset 'two-arg-*))
   (inst li nargs (fixnum 2))
-  (inst lw lip cname
-	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
-	   vm:other-pointer-type))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn)
@@ -186,7 +174,6 @@
 				  (:temp temp non-descriptor-reg nl0-offset)
 				  (:temp lip interior-reg lip-offset)
 				  (:temp nargs any-reg nargs-offset)
-				  (:temp cname descriptor-reg cname-offset)
 				  (:temp ocfp any-reg ocfp-offset))
 	  (inst and temp x 3)
 	  (inst bne temp DO-STATIC-FN)
@@ -195,11 +182,8 @@
 	  ,cmp
 	  
 	  DO-STATIC-FN
-	  (load-symbol cname ',static-fn)
+	  (inst lw lip null-tn (static-function-offset ',static-fn))
 	  (inst li nargs (fixnum 2))
-	  (inst lw lip cname
-		(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
-		   vm:other-pointer-type))
 	  (inst move ocfp cfp-tn)
 	  (inst j lip)
 	  (inst move cfp-tn csp-tn)
@@ -229,7 +213,6 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-T)
   (inst and temp x 3)
@@ -243,11 +226,8 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
-  (load-symbol cname 'eql)
+  (inst lw lip null-tn (static-function-offset 'eql))
   (inst li nargs (fixnum 2))
-  (inst lw lip cname
-	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
-	   vm:other-pointer-type))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn)
@@ -270,7 +250,6 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-T)
   (inst and temp x 3)
@@ -283,11 +262,8 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
-  (load-symbol cname 'two-arg-=)
+  (inst lw lip null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnum 2))
-  (inst lw lip cname
-	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
-	   vm:other-pointer-type))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn)
@@ -310,7 +286,6 @@
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
-			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-NIL)
   (inst and temp x 3)
@@ -323,11 +298,8 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
-  (load-symbol cname 'two-arg-=)
+  (inst lw lip null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnum 2))
-  (inst lw lip cname
-	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
-	   vm:other-pointer-type))
   (inst move ocfp cfp-tn)
   (inst j lip)
   (inst move cfp-tn csp-tn)
