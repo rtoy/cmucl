@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.41 1992/04/19 13:11:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.42 1992/05/15 17:52:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
 ;;; Public:
 
 (defvar *load-if-source-newer* :load-object
-  "The default for the :IF-SOURCE-NEWER argument to load."))
+  "The default for the :IF-SOURCE-NEWER argument to load.")
 
 (declaim (type (member :load-object :load-source :query :compile)
 	       *load-if-source-newer*))
@@ -371,6 +371,16 @@
 	    (*current-fop-table-index* 0))
 	(loop
 	  (let ((byte (read-byte file)))
+	    #+nil ;; Uncomment this to get a trace of the fops executed.
+	    (let ((ptr *fop-stack-pointer*)
+		  (stack *fop-stack*))
+	      (fresh-line *trace-output*)
+	      (unless (= ptr (length stack))
+		(write-char #\space *trace-output*)
+		(prin1 (svref stack ptr) *trace-output*)
+		(terpri *trace-output*))
+	      (prin1 (svref fop-codes byte) *trace-output*)
+	      (terpri *trace-output*))
 	    (if (eql byte 3)
 		(let ((index *fop-stack-pointer*))
 		  (when (zerop index)
@@ -1091,6 +1101,15 @@
       (vm:fixup-code-object code-object (read-arg 4) value kind))
     code-object))
 
+(define-fop (fop-code-object-fixup 149)
+  (let ((kind (pop-stack))
+	(code-object (pop-stack)))
+    ;; Note: We don't have to worry about GC moving the code-object after
+    ;; the GET-LISP-OBJ-ADDRESS and before that value is deposited, because
+    ;; we can only use code-object fixups when code-objects don't move.
+    (vm:fixup-code-object code-object (read-arg 4)
+			  (get-lisp-obj-address code-object) kind)
+    code-object))
 
 
 (proclaim '(maybe-inline read-byte))
