@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.25 2002/10/15 16:36:51 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.26 2003/10/03 15:02:02 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -402,7 +402,8 @@
 		     (setq not-res (type-union not-res other-type)))
 		   (let ((leaf-type (leaf-type leaf)))
 		     (when (or (constant-p other)
-			       (and (csubtypep other-type leaf-type)
+			       (and (leaf-refs other)
+				    (csubtypep other-type leaf-type)
 				    (not (type= other-type leaf-type))))
 		       (change-ref-leaf ref other)
 		       (when (constant-p other) (return)))))))
