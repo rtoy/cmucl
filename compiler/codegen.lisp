@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.18 1992/08/03 12:36:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.19 1993/03/12 15:30:15 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 (in-package :c)
 (export '(component-header-length sb-allocated-size current-nfp-tn
 	  callee-nfp-tn callee-return-pc-tn *code-segment* *elsewhere*
-	  trace-table-entry pack-trace-table note-fixup
+	  trace-table-entry pack-trace-table note-fixup *assembly-optimize*
 	  fixup fixup-p make-fixup fixup-name fixup-flavor fixup-offset))
 
 
@@ -177,6 +177,8 @@
 ;;; 
 (defun init-assembler ()
   (setf *code-segment* (make-segment "Regular"))
+  (setf (new-assem:segment-collect-dynamic-statistics *code-segment*)
+	*collect-dynamic-statistics*)
   (setf *elsewhere* (make-segment "Elsewhere"))
   (undefined-value))
 
