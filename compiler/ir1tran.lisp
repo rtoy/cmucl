@@ -136,12 +136,6 @@
 ;;;
 (defvar *current-form* nil)
 
-;;; A list of UNKNOWN-FUNCTION structures representing the calls to unknown
-;;; functions.  This is bound by WITH-COMPILATION-UNIT.
-;;;
-(defvar *unknown-functions*)
-(proclaim '(list *unknown-functions*))
-
 ;;; *Converting-For-Interpreter* is true when we are creating IR1 to be
 ;;; interpreted rather than compiled.  This inhibits source tranformations and
 ;;; stuff.
@@ -427,13 +421,6 @@
 	(ir1-convert-ok-combination-fer-sher start cont form var))))
 
 
-(defvar *unknown-function-warning-limit* 3
-  "If non-null, then an upper limit on the number of unknown function warnings
-  that the compiler will print for any given function in a single compilation.
-  This prevents excessive amounts of output when there are commonly called
-  unknown functions.")
-
-
 ;;; IR1-Convert-OK-Combination-Fer-Sher  --  Internal
 ;;;
 ;;;    Actually really convert a global function call that we are allowed to
@@ -461,23 +448,11 @@
 	  (node (ir1-convert-combination-args fun-cont cont form)))
       (cond
        ((eq (leaf-where-from var) :assumed)
-	(let* ((name (leaf-name var))
-	       (found (find name *unknown-functions*
-			    :test #'equal
-			    :key #'unknown-function-name))
-	       (res (or found
-			(make-unknown-function :name name))))
+	(let ((name (leaf-name var)))
 	  (when (and (eq (info function where-from name) :assumed)
 		     (eq (info function kind name) :function))
-	    (unless found (push res *unknown-functions*))
-	    (when (or (not *unknown-function-warning-limit*)
-		      (< (unknown-function-count res)
-			 *unknown-function-warning-limit*))
-	      (let ((*compiler-error-context* node))
-		(push (find-error-context)
-		      (unknown-function-warnings res))))
-	    (incf (unknown-function-count res))
-	    
+	    (let ((*compiler-error-context* node))
+	      (note-undefined-reference name :function))
 	    (setf (info function assumed-type name)
 		  (note-function-use node
 				     (info function assumed-type name)))))
@@ -2333,10 +2308,7 @@
 	(setf (leaf-where-from new) :declared)
 	(setf (gethash name *free-functions*) new))))
 
-  (setq *unknown-functions*
-	(delete name *unknown-functions*
-		:test #'equal
-		:key #'unknown-function-name))
+  (note-name-defined name :function)
   (undefined-value))
 
 
