@@ -771,11 +771,10 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 
 (defun print-control-error (condition stream)
-  (apply #'format
-	 stream "~&Error in function ~S.~%~?"
-	 (control-error-function-name condition)
-	 (control-error-format-string condition)
-	 (control-error-format-arguments condition)))
+  (format stream "~&Error in function ~S.~%~?"
+	  (control-error-function-name condition)
+	  (control-error-format-string condition)
+	  (control-error-format-arguments condition)))
 
 (define-condition control-error (error)
   (format-string
