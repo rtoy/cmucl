@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.80 2003/10/11 11:58:28 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.81 2003/10/13 09:57:10 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -563,19 +563,22 @@
   (let ((result (return-result node)))
     (collect ((use-union *empty-type* values-type-union))
       (do-uses (use result)
-	(cond ((and (basic-combination-p use)
-		    (eq (basic-combination-kind use) :local))
-	       (assert (eq (lambda-tail-set (node-home-lambda use))
-			   (lambda-tail-set (combination-lambda use))))
-	       (when (combination-p use)
-		 (when (nth-value 1 (maybe-convert-tail-local-call use))
-		   (return-from find-result-type (undefined-value)))))
-	      (t
-	       (use-union (node-derived-type use)))))
+	(let ((use-home (node-home-lambda use)))
+	  (cond ((or (eq (functional-kind use-home) :deleted)
+                     (block-delete-p (node-block use))))
+		((and (basic-combination-p use)
+		      (eq (basic-combination-kind use) :local))
+		 (assert (eq (lambda-tail-set use-home)
+			     (lambda-tail-set (combination-lambda use))))
+		 (when (combination-p use)
+		   (when (nth-value 1 (maybe-convert-tail-local-call use))
+		     (return-from find-result-type (values)))))
+		(t
+		 (use-union (node-derived-type use))))))
       (let ((int (values-type-intersection (continuation-asserted-type result)
 					   (use-union))))
 	(setf (return-result-type node) int))))
-  (undefined-value))
+  (values))
 
 
 ;;; IR1-Optimize-Return  --  Internal
