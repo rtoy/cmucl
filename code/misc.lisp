@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.12 1991/12/20 15:34:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.13 1992/01/17 16:11:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -69,14 +69,14 @@
 (defun featurep (x)
   "If X is an atom, see if it is present in *FEATURES*.  Also
   handle arbitrary combinations of atoms using NOT, AND, OR."
-  (cond ((atom x) (memq x *features*))
-	((eq (car x) ':not) (not (featurep (cadr x))))
-	((eq (car x) ':and)
-	 (every #'featurep (cdr x)))
-	((eq (car x) ':or)
-	 (some #'featurep (cdr x)))
-	(t nil)))
-
+  (if (consp x)
+      (case (car x)
+	(:not (not (featurep (cadr x))))
+	(:and (every #'featurep (cdr x)))
+	(:or (some #'featurep (cdr x)))
+	(t
+	 (error "Unknown operator in feature expression: ~S." x)))
+      (not (null (memq x *features*)))))
 
 
 ;;; Other Environment Inquiries.
