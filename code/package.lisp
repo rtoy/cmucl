@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.51 1998/07/16 13:30:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.52 1999/05/04 13:11:59 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -697,8 +697,9 @@
 		 (setf shadowing-imports
 		       (acons package-name names shadowing-imports))))))
 	(:use
-	 (setf use (stringify-names (cdr option) "package") )
-	 (setf use-p t))
+	 (let ((new (stringify-names (cdr option) "package")))
+	   (setf use (delete-duplicates (nconc use new) :test #'string=))
+	   (setf use-p t)))
 	(:import-from
 	 (let ((package-name (stringify-name (second option) "package"))
 	       (names (stringify-names (cddr option) "symbol")))
