@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.5 1993/04/28 02:03:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.6 1993/05/13 17:56:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1325,11 +1325,9 @@
 (define-cold-fop (fop-sanctify-for-execution)
   (pop-stack))
 
-(defun cold-verify-code-format ()
-  (unless *current-code-format*
-    (error "Can't load code until after FOP-CODE-FORMAT."))
-  (let ((implementation (car *current-code-format*))
-	(version (cdr *current-code-format*)))
+(define-cold-vop (fop-code-format :nope)
+  (let ((implementation (read-arg 1))
+	(version (read-arg 1)))
     (unless (= implementation (c:backend-fasl-file-implementation c:*backend*))
       (error
        "~A was compiled for a ~A, but we are trying to build a core for a ~A"
@@ -1344,9 +1342,10 @@
        "~A was compiled for a fasl-file version ~A, but we need version ~A"
        *Fasl-file* version (c:backend-fasl-file-version c:*backend*)))))
 
+(not-cold-fop fop-make-byte-compiled-function)
+
 (defmacro define-cold-code-fop (name nconst size)
   `(define-cold-fop (,name)
-     (cold-verify-code-format)
      (let* ((nconst ,nconst)
 	    (size ,size)
 	    (header-size
