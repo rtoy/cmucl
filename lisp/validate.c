@@ -1,12 +1,13 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.18 2004/05/19 23:38:13 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.19 2004/07/08 17:49:04 rtoy Exp $
  *
  * Memory Validation
  */
 
 #include <stdio.h>
 #include <unistd.h>
-#ifdef __SUNPRO_C
+#include <string.h>
+#ifdef sparc
 #include <alloca.h>
 #endif
 #include "lisp.h"
@@ -19,6 +20,10 @@ unsigned long read_only_space_size = READ_ONLY_SPACE_SIZE;
 unsigned long binding_stack_size = BINDING_STACK_SIZE;
 unsigned long static_space_size = STATIC_SPACE_SIZE;
 unsigned long control_stack_size = CONTROL_STACK_SIZE;
+
+#ifdef sparc
+extern void make_holes(void);
+#endif
 
 static void
 ensure_space(lispobj *start, size_t size)

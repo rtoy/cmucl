@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.16 2004/07/08 04:10:09 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.17 2004/07/08 17:49:04 rtoy Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <signal.h>
+#include <string.h>
 
 #include "lisp.h"
 #include "internals.h"
@@ -141,7 +142,7 @@ static void regs_cmd(char **ptr)
     printf("CSP\t=\t0x%08lX\n", (unsigned long)current_control_stack_pointer);
     printf("FP\t=\t0x%08lX\n", (unsigned long)current_control_frame_pointer);
 #if !defined(ibmrt) && !defined(i386) && !defined(__x86_64)
-    printf("BSP\t=\t0x%08X\n", (unsigned long)current_binding_stack_pointer);
+    printf("BSP\t=\t0x%08lX\n", (unsigned long)current_binding_stack_pointer);
 #endif
 #if defined(i386) || defined(__x86_64)
     printf("BSP\t=\t0x%08lX\n", SymbolValue(BINDING_STACK_POINTER));
@@ -152,9 +153,8 @@ static void regs_cmd(char **ptr)
     printf("ALLOC\t=\t0x%08lX\n", SymbolValue(ALLOCATION_POINTER));
     printf("TRIGGER\t=\t0x%08lX\n", SymbolValue(INTERNAL_GC_TRIGGER));
 #else
-    printf("ALLOC\t=\t0x%08X\n",
-	   (unsigned long)current_dynamic_space_free_pointer);
-    printf("TRIGGER\t=\t0x%08X\n", (unsigned long)current_auto_gc_trigger);
+    printf("ALLOC\t=\t0x%08lX\n", (unsigned long) current_dynamic_space_free_pointer);
+    printf("TRIGGER\t=\t0x%08lX\n", (unsigned long)current_auto_gc_trigger);
 #endif
     printf("STATIC\t=\t0x%08lX\n", SymbolValue(STATIC_SPACE_FREE_POINTER));
     printf("RDONLY\t=\t0x%08lX\n", SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
@@ -345,7 +345,7 @@ static void print_context(os_context_t *context)
 		brief_print((lispobj) SC_REG(context, i));
 #endif
 	}
-	printf("PC:\t\t  0x%08lx\n", SC_PC(context));
+	printf("PC:\t\t  0x%08lx\n", (unsigned long) SC_PC(context));
 }
 
 static void print_context_cmd(char **ptr)

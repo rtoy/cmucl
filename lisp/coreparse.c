@@ -1,9 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.8 2004/07/08 03:37:53 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.9 2004/07/08 17:49:04 rtoy Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
 
-#ifdef irix
+#if defined(irix) || defined(sparc)
 #include <fcntl.h>
 #include <stdlib.h>
 #endif
@@ -40,9 +40,9 @@ static void process_directory(int fd, long *ptr, int count)
 	    real_addr=os_map(fd, offset, addr, len);
 	    if(real_addr!=addr)
 	    fprintf(stderr,
-	"process_directory: file mapped in wrong place! (0x%p != 0x%p)\n",
-		real_addr,
-		addr);
+                    "process_directory: file mapped in wrong place! (0x%p != 0x%p)\n",
+                    (void *) real_addr,
+                    (void *) addr);
 	}
 
 #if 0
