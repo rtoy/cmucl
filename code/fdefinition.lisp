@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.4 1991/02/08 13:32:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.5 1991/04/23 12:52:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.4 1991/02/08 13:32:37 ram Exp $
 ;;;
 ;;;    Functions that hack on the global function namespace (primarily
 ;;; concerned with SETF functions here.)
@@ -43,10 +41,12 @@
 
 #+new-compiler
 (defun careful-symbol-function (name)
+  (declare (symbol name))
   (symbol-function name))
 
 #+new-compiler
 (defun set-symbol-function-carefully (name value)
+  (declare (symbol name) (type function value))
   (setf (symbol-function name) value))
 
 (defun fdefinition (name)
