@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.5 1990/10/24 16:42:48 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.6 1991/01/03 13:16:27 ram Exp $
 ;;;
 ;;; This file contains all the irrational functions.  Actually, most of the
 ;;; work is done by calling out to C...
@@ -96,6 +96,11 @@
 
 (defparameter *intexp-maximum-exponent* 10000)
 
+;;; This function precisely calculates base raised to an integral power.  It
+;;; separates the cases by the sign of power, for efficiency reasons, as powers
+;;; can be calculated more efficiently if power is a positive integer.  Values
+;;; of power are calculated as positive integers, and inverted if negative.
+;;;
 (defun intexp (base power)
   (when (> (abs power) *intexp-maximum-exponent*)
     (cerror "Continue with calculation."
@@ -113,46 +118,57 @@
 	   (setq base (* base base))
 	   (setq power nextn)))))
 
-;;; This function calculates x raised to the nth power.  It separates
-;;; the  cases by the type of n, for efficiency reasons, as powers can
-;;; be calculated more efficiently if n is a positive integer,  Therefore,
-;;; All integer values of n are calculated as positive integers, and
-;;; inverted if negative.
 
+;;; EXPT  --  Public
+;;;
+;;;    If an integer power of a rational, use INTEXP above.  Otherwise, do
+;;; floating point stuff.  If both args are real, we try %POW right off,
+;;; assuming it will return 0 if the result may be complex.  If so, we call
+;;; COMPLEX-POW which directly computes the complex result.  We also separate
+;;; the complex-real and real-complex cases from the general complex case.
+;;;
 (defun expt (base power)
   "Returns BASE raised to the POWER."
   (if (zerop power)
-      ;; This is wrong if power isn't an integer.
-      (typecase (realpart base)
-	(single-float (coerce 1 'single-float))
-	(double-float (coerce 1 'double-float))
-	(t 1))
-      (number-dispatch ((base number) (power number))
-	(((foreach fixnum bignum ratio (complex rational)) integer)
-	 (intexp base power))
-	(((foreach single-float double-float) integer)
-	 (coerce (%pow (coerce base 'double-float)
-		       (coerce power 'double-float))
-		 '(dispatch-type base)))
-	(((foreach fixnum bignum ratio single-float)
-	  (foreach ratio single-float))
-	 (coerce (%pow (coerce base 'double-float)
-		       (coerce power 'double-float))
-		 'single-float))
-	(((foreach fixnum bignum ratio single-float double-float) double-float)
-	 (%pow (coerce base 'double-float) (coerce power 'double-float)))
-	(((complex rational) ratio)
-	 (* (expt (abs base) power)
-	    (cis (* power (phase base)))))
-	(((complex float) (foreach integer ratio))
-	 (* (expt (abs base) power)
-	    (cis (* power (phase base)))))
-	(((foreach fixnum bignum ratio single-float double-float) complex)
-	 (if (minusp base)
-	     (/ (exp (* power (log (- base)))))
-	     (exp (* power (log base)))))
-	(((foreach (complex float) (complex rational)) complex)
-	 (exp (* power (log base)))))))
+      (1+ (* base power))
+      (labels ((real-expt (base power rtype)
+		 (let* ((fbase (coerce base 'double-float))
+			(fpower (coerce power 'double-float))
+			(res (coerce (%pow fbase fpower) rtype)))
+		   (if (and (zerop res) (minusp fbase))
+		       (multiple-value-bind (re im)
+					    (complex-pow fbase fpower)
+			 (%make-complex (coerce re rtype) (coerce im rtype)))
+		       res)))
+	       (complex-pow (fbase fpower)
+		 (let ((pow (%pow (- fbase) fpower))
+		       (fpower*pi (* fpower pi)))
+		   (values (* pow (%cos fpower*pi))
+			   (* pow (%sin fpower*pi))))))
+	(declare (inline real-expt))
+	(number-dispatch ((base number) (power number))
+	  (((foreach fixnum (or bignum ratio) (complex rational)) integer)
+	   (intexp base power))
+	  (((foreach single-float double-float) integer)
+	   (real-expt base power '(dispatch-type base)))
+	  (((foreach fixnum (or bignum ratio) single-float)
+	    (foreach ratio single-float))
+	   (real-expt base power 'single-float))
+	  (((foreach fixnum (or bignum ratio) single-float double-float)
+	    double-float)
+	   (real-expt base power 'double-float))
+	  ((double-float single-float)
+	   (real-expt base power 'double-float))
+	  (((foreach (complex rational) (complex float)) rational)
+	   (* (expt (abs base) power)
+	      (cis (* power (phase base)))))
+	  (((foreach fixnum (or bignum ratio) single-float double-float)
+	    complex)
+	   (if (minusp base)
+	       (/ (exp (* power (truly-the float (log (- base))))))
+	       (exp (* power (truly-the float (log base))))))
+	  (((foreach (complex float) (complex rational)) complex)
+	   (exp (* power (log base))))))))
 
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
