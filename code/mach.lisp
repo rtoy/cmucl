@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach.lisp,v 1.2 1992/02/15 12:49:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach.lisp,v 1.3 1992/02/15 13:00:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,7 +58,7 @@
 (defconstant kern-memory-present 23)
 
 (def-alien-routine ("mach_error_string" get-mach-error-msg) c-string
-  (kern-return errno))
+  (errno kern-return))
 
 ;;; GR-Error  --  Public
 ;;;
