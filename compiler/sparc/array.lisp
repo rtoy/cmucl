@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.7 1992/03/11 21:29:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.8 1992/03/23 00:19:00 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
@@ -29,7 +29,7 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 0
     (pseudo-atomic ()
-      (inst or header other-pointer-type)
+      (inst or header alloc-tn other-pointer-type)
       (inst add ndescr rank (* (1+ array-dimensions-offset) vm:word-bytes))
       (inst andn ndescr rank 4)
       (inst add alloc-tn ndescr)
