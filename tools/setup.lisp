@@ -187,20 +187,21 @@
 	   (t
 	    (handler-bind
 		((error #'(lambda (condition)
-			    (format *error-output* "~2&~A~2&"
-				    condition)
-			    (when proceed
-			      (format *error-output* "Proceeding...~%")
-			      (continue))
-			    (format *error-output* "Aborting...~%")
-			    (handler-case
-				(let ((*debug-io* *error-output*))
-				  (debug:backtrace))
-			      (error (condition)
-				     (declare (ignore condition))
-				     (format t "Error in backtrace!~%")))
-			    (format t "Error abort.~%")
-			    (return-from comf))))
+			    (unless (typep condition 'c::compiler-error)
+			      (format *error-output* "~2&~A~2&"
+				      condition)
+			      (when proceed
+				(format *error-output* "Proceeding...~%")
+				(continue))
+			      (format *error-output* "Aborting...~%")
+			      (handler-case
+				  (let ((*debug-io* *error-output*))
+				    (debug:backtrace))
+				(error (condition)
+				       (declare (ignore condition))
+				       (format t "Error in backtrace!~%")))
+			      (format t "Error abort.~%")
+			      (return-from comf)))))
 	      (if assem
 		  (c::assemble-file src :output-file obj)
 		  (compile-file src  :error-file nil  :output-file obj))
