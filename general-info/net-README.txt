@@ -96,28 +96,28 @@ Also in /afs/cs/project/clisp/release:
         distribution. 
 
 -rw-r--r--  1 ram       7267593 Oct 16 16:42 10-16-91-cmucl-master.tar.Z
-	The project/clisp/master subtree: the RCS source (,v) files for all of
+	The project/clisp/rcs subtree: the RCS source (,v) files for all of
 	CMU CL.
 
 
 Totally machine-independent compiler code:
-    /afs/cs/project/clisp/pmax_mach/alpha/compiler/*.lisp
+    /afs/cs/project/clisp/src/alpha/compiler/*.lisp
 See especially node.lisp and ir1tran.lisp for the front end.  vop.lisp,
 vmdef.lisp and ir2tran.lisp for the back end.
 
 Stuff that is dependent on our choice of object format, but not
 particularly machine-dependent:
-    /afs/cs/project/clisp/pmax_mach/alpha/compiler/generic/*.lisp
+    /afs/cs/project/clisp/src/alpha/compiler/generic/*.lisp
 
 Compiler back-end for the PMAX and SPARC:
-    /afs/cs/project/clisp/pmax_mach/alpha/compiler/mips/*.lisp
-    /afs/cs/project/clisp/sun4_mach/alpha/compiler/sparc/*.lisp
+    /afs/cs/project/clisp/src/alpha/compiler/mips/*.lisp
+    /afs/cs/project/clisp/src/alpha/compiler/sparc/*.lisp
 
 Miscellaneous Lisp run-time code:
-    /afs/cs/project/clisp/pmax_mach/alpha/code/*.lisp
+    /afs/cs/project/clisp/src/alpha/code/*.lisp
 
 C run-time code:
-    /afs/cs/project/clisp/pmax_mach/alpha/ldb/*
+    /afs/cs/project/clisp/src/alpha/ldb/*
 
 A very drafty version of an internal design document: (160 pages) Some of
 the "tex" files may be more humanly readable, since many formatting
