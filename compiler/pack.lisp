@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.43 1991/11/05 17:36:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.44 1991/11/16 16:03:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1324,9 +1324,9 @@
 	 ((null current-scs)
 	  (unless allowed
 	    (no-load-scs-allowed-by-primitive-type-error op))
-	  (dolist (sc allowed (failed-to-pack-load-tn-error allowed op))
-	    (when (unpack-for-load-tn sc op) (return)))
-	  (setq current-scs scs  allowed ()))
+	  (dolist (sc allowed)
+	    (unpack-for-load-tn sc op))
+	  (failed-to-pack-load-tn-error allowed op))
 	(t
 	 (let* ((sc (svref (backend-sc-numbers *backend*) (pop current-scs)))
 		(target (find-load-tn-target op sc)))
