@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.47 1991/11/20 21:38:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.48 1991/12/11 17:08:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -541,6 +541,7 @@
 	(setf (block-last block) node)
 	(link-blocks block new-block)
 	(add-to-dfo new-block block)
+	(setf (component-reanalyze (block-component block)) t)
 	
 	(do ((cont start (node-cont (continuation-next cont))))
 	    ((eq cont last-cont)
@@ -670,7 +671,7 @@
       (setf (lambda-bind let) nil)
       (setf (functional-kind let) :deleted))
 
-    (if (or (eq kind :let) (eq kind :mv-let))
+    (if (member kind '(:let :mv-let :assignment))
 	(let ((home (lambda-home leaf)))
 	  (setf (lambda-lets home) (delete leaf (lambda-lets home))))
 	(let* ((bind-block (node-block bind))
@@ -685,6 +686,10 @@
 	  (when return
 	    (unlink-blocks (node-block return) (component-tail component)))
 	  (setf (component-reanalyze component) t)
+	  (let ((tails (lambda-tail-set leaf)))
+	    (setf (tail-set-functions tails)
+		  (delete leaf (tail-set-functions tails)))
+	    (setf (lambda-tail-set leaf) nil))
 	  (setf (component-lambdas component)
 		(delete leaf (component-lambdas component)))))
 
@@ -733,7 +738,10 @@
 		   (cond ((null refs)
 			  (delete-lambda fun))
 			 ((null (rest refs))
-			  (maybe-let-convert fun)))))))
+			  (or (maybe-let-convert fun)
+			      (maybe-convert-to-assignment fun)))
+			 (t
+			  (maybe-convert-to-assignment fun)))))))
 	
 	(dolist (ep (optional-dispatch-entry-points leaf))
 	  (frob ep))
@@ -763,7 +771,7 @@
 	     (lambda-var (delete-lambda-var leaf))
 	     (clambda
 	      (ecase (functional-kind leaf)
-		((nil :let :mv-let :escape :cleanup)
+		((nil :let :mv-let :assignment :escape :cleanup)
 		 (assert (not (functional-entry-function leaf)))
 		 (delete-lambda leaf))
 		(:external
@@ -774,8 +782,12 @@
 		(delete-optional-dispatch leaf)))))
 	  ((null (rest refs))
 	   (typecase leaf
-	     (clambda (maybe-let-convert leaf))
-	     (lambda-var (reoptimize-lambda-var leaf))))))
+	     (clambda (or (maybe-let-convert leaf)
+			  (maybe-convert-to-assignment leaf)))
+	     (lambda-var (reoptimize-lambda-var leaf))))
+	  (t
+	   (typecase leaf
+	     (clambda (maybe-convert-to-assignment leaf))))))
 
   (undefined-value))
 
@@ -783,23 +795,12 @@
 ;;; Delete-Return  --  Interface
 ;;;
 ;;;    Do stuff to indicate that the return node Node is being deleted.  We set
-;;; the RETURN to NIL and remove the function from its tail set.
-;;;
-;;;    As a rather random special case, we leave the function in the tail set
-;;; when there are uses of the result continuation marked TAIL-P.  This is done
-;;; to prevent the tail set from being blown away when the back end deletes the
-;;; return because it discovers that all calls are tail-recursive.
+;;; the RETURN to NIL.
 ;;;
 (defun delete-return (node)
   (declare (type creturn node))
-  (let* ((fun (return-lambda node))
-	 (tail-set (lambda-tail-set fun)))
+  (let ((fun (return-lambda node)))
     (assert (lambda-return fun))
-    (unless (do-uses (use (return-result node) nil)
-	      (when (node-tail-p use) (return t)))
-      (setf (tail-set-functions tail-set)
-	    (delete fun (tail-set-functions tail-set)))
-      (setf (lambda-tail-set fun) nil))
     (setf (lambda-return fun) nil))
   (undefined-value))
 
@@ -1022,7 +1023,7 @@
 		  ;; Not already deleted...
 		  (continuation-use (basic-combination-fun node)))
 	 (let ((fun (combination-lambda node)))
-	   (when (member (functional-kind fun) '(:let :mv-let))
+	   (when (member (functional-kind fun) '(:let :mv-let :assignment))
 	     (delete-lambda fun))))
        (flush-dest (basic-combination-fun node))
        (dolist (arg (basic-combination-args node))
@@ -1032,7 +1033,8 @@
       (bind
        (let ((lambda (bind-lambda node)))
 	 (unless (eq (functional-kind lambda) :deleted)
-	   (assert (member (functional-kind lambda) '(:let :mv-let)))
+	   (assert (member (functional-kind lambda)
+			   '(:let :mv-let :assignment)))
 	   (delete-lambda lambda))))
       (exit
        (let ((value (exit-value node))
@@ -1162,6 +1164,7 @@
   (do-blocks (block component)
     (setf (block-delete-p block) t))
   (dolist (fun (component-lambdas component))
+    (setf (functional-kind fun) nil)
     (setf (leaf-refs fun) nil)
     (delete-lambda fun))
   (do-blocks (block component)
