@@ -1,5 +1,4 @@
-@make[Manual] @comment{-*- Dictionary: /afs/cs/project/clisp/scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
-
+@comment{-*- Dictionary: /afs/cs/project/clisp/scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
 
 @chap[The Hemlock Netnews Interface]
 @section[Introduction to Netnews in Hemlock]
@@ -33,7 +32,7 @@ file containing the newsgroups you want to read.
    groups (one per line) to read.
 @enddefhvar
 
-@defhvar[var "Netnews Database Filename", val{".hemlock-netnews"}]
+@defhvar[var "Netnews Database File", val{".hemlock-netnews"}]
 When you invoke the @hid(Netnews) command, @hemlock merges the value of
 this variable with your home directory.  This file maintains a pointer to
 the highest numbered message read in each group in @hid(Netnews Group
@@ -58,8 +57,8 @@ File).
    to your group file using various commands in this mode.
 @enddefcom
 
-@defcom[com "Netnews Browse Add Newsgroup To File", stuff (bound to @bf[a] in @hid[News-Browse] mode)]
-@defcom1[com "Netnews Browse Pointer Add Newsgroup to File"]
+@defcom[com "Netnews Browse Add Group To File", stuff (bound to @bf[a] in @hid[News-Browse] mode)]
+@defcom1[com "Netnews Browse Pointer Add Group to File"]
 @hid(Netnews Browse Add Group to File) adds the group under the point to
 your group file, and @hid(Netnews Browse Pointer Add Group To File) adds
 the group under the mouse pointer without moving the point.
@@ -70,7 +69,7 @@ the group under the mouse pointer without moving the point.
 @hid(Netnews Browse Read Group) and @hid(Netnews Browse Pointer Read Group)
 read the group under the cursor and the group under the mouse pointer,
 respectively.  These commands neither use nor modify the contents of your
-@hid(Netnews Database Filename); they will always present the last few messages
+@hid(Netnews Database File); they will always present the last few messages
 in the newsgroup, regardless of the last message read.  @hid(Netnews Browse
 Pointer Read Group) does not modify the position of the point.
 @enddefcom
@@ -91,7 +90,7 @@ Once your @hid(Netnews Group File) is set up, you may begin reading netnews.
    @hemlock.  Without an argument, the system looks for what bulletin boards to
    read in the value of @hid(Netnews Group File) and reads each of them in
    succession.  @hemlock keeps a pointer to the last message you read in each
-   of these groups in your @hid(Netnews Database Filename).  Bulletin boards may
+   of these groups in your @hid(Netnews Database File).  Bulletin boards may
    be added to your @hid(Netnews Group File) manually or by using
    the @hid(Netnews Browse) facility.  With an argument, @hemlock prompts the 
    user for the name of a bulletin board and reads it.
@@ -99,7 +98,7 @@ Once your @hid(Netnews Group File) is set up, you may begin reading netnews.
 
 @defcom[com "Netnews Look at Group"]
    This command prompts for a group and reads it, ignoring the information
-   in your @hid(Netnews Database Filename).
+   in your @hid(Netnews Database File).
 @enddefcom
 
 When you read a group, @hemlock creates a buffer that contains important
@@ -307,8 +306,8 @@ not modify the group pointer for the current group.
 @defcom[com "Netnews Group Punt Messages", stuff (bound to @bf[G] in @hid{News-Headers} mode)]
    This command goes on to the next bulletin board in your group
    file.  Without an argument, the system sets the pointer for the current
-   group to the last visible message.  With an argument, @hemlock sets the
-   pointer to the last message in the group.
+   group to the last message.  With an argument, @hemlock sets the
+   pointer to the last visible message in the group.
 @enddefcom
 
 @defcom[com "Netnews Exit", stuff (bound to @bf[q] in @hid{News-Headers} mode)]
@@ -412,7 +411,7 @@ In all cases, the same binding is used: @bf[H-y].
 @hid[Netnews Previous Article]@\@\@bf[p]
 @hid[Netnews Go to Next Group]@\@\@bf[g]
 @hid[Netnews Group Punt Messages]@\@\@bf[G]
-@hid[List All Newsgroups]@\@\@\@bf[l]
+@hid[List All Groups]@\@\@\@bf[l]
 @hid[Netnews Append to File]@\@\@bf[a]
 @hid[Netnews Forward Message]@\@\@bf[f]
 @hid[Netnews Reply to Sender]@\@\@bf[r]
@@ -435,13 +434,13 @@ In all cases, the same binding is used: @bf[H-y].
 
 @hid[Netnews Message Scroll Down]@\@\@bf[Space]
 @hid[Scroll Window Up]@\@\@\@bf[Backspace]
-@hid[Netnews Message Select Headers Buffer]@\@\@bf[H-h], @bf[^]
+@hid[Netnews Goto Headers Buffer]@\@\@bf[H-h], @bf[^]
 @hid[Netnews Message Keep Buffer]@\@\@bf[k]
-@hid[Netnews Message Punt]@\@\@bf[q]
+@hid[Netnews Message Quit]@\@\@bf[q]
 @hid[Netnews Message File Message]@\@\@bf[o]
 @hid[Netnews Reply to Group in Other Window]@\@\@bf[R]
-@hid[Netnews Message Select Post Buffer]@\@\@bf[H-p]
-@hid[Netnews Message Select Draft Buffer]@\@\@bf[H-d]
+@hid[Netnews Goto Post Buffer]@\@\@bf[H-p]
+@hid[Netnews Goto Draft Buffer]@\@\@bf[H-d]
 @hid[Insert Message Region]@\@\@bf[H-y]
 
 
@@ -456,7 +455,7 @@ In all cases, the same binding is used: @bf[H-y].
 @Begin[Center] @b[News-Browse mode bindings:] @End[Center]
 
 @hid[Netnews Quit Browse]@\@\@bf[q]
-@hid[Netnews Browse Add Newsgroup To File]@\@\@bf[a]
+@hid[Netnews Browse Add Group To File]@\@\@bf[a]
 @hid[Netnews Browse Read Group]@\@\@bf[Space]
 @hid[Next Line]@\@\@\@bf[n]
 @hid[Previous Line]@\@\@\@bf[p]
