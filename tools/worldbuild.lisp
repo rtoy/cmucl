@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.14 1992/07/28 22:08:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.15 1992/07/28 22:13:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,10 @@
 
 (in-package "LISP")
 
-(unless (fboundp 'genesis) (load "target:compiler/generic/genesis"))
+(unless (fboundp 'genesis)
+  (if (c:target-featurep '(or :hppa :x86 :pmax))
+      (load "target:compiler/generic/new-genesis")
+      (load "target:compiler/generic/genesis")))
 
 (defparameter lisp-files
   `(,@(when (c:backend-featurep :pmax)
