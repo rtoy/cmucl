@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.24 1990/12/18 20:49:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.25 1990/12/18 21:23:33 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -67,7 +67,7 @@
     vm:list-pointer-type object-not-list-error)
 
   (frob structurep check-structure structure
-    vm:structure-pointer-type object-not-structure)
+    vm:structure-pointer-type object-not-structure-error)
 
   (frob bignump check-bigunm bignum
     vm:bignum-type object-not-bignum-error)
