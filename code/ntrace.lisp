@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.29 2005/02/22 22:55:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.30 2005/02/25 17:11:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,9 +248,9 @@
 (defun trace-wherein-p (frame names)
   (do ((frame (di:frame-down frame) (di:frame-down frame)))
       ((not frame) nil)
-    (when (member (di:debug-function-name (di:frame-debug-function frame))
-		  names :test #'equal)
-      (return t))))
+    (let ((frame-name (di:debug-function-name (di:frame-debug-function frame))))
+      (when (member frame-name names :test #'equal)
+	(return t)))))
 
 ;;; TRACE-PRINT  --  Internal
 ;;;
@@ -454,10 +454,12 @@
 		  (coerce-form-list (trace-info-print-after info) nil))))
 
       (dolist (wherein (trace-info-wherein info))
-	(unless (or (stringp wherein)
-		    (fboundp wherein))
+	(multiple-value-bind (validp block-name)
+	    (ext:valid-function-name-p wherein)
+	(unless (or (stringp block-name)
+		    (fboundp block-name))
 	  (warn ":WHEREIN name is not a defined global function: ~S"
-		wherein)))
+		wherein))))
 
       (cond
        (encapsulated
@@ -527,8 +529,26 @@
 	   (setf (trace-info-condition info) value)
 	   (setf (trace-info-condition-after info) value))
 	  (:wherein
-	   (setf (trace-info-wherein info)
-		 (if (listp (car value)) (car value) value)))
+	   (collect ((new-names))
+	     (dolist (name (if (listp (car value)) (car value) value))
+	       (cond ((and (consp name) (eq (car name) 'method)
+			   (ext:valid-function-name-p name))
+		      ;; This needs to be coordinated with how the
+		      ;; debugger prints method names.  So this is
+		      ;; what this code does.  Any method qualifiers
+		      ;; appear as a list in the debugger.  No
+		      ;; qualifiers show up as NIL.  We also take the
+		      ;; method and add a pcl::fast-method in case the
+		      ;; method wasn't compiled.  (Do we need to do this?)
+		      (let ((method (cond ((atom (third name))
+					   `(,(second name) (,(third name)) ,@(cdddr name)))
+					  (t
+					   `(,(second name) nil ,@(cddr name))))))
+			(new-names `(pcl::fast-method ,@method))
+			(new-names `(method ,@method))))
+		     (t
+		      (new-names name))))
+	     (setf (trace-info-wherein info) (new-names))))
 	  (:encapsulate
 	   (setf (trace-info-encapsulated info) (car value)))
 	  (:break (setf (trace-info-break info) value))
