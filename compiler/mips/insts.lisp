@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.26 1990/10/01 16:31:24 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.27 1990/11/03 16:22:21 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -18,9 +18,6 @@
 (use-package "ASSEM")
 (use-package "EXT")
 
-(import '(c::tn-p c::tn-sc c::tn-offset c::sc-sb c::sb-name c::zero-tn
-		  c::registers c::float-registers
-		  c::component-header-length))
 
 
 ;;;; Resources.
