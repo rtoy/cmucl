@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.29 1993/05/07 07:42:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.30 1993/05/19 13:57:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,7 +196,8 @@
   (let ((error (generate-error-code nil invalid-unwind-error)))
     (inst beq block zero-tn error))
   
-  (load-symbol-value cur-uwp lisp::*current-unwind-protect-block*)
+  #-gengc (load-symbol-value cur-uwp lisp::*current-unwind-protect-block*)
+  #+gengc (loadw cur-uwp mutator-tn mutator-current-unwind-protect-slot)
   (loadw target-uwp block vm:unwind-block-current-uwp-slot)
   (inst bne cur-uwp target-uwp do-uwp)
   (inst nop)
@@ -234,7 +235,8 @@
   
   (progn start count) ; We just need them in the registers.
 
-  (load-symbol-value catch lisp::*current-catch-block*)
+  #-gengc (load-symbol-value catch lisp::*current-catch-block*)
+  #+gengc (loadw temp mutator-tn mutator-current-catch-block-slot)
   
   loop
   
