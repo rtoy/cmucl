@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.141 2003/03/31 11:13:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.142 2003/04/08 12:16:57 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1063,7 +1063,13 @@
 	(unless (eq wot 'function)
 	  (compiler-error "Unrecognizable function or variable name: ~S"
 			  name))
-	(find fn-name fvars :key #'leaf-name :test #'equal))
+	(find fn-name fvars
+	      :key #'leaf-name
+	      :test (lambda (x y)
+		       (or (equal x y)
+			   (and (consp y)
+				(member (car y) '(flet labels))
+				(equal x (cadr y)))))))
       (find-in-bindings vars name)))
 
 
@@ -1078,7 +1084,8 @@
     (let ((var (find-in-bindings-or-fbindings name vars fvars)))
       (cond
        ((not var)
-	(if (or (lexenv-find name variables) (lexenv-find name functions))
+	(if (or (lexenv-find name variables)
+		(lexenv-find-function name))
 	    (compiler-note "Ignoring free ignore declaration for ~S." name)
 	    (compiler-warning "Ignore declaration for unknown variable ~S."
 			      name)))
