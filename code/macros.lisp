@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.23 1991/05/08 23:54:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.24 1991/05/24 16:58:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1447,27 +1447,27 @@
 ;;; matches the specified context.
 ;;;
 (defun evaluate-declaration-context (context name parent)
-  (let ((base (if (and (consp name) (consp (cdr name)))
-		  (cadr name)
-		  name)))
+  (let* ((base (if (and (consp name) (consp (cdr name)))
+		   (cadr name)
+		   name))
+	 (package (and (symbolp base) (symbol-package base))))
     (if (atom context)
-	(let ((package (and (symbolp base) (symbol-package base))))
-	  (multiple-value-bind (ignore how)
-			       (if package
-				   (find-symbol (symbol-name base) package)
-				   (values nil nil))
-	    (declare (ignore ignore))
-	    (case context
-	      (:internal (eq how :internal))
-	      (:external (eq how :external))
-	      (:uninterned (and (symbolp base) (not package)))
-	      (:anonymous (not name))
-	      (:macro (eq parent 'defmacro))
-	      (:function (member parent '(defun labels flet function)))
-	      (:global (member parent '(defun defmacro function)))
-	      (:local (member parent '(labels flet)))
-	      (t
-	       (error "Unknown declaration context: ~S." context)))))
+	(multiple-value-bind (ignore how)
+			     (if package
+				 (find-symbol (symbol-name base) package)
+				 (values nil nil))
+	  (declare (ignore ignore))
+	  (case context
+	    (:internal (eq how :internal))
+	    (:external (eq how :external))
+	    (:uninterned (and (symbolp base) (not package)))
+	    (:anonymous (not name))
+	    (:macro (eq parent 'defmacro))
+	    (:function (member parent '(defun labels flet function)))
+	    (:global (member parent '(defun defmacro function)))
+	    (:local (member parent '(labels flet)))
+	    (t
+	     (error "Unknown declaration context: ~S." context))))
 	(case (first context)
 	  (:or
 	   (loop for x in (rest context)
@@ -1483,6 +1483,10 @@
 	   (let ((name (concatenate 'string "$" (string base) "$")))
 	     (loop for x in (rest context)
 	       thereis (search (string x) name))))
+	  (:package
+	   (and package
+		(loop for x in (rest context)
+		  thereis (eq (find-package (string x)) package))))
 	  (t
 	   (error "Unknown declaration context: ~S." context))))))
 
