@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.34 1992/07/21 18:45:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.35 1992/09/07 16:01:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,8 +19,8 @@
 ;;; places the body of the function inline.
 ;;;
 ;;;    We cannot always do a local call even when we do have the function being
-;;; called.  Local call can be explicitly disabled by a NOTINLINE declaration.
-;;; Calls that cannot be shown to have legal arg counts are also not converted.
+;;; called.  Calls that cannot be shown to have legal arg counts are not
+;;; converted.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
@@ -151,7 +151,7 @@
 	   (temps (gensym)))
 	 `(lambda (,n-supplied ,@(temps))
 	    (declare (fixnum ,n-supplied))
-	    ,(if (policy (lambda-bind fun) (zerop safety))
+	    ,(if (policy nil (zerop safety))
 		 `(declare (ignore ,n-supplied))
 		 `(%verify-argument-count ,n-supplied ,nargs))
 	    (%funcall ,fun ,@(temps))))))
@@ -240,23 +240,19 @@
       (change-ref-leaf ref (or (functional-entry-function fun)
 			       (make-external-entry-point fun))))))
 
+
 
 ;;; Local-Call-Analyze-1  --  Interface
 ;;;
 ;;;    Attempt to convert all references to Fun to local calls.  The reference
-;;; cannot be :Notinline, and must be the function for a call.  The function
-;;; continuation must be used only once, since otherwise we cannot be sure what
-;;; function is to be called.  The call continuation would be multiply used if
-;;; there is hairy stuff such as conditionals in the expression that computes
-;;; the function.
-;;;
-;;;    Except in the interpreter, we don't attempt to convert calls that appear
-;;; in a top-level lambda unless there is only one reference or the function is
-;;; a unwind-protect cleanup.  This allows top-level components to contain only
-;;; load-time code: any references to run-time functions will be as closures.
+;;; must be the function for a call, and the function continuation must be used
+;;; only once, since otherwise we cannot be sure what function is to be called.
+;;; The call continuation would be multiply used if there is hairy stuff such
+;;; as conditionals in the expression that computes the function.
 ;;;
 ;;;    If we cannot convert a reference, then we mark the referenced function
-;;; as an entry-point, creating a new XEP if necessary.
+;;; as an entry-point, creating a new XEP if necessary.  We don't try to
+;;; convert calls that are in error (:ERROR kind.)
 ;;;
 ;;;    This is broken off from Local-Call-Analyze so that people can force
 ;;; analysis of newly introduced calls.  Note that we don't do let conversion
@@ -264,27 +260,22 @@
 ;;;
 (defun local-call-analyze-1 (fun)
   (declare (type functional fun))
-  (let ((refs (leaf-refs fun)))
+  (let ((refs (leaf-refs fun))
+	(first-time t))
     (dolist (ref refs)
       (let* ((cont (node-cont ref))
 	     (dest (continuation-dest cont)))
 	(cond ((and (basic-combination-p dest)
 		    (eq (basic-combination-fun dest) cont)
-		    (eq (continuation-use cont) ref)
-		    (or (null (rest refs))
-			*converting-for-interpreter*
-			(eq (functional-kind fun) :cleanup)
-			(not (eq (functional-kind (node-home-lambda ref))
-				 :top-level))))
-	       (ecase (ref-inlinep ref)
-		 ((nil :inline :maybe-inline)
-		  (convert-call-if-possible ref dest))
-		 ((:notinline)))
+		    (eq (continuation-use cont) ref))
+
+	       (convert-call-if-possible ref dest)
 	       
 	       (unless (eq (basic-combination-kind dest) :local)
 		 (reference-entry-point ref)))
 	      (t
-	       (reference-entry-point ref))))))
+	       (reference-entry-point ref))))
+      (setq first-time nil)))
 
   (undefined-value))
 
@@ -301,6 +292,9 @@
 ;;; triggered by reference deletion.  In particular, the Component-Lambdas are
 ;;; being hacked to remove newly deleted and let converted lambdas, so it is
 ;;; important that the lambda is added to the Component-Lambdas when it is.
+;;; Also, the COMPOENT-NEW-FUNCTIONS may contain all sorts of drivel, since it
+;;; is not updated when we delete functions, etc.  Only COMPONENT-LAMBDAS is
+;;; updated.
 ;;;
 (defun local-call-analyze (component)
   (declare (type component component))
@@ -308,7 +302,7 @@
     (unless (component-new-functions component) (return))
     (let* ((fun (pop (component-new-functions component)))
 	   (kind (functional-kind fun)))
-      (cond ((eq kind :deleted))
+      (cond ((member kind '(:deleted :let :mv-let :assignment)))
 	    ((and (null (leaf-refs fun)) (eq kind nil)
 		  (not (functional-entry-function fun)))
 	     (delete-functional fun))
@@ -322,41 +316,77 @@
   (undefined-value))
 
 
+;;; MAYBE-EXPAND-LOCAL-INLINE  --  Internal
+;;;
+;;;    If policy is auspicious, Call is not in an XEP, and we don't seem to be
+;;; in an infinite recursive loop, then change the reference to reference a
+;;; fresh copy.  We return whichever function we decide to reference.
+;;;
+(defun maybe-expand-local-inline (fun ref call)
+  (if (and (policy call (>= speed space) (>= speed cspeed))
+	   (not (eq (functional-kind (node-home-lambda call)) :external))
+	   (inline-expansion-ok call))
+      (with-ir1-environment call
+	(let* ((*lexical-environment* (functional-lexenv fun))
+	       (res (ir1-convert-lambda (functional-inline-expansion fun))))
+	  (change-ref-leaf ref res)
+	  res))
+      fun))
+
+
 ;;; Convert-Call-If-Possible  --  Interface
 ;;;
 ;;;    Dispatch to the appropriate function to attempt to convert a call.  This
 ;;; is called in IR1 optimize as well as in local call analysis.  If the call
-;;; is already :Local, we do nothing.  If the call is in the top-level
-;;; component, also do nothing, since we don't want to join top-level code into
-;;; normal components.
+;;; is is already :Local, we do nothing.  If the call is already scheduled for
+;;; deletion, also do nothing (in addition to saving time, this also avoids
+;;; some problems with optimizing collections of functions that are partially
+;;; deleted.)
+;;;
+;;;    This is called both before and after FIND-INITIAL-DFO runs.  When called
+;;; on a :INITIAL component, we don't care whether the caller and callee are in
+;;; the same component.  Afterward, we must stick with whatever component
+;;; division we have chosen.
+;;;
+;;;    Before attempting to convert a call, we see if the function is supposed
+;;; to be inline expanded.  Call conversion proceeds as before after any
+;;; expansion.
 ;;;
 ;;;    We bind *Compiler-Error-Context* to the node for the call so that
 ;;; warnings will get the right context.
 ;;;
+;;;
 (defun convert-call-if-possible (ref call)
   (declare (type ref ref) (type basic-combination call))
-  (unless (or (eq (basic-combination-kind call) :local)
-	      (let ((block (node-block call)))
-		(or (block-delete-p block)
-		    (eq (functional-kind (block-home-lambda block))
-			:deleted))))
-    (let ((fun (let ((fun (ref-leaf ref)))
-		 (if (external-entry-point-p fun)
-		     (functional-entry-function fun)
-		     fun)))
-	  (*compiler-error-context* call))
-      (let ((c1 (block-component (node-block call)))
-	    (c2 (block-component (node-block (lambda-bind (main-entry fun))))))
-	(assert (or (eq c1 c2)
-		    (and (eq (component-kind c1) :initial)
-			 (eq (component-kind c2) :initial)))))
-      (assert (member (functional-kind fun) '(nil :escape :cleanup :optional)))
-      (cond ((mv-combination-p call)
-	     (convert-mv-call ref call fun))
-	    ((lambda-p fun)
-	     (convert-lambda-call ref call fun))
-	    (t
-	     (convert-hairy-call ref call fun)))))
+  (let* ((block (node-block call))
+	 (component (block-component block))
+	 (original-fun (ref-leaf ref)))
+    (unless (or (member (basic-combination-kind call) '(:local :error))
+		(block-delete-p block)
+		(eq (functional-kind (block-home-lambda block)) :deleted)
+		(not (or (eq (component-kind component) :initial)
+			 (eq (block-component
+			      (node-block
+			       (lambda-bind (main-entry original-fun))))
+			     component))))
+      (let ((fun (if (external-entry-point-p original-fun)
+		     (functional-entry-function original-fun)
+		     original-fun))
+	    (*compiler-error-context* call))
+	
+	(when (and (eq (functional-inlinep fun) :inline)
+		   (rest (leaf-refs original-fun)))
+	  (setq fun (maybe-expand-local-inline fun ref call)))
+	
+	(assert (member (functional-kind fun)
+			'(nil :escape :cleanup :optional)))
+	(cond ((mv-combination-p call)
+	       (convert-mv-call ref call fun))
+	      ((lambda-p fun)
+	       (convert-lambda-call ref call fun))
+	      (t
+	       (convert-hairy-call ref call fun))))))
+
   (undefined-value))
 
 
@@ -398,7 +428,7 @@
 ;;; Convert-Lambda-Call  --  Internal
 ;;;
 ;;;    Attempt to convert a call to a lambda.  If the number of args is wrong,
-;;; we give a warning and mark the Ref as :Notinline to remove it from future
+;;; we give a warning and mark the call as :ERROR to remove it from future
 ;;; consideration.  If the argcount is O.K. then we just convert it.
 ;;;
 (defun convert-lambda-call (ref call fun)
@@ -411,7 +441,7 @@
 	   (compiler-warning
 	    "Function called with ~R argument~:P, but wants exactly ~R."
 	    call-args nargs)
-	   (setf (ref-inlinep ref) :notinline)))))
+	   (setf (basic-combination-kind call) :error)))))
 
 
 
@@ -433,7 +463,7 @@
     (cond ((< call-args min-args)
 	   (compiler-warning "Function called with ~R argument~:P, but wants at least ~R."
 			     call-args min-args)
-	   (setf (ref-inlinep ref) :notinline))
+	   (setf (basic-combination-kind call) :error))
 	  ((<= call-args max-args)
 	   (convert-call ref call
 			 (elt (optional-dispatch-entry-points fun)
@@ -443,8 +473,7 @@
 	  (t
 	   (compiler-warning "Function called with ~R argument~:P, but wants at most ~R."
 			     call-args max-args)
-	   (setf (ref-inlinep ref) :notinline))))
-
+	   (setf (basic-combination-kind call) :error))))
   (undefined-value))
 
 
@@ -526,7 +555,8 @@
 	(when (oddp (length more))
 	  (compiler-warning "Function called with odd number of ~
 	  		     arguments in keyword portion.")
-	  (setf (ref-inlinep ref) :notinline)
+
+	  (setf (basic-combination-kind call) :error)
 	  (return-from convert-more-call))
 
 	(do ((key more (cddr key))
@@ -536,7 +566,7 @@
 	    (unless (constant-continuation-p cont)
 	      (when flame
 		(compiler-note "Non-constant keyword in keyword call."))
-	      (setf (ref-inlinep ref) :notinline)
+	      (setf (basic-combination-kind call) :error)
 	      (return-from convert-more-call))
 	    
 	    (let ((name (continuation-value cont))
@@ -555,7 +585,7 @@
 	(when (and loser (not (optional-dispatch-allowp fun)))
 	  (compiler-warning "Function called with unknown argument keyword ~S."
 			    loser)
-	  (setf (ref-inlinep ref) :notinline)
+	  (setf (basic-combination-kind call) :error)
 	  (return-from convert-more-call)))
 
       (collect ((call-args))
@@ -837,7 +867,6 @@
     (move-return-stuff fun call next-block)
     (merge-lets fun call))
 
-  (maybe-remove-free-function fun)
   (dolist (arg (basic-combination-args call))
     (when arg
       (reoptimize-continuation arg)))
