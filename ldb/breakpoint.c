@@ -59,6 +59,26 @@ void breakpoint_remove(code_obj, pc_offset, orig_inst)
     swap_insts(code_obj, pc_offset, orig_inst);
 }
 
+static lispobj find_code(scp)
+struct sigcontext *scp;
+{
+    lispobj code = scp->sc_regs[CODE];
+    lispobj header = *(lispobj *)PTR(code);
+
+    switch (TypeOf(header)) {
+      case type_CodeHeader:
+	return code;
+      case type_ReturnPcHeader:
+	return code - HeaderValue(header)*4;
+      case type_FunctionHeader:
+      case type_ClosureFunctionHeader:
+	return code - type_FunctionPointer - HeaderValue(header)*4
+	        + type_OtherPointer;
+      default:
+	crap_out("Strange thing in $CODE at breakpoint.");
+    }
+}
+
 static int calc_offset(code, pc)
      struct code *code;
      unsigned long pc;
@@ -79,7 +99,7 @@ static int calc_offset(code, pc)
 int breakpoint_after_offset(scp)
      struct sigcontext *scp;
 {
-    struct code *code = (struct code *)PTR(scp->sc_regs[CODE]);
+    struct code *code = (struct code *)PTR(find_code(scp));
 
 #ifdef sparc
     return calc_offset(code, scp->sc_npc);
@@ -120,24 +140,7 @@ handle_breakpoint(signal, subcode, scp)
 int signal, subcode;
 struct sigcontext *scp;
 {
-    lispobj code = scp->sc_regs[CODE];
-    lispobj header = *(lispobj *)PTR(code);
-
-    switch (TypeOf(header)) {
-      case type_CodeHeader:
-	break;
-      case type_ReturnPcHeader:
-	code = code - HeaderValue(header)*4;
-	break;
-      case type_FunctionHeader:
-      case type_ClosureFunctionHeader:
-	code = code - type_FunctionPointer - HeaderValue(header)*4
-	     + type_OtherPointer;
-	break;
-      default:
-	crap_out("Strange thing in $CODE at breakpoint.");
-    }
-    internal_handle_breakpoint(scp, code);
+    internal_handle_breakpoint(scp, find_code(scp));
 }
 
 handle_function_end_breakpoint(signal, subcode, scp)
