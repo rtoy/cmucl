@@ -2491,12 +2491,16 @@
     (dolist (def definitions)
       (when (or (atom def) (< (length def) 2))
 	(compiler-error "Malformed ~S definition spec: ~S." context def))
-
+      
       (let ((name (check-function-name (first def))))
 	(names name)
-	(defs `(lambda ,(second def)
-		 (block ,(if (consp name) (second name) name)
-		   (cddr def))))))
+	(multiple-value-bind
+	    (body decls)
+	    (system:parse-body (cddr def) *fenv* t)
+	  (defs `(lambda ,(second def)
+		   ,@decls
+		   (block ,(if (consp name) (second name) name)
+		     . ,body))))))
     (values (names) (defs))))
 
 
