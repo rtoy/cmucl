@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.14 1993/02/17 19:47:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.15 1993/02/19 22:59:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1024,17 +1024,19 @@
   (declare (type defstruct-description info))
   (multiple-value-bind (class layout old-layout)
 		       (ensure-structure-class info inherits "current" "new")
-    (cond (old-layout
+    (cond ((not old-layout)
+	   (register-layout layout nil nil))
+	  ((eq layout old-layout)
+	   (when (not (class-layout class))
+	     (register-layout layout nil nil)))
+	  (t
 	   (let ((old-info (layout-info old-layout)))    
 	     (when (defstruct-description-p old-info)
 	       (dolist (slot (dd-slots old-info))
 		 (fmakunbound (dsd-accessor slot))
 		 (unless (dsd-read-only slot)
 		   (fmakunbound `(setf ,(dsd-accessor slot)))))))
-	   (unless (eq layout old-layout)
-	     (%redefine-defstruct class old-layout layout)))
-	  (t
-	   (register-layout layout nil nil)))
+	   (%redefine-defstruct class old-layout layout)))
 
     (setf (find-class (dd-name info)) class)
       
