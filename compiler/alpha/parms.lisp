@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/parms.lisp,v 1.9 2003/02/12 15:53:46 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/parms.lisp,v 1.10 2003/02/16 19:18:41 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,6 +222,14 @@
     lisp::*free-interrupt-context-index*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
+
+    ;; Make the ..slot-unbound.. symbol static to optimise the
+    ;; common slot unbound check.
+    pcl::..slot-unbound..
+
+    ;; These are filled in the C run-time.
+    lisp::*cmucl-lib*
+    lisp::*cmucl-core-path*
     ))
 
 (defparameter static-functions
