@@ -1,7 +1,39 @@
 ;;; -*- Package: C -*-
-(in-package 'c)
+(in-package "C")
 
 (use-package "PROFILE")
+(declaim (ftype (function (t t t) *) ir1-top-level))
+(declaim (ftype (function (t) *) find-initial-dfo))
+(declaim (ftype (function (t) *) find-dfo))
+(declaim (ftype (function (t) *) local-call-analyze))
+(declaim (ftype (function (t) *) delete-block))
+(declaim (ftype (function (t) *) join-successor-if-possible))
+(declaim (ftype (function (t) *) ir1-optimize-block))
+(declaim (ftype (function (t) *) flush-dead-code))
+(declaim (ftype (function (t) *) generate-type-checks))
+(declaim (ftype (function (t) *) constraint-propagate))
+(declaim (ftype (function (t) *) pre-environment-analyze-top-level))
+(declaim (ftype (function (t) *) environment-analyze))
+(declaim (ftype (function (t) *) gtn-analyze))
+(declaim (ftype (function (t t) *) control-analyze))
+(declaim (ftype (function (t) *) ltn-analyze))
+(declaim (ftype (function (t) *) stack-analyze))
+(declaim (ftype (function (t) *) ir2-convert))
+(declaim (ftype (function (t) *) copy-propagate))
+(declaim (ftype (function (t) *) select-representations))
+(declaim (ftype (function (t) *) lifetime-analyze))
+(declaim (ftype (function (t) *) delete-unreferenced-tns))
+(declaim (ftype (function (t) *) pack))
+(declaim (ftype (function (t) *) generate-code))
+(declaim (ftype (function (t t t t t t) *) fasl-dump-component))
+(declaim (ftype (function (t) *) clear-ir2-info))
+(declaim (ftype (function (t) *) macerate-ir1-component))
+(declaim (ftype (function (t) *) merge-top-level-lambdas))
+(declaim (ftype (function (t t) *) note-failed-optimization))
+(declaim (ftype (function () *) clear-stuff))
+(declaim (ftype (function (t) *) read-source-form))
+(declaim (ftype (function (t t) *) fasl-dump-source-info))
+(declaim (ftype (function (t t) *) fasl-dump-top-level-lambda-call))
 
 (profile ir1-top-level
 	 find-initial-dfo
@@ -45,7 +77,6 @@
 	 clear-ir2-info
 	 macerate-ir1-component
 	 merge-top-level-lambdas
-	 check-free-function
 	 note-failed-optimization
 	 clear-stuff
 	 read-source-form
