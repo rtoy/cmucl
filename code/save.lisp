@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.51 2003/06/18 09:23:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.52 2004/06/20 17:00:36 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,6 +198,14 @@
 				 :test #'(lambda (x y)
 					   (declare (simple-string x y))
 					   (string-equal x y)))))
+               (when (and process-command-line (find-switch "quiet"))
+                 (setq *load-verbose* nil
+                       *compile-verbose* nil
+                       *compile-print* nil
+                       *compile-progress* nil
+                       *require-verbose* nil
+                       *gc-verbose* nil
+                       *herald-items* nil))
 	       (when (and site-init
 			  (not (and process-command-line
 				    (find-switch "nositeinit"))))
