@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.67 2004/05/24 23:04:10 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.68 2004/06/18 22:50:02 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -415,10 +415,14 @@
 	 (des (allocate-vector-object space vm:byte-bits (1+ len)
 				      vm:simple-string-type)))
     (write-indexed des vm:vector-length-slot (make-fixnum-descriptor len))
-    (copy-to-system-area string (* vm:vector-data-offset 32) ; this should be the
-			 ;; word size of the old vm which may be different from the new vm
-			 ;; I'm assuming that the old vm is 32 bits!!!
-			 ;; TODO: add word-bits slot to the backend structure
+    (copy-to-system-area string (* vm:vector-data-offset
+				   ;; the word size of the native backend which
+				   ;; may be different from the target backend
+				   (if (= (c:backend-fasl-file-implementation
+					   c::*native-backend*)
+					  #.c:amd64-fasl-file-implementation)
+				       64
+				       32))
 			 (descriptor-sap des)
 			 (* vm:vector-data-offset vm:word-bits)
 			 (* (1+ len) vm:byte-bits))
