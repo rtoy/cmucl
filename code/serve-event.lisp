@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.7 1991/02/08 13:35:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.8 1991/05/22 00:19:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,10 +92,10 @@
 (defstruct (handler
 	    (:print-function %print-handler)
 	    (:constructor make-handler (direction descriptor function)))
-  direction		      ; Either :input or :output
-  descriptor		      ; File descriptor this handler is tied to.
+  (direction nil :type (member :input :output)) ; Either :input or :output
+  (descriptor 0 :type (mod 32)) ; File descriptor this handler is tied to.
   active		      ; T iff this handler is running.
-  function		      ; Function to call.
+  (function nil :type function) ; Function to call.
   bogus			      ; T if this descriptor is bogus. 
   )
 
@@ -175,58 +175,36 @@
   "Wait until FD is usable for DIRECTION. DIRECTION should be either :INPUT or
   :OUTPUT. TIMEOUT, if supplied, is the number of seconds to wait before giving
   up."
-  (let (usable
-	(stop-at (if timeout
-		   (multiple-value-bind (okay sec usec)
-					(mach:unix-gettimeofday)
-		     (declare (ignore okay))
-		     (+ (* 1000000 timeout sec) usec)))))
-    (with-fd-handler (fd direction #'(lambda (fd)
-				       (declare (ignore fd))
-				       (setf usable t)))
-      (loop
-	(serve-event timeout)
-	
-	(when usable
-	  (return t))
-	
-	(when timeout
-	  (multiple-value-bind (okay sec usec)
-			       (mach:unix-gettimeofday)
-	    (declare (ignore okay))
-	    (let ((now (+ (* sec 1000000) usec)))
-	      (if (> now stop-at)
-		(return nil)
-		(setq timeout
-		      (/ (- stop-at now)
-			 1000000))))))))))
+  (declare (type (or index null) timeout))
+  (let (usable)
+    (multiple-value-bind
+	(stop-sec stop-usec)
+	(if timeout
+	    (multiple-value-bind (okay sec usec)
+				 (mach:unix-gettimeofday)
+	      (declare (ignore okay))
+	      (values (the (unsigned-byte 32) (+ sec timeout))
+		      usec))
+	    (values 0 0))
+      (declare (type (unsigned-byte 32) stop-sec stop-usec))
+      (with-fd-handler (fd direction #'(lambda (fd)
+					 (declare (ignore fd))
+					 (setf usable t)))
+	(loop
+	  (serve-event timeout)
+	  
+	  (when usable
+	    (return t))
+	  
+	  (when timeout
+	    (multiple-value-bind (okay sec usec)
+				 (mach:unix-gettimeofday)
+	      (declare (ignore okay))
+	      (when (or (> sec stop-sec)
+			(and (= sec stop-sec) (>= usec stop-usec)))
+		(return nil))
+	      (setq timeout (- stop-sec sec)))))))))
 
-;;; CALC-MASKS -- Internal.
-;;;
-;;; Return the correct masks to use for UNIX-SELECT.  The four return values
-;;; are: fd count, read mask, write mask, and exception mask.  The exception
-;;; mask is currently unused.
-;;;
-(defun calc-masks ()
-  (let ((count 0)
-	(read-mask 0)
-	(write-mask 0)
-	(except-mask 0))
-    (dolist (handler *descriptor-handlers*)
-      (unless (or (handler-active handler)
-		  (handler-bogus handler))
-	(let ((fd (handler-descriptor handler)))
-	  (ecase (handler-direction handler)
-	    (:input
-	     (setf read-mask (logior read-mask (ash 1 fd))))
-	    (:output
-	     (setf write-mask (logior write-mask (ash 1 fd)))))
-	  (if (> fd count)
-	    (setf count fd)))))
-    (values (1+ count)
-	    read-mask
-	    write-mask
-	    except-mask)))
 
 ;;; HANDLER-DESCRIPTORS-ERROR -- Internal.
 ;;;
@@ -253,6 +231,8 @@
 
 
 ;;;; Serve-all-events, serve-event, and friends.
+
+(declaim (start-block serve-event serve-all-events))
 
 (defvar *display-event-handlers* nil
   "This is an alist mapping displays to user functions to be called when
@@ -299,21 +279,22 @@
   (multiple-value-bind
       (value readable writeable)
       (wait-for-event timeout)
+    (declare (type (unsigned-byte 32) readable writeable))
     ;; Now see what it was (if anything)
     (cond #+nil
 	  ((eq value server-unique-object)
 	   ;; The interrupt handler fired.
 	   (grab-message-loop)
 	   t)
-	  ((numberp value)
+	  ((fixnump value)
 	   (unless (zerop value)
 	     ;; Check the descriptors.
 	     (let ((result nil))
 	       (dolist (handler *descriptor-handlers*)
-		 (when (not (zerop (logand (ash 1 (handler-descriptor handler))
-					   (ecase (handler-direction handler)
-					     (:input readable)
-					     (:output writeable)))))
+		 (when (logbitp (handler-descriptor handler)
+				(ecase (handler-direction handler)
+				  (:input readable)
+				  (:output writeable)))
 		   (unwind-protect
 		       (progn
 			 ;; Doesn't work -- ACK
@@ -323,9 +304,10 @@
 		     (setf (handler-active handler) nil))
 		   (macrolet ((frob (var)
 				`(setf ,var
-				       (logand (lognot (ash 1
-							    (handler-descriptor
-							     handler)))
+				       (logand (32bit-logical-not
+						(ash 1
+						     (handler-descriptor
+						      handler)))
 					       ,var))))
 		     (ecase (handler-direction handler)
 		       (:input (frob readable))
@@ -340,6 +322,40 @@
 	   (handler-descriptors-error)
 	   nil))))
 
+
+;;; CALC-MASKS -- Internal.
+;;;
+;;; Return the correct masks to use for UNIX-SELECT.  The four return values
+;;; are: fd count, read mask, write mask, and exception mask.  The exception
+;;; mask is currently unused.
+;;;
+(defun calc-masks ()
+  (let ((count 0)
+	(read-mask 0)
+	(write-mask 0)
+	(except-mask 0))
+    (declare (type index count)
+	     (type (unsigned-byte 32) read-mask write-mask except-mask))
+    (dolist (handler *descriptor-handlers*)
+      (unless (or (handler-active handler)
+		  (handler-bogus handler))
+	(let ((fd (handler-descriptor handler)))
+	  (ecase (handler-direction handler)
+	    (:input
+	     (setf read-mask
+		   (logior read-mask
+			   (the (unsigned-byte 32) (ash 1 fd)))))
+	    (:output
+	     (setf write-mask
+		   (logior write-mask
+			   (the (unsigned-byte 32) (ash 1 fd))))))
+	  (when (> fd count)
+	    (setf count fd)))))
+    (values (1+ count)
+	    read-mask
+	    write-mask
+	    except-mask)))
+
 ;;; WAIT-FOR-EVENT -- internal
 ;;;
 ;;;   Wait for something to happen. 
@@ -347,38 +363,18 @@
 (defun wait-for-event (&optional timeout)
   "Wait for an something to show up on one of the file descriptors or a message
   interupt to fire. Timeout is in seconds."
-  (let (old-mask)
-    (multiple-value-bind (timeout-sec timeout-usec)
-			 (if timeout
-			   (truncate (round (* timeout 1000000)) 1000000)
-			   (values nil 0))
-      (multiple-value-bind (count read-mask write-mask except-mask)
-			   (calc-masks)
-	(catch 'server-catch
-	  (unwind-protect
-	      (progn
-		;; Block message interrupts.
-		(setf old-mask (mach:unix-sigblock (mach:sigmask :sigmsg)))
-		;; Check for any pending messages, because we are only signaled
-		;; for newly arived messages. This must be done after the
-		;; unix-sigsetmask.
-		#+nil
-		(when (grab-message-loop)
-		  (return-from wait-for-event t))
-		;; Indicate that we are in the server.
-		(let ((*in-server* t))
-		  ;; Establish the interrupt handlers.
-		  #+nil
-		  (enable-interrupt mach:sigmsg #'ih-sigmsg)
-		  ;; Enable all interrupts.
-		  (mach:unix-sigsetmask 0)
-		  ;; Do the select.
-		  (mach:unix-select count read-mask write-mask except-mask
-				    timeout-sec timeout-usec)))
-	    ;; Restore interrupt handler state.
-	    #+nil
-	    (mach:unix-sigblock (mach:sigmask :sigmsg))
-	    #+nil
-	    (default-interrupt mach:sigmsg)
-	    (when old-mask
-	      (mach:unix-sigsetmask old-mask))))))))
+  (multiple-value-bind (timeout-sec timeout-usec)
+		       (typecase timeout
+			 (integer (values timeout 0))
+			 (null (values nil 0))
+			 (t
+			  (multiple-value-bind (q r)
+					       (truncate timeout)
+			    (values q (* r 1000000)))))
+    (declare (type index timeout-usec)
+	     (type (or index null) timeout-sec))
+    (multiple-value-bind (count read-mask write-mask except-mask)
+			 (calc-masks)
+      ;; Do the select.
+      (mach:unix-select count read-mask write-mask except-mask
+			timeout-sec timeout-usec))))
