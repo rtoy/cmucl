@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.44 2003/09/26 15:37:11 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.45 2003/10/09 19:01:22 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -329,7 +329,12 @@
 (defparameter *assembly-unit-length* 8)
 
 
+(export '(pseudo-atomic-trap allocation-trap
+	  pseudo-atomic-value pseudo-atomic-interrupted-mask))
 ;;;; Pseudo-atomic trap number.
+;;;;
+;;;; This is the trap number to use when a pseudo-atomic section has
+;;;; been interrupted.
 ;;;;
 ;;;; This should be any valid trap number. According to the Sparc
 ;;;; Compliance Definition 2.4.1, only traps 16-31 are allowed for
@@ -344,3 +349,16 @@
 ;;;; This is the trap number to use when we need to allocate memory.
 ;;;; This must match the C runtime code
 (defconstant allocation-trap 31)
+
+;;;; Pseudo-atomic flag
+;;;;
+;;;; This value is added to alloc-tn to indicate a pseudo-atomic
+;;;; section.
+(defconstant pseudo-atomic-value (ash 1 (1- vm:lowtag-bits)))
+
+;;;; Pseudo-atomic-interrupted-mask
+;;;;
+;;;; This is a mask used to check if a pseudo-atomic section was
+;;;; interrupted.  On sparc, this is indicated by least-significant
+;;;; bit of alloc-tn being 1.
+(defconstant pseudo-atomic-interrupted-value 1)
