@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.26 1990/10/09 23:10:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.27 1990/11/10 18:40:23 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -16,6 +16,7 @@
 (in-package "C")
 
 (import '(lisp::%raw-bits lisp::simple-array-p))
+
 
 
 
@@ -103,6 +104,13 @@
   (foldable flushable))
 (defknown (%set-raw-bits) (t fixnum (unsigned-byte 32)) (unsigned-byte 32)
   (unsafe))
+
+
+(defknown allocate-vector ((unsigned-byte 8) index index) (simple-array * (*))
+  (flushable movable))
+
+(defknown make-array-header ((unsigned-byte 8) (unsigned-byte 24)) array
+  (flushable movable))
 
 
 (defknown %make-weak-pointer (t boolean) weak-pointer
