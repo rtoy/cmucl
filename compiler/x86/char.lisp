@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.5 2003/07/01 18:47:01 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.6 2003/07/01 20:02:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -180,7 +180,7 @@
   (:variant-vars condition not-condition)
   (:generator 2
     (inst cmp x (char-code y))
-    (inst jump (if not-p not-condition condition) target)))
+    (inst jmp (if not-p not-condition condition) target)))
 
 (define-vop (fast-char=-c/base-char base-char-compare-c)
   (:translate char=)
@@ -188,9 +188,9 @@
 
 (define-vop (fast-char<-c/base-char base-char-compare-c)
   (:translate char<)
-  (:variant :ltu :geu))
+  (:variant :b :nb))
 
 (define-vop (fast-char>-c/base-char/c base-char-compare-c)
   (:translate char>)
-  (:variant :gtu :leu))
+  (:variant :a :na))
 
