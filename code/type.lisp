@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.18 1993/08/31 21:33:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.19 1993/09/01 00:09:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,7 +78,7 @@
 ;;;
 (defun delegate-complex-intersection (type1 type2)
   (let ((method (type-class-complex-intersection (type-class-info type1))))
-    (if method
+    (if (and method (not (eq method #'delegate-complex-intersection)))
 	(funcall method type2 type1)
 	(vanilla-intersection type1 type2))))
 
