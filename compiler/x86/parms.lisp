@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.1 1997/01/18 14:31:21 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.2 1997/02/08 21:23:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,6 +144,7 @@
 (defconstant float-sticky-bits     (byte 6 16))
 (defconstant float-traps-byte      (byte 6  0))
 (defconstant float-exceptions-byte (byte 6 16))
+(defconstant float-precision-control (byte 2 8))
 (defconstant float-fast-bit 0) ; No fast mode on x86
 ); eval-when
 
