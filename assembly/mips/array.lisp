@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.20 1993/05/07 07:41:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.21 1993/05/18 23:24:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,8 +42,8 @@
   (pseudo-atomic (pa-flag)
     (inst or result alloc-tn other-pointer-type)
     (inst addu alloc-tn words)
-    (storew ndescr vector 0 other-pointer-type)
-    (storew length vector vector-length-slot other-pointer-type)))
+    (storew ndescr result 0 other-pointer-type)
+    (storew length result vector-length-slot other-pointer-type)))
 
 
 ;;;; Hash primitives
@@ -61,6 +61,9 @@
 			  (:temp accum non-descriptor-reg nl0-offset)
 			  (:temp data non-descriptor-reg nl1-offset)
 			  (:temp byte non-descriptor-reg nl2-offset))
+
+  ;; These are needed after we jump into sxhash-simple-substring.
+  (progn result lip accum data byte)
 
   (inst j (make-fixup 'sxhash-simple-substring :assembly-routine))
   (loadw length string vector-length-slot other-pointer-type))
