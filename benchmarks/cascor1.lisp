@@ -338,11 +338,11 @@
 ;;; the network's ability to generalize.  These values are not used during
 ;;; training.
 
-(defvar *test-inputs* nil
+(defvar *test-inputs* '#()
   "Vector of input patterns for testing the net.")
 (proclaim '(simple-vector *test-inputs*))
 
-(defvar *test-outputs* nil
+(defvar *test-outputs* '#()
   "Vector of output patterns for testing the net.")
 (proclaim '(simple-vector *test-outputs*))
 
@@ -1440,8 +1440,26 @@
 ;;; IMu 2.00, IEps 100.00, IDcy 0.00000, IPat 8, IChange 0.030
 ;;; Utype :SIGMOID, Otype :SIGMOID, RawErr NIL, Pool 8
 
+(defvar *save-random-state*
+  #+cmu
+  #S(RANDOM-STATE
+     J 6
+     K 37
+     SEED #(495959915 319289337 100972028 135321524 137984323
+	    177928266 385820814 500959740 328846885 254554634
+	    354844676 133704123 362896421 217869951 380210131
+	    323670005 366246053 40575617 346460653 10417936
+	    34276234 300730891 211595838 199986777 291429322
+	    1196272 425488031 328015953 24567252 297307474
+	    82341400 29130711 247126684 98716216 478723257
+	    47355455 81983578 248879315 97829219 533448623
+	    148633156 77868250 28344376 162872116 404460195
+	    321766796 8557425 441861346 455213668 302826847
+	    256874625 271153816 11749650 277043774 234844262))
+  #-cmu (make-random-state))
+
 (defun time-two-spirals ()
-  (setq *random-state* (make-random-state))
+  (setq *random-state* (make-random-state *save-random-state*))
   (build-two-spirals)
   (time (train 100 100 25)))
 	
