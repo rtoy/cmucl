@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.2 1990/10/01 17:14:01 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.3 1990/10/03 18:46:31 ram Exp $
 ;;;
 ;;;    This file contains the definitions of float specific number support
 ;;; (other than irrational stuff, which is in irrat.)  There is code in here
@@ -45,17 +45,18 @@
 (defun single-from-bits (sign exp sig)
   (declare (type bit sign) (type (unsigned-byte 24) sig)
 	   (type (unsigned-byte 8) exp))
-  (let ((base (dpb exp single-float-exponent-byte
-		   (dpb sig single-float-significand-byte 0))))
-    (make-single-float (if (zerop sign) base (- base)))))
+  (make-single-float
+   (dpb exp single-float-exponent-byte
+	(dpb sig single-float-significand-byte
+	     (if (zerop sign) 0 -1)))))
 ;;;
 (defun double-from-bits (sign exp sig)
   (declare (type bit sign) (type (unsigned-byte 53) sig)
 	   (type (unsigned-byte 11) exp))
-  (let ((base (dpb exp double-float-exponent-byte
-		   (dpb (ash sig -32) double-float-significand-byte 0))))
-    (make-double-float (if (zerop sign) base (- base))
-		       (ldb (byte 32 0) sig))))
+  (make-double-float (dpb exp double-float-exponent-byte
+			  (dpb (ash sig -32) double-float-significand-byte
+			       (if (zerop sign) 0 -1)))
+		     (ldb (byte 32 0) sig)))
 					
 
 ;;;; Float parameters:
