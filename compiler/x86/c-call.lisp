@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.9 1999/09/15 10:26:29 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.10 1999/09/15 15:15:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,6 +137,60 @@
 	      (invoke-alien-type-method :result-tn
 					(alien-function-type-result-type type)
 					(make-result-state))))))
+
+(deftransform %alien-funcall ((function type &rest args))
+  (assert (c::constant-continuation-p type))
+  (let* ((type (c::continuation-value type))
+	 (arg-types (alien-function-type-arg-types type))
+	 (result-type (alien-function-type-result-type type)))
+    (assert (= (length arg-types) (length args)))
+    (if (or (some #'(lambda (type)
+		      (and (alien-integer-type-p type)
+			   (> (alien::alien-integer-type-bits type) 32)))
+		  arg-types)
+	    (and (alien-integer-type-p result-type)
+		 (> (alien::alien-integer-type-bits result-type) 32)))
+	(collect ((new-args) (lambda-vars) (new-arg-types))
+	  (dolist (type arg-types)
+	    (let ((arg (gensym)))
+	      (lambda-vars arg)
+	      (cond ((and (alien-integer-type-p type)
+			  (> (alien::alien-integer-type-bits type) 32))
+		     (new-args `(logand ,arg #xffffffff))
+		     (new-args `(ash ,arg -32))
+		     (new-arg-types (parse-alien-type '(unsigned 32)))
+		     (if (alien-integer-type-signed type)
+			 (new-arg-types (parse-alien-type '(signed 32)))
+			 (new-arg-types (parse-alien-type '(unsigned 32)))))
+		    (t
+		     (new-args arg)
+		     (new-arg-types type)))))
+	  (cond ((and (alien-integer-type-p result-type)
+		      (> (alien::alien-integer-type-bits result-type) 32))
+		 (let ((new-result-type
+			(let ((alien::*values-type-okay* t))
+			  (parse-alien-type
+			   (if (alien-integer-type-signed result-type)
+			       '(values (unsigned 32) (signed 32))
+			       '(values (unsigned 32) (unsigned 32)))))))
+		   `(lambda (function type ,@(lambda-vars))
+		      (declare (ignore type))
+		      (multiple-value-bind (low high)
+			  (%alien-funcall function
+					  ',(make-alien-function-type
+					     :arg-types (new-arg-types)
+					     :result-type new-result-type)
+					  ,@(new-args))
+			(logior low (ash high 32))))))
+		(t
+		 `(lambda (function type ,@(lambda-vars))
+		    (declare (ignore type))
+		    (%alien-funcall function
+				    ',(make-alien-function-type
+				       :arg-types (new-arg-types)
+				       :result-type result-type)
+				    ,@(new-args))))))
+	(c::give-up))))
 
 (define-vop (foreign-symbol-address)
   (:translate foreign-symbol-address)
