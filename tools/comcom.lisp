@@ -141,9 +141,10 @@
 (when *new-compile*
   (comf "c:eval-comp")
   (comf "c:eval" :bootstrap-macros :both)
-  (comf "c:rt/assem-insts")
-  (comf "c:rt/assem-macs")
-  (comf "c:vmdef")
-  (comf "c:macros"))
+  (let ((c:*compile-time-define-macros* nil))
+    (comf "c:rt/assem-insts")
+    (comf "c:rt/assem-macs")
+    (comf "c:vmdef")
+    (comf "c:macros")))
 
 ); with-compiler-error-log
