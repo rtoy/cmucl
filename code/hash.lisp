@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.26 1993/08/25 01:13:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.27 1993/11/02 16:10:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -805,22 +805,18 @@
 (defconstant sxmash-rotate-bits 7)
 
 (defmacro sxmash (place with)
-  (let ((n-with (gensym)))
-    `(let ((,n-with ,with))
-       (declare (type hash ,n-with))
-       (setf ,place
-	     (logxor (truly-the hash
-				(ash ,n-with
-				     ,(- sxmash-rotate-bits
-					 sxmash-total-bits)))
-		     (truly-the hash
-				(ash (logand
-				      ,n-with
-				      ,(1- (ash 1
-						(- sxmash-total-bits
-						   sxmash-rotate-bits))))
-				     ,sxmash-rotate-bits))
-		     (truly-the hash ,place))))))
+  (setf ,place
+	(logxor (truly-the hash
+			   (ash ,place
+				,(- sxmash-rotate-bits sxmash-total-bits)))
+		(truly-the hash
+			   (ash (logand
+				 ,place
+				 ,(1- (ash 1
+					   (- sxmash-total-bits
+					      sxmash-rotate-bits))))
+				,sxmash-rotate-bits))
+		(truly-the hash ,with))))
 
 (defmacro sxhash-simple-string (sequence)
   `(%sxhash-simple-string ,sequence))
