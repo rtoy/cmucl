@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.75 2004/04/15 01:34:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.76 2004/04/15 16:25:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1272,7 +1272,7 @@ streams."
 		      (in #'echo-in)
 		      (bin #'echo-bin)
 		      (misc #'echo-misc)
-		      (n-bin #'ill-n-bin))
+		      (n-bin #'echo-n-bin))
 	    (:print-function %print-echo-stream)
 	    (:constructor %make-echo-stream (input-stream output-stream)))
   unread-stuff)
@@ -1357,6 +1357,37 @@ output to Output-stream"
 	   (if (lisp-stream-p out)
 	       (funcall (lisp-stream-misc out) out operation arg1 arg2)
 	       (stream-misc-dispatch out operation arg1 arg2)))))))
+
+
+(defun echo-n-bin (stream buffer start numbytes eof-error-p)
+  (let ((new-start start)
+	(read 0))
+    (loop
+     (let ((thing (pop (echo-stream-unread-stuff stream))))
+       (cond
+	 (thing
+	  (setf (aref buffer new-start) thing)
+	  (incf new-start)
+	  (incf read)
+	  (when (= read numbytes)
+	    (return-from echo-n-bin numbytes)))
+	 (t (return nil)))))
+    (let ((bytes-read (read-n-bytes (echo-stream-input-stream stream) buffer
+				    new-start (- numbytes read) nil)))
+      (cond
+	((not eof-error-p)
+	 (write-sequence buffer (echo-stream-output-stream stream)
+			 :start new-start :end (+ new-start bytes-read))
+	 (+ bytes-read read))
+	((> numbytes (+ read bytes-read))
+	 (write-sequence buffer (echo-stream-output-stream stream)
+			 :start new-start :end (+ new-start bytes-read))
+	 (error 'end-of-file :stream stream))
+	(t
+	 (write-sequence buffer (echo-stream-output-stream stream)
+			 :start new-start :end (+ new-start bytes-read))
+	 (aver (= numbytes (+ new-start bytes-read)))
+	 numbytes)))))
 
 (defun %print-echo-stream (s stream d)
   (declare (ignore d))
