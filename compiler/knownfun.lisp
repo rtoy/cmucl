@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.12 1991/10/08 15:49:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.13 1991/11/12 16:11:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -223,6 +223,19 @@
   (declare (type combination call))
   (let ((cont (car (last (combination-args call)))))
     (when cont (continuation-type cont))))
+
+
+;;; RESULT-TYPE-FLOAT-CONTAGION  --  Interface
+;;;
+;;;    Derive the result type according to the float contagion rules, but
+;;; always return a float.  This is used for irrational functions that preserve
+;;; realness of their arguments.
+;;;
+(defun result-type-float-contagion (call)
+  (declare (type combination call))
+  (reduce #'numeric-contagion (combination-args call)
+	  :key #'continuation-type
+	  :initial-value (specifier-type 'single-float)))
 
 
 ;;; SEQUENCE-RESULT-NTH-ARG  --  Internal
