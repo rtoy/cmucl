@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.40 1990/04/03 03:54:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.41 1990/04/04 19:04:51 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -178,6 +178,13 @@
   pending-interrupt
   error
   cerror)
+
+(defenum (:prefix vector- :suffix -subtype)
+  normal
+  structure
+  valid-hashing
+  must-rehash)
+
 
 
 ;;;; Primitive data objects definition noise.
