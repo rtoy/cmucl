@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.21 1993/08/27 14:58:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.21.1.1 1994/10/19 23:24:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.21 1993/08/27 14:58:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.21.1.1 1994/10/19 23:24:19 ram Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -109,33 +109,43 @@
 (def-unix-signal :SIGPIPE 13 "Write on a pipe with no one to read it")
 (def-unix-signal :SIGALRM 14 "Alarm clock")
 (def-unix-signal :SIGTERM 15 "Software termination signal")
-(def-unix-signal :SIGURG #-hpux 16 #+hpux 29 
+(def-unix-signal :SIGURG #+svr4 21 #-(or hpux svr4) 16 #+hpux 29 
   "Urgent condition present on socket")
-(def-unix-signal :SIGSTOP #-hpux 17 #+hpux 24 "Stop")
-(def-unix-signal :SIGTSTP #-hpux 18 #+hpux 25
+(def-unix-signal :SIGSTOP #-(or hpux svr4) 17 #+hpux 24 #+svr4 23 "Stop")
+(def-unix-signal :SIGTSTP #-(or hpux svr4) 18 #+hpux 25 #+svr4 24
   "Stop signal generated from keyboard")
-(def-unix-signal :SIGCONT #-hpux 19 #+hpux 26 "Continue after stop")
+(def-unix-signal :SIGCONT #-(or hpux svr4) 19 #+hpux 26 #+svr4 25
+    "Continue after stop")
 (def-unix-signal :SIGCHLD #-hpux 20 #+hpux 18 "Child status has changed")
-(def-unix-signal :SIGTTIN #-hpux 21 #+hpux 27
+(def-unix-signal :SIGTTIN #-(or hpux svr4) 21 #+hpux 27 #+svr4 26
   "Background read attempted from control terminal")
-(def-unix-signal :SIGTTOU #-hpux 22 #+hpux 28
+(def-unix-signal :SIGTTOU #-(or hpux svr4) 22 #+hpux 28 #+svr4 27
   "Background write attempted to control terminal")
 (def-unix-signal :SIGIO #-hpux 23 #+hpux 22 "I/O is possible on a descriptor")
 #-hpux
-(def-unix-signal :SIGXCPU 24 "Cpu time limit exceeded")
+(def-unix-signal :SIGXCPU #-svr4 24 #+svr4 30  "Cpu time limit exceeded")
 #-hpux
-(def-unix-signal :SIGXFSZ 25 "File size limit exceeded")
-(def-unix-signal :SIGVTALRM #-hpux 26 #+hpux 20 "Virtual time alarm")
-(def-unix-signal :SIGPROF #-hpux 27 #+hpux 21 "Profiling timer alarm")
-(def-unix-signal :SIGWINCH #-hpux 28 #+hpux 23 "Window size change")
-(def-unix-signal :SIGUSR1 #-hpux 30 #+hpux 16 "User defined signal 1")
-(def-unix-signal :SIGUSR2 #-hpux 31 #+hpux 17 "User defined signal 2")
+(def-unix-signal :SIGXFSZ #-svr4 25 #+svr4 31 "File size limit exceeded")
+(def-unix-signal :SIGVTALRM #-(or hpux svr4) 26 #+hpux 20 #+svr4 28
+    "Virtual time alarm")
+(def-unix-signal :SIGPROF #-(or hpux svr4) 27 #+hpux 21 #+svr4 29
+    "Profiling timer alarm")
+(def-unix-signal :SIGWINCH #-(or hpux svr4) 28 #+hpux 23 #+svr4 20
+    "Window size change")
+(def-unix-signal :SIGUSR1 #-(or hpux svr4) 30 #+(or hpux svr4) 16
+    "User defined signal 1")
+(def-unix-signal :SIGUSR2 #-(or hpux svr4) 31 #+(or hpux svr4) 17
+    "User defined signal 2")
 ;;; 
 ;;; These are Mach Specific
 #+mach
 (def-unix-signal :SIGEMSG 30 "Mach Emergency message")
 #+mach
 (def-unix-signal :SIGMSG 31 "Mach message")
+
+;;; SVR4 (or Solaris?) specific signals
+#+svr4
+(def-unix-signal :SIGWAITING 32 "Process's lwps are blocked")
 
 ;;; SIGMASK -- Public
 ;;;
@@ -240,8 +250,8 @@
 	      (type system-area-pointer scp))
      (system:without-hemlock
       (,function ,(concatenate 'simple-string what " at #x~x.")
-		 (with-alien ((scp (* sigcontext) scp))
-		   (sap-int (vm:sigcontext-program-counter scp)))))))
+		 (with-alien ((scp (* s-context) scp))
+		   (sap-int (vm:s-context-program-counter scp)))))))
 
 (define-signal-handler sigint-handler "Interrupted" break)
 (define-signal-handler sigill-handler "Illegal Instruction")
@@ -284,7 +294,7 @@
 ;;; Before invoking the supplied handler for any of the signals that can be
 ;;; blocked, the C interrupt support code checks to see if *interrupts-enabled*
 ;;; has been bound to NIL.  If so, it saves the signal number and the value of
-;;; the signal mask (from the sigcontext), sets the signal mask to block all
+;;; the signal mask (from the s-context), sets the signal mask to block all
 ;;; blockable signals, sets *interrupt-pending* and returns without handling
 ;;; the signal.
 ;;;
@@ -292,7 +302,7 @@
 ;;; *interrupt-pending* has been set.  If so, we call do-pending-interrupt,
 ;;; which generates a SIGTRAP.  The C code invokes the handler for the saved
 ;;; signal instead of the SIGTRAP after replacing the signal mask in the
-;;; sigcontext with the saved value.  When that hander returns, the original
+;;; s-context with the saved value.  When that hander returns, the original
 ;;; signal mask is installed, allowing any other pending signals to be handled.
 ;;;
 ;;; This means that the cost of without-interrupts is just a special binding in

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.28 1993/06/24 12:53:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.28.1.1 1994/10/19 23:22:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,13 +37,13 @@
   (let* ((rest-pos (position '&rest args))
 	 (required (if rest-pos (subseq args 0 rest-pos) args))
 	 (fp (gensym))
-	 (sigcontext (gensym))
+	 (s-context (gensym))
 	 (sc-offsets (gensym))
 	 (temp (gensym))
 	 (fn-name (symbolicate name "-HANDLER")))
     `(progn
-       (defun ,fn-name (name ,fp ,sigcontext ,sc-offsets)
-	 (declare (ignorable name ,fp ,sigcontext ,sc-offsets))
+       (defun ,fn-name (name ,fp ,s-context ,sc-offsets)
+	 (declare (ignorable name ,fp ,s-context ,sc-offsets))
 	 (macrolet ((set-value (var value)
 		      (let ((pos (position var ',required)))
 			(unless pos
@@ -52,7 +52,7 @@
 			`(let ((,',temp ,value))
 			   (di::sub-set-debug-var-slot
 			    ,',fp (nth ,pos ,',sc-offsets)
-			    ,',temp ,',sigcontext)
+			    ,',temp ,',s-context)
 			   (setf ,var ,',temp)))))
 	   (let (,@(let ((offset -1))
 		     (mapcar #'(lambda (var)
@@ -60,7 +60,7 @@
 					 ,fp
 					 (nth ,(incf offset)
 					      ,sc-offsets)
-					 ,sigcontext)))
+					 ,s-context)))
 			     required))
 		   ,@(when rest-pos
 		       `((,(nth (1+ rest-pos) args)
@@ -68,7 +68,7 @@
 				      (di::sub-access-debug-var-slot
 				       ,fp
 				       sc-offset
-				       ,sigcontext))
+				       ,s-context))
 				  (nthcdr ,rest-pos ,sc-offsets))))))
 	     ,@body)))
        (setf (svref *internal-errors* ,(error-number-or-lose name))
@@ -499,14 +499,14 @@
   (infinite-error-protect
    (let ((scp (locally
 		(declare (optimize (inhibit-warnings 3)))
-		(alien:sap-alien scp (* unix:sigcontext)))))
+		(alien:sap-alien scp (* unix:s-context)))))
      (multiple-value-bind
 	 (error-number arguments)
 	 (vm:internal-error-arguments scp)
        (multiple-value-bind
 	   (name debug:*stack-top-hint*)
 	   (find-interrupted-name)
-	 (let ((fp (int-sap (vm:sigcontext-register scp vm::cfp-offset)))
+	 (let ((fp (int-sap (vm:s-context-register scp vm::cfp-offset)))
 	       (handler (and (< -1 error-number (length *internal-errors*))
 			     (svref *internal-errors* error-number))))
 	   (cond ((null handler)

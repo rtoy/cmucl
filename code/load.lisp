@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.55 1993/08/19 23:09:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.55.1.1 1994/10/19 23:21:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 (export '(*load-if-source-newer* *load-source-types* *load-object-types*))
 
 (in-package "SYSTEM")
-(export 'foreign-symbol-address)
+(export '(foreign-symbol-address alternate-get-global-address))
 
 (in-package "LISP")
 
@@ -1143,7 +1143,9 @@
       (value found)
       (gethash (vm:extern-alien-name symbol) *foreign-symbols* 0)
     (unless found
-      (error "Unknown foreign symbol: ~S" symbol))
+      (setq value (system:alternate-get-global-address symbol))
+      (when (zerop value)
+	    (error "Unknown foreign symbol: ~S" symbol)))
     (int-sap value)))
 
 (define-fop (fop-foreign-fixup 147)

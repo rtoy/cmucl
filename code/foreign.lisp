@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.14 1993/07/05 01:47:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.14.1.1 1994/10/19 23:20:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
 		(t
 		 (incf code))))))))
 
-#+sparc
+#+(and sparc (not svr4))
 (alien:def-alien-type exec
   (alien:struct nil
     (magic c-call:unsigned-long)
@@ -62,6 +62,7 @@
     (trsize c-call:unsigned-long)
     (drsize c-call:unsigned-long)))
 
+#-svr4
 (defun allocate-space-in-foreign-segment (bytes)
   (let* ((pagesize-1 (1- (get-page-size)))
 	 (memory-needed (logandc2 (+ bytes pagesize-1) pagesize-1))
@@ -73,7 +74,7 @@
     (allocate-system-memory-at addr memory-needed)
     addr))
 
-#+sparc
+#+(and sparc (not svr4))
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
@@ -153,6 +154,7 @@
 	    (unix:unix-read fd addr len-of-text-and-data)))
       (unix:unix-close fd))))
 
+#-solaris
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))
@@ -170,6 +172,7 @@
 	    (setf (gethash symbol symbol-table) address)))))
     (setf lisp::*foreign-symbols* symbol-table)))
 
+#-solaris
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
 			   (base-file
@@ -223,3 +226,100 @@
 	(when old-file
 	  (unix:unix-unlink old-file)))))
   (format t ";;; Done.~%"))
+
+
+(export '(alternate-get-global-address))
+
+#-solaris
+(defun alternate-get-global-address (symbol) 0)
+
+#+solaris
+(progn
+
+(defconstant rtld-lazy 1)
+(defconstant rtld-now 2)
+(defconstant rtld-global #o400)
+(defvar *global-table* NIL)
+
+(alien:def-alien-routine dlopen system-area-pointer
+  (str c-call:c-string) (i c-call:int))
+(alien:def-alien-routine dlsym system-area-pointer
+  (lib system-area-pointer)
+  (str c-call:c-string))
+(alien:def-alien-routine dlclose void (lib system-area-pointer))
+(alien:def-alien-routine dlerror c-call:c-string)
+
+(defun load-object-file (file)
+  ; rtld global: so it can find all the symbols previously loaded
+  ; rtld now: that way dlopen will fail if not all symbols are defined.
+  (let ((sap (dlopen file (logior rtld-now rtld-global))))
+       (if (zerop (sap-int sap))
+	   (error "Can't open object ~S: ~S" file (dlerror))
+	   (pushnew sap *global-table*))))
+
+(defun alternate-get-global-address (symbol)
+  (unless *global-table*
+	  ;; Prevent recursive call when dlopen isn't defined.
+	  (setq *global-table* (int-sap 0))
+	  ;; Load standard object
+	  (setq *global-table* (list (dlopen nil rtld-lazy)))
+	  (if (zerop (system:sap-int (car *global-table*)))
+	      (error "Can't open global symbol table: ~S" (dlerror))))
+  ;; find the symbol in any of the loaded obbjects,
+  ;; search in reverse order of loading, later loadings
+  ;; take precedence
+  (let ((result 0))
+       (do ((table *global-table* (cdr table)))
+	   ((or (null (car table)) (not (zerop result))))
+	   (setq result (sap-int (dlsym (car table) symbol))))
+       (values result)))
+
+(defun load-foreign (files &key
+			   (libraries '("-lc"))
+			   (base-file nil)
+			   (env ext:*environment-list*))
+  "Load-foreign loads a list of C object files into a running Lisp.  The files
+  argument should be a single file or a list of files.  The files may be
+  specified as namestrings or as pathnames.  The libraries argument should be a
+  list of library files as would be specified to ld.  They will be searched in
+  the order given.  The default is just \"-lc\", i.e., the C library.  The
+  base-file argument is used to specify a file to use as the starting place for
+  defined symbols.  The default is the C start up code for Lisp.  The env
+  argument is the Unix environment variable definitions for the invocation of
+  the linker.  The default is the environment passed to Lisp."
+  ;; Note: dlopen remembers the name of an object, when dlopenin
+  ;; the same name twice, the old objects is reused.
+  (declare (ignore base-file))
+  (let ((output-file (pick-temporary-file-name
+		      (concatenate 'string "/tmp/~D~S" (string (gensym)))))
+	(error-output (make-string-output-stream)))
+
+    (format t ";;; Running /usr/ccs/bin/ld...~%")
+    (force-output)
+    (let ((proc (ext:run-program
+		 "/usr/ccs/bin/ld"
+		 (list*
+			"-G"
+			"-o"
+			output-file
+			(append (mapcar #'(lambda (name)
+					    (unix-namestring name nil))
+					(if (atom files)
+					    (list files)
+					    files))
+				libraries))
+		 :env env
+		 :input nil
+		 :output error-output
+		 :error :output)))
+      (unless proc
+	(error "Could not run /usr/ccs/bin/ld"))
+      (unless (zerop (ext:process-exit-code proc))
+	(system:serve-all-events 0)
+	(error "/usr/ccs/bin/ld failed:~%~A"
+	       (get-output-stream-string error-output)))
+      (load-object-file output-file)
+      (unix:unix-unlink output-file)
+      ))
+  (format t ";;; Done.~%"))
+)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-machdef.lisp,v 1.2 1991/02/08 13:35:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-machdef.lisp,v 1.2.1.1 1994/10/19 23:24:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,12 +15,12 @@
 ;;;
 (in-package "MACH")
 
-(export '(sigcontext-onstack sigcontext-mask sigcontext-sp sigcontext-pc
-	  sigcontext-npc sigcontext-psr sigcontext-g1 sigcontext-o0
-	  sigcontext-regs sigcontext-fpregs sigcontext-y sigcontext-fsr
-	  sigcontext *sigcontext indirect-*sigcontext))
+(export '(s-context-onstack s-context-mask s-context-sp s-context-pc
+	  s-context-npc s-context-psr s-context-g1 s-context-o0
+	  s-context-regs s-context-fpregs s-context-y s-context-fsr
+	  s-context *s-context indirect-*s-context))
 
-(def-c-record sigcontext
+(def-c-record s-context
   (onstack unsigned-long)
   (mask unsigned-long)
   (sp system-area-pointer)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.14 1994/02/04 15:10:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.14.1.1 1994/10/19 23:24:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,10 +35,17 @@
   (options c-call:int)
   (rusage c-call:int))
 
-(eval-when (load eval compile)
+;(eval-when (load eval compile)
   (defconstant wait-wstopped #o177)
+  #-svr4
   (defconstant wait-wnohang 1)
-  (defconstant wait-wuntraced 2))
+  #+svr4
+  (defconstant wait-wnohang #o100)
+  #-svr4
+  (defconstant wait-wuntraced 2)
+  #+svr4
+  (defconstant wait-wuntraced 4)
+;)
 
 (defun wait3 (&optional do-not-hang check-for-stopped)
   "Return any available status information on child processed. "

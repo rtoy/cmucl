@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-machdef.lisp,v 1.2 1991/02/08 13:34:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-machdef.lisp,v 1.2.1.1 1994/10/19 23:22:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,14 +16,14 @@
 (in-package "MACH")
 
 
-(export '(sigcontext-onstack sigcontext-mask sigcontext-pc sigcontext-regs
-	  sigcontext-mdlo sigcontext-mdhi sigcontext-ownedfp sigcontext-fpregs
-	  sigcontext-fpc_csr sigcontext-fpc_eir sigcontext-cause
-	  sigcontext-badvaddr sigcontext-badpaddr sigcontext *sigcontext
-	  indirect-*sigcontext))
+(export '(s-context-onstack s-context-mask s-context-pc s-context-regs
+	  s-context-mdlo s-context-mdhi s-context-ownedfp s-context-fpregs
+	  s-context-fpc_csr s-context-fpc_eir s-context-cause
+	  s-context-badvaddr s-context-badpaddr s-context *s-context
+	  indirect-*s-context))
 
 
-(def-c-record sigcontext
+(def-c-record s-context
   (onstack unsigned-long)
   (mask unsigned-long)
   (pc system-area-pointer)

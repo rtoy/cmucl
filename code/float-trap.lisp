@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.7 1992/12/10 01:26:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.7.1.1 1994/10/19 23:20:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,9 @@
 (export '(set-floating-point-modes get-floating-point-modes))
 (in-package "VM")
 
+
 (eval-when (compile load eval)
+
 
 (defconstant float-trap-alist
   (list (cons :underflow float-underflow-trap-bit)
@@ -157,8 +159,8 @@
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal code)
 	   (type system-area-pointer scp))
-  (let* ((modes (sigcontext-floating-point-modes
-		 (alien:sap-alien scp (* unix:sigcontext))))
+  (let* ((modes (s-context-floating-point-modes
+		 (alien:sap-alien scp (* unix:s-context))))
 	 (traps (logand (ldb float-exceptions-byte modes)
 			(ldb float-traps-byte modes))))
     (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))

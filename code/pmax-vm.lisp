@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.14 1993/08/27 17:15:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.14.1.1 1994/10/19 23:22:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.14 1993/08/27 17:15:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.14.1.1 1994/10/19 23:22:43 ram Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
@@ -22,14 +22,14 @@
 (use-package "UNIX")
 
 (export '(fixup-code-object internal-error-arguments
-	  sigcontext-program-counter sigcontext-register
-	  sigcontext-float-register sigcontext-floating-point-modes
+	  s-context-program-counter s-context-register
+	  s-context-float-register s-context-floating-point-modes
 	  extern-alien-name sanctify-for-execution))
 
 
-;;;; The sigcontext structure.
+;;;; The s-context structure.
 
-(def-alien-type sigcontext
+(def-alien-type s-context
   (struct nil
     (sc-onstack unsigned-long)
     (sc-mask unsigned-long)
@@ -92,12 +92,12 @@
 
 ;;; INTERNAL-ERROR-ARGUMENTS -- interface.
 ;;;
-;;; Given the sigcontext, extract the internal error arguments from the
+;;; Given the s-context, extract the internal error arguments from the
 ;;; instruction stream.
 ;;; 
 (defun internal-error-arguments (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+  (declare (type (alien (* s-context)) scp))
+  (with-alien ((scp (* s-context) scp))
     (let ((pc (slot scp 'sc-pc)))
       (declare (type system-area-pointer pc))
       (when (logbitp 31 (slot scp 'sc-cause))
@@ -122,50 +122,50 @@
 	    (values error-number (sc-offsets))))))))
 
 
-;;;; Sigcontext access functions.
+;;;; s-context access functions.
 
-;;; SIGCONTEXT-PROGRAM-COUNTER -- Interface.
+;;; s-context-PROGRAM-COUNTER -- Interface.
 ;;;
-(defun sigcontext-program-counter (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+(defun s-context-program-counter (scp)
+  (declare (type (alien (* s-context)) scp))
+  (with-alien ((scp (* s-context) scp))
     (slot scp 'sc-pc)))
 
-;;; SIGCONTEXT-REGISTER -- Interface.
+;;; s-context-REGISTER -- Interface.
 ;;;
 ;;; An escape register saves the value of a register for a frame that someone
 ;;; interrupts.  
 ;;;
-(defun sigcontext-register (scp index)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+(defun s-context-register (scp index)
+  (declare (type (alien (* s-context)) scp))
+  (with-alien ((scp (* s-context) scp))
     (deref (slot scp 'sc-regs) index)))
 
-(defun %set-sigcontext-register (scp index new)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+(defun %set-s-context-register (scp index new)
+  (declare (type (alien (* s-context)) scp))
+  (with-alien ((scp (* s-context) scp))
     (setf (deref (slot scp 'sc-regs) index) new)
     new))
 
-(defsetf sigcontext-register %set-sigcontext-register)
+(defsetf s-context-register %set-s-context-register)
 
 
-;;; SIGCONTEXT-FLOAT-REGISTER  --  Interface.
+;;; s-context-FLOAT-REGISTER  --  Interface.
 ;;;
-;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
+;;; Like s-context-REGISTER, but returns the value of a float register.
 ;;; Format is the type of float to return.
 ;;;
-(defun sigcontext-float-register (scp index format)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+(defun s-context-float-register (scp index format)
+  (declare (type (alien (* s-context)) scp))
+  (with-alien ((scp (* s-context) scp))
     (let ((sap (alien-sap (slot scp 'sc-fpregs))))
       (ecase format
 	(single-float (system:sap-ref-single sap (* index vm:word-bytes)))
 	(double-float (system:sap-ref-double sap (* index vm:word-bytes)))))))
 ;;;
-(defun %set-sigcontext-float-register (scp index format new-value)
-  (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
+(defun %set-s-context-float-register (scp index format new-value)
+  (declare (type (alien (* s-context)) scp))
+  (with-alien ((scp (* s-context) scp))
     (let ((sap (alien-sap (slot scp 'sc-fpregs))))
       (ecase format
 	(single-float
@@ -173,17 +173,17 @@
 	(double-float
 	 (setf (sap-ref-double sap (* index vm:word-bytes)) new-value))))))
 ;;;
-(defsetf sigcontext-float-register %set-sigcontext-float-register)
+(defsetf s-context-float-register %set-s-context-float-register)
 
 
-;;; SIGCONTEXT-FLOATING-POINT-MODES  --  Interface
+;;; s-context-FLOATING-POINT-MODES  --  Interface
 ;;;
-;;;    Given a sigcontext pointer, return the floating point modes word in the
+;;;    Given a s-context pointer, return the floating point modes word in the
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
-(defun sigcontext-floating-point-modes (scp)
-  (declare (type (alien (* sigcontext)) scp))
-   (with-alien ((scp (* sigcontext) scp))
+(defun s-context-floating-point-modes (scp)
+  (declare (type (alien (* s-context)) scp))
+   (with-alien ((scp (* s-context) scp))
     (slot scp 'sc-fpc-csr)))
 
 

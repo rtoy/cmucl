@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.64 1993/11/08 00:22:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.64.1.1 1994/10/19 23:18:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,7 +367,7 @@
   ;;
   ;; Indicates whether someone interrupted frame.  (unexported).
   ;; If escaped, this is a pointer to the state that was saved when we were
-  ;; interrupted.  On the non-gengc system, this is a sigcontext pointer.
+  ;; interrupted.  On the non-gengc system, this is a s-context pointer.
   ;; On the gengc system, this is a state pointer from saved-state-chain.
   escaped
   ;;
@@ -1071,20 +1071,20 @@
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
     (alien:with-alien
-	((lisp-interrupt-contexts (array (* unix:sigcontext) nil) :extern))
+	((lisp-interrupt-contexts (array (* unix:s-context) nil) :extern))
       (let ((scp (alien:deref lisp-interrupt-contexts index)))
 	(when (= (system:sap-int frame-pointer)
-		 (vm:sigcontext-register scp vm::cfp-offset))
+		 (vm:s-context-register scp vm::cfp-offset))
 	  (system:without-gcing
 	   (let ((code (code-object-from-bits
-			(vm:sigcontext-register scp vm::code-offset))))
+			(vm:s-context-register scp vm::code-offset))))
 	     (when (symbolp code)
 	       (return (values code 0 scp)))
 	     (let* ((code-header-len (* (kernel:get-header-data code)
 					vm:word-bytes))
 		    (pc-offset
 		     (- (system:sap-int
-			 (vm:sigcontext-program-counter scp))
+			 (vm:s-context-program-counter scp))
 			(- (kernel:get-lisp-obj-address code)
 			   vm:other-pointer-type)
 			code-header-len)))
@@ -1099,7 +1099,7 @@
 		 ;; We were in an assembly routine.  Therefore, use the LRA as
 		 ;; the pc.
 		 (setf pc-offset
-		       (- (vm:sigcontext-register scp vm::lra-offset)
+		       (- (vm:s-context-register scp vm::lra-offset)
 			  (kernel:get-lisp-obj-address code)
 			  code-header-len)))
 	       (return
@@ -1214,9 +1214,9 @@
 ;;;
 #+gengc
 (defun extract-info-from-state (state)
-  (declare (type (alien:alien (* unix:sigcontext)) state)
+  (declare (type (alien:alien (* unix:s-context)) state)
 	   (values debug-function unsigned-byte system:system-area-pointer))
-  (let* ((pc (vm:sigcontext-program-counter state))
+  (let* ((pc (vm:s-context-program-counter state))
 	 (component-ptr (component-ptr-from-pc pc)))
     (if (zerop (system:sap-int component-ptr))
 	;; We were in one of the trampoline routines or off in the ether.
@@ -1237,13 +1237,13 @@
 		(values (make-bogus-debug-function "Assembler routine.")
 			0
 			(system:int-sap
-			 (vm:sigcontext-register state vm::cfp-offset))))
+			 (vm:s-context-register state vm::cfp-offset))))
 	       (#.vm:trace-table-call-site
 		;; ### Need to do something real.
 		(values (make-bogus-debug-function "Assembler routine.")
 			0
 			(system:int-sap
-			 (vm:sigcontext-register state vm::ocfp-offset))))
+			 (vm:s-context-register state vm::ocfp-offset))))
 	       (#.vm:trace-table-function-prologue
 		(values (make-bogus-debug-function
 			 "Function-Prologue in an assembler routine?")
@@ -1264,16 +1264,16 @@
 		(values (debug-function-from-pc component pc-offset)
 			pc-offset
 			(system:int-sap
-			 (vm:sigcontext-register state vm::cfp-offset))))
+			 (vm:s-context-register state vm::cfp-offset))))
 	       (#.vm:trace-table-call-site
 		(values (debug-function-from-pc component pc-offset)
 			pc-offset
 			(system:int-sap
-			 (vm:sigcontext-register state vm::ocfp-offset))))
+			 (vm:s-context-register state vm::ocfp-offset))))
 	       (#.vm:trace-table-function-prologue
 		#+nil ;; ### Need to do something real.
 		(let* ((ra (system:int-sap
-			    (vm:sigcontext-register state vm::ra-offset)))
+			    (vm:s-context-register state vm::ra-offset)))
 		       (caller-ptr (component-ptr-from-pc ra)))
 		  ...)
 		(values (make-bogus-debug-function
@@ -1321,7 +1321,7 @@
 		 (locally
 		  (declare (optimize (inhibit-warnings 3)))
 		  (alien:sap-alien (car saved-state-chain)
-				   (* unix:sigcontext)))))
+				   (* unix:s-context)))))
 	    (multiple-value-bind
 		(dfun pc-offset cfp)
 		(extract-info-from-state state)
@@ -2695,14 +2695,14 @@
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
-		    (let ((,var (vm:sigcontext-register
+		    (let ((,var (vm:s-context-register
 				 escaped
 				 (c::sc-offset-offset sc-offset))))
 		      ,@forms)
 		    :invalid-value-for-unescaped-register-storage))
 	     (escaped-float-value (format)
 	       `(if escaped
-		    (vm:sigcontext-float-register
+		    (vm:s-context-float-register
 		     escaped
 		     (c::sc-offset-offset sc-offset)
 		     ',format)
@@ -2710,7 +2710,7 @@
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(system:int-sap
-				 (vm:sigcontext-register escaped
+				 (vm:s-context-register escaped
 							 vm::nfp-offset))
 				(system:sap-ref-sap fp (* vm::nfp-save-offset
 							  vm:word-bytes)))))
@@ -2824,14 +2824,14 @@
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
-		    (setf (vm:sigcontext-register
+		    (setf (vm:s-context-register
 			   escaped
 			   (c::sc-offset-offset sc-offset))
 			  ,val)
 		    value))
 	     (set-escaped-float-value (format val)
 	       `(if escaped
-		    (setf (vm:sigcontext-float-register
+		    (setf (vm:s-context-float-register
 			   escaped
 			   (c::sc-offset-offset sc-offset)
 			   ',format)
@@ -2840,7 +2840,7 @@
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(system:int-sap
-				 (vm:sigcontext-register escaped
+				 (vm:s-context-register escaped
 							 vm::nfp-offset))
 				(system:sap-ref-sap fp
 						    (* vm::nfp-save-offset
@@ -3529,7 +3529,7 @@
   (old-inst c-call:unsigned-long))
 
 (alien:def-alien-routine "breakpoint_do_displaced_inst" c-call:void
-  (scp (* unix:sigcontext))
+  (scp (* unix:s-context))
   (orig-inst c-call:unsigned-long))
 
 ;;;
@@ -3648,7 +3648,7 @@
 
 ;;; HANDLE-FUNCTION-END-BREAKPOINT -- Internal Interface
 ;;; 
-(defun handle-function-end-breakpoint (offset component sigcontext)
+(defun handle-function-end-breakpoint (offset component s-context)
   (let ((data (breakpoint-data component offset nil)))
     (unless data
       (error "Unknown breakpoint in ~S at offset ~S."
@@ -3657,7 +3657,7 @@
     (let ((breakpoints (breakpoint-data-breakpoints data)))
       (when breakpoints
 	(assert (eq (breakpoint-kind (car breakpoints)) :function-end))
-	(handle-function-end-breakpoint-aux breakpoints data sigcontext)))))
+	(handle-function-end-breakpoint-aux breakpoints data s-context)))))
 
 ;;; HANDLE-FUNCTION-END-BREAKPOINT-AUX -- Internal.
 ;;;
@@ -3669,8 +3669,8 @@
   (let* ((scp
 	  (locally
 	    (declare (optimize (ext:inhibit-warnings 3)))
-	    (alien:sap-alien signal-context (* unix:sigcontext))))
-	 (frame (do ((cfp (vm:sigcontext-register scp vm::cfp-offset))
+	    (alien:sap-alien signal-context (* unix:s-context))))
+	 (frame (do ((cfp (vm:s-context-register scp vm::cfp-offset))
 		     (f (top-frame) (frame-down f)))
 		    ((= cfp (system:sap-int (frame-pointer f))) f)
 		  (declare (type (unsigned-byte #.vm:word-bits) cfp))))
@@ -3684,16 +3684,16 @@
 	       cookie))))
 
 (defun get-function-end-breakpoint-values (scp)
-  (let ((ocfp (system:int-sap (vm:sigcontext-register scp vm::ocfp-offset)))
+  (let ((ocfp (system:int-sap (vm:s-context-register scp vm::ocfp-offset)))
 	(nargs (kernel:make-lisp-obj
-		(vm:sigcontext-register scp vm::nargs-offset)))
+		(vm:s-context-register scp vm::nargs-offset)))
 	(reg-arg-offsets '#.vm::register-arg-offsets)
 	(results nil))
     (system:without-gcing
      (dotimes (arg-num nargs)
        (push (if reg-arg-offsets
 		 (kernel:make-lisp-obj
-		  (vm:sigcontext-register scp (pop reg-arg-offsets)))
+		  (vm:s-context-register scp (pop reg-arg-offsets)))
 		 (kernel:stack-ref ocfp arg-num))
 	     results)))
     (nreverse results)))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-machdef.lisp,v 1.3 1991/07/22 23:54:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-machdef.lisp,v 1.3.1.1 1994/10/19 23:23:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,12 +15,12 @@
 ;;;
 (in-package "MACH")
 
-(export '(sigcontext-onstack sigcontext-mask sigcontext-sp sigcontext-fp
-	  sigcontext-ap sigcontext-iar sigcontext-icscs sigcontext-saveiar
-	  sigcontext-regs sigcontext *sigcontext indirect-*sigcontext
-	  sigcontext-pc))
+(export '(s-context-onstack s-context-mask s-context-sp s-context-fp
+	  s-context-ap s-context-iar s-context-icscs s-context-saveiar
+	  s-context-regs s-context *s-context indirect-*s-context
+	  s-context-pc))
 
-(def-c-record sigcontext
+(def-c-record s-context
   (onstack unsigned-long)
   (mask unsigned-long)
   (floatsave system-area-pointer)
@@ -32,5 +32,5 @@
   (saveiar system-area-pointer)
   (regs int-array))
 
-(defoperator (sigcontext-pc system-area-pointer) ((x sigcontext))
-  `(sigcontext-iar (alien-value ,x)))
+(defoperator (s-context-pc system-area-pointer) ((x s-context))
+  `(s-context-iar (alien-value ,x)))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.98 1993/11/06 04:32:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.98.1.1 1994/10/19 23:20:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -181,7 +181,7 @@
              "S-IFREG" "S-IFSOCK" "S-IREAD" "S-ISGID" "S-ISUID" "S-ISVTX"
              "S-IWRITE" "SAVETEXT" "SC-MASK" "SC-ONSTACK" "SC-PC" "SETGIDEXEC"
              "SETUIDEXEC" "SG-ERASE" "SG-FLAGS" "SG-ISPEED" "SG-KILL"
-             "SG-OSPEED" "SGTTYB" "SIGCONTEXT" "SIZE-T" "ST-ATIME" "ST-BLKSIZE"
+             "SG-OSPEED" "SGTTYB" "S-CONTEXT" "SIZE-T" "ST-ATIME" "ST-BLKSIZE"
              "ST-BLOCKS" "ST-CTIME" "ST-DEV" "ST-GID" "ST-MODE" "ST-MTIME"
              "ST-NLINK" "ST-RDEV" "ST-SIZE" "ST-UID" "STAT" "SWBLK-T" "T-BRKC"
              "T-DSUSPC" "T-EOFC" "T-FLUSHC" "T-INTRC" "T-LNEXTC" "T-QUITC"
@@ -673,8 +673,8 @@
 	   "WEAK-POINTER-BROKEN-SLOT" "WEAK-POINTER-NEXT-SLOT"
 	   "WEAK-POINTER-SIZE" "WEAK-POINTER-TYPE" "WEAK-POINTER-VALUE-SLOT"
 	   "WORD-BITS" "WORD-BYTES" "WORD-SHIFT" "ZERO-SC-NUMBER"
-	   "SIGCONTEXT-FLOATING-POINT-MODES" "SIGCONTEXT-FLOAT-REGISTER"
-	   "SIGCONTEXT-PROGRAM-COUNTER" "SIGCONTEXT-REGISTER"
+	   "S-CONTEXT-FLOATING-POINT-MODES" "S-CONTEXT-FLOAT-REGISTER"
+	   "S-CONTEXT-PROGRAM-COUNTER" "S-CONTEXT-REGISTER"
 	   "EXTERN-ALIEN-NAME" "SANCTIFY-FOR-EXECUTION"
 	   "FUNCTION-ARGLIST-SLOT"
 	   "INSTANCE-USAGE"

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.33 1993/08/26 15:27:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.33.1.1 1994/10/19 23:17:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,6 +128,8 @@
 
 (defun guess-alignment (bits)
   (cond ((null bits) nil)
+	#+sparc
+	((> bits 32) 64)
 	((> bits 16) 32)
 	((> bits 8) 16)
 	((> bits 1) 8)
