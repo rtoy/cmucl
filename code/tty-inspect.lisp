@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.9 1991/05/15 16:38:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.10 1991/05/22 15:44:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,8 +184,8 @@
 	 (object (if (= type vm:closure-header-type)
 		     (kernel:%closure-function object)
 		     object)))
-    (list (format nil "Function ~s.~%Argument List: ~a." object
-		  (lisp::%function-header-arglist object)
+    (list (format nil "Function ~s.~@[~%Argument List: ~a~]." object
+		  (kernel:%function-header-arglist object)
 		  ;; Defined from stuff used to be here.  Someone took it out.
 		  )
 	  t)))
@@ -236,4 +236,3 @@
 
 (defun describe-atomic-parts (object)
   (list (format nil "Object is an atom.~%") nil object))
-
