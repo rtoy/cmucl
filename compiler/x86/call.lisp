@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.2 1997/02/08 21:57:56 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.3 1997/10/05 16:43:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 (in-package :x86)
 
@@ -988,7 +988,7 @@
 		;; The variable args are on the stack and become the
 		;; frame, but there may be <3 args and 3 stack slots
 		;; are assumed allocate on the call. So need to ensure
-		;; there are at least 3 slots. This hack justs adds 3
+		;; there are at least 3 slots. This hack just adds 3
 		;; more.
 		,(if variable
 		     '(inst sub esp-tn (fixnum 3)))
@@ -1387,35 +1387,34 @@
     
     DONE))
 
-;;; More args are stored contiguously on the stack, starting immediately at
-;;; the context pointer.  The context pointer is not typed, so the lowtag is 0.
+;;; More args are stored contiguously on the stack, starting
+;;; immediately at the context pointer.  The context pointer is not
+;;; typed, so the lowtag is 0.
 ;;;
-;(define-full-reffer more-arg * 0 0 (any-reg descriptor-reg) * %more-arg)
-
-(DEFINE-VOP (MORE-ARG)
-    (:TRANSLATE %MORE-ARG)
-  (:POLICY :FAST-SAFE)
-  (:ARGS (OBJECT :SCS (DESCRIPTOR-REG) :to :result )
-	 (INDEX :SCS (ANY-REG) :target temp))
-  (:ARG-TYPES * TAGGED-NUM)
-  (:temporary (:sc dword-reg :from (:argument 1)) temp)
-  (:RESULTS (VALUE :SCS (ANY-REG DESCRIPTOR-REG)))
-  (:RESULT-TYPES *)
-  (:GENERATOR 5
+(define-vop (more-arg)
+  (:translate %more-arg)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg) :target temp))
+  (:arg-types * tagged-num)
+  (:temporary (:sc dword-reg :from (:argument 1) :to :result) temp)
+  (:results (value :scs (any-reg descriptor-reg)))
+  (:result-types *)
+  (:generator 5
     (move temp index)
     (inst neg temp)
-    (INST MOV VALUE (MAKE-EA :DWORD :BASE OBJECT :INDEX temp))))
+    (inst mov value (make-ea :dword :base object :index temp))))
 
-(DEFINE-VOP (MORE-ARG-C)
-	    (:TRANSLATE %MORE-ARG)
-  (:POLICY :FAST-SAFE)
-  (:ARGS (OBJECT :SCS (DESCRIPTOR-REG)))
-  (:INFO INDEX)				; Note this is raw number.
-  (:ARG-TYPES * (:CONSTANT (SIGNED-BYTE 30)))
-  (:RESULTS (VALUE :SCS (ANY-REG DESCRIPTOR-REG)))
-  (:RESULT-TYPES *)
-  (:GENERATOR 5
-   (INST MOV VALUE
+(define-vop (more-arg-c)
+  (:translate %more-arg)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types * (:constant (signed-byte 30)))
+  (:results (value :scs (any-reg descriptor-reg)))
+  (:result-types *)
+  (:generator 4
+   (inst mov value
 	 (make-ea :dword :base object :disp (- (* index word-bytes))))))
 
 
@@ -1483,12 +1482,13 @@
 (define-vop (more-arg-context)
   (:policy :fast-safe)
   (:translate c::%more-arg-context)
-  (:args (supplied :target count))
+  (:args (supplied :scs (any-reg) :target count))
   (:arg-types positive-fixnum (:constant fixnum))
   (:info fixed)
   (:results (context :scs (descriptor-reg))
 	    (count :scs (any-reg)))
   (:result-types t tagged-num)
+  (:note "more-arg-context")
   (:generator 5
     (move count supplied)
     ;; SP at this point points at the last arg pushed.
@@ -1517,24 +1517,8 @@
 	(inst cmp nargs (fixnum count)))
       (inst jmp :ne err-lab))))
 
-;;; Signal various errors.
+;;; Various other error signallers.
 ;;;
-#+old
-(macrolet ((frob (name error &rest args)
-	     `(define-vop (,name)
-		(:args ,@(mapcar #'(lambda (arg)
-				     `(,arg :scs (any-reg descriptor-reg)))
-				 args))
-		(:vop-var vop)
-		(:save-p :compute-only)
-		(:generator 1000
-		  (error-call vop ,error ,@args)))))
-  (frob argument-count-error invalid-argument-count-error nargs)
-  (frob type-check-error object-not-type-error object type)
-  (frob odd-keyword-arguments-error odd-keyword-arguments-error)
-  (frob unknown-keyword-argument-error unknown-keyword-argument-error key)
-  (frob nil-function-returned-error nil-function-returned-error fun))
-
 (macrolet ((frob (name error translate &rest args)
 	     `(define-vop (,name)
 		,@(when translate
@@ -1548,15 +1532,13 @@
 		(:generator 1000
 		  (error-call vop ,error ,@args)))))
   (frob argument-count-error invalid-argument-count-error
-	c::%argument-count-error nargs)
-  (frob type-check-error object-not-type-error
-	c::%type-check-error
+    c::%argument-count-error nargs)
+  (frob type-check-error object-not-type-error c::%type-check-error
     object type)
-  (frob layout-invalid-error layout-invalid-error
-	c::%layout-invalid-error
+  (frob layout-invalid-error layout-invalid-error c::%layout-invalid-error
     object layout)
   (frob odd-keyword-arguments-error odd-keyword-arguments-error
-	c::%odd-keyword-arguments-error)
+    c::%odd-keyword-arguments-error)
   (frob unknown-keyword-argument-error unknown-keyword-argument-error
-	c::%unknown-keyword-argument-error key)
+    c::%unknown-keyword-argument-error key)
   (frob nil-function-returned-error nil-function-returned-error nil fun))
