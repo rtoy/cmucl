@@ -132,7 +132,7 @@ map_core_sections(char *exec_name)
 	if (!strncmp(nambuf, core_section_names[j], 6)) {
 	  /* Found a core section. Map it! */
 	  if (os_map(exec_fd, sh.sh_offset, (os_vm_address_t)sh.sh_addr, sh.sh_size) == -1) {
-	    fprintf("Can't map section %s\n", core_section_names[j]);
+	    fprintf(stderr, "Can't map section %s\n", core_section_names[j]);
 	    exit(-1);
 	  }
 	  sections_remaining--;
