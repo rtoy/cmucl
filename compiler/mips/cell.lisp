@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.74 1993/06/12 20:35:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.75 1993/08/27 14:35:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,8 +387,8 @@
 		 (:variant ,offset)))))))))
 
 (define-mutator-accessors thread :des t)
-(define-mutator-accessors suspends-disabled-count :ub32 t)
-(define-mutator-accessors suspend-pending :ub32 t)
+(define-mutator-accessors interrupts-enabled :ub32 t)
+(define-mutator-accessors interrupt-pending :ub32 t)
 (define-mutator-accessors control-stack-base :sap nil)
 (define-mutator-accessors control-stack-end :sap nil)
 (define-mutator-accessors current-unwind-protect :sap nil)
