@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.15 1994/06/29 21:39:27 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.16 1994/10/20 11:16:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,9 +30,18 @@
 	  send-character-out-of-band))
 
 
-(defconstant sock-stream #-irix 1 #+irix 2)
-(defconstant sock-dgram #-irix 2 #+irix 1)
-(defconstant sock-raw #-irix 3 #+irix 4)
+#-svr4
+(defconstant sock-stream 1)
+#+svr4
+(defconstant sock-stream 2)
+#-svr4
+(defconstant sock-dgram 2)
+#+svr4
+(defconstant sock-dgram 1)
+#-svr4
+(defconstant sock-raw 3)
+#+svr4
+(defconstant sock-raw 4)
 
 (defconstant af-unix 1)
 (defconstant af-inet 2)
