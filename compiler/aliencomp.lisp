@@ -68,7 +68,7 @@
 (defun analyze-alien-expression (result-type exp)
   (if (atom exp)
       (if (and (symbolp exp)
-	       (or (ct-a-val-p (cdr (assoc exp *venv*)))
+	       (or (ct-a-val-p (lexenv-find exp variables))
 		   (info variable alien-value exp)))
 	  (grovel-alien-var result-type exp)
 	  (grovel-random-alien result-type exp))
@@ -169,11 +169,12 @@
 
 ;;; Grovel-Alien-Var  --  Internal
 ;;;
-;;;    Look the var up in *venv*, and then check if it is a global
-;;; alien-variable.  If it ain't there or is the the wrong type then flame out.
+;;;    Look the var up in the LEXENV-VARIABLES, and then check if it is a
+;;; global alien-variable.  If it ain't there or is the the wrong type then
+;;; flame out.
 ;;;
 (defun grovel-alien-var (type var)
-  (let* ((local-def (cdr (assoc var *venv*)))
+  (let* ((local-def (lexenv-find var variables))
 	 (res (cond ((ct-a-val-p local-def) local-def)
 		    ((or (not local-def)
 			 (and (global-var-p local-def)
@@ -209,7 +210,7 @@
   
   (do* ((args (cdr exp) (cdr args))
 	(dums ())
-	(*venv* *venv*)
+	(*lexical-environment* *lexical-environment*)
 	(num 0 (1+ num))
 	(types (lisp::alien-info-arg-types info))
 	(atype (cdr (assoc num types)) (cdr (assoc num types)))
@@ -241,7 +242,8 @@
 	     (setq binds (nconc binds b)  stuff (nconc stuff s))
 	     (unless val (return nil))
 	     (let ((var (gensym)))
-	       (push (cons var val) *venv*)
+	       (setq *lexical-environment*
+		     (make-lexenv :variables (list (cons var val))))
 	       (push var dums))))
 	  (t
 	   (let ((var (gensym)))
@@ -338,49 +340,49 @@
 ;;; Alien-Bind IR1 convert  --  Internal
 ;;;
 (def-ir1-translator alien-bind ((binds &body body &whole source) start cont)
-  (let ((*venv* *venv*))
-    (collect ((lets nil nconc)
-	      (stuff nil nconc))
-      (dolist (bind binds)
+  (if binds
+      (let ((bind (first binds)))
 	(unless (<= 2 (length bind) 4)
 	  (compiler-error "Malformed Alien-Bind specifier:~% ~S" bind))
 	(let ((var (first bind))
 	      (val (second bind))
 	      (typ (third bind))
 	      (aligned (fourth bind)))
-
-	  (multiple-value-bind (l s res)
+	  
+	  (multiple-value-bind (init-lets stuff res)
 			       (analyze-alien-expression typ val)
 	    (unless (ct-a-val-type res)
 	      (compiler-error "Must specify type, since it is not apparent ~
-	                       from the value:~% ~S" bind))
-	    (lets l)
-	    (stuff s)
+                     	       from the value:~% ~S"
+			      bind))
 	    (let* ((offset (ct-a-val-offset res))
 		   (sap (ct-a-val-sap  res))
 		   (size (ct-a-val-size res))
 		   (n-size (gensym))
 		   (n-sap (gensym))
-		   (n-offset (gensym)))
-	      (lets `((,n-sap ,(if aligned
-				   `(%aligned-sap ,sap ,offset ',source)
-				   sap))
-		      (,n-size ,size)
-		      (,n-offset ,(if aligned 0 offset))))
-
-	      (push (cons var
-			  (make-ct-a-val :type (ct-a-val-type res)
+		   (n-offset (gensym))
+		   (a-val (make-ct-a-val :type (ct-a-val-type res)
 					 :offset (if aligned 0 n-offset)
 					 :size n-size
 					 :sap n-sap
 					 :alien (ct-a-val-alien res)))
-		    *venv*)))))
-
-    (ir1-convert start cont
-		 `(let* ,(reverse (lets))
-		    ,(ignore-unreferenced-vars (lets))
-		    ,@(nreverse (stuff))
-		    ,@body)))))
+		   (lets `(,@(reverse init-lets)
+			   (,n-sap ,(if aligned
+					`(%aligned-sap ,sap ,offset ',source)
+					sap))
+			   (,n-size ,size)
+			   (,n-offset ,(if aligned 0 offset)))))
+	      (ir1-convert
+	       start cont
+	       `(let* ,lets
+		  ,(ignore-unreferenced-vars lets)
+		  (compiler-let ((*lexical-environment*
+				  (make-lexenv :variables
+					       ',(acons var a-val nil))))
+		    ,@(reverse stuff)
+		    (alien-bind ,(rest binds)
+		      ,@body))))))))
+      (ir1-convert-progn-body start cont body)))
 
 
 ;;; With-Stack-Alien-Transform  --  Internal
@@ -394,13 +396,13 @@
     (let* ((n-current (lisp::stack-info-current info))
 	   (n-sap (gensym))
 	   (n-alien (gensym))
-	   (*venv* (acons var
-			  (make-ct-a-val :type (lisp::stack-info-type info)
-					 :size (lisp::stack-info-size info)
-					 :sap n-sap
-					 :offset 0
-					 :alien n-alien)
-			  *venv*)))
+	   (a-val (make-ct-a-val :type (lisp::stack-info-type info)
+				 :size (lisp::stack-info-size info)
+				 :sap n-sap
+				 :offset 0
+				 :alien n-alien))
+	   (*lexical-environment*
+	    (make-lexenv :variables (list (cons var a-val)))))
       (ir1-convert start cont
 		   `(let* ((,n-alien (or (car ,n-current)
 					 (,(lisp::stack-info-grow info))))
@@ -430,8 +432,7 @@
 
 ;;; Alien-SAP soruce transform  --  Internal
 ;;;
-;;;
-(def-source-transform alien-address (alien &whole source)
+(def-source-transform alien-sap (alien &whole source)
   (multiple-value-bind (binds stuff res)
 		       (analyze-alien-expression nil alien)
     `(let* ,(reverse binds)
