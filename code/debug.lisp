@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.40 1994/02/14 13:21:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.41 1994/03/19 23:48:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -536,6 +536,7 @@ See the CMU Common Lisp User's Manual for more information.
 				       (unprintable-object-string x)))))
   string)
 
+
 ;;; PRINT-FRAME-CALL-1 -- Internal.
 ;;;
 ;;; This prints frame with verbosity level 1.  If we hit a rest-arg, 
@@ -568,17 +569,27 @@ See the CMU Common Lisp User's Manual for more information.
       (di:lambda-list-unavailable
        ()
        (push (make-unprintable-object "lambda-list-unavailable") results)))
-    (prin1 (nreverse results))
+    (prin1 (mapcar #'ensure-printable-object (nreverse results)))
     (when (di:debug-function-kind d-fun)
       (write-char #\[)
       (prin1 (di:debug-function-kind d-fun))
       (write-char #\]))))
-;;;
+
+(defun ensure-printable-object (object)
+  (handler-case
+      (with-open-stream (out (make-broadcast-stream))
+	(prin1 object out)
+	object)
+    (error (cond)
+      (declare (ignore cond))
+      (make-unprintable-object "error printing object"))))
+
 (defun frame-call-arg (var location frame)
   (lambda-var-dispatch var location
     (make-unprintable-object "unused-arg")
     (di:debug-variable-value var frame)
     (make-unprintable-object "unavailable-arg")))
+
 
 ;;; PRINT-FRAME-CALL -- Interface
 ;;;
