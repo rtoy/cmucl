@@ -46,7 +46,6 @@ find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" -o \
 	-name "*.x86f" -o \
 	-name "*.core" | xargs rm 2> /dev/null
 
-set -x
 for d in $TARGET
 do
     rm -f $d/compile-*.log $d/hemlock/spell-dictionary.bin 2> /dev/null
