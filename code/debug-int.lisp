@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.24 1991/05/06 15:10:21 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.25 1991/05/09 15:50:26 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,7 +177,7 @@
   ((condition))
   (:report (lambda (condition stream)
 	     (format stream "~&Unhandled debug-condition:~%~A"
-		     condition))))
+		     (unhandled-condition-condition condition)))))
 
 (define-condition invalid-control-stack-pointer (debug-error)
   ()
