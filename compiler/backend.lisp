@@ -20,7 +20,7 @@
 	   backend-register-save-penalty backend-byte-order
 	   backend-any-primitive-type backend-info-environment
 	   backend-instruction-formats backend-instruction-flavors
-	   backend-special-arg-types
+	   backend-special-arg-types backend-features
 
 	   ;; The various backends need to call these support routines
 	   make-stack-pointer-tn primitive-type primitive-type-of))
@@ -167,6 +167,9 @@
   (instruction-formats (make-hash-table :test #'eq) :type hash-table)
   (instruction-flavors (make-hash-table :test #'equal) :type hash-table)
   (special-arg-types (make-hash-table :test #'eq) :type hash-table)
+
+  ;; The backend specific features list, if any.
+  (features nil :type list)
 
   . #.(mapcar #'(lambda (slot)
 		  `(,slot nil :type (or null function)))
