@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.19 1990/07/03 06:31:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.20 1990/07/03 17:29:05 ram Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -140,13 +140,15 @@
 ;;; Move a tagged number to an untagged representation.
 ;;;
 (define-vop (move-to-signed/unsigned)
-  (:args (x :scs (any-reg descriptor-reg)))
+  (:args (x :scs (any-reg descriptor-reg constant)))
   (:results (y :scs (signed-reg unsigned-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (sc-case x
       (any-reg
        (inst sra y x 2))
+      (constant
+       (inst li y (tn-value x)))
       (descriptor-reg
        (let ((done (gen-label)))
 	 (inst and temp x 3)
