@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.70 2003/06/26 13:27:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.71 2003/09/12 20:06:05 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -382,8 +382,7 @@
   (print-and-call kernel::signal-init)
   (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
 
-  (set-floating-point-modes :traps '(:overflow #-x86 :underflow :invalid
-					       :divide-by-zero))
+  (set-floating-point-modes :traps '(:overflow :invalid :divide-by-zero))
   ;; This is necessary because some of the initial top level forms might
   ;; have changed the compliation policy in strange ways.
   (print-and-call c::proclaim-init)
@@ -449,8 +448,7 @@
     (gc-init)
     (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
     (set-floating-point-modes :traps
-			      '(:overflow #-x86 :underflow :invalid
-					  :divide-by-zero))
+			      '(:overflow :invalid :divide-by-zero))
     ;; Clear pseudo atomic in case this core wasn't compiled with support.
     #+x86 (setf lisp::*pseudo-atomic-atomic* 0))))
 
