@@ -978,7 +978,13 @@
       
       (do ((tn (ir2-component-restricted-tns 2comp) (tn-next tn)))
 	  ((null tn))
-	(pack-tn tn t))
+	(when (eq (tn-kind tn) :component)
+	  (pack-tn tn t)))
+
+      (do ((tn (ir2-component-restricted-tns 2comp) (tn-next tn)))
+	  ((null tn))
+	(unless (tn-offset tn)
+	  (pack-tn tn t)))
       
       (do ((tn (ir2-component-normal-tns 2comp) (tn-next tn)))
 	  ((null tn))
