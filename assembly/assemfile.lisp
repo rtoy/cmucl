@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.11 1990/05/24 13:24:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.12 1990/06/16 17:21:04 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -70,21 +70,25 @@
   (kind :temp :type (member :arg :temp :result))
   (name nil :type symbol)
   (temp nil :type symbol)
-  (sc nil :type symbol)
+  (scs nil :type (or list symbol))
   (offset 0 :type fixnum))
 
 (defun %print-reg-spec (spec stream depth)
   (declare (ignore depth))
   (format stream
-	  "#<reg ~S ~S sc=~S offset=~S>"
+	  "#<reg ~S ~S scs=~S offset=~S>"
 	  (reg-spec-kind spec)
 	  (reg-spec-name spec)
-	  (reg-spec-sc spec)
+	  (reg-spec-scs spec)
 	  (reg-spec-offset spec)))
 
+(defun reg-spec-sc (spec)
+  (if (atom (reg-spec-scs spec))
+      (reg-spec-scs spec)
+      (car (reg-spec-scs spec))))
 
 (defun parse-reg-spec (kind name sc offset)
-  (let ((reg (make-reg-spec :kind kind :name name :sc sc :offset offset)))
+  (let ((reg (make-reg-spec :kind kind :name name :scs sc :offset offset)))
     (ecase kind
       (:temp)
       ((:arg :res)
@@ -123,7 +127,9 @@
 
 (defun arg-or-res-spec (reg)
   `(,(reg-spec-name reg)
-    :scs (,(reg-spec-sc reg))
+    :scs ,(if (atom (reg-spec-scs reg))
+	      (list (reg-spec-scs reg))
+	      (reg-spec-scs reg))
     ,@(unless (eq (reg-spec-kind reg) :res)
 	`(:target ,(reg-spec-temp reg)))))
 
