@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.3 1990/03/28 22:49:54 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.4 1990/03/29 21:20:07 ch Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -36,10 +36,10 @@ char *list[];
 }
 
 
-main(argc, argv, argp)
+main(argc, argv, envp)
 int argc;
 char *argv[];
-char *argp[];
+char *envp[];
 {
     char *arg, **argptr;
     char *core = NULL;
@@ -73,8 +73,11 @@ char *argp[];
 
     globals_init();
 
+    interrupt_init();
+
+    /* Convert the argv and envp to something Lisp can grok. */
     SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
-    SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(argp));
+    SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
 
     test_init();
 
