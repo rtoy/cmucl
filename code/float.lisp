@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.9 1992/02/07 11:20:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.10 1992/12/10 01:28:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -559,7 +559,7 @@
    ((float-nan-p x)
     (when (and (float-trapping-nan-p x)
 	       (vm:current-float-trap :invalid))
-      (error 'floating-point-invalid :operation 'scale-float
+      (error 'floating-point-invalid-operation :operation 'scale-float
 	     :operands (list x exp)))
     x)
    (t
@@ -682,7 +682,7 @@ rounding modes & do ieee round-to-integer.
 			 vm:single-float-hidden-bit))
 	   (shift (- exp vm:single-float-digits vm:single-float-bias)))
       (when (> exp vm:single-float-normal-exponent-max)
-	(error 'floating-point-invalid :operator 'truncate
+	(error 'floating-point-invalid-operation :operator 'truncate
 	       :operands (list x)))
       (if (<= shift (- vm:single-float-digits))
 	  0
@@ -707,7 +707,7 @@ rounding modes & do ieee round-to-integer.
 	   (shift (- exp (- vm:double-float-digits vm:word-bits)
 		     vm:double-float-bias)))
       (when (> exp vm:double-float-normal-exponent-max)
-	(error 'floating-point-invalid :operator 'truncate
+	(error 'floating-point-invalid-operation :operator 'truncate
 	       :operands (list x)))
       (if (<= shift (- vm:word-bits vm:double-float-digits))
 	  0
