@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.11 1993/02/26 08:26:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.12 1993/03/15 00:13:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,27 +248,30 @@
 	((null (gethash tree *sharp-equal-circle-table*))
 	 (setf (gethash tree *sharp-equal-circle-table*) t)
 	 (cond ((typep tree 'structure-object)
-		(dotimes (i (%instance-length tree) tree)
-		  (setf (%instance-ref tree i)
-			(circle-subst old-new-alist (%instance-ref tree i)))))
+		(do ((i 1 (1+ i))
+		     (end (%instance-length tree)))
+		    ((= i end))
+		  (let* ((old (%instance-ref tree i))
+			 (new (circle-subst old-new-alist old)))
+		    (unless (eq old new)
+		      (setf (%instance-ref tree i) new)))))
 	       ((arrayp tree)
 		(with-array-data ((data tree) (start) (end))
 		  (declare (fixnum start end))
 		  (do ((i start (1+ i)))
 		      ((>= i end))
-		    (setf (aref data i)
-			  (circle-subst old-new-alist (aref data i)))))
-		tree)
+		    (let* ((old (aref data i))
+			   (new (circle-subst old-new-alist old)))
+		      (unless (eq old new)
+			(setf (aref data i) new))))))
 	       (t
 		(let ((a (circle-subst old-new-alist (car tree)))
 		      (d (circle-subst old-new-alist (cdr tree))))
-		  (if (eq a (car tree))
-		      tree
-		      (rplaca tree a))
-		  (if (eq d (cdr tree))
-		      tree
-		      (rplacd tree d)))
-		  tree)))
+		  (unless (eq a (car tree))
+		    (rplaca tree a))
+		  (unless (eq d (cdr tree))
+		    (rplacd tree d)))))
+	 tree)
 	(t tree)))
 
 ;;; Sharp-equal works as follows.  When a label is assigned (ie when #= is
