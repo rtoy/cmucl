@@ -132,12 +132,16 @@ _call_into_c:
         mov     CSP, CFP
         add     CSP, 32, CSP
         st      OCFP, [CFP]
-        st      LIP, [CFP+4]
         st      CODE, [CFP+8]
 
         /* Turn on pseudo-atomic. */
         sethi   %hi(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET), L0
         st      CSP, [L0+%lo(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET)]
+
+	/* Convert the return address to an offset and save it on the stack. */
+	sub	LIP, CODE, L0
+	add	L0, type_OtherPointer, L0
+	st	L0, [CFP+4]
 
         /* Store LISP state */
         store(ALLOC,current_dynamic_space_free_pointer)
@@ -177,6 +181,12 @@ _call_into_c:
         load(current_control_stack_pointer, CSP)
         load(current_control_frame_pointer, CFP)
 
+	/* Get the return address back. */
+	ld	[CFP+4], LIP
+	ld	[CFP+8], CODE
+	add	LIP, CODE, LIP
+	sub	LIP, type_OtherPointer, LIP
+
         /* No longer atomic. */
         sethi   %hi(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET), NL1
         st      ZERO, [NL1+%lo(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET)]
@@ -215,9 +225,14 @@ _undefined_tramp:
         .word   NIL
         .word   NIL
 
-        unimp   trap_Error
-
-
+	b	1f
+        unimp   trap_Cerror
+	.byte	4, 23, 254, 12, 3
+	.align	4
+1:
+	ld	[CNAME+SYMBOL_RAW_FUNCTION_ADDR_OFFSET], CODE
+	jmp	CODE+FUNCTION_HEADER_CODE_OFFSET
+	nop
 
 	.global	_closure_tramp
 	.align	8
@@ -415,14 +430,9 @@ _sigreturn:
 	ld	[%o0 + 160+(32*4)], %fsr	! restore old fsr
 2:
 
-        ! Restore the integer regs.
-        ldd     [%o0 + 32+(2*4)], %2
-        ldd     [%o0 + 32+(4*4)], %4
-        ldd     [%o0 + 32+(6*4)], %6
-        ld      [%o0 + 32+(9*4)], %9
-        ldd     [%o0 + 32+(10*4)], %10
-        ldd     [%o0 + 32+(12*4)], %12
-        ld      [%o0 + 32+(15*4)], %15
+	! The locals and in are restored from the stack, so we have to put
+	! them there.
+	ld	[%o0 + 8], %o1
         ldd     [%o0 + 32+(16*4)], %16
         ldd     [%o0 + 32+(18*4)], %18
         ldd     [%o0 + 32+(20*4)], %20
@@ -431,6 +441,24 @@ _sigreturn:
         ldd     [%o0 + 32+(26*4)], %26
         ldd     [%o0 + 32+(28*4)], %28
         ldd     [%o0 + 32+(30*4)], %30
+	std	%16, [%o1 + (0*4)]
+	std	%18, [%o1 + (2*4)]
+	std	%20, [%o1 + (4*4)]
+	std	%22, [%o1 + (6*4)]
+	std	%24, [%o1 + (8*4)]
+	std	%26, [%o1 + (10*4)]
+	std	%28, [%o1 + (12*4)]
+	std	%30, [%o1 + (14*4)]
+
+        ! Restore the globals and outs.  Don't restore %g1, %o0, or %sp
+	! 'cause they get restored from the sigcontext.
+        ldd     [%o0 + 32+(2*4)], %2
+        ldd     [%o0 + 32+(4*4)], %4
+        ldd     [%o0 + 32+(6*4)], %6
+        ld      [%o0 + 32+(9*4)], %9
+        ldd     [%o0 + 32+(10*4)], %10
+        ldd     [%o0 + 32+(12*4)], %12
+        ld      [%o0 + 32+(15*4)], %15
 
 	set	139, %g1		! sigcleanup system call
 	t	0
