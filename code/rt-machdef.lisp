@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-machdef.lisp,v 1.2 1991/04/23 01:25:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-machdef.lisp,v 1.3 1991/07/22 23:54:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,5 +32,5 @@
   (saveiar system-area-pointer)
   (regs int-array))
 
-
-
+(defoperator (sigcontext-pc system-area-pointer) ((x sigcontext))
+  `(sigcontext-iar (alien-value ,x)))
