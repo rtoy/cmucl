@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.9 1991/09/04 14:22:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.10 1991/09/10 20:04:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -343,7 +343,7 @@
 	 (editor-error "Buffer ~A is already in use." background)))
     (message "Spawning slave ... ")
     (let ((proc
-	   (ext:run-program (namestring (truename (value slave-utility)))
+	   (ext:run-program (value slave-utility)
 			    `("-slave" ,(get-editor-name)
 			      ,@(if slave (list "-slave-buffer" slave))
 			      ,@(if background
