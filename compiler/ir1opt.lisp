@@ -311,13 +311,13 @@
 ;;;
 ;;; Note that we clear the node & block reoptimize flags *before* doing the
 ;;; optimization.  This ensures that the node or block will be reoptimized if
-;;; necessary.  We leave the NODE-OPTIMIZE flag set doing into
+;;; necessary.  We leave the NODE-OPTIMIZE flag set going into
 ;;; IR1-OPTIMIZE-RETURN, since it wants to clear the flag itself.
 ;;;
 (defun ir1-optimize-block (block)
   (declare (type cblock block))
   (setf (block-reoptimize block) nil)
-  (do-nodes (node cont block)
+  (do-nodes (node cont block :restart-p t)
     (when (node-reoptimize node)
       (setf (node-reoptimize node) nil)
       (typecase node
@@ -715,20 +715,40 @@
 ;;; then we set the combination kind to the function info of %Slot-Setter or
 ;;; %Slot-Accessor, as appropriate.
 ;;;
-(defun recognize-known-call (call)
+;;;    If convert-again is true, and the function has a source-transform or
+;;; inline-expansion, or if the function is conditional, and the destination of
+;;; the value is not an IF, then instead of making the existing call known, we
+;;; change it to be a call to a lambda that just re-calls the function.  This
+;;; gives IR1 transformation another go at the call, in the case where the call
+;;; wasn't obviously known during the initial IR1 conversion.
+;;;
+(defun recognize-known-call (call &optional convert-again)
   (declare (type combination call))
   (let* ((fun (basic-combination-fun call))
 	 (name (continuation-function-name fun)))
     (when name
       (let ((info (info function info name)))
-	(cond (info
-	       (setf (basic-combination-kind call) info))
-	      ((slot-accessor-p (ref-leaf (continuation-use fun)))
-	       (setf (basic-combination-kind call)
-		     (info function info
-			   (if (consp name)
-			       '%slot-setter
-			       '%slot-accessor))))))))
+	(cond
+	 ((and info convert-again
+	       (or (info function source-transform name)
+		   (info function inline-expansion name)
+		   (and (ir1-attributep (function-info-attributes info)
+					predicate)
+			(let ((dest (continuation-dest (node-cont call))))
+			  (and dest (not (if-p dest)))))))
+	  (let ((dums (loop repeat (length (combination-args call))
+			    collect (gensym))))
+	    (transform-call call
+			    `(lambda ,dums
+			       (,name ,@dums)))))
+	 (info
+	  (setf (basic-combination-kind call) info))
+	 ((slot-accessor-p (ref-leaf (continuation-use fun)))
+	  (setf (basic-combination-kind call)
+		(info function info
+		      (if (consp name)
+			  '%slot-setter
+			  '%slot-accessor))))))))
   (undefined-value))
 
 
@@ -769,7 +789,7 @@
 			       :error-function #'compiler-warning
 			       :warning-function #'compiler-note)
 	   (assert-call-type call type)
-	   (recognize-known-call call))
+	   (recognize-known-call call t))
 	  (t
 	   (setf (ref-inlinep use) :notinline))))
 
@@ -821,7 +841,7 @@
 	(flame (policy node (> speed brevity)))
 	(*compiler-error-context* node))
     (cond ((or (not constrained)
-	       (valid-function-use node type))
+	       (valid-function-use node type :strict-result t))
 	   (multiple-value-bind
 	       (severity args)
 	       (catch 'give-up
@@ -939,7 +959,15 @@
 	    (setf (continuation-next cont) next)
 	    (when (eq call (block-last block))
 	      (setf (block-last block) node))
-	    (reoptimize-continuation cont)))))))
+	    (reoptimize-continuation cont))))
+       (t
+	(let ((dummies (loop repeat (length args)
+			     collect (gensym))))
+	  (transform-call
+	   call
+	   `(lambda ,dummies
+	      (declare (ignore ,@dummies))
+	      (values ,@(mapcar #'(lambda (x) `',x) values)))))))))
   
   (undefined-value))
 
@@ -1051,6 +1079,25 @@
       t)))
 
 
+;;; DELETE-LET  --  Interface
+;;;
+;;;    Delete a Let, removing the call and bind nodes, and warning about any
+;;; unreferenced variables.  Note that FLUSH-DEAD-CODE will come along right
+;;; away and delete the REF and then the lambda, since we flush the FUN
+;;; continuation. 
+;;;
+(defun delete-let (fun)
+  (declare (type clambda fun))
+  (assert (eq (functional-kind fun) :let))
+  (note-unreferenced-vars fun)
+  (let ((call (let-combination fun)))
+    (flush-dest (combination-fun call))
+    (unlink-node call)
+    (unlink-node (lambda-bind fun))
+    (setf (lambda-bind fun) nil))
+  (undefined-value))
+
+
 ;;; Propagate-Let-Args  --  Internal
 ;;;
 ;;;    This function is called when one of the arguments to a LET changes.  We
@@ -1064,34 +1111,38 @@
 ;;; being defeated, and also ensures that the best representation for the
 ;;; variable can be used.
 ;;;
+;;;    If all of the variables are deleted (have no references) when we are
+;;; done, then we delete the let.
+;;;
 ;;;    Note that we are responsible for clearing the Continuation-Reoptimize
 ;;; flags.
 ;;;
 (defun propagate-let-args (call fun)
   (declare (type combination call) (type clambda fun))
-  (mapc #'(lambda (arg var)
-	    (when (and arg
-		       (continuation-reoptimize arg))
-	      (setf (continuation-reoptimize arg) nil)
-	      (cond
-	       ((lambda-var-sets var)
-		(propagate-from-sets var (continuation-type arg)))
-	       ((let ((use (continuation-use arg)))
-		  (when (ref-p use)
-		    (let ((leaf (ref-leaf use)))
-		      (when (and (constant-reference-p use)
-				 (values-subtypep
-				  (leaf-type leaf)
-				  (continuation-asserted-type arg)))
-			(propagate-to-refs var (continuation-type arg))
-			(substitute-leaf leaf var)
-			t)))))
-	       ((and (null (rest (leaf-refs var)))
-		     (substitute-single-use-continuation arg var)))
-	       (t
-		(propagate-to-refs var (continuation-type arg))))))
-	(basic-combination-args call)
-	(lambda-vars fun))
+  (loop for arg in (combination-args call)
+        and var in (lambda-vars fun) do
+    (when (and arg (continuation-reoptimize arg))
+      (setf (continuation-reoptimize arg) nil)
+      (cond
+       ((lambda-var-sets var)
+	(propagate-from-sets var (continuation-type arg)))
+       ((let ((use (continuation-use arg)))
+	  (when (ref-p use)
+	    (let ((leaf (ref-leaf use)))
+	      (when (and (constant-reference-p use)
+			 (values-subtypep (leaf-type leaf)
+					  (continuation-asserted-type arg)))
+		(propagate-to-refs var (continuation-type arg))
+		(substitute-leaf leaf var)
+		t)))))
+       ((and (null (rest (leaf-refs var)))
+	     (substitute-single-use-continuation arg var)))
+       (t
+	(propagate-to-refs var (continuation-type arg))))))
+  
+  (when (every #'null (combination-args call))
+    (delete-let fun))
+
   (undefined-value))
 
 
@@ -1146,6 +1197,8 @@
   (undefined-value))
 
 
+;;;; Multiple values optimization:
+
 ;;; IR1-OPTIMIZE-MV-BIND  --  Internal
 ;;;
 ;;;    Propagate derived type info from the values continuation to the vars.
@@ -1168,6 +1221,82 @@
 
     (setf (continuation-reoptimize arg) nil))
   (undefined-value))
+
+
+;;; VALUES IR1 optimizer  --  Internal
+;;;
+;;; If we see:
+;;;    (multiple-value-bind (x y)
+;;;                         (values xx yy)
+;;;      ...)
+;;; Convert to:
+;;;    (let ((x xx)
+;;;          (y yy))
+;;;      ...)
+;;;
+;;; What we actually do is convert the VALUES combination into a normal let
+;;; combination calling the orignal :MV-LET lambda.  If there are extra args to
+;;; VALUES, discard the corresponding continuations.  If there are insufficient
+;;; args, insert references to NIL.
+;;;
+(defoptimizer (values optimizer) ((&rest ignore) node)
+  (declare (ignore ignore))
+  (let ((dest (continuation-dest (node-cont node))))
+    (when (and (mv-combination-p dest)
+	       (eq (basic-combination-kind dest) :local)
+	       (eq (continuation-use (first (basic-combination-args dest)))
+		   node))
+      (let* ((fun (combination-lambda dest))
+	     (vars (lambda-vars fun))
+	     (vals (combination-args node))
+	     (nvars (length vars))
+	     (nvals (length vals)))
+	(cond ((> nvals nvars)
+	       (mapc #'flush-dest (subseq vals nvars))
+	       (setq vals (subseq vals 0 nvars)))
+	      ((< nvals nvars)
+	       (with-ir1-environment node
+		 (let ((node-prev (node-prev node)))
+		   (setf (node-prev node) nil)
+		   (setf (continuation-next node-prev) nil)
+		   (collect ((res vals))
+		     (loop as cont = (make-continuation node)
+			   and prev = node-prev then cont
+			   repeat (- nvars nvals)
+			   do (reference-constant prev cont nil)
+			      (res cont))
+		     (setq vals (res)))
+		   (prev-link node (car (last vals)))))))
+	(setf (combination-args node) vals)
+	(flush-dest (combination-fun node))
+	(let ((fun-cont (basic-combination-fun dest)))
+	  (setf (continuation-dest fun-cont) node)
+	  (setf (combination-fun node) fun-cont))
+	(setf (combination-kind node) :local)
+	(setf (functional-kind fun) :let)
+	(flush-dest (first (basic-combination-args dest)))
+	(unlink-node dest)
+	(propagate-to-args node fun)
+	(when vals
+	  (reoptimize-continuation (first vals))))
+      t)))
+
+
+;;; VALUES IR1 transform  --  Internal
+;;;
+;;;    If VALUES appears in a non-MV context, then effectively convert it to a
+;;; PROG1.  This allows the computation of the additional values to become dead
+;;; code.
+;;;
+(deftransform values ((&rest vals) * * :node node)
+  (when (typep (continuation-dest (node-cont node))
+	       '(or creturn exit mv-combination))
+    (give-up))
+  (let ((dummies (loop repeat (1- (length vals))
+		       collect (gensym))))
+    `(lambda (val ,@dummies)
+       (declare (ignore ,@dummies))
+       val)))
 
 
 ;;; Flush-Dead-Code  --  Internal
