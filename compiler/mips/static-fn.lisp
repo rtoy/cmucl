@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.10 1990/06/25 21:13:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.11 1990/07/03 06:34:26 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -101,6 +101,7 @@
 		    vm:function-pointer-type)
 	     (lisp-jump function lip)
 	     (emit-return-pc lra-label)
+	     (note-this-location vop :unknown-return)
 	     ,(collect ((bindings) (links))
 		(do ((temp (temp-names) (cdr temp))
 		     (name 'values (gensym))
