@@ -24,7 +24,10 @@
 ;;;  1] Make an Environment structure for each non-let lambda, assigning the
 ;;;     lambda-environment for all lambdas.
 ;;;  2] Find all values that need to be closed over by each environment.
-;;;  3] Find any unreferenced variables in the lambdas in the component.
+;;;  3] Do summary analysis of this function:
+;;;      -- Record the derived result type before the back-end trashes the
+;;;         flow graph.
+;;;      -- Note if the function doesn't return.
 ;;;  4] Scan the blocks in the component closing over non-local-exit
 ;;;     continuations.
 ;;;  5] Compute a function type for each "real" function.  This is done now
@@ -35,10 +38,19 @@
   (declare (type component component))
   (assert (not (component-new-functions component)))
   (dolist (fun (component-lambdas component))
-    (let ((f (if (eq (functional-kind fun) :external)
-		 (functional-entry-function fun)
-		 fun)))
-      (setf (leaf-type f) (definition-type f)))
+    (let* ((f (if (eq (functional-kind fun) :external)
+		  (functional-entry-function fun)
+		  fun))
+	   (dtype (definition-type f))
+	   (node (lambda-bind fun)))
+      (setf (leaf-type f) dtype)
+      (when (and (eq (function-type-returns dtype) *empty-type*)
+		 (or (functional-entry-function f)
+		     (null (functional-kind f)))
+		 (policy node (>= safety brevity)))
+	(let ((*compiler-error-context* node))
+	  (compiler-note "Function does not return."))))
+
     (get-lambda-environment fun))
   
   (dolist (fun (component-lambdas component))
@@ -91,7 +103,7 @@
 ;;; 
 (defun get-node-environment (node)
   (declare (type node node))
-  (get-lambda-environment (block-lambda (node-block node))))
+  (get-lambda-environment (lexenv-lambda (node-lexenv node))))
 
 
 ;;; Compute-Closure  --  Internal
@@ -149,37 +161,6 @@
 
 ;;;; Non-local exit:
 
-;;; Find-NLX-Cleanup  --  Internal
-;;;
-;;;    Given an Exit node, return the associated cleanup.  We do this by
-;;; scanning up the cleanups from the ending cleanup of the Entry's block,
-;;; looking for an :Entry cleanup whose mess-up is Entry.
-;;;
-;;; If the previous cleanup was a :Catch or :Unwind-Protect, then we return the
-;;; previous cleanup instead, since we want to return the catch or UWP cleanup
-;;; when that is what the exit really represents.  This assumes that the :Catch
-;;; or :Unwind-Protect cleanup is always nested immediately inside the
-;;; corresponding Entry cleanup, and that the catch or UWP mess-up is always
-;;; converted in the same block as the Entry.
-;;;
-(defun find-nlx-cleanup (exit)
-  (declare (type exit exit))
-  (let ((entry (exit-entry exit)))
-    (let ((cleanup (find-enclosing-cleanup
-		    (block-end-cleanup (node-block entry))))
-	  (return-prev nil))
-      (loop
-	(ecase (cleanup-kind cleanup)
-	  (:special-bind
-	   (assert (not return-prev)))
-	  (:entry
-	   (when (eq (continuation-use (cleanup-start cleanup)) entry)
-	     (return (or return-prev cleanup)))
-	   (setq return-prev nil))
-	  ((:catch :unwind-protect)
-	   (setq return-prev cleanup)))
-	(setq cleanup (find-enclosing-cleanup (cleanup-enclosing cleanup)))))))
-
 
 ;;; Insert-NLX-Entry-Stub  --  Internal
 ;;;
@@ -192,29 +173,35 @@
 ;;; the component head.  This leaves the entry stub reachable, but makes the
 ;;; flow graph less confusing to flow analysis.
 ;;;
-;;; The ending cleanup of the entry stub is set to the enclosing cleanup for
-;;; the entry's cleanup, since this represents the dynamic state that was saved
-;;; at mess-up point.  It may be that additional local cleanups need to be done
-;;; before actually transferring control to the destination.
+;;; If a catch or an unwind-protect, then we set the Lexenv for the last node
+;;; in the cleanup code to be the enclosing environment, to represent the fact
+;;; that the binding was undone as a side-effect of the exit.  This will cause
+;;; a lexical exit to be broken up if we are actually exiting the scope (i.e.
+;;; a BLOCK), and will also do any other cleanups that may have to be done on
+;;; the way.
 ;;;
 (defun insert-nlx-entry-stub (exit env)
   (declare (type environment env) (type exit exit))
   (let* ((exit-block (node-block exit))
 	 (next-block (first (block-succ exit-block)))
-	 (cleanup (find-nlx-cleanup exit))
+	 (cleanup (entry-cleanup (exit-entry exit)))
 	 (info (make-nlx-info :cleanup cleanup
 			      :continuation (node-cont exit)))
+	 (entry (exit-entry exit))
 	 (new-block (insert-cleanup-code exit-block next-block
-					 (exit-entry exit)
-					 `(%nlx-entry ',info))))
+					 entry
+					 `(%nlx-entry ',info)
+					 (entry-cleanup entry))))
     (unlink-blocks exit-block new-block)
     (link-blocks (component-head (block-component new-block)) new-block)
     
     (setf (nlx-info-target info) new-block)
     (push info (environment-nlx-info env))
     (push info (cleanup-nlx-info cleanup))
-    (setf (block-end-cleanup new-block) (cleanup-enclosing cleanup)))
-
+    (when (member (cleanup-kind cleanup) '(:catch :unwind-protect))
+      (setf (node-lexenv (block-last new-block))
+	    (node-lexenv entry))))
+  
   (undefined-value))
 
 
@@ -238,7 +225,7 @@
   (declare (type environment env) (type exit exit))
   (let ((entry (exit-entry exit))
 	(cont (node-cont exit))
-	(exit-fun (lambda-home (block-lambda (node-block exit)))))
+	(exit-fun (node-home-lambda exit)))
 
     (if (find-nlx-info entry cont)
 	(let ((block (node-block exit)))
@@ -260,23 +247,21 @@
 
 ;;; Find-Non-Local-Exits  --  Internal
 ;;;
-;;;    Iterate over the blocks in Component, calling Note-Non-Local-Exit when
-;;; we find a block that ends in a non-local Exit node.  We also ensure that
-;;; all Exit nodes are either non-local or degenerate by calling
-;;; IR1-Optimize-Exit on local exits.  This makes life simpler for later
-;;; phases.
+;;;    Iterate over the Exits in Component, calling Note-Non-Local-Exit when we
+;;; find a block that ends in a non-local Exit node.  We also ensure that all
+;;; Exit nodes are either non-local or degenerate by calling IR1-Optimize-Exit
+;;; on local exits.  This makes life simpler for later phases.
 ;;;
 (defun find-non-local-exits (component)
   (declare (type component component))
-  (do-blocks (block component)
-    (let ((last (block-last block)))
-      (when (exit-p last)
-	(let ((target-env (lambda-environment
-			   (block-lambda (first (block-succ block)))))) 
-	    (if (eq (node-environment last) target-env)
-		(unless *converting-for-interpreter*
-		  (maybe-delete-exit last))
-		(note-non-local-exit target-env last))))))
+  (dolist (lambda (component-lambdas component))
+    (dolist (entry (lambda-entries lambda))
+      (dolist (exit (entry-exits entry))
+	(let ((target-env (node-environment entry)))
+	  (if (eq (node-environment exit) target-env)
+	      (unless *converting-for-interpreter*
+		(maybe-delete-exit exit))
+	      (note-non-local-exit target-env exit))))))
 
   (undefined-value))
 
@@ -285,24 +270,25 @@
 
 ;;; Emit-Cleanups  --  Internal
 ;;;
-;;;    Zoom up the Cleanup-Enclosing thread until we hit Cleanup1, accumulating
-;;; cleanup code as we go.  When we are done, convert the cleanup code in an
-;;; implicit MV-Prog1.  We have to force local call analysis of new references
-;;; to Unwind-Protect cleanup functions.
+;;;    Zoom up the cleanup nesting until we hit Cleanup1, accumulating cleanup
+;;; code as we go.  When we are done, convert the cleanup code in an implicit
+;;; MV-Prog1.  We have to force local call analysis of new references to
+;;; Unwind-Protect cleanup functions.  If we don't actually have to do
+;;; anything, then we don't insert any cleanup code.
 ;;;
-;;;    If we don't actually have to do anything, then we don't insert any
-;;; cleanup code.  In this case, we set Block1's End-Cleanup to be the
-;;; Start-Cleanup for block2 to indicate that no cleanup is necessary.
+;;;    We don't need to adjust the ending cleanup of the cleanup block, since
+;;; the cleanup blocks are inserted at the start of the DFO, and are thus never
+;;; scanned.
 ;;;
 (defun emit-cleanups (block1 block2)
   (declare (type cblock block1 block2))
   (collect ((code)
 	    (reanalyze-funs))
-    (let ((cleanup2 (find-enclosing-cleanup (block-start-cleanup block2))))
-      (do ((cleanup (find-enclosing-cleanup (block-end-cleanup block1))
-		    (find-enclosing-cleanup (cleanup-enclosing cleanup))))
+    (let ((cleanup2 (block-start-cleanup block2)))
+      (do ((cleanup (block-end-cleanup block1)
+		    (node-enclosing-cleanup (cleanup-mess-up cleanup))))
 	  ((eq cleanup cleanup2))
-	(let* ((node (continuation-use (cleanup-start cleanup)))
+	(let* ((node (cleanup-mess-up cleanup))
 	       (args (when (basic-combination-p node)
 		       (basic-combination-args node))))
 	  (ecase (cleanup-kind cleanup)
@@ -315,19 +301,16 @@
 	     (let ((fun (ref-leaf (continuation-use (second args)))))
 	       (reanalyze-funs fun)
 	       (code `(%funcall ,fun))))
-	    (:entry
+	    ((:block :tagbody)
 	     (dolist (nlx (cleanup-nlx-info cleanup))
 	       (code `(%lexical-exit-breakup ',nlx)))))))
 
-      (cond ((code)
-	     (let ((block (insert-cleanup-code block1 block2
-					       (block-last block1)
-					       `(progn ,@(code)))))
-	       (setf (block-end-cleanup block) cleanup2))
-	     (dolist (fun (reanalyze-funs))
-	       (local-call-analyze-1 fun)))
-	    (t
-	     (setf (block-end-cleanup block1) cleanup2)))))
+      (when (code)
+	(insert-cleanup-code block1 block2
+			     (block-last block1)
+			     `(progn ,@(code)))
+	(dolist (fun (reanalyze-funs))
+	  (local-call-analyze-1 fun)))))
 
   (undefined-value))
 
@@ -335,22 +318,27 @@
 ;;; Find-Cleanup-Points  --  Internal
 ;;;
 ;;;    Loop over the blocks in component, calling Emit-Cleanups when we see a
-;;; successor in the same environment with a different cleanup.  
+;;; successor in the same environment with a different cleanup.  We ignore the
+;;; cleanup transition if it is to a cleanup enclosed by the current cleanup,
+;;; since in that case we are just messing up the environment, hence this is
+;;; not the place to clean it.
 ;;;
 (defun find-cleanup-points (component)
   (declare (type component component))
   (do-blocks (block1 component)
-    (let ((env1 (lambda-environment (block-lambda block1)))
-	  (cleanup1 (find-enclosing-cleanup (block-end-cleanup block1))))
+    (let ((env1 (block-environment block1))
+	  (cleanup1 (block-end-cleanup block1)))
       (dolist (block2 (block-succ block1))
-	(let ((fun2 (block-lambda block2)))
-	  (when fun2
-	    (let ((env2 (lambda-environment fun2)))
-	      (when (and (eq env2 env1)
-			 (not (eq (find-enclosing-cleanup
-				   (block-start-cleanup block2))
-				  cleanup1)))
-		(emit-cleanups block1 block2))))))))
+	(when (block-start block2)
+	  (let ((env2 (block-environment block2))
+		(cleanup2 (block-start-cleanup block2)))
+	    (unless (or (not (eq env2 env1))
+			(eq cleanup1 cleanup2)
+			(and cleanup2
+			     (eq (node-enclosing-cleanup
+				  (cleanup-mess-up cleanup2))
+				 cleanup1)))
+	      (emit-cleanups block1 block2)))))))
   (undefined-value))
 
 
