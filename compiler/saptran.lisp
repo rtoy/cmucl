@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.13 2003/03/17 22:10:59 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.14 2003/06/05 18:49:01 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,6 +35,9 @@
 				      (simple-string &rest *))
   #-linkage-table
   (when (null flavor)
+    (give-up))
+  #+linkage-table
+  (unless (constant-continuation-p symbol)
     (give-up))
   (let ((flav (cond ((null flavor) :code)
                     ((not (constant-continuation-p flavor))
