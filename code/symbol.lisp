@@ -1,11 +1,11 @@
-/;; -*- Log: code.log; Package: Lisp -*-
-;;;;
+;;; -*- Log: code.log; Package: Lisp -*-
+;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.21 1997/02/27 21:03:08 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.22 1997/02/27 22:40:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
