@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.52 1998/08/14 07:16:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.53 1998/12/19 15:52:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,8 @@
 
 (in-package "KERNEL")
 (export '(layout-invalid condition-function-name simple-control-error
-	  simple-file-error simple-program-error simple-style-warning))
+	  simple-file-error simple-program-error simple-style-warning
+	  simple-undefined-function))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -522,9 +523,17 @@
 	 (class (typecase thing
 		  (condition-class thing)
 		  (class
-		   (error "~S is not a condition class." thing))
+		   (error 'simple-type-error
+			  :datum thing
+			  :expected-type 'condition-class
+			  :format-control "~S is not a condition class."
+			  :format-arguments (list thing)))
 		  (t
-		   (error "Bad thing for class arg:~%  ~S" thing))))
+		   (error 'simple-type-error
+			  :datum thing
+			  :expected-type 'condition-class
+			  :format-control "Bad thing for class arg:~%  ~S"
+			  :format-arguments (list thing)))))
 	 (res (make-condition-object args)))
     (setf (%instance-layout res) (class-layout class))
     ;;
@@ -931,6 +940,9 @@
 	     "Error in ~S:  the function ~S is undefined."
 	     (condition-function-name condition)
 	     (cell-error-name condition)))))
+
+(define-condition simple-undefined-function (simple-condition
+					     undefined-function) ())
 
 (define-condition arithmetic-error (error)
   ((operation :reader arithmetic-error-operation :initarg :operation
