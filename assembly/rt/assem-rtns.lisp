@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.1 1991/02/18 15:43:33 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.2 1991/04/01 13:38:59 chiles Exp $
 ;;;
 
 (in-package "RT")
@@ -17,6 +17,7 @@
 ;;;; Non-local exit noise.
 
 (define-assembly-routine (unwind (:translate %continue-unwind)
+				 (:return-style :none)
 				 (:policy :fast-safe))
 			 ((:arg block (word-pointer-reg any-reg descriptor-reg)
 				a0-offset)
@@ -32,7 +33,7 @@
 
   (let ((error (generate-error-code nil invalid-unwind-error)))
     (inst c block 0)
-    (inst b :eq error))
+    (inst bc :eq error))
 
   (load-symbol-value cur-uwp lisp::*current-unwind-protect-block*)
   (loadw target-uwp block unwind-block-current-uwp-slot)
@@ -43,7 +44,7 @@
 
   DO-EXIT
 
-  (loadw fp-tn cur-uwp unwind-block-current-cont-slot)
+  (loadw cfp-tn cur-uwp unwind-block-current-cont-slot)
   (loadw code-tn cur-uwp unwind-block-current-code-slot)
   (loadw lra cur-uwp unwind-block-entry-pc-slot)
   (lisp-return lra lip :frob-code nil)
@@ -54,7 +55,8 @@
   (inst bx do-exit)
   (store-symbol-value next-uwp lisp::*current-unwind-protect-block*))
 
-(define-assembly-routine throw
+(define-assembly-routine (throw
+			  (:return-style :none))
 			 ((:arg target descriptor-reg a0-offset)
 			  (:arg start word-pointer-reg ocfp-offset)
 			  (:arg count any-reg nargs-offset)
@@ -62,6 +64,9 @@
 			  (:temp tag descriptor-reg a2-offset)
 			  (:temp ndescr non-descriptor-reg nl0-offset))
   
+  ;; These are needed by UNWIND, but not by us directly.
+  (declare (ignore start count))
+
   (load-symbol-value catch lisp::*current-catch-block*)
   
   LOOP
@@ -93,9 +98,11 @@
 			  (:arg src any-reg cname-offset)
 			  (:arg nvals any-reg nargs-offset)
 
+			  (:temp lip interior-reg lip-offset)
 			  (:temp count any-reg ocfp-offset)
 			  ;; Pointer into cstack, so looks like fixnum.
 			  (:temp dst any-reg lexenv-offset)
+			  (:temp temp any-reg nfp-offset)
 			  (:temp a0 descriptor-reg a0-offset)
 			  (:temp a1 descriptor-reg a1-offset)
 			  (:temp a2 descriptor-reg a2-offset))
@@ -113,7 +120,7 @@
   ;;
   ;; Copy the remaining args to the top of the stack.
   (inst inc src (* word-bytes register-arg-count))
-  (inst cal dst fp-tn (* word-bytes register-arg-count))
+  (inst cal dst cfp-tn (* word-bytes register-arg-count))
   (inst s count nvals (fixnum 3))
   (inst bnc :gt done)
   LOOP
@@ -136,8 +143,8 @@
   ;; Clear the stack.
   DONE
   (move count cfp-tn) ;Put pointer to the start of values in ocfp.
-  (inst cas csp-tn nargs count) ;Adjust the stack top: <ptr-to-vals>+<nvals>.
-  (move fp-tn ocfp) ;Restore returnee's fp.
+  (inst cas csp-tn nvals count) ;Adjust the stack top: <ptr-to-vals>+<nvals>.
+  (move cfp-tn ocfp) ;Restore returnee's fp.
   ;;
   ;; Return.
   (lisp-return lra lip))
@@ -206,7 +213,7 @@
   ;; The start location is the last one we copy.
   (inst cal srcstart cfp-tn (* register-arg-count word-bytes))
   ;; Compute the source location of the last more arg.
-  (inst cal count/src cfp-tn nargs-tn)
+  (inst cas count/src nargs-tn cfp-tn)
   (inst dec count/src word-bytes) ;not an exclusive end.
   ;; Compute destination end, which is the stack pointer minus three register
   ;; slots we saved and minus one to make it an inclusive end.
@@ -261,9 +268,9 @@
 			 ;; These are really args.
 			 ((:temp args any-reg nl0-offset)
 			  ;; These are needed by the blitting code.
-			  (:temp nargs/src any-reg nargs-offset)
+			  (:temp nargs/src any-reg lra-offset)
 			  (:temp lexenv/dst any-reg lexenv-offset)
-			  (:temp count any-reg lra-offset)
+			  (:temp count any-reg nargs-offset)
 			  (:temp temp descriptor-reg cname-offset)
 			  ;; These are needed so we can get at the register args.
 			  (:temp a0 descriptor-reg a0-offset)
