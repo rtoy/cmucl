@@ -26,7 +26,7 @@
 ;;; 12/10/87	LGO	Created
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/input.lisp,v 1.7 1999/03/16 23:37:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/input.lisp,v 1.8 2001/05/12 15:09:17 pw Exp $")
 
 (in-package :xlib)
 
@@ -943,7 +943,7 @@
   (window (window event-window))
   (keyword atom) ;; keyword
   ((or null card32) time)
-  ((member16 :new-value :deleted) state))
+  ((member8 :new-value :deleted) state))
 
 (declare-event :selection-clear
   (card16 sequence)
