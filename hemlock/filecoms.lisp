@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/filecoms.lisp,v 1.1.1.7 1991/06/22 13:54:06 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/filecoms.lisp,v 1.1.1.8 1991/12/22 17:24:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -330,7 +330,8 @@
   (let* ((buffer-pn (buffer-pathname buffer))
 	 (buffer-pn-date (file-write-date buffer-pn))
 	 (checkpoint-pn (get-checkpoint-pathname buffer))
-	 (checkpoint-pn-date (file-write-date checkpoint-pn)))
+	 (checkpoint-pn-date (and checkpoint-pn
+				  (file-write-date checkpoint-pn))))
     (cond (checkpoint-pn-date
 	   (if (> checkpoint-pn-date (or buffer-pn-date 0))
 	       (values checkpoint-pn t)
