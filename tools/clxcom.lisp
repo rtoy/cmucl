@@ -51,4 +51,40 @@
     (comf "target:clx/manager" :load t)
     (comf "target:clx/image" :load t)
     (comf "target:clx/resource" :load t))
-  (comf "target:code/clx-ext"))
+  (comf "target:code/clx-ext")
+  #-no-pcl
+  (comf "target:code/inspect"))
+
+(ext:run-program
+ "cat"
+ (mapcar #'(lambda (x)
+	     (namestring
+	      (truename
+	       (make-pathname
+		:name x
+		:type (c:backend-fasl-file-type c:*target-backend*)))))
+	 '(
+	   "target:clx/package"
+	   "target:clx/depdefs"
+	   "target:clx/clx"
+	   "target:clx/dependent"
+	   "target:clx/macros"
+	   "target:clx/bufmac"
+	   "target:clx/buffer"
+	   "target:clx/display"
+	   "target:clx/gcontext"
+	   "target:clx/input"
+	   "target:clx/requests"
+	   "target:clx/fonts"
+	   "target:clx/graphics"
+	   "target:clx/text"
+	   "target:clx/attributes"
+	   "target:clx/translate"
+	   "target:clx/keysyms"
+	   "target:clx/manager"
+	   "target:clx/image"
+	   "target:clx/resource"
+	   "target:code/clx-ext"
+	   "target:code/inspect"))
+ :output (make-pathname :defaults "target:clx/clx-library"
+			:type (c:backend-fasl-file-type c:*target-backend*)))
