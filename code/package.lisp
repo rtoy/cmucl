@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.29 1993/02/19 23:02:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.30 1993/02/21 16:28:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,6 +136,15 @@
     (dolist (thing (if (listp thing) thing (list thing)) res)
       (push (package-or-lose thing) res))))
 
+;;; PACKAGE-NAMIFY  --  Internal
+;;;
+;;;    Make a package name into a simple-string.
+;;;
+(defun package-namify (n)
+  (if (symbolp n)
+      (symbol-name n)
+      (coerce n 'simple-string)))
+
 ;;; Package-Or-Lose  --  Internal
 ;;;
 ;;;    Take a package-or-string-or-symbol and return a package.
@@ -146,11 +155,12 @@
 	   (error "Can't do anything to a deleted package: ~S" thing))
 	 thing)
 	(t
-	 (cond ((gethash thing *package-names*))
-	       (t
-		(cerror "Make this package."
-			"~S is not the name of a package." thing)
-		(make-package thing))))))
+	 (let ((thing (package-namify thing)))
+	   (cond ((gethash thing *package-names*))
+		 (t
+		  (cerror "Make this package."
+			  "~S is not the name of a package." thing)
+		  (make-package thing)))))))
 
 
 ;;;; Package-Hashtables
@@ -785,16 +795,6 @@
 		     n (package-%name found))
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))))))
-
-
-;;; PACKAGE-NAMIFY  --  Internal
-;;;
-;;;    Make a package name into a simple-string.
-;;;
-(defun package-namify (n)
-  (if (symbolp n)
-      (symbol-name n)
-      (coerce n 'simple-string)))
 
 
 ;;; Make-Package  --  Public
