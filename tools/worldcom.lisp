@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.72.2.2 2000/05/23 16:39:07 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.72.2.3 2000/08/12 07:33:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -256,7 +256,7 @@
 (comf "target:code/parse-time")
 #-no-runtime (comf "target:code/parse-time")
 
-(comf "target:code/run-program")
+(comf "target:code/run-program" :proceed t)
 
 (comf "target:code/loop" :byte-compile *byte-compile*)
 
