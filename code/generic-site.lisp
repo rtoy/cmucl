@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.2 1991/10/22 13:17:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.3 1991/10/22 16:15:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,6 +41,7 @@
 ;;; have source for this font, since it was created by hand-editing the
 ;;; bitmaps.
 ;;;
-(hi:setv ed::open-paren-highlighting-font "*-courier-bold-r-normal--12-*")
-(hi:setv ed::default-font "*-courier-medium-r-normal--12-*")
-(hi:setv ed::active-region-highlighting-font "*-courier-medium-o-normal--12-*")
+(hi:setv ed::open-paren-highlighting-font "*-courier-bold-r-normal--*-120-*")
+(hi:setv ed::default-font "*-courier-medium-r-normal--*-120-*")
+(hi:setv ed::active-region-highlighting-font
+	 "*-courier-medium-o-normal--*-120-*")
