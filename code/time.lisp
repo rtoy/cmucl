@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.22 2003/02/25 15:54:54 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.23 2003/02/25 17:06:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -356,7 +356,7 @@
 		 ~S second~:P of real time~%  ~
 		 ~S second~:P of user run time~%  ~
 		 ~S second~:P of system run time~%  ~
-                 ~D CPU cycles~%  ~
+                 ~:D CPU cycles~%  ~
 		 ~@[[Run times include ~S second~:P GC run time]~%  ~]~
 		 ~S page fault~:P and~%  ~
 		 ~:D bytes consed.~%"
