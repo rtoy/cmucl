@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.8 2002/02/06 22:43:01 pmai Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.9 2003/01/30 15:46:42 toy Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -29,8 +29,10 @@ provide operands for some switches.  These switches are defined:
 
 .TP 10n
 .BR \-core " filename"
-Specifies the suspended Lisp image (or `core file') to start up.  The default
-is `lib/lisp.core'.
+Specifies the suspended Lisp image (or `core file') to start up.  
+.TP
+.BR \-lib " libpath"
+A colon-separated list of directories to be used for the library: search-list.
 .TP
 .BR \-edit
 Causes Lisp to enter the 
@@ -92,7 +94,12 @@ is the decimal number of the socket to connect to.
 .TP 10n
 .BR CMUCLLIB
 This variable points to the `lib/' directory holding `lisp.core' and other
-files used by Lisp at run-time.  The default is `/usr/local/lib/cmucl/lib'.
+files used by Lisp at run-time.  This can be overridden by using the
+-lib commandline option.
+.TP
+.BR CMUCLCORE
+This variable holds the path to the `lisp.core' that that should be
+used.  This can be overridden by using the -core commandline option.
 .TP
 .BR CMUCL_EMPTYFILE
 [SunOS only] If `df /tmp' shows `swap' as the filesystem for the `/tmp'
@@ -107,6 +114,30 @@ XKEYSYMDB to point to the file `lib/XKeysymDB'.  Otherwise, you will get many
 error messages every time a new connection is opened to the CMU CL motifd.
 This file is read by the X11R5 Xt in order to augment the keysym database with
 certain OSF vendor keysyms that Motif wants to use.
+
+.SH CORE FILE SEARCHING
+When no core file is specified (either by the CMUCLCORE environment
+variable or by the -core option), CMUCL will search in various places to
+find a possible core file. 
+
+When the environment variable CMUCLLIB is set or the -lib option is
+given, the lisp core file is searched in the places specified
+therein.  This is a colon-separated list of directories, just like
+PATH.  This is of directories is searched in order for a file named
+`lisp.core'.  The first one found will be the core to be used.
+
+When the CMUCLLIB is not set and -lib is not given, a set of default
+paths is used.  Let the lisp C executable be located at `<bin>/lisp'.
+Then the following directories are searched for the core file:
+
+.TP 10n
+.BR `<bin>'
+.TP
+.BR `<bin>/../lib/cmucl/lib'
+.TP
+.BR `<bin>/../lib'
+.TP
+.BR `/usr/local/lib/cmucl/lib'
 
 .PP
 
