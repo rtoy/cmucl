@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.39 2002/10/04 16:24:03 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.40 2002/10/28 22:24:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1348,24 +1348,26 @@
 
 ;;; LIST-REMOVE-MACRO does not include (removes) each element that satisfies
 ;;; the predicate.
-(defmacro list-remove-macro (pred reverse?)
-  `(let* ((sequence ,(if reverse?
+(defmacro list-remove-macro (pred reverse-p)
+  `(let* ((sequence ,(if reverse-p
 			 '(reverse (the list sequence))
 			 'sequence))
+	  (%start ,(if reverse-p '(- length end) 'start))
+	  (%end ,(if reverse-p '(- length start) 'end))
 	  (splice (list nil))
 	  (results (do ((index 0 (1+ index))
 			(before-start splice))
-		       ((= index (the fixnum start)) before-start)
+		       ((= index (the fixnum %start)) before-start)
 		     (declare (fixnum index))
 		     (setq splice
 			   (cdr (rplacd splice (list (pop sequence))))))))
-     (do ((index start (1+ index))
+     (do ((index %start (1+ index))
 	  (this-element)
 	  (number-zapped 0))
-	 ((or (= index (the fixnum end)) (= number-zapped (the fixnum count)))
+	 ((or (= index (the fixnum %end)) (= number-zapped (the fixnum count)))
 	  (do ((index index (1+ index)))
 	      ((null sequence)
-	       ,(if reverse?
+	       ,(if reverse-p
 		    '(nreverse (the list (cdr results)))
 		    '(cdr results)))
 	    (declare (fixnum index))
@@ -1375,6 +1377,7 @@
        (if ,pred
 	   (setq number-zapped (1+ number-zapped))
 	   (setq splice (cdr (rplacd splice (list this-element))))))))
+
 
 (defmacro list-remove (pred)
   `(list-remove-macro ,pred nil))
@@ -2232,66 +2235,60 @@
 
 (eval-when (compile eval)
 
-(defmacro vector-count-if (predicate sequence)
-  `(do ((index start (1+ index))
-	(count 0))
-       ((= index (the fixnum end)) count)
-     (declare (fixnum index count))
-     (if (funcall ,predicate (apply-key key (aref ,sequence index)))
-	 (setq count (1+ count)))))
+(defmacro vector-count-if (not-p from-end-p predicate sequence)
+  (let ((next-index (if from-end-p '(1- index) '(1+ index)))
+	(pred `(funcall ,predicate (apply-key key (aref ,sequence index)))))
+    `(let ((%start ,(if from-end-p '(1- end) 'start))
+	   (%end ,(if from-end-p '(1- start) 'end)))
+       (do ((index %start ,next-index)
+	    (count 0))
+	   ((= index (the fixnum %end)) count)
+	 (declare (fixnum index count))
+	 (,(if not-p 'unless 'when) ,pred
+	   (setq count (1+ count)))))))
 
-(defmacro list-count-if (predicate sequence)
-  `(do ((sequence (nthcdr start ,sequence))
-	(index start (1+ index))
-	(count 0))
-       ((or (= index (the fixnum end)) (null sequence)) count)
-     (declare (fixnum index count))
-     (if (funcall ,predicate (apply-key key (pop sequence)))
-	 (setq count (1+ count)))))
+(defmacro list-count-if (not-p from-end-p predicate sequence)
+  (let ((pred `(funcall ,predicate (apply-key key (pop sequence)))))
+    `(let ((%start ,(if from-end-p '(- length end) 'start))
+	   (%end ,(if from-end-p '(- length start) 'end))
+	   (sequence ,(if from-end-p '(reverse sequence) 'sequence)))
+       (do ((sequence (nthcdr %start ,sequence))
+	    (index %start (1+ index))
+	    (count 0))
+	   ((or (= index (the fixnum %end)) (null sequence)) count)
+	 (declare (fixnum index count))
+	 (,(if not-p 'unless 'when) ,pred
+	   (setq count (1+ count)))))))
 
 )
 
 (defun count-if (test sequence &key from-end (start 0) end key)
   "Returns the number of elements in SEQUENCE satisfying TEST(el)."
-  (declare (ignore from-end) (fixnum start))
-  (let ((end (or end (length sequence))))
+  (declare (fixnum start))
+  (let* ((length (length sequence))
+	 (end (or end length)))
     (declare (type index end))
     (seq-dispatch sequence
-		  (list-count-if test sequence)
-		  (vector-count-if test sequence))))
+		  (if from-end
+		      (list-count-if nil t test sequence)
+		      (list-count-if nil nil test sequence))
+		  (if from-end
+		      (vector-count-if nil t test sequence)
+		      (vector-count-if nil nil test sequence)))))
 
-
-;;; Count-if-not:
-
-(eval-when (compile eval)
-
-(defmacro vector-count-if-not (predicate sequence)
-  `(do ((index start (1+ index))
-	(count 0))
-       ((= index (the fixnum end)) count)
-     (declare (fixnum index count))
-     (if (not (funcall ,predicate (apply-key key (aref ,sequence index))))
-	 (setq count (1+ count)))))
-
-(defmacro list-count-if-not (predicate sequence)
-  `(do ((sequence (nthcdr start ,sequence))
-	(index start (1+ index))
-	(count 0))
-       ((or (= index (the fixnum end)) (null sequence)) count)
-     (declare (fixnum index count))
-     (if (not (funcall ,predicate (apply-key key (pop sequence))))
-	 (setq count (1+ count)))))
-
-)
-
 (defun count-if-not (test sequence &key from-end (start 0) end key)
-  "Returns the number of elements in SEQUENCE not satisfying TEST(el)."
-  (declare (ignore from-end) (fixnum start))
-  (let ((end (or end (length sequence))))
+  "Returns the number of elements in SEQUENCE satisfying TEST(el)."
+  (declare (fixnum start))
+  (let* ((length (length sequence))
+	 (end (or end length)))
     (declare (type index end))
     (seq-dispatch sequence
-		  (list-count-if-not test sequence)
-		  (vector-count-if-not test sequence))))
+		  (if from-end
+		      (list-count-if t t test sequence)
+		      (list-count-if t nil test sequence))
+		  (if from-end
+		      (vector-count-if t t test sequence)
+		      (vector-count-if t nil test sequence)))))
 
 
 ;;; Mismatch utilities:
