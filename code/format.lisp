@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.15 1991/12/01 16:40:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.16 1991/12/01 18:06:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -609,7 +609,7 @@
 ;;; FORMAT-PRINT-NUMBER does most of the work for the numeric printing
 ;;; directives.  The parameters are interpreted as defined for ~D.
 ;;;
-(defun format-print-integer (number stream print-commas-p print-sign-p
+(defun format-print-integer (stream number print-commas-p print-sign-p
 			     radix mincol padchar commachar commainterval)
   (let ((*print-base* radix)
 	(*print-radix* nil))
