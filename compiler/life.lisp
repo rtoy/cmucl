@@ -950,7 +950,7 @@
 		(setf (tn-global-conflicts original) conf))
 	    (do ((current conf (global-conflicts-tn-next current)))
 		((null current))
-	      (change-global-conflicts-tn conf original))
+	      (change-global-conflicts-tn current original))
 	    (return))
 	  (unless conf (return))))
 
