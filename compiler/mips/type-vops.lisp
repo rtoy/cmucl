@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.35 1992/08/04 14:16:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.36 1992/08/16 16:15:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -154,7 +154,7 @@
 
 (defun %test-headers (value temp target not-p function-p headers
 			    &optional (drop-through (gen-label)))
-  (let ((lowtag (if function-p function-header-type other-pointer-type)))
+  (let ((lowtag (if function-p function-pointer-type other-pointer-type)))
     (multiple-value-bind
 	(when-true when-false)
 	;; WHEN-TRUE and WHEN-FALSE are the labels to branch to when
