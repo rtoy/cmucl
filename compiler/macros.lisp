@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.25 1991/10/03 18:32:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.26 1991/11/12 14:13:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -435,8 +435,9 @@
               this transformation is appropriate.  If the result is false, then
               the transform automatically passes.
     :Eval-Name
-    	    - The name is actually a form to be evaluated.  Useful for getting
-	      closures that transform similar functions.
+    	    - The name and argument/result types are actually forms to be
+              evaluated.  Useful for getting closures that transform similar
+              functions.
     :Defun-Only
             - Don't actually instantiate a transform, instead just DEFUN
               Name with the specified transform definition function.  This may
@@ -474,7 +475,9 @@
 	    `(defun ,name ,@(when doc `(,doc)) ,@stuff)
 	    `(%deftransform
 	      ,(if eval-name name `',name)
-	      '(function ,arg-types ,result-type)
+	      ,(if eval-name
+		   ``(function ,,arg-types ,,result-type)
+		   `'(function ,arg-types ,result-type))
 	      #'(lambda ,@stuff)
 	      ,doc))))))
 
