@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.28 1991/10/03 18:30:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.29 1991/11/09 22:10:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,7 +153,7 @@
 ;;;
 (defun reoptimize-continuation (cont)
   (declare (type continuation cont))
-  (unless (eq (continuation-kind cont) :deleted)
+  (unless (member (continuation-kind cont) '(:deleted :unused))
     (setf (continuation-%derived-type cont) nil)
     (let ((dest (continuation-dest cont)))
       (when dest
@@ -332,7 +332,9 @@
 	 (when (dolist (arg (basic-combination-args node) nil)
 		 (when (and arg (continuation-reoptimize arg))
 		   (return t)))
-	   (ir1-optimize-combination node)))
+	   (ir1-optimize-combination node))
+	 (unless (node-deleted node)
+	   (maybe-terminate-block node)))
 	(cif 
 	 (ir1-optimize-if node))
 	(creturn
@@ -706,6 +708,35 @@
 	       (return))))))))
 
   (undefined-value))
+
+
+;;; MAYBE-TERMINATE-BLOCK  --  Interface
+;;;
+;;;    If Call is to a function that doesn't return (type NIL), then terminate
+;;; the block there, and link it to the component tail.  We also change the
+;;; call's CONT to be a dummy continuation to prevent the use from confusing
+;;; things.  This is also called during IR1 conversion, hence the BLOCK-LAST
+;;; test.
+;;;
+(defun maybe-terminate-block (call)
+  (declare (type basic-combination call))
+  (let ((block (node-block call))
+	(cont (node-cont call)))
+    (when (or (eq (continuation-derived-type cont) *empty-type*)
+	      (eq (node-derived-type call) *empty-type*))
+      (cond ((block-last block)
+	     (node-ends-block call)
+	     (delete-continuation-use call))
+	    (t
+	     (setf (block-last block) call)
+	     (delete-continuation-use call)
+	     (link-blocks block (continuation-starts-block cont))))
+      (unlink-blocks block (first (block-succ block)))
+      (assert (not (block-succ block)))
+      (link-blocks block (component-tail (block-component block)))
+      (reoptimize-continuation cont)
+      (add-continuation-use call (make-continuation))
+      t)))
 
 
 ;;; Recognize-Known-Call  --  Interface
@@ -1239,6 +1270,10 @@
 	     (args (basic-combination-args node)))
 	(when fun-changed
 	  (setf (continuation-reoptimize fun) nil)
+	  (let ((type (continuation-type fun)))
+	    (when (function-type-p type)
+	      (derive-node-type node (function-type-returns type))))
+	  (maybe-terminate-block node)
 	  (let ((use (continuation-use fun)))
 	    (when (and (ref-p use) (functional-p (ref-leaf use))
 		       (not (eq (ref-inlinep use) :notinline)))
