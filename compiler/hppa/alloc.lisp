@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/alloc.lisp,v 1.1 1992/07/13 03:48:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/alloc.lisp,v 1.2 1993/01/15 01:33:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -120,78 +120,69 @@
       (storew null-tn result fdefn-function-slot other-pointer-type)
       (storew temp result fdefn-raw-addr-slot other-pointer-type))))
 
+(define-vop (make-closure)
+  (:args (function :to :save :scs (descriptor-reg)))
+  (:info length)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 10
+    (let ((size (+ length closure-info-offset)))
+      (pseudo-atomic (:extra (pad-data-block size))
+	(inst move alloc-tn result)
+	(inst dep function-pointer-type 31 3 result)
+	(inst li (logior (ash (1- size) type-bits) closure-header-type) temp)
+	(storew temp result 0 function-pointer-type)))
+    (storew function result closure-function-slot function-pointer-type)))
+
+;;; The compiler likes to be able to directly make value cells.
+;;; 
+(define-vop (make-value-cell)
+  (:args (value :to :save :scs (descriptor-reg any-reg)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 10
+    (with-fixed-allocation
+	(result temp value-cell-header-type value-cell-size))
+    (storew value result value-cell-value-slot other-pointer-type)))
+
+
 
 ;;;; Automatic allocators for primitive objects.
 
-(define-for-each-primitive-object (obj)
-  (collect ((forms))
-    (let* ((options (primitive-object-options obj))
-	   (alloc-trans (getf options :alloc-trans))
-	   (alloc-vop (getf options :alloc-vop alloc-trans))
-	   (header (primitive-object-header obj))
-	   (lowtag (primitive-object-lowtag obj))
-	   (size (primitive-object-size obj))
-	   (variable-length (primitive-object-variable-length obj))
-	   (need-unbound-marker nil))
-      (collect ((args) (init-forms))
-	(when (and alloc-vop variable-length)
-	  (args 'extra-words))
-	(dolist (slot (primitive-object-slots obj))
-	  (let* ((name (slot-name slot))
-		 (offset (slot-offset slot)))
-	    (ecase (getf (slot-options slot) :init :zero)
-	      (:zero)
-	      (:null
-	       (init-forms `(storew null-tn result ,offset ,lowtag)))
-	      (:unbound
-	       (setf need-unbound-marker t)
-	       (init-forms `(storew temp result ,offset ,lowtag)))
-	      (:arg
-	       (args name)
-	       (init-forms `(storew ,name result ,offset ,lowtag))))))
-	(when (and (null alloc-vop) (args))
-	  (error "Slots ~S want to be initialized, but there is no alloc vop ~
-	          defined for ~S."
-		 (args) (primitive-object-name obj)))
-	(when alloc-vop
-	  (forms
-	   `(define-vop (,alloc-vop)
-	      (:args ,@(mapcar #'(lambda (name)
-				   `(,name :scs (any-reg descriptor-reg)))
-			       (args)))
-	      ,@(when (or need-unbound-marker header variable-length)
-		  `((:temporary (:scs (non-descriptor-reg)) temp)))
-	      (:results (result :scs (descriptor-reg) :from :load))
-	      (:policy :fast-safe)
-	      ,@(when alloc-trans
-		  `((:translate ,alloc-trans)))
-	      (:generator 37
-		(pseudo-atomic (,@(unless variable-length
-				    `(:extra (pad-data-block ,size))))
-		  (move alloc-tn result)
-		  (inst dep ,lowtag 31 3 result)
-		  ,@(cond
-		     ((and header variable-length)
-		      `((inst addi (* (1+ ,size) word-bytes) extra-words temp)
-			(inst dep 0 31 3 temp)
-			(inst add temp alloc-tn alloc-tn)
-			(inst sll extra-words (- type-bits word-shift) temp)
-			(inst addi (+ (ash (1- ,size) type-bits) ,header)
-			      temp temp)
-			(storew temp result 0 ,lowtag)))
-		     (variable-length
-		      (error ":REST-P T with no header in ~S?"
-			     (primitive-object-name obj)))
-		     (header
-		      `((inst li ,(logior (ash (1- size) type-bits)
-					  (symbol-value header))
-			      temp)
-			(storew temp result 0 ,lowtag)))
-		     (t
-		      nil))
-		  ,@(when need-unbound-marker
-		      `((inst li unbound-marker-type temp)))
-		  ,@(init-forms))))))))
-    (when (forms)
-      `(progn
-	 ,@(forms)))))
+(define-vop (make-unbound-marker)
+  (:args)
+  (:results (result :scs (any-reg)))
+  (:generator 1
+    (inst li unbound-marker-type result)))
+
+(define-vop (fixed-alloc)
+  (:args)
+  (:info name words type lowtag)
+  (:ignore name)
+  (:results (result :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:generator 4
+    (pseudo-atomic (:extra (pad-data-block words))
+      (inst move alloc-tn result)
+      (inst dep lowtag 31 3 result)
+      (when type
+	(inst li (logior (ash (1- words) type-bits) type) temp)
+	(storew temp result 0 lowtag)))))
+
+(define-vop (var-alloc)
+  (:args (extra :scs (any-reg)))
+  (:arg-types positive-fixnum)
+  (:info name words type lowtag)
+  (:ignore name)
+  (:results (result :scs (descriptor-reg)))
+  (:temporary (:scs (any-reg)) bytes header)
+  (:generator 6
+    (inst addi (* (1+ words) word-bytes) extra bytes)
+    (inst sll bytes (- type-bits 2) header)
+    (inst addi (+ (ash -2 type-bits) type) header header)
+    (inst dep 0 31 3 bytes)
+    (pseudo-atomic ()
+      (inst move alloc-tn result)
+      (inst dep lowtag 31 3 result)
+      (storew header result 0 lowtag)
+      (inst add alloc-tn bytes alloc-tn))))
