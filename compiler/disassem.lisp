@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.20 1993/08/17 21:01:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.21 1993/08/20 18:32:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3215,14 +3215,13 @@
 	(t
 	 (error "Can't make a compiled function from ~S" name))))
 
-(defun disassemble (object &optional (stream *standard-output*)
-			   &key (use-labels t)
+(defun disassemble (object &key (stream *standard-output*)
+			   (use-labels t)
 			   (backend c:*native-backend*))
   "Disassemble the machine code associated with OBJECT, which can be a
   function, a lambda expression, or a symbol with a function definition.  If
   it is not already compiled, the compiler is called to produce something to
-  disassemble.  If STREAM is T, *STANDARD-OUTPUT* is used (so you can 
-  use the keywords without having to type it!)."
+  disassemble."
   (declare (type (or function symbol cons) object)
 	   (type (or (member t) stream) stream)
 	   (type (member t nil) use-labels)
@@ -3232,9 +3231,7 @@
 	(c:disassem-byte-fun fun)
 	;; we can't detect closures, so be careful
 	(disassemble-function (fun-self fun)
-			      :stream (if (eq stream t)
-					  *standard-output*
-					  stream)
+			      :stream stream
 			      :use-labels use-labels
 			      :backend backend)))
   (values))
