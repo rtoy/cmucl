@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.28 2003/01/29 19:47:49 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.29 2003/02/18 15:48:29 gerd Exp $
  *
  */
 
@@ -162,6 +162,7 @@ default_cmucllib(char* argv0)
 	/* Create the colon separated list of directories */
 	
         defpath = malloc(total_len + 1);
+	*defpath = '\0';
 
         ptr = cmucllib_search_list;
         while (*ptr != NULL) {
