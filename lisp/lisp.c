@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.15 1999/02/20 15:54:44 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.16 1999/09/09 16:22:44 pw Exp $
  *
  */
 
@@ -100,8 +100,6 @@ void main(int argc, char *argv[], char *envp[])
 
     set_lossage_handler(ldb_monitor);
 
-    define_var("nil", NIL, TRUE);
-    define_var("t", T, TRUE);
     monitor = FALSE;
 
     argptr = argv;
@@ -170,6 +168,14 @@ void main(int argc, char *argv[], char *envp[])
     os_init();
     gc_init();
     validate();
+
+    /* This is the first use of malloc() and must come after the
+     * static memory layout is mmapped to avoid conflicts with possible
+     * use of mmap() by malloc().
+     */
+    define_var("nil", NIL, TRUE);
+    define_var("t"  ,   T, TRUE);
+
     globals_init();
 
     initial_function = load_core_file(core);
