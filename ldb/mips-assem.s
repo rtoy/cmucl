@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.1 1990/02/24 19:37:12 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.2 1990/02/28 18:20:35 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -101,9 +101,9 @@ call_into_lisp:
 	lw	A0, 0(ARGS)
 	lw	A1, 4(ARGS)
 	lw	A2, 8(ARGS)
-	lw	A3, 16(ARGS)
-	lw	A4, 20(ARGS)
-	lw	A5, 24(ARGS)
+	lw	A3, 12(ARGS)
+	lw	A4, 16(ARGS)
+	lw	A5, 20(ARGS)
 
 	/* Calculate LRA */
 	la	LRA, lra + type_OtherPointer
