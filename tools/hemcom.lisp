@@ -157,6 +157,7 @@
 (comf "target:hemlock/lisp-lib")
 (comf "target:hemlock/completion")
 (comf "target:hemlock/shell")
+(comf "target:hemlock/debug")
     ); WITH-COMPILATION-UNIT for commands
 
 (comf "target:hemlock/bindings")
