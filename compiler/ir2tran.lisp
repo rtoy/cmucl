@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.3 1990/02/27 11:42:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.4 1990/03/05 12:13:49 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -122,8 +122,8 @@
 ;;;
 ;;;    Move X to Y, emitting the appropriate move/coerce VOP.  If the primitive
 ;;; types don't overlap, there there must be a type error.  In this case, we
-;;; coerce the source object to T, emit an error call, then emit ILLEGAL-MOVE
-;;; to make properly start the destination's lifetime.
+;;; coerce the source object to T, then emit ILLEGAL-MOVE to make properly
+;;; start the destination's lifetime.
 ;;;
 (defun emit-move (node block x y)
   (declare (type node node) (type ir2-block block) (type tn x y))
@@ -142,15 +142,13 @@
 		  (src (if c-to-t
 			   (make-normal-tn *any-primitive-type*)
 			   x))
-		  (err (emit-constant clc::error-object-not-type))
 		  (y-type (emit-constant
 			   (type-specifier
 			    (primitive-type-type
 			     (tn-primitive-type y))))))
 	     (when c-to-t
 	       (emit-move-template node block c-to-t x src))
-	     (vop error2 node block err src y-type)
-	     (vop illegal-move node block y))))))
+	     (vop illegal-move node block src y-type y)))))
 
   (undefined-value))
 
@@ -194,7 +192,8 @@
 ;;;    Return true if TN is an ok location to compute a result of the specified
 ;;; primitive type in, i.e. no implicit coercion is needed.  This is true when
 ;;; either the primitive types are the same or when no coercion is needed
-;;; to/from T.
+;;; to/from T.  If there is a manifest type error, then we always return T so
+;;; that EMIT-MOVE gets to do its thing.
 ;;;
 (defun ok-result-tn (tn ptype)
   (declare (type tn tn) (type primitive-type ptype))
@@ -202,9 +201,10 @@
     (cond ((eq tn-ptype ptype))
 	  ((eq tn-ptype *any-primitive-type*)
 	   (not (primitive-type-coerce-to-t ptype)))
+	  ((eq ptype *any-primitive-type*)
+	   (not (primitive-type-coerce-from-t tn-ptype)))
 	  (t
-	   (assert (eq ptype *any-primitive-type*))
-	   (not (primitive-type-coerce-from-t tn-ptype))))))
+	   nil))))
 
 
 ;;; Move-Result  --  Internal
@@ -1173,17 +1173,6 @@
 
 ;;;; Function entry:
 
-
-;;; Convert these funny functions into a %Primitive use, letting %Primitive
-;;; deal with evaluating the "Fixed" codegen-info arguments.
-;;;
-(def-source-transform %more-arg-context (&rest foo)
-  `(%primitive more-arg-context ,@foo))
-;;;
-(def-source-transform %verify-argument-count (&rest foo)
-  `(%primitive verify-argument-count ,@foo))
-
-  
 ;;; Init-XEP-Environment  --  Internal
 ;;;
 ;;;    Do all the stuff that needs to be done on XEP entry:
@@ -1666,23 +1655,6 @@
 	  (nil))))
 	    
 
-;;;; Error funny functions:
-;;;
-;;; Mark these as as not returning by using TRULY-THE NIL.
-
-(def-source-transform %type-check-error (obj type)
-  `(truly-the nil (%primitive error2 clc::error-object-not-type ,obj ,type)))
-
-(def-source-transform %odd-keyword-arguments-error ()
-  '(truly-the nil (%primitive error0 clc::error-odd-keyword-arguments)))
-
-(def-source-transform %unknown-keyword-argument-error (key)
-  `(truly-the nil (%primitive error1 clc::error-unknown-keyword-argument ,key)))
-
-(def-source-transform %argument-count-error (&rest foo)
-  `(truly-the nil (%primitive argument-count-error ,@foo)))
-
-
 ;;;; N-arg functions:
 
 (macrolet ((frob (name)
@@ -1699,25 +1671,6 @@
 		  (move-continuation-result node block res cont)))))
   (frob list)
   (frob list*))
-
-#+rt-target(progn
-
-(def-primitive-translator syscall (&rest args) `(%syscall ,@args))
-(defknown %syscall (&rest t) *)
-
-(defoptimizer (%syscall ir2-convert) ((&rest args) node block)
-  (let* ((refs (move-full-call-args node block))
-	 (cont (node-cont node))
-	 (res (continuation-result-tns
-	       cont
-	       (list *any-primitive-type* *any-primitive-type*))))
-    (vop* syscall node block
-	  (refs)
-	  ((first res) (second res) nil)
-	  (length args))
-    (move-continuation-result node block res cont)))  
-
-) ; rt-target progn
 
 
 ;;;; Structure accessors:
