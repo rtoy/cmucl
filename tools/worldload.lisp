@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.74 1994/02/12 14:24:24 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.75 1994/02/14 13:16:30 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,50 +107,25 @@
   (maybe-byte-load "target:code/filesys" nil)
   (maybe-byte-load "target:code/macros" nil))
 
-(defvar *old-ie*)
-
-(setq *old-ie* (car *info-environment*))
-(setq *info-environment*
-      (list* (make-info-environment)
-	     (compact-info-environment (first *info-environment*)
-				       :name "Kernel")
-	     (rest *info-environment*)))
-(lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
-(setq *old-ie* nil)
-
 (purify :root-structures
-	`(lisp::%top-level extensions:save-lisp ,lisp::fop-codes))
+	`(lisp::%top-level extensions:save-lisp ,lisp::fop-codes)
+	:environment-name "Kernel")
 
 ;;; Load the compiler.
 #-(or no-compiler runtime)
 (progn
   (maybe-byte-load "c:loadcom.lisp")
-  (setq *old-ie* (car *info-environment*))
-  (setq *info-environment*
-	(list* (make-info-environment)
-	       (compact-info-environment (first *info-environment*)
-					 :name "Compiler")
-	       (rest *info-environment*)))
-  (lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
+  (purify :root-structures '(compile-file)
+	  :environment-name "Compiler")
 
   (maybe-byte-load "c:loadbackend.lisp")
   ;; If we want a small core, blow away the meta-compile time VOP info.
   #+small (setf (c::backend-parsed-vops c:*backend*)
 		(make-hash-table :test #'eq))
 
-  (setq *old-ie* (car *info-environment*))
-  (setq *info-environment*
-	(list* (make-info-environment)
-	       (compact-info-environment
-		(first *info-environment*)
-		:name
-		(concatenate 'string (c:backend-name c:*backend*) " backend"))
-	       (rest *info-environment*)))
-
-  (lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
-  (setq *old-ie* nil))
-
-(purify :root-structures '(compile-file)))
+  (purify :root-structures (list c:*backend*)
+	  :environment-name (concatenate 'string (c:backend-name c:*backend*)
+					 " backend")))
 
 ;;; CLX.
 ;;;
@@ -184,16 +159,6 @@
 (setf (search-list "modules:") '("./"))
 (setf (search-list "target:") *target-sl*)
 
-;; set up the initial info environment.
-(setq *old-ie* (car *info-environment*))
-(setq *info-environment*
-      (list* (make-info-environment :name "Working")
-	     (compact-info-environment (first *info-environment*)
-				       :name "Auxiliary")
-	     (rest *info-environment*)))
-(lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
-(setq *old-ie* nil)
-
 ;;; Okay, build the thing!
 ;;;
 (progn
@@ -217,6 +182,9 @@
   #-gengc (setf *need-to-collect-garbage* nil)
   #-gengc (gc-on)
   ;;
-  ;; Save the lisp.
-  (save-lisp "lisp.core" :root-structures
-	     `(ed #-(or runtime no-hemlock) ,hi::*global-command-table*)))
+  ;; Save the lisp.  If RUNTIME, there is nothing new to purify, so don't.
+  (save-lisp "lisp.core"
+	     :root-structures
+	     #-(or runtime no-hemlock) `(ed ,hi::*global-command-table*)
+	     #+(or runtime no-hemlock) ()
+	     :purify #+runtime nil #-runtime t))
