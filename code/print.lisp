@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.81 2001/06/11 13:48:02 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.82 2002/01/18 19:45:49 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -527,8 +527,6 @@
 	(output-integer object stream))
        (float
 	(output-float object stream))
-       (ratio
-	(output-ratio object stream))
        (ratio
 	(output-ratio object stream))
        (complex
@@ -1649,6 +1647,7 @@
 ;;;
 ;;;    Functioned called by OUTPUT-OBJECT to handle floats.
 ;;;
+
 (defun output-float (x stream)
   (cond
    ((float-infinity-p x)
@@ -1666,10 +1665,34 @@
 	(write-string "0.0" stream)
 	(print-float-exponent x 0 stream))
        (t
-	(output-float-aux x stream (float 1/1000 x) (float 10000000 x))))))))
-;;;  
-(defun output-float-aux (x stream e-min e-max)
-  (if (and (>= x e-min) (< x e-max))
+	(output-float-aux x stream)))))))
+
+(defconstant output-float-free-format-min 1/1000
+  "Minimum magnitute that allows the float printer to use free format,
+   instead of exponential format.  See section 22.1.3.1.3: Printing Floats
+   in the ANSI CL standard.")
+(defconstant output-float-free-format-max 10000000
+  "Maximum magnitute that allows the float printer to use free format,
+   instead of exponential format.  See section 22.1.3.1.3: Printing Floats
+   in the ANSI CL standard.")
+
+(defmacro output-float-free-format-p (x)
+  "Returns true if x can be printed in free format, as per ANSI CL."
+  (loop with x-var = (gensym)
+	for type in '(short-float single-float double-float long-float)
+	collect
+	`(,type
+	  (and (>= ,x-var ,(coerce output-float-free-format-min type))
+	       (< ,x-var ,(coerce output-float-free-format-max type))))
+	into clauses
+	finally
+	(return
+	  `(let ((,x-var ,x))
+	     (etypecase ,x-var
+	       ,@clauses)))))
+
+(defun output-float-aux (x stream)
+  (if (output-float-free-format-p x)
       ;;free format
       (multiple-value-bind (str len lpoint tpoint)
 			   (flonum-to-string x)
