@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.5 1990/04/03 03:17:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.6 1990/04/03 03:53:03 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -280,14 +280,15 @@
 	  specifier-type streamlike stringable stringlike structure-type
 	  structure-type-name structure-type-p truth two-arg-* two-arg-+
 	  two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<= two-arg-=
-	  two-arg-> two-arg->= type-difference type-intersect
-	  type-intersection type-specifier type-specifier-symbols
-	  type-union type/= type= types-intersect union-type union-type-p
-	  union-type-types values-subtypep values-type values-type-allowp
-	  values-type-intersect values-type-intersection values-type-keyp
-	  values-type-keywords values-type-optional values-type-p
-	  values-type-required values-type-rest values-type-union
-	  values-types values-types-intersect void))
+	  two-arg-> two-arg->= two-arg-and two-arg-ior two-arg-xor
+	  type-difference type-intersect type-intersection type-specifier
+	  type-specifier-symbols type-union type/= type= types-intersect
+	  union-type union-type-p union-type-types values-subtypep
+	  values-type values-type-allowp values-type-intersect
+	  values-type-intersection values-type-keyp values-type-keywords
+	  values-type-optional values-type-p values-type-required
+	  values-type-rest values-type-union values-types
+	  values-types-intersect void))
 
 
 (in-package "EXTENSIONS")
