@@ -3,6 +3,8 @@
 
 (when (find-package "PCL")
   (rename-package "PCL" "OLD-PCL"))
+(when (find-package  "SLOT-ACCESSOR-NAME")
+  (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
 
 (setf c:*suppress-values-declaration* t)
 (pushnew :setf *features*)
