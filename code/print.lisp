@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.17 1990/11/27 15:51:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.18 1990/11/29 02:32:27 ram Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -280,7 +280,11 @@
 	 (output-sap object stream))
 	(weak-pointer
 	 (output-weak-pointer object stream))
-	(t (output-random object stream)))))
+	(t
+	 (if (and (fboundp 'funcallable-instance-p)
+		  (funcallable-instance-p object))
+	     (pcl:print-object object stream)
+	     (output-random object stream))))))
 
 
 ;;;; Symbol Printing Subfunctions
@@ -1348,8 +1352,6 @@
 	      (write-string "Closure Over " stream)
 	      (output-function-object (%primitive c::closure-function object)
 				      stream))))
-	   (#.vm:funcallable-instance-header-type
-	    (pcl::print-object object stream))
 	   (#.vm:value-cell-header-type
 	    (write-string "Value Cell" stream))
 	   (#.vm:unbound-marker-type
