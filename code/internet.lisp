@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.11 1992/07/15 11:43:13 garland Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.12 1992/12/18 19:02:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,20 +131,28 @@
 	  (make-host-entry
 	   :name (slot hostent 'name)
 	   :aliases
-	   (loop
-	     for index upfrom 0
-	     while (not (zerop (deref (cast (slot hostent 'aliases)
-					    (* (unsigned 32)))
-				      index)))
-	     collect (deref (slot hostent 'aliases) index))
+	   (collect ((results))
+	     (iterate repeat ((index 0))
+	       (declare (type kernel:index index))
+	       (cond ((zerop (deref (cast (slot hostent 'aliases)
+					  (* (unsigned 32)))
+				    index))
+		      (results))
+		     (t
+		      (results (deref (slot hostent 'aliases) index))
+		      (repeat (1+ index))))))
 	   :addr-type (slot hostent 'addrtype)
 	   :addr-list
-	   (loop
-	     for index upfrom 0
-	     while (not (zerop (deref (cast (slot hostent 'addr-list)
-					    (* (unsigned 32)))
-				      index)))
-	     collect (deref (deref (slot hostent 'addr-list) index))))))))
+	   (collect ((results))
+	     (iterate repeat ((index 0))
+	       (declare (type kernel:index index))
+	       (cond ((zerop (deref (cast (slot hostent 'addr-list)
+					  (* (unsigned 32)))
+				    index))
+		      (results))
+		     (t
+		      (results (deref (deref (slot hostent 'addr-list) index)))
+		      (repeat (1+ index)))))))))))
 
 (defun create-unix-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
