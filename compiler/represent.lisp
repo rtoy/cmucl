@@ -371,7 +371,7 @@
 		       (emit-context-template
 			node block
 			(template-or-lose 'compute-old-nfp)
-			nfp-tn)
+			nfp-tn vop)
 		       (assert (not (sc-number-stack-p (tn-sc nfp-tn))))
 		       nfp-tn)))
 	       (new (emit-move-arg-template node block res val-tn this-fp
