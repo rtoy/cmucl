@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.37 2002/08/08 15:28:54 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.38 2002/10/02 17:28:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -622,11 +622,14 @@
   which shares no structure with the original argument sequences of the
   specified OUTPUT-TYPE-SPEC."
   (case (type-specifier-atom output-type-spec)
-    ((simple-vector simple-string vector string array simple-array
+    ((simple-vector simple-string vector string
 		    bit-vector simple-bit-vector base-string
 		    simple-base-string)
      (apply #'concat-to-simple* output-type-spec sequences))
     (list (apply #'concat-to-list* sequences))
+    ((array simple-array)
+     ;; Make sure these are actually vectors!
+     (apply #'concat-to-simple* (result-type-or-lose output-type-spec) sequences))
     (t
      (apply #'concatenate (result-type-or-lose output-type-spec) sequences))))
 
@@ -755,9 +758,12 @@
     (case (type-specifier-atom output-type-spec)
       ((nil) (map-for-effect function sequences))
       (list (map-to-list function sequences))
-      ((simple-vector simple-string vector string array simple-array
+      ((simple-vector simple-string vector string
 		   bit-vector simple-bit-vector base-string simple-base-string)
        (map-to-simple output-type-spec function sequences))
+      ((simple-array array)
+       ;; Make sure these are really sequences (vectors)
+       (map-to-simple (result-type-or-lose output-type-spec) function sequences))
       (t
        (apply #'map (result-type-or-lose output-type-spec t)
 	      function sequences)))))
