@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.4 1993/08/25 02:09:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.5 1994/10/04 03:40:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -635,7 +635,7 @@
 			    (invoke-debugger
 			     (make-condition
 			      'simple-condition
-			      :format-string
+			      :format-control
 			      "Error in error handler; Hemlock broken.")))))
     (clear-echo-area)
     (clear-editor-input *editor-input*)
