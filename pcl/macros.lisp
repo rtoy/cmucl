@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.25 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.26 2003/05/05 11:44:56 emarsden Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -75,7 +75,7 @@
   `(position ,item ,list :test #'eq))
 
 (defmacro neq (x y)
-  `(not (eq ,x ,y))))
+  `(not (eq ,x ,y)))
 
 (declaim (inline car-safe))
 (defun car-safe (obj)
