@@ -153,6 +153,7 @@
 #+pmax (load "assem:mips/bit-bash")
 #+pmax (load "assem:mips/array")
 #+pmax (load "assem:mips/arith")
+#+pmax (load "assem:mips/alloc")
 ); mips progn
 
 (load "c:pseudo-vops")
