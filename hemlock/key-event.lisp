@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.8 1992/03/24 19:45:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.9 1992/05/22 18:42:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,11 +52,11 @@
 ;;; This table maps a keysym to a list of names.  The first name is the
 ;;; preferred printing name.
 ;;;
-(defvar *keysyms-to-names* (make-hash-table :test #'eql))
+(defvar *keysyms-to-names*)
  
 ;;; This table maps all keysym names to the appropriate keysym.
 ;;;
-(defvar *names-to-keysyms* (make-hash-table :test #'equal))
+(defvar *names-to-keysyms*)
 
 (proclaim '(inline name-keysym keysym-names keysym-preferred-name))
 
@@ -102,7 +102,7 @@
 ;;; modifier names.  DEFINE-CLX-MODIFIER fills this in, so TRANSLATE-KEY-EVENT
 ;;; and TRANSLATE-MOUSE-KEY-EVENT can work.
 ;;;
-(defvar *modifier-translations* ())
+(defvar *modifier-translations*)
 
 ;;; This is an ordered a-list mapping defined key-event modifier names to the
 ;;; appropriate mask for the modifier.  Modifier names have a short and a long
@@ -110,7 +110,7 @@
 ;;; contiguous in this list, and the short name appears first.
 ;;; PRINT-PRETTY-KEY-EVENT and KEY-EVENT-BITS-MODIFIERS rely on this.
 ;;;
-(defvar *modifiers-to-internal-masks* ())
+(defvar *modifiers-to-internal-masks*)
 
 ;;; TRANSLATE-KEY-EVENT -- Public.
 ;;;
@@ -179,7 +179,7 @@
 ;;; Previously we couldn't, so we mapped the shift bit to a bit we could
 ;;; talke about, such as super.
 ;;;
-(defvar *mouse-translation-info* (make-array 6 :initial-element nil))
+(defvar *mouse-translation-info*)
 
 (eval-when (compile eval)
   (defmacro button-press-info (event-dispatch) `(car ,event-dispatch))
@@ -528,7 +528,7 @@
 
 ;;;; Key event lookup -- GET-KEY-EVENT and MAKE-KEY-EVENT.
 
-(defvar *keysym-high-bytes* (make-array 256 :initial-element nil))
+(defvar *keysym-high-bytes*)
 
 (defconstant modifier-bits-limit (ash 1 modifier-count-limit))
 
@@ -602,7 +602,7 @@
 ;;; This maps key-events to characters.  Users modify this by SETF'ing
 ;;; KEY-EVENT-CHAR.
 ;;;
-(defvar *key-event-characters* (make-hash-table))
+(defvar *key-event-characters*)
 
 (defun key-event-char (key-event)
   "Returns the character associated with key-event. This is SETF'able."
@@ -620,8 +620,7 @@
 ;;; This maps characters to key-events.  Users modify this by SETF'ing
 ;;; CHAR-KEY-EVENT.
 ;;;
-(defvar *character-key-events*
-  (make-array char-code-limit :initial-element nil))
+(defvar *character-key-events*)
 
 (defun char-key-event (char)
   "Returns the key-event associated with char.  This is SETF'able."
@@ -746,3 +745,8 @@
   #+clx (define-clx-modifier (xlib:make-state-mask :mod-1) "Meta")
   #+clx (define-clx-modifier (xlib:make-state-mask :control) "Control")
   #+clx (define-clx-modifier (xlib:make-state-mask :lock) "Lock"))
+
+;;; Initialize stuff if not already initialized.
+;;;
+(unless (boundp '*keysyms-to-names*)
+  (re-initialize-key-events))
