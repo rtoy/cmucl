@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.17 1990/11/19 05:06:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.18 1990/11/21 10:08:09 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -668,21 +668,17 @@
   (prepare-for-fast-read-byte *fasl-file*
     (let* ((len (fast-read-u-integer 4))
 	   (size (fast-read-byte))
-	   (type (case size
-		   (1 vm:simple-bit-vector-type)
-		   (2 vm:simple-array-unsigned-byte-2-type)
-		   (4 vm:simple-array-unsigned-byte-4-type)
-		   (8 vm:simple-array-unsigned-byte-8-type)
-		   (16 vm:simple-array-unsigned-byte-16-type)
-		   (32 vm:simple-array-unsigned-byte-32-type)
-		   (t (error "Losing i-vector element size: ~S"))))
-	   (bits (* len size))
-	   (res (%primitive allocate-vector type len
-			    (the index (ceiling bits vm:word-bits)))))
-      (declare (type (unsigned-byte 8) type)
-	       (type index len))
+	   (res (case size
+		  (1 (make-array len :element-type 'bit))
+		  (2 (make-array len :element-type '(unsigned-byte 2)))
+		  (4 (make-array len :element-type '(unsigned-byte 4)))
+		  (8 (make-array len :element-type '(unsigned-byte 8)))
+		  (16 (make-array len :element-type '(unsigned-byte 16)))
+		  (32 (make-array len :element-type '(unsigned-byte 32)))
+		  (t (error "Losing i-vector element size: ~S" size)))))
+      (declare (type index len))
       (done-with-fast-read-byte)
-      (read-n-bytes *fasl-file* res 0 (ceiling bits vm:byte-bits))
+      (read-n-bytes *fasl-file* res 0 (ceiling (* size len) vm:byte-bits))
       res)))
 
 
@@ -777,16 +773,15 @@
 	 (let ((box-num ,nitems)
 	       (code-length ,size))
 	   (declare (fixnum box-num code-length))
-	   (let ((code (%primitive vm:allocate-code-object
-				   box-num code-length)))
-	     (%primitive c::set-code-debug-info code (pop-stack))
+	   (let ((code (%primitive allocate-code-object box-num code-length)))
+	     (%primitive set-code-debug-info code (pop-stack))
 	     (do ((index (1- box-num) (1- index)))
 		 ((minusp index))
 	       (declare (fixnum index))
-	       (%primitive vm:code-constant-set code index (pop-stack)))
+	       (%primitive code-constant-set code index (pop-stack)))
 	     (system:without-gcing
 	      (let ((inst (truly-the system-area-pointer
-				     (%primitive vm:code-instructions code))))
+				     (%primitive code-instructions code))))
 		(read-n-bytes *fasl-file* inst 0 code-length)))
 	     code)))
        (error
@@ -812,7 +807,7 @@
 	(code (pop-stack))
 	(index (- (clone-arg) vm:code-constants-offset)))
     (declare (type index index))
-    (%primitive vm:code-constant-set code index value)
+    (%primitive code-constant-set code index value)
     (undefined-value)))
 
 (define-fop (fop-function-entry 142)
@@ -824,14 +819,14 @@
     (declare (type index offset))
     (unless (zerop (logand offset vm:lowtag-mask))
       (error "Unaligned function object, offset = #x~X." offset))
-    (let ((fun (%primitive c::compute-function code-object offset)))
-      (%primitive c::set-function-self fun fun)
-      (%primitive c::set-function-next fun
-		  (%primitive c::code-entry-points code-object))
-      (%primitive c::set-code-entry-points code-object fun)
-      (%primitive c::set-function-name fun name)
-      (%primitive c::set-function-arglist fun arglist)
-      (%primitive c::set-function-type fun type)
+    (let ((fun (%primitive compute-function code-object offset)))
+      (%primitive set-function-self fun fun)
+      (%primitive set-function-next fun
+		  (%primitive code-entry-points code-object))
+      (%primitive set-code-entry-points code-object fun)
+      (%primitive set-function-name fun name)
+      (%primitive set-function-arglist fun arglist)
+      (%primitive set-function-type fun type)
       (when *load-print-stuff*
 	(format t "~&; ~S defined" fun))
       fun)))
