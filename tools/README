@@ -153,6 +153,20 @@ d) Populating the kernel.core, and dumping a new lisp.core file.
    were compiled in phase a) are loaded into it, and a new lisp.core
    file is dumped out.
 
+We're not quite done yet.  This produces just a basic lisp.core.
+To complete the build so that you something similar to what the
+releases of CMUCL do, there are a few more steps:
+
+e) Build the utilities like Gray streams, simple streams, CLX, CLM,
+   and Hemlock.  Use the src/tools/build-utils.sh script for this, as
+   described below
+
+f) Create tarfiles using the src/tools/make-dist.sh script, as
+   explained below.
+
+With these tarfiles, you can install them anywhere.  The contents of
+the tarfiles will be the same as the snapshots and releases of CMUCL.
+
 When cross-compiling, there is additional phase at the beginning, and
 some of the phases happen with different hosts/platforms.  The initial
 phase is setting up and compiling the cross-compilation backend, using
@@ -265,6 +279,13 @@ Some options that are available:
   -G group     Group to use
   -O owner     Owner to use
 
+If you specify both -b and -g, you will get two sets of tarfiles.  The
+-G and -O options will attempt to set the owner and group of the files
+when building the tarfiles.  This way, when you extract the tarfiles,
+the owner and group will be set as specified.  You may need to be root
+to do this because many Unix systems don't normally let you change the
+owner and group of a file.
+
 The remaining arguments used to create the name of the tarfiles.  The
 names will have the form:
 
@@ -276,11 +297,17 @@ instead of bzip.
 
 * /src/tools/make-main-dist.sh target-directory version arch os
 
+This is script is not normally invoked by the user; make-dist will do
+it appropriately.
+
 This script creates a main distribution tarball (both in gzipped and
 bzipped variants) from the given target directory.  This will include
 all the stuff that is normally included in official release tarballs.
 
-* make-extra-dist.sh target-directory version arch os
+* src/tools/make-extra-dist.sh target-directory version arch os
+
+This is script is not normally invoked by the user; make-dist will do
+it appropriately.
 
 This script creates an extra distribution tarball (both in gzipped and
 bzipped variants) from the given target directory.  This will include
