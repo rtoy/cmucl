@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.3 1993/02/26 08:39:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.4 1993/08/12 10:56:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,6 +157,8 @@
   (check-type save-p boolean)
   (check-type alternate-scs list)
   (check-type constant-scs list)
+  (unless (= (logcount alignment) 1)
+    (error "Alignment is not a power of two: ~S" alignment))
 
   (let ((sb (meta-sb-or-lose sb-name)))
     (if (eq (sb-kind sb) :finite)
