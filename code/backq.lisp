@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.12 2004/01/16 03:13:09 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.13 2004/07/02 16:29:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,10 +261,10 @@
 		   (backq-unparse (car tail) t)))
 	 (push (backq-unparse (car tail)) accum)))
       (backq-append
-       (mapcan #'(lambda (el) (backq-unparse el t))
+       (mapcar #'(lambda (el) (backq-unparse el t))
 	       (cdr form)))
       (backq-nconc
-       (mapcan #'(lambda (el) (backq-unparse el :nconc))
+       (mapcar #'(lambda (el) (backq-unparse el :nconc))
 	       (cdr form)))
       (backq-cons
        (cons (backq-unparse (cadr form) nil)
