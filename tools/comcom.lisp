@@ -173,7 +173,9 @@
   (comf "target:compiler/rt/sap")
   (comf "target:compiler/rt/system")
   (comf "target:compiler/rt/char")
-  (comf "target:compiler/rt/float")
+  (if (eq vm::*target-float-hardware* :afpa)
+      (comf "target:compiler/rt/afpa")
+      (comf "target:compiler/rt/mc68881"))
   (comf "target:compiler/rt/memory")
   (comf "target:compiler/rt/static-fn")
   (comf "target:compiler/rt/arith")
@@ -222,6 +224,7 @@
   (comf "target:compiler/pack"))
 (comf "target:compiler/codegen")
 (comf "target:compiler/debug")
+(comf "target:compiler/assem-check")
 (comf "target:compiler/statcount")
 (comf "target:compiler/dyncount")
 
