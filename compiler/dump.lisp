@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.24 1990/11/03 03:13:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.25 1990/11/05 17:42:57 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -306,8 +306,8 @@
     ;;
     ;; Specify code format.
     (dump-fop 'lisp::fop-code-format res)
-    (dump-byte target-fasl-file-implementation res)
-    (dump-byte target-fasl-file-version res)
+    (dump-byte (backend-fasl-file-implementation *backend*) res)
+    (dump-byte (backend-fasl-file-version *backend*) res)
 
     res))
 
