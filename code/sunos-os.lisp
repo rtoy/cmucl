@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.4 1992/02/29 02:29:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.5 1992/03/26 03:35:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
 ;;; 
 (defun os-init ()
   ;; Decache version on save, because it might not be the same when we restart.
-  (setq *sofware-version* nil))
+  (setq *software-version* nil))
 
 ;;; GET-SYSTEM-INFO  --  Interface
 ;;;
