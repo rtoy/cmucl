@@ -1,6 +1,6 @@
 /* rcsupdate: utility to update a tree of RCS files.
 
-$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/rcsupdate.c,v 1.1 1991/03/09 16:34:51 wlott Exp $
+$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/rcsupdate.c,v 1.2 1991/05/17 09:12:55 wlott Exp $
 
 */
 #include <sys/types.h>
@@ -11,6 +11,8 @@ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/rcsupdate.c,v
 #include <stdio.h>
 #include <strings.h>
 #include <errno.h>
+
+static int quiet = 0;
 
 extern int errno;
 
@@ -150,35 +152,46 @@ char *localfile, *rcsfile;
     if (stat(localfile, &statbuf) < 0) {
         switch (errno) {
           case ENOENT:
-            printf("local: <doesn't exist>\trcs: ");
+	    if (!quiet)
+		printf("local: <doesn't exist>\trcs: ");
             localtime = 0;
             break;
 
           default:
-            perror("oops");
+	    if (quiet)
+		perror(localfile);
+	    else
+		perror("oops");
             return;
         }
     }
     else {
         localtime = statbuf.st_mtime;
-        printf("local: %ld\trcs: ", localtime);
+	if (!quiet)
+	    printf("local: %ld\trcs: ", localtime);
     }
     
     rcstime = last_ci_time(localfile, rcsfile);
     if (rcstime == 0) {
-        perror("oops");
+	if (quiet)
+	    perror(rcsfile);
+	else
+	    perror("oops");
         return;
     }
 
-    printf("%ld\t", rcstime);
+    if (!quiet)
+	printf("%ld\t", rcstime);
 
     if (localtime < rcstime) {
-        printf("out of date.\n");
+        if (!quiet)
+	    printf("out of date.\n");
         sprintf(buf, "rcsco %s %s", localfile, rcsfile);
         system(buf);
     }
     else
-        printf("up to date.\n");
+	if (!quiet)
+	    printf("up to date.\n");
     fflush(stdout);
 }
 
@@ -209,7 +222,8 @@ void update_rcs_files(dirname)
             strcpy(rcsptr, entry->d_name);
             strcpy(localptr, entry->d_name);
             localptr[entry->d_namlen - 2] = '\0';
-            printf("%s:\t", localfile);
+	    if (!quiet)
+		printf("%s:\t", localfile);
             update(localfile, rcsfile);
         }
     }
@@ -259,50 +273,57 @@ char *argv[];
     char localfile[MAXPATHLEN], rcsfile[MAXPATHLEN], *ptr;
     int len;
     struct stat buf;
+    int did_anything = 0;
 
-    if (argc == 1)
-        update_directory(".");
-    else
-        while (*++argv != NULL) {
-            if (stat(*argv, &buf) != -1 && (buf.st_mode & S_IFMT) == S_IFDIR)
-                update_directory(*argv);
-            else {
-                len = strlen(*argv);
+    while (*++argv != NULL) {
+	if (strcmp(*argv, "-q") == 0)
+	    quiet = 1;
+	else if (stat(*argv, &buf)!=-1 && (buf.st_mode&S_IFMT)==S_IFDIR) {
+	    update_directory(*argv);
+	    did_anything = 1;
+	}
+	else {
+	    len = strlen(*argv);
 
-                /* Determine the two names. */
-                strcpy(rcsfile, *argv);
-                strcpy(localfile, *argv);
-                if (strcmp(",v", localfile + len-2) == 0) {
-                    localfile[len-2] = '\0';
-                    ptr = rindex(localfile, '/');
-                    if (ptr == NULL)
-                        ptr = localfile;
-                    else
-                        ptr -= 3;
-                    if (strncmp(ptr, "RCS/", 4) == 0)
-                        strcpy(ptr, ptr+4);
-                } else {
-                    ptr = rindex(rcsfile, '/');
-                    if (ptr == NULL)
-                        ptr = rcsfile;
-                    else
-                        ptr++;
-                    strcpy(ptr, "RCS/");
-                    strcat(ptr, localfile + (ptr - rcsfile));
-                    strcat(ptr, ",v");
-                }
+	    /* Determine the two names. */
+	    strcpy(rcsfile, *argv);
+	    strcpy(localfile, *argv);
+	    if (strcmp(",v", localfile + len-2) == 0) {
+		localfile[len-2] = '\0';
+		ptr = rindex(localfile, '/');
+		if (ptr == NULL)
+		    ptr = localfile;
+		else
+		    ptr -= 3;
+		if (strncmp(ptr, "RCS/", 4) == 0)
+		    strcpy(ptr, ptr+4);
+	    } else {
+		ptr = rindex(rcsfile, '/');
+		if (ptr == NULL)
+		    ptr = rcsfile;
+		else
+		    ptr++;
+		strcpy(ptr, "RCS/");
+		strcat(ptr, localfile + (ptr - rcsfile));
+		strcat(ptr, ",v");
+	    }
                 
-                /* Display the file we are working on: */
-                ptr = rindex(localfile, '/');
-                if (ptr == NULL)
-                    ptr = localfile;
-                printf("%s:\t", ptr);
-                fflush(stdout);
+	    /* Display the file we are working on: */
+	    if (!quiet) {
+		ptr = rindex(localfile, '/');
+		if (ptr == NULL)
+		    ptr = localfile;
+		printf("%s:\t", ptr);
+		fflush(stdout);
+	    }
                 
-                /* Update it. */
-                update(localfile, rcsfile);
-            }
-        }
+	    /* Update it. */
+	    update(localfile, rcsfile);
+	    did_anything = 1;
+	}
+    }
+    if (!did_anything)
+	update_directory(".");
 
     write_cache();
 
