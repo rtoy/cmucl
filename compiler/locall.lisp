@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.21 1991/08/26 17:28:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.22 1991/11/15 13:41:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -337,9 +337,9 @@
 	     (= (length (leaf-refs fun)) 1)
 	     (= (length (basic-combination-args call)) 1))
     (let ((ep (car (last (optional-dispatch-entry-points fun)))))
-      (change-ref-leaf ref ep)
       (setf (basic-combination-kind call) :local)
       (pushnew ep (lambda-calls (node-home-lambda call)))
+      (change-ref-leaf ref ep)
 
       (assert-continuation-type
        (first (basic-combination-args call))
