@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.26 1991/11/16 03:55:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27 1992/10/20 23:38:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.26 1991/11/16 03:55:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27 1992/10/20 23:38:21 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -47,9 +47,6 @@
   (frob %argument-count-error argument-count-error))
 
 
-(def-source-transform %more-arg-context (&rest foo)
-  `(truly-the (values t fixnum) (%primitive more-arg-context ,@foo)))
-;;;
 (def-source-transform %verify-argument-count (&rest foo)
   `(%primitive verify-argument-count ,@foo))
 
