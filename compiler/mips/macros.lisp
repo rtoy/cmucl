@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.40 1990/11/03 03:25:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.41 1990/11/07 13:16:23 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -87,7 +87,7 @@
   (once-only ((n-target target)
 	      (n-source source)
 	      (n-offset offset))
-    (ecase vm:target-byte-order
+    (ecase (backend-byte-order *backend*)
       (:little-endian
        `(inst lbu ,n-target ,n-source ,n-offset ))
       (:big-endian
@@ -507,6 +507,7 @@
 	   (cerror-call ,vop ,continue ,error-code ,@values)
 	   ,error)))))
 
+
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
 (defmacro pseudo-atomic ((ndescr-temp) &rest forms)
@@ -521,3 +522,35 @@
        (inst nop)
        (inst break vm:pending-interrupt-trap)
        (emit-label ,label))))
+
+
+
+;;;; Other random macros.
+
+(defmacro pad-data-block (words)
+  `(logandc2 (+ (ash ,words vm:word-shift) lowtag-mask) lowtag-mask))
+
+
+(defmacro defenum ((&key (prefix "") (suffix "") (start 0) (step 1))
+		   &rest identifiers)
+  (let ((results nil)
+	(index 0)
+	(start (eval start))
+	(step (eval step)))
+    (dolist (id identifiers)
+      (when id
+	(multiple-value-bind
+	    (root docs)
+	    (if (consp id)
+		(values (car id) (cdr id))
+		(values id nil))
+	  (push `(defconstant ,(intern (concatenate 'simple-string
+						    (string prefix)
+						    (string root)
+						    (string suffix)))
+		   ,(+ start (* step index))
+		   ,@docs)
+		results)))
+      (incf index))
+    `(eval-when (compile load eval)
+       ,@(nreverse results))))
