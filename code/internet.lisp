@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.36 2002/11/22 18:17:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.37 2002/11/25 15:07:15 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -369,11 +369,11 @@ struct in_addr {
 				  reuse-address
 				  (backlog 5)
 				  )
-  (let ((socket (create-inet-socket kind)))
+  (let ((socket (create-inet-socket kind))
         (addr (if (stringp host)
 		  (host-entry-addr (or (lookup-host-entry host)
 				       (error "Unknown host: ~S." host)))
-		host)))
+		  host)))
     (when reuse-address
       (multiple-value-bind (optval errno)
 	  (set-socket-option socket sol-socket so-reuseaddr 1)
