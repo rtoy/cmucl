@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.91 1993/07/17 00:57:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.92 1993/07/30 12:09:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2652,6 +2652,16 @@
     (remhash (kernel:dd-copier info) *free-functions*)
     (ir1-convert start cont `(kernel:%%compiler-defstruct ',info))))
 
+;;; %COMPILER-ONLY-DEFSTRUCT  IR1 Convert  --  Internal
+;;;
+;;;    Don't actually compile anything, instead call the function now.  Use
+;;; EVAL so this can be compiled... 
+;;; 
+(def-ir1-translator kernel:%compiler-only-defstruct
+		    ((info inherits) start cont :kind :function)
+  (eval `(kernel:%compiler-only-defstruct ,info ,inherits))
+  (reference-constant start cont nil))
+ 
 
 ;;;; Let and Let*:
 ;;;
