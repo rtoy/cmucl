@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.31 2003/10/15 15:24:23 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.32 2004/04/13 13:21:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -147,7 +147,7 @@
 (declaim (inline round-to-dualword))
 (defun round-to-dualword (size)
   (declare (type memory-size size))
-  (logand (the memory-size (+ size lowtag-mask)) (lognot lowtag-mask)))
+  (logandc2 (the memory-size (+ size lowtag-mask)) lowtag-mask))
 
 
 ;;; VECTOR-TOTAL-SIZE  --  Internal
