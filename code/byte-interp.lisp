@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.7 1993/05/11 17:29:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.8 1993/05/11 18:11:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,8 @@
 ;;; Represents a byte-compiled closure.
 ;;;
 (defstruct (byte-closure (:include byte-function-or-closure)
-			 (:constructor make-byte-closure function data))
+			 (:constructor make-byte-closure function data)
+			 (:type kernel:funcallable-structure))
   ;;
   ;; Byte function that we call.
   (function (required-argument) :type byte-function)
@@ -64,7 +65,8 @@
 ;;; Any non-closure byte function (including the hidden function object for a
 ;;; closure.)
 ;;;
-(defstruct (byte-function (:include byte-function-or-closure))
+(defstruct (byte-function (:include byte-function-or-closure)
+			  (:type kernel:funcallable-structure))
   ;;
   ;; The component that this XEP is an entry point into.  NIL until
   ;; LOAD or MAKE-CORE-BYTE-COMPONENT fills it in.  They count on this being
@@ -76,7 +78,8 @@
 
 ;;; Fixed-argument byte function.
 ;;;
-(defstruct (simple-byte-function (:include byte-function))
+(defstruct (simple-byte-function (:include byte-function)
+				 (:type kernel:funcallable-structure))
   ;;
   ;; The number of arguments expected.
   (num-args 0 :type (integer 0 #.call-arguments-limit))
@@ -87,7 +90,8 @@
 
 ;;; Variable arg-count byte function.
 ;;;
-(defstruct (hairy-byte-function (:include byte-function))
+(defstruct (hairy-byte-function (:include byte-function)
+				(:type kernel:funcallable-structure))
   ;;
   ;; The minimum and maximum number of args, ignoring &rest and &key.
   (min-args 0 :type (integer 0 #.call-arguments-limit))
