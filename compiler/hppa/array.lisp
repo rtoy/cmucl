@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/array.lisp,v 1.3 1992/10/13 13:14:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/array.lisp,v 1.4 1993/03/01 14:59:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -328,6 +328,27 @@
     (inst fstx value offset object)
     (unless (location= result value)
       (inst funop :copy value result))))
+
+
+;;; These VOPs are used for implementing float slots in structures (whose raw
+;;; data is an unsigned-32 vector.
+;;;
+(define-vop (raw-ref-single data-vector-ref/simple-array-single-float)
+  (:translate %raw-ref-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+(define-vop (raw-set-single data-vector-set/simple-array-single-float)
+  (:translate %raw-set-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum single-float))
+;;;
+(define-vop (raw-ref-double data-vector-ref/simple-array-double-float)
+  (:translate %raw-ref-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+(define-vop (raw-set-double data-vector-set/simple-array-double-float)
+  (:translate %raw-set-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
+
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of
 ;;; what type of vector it is.

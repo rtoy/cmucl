@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/cell.lisp,v 1.3 1993/01/15 01:33:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/cell.lisp,v 1.4 1993/03/01 14:59:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,35 +222,35 @@
 
 
 
-;;;; Structure hackery:
+;;;; Instance hackery:
 
-(define-vop (structure-length)
+(define-vop (instance-length)
   (:policy :fast-safe)
-  (:translate structure-length)
+  (:translate %instance-length)
   (:args (struct :scs (descriptor-reg)))
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 4
-    (loadw res struct 0 structure-pointer-type)
+    (loadw res struct 0 instance-pointer-type)
     (inst srl res type-bits res)))
 
-(define-vop (structure-ref slot-ref)
-  (:variant structure-slots-offset structure-pointer-type)
+(define-vop (instance-ref slot-ref)
+  (:variant instance-slots-offset instance-pointer-type)
   (:policy :fast-safe)
-  (:translate structure-ref)
-  (:arg-types structure (:constant index)))
+  (:translate %instance-ref)
+  (:arg-types instance (:constant index)))
 
-(define-vop (structure-set slot-set)
+(define-vop (instance-set slot-set)
   (:policy :fast-safe)
-  (:translate structure-set)
-  (:variant structure-slots-offset structure-pointer-type)
-  (:arg-types structure (:constant index) *))
+  (:translate %instance-set)
+  (:variant instance-slots-offset instance-pointer-type)
+  (:arg-types instance (:constant index) *))
 
-(define-full-reffer structure-index-ref * structure-slots-offset
-  structure-pointer-type (descriptor-reg any-reg) * structure-ref)
+(define-full-reffer instance-index-ref * instance-slots-offset
+  instance-pointer-type (descriptor-reg any-reg) * %instance-ref)
 
-(define-full-setter structure-index-set * structure-slots-offset
-  structure-pointer-type (descriptor-reg any-reg) * structure-set)
+(define-full-setter instance-index-set * instance-slots-offset
+  instance-pointer-type (descriptor-reg any-reg) * %instance-set)
 
 
 
