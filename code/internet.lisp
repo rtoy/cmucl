@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.8 1992/02/16 13:53:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.9 1992/02/18 19:17:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -101,7 +101,7 @@
     (aliases (* c-string))
     (addrtype int)
     (length int)
-    (addr-list (* (unsigned 32)))))
+    (addr-list (* (* (unsigned 32))))))
 
 (def-alien-routine "gethostbyname" (* hostent)
   (name c-string))
@@ -110,12 +110,6 @@
   (addr unsigned-long :copy)
   (len int)
   (type int))
-
-(defmacro listify-c-array (array)
-  `(do ((results nil (cons (deref ,array index) results))
-	(index 0 (1+ index)))
-       ((zerop (deref (cast ,array (* (unsigned 32))) index))
-	(nreverse results))))
 
 (defun lookup-host-entry (host)
   (if (typep host 'host-entry)
@@ -130,9 +124,21 @@
 	(unless (zerop (sap-int (alien-sap hostent)))
 	  (make-host-entry
 	   :name (slot hostent 'name)
-	   :aliases (listify-c-array (slot hostent 'aliases))
+	   :aliases
+	   (loop
+	     for index upfrom 0
+	     while (not (zerop (deref (cast (slot hostent 'aliases)
+					    (* (unsigned 32)))
+				      index)))
+	     collect (deref (slot hostent 'aliases) index))
 	   :addr-type (slot hostent 'addrtype)
-	   :addr-list (listify-c-array (slot hostent 'addr-list)))))))
+	   :addr-list
+	   (loop
+	     for index upfrom 0
+	     while (not (zerop (deref (cast (slot hostent 'addr-list)
+					    (* (unsigned 32)))
+				      index)))
+	     collect (deref (deref (slot hostent 'addr-list) index))))))))
 
 (defun create-inet-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
