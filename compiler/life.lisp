@@ -40,16 +40,26 @@
 		  new)))
     (setf (tn-current-conflict tn) new)
 
-    (let ((global-num (tn-number tn)))
-      (do ((prev nil conf)
-	   (conf (ir2-block-global-tns block)
-		 (global-conflicts-next conf)))
-	  ((or (null conf)
-	       (> (tn-number (global-conflicts-tn conf)) global-num))
-	   (if prev
-	       (setf (global-conflicts-next prev) new)
-	       (setf (ir2-block-global-tns block) new))
-	   (setf (global-conflicts-next new) conf)))))
+    (insert-block-global-conflict new block))
+  (undefined-value))
+
+
+;;; INSERT-BLOCK-GLOBAL-CONFLICT  --  Internal
+;;;
+;;;    Do the actual insertion of the conflict New into Block's global
+;;; conflicts.
+;;; 
+(defun insert-block-global-conflict (new block)
+  (let ((global-num (tn-number (global-conflicts-tn new))))
+    (do ((prev nil conf)
+	 (conf (ir2-block-global-tns block)
+	       (global-conflicts-next conf)))
+	((or (null conf)
+	     (> (tn-number (global-conflicts-tn conf)) global-num))
+	 (if prev
+	     (setf (global-conflicts-next prev) new)
+	     (setf (ir2-block-global-tns block) new))
+	 (setf (global-conflicts-next new) conf))))
   (undefined-value))
 
 
@@ -123,7 +133,7 @@
 	  (let* ((tn (tn-ref-tn ref))
 		 (local (tn-local tn))
 		 (kind (tn-kind tn)))
-	    (when (eq kind :normal)
+	    (unless (member kind '(:component :environment :constant))
 	      (unless (eq local block)
 		(when (= ltn-num local-tn-limit)
 		  (return-from find-local-references vop))
@@ -395,6 +405,105 @@
   (undefined-value))
 
 
+;;;; Environment TN stuff:
+
+
+;;; SETUP-ENVIRONMENT-TN-CONFLICT  --  Internal
+;;;
+;;;    Add a :LIVE global conflict for TN in 2block if there is none present.
+;;; If Debug-P is false (a :ENVIRONMENT TN), then modify any existing conflict
+;;; to be :LIVE.
+;;;
+(defun setup-environment-tn-conflict (tn 2block debug-p)
+  (declare (type tn tn) (type ir2-block 2block))
+  (let ((block-num (ir2-block-number 2block)))
+    (do ((conf (tn-current-conflict tn) (global-conflicts-tn-next conf))
+	 (prev nil conf))
+	((or (null conf)
+	     (> (ir2-block-number (global-conflicts-block conf)) block-num))
+	 (setf (tn-current-conflict tn) prev)
+	 (add-global-conflict :live tn 2block nil))
+      (when (eq (global-conflicts-block conf) 2block)
+	(unless (or debug-p
+		    (eq (global-conflicts-kind conf) :live))
+	  (setf (global-conflicts-kind conf) :live)
+	  (setf (svref (ir2-block-local-tns 2block)
+		       (global-conflicts-number conf))
+		nil)
+	  (setf (global-conflicts-number conf) nil))
+	(setf (tn-current-conflict tn) conf)
+	(return))))
+  (undefined-value))
+
+
+;;; SETUP-ENVIRONMENT-TN-CONFLICTS  --  Internal
+;;;
+;;;    Iterate over all the blocks in Env, setting up :LIVE conflicts for TN.
+;;; We make the TN global if it isn't already.  The TN must have at least one
+;;; reference.
+;;;
+(defun setup-environment-tn-conflicts (component tn env debug-p)
+  (declare (type component component) (type tn tn) (type environment env))
+  (when (and debug-p (not (tn-global-conflicts tn)))
+    (convert-to-global tn))
+  (setf (tn-current-conflict tn) (tn-global-conflicts tn))
+  (do-blocks-backwards (block component)
+    (when (eq (block-environment block) env)
+      (let* ((2block (block-info block))
+	     (last (do ((b (ir2-block-next 2block) (ir2-block-next b))
+			(prev 2block b))
+		       ((not (eq (ir2-block-block b) block))
+			prev))))
+	(do ((b last (ir2-block-prev b)))
+	    ((not (eq (ir2-block-block b) block)))
+	  (setup-environment-tn-conflict tn b debug-p)))))
+  (undefined-value))
+
+  
+;;; SETUP-ENVIRONMENT-[DEBUG-]LIVE-CONFLICTS  --  Internal
+;;;
+;;;    Iterate over all the environment TNs, adding always-live conflicts as
+;;; appropriate.
+;;;
+(defun setup-environment-live-conflicts (component)
+  (declare (type component component))
+  (dolist (fun (component-lambdas component))
+    (let ((env (lambda-environment fun)))
+      (dolist (tn (ir2-environment-live-tns (environment-info env)))
+	(setup-environment-tn-conflicts component tn env nil))))
+  (undefined-value))
+;;;
+(defun setup-environment-debug-live-conflicts (component)
+  (declare (type component component))
+  (dolist (fun (component-lambdas component))
+    (let ((env (lambda-environment fun)))
+      (dolist (tn (ir2-environment-debug-live-tns (environment-info env)))
+	(setup-environment-tn-conflicts component tn env t))))
+  (undefined-value))
+
+
+;;; Convert-To-Environment-TN  --  Internal
+;;;
+;;;    Convert a :NORMAL or :DEBUG-ENVIRONMENT TN to an :ENVIRONMENT TN.  This
+;;; requires adding :LIVE conflicts to all blocks in TN-ENV.
+;;;
+(defun convert-to-environment-tn (tn tn-env)
+  (declare (type tn tn) (type environment tn-env))
+  (assert (member (tn-kind tn) '(:normal :debug-environment)))
+  (when (eq (tn-kind tn) :debug-environment)
+    (assert (eq (tn-environment tn) tn-env))
+    (let ((2env (environment-info tn-env)))
+      (setf (ir2-environment-debug-live-tns 2env)
+	    (delete tn (ir2-environment-debug-live-tns 2env)))))
+  (setup-environment-tn-conflicts *compile-component* tn tn-env nil)
+  (setf (tn-local tn) nil)
+  (setf (tn-local-number tn) nil)
+  (setf (tn-kind tn) :environment)
+  (setf (tn-environment tn) tn-env)
+  (push tn (ir2-environment-live-tns (environment-info tn-env)))
+  (undefined-value))
+
+
 ;;;; Flow analysis:
 
 ;;; Propagate-Live-TNs  --  Internal
@@ -494,39 +603,6 @@
 
 ;;;; Post-pass:
 
-;;; Convert-To-Environment-TN  --  Internal
-;;;
-;;;    Convert a :Normal TN to an :Environment TN.  This requires deleting the
-;;; existing conflict info.
-;;;
-(defun convert-to-environment-tn (tn)
-  (declare (type tn tn))
-  (assert (eq (tn-kind tn) :normal))
-  (let ((confs (tn-global-conflicts tn)))
-    (if confs
-	(do ((conf confs (global-conflicts-tn-next conf)))
-	    ((null conf))
-	  (let ((block (global-conflicts-block conf)))
-	    (unless (eq (global-conflicts-kind conf) :live)
-	      (let ((ltns (ir2-block-local-tns block))
-		    (num (global-conflicts-number conf)))
-		(assert (not (eq (svref ltns num) :more)))
-		(setf (svref ltns num) nil)))
-	    (deletef-in global-conflicts-next (ir2-block-global-tns block)
-			conf)))
-	(setf (svref (ir2-block-local-tns (tn-local tn))
-		     (tn-local-number tn))
-	      nil))
-    (setf (tn-local tn) nil)
-    (setf (tn-local-number tn) nil)
-    (setf (tn-global-conflicts tn) nil)
-    (setf (tn-kind tn) :environment)
-    (push tn (ir2-environment-live-tns
-	      (environment-info
-	       (tn-environment tn)))))
-  (undefined-value))
-
-
 ;;; Note-Conflicts  --  Internal
 ;;;
 ;;;    Note that TN conflicts with all current live TNs.  Num is TN's LTN
@@ -550,15 +626,30 @@
 ;;;    Compute a bit vector of the TNs live after VOP that aren't results.
 ;;;
 (defun compute-save-set (vop live-bits)
-  (declare (type vop vop) (type local-tn-bit-vector live-list))
+  (declare (type vop vop) (type local-tn-bit-vector live-bits))
   (let ((live (bit-vector-copy live-bits)))
     (do ((r (vop-results vop) (tn-ref-across r)))
 	((null r))
       (let ((tn (tn-ref-tn r)))
 	(ecase (tn-kind tn)
-	  (:normal (setf (sbit live (tn-local-number tn)) 0))
+	  ((:normal :debug-environment)
+	   (setf (sbit live (tn-local-number tn)) 0))
 	  (:environment :component))))
     live))
+
+
+;;; SAVED-AFTER-READ  --  Internal
+;;;
+;;;    Used to determine whether a :DEBUG-ENVIRONMENT TN should be considered
+;;; live at block end.  We return true if a VOP with non-null SAVE-P appears
+;;; before the first read of TN (hence is seen first in our backward scan.)
+;;; 
+(defun saved-after-read (tn block)
+  (do ((vop (ir2-block-last-vop block) (vop-prev vop)))
+      ((null vop) t)
+    (when (vop-info-save-p (vop-info vop)) (return t))
+    (when (find-in #'tn-ref-across tn (vop-args vop) :key #'tn-ref-tn)
+      (return nil))))
 
 
 ;;; Compute-Initial-Conflicts  --  Internal
@@ -570,13 +661,21 @@
 ;;; end, setting up the TN-Local-Conflicts and TN-Local-Number, and adding the
 ;;; TN to the live list.
 ;;;
+;;; If the block has no successors, or its successor is the component tail,
+;;; then all :DEBUG-ENVIRONMENT TNs are always added, regardless of whether
+;;; they appeared to be live.  This ensures that these TNs are considered to be
+;;; live throughout blocks that read them, but don't have any interesting
+;;; successors (such as a return or tail call.)  In this case, we set the
+;;; corresponding bit in LIVE-IN as well.
+;;;
 ;;; ### Note: we alias the global-conflicts-conflicts here as the
 ;;; tn-local-conflicts.
 ;;;
 (defun compute-initial-conflicts (block)
   (declare (type ir2-block block))
-  (let ((live-bits (bit-vector-copy (ir2-block-live-in block)))
-	(live-list nil))
+  (let* ((live-in (ir2-block-live-in block))
+	 (live-bits (bit-vector-copy live-in))
+	 (live-list nil))
 
     (do ((conf (ir2-block-global-tns block)
 	       (global-conflicts-next conf)))
@@ -591,6 +690,28 @@
 	    (setf (sbit bits num) 0)
 	    (push-in tn-next* tn live-list))
 	  (setf (tn-local-conflicts tn) bits))))
+
+    (let* ((1block (ir2-block-block block))
+	   (succ (block-succ 1block))
+	   (next (ir2-block-next block)))
+      (when (and next
+		 (not (eq (ir2-block-block next) 1block))
+		 (or (null succ)
+		     (eq (first succ)
+			 (component-tail (block-component 1block)))))
+	(do ((conf (ir2-block-global-tns block)
+		   (global-conflicts-next conf)))
+	    ((null conf))
+	  (let* ((tn (global-conflicts-tn conf))
+		 (num (global-conflicts-number conf)))
+	    (when (and num (zerop (sbit live-bits num))
+		       (eq (tn-kind tn) :debug-environment)
+		       (eq (tn-environment tn) (block-environment 1block))
+		       (saved-after-read tn block))
+	      (note-conflicts live-bits live-list tn num)
+	      (setf (sbit live-bits num) 1)
+	      (push-in tn-next* tn live-list)
+	      (setf (sbit live-in num) 1))))))
 
     (values live-bits live-list)))
 
@@ -645,7 +766,9 @@
 		  (unless (eq (tn-kind tn) :component)
 		    (force-tn-to-stack tn)
 		    (unless (eq (tn-kind tn) :environment)
-		      (convert-to-environment-tn tn))))))))
+		      (convert-to-environment-tn
+		       tn
+		       (block-environment (ir2-block-block block))))))))))
 	
 	(do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
 	    ((null ref))
@@ -680,13 +803,182 @@
     (conflict-analyze-1-block block)))
 
 
+;;;; Alias TN stuff:
+
+;;; MERGE-ALIAS-BLOCK-CONFLICTS  --  Internal
+;;;
+;;;    Destructively modify Oconf to include the conflict information in Conf.
+;;; 
+(defun merge-alias-block-conflicts (conf oconf)
+  (declare (type global-conflicts conf oconf))
+  (let* ((kind (global-conflicts-kind conf))
+	 (num (global-conflicts-number conf))
+	 (okind (global-conflicts-kind oconf))
+	 (onum (global-conflicts-number oconf))
+	 (block (global-conflicts-block oconf))
+	 (ltns (ir2-block-local-tns block)))
+    (cond
+     ((eq okind :live))
+     ((eq kind :live)
+      (setf (global-conflicts-kind oconf) :live)
+      (setf (svref ltns onum) nil)
+      (setf (global-conflicts-number oconf) nil))
+     (t
+      (unless (eq kind okind)
+	(setf (global-conflicts-kind oconf) :read))
+      ;;
+      ;; Make original conflict with all the local TNs the alias conflicted
+      ;; with.
+      (bit-ior (global-conflicts-conflicts oconf)
+	       (global-conflicts-conflicts conf)
+	       t)
+      (flet ((frob (x)
+	       (unless (zerop (sbit x num))
+		 (setf (sbit x onum) 1))))
+	;;
+	;; Make all the local TNs that conflicted with the alias conflict
+	;; with the original.
+	(dotimes (i (ir2-block-local-tn-count block))
+	  (let ((tn (svref ltns i)))
+	    (when (and tn (not (eq tn :more))
+		       (null (tn-global-conflicts tn)))
+	      (frob (tn-local-conflicts tn)))))
+	;;
+	;; Same for global TNs...
+	(do ((current (ir2-block-global-tns block)
+		      (global-conflicts-next current)))
+	    ((null current))
+	  (unless (eq (global-conflicts-kind current) :live)
+	    (frob (global-conflicts-conflicts current))))
+	;;
+	;; Make the original TN live everywhere that the alias was live.
+	(frob (ir2-block-written block))
+	(frob (ir2-block-live-in block))
+	(frob (ir2-block-live-out block))
+	(do ((vop (ir2-block-start-vop block)
+		  (vop-next vop)))
+	    ((null vop))
+	  (let ((sset (vop-save-set vop)))
+	    (when sset (frob sset)))))))
+    ;;
+    ;; Delete the alias's conflict info.
+    (when num
+      (setf (svref ltns num) nil))
+    (deletef-in global-conflicts-next (ir2-block-global-tns block) conf))
+
+  (undefined-value))
+
+
+;;; CHANGE-GLOBAL-CONFLICTS-TN  --  Internal
+;;;
+;;;    Co-opt Conf to be a conflict for TN.
+;;;
+(defun change-global-conflicts-tn (conf new)
+  (declare (type global-conflicts conf) (type tn new))
+  (setf (global-conflicts-tn conf) new)
+  (let ((ltn-num (global-conflicts-number conf))
+	(block (global-conflicts-block conf)))
+    (deletef-in global-conflicts-next (ir2-block-global-tns block) conf)
+    (setf (global-conflicts-next conf) nil)
+    (insert-block-global-conflict conf block)
+    (when ltn-num
+      (setf (svref (ir2-block-local-tns block) ltn-num) new)))
+  (undefined-value))
+
+
+;;; ENSURE-GLOBAL-TN  --  Internal
+;;;
+;;;    Do CONVERT-TO-GLOBAL on TN if it has no global conflicts.  Copy the
+;;; local conflicts into the global bit vector.
+;;;
+(defun ensure-global-tn (tn)
+  (declare (type tn tn))
+  (unless (tn-global-conflicts tn)
+    (convert-to-global tn)
+    (bit-ior (global-conflicts-conflicts (tn-global-conflicts tn))
+	     (tn-local-conflicts tn)
+	     t))
+  (undefined-value))
+
+  
+;;; MERGE-ALIAS-CONFLICTS  --  Internal
+;;;
+;;;    For each :ALIAS TN, destructively merge the conflict info into the
+;;; original TN and replace the uses of the alias.
+;;;
+;;; For any block that uses only the alias TN, just insert that conflict into
+;;; the conflicts for the original TN, changing the LTN map to refer to the
+;;; original TN.  This gives a result indistinguishable from the what there
+;;; would have been if the original TN had always been referenced.  This leaves
+;;; no sign that an alias TN was ever involved.
+;;;
+;;; If a block has references to both the alias and the original TN, then we
+;;; call MERGE-ALIAS-BLOCK-CONFLICTS to combine the conflicts into the original
+;;; conflict.
+;;; 
+(defun merge-alias-conflicts (component)
+  (declare (type component component))
+  (do ((tn (ir2-component-alias-tns (component-info component))
+	   (tn-next tn)))
+      ((null tn))
+    (let ((original (tn-save-tn tn)))
+      (ensure-global-tn tn)
+      (ensure-global-tn original)
+      (let ((conf (tn-global-conflicts tn))
+	    (oconf (tn-global-conflicts original))
+	    (oprev nil))
+	(loop
+	  (let* ((block (global-conflicts-block conf))
+		 (num (ir2-block-number block))
+		 (onum (ir2-block-number (global-conflicts-block oconf))))
+
+	    (cond ((< onum num)
+		   (shiftf oprev oconf (global-conflicts-tn-next oconf)))
+		  ((> onum num)
+		   (if oprev
+		       (setf (global-conflicts-tn-next oprev) conf)
+		       (setf (tn-global-conflicts original) conf))
+		   (change-global-conflicts-tn conf original)
+		   (shiftf conf (global-conflicts-tn-next conf) oconf))
+		  (t
+		   (merge-alias-block-conflicts conf oconf)
+		   (shiftf oprev oconf (global-conflicts-tn-next oconf))
+		   (setf conf (global-conflicts-tn-next conf)))))
+	  (unless oconf
+	    (if oprev
+		(setf (global-conflicts-tn-next oprev) conf)
+		(setf (tn-global-conflicts original) conf))
+	    (do ((current conf (global-conflicts-tn-next current)))
+		((null current))
+	      (change-global-conflicts-tn conf original))
+	    (return))
+	  (unless conf (return))))
+
+      (flet ((frob (refs)
+	       (let ((ref refs)
+		     (next nil))
+		 (loop
+		   (unless ref (return))
+		   (setq next (tn-ref-next ref))
+		   (change-tn-ref-tn ref original)
+		   (setq ref next)))))
+	(frob (tn-reads tn))
+	(frob (tn-writes tn)))
+      (setf (tn-global-conflicts tn) nil)))
+
+  (undefined-value))
+
+
 ;;; Lifetime-Analyze  --  Interface
 ;;;
 ;;;
 (defun lifetime-analyze (component)
   (lifetime-pre-pass component)
+  (setup-environment-live-conflicts component)
   (lifetime-flow-analysis component)
-  (lifetime-post-pass component))
+  (setup-environment-debug-live-conflicts component)
+  (lifetime-post-pass component)
+  (merge-alias-conflicts component))
 
 
 ;;;; Conflict testing:
@@ -747,32 +1039,6 @@
 	    (advance y-num y-conf)))))))
 
 
-;;; TNs-Conflict-Environment-Global  --  Interface
-;;;
-;;;    Return true if any of Y's blocks are in X's environment.
-;;;
-(defun tns-conflict-environment-global (x y)
-  (declare (type tn x y))
-  (let ((env (tn-environment x)))
-    (do ((conf (tn-global-conflicts y) (global-conflicts-tn-next conf)))
-	((null conf)
-	 nil)
-      (when (eq (block-environment
-		 (ir2-block-block (global-conflicts-block conf)))
-		env)
-	(return t)))))
-
-
-;;; TNs-Conflict-Environment-Local  --  Interface
-;;;
-;;;    Return true if Y's block is in X's environment.
-;;;
-(defun tns-conflict-environment-local (x y)
-  (declare (type tn x y))
-  (eq (block-environment (ir2-block-block (tn-local y)))
-      (tn-environment x)))
-
-
 ;;; TNs-Conflict  --  Interface
 ;;;
 ;;;    Return true if X and Y are distinct and the lifetimes of X and Y overlap
@@ -783,17 +1049,6 @@
   (let ((x-kind (tn-kind x))
 	(y-kind (tn-kind y)))
     (cond ((eq x y) nil)
-	  ((eq x-kind :environment)
-	   (cond ((tn-global-conflicts y)
-		  (tns-conflict-environment-global x y))
-		 ((eq (tn-kind y) :environment)
-		  (eq (tn-environment x) (tn-environment y)))
-		 (t
-		  (tns-conflict-environment-local x y))))
-	  ((eq y-kind :environment)
-	   (if (tn-global-conflicts x)
-	       (tns-conflict-environment-global y x)
-	       (tns-conflict-environment-local y x)))
 	  ((or (eq x-kind :component) (eq y-kind :component)) t)
 	  ((tn-global-conflicts x)
 	   (if (tn-global-conflicts y)
@@ -805,3 +1060,4 @@
 	   (and (eq (tn-local x) (tn-local y))
 		(not (zerop (sbit (tn-local-conflicts x)
 				  (tn-local-number y)))))))))
+
