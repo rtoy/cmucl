@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.20 1993/02/26 08:25:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.21 1993/06/24 12:25:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,9 +36,9 @@
 	  compute-restarts invoke-restart invoke-restart-interactively abort
 	  continue muffle-warning store-value use-value invoke-debugger restart
 	  condition warning serious-condition simple-condition simple-warning
-	  simple-error simple-condition-format-string
-	  simple-condition-format-arguments storage-condition stack-overflow
-	  storage-exhausted type-error type-error-datum
+	  simple-error simple-condition-format-control
+	  simple-condition-format-arguments storage-condition
+	  type-error type-error-datum
 	  type-error-expected-type simple-type-error program-error
 	  control-error stream-error stream-error-stream end-of-file file-error
 	  file-error-pathname cell-error unbound-variable undefined-function
@@ -152,7 +152,7 @@
   (let ((real-restart (find-restart restart)))
     (unless real-restart
       (error 'control-error
-	     :format-string "Restart ~S is not active."
+	     :format-control "Restart ~S is not active."
 	     :format-arguments (list restart)))
     (apply (restart-function real-restart) values)))
 
@@ -163,7 +163,7 @@
   (let ((real-restart (find-restart restart)))
     (unless real-restart
       (error 'control-error
-	     :format-string "Restart ~S is not active."
+	     :format-control "Restart ~S is not active."
 	     :format-arguments (list restart)))
     (apply (restart-function real-restart)
 	   (let ((interactive-function
@@ -355,7 +355,7 @@ The previous version is uglier, but it sets up unique run-time tags.
     (cond ((not fn) (error 'simple-type-error
 			   :datum type
 			   :expected-type '(satisfies make-function)
-			   :format-string "Not a condition type: ~S"
+			   :format-control "Not a condition type: ~S"
 			   :format-arguments (list type)))
           (t (apply fn slot-initializations)))))
 
@@ -520,7 +520,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 		     'simple-type-error
 		     :datum arguments
 		     :expected-type 'null
-		     :format-string "You may not supply additional arguments ~
+		     :format-control "You may not supply additional arguments ~
 				     when giving ~S to ~S."
 		     :format-arguments (list datum function-name)))
 	 datum)
@@ -528,13 +528,13 @@ The previous version is uglier, but it sets up unique run-time tags.
          (apply #'make-condition datum arguments))
         ((or (stringp datum) (functionp datum))
 	 (make-condition default-type
-                         :format-string datum
+                         :format-control datum
                          :format-arguments arguments))
         (t
          (error 'simple-type-error
 		:datum datum
 		:expected-type '(or symbol string)
-		:format-string "Bad argument to ~S: ~S"
+		:format-control "Bad argument to ~S: ~S"
 		:format-arguments (list function-name datum)))))
 
 
@@ -604,21 +604,15 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 (define-condition warning (condition) ())
 
-(defvar *break-on-warnings* ()
-  "If non-NIL, then WARN will enter a break loop before returning.")
 
 (defun warn (datum &rest arguments)
   "Warns about a situation by signalling a condition formed by datum and
-   arguments.  Before signalling, if *break-on-warnings* is set, then BREAK
-   is called.  While the condition is being signaled, a muffle-warning restart
+   arguments.  While the condition is being signaled, a muffle-warning restart
    exists that causes WARN to immediately return nil."
   (kernel:infinite-error-protect
     (let ((condition (coerce-to-condition datum arguments
 					  'simple-warning 'warn)))
       (check-type condition warning "a warning condition")
-      (if *break-on-warnings*
-	  (break "~A~%Break entered because of *break-on-warnings*."
-		 condition))
       (restart-case (signal condition)
 	(muffle-warning ()
 	  :report "Skip warning."
@@ -635,29 +629,29 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 
 (defun simple-condition-printer (condition stream)
-  (apply #'format stream (simple-condition-format-string condition)
+  (apply #'format stream (simple-condition-format-control condition)
 	 		 (simple-condition-format-arguments condition)))
 
-;;; The simple-condition type has a conc-name, so SIMPLE-CONDITION-FORMAT-STRING
+;;; The simple-condition type has a conc-name, so SIMPLE-CONDITION-FORMAT-CONTROL
 ;;; and SIMPLE-CONDITION-FORMAT-ARGUMENTS could be written to handle the
 ;;; simple-condition, simple-warning, simple-type-error, and simple-error types.
 ;;; This seems to create some kind of bogus multiple inheritance that the user
 ;;; sees.
 ;;;
 (define-condition simple-condition (condition)
-  (format-string
+  (format-control
    (format-arguments '()))
   (:conc-name internal-simple-condition-)
   (:report simple-condition-printer))
 
-;;; The simple-warning type has a conc-name, so SIMPLE-CONDITION-FORMAT-STRING
+;;; The simple-warning type has a conc-name, so SIMPLE-CONDITION-FORMAT-CONTROL
 ;;; and SIMPLE-CONDITION-FORMAT-ARGUMENTS could be written to handle the
 ;;; simple-condition, simple-warning, simple-type-error, and simple-error types.
 ;;; This seems to create some kind of bogus multiple inheritance that the user
 ;;; sees.
 ;;;
 (define-condition simple-warning (warning)
-  (format-string
+  (format-control
    (format-arguments '()))
   (:conc-name internal-simple-warning-)
   (:report simple-condition-printer))
@@ -666,26 +660,23 @@ The previous version is uglier, but it sets up unique run-time tags.
 (defun print-simple-error (condition stream)
   (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
 	  (internal-simple-error-function-name condition)
-	  (internal-simple-error-format-string condition)
+	  (internal-simple-error-format-control condition)
 	  (internal-simple-error-format-arguments condition)))
 
-;;; The simple-error type has a conc-name, so SIMPLE-CONDITION-FORMAT-STRING
+;;; The simple-error type has a conc-name, so SIMPLE-CONDITION-FORMAT-CONTROL
 ;;; and SIMPLE-CONDITION-FORMAT-ARGUMENTS could be written to handle the
 ;;; simple-condition, simple-warning, simple-type-error, and simple-error types.
 ;;; This seems to create some kind of bogus multiple inheritance that the user
 ;;; sees.
 ;;;
 (define-condition simple-error (error)
-  (format-string
+  (format-control
    (format-arguments '()))
   (:conc-name internal-simple-error-)
   (:report print-simple-error))
 
 
 (define-condition storage-condition (serious-condition) ())
-
-(define-condition stack-overflow    (storage-condition) ())
-(define-condition storage-exhausted (storage-condition) ())
 
 (define-condition type-error (error)
   (datum
@@ -698,13 +689,13 @@ The previous version is uglier, but it sets up unique run-time tags.
 	     (type-error-expected-type condition)))))
 
 ;;; The simple-type-error type has a conc-name, so
-;;; SIMPLE-CONDITION-FORMAT-STRING and SIMPLE-CONDITION-FORMAT-ARGUMENTS could
+;;; SIMPLE-CONDITION-FORMAT-CONTROL and SIMPLE-CONDITION-FORMAT-ARGUMENTS could
 ;;; be written to handle the simple-condition, simple-warning,
 ;;; simple-type-error, and simple-error types.  This seems to create some kind
 ;;; of bogus multiple inheritance that the user sees.
 ;;;
 (define-condition simple-type-error (type-error)
-  (format-string
+  (format-control
    (format-arguments '()))
   (:conc-name internal-simple-type-error-)
   (:report simple-condition-printer))
@@ -730,17 +721,17 @@ The previous version is uglier, but it sets up unique run-time tags.
 	      (case-failure-possibilities condition)))))
 
 
-;;; SIMPLE-CONDITION-FORMAT-STRING and SIMPLE-CONDITION-FORMAT-ARGUMENTS.
+;;; SIMPLE-CONDITION-FORMAT-CONTROL and SIMPLE-CONDITION-FORMAT-ARGUMENTS.
 ;;; These exist for the obvious types to seemingly give the impression of
 ;;; multiple inheritance.  That is, the last three types inherit from warning,
 ;;; type-error, and error while inheriting from simple-condition also.
 ;;;
-(defun simple-condition-format-string (condition)
+(defun simple-condition-format-control (condition)
   (etypecase condition
-    (simple-condition  (internal-simple-condition-format-string  condition))
-    (simple-warning    (internal-simple-warning-format-string    condition))
-    (simple-type-error (internal-simple-type-error-format-string condition))
-    (simple-error      (internal-simple-error-format-string      condition))))
+    (simple-condition  (internal-simple-condition-format-control  condition))
+    (simple-warning    (internal-simple-warning-format-control    condition))
+    (simple-type-error (internal-simple-type-error-format-control condition))
+    (simple-error      (internal-simple-error-format-control      condition))))
 ;;;
 (defun simple-condition-format-arguments (condition)
   (etypecase condition
@@ -756,11 +747,11 @@ The previous version is uglier, but it sets up unique run-time tags.
 (defun print-control-error (condition stream)
   (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
 	  (control-error-function-name condition)
-	  (control-error-format-string condition)
+	  (control-error-format-control condition)
 	  (control-error-format-arguments condition)))
 
 (define-condition control-error (error)
-  (format-string
+  (format-control
    (format-arguments nil))
   (:report print-control-error))
 
