@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.62 1997/11/16 14:00:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.63 1997/12/11 22:28:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2503,23 +2503,33 @@
 	  (values (type= (numeric-contagion x y)
 			 (numeric-contagion y y)))))))
 
-;;; Fold (OP x 0).
+;;; Fold (+ x 0).
 ;;;
-;;;    If y is not constant, not zerop, or is contagious, then give up.
+;;;    If y is not constant, not zerop, or is contagious, or a
+;;; positive float +0.0 then give up.
 ;;;
-(dolist (stuff '((+ x)
-		 (- x)
-		 (expt 1)))
-  (destructuring-bind (name result) stuff
-    (deftransform name ((x y) '(t (constant-argument t)) '* :eval-name t
-			:when :both)
-      "fold zero arg"
-      (let ((val (continuation-value y)))
-	(unless (and (zerop val)
-		     (not (and (floatp val) (minusp (float-sign val))))
-		     (not-more-contagious y x))
-	  (give-up)))
-      result)))
+(deftransform + ((x y) (t (constant-argument t)) * :when :both)
+  "fold zero arg"
+  (let ((val (continuation-value y)))
+    (unless (and (zerop val)
+		 (not (and (floatp val) (plusp (float-sign val))))
+		 (not-more-contagious y x))
+      (give-up)))
+  'x)
+
+;;; Fold (- x 0).
+;;;
+;;;    If y is not constant, not zerop, or is contagious, or a
+;;; negative float -0.0 then give up.
+;;;
+(deftransform - ((x y) (t (constant-argument t)) * :when :both)
+  "fold zero arg"
+  (let ((val (continuation-value y)))
+    (unless (and (zerop val)
+		 (not (and (floatp val) (minusp (float-sign val))))
+		 (not-more-contagious y x))
+      (give-up)))
+  'x)
 
 ;;; Fold (OP x +/-1)
 ;;;
@@ -2546,7 +2556,8 @@
     ;; multiplication and division for small integral powers.
     (unless (not-more-contagious y x)
       (give-up))
-    (cond ((= val 2) '(* x x))
+    (cond ((zerop val) 1) ; X should be coerced to the correct type.
+	  ((= val 2) '(* x x))
 	  ((= val -2) '(/ (* x x)))
 	  ((= val 3) '(* x x x))
 	  ((= val -3) '(/ (* x x x)))
