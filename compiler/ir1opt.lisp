@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.50 1992/09/07 15:41:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.51 1992/09/15 17:16:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1123,7 +1123,7 @@
 
 (declaim (start-block ir1-optimize-set constant-reference-p delete-let
 		      propagate-let-args propagate-local-call-args
-		      ir1-optimize-mv-combination))
+		      propagate-to-refs ir1-optimize-mv-combination))
 
 ;;; Propagate-To-Refs  --  Internal
 ;;;
