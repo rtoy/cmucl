@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.51 2004/05/17 17:22:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.52 2004/05/17 17:28:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -428,17 +428,20 @@
 (deftransform sxhash ((s-expr) (symbol))
   '(%sxhash-simple-string (symbol-name s-expr)))
 
-#+nil
-(deftransform sxhash ((s-expr) (symbol))
-  '(kernel:symbol-hash s-expr))
-
 #+sparc
 (deftransform sxhash ((s-expr) (symbol))
+  ;; Pick off the constant case first. (Important!)
   (if (constant-continuation-p s-expr)
       (sxhash (continuation-value s-expr))
       '(let ((result (symbol-hash s-expr)))
+	;; A 0 in the symbol-hash slot means uninitialized.  We should
+	;; probably use -1 instead, once we make sure that NIL doesn't
+	;; have a negative hash value.
 	(if (<= result 0)
 	    (let ((sxhash (%sxhash-simple-string (symbol-name s-expr))))
+	      ;; If 0 is the unitialized indicator, should we make
+	      ;; sure we never store 0 into this slot?  It would be
+	      ;; pretty bad if it that happens.
 	      (%set-symbol-hash s-expr sxhash)
 	      sxhash)
 	    result))))
