@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.9 1991/07/09 21:50:09 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.10 1991/07/29 11:11:24 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1113,8 +1113,9 @@
 	    ((valid-spot mark t) (return mark))))
     (mark-after mark)))
 
+
 
-;;;; LISP Mode commands
+;;;; Indentation commands and hook functions.
 
 (defcommand "Defindent" (p)
   "Define the Lisp indentation for the current function.
@@ -1139,7 +1140,72 @@
 	      (when (minusp i)
 		(editor-error "Indentation must be non-negative."))
 	      (defindent s i))))))
-  (indent-command ()))
+  (indent-command nil))
+
+(defcommand "Indent Form" (p)
+  "Indent Lisp code in the next form."
+  "Indent Lisp code in the next form."
+  (declare (ignore p))
+  (let ((point (current-point)))
+    (pre-command-parse-check point)
+    (with-mark ((m point))
+      (unless (form-offset m 1) (editor-error))
+      (lisp-indent-region (region point m) "Indent Form"))))
+
+;;; LISP-INDENT-REGION -- Internal.
+;;;
+;;; This indents a region of Lisp code without doing excessive redundant
+;;; computation.  We parse the entire region once, then scan through doing
+;;; indentation on each line.  We forcibly reparse each line that we indent so
+;;; that the list operations done to determine indentation of subsequent lines
+;;; will work.  This is done undoably with save1, save2, buf-region, and
+;;; undo-region.
+;;;
+(defun lisp-indent-region (region &optional (undo-text "Lisp region indenting"))
+  (check-region-query-size region)
+  (let ((start (region-start region))
+	(end (region-end region)))
+    (with-mark ((m1 start)
+		(m2 end))
+      (funcall (value parse-start-function) m1)
+      (funcall (value parse-end-function) m2)
+      (parse-over-block (mark-line m1) (mark-line m2)))
+    (let* ((first-line (mark-line start))
+	   (last-line (mark-line end))
+	   (prev (line-previous first-line))
+	   (prev-line-info
+	    (and prev (getf (line-plist prev) 'lisp-info)))
+	   (save1 (line-start (copy-mark start :right-inserting)))
+	   (save2 (line-end (copy-mark end :left-inserting)))
+	   (buf-region (region save1 save2))
+	   (undo-region (copy-region buf-region)))
+      (with-mark ((bol start :left-inserting))
+	(do ((line first-line (line-next line)))
+	    (nil)
+	  (line-start bol line)
+	  (insert-lisp-indentation bol)
+	  (let ((line-info (getf (line-plist line) 'lisp-info)))
+	    (parse-lisp-line-info bol line-info prev-line-info)
+	    (setq prev-line-info line-info))
+	  (when (eq line last-line) (return nil))))
+      (make-region-undo :twiddle undo-text buf-region undo-region))))
+
+;;; INDENT-FOR-LISP -- Internal.
+;;;
+;;; This is the value of "Indent Function" for "Lisp" mode.
+;;;
+(defun indent-for-lisp (mark)
+  (line-start mark)
+  (pre-command-parse-check mark)
+  (insert-lisp-indentation mark))
+
+(defun insert-lisp-indentation (m)
+  (delete-horizontal-space m)
+  (funcall (value indent-with-tabs) m (lisp-indentation m)))
+
+
+
+;;;; Most "Lisp" mode commands.
 
 (defcommand "Beginning of Defun" (p)
   "Move the point to the beginning of a top-level form.
@@ -1362,137 +1428,6 @@
 	      (move-mark point s2)))))))
 
 
-(defcommand "Indent Form" (p)
-  "Indent Lisp code in the next form."
-  "Indent Lisp code in the next form."
-  (declare (ignore p))
-  (let ((point (current-point)))
-    (pre-command-parse-check point)
-    (with-mark ((m point))
-      (unless (form-offset m 1) (editor-error))
-      (lisp-indent-region (region point m) "Indent Form"))))
-
-;;; LISP-INDENT-REGION indents a region of Lisp code without doing excessive
-;;; redundant computation.  We parse the entire region once, then scan through
-;;; doing indentation on each line.  We forcibly reparse each line that we
-;;; indent so that the list operations done to determine indentation of
-;;; subsequent lines will work.  This is done undoably with save1, save2,
-;;; buf-region, and undo-region.
-;;;
-(defun lisp-indent-region (region &optional (undo-text "Lisp region indenting"))
-  (check-region-query-size region)
-  (let ((start (region-start region))
-	(end (region-end region)))
-    (with-mark ((m1 start)
-		(m2 end))
-      (funcall (value parse-start-function) m1)
-      (funcall (value parse-end-function) m2)
-      (parse-over-block (mark-line m1) (mark-line m2)))
-    (let* ((first-line (mark-line start))
-	   (last-line (mark-line end))
-	   (prev (line-previous first-line))
-	   (prev-line-info
-	    (and prev (getf (line-plist prev) 'lisp-info)))
-	   (save1 (line-start (copy-mark start :right-inserting)))
-	   (save2 (line-end (copy-mark end :left-inserting)))
-	   (buf-region (region save1 save2))
-	   (undo-region (copy-region buf-region)))
-      (with-mark ((bol start :left-inserting))
-	(do ((line first-line (line-next line)))
-	    (nil)
-	  (line-start bol line)
-	  (insert-lisp-indentation bol)
-	  (let ((line-info (getf (line-plist line) 'lisp-info)))
-	    (parse-lisp-line-info bol line-info prev-line-info)
-	    (setq prev-line-info line-info))
-	  (when (eq line last-line) (return nil))))
-      (make-region-undo :twiddle undo-text buf-region undo-region))))
-
-;;; INDENT-FOR-LISP is the value of "Indent Function" for "Lisp" mode.
-;;;
-(defun indent-for-lisp (mark)
-  (line-start mark)
-  (pre-command-parse-check mark)
-  (insert-lisp-indentation mark))
-
-(defun insert-lisp-indentation (m)
-  (delete-horizontal-space m)
-  (funcall (value indent-with-tabs) m (lisp-indentation m)))
-
-
-(defcommand "Fill Lisp Comment Paragraph" (p)
-  "This fills a flushleft or indented Lisp comment.
-   This also fills lines all beginning with the same initial, non-empty
-   blankspace.  When filling a comment, the current line is used to determine a
-   fill prefix by taking all the initial whitespace on the line, the semicolons,
-   and the first initial whitespace character following the semicolons.
-   If there is no comment, we simply take all the initial whitespace.  Then
-   every adjacent line with the prefix is filled as one paragraph."
-  "Fills a flushleft or indented Lisp comment."
-  (declare (ignore p))
-  ;;
-  ;; Find comment prefix.
-  (with-mark ((start (current-point))
-	      (end (current-point)))
-    (fill-lisp-comment-paragraph-prefix start end)
-    ;;
-    ;; Find comment block.
-    (let* ((prefix (region-to-string (region start end)))
-	   (length (length prefix)))
-      (declare (simple-string prefix))
-      (flet ((frob (mark direction)
-	       (loop
-		 (let* ((line (line-string (mark-line mark)))
-			(line-len (length line)))
-		   (declare (simple-string line))
-		   (unless (string= line prefix :end1 (min line-len length))
-		     (when (= direction -1)
-		       (unless (same-line-p mark end) (line-offset mark 1 0)))
-		     (return)))
-		 (unless (line-offset mark direction 0)
-		   (when (= direction 1) (line-end mark))
-		   (return)))))
-	(frob start -1)
-	(frob end 1))
-      ;;
-      ;; Do it undoable.
-      (let* ((start1 (copy-mark start :right-inserting))
-	     (end2 (copy-mark end :left-inserting))
-	     (region (region start1 end2))
- 	     (undo-region (copy-region region)))
-	(fill-region region prefix)
-	(make-region-undo :twiddle "Fill Lisp Comment Paragraph"
-			  region undo-region)))))
-
-;;; FILL-LISP-COMMENT-PARAGRAPH-PREFIX -- Internal.
-;;;
-;;; This sets start and end around the prefix to be used for filling.  We
-;;; assume we are dealing with a comment.  If there is no ";", then we try to
-;;; find some initial whitespace.  If there is a ";", we make sure the line is
-;;; blank before it to eliminate ";"'s in the middle of a line of text.
-;;; Finally, if we really have a comment instead of some indented text, we skip
-;;; the ";"'s and any immediately following whitespace.  We allow initial
-;;; whitespace, so we can fill strings with the same command.
-;;;
-(defun fill-lisp-comment-paragraph-prefix (start end)
-  (line-start start)
-  (let ((commentp t)) ; Assumes there's a comment.
-    (unless (to-line-comment (line-start end) ";")
-      (find-attribute end :whitespace #'zerop)
-      (when (start-line-p end)
-	(editor-error "No comment on line, and no initial whitespace."))
-      (setf commentp nil))
-    (when commentp
-      (unless (blank-before-p end)
-	(find-attribute (line-start end) :whitespace #'zerop)
-	(when (start-line-p end)
-	  (editor-error "Semicolon preceded by unindented text."))
-	(setf commentp nil)))
-    (when commentp
-      (find-attribute end :lisp-syntax #'(lambda (x) (not (eq x :comment))))
-      (find-attribute end :whitespace #'zerop))))
-
-
 (defcommand "Insert ()" (p)
   "Insert a pair of parentheses ().
    With positive argument, puts parentheses around the next p
@@ -1570,7 +1505,153 @@
 
 
 
-;;;; "Lisp Mode".
+;;;; Filling Lisp comments, strings, and indented text.
+
+(defhvar "Fill Lisp Comment Paragraph Confirm"
+  "This determines whether \"Fill Lisp Comment Paragraph\" will prompt for
+   confirmation to fill contiguous lines with the same initial whitespace when
+   it is invoked outside of a comment or string."
+  :value t)
+
+(defcommand "Fill Lisp Comment Paragraph" (p)
+  "This fills a flushleft or indented Lisp comment.
+   This also fills Lisp string literals using the proper indentation as a
+   filling prefix.  When invoked outside of a comment or string, this tries
+   to fill all contiguous lines beginning with the same initial, non-empty
+   blankspace.  When filling a comment, the current line is used to determine a
+   fill prefix by taking all the initial whitespace on the line, the semicolons,
+   and any whitespace following the semicolons."
+  "Fills a flushleft or indented Lisp comment."
+  (declare (ignore p))
+  (let ((point (current-point)))
+    (pre-command-parse-check point)
+    (with-mark ((start point)
+		(end point)
+		(m point))
+      (let ((commentp (fill-lisp-comment-paragraph-prefix start end)))
+	(cond (commentp
+	       (fill-lisp-comment-or-indented-text start end))
+	      ((and (not (valid-spot m nil))
+		    (form-offset m -1)
+		    (eq (character-attribute :lisp-syntax (next-character m))
+			:string-quote))
+	       (fill-lisp-string m))
+	      ((or (not (value fill-lisp-comment-paragraph-confirm))
+		   (prompt-for-y-or-n
+		    :prompt '("Not in a comment or string.  Fill contiguous ~
+			       lines with the same initial whitespace? ")))
+	       (fill-lisp-comment-or-indented-text start end)))))))
+
+;;; FILL-LISP-STRING -- Internal.
+;;;
+;;; This fills the Lisp string containing mark as if it had been entered using
+;;; Hemlock's Lisp string indentation, "Indent Function" for "Lisp" mode.  This
+;;; assumes the area around mark has already been PRE-COMMAND-PARSE-CHECK'ed,
+;;; and it ensures the string ends before doing any filling.  This function
+;;; is undo'able.
+;;;
+(defun fill-lisp-string (mark)
+  (with-mark ((end mark))
+    (unless (form-offset end 1)
+      (editor-error "Attempted to fill Lisp string, but it doesn't end?"))
+    (let* ((mark (copy-mark mark :left-inserting))
+	   (end (copy-mark end :left-inserting))
+	   (string-region (region mark end))
+	   (undo-region (copy-region string-region))
+	   (hack (make-empty-region)))
+      ;; Generate prefix.
+      (funcall (value indent-with-tabs)
+	       (region-end hack) (1+ (mark-column mark)))
+      ;; Skip opening double quote and fill string starting on its own line.
+      (mark-after mark)
+      (insert-character mark #\newline)
+      (line-start mark)
+      (setf (mark-kind mark) :right-inserting)
+      (fill-region string-region (region-to-string hack))
+      ;; Clean up inserted prefix on first line, delete inserted newline, and
+      ;; move before the double quote for undo.
+      (with-mark ((text mark :left-inserting))
+	(find-attribute text :whitespace #'zerop)
+	(delete-region (region mark text)))
+      (delete-characters mark -1)
+      (mark-before mark)
+      ;; Save undo.
+      (make-region-undo :twiddle "Fill Lisp Comment Paragraph"
+			string-region undo-region))))
+
+;;; FILL-LISP-COMMENT-OR-INDENTED-TEXT -- Internal.
+;;;
+;;; This fills all contiguous lines around start and end containing fill prefix
+;;; designated by the region between start and end.  These marks can only be
+;;; equal when there is no comment and no initial whitespace.  This is a bad
+;;; situation since this function in that situation would fill the entire
+;;; buffer into one paragraph.  This function is undo'able.
+;;;
+(defun fill-lisp-comment-or-indented-text (start end)
+  (when (mark= start end)
+    (editor-error "This command only fills Lisp comments, strings, or ~
+		   indented text, but this line is flushleft."))
+  ;;
+  ;; Find comment block.
+  (let* ((prefix (region-to-string (region start end)))
+	 (length (length prefix)))
+    (declare (simple-string prefix))
+    (flet ((frob (mark direction)
+	     (loop
+	       (let* ((line (line-string (mark-line mark)))
+		      (line-len (length line)))
+		 (declare (simple-string line))
+		 (unless (string= line prefix :end1 (min line-len length))
+		   (when (= direction -1)
+		     (unless (same-line-p mark end) (line-offset mark 1 0)))
+		   (return)))
+	       (unless (line-offset mark direction 0)
+		 (when (= direction 1) (line-end mark))
+		 (return)))))
+      (frob start -1)
+      (frob end 1))
+    ;;
+    ;; Do it undoable.
+    (let* ((start1 (copy-mark start :right-inserting))
+	   (end2 (copy-mark end :left-inserting))
+	   (region (region start1 end2))
+	   (undo-region (copy-region region)))
+      (fill-region region prefix)
+      (make-region-undo :twiddle "Fill Lisp Comment Paragraph"
+			region undo-region))))
+
+;;; FILL-LISP-COMMENT-PARAGRAPH-PREFIX -- Internal.
+;;;
+;;; This sets start and end around the prefix to be used for filling.  We
+;;; assume we are dealing with a comment.  If there is no ";", then we try to
+;;; find some initial whitespace.  If there is a ";", we make sure the line is
+;;; blank before it to eliminate ";"'s in the middle of a line of text.
+;;; Finally, if we really have a comment instead of some indented text, we skip
+;;; the ";"'s and any immediately following whitespace.  We allow initial
+;;; whitespace, so we can fill strings with the same command.
+;;;
+(defun fill-lisp-comment-paragraph-prefix (start end)
+  (line-start start)
+  (let ((commentp t)) ; Assumes there's a comment.
+    (unless (to-line-comment (line-start end) ";")
+      (find-attribute end :whitespace #'zerop)
+      #|(when (start-line-p end)
+	(editor-error "No comment on line, and no initial whitespace."))|#
+      (setf commentp nil))
+    (when commentp
+      (unless (blank-before-p end)
+	(find-attribute (line-start end) :whitespace #'zerop)
+	#|(when (start-line-p end)
+	  (editor-error "Semicolon preceded by unindented text."))|#
+	(setf commentp nil)))
+    (when commentp
+      (find-attribute end :lisp-syntax #'(lambda (x) (not (eq x :comment))))
+      (find-attribute end :whitespace #'zerop))
+    commentp))
+
+
+
+;;;; "Lisp" mode.
 
 (defcommand "LISP Mode" (p)
   "Put current buffer in LISP mode." 
