@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.18 1992/09/04 12:45:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.19 1992/09/09 00:25:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -363,6 +363,8 @@
   #+debug (format *trace-output* "~&Queuing ~S~%" inst)
   (assert (segment-run-scheduler segment))
   (let ((countdown (segment-branch-countdown segment)))
+    (when countdown
+      (decf countdown))
     (cond ((instruction-attributep (inst-attributes inst) branch)
 	   (unless countdown
 	     (setf countdown (inst-delay inst)))
@@ -371,9 +373,9 @@
 	  (t
 	   (sset-adjoin inst (segment-emittable-insts-sset segment))))
     (when countdown
-      (if (minusp (decf countdown))
-	  (schedule-pending-instructions segment)
-	  (setf (segment-branch-countdown segment) countdown))))
+      (setf (segment-branch-countdown segment) countdown)
+      (when (zerop countdown)
+	(schedule-pending-instructions segment))))
   #+debug
   (format *trace-output* "  reads ~S~%  writes ~S~%"
 	  (ext:collect ((reads))
@@ -474,7 +476,7 @@
   (let ((results nil))
     ;;
     ;; Schedule all the branches in their exact locations.
-    (let ((insts-from-end 0))
+    (let ((insts-from-end (segment-branch-countdown segment)))
       (dolist (branch (segment-queued-branches segment))
 	(let ((inst (cdr branch)))
 	  (dotimes (i (- (car branch) insts-from-end))
