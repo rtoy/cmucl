@@ -119,3 +119,13 @@
   to		; Symbol holding alist or vector from integers to keywords.
   kind		; Kind of from mapping, :vector or :alist.
   offset)	; Offset to add to value for :vector from mapping.
+
+
+;;; Condition structures:
+
+(in-package "CONDITIONS")
+
+(defstruct (condition (:constructor |constructor for condition|)
+                      (:predicate nil)
+                      (:print-function condition-print))
+  )
