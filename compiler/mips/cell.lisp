@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.39 1990/07/13 12:00:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.40 1990/07/19 18:43:23 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -193,7 +193,7 @@
 
       (emit-label loop)
       (inst beq symbol zero-tn skip)
-      (loadw value bsp-tn (- vm:binding-symbol-slot vm:binding-size))
+      (loadw value bsp-tn (- vm:binding-value-slot vm:binding-size))
       (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
       (storew zero-tn bsp-tn (- vm:binding-symbol-slot vm:binding-size))
 
