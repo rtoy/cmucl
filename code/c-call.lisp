@@ -504,7 +504,7 @@
 			 single-float double-float)
 	    (sub-compute-call-form descr))
 	   (null-terminated-string
-	    `(alien-access (make-alien ,descr
+	    `(alien-access (make-alien ',descr
 				       ,(c-type-size return-type)
 				       ,(sub-compute-call-form
 					 'system-area-pointer))
@@ -523,11 +523,19 @@
 	    (error "Can't return ~S yet." descr)))))
       (record-type
        (error "Can't return ~S yet." (c-type-description return-type)))
-      ((or array-type pointer-type)
+      (pointer-type
+       (let ((type (pointer-type-to return-type)))
+	 (unless (c-type-size type)
+	   (error "Can't return pointers to objects of unknown size: ~S"
+		  (c-type-description return-type)))
+	 `(make-alien ',(c-type-description type)
+		      ,(c-type-size type)
+		      ,(sub-compute-call-form 'system-area-pointer))))
+      (array-type
        (unless (c-type-size return-type)
 	 (error "Can't return arrays of unknown size: ~S"
 		(c-type-description return-type)))
-       `(make-alien ,(c-type-description return-type)
+       `(make-alien ',(c-type-description return-type)
 		    ,(c-type-size return-type)
 		    ,(sub-compute-call-form 'system-area-pointer))))))
 
