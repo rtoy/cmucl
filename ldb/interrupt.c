@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.11 1990/10/22 12:38:51 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.12 1990/10/29 19:24:18 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -32,7 +32,9 @@ static void fake_foreign_function_call(context)
     /* Get current LISP state from context */
     current_dynamic_space_free_pointer = (lispobj *) context->sc_regs[ALLOC];
     current_binding_stack_pointer = (lispobj *) context->sc_regs[BSP];
+#ifdef MIPS
     current_flags_register = context->sc_regs[FLAGS]|(1<<flag_Atomic);
+#endif
     
     /* Build a fake stack frame */
     current_control_frame_pointer = (lispobj *) context->sc_regs[CSP];
@@ -157,13 +159,18 @@ struct sigcontext *context;
         pending_mask = context->sc_mask;
         context->sc_mask |= BLOCKABLE;
         SetSymbolValue(INTERRUPT_PENDING, T);
-    } else if ((!foreign_function_call_active) &&
-               (context->sc_regs[FLAGS] & (1<<flag_Atomic))) {
+    } else if ((!foreign_function_call_active)
+#ifdef mips
+               && (context->sc_regs[FLAGS] & (1<<flag_Atomic))
+#endif               
+               ) {
         pending_signal = signal;
         pending_code = code;
         pending_mask = context->sc_mask;
         context->sc_mask |= BLOCKABLE;
+#ifdef mips
         context->sc_regs[FLAGS] |= (1<<flag_Interrupted);
+#endif
     } else
         handle_now(signal, code, context);
 }
@@ -171,11 +178,17 @@ struct sigcontext *context;
 static void skip_instruction(context)
      struct sigcontext *context;
 {
+#ifdef mips
     /* Skip the offending instruction */
     if (context->sc_cause & CAUSE_BD)
         emulate_branch(context, *(unsigned long *)context->sc_pc);
     else
         context->sc_pc += 4;
+#endif
+#ifdef sparc
+    context->sc_pc = context->sc_npc;
+    context->sc_npc += 4;
+#endif
 }
 
 #define call_maybe_gc() \
@@ -190,7 +203,9 @@ struct sigcontext *context;
         if (foreign_function_call_active)
             crap_out("Oh no, got a PendingInterrupt while foreign function call was active.\n");
 
+#ifdef mips
         context->sc_regs[FLAGS] &= ~(1<<flag_Interrupted);
+#endif
         SetSymbolValue(INTERRUPT_PENDING, NIL);
         if (maybe_gc_pending) {
             maybe_gc_pending = FALSE;
