@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.7 1997/11/25 16:30:47 dtc Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.8 1997/11/30 12:04:37 dtc Exp $ 
  *
  */
 
@@ -31,31 +31,6 @@ arch_init(void)
   return "lisp.core";
 }
 
-os_vm_address_t 
-arch_get_bad_addr(HANDLER_ARGS)
-{
-#ifdef __linux__
-  GET_CONTEXT
-#endif
-
-  unsigned int badinst;
-
-  if((context->sc_pc & 3) != 0) return NULL;
-
-  if( (context->sc_pc < READ_ONLY_SPACE_START ||
-       context->sc_pc >= READ_ONLY_SPACE_START+READ_ONLY_SPACE_SIZE) && 
-      ((lispobj *)context->sc_pc < current_dynamic_space ||
-       (lispobj *)context->sc_pc >= current_dynamic_space + DYNAMIC_SPACE_SIZE))
-    return NULL;
-
-  badinst = *(unsigned int *)context->sc_pc;
-#ifdef fixme
-  if((badinst>>27)!=0x16) return NULL;
-  return (os_vm_address_t)(context->sc_regs[(badinst>>16)&0x1f]+(badinst&0xffff));
-#else
-  return NULL;
-#endif
-}
 
 void arch_skip_instruction(context)
 struct sigcontext *context;
