@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.3 1997/03/26 20:29:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.4 1997/04/23 19:05:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -192,8 +192,8 @@
   (:generator 13
      (if (sc-is x fp-single-constant)
 	 (ecase (c::constant-value (c::tn-leaf x))
-		(0s0 (load-symbol-value y *fp-constant-0s0*))
-		(1s0 (load-symbol-value y *fp-constant-1s0*)))
+		(0f0 (load-symbol-value y *fp-constant-0s0*))
+		(1f0 (load-symbol-value y *fp-constant-1s0*)))
        (with-fixed-allocation (y ndescr vm:single-float-type
 				 vm:single-float-size)
 	    (with-tn@fp-top(x)
@@ -949,7 +949,7 @@
 (define-vop (=0/single-float float-test)
   (:translate =)
   (:args (x :scs (single-reg)))
-  (:arg-types single-float (:constant (single-float 0s0 0s0)))
+  (:arg-types single-float (:constant (single-float 0f0 0f0)))
   (:variant #x40))
 (define-vop (=0/double-float float-test)
   (:translate =)
@@ -960,7 +960,7 @@
 (define-vop (<0/single-float float-test)
   (:translate <)
   (:args (x :scs (single-reg)))
-  (:arg-types single-float (:constant (single-float 0s0 0s0)))
+  (:arg-types single-float (:constant (single-float 0f0 0f0)))
   (:variant #x01))
 (define-vop (<0/double-float float-test)
   (:translate <)
@@ -971,7 +971,7 @@
 (define-vop (>0/single-float float-test)
   (:translate >)
   (:args (x :scs (single-reg)))
-  (:arg-types single-float (:constant (single-float 0s0 0s0)))
+  (:arg-types single-float (:constant (single-float 0f0 0f0)))
   (:variant #x00))
 (define-vop (>0/double-float float-test)
   (:translate >)
@@ -1082,8 +1082,10 @@
 	       (:vop-var vop)
 	       (:save-p :compute-only)
 	       (:generator 5
-		(note-this-location vop :internal-error)
-		(inst wait) 		; Catch any pending FPE exceptions
+		,@(unless round-p
+		   '((note-this-location vop :internal-error)
+		     ;; Catch any pending FPE exceptions.
+		     (inst wait)))
 		;; normal mode (for now) is "round to best"
 		(with-tn@fp-top(x)
 		  ,@(unless round-p
@@ -1100,26 +1102,54 @@
 		     (inst mov y stack-temp)))
 		  ,@(unless round-p
 		     '((inst fldcw scw))))))))
-  
   (frob %unary-truncate single-reg single-float nil)
   (frob %unary-truncate double-reg double-float nil)
-
-  #-sun4
   (frob %unary-round single-reg single-float t)
-  #-sun4
   (frob %unary-round double-reg double-float t))
 
-#+sun4
-(deftransform %unary-round ((x) (float) (signed-byte 32))
-  '(let* ((trunc (truly-the (signed-byte 32) (%unary-truncate x)))
-	  (extra (- x trunc))
-	  (absx (abs extra))
-	  (one-half (float 1/2 x)))
-     (if (if (oddp trunc)
-	     (>= absx one-half)
-	     (> absx one-half))
-	 (truly-the (signed-byte 32) (%unary-truncate (+ x extra)))
-	 trunc)))
+(macrolet ((frob (trans from-sc from-type round-p)
+	     `(define-vop (,(symbolicate trans "/unsigned" from-type))
+	       (:args (x :scs (,from-sc) :target fr0))
+	       (:temporary (:sc double-reg :offset fr0-offset
+			    :from :argument :to :result) fr0)
+	       ,@(unless round-p
+		  '((:temporary (:sc unsigned-stack) stack-temp)
+		    (:temporary (:sc unsigned-stack) scw)
+		    (:temporary (:sc any-reg) rcw)))
+	       (:results (y :scs (unsigned-reg)))
+	       (:arg-types ,from-type)
+	       (:result-types unsigned-num)
+	       (:translate ,trans)
+	       (:policy :fast-safe)
+	       (:note "inline float truncate")
+	       (:vop-var vop)
+	       (:save-p :compute-only)
+	       (:generator 5
+		,@(unless round-p
+		   '((note-this-location vop :internal-error)
+		     ;; Catch any pending FPE exceptions.
+		     (inst wait)))
+		;; normal mode (for now) is "round to best"
+		(unless (zerop (tn-offset x))
+		  (copy-fp-reg-to-fr0 x))
+		,@(unless round-p
+		   '((inst fnstcw scw)	; save current control word
+		     (move rcw scw)	; into 16-bit register
+		     (inst or rcw (ash #b11 10)) ; CHOP
+		     (move stack-temp rcw)
+		     (inst fldcw stack-temp)))
+		(inst sub esp-tn 8)
+		(inst fistpl (make-ea :dword :base esp-tn))
+		(inst pop y)
+		(inst fld fr0) ; copy fr0 to at least restore stack.
+		(inst add esp-tn 4)
+		,@(unless round-p
+		   '((inst fldcw scw)))))))
+  (frob %unary-truncate single-reg single-float nil)
+  (frob %unary-truncate double-reg double-float nil)
+  (frob %unary-round single-reg single-float t)
+  (frob %unary-round double-reg double-float t))
+
 
 (define-vop (make-single-float)
   (:args (bits :scs (signed-reg) :target res
