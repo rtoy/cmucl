@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.70 2003/06/15 14:06:26 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.71 2003/10/29 12:14:35 gerd Exp $")
 
 (in-package :pcl)
 
@@ -372,10 +372,10 @@
   (multiple-value-bind (meta initargs)
       (ensure-class-values class args)
     (inform-type-system-about-class (class-prototype meta) name)
-    (setf class (apply #'make-instance meta :name name initargs)
-	  (find-class name) class)
-    (inform-type-system-about-class class name)
-    class))
+    (let ((class (apply #'make-instance meta :name name initargs)))
+      (setf (find-class name) class)
+      (inform-type-system-about-class class name)
+      class)))
 
 (defmethod ensure-class-using-class ((class pcl-class) name &rest args &key)
   (multiple-value-bind (meta initargs)

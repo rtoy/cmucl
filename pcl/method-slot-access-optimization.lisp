@@ -52,7 +52,7 @@
 ;;;
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.5 2003/06/15 14:06:26 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.6 2003/10/29 12:14:35 gerd Exp $")
  
 (in-package "PCL")
 
@@ -218,18 +218,10 @@
 ;;;
 (defun get-param/class-to-optimize (instance required-params env
 				    &optional slot-value-access slot-name)
-  (flet ((declared-rebound (instance env)
-	   (caddr (variable-declaration 'variable-rebinding instance env)))
-	 (declared-class (param env)
+  (flet ((declared-class (param env)
 	   (caddr (variable-declaration 'class param env))))
-    (let* ((instance (if (and (consp instance) (eq 'the (car instance)))
-			 (caddr instance)
-			 instance))
-	   (param (when (symbolp instance)
-		    (car (member (or (declared-rebound instance env) instance)
-				 required-params :test #'eq))))
-	   (class-name (when param
-			 (declared-class param env)))
+    (let* ((param (method-parameter instance required-params env))
+	   (class-name (when param (declared-class param env)))
 	   class
 	   optimize-p)
       (when (and class-name (not (eq class-name t)))

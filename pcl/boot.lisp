@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.69 2003/09/06 19:38:17 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.70 2003/10/29 12:14:35 gerd Exp $")
 
 (in-package :pcl)
 
@@ -588,7 +588,7 @@ work during bootstrapping.
   (let ((info (and gf-name (info function type gf-name))))
     (and (kernel::function-type-p info)
 	 (kernel::function-type-keyp info))))
-  
+
 (defun make-method-lambda-internal (method-lambda &optional env)
   (unless (and (consp method-lambda) (eq (car method-lambda) 'lambda))
     (error "~@<The ~s argument to ~s, ~s, is not a lambda form.~@:>"
@@ -600,44 +600,68 @@ work during bootstrapping.
 	   (method-name (when (consp name-decl) (car name-decl)))
 	   (generic-function-name (when method-name (car method-name)))
 	   (specialized-lambda-list (or sll-decl (cadr method-lambda))))
-      (multiple-value-bind (parameters lambda-list specializers)
+      (multiple-value-bind (params lambda-list specializers)
 	  (parse-specialized-lambda-list specialized-lambda-list)
 	;;
-	(let* ((required-parameters
-		(mapcar (lambda (r s) (declare (ignore s)) r)
-			parameters
-			specializers))
-	       (slots (mapcar #'list required-parameters))
-	       (calls (list nil))
+	(let* ((required-params
+		(loop for p in params and s in specializers collect p))
+	       ;;
+	       ;; Determine which of the required parameters are
+	       ;; assigned to.  We can't optimize slot access etc. for
+	       ;; such parameters because we can't easily tell what they are
+	       ;; actually bound to at each point where they are used.
+	       (assigned-params
+		(let ((assigned (assigned-method-params
+				 method-lambda required-params env)))
+		  (when assigned
+		    (warn 'kernel:simple-style-warning
+			  :format-control
+			  "Assignment to method parameter~p ~{~s~^, ~} ~
+                           might prevent CLOS optimizations"
+			  :format-arguments
+			  (list (length assigned) assigned)))
+		  assigned))
+	       ;;
+	       ;; Parameters not assigned to can be declared to be
+	       ;; of their respective type, which might give some
+	       ;; useful output from the compiler.
 	       (class-declarations
-		`(declare
-		  ,@(mapcan (lambda (a s)
-			      (when (and (symbolp s) (neq s t))
-				(list `(class ,a ,s))))
-			    parameters
-			    specializers)))
+		(loop for p in params and s in specializers
+		      when (and (symbolp s) (neq s t))
+			collect `(class ,p ,s) into decls
+		      finally (return `(declare ,@decls))))
+	       ;;
+	       ;; Slot access etc. through parameters not assigned to
+	       ;; can be optimized.
+	       (optimizable-params
+		(set-difference required-params assigned-params))
+	       ;;
+	       (slots (mapcar #'list optimizable-params))
+	       (calls (list nil))
 	       (block-name (nth-value 1 (valid-function-name-p
 					 generic-function-name)))
+	       ;;
+	       ;; Remove the documentation string and insert the
+	       ;; appropriate class declarations.  The documentation
+	       ;; string is removed to make it easy for us to insert
+	       ;; new declarations later, they will just go after the
+	       ;; cadr of the method lambda.  The class declarations
+	       ;; are inserted to communicate the class of the method's
+	       ;; arguments to the code walk.
 	       (method-lambda
-		  ;; Remove the documentation string and insert the
-		  ;; appropriate class declarations.  The documentation
-		  ;; string is removed to make it easy for us to insert
-		  ;; new declarations later, they will just go after the
-		  ;; cadr of the method lambda.  The class declarations
-		  ;; are inserted to communicate the class of the method's
-		  ;; arguments to the code walk.
-		  `(lambda ,lambda-list
-		     (declare (ignorable ,@required-parameters))
-		     ,class-declarations
-		     ,@declarations
-		     (block ,block-name
-		       ,@real-body)))
+		`(lambda ,lambda-list
+		   (declare (ignorable ,@required-params))
+		   ,class-declarations
+		   ,@declarations
+		   (block ,block-name
+		     ,@real-body)))
 	       (constant-value-p (and (null (cdr real-body))
 				      (constantp (car real-body))))
 	       (constant-value (and constant-value-p
 				    (eval (car real-body))))
 	       (plist (if (and constant-value-p
-			       (or (typep constant-value '(or number character))
+			       (or (typep constant-value
+					  '(or number character))
 				   (and (symbolp constant-value)
 					(symbol-package constant-value))))
 			  (list :constant-value constant-value)
@@ -647,72 +671,72 @@ work during bootstrapping.
 				(return t))
 			       ((eq p '&aux)
 				(return nil))))))
-	    (multiple-value-bind (walked-lambda call-next-method-p closurep
-						next-method-p-p)
-		;;
-		;; Process the method lambda, possibly optimizing forms
-		;; appearing in it.
-		(walk-method-lambda method-lambda required-parameters env 
-				    slots calls)
-	      (multiple-value-bind (walked-lambda-body walked-declarations
-						       walked-documentation)
-		  (system:parse-body (cddr walked-lambda) env)
-		(declare (ignore walked-documentation))
-		(when (or next-method-p-p call-next-method-p)
-		  (setq plist (list* :needs-next-methods-p t plist)))
-		;;
-		;; If slot-value, set-slot-value, slot-boundp optimizations
-		;; have been done in WALK-METHOD-LAMBDA, wrap a PV-BINDING
-		;; form around the lambda-body, which gives the code in
-		;; the lambda body access to the PV table, required parameters
-		;; and slot name lists.
-		(when (or (some #'cdr slots) (cdr calls))
-		  (multiple-value-bind (slot-name-lists call-list)
-		      (slot-name-lists-from-slots slots calls)
-		    (let ((pv-table-symbol (make-symbol "pv-table")))
-		      ;;
-		      ;; PV-TABLE-SYMBOL's symbol-value is later set
-		      ;; to an actual PV table for the method
-		      ;; function; see INITIALIZE-METHOD-FUNCTION.
-		      (setq plist 
-			    `(,@(when slot-name-lists 
-				  `(:slot-name-lists ,slot-name-lists))
+	  (multiple-value-bind (walked-lambda call-next-method-p closurep
+					      next-method-p-p)
+	      ;;
+	      ;; Process the method lambda, possibly optimizing forms
+	      ;; appearing in it.
+	      (walk-method-lambda method-lambda optimizable-params env 
+				  slots calls)
+	    (multiple-value-bind (walked-lambda-body walked-declarations
+						     walked-documentation)
+		(system:parse-body (cddr walked-lambda) env)
+	      (declare (ignore walked-documentation))
+	      (when (or next-method-p-p call-next-method-p)
+		(setq plist (list* :needs-next-methods-p t plist)))
+	      ;;
+	      ;; If slot-value, set-slot-value, slot-boundp optimizations
+	      ;; have been done in WALK-METHOD-LAMBDA, wrap a PV-BINDING
+	      ;; form around the lambda-body, which gives the code in
+	      ;; the lambda body access to the PV table, required parameters
+	      ;; and slot name lists.
+	      (when (or (some #'cdr slots) (cdr calls))
+		(multiple-value-bind (slot-name-lists call-list)
+		    (slot-name-lists-from-slots slots calls)
+		  (let ((pv-table-symbol (make-symbol "pv-table")))
+		    ;;
+		    ;; PV-TABLE-SYMBOL's symbol-value is later set
+		    ;; to an actual PV table for the method
+		    ;; function; see INITIALIZE-METHOD-FUNCTION.
+		    (setq plist 
+			  `(,@(when slot-name-lists 
+				`(:slot-name-lists ,slot-name-lists))
 			      ,@(when call-list
 				  `(:call-list ,call-list))
 			      :pv-table-symbol ,pv-table-symbol
 			      ,@plist))
-		      (setq walked-lambda-body
-			    `((pv-binding (,required-parameters ,slot-name-lists
-					   ,pv-table-symbol)
-			       ,@walked-lambda-body))))))
-		;;
-		;; When the lambda-list contains &KEY but not
-		;; &ALLOW-OTHER-KEYS, insert an &ALLOW-OTHER-KEYS
-		;; into the lambda-list.  This corresponds to
-		;; CLHS 7.6.4 which says that methods are effectively
-		;; called as if :ALLOW-OTHER-KEYS T were supplied.
-		(when (and (memq '&key lambda-list)
-			   (not (memq '&allow-other-keys lambda-list)))
-		  (let ((aux (memq '&aux lambda-list)))
-		    (setq lambda-list (nconc (ldiff lambda-list aux)
-					     (list '&allow-other-keys)
-					     aux))))
-		;;
-		;; First value is the resulting lambda.  Second value
-		;; is a list of initargs for the method instance being
-		;; created.
-		(values `(lambda (.method-args. .next-methods.)
-			   (simple-lexical-method-functions
-			       (,lambda-list .method-args. .next-methods.
-				:method-name-declaration ,name-decl
-				:call-next-method-p ,call-next-method-p
-				:next-method-p-p ,next-method-p-p
-				:closurep ,closurep
-				:applyp ,applyp)
-			     ,@walked-declarations
-			     ,@walked-lambda-body))
-			`(,@(when plist 
-			      `(:plist ,plist))
+		    (setq walked-lambda-body
+			  `((pv-binding (,optimizable-params ,slot-name-lists
+							     ,pv-table-symbol)
+					,@walked-lambda-body))))))
+	      ;;
+	      ;; When the lambda-list contains &KEY but not
+	      ;; &ALLOW-OTHER-KEYS, insert an &ALLOW-OTHER-KEYS
+	      ;; into the lambda-list.  This corresponds to
+	      ;; CLHS 7.6.4 which says that methods are effectively
+	      ;; called as if :ALLOW-OTHER-KEYS T were supplied.
+	      (when (and (memq '&key lambda-list)
+			 (not (memq '&allow-other-keys lambda-list)))
+		(let ((aux (memq '&aux lambda-list)))
+		  (setq lambda-list (nconc (ldiff lambda-list aux)
+					   (list '&allow-other-keys)
+					   aux))))
+	      ;;
+	      ;; First value is the resulting lambda.  Second value
+	      ;; is a list of initargs for the method instance being
+	      ;; created.
+	      (values `(lambda (.method-args. .next-methods.)
+			 (simple-lexical-method-functions
+			  (,lambda-list .method-args. .next-methods.
+					:method-name-declaration ,name-decl
+					:call-next-method-p ,call-next-method-p
+					:next-method-p-p ,next-method-p-p
+					:closurep ,closurep
+					:applyp ,applyp)
+			  ,@walked-declarations
+			  ,@walked-lambda-body))
+		      `(,@(when plist 
+			    `(:plist ,plist))
 			  ,@(when documentation 
 			      `(:documentation ,documentation)))))))))))
 
@@ -1161,6 +1185,50 @@ work during bootstrapping.
 	(values walked-lambda
 		call-next-method-p closurep next-method-p-p)))))
 
+;;;
+;;; If VAR is the name of a required method parameter in
+;;; REQUIRED-PARAMS, or a variable rebinding of such a parameter in
+;;; lexical environment ENV, or a form (THE ... <param>) for such a
+;;; parameter, return the method parameter's name.  Otherwise return
+;;; NIL.
+;;;
+(defun method-parameter (var required-params env)
+  (let ((var (if (eq (car-safe var) 'the) (third var) var)))
+    (when (symbolp var)
+      (let* ((vr (caddr (variable-declaration 'variable-rebinding var env)))
+	     (var (or vr var))
+	     (param (car (memq var required-params))))
+	;;
+	;; (defmethod foo ((class integer))
+        ;;   (flet ((bar ()
+	;;            (loop for class in (reverse class) do
+	;;	              (print class))))
+        ;;     (bar)))
+	;;
+	;; results in two lexical vars being recorded in env inside
+	;; the flet/loop, one for the method parameter, and one from
+	;; a let generated by the loop.
+	(when param
+	  (let ((lexvars (walker::env-lexical-variables env)))
+	    (when (= (count var lexvars :key #'car) 1)
+	      param)))))))
+
+;;;
+;;; Return a list of those parameters from REQUIRED-PARAMS which
+;;; are assigned to in METHOD-LAMBDA.
+;;;
+(defun assigned-method-params (method-lambda required-params env)
+  (let ((assigned-params ()))
+    (flet ((walk (form context env)
+	     (when (and (eq context :eval)
+			(memq (car-safe form) '(setq setf)))
+	       (loop for var in (cdr form) by #'cddr
+		     as param = (method-parameter var required-params env)
+		     when param do
+		       (pushnew param assigned-params)))
+	     form))
+      (walk-form method-lambda env #'walk)
+      assigned-params)))
 
 (defun generic-function-name-p (name)
   (and (valid-function-name-p name)

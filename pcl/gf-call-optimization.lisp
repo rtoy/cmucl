@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gf-call-optimization.lisp,v 1.5 2003/05/17 19:38:57 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gf-call-optimization.lisp,v 1.6 2003/10/29 12:14:35 gerd Rel $")
 
 (in-package "PCL")
 
@@ -106,33 +106,21 @@
 ;;; the generic function being called, and each <posN> is the index of
 ;;; a method parameter used as argument N to the generic function.
 ;;;
-(defun make-pv-call (form required-method-parameters env)
+(defun make-pv-call (form required-params env)
   (let* ((gf-name (first form))
 	 (gf-info (gf-info gf-name))
 	 (nreq (gf-info-nreq gf-info)))
-    (labels (;;
-	     ;; If VAR is the name of a required method parameter, or a
-	     ;; variable rebinding of a required method parameter,
-	     ;; return the method parameter's name.  Otherwise return
-	     ;; NIL.
-	     (method-parameter (var)
-	       (when (and (consp var) (eq 'the (car var)))
-		 (setq var (caddr var)))
-	       (when (symbolp var)
-		 (let ((rebound (caddr (variable-declaration
-					'variable-rebinding var env))))
-		   (car (memq (or rebound var) required-method-parameters)))))
-	     ;;
-	     ;; If VAR is the name of a specialized method parameter,
-	     ;; or a rebinding of it, return the method parameter's name,
-	     ;; otherwise return NIL.
-	     (specialized-method-parameter (var)
-	       (let ((param (method-parameter var)))
-		 (when param
-		   (let ((cname (caddr (variable-declaration 'class param
-							     env))))
-		     (when (and cname (not (eq t cname)))
-		       param))))))
+    (flet (;;
+	   ;; If VAR is the name of a specialized method parameter,
+	   ;; or a rebinding of it, return the method parameter's name,
+	   ;; otherwise return NIL.
+	   (specialized-method-parameter (var)
+	     (let ((param (method-parameter var required-params env)))
+	       (when param
+		 (let ((cname (caddr (variable-declaration 'class param
+							   env))))
+		   (when (and cname (not (eq t cname)))
+		     param))))))
       ;;
       ;; Check the generic function call argument list.  If all
       ;; arguments are required method parameter, and no method
@@ -147,7 +135,7 @@
 	(loop with optimizable-p = t
 	      for arg in (rest form) and i below nreq
 	      as param = (specialized-method-parameter arg)
-	      as pos = (and param (posq param required-method-parameters))
+	      as pos = (and param (posq param required-params))
 	      when (or (null param) (member pos posns)) do
 		(setq optimizable-p nil)
 		(loop-finish)
