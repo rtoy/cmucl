@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.37 1993/01/13 15:55:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.38 1993/01/27 10:03:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,7 +82,7 @@
 
 (define-full-setter %set-array-dimension *
   array-dimensions-offset other-pointer-type
-  (any-reg) positive-fixnum lisp::%set-array-dimension nil)
+  (any-reg) positive-fixnum lisp::%set-array-dimension #+gengc nil)
 
 
 (defknown lisp::%array-rank (t) index (flushable))
