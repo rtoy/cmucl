@@ -681,7 +681,11 @@
     (let* ((info (vop-info vop))
 	   (atypes (template-arg-types info))
 	   (rtypes (template-result-types info)))
-      (check-tn-refs (vop-args vop) vop nil (length atypes)
+      (check-tn-refs (vop-args vop) vop nil
+		     (count-if-not #'(lambda (x)
+				       (and (consp x)
+					    (eq (car x) :constant)))
+				   atypes)
 		     (template-more-args-type info) "args")
       (check-tn-refs (vop-results vop) vop t
 		     (if (eq rtypes :conditional) 0 (length rtypes))
