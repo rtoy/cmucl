@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.30 2003/01/29 21:28:27 cracauer Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.31 2003/02/12 20:52:37 emarsden Exp $
  *
  */
 
@@ -650,6 +650,8 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
 
     /* Check for a failure */
     if (first_page >= dynamic_space_pages) {
+      fprintf(stderr, "!!! CMUCL has run out of dynamic heap space. You can control heap size\n");
+      fprintf(stderr, "!!! with the -dynamic-space-size commandline option.\n");
       fprintf(stderr, "*A2 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
       print_generation_stats(1);
       exit(1);
@@ -696,6 +698,8 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
 
   /* Check for a failure */
   if (restart_page >= dynamic_space_pages && bytes_found < nbytes) {
+    fprintf(stderr, "!!! CMUCL has run out of dynamic heap space. You can control heap size\n");
+    fprintf(stderr, "!!! with the -dynamic-space-size commandline option.\n");
     fprintf(stderr, "*A1 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
     print_generation_stats(1);
     exit(1);
@@ -1094,6 +1098,8 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
 
     /* Check for a failure */
     if (first_page >= dynamic_space_pages) {
+      fprintf(stderr, "!!! CMUCL has run out of dynamic heap space. You can control heap size\n");
+      fprintf(stderr, "!!! with the -dynamic-space-size commandline option.\n");
       fprintf(stderr, "*A2 gc_alloc_large failed, nbytes=%d.\n", nbytes);
       print_generation_stats(1);
       exit(1);
@@ -1135,6 +1141,8 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
   /* Check for a failure */
   if (restart_page >= dynamic_space_pages && bytes_found < nbytes) {
     fprintf(stderr, "*A1 gc_alloc_large failed, nbytes=%d.\n", nbytes);
+    fprintf(stderr, "!!! CMUCL has run out of dynamic heap space. You can control heap size\n");
+    fprintf(stderr, "!!! with the -dynamic-space-size commandline option.\n");
     print_generation_stats(1);
     exit(1);
   }
