@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.7 1990/02/13 17:03:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.8 1990/02/20 16:11:32 wlott Exp $
 ;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
@@ -360,11 +360,8 @@
 		    (- other-pointer-type function-pointer-type label-offset
 		       (component-header-length)))))
 
-(def-instruction compute-code-from-fn-inst compute-code-from-fn-format
+(def-instruction compute-code-from-fn compute-code-from-fn-format
   :op #b001000)
-
-(def-label-ref compute-code-from-fn (rt rs label) label
-  compute-code-from-fn-inst)
 
 
 ;;; COMPUTE-CODE-FROM-LRA
@@ -380,11 +377,8 @@
 		    (declare (ignore instr-offset))
 		    (- (+ label-offset (component-header-length))))))
 
-(def-instruction compute-code-from-lra-inst compute-code-from-lra-format
+(def-instruction compute-code-from-lra compute-code-from-lra-format
   :op #b001000)
-
-(def-label-ref compute-code-from-lra (rt rs label) label
-  compute-code-from-lra-inst)
 
 
 ;;; COMPUTE-LRA-FROM-CODE
@@ -400,31 +394,49 @@
 		    (declare (ignore instr-offset))
 		    (+ label-offset (component-header-length)))))
 
-(def-instruction compute-lra-from-code-inst compute-lra-from-code-format
+(def-instruction compute-lra-from-code compute-lra-from-code-format
   :op #b001000)
 
-(def-label-ref compute-lra-from-code (rt rs label) label
-  compute-lra-from-code-inst)
 
 ;;;
-;;; ###  LRA-HEADER-WORD, FUNCTION-HEADER-WORD
+;;; LRA-HEADER-WORD, FUNCTION-HEADER-WORD
 ;;; 
-;;; More hacks here.
-;;;
+
+(def-instruction-format (header-word-format 4) ()
+  (data :unsigned 24 :calculation #'(lambda (posn)
+				      (ash (+ posn (component-header-length))
+					   (- vm:word-shift))))
+  (type :unsigned 8 :instruction-constant))
+
+(def-instruction lra-header-word header-word-format
+  :type vm:return-pc-header-type)
+
+(def-instruction function-header-word header-word-format
+  :type vm:function-header-type)
 
 
-;;; LOAD-FOREIGN
+
+;;; LOAD-FOREIGN-ADDRESS and LOAD-FOREIGN-VALUE
 ;;; 
-;;; This ``instruction'' emits a LUI followed by a ORI.
+;;; This ``instruction'' emits a LUI followed by either an ADDIU, LW, or SW
 ;;;
 (def-instruction-format (load-foreign-format 8) (rt symbol)
+  ;; We need to switch the order of the two instructions because the MIPS
+  ;; is little-endian.
+  (op2 :unsigned 6 :instruction-constant)
+  (rt :unsigned 5 :register)
+  (rt :unsigned 5 :register)
+  (filler :unsigned 16 :constant 0)
   (op1 :unsigned 6 :constant #b001111)
   (rt :unsigned 5 :register)
   (rt :unsigned 5 :register)
-  (symbol :unsigned 16 :fixup :foreign)
-  (op2 :unsigned 6 :constant #b001101)
-  (rt :unsigned 5 :register)
-  (rt :unsigned 5 :register)
-  (filler :unsigned 16 :constant 0))
+  (symbol :unsigned 16 :fixup :foreign))
 
-(def-instruction load-foreign load-foreign-format)
+(def-instruction load-foreign-address load-foreign-format
+  :op2 #b001001)
+
+(def-instruction load-foreign-value load-foreign-format
+  :op2 #b100011)
+
+(def-instruction store-foreign-value load-foreign-format
+  :op2 #b101011)
