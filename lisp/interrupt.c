@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.37 2004/06/18 22:08:12 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.38 2004/07/07 15:03:12 rtoy Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -24,14 +24,14 @@
 
 boolean internal_errors_enabled = 0;
 
-struct sigcontext *lisp_interrupt_contexts[MAX_INTERRUPTS];
+os_context_t *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
 union interrupt_handler interrupt_handlers[NSIG];
 void (*interrupt_low_level_handlers[NSIG]) (HANDLER_ARGS) = {0};
 
 static int pending_signal = 0;
 
-#if defined(SOLARIS) || defined(__OpenBSD__)
+#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__)
 static siginfo_t *pending_code;
 #define PASSCODE(code) ((code))
 #define DEREFCODE(code) ((code))
@@ -54,7 +54,7 @@ static boolean maybe_gc_pending = FALSE;
 \****************************************************************/
 
 void
-build_fake_control_stack_frame(struct sigcontext *context)
+build_fake_control_stack_frame(os_context_t *context)
 {
 #if !(defined(i386) || defined(__x86_64))
   lispobj oldcont;
@@ -97,7 +97,7 @@ build_fake_control_stack_frame(struct sigcontext *context)
 }
 
 void 
-fake_foreign_function_call(struct sigcontext *context)
+fake_foreign_function_call(os_context_t *context)
 {
     int context_index;
 #if !defined(i386) && !defined(__x86_64)
@@ -141,7 +141,7 @@ fake_foreign_function_call(struct sigcontext *context)
 }
 
 void 
-undo_fake_foreign_function_call(struct sigcontext *context)
+undo_fake_foreign_function_call(os_context_t *context)
 {
     /* Block all blockable signals */
 #ifdef POSIX_SIGS
@@ -207,7 +207,7 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 }
 
 void 
-interrupt_handle_pending(struct sigcontext *context)
+interrupt_handle_pending(os_context_t *context)
 {
     boolean were_in_lisp = !foreign_function_call_active;
 
@@ -240,7 +240,7 @@ interrupt_handle_pending(struct sigcontext *context)
 
     if (pending_signal) {
 	int signal;
-#if defined(SOLARIS) || defined(__OpenBSD__)
+#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__)
 	siginfo_t *code;
 #else
 	int code;
@@ -655,12 +655,18 @@ unsigned long install_handler(int signal,
 #endif
 
 void
-interrupt_handle_space_overflow(lispobj error, struct sigcontext *context)
+interrupt_handle_space_overflow(lispobj error, os_context_t *context)
 {
 #ifdef i386
   /* ECX is the argument count.  */
-  context->sc_eip = (int) ((struct function *) PTR (error))->code;
+#if USE_SA_SIGINFO
+  context->uc_mcontext.__gregs[_REG_EIP] ==
+      (int) ((struct function *) PTR (error))->code;
+  context->uc_mcontext.__gregs[_REG_ECX] == 0;
+#else
+  SC_PC(context) = (int) ((struct function *) PTR (error))->code;
   context->sc_ecx = 0;
+#endif
 #else
 #ifdef __x86_64
   /* RCX is the argument count.  */

@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.55 2004/05/19 22:20:49 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.56 2004/07/07 15:03:11 rtoy Exp $
  *
  */
 
@@ -202,14 +202,7 @@ unsigned counters_verbose = 0;
  * To enable the use of page protection to help avoid the scavenging
  * of pages that don't have pointers to younger generations.
  */
-#ifdef __NetBSD__
-
-/* NetBSD on x86 has no way to retrieve the faulting address in the
- * SIGSEGV handler, so for the moment we can't use page protection. */
-boolean  enable_page_protection = FALSE;
-#else /* Netbsd */
 boolean  enable_page_protection = TRUE;
-#endif /* Netbsd */
 
 /*
  * Hunt for pointers to old-space, when GCing generations >= verify_gen.

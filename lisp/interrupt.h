@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.6 1997/11/25 15:27:32 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.7 2004/07/07 15:03:12 rtoy Exp $ */
 
 #if !defined(_INCLUDE_INTERRUPT_H_)
 #define _INCLUDE_INTERRUPT_H_
@@ -7,7 +7,7 @@
 
 #define MAX_INTERRUPTS (4096)
 
-extern struct sigcontext *lisp_interrupt_contexts[MAX_INTERRUPTS];
+extern os_context_t *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
 union interrupt_handler {
 	lispobj lisp;
@@ -15,10 +15,10 @@ union interrupt_handler {
 };
 
 extern void interrupt_init(void);
-extern void fake_foreign_function_call(struct sigcontext *context);
-extern void undo_fake_foreign_function_call(struct sigcontext *context);
+extern void fake_foreign_function_call(os_context_t *context);
+extern void undo_fake_foreign_function_call(os_context_t *context);
 extern void interrupt_handle_now(HANDLER_ARGS);
-extern void interrupt_handle_pending(struct sigcontext *scp);
+extern void interrupt_handle_pending(os_context_t *scp);
 extern void interrupt_internal_error(HANDLER_ARGS, boolean continuable);
 extern boolean interrupt_maybe_gc(HANDLER_ARGS);
 extern void interrupt_install_low_level_handler

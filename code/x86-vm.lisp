@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.21 2002/08/27 22:18:25 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.22 2004/07/07 15:03:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,7 +103,7 @@
 	(sc-sp      unsigned-int)	
 	(sc-ss	    unsigned-int)))
 
-;;; OpenBSD/NetBSD also have sigcontext structs that look more like Linux.
+;;; OpenBSD also have sigcontext structs that look more like Linux.
 #+openbsd
 (def-alien-type sigcontext
     (struct nil
@@ -129,7 +129,9 @@
 	(sc-err     unsigned-int)
 	))
 
-#+netbsd
+;; NetBSD
+
+#+netbsd1.6
 (def-alien-type sigcontext
     (struct nil
 	(sc-gs      unsigned-int)
@@ -156,6 +158,46 @@
 	;; New signal mask (post NetBSD 1.3)
 	(sc-mask    (array unsigned-int 4))
 	))
+
+#+netbsd
+(def-alien-type sigaltstack
+  (struct nil
+      (ss-sp	unsigned-int)
+      (ss-size	unsigned-int)
+      (ss-flags	unsigned-int)))
+
+#+netbsd
+(def-alien-type mcontext
+  (struct nil
+      (mc-gs	unsigned-long)
+      (mc-fs	unsigned-long)
+      (mc-es	unsigned-long)
+      (mc-ds	unsigned-long)
+      (mc-edi	unsigned-long)
+      (mc-esi	unsigned-long)
+      (mc-ebp	unsigned-long)
+      (mc-esp	unsigned-long)
+      (mc-ebx	unsigned-long)
+      (mc-edx	unsigned-long)
+      (mc-ecx	unsigned-long)
+      (mc-eax	unsigned-long)
+      (mc-trapno	unsigned-long)
+      (mc-err	unsigned-long)
+      (mc-eip	unsigned-long)
+      (mc-cs	unsigned-long)
+      (mc-efl	unsigned-long)
+      (mc-uesp	unsigned-long)
+      (mc-ss	unsigned-long)))
+
+#+netbsd
+(def-alien-type ucontext
+  (struct nil
+	  (uc-flags	unsigned-long)
+	  (uc-link	unsigned-long)
+	  (uc-sigmask	(array unsigned-long 4))
+	  (uc-stack	sigaltstack)
+	  (uc-mcontext	mcontext)))
+	  
 
 ;; For Linux...
 #+linux
@@ -328,6 +370,7 @@
 ;;; Given the sigcontext, extract the internal error arguments from the
 ;;; instruction stream.
 ;;; 
+#-netbsd
 (defun internal-error-arguments (scp)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
@@ -351,15 +394,46 @@
 	      (sc-offsets (c::read-var-integer vector index)))
 	    (values error-number (sc-offsets))))))))
 
+#+netbsd
+(defun internal-error-arguments (ucp)
+  (declare (type (alien (* ucontext)) ucp))
+  (%primitive print "internal-error-arguments")
+  (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
+    (let ((pc (int-sap (slot mcp 'mc-eip))))
+      (declare (type system-area-pointer pc))
+      ;; using INT3 the pc is .. INT3 <here> code length bytes...
+      (let* ((length (sap-ref-8 pc 1))
+	     (vector (make-array length :element-type '(unsigned-byte 8))))
+	(declare (type (unsigned-byte 8) length)
+		 (type (simple-array (unsigned-byte 8) (*)) vector))
+	(copy-from-system-area pc (* vm:byte-bits 2)
+			       vector (* vm:word-bits
+					 vm:vector-data-offset)
+			       (* length vm:byte-bits))
+	(let* ((index 0)
+	       (error-number (c::read-var-integer vector index)))
+	  (collect ((sc-offsets))
+	    (loop
+	      (when (>= index length)
+		(return))
+	      (sc-offsets (c::read-var-integer vector index)))
+	    (values error-number (sc-offsets))))))))
 
 ;;;; Sigcontext access functions.
 
 ;;; SIGCONTEXT-PROGRAM-COUNTER -- Interface.
 ;;;
+#-netbsd
 (defun sigcontext-program-counter (scp)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
     (int-sap (slot scp 'sc-pc))))
+
+#+netbsd
+(defun sigcontext-program-counter (ucp)
+  (declare (type (alien (* ucontext)) ucp))
+  (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
+    (int-sap (slot mcp 'sc-eip))))
 
 ;;; SIGCONTEXT-REGISTER -- Interface.
 ;;;
@@ -367,6 +441,7 @@
 ;;; interrupts.  
 ;;;
 
+#-netbsd
 (defun sigcontext-register (scp index)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
@@ -380,7 +455,7 @@
       (#.esi-offset (slot scp 'sc-esi))
       (#.edi-offset (slot scp 'sc-edi)))))
 
-
+#-netbsd
 (defun %set-sigcontext-register (scp index new)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
@@ -393,6 +468,35 @@
       (#.ebp-offset (setf (slot scp #-linux 'sc-fp #+linux 'ebp)  new))
       (#.esi-offset (setf (slot scp 'sc-esi) new))
       (#.edi-offset (setf (slot scp 'sc-edi) new))))
+  new)
+
+#+netbsd
+(defun sigcontext-register (ucp index)
+  (declare (type (alien (* ucontext)) ucp))
+  (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
+    (case index				; ugly -- I know.
+      (#.eax-offset (slot mcp 'mc-eax))
+      (#.ecx-offset (slot mcp 'mc-ecx))
+      (#.edx-offset (slot mcp 'mc-edx))
+      (#.ebx-offset (slot mcp 'mc-ebx))
+      (#.esp-offset (slot mcp 'mc-esp))
+      (#.ebp-offset (slot mcp 'mc-ebp))
+      (#.esi-offset (slot mcp 'mc-esi))
+      (#.edi-offset (slot mcp 'mc-edi)))))
+
+#+netbsd
+(defun %set-sigcontext-register (ucp index new)
+  (declare (type (alien (* ucontext)) ucp))
+  (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
+    (case index
+      (#.eax-offset (setf (slot mcp 'mc-eax) new))
+      (#.ecx-offset (setf (slot mcp 'mc-ecx) new))
+      (#.edx-offset (setf (slot mcp 'mc-edx) new))
+      (#.ebx-offset (setf (slot mcp 'mc-ebx) new))
+      (#.esp-offset (setf (slot mcp 'mc-esp) new))
+      (#.ebp-offset (setf (slot mcp 'mc-ebp) new))
+      (#.esi-offset (setf (slot mcp 'mc-esi) new))
+      (#.edi-offset (setf (slot mcp 'mc-edi) new))))
   new)
 
 (defsetf sigcontext-register %set-sigcontext-register)
@@ -446,11 +550,17 @@
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 
-#+BSD
+#+(or freebsd openbsd)
 (defun sigcontext-floating-point-modes (scp)
   (declare (type (alien (* sigcontext)) scp)
 	   (ignore scp))
   ;; This is broken until some future release of FreeBSD/OpenBSD!!!
+  (floating-point-modes))
+  
+#+netbsd
+(defun sigcontext-floating-point-modes (ucp)
+  (declare (type (alien (* ucontext)) ucp)
+	   (ignore ucp))
   (floating-point-modes))
   
 #+linux

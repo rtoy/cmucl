@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.12 2000/10/27 19:25:54 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.13 2004/07/07 15:03:11 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -52,7 +52,7 @@ void breakpoint_remove(lispobj code_obj, int pc_offset,
     arch_remove_breakpoint(compute_pc(code_obj, pc_offset), orig_inst);
 }
 
-void breakpoint_do_displaced_inst(struct sigcontext *scp,
+void breakpoint_do_displaced_inst(os_context_t *scp,
 				  unsigned long orig_inst)
 {
 #if !defined(hpux) && !defined(irix) && !defined(i386)
@@ -83,7 +83,7 @@ static lispobj find_code(struct sigcontext *scp)
 #endif
 
 #ifdef i386
-static lispobj find_code(struct sigcontext *scp)
+static lispobj find_code(os_context_t *scp)
 {
   lispobj *codeptr = component_ptr_from_pc(SC_PC(scp));
 
@@ -94,7 +94,7 @@ static lispobj find_code(struct sigcontext *scp)
 }
 #endif
 
-static int compute_offset(struct sigcontext *scp, lispobj code)
+static int compute_offset(os_context_t *scp, lispobj code)
 {
     if (code == NIL)
 	return 0;
@@ -122,7 +122,7 @@ static int compute_offset(struct sigcontext *scp, lispobj code)
 }
 
 #ifndef i386
-void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
+void handle_breakpoint(int signal, int subcode, os_context_t *scp)
 {
     lispobj code;
 
@@ -138,7 +138,7 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
     undo_fake_foreign_function_call(scp);
 }
 #else
-void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
+void handle_breakpoint(int signal, int subcode, os_context_t *scp)
 {
     lispobj code, scp_sap=alloc_sap(scp);
 
@@ -152,7 +152,7 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
      */
 
 #if defined POSIX_SIGS
-    sigprocmask(SIG_SETMASK,&scp->sc_mask,NULL);
+    sigprocmask(SIG_SETMASK,&scp->uc_sigmask,NULL);
 #else
     sigsetmask(scp->sc_mask);
 #endif
@@ -167,7 +167,7 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 
 #ifndef i386
 void *handle_function_end_breakpoint(int signal, int subcode,
-				     struct sigcontext *scp)
+				     os_context_t *scp)
 {
     lispobj code, lra;
     struct code *codeptr;
@@ -192,7 +192,7 @@ void *handle_function_end_breakpoint(int signal, int subcode,
 }
 #else
 void *handle_function_end_breakpoint(int signal, int subcode,
-				     struct sigcontext *scp)
+				     os_context_t *scp)
 {
     lispobj code, scp_sap=alloc_sap(scp);
     struct code *codeptr;
@@ -208,7 +208,7 @@ void *handle_function_end_breakpoint(int signal, int subcode,
      */
 
 #if defined POSIX_SIGS
-    sigprocmask(SIG_SETMASK,&scp->sc_mask,NULL);
+    sigprocmask(SIG_SETMASK,&scp->uc_sigmask,NULL);
 #else
     sigsetmask(scp->sc_mask);
 #endif

@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.2 1998/05/01 01:21:41 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.3 2004/07/07 15:03:12 rtoy Exp $
  */
 
 /* These register names and offsets correspond to definitions
@@ -41,5 +41,12 @@
  */
 
 #define SC_REG(sc, n) sc_reg(sc,n)
+
+#ifdef __NetBSD__
+#define SC_PC(uc) ((uc)->uc_mcontext.__gregs[_REG_EIP])
+#define SC_SP(uc) ((uc)->uc_mcontext.__gregs[_REG_ESP])
+#else
 #define SC_PC(sc) ((sc)->sc_pc)
+#define SC_SP(sc) ((sc)->sc_esp)
+#endif
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.92 2004/03/24 13:26:19 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.93 2004/07/07 15:03:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -928,6 +928,21 @@
             (pw-expire int)             ; account expiration
             (pw-fields int)))           ; internal
 
+#+netbsd
+(def-alien-type nil
+    (struct passwd
+	    (pw-name (* char))          ; user's login name
+	    (pw-passwd (* char))        ; no longer used
+	    (pw-uid uid-t)              ; user id
+	    (pw-gid gid-t)              ; group id
+            (pw-change int)             ; password change time
+            (pw-class (* char))         ; user access class
+	    (pw-gecos (* char))         ; typically user's full name
+	    (pw-dir (* char))           ; user's home directory
+	    (pw-shell (* char))         ; user's login shell
+            (pw-expire int)))           ; account expiration
+
+
 ;; see <grp.h>
 (def-alien-type nil
   (struct group
@@ -987,7 +1002,7 @@
 (defconstant map_anonymous
   #+solaris #x100			; Solaris
   #+linux 32				; Linux
-  #+freebsd #x1000)
+  #+bsd #x1000)
 
 (defconstant ms_async 1)
 (defconstant ms_sync 4)
@@ -2856,7 +2871,7 @@
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
-#+FreeBSD
+#+(or FreeBSD NetBSD)
 (defun unix-getpwnam (login)
   "Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
   (declare (type simple-string login))
@@ -2907,7 +2922,7 @@
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
-#+FreeBSD
+#+(or FreeBSD NetBSD)
 (defun unix-getpwuid (uid)
   "Return a USER-INFO structure for the user identified by UID, or NIL if not found."
   (declare (type unix-uid uid))
@@ -2956,7 +2971,7 @@
                         :until (zerop (sap-int (alien-sap member)))
                         :collect (string (cast member c-call:c-string))))))))
 
-#+FreeBSD
+#+(or FreeBSD NetBSD)
 (defun unix-getgrnam (name)
   "Return a GROUP-INFO structure for the group identified by NAME, or NIL if not found."
   (declare (type simple-string name))
@@ -3006,7 +3021,7 @@
                         :until (zerop (sap-int (alien-sap member)))
                         :collect (string (cast member c-call:c-string))))))))
 
-#+FreeBSD
+#+(or FreeBSD NetBSD)
 (defun unix-getgrgid (gid)
   "Return a GROUP-INFO structure for the group identified by GID, or NIL if not found."
   (declare (type unix-gid gid))

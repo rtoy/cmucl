@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.13 2004/05/19 23:32:05 cwang Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.14 2004/07/07 15:03:12 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -50,7 +50,7 @@ os_vm_size_t length;
 	addr=os_validate(block_start,block_size);
 
 	if(addr==NULL || addr!=block_start)
-	    fprintf(stderr,"os_zero: block moved, 0x%08x ==> 0x%08x!\n",block_start,addr);
+	    fprintf(stderr,"os_zero: block moved, 0x%08p ==> 0x%08p!\n",block_start,addr);
     }
 }
 
@@ -395,7 +395,7 @@ os_guard_control_stack (int zone, int guard)
    non-zero if FAULT_ADDR is in a guard zone.  */
 
 int
-os_control_stack_overflow (void *fault_addr, struct sigcontext *context)
+os_control_stack_overflow (void *fault_addr, os_context_t *context)
 {
   enum stack_zone_t zone;
 
@@ -430,8 +430,12 @@ os_control_stack_overflow (void *fault_addr, struct sigcontext *context)
 
 #ifdef i386
       /* ECX is the argument count.  */
-      context->sc_eip = (int) ((struct function *) PTR (error))->code;
+      SC_PC(context) = (int) ((struct function *) PTR (error))->code;
+#if USE_SA_SIGINFO
+      context->uc_mcontext.__gregs[_REG_ECX] == 0;
+#else
       context->sc_ecx = 0;
+#endif
 #else
 #ifdef __x86_64
       /* RCX is the argument count.  */

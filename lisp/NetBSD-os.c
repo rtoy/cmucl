@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.1 2002/01/28 20:19:39 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.2 2004/07/07 15:03:11 rtoy Exp $
  *
  */
 
@@ -36,6 +36,7 @@
 #include <signal.h>
 /* #include <sys/sysinfo.h> */
 #include <sys/proc.h>
+#include <dlfcn.h>
 #include "validate.h"
 size_t os_vm_page_size;
 
@@ -51,8 +52,22 @@ void os_init(void)
   os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
 }
 
-int sc_reg(struct sigcontext *c, int offset)
+int sc_reg(os_context_t *c, int offset)
 {
+#ifdef i386
+#if USE_SA_SIGINFO
+  switch(offset)
+    {
+    case  0: return c->uc_mcontext.__gregs[_REG_EAX];
+    case  2: return c->uc_mcontext.__gregs[_REG_ECX];
+    case  4: return c->uc_mcontext.__gregs[_REG_EDX];
+    case  6: return c->uc_mcontext.__gregs[_REG_EBX];
+    case  8: return c->uc_mcontext.__gregs[_REG_ESP];
+    case 10: return c->uc_mcontext.__gregs[_REG_EBP];
+    case 12: return c->uc_mcontext.__gregs[_REG_ESI];
+    case 14: return c->uc_mcontext.__gregs[_REG_EDI];
+    }
+#else
   switch(offset)
     {
     case  0: return c->sc_eax;
@@ -64,6 +79,8 @@ int sc_reg(struct sigcontext *c, int offset)
     case 12: return c->sc_esi;
     case 14: return c->sc_edi;
     }
+#endif
+#endif
   return 0;
 }
 
@@ -94,7 +111,7 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
   else
     flags |= MAP_VARIABLE;
 
-  DPRINTF(0, (stderr, "os_validate %x %d =>", addr, len));
+  DPRINTF(0, (stderr, "os_validate %p %d =>", addr, len));
 
   if (addr)
     {
@@ -120,7 +137,7 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
 	      return NULL;
 	    }
 
-	  DPRINTF(0, (stderr, " %x", resaddr));
+	  DPRINTF(0, (stderr, " %p", resaddr));
 	  
 	  curaddr+=curlen;
 	  len-=curlen;
@@ -138,7 +155,7 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
 	  return NULL;
 	}
       
-      DPRINTF(0, (stderr, " %x\n", addr));
+      DPRINTF(0, (stderr, " %p\n", addr));
     }
 
   return addr;
@@ -146,7 +163,7 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
 
 void os_invalidate(os_vm_address_t addr, os_vm_size_t len)
 {
-  DPRINTF(0, (stderr, "os_invalidate %x %d\n", addr, len));
+  DPRINTF(0, (stderr, "os_invalidate %p %d\n", addr, len));
 
   if (munmap(addr, len) == -1)
     perror("munmap");
@@ -189,14 +206,15 @@ static boolean in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 
 boolean valid_addr(os_vm_address_t addr)
 {
-  int ret;
   os_vm_address_t newaddr;
   newaddr = os_trunc_to_page(addr);
 
   if (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
       || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
       || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size  )
+#ifndef GENCGC
       || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size  )
+#endif
       || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
       || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ))
     return TRUE;
@@ -206,16 +224,30 @@ boolean valid_addr(os_vm_address_t addr)
 
 static void sigsegv_handler(HANDLER_ARGS)
 {
+#if defined GENCGC
+  caddr_t  fault_addr = code ? code->si_addr : 0;
+  int  page_index = find_page_index((void*)fault_addr);
 
-  /*
-   * Since NetBSD on x86 currently provides no way to get the faulting
-   * memory address (i.e. the contents of the CR2 register), the page
-   * protection mechanism of the generational GC currently can't be
-   * used (see gengc.c), hence we don't neet to do anything here.
-   *
-   * See OpenBSD-os.c for details of what should be here, once NetBSD
-   * provides siginfo_t.
-   */
+#if SIGSEGV_VERBOSE
+  fprintf(stderr,"Signal %d, fault_addr=%p, page_index=%d:\n",
+	  signal, fault_addr, page_index);
+#endif
+
+  /* Check if the fault is within the dynamic space. */
+  if (page_index != -1) {
+    /* Un-protect the page */
+
+    /* The page should have been marked write protected */
+    if (!PAGE_WRITE_PROTECTED(page_index))
+      fprintf(stderr, "*** Sigsegv in page not marked as write protected\n");
+
+    os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
+    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
+    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
+
+    return;
+    }
+#endif
 
   SAVE_CONTEXT();
 
@@ -235,4 +267,27 @@ void os_install_interrupt_handlers(void)
 {
   interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
   interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
+}
+
+void *
+os_dlsym (const char *sym_name, lispobj lib_list)
+{
+  if (lib_list != NIL)
+    {
+      lispobj lib_list_head;
+
+      for (lib_list_head = lib_list;
+	   lib_list_head != NIL;
+	   lib_list_head = CONS (lib_list_head)->cdr)
+	{
+	  struct cons *lib_cons = CONS (CONS (lib_list_head)->car);
+	  struct sap *dlhandle = (struct sap *) PTR (lib_cons->car);
+	  void *sym_addr = dlsym ((void *) dlhandle->pointer, sym_name);
+
+	  if (sym_addr)
+	    return sym_addr;
+	}
+    }
+  
+  return dlsym (RTLD_DEFAULT, sym_name);
 }

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.14 2004/05/19 23:26:15 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.15 2004/07/07 15:03:12 rtoy Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -333,7 +333,7 @@ static void purify_cmd(char **ptr)
     purify(NIL, NIL);
 }
 
-static void print_context(struct sigcontext *context)
+static void print_context(os_context_t *context)
 {
 	int i;
 

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.h,v 1.1 2002/01/28 20:17:11 pmai Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.h,v 1.2 2004/07/07 15:03:11 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/signal.h>
+#include <ucontext.h>
 
 #define MAP_ANONYMOUS MAP_ANON
 #define MAP_VARIABLE 0
@@ -26,12 +27,10 @@ typedef int os_vm_prot_t;
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
 #define POSIX_SIGS
-/* NetBSD 1.5.2 doesn't have this yet */
-#define USE_SA_SIGINFO 0
+#define HANDLER_ARGS int signal, siginfo_t *code, ucontext_t *context
+#define CODE(code)  ((code) ? code->si_code : 0)
+#define os_context_t ucontext_t
 
-#ifndef sa_sigaction
-#define sa_sigaction    sa_handler
-#endif
+int sc_reg(ucontext_t *,int);
 
-#define uc_sigmask sc_mask
-int sc_reg(struct sigcontext*,int);
+#define PROTECTION_VIOLATION_SIGNAL SIGSEGV

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.12 2003/05/29 22:03:01 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.13 2004/07/07 15:03:12 rtoy Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -47,8 +47,11 @@
 #endif
 #endif
 
+#ifndef os_context_t 
+#define os_context_t struct sigcontext
+#endif
 #ifndef HANDLER_ARGS
-#define HANDLER_ARGS int signal, int code, struct sigcontext *context
+#define HANDLER_ARGS int signal, int code, os_context_t *context
 #endif
 #ifndef CODE
 #define CODE(code)  code
@@ -108,6 +111,6 @@ extern void *os_dlsym (const char *sym_name, lispobj lib_list);
 enum stack_zone_t {BOTH_ZONES, YELLOW_ZONE, RED_ZONE};
 extern int os_stack_grows_down (void);
 extern void os_guard_control_stack (int zone, int guard);
-extern int os_control_stack_overflow (void *, struct sigcontext *);
+extern int os_control_stack_overflow (void *, os_context_t *);
 
 #endif

@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.19 2004/01/16 03:32:21 toy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.20 2004/07/07 15:03:12 rtoy Exp $
  *
  */
 
@@ -80,18 +80,21 @@
 #endif /* __FreeBSD__ */
 
 
-#if defined(__OpenBSD__) || defined(__NetBSD__)
+#ifdef __OpenBSD__
 #define READ_ONLY_SPACE_START   (0x10000000)
 #define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
 
 #define STATIC_SPACE_START	(0x28000000)
 #define STATIC_SPACE_SIZE	(0x0ffff000) /* 256MB - 1 page */
 
-#define BINDING_STACK_START	(0x20000000)
+#define BINDING_STACK_START	(0x38000000)
 #define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
 
-#define CONTROL_STACK_START	(0x38000000)
-#define CONTROL_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
+#define CONTROL_STACK_START	(0x40000000)
+#define CONTROL_STACK_SIZE	(0x07fd8000) /* 128MB - SIGSTKSZ */
+
+#define SIGNAL_STACK_START	(0x47fd8000)
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(0x48000000)
 #ifdef GENCGC
@@ -102,6 +105,34 @@
 #define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
 #endif
 
+#ifdef __NetBSD__
+#define READ_ONLY_SPACE_START   (0x10000000)
+#define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
+
+#define STATIC_SPACE_START	(0x28000000)
+#define STATIC_SPACE_SIZE	(0x0ffff000) /* 256MB - 1 page */
+
+#define BINDING_STACK_START	(0x38000000)
+#define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
+
+#define CONTROL_STACK_START	(0x40000000)
+#define CONTROL_STACK_SIZE	(0x07fd8000) /* 128MB - SIGSTKSZ */
+
+#define SIGNAL_STACK_START	(0x47fd8000)
+#define SIGNAL_STACK_SIZE	SIGSTKSZ
+
+#define DYNAMIC_0_SPACE_START	(0x48800000)
+#ifdef GENCGC
+#define DYNAMIC_SPACE_SIZE	(0x67800000) /* 1.625GB */
+#else
+#define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
+#endif
+#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
+#ifdef LINKAGE_TABLE
+#define FOREIGN_LINKAGE_SPACE_START (0xb0000000)
+#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000) /* 1MB */
+#endif
+#endif
 
 #ifdef __linux__
 #define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)

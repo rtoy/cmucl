@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.32 2003/03/03 18:40:58 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.33 2004/07/07 15:03:12 rtoy Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -80,6 +80,7 @@ F(mkdir)
 F(mknod)
 F(mmap)
 F(mount)
+F(msync)
 F(munmap)
 F(open)
 F(pipe)
@@ -126,6 +127,8 @@ F(setreuid)
 F(setrlimit)
 F(setsockopt)
 F(settimeofday)
+F(setgid)
+F(setuid)
 F(shutdown)
 #ifndef SVR4
 F(sigblock)
