@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dired.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dired.lisp,v 1.3.2.1 2000/07/06 08:24:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -611,23 +611,18 @@
     (unix:unix-fchmod fd (logand mode #o777))
     (unix:unix-close fd)))
 
-(defvar *utimes-buffer* (make-list 4 :initial-element 0))
-
 (defun set-write-date (ses-name secs)
   (multiple-value-bind (winp dev-or-err ino mode nlink uid gid rdev size atime)
 		       (unix:unix-stat ses-name)
     (declare (ignore ino mode nlink uid gid rdev size))
-    (unless winp (funcall *error-function*
-			  "Couldn't stat file ~S failed: ~A."  ses-name
-			  dev-or-err))
-    (setf (car *utimes-buffer*) atime)
-    (setf (caddr *utimes-buffer*) secs))
-  (multiple-value-bind (winp err)
-		       `(unix:unix-utimes ses-name ,@*utimes-buffer*)
     (unless winp
-      (funcall *error-function* "Couldn't set write date of file ~S: ~A"
-	       ses-name
-	       (unix:get-unix-error-msg err)))))
+      (funcall *error-function* "Couldn't stat file ~S failed: ~A."
+	       ses-name dev-or-err))
+    (multiple-value-bind (winp err)
+	(unix:unix-utimes ses-name atime 0 secs 0)
+      (unless winp
+	(funcall *error-function* "Couldn't set write date of file ~S: ~A"
+		 ses-name (unix:get-unix-error-msg err))))))
 
 (defun get-write-date (ses-name)
   (multiple-value-bind (winp dev-or-err ino mode nlink uid gid rdev size
