@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.11 1990/04/27 11:39:42 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.12 1990/04/30 10:25:01 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -529,7 +529,7 @@
 ;;;    Convert an IF that isn't the DEST of a conditional template.
 ;;;
 (defun ir2-convert-if (node block)
-  (declare (type (ir2-block block)) (type cif node))
+  (declare (type ir2-block block) (type cif node))
   (let* ((test (if-test node))
 	 (test-ref (reference-tn (continuation-tn node block test) nil))
 	 (nil-ref (reference-tn (emit-constant nil) nil)))
