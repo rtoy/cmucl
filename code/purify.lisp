@@ -302,7 +302,7 @@
 ;;;    Copy a function object into read-only space.  This only moves the
 ;;; function (entry or constants) object itself, and lets GC scavenge.
 ;;;
-(defun transport-function-entry (fun)
+(defun transport-function-object (fun)
   (%primitive set-allocation-space %read-only-space)
   (let* ((len (%primitive header-length fun))
 	 (res (%primitive alloc-function len)))
