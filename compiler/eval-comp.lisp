@@ -31,7 +31,7 @@
 		    *last-message-count* *check-consistency*
 		    *all-components* *converting-for-interpreter*
 		    *source-info* *block-compile* *current-path*
-		    *current-component* *fenv*))
+		    *current-component* *lexical-environment*))
 
 (export '(compile-for-eval lambda-eval-info-frame-size
 	  lambda-eval-info-args-passed lambda-eval-info-entries
@@ -48,7 +48,7 @@
 (defun compile-for-eval (form quietly)
   (with-ir1-namespace
     (let* ((*block-compile* nil)
-	   (*fenv* ())
+	   (*lexical-environment* (make-null-environment))
 	   ;;
 	   (*compiler-error-output*
 	    (if quietly
@@ -69,15 +69,17 @@
 	   (*compiler-error-count* 0)
 	   (*compiler-warning-count* 0)
 	   (*compiler-note-count* 0)
-	   (*source-info* (make-lisp-source-info form)))
+	   (*source-info* (make-lisp-source-info form))
+	   (*converting-for-interpreter* t))
+
       (clear-stuff nil)
       (find-source-paths form 0)
       ;;
       ;; This LET comes from COMPILE-TOP-LEVEL.
       ;; The noted DOLIST is a splice from a call that COMPILE-TOP-LEVEL makes.
       (with-compilation-unit ()
-	(let* ((*converting-for-interpreter* t)
-	       (lambdas (list (ir1-top-level form 0 t))))
+	(let ((lambdas (list (ir1-top-level form '(original-source-start 0 0)
+					    t))))
 	  (declare (list lambdas))
 	  (dolist (lambda lambdas)
 	    (let* ((component
@@ -242,18 +244,16 @@
 ;;; PROCESS-ENTRY-NODE-P -- Internal.
 ;;; 
 (defun process-entry-node-p (entry)
-  (dolist (nlx (environment-nlx-info (node-environment entry))
-	       :local-lexical-exit)
-    (let ((cleanup (nlx-info-cleanup nlx)))
-      (ecase (cleanup-kind cleanup)
-	(:entry
-	 (when (eq (continuation-use (cleanup-start cleanup))
-		   entry)
-	   (return :non-local-lexical-exit)))
-	((:catch :unwind-protect)
-	 (when (eq (continuation-use (cleanup-start (cleanup-enclosing cleanup)))
-		   entry)
-	   (return :blow-it-off)))))))
+  (let ((entry-cleanup (entry-cleanup entry)))
+    (dolist (nlx (environment-nlx-info (node-environment entry))
+		 :local-lexical-exit)
+      (let ((cleanup (nlx-info-cleanup nlx)))
+	(when (eq entry-cleanup cleanup)
+	  (ecase (cleanup-kind cleanup)
+	    ((:block :tagbody)
+	     (return :non-local-lexical-exit))
+	    ((:catch :unwind-protect)
+	     (return :blow-it-off))))))))
 
 
 ;;; Sometime consider annotations to exclude processign of exit nodes when
