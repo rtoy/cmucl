@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.29 2001/10/31 13:16:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.30 2002/08/09 20:18:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,7 @@
 ;;;
 (defmacro def-assembler-params (&rest options)
   "Set up the assembler."
-  `(eval-when (compile load eval)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
      (setf (c:backend-assembler-params c:*target-backend*)
 	   (make-assem-params :backend c:*target-backend*
 			      ,@options))))
@@ -306,7 +306,7 @@
 
 ;;; WITHOUT-SCHEDULING -- interface.
 ;;;
-(defmacro without-scheduling ((&optional (segment '*current-segment*))
+(defmacro without-scheduling ((&optional (segment '(%%current-segment%%)))
 			      &body body)
   "Execute BODY (as a progn) without scheduling any of the instructions
    generated inside it.  DO NOT throw or return-from out of it."
@@ -1304,29 +1304,36 @@
 
 ;;;; Interface to the rest of the compiler.
 
-;;; *CURRENT-SEGMENT* -- internal.
+;;; Macro %%CURRENT-SEGMENT%% -- internal.
 ;;;
-;;; The holds the current segment while assembling.  Use ASSEMBLE to change
-;;; it.
+;;; Returns the current segment while assembling. Use ASSEMBLE to
+;;; change it.
+;;;
+;;; Using a macro to access the underlying special variable
+;;; *CURRENT-SEGMENT* allows us to play scoping tricks in
+;;; DEFINE-INSTRUCTION, to detect calls to the INST macro that aren't
+;;; inside the scope of an ASSEMBLE. 
 ;;; 
 (defvar *current-segment*)
+(defmacro %%current-segment%% () '*current-segment*)
 
-;;; *CURRENT-VOP* -- internal.
+;;; Macro %%CURRENT-VOP%% -- internal.
 ;;;
-;;; Just like *CURRENT-SEGMENT*, but holds the current vop.  Used only to keep
-;;; track of which vops emit which insts.
+;;; Like %%CURRENT-SEGMENT%%, but returns the current vop. Used
+;;; only to keep track of which vops emit which insts.
 ;;; 
 (defvar *current-vop* nil)
+(defmacro %%current-vop%% () '*current-vop*)
 
 ;;; ASSEMBLE -- interface.
 ;;;
-;;; We also symbol-macrolet *current-segment* to a local holding the segment
-;;; so uses of *current-segment* inside the body don't have to keep
-;;; dereferencing the symbol.  Given that ASSEMBLE is the only interface to
-;;; *current-segment*, we don't have to worry about the special value becomming
-;;; out of sync with the lexical value.  Unless some bozo closes over it,
-;;; but nobody does anything like that...
-;;;
+;;; Performance optimization: we MACROLET %%CURRENT-SEGMENT%% to a
+;;; local holding the segment so that uses of %%CURRENT-SEGMENT%%
+;;; inside the body don't have to keep dereferencing the symbol. Given
+;;; that ASSEMBLE is the only interface to *CURRENT-SEGMENT*, we don't
+;;; have to worry about the special value becomming out of sync with
+;;; the lexical value. Unless some bozo closes over it, but nobody
+;;; does anything like that...
 (defmacro assemble ((&optional segment vop &key labels) &body body
 		    &environment env)
   "Execute BODY (as a progn) with SEGMENT as the current segment."
@@ -1348,8 +1355,8 @@
       (when (intersection labels inherited-labels)
 	(error "Duplicate nested labels: ~S"
 	       (intersection labels inherited-labels)))
-      `(let* ((,seg-var ,(or segment '*current-segment*))
-	      (,vop-var ,(or vop '*current-vop*))
+      `(let* ((,seg-var ,(or segment '(%%current-segment%%)))
+              (,vop-var ,(or vop '(%%current-vop%%)))
 	      ,@(when segment
 		  `((*current-segment* ,seg-var)))
 	      ,@(when vop
@@ -1357,15 +1364,16 @@
 	      ,@(mapcar #'(lambda (name)
 			    `(,name (gen-label)))
 			new-labels))
-	 (symbol-macrolet ((*current-segment* ,seg-var)
-			   (*current-vop* ,vop-var)
-			   ,@(when (or inherited-labels nested-labels)
+        (declare (ignorable ,vop-var ,seg-var))
+        (macrolet ((%%current-segment%% () '*current-segment*)
+                   (%%current-vop%% () '*current-vop*))
+          (symbol-macrolet (,@(when (or inherited-labels nested-labels)
 			       `((..inherited-labels.. ,nested-labels))))
 	   ,@(mapcar #'(lambda (form)
 			 (if (label-name-p form)
 			     `(emit-label ,form)
 			     form))
-		     body))))))
+		     body)))))))
 
 ;;; INST -- interface.
 ;;; 
@@ -1379,24 +1387,27 @@
 	  ((functionp inst)
 	   (funcall inst (cdr whole) env))
 	  (t
-	   `(,inst *current-segment* *current-vop* ,@args)))))
+	   `(,inst (%%current-segment%%) (%%current-vop%%) ,@args)))))
 
 ;;; EMIT-LABEL -- interface.
 ;;; 
+;;; Note: The need to capture MACROLET bindings of %%CURRENT-SEGMENT%%
+;;; and %%CURRENT-VOP%% prevents this from being an ordinary function
+;;; (likewise for EMIT-POSTIT and ALIGN, below).
 (defmacro emit-label (label)
   "Emit LABEL at this location in the current segment."
-  `(%emit-label *current-segment* *current-vop* ,label))
+  `(%emit-label (%%current-segment%%) (%%current-vop%%) ,label))
 
 ;;; EMIT-POSTIT -- interface.
 ;;;
 (defmacro emit-postit (function)
-  `(%emit-postit *current-segment* ,function))
+  `(%emit-postit (%%current-segment%%) ,function))
 
 ;;; ALIGN -- interface.
 ;;; 
 (defmacro align (bits &optional (fill-byte 0))
   "Emit an alignment restriction to the current segment."
-  `(emit-alignment *current-segment* *current-vop* ,bits ,fill-byte))
+  `(emit-alignment (%%current-segment%%) (%%current-vop%%) ,bits ,fill-byte))
 
 ;;; LABEL-POSITION -- interface.
 ;;; 
@@ -1808,12 +1819,8 @@
 	       `((declare ,@decls)))
 	   (let ((,postits (segment-postits ,segment-name)))
 	     (setf (segment-postits ,segment-name) nil)
-	     (symbol-macrolet
-		 ((*current-segment*
-		   (macrolet ((lose ()
-				(error "Can't use INST without an ASSEMBLE ~
-					inside emitters.")))
-		     (lose))))
+             (macrolet ((%%current-segment%% ()
+                          (error "You can't use INST without an ASSEMBLE inside emitters.")))
 	       ,@emitter))
 	   (ext:undefined-value))
 	 (eval-when (compile load eval)
