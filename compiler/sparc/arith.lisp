@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.33 2003/08/03 11:27:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.34 2003/08/22 16:14:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -732,7 +732,7 @@
   (:guard (or (backend-featurep :sparc-v8)
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
-  (:generator 1
+  (:generator 2
     (inst umul r x y)))
 
 (define-vop (fast-v8-*-c/signed=>signed fast-signed-binop-c)
@@ -740,14 +740,14 @@
   (:guard (or (backend-featurep :sparc-v8)
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
-  (:generator 1
+  (:generator 2
     (inst smul r x y)))
 
 (define-vop (fast-v8-*-c/fixnum=>fixnum fast-safe-arith-op)
   (:args (x :target r :scs (any-reg zero)))
   (:info y)
   (:arg-types tagged-num
-	      (:constant (and (signed-byte 15) (not (integer 0 0)))))
+	      (:constant (and (signed-byte 13) (not (integer 0 0)))))
   (:results (r :scs (any-reg)))
   (:result-types tagged-num)
   (:note "inline fixnum arithmetic")
@@ -756,7 +756,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 1
-    (inst smul r x (ash (tn-value y) -2))))
+    (inst smul r x y)))
 
 
 (define-vop (fast-v8-*/signed=>signed fast-signed-binop)
