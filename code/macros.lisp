@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.77 2002/10/29 16:42:22 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.78 2002/10/30 18:08:32 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -886,16 +886,23 @@
 (defmacro push (obj place &environment env)
   "Takes an object and a location holding a list.  Conses the object onto
   the list, returning the modified list.  OBJ is evaluated before PLACE."
+
+  ;; This special case for place being a symbol isn't strictly needed.
+  ;; It's so we can do push (and pushnew) with a kernel.core.
   (if (and (symbolp place)
 	   (eq place (macroexpand place env)))
       `(setq ,place (cons ,obj ,place))
       (multiple-value-bind (dummies vals newval setter getter)
 	  (get-setf-expansion place env)
-	(let ((g (gensym)))
-	  `(let* ((,g ,obj)
-		  ,@(mapcar #'list dummies vals)
-		  (,(car newval) (cons ,g ,getter)))
-	    ,setter)))))
+	;; Handle multiple values
+	`(let* (,@(mapcar #'list dummies vals))
+	   (multiple-value-bind ,newval
+	       ,(if (cdr newval)
+		    `(values ,@(rest (mapcar #'(lambda (a b)
+						 (list 'cons a b))
+					     obj getter)))
+		    `(cons ,obj ,getter))
+	     ,setter)))))
 
 (defmacro pushnew (obj place &rest keys &environment env)
   "Takes an object and a location holding a list.  If the object is already
@@ -905,12 +912,15 @@
 	   (eq place (macroexpand place env)))
       `(setq ,place (adjoin ,obj ,place ,@keys))
       (multiple-value-bind (vars vals stores setter getter)
-	  (get-setf-method place env)
-	(let ((tem (gensym)))
-	  `(let* ((,tem ,obj)
-		  ,@(mapcar #'list vars vals)
-		  (,(car stores) (adjoin ,tem ,getter ,@keys)))
-	    ,setter)))))
+	  (get-setf-expansion place env)
+	`(let* (,@(mapcar #'list vars vals))
+	   (multiple-value-bind ,stores
+	       ,(if (cdr stores)
+		    `(values ,@(rest (mapcar #'(lambda (a b)
+						 `(adjoin ,a ,b ,@keys))
+					     obj getter)))
+		    `(adjoin ,obj ,getter ,@keys))
+	     ,setter)))))
 
 
 (defmacro pop (place &environment env)
