@@ -1,4 +1,8 @@
 #!/bin/csh -f
+#
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/fixheader,v 1.2 1992/02/03 01:46:58 ram Exp $
+
+set quotehack = \$"Header: "\$
 
 foreach file ($argv)
 	set range = (`fgrep -n ';;; ***********' $file | sed -e '3,$d' -e 's/:.*//'`)
@@ -23,7 +27,7 @@ $range[1]i
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "\$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/fixheader,v 1.1 1991/03/08 19:51:13 ram Exp $")
+  "$quotehack")
 ;;;
 ;;; **********************************************************************
 .
