@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.1 1992/12/13 15:14:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.2 1992/12/15 19:33:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,16 +26,24 @@
 	 name offset lowtag res)
     (move-continuation-result node block locs cont)))
 
+#+gengc
+(defun needs-remembering (cont)
+  (if (csubtypep (continuation-type cont)
+		 (load-time-value (specifier-type '(or fixnum character
+						       (member t nil)))))
+      nil
+      t))
+
 (defoptimizer ir2-convert-setter ((object value) node block name offset lowtag)
   (let ((value-tn (continuation-tn node block value)))
     (vop set-slot node block (continuation-tn node block object) value-tn
-	 name offset lowtag)
+	 name offset lowtag #+gengc (needs-remembering value))
     (move-continuation-result node block (list value-tn) (node-cont node))))
 
 (defoptimizer ir2-convert-setfer ((value object) node block name offset lowtag)
   (let ((value-tn (continuation-tn node block value)))
     (vop set-slot node block (continuation-tn node block object) value-tn
-	 name offset lowtag)
+	 name offset lowtag #+gengc (needs-remembering value))
     (move-continuation-result node block (list value-tn) (node-cont node))))
 
 (defun do-inits (node block name result lowtag inits args)
@@ -58,7 +66,7 @@
 			    tn))))
 	       (:null
 		(emit-constant nil)))
-	     name slot lowtag))))
+	     name slot lowtag #+gengc nil))))
   (assert (null args)))
 
 (defoptimizer ir2-convert-fixed-allocation
@@ -84,8 +92,66 @@
 	  (vop fixed-alloc node block name words
 	       (logior (ash words vm:type-bits) type)
 	       lowtag result))
-	(vop var-alloc node block (continuation-tn extra) name words
+	(vop var-alloc node block (continuation-tn node block extra) name words
 	     (logior (ash words vm:type-bits) type)
 	     lowtag result))
     (do-inits node block name result lowtag inits args)
     (move-continuation-result node block locs cont)))
+
+
+
+;;;; Replacements for stuff in ir2tran to make gengc work.
+
+#+gengc
+(defun ir2-convert-set (node block)
+  (declare (type cset node) (type ir2-block block))
+  (let* ((cont (node-cont node))
+	 (leaf (set-var node))
+	 (val (continuation-tn node block (set-value node)))
+	 (locs (if (continuation-info cont)
+		   (continuation-result-tns
+		    cont (list (primitive-type (leaf-type leaf))))
+		   nil)))
+    (etypecase leaf
+      (lambda-var
+       (when (leaf-refs leaf)
+	 (let ((tn (find-in-environment leaf (node-environment node))))
+	   (if (lambda-var-indirect leaf)
+	       (vop value-cell-set node block tn val
+		    (needs-remembering val))
+	       (emit-move node block val tn)))))
+      (global-var
+       (ecase (global-var-kind leaf)
+	 ((:special :global)
+	  (assert (symbolp (leaf-name leaf)))
+	  (vop set node block (emit-constant (leaf-name leaf)) val
+	       (needs-remembering val))))))
+
+    (when locs
+      (emit-move node block val (first locs))
+      (move-continuation-result node block locs cont)))
+  (undefined-value))
+
+
+#+gengc
+(defoptimizer (%lexical-exit-breakup ir2-convert) ((info) node block)
+  (vop value-cell-set node block
+       (find-in-environment (continuation-value info) (node-environment node))
+       (emit-constant 0)
+       nil))
+
+
+#+gengc
+(defoptimizer (%slot-setter ir2-convert) ((value str) node block)
+  (let ((val (continuation-tn node block value)))
+    (vop structure-set node block
+	 (continuation-tn node block str)
+	 val
+	 (dsd-index
+	  (slot-accessor-slot
+	   (ref-leaf
+	    (continuation-use
+	     (combination-fun node)))))
+	 (needs-remembering value))
+  
+    (move-continuation-result node block (list val) (node-cont node))))
