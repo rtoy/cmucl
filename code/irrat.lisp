@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.12 1993/05/08 04:49:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.13 1993/05/25 22:09:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -321,40 +321,26 @@
   "Return the arc tangent of Y if X is omitted or Y/X if X is supplied."
   (if xp
       (flet ((atan2 (y x)
-	       (declare (type double-float y x))
-	       (if (plusp (float-sign x))
-		   ;; X is either +0.0 or > 0.0
-		   (if (zerop x)
-		       ;; X is +0.0.
-		       (if (plusp (float-sign y))
-			   ;; Y is either +0.0 or > 0.0
-			   (if (zerop y) +0.0d0 (/ pi 2))
-			   ;; Y is either -0.0 or < 0.0
-			   (if (zerop y) -0.0d0 (/ pi 2)))
-		       ;; X is > 0.0
-		       (if (plusp (float-sign y))
-			   ;; Y is either +0.0 or > 0.0
-			   (if (zerop y) +0.0d0 (%atan2 y x))
-			   ;; Y is either -0.0 or < 0.0
-			   (if (zerop y) -0.0d0 (%atan2 y x))))
-		   ;; X is either -0.0 or < 0.0
-		   (if (zerop x)
-		       ;; X is -0.0
-		       (if (plusp (float-sign y))
-			   ;; Y is either +0.0 or > 0.0
-			   (if (zerop y) pi (/ pi 2))
-			   ;; Y is either -0.0 or < 0.0
-			   (if (zerop y) (- pi) (- (/ pi 2))))
-		       ;; X is < 0.0
-		       (if (zerop y) pi (%atan2 y x))))))
-	(atan2 (number-dispatch ((y real))
-		 (((foreach fixnum bignum ratio single-float))
-		  (coerce y 'double-float))
-		 ((double-float) y))
-	       (number-dispatch ((x real))
-		 (((foreach fixnum bignum ratio single-float))
-		  (coerce x 'double-float))
-		 ((double-float) x))))
+	       (declare (type double-float y x)
+			(values double-float))
+	       (if (zerop x)
+		   (if (zerop y)
+		       (if (plusp (float-sign x))
+			   y
+			   (float-sign y pi))
+		       (float-sign y (/ pi 2)))
+		   (%atan2 y x))))
+	(number-dispatch ((y number) (x number))
+	  ((double-float
+	    (foreach double-float single-float fixnum bignum ratio))
+	   (atan2 y (coerce x 'double-float)))
+	  (((foreach single-float fixnum bignum ratio)
+	    double-float)
+	   (atan2 (coerce y 'double-float) x))
+	  (((foreach single-float fixnum bignum ratio)
+	    (foreach single-float fixnum bignum ratio))
+	   (coerce (atan2 (coerce y 'double-float) (coerce x 'double-float))
+		   'single-float))))
       (number-dispatch ((y number))
 	(handle-reals %atan y)
 	((complex)
