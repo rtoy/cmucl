@@ -6,7 +6,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/float.lisp,v 1.8 1998/03/04 15:00:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/float.lisp,v 1.9 1998/03/04 16:41:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -296,7 +296,7 @@
 			   vm:other-pointer-type)
 	    x))))
 (define-move-vop move-to-complex-single :move
-  (descriptor-reg) (complex-single-reg)))))
+  (descriptor-reg) (complex-single-reg))
 
 (define-vop (move-to-complex-double)
   (:args (x :scs (descriptor-reg)))
@@ -312,7 +312,7 @@
 			   vm:other-pointer-type)
 	    x))))
 (define-move-vop move-to-complex-double :move
-  (descriptor-reg) (complex-double-reg)))))
+  (descriptor-reg) (complex-double-reg))
 
 ;;;
 ;;; Complex float move-argument vop
@@ -339,7 +339,7 @@
 	 (let ((imag-tn (complex-single-reg-imag-tn x)))
 	   (inst sts imag-tn (+ offset world-bytes) nfp)))))))
 (define-move-vop move-complex-single-float-argument :move-argument
-  (complex-single-reg descriptor-reg) (complex-single-reg)))))
+  (complex-single-reg descriptor-reg) (complex-single-reg))
 
 (define-vop (move-complex-double-float-argument)
   (:args (x :scs (complex-double-reg) :target y)
@@ -363,7 +363,7 @@
 	 (let ((imag-tn (complex-double-reg-imag-tn x)))
 	   (inst stt imag-tn (+ offset (* 2 word-bytes)) nfp)))))))
 (define-move-vop move-complex-double-float-argument :move-argument
-  (complex-double-reg descriptor-reg) (complex-double-reg)))))
+  (complex-double-reg descriptor-reg) (complex-double-reg))
 
 ) ; progn complex-float
 

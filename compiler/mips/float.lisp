@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.22 1998/03/04 15:08:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.23 1998/03/04 16:41:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -372,7 +372,7 @@
 	 (let ((imag-tn (complex-single-reg-imag-tn x)))
 	   (inst stc1 imag-tn nfp (+ offset word-bytes))))))))
 (define-move-vop move-complex-single-float-argument :move-argument
-  (complex-single-reg descriptor-reg) (complex-single-reg)))))
+  (complex-single-reg descriptor-reg) (complex-single-reg))
 
 (define-vop (move-complex-double-float-argument)
   (:args (x :scs (complex-double-reg) :target y)
@@ -396,7 +396,7 @@
 	 (let ((imag-tn (complex-double-reg-imag-tn x)))
 	   (str-double imag-tn nfp (+ offset (* 2 word-bytes)))))))))
 (define-move-vop move-complex-double-float-argument :move-argument
-  (complex-double-reg descriptor-reg) (complex-double-reg)))))
+  (complex-double-reg descriptor-reg) (complex-double-reg))
 
 ) ; progn complex-float
 
