@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.2 1990/08/24 18:10:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.3 1990/09/23 18:05:50 wlott Exp $
 ;;;
 ;;;    Functions that hack on the global function namespace (primarily
 ;;; concerned with SETF functions here.)
@@ -65,16 +65,13 @@
 (defun fboundp (name)
   "Return true if Name has a global function definition."
   (with-function-name name
-    (functionp (%primitive fast-symbol-function name))
+    (fboundp (the symbol name))
     (functionp (gethash (cadr name) *setf-functions*))))
-
-#+new-compiler
-(defvar *the-undefined-function*)
 
 #+new-compiler
 (defun fmakunbound (name)
   "Make Name have no global function definition."
   (with-function-name name
-    (%primitive set-symbol-function name *the-undefined-function*)
+    (fmakunbound (the symbol name))
     (remhash (cadr name) *setf-functions*))
   t)
