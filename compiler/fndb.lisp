@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.85 1999/02/02 12:18:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.86 2000/02/25 15:00:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -846,7 +846,8 @@
 ;;; code motion over I/O operations is particularly confusing and not very
 ;;; important for efficency.
 
-(defknown copy-readtable (&optional (or readtable null) readtable) readtable
+(defknown copy-readtable (&optional (or readtable null) (or readtable null))
+  readtable
   ())
 (defknown readtablep (t) boolean (movable foldable flushable))
 
@@ -856,7 +857,7 @@
 
 (defknown set-macro-character (character callable &optional t readtable) void
   (unsafe))
-(defknown get-macro-character (character &optional readtable)
+(defknown get-macro-character (character &optional (or readtable null))
   (values callable boolean) (flushable))
 
 (defknown make-dispatch-macro-character (character &optional t readtable)
@@ -865,7 +866,7 @@
   (character character callable &optional readtable) void
   (unsafe))
 (defknown get-dispatch-macro-character
-  (character character &optional readtable) callable
+  (character character &optional (or readtable null)) callable
   (flushable))
 
 ;;; May return any type due to eof-value...
