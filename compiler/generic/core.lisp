@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.16 1992/07/22 23:35:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.17 1992/08/02 19:41:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -244,6 +244,9 @@
 	       (:fdefinition
 		(setf (code-header-ref code-obj code-obj-index)
 		      (lisp::fdefinition-object (cdr const) t)))
+	       (:type-predicate
+		(setf (code-header-ref code-obj code-obj-index)
+		      (load-type-predicate (type-specifier (cdr const)))))
 	       (:xep
 		(let ((xep (cdr (assoc (cdr const) xeps :test #'eq))))
 		  (assert xep)
