@@ -16,6 +16,9 @@
 ;;;
 (in-package 'c)
 
+(export '(component-header-length sb-allocated-size current-nfp-tn
+	  callee-nfp-tn callee-return-pc-tn *code-segment* *elsewhere*))
+
 ;;;; Utilities used during code generation.
 
 ;;; Component-Header-Length   --  Interface
@@ -46,7 +49,6 @@
 	   (environment-info
 	    (block-environment block)))
       (ir2-component-nfp (component-info (block-component block)))))))
-
 
 ;;; CALLEE-NFP-TN  --  Interface
 ;;;
