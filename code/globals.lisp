@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.5 1991/02/08 13:33:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.6 1992/03/03 18:59:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,23 +33,17 @@
 		    *print-case* *print-circle* *print-gensym* *print-array*
 		    defmacro-error-string defsetf-error-string
 		    std-lisp-readtable hi::*in-the-editor*
-		    debug::*in-the-debugger* mach::*free-trap-arg-blocks*
+		    debug::*in-the-debugger*
 		    conditions::*handler-clusters*
 		    conditions::*restart-clusters* alloctable-address
-		    ext::*c-type-names* *gc-inhibit* *need-to-collect-garbage*
+		    *gc-inhibit* *need-to-collect-garbage*
 		    defmacro-error-string deftype-error-string
 		    defsetf-error-string %sp-interrupts-inhibited
 		    *software-interrupt-vector* *load-verbose*
 		    *load-print-stuff* *in-compilation-unit*
 		    *aborted-compilation-units* char-name-alist
 		    *default-pathname-defaults* *beep-function*
-		    *gc-notify-before* *gc-notify-after*
-
-		    ;; hack to get these args to with-trap-arg-block to work in
-		    ;; the bootstrapping env, since the var must be known to be
-		    ;; special, in addition to being known to be an alien var.
-		    mach::timeval mach::timezone mach::int1 mach::int2
-		    mach::int3 mach::tchars mach::ltchars))
+		    *gc-notify-before* *gc-notify-after*))
 
 
 (proclaim '(ftype (function (&rest t) *)
