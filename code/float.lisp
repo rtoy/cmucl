@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.16 1997/06/26 19:19:51 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.17 1998/02/19 03:49:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,15 +82,14 @@
 
 ;;;; Float parameters:
 
-(progn
-  (defconstant least-positive-single-float (single-from-bits 0 0 1))
-  (defconstant least-positive-short-float least-positive-single-float)
-  (defconstant least-negative-single-float (single-from-bits 1 0 1))
-  (defconstant least-negative-short-float least-negative-single-float)
-  (defconstant least-positive-double-float (double-from-bits 0 0 1))
-  (defconstant least-positive-long-float least-positive-double-float)
-  (defconstant least-negative-double-float (double-from-bits 1 0 1))
-  (defconstant least-negative-long-float least-negative-double-float))
+(defconstant least-positive-single-float (single-from-bits 0 0 1))
+(defconstant least-positive-short-float least-positive-single-float)
+(defconstant least-negative-single-float (single-from-bits 1 0 1))
+(defconstant least-negative-short-float least-negative-single-float)
+(defconstant least-positive-double-float (double-from-bits 0 0 1))
+(defconstant least-positive-long-float least-positive-double-float)
+(defconstant least-negative-double-float (double-from-bits 1 0 1))
+(defconstant least-negative-long-float least-negative-double-float)
 
 (defconstant least-positive-normalized-single-float
   (single-from-bits 0 vm:single-float-normal-exponent-min 0))
@@ -183,6 +182,7 @@
 		  ((double-float)
 		   (let ((hi (double-float-high-bits x))
 			 (lo (double-float-low-bits x)))
+		     (declare (ignorable lo))
 		     (and (> (ldb vm:double-float-exponent-byte hi)
 			     vm:double-float-normal-exponent-max)
 			  ,double)))))))
@@ -199,12 +199,10 @@
 
   (frob float-trapping-nan-p
     "Return true if the float X is a trapping NaN (Not a Number)."
-    (not (zerop (logand (ldb vm:single-float-significand-byte bits)
-			vm:single-float-trapping-nan-bit)))
-    (progn
-      lo; ignore
-      (not (zerop (logand (ldb vm:double-float-significand-byte hi)
-			  vm:double-float-trapping-nan-bit))))))
+    (zerop (logand (ldb vm:single-float-significand-byte bits)
+		   vm:single-float-trapping-nan-bit))
+    (zerop (logand (ldb vm:double-float-significand-byte hi)
+		   vm:double-float-trapping-nan-bit))))
 
 
 ;;; FLOAT-PRECISION  --  Public

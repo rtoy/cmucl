@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.25 1997/12/15 06:46:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.26 1998/02/19 03:49:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -750,7 +750,7 @@ For the special cases, the following values are used:
    0              -infinity
 "
   (declare (type double-float x))
-  (cond ((float-trapping-nan-p x)
+  (cond ((float-nan-p x)
 	 x)
 	((float-infinity-p x)
 	 #.ext:double-float-positive-infinity)
@@ -802,7 +802,7 @@ and Y are coerced to single-float."
     ;; signal would have been raised.
     (with-float-traps-masked (:underflow :overflow)
       (setf rho (+ (square x) (square y)))
-      (cond ((and (or (float-trapping-nan-p rho)
+      (cond ((and (or (float-nan-p rho)
 		      (float-infinity-p rho))
 		  (or (float-infinity-p (abs x))
 		      (float-infinity-p (abs y))))
@@ -836,7 +836,7 @@ Z may be any number, but the result is always a complex."
 	  (nu 0d0))
       (declare (double-float x y eta nu))
 
-      (if (not (float-trapping-nan-p x))
+      (if (not (float-nan-p x))
 	  (setf rho (+ (scalb (abs x) (- k)) (sqrt rho))))
 
       (cond ((oddp k)
