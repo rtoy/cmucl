@@ -83,7 +83,7 @@ Pittsburgh, PA 15213
 \hide{ -*- Dictionary: cmu-user -*- }
 \begin{menu}
 * Introduction::                
-* Design Choices and Extensions:: 
+* Design Choices and Extensions::  
 * The Debugger::                
 * The Compiler::                
 * Advanced Compiler Use and Efficiency Hints::  
@@ -451,8 +451,20 @@ The WIRE Package
 
 Debugger Programmer's Interface
 
-* Debug-conditions::            
-* Debug-errors::                
+* DI Exceptional Conditions::
+* Debug-variables::
+* Frames::
+* Debug-functions::
+* Debug-blocks::
+* Breakpoints::
+* Code-locations::
+* Debug-sources::
+* Source Translation Utilities::
+
+DI Exceptional Conditions
+
+* Debug-conditions::
+* Debug-errors::
 \end{menu}
 
 \node Introduction, Design Choices and Extensions, Top, Top
@@ -10614,11 +10626,19 @@ takes either type, but when it specifically names the argument
 unknown code-location.
 
 \begin{menu}
-* Debug-conditions::            
-* Debug-errors::                
+* DI Exceptional Conditions::
+* Debug-variables::
+* Frames::
+* Debug-functions::
+* Debug-blocks::
+* Breakpoints::
+* Code-locations::
+* Debug-sources::
+* Source Translation Utilities::
 \end{menu}
 
 
+\node DI Exceptional Conditions, Debug-variables, Debugger Programmer's Interface, Debugger Programmer's Interface
 \section{DI Exceptional Conditions}
 
 Some of these operations fail depending on the availability debugging
@@ -10636,7 +10656,12 @@ must handle them before it can correctly continue execution.  These
 debugging conditions are not errors since it is no fault of the
 programmers that the conditions occur.
 
-\node Debug-conditions, Debug-errors, Debugger Programmer's Interface, Debugger Programmer's Interface
+\begin{menu}
+* Debug-conditions::
+* Debug-errors::
+\end{menu}
+
+\node Debug-conditions, Debug-errors, DI Exceptional Conditions, DI Exceptional Conditions
 \subsection{Debug-conditions}
 
 The debug internals interface signals conditions when it can't adhere
@@ -10699,7 +10724,7 @@ than one valid variable in a particular frame.
 \enddeftp
 
 
-\node Debug-errors,  , Debug-conditions, Debugger Programmer's Interface
+\node Debug-errors,  , Debug-conditions, DI Exceptional Conditions
 \subsection{Debug-errors}
 
 These are programmer errors resulting from misuse of the debugging tools'
@@ -10741,7 +10766,7 @@ on a frame other than the one for which the function had been prepared.
 
 
 
-\node Debug-variables, Frames, Debugger Programmer's Interface, Debugger Programmer's Interface
+\node Debug-variables, Frames, DI Exceptional Conditions, Debugger Programmer's Interface
 \section{Debug-variables}
 
 Debug-variables represent the constant information about where the system
