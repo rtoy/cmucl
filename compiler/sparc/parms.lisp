@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.6 1991/03/19 18:48:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.7 1991/03/22 14:01:43 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -138,17 +138,26 @@
 ;;;; Other random constants.
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
-	  breakpoint-trap object-not-list-trap object-not-structure-trap))
+	  breakpoint-trap object-not-list-trap object-not-structure-trap
+	  trace-table-normal trace-table-call-site
+	  trace-table-function-prologue trace-table-function-epilogue))
 
-(defconstant halt-trap 8)
-(defconstant pending-interrupt-trap 9)
-(defconstant error-trap 10)
-(defconstant cerror-trap 11)
-(defconstant breakpoint-trap 12)
+(defenum (:suffix -trap :start 8)
+  halt
+  pending-interrupt
+  error
+  cerror
+  breakpoint)
 
+(defenum (:prefix object-not- :suffix -trap :start 16)
+  list
+  structure)
 
-(defconstant object-not-list-trap 16)
-(defconstant object-not-structure-trap 17)
+(defenum (:prefix trace-table-)
+  normal
+  call-site
+  function-prologue
+  function-epilogue)
 
 
 
