@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.30 1991/02/20 14:58:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.31 1991/03/10 18:30:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -610,6 +610,22 @@ inlines
   (undefined-value))
 
 
+;;; MAYBE-REMOVE-FREE-FUNCTION  --  Interface
+;;;
+;;;    This function is called when we let convert a function or blow away an
+;;; XEP, or otherwise do something that should prevent any new references to
+;;; Fun (or its optional-dispatch) from being created.
+;;;
+(defun maybe-remove-free-function (fun)
+  (declare (type functional fun))
+  (let* ((fun (etypecase fun
+		(clambda (or (lambda-optional-dispatch fun) fun))
+		(optional-dispatch fun)))
+	 (entry (gethash (leaf-name fun) *free-functions*)))
+    (when (eq entry fun)
+      (remhash (leaf-name fun) *free-functions*)))
+  (undefined-value))
+
 ;;; Delete-Lambda  --  Internal
 ;;;
 ;;;    Deal with deleting the last reference to a lambda.  Since there is only
@@ -620,9 +636,9 @@ inlines
 ;;;
 ;;;    If the function isn't a Let, we unlink the function head and tail from
 ;;; the component head and tail to indicate that the code is unreachable.  We
-;;; also delete the function Component-Lambdas (it won't be there before local
-;;; call analysis, but no matter.)  If the lambda was never referenced, we give
-;;; a note.
+;;; also delete the function from Component-Lambdas (it won't be there before
+;;; local call analysis, but no matter.)  If the lambda was never referenced,
+;;; we give a note.
 ;;;
 ;;;    If the lambda is an XEP, then we null out the Entry-Function in its
 ;;; Entry-Function so that people will know that it is not an entry point
@@ -645,6 +661,7 @@ inlines
 	(let* ((bind-block (node-block bind))
 	       (component (block-component bind-block))
 	       (return (lambda-return leaf)))
+	  (assert (null (leaf-refs leaf)))
 	  (unless (leaf-ever-used leaf)
 	    (let ((*compiler-error-context* bind))
 	      (compiler-note "Deleting unused function~:[.~;~:*~%  ~S~]"
@@ -657,6 +674,7 @@ inlines
 
     (when (eq kind :external)
       (let ((fun (functional-entry-function leaf)))
+	(assert (null (leaf-refs fun)))
 	(setf (functional-entry-function fun) nil)
 	(when (optional-dispatch-p fun)
 	  (delete-optional-dispatch fun)))))
@@ -686,6 +704,7 @@ inlines
 ;;;
 (defun delete-optional-dispatch (leaf)
   (declare (type optional-dispatch leaf))
+  (maybe-remove-free-function leaf)
   (let ((entry (functional-entry-function leaf)))
     (unless (and entry (leaf-refs entry))
       (assert (or (not entry) (eq (functional-kind entry) :deleted)))
