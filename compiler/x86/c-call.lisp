@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.15 2004/09/11 19:18:02 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.16 2004/10/24 16:58:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -319,17 +319,31 @@
 	      delta)))))
 
 ;;; Support for callbacks to Lisp.
-(export '(make-callback-trampoline callback-accessor-form))
+(export '(make-callback-trampoline callback-accessor-form
+	  compatible-function-types-p))
 
 (defun callback-accessor-form (type sp offset)
   `(alien:deref (sap-alien 
 		 (sys:sap+ ,sp ,offset)
 		 (* ,type))))
 
-(defun make-callback-trampoline (index return-type)
+(defun compatible-function-types-p (type1 type2)
+  (flet ((machine-rep (type)
+	   (etypecase type
+	     (alien::integer-64$ :dword)
+	     ((or alien::integer$ alien::pointer$ alien::sap$) :word)
+	     (alien::single$ :single)
+	     (alien::double$ :double)
+	     (alien::void$ :void))))
+    (let ((type1 (alien-function-type-result-type type1))
+	  (type2 (alien-function-type-result-type type2)))
+      (eq (machine-rep type1) (machine-rep type2)))))
+
+(defun make-callback-trampoline (index fn-type)
   "Cons up a piece of code which calls call-callback with INDEX and a
 pointer to the arguments."
-  (let* ((segment (make-segment))
+  (let* ((return-type (alien-function-type-result-type fn-type))
+	 (segment (make-segment))
 	 (eax x86::eax-tn)
 	 (edx x86::edx-tn)
 	 (ebp x86::ebp-tn)

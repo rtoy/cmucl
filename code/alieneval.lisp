@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.60 2004/10/23 15:33:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.61 2004/10/24 16:58:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2118,13 +2118,13 @@ If so return true; otherwise call ALTERNATIVE."
 ||#
 
 (defstruct (callback 
-	     (:constructor make-callback (trampoline lisp-fn return-type)))
+	     (:constructor make-callback (trampoline lisp-fn function-type)))
   "A callback consists of a piece assembly code -- the trampoline --
-and a lisp function.  We store the return-type, so we can detect
-incompatible redefinitions."
+and a lisp function.  We store the function type (including return
+type and arg types, so we can detect incompatible redefinitions."
   (trampoline (required-argument) :type system-area-pointer)
   (lisp-fn (required-argument) :type (function (fixnum fixnum) (values)))
-  (return-type (required-argument) :type alien::alien-type))
+  (function-type (required-argument) :type alien::alien-function-type))
 
 (declaim (type (vector callback) *callbacks*))
 (defvar *callbacks* (make-array 10 :element-type 'callback
@@ -2137,10 +2137,10 @@ incompatible redefinitions."
   (funcall (callback-lisp-fn (aref *callbacks* index))
 	   sp-fixnum ret-addr))
 
-(defun create-callback (lisp-fn return-type)
+(defun create-callback (lisp-fn fn-type)
   (let* ((index (fill-pointer *callbacks*))
-	 (tramp (vm:make-callback-trampoline index return-type))
-	 (cb (make-callback tramp lisp-fn return-type)))
+	 (tramp (vm:make-callback-trampoline index fn-type))
+	 (cb (make-callback tramp lisp-fn fn-type)))
     (vector-push-extend cb *callbacks*)
     cb))
 
@@ -2183,10 +2183,10 @@ incompatible redefinitions."
 		length))
 	 (fill-pointer code))
     (new-assem:segment-map-output segment
-				  (lambda (sap length)
-				    (kernel:system-area-copy sap 0 fill-pointer 0
-							     (* length vm:byte-bits))
-				    (setf fill-pointer (sys:sap+ fill-pointer length))))
+      (lambda (sap length)
+	(kernel:system-area-copy sap 0 fill-pointer 0
+				 (* length vm:byte-bits))
+	(setf fill-pointer (sys:sap+ fill-pointer length))))
     code))
 
 (defun symbol-trampoline (symbol)
@@ -2196,39 +2196,36 @@ incompatible redefinitions."
   "Return the trampoline pointer for the callback NAME."
   `(symbol-trampoline ',name))
 
-(defun compatible-return-types-p (type1 type2)
-  (flet ((machine-rep (type)
-	   (etypecase type
-	     (integer-64$ :dword)
-	     ((or integer$ pointer$ sap$) :word)
-	     (single$ :single)
-	     (double$ :double)
-	     (void$ :void))))
-    (eq (machine-rep type1) (machine-rep type2))))
-	       
-(defun define-callback-function (name lisp-fn return-type)
+;; Convenience macro to make it easy to call callbacks.
+(defmacro callback-funcall (name &rest args)
+  `(alien-funcall (sap-alien (callback ,name)
+			     ,(unparse-alien-type
+			       (callback-function-type (symbol-value name))))
+		  ,@args))
+
+(defun define-callback-function (name lisp-fn fn-type)
   (declare (type symbol name)
 	   (type function lisp-fn))
   (flet ((register-new-callback () 
 	   (setf (symbol-value name)
-		 (create-callback lisp-fn return-type))))
+		 (create-callback lisp-fn fn-type))))
     (if (and (boundp name)
 	     (callback-p (symbol-value name)))
 	;; try do redefine the existing callback
 	(let ((callback (find (symbol-trampoline name) *callbacks*
 			      :key #'callback-trampoline :test #'sys:sap=)))
 	  (cond (callback
-		 (let ((old-type (callback-return-type callback)))
-		   (cond ((compatible-return-types-p old-type return-type)
+		 (let ((old-type (callback-function-type callback)))
+		   (cond ((vm::compatible-function-types-p old-type fn-type)
 			  ;; (format t "~&; Redefining callback ~A~%" name)
 			  (setf (callback-lisp-fn callback) lisp-fn)
-			  (setf (callback-return-type callback) return-type)
+			  (setf (callback-function-type callback) fn-type)
 			  callback)
 			 (t
 			  (let ((e (format nil "~
 Attempt to redefine callback with incompatible return type.
    Old type was: ~A 
-    New type is: ~A" old-type return-type))
+    New type is: ~A" old-type fn-type))
 				(c (format nil "~
 Create new trampoline (old trampoline calls old lisp function).")))
 			    (cerror c e)
@@ -2249,6 +2246,10 @@ Create new trampoline (old trampoline calls old lisp function).")))
 (defun parse-return-type (spec)
   (let ((*values-type-okay* t))
     (parse-alien-type spec)))
+
+(defun parse-function-type (return-type arg-specs)
+  (parse-alien-type
+   `(function ,return-type ,@(mapcar #'second arg-specs))))
 
 (defun return-exp (spec sap body)
   (flet ((store (spec) `(setf (deref (sap-alien ,sap (* ,spec))) ,body)))
@@ -2287,10 +2288,10 @@ incremental redefinition of callback functions."
 	,@decls
 	;; We assume sp-fixnum is word aligned and pass it untagged to
 	;; this function.  The shift compensates this.
-	(let ((,sp (sys:int-sap (bignum:%ashl (ldb (byte vm:word-bits 0) ,sp-fixnum)
-					      2)))
-	      (,ret (sys:int-sap (bignum:%ashl (ldb (byte vm:word-bits 0) ,ret-addr)
-					       2))))
+ 	(let ((,sp (sys:int-sap (bignum:%ashl (ldb (byte vm:word-bits 0) ,sp-fixnum)
+ 					      2)))
+ 	      (,ret (sys:int-sap (bignum:%ashl (ldb (byte vm:word-bits 0) ,ret-addr)
+ 					       2))))
 	  (declare (ignorable ,sp ,ret))
 	  ;; Copy all arguments to local variables.
 	  (with-alien ,(loop for offset = 0 then (+ offset 
@@ -2301,7 +2302,7 @@ incremental redefinition of callback functions."
 	    ,(return-exp return-type ret `(progn ,@body))
 	    (values))))
       (define-callback-function 
-	  ',name #',name ',(parse-return-type return-type)))))
+	  ',name #',name ',(parse-function-type return-type arg-specs)))))
 
 ;;; dumping support
 
@@ -2310,7 +2311,7 @@ incremental redefinition of callback functions."
   (loop for cb across *callbacks*
 	for i from 0
 	do (setf (callback-trampoline cb)
-		 (vm:make-callback-trampoline i (callback-return-type cb)))))
+		 (vm:make-callback-trampoline i (callback-function-type cb)))))
 
 ;; *after-save-initializations* contains
 ;; new-assem::forget-output-blocks, and the assembler may not work
