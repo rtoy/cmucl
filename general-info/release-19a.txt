@@ -180,6 +180,12 @@ New in this release:
        all methods returned constant values, and some methods were
        qualified, or the generic function didn't use the standard
        method combination.
+     - For standard method combination and method combinations defined
+       with the short form of DEFINE-METHOD-COMBINATION: If there are
+       no applicable primary methods when a generic function is
+       called, the generic function PCL:NO-PRIMARY-METHOD is called.
+       The default method of this generic function signals a
+       continuable error of type PCL:NO-PRIMARY-METHOD-ERROR.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

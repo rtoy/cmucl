@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.23 2003/05/04 13:11:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.24 2003/06/17 09:45:40 gerd Exp $")
 
 (in-package :pcl)
 
@@ -174,7 +174,7 @@
 		 :definition-source method
 		 :documentation doc))
 
-(defmethod compute-effective-method ((generic-function generic-function)
+(defmethod compute-effective-method ((gf generic-function)
 				     (combin short-method-combination)
 				     applicable-methods)
   (let ((type (method-combination-type combin))
@@ -215,8 +215,7 @@
 		`(,operator ,@(mapcar (lambda (m) `(call-method ,m ()))
 				      primary)))))
       (cond ((null primary)
-	     `(error "~@<No ~S methods for the generic function ~S.~@:>"
-		     ',type ',generic-function))
+	     `(%no-primary-method ',gf .args.))
 	    ((null around) main-method)
 	    (t
 	     `(call-method ,(car around)
