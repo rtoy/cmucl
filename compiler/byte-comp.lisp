@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.19 1993/08/20 23:55:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.20 1993/08/23 01:37:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,7 +221,9 @@
     return-from
     tagbody
     go
-    unwind-protect))
+    unwind-protect
+    dylan-var-ref
+    dylan-var-set))
 
 (defun xop-index-or-lose (name)
   (or (position name *xop-names* :test #'eq)
@@ -1253,7 +1255,13 @@
 		(output-do-inline-function segment 'symbol-value))
 	       (:global-function
 		(output-push-fdefinition segment (global-var-name leaf))
-		(output-do-xop segment 'fdefn-function-or-lose)))))
+		(output-do-xop segment 'fdefn-function-or-lose))))
+	    (dylan-var
+	     (output-push-load-time-constant
+	      segment :dylan-varinfo-value
+	      (cons (dylan-var-name leaf)
+		    (dylan-var-module-name leaf)))
+	     (output-do-xop segment 'dylan-var-ref)))
 	  (checked-canonicalize-values segment cont 1))))))
   (undefined-value))
 
@@ -1275,7 +1283,13 @@
 	  (output-push-constant segment (global-var-name leaf))
 	  (output-do-inline-function segment 'setf-symbol-value))))
       (lambda-var
-       (output-set-lambda-var segment leaf (node-environment set))))
+       (output-set-lambda-var segment leaf (node-environment set)))
+      (dylan-var
+       (output-push-load-time-constant
+	segment :dylan-varinfo-value
+	(cons (dylan-var-name leaf)
+	      (dylan-var-module-name leaf)))
+       (output-do-xop segment 'dylan-var-set)))
     (unless (eql values 0)
       (checked-canonicalize-values segment cont 1)))
   (undefined-value))
