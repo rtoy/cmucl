@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.27 2002/10/27 23:01:10 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.28 2002/11/19 12:51:00 toy Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -259,3 +259,20 @@ F(cfgetospeed)
 F(cfgetispeed)
 F(cfsetispeed)
 #endif
+
+#if defined(sparc)
+F(getpwnam_r)
+F(getpwuid_r)
+F(getgrnam_r)
+F(getgrgid_r)
+#endif
+#if defined(__NetBSD__)
+F(getpwnam)
+F(getpwuid)
+F(getgrnam)
+F(getgrgid)
+#endif
+
+F(setpwent)
+F(getpwent)
+F(endpwent)  
