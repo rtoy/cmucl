@@ -72,12 +72,16 @@
 ;;;
 (load "code:run-program")
 
-#|
+
 ;;; CLX.
 ;;;
+#+clx(progn
 (load "clx:defsystem")
-(load-clx (pathname "clx:"))
+(setf (symbol-function 'xlib::clx-foreign-files) #'list); #### Hack...
+(xlib::load-clx (pathname "clx:"))
+)
 
+#|
 ;;; A hack to fix a bug in the X11 R3 server.  This should go away when
 ;;; the server is fixed.
 ;;;
