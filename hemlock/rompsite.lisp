@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.27 1993/07/23 13:24:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.28 1993/07/26 19:49:45 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -928,9 +928,63 @@
 
 (defvar old-ltchars)
 
+#+hpux
+(progn
+  (defvar old-c-iflag)
+  (defvar old-c-oflag)
+  (defvar old-c-cflag)
+  (defvar old-c-lflag)
+  (defvar old-c-cc))
+
 (defun setup-input ()
   (let ((fd *editor-file-descriptor*))
     (when (unix:unix-isatty 0)
+      #+hpux
+      (alien:with-alien ((tios (alien:struct unix:termios)))
+	(multiple-value-bind
+	    (val err)
+	    (unix:unix-tcgetattr fd (alien:alien-sap tios))
+	  (when (null val)
+	    (error "Could not tcgetattr, unix error ~S."
+		   (unix:get-unix-error-msg err))))
+	(setf old-c-iflag (alien:slot tios 'unix:c-iflag))
+	(setf old-c-oflag (alien:slot tios 'unix:c-oflag))
+	(setf old-c-cflag (alien:slot tios 'unix:c-cflag))
+	(setf old-c-lflag (alien:slot tios 'unix:c-lflag))
+	(setf old-c-cc
+	      (vector (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:veof)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vquit)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vstart)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vstop)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vsusp)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vmin)
+		      (alien:deref (alien:slot tios 'unix:c-cc) unix:vtime)))
+	(setf (alien:slot tios 'unix:c-lflag)
+	      (logand (alien:slot tios 'unix:c-lflag)
+		      (lognot (logior unix:tty-echo unix:tty-icanon))))
+	(setf (alien:slot tios 'unix:c-iflag)
+	      (logand (alien:slot tios 'unix:c-iflag) (lognot unix:tty-icrnl)))
+	(setf (alien:slot tios 'unix:c-oflag)
+	      (logand (alien:slot tios 'unix:c-oflag) (lognot unix:tty-ocrnl)))
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:veof) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)
+	      (if *editor-windowed-input* #xff 28))
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vquit) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vstart) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vstop) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vsusp) #xff)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vmin) 1)
+	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vtime) 0)
+	(multiple-value-bind
+	    (val err)
+	    (unix:unix-tcsetattr fd unix:tcsaflush (alien:alien-sap tios))
+	  (when (null val)
+	    (error "Could not tcsetattr, unix error ~S."
+		   (unix:get-unix-error-msg err)))))
+      #-hpux
       (alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	(multiple-value-bind
 	    (val err)
@@ -941,7 +995,7 @@
 	(let ((flags (alien:slot sg 'unix:sg-flags)))
 	  (setq old-flags flags)
 	  (setf (alien:slot sg 'unix:sg-flags)
-		(logand (logior flags unix:tty-cbreak)
+		(logand #-hpux (logior flags unix:tty-cbreak)
 			(lognot unix:tty-echo)
 			(lognot unix:tty-crmod)))
 	  (multiple-value-bind
@@ -950,6 +1004,7 @@
 	    (if (null val)
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err))))))
+      #-hpux
       (alien:with-alien ((tc (alien:struct unix:tchars)))
 	(multiple-value-bind
 	    (val err)
@@ -977,6 +1032,7 @@
 	  (unless val
 	    (error "Failed to set tchars, unix error ~S."
 		   (unix:get-unix-error-msg err)))))
+      #-hpux
       (alien:with-alien ((tc (alien:struct unix:ltchars)))
 	(multiple-value-bind
 	    (val err)
@@ -1007,6 +1063,44 @@
 (defun reset-input ()
   (when (unix:unix-isatty 0)
     (let ((fd *editor-file-descriptor*))
+      #+hpux
+      (when (boundp 'old-c-lflag)
+	(alien:with-alien ((tios (alien:struct unix:termios)))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-tcgetattr fd (alien:alien-sap tios))
+	    (when (null val)
+	      (error "Could not tcgetattr, unix error ~S."
+		     (unix:get-unix-error-msg err))))
+	  (setf (alien:slot tios 'unix:c-iflag) old-c-iflag)
+	  (setf (alien:slot tios 'unix:c-oflag) old-c-oflag)
+	  (setf (alien:slot tios 'unix:c-cflag) old-c-cflag)
+	  (setf (alien:slot tios 'unix:c-lflag) old-c-lflag)
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp)
+		(svref old-c-cc 0))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:veof)
+		(svref old-c-cc 1))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)
+		(svref old-c-cc 2))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vquit)
+		(svref old-c-cc 3))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vstart)
+		(svref old-c-cc 4))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vstop)
+		(svref old-c-cc 5))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vsusp)
+		(svref old-c-cc 6))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vmin)
+		(svref old-c-cc 7))
+	  (setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vtime)
+		(svref old-c-cc 8))
+	  (multiple-value-bind
+	      (val err)
+	      (unix:unix-tcsetattr fd unix:tcsaflush (alien:alien-sap tios))
+	    (when (null val)
+	      (error "Could not tcsetattr, unix error ~S."
+		     (unix:get-unix-error-msg err))))))
+      #-hpux
       (when (boundp 'old-flags)
 	(alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	  (multiple-value-bind
@@ -1022,6 +1116,7 @@
 	      (unless val
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err)))))))
+      #-hpux
       (when (and (boundp 'old-tchars)
 		 (simple-vector-p old-tchars)
 		 (eq (length old-tchars) 6))
@@ -1038,6 +1133,7 @@
 	    (unless val
 	      (error "Failed to set tchars, unix error ~S."
 		     (unix:get-unix-error-msg err))))))
+      #-hpux
       (when (and (boundp 'old-ltchars)
 		 (simple-vector-p old-ltchars)
 		 (eq (length old-ltchars) 6))
