@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.17 1992/12/09 00:10:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.18 1993/05/02 14:55:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,7 +99,9 @@
 ;;; possible information about the actual argument types.
 ;;;
 (defun note-assumed-types (component name var)
-  (when (eq (leaf-where-from var) :assumed)
+  (when (and (eq (leaf-where-from var) :assumed)
+	     (not (and (defined-function-p var)
+		       (eq (defined-function-inlinep var) :notinline))))
     (assert  (and (eq (info function where-from name) :assumed)
 		  (eq (info function kind name) :function)))
     (let ((atype (info function assumed-type name)))
