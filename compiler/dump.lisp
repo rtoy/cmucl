@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.79 2003/06/10 16:52:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.80 2003/06/30 14:59:03 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,32 +278,21 @@
     (dump-fop 'lisp::fop-pop file)
     (incf (fasl-file-table-free file))))
 
-;;; circular-cons-p -- Internal
+;;; non-circular-cons-p -- Internal
 ;;;
-;;; Test for the kind of circularities that would cause equal not to
-;;; return, but allow other kinds of shared structure.
+;;; Return true if LIST is definitely not circular.
 
-(defun circular-cons-p (obj)
-  (unless (consp obj)
-    (return-from circular-cons-p nil))
-  (let ((circ-hash (make-hash-table :test #'eq)))
-    (labels ((circular-cons-p-aux (obj top-level)
-	       (do* ((sublist obj (cdr sublist)))
-		   ((not (consp sublist))
-		    nil)
-		 (let ((car-list (car sublist)))
-		   (when (gethash sublist circ-hash)
-		     (return-from circular-cons-p t))
-		   (setf (gethash sublist circ-hash) t)
-		   (when (consp car-list)
-		     (circular-cons-p-aux car-list nil))))
-	       (when (not top-level)
-		 (do ((sublist obj (cdr sublist)))
-		   ((not (consp sublist))
-		    nil)
-		 (remhash sublist circ-hash)))
-	       nil))
-      (circular-cons-p-aux obj t))))
+(defun non-circular-list-p (list)
+  (declare (list list))
+  (or (null list)
+      (labels ((safe-cddr (obj)
+		 (when (and (consp obj) (consp (cdr obj)))
+		   (cddr obj))))
+	(loop for tortoise = list then (cdr tortoise)
+	      for hare = (safe-cddr list) then (safe-cddr hare)
+	      when (not (consp tortoise)) return t
+	      when (consp (car tortoise)) return nil
+	      when (eq hare tortoise) return nil))))
 
 ;;; EQUAL-CHECK-TABLE  --  Internal
 ;;;
@@ -897,10 +886,10 @@
 	   (typecase x
 	     (symbol (dump-symbol x file))
 	     (list
-	      (cond (*coalesce-constants* ;(and (not (circular-cons-p x)))
+	      (cond ((and *coalesce-constants* (non-circular-list-p x))
 		     (unless (equal-check-table x file)
-			     (dump-list x file)
-			     (equal-save-object x file)))
+		       (dump-list x file)
+		       (equal-save-object x file)))
 		    (t
 		     (dump-list x file)
 		     (eq-save-object x file))))
