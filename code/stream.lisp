@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.19 1993/03/12 21:05:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.20 1994/03/16 11:35:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,8 +275,9 @@
 		 (incf index))
 		((zerop index)
 		 (done-with-fast-read-char)
-		 (return (funcall (stream-in stream) stream
-				  eof-errorp eof-value)))
+		 (return (eof-or-lose stream eof-errorp eof-value)))
+		;; since fast-read-char hit already the eof char, we
+	        ;; shouldn't do another read-char
 		(t
 		 (done-with-fast-read-char)
 		 (return (values (shrink-vector res index) t)))))))))
