@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.1 1993/07/27 16:02:04 hallgren Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.2 1993/08/02 19:56:26 hallgren Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -38,6 +38,7 @@ the particular section in.
 #include <sys/resource.h>
 #include "interrupt.h"
 #include <netdb.h>
+#include <sys/times.h>
 
 os_vm_size_t os_vm_page_size=(-1);
 
@@ -308,7 +309,25 @@ os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 void
 getrusage(int who,struct rusage *rusage)
 {
+  long clk_tck;
+  struct tms buf;
   bzero(rusage,sizeof(struct rusage));
+  clk_tck=sysconf(_SC_CLK_TCK);
+  if(times(&buf) == -1) {
+    perror("times");
+    return;
+  }
+  if(who == RUSAGE_SELF) {
+    rusage.ru_utime.tv_sec=buf.tms_utime/clk_tck;
+    rusage.ru_utime.tv_usec=(buf.tms_utime%clk) * 100000;
+    rusage.ru_stime.tv_sec=buf.tms_stime/clk_tck;
+    rusage.ru_stime.tv_usec=(buf.tms_stime%clk_tck) * 100000;
+  } else if(who == RUSAGE_CHILDREN) {
+    rusage.ru_utime.tv_sec=buf.tms_cutime/clk_tck;
+    rusage.ru_utime.tv_usec=(buf.tms_cutime%clk) * 100000;
+    rusage.ru_stime.tv_sec=buf.tms_cstime/clk_tck;
+    rusage.ru_stime.tv_usec=(buf.tms_cstime%clk_tck) * 100000;
+  }
 }
 
 int
