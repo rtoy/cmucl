@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.17 1999/09/28 16:07:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.18 1999/11/11 16:09:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2499,6 +2499,14 @@
   (:printer floating-point-fp ((op '(#b101 #b000))))
   (:emitter
    (emit-byte segment #b11011101)
+   (emit-fp-op segment dest #b000)))
+;;;
+;;; Free fp register and pop the stack.
+;;;
+(define-instruction ffreep (segment dest)
+  (:printer floating-point-fp ((op '(#b111 #b000))))
+  (:emitter 
+   (emit-byte segment #b11011111)
    (emit-fp-op segment dest #b000)))
 
 (define-instruction fabs (segment)
