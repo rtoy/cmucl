@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.1.1.1 1994/10/24 19:47:21 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.2 1994/10/24 20:04:27 ram Exp $
  *
  * Stuff to handle internal errors.
  *
