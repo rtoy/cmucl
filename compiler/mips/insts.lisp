@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.30 1991/02/20 15:14:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.31 1991/05/24 19:41:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.30 1991/02/20 15:14:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.31 1991/05/24 19:41:42 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -667,17 +667,17 @@
 
 (define-format (word-format 32 :pinned t)
   (data (byte 32 0)))
-(define-instruction (word)
+(define-instruction (word :cost 0)
   (word-format (data :argument (or (unsigned-byte 32) (signed-byte 32)))))
 
 (define-format (short-format 16 :pinned t)
   (data (byte 16 0)))
-(define-instruction (short)
+(define-instruction (short :cost 0)
   (short-format (data :argument (or (unsigned-byte 16) (signed-byte 16)))))
 
 (define-format (byte-format 8 :pinned t)
   (data (byte 8 0)))
-(define-instruction (byte)
+(define-instruction (byte :cost 0)
   (byte-format (data :argument (or (unsigned-byte 8) (signed-byte 8)))))
 
 
