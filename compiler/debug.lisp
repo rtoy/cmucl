@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.28 1999/11/25 15:54:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.29 1999/11/25 15:57:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -965,12 +965,14 @@
 ;;; Continuation-Number, Number-Continuation, ID-TN, TN-ID  --  Interface
 ;;;
 ;;;    When we print Continuations and TNs, we assign them small numeric IDs so
-;;; that we can get a handle on anonymous objects given a printout.
+;;; that we can get a handle on anonymous objects given a printout. Note that
+;;; the variables are bound by the with-debug-counters macro which needs to be
+;;; consistent with the definitions here.
 ;;;
 (macrolet ((frob (counter vto vfrom fto ffrom)
 	     `(progn
-		(defvar ,vto (make-hash-table :test #'eq))
-		(defvar ,vfrom (make-hash-table :test #'eql))
+		(defvar ,vto)
+		(defvar ,vfrom)
 		(proclaim '(hash-table ,vto ,vfrom))
 		(defvar ,counter 0)
 		(proclaim '(fixnum ,counter))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.42 1999/02/25 13:03:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.43 1999/11/25 15:57:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -736,6 +736,25 @@
     `(if ,n-res
 	 (values (cdr ,n-res) t)
 	 (values nil nil))))
+
+
+
+;;; With-debug-counters  --  Interface
+;;;
+;;;    Bind the hashtables and counters used for keeping track of
+;;; continuation, TN, and label IDs for the debug dumping routines.
+;;;
+(defmacro with-debug-counters (&body forms)
+  `(let ((*continuation-numbers* (make-hash-table :test #'eq))
+	 (*number-continuations* (make-hash-table :test #'eql))
+	 (*continuation-number* 0)
+	 (*tn-ids* (make-hash-table :test #'eq))
+	 (*id-tns* (make-hash-table :test #'eql))
+	 (*tn-id* 0)
+	 (*id-labels* (make-hash-table :test #'eq))
+	 (*label-ids* (make-hash-table :test #'eql))
+	 (*label-id* 0))
+     ,@forms))
 
 
 ;;;; The Defprinter macro:

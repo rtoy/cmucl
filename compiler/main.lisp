@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.112 1999/11/25 15:54:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.113 1999/11/25 15:57:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -309,7 +309,7 @@
 	  (when *check-consistency*
 	    (maybe-mumble "CheckL ")
 	    (check-life-consistency component))
-	  
+
 	  (maybe-mumble "Pack ")
 	  (pack component)
 	  
@@ -325,7 +325,7 @@
 	  (multiple-value-bind
 	      (length trace-table fixups)
 	      (generate-code component)
-	    
+
 	    (when (and *compiler-trace-output*
 		       (backend-disassem-params *backend*))
 	      (format *compiler-trace-output*
@@ -346,7 +346,7 @@
 				    length trace-table fixups
 				    *compile-object*))
 	      (null))))
-	    
+
       (when *code-segment*
 	(new-assem:release-segment *code-segment*))
       (when *elsewhere*
@@ -1501,22 +1501,23 @@
 	    (or (backend-info-environment *backend*)
 		*info-environment*))
 	   (*gensym-counter* 0))
-      (clear-stuff)
-      (with-compilation-unit ()
-	(process-sources info)
+      (with-debug-counters
+	(clear-stuff)
+	(with-compilation-unit ()
+	  (process-sources info)
 
-	(finish-block-compilation)
-	(compile-top-level-lambdas () t)
-	(let ((object *compile-object*))
-	  (etypecase object
-	    (fasl-file (fasl-dump-source-info info object))
-	    (core-object (fix-core-source-info info object d-s-info))
-	    (null)))
-    
-	(cond ((> *compiler-error-count* start-errors) :error)
-	      ((> *compiler-warning-count* start-warnings) :warning)
-	      ((> *compiler-note-count* start-notes) :note)
-	      (t nil))))))
+	  (finish-block-compilation)
+	  (compile-top-level-lambdas () t)
+	  (let ((object *compile-object*))
+	    (etypecase object
+	      (fasl-file (fasl-dump-source-info info object))
+	      (core-object (fix-core-source-info info object d-s-info))
+	      (null)))
+
+	  (cond ((> *compiler-error-count* start-errors) :error)
+		((> *compiler-warning-count* start-warnings) :warning)
+		((> *compiler-note-count* start-notes) :note)
+		(t nil)))))))
 
 
 ;;; Verify-Source-Files  --  Internal
@@ -1856,35 +1857,36 @@
 	     (*last-message-count* 0)
 	     (*compile-object* (make-core-object))
 	     (*gensym-counter* 0))
-	(clear-stuff)
-	(find-source-paths form 0)
-	(let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
-	  
-	  (compile-fix-function-name lambda name)
-	  (let* ((component
-		  (block-component (node-block (lambda-bind lambda))))
-		 (*all-components* (list component)))
-	    (local-call-analyze component))
-	  
-	  (multiple-value-bind (components top-components)
-			       (find-initial-dfo (list lambda))
-	    (let ((*all-components* (append components top-components)))
-	      (dolist (component *all-components*)
-		(compile-component component))))
-	  
-	  (let* ((res (core-call-top-level-lambda lambda *compile-object*))
-		 (return (or name res)))
-	    (fix-core-source-info *source-info* *compile-object* res)
-	    (when name
-	      (setf (fdefinition name) res))
-	    
-	    (cond ((or (> *compiler-error-count* start-errors)
-		       (> *compiler-warning-count* start-warnings))
-		   (values return t t))
-		  ((> *compiler-note-count* start-notes)
-		   (values return t nil))
-		  (t
-		   (values return nil nil)))))))))
+	(with-debug-counters
+	  (clear-stuff)
+	  (find-source-paths form 0)
+	  (let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
+
+	    (compile-fix-function-name lambda name)
+	    (let* ((component
+		    (block-component (node-block (lambda-bind lambda))))
+		   (*all-components* (list component)))
+	      (local-call-analyze component))
+
+	    (multiple-value-bind (components top-components)
+		(find-initial-dfo (list lambda))
+	      (let ((*all-components* (append components top-components)))
+		(dolist (component *all-components*)
+		  (compile-component component))))
+
+	    (let* ((res (core-call-top-level-lambda lambda *compile-object*))
+		   (return (or name res)))
+	      (fix-core-source-info *source-info* *compile-object* res)
+	      (when name
+		(setf (fdefinition name) res))
+
+	      (cond ((or (> *compiler-error-count* start-errors)
+			 (> *compiler-warning-count* start-warnings))
+		     (values return t t))
+		    ((> *compiler-note-count* start-notes)
+		     (values return t nil))
+		    (t
+		     (values return nil nil))))))))))
 
 ;;; UNCOMPILE  --  Public
 ;;;
