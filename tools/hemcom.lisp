@@ -2,24 +2,17 @@
 ;;; This file compiles all of Hemlock.
 ;;;
 
-(declaim (optimize (speed 1) (safety 1) (brevity 1)
-		   #+small (debug-info 1)
-		   #-small (debug-info 2)))
-#|
-(when (ext:get-command-line-switch "slave")
-  (error "Cannot compile Hemlock in a slave due to its clobbering needed
-	  typescript routines by renaming the package."))
+#+bootstrap
+(progn
+  (when (ext:get-command-line-switch "slave")
+    (error "Cannot compile Hemlock in a slave due to its clobbering needed
+    typescript routines by renaming the package."))
+  
+  ;;; Blast the old packages in case they are around.  We do this solely to
+  ;;; prove Hemlock can compile cleanly without its having to exist already.
+  ;;;
+  (copy-packages '("ED" "HI")))
 
-
-;;; Blast the old packages in case they are around.  We do this solely to
-;;; prove Hemlock can compile cleanly without its having to exist already.
-;;;
-(unless (find-package "OLD-ED")
-  (when (find-package "ED")
-    (rename-package (find-package "ED") "OLD-ED"))
-  (when (find-package "HI")
-    (rename-package (find-package "HI") "OLD-HI")))
-|#
 
 ;;; Stuff to set up the packages Hemlock uses.
 ;;;
@@ -40,7 +33,17 @@
 (pushnew :command-bits *features*)
 (pushnew :buffered-lines *features*)
 
-(with-compiler-log-file ("target:compile-hemlock.log")
+(with-compiler-log-file
+    ("target:compile-hemlock.log"
+     :optimize
+     '(optimize (debug-info #-small 2 #+small 1) 
+		(speed 2) (inhibit-warnings 2)
+		(safety #-small 1 #+small 0))
+     :optimize-interface
+     '(optimize-interface (debug-info 1))
+     :context-declarations
+     '((:external
+	(declare (optimize (safety 2))))))
 
 (comf "target:code/globals")
 (comf "target:code/struct")
@@ -80,7 +83,8 @@
 (comf "target:hemlock/display")
 #+clx (comf "target:hemlock/bit-display")
 (comf "target:hemlock/tty-disp-rt")
-(comf "target:hemlock/tty-display")
+(with-compilation-unit (:optimize (safety 2) (debug-info 3))
+  (comf "hem:tty-display")) ; Buggy...
 ;(comf "target:hemlock/tty-stream")
 (comf "target:hemlock/pop-up-stream")
 (comf "target:hemlock/screen")
@@ -97,6 +101,15 @@
 (comf "target:hemlock/main")
 (comf "target:hemlock/echocoms")
 (comf "target:hemlock/defsyn")
+
+(with-compilation-unit
+    (:optimize
+     '(optimize (safety 2))
+     :context-declarations
+     '(((:match "-COMMAND$")
+	(declare (optimize (safety #+small 0 #-small 1))
+		 (optimize-interface (safety 2))))))
+
 (comf "target:hemlock/command")
 (comf "target:hemlock/morecoms")
 (comf "target:hemlock/undo")
@@ -143,6 +156,8 @@
 (comf "target:hemlock/lisp-lib")
 (comf "target:hemlock/completion")
 (comf "target:hemlock/shell")
+    ); WITH-COMPILATION-UNIT for commands
+
 (comf "target:hemlock/bindings")
 (comf "target:hemlock/hacks")
 
