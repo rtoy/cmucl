@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.13 1990/08/24 18:35:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.14 1990/11/20 18:36:03 ram Exp $
 ;;; 
 ;;; This file contains the interpreter.  We first convert to the compiler's
 ;;; IR1 and interpret that.
@@ -25,6 +25,7 @@
 			interpreted-function-closure
 			interpreted-function-name
 			interpreted-function-arglist
+			interpreted-function-type
 			make-interpreted-function))
 
 
@@ -248,6 +249,22 @@
 			(c::node-block (c::lambda-bind fun))))))))))
 
 
+;;; INTERPRETED-FUNCTION-TYPE  --  Interface
+;;;
+;;;    Return a FUNCTION-TYPE describing an eval function.  We just grab the
+;;; LEAF-TYPE of the definition, converting the definition if not currently
+;;; cached.
+;;;
+(defun interpreted-function-type (fun)
+  (let* ((eval-fun (get-eval-function fun))
+	 (def (or (eval-function-definition eval-fun)
+		  (system:without-gcing
+		    (convert-eval-fun eval-fun)
+		    (eval-function-definition eval-fun)))))
+    (c::leaf-type (c::functional-entry-function def))))
+
+
+;;; 
 ;;; INTERPRETED-FUNCTION-{NAME,ARGLIST}  --  Interface
 ;;;
 (defun interpreted-function-name (x)
