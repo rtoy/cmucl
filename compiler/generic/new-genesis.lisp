@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.14 1994/06/29 21:53:00 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.15 1994/10/24 22:51:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -765,18 +765,8 @@
 	    (write-indexed fdefn vm:fdefn-function-slot *nil-descriptor*)
 	    (write-indexed fdefn vm:fdefn-raw-addr-slot
 			   (make-random-descriptor
-			    (ecase (c:backend-fasl-file-implementation
-				    c:*backend*)
-			      ((#.c:pmax-fasl-file-implementation
-				#.c:rt-fasl-file-implementation
-				#.c:rt-afpa-fasl-file-implementation
-				#.c:x86-fasl-file-implementation
-				#.c:hppa-fasl-file-implementation
-				#.c:alpha-fasl-file-implementation
-				#.c:sgi-fasl-file-implementation)
-			       (lookup-foreign-symbol "undefined_tramp"))
-			      (#.c:sparc-fasl-file-implementation
-			       (lookup-foreign-symbol "_undefined_tramp"))))))
+			    (lookup-maybe-prefix-foreign-symbol
+			     "undefined_tramp"))))
 	  fdefn))))
   
 (defun cold-fset (name defn)
@@ -784,28 +774,14 @@
 	(type (logand (descriptor-low (read-memory defn)) vm:type-mask)))
     (write-indexed fdefn vm:fdefn-function-slot defn)
     (write-indexed fdefn vm:fdefn-raw-addr-slot
-		   (ecase (c:backend-fasl-file-implementation c:*backend*)
-		     ((#.c:pmax-fasl-file-implementation
-		       #.c:rt-fasl-file-implementation
-		       #.c:rt-afpa-fasl-file-implementation
-		       #.c:x86-fasl-file-implementation
-		       #.c:hppa-fasl-file-implementation
-		       #.c:alpha-fasl-file-implementation
-		       #.c:sgi-fasl-file-implementation)
-		      (ecase type
-			(#.vm:function-header-type
-			 (make-random-descriptor
-			  (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
-			     (ash vm:function-code-offset vm:word-shift))))
-			(#.vm:closure-header-type
-			 (make-random-descriptor
-			  (lookup-foreign-symbol "closure_tramp")))))
-		     (#.c:sparc-fasl-file-implementation
-		      (ecase type
-			(#.vm:function-header-type defn)
-			(#.vm:closure-header-type
-			 (make-random-descriptor
-			  (lookup-foreign-symbol "_closure_tramp")))))))
+		   (ecase type
+		     (#.vm:function-header-type
+		      (make-random-descriptor
+		       (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
+			  (ash vm:function-code-offset vm:word-shift))))
+		     (#.vm:closure-header-type
+		      (make-random-descriptor
+		       (lookup-maybe-prefix-foreign-symbol "closure_tramp")))))
     fdefn))
 
 (defun initialize-static-fns ()
@@ -1643,6 +1619,23 @@
       (warn "Undefined foreign symbol: ~S" name))
     value))
 
+(defun lookup-maybe-prefix-foreign-symbol (name)
+  (lookup-foreign-symbol
+   (concatenate 'string
+		(ecase (c:backend-fasl-file-implementation c:*backend*)
+		  ((#.c:pmax-fasl-file-implementation
+		    #.c:rt-fasl-file-implementation
+		    #.c:rt-afpa-fasl-file-implementation
+		    #.c:x86-fasl-file-implementation
+		    #.c:hppa-fasl-file-implementation
+		    #.c:alpha-fasl-file-implementation
+		    #.c:sgi-fasl-file-implementation)
+		   "")
+		  (#.c:sparc-fasl-file-implementation
+		   (if (member :svr4 (c:backend-features c:*backend*))
+		       "_"
+		       "")))
+		name)))
 
 (defvar *cold-assembler-routines* nil)
 
