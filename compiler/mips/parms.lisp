@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.60 1990/07/02 05:06:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.61 1990/07/02 16:35:12 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -67,6 +67,25 @@
 (defconstant native-byte-order :big-endian
   "The byte order we are running under.")
 
+
+(defconstant float-sign-shift 31)
+
+;;; The exponent min/max values are wrong, I think.  The denorm, infinity, etc.
+;;; info must go in there somewhere.
+
+(defconstant single-float-bias 126)
+(defconstant single-float-exponent-byte (byte 8 23))
+(defconstant single-float-significand-byte (byte 23 0))
+(defconstant single-float-normal-exponent-min 0)
+(defconstant single-float-normal-exponent-max 255)
+(defconstant single-float-hidden-bit (ash 1 23))
+
+(defconstant double-float-bias 1022)
+(defconstant double-float-exponent-byte (byte 11 20))
+(defconstant double-float-significand-byte (byte 20 0))
+(defconstant double-float-normal-exponent-min 0)
+(defconstant double-float-normal-exponent-max #x7FF)
+(defconstant double-float-hidden-bit (ash 1 20))
 
 
 ;;;; Description of the target address space.
