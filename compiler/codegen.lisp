@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.21 1993/05/28 05:22:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.22 1993/06/10 02:21:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,7 +289,7 @@
 		   (state (cdr entry)))
 	      (declare (type index posn) (type tt-state state))
 	      (assert (<= last-posn posn))
-	      (do ((offset (- posn last-posn) (- offset max-offset)))
+	      (do ((offset (- posn last-posn) (- offset tt-max-offset)))
 		  ((< offset tt-max-offset)
 		   (push-entry offset state))
 		(push-entry tt-max-offset last-state))
