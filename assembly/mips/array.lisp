@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.16 1990/11/03 17:22:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.17 1990/11/10 18:47:05 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -42,7 +42,12 @@
 ); eval-when (compile eval)
 
 
-(define-assembly-routine allocate-vector
+(define-assembly-routine (allocate-vector
+			  (:policy :fast-safe)
+			  (:translate allocate-vector)
+			  (:arg-types positive-fixnum
+				      positive-fixnum
+				      positive-fixnum))
 			 ((:arg type any-reg a0-offset)
 			  (:arg length any-reg a1-offset)
 			  (:arg words any-reg a2-offset)
