@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.9 1992/05/22 18:42:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.10 1992/09/07 16:50:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -647,7 +647,7 @@
 	   ,@body)))))
 
 (defmacro do-alpha-key-events ((var kind &optional result) &rest forms)
-  "(DO-ALPHA-CHARS (var kind [result]) {form}*)
+  "(DO-ALPHA-KEY-EVENTS (var kind [result]) {form}*)
    This macro evaluates each form with var bound to a key-event representing an
    alphabetic character.  Kind is one of :lower, :upper, or :both, and this
    binds var to each key-event in order as specified in the X11 protocol
