@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.25 1991/12/15 10:21:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.26 1991/12/16 18:47:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -470,7 +470,8 @@
 ;;; %End-Of-The-World.  We quit this way so that all outstanding cleanup forms
 ;;; in Unwind-Protects will get executed.
 
-(proclaim '(special *lisp-initialization-functions*))
+(proclaim '(special *lisp-initialization-functions*
+		    *load-time-values*))
 
 (eval-when (compile)
   (defmacro print-and-call (name)
@@ -499,12 +500,31 @@
   ;; Some of the random top-level forms call Make-Array, which calls Subtypep...
   (print-and-call type-init)
 
-  (setf *lisp-initialization-functions*
-	(nreverse *lisp-initialization-functions*))
-  (%primitive print "Calling top-level forms.")
-  (dolist (fun *lisp-initialization-functions*)
-    (funcall fun))
+  (let ((funs (nreverse *lisp-initialization-functions*)))
+    (%primitive print "Calling top-level forms.")
+    (dolist (fun funs)
+      (typecase fun
+	(function
+	 (funcall fun))
+	(cons
+	 (case (car fun)
+	   (:load-time-value
+	    (setf (svref *load-time-values* (third fun)) 
+		  (funcall (second fun))))
+	   (:load-time-value-fixup
+	    (setf (sap-ref-32 (second fun) 0)
+		  (get-lisp-obj-address
+		   (svref *load-time-values* (third fun)))))
+	   (t
+	    (%primitive print
+			"Bogus fixup in *lisp-initialization-functions*")
+	    (%halt))))
+	(t
+	 (%primitive print
+		     "Bogus function in *lisp-initialization-functions*")
+	 (%halt)))))
   (makunbound '*lisp-initialization-functions*)	; So it gets GC'ed.
+  (makunbound '*load-time-values*)
 
   ;; Only do this after top level forms have run, 'cause thats where
   ;; deftypes are.
