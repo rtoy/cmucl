@@ -1,9 +1,12 @@
 # For Solaris 2.4 or earlier, remove -DSOLARIS25 from CPPFLAGS.
+# For v8plus support (allows 64-bit integer support on V9 architectures), add -Dv8plus.
+# The -Wa,xarch=v8plus option tells the assembler to accept v8plus instructions 
+# and generate a v8plus object files and executable
 
-CPPFLAGS = -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4
+CPPFLAGS = -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 -Dv8plus
 CC = gcc
 CPP = gcc -E
-CFLAGS = -g -O3
+CFLAGS = -g -O3 -Wa,-xarch=v8plus
 # Needed for sys/asm_linkage.h and sparc-assem.S (at least in 2.3)
 # Note that the sys/asm_linkage.h braindamage breaks make depend
 ASFLAGS = -g -traditional-cpp
