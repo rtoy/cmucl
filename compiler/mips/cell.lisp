@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.15 1990/02/23 23:36:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.16 1990/02/27 00:03:24 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -56,7 +56,21 @@
 	  symbol-function-slot symbol-plist-slot symbol-name-slot
 	  symbol-package-slot
 
-	  sap-structure sap-size sap-pointer-slot))
+	  sap-structure sap-size sap-pointer-slot
+
+	  binding-structure binding-size binding-symbol-slot binding-value-slot
+
+	  unwind-block-structure unwind-block-size
+	  unwind-block-current-uwp-slot unwind-block-current-cont-slot
+	  unwind-block-current-code-slot unwind-block-entry-pc-slot
+
+	  catch-block-structure catch-block-size
+	  catch-block-current-uwp-slot catch-block-current-cont-slot
+	  catch-block-current-code-slot catch-block-entry-pc-slot
+	  catch-block-tag-slot catch-block-previous-catch-slot
+	  catch-block-size-slot
+
+	  ))
 
 
 (in-package "C")
@@ -291,6 +305,29 @@
   (pointer :c-type "char *"))
 
 
+;;; Other non-heap data blocks.
+
+(defslots (binding)
+  value
+  symbol)
+
+(defslots (unwind-block)
+  current-uwp
+  current-cont
+  current-code
+  entry-pc)
+
+(defslots (catch-block)
+  current-uwp
+  current-cont
+  current-code
+  entry-pc
+  tag
+  previous-catch
+  size)
+
+
+
 
 ;;;; Symbol hacking VOPs:
 
@@ -312,7 +349,7 @@
   (:generator 9
     (move obj-temp object)
     (loadw value obj-temp vm:symbol-value-slot vm:other-pointer-type)
-    (let ((err-lab (generate-error-code node 56 obj-temp)))
+    (let ((err-lab (generate-error-code node di:unbound-symbol-error obj-temp)))
       (inst xori temp value vm:unbound-marker-type)
       (inst beq temp zero-tn err-lab)
       (nop))))
@@ -325,7 +362,7 @@
   (:generator 10
     (move obj-temp object)
     (loadw value obj-temp symbol-function-slot)
-    (let ((err-lab (generate-error-code node clc::error-symbol-undefined
+    (let ((err-lab (generate-error-code node di:undefined-symbol-error
 					obj-temp)))
       (test-simple-type value temp err-lab t vm:function-pointer-type))))
 
@@ -382,12 +419,9 @@
 
 ;;; Binding and Unbinding.
 
-;;; Position of next symbol and saved value relative to BSP.
-(defconstant bs-symbol-offset -1)
-(defconstant bs-value-offset -2)
-
 ;;; BIND -- Establish VAL as a binding for SYMBOL.  Save the old value and
-;;; the symbol on the binding stack and 
+;;; the symbol on the binding stack and stuff the new value into the
+;;; symbol.
 
 (define-vop (bind)
   (:args (val :scs (any-reg descriptor-reg))
@@ -396,8 +430,8 @@
   (:generator 5
     (loadw temp symbol vm:symbol-value-slot vm:other-pointer-type)
     (inst addiu bsp-tn bsp-tn (* 2 vm:word-bytes))
-    (storew temp bsp-tn bs-value-offset)
-    (storew symbol bsp-tn bs-symbol-offset)
+    (storew temp bsp-tn (- binding-symbol-slot binding-size))
+    (storew symbol bsp-tn (- binding-symbol-slot binding-size))
     (storew val symbol vm:symbol-value-slot vm:other-pointer-type)))
 
 
@@ -415,11 +449,11 @@
 
       (emit-label loop)
 
-      (loadw symbol bsp-tn bs-symbol-offset)
+      (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
       (inst beq symbol zero-tn skip)
-      (loadw value bsp-tn bs-value-offset)
+      (loadw value bsp-tn (- binding-symbol-slot binding-size))
       (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
-      (storew zero-tn bsp-tn bs-symbol-offset)
+      (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
       (emit-label skip)
       (inst addiu num num (fixnum -1))
       (inst bne num zero-tn loop)
