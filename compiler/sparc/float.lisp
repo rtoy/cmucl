@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.36 2002/11/26 03:59:39 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.37 2002/11/26 15:50:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1760,7 +1760,7 @@
 	     (r-type (symbolicate size "-FLOAT"))
 	     (real-part (symbolicate "COMPLEX-" size "-REG-REAL-TN"))
 	     (imag-part (symbolicate "COMPLEX-" size "-REG-IMAG-TN")))
-	 `(define-vop (single-float---complex-single-float)
+	 `(define-vop (,vop-name)
 	      (:args (x :scs (,real-reg)) (y :scs (,complex-reg)))
 	    (:results (r :scs (,complex-reg)))
 	    (:arg-types ,r-type ,c-type)
@@ -1774,8 +1774,7 @@
 		     (rr (,real-part r))
 		     (ri (,imag-part r)))
 		 (inst ,fop rr x yr)
-		 (,@fneg ri yi))))
-       )))
+		 (,@fneg ri yi)))))))
 
   (frob single fsubs (inst fnegs) 2)
   (frob double fsubd (negate-double-reg) 2))
