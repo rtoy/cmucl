@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.31 1990/05/18 07:06:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.32 1990/05/31 00:17:33 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -106,12 +106,15 @@
      (inst j ,lip)
      (move code-tn ,function)))
 
-(defmacro lisp-return (return-pc lip)
+(defmacro lisp-return (return-pc lip &key (offset 0) (frob-code t))
   "Return to RETURN-PC.  LIP is an interior-reg temporary."
   `(progn
-     (inst addu ,lip ,return-pc (- vm:word-bytes vm:other-pointer-type))
+     (inst addu ,lip ,return-pc
+	   (- (* (1+ ,offset) vm:word-bytes) vm:other-pointer-type))
      (inst j ,lip)
-     (move code-tn ,return-pc)))
+     ,(if frob-code
+	  `(move code-tn ,return-pc)
+	  '(inst nop))))
 
 (defmacro emit-return-pc (label)
   "Emit a return-pc header word.  LABEL is the label to use for this return-pc."
