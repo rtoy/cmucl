@@ -20,53 +20,21 @@
 
 (proclaim '(special *read-suppress* std-lisp-readtable *bq-vector-flag*))
 
-(defun sharp-backslash (stream backslash font)
+
+(defun sharp-backslash (stream backslash ignore)
+  (declare (ignore ignore))
   (unread-char backslash stream)
   (let* ((*readtable* std-lisp-readtable)
-	 (bitnames ())
 	 (charstring (read-extended-token stream)))
     (declare (simple-string charstring))
-    (when *read-suppress* (return-from sharp-backslash nil))
-    ;;find bit name prefixes
-    (do ((i (position #\- charstring) (position #\- charstring)))
-	((or (null i) (zerop (the fixnum i))))
-      (let ((bitname (string-upcase (subseq charstring 0 i))))
-	(setq charstring (subseq charstring (1+ (the fixnum i))))
-	;;* symbols in alist are a kludge to circumvent xc bogosity.
-	(let ((expansion (cdr (assoc bitname '(("C" . CONTROL)
-					       ("M" . META)
-					       ("H" . HYPER)
-					       ("S" . SUPER))
-				     :test #'equal))))
-	  (if expansion (setq bitname (symbol-name expansion)))
-	  (cond ((member bitname '("CONTROL" "META" "HYPER" "SUPER")
-			 :test #'EQUAL)
-		 (if (not (member bitname bitnames :test #'EQUAL))
-		     (push bitname bitnames)
-		     (error
-			     "Redundant bit name in character name: ~A"
-			     bitname)))
-		(t (error
-			   "Meaningless bit name in character name: ~A"
-			   bitname))))))
-    ;;build un-hyphenated char, add specified bits:
-    (let ((char (if (= (the fixnum (length charstring)) 1)
-		    (char charstring 0)
-		    (name-char charstring))))
-      (cond (char
-	     (if font
-		 (setq char (make-char char 0 font)))
-	     (if (member "CONTROL" bitnames :test #'EQUAL)
-		 (setq char (set-char-bit char :control t)))
-	     (if (member "META" bitnames :test #'EQUAL)
-		 (setq char (set-char-bit char :meta t)))
-	     (if (member "HYPER" bitnames :test #'EQUAL)
-		 (setq char (set-char-bit char :hyper t)))
-	     (if (member "SUPER" bitnames :test #'EQUAL)
-		 (setq char (set-char-bit char :super t)))
-	     char)
-	    (t (error "Meaningless character name ~A"
-		       charstring))))))
+    (cond (*read-suppress* nil)
+	  ((= (the fixnum (length charstring)) 1)
+	   (char charstring 0))
+	  ((name-char charstring))
+	  (t
+	   (error "Meaningless character name: ~S" charstring)))))
+
+
 
 (defun sharp-quote (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
