@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.23 1992/05/16 01:08:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.24 1992/05/18 17:27:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -670,8 +670,8 @@
     (enter-new-nicknames package nicknames)
     ;; Shadows and Shadowing-imports.
     (let ((old-shadows (package-%shadowing-symbols package)))
+      (shadow shadows package)
       (dolist (sym-name shadows)
-	(shadow sym-name package)
 	(setf old-shadows (remove (find-symbol sym-name package) old-shadows)))
       (dolist (simports-from shadowing-imports)
 	(let ((other-package (package-or-lose (car simports-from))))
@@ -688,7 +688,7 @@
 	    (new-use-list (mapcar #'package-or-lose use)))
 	(use-package (set-difference new-use-list old-use-list) package)
 	(let ((laterize (set-difference old-use-list new-use-list)))
-	  (unuse-package other-package package)
+	  (unuse-package laterize package)
 	  (warn "~A used to use the following packages:~%  ~S" laterize))))
     ;; Import and Intern.
     (dolist (sym-name interns)
