@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.32 1997/01/18 14:31:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.33 1997/04/01 12:04:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,8 +95,13 @@
 	     (gethash name lisp::*assembler-routines*))
 	    (:foreign
 	     (assert (stringp name))
-	     (gethash name lisp::*foreign-symbols*))
-	    ;;; pw -- don't the RISC systems need this too?
+	     (multiple-value-bind
+		   (value found)
+		 (gethash name lisp::*foreign-symbols*)
+	       (if found
+		   (values value found)
+		   (gethash (concatenate 'string "PVE_stub_" name)
+			    lisp::*foreign-symbols*))))
 	    #+x86
 	    (:code-object
 	     (values
