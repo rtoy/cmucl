@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.8 1992/12/13 14:44:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.9 1992/12/16 13:34:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,14 @@
 
 
 ;;;; Primitive object definition stuff.
+
+(export '(primitive-object primitive-object-p
+	  primitive-object-name primitive-object-header
+	  primitive-object-lowtag primitive-object-options
+	  primitive-object-slots primitive-object-size
+	  primitive-object-variable-length slot-name slot-docs slot-rest-p
+	  slot-offset slot-length slot-options *primitive-objects*
+	  define-for-each-primitive-object))
 
 
 (defun remove-keywords (options keywords)
@@ -176,35 +184,41 @@
 (export '(def-reffer def-setter def-alloc))
 
 (defun %def-reffer (name offset lowtag)
-  (setf (function-info-ir2-convert (function-info-or-lose name))
-	#'(lambda (node block)
-	    (ir2-convert-reffer node block name offset lowtag)))
+  (let ((info (function-info-or-lose name)))
+    (setf (function-info-ir2-convert info)
+	  #'(lambda (node block)
+	      (ir2-convert-reffer node block name offset lowtag)))
+    (setf (function-info-ltn-annotate info) #'annotate-funny-call))
   name)
 
 (defmacro def-reffer (name offset lowtag)
   `(%def-reffer ',name ,offset ,lowtag))
 
 (defun %def-setter (name offset lowtag)
-  (setf (function-info-ir2-convert (function-info-or-lose name))
-	(if (listp name)
-	    #'(lambda (node block)
-		(ir2-convert-setfer node block name offset lowtag))
-	    #'(lambda (node block)
-		(ir2-convert-setter node block name offset lowtag))))
+  (let ((info (function-info-or-lose name)))
+    (setf (function-info-ir2-convert info)
+	  (if (listp name)
+	      #'(lambda (node block)
+		  (ir2-convert-setfer node block name offset lowtag))
+	      #'(lambda (node block)
+		  (ir2-convert-setter node block name offset lowtag))))
+    (setf (function-info-ltn-annotate info) #'annotate-funny-call))
   name)
 
 (defmacro def-setter (name offset lowtag)
   `(%def-setter ',name ,offset ,lowtag))
 
 (defun %def-alloc (name words variable-length header lowtag inits)
-  (setf (function-info-ir2-convert (function-info-or-lose name))
-	(if variable-length
-	    #'(lambda (node block)
-		(ir2-convert-variable-allocation node block name words header
-						 lowtag inits))
-	    #'(lambda (node block)
-		(ir2-convert-fixed-allocation node block name words header
-					      lowtag inits))))
+  (let ((info (function-info-or-lose name)))
+    (setf (function-info-ir2-convert info)
+	  (if variable-length
+	      #'(lambda (node block)
+		  (ir2-convert-variable-allocation node block name words header
+						   lowtag inits))
+	      #'(lambda (node block)
+		  (ir2-convert-fixed-allocation node block name words header
+						lowtag inits))))
+    (setf (function-info-ltn-annotate info) #'annotate-funny-call))
   name)
 
 (defmacro def-alloc (name words variable-length header lowtag inits)
