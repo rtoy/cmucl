@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.74 1997/11/07 12:45:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.75 1997/11/15 07:36:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3075,7 +3075,7 @@
 		     (and (logand ,val 1)
 		      ;; Check that the pointer is valid. XX Should do
 		      ;; a better job.
-		      (< vm:target-read-only-space-start ,val #x11000000)))
+		      (< (lisp::read-only-space-start) ,val #x11000000)))
 		 (kernel:make-lisp-obj ,val)
 		 :invalid-object)))
     (ecase (c::sc-offset-scn sc-offset)
