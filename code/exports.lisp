@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.106 1995/08/18 13:05:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.107 1996/07/25 15:01:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,7 +248,7 @@
 	     "UNIX-TCGETATTR" "C-LFLAG" "VDSUSP" "C-OFLAG" "VSTOP"
 	     "C-CFLAG" "TTY-OCRNL" "VMIN" "VEOF" "TCSAFLUSH"
 	     "TTY-IXON" "C-CC" "SIOCSPGRP" "TERMIOS" "VQUIT"
-	     "UNIX-TCSETATTR" "VINTR" "VSTART"))
+	     "UNIX-TCSETATTR" "VINTR" "VSTART" "TIOCSIGSEND"))
   
 (defpackage "FORMAT")
 (defpackage "COMMON-LISP"
