@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.27 1991/11/07 17:32:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.28 1991/12/05 06:25:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -669,26 +669,25 @@
   (let* ((type (structure-ref structure 0))
 	 (dd (info type defined-structure-info type)))
     (cond (*print-pretty*
-	   (let ((slots (dd-slots dd)))
-	     (xp:pprint-logical-block (stream
-				       (mapcar
-					#'(lambda (dsd)
-					    (structure-ref structure
-							   (dsd-index dsd)))
-					slots)
-				       :prefix "#S(" :suffix ")")
-	       (prin1 type stream)
-	       (xp:pprint-exit-if-list-exhausted)
-	       (write-char #\space stream)
-	       (xp:pprint-indent :current 0 stream)
-	       (loop
-		 (prin1 (dsd-name (pop slots)) stream)
+	   (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
+	     (prin1 type stream)
+	     (let ((slots (dd-slots dd)))
+	       (when slots
 		 (write-char #\space stream)
-		 (xp:pprint-newline :miser stream)
-		 (prin1 (xp:pprint-pop) stream)
-		 (xp:pprint-exit-if-list-exhausted)
-		 (write-char #\space stream)
-		 (xp:pprint-newline :linear stream)))))
+		 (pprint-indent :current 0 stream)
+		 (pprint-newline :miser stream)
+		 (loop
+		   (pprint-pop)
+		   (let ((slot (pop slots)))
+		     (output-object (dsd-name slot) stream)
+		     (write-char #\space stream)
+		     (pprint-newline :miser stream)
+		     (output-object (structure-ref structure (dsd-index slot))
+				    stream)
+		     (when (null slots)
+		       (return))
+		     (write-char #\space stream)
+		     (pprint-newline :linear stream)))))))
 	  (t
 	   (write-string "#S(" stream)
 	   (prin1 type stream)
@@ -703,6 +702,6 @@
 		    (write-string "...)" stream)))
 	     (declare (type index index))
 	     (write-char #\space stream)
-	     (prin1 (dsd-name (car slots)) stream)
+	     (output-object (dsd-name (car slots)) stream)
 	     (write-char #\space stream)
-	     (prin1 (structure-ref structure index) stream))))))
+	     (output-object (structure-ref structure index) stream))))))
