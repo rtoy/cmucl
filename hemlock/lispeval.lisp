@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.8 1991/11/12 01:14:36 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.9 1992/01/14 14:25:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -329,8 +329,8 @@
   (let* ((region (region (copy-mark (region-start region) :left-inserting)
 			 (copy-mark (region-end region) :left-inserting)))
 	 (buf (line-buffer (mark-line (region-start region))))
-	 (defined-from (and buf
-			    (namestring (buffer-pathname buf)))))
+	 (pn (and buf (buffer-pathname buf)))
+	 (defined-from (if pn (namestring pn) "unknown")))
     (queue-note (make-note :kind :compile
 			   :context (region-context region "compilation")
 			   :buffer (and region
