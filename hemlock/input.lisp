@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.1.1.5 1991/03/13 23:24:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.1.1.6 1991/03/15 22:27:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,7 +189,7 @@
 ;;; input method (recursively even).
 ;;;
 (eval-when (compile eval)
-(defmacro editor-input-method-macro (&optional screen-image-trashed-concern)
+(defmacro editor-input-method-macro ()
   `(handler-bind ((error #'(lambda (condition)
 			     (let ((device (device-hunk-device
 					    (window-hunk (current-window)))))
@@ -206,10 +206,8 @@
 	   (dolist (f (variable-value 'ed::input-hook)) (funcall f))
 	   (return))
 	 (invoke-scheduled-events)
-	 (unless (system:serve-event 0)
-	   (internal-redisplay)
-	   ,@(if screen-image-trashed-concern
-		 '((when *screen-image-trashed* (internal-redisplay))))
+	 (unless (or (system:serve-event 0)
+		     (internal-redisplay))
 	   (when nrw-fun (funcall nrw-fun t))
 	   (let ((wait (next-scheduled-event-wait)))
 	     (if wait (system:serve-event wait) (system:serve-event)))))
@@ -242,8 +240,9 @@
   hunks)      ; List of bitmap-hunks which input to this stream.
 
 #+clx
+;;; There's actually no difference from the TTY case...
 (defun windowed-get-key-event (stream ignore-abort-attempts-p)
-  (editor-input-method-macro))
+  (tty-get-key-event stream ignore-abort-attempts-p))
 
 #+clx
 (defun windowed-unget-key-event (key-event stream)
@@ -263,13 +262,14 @@
 
 #+clx
 (defun windowed-listen (stream)
-  (loop (unless (system:serve-event 0)
-	  ;; If nothing is pending, check the queued input.
-	  (return (not (null (input-event-next (editor-input-head stream))))))
+  (loop
+    ;; Don't service anymore events if we just got some input.
     (when (input-event-next (editor-input-head stream))
-      ;; Don't service anymore events if we just got some input.
-      (return t))))
-
+      (return t))
+    ;;
+    ;; If nothing is pending, check the queued input.
+    (unless (system:serve-event 0)
+      (return (not (null (input-event-next (editor-input-head stream))))))))
 
 
 ;;;; Editor input from a tty.
@@ -289,7 +289,7 @@
   fd)
 
 (defun tty-get-key-event (stream ignore-abort-attempts-p)
-  (editor-input-method-macro t))
+  (editor-input-method-macro))
 
 (defun tty-unget-key-event (key-event stream)
   (un-event key-event stream))
