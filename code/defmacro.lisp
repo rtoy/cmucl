@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.12 1991/02/08 13:31:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.13 1992/08/12 18:56:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,27 +164,7 @@
 	       (setf allow-other-keys-p t))
 	      ((eq var '&aux)
 	       (setf now-processing :auxs))
-	      ((symbolp var)
-	       (case now-processing
-		 (:required
-		  (incf minimum)
-		  (incf maximum)
-		  (push-let-binding var `(car ,path) nil)
-		  (setf path `(cdr ,path)))
-		 (:optionals
-		  (incf maximum)
-		  (push-let-binding var `(car ,path) nil `(not (null ,path)))
-		  (setf path `(cdr ,path)))
-		 (:keywords
-		  (let ((key (make-keyword var)))
-		    (push-let-binding var `(lookup-keyword ,key ,rest-name)
-				      nil)
-		    (push key keys)))
-		 (:auxs
-		  (push-let-binding var nil nil))))
-	      ((atom var)
-	       (error "Non-symbol in lambda-list - ~S." var))
-	      (t
+	      ((listp var)
 	       (case now-processing
 		 (:required
 		  (let ((sub-list-name (gensym "SUBLIST-")))
@@ -222,7 +202,27 @@
 							    ,rest-name)
 					   name error-kind error-fun)
 		    (push keyword keys)))
-		 (:auxs (push-let-binding (car var) (cadr var) nil)))))))
+		 (:auxs (push-let-binding (car var) (cadr var) nil))))
+	      ((symbolp var)
+	       (case now-processing
+		 (:required
+		  (incf minimum)
+		  (incf maximum)
+		  (push-let-binding var `(car ,path) nil)
+		  (setf path `(cdr ,path)))
+		 (:optionals
+		  (incf maximum)
+		  (push-let-binding var `(car ,path) nil `(not (null ,path)))
+		  (setf path `(cdr ,path)))
+		 (:keywords
+		  (let ((key (make-keyword var)))
+		    (push-let-binding var `(lookup-keyword ,key ,rest-name)
+				      nil)
+		    (push key keys)))
+		 (:auxs
+		  (push-let-binding var nil nil))))
+	      (t
+	       (error "Non-symbol in lambda-list - ~S." var)))))
     (push `(unless (<= ,minimum
 		       (length (the list ,(if top-level
 					      `(cdr ,arg-list-name)
