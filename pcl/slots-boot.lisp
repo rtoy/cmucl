@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.24 2003/06/15 14:06:26 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.25 2003/06/17 13:16:45 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -62,7 +62,7 @@
 			(make-method-function
 			 (lambda (val obj)
 			   (slot-missing (class-of obj) obj slot-name
-					 'setf)
+					 'setf val)
 			   val)))))
 		    (initargs (copy-tree initargs)))
 	       (setf (getf (getf initargs :plist) :slot-name-lists)
