@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.37 1998/12/20 04:17:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.38 1999/02/02 10:54:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -971,20 +971,21 @@
   unread-stuff)
 
 
-(macrolet ((in-fun (name fun out-slot stream-method &rest args)
-	     `(defun ,name (stream ,@args)
+(macrolet ((in-fun (name fun out-slot stream-method)
+	     `(defun ,name (stream eof-errorp eof-value)
 		(or (pop (echo-stream-unread-stuff stream))
 		    (let* ((in (echo-stream-input-stream stream))
 			   (out (echo-stream-output-stream stream))
-			   (result (,fun in ,@args)))
-		      (if (lisp-stream-p out)
-			  (funcall (,out-slot out) out result)
-			  (,stream-method out result))
-		      result)))))
-  (in-fun echo-in read-char lisp-stream-out stream-write-char
-	  eof-errorp eof-value)
-  (in-fun echo-bin read-byte lisp-stream-bout stream-write-byte
-	  eof-errorp eof-value))
+			   (result (,fun in nil :eof)))
+		      (cond ((eq result :eof)
+			     (eof-or-lose stream eof-errorp eof-value))
+			    (t
+			     (if (lisp-stream-p out)
+				 (funcall (,out-slot out) out result)
+				 (,stream-method out result))
+			     result)))))))
+  (in-fun echo-in read-char lisp-stream-out stream-write-char)
+  (in-fun echo-bin read-byte lisp-stream-bout stream-write-byte))
 
 (defun echo-misc (stream operation &optional arg1 arg2)
   (let* ((in (two-way-stream-input-stream stream))
