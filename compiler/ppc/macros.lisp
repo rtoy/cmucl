@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.3 2004/08/08 11:15:12 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.4 2004/08/09 03:34:54 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -165,6 +165,14 @@
 
 ;;;; Storage allocation:
 
+;; Allocation macro
+;;
+;; This macro does the appropriate stuff to allocate space.
+;;
+;; The allocated space is stored in RESULT-TN with the lowtag LOWTAG
+;; applied.  The amount of space to be allocated is SIZE bytes (which
+;; must be a multiple of the lisp object size).
+;;
 (defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
   (declare (ignore stack-p temp-tn))
   (let ((alloc-size (gensym)))
@@ -179,22 +187,6 @@
 	   (inst addi alloc-tn alloc-tn ,alloc-size)
 	   (inst add alloc-tn alloc-tn ,alloc-size)))))
   
-#+nil
-(defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size)
-				 &body body)
-  "Do stuff to allocate an other-pointer object of fixed Size with a single
-  word header having the specified Type-Code.  The result is placed in
-  Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
-  by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
-  initializes the object."
-  (once-only ((result-tn result-tn) (temp-tn temp-tn) (flag-tn flag-tn)
-	      (type-code type-code) (size size))
-    `(pseudo-atomic (,flag-tn :extra (pad-data-block ,size))
-       (inst ori ,result-tn alloc-tn other-pointer-type)
-       (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
-       (storew ,temp-tn ,result-tn 0 other-pointer-type)
-       ,@body)))
-
 (defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size
 					    &key (lowtag other-pointer-type))
 				 &body body)
