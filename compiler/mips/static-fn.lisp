@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.2 1990/03/29 16:29:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.3 1990/04/03 03:02:44 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -30,7 +30,9 @@
   (:temporary (:sc descriptor-reg :offset lexenv-offset) lexenv)
   (:temporary (:scs (descriptor-reg)) function)
   (:temporary (:scs (interior-reg) :type interior) lip)
-  (:temporary (:sc any-reg :offset nargs-offset) nargs))
+  (:temporary (:sc any-reg :offset nargs-offset) nargs)
+  (:temporary (:sc any-reg :offset args-offset) args)
+  (:temporary (:sc any-reg :offset oldcont-offset) old-cont))
 
 
 (eval-when (compile load eval)
@@ -89,6 +91,8 @@
 	     (loadi nargs (fixnum ,num-args))
 	     (load-symbol cname symbol)
 	     (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
+	     (move args cont-tn)
+	     (move old-cont csp-tn)
 	     (inst compute-lra-from-code lra code-tn lra-label)
 	     (loadw function lexenv vm:closure-function-slot
 		    vm:function-pointer-type)
