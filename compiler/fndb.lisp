@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.30 1991/11/12 16:10:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.31 1991/11/16 15:49:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,7 +246,12 @@
   (movable foldable flushable explicit-check recursive)
   :derive-type #'result-type-float-contagion)
 
-(defknown (atan tan sinh cosh tanh asinh)
+(defknown atan
+  (number &optional real) irrational
+  (movable foldable flushable explicit-check recursive)
+  :derive-type #'result-type-float-contagion)
+
+(defknown (tan sinh cosh tanh asinh)
   (number) irrational (movable foldable flushable explicit-check recursive)
   :derive-type #'result-type-float-contagion)
 
