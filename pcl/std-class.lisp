@@ -1017,6 +1017,10 @@
   (or (eq new-super *the-class-t*)
       (eq (class-of class) (class-of new-super))))
 
+(defmethod validate-superclass ((class standard-class) (new-super std-class))
+  (let ((new-super-meta-class (class-of new-super)))
+    (or (eq new-super-meta-class *the-class-std-class*)
+	(eq (class-of class) new-super-meta-class))))
 
 
 ;;;
@@ -1301,7 +1305,7 @@
 ;;;
 
 (defmethod validate-superclass ((c slot-class)
-						(f forward-referenced-class))
+				(f forward-referenced-class))
   't)
 
 
