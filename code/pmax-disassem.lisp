@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.8 1990/02/18 06:23:22 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.9 1990/02/20 23:10:11 ch Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -432,18 +432,20 @@
 
 (defun disassemble-instruction (word &optional (stream t))
   (let* ((instr (mips-instruction word)))
-    (unless instr
-      (format stream "UNKNOWN INSTR (#x~X)~%" word)
-      (return-from disassemble-instruction (values nil nil)))
-    (let* ((instr-name (mips-instruction-name instr))
-	   (instr-type (mips-instruction-type instr))
-	   (closure (gethash instr-type *mips-instruction-types*)))
-      (cond (closure
-	     (funcall closure instr-name word stream))
-	    (t
-	     (format stream "UNKNOWN TYPE (~A/~S/#x~X)~%"
-		     instr-name instr-type word)))
-      (values instr-name instr-type))))
+    (cond (instr
+	   (let* ((instr-name (mips-instruction-name instr))
+		  (instr-type (mips-instruction-type instr))
+		  (closure (gethash instr-type *mips-instruction-types*)))
+	     (cond (closure
+		    (funcall closure instr-name word stream))
+		   (t
+		    (format stream "UNKNOWN TYPE (~A/~S/#x~X)~%"
+			    instr-name instr-type word)))
+	     (values instr-name instr-type)))
+	  (t
+	   (format stream "~16,8TDATA~8,8T#x~X~%" word)
+	   (return-from disassemble-instruction (values nil nil))))))
+
 
 
 ;;; Dissassemble-Code-Vector
