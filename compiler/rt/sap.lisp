@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.10 1992/03/09 20:35:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.11 1992/03/10 09:01:21 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -262,9 +262,9 @@
 ;;; (the machines address units).  Translate and signed-translate are the Lisp
 ;;; function calls for which these VOP's are in-line expansions.
 ;;;
-(defmacro define-system-set (name :size translate data-scs data-type)
+(defmacro define-system-set (name size translate data-scs data-type)
   (let ((set-form 
-	 (ecase :size
+	 (ecase size
 	   (:byte '(inst stc data base offset))
 	   (:halfword '(inst sth data base offset))
 	   (:word '(inst st data base offset))))
@@ -305,23 +305,23 @@
 
 ) ;EVAL-WHEN
 
-(define-system-set 8bit-system-set 0 %set-sap-ref-8
-  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+(define-system-set 8bit-system-set :byte %set-sap-ref-8
+  (unsigned-reg) positive-fixnum)
 
-(define-system-set 16bit-system-set 1 %set-sap-ref-16
-  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+(define-system-set 16bit-system-set :halfword %set-sap-ref-16
+  (unsigned-reg) positive-fixnum)
 
-(define-system-set 32bit-system-set 2 %set-sap-ref-32
-  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+(define-system-set 32bit-system-set :word %set-sap-ref-32
+  unsigned-reg unsigned-num)
 
-(define-system-set signed-8bit-system-set 0 %set-signed-sap-ref-8
-  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+(define-system-set signed-8bit-system-set :byte %set-signed-sap-ref-8
+  signed-reg tagged-num)
 
-(define-system-set signed-16bit-system-set 1 %set-signed-sap-ref-16
-  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+(define-system-set signed-16bit-system-set :halfword %set-signed-sap-ref-16
+  signed-reg tagged-num)
 
-(define-system-set signed-32bit-system-set 2 %set-signed-sap-ref-32
-  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+(define-system-set signed-32bit-system-set :word %set-signed-sap-ref-32
+  signed-reg signed-num)
 
 ;;; Ugly, because there are only 2 free sap-regs.  We stash the data value in
 ;;; NARGS to free up a sap-reg for BASE.
@@ -355,6 +355,7 @@
   (:translate %set-sap-ref-sap)
   (:args (object :scs (sap-reg))
 	 (data :scs (sap-reg) :target result))
+  (:info offset)
   (:arg-types system-area-pointer
 	      (:constant (unsigned-byte 16))
 	      system-area-pointer)
