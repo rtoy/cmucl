@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.33 2002/08/27 18:46:49 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.34 2002/09/07 13:28:46 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -1073,7 +1073,7 @@
 	      (wrapper-instance-slots-layout owrapper))
 	(setf (wrapper-class-slots nwrapper)
 	      (wrapper-class-slots owrapper))
-	(without-interrupts
+	(with-pcl-lock
 	  (update-lisp-class-layout class nwrapper)
 	  (setf (slot-value class 'wrapper) nwrapper)
 	  (invalidate-wrapper owrapper :flush nwrapper))))))
@@ -1097,7 +1097,7 @@
 	    (wrapper-instance-slots-layout owrapper))
       (setf (wrapper-class-slots nwrapper)
 	    (wrapper-class-slots owrapper))
-      (without-interrupts
+      (with-pcl-lock
 	(update-lisp-class-layout class nwrapper)
 	(setf (slot-value class 'wrapper) nwrapper)
 	(invalidate-wrapper owrapper :obsolete nwrapper)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.12 1999/05/30 23:14:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.13 2002/09/07 13:28:46 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -68,7 +68,7 @@
 	 (error "What kind of instance is this?"))))
 
 (defun swap-wrappers-and-slots (i1 i2)
-  (without-interrupts
+  (with-pcl-lock
    (cond ((std-instance-p i1)
 	  (let ((w1 (std-instance-wrapper i1))
 		(s1 (std-instance-slots i1)))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.16 2002/09/07 13:16:48 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.17 2002/09/07 13:28:46 pmai Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -58,28 +58,36 @@ declaration.")
 	   ,new-value)))
 
 ;;;
-;;; without-interrupts
+;;; With-Pcl-Lock
+;;;
+;;; Evaluate the body in such a way that no other code that is
+;;; running PCL can be run during that evaluation.
+;;;
+;;; Note that the MP version, which uses a PCL-specific lock
+;;; is rather experimental, in that it is not currently clear
+;;; if the code inside with-pcl-lock only has to prevent other
+;;; threads from entering such sections, or if it really has to
+;;; prevent _ALL_ other PCL code (e.g. GF invocations, etc.)
+;;; from running.  If the latter then we really need to identify
+;;; all places that need to acquire the PCL lock, if we are going to
+;;; support multiple concurrent threads/processes on SMP machines.
 ;;; 
-;;; OK, Common Lisp doesn't have this and for good reason.  But For all of
-;;; the Common Lisp's that PCL runs on today, there is a meaningful way to
-;;; implement this.  WHAT I MEAN IS:
+;;; For the moment we do the experimental thing, and fix any bugs
+;;; that occur as a result of this.             -- PRM 2002-09-06
 ;;;
-;;; I want the body to be evaluated in such a way that no other code that is
-;;; running PCL can be run during that evaluation.  I agree that the body
-;;; won't take *long* to evaluate.  That is to say that I will only use
-;;; without interrupts around relatively small computations.
-;;;
-;;; INTERRUPTS-ON should turn interrupts back on if they were on.
-;;; INTERRUPTS-OFF should turn interrupts back off.
-;;; These are only valid inside the body of WITHOUT-INTERRUPTS.
-;;;
-;;; OK?
-;;;
-;;; For CMU CL we just use our without-interrupts.  We don't have the
-;;; INTERRUPTS-ON/OFF local macros spec'ed, but they aren't used.
-;;;
-(defmacro without-interrupts (&body body)
+
+#-MP
+(defmacro with-pcl-lock (&body body)
   `(sys:without-interrupts ,@body))
+
+#+MP
+(defvar *global-pcl-lock* (mp:make-lock "Global PCL Lock"))
+
+#+MP
+(defmacro with-pcl-lock (&body body)
+  `(mp:with-lock-held (*global-pcl-lock*)
+     ,@body))
+
 
 
 ;;;
