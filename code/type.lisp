@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.31 1998/08/19 15:19:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.32 2000/01/10 14:47:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2017,13 +2017,14 @@
 (define-type-class union)
 
 
-;;;    If List, then return that, otherwise the OR of the component types.
+;;;    If List or Bignum then return that, otherwise the OR of the component
+;;; types.
 ;;;
 (define-type-method (union :unparse) (type)
   (declare (type ctype type))
-  (if (type= type (specifier-type 'list))
-      'list
-      `(or ,@(mapcar #'type-specifier (union-type-types type)))))
+  (cond ((type= type (specifier-type 'list)) 'list)
+	((type= type (specifier-type 'bignum)) 'bignum)
+	(t `(or ,@(mapcar #'type-specifier (union-type-types type))))))
 
 
 
