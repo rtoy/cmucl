@@ -33,9 +33,9 @@ FTP compressed tar archives in binary mode.  To extract, "cd" to the
 directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
-As of 8/6/92, the latest SunOS Sparc release is:
-    16e-sun4c_41.tar.Z (6.5 meg)
-    16e-extra-sun4c_41.tar.Z (3.5 meg)
+As of 12/11/92, the latest SunOS Sparc release is:
+    16f-sun4c_41.tar.Z (6.8 meg)
+    16f-extra-sun4c_41.tar.Z (3.5 meg)
 
 The first file holds binaries and documentation for the basic Lisp system,
 while the second `-extra' file contains the Hemlock editor, the graphical
@@ -77,6 +77,9 @@ manually deleted to save disk space.
 
 SunOS/SPARC Notes:
 
+Note: CMU CL does not currently run on SPARC 10 systems, since the stack has
+been moved.  This problem should be fixed in version 17.
+
 At least 16 meg of memory is recommended, and more is better.  Your system
 maintainer may need to configure extra paging space for large Lisp application.
 
@@ -104,8 +107,8 @@ packages: PCL and CLX.  Although these packages are copyrighted, they may be
 freely distributed without any licensing agreement or fee.
 
 The release area contains a source distribution, which is an image of all the
-".lisp" source files used to build version 16e:
-    16e-source.tar.Z (3.6 meg)
+".lisp" source files used to build version 16f:
+    16f-source.tar.Z (3.6 meg)
 
 All of our files (including the release area) are actually in the AFS file
 system.  On the release machines, the FTP server's home is the release
