@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.5 1991/02/08 16:34:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.6 1991/03/21 14:48:50 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,9 +272,17 @@
   "Make the interactive and background buffers slave-name and background-name.
    If either is nil, then prompt the user."
   (multiple-value-bind (slave-name background-name)
-		       (if (and slave-name background-name)
-			   (values slave-name background-name)
-			   (pick-slave-buffer-names))
+		       (cond ((not (and slave-name background-name))
+			      (pick-slave-buffer-names))
+			     ((getstring slave-name *server-names*)
+			      (multiple-value-bind
+				  (new-sn new-bn)
+				  (pick-slave-buffer-names)
+				(message "~S is already an eval server; ~
+					  using ~S instead."
+					 slave-name new-sn)
+				(values new-sn new-bn)))
+			     (t (values slave-name background-name)))
     (let* ((slave-buffer (or (getstring slave-name *buffer-names*)
 			     (make-buffer slave-name :modes '("Lisp"))))
 	   (background-buffer (or (getstring background-name *buffer-names*)
