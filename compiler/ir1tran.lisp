@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.76 1992/09/21 15:35:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.77 1992/09/22 00:03:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -565,6 +565,18 @@
   (undefined-value))
 
 
+;;; MAYBE-REANALYZE-FUNCTION  --  Internal
+;;;
+;;;    If we are not in a :INITIAL component, then add Fun to the
+;;; COMPONENT-REANALYZE-FUNCTIONS.  Fun is returned.
+;;;
+(defun maybe-reanalyze-functions (fun)
+  (declare (type functional fun))
+  (unless (eq (component-kind *current-component*) :initial)
+    (pushnew fun (component-reanalyze-functions *current-component*)))
+  fun)
+
+
 ;;; Reference-Leaf  --  Internal
 ;;;
 ;;;    Generate a Ref node for a Leaf, frobbing the Leaf structure as needed.
@@ -578,7 +590,7 @@
 				 :notinline))
 			(let ((fun (defined-function-functional leaf)))
 			  (when (and fun (not (functional-kind fun)))
-			    fun)))
+			    (maybe-reanalyze-function fun))))
 		   leaf))
 	 (res (make-ref (or (lexenv-find leaf type-restrictions)
 			    (leaf-type leaf))
@@ -807,7 +819,8 @@
 (defun ir1-convert-local-combination (start cont form fun)
   (if (functional-kind fun)
       (throw 'local-call-lossage fun)
-      (ir1-convert-combination start cont form fun)))
+      (ir1-convert-combination start cont form
+			       (maybe-reanalyze-function fun))))
 
 
 ;;;; PROCESS-DECLARATIONS:
