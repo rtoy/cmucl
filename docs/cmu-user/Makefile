@@ -58,7 +58,6 @@ all: cmu-user.ps
 	if [ "$<" = "cmu-user.tex" ]; then $(MAKE) index; else $(MAKE) index-letter; fi
 
 	$(LATEX) $<
-	rm $*.log
 
 %.pdf : %.tex $(FILES)
 	$(PDFLATEX) $<
@@ -67,7 +66,6 @@ all: cmu-user.ps
 	done
 	if [ "$<" = "cmu-user.tex" ]; then $(MAKE) index; else $(MAKE) index-letter; fi
 	$(PDFLATEX) $<
-	rm $*.log
 
 # the "-fix" option to hevea makes it run as many times as necessary
 # to resolve all cross-references and generate an index.
