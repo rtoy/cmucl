@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.2 1990/11/26 15:16:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.3 1990/11/26 18:49:59 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
@@ -53,16 +53,14 @@
 ;;; Given the sigcontext, extract the internal error arguments from the
 ;;; instruction stream.
 ;;; 
-(defun internal-error-arguments (scp)
-  (alien-bind ((sc (make-alien 'mach:sigcontext
-			       #.(c-sizeof 'mach:sigcontext)
-			       scp)
-		   mach:sigcontext
-		   t)
-	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+(defun internal-error-arguments (sc)
+  (alien-bind ((sc sc mach:sigcontext t))
     (let* ((pc (alien-access (mach:sigcontext-pc (alien-value sc))))
 	   (length (sap-ref-8 pc 4))
 	   (vector (make-array length :element-type '(unsigned-byte 8))))
+      (declare (type system-area-pointer pc)
+	       (type (unsigned-byte 8) length)
+	       (type (simple-array (unsigned-byte 8) (*))) vector)
       (copy-from-system-area pc (* vm:byte-bits 5)
 			     vector (* vm:word-bits
 				       vm:vector-data-offset)
@@ -75,6 +73,3 @@
 	      (return))
 	    (sc-offsets (c::read-var-integer vector index)))
 	  (values error-number (sc-offsets)))))))
-
-
-
