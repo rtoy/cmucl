@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.6 1992/03/10 13:01:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.7 1992/03/22 17:30:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,7 +67,7 @@
 	  (alien-values-type-values type)))
 
 
-(def-vm-support-routine make-call-out-argument-tns (type)
+(def-vm-support-routine make-call-out-tns (type)
   (declare (type alien-function-type type))
   (let ((arg-state (make-arg-state)))
     (collect ((arg-tns))

@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.9 1992/03/10 12:38:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.10 1992/03/22 17:30:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.9 1992/03/10 12:38:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.10 1992/03/22 17:30:01 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -131,7 +131,7 @@
 	      (invoke-alien-type-method :result-tn type state))
 	  (alien-values-type-values type)))
 
-(def-vm-support-routine make-call-out-argument-tns (type)
+(def-vm-support-routine make-call-out-tns (type)
   (let ((arg-state (make-arg-state)))
     (collect ((arg-tns))
       (dolist (arg-type (alien-function-type-arg-types type))
