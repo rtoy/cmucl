@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.32 2003/09/25 02:40:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.33 2003/09/25 14:08:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,6 +123,18 @@
 
 #+pentium
 (sys:register-lisp-runtime-feature :pentium)
+
+#+sparc-v7
+(sys:register-lisp-runtime-feature :sparc-v7)
+
+#+sparc-v8
+(sys:register-lisp-runtime-feature :sparc-v8)
+
+#+sparc-v9
+(sys:register-lisp-runtime-feature :sparc-v9)
+
+#+complex-fp-vops
+(sys:register-lisp-feature :complex-fp-vops)
 
 (defun featurep (x)
   "If X is an atom, see if it is present in *FEATURES*.  Also

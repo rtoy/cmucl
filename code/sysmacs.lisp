@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.28 2003/09/25 02:40:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.29 2003/09/25 14:08:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,14 +19,16 @@
 
 (defmacro register-lisp-feature (feature)
   "Register the feature as having influenced the CMUCL build process."
-  `(pushnew ',feature *features*))
+  `(pushnew ,feature *features*))
 
 (defmacro register-lisp-runtime-feature (feature)
   "Register the feature as having influenced the CMUCL build process,
 and also the CMUCL C runtime."
-   `(progn
-     (pushnew ',feature *features*)
-     (pushnew ',feature sys::*runtime-features*)))
+  (let ((f (gensym)))
+    `(progn
+      (let ((,f ,feature))
+	(pushnew ,f *features*)
+	(pushnew ,f sys::*runtime-features*)))))
 
 (in-package "LISP")
 
