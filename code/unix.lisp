@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.89 2003/06/26 13:27:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.90 2003/08/08 11:37:21 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1018,6 +1018,22 @@
   (declare (type system-area-pointer addr)
 	   (type (unsigned-byte 32) length))
   (syscall ("munmap" system-area-pointer size-t) t addr length))
+
+(defun unix-setuid (uid)
+  "Set the user ID of the calling process to UID.
+   If the calling process is the super-user, set the real
+   and effective user IDs, and the saved set-user-ID to UID;
+   if not, the effective user ID is set to UID."
+  (int-syscall ("setuid" uid-t) uid))
+
+(defun unix-setgid (gid)
+  "Set the group ID of the calling process to GID.
+   If the calling process is the super-user, set the real
+   and effective group IDs, and the saved set-group-ID to GID;
+   if not, the effective group ID is set to GID."
+  (int-syscall ("setgid" gid-t) gid))
+
+
 
 (defun unix-msync (addr length flags)
   (declare (type system-area-pointer addr)

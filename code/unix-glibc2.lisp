@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.28 2003/06/26 13:27:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.29 2003/08/08 11:37:21 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2081,13 +2081,12 @@ length LEN and type TYPE."
   (int-syscall ( "group-member" gid-t) gid))
 
 
-#+(or)
 (defun unix-setuid (uid)
   "Set the user ID of the calling process to UID.
    If the calling process is the super-user, set the real
    and effective user IDs, and the saved set-user-ID to UID;
    if not, the effective user ID is set to UID."
-  (int-syscall ( "setuid" uid-t) uid))
+  (int-syscall ("setuid" uid-t) uid))
 
 ;;; Unix-setreuid sets the real and effective user-id's of the current
 ;;; process to the arguments "ruid" and "euid", respectively.  Usage is
@@ -2100,13 +2099,12 @@ length LEN and type TYPE."
    if the call fails."
   (void-syscall ("setreuid" int int) ruid euid))
 
-#+(or)
 (defun unix-setgid (gid)
   "Set the group ID of the calling process to GID.
    If the calling process is the super-user, set the real
    and effective group IDs, and the saved set-group-ID to GID;
    if not, the effective group ID is set to GID."
-  (int-syscall ( "setgid" gid-t) gid))
+  (int-syscall ("setgid" gid-t) gid))
 
 
 ;;; Unix-setregid sets the real and effective group-id's of the current
