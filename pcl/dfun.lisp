@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.24 2003/04/14 21:45:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.25 2003/04/30 18:42:23 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1655,7 +1655,7 @@ And so, we are saved.
 		    (class      
 		     (or (eq (cadr specl) (cadr type))
 			 (memq (cadr specl)
-			       (cpl-maybe-early (cadr type))))))))
+			       (cpl-or-nil (cadr type))))))))
 	(values pred pred))))
 
 (defun saut-prototype (specl type)
@@ -1670,7 +1670,7 @@ And so, we are saved.
 		 (eq (cadr specl) (class-of (cadr type))))
 		(class
 		 (memq (cadr specl)
-		       (cpl-maybe-early (class-of (cadr type))))))))
+		       (cpl-or-nil (class-of (cadr type))))))))
     (values pred pred)))
 
 
