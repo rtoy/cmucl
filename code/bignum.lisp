@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.39 2004/08/22 15:21:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.40 2004/08/31 00:19:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1154,33 +1154,16 @@ down to individual words.")
 
 
 ;;;; GCD.
-
-#+nil
-(defun bignum-gcd (a b)
-  (declare (type bignum-type a b))
-  (let* ((a (if (%bignum-0-or-plusp a (%bignum-length a))
-		a
-		(negate-bignum a nil)))
-	 (b (if (%bignum-0-or-plusp b (%bignum-length b))
-		b
-		(negate-bignum b nil))))
-    (declare (type bignum-type a b))
-    (when (< a b)
-      (rotatef a b))
-    ;; While the length difference of A and B is sufficiently large,
-    ;; reduce using MOD (slowish, but it should equalize the sizes of
-    ;; A and B pretty quickly). After that, use the binary GCD
-    ;; algorithm to handle the rest.  This gives a very large speedup
-    ;; in cl-bench.
-    (loop until (and (= (%bignum-length b) 1) (zerop (%bignum-ref b 0))) do
-	 (when (<= (%bignum-length a) (1+ (%bignum-length b)))
-	   (return-from bignum-gcd (bignum-binary-gcd a b)))
-	 (let ((rem (mod a b)))
-	   (if (fixnump rem)
-	       (setf a (make-small-bignum rem))
-	       (setf a rem))
-	   (rotatef a b)))
-    a))
+;;; MAKE-SMALL-BIGNUM -- Public.
+;;;
+;;; Allocate a single word bignum that holds fixnum.  This is useful when
+;;; we are trying to mix fixnum and bignum operands.
+;;; 
+(declaim (inline make-small-bignum))
+(defun make-small-bignum (fixnum)
+  (let ((res (%allocate-bignum 1)))
+    (setf (%bignum-ref res 0) (%fixnum-to-digit fixnum))
+    res))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; The asserts in the GCD implementation are way too expensive to
@@ -3597,17 +3580,6 @@ friends is working.
 
 
 ;;;; General utilities.
-
-;;; MAKE-SMALL-BIGNUM -- Public.
-;;;
-;;; Allocate a single word bignum that holds fixnum.  This is useful when
-;;; we are trying to mix fixnum and bignum operands.
-;;; 
-(declaim (inline make-small-bignum))
-(defun make-small-bignum (fixnum)
-  (let ((res (%allocate-bignum 1)))
-    (setf (%bignum-ref res 0) (%fixnum-to-digit fixnum))
-    res))
 
 ;;; %NORMALIZE-BIGNUM-BUFFER -- Internal.
 ;;;
