@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defclass.lisp,v 1.2 2003/03/22 16:15:15 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defclass.lisp,v 1.3 2003/04/03 11:46:20 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -175,3 +175,17 @@
     (values r (null c)))
   t t)
 
+;;;
+;;; The change of DFR1 from forward-referenced to standard class
+;;; caused problems at some point, which were fixed by passing
+;;; initargs to CHANGE-CLASS in ENSURE-CLASS-USING-CLASS.
+;;;
+(deftest defclass-forward-referenced-class.0
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dfr0 (dfr1 dfr2) ())
+	  (defclass dfr1 (dfr3 dfr4) ())
+	  t)
+      (values r (null c)))
+  t t)
+      
