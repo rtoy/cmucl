@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.27 1998/05/15 01:01:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.28 2000/02/25 14:56:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -312,11 +312,11 @@
   (set-cmt-entry char function rt)
   T)
 
-(defun get-macro-character (char &optional rt)
+(defun get-macro-character (char &optional (rt *readtable*))
   "Returns the function associated with the specified char which is a macro
   character.  The optional readtable argument defaults to the current
   readtable."
-  (let ((rt (or rt *readtable*)))
+  (let ((rt (or rt std-lisp-readtable)))
     ;; Check macro syntax, return associated function if it's there.
     ;; Returns a value for all constituents.
     (cond ((constituentp char)
@@ -1368,12 +1368,13 @@
 	      (coerce function 'function))
 	(error "~S is not a dispatch char." disp-char))))
 
-(defun get-dispatch-macro-character (disp-char sub-char &optional rt)
+(defun get-dispatch-macro-character
+       (disp-char sub-char &optional (rt *readtable*))
   "Returns the macro character function for sub-char under disp-char
    or nil if there is no associated function."
   (unless (digit-char-p sub-char)
     (let* ((sub-char (char-upcase sub-char))
-	   (rt (or rt *readtable*))
+	   (rt (or rt std-lisp-readtable))
 	   (dpair (find disp-char (dispatch-tables rt)
 			:test #'char= :key #'car)))
       (if dpair
