@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.20 2003/03/22 16:15:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.21 2003/05/09 14:16:40 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -631,7 +631,7 @@
 
    :METHODS Function-Form
        This is a not really an option, but rather a way of specifying
-       that all methods of a generic functions should be tracee.  The
+       that all methods of a generic functions should be traced.  The
        Function-Form is evaluated immediately, and the methods of the resulting
        generic function are traced.
 
