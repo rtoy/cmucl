@@ -23,8 +23,7 @@
 
 ;;; Add-To-Emit-Order  --  Interface
 ;;;
-;;;    Insert Block in the emission order after the block After.  We also add
-;;; the block to the IR2-Environment-Blocks.
+;;;    Insert Block in the emission order after the block After.
 ;;;
 (defun add-to-emit-order (block after)
   (declare (type ir2-block block after))
@@ -33,25 +32,22 @@
     (setf (ir2-block-prev block) after)
     (setf (ir2-block-next block) next)
     (setf (ir2-block-prev next) block))
-
-  (let ((2env (environment-info
-	       (lambda-environment
-		(block-lambda (ir2-block-block block))))))
-    (push-in ir2-block-environment-next block (ir2-environment-blocks 2env)))
-
   (undefined-value))
 
 
 ;;; Control-Analyze-Block  --  Internal
 ;;;
 ;;;    Do a graph walk linking blocks into the emit order as we go.  We treat
-;;; blocks ending in TR nodes specially, since it may be that we want to go
-;;; somewhere other than the return block.  If tail-call-p, then we drop
-;;; through to the head of the called function in a TR local calls (instead of
-;;; to the return node.)
+;;; blocks ending in tail local calls specially.  We can't walked the called
+;;; function immediately, since it is in a different function and we must keep
+;;; the code for a function contiguous.   Instead, we return the function that
+;;; we want to call so that it can be walked as soon as possible, which is
+;;; hopefully immediately.
 ;;;
-;;;    If the IR2 blocks haven't already been assigned, then we make them at
-;;; this point.
+;;;    If any of the recursive calls ends in a tail local call, then we return
+;;; the last such function, since it is the only one we can possibly drop
+;;; through to.  (But it doesn't have to be from the last block walked, since
+;;; that call might not have added anything.)
 ;;;
 (defun control-analyze-block (block tail)
   (declare (type cblock block) (type ir2-block tail))
@@ -62,23 +58,16 @@
 			   (setf (block-info block) (make-ir2-block block)))
 		       (ir2-block-prev tail))
 
-    #|But not really...
     (let ((last (block-last block)))
-      (when (and (combination-p last) (node-tail-p last)
-		 (eq (basic-combination-kind last) :local)
-		 tail-call-p)
-	(control-analyze-block (node-block
-				(lambda-bind
-				 (ref-leaf
-				  (continuation-use
-				   (basic-combination-fun last)))))
-			       tail t)))
-    |#
-    
-    (dolist (succ (block-succ block))
-      (control-analyze-block succ tail)))
-
-  (undefined-value))
+      (cond ((and (combination-p last) (node-tail-p last)
+		  (eq (basic-combination-kind last) :local))
+	     (combination-lambda last))
+	    (t
+	     (let ((fun nil))
+	       (dolist (succ (block-succ block))
+		 (let ((res (control-analyze-block succ tail)))
+		   (when res (setq fun res))))
+	       fun))))))
 
 
 ;;; CONTROL-ANALYZE-1-FUN  --  Internal
@@ -90,6 +79,10 @@
 ;;; will never reach the bind block, so we will always get to insert it at the
 ;;; beginning.
 ;;;
+;;;    If the talk from the bind node encountered a tail local call, then we
+;;; start over again there to help the call drop through.  Of course, it will
+;;; never get a drop-through if either function has NLX code.
+;;;
 (defun control-analyze-1-fun (fun component)
   (declare (type clambda fun) (type component component))
   (let* ((tail-block (block-info (component-tail component)))
@@ -99,7 +92,10 @@
       (dolist (nlx (environment-nlx-info (lambda-environment fun)))
 	(control-analyze-block (nlx-info-target nlx) tail-block))
       (assert (not (block-flag bind-block)))
-      (control-analyze-block bind-block (ir2-block-next prev-block))))
+      (let ((new-fun (control-analyze-block bind-block
+					    (ir2-block-next prev-block))))
+	(when new-fun
+	  (control-analyze-1-fun new-fun component)))))
   (undefined-value))
 
   
@@ -111,7 +107,9 @@
 ;;;
 ;;;    When we are done, we delete all blocks that weren't reached during our
 ;;; walk.  This allows IR2 phases to assume that all IR1 blocks in the DFO have
-;;; valid IR2 blocks in their Info.
+;;; valid IR2 blocks in their Info.  We delete all deleted blocks from the
+;;; IR2-COMPONENT VALUES-GENERATORS and VALUES-RECEIVERS so that stack analysis
+;;; won't get confused.
 ;;;
 (defun control-analyze (component)
   (let* ((head (component-head component))
@@ -135,5 +133,13 @@
     (do-blocks (block component)
       (unless (block-flag block)
 	(delete-block block))))
+
+  (let ((2comp (component-info component)))
+    (setf (ir2-component-values-receivers 2comp)
+	  (delete-if-not #'block-component
+			 (ir2-component-values-receivers 2comp)))
+    (setf (ir2-component-values-generators 2comp)
+	  (delete-if-not #'block-component
+			 (ir2-component-values-generators 2comp))))
 
   (undefined-value))
