@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.26 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.27 1997/04/16 18:06:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,7 +162,8 @@
 
 
 (define-vop (xep-allocate-frame)
-  (:info start-lab)
+  (:info start-lab copy-more-arg-follows)
+  (:ignore copy-more-arg-follows)
   (:vop-var vop)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 1
@@ -1177,7 +1178,7 @@ default-value-8
 
 	;; NIL out the last cons.
 	(storew null-tn dst 1 vm:list-pointer-type)))
-    DONE)))
+    DONE))
 
 
 ;;; Return the location and size of the more arg glob created by Copy-More-Arg.
