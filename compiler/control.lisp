@@ -108,8 +108,7 @@
 ;;;    When we are done, we delete all blocks that weren't reached during our
 ;;; walk.  This allows IR2 phases to assume that all IR1 blocks in the DFO have
 ;;; valid IR2 blocks in their Info.  We delete all deleted blocks from the
-;;; IR2-COMPONENT VALUES-GENERATORS and VALUES-RECEIVERS so that stack analysis
-;;; won't get confused.
+;;; IR2-COMPONENT VALUES-RECEIVERS so that stack analysis won't get confused.
 ;;;
 (defun control-analyze (component)
   (let* ((head (component-head component))
@@ -137,9 +136,6 @@
   (let ((2comp (component-info component)))
     (setf (ir2-component-values-receivers 2comp)
 	  (delete-if-not #'block-component
-			 (ir2-component-values-receivers 2comp)))
-    (setf (ir2-component-values-generators 2comp)
-	  (delete-if-not #'block-component
-			 (ir2-component-values-generators 2comp))))
+			 (ir2-component-values-receivers 2comp))))
 
   (undefined-value))
