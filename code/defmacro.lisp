@@ -325,13 +325,13 @@
 (defun lookup-keyword (keyword key-list)
   (do ((remaining key-list (cddr remaining)))
       ((endp remaining))
-    (when (eq keyword (car key-list))
-      (return (cadr key-list)))))
+    (when (eq keyword (car remaining))
+      (return (cadr remaining)))))
 
 (defun keyword-supplied-p (keyword key-list)
   (do ((remaining key-list (cddr remaining)))
       ((endp remaining))
-    (when (eq keyword (car key-list))
+    (when (eq keyword (car remaining))
       (return t))))
 
 
