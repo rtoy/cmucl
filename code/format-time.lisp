@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.5 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.6 2000/01/30 13:58:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -91,9 +91,9 @@
     (let ((time-string "~2,'0D:~2,'0D")
 	  (date-string
 	   (case style
-	     (:short "~D/~D/~2,'0D")             ;;  MM/DD/YY
-	     ((:abbreviated :long) "~A ~D, ~D")  ;;  Month DD, YYYY
-	     (:government "~2,'0D ~:@(~A~) ~D")      ;;  DD MON YY
+	     (:short "~D/~D/~2,'0D")			;;  MM/DD/YY
+	     ((:abbreviated :long) "~A ~D, ~D")		;;  Month DD, YYYY
+	     (:government "~2,'0D ~:@(~A~) ~2,'0D")	;;  DD MON YY
 	     (t
 	      (error "~A: Unrecognized :style keyword value." style))))
 	  (time-args
