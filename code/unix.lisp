@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.3 1992/01/24 07:10:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.4 1992/01/28 05:57:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -937,8 +937,8 @@
 (define-ioctl-command TIOCSWINSZ #\t 103 (struct winsize) :in)
 
 (define-ioctl-command TIOCNOTTY #\t 113 nil :void)
-(define-ioctl-command TIOCSLTC #\t 117 ltchars :in)
-(define-ioctl-command TIOCGLTC #\t 116 ltchars :out)
+(define-ioctl-command TIOCSLTC #\t 117 (struct ltchars) :in)
+(define-ioctl-command TIOCGLTC #\t 116 (struct ltchars) :out)
 (define-ioctl-command TIOCSPGRP #\t 118 int :in)
 (define-ioctl-command TIOCGPGRP #\t 119 int :out)
 
