@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.6 1997/05/11 11:37:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.7 1997/08/01 19:33:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -484,24 +484,24 @@
 		       (case mod
 			 (#b00
 			  (if (= base-reg #b101)
-			      (disassem:read-suffix 32 dstate)
+			      (disassem:read-signed-suffix 32 dstate)
 			      nil))
 			 (#b01
 			  (disassem:read-signed-suffix 8 dstate))
 			 (#b10
-			  (disassem:read-suffix 32 dstate)))))
+			  (disassem:read-signed-suffix 32 dstate)))))
 		 (list (if (and (= mod #b00) (= base-reg #b101)) nil base-reg)
 		       offset
 		       (if (= index-reg #b100) nil index-reg)
 		       (ash 1 index-scale))))))
 	  ((and (= mod #b00) (= r/m #b101))
-	   (list nil (disassem:read-suffix 32 dstate)) )
+	   (list nil (disassem:read-signed-suffix 32 dstate)) )
 	  ((= mod #b00)
 	   (list r/m))
 	  ((= mod #b01)
 	   (list r/m (disassem:read-signed-suffix 8 dstate)))
 	  (t				; (= mod #b10)
-	   (list r/m (disassem:read-suffix 32 dstate))))))
+	   (list r/m (disassem:read-signed-suffix 32 dstate))))))
 
 
 ;;; This is a sort of bogus prefilter that just
