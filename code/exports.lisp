@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.168 2000/05/02 04:44:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.169 2000/05/23 05:43:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1622,7 +1622,7 @@
 	   "INFINITE-ERROR-PROTECT"
 	   "FIND-CALLER-NAME" "OLD-IN-PACKAGE"
 	   "%SET-SYMBOL-VALUE" "%SET-SYMBOL-PACKAGE" "OUTPUT-SYMBOL-NAME"
-	   "FSET" "RAW-DEFINITION" "%IN-PACKAGE" 
+	   "FSET" "RAW-DEFINITION" "%IN-PACKAGE" "%DEFPACKAGE"
 	   "INVOKE-MACROEXPAND-HOOK" "TYPEDEF-INIT" "DEFAULT-STRUCTURE-PRINT"
 	   "LAYOUT" "LAYOUT-LENGTH" "RATIOP" "FIXNUMP"
 	   "LAMBDA-WITH-ENVIRONMENT" "LAYOUT-PURE" "DSD-RAW-TYPE"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.52 1999/05/04 13:11:59 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.53 2000/05/23 05:43:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,7 +30,7 @@
 			    map-apropos))
 
 (in-package "KERNEL")
-(export '(%in-package old-in-package))
+(export '(%in-package old-in-package %defpackage))
 
 (in-package "LISP")
 
