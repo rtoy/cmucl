@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.30 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.31 1997/02/08 17:22:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -342,14 +342,11 @@
      (format t "~S is function." x)))
   (case (get-type x)
     (#.vm:closure-header-type
-     (cond ((eval:interpreted-function-p x)
-	    (describe-function-interpreted x kind name))
-	   (t
-	    (describe-function-compiled (%closure-function x) kind name)
-	    (format t "~&Its closure environment is:")
-	    (indenting-further *standard-output* 8)
-	    (dotimes (i (- (get-closure-length x) (1- vm:closure-info-offset)))
-	      (format t "~&~D: ~S" i (%closure-index-ref x i))))))
+     (describe-function-compiled (%closure-function x) kind name)
+     (format t "~&Its closure environment is:")
+     (indenting-further *standard-output* 8)
+     (dotimes (i (- (get-closure-length x) (1- vm:closure-info-offset)))
+	      (format t "~&~D: ~S" i (%closure-index-ref x i))))
     ((#.vm:function-header-type #.vm:closure-function-header-type)
      (describe-function-compiled x kind name))
     (#.vm:funcallable-instance-header-type
@@ -364,6 +361,8 @@
 	(let ((data (byte-closure-data x)))
 	  (dotimes (i (length data))
 	    (format t "~&~D: ~S" i (svref data i)))))
+       (eval:interpreted-function
+	(describe-function-interpreted x kind name))
        (t
 	 (describe-instance x :funcallable-instance))))
     (t

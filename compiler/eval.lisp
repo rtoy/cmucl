@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.29 1997/02/05 16:01:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.30 1997/02/08 17:24:47 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,36 +127,6 @@
 
 ;;;; Interpreted functions:
 
-(defstruct (eval-function
-	    (:print-function
-	     (lambda (s stream d)
-	       (declare (ignore d))
-	       (format stream "#<EVAL-FUNCTION ~S>"
-		       (eval-function-name s)))))
-  ;;
-  ;; The name of this interpreted function, or NIL if none specified.
-  (name nil)
-  ;;
-  ;; This function's debug arglist.
-  (arglist nil)
-  ;;
-  ;; A lambda that can be converted to get the definition.
-  (lambda nil)
-  ;;
-  ;; If this function has been converted, then this is the XEP.  If this is
-  ;; false, then the function is not in the cache (or is in the process of
-  ;; being removed.)
-  (definition nil :type (or c::clambda null))
-  ;;
-  ;; The number of consequtive GCs that this function has been unused.  This is
-  ;; used to control cache replacement.
-  (gcs 0 :type c::index)
-  ;;
-  ;; True if Lambda has been converted at least once, and thus warnings should
-  ;; be suppressed on additional conversions.
-  (converted-once nil))
-
-
 (defvar *interpreted-function-cache-minimum-size* 25
   "If the interpreted function cache has more functions than this come GC time,
   then attempt to prune it according to
@@ -171,7 +141,7 @@
 		 *interpreted-function-cache-threshold*))
 
 
-;;; The list of EVAL-FUNCTIONS that have translated definitions.
+;;; The list of INTERPRETED-FUNCTIONS that have translated definitions.
 ;;;
 (defvar *interpreted-function-cache* nil)
 (proclaim '(type list *interpreted-function-cache*))
@@ -183,41 +153,34 @@
 ;;; cache translations.
 ;;;
 (defun make-interpreted-function (lambda)
-  (let ((eval-fun (make-eval-function :lambda lambda
-				      :arglist (second lambda))))
-    #'(lambda (&rest args)
-	(let ((fun (eval-function-definition eval-fun))
-	      (args (cons (length args) args)))
-	  (setf (eval-function-gcs eval-fun) 0)
-	  (internal-apply (or fun (convert-eval-fun eval-fun))
-			  args '#())))))
-
-
-;;; GET-EVAL-FUNCTION  --  Internal
-;;;
-(defun get-eval-function (x)
-  (let ((res (system:find-if-in-closure #'eval-function-p x)))
-    (assert res)
+  (let ((res (%make-interpreted-function :lambda lambda
+					 :arglist (second lambda))))
+    (setf (funcallable-instance-function res)
+	  #'(instance-lambda (&rest args)
+	       (let ((fun (interpreted-function-definition res))
+		     (args (cons (length args) args)))
+		 (setf (interpreted-function-gcs res) 0)
+		 (internal-apply (or fun (convert-interpreted-fun res))
+				 args '#()))))
     res))
 
 
-;;; CONVERT-EVAL-FUN  --  Internal
+;;; CONVERT-INTERPRETED-FUN  --  Internal
 ;;;
 ;;;    Eval a FUNCTION form, grab the definition and stick it in.
 ;;;
-(defun convert-eval-fun (eval-fun)
-  (declare (type eval-function eval-fun))
-  (let* ((new (eval-function-definition
-	       (get-eval-function
-		(internal-eval `#',(eval-function-lambda eval-fun)
-			       (eval-function-converted-once eval-fun))))))
-    (setf (eval-function-definition eval-fun) new)
-    (setf (eval-function-converted-once eval-fun) t)
-    (let ((name (eval-function-name eval-fun)))
+(defun convert-interpreted-fun (fun)
+  (declare (type interpreted-function fun))
+  (let* ((new (interpreted-function-definition
+	       (internal-eval `#',(interpreted-function-lambda fun)
+			      (interpreted-function-converted-once fun)))))
+    (setf (interpreted-function-definition fun) new)
+    (setf (interpreted-function-converted-once fun) t)
+    (let ((name (interpreted-function-%name fun)))
       (setf (c::leaf-name new) name)
       (setf (c::leaf-name (c::main-entry (c::functional-entry-function new)))
 	    name))
-    (push eval-fun *interpreted-function-cache*)
+    (push fun *interpreted-function-cache*)
     new))
 
 
@@ -227,12 +190,11 @@
 ;;; the real function.
 ;;;
 (defun interpreted-function-lambda-expression (x)
-  (let* ((eval-fun (get-eval-function x))
-	 (lambda (eval-function-lambda eval-fun)))
+  (let ((lambda (interpreted-function-lambda x)))
     (if lambda
-	(values lambda nil (eval-function-name eval-fun))
+	(values lambda nil (interpreted-function-%name x))
 	(let ((fun (c::functional-entry-function
-		    (eval-function-definition eval-fun))))
+		    (interpreted-function-definition x))))
 	  (values (c::functional-inline-expansion fun)
 		  (if (let ((env (c::functional-lexenv fun)))
 			(or (c::lexenv-functions env)
@@ -240,7 +202,7 @@
 			    (c::lexenv-blocks env)
 			    (c::lexenv-tags env)))
 		      t nil)
-		  (or (eval-function-name eval-fun)
+		  (or (interpreted-function-%name x)
 		      (c::component-name
 		       (c::block-component
 			(c::node-block (c::lambda-bind fun))))))))))
@@ -259,16 +221,15 @@
       (specifier-type 'function)
       (let* ((*already-looking-for-type-of*
 	      (cons fun *already-looking-for-type-of*))
-	     (eval-fun (get-eval-function fun))
-	     (def (or (eval-function-definition eval-fun)
+	     (def (or (interpreted-function-definition fun)
 		      (system:without-gcing
-		       (convert-eval-fun eval-fun)
-		       (eval-function-definition eval-fun)))))
+		       (convert-interpreted-fun fun)
+		       (interpreted-function-definition fun)))))
 	(c::leaf-type (c::functional-entry-function def)))))
 
 
 ;;; 
-;;; INTERPRETED-FUNCTION-{NAME,ARGLIST}  --  Interface
+;;; INTERPRETED-FUNCTION-NAME  --  Interface
 ;;;
 (defun interpreted-function-name (x)
   (multiple-value-bind (ig1 ig2 res)
@@ -277,33 +238,12 @@
     res))
 ;;;
 (defun (setf interpreted-function-name) (val x)
-  (let* ((eval-fun (get-eval-function x))
-	 (def (eval-function-definition eval-fun)))
+  (let ((def (interpreted-function-definition x)))
     (when def
       (setf (c::leaf-name def) val)
       (setf (c::leaf-name (c::main-entry (c::functional-entry-function def)))
 	    val))
-    (setf (eval-function-name eval-fun) val)))
-;;;
-(defun interpreted-function-arglist (x)
-  (eval-function-arglist (get-eval-function x)))
-;;;
-(defun (setf interpreted-function-arglist) (val x)
-  (setf (eval-function-arglist (get-eval-function x)) val))
-
-
-;;; INTERPRETED-FUNCTION-ENVIRONMENT  --  Interface
-;;;
-;;;    The environment should be the only SIMPLE-VECTOR in the closure.  We
-;;; have to throw in the EVAL-FUNCTION-P test, since structure are currently
-;;; also SIMPLE-VECTORs.
-;;;
-(defun interpreted-function-closure (x)
-  (system:find-if-in-closure #'(lambda (x)
-				 (and (simple-vector-p x)
-				      (not (eval-function-p x))))
-			     x))
-
+    (setf (interpreted-function-%name x) val)))
 
 ;;; INTERPRETER-GC-HOOK  --  Internal
 ;;;
@@ -321,15 +261,15 @@
     (when (plusp num)
       (setq *interpreted-function-cache*
 	    (delete-if #'(lambda (x)
-			   (when (>= (eval-function-gcs x)
+			   (when (>= (interpreted-function-gcs x)
 				     *interpreted-function-cache-threshold*)
-			     (setf (eval-function-definition x) nil)
+			     (setf (interpreted-function-definition x) nil)
 			     t))
 		       *interpreted-function-cache*
 		       :count num))))
 
   (dolist (fun *interpreted-function-cache*)
-    (incf (eval-function-gcs fun))))
+    (incf (interpreted-function-gcs fun))))
 ;;;
 (pushnew 'interpreter-gc-hook ext:*before-gc-hooks*)
 
@@ -341,7 +281,7 @@
   representation of the functions to be reclaimed, and also lazily forces
   macroexpansions to be recomputed."
   (dolist (fun *interpreted-function-cache*)
-    (setf (eval-function-definition fun) nil))
+    (setf (interpreted-function-definition fun) nil))
   (setq *interpreted-function-cache* ()))
 
 
@@ -1031,7 +971,7 @@
 ;;;                  functional environment, then we use
 ;;;                  MAKE-INTERPRETED-FUNCTION to make a cached translation.
 ;;;                  Since it is too late to lazily convert, we set up the
-;;;                  EVAL-FUNCTION to be already converted. 
+;;;                  INTERPRETED-FUNCTION to be already converted. 
 ;;;
 (defun leaf-value (node frame-ptr closure)
   (let ((leaf (c::ref-leaf node)))
@@ -1063,26 +1003,30 @@
 	       ((and (zerop (length calling-closure))
 		     (null (c::lexenv-functions
 			    (c::functional-lexenv real-fun))))
-		(let* ((res (make-interpreted-function
-			     (c::functional-inline-expansion real-fun)))
-		       (eval-fun (get-eval-function res)))
-		  (push eval-fun *interpreted-function-cache*)
-		  (setf (eval-function-definition eval-fun) leaf)
-		  (setf (eval-function-converted-once eval-fun) t)
-		  (setf (eval-function-arglist eval-fun) arg-doc)
-		  (setf (eval-function-name eval-fun) (c::leaf-name real-fun))
+		(let ((res (make-interpreted-function
+			    (c::functional-inline-expansion real-fun))))
+		  (push res *interpreted-function-cache*)
+		  (setf (interpreted-function-definition res) leaf)
+		  (setf (interpreted-function-converted-once res) t)
+		  (setf (interpreted-function-arglist res) arg-doc)
+		  (setf (interpreted-function-%name res)
+			(c::leaf-name real-fun))
 		  (setf (c:lambda-eval-info-function (c::leaf-info leaf)) res)
 		  res))
 	       (t
-		(let ((eval-fun (make-eval-function
-				 :definition leaf
-				 :name (c::leaf-name real-fun)
-				 :arglist arg-doc)))
-		  #'(lambda (&rest args)
-		      (declare (list args))
-		      (internal-apply (eval-function-definition eval-fun)
-				      (cons (length args) args)
-				      calling-closure))))))))))
+		(let ((res (%make-interpreted-function
+			    :definition leaf
+			    :%name (c::leaf-name real-fun)
+			    :arglist arg-doc
+			    :closure calling-closure)))
+		  (setf (funcallable-instance-function res)
+			#'(instance-lambda (&rest args)
+		            (declare (list args))
+			    (internal-apply
+			     (interpreted-function-definition res)
+			     (cons (length args) args)
+			     (interpreted-function-closure res))))
+		  res))))))))
 
 ;;; LEAF-VALUE-LAMBDA-VAR -- Internal Interface.
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.25 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.26 1997/02/08 17:22:46 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,10 @@
 |#
 
 (export '(eval::interpreted-function-p
-	  eval::interpreted-function-lambda-expression)
+	  eval::interpreted-function-lambda-expression
+	  eval::interpreted-function
+	  eval::interpreted-function-arglist
+	  eval::interpreted-function-closure)
 	"EVAL")
 (import '(eval::*eval-stack-top*))
 
@@ -73,9 +76,56 @@
   "The exclusive upper bound on the number of multiple-values that you can
   have.")
 
+
+;;;;
+
+(in-package "EVAL")
+
+;;; This is defined here so that the printer &c can call
+;;; interpreted-function-p before the full interpreter is loaded.
+
+;;; Interpreted function.
+;;;
+(defstruct (interpreted-function
+	    (:alternate-metaclass kernel:funcallable-instance
+				  kernel:funcallable-structure-class
+				  kernel:make-funcallable-structure-class)
+	    (:type kernel:funcallable-structure)
+	    (:constructor %make-interpreted-function)
+	    (:print-function
+	     (lambda (s stream d)
+	       (declare (ignore d)) 
+	       (print-unreadable-object (s stream :identity t)
+		 (cl::output-interpreted-function s stream)))))
+  ;;
+  ;; The name of this interpreted function, or NIL if none specified.
+  (%name nil)
+  ;;
+  ;; This function's debug arglist.
+  (arglist nil)
+  ;;
+  ;; A lambda that can be converted to get the definition.
+  (lambda nil)
+  ;;
+  ;; If this function has been converted, then this is the XEP.  If this is
+  ;; false, then the function is not in the cache (or is in the process of
+  ;; being removed.)
+  (definition nil :type (or c::clambda null))
+  ;;
+  ;; The number of consequtive GCs that this function has been unused.  This is
+  ;; used to control cache replacement.
+  (gcs 0 :type c::index)
+  ;;
+  ;; True if Lambda has been converted at least once, and thus warnings should
+  ;; be suppressed on additional conversions.
+  (converted-once nil)
+  ;;
+  ;; For a closure, the closure date vector.
+  (closure nil :type (or null simple-vector)))
 
 
 ;;;; EVAL and friends.
+(in-package "LISP")
 
 ;;;
 ;;; This flag is used by EVAL-WHEN to keep track of when code has already been
@@ -200,22 +250,6 @@
   (error "EVAL called on #'(lambda (x) ...) when the compiler isn't loaded:~
 	  ~%     ~S~%"
 	 x))
-
-
-;;; INTERPRETED-FUNCTION-P  --  Interface
-;;;
-;;;    This is defined here so that the printer &c can call it before the full
-;;; interpreter is loaded.
-;;;
-(defun eval:interpreted-function-p (x)
-  (and (functionp x)
-       (= (get-type x) vm:closure-header-type)
-       (fboundp 'eval::leaf-value)
-       (let ((code-component (di::function-code-header (%closure-function x))))
-	 (or (eq (di::function-code-header #'eval::leaf-value)
-		 code-component)
-	     (eq (di::function-code-header #'eval:make-interpreted-function)
-		 code-component)))))
 
 
 ;;; FUNCTION-LAMBDA-EXPRESSION  --  Public

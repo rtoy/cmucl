@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.70 1997/02/05 16:15:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.71 1997/02/08 17:22:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1804,15 +1804,14 @@
   "Returns a debug-function that represents debug information for function."
   (case (get-type fun)
     (#.vm:closure-header-type
-     (cond ((eval:interpreted-function-p fun)
-	    (let ((eval-fun (eval::get-eval-function fun)))
-	      (make-interpreted-debug-function
-	       (or (eval::eval-function-definition eval-fun)
-		   (eval::convert-eval-fun eval-fun)))))
-	   (t
-	    (function-debug-function (%closure-function fun)))))
+     (function-debug-function (%closure-function fun)))
     (#.vm:funcallable-instance-header-type
-     (function-debug-function (funcallable-instance-function fun)))
+     (cond ((eval:interpreted-function-p fun)
+	    (make-interpreted-debug-function
+	     (or (eval::interpreted-function-definition fun)
+		 (eval::convert-interpreted-fun fun))))
+	   (t
+	    (function-debug-function (funcallable-instance-function fun)))))
     ((#.vm:function-header-type #.vm:closure-function-header-type)
       (let* ((name (kernel:%function-name fun))
 	     (component (kernel:function-code-header fun))
