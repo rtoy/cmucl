@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.70 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.71 2004/08/04 20:29:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -906,7 +906,8 @@
 	    (write-indexed fdefn vm:fdefn-raw-addr-slot
 			   (make-random-descriptor
 			    (lookup-foreign-symbol
-			     (vm::extern-alien-name "undefined_tramp")))))
+			     (vm::extern-alien-name "undefined_tramp")
+			     #+sparc :data))))
 	  fdefn))))
   
 (defun cold-fset (name defn)
@@ -926,7 +927,8 @@
 		     (#.vm:closure-header-type
 		      (make-random-descriptor
 		       (lookup-foreign-symbol
-		        (vm::extern-alien-name "closure_tramp"))))))
+		        (vm::extern-alien-name "closure_tramp")
+			#+sparc :data)))))
     fdefn))
 
 (defun initialize-static-fns ()
@@ -1921,12 +1923,12 @@
 		  (setf (gethash name *cold-foreign-symbol-table*) value))))))
       version)))
 
-(defun lookup-foreign-symbol (name)
+(defun lookup-foreign-symbol (name &optional (link-type :code))
   (flet ((lookup-sym (name)
 	   #-linkage-table
 	   (gethash name *cold-foreign-symbol-table* nil)
 	   #+linkage-table
-	   (cold-register-foreign-linkage name :code)))
+	   (cold-register-foreign-linkage name link-type)))
     (let ((linux-p (and (or (eq (c:backend-fasl-file-implementation c:*backend*)
 				#.c:x86-fasl-file-implementation)
 			    (eq (c:backend-fasl-file-implementation c:*backend*)
@@ -1949,7 +1951,20 @@
 	 (let ((value (lookup-sym name)))
 	   (when (and (numberp value) (zerop value))
 	     (warn "Not-really-defined foreign symbol: ~S" name))
-	   value))
+	   value)
+	 #+sparc
+	 (let ((address (lookup-sym name)))
+	   ;; If the link-type is :data, need to lookup and return the
+	   ;; value, not the address of NAME in the linkage table.
+	   ;;
+	   ;; Perhaps we should consider changing how sparc handles
+	   ;; undefined_tramp and closure_tramp?  We could add special
+	   ;; entries for them so that instead of doing
+	   ;; resolve_linkage_tramp stuff, we jump directly to the
+	   ;; routines.
+	   (if (eq link-type :code)
+	       address
+	       (sys:sap-ref-32 (sys:int-sap address) 0))))
 	;; Are those still necessary?
 	((and linux-p (lookup-sym (concatenate 'string "__libc_" name))))
 	((and linux-p (lookup-sym (concatenate 'string "__" name))))
