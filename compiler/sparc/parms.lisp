@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.1 1990/11/30 17:04:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.2 1990/12/01 22:33:30 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -20,16 +20,6 @@
 
 (in-package "SPARC")
 (use-package "C")
-
-(export '(word-bits byte-bits word-shift word-bytes))
-
-(export '(float-underflow-trap-bit float-overflow-trap-bit
-	  float-imprecise-trap-bit float-invalid-trap-bit
-	  float-divide-by-zero-trap-bit single-float-trapping-nan-bit
-	  double-float-trapping-nan-bit *fixup-values*))
-
-(export '(check-cons check-symbol check-fixnum check-unsigned-byte-32
-	  check-signed-byte-32 check-function check-function-or-symbol))
 
 
 ;;;; Compiler constants.
@@ -49,6 +39,24 @@
 
 
 ;;;; Machine Architecture parameters:
+
+(export '(word-bits byte-bits word-shift word-bytes float-sign-shift
+
+	  single-float-bias single-float-exponent-byte
+	  single-float-significand-byte single-float-normal-exponent-min
+	  single-float-normal-exponent-max single-float-hidden-bit
+	  single-float-trapping-nan-bit single-float-digits
+
+	  double-float-bias double-float-exponent-byte
+	  double-float-significand-byte double-float-normal-exponent-min
+	  double-float-normal-exponent-max double-float-hidden-bit
+	  double-float-trapping-nan-bit double-float-digits
+
+	  float-underflow-trap-bit float-overflow-trap-bit
+	  float-imprecise-trap-bit float-invalid-trap-bit
+	  float-divide-by-zero-trap-bit))
+
+	  
 
 (eval-when (compile load eval)
 
