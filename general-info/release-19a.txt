@@ -134,6 +134,7 @@ New in this release:
      - Lambda-lists of the form (X . Y) in DESTRUCTURING-BIND and macros
        are now equivalent to (X &REST Y).
      - LAST, BUTLAST, NBUTLAST accepting bignum counts.
+     - WITH-OUTPUT-TO-STRING accepting :ELEMENT-TYPE.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
