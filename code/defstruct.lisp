@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.41 1993/03/13 13:07:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.42 1993/03/13 13:36:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1095,7 +1095,8 @@
 		 (fmakunbound (dsd-accessor slot))
 		 (unless (dsd-read-only slot)
 		   (fmakunbound `(setf ,(dsd-accessor slot)))))))
-	   (%redefine-defstruct class old-layout layout)))
+	   (%redefine-defstruct class old-layout layout)
+	   (setq layout (class-layout class))))
 
     (setf (find-class (dd-name info)) class)
 
@@ -1241,7 +1242,7 @@
 ;;;
 ;;;    This function is called when we are incompatibly redefining a structure
 ;;; Class to have the specified New-Layout.  We signal an error with some
-;;; proceed options.
+;;; proceed options and return the layout that should be used.
 ;;;
 (defun %redefine-defstruct (class old-layout new-layout)
   (declare (type class class) (type layout old-layout new-layout))
@@ -1261,7 +1262,6 @@
 	      name)
 	(register-layout new-layout :invalidate nil
 			 :destruct-layout old-layout))))
-
   (undefined-value))
 
 
