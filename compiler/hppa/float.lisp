@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/float.lisp,v 1.2 1992/07/14 03:45:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/float.lisp,v 1.3 1993/07/26 20:06:29 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,7 +242,7 @@
 		  (:variant ,condition ,complement)))))
   (frob < #b01001 #b10101 </single-float </double-float)
   (frob > #b10001 #b01101 >/single-float >/double-float)
-  (frob eql #b00101 #b11001 eql/single-float eql/double-float))
+  (frob = #b00101 #b11001 eql/single-float eql/double-float))
 
 
 ;;;; Conversion:
