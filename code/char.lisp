@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.12 1998/07/16 13:30:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.13 2002/12/07 16:56:00 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,7 @@
 	 (#x07 ("Bell" "^g" "Bel"))
 	 (#x08 ("Backspace" "^h" "Bs"))
 	 (#x09 ("Tab" "^i" "Ht"))
-	 (#x0A ("Linefeed" "Newline" "^j" "Lf" "Nl" ))
+	 (#x0A ("Newline" "Linefeed" "^j" "Lf" "Nl" ))
 	 (#x0B ("Vt" "^k"))
 	 (#x0C ("Page" "^l" "Form" "Formfeed" "Ff" "Np"))
 	 (#x0D ("Return" "^m" "Cr"))
