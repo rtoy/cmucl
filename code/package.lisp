@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.32 1993/07/23 13:44:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.33 1993/08/15 16:41:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -405,8 +405,9 @@
 			      (,flet-name sym))))))))
 	     (iterate-over-hash-table (package-internal-symbols package) nil)
 	     (iterate-over-hash-table (package-external-symbols package) nil)
-	     (dolist (table (cdr (package-tables package)))
-	       (iterate-over-hash-table table shadows)))))
+	     (dolist (use (package-%use-list package))
+	       (iterate-over-hash-table (package-external-symbols use)
+					shadows)))))
        (let ((,var nil))
 	 (declare (ignorable ,var))
 	 ,result-form))))
