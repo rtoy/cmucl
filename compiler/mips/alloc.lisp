@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.19 1992/12/13 15:21:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.20 1992/12/16 18:13:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,7 @@
 
 ;;;; LIST and LIST*
 
+#-gengc
 (define-vop (list-or-list*)
   (:args (things :more t))
   (:temporary (:scs (descriptor-reg) :type list) ptr)
@@ -72,9 +73,11 @@
 		 (assert (null (tn-ref-across things)))
 		 (move result res))))))))
 
+#-gengc
 (define-vop (list list-or-list*)
   (:variant nil))
 
+#-gengc
 (define-vop (list* list-or-list*)
   (:variant t))
 
@@ -91,28 +94,33 @@
   (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:generator 100
     (inst li ndescr (lognot lowtag-mask))
-    (inst addu boxed boxed-arg (fixnum (1+ code-trace-table-offset-slot)))
+    (inst addu boxed boxed-arg
+	  (fixnum (1+ #-gengc code-trace-table-offset-slot
+		      #+gengc code-debug-info-slot)))
     (inst and boxed ndescr)
     (inst srl unboxed unboxed-arg word-shift)
     (inst addu unboxed unboxed lowtag-mask)
     (inst and unboxed ndescr)
-    (pseudo-atomic (pa-flag)
+    (inst sll ndescr boxed (- type-bits word-shift))
+    (inst or ndescr code-header-type)
+    
+    (#-gengc pseudo-atomic #-gengc (pa-flag)
+     #+gengc without-scheduling #+gengc ()
       (inst or result alloc-tn other-pointer-type)
+      (storew ndescr alloc-tn 0)
+      (storew unboxed alloc-tn code-code-size-slot)
+      (storew null-tn alloc-tn code-entry-points-slot)
       (inst addu alloc-tn boxed)
-      (inst addu alloc-tn unboxed)
-      (inst sll ndescr boxed (- type-bits word-shift))
-      (inst or ndescr code-header-type)
-      (storew ndescr result 0 other-pointer-type)
-      (storew unboxed result code-code-size-slot other-pointer-type)
-      (storew null-tn result code-entry-points-slot other-pointer-type)
-      (storew null-tn result code-debug-info-slot other-pointer-type))))
+      (inst addu alloc-tn unboxed))
+
+    (storew null-tn result code-debug-info-slot other-pointer-type)))
 
 (define-vop (make-fdefn)
   (:policy :fast-safe)
   (:translate make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
   (:temporary (:scs (non-descriptor-reg)) temp)
-  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
+  #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (result :scs (descriptor-reg) :from :argument))
   (:generator 37
     (with-fixed-allocation (result pa-flag temp fdefn-type fdefn-size)
@@ -128,19 +136,30 @@
   (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
+    #-gengc
     (let ((size (+ length closure-info-offset)))
+      (inst li temp (logior (ash (1- size) type-bits) closure-header-type))
       (pseudo-atomic (pa-flag :extra (pad-data-block size))
 	(inst or result alloc-tn function-pointer-type)
-	(inst li temp (logior (ash (1- size) type-bits) closure-header-type))
-	(storew temp result 0 function-pointer-type)))
-    (storew function result closure-function-slot function-pointer-type)))
+	(storew temp alloc-tn))
+      (storew function result closure-function-slot function-pointer-type))
+    #+gengc
+    (let ((size (+ length closure-info-offset)))
+      (inst li temp (logior (ash (1- size) type-bits) closure-header-type))
+      (without-scheduling ()
+	(inst or result alloc-tn function-pointer-type)
+	(storew temp alloc-tn)
+	(inst addu alloc-tn (pad-data-block size)))
+      (inst addu temp function
+	    (- (* function-code-offset word-bytes) function-pointer-type))
+      (storew temp result closure-entry-point-slot function-pointer-type))))
 
 ;;; The compiler likes to be able to directly make value cells.
 ;;; 
 (define-vop (make-value-cell)
   (:args (value :to :save :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
-  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
+  #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (with-fixed-allocation
@@ -164,11 +183,21 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:generator 4
+    #-gengc
     (pseudo-atomic (pa-flag :extra (pad-data-block words))
       (inst or result alloc-tn lowtag)
       (when type
 	(inst li temp (logior (ash (1- words) type-bits) type))
-	(storew temp result 0 lowtag)))))
+	(storew temp result 0 lowtag)))
+    #+gengc
+    (progn
+      (when type
+	(inst li temp (logior (ash (1- words) type-bits) type)))
+      (without-scheduling ()
+	(inst or result alloc-tn lowtag)
+	(when type
+	  (storew temp alloc-tn))
+	(inst addu alloc-tn (pad-data-block words))))))
 
 (define-vop (var-alloc)
   (:args (extra :scs (any-reg)))
@@ -176,15 +205,22 @@
   (:info name words type lowtag)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
-  (:temporary (:scs (any-reg)) temp1 temp2)
-  (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
+  (:temporary (:scs (any-reg)) header)
+  (:temporary (:scs (non-descriptor-reg)) bytes)
+  #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:generator 6
+    (inst addu bytes extra (* (1+ words) word-bytes))
+    (inst sll header bytes (- type-bits 2))
+    (inst addu header header (+ (ash -2 type-bits) type))
+    (inst srl bytes bytes lowtag-bits)
+    (inst sll bytes bytes lowtag-bits)
+    #-gengc
     (pseudo-atomic (pa-flag)
       (inst or result alloc-tn lowtag)
-      (inst addu temp1 extra (fixnum (1- words)))
-      (inst sll temp2 temp2 (- type-bits 2))
-      (inst or temp2 temp2 type)
-      (storew temp2 result 0 lowtag)
-      (inst li temp2 (lognot lowtag-mask))
-      (inst and temp1 temp1 temp2)
-      (inst addu alloc-tn alloc-tn temp1))))
+      (storew header result 0 lowtag)
+      (inst addu alloc-tn alloc-tn bytes))
+    #+gengc
+    (without-scheduling ()
+      (inst or result alloc-tn lowtag)
+      (storew header result 0 lowtag)
+      (inst addu alloc-tn alloc-tn bytes))))
