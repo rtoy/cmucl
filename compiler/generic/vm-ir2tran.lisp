@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.4 1992/12/16 20:02:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.5 1992/12/18 11:19:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,8 @@
 		    (setf unbound-marker-tn
 			  (let ((tn (make-restricted-tn
 				     nil
-				     (sc-number-or-lose 'vm::any-reg))))
+				     (sc-number-or-lose 'vm::any-reg
+							*backend*))))
 			    (vop make-unbound-marker node block tn)
 			    tn))))
 	       (:null
