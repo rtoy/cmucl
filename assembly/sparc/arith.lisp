@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.10 1992/04/28 04:23:47 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.11 1992/12/17 09:45:50 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -48,8 +50,8 @@
   (inst sra temp x 2)
   (inst sra temp2 y 2)
   (inst add temp2 temp)
-  (with-fixed-allocation (res temp vm:bignum-type (1+ bignum-digits-offset))
-    (storew temp2 res vm:bignum-digits-offset vm:other-pointer-type))
+  (with-fixed-allocation (res temp bignum-type (1+ bignum-digits-offset))
+    (storew temp2 res bignum-digits-offset other-pointer-type))
   (lisp-return lra :offset 2)
 
   DO-STATIC-FUN
@@ -57,8 +59,7 @@
   (inst li nargs (fixnum 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
-	(- (* vm:function-header-code-offset vm:word-bytes)
-	   vm:function-pointer-type))
+	(- (* function-code-offset word-bytes) function-pointer-type))
   (inst move cfp-tn csp-tn)
 
   DONE
@@ -93,8 +94,8 @@
   (inst sra temp x 2)
   (inst sra temp2 y 2)
   (inst sub temp2 temp temp2)
-  (with-fixed-allocation (res temp vm:bignum-type (1+ bignum-digits-offset))
-    (storew temp2 res vm:bignum-digits-offset vm:other-pointer-type))
+  (with-fixed-allocation (res temp bignum-type (1+ bignum-digits-offset))
+    (storew temp2 res bignum-digits-offset other-pointer-type))
   (lisp-return lra :offset 2)
 
   DO-STATIC-FUN
@@ -102,8 +103,7 @@
   (inst li nargs (fixnum 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
-	(- (* vm:function-header-code-offset vm:word-bytes)
-	   vm:function-pointer-type))
+	(- (* function-code-offset word-bytes) function-pointer-type))
   (inst move cfp-tn csp-tn)
 
   DONE
@@ -190,8 +190,7 @@
   (inst li nargs (fixnum 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
-	(- (* vm:function-header-code-offset vm:word-bytes)
-	   vm:function-pointer-type))
+	(- (* function-code-offset word-bytes) function-pointer-type))
   (inst move cfp-tn csp-tn)
 
   LOW-FITS-IN-FIXNUM
@@ -388,8 +387,7 @@
 	  (inst li nargs (fixnum 2))
 	  (inst move ocfp cfp-tn)
 	  (inst j code-tn
-		(- (* vm:function-header-code-offset vm:word-bytes)
-		   vm:function-pointer-type))
+		(- (* function-code-offset word-bytes) function-pointer-type))
 	  (inst move cfp-tn csp-tn)
 	  
 	  DO-COMPARE
@@ -435,8 +433,7 @@
   (inst li nargs (fixnum 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
-	(- (* vm:function-header-code-offset vm:word-bytes)
-	   vm:function-pointer-type))
+	(- (* function-code-offset word-bytes) function-pointer-type))
   (inst move cfp-tn csp-tn)
 
   RETURN-T
@@ -472,8 +469,7 @@
   (inst li nargs (fixnum 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
-	(- (* vm:function-header-code-offset vm:word-bytes)
-	   vm:function-pointer-type))
+	(- (* function-code-offset word-bytes) function-pointer-type))
   (inst move cfp-tn csp-tn)
 
   RETURN-T
@@ -509,8 +505,7 @@
   (inst li nargs (fixnum 2))
   (inst move ocfp cfp-tn)
   (inst j code-tn
-	(- (* vm:function-header-code-offset vm:word-bytes)
-	   vm:function-pointer-type))
+	(- (* function-code-offset word-bytes) function-pointer-type))
   (inst move cfp-tn csp-tn)
 
   RETURN-NIL
