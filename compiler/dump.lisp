@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.52 1993/05/11 17:30:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.53 1993/05/11 21:15:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -751,7 +751,7 @@
     (dotimes (i nslots)
       (if (zerop i)
 	  (dump-push code-handle file)
-	  (dump-object (%funcallable-instance-info xep) file)))
+	  (dump-object (%funcallable-instance-info xep i) file)))
     (dump-object (%funcallable-instance-layout xep) file)
     (dump-fop 'lisp::fop-make-byte-compiled-function file)
     (dump-byte nslots file))
