@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.10 1991/09/10 20:04:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.11 1991/10/01 17:52:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -699,6 +699,34 @@
       (format t "Connecting to ~A:~D~%" machine port)
       (connect-to-editor machine port))))
 
+
+;;; PRINT-SLAVE-STATUS  --  Internal
+;;;
+;;;    Print out some useful information about what the slave is up to.
+;;;
+(defun print-slave-status ()
+  (ignore-errors
+    (multiple-value-bind (sys user faults)
+			 (system:get-system-info)
+      (let* ((seconds (truncate (+ sys user) 1000000))
+	     (minutes (truncate seconds 60))
+	     (hours (truncate minutes 60))
+	     (days (truncate hours 24)))
+	(format *error-output* "~&; Used ~D:~2,'0D:~2,'0D~V@{!~}, "
+		hours (rem minutes 60) (rem seconds 60) days))
+      (format *error-output* "~D fault~:P.  In: " faults)
+	    
+      (do ((i 0 (1+ i))
+	   (frame (di:top-frame) (di:frame-down frame)))
+	  ((= i 3)
+	   (prin1 (di:debug-function-name (di:frame-debug-function frame))
+		  *error-output*))
+	(unless frame (return)))
+      (terpri *error-output*)
+      (force-output *error-output*)))
+  (values))
+
+
 ;;; CONNECT-TO-EDITOR -- internal
 ;;;
 ;;; Do the actual connect to the editor.
@@ -731,6 +759,8 @@
 				(throw 'abort-operation
 				       (if debug::*in-the-debugger*
 					   :was-in-debugger)))))
+    (ext:add-oob-handler (wire:wire-fd wire) #\S #'print-slave-status)
+
     (wire:remote-value wire
       (make-buffers-for-typescript slave background))))
 
