@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.29 1990/06/03 18:38:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.30 1990/06/03 18:55:50 ch Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -387,7 +387,7 @@
  	  translate-mouse-character truly-the uncompile undefined-value
  	  unencapsulate unsigned-char unsigned-int unsigned-long
  	  unsigned-short void with-clx-event-handling
-	  weak-pointer-p make-weak-pointer weak-pointer-value))
+	  weak-pointer weak-pointer-p make-weak-pointer weak-pointer-value))
 
 
 (in-package "SYSTEM")
