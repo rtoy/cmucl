@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.39 2004/04/07 02:47:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.40 2004/04/13 17:18:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1534,6 +1534,103 @@
 (define-static-function two-arg-ior (x y) :translate logior)
 (define-static-function two-arg-xor (x y) :translate logxor)
 
+
+;; Truncation by a constant can be done by multiplication with the
+;; appropriate constant.
+;;
+;; See generic/vm-tran.lisp for the algorithm.
+
+(define-vop (signed-truncate-by-mult fast-signed-binop)
+  (:translate truncate)
+  (:args (x :scs (signed-reg)))
+  (:info y)
+  (:arg-types signed-num (:constant (integer 2 #.(1- (ash 1 vm:word-bits)))))
+  (:results (quo :scs (signed-reg))
+            (rem :scs (signed-reg)))
+  (:result-types signed-num signed-num)
+  (:note "inline (signed-byte 32) arithmetic")
+  (:guard (or (backend-featurep :sparc-v8)
+              (and (backend-featurep :sparc-v9)
+                   (not (backend-featurep :sparc-64)))))
+  (:temporary (:scs (signed-reg)) q)
+  (:temporary (:scs (signed-reg)) r)
+  (:temporary (:scs (signed-reg)) temp)
+  (:generator 6
+    (multiple-value-bind (recip shift)
+        (c::find-signed-reciprocal y vm:word-bits)
+      ;; Compute q = floor(M*n/2^32).  That is, the high half of the
+      ;; product.
+      (inst li temp recip)
+      (inst smul r x temp)
+      (inst rdy q)
+      ;; Adjust if the M is negative.
+      (when (minusp recip)
+        (inst add q x))
+      ;; Shift quotient as needed.
+      (unless (zerop shift)
+        (inst sran q shift))
+      ;; Add one to quotient if X is negative.  This is done by right
+      ;; shifting X to give either -1 or 0.  Then subtract this from
+      ;; the quotient.  (NOTE: in the book, the sample code has this
+      ;; wrong and ADDS instead of SUBTRACTS.)
+      (inst sran temp x 31)
+      (inst sub q q temp)
+      ;; Now compute remainder via r = x - q*d
+      (cond ((typep y '(signed-byte 13))
+             (inst smul r q y))
+            (t
+             (inst li temp y)
+             (inst smul r q temp)))
+      (inst sub rem x r)
+      (unless (location= quo q)
+        (move quo q)))))
+
+(define-vop (unsigned-truncate-by-mult fast-signed-binop)
+  (:translate truncate)
+  (:args (x :scs (unsigned-reg)))
+  (:info y)
+  (:arg-types unsigned-num (:constant (integer 2 #.(1- (ash 1 vm:word-bits)))))
+  (:results (quo :scs (unsigned-reg))
+            (rem :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:note "inline (unsigned-byte 32) arithmetic")
+  (:guard (or (backend-featurep :sparc-v8)
+              (and (backend-featurep :sparc-v9)
+                   (not (backend-featurep :sparc-64)))))
+  (:temporary (:scs (unsigned-reg)) q)
+  (:temporary (:scs (unsigned-reg)) r)
+  (:temporary (:scs (unsigned-reg)) temp)
+  (:generator 6
+    (multiple-value-bind (recip shift overflowp)
+        (c::find-unsigned-reciprocal y vm:word-bits)
+      ;; q = floor(M*x/2^32)
+      (inst li temp recip)
+      (inst umul r x temp)
+      (inst rdy q)
+      (cond (overflowp
+             ;; The complicated case.  Sparc does not have a
+             ;; shift-with-carry instruction, so we use idea above.
+             ;; (But we could also do this by putting the carry flag
+             ;; into a register, shifting it left some amount,
+             ;; shifting the quotient right, and adding the two
+             ;; results together.)
+             (inst sub temp x q)
+             (inst srln temp 1)
+             (inst add temp q)
+             (inst srln q temp (1- shift)))
+            (t
+             ;; The easy case
+             (unless (zerop shift)
+               (inst sran q shift))))
+      ;; Compute the remainder
+      (cond ((typep y '(signed-byte 13))
+             (inst umul r q y))
+            (t
+             (inst li temp y)
+             (inst umul r q temp)))
+      (inst sub rem x r)
+      (unless (location= quo q)
+        (move quo q)))))
 
 ;; Need these so constant folding works with the deftransform.
 
