@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.18 2001/02/22 20:28:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.19 2001/12/10 02:53:16 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -298,4 +298,5 @@
   (let ((fdefn (fdefinition-object name nil)))
     (when fdefn
       (fdefn-makunbound fdefn)))
+  (kernel:undefine-function-name name)
   name)
