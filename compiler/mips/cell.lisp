@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.37 1990/07/03 06:31:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.38 1990/07/04 21:04:39 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -204,6 +204,13 @@
 
       (emit-label done))))
 
+
+
+;;;; Closure indexing.
+
+(define-vop (closure-index-ref word-index-ref)
+  (:variant vm:closure-info-offset vm:other-pointer-type)
+  (:translate %closure-index-ref))
 
 
 ;;;; Structure hackery:
