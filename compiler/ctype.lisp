@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.34 2001/03/04 20:12:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.35 2003/02/03 15:24:44 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -249,27 +249,50 @@
 ;;;
 (defun check-keywords (args pre-key type)
   (declare (list args) (fixnum pre-key))
-  (do ((key (nthcdr pre-key args) (cddr key))
-       (n (1+ pre-key) (+ n 2)))
-      ((null key))
-    (declare (fixnum n))
-    (let ((k (car key)))
-      (cond
-       ((not (check-arg-type k (specifier-type 'symbol) n)))
-       ((not (constant-continuation-p k))
-	(note-slime "The ~:R argument (in keyword position) is not a constant."
-		    n))
-       (t
-	(let* ((name (continuation-value k))
-	       (info (find name (function-type-keywords type)
-			   :key #'key-info-name)))
-	  (cond ((not info)
-		 (unless (function-type-allowp type)
-		   (note-lossage "~S is not a known argument keyword."
-				 name)))
-		(t
-		 (check-arg-type (second key) (key-info-type info)
-				 (1+ n))))))))))
+  (let ((allow-other-keys nil)
+	(allow-other-keys-seen nil))
+    (do ((key (nthcdr pre-key args) (cddr key))
+	 (n (1+ pre-key) (+ n 2)))
+	((null key))
+      (declare (fixnum n))
+      (let ((k (car key)))
+	(cond
+	  ((not (check-arg-type k (specifier-type 'symbol) n)))
+	  ((not (constant-continuation-p k))
+	   (note-slime "The ~:R argument (in keyword position) is not a constant."
+		       n))
+	  (t
+	   (let* ((name (continuation-value k))
+		  (info (find name (function-type-keywords type)
+			      :key #'key-info-name)))
+	     (cond (allow-other-keys)
+		   ((eq name :allow-other-keys)
+		    (unless allow-other-keys-seen
+		      (let ((value (second key)))
+			;; If the value of :allow-other-keys has a
+			;; known constant value, use that so we can
+			;; enable (or disable) checking of args at
+			;; compile time.
+			;;
+			;; If :allow-other-keys is not a compile-time
+			;; constant, set ALLOW-OTHER-KEYS to T so that
+			;; we don't do checking at compile time, but
+			;; also warn that it's not constant.  Run-time
+			;; checking, of course, still happens.
+			(if (constant-continuation-p value)
+			    (setq allow-other-keys (continuation-value value))
+			    (progn
+			      (setq allow-other-keys t)
+			      (note-slime "The value of ~S is not a constant"
+					  :allow-other-keys)))
+			(setq allow-other-keys-seen t))))
+		   ((not info)
+		    (unless (function-type-allowp type)
+		      (note-lossage "~S is not a known argument keyword."
+				    name)))
+		   (t
+		    (check-arg-type (second key) (key-info-type info)
+				    (1+ n)))))))))))
 
 
 ;;; Definition-Type  --  Interface
