@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.163 2003/09/03 21:12:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.164 2003/09/14 10:13:27 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,7 +144,7 @@
 
 ;;;; Dynamic-Extent
 
-(defvar *trust-dynamic-extent-declarations* t
+(defvar *trust-dynamic-extent-declarations* nil
   "If null, don't trust dynamic-extent declarations.
 
    If T, always trust dynamic-extent declarations.

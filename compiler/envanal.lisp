@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.30 2003/08/25 20:51:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.31 2003/09/14 10:13:27 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -418,7 +418,7 @@
 
 ;;;; Dynamic-Extent Closures
 
-(defvar *suppress-dynamic-extent-safe-closures* nil)
+(defvar *suppress-dynamic-extent-safe-closures* t)
 
 ;;;
 ;;; Mark closures that can be allocated on the stack because they are
