@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.36.2.5 2000/08/08 13:41:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.36.2.6 2002/03/23 18:49:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,30 +367,44 @@
 	res
 	(error "Class not yet defined:~%  ~S" name))))
 ;;;
-(defun (setf find-class) (new-value name)
-  (declare (type class new-value))
-  (ecase (info type kind name)
-    ((nil))
-    (:instance
-     (let ((old (class-of (find-class name)))
-	   (new (class-of new-value)))
-       (unless (eq old new)
-	 (warn "Changing meta-class of ~S from ~S to ~S."
-	       name (class-name old) (class-name new)))))
-    (:primitive
-     (error "Illegal to redefine standard type ~S." name))
-    (:defined
-     (warn "Redefining DEFTYPE type to be a class: ~S."
-	   name)
-     (setf (info type expander name) nil)))
-
-  (remhash name *forward-referenced-layouts*)
-  (%note-type-defined name)
-  (setf (info type kind name) :instance)
-  (setf (class-cell-class (find-class-cell name)) new-value)
-  (unless (eq (info type compiler-layout name)
-	      (class-layout new-value))
-    (setf (info type compiler-layout name) (class-layout new-value)))
+(defun (setf find-class) (new-value name &optional (errorp t) environment)
+  (declare (type (or null class) new-value) (ignore errorp environment))
+  (cond
+    ((null new-value)
+     ;; Clear info db if name names a class
+     (ecase (info type kind name)
+       (:primitive
+	(error "Illegal to redefine standard type ~S." name))
+       (:defined)
+       ((nil))
+       (:instance
+	(setf (info type kind name) nil
+	      (info type class name) nil
+	      (info type documentation name) nil
+	      (info type compiler-layout name) nil))))
+    (t
+     (ecase (info type kind name)
+       ((nil))
+       (:instance
+	(let ((old (class-of (find-class name)))
+	      (new (class-of new-value)))
+	  (unless (eq old new)
+	    (warn "Changing meta-class of ~S from ~S to ~S."
+		  name (class-name old) (class-name new)))))
+       (:primitive
+	(error "Illegal to redefine standard type ~S." name))
+       (xdefined
+	(warn "Redefining DEFTYPE type to be a class: ~S."
+	      name)
+	(setf (info type expander name) nil)))
+     
+     (remhash name *forward-referenced-layouts*)
+     (%note-type-defined name)
+     (setf (info type kind name) :instance)
+     (setf (class-cell-class (find-class-cell name)) new-value)
+     (unless (eq (info type compiler-layout name)
+		 (class-layout new-value))
+       (setf (info type compiler-layout name) (class-layout new-value)))))
   new-value)
 
 

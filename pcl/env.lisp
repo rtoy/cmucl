@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.9.2.1 2000/05/23 16:38:50 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.9.2.2 2002/03/23 18:51:17 pw Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -36,6 +36,10 @@
 ;;;
 ;;;
 ;;;
+
+;;; ANSI compliance wants default structure printer to use #S(...) format.
+(defmethod print-object ((object structure-object) stream)
+  (lisp::default-structure-print object stream 0))
 
 (defgeneric describe-object (object stream))
 

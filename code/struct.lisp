@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.19.2.1 1998/06/23 11:22:33 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.19.2.2 2002/03/23 18:50:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,7 +33,7 @@
   (in-index in-buffer-length :type index)	; Index into in-buffer
   (in #'ill-in :type function)			; Read-Char function
   (bin #'ill-bin :type function)		; Byte input function
-  (n-bin #'ill-bin :type function)		; N-Byte input function
+  (n-bin #'ill-n-bin :type function)		; N-Byte input function
   (out #'ill-out :type function)		; Write-Char function
   (bout #'ill-bout :type function)		; Byte output function
   (sout #'ill-out :type function)		; String output function

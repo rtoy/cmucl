@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.17.2.4 2000/07/06 06:57:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.17.2.5 2002/03/23 18:50:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,7 +92,7 @@
 ;;;    If Ref is to a Lambda-Var with Constraints (i.e. we can do flow analysis
 ;;; on it), then return the Lambda-Var, otherwise NIL.
 ;;;
-(proclaim '(inline ok-ref-lambda-var))
+(declaim (inline ok-ref-lambda-var))
 (defun ok-ref-lambda-var (ref)
   (declare (type ref ref))
   (let ((leaf (ref-leaf ref)))
@@ -106,7 +106,7 @@
 ;;;    If Cont's Use is a Ref, then return OK-REF-LAMBDA-VAR of the Use,
 ;;; otherwise NIL.
 ;;;
-(proclaim '(inline ok-cont-lambda-var))
+(declaim (inline ok-cont-lambda-var))
 (defun ok-cont-lambda-var (cont)
   (declare (type continuation cont))
   (let ((use (continuation-use cont)))
@@ -136,7 +136,7 @@
 ;;;    Add complementary constraints to the consequent and alternative blocks
 ;;; of If.  We do nothing if X is NIL.
 ;;;
-(proclaim '(inline add-complement-constraints))
+(declaim (inline add-complement-constraints))
 (defun add-complement-constraints (if fun x y not-p)
   (when x
     (add-test-constraint (if-consequent if) fun x y not-p)
@@ -409,7 +409,6 @@
 		      (let ((greater (if not-p (not greater) greater)))
 			(setq res
 			      (constrain-integer-type res y greater not-p)))))
-		   #+constrain-float-type
 		   ((and (float-type-p res) (float-type-p y))
 		    (let ((greater (eq kind '>)))
 		      (let ((greater (if not-p (not greater) greater)))

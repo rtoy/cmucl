@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/syntax.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/syntax.lisp,v 1.3.2.1 2002/03/23 18:50:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,7 +70,7 @@
 (defvar *value-of-last-character-attribute-requested* nil
   "The value of the most recent character attribute, Do Not Bind.")
 
-(proclaim '(special *character-attribute-names*))
+(declaim (special *character-attribute-names*))
 
 
 ;;; Each bucket contains a list of character-attribute-bucket-size
@@ -251,14 +251,14 @@
   (with-attribute attribute
     (setf (attribute-descriptor-hooks obj) new-value)))
 
-(proclaim '(special *last-character-attribute-requested*
+(declaim (special *last-character-attribute-requested*
 		    *value-of-last-character-attribute-requested*))
 
 ;;; CHARACTER-ATTRIBUTE  --  Public
 ;;;
 ;;;    Return the value of a character attribute for some character.
 ;;;
-(proclaim '(inline character-attribute))
+(declaim (inline character-attribute))
 (defun character-attribute (attribute character)
   "Return the value of the the character-attribute Attribute for Character.
   If Character is Nil then return the end-value."
@@ -368,7 +368,7 @@
 
 
 
-(proclaim '(special *mode-names* *current-buffer*))
+(declaim (special *mode-names* *current-buffer*))
 
 ;;; SHADOW-ATTRIBUTE  --  Public
 ;;;

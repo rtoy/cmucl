@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.15 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.15.2.1 2002/03/23 18:49:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,16 +71,15 @@
 
 (defun %naturalize-c-string (sap)
   (declare (type system-area-pointer sap))
-  (with-alien ((ptr (* char) sap))
-    (locally
-     (declare (optimize (speed 3) (safety 0)))
-     (let ((length (loop
-		     for offset of-type fixnum upfrom 0
-		     until (zerop (deref ptr offset))
-		     finally (return offset))))
-       (let ((result (make-string length)))
-	 (kernel:copy-from-system-area (alien-sap ptr) 0
-				       result (* vm:vector-data-offset
-						 vm:word-bits)
-				       (* length vm:byte-bits))
-	 result)))))
+  (locally
+      (declare (optimize (speed 3) (safety 0)))
+    (let ((length (loop
+		      for offset of-type fixnum upfrom 0
+		      until (zerop (sap-ref-8 sap offset))
+		      finally (return offset))))
+      (let ((result (make-string length)))
+	(kernel:copy-from-system-area sap 0
+				      result (* vm:vector-data-offset
+						vm:word-bits)
+				      (* length vm:byte-bits))
+	result))))

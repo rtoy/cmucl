@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.7.2.6 2000/08/06 19:13:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.7.2.7 2002/03/23 18:51:15 pw Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -604,9 +604,26 @@
   (setq *boot-state* 'braid)
   )
 
+
+(define-condition no-applicable-method (type-error)
+  ((function :reader no-applicable-method-function :initarg :function)
+   (arguments :reader no-applicable-method-arguments :initarg :arguments))
+  (:report (lambda (condition stream)
+             (format stream "No matching method for the generic-function ~S,~@
+when called with arguments ~S."
+                     (no-applicable-method-function condition)
+                     (no-applicable-method-arguments condition)))))
+
 (defmethod no-applicable-method (generic-function &rest args)
   (cerror "Retry call to ~S"
-	  "No matching method for the generic-function ~S,~@
-          when called with arguments ~S."
-	  generic-function args)
+          'no-applicable-method
+          :function generic-function
+          :arguments args)
   (apply generic-function args))
+
+;; (defmethod no-applicable-method (generic-function &rest args)
+;;   (cerror "Retry call to ~S"
+;; 	  "No matching method for the generic-function ~S,~@
+;;           when called with arguments ~S."
+;; 	  generic-function args)
+;;   (apply generic-function args))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.28.2.2 2000/05/23 16:36:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.28.2.3 2002/03/23 18:50:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -217,7 +217,7 @@
 ;;; used when we know that realpart and imagpart are the same type, but
 ;;; rational canonicalization might still need to be done.
 ;;;
-(proclaim '(inline canonical-complex))
+(declaim (inline canonical-complex))
 (defun canonical-complex (realpart imagpart)
   (if (eql imagpart 0)
       realpart
@@ -241,7 +241,7 @@
 ;;; a canonical rational.  We make the denominator positive, and check whether
 ;;; it is 1.
 ;;;
-(proclaim '(inline build-ratio))
+(declaim (inline build-ratio))
 (defun build-ratio (num den)
   (multiple-value-bind (num den)
 		       (if (minusp den)
@@ -256,7 +256,7 @@
 ;;;
 ;;;    Truncate X and Y, but bum the case where Y is 1.
 ;;;
-(proclaim '(inline maybe-truncate))
+(declaim (inline maybe-truncate))
 (defun maybe-truncate (x y)
   (if (eql y 1)
       x
@@ -669,7 +669,9 @@
 ;;; maybe-inline for now, so that the power-of-2 ceiling and floor transforms
 ;;; get a chance.
 ;;;
-(declaim (inline rem mod fceiling ffloor ftruncate))
+;;; Don't inline ftruncate because it's probably too big now.
+;;;
+(declaim (inline rem mod fceiling ffloor))
 (declaim (maybe-inline ceiling floor))
 
 ;;; If the numbers do not divide exactly and the result of (/ number divisor)
@@ -742,20 +744,60 @@
 	rem)))
 
 
-(macrolet ((frob (name op doc)
-	     `(defun ,name (number &optional (divisor 1))
-		,doc
-		(multiple-value-bind (res rem) (,op number divisor)
-		  (values (float res (if (floatp rem) rem 1.0)) rem)))))
-  (frob ffloor floor
-    "Same as FLOOR, but returns first value as a float.")
-  (frob fceiling ceiling
-    "Same as CEILING, but returns first value as a float." )
-  (frob ftruncate truncate
-    "Same as TRUNCATE, but returns first value as a float.")
-  (frob fround round
-    "Same as ROUND, but returns first value as a float."))
+(defun ftruncate (number &optional (divisor 1))
+  "Same as TRUNCATE, but returns first value as a float."
+  (macrolet ((truncate-float (rtype)
+	       `(let* ((float-div (coerce divisor ',rtype))
+		       (res (%unary-ftruncate (/ number float-div))))
+		 (values res
+		  (- number
+		   (* (coerce res ',rtype) float-div))))))
+    (number-dispatch ((number real) (divisor real))
+      (((foreach fixnum bignum ratio) (or fixnum bignum ratio))
+       (multiple-value-bind (q r)
+	   (truncate number divisor)
+	 (values (float q) r)))
+      (((foreach single-float double-float)
+	(or rational single-float))
+       (if (eql divisor 1)
+	   (let ((res (%unary-ftruncate number)))
+	     (values res (- number (coerce res '(dispatch-type number)))))
+	   (truncate-float (dispatch-type number))))
+      ((double-float (or single-float double-float))
+       (truncate-float double-float))
+      ((single-float double-float)
+       (truncate-float double-float))
+      (((foreach fixnum bignum ratio)
+	(foreach single-float double-float))
+       (truncate-float (dispatch-type divisor))))))
 
+
+(defun ffloor (number &optional (divisor 1))
+  "Same as FLOOR, but returns first value as a float."
+  (multiple-value-bind (tru rem) (ftruncate number divisor)
+    (if (and (not (zerop rem))
+	     (if (minusp divisor)
+		 (plusp number)
+		 (minusp number)))
+	(values (1- tru) (+ rem divisor))
+	(values tru rem))))
+
+(defun fceiling (number &optional (divisor 1))
+  "Same as CEILING, but returns first value as a float." 
+  (multiple-value-bind (tru rem) (ftruncate number divisor)
+    (if (and (not (zerop rem))
+	     (if (minusp divisor)
+		 (minusp number)
+		 (plusp number)))
+	(values (+ tru 1) (- rem divisor))
+	(values tru rem))))
+
+
+(defun fround (number &optional (divisor 1))
+  "Same as ROUND, but returns first value as a float."
+  (multiple-value-bind (res rem)
+      (round number divisor)
+    (values (float res (if (floatp rem) rem 1.0)) rem)))
 
 ;;;; Comparisons:
 
@@ -843,11 +885,16 @@
     ((double-float single-float)
      (,op x (coerce y 'double-float)))
     (((foreach single-float double-float #+long-float long-float) rational)
-     (if (eql y 0)
+     ;; Comparing infinity against any rational produces the same
+     ;; answer as comparing infinity against 0.  Comparison against
+     ;; zero is quite common, so add a special case for that.
+     (if (or (eql y 0) (float-infinity-p x))
 	 (,op x (coerce 0 '(dispatch-type x)))
 	 (,op (rational x) y)))
     (((foreach bignum fixnum ratio) float)
-     (,op x (rational y)))))
+     (if (or (eql x 0) (float-infinity-p y))
+	 (,op (coerce 0 '(dispatch-type y)) y)
+	 (,op x (rational y))))))
 
 
 (defmacro two-arg-</> (name op ratio-arg1 ratio-arg2 &rest cases)

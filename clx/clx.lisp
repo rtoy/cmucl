@@ -17,7 +17,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.7.2.2 2000/05/23 16:35:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.7.2.3 2002/03/23 18:49:49 pw Exp $")
 
 ;; Primary Interface Author:
 ;;	Robert W. Scheifler
@@ -89,6 +89,8 @@
 (defparameter *version* "MIT R5.02")
 (pushnew :clx-mit-r4 *features*)
 (pushnew :clx-mit-r5 *features*)
+
+(provide :clx)
 
 (defparameter *protocol-major-version* 11.)
 (defparameter *protocol-minor-version* 0)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.46.2.7 2000/10/25 17:17:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.46.2.8 2002/03/23 18:49:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -498,6 +498,8 @@
       (if (eq val *empty-slot*)
 	  (let ((actual-initargs (condition-actual-initargs condition))
 		(slot (find-slot (condition-class-cpl class) name)))
+	    (unless slot
+	      (error "Slot ~S of ~S missing." name condition))
 	    (dolist (initarg (condition-slot-initargs slot))
 	      (let ((val (getf actual-initargs initarg *empty-slot*)))
 		(unless (eq val *empty-slot*)
@@ -1064,7 +1066,11 @@
 					       '(declare (ignore temp)))
 					  (go ,(car annotated-case)))))
 			   annotated-cases)
-			       (return-from ,tag ,form))
+			       (return-from ,tag
+				 #-x86 ,form
+				 #+x86 (multiple-value-prog1 ,form
+					 ;; Need to catch FP errors here!
+					 (kernel::float-wait))))
 		 ,@(mapcan
 		    #'(lambda (annotated-case)
 			(list (car annotated-case)
@@ -1078,7 +1084,7 @@
 					 ((not (cdr body))
 					  (car body))
 					 (t
-					  `(progn ,@body)))))))
+					  `(locally ,@body)))))))
 			   annotated-cases))))))))
 
 (defmacro ignore-errors (&rest forms)

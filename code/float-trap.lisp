@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9.2.6 2000/05/23 16:36:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9.2.7 2002/03/23 18:50:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,6 +48,12 @@
 	(cons :zero float-round-to-zero)
 	(cons :positive-infinity float-round-to-positive)
 	(cons :negative-infinity float-round-to-negative)))
+
+#+x86
+(defconstant precision-control-alist
+  (list (cons :24-bit float-precision-24-bit)
+	(cons :53-bit float-precision-53-bit)
+	(cons :64-bit float-precision-64-bit)))
   
 ); Eval-When (Compile Load Eval)
 
@@ -64,7 +70,8 @@
 				      (rounding-mode nil round-p)
 				      (current-exceptions nil current-x-p)
 				      (accrued-exceptions nil accrued-x-p)
-				      (fast-mode nil fast-mode-p))
+				      (fast-mode nil fast-mode-p)
+				      (precision-control nil precision-control-p))
   "This function sets options controlling the floating-point hardware.  If a
   keyword is not supplied, then the current value is preserved.  Possible
   keywords:
@@ -90,6 +97,11 @@
        conformance or debuggability may be impaired.  Some machines may not
        have this feature, in which case the value is always NIL.
 
+   :PRECISION-CONTROL
+       On the x86 architecture, you can set the precision of the arithmetic
+       to :24-BIT, :53-BIT, or :64-BIT mode, corresponding to IEEE single
+       precision, double precision, and extended double precision.
+
    GET-FLOATING-POINT-MODES may be used to find the floating point modes
    currently in effect."
   (let ((modes (floating-point-modes)))
@@ -109,6 +121,15 @@
       (if fast-mode
 	  (setq modes (logior float-fast-bit modes))
 	  (setq modes (logand (lognot float-fast-bit) modes))))
+    #+x86
+    (when precision-control-p
+      (setf (ldb float-precision-control modes)
+	    (or (cdr (assoc precision-control precision-control-alist))
+		(error "Unknown precision mode: ~S." precision-control))))
+    #-x86
+    (when precision-control-p
+      (warn "Precision control only available for x86"))
+    
     (setf (floating-point-modes) modes))
     
   (values))
@@ -138,7 +159,13 @@
 				     rounding-mode-alist))
 	:current-exceptions ,(exc-keys (ldb float-exceptions-byte modes))
 	:accrued-exceptions ,(exc-keys (ldb float-sticky-bits modes))
-	:fast-mode ,(logtest float-fast-bit modes)))))
+	:fast-mode ,(logtest float-fast-bit modes)
+	#+x86
+	:precision-control
+	#+x86
+	,(car (rassoc (ldb float-precision-control modes)
+		      precision-control-alist))
+	))))
 
   
 ;;; CURRENT-FLOAT-TRAP  --  Interface
@@ -156,7 +183,7 @@
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
 
-#+FreeBSD
+#+BSD
 (define-condition floating-point-exception (arithmetic-error)
   ((flags :initarg :traps
 	  :reader floating-point-exception-traps))
@@ -189,7 +216,7 @@
 	   (error 'floating-point-underflow))
 	  ((not (zerop (logand float-inexact-trap-bit traps)))
 	   (error 'ext:floating-point-inexact))
-	  #+FreeBSD
+	  #+BSD
 	  ((zerop (ldb float-exceptions-byte modes))
 	   ;; I can't tell what caused the exception!!
 	   (error 'floating-point-exception
@@ -211,15 +238,16 @@
 	(trap-mask (dpb (lognot (float-trap-mask traps))
 			float-traps-byte #xffffffff))
 	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
-			     float-sticky-bits #xffffffff)))
-    `(let ((orig-modes (floating-point-modes)))
+			     float-sticky-bits #xffffffff))
+	(orig-modes (gensym)))
+    `(let ((,orig-modes (floating-point-modes)))
       (unwind-protect
 	   (progn
 	     (setf (floating-point-modes)
-		   (logand orig-modes ,(logand trap-mask exception-mask)))
+		   (logand ,orig-modes ,(logand trap-mask exception-mask)))
 	     ,@body)
 	;; Restore the original traps and exceptions.
 	(setf (floating-point-modes)
-	      (logior (logand orig-modes ,(logior traps exceptions))
+	      (logior (logand ,orig-modes ,(logior traps exceptions))
 		      (logand (floating-point-modes)
 			      ,(logand trap-mask exception-mask))))))))

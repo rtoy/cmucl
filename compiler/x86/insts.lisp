@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.6.2.3 2000/05/23 16:38:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.6.2.4 2002/03/23 18:50:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -423,9 +423,34 @@
 	  (unless (or firstp (minusp offset))
 	    (write-char #\+ stream))
 	  (if firstp
-	      (disassem:princ16 offset stream)
+	      (progn
+		(disassem:princ16 offset stream)
+		(or (minusp offset)
+		    (nth-value 1
+			       (disassem::note-code-constant-absolute offset
+								      dstate))
+		    (disassem:maybe-note-assembler-routine offset
+							   nil
+							   dstate)
+		    (let ((offs (- offset disassem::nil-addr)))
+		      (when (typep offs 'offset)
+			(or (disassem::maybe-note-nil-indexed-symbol-slot-ref offs
+									      dstate)
+			    (disassem::maybe-note-static-function offs dstate))))))
 	      (princ offset stream))))))
   (write-char #\] stream))
+
+(defun print-imm-data (value stream dstate)
+  (let ((offset (- value disassem::nil-addr)))
+    (if (zerop offset)
+	(format stream "#x~X" value)
+	(format stream "~A" value))
+    (when (typep offset 'offset)
+      (or (disassem::maybe-note-nil-indexed-object offset dstate)
+	  (disassem::maybe-note-assembler-routine value stream dstate)
+	  (nth-value 1
+		     (disassem::note-code-constant-absolute offset
+							    dstate))))))
 
 (defun print-reg/mem (value stream dstate)
   (declare (type (or list reg) value)
@@ -578,6 +603,7 @@
 		 (disassem:read-suffix
 		  (width-bits (disassem:dstate-get-prop dstate 'width))
 		  dstate))
+  :printer #'print-imm-data
   )
 
 (disassem:define-argument-type signed-imm-data
@@ -1696,7 +1722,10 @@
 
 (disassem:define-argument-type displacement
   :sign-extend t
-  :use-label #'offset-next)
+  :use-label #'offset-next
+  :printer #'(lambda (value stream dstate)
+	       (disassem:maybe-note-assembler-routine value nil dstate)
+	       (print-label value stream dstate)))
 
 (disassem:define-instruction-format (short-cond-jump 16)
   (op    :field (byte 4 4))

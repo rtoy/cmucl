@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.8.2.1 2000/05/23 16:38:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.8.2.2 2002/03/23 18:50:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,7 @@
 	      (parse-fields s)
 	      (error "Unknown Terminal ~S in file ~S." name termcap-file))))))
 
-(proclaim '(inline termcap))
+(declaim (inline termcap))
 (defun termcap (name termcap)
   (cdr (assoc name termcap :test #'eq)))
 

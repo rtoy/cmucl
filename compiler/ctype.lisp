@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.32.2.1 2000/07/07 09:34:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.32.2.2 2002/03/23 18:50:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,8 +32,8 @@
 ;;;
 (defvar *test-function*)
 
-(proclaim '(type (or function null) *error-function* *warning-function
-		 *test-function*))
+(declaim (type (or function null) *error-function* *warning-function
+	       *test-function*))
 
 ;;; *lossage-detected* is set if a definite incompatibility is detected.
 ;;; *slime-detected* is set if we can't tell whether the call is compatible or
@@ -60,7 +60,7 @@
     (apply *warning-function* format-string format-args)))
 
 
-(proclaim '(special *compiler-error-context*))
+(declaim (special *compiler-error-context*))
 
 
 ;;;; Stuff for checking a call against a function type.

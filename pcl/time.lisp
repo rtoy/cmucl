@@ -1,6 +1,6 @@
 (in-package "PCL")
 
-(proclaim '(optimize (speed 3)(safety 0)(compilation-speed 0)))
+(declaim (optimize (speed 3)(safety 0)(compilation-speed 0)))
 
 (defvar *tests*)
 (setq *tests* nil)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/pop-up-stream.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/pop-up-stream.lisp,v 1.3.2.1 2002/03/23 18:50:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -211,7 +211,7 @@
 
 ;;; Proclaim this special so the compiler doesn't warn me.  I hate that.
 ;;;
-(proclaim '(special *more-prompt-action*))
+(declaim (special *more-prompt-action*))
 
 (defun display-more-prompt (stream)
   (unless (random-typeout-stream-no-prompt stream)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.25.2.2 2000/08/24 16:40:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.25.2.3 2002/03/23 18:50:11 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 (defconstant sig_dfl 0)
 (defconstant sig_ign 1)
 
-(proclaim '(special lisp::lisp-command-line-list))
+(declaim (special lisp::lisp-command-line-list))
 
 
 
@@ -169,7 +169,7 @@
 
 ;;;; System calls that deal with signals.
 
-(proclaim '(inline real-unix-kill))
+(declaim (inline real-unix-kill))
 
 (alien:def-alien-routine ("kill" real-unix-kill) c-call:int
   (pid c-call:int)
@@ -179,10 +179,11 @@
   "Unix-kill sends the signal signal to the process with process 
    id pid.  Signal should be a valid signal number or a keyword of the
    standard UNIX signal name."
-  (real-unix-kill pid (unix-signal-number signal)))
+  (if (minusp (real-unix-kill pid (unix-signal-number signal)))
+      (values nil unix-errno)
+      t))
 
-
-(proclaim '(inline real-unix-killpg))
+(declaim (inline real-unix-killpg))
 
 (alien:def-alien-routine ("killpg" real-unix-killpg) c-call:int
   (pgrp c-call:int)
@@ -192,8 +193,9 @@
   "Unix-killpg sends the signal signal to the all the process in process
   group PGRP.  Signal should be a valid signal number or a keyword of
   the standard UNIX signal name."
-  (real-unix-killpg pgrp (unix-signal-number signal)))
-
+  (if (minusp (real-unix-killpg pgrp (unix-signal-number signal)))
+      (values nil unix-errno)
+      t))
 
 (alien:def-alien-routine ("sigblock" unix-sigblock) c-call:unsigned-long
   "Unix-sigblock cause the signals specified in mask to be
@@ -257,7 +259,8 @@
 (defmacro define-signal-handler (name what &optional (function 'error))
   `(defun ,name (signal code scp)
      (declare (ignore signal code)
-	      (type system-area-pointer scp))
+	      (type system-area-pointer scp)
+	      (optimize (inhibit-warnings 3)))
      (system:without-hemlock
       (,function ,(concatenate 'simple-string what " at #x~x.")
 		 (with-alien ((scp (* sigcontext) scp))

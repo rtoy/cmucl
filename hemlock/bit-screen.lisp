@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.16 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.16.2.1 2002/03/23 18:50:41 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 	  *random-typeout-hook* *create-initial-windows-hook*))
 
 
-(proclaim '(special *echo-area-window*))
+(declaim (special *echo-area-window*))
 
 ;;; We have an internal notion of window groups on bitmap devices.  Every
 ;;; Hemlock window has a hunk slot which holds a structure with information
@@ -652,9 +652,9 @@
 ;;; The width must be that of a tab for the screen image builder, and the
 ;;; height must be one line (two with a modeline).
 ;;; 
-(defconstant minimum-window-lines 1
+(defconstant minimum-window-lines 2
   "Windows must have at least this many lines.")
-(defconstant minimum-window-columns 8
+(defconstant minimum-window-columns 10
   "Windows must be at least this many characters wide.")
 
 (eval-when (compile eval load)
@@ -672,7 +672,7 @@
   (let ((*print-base* 10))
     (format nil "Hemlock ~S" (incf *hemlock-window-count*))))
 
-(proclaim '(inline surplus-window-height surplus-window-height-w/-modeline))
+(declaim (inline surplus-window-height surplus-window-height-w/-modeline))
 ;;;
 (defun surplus-window-height (thumb-bar-p)
   (+ hunk-top-border (if thumb-bar-p

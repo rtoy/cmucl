@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.58.2.2 2000/05/23 16:36:20 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.58.2.3 2002/03/23 18:49:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,8 +30,13 @@
 	  defstruct-description dd-name dd-default-constructor dd-copier
 	  dd-predicate dd-slots dd-length dd-type dd-raw-index dd-raw-length
 	  defstruct-slot-description dsd-name dsd-%name dsd-accessor dsd-type
-	  dsd-index dsd-raw-type dsd-read-only undefine-structure))
+	  dsd-index dsd-raw-type dsd-read-only undefine-structure
+	  *ansi-defstruct-options-p*))
 
+
+(defparameter *ANSI-defstruct-options-p* nil
+  "Controls compiling DEFSTRUCT :print-function and :print-method
+   options according to ANSI spec. MUST be NIL to compile CMUCL & PCL")
 
 ;;;; Structure frobbing primitives.
 
@@ -323,6 +328,26 @@
   (declare (ignore depth))
   (format stream "#<Defstruct-Slot-Description for ~S>" (dsd-name structure)))
 
+(defun dd-maybe-make-print-method (defstruct)
+  ;; Maybe generate CLOS DEFMETHOD forms for :print-function/:print-object.
+  (let ((print-function-value (dd-print-function defstruct)))
+    (when (consp print-function-value)
+      (let ((kind (car print-function-value))
+	    (function (cdr print-function-value)))
+	(unless (eq kind 'lambda)
+	  (setf (dd-print-function defstruct) nil)
+	  (let* ((class (dd-name defstruct))
+		 (func (if (symbolp function) `',function `#',function)))
+	    ;; We can only generate this code if CLOS is loaded. Maybe should
+	    ;; signal an error instead of quietly ignoring the defmethod?
+	    `((when (fboundp 'print-object)
+		(defmethod print-object ((object ,class) stream)
+		  (funcall
+		   ,func object stream
+		   ,@(when (or (eq kind :print-function)
+			       (eq function 'default-structure-print))
+		       '(*current-level*))))))))))))
+
 
 ;;; The legendary macro itself.
 
@@ -331,6 +356,36 @@
 ;;; Return a list of forms to install print and make-load-form funs, mentioning
 ;;; them in the expansion so that they can be compiled.
 ;;;
+
+(defun define-class-methods (defstruct)
+  (let* ((name (dd-name defstruct))
+	 (pom (dd-maybe-make-print-method defstruct)))
+    `(,@(let ((pf (dd-print-function defstruct)))
+	  (when pf
+	    `((setf (basic-structure-class-print-function (find-class ',name))
+		    ,(if (symbolp pf)
+			 `',pf
+			 `#',pf)))))
+      ,@(let ((mlff (dd-make-load-form-fun defstruct)))
+	  (when mlff
+	    `((setf (structure-class-make-load-form-fun (find-class ',name))
+		    ,(if (symbolp mlff)
+			 `',mlff
+			 `#',mlff)))))
+      ,@(let ((pure (dd-pure defstruct)))
+	  (cond ((eq pure 't)
+		 `((setf (layout-pure (class-layout (find-class ',name)))
+		    t)))
+		((eq pure :substructure)
+		 `((setf (layout-pure (class-layout (find-class ',name)))
+		    0)))))
+      ,@(let ((def-con (dd-default-constructor defstruct)))
+	  (when (and def-con (not (dd-alternate-metaclass defstruct)))
+	    `((setf (structure-class-constructor (find-class ',name))
+		    #',def-con))))
+      ,@pom)))
+
+#+ORIGINAL
 (defun define-class-methods (defstruct)
   (let ((name (dd-name defstruct)))
     `(,@(let ((pf (dd-print-function defstruct)))
@@ -425,6 +480,69 @@
 ;;;
 ;;;    Parse a single defstruct option and store the results in Defstruct.
 ;;;
+(defun parse-1-option (option defstruct)
+  (let ((args (rest option))
+	(name (dd-name defstruct)))
+    (case (first option)
+      (:conc-name
+       (destructuring-bind (conc-name) args
+	 (setf (dd-conc-name defstruct)
+	       (if (symbolp conc-name)
+		   conc-name
+		   (make-symbol (string conc-name))))))
+      (:constructor
+       (destructuring-bind (&optional (cname (concat-pnames 'make- name))
+				      &rest stuff)
+			   args
+	 (push (cons cname stuff) (dd-constructors defstruct))))
+      (:copier
+       (destructuring-bind (&optional (copier (concat-pnames 'copy- name)))
+			   args
+	 (setf (dd-copier defstruct) copier)))
+      (:predicate
+       (destructuring-bind (&optional (pred (concat-pnames name '-p)))
+			   args
+	 (setf (dd-predicate defstruct) pred)))
+      (:include
+       (when (dd-include defstruct)
+	 (error "Can't have more than one :INCLUDE option."))
+       (setf (dd-include defstruct) args))
+      (:alternate-metaclass
+       (setf (dd-alternate-metaclass defstruct) args))
+      ((:print-function :print-object)
+       (destructuring-bind (&optional (fun 'default-structure-print)) args
+	 (setf (dd-print-function defstruct)
+	       (if *ANSI-defstruct-options-p*
+		   (cons (first option) fun)
+		   fun))))
+      (:type
+       (destructuring-bind (type) args
+	 (cond ((eq type 'funcallable-structure)
+		(setf (dd-type defstruct) type))
+	       ((member type '(list vector))
+		(setf (dd-element-type defstruct) 't)
+		(setf (dd-type defstruct) type))
+	       ((and (consp type) (eq (first type) 'vector))
+		(destructuring-bind (vector vtype) type
+		  (declare (ignore vector))
+		  (setf (dd-element-type defstruct) vtype)
+		  (setf (dd-type defstruct) 'vector)))
+	       (t
+		(error "~S is a bad :TYPE for Defstruct." type)))))
+      (:named
+       (error "The Defstruct option :NAMED takes no arguments."))
+      (:initial-offset
+       (destructuring-bind (offset) args
+	 (setf (dd-offset defstruct) offset)))
+      (:make-load-form-fun
+       (destructuring-bind (fun) args
+	 (setf (dd-make-load-form-fun defstruct) fun)))
+      (:pure
+       (destructuring-bind (fun) args
+	 (setf (dd-pure defstruct) fun)))
+      (t (error "Unknown DEFSTRUCT option~%  ~S" option)))))
+
+#+ORIGINAL
 (defun parse-1-option (option defstruct)
   (let ((args (rest option))
 	(name (dd-name defstruct)))
@@ -999,7 +1117,7 @@
       (data)
       (t
        `(truly-the (simple-array (unsigned-byte 32) (*))
-		   (%instance-ref object ,(dd-raw-index defstruct))))))))
+		   (%instance-ref ,object ,(dd-raw-index defstruct))))))))
 
 
 ;;; dsd-inherited-p  --  Internal
@@ -1084,7 +1202,7 @@
 	      (index (dsd-index slot))
 	      (slot-type `(and ,(dsd-type slot)
 			       ,(dd-element-type defstruct))))
-	  (stuff `(proclaim '(inline ,aname (setf ,aname))))
+	  (stuff `(declaim (inline ,aname (setf ,aname))))
 	  (stuff `(defun ,aname (structure)
 		    (declare (type ,ltype structure))
 		    (the ,slot-type (elt structure ,index))))
@@ -1137,7 +1255,7 @@
 ;;; Layout.  This is called by the accessor closures, which have a handle on
 ;;; the type's layout.
 ;;;
-(proclaim '(inline typep-to-layout))
+(declaim (inline typep-to-layout))
 (defun typep-to-layout (obj layout)
   (declare (type layout layout) (optimize (speed 3) (safety 0)))
   (when (layout-invalid layout)

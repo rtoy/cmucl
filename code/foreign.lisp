@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.22.2.4 2000/09/27 11:10:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.22.2.5 2002/03/23 18:50:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,9 +25,9 @@
 #+hppa (defconstant foreign-segment-start #x10C00000)
 #+hppa (defconstant foreign-segment-size  #x00400000)
 
-#+(and freebsd x86)
+#+(and bsd x86)
 (defconstant foreign-segment-start #x0E000000)
-#+(and freebsd x86) 
+#+(and bsd x86) 
 (defconstant foreign-segment-size  #x02000000)
 
 (defvar *previous-linked-object-file* nil)
@@ -57,7 +57,7 @@
 		(t
 		 (incf code))))))))
 
-#+(or (and FreeBSD (not elf)) (and sparc (not svr4)))
+#+(or OpenBSD (and FreeBSD (not elf)) (and sparc (not svr4)))
 (alien:def-alien-type exec
   (alien:struct nil
     (magic c-call:unsigned-long)
@@ -89,7 +89,7 @@
 ;;; The following definitions are taken from
 ;;; /usr/include/sys/elf_common.h and /usr/include/sys/elf32.h.
 ;;;
-#+(and FreeBSD elf)
+#+(or NetBSD (and FreeBSD elf (not FreeBSD4)))
 (progn
 (alien:def-alien-type elf-address      (alien:unsigned 32))
 (alien:def-alien-type elf-half-word    (alien:unsigned 16))
@@ -116,11 +116,41 @@
     (elf-section-header-count        elf-half-word)
     (elf-section-name-strings        elf-half-word)))
 
+;; Indices into the elf-ident array, as per SVR4 ABI
+(defconstant ei-mag0          0) ; Magic number, byte 0
+(defconstant ei-mag1          1) ; Magic number, byte 1
+(defconstant ei-mag2          2) ; Magic number, byte 2
+(defconstant ei-mag3          3) ; Magic number, byte 3
+(defconstant ei-class         4) ; class of machine
+(defconstant ei-data          5) ; data format
+(defconstant ei-version       6) ; ELF format version
+(defconstant ei-osabi         7) ; Operating system / ABI identification
+(defconstant ei-abiversion    8) ; ABI version
+(defconstant ei-pad           9) ; Start of padding
+(defconstant ei-nident       16) ; Size of elf-ident array
+
 ;; values for elf-type
 (defconstant et-relocatable   1)
 (defconstant et-executable    2)
 (defconstant et-shared-object 3)
 (defconstant et-core-file     4)
+
+;; values for elf-ident[ei-osabi]
+(defconstant elfosabi-sysv         0)
+(defconstant elfosabi-hpux         1)
+(defconstant elfosabi-netbsd       2)
+(defconstant elfosabi-linux        3)
+(defconstant elfosabi-hurd         4)
+(defconstant elfosabi-86open       5)
+(defconstant elfosabi-solaris      6)
+(defconstant elfosabi-monterey     7)
+(defconstant elfosabi-irix         8)
+(defconstant elfosabi-freebsd      9)
+(defconstant elfosabi-tru64       10)
+(defconstant elfosabi-modesto     11)
+(defconstant elfosabi-openbsd     12)
+(defconstant elfosabi-arm         97)
+(defconstant elfosabi-standalone 255)
 
 (alien:def-alien-type pheader
 ;;"Program header."
@@ -143,13 +173,28 @@
     (unless (= (alien:deref h i) (aref +elf-magic+ i))
       (return nil))))
 
-(defun elf-brand (h)
-  "Return the `brand' in the padding of the ELF file."
-  (let ((return (make-string 8 :initial-element #\space)))
-    (dotimes (i 8 return)
-      (let ((code (alien:deref h (+ i 8))))
-	(unless (= code 0)
-	  (setf (aref return i) (code-char code)))))))
+(defun elf-osabi (h)
+  "Return the `osabi' field in the padding of the ELF file."
+  (alien:deref h ei-osabi))
+
+(defun elf-osabi-name (id)
+  (cond
+    ((eql id elfosabi-sysv) "Unix System V ABI")
+    ((eql id elfosabi-hpux) "HP-UX")
+    ((eql id elfosabi-netbsd) "NetBSD")
+    ((eql id elfosabi-linux) "Linux")
+    ((eql id elfosabi-hurd) "GNU/Hurd")
+    ((eql id elfosabi-86open) "86Open common IA32 ABI")
+    ((eql id elfosabi-solaris) "Solaris")
+    ((eql id elfosabi-monterey) "Monterey")
+    ((eql id elfosabi-irix) "IRIX")
+    ((eql id elfosabi-freebsd) "FreeBSD")
+    ((eql id elfosabi-tru64) "Tru64 Unix")
+    ((eql id elfosabi-modesto) "Novell Modesto")
+    ((eql id elfosabi-openbsd) "OpenBSD")
+    ((eql id elfosabi-arm) "ARM")
+    ((eql id elfosabi-standalone) "Standalone/Embedded")
+    (t (format nil "Unknown ABI (~D)" id))))
 
 (defun elf-executable-p (n)
   "Given a file type number, determine if the file is executable."
@@ -181,12 +226,16 @@
 			  (alien:alien-sap header)
 			  (alien:alien-size eheader :bytes))
 	  (unless (elf-p (alien:slot header 'elf-ident))
-	      (error (format nil "~A is not an ELF file." name)))
+	    (error (format nil "~A is not an ELF file." name)))
 
-	  (let ((brand (elf-brand (alien:slot header 'elf-ident))))
-	    (unless (string= brand "FreeBSD" :end1 6 :end2 6)
-	      (error (format nil "~A is not a FreeBSD executable. Brand: ~A"
-			     name brand))))
+	  (let ((osabi (elf-osabi (alien:slot header 'elf-ident)))
+		(expected-osabi #+NetBSD elfosabi-netbsd
+				#+FreeBSD elfosabi-freebsd))
+	    (unless (= osabi expected-osabi)
+	      (error "~A is not a ~A executable, it's a ~A executable."
+		     name
+		     (elf-osabi-name expected-osabi)
+		     (elf-osabi-name osabi))))
 
 	  (unless (elf-executable-p (alien:slot header 'elf-type))
 	    (error (format nil "~A is not executable." name)))
@@ -216,10 +265,10 @@ to skip undefined symbols which don't have an address."
 	  (unless (eql (aref line 0) #\space)   ; Skip undefined symbols....
 	    (let* ((symbol (subseq line 11))
 		   (address (parse-integer line :end 8 :radix 16))
-		   #+FreeBSD (kind (aref line 9))	; filter out .o file names
+		   (kind (aref line 9))	; filter out .o file names
 		   (old-address (gethash symbol lisp::*foreign-symbols*)))
 	      (unless (or (null old-address) (= address old-address)
-			  #+FreeBSD (char= kind #\F))
+			  (char= kind #\F))
 		(warn "~S moved from #x~8,'0X to #x~8,'0X.~%"
 		      symbol old-address address))
 	      (setf (gethash symbol symbol-table) address))))))
@@ -230,7 +279,8 @@ to skip undefined symbols which don't have an address."
 ;;; pw-- This seems to work for FreeBSD. The MAGIC field is not tested
 ;;; for correct file format so it may croak if ld fails to produce the
 ;;; expected results. It is probably good enough for now.
-#+(or (and FreeBSD (not ELF)) (and sparc (not svr4)))
+;;; prm- We assume this works for OpenBSD as well, needs testing...
+#+(or OpenBSD (and FreeBSD (not ELF)) (and sparc (not svr4)))
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
@@ -435,7 +485,7 @@ to skip undefined symbols which don't have an address."
             ))
       (unix:unix-close fd))))
 
-#-(or linux solaris irix (and FreeBSD elf))
+#-(or linux solaris irix NetBSD (and FreeBSD elf))
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))
@@ -446,10 +496,10 @@ to skip undefined symbols which don't have an address."
 	    (return))
 	  (let* ((symbol (subseq line 11))
 		 (address (parse-integer line :end 8 :radix 16))
-		 #+FreeBSD (kind (aref line 9))	; filter out .o file names
+		 #+BSD (kind (aref line 9))	; filter out .o file names
 		 (old-address (gethash symbol lisp::*foreign-symbols*)))
 	    (unless (or (null old-address) (= address old-address)
-			#+FreeBSD (char= kind #\F))
+			#+BSD (char= kind #\F))
 	      (warn "~S moved from #x~8,'0X to #x~8,'0X.~%"
 		    symbol old-address address))
 	    (setf (gethash symbol symbol-table) address)))))
@@ -463,7 +513,8 @@ to skip undefined symbols which don't have an address."
 			    (merge-pathnames *command-line-utility-name*
 					     "path:")
 			    #+hpux "library:cmucl.orig")
-			   (env ext:*environment-list*))
+			   (env ext:*environment-list*)
+		           (verbose *load-verbose*))
   "Load-foreign loads a list of C object files into a running Lisp.  The files
   argument should be a single file or a list of files.  The files may be
   specified as namestrings or as pathnames.  The libraries argument should be a
@@ -478,8 +529,9 @@ to skip undefined symbols which don't have an address."
 	(error-output (make-string-output-stream))
 	(files (if (atom files) (list files) files)))
 
-    (format t ";;; Running library:load-foreign.csh...~%")
-    (force-output)
+    (when verbose
+      (format t ";;; Running library:load-foreign.csh...~%")
+      (force-output))
     #+hpux
     (dolist (f files)
       (with-open-file (stream f :element-type '(unsigned-byte 16))
@@ -503,9 +555,17 @@ to skip undefined symbols which don't have an address."
 				*foreign-segment-free-pointer*)
 			output-file
 			symbol-table-file
-			(append (mapcar #'(lambda (name)
-					    (unix-namestring name))
-					files)
+			(append (mapcar
+				 #'(lambda (name)
+				     (or (unix-namestring name)
+					 (error 'simple-file-error
+						:pathname name
+						:format-control
+						"File does not exist: ~A."
+						:format-arguments
+						(list name))))
+				 
+				 files)
 				libraries))
 		 :env env
 		 :input nil
@@ -524,7 +584,9 @@ to skip undefined symbols which don't have an address."
 	(setf *previous-linked-object-file* output-file)
 	(when old-file
 	  (unix:unix-unlink old-file)))))
-  (format t ";;; Done.~%"))
+  (when verbose
+    (format t ";;; Done.~%")
+    (force-output)))
 
 
 (export '(alternate-get-global-address))
@@ -535,7 +597,7 @@ to skip undefined symbols which don't have an address."
 	   (ignore symbol))
   0)
 
-#+(or linux solaris irix)
+#+(or linux solaris irix FreeBSD4)
 (progn
 
 (defconstant rtld-lazy 1
@@ -560,7 +622,7 @@ to skip undefined symbols which don't have an address."
 
 (defvar *dso-linker*
   #+solaris "/usr/ccs/bin/ld"
-  #+(or linux irix) "/usr/bin/ld")
+  #+(or linux irix FreeBSD4) "/usr/bin/ld")
 
 (alien:def-alien-routine dlopen system-area-pointer
   (file c-call:c-string) (mode c-call:int))
@@ -608,7 +670,8 @@ to skip undefined symbols which don't have an address."
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
 			   (base-file nil)
-			   (env ext:*environment-list*))
+			   (env ext:*environment-list*)
+		           (verbose *load-verbose*))
   "Load-foreign loads a list of C object files into a running Lisp.  The files
   argument should be a single file or a list of files.  The files may be
   specified as namestrings or as pathnames.  The libraries argument should be a
@@ -624,20 +687,36 @@ to skip undefined symbols which don't have an address."
   (let ((output-file (pick-temporary-file-name
 		      (concatenate 'string "/tmp/~D~C" (string (gensym)))))
 	(error-output (make-string-output-stream)))
- 
-    (format t ";;; Running ~A...~%" *dso-linker*)
-    (force-output)
+
+    (when verbose
+      (format t ";;; Running ~A...~%" *dso-linker*)
+      (force-output))
+    
     (let ((proc (ext:run-program
 		 *dso-linker*
 		 (list*
-		        #+(or solaris linux) "-G" #+irix "-shared"
+		        #+(or solaris linux FreeBSD4) "-G" #+irix "-shared"
 			"-o"
 			output-file
-			(append (mapcar #'(lambda (name)
-					    (unix-namestring name))
-					(if (atom files)
-					    (list files)
-					    files))
+			;; Cause all specified libs to be loaded in full
+			#+(or linux FreeBSD4) "--whole-archive"
+			#+solaris "-z" #+solaris "allextract"
+			(append (mapcar
+				 #'(lambda (name)
+				     (or (unix-namestring name)
+					 (error 'simple-file-error
+						:pathname name
+						:format-control
+						"File does not exist: ~A."
+						:format-arguments
+						(list name))))
+				 (if (atom files)
+				     (list files)
+				     files))
+				;; Return to default ld behaviour for libs
+				(list
+				 #+(or linux FreeBSD4) "--no-whole-archive"
+				 #+solaris "-z" #+solaris "defaultextract")
 				libraries))
 		 :env env
 		 :input nil
@@ -652,5 +731,7 @@ to skip undefined symbols which don't have an address."
       (load-object-file output-file)
       (unix:unix-unlink output-file)
       ))
-  (format t ";;; Done.~%"))
+  (when verbose
+    (format t ";;; Done.~%")
+    (force-output)))
 )

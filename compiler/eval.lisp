@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.31.2.2 2000/09/26 16:40:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.31.2.3 2002/03/23 18:50:19 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,15 +136,15 @@
   "If an interpreted function goes uncalled for more than this many GCs, then
   it is eligible for flushing from the cache.")
 
-(proclaim '(type c::index
-		 *interpreted-function-cache-minimum-size*
-		 *interpreted-function-cache-threshold*))
+(declaim (type c::index
+	       *interpreted-function-cache-minimum-size*
+	       *interpreted-function-cache-threshold*))
 
 
 ;;; The list of INTERPRETED-FUNCTIONS that have translated definitions.
 ;;;
 (defvar *interpreted-function-cache* nil)
-(proclaim '(type list *interpreted-function-cache*))
+(declaim (type list *interpreted-function-cache*))
 
 
 ;;; MAKE-INTERPRETED-FUNCTION  --  Interface
@@ -625,23 +625,14 @@
   (setf *internal-apply-node-trace* on))
 
 
-;;;; INTERNAL-EVAL:
-
-(proclaim '(special lisp::*already-evaled-this*))
-
 ;;; INTERNAL-EVAL  --  Interface
 ;;;
 ;;;    Evaluate an arbitary form.  We convert the form, then call internal
-;;; apply on it.  If *ALREADY-EVALED-THIS* is true, then we bind it to NIL
-;;; around the apply to limit the inhibition to the lexical scope of the
-;;; EVAL-WHEN.
+;;; apply on it.
 ;;;
 (defun internal-eval (form &optional quietly)
   (let ((res (c:compile-for-eval form quietly)))
-    (if lisp::*already-evaled-this*
-	(let ((lisp::*already-evaled-this* nil))
-	  (internal-apply res nil '#()))
-	(internal-apply res nil '#()))))
+    (internal-apply res nil '#())))
 
 
 ;;; VALUE -- Internal.

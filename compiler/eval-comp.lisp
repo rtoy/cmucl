@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.27.2.1 2000/05/23 16:37:07 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.27.2.2 2002/03/23 18:50:19 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,22 +17,22 @@
 
 (in-package "C")
 
-(proclaim '(special *constants* *free-variables* *compile-component*
-		    *code-vector* *next-location* *result-fixups*
-		    *free-functions* *source-paths* *failed-optimizations*
-		    *continuation-number* *continuation-numbers*
-		    *number-continuations* *tn-id* *tn-ids* *id-tns*
-		    *label-ids* *label-id* *id-labels*
-		    *compiler-error-count*
-		    *compiler-warning-count* *compiler-note-count*
-		    *compiler-error-output* *compiler-error-bailout*
-		    *compiler-trace-output*
-		    *last-source-context* *last-original-source*
-		    *last-source-form* *last-format-string* *last-format-args*
-		    *last-message-count* *check-consistency*
-		    *all-components* *converting-for-interpreter*
-		    *source-info* *block-compile* *current-path*
-		    *current-component* *lexical-environment*))
+(declaim (special *constants* *free-variables* *compile-component*
+		  *code-vector* *next-location* *result-fixups*
+		  *free-functions* *source-paths* *failed-optimizations*
+		  *continuation-number* *continuation-numbers*
+		  *number-continuations* *tn-id* *tn-ids* *id-tns*
+		  *label-ids* *label-id* *id-labels*
+		  *compiler-error-count*
+		  *compiler-warning-count* *compiler-note-count*
+		  *compiler-error-output* *compiler-error-bailout*
+		  *compiler-trace-output*
+		  *last-source-context* *last-original-source*
+		  *last-source-form* *last-format-string* *last-format-args*
+		  *last-message-count* *check-consistency*
+		  *all-components* *converting-for-interpreter*
+		  *source-info* *block-compile* *current-path*
+		  *current-component* *lexical-environment*))
 
 (export '(compile-for-eval lambda-eval-info-frame-size
 	  lambda-eval-info-args-passed lambda-eval-info-entries
@@ -292,13 +292,19 @@
   (values-list (subseq args start count)))
 
 (defun %argument-count-error (args-passed-count)
-  (error "Wrong number of arguments passed -- ~S." args-passed-count))
+  (error 'simple-program-error
+	 :format-control "Wrong number of arguments passed -- ~S."
+	 :format-arguments (list args-passed-count)))
 
 (defun %odd-keyword-arguments-error ()
-  (error "Function called with odd number of keyword arguments."))
+  (error 'simple-program-error
+	 :format-control
+	 "Function called with odd number of keyword arguments."))
 
 (defun %unknown-keyword-argument-error (keyword)
-  (error "Unknown keyword argument -- ~S." keyword))
+  (error 'simple-program-error
+	 :format-control "Unknown keyword argument -- ~S."
+	 :format-arguments (list keyword)))
 
 (defun %cleanup-point ())
 

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.5.2.1 1998/06/23 11:25:06 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.5.2.3 2002/03/23 18:51:07 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -20,6 +20,7 @@
 #include "save.h"
 #include "lispregs.h"
 #include "validate.h"
+#include "dynbind.h"
 
 #ifdef GENCGC
 #include "gencgc.h"
@@ -72,7 +73,7 @@ static void output_space(FILE *file, int id, lispobj *addr, lispobj *end)
     data = write_bytes(file, (char *)addr, bytes);
 
     putw(data, file);
-    putw((os_vm_address_t)((long)addr / CORE_PAGESIZE), file);
+    putw((long) addr / CORE_PAGESIZE, file);
     putw((bytes + CORE_PAGESIZE - 1) / CORE_PAGESIZE, file);
 }
 

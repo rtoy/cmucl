@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.16.2.2 1998/06/23 11:22:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.16.2.3 2002/03/23 18:50:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,9 +176,9 @@
 (defvar *enclosed-time* 0)
 (defvar *enclosed-consing* 0)
 (defvar *enclosed-profilings* 0)
-(proclaim '(type time-type *enclosed-time*))
-(proclaim '(type consing-type *enclosed-consing*))
-(proclaim '(fixnum *enclosed-profilings*))
+(declaim (type time-type *enclosed-time*))
+(declaim (type consing-type *enclosed-consing*))
+(declaim (fixnum *enclosed-profilings*))
 
 
 ;;; The number of seconds a bare function call takes.  Factored into the other
@@ -195,8 +195,8 @@
 ;;;
 (defvar *total-profile-overhead*)
 
-(proclaim '(single-float *call-overhead* *internal-profile-overhead*
-			 *total-profile-overhead*))
+(declaim (single-float *call-overhead* *internal-profile-overhead*
+		       *total-profile-overhead*))
 
 
 ;;;; Profile encapsulations:
@@ -281,17 +281,17 @@
 					    ,@required-args optional-args)
 				    `(funcall old-definition ,@required-args))
 			     (setq time-inc
-				   #-FreeBSD
+				   #-BSD
 				   (- (quickly-get-time) start-time)
-				   #+FreeBSD
+				   #+BSD
 				   (max (- (quickly-get-time) start-time) 0))
 			     (setq cons-inc (- (total-consing) start-consed))
 			     (setq profile-inc *enclosed-profilings*)
 			     (incf time
 				   (the time-type
-					#-FreeBSD
+					#-BSD
 					(- time-inc *enclosed-time*)
-					#+FreeBSD
+					#+BSD
 					(max (- time-inc *enclosed-time*) 0)))
 			     (incf consed
 				   (the consing-type
@@ -570,7 +570,7 @@
 ;;;    Dummy function we profile to find profiling overhead.  Declare
 ;;; debug-info to make sure we have arglist info.
 ;;;
-(proclaim '(notinline compute-time-overhead-aux))
+(declaim (notinline compute-time-overhead-aux))
 (defun compute-time-overhead-aux (x)
   (declare (ext:optimize-interface (debug 2)))
   (declare (ignore x)))

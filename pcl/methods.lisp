@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.8.2.3 2000/05/23 16:38:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.8.2.4 2002/03/23 18:51:20 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -592,7 +592,7 @@
 ;;;
 ;;;
 
-(proclaim '(special *lazy-dfun-compute-p*))
+(declaim (special *lazy-dfun-compute-p*))
 
 (defun set-methods (gf methods)
   (setf (generic-function-methods gf) nil)

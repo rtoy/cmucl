@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.30.2.6 2000/07/06 06:56:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.30.2.7 2002/03/23 18:50:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,52 @@
 	(values (1+ tru) (- rem divisor))
 	(values tru rem))))
 
+(defknown %unary-ftruncate/single-float (single-float) single-float
+	  (movable foldable flushable))
+(defknown %unary-ftruncate/double-float (double-float) double-float
+	  (movable foldable flushable))
+
+(defknown %unary-ftruncate (real) float
+	  (movable foldable flushable))
+
+;; Convert (ftruncate x y) to the obvious implementation.  We only
+;; want this under certain conditions and let the generic ftruncate
+;; handle the rest.  (Note: if y = 1, the divide and multiply by y
+;; should be removed by other deftransforms.)
+
+(deftransform ftruncate ((x &optional (y 1))
+			 (float &optional (or float integer)))
+  '(let ((res (%unary-ftruncate (/ x y))))
+     (values res (- x (* y res)))))
+
+#+sparc
+(defknown fast-unary-ftruncate ((or single-float double-float))
+  (or single-float double-float)
+  (movable foldable flushable))
+
+;; Convert %unary-ftruncate to unary-ftruncate/{single,double}-float
+;; if x is known to be of the right type.  Also, if the result is
+;; known to fit in the same range as a (signed-byte 32), convert this
+;; to %unary-truncate, which might be a single instruction, and float
+;; the result.  However, for sparc, we have a vop to do this so call
+;; that, and for Sparc V9, we can actually handle a 64-bit integer
+;; range.
+
+(macrolet ((frob (ftype func)
+	     `(deftransform %unary-ftruncate ((x) (,ftype))
+		(let* ((x-type (continuation-type x))
+		       (lo (numeric-type-low x-type))
+		       (hi (numeric-type-high x-type))
+		       (limit-lo (- (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
+		       (limit-hi (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
+		  (if (and (numberp lo) (numberp hi)
+			   (< limit-lo lo)
+			   (< hi limit-hi))
+		      #-sparc '(coerce (%unary-truncate x) ',ftype)
+		      #+sparc '(fast-unary-ftruncate x)
+		      '(,func x))))))
+  (frob single-float %unary-ftruncate/single-float)
+  (frob double-float %unary-ftruncate/double-float))
 
 ;;; Random:
 ;;;
@@ -118,9 +164,9 @@
 #+new-random
 (deftransform random ((num &optional state)
 		      ((integer 1
-				#+(and propagate-float-type x86) #xffffffff
-				#+(and propagate-float-type (not x86)) #x7fffffff
-				#-propagate-float-type #.most-positive-fixnum)
+				#+x86 #xffffffff
+				#-x86 #x7fffffff
+				)
 		       &optional *))
   #+x86 "use inline (unsigned-byte 32) operations"
   #-x86 "use inline (signed-byte 32) operations"
@@ -282,9 +328,6 @@
 ;;; Optimizers for scale-float.  If the float has bounds, new bounds
 ;;; are computed for the result, if possible.
 
-#+propagate-float-type
-(progn
-
 (defun scale-float-derive-type-aux (f ex same-arg)
   (declare (ignore same-arg))
   (flet ((scale-bound (x n)
@@ -347,7 +390,6 @@
 	     (one-arg-derive-type num #',aux-name #',fun))))))
   (frob %single-float single-float)
   (frob %double-float double-float))
-) ; end progn  
 
 
 ;;;; Float contagion:
@@ -394,36 +436,6 @@
   (frob <)
   (frob >)
   (frob =))
-
-
-;;;; Irrational derive-type methods:
-
-;;; Derive the result to be float for argument types in the appropriate domain.
-;;;
-#-propagate-fun-type
-(dolist (stuff '((asin (real -1.0 1.0))
-		 (acos (real -1.0 1.0))
-		 (acosh (real 1.0))
-		 (atanh (real -1.0 1.0))
-		 (sqrt (real 0.0))))
-  (destructuring-bind (name type) stuff
-    (let ((type (specifier-type type)))
-      (setf (function-info-derive-type (function-info-or-lose name))
-	    #'(lambda (call)
-		(declare (type combination call))
-		(when (csubtypep (continuation-type
-				  (first (combination-args call)))
-				 type)
-		  (specifier-type 'float)))))))
-
-#-propagate-fun-type
-(defoptimizer (log derive-type) ((x &optional y))
-  (when (and (csubtypep (continuation-type x)
-			(specifier-type '(real 0.0)))
-	     (or (null y)
-		 (csubtypep (continuation-type y)
-			    (specifier-type '(real 0.0)))))
-    (specifier-type 'float)))
 
 
 ;;;; Irrational transforms:
@@ -580,9 +592,6 @@
        (float pi x)
        (float 0 x)))
 
-#+(or propagate-float-type propagate-fun-type)
-(progn
-
 ;;; The number is of type REAL.
 (declaim (inline numeric-type-real-p))
 (defun numeric-type-real-p (type)
@@ -597,10 +606,6 @@
 	(list (coerce (car bound) type))
 	(coerce bound type))))
 
-)  ; end progn
-
-#+propagate-fun-type
-(progn
 
 ;;;; Optimizers for elementary functions
 ;;;;
@@ -1118,7 +1123,6 @@
 (defoptimizer (phase derive-type) ((num))
   (one-arg-derive-type num #'phase-derive-type-aux #'phase))
 
-) ;end progn for propagate-fun-type
 
 (deftransform realpart ((x) ((complex rational)) *)
   '(kernel:%realpart x))
@@ -1264,11 +1268,11 @@
 			 (iy (imagpart y)))
 		    (if (> (abs ry) (abs iy))
 			(let* ((r (/ iy ry))
-			       (dn (* ry (+ 1 (* r r)))))
+			       (dn (+ ry (* r iy))))
 			  (complex (/ (+ rx (* ix r)) dn)
 				   (/ (- ix (* rx r)) dn)))
 			(let* ((r (/ ry iy))
-			       (dn (* iy (+ 1 (* r r)))))
+			       (dn (+ iy (* r ry))))
 			  (complex (/ (+ (* rx r) ix) dn)
 				   (/ (- (* ix r) rx) dn))))))
 	       ;; Multiply a complex by a real or vice versa
@@ -1279,6 +1283,19 @@
 	       ;; Divide a complex by a real
 	       (deftransform / ((w z) ((complex ,type) real) *)
 		 '(complex (/ (realpart w) z) (/ (imagpart w) z)))
+	       ;; Divide a real by a complex
+	       (deftransform / ((rx y) (real (complex ,type)) *)
+		 '(let* ((ry (realpart y))
+			 (iy (imagpart y)))
+		    (if (> (abs ry) (abs iy))
+			(let* ((r (/ iy ry))
+			       (dn (+ ry (* r iy))))
+			  (complex (/ rx dn)
+				   (/ (- (* rx r)) dn)))
+			(let* ((r (/ ry iy))
+			       (dn (+ iy (* r ry))))
+			  (complex (/ (* rx r) dn)
+				   (/ (- rx) dn))))))
 	       ;; Conjugate of complex number
 	       (deftransform conjugate ((z) ((complex ,type)) *)
 		 '(complex (realpart z) (- (imagpart z))))
@@ -1321,8 +1338,6 @@
 ;;; reduction correctly but still provides useful results when the
 ;;; inputs are union types.
 
-#+propagate-fun-type
-(progn
 (defun trig-derive-type-aux (arg domain fcn
 				 &optional def-lo def-hi (increasingp t))
   (etypecase arg
@@ -1404,4 +1419,3 @@
 	 (specifier-type `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
-) ; end progn

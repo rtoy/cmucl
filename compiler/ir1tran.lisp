@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.10 2000/10/06 15:12:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.11 2002/03/23 18:50:21 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,14 +31,14 @@
 (in-package "C")
 
 
-(proclaim '(special *compiler-error-bailout*))
+(declaim (special *compiler-error-bailout*))
 
 
 ;;; The lexical environment we are currently converting in.  See the LEXENV
 ;;; structure.
 ;;;
 (defvar *lexical-environment*)
-(proclaim '(type lexenv *lexical-environment*))
+(declaim (type lexenv *lexical-environment*))
 
 ;;; That variable is used to control the context-sensitive declarations
 ;;; mechanism (see WITH-COMPILATION-UNIT).  Each entry is a function which is
@@ -62,14 +62,14 @@
 ;;;
 (defvar *free-variables*)
 (defvar *free-functions*)
-(proclaim '(hash-table *free-variables* *free-functions*))
+(declaim (hash-table *free-variables* *free-functions*))
 
 ;;; We use the same Constant structure to represent all equal anonymous
 ;;; constants.  This hashtable translates from constants to the Leafs that
 ;;; represent them.
 ;;;
 (defvar *constants*)
-(proclaim '(hash-table *constants*))
+(declaim (hash-table *constants*))
 
 ;;; When compiling Dylan, we don't coalesce constants, because the dylan
 ;;; test suite implies that doing so is a bozo-no-no.
@@ -83,7 +83,7 @@
 ;;; arbitary permutations of the code happen.  This table is initialized by
 ;;; calling Find-Source-Paths on the original source.
 ;;;
-(proclaim '(hash-table *source-paths*))
+(declaim (hash-table *source-paths*))
 (defvar *source-paths*)
 
 ;;; *Current-Component* is the Component structure which we link blocks into as
@@ -92,13 +92,13 @@
 ;;; is really going on.  We need to keep track of all the blocks generated so
 ;;; that we can delete them if they turn out to be unreachable.
 ;;;
-(proclaim '(type (or component null) *current-component*))
+(declaim (type (or component null) *current-component*))
 (defvar *current-component*)
 
 ;;; *Current-Path* is the source path of the form we are currently translating.
 ;;; See NODE-SOURCE-PATH in the NODE structure.
 ;;;
-(proclaim '(list *current-path*))
+(declaim (list *current-path*))
 (defvar *current-path* nil)
 
 ;;; *Converting-For-Interpreter* is true when we are creating IR1 to be
@@ -474,7 +474,7 @@
 ;;; number to associate with a source path.  This should be bound to 0 around
 ;;; the processing of each truly top-level form.
 ;;;
-(proclaim '(type index *current-form-number*))
+(declaim (type index *current-form-number*))
 (defvar *current-form-number*)
 
 ;;; Find-Source-Paths  --  Interface
@@ -1077,7 +1077,7 @@
 	    (compiler-note "Ignoring free ignore declaration for ~S." name)
 	    (compiler-warning "Ignore declaration for unknown variable ~S."
 			      name)))
-       ((and (consp var) (consp (cdr var)) (eq (cadr var) 'macro))
+       ((and (consp var) (consp (cdr var)) (eq (car var) 'macro))
 	;; Just ignore the ignore decl.
 	)
        ((functional-p var)
@@ -2212,12 +2212,6 @@
       (ir1-convert-progn-body start cont body))))
 
 
-;;; This flag is used by Eval-When to keep track of when code has already been
-;;; evaluated so that it can avoid multiple evaluation of nested Eval-When
-;;; (Compile)s.
-;;;
-(proclaim '(special lisp::*already-evaled-this*))
-
 ;;; DO-EVAL-WHEN-STUFF  --  Interface
 ;;;
 ;;;    Do stuff to do an EVAL-WHEN.  This is split off from the IR1 convert
@@ -2225,43 +2219,34 @@
 ;;; processing code.  We play with the dynamic environment and eval stuff, then
 ;;; call Fun with a list of forms to be processed at load time.
 ;;;
-;;; Note: the EVAL situation is always ignored: this is conceptually a
-;;; compile-only implementation.
-;;;
-;;; We have to interact with the interpreter to ensure that the forms get
-;;; eval'ed exactly once.  We bind *already-evaled-this* to true to inhibit
-;;; evaluation of any enclosed EVAL-WHENs, either by IR1 conversion done by
-;;; EVAL, or by conversion of the body for load-time processing.  If
-;;; *already-evaled-this* is true then we *do not* eval since some enclosing
-;;; eval-when already did.
-;;;
-;;;    We know we are eval'ing for load since we wouldn't get called otherwise.
-;;; If LOAD is a situation we call Fun on body. If we aren't evaluating for
-;;; load, then we call Fun on NIL for the result of the EVAL-WHEN.
-;;;
-(defun do-eval-when-stuff (situations body fun)
+
+(defun do-eval-when-stuff (situations body fun &optional toplevel-p)
   (when (or (not (listp situations))
 	    (set-difference situations
 			    '(compile load eval
 			      :compile-toplevel :load-toplevel :execute)))
     (compiler-error "Bad Eval-When situation list: ~S." situations))
 
-  (let* ((do-eval (and (intersection '(compile :compile-toplevel) situations)
-		       (not lisp::*already-evaled-this*)))
-	 (lisp::*already-evaled-this* t))
-    (when do-eval
-      (eval `(progn ,@body)))
-    (if (or (intersection '(:load-toplevel load) situations)
-	    (and *converting-for-interpreter*
-		 (intersection '(:execute eval) situations)))
-	(funcall fun body)
-	(funcall fun '(nil)))))
-
+  (if toplevel-p
+      ;; Can only get here from compile-file
+      (progn
+	(when (intersection '(compile :compile-toplevel) situations)
+	  (eval `(progn ,@body)))
+	;; Maybe generate code for load-time or run-time eval
+	(if (or (intersection '(:load-toplevel load) situations)
+		(and *converting-for-interpreter*
+		     (intersection '(:execute eval) situations)))
+	    (funcall fun body)
+	    (funcall fun '(nil))))
+      ;; Not toplevel, only :execute counts.
+      (if (intersection '(eval :execute) situations)
+	  (funcall fun body)
+	  (funcall fun '(nil)))))
   
 (def-ir1-translator eval-when ((situations &rest body) start cont)
   "EVAL-WHEN (Situation*) Form*
-  Evaluate the Forms in the specified Situations, any of COMPILE, LOAD, EVAL.
-  This is conceptually a compile-only implementation, so EVAL is a no-op."
+  Evaluate the Forms in the specified Situations, any of :COMPILE-TOPLEVEL,
+  :LOAD-TOPLEVEL, :EXECUTE."
   (do-eval-when-stuff situations body
 		      #'(lambda (forms)
 			  (ir1-convert-progn-body start cont forms))))
@@ -2635,8 +2620,9 @@
 	       (make-new-inlinep var
 				 (cdr (assoc kind inlinep-translations)))))))))
 
+(defknown %declaim (list) void)
 
-(def-ir1-translator proclaim ((what) start cont :kind :function)
+(def-ir1-translator %declaim ((what) start cont :kind :function)
   (if (constantp what)
       (let ((form (eval what)))
 	(unless (consp form)
@@ -2695,11 +2681,11 @@
 				      form)))))
 	  
 	  (unless ignore
-	    (%proclaim form))
+	    (proclaim form))
 	  (if ignore
 	      (ir1-convert start cont nil)
-	      (ir1-convert start cont `(%proclaim ,what)))))
-      (ir1-convert start cont `(%proclaim ,what))))
+	      (ir1-convert start cont `(proclaim ,what)))))
+      (ir1-convert start cont `(proclaim ,what))))
 
 
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
@@ -3287,38 +3273,41 @@
 
 
 ;;; Warn about incompatible or illegal definitions and add the macro to the
-;;; compiler environment.  
+;;; compiler environment.  This is split up into compile-time processing and
+;;; compilation for load-time effect so that macro definitions, which are split
+;;; into :compile-toplevel and (:load-toplevel :execute) parts by the DEFMACRO
+;;; macro,  will behave properly when not at top level (i.e., no compile time
+;;; effect). 
 ;;;
 ;;; Someday we could check for macro arguments being incompatibly redefined.
 ;;; Doing this right will involve finding the old macro lambda-list and
 ;;; comparing it with the new one.
 ;;;
+(defun do-macro-compile-time (name def)
+  (unless (symbolp name)
+    (compiler-error "Macro name is not a symbol: ~S." name))
+
+  (ecase (info function kind name)
+    ((nil))
+    (:function
+     (remhash name *free-functions*)
+     (undefine-function-name name)
+     (compiler-warning
+      "Defining ~S to be a macro when it was ~(~A~) to be a function."
+      name (info function where-from name)))
+    (:macro)
+    (:special-form
+     (compiler-error "Attempt to redefine special form ~S as a macro." name)))
+
+  (setf (info function kind name) :macro)
+  (setf (info function where-from name) :defined)
+  (when *compile-time-define-macros*
+    (setf (info function macro-function name) (coerce def 'function))))
+
 (def-ir1-translator %defmacro ((name def lambda-list doc) start cont
 			       :kind :function)
   (let ((name (eval name))
 	(def (second def))) ; Don't want to make a function just yet...
-    (unless (symbolp name)
-      (compiler-error "Macro name is not a symbol: ~S." name))
-
-    (ecase (info function kind name)
-      ((nil))
-      (:function
-       (remhash name *free-functions*)
-       (undefine-function-name name)
-       (compiler-warning
-	"Defining ~S to be a macro when it was ~(~A~) to be a function."
-	name (info function where-from name)))
-      (:macro)
-      (:special-form
-       (compiler-error "Attempt to redefine special form ~S as a macro."
-		       name)))
-
-    (setf (info function kind name) :macro)
-    (setf (info function where-from name) :defined)
-
-    (when *compile-time-define-macros*
-      (setf (info function macro-function name)
-	    (coerce def 'function)))
 
     (let* ((*current-path* (revert-source-path 'defmacro))
 	   (fun (ir1-convert-lambda def name 'defmacro)))
@@ -3332,20 +3321,19 @@
       (compiler-mumble "Converted ~S.~%" name))))
 
 
+(defun do-compiler-macro-compile-time (name def)
+  (when (eq (info function kind name) :special-form)
+    (compiler-error "Attempt to define a compiler-macro for special form ~S."
+		    name))
+  (when *compile-time-define-macros*
+    (setf (info function compiler-macro-function name)
+	  (coerce def 'function))))
+
 (def-ir1-translator %define-compiler-macro ((name def lambda-list doc)
 					    start cont
 					    :kind :function)
   (let ((name (eval name))
 	(def (second def))) ; Don't want to make a function just yet...
-
-    (when (eq (info function kind name) :special-form)
-      (compiler-error "Attempt to define a compiler-macro for special form ~S."
-		      name))
-
-    (when *compile-time-define-macros*
-      (setf (info function compiler-macro-function name)
-	    (coerce def 'function)))
-
     (let* ((*current-path* (revert-source-path 'define-compiler-macro))
 	   (fun (ir1-convert-lambda def name 'define-compiler-macro)))
       (setf (leaf-name fun)
@@ -3361,37 +3349,31 @@
 
 ;;; Update the global environment to correspond to the new definition.
 ;;;
-(def-ir1-translator %defconstant ((name value doc) start cont
-				  :kind :function)
-  (let ((name (eval name))
-	(newval (eval value)))
-    (unless (symbolp name)
-      (compiler-error "Constant name is not a symbol: ~S." name))
-    (when (eq name t)
-      (compiler-error "Can't change T."))
-    (when (eq name nil)
-      (compiler-error "Nihil ex nihil (Can't change NIL)."))
-    (when (keywordp name)
-      (compiler-error "Can't change the value of keywords."))
+(defun do-defconstant-compile-time (name value doc)
+  (unless (symbolp name)
+    (compiler-error "Constant name is not a symbol: ~S." name))
+  (when (eq name t)
+    (compiler-error "Can't change T."))
+  (when (eq name nil)
+    (compiler-error "Nihil ex nihil (Can't change NIL)."))
+  (when (keywordp name)
+    (compiler-error "Can't change the value of keywords."))
 
-    (let ((kind (info variable kind name)))
-      (case kind
-	(:constant
-	 (unless (equalp newval (info variable constant-value name))
-	   (compiler-warning "Redefining constant ~S as:~%  ~S"
-			     name newval)))
-	(:global)
-	(t
-	 (compiler-warning "Redefining ~(~A~) ~S to be a constant."
-			   kind name))))
+  (let ((kind (info variable kind name)))
+    (case kind
+      (:constant
+       (unless (equalp value (info variable constant-value name))
+	 (compiler-warning "Redefining constant ~S as:~%  ~S"
+			   name value)))
+      (:global)
+      (t
+       (compiler-warning "Redefining ~(~A~) ~S to be a constant."
+			 kind name))))
 
-    (setf (info variable kind name) :constant)
-    (setf (info variable where-from name) :defined)
-    (setf (info variable constant-value name) newval)
-    (remhash name *free-variables*))
-
-  (ir1-convert start cont `(%%defconstant ,name ,value ,doc)))
-
+  (setf (info variable kind name) :constant)
+  (setf (info variable where-from name) :defined)
+  (setf (info variable constant-value name) value)
+  (remhash name *free-variables*))
 
 ;;;; Defining global functions:
 

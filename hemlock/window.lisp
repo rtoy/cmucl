@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/window.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/window.lisp,v 1.4.2.1 2002/03/23 18:50:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,7 +30,7 @@
 (defvar *current-window* nil "The current window object.")
 (defvar *window-list* () "A list of all window objects.")
 
-(proclaim '(inline current-window))
+(declaim (inline current-window))
 
 (defun current-window ()
   "Return the current window.  The current window is specially treated by
@@ -151,8 +151,8 @@
   (gethash name *modeline-field-names*))
 
 
-(proclaim '(inline modeline-field-name modeline-field-width
-		   modeline-field-function))
+(declaim (inline modeline-field-name modeline-field-width
+		 modeline-field-function))
 
 (defun modeline-field-name (ml-field)
   "Returns the name of a modeline field object."
@@ -171,7 +171,7 @@
   "Returns the width of a modeline field."
   (modeline-field-%width ml-field))
 
-(proclaim '(special *buffer-list*))
+(declaim (special *buffer-list*))
 
 (defun %set-modeline-field-width (ml-field width)
   (check-type ml-field modeline-field)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.6 1997/01/18 14:31:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.6.2.1 2002/03/23 18:50:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,7 +92,7 @@
 (defvar *key-event-history* nil
   "This ring holds the last 60 key-events read by the command interpreter.")
 
-(proclaim '(special *input-transcript*))
+(declaim (special *input-transcript*))
 
 ;;; DQ-EVENT is used in editor stream methods for popping off input.
 ;;; If there is an event not yet read in Stream, then pop the queue
@@ -160,12 +160,25 @@
   "This keeps us from undefined nasties like re-entering Hemlock stream
    input methods from input hooks and scheduled events.")
 
-(proclaim '(special *screen-image-trashed*))
+(declaim (special *screen-image-trashed*))
 
 ;;; These are the characters GET-KEY-EVENT notices when it pays attention
 ;;; to aborting input.  This happens via EDITOR-INPUT-METHOD-MACRO.
 ;;;
 (defparameter editor-abort-key-events (list #k"Control-g" #k"Control-G"))
+
+(defun cleanup-for-wm-closed-display(closed-display)
+  ;; Remove fd-handlers
+  (ext:disable-clx-event-handling closed-display)
+  ;; Close file descriptor and note DEAD.
+  (xlib:close-display closed-display)
+  ;;
+  ;; At this point there is not much sense to returning to Lisp
+  ;; as the editor cannot be re-entered (there are lots of pointers
+  ;; to the dead display around that will cause subsequent failures).
+  ;; Maybe could switch to tty mode then (save-all-files-and-exit)?
+  ;; For now, just assume user wanted an easy way to kill the session.
+  (ext:quit))
 
 (defmacro abort-key-event-p (key-event)
   `(member ,key-event editor-abort-key-events))
@@ -187,12 +200,34 @@
 ;;; input method (recursively even).
 ;;;
 (eval-when (compile eval)
+
 (defmacro editor-input-method-macro ()
-  `(handler-bind ((error #'(lambda (condition)
-			     (let ((device (device-hunk-device
-					    (window-hunk (current-window)))))
-			       (funcall (device-exit device) device))
-			     (invoke-debugger condition))))
+  `(handler-bind
+       ((error
+	 (lambda (condition)
+	   (when (typep condition 'stream-error)
+	     (let* ((stream (stream-error-stream condition))
+		    (display *editor-windowed-input*)
+		    (display-stream 
+		     #+CLX
+		     (and display (xlib::display-input-stream display))))
+	       (when (eq stream display-stream)
+		 ;;(format *error-output* "~%Hemlock: Display died!~%~%")
+		 (cleanup-for-wm-closed-display display)
+		 (exit-hemlock nil))
+	       (let ((device
+		      (device-hunk-device (window-hunk (current-window)))))
+		 (funcall (device-exit device) device))
+	       (invoke-debugger condition)))))
+	#+(and CLX )
+	(xlib:closed-display
+	 (lambda(condition)
+	   (let ((display (xlib::closed-display-display condition)))
+	     (format *error-output*
+		     "Closed display on stream ~a~%"
+		     (xlib::display-input-stream display)))
+	   (exit-hemlock nil)))
+	)
 ;     (when *in-hemlock-stream-input-method*
 ;       (error "Entering Hemlock stream input method recursively!"))
      (let ((*in-hemlock-stream-input-method* t)
@@ -405,7 +440,7 @@
 	   (random-typeout-cleanup stream)
 	   (throw 'more-punt nil)))))
 
-(proclaim '(special *more-prompt-action*))
+(declaim (special *more-prompt-action*))
 
 (defun maybe-keep-random-typeout-window (stream)
   (let* ((window (random-typeout-stream-window stream))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.35.2.4 2000/10/21 13:09:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.35.2.5 2002/03/23 18:50:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,7 @@
   `(%instance-set ,x 0 (the layout ,val)))
 
 
-;;;; Charater support.
+;;;; Character support.
 
 ;;; There are really only base-chars.
 ;;;
@@ -242,6 +242,11 @@
 			    vm:byte-bits)))
      string1))
 
+;; The original version of this deftransform seemed to cause the
+;; compiler to spend huge amounts of time deriving the type of the
+;; START variable.  The following version uses nested lets to prevent
+;; the compiler from doing this analysis.  This only hides the
+;; symptom.
 
 (deftransform concatenate ((rtype &rest sequences)
 			   (t &rest simple-string)
@@ -257,19 +262,32 @@
 	(args n-seq)
 	(lets `(,n-length (the index (* (length ,n-seq) vm:byte-bits))))
 	(all-lengths n-length)
-	(forms `(bit-bash-copy ,n-seq vector-data-bit-offset
-			       res start
-			       ,n-length))
-	(forms `(setq start (+ start ,n-length)))))
-    `(lambda (rtype ,@(args))
-       (declare (ignore rtype))
-       (let* (,@(lets)
-	      (res (make-string (truncate (the index (+ ,@(all-lengths)))
-					  vm:byte-bits)))
-	      (start vector-data-bit-offset))
-	 (declare (type index start ,@(all-lengths)))
-	 ,@(forms)
-	 res))))
+	(forms `((bit-bash-copy ,n-seq vector-data-bit-offset
+		  res start
+		  ,n-length)
+		 (start (+ start ,n-length))))))
+    (flet ((nestify (lists)
+	     (let* ((lists (reverse lists))
+		    (result `(,(caar lists))))
+	       (dolist (item (rest lists))
+		 (destructuring-bind (bit-bash init)
+		     item
+		   (setf result `(,bit-bash
+				  (let (,init)
+				    ,@result)))))
+	       result)))
+      (let ((result 
+	     `(lambda (rtype ,@(args))
+	       (declare (ignore rtype))
+	       (let* (,@(lets)
+			(res (make-string (truncate (the index (+ ,@(all-lengths)))
+						    vm:byte-bits))))
+		 (declare (type index ,@(all-lengths)))
+		 (let ((start vector-data-bit-offset))
+		   ,@(nestify (forms)))
+		 res))))
+	result))))
+
 
 
 ;;;; Bit vector hackery:

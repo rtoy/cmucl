@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.6.2.2 2000/05/23 16:38:07 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.6.2.3 2002/03/23 18:50:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -295,7 +295,7 @@
     (when (mark< tem *parse-starting-mark*) (editor-error))
     (kill-previous-word-command p)))
 
-(proclaim '(special *kill-ring*))
+(declaim (special *kill-ring*))
 
 (defcommand "Kill Parse" (p)
   "Kills any input so far."

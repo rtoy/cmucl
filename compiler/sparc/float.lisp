@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.12.2.3 2000/09/26 15:16:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.12.2.4 2002/03/23 18:50:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -942,6 +942,60 @@
   (frob %unary-round single-reg single-float fstoir)
   #-sun4
   (frob %unary-round double-reg double-float fdtoir))
+
+(define-vop (fast-unary-ftruncate/single-float)
+  (:args (x :scs (single-reg)))
+  (:arg-types single-float)
+  (:results (r :scs (single-reg)))
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:guard (not (backend-featurep :sparc-v9)))
+  (:note "inline ftruncate")
+  (:generator 2
+    (inst fstoi r x)
+    (inst fitos r r)))
+
+(define-vop (fast-unary-ftruncate/double-float)
+  (:args (x :scs (double-reg) :target r))
+  (:arg-types double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:guard (not (backend-featurep :sparc-v9)))
+  (:note "inline ftruncate")
+  (:generator 2
+    (inst fdtoi r x)
+    (inst fitod r r)))
+
+;; The V9 architecture can convert 64-bit integers.
+(define-vop (v9-fast-unary-ftruncate/single-float)
+  (:args (x :scs (single-reg)))
+  (:arg-types single-float)
+  (:results (r :scs (single-reg)))
+  (:result-types single-float)
+  (:temporary (:scs (double-reg)) temp)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:guard (backend-featurep :sparc-v9))
+  (:note "inline ftruncate")
+  (:generator 2
+    (inst fstox temp x)
+    (inst fxtos r temp)))
+
+(define-vop (v9-fast-unary-ftruncate/double-float)
+  (:args (x :scs (double-reg) :target r))
+  (:arg-types double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:translate c::fast-unary-ftruncate)
+  (:guard (backend-featurep :sparc-v9))
+  (:note "inline ftruncate")
+  (:generator 2
+    (inst fdtox r x)
+    (inst fxtod r r)))
 
 #+sun4
 (deftransform %unary-round ((x) (float) (signed-byte 32))
@@ -1956,7 +2010,7 @@
 		    (done (gen-label)))
 		(,@fabs ratio yr)
 		(,@fabs den yi)
-		(inst ,fcmp ratio den)
+		(inst ,fcmp den ratio)
 		(unless (backend-featurep :sparc-v9)
 		  (inst nop))
 		(inst fb :ge bigger)
@@ -2031,7 +2085,7 @@
 		    (done (gen-label)))
 		(,@fabs ratio yr)
 		(,@fabs den yi)
-		(inst ,fcmp ratio den)
+		(inst ,fcmp den ratio)
 		(unless (backend-featurep :sparc-v9)
 		  (inst nop))
 		(inst fb :ge bigger)
@@ -2121,7 +2175,6 @@
 	    (:translate /)
 	    (:temporary (:sc ,real-reg) ratio)
 	    (:temporary (:sc ,real-reg) den)
-	    (:temporary (:sc ,real-reg) temp)
 	    (:generator ,cost
 	      (let ((yr (,real-tn y))
 		    (yi (,imag-tn y))
@@ -2131,7 +2184,7 @@
 		    (done (gen-label)))
 		(,@fabs ratio yr)
 		(,@fabs den yi)
-		(inst ,fcmp ratio den)
+		(inst ,fcmp den ratio)
 		(unless (backend-featurep :sparc-v9)
 		  (inst nop))
 		(inst fb :ge bigger)
@@ -2141,10 +2194,10 @@
 		(inst ,fmul den ratio yi)
 		(inst ,fadd den den yr) ; den = yr + (yi/yr)*yi
 
-		(inst ,fmul temp ratio x) ; temp = (yi/yr)*x
+		(inst ,fmul ri ratio x) ; ri = (yi/yr)*x
 		(inst ,fdiv rr x den)	; rr = x/den
 		(inst b done)
-		(inst ,fdiv temp temp den) ; temp = (yi/yr)*x/den
+		(inst ,fdiv ri ri den) ; ri = (yi/yr)*x/den
 
 		(emit-label bigger)
 		;; The case of |yi| > |yr|
@@ -2152,12 +2205,12 @@
 		(inst ,fmul den ratio yr)
 		(inst ,fadd den den yi) ; den = yi + (yr/yi)*yr
 
-		(inst ,fmul temp ratio x) ; temp = (yr/yi)*x
-		(inst ,fdiv rr temp den) ; rr = (yr/yi)*x/den
-		(inst ,fdiv temp x den) ; temp = x/den
+		(inst ,fmul ri ratio x) ; ri = (yr/yi)*x
+		(inst ,fdiv rr ri den) ; rr = (yr/yi)*x/den
+		(inst ,fdiv ri x den) ; ri = x/den
 		(emit-label done)
 
-		(,@fneg ri temp)))))))
+		(,@fneg ri ri)))))))
 
   (frob single fcmps fadds fmuls fdivs (inst fnegs) (inst fabss) 10)
   (frob double fcmpd faddd fmuld fdivd (negate-double-reg) (abs-double-reg) 10))
@@ -2359,7 +2412,7 @@
 		(inst ,fcmp xi yi)
 		(inst cmove (if not-p :eq :ne) true null-tn :fcc0)
 		(inst cmp true null-tn)
-		(inst b (if not-p :eq :ne) target :icc :pt)
+		(inst b (if not-p :eq :ne) target :pt)
 		(inst nop)))))))
   (frob single fcmps)
   (frob double fcmpd))
@@ -2369,22 +2422,9 @@
 #+sparc-v9
 (progn
 
-#+nil
-(macrolet
-    ((frob (op type)
-       (let ((name (symbolicate op "-" type)))
-       `(progn
-	 (defknown ,name (,type ,type)
-	   ,type
-	   (movable foldable flushable))
-	 (defun ,name (x y)
-	   (declare (,type x y))
-	   (,name x y))))))
-  (frob %max single-float)
-  (frob %max double-float)
-  (frob %min double-float)
-  (frob %min single-float))
-
+;; Vops to take advantage of the conditional move instruction
+;; available on the Sparc V9
+  
 (defknown (%%max %%min) ((or (unsigned-byte #.vm:word-bits)
 			     (signed-byte #.vm:word-bits)
 			     single-float double-float)
@@ -2396,52 +2436,19 @@
       single-float double-float)
   (movable foldable flushable))
 
-#+nil
-(defun %%max (x y)
-  (declare (type (or (unsigned-byte #.vm:word-bits)
-		     (signed-byte #.vm:word-bits)
-		     single-float double-float) x y))
-  (cond ((and (typep x '(signed-byte #.vm:word-bits))
-	      (typep y '(signed-byte #.vm:word-bits)))
-	 (%%max x y))
-	((and (typep x '(unsigned-byte #.vm:word-bits))
-	      (typep y '(unsigned-byte #.vm:word-bits)))
-	 (%%max x y))
-	((and (typep x 'double-float)
-	      (typep y 'double-float))
-	 (%%max x y))
-	((and (typep x 'single-float)
-	      (typep y 'single-float))
-	 (%%max x y))
-	(t
-	 (max x y))))
-
-#+nil
+;; We need these definitions for byte-compiled code
 (defun %%min (x y)
   (declare (type (or (unsigned-byte 32) (signed-byte 32)
 		     single-float double-float) x y))
-  (%%min x y))
+  (if (< x y)
+      x y))
 
-#+nil
-(defun %%min (x y)
-  (declare (type (or (unsigned-byte #.vm:word-bits)
-		     (signed-byte #.vm:word-bits)
+(defun %%max (x y)
+  (declare (type (or (unsigned-byte 32) (signed-byte 32)
 		     single-float double-float) x y))
-  (cond ((and (typep x '(signed-byte #.vm:word-bits))
-	      (typep y '(signed-byte #.vm:word-bits)))
-	 (%%min x y))
-	((and (typep x '(unsigned-byte #.vm:word-bits))
-	      (typep y '(unsigned-byte #.vm:word-bits)))
-	 (%%min x y))
-	((and (typep x 'double-float)
-	      (typep y 'double-float))
-	 (%%min x y))
-	((and (typep x 'single-float)
-	      (typep y 'single-float))
-	 (%%min x y))
-	(t
-	 (min x y))))
-
+  (if (> x y)
+      x y))
+  
 (macrolet
     ((frob (name sc-type type compare cmov cost cc max min note)
        (let ((vop-name (symbolicate name "-" type "=>" type))
@@ -2537,11 +2544,8 @@
 )
 
 (in-package "C")
-;;#+(and sparc-v9 fast-maxmin)
 #+sparc-v9
 (progn
-
-(in-package "C")
 ;;; The sparc-v9 architecture has conditional move instructions that
 ;;; can be used.  This should be faster than using the obvious if
 ;;; expression since we don't have to do branches.
@@ -2580,41 +2584,6 @@
 	  (t
 	   (make-canonical-union-type (list (continuation-type x)
 					    (continuation-type y)))))))
-
-#+nil
-(macrolet
-    ((frob (name vop)
-       `(deftransform ,name ((x y) (number number) * :when :both)
-	  (let ((x-type (continuation-type x))
-		(y-type (continuation-type y))
-		(signed (specifier-type '(signed-byte #.vm:word-bits)))
-		(unsigned (specifier-type '(unsigned-byte #.vm:word-bits)))
-		(d-float (specifier-type 'double-float))
-		(s-float (specifier-type 'single-float)))
-	    ;; Use %%max if both args are good types of the same type.  As a
-	    ;; last resort, use the obvious comparison to select the desired
-	    ;; element.
-	    (cond ((and (csubtypep x-type signed)
-			(csubtypep y-type signed))
-		   `(,',vop x y))
-		  ((and (csubtypep x-type unsigned)
-			(csubtypep y-type unsigned))
-		   `(,',vop x y))
-		  ((and (csubtypep x-type d-float)
-			(csubtypep y-type d-float))
-		   `(,',vop x y))
-		  ((and (csubtypep x-type s-float)
-			(csubtypep y-type s-float))
-		   `(,',vop x y))
-		  (t
-		   (let ((arg1 (gensym))
-			 (arg2 (gensym)))
-		     `(let ((,arg1 x)
-			    (,arg2 y))
-		       (if (> ,arg1 ,arg2)
-			   ,arg1 ,arg2)))))))))
-  (frob max sparc::%%max)
-  (frob min sparc::%%min))
 
 (deftransform max ((x y) (number number) * :when :both)
   (let ((x-type (continuation-type x))

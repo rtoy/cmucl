@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.21.2.2 2000/05/23 16:36:31 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.21.2.3 2002/03/23 18:50:01 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,8 +27,8 @@
 
 ;;;; DYNAMIC-USAGE and friends.
 
-(proclaim '(special *read-only-space-free-pointer*
-		    *static-space-free-pointer*))
+(declaim (special *read-only-space-free-pointer*
+		  *static-space-free-pointer*))
 
 (eval-when (compile eval)
   (defmacro c-var-frob (lisp-fun c-var-name)
@@ -148,7 +148,7 @@
 (defun get-bytes-consed ()
   "Returns the number of bytes consed since the first time this function
   was called.  The first time it is called, it returns zero."
-  (declare (optimize (speed 3) (safety 0)))
+  (declare (optimize (speed 3) (safety 0)(inhibit-warnings 3)))
   (cond ((null *last-bytes-in-use*)
 	 (setq *last-bytes-in-use* (dynamic-usage))
 	 (setq *total-bytes-consed* 0))

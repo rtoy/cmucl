@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.26.2.3 2000/07/07 11:04:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.26.2.4 2002/03/23 18:50:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,7 @@
   "Action taken by the Burp function when a possible compiler bug is detected.
   One of :Warn, :Error or :None.")
 
-(proclaim '(type (member :warn :error :none) *burp-action*))
+(declaim (type (member :warn :error :none) *burp-action*))
 
 ;;; Burp  --  Interface
 ;;;
@@ -971,11 +971,11 @@
 ;;;
 (macrolet ((frob (counter vto vfrom fto ffrom)
 	     `(progn
-		(defvar ,vto)
-		(defvar ,vfrom)
-		(proclaim '(hash-table ,vto ,vfrom))
+		(defvar ,vto (make-hash-table :test #'eq))
+		(defvar ,vfrom (make-hash-table :test #'eql))
+		(declaim (hash-table ,vto ,vfrom))
 		(defvar ,counter 0)
-		(proclaim '(fixnum ,counter))
+		(declaim (fixnum ,counter))
 		
 		(defun ,fto (x)
 		  (or (gethash x ,vto)

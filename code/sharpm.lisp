@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.14.2.2 2000/05/23 16:36:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.14.2.3 2002/03/23 18:50:11 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 
 ;;; declared in READ.LISP
 
-(proclaim '(special *read-suppress* std-lisp-readtable *bq-vector-flag*))
+(declaim (special *read-suppress* std-lisp-readtable *bq-vector-flag*))
 
 (defun ignore-numarg (sub-char numarg)
   (when numarg

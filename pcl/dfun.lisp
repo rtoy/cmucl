@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.7.2.2 2000/05/23 16:38:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.7.2.3 2002/03/23 18:51:17 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -37,7 +37,7 @@ This implementation of method lookup was redone in early August of 89.
 
 It has the following properties:
 
- - It's modularity makes it easy to modify the actual caching algorithm.
+ - Its modularity makes it easy to modify the actual caching algorithm.
    The caching algorithm is almost completely separated into the files
    cache.lisp and dlap.lisp.  This file just contains the various uses
    of it. There will be more tuning as we get more results from Luis'
@@ -1026,23 +1026,19 @@ And so, we are saved.
 ;;;               in the object argument.
 ;;;
 (defun cache-miss-values (gf args state)
-  (if (null (if (early-gf-p gf)
-		(early-gf-methods gf)
-		(generic-function-methods gf)))
-      (apply #'no-applicable-method gf args)
-      (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
-	  (get-generic-function-info gf)
-	(declare (ignore nreq applyp nkeys))
-	(with-dfun-wrappers (args metatypes)
-	  (dfun-wrappers invalid-wrapper-p wrappers classes types)
-	  (error "The function ~S requires at least ~D arguments"
-		 gf (length metatypes))
-	  (multiple-value-bind (emf methods accessor-type index)
-	      (cache-miss-values-internal gf arg-info wrappers classes types state)
-	    (values emf methods
-		    dfun-wrappers
-		    invalid-wrapper-p
-		    accessor-type index))))))
+  (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
+      (get-generic-function-info gf)
+    (declare (ignore nreq applyp nkeys))
+    (with-dfun-wrappers (args metatypes)
+      (dfun-wrappers invalid-wrapper-p wrappers classes types)
+      (error "The function ~S requires at least ~D arguments"
+	     gf (length metatypes))
+      (multiple-value-bind (emf methods accessor-type index)
+	  (cache-miss-values-internal gf arg-info wrappers classes types state)
+	(values emf methods
+		dfun-wrappers
+		invalid-wrapper-p
+		accessor-type index)))))
 
 (defun cache-miss-values-internal (gf arg-info wrappers classes types state)
   (let* ((for-accessor-p (eq state 'accessor))
@@ -1542,14 +1538,9 @@ And so, we are saved.
 		      (generic-function-name generic-function)))
 	 (ocache (gf-dfun-cache generic-function)))
     (set-dfun generic-function dfun cache info)
-    (let* ((dfun (if early-p
-		     (or dfun (make-initial-dfun generic-function))
-		     (compute-discriminating-function generic-function)))
-	   (info (gf-dfun-info generic-function)))
-      (unless (eq 'default-method-only (type-of info))
-	(setq dfun (doctor-dfun-for-the-debugger 
-		    generic-function
-		    dfun)))
+    (let ((dfun (if early-p
+		    (or dfun (make-initial-dfun generic-function))
+		    (compute-discriminating-function generic-function))))
       (set-funcallable-instance-function generic-function dfun)
       (set-function-name generic-function gf-name)
       (when (and ocache (not (eq ocache cache))) (free-cache ocache))

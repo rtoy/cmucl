@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/line.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/line.lisp,v 1.3.2.1 2002/03/23 18:50:46 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,7 @@
 
 ;;;; The line object:
 
-(proclaim '(inline %make-line))
+(declaim (inline %make-line))
 (defstruct (line (:print-function %print-hline)
 		 (:constructor %make-line)
 		 (:predicate linep))
@@ -122,7 +122,7 @@
 ;;;
 ;;;    We can just return the Line-%Chars.
 ;;;
-(proclaim '(inline line-signature))
+(declaim (inline line-signature))
 (defun line-signature (line)
   "This function returns an object which serves as a signature for a line's
   contents.  It is guaranteed that any modification of text on the line will

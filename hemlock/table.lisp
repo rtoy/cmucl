@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.3.2.1 2002/03/23 18:50:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,7 +237,7 @@
 
 (defvar *string-buffer-size* 128)
 (defvar *string-buffer* (make-string *string-buffer-size*))
-(proclaim '(simple-string *string-buffer*))
+(declaim (simple-string *string-buffer*))
 
 (defvar *separator-positions* nil)
 
@@ -528,7 +528,7 @@
 
 (defvar *complete-string-buffer-size* 128)
 (defvar *complete-string-buffer* (make-string *complete-string-buffer-size*))
-(proclaim '(simple-string *complete-string-buffer*))
+(declaim (simple-string *complete-string-buffer*))
 
 (defun complete-string (string tables)
   "Attempts to complete the string String against the string tables in the

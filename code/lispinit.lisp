@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.5 2000/10/16 17:33:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.6 2002/03/23 18:50:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,6 +84,7 @@
 ;;; Determine if key-list is a valid list of keyword/value pairs.  Do not
 ;;; signal the error directly, 'cause we don't know how it should be signaled.
 ;;; 
+
 (defun verify-keywords (key-list valid-keys allow-other-keys)
   (do ((already-processed nil)
        (unknown-keyword nil)
@@ -98,6 +99,7 @@
 	   (return (values :dotted-list key-list)))
 	  ((null (cdr remaining))
 	   (return (values :odd-length key-list)))
+	  #+nil ;; Not ANSI compliant to disallow duplicate keywords.
 	  ((member (car remaining) already-processed)
 	   (return (values :duplicate (car remaining))))
 	  ((or (eq (car remaining) :allow-other-keys)
@@ -257,8 +259,8 @@
 ;;; %End-Of-The-World.  We quit this way so that all outstanding cleanup forms
 ;;; in Unwind-Protects will get executed.
 
-(proclaim '(special *lisp-initialization-functions*
-		    *load-time-values*))
+(declaim (special *lisp-initialization-functions*
+		  *load-time-values*))
 
 (eval-when (compile)
   (defmacro print-and-call (name)
@@ -431,6 +433,9 @@
 
 ;;;; Miscellaneous external functions:
 
+(defvar *cleanup-functions* nil
+  "Functions to be invoked during cleanup at Lisp exit.")
+
 ;;; Quit gets us out, one way or another.
 
 (defun quit (&optional recklessly-p)
@@ -438,7 +443,9 @@
   non-Nil."
   (if recklessly-p
       (unix:unix-exit 0)
-      (throw '%end-of-the-world 0)))
+      (progn
+        (mapc (lambda (fn) (ignore-errors (funcall fn))) *cleanup-functions*)
+        (throw '%end-of-the-world 0))))
 
 
 #-mp ; Multi-processing version defined in multi-proc.lisp.
@@ -453,8 +460,8 @@
   (multiple-value-bind (sec usec)
     (if (integerp n)
 	(values n 0)
-	(multiple-value-bind (sec frac)(truncate n)
-	  (values sec(truncate frac 1e-6))))
+	(multiple-value-bind (sec frac) (truncate n)
+	  (values sec (truncate frac 1e-6))))
     (unix:unix-select 0 0 0 0 sec usec))
   nil)
 
@@ -536,7 +543,10 @@
   "Evaluate FORM, returning whatever it returns but adjust ***, **, *, +++, ++,
   +, ///, //, /, and -."
   (setf - form)
-  (let ((results (multiple-value-list (eval form))))
+  (let ((results (multiple-value-list
+		  (if (and (fboundp 'commandp)(funcall 'commandp form))
+		      (funcall 'invoke-command-interactive form)
+		      (eval form)))))
     (finish-standard-output-streams)
     (setf /// //
 	  // /

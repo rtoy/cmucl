@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.36.2.4 2000/05/23 16:36:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.36.2.5 2002/03/23 18:50:01 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,8 +248,9 @@
 
   Example:   (FORMAT NIL \"The answer is ~D.\" 10) => \"The answer is 10.\"
 
-  FORMAT has many additional capabilities not described here.  Consult the
-  manual for details."
+  FORMAT has many additional capabilities not described here.  Consult
+  Section 22.3 (Formatted Output) of the ANSI Common Lisp standard for
+  details."
   (etypecase destination
     (null
      (with-output-to-string (stream)
@@ -413,7 +414,7 @@
      (pprint-pop)
      (pop args)))
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
 
 ;;; NEXT-ARG -- internal.
 ;;;
@@ -602,10 +603,11 @@
     (write-string string stream))
   (dotimes (i minpad)
     (write-char padchar stream))
-  (do ((chars (+ (length string) minpad) (+ chars colinc)))
-      ((>= chars mincol))
-    (dotimes (i colinc)
-      (write-char padchar stream)))
+  (and mincol minpad colinc
+       (do ((chars (+ (length string) minpad) (+ chars colinc)))
+	   ((>= chars mincol))
+	 (dotimes (i colinc)
+	   (write-char padchar stream))))
   (when padleft
     (write-string string stream)))
 
@@ -1285,7 +1287,7 @@
 			     (lisp::flonum-to-string number nil d nil)
 	  (declare (ignore ig2 ig3))
 	  (when colon (write-string signstr stream))
-	  (dotimes (i (- w signlen (- n pointplace) strlen))
+	  (dotimes (i (- w signlen (max 0 (- n pointplace)) strlen))
 	    (write-char pad stream))
 	  (unless colon (write-string signstr stream))
 	  (dotimes (i (- n pointplace)) (write-char #\0 stream))
@@ -2387,17 +2389,19 @@
 				  ;; expansion.
 				  (subseq foo (1+ slash) (1- end)))))
 	   (first-colon (position #\: name))
-	   (last-colon (if first-colon (position #\: name :from-end t)))
-	   (package-name (if last-colon
+	   (second-colon (if first-colon (position #\: name :start (1+ first-colon))))
+	   (package-name (if first-colon
 			     (subseq name 0 first-colon)
-			     "USER"))
+			     "COMMON-LISP-USER"))
 	   (package (find-package package-name)))
       (unless package
 	(error 'format-error
-	       :complaint "No package named ``~A''."
+	       :complaint "No package named ~S"
 	       :arguments (list package-name)))
-      (intern (if first-colon
-		  (subseq name (1+ first-colon))
-		  name)
-	      package))))
-
+      (intern (cond
+                ((and second-colon (= second-colon (1+ first-colon)))
+                 (subseq name (1+ second-colon)))
+                (first-colon
+                 (subseq name (1+ first-colon)))
+                (t name))
+              package))))

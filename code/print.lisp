@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66.2.4 2000/05/23 16:36:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66.2.5 2002/03/23 18:50:08 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,25 +252,40 @@
 	   (*print-array* nil))
        (format stream "~S cannot be printed readably." obj)))))
 
+;;; Guts of print-unreadable-object.
+;;;
+;;; When *print-pretty* and the stream is a pretty-stream, format the object
+;;; within a logical block - pprint-logical-block does not rebind the stream
+;;; when it is already a pretty stream so output from the body will go to the
+;;; same stream.
+;;;
 (defun %print-unreadable-object (object stream type identity body)
   (when *print-readably*
     (error 'print-not-readable :object object))
-  (write-string "#<" stream)
-  (when type
-    (write (type-of object) :stream stream :circle nil
-	   :level nil :length nil)
-    (when (or body identity)
-      (write-char #\space stream)))
-  (when body
-    (funcall body))
-  (when identity
-    (when body
-      (write-char #\space stream))
-    (write-char #\{ stream)
-    (write (get-lisp-obj-address object) :stream stream
-	   :radix nil :base 16)
-    (write-char #\} stream))
-  (write-char #\> stream)
+  (flet ((print-description ()
+	   (when type
+	     (write (type-of object) :stream stream :circle nil
+		    :level nil :length nil)
+	     (when (or body identity)
+	       (write-char #\space stream)
+	       (pprint-newline :fill stream)))
+	   (when body
+	     (funcall body))
+	   (when identity
+	     (when body
+	       (write-char #\space stream)
+	       (pprint-newline :fill stream))
+	     (write-char #\{ stream)
+	     (write (get-lisp-obj-address object) :stream stream
+		    :radix nil :base 16)
+	     (write-char #\} stream))))
+    (cond ((and (pp:pretty-stream-p stream) *print-pretty*)
+	   (pprint-logical-block (stream nil :prefix "#<" :suffix ">")
+	     (print-description)))
+	  (t
+	   (write-string "#<" stream)
+	   (print-description)
+	   (write-char #\> stream))))
   nil)
 
 
@@ -512,8 +527,6 @@
 	(output-integer object stream))
        (float
 	(output-float object stream))
-       (ratio
-	(output-ratio object stream))
        (ratio
 	(output-ratio object stream))
        (complex
@@ -1012,15 +1025,20 @@
 (defun output-vector (vector stream)
   (declare (vector vector))
   (cond ((stringp vector)
-	 (if (or *print-escape* *print-readably*)
-	     (quote-string vector stream)
-	     (write-string vector stream)))
+	 (cond ((or *print-escape* *print-readably*)
+		(write-char #\" stream)
+		(quote-string vector stream)
+		(write-char #\" stream))
+	       (t
+		(write-string vector stream))))
 	((not (or *print-array* *print-readably*))
 	 (output-terse-array vector stream))
 	((bit-vector-p vector)
 	 (write-string "#*" stream)
 	 (dotimes (i (length vector))
-	   (output-object (aref vector i) stream)))
+	   (ecase (aref vector i)
+	     (0 (write-char #\0 stream))
+	     (1 (write-char #\1 stream)))))
 	((and *print-readably*
 	      (not (eq (array-element-type vector) 't)))
 	 (output-array vector stream))
@@ -1045,14 +1063,12 @@
 	       ;; Probably should look at readtable, but just do this for now.
 	       `(or (char= ,char #\\)
 		    (char= ,char #\"))))
-    (write-char #\" stream)
     (with-array-data ((data string) (start) (end (length string)))
       (do ((index start (1+ index)))
 	  ((>= index end))
 	(let ((char (schar data index)))
 	  (when (frob char) (write-char #\\ stream))
-	  (write-char char stream))))
-    (write-char #\" stream)))
+	  (write-char char stream))))))
 
 (defun output-array (array stream)
   "Outputs the printed representation of any array in either the #< or #A
@@ -1111,6 +1127,39 @@
 ;;; Instance Printing.  If it's a structure, call the structure printer.
 ;;; Otherwise, call PCL if it's loaded.  If not, print unreadably.
 
+(defun output-instance (instance stream)
+  (let ((layout (typecase instance
+		  (instance (%instance-ref instance 0))
+		  (funcallable-instance
+		   (%funcallable-instance-layout instance)))))
+
+    (if (typep layout 'layout)
+	(let ((class (layout-class layout)))
+	  (cond
+	   ((typep class 'slot-class) ; has slot print-function
+	    (if (layout-invalid layout)
+		(print-unreadable-object
+		    (instance stream :identity t :type t)
+		  (write-string "Obsolete Instance" stream))
+		(cond (;; non-CLOS :print-function option
+		       (slot-class-print-function class)
+		       (funcall (slot-class-print-function class)
+				instance stream *current-level*))
+		      ;; When CLOS loaded, use PRINT-OBJECT.
+		      ((fboundp 'print-object)
+		       (print-object instance stream))
+		      (t
+		       (default-structure-print
+			   instance stream *current-level*)))))
+	   ((fboundp 'print-object)
+	    (print-object instance stream))
+	   (t
+	    (print-unreadable-object (instance stream :identity t)
+	      (write-string "Unprintable Instance" stream)))))
+	(print-unreadable-object (instance stream :identity t)
+	  (write-string "Unprintable Instance" stream)))))
+
+#+ORIGINAL
 (defun output-instance (instance stream)
   (let ((layout (typecase instance
 		  (instance (%instance-ref instance 0))
@@ -1598,6 +1647,7 @@
 ;;;
 ;;;    Functioned called by OUTPUT-OBJECT to handle floats.
 ;;;
+
 (defun output-float (x stream)
   (cond
    ((float-infinity-p x)
@@ -1615,10 +1665,34 @@
 	(write-string "0.0" stream)
 	(print-float-exponent x 0 stream))
        (t
-	(output-float-aux x stream (float 1/1000 x) (float 10000000 x))))))))
-;;;  
-(defun output-float-aux (x stream e-min e-max)
-  (if (and (>= x e-min) (< x e-max))
+	(output-float-aux x stream)))))))
+
+(defconstant output-float-free-format-min 1/1000
+  "Minimum magnitute that allows the float printer to use free format,
+   instead of exponential format.  See section 22.1.3.1.3: Printing Floats
+   in the ANSI CL standard.")
+(defconstant output-float-free-format-max 10000000
+  "Maximum magnitute that allows the float printer to use free format,
+   instead of exponential format.  See section 22.1.3.1.3: Printing Floats
+   in the ANSI CL standard.")
+
+(defmacro output-float-free-format-p (x)
+  "Returns true if x can be printed in free format, as per ANSI CL."
+  (loop with x-var = (gensym)
+	for type in '(short-float single-float double-float long-float)
+	collect
+	`(,type
+	  (and (>= ,x-var ,(coerce output-float-free-format-min type))
+	       (< ,x-var ,(coerce output-float-free-format-max type))))
+	into clauses
+	finally
+	(return
+	  `(let ((,x-var ,x))
+	     (etypecase ,x-var
+	       ,@clauses)))))
+
+(defun output-float-aux (x stream)
+  (if (output-float-free-format-p x)
       ;;free format
       (multiple-value-bind (str len lpoint tpoint)
 			   (flonum-to-string x)
@@ -1652,7 +1726,7 @@
       (let ((name (char-name char)))
 	(write-string "#\\" stream)
 	(if name
-	    (write-string name stream)
+	    (quote-string name stream)
 	    (write-char char stream)))
       (write-char char stream)))
 

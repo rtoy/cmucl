@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.8.2.3 2000/05/23 16:38:37 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.8.2.4 2002/03/23 18:51:13 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -66,7 +66,7 @@ int use_unix_socket=1;
 
 enum { Global, Normal, Local } socket_choice = Normal;
 
-#if defined BSD
+#if defined(BSD) || defined(linux)
 void bury_zombie ()
 {
   /* This is called to handle SIGCHLD. Wait3 lets BSD lay
@@ -250,7 +250,7 @@ main(int argc, char **argv)
   signal(SIGHUP, server_shutdown);
   signal(SIGINT, server_shutdown);
   signal(SIGQUIT, server_shutdown);
-#if defined BSD
+#if defined(BSD) || defined(linux)
   signal(SIGCHLD, bury_zombie);
 #elif defined(hpux) || defined(SVR4)
   signal(SIGCHLD, SIG_IGN);

@@ -26,14 +26,9 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.10.2.2 2000/05/23 16:39:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.10.2.3 2002/03/23 18:51:20 pw Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
-;;; Note that at this time CMUCL is not in compliance with ANSI
-;;; specified use of feature names :cltl2 :x3j13 :draft-ansi-cl or :ansi-cl
-;;; since all of them are in *features*. So I'm not going to try and be
-;;; clever with hacking around all the various ancient lisp quirks. 
-;;; This file is now CMUCL specific only.
 
 (defpackage "WALKER" (:use :common-lisp)
   (:export "DEFINE-WALKER-TEMPLATE"

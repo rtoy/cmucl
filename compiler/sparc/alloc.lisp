@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.11 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.11.2.1 2002/03/23 18:50:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,7 +159,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (pseudo-atomic (:extra (pad-data-block words))
-      (cond ((logbitp 2 lowtag)
+      (cond ((logbitp (1- lowtag-bits) lowtag)
 	     (inst or result alloc-tn lowtag))
 	    (t
 	     (inst andn result alloc-tn lowtag-mask)
@@ -181,7 +181,9 @@
     (inst add header header (+ (ash -2 type-bits) type))
     (inst and bytes (lognot lowtag-mask))
     (pseudo-atomic ()
-      (cond ((logbitp 2 lowtag)
+      ;; Need to be careful if the lowtag and the pseudo-atomic flag
+      ;; are not compatible.
+      (cond ((logbitp (1- lowtag-bits) lowtag)
 	     (inst or result alloc-tn lowtag))
 	    (t
 	     (inst andn result alloc-tn lowtag-mask)

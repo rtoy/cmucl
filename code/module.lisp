@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.4.2.1 1998/07/19 01:06:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.4.2.2 2002/03/23 18:50:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -58,8 +58,8 @@
 
 (defun provide (module-name)
   "Adds a new module name to *modules* indicating that it has been loaded.
-   Module-name may be either a case-sensitive string or a symbol; if it is
-   a symbol, its print name is downcased and used."
+   Module-name may be any valid string designator.  All comparisons are
+   done using string=, i.e. module names are case-sensitive."
   (pushnew (module-name-string module-name) *modules* :test #'string=)
   t)
 
@@ -69,32 +69,42 @@
    needs to be.  If pathname is not supplied, then a list of files are
    looked for that were registered by a EXT:DEFMODULE form.  If the module
    has not been defined, then a file will be loaded whose name is formed
-   by merging \"modules:\" and module-name (downcased if it is a symbol).
-   This merged name will be probed with both a .lisp and .fasl extensions,
-   calling LOAD
-   if it exists.  While loading any files, *load-verbose* is bound to
-   *require-verbose* which defaults to nil."
+   by merging \"modules:\" and the concatenation of module-name with the
+   suffix \"-LIBRARY\".  Note that both the module-name and the suffix are
+   each, separately, converted from :case :common to :case :local.  This
+   merged name will be probed with both a .lisp and .fasl extensions,
+   calling LOAD if it exists.  While loading any files, *load-verbose* is
+   bound to *require-verbose* which defaults to nil."
  (setf module-name (module-name-string module-name))
-  (unless (member module-name *modules* :test #'string=)
-    (if pathname
-        (unless (listp pathname) (setf pathname (list pathname)))
-        (let ((files (module-files module-name)))
-          (if files
-              (setf pathname files)
-              (setf pathname (list (merge-pathnames "modules:" module-name))))))    (let ((*load-verbose* *require-verbose*))
-      (dolist (ele pathname t)
-        (load ele)))))
+ (unless (member module-name *modules* :test #'string=)
+   (let ((files (or (when pathname
+		      (if (consp pathname) pathname (list pathname)))
+		    (module-files module-name)
+		    (list (module-default-pathname module-name))))
+	 (*load-verbose* *require-verbose*))
+     (dolist (file files t)
+       (load file)))))
 
 
 
 ;;;; Misc.
 
 (defun module-name-string (name)
-  (typecase name
-    (string name)
-    (symbol (string-downcase (symbol-name name)))
-    (t (error 'simple-type-error
-	      :datum name
-	      :expected-type '(or string symbol)
-	      :format-control "Module name must be a string or symbol -- ~S."
-              :format-arguments (list name)))))
+  "Coerce a string designator to a module name."
+  (string name))
+
+(defun module-default-pathname (module-name)
+  "Derive a default pathname to try to load for an undefined module
+named module-name.  The default pathname is constructed from the
+module-name by appending the suffix \"-LIBRARY\" to it, and merging
+with \"modules:\".  Note that both the module-name and the suffix are
+each, separately, converted from :case :common to :case :local."
+  (let* ((module-pathname (make-pathname :name module-name :case :common))
+         (library-pathname (make-pathname :name "-LIBRARY" :case :common)))
+    (merge-pathnames
+     "modules:"
+     (make-pathname :name
+		    (concatenate 'string
+				 (pathname-name module-pathname :case :local)
+				 (pathname-name library-pathname :case :local))
+                    :case :local))))

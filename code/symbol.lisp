@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.22.2.1 1998/06/23 11:22:33 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.22.2.2 2002/03/23 18:50:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,7 +198,7 @@
       (setf (symbol-function new-symbol) (symbol-function symbol))))
   new-symbol)
 
-(proclaim '(special *keyword-package*))
+(declaim (special *keyword-package*))
 
 (defun keywordp (object)
   "Returns true if Object is a symbol in the keyword package."

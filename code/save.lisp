@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.31.2.5 2000/11/04 17:06:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.31.2.6 2002/03/23 18:50:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,9 +91,8 @@
 
   (setf (search-list "library:")
 	(or (parse-unix-search-list :cmucllib)
-	    '(#+mach  "/usr/misc/.cmucl/lib/"
-	      #+linux "/usr/lib/cmucl/"
-	      #-(or mach linux) "/usr/local/lib/cmucl/lib/"))))
+	    '("/usr/local/lib/cmucl/lib/")))
+  (setf (search-list "modules:") (ext:unix-namestring "library:subsystems/")))
 
 
 
@@ -111,7 +110,8 @@
 				 (load-init-file t)
 				 (site-init "library:site-init")
 				 (print-herald t)
-				 (process-command-line t))
+				 (process-command-line t)
+				 (batch-mode nil))
   "Saves a CMU Common Lisp core image in the file of the specified name.  The
   following keywords are defined:
   
@@ -144,7 +144,17 @@
       library:site-init.  No error if this does not exist.
 
   :print-herald
-      If true (the default), print out the lisp system herald when starting."
+      If true (the default), print out the lisp system herald when starting.
+
+  :process-command-line
+      If true (the default), process command-line switches via the normal
+  mechanisms, otherwise ignore all switches (except those processed by the
+  C startup code).
+
+  :batch-mode
+      If nil (the default), then the presence of the -batch command-line
+  switch will invoke batch-mode processing.  If true, the produced core
+  will always be in batch-mode, regardless of any command-line switches."
 
   #+mp (mp::shutdown-multi-processing)
   (when (fboundp 'eval:flush-interpreted-function-cache)
@@ -156,6 +166,7 @@
 	      :environment-name environment-name)
       #-gencgc (gc) #+gencgc (gc :full t))
   (dolist (f *before-save-initializations*) (funcall f))
+  (setq ext:*batch-mode* (if batch-mode t nil))
   (labels
       ((%restart-lisp ()
 	 (with-simple-restart (abort "Skip remaining initializations.")
@@ -172,7 +183,9 @@
 				 :test #'(lambda (x y)
 					   (declare (simple-string x y))
 					   (string-equal x y)))))
-	       (when site-init
+	       (when (and site-init
+			  (not (and process-command-line
+				    (find-switch "nositeinit"))))
 		 (load site-init :if-does-not-exist nil :verbose nil))
 	       (when (and process-command-line (find-switch "edit"))
 		 (setf *editor-lisp-p* t))

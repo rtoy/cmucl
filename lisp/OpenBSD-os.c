@@ -13,7 +13,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.1 2001/12/06 19:15:44 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.1.2.1 2002/03/23 18:50:59 pw Exp $
  *
  */
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.7 2000/11/06 13:07:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.8 2002/03/23 18:50:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,7 +74,7 @@
 
 (defun internet-protocol (kind)
   (when (eq kind :data-gram) ; Sep-2000. Remove someday.
-    (warn "Internet protocol :DATA-GRAM is depreciated. Using :DATAGRAM")
+    (warn "Internet protocol :DATA-GRAM is deprecated. Using :DATAGRAM")
     (setq kind :datagram))
   (let ((entry (assoc kind *internet-protocols*)))
     (unless entry
@@ -94,7 +94,7 @@
 		     ,(* (- bytes 1 i) 8))
 	       ldbs))))))
 
-(proclaim '(inline htonl ntohl htons ntohs))
+(declaim (inline htonl ntohl htons ntohs))
 
 (defun htonl (x)
   (maybe-byte-swap x 4))
@@ -119,7 +119,7 @@
   (declare (type host-entry host))
   (car (host-entry-addr-list host)))
 
-#-FreeBSD
+#-BSD
 (def-alien-type unix-sockaddr
   (struct nil
     (family #-(or linux alpha) short #+(or linux alpha)  unsigned-short)
@@ -132,7 +132,7 @@ struct  sockaddr_un {
 };
 |#
 
-#+FreeBSD
+#+BSD
 (def-alien-type unix-sockaddr
     (struct nil
       (sun-len unsigned-char)
@@ -154,7 +154,7 @@ struct in_addr {
 };
 
 |#
-#+FreeBSD
+#+BSD
 (def-alien-type inet-sockaddr
     (struct nil
       (sin-len unsigned-char)
@@ -163,7 +163,7 @@ struct in_addr {
       (addr    unsigned-long)
       (zero    (array char 8))))
 
-#-FreeBSD
+#-BSD
 (def-alien-type inet-sockaddr
   (struct nil
     (family #-alpha short #+alpha unsigned-short)
@@ -191,6 +191,8 @@ struct in_addr {
 (defun lookup-host-entry (host)
   "Return a host-entry for the given host. The host may be an address
   string or an IP address in host order."
+  (declare (type (or host-entry string (unsigned-byte 32)) host)
+	   (optimize (inhibit-warnings 3)))
   (if (typep host 'host-entry)
       host
       (with-alien
@@ -265,30 +267,39 @@ struct in_addr {
 	(error "Error creating socket: ~A" (unix:get-unix-error-msg)))
       socket)))
 
-(defun connect-to-inet-socket (host port &optional (kind :stream))
+ (defun connect-to-inet-socket (host port &optional (kind :stream))
   "The host may be an address string or an IP address in host order."
-  (let ((socket (create-inet-socket kind))
-	(hostent (or (lookup-host-entry host)
-		     (error "Unknown host: ~S." host))))
+  (let* ((addr (if (stringp host)
+		   (host-entry-addr (or (lookup-host-entry host)
+					(error "Unknown host: ~S." host)))
+		   host))
+	 (socket (create-inet-socket kind)))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
-      (setf (slot sockaddr 'addr) (htonl (host-entry-addr hostent)))
+      (setf (slot sockaddr 'addr) (htonl addr))
       (when (minusp (unix:unix-connect socket
 				       (alien-sap sockaddr)
 				       (alien-size inet-sockaddr :bytes)))
 	(unix:unix-close socket)
 	(error "Error connecting socket to [~A:~A]: ~A"
-	       (host-entry-name hostent)
+	       (if (stringp host)
+		   host
+		   (let ((naddr (htonl addr)))
+		     (format nil "~D.~D.~D.~D"
+			     (ldb (byte 8 0) naddr)
+			     (ldb (byte 8 8) naddr)
+			     (ldb (byte 8 16) naddr)
+			     (ldb (byte 8 24) naddr))))
 	       port
 	       (unix:get-unix-error-msg)))
       socket)))
 
 ;;; Socket levels.
-(defconstant sol-socket #+linux 1 #+(or solaris freebsd) #xffff)
+(defconstant sol-socket #+linux 1 #+(or solaris bsd hpux irix) #xffff)
 
 ;;; Socket options.
-(defconstant so-reuseaddr #+linux 2 #+(or solaris freebsd) 4)
+(defconstant so-reuseaddr #+linux 2 #+(or solaris bsd hpux irix) 4)
 
 (defun get-socket-option (socket level optname)
   "Get an integer value socket option."
@@ -340,6 +351,7 @@ struct in_addr {
 
 (defun accept-tcp-connection (unconnected)
   (declare (fixnum unconnected))
+  #+MP (mp:process-wait-until-fd-usable unconnected :input)
   (with-alien ((sockaddr inet-sockaddr))
     (let ((connected (unix:unix-accept unconnected
 				       (alien-sap sockaddr)

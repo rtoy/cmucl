@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.4.2.3 2000/05/23 16:38:02 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.4.2.4 2002/03/23 18:50:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,7 +116,7 @@
 
 (define-vop (make-catch-block)
   (:args (tn)
-	 (tag :scs (descriptor-reg) :to (:result 1)))
+	 (tag :scs (descriptor-reg any-reg) :to (:result 1)))
   (:info entry-label)
   (:results (block :scs (any-reg)))
   (:temporary (:sc descriptor-reg) temp)

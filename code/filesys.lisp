@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.43.2.5 2000/08/24 14:24:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.43.2.6 2002/03/23 18:49:59 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,9 +38,9 @@
 ;;; search-list := [^:/]*:
 ;;; file := [^/]*
 ;;; type := "." [^/.]*
-;;; version := "." ([0-9]+ | "*")
+;;; version := ".*" | ".~" ([0-9]+ | "*") "~"
 ;;;
-;;; Note: this grammer is ambiguous.  The string foo.bar.5 can be parsed
+;;; Note: this grammer is ambiguous.  The string foo.bar.~5~ can be parsed
 ;;; as either just the file specified or as specifying the file, type, and
 ;;; version.  Therefore, we use the following rules when confronted with
 ;;; an ambiguous file.type.version string:
@@ -170,44 +170,67 @@
 	      (t
 	       (make-pattern (pattern)))))))
 
+;;; extract-name-type-and-version  --  Internal.
+;;;
 (defun extract-name-type-and-version (namestr start end)
   (declare (type simple-base-string namestr)
 	   (type index start end))
-  (let* ((last-dot (position #\. namestr :start (1+ start) :end end
-			     :from-end t))
-	 (second-to-last-dot (and last-dot
-				  (position #\. namestr :start (1+ start)
-					    :end last-dot :from-end t)))
-	 (version :newest))
-    ;; If there is a second-to-last dot, check to see if there is a valid
-    ;; version after the last dot.
-    (when second-to-last-dot
-      (cond ((and (= (+ last-dot 2) end)
-		  (char= (schar namestr (1+ last-dot)) #\*))
-	     (setf version :wild))
-	    ((and (< (1+ last-dot) end)
-		  (do ((index (1+ last-dot) (1+ index)))
-		      ((= index end) t)
-		    (unless (char<= #\0 (schar namestr index) #\9)
-		      (return nil))))
-	     (setf version
-		   (parse-integer namestr :start (1+ last-dot) :end end)))
-	    (t
-	     (setf second-to-last-dot nil))))
-    (cond (second-to-last-dot
-	   (values (maybe-make-pattern namestr start second-to-last-dot)
-		   (maybe-make-pattern namestr
-				       (1+ second-to-last-dot)
-				       last-dot)
-		   version))
-	  (last-dot
-	   (values (maybe-make-pattern namestr start last-dot)
-		   (maybe-make-pattern namestr (1+ last-dot) end)
-		   version))
-	  (t
-	   (values (maybe-make-pattern namestr start end)
-		   nil
-		   version)))))
+  (labels
+      ((explicit-version (namestr start end)
+	 (cond ((or (< (- end start) 5)
+		    (char/= (schar namestr (1- end)) #\~))
+		(values :newest end))
+	       ((and (char= (schar namestr (- end 2)) #\*)
+		     (char= (schar namestr (- end 3)) #\~)
+		     (char= (schar namestr (- end 4)) #\.))
+		(values :wild (- end 4)))
+	       (t
+		(do ((i (- end 2) (1- i)))
+		    ((< i (+ start 2)) (values :newest end))
+		  (let ((char (schar namestr i)))
+		    (when (eql char #\~)
+		      (return (if (char= (schar namestr (1- i)) #\.)
+				  (values (parse-integer namestr :start (1+ i)
+							 :end (1- end))
+					  (1- i))
+				  (values :newest end))))
+		    (unless (char<= #\0 char #\9)
+		      (return (values :newest end))))))))
+       (any-version (namestr start end)
+	 ;; process end of string looking for a version candidate.
+	 (multiple-value-bind (version where)
+	   (explicit-version namestr start end)
+	   (cond ((not (eq version :newest))
+		  (values version where))
+		 ((and (>= (- end 2) start)
+		       (char= (schar namestr (- end 1)) #\*)
+		       (char= (schar namestr (- end 2)) #\.)
+		       (find #\. namestr
+			     :start (min (1+ start) (- end 2))
+			     :end (- end 2)))
+		  (values :wild (- end 2)))
+		 (t (values version where)))))
+       (any-type (namestr start end)
+	 ;; Process end of string looking for a type. A leading "."
+	 ;; is part of the name.
+	 (let ((where (position #\. namestr
+				:start (min (1+ start) end)
+				:end end :from-end t)))
+	   (when where
+	     (values where end))))
+       (any-name (namestr start end)
+	 (declare (ignore namestr))
+	 (values start end)))
+    (multiple-value-bind
+	(version vstart)(any-version namestr start end)
+      (multiple-value-bind
+	  (tstart tend)(any-type namestr start vstart)
+	(multiple-value-bind
+	    (nstart nend)(any-name namestr start (or tstart vstart))
+	  (values
+	   (maybe-make-pattern namestr nstart nend)
+	   (and tstart (maybe-make-pattern namestr (1+ tstart) tend))
+	   version))))))
 
 ;;; Take a string and return a list of cons cells that mark the char
 ;;; separated subseq. The first value t if absolute directories location.
@@ -390,13 +413,14 @@
 (defun unparse-unix-directory (pathname)
   (declare (type pathname pathname))
   (unparse-unix-directory-list (%pathname-directory pathname)))
-  
+
 (defun unparse-unix-file (pathname)
   (declare (type pathname pathname))
   (collect ((strings))
     (let* ((name (%pathname-name pathname))
 	   (type (%pathname-type pathname))
 	   (type-supplied (not (or (null type) (eq type :unspecific))))
+	   (logical-p (logical-pathname-p pathname))
 	   (version (%pathname-version pathname))
 	   (version-supplied (not (or (null version) (eq version :newest)))))
       (when name
@@ -407,11 +431,10 @@
 	(strings ".")
 	(strings (unparse-unix-piece type)))
       (when version-supplied
-	(unless type-supplied
-	  (error "Cannot specify the version without a type: ~S" pathname))
 	(strings (if (eq version :wild)
-		     ".*"
-		     (format nil ".~D" version)))))
+		     (if logical-p ".*" ".~*~")
+		     (format nil (if logical-p ".~D" ".~~~D~~")
+			     version)))))
     (and (strings) (apply #'concatenate 'simple-string (strings)))))
 
 (defun unparse-unix-namestring (pathname)
@@ -469,9 +492,9 @@
 	(when version-needed
 	  (typecase pathname-version
 	    ((member :wild)
-	     (strings ".*"))
+	     (strings ".~*~"))
 	    (integer
-	     (strings (format nil ".~D" pathname-version)))
+	     (strings (format nil ".~~~D~~" pathname-version)))
 	    (t
 	     (lose)))))
       (apply #'concatenate 'simple-string (strings)))))
@@ -514,9 +537,6 @@
   (when (pathname-type pathname)
     (unless (pathname-name pathname)
       (error "Cannot supply a type without a name:~%  ~S" pathname)))
-  (when (and (integerp (pathname-version pathname))
-	     (member (pathname-type pathname) '(nil :unspecific)))
-    (error "Cannot supply a version without a type:~%  ~S" pathname))
   (let ((directory (pathname-directory pathname)))
     (if directory
 	(ecase (car directory)
@@ -654,8 +674,9 @@
 	     (unless (or (null type) (eq type :unspecific))
 	       (setf file (concatenate 'string file "." type)))
 	     (unless (member version '(nil :newest :wild))
-	       (setf file (concatenate 'string file "."
-				       (quick-integer-to-string version))))
+	       (setf file (concatenate 'string file ".~"
+				       (quick-integer-to-string version)
+				       "~")))
 	     (when (or (not verify-existance)
 		       (unix:unix-file-kind file t))
 	       (funcall function file)))))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.24.2.1 2000/10/23 16:07:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.24.2.2 2002/03/23 18:50:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;

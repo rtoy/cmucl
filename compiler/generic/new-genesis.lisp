@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23.2.3 2000/10/23 20:21:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23.2.4 2002/03/23 18:50:28 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -862,7 +862,8 @@
     (write-indexed fdefn vm:fdefn-raw-addr-slot
 		   (ecase type
 		     (#.vm:function-header-type
-		      (if (c:backend-featurep :sparc)
+		      (if (or (c:backend-featurep :sparc)
+			      (c:backend-featurep :ppc))
 			  defn
 			  (make-random-descriptor
 			   (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
@@ -1808,15 +1809,23 @@
   (let ((linux-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
 			  #.c:x86-fasl-file-implementation)
 		      (c:backend-featurep :linux)))
-	(freebsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+	(bsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
 			    #.c:x86-fasl-file-implementation)
-			(c:backend-featurep :freebsd))))
-    
+			(c:backend-featurep :bsd)))
+	(bsd-elf-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			    #.c:x86-fasl-file-implementation)
+			(c:backend-featurep :bsd)
+			(c:backend-featurep :elf)))
+	(freebsd4-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			    #.c:x86-fasl-file-implementation)
+			 (c:backend-featurep :freebsd4))))
     (cond
-     ((and freebsd-p (gethash (concatenate 'string "_" name)
-			      *cold-foreign-symbol-table* nil)))
-     ((and linux-p (gethash (concatenate 'string "PVE_stub_" name)
-			    *cold-foreign-symbol-table* nil)))
+     ((and bsd-p (not bsd-elf-p)
+	   (gethash (concatenate 'string "_" name)
+		    *cold-foreign-symbol-table* nil)))
+     ((and (or linux-p freebsd4-p)
+	   (gethash (concatenate 'string "PVE_stub_" name)
+		    *cold-foreign-symbol-table* nil)))
      ;; Non-linux case
      (#-irix
       (gethash name *cold-foreign-symbol-table* nil)
@@ -1839,6 +1848,7 @@
 ;; syscalls and Unix library things. Linux doesn't or maybe does
 ;; depending on things I don't know about yet? FreeBSD version 3
 ;; is ELF based and looks more like the other systems.
+;; For the moment we assume all non-elf BSDs are the same as non-elf FreeBSD.
 ;; Maybe these x86 hacks can be fixed when the non-elf's are obsoleted.
 
 (defun lookup-maybe-prefix-foreign-symbol (name)
@@ -1850,17 +1860,19 @@
 		    #.c:rt-afpa-fasl-file-implementation
 		    #.c:hppa-fasl-file-implementation
 		    #.c:alpha-fasl-file-implementation
-		    #.c:sgi-fasl-file-implementation)
+		    #.c:sgi-fasl-file-implementation
+		    #.c:ppc-fasl-file-implementation)
 		   "")
 		  (#.c:sparc-fasl-file-implementation
 		   (if (c:backend-featurep :svr4)
 		       ""
 		       "_"))
 		  (#.c:x86-fasl-file-implementation
-		   (if (and (c:backend-featurep :freebsd)
-			    (not (c:backend-featurep :elf)))
-		       "_" ; older FreeBSD
-		       "")) ; Linux and FreeBSD V3+
+		   (if (and (c:backend-featurep :bsd)
+			    (not (c:backend-featurep :elf))
+			    (not (c:backend-featurep :netbsd)))
+		       "_" ; older FreeBSD, OpenBSD
+		       "")) ; Linux and ELF FreeBSD V3+, NetBSD
 		  )
 		name)))
 
@@ -2077,7 +2089,20 @@
 	 (:addi
 	  (setf (sap-ref-16 sap 2)
 		(maybe-byte-swap-short
-		 (ldb (byte 16 0) value))))))))
+		 (ldb (byte 16 0) value))))))
+      (#.c:ppc-fasl-file-implementation
+       (ecase kind
+	 (:ba
+ 	  (setf (sap-ref-32 sap 0)
+ 		(dpb (ash value -2) (byte 24 2) (sap-ref-32 sap 0))))
+ 	 (:ha
+ 	  (let* ((h (ldb (byte 16 16) value))
+ 		 (l (ldb (byte 16 0) value)))
+ 	    (setf (sap-ref-16 sap 2)
+ 		  (if (logbitp 15 l) (ldb (byte 16 0) (1+ h)) h))))
+ 	 (:l
+  	  (setf (sap-ref-16 sap 2)
+  		(ldb (byte 16 0) value)))))))
   (undefined-value))
 
 (defun linkage-info-to-core ()

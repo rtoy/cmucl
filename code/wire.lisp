@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.11 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.11.2.1 2002/03/23 18:50:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -471,7 +471,7 @@ signed (defaults to T)."
 
 ;;; WRITE-STUFF -- internal
 ;;;
-;;;   Slightly better interface to unix:unix-write. Choaks on errors.
+;;;   Slightly better interface to unix:unix-write. Chokes on errors.
 
 (defmacro write-stuff (fd string-form &optional end)
   (let ((string (gensym))

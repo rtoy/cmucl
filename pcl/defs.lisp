@@ -1,4 +1,4 @@
-;;;-*-Mode:LISP; Package:(PCL LISP 1000); Base:10; Syntax:Common-lisp -*-
+;;;-*-Mode:LISP; Package:PCL  -*-
 ;;;
 ;;; *************************************************************************
 ;;; Copyright (c) 1985, 1986, 1987, 1988, 1989, 1990 Xerox Corporation.
@@ -76,49 +76,49 @@
   (c::note-name-defined name :function)
   new-definition)
 
-(proclaim '(special *the-class-t* 
-	            *the-class-vector* *the-class-symbol*
-                    *the-class-string* *the-class-sequence*
-                    *the-class-rational* *the-class-ratio*
-                    *the-class-number* *the-class-null* *the-class-list*
-                    *the-class-integer* *the-class-float* *the-class-cons*
-                    *the-class-complex* *the-class-character*
-                    *the-class-bit-vector* *the-class-array*
-		    *the-class-stream*
+(declaim (special *the-class-t* 
+		  *the-class-vector* *the-class-symbol*
+		  *the-class-string* *the-class-sequence*
+		  *the-class-rational* *the-class-ratio*
+		  *the-class-number* *the-class-null* *the-class-list*
+		  *the-class-integer* *the-class-float* *the-class-cons*
+		  *the-class-complex* *the-class-character*
+		  *the-class-bit-vector* *the-class-array*
+		  *the-class-stream*
 
-                    *the-class-slot-object*
-                    *the-class-structure-object*
-                    *the-class-std-object*
-                    *the-class-standard-object*
-                    *the-class-funcallable-standard-object*
-                    *the-class-class*
-                    *the-class-generic-function*
-                    *the-class-built-in-class*
-                    *the-class-slot-class*
-                    *the-class-structure-class*
-                    *the-class-std-class*
-                    *the-class-standard-class*
-                    *the-class-funcallable-standard-class*
-                    *the-class-method*
-                    *the-class-standard-method*
-	            *the-class-standard-reader-method*
-	            *the-class-standard-writer-method*
-	            *the-class-standard-boundp-method*
-                    *the-class-standard-generic-function*
-                    *the-class-standard-effective-slot-definition*
+		  *the-class-slot-object*
+		  *the-class-structure-object*
+		  *the-class-std-object*
+		  *the-class-standard-object*
+		  *the-class-funcallable-standard-object*
+		  *the-class-class*
+		  *the-class-generic-function*
+		  *the-class-built-in-class*
+		  *the-class-slot-class*
+		  *the-class-structure-class*
+		  *the-class-std-class*
+		  *the-class-standard-class*
+		  *the-class-funcallable-standard-class*
+		  *the-class-method*
+		  *the-class-standard-method*
+		  *the-class-standard-reader-method*
+		  *the-class-standard-writer-method*
+		  *the-class-standard-boundp-method*
+		  *the-class-standard-generic-function*
+		  *the-class-standard-effective-slot-definition*
+		  
+		  *the-eslotd-standard-class-slots*
+		  *the-eslotd-funcallable-standard-class-slots*))
 
-                    *the-eslotd-standard-class-slots*
-                    *the-eslotd-funcallable-standard-class-slots*))
-
-(proclaim '(special *the-wrapper-of-t*
-                    *the-wrapper-of-vector* *the-wrapper-of-symbol*
-                    *the-wrapper-of-string* *the-wrapper-of-sequence*
-                    *the-wrapper-of-rational* *the-wrapper-of-ratio*
-                    *the-wrapper-of-number* *the-wrapper-of-null*
-                    *the-wrapper-of-list* *the-wrapper-of-integer*
-                    *the-wrapper-of-float* *the-wrapper-of-cons*
-                    *the-wrapper-of-complex* *the-wrapper-of-character*
-                    *the-wrapper-of-bit-vector* *the-wrapper-of-array*))
+(declaim (special *the-wrapper-of-t*
+		  *the-wrapper-of-vector* *the-wrapper-of-symbol*
+		  *the-wrapper-of-string* *the-wrapper-of-sequence*
+		  *the-wrapper-of-rational* *the-wrapper-of-ratio*
+		  *the-wrapper-of-number* *the-wrapper-of-null*
+		  *the-wrapper-of-list* *the-wrapper-of-integer*
+		  *the-wrapper-of-float* *the-wrapper-of-cons*
+		  *the-wrapper-of-complex* *the-wrapper-of-character*
+		  *the-wrapper-of-bit-vector* *the-wrapper-of-array*))
 
 ;;;; Type specifier hackery:
 
@@ -192,7 +192,6 @@
   ;; skeleton class will be replaced at load-time with the correct object.
   ;; Earlier revisions (<= 1.17) of this function were essentially NOOPs.
   (declare (ignorable name))
-  #+nil ;; This is causing problems with native compile of defcombin.lisp
   (when (and (eq *boot-state* 'complete)
 	     (null (lisp:find-class name nil)))
     (setf (lisp:find-class name)

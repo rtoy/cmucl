@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/hunk-draw.lisp,v 1.6 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/hunk-draw.lisp,v 1.6.2.1 2002/03/23 18:50:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -332,7 +332,7 @@
 (defun frob-cursor (on)
   (if on (drop-cursor) (lift-cursor)))
 
-(proclaim '(special *default-border-pixmap* *highlight-border-pixmap*))
+(declaim (special *default-border-pixmap* *highlight-border-pixmap*))
 
 ;;; DROP-CURSOR and LIFT-CURSOR are separate functions from FROB-CURSOR
 ;;; because they are called a couple places (e.g., HUNK-EXPOSED-REGION

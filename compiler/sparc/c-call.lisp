@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.11.2.2 1998/07/12 21:51:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.11.2.3 2002/03/23 18:50:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,21 +49,36 @@
   (declare (ignore type))
   (int-arg state 'system-area-pointer 'sap-reg 'sap-stack))
 
-(def-alien-type-method (integer :result-tn) (type)
-  (if (alien-integer-type-signed type)
-      (my-make-wired-tn 'signed-byte-32 'signed-reg nl0-offset)
-      (my-make-wired-tn 'unsigned-byte-32 'unsigned-reg nl0-offset)))
-  
-(def-alien-type-method (system-area-pointer :result-tn) (type)
-  (declare (ignore type))
-  (my-make-wired-tn 'system-area-pointer 'sap-reg nl0-offset))
+(defstruct result-state
+  (num-results 0))
 
-(def-alien-type-method (double-float :result-tn) (type)
+(defun result-reg-offset (slot)
+  (ecase slot
+    (0 nl0-offset)
+    (1 nl1-offset)))
+
+(def-alien-type-method (integer :result-tn) (type state)
+  (let ((num-results (result-state-num-results state)))
+    (setf (result-state-num-results state) (1+ num-results))
+    (multiple-value-bind (ptype reg-sc)
+	(if (alien-integer-type-signed type)
+	    (values 'signed-byte-32 'signed-reg)
+	    (values 'unsigned-byte-32 'unsigned-reg))
+      (my-make-wired-tn ptype reg-sc (result-reg-offset num-results)))))
+  
+(def-alien-type-method (system-area-pointer :result-tn) (type state)
   (declare (ignore type))
+  (let ((num-results (result-state-num-results state)))
+    (setf (result-state-num-results state) (1+ num-results))
+    (my-make-wired-tn 'system-area-pointer 'sap-reg
+		      (result-reg-offset num-results))))
+
+(def-alien-type-method (double-float :result-tn) (type state)
+  (declare (ignore type state))
   (my-make-wired-tn 'double-float 'double-reg 0))
 
-(def-alien-type-method (single-float :result-tn) (type)
-  (declare (ignore type))
+(def-alien-type-method (single-float :result-tn) (type state)
+  (declare (ignore type state))
   (my-make-wired-tn 'single-float 'single-reg 0))
 
 #+long-float
@@ -71,11 +86,13 @@
   (declare (ignore type))
   (my-make-wired-tn 'long-float 'long-reg 0))
 
-(def-alien-type-method (values :result-tn) (type)
-  (mapcar #'(lambda (type)
-	      (invoke-alien-type-method :result-tn type))
-	  (alien-values-type-values type)))
-
+(def-alien-type-method (values :result-tn) (type state)
+  (let ((values (alien-values-type-values type)))
+    (when (> (length values) 2)
+      (error "Too many result values from c-call."))
+    (mapcar #'(lambda (type)
+		(invoke-alien-type-method :result-tn type state))
+	    values)))
 
 (def-vm-support-routine make-call-out-tns (type)
   (declare (type alien-function-type type))
@@ -88,7 +105,8 @@
 	      (arg-tns)
 	      (invoke-alien-type-method
 	       :result-tn
-	       (alien-function-type-result-type type))))))
+	       (alien-function-type-result-type type)
+	       (make-result-state))))))
 
 (deftransform %alien-funcall ((function type &rest args))
   (assert (c::constant-continuation-p type))
@@ -96,41 +114,79 @@
 	 (arg-types (alien-function-type-arg-types type))
 	 (result-type (alien-function-type-result-type type)))
     (assert (= (length arg-types) (length args)))
+    ;; We need to do something special for the following argument
+    ;; types: single-float, double-float, and 64-bit integers.  For
+    ;; results, we need something special for 64-bit integer results.
     (if (or (some #'alien-single-float-type-p arg-types)
 	    (some #'alien-double-float-type-p arg-types)
-	    #+long-float (some #'alien-long-float-type-p arg-types))
+	    (some #'(lambda (type)
+		      (and (alien-integer-type-p type)
+			   (> (alien::alien-integer-type-bits type) 32)))
+		  arg-types)
+	    #+long-float (some #'alien-long-float-type-p arg-types)
+	    (and (alien-integer-type-p result-type)
+		 (> (alien::alien-integer-type-bits result-type) 32)))
 	(collect ((new-args) (lambda-vars) (new-arg-types))
-	  (dolist (type arg-types)
-	    (let ((arg (gensym)))
-	      (lambda-vars arg)
-	      (cond ((alien-single-float-type-p type)
-		     (new-args `(single-float-bits ,arg))
-		     (new-arg-types (parse-alien-type '(signed 32))))
-		    ((alien-double-float-type-p type)
-		     (new-args `(double-float-high-bits ,arg))
-		     (new-args `(double-float-low-bits ,arg))
-		     (new-arg-types (parse-alien-type '(signed 32)))
-		     (new-arg-types (parse-alien-type '(unsigned 32))))
-		    #+long-float
-		    ((alien-long-float-type-p type)
-		     (new-args `(long-float-exp-bits ,arg))
-		     (new-args `(long-float-high-bits ,arg))
-		     (new-args `(long-float-mid-bits ,arg))
-		     (new-args `(long-float-low-bits ,arg))
-		     (new-arg-types (parse-alien-type '(signed 32)))
-		     (new-arg-types (parse-alien-type '(unsigned 32)))
-		     (new-arg-types (parse-alien-type '(unsigned 32)))
-		     (new-arg-types (parse-alien-type '(unsigned 32))))
-		    (t
-		     (new-args arg)
-		     (new-arg-types type)))))
-	  `(lambda (function type ,@(lambda-vars))
-	     (declare (ignore type))
-	     (%alien-funcall function
-			     ',(make-alien-function-type
-				:arg-types (new-arg-types)
-				:result-type result-type)
-			     ,@(new-args))))
+		 (dolist (type arg-types)
+		   (let ((arg (gensym)))
+		     (lambda-vars arg)
+		     (cond ((and (alien-integer-type-p type)
+				 (> (alien::alien-integer-type-bits type) 32))
+			    ;; 64-bit long long types are stored in
+			    ;; consecutive locations, most significant word
+			    ;; first (big-endian).
+			    (new-args `(ash ,arg -32))
+			    (new-args `(logand ,arg #xffffffff))
+			    (if (alien-integer-type-signed type)
+				(new-arg-types (parse-alien-type '(signed 32)))
+				(new-arg-types (parse-alien-type '(unsigned 32))))
+			    (new-arg-types (parse-alien-type '(unsigned 32))))
+			   ((alien-single-float-type-p type)
+			    (new-args `(single-float-bits ,arg))
+			    (new-arg-types (parse-alien-type '(signed 32))))
+			   ((alien-double-float-type-p type)
+			    (new-args `(double-float-high-bits ,arg))
+			    (new-args `(double-float-low-bits ,arg))
+			    (new-arg-types (parse-alien-type '(signed 32)))
+			    (new-arg-types (parse-alien-type '(unsigned 32))))
+			   #+long-float
+			   ((alien-long-float-type-p type)
+			    (new-args `(long-float-exp-bits ,arg))
+			    (new-args `(long-float-high-bits ,arg))
+			    (new-args `(long-float-mid-bits ,arg))
+			    (new-args `(long-float-low-bits ,arg))
+			    (new-arg-types (parse-alien-type '(signed 32)))
+			    (new-arg-types (parse-alien-type '(unsigned 32)))
+			    (new-arg-types (parse-alien-type '(unsigned 32)))
+			    (new-arg-types (parse-alien-type '(unsigned 32))))
+			   (t
+			    (new-args arg)
+			    (new-arg-types type)))))
+		 (cond ((and (alien-integer-type-p result-type)
+			     (> (alien::alien-integer-type-bits result-type) 32))
+			(let ((new-result-type
+			       (let ((alien::*values-type-okay* t))
+				 (parse-alien-type
+				  (if (alien-integer-type-signed result-type)
+				      '(values (signed 32) (unsigned 32))
+				      '(values (unsigned 32) (unsigned 32)))))))
+			  `(lambda (function type ,@(lambda-vars))
+			    (declare (ignore type))
+			    (multiple-value-bind (high low)
+				(%alien-funcall function
+						',(make-alien-function-type
+						   :arg-types (new-arg-types)
+						   :result-type new-result-type)
+						,@(new-args))
+			      (logior low (ash high 32))))))
+		       (t
+			`(lambda (function type ,@(lambda-vars))
+			  (declare (ignore type))
+			  (%alien-funcall function
+			   ',(make-alien-function-type
+			      :arg-types (new-arg-types)
+			      :result-type result-type)
+			   ,@(new-args))))))
 	(c::give-up))))
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.31.2.2 2000/08/10 10:56:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.31.2.3 2002/03/23 18:49:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -427,6 +427,11 @@
   (desc-doc x 'setf "Setf macro")
   (dolist (assoc (info random-documentation stuff x))
     (format t "~&Documentation on the ~(~A~):~%~A" (car assoc) (cdr assoc)))
+  ;;
+  ;; Print Class information
+  (when (find-class x nil)
+    (format t "~&It names a class ~A." (find-class x))
+    (describe (find-class x)))
   ;;
   ;; Print out properties, possibly ignoring implementation details.
   (do ((plist (symbol-plist X) (cddr plist)))

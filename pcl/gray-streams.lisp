@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.2.2.2 2000/06/06 10:05:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.2.2.3 2002/03/23 18:51:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,6 +188,10 @@
 (defmethod stream-clear-input ((stream fundamental-character-input-stream))
   nil)
 
+(defgeneric stream-read-sequence (stream seq &optional start end)
+  (:documentation
+   "Implements READ-SEQUENCE for the stream."))
+
 
 ;;; Character output streams.
 ;;;
@@ -319,6 +323,10 @@
 	  (stream-write-char stream #\Space)))
       T)))
 
+(defgeneric stream-write-sequence (stream seq &optional start end)
+  (:documentation
+   "Implements WRITE-SEQUENCE for the stream."))
+
 
 ;;; Binary streams.
 ;;;
@@ -412,3 +420,10 @@
 
 (defmethod stream-clear-input ((stream character-input-stream))
   (clear-input (character-input-stream-lisp-stream stream)))
+
+;; Announce ourselves to the world
+(pushnew :gray-streams *features*)
+
+(setf (getf ext:*herald-items* :gray-streams)
+      '("    Gray Streams Protocol Support"))
+

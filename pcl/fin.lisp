@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.10.2.1 2000/05/23 16:38:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.10.2.2 2002/03/23 18:51:18 pw Exp $")
 ;;;
 
   ;;   
@@ -127,7 +127,7 @@ explicitly marked saying who wrote it.
             `(error "Unknown funcallable-instance data: ~S." ',(cadr data))))
       `(position ,data funcallable-instance-data :test #'eq)))
 
-(proclaim '(notinline called-fin-without-function))
+(declaim (notinline called-fin-without-function))
 (defun called-fin-without-function (&rest args)
   (declare (ignore args))
   (error "Attempt to funcall a funcallable-instance without first~%~

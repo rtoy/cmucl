@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.64.2.2 2000/05/23 16:37:04 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.64.2.3 2002/03/23 18:50:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,7 +13,7 @@
 ;;;
 (in-package "C")
 
-(proclaim '(special compiler-version))
+(declaim (special compiler-version))
 
 ;;;; Fasl dumper state:
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.9 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.9.2.1 2002/03/23 18:50:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 ;;;
 (defvar *in-redisplay* nil)
 
-(proclaim '(special *window-list*))
+(declaim (special *window-list*))
 
 (eval-when (compile eval)
 

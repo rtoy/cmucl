@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.6 1995/12/14 18:11:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.6.2.1 2002/03/23 18:50:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.6 1995/12/14 18:11:28 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.6.2.1 2002/03/23 18:50:36 pw Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -155,7 +155,7 @@
   (:arg-types tagged-num)
   (:note "fixnum untagging")
   (:generator 1
-    (inst sra y x 2)))
+    (inst sra y x fixnum-tag-bits)))
 ;;;
 (define-move-vop move-to-word/fixnum :move
   (any-reg descriptor-reg) (signed-reg unsigned-reg))
@@ -180,9 +180,9 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (let ((done (gen-label)))
-      (inst andcc temp x 3)
+      (inst andcc temp x fixnum-tag-mask)
       (inst b :eq done)
-      (inst sra y x 2)
+      (inst sra y x fixnum-tag-bits)
       
       (loadw y x bignum-digits-offset other-pointer-type)
       
@@ -202,7 +202,7 @@
   (:result-types tagged-num)
   (:note "fixnum tagging")
   (:generator 1
-    (inst sll y x 2)))
+    (inst sll y x fixnum-tag-bits)))
 ;;;
 (define-move-vop move-from-word/fixnum :move
   (signed-reg unsigned-reg) (any-reg descriptor-reg))
@@ -220,12 +220,12 @@
     (move x arg)
     (let ((fixnum (gen-label))
 	  (done (gen-label)))
-      (inst sra temp x 29)
+      (inst sra temp x positive-fixnum-bits)
       (inst cmp temp)
       (inst b :eq fixnum)
       (inst orncc temp zero-tn temp)
       (inst b :eq done)
-      (inst sll y x 2)
+      (inst sll y x fixnum-tag-bits)
       
       (with-fixed-allocation
 	(y temp bignum-type (1+ bignum-digits-offset))
@@ -234,7 +234,7 @@
       (inst nop)
       
       (emit-label fixnum)
-      (inst sll y x 2)
+      (inst sll y x fixnum-tag-bits)
       (emit-label done))))
 ;;;
 (define-move-vop move-from-signed :move
@@ -254,21 +254,23 @@
     (let ((done (gen-label))
 	  (one-word (gen-label))
 	  (initial-alloc (pad-data-block (1+ bignum-digits-offset))))
-      (inst sra temp x 29)
+      (inst sra temp x positive-fixnum-bits)
       (inst cmp temp)
       (inst b :eq done)
-      (inst sll y x 2)
-      
-      (pseudo-atomic (:extra initial-alloc)
-	(inst or y alloc-tn other-pointer-type)
+      (inst sll y x fixnum-tag-bits)
+
+      ;; We always allocate 2 words even if we don't need it.  (The
+      ;; copying GC will take care of freeing the unused extra word.)
+      (with-fixed-allocation
+	  (y temp bignum-type (+ 2 bignum-digits-offset))
 	(inst cmp x)
 	(inst b :ge one-word)
 	(inst li temp (logior (ash 1 type-bits) bignum-type))
-	(inst add alloc-tn
-	      (- (pad-data-block (+ bignum-digits-offset 2))
-		 (pad-data-block (+ bignum-digits-offset 1))))
 	(inst li temp (logior (ash 2 type-bits) bignum-type))
 	(emit-label one-word)
+	;; Set the header word, then the actual digit.  The extra
+	;; digit, if any, is automatically set to zero, so we don't
+	;; have to.
 	(storew temp y 0 other-pointer-type)
 	(storew x y bignum-digits-offset other-pointer-type))
       (emit-label done))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/search2.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/search2.lisp,v 1.3.2.1 2002/03/23 18:50:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,7 +98,7 @@
 ;;;
 ;;;    Modify the character-set Set to succeed for Character.
 ;;;
-(proclaim '(inline add-character-to-set))
+(declaim (inline add-character-to-set))
 (defun add-character-to-set (character set)
   (setf (aref (the (simple-array (mod 256)) set)
 	      (search-char-code character))

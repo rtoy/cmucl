@@ -1,6 +1,6 @@
 /* -*- Mode: C -*- */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/timer-support.c,v 1.2 1994/10/29 03:00:32 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/timer-support.c,v 1.2.2.1 2002/03/23 18:51:13 pw Exp $ */
 
 /* timer_support.c --
  * Extension to CMUCL Motif Interface. Adding missing call for
@@ -61,7 +61,7 @@ RawTimerHandler(XtPointer lisp_timer_id, XtIntervalId* timer) {
   message_add_packet(reply);
   message_put_dblword(reply, TIMEOUT_REPLY); /* This is new. */
   message_write_int(reply, (unsigned long) *lisp_timer_id);
-  message_write_int(reply, (unsgined long) *timer);
+  message_write_int(reply, (unsigned long) *timer);
   message_send(client_socket, reply);
   message_free(reply);
 

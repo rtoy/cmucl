@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.81.2.1 1998/06/23 11:25:45 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.81.2.2 2002/03/23 18:51:24 pw Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,6 +63,7 @@
 	#+hppa "c:hppa/"
 	#+x86 "c:x86/"
 	#+alpha "c:alpha/"
+	#+ppc "c:ppc/"
 	"c:generic/"))
 (setf (ext:search-list "assem:")
       '(#+(or pmax sgi) "target:assembly/mips/"
@@ -71,6 +72,7 @@
 	#+hppa "target:assembly/hppa/"
 	#+x86 "target:assembly/x86/"
 	#+alpha "target:assembly/alpha/"
+	#+ppc "target:assembly/ppc/"
 	"target:assembly/"))
 (setf (ext:search-list "hem:") '("target:hemlock/"))
 (setf (ext:search-list "clx:") '("target:clx/"))
@@ -165,8 +167,13 @@
 #-(or no-clm runtime)
 (maybe-byte-load "target:interface/clm-library")
 
-(defvar *target-sl*)
+#+no-compiler (proclaim '(special *target-sl*))
+#-no-compiler (defvar *target-sl*)
 (setq *target-sl* (search-list "target:"))
+
+#+no-compiler (proclaim '(special *target-core-name*))
+#-no-compiler (defvar *target-core-name*)
+(setq *target-core-name* (unix-namestring "target:lisp/lisp.core" nil))
 
 ;;; Don't include the search lists used for loading in the resultant core.
 ;;;
@@ -213,10 +220,20 @@
   ;;; Reset the counter of the number of native code fixups.
   #+x86 (setf x86::*num-fixups* 0)
 
+  ;; Maybe enable ANSI defstruct :print-function/:print-object processing
+  #-NO-PCL
+  (setq ext:*ansi-defstruct-options-p* t)
   ;;
   ;; Save the lisp.  If RUNTIME, there is nothing new to purify, so don't.
-  (save-lisp "lisp.core"
-	     :root-structures
-	     #-(or runtime no-hemlock) `(ed ,hi::*global-command-table*)
-	     #+(or runtime no-hemlock) ()
-	     :purify #+runtime nil #-runtime t))
+  ;; the following features are only used to control the build
+  ;; process, so we remove them from the generated image
+  (setq *features*
+	(nreverse
+	 (set-difference
+	  *features* 
+	  '(:runtime :no-compiler :no-pcl :no-clx :no-clm :no-hemlock))))
+  (save-lisp *target-core-name*
+             :root-structures
+             #-(or runtime no-hemlock) `(ed ,hi::*global-command-table*)
+             #+(or runtime no-hemlock) ()
+             :purify #+runtime nil #-runtime t))

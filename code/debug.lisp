@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.45.2.2 2000/05/23 16:36:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.45.2.3 2002/03/23 18:49:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 	  do-debug-command))
 
 (in-package "LISP")
-(export '(invoke-debugger *debugger-hook*))
+(export '(invoke-debugger *debugger-hook* step))
 
 (in-package "DEBUG")
 
@@ -436,7 +436,7 @@ See the CMU Common Lisp User's Manual for more information.
 
 
 
-;;; STEP -- Internal.
+;;; SET-STEP-BREAKPOINT -- Internal.
 ;;;
 ;;; Sets breakpoints at the next possible code-locations.  After calling
 ;;; this either (continue) if in the debugger or just let program flow
@@ -468,6 +468,42 @@ See the CMU Common Lisp User's Manual for more information.
 	  (push (create-breakpoint-info debug-function bp 0)
 		*step-breakpoints*))))))))
 
+;;; STEP-INTERNAL -- Internal.
+;;;
+(defun step-internal (function form)
+  (when (eval:interpreted-function-p function)
+    ;; The stepper currently only supports compiled functions So we
+    ;; try to compile the passed-in function, bailing out if it fails.
+    (handler-case
+	(setq function (compile nil function))
+      (error (c)
+	(error "Currently only compiled code can be stepped.~%~
+                Trying to compile the passed form resulted in ~
+                the following error:~%  ~A" c))))
+  (let ((*print-length* *debug-print-length*)
+	(*print-level* *debug-print-level*))
+    (format *debug-io* "~2&Stepping the form~%  ~S~%" form)
+    (format *debug-io* "~&using the debugger.  Type HELP for help.~2%"))
+  (let* ((debug-function (di:function-debug-function function))
+	 (bp (di:make-breakpoint #'main-hook-function debug-function
+				 :kind :function-start)))
+    (di:activate-breakpoint bp)
+    (push (create-breakpoint-info debug-function bp 0)
+	  *step-breakpoints*))
+  (funcall function))
+
+;;; STEP -- Public.
+;;;
+(defmacro step (form)
+  "STEP implements a debugging paradigm wherein the programmer is allowed
+   to step through the evaluation of a form.  We use the debugger's stepping
+   facility to step through an anonymous function containing only form.
+
+   Currently the stepping facility only supports stepping compiled code,
+   so step will try to compile the resultant anonymous function.  If this
+   fails, e.g. because it closes over a non-null lexical environment, an
+   error is signalled."
+  `(step-internal #'(lambda () ,form) ',form))
 
 
 ;;;; Backtrace:
@@ -623,6 +659,20 @@ See the CMU Common Lisp User's Manual for more information.
 	(di:debug-condition (ignore) ignore)
 	(error (cond) (format t "Error finding source: ~A" cond))))))
 
+;;; SAFE-CONDITION-MESSAGE  --  Internal
+;;;
+;;;    Safely print condition to a string, handling any errors during
+;;;    printing.
+;;;
+(defun safe-condition-message (condition)
+  (handler-case
+      (princ-to-string condition)
+    (error (cond)
+      ;; Beware of recursive errors in printing, so only use the condition
+      ;; if it is printable itself:
+      (format nil "Unable to display error condition~@[: ~A~]"
+	      (ignore-errors (princ-to-string cond))))))
+
 
 ;;;; Invoke-debugger.
 
@@ -637,6 +687,29 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 (defvar *debug-restarts*)
 (defvar *debug-condition*)
+
+;;; INVOKE-TTY-DEBUGGER  --  Internal
+;;;
+;;;    Print condition and invoke the TTY debugger.
+;;;
+(defun invoke-tty-debugger (condition)
+  (format *error-output* "~2&~A~2&"
+	  (safe-condition-message *debug-condition*))
+  (unless (typep condition 'step-condition)
+    (show-restarts *debug-restarts* *error-output*))
+  (internal-debug))
+
+;;; REAL-INVOKE-DEBUGGER  --  Internal
+;;;
+;;;    This function really invokes the current standard debugger.
+;;;    This is overwritten by e.g. the Motif Interface code.  It is a
+;;;    function and not a special variable hook, because users are
+;;;    supposed to use *debugger-hook*, and this is supposed to be the
+;;;    safe fall-back, which should be fairly secure against
+;;;    accidental mishaps.
+;;;
+(defun real-invoke-debugger (condition)
+  (invoke-tty-debugger condition))
 
 ;;; INVOKE-DEBUGGER -- Public.
 ;;;
@@ -656,10 +729,7 @@ See the CMU Common Lisp User's Manual for more information.
 	 (kernel:*current-level* 0)
 	 (*print-readably* nil)
 	 (*read-eval* t))
-    (format *error-output* "~2&~A~2&" *debug-condition*)
-    (unless (typep condition 'step-condition)
-      (show-restarts *debug-restarts* *error-output*))
-    (internal-debug)))
+    (real-invoke-debugger condition)))
 
 ;;; SHOW-RESTARTS -- Internal.
 ;;;
@@ -716,6 +786,31 @@ See the CMU Common Lisp User's Manual for more information.
   "When non-NIL, becomes the system *READTABLE* in the debugger
    read-eval-print loop")
 
+(defvar *debug-print-current-frame* t
+  "When non-NIL, print the current frame when entering the debugger.")
+
+(defun maybe-handle-dead-input-stream (condition)
+  ;; Scenario: "xon <remote-box> cmucl -edit"
+  ;; Then close the display with the window manager or shutdown the
+  ;; local computer. The remote lisp goes into infinite error loop.
+  (labels ((real-stream (stream)
+	     (etypecase stream
+	       (system:fd-stream
+		(values stream (system:fd-stream-fd stream)))
+	       (synonym-stream
+		(real-stream (symbol-value (synonym-stream-symbol stream))))
+	       (two-way-stream
+		(real-stream (two-way-stream-input-stream stream))))))
+
+    (when (typep condition 'stream-error)
+      (let* ((stream-with-error (stream-error-stream condition))
+	     (real-stream-with-error (real-stream stream-with-error))
+	     (real-debug-io  (real-stream *debug-io*)))
+	(when (and (eq real-stream-with-error real-debug-io)
+		   (not (unix:unix-isatty (system:fd-stream-fd real-debug-io))))
+	  ;; Probably running on a remote processor and lost the connection.
+	  (ext:quit))))))
+
 (defun debug-loop ()
   (let* ((*debug-command-level* (1+ *debug-command-level*))
 	 (*real-stack-top* (di:top-frame))
@@ -726,11 +821,13 @@ See the CMU Common Lisp User's Manual for more information.
     (handler-bind ((di:debug-condition #'(lambda (condition)
 					   (princ condition *debug-io*)
 					   (throw 'debug-loop-catcher nil))))
-      (fresh-line)
-      (print-frame-call *current-frame* :verbosity 2)
+      (when *debug-print-current-frame*
+        (fresh-line)
+        (print-frame-call *current-frame* :verbosity 2))
       (loop
 	(catch 'debug-loop-catcher
 	  (handler-bind ((error #'(lambda (condition)
+				    (maybe-handle-dead-input-stream condition)
 				    (when *flush-debug-errors*
 				      (clear-input *debug-io*)
 				      (princ condition)
@@ -775,9 +872,11 @@ See the CMU Common Lisp User's Manual for more information.
 (defun debug-eval-print (exp)
   (setq +++ ++ ++ + + - - exp)
   (let* ((values (multiple-value-list
-		  (if (and (fboundp 'compile) *auto-eval-in-frame*)
-		      (di:eval-in-frame *current-frame* -)
-		      (eval -))))
+		  (cond ((and (fboundp 'cl::commandp)(funcall 'cl::commandp exp))
+			 (funcall 'cl::invoke-command-interactive exp))
+			((and (fboundp 'compile) *auto-eval-in-frame*)
+			 (di:eval-in-frame *current-frame* -))
+			(t (eval -)))))
 	 (*standard-output* *debug-io*))
     (fresh-line)
     (if values (prin1 (car values)))
@@ -1039,19 +1138,19 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 ;;; Two commands are made for each restart: one for the number, and one for
 ;;; the restart name (unless it's been shadowed by an earlier restart of the
-;;; same name.
+;;; same name, or it is nil).
 ;;;
 (defun make-restart-commands (&optional (restarts *debug-restarts*))
   (let ((commands)
 	(num 0))			; better be the same as show-restarts!
     (dolist (restart restarts)
       (let ((name (string (restart-name restart))))
-	(unless (find name commands :key #'car :test #'string=)
-	  (let ((restart-fun
-		 #'(lambda ()
-		     (invoke-restart-interactively restart))))
-	    (push (cons name restart-fun) commands)
-	    (push (cons (format nil "~d" num) restart-fun) commands))))
+        (let ((restart-fun
+	       #'(lambda () (invoke-restart-interactively restart))))
+	  (push (cons (format nil "~d" num) restart-fun) commands)
+	  (unless (or (null (restart-name restart)) 
+	              (find name commands :key #'car :test #'string=))
+	    (push (cons name restart-fun) commands))))
       (incf num))
     commands))
 
@@ -1194,7 +1293,7 @@ See the CMU Common Lisp User's Manual for more information.
 (def-debug-command-alias "?" "HELP")
 
 (def-debug-command "ERROR" ()
-  (format t "~A~%" *debug-condition*)
+  (format t "~A~%" (safe-condition-message *debug-condition*))
   (show-restarts *debug-restarts*))
 
 (def-debug-command "BACKTRACE" ()

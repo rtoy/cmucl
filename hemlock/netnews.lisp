@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/netnews.lisp,v 1.14 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/netnews.lisp,v 1.14.2.1 2002/03/23 18:50:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -818,7 +818,7 @@
     (setf (nn-info-last-batch-p nn-info) last-batch-p)
     (setf (nn-info-from-end-p nn-info) nil)))
 
-(proclaim '(special *nn-last-command-issued*))
+(declaim (special *nn-last-command-issued*))
 
 (defun nn-send-many-head-requests (stream first last out-of-order-p)
   (do ((i first (1+ i)))

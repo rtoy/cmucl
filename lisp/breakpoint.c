@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.6.2.2 2000/05/23 16:38:13 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.6.2.3 2002/03/23 18:51:00 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -19,6 +19,9 @@
 #include "globals.h"
 #include "alloc.h"
 #include "breakpoint.h"
+#if defined GENCGC
+#include "gencgc.h"
+#endif
 
 #define REAL_LRA_SLOT 0
 #ifndef i386
@@ -34,7 +37,7 @@ static void *compute_pc(lispobj code_obj, int pc_offset)
     struct code *code;
 
     code = (struct code *)PTR(code_obj);
-    return (void *)((char *)code + HeaderValue(code->header)*sizeof(lispobj)
+    return (void *)((char *)code + HeaderValue(code->header) * sizeof(lispobj)
 		    + pc_offset);
 }
 
@@ -82,11 +85,12 @@ static lispobj find_code(struct sigcontext *scp)
 #ifdef i386
 static lispobj find_code(struct sigcontext *scp)
 {
-  lispobj codeptr = component_ptr_from_pc(SC_PC(scp));
+  lispobj *codeptr = component_ptr_from_pc(SC_PC(scp));
 
-  if (codeptr==NULL)
+  if (codeptr == NULL)
     return NIL;
-  return (codeptr+type_OtherPointer);
+  else
+    return (lispobj) codeptr | type_OtherPointer;
 }
 #endif
 
@@ -142,8 +146,11 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 
     code = find_code(scp);
 
-    /* Don't disallow recursive breakpoint traps.  Otherwise, we can't */
-    /* use debugger breakpoints anywhere in here. */
+    /*
+     * Don't disallow recursive breakpoint traps.  Otherwise, we can't
+     * use debugger breakpoints anywhere in here.
+     */
+
 #if defined POSIX_SIGS
     sigprocmask(SIG_SETMASK,&scp->sc_mask,NULL);
 #else
@@ -193,10 +200,13 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     fake_foreign_function_call(scp);
 
     code = find_code(scp);
-    codeptr = (struct code *)PTR(code);
+    codeptr = (struct code *) PTR(code);
 
-    /* Don't disallow recursive breakpoint traps.  Otherwise, we can't
-     * use debugger breakpoints anywhere in here. */
+    /*
+     * Don't disallow recursive breakpoint traps.  Otherwise, we can't
+     * use debugger breakpoints anywhere in here.
+     */
+
 #if defined POSIX_SIGS
     sigprocmask(SIG_SETMASK,&scp->sc_mask,NULL);
 #else
@@ -210,6 +220,6 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     undo_fake_foreign_function_call(scp);
 
     return compute_pc(codeptr->constants[REAL_LRA_SLOT],
-		      fixnum_value(codeptr->constants[REAL_LRA_SLOT+1]));
+		      fixnum_value(codeptr->constants[REAL_LRA_SLOT + 1]));
 }
 #endif

@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11.2.7 2000/10/24 17:46:15 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11.2.8 2002/03/23 18:51:04 pw Exp $
  *
  */
 
@@ -25,6 +25,7 @@
 #include "gc.h"
 #include "monitor.h"
 #include "validate.h"
+#include "interr.h"
 #if defined GENCGC
 #include "gencgc.h"
 #endif
@@ -84,7 +85,7 @@ static lispobj alloc_str_list(char *list[])
 
 /* And here be main. */
 
-void main(int argc, char *argv[], char *envp[])
+int main(int argc, char *argv[], char *envp[])
 {
     char *arg, **argptr;
     char *core = NULL, *default_core;
@@ -173,6 +174,10 @@ void main(int argc, char *argv[], char *envp[])
 		    break;
 		}
 	    } while (*lib++ == ':');
+
+	    if (core == NULL)
+                fprintf(stderr, "WARNING: Couldn't find core in specified CMUCLLIB, using default path.\n");
+
 	}
 	if (core == NULL) {
 	    /* Note: the /usr/misc/.cmucl/lib/ default path is also wired
@@ -180,11 +185,7 @@ void main(int argc, char *argv[], char *envp[])
 #ifdef MACH
 	    strcpy(buf, "/usr/misc/.cmucl/lib/");
 #else
-#ifdef __linux__
-	    strcpy(buf, "/usr/lib/cmucl/");
-#else
 	    strcpy(buf, "/usr/local/lib/cmucl/lib/");
-#endif
 #endif
 	    strcat(buf, default_core);
 	    core = buf;

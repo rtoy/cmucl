@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.22.2.1 1998/06/23 11:22:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.22.2.2 2002/03/23 18:50:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,6 +104,7 @@
 (defun process-status (proc)
   "Return the current status of process.  The result is one of :running,
    :stopped, :exited, :signaled."
+  (declare (type process proc))
   (get-processes-status-changes)
   (process-%status proc))
 
@@ -112,6 +113,7 @@
 ;;;
 (defun process-wait (proc &optional check-for-stopped)
   "Wait for PROC to quit running for some reason.  Returns PROC."
+  (declare (type process proc))
   (loop
     (case (process-status proc)
       (:running)
@@ -153,6 +155,7 @@
    whom is :process-group, use the killpg Unix system call.  If whom is
    :pty-process-group deliver the signal to whichever process group is currently
    in the foreground."
+  (declare (type process proc))
   (let ((pid (ecase whom
 	       ((:pid :process-group)
 		(process-pid proc))
@@ -191,6 +194,7 @@
 ;;; 
 (defun process-alive-p (proc)
   "Returns T if the process is still alive, NIL otherwise."
+  (declare (type process proc))
   (let ((status (process-status proc)))
     (if (or (eq status :running)
 	    (eq status :stopped))
@@ -203,6 +207,7 @@
 ;;; 
 (defun process-close (proc)
   "Close all streams connected to PROC and stop maintaining the status slot."
+  (declare (type process proc))
   (macrolet ((frob (stream abort)
 	       `(when ,stream (close ,stream :abort ,abort))))
     (frob (process-pty    proc)   t) ; Don't FLUSH-OUTPUT to dead process.

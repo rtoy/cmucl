@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.35.2.1 1998/06/23 11:25:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.35.2.2 2002/03/23 18:51:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,6 +55,13 @@
 	  "target:assembly/mips/array.assem"
 	  "target:assembly/mips/arith.assem"
 	  "target:assembly/mips/alloc.assem"))
+    ,@(when (c:backend-featurep :ppc)
+	'("target:assembly/ppc/assem-rtns.assem"
+	  "target:assembly/ppc/array.assem"
+	  "target:assembly/ppc/arith.assem"
+	  "target:assembly/ppc/alloc.assem"))
+    
+    
 
     "target:code/type-boot"
     "target:code/fdefinition"
@@ -126,7 +133,7 @@
 	'("target:code/osf1-os"))
     ,@(when (c:backend-featurep :irix)
 	'("target:code/irix-os"))
-    ,@(when (c:backend-featurep :FreeBSD)
+    ,@(when (c:backend-featurep :BSD)
 	'("target:code/bsd-os"))
     ,@(when (c:backend-featurep :Linux)
 	'("target:code/linux-os"))
@@ -155,6 +162,8 @@
 	'("target:code/alpha-vm"))
     ,@(when (c:backend-featurep :sgi)
 	'("target:code/sgi-vm"))
+    ,@(when (c:backend-featurep :ppc)
+	'("target:code/ppc-vm"))
 
     "target:code/signal"
     "target:code/interr"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.10.2.3 2000/09/26 15:16:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.10.2.4 2002/03/23 18:50:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,7 +252,7 @@
         (inst sra r x 31)
       (inst wry r)
       ;; Remove tag bits so Q and R will be tagged correctly.
-      (inst sra y-int y 2)
+      (inst sra y-int y fixnum-tag-bits)
       (inst nop)
       (inst nop)
 
@@ -282,7 +282,7 @@
   (:generator 12
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero)
+      (inst b :eq zero #+sparc-v9 :pn)
       ;; Extend the sign of X into the Y register
         (inst sra r x 31)
       (inst wry r)
@@ -316,7 +316,7 @@
   (:generator 8
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero)
+      (inst b :eq zero #+sparc-v9 :pn)
         (inst wry zero-tn)		; Clear out high part
       (inst nop)
       (inst nop)
@@ -346,7 +346,7 @@
   (:generator 8
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero)
+      (inst b :eq zero :pn)
       ;; Sign extend the numbers, just in case.
         (inst sra x 0)
       (inst sra y 0)
@@ -374,7 +374,7 @@
   (:generator 8
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero)
+      (inst b :eq zero :pn)
       ;; Zap the higher 32 bits, just in case
         (inst srl x 0)
       (inst srl y 0)
@@ -387,77 +387,129 @@
 
 ;;; Shifting
 
-(macrolet
-    ((frob (name sc-type type shift-right-inst)
-       `(define-vop (,name)
-	  (:note "inline ASH")
-	  (:args (number :scs (,sc-type) :to :save)
-		 (amount :scs (signed-reg immediate)))
-	  (:arg-types ,type signed-num)
-	  (:results (result :scs (,sc-type)))
-	  (:result-types ,type)
-	  (:translate ash)
-	  (:policy :fast-safe)
-	  (:temporary (:sc non-descriptor-reg) ndesc)
-	  (:generator 3
-	    (sc-case amount
-	      (signed-reg
-	       (cond ((backend-featurep :sparc-v9)
-		      (let ((done (gen-label))
-			    (positive (gen-label)))
-			(inst cmp amount)
-			(inst b :ge positive)
-			  (inst neg ndesc amount)
-			;; ndesc = max(-amount, 31)
-			(inst cmp ndesc 31)
-			(inst cmove :ge ndesc 31)
-			(inst b done)
-			  (inst ,shift-right-inst result number ndesc)
-			(emit-label positive)
-			;; The result-type assures us that this shift will not
-			;; overflow.
-			(inst sll result number amount)
-			;; We want a right shift of the appropriate size.
-			(emit-label done)))
-		     (t
-		      (let ((positive (gen-label))
-			    (done (gen-label)))
-			(inst cmp amount)
-			(inst b :ge positive)
-			(inst neg ndesc amount)
-			(inst cmp ndesc 31)
-			(inst b :le done)
-			(inst ,shift-right-inst result number ndesc)
-			(inst b done)
-			(inst ,shift-right-inst result number 31)
+(define-vop (fast-ash/signed=>signed)
+  (:note "inline (signed-byte 32) ASH")
+  (:args (number :scs (signed-reg) :to :save)
+	 (amount :scs (signed-reg immediate) :to :save))
+  (:arg-types signed-num signed-num)
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:generator 5
+    (sc-case amount
+      (signed-reg
+       (cond ((backend-featurep :sparc-v9)
+	      (let ((done (gen-label)))
+		(inst cmp amount)
+		(inst b :ge done)
+		;; The result-type assures us that this shift will not
+		;; overflow.
+		(inst sll result number amount)
+		(inst neg ndesc amount)
+		;; ndesc = max(-amount, 31)
+		(inst cmp ndesc 31)
+		(inst cmove :ge ndesc 31)
+		(inst sra result number ndesc)
+		(emit-label done)))
+	     (t
+	      (let ((done (gen-label)))
+		(inst cmp amount)
+		(inst b :ge done)
+		;; The result-type assures us that this shift will not overflow.
+		(inst sll result number amount)
 
-			(emit-label positive)
-			;; The result-type assures us that this shift will not overflow.
-			(inst sll result number amount)
+		;; Handle right shifts here.
+		(inst neg ndesc amount)
+		(inst cmp ndesc 31)
+		(inst b :le done)
+		(inst sra result number ndesc)
+		;; Right shift of greater than 31 bits is the same as a shift
+		;; of 31 bits for signed 32-bit numbers.
+		(inst sra result number 31)
 
-			(emit-label done)))))
+		(emit-label done)))))
 
-	      (immediate
-	       (let ((amount (tn-value amount)))
-		 (if (minusp amount)
-		     (let ((amount (min 31 (- amount))))
-		       (inst ,shift-right-inst result number amount))
-		     (inst sll result number amount)))))))))
-  (frob fast-ash/signed=>signed signed-reg signed-num sra)
-  (frob fast-ash/unsigned=>unsigned unsigned-reg unsigned-num srl))
+	(immediate
+	 (let ((amount (tn-value amount)))
+	   (cond ((< amount -31)
+		  (inst li result -1))
+		 ((< amount 0)
+		  (inst sra result number (- amount)))
+		 ((> amount 0)
+		  (inst sll result number amount))
+		 (t
+		  ;; amount = 0.  Shouldn't happen because of a
+		  ;; deftransform, but it's easy.
+		  (move result number))))))))
+
+(define-vop (fast-ash/unsigned=>unsigned)
+  (:note "inline (unsigned-byte 32) ASH")
+  (:args (number :scs (unsigned-reg) :to :save)
+	 (amount :scs (signed-reg immediate) :to :save))
+  (:arg-types unsigned-num signed-num)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:generator 5
+    (sc-case amount
+      (signed-reg
+       (cond ((backend-featurep :sparc-v9)
+	      (let ((done (gen-label)))
+		(inst cmp amount)
+		(inst b :ge done)
+		;; The result-type assures us that this shift will not
+		;; overflow.
+		(inst sll result number amount)
+		(inst neg ndesc amount)
+		;; A right shift of 32 or more results in zero.
+		(inst cmp ndesc 32)
+		(inst srl result number ndesc)
+		(inst cmove :ge result zero-tn)
+		(emit-label done)))
+	     (t
+	      (let ((done (gen-label)))
+		(inst cmp amount)
+		(inst b :ge done)
+		;; The result-type assures us that this shift will not
+		;; overflow.
+		(inst sll result number amount)
+		(inst neg ndesc amount)
+		(inst cmp ndesc 32)
+		(inst b :lt done)
+		(inst srl result number ndesc)
+		;; Right shift of 32 or more is the same as zero for unsigned
+		;; 32-bit numbers.
+		(move result zero-tn)
+
+		(emit-label done)))))
+
+      (immediate
+       (let ((amount (tn-value amount)))
+	 (cond ((< amount -31)
+		(move result zero-tn))
+	       ((< amount 0)
+		(inst srl result number (- amount)))
+	       ((> amount 0)
+		(inst sll result number amount))
+	       (t
+		;; amount = 0.  Shouldn't happen because of a
+		;; deftransform, but it's easy.
+		(move result number))))))))
 
 ;; Some special cases where we know we want a left shift.  Just do the
-;; shift, instead of checking for the sign of the shift.  The case for
-;; a known constant shift is handled very nicely by the fast-ash VOP
-;; above, so there's nothing here for us to add.
+;; shift, instead of checking for the sign of the shift.
 (macrolet
     ((frob (name sc-type type result-type cost)
        `(define-vop (,name)
 	 (:note "inline ASH")
 	 (:translate ash)
 	 (:args (number :scs (,sc-type))
-	        (amount :scs (unsigned-reg)))
-	 (:arg-types ,type unsigned-num)
+	        (amount :scs (signed-reg unsigned-reg immediate)))
+	 (:arg-types ,type positive-fixnum)
 	 (:results (result :scs (,result-type)))
 	 (:result-types ,type)
 	 (:policy :fast-safe)
@@ -465,10 +517,16 @@
 	  ;; The result-type assures us that this shift will not
 	  ;; overflow. And for fixnum's, the zero bits that get
 	  ;; shifted in are just fine for the fixnum tag.
-	  (inst sll result number amount)))))
-  (frob fast-ash-left/signed=>signed signed-reg signed-num signed-reg 2)
-  ;;(frob fast-ash-left/fixnum=>signed any-reg tagged-num signed-reg 1)
-  (frob fast-ash-left/unsigned=>unsigned unsigned-reg unsigned-num unsigned-reg 2))
+	  (sc-case amount
+	   ((signed-reg unsigned-reg)
+	    (inst sll result number amount))
+	   (immediate
+	    (let ((amount (tn-value amount)))
+	      (assert (>= amount 0))
+	      (inst sll result number amount))))))))
+  (frob fast-ash-left/signed=>signed signed-reg signed-num signed-reg 3)
+  (frob fast-ash-left/fixnum=>fixnum any-reg tagged-num any-reg 2)
+  (frob fast-ash-left/unsigned=>unsigned unsigned-reg unsigned-num unsigned-reg 3))
 
 (defknown ash-right-signed ((signed-byte #.vm:word-bits)
 			    (and fixnum unsigned-byte))
@@ -489,14 +547,14 @@
 	 (:note "inline right ASH")
 	 (:translate ,trans)
 	 (:args (number :scs (,sc-type))
-	        (amount :scs (unsigned-reg immediate)))
-	 (:arg-types ,type unsigned-num)
+	        (amount :scs (signed-reg unsigned-reg immediate)))
+	 (:arg-types ,type positive-fixnum)
 	 (:results (result :scs (,sc-type)))
 	 (:result-types ,type)
 	 (:policy :fast-safe)
 	 (:generator ,cost
 	    (sc-case amount
-	     (unsigned-reg
+	     ((signed-reg unsigned-reg)
 		(inst ,shift-inst result number amount))
 	     (immediate
 	      (let ((amt (tn-value amount)))
@@ -510,8 +568,8 @@
     (:note "inline right ASH")
   (:translate ash-right-signed)
   (:args (number :scs (any-reg))
-	 (amount :scs (unsigned-reg immediate)))
-  (:arg-types tagged-num unsigned-num)
+	 (amount :scs (signed-reg unsigned-reg immediate)))
+  (:arg-types tagged-num positive-fixnum)
   (:results (result :scs (any-reg)))
   (:result-types tagged-num)
   (:temporary (:sc non-descriptor-reg :target result) temp)
@@ -520,11 +578,11 @@
     ;; Shift the fixnum right by the desired amount.  Then zap out the
     ;; 2 LSBs to make it a fixnum again.  (Those bits are junk.)
     (sc-case amount
-      (unsigned-reg
+      ((signed-reg unsigned-reg)
        (inst sra temp number amount))
       (immediate
        (inst sra temp number (tn-value amount))))
-    (inst andn result temp 3)))
+    (inst andn result temp fixnum-tag-mask)))
     
 
 
@@ -594,7 +652,7 @@
     ;; */signed=>signed.  Why?  A fixnum product using signed=>signed
     ;; has to convert both args to signed-nums.  But using this, we
     ;; don't have to and that saves an instruction.
-    (inst sra temp y 2)
+    (inst sra temp y fixnum-tag-bits)
     (inst smul r x temp)))
 
 (define-vop (fast-v8-*/signed=>signed fast-signed-binop)
@@ -620,7 +678,7 @@
   (:translate *)
   (:guard (backend-featurep :sparc-64))
   (:generator 4
-    (inst sra temp y 2)
+    (inst sra temp y fixnum-tag-bits)
     (inst mulx r x temp)))
 
 (define-vop (fast-v9-*/signed=>signed fast-signed-binop)
@@ -1076,7 +1134,7 @@
   (:results (digit :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
-    (inst sra digit fixnum 2)))
+    (inst sra digit fixnum fixnum-tag-bits)))
 
 (define-vop (bignum-floor)
   (:translate bignum::%floor)
@@ -1166,7 +1224,7 @@
   (:generator 1
     (sc-case res
       (any-reg
-       (inst sll res digit 2))
+       (inst sll res digit fixnum-tag-bits))
       (signed-reg
        (move res digit)))))
 
@@ -1258,12 +1316,12 @@
 (defun ash-right-signed (num shift)
   (declare (type (signed-byte #.vm:word-bits) num)
 	   (type (integer 0 #.(1- vm:word-bits)) shift))
-  (sparc::ash-right-signed num shift))
+  (ash num (- shift)))
 
 (defun ash-right-unsigned (num shift)
   (declare (type (unsigned-byte #.vm:word-bits) num)
 	   (type (integer 0 #.(1- vm:word-bits)) shift))
-  (sparc::ash-right-unsigned num shift))
+  (ash num (- shift)))
 
 ;; If we can prove that we have a right shift, just do the right shift
 ;; instead of calling the inline ASH which has to check for the
@@ -1284,11 +1342,11 @@
     ;; s-expr and depend on other parts of the compiler to delete the
     ;; unreachable parts, if any?)
     (cond ((csubtypep num-type (specifier-type '(signed-byte #.vm:word-bits)))
+	   ;; A right shift by 31 is the same as a right shift by
+	   ;; larger amount.  We get just the sign.
 	   (if (csubtypep shift-type (specifier-type '(integer #.(- 1 vm:word-bits) 0)))
 	       `(sparc::ash-right-signed num (- shift))
-	       `(if (<= shift #.(- vm:word-bits))
-		 -1
-		 (sparc::ash-right-signed num (- shift)))))
+	       `(sparc::ash-right-signed num (min (- shift) #.(1- vm:word-bits)))))
 	  ((csubtypep num-type (specifier-type '(unsigned-byte #.vm:word-bits)))
 	   (if (csubtypep shift-type (specifier-type '(integer #.(- 1 vm:word-bits) 0)))
 	       `(sparc::ash-right-unsigned num (- shift))

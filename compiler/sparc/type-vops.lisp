@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.16.2.2 2000/05/23 16:37:48 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.16.2.3 2002/03/23 18:50:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -65,40 +65,12 @@
 
 ); eval-when (compile eval)
 
-(def-type-vops fixnump nil nil nil vm:even-fixnum-type vm:odd-fixnum-type)
-(define-vop (check-fixnum check-type)
-  (:ignore temp)
-  (:generator 1
-    (inst taddcctv result value zero-tn)))
-(primitive-type-vop check-fixnum (:check) fixnum)
-
+(def-type-vops fixnump check-fixnum fixnum object-not-fixnum-error
+	       vm:even-fixnum-type vm:odd-fixnum-type)
 
 (def-type-vops functionp check-function function
   object-not-function-error vm:function-pointer-type)
 
-;; The following encode the error type and register in the trap
-;; instruction, however this breaks on the later sparc Ultra.
-#+nil
-(progn
-(def-type-vops listp nil nil nil vm:list-pointer-type)
-(define-vop (check-list check-type)
-  (:generator 3
-    (inst and temp value lowtag-mask)
-    (inst cmp temp list-pointer-type)
-    (inst t :ne (logior (ash (tn-offset value) 8) object-not-list-trap))
-    (move result value)))
-(primitive-type-vop check-list (:check) list)
-
-(def-type-vops %instancep nil nil nil vm:instance-pointer-type)
-(define-vop (check-instance check-type)
-  (:generator 3
-    (inst and temp value lowtag-mask)
-    (inst cmp temp instance-pointer-type)
-    (inst t :ne (logior (ash (tn-offset value) 8) object-not-instance-trap))
-    (move result value)))
-(primitive-type-vop check-instance (:check) instance)
-)
-;; These avoid the trap instruction.
 (def-type-vops listp check-list list object-not-list-error
   vm:list-pointer-type)
 (def-type-vops %instancep check-instance instance object-not-instance-error
@@ -353,7 +325,7 @@
 	  (if not-p
 	      (values not-target target)
 	      (values target not-target))
-	(inst andcc zero-tn value #x3)
+	(inst andcc zero-tn value fixnum-tag-mask)
 	(inst b :eq yep)
 	(test-type value temp nope t vm:other-pointer-type)
 	(loadw temp value 0 vm:other-pointer-type)
@@ -367,7 +339,7 @@
   (:generator 45
     (let ((nope (generate-error-code vop object-not-signed-byte-32-error value))
 	  (yep (gen-label)))
-      (inst andcc temp value #x3)
+      (inst andcc temp value fixnum-tag-mask)
       (inst b :eq yep)
       (test-type value temp nope t vm:other-pointer-type)
       (loadw temp value 0 vm:other-pointer-type)
@@ -394,7 +366,7 @@
 	      (values not-target target)
 	      (values target not-target))
 	;; Is it a fixnum?
-	(inst andcc temp value #x3)
+	(inst andcc temp value fixnum-tag-mask)
 	(inst b :eq fixnum)
 	(inst cmp value)
 
@@ -438,7 +410,7 @@
 	  (fixnum (gen-label))
 	  (single-word (gen-label)))
       ;; Is it a fixnum?
-      (inst andcc temp value #x3)
+      (inst andcc temp value fixnum-tag-mask)
       (inst b :eq fixnum)
       (inst cmp value)
 

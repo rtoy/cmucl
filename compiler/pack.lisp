@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.55 1997/04/13 21:07:32 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.55.2.1 2002/03/23 18:50:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1275,7 +1275,7 @@
 ;;; has already been allocated, we can assume that the restriction is
 ;;; satisfied.
 ;;;
-(proclaim '(inline check-operand-restrictions))
+(declaim (inline check-operand-restrictions))
 (defun check-operand-restrictions (scs ops)
   (declare (list scs) (type (or tn-ref null) ops))
 

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.10 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.10.2.1 2002/03/23 18:50:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.10 1994/10/31 04:46:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.10.2.1 2002/03/23 18:50:35 pw Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -28,10 +28,34 @@
     `(unless (location= ,n-dst ,n-src)
        (inst move ,n-dst ,n-src))))
 
+;; (loadw object base &optional (offset 0) (lowtag 0) temp)
+;;
+;; Load a word at a given address into the register OBJECT. The
+;; address of the word is in register BASE, plus an offset given by
+;; OFFSET, which is in words.  LOWTAG is an adjustment to OFFSET to
+;; account for any tag bits used in the BASE descriptor register.
+;;
+;; In some situations, the offset may be so large that it cannot fit
+;; into the offset field of the LD instruction (a 13-bit signed
+;; quantity).  In this situation, the TEMP non-descriptor register, if
+;; supplied, is used to compute the correct offset.  If TEMP is not
+;; given, the offset is assumed to fit.  (TEMP must be a
+;; non-descriptor because we store random values into it.  If OBJECT
+;; were always a non-descriptor, we wouldn't need the TEMP register.)
+;;
+;; Samething for storew, except we store OBJECT at the given address.
 (macrolet
     ((frob (op inst shift)
-       `(defmacro ,op (object base &optional (offset 0) (lowtag 0))
-	  `(inst ,',inst ,object ,base (- (ash ,offset ,,shift) ,lowtag)))))
+     `(defmacro ,op (object base &optional (offset 0) (lowtag 0) temp)
+       (if temp
+	   (let ((offs (gensym)))
+	     `(let ((,offs (- (ash ,offset ,',shift) ,lowtag)))
+	       (if (typep ,offs '(signed-byte 13))
+		   (inst ,',inst ,object ,base ,offs)
+		   (progn
+		     (inst li ,temp ,offs)
+		     (inst ,',inst ,object ,base ,temp)))))
+	   `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
   (frob loadw ld word-shift)
   (frob storew st word-shift))
 
@@ -273,10 +297,12 @@
 		     (emit-label ,fall-through))))
 	       (gen-other-immediate-test temp target not-target not-p immed))))
      (when fixnump
-       `((inst andcc zero-tn ,reg 3)
+       `((inst andcc zero-tn ,reg fixnum-tag-mask)
 	 ,(if (or lowtags hdrs)
-	      `(inst b :eq ,(if not-p not-target target))
-	      `(inst b ,(if not-p :ne :eq) ,target))))
+	      `(inst b :eq ,(if not-p not-target target)
+		     #+sparc-v9 ,(if not-p :pn :pt))
+	      `(inst b ,(if not-p :ne :eq) ,target
+		       #+sparc-v9 ,(if not-p :pn :pt)))))
      (when (or lowtags hdrs)
        `((inst and ,temp ,reg lowtag-mask)))
      (when lowtags
@@ -291,7 +317,8 @@
 			   (1- lowtag-limit) lowtags)))
      (when hdrs
        `((inst cmp ,temp ,lowtag)
-	 (inst b :ne ,(if not-p target not-target))
+	 (inst b :ne ,(if not-p target not-target)
+	         #+sparc-v9 ,(if not-p :pn :pt))
 	 (inst nop)
 	 (load-type ,temp ,reg (- ,lowtag))
 	 ,@(gen-other-immediate-test temp target not-target not-p hdrs))))))
@@ -433,8 +460,17 @@
 (defmacro pseudo-atomic ((&key (extra 0)) &rest forms)
   (let ((n-extra (gensym)))
     `(let ((,n-extra ,extra))
+       ;; Set the pseudo-atomic flag
        (without-scheduling ()
 	 (inst add alloc-tn 4))
        ,@forms
+       ;; Reset the pseudo-atomic flag
        (without-scheduling ()
-	 (inst taddcctv alloc-tn (- ,n-extra 4))))))
+	 #+nil (inst taddcctv alloc-tn (- ,n-extra 4))
+	;; Remove the pseudo-atomic flag
+	(inst add alloc-tn (- ,n-extra 4))
+	;; Check to see if pseudo-atomic interrupted flag is set (bit 0 = 1)
+	(inst andcc zero-tn alloc-tn 3)
+	;; The C code needs to process this correctly and fixup alloc-tn.
+	(inst t :ne pseudo-atomic-trap)
+	))))

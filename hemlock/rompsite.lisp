@@ -5,12 +5,16 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.9.2.1 1998/06/23 11:24:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.9.2.2 2002/03/23 18:50:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; "Site dependent" stuff for the editor while on the IBM RT PC machine.
 ;;;
+
+;;; If we were compiled with CLX support, we require it at runtime
+#+clx
+(require :clx)
 
 ;;; Stuff to set up the packages Hemlock uses.
 ;;;
@@ -66,7 +70,7 @@
 ;;; *key-event-history* is defined in input.lisp, but it needs to be set in
 ;;; SITE-INIT, since MAKE-RING doesn't exist at load time for this file.
 ;;;
-(proclaim '(special *key-event-history*))
+(declaim (special *key-event-history*))
 
 ;;; SITE-INIT  --  Internal
 ;;;
@@ -219,15 +223,15 @@
 
 
 #+clx
-(proclaim '(special ed::*open-paren-highlight-font*
-		    ed::*active-region-highlight-font*))
+(declaim (special ed::*open-paren-highlight-font*
+		  ed::*active-region-highlight-font*))
 
 #+clx
 (defparameter lisp-fonts-pathnames '("library:fonts/"))
 
-(proclaim '(special *editor-input* *real-editor-input*))
+(declaim (special *editor-input* *real-editor-input*))
 
-(proclaim '(special *editor-input* *real-editor-input*))
+(declaim (special *editor-input* *real-editor-input*))
 
 ;;; INIT-RAW-IO  --  Internal
 ;;;
@@ -255,8 +259,8 @@
 ;;; Stop flaming from compiler due to CLX macros expanding into illegal
 ;;; declarations.
 ;;;
-(proclaim '(declaration values))
-(proclaim '(special *default-font-family*))
+(declaim (declaration values))
+(declaim (special *default-font-family*))
 
 ;;; font-map-size should be defined in font.lisp, but SETUP-FONT-FAMILY would
 ;;; assume it to be special, issuing a nasty warning.
@@ -332,7 +336,7 @@
   (when (variable-value 'ed::bell-style)
     (unix:unix-write 1 *editor-bell* 0 1)))
 
-(proclaim '(special *current-window*))
+(declaim (special *current-window*))
 
 ;;; BITMAP-BEEP is used in Hemlock for beeping when running under windowed
 ;;; input.
@@ -361,7 +365,7 @@
        ))))
 
 #+clx
-(proclaim '(special *foreground-background-xor*))
+(declaim (special *foreground-background-xor*))
 
 #+clx
 (defun flash-window-border (window)
@@ -488,7 +492,7 @@
 (defun standard-device-exit ()
   (reset-input))
 
-(proclaim '(special *echo-area-window*))
+(declaim (special *echo-area-window*))
 
 ;;; Maybe bury/unbury hemlock window when we go to and from Lisp.
 ;;; This should do something more sophisticated when we know what that is.
@@ -776,7 +780,7 @@
 ;;; 
 
 #+clx
-(proclaim '(special *default-foreground-pixel* *default-background-pixel*))
+(declaim (special *default-foreground-pixel* *default-background-pixel*))
 
 #+clx
 (defvar *hemlock-cursor* nil "Holds cursor for Hemlock windows.")
@@ -936,7 +940,7 @@
 #-glibc2
 (defvar old-ltchars)
 
-#+(or hpux irix freebsd glibc2)
+#+(or hpux irix bsd glibc2)
 (progn
   (defvar old-c-iflag)
   (defvar old-c-oflag)
@@ -947,7 +951,7 @@
 (defun setup-input ()
   (let ((fd *editor-file-descriptor*))
     (when (unix:unix-isatty 0)
-      #+(or hpux irix freebsd glibc2)
+      #+(or hpux irix bsd glibc2)
       (alien:with-alien ((tios (alien:struct unix:termios)))
 	(multiple-value-bind
 	    (val err)
@@ -977,8 +981,8 @@
 		      (lognot (logior unix:tty-icrnl unix:tty-ixon))))
 	(setf (alien:slot tios 'unix:c-oflag)
 	      (logand (alien:slot tios 'unix:c-oflag)
-		      (lognot #-freebsd unix:tty-ocrnl
-			      #+freebsd unix:tty-onlcr)))
+		      (lognot #-bsd unix:tty-ocrnl
+			      #+bsd unix:tty-onlcr)))
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp) #xff)
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:veof) #xff)
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)
@@ -995,7 +999,7 @@
 	  (when (null val)
 	    (error "Could not tcsetattr, unix error ~S."
 		   (unix:get-unix-error-msg err)))))
-      #-(or hpux irix freebsd glibc2)
+      #-(or hpux irix bsd glibc2)
       (alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	(multiple-value-bind
 	    (val err)
@@ -1006,7 +1010,7 @@
 	(let ((flags (alien:slot sg 'unix:sg-flags)))
 	  (setq old-flags flags)
 	  (setf (alien:slot sg 'unix:sg-flags)
-		(logand #-(or hpux irix freebsd glibc2) (logior flags unix:tty-cbreak)
+		(logand #-(or hpux irix bsd glibc2) (logior flags unix:tty-cbreak)
 			(lognot unix:tty-echo)
 			(lognot unix:tty-crmod)))
 	  (multiple-value-bind
@@ -1015,7 +1019,7 @@
 	    (if (null val)
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err))))))
-      #-(or hpux irix freebsd glibc2)
+      #-(or hpux irix bsd glibc2)
       (alien:with-alien ((tc (alien:struct unix:tchars)))
 	(multiple-value-bind
 	    (val err)
@@ -1076,7 +1080,7 @@
 (defun reset-input ()
   (when (unix:unix-isatty 0)
     (let ((fd *editor-file-descriptor*))
-      #+(or hpux irix freebsd glibc2)
+      #+(or hpux irix bsd glibc2)
       (when (boundp 'old-c-lflag)
 	(alien:with-alien ((tios (alien:struct unix:termios)))
 	  (multiple-value-bind
@@ -1113,7 +1117,7 @@
 	    (when (null val)
 	      (error "Could not tcsetattr, unix error ~S."
 		     (unix:get-unix-error-msg err))))))
-      #-(or hpux irix freebsd glibc2)
+      #-(or hpux irix bsd glibc2)
       (when (boundp 'old-flags)
 	(alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	  (multiple-value-bind
@@ -1129,7 +1133,7 @@
 	      (unless val
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err)))))))
-      #-(or hpux irix freebsd glibc2)
+      #-(or hpux irix bsd glibc2)
       (when (and (boundp 'old-tchars)
 		 (simple-vector-p old-tchars)
 		 (eq (length old-tchars) 6))

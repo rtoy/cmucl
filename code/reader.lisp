@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.22.2.2 2000/05/23 16:36:46 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.22.2.3 2002/03/23 18:50:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,7 +158,7 @@
 ;;; In case we get an error trying to parse a symbol, we want to rebind the
 ;;; above stuff so it's cool.
 
-(proclaim '(special *package* *keyword-package* *read-base*))
+(declaim (special *package* *keyword-package* *read-base*))
 
 
 
@@ -197,7 +197,7 @@
 
 ;;; Make this a function, since other people want to use it.
 ;;;
-(proclaim '(inline whitespacep))
+(declaim (inline whitespacep))
 (defun whitespacep (char &optional (rt *readtable*))
   (test-attribute char whitespace rt))
 
@@ -277,6 +277,8 @@
 	  (mapcar #'(lambda (pair) (cons (car pair)
 					 (copy-seq (cdr pair))))
 		  (dispatch-tables from-readtable)))
+    (setf (readtable-case to-readtable)
+	  (readtable-case from-readtable))
     to-readtable))
 
 (defun set-syntax-from-char (to-char from-char &optional
@@ -470,7 +472,7 @@
 ;;
 (defvar *sharp-equal-alist* ())
 
-(proclaim '(special *standard-input*))
+(declaim (special *standard-input*))
  
 ;;; READ-PRESERVING-WHITESPACE behaves just like read only it makes sure
 ;;; to leave terminating whitespace in the stream.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/initial.lisp,v 1.3.2.1 1998/06/23 11:25:12 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/initial.lisp,v 1.3.2.2 2002/03/23 18:51:11 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,8 @@
 (in-package  "USER")
 
 
+
+(require :clx)
 
 ;;;; Set up Lisp for the loading of the Motif toolkit
 

@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.3.2.3 2000/05/23 16:38:33 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.3.2.4 2002/03/23 18:51:10 pw Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -22,7 +22,7 @@
 #endif
 
 /* Minimize conditionalization for different OS naming schemes */
-#if defined (__linux__) || (__FreeBSD_version >= 300000)
+#if defined (__linux__) || (__FreeBSD_version >= 300000) || defined (__NetBSD__)
 #define GNAME(var) var
 #else
 #define GNAME(var) _##var
@@ -50,7 +50,7 @@
  * Return values are in eax and maybe edx for quads, or st(0) for
  * floats.
  *
- * It should work for lisp calls c calls lisp calls c ..
+ * It should work for lisp calls C calls lisp calls C ..
  */
 	.text
 	.align	align_16byte,0x90
@@ -122,6 +122,7 @@ Lfp_rtn_value:
 	.size	GNAME(call_into_c), . - GNAME(call_into_c)
 
 
+
 	.text	
 	.global GNAME(call_into_lisp)
 	.type  GNAME(call_into_lisp),@function
@@ -204,15 +205,15 @@ OnLispStack:
 	je	Ldone
 	movl	8(%ebx),%esi	# arg2
 Ldone:	
-	/* registers eax, ecx, edx,edi,esi now live */
+	/* Registers eax, ecx, edx,edi,esi now live */
 
-	/* alloc new frame */
+	/* Allocate new frame */
 	mov	%esp,%ebx	# current sp marks start of new frame
 	push	%ebp		# fp in save location S0
 	sub	$8,%esp		# Ensure 3 slots are allocated, one above.
 	mov	%ebx,%ebp	# switch to new frame
 
-	/* indirect the closure */
+	/* Indirect the closure */
 	call	*CLOSURE_FUNCTION_OFFSET(%eax)
 	
 	/* Multi-value return - blow off any extra values */
@@ -222,7 +223,7 @@ Ldone:
 /* Restore the stack, in case there was a stack change. */
 	popl	%esp		# c-sp
 
-/* restore C regs: ebx esi edi */
+/* Restore C regs: ebx esi edi */
 	popl	%edi
 	popl	%esi
 	popl	%ebx
@@ -256,6 +257,7 @@ GNAME(fpu_restore):
 	ret
 	.size	GNAME(fpu_restore),.-GNAME(fpu_restore)
 
+
 /*
  * The undefined-function trampoline.
  */

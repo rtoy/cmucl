@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.72.2.3 2000/08/12 07:33:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.72.2.4 2002/03/23 18:51:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 (in-package "USER")
 
 (defvar *byte-compile* #+small t #-small :maybe)
+(defvar *original-%deftype* #'lisp::%deftype)
 
 (with-compiler-log-file
     ("target:compile-lisp.log"
@@ -92,6 +93,13 @@
   (comf "target:assembly/mips/arith" :assem t)
   (comf "target:assembly/mips/alloc" :assem t))
 
+(when (c:backend-featurep :ppc)
+  (comf "target:assembly/ppc/assem-rtns" :assem t)
+  (comf "target:assembly/ppc/array" :assem t)
+  (comf "target:assembly/ppc/arith" :assem t)
+  (comf "target:assembly/ppc/alloc" :assem t))
+
+
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
 
@@ -107,7 +115,6 @@
 ;;; prevent deftypes from taking effect at compile time so that we don't
 ;;; install interpreted type expanders causing the compiler to infinitely
 ;;; recurse.
-(defvar *original-%deftype* #'lisp::%deftype)
 (setf (fdefinition 'lisp::%deftype) #'list)
 (comf "target:code/typedefs")
 
@@ -176,6 +183,8 @@
   (comf "target:code/alpha-vm"))
 (when (c:backend-featurep :sgi)
   (comf "target:code/sgi-vm"))
+(when (c:backend-featurep :ppc)
+  (comf "target:code/ppc-vm"))
 
 (comf "target:code/symbol")
 (comf "target:code/bignum")

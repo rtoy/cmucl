@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.2.2.6 2000/08/25 10:00:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.2.2.7 2002/03/23 18:50:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,6 +56,7 @@
 	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
 	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
+	  unix-uname utsname
 	  tcsetpgrp tcgetpgrp tty-process-group
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase
 	  tty-cbreak
@@ -168,7 +169,7 @@
       (setf (svref array (car error)) (cdr error)))
     `(progn
        (defvar *unix-errors* ',array)
-       (proclaim '(simple-vector *unix-errors*)))))
+       (declaim (simple-vector *unix-errors*)))))
 
 )
 
@@ -754,7 +755,7 @@
 				       "%"
 				       (string-upcase name)))))
     `(progn
-       (proclaim '(inline ,function))
+       (declaim (inline ,function))
        (export ',function)
        (alien:def-alien-routine (,name ,function) double-float
 	 ,@(let ((results nil))
@@ -769,7 +770,7 @@
 				       "%"
 				       (string-upcase name)))))
     `(progn
-       (proclaim '(inline ,function))
+       (declaim (inline ,function))
        (export ',function)
        (alien:def-alien-routine (,name ,function) double-float
 	 (ARG-1 'integer)
@@ -2148,12 +2149,35 @@ length LEN and type TYPE."
 	nil
       result)))
 
+(def-alien-type nil
+  (struct utsname
+    (sysname (array char 65))
+    (nodename (array char 65))
+    (release (array char 65))
+    (version (array char 65))
+    (machine (array char 65))
+    (domainname (array char 65))))
+
+(defun unix-uname ()
+  "Unix-uname returns the name and information about the current kernel. The
+  values returned upon success are: sysname, nodename, release, version,
+  machine, and domainname. Upon failure, 'nil and the 'errno are returned."
+  (with-alien ((utsname (struct utsname)))
+    (syscall* ("uname" (* (struct utsname)))
+	      (values (cast (slot utsname 'sysname) c-string)
+		      (cast (slot utsname 'nodename) c-string)
+		      (cast (slot utsname 'release) c-string)
+		      (cast (slot utsname 'version) c-string)
+		      (cast (slot utsname 'machine) c-string)
+		     (cast (slot utsname 'domainname) c-string))
+	      (addr utsname))))
+
 (defun unix-gethostname ()
   "Unix-gethostname returns the name of the host machine as a string."
   (with-alien ((buf (array char 256)))
-    (syscall ("gethostname" (* char) int)
-	     (cast buf c-string)
-	     (cast buf (* char)) 256)))
+    (syscall* ("gethostname" (* char) int)
+	      (cast buf c-string)
+	      (cast buf (* char)) 256)))
 
 #+nil
 (defun unix-sethostname (name len)

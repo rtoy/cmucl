@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.2.2.5 2000/07/31 10:03:55 dtc Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.2.2.6 2002/03/23 18:51:04 pw Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -126,6 +126,7 @@ PVE_stub_ ## fct: ;\
  doe(truncate)
  doe(ttyname)
  doe(tzname)
+ doe(uname)
  doe(unlink)
  doe(utimes)
  doe(wait3)	
@@ -862,7 +863,6 @@ PVE_stub_ ## fct: ;\
 /*  doe(ulimit) */
 /*  doe(umask) */
 /*  doe(umount) */
-/*  doe(uname) */
 /*  doe(ungetc) */
 /*  doe(unlink) */
 /*  doe(unsetenv) */

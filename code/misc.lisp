@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.23.2.5 1998/06/23 11:22:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.23.2.6 2002/03/23 18:50:05 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 (in-package "LISP")
 
 ;;; cobbled from stuff in describe.lisp.
-(defun function-doc(x)
+(defun function-doc (x)
   (let ((name
 	 (case (kernel:get-type x)
 	   (#.vm:closure-header-type
@@ -110,8 +110,9 @@
 		 (info random-documentation stuff name))))))
   string)
 
-(defvar *features* '(:common :cmu :new-compiler :cltl2 :common-lisp :ansi-cl
-			     :draft-ansi-cl :x3j13 :ieee-floating-point)
+
+(defvar *features* '(:common :cmu :new-compiler :common-lisp :ansi-cl
+			     :ieee-floating-point)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 

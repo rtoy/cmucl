@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.6.2.2 2000/05/23 16:38:29 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.6.2.3 2002/03/23 18:51:05 pw Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -22,6 +22,9 @@
 #include "gc.h"
 #include "search.h"
 #include "purify.h"
+#if defined GENCGC
+#include "gencgc.h"
+#endif
 
 extern boolean isatty(int fd);
 

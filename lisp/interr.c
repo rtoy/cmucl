@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.3 1997/01/21 00:28:13 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.3.2.1 2002/03/23 18:51:03 pw Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -118,15 +118,22 @@ void internal_error(struct sigcontext *context)
 	  case sc_UnsignedReg:
 	    printf("\t%u\n", SC_REG(context, offset));
 	    break;
-#ifdef sc_SingleFloatReg
-	  case sc_SingleFloatReg:
-	    printf("\t%g\n", *(float *)&context->sc_fpregs[offset]);
+#if 0 /* broken */
+#ifdef sc_SingleReg
+	  case sc_SingleReg:
+	    printf("\t%g\n", *(float *) &context->sc_fpregs[offset]);
 	    break;
 #endif
-#ifdef sc_DoubleFloatReg
-	  case sc_DoubleFloatReg:
-	    printf("\t%g\n", *(double *)&context->sc_fpregs[offset]);
+#ifdef sc_DoubleReg
+	  case sc_DoubleReg:
+	    printf("\t%g\n", *(double *) &context->sc_fpregs[offset]);
 	    break;
+#endif
+#ifdef sc_LongReg
+	  case sc_LongReg:
+	    printf("\t%Lg\n", *(long double *) &context->sc_fpregs[offset]);
+	    break;
+#endif
 #endif
 	  default:
 	    printf("\t???\n");
@@ -145,6 +152,7 @@ void internal_error(struct sigcontext *context)
 lispobj debug_print(lispobj string)
 {
     printf("%s\n", (char *)(((struct vector *)PTR(string))->data));
+    fflush(stdout);
 
     return NIL;
 }

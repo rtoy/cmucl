@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.13.2.1 2000/05/23 16:35:50 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.13.2.2 2002/03/23 18:49:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,17 +36,17 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst andcc zero-tn x 3)
+  (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
-  (inst andcc zero-tn y 3)
+  (inst andcc zero-tn y fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
   (inst nop)
   (inst addcc temp x y)
   (inst b :vc done)
   (inst nop)
 
-  (inst sra temp x 2)
-  (inst sra temp2 y 2)
+  (inst sra temp x fixnum-tag-bits)
+  (inst sra temp2 y fixnum-tag-bits)
   (inst add temp2 temp)
   (with-fixed-allocation (res temp bignum-type (1+ bignum-digits-offset))
     (storew temp2 res bignum-digits-offset other-pointer-type))
@@ -80,17 +80,17 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst andcc zero-tn x 3)
+  (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
-  (inst andcc zero-tn y 3)
+  (inst andcc zero-tn y fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
   (inst nop)
   (inst subcc temp x y)
   (inst b :vc done)
   (inst nop)
 
-  (inst sra temp x 2)
-  (inst sra temp2 y 2)
+  (inst sra temp x fixnum-tag-bits)
+  (inst sra temp2 y fixnum-tag-bits)
   (inst sub temp2 temp temp2)
   (with-fixed-allocation (res temp bignum-type (1+ bignum-digits-offset))
     (storew temp2 res bignum-digits-offset other-pointer-type))
@@ -130,15 +130,15 @@
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   ;; If either arg is not a fixnum, call the static function.
-  (inst andcc zero-tn x 3)
+  (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
-  (inst andcc zero-tn y 3)
+  (inst andcc zero-tn y fixnum-tag-mask)
   (inst b :ne DO-STATIC-FUN)
   (inst nop)
 
   ;; Remove the tag from one arg so that the result will have the correct
   ;; fixnum tag.
-  (inst sra temp x 2)
+  (inst sra temp x fixnum-tag-bits)
   ;; Compute the produce temp * y and return the double-word product
   ;; in hi:lo.
   (cond ((backend-featurep :sparc-64)
@@ -175,21 +175,22 @@
   (inst b :eq LOW-FITS-IN-FIXNUM)
   ;; Shift the double word hi:lo down two bits to get rid of the fixnum tag.
   (inst sll temp hi 30)
-  (inst srl lo 2)
+  (inst srl lo fixnum-tag-bits)
   (inst or lo temp)
-  (inst sra hi 2)
-  ;; Allocate a BIGNUM for the result.
-  (pseudo-atomic (:extra (pad-data-block (1+ bignum-digits-offset)))
+  (inst sra hi fixnum-tag-bits)
+  ;; Allocate a BIGNUM for the result. We always allocate 2 words for
+  ;; the bignum result, even if we only need one.  The copying GC will
+  ;; take care of the extra word if it isn't needed.
+  (with-fixed-allocation
+      (res temp bignum-type (+ 2 bignum-digits-offset))
     (let ((one-word (gen-label)))
-      (inst or res alloc-tn other-pointer-type)
       ;; We start out assuming that we need one word.  Is that correct?
       (inst sra temp lo 31)
       (inst xorcc temp hi)
       (inst b :eq one-word)
       (inst li temp (logior (ash 1 type-bits) bignum-type))
-      ;; Nope, we need two, so allocate the addition space.
-      (inst add alloc-tn (- (pad-data-block (+ 2 bignum-digits-offset))
-			    (pad-data-block (1+ bignum-digits-offset))))
+      ;; Need 2 words.  Set the header appropriately, and save the
+      ;; high and low parts.
       (inst li temp (logior (ash 2 type-bits) bignum-type))
       (storew hi res (1+ bignum-digits-offset) other-pointer-type)
       (emit-label one-word)
@@ -413,9 +414,9 @@
 				  
 				  (:temp nargs any-reg nargs-offset)
 				  (:temp ocfp any-reg ocfp-offset))
-	  (inst andcc zero-tn x 3)
+	  (inst andcc zero-tn x fixnum-tag-mask)
 	  (inst b :ne DO-STATIC-FN)
-	  (inst andcc zero-tn y 3)
+	  (inst andcc zero-tn y fixnum-tag-mask)
 	  (inst b :eq DO-COMPARE)
 	  (inst cmp x y)
 	  
@@ -455,9 +456,9 @@
 			  (:temp ocfp any-reg ocfp-offset))
   (inst cmp x y)
   (inst b :eq RETURN-T)
-  (inst andcc zero-tn x 3)
+  (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :eq RETURN-NIL)
-  (inst andcc zero-tn y 3)
+  (inst andcc zero-tn y fixnum-tag-mask)
   (inst b :ne DO-STATIC-FN)
   (inst nop)
 
@@ -490,9 +491,9 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst andcc zero-tn x 3)
+  (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FN)
-  (inst andcc zero-tn y 3)
+  (inst andcc zero-tn y fixnum-tag-mask)
   (inst b :ne DO-STATIC-FN)
   (inst cmp x y)
   (inst b :eq RETURN-T)
@@ -528,9 +529,9 @@
 			  (:temp ocfp any-reg ocfp-offset))
   (inst cmp x y)
   (inst b :eq RETURN-NIL)
-  (inst andcc zero-tn x 3)
+  (inst andcc zero-tn x fixnum-tag-mask)
   (inst b :ne DO-STATIC-FN)
-  (inst andcc zero-tn y 3)
+  (inst andcc zero-tn y fixnum-tag-mask)
   (inst b :ne DO-STATIC-FN)
   (inst nop)
 

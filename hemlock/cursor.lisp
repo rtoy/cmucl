@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/cursor.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/cursor.lisp,v 1.3.2.1 2002/03/23 18:50:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
 ;;;    3) Call Real-Line-Length or Cached-Real-Line-Length to get the
 ;;; X position and number of times wrapped.
 
-(proclaim '(special the-sentinel))
+(declaim (special the-sentinel))
 
 (eval-when (compile eval)
 ;;; find-line

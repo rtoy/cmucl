@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/screen.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/screen.lisp,v 1.4.2.1 2002/03/23 18:50:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 
 ;;;; Screen management initialization.
 
-(proclaim '(special *echo-area-buffer*))
+(declaim (special *echo-area-buffer*))
 
 ;;; %INIT-SCREEN-MANAGER creates the initial windows and sets up the data
 ;;; structures used by the screen manager.  The "Main" and "Echo Area" buffer

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.19.2.3 2000/11/15 11:37:03 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.19.2.4 2002/03/23 18:50:04 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,19 +39,19 @@
 	  rassoc rassoc-if rassoc-if-not
 	  complement constantly))
 
-(proclaim '(maybe-inline
-	    tree-equal list-length nth %setnth nthcdr last make-list append
-	    copy-list copy-alist copy-tree revappend nconc nreconc butlast
-	    nbutlast ldiff member member-if member-if-not tailp adjoin union
-	    nunion intersection nintersection set-difference nset-difference
-	    set-exclusive-or nset-exclusive-or subsetp acons pairlis assoc
-	    assoc-if assoc-if-not rassoc rassoc-if rassoc-if-not subst subst-if
-	    subst-if-not nsubst nsubst-if nsubst-if-not sublis nsublis))
+(declaim (maybe-inline
+	  tree-equal list-length nth %setnth nthcdr last make-list append
+	  copy-list copy-alist copy-tree revappend nconc nreconc butlast
+	  nbutlast ldiff member member-if member-if-not tailp adjoin union
+	  nunion intersection nintersection set-difference nset-difference
+	  set-exclusive-or nset-exclusive-or subsetp acons pairlis assoc
+	  assoc-if assoc-if-not rassoc rassoc-if rassoc-if-not subst subst-if
+	  subst-if-not nsubst nsubst-if nsubst-if-not sublis nsublis))
 
 
 (in-package "EXTENSIONS")
 (export '(assq memq delq))
-(proclaim '(maybe-inline delq))
+(declaim (maybe-inline delq))
 (in-package "LISP")
 
 
@@ -91,7 +91,7 @@
                       (cons se1 se2))
 
 
-(proclaim '(maybe-inline tree-equal-test tree-equal-test-not))
+(declaim (maybe-inline tree-equal-test tree-equal-test-not))
 
 (defun tree-equal-test-not (x y test-not)
   (cond ((consp x)
@@ -861,6 +861,7 @@
 (defmacro assoc-guts (test-guy)
   `(do ((alist alist (cdr alist)))
        ((endp alist))
+     (declare (optimize (inhibit-warnings 3)))
      (if (car alist)
 	 (if ,test-guy (return (car alist))))))
 
@@ -987,7 +988,8 @@
 
 (defun memq (item list)
   "Returns tail of list beginning with first element eq to item"
-  (declare (inline member))
+  (declare (inline member)
+	   (optimize (inhibit-warnings 3))) ; from MEMBER optimizations
   (member item list :test #'eq))
 
 (defun assq (item alist)

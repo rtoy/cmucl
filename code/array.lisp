@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.23.2.3 2000/05/23 16:36:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.23.2.4 2002/03/23 18:49:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,6 +232,11 @@
 		 (when (or initial-element-p initial-contents)
 		   (error "Neither :initial-element nor :initial-contents ~
 		   can be specified along with :displaced-to"))
+		 (unless (subtypep element-type
+				   (array-element-type displaced-to))
+		   (error "One can't displace an array of type ~S into ~
+                           another of type ~S."
+			  element-type (array-element-type displaced-to)))
 		 (let ((offset (or displaced-index-offset 0)))
 		   (when (> (+ offset total-size)
 			    (array-total-size displaced-to))
@@ -746,17 +751,23 @@
 	       (declare (fixnum old-length new-length))
 	       (with-array-data ((old-data array) (old-start)
 				 (old-end old-length))
-		 (cond ((or (%array-displaced-p array)
-			    (< old-length new-length))
-			(setf new-data
-			      (data-vector-from-inits
-			       dimensions new-length element-type
-			       initial-contents initial-element
-			       initial-element-p))
-			(replace new-data old-data
-				 :start2 old-start :end2 old-end))
-		       (t (setf new-data
-				(shrink-vector old-data new-length))))
+		 (cond
+		   ((and (adjustable-array-p array)
+			 (not (%array-displaced-p array))
+			 (<= new-length old-length))
+		    ;; Shrink underlying vector in-place.  We don't do this
+		    ;; for non-adjustable arrays, since that might confuse
+		    ;; user expectations about adjust-array consing a fresh
+		    ;; array in that case.
+		    (setf new-data (shrink-vector old-data new-length)))
+		   (t
+		    (setf new-data
+			  (data-vector-from-inits
+			   dimensions new-length element-type
+			   initial-contents initial-element
+			   initial-element-p))
+		    (replace new-data old-data
+			     :start2 old-start :end2 old-end)))
 		 (if (adjustable-array-p array)
 		     (set-array-header array new-data new-length
 				       (get-new-fill-pointer array new-length

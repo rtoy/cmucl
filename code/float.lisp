@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.15.2.3 2000/05/23 16:36:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.15.2.4 2002/03/23 18:50:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,8 @@
 ;;; Long-float support by Douglas Crosher, 1998.
 ;;; 
 (in-package "KERNEL")
-(export '(%unary-truncate %unary-round))
+(export '(%unary-truncate %unary-round %unary-ftruncate
+	  %unary-ftruncate/single-float %unary-ftruncate/double-float))
 
 (in-package "LISP")
 (export '(least-positive-normalized-short-float
@@ -219,7 +220,7 @@
 
 ;;;; Float predicates and environment query:
 
-(proclaim '(maybe-inline float-denormalized-p float-infinity-p float-nan-p
+(declaim (maybe-inline float-denormalized-p float-infinity-p float-nan-p
 			 float-trapping-nan-p))
 
 ;;; FLOAT-DENORMALIZED-P  --  Public
@@ -298,7 +299,7 @@
 ;;; actual exponent (and hence how denormalized it is), otherwise we just
 ;;; return the number of digits or 0.
 ;;;
-(proclaim '(maybe-inline float-precision))
+(declaim (maybe-inline float-precision))
 (defun float-precision (f)
   "Returns a non-negative number of significant digits in it's float argument.
   Will be less than FLOAT-DIGITS if denormalized or zero."
@@ -346,7 +347,7 @@
     #+long-float
     (long-float vm:long-float-digits)))
 
-(proclaim '(inline float-digits float-radix))
+(declaim (inline float-digits float-radix))
 
 (defun float-digits (f)
   "Returns a non-negative number of radix-b digits used in the
@@ -361,15 +362,15 @@
 (defun float-radix (f)
   "Returns (as an integer) the radix b of its floating-point
    argument."
-  (declare (ignore f))
+  (declare (float f)(ignorable f))
   2)
 
 
 
 ;;;; INTEGER-DECODE-FLOAT and DECODE-FLOAT:
 
-(proclaim '(maybe-inline integer-decode-single-float
-			 integer-decode-double-float))
+(declaim (maybe-inline integer-decode-single-float
+		       integer-decode-double-float))
 
 ;;; INTEGER-DECODE-SINGLE-DENORM  --  Internal
 ;;;
@@ -559,7 +560,7 @@
      (integer-decode-long-float x))))
 
 
-(proclaim '(maybe-inline decode-single-float decode-double-float))
+(declaim (maybe-inline decode-single-float decode-double-float))
 
 ;;; DECODE-SINGLE-DENORM  --  Internal
 ;;;
@@ -707,7 +708,7 @@
 
 ;;;; SCALE-FLOAT:
 
-(proclaim '(maybe-inline scale-single-float scale-double-float))
+(declaim (maybe-inline scale-single-float scale-double-float))
 
 ;;; SCALE-FLOAT-MAYBE-UNDERFLOW  --  Internal
 ;;;
@@ -1061,6 +1062,116 @@ rounding modes & do ieee round-to-integer.
 	     (if (minusp number)
 		 (- rounded)
 		 rounded)))))))
+
+;; %UNARY-FTRUNCATE/SINGLE-FLOAT
+;;
+;; Basically the same as ftruncate, but specialized to handle only
+;; single-floats and to only return the first value.  We diddle the
+;; bits directly to truncate the number to reduce consing.
+(defun %unary-ftruncate/single-float (x)
+  (declare (single-float x)
+	   (optimize (speed 3) (safety 0)))
+  (let* ((bits (kernel:single-float-bits x))
+	 (exp (ldb vm:single-float-exponent-byte bits))
+	 (biased (truly-the kernel:single-float-exponent
+			    (- exp vm:single-float-bias))))
+    ;; At this point, we have the number represented as
+    ;;
+    ;; x = sign * 2^exp * frac
+    ;;
+    ;; where 0.5 <= frac < 1.0
+    ;;
+    ;; So if the exp <= 0, |x| < 1 and we know the result is 0.
+    ;;
+    ;; If exp >= (float-digits x), we know that all of the bits
+    ;; in the fraction are integer bits, so the result is x.
+    ;;
+    ;; For everything else, some of the bits in frac are
+    ;; fractional.  Figure which ones they are and set them to
+    ;; zero.
+    (cond ((= exp vm:single-float-normal-exponent-max)
+	   ;; Infinity or NaN.
+	   x)
+	  ((<= biased 0)
+	   ;; Number is less than 1
+	   0f0)
+	  ((>= biased (float-digits x))
+	   ;; Number is an integer
+	   x)
+	  (t
+	   ;; Somewhere in between.  Zap the bits that
+	   ;; represent the fraction part.
+	   (let ((frac-bits (- (float-digits x) biased)))
+	     (declare (type (signed-byte 32) bits))
+	     (setf bits (logandc2 bits (- (ash 1 frac-bits) 1)))
+	     (kernel:make-single-float bits))))))
+
+;; %UNARY-FTRUNCATE/DOUBLE-FLOAT
+;;
+;; Like %UNARY-FTRUNCATE/SINGLE-FLOAT, except for double-float.
+
+(defun %unary-ftruncate/double-float (x)
+  (declare (double-float x)
+	   (optimize (speed 3) (safety 0)))
+  (let* ((hi (kernel:double-float-high-bits x))
+	 (lo (kernel:double-float-low-bits x))
+	 (exp (ldb vm:double-float-exponent-byte hi))
+	 (biased (truly-the kernel:double-float-exponent
+			    (- exp vm:double-float-bias))))
+    (declare (type (signed-byte 32) hi)
+	     (type (unsigned-byte 32) lo))
+    (cond ((= exp vm:double-float-normal-exponent-max)
+	   x)
+	  ((<= biased 0)
+	   ;; Number is less than 1
+	   0d0)
+	  ((>= biased (float-digits x))
+	   ;; Number is an integer
+	   x)
+	  (t
+	   ;; Somewhere in between.  Zap the bits that
+	   ;; represent the fraction part.
+	   (let ((frac-bits (- (float-digits x) biased)))
+	     (cond ((< frac-bits 32)
+		    (setf lo (logandc2 lo (- (ash 1 frac-bits) 1))))
+		   (t
+		    (setf lo 0)
+		    (setf hi (logandc2 hi (- (ash 1 (- frac-bits 32)) 1)))))
+	     (kernel:make-double-float hi lo))))))
+
+
+;;; %UNARY-FTRUNCATE  --  Interface
+;;;
+;;; This function is called when we are doing an ftruncate without any
+;;; funky divisor.  Note that we do *not* return the second value of
+;;; truncate, so it must be computed by the caller if needed.
+;;;
+;;; In the float case, we pick off small arguments so that compiler
+;;; can use special-case operations.  We use an exclusive test, since
+;;; (due to round-off error), (float most-positive-signed-byte-32) may
+;;; be greater than most-positive-signed-byte-32.  We chose this
+;;; because %unary-truncate can be optimized when the result is known
+;;; to be a (signed-byte 32).
+;;;
+(defun %unary-ftruncate (number)
+  (macrolet ((truncate-float (rtype helper)
+	       `(if (< (float (- (- (ash 1 31)) 1) number)
+		       number
+		       (float (ash 1 31) number))
+		    (coerce (truly-the (signed-byte 32)
+				       (%unary-truncate number))
+			    ',rtype)
+		    (,helper number))))
+  (number-dispatch ((number real))
+    ((integer)
+     (float number))
+    ((ratio)
+     (float (truncate (numerator number) (denominator number))))
+    ((single-float)
+     (truncate-float single-float %unary-ftruncate/single-float))
+    ((double-float)
+     (truncate-float double-float %unary-ftruncate/double-float)))))
+	     
 
 
 (defun rational (x)

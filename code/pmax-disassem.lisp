@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.18 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.18.2.1 2002/03/23 18:50:08 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,7 +243,7 @@
 
 (defvar *mips-instructions*
   (make-array (ash 1 mips-instruction-bits) :initial-element nil))
-(proclaim '(type simple-vector *mips-instructions*))
+(declaim (type simple-vector *mips-instructions*))
 
 (defmacro def-mips-instr (name op-code type)
   `(let ((name ,name)
@@ -259,7 +259,7 @@
 
 (defvar *mips-special-instructions*
   (make-array (ash 1 mips-special-instruction-bits) :initial-element nil))
-(proclaim '(type simple-vector *mips-special-instructions*))
+(declaim (type simple-vector *mips-special-instructions*))
 
 (defmacro def-mips-special-instr (name op-code type)
   `(let ((name ,name)
@@ -275,7 +275,7 @@
 
 (defvar *mips-bcond-instructions*
   (make-array (ash 1 mips-bcond-instruction-bits) :initial-element nil))
-(proclaim '(type simple-vector *mips-bcond-instructions*))
+(declaim (type simple-vector *mips-bcond-instructions*))
 
 (defmacro def-mips-bcond-instr (name op-code type)
   `(let ((name ,name)

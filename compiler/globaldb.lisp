@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34.2.4 2000/08/10 10:56:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34.2.5 2002/03/23 18:50:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,8 +39,8 @@
 (in-package "C")
 
 ;;; The defvar for this appears later.
-(proclaim '(special *universal-type*))
-(proclaim '(type list type-specifier-symbols))
+(declaim (special *universal-type*))
+(declaim (type list type-specifier-symbols))
 
 
 ;;; PRIMIFY  --  Internal
@@ -113,7 +113,7 @@
 ;;; GLOBALDB-INIT...
 ;;;
 (defvar *info-classes* (make-hash-table :test #'equal))
-(proclaim '(hash-table *info-classes*))
+(declaim (hash-table *info-classes*))
 
 
 ;;; FIND-TYPE-INFO  --  Internal
@@ -252,7 +252,7 @@
 ;;; initialized in GLOBALDB-INIT.
 
 (defvar *info-environment*)
-(proclaim '(type list *info-environment*))
+(declaim (type list *info-environment*))
 
 
 (defun %print-info-environment (s stream d)
@@ -285,7 +285,7 @@
 ;;; does, but we get there more expeditiously.  With the two-list, we LOGXOR a
 ;;; random constant with the hash of the second symbol.
 ;;;
-(proclaim '(inline info-hash))
+(declaim (inline info-hash))
 (defun info-hash (x)
   (cond
    ((symbolp x)
@@ -327,7 +327,7 @@
 		(get-info-value ,name ,(type-info-number info)
 				,@(when env-list `(,env-list))))))
 ;;;
-(define-setf-method info (class type name &optional env-list)
+(define-setf-expander info (class type name &optional env-list)
   "Set the global information for Name."
   (let* ((n-name (gensym))
 	 (n-env-list (if env-list (gensym)))
@@ -504,7 +504,7 @@
 ;;;
 ;;;    If the info cache is invalid, then clear it.
 ;;;
-(proclaim '(inline clear-invalid-info-cache))
+(declaim (inline clear-invalid-info-cache))
 (defun clear-invalid-info-cache ()
   (unless (eq *info-environment* *cached-info-environment*)
     (without-interrupts
@@ -573,7 +573,7 @@
 ;;;    Return the value of the type corresponding to Number for the currently
 ;;; cached name in Env.
 ;;;
-(proclaim '(inline compact-info-cache-hit))
+(declaim (inline compact-info-cache-hit))
 (defun compact-info-cache-hit (env number)
   (declare (type compact-info-env env) (type type-number number))
   (let ((entries-info (compact-info-env-entries-info env))
@@ -753,7 +753,7 @@
 ;;;
 ;;;    Just like COMPACT-INFO-CACHE-HIT, only do it on a volatile environment.
 ;;;
-(proclaim '(inline volatile-info-cache-hit))
+(declaim (inline volatile-info-cache-hit))
 (defun volatile-info-cache-hit (env number)
   (declare (type volatile-info-env env) (type type-number number))
   (dolist (type (volatile-info-env-cache-types env) (values nil nil))
@@ -804,7 +804,7 @@
 ;;; This is always the first environment in the list, and must be a
 ;;; VOLATILE-INFO-ENV.
 ;;;
-(proclaim '(inline get-write-info-env))
+(declaim (inline get-write-info-env))
 (defun get-write-info-env (&optional (env-list *info-environment*))
   (let ((env (car env-list)))
     (unless env

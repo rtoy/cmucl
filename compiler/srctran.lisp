@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51.2.10 2000/09/26 15:15:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51.2.11 2002/03/23 18:50:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,9 +184,7 @@
 		    `(,',fun ,x 1)))))
   (frob truncate)
   (frob round)
-  #+propagate-float-type
   (frob floor)
-  #+propagate-float-type
   (frob ceiling))
 
 (def-source-transform lognand (x y) `(lognot (logand ,x ,y)))
@@ -243,9 +241,6 @@
 ;;;; everything we want to know.  Reason 2 wins for now.
 
 
-#+propagate-float-type
-(progn
-
 ;;; The basic interval type.  It can handle open and closed intervals.  A
 ;;; bound is open if it is a list containing a number, just like Lisp says.
 ;;; NIL means unbounded.
@@ -278,7 +273,7 @@
     (%make-interval :low (normalize-bound low)
 		    :high (normalize-bound high))))
 
-(proclaim '(inline bound-value set-bound))
+(declaim (inline bound-value set-bound))
 
 ;;; Extract the numeric value of a bound.  Return NIL, if X is NIL.
 ;;;
@@ -849,7 +844,7 @@
   (declare (type interval x))
   (interval-func #'(lambda (x) (* x x))
 		 (interval-abs x)))
-) ; end progn
+
 
 
 
@@ -876,9 +871,6 @@
 	  (make-numeric-type :class 'integer  :complexp :real
 			     :low low  :high high))
 	(numeric-contagion x y))))
-
-#+(or propagate-float-type propagate-fun-type)
-(progn
 
 ;; Simple utility to flatten a list
 (defun flatten-list (x)
@@ -1292,63 +1284,8 @@
 	      (make-canonical-union-type results)
 	      (first results)))))))
 
-) ; end progn
 
 
-#-propagate-float-type
-(progn
-(defoptimizer (+ derive-type) ((x y))
-  (derive-integer-type
-   x y
-   #'(lambda (x y)
-       (flet ((frob (x y)
-		(if (and x y)
-		    (+ x y)
-		    nil)))
-	 (values (frob (numeric-type-low x) (numeric-type-low y))
-		 (frob (numeric-type-high x) (numeric-type-high y)))))))
-
-(defoptimizer (- derive-type) ((x y))
-  (derive-integer-type
-   x y
-   #'(lambda (x y)
-       (flet ((frob (x y)
-		(if (and x y)
-		    (- x y)
-		    nil)))
-	 (values (frob (numeric-type-low x) (numeric-type-high y))
-		 (frob (numeric-type-high x) (numeric-type-low y)))))))
-
-
-(defoptimizer (* derive-type) ((x y))
-  (derive-integer-type
-   x y
-   #'(lambda (x y)
-       (let ((x-low (numeric-type-low x))
-	     (x-high (numeric-type-high x))
-	     (y-low (numeric-type-low y))
-	     (y-high (numeric-type-high y)))
-	 (cond ((not (and x-low y-low))
-		(values nil nil))
-	       ((or (minusp x-low) (minusp y-low))
-		(if (and x-high y-high)
-		    (let ((max (* (max (abs x-low) (abs x-high))
-				  (max (abs y-low) (abs y-high)))))
-		      (values (- max) max))
-		    (values nil nil)))
-	       (t
-		(values (* x-low y-low)
-			(if (and x-high y-high)
-			    (* x-high y-high)
-			    nil))))))))
-
-(defoptimizer (/ derive-type) ((x y))
-  (numeric-contagion (continuation-type x) (continuation-type y)))
-
-) ; end progn
-
-#+propagate-float-type
-(progn
 (defun +-derive-type-aux (x y same-arg)
   (if (and (numeric-type-real-p x)
 	   (numeric-type-real-p y))
@@ -1481,76 +1418,57 @@
 (defoptimizer (/ derive-type) ((x y))
   (two-arg-derive-type x y #'/-derive-type-aux #'/))
 
-) ;end progn
 
 
-#-propagate-fun-type
-(defoptimizer (ash derive-type) ((n shift))
-  (or (let ((n-type (continuation-type n)))
-	(when (numeric-type-p n-type)
-	  (let ((n-low (numeric-type-low n-type))
-		(n-high (numeric-type-high n-type)))
-	    (if (constant-continuation-p shift)
-		(let ((shift (continuation-value shift)))
-		  (make-numeric-type :class 'integer  :complexp :real
-				     :low (when n-low (ash n-low shift))
-				     :high (when n-high (ash n-high shift))))
-		(let ((s-type (continuation-type shift)))
-		  (when (numeric-type-p s-type)
-		    (let ((s-low (numeric-type-low s-type))
-			  (s-high (numeric-type-high s-type)))
-		      (if (and s-low s-high (<= s-low 64) (<= s-high 64))
-			  (make-numeric-type :class 'integer  :complexp :real
-					     :low (when n-low
-						    (min (ash n-low s-high)
-							 (ash n-low s-low)))
-					     :high (when n-high
-						     (max (ash n-high s-high)
-							  (ash n-high s-low))))
-			  (make-numeric-type :class 'integer
-					     :complexp :real)))))))))
-      *universal-type*))
 
-#+propagate-fun-type
+;;; 'ash derive type optimizer.
+;;;
+;;; Large resulting bounds are easy to generate but are not particularly
+;;; useful, so an open outer bound is returned for a shift greater than 64 -
+;;; the largest word size of any of the ports. Large negative shifts are also
+;;; problematic as the 'ash implementation only accepts shifts greater than
+;;; the most-negative-fixnum. These issues are handled by two local functions:
+;;;
+;;; ash-outer: performs the shift when within an acceptable range, otherwise
+;;; returns an open bound.
+;;;
+;;; ash-inner: performs the shift when within range, limited to a maximum of
+;;; 64, otherwise returns the inner limit.
+;;;
+
 (defun ash-derive-type-aux (n-type shift same-arg)
   (declare (ignore same-arg))
-  (or (and (csubtypep n-type (specifier-type 'integer))
-	   (csubtypep shift (specifier-type 'integer))
-	   (let ((n-low (numeric-type-low n-type))
-		 (n-high (numeric-type-high n-type))
-		 (s-low (numeric-type-low shift))
-		 (s-high (numeric-type-high shift)))
-	     (if (and s-low s-high (<= s-low 64) (<= s-high 64))
-		 (make-numeric-type :class 'integer  :complexp :real
-				    :low (when n-low
-					   (min (ash n-low s-high)
-						(ash n-low s-low)))
-				    :high (when n-high
-					    (max (ash n-high s-high)
-						 (ash n-high s-low))))
-		 (make-numeric-type :class 'integer
-				    :complexp :real))))
-      *universal-type*))
-
-#+propagate-fun-type
+  (flet ((ash-outer (n s)
+	   (when (and (fixnump s)
+		      (<= s 64)
+		      (> s most-negative-fixnum))
+	     (ash n s)))
+	 (ash-inner (n s)
+	   (if (and (fixnump s)
+		    (> s most-negative-fixnum))
+	       (ash n (min s 64))
+	       (if (minusp n) -1 0))))
+    (or (and (csubtypep n-type (specifier-type 'integer))
+	     (csubtypep shift (specifier-type 'integer))
+	     (let ((n-low (numeric-type-low n-type))
+		   (n-high (numeric-type-high n-type))
+		   (s-low (numeric-type-low shift))
+		   (s-high (numeric-type-high shift)))
+	       (make-numeric-type :class 'integer  :complexp :real
+				  :low (when n-low
+					 (if (minusp n-low)
+					     (ash-outer n-low s-high)
+					     (ash-inner n-low s-low)))
+				  :high (when n-high
+					  (if (minusp n-high)
+					      (ash-inner n-high s-low)
+					      (ash-outer n-high s-high))))))
+	*universal-type*)))
+;;;
 (defoptimizer (ash derive-type) ((n shift))
   (two-arg-derive-type n shift #'ash-derive-type-aux #'ash))
 
-#-propagate-float-type
-(macrolet ((frob (fun)
-	     `#'(lambda (type type2)
-		  (declare (ignore type2))
-		  (let ((lo (numeric-type-low type))
-			(hi (numeric-type-high type)))
-		    (values (if hi (,fun hi) nil) (if lo (,fun lo) nil))))))
 
-  (defoptimizer (%negate derive-type) ((num))
-    (derive-integer-type num num (frob -)))
-
-  (defoptimizer (lognot derive-type) ((int))
-    (derive-integer-type int int (frob lognot))))
-
-#+propagate-float-type
 (defoptimizer (lognot derive-type) ((int))
   (derive-integer-type int int
 		       #'(lambda (type type2)
@@ -1562,7 +1480,6 @@
 				     (numeric-type-class type)
 				     (numeric-type-format type))))))
 
-#+propagate-float-type
 (defoptimizer (%negate derive-type) ((num))
   (flet ((negate-bound (b)
 	   (set-bound (- (bound-value b)) (consp b))))
@@ -1578,27 +1495,6 @@
 			       result))
 			 #'-)))
 
-#-propagate-float-type
-(defoptimizer (abs derive-type) ((num))
-  (let ((type (continuation-type num)))
-    (if (and (numeric-type-p type)
-	     (eq (numeric-type-class type) 'integer)
-	     (eq (numeric-type-complexp type) :real))
-	(let ((lo (numeric-type-low type))
-	      (hi (numeric-type-high type)))
-	  (make-numeric-type :class 'integer :complexp :real
-			     :low (cond ((and hi (minusp hi))
-					 (abs hi))
-					(lo
-					 (max 0 lo))
-					(t
-					 0))
-			     :high (if (and hi lo)
-				       (max (abs hi) (abs lo))
-				       nil)))
-	(numeric-contagion type type))))
-
-#+propagate-float-type
 (defun abs-derive-type-aux (type)
   (cond ((eq (numeric-type-complexp type) :complex)
 	 ;; The absolute value of a complex number is always a
@@ -1627,32 +1523,8 @@
 	    :high (coerce-numeric-bound
 		   (interval-high abs-bnd) bound-type))))))
 
-#+propagate-float-type
 (defoptimizer (abs derive-type) ((num))
   (one-arg-derive-type num #'abs-derive-type-aux #'abs))
-
-#-propagate-float-type
-(defoptimizer (truncate derive-type) ((number divisor))
-  (let ((number-type (continuation-type number))
-	(divisor-type (continuation-type divisor))
-	(integer-type (specifier-type 'integer)))
-    (if (and (numeric-type-p number-type)
-	     (csubtypep number-type integer-type)
-	     (numeric-type-p divisor-type)
-	     (csubtypep divisor-type integer-type))
-	(let ((number-low (numeric-type-low number-type))
-	      (number-high (numeric-type-high number-type))
-	      (divisor-low (numeric-type-low divisor-type))
-	      (divisor-high (numeric-type-high divisor-type)))
-	  (values-specifier-type
-	   `(values ,(integer-truncate-derive-type number-low number-high
-						   divisor-low divisor-high)
-		    ,(integer-rem-derive-type number-low number-high
-					      divisor-low divisor-high))))
-	*universal-type*)))
-
-#+propagate-float-type
-(progn
 
 (defun rem-result-type (number-type divisor-type)
   ;; Figure out what the remainder type is.  The remainder is an
@@ -1787,14 +1659,30 @@
       (ftruncate-derive-type-quot n d)
       *empty-type*))
 
-(defoptimizer (ftruncate derive-type) ((number divisor))
-  (let ((quot
-	 (two-arg-derive-type number divisor
-			      #'ftruncate-derive-type-quot-aux #'ftruncate))
-	(rem (two-arg-derive-type number divisor
-				  #'truncate-derive-type-rem-aux #'rem)))
-    (when (and quot rem)
-      (make-values-type :required (list quot rem)))))
+;; I (RLT) don't understand why I need to make divisor optional.  This
+;; should look just like the optimizer for TRUNCATE.  Until I figure
+;; out why, this seems to work.
+(defoptimizer (ftruncate derive-type) ((number &optional divisor))
+  (if divisor
+      (let ((quot
+	     (two-arg-derive-type number divisor
+				  #'ftruncate-derive-type-quot-aux #'ftruncate))
+	    (rem (two-arg-derive-type number divisor
+				      #'truncate-derive-type-rem-aux #'rem)))
+	(when (and quot rem)
+	  (make-values-type :required (list quot rem))))
+      (let* ((div (specifier-type '(integer 1 1)))
+	     (quot
+	      (one-arg-derive-type number
+				   #'(lambda (n)
+				       (ftruncate-derive-type-quot-aux n div nil))
+				   #'ftruncate))
+	     (rem (one-arg-derive-type number
+				       #'(lambda (n)
+					   (truncate-derive-type-rem-aux n div nil))
+				       #'rem)))
+	(when (and quot rem)
+	  (make-values-type :required (list quot rem))))))
 
 
 (defun %unary-truncate-derive-type-aux (number)
@@ -1804,6 +1692,13 @@
   (one-arg-derive-type number
 		       #'%unary-truncate-derive-type-aux
 		       #'%unary-truncate))
+
+(defoptimizer (%unary-ftruncate derive-type) ((number))
+  (let ((divisor (specifier-type '(integer 1 1))))
+    (one-arg-derive-type number
+			 #'(lambda (n)
+			     (ftruncate-derive-type-quot-aux n divisor nil))
+			 #'%unary-ftruncate)))
 
 ;;; Define optimizers for floor and ceiling
 (macrolet
@@ -2163,7 +2058,7 @@
 	 (interval-split 0 num t t)
        (interval-merge-pair (truncate-rem-bound neg div)
 			    (truncate-rem-bound pos div))))))
-)
+
 
 
 
@@ -2250,54 +2145,6 @@
 	     `integer)))))
 
 
-#-propagate-float-type
-(defun integer-rem-derive-type
-       (number-low number-high divisor-low divisor-high)
-  (if (and divisor-low divisor-high)
-      ;; We know the range of the divisor, and the remainder must be smaller
-      ;; than the divisor.  We can tell the sign of the remainer if we know
-      ;; the sign of the number.
-      (let ((divisor-max (1- (max (abs divisor-low) (abs divisor-high)))))
-	`(integer ,(if (or (null number-low)
-			   (minusp number-low))
-		       (- divisor-max)
-		       0)
-		  ,(if (or (null number-high)
-			   (plusp number-high))
-		       divisor-max
-		       0)))
-      ;; The divisor is potentially either very positive or very negative.
-      ;; Therefore, the remainer is unbounded, but we might be able to tell
-      ;; something about the sign from the number.
-      `(integer ,(if (and number-low (not (minusp number-low)))
-		     ;; The number we are dividing is positive.  Therefore,
-		     ;; the remainder must be positive.
-		     0
-		     '*)
-		,(if (and number-high (not (plusp number-high)))
-		     ;; The number we are dividing is negative.  Therefore,
-		     ;; the remainder must be negative.
-		     0
-		     '*))))
-
-#-propagate-float-type
-(defoptimizer (random derive-type) ((bound &optional state))
-  (let ((type (continuation-type bound)))
-    (when (numeric-type-p type)
-      (let ((class (numeric-type-class type))
-	    (high (numeric-type-high type))
-	    (format (numeric-type-format type)))
-	(make-numeric-type
-	 :class class
-	 :format format
-	 :low (coerce 0 (or format class 'real))
-	 :high (cond ((not high) nil)
-		     ((eq class 'integer) (max (1- high) 0))
-		     ((or (consp high) (zerop high)) high)
-		     (t `(,high))))))))
-
-
-#+propagate-float-type
 (defun random-derive-type-aux (type)
   (let ((class (numeric-type-class type))
 	(high (numeric-type-high type))
@@ -2311,7 +2158,6 @@
 		     ((or (consp high) (zerop high)) high)
 		     (t `(,high))))))
 
-#+propagate-float-type
 (defoptimizer (random derive-type) ((bound &optional state))
   (one-arg-derive-type bound #'random-derive-type-aux nil))
 
@@ -2335,127 +2181,7 @@
 		(or (null min) (minusp min))))
       (values nil t t)))
 
-#-propagate-fun-type
-(progn
-(defoptimizer (logand derive-type) ((x y))
-  (multiple-value-bind
-      (x-len x-pos x-neg)
-      (integer-type-length (continuation-type x))
-    (declare (ignore x-pos))
-    (multiple-value-bind
-	(y-len y-pos y-neg)
-	(integer-type-length (continuation-type y))
-      (declare (ignore y-pos))
-      (if (not x-neg)
-	  ;; X must be positive.
-	  (if (not y-neg)
-	      ;; The must both be positive.
-	      (cond ((or (null x-len) (null y-len))
-		     (specifier-type 'unsigned-byte))
-		    ((or (zerop x-len) (zerop y-len))
-		     (specifier-type '(integer 0 0)))
-		    (t
-		     (specifier-type `(unsigned-byte ,(min x-len y-len)))))
-	      ;; X is positive, but Y might be negative.
-	      (cond ((null x-len)
-		     (specifier-type 'unsigned-byte))
-		    ((zerop x-len)
-		     (specifier-type '(integer 0 0)))
-		    (t
-		     (specifier-type `(unsigned-byte ,x-len)))))
-	  ;; X might be negative.
-	  (if (not y-neg)
-	      ;; Y must be positive.
-	      (cond ((null y-len)
-		     (specifier-type 'unsigned-byte))
-		    ((zerop y-len)
-		     (specifier-type '(integer 0 0)))
-		    (t
-		     (specifier-type
-		      `(unsigned-byte ,y-len))))
-	      ;; Either might be negative.
-	      (if (and x-len y-len)
-		  ;; The result is bounded.
-		  (specifier-type `(signed-byte ,(1+ (max x-len y-len))))
-		  ;; We can't tell squat about the result.
-		  (specifier-type 'integer)))))))
 
-(defoptimizer (logior derive-type) ((x y))
-  (multiple-value-bind
-      (x-len x-pos x-neg)
-      (integer-type-length (continuation-type x))
-    (multiple-value-bind
-	(y-len y-pos y-neg)
-	(integer-type-length (continuation-type y))
-      (cond
-       ((and (not x-neg) (not y-neg))
-	;; Both are positive.
-	(specifier-type `(unsigned-byte ,(if (and x-len y-len)
-					     (max x-len y-len)
-					     '*))))
-       ((not x-pos)
-	;; X must be negative.
-	(if (not y-pos)
-	    ;; Both are negative.  The result is going to be negative and be
-	    ;; the same length or shorter than the smaller.
-	    (if (and x-len y-len)
-		;; It's bounded.
-		(specifier-type `(integer ,(ash -1 (min x-len y-len)) -1))
-		;; It's unbounded.
-		(specifier-type '(integer * -1)))
-	    ;; X is negative, but we don't know about Y.  The result will be
-	    ;; negative, but no more negative than X.
-	    (specifier-type
-	     `(integer ,(or (numeric-type-low (continuation-type x)) '*)
-		       -1))))
-       (t
-	;; X might be either positive or negative.
-	(if (not y-pos)
-	    ;; But Y is negative.  The result will be negative.
-	    (specifier-type
-	     `(integer ,(or (numeric-type-low (continuation-type y)) '*)
-		       -1))
-	    ;; We don't know squat about either.  It won't get any bigger.
-	    (if (and x-len y-len)
-		;; Bounded.
-		(specifier-type `(signed-byte ,(1+ (max x-len y-len))))
-		;; Unbounded.
-		(specifier-type 'integer))))))))
-
-(defoptimizer (logxor derive-type) ((x y))
-  (multiple-value-bind
-      (x-len x-pos x-neg)
-      (integer-type-length (continuation-type x))
-    (multiple-value-bind
-	(y-len y-pos y-neg)
-	(integer-type-length (continuation-type y))
-      (cond
-       ((or (and (not x-neg) (not y-neg))
-	    (and (not x-pos) (not y-pos)))
-	;; Either both are negative or both are positive.  The result will be
-	;; positive, and as long as the longer.
-	(specifier-type `(unsigned-byte ,(if (and x-len y-len)
-					     (max x-len y-len)
-					     '*))))
-       ((or (and (not x-pos) (not y-neg))
-	    (and (not y-neg) (not y-pos)))
-	;; Either X is negative and Y is positive of vice-verca.  The result
-	;; will be negative.
-	(specifier-type `(integer ,(if (and x-len y-len)
-				       (ash -1 (max x-len y-len))
-				       '*)
-				  -1)))
-       ;; We can't tell what the sign of the result is going to be.  All we
-       ;; know is that we don't create new bits.
-       ((and x-len y-len)
-	(specifier-type `(signed-byte ,(1+ (max x-len y-len)))))
-       (t
-	(specifier-type 'integer))))))
-
-) ; end progn
-
-#+propagate-fun-type
-(progn
 (defun logand-derive-type-aux (x y &optional same-leaf)
   (declare (ignore same-leaf))
   (multiple-value-bind
@@ -2611,7 +2337,7 @@
 				     :low 0 :high nil))))))
    #'integer-length))
 
-) ; end progn
+
 
 
 ;;;; Miscellaneous derive-type methods:
@@ -2627,6 +2353,38 @@
 			  (type-specifier (continuation-type x)))
 		      values))))
 
+
+(defun signum-derive-type-aux (type)
+  ;; The signum of a complex number is a complex number of the same type.
+  ;; The signum of a real number is 0, 1, or -1, of the same type.
+  (if (eq (numeric-type-complexp type) :complex)
+      type
+      (let* ((type-interval (numeric-type->interval type))
+	     (range-info (interval-range-info type-interval))
+	     (contains-0-p (interval-contains-p 0 type-interval))
+	     (plus (make-numeric-type :class (numeric-type-class type)
+				      :format (numeric-type-format type)
+				      :low 1 :high 1))
+	     (minus (make-numeric-type :class (numeric-type-class type)
+				       :format (numeric-type-format type)
+				       :low -1 :high -1))
+	     (zero (make-numeric-type :class (numeric-type-class type)
+				      :format (numeric-type-format type)
+				      :low 0 :high 0)))
+	(cond ((eq range-info '+)
+	       (if contains-0-p
+		   (make-union-type (list plus zero))
+		   plus))
+	      ((eq range-info '-)
+	       (if contains-0-p
+		   (make-union-type (list minus zero))
+		   minus))
+	      (t
+	       (make-union-type (list minus plus zero)))))))
+
+	
+(defoptimizer (signum derive-type) ((num))
+  (one-arg-derive-type num #'signum-derive-type-aux nil))
 
 
 ;;;; Byte operations:
@@ -3298,33 +3056,6 @@
     res))
 
 
-;;; IR1-TRANSFORM-<  --  Internal
-;;;
-;;;    See if we can statically determine (< X Y) using type information.  If
-;;; X's high bound is < Y's low, then X < Y.  Similarly, if X's low is >= to
-;;; Y's high, then X >= Y (so return NIL).  If not, at least make sure any
-;;; constant arg is second.
-;;;
-#-propagate-float-type
-(defun ir1-transform-< (x y first second inverse)
-  (if (same-leaf-ref-p x y)
-      'nil
-      (let* ((x-type (numeric-type-or-lose x))
-	     (x-lo (numeric-type-low x-type))
-	     (x-hi (numeric-type-high x-type))
-	     (y-type (numeric-type-or-lose y))
-	     (y-lo (numeric-type-low y-type))
-	     (y-hi (numeric-type-high y-type)))
-	(cond ((and x-hi y-lo (< x-hi y-lo))
-	       't)
-	      ((and y-hi x-lo (>= x-lo y-hi))
-	       'nil)
-	      ((and (constant-continuation-p first)
-		    (not (constant-continuation-p second)))
-	       `(,inverse y x))
-	      (t
-	       (give-up))))))
-
 ;;; Ir1-transform-<-helper  --  Internal
 ;;;
 ;;; Derive the result type of the comparision X < Y returning two values: the
@@ -3333,7 +3064,7 @@
 ;;; X are less than all types of Y, then X < Y. Similarly, if all types of X
 ;;; are >= all types of Y, then X >= Y.
 ;;;
-#+propagate-float-type
+
 (defun ir1-transform-<-helper (x y)
   (flet ((maybe-convert (type)
 	   (numeric-type->interval (if (member-type-p type)
@@ -3360,7 +3091,6 @@
 ;;; Y's high, then X >= Y (so return NIL).  If not, at least make sure any
 ;;; constant arg is second.
 ;;;
-#+propagate-float-type
 (defun ir1-transform-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
@@ -3376,13 +3106,11 @@
               (t
                (give-up))))))
 
-(deftransform < ((x y) #-propagate-float-type (integer integer)
-		       #+propagate-float-type (real real)
+(deftransform < ((x y) (real real)
 		 * :when :both)
   (ir1-transform-< x y x y '>))
 
-(deftransform > ((x y) #-propagate-float-type (integer integer)
-		       #+propagate-float-type (real real)
+(deftransform > ((x y) (real real)
 		 * :when :both)
   (ir1-transform-< y x x y '<))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.7 2000/10/16 17:32:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.8 2002/03/23 18:49:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,7 @@
 ;;;
 ;;; Returns the next available buffer, creating one if necessary.
 ;;;
-(proclaim '(inline next-available-buffer))
+(declaim (inline next-available-buffer))
 ;;;
 (defun next-available-buffer ()
   (if *available-buffers*
@@ -852,7 +852,10 @@
 		  (fd-stream-bin stream) #'ill-bin)
 	    (setf (fd-stream-in stream) #'ill-in
 		  (fd-stream-bin stream) routine))
-	(when (eql size 1)
+	(when (or (eql size 1)
+		  (eql size 2)
+		  (eql size 4))
+	  ;; Support for n-byte operations on 8-, 16-, and 32-bit streams
 	  (setf (fd-stream-n-bin stream) #'fd-stream-read-n-bytes)
 	  (when buffer-p
 	    (setf (lisp-stream-in-buffer stream)
@@ -1023,6 +1026,12 @@
     (:charpos
      (fd-stream-char-pos stream))
     (:file-length
+     (unless (fd-stream-file stream)
+       (error 'simple-type-error
+	      :datum stream
+	      :expected-type 'file-stream
+	      :format-control "~s is not a stream associated with a file."
+	      :format-arguments (list stream)))
      (multiple-value-bind
 	 (okay dev ino mode nlink uid gid rdev size
 	       atime mtime ctime blksize blocks)
@@ -1237,6 +1246,16 @@
 		   (unix:get-unix-error-msg err))
 	   nil))))
 
+;;; RETURN-STREAM -- internal
+;;;
+;;; (this is just to save having to reindent the code in OPEN...move it there)
+;;;
+(defmacro return-stream (class &body body)
+  (let ((stream (gensym)))
+    `(let ((,stream (progn ,@body)))
+       (return (if ,class
+                  (make-instance ,class :lisp-stream ,stream)
+                  ,stream)))))
 
 ;;; OPEN -- public
 ;;;
@@ -1249,6 +1268,7 @@
 	     (if-exists nil if-exists-given)
 	     (if-does-not-exist nil if-does-not-exist-given)
 	     (external-format :default)
+	     class
 	     &aux ; Squelch assignment warning.
 	     (direction direction)
 	     (if-does-not-exist if-does-not-exist)
@@ -1375,7 +1395,7 @@
 		  (unix:unix-open namestring mask mode)
 		  (values nil unix:enoent))
 	    (cond ((numberp fd)
-		   (return
+		   (return-stream class
 		    (case direction
 		      ((:input :output :io)
 		       (make-fd-stream fd

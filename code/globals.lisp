@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.12.2.3 1998/06/23 11:22:01 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.12.2.4 2002/03/23 18:50:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,4 +73,5 @@
 		stream-listen stream-peek-char stream-read-byte
 		stream-read-char stream-read-char-no-hang stream-read-line
 		stream-start-line-p stream-terpri stream-unread-char
-		stream-write-byte stream-write-char stream-write-string))
+		stream-write-byte stream-write-char stream-write-string
+		stream-read-sequence stream-write-sequence))

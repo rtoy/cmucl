@@ -1,4 +1,4 @@
-;;;-*-Mode:LISP; Package:(PCL LISP 1000); Base:10; Syntax:Common-lisp -*-
+;;; -*- Mode: LISP; Package: PCL -*-
 ;;;
 ;;; *************************************************************************
 ;;; Copyright (c) 1985, 1986, 1987, 1988, 1989, 1990 Xerox Corporation.
@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.3.2.1 2000/05/23 16:38:51 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.3.2.2 2002/03/23 18:51:18 pw Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 
@@ -68,7 +68,15 @@
 	     (sym (make-instance-function-symbol key)))
 	(push key *make-instance-function-keys*)
 	(when sym
+	  (progn ;; Lifted from c::%%defun.
+	    (c::define-function-name sym)
+	    (when (eq (ext:info function where-from sym) :assumed)
+	      (setf (ext:info function where-from sym) :defined)
+	      (when (ext:info function assumed-type sym)
+		(setf (ext:info function assumed-type sym) nil))))
 	  `(,sym ',class (list ,@initargs)))))))
+
+
 
 (defmacro expanding-make-instance-top-level (&rest forms &environment env)
   (let* ((*make-instance-function-keys* nil)

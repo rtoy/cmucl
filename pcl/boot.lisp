@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.12.2.5 2000/10/04 15:54:59 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.12.2.6 2002/03/23 18:51:14 pw Exp $")
 
 (in-package :pcl)
 
@@ -74,13 +74,12 @@ work during bootstrapping.
 
 |#
 
-(proclaim '(notinline make-a-method
-		      add-named-method		      
-		      ensure-generic-function-using-class
-
-		      add-method
-		      remove-method
-		      ))
+(declaim (notinline make-a-method
+		    add-named-method		      
+		    ensure-generic-function-using-class
+		    add-method
+		    remove-method
+		    ))
 
 (defvar *early-functions*
 	'((make-a-method early-make-a-method
@@ -1088,7 +1087,6 @@ work during bootstrapping.
   (let ((method-spec (or (getf initargs ':method-spec)
 			 (make-method-spec name quals specls))))
     (setf (getf initargs ':method-spec) method-spec)
-    (record-definition 'method method-spec)
     (load-defmethod-internal class name quals specls ll initargs pv-table-symbol)))
 
 (defun load-defmethod-internal
@@ -1252,24 +1250,30 @@ work during bootstrapping.
 				&allow-other-keys)
   (declare (ignore environment))
   #+copy-&rest-arg (setq all-keys (copy-list all-keys))
-  (let ((existing (and (fboundp function-specifier)		       
+  (let ((existing (and (fboundp function-specifier)
 		       (gdefinition function-specifier))))
-    (if (and existing
-	     (eq *boot-state* 'complete)
-	     (null (generic-function-p existing)))
-	(generic-clobbers-function function-specifier)
-	(apply #'ensure-generic-function-using-class
-	       existing function-specifier all-keys))))
+    (when (and existing
+	       (eq *boot-state* 'complete)
+	       (null (generic-function-p existing)))
+      (generic-clobbers-function function-specifier)
+      (setq existing nil))
+    (apply #'ensure-generic-function-using-class
+	   existing function-specifier all-keys)))
 
 (defun generic-clobbers-function (function-specifier)
-  (error 'kernel:simple-program-error
-	 :format-control
-	 "~S already names an ordinary function or a macro,~%~
-	  you may want to replace it with a generic function, but doing so~%~
-	  will require that you decide what to do with the existing function~%~
-	  definition.~%~
-	  The PCL-specific function MAKE-SPECIALIZABLE may be useful to you."
-	 :format-arguments (list function-specifier)))
+  (restart-case
+      (error
+       'kernel:simple-program-error
+       :format-control
+       "~S already names an ordinary function or a macro.~%~
+	If you want to replace it with a generic function, you should remove~%~
+        the existing definition beforehand.~%"
+       :format-arguments (list function-specifier))
+    (continue ()
+      :report (lambda (stream)
+		(format stream "Discard the existing definition of ~S."
+			function-specifier))
+      (fmakunbound function-specifier))))
 
 (defvar *sgf-wrapper* 
   (boot-make-wrapper (early-class-size 'standard-generic-function)
@@ -1617,7 +1621,10 @@ work during bootstrapping.
 	       (find-method-combination (class-prototype ,gf-class)
 					(car combin)
 					(cdr combin)))))
-     ))
+     (let ((method-class (getf ,all-keys :method-class '.shes-not-there.)))
+       (unless (eq method-class '.shes-not-there.)
+	 (setf (getf ,all-keys :method-class)
+	       (find-class method-class t ,env))))))
      
 (defun real-ensure-gf-using-class--generic-function
        (existing
@@ -1921,7 +1928,7 @@ work during bootstrapping.
 ;;; implemented.
 ;;; 
 (defun parse-defmethod (cdr-of-form)
-  ;;(declare (values name qualifiers specialized-lambda-list body))
+  (declare (list cdr-of-form))
   (let ((name (pop cdr-of-form))
 	(qualifiers ())
 	(spec-ll ()))
@@ -1932,6 +1939,7 @@ work during bootstrapping.
     (values name qualifiers spec-ll cdr-of-form)))
 
 (defun parse-specializers (specializers)
+  (declare (list specializers))
   (flet ((parse (spec)
 	   (let ((result (specializer-from-type spec)))
 	     (if (specializerp result)

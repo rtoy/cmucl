@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.25.2.3 2000/07/06 06:18:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.25.2.4 2002/03/23 18:50:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,8 +114,8 @@
 
 ;;;; MAP-ALLOCATED-OBJECTS:
 
-(proclaim '(type fixnum *static-space-free-pointer*
-		 *read-only-space-free-pointer* ))
+(declaim (type fixnum *static-space-free-pointer*
+	       *read-only-space-free-pointer* ))
 
 (defun space-bounds (space)
   (declare (type spaces space))
@@ -143,7 +143,7 @@
 ;;;
 ;;;    Round Size (in bytes) up to the next dualword (eight byte) boundry.
 ;;;
-(proclaim '(inline round-to-dualword))
+(declaim (inline round-to-dualword))
 (defun round-to-dualword (size)
   (declare (fixnum size))
   (logand (the fixnum (+ size lowtag-mask)) (lognot lowtag-mask)))
@@ -153,7 +153,7 @@
 ;;;
 ;;;    Return the total size of a vector in bytes, including any pad.
 ;;;
-(proclaim '(inline vector-total-size))
+(declaim (inline vector-total-size))
 (defun vector-total-size (obj info)
   (let ((shift (room-info-length info))
 	(len (+ (length (the (simple-array * (*)) obj))
@@ -178,7 +178,7 @@
 ;;; object, the object's type code, and the objects total size in bytes,
 ;;; including any header and padding.
 ;;;
-(proclaim '(maybe-inline map-allocated-objects))
+(declaim (maybe-inline map-allocated-objects))
 (defun map-allocated-objects (fun space)
   (declare (type function fun) (type spaces space))
   (without-gcing

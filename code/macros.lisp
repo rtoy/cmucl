@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.9 2000/10/06 15:20:38 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.10 2002/03/23 18:50:05 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,9 +24,7 @@
 	  get-setf-expansion define-setf-expander
           define-modify-macro destructuring-bind nth-value
           otherwise ; Sacred to CASE and related macros.
-	  define-compiler-macro
-	  ;; CLtL1 versions:
-	  define-setf-method get-setf-method get-setf-method-multiple-value))
+	  define-compiler-macro))
 
 (in-package "EXTENSIONS")
 (export '(do-anonymous collect iterate))
@@ -57,7 +55,9 @@
       (let ((form (car tail)))
 	(cond ((and (stringp form) (cdr tail))
 	       (if doc-string-allowed
-		   (setq doc form)
+		   (setq doc form
+			 ;; Only one doc string is allowed.
+			 doc-string-allowed nil)
 		   (return (values tail (nreverse decls) doc))))
 	      ((not (and (consp form) (symbolp (car form))))
 	       (return (values tail (nreverse decls) doc)))
@@ -85,7 +85,11 @@
 		    ,@local-decs
 		    (block ,name
 		      ,body))))
-	`(c::%defmacro ',name #',def ',lambda-list ,doc)))))
+	`(progn
+	   (eval-when (:compile-toplevel)
+	     (c::do-macro-compile-time ',name #',def))
+	   (eval-when (:load-toplevel :execute)
+	     (c::%defmacro ',name #',def ',lambda-list ,doc)))))))
 
 
 ;;; %Defmacro, %%Defmacro  --  Internal
@@ -128,7 +132,12 @@
 		    ,@local-decs
 		    (block ,name
 		      ,body))))
-	`(c::%define-compiler-macro ',name #',def ',lambda-list ,doc)))))
+	`(progn
+	   (eval-when (:compile-toplevel)
+	     (c::do-compiler-macro-compile-time ',name #',def))
+	   (eval-when (:load-toplevel :execute)
+	     (c::%define-compiler-macro ',name #',def ',lambda-list ,doc)))))))
+
 
 (defun c::%define-compiler-macro (name definition lambda-list doc)
   (assert (eval:interpreted-function-p definition))
@@ -221,7 +230,7 @@
 (defparameter defsetf-error-string "Setf expander for ~S cannot be called with ~S args.")
 
 (defmacro define-setf-expander (access-fn lambda-list &body body)
-  "Syntax like DEFMACRO, but creates a Setf-Method generator.  The body
+  "Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body
   must be a form that returns the five magical values."
   (unless (symbolp access-fn)
     (error "~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
@@ -335,7 +344,11 @@
   value is constant and may be compiled into code.  If the variable already has
   a value, and this is not equal to the init, an error is signalled.  The third
   argument is an optional documentation string for the variable."
-  `(c::%defconstant ',var ,val ',doc))
+  `(progn
+     (eval-when (:compile-toplevel)
+       (c::do-defconstant-compile-time ',var ,val ',doc))
+     (eval-when (:load-toplevel :execute)
+       (c::%%defconstant ',var ,val ',doc))))
 
 ;;; %Defconstant, %%Defconstant  --  Internal
 ;;;
@@ -365,7 +378,7 @@
   value, the old value is not clobbered.  The third argument is an optional
   documentation string for the variable."
   `(progn
-    (proclaim '(special ,var))
+    (declaim (special ,var))
      ,@(when valp
 	 `((unless (boundp ',var)
 	     (setq ,var ,val))))
@@ -379,7 +392,7 @@
   variable special and sets its value to VAL.  The third argument is
   an optional documentation string for the parameter."
   `(progn
-    (proclaim '(special ,var))
+    (declaim (special ,var))
     (setq ,var ,val)
     ,@(when docp
 	`((setf (documentation ',var 'variable) ',doc)))
@@ -1471,7 +1484,7 @@
   (cond ((numberp count)
          `(do ((,var 0 (1+ ,var)))
               ((>= ,var ,count) ,result)
-	    (declare (type unsigned-byte ,var))
+	    (declare (type (integer 0 ,count) ,var))
             ,@body))
         (t (let ((v1 (gensym)))
              `(do ((,var 0 (1+ ,var)) (,v1 ,count))
