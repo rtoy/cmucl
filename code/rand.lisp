@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.3 1991/02/08 13:35:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.4 1991/12/14 09:01:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,9 @@
 (defconstant %fixnum-length (integer-length most-positive-fixnum))
 (defvar rand-seed 0)
 
-(defstruct (random-state (:constructor make-random-object))
+(defstruct (random-state
+	    (:constructor make-random-object)
+	    (:make-load-form-fun :just-dump-it-normally))
   (j 24 :type integer)
   (k 0 :type integer)
   (seed (make-array (1+ random-max) :initial-contents
