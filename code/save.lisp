@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.2 1990/08/24 18:13:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.3 1990/09/27 02:24:19 wlott Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.
@@ -52,6 +52,7 @@
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
+				 (constants nil)
 				 (init-function
 				  #'(lambda ()
 				      (throw 'top-level-catcher nil)))
@@ -68,9 +69,11 @@
   less often and take less time in the resulting core file.
 
   :root-structures
-      This should be a list of the main entry points in any newly loaded
-  systems.  This need not be supplied, but locality will be better if it
-  is.  This is meaningless if :purify is Nil.
+  :constants
+      These should be a list of the main entry points in any newly loaded
+  systems and a list of any large data structures that will never again
+  be changed.  These need not be supplied, but locality and/or GC performance
+  will be better if they are.  They are meaningless if :purify is NIL.
   
   :init-function
       This is a function which is called when the created core file is
@@ -86,7 +89,7 @@
       If true, print out the lisp system herald when starting."
   
   (if purify
-      (purify :root-structures root-structures)
+      (purify :root-structures root-structures :constants constants)
       (gc))
   (unless (save (namestring core-file-name))
     (dolist (f *before-save-initializations*) (funcall f))
