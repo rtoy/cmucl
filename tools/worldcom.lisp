@@ -104,7 +104,7 @@
 (comf "nicode:machdefs")
 (comf "nicode:netnamedefs")
 
-(let ((system:*alien-eval-when* '(compile)))
+(let ((system:*alien-eval-when* '(compile eval)))
   (unless (probe-file "nicode:machuser.nfasl")
     (load "nicode:machmsgdefs.lisp")
     (comf "nicode:machuser"))
