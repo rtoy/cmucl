@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.30 2002/03/31 14:48:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.31 2002/11/14 16:58:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1300,7 +1300,7 @@
 	    (output-push-fdefinition
 	     segment
 	     (if (and found
-		      (= (length (combination-args (continuation-dest cont)))
+		      (= (length (basic-combination-args (continuation-dest cont)))
 			 2))
 		 found
 		 name))))
