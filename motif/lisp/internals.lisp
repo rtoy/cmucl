@@ -67,8 +67,8 @@
 	  (handler-case
 	      (ext::connect-to-unix-socket
 	       (if pid
-		   (format nil "/tmp/.motif_socket-p~a" pid)
-		   (format nil "/tmp/.motif_socket-u~a" (unix:unix-getuid))))
+		   (format nil "/tmp/.motif_socket-p~D" pid)
+		   (format nil "/tmp/.motif_socket-u~D" (unix:unix-getuid))))
 	    (error ()
 	      (ext:connect-to-unix-socket "/tmp/.motif_socket"))))
     (error ()
