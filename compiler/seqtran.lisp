@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.13 1991/11/12 14:13:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.14 1991/12/08 16:55:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,11 +84,11 @@
 (deftransform %setelt ((s i v) (list * *))
   '(setf (car (nthcdr i s)) v))
 
+
 (deftransform member ((e l &key (test #'eql)) * * :node node)
   (unless (constant-continuation-p l) (give-up))
   
-  (let ((val (continuation-value l))
-	(if-p (if-p (continuation-dest (node-cont node)))))
+  (let ((val (continuation-value l)))
     (unless (policy node
 		    (or (= speed 3)
 			(and (>= speed space)
@@ -98,7 +98,7 @@
     (labels ((frob (els)
 	       (if els
 		   `(if (funcall test e ',(car els))
-			',(if if-p t els)
+			',els
 			,(frob (cdr els)))
 		   'nil)))
       (frob val))))
