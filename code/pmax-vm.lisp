@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.4 1990/11/26 18:55:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.5 1990/12/06 17:39:33 ram Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
@@ -83,3 +83,16 @@
 	      (sc-offsets (c::read-var-integer vector index)))
 	    (values error-number (sc-offsets))))))))
 
+
+;;; SIGCONTEXT-FLOATING-POINT-MODES  --  Interface
+;;;
+;;;    Given a sigcontext pointer, return the floating point modes word in the
+;;; same format as returned by FLOATING-POINT-MODES.
+;;;
+(defun sigcontext-floating-point-modes (scp)
+  (alien-bind ((sc (make-alien 'mach:sigcontext
+					     #.(ext:c-sizeof 'mach:sigcontext)
+					     scp)
+			  mach:sigcontext
+			  t))
+    (alien-access (mach:sigcontext-fpc_csr (alien-value sc)))))
