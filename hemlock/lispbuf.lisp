@@ -429,7 +429,7 @@
    (with-input-from-region (stream region)
      (with-pop-up-display (*error-output* :height 19)
        (c::compile-from-stream stream
-			       :defined-from-pathname
+			       :source-info
 			       (buffer-pathname (current-buffer)))))))
 
 
