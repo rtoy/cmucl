@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.106 2001/04/12 19:45:57 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.107 2001/09/24 15:26:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2330,6 +2330,38 @@
 			  (type-specifier (continuation-type x)))
 		      values))))
 
+
+(defun signum-derive-type-aux (type)
+  ;; The signum of a complex number is a complex number of the same type.
+  ;; The signum of a real number is 0, 1, or -1, of the same type.
+  (if (eq (numeric-type-complexp type) :complex)
+      type
+      (let* ((type-interval (numeric-type->interval type))
+	     (range-info (interval-range-info type-interval))
+	     (contains-0-p (interval-contains-p 0 type-interval))
+	     (plus (make-numeric-type :class (numeric-type-class type)
+				      :format (numeric-type-format type)
+				      :low 1 :high 1))
+	     (minus (make-numeric-type :class (numeric-type-class type)
+				       :format (numeric-type-format type)
+				       :low -1 :high -1))
+	     (zero (make-numeric-type :class (numeric-type-class type)
+				      :format (numeric-type-format type)
+				      :low 0 :high 0)))
+	(cond ((eq range-info '+)
+	       (if contains-0-p
+		   (make-union-type (list plus zero))
+		   plus))
+	      ((eq range-info '-)
+	       (if contains-0-p
+		   (make-union-type (list minus zero))
+		   minus))
+	      (t
+	       (make-union-type (list minus plus zero)))))))
+
+	
+(defoptimizer (signum derive-type) ((num))
+  (one-arg-derive-type num #'signum-derive-type-aux nil))
 
 
 ;;;; Byte operations:
