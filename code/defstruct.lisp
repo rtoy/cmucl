@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.94 2004/09/03 03:05:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.95 2004/10/05 21:57:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1272,11 +1272,28 @@
 	(if (eq ltype 'list)
 	    `((defun ,pred (object)
 		(and (typep object 'list)
-		     (eq (nth ,index object) ',name))))
+		     (defstruct-list-p ,index object ',name))))
 	    `((defun ,pred (object)
 		(and (typep object 'vector)
 		     (array-in-bounds-p object ,index)
 		     (eq (aref object ,index) ',name)))))))))
+
+;; A predicate to determine if the given list is a defstruct object of
+;; :type list.  This used to be done using (eq (nth index object)
+;; name), but that fails if the (nth index object) doesn't work
+;; because object is not a proper list.
+(defun defstruct-list-p (index list name)
+  ;; Basically do (nth index list), but don't crash if the list is not
+  ;; a proper list.
+  (declare (type index index)
+	   (type list list))
+  (do ((i index (1- i))
+       (result list (cdr result)))
+      ((or (atom result) (not (plusp i)))
+       (unless (atom result)
+	 (eq (car result) name)))
+    (declare (type index i))))
+
 
 
 ;;;; Load time support for default structures (%DEFSTRUCT)
