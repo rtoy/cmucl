@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.1 1990/04/13 13:27:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.2 1990/04/13 17:16:42 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -995,8 +995,11 @@ default-value-5
 ;;; Fixed is the number of non-more arguments. 
 ;;;
 (define-vop (copy-more-arg)
-  (:temporary (:scs (any-reg) :type fixnum) result count src dst)
-  (:temporary (:scs (descriptor-reg)) temp)
+  (:temporary (:sc any-reg :offset nl0-offset) result)
+  (:temporary (:sc any-reg :offset nl1-offset) count)
+  (:temporary (:sc any-reg :offset nl2-offset) src)
+  (:temporary (:sc any-reg :offset nl3-offset) dst)
+  (:temporary (:sc descriptor-reg :offset l0-offset) temp)
   (:info fixed)
   (:generator 20
     (let ((loop (gen-label))
