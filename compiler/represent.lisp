@@ -304,6 +304,61 @@
   (undefined-value))
 
 
+;;; GET-OPERAND-NAME  --  Internal
+;;;
+;;;    If TN is a variable, return the name.  If TN is used by a VOP emitted
+;;; for a return, then return a string indicating this.  Otherwise, return NIL.
+;;;
+(defun get-operand-name (tn arg-p)
+  (declare (type tn tn))
+  (let* ((actual (if (eq (tn-kind tn) :alias) (tn-save-tn tn) tn))
+	 (reads (tn-reads tn))
+	 (leaf (tn-leaf actual)))
+    (cond ((lambda-var-p leaf) (leaf-name leaf))
+	  ((and (not arg-p) reads
+		(return-p (vop-node (tn-ref-vop reads))))
+	   "<return value>")
+	  (t
+	   nil))))
+
+
+;;; DO-COERCE-EFFICENCY-NOTE  --  Internal
+;;;
+;;;    If policy indicates, give an efficency note for doing the a coercion
+;;; Vop, where Op is the operand we are coercing for and Dest-TN is the
+;;; distinct destination in a move.
+;;;
+(defun do-coerce-efficency-note (vop op dest-tn)
+  (declare (type vop-info vop) (type tn-ref op) (type (or tn null) dest-tn))
+  (let* ((note (or (template-note vop) (template-name vop)))
+	 (cost (template-cost vop))
+	 (op-vop (tn-ref-vop op))
+	 (op-node (vop-node op-vop))
+	 (op-tn (tn-ref-tn op))
+	 (*compiler-error-context* op-node))
+    (cond ((eq (tn-kind op-tn) :constant))
+	  ((policy op-node (<= speed brevity) (<= space brevity)))
+	  ((null dest-tn)
+	   (let* ((op-info (vop-info op-vop))
+		  (op-note (or (template-note op-info)
+			       (template-name op-info)))
+		  (arg-p (not (tn-ref-write-p op)))
+		  (name (get-operand-name op-tn arg-p)))
+	     (multiple-value-bind (ignore pos)
+				  (get-operand-info op)
+	       (declare (ignore ignore))
+	       (compiler-note
+		"Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
+		The ~:R ~:[result~;argument~] of ~A."
+		note cost name arg-p name
+		pos arg-p op-note))))
+	  (t
+	   (compiler-note "Doing ~A (cost ~D)~@[ from ~S~]~@[ to ~S~]."
+			  note cost (get-operand-name op-tn t)
+			  (get-operand-name dest-tn nil)))))
+  (undefined-value))
+
+
 ;;; EMIT-COERCE-VOP  --  Internal
 ;;;
 ;;;    Emit a coercion VOP for Op Before the specifed VOP or die trying.  SCS
@@ -316,11 +371,15 @@
 ;;; between the operand's SC and load SC.  If we find such a VOP, then we make
 ;;; a TN having the load SC as the representation.
 ;;;
+;;;    Dest-TN is the TN that we are moving to, for a move or move-arg.  This
+;;; is only for efficiency notes.
+;;;
 ;;;    If the TN is an unused result TN, then we don't actually emit the move;
 ;;; we just change to the right kind of TN.
 ;;;
-(defun emit-coerce-vop (op scs before)
-  (declare (type tn-ref op) (type sc-vector scs) (type (or vop null) before))
+(defun emit-coerce-vop (op dest-tn scs before)
+  (declare (type tn-ref op) (type sc-vector scs) (type (or vop null) before)
+	   (type (or tn null) dest-tn))
   (let* ((op-tn (tn-ref-tn op))
 	 (op-sc (tn-sc op-tn))
 	 (op-scn (sc-number op-sc))
@@ -337,6 +396,8 @@
 			 (svref (sc-move-vops op-sc) i)
 			 (svref (sc-move-vops i-sc) op-scn))))
 	    (when res
+	      (when (>= (vop-info-cost res) *efficency-note-cost-threshold*)
+		(do-coerce-efficency-note res op dest-tn))
 	      (let ((temp (make-representation-tn ptype i)))
 		(change-tn-ref-tn op temp)
 		(cond
@@ -352,17 +413,19 @@
 ;;;
 ;;;    Scan some operands and call EMIT-COERCE-VOP on any for which we can't
 ;;; load the operand.  The coerce VOP is inserted Before the specified VOP.
+;;; Dest-TN is the destination TN if we are doing a move or move-arg, and is
+;;; NIL otherwise.  This is only used for efficency notes.
 ;;;
 (proclaim '(inline coerce-some-operands))
-(defun coerce-some-operands (ops load-scs before)
+(defun coerce-some-operands (ops dest-tn load-scs before)
   (declare (type (or tn-ref null) ops) (list load-scs)
-	   (type (or vop null) before))
+	   (type (or tn null) dest-tn) (type (or vop null) before))
   (do ((op ops (tn-ref-across op))
        (scs load-scs (cdr scs)))
       ((null scs))
     (unless (svref (car scs)
 		   (sc-number (tn-sc (tn-ref-tn op))))
-      (emit-coerce-vop op (car scs) before)))
+      (emit-coerce-vop op dest-tn (car scs) before)))
   (undefined-value))
 
 
@@ -373,9 +436,10 @@
 (defun coerce-vop-operands (vop)
   (declare (type vop vop))
   (let ((info (vop-info vop)))
-    (coerce-some-operands (vop-args vop) (vop-info-arg-load-scs info) vop)
-    (coerce-some-operands (vop-results vop) (vop-info-result-load-scs info)
-			  (vop-next vop))))
+    (coerce-some-operands (vop-args vop) nil (vop-info-arg-load-scs info) vop)
+    (coerce-some-operands (vop-results vop) nil (vop-info-result-load-scs info)
+			  (vop-next vop)))
+  (undefined-value))
 
 
 ;;; EMIT-ARG-MOVES  --  Internal
@@ -430,7 +494,8 @@
 		       nfp-tn)))
 	       (new (emit-move-arg-template node block res val-tn this-fp
 					    pass-tn vop)))
-	  (coerce-some-operands (vop-args new) (vop-info-arg-load-scs res)
+	  (coerce-some-operands (vop-args new) pass-tn
+				(vop-info-arg-load-scs res)
 				(if prev
 				    (vop-next prev)
 				    (ir2-block-start-vop block)))))))
@@ -452,11 +517,14 @@
 	  (block (vop-block vop)))
       (cond
        ((eq (vop-info-name info) 'move)
-	(let* ((x (tn-ref-tn (vop-args vop)))
+	(let* ((args (vop-args vop))
+	       (x (tn-ref-tn args))
 	       (y (tn-ref-tn (vop-results vop)))
 	       (res (svref (sc-move-vops (tn-sc y))
 			   (sc-number (tn-sc x)))))
 	  (cond (res
+		 (when (>= (vop-info-cost res) *efficency-note-cost-threshold*)
+		   (do-coerce-efficency-note res args y))
 		 (emit-move-template node block res x y vop)
 		 (delete-vop vop))
 		(t
