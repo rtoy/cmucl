@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.34 2003/05/26 20:20:31 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.35 2003/07/16 09:51:57 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -539,7 +539,8 @@
 					:key #'continuation-type-check)))
 			 (if (consp name)
 			     (not (continuation-dest (node-cont call)))
-			     t))))
+			     t)
+			 (= (length args) (if (consp name) 2 1)))))
 	     (setf (basic-combination-info call)
 		   (gethash (if (consp name) '%setf-instance-ref '%instance-ref)
 			    *inline-function-table*))
