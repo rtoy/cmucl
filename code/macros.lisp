@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.49 1997/05/08 20:52:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50 1997/06/05 13:02:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -726,38 +726,27 @@
 		   `(progn ,@(setters) nil))))
       (thunk (let*-bindings) (mv-bindings)))))
 
-
-(defmacro shiftf (&rest args &environment env)
+(defmacro shiftf (&whole form &rest args &environment env)
   "One or more SETF-style place expressions, followed by a single
    value expression.  Evaluates all of the expressions in turn, then
    assigns the value of each expression to the place on its left,
    returning the value of the leftmost."
-  (if (< (length args) 2)
-      (error "Too few argument forms to a SHIFTF."))
-  (collect ((let*-bindings) (forms))
-    (do ((first t nil)
-	 (a args (cdr a))
-	 (prev-store-vars)
-	 (prev-setter))
-	((endp (cdr a))
-	 (forms `(multiple-value-bind ,prev-store-vars ,(car a)
-		   ,prev-setter)))
-      (multiple-value-bind
-	  (temps exprs store-vars setter getter)
-	  (get-setf-expansion (car a) env)
-	(loop
-	  for temp in temps
-	  for expr in exprs
-	  do (let*-bindings `(,temp ,expr)))
-	(forms (if first
-		   getter
-		   `(multiple-value-bind ,prev-store-vars ,getter
-		      ,prev-setter)))
-	(setf prev-store-vars store-vars)
-	(setf prev-setter setter)))
-    `(let* ,(let*-bindings)
-       (multiple-value-prog1
-	   ,@(forms)))))
+  (when (< (length args) 2)
+    (error "~S called with too few arguments: ~S" 'shiftf form))
+  (let ((resultvar (gensym)))
+    (do ((arglist args (cdr arglist))
+         (bindlist nil)
+         (storelist nil)
+         (lastvar resultvar))
+        ((atom (cdr arglist))
+         (push `(,lastvar ,(first arglist)) bindlist)
+         `(LET* ,(nreverse bindlist) ,@(nreverse storelist) ,resultvar))
+      (multiple-value-bind (SM1 SM2 SM3 SM4 SM5)
+          (get-setf-method (first arglist) env)
+        (mapc #'(lambda (var val) (push `(,var ,val) bindlist)) SM1 SM2)
+        (push `(,lastvar ,SM5) bindlist)
+        (push SM4 storelist)
+        (setq lastvar (first SM3))))))
 
 (defmacro rotatef (&rest args &environment env)
   "Takes any number of SETF-style place expressions.  Evaluates all of the
