@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.31 1991/11/10 22:32:46 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.32 1992/03/02 03:56:01 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -130,6 +130,27 @@ struct timeval *x, *y;
 {
     return (((double) x->tv_sec + (double) x->tv_usec * 1.0e-6) -
 	    ((double) y->tv_sec + (double) y->tv_usec * 1.0e-6));
+}
+
+#define BYTES_ZERO_BEFORE_END (1<<12)
+
+static void zero_stack()
+{
+    unsigned long *ptr = (unsigned long *)current_control_stack_pointer;
+
+  search:
+    do {
+	if (*ptr)
+	    goto fill;
+	ptr++;
+    } while (((unsigned long)ptr) & (BYTES_ZERO_BEFORE_END-1));
+    return;
+
+  fill:
+    do {
+	*ptr++ = 0;
+    } while (((unsigned long)ptr) & (BYTES_ZERO_BEFORE_END-1));
+    goto search;
 }
 
 collect_garbage()
@@ -268,9 +289,7 @@ collect_garbage()
 #ifdef PRINTNOISE
 	printf("Zeroing empty part of control stack ...\n");
 #endif
-	os_zero((os_vm_address_t) current_control_stack_pointer,
-		(os_vm_size_t) (CONTROL_STACK_SIZE -
-				control_stack_size * sizeof(lispobj)));
+	zero_stack();
 
 	(void) sigsetmask(oldmask);
 
