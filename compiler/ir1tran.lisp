@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.170 2004/04/28 17:58:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.171 2004/08/30 14:55:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -140,6 +140,17 @@
       (and (consp y)
            (member (car y) '(flet labels))
            (equal x (cadr y)))))
+
+
+;;; *ALLOW-DEBUG-CATCH-TAG* controls whether we should allow the
+;;; insertion a (CATCH ...) around code to allow the debugger
+;;; return-from-frame (RETURN) command to work.
+(defvar *allow-debug-catch-tag* t)
+
+;;; This is for debugging the return-from-frame functionality. These are
+;;; supposed to go away in the future. --jwr
+(defvar *print-debug-tag-conversions* nil)
+(defvar *print-debug-tag-converted-bodies* nil)
 
 
 ;;;; Dynamic-Extent
@@ -669,6 +680,8 @@
 	  (setq trail (cdr trail)))))))
 
 
+
+
 ;;;; IR1-CONVERT, macroexpansion and special-form dispatching.
 
 (declaim (start-block ir1-convert ir1-convert-progn-body
@@ -722,7 +735,12 @@
 	      (compiler-error "Illegal function call."))
 	     (t
 	      (ir1-convert-combination start cont form
-				       (ir1-convert-lambda fun)))))))))
+				       ;; TODO: check this case --jwr
+				       (ir1-convert-lambda fun 
+							   nil ; name
+							   nil ; parent-form
+							   t
+							   'ir1-convert)))))))))
 
 
 ;;; Reference-Constant  --  Internal
@@ -1476,6 +1494,97 @@
     key))
 
 
+;;; IR1-wrap-for-debug -- Internal
+;;;
+;;; Wrap a piece of code in a catch form, so that we can later throw to it 
+;;; in the debugger, to return a value.
+;;;
+(defun ir1-wrap-for-debug (body)
+  (let ((new-body `((catch (make-symbol "CMUCL-DEBUG-CATCH-TAG")
+		      ,@body))))
+    (when (and *compile-print* 
+	       *print-debug-tag-conversions*
+	       *print-debug-tag-converted-bodies*)
+      (format t "new-body: ~S~%" new-body))
+    new-body))
+
+
+;;; IR1-Convert-Lambda  --  Internal
+;;;
+;;;    Convert a Lambda into a Lambda or Optional-Dispatch leaf.  NAME and
+;;; PARENT-FORM are context that is used to drive the context sensitive
+;;; declaration mechanism.  If we find an entry in *CONTEXT-DECLARATIONS* that
+;;; matches this context (by returning a non-null value) then we add it into
+;;; the local declarations.
+;;;
+(defun ir1-convert-lambda (form &optional
+				name 
+				parent-form
+				allow-debug-catch-tag
+				caller)
+  (unless (consp form)
+    (compiler-error "Found a ~S when expecting a lambda expression:~%  ~S"
+		    (type-of form) form))
+  (unless (eq (car form) 'lambda)
+    (compiler-error "Expecting a lambda, but form begins with ~S:~%  ~S"
+		    (car form) form))
+  (unless (and (consp (cdr form)) (listp (cadr form)))
+    (compiler-error "Lambda-list absent or not a list:~%  ~S" form))
+
+  (multiple-value-bind (vars keyp allow-other-keys aux-vars aux-vals)
+      (find-lambda-vars (cadr form))
+    (multiple-value-bind (body decls)
+	(system:parse-body (cddr form) *lexical-environment* t)
+      (let* ((*allow-debug-catch-tag* (and *allow-debug-catch-tag* 
+					   allow-debug-catch-tag))
+	     (new-body (if (and parent-form
+				*allow-debug-catch-tag*
+				(policy nil (= debug 3))) ; TODO: check the policy settings --jwr
+			   (progn
+			     (when (and *compile-print* *print-debug-tag-conversions*)
+			       (format t "ir1-convert-lambda: called by: ~S, parent-form: ~S~%" 
+				       caller parent-form))
+			     (ir1-wrap-for-debug body))
+			   body))
+	     (*current-function-names*
+	      (if (member parent-form
+			  '(flet labels defun defmacro define-compiler-macro)
+			  :test #'eq)
+		  (list name)
+		  *current-function-names*))
+	     (context-decls
+	      (and parent-form
+		   (loop for fun in *context-declarations*
+			 append (funcall (the function fun)
+					 name parent-form))))
+	     (cont (make-continuation))
+	     (*lexical-environment*
+	      (process-declarations (append context-decls decls)
+				    (append aux-vars vars)
+				    nil cont))
+	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp)
+		      (ir1-convert-hairy-lambda new-body vars keyp
+						allow-other-keys
+						aux-vars aux-vals cont)
+		      (ir1-convert-lambda-body new-body vars aux-vars aux-vals
+					       t cont))))
+	(setf (functional-inline-expansion res) form)
+	(setf (functional-arg-documentation res) (cadr form))
+	(setf (leaf-name res)
+	      (or name
+		  ;; PCL-generated lambdas end up here without an explicit NAME.
+		  ;; To avoid ending up with IR1 lambda-nodes that are unnamed,
+		  ;; we extract a name from the "method-name" declaration that
+		  ;; is inserted by PCL. A cleaner solution would be to add a
+		  ;; NAMED-LAMBDA IR1 translator, similar to that used in SBCL,
+		  ;; and make PCL use that instead of LAMBDA.
+		  (let ((decl (find 'pcl::method-name decls :key 'caadr)))
+		    (and decl
+			 (eq 'declare (first decl))
+			 (cons 'pcl::method (cadadr decl))))))
+	res))))
+
+
 ;;; Find-Lambda-Vars  --  Internal
 ;;;
 ;;;    Parse a lambda-list into a list of Var structures, stripping off any aux
@@ -2196,65 +2305,6 @@
     res))
 
     
-;;; IR1-Convert-Lambda  --  Internal
-;;;
-;;;    Convert a Lambda into a Lambda or Optional-Dispatch leaf.  NAME and
-;;; PARENT-FORM are context that is used to drive the context sensitive
-;;; declaration mechanism.  If we find an entry in *CONTEXT-DECLARATIONS* that
-;;; matches this context (by returning a non-null value) then we add it into
-;;; the local declarations.
-;;;
-(defun ir1-convert-lambda (form &optional name parent-form)
-  (unless (consp form)
-    (compiler-error "Found a ~S when expecting a lambda expression:~%  ~S"
-		    (type-of form) form))
-  (unless (eq (car form) 'lambda)
-    (compiler-error "Expecting a lambda, but form begins with ~S:~%  ~S"
-		    (car form) form))
-  (unless (and (consp (cdr form)) (listp (cadr form)))
-    (compiler-error "Lambda-list absent or not a list:~%  ~S" form))
-
-  (multiple-value-bind (vars keyp allow-other-keys aux-vars aux-vals)
-      (find-lambda-vars (cadr form))
-    (multiple-value-bind (body decls)
-	(system:parse-body (cddr form) *lexical-environment* t)
-      (let* ((*current-function-names*
-	      (if (member parent-form
-			  '(flet labels defun defmacro define-compiler-macro)
-			  :test #'eq)
-		  (list name)
-		  *current-function-names*))
-	     (context-decls
-	      (and parent-form
-		   (loop for fun in *context-declarations*
-		         append (funcall (the function fun)
-					 name parent-form))))
-	     (cont (make-continuation))
-	     (*lexical-environment*
-	      (process-declarations (append context-decls decls)
-				    (append aux-vars vars)
-				    nil cont))
-	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp)
-		      (ir1-convert-hairy-lambda body vars keyp
-						allow-other-keys
-						aux-vars aux-vals cont)
-		      (ir1-convert-lambda-body body vars aux-vars aux-vals
-					       t cont))))
-        (setf (functional-inline-expansion res) form)
-	(setf (functional-arg-documentation res) (cadr form))
-	(setf (leaf-name res)
-              (or name
-                  ;; PCL-generated lambdas end up here without an explicit NAME.
-                  ;; To avoid ending up with IR1 lambda-nodes that are unnamed,
-                  ;; we extract a name from the "method-name" declaration that
-                  ;; is inserted by PCL. A cleaner solution would be to add a
-                  ;; NAMED-LAMBDA IR1 translator, similar to that used in SBCL,
-                  ;; and make PCL use that instead of LAMBDA.
-                  (let ((decl (find 'pcl::method-name decls :key 'caadr)))
-                    (and decl
-                         (eq 'declare (first decl))
-                         (cons 'pcl::method (cadadr decl))))))
-	res))))
 
 (declaim (end-block))
 
@@ -2695,11 +2745,14 @@
 	     (reference-leaf start cont fn))))
     (if (consp thing)
 	(case (car thing)
-	  ((lambda)
-	   (reference-leaf start cont (ir1-convert-lambda thing nil 'function)))
+	  ((lambda)			
+	   ;; we set allow-debug-catch-tag here, needed for CLOS --jwr
+	   (reference-leaf start cont (ir1-convert-lambda thing nil 'function t)))
 	  ((instance-lambda)
+	   ;; TODO: check if we should allow-debug-catch-tag here --jwr
 	   (let ((res (ir1-convert-lambda `(lambda ,@(cdr thing))
-					  nil 'function)))
+					  nil ; name
+					  'function)))
 	     (setf (getf (functional-plist res) :fin-function) t)
 	     (reference-leaf start cont res)))
 	  (t
@@ -3132,6 +3185,11 @@
   (multiple-value-bind (names defs)
       (extract-flet-variables definitions 'flet)
     (let* ((fvars (mapcar #'(lambda (n d)
+			      ;; There is no point in allowing debug
+			      ;; catch tag to be inserted here, since in
+			      ;; CMUCL (as opposed to SBCL) flet
+			      ;; function calls do not make it to the
+			      ;; debugger anyway? --jwr
 			      (ir1-convert-lambda d n 'flet))
 			  names defs))
 	   (*lexical-environment*
@@ -3158,6 +3216,9 @@
 	   (real-funs 
 	    (let ((*lexical-environment* (make-lexenv :functions new-fenv)))
 	      (mapcar #'(lambda (n d)
+			  ;; see comments in (def-ir1-translator flet)
+			  ;; on why we don't set allow-debug-catch-tag
+			  ;; to t here --jwr
 			  (ir1-convert-lambda d n 'labels))
 		      names defs))))
 
@@ -3635,7 +3696,9 @@
   (let ((name (eval name))
 	(def (second def))) ; Don't want to make a function just yet...
     (let* ((*current-path* (revert-source-path 'define-compiler-macro))
-	   (fun (ir1-convert-lambda def name 'define-compiler-macro)))
+	   (fun (ir1-convert-lambda def 
+				    name 
+				    'define-compiler-macro)))
       (setf (leaf-name fun) (list :compiler-macro name))
       (setf (functional-arg-documentation fun) (eval lambda-list))
 
@@ -3842,7 +3905,18 @@
     (unless (eq (defined-function-inlinep var) :inline)
       (setf (defined-function-inline-expansion var) nil))
     (let* ((name (leaf-name var))
-	   (fun (funcall converter lambda name parent-form))
+	   ;; converter is either ir1-convert-lambda or ir1-convert-inline-lambda
+	   ;; we allow-debug-catch-tag if it's not inline --jwr
+	   (fun (if (eq converter #'ir1-convert-inline-lambda)
+		    (funcall converter 
+			     lambda 
+			     name 
+			     parent-form)
+		    (funcall converter 
+			     lambda 
+			     name 
+			     parent-form
+			     t)))
 	   (function-info (info function info name)))
       (setf (functional-inlinep fun) (defined-function-inlinep var))
       (assert-new-definition var fun)

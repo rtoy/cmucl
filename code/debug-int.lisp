@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.112 2004/08/03 11:59:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.113 2004/08/30 14:55:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 
 	  top-frame frame-down frame-up flush-frames-above frame-debug-function
 	  frame-code-location eval-in-frame return-from-frame frame-catches
-	  frame-number frame frame-p
+	  frame-number frame frame-p find-debug-tag-for-frame
 
 	  do-debug-function-blocks debug-function-lambda-list
 	  debug-variable-info-available do-debug-function-variables
@@ -3834,6 +3834,28 @@
   "Evaluate Form in the lexical context of Frame's current code location,
    returning the results of the evaluation."
   (funcall (preprocess-for-eval form (frame-code-location frame)) frame))
+
+
+;;; FIND-DEBUG-TAG-FOR-FRAME  --  Public.
+;;;
+;;; helper function, used also by debug:debug-return.
+(defun find-debug-tag-for-frame (frame)
+  "Find and return the debug catch tag for a given frame, if it exists."
+  (assoc-if #'(lambda (x)
+		(and (symbolp x)
+		     (not (symbol-package x))
+		     (string= x :cmucl-debug-catch-tag)))
+	    (frame-catches frame)))
+
+
+;;; RETURN-FROM-FRAME  --  Public.
+;;;
+(defun return-from-frame (frame form)
+  (declare (type frame frame))
+  "Evaluate Form in the lexical context of Frame's current code location,
+   returning from the current frame the results of the evaluation."
+  (let ((tag (find-debug-tag-for-frame frame)))
+    (when tag (throw (car tag) (eval-in-frame frame form)))))
 
 
 

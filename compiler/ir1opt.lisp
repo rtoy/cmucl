@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.82 2003/10/26 17:31:25 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.83 2004/08/30 14:55:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1662,7 +1662,12 @@
 		     (fun (ir1-convert-lambda
 			   `(lambda (&optional ,@dums &rest ,ignore)
 			      (declare (ignore ,ignore))
-			      (funcall ,(ref-leaf ref) ,@dums)))))
+			      (funcall ,(ref-leaf ref) ,@dums))
+			   nil		; name
+			   nil		; parent-form
+			   nil		; allow-debug-catch-tag
+			   'ir1-optimize-mv-call ; caller
+			   )))
 		(change-ref-leaf ref fun)
 		(assert (eq (basic-combination-kind node) :full))
 		(local-call-analyze *current-component*)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.63 2003/08/08 11:36:25 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.64 2004/08/30 14:55:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -124,13 +124,10 @@ Breakpoints and steps:
     Abbreviations: BR, BP
   STEP [n]                          step to the next location or step n times.
 
-Function and macro commands:
- (DEBUG:DEBUG-RETURN expression)
+Actions on frames:
+  DEBUG-RETURN expression
     returns expression's values from the current frame, exiting the debugger.
- (DEBUG:ARG n)
-    returns the n'th argument, remaining in the debugger.
- (DEBUG:VAR string-or-symbol [id])
-    returns the specified variable's value, remaining in the debugger.
+    Abbreviations: R
 
 See the CMU Common Lisp User's Manual for more information.
 ")
@@ -1238,6 +1235,21 @@ See the CMU Common Lisp User's Manual for more information.
 		      (return prev)))))))))
 
 (def-debug-command-alias "F" "FRAME")
+
+;; debug-return, equivalent to return-from-frame in some other lisps,
+;; allows us to return an arbitrary value from any frame
+(def-debug-command "DEBUG-RETURN" (&optional
+				   (return (read-prompting-maybe
+					    "debug-return: ")))
+  (unless (di:return-from-frame *current-frame* return)
+    ;; the "unless" here is for aesthetical purposes only. If all goes
+    ;; well with return-from-frame, the code after it will never get
+    ;; reached anyway.
+    (format t "~@<can't find a tag for this frame ~
+                   ~2I~_(hint: try increasing the DEBUG optimization quality ~
+                   and recompiling)~:@>")))
+
+(def-debug-command-alias "R" "DEBUG-RETURN")
 
 
 ;;;
