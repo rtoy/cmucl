@@ -165,7 +165,7 @@
 
     (unless (and (probe-file obj)
 		 (>= (file-write-date obj) (file-write-date src)))
-      (write-line name)
+      (write-line (namestring name))
       (format *error-output* "~2&Start time: ~A, compiling ~A.~%"
 	      (ext:format-universal-time nil (get-universal-time))
 	      name)
