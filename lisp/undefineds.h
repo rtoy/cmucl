@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.31 2003/03/02 16:13:38 emarsden Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.32 2003/03/03 18:40:58 pmai Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -276,6 +276,7 @@ F(fstat64)
 F(lstat64)
 F(readdir64)
 F(statfs64)
+F(lockf64)
 #endif
 
 #if defined(sparc) || defined(linux)
