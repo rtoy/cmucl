@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.13 1999/06/22 14:53:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.14 1999/11/11 16:25:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -281,40 +281,26 @@
   (:translate logcount)
   (:note "inline (unsigned-byte 32) logcount")
   (:policy :fast-safe)
-  (:args (arg :scs (unsigned-reg) :target shift))
-  (:arg-types unsigned-num)
-  (:results (res :scs (any-reg)))
-  (:result-types positive-fixnum)
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift temp)
-  (:guard (not (backend-featurep :sparc-v9)))
-  (:generator 30
-    (let ((loop (gen-label))
-	  (done (gen-label)))
-      (inst addcc shift zero-tn arg)
-      (inst b :eq done)
-      (move res zero-tn)
-
-      (emit-label loop)
-      (inst sub temp shift 1)
-      (inst andcc shift temp)
-      (inst b :ne loop)
-      (inst add res (fixnum 1))
-
-      (emit-label done))))
-
-(define-vop (unsigned-byte-32-count)
-  (:translate logcount)
-  (:note "inline (unsigned-byte 32) logcount")
-  (:policy :fast-safe)
   (:args (arg :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:results (res :scs (unsigned-reg)))
-  (:result-types unsigned-num)
-  (:guard (backend-featurep :sparc-v9))
-  (:generator 2
-    ;; Clear the upper 32-bits, just in case.  Is this really needed?
-    (inst srl res res 0)
-    (inst popc res arg)))
+  (:result-types positive-fixnum)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) mask temp)
+  (:generator 35
+      (move res arg)
+
+      (dolist (stuff '((1 #x55555555) (2 #x33333333) (4 #x0f0f0f0f)
+		       (8 #x00ff00ff) (16 #x0000ffff)))
+	(destructuring-bind (shift bit-mask)
+	    stuff
+	  ;; Set mask
+	  (inst sethi mask (ldb (byte 22 10) bit-mask))
+	  (inst add mask (ldb (byte 10 0) bit-mask))
+
+	  (inst and temp res mask)
+	  (inst srl res shift)
+	  (inst and res mask)
+	  (inst add res temp)))))
 
 
 ;;; Multiply and Divide.
