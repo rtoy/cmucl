@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.17 1990/07/02 13:06:22 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.18 1990/07/24 21:38:59 ram Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -145,7 +145,7 @@
 	    (total-size (if (member '* dims)
 			    '*
 			    (reduce #'* dims))))
-	`(data-vector-ref (truly-the (simple-array ,(type-specifier el-type)
+	`(data-vector-set (truly-the (simple-array ,(type-specifier el-type)
 						   (,total-size))
 				     (%array-data-vector array))
 			  index
