@@ -128,10 +128,8 @@
 ;;; Annotate-Full-Call-Continuation  --  Internal
 ;;;
 ;;;    Annotate a continuation that is an argument to a full call.  Kind of
-;;; like Annotate-Ordinary-Continuation, except that we only delay leaf refs
-;;; when no implicit coercion is required to move the TN to a descriptor
-;;; location.   We also always clear the type-check flag, since it is assumed
-;;; that the callee does appropriate checking.
+;;; like Annotate-Ordinary-Continuation, but we always clear the type-check
+;;; flag, since it is assumed that the callee does appropriate checking.
 ;;;
 (defun annotate-full-call-continuation (cont)
   (declare (type continuation cont))
@@ -141,13 +139,7 @@
 	(leaf (continuation-delayed-leaf cont)))
     (flush-type-check cont)
     (setf (ir2-continuation-primitive-type info) *any-primitive-type*)
-    (if (and leaf
-	     (etypecase leaf
-	       (constant t)
-	       (lambda-var
-		(let ((ptype (tn-primitive-type (leaf-info leaf))))
-		  (or (eq ptype *any-primitive-type*)
-		      (not (primitive-type-coerce-to-t ptype)))))))
+    (if leaf
 	(setf (ir2-continuation-kind info) :delayed)
 	(setf (ir2-continuation-locs info)
 	      (list (make-normal-tn *any-primitive-type*)))))
@@ -179,16 +171,47 @@
   (undefined-value))
 
 
+;;; FLUSH-FULL-CALL-TAIL-TRANSFER  --  Internal
+;;;
+;;;    If TAIL-P is true, then we check to see if the call can really be a tail
+;;; call by seeing if this function's return convention is :UNKNOWN.  If so, we
+;;; unlink the call from the return block (after ensuring that they are in
+;;; separate blocks.)  This allows the return to be deleted when there are no
+;;; non-tail uses.
+;;;
+(defun flush-full-call-tail-transfer (call)
+  (declare (type basic-combination call))
+  (let ((tails (node-tail-p call)))
+    (when tails
+      (cond ((eq (return-info-kind (tail-set-info tails)) :unknown)
+	     (node-ends-block call)
+	     (let ((block (node-block call)))
+	       (unlink-blocks block (first (block-succ block)))))
+	    (t
+	     (setf (node-tail-p call) nil)))))
+  (undefined-value))
+
+
 ;;; LTN-Default-Call  --  Internal
 ;;;
 ;;;    Set up stuff to do a full call for Call.  We assume that that
-;;; IR2-Continuation structures have already been assigned to the args.
+;;; IR2-Continuation structures have already been assigned to the args.  We set
+;;; the kind to :FULL or :FUNNY, depending on whether there is an IR2-CONVERT
+;;; method.
 ;;;
 (defun ltn-default-call (call policy)
   (declare (type combination call) (type policies policy))
+  (let ((kind (basic-combination-kind call)))
+    (setf (basic-combination-info call)
+	  (if (and (function-info-p kind)
+		   (function-info-ir2-convert kind))
+	      :funny :full)))
+
   (annotate-function-continuation (basic-combination-fun call) policy)
   (dolist (arg (basic-combination-args call))
     (annotate-full-call-continuation arg))
+
+  (flush-full-call-tail-transfer call)
   (undefined-value))
 
 
@@ -267,18 +290,26 @@
 ;;; computed by GTN to determine how to represent the return values within the
 ;;; function.
 ;;;
-;;;    If there is no non-tail use of the continuation within the function,
-;;; then we annotate the continuation as unused.  We never annotate NLX
-;;; continuations as :Unused, simplifying the NLX entry code.
-;;;
 ;;;    If the kind is :Fixed, and the function being returned from isn't an
 ;;; XEP, then we allocate a fixed number of locations to compute the function
 ;;; result in.
 ;;;
-;;;    Otherwise, we are going to use the unknown return convention.  If it is
-;;; known that a fixed number of values are always returned, then we annotate
-;;; the continuation for that many values.  Otherwise we must use the
-;;; unknown-values convention.
+;;;    Otherwise, we are going to use the unknown return convention.  We still
+;;; try to annotate for a fixed number of values:
+;;; -- If the tail-set has a fixed values count, then use that many values.
+;;; -- If the actual uses of the result continuation in this function have a
+;;;    fixed number of values, then use that number.  We throw out TAIL-P
+;;;    :FULL and :LOCAL calls, since we know they will truly end up as TR
+;;;    calls.  We can use the BASIC-COMBINATION-INFO even though it is assigned
+;;;    by this phase, since the initial value NIL doesn't look like a TR call.
+;;;
+;;;    If there are *no* non-tail-call uses, then it falls out that we annotate
+;;;    for one value (type is NIL), but the return will end up being deleted.
+;;;
+;;;    In non-perverse code, the DFO walk will reach all uses of the result
+;;;    continuation before it reaches the RETURN.  In perverse code, we may
+;;;    annotate for unknown values when we didn't have to. 
+;;; -- Otherwise, we must annotate the continuation for unknown values.
 ;;;
 (defun ltn-analyze-return (node policy)
   (declare (type creturn node) (type policies policy))
@@ -287,14 +318,6 @@
 	 (returns (tail-set-info (lambda-tail-set fun)))
 	 (types (return-info-types returns)))
     (cond
-     ((and (do-uses (use cont t)
-	     (unless (node-tail-p use)
-	       (return nil)))
-	   (not (find cont (environment-nlx-info (node-environment node))
-		      :key #'nlx-info-continuation)))
-      (let ((res (make-ir2-continuation nil)))
-	(setf (ir2-continuation-kind res) :unused)
-	(setf (continuation-info cont) res)))
      ((and (eq (return-info-kind returns) :fixed)
 	   (not (external-entry-point-p fun)))
       (annotate-fixed-values-continuation cont policy
@@ -304,8 +327,22 @@
        cont policy
        (make-n-tns (return-info-count returns) *any-primitive-type*)))
      (t
-      (annotate-unknown-values-continuation cont policy))))
-
+      (collect ((res *empty-type* values-type-union))
+	(do-uses (use (return-result node))
+	  (unless (and (node-tail-p use)
+		       (basic-combination-p use)
+		       (member (basic-combination-info use) '(:local :full)))
+	    (res (node-derived-type use))))
+	
+	(multiple-value-bind (types kind)
+			     (values-types (res))
+	  (if (eq kind :unknown)
+	      (annotate-unknown-values-continuation cont policy)
+	      (annotate-fixed-values-continuation
+	       cont policy
+	       (mapcar #'(lambda (x)
+			   (make-normal-tn (primitive-type x)))
+		       types))))))))
   (undefined-value))
 
 
@@ -319,6 +356,7 @@
 (defun ltn-analyze-mv-bind (call policy)
   (declare (type mv-combination call)
 	   (type policies policy))
+  (setf (basic-combination-kind call) :local)
   (annotate-fixed-values-continuation
    (first (basic-combination-args call)) policy
    (mapcar #'(lambda (var)
@@ -352,26 +390,42 @@
   (let ((fun (basic-combination-fun call))
 	(args (basic-combination-args call)))
     (cond ((eq (continuation-function-name fun) '%throw)
+	   (setf (basic-combination-info call) :funny)
 	   (annotate-ordinary-continuation (first args) policy)
 	   (annotate-unknown-values-continuation (second args) policy))
 	  (t
+	   (setf (basic-combination-info call) :full)
 	   (annotate-function-continuation (basic-combination-fun call)
 					   policy nil)
 	   (dolist (arg (reverse args))
-	     (annotate-unknown-values-continuation arg policy)))))
+	     (annotate-unknown-values-continuation arg policy))
+	   (flush-full-call-tail-transfer call))))
+
   (undefined-value))
 
 
 ;;; LTN-Analyze-Local-Call  --  Internal
 ;;;
-;;;    Annotate the arguments as ordinary single-value continuations.
+;;;    Annotate the arguments as ordinary single-value continuations.  If a
+;;; tail call, swing the successor link to the start of the called function so
+;;; that the return can be deleted.
 ;;;
 (defun ltn-analyze-local-call (call policy)
   (declare (type combination call)
 	   (type policies policy))
+  (setf (basic-combination-info call) :local)
+
   (dolist (arg (basic-combination-args call))
     (when arg
       (annotate-ordinary-continuation arg policy)))
+
+  (when (node-tail-p call)
+    (node-ends-block call)
+    (let ((block (node-block call)))
+      (unlink-blocks block (first (block-succ block)))
+      (link-blocks block
+		   (node-block (lambda-bind (combination-lambda call))))))
+
   (undefined-value))
 
 
@@ -400,7 +454,7 @@
 	 (use (continuation-use test)))
     (unless (and (combination-p use)
 		 (let ((info (basic-combination-info use)))
-		   (and info
+		   (and (template-p info)
 			(eq (template-result-types info) :conditional))))
       (annotate-ordinary-continuation test policy)))
   (undefined-value))
@@ -431,14 +485,15 @@
 ;;;
 (defoptimizer (%unwind-protect ltn-annotate) ((escape cleanup) node policy)
   policy ; Ignore...
+  (setf (basic-combination-info node) :funny)
   )
 
 
 ;;; LTN annotate %Slot-Setter, %Slot-Accessor  --  Internal
 ;;;
-;;;    Both of these functions need special LTN-annotate methods, since we
-;;; only want to clear the Type-Check in unsafe policies.  If allowed the call
-;;; to be annotated as a full call, then no type checking would be done.
+;;;    Both of these functions need special LTN-annotate methods, since we only
+;;; want to clear the Type-Check in unsafe policies.  If we allowed the call to
+;;; be annotated as a full call, then no type checking would be done.
 ;;;
 ;;;    We also need a special LTN annotate method for %Slot-Setter so that the
 ;;; function is ignored.  This is because the reference to a SETF function
@@ -446,15 +501,34 @@
 ;;; FDEFINITION by the time the IR2 convert method got control.
 ;;;
 (defoptimizer (%slot-accessor ltn-annotate) ((struct) node policy)
+  (setf (basic-combination-info node) :funny)
   (annotate-ordinary-continuation struct policy))
 ;;;
 (defoptimizer (%slot-setter ltn-annotate) ((struct value) node policy)
+  (setf (basic-combination-info node) :funny)
   (annotate-ordinary-continuation struct policy)
   (annotate-ordinary-continuation value policy))
 
 
 ;;;; Known call annotation:
 
+;;; OPERAND-RESTRICTION-OK  --  Internal
+;;;
+(proclaim '(inline operand-restriction-ok))
+(defun operand-restriction-ok (restr type &optional cont)
+  (declare (type (or (member *) cons) restr)
+	   (type primitive-type type)
+	   (type (or continuation null) cont))
+  (if (eq restr '*)
+      t
+      (ecase (first restr)
+	(:or
+	 (dolist (mem (rest restr) nil)
+	   (when (eq mem type) (return t))))
+	(:constant
+	 (funcall (second restr) (continuation-value cont))))))
+
+  
 ;;; Template-Args-OK  --  Internal
 ;;;
 ;;;    Check that the argument type restriction for Template are satisfied in
@@ -470,11 +544,10 @@
 	((null types)
 	 (cond ((null args) t)
 	       ((not mtype) nil)
-	       ((eq mtype '*) t)
 	       (t
 		(dolist (arg args t)
-		  (unless (primitive-subtypep (continuation-ptype arg)
-					      mtype)
+		  (unless (operand-restriction-ok mtype
+						  (continuation-ptype arg))
 		    (return nil))))))
       (when (null args) (return nil))
       (let ((arg (car args))
@@ -483,21 +556,19 @@
 		   safe-p
 		   (not (eq (template-policy template) :safe)))
 	  (return nil))
-	(unless (or (eq type '*)
-		    (primitive-subtypep (continuation-ptype arg) type))
+	(unless (operand-restriction-ok type (continuation-ptype arg) arg)
 	  (return nil))))))
 
 
 ;;; Template-Results-OK  --  Internal
 ;;;
-;;;    Check that Template can be used with the specifed Result-Type.   Result
+;;;    Check that Template can be used with the specifed Result-Type.  Result
 ;;; type checking is pretty different from argument type checking due to the
-;;; relaxed rules for values count.  We suceed if for each required result,
+;;; relaxed rules for values count.  We succeed if for each required result,
 ;;; there is a positional restriction on the value that is at least as good.
 ;;; If we run out of result types before we run out of restrictions, then we
-;;; only suceed if the leftover restrictions are unrestrictive (* or T).
-;;; If we run out of restrictions before we run out of result types, then we
-;;; always win.
+;;; only suceed if the leftover restrictions are *.  If we run out of
+;;; restrictions before we run out of result types, then we always win.
 ;;;
 (defun template-results-ok (template result-type)
   (declare (type template template)
@@ -511,22 +582,19 @@
 	   (types types (rest types)))
 	  ((null ltypes)
 	   (dolist (type types t)
-	     (unless (or (eq type '*) (eq type *any-primitive-type*))
+	     (unless (eq type '*)
 	       (return nil))))
 	(when (null types) (return t))
 	(let ((type (first types)))
-	  (unless (or (eq type '*)
-		      (primitive-subtypep (primitive-type (first ltypes))
-					  type))
+	  (unless (operand-restriction-ok type
+					  (primitive-type (first ltypes)))
 	    (return nil)))))
      (types
-      (let ((type (first types)))
-	(or (eq type '*)
-	    (primitive-subtypep (primitive-type result-type) type))))
+      (operand-restriction-ok (first types) (primitive-type result-type)))
      (t
       (let ((mtype (template-more-args-type template)))
-	(or (not mtype) (eq mtype '*)
-	    (primitive-subtypep (primitive-type result-type) mtype)))))))
+	(or (not mtype)
+	    (operand-restriction-ok mtype (primitive-type result-type))))))))
 
 
 ;;; Find-Template  --  Internal
@@ -619,16 +687,6 @@
 		   (setq fallback template)))))))))
 
 
-;;; Template-Description  --  Internal
-;;;
-;;;    Return some short description of template for use in messages.  If there
-;;; is a note, return that, otherwise return the name.
-;;;
-(defun template-description (template)
-  (declare (type template template))
-  (or (template-note template) (template-name template)))
-
-
 ;;; Note-Rejected-Templates  --  Internal
 ;;;
 ;;;    This function emits efficiency notes describing all of the templates
@@ -661,7 +719,8 @@
       (dolist (try (function-info-templates (basic-combination-kind call)))
 	(when (eq try template) (return))
 	(let ((guard (template-guard try)))
-	  (when (and (or (not guard) (funcall guard))
+	  (when (and (template-note template)
+		     (or (not guard) (funcall guard))
 		     (or (not safe-p)
 			 (policy-safe-p (template-policy try)))
 		     (valid-function-use
@@ -682,7 +741,7 @@
 						     :strict-result t)))
 	      (when (or (not valid) (not strict-valid))
 		(frob "Unable to do ~A (cost ~D) because:"
-		      (template-description loser) (template-cost loser)))
+		      (template-note loser) (template-cost loser)))
 
 	      (cond ((not valid)
 		     (valid-function-use call type
@@ -697,7 +756,7 @@
 	  (compiler-note "~{~?~^~&~6T~}"
 			 (if template
 			     `("Forced to do ~A (cost ~D)."
-			       (,(template-description template)
+			       (,(template-note template)
 				,(template-cost template))
 			       . ,(messages))
 			     `("Forced to do full call."
@@ -705,40 +764,6 @@
 			       . ,(messages))))))))
   (undefined-value))
 
-
-;;; Maybe-Restrict-Arg  --  Internal
-;;;
-;;;    Cont is some continuation that is an argument to a template with a T
-;;; type restriction.  If the continuation's ptype has a coerce-to-t template
-;;; (indicating that a conversion is involved), then we set the type to
-;;; *any-primitive-type*.
-;;;
-(defun maybe-restrict-arg (cont)
-  (declare (type continuation cont))
-  (let ((2cont (continuation-info cont)))
-    (when (primitive-type-coerce-to-t (ir2-continuation-primitive-type 2cont))
-      (setf (ir2-continuation-primitive-type 2cont) *any-primitive-type*)))
-  (undefined-value))
-
-
-;;; Restrict-Descriptor-Args  --  Internal
-;;;
-;;;    If any argument to the template is restricted to a descriptor
-;;; representation, then force the corresponding continuation to
-;;; *any-primitive-type* when the current ptype has a 
-;;;
-(defun restrict-descriptor-args (call template)
-  (declare (type combination call)
-	   (type template template))
-  (do ((args (basic-combination-args call) (cdr args))
-       (type (template-arg-types template) (cdr type)))
-      ((null type)
-       (if (eq (template-more-args-type template) *any-primitive-type*)
-	   (dolist (arg args)
-	     (maybe-restrict-arg arg))))
-    (when (eq (car type) *any-primitive-type*)
-      (maybe-restrict-arg (car args))))
-  (undefined-value))
 
 
 ;;; Flush-Type-Checks-According-To-Policy  --  Internal
@@ -811,7 +836,6 @@
       (setf (basic-combination-info call) template)
       
       (flush-type-checks-according-to-policy call policy template)
-      (restrict-descriptor-args call template)
       
       (dolist (arg args)
 	(annotate-1-value-continuation arg))))
@@ -832,35 +856,43 @@
 ;;;    This code computes the policy and then dispatches to the appropriate
 ;;; node-specific function.
 ;;;
+;;; Note: we deliberately don't use the DO-NODES macro, since the block can be
+;;; split out from underneath us, and DO-NODES scans past the block end in this
+;;; case.
+;;;
 (defmacro ltn-analyze-block-macro ()
-  '(progn
-     (do-nodes (node cont block)
-       (unless (and (eq (node-cookie node) cookie)
-		    (eq (node-default-cookie node) default-cookie))
-	 (setq policy (translation-policy node))
-	 (setq cookie (node-cookie node))
-	 (setq default-cookie (node-default-cookie node)))
-       
-       (etypecase node
-	 (ref)
-	 (combination
-	  (case (basic-combination-kind node)
-	    (:local (ltn-analyze-local-call node policy))
-	    (:full (ltn-default-call node policy))
-	    (t
-	     (ltn-analyze-known-call node policy))))
-	 (cif
-	  (ltn-analyze-if node policy))
-	 (creturn
-	  (ltn-analyze-return node policy))
-	 ((or bind entry))
-	 (exit
-	  (ltn-analyze-exit node policy))
-	 (cset (ltn-analyze-set node policy))
-	 (mv-combination
-	  (ecase (basic-combination-kind node)
-	    (:local (ltn-analyze-mv-bind node policy))
-	    (:full (ltn-analyze-mv-call node policy))))))))
+  '(do* ((node (continuation-next (block-start block))
+	       (continuation-next cont))
+	 (cont (node-cont node) (node-cont node)))
+	(())
+     (unless (and (eq (node-cookie node) cookie)
+		  (eq (node-default-cookie node) default-cookie))
+       (setq policy (translation-policy node))
+       (setq cookie (node-cookie node))
+       (setq default-cookie (node-default-cookie node)))
+	     
+     (etypecase node
+       (ref)
+       (combination
+	(case (basic-combination-kind node)
+	  (:local (ltn-analyze-local-call node policy))
+	  (:full (ltn-default-call node policy))
+	  (t
+	   (ltn-analyze-known-call node policy))))
+       (cif
+	(ltn-analyze-if node policy))
+       (creturn
+	(ltn-analyze-return node policy))
+       ((or bind entry))
+       (exit
+	(ltn-analyze-exit node policy))
+       (cset (ltn-analyze-set node policy))
+       (mv-combination
+	(ecase (basic-combination-kind node)
+	  (:local (ltn-analyze-mv-bind node policy))
+	  (:full (ltn-analyze-mv-call node policy)))))
+
+     (when (eq node (block-last block)) (return))))
 
 ); Eval-When (Compile Eval)
 
@@ -878,23 +910,28 @@
 ;;; continuations, adding the use block to the Generators.  Uses by Exit nodes
 ;;; are ignored, since they correspond to non-local exits.
 ;;;
+;;;    This is where we allocate IR2 blocks because it is the first place we
+;;; need them.
+;;;
 (defun ltn-analyze (component)
   (declare (type component component))
   (let ((2comp (component-info component))
 	(cookie nil)
 	default-cookie policy)
     (do-blocks (block component)
-      (ltn-analyze-block-macro)
-      
-      (let* ((2block (block-info block))
-	     (popped (ir2-block-popped 2block)))
-	(when popped
-	  (push block (ir2-component-values-receivers 2comp))
-	  (dolist (pop popped)
-	    (do-uses (use pop)
-	      (unless (exit-p use)
-		(pushnew (node-block use)
-			 (ir2-component-values-generators 2comp)))))))))
+      (assert (not (block-info block)))
+      (let ((2block (make-ir2-block block)))
+	(setf (block-info block) 2block)
+	(ltn-analyze-block-macro)
+	
+	(let ((popped (ir2-block-popped 2block)))
+	  (when popped
+	    (push block (ir2-component-values-receivers 2comp))
+	    (dolist (pop popped)
+	      (do-uses (use pop)
+		(unless (exit-p use)
+		  (pushnew (node-block use)
+			   (ir2-component-values-generators 2comp))))))))))
   
   (undefined-value))
 
@@ -902,8 +939,8 @@
 ;;; LTN-Analyze-Block  --  Interface
 ;;;
 ;;;    This function is used to analyze blocks that must be added to the flow
-;;; graph after the normal LTN phase runs.  Such code is constrained not to use
-;;; weird unknown values (and probably in lots of other ways).
+;;; graph after the normal LTN phase runs.  Such code is constrained not to
+;;; use weird unknown values (and probably in lots of other ways).
 ;;;
 (defun ltn-analyze-block (block)
   (declare (type cblock block))
