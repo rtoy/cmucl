@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.56 1997/09/08 02:26:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.57 1997/09/20 11:49:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -834,15 +834,27 @@
   ;; Merge the first interval in the list with the rest of
   ;; intervals in the list.  The list of intervals MUST be
   ;; sorted in ascending order of lower limits.
+  
   (let* ((cur (first tlist))
-	 (cur-intvrl (numeric-type->interval cur))
+	 (cur-intvrl (if (numeric-type-real-p cur)
+			 (numeric-type->interval cur)
+			 nil))
 	 (res (list cur)))
     (dolist (this-interval (rest tlist) res)
-      (let ((this (numeric-type->interval this-interval)))
-	;; If interval intersects cur or if they are adjacent, we can
-	;; merge them together, but only if they are the same type of
-	;; number.  If they are different, we can't merge them.
-	(cond ((and (eq (numeric-type-class cur) 
+      (let ((this (if (numeric-type-real-p this-interval)
+		      (numeric-type->interval this-interval)
+		      nil)))
+	;; If the current interval is complex (cur-intvrl is nil) or
+	;; the next interval is complex (this is nil), we just simply
+	;; add that to the resulting list.  That is we don't try to
+	;; merge complex types at all.
+	;;
+	;;If interval intersects cur or if they are adjacent, we can
+	;;merge them together, but only if they are the same type of
+	;;number.  If they are different, we can't merge them.
+	(cond ((and cur-intvrl
+		    this
+		    (eq (numeric-type-class cur) 
 			(numeric-type-class this-interval))
 		    (or (interval-intersect-p cur-intvrl this)
 			(interval-adjacent-p cur-intvrl this)))
