@@ -15,9 +15,61 @@
 (in-package 'c)
 
 ;;; Defvars for these variables appear later.
-(proclaim '(special *current-cookie* *default-cookie* *current-path*
-		    *current-cleanup* *current-lambda* *current-component*
-		    *fenv* *venv* *benv* *tenv*))
+(proclaim '(special *current-path* *lexical-environment* *current-component*
+		    *default-cookie*))
+  
+
+(proclaim '(inline internal-make-lexenv))
+
+;;; The LEXENV represents the lexical environment used for IR1 conversion.
+;;;
+(defstruct (lexenv
+	    (:constructor make-null-environment ())
+	    (:constructor internal-make-lexenv
+			  (functions variables blocks tags type-restrictions
+				     inlines lambda cleanup cookie)))
+  ;;
+  ;; Alist (name . what), where What is either a Functional (a local function)
+  ;; or a list (MACRO . <function>) (a local macro, with the specifier
+  ;; expander.)    Note that Name may be a (SETF <name>) function.
+  (functions nil :type list)
+  ;;
+  ;; An alist translating variable names to Leaf structures.  A special binding
+  ;; is indicated by a :Special Global-Var leaf.  Each special binding within
+  ;; the code gets a distinct leaf structure, as does the current "global"
+  ;; value on entry to the code compiled.  (locally (special ...)) is handled
+  ;; by adding the most recent special binding to the front of the list.
+  ;;
+  ;; If the CDR is (MACRO . <exp>), then <exp> is the expansion of a symbol
+  ;; macro.
+  ;;
+  ;; The value can also be a CT-A-VAL structure, representing an Alien
+  ;; variable.
+  (variables nil :type list)
+  ;;
+  ;; Blocks and Tags are alists from block and go-tag names to 2-lists of the
+  ;; form (<entry> <continuation>), where <continuation> is the continuation to
+  ;; exit to, and <entry> is the corresponding Entry node.
+  (blocks nil :type list)
+  (tags nil :type list)
+  ;;
+  ;; An alist (Leaf . CType) which is used to keep track of "pervasive" type
+  ;; declarations.  A pervasive type declaration is a type declaration that
+  ;; pertains to the type in a syntactic extent which does not correspond to a
+  ;; binding of the affected name.
+  (type-restrictions nil :type list)
+  ;;
+  ;; An alist (Leaf . Inlinep) describing local inline declarations.
+  (inlines nil :type list)
+  ;;
+  ;; The lexically enclosing lambda, if any.
+  (lambda nil :type (or clambda null))
+  ;;
+  ;; The lexically enclosing cleanup, or NIL if none enclosing within Lambda.
+  (cleanup nil :type (or cleanup null))
+  ;;
+  ;; The representation of the current OPTIMIZE policy. 
+  (cookie *default-cookie* :type cookie))
 
 
 ;;; The front-end data structure (IR1) is composed of nodes and continuations.
@@ -171,22 +223,19 @@
   ;; have been deleted from the IR1 by UNLINK-NODE.
   (prev nil :type (or continuation null))
   ;;
-  ;; The Cookie holds various rarely-changed information about how a node
-  ;; should be compiled.  Currently it only holds the values of the Optimize
-  ;; settings.  Values for things which have not been specified locally are
-  ;; null.  The real value is then found in the Default-Cookie.  The
-  ;; Default-Cookie must also be kept in the node since it changes when
-  ;; we run into a Proclaim duing IR1 conversion.
-  (cookie *current-cookie* :type cookie)
-  (default-cookie *default-cookie* :type cookie)
+  ;; The lexical environment this node was converted in.
+  (lexenv *lexical-environment* :type lexenv)
   ;;
-  ;; Source code for this node.  This is used to provide context in messages to
-  ;; the user, since it may be hard to reconstruct the source from the internal
-  ;; representation.
-  (source nil :type t)
+  ;; A representation of the source code responsible for generating this node.
+  ;; 
+  ;; For a form introduced by compilation (does not appear in the original
+  ;; source), the path begins with a list of all the enclosing introduced
+  ;; forms.  This list is from the inside out, with the form immediately
+  ;; responsible for this node at the head of the list.
   ;;
-  ;; A representation of the location in the original source of the form
-  ;; responsible for generating this node.  The first element in this list is
+  ;; Following the introduced forms is a representation of the location of the
+  ;; enclosing original source form.  This transition is indicated by the magic
+  ;; ORIGINAL-SOURCE-START marker.  The first element of the orignal source is
   ;; the "form number", which is the ordinal number of this form in a
   ;; depth-first, left-to-right walk of the truly top-level form in which this
   ;; appears.
@@ -195,12 +244,9 @@
   ;; source to get to this point:
   ;;     (k l m ...) => (nth k (nth l (nth m ...)))
   ;; 
-  ;; This path is through the original top-level form compiled, and in general
-  ;; has nothing to do with the Source slot.  This path is our best guess for
-  ;; where the code came from, and may be not be very helpful in the case of
-  ;; code resulting from macroexpansion.  The last element in the list is the
-  ;; top-level form number, which is the ordinal number (in this call to the
-  ;; compiler) of the truly top-level form containing the orignal source
+  ;; The last element in the list is the top-level form number, which is the
+  ;; ordinal number (in this call to the compiler) of the truly top-level form
+  ;; containing the orignal source.
   (source-path *current-path* :type list)
   ;;
   ;; If this node is in a tail-recursive position, then this is set to the
@@ -210,6 +256,44 @@
   (tail-p nil :type (or tail-set null)))
 
 
+;;; Flags that are used to indicate various things about a block, such as what
+;;; optimizations need to be done on it:
+;;; -- REOPTIMIZE is set when something interesting happens the uses of a
+;;;    continuation whose Dest is in this block.  This indicates that the
+;;;    value-driven (forward) IR1 optimizations should be done on this block.
+;;; -- FLUSH-P is set when code in this block becomes potentially flushable,
+;;;    usually due to a continuation's DEST becoming null.
+;;; -- TYPE-CHECK is true when the type check phase should be run on this
+;;;    block.  IR1 optimize can introduce new blocks after type check has
+;;;    already run.  We need to check these blocks, but there is no point in
+;;;    checking blocks we have already checked.
+;;; -- DELETE-P is true when this block is used to indicate that this block
+;;;    has been determined to be unreachable and should be deleted.  IR1
+;;;    phases should not attempt to  examine or modify blocks with DELETE-P
+;;;    set, since they may:
+;;;     - be in the process of being deleted, or
+;;;     - have no successors, or
+;;;     - receive :DELETED continuations.
+;;; -- TYPE-ASSERTED, TEST-MODIFIED
+;;;    These flags are used to indicate that something in this block might be
+;;;    of interest to constraint propagation.  TYPE-ASSERTED is set when a
+;;;    continuation type assertion is strengthened.  TEST-MODIFIED is set
+;;;    whenever the test for the ending IF has changed (may be true when there
+;;;    is no IF.)
+;;;
+(def-boolean-attribute block
+  reoptimize flush-p type-check delete-p type-asserted test-modified)
+
+(macrolet ((frob (slot)
+	     `(defmacro ,(symbolicate "BLOCK-" slot) (block)
+		`(block-attributep (block-flags ,block) ,',slot))))
+  (frob reoptimize)
+  (frob flush-p)
+  (frob type-check)
+  (frob delete-p)
+  (frob type-asserted)
+  (frob test-modified))
+  
 
 ;;; The CBlock structure represents a basic block.  We include SSet-Element so
 ;;; that we can have sets of blocks.  Initially the SSet-Element-Number is
@@ -231,67 +315,25 @@
   ;;
   ;; The continuation which heads this block (either a :Block-Start or
   ;; :Deleted-Block-Start.)  Null when we haven't made the start continuation
-  ;; yet.
+  ;; yet (and in the dummy component head and tail blocks.)
   (start nil :type (or continuation null))
   ;;
   ;; A list of all the nodes that have Start as their Cont.
   (start-uses nil :type list)
   ;;
   ;; The last node in this block.  This is null when we are in the process of
-  ;; building a block.
+  ;; building a block (and in the dummy component head and tail blocks.)
   (last nil :type (or node null))
-  ;;
-  ;; The Lambda that this code is syntactically within, for environment
-  ;; analysis.  This may be null during IR1 conversion.  This is also null in
-  ;; the dummy head and tail blocks for a component.
-  (lambda *current-lambda* :type (or clambda null))
-  ;;
-  ;; The cleanups in effect at the beginning and after the end of this block.
-  ;; If there is no cleanup in effect within the enclosing lambda, then the
-  ;; value is the enclosing lambda.  The Lambda-Cleanup must be examined to
-  ;; determine whether later let-substitution has added an enclosing dynamic
-  ;; binding in the same environment.  Cleanup generation uses this information
-  ;; to determine if code needs to be emitted to undo dynamic bindings.
-  ;; Null in the dummy component head and tail.
-  (start-cleanup *current-cleanup* :type (or cleanup clambda null))
-  (end-cleanup *current-cleanup* :type (or cleanup clambda null))
   ;;
   ;; The forward and backward links in the depth-first ordering of the blocks.
   ;; These slots are null at beginning/end.
   (next nil :type (or null cblock))
   (prev nil :type (or null cblock))
   ;;
-  ;; Flags that are used to indicate that various IR1 optimization phases
-  ;; should be done on code in this block:
-  ;; -- REOPTIMIZE is set when something interesting happens the uses of a
-  ;;    continuation whose Dest is in this block.  This indicates that the
-  ;;    value-driven (forward) IR1 optimizations should be done on this block.
-  ;; -- FLUSH-P is set when code in this block becomes potentially flushable,
-  ;;    usually due to a continuation's DEST becoming null.
-  ;; -- TYPE-CHECK is true when the type check phase should be run on this
-  ;;    block.  IR1 optimize can introduce new blocks after type check has
-  ;;    already run.  We need to check these blocks, but there is no point in
-  ;;    checking blocks we have already checked.
-  ;; -- DELETE-P is true when this block is used to indicate that this block
-  ;;    has been determined to be unreachable and should be deleted.  IR1
-  ;;    phases should not attempt to  examine or modify blocks with DELETE-P
-  ;;    set, since they may:
-  ;;     - be in the process of being deleted, or
-  ;;     - have no successors, or
-  ;;     - receive :DELETED continuations.
-  ;; -- TYPE-ASSERTED, TEST-MODIFIED
-  ;;    These flags are used to indicate that something in this block might be
-  ;;    of interest to constraint propagation.  TYPE-ASSERTED is set when a
-  ;;    continuation type assertion is strengthened.  TEST-MODIFIED is set
-  ;;    whenever the test for the ending IF has changed (may be true when there 
-  ;;    is no IF.)
-  ;;
-  (reoptimize t :type boolean)
-  (flush-p t :type boolean)
-  (type-check t :type boolean)
-  (delete-p nil :type boolean)
-  (type-asserted t :type boolean)
-  (test-modified t :type boolean)
+  ;; This block's attributes: see above.
+  (flags (block-attributes reoptimize flush-p type-check type-asserted
+			   test-modified)
+	 :type attributes)
   ;;
   ;; Some sets used by constraint propagation.
   (kill nil)
@@ -375,8 +417,11 @@
   (name "<unknown>" :type simple-string)
   ;;
   ;; Some kind of info used by the back end.
-  (info nil))
-
+  (info nil)
+  ;;
+  ;; The Source-Info structure describing where this component was compiled
+  ;; from.
+  (source-info *source-info* :type source-info))
 
 (defprinter component
   name
@@ -396,20 +441,14 @@
 ;;;
 (defstruct (cleanup (:print-function %print-cleanup))
   ;;
-  ;; The kind of thing that has to be cleaned up.  :Entry marks the dynamic
-  ;; extent of a lexical exit (TAGBODY or BLOCK).
-  (kind nil :type (member :special-bind :catch :unwind-protect :entry))
+  ;; The kind of thing that has to be cleaned up.
+  (kind nil :type (member :special-bind :catch :unwind-protect :block
+			  :tagbody))
   ;;
-  ;; The first messed-up continuation.  This is Use'd by the node that is the
-  ;; mess-up.  Null only temporarily.  This could be deleted if the mess-up was
-  ;; deleted.  Note that the cleanup "belongs" to the block holding the
-  ;; mess-up, rather than the start continuation's block.
-  (start nil :type (or continuation null))
-  ;;
-  ;; The syntactically enclosing cleanup.  If there is no enclosing cleanup in
-  ;; our lambda, then this is the lambda.  A :Catch or :Unwind-Protect cleanup
-  ;; is always enclosed by the :Entry cleanup for the escape block.
-  (enclosing *current-cleanup* :type (or cleanup clambda))
+  ;; The node that messes things up.  This is the last node in the
+  ;; non-messed-up environment.  Null only temporarily.  This could be deleted
+  ;; due to unreachability.
+  (mess-up nil :type (or node null))
   ;;
   ;; A list of all the NLX-Info structures whose NLX-Info-Cleanup is this
   ;; cleanup.  This is filled in by environment analysis.
@@ -417,7 +456,7 @@
 
 (defprinter cleanup
   kind
-  (start :prin1 (continuation-use start))
+  mess-up
   (nlx-info :test nlx-info))
 
 
@@ -704,16 +743,13 @@
   ;; corresponding to this function then this is Null.
   (inline-expansion nil :type list)
   ;;
+  ;; The lexical environment that the inline-expansion should be converted in.
+  (lexenv *lexical-environment* :type lexenv)
+  ;;
   ;; The original function or macro lambda list, or :UNSPECIFIED if this is a
   ;; compiler created function.
-  (arg-documentation nil :type (or list (member :unspecified)))
-  ;;
-  ;; The environment values that we use if we reconvert the Inline-Expansion.
-  (fenv *fenv*)
-  (venv *venv*)
-  (benv *benv*)
-  (tenv *tenv*))
-
+  (arg-documentation nil :type (or list (member :unspecified))))
+  
 (defprinter functional
   name)
 
@@ -758,13 +794,6 @@
   ;; A list of all the Entry nodes in this function and its lets.  Null an a
   ;; let.
   (entries () :type list)
-  ;;
-  ;; If true, then this is the innermost cleanup that dynamically encloses the
-  ;; call to this function.  If false, then there is no such cleanup.  This is
-  ;; never true if the lambda isn't a let, since in other cases the function
-  ;; will have its own environment, and the non-local exit mechanism will deal
-  ;; with cleanups.
-  (cleanup nil :type (or cleanup null))
   ;;
   ;; A list of all the functions directly called from this function (or one of
   ;; its lets) using a non-let local call.
@@ -951,7 +980,7 @@
 ;;;
 (defstruct (ref
 	    (:include node (:reoptimize nil))
-	    (:constructor really-make-ref (derived-type source leaf inlinep))
+	    (:constructor really-make-ref (derived-type leaf inlinep))
 	    (:print-function %print-ref))
   ;;
   ;; The leaf referenced.
@@ -1042,7 +1071,7 @@
 ;;; isn't Combination-P.
 ;;;
 (defstruct (combination (:include basic-combination)
-			(:constructor really-make-combination (source fun))
+			(:constructor really-make-combination (fun))
 			(:print-function %print-combination)))
 
 (defprinter combination
@@ -1058,7 +1087,7 @@
 ;;; This is used to implement all the multiple-value receiving forms.
 ;;;
 (defstruct (mv-combination (:include basic-combination)
-			   (:constructor make-mv-combination (source fun))
+			   (:constructor make-mv-combination (fun))
 			   (:print-function %print-mv-combination)))
 
 (defprinter mv-combination
@@ -1120,11 +1149,13 @@
 (defstruct (entry (:include node)
 		  (:print-function %print-entry))
   ;;
-  ;; All of the continuations for potential non-local exits to this point.
-  (exits nil :type list))
+  ;; All of the Exit nodes for potential non-local exits to this point.
+  (exits nil :type list)
+  ;;
+  ;; The cleanup for this entry.  Null only temporarily.
+  (cleanup nil :type (or cleanup null)))
 
-(defprinter entry
-  exits)
+(defprinter entry)
 
 
 ;;; The Exit node marks the place at which exit code would be emitted, if
