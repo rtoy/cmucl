@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.32 2002/08/26 02:23:15 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.33 2002/08/27 18:46:49 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -374,20 +374,16 @@
 		  *the-class-standard-class*)
 		 (t
 		  (class-of class)))))  
-    (labels ((program-error (format-control &rest args)
-	       (error 'kernel:simple-program-error
-		      :format-control format-control
-		      :format-arguments args))
-	     (fix-super (s)
-	       (cond ((classp s) s)
-		     ((not (legal-class-name-p s))
-		      (program-error "~S is not a class or a legal ~
-				      class name." s))
-		     (t
-		      (or (find-class s nil)
-			  (setf (find-class s)
-				(make-instance 'forward-referenced-class
-					       :name s)))))))
+    (flet ((fix-super (s)
+	     (cond ((classp s) s)
+		   ((not (legal-class-name-p s))
+		    (simple-program-error
+		     "~S is not a class or a legal class name." s))
+		   (t
+		    (or (find-class s nil)
+			(setf (find-class s)
+			      (make-instance 'forward-referenced-class
+					     :name s)))))))
       ;;
       ;; CLHS: signal PROGRAM-ERROR, if
       ;; (a) there are any duplicate slot names
@@ -396,25 +392,28 @@
       (loop for (slot . more) on (getf initargs :direct-slots)
 	    for slot-name = (getf slot :name)
 	    if (some (lambda (s) (eq slot-name (getf s :name))) more) do
-	      (program-error "More than one direct slot with name ~S."
-			     slot-name)
+	      (simple-program-error
+	       "More than one direct slot with name ~S."
+	       slot-name)
 	    else do
 	      (loop for (option value . more) on slot by #'cddr
 		    when (and (member option '(:allocation :type :initform
 					       :documentation))
 			      (not (eq unsupplied
 				       (getf more option unsupplied)))) do
-		      (program-error "Duplicate slot option ~S for slot ~S."
-				     option slot-name)))
+		      (simple-program-error
+		       "Duplicate slot option ~S for slot ~S."
+		       option slot-name)))
       ;;
       ;; CLHS: signal PROGRAM-ERROR, if an initialization argument name
       ;; appears more than once in :DEFAULT-INITARGS class option.
       (loop for (initarg . more) on (getf initargs :direct-default-initargs)
 	    for name = (car initarg) 
 	    when (some (lambda (a) (eq (car a) name)) more) do
-	      (program-error "Duplicate initialization argument ~
-                              name ~S in :default-initargs of class ~A."
-			     name class))
+	      (simple-program-error
+	       "Duplicate initialization argument ~
+                name ~S in :default-initargs of class ~A."
+	       name class))
       ;;
       (loop (unless (remf initargs :metaclass) (return)))
       (loop (unless (remf initargs :direct-superclasses) (return)))

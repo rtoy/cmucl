@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.29 2002/08/26 16:09:33 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.30 2002/08/27 18:46:48 pmai Exp $")
 
 (in-package :pcl)
 
@@ -175,9 +175,8 @@ work during bootstrapping.
   (let ((initargs ())
 	(methods ()))
     (flet ((duplicate-option (name)
-	     (error 'kernel:simple-program-error
-		    :format-control "The option ~S appears more than once."
-		    :format-arguments (list name))))
+	     (simple-program-error "The option ~S appears more than once."
+				   name)))
       ;;
       ;; INITARG takes this screwy new argument to get around a bad
       ;; interaction between lexical macros and setf in the Lucid
@@ -216,9 +215,7 @@ work during bootstrapping.
 	     (push `(defmethod ,function-specifier ,@(cdr option))
 		   methods))
 	    (t ;unsuported things must get a 'program-error
-	     (error 'kernel:simple-program-error
-		    :format-control "Unsupported option ~S."
-		    :format-arguments (list option)))))
+	     (simple-program-error "Unsupported option ~S." option))))
 
 	(let ((declarations (initarg :declarations)))
 	  (when declarations (initarg :declarations `',declarations))))
@@ -1261,13 +1258,11 @@ work during bootstrapping.
 
 (defun generic-clobbers-function (function-specifier)
   (restart-case
-      (error
-       'kernel:simple-program-error
-       :format-control
+      (simple-program-error
        "~S already names an ordinary function or a macro.~%~
 	If you want to replace it with a generic function, you should remove~%~
         the existing definition beforehand.~%"
-       :format-arguments (list function-specifier))
+       function-specifier)
     (continue ()
       :report (lambda (stream)
 		(format stream "Discard the existing definition of ~S."
