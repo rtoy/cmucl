@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.8 1998/03/21 07:54:37 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.9 1999/09/15 10:26:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Debugging and Enhancements by Douglas Crosher 1996,1997,1998.
+;;; Debugging and Enhancements by Douglas Crosher 1996,1997,1998,1999.
 ;;;
 
 (in-package :x86)
@@ -118,26 +118,18 @@
     (setf (result-state-num-results state) (1+ num-results))
     (my-make-wired-tn 'single-float 'single-reg (* num-results 2))))
 
-#+nil ;;pfw obsolete now?
-(def-alien-type-method (values :result-tn) (type state)
-  (mapcar #'(lambda (type)
-	      (invoke-alien-type-method :result-tn type state))
-	  (alien-values-type-values type)))
-
-;;; pfw - from alpha
 (def-alien-type-method (values :result-tn) (type state)
   (let ((values (alien-values-type-values type)))
-    (when (cdr values)
+    (when (> (length values) 2)
       (error "Too many result values from c-call."))
-    (when values
-      (invoke-alien-type-method :result-tn (car values) state))))
+    (mapcar #'(lambda (type)
+		(invoke-alien-type-method :result-tn type state))
+	    (alien-values-type-values type))))
 
 (def-vm-support-routine make-call-out-tns (type)
   (let ((arg-state (make-arg-state)))
     (collect ((arg-tns))
-      (dolist #+nil ;; this reversed list seems to cause the alien botches!!
-	(arg-type (reverse (alien-function-type-arg-types type)))
-	(arg-type (alien-function-type-arg-types type))
+      (dolist (arg-type (alien-function-type-arg-types type))
 	(arg-tns (invoke-alien-type-method :arg-tn arg-type arg-state)))
       (values (my-make-wired-tn 'positive-fixnum 'any-reg esp-offset)
 	      (* (arg-state-stack-frame-size arg-state) word-bytes)
@@ -162,16 +154,19 @@
   (:args (function :scs (sap-reg))
 	 (args :more t))
   (:results (results :more t))
-  ;; eax is already wired
-  (:temporary (:sc unsigned-reg :offset ecx-offset) ecx)
-  (:temporary (:sc unsigned-reg :offset edx-offset) edx)
+  (:temporary (:sc unsigned-reg :offset eax-offset
+		   :from :eval :to :result) eax)
+  (:temporary (:sc unsigned-reg :offset ecx-offset
+		   :from :eval :to :result) ecx)
+  (:temporary (:sc unsigned-reg :offset edx-offset
+		   :from :eval :to :result) edx)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
   (:ignore args ecx edx)
   (:generator 0 
     (cond ((policy node (> space speed))
-	   (move eax-tn function)
+	   (move eax function)
 	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
 	  (t
 	   ;; Setup the NPX for C; all the FP registers need to be
