@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.67 1991/02/08 13:32:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.68 1991/03/14 14:24:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.67 1991/02/08 13:32:20 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.68 1991/03/14 14:24:53 ram Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -588,7 +588,6 @@
 	  closure-ref
 	  coerce-to-function
 	  copy-more-arg
-	  current-fp
 	  current-stack-pointer
 	  dealloc-number-stack-space
 	  fast-safe-coerce-to-function
