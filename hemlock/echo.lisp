@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echo.lisp,v 1.5 1991/10/23 11:09:19 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echo.lisp,v 1.6 1991/12/18 11:44:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,29 +293,13 @@
 		     ((directoryp pn)
 		      (merge-pathnames pn *parse-default*))
 		     (t
-		      (merge-pathnames
-		       (prompting-merge-pathnames (directory-namestring pn)
-						  (directory-namestring
-						   *parse-default*))
-		       (file-namestring pn))))))
+		      (merge-pathnames pn
+				       (directory-namestring
+					*parse-default*))))))
 	  (cond ((probe-file pn) (list pn))
 		((and merge (probe-file merge)) (list merge))
 		((not *parse-value-must-exist*) (list (or merge pn)))
 		(t nil))))))
-
-(defun prompting-merge-pathnames (pathname default-directory)
-  "Merges pathname with default-directory.  If pathname is not absolute, it
-   is assumed to be relative to default-directory.  The result is always a
-   directory.  This works even when pathname is a logical name."
-  (if (and pathname (string/= (namestring pathname) ""))
-      (let ((pathname (pathname pathname))
-	    (device (pathname-device pathname)))
-	(if (and device
-		 (not (eq device :absolute))
-		 (not (string= device "Default")))
-	    pathname
-	    (merge-relative-pathnames pathname default-directory)))
-      default-directory))
 
 ;;; PATHNAME-OR-LOSE tries to convert string to a pathname using
 ;;; PARSE-NAMESTRING.  If it succeeds, this returns the pathname.  Otherwise,
