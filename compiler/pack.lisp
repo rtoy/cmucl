@@ -794,6 +794,46 @@
   (undefined-value))
 
 
+(defevent spill-conditional-arg-tn
+	  "Spilled a TN that was an arg to a :CONDITIONAL VOP.")
+
+;;; SPILL-CONDITIONAL-ARG-TN  --  Internal
+;;;
+;;;    Fix things up when we spill a TN for loading of an argument to a
+;;; conditional VOP.  We have to insert a block on the branch target path that
+;;; restores the spilled value.  In addition to inserting a block in the IR1
+;;; flow graph, we must also insert an IR2 block into the emit order and frob
+;;; the assembly level control flow by emitting or modifying branches.
+;;;
+;;;    We change the conditional's target label to be the new block's label.
+;;; We insert the new block in the emit order immediately after the conditional
+;;; block.  In order to do this, we must insert a branch at the end of the
+;;; conditional block if it currently drops through.
+;;;
+(defun spill-conditional-arg-tn (victim vop)
+  (declare (type tn tn) (type vop vop))
+  (let* ((info-args (vop-codegen-info vop))
+	 (lab (first info-args))
+	 (node (vop-node vop))
+	 (2block (vop-block vop))
+	 (block (ir2-block-block 2block))
+	 (succ (find lab (block-succ block) :key #'block-label))
+	 (new (insert-cleanup-code block succ node
+				   "<conditional spill hack>"))
+	 (new-2block (make-ir2-block new)))
+    (event spill-conditional-arg-tn node)
+    (setf (block-info new) new-2block)
+    (setf (first info-args) (block-label new))
+    (vop restore-reg node new-2block (tn-save-tn victim) victim)
+    (vop branch node new-2block lab)
+    
+    (let ((next-lab (block-label (ir2-block-block (ir2-block-next 2block)))))
+      (add-to-emit-order new-2block 2block)
+      (unless (eq (vop-info-name (ir2-block-last-vop 2block)) 'branch)
+	(vop branch node 2block next-lab)))
+    (undefined-value)))
+
+
 (defevent spill-tn "Spilled a TN to satisfy operand SC restriction.")
 
 ;;; Spill-And-Pack-Load-TN  --  Internal
@@ -830,7 +870,9 @@
 
 	    (let ((victim (svref (finite-sb-live-tns sb) loc)))
 	      (assert victim)
-	      (save-complex-writer-tn victim vop))
+	      (save-complex-writer-tn victim vop)
+	      (when (eq (template-result-types (vop-info vop)) :conditional)
+		(spill-conditional-arg-tn victim vop)))
 
 	    (let ((res (make-tn 0 :load (tn-primitive-type tn) sc)))
 	      (setf (tn-offset res) loc)
