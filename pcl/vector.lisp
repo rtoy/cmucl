@@ -888,7 +888,7 @@
     simple-bit-vector simple-string simple-vector single-float standard-char
     stream string-char symbol t unsigned-byte vector))
 
-(defun split-declarations (body args)
+(defun split-declarations (body args calls-next-method-p)
   (let ((inner-decls nil) (outer-decls nil) decl)
     (loop (when (null body) (return nil))
 	  (setq decl (car body))
@@ -923,7 +923,12 @@
 			(setq dname (append dname (list (pop form)))))
 		      (dolist (var form)
 			(if (member var args)
-			    (push var outers)
+			    ;; quietly remove ignore declarations on args when
+			    ;; a next-method is involved to prevent compiler
+			    ;; warns about ignored args being read
+			    (unless (and  calls-next-method-p
+					  (eq (car dname) 'ignore))
+				(push var outers))
 			    (push var inners)))
 		      (when outers
 			(push `(declare (,@dname ,@outers)) outer-decls))
@@ -958,7 +963,8 @@
 (defun make-method-initargs-form-internal1 
     (initargs body req-args lmf-params restp)
   (multiple-value-bind (outer-decls inner-decls body)
-      (split-declarations body req-args)
+      (split-declarations
+       body req-args (getf (cdr lmf-params) :call-next-method-p))
     (let* ((rest-arg (when restp '.rest-arg.))
 	   (args+rest-arg (if restp (append req-args (list rest-arg)) req-args)))
       `(list* :fast-function
