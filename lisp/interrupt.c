@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.36 2004/05/20 00:32:24 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.37 2004/06/18 22:08:12 cwang Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -521,7 +521,7 @@ boolean interrupt_maybe_gc(HANDLER_ARGS)
 * Noise to install handlers.                                     *
 \****************************************************************/
 
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
 #define SIGNAL_STACK_SIZE SIGSTKSZ
 static char altstack[SIGNAL_STACK_SIZE];
 #endif
@@ -544,7 +544,7 @@ interrupt_install_low_level_handler (int signal, void handler (HANDLER_ARGS))
   /* But we only need this on x86 since the Lisp control stack and the
      C control stack are the same.  For others, they're separate so
      the C stack can still be used.  */
-#if defined(RED_ZONE_HIT) && defined(i386)
+#if defined(RED_ZONE_HIT) && (defined( i386 ) || defined(__x86_64))
   if (signal == PROTECTION_VIOLATION_SIGNAL)
     {
       stack_t sigstack;
