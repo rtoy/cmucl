@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.2 1990/06/16 15:34:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.3 1990/06/18 18:14:33 wlott Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -37,6 +37,7 @@
   (:translate current-sp)
   (:policy :fast-safe)
   (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:generator 1
     (move res csp-tn)))
 
@@ -44,6 +45,7 @@
   (:translate current-fp)
   (:policy :fast-safe)
   (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:generator 1
     (move res fp-tn)))
 
@@ -91,6 +93,7 @@
   (:policy :fast-safe)
   (:translate make-lisp-obj)
   (:args (value :scs (unsigned-reg) :target result))
+  (:arg-types unsigned-num)
   (:results (result :scs (descriptor-reg)))
   (:generator 1
     (move result value)))
@@ -100,5 +103,6 @@
   (:translate get-lisp-obj-address)
   (:args (thing :scs (descriptor-reg) :target result))
   (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:generator 1
     (move result thing)))

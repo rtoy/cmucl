@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.19 1990/06/16 15:34:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.20 1990/06/18 18:13:02 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -1102,6 +1102,7 @@ default-value-5
 (define-vop (listify-rest-args)
   (:args (context-arg :target context :scs (descriptor-reg))
 	 (count-arg :target count :scs (any-reg)))
+  (:arg-types * positive-fixnum)
   (:temporary (:scs (any-reg) :from (:argument 0)) context)
   (:temporary (:scs (any-reg) :from (:argument 1)) count)
   (:temporary (:scs (descriptor-reg) :from :eval) temp)
@@ -1160,8 +1161,8 @@ default-value-5
 ;;; stack top.
 ;;;
 (define-vop (more-arg-context)
-  (:args
-   (supplied :scs (any-reg)))
+  (:args (supplied :scs (any-reg)))
+  (:arg-types positive-fixnum)
   (:info fixed)
   (:results
    (context :scs (descriptor-reg))
@@ -1174,8 +1175,8 @@ default-value-5
 ;;; Signal wrong argument count error if Nargs isn't = to Count.
 ;;;
 (define-vop (verify-argument-count)
-  (:args
-   (nargs :scs (any-reg)))
+  (:args (nargs :scs (any-reg)))
+  (:arg-types positive-fixnum)
   (:temporary (:scs (any-reg) :type fixnum) temp)
   (:info count)
   (:generator 3
