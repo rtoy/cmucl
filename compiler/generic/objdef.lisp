@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.25 1993/03/12 15:18:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.26 1993/03/12 18:20:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -316,15 +316,18 @@
 			  :lowtag function-pointer-type
 			  :header funcallable-instance-header-type
 			  :alloc-trans %make-funcallable-instance)
-  #-gengc (function :init :arg
-		    :set-trans %set-funcallable-instance-function)
+  #-gengc
+  (function
+   :init :arg
+   :ref-known (flushable) :ref-trans %funcallable-instance-function
+   :set-known (unsafe) :set-trans (setf %funcallable-instance-function))
   #+gengc (entry-point :c-type "char *")
   (lexenv :init :arg
-	  :ref-known (flushable) :ref-trans funcallable-instance-lexenv
-	  :set-known (unsafe) :set-trans (setf funcallable-instance-lexenv))
+	  :ref-known (flushable) :ref-trans %funcallable-instance-lexenv
+	  :set-known (unsafe) :set-trans (setf %funcallable-instance-lexenv))
   (layout :init :arg
-	  :ref-known (flushable) :ref-trans funcallable-instance-layout
-	  :set-known (unsafe) :set-trans (setf funcallable-instance-layout))
+	  :ref-known (flushable) :ref-trans %funcallable-instance-layout
+	  :set-known (unsafe) :set-trans (setf %funcallable-instance-layout))
   (info :rest-p t))
 
 (define-primitive-object (value-cell :lowtag other-pointer-type
