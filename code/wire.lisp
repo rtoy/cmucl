@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.3 1991/02/08 13:36:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.4 1991/10/01 13:17:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,13 +18,13 @@
 
 (in-package "WIRE")
 
-(export '(remote-object-p remote-object-local-p remote-object-eq
+(remote-object-p remote-object-local-p remote-object-eq
 	  remote-object-value make-remote-object forget-remote-translation
 	  make-wire wire-p wire-fd wire-listen wire-get-byte wire-get-number
 	  wire-get-string wire-get-object wire-force-output wire-output-byte
 	  wire-output-number wire-output-string wire-output-object
 	  wire-output-funcall wire-error wire-eof wire-io-error
-	  *current-wire*))
+	  *current-wire* wire-get-bignum wire-output-bignum)
 
 
 (eval-when (compile load eval) ;For macros in remote.lisp.
@@ -47,6 +47,7 @@
 (defconstant lookup-op 11)
 (defconstant remote-op 12)
 (defconstant cons-op 13)
+(defconstant bignum-op 14)
 
 ) ;eval-when
 
@@ -306,8 +307,23 @@ signed (defaults to T)."
 	 (unsigned
 	  (+ b4 (* 256 (+ b3 (* 256 (+ b2 (* 256 b1))))))))
     (if (and signed (> b1 127))
-	(- #x100000000 unsigned)
+	(logior (ash -1 32) unsigned)
 	unsigned)))
+
+;;; WIRE-GET-BIGNUM -- public
+;;;
+;;; Extracts a number, which might be a bignum.
+;;;
+(defun wire-get-bignum (wire)
+  "Reads an arbitrary integer sent by WIRE-OUTPUT-BIGNUM from the wire and
+   return it."
+  (let ((count-and-sign (wire-get-number wire)))
+    (do ((count (abs count-and-sign) (1- count))
+	 (result 0 (+ (ash result 32) (wire-get-number wire nil))))
+	((not (plusp count))
+	 (if (minusp count-and-sign)
+	     (- result)
+	     result)))))
 
 ;;; WIRE-GET-STRING -- public
 ;;;
@@ -367,6 +383,8 @@ signed (defaults to T)."
 	       (svref cache index))))
 	  ((eql identifier number-op)
 	   (wire-get-number wire))
+	  ((eql identifier bignum-op)
+	   (wire-get-bignum wire))
 	  ((eql identifier string-op)
 	   (wire-get-string wire))
 	  ((eql identifier symbol-op)
@@ -514,7 +532,7 @@ harmfull will happen if called when the output buffer is empty."
 ;;;
 ;;;   Output the number. Note, we don't care if the number is signed or not,
 ;;; because we just crank out the low 32 bits.
-
+;;;
 (defun wire-output-number (wire number)
   "Output the given (32-bit) number on the wire."
   (declare (integer number))
@@ -524,11 +542,28 @@ harmfull will happen if called when the output buffer is empty."
   (wire-output-byte wire (ldb (byte 8 0) number))
   (values))
 
+;;; WIRE-OUTPUT-BIGNUM -- public
+;;;
+;;; Output an arbitrary integer.
+;;; 
+(defun wire-output-bignum (wire number)
+  "Outputs an arbitrary integer, but less effeciently than WIRE-OUTPUT-NUMBER."
+  (do ((digits 0 (1+ digits))
+       (remaining (abs number) (ash remaining -32))
+       (words nil (cons (ldb (byte 32 0) remaining) words)))
+      ((zerop remaining)
+       (wire-output-number wire
+			   (if (minusp number)
+			       (- digits)
+			       digits))
+       (dolist (word words)
+	 (wire-output-number wire word)))))
+
 ;;; WIRE-OUTPUT-STRING -- public
 ;;;
 ;;;   Output the string. Strings are represented by the length as a number,
 ;;; followed by the bytes of the string.
-
+;;;
 (defun wire-output-string (wire string)
   "Output the given string. First output the length using WIRE-OUTPUT-NUMBER,
 then output the bytes."
@@ -581,8 +616,12 @@ object in the cache for future reference."
 	  (setf (wire-cache-index wire) (1+ index))))
       (typecase object
 	(integer
-	 (wire-output-byte wire number-op)
-	 (wire-output-number wire object))
+	 (cond ((typep object '(signed-byte 32))
+		(wire-output-byte wire number-op)
+		(wire-output-number wire object))
+	       (t
+		(wire-output-byte wire bignum-op)
+		(wire-output-bignum wire object))))
 	(simple-string
 	 (wire-output-byte wire string-op)
 	 (wire-output-string wire object))
