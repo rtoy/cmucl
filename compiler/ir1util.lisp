@@ -557,6 +557,20 @@ inlines
   (undefined-value))
 
 
+;;; DELETE-FUNCTIONAL  --  Interface
+;;;
+;;;    This function deletes functions that have no references.  This need only
+;;; be called on functions that never had any references, since otherwise
+;;; DELETE-REF will handle the deletion. 
+;;;
+(defun delete-functional (fun)
+  (assert (null (leaf-refs fun)))
+  (etypecase fun
+    (optional-dispatch (delete-optional-dispatch fun))
+    (clambda (delete-lambda fun)))
+  (undefined-value))
+
+
 ;;; Delete-Lambda  --  Internal
 ;;;
 ;;;    Deal with deleting the last reference to a lambda.  Since there is only
@@ -1564,6 +1578,8 @@ inlines
 
 
 ;;;; Generic list (?) functions:
+
+(proclaim '(inline find-in position-in map-in))
 
 ;;; Find-In  --  Interface
 ;;;
