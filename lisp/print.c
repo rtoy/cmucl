@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.12 2000/09/05 09:32:31 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.13 2001/01/09 19:46:57 dtc Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -510,12 +510,21 @@ static void print_otherptr(lispobj obj)
                 break;
 
             case type_SimpleVector:
-            case type_InstanceHeader:
                 NEWLINE;
                 printf("length = %ld", length);
                 ptr++;
                 index = 0;
                 while (length-- > 0) {
+                    sprintf(buffer, "%d: ", index++);
+                    print_obj(buffer, *ptr++);
+                }
+                break;
+
+            case type_InstanceHeader:
+                NEWLINE;
+                printf("length = %ld", count);
+                index = 0;
+                while (count-- > 0) {
                     sprintf(buffer, "%d: ", index++);
                     print_obj(buffer, *ptr++);
                 }
