@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.11 1990/05/13 22:49:09 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.12 1990/09/21 06:04:12 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -52,9 +52,13 @@ char *subtype_Names[] = {
     "array",
     "code header",
     "function header",
+    "closure header",
+    "funcallable-instance header",
+    "unused function header 1",
+    "unused function header 2",
+    "unused function header 3",
     "closure function header",
     "return PC header",
-    "closure header",
     "value cell header",
     "symbol header",
     "character",
@@ -332,7 +336,8 @@ long *ptr;
             print_obj("???: ", *ptr++);
 }
 
-static char *symbol_slots[] = {"value: ", "function: ", "plist: ", "name: ", "package: ", NULL};
+static char *symbol_slots[] = {"value: ", "function: ", "raw fn addr: ",
+"setf fn: ", "plist: ", "name: ", "package: ", NULL};
 static char *ratio_slots[] = {"numer: ", "denom: ", NULL};
 static char *complex_slots[] = {"real: ", "imag: ", NULL};
 static char *code_slots[] = {"words: ", "entry: ", "debug: ", NULL};
