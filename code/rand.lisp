@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.10 1997/06/11 18:32:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.11 2002/07/10 16:15:59 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,7 +87,11 @@
 	((random-state-p state) (copy-state state))
 	((eq state t) (setq rand-seed (get-universal-time))
 		      (make-random-object))
-	(t (error "Argument is not a RANDOM-STATE, T or NIL: ~S" state))))
+	(t (error 'simple-type-error
+                  :expected-type '(or null t (satisfies random-state-p))
+                  :datum state
+                  :format-control "Argument is not a RANDOM-STATE, T or NIL: ~S"
+                  :format-arguments (list state)))))
 
 
 ;;;; Random entries:
@@ -331,9 +335,11 @@
 	((eq state t)
 	 (setq rand-seed (mod (get-universal-time) 900000000))
 	 (make-random-object))
-	(t
-	 (error "Argument is not a RANDOM-STATE, T or NIL: ~S" state))))
-
+	(t (error 'simple-type-error
+                  :expected-type '(or null t (satisfies random-state-p))
+                  :datum state
+                  :format-control "Argument is not a RANDOM-STATE, T or NIL: ~S"
+                  :format-arguments (list state)))))
 
 
 ;;;; Random entries

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.42 2002/06/19 15:08:55 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.43 2002/07/10 16:15:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1277,7 +1277,7 @@ significant bit of INTEGER is bit 0."
     (13 (boole 13 integer1 integer2))
     (14 (boole 14 integer1 integer2))
     (15 (boole 15 integer1 integer2))
-    (t (error "~S is not of type (mod 16)." op))))
+    (t (error 'type-error :datum op :expected-type '(mod 16)))))
 
 
 ;;;; GCD, LCM:

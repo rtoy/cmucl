@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.17 2001/07/08 17:37:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.18 2002/07/10 16:15:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,16 +21,16 @@
 
 (declaim (special *keyword-package* *lisp-package* *package* *query-io*
 		  *terminal-io* *error-output* *trace-output* *debug-io*
-		  *standard-input* *standard-output* *hemlock-version*
+		  *standard-input* *standard-output*
 		  *evalhook* *applyhook* *command-line-switches*
-		  *command-switch-demons* ext::temporary-foreign-files
+		  *command-switch-demons*
 		  *display-event-handlers* original-lisp-environment
 		  *environment-list* *read-default-float-format*
 		  *read-suppress* *readtable* *print-base* *print-radix*
 		  *print-length* *print-level* *print-pretty* *print-escape*
 		  *print-case* *print-circle* *print-gensym* *print-array*
 		  defmacro-error-string defsetf-error-string
-		  std-lisp-readtable hi::*in-the-editor*
+		  std-lisp-readtable #-no-hemlock hi::*in-the-editor*
 		  debug::*in-the-debugger*
 		  conditions::*handler-clusters*
 		  conditions::*restart-clusters*

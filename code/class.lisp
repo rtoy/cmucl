@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.47 2001/12/06 23:24:42 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.48 2002/07/10 16:15:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -814,9 +814,9 @@
 		:inherits (list sequence mutable-sequence mutable-collection
 			   generic-sequence collection))
 	  (null :translation (member nil)
-		:inherits (list sequence mutable-sequence mutable-collection
-			   generic-sequence collection symbol)
-		:direct-superclasses (list symbol))
+		:inherits (symbol list sequence mutable-sequence mutable-collection
+			   generic-sequence collection)
+		:direct-superclasses (symbol list))
 
 	  (stream :state :read-only :depth 3 :inherits (instance)))))
 

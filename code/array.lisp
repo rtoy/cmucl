@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.32 2001/11/21 22:45:36 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.33 2002/07/10 16:15:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -547,7 +547,7 @@
 	  (declare (ignore start end))
 	  (array-element-type array)))
        (t
-	(error "~S is not an array." array))))))
+        (error 'type-error :datum array :expected-type 'array))))))
 
 
 (defun array-rank (array)

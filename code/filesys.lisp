@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.66 2002/02/19 15:48:25 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.67 2002/07/10 16:15:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1274,7 +1274,9 @@
 (defun %set-default-directory (new-val)
   (let ((namestring (unix-namestring new-val t)))
     (unless namestring
-      (error "~S doesn't exist." new-val))
+      (error 'simple-file-error
+             :format-control "~S doesn't exist."
+             :format-arguments (list new-val)))
     (multiple-value-bind (gr error)
 			 (unix:unix-chdir namestring)
       (if gr

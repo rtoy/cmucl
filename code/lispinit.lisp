@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.65 2001/07/12 20:10:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.66 2002/07/10 16:15:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -454,9 +454,13 @@
   be any non-negative, non-complex number."
   (when (or (not (realp n))
 	    (minusp n))
-    (error "Invalid argument to SLEEP: ~S.~%~
+    (error 'simple-type-error
+           :format-control
+           "Invalid argument to SLEEP: ~S.~%~
             Must be a non-negative, non-complex number."
-	   n))
+           :format-arguments (list n)
+           :datum n
+           :expected-type '(real 0)))
   (multiple-value-bind (sec usec)
     (if (integerp n)
 	(values n 0)

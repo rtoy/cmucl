@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.17 2001/03/30 11:01:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.18 2002/07/10 16:15:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -217,8 +217,9 @@
 	       (values 'equalp #'equalp #'equalp-hash))
 	      (t
 	       (dolist (info *hash-table-tests*
-			     (error "Unknown :TEST for MAKE-HASH-TABLE: ~S"
-				    test))
+			     (error 'simple-program-error
+                                    :format-control "Unknown :TEST for MAKE-HASH-TABLE: ~S"
+				    :format-arguments (list test)))
 		 (destructuring-bind
 		  (test-name test-fun hash-fun)
 		  info
@@ -230,7 +231,7 @@
 	     (length (if (<= scaled-size 37) 37 (almost-primify scaled-size))))
 	(declare (type index size+1 scaled-size length))
 	(when weak-p
-	  (format *debug-io* "* Creating unsupported weak-p hash table~%"))
+	  (format *debug-io* ";; Creating unsupported weak-p hash table~%"))
 	(let* ((index-vector
 		(make-array length :element-type '(unsigned-byte 32)
 			    :initial-element 0))
