@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.22 1991/02/08 13:32:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.23 1991/03/04 16:52:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.22 1991/02/08 13:32:03 ram Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -87,7 +85,7 @@
 	`(progn
 	   (%defstruct ',defstruct)
 	   (%compiler-defstruct ',defstruct)
-	   ,@(define-constructor defstruct)
+	   ,@(define-constructors defstruct)
 	   ,@(define-boa-constructors defstruct)
 	   ;;
 	   ;; So the print function is in the right lexical environment, and
@@ -103,7 +101,7 @@
 	   (eval-when (compile load eval)
 	     (setf (info type kind ',name) nil)
 	     (setf (info type structure-info ',name) ',defstruct))
-	   ,@(define-constructor defstruct)
+	   ,@(define-constructors defstruct)
 	   ,@(define-boa-constructors defstruct)
 	   ,@(define-predicate defstruct)
 	   ,@(define-accessors defstruct)
@@ -123,8 +121,8 @@
 	(print-function nil)
 	(pf-supplied-p)
 	(conc-name (concat-pnames name '-))
-	(constructor (concat-pnames 'make- name))
-	(saw-constructor)
+	(constructors '())
+	(constructor-opt-p nil)
 	(boa-constructors '())
 	(copier (concat-pnames 'copy- name))
 	(predicate (concat-pnames name '-p))
@@ -137,7 +135,10 @@
 	(make-defstruct-description
 	 :name name
 	 :conc-name conc-name
-	 :constructor constructor
+	 :constructors
+	 (if constructor-opt-p
+	     (nreverse constructors)
+	     (list (concat-pnames 'make- name)))
 	 :boa-constructors boa-constructors
 	 :copier copier
 	 :predicate predicate
@@ -154,8 +155,9 @@
 	 :offset offset))
     (if (atom (car options))
 	(case (car options)
-	  (:constructor (setq saw-constructor t
-			      constructor (concat-pnames 'make- name)))
+	  (:constructor
+	   (setf constructor-opt-p t)
+	   (setf constructors (list (concat-pnames 'make- name))))
 	  (:copier)
 	  (:predicate)
 	  (:named (setq saw-named t))
@@ -165,15 +167,21 @@
 	      (args (cdar options)))
 	  (case option
 	    (:conc-name (setq conc-name (car args)))
-	    (:constructor (cond ((cdr args)
-				 (unless saw-constructor
-				   (setq constructor nil))
-				 (push args boa-constructors))
-				(t
-				 (setq saw-constructor t)
-				 (setq constructor
-				       (or (car args)
-					   (concat-pnames 'make- name))))))
+	    (:constructor
+	     (setf constructor-opt-p t)
+	     (let ((lambda-list (cdr args))
+		   (constructor-name (car args))
+		   (no-explicit-nil-name (not args)))
+	       ;; Constructor-name may be nil because args has one element, the
+	       ;; explicit name of nil.  In this situation, don't make a
+	       ;; default constructor.  If args itself is nil, then we make a
+	       ;; default constructor.
+	       (cond (lambda-list
+		      (push args boa-constructors))
+		     (constructor-name
+		      (push constructor-name constructors))
+		     (no-explicit-nil-name
+		      (push (concat-pnames 'make- name) constructors)))))
 	    (:copier (setq copier (car args)))
 	    (:predicate (setq predicate (car args)))
 	    (:include
@@ -457,18 +465,16 @@
        stuff))))
 
 
-;;; Define-Constructor returns a definition for the constructor function of the
-;;; given Defstruct.  If the structure is implemented as a vector and is named,
-;;; we structurify it.  If the structure is a vector of some specialized type,
-;;; we can't use the Vector function.
+;;; Define-Constructors returns a definition for the constructor function of
+;;; the given Defstruct.  If the structure is implemented as a vector and is
+;;; named, we structurify it.  If the structure is a vector of some specialized
+;;; type, we can't use the Vector function.
 ;;;
-;;; If we are defining safe accessors, we also check the types of the values to
-;;; make sure that they are legal.
-;;;
-(defun define-constructor (defstruct)
-  (let ((name (dd-constructor defstruct)))
-    (when name
-      (let* ((initial-cruft
+(defun define-constructors (defstruct)
+  (let ((cons-names (dd-constructors defstruct)))
+    (when cons-names
+      (let* ((name (first cons-names))
+	     (initial-cruft
 	      (if (dd-named defstruct)
 		  (make-list (1+ (dd-offset defstruct))
 			     :initial-element `',(dd-name defstruct))
@@ -516,8 +522,10 @@
 		  (let ((slot (car sluts)))
 		    (push `(setf (aref ,temp ,(dsd-index slot))
 				 ,(dsd-name slot))
-			  sets)))))))))))
-
+			  sets))))))
+	  ,@(mapcar #'(lambda (other-name)
+			`(setf (fdefinition ',other-name) #',name))
+		    (rest cons-names)))))))
 
 
 ;;;; Support for By-Order-Argument Constructors.
