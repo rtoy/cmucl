@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.25.1.1 1993/01/15 15:28:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.25.1.2 1993/02/08 22:25:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -383,11 +383,11 @@
 	 :datum object
 	 :expected-type 'weak-pointer))
 
-(deferr object-not-structure-error (object)
+(deferr object-not-instance-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
-	 :expected-type 'structure))
+	 :expected-type 'instance))
 
 
 
