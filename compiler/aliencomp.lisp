@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.17 1992/02/19 19:44:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.18 1992/02/21 23:38:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -650,7 +650,7 @@
   (let ((type (continuation-value type)))
     (unless (alien-function-type-p type)
       (error "Something is broken."))
-    (make-alien-type-type (alien-function-type-result-type type))))
+    (specifier-type (compute-alien-rep-type type))))
 
 (defoptimizer (%alien-funcall ltn-annotate)
 	      ((function type &rest args) node policy)
