@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.36 1999/09/10 06:54:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.37 1999/09/25 15:39:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1830,7 +1830,7 @@
 		   `(progn
 		      (when (and (error-check-lock-p ,lock) ,have-lock)
 			(error "Dead lock"))
-		      (unless (or ,have-lock
+		      (when (or ,have-lock
 				 #+i486 (null (kernel:%instance-set-conditional
 					       ,lock 2 nil *current-process*))
 				 #-i486 (seize-lock ,lock)
