@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.37 1999/09/25 15:39:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.38 2000/08/12 15:05:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1481,32 +1481,32 @@
 
 	(ecase direction
 	  (:input
-	   (unless (fd-usable-for-input)
-	     ;; Wait until input possible.
-	     (sys:with-fd-handler (fd :input
-				   #'(lambda (fd)
-				       (declare (ignore fd)
-						(optimize (speed 3)
-							  (safety 0)))
-				       (mp:process-yield)))
-	       (if timeout
-		   (mp:process-wait-with-timeout "Input Wait" timeout
-						 #'fd-usable-for-input)
-		   (mp:process-wait "Input Wait" #'fd-usable-for-input)))))
+	   (or (fd-usable-for-input)
+	       ;; Wait until input possible.
+	       (sys:with-fd-handler (fd :input
+					#'(lambda (fd)
+					    (declare (ignore fd)
+						     (optimize (speed 3)
+							       (safety 0)))
+					    (mp:process-yield)))
+		 (if timeout
+		     (mp:process-wait-with-timeout "Input Wait" timeout
+						   #'fd-usable-for-input)
+		     (mp:process-wait "Input Wait" #'fd-usable-for-input)))))
 	  (:output
-	   (unless (fd-usable-for-output)
-	     ;; Wait until output possible.
-	     (sys:with-fd-handler (fd :output
-				   #'(lambda (fd)
-				       (declare (ignore fd)
-						(optimize (speed 3)
-							  (safety 0)))
-				       (mp:process-yield)))
-	       (if timeout
-		   (mp:process-wait-with-timeout "Output Wait" timeout
-						 #'fd-usable-for-output)
-		   (mp:process-wait "Output Wait"
-				    #'fd-usable-for-output)))))))))
+	   (or (fd-usable-for-output)
+	       ;; Wait until output possible.
+	       (sys:with-fd-handler (fd :output
+					#'(lambda (fd)
+					    (declare (ignore fd)
+						     (optimize (speed 3)
+							       (safety 0)))
+					    (mp:process-yield)))
+		 (if timeout
+		     (mp:process-wait-with-timeout "Output Wait" timeout
+						   #'fd-usable-for-output)
+		     (mp:process-wait "Output Wait"
+				      #'fd-usable-for-output)))))))))
 
 
 ;;; Sleep  --  Public
