@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.155 2003/06/02 16:29:23 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.156 2003/06/08 11:43:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -542,7 +542,6 @@
 
 ;;;; IR1-CONVERT, macroexpansion and special-form dispatching.
 
-
 (declaim (start-block ir1-convert ir1-convert-progn-body
 		      ir1-convert-combination-args reference-leaf
 		      reference-constant))
@@ -932,21 +931,30 @@
 			(find-free-variable var-name))))
 	  (etypecase var
 	    (leaf
-	     (let* ((old-type (or (lexenv-find var type-restrictions)
-				  (leaf-type var)))
-		    (int (if (or (function-type-p type)
-				 (function-type-p old-type))
-			     type
-			     (type-intersection old-type type))))
-	       (cond ((eq int *empty-type*)
-		      (unless (policy nil (= brevity 3))
-			(compiler-warning
-			 "Conflicting type declarations ~S and ~S for ~S."
-			 (type-specifier old-type) (type-specifier type)
-			 var-name)))
-		     (bound-var (setf (leaf-type bound-var) int))
-		     (t
-		      (restr (cons var int))))))
+	     (flet ((process (var bound-var)
+		      (let* ((old-type (or (lexenv-find var type-restrictions)
+					   (leaf-type var)))
+			     (int (if (or (function-type-p type)
+					  (function-type-p old-type))
+				      type
+				      (type-intersection old-type type))))
+			(cond ((eq int *empty-type*)
+			       (unless (policy nil (= brevity 3))
+				 (compiler-warning
+				  "Conflicting type declarations ~
+				   ~S and ~S for ~S."
+				  (type-specifier old-type)
+				  (type-specifier type)
+				  var-name)))
+			      (bound-var
+			       (setf (leaf-type bound-var) int))
+			      (t
+			       (restr (cons var int)))))))
+	       (process var bound-var)
+	       (when (lambda-var-p var)
+		 (let ((special (lambda-var-specvar var)))
+		   (when special
+		     (process special nil))))))
 	    (cons
 	     (assert (eq (car var) 'MACRO))
 	     (new-vars `(,var-name . (MACRO . (the ,(first decl)
