@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.88 2004/07/25 19:25:25 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.89 2004/12/03 22:08:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -931,7 +931,7 @@
 	 (res (make-array-header vm:simple-array-type rank)))
     (declare (simple-array vec)
 	     (type (unsigned-byte 24) rank))
-    (set-array-header res vec length length 0
+    (set-array-header res vec length nil 0
 		      (do ((i rank (1- i))
 			   (dimensions () (cons (pop-stack) dimensions)))
 			  ((zerop i) dimensions)
