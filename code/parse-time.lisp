@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.3 1991/07/26 11:35:16 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.4 1994/10/02 22:45:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -18,7 +18,7 @@
 
 ;;; **********************************************************************
 
-(in-package "EXTENSIONS" :use "LISP")
+(in-package "EXTENSIONS")
 
 (export 'parse-time)
 
