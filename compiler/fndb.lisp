@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.18 1991/02/20 14:57:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.19 1991/04/04 14:30:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.18 1991/02/20 14:57:31 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.19 1991/04/04 14:30:57 ram Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -886,7 +886,8 @@
   (values (or function symbol) boolean boolean))
 (defknown compile-file
   ((or filename list) &key (output-file filename) (error-file filename)
-   (trace-file filename) (error-output t) (load t) (block-compile t))
+   (trace-file filename) (error-output t) (load t) (verbose t)
+   (print t) (progress t) (block-compile t) (entry-points list))
   (values (or pathname null) boolean boolean))
 (defknown disassemble (callable &optional stream) void)
 
