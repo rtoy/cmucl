@@ -731,7 +731,7 @@
       (dolist (try (function-info-templates (basic-combination-kind call)))
 	(when (eq try template) (return))
 	(let ((guard (template-guard try)))
-	  (when (and (template-note template)
+	  (when (and (template-note try)
 		     (or (not guard) (funcall guard))
 		     (or (not safe-p)
 			 (policy-safe-p (template-policy try)))
@@ -768,7 +768,8 @@
 	  (compiler-note "~{~?~^~&~6T~}"
 			 (if template
 			     `("Forced to do ~A (cost ~D)."
-			       (,(template-note template)
+			       (,(or (template-note template)
+				     (template-name template))
 				,(template-cost template))
 			       . ,(messages))
 			     `("Forced to do full call."
