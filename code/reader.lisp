@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.13 1992/04/02 03:50:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.14 1992/04/17 16:00:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -586,11 +586,13 @@
 
 (defun read-right-paren (stream ignore)
   (declare (ignore ignore))
-  (cond (*ignore-extra-close-parentheses*
-	 (warn "Ignoring unmatched close parenthesis.")
-	 (values))
-	(t
-	 (%reader-error stream "Unmatched close parenthesis."))))
+    (cond (*ignore-extra-close-parentheses*
+	   (warn "Ignoring unmatched close parenthesis~
+		  ~@[ at file position ~D~]."
+		 (file-position stream))
+	   (values))
+	  (t
+	   (%reader-error stream "Unmatched close parenthesis.")))))
 
 ;;; INTERNAL-READ-EXTENDED-TOKEN  --  Internal
 ;;;
