@@ -1,5 +1,10 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.27 1991/11/08 00:31:02 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.28 1992/03/02 04:26:53 wlott Exp $ */
 INCLS = -I. -I/usr/misc/.X11/include
+
+SRCS = ldb.c egets.c coreparse.c alloc.c monitor.c print.c \
+	os.c os-common.c arch.c vars.c assem.s parse.c interrupt.c test.c \
+	search.c validate.c gc.c globals.c dynbind.c breakpoint.c \
+	regnames.c backtrace.c bitbash.c save.c purify.c socket.c
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	os.o os-common.o arch.o vars.o assem.o parse.o interrupt.o test.o \
@@ -30,6 +35,7 @@ ARCH_SRC="sparc-arch.c"
 #ifdef MACH
 OS_SRC=mach-os.c
 OS_LINK_FLAGS=
+OS_SRCS=
 OS_OBJS=
 OS_LIBS=-lmach
 CPP=/usr/cs/lib/cpp
@@ -37,11 +43,13 @@ CPP=/usr/cs/lib/cpp
 #ifdef sun
 OS_SRC=sunos-os.c
 OS_LINK_FLAGS=-Bstatic
+OS_SRCS=fake-mach.c
 OS_OBJS=fake-mach.o
 OS_LIBS=
 #endif
 CPP=/lib/cpp
 #endif
+
 
 all: ldb.map
 
@@ -131,11 +139,11 @@ lisp.h:
 
 depend: depends
 
-depends:
+depends: os.c arch.c assem.s
 	rm -f Makefile.BAK
 	ln Makefile Makefile.BAK
 	sed -n '1,/^\/\*@/p' Makefile > Makefile.NEW
-	cc -M ${INCLS} *.c | egrep -v ' /usr/' >> Makefile.NEW
+	cc -M ${INCLS} ${SRCS} ${OS_SRCS} | egrep -v ' /usr/' >> Makefile.NEW
 	mv Makefile.NEW Makefile
 	rm Makefile.BAK
 
