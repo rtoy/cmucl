@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.14 1993/08/06 05:08:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.15 1993/08/06 15:49:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -957,10 +957,12 @@
 
 (defun memq (item list)
   "Returns tail of list beginning with first element eq to item"
+  (declare (inline member))
   (member item list :test #'eq))
 
 (defun assq (item alist)
   "Return the first pair of alist where item EQ the key of pair"
+  (declare (inline assoc))
   (assoc item alist :test #'eq))
 
 (defun delq (item list &optional (n most-positive-fixnum))
