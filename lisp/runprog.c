@@ -1,12 +1,16 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.1 1993/08/04 11:25:08 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.1.1.1 1994/10/24 19:50:05 ram Exp $
  *
  * Support for run-program.
  *
  */
 
 #include <sys/file.h>
+#include <sys/fcntl.h>
 #include <sys/ioctl.h>
+#ifdef SVR4
+#include <unistd.h>
+#endif
 
 int spawn(char *program, char *argv[], char *envp[], char *pty_name,
 	  int stdin, int stdout, int stderr)
@@ -18,15 +22,17 @@ int spawn(char *program, char *argv[], char *envp[], char *pty_name,
 	return pid;
 
     /* Put us in our own process group. */
-#ifdef hpux
+#if defined(hpux)
     setsid();
+#elif defined(SVR4)
+    setpgrp();
 #else
     setpgrp(0, getpid());
 #endif
 
     /* If we are supposed to be part of some other pty, go for it. */
     if (pty_name) {
-#ifndef hpux
+#if !defined(hpux) && !defined(SVR4)
 	fd = open("/dev/tty", O_RDWR, 0);
 	if (fd >= 0) {
 	    ioctl(fd, TIOCNOTTY, 0);
@@ -50,8 +56,13 @@ int spawn(char *program, char *argv[], char *envp[], char *pty_name,
 	dup2(stderr, 2);
 
     /* Close all other fds. */
+#ifdef SVR4
+    for (fd = sysconf(_SC_OPEN_MAX)-1; fd >= 3; fd--)
+	close(fd);
+#else
     for (fd = getdtablesize()-1; fd >= 3; fd--)
 	close(fd);
+#endif
 
     /* Exec the program. */
     execve(program, argv, envp);

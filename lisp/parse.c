@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.1 1992/07/28 20:15:14 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.1.1.1 1994/10/24 19:49:55 ram Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -8,14 +8,14 @@
 #include "globals.h"
 #include "vars.h"
 #include "parse.h"
+#include "os.h"
 #include "interrupt.h"
 #include "lispregs.h"
 #include "monitor.h"
 #include "arch.h"
-#include "os.h"
 #include "search.h"
 
-#ifndef MACH
+#if !defined(MACH) && !defined(SVR4)
 
 static int strcasecmp(s1,s2)
 char *s1,*s2;

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.2 1992/09/08 20:18:32 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.2.1.1 1994/10/24 19:46:05 ram Exp $ */
 
 #if !defined(_INCLUDE_GLOBALS_H_)
 #define _INCLUDED_GLOBALS_H_
@@ -38,7 +38,11 @@ extern void globals_init(void);
 #define EXTERN(name,bytes) .extern name bytes
 #endif
 #ifdef sparc
+#ifdef SVR4
+#define EXTERN(name,bytes) .global name
+#else
 #define EXTERN(name,bytes) .global _ ## name
+#endif
 #endif
 #ifdef ibmrt
 #define EXTERN(name,bytes) .globl _/**/name

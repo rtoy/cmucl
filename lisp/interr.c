@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.1 1992/07/28 20:14:32 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.1.1.1 1994/10/24 19:47:21 ram Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "arch.h"
 #include "signal.h"
 
 #include "lisp.h"
@@ -15,7 +16,6 @@
 #include "interr.h"
 #include "print.h"
 #include "lispregs.h"
-#include "arch.h"
 
 
 /* Lossage handler. */

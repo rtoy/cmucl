@@ -1,11 +1,27 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.1 1992/09/08 20:21:10 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.1.1.1 1994/10/24 19:51:49 ram Exp $ */
+
+
 
 #ifdef LANGUAGE_ASSEMBLY
 
-#define GREG(num) %g ## num
-#define OREG(num) %o ## num
-#define LREG(num) %l ## num
-#define IREG(num) %i ## num
+#ifdef __STDC__
+				/* Standard C token concatenation */
+#define CAT(a,b) a ## b
+
+#else
+				/* Reisser CPP token concatenation */
+#define CAT(a,b) a/**/b
+
+#endif
+
+/*
+ * Note: concatenation to non preprocessor symbols is not defined,
+ * SunPRO C 2.0.1 yields % g0, perfectly valid according to ANSI
+ */
+#define GREG(num) CAT(%g,num)
+#define OREG(num) CAT(%o,num)
+#define LREG(num) CAT(%l,num)
+#define IREG(num) CAT(%i,num)
 
 #else
 
@@ -65,13 +81,30 @@
 
 #define BOXED_REGISTERS { \
     reg_A0, reg_A1, reg_A2, reg_A3, reg_A4, reg_A5, reg_FDEFN, reg_LEXENV, \
-    reg_NFP, reg_OCFP, reg_LRA, reg_L0, reg_L1, reg_CODE \
+    reg_NFP, reg_OCFP, reg_LRA, reg_L0, reg_L1, reg_L2, reg_CODE \
 }
 
 #ifndef LANGUAGE_ASSEMBLY
 
+#ifdef SOLARIS
+
+#include <ucontext.h>
+
+extern int * solaris_register_address(struct ucontext *, int);
+
+#define SC_REG(sc, reg) (*solaris_register_address(sc,reg))
+
+/* short cuts */
+
+#define SC_PC(sc) ((sc)->uc_mcontext.gregs[REG_PC])
+#define SC_NPC(sc) ((sc)->uc_mcontext.gregs[REG_nPC])
+
+#else
+
 #define SC_REG(sc, n) (((int *)((sc)->sc_g1))[n])
 #define SC_PC(sc) ((sc)->sc_pc)
 #define SC_NPC(sc) ((sc)->sc_npc)
+
+#endif /* SOLARIS */
 
 #endif

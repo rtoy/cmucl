@@ -20,6 +20,8 @@
 #include <netinet/tcp.h>
 #endif
 
+#include "os.h"
+
 extern int errno;		/* Certain (broken) OS's don't have this */
 				/* decl in errno.h */
 
@@ -34,7 +36,9 @@ extern int errno;		/* Certain (broken) OS's don't have this */
 #endif /* hpux */
 #endif /* X_UNIX_PATH */
 #endif /* UNIXCONN */
+#ifndef bcopy
 void bcopy();
+#endif
 
 /* 
  * Attempts to connect to server, given host and display. Returns file 

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.3 1993/04/28 01:59:00 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.3.1.1 1994/10/24 19:48:49 ram Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -13,9 +13,9 @@
 #include "globals.h"
 #include "vars.h"
 #include "parse.h"
+#include "os.h"
 #include "interrupt.h"
 #include "lispregs.h"
-#include "os.h"
 #include "monitor.h"
 #include "print.h"
 #include "arch.h"

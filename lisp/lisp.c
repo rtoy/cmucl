@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.5 1994/01/28 17:22:29 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.5.1.1 1994/10/24 19:48:01 ram Exp $
  *
  */
 
@@ -20,11 +20,11 @@
 #include "vars.h"
 #include "globals.h"
 #include "os.h"
+#include "interrupt.h"
 #include "arch.h"
 #include "gc.h"
 #include "monitor.h"
 #include "validate.h"
-#include "interrupt.h"
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
@@ -32,8 +32,10 @@
 
 /* SIGINT handler that invokes the monitor. */
 
-static void sigint_handler(int signal, int code, struct sigcontext *context)
+static void sigint_handler(HANDLER_ARGS)
 {
+    SAVE_CONTEXT();
+
     printf("\nSIGINT hit at 0x%08X\n", SC_PC(context));
     ldb_monitor();
 }
@@ -80,6 +82,9 @@ void main(int argc, char *argv[], char *envp[])
 #ifdef MACH
     mach_init();
 #endif
+#ifdef SVR4
+    tzset();
+#endif
 
     set_lossage_handler(ldb_monitor);
 
@@ -109,11 +114,7 @@ void main(int argc, char *argv[], char *envp[])
     if (default_core == NULL)
 	default_core = "lisp.core";
 
-    /* Note: the /usr/misc/.cmucl/lib/ default path is also wired into */
-    /* the lisp code in .../code/save.lisp. */
-
     if (core == NULL) {
-	extern char *getenv(char *var);
 	static char buf[MAXPATHLEN];
 	char *lib = getenv("CMUCLLIB");
 
@@ -135,8 +136,10 @@ void main(int argc, char *argv[], char *envp[])
 	    } while (*lib++ == ':');
 	}
 	if (core == NULL) {
+	    /* Note: the /usr/misc/.cmucl/lib/ default path is also wired
+	    /* into the lisp code in .../code/save.lisp. */
 #ifdef hpux
-	    strcpy(buf, "/usr/local/cmucl/lib/");
+	    strcpy(buf, "/usr/local/lib/cmucl/lib/");
 #else
 	    strcpy(buf, "/usr/misc/.cmucl/lib/");
 #endif

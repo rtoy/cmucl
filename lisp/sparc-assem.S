@@ -1,7 +1,34 @@
 
+#ifdef SOLARIS
+#define _ASM
+#include <sys/asm_linkage.h>
+#include <sys/psw.h>
+#include <sys/trap.h>
+#define _current_binding_stack_pointer current_binding_stack_pointer
+#define _current_control_stack_pointer current_control_stack_pointer
+#define _current_dynamic_space_free_pointer current_dynamic_space_free_pointer
+#define _foreign_function_call_active foreign_function_call_active
+#define _current_control_frame_pointer current_control_frame_pointer
+#define _call_into_lisp call_into_lisp
+#define _function_end_breakpoint_end function_end_breakpoint_end
+#define _closure_tramp closure_tramp
+#define _undefined_tramp undefined_tramp
+#define _function_end_breakpoint_trap function_end_breakpoint_trap
+#define _function_end_breakpoint_guts function_end_breakpoint_guts
+#define _call_into_c call_into_c
+#define _flush_icache flush_icache
+#ifdef __STDC__
+#define FUNCDEF(x)	.type x, \#function
+#else
+#define FUNCDEF(x)	.type x, #function
+#endif
+#else
 #include <machine/asm_linkage.h>
 #include <machine/psl.h>
 #include <machine/trap.h>
+#define FUNCDEF(x)  /* nothing */
+#define SET_SIZE(x) /* nothing */
+#endif
 
 #define LANGUAGE_ASSEMBLY
 #include "lispregs.h"
@@ -18,6 +45,7 @@
 
         .seg    "text"
         .global _call_into_lisp
+	FUNCDEF(_call_into_lisp)
 _call_into_lisp:
         save    %sp, -FRAMESIZE, %sp
 
@@ -110,10 +138,12 @@ lra:
 	ld	[%sp+FRAMESIZE-4], %i7
         ret
         restore	%sp, FRAMESIZE, %sp
+	SET_SIZE(_call_into_lisp)
 
 
 
         .global _call_into_c
+	FUNCDEF(_call_into_c)
 _call_into_c:
         /* Build a lisp stack frame */
         mov     reg_CFP, reg_OCFP
@@ -182,9 +212,11 @@ _call_into_c:
         ret
         nop
 
+	SET_SIZE(_call_into_c)
 
 
         .global _undefined_tramp
+	FUNCDEF(_undefined_tramp)
         .align  8
         .byte   0
 _undefined_tramp:
@@ -203,8 +235,10 @@ _undefined_tramp:
 	ld	[reg_FDEFN+FDEFN_RAW_ADDR_OFFSET], reg_CODE
 	jmp	reg_CODE+FUNCTION_CODE_OFFSET
 	nop
+	SET_SIZE(_undefined_tramp)
 
 	.global	_closure_tramp
+	FUNCDEF(_closure_tramp)
 	.align	8
 	.byte	0
 _closure_tramp:
@@ -219,6 +253,7 @@ _closure_tramp:
 	ld	[reg_LEXENV+CLOSURE_FUNCTION_OFFSET], reg_CODE
 	jmp	reg_CODE+FUNCTION_CODE_OFFSET
 	nop
+	SET_SIZE(_closure_tramp)
 
 
 
@@ -252,9 +287,20 @@ _function_end_breakpoint_trap:
 	.global	_function_end_breakpoint_end
 _function_end_breakpoint_end:
 
+	.global _flush_icache
+	FUNCDEF(_flush_icache)
+_flush_icache:
+	iflush %i0			! flush instruction cache
+	retl				! return from leaf routine
+	nop
+	SET_SIZE(_flush_icache)
+
+#ifndef SOLARIS
+
 /****************************************************************\
 * State saving and restoring.
 \****************************************************************/
+
 
 	.global	_call_on_stack
 _call_on_stack:
@@ -293,6 +339,7 @@ _restore_state:
 	ld	[%sp+SA(MINFRAME)], %i7
 	b restore_state
 	mov	%o0, %i0
+
 
 
 /****************************************************************\
@@ -493,3 +540,13 @@ _sigreturn:
 	unimp	0			! just in case it returns
 	/*NOTREACHED*/
 
+#else /* SOLARIS */
+	.global save_context
+	FUNCDEF(save_context)
+save_context:
+	ta	ST_FLUSH_WINDOWS	! flush register windows
+	retl				! return from leaf routine
+	nop
+	SET_SIZE(save_context)
+
+#endif

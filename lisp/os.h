@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.2 1993/07/27 15:40:17 hallgren Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.2.1.1 1994/10/24 19:49:34 ram Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -21,6 +21,19 @@
 #include "hpux-os.h"
 #endif
 #endif
+#endif
+
+#ifndef HANDLER_ARGS
+#define HANDLER_ARGS int signal, int code, struct sigcontext *context
+#endif
+#ifndef CODE
+#define CODE(code)  code
+#endif
+#ifndef CTXT_SIGMASK
+#define CTXT_SIGMASK(context) context->sc_mask
+#endif
+#ifndef SAVE_CONTEXT
+#define SAVE_CONTEXT() do {} while(0)
 #endif
 
 #define OS_VM_PROT_ALL (OS_VM_PROT_READ|OS_VM_PROT_WRITE|OS_VM_PROT_EXECUTE)
