@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.2 1993/01/14 02:23:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.3 1993/06/08 13:04:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,8 +65,10 @@
     
     (gc-off)
     (when load-clx
+      (setf *features* (delete :no-clx *features* :test #'eq))
       (load "library:subsystems/clx-library"))
     (when load-hemlock
+      (setf *features* (delete :no-hemlock *features* :test #'eq))
       (load "library:subsystems/hemlock-library"))
     (dolist (f other) (load f))
     
