@@ -50,7 +50,7 @@
 (comf "target:code/globals")
 (comf "target:code/struct")
 (comf "target:hemlock/charmacs")
-(comf "target:hemlock/key-event")
+(comf "target:hemlock/key-event" :load t)
 (comf "target:hemlock/struct")
 ;(comf "target:hemlock/struct-ed")
 (comf "target:hemlock/rompsite")
