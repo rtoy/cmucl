@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.57 2002/10/16 14:01:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.58 2002/10/16 14:44:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1976,7 +1976,7 @@ a host-structure or string."
 		    (translate-pathname pathname from to)))))))
     (pathname pathname)
     (stream (translate-logical-pathname (pathname pathname)))
-    (t (translate-logical-pathname (logical-pathname pathname)))))
+    (t (translate-logical-pathname (pathname pathname)))))
 
 (defvar *logical-pathname-defaults*
   (%make-logical-pathname (make-logical-host :name "BOGUS") :unspecific
