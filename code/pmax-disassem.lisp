@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.13 1990/11/07 13:15:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.14 1990/11/17 05:43:08 wlott Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -52,35 +52,11 @@
 
 ;;;; Register Names
 
-(defparameter register-name-style :lisp
-  "The register name style: :c, :lisp, :raw")
-
-(defvar *c-register-names*
-  '#("ZERO" "$AT" "$V0" "$V1" "$A0" "$A1" "$A2" "$A3"
-     "$T0" "$T1" "$T2" "$T3" "$T4" "$T5" "$T6" "$T7"
-     "$S0" "$S1" "$S2" "$S3" "$S4" "$S5" "$S6" "$S7"
-     "$T8" "$T9" "$K0" "$K1" "$GP" "$SP" "$S8" "$RA"))
-
-(defvar *lisp-register-names*
-  '#("$ZERO" "$LIP" "$NL0" "$NL1" "$NL2" "$NL3" "$NL4" "$NARGS"
-     "$A0" "$A1" "$A2" "$A3" "$A4" "$A5" "$CNAME" "$LEXENV"
-     "$ARGS" "$OLDCONT" "$LRA" "$L0" "$NULL" "$BSP" "$CONT" "$CSP"
-     "$FLAGS" "$ALLOC" "$K0" "$K1" "$L1" "$NSP" "$CODE" "$L2"))
-
-(defvar *raw-register-names*
-  '#("$R0" "$R1" "$R2" "$R3" "$R4" "$R5" "$R6" "$R7"
-     "$R8" "$R9" "$R10" "$R12" "$R13" "$R14" "$R15"
-     "$R16" "$R17" "$R18" "$R19" "$R20" "$R21" "$R22" "$R23"
-     "$R24" "$R25" "$R26" "$R27" "$R28" "$R29" "$R30" "$R31"))
-
 (defun register-name (register-number)
   (unless (<= 0 register-number 31)
     (error "Illegal register number!"))
-  (let ((register-names (ecase register-name-style
-			  (:c *c-register-names*)
-			  (:lisp *lisp-register-names*)
-			  (:raw *raw-register-names*))))
-    (svref register-names register-number)))
+  (svref *register-names* register-number))
+
 
 
 ;;;; Instruction Type Definition
@@ -471,3 +447,63 @@
 	     (setf instruction-in-delay-slot-p t))
 	    (t
 	     (setf instruction-in-delay-slot-p nil))))))
+
+
+
+;;;; Disassemble-code-sap
+
+(defun disassemble-code-sap (sap length &optional (stream t))
+  (do ((*current-instruction-number* 0 (1+ *current-instruction-number*))
+       (instruction-in-delay-slot-p nil))
+      ((>= *current-instruction-number* length))
+    (unless instruction-in-delay-slot-p
+      (format stream "~6D:" *current-instruction-number*))
+    (multiple-value-bind
+	(name type)
+	(disassemble-instruction (system:sap-ref-32
+				  sap
+				  *current-instruction-number*)
+				 stream)
+      (declare (ignore name))
+      (cond ((member type delay-slot-instruction-types :test #'eq)
+	     (setf instruction-in-delay-slot-p t))
+	    (t
+	     (setf instruction-in-delay-slot-p nil))))))
+
+
+;;;; Disassemble
+
+(defun compile-function-lambda-expr (function)
+  (multiple-value-bind
+      (lambda closurep name)
+      (function-lambda-expression function)
+    (declare (ignore name))
+    (when closurep
+      (error "Cannot compile lexical closure."))
+    (compile nil lambda)))
+
+(defun disassemble (object &optional (stream *standard-output*))
+  (let* ((function (cond ((or (symbolp object)
+			      (and (listp object)
+				   (eq (car object) 'lisp:setf)))
+			  (let ((temp (fdefinition object)))
+			    (if (eval:interpreted-function-p temp)
+				(compile-function-lambda-expr temp)
+				temp)))
+			 ((eval:interpreted-function-p object)
+			  (compile-function-lambda-expr object))
+			 ((functionp object)
+			  object)
+			 ((and (listp object)
+			       (eq (car object) 'lisp::lambda))
+			  (compile nil object))
+			 (t
+			  (error "Invalid argument to disassemble - ~S"
+				 object))))
+	 (self (system:%primitive function-self function))
+	 (code (di::function-code-header self)))
+    (disassemble-code-sap (truly-the system:system-area-pointer
+				     (system:%primitive code-instructions
+							code))
+			  (system:%primitive code-code-size code)
+			  stream)))
