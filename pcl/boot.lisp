@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.35 2002/10/11 16:15:55 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.36 2002/10/19 01:13:27 pmai Exp $")
 
 (in-package :pcl)
 
@@ -1429,9 +1429,10 @@ work during bootstrapping.
       (analyze-lambda-list (if (consp method)
 			       (early-method-lambda-list method)
 			       (method-lambda-list method)))
-    (flet ((lose (string &rest args)
-	     (error "Attempt to add the method ~S to the generic function ~S.~%~
-                   But ~A" method gf (apply #'format nil string args)))
+    (flet ((lose (format-control &rest format-args)
+	     (simple-program-error
+	      "Attempt to add the method ~S to the generic function ~S.~%~
+               But ~?" method gf format-control format-args))
 	   (compare (x y)
 	     (if (> x y) "more" "fewer")))
       (let ((gf-nreq (arg-info-number-required arg-info))
@@ -1445,14 +1446,14 @@ work during bootstrapping.
 	  (lose "the method has ~S optional arguments than the generic function."
 		(compare nopt gf-nopt)))
 	(unless (eq (or keysp restp) gf-key/rest-p)
-	  (error "the method and generic function differ in whether they accept~%~
-                  rest or keyword arguments."))
+	  (lose "the method and generic function differ in whether they accept~%~
+                 rest or keyword arguments."))
 	(when (consp gf-keywords)
 	  (unless (or (and restp (not keysp))
 		      allow-other-keys-p
 		      (every (lambda (k) (memq k keywords)) gf-keywords))
 	    (lose "the method does not accept each of the keyword arguments~%~
-                 ~S." gf-keywords)))))))
+                   ~S." gf-keywords)))))))
 
 (defun set-arg-info1 (gf arg-info new-method methods was-valid-p first-p)  
   (let* ((existing-p (and methods (cdr methods) new-method))
