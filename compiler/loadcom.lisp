@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.41 1992/07/24 04:12:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.42 1992/07/29 13:07:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,7 +67,6 @@
 
 (load "c:dump")
 (load "c:debug")
-(load "c:assem-check")
 (load "c:copyprop")
 (load "c:represent")
 
