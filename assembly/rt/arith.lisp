@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.1 1991/02/18 15:43:31 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.2 1991/04/22 10:18:42 chiles Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -35,9 +35,11 @@
 			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   ;; If either arg is not a fixnum, call the static function.
-  (inst n temp x 3)
+  (move temp x)
+  (inst nilz temp 3)
   (inst bnc :eq DO-STATIC-FUN)
-  (inst n temp y 3)
+  (move temp y)
+  (inst nilz temp 3)
   (inst bnc :eq DO-STATIC-FUN)
   ;; Use ocfp as a temporary result.
   (move ocfp x)
@@ -88,9 +90,11 @@
 			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   ;; If either arg is not a fixnum, call the static function.
-  (inst n temp x 3)
+  (move temp x)
+  (inst nilz temp 3)
   (inst bnc :eq DO-STATIC-FUN)
-  (inst n temp y 3)
+  (move temp y)
+  (inst nilz temp 3)
   (inst bnc :eq DO-STATIC-FUN)
   ;; Use ocfp as a temporary result.
   (move ocfp x)
@@ -142,9 +146,11 @@
 			  (:temp ocfp/low non-descriptor-reg ocfp-offset)
 			  (:temp cname descriptor-reg cname-offset))
   ;; If either arg is not a fixnum, call the static function.
-  (inst n temp x 3)
+  (move temp x)
+  (inst nilz temp 3)
   (inst bnc :eq DO-STATIC-FUN)
-  (inst n temp y 3)
+  (move temp y)
+  (inst nilz temp 3)
   (inst bnc :eq DO-STATIC-FUN)
 
   ;; Remove the tag from one arg so that the result will have the correct
@@ -159,7 +165,7 @@
   ;; Subtract high from high to set it to zero and to set the C0 condition
   ;; bit appropriately for the m instruction.
   (inst s nargs/high nargs/high)
-  (dotimes (i 15)
+  (dotimes (i 16)
     (inst m nargs/high y))
   (inst mfmqscr res)
 
@@ -183,19 +189,20 @@
       (load-symbol-value alloc *allocation-pointer*)
       (inst cal res alloc other-pointer-type)
       ;; Assume we need one word.
-      (inst cal alloc (pad-data-block (1+ bignum-digits-offset)))
+      (inst cal alloc alloc (pad-data-block (1+ bignum-digits-offset)))
       ;; Is that correct?
-      (inst sar temp ocfp/low 31)
+      (move temp ocfp/low)
+      (inst sar temp 31)
       (inst c temp nargs/high)
       (inst bcx :eq one-word)
       (inst li temp (logior (ash 1 type-bits) bignum-type))
       ;; Nope, we need two, so allocate the addition space.
-      (inst cal alloc (- (pad-data-block (+ 2 bignum-digits-offset))
-			 (pad-data-block (1+ bignum-digits-offset))))
+      (inst cal alloc alloc (- (pad-data-block (+ 2 bignum-digits-offset))
+			       (pad-data-block (1+ bignum-digits-offset))))
       (inst li temp (logior (ash 2 type-bits) bignum-type))
       (storew nargs/high res (1+ bignum-digits-offset) other-pointer-type)
       (emit-label one-word)
-      (storew alloc *allocation-pointer*)
+      (store-symbol-value alloc *allocation-pointer*)
       (storew temp res 0 other-pointer-type)
       (storew ocfp/low res bignum-digits-offset other-pointer-type)))
   ;; Out of here
@@ -226,15 +233,17 @@
 			  (:temp temp1 non-descriptor-reg nl0-offset)
 			  (:temp alloc word-pointer-reg a2-offset)
 			  (:temp lip interior-reg lip-offset)
-			  (:temp lra descriptor-reg lra-offset)
+
 			  ;; High holds the sign of x and becomes the remainder.
 			  (:temp nargs/high non-descriptor-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp/temp2 non-descriptor-reg ocfp-offset))
   ;; If either arg is not a fixnum, call the static function.
-  (inst n temp1 x 3)
+  (move temp1 x)
+  (inst nilz temp1 3)
   (inst bnc :eq DO-STATIC-FUN)
-  (inst n temp1 y 3)
+  (move temp1 y)
+  (inst nilz temp1 3)
   (inst bnc :eq DO-STATIC-FUN)
 
   ;; Make sure y is not 0, 1, or -1.
@@ -259,15 +268,22 @@
   (inst a nargs/high y)
   REM-OKAY
 
-  ;; The RT gives us a Common Lisp FLOOR, but we're writing TRUNCATE.
+  ;; The RT gives us some random division concept, but we're writing TRUNCATE.
   ;; The fixup involves adding one to the quotient and subtracting the divisor
-  ;; from the remainder whenever the divisor and dividend had differing signs.
-  ;; Of course, don't diddle anything when the remainder is zero.
+  ;; from the remainder under certain circumstances:
+  ;; IF the remainder is zero, we're done.
   (inst c nargs/high 0)
   (inst bc :eq move-results)
+  ;; ELSE-IF the remainder is equal to the divisor, we can obviously take
+  ;; one more divisor out of the dividend, so do it.
+  (inst c nargs/high y)
+  (inst bc :eq do-it)
+  ;; ELSE-IF the divisor and dividend had different signs, adjust the results.
   (move temp1 x)
-  (inst xor temp1 y)
+  (inst x temp1 y)
   (inst bnc :lt move-results)
+
+  DO-IT
   ;; Add 1 to quotient and subtract divisor from remainder.
   (inst mfmqscr temp1)
   (inst sl temp1 2)
@@ -288,7 +304,7 @@
   (inst b done)
 
   DO-STATIC-FUN
-  (load-symbol cname 'two-arg-truncate)
+  (load-symbol cname 'truncate)
   (inst li nargs/high (fixnum 2))
   (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
   (move ocfp/temp2 cfp-tn)
@@ -301,7 +317,7 @@
   ;; signal an error somehow.
 
   NEG-ONE-DIVISOR
-  (li rem 0)
+  (inst li rem 0)
   (inst neg quo x)
   ;; If quo still fits in a fixnum, go to done.
   (inst bnc :ov done)
@@ -318,7 +334,143 @@
   (inst b done)
 
   ONE-DIVISOR
-  (li rem 0)
+  (inst li rem 0)
   (move quo x)
 
+  DONE)
+
+
+
+;;;; Conditionals
+
+(define-assembly-routine (generic-<
+			  (:cost 25)
+			  (:return-style :full-call)
+			  (:translate <)
+			  (:policy :safe)
+			  (:save-p t))
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
+
+			  (:res res (descriptor-reg) a0-offset)
+
+			  (:temp temp non-descriptor-reg nl0-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp nargs any-reg nargs-offset)
+			  (:temp cname descriptor-reg cname-offset)
+			  (:temp ocfp any-reg ocfp-offset))
+  ;; If either arg is not a fixnum, call the static function.
+  (move temp x)
+  (inst nilz temp 3)
+  (inst bnc :eq DO-STATIC-FUN)
+  (move temp y)
+  (inst nilz temp 3)
+  (inst bnc :eq DO-STATIC-FUN)
+
+  ;; They are both fixnums, we can compare them.
+  (inst c x y)
+  (inst bcx :lt DONE)
+  (load-symbol res t)
+
+  (inst bx DONE)
+  (move res null-tn)
+
+  DO-STATIC-FUN
+  (load-symbol cname 'two-arg-<)
+  (inst li nargs (fixnum 2))
+  (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
+  (move ocfp cfp-tn)
+  ;; Tail call TWO-ARG->.
+  (inst bx lip)
+  (move cfp-tn csp-tn)
+
+  DONE)
+
+(define-assembly-routine (generic->
+			  (:cost 25)
+			  (:return-style :full-call)
+			  (:translate >)
+			  (:policy :safe)
+			  (:save-p t))
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
+
+			  (:res res (descriptor-reg) a0-offset)
+
+			  (:temp temp non-descriptor-reg nl0-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp nargs any-reg nargs-offset)
+			  (:temp cname descriptor-reg cname-offset)
+			  (:temp ocfp any-reg ocfp-offset))
+  ;; If either arg is not a fixnum, call the static function.
+  (move temp x)
+  (inst nilz temp 3)
+  (inst bnc :eq DO-STATIC-FUN)
+  (move temp y)
+  (inst nilz temp 3)
+  (inst bnc :eq DO-STATIC-FUN)
+
+  ;; They are both fixnums, we can compare them.
+  (inst c x y)
+  (inst bcx :gt DONE)
+  (load-symbol res t)
+
+  (inst bx DONE)
+  (move res null-tn)
+
+  DO-STATIC-FUN
+  (load-symbol cname 'two-arg->)
+  (inst li nargs (fixnum 2))
+  (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
+  (move ocfp cfp-tn)
+  ;; Tail call TWO-ARG->.
+  (inst bx lip)
+  (move cfp-tn csp-tn)
+
+  DONE)
+
+
+(define-assembly-routine (generic-=
+			  (:cost 25)
+			  (:return-style :full-call)
+			  (:translate =)
+			  (:policy :safe)
+			  (:save-p t))
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
+
+			  (:res res (descriptor-reg) a0-offset)
+
+			  (:temp temp non-descriptor-reg nl0-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp nargs any-reg nargs-offset)
+			  (:temp cname descriptor-reg cname-offset)
+			  (:temp ocfp any-reg ocfp-offset))
+  ;; If they are eq, they must be =
+  (inst c x y)
+  (inst bc :eq TRUE)
+
+  ;; If both args are fixnums, we know the result is NIL.  Otherwise, we
+  ;; have to hit the static fun.
+  (move temp x)
+  (inst nilz temp 3)
+  (inst bnc :eq DO-STATIC-FUN)
+  (move temp y)
+  (inst nilz temp 3)
+  (inst bnc :eq DO-STATIC-FUN)
+
+  (inst bx DONE)
+  (move res null-tn)
+
+  DO-STATIC-FUN
+  (load-symbol cname 'two-arg-=)
+  (inst li nargs (fixnum 2))
+  (loadw lip cname symbol-raw-function-addr-slot other-pointer-type)
+  (move ocfp cfp-tn)
+  ;; Tail call TWO-ARG-=.
+  (inst bx lip)
+  (move cfp-tn csp-tn)
+
+  TRUE
+  (load-symbol res t)
   DONE)
