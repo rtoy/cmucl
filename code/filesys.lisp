@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.21 1991/12/18 11:42:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.22 1991/12/18 23:15:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -763,8 +763,8 @@
       (mapcar #'(lambda (name)
 		  (if (and check-for-subdirs
 			   (eq (mach:unix-file-kind name) :directory))
-		      (pathname (concatenate 'string name "/"))
-		      (pathname name)))
+		      (truename (concatenate 'string name "/"))
+		      (truename name)))
 	      (sort (delete-duplicates results :test #'string=) #'string<)))))
 
 
@@ -987,9 +987,8 @@
 ;;;
 (defun complete-file (pathname &key (defaults *default-pathname-defaults*)
 			       ignore-types)
-  (let ((files
-	 (directory (complete-file-directory-arg pathname defaults)
-		    :check-for-subdirs nil)))
+  (let ((files (directory (complete-file-directory-arg pathname defaults)
+			  :check-for-subdirs nil)))
     (cond ((null files)
 	   (values nil nil))
 	  ((null (cdr files))
@@ -1029,7 +1028,7 @@
 ;;; COMPLETE-FILE-DIRECTORY-ARG -- Internal.
 ;;;
 (defun complete-file-directory-arg (pathname defaults)
-  (let* ((pathname (merge-pathnames pathname defaults))
+  (let* ((pathname (merge-pathnames pathname (directory-namestring defaults)))
 	 (type (pathname-type pathname)))
     (flet ((append-multi-char-wild (thing)
 	     (etypecase thing
