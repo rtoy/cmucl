@@ -5,7 +5,10 @@
 
 (in-package :lisp)
 
-(export '(ext::package-lock ext::package-definition-lock) :ext)
+;; Ensure all packages have been set up, since package definition is broken
+;; once this file has been loaded:
+(load "target:code/exports")
+
 (defvar *enable-package-locked-errors* nil)
 
 ;;;
