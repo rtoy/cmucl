@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.49 2001/04/05 13:40:02 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.50 2001/05/14 13:13:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -850,7 +850,8 @@ a host-structure or string."
 	   (values (or logical-host null)))
   (let ((colon-pos (position #\: namestr :start start :end end)))
     (if colon-pos
-	(values (find-logical-host (nstring-upcase (subseq namestr start colon-pos)) nil))
+	(find-logical-host (nstring-upcase (subseq namestr start colon-pos))
+			   nil)
 	nil)))
 
 ;;; PARSE-NAMESTRING -- Interface
@@ -1512,14 +1513,21 @@ a host-structure or string."
 (defun find-logical-host (thing &optional (errorp t))
   (etypecase thing
     (string
-     (let ((found (or (gethash (logical-word-or-lose thing)
-			       *logical-hosts*)
+     (let* ((valid-hostname
+	     (catch 'error-bailout
+	       (handler-bind
+		   ((namestring-parse-error
+		     (lambda(c)(declare (ignore c))
+		       (unless errorp
+			 (throw 'error-bailout nil)))))
+		 (logical-word-or-lose thing))))
+	    (found
+	     (and valid-hostname
+		  (or (gethash valid-hostname *logical-hosts*)
 		      (and *autoload-translations*
-			   (handler-case
-			       (load-logical-pathname-translations thing)
-			     (error () nil))
-			   (gethash (logical-word-or-lose thing)
-				    *logical-hosts*)))))
+			   (ignore-errors
+			    (load-logical-pathname-translationsvalid-hostname))
+			   (gethash valid-hostname *logical-hosts*))))))
        (if (or found (not errorp))
 	   found
 	   (error 'simple-file-error
