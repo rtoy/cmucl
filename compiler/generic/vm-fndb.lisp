@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.3 1990/04/27 19:25:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.4 1990/05/06 05:28:48 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -26,7 +26,8 @@
 
 (defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
 	   long-float-p base-char-p %string-char-p %standard-char-p structurep
-	   array-header-p simple-array-p system-area-pointer-p realp)
+	   array-header-p simple-array-p system-area-pointer-p realp
+	   unsigned-byte-32-p signed-byte-32-p)
   (t) boolean (movable foldable flushable))
 
 
@@ -59,3 +60,52 @@
 	  ((unsigned-byte 32) (unsigned-byte 32)) (unsigned-byte 32)
   (foldable flushable movable))
 
+
+
+;;;; Bignum operations.
+
+(defknown bignum::%allocate-bignum (bignum-index) bignum-type
+  (flushable))
+
+(defknown bignum::%bignum-length (bignum-type) bignum-index
+  (foldable flushable movable))
+
+(defknown bignum::%bignum-set-length (bignum-type bignum-index) bignum-index
+  (unsafe))
+
+(defknown bignum::%bignum-ref (bignum-type bignum-index) bignum-element-type
+  (flushable))
+
+(defknown bignum::%bignum-set (bignum-type bignum-index bignum-element-type)
+  bignum-element-type
+  (unsafe))
+
+(defknown bignum::%digit-0-or-plusp (bignum-element-type) (mod 2)
+  (foldable flushable movable))
+
+(defknown (bignum::%add-with-carry bignum::%subtract-with-borrow)
+	  (bignum-element-type bignum-element-type (mod 2))
+  (values bignum-element-type (mod 2))
+  (foldable flushable movable))
+
+(defknown bignum::%multiply (bignum-element-type bignum-element-type)
+  (values bignum-element-type bignum-element-type)
+  (foldable flushable movable))
+
+(defknown bignum::%lognot (bignum-element-type) bignum-element-type
+  (foldable flushable movable))
+
+(defknown (bignum::%logand bignum::%logior bignum::%logxor)
+	  (bignum-element-type bignum-element-type)
+  bignum-element-type
+  (foldable flushable movable))
+
+(defknown bignum::%floor
+	  (bignum-element-type bignum-element-type bignum-element-type)
+  (values bignum-element-type bignum-element-type)
+  (foldable flushable movable))
+
+(defknown bignum::%fixnum-digit-with-correct-sign
+	  (bignum-element-type)
+  fixnum
+  (foldable flushable movable))
