@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.2 2004/06/15 23:40:58 cwang Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.3 2004/06/22 22:38:27 cwang Exp $ 
  *
  */
 
@@ -375,15 +375,16 @@ void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
 	long offset = (char *)target_addr;
 	int i;
 	
+	/* %r11 is a temp register */
 	*reloc_addr++ = 0x49;		/* opcode for MOV */
-	*reloc_addr++ = 0xbf; /* %r15 */
+	*reloc_addr++ = 0xbb; /* %r11 */
 	for (i = 0; i < 8; i++) {
 	    *reloc_addr++ = offset & 0xff;
 	    offset >>= 8;
 	}
 	*reloc_addr++ = 0x41; /* jmpq */
 	*reloc_addr++ = 0xff;
-	*reloc_addr++ = 0xe7; /* %r15 */
+	*reloc_addr++ = 0xe3; /* %r11 */
 	/* write a nop for good measure. */
 	*reloc_addr = 0x90;
     } else if (type == 2) {
