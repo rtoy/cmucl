@@ -62,9 +62,10 @@
 (progn
   (zap-sym "ABORT" "C")
   (zap-sym "CONCAT-PNAMES" "LISP")
+  (zap-sym "ARG" "LISP")
+  (zap-sym "VAR" "LISP")
   (zap-sym "ONCE-ONLY" "COMPILER")
   (zap-sym "UNIX-PIPE" "COMPILER")
-  (zap-sym "CONSTANT" "COMPILER")
   (zap-sym "MAKE-UNIX-PIPE" "MACH")
   (zap-sym "UNIX-PIPE-P" "MACH"))
   
