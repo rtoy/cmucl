@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.14 1993/08/25 00:15:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.15 1994/08/23 17:49:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,7 +138,8 @@
 	    (dolist (ref (leaf-refs fun))
 	      (let* ((cont (node-cont ref))
 		     (dest (continuation-dest cont)))
-		(when (and (not (node-tail-p dest))
+		(when (and dest
+			   (not (node-tail-p dest))
 			   (basic-combination-p dest)
 			   (eq (basic-combination-fun dest) cont)
 			   (eq (basic-combination-kind dest) :local))
