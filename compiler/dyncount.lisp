@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.6 1992/08/04 08:24:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.7 1993/03/12 15:34:04 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,8 @@
 ;;; 
 (in-package "C")
 
-(export '(*collect-dynamic-statistics*))
+(export '(*collect-dynamic-statistics* dyncount-info-counts
+				       dyncount-info-costs))
 
 (export '(count-me))
 
@@ -31,19 +32,81 @@
 	    (:print-function %print-dyncount-info)
 	    (:make-load-form-fun :just-dump-it-normally))
   for
-  (counts (required-argument) :type (simple-array (unsigned-byte 32) (*)))
-  (vops (required-argument) :type simple-vector))
+  (costs (required-argument) :type (simple-array (unsigned-byte 32) (*)))
+  (counts (required-argument) :type (simple-array (unsigned-byte 32) (*))))
 
 
 (defprinter dyncount-info
   for
-  counts
-  vops)
+  costs
+  counts)
 
-(defun setup-dynamic-count-info (component)
-  (declare (ignore component))
-  (error "Dynamic statistic collection not implemented for the new-assembler.")
+;;; FIND-INFO-FOR  --  Interface
+;;;
+;;;    Return the DYNCOUNT-INFO for FUNCTION.
+;;;
+(defun find-info-for (function)
+  (declare (type function function))
+  (let* ((function (%closure-function function))
+	 (component (di::function-code-header function)))
+    (do ((end (get-header-data component))
+	 (i vm:code-constants-offset (1+ i)))
+	((= end i))
+      (let ((constant (code-header-ref component i)))
+	(when (dyncount-info-p constant)
+	  (return constant))))))
+
+;;
+(defun clear-dyncount-info (info)
+  (declare (type dyncount-info info))
+  (declare (optimize (speed 3) (safety 0)))
+  (let ((counts (dyncount-info-counts info)))
+    (dotimes (i (length counts))
+      (setf (aref counts i) 0))))
+
+;;
+(defun dyncount-total-cost (info)
+  (let ((costs (dyncount-info-costs info))
+	(counts (dyncount-info-counts info))
+	(sum 0))
+    (dotimes (i (length costs))
+      (incf sum (* (aref costs i) (aref counts i))))
+    sum))
+
+;; 
+(defun get-stats (&optional (spaces '(:dynamic)) &key (clear nil))
+  (locally
+      (declare (optimize (speed 3) (safety 0))
+	       (inline vm::map-allocated-objects))
+    (without-gcing
+      (dolist (space spaces)
+	(vm::map-allocated-objects
+	 #'(lambda (object type-code size)
+	     (declare (ignore type-code size))
+	     (when (kernel:code-component-p object)
+	       (let ((info (kernel:code-header-ref object 5)))
+		 (when (dyncount-info-p info)
+		   (let ((debug-info (kernel:code-header-ref object 3)))
+		     (format t "Function: ~S  Cost: ~S~&XS"
+			     (compiled-debug-info-name debug-info)
+			     (dyncount-total-cost info)))
+		   (when clear
+		     (clear-dyncount-info info))))))
+	 space))))
   #+nil
+  (let ((counts (make-hash-table :test #'equal)))
+    (do-hash (k v (backend-template-names *backend*))
+      (declare (ignore v))
+      (let ((stats (get k 'vop-stats)))
+	(when stats
+	  (setf (gethash (symbol-name k) counts) stats)
+	  (when clear
+	    (remprop k 'vop-stats)))))
+    counts))
+
+
+#|
+(defun setup-dynamic-count-info (component)
   (let* ((info (ir2-component-dyncount-info (component-info component)))
 	 (vops (dyncount-info-vops info)))
     (when (producing-fasl-file)
@@ -71,6 +134,7 @@
 		       (setf (svref counts i) vop-name))
 		     (incf (svref counts (1+ i)))))))
 	    (setf (svref vops index) counts)))))
+    #+nil
     (assem:count-instructions
      #'(lambda (vop bytes elsewherep)
 	 (let ((block-number (block-number (ir2-block-block (vop-block vop)))))
@@ -88,3 +152,4 @@
      *code-segment*
      *elsewhere*))
   (undefined-value))
+|#
