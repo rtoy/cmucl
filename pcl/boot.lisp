@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.20 1999/05/30 23:13:51 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.21 2000/08/01 15:04:31 pw Exp $")
 
 (in-package :pcl)
 
@@ -163,6 +163,12 @@ work during bootstrapping.
 ;;;
 ;;;
 ;;;
+(defun tell-compiler-about-gf (function-specifier lambda-list)
+  ;; Supress any undefined function warnings from compiler.
+  ;; I had originally lifted some code from c::%%defun but this
+  ;; seems to do the job just as well.
+  (proclaim-defgeneric function-specifier lambda-list))
+
 (defmacro defgeneric (function-specifier lambda-list &body options)
   (expand-defgeneric function-specifier lambda-list options))
 
@@ -217,6 +223,9 @@ work during bootstrapping.
 
 	(let ((declarations (initarg :declarations)))
 	  (when declarations (initarg :declarations `',declarations))))
+
+      (tell-compiler-about-gf function-specifier lambda-list)
+
     `(progn 
        (proclaim-defgeneric ',function-specifier ',lambda-list)
        ,(make-top-level-form
@@ -306,6 +315,7 @@ work during bootstrapping.
 	(let ((initargs-form (make-method-initargs-form 
 			      proto-gf proto-method
 			      method-function-lambda initargs env)))
+	  (tell-compiler-about-gf name lambda-list)
 	  `(progn
 	     (proclaim-defgeneric ',name ',lambda-list)
 	     ,@(when *make-instance-function-keys*
