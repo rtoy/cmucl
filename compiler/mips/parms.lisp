@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.57 1990/06/23 06:20:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.58 1990/06/29 11:09:34 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -338,29 +338,34 @@
 (define-primitive-object (array :lowtag other-pointer-type
 				:header t)
   (fill-pointer :type index
-		:ref-trans lisp::%array-fill-pointer
+		:ref-trans %array-fill-pointer
 		:ref-known (c::flushable c::foldable)
-		:set-trans (setf lisp::%array-fill-pointer)
+		:set-trans (setf %array-fill-pointer)
 		:set-known (c::unsafe))
+  (fill-pointer-p :type (member t nil)
+		  :ref-trans %array-fill-pointer-p
+		  :ref-known (c::flushable c::foldable)
+		  :set-trans (setf %array-fill-pointer-p)
+		  :set-known (c::unsafe))
   (elements :type index
-	    :ref-trans lisp::%array-available-elements
+	    :ref-trans %array-available-elements
 	    :ref-known (c::flushable c::foldable)
-	    :set-trans (setf lisp::%array-available-elements)
+	    :set-trans (setf %array-available-elements)
 	    :set-known (c::unsafe))
   (data :type array
-	:ref-trans lisp::%array-data-vector
+	:ref-trans %array-data-vector
 	:ref-known (c::flushable c::foldable)
-	:set-trans (setf lisp::%array-data-vector)
+	:set-trans (setf %array-data-vector)
 	:set-known (c::unsafe))
   (displacement :type (or index null)
-		:ref-trans lisp::%array-displacement
+		:ref-trans %array-displacement
 		:ref-known (c::flushable c::foldable)
-		:set-trans (setf lisp::%array-displacement)
+		:set-trans (setf %array-displacement)
 		:set-known (c::unsafe))
   (displaced-p :type (member t nil)
-	       :ref-trans lisp::%array-displaced-p
+	       :ref-trans %array-displaced-p
 	       :ref-known (c::flushable c::foldable)
-	       :set-trans (setf lisp::%array-displaced-p)
+	       :set-trans (setf %array-displaced-p)
 	       :set-known (c::unsafe))
   (dimensions :rest-p t))
 
