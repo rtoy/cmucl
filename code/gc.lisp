@@ -1,18 +1,26 @@
 ;;; -*- Mode: Lisp; Package: LISP; Log: code.log -*-
-;;; 
-;;; Replacement for the GC brain damage in misc.lisp
 ;;;
-;;; Written by Christopher Hoover.
+;;; **********************************************************************
+;;; This code was written as part of the Spice Lisp project at
+;;; Carnegie-Mellon University, and has been placed in the public domain.
+;;; Spice Lisp is currently incomplete and under active development.
+;;; If you want to use this code or any part of Spice Lisp, please contact
+;;; Scott Fahlman (Scott.Fahlman@CS.CMU.EDU). 
+;;; **********************************************************************
+;;;
+;;; Garbage collection and allocation related code.
+;;;
+;;; Written by Christopher Hoover, Rob MacLachlan, Dave McDonald, et al.
 ;;; 
 
 (in-package "EXTENSIONS")
-(export '(*before-gc-hooks* *after-gc-hooks* gc *ask-about-gc*
-			    *bytes-consed-between-gcs*
-			    *gc-verbose* *gc-notify-before* *gc-notify-after*
-			    *gc-inhibit-hook*
-			    get-bytes-consed))
+(export '(*before-gc-hooks* *after-gc-hooks* gc gc-on gc-off
+	  *bytes-consed-between-gcs* *gc-verbose* *gc-inhibit-hook*
+	  *gc-notify-before* *gc-notify-after* get-bytes-consed))
 
 (in-package "LISP")
+(export '(room))
+
 
 
 ;;;; Room.
@@ -88,7 +96,7 @@
 	  (room-summary cum-dyn cum-stat cum-ro)))))))
 
 
-;;;; DYNAMIC-USAGE
+;;;; DYNAMIC-USAGE.
 
 ;;; 
 ;;; DYNAMIC-USAGE -- Interface
@@ -100,7 +108,7 @@
   (system:%primitive dynamic-space-in-use))
 
 
-;;; GET-BYTES-CONSED
+;;;; GET-BYTES-CONSED.
 
 ;;;
 ;;; Internal State
@@ -124,19 +132,12 @@
   *total-bytes-consed*)
     
 
-;;;; Variables and Constants
+;;;; Variables and Constants.
 
-;;;
-;;; DEFAULT-BYTES-CONSED-BETWEEN-GCS
-;;;
 ;;; The default value of *BYTES-CONSED-BETWEEN-GCS* and *GC-TRIGGER*.
-;;; This should not be set by the user.
 ;;; 
 (defconstant default-bytes-consed-between-gcs 2000000)
 
-;;;
-;;; *BYTES-CONSED-BETWEEN-GCS*
-;;;
 ;;; This variable is the user-settable variable that specifices the
 ;;; minimum amount of dynamic space which must be consed before a GC
 ;;; will be triggered.
@@ -145,9 +146,6 @@
   "This number specifies the minimum number of bytes of dynamic space
   that must be consed before the next gc will occur.")
 
-;;;
-;;; *GC-TRIGGER*
-;;; 
 ;;; Internal trigger.  When the dynamic usage increases beyond this
 ;;; amount, the system notes that a garbage collection needs to occur by
 ;;; setting *NEED-TO-COLLECT-GARBAGE* to T.
@@ -164,7 +162,7 @@
 ;;; 
 ;;; *GC-INHIBIT*
 ;;;
-;;; When Y, inhibits garbage collection.
+;;; When non-NIL, inhibits garbage collection.
 ;;; 
 (defvar *gc-inhibit* nil)
 
@@ -176,16 +174,13 @@
 ;;; 
 (defvar *already-maybe-gcing* nil)
 
-;;;
-;;; *NEED-TO-COLLECT-GARBAGE*
-;;;
 ;;; When T, indicates that the dynamic usage has exceeded the value
 ;;; *GC-TRIGGER*.
 ;;; 
 (defvar *need-to-collect-garbage* nil)
 
 
-;;;; GC Hooks
+;;;; GC Hooks.
 
 ;;;
 ;;; *BEFORE-GC-HOOKS*
@@ -219,6 +214,15 @@
 
 
 
+;;;
+;;; *GC-VERBOSE*
+;;;
+(defvar *gc-verbose* t
+  "When non-NIL, causes the functions bound to *GC-NOTIFY-BEFORE* and
+  *GC-NOTIFY-AFTER* to be called before and after a garbage collection
+  occurs respectively.")
+
+
 (defun default-gc-notify-before (bytes-in-use)
   (system:beep *standard-output*)
   (format t "~&[GC threshold exceeded with ~:D bytes in use.  ~
@@ -226,8 +230,9 @@
   (finish-output))
 ;;;
 (defparameter *gc-notify-before* #'default-gc-notify-before
-  "This function is invoked before GC'ing with the number of bytes in use.  It
-   notifies the user that the system is going into GC.")
+  "This function bound to this variable is invoked before GC'ing (unless
+  *GC-VERBOSE* is NIL) with the current amount of dynamic usage (in
+  bytes).  It should notify the user that the system is going to GC.")
 
 (defun default-gc-notify-after (bytes-retained bytes-freed new-trigger)
   (format t "[GC completed with ~:D bytes retained and ~:D bytes freed.]~%"
@@ -238,8 +243,11 @@
   (finish-output))
 ;;;
 (defparameter *gc-notify-after* #'default-gc-notify-after
-  "This function is invoked after GC'ing with the number of bytes freed.  It
-   notifies the user that the system is going into GC.")
+  "The function bound to this variable is invoked after GC'ing (unless
+  *GC-VERBOSE* is NIL) with the amount of dynamic usage (in bytes) now
+  free, the number of bytes freed by the GC, and the new GC trigger
+  threshold.  The function should notify the user that the system has
+  finished GC'ing.")
 
 
 ;;;; Stack grovelling:
@@ -574,7 +582,7 @@
 ;;; which must be returned to the caller.
 ;;; 
 (defun maybe-gc (object)
-  (sub-gc t nil)
+  (sub-gc *gc-verbose* nil)
   object)
 
 ;;;
@@ -582,20 +590,20 @@
 ;;;
 ;;; This is the user advertised garbage collection function.
 ;;; 
-(defun gc (&optional (verbose-p t))
+(defun gc (&optional (verbose-p *gc-verbose*))
   "Initiates a garbage collection.  The optional argument, VERBOSE-P,
-  controls wether or not GC statistics are printed."
-  (sub-gc verbose-p t)
-  nil)
+  which defaults to the value of the variable *GC-VERBOSE* controls
+  whether or not GC statistics are printed."
+  (sub-gc verbose-p t))
 
 
-;;;; Auxiliary Functions
+;;;; Auxiliary Functions.
 
 (defun gc-on ()
   "Enables the garbage collector."
   (setq *gc-inhibit* nil)
   (when *need-to-collect-garbage*
-    (sub-gc t nil))
+    (sub-gc *gc-verbose* nil))
   nil)
 
 (defun gc-off ()
