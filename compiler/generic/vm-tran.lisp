@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.6 1990/03/23 21:44:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.7 1990/04/29 23:53:52 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -175,16 +175,16 @@
 		    (+ (* start vm:byte-bits) vector-data-bit-offset)
 		    result
 		    vector-data-bit-offset
-		    (* (- end start) vm:byte-bits))
+		    (* length vm:byte-bits))
      result))
 
 
 (deftransform copy-seq ((seq) (simple-string))
   '(let* ((length (length seq))
 	  (res (make-string length)))
-     (bit-bash-copy string
+     (bit-bash-copy seq
 		    vector-data-bit-offset
-		    result
+		    res
 		    vector-data-bit-offset
 		    (* length vm:byte-bits))
      res))
