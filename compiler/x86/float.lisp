@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.32 1999/11/11 16:10:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.33 1999/12/05 16:23:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2144,7 +2144,6 @@
 	       (:args (x :scs (double-reg) :target fr0))
 	       (:temporary (:sc double-reg :offset fr0-offset
 				:from :argument :to :result) fr0)
-	       (:ignore fr0)
 	       (:results (y :scs (double-reg)))
 	       (:arg-types double-float)
 	       (:result-types double-float)
@@ -2154,6 +2153,7 @@
 	       (:vop-var vop)
 	       (:save-p :compute-only)
 	       (:node-var node)
+	       (:ignore fr0)
 	       (:generator 5
 		(note-this-location vop :internal-error)
 		(unless (zerop (tn-offset x))
@@ -2337,7 +2337,7 @@
 		(:note "inline sin/cos function")
 		(:vop-var vop)
 		(:save-p :compute-only)
-	        (:ignore eax)
+	        (:ignore eax fr0)
 		(:generator 5
 		  (note-this-location vop :internal-error)
 		  (unless (zerop (tn-offset x))
@@ -2374,7 +2374,7 @@
   (:note "inline tan function")
   (:vop-var vop)
   (:save-p :compute-only)
-  (:ignore eax)
+  (:ignore eax fr0)
   (:generator 5
     (note-this-location vop :internal-error)
     (case (tn-offset x)
@@ -2531,7 +2531,7 @@
   (:note "inline expm1 function")
   (:vop-var vop)
   (:save-p :compute-only)
-  (:ignore temp)
+  (:ignore temp fr0)
   (:generator 5
      (note-this-location vop :internal-error)
      (unless (zerop (tn-offset x))
@@ -2805,6 +2805,7 @@
   (:result-types double-float)
   (:policy :fast-safe)
   (:note "inline scalbn function")
+  (:ignore fr0)
   (:generator 5
      ;; Setup x in fr0 and y in fr1
      (sc-case x
@@ -2871,6 +2872,7 @@
   (:note "inline scalb function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:ignore fr0)
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr0 and y in fr1
@@ -3080,6 +3082,7 @@
   (:note "inline logb function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:ignore fr0)
   (:generator 5
      (note-this-location vop :internal-error)
      (sc-case x
