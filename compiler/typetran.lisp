@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.20 1993/05/12 11:12:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.21 1993/07/17 01:00:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -342,8 +342,8 @@
 ;;;
 ;;;    Transform a type test against some instance type.  If not properly
 ;;; named, error.  If sealed and has no subclasses, just test for layout-EQ.
-;;; If a structure, call S-T-STRUCTURE-TYPEP.  Otherwise, call CLASS-TYPEP at
-;;; run-time with the layout and class object.
+;;; If a structure, call S-T-STRUCTURE-TYPEP.  Otherwise, look up the indirect
+;;; class-cell and call CLASS-CELL-TYPEP at runtime.
 ;;;
 (defun source-transform-instance-typep (obj class)
   (let* ((name (class-name class))
@@ -370,7 +370,9 @@
        (t
 	(once-only ((object obj))
 	  `(and (,pred ,object)
-		(class-typep (,get-layout ,object) ',class))))))))
+		(class-cell-typep
+		 (,get-layout ,object)
+		 (load-time-value (find-class-cell ',name))))))))))
 
 
 ;;; SOURCE-TRANSFORM-STRUCTURE-TYPEP  --  Internal
