@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.44 1993/09/03 02:37:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.45 1994/02/15 14:45:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,8 +132,9 @@
   (let ((condition (coerce-to-condition datum arguments
 					'simple-condition 'signal))
         (*handler-clusters* *handler-clusters*))
-    (when (typep condition *break-on-signals*)
-      (let ((*break-on-signals* nil))
+    (let ((obos *break-on-signals*)
+	  (*break-on-signals* nil))
+      (when (typep condition obos)
 	(break "~A~%Break entered because of *break-on-signals* (now NIL.)"
 	       condition)))
     (loop
