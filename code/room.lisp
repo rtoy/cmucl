@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.30 2001/03/04 20:12:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.31 2003/10/15 15:24:23 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,7 +110,8 @@
 
 (defparameter *room-info* '#.*meta-room-info*)
 (deftype spaces () '(member :static :dynamic :read-only))
-
+;; A type denoting the virtual address available to us.
+(deftype memory-size () `(unsigned-byte #.vm:word-bits))
 
 ;;;; MAP-ALLOCATED-OBJECTS:
 
@@ -145,8 +146,8 @@
 ;;;
 (declaim (inline round-to-dualword))
 (defun round-to-dualword (size)
-  (declare (fixnum size))
-  (logand (the fixnum (+ size lowtag-mask)) (lognot lowtag-mask)))
+  (declare (type memory-size size))
+  (logand (the memory-size (+ size lowtag-mask)) (lognot lowtag-mask)))
 
 
 ;;; VECTOR-TOTAL-SIZE  --  Internal
@@ -163,11 +164,11 @@
     (declare (type (integer -3 3) shift))
     (round-to-dualword
      (+ (* vector-data-offset word-bytes)
-	(the fixnum
+	(the memory-size
 	     (if (minusp shift)
-		 (ash (the fixnum
-			   (+ len (the fixnum
-				       (1- (the fixnum (ash 1 (- shift)))))))
+		 (ash (the memory-size
+			   (+ len (the memory-size
+				       (1- (the memory-size (ash 1 (- shift)))))))
 		      shift)
 		 (ash len shift)))))))
 
@@ -216,7 +217,7 @@
 			   (logior (sap-int current) instance-pointer-type)))
 		     (size (round-to-dualword
 			    (* (+ (%instance-length obj) 1) word-bytes))))
-		(declare (fixnum size))
+		(declare (type memory-size size))
 		(funcall fun obj header-type size)
 		(assert (zerop (logand size lowtag-mask)))
 		#+nil
@@ -245,7 +246,7 @@
 				 (round-to-dualword
 				  (* (the fixnum (%code-code-size obj))
 				     word-bytes)))))))
-		(declare (fixnum size))
+		(declare (type memory-size size))
 		(funcall fun obj header-type size)
 		(assert (zerop (logand size lowtag-mask)))
 		#+nil
@@ -270,11 +271,11 @@
 ;;; allocated in Space.
 ;;;
 (defun type-breakdown (space)
-  (let ((sizes (make-array 256 :initial-element 0 :element-type 'fixnum))
-	(counts (make-array 256 :initial-element 0 :element-type 'fixnum)))
+  (let ((sizes (make-array 256 :initial-element 0 :element-type '(unsigned-byte 32)))
+	(counts (make-array 256 :initial-element 0 :element-type '(unsigned-byte 32))))
     (map-allocated-objects
      #'(lambda (obj type size)
-	 (declare (fixnum size) (optimize (speed 3) (safety 0)) (ignore obj))
+	 (declare (type memory-size size) (optimize (speed 3) (safety 0)) (ignore obj))
 	 (incf (aref sizes type) size)
 	 (incf (aref counts type)))
      space)
@@ -318,7 +319,7 @@
       (maphash #'(lambda (k v)
 		   (declare (ignore k))
 		   (let ((sum 0))
-		     (declare (fixnum sum))
+		     (declare (type memory-size sum))
 		     (dolist (space-total v)
 		       (incf sum (first (cdr space-total))))
 		     (summary-totals (cons sum v))))
@@ -327,13 +328,14 @@
       (format t "~2&Summary of spaces: ~(~{~A ~}~)~%" spaces)
       (let ((summary-total-bytes 0)
 	    (summary-total-objects 0))
-	(declare (fixnum summary-total-bytes summary-total-objects))
+	(declare (type memory-size summary-total-bytes summary-total-objects))
 	(dolist (space-totals
 		 (mapcar #'cdr (sort (summary-totals) #'> :key #'car)))
 	  (let ((total-objects 0)
 		(total-bytes 0)
 		name)
-	    (declare (fixnum total-objects total-bytes))
+	    (declare (fixnum total-objects)
+		     (type memory-size total-bytes))
 	    (collect ((spaces))
 	      (dolist (space-total space-totals)
 		(let ((total (cdr space-total)))
@@ -369,19 +371,19 @@
 			   0))
 	 (reported-bytes 0)
 	 (reported-objects 0))
-    (declare (fixnum total-objects total-bytes cutoff-point reported-objects
-		     reported-bytes))
+    (declare (fixnum total-objects cutoff-point reported-objects)
+	     (type memory-size total-bytes reported-bytes))
     (loop for (bytes objects name) in types do
       (when (<= bytes cutoff-point)
-	(format t "  ~10:D bytes for ~9:D other object~2:*~P.~%"
+	(format t "  ~13:D bytes for ~9:D other object~2:*~P.~%"
 		(- total-bytes reported-bytes)
 		(- total-objects reported-objects))
 	(return))
       (incf reported-bytes bytes)
       (incf reported-objects objects)
-      (format t "  ~10:D bytes for ~9:D ~(~A~) object~2:*~P.~%"
+      (format t "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P.~%"
 	      bytes objects name))
-    (format t "  ~10:D bytes for ~9:D ~(~A~) object~2:*~P (space total.)~%"
+    (format t "  ~13:D bytes for ~9:D ~(~A~) object~2:*~P (space total.)~%"
 	    total-bytes total-objects (car space-total))))
 
 
@@ -525,10 +527,11 @@
   (let ((totals (make-hash-table :test #'eq))
 	(total-objects 0)
 	(total-bytes 0))
-    (declare (fixnum total-objects total-bytes))
+    (declare (fixnum total-objects)
+	     (type memory-size total-bytes))
     (map-allocated-objects
      #'(lambda (obj type size)
-	 (declare (fixnum size) (optimize (speed 3) (safety 0)))
+	 (declare (type memory-size size) (optimize (speed 3) (safety 0)))
 	 (when (eql type instance-header-type)
 	   (incf total-objects)
 	   (incf total-bytes size)
@@ -550,7 +553,7 @@
       (let ((sorted (sort (totals-list) #'> :key #'cddr))
 	    (printed-bytes 0)
 	    (printed-objects 0))
-	(declare (fixnum printed-bytes printed-objects))
+	(declare (type memory-size printed-bytes printed-objects))
 	(dolist (what (if top-n
 			  (subseq sorted 0 (min (length sorted) top-n))
 			  sorted))
@@ -558,7 +561,7 @@
 		(objects (cadr what)))
 	    (incf printed-bytes bytes)
 	    (incf printed-objects objects)
-	    (format t "  ~A: ~:D bytes, ~D object~:P.~%" (car what)
+	    (format t "  ~32A: ~7:D bytes, ~5D object~:P.~%" (car what)
 		    bytes objects)))
 
 	(let ((residual-objects (- total-objects printed-objects))
