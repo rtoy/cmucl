@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.54.2.2 2000/05/23 16:37:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.54.2.3 2000/07/09 16:08:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -283,23 +283,23 @@
 
 (defknown copy-to-system-area
 	  ((simple-unboxed-array (*)) index system-area-pointer index index)
-  null
+  t
   ())
 
 (defknown copy-from-system-area
 	  (system-area-pointer index (simple-unboxed-array (*)) index index)
-  null
+  t
   ())
 
 (defknown system-area-copy
 	  (system-area-pointer index system-area-pointer index index)
-  null
+  t
   ())
 
 (defknown bit-bash-copy
 	  ((simple-unboxed-array (*)) index
 	   (simple-unboxed-array (*)) index index)
-  null
+  t
   ())
 
 
