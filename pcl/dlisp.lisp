@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.9 2002/10/19 14:32:43 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.10 2002/11/28 16:23:33 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -109,10 +109,6 @@
 		    ,@(when (member 'miss-fn closure-variables)
 			`((declare (type function miss-fn))))
 		    #'(kernel:instance-lambda ,args
-			#+copy-&rest-arg
-			,@(when rest
-			    `((setq .lap-rest-arg.
-				    (copy-list .lap-rest-arg.))))
 			(let ()
 			  (declare #.*optimize-speed*)
 			  ,form)))))

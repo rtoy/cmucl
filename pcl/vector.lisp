@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.22 2002/11/22 00:15:48 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.23 2002/11/28 16:23:34 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -219,7 +219,6 @@
 							wrappers classes types 
 							'caching)))
 		  (update-all-pv-tables call wrappers emf)
-		  #+copy-&rest-arg (setq args (copy-list args))
 		  (invoke-emf emf args))))))))
 ||#
 

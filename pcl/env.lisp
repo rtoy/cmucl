@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.15 2002/08/26 02:23:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.16 2002/11/28 16:23:33 pmai Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -224,7 +224,6 @@
 (defvar *traced-methods* ())
 
 (defun trace-method (spec &rest options)
-  #+copy-&rest-arg (setq options (copy-list options))
   (multiple-value-bind (gf omethod name)
       (parse-method-or-spec spec)
     (let* ((tfunction (trace-method-internal (method-function omethod)

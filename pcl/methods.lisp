@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.17 2002/10/11 15:15:03 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.18 2002/11/28 16:23:34 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -392,7 +392,6 @@
 			      specializers
 			      lambda-list
 			      &rest other-initargs)
-  #+copy-&rest-arg (setq other-initargs (copy-list other-initargs))
   ;; What about changing the class of the generic-function if there is
   ;; one.  Whose job is that anyways.  Do we need something kind of
   ;; like class-for-redefinition?
@@ -748,7 +747,6 @@
 
 (defun default-secondary-dispatch-function (generic-function)
   (lambda (&rest args)
-    #+copy-&rest-arg (setq args (copy-list args))
     (let ((methods (compute-applicable-methods generic-function args)))
       (if methods
 	  (let ((emf (get-effective-method-function generic-function methods)))
@@ -1354,10 +1352,6 @@
 				 ,@(unless function-p
 				     `((declare (ignore .pv-cell.
 							.next-method-call.))))
-				 #+copy-&rest-arg
-				 ,@(when (and applyp function-p)
-				     `((setq .dfun-rest-arg.
-					     (copy-list .dfun-rest-arg.))))
 				 (locally (declare #.*optimize-speed*)
 				   (let ((emf ,net))
 				     ,(make-emf-call metatypes applyp 'emf))))
@@ -1394,7 +1388,6 @@
     (format t "~&make-unordered-methods-emf ~s~%" 
 	    (generic-function-name generic-function)))
   (lambda (&rest args)
-    #+copy-&rest-arg (setq args (copy-list args))
     (let* ((types (types-from-arguments generic-function args 'eql))
 	   (smethods (sort-applicable-methods generic-function methods types))
 	   (emf (get-effective-method-function generic-function smethods)))

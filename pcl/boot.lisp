@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.44 2002/11/28 16:10:11 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.45 2002/11/28 16:23:32 pmai Exp $")
 
 (in-package :pcl)
 
@@ -904,7 +904,6 @@ work during bootstrapping.
 	 `(call-next-method-bind
 	    (flet (,@(and call-next-method-p
 		       `((call-next-method (&rest cnm-args)
-			  #+copy-&rest-arg (setq args (copy-list args))
 			  (call-next-method-body ,method-name-declaration
 						 cnm-args))))
 		   ,@(and next-method-p-p
@@ -1255,7 +1254,6 @@ work during bootstrapping.
 				&key environment
 				&allow-other-keys)
   (declare (ignore environment))
-  #+copy-&rest-arg (setq all-keys (copy-list all-keys))
   (let ((existing (and (fboundp function-specifier)
 		       (gdefinition function-specifier))))
     (when (and existing
@@ -1646,7 +1644,6 @@ work during bootstrapping.
 	&key environment (lambda-list nil lambda-list-p)
 	     (generic-function-class 'standard-generic-function gf-class-p)
 	&allow-other-keys)
-  #+copy-&rest-arg (setq all-keys (copy-list all-keys))
   (real-ensure-gf-internal generic-function-class all-keys environment)
   (unless (or (null gf-class-p)
 	      (eq (class-of existing) generic-function-class))
@@ -1664,7 +1661,6 @@ work during bootstrapping.
 	     (generic-function-class 'standard-generic-function)
 	&allow-other-keys)
   (declare (ignore existing))
-  #+copy-&rest-arg (setq all-keys (copy-list all-keys))
   (real-ensure-gf-internal generic-function-class all-keys environment)
   (prog1
       (setf (gdefinition function-specifier)
@@ -1793,7 +1789,6 @@ work during bootstrapping.
 			       specializers
 			       arglist
 			       &rest initargs)
-  #+copy-&rest-arg (setq initargs (copy-list initargs))
   (let* ((gf (ensure-generic-function generic-function-name))
 	 (existing
 	   (dolist (m (early-gf-methods gf))

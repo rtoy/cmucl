@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.12 2002/10/19 14:32:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.13 2002/11/28 16:23:33 pmai Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 
@@ -519,7 +519,6 @@
 	     `((,(find-standard-ii-method shared-initialize-methods 'slot-object)
 		,(lambda (instance init-type &rest initargs)
 		    (declare (ignore init-type))
-		    #+copy-&rest-arg (setq initargs (copy-list initargs))
 		    (call-initialize-function initialize-function 
 					      instance initargs)
 		    instance)))
@@ -530,7 +529,6 @@
 	     `((class-eq ,class) t)
 	     `((,(find-standard-ii-method initialize-instance-methods 'slot-object)
 		,(lambda (instance &rest initargs)
-		   #+copy-&rest-arg (setq initargs (copy-list initargs))
 		   (invoke-effective-method-function
 		    shared-initialize t instance t initargs))))
 	     (list wrapper *the-wrapper-of-t*))))

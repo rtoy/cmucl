@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.9 2002/10/09 15:32:28 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.10 2002/11/28 16:23:33 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -86,7 +86,6 @@
 	(declare (type function miss-fn))
 	#'(kernel:instance-lambda (&rest args)
             (declare #.*optimize-speed*)
-	    #+copy-&rest-arg (setq args (copy-list args))
 	    (with-dfun-wrappers (args metatypes)
 	      (dfun-wrappers invalid-wrapper-p)
 	      (apply miss-fn args)
@@ -102,7 +101,6 @@
 	(declare (type function miss-fn))
 	#'(kernel:instance-lambda (&rest args)
 	    (declare #.*optimize-speed*)
-	    #+copy-&rest-arg (setq args (copy-list args))
 	    (with-dfun-wrappers (args metatypes)
 	      (dfun-wrappers invalid-wrapper-p)
 	      (apply miss-fn args)
@@ -122,6 +120,5 @@
   (declare (ignore metatypes applyp))
   (values (lambda (emf)
 	    (lambda (&rest args)
-	      #+copy-&rest-arg (setq args (copy-list args))
 	      (invoke-emf emf args)))
 	  t))
