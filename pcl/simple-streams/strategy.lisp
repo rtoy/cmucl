@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.6 2003/07/19 15:32:58 emarsden Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.7 2004/07/09 21:54:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,13 +58,30 @@
                                          unread))
         bytes))))
 
+(defun sc-set-dirty (stream)
+  (with-stream-class (single-channel-simple-stream stream)
+    (setf (sm mode stream)
+          (if (<= (sm buffpos stream)
+                  (sm buffer-ptr stream))
+              3    ; read-modify
+              1    ; write
+              ))))
+
+(defun sc-set-clean (stream)
+  (with-stream-class (single-channel-simple-stream stream)
+    (setf (sm mode stream) 0)))
+
+(defun sc-dirty-p (stream)
+  (with-stream-class (single-channel-simple-stream stream)
+    (> (sm mode stream) 0)))
+
 (defun flush-buffer (stream blocking)
   (with-stream-class (single-channel-simple-stream stream)
     (let ((ptr 0)
           (bytes (sm buffpos stream)))
       (declare (type fixnum ptr bytes))
       (loop
-        (when (>= ptr bytes) (setf (sm buffpos stream) 0) (return 0))
+        (when (>= ptr bytes) (setf (sm buffpos stream) 0) (setf (sm mode stream) 0) (return 0))
         (let ((bytes-written (device-write stream nil ptr nil blocking)))
           (declare (fixnum bytes-written))
           (when (minusp bytes-written)
@@ -170,6 +187,39 @@
 	      (lisp::eof-or-lose stream eof-error-p eof-value)
 	      char))))))
 
+
+(declaim (ftype j-read-char-fn (sc read-char :ef mapped)))
+(defun (sc read-char :ef mapped) (stream eof-error-p eof-value blocking)
+  #|(declare (optimize (speed 3) (space 2) (safety 0) (debug 0)))|#
+  (declare (ignore blocking))
+  (with-stream-class (simple-stream stream)
+    (let* ((buffer (sm buffer stream))
+	   (buffpos (sm buffpos stream))
+	   (ctrl (sm control-in stream))
+	   (ef (sm external-format stream))
+	   (state (sm oc-state stream)))
+      (flet ((input ()
+	       (when (>= buffpos (sm buffer-ptr stream))
+		 (return-from read-char
+                   (lisp::eof-or-lose stream eof-error-p eof-value)))
+	       (incf (sm last-char-read-size stream))
+	       (prog1 (bref buffer buffpos)
+		 (incf buffpos)))
+	     (unput (n)
+	       (decf buffpos n)))
+	(let* ((cnt 0)
+	       (char (octets-to-char ef state cnt #'input #'unput))
+	       (code (char-code char)))
+	  (setf (sm buffpos stream) buffpos
+		(sm last-char-read-size stream) cnt
+		(sm oc-state stream) state)
+	  (when (and (< code 32) ctrl (svref ctrl code))
+	    (setq char (funcall (the (or symbol function) (svref ctrl code))
+				stream char)))
+	  (if (null char)
+	      (lisp::eof-or-lose stream eof-error-p eof-value)
+	      char))))))
+
 (declaim (ftype j-read-chars-fn (sc read-chars :ef)))
 (defun (sc read-chars :ef) (stream string search start end blocking)
   ;; string is filled from START to END, or until SEARCH is found
@@ -238,6 +288,67 @@
 		 (return (values count t)))
 		(t
 		 (setf (char string posn) char))))))))
+
+
+(declaim (ftype j-read-chars-fn (sc read-chars :ef mapped)))
+(defun (sc read-chars :ef mapped) (stream string search start end blocking)
+  ;; string is filled from START to END, or until SEARCH is found
+  ;; Return two values: count of chars read and
+  ;;  NIL if SEARCH was not found
+  ;;  T if SEARCH was found
+  ;;  :EOF if eof encountered before end
+  (declare (type simple-stream stream)
+           (type string string)
+           (type (or null character) search)
+           (type fixnum start end)
+           (type boolean blocking)
+           (ignore blocking)
+	   #|(optimize (speed 3) (space 2) (safety 0) (debug 0))|#)
+  (with-stream-class (simple-stream stream)
+    ;; if stream is single-channel and mode == 3, flush buffer (if dirty)
+    (do ((buffer (sm buffer stream))
+         (buffpos (sm buffpos stream))
+         (buffer-ptr (sm buffer-ptr stream))
+	 (lcrs 0)
+	 (ctrl (sm control-in stream))
+	 (ef (sm external-format stream))
+	 (state (sm oc-state stream))
+         (posn start (1+ posn))
+         (count 0 (1+ count)))
+        ((>= posn end)
+	 (setf (sm buffpos stream) buffpos
+	       (sm last-char-read-size stream) lcrs
+	       (sm oc-state stream) state)
+	 (values count nil))
+      (declare (type lisp::index buffpos buffer-ptr posn count))
+      (flet ((input ()
+	       (when (>= buffpos buffer-ptr)
+                 (return (values count :eof)))
+	       (prog1 (bref buffer buffpos)
+		 (incf buffpos)
+		 (incf lcrs)))
+	     (unput (n)
+	       (decf buffpos n)))
+	(let* ((cnt 0)
+	       (char (octets-to-char ef state cnt #'input #'unput))
+	       (code (char-code char)))
+	  (setq lcrs cnt)
+	  (when (and (< code 32) ctrl (svref ctrl code))
+	    (setq char (funcall (the (or symbol function) (svref ctrl code))
+				stream char)))
+	  (cond ((null char)
+		 (setf (sm buffpos stream) buffpos
+		       (sm last-char-read-size stream) lcrs
+		       (sm oc-state stream) state)
+		 (return (values count :eof)))
+		((and search (char= char search))
+		 (setf (sm buffpos stream) buffpos
+		       (sm last-char-read-size stream) lcrs
+		       (sm oc-state stream) state)
+		 (return (values count t)))
+		(t
+		 (setf (char string posn) char))))))))
+
 
 (declaim (ftype j-unread-char-fn (sc unread-char :ef)))
 (defun (sc unread-char :ef) (stream relaxed)
@@ -470,6 +581,7 @@
 (defun %sf (kind name format &optional access)
   (or (ignore-errors (fdefinition (list kind name format access)))
       (ignore-errors (fdefinition (list kind name format)))
+      (ignore-errors (fdefinition (list kind name :ef access)))
       (fdefinition (list kind name :ef))))
 
 (defun install-single-channel-character-strategy (stream external-format

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.4 2003/06/26 13:27:43 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.5 2004/07/09 21:54:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -397,7 +397,8 @@
   (declare (type simple-stream stream))
   (%check stream :output)
   ;; implement me
-  )
+  nil)
+
 
 (defun %finish-output (stream)
   (declare (type simple-stream stream))
@@ -493,6 +494,9 @@
     (%check stream :input)
     (when (any-stream-instance-flags stream :eof)
       (return-from %read-sequence 0))
+    (when (and (not (any-stream-instance-flags stream :dual :string))
+               (sc-dirty-p stream))
+      (flush-buffer stream t))
     (etypecase seq
       (string
        (funcall-stm-handler j-read-chars (sm melded-stream stream) seq nil
@@ -500,9 +504,17 @@
 			    (if partial-fill :bnb t)))
       ((or (simple-array (unsigned-byte 8) (*))
 	   (simple-array (signed-byte 8) (*)))
+       (when (any-stream-instance-flags stream :string)
+         (error "Can't read into byte sequence from a string stream."))       
        ;; "read-vector" equivalent, but blocking if partial-fill is NIL
-       (error "implement me")
-       )
+       ;; FIXME: this could be implemented faster via buffer-copy
+       (loop with encap = (sm melded-stream stream)
+            for index from start below (or end (length seq))
+            for byte = (read-byte-internal encap nil nil t)
+              then (read-byte-internal encap nil nil partial-fill)
+            while byte
+            do (setf (bref seq index) byte)
+            finally (return index)))
       ;; extend to work on other sequences: repeated read-byte
       )))
 
@@ -520,28 +532,64 @@
       ((or (simple-array (unsigned-byte 8) (*))
 	   (simple-array (signed-byte 8) (*)))
        ;; "write-vector" equivalent
-       (error "implement me")
+       (setf (sm charpos stream) nil)
+       (simple-stream-dispatch stream
+         ;; single-channel-simple-stream
+         (with-stream-class (single-channel-simple-stream stream)
+            (loop with max-ptr fixnum = (sm buf-len stream)
+                  for src-pos fixnum = start then (+ src-pos count)
+                  for src-rest fixnum = (- (or end (length seq)) src-pos)
+                  while (> src-rest 0) ; FIXME: this is non-ANSI
+                  for ptr fixnum = (let ((ptr (sm buffpos stream)))
+                                     (if (>= ptr max-ptr)
+                                         (flush-buffer stream t)
+                                         ptr))
+                  for buf-rest fixnum = (- max-ptr ptr)
+                  for count fixnum = (min buf-rest src-rest)
+                  do (progn (setf (sm mode stream) 1)
+                            (setf (sm buffpos stream) (+ ptr count))
+                            (buffer-copy seq src-pos (sm buffer stream) ptr count))))
+         ;; dual-channel-simple-stream
+         (with-stream-class (dual-channel-simple-stream stream)
+            (loop with max-ptr fixnum = (sm max-out-pos stream)
+                  for src-pos fixnum = start then (+ src-pos count)
+                  for src-rest fixnum = (- (or end (length seq)) src-pos)
+                  while (> src-rest 0) ; FIXME: this is non-ANSI
+                  for ptr fixnum = (let ((ptr (sm outpos stream)))
+                                     (if (>= ptr max-ptr)
+                                         (flush-out-buffer stream t)
+                                         ptr))
+                  for buf-rest fixnum = (- max-ptr ptr)
+                  for count fixnum = (min buf-rest src-rest)
+                  do (progn (setf (sm outpos stream) (+ ptr count))
+                            (buffer-copy seq src-pos (sm out-buffer stream) ptr count))))
+         ;; string-simple-stream
+         (error 'simple-type-error
+                 :datum stream
+                 :expected-type 'stream
+                 :format-control "Can't write a byte sequence to a string stream."
+                 :format-arguments '()))
        )
       ;; extend to work on other sequences: repeated write-byte
-      )))
-
+      ))
+  seq)
 
 (defun read-no-hang-p (stream)
   (declare (type (or integer stream) stream))
   (etypecase stream
     (integer (sys:wait-until-fd-usable stream :input 0))
     (simple-stream (%check stream :input)
-		   (when (any-stream-instance-flags stream :eof)
-		     (return-from read-no-hang-p nil))
-		   (simple-stream-dispatch stream
-		     ;; single-channel-simple-stream
-		     nil
-		     ;; dual-channel-simple-stream
-		     ;; if record-end is -1, call device-finish-record
-		     ;; return NIL if it returns NIL, T if it returns :EOF
-		     nil
-		     ;; string-simple-stream
-		     nil))
+                   (when (any-stream-instance-flags stream :eof)
+                     (return-from read-no-hang-p nil))
+                   (simple-stream-dispatch stream
+                     ;; single-channel-simple-stream
+                     nil
+                     ;; dual-channel-simple-stream
+                     ;; if record-end is -1, call device-finish-record
+                     ;; return NIL if it returns NIL, T if it returns :EOF
+                     nil
+                     ;; string-simple-stream
+                     nil))
     (stream (listen stream))))
 
 (defun write-no-hang-p (stream)
@@ -550,7 +598,6 @@
     (integer (sys:wait-until-fd-usable stream :output 0))
     (simple-stream #| ... |#)
     (stream #| ... |#)))
-
 
 (defun read-vector (vector stream &key (start 0) end (endian-swap :byte-8))
   (declare (type (kernel:simple-unboxed-array (*)) vector)
@@ -585,7 +632,5 @@
      (unless (typep vector '(or string
 			     (simple-array (signed-byte 8) (*))
 			     (simple-array (unsigned-byte 8) (*))))
-       (error "Bad vector."))
+       (error "Wrong vector type for read-vector on stream not of type simple-stream."))
      (read-sequence vector stream :start (or start 0) :end end))))
-
-#|(defun write-vector ...)|#
