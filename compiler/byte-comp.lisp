@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.32 2003/02/12 15:53:46 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.33 2003/04/11 15:38:45 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1317,7 +1317,7 @@
 		    (output-do-inline-function segment 'symbol-value))))
 	    (clambda
 	     (let* ((refered-env (lambda-environment leaf))
-		    (closure (environment-closure refered-env)))
+		    (closure (and refered-env (environment-closure refered-env))))
 	       (if (null closure)
 		   (output-push-load-time-constant segment :entry leaf)
 		   (let ((my-env (node-environment ref)))
