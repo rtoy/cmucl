@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.15 1997/04/02 18:19:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.16 1997/04/21 20:01:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -74,6 +74,10 @@
 (def-type-vops functionp check-function function
   object-not-function-error vm:function-pointer-type)
 
+;; The following encode the error type and register in the trap
+;; instruction, however this breaks on the later sparc Ultra.
+#+nil
+(progn
 (def-type-vops listp nil nil nil vm:list-pointer-type)
 (define-vop (check-list check-type)
   (:generator 3
@@ -91,6 +95,12 @@
     (inst t :ne (logior (ash (tn-offset value) 8) object-not-instance-trap))
     (move result value)))
 (primitive-type-vop check-instance (:check) instance)
+)
+;; These avoid the trap instruction.
+(def-type-vops listp check-list list object-not-list-error
+  vm:list-pointer-type)
+(def-type-vops %instancep check-instance instance object-not-instance-error
+  vm:instance-pointer-type)
 
 (def-type-vops bignump check-bigunm bignum
   object-not-bignum-error vm:bignum-type)
