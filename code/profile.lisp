@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.31 2003/02/09 17:25:20 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.32 2003/03/22 16:15:20 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,7 @@
 ;;;
 
 (defpackage "PROFILE"
+  (:use :common-lisp :ext)
   (:export *timed-functions* profile profile-all unprofile reset-time 
 	   report-time report-time-custom *default-report-time-printfunction*
 	   with-spacereport print-spacereports reset-spacereports
@@ -424,51 +425,128 @@ this, the functions are listed.  If NIL, then always list the functions.")
    Wraps profiling code around the named functions.  As in TRACE, the names are
    not evaluated.  If a function is already profiled, then unprofile and
    reprofile (useful to notice function redefinition.)  If a name is undefined,
-   then we give a warning and ignore it.  If :CALLERS T appears, subsequent
-   names have counts of the most common calling functions recorded.
+   then we give a warning and ignore it.
+
+   CLOS methods can be profiled by specifying names of the form
+   (METHOD <name> <qualifier>* (<specializer>*)), like in TRACE.
+
+   :METHODS Function-Form is a way of specifying that all methods of a
+   generic functions should be profiled.  The Function-Form is
+   evaluated immediately, and the methods of the resulting generic
+   function are profiled.
+
+   If :CALLERS T appears, subsequent names have counts of the most
+   common calling functions recorded.
+
    See also UNPROFILE, REPORT-TIME and RESET-TIME."
-  (let ((names names)
-	(callers nil)
-	(res ()))
-    (loop
-      (unless names (return))
-      (let ((name (pop names)))
-	(case name
-	  (:callers
-	   (setq callers (pop names)))
-	  (t
-	   (push `(profile-1-function ',name ,callers) res)))))
-    `(progn ,@res (values))))
+  (collect ((binds) (forms))
+     (let ((names names)
+	   (callers nil))
+       (loop
+	  (unless names (return))
+	  (let ((name (pop names)))
+	    (cond ((eq name :callers)
+		   (setq callers (pop names)))
+		  ;;
+		  ;; Method functions.
+		  #+pcl
+		  ((and (consp name) (eq 'method (car name)))
+		   (let ((fast-name `(pcl::fast-method ,@(cdr name))))
+		     (forms `(when (fboundp ',name)
+			       (profile-1-function ',name ,callers)
+			       (reinitialize-method-function ',name)))
+		     (forms `(when (fboundp ',fast-name)
+			       (profile-1-function ',fast-name ,callers)
+			       (reinitialize-method-function ',fast-name)))))
+		  ;;
+		  ;; All method of a generic function.
+		  #+pcl
+		  ((eq :methods name)
+		   (let ((tem (gensym)))
+		     (binds `(,tem ,(pop names)))
+		     (forms `(dolist (name
+				       (debug::all-method-function-names ,tem))
+			       (when (fboundp name)
+				 (profile-1-function name ,callers)
+				 (reinitialize-method-function name))))))
+		  (t
+		   (forms `(profile-1-function ',name ,callers))))))
+       (if (binds)
+	   `(let ,(binds) ,@(forms) (values))
+	   `(progn ,@(forms) (values))))))
 
 ;;; PROFILE-ALL -- Public
 ;;;
 ;;; Add profiling to all symbols in the given package.
 ;;;
-(defun profile-all (&key (package *package*) (callers-p nil))
+(defun profile-all (&key (package *package*) (callers-p nil)
+		    (methods nil))
   "PROFILE-ALL
 
  Wraps profiling code around all functions in PACKAGE, which defaults
  to *PACKAGE*. If a function is already profiled, then unprofile and
  reprofile (useful to notice function redefinition.)  If a name is
  undefined, then we give a warning and ignore it.  If CALLERS-P is T
- names have counts of the most common calling functions recorded. See
- also UNPROFILE, REPORT-TIME and RESET-TIME. "
+ names have counts of the most common calling functions recorded.
+
+ When called with arguments :METHODS T, profile all methods of all
+ generic function having names in the given package.  Generic functions
+ themselves, that is, their dispatch functions, are left alone.
+
+ See also UNPROFILE, REPORT-TIME and RESET-TIME. "
   (let ((package (if (packagep package)
 		     package
 		     (find-package package))))
     (do-symbols (symbol package (values))
       (when (and (eq (symbol-package symbol) package)
 		 (fboundp symbol)
-		 (not (special-operator-p symbol)))
-	(profile-1-function symbol callers-p)))))
+		 (not (special-operator-p symbol))
+		 (or (not methods)
+		     (not (typep (fdefinition symbol) 'generic-function))))
+	(profile-1-function symbol callers-p)))
+    ;;
+    ;; Profile all method functions whose generic function name
+    ;; is in the package.
+    (when methods
+      (dolist (name (debug::all-method-functions-in-package package))
+	(when (fboundp name)
+	  (profile-1-function name callers-p)
+	  (reinitialize-method-function name))))))
 
 ;;; UNPROFILE  --  Public
 ;;;
 (defmacro unprofile (&rest names)
   "Unwraps the profiling code around the named functions.  Names defaults to
   the list of all currently profiled functions."
-  `(dolist (name ,(if names `',names '*timed-functions*) (values))
-     (unprofile-1-function name)))
+  (collect ((binds) (forms))
+    (let ((names names))
+      (loop
+	 (unless names (return))
+	 (let ((name (pop names)))
+	   (cond #+pcl
+		 ((and (consp name)
+		       (member (car name) '(method pcl::fast-method)))
+		  (let ((name `(method ,@(cdr name)))
+			(fast-name `(pcl::fast-method ,@(cdr name))))
+		    (forms `(when (fboundp ',name)
+			      (unprofile-1-function ',name)
+			      (reinitialize-method-function ',name)))
+		    (forms `(when (fboundp ',fast-name)
+			      (unprofile-1-function ',fast-name)
+			      (reinitialize-method-function ',fast-name)))))
+		 #+pcl
+		 ((eq :methods name)
+		  (let ((tem (gensym)))
+		    (binds `(,tem ,(pop names)))
+		    (forms `(dolist (name (debug::all-method-function-names ,tem))
+			      (when (fboundp name)
+				(unprofile-1-function name)
+				(reinitialize-method-function name))))))
+		 (t
+		  (forms `(unprofile-1-function ',name))))))
+      (if (binds)
+	  `(let ,(binds) ,@(forms) (values))
+	  `(progn ,@(forms) (values))))))
 
 
 ;;; UNPROFILE-1-FUNCTION  --  Internal

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.22 2002/09/04 14:04:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.23 2003/03/22 16:15:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -393,10 +393,10 @@
 	 (ecase (named-type-name type)
 	   ((t *) (values *any-primitive-type* t))
 	   ((nil) (any))))
-	(built-in-class
-	 (case (class-name type)
+	(kernel::built-in-class
+	 (case (%class-name type)
 	   ((complex function instance system-area-pointer weak-pointer)
-	    (values (primitive-type-or-lose (class-name type) *backend*) t))
+	    (values (primitive-type-or-lose (%class-name type) *backend*) t))
 	   (funcallable-instance
 	    (part-of function))
 	   (base-char

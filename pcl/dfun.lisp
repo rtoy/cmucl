@@ -23,11 +23,9 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.17 2002/12/18 00:57:04 pmai Exp $")
-;;;
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.18 2003/03/22 16:15:17 gerd Exp $")
 
 (in-package :pcl)
 
@@ -87,54 +85,48 @@ And so, we are saved.
 |#
 
 
-;An alist in which each entry is of the form :
-;  (<generator> . (<subentry> ...))
-;Each subentry is of the form:
-;  (<args> <constructor> <system>)
+;;;
+;;; An alist in which each entry is of the form (<generator>
+;;; . (<subentry> ...))  Each subentry is of the form: (<args>
+;;; <constructor> <system>)
+;;;
 (defvar *dfun-constructors* ())			
 
-;If this is NIL, then the whole mechanism
-;for caching dfun constructors is turned
-;off.  The only time that makes sense is
-;when debugging LAP code. 
-(defvar *enable-dfun-constructor-caching* t)	
-
-(defun show-dfun-constructors ()
-  (format t "~&DFUN constructor caching is ~A." 
-	  (if *enable-dfun-constructor-caching*
-	      "enabled" "disabled"))
-  (dolist (generator-entry *dfun-constructors*)
-    (dolist (args-entry (cdr generator-entry))
-      (format t "~&~S ~S"
-	      (cons (car generator-entry) (caar args-entry))
-	      (caddr args-entry)))))
-
-(defvar *raise-metatypes-to-class-p* t)
+;;;
+;;; If this is NIL, then the whole mechanism for caching dfun
+;;; constructors is turned off.  The only time that makes sense is
+;;; when debugging LAP code.
+;;;
+(defvar *enable-dfun-constructor-caching* t)
 
 (defun get-dfun-constructor (generator &rest args)
-  (when (and *raise-metatypes-to-class-p*
-	     (member generator '(emit-checking emit-caching
-				 emit-in-checking-cache-p emit-constant-value)))
-    (setq args (cons (mapcar (lambda (mt)
-			       (if (eq mt t)
-				   mt
-				   'class))
-			     (car args))
-		     (cdr args))))						  
+  (when (member generator '(emit-checking emit-caching
+			    emit-in-checking-cache-p
+			    emit-constant-value))
+    (loop for type in (car args)
+	  if (eq type t)
+	    collect type into types
+	  else
+	    collect 'class into types
+	  finally
+	    (setf (car args) types)))
   (let* ((generator-entry (assq generator *dfun-constructors*))
 	 (args-entry (assoc args (cdr generator-entry) :test #'equal)))
-    (if (null *enable-dfun-constructor-caching*)
-	(apply (symbol-function generator) args)
-	(or (cadr args-entry)
-	    (multiple-value-bind (new not-best-p)
-		(apply (symbol-function generator) args)
-	      (let ((entry (list (copy-list args) new (unless not-best-p 'pcl)
+    (cond ((null *enable-dfun-constructor-caching*)
+	   (apply (symbol-function generator) args))
+	  ((cadr args-entry)
+	   (cadr args-entry))
+	  (t
+	   (multiple-value-bind (new not-best-p)
+	       (apply (symbol-function generator) args)
+	     (let ((entry (list (copy-list args)
+				 new
+				 (unless not-best-p 'pcl)
 				 not-best-p)))
-		(if generator-entry
-		    (push entry (cdr generator-entry))
-		    (push (list generator entry)
-			  *dfun-constructors*)))
-	      (values new not-best-p))))))
+	       (if generator-entry
+		   (push entry (cdr generator-entry))
+		   (push (list generator entry) *dfun-constructors*)))
+	     (values new not-best-p))))))
 
 (defun load-precompiled-dfun-constructor (generator args system constructor)
   (let* ((generator-entry (assq generator *dfun-constructors*))
@@ -142,21 +134,23 @@ And so, we are saved.
     (if args-entry
 	(when (fourth args-entry)
 	  (let* ((dfun-type (case generator
-			      (emit-checking 'checking)
-			      (emit-caching 'caching)
+			      (emit-checking       'checking)
+			      (emit-caching        'caching)
 			      (emit-constant-value 'constant-value)
-			      (emit-default-only 'default-method-only)))
+			      (emit-default-only   'default-method-only)))
 		 (metatypes (car args))
 		 (gfs (when dfun-type (gfs-of-type dfun-type))))
 	    (dolist (gf gfs)
-	      (when (and (equal metatypes (arg-info-metatypes (gf-arg-info gf)))
+	      (when (and (equal metatypes
+				(arg-info-metatypes (gf-arg-info gf)))
 			 (let ((gf-name (generic-function-name gf)))
 			   (and (not (eq gf-name 'slot-value-using-class))
-				(not (equal gf-name '(setf slot-value-using-class)))
+				(not (equal gf-name
+					    '(setf slot-value-using-class)))
 				(not (eq gf-name 'slot-boundp-using-class)))))
 		(update-dfun gf)))
 	    (setf (second args-entry) constructor)
-	    (setf (third args-entry) system)
+	    (setf (third args-entry)  system)
 	    (setf (fourth args-entry) nil)))
 	(let ((entry (list args constructor system nil)))
 	  (if generator-entry
@@ -177,7 +171,7 @@ And so, we are saved.
 		 (push
 		   (make-top-level-form `(precompile-dfun-constructor 
 					  ,(car generator-entry))
-					'(load)
+					'(:load-toplevel)
 		     `(load-precompiled-dfun-constructor
 		       ',(car generator-entry)
 		       ',(car args-entry)
@@ -233,23 +227,23 @@ And so, we are saved.
     (format stream "~A" (type-of dfun-info))))
 
 (defstruct (no-methods
-	     (:constructor no-methods-dfun-info ())
+	     (:constructor make-no-methods-dfun-info ())
 	     (:include dfun-info)))
 
 (defstruct (initial
-	     (:constructor initial-dfun-info ())
+	     (:constructor make-initial-dfun-info ())
 	     (:include dfun-info)))
 
 (defstruct (initial-dispatch
-	     (:constructor initial-dispatch-dfun-info ())
+	     (:constructor make-initial-dispatch-dfun-info ())
 	     (:include dfun-info)))
 
 (defstruct (dispatch
-	     (:constructor dispatch-dfun-info ())
+	     (:constructor make-dispatch-dfun-info ())
 	     (:include dfun-info)))
 
 (defstruct (default-method-only
-	     (:constructor default-method-only-dfun-info ())
+	     (:constructor make-default-method-only-dfun-info ())
 	     (:include dfun-info)))
 
 ;without caching:
@@ -260,61 +254,54 @@ And so, we are saved.
 
 ;accessor:
 ;  one-class two-class one-index n-n
+
 (defstruct (accessor-dfun-info
 	     (:constructor nil)
+	     (:conc-name dfun-info-)
 	     (:include dfun-info))
   accessor-type) ; (member reader writer)
 
-(defmacro dfun-info-accessor-type (di)
-  `(accessor-dfun-info-accessor-type ,di))
-
 (defstruct (one-index-dfun-info
 	     (:constructor nil)
+	     (:conc-name dfun-info-)
 	     (:include accessor-dfun-info))
   index)
 
-(defmacro dfun-info-index (di)
-  `(one-index-dfun-info-index ,di))
-
 (defstruct (n-n
-	     (:constructor n-n-dfun-info (accessor-type cache))
+	     (:constructor make-n-n-dfun-info (accessor-type cache))
 	     (:include accessor-dfun-info)))
 
 (defstruct (one-class
-	     (:constructor one-class-dfun-info (accessor-type index wrapper0))
+	     (:constructor make-one-class-dfun-info
+			   (accessor-type index wrapper0))
+	     (:conc-name dfun-info-)
 	     (:include one-index-dfun-info))
   wrapper0)
 
-(defmacro dfun-info-wrapper0 (di)
-  `(one-class-wrapper0 ,di))
-
 (defstruct (two-class
-	     (:constructor two-class-dfun-info (accessor-type index wrapper0 wrapper1))
+	     (:constructor make-two-class-dfun-info
+			   (accessor-type index wrapper0 wrapper1))
+	     (:conc-name dfun-info-)
 	     (:include one-class))
   wrapper1)
 
-(defmacro dfun-info-wrapper1 (di)
-  `(two-class-wrapper1 ,di))
-
 (defstruct (one-index
-	     (:constructor one-index-dfun-info
+	     (:constructor make-one-index-dfun-info
 			   (accessor-type index cache))
 	     (:include one-index-dfun-info)))	     
 
 (defstruct (checking
-	     (:constructor checking-dfun-info (function cache))
+	     (:constructor make-checking-dfun-info (function cache))
+	     (:conc-name dfun-info-)
 	     (:include dfun-info))
   function)
 
-(defmacro dfun-info-function (di)
-  `(checking-function ,di))
-
 (defstruct (caching
-	     (:constructor caching-dfun-info (cache))
+	     (:constructor make-caching-dfun-info (cache))
 	     (:include dfun-info)))
 
 (defstruct (constant-value
-	     (:constructor constant-value-dfun-info (cache))
+	     (:constructor make-constant-value-dfun-info (cache))
 	     (:include dfun-info)))
 
 (defmacro dfun-update (generic-function function &rest args)
@@ -324,13 +311,11 @@ And so, we are saved.
 
 (defun accessor-miss-function (gf dfun-info)
   (ecase (dfun-info-accessor-type dfun-info)
-    (reader
+    ((reader boundp)
      (lambda (arg)
-       (declare (pcl-fast-call))
        (accessor-miss gf nil arg dfun-info)))
     (writer
      (lambda (new arg)
-       (declare (pcl-fast-call))
        (accessor-miss gf new arg dfun-info)))))
 
 (declaim (ext:freeze-type dfun-info))
@@ -340,8 +325,11 @@ And so, we are saved.
 ;;; ONE-CLASS-ACCESSOR
 ;;;
 (defun make-one-class-accessor-dfun (gf type wrapper index)
-  (let ((emit (if (eq type 'reader) 'emit-one-class-reader 'emit-one-class-writer))
-	(dfun-info (one-class-dfun-info type index wrapper)))
+  (let ((emit (ecase type
+		(reader 'emit-one-class-reader)
+		(boundp 'emit-one-class-boundp)
+		(writer 'emit-one-class-writer)))
+	(dfun-info (make-one-class-dfun-info type index wrapper)))
     (values
      (funcall (get-dfun-constructor emit (consp index))
 	      wrapper index
@@ -353,8 +341,11 @@ And so, we are saved.
 ;;; TWO-CLASS-ACCESSOR
 ;;;
 (defun make-two-class-accessor-dfun (gf type w0 w1 index)
-  (let ((emit (if (eq type 'reader) 'emit-two-class-reader 'emit-two-class-writer))
-	(dfun-info (two-class-dfun-info type index w0 w1)))
+  (let ((emit (ecase type
+		(reader 'emit-two-class-reader)
+		(boundp 'emit-two-class-boundp)
+		(writer 'emit-two-class-writer)))
+	(dfun-info (make-two-class-dfun-info type index w0 w1)))
     (values
      (funcall (get-dfun-constructor emit (consp index))
 	      w0 w1 index
@@ -366,9 +357,12 @@ And so, we are saved.
 ;;; std accessors same index dfun
 ;;;
 (defun make-one-index-accessor-dfun (gf type index &optional cache)
-  (let* ((emit (if (eq type 'reader) 'emit-one-index-readers 'emit-one-index-writers))
-	 (cache (or cache (get-cache 1 nil #'one-index-limit-fn 4)))
-	 (dfun-info (one-index-dfun-info type index cache)))
+  (let* ((emit (ecase type
+		 (reader 'emit-one-index-readers)
+		 (boundp 'emit-one-index-boundps)
+		 (writer 'emit-one-index-writers)))
+	 (cache (or cache (get-cache 1 nil 4)))
+	 (dfun-info (make-one-index-dfun-info type index cache)))
     (declare (type cache cache))
     (values
      (funcall (get-dfun-constructor emit (consp index))
@@ -379,17 +373,16 @@ And so, we are saved.
      dfun-info)))
 
 (defun make-final-one-index-accessor-dfun (gf type index table)
-  (let ((cache (fill-dfun-cache table nil 1 #'one-index-limit-fn)))
+  (let ((cache (fill-dfun-cache table nil 1)))
     (make-one-index-accessor-dfun gf type index cache)))
 
-(defun one-index-limit-fn (nlines)
-  (default-limit-fn nlines))
-
-
 (defun make-n-n-accessor-dfun (gf type &optional cache)
-  (let* ((emit (if (eq type 'reader) 'emit-n-n-readers 'emit-n-n-writers))
-	 (cache (or cache (get-cache 1 t #'n-n-accessors-limit-fn 2)))
-	 (dfun-info (n-n-dfun-info type cache)))
+  (let* ((emit (ecase type
+		 (reader 'emit-n-n-readers)
+		 (boundp 'emit-n-n-boundps)
+		 (writer 'emit-n-n-writers)))
+	 (cache (or cache (get-cache 1 t 2)))
+	 (dfun-info (make-n-n-dfun-info type cache)))
     (declare (type cache cache))
     (values
      (funcall (get-dfun-constructor emit)
@@ -399,11 +392,8 @@ And so, we are saved.
      dfun-info)))
 
 (defun make-final-n-n-accessor-dfun (gf type table)
-  (let ((cache (fill-dfun-cache table t 1 #'n-n-accessors-limit-fn)))
+  (let ((cache (fill-dfun-cache table t 1)))
     (make-n-n-accessor-dfun gf type cache)))
-
-(defun n-n-accessors-limit-fn (nlines)
-  (default-limit-fn nlines))
 
 (defun make-checking-dfun (generic-function function &optional cache)
   (unless cache
@@ -415,20 +405,19 @@ And so, we are saved.
       (get-generic-function-info generic-function)
     (declare (ignore nreq))
     (if (every (lambda (mt) (eq mt t)) metatypes)
-	(let ((dfun-info (default-method-only-dfun-info)))
+	(let ((dfun-info (make-default-method-only-dfun-info)))
 	  (values 
 	   (funcall (get-dfun-constructor 'emit-default-only metatypes applyp)
 		    function)
 	   nil
 	   dfun-info))
-	(let* ((cache (or cache (get-cache nkeys nil #'checking-limit-fn 2)))
-	       (dfun-info (checking-dfun-info function cache)))
+	(let* ((cache (or cache (get-cache nkeys nil 2)))
+	       (dfun-info (make-checking-dfun-info function cache)))
 	  (values
 	   (funcall (get-dfun-constructor 'emit-checking metatypes applyp)
 		    cache
 		    function 
 		    (lambda (&rest args)
-		      (declare (pcl-fast-call))
 		      (checking-miss generic-function args dfun-info)))
 	   cache
 	   dfun-info)))))
@@ -439,17 +428,12 @@ And so, we are saved.
     (if (every (lambda (mt) (eq mt t)) metatypes)
 	(values (lambda (&rest args)
 		  (invoke-emf function args))
-		nil (default-method-only-dfun-info))
+		nil
+		(make-default-method-only-dfun-info))
 	(let ((cache (make-final-ordinary-dfun-internal 
-		      generic-function nil #'checking-limit-fn 
+		      generic-function nil
 		      classes-list new-class)))
 	  (make-checking-dfun generic-function function cache)))))
-
-(defun use-default-method-only-dfun-p (generic-function)
-  (multiple-value-bind (nreq applyp metatypes nkeys)
-      (get-generic-function-info generic-function)
-    (declare (ignore nreq applyp nkeys))
-    (every (lambda (mt) (eq mt t)) metatypes)))
 
 (defun use-caching-dfun-p (generic-function)
   (some (lambda (method)
@@ -460,9 +444,6 @@ And so, we are saved.
 	(if (early-gf-p generic-function)
 	    (early-gf-methods generic-function)
 	    (generic-function-methods generic-function))))
-
-(defun checking-limit-fn (nlines)
-  (default-limit-fn nlines))
 
 
 ;;;
@@ -477,25 +458,20 @@ And so, we are saved.
   (multiple-value-bind (nreq applyp metatypes nkeys)
       (get-generic-function-info generic-function)
     (declare (ignore nreq))
-    (let* ((cache (or cache (get-cache nkeys t #'caching-limit-fn 2)))
-	   (dfun-info (caching-dfun-info cache)))
+    (let* ((cache (or cache (get-cache nkeys t 2)))
+	   (dfun-info (make-caching-dfun-info cache)))
       (values
        (funcall (get-dfun-constructor 'emit-caching metatypes applyp)
 		cache
 		(lambda (&rest args)
-		  (declare (pcl-fast-call))
 		  (caching-miss generic-function args dfun-info)))
        cache
        dfun-info))))
 
 (defun make-final-caching-dfun (generic-function classes-list new-class)
   (let ((cache (make-final-ordinary-dfun-internal 
-		generic-function t #'caching-limit-fn
-		classes-list new-class)))
+		generic-function t classes-list new-class)))
     (make-caching-dfun generic-function cache)))
-
-(defun caching-limit-fn (nlines)
-  (default-limit-fn nlines))
 
 (defun insure-caching-dfun (gf)
   (multiple-value-bind (nreq applyp metatypes nkeys)
@@ -538,20 +514,19 @@ And so, we are saved.
   (multiple-value-bind (nreq applyp metatypes nkeys)
       (get-generic-function-info generic-function)
     (declare (ignore nreq applyp))
-    (let* ((cache (or cache (get-cache nkeys t #'caching-limit-fn 2)))
-	   (dfun-info (constant-value-dfun-info cache)))
+    (let* ((cache (or cache (get-cache nkeys t 2)))
+	   (dfun-info (make-constant-value-dfun-info cache)))
       (values
        (funcall (get-dfun-constructor 'emit-constant-value metatypes)
 		cache
 		(lambda (&rest args)
-		  (declare (pcl-fast-call))
 		  (constant-value-miss generic-function args dfun-info)))
        cache
        dfun-info))))
 
 (defun make-final-constant-value-dfun (generic-function classes-list new-class)
   (let ((cache (make-final-ordinary-dfun-internal 
-		generic-function :constant-value #'caching-limit-fn
+		generic-function :constant-value
 		classes-list new-class)))
     (make-constant-value-dfun generic-function cache)))
 
@@ -576,7 +551,7 @@ And so, we are saved.
 ;; Look at pcl/generic-functions.lisp for other potential test cases.
 (defun show-dfun-costs (gf)
   (when (or (symbolp gf) (consp gf))
-    (setq gf (fdefinition gf)))
+    (setq gf (gdefinition gf)))
   (format t "~&Name ~S  caching cost ~D  dispatch cost ~D~%"
 	  (generic-function-name gf)
 	  (caching-dfun-cost gf)
@@ -585,31 +560,6 @@ And so, we are saved.
 (defparameter *non-built-in-typep-cost* 1)
 (defparameter *structure-typep-cost* 1)
 (defparameter *built-in-typep-cost* 0)
-
-;; The execution time of this is exponential to some function
-;; of number of gf methods and argument lists. It was taking
-;; literally hours to load the presentation methods from the
-;; cl-http w3p kit.
-#+nil
-(defun dispatch-dfun-cost (gf)
-  (generate-discrimination-net-internal 
-   gf (generic-function-methods gf) nil
-   (lambda (methods known-types)
-     (declare (ignore methods known-types))
-     0)
-   (lambda (position type true-value false-value)
-     (declare (ignore position))
-     (+ (max true-value false-value)
-	(if (eq 'class (car type))
-	    (let ((cpl (class-precedence-list (class-of (cadr type)))))
-	      (cond((memq *the-class-built-in-class* cpl)
-		    *built-in-typep-cost*)
-		   ((memq *the-class-structure-class* cpl)
-		    *structure-typep-cost*)
-		   (t
-		    *non-built-in-typep-cost*)))
-	    0)))
-   #'identity))
 
 ;; This version is from the pcl found in the gcl-2.1 distribution.
 ;; Someone added a cost limit so as to keep the execution time controlled
@@ -664,13 +614,13 @@ And so, we are saved.
   
 
 (defun make-dispatch-dfun (gf)
-  (values (get-dispatch-function gf) nil (dispatch-dfun-info)))
+  (values (get-dispatch-function gf) nil (make-dispatch-dfun-info)))
 
 (defun get-dispatch-function (gf)
-  (let ((methods (generic-function-methods gf)))
-    (function-funcall (get-secondary-dispatch-function1 gf methods nil nil nil 
-							nil nil t)
-		      nil nil)))
+  (let* ((methods (generic-function-methods gf))
+	 (generator (get-secondary-dispatch-function1
+		     gf methods nil nil nil nil nil t)))
+    (make-callable gf methods generator nil nil)))
 
 (defun make-final-dispatch-dfun (gf)
   (make-dispatch-dfun gf))
@@ -679,8 +629,8 @@ And so, we are saved.
   (dolist (gf (gfs-of-type '(dispatch initial-dispatch)))
     (dfun-update gf #'make-dispatch-dfun)))
 
-(defun fill-dfun-cache (table valuep nkeys limit-fn &optional cache)
-  (let ((cache (or cache (get-cache nkeys valuep limit-fn
+(defun fill-dfun-cache (table valuep nkeys &optional cache)
+  (let ((cache (or cache (get-cache nkeys valuep
 				    (+ (hash-table-count table) 3)))))
     (maphash (lambda (classes value)
 	       (setq cache (fill-cache cache
@@ -689,19 +639,22 @@ And so, we are saved.
 	     table)
     cache))
 
-(defun make-final-ordinary-dfun-internal (generic-function valuep limit-fn
-							   classes-list new-class)
+(defun make-final-ordinary-dfun-internal (generic-function valuep
+					  classes-list new-class)
   (let* ((arg-info (gf-arg-info generic-function))
 	 (nkeys (arg-info-nkeys arg-info))
 	 (new-class (and new-class
 			 (equal (type-of (gf-dfun-info generic-function))
-				(cond ((eq valuep t) 'caching)
-				      ((eq valuep :constant-value) 'constant-value)
-				      ((null valuep) 'checking)))
+				(cond ((eq valuep t)
+				       'caching)
+				      ((eq valuep :constant-value)
+				       'constant-value)
+				      ((null valuep)
+				       'checking)))
 			 new-class))
 	 (cache (if new-class
 		    (copy-cache (gf-dfun-cache generic-function))
-		    (get-cache nkeys (not (null valuep)) limit-fn 4))))
+		    (get-cache nkeys (not (null valuep)) 4))))
       (make-emf-cache generic-function valuep cache classes-list new-class)))
 
 (defvar *dfun-miss-gfs-on-stack* ())
@@ -709,7 +662,8 @@ And so, we are saved.
 (defmacro dfun-miss ((gf args wrappers invalidp nemf
 		      &optional type index caching-p applicable)
 		     &body body)
-  (unless applicable (setq applicable (gensym)))
+  (unless applicable
+    (setq applicable (gensym)))
   `(multiple-value-bind (,nemf ,applicable ,wrappers ,invalidp 
 			 ,@(when type `(,type ,index)))
        (cache-miss-values ,gf ,args ',(cond (caching-p 'caching)
@@ -718,7 +672,15 @@ And so, we are saved.
      (when (and ,applicable (not (memq ,gf *dfun-miss-gfs-on-stack*)))
        (let ((*dfun-miss-gfs-on-stack* (cons ,gf *dfun-miss-gfs-on-stack*)))
 	 ,@body))
-     (invoke-emf ,nemf ,args)))
+     ;;
+     ;; Create a FAST-INSTANCE-BOUNDP structure instance for a cached
+     ;; SLOT-BOUNDP so that INVOKE-EMF does the right thing, that is,
+     ;; does not signal a SLOT-UNBOUND error for a boundp test.
+     ,@(if type
+	   `((if (and (eq ,type 'boundp) (integerp ,nemf))
+		 (invoke-emf (make-fast-instance-boundp :index ,nemf) ,args)
+		 (invoke-emf ,nemf ,args)))
+	   `((invoke-emf ,nemf ,args)))))
 
 ;;;
 ;;; The dynamically adaptive method lookup algorithm is implemented is
@@ -733,39 +695,74 @@ And so, we are saved.
 ;;; simply select a new cache or cache field.  Those are not considered
 ;;; as state transitions.
 ;;; 
-(defvar *lazy-dfun-compute-p* t)
 (defvar *early-p* nil)
 
+;;;
+;;; Try to finalize all unfinalized class specializers of all methods
+;;; of generic function GF.  Value is true if successful.
+;;;
+(defun finalize-specializers (gf)
+  (let ((all-finalized t))
+    (dolist (method (generic-function-methods gf))
+      (dolist (specializer (method-specializers method))
+	(when (and (classp specializer)
+		   (not (class-finalized-p specializer)))
+	  (if (class-has-a-forward-referenced-superclass-p specializer)
+	      (setq all-finalized nil)
+	      (finalize-inheritance specializer)))))
+    all-finalized))
+      
 (defun make-initial-dfun (gf)
   (let ((initial-dfun 
 	 #'(kernel:instance-lambda (&rest args)
 	     (initial-dfun gf args))))
     (multiple-value-bind (dfun cache info)
-	(if (and (eq *boot-state* 'complete)
-		 (compute-applicable-methods-emf-std-p gf))
-	    (let* ((caching-p (use-caching-dfun-p gf))
-		   (classes-list (precompute-effective-methods 
-				  gf caching-p
-				  (not *lazy-dfun-compute-p*))))
-	      (if *lazy-dfun-compute-p*
-		  (cond ((use-dispatch-dfun-p gf caching-p)
-			 (values initial-dfun nil (initial-dispatch-dfun-info)))
-			(caching-p
-			 (insure-caching-dfun gf)
-			 (values initial-dfun nil (initial-dfun-info)))
-			(t
-			 (values initial-dfun nil (initial-dfun-info))))
-		  (make-final-dfun-internal gf classes-list)))
-	    (let ((arg-info (if (early-gf-p gf)
-				(early-gf-arg-info gf)
-				(gf-arg-info gf)))
-		  (type nil))
-	      (if (and (gf-precompute-dfun-and-emf-p arg-info)
-		       (setq type (final-accessor-dfun-type gf)))
-		  (if *early-p*
-		      (values (make-early-accessor gf type) nil nil)
-		      (make-final-accessor-dfun gf type))
-		  (values initial-dfun nil (initial-dfun-info)))))
+	(cond ((and (eq *boot-state* 'complete)
+		    (not (finalize-specializers gf)))
+	       (values initial-dfun nil (make-initial-dfun-info)))
+
+	      ((and (eq *boot-state* 'complete)
+		    (compute-applicable-methods-emf-std-p gf))
+	       (let* ((caching-p (use-caching-dfun-p gf))
+		      ;;
+		      ;; FIXME: I believe the call to P-E-M below is a
+		      ;; relict of the unused, and meanwhile removed,
+		      ;; *LAZY-DFUN-COMPUTE-P* code in the original PCL.
+		      ;; The call also caused problems before the
+		      ;; introduction of FINALIZE-SPECIALIZERS.  Example:
+		      ;;
+		      ;; (defclass foo () ())
+		      ;; (defclass bar (forward) ())
+		      ;; (defmethod baz ((x bar)) x)
+		      ;; (defmethod baz ((x foo)) x)
+		      ;; 
+		      ;; This signaled an error because of the unfinalized
+		      ;; class BAR, which P-E-M trampled on.
+		      ;;
+		      ;; When removing the call doesn't cause unforeseen
+		      ;; problems, remove the P-E-M function.
+		      ;;
+		      ;; Gerd, 2003-03-18
+		      #+nil
+		      (classes-list (precompute-effective-methods gf caching-p)))
+		 (cond ((use-dispatch-dfun-p gf caching-p)
+			(values initial-dfun nil (make-initial-dispatch-dfun-info)))
+		       (caching-p
+			(insure-caching-dfun gf)
+			(values initial-dfun nil (make-initial-dfun-info)))
+		       (t
+			(values initial-dfun nil (make-initial-dfun-info))))))
+	      (t
+	       (let ((arg-info (if (early-gf-p gf)
+				   (early-gf-arg-info gf)
+				   (gf-arg-info gf)))
+		     (type nil))
+		 (if (and (gf-precompute-dfun-and-emf-p arg-info)
+			  (setq type (final-accessor-dfun-type gf)))
+		     (if *early-p*
+			 (values (make-early-accessor gf type) nil nil)
+			 (make-final-accessor-dfun gf type))
+		     (values initial-dfun nil (make-initial-dfun-info))))))
       (set-dfun gf dfun cache info))))
 
 (defun make-early-accessor (gf type)
@@ -776,6 +773,12 @@ And so, we are saved.
 		  (let* ((class (class-of instance))
 			 (class-name (bootstrap-get-slot 'class class 'name)))
 		    (bootstrap-get-slot class-name instance slot-name))))
+      (boundp #'(kernel:instance-lambda (instance)
+		  (let* ((class (class-of instance))
+			 (class-name (bootstrap-get-slot 'class class 'name)))
+		    (not (eq +slot-unbound+
+			     (bootstrap-get-slot class-name instance
+						 slot-name))))))
       (writer #'(kernel:instance-lambda (new-value instance)
 		  (let* ((class (class-of instance))
 			 (class-name (bootstrap-get-slot 'class class 'name)))
@@ -785,20 +788,40 @@ And so, we are saved.
   (dfun-miss (gf args wrappers invalidp nemf ntype nindex)
     (cond (invalidp)
 	  ((and ntype nindex)
-	   (dfun-update 
-	    gf #'make-one-class-accessor-dfun ntype wrappers nindex))
+	   (dfun-update gf #'make-one-class-accessor-dfun
+			ntype wrappers nindex))
 	  ((use-caching-dfun-p gf)
 	   (dfun-update gf #'make-caching-dfun))
 	  (t
-	   (dfun-update 
-	    gf #'make-checking-dfun
-	    ;; nemf is suitable only for caching, have to do this:
-	    (cache-miss-values gf args 'checking))))))
+	   (dfun-update gf #'make-checking-dfun
+			(cache-miss-values gf args 'checking))))))
 
 (defun make-final-dfun (gf &optional classes-list)
   (multiple-value-bind (dfun cache info)
       (make-final-dfun-internal gf classes-list)
     (set-dfun gf dfun cache info)))
+
+(defun update-dfun (generic-function &optional dfun cache info)
+  (let* ((early-p (early-gf-p generic-function))
+	 (gf-name (if early-p
+		      (early-gf-name generic-function)
+		      (generic-function-name generic-function))))
+    (set-dfun generic-function dfun cache info)
+    (let ((dfun (if early-p
+		    (or dfun (make-initial-dfun generic-function))
+		    (compute-discriminating-function generic-function))))
+      (set-funcallable-instance-function generic-function dfun)
+      (set-function-name generic-function gf-name)
+      (update-pv-calls-for-gf generic-function)
+      dfun)))
+
+(defun gfs-of-type (type)
+  (unless (consp type) (setq type (list type)))
+  (let ((gf-list nil))
+    (map-all-generic-functions (lambda (gf)
+				 (when (memq (type-of (gf-dfun-info gf)) type)
+				   (push gf gf-list))))
+    gf-list))
 
 (defvar *new-class* nil)
 
@@ -828,6 +851,13 @@ And so, we are saved.
 			(standard-reader-method-p method)))
 		  methods)
 	   'reader)
+	  ((every (lambda (method)
+		    (if (consp method)
+			(eq *the-class-standard-boundp-method*
+			    (early-method-class method))
+			(standard-boundp-method-p method)))
+		  methods)
+	   'boundp)
 	  ((every (lambda (method) 
 		    (if (consp method)
 			(eq *the-class-standard-writer-method*
@@ -866,7 +896,7 @@ And so, we are saved.
 	    #'(kernel:instance-lambda (&rest args)
 		(apply #'no-applicable-method gf args))
 	    nil
-	    (no-methods-dfun-info)))
+	    (make-no-methods-dfun-info)))
 	  ((setq type (final-accessor-dfun-type gf))
 	   (make-final-accessor-dfun gf type classes-list new-class))
 	  ((and (not (and (every (lambda (specl) (eq specl *the-class-t*))
@@ -890,9 +920,9 @@ And so, we are saved.
   (let* ((ostate (type-of dfun-info))
 	 (otype (dfun-info-accessor-type dfun-info))
 	 oindex ow0 ow1 cache
-	 (args (ecase otype			;The congruence rules assure
-		(reader (list object))		;us that this is safe despite
-		(writer (list new object)))))	;not knowing the new type yet.
+	 (args (ecase otype
+		((reader boundp) (list object))
+		(writer (list new object)))))
     (dfun-miss (gf args wrappers invalidp nemf ntype nindex)
       ;;
       ;; The following lexical functions change the state of the
@@ -902,9 +932,11 @@ And so, we are saved.
       ;; 
       (flet ((two-class (index w0 w1)
 	       (when (zerop (random 2)) (psetf w0 w1 w1 w0))
-	       (dfun-update gf #'make-two-class-accessor-dfun ntype w0 w1 index))
+	       (dfun-update gf #'make-two-class-accessor-dfun
+			    ntype w0 w1 index))
 	     (one-index (index &optional cache)
-	       (dfun-update gf #'make-one-index-accessor-dfun ntype index cache))
+	       (dfun-update gf #'make-one-index-accessor-dfun
+			    ntype index cache))
 	     (n-n (&optional cache)
 	       (if (consp nindex)
 		   (dfun-update gf #'make-checking-dfun nemf)
@@ -1022,13 +1054,15 @@ And so, we are saved.
 ;;;               an :instance slot, this is the index number of that slot
 ;;;               in the object argument.
 ;;;
+;;; Only used in this file.
+;;;
 (defun cache-miss-values (gf args state)
   (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
       (get-generic-function-info gf)
     (declare (ignore nreq applyp nkeys))
     (with-dfun-wrappers (args metatypes)
       (dfun-wrappers invalid-wrapper-p wrappers classes types)
-      (error "The function ~S requires at least ~D arguments"
+      (error "~@<The function ~S requires at least ~D arguments.~@:>"
 	     gf (length metatypes))
       (multiple-value-bind (emf methods accessor-type index)
 	  (cache-miss-values-internal gf arg-info wrappers classes types state)
@@ -1037,6 +1071,9 @@ And so, we are saved.
 		invalid-wrapper-p
 		accessor-type index)))))
 
+;;;
+;;; Called from vector.lisp
+;;;
 (defun cache-miss-values-internal (gf arg-info wrappers classes types state)
   (let* ((for-accessor-p (eq state 'accessor))
 	 (for-cache-p (or (eq state 'caching) (eq state 'accessor)))
@@ -1047,38 +1084,77 @@ And so, we are saved.
 	    (compute-applicable-methods-using-types gf types)
 	    (compute-applicable-methods-using-classes gf classes))
       (let ((emf (if (or cam-std-p all-applicable-and-sorted-p)
-		     (function-funcall (get-secondary-dispatch-function1
-					gf methods types nil (and for-cache-p wrappers)
-					all-applicable-and-sorted-p)
-				       nil (and for-cache-p wrappers))
-		     (default-secondary-dispatch-function gf))))
+		     (let ((generator (get-secondary-dispatch-function1
+				       gf methods types nil
+				       (and for-cache-p wrappers)
+				       all-applicable-and-sorted-p)))
+		       (make-callable gf methods generator nil
+				      (and for-cache-p wrappers)))
+		     (let ((fn (default-secondary-dispatch-function gf)))
+		       (set-emf-name gf methods fn)))))
 	(multiple-value-bind (index accessor-type)
 	    (and for-accessor-p all-applicable-and-sorted-p methods
 		 (accessor-values gf arg-info classes methods))
 	  (values (if (integerp index) index emf)
 		  methods accessor-type index))))))
 
+;;;
+;;; Only used in this file.
+;;;
 (defun accessor-values (gf arg-info classes methods)
   (declare (ignore gf))
   (let* ((accessor-type (gf-info-simple-accessor-type arg-info))
 	 (accessor-class (case accessor-type
-			   (reader (car classes))
-			   (writer (cadr classes))
-			   (boundp (car classes)))))
+			   ((reader boundp) (car classes))
+			   (writer (cadr classes)))))
     (accessor-values-internal accessor-type accessor-class methods)))
 
+;;;
+;;; Called from vector.lisp
+;;;
 (defun accessor-values1 (gf accessor-type accessor-class)
   (let* ((type `(class-eq ,accessor-class))
-	 (types (if (eq accessor-type 'writer) `(t ,type) `(,type)))
+	 (types (ecase accessor-type
+		  (writer `(t ,type))
+		  ((reader boundp) `(,type))))
 	 (methods (compute-applicable-methods-using-types gf types)))
     (accessor-values-internal accessor-type accessor-class methods)))
 
+;;;
+;;; Only used in this file.
+;;;
+(declaim (inline cpl-maybe-early slot-location-maybe-early))
+
+(defun cpl-maybe-early (class)
+  (if (eq *boot-state* 'complete)
+      (class-precedence-list class)
+      (early-class-precedence-list class)))
+
+;;;
+;;; Return the class precedence list of CLASS or null if we can't
+;;; tell, which is the case when the class isn't finalized yet.
+;;;
+(defun cpl-or-nil (class)
+  (if (eq *boot-state* 'complete)
+      (when (class-finalized-p class)
+	(class-precedence-list class))
+      (early-class-precedence-list class)))
+
+(defun slot-location-maybe-early (slotd)
+  (if (eq *boot-state* 'complete)
+      (slot-definition-location slotd) 
+      (early-slot-definition-location slotd)))
+
+;;;
+;;; Only used in this file.
+;;;
 (defun accessor-values-internal (accessor-type accessor-class methods)
-  (dolist (meth methods)
-    (when (if (consp meth) 
-	      (early-method-qualifiers meth)
-	      (method-qualifiers meth))
-      (return-from accessor-values-internal (values nil nil))))
+  (when (some (lambda (method)
+		(if (consp method) 
+		    (early-method-qualifiers method)
+		    (method-qualifiers method)))
+	      methods)
+    (return-from accessor-values-internal (values nil nil)))
   (let* ((meth (car methods))
 	 (early-p (not (eq *boot-state* 'complete)))
 	 (slot-name (when accessor-class
@@ -1086,9 +1162,7 @@ And so, we are saved.
 			  (and (early-method-standard-accessor-p meth)
 			       (early-method-standard-accessor-slot-name meth))
 			  (and (member *the-class-std-object*
-				       (if early-p
-					   (early-class-precedence-list accessor-class)
-					   (class-precedence-list accessor-class)))
+				       (cpl-maybe-early accessor-class))
 			       (if early-p
 				   (not (eq *the-class-standard-method*
 					    (early-method-class meth)))
@@ -1105,14 +1179,15 @@ And so, we are saved.
     (when (and slotd
 	       (or early-p
 		   (slot-accessor-std-p slotd accessor-type)))
-      (values (if early-p
-		  (early-slot-definition-location slotd) 
-		  (slot-definition-location slotd))
+      (values (slot-location-maybe-early slotd)
 	      accessor-type))))
 
-(defun make-accessor-table (gf type &optional table)
-  (unless table (setq table (make-hash-table :test 'eq)))
-  (let ((methods (if (early-gf-p gf)
+;;;
+;;; Only used in this file.
+;;;
+(defun make-accessor-table (gf type table)
+  (let ((table (or table (make-hash-table :test 'eq)))
+	(methods (if (early-gf-p gf)
 		     (early-gf-methods gf)
 		     (generic-function-methods gf)))
 	(all-index nil)
@@ -1120,72 +1195,83 @@ And so, we are saved.
 	(early-p (not (eq *boot-state* 'complete)))
 	first second (size 0))
     (declare (fixnum size))
-    ;; class -> {(specl slotd)}
-    (dolist (method methods)
-      (let* ((specializers (if (consp method)
-			       (early-method-specializers method t)
-			       (method-specializers method)))
-	     (specl (if (eq type 'reader)
-			(car specializers)
-			(cadr specializers)))
-	     (specl-cpl (if early-p
-			    (early-class-precedence-list specl)
-			    (and (class-finalized-p specl)
-				 (class-precedence-list specl))))
-	     (so-p (member *the-class-std-object* specl-cpl))
-	     (slot-name (if (consp method)
-			    (and (early-method-standard-accessor-p method)
-				 (early-method-standard-accessor-slot-name method))
-			    (accessor-method-slot-name method))))
-	(when (or (null specl-cpl)
-		  (member *the-class-structure-object* specl-cpl))
-	  (return-from make-accessor-table nil))
-	(maphash (lambda (class slotd)
-		   (let ((cpl (if early-p
-				  (early-class-precedence-list class)
-				  (class-precedence-list class))))
-		     (when (memq specl cpl)
-		       (unless (and (or so-p
-					(member *the-class-std-object* cpl))
-				    (or early-p
-					(slot-accessor-std-p slotd type)))
-			 (return-from make-accessor-table nil))
-		       (push (cons specl slotd) (gethash class table)))))
-		 (gethash slot-name *name->class->slotd-table*))))
-    (maphash (lambda (class specl+slotd-list)
-	       (dolist (sclass (if early-p
-				   (early-class-precedence-list class)
-				   (class-precedence-list class)) 
-			(error "This can't happen"))
-		 (let ((a (assq sclass specl+slotd-list)))
-		   (when a
-		     (let* ((slotd (cdr a))
-			    (index (if early-p
-				       (early-slot-definition-location slotd) 
-				       (slot-definition-location slotd))))
-		       (unless index (return-from make-accessor-table nil))
-		       (setf (gethash class table) index)
-		       (when (consp index) (setq no-class-slots-p nil))
-		       (setq all-index (if (or (null all-index)
-					       (eql all-index index))
-					   index t))
-		       (incf size)
-		       (cond ((= size 1) (setq first class))
-			     ((= size 2) (setq second class)))
-		       (return nil))))))
-	     table)
-    (values table all-index first second size no-class-slots-p)))
+    (flet ((precedence (class)
+	     (cpl-maybe-early class))
+	   (slot-name (method)
+	     (if (consp method)
+		 (and (early-method-standard-accessor-p method)
+		      (early-method-standard-accessor-slot-name method))
+		 (accessor-method-slot-name method)))
+	   (slot-location (slotd)
+	     (slot-location-maybe-early slotd)))
+      ;; class -> {(specl slotd)}
+      (dolist (method methods)
+	(let* ((specializers (if (consp method)
+				 (early-method-specializers method t)
+				 (method-specializers method)))
+	       (specl (ecase type
+			((reader boundp) (car specializers))
+			(writer (cadr specializers))))
+	       (specl-cpl (precedence specl))
+	       (so-p (member *the-class-std-object* specl-cpl))
+	       (slot-name (slot-name method)))
+	  (when (or (null specl-cpl)
+		    (member *the-class-structure-object* specl-cpl))
+	    (return-from make-accessor-table nil))
+	  (maphash (lambda (class slotd)
+		     (let ((cpl (precedence class)))
+		       (when (memq specl cpl)
+			 (unless (and (or so-p
+					  (member *the-class-std-object* cpl))
+				      (or early-p
+					  (slot-accessor-std-p slotd type)))
+			   (return-from make-accessor-table nil))
+			 (push (cons specl slotd) (gethash class table)))))
+		   (gethash slot-name *name->class->slotd-table*))))
+      (maphash (lambda (class specl+slotd-list)
+		 (dolist (sclass (precedence class)
+			  (internal-error "This can't happen."))
+		   (let ((a (assq sclass specl+slotd-list)))
+		     (when a
+		       (let* ((slotd (cdr a))
+			      (index (slot-location slotd)))
+			 (unless index
+			   (return-from make-accessor-table nil))
+			 (setf (gethash class table) index)
+			 (when (consp index)
+			   (setq no-class-slots-p nil))
+			 (setq all-index (if (or (null all-index)
+						 (eql all-index index))
+					     index t))
+			 (incf size)
+			 (cond ((= size 1) (setq first class))
+			       ((= size 2) (setq second class)))
+			 (return nil))))))
+	       table)
+      (values table all-index first second size no-class-slots-p))))
 
-(defun compute-applicable-methods-using-types (generic-function types)
-  (let ((definite-p t) (possibly-applicable-methods nil))
-    (dolist (method (if (early-gf-p generic-function)
-			(early-gf-methods generic-function)
-			(generic-function-methods generic-function)))
+
+;;;; ***********************************************
+;;;; The guts of COMPUTE-APPLICABLE-METHODS  *******
+;;;; ***********************************************
+
+;;;
+;;; First value is a sorted list of possibly applicable methods of
+;;; generic function GF when applied to arguments of types TYPES.
+;;; Second value is true if all methods are known to be applicable.
+;;;
+(defun compute-applicable-methods-using-types (gf types)
+  (let ((definite-p t)
+	(possibly-applicable-methods ()))
+    (dolist (method (if (early-gf-p gf)
+			(early-gf-methods gf)
+			(generic-function-methods gf)))
       (let ((specls (if (consp method)
 			(early-method-specializers method t)
 			(method-specializers method)))
 	    (types types)
-	    (possibly-applicable-p t) (applicable-p t))
+	    (possibly-applicable-p t)
+	    (applicable-p t))
 	(dolist (specl specls)
 	  (multiple-value-bind (specl-applicable-p specl-possibly-applicable-p)
 	      (specializer-applicable-using-type-p specl (pop types))
@@ -1193,72 +1279,102 @@ And so, we are saved.
 	      (setq applicable-p nil))
 	    (unless specl-possibly-applicable-p
 	      (setq possibly-applicable-p nil)
-	      (return nil))))
+	      (return))))
 	(when possibly-applicable-p
-	  (unless applicable-p (setq definite-p nil))
+	  (unless applicable-p
+	    (setq definite-p nil))
 	  (push method possibly-applicable-methods))))
-    (let ((precedence (arg-info-precedence (if (early-gf-p generic-function)
-					       (early-gf-arg-info generic-function)
-					       (gf-arg-info generic-function)))))
-      (values (sort-applicable-methods precedence
-				       (nreverse possibly-applicable-methods)
-				       types)
+    (let ((precedence (arg-info-precedence (if (early-gf-p gf)
+					       (early-gf-arg-info gf)
+					       (gf-arg-info gf)))))
+      (values (sort-applicable-methods (nreverse possibly-applicable-methods)
+				       types precedence)
 	      definite-p))))
 
-(defun sort-applicable-methods (precedence methods types)
+;;;
+;;; Sort the list of methods METHODS which are applicable to TYPES
+;;; destructively according to PRECEDENCE.  PRECEDENCE is a list of
+;;; indices for the argument precedence order.
+;;;
+;;; Only used in this file.
+;;;
+(defun sort-applicable-methods (methods types precedence)
   (sort-methods methods
 		precedence
 		(lambda (class1 class2 index)
 		  (let* ((class (type-class (nth index types)))
-			 (cpl (if (eq *boot-state* 'complete)
-				  (class-precedence-list class)
-				  (early-class-precedence-list class))))
+			 (cpl (cpl-maybe-early class)))
 		    (if (memq class2 (memq class1 cpl))
-			class1 class2)))))
+			class1
+			class2)))))
 
-(defun sort-methods (methods precedence compare-classes-function)
+;;;
+;;; Sort the list of methods METHODS using argument precedence order
+;;; PRECEDENCE.  COMPARE-CLASSES is a function used to compare method
+;;; specializers.
+;;;
+;;; Only used in this file.
+;;;
+(defun sort-methods (methods precedence compare-classes)
   (flet ((sorter (method1 method2)
 	   (dolist (index precedence)
-	     (let* ((specl1 (nth index (if (listp method1)
-					   (early-method-specializers method1 t)
-					   (method-specializers method1))))
-		    (specl2 (nth index (if (listp method2)
-					   (early-method-specializers method2 t)
-					   (method-specializers method2))))
-		    (order (order-specializers
-			     specl1 specl2 index compare-classes-function)))
-	       (when order
-		 (return-from sorter (eq order specl1)))))))
+	     (flet ((specializers (method)
+		      (if (listp method)
+			  (early-method-specializers method t)
+			  (method-specializers method))))
+	       (let* ((specl1 (nth index (specializers method1)))
+		      (specl2 (nth index (specializers method2)))
+		      (more-specific (more-specific-specializer
+				      specl1 specl2 index compare-classes)))
+		 (when more-specific
+		   (return-from sorter (eq more-specific specl1))))))))
     (stable-sort methods #'sorter)))
 
-(defun order-specializers (specl1 specl2 index compare-classes-function)
-  (let ((type1 (if (eq *boot-state* 'complete)
-		   (specializer-type specl1)
-		   (bootstrap-get-slot 'specializer specl1 'type)))
-	(type2 (if (eq *boot-state* 'complete)
-		   (specializer-type specl2)
-		   (bootstrap-get-slot 'specializer specl2 'type))))
-    (cond ((eq specl1 specl2)
-	   nil)
-	  ((atom type1)
-	   specl2)
-	  ((atom type2)
-	   specl1)
-	  (t
-	   (case (car type1)
-	     (class    (case (car type2)
-			 (class (funcall compare-classes-function specl1 specl2 index))
-			 (t specl2)))
-	     (prototype (case (car type2)
-			 (class (funcall compare-classes-function specl1 specl2 index))
-			 (t specl2)))
-	     (class-eq (case (car type2)
-			 (eql specl2)
-			 (class-eq nil)
-			 (class type1)))
-	     (eql      (case (car type2)
-			 (eql nil)
-			 (t specl1))))))))
+;;;
+;;; Return the more specific specializer of SPEC1 and SPEC2, or null
+;;; if equally specific.  INDEX is the index of SPEC1 and SPEC2 in the
+;;; method specializers.  COMPARE-CLASSES is a function to call for
+;;; comparing class specializers.
+;;;
+;;; Only used in this file.
+;;;
+(defun more-specific-specializer (specl1 specl2 index compare-classes)
+  (flet ((spec-type (spec)
+	   (if (eq *boot-state* 'complete)
+	       (specializer-type spec)
+	       (bootstrap-get-slot 'specializer spec 'type))))
+    (let ((type1 (spec-type specl1))
+	  (type2 (spec-type specl2)))
+      (cond ((eq specl1 specl2)
+	     nil)
+	    ((atom type1)
+	     specl2)
+	    ((atom type2)
+	     specl1)
+	    (t
+	     (case (car type1)
+	       (class
+		(case (car type2)
+		  (class (funcall compare-classes specl1 specl2 index))
+		  (t specl2)))
+	       (prototype
+		(case (car type2)
+		  (class (funcall compare-classes specl1 specl2 index))
+		  (t specl2)))
+	       (class-eq
+		(case (car type2)	; FIXME: ECASE?
+		  (eql specl2)
+		  (class-eq nil)
+		  (class type1)))
+	       (eql
+		(case (car type2)
+		  (eql nil)
+		  (t specl1)))))))))
+
+
+;;;; ***********************
+;;;; MAP-ALL-ORDERS  *******
+;;;; ***********************
 
 (defun map-all-orders (methods precedence function)
   (let ((choices nil))
@@ -1304,14 +1420,34 @@ And so, we are saved.
       (not (member class1 (cdr (class-precedence-list class2))))
       (class-can-precede-p class1 class2)))
 
-(defun compute-precedence (lambda-list nreq argument-precedence-order)
-  (if (null argument-precedence-order)
-      (let ((list nil))
-	(dotimes (i nreq list)
-	  (declare (fixnum i))
-	  (push (- (1- nreq) i) list)))
-      (mapcar (lambda (x) (position x lambda-list))
-	      argument-precedence-order)))
+
+;;;; ********************************************
+;;;; SPECIALIZER-APPLICABLE-USING-TYPE-P  *******
+;;;; ********************************************
+
+;;;
+;;; First value is true if specializer SPECL is applicable to TYPE.
+;;; Second value is true if its possibly applicable to TYPE.  This is
+;;; used by c-a-m-u-t and generate-discrimination-net-internal, and
+;;; has only what they need.
+;;;
+(defun specializer-applicable-using-type-p (specl type)
+  (let ((specl (type-from-specializer specl)))
+    (cond ((eq specl t)
+	   (values t t))
+	  ((or (atom type) (eq (car type) t))
+	   (values nil t))
+	  (t
+	   (case (car type)
+	     (class (saut-class specl type))
+	     (and (saut-and specl type))
+	     (not (saut-not specl type))
+	     (prototype (saut-prototype specl type))
+	     (class-eq (saut-class-eq specl type))
+	     (eql (saut-eql specl type))
+	     (t (internal-error
+		 "~@<~s cannot handle the second argument ~s.~@:>"
+		 'specializer-applicable-using-type-p type)))))))
 
 (defun saut-and (specl type)
   (let ((applicable nil)
@@ -1319,57 +1455,59 @@ And so, we are saved.
     (dolist (type (cdr type))
       (multiple-value-bind (appl poss-appl)
 	  (specializer-applicable-using-type-p specl type)
-	(when appl (return (setq applicable t)))
-	(unless poss-appl (return (setq possibly-applicable nil)))))
+	(when appl
+	  (return (setq applicable t)))
+	(unless poss-appl
+	  (return (setq possibly-applicable nil)))))
     (values applicable possibly-applicable)))
 
 (defun saut-not (specl type)
   (let ((ntype (cadr type)))
-    (values nil
-	    (case (car ntype)
-	      (class      (saut-not-class specl ntype))
-	      (class-eq   (saut-not-class-eq specl ntype))
-	      (prototype  (saut-not-prototype specl ntype))
-	      (eql        (saut-not-eql specl ntype))
-	      (t (error "~s cannot handle the second argument ~s"
+    (values
+     nil
+     (case (car ntype)
+       (class
+	(let* ((class (type-class specl))
+	       (cpl (cpl-or-nil class)))
+	  (not (memq (cadr ntype) cpl))))
+       (class-eq
+	(let ((class (case (car specl)
+		       (eql (class-of (cadr specl)))
+		       (class-eq (cadr specl)))))
+	  (not (eq class (cadr ntype)))))
+       (prototype
+	(let* ((class (case (car specl)
+			(eql (class-of (cadr specl)))
+			(class-eq (cadr specl))
+			(prototype (cadr specl))
+			(class (cadr specl))))
+	       (cpl (cpl-or-nil class)))
+	  (not (memq (cadr ntype) cpl))))
+       (eql
+	(case (car specl)
+	  (eql (not (eql (cadr specl) (cadr ntype))))
+	  (t t)))
+       (t
+	(internal-error "~@<~s cannot handle the second argument ~s.~@:>"
 			'specializer-applicable-using-type-p type))))))
 
-(defun saut-not-class (specl ntype)
-  (let* ((class (type-class specl))
-	 (cpl (class-precedence-list class)))
-     (not (memq (cadr ntype) cpl))))
-
-(defun saut-not-prototype (specl ntype)
-  (let* ((class (case (car specl)
-		  (eql       (class-of (cadr specl)))
-		  (class-eq  (cadr specl))
-		  (prototype (cadr specl))
-		  (class     (cadr specl))))
-	 (cpl (class-precedence-list class)))
-     (not (memq (cadr ntype) cpl))))
-
-(defun saut-not-class-eq (specl ntype)
-  (let ((class (case (car specl)
-		 (eql      (class-of (cadr specl)))
-		 (class-eq (cadr specl)))))
-    (not (eq class (cadr ntype)))))
-
-(defun saut-not-eql (specl ntype)
-  (case (car specl)
-    (eql (not (eql (cadr specl) (cadr ntype))))
-    (t   t)))
-
-(defun class-applicable-using-class-p (specl type)
-  (let ((pred (memq specl (if (eq *boot-state* 'complete)
-			      (class-precedence-list type)
-			      (early-class-precedence-list type)))))
-    (values pred
-	    (or pred
-		(if (not *in-precompute-effective-methods-p*)
-		    ;; classes might get common subclass
-		    (superclasses-compatible-p specl type)
-		    ;; worry only about existing classes
-		    (classes-have-common-subclass-p specl type))))))
+(defun saut-class (specl type)
+  (if (eq 'class (car specl))
+      (let* ((specl (cadr specl))
+	     (type (cadr type))
+	     (cpl (cpl-or-nil type))
+	     (pred (memq specl cpl)))
+	(values pred
+		(or pred
+		    (if (not *in-precompute-effective-methods-p*)
+			;; classes might get common subclass
+			(superclasses-compatible-p specl type)
+			;; worry only about existing classes
+			(classes-have-common-subclass-p specl type)))))
+      (values nil
+	      (let ((class (type-class specl))
+		    (cpl (cpl-or-nil class)))
+		(memq (cadr type) cpl)))))
 
 (defun classes-have-common-subclass-p (class1 class2)
   (or (eq class1 class2)
@@ -1378,13 +1516,6 @@ And so, we are saved.
 	    (dolist (class1-sub class1-subs nil)
 	      (when (classes-have-common-subclass-p class1-sub class2)
 		(return t)))))))
-
-(defun saut-class (specl type)
-  (case (car specl)
-    (class (class-applicable-using-class-p (cadr specl) (cadr type)))
-    (t     (values nil (let ((class (type-class specl)))
-			 (memq (cadr type)
-			       (class-precedence-list class)))))))
 
 (defun saut-class-eq (specl type)
   (if (eq (car specl) 'eql)
@@ -1395,9 +1526,7 @@ And so, we are saved.
 		    (class      
 		     (or (eq (cadr specl) (cadr type))
 			 (memq (cadr specl)
-			       (if (eq *boot-state* 'complete)
-				   (class-precedence-list (cadr type))
-				   (early-class-precedence-list (cadr type)))))))))
+			       (cpl-maybe-early (cadr type))))))))
 	(values pred pred))))
 
 (defun saut-prototype (specl type)
@@ -1406,45 +1535,15 @@ And so, we are saved.
 
 (defun saut-eql (specl type) 
   (let ((pred (case (car specl)
-		(eql        (eql (cadr specl) (cadr type)))
-		(class-eq   (eq (cadr specl) (class-of (cadr type))))
-		(class      (memq (cadr specl)
-				  (let ((class (class-of (cadr type))))
-				    (if (eq *boot-state* 'complete)
-					(class-precedence-list class)
-					(early-class-precedence-list class))))))))
+		(eql
+		 (eql (cadr specl) (cadr type)))
+		(class-eq
+		 (eq (cadr specl) (class-of (cadr type))))
+		(class
+		 (memq (cadr specl)
+		       (cpl-maybe-early (class-of (cadr type))))))))
     (values pred pred)))
 
-(defun specializer-applicable-using-type-p (specl type)
-  (setq specl (type-from-specializer specl))
-  (when (eq specl t)
-    (return-from specializer-applicable-using-type-p (values t t)))
-  ;; This is used by c-a-m-u-t and generate-discrimination-net-internal,
-  ;; and has only what they need.
-  (if (or (atom type) (eq (car type) t))
-      (values nil t)
-      (case (car type)
-	(and        (saut-and specl type))
-	(not        (saut-not specl type))
-	(class      (saut-class specl type))
-	(prototype  (saut-prototype specl type))
-	(class-eq   (saut-class-eq specl type))
-	(eql        (saut-eql specl type))
-	(t          (error "~s cannot handle the second argument ~s"
-			   'specializer-applicable-using-type-p type)))))
-
-(defun map-all-classes (function &optional (root t))
-  (let ((braid-p (or (eq *boot-state* 'braid)
-		     (eq *boot-state* 'complete))))
-    (labels ((do-class (class)
-	       (mapc #'do-class 
-		     (if braid-p
-			 (class-direct-subclasses class)
-			 (early-class-direct-subclasses class)))
-	       (funcall function class)))
-      (do-class (if (symbolp root)
-		    (find-class root)
-		    root)))))
 
 ;;;
 ;;; NOTE: We are assuming a restriction on user code that the method
@@ -1456,21 +1555,22 @@ And so, we are saved.
 ;;;       cache, is just a backing cache for the fast cache.  If that
 ;;;       cache is legal, this one must be too.
 ;;;
-;;; Don't clear this table!  
+;;; Don't clear this table!
+;;;
 (defvar *effective-method-table* (make-hash-table :test 'eq))
 
 (defun get-secondary-dispatch-function (gf methods types &optional 
-							 method-alist wrappers)
-  (function-funcall (get-secondary-dispatch-function1 
-		     gf methods types
-		     (not (null method-alist))
-		     (not (null wrappers))
-		     (not (methods-contain-eql-specializer-p methods)))
-		    method-alist wrappers))
+					method-alist wrappers)
+  (let ((generator (get-secondary-dispatch-function1 
+		    gf methods types
+		    (not (null method-alist))
+		    (not (null wrappers))
+		    (not (methods-contain-eql-specializer-p methods)))))
+    (make-callable gf methods generator method-alist wrappers)))
 
 (defun get-secondary-dispatch-function1 (gf methods types method-alist-p wrappers-p
-					    &optional all-applicable-p
-					    (all-sorted-p t) function-p)
+					 &optional all-applicable-p
+					 (all-sorted-p t) function-p)
   (if (null methods)
       (if function-p
           (lambda (method-alist wrappers)
@@ -1502,50 +1602,49 @@ And so, we are saved.
 		    (push (cons akey value) (cdr ht-value))
 		    value)))))))
 
-(defun get-secondary-dispatch-function2 (gf methods types method-alist-p wrappers-p
-					    all-applicable-p all-sorted-p function-p)
+(defvar *computing-standard-effective-method-p* nil)
+
+(defun get-secondary-dispatch-function2 (gf methods types method-alist-p
+					 wrappers-p all-applicable-p
+					 all-sorted-p function-p)
   (if (and all-applicable-p all-sorted-p (not function-p))
-      (if (eq *boot-state* 'complete)
+      (if (and (eq *boot-state* 'complete)
+	       ;; Because of loadable-pcl.  See combin.lisp.
+	       (not (eq #'compute-effective-method gf))
+	       (not *computing-standard-effective-method-p*))
 	  (let* ((combin (generic-function-method-combination gf))
 		 (effective (compute-effective-method gf combin methods)))
-	    (make-effective-method-function1 gf effective method-alist-p wrappers-p))
-	  (let ((effective (standard-compute-effective-method gf nil methods)))
-	    (make-effective-method-function1 gf effective method-alist-p wrappers-p)))
-      (let ((net (generate-discrimination-net 
-		  gf methods types all-sorted-p)))
+	    (callable-generator gf effective method-alist-p wrappers-p))
+	  (let ((*computing-standard-effective-method-p* t)
+		(effective (standard-compute-effective-method gf nil methods)))
+	    (callable-generator gf effective method-alist-p wrappers-p)))
+      (let ((net (generate-discrimination-net gf methods types all-sorted-p)))
 	(compute-secondary-dispatch-function1 gf net function-p))))
 
-(defun get-effective-method-function (gf methods &optional method-alist wrappers)
-  (function-funcall (get-secondary-dispatch-function1 gf methods nil 
-						      (not (null method-alist))
-						      (not (null wrappers))
-						      t)
-		    method-alist wrappers))
+(defun get-effective-method-function (gf methods
+				      &optional method-alist wrappers)
+  (let ((generator (get-secondary-dispatch-function1
+		    gf methods nil (not (null method-alist))
+		    (not (null wrappers)))))
+    (make-callable gf methods generator method-alist wrappers)))
 
 (defun get-effective-method-function1 (gf methods &optional (sorted-p t))
   (get-secondary-dispatch-function1 gf methods nil nil nil t sorted-p))
 
 (defun methods-contain-eql-specializer-p (methods)
   (and (eq *boot-state* 'complete)
-       (dolist (method methods nil)
-	 (when (dolist (spec (method-specializers method) nil)
-		 (when (eql-specializer-p spec) (return t)))
-	   (return t)))))
-
-(defun update-dfun (generic-function &optional dfun cache info)
-  (let* ((early-p (early-gf-p generic-function))
-	 (gf-name (if early-p
-		      (early-gf-name generic-function)
-		      (generic-function-name generic-function))))
-    (set-dfun generic-function dfun cache info)
-    (let ((dfun (if early-p
-		    (or dfun (make-initial-dfun generic-function))
-		    (compute-discriminating-function generic-function))))
-      (set-funcallable-instance-function generic-function dfun)
-      (set-function-name generic-function gf-name)
-      dfun)))
+       (some (lambda (method)
+	       (some #'eql-specializer-p (method-specializers method)))
+	     methods)))
 
 
+;;;; ************************
+;;;; Debugging Stuff  *******
+;;;; ************************
+
+#+pcl-debug
+(progn
+  
 (defvar dfun-count nil)
 (defvar dfun-list nil)
 (defvar *minimum-cache-size-to-list*)
@@ -1582,7 +1681,6 @@ And so, we are saved.
   (mapc #'print dfun-list)
   (values))
 
-
 (defun count-dfun (gf)
   (let* ((sym (type-of (gf-dfun-info gf)))
 	 (cache (gf-dfun-cache gf))
@@ -1614,10 +1712,15 @@ And so, we are saved.
 	dfun-count)
   (values))
 
-(defun gfs-of-type (type)
-  (unless (consp type) (setq type (list type)))
-  (let ((gf-list nil))
-    (map-all-generic-functions (lambda (gf)
-				 (when (memq (type-of (gf-dfun-info gf)) type)
-				   (push gf gf-list))))
-    gf-list))
+
+(defun show-dfun-constructors ()
+  (format t "~&DFUN constructor caching is ~A." 
+	  (if *enable-dfun-constructor-caching*
+	      "enabled" "disabled"))
+  (dolist (generator-entry *dfun-constructors*)
+    (dolist (args-entry (cdr generator-entry))
+      (format t "~&~S ~S"
+	      (cons (car generator-entry) (caar args-entry))
+	      (caddr args-entry)))))
+
+) ; #+pcl-debug

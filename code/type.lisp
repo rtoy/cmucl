@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.50 2003/03/18 05:35:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.51 2003/03/22 16:15:20 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,13 +89,13 @@
 ;;;
 (defun has-superclasses-complex-subtypep-arg1 (type1 type2 info)
   (values
-   (and (typep type2 'class)
+   (and (typep type2 'kernel::class)
 	(dolist (x info nil)
 	  (when (or (not (cdr x))
 		    (csubtypep type1 (specifier-type (cdr x))))
 	    (return
 	     (or (eq type2 (car x))
-		 (let ((inherits (layout-inherits (class-layout (car x)))))
+		 (let ((inherits (layout-inherits (%class-layout (car x)))))
 		   (dotimes (i (length inherits) nil)
 		     (when (eq type2 (layout-class (svref inherits i)))
 		       (return t)))))))))
@@ -117,7 +117,7 @@
 	 (mapcar #'(lambda (spec)
 		     (destructuring-bind (super &optional guard)
 					 spec
-		       (cons (find-class super) guard)))
+		       (cons (kernel::find-class super) guard)))
 		 specs)))
     `(cold-load-init
       (setf (type-class-complex-subtypep-arg1
@@ -869,15 +869,16 @@
 	 ((and (not (eq spec orig))
 	       (info type builtin spec)))
 	 ((eq (info type kind spec) :instance)
-	  (find-class spec))
-	 ((typep spec 'class)
-	  (if (typep spec 'built-in-class)
+	  (kernel::find-class spec))
+	 ((typep spec 'kernel::class)
+	  (if (typep spec 'kernel::built-in-class)
 	      (or (built-in-class-translation spec) spec)
 	      spec))
 	 (t
 	  (let* ((lspec (if (atom spec) (list spec) spec))
 		 (fun (info type translator (car lspec))))
-	    (cond (fun (funcall fun lspec))
+	    (cond (fun
+		   (funcall fun lspec))
 		  ((or (and (consp spec) (symbolp (car spec)))
 		       (symbolp spec))
 		   (when *type-system-initialized*
@@ -2535,14 +2536,15 @@
 (defun ctypep (obj type)
   (declare (type ctype type))
   (etypecase type
-    ((or numeric-type named-type member-type array-type built-in-class cons-type)
+    ((or numeric-type named-type member-type array-type
+	 kernel::built-in-class cons-type)
      (values (%typep obj type) t))
     (class
      (if (if (csubtypep type (specifier-type 'funcallable-instance))
 	     (funcallable-instance-p obj)
 	     (%instancep obj))
-	 (if (eq (class-layout type)
-		 (info type compiler-layout (class-name type)))
+	 (if (eq (%class-layout type)
+		 (info type compiler-layout (%class-name type)))
 	     (values (typep obj type) t)
 	     (values nil nil))
 	 (values nil t)))
@@ -2622,7 +2624,7 @@
   (typecase x
     (function
      (if (funcallable-instance-p x)
-	 (class-of x)
+	 (kernel::class-of x)
 	 (extract-function-type x)))
     (symbol
      (make-member-type :members (list x)))
@@ -2661,7 +2663,7 @@
     (cons
      (make-cons-type))
     (t
-     (class-of x))))
+     (kernel::class-of x))))
 
 
 ;;; Clear this cache on GC so that we don't hold onto too much garbage.
@@ -2699,11 +2701,14 @@
 
 
 ;;;; Some types that we use in defining the standard functions:
-;;; 
+;;;
 
 ;;;
-;;; A type specifier.
-(deftype type-specifier () '(or list symbol class))
+;;; A type specifier.  INSTANCE stands for either KERNEL::CLASS
+;;; or LISP:CLASS (CLOS class), but since LISP:CLASS isn't a type
+;;; until PCL is loaded, that's not expressable.
+;;;
+(deftype type-specifier () '(or list symbol instance))
 ;;;
 ;;; An index into an array.   Also used for sequence index. 
 (deftype index () `(integer 0 (,array-dimension-limit)))

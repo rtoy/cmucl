@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.19 2003/01/29 21:48:40 cracauer Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.20 2003/03/22 16:15:20 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -536,9 +536,25 @@
 	    (let ((temp (gensym)))
 	      (binds `(,temp ,(pop current)))
 	      (forms `(trace-1 ,temp ',options))))
+	   ;;
+	   ;; Generic function -> trace all method functions.
+	   ((eq name :methods)
+	    (let ((tem (gensym)))
+	      (binds `(,tem ,(pop current)))
+	      (forms `(dolist (name (all-method-function-names ,tem))
+			(when (fboundp name)
+			  (trace-1 name ',options))))))
 	   ((and (keywordp name)
 		 (not (or (fboundp name) (macro-function name))))
 	    (error "Unknown TRACE option: ~S" name))
+	   ;;
+	   ;; Method name -> trace method functions.
+	   ((and (consp name) (eq (car name) 'method))
+	    (when (fboundp name)
+	      (forms `(trace-1 ',name ',options)))
+	    (let ((name `(pcl::fast-method ,@(cdr name))))
+	      (when (fboundp name)
+		(forms `(trace-1 ',name ',options)))))
 	   (t
 	    (forms `(trace-1 ',name ',options))))
 	  (setq current (parse-trace-options current options)))))
@@ -562,6 +578,9 @@
    TRACE is a debugging tool that prints information when specified functions
    are called.  In its simplest form:
        (trace Name-1 Name-2 ...)
+
+   CLOS methods can be traced by specifying a name of the form
+   (METHOD {Qualifier}* ({Specializer}*)).
 
    TRACE causes a printout on *TRACE-OUTPUT* each time that one of the named
    functions is entered or returns (the Names are not evaluated.)  The output
@@ -609,6 +628,12 @@
        This is a not really an option, but rather another way of specifying
        what function to trace.  The Function-Form is evaluated immediately,
        and the resulting function is traced.
+
+   :METHODS Function-Form
+       This is a not really an option, but rather a way of specifying
+       that all methods of a generic functions should be tracee.  The
+       Function-Form is evaluated immediately, and the methods of the resulting
+       generic function are traced.
 
    :ENCAPSULATE {:DEFAULT | T | NIL}
        If T, the tracing is done via encapsulation (redefining the function
@@ -665,8 +690,25 @@
 	  (loop
 	    (unless current (return))
 	    (let ((name (pop current)))
-	      (res (if (eq name :function)
-		       `(untrace-1 ,(pop current))
-		       `(untrace-1 ',name)))))
+	      (cond ((eq name :function)
+		     (res `(untrace-1 ,(pop current))))
+		    ;;
+		    ;; Method name -> untrace existing method functions.
+		    ((and (consp name)
+			  (eq (car name) 'method))
+		     (when (fboundp name)
+		       (res `(untrace-1 ',name)))
+		     (let ((name `(pcl::fast-method ,@(cdr name))))
+		       (when (fboundp name)
+			 (res `(untrace-1 ',name)))))
+		    ;;
+		    ;; Generic function -> untrace all method functions.
+		    ((eq name :methods)
+		     (res
+		      `(dolist (name (all-method-function-names ,(pop current)))
+			 (when (fboundp name)
+			   (untrace-1 name)))))
+		    (t
+		     (res `(untrace-1 ',name))))))
 	  `(progn ,@(res) t)))
       '(untrace-all)))

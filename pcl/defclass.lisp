@@ -23,10 +23,9 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.24 2002/10/19 14:56:02 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.25 2003/03/22 16:15:17 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -49,9 +48,9 @@
 (defun make-top-level-form (name times form)
   (flet ((definition-name ()
 	   (if (and (listp name)
-		    (memq (car name) '(defmethod defclass class method method-combination)))
-	       (format nil "~A~{ ~S~}"
-		       (capitalize-words (car name) ()) (cdr name))
+		    (memq (car name) '(defmethod defclass class method
+				       method-combination)))
+	       (format nil "~A~{ ~S~}" (car name) (cdr name))
 	       (format nil "~S" name))))
     (definition-name)
     (if (or (member 'compile times)
@@ -72,9 +71,9 @@
 ;;; has been defined, the real definition of LOAD-DEFCLASS is installed by the
 ;;; file defclass.lisp
 ;;; 
-(defmacro DEFCLASS (name direct-superclasses direct-slots &rest options)
-  (declare (indentation 2 4 3 1))
-  (expand-defclass name direct-superclasses direct-slots options))
+(defmacro defclass (name direct-superclasses direct-slots
+		    &rest options &environment env)
+  (expand-defclass name direct-superclasses direct-slots options env))
 
 ;;; The following functions were moved here from slots-boot.lisp
 ;;; because expand-defclass now depends on them to generate ftype
@@ -82,41 +81,28 @@
 ;;; the relevant GFs at run-time, in order to squelch spurious
 ;;; warnings.
 
-(defmacro slot-symbol (slot-name type)
-  `(if (and (symbolp ,slot-name) (symbol-package ,slot-name))
-       (or (get ,slot-name ',(ecase type
-			       (reader 'reader-symbol)
-			       (writer 'writer-symbol)
-			       (boundp 'boundp-symbol)))
-	   (intern (format nil "~A ~A slot ~a" 
-			   (package-name (symbol-package ,slot-name))
-			   (symbol-name ,slot-name)
-			   ,(symbol-name type))
-	           *slot-accessor-name-package*))
-       (progn 
-	 (error "non-symbol and non-interned symbol slot name accessors~
-                 are not yet implemented")
-	 ;;(make-symbol (format nil "~a ~a" ,slot-name ,type))
-	 )))
+(defun slot-reader-name (slot-name)
+  (list 'slot-accessor :global slot-name 'reader))
 
-(defun slot-reader-symbol (slot-name)
-  (slot-symbol slot-name reader))
-
-(defun slot-writer-symbol (slot-name)
-  (slot-symbol slot-name writer))
-
-(defun slot-boundp-symbol (slot-name)
-  (slot-symbol slot-name boundp))
+(defun slot-writer-name (slot-name)
+  (list 'slot-accessor :global slot-name 'writer))
+  
+(defun slot-boundp-name (slot-name)
+  (list 'slot-accessor :global slot-name 'boundp))
 
 ;;; The defclass expander proper
 
-(defun expand-defclass (name supers slots options)
-  (declare (special *defclass-times* *boot-state* *the-class-structure-class*))
-  (setq supers  (nsubstitute 'standard-class 'lisp:standard-class
-			     (copy-tree supers))
-	slots   (copy-tree slots)
+(defun expand-defclass (name supers slots options env)
+  (declare (special *boot-state* *the-class-structure-class*))
+  (setq slots (copy-tree slots)
 	options (copy-tree options))
-  (let ((metaclass 'standard-class))
+  ;;
+  (when (eq *boot-state* 'complete)
+    (dolist (super supers)
+      (check-seals super 'expand-defclass)))
+  ;;
+  (let ((metaclass 'standard-class)
+	(info-slots (copy-tree slots)))
     ;; TBD - ANSI compliant class and slot option checking.
     (dolist (option options)
       (if (not (listp option))
@@ -125,14 +111,10 @@
           (when (eq (car option) :metaclass)
             (unless (legal-class-name-p (cadr option))
               (simple-program-error
-	       "The value of the :metaclass option (~S) is not a~%~
-		legal class name."
-	       (cadr option)))
-	    (setq metaclass
-		  (case (cadr option)
-		    (lisp:standard-class 'standard-class)
-		    (lisp:structure-class 'structure-class)
-		    (t (cadr option))))
+	       "~@<The value of the ~s option (~s) is not a legal ~
+	        class name.~@:>"
+	       :metaclass (cadr option)))
+	    (setq metaclass (cadr option))
 	    (setf options (remove option options))
 	    (return t))))
 
@@ -149,37 +131,43 @@
 	      (mapcar (lambda (option)
 			(canonicalize-defclass-option name option))
 		      options))
-	    (defstruct-p (and (eq *boot-state* 'complete)
-			      (let ((mclass (find-class metaclass nil)))
-				(and mclass
-				     (*subtypep mclass 
-						*the-class-structure-class*))))))
+	    (defstruct-p
+	     (and (eq *boot-state* 'complete)
+		  (not (or (ext:featurep :loadable-pcl)
+			   (ext:featurep :bootable-pcl)))
+		  (let ((mclass (find-class metaclass nil)))
+		    (and mclass
+			 (*subtypep mclass 
+				    *the-class-structure-class*))))))
         (let ((defclass-form 
-                 (make-top-level-form `(defclass ,name)
-                   (if defstruct-p '(load eval) *defclass-times*)
-		   `(progn
-		      ,@(mapcar (lambda (x)
-				  `(declaim (ftype (function (t) t) ,x)))
-				*readers*)
-		      ,@(mapcar (lambda (x)
-				  `(declaim (ftype (function (t t) t) ,x)))
-				*writers*)
-		      ,@(mapcar (lambda (x)
-				  `(declaim (ftype (function (t) t)
-						   ,(slot-reader-symbol x)
-						   ,(slot-boundp-symbol x))
-					    (ftype (function (t t) t)
-						   ,(slot-writer-symbol x))))
-				*slots*)
-		      (let ,(mapcar #'cdr *initfunctions*)
-			(load-defclass ',name
-				       ',metaclass
-				       ',supers
-				       (list ,@canonical-slots)
-				       (list ,@(apply #'append 
-						      (when defstruct-p
-							'(:from-defclass-p t))
-						      other-initargs))))))))
+	       (make-top-level-form
+		`(defclass ,name)
+		(if (define-class-at-compile-time-p env name supers)
+		    '(:compile-toplevel :load-toplevel :execute)
+		    '(:load-toplevel :execute))
+		`(progn
+		   ,@(mapcar (lambda (x)
+			       `(declaim (ftype (function (t) t) ,x)))
+			     *readers*)
+		   ,@(mapcar (lambda (x)
+			       `(declaim (ftype (function (t t) t) ,x)))
+			     *writers*)
+		   ,@(mapcar (lambda (x)
+			       `(declaim (ftype (function (t) t)
+						,(slot-reader-name x)
+						,(slot-boundp-name x))
+					 (ftype (function (t t) t)
+						,(slot-writer-name x))))
+			     *slots*)
+		   (let ,(mapcar #'cdr *initfunctions*)
+		     (load-defclass ',name
+				    ',metaclass
+				    ',supers
+				    (list ,@canonical-slots)
+				    (list ,@(apply #'append 
+						   (when defstruct-p
+						     '(:from-defclass-p t))
+						   other-initargs))))))))
           (if defstruct-p
               (progn
                 (eval defclass-form) ; define the class now, so that
@@ -187,8 +175,8 @@
                    ,(class-defstruct-form (find-class name))
                    ,defclass-form))
 	      (progn
-		(when (and (eq *boot-state* 'complete)
-			   (not (member 'compile *defclass-times*)))
+		(set-class-info name metaclass info-slots)
+		(when (eq *boot-state* 'complete)
 		  (when (eq metaclass 'standard-class)
 		    ;; a funcallable-standard-class metaclass here causes
 		    ;; a compiler crash in construct.lisp
@@ -223,14 +211,15 @@
 	 (push spec *slots*)
 	 `'(:name ,spec))
 	((not (consp spec))
-	 (error "~S is not a legal slot specification." spec))
+	 (error "~@<~S is not a legal slot specification.~@:>" spec))
 	((null (cdr spec))
 	 (push (car spec) *slots*)
 	 `'(:name ,(car spec)))
 	((null (cddr spec))
-	 (error "In DEFCLASS ~S, the slot specification ~S is obsolete.~%~
-                 Convert it to ~S"
-		class-name spec (list (car spec) :initform (cadr spec))))
+	 (error "~@<In the class definintion of ~s, the slot specification ~s ~
+                 is obsolete.  Convert it to ~s.~@:>"
+		class-name spec
+		(list (car spec) :initform (cadr spec))))
 	(t
 	 (let* ((name (pop spec))
 		(readers ())
@@ -293,7 +282,8 @@
 
 (defun early-class-definition (class-name)
   (or (find class-name *early-class-definitions* :key #'ecd-class-name)
-      (error "~S is not a class in *early-class-definitions*." class-name)))
+      (error "~@<~S is not a class in *early-class-definitions*.~@:>"
+	     class-name)))
 
 (defun make-early-class-definition
        (name source metaclass
@@ -326,7 +316,6 @@
   (length (early-class-slots class-name)))
 
 (defun early-collect-inheritance (class-name)
-  ;;(declare (values slots cpl default-initargs direct-subclasses))
   (let ((cpl (early-collect-cpl class-name)))
     (values (early-collect-slots cpl)
 	    cpl
@@ -343,10 +332,10 @@
       (let ((name1 (canonical-slot-name s1)))
 	(dolist (s2 (cdr (memq s1 slots)))
 	  (when (eq name1 (canonical-slot-name s2))
-	    (error "More than one early class defines a slot with the~%~
-                    name ~S.  This can't work because the bootstrap~%~
-                    object system doesn't know how to compute effective~%~
-                    slots."
+	    (error "~@<More than one early class defines a slot with the ~
+                    name ~S.  This can't work because the bootstrap ~
+                    object system doesn't know how to compute effective ~
+                    slots.~@:>"
 		   name1)))))
     slots))
 
@@ -366,8 +355,8 @@
 	(loop (when (null others) (return nil))
 	      (let ((initarg (pop others)))
 		(unless (eq initarg :direct-default-initargs)
-		 (error "The defclass option ~S is not supported by the bootstrap~%~
-                        object system."
+		 (error "~@<The defclass option ~S is not supported by ~
+                         the bootstrap object system.~@:>"
 			initarg)))
 	      (setq default-initargs
 		    (nconc default-initargs (reverse (pop others)))))))
@@ -375,7 +364,7 @@
 
 (defun bootstrap-slot-index (class-name slot-name)
   (or (position slot-name (early-class-slots class-name))
-      (error "~S not found" slot-name)))
+      (internal-error "Slot ~S not found in class ~S" slot-name class-name)))
 
 ;;;
 ;;; bootstrap-get-slot and bootstrap-set-slot are used to access and change
@@ -394,7 +383,7 @@
 ;;; object system later.
 ;;; 
 (defmacro bootstrap-get-slot (type object slot-name)
-  `(instance-ref (get-slots ,object) (bootstrap-slot-index ,type ,slot-name)))
+  `(slot-ref (get-slots ,object) (bootstrap-slot-index ,type ,slot-name)))
 
 (defun bootstrap-set-slot (type object slot-name new-value)
   (setf (bootstrap-get-slot type object slot-name) new-value))

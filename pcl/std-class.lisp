@@ -26,8 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.43 2003/02/06 15:20:12 gerd Exp $")
-;;;
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.44 2003/03/22 16:15:15 gerd Exp $")
 
 (in-package :pcl)
 
@@ -90,7 +89,8 @@
 	(compute-slot-accessor-info slotd type gf)))
     (initialize-internal-slot-gfs name)))
 
-(defmethod compute-slot-accessor-info ((slotd effective-slot-definition) type gf)
+(defmethod compute-slot-accessor-info ((slotd effective-slot-definition)
+				       type gf)
   (let* ((name (slot-value slotd 'name))
 	 (class (slot-value slotd 'class))
 	 (old-slotd (find-slot-definition class name))
@@ -101,8 +101,11 @@
 	    (get-optimized-std-accessor-method-function class slotd type))
       (setf (slot-accessor-std-p slotd type) std-p)
       (setf (slot-accessor-function slotd type) function))
-    (when (and old-slotd (not (eq old-std-p (slot-accessor-std-p slotd 'all))))
-      (push (cons class name) *pv-table-cache-update-info*))))
+    ;;
+    ;; Optimized accessor functions use pv tables.
+    (when (and old-slotd
+	       (not (eq old-std-p (slot-accessor-std-p slotd 'all))))
+      (record-pv-update-info slotd))))
 
 (defmethod slot-definition-allocation ((slotd structure-slot-definition))
   :instance)
@@ -122,7 +125,7 @@
 
 (defmethod (setf documentation) (new-value object doc-type)
   (declare (ignore new-value doc-type))
-  (error "Can't change the documentation of ~S." object))
+  (error "~@<Can't change the documentation of ~S.~@:>" object))
 
 (defmethod documentation ((object documentation-mixin) doc-type)
   (declare (ignore doc-type))
@@ -190,11 +193,13 @@
 ;;; here, the values are read by an automatically generated reader method.
 ;;; 
 (defmethod add-direct-subclass ((class class) (subclass class))
+  (check-seals class 'add-direct-subclass)
   (with-slots (direct-subclasses) class
     (pushnew subclass direct-subclasses)
     subclass))
 
 (defmethod remove-direct-subclass ((class class) (subclass class))
+  (check-seals class 'remove-direct-subclass)
   (with-slots (direct-subclasses) class
     (setq direct-subclasses (remove subclass direct-subclasses))
     subclass))
@@ -227,6 +232,7 @@
   (with-slots (direct-methods) specializer
     (setf (car direct-methods) (remove method (car direct-methods))
 	  (cdr direct-methods) ()))
+  (remove-inline-access-method specializer method)
   method)
 
 (defmethod specializer-direct-methods ((specializer class))
@@ -248,8 +254,8 @@
 ;;; This hash table is used to store the direct methods and direct generic
 ;;; functions of EQL specializers.  Each value in the table is the cons.
 ;;; 
-(defvar *eql-specializer-methods* (make-hash-table :test #'eql))
-(defvar *class-eq-specializer-methods* (make-hash-table :test #'eq))
+(defvar *eql-specializer-methods* (make-hash-table :test 'eql))
+(defvar *class-eq-specializer-methods* (make-hash-table :test 'eq))
 
 (defmethod specializer-method-table ((specializer eql-specializer))
   *eql-specializer-methods*)
@@ -307,6 +313,17 @@
 	   *eql-specializer-table*)
   nil)
 
+(defun map-all-classes (function &optional (root t))
+  (let ((braid-p (memq *boot-state* '(braid complete)))
+	(root (if (symbolp root) (find-class root) root)))
+    (labels ((map-class (class)
+	       (mapc #'map-class
+		     (if braid-p
+			 (class-direct-subclasses class)
+			 (early-class-direct-subclasses class)))
+	       (funcall function class)))
+      (map-class root))))
+
 (defun map-all-generic-functions (function)
   (let ((all-generic-functions (make-hash-table :test 'eq)))
     (map-specializers (lambda (specl)
@@ -327,17 +344,11 @@
 
 
 (defun real-load-defclass (name metaclass-name supers slots other)
-  (let ((res (apply #'ensure-class name :metaclass metaclass-name
-		    :direct-superclasses supers
-		    :direct-slots slots
-		    :definition-source `((defclass ,name)
-					 ,*load-pathname*)
-		    other)))
-    ;; Defclass of a class with a forward-referenced superclass does not
-    ;; have a wrapper. RES is the incomplete PCL class. The Lisp class
-    ;; does not yet exist. Maybe should return NIL in that case as RES
-    ;; is not useful to the user?
-    (and (class-wrapper res)(kernel:layout-class (class-wrapper res)))))
+  (apply #'ensure-class name :metaclass metaclass-name
+	 :direct-superclasses supers
+	 :direct-slots slots
+	 :definition-source `((defclass ,name) ,*load-pathname*)
+	 other))
 
 (setf (gdefinition 'load-defclass) #'real-load-defclass)
 
@@ -347,19 +358,20 @@
 (defmethod ensure-class-using-class (name (class null) &rest args &key)
   (multiple-value-bind (meta initargs)
       (ensure-class-values class args)
-    (inform-type-system-about-class (class-prototype meta) name);***
+    (inform-type-system-about-class (class-prototype meta) name)
     (setf class (apply #'make-instance meta :name name initargs)
 	  (find-class name) class)
-    (inform-type-system-about-class class name)	                ;***
+    (inform-type-system-about-class class name)
     class))
 
 (defmethod ensure-class-using-class (name (class pcl-class) &rest args &key)
   (multiple-value-bind (meta initargs)
       (ensure-class-values class args)
-    (unless (eq (class-of class) meta) (change-class class meta))
+    (unless (eq (class-of class) meta)
+      (change-class class meta))
     (apply #'reinitialize-instance class initargs)
     (setf (find-class name) class)
-    (inform-type-system-about-class class name)	                ;***
+    (inform-type-system-about-class class name)
     class))
 
 (defmethod class-predicate-name ((class t))
@@ -370,19 +382,18 @@
 	 (unsupplied (list 1))
 	 (supplied-meta   (getf initargs :metaclass unsupplied))
 	 (supplied-supers (getf initargs :direct-superclasses unsupplied))
-	 (meta
-	   (cond ((neq supplied-meta unsupplied)
-		  (find-class supplied-meta))
-		 ((or (null class)
-		      (forward-referenced-class-p class))
-		  *the-class-standard-class*)
-		 (t
-		  (class-of class)))))  
+	 (meta (cond ((neq supplied-meta unsupplied)
+		      (find-class supplied-meta))
+		     ((or (null class)
+			  (forward-referenced-class-p class))
+		      *the-class-standard-class*)
+		     (t
+		      (class-of class)))))  
     (flet ((fix-super (s)
 	     (cond ((classp s) s)
 		   ((not (legal-class-name-p s))
 		    (simple-program-error
-		     "~S is not a class or a legal class name." s))
+		     "~@<~S is not a class or a legal class name.~@:>" s))
 		   (t
 		    (or (find-class s nil)
 			(setf (find-class s)
@@ -397,17 +408,27 @@
 	    for slot-name = (getf slot :name)
 	    if (some (lambda (s) (eq slot-name (getf s :name))) more) do
 	      (simple-program-error
-	       "More than one direct slot with name ~S."
+	       "~@<More than one direct slot with name ~S.~@:>"
 	       slot-name)
 	    else do
 	      (loop for (option value . more) on slot by #'cddr
-		    when (and (member option '(:allocation :type :initform
-					       :documentation))
-			      (not (eq unsupplied
-				       (getf more option unsupplied)))) do
+		    if (and (member option '(:allocation :type :initform
+					     :documentation))
+			    (not (eq unsupplied
+				     (getf more option unsupplied)))) do
 		      (simple-program-error
-		       "Duplicate slot option ~S for slot ~S."
-		       option slot-name)))
+		       "~@<Duplicate slot option ~S for slot ~S.~@:>"
+		       option slot-name)
+		    else if (and (eq option :readers)
+				 (notevery #'symbolp value)) do
+		      (simple-program-error
+		       "~@<Slot ~S: slot reader names must be symbols.~@:>"
+		       slot-name)
+		    else if (and (eq option :initargs)
+				 (notevery #'symbolp value)) do
+		      (simple-program-error
+		       "~@<Slot ~S: initarg names must be symbols.~@:>"
+		       slot-name)))
       ;;
       ;; CLHS: signal PROGRAM-ERROR, if an initialization argument name
       ;; appears more than once in :DEFAULT-INITARGS class option.
@@ -415,33 +436,31 @@
 	    for name = (car initarg) 
 	    when (some (lambda (a) (eq (car a) name)) more) do
 	      (simple-program-error
-	       "Duplicate initialization argument ~
-                name ~S in :default-initargs of class ~A."
-	       name class))
+	       "~@<Duplicate initialization argument ~
+                name ~S in ~s of class ~A.~@:>"
+	       name :default-initargs class))
       ;;
-      (loop (unless (remf initargs :metaclass) (return)))
-      (loop (unless (remf initargs :direct-superclasses) (return)))
+      (loop for (arg value) on initargs by #'cddr
+	    count (eq arg :metaclass) into metaclass
+	    count (eq arg :direct-default-initargs) into default-initargs
+	    when (or (> metaclass 1) (> default-initargs 1)) do
+	      (simple-program-error
+	       "~@<Class ~S: More than one ~S specified~@:>"
+	       class (if (eq arg :direct-default-initargs)
+			 :default-initargs arg)))
+      (remf initargs :metaclass)
+      (remf initargs :direct-superclasses)
+      ;;
       (values meta
-	      (nconc
-	       (when (neq supplied-supers unsupplied)
-		 (list 
-		  :direct-superclasses
-		  (mapcar #'fix-super supplied-supers)))
-	       initargs)))))
+	      (nconc (when (neq supplied-supers unsupplied)
+		       (list :direct-superclasses
+			     (mapcar #'fix-super supplied-supers)))
+		     initargs)))))
 
 
 ;;;
 ;;;
 ;;;
-#|| ; since it doesn't do anything
-(defmethod shared-initialize :before ((class std-class)
-				      slot-names
-				      &key direct-superclasses)
-  (declare (ignore slot-names))
-  ;; *** error checking
-  )
-||#
-  
 (defmethod shared-initialize :after
 	   ((class std-class)
 	    slot-names
@@ -459,10 +478,10 @@
 			     *the-class-standard-object*))))
 	 (dolist (superclass direct-superclasses)
 	   (unless (validate-superclass class superclass)
-	     (error "The class ~S was specified as a~%
-		     super-class of the class ~S;~%~
-		     but the meta-classes ~S and~%~S are incompatible.~@
-		     Define a method for ~S to avoid this error."
+	     (error "~@<The class ~S was specified as a ~
+		     super-class of the class ~S, ~
+		     but the meta-classes ~S and ~S are incompatible.  ~
+		     Define a method for ~S to avoid this error.~@:>"
 		     superclass class (class-of superclass) (class-of class)
 		     'validate-superclass)))
 	 (setf (slot-value class 'direct-superclasses) direct-superclasses))
@@ -539,9 +558,13 @@
 		    (mapcar (lambda (pl)
 			      (when defstruct-p
 				(let* ((slot-name (getf pl :name))
-				       (acc-name (format nil "~s structure class ~a" 
-							 name slot-name))
-				       (accessor (intern acc-name)))
+				       (accessor
+					(symbolicate
+					 *package*
+					 (if (symbol-package name)
+					     (package-name (symbol-package name))
+					     "")
+					 "::" name " structure class " slot-name)))
 				  (setq pl (list* :defstruct-accessor-symbol accessor
 						  pl))))
 			      (make-direct-slotd class pl))
@@ -549,25 +572,41 @@
 	(setq direct-slots (slot-value class 'direct-slots)))
     (when defstruct-p
       (let* ((include (car (slot-value class 'direct-superclasses)))
-	     (conc-name (intern (format nil "~s structure class " name)))
-	     (constructor (intern (format nil "~a constructor" conc-name)))
+	     (conc-name (symbolicate *package*
+				     (if (symbol-package name)
+					 (package-name (symbol-package name))
+					 "")
+				     "::" name " structure class "))
+	     ;;
+	     ;; It's not possible to use a generalized name for the
+	     ;; constructor function.  It shouldn't matter though, I think,
+	     ;; like for the slot names above, because this stuff is not
+	     ;; supposed to be used by users directly.
+	     (constructor
+	       (symbolicate *package* conc-name " constructor"))
 	     (defstruct `(defstruct (,name
 				      ,@(when include
 					  `((:include ,(class-name include))))
 				      (:predicate nil)
 				      (:conc-name ,conc-name)
 				      (:constructor ,constructor ()))
+			   ;;
+			   ;; Use a temporary unbound marker that lets
+			   ;; SHARED-INITIALIZE recognize if a before-method
+			   ;; has written to a slot.
 			   ,@(mapcar (lambda (slot)
 				       `(,(slot-definition-name slot)
-					 +slot-unbound+))
+					 '.unbound.))
 			             direct-slots)))
 	     (reader-names (mapcar (lambda (slotd)
-				     (intern (format nil "~A~A reader" conc-name 
-						     (slot-definition-name slotd))))
+				     (list 'slot-accessor name
+					   (slot-definition-name slotd)
+					   'reader))
 				   direct-slots))
 	     (writer-names (mapcar (lambda (slotd)
-				     (intern (format nil "~A~A writer" conc-name 
-						     (slot-definition-name slotd))))
+				     (list 'slot-accessor name
+					   (slot-definition-name slotd)
+					   'writer))
 				   direct-slots))
 	     (readers-init 
 	      (mapcar (lambda (slotd reader-name)
@@ -603,9 +642,9 @@
   (setf (slot-value class 'class-precedence-list) 
 	(compute-class-precedence-list class))
   (setf (slot-value class 'slots) (compute-slots class))
-  (let ((lclass (lisp:find-class (class-name class))))
-    (setf (kernel:class-pcl-class lclass) class)
-    (setf (slot-value class 'wrapper) (kernel:class-layout lclass)))
+  (let ((lclass (kernel::find-class (class-name class))))
+    (setf (kernel:%class-pcl-class lclass) class)
+    (setf (slot-value class 'wrapper) (kernel:%class-layout lclass)))
   (update-pv-table-cache-info class)
   (setq predicate-name (if predicate-name-p
 			   (setf (slot-value class 'predicate-name)
@@ -629,7 +668,7 @@
 (defun remove-slot-accessors (class dslotds)
   (fix-slot-accessors class dslotds 'remove))
 
-(defun fix-slot-accessors (class dslotds add/remove)  
+(defun fix-slot-accessors (class dslotds add/remove)
   (flet ((fix (gfspec name r/w)
 	   (let ((gf (ensure-generic-function gfspec)))
 	     (case r/w
@@ -641,8 +680,10 @@
 		      (remove-writer-method class gf)))))))
     (dolist (dslotd dslotds)
       (let ((slot-name (slot-definition-name dslotd)))
-	(dolist (r (slot-definition-readers dslotd)) (fix r slot-name 'r))
-	(dolist (w (slot-definition-writers dslotd)) (fix w slot-name 'w))))))
+	(dolist (r (slot-definition-readers dslotd))
+	  (fix r slot-name 'r))
+	(dolist (w (slot-definition-writers dslotd))
+	  (fix w slot-name 'w))))))
 
 
 (defun add-direct-subclasses (class new)
@@ -664,7 +705,7 @@
 
 (defmethod finalize-inheritance ((class forward-referenced-class))
   (simple-program-error
-   "Forward-referenced classes cannot be finalized: ~A"
+   "~@<Forward-referenced classes cannot be finalized: ~A.~@:>"
    class))
 
 
@@ -677,31 +718,31 @@
 ;;; Called by :after shared-initialize whenever a class is initialized or 
 ;;; reinitialized.  The class may or may not be finalized.
 ;;; 
-(defun update-class (class finalizep)  
-  ;; Comment from Gerd Moellmann:
+(defun update-class (class finalizep)
   ;;
-  ;; Note that we can't simply delay the finalization when CLASS has
-  ;; no forward referenced superclasses because that causes bootstrap
-  ;; problems.
-  (when (and (not finalizep)
-	     (not (class-finalized-p class))
+  ;; Calling UPDATE-SLOTS below sets the class wrapper of CLASS, which
+  ;; makes the class finalized.  When UPDATE-CLASS isn't called from
+  ;; FINALIZE-INHERITANCE, make sure that this finalization invokes
+  ;; FINALIZE-INHERITANCE as per AMOP.  Note that we can't simply
+  ;; delay the finalization when CLASS has no forward referenced
+  ;; superclasses because that causes bootstrap problems.
+  (when (and (not (or finalizep (class-finalized-p class)))
 	     (not (class-has-a-forward-referenced-superclass-p class)))
     (finalize-inheritance class)
     (return-from update-class))
-  (when (or finalizep (class-finalized-p class)
+  ;;
+  (when (or finalizep
+	    (class-finalized-p class)
 	    (not (class-has-a-forward-referenced-superclass-p class)))
     (update-cpl class (compute-class-precedence-list class))
-    ;; This invocation of UPDATE-SLOTS, in practice, finalizes the
-    ;; class.  The hoops above are to ensure that FINALIZE-INHERITANCE
-    ;; is called at finalization, so that MOP programmers can hook
-    ;; into the system as described in "Class Finalization Protocol"
-    ;; (section 5.5.2 of AMOP).
     (update-slots class (compute-slots class))
     (update-gfs-of-class class)
     (update-inits class (compute-default-initargs class))
-    (update-make-instance-function-table class))
+    (update-ctors 'finalize-inheritance :class class))
+  ;;
   (unless finalizep
-    (dolist (sub (class-direct-subclasses class)) (update-class sub nil))))
+    (dolist (sub (class-direct-subclasses class))
+      (update-class sub nil))))
 
 (defun update-cpl (class cpl)
   (if (class-finalized-p class)
@@ -747,7 +788,7 @@
 		  ;;
 		  ;; We cannot reuse the old wrapper easily when it
 		  ;; has class slot cells, even if these cells are
-		  ;; equal to the ones used in the new wrapper.  The
+		  ;; EQUAL to the ones used in the new wrapper.  The
 		  ;; class slot cells of OWRAPPER may be referenced
 		  ;; from caches, and if we don't change the wrapper,
 		  ;; the caches won't notice that something has
@@ -775,6 +816,7 @@
 	      wrapper nwrapper))
 
       (unless (eq owrapper nwrapper)
+	(update-inline-access class)
 	(update-pv-table-cache-info class)))))
 
 (defun compute-class-slots (eslotds)
@@ -833,96 +875,102 @@
 
 (defun make-direct-slotd (class initargs)
   (let ((initargs (list* :class class initargs)))
-    (apply #'make-instance (direct-slot-definition-class class initargs) initargs)))
+    (apply #'make-instance (direct-slot-definition-class class initargs)
+	   initargs)))
 
 ;;;
-;;;
+;;; As specified, we must call COMPUTE-EFFECTIVE-SLOT-DEFINITION once
+;;; for each different slot name we find in our superclasses.  Each
+;;; call receives the class and a list of the dslotds with that name.
+;;; The list is in most-specific-first order.
 ;;;
 (defmethod compute-slots ((class std-class))
-  ;;
-  ;; As specified, we must call COMPUTE-EFFECTIVE-SLOT-DEFINITION once
-  ;; for each different slot name we find in our superclasses.  Each
-  ;; call receives the class and a list of the dslotds with that name.
-  ;; The list is in most-specific-first order.
-  ;;
-  (let ((name-dslotds-alist ()))
-    (dolist (c (class-precedence-list class))
-      (dolist (slot (class-direct-slots c))
-	(let* ((name (slot-definition-name slot))
-	       (entry (assq name name-dslotds-alist)))
-	  (if entry
-	      (push slot (cdr entry))
-	      (push (list name slot) name-dslotds-alist)))))
-    (mapcar (lambda (direct)
-	      (compute-effective-slot-definition class
-						 (nreverse (cdr direct))))
-	    name-dslotds-alist)))
+  (loop with names/slots = ()
+	for c in (class-precedence-list class) do
+	  (loop for slot in (class-direct-slots c)
+		as name = (slot-definition-name slot)
+		as entry = (assq name names/slots) do
+		  (if entry
+		      (push slot (cdr entry))
+		      (push (list name slot) names/slots)))
+	finally
+	  (return
+	    (loop for (name . slots) in names/slots collect
+		    (compute-effective-slot-definition
+		     class (nreverse slots))))))
+
+;;;
+;;; These are the specified AMOP methods.
+;;;
 
 (defmethod compute-slots ((class standard-class))
   (call-next-method))
-
+  
 (defmethod compute-slots :around ((class standard-class))
-  (let ((eslotds (call-next-method))
-	(location -1))
-    (dolist (eslotd eslotds eslotds)
-      (setf (slot-definition-location eslotd)
-	    (ecase (slot-definition-allocation eslotd)
-	      (:instance
-	       (incf location))
-	      (:class
-	       (let* ((name (slot-definition-name eslotd))
-		      (from-class (slot-definition-allocation-class eslotd))
-		      (cell (assq name (class-slot-cells from-class))))
-		 (assert (consp cell))
-		 cell))))
-      (initialize-internal-slot-functions eslotd))))
+  (loop with slotds = (call-next-method) and location = -1
+	for slot in slotds do
+	  (setf (slot-definition-location slot)
+		(ecase (slot-definition-allocation slot)
+		  (:instance
+		   (incf location))
+		  (:class
+		   (let* ((name (slot-definition-name slot))
+			  (from-class (slot-definition-allocation-class slot))
+			  (cell (assq name (class-slot-cells from-class))))
+		     (assert (consp cell))
+		     cell))))
+	  (initialize-internal-slot-functions slot)
+	finally
+	  (return slotds)))
 
 (defmethod compute-slots ((class funcallable-standard-class))
   (call-next-method))
 
 (defmethod compute-slots :around ((class funcallable-standard-class))
-  (labels ((instance-slot-names (slotds)
-	     (let (collect)
-	       (dolist (slotd slotds (nreverse collect))
-		 (when (eq (slot-definition-allocation slotd) :instance)
-		   (push (slot-definition-name slotd) collect)))))
+  (labels (;;
+	   ;; Return a list of the names of instance slots in SLOTDS.
+	   (instance-slot-names (slotds)
+	     (loop for e in slotds
+		   when (eq (slot-definition-allocation e) :instance)
+		     collect (slot-definition-name e)))
+	   ;;
 	   ;; This sorts slots so that slots of classes later in the CPL
-           ;; come before slots of other classes.  This is crucial for
-           ;; funcallable instances because it ensures that the slots of
-           ;; FUNCALLABLE-STANDARD-OBJECT, which includes the slots of
-           ;; KERNEL:FUNCALLABLE-INSTANCE, come first, which in turn
-           ;; makes it possible to treat FUNCALLABLE-STANDARD-OBJECT as
-           ;; a funcallable instance.
+	   ;; come before slots of other classes.  This is crucial for
+	   ;; funcallable instances because it ensures that the slots of
+	   ;; FUNCALLABLE-STANDARD-OBJECT, which includes the slots of
+	   ;; KERNEL:FUNCALLABLE-INSTANCE, come first, which in turn
+	   ;; makes it possible to treat FUNCALLABLE-STANDARD-OBJECT as
+	   ;; a funcallable instance.
 	   (compute-layout (eslotds)
-	     (let ((first ())
-		   (names (instance-slot-names eslotds)))
-	       (dolist (class
-			 (reverse (class-precedence-list class))
-			(nreverse (nconc names first)))
-		 (dolist (ss (class-slots class))
-		   (let ((name (slot-definition-name ss)))
-		     (when (member name names)
-		       (push name first)
-		       (setq names (delete name names)))))))))
+	     (loop with first = ()
+		   with names = (instance-slot-names eslotds)
+		   for class in (reverse (class-precedence-list class)) do
+		     (loop for ss in (class-slots class)
+			   as name = (slot-definition-name ss) 
+			   when (member name names) do
+			     (push name first)
+			     (setq names (delete name names)))
+		   finally (return (nreverse (nconc names first))))))
+    ;;
     (let ((all-slotds (call-next-method))
 	  (instance-slots ())
 	  (class-slots ()))
-      (dolist (slotd all-slotds)
-	(ecase (slot-definition-allocation slotd)
-	  (:instance (push slotd instance-slots))
-	  (:class (push slotd class-slots))))
-      (let ((layout (compute-layout instance-slots)))
-	(dolist (slotd instance-slots)
-	  (setf (slot-definition-location slotd)
-		(position (slot-definition-name slotd) layout))
-	  (initialize-internal-slot-functions slotd)))
-      (dolist (slotd class-slots)
-	(let ((name (slot-definition-name slotd))
-	      (from-class (slot-definition-allocation-class slotd)))
-	  (setf (slot-definition-location slotd)
-		(assoc name (class-slot-cells from-class)))
-	  (assert (consp (slot-definition-location slotd)))
-	  (initialize-internal-slot-functions slotd)))
+      (loop for slotd in all-slotds do
+	      (ecase (slot-definition-allocation slotd)
+		(:instance (push slotd instance-slots))
+		(:class    (push slotd class-slots))))
+      (loop with layout = (compute-layout instance-slots)
+	    for slotd in instance-slots do
+	      (setf (slot-definition-location slotd) 
+		    (position (slot-definition-name slotd) layout))
+	      (initialize-internal-slot-functions slotd))
+      (loop for slotd in class-slots
+	    as name = (slot-definition-name slotd)
+	    as from-class = (slot-definition-allocation-class slotd) do
+	      (setf (slot-definition-location slotd) 
+		    (assoc name (class-slot-cells from-class)))
+	      (assert (consp (slot-definition-location slotd)))
+	      (initialize-internal-slot-functions slotd))
       all-slotds)))
 
 (defmethod compute-slots ((class structure-class))
@@ -1044,16 +1092,19 @@
 
 (defmethod remove-reader-method ((class slot-class) generic-function)
   (let ((method (get-method generic-function () (list class) nil)))
-    (when method (remove-method generic-function method))))
+    (when method
+      (remove-method generic-function method))))
 
 (defmethod remove-writer-method ((class slot-class) generic-function)
-  (let ((method
-	  (get-method generic-function () (list *the-class-t* class) nil)))
-    (when method (remove-method generic-function method))))
+  (let ((method (get-method generic-function ()
+			    (list *the-class-t* class) nil)))
+    (when method
+      (remove-method generic-function method))))
 
 (defmethod remove-boundp-method ((class slot-class) generic-function)
   (let ((method (get-method generic-function () (list class) nil)))
-    (when method (remove-method generic-function method))))
+    (when method
+      (remove-method generic-function method))))
 
 
 ;;;
@@ -1093,13 +1144,18 @@
 (defmethod inform-type-system-about-class ((class std-class) name)
   ;; Maybe add skeleton lisp:standard-class to avoid undefined-function
   ;; compiler warnings. Not otherwise needed in this implementation.
-  (inform-type-system-about-std-class name))
+  (inform-type-system-about-std-class name)
+  (set-class-translation class name))
 
-(defmethod inform-type-system-about-class
-    ((class funcallable-standard-class) name)
-  (declare (ignore name))
-  ;; Avoid load-time warning of changing metaclass.
-  )
+(defmethod inform-type-system-about-class ((class funcallable-standard-class)
+					   name)
+  (set-class-translation class name))
+
+(defmethod inform-type-system-about-class ((class structure-class) name)
+  (set-class-translation class name))
+
+(defmethod inform-type-system-about-class ((class condition-class) name)
+  (set-class-translation class name))
 
 
 
@@ -1139,13 +1195,6 @@
 ;;;
 (defun force-cache-flushes (class)
   (let* ((owrapper (class-wrapper class)))
-    ;;
-    ;; We only need to do something if the wrapper is still valid.  If the
-    ;; wrapper isn't valid, state will be FLUSH or OBSOLETE, and both of those
-    ;; will already be doing what we want.  In particular, we must be
-    ;; sure we never change an OBSOLETE into a FLUSH since OBSOLETE
-    ;; means do what FLUSH does and then some.
-    ;; 
     (when (or (not (invalid-wrapper-p owrapper))
 	      (eq :invalid (kernel:layout-invalid owrapper)))
       (let ((nwrapper (make-wrapper (wrapper-no-of-instance-slots owrapper)
@@ -1161,10 +1210,14 @@
 
 (defun flush-cache-trap (owrapper nwrapper instance)
   (declare (ignore owrapper))
-  (set-wrapper instance nwrapper))
+  (cond ((std-instance-p instance)
+	 (setf (std-instance-wrapper instance) nwrapper))
+	((fsc-instance-p instance)
+	 (setf (fsc-instance-wrapper instance) nwrapper))
+	(t
+	 (internal-error "Internal error."))))
 
 
-
 ;;;
 ;;; make-instances-obsolete can be called by user code.  It will cause the
 ;;; next access to the instance (as defined in 88-002R) to trap through the
@@ -1217,6 +1270,7 @@
 ;;; case, we have to return some reasonable wrapper, instead.
 
 (defvar *in-obsolete-instance-trap* nil)
+
 (defvar *the-wrapper-of-structure-object* 
   (class-wrapper (find-class 'structure-object)))
 
@@ -1226,8 +1280,8 @@
    (lambda (condition stream)
      ;; Don't try to print the structure, since it probably
      ;; won't work.
-     (format stream "Obsolete structure error in ~S:~@
-		     For a structure of type: ~S"
+     (format stream "~@<Obsolete structure error in ~S ~
+		     for a structure of type ~S.~@:>"
 	     (conditions::condition-function-name condition)
 	     (type-of (obsolete-structure-datum condition))))))
 
@@ -1261,20 +1315,20 @@
 	(loop for name in olayout and opos from 0
 	      as npos = (posq name nlayout)
 	      if npos do
-	        (setf (instance-ref nslots npos)
-		      (instance-ref oslots opos))
+	        (setf (slot-ref nslots npos)
+		      (slot-ref oslots opos))
 	      else do
 		(push name discarded)
-		(unless (eq (instance-ref oslots opos) +slot-unbound+)
+		(unless (eq (slot-ref oslots opos) +slot-unbound+)
 		  (setf (getf plist name)
-			(instance-ref oslots opos))))
+			(slot-ref oslots opos))))
 	;;
 	;; Go through all the old shared slots.
 	;;
 	(loop for (name . val) in oclass-slots
 	      for npos = (posq name nlayout)
 	      if npos do
-	        (setf (instance-ref nslots npos) val)
+	        (setf (slot-ref nslots npos) val)
 	      else do
 	        (push name discarded)
 		(unless (eq val +slot-unbound+)
@@ -1299,15 +1353,6 @@
 ;;;
 ;;;
 ;;;
-(defmacro copy-instance-internal (instance)
-  `(progn
-      (let* ((class (class-of instance))
-	     (copy (allocate-instance class)))
-	 (if (std-instance-p ,instance)
-	     (setf (std-instance-slots ,instance) (std-instance-slots ,instance))
-	     (setf (fsc-instance-slots ,instance) (fsc-instance-slots ,instance)))
-	 copy)))
-
 (defun change-class-internal (instance new-class initargs)
   (let* ((old-class (class-of instance))
 	 (copy (allocate-instance new-class))
@@ -1327,8 +1372,8 @@
     (loop for new-slot in new-layout and new-position from 0
 	  for old-position = (posq new-slot old-layout)
 	  when old-position do
-	    (setf (instance-ref new-slots new-position)
-		  (instance-ref old-slots old-position)))
+	    (setf (slot-ref new-slots new-position)
+		  (slot-ref old-slots old-position)))
     ;;
     ;; "The values of slots specified as shared in the class Cfrom and
     ;; as local in the class Cto are retained."
@@ -1336,7 +1381,7 @@
     (loop for (name . val) in old-class-slots
 	  for new-position = (posq name new-layout)
 	  when new-position do
-	    (setf (instance-ref new-slots new-position) val))
+	    (setf (slot-ref new-slots new-position) val))
 
     ;; Make the copy point to the old instance's storage, and make the
     ;; old instance point to the new storage.
@@ -1359,16 +1404,16 @@
 			 (new-class funcallable-standard-class)
 			 &rest initargs)
   (declare (ignore initargs))
-  (error "Can't change the class of ~S to ~S~@
-          because it isn't already an instance with metaclass ~S."
+  (error "~@<Can't change the class of ~S to ~S ~
+          because it isn't already an instance with metaclass ~S.~@:>"
 	 instance new-class 'standard-class))
 
 (defmethod change-class ((instance funcallable-standard-object)
 			 (new-class standard-class)
 			 &rest initargs)
   (declare (ignore initargs))
-  (error "Can't change the class of ~S to ~S~@
-          because it isn't already an instance with metaclass ~S."
+  (error "~@<Can't change the class of ~S to ~S ~
+          because it isn't already an instance with metaclass ~S.~@:>"
 	 instance new-class 'funcallable-standard-class))
 
 (defmethod change-class ((instance t) (new-class-name symbol) &rest initargs)
@@ -1389,7 +1434,7 @@
 (defmethod shared-initialize :before
 	   ((class built-in-class) slot-names &rest initargs)
   (declare (ignore slot-names initargs))
-  (error "Attempt to initialize or reinitialize a built in class."))
+  (error "Attempt to initialize or reinitialize a built-in class."))
 
 (defmethod class-direct-slots            ((class built-in-class)) ())
 (defmethod class-slots                   ((class built-in-class)) ())
@@ -1397,7 +1442,8 @@
 (defmethod class-default-initargs        ((class built-in-class)) ())
 
 (defmethod validate-superclass ((c class) (s built-in-class))
-  (or (eq s *the-class-t*) (eq s *the-class-stream*)))
+  (or (eq s *the-class-t*)
+      (eq s *the-class-stream*)))
 
 
 
@@ -1405,6 +1451,21 @@
 ;;;
 ;;;
 
+(macrolet ((frob (method)
+	   `(defmethod ,method ((class forward-referenced-class))
+	      (declare (ignore class))
+	      ())))
+  (frob class-direct-slots)
+  (frob class-direct-default-initargs))
+
+(macrolet ((frob (method)
+	     `(defmethod ,method ((class forward-referenced-class))
+		(error "~@<~S called for forward referenced class ~S.~@:>"
+		       ',method class))))
+  (frob class-default-initargs)
+  (frob class-precedence-list)
+  (frob class-slots))
+  
 (defmethod validate-superclass ((c slot-class)
 				(f forward-referenced-class))
   t)
@@ -1425,3 +1486,23 @@
   (dolist (dependent (plist-value metaobject 'dependents))
     (funcall function dependent)))
 
+
+;;;
+;;; Conditions
+;;;
+(defmethod shared-initialize :after ((class condition-class) slot-names
+				     &key direct-superclasses)
+  (declare (ignore slot-names))
+  (let ((kernel-class (kernel::find-class (class-name class))))
+    (with-slots (wrapper class-precedence-list prototype predicate-name
+			 (direct-supers direct-superclasses))
+	class
+      (setf (kernel:%class-pcl-class kernel-class) class)
+      (setq direct-supers direct-superclasses)
+      (setq wrapper (kernel:%class-layout kernel-class))
+      (setq class-precedence-list (compute-class-precedence-list class))
+      (setq prototype (make-condition (class-name class)))
+      (add-direct-subclasses class direct-superclasses)
+      (setq predicate-name (make-class-predicate-name (class-name class)))
+      (make-class-predicate class predicate-name))))
+				     

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.41 2002/11/28 00:51:34 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.42 2003/03/22 16:15:21 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -872,7 +872,7 @@
     (character (char-code (char-upcase s-expr)))
     (instance
      (if (typep s-expr 'structure-object)
-	 (internal-sxhash (class-name (layout-class (%instance-layout s-expr)))
+	 (internal-sxhash (%class-name (layout-class (%instance-layout s-expr)))
 			  depth)
 	 (sxhash-instance s-expr)))
     (funcallable-instance (sxhash-instance s-expr))
@@ -939,7 +939,7 @@
        0
        (let* ((layout (%instance-layout ,structure))
 	      (length (min (1- (layout-length layout)) sxhash-max-len))
-	      (hash (internal-sxhash (class-name (layout-class layout))
+	      (hash (internal-sxhash (%class-name (layout-class layout))
 				     depth))
 	      (,depth (+ ,depth 1)))
 	 (declare (type index length) (type hash hash))

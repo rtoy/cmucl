@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.37 2001/03/04 20:12:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.38 2003/03/22 16:15:19 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -731,7 +731,7 @@
   ;;
   ;; The description of the structure that this is an accessor for.
   (for (required-argument)
-       :type #+ns-boot (or class defstruct-description)
+       :type #+ns-boot (or kernel::class defstruct-description)
        #-ns-boot class)
   ;;
   ;; The slot description of the slot.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.23 2003/01/06 22:27:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.24 2003/03/22 16:15:20 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -214,13 +214,13 @@
       (%reader-error stream "Non-list following #S: ~S" body))
     (unless (symbolp (car body))
       (%reader-error stream "Structure type is not a symbol: ~S" (car body)))
-    (let ((class (find-class (car body) nil)))
-      (unless (typep class 'structure-class)
+    (let ((class (kernel::find-class (car body) nil)))
+      (unless (typep class 'kernel::structure-class)
 	(%reader-error stream "~S is not a defined structure type."
 		       (car body)))
       (let ((def-con (dd-default-constructor
 		      (layout-info
-		       (class-layout class)))))
+		       (%class-layout class)))))
 	(unless def-con
 	  (%reader-error
 	   stream "The ~S structure does not have a default constructor."
@@ -239,12 +239,13 @@
 ;; alist of the things to be replaced assoc'd with the things to replace them.
 ;;
 (defun circle-subst (old-new-alist tree)
-  (cond ((not (typep tree '(or cons (array t) structure-object)))
+  (cond ((not (typep tree '(or cons (array t) structure-object
+			    standard-object)))
 	 (let ((entry (find tree old-new-alist :key #'second)))
 	   (if entry (third entry) tree)))
 	((null (gethash tree *sharp-equal-circle-table*))
 	 (setf (gethash tree *sharp-equal-circle-table*) t)
-	 (cond ((typep tree 'structure-object)
+	 (cond ((typep tree '(or structure-object standard-object))
 		(do ((i 1 (1+ i))
 		     (end (%instance-length tree)))
 		    ((= i end))

@@ -26,10 +26,25 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.23 2003/01/03 18:52:14 pmai Exp $")
-;;;
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.24 2003/03/22 16:15:16 gerd Exp $")
 
 (in-package :pcl)
+
+;;;; *********************
+;;;; PRINT-OBJECT  *******
+;;;; *********************
+
+(defun named-object-print-function (instance stream
+				    &optional (extra nil extra-p))
+  (printing-random-thing (instance stream)
+    (if extra-p					
+	(format stream "~A ~S ~:S"
+		(class-name (class-of instance))
+		(slot-value-or-default instance 'name)
+		extra)
+	(format stream "~A ~S"
+		(class-name (class-of instance))
+		(slot-value-or-default instance 'name)))))
 
 (defmethod print-object (instance stream)
   (printing-random-thing (instance stream)
@@ -44,39 +59,58 @@
 (defmethod print-object ((slotd slot-definition) stream)
   (named-object-print-function slotd stream))
 
-(defun named-object-print-function (instance stream
-				    &optional (extra nil extra-p))
-  (printing-random-thing (instance stream)
-    (if extra-p					
-	(format stream "~A ~S ~:S"
-		(capitalize-words (class-name (class-of instance)))
-		(slot-value-or-default instance 'name)
-		extra)
-	(format stream "~A ~S"
-		(capitalize-words (class-name (class-of instance)))
-		(slot-value-or-default instance 'name)))))
-
 (defmethod print-object ((mc standard-method-combination) stream)
   (printing-random-thing (mc stream)
     (format stream
 	    "Method-Combination ~S ~S"
 	    (slot-value-or-default mc 'type)
 	    (slot-value-or-default mc 'options))))
-
 
+(defmethod print-object ((method standard-method) stream)
+  (printing-random-thing (method stream)
+    (if (slot-boundp method 'generic-function)
+	(let ((gf (method-generic-function method))
+	      (class-name (class-name (class-of method))))
+	  (format stream "~A ~S ~{~S ~}~:S"
+		  class-name
+		  (and gf (generic-function-name gf))
+		  (method-qualifiers method)
+		  (unparse-specializers method)))
+	(call-next-method))))
+
+(defmethod print-object ((method standard-accessor-method) stream)
+  (printing-random-thing (method stream)
+    (if (slot-boundp method 'generic-function)
+	(let ((gf (method-generic-function method))
+	      (class-name (class-name (class-of method))))
+	  (format stream "~A ~S, slot:~S, ~:S"
+		  class-name
+		  (and gf (generic-function-name gf))
+		  (accessor-method-slot-name method)
+		  (unparse-specializers method)))
+	(call-next-method))))
+
+(defmethod print-object ((gf generic-function) stream)
+  (named-object-print-function
+    gf
+    stream
+    (if (slot-boundp gf 'methods)
+	(list (length (generic-function-methods gf)))
+	"?")))
+
+
 ;;;
 ;;;
 ;;;
-(defmethod shared-initialize :after
-    ((slotd structure-slot-definition) slot-names 
-     &key (allocation :instance) allocation-class)
+(defmethod shared-initialize :after ((slotd structure-slot-definition)
+				     slot-names 
+				     &key (allocation :instance)
+				     allocation-class)
   (declare (ignore slot-names allocation-class))
   (unless (eq allocation :instance)
-    (error "structure slots must have :instance allocation")))
+    (error "~@<Structure slots must have ~s allocation.~@:>" :instance)))
 
-(defmethod inform-type-system-about-class ((class structure-class) (name t))
-  nil)
-
+
 ;;;
 ;;; METHODS
 ;;;
@@ -91,10 +125,15 @@
 (defmethod method-function ((method standard-method))
   (or (slot-value method 'function)
       (let ((fmf (slot-value method 'fast-function)))
-	(unless fmf ; the :before shared-initialize method prevents this
-	  (error "~S doesn't seem to have a method-function" method))
+	;; The :before shared-initialize method prevents this
+	(unless fmf
+	  (internal-error "~@<~S doesn't seem to have a method function.~@:>"
+			  method))
 	(setf (slot-value method 'function)
 	      (method-function-from-fast-function fmf)))))
+
+(defmethod method-qualifiers ((method standard-method))
+  (plist-value method 'qualifiers))
 
 (defmethod accessor-method-class ((method standard-accessor-method))
   (car (slot-value method 'specializers)))
@@ -102,30 +141,7 @@
 (defmethod accessor-method-class ((method standard-writer-method))
   (cadr (slot-value method 'specializers)))
 
-(defmethod print-object ((method standard-method) stream)
-  (printing-random-thing (method stream)
-    (if (slot-boundp method 'generic-function)
-	(let ((generic-function (method-generic-function method))
-	      (class-name (capitalize-words (class-name (class-of method)))))
-	  (format stream "~A ~S ~{~S ~}~:S"
-		  class-name
-		  (and generic-function (generic-function-name generic-function))
-		  (method-qualifiers method)
-		  (unparse-specializers method)))
-	(call-next-method))))
-
-(defmethod print-object ((method standard-accessor-method) stream)
-  (printing-random-thing (method stream)
-    (if (slot-boundp method 'generic-function)
-	(let ((generic-function (method-generic-function method))
-	      (class-name (capitalize-words (class-name (class-of method)))))
-	  (format stream "~A ~S, slot:~S, ~:S"
-		  class-name
-		  (and generic-function (generic-function-name generic-function))
-		  (accessor-method-slot-name method)
-		  (unparse-specializers method)))
-	(call-next-method))))
-
+
 ;;;
 ;;; INITIALIZATION
 ;;;
@@ -135,16 +151,57 @@
 ;;; Methods are not reinitializable.
 ;;; 
 
+(defvar *allow-experimental-specializers-p* t)
+
+(defvar *the-class-generic-function*
+  (find-class 'generic-function))
+
+(defvar *the-class-standard-generic-function*
+  (find-class 'standard-generic-function))
+
+
 (defmethod reinitialize-instance ((method standard-method) &rest initargs)
   (declare (ignore initargs))
-  (error "Attempt to reinitialize the method ~S.~%~
-          Method objects cannot be reinitialized."
+  (error "~@<Attempt to reinitialize the method ~S.  ~
+          Method objects cannot be reinitialized.~@:>"
 	 method))
+
+(defmethod shared-initialize :before ((method standard-method)
+				      slot-names
+				      &key qualifiers
+					   lambda-list
+					   specializers
+					   function
+				           fast-function
+					   documentation)
+  (declare (ignore slot-names))
+  (flet ((lose (initarg value string)
+	   (error "~@<When initializing the method ~S, ~
+                   the ~S initialization argument was ~S, ~
+                   which ~A.~@:>"
+		  method initarg value string)))
+    (let ((check-qualifiers    (legal-qualifiers-p method qualifiers))
+	  (check-lambda-list   (legal-lambda-list-p method lambda-list))
+	  (check-specializers  (legal-specializers-p method specializers))
+	  (check-function      (legal-method-function-p
+				method
+				(or function fast-function)))
+	  (check-documentation (legal-documentation-p method documentation)))
+      (unless (eq check-qualifiers t)
+	(lose :qualifiers qualifiers check-qualifiers))
+      (unless (eq check-lambda-list t)
+	(lose :lambda-list lambda-list check-lambda-list))
+      (unless (eq check-specializers t)
+	(lose :specializers specializers check-specializers))
+      (unless (eq check-function t)
+	(lose :function function check-function))
+      (unless (eq check-documentation t)
+	(lose :documentation documentation check-documentation)))))
 
 (defmethod legal-documentation-p ((object standard-method) x)
   (if (or (null x) (stringp x))
       t
-      "a string or NULL"))
+      "is not a string or NULL"))
 
 (defmethod legal-lambda-list-p ((object standard-method) x)
   (declare (ignore x))
@@ -153,7 +210,7 @@
 (defmethod legal-method-function-p ((object standard-method) x)
   (if (functionp x)
       t
-      "a function"))
+      "is not a function"))
 
 (defmethod legal-qualifiers-p ((object standard-method) x)
   (flet ((improper-list ()
@@ -179,15 +236,13 @@
 
 (defmethod legal-specializers-p ((object standard-method) x)
   (flet ((improper-list ()
-	   (return-from legal-specializers-p "Is not a proper list.")))
+	   (return-from legal-specializers-p "is not a proper list.")))
     (dolist-carefully (s x improper-list)
       (let ((ok (legal-specializer-p object s)))
 	(unless (eq ok t)
 	  (return-from legal-specializers-p
 	    (format nil "Contains ~S which ~A" s ok)))))
     t))
-
-(defvar *allow-experimental-specializers-p* nil)
 
 (defmethod legal-specializer-p ((object standard-method) x)
   (if (if *allow-experimental-specializers-p*
@@ -197,37 +252,6 @@
       t
       "is neither a class object nor an eql specializer"))
 
-(defmethod shared-initialize :before ((method standard-method)
-				      slot-names
-				      &key qualifiers
-					   lambda-list
-					   specializers
-					   function
-				           fast-function
-					   documentation)
-  (declare (ignore slot-names))
-  (flet ((lose (initarg value string)
-	   (error "When initializing the method ~S:~%~
-                   The ~S initialization argument was: ~S.~%~
-                   which ~A."
-		  method initarg value string)))
-    (let ((check-qualifiers    (legal-qualifiers-p method qualifiers))
-	  (check-lambda-list   (legal-lambda-list-p method lambda-list))
-	  (check-specializers  (legal-specializers-p method specializers))
-	  (check-function      (legal-method-function-p method (or function
-								   fast-function)))
-	  (check-documentation (legal-documentation-p method documentation)))
-      (unless (eq check-qualifiers t)
-	(lose :qualifiers qualifiers check-qualifiers))
-      (unless (eq check-lambda-list t)
-	(lose :lambda-list lambda-list check-lambda-list))
-      (unless (eq check-specializers t)
-	(lose :specializers specializers check-specializers))
-      (unless (eq check-function t)
-	(lose :function function check-function))
-      (unless (eq check-documentation t)
-	(lose :documentation documentation check-documentation)))))
-
 (defmethod shared-initialize :before ((method standard-accessor-method)
 				      slot-names
 				      &key slot-name slot-definition)
@@ -235,17 +259,14 @@
   (unless slot-definition
     (let ((legalp (legal-slot-name-p method slot-name)))
       (unless (eq legalp t)
-	(error "The value of the :SLOT-NAME initarg ~A." legalp)))))
+	(error "The value of the ~s initarg ~A." :slot-name legalp)))))
 
 (defmethod shared-initialize :after ((method standard-method) slot-names
 				     &rest initargs
 				     &key qualifiers method-spec plist)
   (declare (ignore slot-names method-spec plist))
   (initialize-method-function initargs nil method)
-  (setf (plist-value method 'qualifiers) qualifiers)
-  #+ignore
-  (setf (slot-value method 'closure-generator) 
-	(method-function-closure-generator (slot-value method 'function))))
+  (setf (plist-value method 'qualifiers) qualifiers))
 
 (defmethod shared-initialize :after ((method standard-accessor-method)
 				     slot-names
@@ -261,26 +282,8 @@
     (when (and slot-definition (null slot-name))
       (setq slot-name (slot-definition-name slot-definition)))))
 
-(defmethod method-qualifiers ((method standard-method))
-  (plist-value method 'qualifiers))
-
-
-
-(defvar *the-class-generic-function*          (find-class 'generic-function))
-(defvar *the-class-standard-generic-function* (find-class 'standard-generic-function))
-
-
-
-(defmethod print-object ((generic-function generic-function) stream)
-  (named-object-print-function
-    generic-function
-    stream
-    (if (slot-boundp generic-function 'methods)
-	(list (length (generic-function-methods generic-function)))
-	"?")))
-
 (defmethod shared-initialize :before
-	   ((generic-function standard-generic-function)
+	   ((gf standard-generic-function)
 	    slot-names
 	    &key (name nil namep)
 		 (lambda-list () lambda-list-p)
@@ -294,210 +297,188 @@
 		   lambda-list lambda-list-p))
 
   (when namep
-    (set-function-name generic-function name))
+    (set-function-name gf name))
 		   
   (flet ((initarg-error (initarg value string)
-	   (error "When initializing the generic-function ~S:~%~
-                   The ~S initialization argument was: ~A.~%~
-                   It must be ~A."
-		  generic-function initarg value string)))
+	   (error (format nil "~~@<When initializing the generic-function ~S: ~
+                               The ~S initialization argument was ~A.  ~
+                               It must be ~A.~~@:>"
+			  gf initarg value string))))
     (cond (method-class-supplied-p
 	   (when (symbolp method-class)
 	     (setq method-class (find-class method-class)))
 	   (unless (and (classp method-class)
 			(*subtypep (class-eq-specializer method-class)
 				   *the-class-method*))
-	     (initarg-error :method-class
-			    method-class
-			    "a subclass of the class METHOD"))
-	   (setf (slot-value generic-function 'method-class) method-class))
-	  ((slot-boundp generic-function 'method-class))
+	     (initarg-error :method-class method-class "a method class"))
+	   (setf (slot-value gf 'method-class) method-class))
+	  ((slot-boundp gf 'method-class))
 	  (t
-	   (initarg-error :method-class
-			  "not supplied"
-			  "a subclass of the class METHOD")))
+	   (initarg-error :method-class "not supplied" "a method class")))
     (cond (method-combination-supplied-p
 	   (unless (method-combination-p method-combination)
-	     (initarg-error :method-combination
-			    method-combination
+	     (initarg-error :method-combination method-combination
 			    "a method combination object")))
-	  ((slot-boundp generic-function 'method-combination))
+	  ((slot-boundp gf 'method-combination))
 	  (t
 	   (initarg-error :method-combination
 			  "not supplied"
 			  "a method combination object")))))
 
-
-#||
-(defmethod reinitialize-instance ((generic-function standard-generic-function)
-				  &rest initargs
-				  &key name
-				       lambda-list
-				       argument-precedence-order
-				       declarations
-				       documentation
-				       method-class
-				       method-combination)
-  (declare (ignore documentation declarations argument-precedence-order
-		   lambda-list name method-class method-combination))
-  (macrolet ((add-initarg (check name slot-name)
-	       `(unless ,check
-		  (push (slot-value generic-function ,slot-name) initargs)
-		  (push ,name initargs))))
-;   (add-initarg name :name 'name)
-;   (add-initarg lambda-list :lambda-list 'lambda-list)
-;   (add-initarg argument-precedence-order
-;		 :argument-precedence-order
-;		 'argument-precedence-order)
-;   (add-initarg declarations :declarations 'declarations)
-;   (add-initarg documentation :documentation 'documentation)
-;   (add-initarg method-class :method-class 'method-class)
-;   (add-initarg method-combination :method-combination 'method-combination)
-    (apply #'call-next-method generic-function initargs)))
-||#
-
 
 ;;;
 ;;; These three are scheduled for demolition.
 ;;; 
-(defmethod remove-named-method (generic-function-name argument-specifiers
-						      &optional extra)
-  (let ((generic-function ())
-	(method ()))
-    (cond ((or (null (fboundp generic-function-name))
-	       (not (generic-function-p
-		      (setq generic-function
-			    (symbol-function generic-function-name)))))
-	   (error "~S does not name a generic-function."
-		  generic-function-name))
-	  ((null (setq method (get-method generic-function
-					  extra
-					  (parse-specializers
-					    argument-specifiers)
-					  nil)))
-	   (error "There is no method for the generic-function ~S~%~
-                   which matches the argument-specifiers ~S."
-		  generic-function
-		  argument-specifiers))
+(defmethod remove-named-method (gf-name argument-specifiers &optional extra)
+  (let (gf method)
+    (cond ((or (not (fboundp gf-name))
+	       (not (generic-function-p (setq gf (gdefinition gf-name)))))
+	   (error "~@<~S does not name a generic function.~@:>" gf-name))
+	  ((null (setq method
+		       (get-method gf extra
+				   (parse-specializers argument-specifiers)
+				   nil)))
+	   (error "~@<There is no method for the generic function ~S ~
+                   matching argument specifiers ~S.~@:>"
+		  gf argument-specifiers))
 	  (t
-	   (remove-method generic-function method)))))
+	   (remove-method gf method)))))
 
-(defun real-add-named-method (generic-function-name
-			      qualifiers
-			      specializers
-			      lambda-list
-			      &rest other-initargs)
+(defun #+loadable-pcl add-named-method
+       #-loadable-pcl real-add-named-method
+    (gf-name qualifiers specializers lambda-list &rest other-initargs)
   ;; What about changing the class of the generic-function if there is
   ;; one.  Whose job is that anyways.  Do we need something kind of
   ;; like class-for-redefinition?
-  (let* ((generic-function
-	   (ensure-generic-function generic-function-name))
+  (let* ((gf (ensure-generic-function gf-name))
 	 (specs (parse-specializers specializers))
-;	 (existing (get-method generic-function qualifiers specs nil))
-	 (proto (method-prototype-for-gf generic-function-name))
+	 (proto (method-prototype-for-gf gf-name))
 	 (new (apply #'make-instance (class-of proto)
-				     :qualifiers qualifiers
-				     :specializers specs
-				     :lambda-list lambda-list
-				     other-initargs)))
-;   (when existing (remove-method generic-function existing))
-    (add-method generic-function new)))
+		     :qualifiers qualifiers
+		     :specializers specs
+		     :lambda-list lambda-list
+		     other-initargs)))
+    (add-method gf new)))
 
 	
 
+#+loadable-pcl
+(defmethod get-method ((gf standard-generic-function)
+		       qualifiers specializers &optional (errorp t))
+  (loop with nspecializers = (length specializers)
+	for method in (generic-function-methods gf)
+	as quals = (method-qualifiers method)
+	as specs = (method-specializers method)
+	when (and (equal quals qualifiers)
+		  (= (length specs) nspecializers)
+		  (every #'same-specializer-p specs specializers)) do
+	  (return-from get-method method))
+  (when errorp
+    (error "~@<No method on ~S with qualifiers ~S and ~
+           specializers ~S.~@:>"
+	   gf qualifiers specializers)))
 
-(defun real-get-method (generic-function qualifiers specializers
-					 &optional (errorp t))
-  (let ((hit
-	  (dolist (method (generic-function-methods generic-function))
-	    (when (and (equal qualifiers (method-qualifiers method))
-		       (every #'same-specializer-p specializers
-			      (method-specializers method)))
-	      (return method)))))
-    (cond (hit hit)
-	  ((null errorp) nil)
-	  (t
-	   (error "No method on ~S with qualifiers ~:S and specializers ~:S."
-		  generic-function qualifiers specializers)))))
+#-loadable-pcl
+(defun real-get-method (gf qualifiers specializers &optional (errorp t))
+  (loop with nspecializers = (length specializers)
+	for method in (generic-function-methods gf)
+	as quals = (method-qualifiers method)
+	as specs = (method-specializers method)
+	when (and (equal quals qualifiers)
+		  (= (length specs) nspecializers)
+		  (every #'same-specializer-p specs specializers)) do
+	  (return-from real-get-method method))
+  (when errorp
+    (error "~@<No method on ~S with qualifiers ~S and ~
+            specializers ~S.~@:>"
+	   gf qualifiers specializers)))
 
-(defmethod find-method ((generic-function standard-generic-function)
+(defmethod find-method ((gf standard-generic-function)
 			qualifiers specializers &optional (errorp t))
-  (real-get-method generic-function qualifiers
+  (real-get-method gf qualifiers
 		   (parse-specializers specializers) errorp))
   
+;;;
+;;;
+;;;
+
+(defun set-methods (gf methods)
+  (setf (generic-function-methods gf) nil)
+  (loop (when (null methods) (return gf))
+	(real-add-method gf (pop methods) methods)))
+
+(defun real-add-method (gf method &optional skip-dfun-update-p)
+  (when (method-generic-function method)
+    (error "~@<The method ~S is already part of the generic ~
+            function ~S.  It can't be added to another generic ~
+            function until it is removed from the first one.~@:>"
+	   method (method-generic-function method)))
+  ;;
+  (flet (;;
+	 ;; Return T if METHOD-A and METHOD-B have similar lambda
+	 ;; lists, that is, when they are considered the same
+	 ;; when redefining methods.
+	 (similar-lambda-lists-p (method-a method-b)
+	   (multiple-value-bind (a-nreq a-nopt a-keyp a-restp)
+	       (analyze-lambda-list (method-lambda-list method-a))
+	     (multiple-value-bind (b-nreq b-nopt b-keyp b-restp)
+		 (analyze-lambda-list (method-lambda-list method-b))
+	       (and (= a-nreq b-nreq) (= a-nopt b-nopt)
+		    (eq (or a-keyp a-restp) (or b-keyp b-restp)))))))
+    (let* ((qualifiers (method-qualifiers method))
+	   (specializers (method-specializers method))
+	   (old (get-method gf qualifiers specializers nil)))
+      ;;
+      ;; If there is already a method like this one then we must
+      ;; get rid of it before proceeding.  Note that we call the
+      ;; generic function remove-method to remove it rather than
+      ;; doing it in some internal way.
+      (when (and old (similar-lambda-lists-p old method))
+	(remove-method gf old))
+      ;;
+      ;; Add the method.
+      (setf (method-generic-function method) gf)
+      (push method (generic-function-methods gf))
+      (dolist (specializer specializers)
+	(add-direct-method specializer method))
+      ;;
+      ;; SET-ARG-INFO signals an error if the new method has an
+      ;; incongruent lambda list, but the function depends on the
+      ;; new method already having been added to the gf.  So kluge
+      ;; around a bit.
+      (let ((remove-again-p t))
+	(unwind-protect
+	     (progn
+	       (set-arg-info gf :new-method method)
+	       (setq remove-again-p nil))
+	  (when remove-again-p
+	    (remove-method gf method))))
+      ;;
+      (unless skip-dfun-update-p
+	(update-ctors 'add-method :generic-function gf :method method)
+	(update-dfun gf))
+      (update-accessor-pvs 'add-method gf method old)
+      method)))
+  
+(defun real-remove-method (gf method)
+  ;; Note: Error check prohibited by ANSI spec removed.
+  (when (eq gf (method-generic-function method))
+    (let* ((methods (generic-function-methods gf))
+	   (new-methods (remove method methods)))	      
+      (setf (method-generic-function method) nil)
+      (setf (generic-function-methods gf) new-methods)
+      (dolist (specializer (method-specializers method))
+	(remove-direct-method specializer method))
+      (set-arg-info gf)
+      (update-ctors 'remove-method :generic-function gf :method method)
+      (update-dfun gf)
+      (update-accessor-pvs 'remove-method gf method)
+      gf)))
+
 
-;;;
-;;; Compute various information about a generic-function's arglist by looking
-;;; at the argument lists of the methods.  The hair for trying not to use
-;;; &rest arguments lives here.
-;;;  The values returned are:
-;;;    number-of-required-arguments
-;;;       the number of required arguments to this generic-function's
-;;;       discriminating function
-;;;    &rest-argument-p
-;;;       whether or not this generic-function's discriminating
-;;;       function takes an &rest argument.
-;;;    specialized-argument-positions
-;;;       a list of the positions of the arguments this generic-function
-;;;       specializes (e.g. for a classical generic-function this is the
-;;;       list: (1)).
-;;;
-(defmethod compute-discriminating-function-arglist-info
-	   ((generic-function standard-generic-function))
-  ;;(declare (values number-of-required-arguments &rest-argument-p
-  ;;                 specialized-argument-postions))
-  (let ((number-required nil)
-        (restp nil)
-        (specialized-positions ())
-	(methods (generic-function-methods generic-function)))
-    (dolist (method methods)
-      (multiple-value-setq (number-required restp specialized-positions)
-        (compute-discriminating-function-arglist-info-internal
-	  generic-function method number-required restp specialized-positions)))
-    (values number-required restp (sort specialized-positions #'<))))
-
-(defun compute-discriminating-function-arglist-info-internal
-       (generic-function method number-of-requireds restp
-	specialized-argument-positions)
-  (declare (ignore generic-function) (type (or null fixnum) number-of-requireds))
-  (let ((requireds 0))
-    (declare (fixnum requireds))
-    ;; Go through this methods arguments seeing how many are required,
-    ;; and whether there is an &rest argument.
-    (dolist (arg (method-lambda-list method))
-      (cond ((eq arg '&aux) (return))
-            ((memq arg '(&optional &rest &key))
-             (return (setq restp t)))
-	    ((memq arg lambda-list-keywords))
-            (t (incf requireds))))
-    ;; Now go through this method's type specifiers to see which
-    ;; argument positions are type specified.  Treat T specially
-    ;; in the usual sort of way.  For efficiency don't bother to
-    ;; keep specialized-argument-positions sorted, rather depend
-    ;; on our caller to do that.
-    (loop for type-spec in (method-specializers method)
-	  and pos from 0
-	  unless (eq type-spec *the-class-t*) do
-	    (pushnew pos specialized-argument-positions))
-    ;; Finally merge the values for this method into the values
-    ;; for the exisiting methods and return them.  Note that if
-    ;; num-of-requireds is NIL it means this is the first method
-    ;; and we depend on that.
-    (values (min (or number-of-requireds requireds) requireds)
-            (or restp
-		(and number-of-requireds (/= number-of-requireds requireds)))
-            specialized-argument-positions)))
-
-(defun make-discriminating-function-arglist (number-required-arguments restp)
-  (nconc (loop for i below number-required-arguments
-	       collect (intern (format nil "Discriminating Function Arg ~D" i)))
-         (when restp
-	   (list '&rest (intern "Discriminating Function &rest Arg")))))
-
-
-;;;
-;;;
-;;;
+;;;; **************************
+;;;; Generic Functions  *******
+;;;; **************************
 
 (defmethod generic-function-argument-precedence-order
     ((gf standard-generic-function))
@@ -531,8 +512,7 @@
 					 &key (lambda-list nil lambda-list-p)
 					 (argument-precedence-order 
 					  nil argument-precedence-order-p))
-  (with-slots (arg-info)
-    gf
+  (with-slots (arg-info) gf
     (if lambda-list-p
 	(if argument-precedence-order-p
 	    (set-arg-info gf 
@@ -546,101 +526,37 @@
 	       (or lambda-list-p (cddr args)))
       (update-dfun gf))))
 
-;;;
-;;;
-;;;
-
-(declaim (special *lazy-dfun-compute-p*))
-
-(defun set-methods (gf methods)
-  (setf (generic-function-methods gf) nil)
-  (loop (when (null methods) (return gf))
-	(real-add-method gf (pop methods) methods)))
-
-(defun real-add-method (generic-function method &optional skip-dfun-update-p)
-  (if (method-generic-function method)
-      (error "The method ~S is already part of the generic~@
-              function ~S.  It can't be added to another generic~@
-              function until it is removed from the first one."
-	     method (method-generic-function method))
-
-      (let* ((name (generic-function-name generic-function))
-	     (qualifiers   (method-qualifiers method))
-	     (specializers (method-specializers method))
-	     (existing (get-method generic-function qualifiers specializers nil)))
-	;;
-	;; If there is already a method like this one then we must
-	;; get rid of it before proceeding.  Note that we call the
-	;; generic function remove-method to remove it rather than
-	;; doing it in some internal way.
-	;; 
-	(when existing (remove-method generic-function existing))
-	;;
-	(setf (method-generic-function method) generic-function)
-	(pushnew method (generic-function-methods generic-function))
-	(dolist (specializer specializers)
-	  (add-direct-method specializer method))
-	(set-arg-info generic-function :new-method method)
-	(unless skip-dfun-update-p
-	  (when (member name 
-			'(make-instance default-initargs
-			  allocate-instance shared-initialize initialize-instance))
-	    (update-make-instance-function-table (type-class (car specializers))))
-	  (update-dfun generic-function))
-	method)))
-  
-(defun real-remove-method (generic-function method)
-  ;; Note: Error check prohibited by ANSI spec removed.
-  (when  (eq generic-function (method-generic-function method))
-    (let* ((name         (generic-function-name generic-function))
-	   (specializers (method-specializers method))
-	   (methods      (generic-function-methods generic-function))
-	   (new-methods  (remove method methods)))	      
-      (setf (method-generic-function method) nil)
-      (setf (generic-function-methods generic-function) new-methods)
-      (dolist (specializer (method-specializers method))
-	(remove-direct-method specializer method))
-      (set-arg-info generic-function)
-      (when (member name
-		    '(make-instance
-		      default-initargs
-		      allocate-instance shared-initialize initialize-instance))
-	(update-make-instance-function-table (type-class (car specializers))))
-      (update-dfun generic-function)
-      generic-function)))
-
 
-(defun compute-applicable-methods-function (generic-function arguments)
+(defun compute-applicable-methods-function (gf arguments)
   (values (compute-applicable-methods-using-types 
-	   generic-function
-	   (types-from-arguments generic-function arguments 'eql))))
+	   gf
+	   (types-from-arguments gf arguments 'eql))))
   
-(defmethod compute-applicable-methods 
-    ((generic-function generic-function) arguments)
+(defmethod compute-applicable-methods ((gf generic-function) arguments)
   (values (compute-applicable-methods-using-types 
-	   generic-function
-	   (types-from-arguments generic-function arguments 'eql))))
+	   gf
+	   (types-from-arguments gf arguments 'eql))))
 
-(defmethod compute-applicable-methods-using-classes 
-    ((generic-function generic-function) classes)
+(defmethod compute-applicable-methods-using-classes ((gf generic-function)
+						     classes)
   (compute-applicable-methods-using-types 
-   generic-function
-   (types-from-arguments generic-function classes 'class-eq)))
+   gf
+   (types-from-arguments gf classes 'class-eq)))
 
 (defun proclaim-incompatible-superclasses (classes)
-  (setq classes (mapcar (lambda (class)
-			  (if (symbolp class)
-			      (find-class class)
-			      class))
-			classes))
-  (dolist (class classes)
-    (dolist (other-class classes)
-      (unless (eq class other-class)
-	(pushnew other-class (class-incompatible-superclass-list class))))))
+  (let ((classes (mapcar (lambda (class)
+			   (if (symbolp class)
+			       (find-class class)
+			       class))
+			 classes)))
+    (dolist (class classes)
+      (dolist (other-class classes)
+	(unless (eq class other-class)
+	  (pushnew other-class (class-incompatible-superclass-list class)))))))
 
 (defun superclasses-compatible-p (class1 class2)
-  (let ((cpl1 (class-precedence-list class1))
-	(cpl2 (class-precedence-list class2)))
+  (let ((cpl1 (cpl-or-nil class1))
+	(cpl2 (cpl-or-nil class2)))
     (dolist (sc1 cpl1 t)
       (dolist (ic (class-incompatible-superclass-list sc1))
 	(when (memq ic cpl2)
@@ -697,20 +613,21 @@
 		 t)))
 	(lambda (&rest args) (funcall mf args nil))))
 
-(defun types-from-arguments (generic-function arguments &optional type-modifier)
+(defun types-from-arguments (gf arguments &optional type-modifier)
   (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
-      (get-generic-function-info generic-function)
+      (get-generic-function-info gf)
     (declare (ignore applyp metatypes nkeys))
-    (let ((types-rev nil))
-      (dotimes (i nreq)
-	i
-	(unless arguments
-	  (error "The function ~S requires at least ~D arguments"
-		 (generic-function-name generic-function)
-		 nreq))
-	(let ((arg (pop arguments)))
-	  (push (if type-modifier `(,type-modifier ,arg) arg) types-rev)))
-      (values (nreverse types-rev) arg-info))))
+    (loop repeat nreq
+	  if arguments
+	    if type-modifier
+	      collect `(,type-modifier ,(pop arguments)) into types
+	    else
+	      collect (pop arguments) into types
+	  else do
+	    (error "~@<Generic function ~S requires at least ~D arguments.~@:>"
+		   (generic-function-name gf) nreq)
+	  finally
+	    (return (values types arg-info)))))
 
 (defun get-wrappers-from-classes (nkeys wrappers classes metatypes)
   (let* ((w wrappers) (w-tail w) (mt-tail metatypes))
@@ -729,9 +646,11 @@
   (let ((types (mapcar #'class-eq-type classes)))
     (multiple-value-bind (methods all-applicable-and-sorted-p)
 	(compute-applicable-methods-using-types gf types)
-      (function-funcall (get-secondary-dispatch-function1 
-			 gf methods types nil t all-applicable-and-sorted-p)
-			nil (mapcar #'class-wrapper classes)))))
+      (let ((generator (get-secondary-dispatch-function1 
+			gf methods types nil t
+			all-applicable-and-sorted-p)))
+	(make-callable gf methods generator nil
+		       (mapcar #'class-wrapper classes))))))
 
 (defun value-for-caching (gf classes)
   (let ((methods (compute-applicable-methods-using-types 
@@ -740,33 +659,27 @@
 			     (method-function (car methods)))
 			 :constant-value)))
 
-(defun default-secondary-dispatch-function (generic-function)
+(defun default-secondary-dispatch-function (gf)
   (lambda (&rest args)
-    (let ((methods (compute-applicable-methods generic-function args)))
+    (let ((methods (compute-applicable-methods gf args)))
       (if methods
-	  (let ((emf (get-effective-method-function generic-function methods)))
+	  (let ((emf (get-effective-method-function gf methods)))
 	    (invoke-emf emf args))
-	  (apply #'no-applicable-method generic-function args)))))
-
-(defun list-eq (x y)
-  (loop (when (atom x) (return (eq x y)))
-	(when (atom y) (return nil))
-	(unless (eq (car x) (car y)) (return nil))
-	(setq x (cdr x)  y (cdr y))))
+	  (apply #'no-applicable-method gf args)))))
 
 (defvar *std-cam-methods* nil)
 
-(defun compute-applicable-methods-emf (generic-function)  
+(defun compute-applicable-methods-emf (gf)  
   (if (eq *boot-state* 'complete)
       (let* ((cam (gdefinition 'compute-applicable-methods))
 	     (cam-methods (compute-applicable-methods-using-types
-			   cam (list `(eql ,generic-function) t))))
+			   cam (list `(eql ,gf) t))))
+	(unless *std-cam-methods*
+	  (setq *std-cam-methods*
+		(compute-applicable-methods-using-types
+		 cam (list `(eql ,cam) t))))
 	(values (get-effective-method-function cam cam-methods)
-		(list-eq cam-methods 
-			 (or *std-cam-methods*
-			     (setq *std-cam-methods*
-				   (compute-applicable-methods-using-types
-				    cam (list `(eql ,cam) t)))))))
+		(every #'eq cam-methods *std-cam-methods*)))
       (values #'compute-applicable-methods-function t)))
 
 (defun compute-applicable-methods-emf-std-p (gf)
@@ -791,6 +704,7 @@
 	  (map-all-generic-functions 
 	   (lambda (gf)
 	     (when (or (member gf gfs-to-do)
+		       ;; FIXME: Always returning NIL cannot be right, or?
 		       (dolist (class gf-classes-to-do nil)
 			 (member class (class-precedence-list (class-of gf)))))
 	       (update-c-a-m-gf-info gf)))))
@@ -844,7 +758,7 @@
 	   gf methods types
 	   `((,(car (or (member std-method methods)
 			(member str-method methods)
-			(error "error in get-accessor-method-function")))
+			(internal-error "In get-accessor-method-function.")))
 	      ,(get-optimized-std-slot-value-using-class-method-function
 		class slotd type)))
 	   (unless (and (eq type 'writer)
@@ -965,8 +879,8 @@
 		  (mapcar (lambda (c) (cons c list)) car-all-classes))
 		all-class-lists))))
 
-(defun make-emf-cache (generic-function valuep cache classes-list new-class)
-  (let* ((arg-info (gf-arg-info generic-function))
+(defun make-emf-cache (gf valuep cache classes-list new-class)
+  (let* ((arg-info (gf-arg-info gf))
 	 (nkeys (arg-info-nkeys arg-info))
 	 (metatypes (arg-info-metatypes arg-info))
 	 (wrappers (unless (eq nkeys 1) (make-list nkeys)))
@@ -979,13 +893,13 @@
 		 (when (and wrappers
 			    (eq default (probe-cache cache wrappers default)))
 		   (let ((value (cond ((eq valuep t)
-				       (sdfun-for-caching generic-function classes))
+				       (sdfun-for-caching gf classes))
 				      ((eq valuep :constant-value)
-				       (value-for-caching generic-function classes)))))
+				       (value-for-caching gf classes)))))
 		     (setq cache (fill-cache cache wrappers value))))))))
       (if classes-list
 	  (mapc #'add-class-list classes-list)
-	  (dolist (method (generic-function-methods generic-function))
+	  (dolist (method (generic-function-methods gf))
 	    (mapc #'add-class-list
 		  (mec-all-class-lists (method-specializers method) precompute-p))))
       cache)))
@@ -995,7 +909,7 @@
   (cond ((eq class *the-class-t*)
 	 t)
 	((eq class *the-class-slot-object*)
-	 `(not (lisp:typep (lisp:class-of ,arg) 'lisp:built-in-class)))
+	 `(not (lisp:typep (kernel::class-of ,arg) 'kernel::built-in-class)))
 	((eq class *the-class-std-object*)
 	 `(or (std-instance-p ,arg) (fsc-instance-p ,arg)))
 	((eq class *the-class-standard-object*)
@@ -1036,11 +950,11 @@
 
 (defmacro mcase (arg &rest clauses) `(scase ,arg ,@clauses))
 
-(defun generate-discrimination-net (generic-function methods types sorted-p)
-  (let* ((arg-info (gf-arg-info generic-function))
+(defun generate-discrimination-net (gf methods types sorted-p)
+  (let* ((arg-info (gf-arg-info gf))
 	 (precedence (arg-info-precedence arg-info)))
     (generate-discrimination-net-internal 
-     generic-function methods types
+     gf methods types
      (lambda (methods known-types)
        (if (or sorted-p
 	       (block one-order-p
@@ -1094,7 +1008,8 @@
         (class-eq (cadr type))
         (class (cadr type)))))
 
-(defun precompute-effective-methods (gf caching-p &optional classes-list-p)
+#+nil
+(defun precompute-effective-methods (gf caching-p)
   (let* ((arg-info (gf-arg-info gf))
 	 (methods (generic-function-methods gf))
 	 (precedence (arg-info-precedence arg-info))
@@ -1104,8 +1019,6 @@
      gf methods nil
      (lambda (methods known-types)
        (when methods
-	 (when classes-list-p
-	   (push (mapcar #'class-from-type known-types) classes-list))
 	 (let ((no-eql-specls-p (not (methods-contain-eql-specializer-p methods))))
 	   (map-all-orders 
 	    methods precedence
@@ -1140,27 +1053,44 @@
 	    new-type
 	    `(and ,new-type ,@so-far)))))
 
+;;;
+;;; Given a set of methods METHDOS of generic function GF and a list
+;;; of the types of actual arguments TYPES, call METHODS-FUNCTION with
+;;; two arguments: a list of possibly applicable methods and a list of
+;;; type expressions that can be used on actual arguments for testing
+;;; if a method is applicable.
+;;;
+;;; TEST-FUNCTION is a function to determine if a method is possibly
+;;; applicable, if SPECIALIZER-APPLICABLE-USING-TYPE-P can't tell.
+;;;
+;;; TYPE-FUNCTION is a function to transform a method specializer's
+;;; type.
+;;;
+;;; Or something.
+;;;
+;;; Rewrite this to a control flow that one can follow!
+;;;
 (defun generate-discrimination-net-internal 
     (gf methods types methods-function test-function type-function)
   (let* ((arg-info (gf-arg-info gf))
 	 (precedence (arg-info-precedence arg-info))
 	 (nreq (arg-info-number-required arg-info))
 	 (metatypes (arg-info-metatypes arg-info)))
-    (labels ((do-column (p-tail contenders known-types)
-	       (if p-tail
-		   (let* ((position (car p-tail))
+    (labels ((do-column (precedence contenders known-types)
+	       (if precedence
+		   (let* ((position (car precedence))
 			  (known-type (or (nth position types) t)))
 		     (if (eq (nth position metatypes) t)
-			 (do-column (cdr p-tail) contenders
+			 (do-column (cdr precedence) contenders
 				    (cons (cons position known-type) known-types))
-			 (do-methods p-tail contenders 
+			 (do-methods precedence contenders 
 				     known-type () known-types)))
 		   (funcall methods-function contenders 
 			    (let ((k-t (make-list nreq)))
 			      (dolist (index+type known-types)
 				(setf (nth (car index+type) k-t) (cdr index+type)))
 			      k-t))))
-	     (do-methods (p-tail contenders known-type winners known-types)
+	     (do-methods (precedence contenders known-type winners known-types)
 	       ;;
                ;; <contenders>
 	       ;;   is a (sorted) list of methods that must be discriminated
@@ -1171,9 +1101,9 @@
 	       ;;   after the discrimination has been made.
 	       ;;   
                (if (null contenders)
-		   (do-column (cdr p-tail) winners
-			      (cons (cons (car p-tail) known-type) known-types))
-                   (let* ((position (car p-tail))
+		   (do-column (cdr precedence) winners
+			      (cons (cons (car precedence) known-type) known-types))
+                   (let* ((position (car precedence))
 			  (method (car contenders))
 			  (specl (nth position (method-specializers method)))
                           (type (funcall type-function (type-from-specializer specl))))
@@ -1183,7 +1113,7 @@
 				(if truth-value app-p (not maybe-app-p)))
 			      (do-if (truth &optional implied)
 				(let ((ntype (if truth type `(not ,type))))
-				  (do-methods p-tail
+				  (do-methods precedence
 				    (cdr contenders)
 				    (if implied
 					known-type
@@ -1198,36 +1128,40 @@
 					   (do-if t) (do-if nil))))))))))
       (do-column precedence methods ()))))
 
-(defun compute-secondary-dispatch-function (generic-function net &optional 
-					    method-alist wrappers)
-  (function-funcall (compute-secondary-dispatch-function1 generic-function net)
-		    method-alist wrappers))
+;;;
+;;; These constants are the maximum number of case clauses for which
+;;; to use the :ASSOC implementation of MCASE.  For larger numbers, a
+;;; :HASH-TABLE is used.
+;;;
+(defconstant +eq-case-table-limit+ 15)
+(defconstant +case-table-limit+ 10)
 
-(defvar *eq-case-table-limit* 15)
-(defvar *case-table-limit* 10)
-
+;;;
+;;; Value is a list (EQ-P IMPL) for use as the last two parameters to
+;;; MLOOKUP.  EQ-P true means all case clauses in CASE-LIST can be
+;;; implemented using EQ.  IMPL is one of the symbols :ASSOC, :SIMPLE,
+;;; :HASH-TABLE for the mcase implementation to use.
+;;;
 (defun compute-mcase-parameters (case-list)
   (unless (eq t (caar (last case-list)))
-    (error "The key for the last case arg to mcase was not T"))
-  (let* ((eq-p (dolist (case case-list t)
-		 (unless (or (eq (car case) t)
-			     (symbolp (caar case)))
-		   (return nil))))
+    (internal-error "The key for the last case arg to mcase was not T."))
+  (let* ((eq-p (loop for case in case-list
+		     always (or (eq (car case) t)
+				(symbolp (caar case)))))
+	 (limit (if eq-p +eq-case-table-limit+ +case-table-limit+))
 	 (len (1- (length case-list)))
-	 (type (cond ((= len 1)
-		      :simple)
-		     ((<= len
-			  (if eq-p
-			      *eq-case-table-limit*
-			      *case-table-limit*))
-		      :assoc)
-		     (t
-		      :hash-table))))
+	 (type (cond ((= len 1)      :simple)
+		     ((<= len limit) :assoc)
+		     (t              :hash-table))))
     (list eq-p type)))
 
-(defmacro mlookup (key info default &optional eq-p type)
-  (unless (or (eq eq-p t) (null eq-p))
-    (error "Invalid eq-p argument"))
+;;;
+;;; Value is a form for looking up KEY in INFO, returning DEFAULT if
+;;; not found.  EQ-P true means compare keys with EQ.  TYPE is a
+;;; symbol describing the type of lookup to use, one of :SIMPLE,
+;;; :ASSOC, or :HASH-TABLE.
+;;;
+(defmacro mlookup (key info default eq-p type)
   (ecase type
     (:simple
      `(if (,(if eq-p 'eq 'eql) ,key (car ,info))
@@ -1240,6 +1174,10 @@
     (:hash-table
      `(gethash ,key ,info ,default))))
 
+;;;
+;;; The following three functions are used for the GET-FUNCTION
+;;; mechanism, when used on lambdas containing discriminating nets.
+;;;
 (defun net-test-converter (form)
   (if (atom form)
       (default-test-converter form)
@@ -1260,8 +1198,7 @@
       (case (car form)
 	((methods unordered-methods)
 	 (let ((gensym (gensym)))
-	   (values gensym
-		   (list gensym))))
+	   (values gensym (list gensym))))
 	(mcase
 	 (let ((mp (compute-mcase-parameters (cddr form)))
 	       (gensym (gensym)) (default (gensym)))
@@ -1270,123 +1207,116 @@
 	(t
 	 (default-code-converter form)))))
 
-(defun net-constant-converter (form generic-function)
-  (or (let ((c (methods-converter form generic-function)))
-	(when c (list c)))
-      (if (atom form)
-	  (default-constant-converter form)
-	  (case (car form)
-	    (mcase
-	     (let* ((mp (compute-mcase-parameters (cddr form)))
-		    (list (mapcar (lambda (clause)
-				    (let ((key (car clause))
-					  (meth (cadr clause)))
-				      (cons (if (consp key) (car key) key)
-					    (methods-converter
-					     meth generic-function))))
-				  (cddr form)))
-		    (default (car (last list))))
-	       (list (list* :mcase mp (nbutlast list))
-		     (cdr default))))
-	    (t
-	     (default-constant-converter form))))))
+(defun net-constant-converter (form gf)
+  (flet ((methods-converter (form gf)
+	   (case (car-safe form)
+	     (methods
+	      (cons '.methods.
+		    (get-effective-method-function1 gf (cadr form))))
+	     (unordered-methods
+	      (default-secondary-dispatch-function gf)))))
+    (or (let ((c (methods-converter form gf)))
+	  (when c (list c)))
+	(if (atom form)
+	    (default-constant-converter form)
+	    (case (car form)
+	      (mcase
+	       (let* ((mp (compute-mcase-parameters (cddr form)))
+		      (list (mapcar (lambda (clause)
+				      (let ((key (car clause))
+					    (meth (cadr clause)))
+					(cons (if (consp key) (car key) key)
+					      (methods-converter
+					       meth gf))))
+				    (cddr form)))
+		      (default (car (last list))))
+		 (list (list* :mcase mp (nbutlast list))
+		       (cdr default))))
+	      (t
+	       (default-constant-converter form)))))))
 
-(defun methods-converter (form generic-function)
-  (cond ((and (consp form) (eq (car form) 'methods))
-	 (cons '.methods.
-	       (get-effective-method-function1 generic-function (cadr form))))
-	((and (consp form) (eq (car form) 'unordered-methods))
-	 (default-secondary-dispatch-function generic-function))))
+;;;
+;;;
+;;;
+(defun compute-secondary-dispatch-function (gf net &optional 
+					    method-alist wrappers)
+  (function-funcall (compute-secondary-dispatch-function1 gf net)
+		    method-alist wrappers))
+
+(defun compute-secondary-dispatch-function1 (gf net &optional function-p)
+  (when (and (eq (car net) 'methods) (not function-p))
+    (return-from compute-secondary-dispatch-function1
+      (get-effective-method-function1 gf (cadr net))))
+  ;;
+  (let* ((name (generic-function-name gf))
+	 (arg-info (gf-arg-info gf))
+	 (metatypes (arg-info-metatypes arg-info))
+	 (applyp (arg-info-applyp arg-info))
+	 (fmc-arg-info (cons (length metatypes) applyp))
+	 (arglist (if function-p
+		      (make-dfun-lambda-list metatypes applyp)
+		      (make-fast-method-call-lambda-list metatypes applyp))))
+    (multiple-value-bind (cfunction constants)
+	(get-function1 `(,(if function-p
+			      'kernel:instance-lambda
+			      'lambda)			   
+			  ,arglist
+			  ,@(unless function-p
+				    `((declare (ignore .pv-cell.
+						       .next-method-call.))))
+			  (locally (declare #.*optimize-speed*)
+			    (let ((emf ,net))
+			      ,(make-emf-call metatypes applyp 'emf))))
+		       #'net-test-converter
+		       #'net-code-converter
+		       (lambda (form)
+			 (net-constant-converter form gf)))
+      (lambda (method-alist wrappers)
+	(let* ((alist (list nil))
+	       (alist-tail alist))
+	  (dolist (constant constants)
+	    (let* ((a (or (dolist (a alist nil)
+			    (when (eq (car a) constant)
+			      (return a)))
+			  (cons constant
+				(or (convert-table
+				     constant method-alist wrappers)
+				    (convert-methods
+				     constant method-alist wrappers)))))
+		   (new (list a)))
+	      (setf (cdr alist-tail) new)
+	      (setf alist-tail new)))
+	  (let ((function (apply cfunction (mapcar #'cdr (cdr alist)))))
+	    (if function-p
+		function
+		(make-fast-method-call
+		 :function (set-function-name function
+					      `(discriminator ,name))
+		 :arg-info fmc-arg-info))))))))
 
 (defun convert-methods (constant method-alist wrappers)
-  (if (and (consp constant)
-	   (eq (car constant) '.methods.))
+  (if (eq (car-safe constant) '.methods.)
       (funcall (cdr constant) method-alist wrappers)
       constant))
 
 (defun convert-table (constant method-alist wrappers)
-  (cond ((and (consp constant)
-	      (eq (car constant) :mcase))
-	 (let ((alist (mapcar (lambda (k+m)
-				(cons (car k+m)
-				      (convert-methods (cdr k+m)
-						       method-alist wrappers)))
-			      (cddr constant)))
-	       (mp (cadr constant)))
-	   (ecase (cadr mp)
-	     (:simple
-	      (car alist))
-	     (:assoc
-	      alist)
-	     (:hash-table
-	      (let ((table (make-hash-table :test (if (car mp) 'eq 'eql))))
-		(dolist (k+m alist)
-		  (setf (gethash (car k+m) table) (cdr k+m)))
-		table)))))))
-
-(defun compute-secondary-dispatch-function1 (generic-function net
-					     &optional function-p)
-  (cond
-   ((and (eq (car net) 'methods) (not function-p))
-    (get-effective-method-function1 generic-function (cadr net)))
-   (t
-    (let* ((name (generic-function-name generic-function))
-	   (arg-info (gf-arg-info generic-function))
-	   (metatypes (arg-info-metatypes arg-info))
-	   (applyp (arg-info-applyp arg-info))
-	   (fmc-arg-info (cons (length metatypes) applyp))
-	   (arglist (if function-p
-			(make-dfun-lambda-list metatypes applyp)
-			(make-fast-method-call-lambda-list metatypes applyp))))
-      (multiple-value-bind
-	  (cfunction constants)
-	  (get-function1 `(,(if function-p
-				'kernel:instance-lambda
-				'lambda)			   
-			   ,arglist
-				 ,@(unless function-p
-				     `((declare (ignore .pv-cell.
-							.next-method-call.))))
-				 (locally (declare #.*optimize-speed*)
-				   (let ((emf ,net))
-				     ,(make-emf-call metatypes applyp 'emf))))
-			 #'net-test-converter
-			 #'net-code-converter
-			 (lambda (form)
-			   (net-constant-converter form generic-function)))
-	(lambda (method-alist wrappers)
-	  (let* ((alist (list nil))
-		 (alist-tail alist))
-	    (dolist (constant constants)
-	      (let* ((a (or (dolist (a alist nil)
-			      (when (eq (car a) constant)
-				(return a)))
-			    (cons constant
-				  (or (convert-table
-				       constant method-alist wrappers)
-				      (convert-methods
-				       constant method-alist wrappers)))))
-		     (new (list a)))
-		(setf (cdr alist-tail) new)
-		(setf alist-tail new)))
-	    (let ((function (apply cfunction (mapcar #'cdr (cdr alist)))))
-	      (if function-p
-		  function
-		  (make-fast-method-call
-		   :function (set-function-name function `(sdfun-method ,name))
-		   :arg-info fmc-arg-info))))))))))
-
-(defvar *show-make-unordered-methods-emf-calls* nil)
-
-(defun make-unordered-methods-emf (generic-function methods)
-  (when *show-make-unordered-methods-emf-calls*
-    (format t "~&make-unordered-methods-emf ~s~%" 
-	    (generic-function-name generic-function)))
-  (lambda (&rest args)
-    (let* ((types (types-from-arguments generic-function args 'eql))
-	   (smethods (sort-applicable-methods generic-function methods types))
-	   (emf (get-effective-method-function generic-function smethods)))
-      (invoke-emf emf args))))
+  (when (eq (car-safe constant) :mcase)
+    (let ((alist (mapcar (lambda (k+m)
+			   (cons (car k+m)
+				 (convert-methods (cdr k+m)
+						  method-alist wrappers)))
+			 (cddr constant)))
+	  (mp (cadr constant)))
+      (ecase (cadr mp)
+	(:simple
+	 (car alist))
+	(:assoc
+	 alist)
+	(:hash-table
+	 (let ((table (make-hash-table :test (if (car mp) 'eq 'eql))))
+	   (dolist (k+m alist)
+	     (setf (gethash (car k+m) table) (cdr k+m)))
+	   table))))))
 
 
 ;;;
@@ -1534,15 +1464,6 @@
     (declare (ignore nreq nopt keysp restp))
     (values keywords allow-other-keys-p)))
 
-(defun method-ll->generic-function-ll (ll)
-  (multiple-value-bind (nreq nopt keysp restp allow-other-keys-p keywords keyword-parameters)
-      (analyze-lambda-list ll)
-    (declare (ignore nreq nopt keysp restp allow-other-keys-p keywords))
-    (remove-if (lambda (s)
-		 (or (memq s keyword-parameters)
-		     (eq s '&allow-other-keys)))
-	       ll)))
-
 
 ;;;
 ;;; This is based on the rules of method lambda list congruency defined in
@@ -1551,8 +1472,8 @@
 ;;; into account at all yet.
 ;;; 
 (defmethod generic-function-pretty-arglist
-	   ((generic-function standard-generic-function))
-  (let ((methods (generic-function-methods generic-function))
+	   ((gf standard-generic-function))
+  (let ((methods (generic-function-methods gf))
 	(arglist ()))      
     (when methods
       (multiple-value-bind (required optional rest key allow-other-keys)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.23 2002/08/27 19:01:40 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.24 2003/03/22 16:15:15 gerd Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -119,13 +119,13 @@
 
 (defun unbound-lexical-function (&rest args)
   (declare (ignore args))
-  (error "The evaluator was called to evaluate a form in a macroexpansion~%~
-          environment constructed by the PCL portable code walker.  These~%~
-          environments are only useful for macroexpansion, they cannot be~%~
-          used for evaluation.~%~
-          This error should never occur when using PCL.~%~
-          This most likely source of this error is a program which tries to~%~
-          to use the PCL portable code walker to build its own evaluator."))
+  (error "~@<The evaluator was called to evaluate a form in a macroexpansion ~
+          environment constructed by the PCL portable code walker.  These ~
+          environments are only useful for macroexpansion, they cannot be ~
+          used for evaluation.  ~
+          This error should never occur when using PCL.  ~
+          This most likely source of this error is a program which tries to ~
+          to use the PCL portable code walker to build its own evaluator.~@:>"))
 
 
 
@@ -174,10 +174,8 @@
   (let* ((env (or env (c::make-null-environment)))
 	 (tem (first macros))
 	 ;; A symbol-macro spec suitable for macroexpand-1
-	 (variables 
-	  (and (eql (first tem) *key-to-walker-environment*)
-	       (loop for item in (fourth (cadr tem))
-		 collect (substitute 'c::macro :macro item)))))
+	 (variables (when (eql (first tem) *key-to-walker-environment*)
+		      (copy-list (fourth (cadr tem))))))
     (c::make-lexenv 
       :default env
       :variables variables
@@ -190,12 +188,26 @@
 			       (coerce (cadr m) 'function)))
 		      macros)))))
 
+#-gerd-flet-names
 (defun environment-function (env fn)
   (when env
     (let ((entry (assoc fn (c::lexenv-functions env) :test #'equal)))
       (and entry
 	   (c::functional-p (cdr entry))
 	   (cdr entry)))))
+
+#+gerd-flet-names
+(defun environment-function (env fn)
+  (when env
+    (flet ((test (x y)
+	     (or (equal x y)
+		 (and (consp y)
+		      (member (car y) '(flet labels))
+		      (equal x (cadr y))))))
+      (let ((entry (assoc fn (c::lexenv-functions env) :test #'test)))
+	(and entry
+	     (c::functional-p (cdr entry))
+	     (cdr entry))))))
 
 (defun environment-macro (env macro)
   (when env
@@ -220,7 +232,7 @@
 	 ((macrolet)
 	  (dolist (mac (cadr ,macrolet/flet/labels-form))
 	    (push (list (car mac)
-			(convert-macro-to-lambda (cadr mac)
+			(convert-macro-to-lambda ,old-env (cadr mac)
 						 (cddr mac)
 						 (string (car mac))))
 		  ,macros))))
@@ -228,9 +240,13 @@
 	      (,new-env ,old-env :functions ,functions :macros ,macros)
 	 ,@body))))
 
-(defun convert-macro-to-lambda (llist body &optional (name "Dummy Macro"))
+(defun eval-in-environment (form env)
+  (eval:internal-eval (macroexpand form env) t env))
+
+(defun convert-macro-to-lambda (env llist body &optional (name "dummy"))
   (let ((gensym (make-symbol name)))
-    (eval `(defmacro ,gensym ,llist ,@body))
+    (eval-in-environment `(defmacro ,gensym ,llist ,@body)
+			 (c::make-macrolet-environment env))
     (macro-function gensym)))
 
 
@@ -294,22 +310,22 @@
 
 (defun variable-symbol-macro-p (var env)
   (let ((entry (member var (env-lexical-variables env) :key #'car)))
-    (when (eq (cadar entry) :macro)
+    (when (eq (cadar entry) 'c::macro)
       entry)))
 
 
 (defvar *VARIABLE-DECLARATIONS* '(special))
 
-(defun VARIABLE-DECLARATION (declaration var env)
+(defun variable-declaration (declaration var env)
   (if (not (member declaration *variable-declarations*))
-      (error "~S is not a recognized variable declaration." declaration)
+      (error "~@<~S is not a recognized variable declaration.~@:>" declaration)
       (let ((id (or (variable-lexical-p var env) var)))
 	(dolist (decl (env-declarations env))
 	  (when (and (eq (car decl) declaration)
 		     (eq (cadr decl) id))
 	    (return decl))))))
 
-(defun VARIABLE-SPECIAL-P (var env)
+(defun variable-special-p (var env)
   (or (not (null (variable-declaration 'special var env)))
       (variable-globally-special-p var)))
 
@@ -404,7 +420,7 @@
 	((and (listp x) (eq (car x) 'lambda))
 	 '(lambda repeat (eval)))
 	(t
-	 (error "Can't get template for ~S" x))))
+	 (error "~@<Can't get template for ~S.~@:>" x))))
 
 (defun get-implementation-dependent-walker-template (x)
   (declare (ignore x))
@@ -603,9 +619,9 @@
 			 (not (fboundp fn))
 			 (special-operator-p fn))
 		    (error
-		     "~S is a special form, not defined in the CommonLisp.~%~
-		      manual This code walker doesn't know how to walk it.~%~
-		      Define a template for this special form and try again."
+		     "~@<~S is a special form, not defined in the CommonLisp ~
+		      manual.  This code walker doesn't know how to walk it.  ~
+		      Define a template for this special form and try again.~@:>"
 		     fn))
 		   (t
 		    ;; Otherwise, walk the form as if its just a standard 
@@ -623,11 +639,7 @@
         (SET
           (walk-form-internal form :SET env))
         ((LAMBDA CALL)
-	 (cond ((or (symbolp form)
-		    (and (listp form)
-			 (= (length form) 2)
-			 (eq (car form) 'setf)))
-		form)
+	 (cond ((ext:valid-function-name-p form) form)
 	       (t (walk-form-internal form context env)))))
       (case (car template)
         (REPEAT
@@ -679,8 +691,8 @@
         ((eq form stop-form)
          (if (null repeat-template)
              (walk-template stop-form (cdr template) context env)       
-             (error "While handling repeat:
-                     ~%~Ran into stop while still in repeat template.")))
+             (error "~@<While handling repeat: ~
+                     Ran into stop while still in repeat template.~@:>")))
         ((null repeat-template)
          (walk-template-handle-repeat-1
 	   form template (car template) stop-form context env))
@@ -777,7 +789,8 @@
 
 (defun walk-unexpected-declare (form context env)
   (declare (ignore context env))
-  (warn "Encountered declare ~S in a place where a declare was not expected."
+  (warn "~@<Encountered declare ~S in a place where a ~
+         declare was not expected.~@:>"
 	form)
   form)
 
@@ -811,7 +824,7 @@
                     (not (symbolp (caddr arg)))
                     (note-lexical-binding (caddr arg) env))))
           (t
-	   (error "Can't understand something in the arglist ~S" arglist))))
+	   (error "~@<Can't understand something in the arglist ~S.~@:>" arglist))))
 
 (defun walk-let (form context env)
   (walk-let/let* form context env nil))
@@ -1057,7 +1070,7 @@
 		 :lexical-variables
 		 (append (mapcar (lambda (binding)
 				   `(,(car binding)
-				     :macro . ,(cadr binding)))
+				     c::macro . ,(cadr binding)))
 				 bindings)
 			 (env-lexical-variables old-env)))
       (relist* form 'symbol-macrolet bindings
@@ -1152,15 +1165,12 @@
 	(arm2 
 	  (if (cddddr form)
 	      (progn
-		(warn "In the form:~%~S~%~
-                       IF only accepts three arguments, you are using ~D.~%~
+		(warn "~@<In the form ~S: ~
+                       IF only accepts three arguments, you are using ~D. ~
                        It is true that some Common Lisps support this, but ~
-                       it is not~%~
-                       truly legal Common Lisp.  For now, this code ~
-                       walker is interpreting ~%~
-                       the extra arguments as extra else clauses. ~
-                       Even if this is what~%~
-                       you intended, you should fix your source code."
+                       it is not truly legal Common Lisp.  For now, this code ~
+                       walker is interpreting the extra arguments as extra else clauses. ~
+                       Even if this is what you intended, you should fix your source code.~@:>"
 		      form
 		      (length (cdr form)))
 		(cons 'progn (cdddr form)))
@@ -1423,7 +1433,7 @@
 	   (member 'a the-lexical-variables)
 	   (member 'b the-lexical-variables)
 	   (member 'x the-lexical-variables))
-      (error "Walker didn't do lexical variables of a closure properly.")))
+      (error "~@<Walker didn't do lexical variables of a closure properly.~@:>")))
     
 |#
 

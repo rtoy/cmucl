@@ -2,9 +2,9 @@
 ;;; **********************************************************************
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the public domain, and is provided 'as is'.
-;;;
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.10 2003/02/06 15:47:35 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.11 2003/03/22 16:15:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,26 +63,26 @@
   (setf (lisp::package-doc-string x) new-value))
 
 ;;; Types, classes, and structure names.
-(defmethod documentation ((x lisp:structure-class) (doc-type (eql 't)))
-  (values (ext:info type documentation (lisp:class-name x))))
+(defmethod documentation ((x kernel::structure-class) (doc-type (eql 't)))
+  (values (ext:info type documentation (kernel:%class-name x))))
 
 (defmethod documentation ((x structure-class) (doc-type (eql 't)))
   (values (ext:info type documentation (class-name x))))
 
-(defmethod documentation ((x lisp:standard-class) (doc-type (eql 't)))
-  (or (values (ext:info type documentation (lisp:class-name x)))
-      (let ((pcl-class (kernel:class-pcl-class x)))
+(defmethod documentation ((x kernel::standard-class) (doc-type (eql 't)))
+  (or (values (ext:info type documentation (kernel:%class-name x)))
+      (let ((pcl-class (kernel:%class-pcl-class x)))
 	(and pcl-class (plist-value pcl-class 'documentation)))))
 
-(defmethod documentation ((x lisp:structure-class) (doc-type (eql 'type)))
-  (values (ext:info type documentation (lisp:class-name x))))
+(defmethod documentation ((x kernel::structure-class) (doc-type (eql 'type)))
+  (values (ext:info type documentation (kernel:%class-name x))))
 
 (defmethod documentation ((x structure-class) (doc-type (eql 'type)))
   (values (ext:info type documentation (class-name x))))
 
-(defmethod documentation ((x lisp:standard-class) (doc-type (eql 'type)))
-  (or (values (ext:info type documentation (lisp:class-name x)))
-      (let ((pcl-class (kernel:class-pcl-class x)))
+(defmethod documentation ((x kernel::standard-class) (doc-type (eql 'type)))
+  (or (values (ext:info type documentation (kernel:%class-name x)))
+      (let ((pcl-class (kernel:%class-pcl-class x)))
 	(and pcl-class (plist-value pcl-class 'documentation)))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'type)))
@@ -95,20 +95,20 @@
   (when (eq (ext:info type kind x) :instance)
     (values (ext:info type documentation x))))
 
-(defmethod (setf documentation) (new-value (x lisp:structure-class) (doc-type (eql 't)))
-  (setf (ext:info type documentation (lisp:class-name x)) new-value))
+(defmethod (setf documentation) (new-value (x kernel::structure-class) (doc-type (eql 't)))
+  (setf (ext:info type documentation (kernel:%class-name x)) new-value))
 
 (defmethod (setf documentation) (new-value (x structure-class) (doc-type (eql 't)))
   (setf (ext:info type documentation (class-name x)) new-value))
 
-(defmethod (setf documentation) (new-value (x lisp:structure-class) (doc-type (eql 'type)))
-  (setf (ext:info type documentation (lisp:class-name x)) new-value))
+(defmethod (setf documentation) (new-value (x kernel::structure-class) (doc-type (eql 'type)))
+  (setf (ext:info type documentation (kernel:%class-name x)) new-value))
 
 (defmethod (setf documentation) (new-value (x structure-class) (doc-type (eql 'type)))
   (setf (ext:info type documentation (class-name x)) new-value))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'type)))
-  (if (structure-type-p x)	; Catch structures first.
+  (if (or (structure-type-p x) (condition-type-p x))
       (setf (ext:info type documentation x) new-value)
       (let ((class (find-class x nil)))
 	(if class
@@ -117,7 +117,7 @@
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
   (unless (eq (ext:info type kind x) :instance)
-    (error "~S is not the name of a structure type." x))
+    (error "~@<~S is not the name of a structure type.~@:>" x))
   (setf (ext:info type documentation x) new-value))
 
 ;;; Variables.

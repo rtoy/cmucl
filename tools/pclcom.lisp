@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.23 2002/12/03 01:42:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.24 2003/03/22 16:15:14 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
   ;;
   ;; Undefine all generic functions exported from Lisp so that bootstrapping
   ;; doesn't get confused.
-  (let ((class (find-class 'generic-function nil)))
+  (let ((class (kernel::find-class 'generic-function nil)))
     (when class
       (do-external-symbols (sym "LISP")
 	(when (and (fboundp sym)
@@ -36,12 +36,17 @@
 		     (typep (fdefinition ssym) class))
 	    (fmakunbound ssym))))))
 
+  (let ((sym (find-symbol "%CHECK-GF-REDEFINITION" "PCL")))
+    (when sym
+      (setq lisp::*setf-fdefinition-hook*
+	    (delete (symbol-function sym) lisp::*setf-fdefinition-hook*))))
+
   ;; Undefine all PCL classes, and clear CLASS-PCL-CLASS slots.
-  (let ((wot (find-symbol "*FIND-CLASS*" "PCL")))
+  (let ((wot (kernel::find-symbol "*FIND-CLASS*" "PCL")))
     (when (and wot (boundp wot))
       (do-hash (name ignore (symbol-value wot))
 	(declare (ignore ignore))
-	(let ((class (find-class name nil)))
+	(let ((class (kernel::find-class name nil)))
 	  (cond ((not class))
 		((typep class 'kernel::std-class)
 		 (setf (kernel:class-cell-class
@@ -49,17 +54,14 @@
 		       nil)
 		 (setf (info type kind name) nil))
 		(t
-		 (setf (kernel:class-pcl-class class) nil)))))))
+		 (setf (kernel:%class-pcl-class class) nil)))))))
 
   ;; Rename the PCL package to OLD-PCL, then restoring pcl::class and
   ;; pcl::..slot-unbound.. back to the PCL package as they need be
   ;; consistent with the symbols recognised by the compiler.
-  (let ((class 'pcl::class)
-	(slot-unbound 'pcl::..slot-unbound..))
+  (let ((slot-unbound 'pcl::..slot-unbound..))
     (rename-package "PCL" "OLD-PCL")
     (make-package "PCL")
-    (shadowing-import class "PCL")
-    (kernel:%set-symbol-package class (find-package "PCL"))
     (import slot-unbound "PCL")
     (kernel:%set-symbol-package slot-unbound (find-package "PCL"))))
 
@@ -73,7 +75,7 @@
 (setq kernel::*ansi-defstruct-options-p* nil)
 
 (setf c:*suppress-values-declaration* t)
-(pushnew :setf *features*)
+(setf *features* (adjoin :setf *features*))
 
 (setf (search-list "pcl:") '("target:pcl/"))
 
@@ -86,6 +88,7 @@
 (load "pcl:defsys" :verbose t)
 
 (import 'kernel:funcallable-instance-p (find-package "PCL"))
+(setq *gc-verbose* nil)
 
 (with-compiler-log-file
     ("target:compile-pcl.log"

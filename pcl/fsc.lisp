@@ -23,10 +23,9 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.10 2002/08/27 19:01:39 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.11 2003/03/22 16:15:16 gerd Exp $")
 ;;;
 ;;; This file contains the definition of the FUNCALLABLE-STANDARD-CLASS
 ;;; metaclass.  Much of the implementation of this metaclass is actually
@@ -76,29 +75,4 @@
 (defmethod make-writer-method-function ((class funcallable-standard-class)
 					slot-name)
   (make-std-writer-method-function (class-name class) slot-name))
-
-;;;;
-;;;; See the comment about reader-function--std and writer-function--sdt.
-;;;;
-;(define-function-template reader-function--fsc () '(slot-name)
-;  `(function
-;     (lambda (instance)
-;       (slot-value-using-class (wrapper-class (get-wrapper instance))
-;			       instance
-;			       slot-name))))
-;
-;(define-function-template writer-function--fsc () '(slot-name)
-;  `(function
-;     (lambda (nv instance)
-;       (setf
-;	 (slot-value-using-class (wrapper-class (get-wrapper instance))
-;				 instance
-;				 slot-name)
-;	 nv))))
-;
-;(eval-when (:load-toplevel)
-;  (pre-make-templated-function-constructor reader-function--fsc)
-;  (pre-make-templated-function-constructor writer-function--fsc))
-
-
 

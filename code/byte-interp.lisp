@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.35 2002/11/14 16:54:32 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.36 2003/03/22 16:15:22 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -915,8 +915,8 @@
 (defun load-type-predicate (desc)
   (or (gethash desc *byte-type-predicates*)
       (let ((type (specifier-type desc)))
-	(if (typep type 'structure-class)
-	    (let ((info (layout-info (class-layout type))))
+	(if (typep type 'kernel::structure-class)
+	    (let ((info (layout-info (%class-layout type))))
 	      (if (and info (eq (dd-type info) 'structure))
 		  (let ((pred (dd-predicate info)))
 		    (if (and pred (fboundp pred))

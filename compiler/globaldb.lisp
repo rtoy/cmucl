@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.41 2001/03/13 16:52:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.42 2003/03/22 16:15:19 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1132,8 +1132,8 @@
 ;;; Layout for this type being used by the compiler.
 ;;;
 (define-info-type type compiler-layout (or layout null)
-  (let ((class (find-class name nil)))
-    (when class (class-layout class))))
+  (let ((class (kernel::find-class name nil)))
+    (when class (%class-layout class))))
 
 (define-info-class typed-structure)
 (define-info-type typed-structure info t nil)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.202 2003/03/21 23:43:35 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.203 2003/03/22 16:15:21 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,6 @@
 (if (find-package "PCL")
     (rename-package "PCL" "PCL" 'nil)
     (make-package "PCL" :nicknames 'nil :use nil))
-(shadow 'class "PCL")
 
 (if (find-package "C-CALL")
     (rename-package "C-CALL" "C-CALL" 'nil)
@@ -314,7 +313,13 @@
 (defpackage "FORMAT")
 (defpackage "COMMON-LISP"
 	    (:nicknames "CL" "LISP")
-	    (:export "&ALLOW-OTHER-KEYS" "&AUX" "&BODY" "&ENVIRONMENT" "&KEY"
+	    (:shadow "CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS"
+		     "STRUCTURE-CLASS" "CLASS-OF" "FIND-CLASS")
+	    (:export
+	     "CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS"
+	     "STRUCTURE-CLASS" "CLASS-OF" "FIND-CLASS"
+	     
+	     "&ALLOW-OTHER-KEYS" "&AUX" "&BODY" "&ENVIRONMENT" "&KEY"
              "&OPTIONAL" "&REST" "&WHOLE" "*" "**" "***"
              "*BREAK-ON-SIGNALS*"
              "*COMPILE-FILE-PATHNAME*" "*COMPILE-FILE-TRUENAME*"
@@ -352,7 +357,7 @@
              "BOOLE-C1" "BOOLE-C2" "BOOLE-CLR" "BOOLE-EQV" "BOOLE-IOR"
              "BOOLE-NAND" "BOOLE-NOR" "BOOLE-ORC1" "BOOLE-ORC2" "BOOLE-SET"
              "BOOLE-XOR" "BOTH-CASE-P" "BOUNDP" "BREAK" 
-	     "BROADCAST-STREAM" "BROADCAST-STREAM-STREAMS" "BUILT-IN-CLASS"
+	     "BROADCAST-STREAM" "BROADCAST-STREAM-STREAMS"
 	     "BUTLAST" "BYTE" "BYTE-POSITION" "BYTE-SIZE"
 	     "CAAAAR" "CAAADR" "CAAAR" "CAADAR" "CAADDR" "CAADR" "CAAR"
 	     "CADAAR" "CADADR" "CADAR" "CADDAR" "CADDDR" "CADDR" "CADR"
@@ -365,7 +370,7 @@
              "CHAR-NAME" "CHAR-NOT-EQUAL" "CHAR-NOT-GREATERP"
              "CHAR-NOT-LESSP" "CHAR-UPCASE" "CHAR/="
              "CHAR<" "CHAR<=" "CHAR=" "CHAR>" "CHAR>=" "CHARACTER"
-             "CHARACTERP" "CHECK-TYPE" "CIS" "CLASS" "CLASS-OF" "CLASS-NAME"
+             "CHARACTERP" "CHECK-TYPE" "CIS" "CLASS-NAME" 
 	     "CLEAR-INPUT" "CLEAR-OUTPUT"
              "CLOSE" "CLRHASH" "CODE-CHAR" "COERCE"
              "COMPILATION-SPEED" "COMPILE" "COMPILE-FILE"
@@ -407,7 +412,7 @@
              "FILE-ERROR-PATHNAME" "FILE-LENGTH" "FILE-NAMESTRING"
              "FILE-POSITION" "FILE-STREAM" "FILE-STRING-LENGTH"
 	     "FILE-WRITE-DATE" "FILL" "FILL-POINTER" "FIND"
-             "FIND-ALL-SYMBOLS" "FIND-CLASS"
+             "FIND-ALL-SYMBOLS"
 	     "FIND-IF" "FIND-IF-NOT" "FIND-PACKAGE"
              "FIND-RESTART" "FIND-SYMBOL" "FINISH-OUTPUT" "FIRST" "FIXNUM"
              "FLET" "FLOAT" "FLOAT-DIGITS" "FLOAT-PRECISION" "FLOAT-RADIX"
@@ -541,7 +546,7 @@
              "STRING-RIGHT-TRIM" "STRING-STREAM"
 	     "STRING-TRIM" "STRING-UPCASE" "STRING/="
              "STRING<" "STRING<=" "STRING=" "STRING>" "STRING>=" "STRINGP"
-             "STRUCTURE" "STRUCTURE-CLASS" "STRUCTURE-OBJECT"
+             "STRUCTURE" "STRUCTURE-OBJECT"
 	     "SUBLIS" "SUBSEQ" "SUBSETP" "SUBST" "SUBST-IF"
              "SUBST-IF-NOT" "SUBSTITUTE" "SUBSTITUTE-IF"
              "SUBSTITUTE-IF-NOT" "SUBTYPEP" "SVREF" "SXHASH" "SYMBOL"
@@ -583,7 +588,7 @@
              "NO-APPLICABLE-METHOD" "NO-NEXT-METHOD" "PRINT-OBJECT"
              "REINITIALIZE-INSTANCE" "REMOVE-METHOD" "SHARED-INITIALIZE"
              "SLOT-BOUNDP" "SLOT-EXISTS-P" "SLOT-MAKUNBOUND" "SLOT-MISSING"
-             "SLOT-UNBOUND" "SLOT-VALUE" "STANDARD" "STANDARD-CLASS"
+             "SLOT-UNBOUND" "SLOT-VALUE" "STANDARD"
              "STANDARD-GENERIC-FUNCTION" "STANDARD-METHOD" "STANDARD-OBJECT"
 	     "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS"
              "UPDATE-INSTANCE-FOR-REDEFINED-CLASS" "WITH-ACCESSORS" "WITH-SLOTS"
@@ -644,6 +649,8 @@
              "READ-ONLY-SPACE-START" "SHORT-FLOAT-P" "STATIC-SPACE-START"
 	     "STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
              "STRING>*" "STRING>=*")
+  (:shadowing-import-from "KERNEL" "CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS"
+			  "STRUCTURE-CLASS" "FIND-CLASS" "CLASS-OF")
   (:export "*ASSEMBLY-UNIT-LENGTH*" "*PRIMITIVE-OBJECTS*"
 	   "AFTER-BREAKPOINT-TRAP"
 	   "ANY-REG-SC-NUMBER" "ARRAY-DATA-SLOT" "ARRAY-DIMENSIONS-OFFSET"
@@ -1135,6 +1142,8 @@
 		"STRING>*" "STRING>=*")
   (:import-from "SYSTEM" "FOREIGN-SYMBOL-ADDRESS" "FOREIGN-SYMBOL-CODE-ADDRESS"
 		"FOREIGN-SYMBOL-DATA-ADDRESS")
+  (:shadowing-import-from "KERNEL" "CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS"
+			  "STRUCTURE-CLASS" "FIND-CLASS" "CLASS-OF")
   (:export "%ALIEN-FUNCALL" "%CATCH-BREAKUP" "%CONTINUE-UNWIND" "&MORE"
 	   "%LISTIFY-REST-ARGS" "%MORE-ARG" "%MORE-ARG-VALUES"
 	   "%UNWIND-PROTECT-BREAKUP"
@@ -1495,10 +1504,13 @@
        "PATHNAME-NAME" "PATHNAME-TYPE" "PATHNAME-VERSION"))
   (intern name "LISP"))
 (intern "VOID" "C-CALL")
+
 (defpackage "KERNEL"
   (:import-from "LISP" "BOOLEAN")
   (:import-from "C-CALL" "VOID")
-  (:export "*ANSI-DEFSTRUCT-OPTIONS-P*"
+  (:export "%CLASS-LAYOUT" "%CLASS-STATE" "%CLASS-DIRECT-SUPERCLASSES"
+	   "%CLASS-SUBCLASSES" "%CLASS-PCL-CLASS"
+	   "*ANSI-DEFSTRUCT-OPTIONS-P*"
 	   "%ACOS" "%ACOSH" "%ARRAY-AVAILABLE-ELEMENTS"
 	   "%ARRAY-DATA-VECTOR" "%ARRAY-DIMENSION" "%ARRAY-DISPLACED-P"
 	   "%ARRAY-DISPLACEMENT" "%ARRAY-FILL-POINTER"

@@ -3,8 +3,9 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.8 2002/10/09 14:19:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.9 2003/03/22 16:15:16 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,9 +96,6 @@
   t)
 
 
-(eval-when (:compile-toplevel)
-  (pushnew 'compile pcl::*defgeneric-times*))
-
 ;;; Character input streams.
 ;;;
 ;;; A character input stream can be created by defining a class that

@@ -3,7 +3,7 @@
 ;;; Author: Eric Marsden <emarsden@laas.fr>
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.2 2003/02/24 16:40:05 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.3 2003/03/22 16:15:19 gerd Exp $")
 ;;
 ;; This code was written as part of the CMUCL project and has been
 ;; placed in the public domain.
@@ -205,22 +205,22 @@ be set at runtime."
 ;;
 #+pcl
 (defun who-subclasses (class)
-  (declare (type class class))
+  (declare (type kernel::class class))
   (pcl::class-direct-subclasses class))
 
 ;; WHO-SUPERCLASSES -- interface
 ;;
 #+pcl
 (defun who-superclasses (class)
-  (declare (type class class))
+  (declare (type kernel::class class))
   (pcl::class-direct-superclasses class))
 
 ;; generic functions defined for this class
 #+pcl
 (defun who-specializes (class)
-  (declare (type class class))
+  (declare (type kernel::class class))
   (let ((pcl-class (etypecase class
-                     (lisp:class (pcl::coerce-to-pcl-class class))
+                     (kernel::class (pcl::coerce-to-pcl-class class))
                      (pcl::class class))))
     (pcl::specializer-direct-methods pcl-class)))
 

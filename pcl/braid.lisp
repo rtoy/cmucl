@@ -23,10 +23,10 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.28 2002/12/18 19:16:27 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.29 2003/03/22 16:15:18 gerd Exp $")
+
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -41,27 +41,23 @@
 (in-package :pcl)
 
 (defun allocate-standard-instance (wrapper &optional (slots-init nil slots-init-p))
-  (let ((instance (%%allocate-instance--class))
-	(no-of-slots (wrapper-no-of-instance-slots wrapper)))
+  (declare #.*optImize-speed*)
+  (let* ((no-of-slots (kernel:layout-length wrapper))
+	 (instance (%%allocate-instance--class))
+	 (slots (make-array no-of-slots)))
+    (declare (fixnum no-of-slots))
+    (if slots-init-p
+	(loop for i below no-of-slots
+	      for init-value in slots-init do
+		(setf (%svref slots i) init-value))
+	(loop for i below no-of-slots do
+		(setf (%svref slots i) +slot-unbound+)))
     (setf (std-instance-wrapper instance) wrapper)
-    (setf (std-instance-slots instance) 
-	  (cond (slots-init-p
-		 ;; Inline the slots vector allocation and initialisation.
-		 (let ((slots (make-array no-of-slots :initial-element 0)))
-		   (do ((rem-slots slots-init (rest rem-slots))
-			(i 0 (1+ i)))
-		       ((>= i no-of-slots)) ;endp rem-slots))
-		     (declare (list rem-slots)
-			      (type kernel:index i))
-		     (setf (aref slots i) (first rem-slots)))
-		   slots))
-		(t
-		 (make-array no-of-slots
-			     :initial-element pcl::+slot-unbound+))))
+    (setf (std-instance-slots instance) slots)
     instance))
 
 (defmacro allocate-funcallable-instance-slots (wrapper &optional 
-						       slots-init-p slots-init)
+					       slots-init-p slots-init)
   `(let ((no-of-slots (wrapper-no-of-instance-slots ,wrapper)))
      ,(if slots-init-p
 	  `(if ,slots-init-p
@@ -69,30 +65,21 @@
 	       (make-array no-of-slots :initial-element +slot-unbound+))
 	  `(make-array no-of-slots :initial-element +slot-unbound+))))
 
-(defun allocate-funcallable-instance (wrapper &optional (slots-init nil slots-init-p))
+(defun allocate-funcallable-instance (wrapper &optional
+				      (slots-init nil slots-init-p))
   (let ((fin (allocate-funcallable-instance-1)))
     (set-funcallable-instance-function
      fin
      #'(kernel:instance-lambda (&rest args)
          (declare (ignore args))
-	 (error "The function of the funcallable-instance ~S has not been set"
+	 (error "~@<The function of the funcallable instance ~S ~
+                 has not been set.~@:>"
 		fin)))
     (setf (fsc-instance-wrapper fin) wrapper
 	  (fsc-instance-slots fin) (allocate-funcallable-instance-slots
 				    wrapper slots-init-p slots-init))
     fin))
 
-(defun allocate-structure-instance (wrapper &optional (slots-init nil slots-init-p))
-  (let* ((class (wrapper-class wrapper))
-	 (constructor (class-defstruct-constructor class)))
-    (if constructor
-	(let ((instance (funcall constructor))
-	      (slots (class-slots class)))
-	  (when slots-init-p
-	    (dolist (slot slots)
-	      (setf (slot-value-using-class class instance slot) (pop slots-init))))
-	  instance)
-	(error "Can't allocate an instance of class ~S" (class-name class)))))
 
 ;;;
 ;;; bootstrap-meta-braid
@@ -102,8 +89,7 @@
 (defmacro initial-classes-and-wrappers (&rest classes)
   `(progn
      ,@(mapcar (lambda (class)
-		 (let ((wr (intern (format nil "~A-WRAPPER" class) 
-				   *the-pcl-package*)))
+		 (let ((wr (symbolicate *the-pcl-package* class '-wrapper)))
 		   `(setf ,wr ,(if (eq class 'standard-generic-function)
 				   '*sgf-wrapper*
 				   `(boot-make-wrapper
@@ -116,6 +102,20 @@
 			  (wrapper-class ,wr) ,class
 			  (find-class ',class) ,class)))
 	      classes)))		        
+
+(defun set-class-translation (class name)
+  (let ((kernel-class (kernel::find-class name nil)))
+    (etypecase kernel-class
+      (null)
+      (kernel::built-in-class
+       (let ((translation (kernel::built-in-class-translation kernel-class)))
+	 (setf (ext:info type translator class)
+	       (if translation
+		   (lambda (spec) (declare (ignore spec)) translation)
+		   (lambda (spec) (declare (ignore spec)) kernel-class)))))
+      (kernel::class
+       (setf (ext:info type translator class)
+	     (lambda (spec) (declare (ignore spec)) kernel-class))))))
 
 (defun bootstrap-meta-braid ()
   (let* ((*create-classes-from-internal-structure-definitions-p* nil)
@@ -151,7 +151,8 @@
 			(structure-class structure-class-wrapper)))
              (class (or (find-class name nil)
 			(allocate-standard-instance wrapper))))
-	(when (or (eq meta 'standard-class) (eq meta 'funcallable-standard-class))
+	(when (or (eq meta 'standard-class)
+		  (eq meta 'funcallable-standard-class))
 	  (inform-type-system-about-std-class name))
         (setf (find-class name) class)))
     ;;
@@ -193,12 +194,12 @@
 				   (boot-make-wrapper (length slots) name))))
 		   (proto nil))
 	      (when (eq name t) (setq *the-wrapper-of-t* wrapper))
-	      (set (intern (format nil "*THE-CLASS-~A*" (symbol-name name))
-			   *the-pcl-package*)
+	      (set (symbolicate *the-pcl-package* '*the-class- name '*)
 		   class)
 	      (dolist (slot slots)
 		(unless (eq (getf slot :allocation :instance) :instance)
-		  (error "Slot allocation ~S not supported in bootstrap.")))
+		  (error "~@<Slot allocation ~S is not supported ~
+                          in bootstrap.~@:>")))
 	      
 	      (when (typep wrapper 'wrapper)
 		(setf (wrapper-instance-slots-layout wrapper)
@@ -259,8 +260,10 @@
 (defun bootstrap-initialize-class
        (metaclass-name class name
         class-eq-wrapper source direct-supers direct-subclasses cpl wrapper
-	&optional proto direct-slots slots direct-default-initargs default-initargs)
-  (flet ((classes (names) (mapcar #'find-class names))
+	&optional (proto nil proto-p)
+	direct-slots slots direct-default-initargs default-initargs)
+  (flet ((classes (names)
+	   (mapcar #'find-class names))
 	 (set-slot (slot-name value)
 	   (bootstrap-set-slot metaclass-name class slot-name value)))
     (set-slot 'name name)
@@ -294,6 +297,22 @@
       (set-slot 'direct-slots direct-slots)
       (set-slot 'slots slots)
       (set-slot 'initialize-info nil))
+    ;;
+    ;; For all direct superclasses SUPER of CLASS, make sure CLASS is
+    ;; a direct subclass of SUPER.  Note that METACLASS-NAME doesn't
+    ;; matter here for the slot DIRECT-SUBCLASSES, since every class
+    ;; inherits the slot from class CLASS.
+    (dolist (super direct-supers)
+      (let* ((super (find-class super))
+	     (subclasses (bootstrap-get-slot metaclass-name super
+					     'direct-subclasses)))
+	(cond ((eq +slot-unbound+ subclasses)
+	       (setf (bootstrap-get-slot metaclass-name super 'direct-subclasses)
+		     (list class)))
+	      ((not (memq class subclasses))
+	       (setf (bootstrap-get-slot metaclass-name super 'direct-subclasses)
+		     (cons class subclasses))))))
+    ;;
     (if (eq metaclass-name 'structure-class)
 	(let ((constructor-sym '|STRUCTURE-OBJECT class constructor|))
 	  (set-slot 'predicate-name (or (cadr (assoc name *early-class-predicates*))
@@ -304,7 +323,7 @@
 	  (set-slot 'from-defclass-p t)    
 	  (set-slot 'plist nil)
 	  (set-slot 'prototype (funcall constructor-sym)))
-	(set-slot 'prototype (or proto (allocate-standard-instance wrapper))))
+	(set-slot 'prototype (if proto-p proto (allocate-standard-instance wrapper))))
     class))
 
 (defun bootstrap-make-slot-definitions (name class slots wrapper effective-p)
@@ -370,9 +389,9 @@
 		(bootstrap-accessor-definitions1 
 		 'slot-object
 		 slot-name
-		 (list (slot-reader-symbol slot-name))
-		 (list (slot-writer-symbol slot-name))
-		 (list (slot-boundp-symbol slot-name)))))))))))
+		 (list (slot-reader-name slot-name))
+		 (list (slot-writer-name slot-name))
+		 (list (slot-boundp-name slot-name)))))))))))
 
 (defun bootstrap-accessor-definition (class-name accessor-name slot-name type)
   (multiple-value-bind (accessor-class make-method-function arglist specls doc)
@@ -426,44 +445,39 @@
   ;; First make sure that all the supers listed in *built-in-class-lattice*
   ;; are themselves defined by *built-in-class-lattice*.  This is just to
   ;; check for typos and other sorts of brainos.
-  ;; 
   (dolist (e *built-in-classes*)
     (dolist (super (cadr e))
       (unless (or (eq super t)
 		  (assq super *built-in-classes*))
-	(error "In *built-in-classes*: ~S has ~S as a super,~%~
+	(error "In *built-in-classes*: ~S has ~S as a superclass,~%~
                 but ~S is not itself a class in *built-in-classes*."
 	       (car e) super super))))
-
   ;;
   ;; In the first pass, we create a skeletal object to be bound to the
   ;; class name.
-  ;;
   (let* ((built-in-class (find-class 'built-in-class))
 	 (built-in-class-wrapper (class-wrapper built-in-class)))
     (dolist (e *built-in-classes*)
       (let ((class (allocate-standard-instance built-in-class-wrapper)))
 	(setf (find-class (car e)) class))))
-
   ;;
   ;; In the second pass, we initialize the class objects.
-  ;;
   (let ((class-eq-wrapper (class-wrapper (find-class 'class-eq-specializer))))
     (dolist (e *built-in-classes*)
       (destructuring-bind (name supers subs cpl prototype) e
 	(let* ((class (find-class name))
-	       (lclass (lisp:find-class name))
-	       (wrapper (kernel:class-layout lclass)))
+	       (lclass (kernel::find-class name))
+	       (wrapper (kernel:%class-layout lclass)))
 	  (set (get-built-in-class-symbol name) class)
 	  (set (get-built-in-wrapper-symbol name) wrapper)
-	  (setf (kernel:class-pcl-class lclass) class)
+	  (setf (kernel:%class-pcl-class lclass) class)
 
 	  (bootstrap-initialize-class 'built-in-class class
 				      name class-eq-wrapper nil
 				      supers subs
 				      (cons name cpl)
 				      wrapper prototype)))))
-  
+  ;;
   (dolist (e *built-in-classes*)
     (let* ((name (car e))
 	   (class (find-class name)))
@@ -485,35 +499,44 @@
 (defun wrapper-of (x)
   (wrapper-of-macro x))
 
-(defvar find-structure-class nil)
-
 (defun eval-form (form)
   (lambda () (eval form)))
 
-(defun slot-initargs-from-structure-slotd (slotd)
-  `(:name ,(structure-slotd-name slotd)
-    :defstruct-accessor-symbol ,(structure-slotd-accessor-symbol slotd)
-    :internal-reader-function ,(structure-slotd-reader-function slotd)
-    :internal-writer-function ,(structure-slotd-writer-function slotd)
-    :type ,(or (structure-slotd-type slotd) t)
-    :initform ,(structure-slotd-init-form slotd)
-    :initfunction ,(eval-form (structure-slotd-init-form slotd))))
-
-(defun find-structure-class (symbol)
-  (if (structure-type-p symbol)
-      (unless (eq find-structure-class symbol)
-	(let ((find-structure-class symbol))
-	  (ensure-class symbol
-			:metaclass 'structure-class
-			:name symbol
-			:direct-superclasses
-			(mapcar #'lisp:class-name
-				(kernel:class-direct-superclasses
-				 (lisp:find-class symbol)))
-			:direct-slots
-			(mapcar #'slot-initargs-from-structure-slotd
-				(structure-type-slot-description-list symbol)))))
-      (error "~S is not a legal structure class name." symbol)))
+;;;
+;;; Make a non-STANDARD-CLASS for the thing with name NAME.  The thing
+;;; may currently either be a structure or a condition, in which
+;;; case we construct either a STRUCTURE-CLASS or a CONDITION-CLASS
+;;; for the corresponding KERNEL::CLASS.
+;;; 
+(defun ensure-non-standard-class (name)
+  (flet ((ensure (metaclass &optional (slots nil slotsp))
+	   (let* ((class (kernel::find-class name))
+		  (kernel-supers (kernel:%class-direct-superclasses class))
+		  (supers (mapcar #'kernel:%class-name kernel-supers)))
+	     (if slotsp
+		 (ensure-class-using-class
+		  name nil :metaclass metaclass :name name
+		  :direct-superclasses supers
+		  :direct-slots slots)
+		 (ensure-class-using-class
+		  name nil :metaclass metaclass :name name
+		  :direct-superclasses supers))))
+	 (slot-initargs-from-structure-slotd (slotd)
+	   `(:name ,(structure-slotd-name slotd)
+	     :defstruct-accessor-symbol ,(structure-slotd-accessor-symbol slotd)
+	     :internal-reader-function ,(structure-slotd-reader-function slotd)
+	     :internal-writer-function ,(structure-slotd-writer-function slotd)
+	     :type ,(or (structure-slotd-type slotd) t)
+	     :initform ,(structure-slotd-init-form slotd)
+	     :initfunction ,(eval-form (structure-slotd-init-form slotd)))))
+    (cond ((structure-type-p name)
+	   (ensure 'structure-class
+		   (mapcar #'slot-initargs-from-structure-slotd
+			   (structure-type-slot-description-list name))))
+	  ((condition-type-p name)
+	   (ensure 'condition-class))
+	  (t
+	   (error "~@<~S is not the name of a class.~@:>" name)))))
 
 
 (defun method-function-returning-nil (args next-methods)
@@ -561,7 +584,7 @@
 ;;;
 (defun update-lisp-class-layout (class layout)
   (let ((lclass (kernel:layout-class layout)))
-    (unless (eq (kernel:class-layout lclass) layout)
+    (unless (eq (kernel:%class-layout lclass) layout)
       (setf (kernel:layout-inherits layout)
 	    (kernel:order-layout-inherits
 	     (map 'simple-vector #'class-wrapper
@@ -572,82 +595,95 @@
       ;; to lisp:find-class and also anonymous. This functionality moved
       ;; here from (setf find-class).
       (let ((name (class-name class)))
-	(setf (lisp:find-class name) lclass
-	      (lisp:class-name lclass) name)))))
+	(setf (kernel::find-class name) lclass
+	      (kernel:%class-name lclass) name)))))
 
+(defun common-lisp::sxhash-instance (instance)
+  (get-hash instance))
+
+#-loadable-pcl
 (eval-when (:load-toplevel :execute)
+  (/show "Bootstrapping PCL")
   (clrhash *find-class*)
+  (/show "  meta braid")
   (bootstrap-meta-braid)
+  (/show "  accessor definitions 1")
   (bootstrap-accessor-definitions t)
+  (/show "  class predicates 1")
   (bootstrap-class-predicates t)
+  (/show "  accessor definitions 2")
   (bootstrap-accessor-definitions nil)
+  (/show "  class predicates 2")
   (bootstrap-class-predicates nil)
+  (/show "  built-in classes")
   (bootstrap-built-in-classes)
 
+  (/show "  class layouts")
   (ext:do-hash (name x *find-class*)
     (let* ((class (find-class-from-cell name x))
 	   (layout (class-wrapper class))
 	   (lclass (kernel:layout-class layout))
-	   (lclass-pcl-class (kernel:class-pcl-class lclass))
-	   (olclass (lisp:find-class name nil)))
+	   (lclass-pcl-class (kernel:%class-pcl-class lclass))
+	   (olclass (kernel::find-class name nil)))
       (if lclass-pcl-class
 	  (assert (eq class lclass-pcl-class))
-	  (setf (kernel:class-pcl-class lclass) class))
+	  (setf (kernel:%class-pcl-class lclass) class))
 
       (update-lisp-class-layout class layout)
 
-      (cond (olclass
-	     (assert (eq lclass olclass)))
-	    (t
-	     (setf (lisp:find-class name) lclass)))))
+      (if olclass
+	  (assert (eq lclass olclass))
+	  (setf (kernel::find-class name) lclass))
 
-  (setq *boot-state* 'braid)
-  )
+      (set-class-translation class name)))
 
+  (/show "Boot state BRAID reached")
+  (setq *boot-state* 'braid))
 
-(define-condition no-applicable-method (type-error)
+(define-condition no-applicable-method-error (type-error)
   ((function :reader no-applicable-method-function :initarg :function)
    (arguments :reader no-applicable-method-arguments :initarg :arguments))
   (:report (lambda (condition stream)
-             (format stream "No matching method for the generic-function ~S,~@
-when called with arguments ~S."
+             (format stream "~@<No matching method for the generic function ~
+                             ~S, when called with arguments ~S.~@:>"
                      (no-applicable-method-function condition)
                      (no-applicable-method-arguments condition)))))
 
 (defmethod no-applicable-method (generic-function &rest args)
-  (cerror "Retry call to ~S"
-          'no-applicable-method
+  (cerror "Retry call to ~S."
+          'no-applicable-method-error
           :function generic-function
           :arguments args)
   (apply generic-function args))
 
-(define-condition no-primary-method (no-applicable-method)
-  ()
-  (:report (lambda (condition stream)
-             (format stream "Generic function ~S~%~
-                             No primary method given arguments ~S"
-                     (no-applicable-method-function condition)
-                     (no-applicable-method-arguments condition)))))
-
-(defmethod no-primary-method ((generic-function standard-generic-function)
-			      &rest args)
-  (cerror "Try again." 'no-primary-method
-	  :function generic-function :arguments args)
-  (apply generic-function args))
-
-(define-condition no-next-method (type-error)
+(define-condition no-next-method-error (type-error)
   ((method :reader no-next-method-method :initarg :method)
    (arguments :reader no-next-method-arguments :initarg :arguments))
   (:report (lambda (condition stream)
              (format stream
-		     "In method ~S:~%No next method for arguments ~S"
+		     "~@<In method ~S: No next method for arguments ~S.~@:>"
                      (no-next-method-method condition)
                      (no-next-method-arguments condition)))))
 
 (defmethod no-next-method ((generic-function standard-generic-function)
 			   (method standard-method)
 			   &rest args)
-  (cerror "Try again." 'no-next-method :method method :arguments args)
+  (cerror "Try again." 'no-next-method-error :method method :arguments args)
   (apply generic-function args))
 
+(define-condition no-primary-method-error (no-applicable-method-error)
+  ()
+  (:report (lambda (condition stream)
+             (format stream "~@<Generic function ~S: ~
+                             No primary method given arguments ~S~@:>"
+                     (no-applicable-method-function condition)
+                     (no-applicable-method-arguments condition)))))
 
+(defmethod no-primary-method ((generic-function standard-generic-function)
+			      &rest args)
+  (cerror "Try again." 'no-primary-method-error
+	  :function generic-function :arguments args)
+  (apply generic-function args))
+
+(defun %no-primary-method (gf args)
+  (apply #'no-primary-method gf args))

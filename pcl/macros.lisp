@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.21 2002/08/27 19:01:39 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.22 2003/03/22 16:15:16 gerd Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -37,42 +37,51 @@
 
 (in-package :pcl)
 
-(declaim (declaration
-	  values ;;I use this so that Zwei can remind
-	         ;;me what values a function returns.
-	     
-	  arglist ;;Tells me what the pretty arglist
-	          ;;of something (which probably takes
-		  ;;&rest args) is.
+(declaim (declaration class variable-rebinding method-name
+		      method-lambda-list))
 
-	  indentation     ;;Tells ZWEI how to indent things
-		          ;;like defclass.
-	  class
-	  variable-rebinding
-	  pcl-fast-call
-	  method-name
-	  method-lambda-list
-	  ))
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
+  ;; (CLASS-PREDICATE <CLASS-NAME>
+  (ext:define-function-name-syntax class-predicate (name)
+    (symbolp (cadr name)))
+
+  ;; (SLOT-ACCESSOR <CLASS> <SLOT> <READER/WRITER/BOUNDP>)
+  ;; <CLASS> is :GLOBAL for functions used by ACCESSOR-SLOT-VALUE etc.
+  (ext:define-function-name-syntax slot-accessor (name)
+    (and (symbolp (cadr name))
+	 (consp (cddr name))
+	 (symbolp (caddr name))
+	 (consp (cdddr name))
+	 (member (cadddr name) '(reader writer boundp))))
+
+  ;; (METHOD NAME QUALIFIERS (SPECIALIZERS))
+  (ext:define-function-name-syntax method (name)
+    (ext:valid-function-name-p (cadr name)))
+
+  ;; (FAST-METHOD NAME QUALIFIERS (SPECIALIZERS))
+  (ext:define-function-name-syntax fast-method (name)
+    (ext:valid-function-name-p (cadr name)))
+
+  ;; (EFFECTIVE-METHOD GF-NAME METHOD-SPEC ...)
+  (ext:define-function-name-syntax effective-method (name)
+    (ext:valid-function-name-p (cadr name)))
+
+  ;; (CALL FUNCTION)?
+  )
+
+;;;
 ;;; Age old functions which CommonLisp cleaned-up away.  They probably exist
 ;;; in other packages in all CommonLisp implementations, but I will leave it
 ;;; to the compiler to optimize into calls to them.
 ;;;
-;;; Common Lisp BUG:
-;;;    Some Common Lisps define these in the Lisp package which causes
-;;;    all sorts of lossage.  Common Lisp should explictly specify which
-;;;    symbols appear in the Lisp package.
-;;;
 (eval-when (:compile-toplevel :load-toplevel :execute)
-
-(defmacro memq (item list) `(member ,item ,list :test #'eq))
-(defmacro assq (item list) `(assoc ,item ,list :test #'eq))
-(defmacro rassq (item list) `(rassoc ,item ,list :test #'eq))
-(defmacro delq (item list) `(delete ,item ,list :test #'eq))
-(defmacro posq (item list) `(position ,item ,list :test #'eq))
-(defmacro neq (x y) `(not (eq ,x ,y)))
-
-)
+  (defmacro memq (item list) `(member ,item ,list :test #'eq))
+  (defmacro assq (item list) `(assoc ,item ,list :test #'eq))
+  (defmacro rassq (item list) `(rassoc ,item ,list :test #'eq))
+  (defmacro delq (item list) `(delete ,item ,list :test #'eq))
+  (defmacro posq (item list) `(position ,item ,list :test #'eq))
+  (defmacro neq (x y) `(not (eq ,x ,y))))
 
 (defun true (&rest ignore) (declare (ignore ignore)) t)
 (defun false (&rest ignore) (declare (ignore ignore)) nil)
@@ -85,7 +94,7 @@
 	(return-from get-declaration (cdr form))))))
 
 
-(defvar *keyword-package* (find-package 'keyword))
+(defvar *keyword-package* (find-package "KEYWORD"))
 
 (defun make-keyword (symbol)
   (intern (symbol-name symbol) *keyword-package*))
@@ -125,30 +134,6 @@
   (declare (ignore thing stream))
   nil)
 
-  ;;   
-;;;;;; 
-  ;;
-
-(defun capitalize-words (string &optional (dashes-p t))
-  (let ((string (copy-seq (string string))))
-    (declare (string string))
-    (do* ((flag t flag)
-	  (length (length string) length)
-	  (char nil char)
-	  (i 0 (+ i 1)))
-	 ((= i length) string)
-      (setq char (elt string i))
-      (cond ((both-case-p char)
-	     (if flag
-		 (and (setq flag (lower-case-p char))
-		      (setf (elt string i) (char-upcase char)))
-		 (and (not flag) (setf (elt string i) (char-downcase char))))
-	     (setq flag nil))
-	    ((char-equal char #\-)
-	     (setq flag t)
-	     (unless dashes-p (setf (elt string i) #\space)))
-	    (t (setq flag nil))))))
-
 ;;;
 ;;; FIND-CLASS
 ;;;
@@ -177,7 +162,7 @@
   (or (gethash symbol *find-class*)
       (unless dont-create-p
 	(unless (legal-class-name-p symbol)
-	  (error "~S is not a legal class name." symbol))
+	  (error "~@<~S is not a legal class name.~@:>" symbol))
 	(setf (gethash symbol *find-class*) (make-find-class-cell symbol)))))
 
 (defvar *create-classes-from-internal-structure-definitions-p* t)
@@ -185,11 +170,11 @@
 (defun find-class-from-cell (symbol cell &optional (errorp t))
   (or (find-class-cell-class cell)
       (and *create-classes-from-internal-structure-definitions-p*
-           (structure-type-p symbol)
-           (find-structure-class symbol))
+           (or (condition-type-p symbol) (structure-type-p symbol))
+           (ensure-non-standard-class symbol))
       (cond ((null errorp) nil)
 	    ((legal-class-name-p symbol)
-	     (error "No class named: ~S." symbol))
+	     (error "No class named ~S." symbol))
 	    (t
 	     (error "~S is not a legal class name." symbol)))))
 
@@ -199,16 +184,14 @@
   (find-class-cell-predicate cell))
 
 (defun legal-class-name-p (x)
-  (and (symbolp x)
-       (not (keywordp x))))
+  (symbolp x))
 
 (defun find-class (symbol &optional (errorp t) environment)
   "Returns the PCL class metaobject named by SYMBOL. An error of type
    SIMPLE-ERROR is signaled if the class does not exist unless ERRORP
    is NIL in which case NIL is returned. SYMBOL cannot be a keyword."
   (declare (ignore environment))
-  (find-class-from-cell
-   symbol (find-class-cell symbol t) errorp))
+  (find-class-from-cell symbol (find-class-cell symbol t) errorp))
 
 (defun find-class-predicate (symbol &optional (errorp t) environment)
   (declare (ignore environment))
@@ -217,16 +200,21 @@
 
 (defvar *boot-state* nil) ; duplicate defvar to defs.lisp
 
-; Use this definition in any CL implementation supporting 
-; both define-compiler-macro and load-time-value.
-; Note that in CMU, lisp:find-class /= pcl:find-class
-(define-compiler-macro find-class (&whole form
-				   symbol &optional (errorp t) environment)
+;;;
+;;; When compiling #+BOOTABLE, *BOOT-STATE* is COMPLETE because that's
+;;; the setting of the host PCL.  We'd could use something like
+;;; *COMPILE-STATE* to tell the compiler macro when it should optimize
+;;; or not in such a setting.  For simplicity we just don't optimize
+;;; in the bootable PCL.
+;;; 
+(define-compiler-macro find-class (&whole form symbol
+					  &optional (errorp t) environment)
   (declare (ignore environment))
   (if (and (constantp symbol) 
 	   (legal-class-name-p (eval symbol))
 	   (constantp errorp)
-	   (member *boot-state* '(braid complete)))
+	   (member *boot-state* '(braid complete))
+	   (not (intersection '(:loadable-pcl :bootable-pcl) *features*)))
       (let ((symbol (eval symbol))
 	    (errorp (not (null (eval errorp))))
 	    (class-cell (make-symbol "CLASS-CELL")))	
@@ -247,13 +235,8 @@
 		  (eq *boot-state* 'braid))
 	  (when (and new-value (class-wrapper new-value))
 	    (setf (find-class-cell-predicate cell)
-		  (symbol-function (class-predicate-name new-value))))
-	  (when (and new-value (not (forward-referenced-class-p new-value)))
-
-	    (dolist (keys+aok (find-class-cell-make-instance-function-keys cell))
-	      (update-initialize-info-internal
-	       (initialize-info new-value (car keys+aok) nil (cdr keys+aok))
-	       'make-instance-function))))
+		  (fdefinition (class-predicate-name new-value))))
+	  (update-ctors 'setf-find-class :class new-value :name symbol))
 	new-value)
       (error "~S is not a legal class name." symbol)))
 
@@ -271,16 +254,28 @@
 
 (defsetf slot-value set-slot-value)
 
-(defvar *redefined-functions* nil)
+(declaim (inline car-safe))
 
-(defmacro original-definition (name)
-  `(get ,name :definition-before-pcl))
+(defun car-safe (obj)
+  (when (consp obj)
+    (car obj)))
 
-(defun redefine-function (name new)
-  (pushnew name *redefined-functions*)
-  (unless (original-definition name)
-    (setf (original-definition name)
-	  (symbol-function name)))
-  (setf (symbol-function name)
-	(symbol-function new)))
+(defvar *cold-boot-state* nil)
+
+#+pcl-debug
+(defmacro %print (&rest args)
+  `(when *cold-boot-state*
+     (system:%primitive print ,@args)))
+
+#-pcl-debug
+(defmacro %print (&rest args)
+  (declare (ignore args)))
+
+#+bootable-pcl
+(defmacro /show (msg)
+  `(system:%primitive print ,msg))
+
+#-bootable-pcl
+(defmacro /show (&rest args)
+  )
 

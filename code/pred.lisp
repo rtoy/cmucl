@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.55 2003/01/29 02:16:30 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.56 2003/03/22 16:15:20 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,7 +133,7 @@
   (if (typep object '(or function array complex))
       (type-specifier (ctype-of object))
       (let* ((class (layout-class (layout-of object)))
-	     (name (class-name class)))
+	     (name (%class-name class)))
 	(if (%instancep object)
 	    (case name
 	      (alien-internals:alien-value
@@ -285,7 +285,7 @@
 		      (specifier-type (array-element-type object)))))))
     (member-type
      (if (member object (member-type-members type)) t))
-    (class
+    (kernel::class
      (class-typep (layout-of object) type object))
     (union-type
      (dolist (type (union-type-types type))
@@ -354,11 +354,11 @@
 (defun class-typep (obj-layout class object)
   (declare (optimize speed))
   (when (layout-invalid obj-layout)
-    (if (and (typep (class-of object) 'standard-class) object)
+    (if (and (typep (kernel::class-of object) 'kernel::standard-class) object)
 	(setq obj-layout (pcl::check-wrapper-validity object))
 	(error "TYPEP on obsolete object (was class ~S)."
 	       (class-proper-name (layout-class obj-layout)))))
-  (let ((layout (class-layout class))
+  (let ((layout (%class-layout class))
 	(obj-inherits (layout-inherits obj-layout)))
     (when (layout-invalid layout)
       (error "Class is currently invalid: ~S" class))

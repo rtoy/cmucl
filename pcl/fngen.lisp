@@ -23,11 +23,9 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.9 2002/08/26 02:23:14 pmai Exp $")
-;;;
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.10 2003/03/22 16:15:16 gerd Exp $")
 
 (in-package :pcl)
 
@@ -56,20 +54,15 @@
 ;;; Whether the returned function is actually compiled depends on whether
 ;;; the compiler is present (see COMPILE-LAMBDA) and whether this shape of
 ;;; code was precompiled.
-;;; 
-(defun get-function (lambda
-		      &optional (test-converter     #'default-test-converter)
-		                (code-converter     #'default-code-converter)
-				(constant-converter #'default-constant-converter))
-  (function-apply (get-function-generator lambda test-converter code-converter)
-		  (compute-constants      lambda constant-converter)))
+;;;
 
-(defun get-function1 (lambda
-		      &optional (test-converter     #'default-test-converter)
-		                (code-converter     #'default-code-converter)
-				(constant-converter #'default-constant-converter))
-  (values (the function (get-function-generator lambda test-converter code-converter))
-	  (compute-constants      lambda constant-converter)))
+(defun get-function1 (lambda &optional
+		      (test-converter #'default-test-converter)
+		      (code-converter #'default-code-converter)
+		      (constant-converter #'default-constant-converter))
+  (values (the function (get-function-generator lambda test-converter
+						code-converter))
+	  (compute-constants lambda constant-converter)))
 
 (defun default-constantp (form)
   (and (constantp form)
@@ -91,6 +84,13 @@
       nil))
 
 
+(defstruct (fgen (:constructor %make-fgen))
+  test
+  gensyms
+  generator
+  generator-lambda
+  system)
+
 ;;;
 ;;; *fgens* is a list of all the function generators we have so far.  Each 
 ;;; element is a FGEN structure as implemented below.  Don't ever touch this
@@ -98,31 +98,20 @@
 ;;;
 (defvar *fgens* ())
 
-(defun store-fgen (fgen)
-  (let ((old (lookup-fgen (fgen-test fgen))))
-    (if old
-	(setf (svref old 2) (fgen-generator fgen)
-	      (svref old 4) (or (svref old 4)
-				(fgen-system fgen)))
-	(setq *fgens* (nconc *fgens* (list fgen))))))
-
 (defun lookup-fgen (test)
   (find test (the list *fgens*) :key #'fgen-test :test #'equal))
 
-(defun make-fgen (test gensyms generator generator-lambda system)
-  (let ((new (make-array 6)))
-    (setf (svref new 0) test
-	  (svref new 1) gensyms
-	  (svref new 2) generator
-	  (svref new 3) generator-lambda
-	  (svref new 4) system)
-    new))
+(defun store-fgen (fgen)
+  (let ((old (lookup-fgen (fgen-test fgen))))
+    (if old
+	(setf (fgen-generator old) (fgen-generator fgen)
+	      (fgen-system old) (or (fgen-system old)
+				    (fgen-system fgen)))
+	(setq *fgens* (nconc *fgens* (list fgen))))))
 
-(defun fgen-test             (fgen) (svref fgen 0))
-(defun fgen-gensyms          (fgen) (svref fgen 1))
-(defun fgen-generator        (fgen) (svref fgen 2))
-(defun fgen-generator-lambda (fgen) (svref fgen 3))
-(defun fgen-system           (fgen) (svref fgen 4))
+(defun make-fgen (test gensyms generator generator-lambda system)
+  (%make-fgen :test test :gensyms gensyms :generator generator
+	      :generator-lambda generator-lambda :system system))
 
 
 
@@ -146,7 +135,6 @@
       (compute-code lambda code-converter)
     (values gensyms `(lambda ,gensyms (function ,code)))))
 
-
 (defun compute-test (lambda test-converter)
   (let ((walk-form-expand-macros-p t))
     (walk-form lambda
@@ -169,7 +157,8 @@
 			     f
 			     (multiple-value-bind (converted gens)
 				 (funcall code-converter f)
-			       (when gens (setq gensyms (append gensyms gens)))
+			       (when gens
+				 (setq gensyms (append gensyms gens)))
 			       (values converted (neq converted f))))))
 	      gensyms)))
 
@@ -201,11 +190,11 @@
 		  (when (or (null (fgen-system fgen))
 			    (eq (fgen-system fgen) system))
 		    (when system
-		      (setf (svref fgen 4) system))
+		      (setf (fgen-system fgen) system))
 		    (push
 		     (make-top-level-form
 		      `(precompile-function-generators ,system ,(incf index))
-		      '(load)
+		      '(:load-toplevel)
 		      `(load-function-generator
 			',(fgen-test fgen)
 			',(fgen-gensyms fgen)

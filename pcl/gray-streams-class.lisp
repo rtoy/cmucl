@@ -3,8 +3,9 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
+
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.3 2003/02/24 10:04:11 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams-class.lisp,v 1.4 2003/03/22 16:15:16 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,25 +32,31 @@
 
 (defclass fundamental-binary-stream (fundamental-stream) ())
 
-(defclass fundamental-character-input-stream
-    (fundamental-input-stream fundamental-character-stream) ())
+(defclass fundamental-character-input-stream (fundamental-input-stream
+					      fundamental-character-stream)
+  ())
 
-(defclass fundamental-character-output-stream
-    (fundamental-output-stream fundamental-character-stream) ())
+(defclass fundamental-character-output-stream (fundamental-output-stream
+					       fundamental-character-stream)
+  ())
 
-(defclass fundamental-binary-input-stream
-    (fundamental-input-stream fundamental-binary-stream) ())
+(defclass fundamental-binary-input-stream (fundamental-input-stream
+					   fundamental-binary-stream)
+  ())
 
-(defclass fundamental-binary-output-stream
-    (fundamental-output-stream fundamental-binary-stream) ())
+(defclass fundamental-binary-output-stream (fundamental-output-stream
+					    fundamental-binary-stream)
+  ())
 
 
 ;;; Example character input and output streams.
 
 (defclass character-output-stream (fundamental-character-output-stream)
-  ((lisp-stream :initarg :lisp-stream
-		:accessor character-output-stream-lisp-stream)))
+  ((lisp-stream
+    :initarg :lisp-stream
+    :accessor character-output-stream-lisp-stream)))
 
 (defclass character-input-stream (fundamental-character-input-stream)
-  ((lisp-stream :initarg :lisp-stream
-		:accessor character-input-stream-lisp-stream)))
+  ((lisp-stream
+    :initarg :lisp-stream
+    :accessor character-input-stream-lisp-stream)))

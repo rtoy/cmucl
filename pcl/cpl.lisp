@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.10 2002/08/26 02:23:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.11 2003/03/22 16:15:17 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -84,11 +84,12 @@
 ;;;    rule is used to choose among them.
 ;;;    
 
-(defmethod compute-class-precedence-list ((root slot-class))
+(defmethod compute-class-precedence-list ((root class))
   (compute-std-cpl root (class-direct-superclasses root)))
 
 (defstruct (class-precedence-description
 	     (:conc-name nil)
+	     #-bootable-pcl
 	     (:print-function (lambda (obj str depth)
 				(declare (ignore depth))
 				(format str
@@ -102,9 +103,14 @@
   (cpd-count  0))
 
 (defun compute-std-cpl (class supers)
-  (cond ((null supers)				;First two branches of COND
-	 (list class))				;are implementing the single
-	((null (cdr supers))			;inheritance optimization.
+  ;; First two branches of COND are implementing the single
+  ;; inheritance optimization.
+  (cond ((and (null supers)
+	      (not (forward-referenced-class-p class)))
+	 (list class))
+	((and (car supers)
+	      (null (cdr supers))
+	      (not (forward-referenced-class-p (car supers))))
 	 (cons class
 	       (compute-std-cpl (car supers)
 				(class-direct-superclasses (car supers)))))
@@ -207,38 +213,43 @@
 ;;;
 
 (defun cpl-error (class format-string &rest format-args)
-  (error "While computing the class precedence list of the class ~A.~%~A"
-	  (if (class-name class)
-	      (format nil "named ~S" (class-name class))
-	      class)
-	  (apply #'format nil format-string format-args)))
-	  
+  (error
+   (format nil "~~@<While computing the class precedence list ~
+                of the class ~A: ~?.~~@:>"
+	   (if (class-name class)
+	       (format nil "named ~S" (class-name class))
+	       class)
+	   format-string format-args)))
 
 (defun cpl-forward-referenced-class-error (class forward-class)
   (flet ((class-or-name (class)
 	   (if (class-name class)
 	       (format nil "named ~S" (class-name class))
 	       class)))
-    (let ((names (mapcar #'class-or-name
-			 (cdr (find-superclass-chain class forward-class)))))
-      (cpl-error class
-		 "The class ~A is a forward referenced class.~@
-                  The class ~A is ~A."
-		 (class-or-name forward-class)
-		 (class-or-name forward-class)
-		 (if (null (cdr names))
-		     (format nil
-			     "a direct superclass of the class ~A"
-			     (class-or-name class))
-		     (format nil
-			     "reached from the class ~A by following~@
-                              the direct superclass chain through: ~A~
-                              ~%  ending at the class ~A"
-			     (class-or-name class)
-			     (format nil
-				     "~{~%  the class ~A,~}"
-				     (butlast names))
-			     (car (last names))))))))
+    (if (eq class forward-class)
+	(cpl-error class
+		   "The class ~A is a forward referenced class"
+		   (class-or-name class))
+	(let ((names (mapcar #'class-or-name
+			     (cdr (find-superclass-chain class forward-class)))))
+	  (cpl-error class
+		     "The class ~A is a forward referenced class. ~
+                      The class ~A is ~A."
+		     (class-or-name forward-class)
+		     (class-or-name forward-class)
+		     (if (null (cdr names))
+			 (format nil
+				 "a direct superclass of the class ~A"
+				 (class-or-name class))
+			 (format nil
+				 "reached from the class ~A by following~@
+                                  the direct superclass chain through: ~A~
+                                  ~%  ending at the class ~A"
+				 (class-or-name class)
+				 (format nil
+					 "~{~%  the class ~A,~}"
+					 (butlast names))
+				 (car (last names)))))))))
 
 (defun find-superclass-chain (bottom top)
   (labels ((walk (c chain)
@@ -252,8 +263,8 @@
 (defun cpl-inconsistent-error (class all-cpds)
   (let ((reasons (find-cycle-reasons all-cpds)))
     (cpl-error class
-      "It is not possible to compute the class precedence list because~@
-       there ~A in the local precedence relations.~@
+      "It is not possible to compute the class precedence list because ~
+       there ~A in the local precedence relations.  ~
        ~A because:~{~%  ~A~}."
       (if (cdr reasons) "are circularities" "is a circularity")
       (if (cdr reasons) "These arise" "This arises")

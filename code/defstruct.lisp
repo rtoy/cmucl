@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.81 2003/02/01 20:42:29 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.82 2003/03/22 16:15:22 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -377,10 +377,10 @@
 			 `#',mlff)))))
       ,@(let ((pure (dd-pure defstruct)))
 	  (cond ((eq pure 't)
-		 `((setf (layout-pure (class-layout (find-class ',name)))
+		 `((setf (layout-pure (%class-layout (find-class ',name)))
 		    t)))
 		((eq pure :substructure)
-		 `((setf (layout-pure (class-layout (find-class ',name)))
+		 `((setf (layout-pure (%class-layout (find-class ',name)))
 		    0)))))
       ,@(let ((def-con (dd-default-constructor defstruct)))
 	  (when (and def-con (not (dd-alternate-metaclass defstruct)))
@@ -405,10 +405,10 @@
 			 `#',mlff)))))
       ,@(let ((pure (dd-pure defstruct)))
 	  (cond ((eq pure 't)
-		 `((setf (layout-pure (class-layout (find-class ',name)))
+		 `((setf (layout-pure (%class-layout (find-class ',name)))
 		    t)))
 		((eq pure :substructure)
-		 `((setf (layout-pure (class-layout (find-class ',name)))
+		 `((setf (layout-pure (%class-layout (find-class ',name)))
 		    0)))))
       ,@(let ((def-con (dd-default-constructor defstruct)))
 	  (when (and def-con (not (dd-alternate-metaclass defstruct)))
@@ -1340,7 +1340,7 @@
 		     :expected-type class
 		     :format-control "Structure for accessor ~S is not a ~S:~% ~S"
 		     :format-arguments (list (dsd-accessor dsd)
-					     (class-name class)
+					     (%class-name class)
 					     structure)))
 	    (%instance-ref structure (dsd-index dsd)))
 	#'(lambda (structure)
@@ -1365,7 +1365,7 @@
 		     :expected-type class
 		     :format-control "Structure for setter ~S is not a ~S:~% ~S"
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
-					     (class-name class)
+					     (%class-name class)
 					     structure)))
 	    (unless (%typep new-value (dsd-type dsd))
 	      (error 'simple-type-error
@@ -1384,7 +1384,7 @@
 		     :expected-type class
 		     :format-control "Structure for setter ~S is not a ~S:~% ~S"
 		     :format-arguments (list `(setf ,(dsd-accessor dsd))
-					     (class-name class)
+					     (%class-name class)
 					     structure)))
 	    (unless (%typep new-value (dsd-type dsd))
 	      (error 'simple-type-error
@@ -1409,7 +1409,7 @@
   (multiple-value-bind (class layout old-layout)
       (ensure-structure-class info inherits "current" "new")
     (cond ((not old-layout)
-	   (unless (eq (class-layout class) layout)
+	   (unless (eq (%class-layout class) layout)
 	     (register-layout layout)))
 	  (t
 	   (let ((old-info (layout-info old-layout)))    
@@ -1421,7 +1421,7 @@
 		     (unless (dsd-read-only slot)
 		       (fmakunbound `(setf ,aname))))))))
 	   (%redefine-defstruct class old-layout layout)
-	   (setq layout (class-layout class))))
+	   (setq layout (%class-layout class))))
 
     (setf (find-class (dd-name info)) class)
 
@@ -1487,16 +1487,16 @@
 				    &optional compiler-layout)
   (multiple-value-bind
       (class old-layout)
-      (destructuring-bind (&optional name (class 'structure-class)
+      (destructuring-bind (&optional name (class 'kernel::structure-class)
 				     (constructor 'make-structure-class))
 			  (dd-alternate-metaclass info)
 	(declare (ignore name))
 	(insured-find-class (dd-name info)
-			    (if (eq class 'structure-class)
-				#'(lambda (x) (typep x 'structure-class))
+			    (if (eq class 'kernel::structure-class)
+				#'(lambda (x) (typep x 'kernel::structure-class))
 				#'(lambda (x) (typep x (find-class class))))
 			    (fdefinition constructor)))
-    (setf (class-direct-superclasses class)
+    (setf (%class-direct-superclasses class)
 	  (if (eq (dd-name info) 'lisp-stream)
 	      ;; Hack to add stream as a superclass mixin to lisp-streams.
 	      (list (layout-class (svref inherits (1- (length inherits))))
@@ -1569,7 +1569,8 @@
 ;;; different slots than in the currently loaded version.
 ;;;
 (defun redefine-structure-warning (class old new)
-  (declare (type defstruct-description old new) (type class class)
+  (declare (type defstruct-description old new)
+	   (type kernel::class class)
 	   (ignore class))
   (let ((name (dd-name new)))
     (multiple-value-bind (moved retyped deleted)
@@ -1619,7 +1620,7 @@
 ;;; type info, and undefining all the associated functions.
 ;;; 
 (defun undefine-structure (class)
-  (let ((info (layout-info (class-layout class))))
+  (let ((info (layout-info (%class-layout class))))
     (when (defstruct-description-p info)
       (let ((type (dd-name info)))
 	(setf (info type compiler-layout type) nil)
@@ -1680,12 +1681,12 @@
 	 (super
 	  (if include
 	      (compiler-layout-or-lose (first include))
-	      (class-layout (find-class (or (first superclass-opt)
+	      (%class-layout (find-class (or (first superclass-opt)
 					    'structure-object))))))
     (if (eq (dd-name info) 'lisp-stream)
 	;; Hack to added the stream class as a mixin for lisp-streams.
 	(concatenate 'simple-vector (layout-inherits super)
-		     (vector super (class-layout (find-class 'stream))))
+		     (vector super (%class-layout (find-class 'stream))))
 	(concatenate 'simple-vector (layout-inherits super) (vector super)))))
 
 ;;; %COMPILER-ONLY-DEFSTRUCT  --  Internal
@@ -1713,18 +1714,18 @@
     (cond
      (old-layout
       (undefine-structure (layout-class old-layout))
-      (when (and (class-subclasses class)
+      (when (and (%class-subclasses class)
 		 (not (eq layout old-layout)))
 	(collect ((subs))
-	  (do-hash (class layout (class-subclasses class))
+	  (do-hash (class layout (%class-subclasses class))
 	    (declare (ignore layout))
 	    (undefine-structure class)
 	    (subs (class-proper-name class)))
 	  (when (subs)
 	    (warn "Removing old subclasses of ~S:~%  ~S"
-		  (class-name class) (subs))))))
+		  (%class-name class) (subs))))))
      (t
-      (unless (eq (class-layout class) layout)
+      (unless (eq (%class-layout class) layout)
 	(register-layout layout :invalidate nil))
       (setf (find-class (dd-name info)) class)))
     
@@ -1836,7 +1837,7 @@
       (print-unreadable-object (structure stream :identity t :type t)
 	(write-string "Funcallable Structure" stream))
       (let* ((type (%instance-layout structure))
-	     (name (class-name (layout-class type)))
+	     (name (%class-name (layout-class type)))
 	     (dd (layout-info type)))
 	(if *print-pretty*
 	    (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
@@ -1889,7 +1890,7 @@
        fun)
       (null
        (error "Structures of type ~S cannot be dumped as constants."
-	      (class-name class)))
+	      (%class-name class)))
       (function
        (funcall fun structure))
       (symbol

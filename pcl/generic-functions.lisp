@@ -1,8 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.17 2003/01/03 18:50:23 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.18 2003/03/22 16:15:16 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -51,9 +50,6 @@
 ;          (short-method-combination)
 ;          (t)
 
-(defgeneric long-method-combination-p (object))
-;          (long-method-combination)
-;          (t)
 (defgeneric slot-class-p (object))
 ;          (t)
 ;          (slot-class)
@@ -140,9 +136,6 @@
 
 (defgeneric eql-specializer-object (eql-specializer))
 ;          (eql-specializer)
-
-(defgeneric generic-function-declarations (standard-generic-function))
-;          (standard-generic-function)
 
 (defgeneric generic-function-method-class (standard-generic-function))
 ;          (standard-generic-function)
@@ -278,9 +271,6 @@
 (defgeneric (setf generic-function-method-combination) (new-value standard-generic-function))
 ;          (t standard-generic-function)
 
-(defgeneric (setf generic-function-declarations) (new-value standard-generic-function))
-;          (t standard-generic-function)
-
 (defgeneric (setf generic-function-methods) (new-value standard-generic-function))
 ;          (t standard-generic-function)
 
@@ -406,6 +396,8 @@
 ;          (structure-class)
 ;  :around (structure-class)
 
+(defgeneric default-initargs (class initargs defaults))
+
 (defgeneric finalize-inheritance (class))
 ;          (structure-class)
 ;          (std-class)
@@ -506,9 +498,6 @@
 ;          (funcallable-standard-object funcallable-standard-class)
 ;          (t symbol)
 
-(defgeneric class-slot-value (class slot-name))
-;          (std-class t)
-
 (defgeneric compatible-meta-class-change-p (class proto-new-class))
 ;          (t t)
 
@@ -524,9 +513,6 @@
 (defgeneric compute-effective-slot-definition-initargs (class direct-slotds))
 ;          (slot-class t)
 ;  :around (structure-class t)
-
-(defgeneric default-initargs (class supplied-initargs))
-;          (slot-class t)
 
 (defgeneric describe-object (object stream))
 ;          (class t)
@@ -582,6 +568,7 @@
 ;          (dependent-update-mixin t)
 
 (defgeneric no-next-method (generic-function method &rest args))
+(defgeneric no-primary-method (generic-function &rest args))
 
 ;(defgeneric maybe-update-constructors (generic-function method))
 ;           (generic-function method)
@@ -664,9 +651,6 @@
 (defgeneric add-writer-method (class generic-function slot-name))
 ;          (slot-class t t)
 
-(defgeneric (setf class-slot-value) (nv class slot-name))
-;          (t std-class t)
-
 ;;;
 ;;; According to AMOP, COMPUTE-EFFECTIVE-METHOD should return two
 ;;; values.  Alas, the second value is only vaguely described in AMOP,
@@ -675,9 +659,7 @@
 ;;; COMPUTE-EFFECTIVE-METHOD returns one value as do Allegro and
 ;;; Lispworks.
 ;;;
-
-(defgeneric compute-effective-method
-    (generic-function combin applicable-methods))
+(defgeneric compute-effective-method (generic-function combin applicable-methods))
 ;          (generic-function long-method-combination t)
 ;          (generic-function short-method-combination t)
 ;          (generic-function standard-method-combination t)
@@ -771,8 +753,6 @@
 
 (defgeneric no-applicable-method (generic-function &rest args))
 ;          (t)
-
-(defgeneric no-primary-method (generic-function &rest args))
 
 (defgeneric reader-method-class (class direct-slot &rest initargs))
 ;          (slot-class t)

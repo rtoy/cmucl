@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.51 2002/11/14 16:54:32 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.52 2003/03/22 16:15:22 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,30 +17,39 @@
 (in-package "KERNEL")
 
 (export '(layout layout-hash layout-hash-length layout-hash-max
-		 initialize-layout-hash layout-class layout-invalid
-		 layout-inherits layout-inheritance-depth layout-length
-		 layout-info layout-pure
-		 layout-of structure-class-p
-		 slot-class-print-function
-		 structure-class-make-load-form-fun find-layout
-		 class-proper-name class-layout class-state
-		 class-direct-superclasses class-subclasses
-		 class-pcl-class class-init register-layout
-		 basic-structure-class slot-class funcallable-instance
-		 funcallable-structure-class
-		 make-funcallable-structure-class
-		 funcallable-structure-class-p make-standard-class
-		 random-pcl-class make-random-pcl-class
-		 built-in-class-direct-superclasses
-		 find-class-cell class-cell-name class-cell-class
-		 make-layout make-undefined-class insured-find-class
-		 redefine-layout-warning std-compute-class-precedence-list))
+	  initialize-layout-hash layout-class layout-invalid
+	  layout-inherits layout-inheritance-depth layout-length
+	  layout-info layout-pure
+	  layout-of structure-class-p
+	  slot-class-print-function
+	  structure-class-make-load-form-fun find-layout
+	  class-proper-name
+	  class-init
+	  register-layout
+	  basic-structure-class slot-class funcallable-instance
+	  funcallable-structure-class
+	  make-funcallable-structure-class
+	  funcallable-structure-class-p make-standard-class
+	  random-pcl-class make-random-pcl-class
+	  built-in-class-direct-superclasses
+	  find-class-cell class-cell-name class-cell-class
+	  make-layout make-undefined-class insured-find-class
+	  redefine-layout-warning std-compute-class-precedence-list
+
+	  %class-name
+	  %class-layout
+	  %class-state
+	  %class-direct-superclasses
+	  %class-subclasses
+	  %class-pcl-class))
 
 (in-package "LISP")
-(export '(class structure-class standard-class class-name find-class class-of
-		built-in-class))
+(export '(class-name))
 
 (in-package "KERNEL")
+
+(shadow '("CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS" "STRUCTURE-CLASS"
+	  "FIND-CLASS" "CLASS-OF"))
 
 (with-cold-load-init-forms)
 
@@ -102,7 +111,7 @@
   (hash7 0 :type index)
   ;;
   ;; The class this is a layout for.
-  (class (required-argument) :type class)
+  (class (required-argument) :type kernel::class)
   ;;
   ;; NIL if this is the latest layout for this class.  If non-null, then the
   ;; class was changed after this instance was created.  The exact value may
@@ -227,11 +236,12 @@
 ;;; CTYPE structure as recognized by the type system.
 ;;;
 (defstruct (class
-	    (:make-load-form-fun class-make-load-form-fun)
-	    (:print-function %print-class)
-	    (:include ctype
-		      (:class-info (type-class-or-lose 'class)))
-	    (:pure nil))
+	     (:conc-name %class-)
+	     (:make-load-form-fun class-make-load-form-fun)
+	     (:print-function %print-class)
+	     (:include ctype
+		       (:class-info (type-class-or-lose 'class)))
+	     (:pure nil))
   ;;
   ;; Optional name, for printing.
   (name nil)
@@ -255,9 +265,26 @@
   ;;
   ;; The PCL class object, or NIL if none assigned yet.
   (pcl-class nil))
+
+;;;
+;;; Remove this whole stuff once everyone has bootstrapped the
+;;; LISP:CLASS = PCL:CLASS stuff, that is, when the bootstrap file
+;;; using this feature is no longer needed.
+;;;
+#+bootstrap-lisp-class=pcl-class
+(macrolet ((def (o n)
+	     `(progn
+		(defun ,o (x) (,n x))
+		(defun (setf ,o) (v x) (setf (,n x) v)))))
+  (def class-layout %class-layout)
+  (def class-name %class-name)
+  (def class-state %class-state)
+  (def class-direct-subclasses %class-direct-superclasses)
+  (def class-subclasses %class-subclasses))
+
 ;;;
 (defun class-make-load-form-fun (class)
-  (let ((name (class-name class)))
+  (let ((name (%class-name class)))
     (unless (and name (eq (find-class name nil) class))
       (error
        "Can't use anonymous or undefined class as constant:~%  ~S"
@@ -268,7 +295,7 @@
   (declare (ignore d))
   (print-unreadable-object (s stream :identity t :type t)
     (format stream "~:[<anonymous>~;~:*~S~]~@[ (~(~A~))~]"
-	    (class-name s) (class-state s))))
+	    (%class-name s) (%class-state s))))
 
 
 ;;; The UNDEFINED-CLASS is a cookie we make up to stick in forward referenced
@@ -392,7 +419,7 @@
 	      (new (class-of new-value)))
 	  (unless (eq old new)
 	    (warn "Changing meta-class of ~S from ~S to ~S."
-		  name (class-name old) (class-name new)))))
+		  name (%class-name old) (%class-name new)))))
        (:primitive
 	(error "Illegal to redefine standard type ~S." name))
        (:defined
@@ -405,8 +432,8 @@
      (setf (info type kind name) :instance)
      (setf (class-cell-class (find-class-cell name)) new-value)
      (unless (eq (info type compiler-layout name)
-		 (class-layout new-value))
-       (setf (info type compiler-layout name) (class-layout new-value)))))
+		 (%class-layout new-value))
+       (setf (info type compiler-layout name) (%class-layout new-value)))))
   new-value)
 
 
@@ -423,7 +450,7 @@
 		  old
 		  (funcall constructor :name name)))
 	 (found (or (gethash name *forward-referenced-layouts*)
-		    (when old (class-layout old)))))
+		    (when old (%class-layout old)))))
     (when found
       (setf (layout-class found) res))
 
@@ -437,7 +464,7 @@
 ;;;
 (defun class-proper-name (class)
   (declare (type class class))
-  (let ((name (class-name class)))
+  (let ((name (%class-name class)))
     (if (and name (eq (find-class name nil) class))
 	name
 	class)))
@@ -456,7 +483,7 @@
 
 (define-type-method (class :simple-subtypep) (class1 class2)
   (assert (not (eq class1 class2)))
-  (let ((subclasses (class-subclasses class2)))
+  (let ((subclasses (%class-subclasses class2)))
     (if (and subclasses (gethash class1 subclasses))
 	(values t t)
 	(values nil t))))
@@ -470,8 +497,8 @@
 ;;;
 (defun sealed-class-intersection (sealed other)
   (declare (type class sealed other))
-  (let ((s-sub (class-subclasses sealed))
-	(o-sub (class-subclasses other)))
+  (let ((s-sub (%class-subclasses sealed))
+	(o-sub (%class-subclasses other)))
     (if (and s-sub o-sub)
 	(collect ((res *empty-type* type-union))
 	  (do-hash (subclass layout s-sub)
@@ -490,18 +517,18 @@
 (define-type-method (class :simple-intersection) (class1 class2)
   (declare (type class class1 class2))
   (cond ((eq class1 class2) class1)
-	((let ((subclasses (class-subclasses class2)))
+	((let ((subclasses (%class-subclasses class2)))
 	   (and subclasses (gethash class1 subclasses)))
 	 (values class1 t))
-	((let ((subclasses (class-subclasses class1)))
+	((let ((subclasses (%class-subclasses class1)))
 	   (and subclasses (gethash class2 subclasses)))
 	 (values class2 t))
 	((or (basic-structure-class-p class1)
 	     (basic-structure-class-p class2))
 	 (values *empty-type* t))
-	((eq (class-state class1) :sealed)
+	((eq (%class-state class1) :sealed)
 	 (sealed-class-intersection class1 class2))
-	((eq (class-state class2) :sealed)
+	((eq (%class-state class2) :sealed)
 	 (sealed-class-intersection class2 class1))
 	(t
 	 (values class1 nil))))
@@ -854,7 +881,7 @@
 	       (inherit-layouts
 		(map 'vector
 		     #'(lambda (x)
-			 (let ((super-layout (class-layout (find-class x))))
+			 (let ((super-layout (%class-layout (find-class x))))
 			   (when (= (layout-inheritance-depth super-layout) -1)
 			     (setf inheritance-depth -1))
 			   super-layout))
@@ -877,7 +904,7 @@
       (setf (info type kind name) :instance)
       (let ((inherit-layouts
 	     (map 'vector #'(lambda (x)
-			      (class-layout (lisp:find-class x)))
+			      (%class-layout (find-class x)))
 		  inherits)))
 	(register-layout (find-layout name 0 inherit-layouts -1)
 			 :invalidate nil)))))
@@ -888,7 +915,7 @@
 (cold-load-init
   (dolist (x built-in-classes)
     (destructuring-bind (name &key (state :sealed) &allow-other-keys) x
-      (setf (class-state (find-class name)) state))))
+      (setf (%class-state (find-class name)) state))))
 
 
 ;;; A vector that maps type codes to layouts, used for quickly finding the
@@ -898,11 +925,11 @@
 (cold-load-init
   (setq built-in-class-codes
 	(let ((res (make-array 256 :initial-element
-			       '#.(class-layout (find-class 'random-class)))))
+			       '#.(%class-layout (find-class 'random-class)))))
 	  (dolist (x built-in-classes res)
 	    (destructuring-bind (name &key codes &allow-other-keys)
 				x
-	      (let ((layout (class-layout (find-class name))))
+	      (let ((layout (%class-layout (find-class name))))
 		(dolist (code codes)
 		  (setf (svref res code) layout))))))))
 
@@ -921,7 +948,7 @@
   (declare (optimize (speed 3) (safety 0)))
   (cond ((%instancep x) (%instance-layout x))
 	((funcallable-instance-p x) (%funcallable-instance-layout x))
-	((null x) '#.(class-layout (find-class 'null)))
+	((null x) '#.(%class-layout (find-class 'null)))
 	(t (svref built-in-class-codes (get-type x)))))
 
 
@@ -943,10 +970,10 @@
 ;;;
 (defun modify-class (class)
   (clear-type-caches)
-  (when (member (class-state class) '(:read-only :frozen))
+  (when (member (%class-state class) '(:read-only :frozen))
     (warn "Modifing ~(~A~) class ~S; making it writable."
-	  (class-state class) (class-name class))
-    (setf (class-state class) nil)))
+	  (%class-state class) (%class-name class))
+    (setf (%class-state class) nil)))
 
 
 ;;; INVALIDATE-LAYOUT  --  Internal
@@ -964,7 +991,7 @@
     (modify-class class)
     (dotimes (i (length inherits))
       (let* ((super (svref inherits i))
-	     (subs (class-subclasses (layout-class super))))
+	     (subs (%class-subclasses (layout-class super))))
 	(when subs
 	  (remhash class subs)))))
   (undefined-value))
@@ -985,8 +1012,8 @@
 (defun register-layout (layout &key (invalidate t) destruct-layout)
   (declare (type layout layout) (type (or layout null) destruct-layout))
   (let* ((class (layout-class layout))
-	 (class-layout (class-layout class))
-	 (subclasses (class-subclasses class)))
+	 (class-layout (%class-layout class))
+	 (subclasses (%class-subclasses class)))
     (assert (not (eq class-layout layout)))
     (when class-layout
       (modify-class class)
@@ -996,7 +1023,7 @@
 	  (when invalidate (invalidate-layout l))))
       (when invalidate
 	(invalidate-layout class-layout)
-	(setf (class-subclasses class) nil)))
+	(setf (%class-subclasses class) nil)))
     
     (cond (destruct-layout
 	   (setf (layout-invalid destruct-layout) nil)
@@ -1005,22 +1032,22 @@
 		 (layout-inheritance-depth layout))
 	   (setf (layout-length destruct-layout) (layout-length layout))
 	   (setf (layout-info destruct-layout) (layout-info layout))
-	   (setf (class-layout class) destruct-layout))
+	   (setf (%class-layout class) destruct-layout))
 	  (t
 	   (setf (layout-invalid layout) nil)
-	   (setf (class-layout class) layout)))
+	   (setf (%class-layout class) layout)))
 
     (let ((inherits (layout-inherits layout)))
       (dotimes (i (length inherits))
 	(let* ((super (layout-class (svref inherits i)))
-	       (subclasses (or (class-subclasses super)
-			       (setf (class-subclasses super)
+	       (subclasses (or (%class-subclasses super)
+			       (setf (%class-subclasses super)
 				     (make-hash-table :test #'eq)))))
-	  (when (and (eq (class-state super) :sealed)
+	  (when (and (eq (%class-state super) :sealed)
 		     (not (gethash class subclasses)))
 	    (warn "Subclassing sealed class ~S; unsealing it."
-		  (class-name super))
-	    (setf (class-state super) :read-only))
+		  (%class-name super))
+	    (setf (%class-state super) :read-only))
 	  (setf (gethash class subclasses)
 		(or destruct-layout layout))))))
 
@@ -1100,7 +1127,7 @@
 	   (type (or index (integer -1 -1)) depth))
   (let* ((class (or (find-class name nil)
 		    (make-undefined-class name)))
-	 (old (or (class-layout class)
+	 (old (or (%class-layout class)
 		  (gethash name *forward-referenced-layouts*)))
 	 (res (make-layout :class class
 			   :invalid :undefined
@@ -1206,7 +1233,7 @@
     (labels ((note-class (class)
 	       (unless (member class classes)
 		 (push class classes)
-		 (let ((superclasses (class-direct-superclasses class)))
+		 (let ((superclasses (%class-direct-superclasses class)))
 		   (do ((prev class)
 			(rest superclasses (rest rest)))
 		       ((endp rest))
@@ -1217,7 +1244,7 @@
 		     (note-class class)))))
 	     (std-cpl-tie-breaker (free-classes rev-cpl)
 	       (dolist (class rev-cpl (first free-classes))
-		 (let* ((superclasses (class-direct-superclasses class))
+		 (let* ((superclasses (%class-direct-superclasses class))
 			(intersection (intersection free-classes
 						    superclasses)))
 		   (when intersection
@@ -1243,7 +1270,7 @@
     (let ((class (find-class name nil)))
       (cond ((not class)
 	     (setf (layout-class layout) (make-undefined-class name)))
-	    ((eq (class-layout class) layout)
+	    ((eq (%class-layout class) layout)
 	     (remhash name *forward-referenced-layouts*))
 	    (t
 	     (warn "Something strange with forward layout for ~S:~%  ~S"

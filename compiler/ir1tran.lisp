@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.138 2003/02/05 23:37:06 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.139 2003/03/22 16:15:19 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -147,10 +147,10 @@
 ;;; accessor Name.  Class is the structure class.
 ;;;
 (defun find-structure-slot-accessor (class name)
-  (declare (type class class))
+  (declare (type kernel::class class))
   (let* ((info (layout-info
-		(or (info type compiler-layout (class-name class))
-		    (class-layout class))))
+		(or (info type compiler-layout (%class-name class))
+		    (%class-layout class))))
 	 (accessor (if (listp name) (cadr name) name))
 	 (slot (find accessor (kernel:dd-slots info)
 		     :key #'kernel:dsd-accessor))
@@ -201,11 +201,11 @@
 		       (etypecase info
 			 (null
 			  (find-free-really-function name))
-			 (structure-class
+			 (kernel::structure-class
 			  (find-structure-slot-accessor info name))
 			 (class
 			  (if (typep (layout-info (info type compiler-layout
-							(class-name info)))
+							(%class-name info)))
 				     'defstruct-description)
 			      (find-structure-slot-accessor info name)
 			      (find-free-really-function name))))))))))))

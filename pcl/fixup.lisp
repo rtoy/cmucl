@@ -23,12 +23,15 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (in-package :pcl)
 
-(fix-early-generic-functions)
-(setq *boot-state* 'complete)
+#-loadable-pcl
+(progn
+  (/show "Fixing generic functions")
+  (fix-early-generic-functions)
+  (/show "PCL boot state COMPLETE")
+  (setq *boot-state* 'complete))
 
 (defun print-std-instance (instance stream depth)
   (declare (ignore depth))

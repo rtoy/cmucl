@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.39 2000/08/09 13:00:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.40 2003/03/22 16:15:19 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,8 +118,8 @@
 ;;;    If FIND-CLASS is called on a constant class, locate the CLASS-CELL at
 ;;; load time.
 ;;; 
-(deftransform find-class ((name) ((constant-argument symbol)) *
-			  :when :both)
+(deftransform kernel::find-class ((name) ((constant-argument symbol)) *
+				  :when :both)
   (let* ((name (continuation-value name))
 	 (cell (find-class-cell name)))
     `(or (class-cell-class ',cell)
@@ -432,7 +432,7 @@
   (assert (constant-continuation-p spec))
   (let* ((spec (continuation-value spec))
 	 (class (specifier-type spec))
-	 (name (class-name class))
+	 (name (%class-name class))
 	 (otype (continuation-type object))
 	 (layout (let ((res (info type compiler-layout name)))
 		   (if (and res (member (layout-invalid res) '(:compiler nil)))
@@ -443,7 +443,7 @@
       ((not (types-intersect otype class)) 'nil)
       ((csubtypep otype class) 't)
       ;; If not properly named, error.
-      ((not (and name (eq (find-class name) class)))
+      ((not (and name (eq (kernel::find-class name) class)))
        (compiler-error "Can't compile TYPEP of anonymous or undefined ~
 			class:~%  ~S"
 		       class))
@@ -461,8 +461,8 @@
 	     (t
 	      (values '(lambda (x) (declare (ignore x)) t) 'layout-of)))
 	 (cond
-	   ((and (eq (class-state class) :sealed) layout
-		 (not (class-subclasses class)))
+	   ((and (eq (%class-state class) :sealed) layout
+		 (not (%class-subclasses class)))
 	    ;; Sealed and has no subclasses.
 	    (let ((n-layout (gensym)))
 	      `(and (,pred object)

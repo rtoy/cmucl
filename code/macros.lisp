@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.90 2003/02/28 12:44:11 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.91 2003/03/22 16:15:21 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,7 +207,7 @@
        (error "Illegal to redefine standard type: ~S." name)))
     (:instance
      (warn "Redefining class ~S to be a DEFTYPE." name)
-     (undefine-structure (layout-info (class-layout (find-class name))))
+     (undefine-structure (layout-info (%class-layout (kernel::find-class name))))
      (setf (class-cell-class (find-class-cell name)) nil)
      (setf (info type compiler-layout name) nil)
      (setf (info type kind name) :defined))

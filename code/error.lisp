@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.65 2003/02/15 23:41:30 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.66 2003/03/22 16:15:21 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,8 +21,7 @@
 (in-package "KERNEL")
 (export '(layout-invalid condition-function-name simple-control-error
 	  simple-file-error simple-program-error simple-parse-error
-          simple-style-warning
-	  simple-undefined-function))
+          simple-style-warning simple-undefined-function))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -402,10 +401,10 @@
   (cell nil :type (or cons null)))
 
 (eval-when (compile load eval)
-  (setf (condition-class-cpl (find-class 'condition))
-	(list (find-class 'condition))))
+  (setf (condition-class-cpl (kernel::find-class 'condition))
+	(list (kernel::find-class 'condition))))
 
-(setf (condition-class-report (find-class 'condition))
+(setf (condition-class-report (kernel::find-class 'condition))
       #'(lambda (cond stream)
 	  (format stream "Condition ~S was signalled." (type-of cond))))
 
@@ -417,14 +416,14 @@
 		(reduce #'append
 			(mapcar #'(lambda (x)
 				    (condition-class-cpl
-				     (find-class x)))
+				     (kernel::find-class x)))
 				parent-types)))))
 	 (cond-layout (info type compiler-layout 'condition))
 	 (olayout (info type compiler-layout name))
 	 (new-inherits
 	  (order-layout-inherits (concatenate 'simple-vector
 					      (layout-inherits cond-layout)
-					      (mapcar #'class-layout cpl)))))
+					      (mapcar #'%class-layout cpl)))))
     (if (and olayout
 	     (not (mismatch (layout-inherits olayout) new-inherits)))
 	olayout
@@ -447,7 +446,7 @@
 (defun real-print-condition (s stream)
   (if *print-escape*
       (print-unreadable-object (s stream :identity t :type t))
-      (dolist (class (condition-class-cpl (class-of s))
+      (dolist (class (condition-class-cpl (kernel::class-of s))
 		     (error "No REPORT?  Shouldn't happen!"))
 	(let ((report (condition-class-report class)))
 	  (when report
@@ -523,7 +522,7 @@
   ;; Note: ANSI specifies no exceptional situations in this function.
   ;; signalling simple-type-error would not be wrong.
   (let* ((thing (if (symbolp thing)
-		    (find-class thing)
+		    (kernel::find-class thing)
 		    thing))
 	 (class (typecase thing
 		  (condition-class thing)
@@ -540,7 +539,7 @@
 			  :format-control "Bad thing for class arg:~%  ~S"
 			  :format-arguments (list thing)))))
 	 (res (make-condition-object args)))
-    (setf (%instance-layout res) (class-layout class))
+    (setf (%instance-layout res) (%class-layout class))
     ;;
     ;; Set any class slots with initargs present in this call.
     (dolist (cslot (condition-class-class-slots class))
@@ -568,25 +567,25 @@
 		       (insured-find-class name #'condition-class-p
 					   #'make-condition-class)
     (setf (layout-class layout) class)
-    (setf (class-direct-superclasses class)
-	  (mapcar #'find-class direct-supers))
+    (setf (%class-direct-superclasses class)
+	  (mapcar #'kernel::find-class direct-supers))
     (cond ((not old-layout)
 	   (register-layout layout))
 	  ((not *type-system-initialized*)
 	   (setf (layout-class old-layout) class)
 	   (setq layout old-layout)
-	   (unless (eq (class-layout class) layout)
+	   (unless (eq (%class-layout class) layout)
 	     (register-layout layout)))
 	  ((redefine-layout-warning old-layout "current"
 				    layout "new")
 	   (register-layout layout :invalidate t))
-	  ((not (class-layout class))
+	  ((not (%class-layout class))
 	   (register-layout layout)))
 
     (setf (layout-info layout)
-	  (layout-info (class-layout (find-class 'condition))))
+	  (layout-info (%class-layout (kernel::find-class 'condition))))
 
-    (setf (find-class name) class)
+    (setf (kernel::find-class name) class)
     ;;
     ;; Initialize CPL slot.
     (setf (condition-class-cpl class)
@@ -626,7 +625,7 @@
 
 
 (defun %define-condition (name slots documentation report default-initargs)
-  (let ((class (find-class name)))
+  (let ((class (kernel::find-class name)))
     (setf (slot-class-print-function class) #'%print-condition)
     (setf (condition-class-slots class) slots)
     (setf (condition-class-report class) report)

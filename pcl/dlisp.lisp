@@ -23,10 +23,9 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.10 2002/11/28 16:23:33 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.11 2003/03/22 16:15:17 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -40,11 +39,17 @@
 (defun emit-one-class-reader (class-slot-p)
   (emit-reader/writer :reader 1 class-slot-p))
 
+(defun emit-one-class-boundp (class-slot-p)
+  (emit-reader/writer :boundp 1 class-slot-p))
+
 (defun emit-one-class-writer (class-slot-p)
   (emit-reader/writer :writer 1 class-slot-p))
 
 (defun emit-two-class-reader (class-slot-p)
   (emit-reader/writer :reader 2 class-slot-p))
+
+(defun emit-two-class-boundp (class-slot-p)
+  (emit-reader/writer :boundp 2 class-slot-p))
 
 (defun emit-two-class-writer (class-slot-p)
   (emit-reader/writer :writer 2 class-slot-p))
@@ -54,11 +59,17 @@
 (defun emit-one-index-readers (class-slot-p)
   (emit-one-or-n-index-reader/writer :reader nil class-slot-p))
 
+(defun emit-one-index-boundps (class-slot-p)
+  (emit-one-or-n-index-reader/writer :boundp nil class-slot-p))
+
 (defun emit-one-index-writers (class-slot-p)
   (emit-one-or-n-index-reader/writer :writer nil class-slot-p))
 
 (defun emit-n-n-readers ()
   (emit-one-or-n-index-reader/writer :reader t nil))
+
+(defun emit-n-n-boundps ()
+  (emit-one-or-n-index-reader/writer :boundp t nil))
 
 (defun emit-n-n-writers ()
   (emit-one-or-n-index-reader/writer :writer t nil))
@@ -82,10 +93,13 @@
 (defvar *precompiling-lap* nil)
 (defvar *emit-function-p* t)
 
+(defvar *optimize-cache-functions-p* t)
+
 (defun emit-default-only (metatypes applyp)
-  (when (and (null *precompiling-lap*) *emit-function-p*)
-    (return-from emit-default-only
-      (emit-default-only-function metatypes applyp)))
+  (unless *optimize-cache-functions-p*
+    (when (and (null *precompiling-lap*) *emit-function-p*)
+      (return-from emit-default-only
+	(emit-default-only-function metatypes applyp))))
   (let* ((dlap-lambda-list (make-dlap-lambda-list metatypes applyp))
 	 (args (remove '&rest dlap-lambda-list))
 	 (restl (when applyp '(.lap-rest-arg.))))
@@ -93,12 +107,6 @@
 		     dlap-lambda-list
       `(invoke-effective-method-function emf ,applyp ,@args ,@restl))))
       
-(defmacro emit-default-only-macro (metatypes applyp)
-  (let ((*emit-function-p* nil)
-	(*precompiling-lap* t))
-    (values
-     (emit-default-only metatypes applyp))))
-
 ;;; --------------------------------
 
 (defun generating-lisp (closure-variables args form)
@@ -109,41 +117,45 @@
 		    ,@(when (member 'miss-fn closure-variables)
 			`((declare (type function miss-fn))))
 		    #'(kernel:instance-lambda ,args
-			(let ()
-			  (declare #.*optimize-speed*)
+			;;
+			;; Don't ask me why LOCALLY is necessary here.
+			;; Fact is that without it the resulting code is
+			;; up ta 25% slower.  --gerd 2002-10-26.
+			(locally (declare #.*optimize-speed*)
 			  ,form)))))
     (values (if *precompiling-lap*
 		`#',lambda
 		(compile-lambda lambda))
 	    nil)))
 
+;;;
 ;;; cmu17 note: since std-instance-p is weakened, that branch may run
-;;; on non-pcl instances (structures).  The result will be the 
-;;; non-wrapper layout for the structure, which will cause a miss.  The "slots"
-;;; will be whatever the first slot is, but will be ignored.  Similarly,
-;;; fsc-instance-p returns true on funcallable structures as well as PCL fins.
+;;; on non-pcl instances (structures).  The result will be the
+;;; non-wrapper layout for the structure, which will cause a miss.
+;;; The "slots" will be whatever the first slot is, but will be
+;;; ignored.  Similarly, fsc-instance-p returns true on funcallable
+;;; structures as well as PCL fins.
 ;;;
 (defun emit-reader/writer (reader/writer 1-or-2-class class-slot-p)
-  (when (and (null *precompiling-lap*) *emit-function-p*)
-    (return-from emit-reader/writer
-      (emit-reader/writer-function reader/writer 1-or-2-class class-slot-p)))
-  (let ((instance nil)
-	(arglist  ())
-	(closure-variables ())
-	(field (first-wrapper-cache-number-index))
-	(readp (eq reader/writer :reader))
-	(read-form (emit-slot-read-form class-slot-p 'index 'slots)))
-    ;;we need some field to do the fast obsolete check
-    (ecase reader/writer
-      (:reader (setq instance (dfun-arg-symbol 0)
-		     arglist  (list instance)))
-      (:writer (setq instance (dfun-arg-symbol 1)
-		     arglist  (list (dfun-arg-symbol 0) instance))))
-    (ecase 1-or-2-class
-      (1 (setq closure-variables '(wrapper-0 index miss-fn)))
-      (2 (setq closure-variables '(wrapper-0 wrapper-1 index miss-fn))))
-    (generating-lisp closure-variables
-		     arglist
+  (unless *optimize-cache-functions-p*
+    (when (and (null *precompiling-lap*) *emit-function-p*)
+      (return-from emit-reader/writer
+	(emit-reader/writer-function reader/writer 1-or-2-class class-slot-p))))
+  (let* ((instance
+	  (ecase reader/writer
+	    ((:reader :boundp) (dfun-arg-symbol 0))
+	    (:writer (dfun-arg-symbol 1))))
+	 (arglist
+	  (ecase reader/writer
+	    ((:reader :boundp) (list instance))
+	    (:writer (list (dfun-arg-symbol 0) instance))))
+	 (closure-variables
+	  (ecase 1-or-2-class
+	    (1 '(wrapper-0 index miss-fn))
+	    (2 '(wrapper-0 wrapper-1 index miss-fn))))
+	 (read-form
+	  (emit-slot-read-form class-slot-p 'index 'slots)))
+    (generating-lisp closure-variables arglist
        `(let* (,@(unless class-slot-p `((slots nil)))
 	       (wrapper (cond ((std-instance-p ,instance)
 			       ,@(unless class-slot-p
@@ -155,22 +167,27 @@
 			       (fsc-instance-wrapper ,instance)))))
 	  (block access
 	    (when (and wrapper
-		       (/= (wrapper-cache-number-vector-ref wrapper ,field) 0)
+		       (not (zerop (kernel:layout-hash wrapper 0)))
 		       ,@(if (eql 1 1-or-2-class)
 			     `((eq wrapper wrapper-0))
 			     `((or (eq wrapper wrapper-0)
 				   (eq wrapper wrapper-1)))))
-	      ,@(if readp
-		    `((let ((value ,read-form))
-			(unless (eq value +slot-unbound+)
-			  (return-from access value))))
-		    `((return-from access (setf ,read-form ,(car arglist))))))
+	      ,@(ecase reader/writer
+		 (:reader
+		  `((let ((value ,read-form))
+		      (unless (eq value +slot-unbound+)
+			(return-from access value)))))
+		 (:boundp
+		  `((let ((value ,read-form))
+		      (return-from access (not (eq value +slot-unbound+))))))
+		 (:writer
+		  `((return-from access (setf ,read-form ,(car arglist)))))))
 	    (funcall miss-fn ,@arglist))))))
 
 (defun emit-slot-read-form (class-slot-p index slots)
   (if class-slot-p
       `(cdr ,index)
-      `(%instance-ref ,slots ,index)))
+      `(%slot-ref ,slots ,index)))
 
 (defun emit-boundp-check (value-form miss-fn arglist)
   `(let ((value ,value-form))
@@ -182,6 +199,7 @@
   (let ((read-form (emit-slot-read-form class-slot-p index slots)))
     (ecase reader/writer
       (:reader (emit-boundp-check read-form miss-fn arglist))
+      (:boundp `(not (eq +slot-unbound+ ,read-form)))
       (:writer `(setf ,read-form ,(car arglist))))))
 
 (defmacro emit-reader/writer-macro (reader/writer 1-or-2-class class-slot-p)
@@ -191,16 +209,19 @@
      (emit-reader/writer reader/writer 1-or-2-class class-slot-p))))
 
 (defun emit-one-or-n-index-reader/writer (reader/writer cached-index-p class-slot-p)
-  (when (and (null *precompiling-lap*) *emit-function-p*)
-    (return-from emit-one-or-n-index-reader/writer
-      (emit-one-or-n-index-reader/writer-function
-       reader/writer cached-index-p class-slot-p)))
+  (unless *optimize-cache-functions-p*
+    (when (and (null *precompiling-lap*) *emit-function-p*)
+      (return-from emit-one-or-n-index-reader/writer
+	(emit-one-or-n-index-reader/writer-function
+	 reader/writer cached-index-p class-slot-p))))
   (multiple-value-bind (arglist metatypes)
       (ecase reader/writer
-	(:reader (values (list (dfun-arg-symbol 0))
-			 '(standard-instance)))
-	(:writer (values (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))
-			 '(t standard-instance))))
+	((:reader :boundp)
+	 (values (list (dfun-arg-symbol 0))
+		 '(standard-instance)))
+	(:writer
+	 (values (list (dfun-arg-symbol 0) (dfun-arg-symbol 1))
+		 '(t standard-instance))))
     (generating-lisp `(cache ,@(unless cached-index-p '(index)) miss-fn)
 		     arglist
       `(let (,@(unless class-slot-p '(slots))
@@ -217,7 +238,8 @@
   (let ((*emit-function-p* nil)
 	(*precompiling-lap* t))
     (values
-     (emit-one-or-n-index-reader/writer reader/writer cached-index-p class-slot-p))))
+     (emit-one-or-n-index-reader/writer reader/writer cached-index-p
+					class-slot-p))))
 
 (defun emit-miss (miss-fn args &optional applyp)
   (let ((restl (when applyp '(.lap-rest-arg.))))
@@ -226,10 +248,11 @@
 	`(funcall ,miss-fn ,@args ,@restl))))
 
 (defun emit-checking-or-caching (cached-emf-p return-value-p metatypes applyp)
-  (when (and (null *precompiling-lap*) *emit-function-p*)
-    (return-from emit-checking-or-caching
-      (emit-checking-or-caching-function
-       cached-emf-p return-value-p metatypes applyp)))
+  (unless *optimize-cache-functions-p*
+    (when (and (null *precompiling-lap*) *emit-function-p*)
+      (return-from emit-checking-or-caching
+	(emit-checking-or-caching-function
+	 cached-emf-p return-value-p metatypes applyp))))
   (let* ((dlap-lambda-list (make-dlap-lambda-list metatypes applyp))
 	 (args (remove '&rest dlap-lambda-list))
 	 (restl (when applyp '(.lap-rest-arg.))))
@@ -245,12 +268,6 @@
 	             (emit-miss 'miss-fn args applyp)
 		     (when cached-emf-p 'emf))))))
 
-(defmacro emit-checking-or-caching-macro (cached-emf-p return-value-p metatypes applyp)
-  (let ((*emit-function-p* nil)
-	(*precompiling-lap* t))
-    (values
-     (emit-checking-or-caching cached-emf-p return-value-p metatypes applyp))))
-
 (defun emit-dlap (args metatypes hit miss value-reg &optional slot-regs)
   (let* ((index -1)
 	 (wrapper-bindings (mapcan (lambda (arg mt)
@@ -263,7 +280,7 @@
 				   args metatypes))
 	 (wrappers (mapcar #'car wrapper-bindings)))
     (declare (fixnum index))
-    (unless wrappers (error "Every metatype is T."))
+    (assert (not (null wrappers)) () "Every metatype is T.")
     `(block dfun
        (tagbody
 	  (let ((field (cache-field cache))
@@ -301,8 +318,6 @@
 
 (defmacro get-cache-vector-lock-count (cache-vector)
   `(let ((lock-count (cache-vector-lock-count ,cache-vector)))
-     (unless (typep lock-count 'fixnum)
-       (error "my cache got freed somehow"))
      (the fixnum lock-count)))
 
 (defun emit-1-t-dlap (wrapper miss-label value)
@@ -336,46 +351,48 @@
        ,(emit-n-wrapper-compute-primary-cache-location wrappers miss-label)
        (let ((initial-lock-count (get-cache-vector-lock-count cache-vector)))
 	 (declare (fixnum initial-lock-count))
-	 (let ((location primary) (next-location 0))
-	   (declare (fixnum location next-location))
+	 (let ((location primary))
+	   (declare (fixnum location))
 	   (block search
-	     (loop (setq next-location (the fixnum (+ location ,cache-line-size)))
-		   (when (and ,@(mapcar
-				 (lambda (wrapper)
-				   `(eq ,wrapper 
-				     (cache-vector-ref cache-vector
-				      (setq location
-				       (the fixnum (+ location 1))))))
-				 wrappers))
+	     (loop
+		(let ((next-location (the fixnum (+ location ,cache-line-size))))
+		  (declare #.*optimize-speed*)
+		  (declare (fixnum next-location))
+		  (when (and ,@(mapcar
+				(lambda (wrapper)
+				  `(eq ,wrapper 
+				       (%svref cache-vector
+					       (setq location
+						     (the fixnum (1+ location))))))
+				wrappers))
 		     ,@(when value
-			 `((setq location (the fixnum (+ location 1)))
-			   (setq ,value (cache-vector-ref cache-vector location))))
+			 `((setq location (the fixnum (1+ location)))
+			   (setq ,value (%svref cache-vector location))))
 		     (return-from search nil))
-		   (setq location next-location)
-		   (when (= location size-1)
-		     (setq location 0))
-		   (when (= location primary)
-		     (dolist (entry overflow)
-		       (let ((entry-wrappers (car entry)))
-			 (when (and ,@(mapcar (lambda (wrapper)
-						`(eq ,wrapper (pop entry-wrappers)))
-					      wrappers))
-			   ,@(when value
-			       `((setq ,value (cdr entry))))
-			   (return-from search nil))))
-		     (go ,miss-label))))
+		  (setq location next-location)
+		  (when (= location size-1)
+		    (setq location 0))
+		  (when (= location primary)
+		    (loop for (ws . v) in overflow
+			  when (and ,@(mapcar (lambda (w)
+						`(eq ,w (pop ws)))
+					      wrappers)) do
+			    ,@(when value `((setq ,value v)))
+			    (return-from search nil))
+		    (go ,miss-label)))))
 	   (unless (= initial-lock-count
 		      (get-cache-vector-lock-count cache-vector))
 	     (go ,miss-label)))))))
 
 (defun emit-1-wrapper-compute-primary-cache-location (wrapper miss-label)
-  `(let ((wrapper-cache-no (wrapper-cache-number-vector-ref ,wrapper field)))
+  `(let ((wrapper-cache-no (kernel:layout-hash ,wrapper field)))
      (declare (fixnum wrapper-cache-no))
-     (when (zerop wrapper-cache-no) (go ,miss-label))
-     ,(let ((form `(logand
-		    mask wrapper-cache-no)))
+     (when (zerop wrapper-cache-no)
+       (go ,miss-label))
+     ,(let ((form `(logand mask wrapper-cache-no)))
 	`(the fixnum ,form))))
 
+#-pcl-xorhash
 (defun emit-n-wrapper-compute-primary-cache-location (wrappers miss-label)
   (declare (type list wrappers))
   ;; this returns 1 less that the actual location
@@ -383,20 +400,40 @@
      ,@(let ((adds 0) (len (length wrappers)))
 	 (declare (fixnum adds len))
 	 (mapcar (lambda (wrapper)
-		   `(let ((wrapper-cache-no (wrapper-cache-number-vector-ref 
-					     ,wrapper field)))
+		   `(let ((wrapper-cache-no (kernel:layout-hash ,wrapper field)))
 		     (declare (fixnum wrapper-cache-no))
 		     (when (zerop wrapper-cache-no) (go ,miss-label))
 		     (setq primary (the fixnum (+ primary wrapper-cache-no)))
 		     ,@(progn
 			(incf adds)
-			(when (or (zerop (mod adds wrapper-cache-number-adds-ok))
+			(when (or (zerop (mod adds +max-hash-code-additions+))
 				  (eql adds len))
 			  `((setq primary
 			     ,(let ((form `(logand primary mask)))
 				   `(the fixnum ,form))))))))
 		 wrappers))))
-     
+
+#+pcl-xorhash
+(defun emit-n-wrapper-compute-primary-cache-location (wrappers miss-label)
+  (declare (type list wrappers))
+  ;; this returns 1 less that the actual location
+  `(progn
+     ,@(let ((adds 0) (len (length wrappers)))
+	 (declare (fixnum adds len))
+	 (mapcar (lambda (wrapper)
+		   `(let ((hash (kernel:layout-hash ,wrapper field)))
+		     (declare (fixnum hash))
+		     (when (zerop hash) (go ,miss-label))
+		     (setq primary (logxor primary hash))
+		     ,@(progn
+			(incf adds)
+			(when (eql adds len)
+			  `((setq primary
+			     ,(let ((form `(logand primary mask)))
+				   `(the fixnum ,form))))))))
+		 wrappers))))
+
+;;;
 ;;; cmu17 note: since std-instance-p is weakened, that branch may run
 ;;; on non-pcl instances (structures).  The result will be the 
 ;;; non-wrapper layout for the structure, which will cause a miss.  The "slots"
@@ -415,10 +452,9 @@
 	    (t
 	     (go ,miss-label))))
     (class
-     (when slot (error "Can't do a slot reg for this metatype."))
+     (assert (null slot) () "Can't do a slot reg for this metatype.")
      `(wrapper-of-macro ,argument))
     ((built-in-instance structure-instance)
-     (when slot (error "Can't do a slot reg for this metatype."))
-     `(built-in-or-structure-wrapper
-       ,argument))))
+     (assert (null slot) () "Can't do a slot reg for this metatype.")
+     `(built-in-or-structure-wrapper ,argument))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.29 2001/07/08 16:28:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.30 2003/03/22 16:15:21 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,14 +79,14 @@
 		   (values (info type documentation x))))))
       (type
        (typecase x
-	 (structure-class (values (info type documentation (class-name x))))
+	 (kernel::structure-class (values (info type documentation (%class-name x))))
 	 (t (and (typep x 'symbol) (values (info type documentation x))))))
       (setf (info setf documentation x))
       ((t)
        (typecase x
 	 (function (function-doc x))
 	 (package (package-doc-string x))
-	 (structure-class (values (info type documentation (class-name x))))
+	 (kernel::structure-class (values (info type documentation (%class-name x))))
 	 (symbol (try-cmucl-random-doc x doc-type))))
       (t
        (typecase x

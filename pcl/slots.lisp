@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.16 2002/11/21 22:09:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.17 2003/03/22 16:15:15 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -36,8 +36,8 @@
 (define-condition unbound-slot (cell-error)
   ((instance :reader unbound-slot-instance :initarg :instance)
    (slot :reader unbound-slot-slot :initarg :slot))
-  (:report (lambda(condition stream)
-	     (format stream "The slot ~S is unbound in the object ~S"
+  (:report (lambda (condition stream)
+	     (format stream "~@<The slot ~S is unbound in the object ~S.~@:>"
 		     (unbound-slot-slot condition)
 		     (unbound-slot-instance condition)))))
 
@@ -59,71 +59,28 @@
 ;;; std-class.  Many of these methods call these four functions.
 ;;;
 
-(defun set-wrapper (inst new)
-  (cond ((std-instance-p inst)
-	 (setf (std-instance-wrapper inst) new))
-	((fsc-instance-p inst)
-	 (setf (fsc-instance-wrapper inst) new))
-	(t
-	 (error "What kind of instance is this?"))))
-
 (defun swap-wrappers-and-slots (i1 i2)
   (with-pcl-lock
-   (cond ((std-instance-p i1)
-	  (let ((w1 (std-instance-wrapper i1))
-		(s1 (std-instance-slots i1)))
-	    (setf (std-instance-wrapper i1) (std-instance-wrapper i2))
-	    (setf (std-instance-slots i1) (std-instance-slots i2))
-	    (setf (std-instance-wrapper i2) w1)
-	    (setf (std-instance-slots i2) s1)))
-	 ((fsc-instance-p i1)
-	  (let ((w1 (fsc-instance-wrapper i1))
-		(s1 (fsc-instance-slots i1)))
-	    (setf (fsc-instance-wrapper i1) (fsc-instance-wrapper i2))
-	    (setf (fsc-instance-slots i1) (fsc-instance-slots i2))
-	    (setf (fsc-instance-wrapper i2) w1)
-	    (setf (fsc-instance-slots i2) s1)))
-	 (t
-	  (error "What kind of instance is this?")))))
+   (if (std-instance-p i1)
+       (let ((w1 (std-instance-wrapper i1))
+	     (s1 (std-instance-slots i1)))
+	 (setf (std-instance-wrapper i1) (std-instance-wrapper i2))
+	 (setf (std-instance-slots i1) (std-instance-slots i2))
+	 (setf (std-instance-wrapper i2) w1)
+	 (setf (std-instance-slots i2) s1))
+       (progn
+	 (assert (fsc-instance-p i1))
+	 (let ((w1 (fsc-instance-wrapper i1))
+	       (s1 (fsc-instance-slots i1)))
+	   (setf (fsc-instance-wrapper i1) (fsc-instance-wrapper i2))
+	   (setf (fsc-instance-slots i1) (fsc-instance-slots i2))
+	   (setf (fsc-instance-wrapper i2) w1)
+	   (setf (fsc-instance-slots i2) s1))))))
 
 
-
-
-
-
-(defun get-class-slot-value-1 (object wrapper slot-name)
-  (let ((entry (assoc slot-name (wrapper-class-slots wrapper))))
-    (if (null entry)
-	(slot-missing (wrapper-class wrapper) object slot-name 'slot-value)
-	(if (eq (cdr entry) +slot-unbound+)
-	    (slot-unbound (wrapper-class wrapper) object slot-name)
-	    (cdr entry)))))
-
-(defun set-class-slot-value-1 (new-value object wrapper slot-name)
-  (let ((entry (assoc slot-name (wrapper-class-slots wrapper))))
-    (if (null entry)
-	(slot-missing (wrapper-class wrapper)
-		      object
-		      slot-name
-		      'setf
-		      new-value)
-	(setf (cdr entry) new-value))))
-
-(defmethod class-slot-value ((class std-class) slot-name)
-  (let ((wrapper (class-wrapper class))
-	(prototype (class-prototype class)))
-    (get-class-slot-value-1 prototype wrapper slot-name)))
-
-(defmethod (setf class-slot-value) (nv (class std-class) slot-name)
-  (let ((wrapper (class-wrapper class))
-	(prototype (class-prototype class)))
-    (set-class-slot-value-1 nv prototype wrapper slot-name)))
-
-
-
 (defun find-slot-definition (class slot-name)
   (dolist (slot (class-slots class) nil)
-    (when (eql slot-name (slot-definition-name slot))
+    (when (eq slot-name (slot-definition-name slot))
       (return slot))))
 
 (defun slot-value (object slot-name)
@@ -153,8 +110,6 @@
       `(accessor-set-slot-value ,object ,slot-name ,value)
       form))
 
-(defconstant *optimize-slot-boundp* nil)
-
 (defun slot-boundp (object slot-name)
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
@@ -162,14 +117,11 @@
 	(slot-missing class object slot-name 'slot-boundp)
 	(slot-boundp-using-class class object slot-definition))))
 
-(setf (gdefinition 'slot-boundp-normal) #'slot-boundp)
-
-(define-compiler-macro slot-boundp (object-form slot-name-form)
-  (if (and (constantp slot-name-form)
-	   (let ((slot-name (eval slot-name-form)))
-	     (and (symbolp slot-name) (symbol-package slot-name))))
-      `(accessor-slot-boundp ,object-form ,slot-name-form)
-      `(slot-boundp-normal ,object-form ,slot-name-form)))
+(define-compiler-macro slot-boundp (&whole form object slot-name)
+  (if (and (constantp slot-name)
+	   (interned-symbol-p (eval slot-name)))
+      `(accessor-slot-boundp ,object ,slot-name)
+      form))
 
 (defun slot-makunbound (object slot-name)
   (let* ((class (class-of object))
@@ -196,10 +148,10 @@
 ;;; 
 ;;; 
 (defun standard-instance-access (instance location)
-  (%instance-ref (std-instance-slots instance) location))
+  (%slot-ref (std-instance-slots instance) location))
 
 (defun funcallable-standard-instance-access (instance location)
-  (%instance-ref (fsc-instance-slots instance) location))
+  (%slot-ref (fsc-instance-slots instance) location))
 
 (defmethod slot-value-using-class ((class std-class)
                                    (object std-object)
@@ -209,16 +161,17 @@
 	 (value (typecase location
 		  (fixnum 
 		   (cond ((std-instance-p object)
-			  (%instance-ref (std-instance-slots object) location))
+			  (%slot-ref (std-instance-slots object) location))
 			 ((fsc-instance-p object)
-			  (%instance-ref (fsc-instance-slots object) location))
-			 (t (error "What kind of instance is this?"))))
+			  (%slot-ref (fsc-instance-slots object) location))
+			 (t (internal-error "What kind of instance is this?"))))
 		  (cons
 		   (cdr location))
 		  (t
-		   (error "The slot ~s has neither :instance nor :class allocation, ~@
-                           so it can't be read by the default ~s method."
-			  slotd 'slot-value-using-class)))))
+		   (error "~@<The slot ~s has neither ~s nor ~s ~
+                           allocation, so it can't be read by the default ~s ~
+                           method.~@:>"
+			  slotd :instance :class 'slot-value-using-class)))))
     (if (eq value +slot-unbound+)
 	(slot-unbound class object (slot-definition-name slotd))
 	value)))
@@ -232,16 +185,16 @@
     (typecase location
       (fixnum 
        (cond ((std-instance-p object)
-	      (setf (%instance-ref (std-instance-slots object) location) new-value))
+	      (setf (%slot-ref (std-instance-slots object) location) new-value))
 	     ((fsc-instance-p object)
-	      (setf (%instance-ref (fsc-instance-slots object) location) new-value))
-	     (t (error "What kind of instance is this?"))))
+	      (setf (%slot-ref (fsc-instance-slots object) location) new-value))
+	     (t (internal-error "What kind of instance is this?"))))
       (cons
        (setf (cdr location) new-value))
       (t
-       (error "The slot ~s has neither :instance nor :class allocation, ~@
-                           so it can't be written by the default ~s method."
-	      slotd '(setf slot-value-using-class))))))
+       (error "~@<The slot ~s has neither ~s nor ~s allocation, ~
+               so it can't be written by the default ~s method.~@:>"
+	      slotd :instance :class '(setf slot-value-using-class))))))
 
 (defmethod slot-boundp-using-class
 	   ((class std-class) 
@@ -252,16 +205,17 @@
 	 (value (typecase location
 		  (fixnum 
 		   (cond ((std-instance-p object)
-			  (%instance-ref (std-instance-slots object) location))
+			  (%slot-ref (std-instance-slots object) location))
 			 ((fsc-instance-p object)
-			  (%instance-ref (fsc-instance-slots object) location))
-			 (t (error "What kind of instance is this?"))))
+			  (%slot-ref (fsc-instance-slots object) location))
+			 (t (internal-error "What kind of instance is this?"))))
 		  (cons
 		   (cdr location))
 		  (t
-		   (error "The slot ~s has neither :instance nor :class allocation, ~@
-                           so it can't be read by the default ~s method."
-			  slotd 'slot-boundp-using-class)))))
+		   (error "~@<The slot ~s has neither ~s nor ~s ~
+                           allocation, so it can't be read by the default ~s ~
+			   method.~@:>"
+			  slotd :instance :class 'slot-boundp-using-class)))))
     (not (eq value +slot-unbound+))))
 
 (defmethod slot-makunbound-using-class
@@ -273,28 +227,25 @@
     (typecase location
       (fixnum 
        (cond ((std-instance-p object)
-	      (setf (%instance-ref (std-instance-slots object) location) +slot-unbound+))
+	      (setf (%slot-ref (std-instance-slots object) location) +slot-unbound+))
 	     ((fsc-instance-p object)
-	      (setf (%instance-ref (fsc-instance-slots object) location) +slot-unbound+))
-	     (t (error "What kind of instance is this?"))))
+	      (setf (%slot-ref (fsc-instance-slots object) location) +slot-unbound+))
+	     (t (internal-error "What kind of instance is this?"))))
       (cons
        (setf (cdr location) +slot-unbound+))
       (t
-       (error "The slot ~s has neither :instance nor :class allocation, ~@
-                           so it can't be written by the default ~s method."
-	      slotd 'slot-makunbound-using-class))))
+       (error "~@<The slot ~s has neither ~s nor ~s allocation, ~
+               so it can't be written by the default ~s method.~@:>"
+	      slotd :instance :class 'slot-makunbound-using-class))))
   nil)
 
 (defmethod slot-value-using-class
     ((class structure-class)
      (object structure-object)
      (slotd structure-effective-slot-definition))
-  (let* ((function (slot-definition-internal-reader-function slotd))
-	 (value (funcall function object)))
+  (let ((function (slot-definition-internal-reader-function slotd)))
     (declare (type function function))
-    (if (eq value +slot-unbound+)
-	(slot-unbound class object (slot-definition-name slotd))
-	value)))
+    (funcall function object)))
 
 (defmethod (setf slot-value-using-class)
     (new-value (class structure-class)
@@ -314,21 +265,22 @@
 	   ((class structure-class)
 	    (object structure-object)
 	    (slotd structure-effective-slot-definition))
-  (error "Structure slots can't be unbound"))
+  (error "Structure slots cannot be unbound."))
 
 
 (defmethod slot-missing
 	   ((class t) instance slot-name operation &optional new-value)
-  (error "When attempting to ~A,~%the slot ~S is missing from the object ~S."
-	 (ecase operation
-	   (slot-value "read the slot's value (slot-value)")
-	   (setf (format nil
-			 "set the slot's value to ~S (setf of slot-value)"
-			 new-value))
-	   (slot-boundp "test to see if slot is bound (slot-boundp)")
-	   (slot-makunbound "make the slot unbound (slot-makunbound)"))
-	 slot-name
-	 instance))
+  (error
+   (format nil "~~@<When attempting to ~A, the slot ~S is missing ~
+                from the object ~S.~~@:>"
+	   (ecase operation
+	     (slot-value "read the slot's value (slot-value)")
+	     (setf (format nil "set the slot's value to ~S (setf of slot-value)"
+			   new-value))
+	     (slot-boundp "test to see if slot is bound (slot-boundp)")
+	     (slot-makunbound "make the slot unbound (slot-makunbound)"))
+	   slot-name
+	   instance)))
 
 (defmethod slot-unbound ((class t) instance slot-name)
   (error 'unbound-slot :slot slot-name :instance instance))
@@ -353,6 +305,7 @@
   (let ((constructor (class-defstruct-constructor class)))
     (if constructor
 	(funcall constructor)
-	(error "Can't allocate an instance of class ~S" (class-name class)))))
+	(error "~@<Can't allocate an instance of class ~S.~@:>"
+	       (class-name class)))))
 
 

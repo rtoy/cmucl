@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.39 2003/02/05 12:33:12 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.40 2003/03/22 16:15:19 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -238,7 +238,7 @@
 	 (compiler-warning
 	  "Undefining structure type:~%  ~S~@
 	   so that this slot accessor can be redefined:~%  ~S"
-	  (class-name for) name)
+	  (%class-name for) name)
 	 (undefine-structure for)
 	 (setf (info function kind name) :function))))
     (:macro
@@ -395,13 +395,13 @@
       (freeze-type
        (dolist (type args)
 	 (let ((class (specifier-type type)))
-	   (when (typep class 'class)
-	     (setf (class-state class) :sealed)
-	     (let ((subclasses (class-subclasses class)))
+	   (when (typep class 'kernel::class)
+	     (setf (%class-state class) :sealed)
+	     (let ((subclasses (%class-subclasses class)))
 	       (when subclasses
 		 (do-hash (subclass layout subclasses)
 		   (declare (ignore layout))
-		   (setf (class-state subclass) :sealed))))))))
+		   (setf (%class-state subclass) :sealed))))))))
       (function
        ;;
        ;; Handle old-style FUNCTION declaration, which is a shorthand for

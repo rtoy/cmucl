@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.108 2003/03/21 21:36:35 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.109 2003/03/22 16:15:20 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,11 +100,9 @@
 
 ;;;; Classes:
 
-(deftype name-for-class () 't)
-(defknown class-name (class) name-for-class (flushable))
-(defknown find-class (name-for-class &optional t lexenv-or-null)
-  (or class null) ())
-(defknown class-of (t) class (flushable))
+(defknown kernel::find-class (t &optional t lexenv-or-null)
+  (or kernel::class null) ())
+(defknown kernel::class-of (t) kernel::class (flushable))
 (defknown layout-of (t) layout (flushable))
 (defknown copy-structure (structure-object) structure-object
   (flushable unsafe))

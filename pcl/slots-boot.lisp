@@ -26,33 +26,93 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.16 2002/11/28 16:18:19 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.17 2003/03/22 16:15:15 gerd Exp $")
 ;;;
 
 (in-package :pcl)
 
-(defmacro asv-funcall (sym slot-name type &rest args)
-  (declare (ignore type))
-  `(if (fboundp ',sym)
-       (,sym ,@args)
-       (no-slot ',sym ',slot-name)))
-
-(defun no-slot (sym slot-name)
-  (error "No class has a slot named ~S (~s has no function binding)."
-	 slot-name sym))
+;;;
+;;; Called via LOAD-TIME-VALUE to make sure that the slot accessor
+;;; function with name GF-NAME is a generic function, and has a
+;;; method that will call SLOT-MISSING if appropriate.
+;;;
+;;; TYPE is the type of the accessor method, one of the symbols
+;;; READER, WRITER, or BOUNDP.  SLOT-NAME is the name of the slot
+;;; accessed.
+;;;
+(defun ensure-accessor (type gf-name slot-name)
+  (labels ((slot-missing-fn (slot-name type)
+	     (let* ((method-type (ecase type
+				   (slot-value 'reader-method)
+				   (setf 'writer-method)
+				   (slot-boundp 'boundp-method)))
+		    (initargs
+		     (ecase type
+		       (slot-value
+			(make-method-function
+			 (lambda (obj)
+			   (slot-missing (class-of obj) obj slot-name
+					 'slot-value))))
+		       (slot-boundp
+			(make-method-function
+			 (lambda (obj)
+			   (slot-missing (class-of obj) obj slot-name
+					 'slot-boundp))))
+		       (setf
+			(make-method-function
+			 (lambda (val obj)
+			   (declare (ignore val))
+			   (slot-missing (class-of obj) obj slot-name
+					 'setf))))))
+		    (initargs (copy-tree initargs)))
+	       (setf (getf (getf initargs :plist) :slot-name-lists)
+		     (list (list nil slot-name)))
+	       (setf (getf (getf initargs :plist) :pv-table-symbol)
+		     (gensym))
+	       (list* :method-spec (list method-type 'slot-object slot-name)
+		      initargs)))
+	   (add-slot-missing-method (gf slot-name type)
+	     (multiple-value-bind (class lambda-list specializers)
+		 (ecase type
+		   (slot-value
+		    (values 'standard-reader-method
+			    '(object)
+			    (list *the-class-slot-object*)))
+		   (slot-boundp
+		    (values 'standard-boundp-method
+			    '(object)
+			    (list *the-class-slot-object*)))
+		   (setf
+		    (values 'standard-writer-method
+			    '(new-value object)
+			    (list *the-class-t* *the-class-slot-object*))))
+	       (add-method gf (make-a-method class
+					     ()
+					     lambda-list
+					     specializers
+					     (slot-missing-fn slot-name type)
+					     "generated slot-missing method"
+					     slot-name)))))
+    (unless (fboundp gf-name)
+      (let ((gf (ensure-generic-function gf-name)))
+	(ecase type
+	  (reader (add-slot-missing-method gf slot-name 'slot-value))
+	  (boundp (add-slot-missing-method gf slot-name 'slot-boundp))
+	  (writer (add-slot-missing-method gf slot-name 'setf)))
+	(setf (plist-value gf 'slot-missing-method) t))
+      t)))
 
 (defmacro accessor-slot-value (object slot-name)
-  (unless (constantp slot-name)
-    (error "~s requires its slot-name argument to be a constant" 
-	   'accessor-slot-value))
+  (assert (constantp slot-name))
   (let* ((slot-name (eval slot-name))
-	 (sym (slot-reader-symbol slot-name)))
-    `(asv-funcall ,sym ,slot-name reader ,object)))
+	 (reader-name (slot-reader-name slot-name)))
+    `(let ((.ignore. (load-time-value (ensure-accessor 'reader ',reader-name
+						       ',slot-name))))
+       (declare (ignore .ignore.))
+       (funcall #',reader-name ,object))))
 
 (defmacro accessor-set-slot-value (object slot-name new-value &environment env)
-  (unless (constantp slot-name)
-    (error "~s requires its slot-name argument to be a constant" 
-	   'accessor-set-slot-value))
+  (assert (constantp slot-name))
   (setq object (macroexpand object env))
   (setq slot-name (macroexpand slot-name env))
   (let* ((slot-name (eval slot-name))
@@ -60,23 +120,23 @@
 		     (let ((object-var (gensym)))
 		       (prog1 `((,object-var ,object))
 			 (setq object object-var)))))
-	 (sym (slot-writer-symbol slot-name))
-	 (form `(asv-funcall ,sym ,slot-name writer ,new-value ,object)))
+	 (writer-name (slot-writer-name slot-name))
+	 (form `(let ((.ignore. (load-time-value
+				 (ensure-accessor 'writer ',writer-name ',slot-name))))
+		  (declare (ignore .ignore.))
+		  (funcall #',writer-name ,new-value ,object))))
     (if bindings
 	`(let ,bindings ,form)
 	form)))
 
-(defconstant *optimize-slot-boundp* nil)
-
 (defmacro accessor-slot-boundp (object slot-name)
-  (unless (constantp slot-name)
-    (error "~s requires its slot-name argument to be a constant" 
-	   'accessor-slot-boundp))
+  (assert (constantp slot-name))
   (let* ((slot-name (eval slot-name))
-	 (sym (slot-boundp-symbol slot-name)))
-    (if (not *optimize-slot-boundp*)
-	`(slot-boundp-normal ,object ',slot-name)
-	`(asv-funcall ,sym ,slot-name boundp ,object))))
+	 (boundp-name (slot-boundp-name slot-name)))
+    `(let ((.ignore. (load-time-value
+		      (ensure-accessor 'boundp ',boundp-name ',slot-name))))
+       (declare (ignore .ignore.))
+       (funcall #',boundp-name ,object))))
 
 (defun make-structure-slot-boundp-function (slotd)
   (declare (ignore slotd))
@@ -96,7 +156,7 @@
 			   #+nil (format t "* Warning: ~s ~s~%   ~s~%"
 				   name slotd class)
 			   nil)
-			  (t (error "~S is not a standard-class" class))))
+			  (t (error "~@<~S is not a standard-class.~@:>" class))))
 	     (slot-name (slot-definition-name slotd))
 	     (index (slot-definition-location slotd))
 	     (function (ecase name
@@ -114,13 +174,13 @@
      (fixnum (if fsc-p
 		 (lambda (instance)
 		   (check-obsolete-instance instance)
-		   (let ((value (%instance-ref (fsc-instance-slots instance) index)))
+		   (let ((value (%slot-ref (fsc-instance-slots instance) index)))
 		     (if (eq value +slot-unbound+)
 			 (slot-unbound (class-of instance) instance slot-name)
 			 value)))
 		 (lambda (instance)
 		   (check-obsolete-instance instance)
-		   (let ((value (%instance-ref (std-instance-slots instance) index)))
+		   (let ((value (%slot-ref (std-instance-slots instance) index)))
 		     (if (eq value +slot-unbound+)
 			 (slot-unbound (class-of instance) instance slot-name)
 			 value)))))
@@ -139,10 +199,10 @@
      (fixnum (if fsc-p
 		 (lambda (nv instance)
 		   (check-obsolete-instance instance)
-		   (setf (%instance-ref (fsc-instance-slots instance) index) nv))
+		   (setf (%slot-ref (fsc-instance-slots instance) index) nv))
 		 (lambda (nv instance)
 		   (check-obsolete-instance instance)
-		   (setf (%instance-ref (std-instance-slots instance) index) nv))))
+		   (setf (%slot-ref (std-instance-slots instance) index) nv))))
      (cons   (lambda (nv instance)
 	       (check-obsolete-instance instance)
 	       (setf (cdr index) nv))))
@@ -155,13 +215,11 @@
      (fixnum (if fsc-p
 		 (lambda (instance)
 		   (check-obsolete-instance instance)
-		   (not (eq (%instance-ref (fsc-instance-slots instance)
-					   index)
+		   (not (eq (%slot-ref (fsc-instance-slots instance) index)
 			    +slot-unbound+)))
 		 (lambda (instance)
 		   (check-obsolete-instance instance)
-		   (not (eq (%instance-ref (std-instance-slots instance)
-					   index)
+		   (not (eq (%slot-ref (std-instance-slots instance) index)
 			    +slot-unbound+)))))
      (cons   (lambda (instance)
 	       (check-obsolete-instance instance)
@@ -195,7 +253,7 @@
 	(boundp (make-optimized-structure-slot-boundp-using-class-method-function)))
       (let* ((fsc-p (cond ((standard-class-p class) nil)
 			  ((funcallable-standard-class-p class) t)
-			  (t (error "~S is not a standard-class" class))))
+			  (t (error "~@<~S is not a standard-class.~@:>" class))))
 	     (slot-name (slot-definition-name slotd))
 	     (index (slot-definition-location slotd))
 	     (function 
@@ -217,14 +275,14 @@
 		(lambda (class instance slotd)
 		  (declare (ignore slotd))
 		  (check-obsolete-instance instance)
-		  (let ((value (%instance-ref (fsc-instance-slots instance) index)))
+		  (let ((value (%slot-ref (fsc-instance-slots instance) index)))
 		    (if (eq value +slot-unbound+)
 			(slot-unbound class instance slot-name)
 			value)))
 		(lambda (class instance slotd)
 		  (declare (ignore slotd))
 		  (check-obsolete-instance instance)
-		  (let ((value (%instance-ref (std-instance-slots instance) index)))
+		  (let ((value (%slot-ref (std-instance-slots instance) index)))
 		    (if (eq value +slot-unbound+)
 			(slot-unbound class instance slot-name)
 			value)))))
@@ -245,11 +303,11 @@
 		(lambda (nv class instance slotd)
 		  (declare (ignore class slotd))
 		  (check-obsolete-instance instance)
-		  (setf (%instance-ref (fsc-instance-slots instance) index) nv))
+		  (setf (%slot-ref (fsc-instance-slots instance) index) nv))
 		(lambda (nv class instance slotd)
 		  (declare (ignore class slotd))
 		  (check-obsolete-instance instance)
-		  (setf (%instance-ref (std-instance-slots instance) index) nv))))
+		  (setf (%slot-ref (std-instance-slots instance) index) nv))))
     (cons   (lambda (nv class instance slotd)
 	      (declare (ignore class slotd))
 	      (check-obsolete-instance instance)
@@ -264,14 +322,12 @@
 		(lambda (class instance slotd)
 		  (declare (ignore class slotd))
 		  (check-obsolete-instance instance)
-		  (not (eq (%instance-ref (fsc-instance-slots instance)
-					  index)
+		  (not (eq (%slot-ref (fsc-instance-slots instance) index)
 			   +slot-unbound+)))
 		(lambda (class instance slotd)
 		  (declare (ignore class slotd))
 		  (check-obsolete-instance instance)
-		  (not (eq (%instance-ref (std-instance-slots instance)
-					  index)
+		  (not (eq (%slot-ref (std-instance-slots instance) index)
 			   +slot-unbound+)))))
     (cons   (lambda (class instance slotd)
 	      (declare (ignore class slotd))
@@ -299,7 +355,7 @@
 				    (assq slot-name (wrapper-class-slots wrapper)))))
 		    (typecase index
 		      (fixnum 	
-		       (let ((value (%instance-ref (get-slots instance) index)))
+		       (let ((value (%slot-ref (get-slots instance) index)))
 			 (if (eq value +slot-unbound+)
 			     (slot-unbound (class-of instance) instance slot-name)
 			     value)))
@@ -309,7 +365,8 @@
 			     (slot-unbound (class-of instance) instance slot-name)
 			     value)))
 		      (t
-		       (error "The wrapper for class ~S does not have the slot ~S"
+		       (error "~@<The wrapper for class ~S does not have ~
+                               the slot ~S.~@:>"
 			      class slot-name))))
 		  (slot-value instance slot-name)))))))
 
@@ -321,9 +378,9 @@
 		     (lambda (instance)
 		       (pv-binding1 (.pv. .calls.
 					  (symbol-value pv-table-symbol)
-					  (instance) (instance-slots))
-			 (instance-read-internal 
-			  .pv. instance-slots 1
+					  (instance) (.slots.))
+			 (pv-slot-value
+			  class-name slot-name .slots. 0 t nil
 			  (slot-value instance slot-name))))))))
     (setf (getf (getf initargs :plist) :slot-name-lists)
 	  (list (list nil slot-name)))
@@ -338,9 +395,9 @@
 		     (lambda (nv instance)
 		       (pv-binding1 (.pv. .calls.
 					  (symbol-value pv-table-symbol)
-					  (instance) (instance-slots))
-			 (instance-write-internal 
-			  .pv. instance-slots 1 nv
+					  (instance) (.slots.))
+			 (pv-set-slot-value
+			  class-name slot-name .slots. 0 nv nil
 			  (setf (slot-value instance slot-name) nv))))))))
     (setf (getf (getf initargs :plist) :slot-name-lists)
 	  (list nil (list nil slot-name)))
@@ -355,9 +412,9 @@
 		     (lambda (instance)
 		       (pv-binding1 (.pv. .calls.
 					  (symbol-value pv-table-symbol)
-					  (instance) (instance-slots))
-			  (instance-boundp-internal 
-			   .pv. instance-slots 1
+					  (instance) (.slots.))
+			  (pv-slot-boundp
+			   class-name slot-name .slots. 0
 			   (slot-boundp instance slot-name))))))))
     (setf (getf (getf initargs :plist) :slot-name-lists)
 	  (list (list nil slot-name)))
@@ -367,27 +424,29 @@
 
 (defun initialize-internal-slot-gfs (slot-name &optional type)
   (when (or (null type) (eq type 'reader))
-    (let* ((name (slot-reader-symbol slot-name))
-	   (gf (ensure-generic-function name)))
-      (unless (generic-function-methods gf)
+    (let* ((name (slot-reader-name slot-name))
+	   (gf (ensure-generic-function name))
+	   (methods (generic-function-methods gf)))
+      (when (or (null methods)
+		(plist-value gf 'slot-missing-method))
+	(setf (plist-value gf 'slot-missing-method) nil)
 	(add-reader-method *the-class-slot-object* gf slot-name))))
   (when (or (null type) (eq type 'writer))
-    (let* ((name (slot-writer-symbol slot-name))
-	   (gf (ensure-generic-function name)))
-      (unless (generic-function-methods gf)
+    (let* ((name (slot-writer-name slot-name))
+	   (gf (ensure-generic-function name))
+	   (methods (generic-function-methods gf)))
+      (when (or (null methods)
+		(plist-value gf 'slot-missing-method))
+	(setf (plist-value gf 'slot-missing-method) nil)
 	(add-writer-method *the-class-slot-object* gf slot-name))))
-  (when (and *optimize-slot-boundp*
-	     (or (null type) (eq type 'boundp)))
-    (let* ((name (slot-boundp-symbol slot-name))
-	   (gf (ensure-generic-function name)))
-      (unless (generic-function-methods gf)
+  (when (or (null type) (eq type 'boundp))
+    (let* ((name (slot-boundp-name slot-name))
+	   (gf (ensure-generic-function name))
+	   (methods (generic-function-methods gf)))
+      (when (or (null methods)
+		(plist-value gf 'slot-missing-method))
+	(setf (plist-value gf 'slot-missing-method) nil)
 	(add-boundp-method *the-class-slot-object* gf slot-name))))
   nil)
 
-(defun initialize-internal-slot-gfs* (readers writers boundps)
-  (dolist (reader readers)
-    (initialize-internal-slot-gfs reader 'reader))
-  (dolist (writer writers)
-    (initialize-internal-slot-gfs writer 'writer))
-  (dolist (boundp boundps)
-    (initialize-internal-slot-gfs boundp 'boundp)))
+

@@ -23,10 +23,9 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.19 2002/11/28 00:51:35 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.20 2003/03/22 16:15:16 gerd Exp $")
 ;;;
 
   ;;   
@@ -113,8 +112,8 @@ explicitly marked saying who wrote it.
 (declaim (notinline called-fin-without-function))
 (defun called-fin-without-function (&rest args)
   (declare (ignore args))
-  (error "Attempt to funcall a funcallable-instance without first~%~
-          setting its funcallable-instance-function."))
+  (error "~@<Attempt to funcall a funcallable instance without first ~
+          setting its function.~@:>"))
 
 
 ;;;; Implementation of funcallable instances for CMU Common Lisp:
@@ -137,9 +136,6 @@ explicitly marked saying who wrote it.
   ;;
   ;; Hash code.
   (hash-code (get-instance-hash-code) :type fixnum))
-
-(defmacro fsc-instance-hash-code (fin)
-  `(kernel:%funcallable-instance-info ,fin 2))
 
 ;;; Note: returns true for non-pcl funcallable structures.
 (import 'kernel:funcallable-instance-p)
@@ -167,14 +163,5 @@ explicitly marked saying who wrote it.
 (defmacro fsc-instance-slots (fin)
   `(kernel:%funcallable-instance-info ,fin 0))
 
-;;; Implement proper sxhashing of standard instances.
-(defun common-lisp::sxhash-instance (instance)
-  (cond
-    ((and (std-instance-p instance)
-          (typep (std-instance-wrapper instance) 'wrapper))
-     (std-instance-hash-code instance))
-    ((and (fsc-instance-p instance)
-          (typep (fsc-instance-wrapper instance) 'wrapper))
-     (fsc-instance-hash-code instance))
-    (t
-     42)))
+(defmacro fsc-instance-hash (fin)
+  `(kernel:%funcallable-instance-info ,fin 2))

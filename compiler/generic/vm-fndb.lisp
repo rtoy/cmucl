@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.63 2000/07/09 16:08:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.64 2003/03/22 16:15:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,7 +99,7 @@
 
 
 (defknown %make-instance (index) instance
-  (unsafe))
+  (flushable movable))
 (defknown %instance-layout (instance) layout
   (foldable flushable))
 (defknown %set-instance-layout (instance layout) layout

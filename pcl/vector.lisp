@@ -26,742 +26,529 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.26 2002/12/18 16:29:07 pmai Exp $")
-;;;
-;;; Permutation vectors.
-;;;
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.27 2003/03/22 16:15:15 gerd Exp $")
 
 (in-package :pcl)
 
-(defmacro instance-slot-index (wrapper slot-name)
-  `(let ((pos 0))
-     (declare (fixnum pos))
-     (block loop
-       (dolist (sn (wrapper-instance-slots-layout ,wrapper))
-	 (when (eq ,slot-name sn) (return-from loop pos))
-	 (incf pos)))))
+;;;
+;;; Return the index of the slot named SLOT-NAME in the slot vector of
+;;; instances whose wrapper is WRAPPER.
+;;;
+(declaim (inline instance-slot-index))
+
+(defun instance-slot-index (wrapper slot-name)
+  (loop for name in (wrapper-instance-slots-layout wrapper)
+	for index of-type fixnum from 0
+	when (eq slot-name name)
+	  return index))
 
 
-;;;
-;;;
-;;;
-(defun pv-cache-limit-fn (nlines)
-  (default-limit-fn nlines))
+(deftype pv-index () `(integer 0 ,most-positive-fixnum))
+(deftype param-index () `(integer 0 ,most-positive-fixnum))
 
-(defstruct (pv-table
-	     (:predicate pv-tablep)
-	     (:constructor make-pv-table-internal
-			   (slot-name-lists call-list)))
+(defstruct pv-table
+  ;;
+  ;; This cache maps N wrappers, one for each required method
+  ;; parameter for which PV optimization has been done, to a pair (PV
+  ;; . CALLS).
+  ;;
+  ;; PV is a "permutation vector" of size PV-SIZE (see below).  Each
+  ;; slot name (and (READER <gf-name>) or (WRITER <gf-name>)) used in
+  ;; an pv optimization is assigned an index in this vector.  For
+  ;; instance slots, the value of PV at that index is a fixnum, the
+  ;; index the slot's value an instance's slot value vector.  For
+  ;; class slots, the PV slot contains the cons cell of the class
+  ;; slot.  If the PV contains neither a fixnum nor a cons, the PV
+  ;; optimization code executes a default form.
+  ;;
+  ;; CALLS is currently not used.
   (cache nil :type (or cache null))
+  ;;
+  ;; Size of permutation vectors in this table.  This is 1+ the
+  ;; highest slot pv index (see below).
   (pv-size 0 :type fixnum)
+  ;;
+  ;; This list has an entry for each required parameter of the
+  ;; pv-table's method.  List element at index K corresponds to the
+  ;; Kth parameter P_k.  Entries for parameters for which no
+  ;; pv-optimization has been done are NIL.  Other entries have the
+  ;; form (NIL SLOT-NAME SLOT-NAME ...)  where each SLOT-NAME is
+  ;; either
+  ;;
+  ;; -- the name of a slot used in a pv-optimization involving P_k
+  ;; (that is, say, (SLOT-VALUE P_k SLOT-NAME) has been optimized).
+  ;;
+  ;; -- a list (READER <gf-name>) or (WRITER <gf-name>), meaning that
+  ;; a slot reader/writer call has been pv-optimized, say (GF-NAME P_k).
+  ;; GF-NAME is the name of the slot accessor generic function.
+  ;;
+  ;; A T in the car of an parameter entry means that the corresponding
+  ;; method parameter is used in a generic function call optimization.
+  ;;
+  ;; Each SLOT-NAME has a "pv-index" >= 0 assigned to it, which is the
+  ;; index in permutation vectors of this pv-table, under which the
+  ;; pv-value (fixnum, cons, or nil) for the slot name is found.
   (slot-name-lists nil :type list)
-  (call-list nil :type list))
+  ;;
+  ;; Contains elements (GF-NAME i0 i1 ...), for each generic function
+  ;; call optimized.  GF-NAME is the name of the generic function
+  ;; called; iN is the index of the method parameter passed as
+  ;; argument N to the generic function.  Only method parameters used
+  ;; in pv-optimization are counted, that is, the indices give the 
+  ;; index in the wrappers kept in the cache.
+  (call-list nil :type list)
+  ;;
+  ;; This is set to T while computing calls.  The slot is needed to
+  ;; prevent GET-METHOD-FUNCTION from using PV-TABLE-LOOKUP to determine
+  ;; a pv cell when GET-METHOD-FUNCTION is actually called while computing
+  ;; the pv-table cache.
+  (computing-cache-p nil :type boolean))
 
 (declaim (ext:freeze-type pv-table))
 
-(defvar *initial-pv-table* (make-pv-table-internal nil nil))
+
+;;;
+;;; Hash-table mapping slot name lists and call lists to canonical
+;;; representations.
+;;;
+(defvar *calls+snls->canonical* (make-hash-table :test 'equal))
 
-; help new slot-value-using-class methods affect fast iv access
-(defvar *all-pv-table-list* nil) 
+;;;
+;;; Hash-table mapping a list of calls + slot name lists to a
+;;; corresponding PV-TABLE for it.
+;;;
+(defvar *calls+snls->pv-table* (make-hash-table :test 'equal))
 
-(defun make-pv-table (&key slot-name-lists call-list)
-  (let ((pv-table (make-pv-table-internal slot-name-lists call-list)))
-    (push pv-table *all-pv-table-list*)
-    pv-table))
+;;;
+;;; Values are lists of pv-tables.  Keys are slot names or (READER
+;;; <gf-name>), (WRITER <gf-name>), or (CALL <gf-name>).  Each
+;;; pv-table is one containing the key in one of its slot name lists,
+;;; or, for CALL, having <gf-name> in its call-list.
+;;;
+(defvar *pv-key->pv-tables* (make-hash-table :test 'equal))
 
-(defun make-pv-table-type-declaration (var)
-  `(type pv-table ,var))
+;;;
+;;; Execute BODY for all slot-names, (READER <gf-name>) etc.  of
+;;; TABLE.  Bind KEY to the key in question, INDEX to its index
+;;; in permutation vectors of TABLE, PARAM-INDEX to the method
+;;; parameter number of the key.
+;;;
+(defmacro do-pv-slots ((key param-index index table) &body body)
+  (let ((snl (gensym)))
+    `(loop with ,index of-type pv-index = 0
+	   for ,param-index of-type param-index from 0
+	   for ,snl in (pv-table-slot-name-lists ,table) do
+	     (loop for ,key in (cdr ,snl) do
+		     (locally ,@body)
+		     (incf ,index)))))
 
-(defvar *slot-name-lists-inner* (make-hash-table :test #'equal))
-(defvar *slot-name-lists-outer* (make-hash-table :test #'equal))
+;;;
+;;; Execute BODY for all calls of table, binding INDEX to pv
+;;; indices of the calls.
+;;;
+(defmacro do-pv-calls ((call index table) &body body)
+  `(loop for ,index of-type pv-index from 0
+	 for ,call in (pv-table-call-list ,table) do
+	   (locally ,@body)))
 
-;entries in this are lists of (table . pv-offset-list)
-(defvar *pv-key-to-pv-table-table* (make-hash-table :test 'equal))
-
+;;;
+;;; Return a PV-TABLE for the given SLOT-NAME-LISTS and CALL-LIST.
+;;; If such a table already exists, return that.  Otherwise make
+;;; a new one.
+;;;
 (defun intern-pv-table (&key slot-name-lists call-list)
   (let ((new-p nil))
-    (flet ((inner (x)
-	     (or (gethash x *slot-name-lists-inner*)
-		 (setf (gethash x *slot-name-lists-inner*) (copy-list x))))
-	   (outer (x)
-	     (or (gethash x *slot-name-lists-outer*)
-		 (setf (gethash x *slot-name-lists-outer*)
+    (flet (;;
+	   ;; Map calls or slot name list X to a canonical form.
+	   (make-key (x)
+	     (or (gethash x *calls+snls->canonical*)
+		 (setf (gethash x *calls+snls->canonical*)
+		       (copy-list x))))
+	   ;;
+	   ;; Lookup pv-table for calls + slots in X.  Add a new
+	   ;; entry and create a new pv-table if not found.
+	   (lookup (x)
+	     (or (gethash x *calls+snls->pv-table*)
+		 (setf (gethash x *calls+snls->pv-table*)
 		       (let ((snl (copy-list (cdr x)))
 			     (cl (car x)))
 			 (setq new-p t)
 			 (make-pv-table :slot-name-lists snl
 					:call-list cl))))))
-    (let ((pv-table (outer (mapcar #'inner (cons call-list slot-name-lists)))))
+    (let ((table (lookup (mapcar #'make-key
+				 (cons call-list slot-name-lists)))))
+      ;;
+      ;; When a new pv table has been created, record which keys
+      ;; (slot-names, (reader <gf-name>), etc.) it uses and which
+      ;; permutation vectors indices these keys are associated with.
       (when new-p
-	(let ((pv-index 1))
-	  (dolist (slot-name-list slot-name-lists)
-	    (dolist (slot-name (cdr slot-name-list))
-	      (note-pv-table-reference slot-name pv-index pv-table)
-	      (incf pv-index)))
-	  (dolist (gf-call call-list)
-	    (note-pv-table-reference gf-call pv-index pv-table)
-	    (incf pv-index))
-	  (setf (pv-table-pv-size pv-table) pv-index)))
-      pv-table))))
+	(let ((last-index -1))
+	  (do-pv-slots (key param index table)
+	    (setq last-index index)
+	    (note-pv-table-reference key table))
+	  (setf (pv-table-pv-size table) (1+ last-index)))
+	(do-pv-calls (call index table)
+	  (note-pv-table-reference `(call ,(car call)) table)))
+      ;;
+      table))))
 
-(defun note-pv-table-reference (ref pv-offset pv-table)
-  (let ((entry (gethash ref *pv-key-to-pv-table-table*)))
-    (when (listp entry)
-      (let ((table-entry (assq pv-table entry)))
-	(when (and (null table-entry)
-		   (> (length entry) 8))
-	  (let ((new-table-table (make-hash-table :size 16 :test 'eq)))
-	    (dolist (table-entry entry)
-	      (setf (gethash (car table-entry) new-table-table)
-		    (cdr table-entry)))
-	    (setf (gethash ref *pv-key-to-pv-table-table*) new-table-table)
-	    (setq entry new-table-table)))
-	(when (listp entry)
-	  (if (null table-entry)
-	      (let ((new (cons pv-table pv-offset)))
-		(if (consp entry)
-		    (push new (cdr entry))
-		    (setf (gethash ref *pv-key-to-pv-table-table*) (list new))))
-	      (push pv-offset (cdr table-entry)))
-	  (return-from note-pv-table-reference nil))))
-    (let ((list (gethash pv-table entry)))
-      (if (consp list)
-	  (push pv-offset (cdr list))
-	  (setf (gethash pv-table entry) (list pv-offset)))))
-  nil)
+;;;
+;;; Record that REF is referenced from PV-TABLE.  REF can be the name
+;;; of a slot, (READER <gf-name>), (WRITER <gf-name>), or (CALL
+;;; <gf-name>).
+;;;
+(defun note-pv-table-reference (ref pv-table)
+  (push pv-table (gethash ref *pv-key->pv-tables*)))
 
-(defun map-pv-table-references-of (ref function)
-  (let ((entry (gethash ref *pv-key-to-pv-table-table*)))
-    (if (listp entry)
-	(dolist (table+pv-offset-list entry)
-	  (funcall function
-		   (car table+pv-offset-list) (cdr table+pv-offset-list)))
-	(maphash function entry)))
-  ref)
+;;;
+;;; Execute BODY for all pv tables using KEY.  Bind TABLE to the pv
+;;; table around BODY.
+;;;
+(defmacro do-pv-tables ((table key) &body body)
+  `(loop for ,table in (gethash ,key *pv-key->pv-tables*) do
+	   (locally ,@body)))
+
 
 
-(defvar *pvs* (make-hash-table :test #'equal))
 
-(defun optimize-slot-value-by-class-p (class slot-name type)
-  (or (not (eq *boot-state* 'complete))
-      (let ((slotd (find-slot-definition class slot-name)))
-	(and slotd 
-	     (slot-accessor-std-p slotd type)))))
+;;;
+;;; Return the permutation vector value for SLOT-NAME in instances
+;;; having WRAPPER layout.  CLASS is the class of the instance,
+;;; CLASS-SLOTS is the list of class slots of CLASS.
+;;;
+;;; SLOT-NAME can be a symbol or a cons.  If it is a symbol, it names
+;;; an instance or class slot.  If it is a cons (READER gf) or (WRITER
+;;; gf), this signals that a call to the slot accessor generic
+;;; function gf has been PV-optimized.
+;;;
+;;; First value is the permutation vector value for SLOT-NAME;
+;;; a fixnum for an optimized instance slot, a cons for an optimized
+;;; class slot, or NIL for "not optimized".
+;;;
+;;; Second value is T for an optimized class slot.
+;;;
+(defun compute-pv-slot (key wrapper class class-slots)
+  (etypecase key
+    (symbol
+     (when (optimize-slot-value-by-class-p class key 'all)
+       (or (instance-slot-index wrapper key)
+	   (assq key class-slots))))
+    (cons
+     (ecase (first key)
+       ((reader writer)
+	(when (eq *boot-state* 'complete)
+	  (let ((gf (gdefinition (second key))))
+	    (when (generic-function-p gf)
+	      (accessor-values1 gf (first key) class)))))
+       (inline-access
+	nil)))))
 
-(defun compute-pv-slot (slot-name wrapper class class-slots class-slot-p-cell)
-  (if (symbolp slot-name)
-      (when (optimize-slot-value-by-class-p class slot-name 'all)
-	(or (instance-slot-index wrapper slot-name)
-	    (let ((cell (assq slot-name class-slots)))
-	      (when cell
-		(setf (car class-slot-p-cell) t)
-		cell))))
-      (when (consp slot-name)
-	(dolist (type '(reader writer) nil)
-	  (when (eq (car slot-name) type)
-	    (return
-	      (let* ((gf-name (cadr slot-name))
-		     (gf (gdefinition gf-name))
-		     (location 
-		      (when (eq *boot-state* 'complete)
-			(accessor-values1 gf type class))))
-		(when (consp location)
-		  (setf (car class-slot-p-cell) t))
-		location)))))))
+;;;
+;;; Return a permutation vector for SLOT-NAME-LISTS given a list of
+;;; wrappers for actual method arguments.
+;;;
+(defun compute-pv (snls wrappers)
+  (loop with wrappers = (if (listp wrappers) wrappers (list wrappers))
+	for snl in snls
+	when snl nconc
+	  (loop with wrapper = (pop wrappers)
+		with stdp = (typep wrapper 'wrapper)
+		with class = (wrapper-class* wrapper)
+		with class-slots = (and stdp (wrapper-class-slots wrapper))
+		for sn in (cdr snl) collect
+		  (when stdp
+		    (compute-pv-slot sn wrapper class class-slots)))
+	into pv-values
+	finally
+	  (return (make-permutation-vector pv-values))))
 
-(defun compute-pv (slot-name-lists wrappers)
-  (let* ((not-simple-p-cell (list nil))
-	 (elements
-	  (loop with wrappers = (if (listp wrappers) wrappers (list wrappers))
-		for slot-names in slot-name-lists
-		when slot-names
-		  nconc (loop with wrapper = (pop wrappers)
-			      with stdp = (typep wrapper 'wrapper)
-			      and class = (wrapper-class* wrapper)
-			      with class-slots
-			        = (and stdp (wrapper-class-slots wrapper))
-			      for slot-name in (cdr slot-names)
-			      collect
-			        (when stdp
-				  (compute-pv-slot slot-name wrapper class
-						   class-slots
-						   not-simple-p-cell))))))
-    (if (car not-simple-p-cell)
-	(make-permutation-vector (cons t elements))
-	(or (gethash elements *pvs*)
-	    (setf (gethash elements *pvs*)
-		  (make-permutation-vector (cons nil elements)))))))
+(defun make-permutation-vector (contents)
+  (make-array (length contents) :initial-contents contents))
 
-(defun compute-calls (call-list wrappers)
-  (declare (ignore call-list wrappers))
-  #||
-  (map 'vector
-       (lambda (call)
-	   (compute-emf-from-wrappers call wrappers))
-       call-list)
-  ||#  
-  '#())
+;;;
+;;; Look up wrappers PV-WRAPPERS in PV-TABLE.  Value is a pv cell
+;;; (PV . CALLS), with PV being the permutation vector associated
+;;; with the set of wrappers PV-WRAPPERS.
+;;;
+;;; If PV-TABLE doen't have a cache, make a new one.  If PV-WRAPPERS
+;;; are not in the cache, compute a permutation vector and fill the
+;;; cache.
+;;;
+(defun pv-table-lookup (table wrappers)
+  (let* ((cache (pv-table-cache table))
+	 (pv-cell (and cache (probe-cache cache wrappers nil))))
+    (unless pv-cell
+      (let* ((slot-name-lists (pv-table-slot-name-lists table))
+	     (call-list (pv-table-call-list table))
+	     (cache (or cache
+			(setf (pv-table-cache table)
+			      (get-cache (- (length slot-name-lists)
+					    (count nil slot-name-lists))
+					 t 2))))
+	     (pv (compute-pv slot-name-lists wrappers))
+	     (calls (compute-calls table call-list wrappers))
+	     (cell (cons pv calls))
+	     (new-cache (fill-cache cache wrappers cell)))
+	(setf (pv-table-cache table) new-cache)
+	(setq pv-cell cell)))
+    pv-cell))
 
-#|| ; Need to finish this, then write the maintenance functions.
-(defun compute-emf-from-wrappers (call wrappers)
-  (when call
-    (destructuring-bind (gf-name nreq restp arg-info) call
-      (if (eq gf-name 'make-instance)
-	  (error "should not get here") ; there is another mechanism for this.
-	  (lambda (&rest args)
-	    (if (not (eq *boot-state* 'complete))
-		(apply (gdefinition gf-name) args)
-		(let* ((gf (gdefinition gf-name))
-		       (arg-info (arg-info-reader gf))
-		       (classes '?)
-		       (types '?)
-		       (emf (cache-miss-values-internal gf arg-info 
-							wrappers classes types 
-							'caching)))
-		  (update-all-pv-tables call wrappers emf)
-		  (invoke-emf emf args))))))))
-||#
+
+;;; ***************************************
+;;; Updating PV-TABLEs for Changes  *******
+;;; ***************************************
 
-(defun make-permutation-vector (indexes)
-  (make-array (length indexes) :initial-contents indexes))
+(defvar *pv-table-cache-update-info* ())
 
-(defun pv-table-lookup (pv-table pv-wrappers)
-  (let* ((slot-name-lists (pv-table-slot-name-lists pv-table))
-	 (call-list (pv-table-call-list pv-table))
-	 (cache (or (pv-table-cache pv-table)
-		    (setf (pv-table-cache pv-table)
-			  (get-cache (- (length slot-name-lists)
-					(count nil slot-name-lists))
-				     t
-				     #'pv-cache-limit-fn
-				     2)))))
-    (or (probe-cache cache pv-wrappers)
-	(let* ((pv (compute-pv slot-name-lists pv-wrappers))
-	       (calls (compute-calls call-list pv-wrappers))
-	       (pv-cell (cons pv calls))
-	       (new-cache (fill-cache cache pv-wrappers pv-cell)))
-	  (unless (eq new-cache cache)
-	    (setf (pv-table-cache pv-table) new-cache))
-	  pv-cell))))
+;;;
+;;; Record that slot definition SLOTD has been changed.  This pushes
+;;; (CLASS . PV-KEY) onto *PV-TABLE-CACHE-UPDATE-INFO*, where CLASS is
+;;; the class to which SLOTD belongs, and PV-KEY is either a slot
+;;; name, a symbol, or (READER <gf-name>), or (WRITER <gf-name>).
+;;; *PV-TABLE-CACHE-UPDATE-INFO* is later used by
+;;; UPDATE-PV-TABLE-CACHE-INFO to do the actual updating.
+;;;
+(defun record-pv-update-info (slotd)
+  (let ((class (slot-definition-class slotd)))
+    (flet ((push-accessor-info (type accessors)
+	     (loop for gf-name in accessors
+		   as key = (if (and (consp gf-name) (eq 'setf (car gf-name)))
+				(list 'writer (cadr gf-name))
+				(list type gf-name))
+		   when (gethash key *pv-key->pv-tables*) do
+		     (push (cons class key) *pv-table-cache-update-info*))))
+      (push (cons class (slot-definition-name slotd))
+	    *pv-table-cache-update-info*)
+      (push-accessor-info 'reader (slot-definition-readers slotd))
+      (push-accessor-info 'writer (slot-definition-writers slotd)))))
 
-(defun make-pv-type-declaration (var)
-  `(type simple-vector ,var))
-
-(defvar *empty-pv* #())
-
-(defmacro pvref (pv index)
-  `(svref ,pv ,index))
-
-(defmacro copy-pv (pv)
-  `(copy-seq ,pv))
-
-(defun make-calls-type-declaration (var)
-  `(type simple-vector ,var))
-
-(defmacro callsref (calls index)
-  `(svref ,calls ,index))
-
-(defvar *pv-table-cache-update-info* nil)
-
-;called by: 
-;(method shared-initialize :after (structure-class t))
-;update-slots
+;;;
+;;; Update PV-TABLE caches for class CLASS.  Called by
+;;; SHARED-INITIALIZE :AFTER (STRUCTURE-CLASS T)) and by UPDATE-SLOTS.
+;;;
 (defun update-pv-table-cache-info (class)
-  (let ((slot-names-for-pv-table-update nil)
-	(new-icui nil))
-    (dolist (icu *pv-table-cache-update-info*)
-      (if (eq (car icu) class)
-	  (pushnew (cdr icu) slot-names-for-pv-table-update)
-	  (push icu new-icui)))
-    (setq *pv-table-cache-update-info* new-icui)
-    (when slot-names-for-pv-table-update
-      (update-all-pv-table-caches class slot-names-for-pv-table-update))))
+    (loop for entry in *pv-table-cache-update-info*
+	  with keys = ()
+	  as (entry-class . key) = entry
+	  if (eq class entry-class) do
+	    (pushnew key keys :test #'equal)
+	  else
+	    collect entry into remaining-entries
+	  finally
+	    (when keys
+	      (setq *pv-table-cache-update-info* remaining-entries)
+	      (update-all-pv-table-caches class keys))))
 
 (defun update-all-pv-table-caches (class slot-names)
   (let* ((cwrapper (class-wrapper class))
-	 (std-p (typep cwrapper 'wrapper))
-	 (class-slots (and std-p (wrapper-class-slots cwrapper)))
-	 (class-slot-p-cell (list nil))
-	 (new-values (mapcar (lambda (slot-name)
-			       (cons slot-name
-				     (when std-p
-				       (compute-pv-slot 
-					slot-name cwrapper class 
-					class-slots class-slot-p-cell))))
-			     slot-names))
-	 (pv-tables nil))
-    (dolist (slot-name slot-names)
-      (map-pv-table-references-of
-       slot-name
-       (lambda (pv-table pv-offset-list)
-	 (declare (ignore pv-offset-list))
-	 (pushnew pv-table pv-tables))))
-    (dolist (pv-table pv-tables)
-      (let* ((cache (pv-table-cache pv-table))
-	     (slot-name-lists (pv-table-slot-name-lists pv-table))
-	     (pv-size (pv-table-pv-size pv-table))
-	     (pv-map (make-array pv-size :initial-element nil)))
-	(let ((map-index 1)
-	      (param-index 0))
-	  (dolist (slot-name-list slot-name-lists)
-	    (dolist (slot-name (cdr slot-name-list))
-	      (let ((a (assoc slot-name new-values)))
-		(setf (svref pv-map map-index)
-		      (and a (cons param-index (cdr a)))))
-	      (incf map-index))
-	    (incf param-index)))
-	(when cache
-	  (map-cache (lambda (wrappers pv-cell)
-		       (setf (car pv-cell)
-			     (update-slots-in-pv wrappers (car pv-cell)
-						 cwrapper pv-size pv-map)))
-		     cache))))))
+	 ;; Note that CLASS can be structure-class here.
+	 (class-slots (when (typep cwrapper 'wrapper)
+			(wrapper-class-slots cwrapper)))
+	 (new-locations
+	  (when (typep cwrapper 'wrapper)
+	    (loop for sn in slot-names collect
+	       (cons sn (compute-pv-slot sn cwrapper class class-slots)))))
+	 (pv-tables ()))
+    (flet ((new-location (key)
+	     (cdr (assoc key new-locations :test #'equal))))
+    ;;
+    ;; Collect all PV-TABLES referencing a slot name from SLOT-NAMES
+    ;; in PV-TABLES.
+    (loop for sn in slot-names do
+	    (do-pv-tables (table sn)
+	      (pushnew table pv-tables)))
+    ;;
+    ;; Update all these PV-TABLEs.
+    (loop for table in pv-tables
+	  as cache = (pv-table-cache table)
+	  when cache do
+	    (let* ((pv-size (pv-table-pv-size table))
+		   (pv-map (make-array pv-size :initial-element nil)))
+	      (do-pv-slots (key param-index pv-index table)
+		(let ((location (new-location key)))
+		  (setf (svref pv-map pv-index)
+			(and location (cons param-index location)))))
+	      (map-cache (lambda (wrappers pv-cell)
+			   (update-slots-in-pv wrappers (car pv-cell)
+					       cwrapper pv-map))
+			 cache))))))
 
-(defun update-slots-in-pv (wrappers pv cwrapper pv-size pv-map)
-  (if (not (if (atom wrappers)
-	       (eq cwrapper wrappers)
-	       (dolist (wrapper wrappers nil)
-		 (when (eq wrapper cwrapper)
-		   (return t)))))
-      pv
-      (let* ((old-intern-p (listp (pvref pv 0)))
-	     (new-pv (if old-intern-p
-			 (copy-pv pv)
-			 pv))
-	     (new-intern-p t))
-	(if (atom wrappers)
-	    (dotimes (i pv-size)
-	      (declare (fixnum i))
-	      (when (consp (let ((map (svref pv-map i)))
-			     (if map
-				 (setf (pvref new-pv i) (cdr map))
-				 (pvref new-pv i))))
-		(setq new-intern-p nil)))
-	    (let ((param 0))
-	      (dolist (wrapper wrappers)
-		(when (eq wrapper cwrapper)
-		  (dotimes (i pv-size)
-		    (declare (fixnum i))
-		    (when (consp (let ((map (svref pv-map i)))
-				   (if (and map (= (car map) param))
-				       (setf (pvref new-pv i) (cdr map))
-				       (pvref new-pv i))))
-		      (setq new-intern-p nil))))
-		(incf param))))
-	(when new-intern-p
-	  (setq new-pv (let ((list-pv (coerce pv 'list)))
-			 (or (gethash (cdr list-pv) *pvs*)
-			     (setf (gethash (cdr list-pv) *pvs*)
-				   (if old-intern-p
-				       new-pv
-				       (make-permutation-vector list-pv)))))))
-	new-pv)))
-
-
-(defun maybe-expand-accessor-form (form required-parameters slots env)
-  (let* ((fname (car form))
-	 #||(len (length form))||#
-	 (gf (gdefinition fname)))
-    (macrolet ((maybe-optimize-reader ()
-		 `(let ((parameter
-			 (can-optimize-access1 (cadr form)
-					       required-parameters env)))
-		   (when parameter
-		     (optimize-reader slots parameter gf-name form))))
-	       (maybe-optimize-writer ()
-		 `(let ((parameter
-			 (can-optimize-access1 (caddr form)
-					       required-parameters env)))
-		   (when parameter
-		     (optimize-writer slots parameter gf-name form)))))
-      (unless (and (consp (cadr form))
-		   (eq 'instance-accessor-parameter (caadr form)))
-	(or #||
-	    (cond ((and (= len 2) (symbolp fname))
-		   (let ((gf-name (gethash fname *gf-declared-reader-table*)))
-		     (when gf-name
-		       (maybe-optimize-reader))))
-		  ((= len 3)
-		   (let ((gf-name (gethash fname *gf-declared-writer-table*)))
-		     (when gf-name
-		       (maybe-optimize-writer)))))
-	    ||#
-	    (when (and (eq *boot-state* 'complete)
-		       (generic-function-p gf))
-	      (let ((methods (generic-function-methods gf)))
-		(when methods
-		  (let* ((gf-name (generic-function-name gf))
-			 (arg-info (gf-arg-info gf))
-			 (metatypes (arg-info-metatypes arg-info))
-			 (nreq (length metatypes))
-			 (applyp (arg-info-applyp arg-info)))
-		    (when (null applyp)
-		      (cond ((= nreq 1)
-			     (when (some #'standard-reader-method-p methods)
-			       (maybe-optimize-reader)))
-			    ((and (= nreq 2)
-				  (consp gf-name)
-				  (eq (car gf-name) 'setf))
-			     (when (some #'standard-writer-method-p methods)
-			       (maybe-optimize-writer))))))))))))))
-
-(defun optimize-generic-function-call (form required-parameters env slots calls)
-  (declare (ignore required-parameters env slots calls))
-  (or (and (eq (car form) 'make-instance)
-	   (expand-make-instance-form form))
-      #||
-      (maybe-expand-accessor-form form required-parameters slots env)
-      (let* ((fname (car form))
-	     (len (length form))
-	     (gf (and (fboundp fname) (gdefinition fname)))
-	     (gf-name (and (fsc-instance-p gf)
-			   (if (early-gf-p gf)
-			       (early-gf-name gf)
-			       (generic-function-name gf)))))
-	(when gf-name
-	  (multiple-value-bind (nreq restp)
-	      (get-generic-function-info gf)
-	    (optimize-gf-call slots calls form nreq restp env))))
-      ||#
-      form))
-
-
-
-(defun can-optimize-access (form required-parameters env)
-  (let ((type (ecase (car form)
-		(slot-value 'reader)
-		(set-slot-value 'writer)
-		(slot-boundp 'boundp)))
-	(var (cadr form))
-	(slot-name (eval (caddr form)))) ; known to be constant
-    (can-optimize-access1 var required-parameters env type slot-name)))
-
-(defun can-optimize-access1 (var required-parameters env &optional type slot-name)
-  (when (and (consp var) (eq 'the (car var)))
-    (setq var (caddr var)))
-  (when (symbolp var)
-    (let* ((rebound? (caddr (variable-declaration 'variable-rebinding var env)))
-	   (parameter-or-nil (car (memq (or rebound? var) required-parameters))))
-      (when parameter-or-nil
-	(let* ((class-name (caddr (variable-declaration 
-				   'class parameter-or-nil env)))
-	       (class (find-class class-name nil)))
-	  (when (or (not (eq *boot-state* 'complete))
-		    (and class (not (class-finalized-p class))))
-	    (setq class nil))
-	  (when (and class-name (not (eq class-name 't)))
-	    (when (or (null type)
-		      (not (and class
-				(memq *the-class-structure-object*
-				      (class-precedence-list class))))
-		      (optimize-slot-value-by-class-p class slot-name type))
-	      (cons parameter-or-nil (or class class-name)))))))))
-
-(defun optimize-slot-value (slots sparameter form)
-  (if sparameter
-      (destructuring-bind (slot-value instance-form slot-name-form) form
-	(declare (ignore slot-value instance-form))
-	(let ((slot-name (eval slot-name-form)))
-	  (optimize-instance-access slots :read sparameter slot-name nil)))
-      `(accessor-slot-value ,@(cdr form))))
-
-(defun optimize-set-slot-value (slots sparameter form)
-  (if sparameter
-      (destructuring-bind
-          (set-slot-value instance-form slot-name-form new-value) form
-	(declare (ignore set-slot-value instance-form))
-	(let ((slot-name (eval slot-name-form)))
-	  (optimize-instance-access slots :write sparameter
-	                            slot-name new-value)))
-      `(accessor-set-slot-value ,@(cdr form))))
-
-(defun optimize-slot-boundp (slots sparameter form)
-  (if sparameter
-      ;;
-      ;; The original PCL code, which used its own definition of
-      ;; DESTRUCTURING-BIND, had a fourth variable NEW-VALUE below,
-      ;; that was passed to OPTIMIZE-INSTANCE-ACCESS as its NEW-VALUE
-      ;; argument; the NEW-VALUE seems not to be used in
-      ;; OPTIMIZE-INSTANCE-ACCESS for the :BOUNDP case.
-      ;;
-      ;; Using CL's DESTRUCTURING-BIND, one gets an error when
-      ;; building PCL because FORM has 3 elements only, which seems
-      ;; reasonable for a SLOT-BOUNDP form.  I don't see a case where
-      ;; this function could be called with a form having 4 elements.
-      (destructuring-bind (slot-boundp instance-form slot-name-form) form
-	(declare (ignore slot-boundp instance-form))
-	(let ((slot-name (eval slot-name-form)))
-	  (optimize-instance-access slots :boundp sparameter slot-name nil)))
-      `(accessor-slot-boundp ,@(cdr form))))
-
-(defun optimize-reader (slots sparameter gf-name form)
-  (if sparameter
-      (optimize-accessor-call slots :read sparameter gf-name nil)
-      form))
-
-(defun optimize-writer (slots sparameter gf-name form)
-  (if sparameter
-      (destructuring-bind (writer instance-form new-value) form
-	(declare (ignore writer instance-form))
-	(optimize-accessor-call slots :write sparameter gf-name new-value))
-      form))
 ;;;
-;;; The <slots> argument is an alist, the CAR of each entry is the name of
-;;; a required parameter to the function.  The alist is in order, so the
-;;; position of an entry in the alist corresponds to the argument's position
-;;; in the lambda list.
-;;; 
-(defun optimize-instance-access (slots read/write sparameter slot-name new-value)
-  (let ((class (if (consp sparameter) (cdr sparameter) *the-class-t*))
-	(parameter (if (consp sparameter) (car sparameter) sparameter)))
-    (if (and (eq *boot-state* 'complete)
-	     (classp class)
-	     (memq *the-class-structure-object* (class-precedence-list class)))
-	(let ((slotd (find-slot-definition class slot-name)))
-	  (ecase read/write
-	    (:read
-	     `(,(slot-definition-defstruct-accessor-symbol slotd) ,parameter))
-	    (:write
-	     `(setf (,(slot-definition-defstruct-accessor-symbol slotd) ,parameter)
-	       ,new-value))
-	    (:boundp
-	     'T)))
-	(let* ((parameter-entry (assq parameter slots))
-	       (slot-entry      (assq slot-name (cdr parameter-entry)))
-	       (position (posq parameter-entry slots))
-	       (pv-offset-form (list 'pv-offset ''.PV-OFFSET.)))
-	  (unless parameter-entry
-	    (error "Internal error in slot optimization."))
-	  (unless slot-entry
-	    (setq slot-entry (list slot-name))
-	    (push slot-entry (cdr parameter-entry)))
-	  (push pv-offset-form (cdr slot-entry))
-	  (ecase read/write
-	    (:read
-	     `(instance-read ,pv-offset-form ,parameter ,position 
-		             ',slot-name ',class))
-	    (:write
-	     `(let ((.new-value. ,new-value)) 
-	        (instance-write ,pv-offset-form ,parameter ,position 
-		                ',slot-name ',class .new-value.)))
-	    (:boundp
-	     `(instance-boundp ,pv-offset-form ,parameter ,position 
-		               ',slot-name ',class)))))))
+;;; WRAPPERS - wrappers of a cache line.
+;;; CWRAPPER - the wrapper of the class being updated.
+;;; PV - the car of a PV cell, that is the permutation vector.
+;;; PV-SIZE - the size of PV
+;;; PV-MAP - a vector of size PV-SIZE.  NIL slots means nothing to update.
+;;; Otherwise (PARAM-INDEX . NEW-VALUE).
+;;;
+(defun update-slots-in-pv (wrappers pv cwrapper pv-map)
+  (if (atom wrappers)
+      (when (eq wrappers cwrapper)
+	(loop for new across pv-map and i from 0
+	      when new do
+		(setf (svref pv i) (cdr new))))
+      (when (memq cwrapper wrappers)
+	(loop for param from 0 and wrapper in wrappers
+	      when (eq wrapper cwrapper) do
+		(loop for new across pv-map and i from 0
+		      when (and new (= (car new) param)) do
+		      (setf (svref pv i) (cdr new)))))))
 
-(defun optimize-accessor-call (slots read/write sparameter gf-name new-value)
-  (let* ((class (if (consp sparameter) (cdr sparameter) *the-class-t*))
-	 (parameter (if (consp sparameter) (car sparameter) sparameter))
-	 (parameter-entry (assq parameter slots))
-	 (name (case read/write
-		 (:read `(reader ,gf-name))
-		 (:write `(writer ,gf-name))))
-	 (slot-entry      (assoc name (cdr parameter-entry) :test #'equal))
-	 (position (posq parameter-entry slots))
-	 (pv-offset-form (list 'pv-offset ''.PV-OFFSET.)))
-    (unless parameter-entry
-      (error "Internal error in slot optimization."))
-    (unless slot-entry
-      (setq slot-entry (list name))
-      (push slot-entry (cdr parameter-entry)))
-    (push pv-offset-form (cdr slot-entry))
-    (ecase read/write
-      (:read
-       `(instance-reader ,pv-offset-form ,parameter ,position ,gf-name ',class))
-      (:write
-       `(let ((.new-value. ,new-value)) 
-	  (instance-writer ,pv-offset-form ,parameter ,position ,gf-name ',class
-	                   .new-value.))))))
+(declaim (inline count-gf-required-parameters))
 
-(defvar *unspecific-arg* '..unspecific-arg..)
+(defun count-gf-required-parameters (gf)
+  (let ((arg-info (gf-arg-info gf)))
+    (length (arg-info-metatypes arg-info))))
 
-(defun optimize-gf-call-internal (form slots env)
-  (when (and (consp form)
-	     (eq (car form) 'the))
-    (setq form (caddr form)))
-  (or (and (symbolp form)
-	   (let* ((rebound? (caddr (variable-declaration 'variable-rebinding
-							 form env)))
-		  (parameter-or-nil (car (assq (or rebound? form) slots))))
-	     (when parameter-or-nil
-	       (let* ((class-name (caddr (variable-declaration 
-					  'class parameter-or-nil env))))
-		 (when (and class-name (not (eq class-name 't)))
-		   (position parameter-or-nil slots :key #'car))))))
-      (if (constantp form)
-	  (let ((form (eval form)))
-	    (if (symbolp form)
-		form
-		*unspecific-arg*))
-	  *unspecific-arg*)))
+(defun update-accessor-pvs (reason gf &optional method replaced-method)
+  (declare (ignore method replaced-method))
+  (let ((nreq (count-gf-required-parameters gf)))
+    (when (and (<= 1 nreq 2)
+	       (some #'standard-accessor-method-p
+		     (generic-function-methods gf)))
+      (let* ((gf-name (generic-function-name gf))
+	     (key (if (= nreq 1) `(reader ,gf-name) `(writer ,gf-name))))
+	(do-pv-tables (table key)
+	  (when (pv-table-cache table)
+	    (map-cache
+	     (lambda (wrappers pv-cell)
+	       (setf (car pv-cell)
+		     (recompute-pv-for-key key (car pv-cell)
+					   (pv-table-slot-name-lists table)
+					   wrappers
+					   (eq reason 'removed-gf))))
+	     (pv-table-cache table))))))))
 
-(defun optimize-gf-call (slots calls gf-call-form nreq restp env)
-  (unless (eq (car gf-call-form) 'make-instance) ; needs more work
-    (let* ((args (cdr gf-call-form))
-	   (all-args-p (eq (car gf-call-form) 'make-instance))
-	   (non-required-args (nthcdr nreq args))
-	   (required-args (ldiff args non-required-args))
-	   (call-spec (list (car gf-call-form) nreq restp
-			    (mapcar (lambda (form)
-				      (optimize-gf-call-internal form slots env))
-				    (if all-args-p
-					args
-					required-args))))
-	   (call-entry (assoc call-spec calls :test #'equal))
-	   (pv-offset-form (list 'pv-offset ''.PV-OFFSET.)))
-      (unless (some #'integerp 
-		    (let ((spec-args (cdr call-spec)))
-		      (if all-args-p 
-			  (ldiff spec-args (nthcdr nreq spec-args))
-			  spec-args)))
-	(return-from optimize-gf-call nil))
-      (unless call-entry
-	(setq call-entry (list call-spec))
-	(push call-entry (cdr calls)))
-      (push pv-offset-form (cdr call-entry))
-      (if (eq (car call-spec) 'make-instance)
-	  `(funcall (pv-ref .pv. ,pv-offset-form) ,@(cdr gf-call-form))
-	  `(let ((.emf. (pv-ref .pv. ,pv-offset-form)))
-	    (invoke-effective-method-function .emf. ,restp
-	     ,@required-args ,@(when restp `((list ,@non-required-args)))))))))
-      
+;;;
+;;; Like COMPUTE-PV, but only recomputes entries for KEY.  If no
+;;; pv values change, OLD-PV is returned unchanged.
+;;;
+(defun recompute-pv-for-key (key pv snls wrappers gf-removed-p)
+  (loop with pv-index = 0
+	with wrappers = (if (listp wrappers) wrappers (list wrappers))
+	for snl in snls
+	when snl do
+	  (loop with wrapper = (pop wrappers)
+		with stdp = (typep wrapper 'wrapper)
+		and class = (wrapper-class* wrapper)
+		with class-slots = (when stdp (wrapper-class-slots wrapper))
+		for sn in (cdr snl)
+		when (equal sn key) do
+		  (setf (svref pv pv-index)
+			(and stdp
+			     (not gf-removed-p)
+			     (compute-pv-slot sn wrapper class class-slots)))
+		do (incf pv-index))
+	finally
+	  (return pv)))
 
-(define-walker-template pv-offset) ; These forms get munged by mutate slots.
+
+
+;;; **************************************************
+;;; Deciding Whether to Optimize Slot Access  ********
+;;; **************************************************
+
+
+;;; These forms get munged by MUTATE-SLOTS.
+
+(define-walker-template pv-offset)
 (defmacro pv-offset (arg) arg)
-(define-walker-template instance-accessor-parameter)
-(defmacro instance-accessor-parameter (x) x)
 
-;; It is safe for these two functions to be wrong.
-;; They just try to guess what the most likely case will be.
-(defun generate-fast-class-slot-access-p (class-form slot-name-form)
-  (let ((class (and (constantp class-form) (eval class-form)))
-	(slot-name (and (constantp slot-name-form) (eval slot-name-form))))
-    (and (eq *boot-state* 'complete)
-	 (standard-class-p class)
-	 (not (eq class *the-class-t*)) ; shouldn't happen, though.
-	 (let ((slotd (find-slot-definition class slot-name)))
-	   (and slotd (eq :class (slot-definition-allocation slotd)))))))
+;;;
+;;; Sometimes useful for debugging.
+;;;
+(defmacro pvref (pv i)
+  `(%svref ,pv ,i))
 
-(defun skip-fast-slot-access-p (class-form slot-name-form type)
-  (let ((class (and (constantp class-form) (eval class-form)))
-	(slot-name (and (constantp slot-name-form) (eval slot-name-form))))
-    (and (eq *boot-state* 'complete)
-	 (standard-class-p class)
-	 (not (eq class *the-class-t*)) ; shouldn't happen, though.
-	 (let ((slotd (find-slot-definition class slot-name)))
-	   (and slotd (skip-optimize-slot-value-by-class-p class slot-name type))))))
-
-(defun skip-optimize-slot-value-by-class-p (class slot-name type)
-  (let ((slotd (find-slot-definition class slot-name)))
-    (and slotd
-	 (eq *boot-state* 'complete)
-	 (not (slot-accessor-std-p slotd type)))))
-
-(defmacro instance-read-internal (pv slots pv-offset default &optional type)
-  (unless (member type '(nil :instance :class :default))
-    (error "Illegal type argument to ~S: ~S" 'instance-read-internal type))
-  (if (eq type :default)
-      default
-      (let* ((index (gensym))
-	     (value index))
-	`(locally (declare #.*optimize-speed*)
-	  (let ((,index (pvref ,pv ,pv-offset)))
-	    (setq ,value (typecase ,index
-			   ,@(when (or (null type) (eq type :instance))
-			       `((fixnum (%instance-ref ,slots ,index))))
-			   ,@(when (or (null type) (eq type :class))
-			       `((cons (cdr ,index))))
-			   (t +slot-unbound+)))
-	    (if (eq ,value +slot-unbound+)
-		,default
-		,value))))))
-
-(defmacro instance-read (pv-offset parameter position slot-name class)
-  (if (skip-fast-slot-access-p class slot-name 'reader)
-      `(accessor-slot-value ,parameter ,slot-name)
-      `(instance-read-internal .pv. ,(slot-vector-symbol position)
-	,pv-offset (accessor-slot-value ,parameter ,slot-name)
-	,(if (generate-fast-class-slot-access-p class slot-name)
-	     :class :instance))))
-
-(defmacro instance-reader (pv-offset parameter position gf-name class)
-  (declare (ignore class))
-  `(instance-read-internal .pv. ,(slot-vector-symbol position)
-    ,pv-offset 
-    (,gf-name (instance-accessor-parameter ,parameter))
-    :instance))
+(defmacro instance-read-internal (pv slot-vector pv-offset-form default
+				  &optional type)
+  (assert (member type '(nil :instance :class)))
+  (let* ((index (gensym))
+	 (value (gensym)))
+    `(locally
+	 (declare #.*optimize-speed*)
+       (let* ((,index (pvref ,pv ,pv-offset-form))
+	      (,value (typecase ,index
+			,@(when (or (null type) (eq type :instance))
+			    `((fixnum
+			       (%slot-ref ,slot-vector ,index))))
+			,@(when (or (null type) (eq type :class))
+			    `((cons
+			       (cdr ,index))))
+			(t +slot-unbound+))))
+	 (if (eq ,value +slot-unbound+)
+	     ,default
+	     ,value)))))
 
 (defmacro instance-write-internal (pv slots pv-offset new-value default
 				      &optional type)
-  (unless (member type '(nil :instance :class :default))
-    (error "Illegal type argument to ~S: ~S" 'instance-write-internal type))
-  (if (eq type :default)
-      default
-      (let* ((index (gensym)))
-	`(locally (declare #.*optimize-speed*)
-	  (let ((,index (pvref ,pv ,pv-offset)))
-	    (typecase ,index
-	      ,@(when (or (null type) (eq type :instance))
-		  `((fixnum (setf (%instance-ref ,slots ,index) ,new-value))))
-	      ,@(when (or (null type) (eq type :class))
-		  `((cons (setf (cdr ,index) ,new-value))))
-	      (t ,default)))))))
-
-(defmacro instance-write (pv-offset parameter position slot-name class new-value)
-  (if (skip-fast-slot-access-p class slot-name 'writer)
-      `(accessor-set-slot-value ,parameter ,slot-name ,new-value)
-      `(instance-write-internal .pv. ,(slot-vector-symbol position)
-	,pv-offset ,new-value
-	(accessor-set-slot-value ,parameter ,slot-name ,new-value)
-	,(if (generate-fast-class-slot-access-p class slot-name)
-	     :class :instance))))
-
-(defmacro instance-writer (pv-offset parameter position gf-name class new-value)
-  (declare (ignore class))
-  `(instance-write-internal .pv. ,(slot-vector-symbol position)
-    ,pv-offset ,new-value
-    (,gf-name (instance-accessor-parameter ,parameter) ,new-value)
-    :instance))
+  (assert (member type '(nil :instance :class)))
+  (let* ((index (gensym)))
+    `(locally
+	 (declare #.*optimize-speed*)
+       (let ((,index (pvref ,pv ,pv-offset)))
+	 (typecase ,index
+	   ,@(when (or (null type) (eq type :instance))
+	       `((fixnum (setf (%slot-ref ,slots ,index) ,new-value))))
+	   ,@(when (or (null type) (eq type :class))
+	       `((cons (setf (cdr ,index) ,new-value))))
+	   (t ,default))))))
 
 (defmacro instance-boundp-internal (pv slots pv-offset default
 				       &optional type)
-  (unless (member type '(nil :instance :class :default))
-    (error "Illegal type argument to ~S: ~S" 'instance-boundp-internal type))
-  (if (eq type :default)
-      default
-      (let* ((index (gensym)))
-	`(locally (declare #.*optimize-speed*)
-	  (let ((,index (pvref ,pv ,pv-offset)))
-	    (typecase ,index
-	      ,@(when (or (null type) (eq type :instance))
-		  `((fixnum (not (eq (%instance-ref ,slots ,index) +slot-unbound+)))))
-	      ,@(when (or (null type) (eq type :class))
-		  `((cons (not (eq (cdr ,index) +slot-unbound+)))))
-	      (t ,default)))))))
-
-(defmacro instance-boundp (pv-offset parameter position slot-name class)
-  (if (skip-fast-slot-access-p class slot-name 'boundp)
-      `(accessor-slot-boundp ,parameter ,slot-name)
-      `(instance-boundp-internal .pv. ,(slot-vector-symbol position)
-	,pv-offset (accessor-slot-boundp ,parameter ,slot-name)
-	,(if (generate-fast-class-slot-access-p class slot-name)
-	     :class :instance))))
-
+  (assert (member type '(nil :instance :class)))
+  (let* ((index (gensym)))
+    `(locally
+	 (declare #.*optimize-speed*)
+       (let ((,index (pvref ,pv ,pv-offset)))
+	 (typecase ,index
+	   ,@(when (or (null type) (eq type :instance))
+	       `((fixnum (not (eq (%slot-ref ,slots ,index) +slot-unbound+)))))
+	   ,@(when (or (null type) (eq type :class))
+	       `((cons (not (eq (cdr ,index) +slot-unbound+)))))
+	   (t ,default))))))
+
 ;;;
-;;; This magic function has quite a job to do indeed.
+;;; Build ``slot name lists'' from the collected information about
+;;; INSTANCE-READ and INSTANCE-WRITE optimizations.
 ;;;
-;;; The careful reader will recall that <slots> contains all of the optimized
-;;; slot access forms produced by OPTIMIZE-INSTANCE-ACCESS.  Each of these is
-;;; a call to either INSTANCE-READ or INSTANCE-WRITE.
+;;; SLOTS is an alist of lists
 ;;;
-;;; At the time these calls were produced, the first argument was specified as
-;;; the symbol .PV-OFFSET.; what we have to do now is convert those pv-offset
-;;; arguments into the actual number that is the correct offset into the pv.
+;;; (PARAMETER-NAME ((SLOT-NAME PV-OFFSET-FORMs ...)
+;;;                  (SLOT-NAME PV-OFFSET-FORMs ...)
+;;;                 ...))
 ;;;
-;;; But first, oh but first, we sort <slots> a bit so that for each argument
-;;; we have the slots in alphabetical order.  This canonicalizes the PV-TABLE's a
-;;; bit and will hopefully lead to having fewer PV's floating around.  Even
-;;; if the gain is only modest, it costs nothing.
-;;;  
+;;; where each PARAMETER-NAME is the name of a required parameter for
+;;; which a slot access via slot-value, set-slot-value, slot-boundp
+;;; has been optimized into a PV access.  The SLOT-NAMES are the names
+;;; of the slots for which the optimization has been performed.
+;;; The PV-OFFSET-FORMs are lists (PV-OFFSET <dummy>) that are contained
+;;; in calls to INSTANCE-READ and INSTANCE-WRITE.
+;;;
+;;; CALLS is currently unused, and always NIL.
+;;;
+;;; First value is a slot name list of the form
+;;;
+;;;  ((NIL SLOT-NAME SLOT-NAME ...)
+;;;   (NIL SLOT-NAME SLOT-NAME ...)
+;;;   ...)
+;;;
+;;; Second value is nil, since generic function call optimization is
+;;; currently not done, and CALLS is always NIL.
+;;;
+;;; From the code, it seems that CALLS was intended to be a list of
+;;; lists of the form
+;;;
+;;; ((FN ARG1 ARG2 ...) PV-OFFSET-FORMs ...)
+;;;
+;;; where FN is a symbol or cons for the generic function name, and
+;;; each ARG is either an integer specifying the position of a required
+;;; parameter, or something else (NIL?).
+;;;
+;;; The first element of a slot-name list for parameter number P is set
+;;; from NIL to T if that parameter appears in an optimized generic
+;;; function call.
+;;;
 (defun slot-name-lists-from-slots (slots calls)
   (multiple-value-bind (slots calls)
       (mutate-slots-and-calls slots calls)
@@ -771,42 +558,66 @@
 		    slots))
 	   (call-list
 	    (mapcar #'car calls)))
-      (dolist (call call-list)
-	(dolist (arg (cdr call))
-	  (when (integerp arg)
-	    (setf (car (nth arg slot-name-lists)) t))))
-      (setq slot-name-lists (mapcar (lambda (r+snl)
-				      (when (or (car r+snl) (cdr r+snl))
-					r+snl))
-				    slot-name-lists))
-      (let ((cvt (apply #'vector
-			(let ((i -1))
-			  (mapcar (lambda (r+snl)
-				    (when r+snl (incf i)))
-				  slot-name-lists)))))
-	(setq call-list (mapcar (lambda (call)
-				  (cons (car call) 
-					(mapcar (lambda (arg)
-						  (if (integerp arg)
-						      (svref cvt arg)
-						      arg))
-						(cdr call))))
-				call-list)))
+      ;;
+      ;; For every parameter used by a gf optimization, mark the
+      ;; parameter's slot entry by setting its car to T.  This is
+      ;; done to prevent the code below from setting an otherwise
+      ;; unused parameter entry in the slot name list to NIL, which
+      ;; would mean that that parameter would be considered as not
+      ;; participating in pv optimizations.
+      (loop for (gf-name . args) in call-list do
+	      (loop for arg in args do
+		      (setf (car (nth arg slot-name-lists)) t)))
+      ;;
+      ;; Replace (NIL . NIL) with NIL in the slot name lists.  The NIL
+      ;; indicates that a parameter is not used in pv optimizations
+      ;; which means we don't need to retrieve its wrapper and slots
+      ;; etc. at the start of a method function.
+      (setq slot-name-lists
+	    (loop for snl in slot-name-lists
+		  if (or (car snl) (cdr snl))
+		    collect snl
+		  else
+		    collect nil))
+      ;;
+      ;; Convert "absolute" parameter numbers in calls to "relative"
+      ;; parameter indices, excluding parameters not used for
+      ;; pv-optimization (the index of wrappers in the pv table
+      ;; cache).
+      (setq call-list
+	    (loop with index-vector =
+		    (coerce (loop with i = -1
+				  for snl in slot-name-lists
+				  collect (when snl (incf i)))
+			    'simple-vector)
+		  for (gf-name . args) in call-list collect
+		    (cons gf-name
+			  (mapcar (lambda (arg) (svref index-vector arg))
+				  args))))
+      ;;
       (values slot-name-lists call-list))))
 
+;;;
+;;; Assign actual PV indices to slots and patch these into
+;;; recorded PV-OFFSET forms in SLOTS and CALLS.
+;;;
 (defun mutate-slots-and-calls (slots calls)
   (let ((sorted-slots (sort-slots slots))
 	(sorted-calls (sort-calls (cdr calls)))
-	(pv-offset 0))  ; index 0 is for info
+	(pv-offset -1))
+    ;;
+    ;; Patch PV indices into PV-OFFSET forms recorded in SLOTS.
     (dolist (parameter-entry sorted-slots)
       (dolist (slot-entry (cdr parameter-entry))
 	(incf pv-offset)	
-	(dolist (form (cdr slot-entry))
-	  (setf (cadr form) pv-offset))))
-    (dolist (call-entry sorted-calls)
-      (incf pv-offset)
-      (dolist (form (cdr call-entry))
-	(setf (cadr form) pv-offset)))
+	(dolist (pv-offset-form (cdr slot-entry))
+	  (setf (cadr pv-offset-form) pv-offset))))
+    ;;
+    ;; Patch PV indices into PV-OFFSET forms recorded in CALLS.
+    (loop for i from 0 and call in sorted-calls do
+	    (loop for form in (cdr call) do
+		    (setf (cadr form) i)))
+    ;;
     (values sorted-slots sorted-calls)))
 
 (defun symbol-pkg-name (sym) 
@@ -814,23 +625,24 @@
     (if pkg (package-name pkg) "")))
 
 (defun symbol-lessp (a b)
-  (if (eq (symbol-package a)
-	  (symbol-package b))
-      (string-lessp (symbol-name a)
-		    (symbol-name b))
-      (string-lessp (symbol-pkg-name a)
-		    (symbol-pkg-name b))))
+  (if (eq (symbol-package a) (symbol-package b))
+      (string-lessp (symbol-name a) (symbol-name b))
+      (string-lessp (symbol-pkg-name a) (symbol-pkg-name b))))
 
 (defun symbol-or-cons-lessp (a b)
   (etypecase a
-    (symbol (etypecase b
-	      (symbol (symbol-lessp a b))
-	      (cons t)))
-    (cons   (etypecase b
-	      (symbol nil)
-	      (cons (if (eq (car a) (car b))
-			(symbol-or-cons-lessp (cdr a) (cdr b))
-			(symbol-or-cons-lessp (car a) (car b))))))))
+    (symbol
+     (etypecase b
+       (symbol (symbol-lessp a b))
+       (cons t)))
+    (integer
+     (< a b))
+    (cons
+     (etypecase b
+       (symbol nil)
+       (cons (if (eq (car a) (car b))
+		 (symbol-or-cons-lessp (cdr a) (cdr b))
+		 (symbol-or-cons-lessp (car a) (car b))))))))
 
 (defun sort-slots (slots)
   (mapcar (lambda (parameter-entry)
@@ -845,110 +657,86 @@
 
 
 ;;;
-;;; This needs to work in terms of metatypes and also needs to work for
-;;; automatically generated reader and writer functions.
-;;; -- Automatically generated reader and writer functions use this stuff too.
+;;; Giving method lambdas access to PV tables.
+;;;
+
+;;; PV-BINDING is wrapped around a method lambda body BODY in
+;;; MAKE-METHOD-LAMBDA-INTERNAL when optimizations have been performed
+;;; by WALK-METHOD-LAMBDA on the method lambda that require access to
+;;; PV tables.
+;;;
+;;; REQUIRED-PARAMETERS is a list of the names of required parameters
+;;; of the method.
+;;;
+;;; SLOT-NAME-LISTS is a list of the form
+;;; 
+;;; ((PARAM1 NIL SLOT-NAME SLOT-NAME ...)
+;;;  (PARAM2 NIL SLOT-NAME SLOT-NAME ...))
+;;;
+;;; PV-TABLE-SYMBOL is an uninterned symbol whose symbol-value will be
+;;; set to the methods pv-table when the method is invoked.
+;;;
+;;; The resulting form looks like
+;;;
+;;; (let* ((.pv-table. PV-TABLE-SYMBOL)
+;;;	   (.pv-cell. (pv-table-lookup-pv-args .pv-table. PARAM0 PARAM1 ...))
+;;;	   (.pv. (car .pv-cell.))
+;;;	   (.calls. (cdr .pv-cell.)))
+;;;  (declare (type simple-vector .pv.))
+;;;  (declare (type simple-vector .calls.))
+;;;  (declare (special PV-TABLE-SYMBOL))
+;;;  (declare (ignorable .pv. .calls.))
+;;;  (let ((.slots0. (get-slots-or-nil PARAM0))
+;;;        (.slots1. (get-slots-or-nil PARAM1))
+;;;        ...)
+;;;    <the method function body>))
+;;;
+;;; The .SLOTS*. variables are bound to the instance slot value vectors
+;;; of the required parameters appearing in SLOT-NAME-LISTS.
+;;;
+
+(defun needs-pv-p (snl)
+  (loop for entry in (cdr snl)
+	thereis (not (equal '(inline-access) entry))))
 
 (defmacro pv-binding ((required-parameters slot-name-lists pv-table-symbol)
 		      &body body)
-  (loop for slot-names in slot-name-lists
-	and required-parameter in required-parameters
-	and i of-type fixnum from 0
-	when slot-names
-	  collect required-parameter into pv-parameters
-	  and collect (slot-vector-symbol i) into slot-vars
+  (loop for snl in slot-name-lists
+	and param in required-parameters and i from 0
+	when snl
+	  collect param into params
+	  and collect (and (cdr snl) (slot-vector-symbol i)) into slot-vars
 	finally
 	  (return `(pv-binding1 (.pv. .calls. ,pv-table-symbol
-				      ,pv-parameters ,slot-vars)
+				      ,params ,slot-vars)
 		     ,@body))))
 
 (defmacro pv-binding1 ((pv calls pv-table-symbol pv-parameters slot-vars) 
 		       &body body)
-  `(pv-env (,pv ,calls ,pv-table-symbol ,pv-parameters)
-     (let (,@(mapcar (lambda (slot-var p) `(,slot-var (get-slots-or-nil ,p)))
-	       slot-vars pv-parameters))
-	,@body)))
+  (multiple-value-bind (bindings vars)
+    (loop for v in slot-vars and p in pv-parameters
+	  when v
+	    collect `(,v (get-slots-or-nil ,p)) into bindings
+	    and collect v into vars
+	  finally
+	    (return (values bindings vars)))
+    `(pv-env (,pv ,calls ,pv-table-symbol ,pv-parameters)
+	(let (,@bindings)
+	  ,@(when vars `((declare (ignorable ,@vars))))
+	  ,@body))))
 
-;This gets used only when the default make-method-lambda is overriden.
-(defmacro pv-env ((pv calls pv-table-symbol pv-parameters)
-		  &rest forms)
+(defmacro pv-env ((pv calls pv-table-symbol pv-parameters) &rest forms)
   `(let* ((.pv-table. ,pv-table-symbol)
 	  (.pv-cell. (pv-table-lookup-pv-args .pv-table. ,@pv-parameters))
 	  (,pv (car .pv-cell.))
 	  (,calls (cdr .pv-cell.)))
-     (declare ,(make-pv-type-declaration pv))
-     (declare ,(make-calls-type-declaration calls))
+     (declare (type list .pv-cell.))
      ,@(when (symbolp pv-table-symbol)
 	 `((declare (special ,pv-table-symbol))))
-     ,pv ,calls
+     (declare (ignorable ,pv ,calls))
      ,@forms))
 
-(defvar *non-variable-declarations*
-  '(values method-name method-lambda-list
-    optimize ftype inline notinline))
-
-(defvar *variable-declarations-with-argument*
-  '(class
-    type))
-
-(defvar *variable-declarations-without-argument*
-  '(ignore ignorable special dynamic-extent
-    array atom base-char bignum bit bit-vector character compiled-function
-    complex cons double-float extended-char fixnum float function hash-table integer
-    keyword list long-float nil null number package pathname random-state ratio
-    rational readtable sequence short-float signed-byte simple-array
-    simple-bit-vector simple-string simple-vector single-float standard-char
-    stream string symbol t unsigned-byte vector))
-
-(defun split-declarations (body args)
-  (let ((inner-decls nil) (outer-decls nil) decl)
-    (loop (when (null body) (return nil))
-	  (setq decl (car body))
-	  (unless (and (consp decl)
-		       (eq (car decl) 'declare))
-	    (return nil))
-	  (dolist (form (cdr decl))
-	    (when (consp form)
-	      (let ((declaration-name (car form)))
-		(if (member declaration-name *non-variable-declarations*)
-		    (push `(declare ,form) outer-decls)
-		    (let ((arg-p
-			   (member declaration-name
-				   *variable-declarations-with-argument*))
-			  (non-arg-p
-			   (member declaration-name
-				   *variable-declarations-without-argument*))
-			  (dname (list (pop form)))
-			  (inners nil) (outers nil))
-		      (unless (or arg-p non-arg-p)
-			(warn "The declaration ~S is not understood by ~S.~@
-                               Please put ~S on one of the lists ~S,~%~S, or~%~S.~@
-                        (Assuming it is a variable declarations without argument)."
-			      declaration-name 'split-declarations
-			      declaration-name
-			      '*non-variable-declarations*
-			      '*variable-declarations-with-argument*
-			      '*variable-declarations-without-argument*)
-			(push declaration-name
-			      *variable-declarations-without-argument*))
-		      (when arg-p
-			(setq dname (append dname (list (pop form)))))
-		      (dolist (var form)
-			(if (member var args)
-			    ;; quietly remove ignore declarations on args
-			    ;; to prevent compiler warns about ignored args
-			    ;; being read, caused by references in the
-			    ;; definitions of call-next-method
-			    (unless (eq (car dname) 'ignore)
-			      (push var outers))
-			    (push var inners)))
-		      (when outers
-			(push `(declare (,@dname ,@outers)) outer-decls))
-		      (when inners
-			(push `(declare (,@dname ,@inners)) inner-decls)))))))
-	  (setq body (cdr body)))
-    (values outer-decls inner-decls body)))
-
+
 (defun make-method-initargs-form-internal (method-lambda initargs env)
   (declare (ignore env))
   (let (method-lambda-args lmf lmf-params)
@@ -980,23 +768,21 @@
 (defun make-method-initargs-form-internal1 
     (initargs body req-args lmf-params restp)
   (multiple-value-bind (outer-decls inner-decls body)
-      (split-declarations body req-args)
+      (split-declarations
+       body req-args (getf (cdr lmf-params) :call-next-method-p))
     (let* ((rest-arg (when restp '.rest-arg.))
-	   (args+rest-arg (if restp
-			      (append req-args (list rest-arg))
-			      req-args)))
+	   (args+rest-arg (if restp (append req-args (list rest-arg)) req-args)))
       `(list* :fast-function
 	(lambda (.pv-cell. .next-method-call. ,@args+rest-arg)
-	  ,@outer-decls
 	  (declare (ignorable .pv-cell. .next-method-call.))
+	  ,@outer-decls
 	  (macrolet ((pv-env ((pv calls pv-table-symbol pv-parameters)
 			      &rest forms)
 		       (declare (ignore pv-table-symbol pv-parameters))
 		       `(let ((,pv (car .pv-cell.))
 			      (,calls (cdr .pv-cell.)))
-			  (declare ,(make-pv-type-declaration pv)
-				   ,(make-calls-type-declaration calls))
-			  ,pv ,calls
+			  (declare (type list .pv-cell.))
+			  (declare (ignorable ,pv ,calls))
 			  ,@forms)))
 	    (fast-lexical-method-functions 
 	     (,(car lmf-params) .next-method-call. ,req-args ,rest-arg
@@ -1005,10 +791,13 @@
 	     ,@body)))
 	',initargs))))
 
-;use arrays and hash tables and the fngen stuff to make this much better.
-;It doesn't really matter, though, because a function returned by this
-;will get called only when the user explicitly funcalls a result of method-function. 
-;BUT, this is needed to make early methods work.
+;;;
+;;; Use arrays and hash tables and the fngen stuff to make this much
+;;; better.  It doesn't really matter, though, because a function
+;;; returned by this will get called only when the user explicitly
+;;; funcalls a result of method-function.  BUT, this is needed to make
+;;; early methods work.
+;;;
 (defun method-function-from-fast-function (fmf)
   (declare (type function fmf))
   (let* ((method-function nil) (pv-table nil)
@@ -1035,74 +824,55 @@
 		    (apply fmf pv-cell nmc (nconc args (list rest))))
 		  (apply fmf pv-cell nmc method-args)))))
     (let* ((fname (method-function-get fmf :name))
-	   (name `(,(or (get (car fname) 'method-sym)
-			(setf (get (car fname) 'method-sym)
-			      (let ((str (symbol-name (car fname))))
-				(if (string= "FAST-" str :end2 5)
-				    (intern (subseq str 5) *the-pcl-package*)
-				    (car fname)))))
-		    ,@(cdr fname))))
+	   (name (cons 'method (cdr fname))))
       (set-function-name method-function name))      
     (setf (method-function-get method-function :fast-function) fmf)
     method-function))
 
-(defun get-method-function-pv-cell (method-function method-args &optional pv-table)
+(defun get-method-function-pv-cell (method-function method-args
+				    &optional pv-table)
   (let ((pv-table (or pv-table (method-function-pv-table method-function))))
     (when pv-table
       (let ((pv-wrappers (pv-wrappers-from-all-args pv-table method-args)))
 	(when pv-wrappers
 	  (pv-table-lookup pv-table pv-wrappers))))))
 
-(defun pv-table-lookup-pv-args (pv-table &rest pv-parameters)
-  (pv-table-lookup pv-table (pv-wrappers-from-pv-args pv-parameters)))
+;;;
+;;; Called to bind .PV-CELL. in a method body to the cell
+;;; corresponding to the actual arguments the method.  Only those
+;;; arguments are considered for which PV optimizations have been
+;;; performed.
+;;;
+;;; PV-TABLE is the PV table of the method.
+;;;
+;;; ARGS is a list of actual method arguments, only those
+;;; pv-optimized.
+;;;
+(defun pv-table-lookup-pv-args (pv-table &rest args)
+  (pv-table-lookup pv-table (pv-wrappers-from-pv-args args)))
 
 (defun pv-wrappers-from-pv-args (&rest args)
-  (let* ((nkeys (length args))
-	 (pv-wrappers (make-list nkeys))
-	 w (w-t pv-wrappers))
-    (dolist (arg args)
-      (setq w
-	    (wrapper-of arg))
-      (when (invalid-wrapper-p w)
-	(setq w (check-wrapper-validity arg)))
-      (setf (car w-t) w))
-      (setq w-t (cdr w-t))
-      (when (= nkeys 1) (setq pv-wrappers (car pv-wrappers)))
-      pv-wrappers))
+  (loop for arg in args
+	for wrapper = (wrapper-of arg)
+	if (invalid-wrapper-p wrapper)
+	  collect (check-wrapper-validity wrapper) into wrappers
+	else
+	  collect wrapper into wrappers
+	finally (return (if (cdr wrappers) wrappers (car wrappers)))))
 
 (defun pv-wrappers-from-all-args (pv-table args)
-  (let ((nkeys 0)
-	(slot-name-lists (pv-table-slot-name-lists pv-table)))
-    (dolist (sn slot-name-lists)
-      (when sn (incf nkeys)))
-    (let* ((pv-wrappers (make-list nkeys))
-	   (pv-w-t pv-wrappers))
-      (dolist (sn slot-name-lists)
-	(when sn
-	  (let* ((arg (car args))
-		 (w (wrapper-of arg)))
-	    (unless w ; can-optimize-access prevents this from happening.
-	      (error "error in pv-wrappers-from-all-args"))
-	    (setf (car pv-w-t) w)
-	    (setq pv-w-t (cdr pv-w-t))))
-	(setq args (cdr args)))
-      (when (= nkeys 1) (setq pv-wrappers (car pv-wrappers)))
-      pv-wrappers)))
+  (loop for snl in (pv-table-slot-name-lists pv-table) and arg in args
+	when snl
+	  collect (wrapper-of arg) into wrappers
+	finally (return (if (cdr wrappers) wrappers (car wrappers)))))
 
+;;;
+;;; Return the subset of WRAPPERS which is used in the cache
+;;; of PV-TABLE.
+;;;
 (defun pv-wrappers-from-all-wrappers (pv-table wrappers)
-  (let ((nkeys 0)
-	(slot-name-lists (pv-table-slot-name-lists pv-table)))
-    (dolist (sn slot-name-lists)
-      (when sn (incf nkeys)))
-    (let* ((pv-wrappers (make-list nkeys))
-	   (pv-w-t pv-wrappers))
-      (dolist (sn slot-name-lists)
-	(when sn
-	  (let ((w (car wrappers)))
-	    (unless w ; can-optimize-access prevents this from happening.
-	      (error "error in pv-wrappers-from-all-wrappers"))
-	    (setf (car pv-w-t) w)
-	    (setq pv-w-t (cdr pv-w-t))))
-	(setq wrappers (cdr wrappers)))
-      (when (= nkeys 1) (setq pv-wrappers (car pv-wrappers)))
-      pv-wrappers)))
+  (loop for snl in (pv-table-slot-name-lists pv-table) and w in wrappers
+	when snl
+	  collect w into result
+	finally (return (if (cdr result) result (car result)))))
+

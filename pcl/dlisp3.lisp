@@ -23,10 +23,9 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp3.lisp,v 1.6 2002/10/09 15:32:28 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp3.lisp,v 1.7 2003/03/22 16:15:17 gerd Exp $")
 ;;;
 
 (in-package :pcl)

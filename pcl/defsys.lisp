@@ -23,10 +23,9 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.29 2003/03/04 00:46:46 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.30 2003/03/22 16:15:17 gerd Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -67,10 +66,10 @@
 ;;; 
 (defvar *the-pcl-package* (find-package :pcl))
 
-(defvar *pcl-system-date* "September 16 92 PCL (f)")
+(defvar *pcl-system-date* "$Date: 2003/03/22 16:15:17 $")
 
 (setf (getf ext:*herald-items* :pcl)
-      `("    CLOS 18e (based on PCL " ,*pcl-system-date* ")"))
+      `("    CLOS based on Gerd's PCL " ,(subseq *pcl-system-date* 7 26)))
 
 
 ;;; Yet Another Sort Of General System Facility and friends.
@@ -374,11 +373,7 @@ and load your system with:
 				   (make-pathname :defaults
 						  (make-binary-pathname name)
 						  :version :newest)
-				   :byte-compile
-				   (if (and (member name *byte-files*)
-					    (member :small *features*))
-				       t
-				       :maybe))))))
+				   :byte-compile nil)))))
 	(with-compilation-unit ()
 	  (loop (when (null transformations) (return t))
 	    (let ((transform (pop transformations)))
@@ -462,37 +457,39 @@ and load your system with:
    (walk            (pkg)        (pkg)        ())
    (macros          t            t            ())
    (low             (pkg macros) t            (macros))
+   (info            (pkg walk)   t            (macros))
    
    (fin         t                                   t (low))
-   (defclass    t                                   t (low))
+   (defclass    t                                   t (low info))
    (defs        t                                   t (defclass macros))
    (fngen       t                                   t (low))
    (cache       t                                   t (low defs))
    (dlisp       t                                   t (defs low fin cache))
    (dlisp2      t                                   t (low fin cache dlisp))
    (boot        t                                   t (defs fin))
-   (vector      t                                   t (boot defs cache fin))
+   (vector t t (boot defs cache fin))
+   (method-slot-access-optimization t t (vector))
+   (gf-call-optimization t t (vector))
    (slots-boot  t                                   t (vector boot defs cache fin))
    (combin      t                                   t (boot defs))
    (dfun        t                                   t (boot low cache))
-   (fast-init   t                                   t (boot low))
-   (braid       (+ precom1 precom2)                 t (boot defs low fin cache))
+   (ctor t t (boot low))
+   (braid       (+ precom2)		            t (boot defs low fin cache))
    (dlisp3      t                                   t (dlisp2 boot braid))
    (generic-functions t                             t (boot))
    (slots       t                                   t (vector boot defs low cache fin))
-   (init        t                                   t (vector boot defs low fast-init))
-   (std-class   t                                   t (vector boot defs low cache fin slots))
+   (init t t (vector boot defs low ctor))
+   (seal        t                                   t (info generic-functions slots))
+   (std-class   t                                   t (vector boot defs low cache fin slots seal))
    (cpl         t                                   t (vector boot defs low cache fin slots))
    (fsc         t                                   t (defclass boot defs low fin cache))
    (methods     t                                   t (defclass boot defs low fin cache))
    (fixup       t                                   t (boot defs low fin))
    (defcombin   t                                   t (defclass boot defs low fin))
    (ctypes      t                                   t (defclass defcombin))
-   (construct   t                                   t (defclass boot defs low))
    (env         t                                   t (defclass boot defs low fin))
-   (cmucl-documentation t			    t () CMU)
-   (precom1     (dlisp)                             t (defs low cache fin dfun))
-   (precom2     (dlisp)                             t (defs low cache fin dfun))
+   (cmucl-documentation t			    t ())
+   (precom2     (dlisp)         t (defs low cache fin dfun cmucl-documentation))
    ))
 
 (defsystem gray-streams
@@ -541,60 +538,3 @@ and load your system with:
 	  (lisp-implementation-type)
 	  (lisp-implementation-version)
 	  *features*))
-
-;;;;
-;;;
-;;; This stuff is not intended for external use.
-;;; 
-(defun rename-pcl ()
-  (dolist (f (cadr (get-system 'pcl)))
-    (let ((old nil)
-          (new nil))
-      (let ((*system-directory* *default-pathname-defaults*))
-        (setq old (make-source-pathname (car f))))
-      (setq new  (make-source-pathname (car f)))
-      (rename-file old new))))
-
-(defun reset-pcl-package ()		; Try to do this safely
-  (let* ((vars '(*pcl-directory* 
-		 *default-pathname-extensions* 
-		 *pathname-extensions*
-		 *redefined-functions*))
-	 (names (mapcar #'symbol-name vars))
-	 (values (mapcar #'symbol-value vars)))
-    (declare (special *redefined-functions*))
-    (reset-package "PCL")
-    (let ((pkg (find-package "SLOT-ACCESSOR-NAME")))
-      (when pkg
-	(do-symbols (sym pkg)
-	  (makunbound sym)
-	  (fmakunbound sym)
-	  (setf (symbol-plist sym) nil))))
-    (let ((pcl (find-package "PCL")))
-      (mapcar (lambda (name value)
-		(let ((var (intern name pcl)))
-		  (proclaim `(special ,var))
-		  (set var value)))
-	      names values))      
-    (dolist (sym *redefined-functions*)
-      (setf (symbol-function sym) (get sym :definition-before-pcl)))
-    nil))
-
-(defun reset-package (&optional (package-name "PCL"))
-  (let ((pkg (find-package package-name)))
-    (do-symbols (sym pkg)
-      (when (eq pkg (symbol-package sym))
-	(if (or (constantp sym)
-		(or (c::info setf inverse sym)
-		    (c::info setf expander sym)
-		    (c::info type kind sym)
-		    (c::info function macro-function sym)
-		    (c::info function compiler-macro-function sym)))
-	    (unintern sym pkg)
-	    (progn
-	      (makunbound sym)
-	      (unless (or (eq sym 'reset-pcl-package)
-			  (eq sym 'reset-package))
-		(fmakunbound sym)
-		(fmakunbound `(setf ,sym)))
-	      (setf (symbol-plist sym) nil)))))))

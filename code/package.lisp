@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.61 2002/11/25 18:59:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.62 2003/03/22 16:15:20 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1678,7 +1678,7 @@
 
       ;; Class and Type Namespace(s)
       (cond
-        ((find-class symbol nil)
+        ((kernel::find-class symbol nil)
          (print-symbol "class"))
         ((info type kind symbol)
          (print-symbol "type")))

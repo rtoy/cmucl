@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.18 2003/02/15 23:41:31 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.19 2003/03/22 16:15:17 gerd Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -74,7 +74,7 @@
 	(adjust-slot-name-length (slot-definition-name slotd))
 	(case (slot-definition-allocation slotd)
 	  (:instance (push slotd instance-slotds))
-	  (:class  (push slotd class-slotds))
+	  (:class    (push slotd class-slotds))
 	  (otherwise (push slotd other-slotds))))
       (setq max-slot-name-length  (min (+ max-slot-name-length 3) 30))
       (format stream "~%~S is an instance of class ~S:" object class)
@@ -144,12 +144,12 @@
 	  (mapcar #'pretty-class (class-direct-subclasses class))
 	  (mapcar #'pretty-class (class-precedence-list class))
 	  (length (specializer-direct-methods class)))
-      (loop initially
-	      (ft "~&Its direct slots are:~%")
-	    for slotd in (class-direct-slots class)
-	    as name = (slot-definition-name slotd)
-	    as doc = (slot-value slotd 'documentation) do
-	      (ft "  ~a~@[, documentation ~s~]~%" name doc))))
+      (unless (typep class 'condition-class)
+	(loop initially (ft "~&Its direct slots are:~%")
+	      for slotd in (class-direct-slots class)
+	      as name = (slot-definition-name slotd)
+	      as doc = (slot-value slotd 'documentation) do
+		(ft "  ~a, documentation ~s~%" name doc)))))
   (when *describe-metaobjects-as-objects-p*
     (call-next-method)))
 
@@ -196,95 +196,53 @@
 
 
 ;;;
-;;; trace-method and untrace-method accept method specs as arguments.  A
-;;; method-spec should be a list like:
-;;;   (<generic-function-spec> qualifiers* (specializers*))
-;;; where <generic-function-spec> should be either a symbol or a list
-;;; of (SETF <symbol>).
+;;; Value is a list of all (possible) method function names of
+;;; generic function GF.
 ;;;
-;;;   For example, to trace the method defined by:
+(defun debug::all-method-function-names (gf)
+  (loop with gf = (if (symbolp gf) (gdefinition gf) gf)
+	for method in (generic-function-methods gf)
+	as name = (nth-value 2 (parse-method-or-spec method))
+	collect name
+	collect (list* 'fast-method (cdr name))))
+
+(defun debug::all-method-functions-in-package (pkg)
+  (let ((gfs ()))
+    (map-all-generic-functions
+     (lambda (gf)
+       (multiple-value-bind (valid base)
+	   (ext:valid-function-name-p (generic-function-name gf))
+	 (declare (ignore valid))
+	 (when (and (symbolp base)
+		    (eq (symbol-package base) pkg))
+	   (push gf gfs)))))
+    (loop for gf in gfs nconc (debug::all-method-function-names gf))))
+
 ;;;
-;;;     (defmethod foo ((x spaceship)) 'ss)
+;;; Reinitialize method function NAME from its fdefinitions.
 ;;;
-;;;   You should say:
-;;;
-;;;     (trace-method '(foo (spaceship)))
-;;;
-;;;   You can also provide a method object in the place of the method
-;;;   spec, in which case that method object will be traced.
-;;;
-;;; For untrace-method, if an argument is given, that method is untraced.
-;;; If no argument is given, all traced methods are untraced.
-;;;
-(defclass traced-method (method)
-     ((method :initarg :method)
-      (function :initarg :function
-		:reader method-function)
-      (generic-function :initform nil
-			:accessor method-generic-function)))
-
-(defmethod method-lambda-list ((m traced-method))
-  (with-slots (method) m (method-lambda-list method)))
-
-(defmethod method-specializers ((m traced-method))
-  (with-slots (method) m (method-specializers method)))
-
-(defmethod method-qualifiers ((m traced-method))
-  (with-slots (method) m (method-qualifiers method)))
-
-(defmethod accessor-method-slot-name ((m traced-method))
-  (with-slots (method) m (accessor-method-slot-name method)))
-
-(defvar *traced-methods* ())
-
-(defun trace-method (spec &rest options)
-  (multiple-value-bind (gf omethod name)
-      (parse-method-or-spec spec)
-    (let* ((tfunction (trace-method-internal (method-function omethod)
-					     name
-					     options))
-	   (tmethod (make-instance 'traced-method
-				   :method omethod
-				   :function tfunction)))
-      (remove-method gf omethod)
-      (add-method gf tmethod)
-      (pushnew tmethod *traced-methods*)
-      tmethod)))
-
-(defun untrace-method (&optional spec)  
-  (flet ((untrace-1 (m)
-	   (let ((gf (method-generic-function m)))
-	     (when gf
-	       (remove-method gf m)
-	       (add-method gf (slot-value m 'method))
-	       (setq *traced-methods* (remove m *traced-methods*))))))
-    (if (not (null spec))
-	(multiple-value-bind (gf method)	    
-	    (parse-method-or-spec spec)
-	  (declare (ignore gf))
-	  (if (memq method *traced-methods*)
-	      (untrace-1 method)
-	      (error "~S is not a traced method?" method)))
-	(dolist (m *traced-methods*) (untrace-1 m)))))
-
-(defun trace-method-internal (ofunction name options)
-  (eval `(untrace ,name))
-  (setf (symbol-function name) ofunction)
-  (eval `(trace ,name ,@options))
-  (symbol-function name))
-
-
+(defun profile::reinitialize-method-function (name)
+  (multiple-value-bind (gf method method-name)
+      (parse-method-or-spec (cdr name))
+    (declare (ignore gf method-name))
+    (with-slots (function fast-function) method
+      (ecase (car name)
+	(method
+	 (when function
+	   (setq function (fdefinition name))))
+	(fast-method
+	 (when fast-function
+	   (let* ((new (fdefinition name))
+		  (plist (method-function-plist new)))
+	     ;;
+	     ;; This is necessary so that, for instance, the arg-info of
+	     ;; the function can be determined.
+	     (unless plist
+	       (setf (method-function-plist new)
+		     (method-function-plist fast-function)))
+	     (setq fast-function new))))))))
 
-
-;(defun compile-method (spec)
-;  (multiple-value-bind (gf method name)
-;      (parse-method-or-spec spec)
-;    (declare (ignore gf))
-;    (compile name (method-function method))
-;    (setf (method-function method) (symbol-function name))))
-
 (defmacro undefmethod (&rest args)
-  (declare (arglist name {method-qualifier}* specializers))
   `(undefmethod-1 ',args))
 
 (defun undefmethod-1 (args)
@@ -298,6 +256,7 @@
 (pushnew :pcl *features*)
 (pushnew :portable-commonloops *features*)
 (pushnew :pcl-structures *features*)
+(pushnew :gerds-pcl *features*)
 
 (when (find-package "OLD-PCL")
   (setf (symbol-function (find-symbol "PRINT-OBJECT" :old-pcl))
@@ -318,47 +277,22 @@
   (declare (ignore env))
   (let ((pname (kernel:class-proper-name (kernel:layout-class object))))
     (unless pname
-      (error "Can't dump wrapper for anonymous class:~%  ~S"
+      (error "~@<Can't dump wrapper for anonymous class ~S.~@:>"
 	     (kernel:layout-class object)))
-    `(kernel:class-layout (lisp:find-class ',pname))))
+    `(kernel:%class-layout (kernel::find-class ',pname))))
 
+(defmethod make-load-form ((class class) &optional env)
+  (declare (ignore env))
+  (let ((name (class-name class)))
+    (unless (and name (eq (find-class name nil) class))
+      (error "~@<Can't use anonymous or undefined class as constant: ~S~:@>"
+	     class))
+    `(find-class ',name)))
+  
 (defun make-load-form-saving-slots (object &key slot-names environment)
   (declare (ignore environment))
   (when slot-names
-    (warn ":SLOT-NAMES MAKE-LOAD-FORM option not implemented, dumping all ~
-	   slots:~%  ~S"
-	  object))
+    (warn "~@<~s ~s option not implemented, dumping all slots: ~S~@:>"
+	  :slot-names 'make-load-form object))
   :just-dump-it-normally)
 
-
-;;; The following are hacks to deal with CMU CL having two different CLASS
-;;; classes.
-;;;
-(defun coerce-to-pcl-class (class)
-  (if (typep class 'lisp:class)
-      (or (kernel:class-pcl-class class)
-	  (find-structure-class (lisp:class-name class)))
-      class))
-
-(defmethod make-instance ((class lisp:class) &rest stuff)
-  (apply #'make-instance (coerce-to-pcl-class class) stuff))
-(defmethod change-class (instance (class lisp:class) &rest initargs)
-  (apply #'change-class instance (coerce-to-pcl-class class) initargs))
-
-(macrolet ((frob (&rest names)
-	     `(progn
-		,@(mapcar (lambda (name)
-			    `(defmethod ,name ((class lisp:class))
-			      (funcall #',name
-			       (coerce-to-pcl-class class))))
-			  names))))
-  (frob
-    class-direct-slots
-    class-prototype
-    class-precedence-list
-    class-direct-default-initargs
-    class-direct-superclasses
-    compute-class-precedence-list
-    class-default-initargs class-finalized-p
-    class-direct-subclasses class-slots
-    make-instances-obsolete))

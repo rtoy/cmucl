@@ -23,28 +23,29 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
-;;;
 
 (in-package :pcl)
 
+#-(or loadable-pcl bootable-pcl)
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; Probably have to add 'compile' if you use defconstructor.
-  (defvar *defclass-times*   '(load eval))
-  
-  (defvar *defmethod-times*  '(load eval))
-  (defvar *defgeneric-times* '(load eval))
-
   (when (eq *boot-state* 'complete)
-    (error "Trying to load (or compile) PCL in an environment in which it~%~
-            has already been loaded.  This doesn't work, you will have to~%~
-            get a fresh lisp (reboot) and then load PCL."))
+    (error "~@<Trying to load (or compile) PCL in an environment in which it ~
+            has already been loaded.  This doesn't work, you will have to ~
+            get a fresh lisp (reboot) and then load PCL.~@:>"))
   
   (when *boot-state*
     (cerror "Try loading (or compiling) PCL anyways."
-	    "Trying to load (or compile) PCL in an environment in which it~%~
-             has already been partially loaded.  This may not work, you may~%~
-             need to get a fresh lisp (reboot) and then load PCL.")))
+	    "~@<Trying to load (or compile) PCL in an environment in which it ~
+             has already been partially loaded.  This may not work, you may ~
+             need to get a fresh lisp (reboot) and then load PCL.~@:>")))
 
+;;;
+;;; These are retained only for backward compatibility.  They
+;;; are no longer used, and may be deleted at some point.
+;;;
+(defvar *defclass-times*   () "Obsolete, don't use.")
+(defvar *defmethod-times*  () "Obsolete, don't use.")
+(defvar *defgeneric-times* () "Obsolete, don't use.")
 
 
 ;;;
@@ -52,9 +53,18 @@
 ;;; unadvised, traced etc. definition.  This lets me get at the generic
 ;;; function object even when it is traced.
 ;;;
+;;; Note that FDEFINITION takes care of encapsulations.  PROFILE
+;;; isn't using encapsulations, so it has to be treated specially.
+;;;
 (declaim (inline gdefinition))
-(defun gdefinition (symbol)
-  (fdefinition symbol))
+
+(defun gdefinition (name)
+  (let ((fdefn (fdefinition name))
+	(info (gethash name profile::*profile-info*)))
+    (if (and info
+	     (eq fdefn (profile::profile-info-new-definition info)))
+	(profile::profile-info-old-definition info)
+	fdefn)))
 
 ;;;
 ;;; If symbol names a function which is traced or advised, redefine
@@ -64,6 +74,7 @@
   (c::%%defun name new-definition nil)
   (c::note-name-defined name :function)
   new-definition)
+
 
 (declaim (special *the-class-t* 
 		  *the-class-vector* *the-class-symbol*
@@ -126,13 +137,11 @@
 	 (or (and (null args) (find-class type))
 	     (ecase type
 	       (class    (coerce-to-class (car args)))
-	       (prototype (make-instance 'class-prototype-specializer
-					 :object (coerce-to-class (car args))))
 	       (class-eq (class-eq-specializer (coerce-to-class (car args))))
 	       (eql      (intern-eql-specializer (car args))))))
-	((and (null args) (typep type 'lisp:class))
-	 (or (kernel:class-pcl-class type)
-	     (find-structure-class (lisp:class-name type))))
+	((and (null args) (typep type 'kernel::class))
+	 (or (kernel:%class-pcl-class type)
+	     (ensure-non-standard-class (kernel:%class-name type))))
 	((specializerp type) type)))
 
 ;;; interface
@@ -140,8 +149,8 @@
   (cond ((eq specl t)
 	 t)
 	((consp specl)
-         (unless (member (car specl) '(class prototype class-eq eql))
-           (error "~S is not a legal specializer type" specl))
+         (unless (member (car specl) '(class class-eq eql))
+           (error "~@<~S is not a legal specializer type.~@:>" specl))
          specl)
         ((progn
 	   (when (symbolp specl)
@@ -151,7 +160,7 @@
 	       (specializerp specl)))
 	 (specializer-type specl))
         (t
-         (error "~s is neither a type nor a specializer" specl))))
+         (error "~@<~s is neither a type nor a specializer.~@:>" specl))))
 
 (defun type-class (type)
   (declare (special *the-class-t*))
@@ -159,10 +168,9 @@
   (if (atom type)
       (if (eq type t)
 	  *the-class-t*
-	  (error "bad argument to type-class"))
+	  (internal-error "Bad argument to type-class."))
       (case (car type)
         (eql (class-of (cadr type)))
-	(prototype (class-of (cadr type))) ;?
         (class-eq (cadr type))
         (class (cadr type)))))
 
@@ -182,9 +190,9 @@
   ;; Earlier revisions (<= 1.17) of this function were essentially NOOPs.
   (declare (ignorable name))
   (when (and (eq *boot-state* 'complete)
-	     (null (lisp:find-class name nil)))
-    (setf (lisp:find-class name)
-	  (lisp::make-standard-class :name name))))
+	     (null (kernel::find-class name nil)))
+    (setf (kernel::find-class name)
+	  (kernel::make-standard-class :name name))))
 
 ;;; Internal to this file.
 ;;;
@@ -208,7 +216,7 @@
 	     (specializerp type))
 	 (specializer-type type))
         (t
-         (error "~s is not a type" type))))
+         (error "~s is not a type." type))))
 
 ;;; internal to this file...
 (defun convert-to-system-type (type)
@@ -259,19 +267,15 @@
 
 (defun get-built-in-class-symbol (class-name)
   (or (cadr (assq class-name *built-in-class-symbols*))
-      (let ((symbol (intern (format nil
-				    "*THE-CLASS-~A*"
-				    (symbol-name class-name))
-			    *the-pcl-package*)))
+      (let ((symbol (symbolicate *the-pcl-package*
+				 '*the-class- class-name '*)))
 	(push (list class-name symbol) *built-in-class-symbols*)
 	symbol)))
 
 (defun get-built-in-wrapper-symbol (class-name)
   (or (cadr (assq class-name *built-in-wrapper-symbols*))
-      (let ((symbol (intern (format nil
-				    "*THE-WRAPPER-OF-~A*"
-				    (symbol-name class-name))
-			    *the-pcl-package*)))
+      (let ((symbol (symbolicate *the-pcl-package*
+				 '*the-wrapper-of- class-name '*)))
 	(push (list class-name symbol) *built-in-wrapper-symbols*)
 	symbol)))
 
@@ -288,11 +292,7 @@
 
 
 (defun make-class-predicate-name (name)
-  (intern (format nil "~A::~A class predicate"
-		  (let ((pkg (symbol-package name)))
-		    (if pkg (package-name pkg) ""))
-		  name)
-	  *the-pcl-package*))
+  `(class-predicate ,name))
 
 (defun plist-value (object name)
   (getf (object-plist object) name))
@@ -347,14 +347,14 @@
      nil)))
 
 (labels ((direct-supers (class)
-	   (if (typep class 'lisp:built-in-class)
+	   (if (typep class 'kernel::built-in-class)
 	       (kernel:built-in-class-direct-superclasses class)
 	       (let ((inherits (kernel:layout-inherits
-				(kernel:class-layout class))))
+				(kernel:%class-layout class))))
 		 (list (svref inherits (1- (length inherits)))))))
 	 (direct-subs (class)
 	   (ext:collect ((res))
-	     (let ((subs (kernel:class-subclasses class)))
+	     (let ((subs (kernel:%class-subclasses class)))
 	       (when subs
 		 (ext:do-hash (sub v subs)
 		   (declare (ignore v))
@@ -364,17 +364,17 @@
   (ext:collect ((res))
     (dolist (bic kernel::built-in-classes)
       (let* ((name (car bic))
-	     (class (lisp:find-class name)))
+	     (class (kernel::find-class name)))
 	(unless (member name '(t kernel:instance kernel:funcallable-instance
 				 function stream))
 	  (res `(,name
-		 ,(mapcar #'lisp:class-name (direct-supers class))
-		 ,(mapcar #'lisp:class-name (direct-subs class))
+		 ,(mapcar #'kernel:%class-name (direct-supers class))
+		 ,(mapcar #'kernel:%class-name (direct-subs class))
 		 ,(map 'list (lambda (x)
-			       (lisp:class-name (kernel:layout-class x)))
+			       (kernel:%class-name (kernel:layout-class x)))
 		       (reverse
 			(kernel:layout-inherits
-			 (kernel:class-layout class))))
+			 (kernel:%class-layout class))))
 		 ,(let ((found (assoc name *built-in-classes*)))
 		    (if found (fifth found) 42)))))))
     (setq *built-in-classes* (res))))
@@ -401,6 +401,20 @@
 (defclass slot-object (t) ()
   (:metaclass slot-class))
 
+;;;
+;;; In a host Lisp with intact PCL, the DEFCLASS below would normally
+;;; generate a DEFSTRUCT with :INCLUDE SLOT-OBJECT.  SLOT-OBJECT is
+;;; not a structure, so this would give an error.  Likewise,
+;;; KERNEL:INSTANCE is a BUILT-IN-CLASS, not a structure class, so
+;;; this would give an error, too.
+;;;
+;;; When PCL is bootstrapped normally, *BOOT-STATE* is not COMPLETE at
+;;; this point, which means that a DEFSTRUCT is not done, because
+;;; EXPAND-DEFCLASS looks at the boot state.
+;;;
+;;; I've modified EXPAND-DEFCLASS accordingly to not do a DEFSTRUCT
+;;; when a loadable or bootable PCL is built.
+;;;
 (defclass structure-object (slot-object kernel:instance) ()
   (:metaclass structure-class))
 
@@ -413,34 +427,35 @@
 
 (defclass standard-object (std-object kernel:instance) ())
 
-(defclass funcallable-standard-object (std-object kernel:funcallable-instance)
-     ()
+(defclass funcallable-standard-object (std-object
+				       kernel:funcallable-instance)
+  ()
   (:metaclass funcallable-standard-class))
 
 (defclass specializer (standard-object) 
-     ((type
-        :initform nil
-        :reader specializer-type)))
+  ((type
+    :initform nil
+    :reader specializer-type)))
 
 (defclass definition-source-mixin (std-object)
-     ((source
-	:initform *load-pathname*
-	:reader definition-source
-	:initarg :definition-source))
+  ((source
+    :initform *load-pathname*
+    :reader definition-source
+    :initarg :definition-source))
   (:metaclass std-class))
 
 (defclass plist-mixin (std-object)
-     ((plist
-	:initform ()
-	:accessor object-plist))
+  ((plist
+    :initform ()
+    :accessor object-plist))
   (:metaclass std-class))
 
 (defclass documentation-mixin (plist-mixin)
-     ()
+  ()
   (:metaclass std-class))
 
 (defclass dependent-update-mixin (plist-mixin)
-    ()
+  ()
   (:metaclass std-class))
 
 ;;;
@@ -448,103 +463,126 @@
 ;;; of any kind of class.  That is any class that can be a metaclass must
 ;;; have the class CLASS in its class precedence list.
 ;;; 
-(defclass class (documentation-mixin dependent-update-mixin definition-source-mixin
-		 specializer)
-     ((name
-	:initform nil
-	:initarg  :name
-	:accessor class-name)
-      (class-eq-specializer
-        :initform nil
-        :reader class-eq-specializer)
-      (direct-superclasses
-	:initform ()
-	:reader class-direct-superclasses)
-      (direct-subclasses
-	:initform ()
-	:reader class-direct-subclasses)
-      (direct-methods
-	:initform (cons nil nil))
-      (predicate-name
-        :initform nil
-	:reader class-predicate-name)))
+(defclass class (documentation-mixin dependent-update-mixin
+				     definition-source-mixin
+				     specializer)
+  ((name
+    :initform nil
+    :initarg  :name
+    :accessor class-name)
+   (class-eq-specializer
+    :initform nil
+    :reader class-eq-specializer)
+   (direct-superclasses
+    :initform ()
+    :reader class-direct-superclasses)
+   (direct-subclasses
+    :initform ()
+    :reader class-direct-subclasses)
+   (direct-methods
+    :initform (cons nil nil))
+   (predicate-name
+    :initform nil
+    :reader class-predicate-name)))
 
 ;;;
 ;;; The class PCL-CLASS is an implementation-specific common superclass of
 ;;; all specified subclasses of the class CLASS.
 ;;; 
 (defclass pcl-class (class)
-     ((class-precedence-list
-	:reader class-precedence-list)
-      (can-precede-list
-        :initform ()
-	:reader class-can-precede-list)
-      (incompatible-superclass-list
-        :initform ()
-	:accessor class-incompatible-superclass-list)
-      (wrapper
-	:initform nil
-	:reader class-wrapper)
-      (prototype
-	:initform nil
-	:reader class-prototype)))
+  ((class-precedence-list
+    :reader class-precedence-list)
+   (can-precede-list
+    :initform ()
+    :reader class-can-precede-list)
+   (incompatible-superclass-list
+    :initform ()
+    :accessor class-incompatible-superclass-list)
+   (wrapper
+    :initform nil
+    :reader class-wrapper)
+   (prototype
+    :initform nil
+    :reader class-prototype)))
 
 (defclass slot-class (pcl-class)
-     ((direct-slots
-	:initform ()
-	:accessor class-direct-slots)
-      (slots
-        :initform ()
-	:accessor class-slots)
-      (initialize-info
-        :initform nil
-	:accessor class-initialize-info)))
+  ((direct-slots
+    :initform ()
+    :accessor class-direct-slots)
+   (slots
+    :initform ()
+    :accessor class-slots)
+   (initialize-info
+    :initform nil
+    :accessor class-initialize-info)))
 
 ;;;
 ;;; The class STD-CLASS is an implementation-specific common superclass of
 ;;; the classes STANDARD-CLASS and FUNCALLABLE-STANDARD-CLASS.
 ;;; 
-(defclass std-class (slot-class)
-     ())
+(defclass std-class (slot-class) ())
 
-(defclass standard-class (std-class)
-     ())
+(defclass standard-class (std-class) ())
 
-(defclass funcallable-standard-class (std-class)
-     ())
+(defclass funcallable-standard-class (std-class) ())
     
 (defclass forward-referenced-class (pcl-class) ())
 
 (defclass built-in-class (pcl-class) ())
 
 (defclass structure-class (slot-class)
-     ((defstruct-form
-        :initform ()
-	:accessor class-defstruct-form)
-      (defstruct-constructor
-        :initform nil
-	:accessor class-defstruct-constructor)
-      (from-defclass-p
-        :initform nil
-	:initarg :from-defclass-p)))
+  ((defstruct-form
+     :initform ()
+     :accessor class-defstruct-form)
+   (defstruct-constructor
+     :initform nil
+     :accessor class-defstruct-constructor)
+   (from-defclass-p
+    :initform nil
+    :initarg :from-defclass-p)))
      
+(defclass condition-class (pcl-class) ())
 
 (defclass specializer-with-object (specializer) ())
 
 (defclass exact-class-specializer (specializer) ())
 
-(defclass class-eq-specializer (exact-class-specializer specializer-with-object)
-  ((object :initarg :class :reader specializer-class :reader specializer-object)))
+;;;
+;;; Extension specializing on the exact specified class.  You must set
+;;; pcl::*allow-experimental-specializers-p* to use this extension.
+;;;
+;;; (defclass foo () ())
+;;; (defclass bar (foo) ())
+;;;
+;;; (setq pcl::*allow-experimental-specializers-p* t)
+;;; (defmethod m (x) nil)
+;;; (defmethod m ((x (pcl::class-eq 'foo))) t)
+;;;
+;;; (m (make-instance 'foo)) => t
+;;; (m (make-instance 'bar)) => nil
+;;;
 
-(defclass class-prototype-specializer (specializer-with-object)
-  ((object :initarg :class :reader specializer-class :reader specializer-object)))
+(defclass class-eq-specializer (exact-class-specializer
+				specializer-with-object)
+  ((object
+    :initarg :class
+    :reader specializer-class
+    :reader specializer-object)))
 
 (defclass eql-specializer (exact-class-specializer specializer-with-object)
-  ((object :initarg :object :reader specializer-object 
-	   :reader eql-specializer-object)))
+  ((object
+    :initarg :object
+    :reader specializer-object 
+    :reader eql-specializer-object)))
 
 (defvar *eql-specializer-table* (make-hash-table :test 'eql))
 
+;;;
+;;; When compiled with an intact PCL, the MAKE-INSTANCE in the function
+;;; below will generate an optimized constructor, and a LOAD-TIME-VALUE
+;;; creating it.  That means CTOR must be initialized before this file
+;;; is.
+;;;
 (defun intern-eql-specializer (object)
   (or (gethash object *eql-specializer-table*)
       (setf (gethash object *eql-specializer-table*)
@@ -555,41 +593,41 @@
 ;;; Slot definitions.
 ;;;
 (defclass slot-definition (standard-object) 
-     ((name
-	:initform nil
-	:initarg :name
-        :accessor slot-definition-name)
-      (initform
-	:initform nil
-	:initarg :initform
-	:accessor slot-definition-initform)
-      (initfunction
-	:initform nil
-	:initarg :initfunction
-	:accessor slot-definition-initfunction)
-      (readers
-	:initform nil
-	:initarg :readers
-	:accessor slot-definition-readers)
-      (writers
-	:initform nil
-	:initarg :writers
-	:accessor slot-definition-writers)
-      (initargs
-	:initform nil
-	:initarg :initargs
-	:accessor slot-definition-initargs)
-      (type
-	:initform t
-	:initarg :type
-	:accessor slot-definition-type)
-      (documentation
-	:initform ""
-	:initarg :documentation)
-      (class
-        :initform nil
-	:initarg :class
-	:accessor slot-definition-class)))
+  ((name
+    :initform nil
+    :initarg :name
+    :accessor slot-definition-name)
+   (initform
+    :initform nil
+    :initarg :initform
+    :accessor slot-definition-initform)
+   (initfunction
+    :initform nil
+    :initarg :initfunction
+    :accessor slot-definition-initfunction)
+   (readers
+    :initform nil
+    :initarg :readers
+    :accessor slot-definition-readers)
+   (writers
+    :initform nil
+    :initarg :writers
+    :accessor slot-definition-writers)
+   (initargs
+    :initform nil
+    :initarg :initargs
+    :accessor slot-definition-initargs)
+   (type
+    :initform t
+    :initarg :type
+    :accessor slot-definition-type)
+   (documentation
+    :initform ""
+    :initarg :documentation)
+   (class
+    :initform nil
+    :initarg :class
+    :accessor slot-definition-class)))
 
 (defclass standard-slot-definition (slot-definition)
   ((allocation
@@ -597,6 +635,9 @@
     :initarg :allocation
     :accessor slot-definition-allocation)
    (allocation-class
+    :documentation "For class slots, the class defininig the slot.
+For inherited class slots, this is the superclass from which the slot
+was inherited."
     :initform nil
     :initarg :allocation-class
     :accessor slot-definition-allocation-class)))
@@ -648,42 +689,36 @@
 
 (defclass method (standard-object) ())
 
-(defclass standard-method (definition-source-mixin documentation-mixin method)
-     ((generic-function
-	:initform nil	
-	:accessor method-generic-function)
-;     (qualifiers
-;	:initform ()
-;	:initarg  :qualifiers
-;	:reader method-qualifiers)
-      (specializers
-	:initform ()
-	:initarg  :specializers
-	:reader method-specializers)
-      (lambda-list
-	:initform ()
-	:initarg  :lambda-list
-	:reader method-lambda-list)
-      (function
-	:initform nil
-	:initarg :function)		;no writer
-      (fast-function
-	:initform nil
-	:initarg :fast-function		;no writer
-	:reader method-fast-function)
-;     (documentation
-;	:initform nil
-;	:initarg  :documentation
-;	:reader method-documentation)
-      ))
+(defclass standard-method (definition-source-mixin documentation-mixin
+			      method)
+  ((generic-function
+    :initform nil	
+    :accessor method-generic-function)
+   (specializers
+    :initform ()
+    :initarg  :specializers
+    :reader method-specializers)
+   (lambda-list
+    :initform ()
+    :initarg  :lambda-list
+    :reader method-lambda-list)
+   (function
+    :initform nil
+    :initarg :function)	
+   (fast-function
+    :initform nil
+    :initarg :fast-function
+    :reader method-fast-function)))
 
 (defclass standard-accessor-method (standard-method)
-     ((slot-name :initform nil
-		 :initarg :slot-name
-		 :reader accessor-method-slot-name)
-      (slot-definition :initform nil
-		       :initarg :slot-definition
-		       :reader accessor-method-slot-definition)))
+  ((slot-name
+    :initform nil
+    :initarg :slot-name
+    :reader accessor-method-slot-name)
+   (slot-definition
+    :initform nil
+    :initarg :slot-definition
+    :reader accessor-method-slot-definition)))
 
 (defclass standard-reader-method (standard-accessor-method) ())
 
@@ -695,59 +730,66 @@
 			    definition-source-mixin
 			    documentation-mixin
 			    funcallable-standard-object)
-     ()
+  ()
   (:metaclass funcallable-standard-class))
     
 (defclass standard-generic-function (generic-function)
-     ((name
-	:initform nil
-	:initarg :name
-	:accessor generic-function-name)
-      (methods
-	:initform ()
-	:accessor generic-function-methods)
-      (method-class
-	:initarg :method-class
-	:accessor generic-function-method-class)
-      (method-combination
-	:initarg :method-combination
-	:accessor generic-function-method-combination)
-      (declarations
-        :initarg :declarations
-        :initform ()
-        :accessor generic-function-declarations)
-      (arg-info
-        :initform (make-arg-info)
-	:reader gf-arg-info)
-      (dfun-state
-	:initform ()
-	:accessor gf-dfun-state)
-      (pretty-arglist
-	:initform ()
-	:accessor gf-pretty-arglist)
-      )
+  ((name
+    :initform nil
+    :initarg :name
+    :accessor generic-function-name)
+   (methods
+    :initform ()
+    :accessor generic-function-methods)
+   (method-class
+    :initarg :method-class
+    :accessor generic-function-method-class)
+   (method-combination
+    :initarg :method-combination
+    :accessor generic-function-method-combination)
+   (arg-info
+    :initform (make-arg-info)
+    :reader gf-arg-info)
+   (dfun-state
+    :initform ()
+    :accessor gf-dfun-state)
+   (pretty-arglist
+    :initform ()
+    :accessor gf-pretty-arglist)
+   (declarations
+    :initform ()
+    :initarg :declarations
+    :reader generic-function-declarations))
   (:metaclass funcallable-standard-class)
   (:default-initargs :method-class *the-class-standard-method*
-		     :method-combination *standard-method-combination*))
+    :method-combination *standard-method-combination*))
 
 (defclass method-combination (standard-object) ())
 
 (defclass standard-method-combination
-	  (definition-source-mixin method-combination)
-     ((type          :reader method-combination-type
-	             :initarg :type)
-      (documentation :reader method-combination-documentation
-		     :initarg :documentation)
-      (options       :reader method-combination-options
-	             :initarg :options)))
+    (definition-source-mixin method-combination)
+  ((type
+    :reader method-combination-type
+    :initarg :type)
+   (documentation
+    :reader method-combination-documentation
+    :initarg :documentation)
+   (options
+    :reader method-combination-options
+    :initarg :options)))
 
 (defclass long-method-combination (standard-method-combination)
   ((function
     :initarg :function
     :reader long-method-combination-function)
-   (arguments-lambda-list
-    :initarg :arguments-lambda-list
-    :reader long-method-combination-arguments-lambda-list)))
+   (args-lambda-list
+    :initarg :args-lambda-list
+    :reader long-method-combination-args-lambda-list)))
+
+(defclass seal (standard-object)
+  ((quality
+    :initarg :quality
+    :reader seal-quality)))
 
 (defparameter *early-class-predicates*
   '((specializer specializerp)
@@ -771,4 +813,5 @@
     (standard-generic-function standard-generic-function-p)
     (method-combination method-combination-p)
     (long-method-combination long-method-combination-p)))
+
 
