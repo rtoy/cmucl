@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.18 1993/02/26 08:26:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.19 1993/03/12 21:05:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -225,10 +225,11 @@
 ;;;
 (defun file-position (stream &optional position)
   "With one argument returns the current position within the file
-  File-Stream is open to.  If the second argument is supplied, then
-  this becomes the new file position.  The second argument may also
-  be :start or :end for the start and end of the file, respectively."
-  (declare (stream stream) (type (or index null) position))
+   File-Stream is open to.  If the second argument is supplied, then
+   this becomes the new file position.  The second argument may also
+   be :start or :end for the start and end of the file, respectively."
+  (declare (stream stream)
+	   (type (or index (member nil :start :end)) position))
   (cond
    (position
     (setf (stream-in-index stream) in-buffer-length)
