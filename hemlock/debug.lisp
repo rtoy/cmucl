@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.8 2000/10/30 15:45:04 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.9 2000/11/15 11:59:23 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -227,11 +227,7 @@
 	(let* ((vector (di:form-number-translations
 			(with-input-from-region
 			    (s (region point (buffer-end-mark buffer)))
-			  (let ((*readtable* (copy-readtable)))
-			    (set-dispatch-macro-character
-			     #\# #\. (lambda(stream char arg)
-				       (declare (ignore char arg))
-				       (read stream)))
+			  (let ((*read-suppress* t))
 			    (read s)))
 			tlf-offset))
 	       ;; Don't signal error on index overrun.It may be due
