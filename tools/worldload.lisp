@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.75 1994/02/14 13:16:30 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.76 1994/02/14 15:12:17 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,9 +119,14 @@
 	  :environment-name "Compiler")
 
   (maybe-byte-load "c:loadbackend.lisp")
+  ;;
   ;; If we want a small core, blow away the meta-compile time VOP info.
-  #+small (setf (c::backend-parsed-vops c:*backend*)
-		(make-hash-table :test #'eq))
+  ;; Redundant clarhash to work around gc leakage.
+  #+small
+  (progn
+    (clrhash (c::backend-parsed-vops c:*backend*))
+    (setf (c::backend-parsed-vops c:*backend*)
+	  (make-hash-table :test #'eq)))
 
   (purify :root-structures (list c:*backend*)
 	  :environment-name (concatenate 'string (c:backend-name c:*backend*)
