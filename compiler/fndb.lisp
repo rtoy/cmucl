@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.40 1992/02/07 12:37:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.41 1992/02/13 09:17:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,6 +26,7 @@
 	  %charset
 	  %primitive
 	  %put
+	  %puthash
 	  %rplaca
 	  %rplacd
 	  %sbitset
@@ -642,6 +643,7 @@
 (defknown hash-table-p (t) boolean (movable foldable flushable))
 (defknown gethash (t hash-table &optional t) (values t boolean)
   (foldable flushable unsafe))
+(defknown %puthash (t hash-table t) t (unsafe))
 (defknown remhash (t hash-table) boolean ())
 (defknown maphash (callable hash-table) null (foldable flushable call))
 (defknown clrhash (hash-table) hash-table ())
