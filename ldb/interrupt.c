@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.33 1992/03/22 19:57:46 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.34 1992/03/22 20:25:51 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -324,8 +324,12 @@ struct sigcontext *context;
 #ifdef mips
 	    context->sc_regs[FLAGS] & (1<<flag_Atomic)
 #else
+#ifdef sparc
+	    context->sc_regs[ALLOC] & 4
+#else
 	    SymbolValue(PSEUDO_ATOMIC_ATOMIC)
-#endif
+#endif sparc
+#endif mips
 	    ) {
 	    maybe_gc_pending = TRUE;
 	    if (pending_signal == 0) {
@@ -335,7 +339,11 @@ struct sigcontext *context;
 #ifdef mips
 	    context->sc_regs[FLAGS] |= (1<<flag_Interrupted);
 #else
+#ifdef sparc
+	    context->sc_regs[ALLOC] |= 1;
+#else
 	    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, T);
+#endif
 #endif
 	}
 	else {
