@@ -75,10 +75,9 @@
 	       (kernel:byte-closure
 		(set-function-name (kernel:byte-closure-function fcn) new-name))
 	       (kernel:byte-function
-		(setf (kernel:byte-function-name fcn) new-name))))
-         fcn)
-        ((eval:interpreted-function-p fcn)
-         (setf (eval:interpreted-function-name fcn) new-name)
+		(setf (kernel:byte-function-name fcn) new-name))
+	       (eval:interpreted-function
+		(setf (eval:interpreted-function-name fcn) new-name))))
          fcn)
         (t
 	 ;; pw-- This seems wrong and causes trouble. Tests show
