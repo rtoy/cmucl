@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.59 1993/05/28 05:20:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.60 1993/07/22 00:02:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3042,8 +3042,11 @@
   ;; context and path.
   (let ((path (reverse (butlast (cdr path)))))
     (dotimes (i (- (length path) context))
-      (setq form (elt form (first path)))
-      (setq path (rest path)))
+      (let ((index (first path)))
+	(unless (and (listp form) (< index (length form)))
+	  (error "Source path no longer exists."))
+	(setq form (elt form index))
+	(setq path (rest path))))
     ;;
     ;; Recursively rebuild the source form resulting from the above descent,
     ;; copying the beginning of each subform up to the next subform we descend
@@ -3055,10 +3058,12 @@
 		   (if (zerop context)
 		       form
 		       `(#:***here*** ,form))
-		   (let* ((n (first path))
-			  (res (frob (elt form n) (rest path) (1- level))))
-		     (nconc (subseq form 0 n)
-			    (cons res (nthcdr (1+ n) form)))))))
+		   (let ((n (first path)))
+		     (unless (and (listp form) (< n (length form)))
+		       (error "Source path no longer exists."))
+		     (let ((res (frob (elt form n) (rest path) (1- level))))
+		       (nconc (subseq form 0 n)
+			      (cons res (nthcdr (1+ n) form))))))))
       (frob form path context))))
 
 
