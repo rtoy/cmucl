@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.58 1993/08/24 02:11:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.59 1993/08/27 21:13:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -683,70 +683,90 @@
 	   (type index length)
 	   (type vector constants)
 	   (type fasl-file file))
-  (collect ((entry-patches))
-    ;; No trace table in byte-compiled functions.
-    (dump-object 0 file)
+  (let ((gengc (backend-featurep :gengc)))
+    (collect ((entry-patches))
+      ;; Dump the debug info.
+      (when gengc
+	(let ((info (make-debug-info :name
+				     (component-name *compile-component*)))
+	      (*dump-only-valid-structures* nil))
+	  (dump-object info file)
+	  (let ((info-handle (dump-pop file)))
+	    (dump-push info-handle file)
+	    (push info-handle (fasl-file-debug-info file)))))
 
-    ;; Dump the constants.
-    (dotimes (i (length constants))
-      (let ((entry (aref constants i)))
-	(etypecase entry
-	  (constant
-	   (dump-object (constant-value entry) file))
-	  (null
-	   (dump-fop 'lisp::fop-misc-trap file))
-	  (list
-	   (ecase (car entry)
-	     (:entry
-	      (let* ((info (leaf-info (cdr entry)))
-		     (handle (gethash info (fasl-file-entry-table file))))
-		(cond
-		 (handle
-		  (dump-push handle file))
-		 (t
-		  (entry-patches (cons info (+ i vm:code-constants-offset))) 
-		  (dump-fop 'lisp::fop-misc-trap file)))))
-	     (:load-time-value
-	      (dump-push (cdr entry) file))
-	     (:fdefinition
-	      (dump-object (cdr entry) file)
-	      (dump-fop 'lisp::fop-fdefinition file))
-	     (:dylan-varinfo-value
-	      (dump-object (cadr entry) file)
-	      (dump-object (cddr entry) file)
-	      (dump-fop 'lisp::fop-dylan-varinfo-value file))
-	     (:type-predicate
-	      (dump-object 'load-type-predicate file)
-	      (let ((*unparse-function-type-simplify* t))
-		(dump-object (type-specifier (cdr entry)) file))
-	      (dump-fop 'lisp::fop-funcall file)
-	      (dump-byte 1 file)))))))
+      ;; No trace table in byte-compiled functions.
+      (dump-object 0 file)
 
-    ;; Dump the debug info.
-    (let ((info (make-debug-info :name (component-name *compile-component*)))
-	  (*dump-only-valid-structures* nil))
-      (dump-object info file)
-      (let ((info-handle (dump-pop file)))
-	(dump-push info-handle file)
-	(push info-handle (fasl-file-debug-info file))))
+      ;; Dump the constants.
+      (dotimes (i (length constants))
+	(let ((entry (aref constants i)))
+	  (etypecase entry
+	    (constant
+	     (dump-object (constant-value entry) file))
+	    (null
+	     (dump-fop 'lisp::fop-misc-trap file))
+	    (list
+	     (ecase (car entry)
+	       (:entry
+		(let* ((info (leaf-info (cdr entry)))
+		       (handle (gethash info (fasl-file-entry-table file))))
+		  (cond
+		   (handle
+		    (dump-push handle file))
+		   (t
+		    (entry-patches (cons info (+ i vm:code-constants-offset))) 
+		    (dump-fop 'lisp::fop-misc-trap file)))))
+	       (:load-time-value
+		(dump-push (cdr entry) file))
+	       (:fdefinition
+		(dump-object (cdr entry) file)
+		(dump-fop 'lisp::fop-fdefinition file))
+	       (:dylan-varinfo-value
+		(dump-object (cadr entry) file)
+		(dump-object (cddr entry) file)
+		(dump-fop 'lisp::fop-dylan-varinfo-value file))
+	       (:type-predicate
+		(dump-object 'load-type-predicate file)
+		(let ((*unparse-function-type-simplify* t))
+		  (dump-object (type-specifier (cdr entry)) file))
+		(dump-fop 'lisp::fop-funcall file)
+		(dump-byte 1 file)))))))
 
-    (let ((num-consts (1+ (length constants))))
-      (cond ((and (< num-consts #x100) (< length #x10000))
-	     (dump-fop 'lisp::fop-small-code file)
-	     (dump-byte num-consts file)
-	     (dump-var-signed length 2 file))
-	    (t
-	     (dump-fop 'lisp::fop-code file)
-	     (dump-unsigned-32 num-consts file)
-	     (dump-unsigned-32 length file)))
+      ;; Dump the debug info.
+      (unless gengc
+	(let ((info (make-debug-info :name
+				     (component-name *compile-component*)))
+	      (*dump-only-valid-structures* nil))
+	  (dump-object info file)
+	  (let ((info-handle (dump-pop file)))
+	    (dump-push info-handle file)
+	    (push info-handle (fasl-file-debug-info file)))))
+
+      (let ((num-consts (if gengc
+			    (+ (length constants) 2)
+			    (1+ (length constants))))
+	    (length (if gengc
+			(ceiling length 4)
+			length)))
+	(cond ((and (< num-consts #x100) (< length #x10000))
+	       (dump-fop 'lisp::fop-small-code file)
+	       (dump-byte num-consts file)
+	       (dump-var-signed length 2 file))
+	      (t
+	       (dump-fop 'lisp::fop-code file)
+	       (dump-unsigned-32 num-consts file)
+	       (dump-unsigned-32 length file))))
+
       (flush-fasl-file-buffer file)
-      (dump-segment segment length file))
-    (let ((code-handle (dump-pop file))
-	  (patch-table (fasl-file-patch-table file)))
-      (dolist (patch (entry-patches))
-	(push (cons code-handle (cdr patch))
-	      (gethash (car patch) patch-table)))
-      code-handle)))
+      (dump-segment segment length file)
+      
+      (let ((code-handle (dump-pop file))
+	    (patch-table (fasl-file-patch-table file)))
+	(dolist (patch (entry-patches))
+	  (push (cons code-handle (cdr patch))
+		(gethash (car patch) patch-table)))
+	code-handle))))
 
 
 ;;; DUMP-BYTE-FUNCTION  --  Internal
