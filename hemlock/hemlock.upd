@@ -87,6 +87,7 @@ lisp-lib.lisp
 completion.lisp
 shell.lisp
 debug.lisp
+netnews.lisp
 bindings.lisp
 compilation.order
 things-to-do.txt
