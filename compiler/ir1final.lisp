@@ -29,20 +29,24 @@
     (let ((*compiler-error-context* node))
       (dolist (failure failures)
 	(let ((what (cdr failure)))
-	  (if (consp what)
-	      (compiler-note "Unable to optimize because:~%~6T~?"
-			     (first what) (rest what))
-	      (collect ((messages))
-		(flet ((frob (string &rest stuff)
-			 (messages string)
-			 (messages stuff)))
-		  (valid-function-use node what
-				      :warning-function #'frob
-				      :error-function #'frob))
-		
-		(compiler-note "Unable to optimize due to type uncertainty:~@
-		                ~{~6T~?~^~&~}"
-			       (messages)))))))))
+	  (cond
+	   ((consp what)
+	    (compiler-note "Unable to optimize because:~%~6T~?"
+			   (first what) (rest what)))
+	   ((valid-function-use node what
+				:argument-test #'types-intersect
+				:result-test #'values-types-intersect)
+	    (collect ((messages))
+	      (flet ((frob (string &rest stuff)
+		       (messages string)
+		       (messages stuff)))
+		(valid-function-use node what
+				    :warning-function #'frob
+				    :error-function #'frob))
+	      
+	      (compiler-note "Unable to optimize due to type uncertainty:~@
+	                      ~{~6T~?~^~&~}"
+			     (messages))))))))))
 
 	  
 ;;; Check-Free-Function  --  Interface
