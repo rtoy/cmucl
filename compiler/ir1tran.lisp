@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.137 2003/02/05 19:32:20 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.138 2003/02/05 23:37:06 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2844,14 +2844,14 @@
       (when (or (atom def) (< (length def) 2))
 	(compiler-error "Malformed ~S definition spec: ~S." context def))
       
-      (let ((name (check-function-name (first def))))
+      (let ((name (check-function-name (first def)))
+	    (block-name (nth-value 1 (valid-function-name-p (first def)))))
 	(names name)
-	(multiple-value-bind
-	    (body decls)
+	(multiple-value-bind (body decls)
 	    (system:parse-body (cddr def) *lexical-environment* t)
 	  (defs `(lambda ,(second def)
 		   ,@decls
-		   (block ,(if (consp name) (second name) name)
+		   (block ,block-name
 		     . ,body))))))
     (values (names) (defs))))
 
