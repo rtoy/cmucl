@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.19 2002/08/26 16:09:34 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.20 2002/08/26 16:58:06 pmai Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -72,31 +72,11 @@
 (defmacro posq (item list) `(position ,item ,list :test #'eq))
 (defmacro neq (x y) `(not (eq ,x ,y)))
 
-
-(defun make-caxr (n form)
-  (if (< n 4)
-      `(,(nth n '(car cadr caddr cadddr)) ,form)
-      (make-caxr (- n 4) `(cddddr ,form))))
-
-(defun make-cdxr (n form)
-  (cond ((zerop n) form)
-	((< n 5) `(,(nth n '(identity cdr cddr cdddr cddddr)) ,form))
-	(t (make-cdxr (- n 4) `(cddddr ,form)))))
 )
 
 (defun true (&rest ignore) (declare (ignore ignore)) t)
 (defun false (&rest ignore) (declare (ignore ignore)) nil)
 (defun zero (&rest ignore) (declare (ignore ignore)) 0)
-
-(defun make-plist (keys vals)
-  (if (null vals)
-      ()
-      (list* (car keys)
-	     (car vals)
-	     (make-plist (cdr keys) (cdr vals)))))
-
-(defun remtail (list tail)
-  (if (eq list tail) () (cons (car list) (remtail (cdr list) tail))))
 
 (defun get-declaration (name declarations &optional default)
   (dolist (d declarations default)
@@ -110,32 +90,6 @@
 (defun make-keyword (symbol)
   (intern (symbol-name symbol) *keyword-package*))
 
-(eval-when (compile load eval)
-
-(defun string-append (&rest strings)
-  (setq strings (copy-list strings))		;The explorer can't even
-						;rplaca an &rest arg?
-  (do ((string-loc strings (cdr string-loc)))
-      ((null string-loc)
-       (apply #'concatenate 'string strings))
-    (rplaca string-loc (string (car string-loc)))))
-)
-
-(defun symbol-append (sym1 sym2 &optional (package *package*))
-  (intern (string-append sym1 sym2) package))
-
-(defmacro check-member (place list &key (test #'eql) (pretty-name place))
-  (ext:once-only ((place place) (list list))
-    `(or (member ,place ,list :test ,test)
-         (error "The value of ~A, ~S is not one of ~S."
-                ',pretty-name ,place ,list))))
-
-(defmacro alist-entry (alist key make-entry-fn)
-  (ext:once-only ((alist alist) (key key))
-    `(or (assq ,key ,alist)
-	 (progn (setf ,alist (cons (,make-entry-fn ,key) ,alist))
-		(car ,alist)))))
-
 (defmacro doplist ((key val) plist &body body &environment env)
   (multiple-value-bind (bod decls doc)
       (system:parse-body body env)
@@ -148,9 +102,6 @@
 	       (error "Malformed plist in doplist, odd number of elements."))
 	     (setq ,val (pop .plist-tail.))
 	     (progn ,@bod)))))
-
-(defmacro if* (condition true &rest false)
-  `(if ,condition ,true (progn ,@false)))
 
 (defmacro dolist-carefully ((var list improper-list-handler) &body body)
   `(let ((,var nil)
