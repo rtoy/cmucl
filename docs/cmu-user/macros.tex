@@ -116,43 +116,50 @@
   \layout{#2}{\var{#3}}{#1}
   }{}
 
-%% Define a function
+%% Define a function with name NAME and given parameters PARAM.  The
+%% function is in the package PKG.  If the optional arg SUFFIX is
+%% given, this is used as a suffix for the label.  (Useful when you
+%% have functions of the same name, such as methods, but want
+%% different labels for each version.)
 %%
-%% \begin{defun}{pkg}{name}{params}
+%% The defunx is for additional functions that are related to this one
+%% in some way, and we want to group them all together.
+%%  
+%% \begin{defun}[suffix]{pkg}{name}{params}
 %%   \defunx[pkg]{name}{params}
 %%   description of function
 %% \end{defun}
-\newenvironment{defun}[3]{%
-  \par\defunvspace\fnindexbold{#2}\label{FN:#2}%
-  \layout[#1]{#2}{#3}{Function}
+\newenvironment{defun}[4][]{%
+  \par\defunvspace\fnindexbold{#3}\label{FN:#3#1}%
+  \layout[#2]{#3}{#4}{Function}
   }{}
 \newcommand{\defunx}[3][\mbox{}]{%
   \par\fnindexbold{#2}\label{FN:#2}%
   \layout[#1]{#2}{#3}{Function}}
 
-%% Define a generic function
+%% Define a generic function.  Like defun, but for defgeneric.
 %%
-%% \begin{defgeneric}{pkg}{name}{params}
+%% \begin{defgeneric}[suffix]{pkg}{name}{params}
 %%   \defgenericx[pkg]{name}{params}
 %%   description of function
 %% \end{defgeneric}
-\newenvironment{defgeneric}[3]{%
-  \par\defunvspace\fnindexbold{#2}\label{FN:#2}%
-  \layout[#1]{#2}{#3}{Generic Function}
+\newenvironment{defgeneric}[4][]{%
+  \par\defunvspace\fnindexbold{#3}\label{FN:#3-generic#1}%
+  \layout[#2]{#3}{#4}{Generic Function}
   }{}
 \newcommand{\defgenericx}[3][\mbox{}]{%
   \par\fnindexbold{#2}\label{FN:#2}%
   \layout[#1]{#2}{#3}{Generic Function}}
 
-%% Define a method
+%% Define a method.  Like defgeneric, but for methods.
 %%
-%% \begin{defmethod}{pkg}{name}{params}
+%% \begin{defmethod}[suffix]{pkg}{name}{params}
 %%   \defmethod[pkg]{name}{params}
 %%   description of function
 %% \end{defmethod}
-\newenvironment{defmethod}[3]{%
-  \par\defunvspace\fnindexbold{#2}\label{FN:#2}%
-  \layout[#1]{#2}{#3}{Method}
+\newenvironment{defmethod}[4][]{%
+  \par\defunvspace\fnindexbold{#3}\label{FN:#3-method#1}%
+  \layout[#2]{#3}{#4}{Method}
   }{}
 \newcommand{\defmethodx}[3][\mbox{}]{%
   \par\fnindexbold{#2}\label{FN:#2}%
