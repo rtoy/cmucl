@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.5 1990/03/13 16:55:36 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.6 1990/03/15 19:38:46 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -117,16 +117,17 @@
       (inst bne temp zero-tn err-lab)
       (move result value t))))
 
+(primitive-type-vop check-fixnum (:check) fixnum)
+
 (define-vop (fixnump simple-type-predicate)
   (:ignore type-code)
+  (:translate ext:fixnump)
   (:generator 3
     (inst andi temp value #x3)
     (if not-p
 	(inst bne temp zero-tn target)
 	(inst beq temp zero-tn target))
     (nop)))
-
-(primitive-type-vop check-fixnum (:check) fixnum)
 
 
 ;;;; Hairy type tests:
