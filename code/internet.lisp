@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.41 2004/07/25 19:32:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.42 2004/12/09 21:56:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,6 +68,13 @@
 #+linux
 (defconstant msg-proxy 16)
 
+;; For errors with socket stuff.
+(define-condition socket-error (simple-error)
+  ((errno :reader socket-errno
+	  :initarg :errno
+	  :initform 0)))
+  
+  
 (defvar *internet-protocols*
   '((:stream    6 #.sock-stream)
     (:datagram 17 #.sock-dgram))
@@ -246,7 +253,10 @@ struct in_addr {
     (declare (ignore proto))
     (let ((socket (unix:unix-socket af-unix type 0)))
       (when (minusp socket)
-	(error "Error creating socket: ~A" (unix:get-unix-error-msg)))
+	(error 'socket-error
+	       :format-control "Error creating socket: ~A"
+	       :format-arguments (list (unix:get-unix-error-msg))
+	       :errno (unix:unix-errno)))
       socket)))
 
 (defun connect-to-unix-socket (path &optional (kind :stream))
@@ -263,8 +273,10 @@ struct in_addr {
 				       (alien-sap sockaddr)
 				       (alien-size unix-sockaddr :bytes)))
 	(unix:unix-close socket)
-	(error "Error connecting socket to [~A]: ~A"
-	       path (unix:get-unix-error-msg)))
+	(error 'socket-error
+	       :format-control "Error connecting socket to [~A]: ~A"
+	       :format-arguments (list path (unix:get-unix-error-msg))
+	       :errno (unix:unix-errno)))
       socket)))
 
 (defun create-unix-listener (path &optional (kind :stream)
@@ -308,10 +320,13 @@ struct in_addr {
 		       (internet-protocol kind)
     (let ((socket (unix:unix-socket af-inet type proto)))
       (when (minusp socket)
-	(error "Error creating socket: ~A" (unix:get-unix-error-msg)))
+	(error 'socket-error
+	       :format-control"Error creating socket: ~A"
+	       :format-arguments (list (unix:get-unix-error-msg))
+	       :errno (unix:unix-errno)))
       socket)))
 
- (defun connect-to-inet-socket (host port &optional (kind :stream))
+(defun connect-to-inet-socket (host port &optional (kind :stream))
   "The host may be an address string or an IP address in host order."
   (let* ((addr (if (stringp host)
 		   (host-entry-addr (or (lookup-host-entry host)
@@ -458,13 +473,18 @@ struct in_addr {
   (let ((socket (create-inet-socket kind))
         (addr (if (stringp host)
 		  (host-entry-addr (or (lookup-host-entry host)
-				       (error "Unknown host: ~S." host)))
+				       (error 'socket-error
+					      :format-control "Unknown host: ~S."
+					      :format-arguments (list host))))
 		  host)))
     (when reuse-address
       (multiple-value-bind (optval errno)
 	  (set-socket-option socket sol-socket so-reuseaddr 1)
-	(or optval (error "Error ~s setting socket option on socket ~d."
-			  (unix:get-unix-error-msg errno) socket))))
+	(or optval (error 'socket-error
+			  :format-control "Error ~S setting socket option on socket ~D."
+			  :format-arguments (list (unix:get-unix-error-msg errno)
+						  socket)
+			  :errno errno))))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
@@ -472,14 +492,21 @@ struct in_addr {
       (when (minusp (unix:unix-bind socket
 				    (alien-sap sockaddr)
 				    (alien-size inet-sockaddr :bytes)))
-	(unix:unix-close socket)
-	(error "Error binding socket to port ~a: ~a"
-	       port
-	       (unix:get-unix-error-msg))))
+	(let ((errno (unix:unix-errno)))
+	  (unix:unix-close socket)
+	  (error 'socket-error
+		 :format-control "Error binding socket to port ~A: ~A"
+		 :format-arguments (list port
+					 (unix:get-unix-error-msg))
+		 :errno errno))))
     (when (eq kind :stream)
       (when (minusp (unix:unix-listen socket backlog))
-	(unix:unix-close socket)
-	(error "Error listening to socket: ~A" (unix:get-unix-error-msg))))
+	(let ((errno (unix:unix-errno)))
+	  (unix:unix-close socket)
+	  (error 'socket-error
+		 :format-control "Error listening to socket: ~A"
+		 :format-arguments (list (unix:get-unix-error-msg))
+		 :errno errno))))
     socket))
 
 (defun accept-tcp-connection (unconnected)
@@ -489,15 +516,22 @@ struct in_addr {
     (let ((connected (unix:unix-accept unconnected
 				       (alien-sap sockaddr)
 				       (alien-size inet-sockaddr :bytes))))
-      (when (minusp connected)
-	(error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
-      (values connected (ntohl (slot sockaddr 'addr))))))
+      (let ((errno (unix:unix-errno)))
+	(when (minusp connected)
+	  (error 'socket-error
+		 :format-control "Error accepting a connection: ~A"
+		 :format-arguments (list (unix:get-unix-error-msg))
+		 :errno errno))
+	(values connected (ntohl (slot sockaddr 'addr)))))))
 
 (defun close-socket (socket)
   (multiple-value-bind (ok err)
 		       (unix:unix-close socket)
     (unless ok
-      (error "Error closing socket: ~A" (unix:get-unix-error-msg err))))
+      (error 'socket-error
+	     :format-control "Error closing socket: ~A"
+	     :format-arguments (list (unix:get-unix-error-msg err))
+	     :errno (unix:unix-errno))))
   (undefined-value))
 
 (defun get-peer-host-and-port (fd)
