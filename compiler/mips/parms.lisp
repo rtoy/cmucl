@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.82 1990/11/23 08:42:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.83 1990/11/26 19:16:07 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -35,7 +35,7 @@
 
 (setf (backend-name *target-backend*) "PMAX")
 (setf (backend-version *target-backend*) "DECstation 3100/Mach 0.0")
-(setf (backend-fasl-file-type *target-backend*) "mips-fasl")
+(setf (backend-fasl-file-type *target-backend*) "pmaxf")
 (setf (backend-fasl-file-implementation *target-backend*)
       pmax-fasl-file-implementation)
 (setf (backend-fasl-file-version *target-backend*) 1)
@@ -131,9 +131,11 @@
     ;; Random stuff needed for initialization.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
-    lisp::*initial-symbols*
-    lisp::*lisp-initialization-functions*
+
+    ;; Functions that the C code needs to call
     lisp::%initial-function
+    lisp::maybe-gc
+    kernel::internal-error
 
     ;; Free Pointers
     lisp::*read-only-space-free-pointer*
@@ -152,44 +154,13 @@
 
     ;; Static functions.
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
-    two-arg-<= two-arg->= two-arg-/= %negate
+    two-arg-<= two-arg->= two-arg-/= eql %negate
     two-arg-and two-arg-ior two-arg-xor
     length two-arg-gcd two-arg-lcm
-
-    ;; Auto GC interface.
-    lisp::maybe-gc
-
-    ;; More static functions.
-    eql))
+    ))
 
 (defparameter exported-static-symbols
-  '(t
-
-    ;; Random stuff needed for initialization.
-    lisp::lisp-environment-list
-    lisp::lisp-command-line-list
-    lisp::*initial-symbols*
-    lisp::*lisp-initialization-functions*
-    lisp::%initial-function
-
-    ;; Free Pointers
-    lisp::*read-only-space-free-pointer*
-    lisp::*static-space-free-pointer*
-    lisp::*initial-dynamic-space-free-pointer*
-
-    ;; Things needed for non-local-exit.
-    lisp::*current-catch-block*
-    lisp::*current-unwind-protect-block*
-    *eval-stack-top*
-
-    ;; Interrupt Handling
-    lisp::*free-interrupt-context-index*
-    mach::*interrupts-enabled*
-    mach::*interrupt-pending*
-
-    ;; Auto GC interface.
-    lisp::maybe-gc
-    ))
+  (subseq static-symbols 0 (position 'length static-symbols)))
 
 
 
