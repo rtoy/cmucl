@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.39 1991/07/11 16:29:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.40 1991/07/18 02:11:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -349,7 +349,7 @@
 ;;; 
 (defun make-lexenv (&key (default *lexical-environment*)
 			 functions variables blocks tags type-restrictions
-			 inlines
+			 inlines options
 			 (lambda (lexenv-lambda default))
 			 (cleanup (lexenv-cleanup default))
 			 (cookie (lexenv-cookie default))
@@ -366,7 +366,8 @@
      (frob tags lexenv-tags)
      (frob type-restrictions lexenv-type-restrictions)
      (frob inlines lexenv-inlines)
-     lambda cleanup cookie interface-cookie)))
+     lambda cleanup cookie interface-cookie
+     (frob options lexenv-options))))
 
 
 ;;; MAKE-INTERFACE-COOKIE  --  Interface
