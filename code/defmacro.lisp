@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.27 2003/05/04 13:39:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.28 2003/06/01 19:26:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -214,7 +214,7 @@
 	       (setf allow-other-keys-p t))
 	      ((eq var '&aux)
 	       (setf now-processing :auxs))
-	      ((listp var)
+	      ((consp var)
 	       (case now-processing
 		 (:required
 		  (let ((sub-list-name (gensym "SUBLIST-")))
@@ -253,6 +253,7 @@
 					   name error-kind error-fun)
 		    (push keyword keys)))
 		 (:auxs (push-let-binding (car var) (cadr var) nil))))
+	      ((null var))
 	      ((symbolp var)
 	       (case now-processing
 		 (:required
