@@ -102,15 +102,23 @@
 
 ;;;; ILLEGAL-MOVE
 
-;;; This VOP exists just to begin the lifetime of a TN that couldn't be written
-;;; legally due to a type error.  An error is signalled before this VOP is
-;;; so we don't need to do anything (not that there would be anything sensible
-;;; to do anyway.)
+;;; This VOP is emitted when we attempt to do a move between incompatible
+;;; primitive types.  We signal an error, and ignore the result (which is
+;;; specified only to terminate its lifetime.)
 ;;;
-(define-vop (illegal-move)
-  (:results (y))
-  (:ignore y)
-  (:generator 666))
+(define-vop (illegal-move three-arg-miscop)
+  (:args (x :scs (any-reg descriptor-reg) :target a1)
+	 (y-type :scs (any-reg descriptor-reg) :target a2))
+  (:variant-vars)
+  (:ignore r a3 nl0 nl1 misc-pc)
+  (:generator 666
+    (loadi a0 clc::error-object-not-type)
+    (unless (location= x a1)
+      (inst lr a1 x))
+    (unless (location= y-type a2)
+      (inst lr a2 y-type))
+    (inst miscop 'clc::error2)
+    (note-this-location vop :internal-error)))
 
 
 ;;;; Operand loading and saving:
