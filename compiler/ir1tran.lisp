@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.79 1992/09/23 13:24:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.80 1992/09/23 16:26:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3476,7 +3476,7 @@
 		  (not (member name *entry-points* :test #'equal)))
 	     `',name
 	     `(%%defun ',name ,fun ,doc
-		       ,@(when expansion `(',expansion)))))
+		       ,@(when save-expansion `(',save-expansion)))))
 
 	(when *compile-print*
 	  (compiler-mumble "Converted ~S.~%" name))))))
