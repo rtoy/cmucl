@@ -126,11 +126,11 @@
 	((null el1) t)
       (let ((num1 (sset-element-number (car el1))))
 	(loop
-	 (when (null el2) (return-from sset-subsetp nil))
-	 (let ((num2 (sset-element-number (pop el2))))
-	   (when (>= num2 num1)
-	     (when (> num2 num1) (return-from sset-subsetp nil))
-	     (return))))))))
+	  (when (null el2) (return-from sset-subsetp nil))
+	  (let ((num2 (sset-element-number (pop el2))))
+	    (when (>= num2 num1)
+	      (when (> num2 num1) (return-from sset-subsetp nil))
+	      (return))))))))
 
 
 ;;; SSet-Equal  --  Interface
@@ -275,6 +275,7 @@
 			  (when (null el3)
 			    (setf (cdr prev-el1) (copy-list el2))
 			    (return-from sset-union-of-difference t))
+			  (setq num3 (sset-element-number (car el3)))
 			  (when (<= num2 num3)
 			    (unless (= num2 num3)
 			      (let ((new (cons e el1)))
