@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.38 1997/08/07 00:29:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.39 1997/12/18 07:20:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1400,7 +1400,8 @@
        ((> index terminus)
 	nil)
     (declare (simple-string name)
-	     (type index index terminus length))
+	     (type index index length)
+	     (fixnum terminus))
     (if (do ((jndex 0 (1+ jndex))
 	     (kndex index (1+ kndex)))
 	    ((= jndex length)
