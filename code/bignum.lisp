@@ -148,7 +148,7 @@
 ;;;
 (defun %digit-0-or-plusp (digit)
   (declare (type bignum-element-type digit))
-  (logbitp (1- digit-size) digit))
+  (not (logbitp (1- digit-size) digit)))
 
 (proclaim '(inline %bignum-0-or-plusp))
 (defun %bignum-0-or-plusp (bignum len)
@@ -545,22 +545,26 @@
       (negate-bignum-in-place result))
     (%normalize-bignum result (1+ bignum-len))))
 
+
 (defun multiply-fixnums (a b)
   (declare (fixnum a b))
-  (let ((result (%allocate-bignum 2))
-	(a-neg-p (minusp a))
-	(b-neg-p (minusp b)))
-    (declare (type bignum-type result))
+  (let* ((a-plusp (plusp a))
+	 (b-plusp (plusp b)))
     (multiple-value-bind (high low)
-			 (%multiply (%fixnum-to-digit (if a-neg-p (- a) a))
-				    (%fixnum-to-digit (if b-neg-p (- b) b)))
-      (declare (type bignum-element-type high low))
-      (setf (%bignum-ref result 0) low)
-      (setf (%bignum-ref result 1) high))
-    (unless (eq a-neg-p b-neg-p)
-      (negate-bignum-in-place result))
-    (%normalize-bignum result 2)))
-
+			 (%multiply (%fixnum-to-digit (if a-plusp a (- a)))
+				    (%fixnum-to-digit (if b-plusp b (- b))))
+      (if (and (zerop high)
+	       (%digit-0-or-plusp low))
+	  (let ((low (truly-the (unsigned-byte 31)
+				(%fixnum-digit-with-correct-sign low))))
+	    (if (eq a-plusp b-plusp)
+		low
+		(- low)))
+	  (let ((res (%allocate-bignum 2)))
+	    (%bignum-set res 0 low)
+	    (%bignum-set res 1 high)
+	    (unless (eq a-plusp b-plusp) (negate-bignum-in-place res))
+	    (%normalize-bignum res 2))))))
 
 
 ;;;; GCD.
