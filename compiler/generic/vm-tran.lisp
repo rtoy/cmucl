@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.15 1990/06/18 14:47:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.16 1990/06/18 18:37:31 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -26,10 +26,10 @@
 ;;; Some hacks to let us implement structures as simple-vectors without
 ;;; confusing type inference too much.
 ;;;
-(def-builtin-type 'structure-vector
-  (make-named-type :name 'structure-vector
-		   :supertypes '(structure-vector t)
-		   :subclasses '(structure)))
+(kernel::def-builtin-type 'structure-vector
+  (kernel::make-named-type :name 'structure-vector
+			   :supertypes '(structure-vector t)
+			   :subclasses '(structure)))
 
 (defknown structure-vector-p (t) boolean)
 
