@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.32 1997/01/18 14:31:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.33 1999/02/25 13:02:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -882,30 +882,6 @@
       (allocate-eval-stack howmany)
       (push-eval-stack val))
     (byte-interpret component new-pc fp)))
-
-
-;;; Used to ref and set dylan variables.
-;;;
-(define-xop dylan-var-ref (component old-pc pc fp)
-  (declare (type code-component component)
-	   (ignore old-pc)
-	   (type pc pc)
-	   (type stack-pointer fp))
-  (let ((value (pop-eval-stack)))
-    (declare (optimize (inhibit-warnings 3)))
-    (push-eval-stack (dylan::value-datum value)))
-  (byte-interpret component pc fp))
-;;;
-(define-xop dylan-var-set (component old-pc pc fp)
-  (declare (type code-component component)
-	   (ignore old-pc)
-	   (type pc pc)
-	   (type stack-pointer fp))
-  (multiple-value-pop-eval-stack
-      (new value)
-    (declare (optimize (inhibit-warnings 3)))
-    (setf (dylan::value-datum value) new))
-  (byte-interpret component pc fp))
 
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.66 1998/02/24 09:58:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.67 1999/02/25 13:03:05 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -884,14 +884,12 @@
 	      nil))
      (t
       (let* ((name (leaf-name leaf))
-	     (info (if (dylan-function-var-p leaf)
-		       (dylan-function-var-function-info leaf)
-		       (info function info
-			     (if (slot-accessor-p leaf)
-				 (if (consp name)
-				     '%slot-setter
-				     '%slot-accessor)
-				 name)))))
+	     (info (info function info
+			 (if (slot-accessor-p leaf)
+			     (if (consp name)
+				 '%slot-setter
+				 '%slot-accessor)
+			     name))))
 	(if info
 	    (values leaf (setf (basic-combination-kind call) info))
 	    (values leaf nil)))))))

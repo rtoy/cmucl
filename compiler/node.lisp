@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.34 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.35 1999/02/25 13:03:11 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -749,32 +749,6 @@
   name
   inlinep
   (functional :test functional))
-
-
-;;; The Dylan-Var structure is used to represent dylan module-variables.
-;;; 
-(defstruct (dylan-var
-	    (:include basic-var)
-	    (:print-function %print-dylan-var))
-  ;;
-  ;; The name of the module to extract this from.
-  (module-name (required-argument)))
-
-(defprinter dylan-var
-  name
-  module-name)
-
-
-
-;;; The Dylan-Function-Var is used to represent functional references to
-;;; dylan module variables.  The name is `(:dylan-function ,dname ,modname).
-;;;
-(defstruct (dylan-function-var
-	    (:include global-var))
-  ;;
-  ;; The function-info if this is a :function dylan-var.
-  (function-info nil :type (or null function-info)))
-
 
 
 ;;;; Function stuff:

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.38 1998/05/04 01:27:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.39 1999/02/25 13:03:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,14 +198,7 @@
 					 (cdr const) object))
 	       (:fdefinition
 		(setf (code-header-ref code-obj index)
-		      (lisp::fdefinition-object (cdr const) t)))
-	       (:dylan-varinfo-value
-		(setf (code-header-ref code-obj index)
-		      (locally
-		       (declare (optimize (inhibit-warnings 3)))
-		       (dylan::lookup-variable-value (cadr const)
-						     (cddr const)
-						     t)))))))))))
+		      (lisp::fdefinition-object (cdr const) t))))))))))
   (undefined-value))
 
 
@@ -259,13 +252,6 @@
 	       (:fdefinition
 		(setf (code-header-ref code-obj code-obj-index)
 		      (lisp::fdefinition-object (cdr const) t)))
-	       (:dylan-varinfo-value
-		(setf (code-header-ref code-obj code-obj-index)
-		      (locally
-		       (declare (optimize (inhibit-warnings 3)))
-		       (dylan::lookup-variable-value (cadr const)
-						     (cddr const)
-						     t))))
 	       (:type-predicate
 		(let ((*unparse-function-type-simplify* t))
 		  (setf (code-header-ref code-obj code-obj-index)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.110 1997/02/15 15:32:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.111 1999/02/25 13:03:10 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -664,7 +664,7 @@
   (positions (make-array 10 :fill-pointer 0 :adjustable t) :type (vector t))
   ;;
   ;; Language to use.  Normally Lisp, but sometimes Dylan.
-  (language :lisp :type (member :lisp :dylan)))
+  (language :lisp :type (member :lisp #+nil :dylan)))
 
 ;;; The Source-Info structure provides a handle on all the source information
 ;;; for an entire compilation.
@@ -700,11 +700,7 @@
 		     (make-file-info :name (truename x)
 				     :untruename x
 				     :write-date (file-write-date x)
-				     :language
-				     (if (string-equal (pathname-type x)
-						       "dylan")
-					 :dylan
-					 :lisp)))
+				     :language :lisp))
 		 files)))
 
     (make-source-info :files file-info
@@ -729,7 +725,7 @@
 ;;;    Return a SOURCE-INFO which will read from Stream.
 ;;;
 (defun make-stream-source-info (stream language)
-  (declare (type (member :lisp :dylan) language))
+  (declare (type (member :lisp #+nil :dylan) language))
   (let ((files (list (make-file-info :name :stream :language language))))
     (make-source-info
      :files files
@@ -902,21 +898,7 @@
 		 (clrhash *source-paths*)
 		 (find-source-paths form current-idx)
 		 (process-form form
-			       `(original-source-start 0 ,current-idx)))))))
-      (:dylan
-       (setf *coalesce-constants* nil)
-       (let ((*error-output* *compiler-error-output*))
-	 (dylan::parse-and-convert
-	  stream
-	  #'(lambda (form start-position)
-	      (let* ((forms (file-info-forms file))
-		     (current-idx (+ (fill-pointer forms)
-				     (file-info-source-root file))))
-		(vector-push-extend form forms)
-		(vector-push-extend start-position (file-info-positions file))
-		(clrhash *source-paths*)
-		(process-form form
-			      `(original-source-start 0 ,current-idx))))))))
+			       `(original-source-start 0 ,current-idx))))))))
     (when (advance-source-file info)
       (process-sources info))))
 
@@ -1567,7 +1549,6 @@
 			   (try-with-type x "LISP" t))
 			  ((probe-file x) x)
 			  ((try-with-type x "lisp"  nil))
-			  ((try-with-type x "dylan" nil))
 			  ((try-with-type x "lisp"  t)))))
 	      stuff))))
 
@@ -1603,10 +1584,8 @@
   :Source-Info
         Some object to be placed in the DEBUG-SOURCE-INFO.
   :Byte-Compile {T, NIL, :MAYBE}
-        If true, then may compile to interpreted byte code.
-  :Language {:LISP, :DYLAN}
-      The source language to compile.  Defaults to LISP."
-  (declare (type (member :lisp :dylan) language))
+        If true, then may compile to interpreted byte code."
+  (declare (type (member :lisp #+nil :dylan) language))
   (let ((info (make-stream-source-info stream language))
 	(*backend* *native-backend*))
     (unwind-protect

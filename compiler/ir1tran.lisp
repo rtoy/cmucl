@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.111 1998/05/15 03:26:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.112 1999/02/25 13:03:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3595,43 +3595,3 @@
 
 	(when *compile-print*
 	  (compiler-mumble "Converted ~S.~%" name))))))
-
-
-;;;; Some support for Dylan module-variables
-
-
-(def-ir1-translator dylan::%var
-		    ((name module-name &optional type (where-from :assumed))
-		     start cont)
-  (reference-leaf
-   start cont
-   (make-dylan-var
-    :name name
-    :module-name module-name
-    :type (or type *universal-type*)
-    :where-from where-from)))
-    
-(def-ir1-translator dylan::%set-var
-		    ((value name module-name
-			    &optional type (where-from :assumed))
-		     start cont)
-  (set-variable
-   start cont
-   (make-dylan-var
-    :name name
-    :module-name module-name
-    :type (or type *universal-type*)
-    :where-from where-from)
-   value))
-  
-(def-ir1-translator dylan::%func ((name module-name &optional type info)
-				  start cont)
-  (reference-leaf
-   start cont 
-   (make-dylan-function-var
-    :kind :global-function
-    :name (list :dylan-function name module-name)
-    :type (or type (specifier-type 'function))
-    :where-from :assumed
-    :function-info info)))
-

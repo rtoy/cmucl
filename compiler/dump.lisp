@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.71 1998/07/24 17:22:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.72 1999/02/25 13:03:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -498,11 +498,7 @@
 		(dump-push (cdr entry) file))
 	       (:fdefinition
 		(dump-object (cdr entry) file)
-		(dump-fop 'lisp::fop-fdefinition file))
-	       (:dylan-varinfo-value
-		(dump-object (cadr entry) file)
-		(dump-object (cddr entry) file)
-		(dump-fop 'lisp::fop-dylan-varinfo-value file))))
+		(dump-fop 'lisp::fop-fdefinition file))))
 	    (null
 	     (dump-fop 'lisp::fop-misc-trap file)))))
 
@@ -725,10 +721,6 @@
 	       (:fdefinition
 		(dump-object (cdr entry) file)
 		(dump-fop 'lisp::fop-fdefinition file))
-	       (:dylan-varinfo-value
-		(dump-object (cadr entry) file)
-		(dump-object (cddr entry) file)
-		(dump-fop 'lisp::fop-dylan-varinfo-value file))
 	       (:type-predicate
 		(dump-object 'load-type-predicate file)
 		(let ((*unparse-function-type-simplify* t))

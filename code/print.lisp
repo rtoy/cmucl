@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.73 1998/06/30 10:58:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.74 1999/02/25 13:02:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1100,10 +1100,6 @@
 	(*print-length* nil))
     (print-unreadable-object (array stream :type t :identity t))))
 
-
-(declaim (ftype function dylan::%print-dylan-instance
-		dylan::dylan-instance-p))
-
 ;;; Instance Printing.  If it's a structure, call the structure printer.
 ;;; Otherwise, call PCL if it's loaded.  If not, print unreadably.
 
@@ -1736,8 +1732,6 @@
 	(t
 	 (write-string "Closure Over " stream)
 	 (output-function-object (%closure-function function) stream))))
-      (#.vm:dylan-function-header-type
-       (write-string "Dylan Function" stream))
       (t
        (write-string "Unknown Function" stream)))))
 

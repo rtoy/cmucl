@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.73 1998/07/24 17:17:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.74 1999/02/25 13:02:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1297,29 +1297,6 @@
     res))
 
 
-;;;; Dylan support.
-
-(clone-fop (fop-dylan-symbol-save 100)
-	   (fop-small-dylan-symbol-save 101)
-  (let* ((arg (clone-arg))
-	 (res (make-string arg)))
-    (declare (optimize (inhibit-warnings 3)))
-    (read-n-bytes *fasl-file* res 0 arg)
-    (push-table (dylan::string->symbol res))))
-
-(clone-fop (fop-dylan-keyword-save 102)
-	   (fop-small-dylan-keyword-save 103)
-  (let* ((arg (clone-arg))
-	 (res (make-string arg)))
-    (declare (optimize (inhibit-warnings 3)))
-    (read-n-bytes *fasl-file* res 0 arg)
-    (push-table (dylan::string->keyword res))))
-
-(define-fop (fop-dylan-varinfo-value 104)
-  (let ((module-name (pop-stack))
-	(name (pop-stack)))
-    (declare (optimize (inhibit-warnings 3)))
-    (dylan::lookup-varinfo-value name (dylan::find-module module-name) t)))
 
 
 ;;;; Linkage fixups.

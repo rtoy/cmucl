@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.41 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.42 1999/02/25 13:03:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,15 +25,7 @@
 
 (proclaim '(special *wild-type* *universal-type* *compiler-error-context*))
 
-(declaim (ftype function (setf dylan::value-datum) dylan::find-module
-		dylan::lookup-varinfo-value 
-		dylan::parse-and-convert dylan::value-datum))
-
 ;;;; Deftypes:
-
-;;;
-;;; Should be standard:
-(deftype boolean () '(member t nil))
 
 ;;;
 ;;; Inlinep is used to determine how a function is called.  The values have

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.26 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.27 1999/02/25 13:03:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1006,8 +1006,6 @@
     (constant (format stream "'~S" (constant-value leaf)))
     (global-var
      (format stream "~S {~A}" (leaf-name leaf) (global-var-kind leaf)))
-    (dylan-var
-     (format stream "~A ~A" (leaf-name leaf) (dylan-var-module-name leaf)))
     (clambda
       (format stream "lambda ~S ~S" (leaf-name leaf)
 	      (mapcar #'leaf-name (lambda-vars leaf))))
