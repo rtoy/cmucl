@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.48 1992/06/04 15:55:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.49 1992/06/22 11:17:39 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3333,27 +3333,32 @@
   (let ((after (breakpoint-data-after-breakpoint data)))
     (when after
       (handle-after-breakpoint after breakpoints data offset component)))
+  
   (when breakpoints
     (unless (member data *executing-breakpoint-hooks*)
       (let ((*executing-breakpoint-hooks* (cons data
 						*executing-breakpoint-hooks*)))
 	(invoke-breakpoint-hooks breakpoints component offset)))
     ;; At this point breakpoints may not hold the same list as
-    ;; BREAKPOINT-DATA-BREAKPOINTS since invoking hooks may have allowed
-    ;; a breakpoint deactivation.  If there are no more active at this
-    ;; location, then the normal instruction has been put back, and we do
-    ;; no need an after breakpoint to re-install a break instruction.
-    (when (breakpoint-data-breakpoints data)
+    ;; BREAKPOINT-DATA-BREAKPOINTS since invoking hooks may have allowed a
+    ;; breakpoint deactivation.  In fact, if all breakpoints were deactivated
+    ;; then data is invalid since it was deleted and so the correct one must be
+    ;; looked up if it is to be used.  If there are no more breakpoints active
+    ;; at this location, then the normal instruction has been put back, and we
+    ;; do not need an after breakpoint to re-install a break instruction.
+    (setf data (breakpoint-data component offset nil))
+    (when (and data
+	       (breakpoint-data-breakpoints data))
       ;; Restore instruction.  Do this before SET-AFTER-BREAKPOINTS which
       ;; uses CALL-BREAKPOINT-AFTER-OFFSET.
       (system:without-gcing
        (breakpoint-remove (kernel:get-lisp-obj-address component) offset
 			  (breakpoint-data-instruction data)))
-      (set-after-breakpoints component data signal-context))
-    ;; Set the sigmask, to keep the system running until we can
-    ;; remove the after breakpoints and re-install the user breakpoints.
-    (setf (breakpoint-data-sigmask data)
-	  (unix:unix-sigblock (unix:sigmask :sigint :sigquit :sigtstp)))))
+      (set-after-breakpoints component data signal-context)
+      ;; Set the sigmask, to keep the system running until we can
+      ;; remove the after breakpoints and re-install the user breakpoints.
+      (setf (breakpoint-data-sigmask data)
+	    (unix:unix-sigblock (unix:sigmask :sigint :sigquit :sigtstp))))))
 
 (defun handle-after-breakpoint (after breakpoints data offset component)
   (let ((previous-data (after-breakpoint-previous-data after)))
