@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.34 1994/10/27 15:29:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.35 1994/10/29 05:44:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1195,6 +1195,7 @@
 
 #+svr4
 (defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
+  (declare (ignore dev arg parm-type))
   `(eval-when (eval load compile)
      (defconstant ,name ,(logior (ash (char-code #\t) 8) cmd))))
 
