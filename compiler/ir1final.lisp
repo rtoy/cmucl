@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.12 1991/03/16 01:44:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.13 1991/03/18 13:07:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,29 +51,6 @@
 	      (compiler-note "Unable to optimize due to type uncertainty:~@
 	                      ~{~6T~?~^~&~}"
 			     (messages))))))))))
-
-
-;;; Tail-Annotate  --  Internal
-;;;
-;;;    Mark all tail-recursive uses of function result continuations with the
-;;; corresponding tail-set.  Nodes whose type is NIL (i.e. don't return) such
-;;; as calls to ERROR are never annotated as tail, so as to preserve debugging
-;;; information.
-;;;
-(defun tail-annotate (component)
-  (declare (type component component))
-  (dolist (fun (component-lambdas component))
-    (let ((ret (lambda-return fun)))
-      (when ret
-	(let ((result (return-result ret))
-	      (tails (lambda-tail-set fun)))
-	  (do-uses (use result)
-	    (when (and (immediately-used-p result use)
-		       (or (not (eq (node-derived-type use) *empty-type*))
-			   (not (basic-combination-p use))
-			   (eq (basic-combination-kind use) :local)))
-	      (setf (node-tail-p use) tails)))))))
-  (undefined-value))
 
 
 ;;; FINALIZE-XEP-DEFINITION  --  Internal
@@ -122,8 +99,6 @@
 ;;; 
 (defun ir1-finalize (component)
   (declare (type component component))
-  (tail-annotate component)
-
   (dolist (fun (component-lambdas component))
     (case (functional-kind fun)
       (:external
