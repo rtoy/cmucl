@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.21 1993/08/24 23:34:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.22 1993/09/01 13:25:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -417,10 +417,6 @@
   ;; Annotate the value for one value.
   (annotate-continuation (set-value set) 1))
 
-(defun real-local-call-p (node)
-  (and (combination-p node)
-))
-
 
 ;;; ANNOTATE-BASIC-COMBINATION-ARGS  --  Internal
 ;;; 
@@ -702,7 +698,13 @@
 		     (when (interesting cont)
 		       (push cont stack))))))
 	      (setf nlx-entry-p t))
-	     ((%catch-breakup %unwind-protect-breakup %lexical-exit-breakup)
+	     (%lexical-exit-breakup
+	      (unless (byte-nlx-info-duplicate
+		       (nlx-info-info
+			(continuation-value
+			 (first (basic-combination-args node)))))
+		(consume :nlx-entry)))
+	     ((%catch-breakup %unwind-protect-breakup)
 	      (consume :nlx-entry))))
 	  (cif
 	   (consume (if-test node)))
