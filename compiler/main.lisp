@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.47 1991/11/25 12:07:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.48 1991/12/11 17:20:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,6 +233,7 @@
     (gtn-analyze component)
     (maybe-mumble "LTN ")
     (ltn-analyze component)
+    (dfo-as-needed component)
     (maybe-mumble "Control ")
     (control-analyze component)
 
