@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.62 2003/05/08 14:52:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.63 2003/07/03 12:14:03 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -664,12 +664,14 @@
 ;;; The union or intersection of two FUNCTION types is FUNCTION.
 ;;;
 (define-type-method (function :simple-union) (type1 type2)
-  (declare (ignore type1 type2))
-  (specifier-type 'function))
+  (if (type= type1 type2)
+      type1
+      (specifier-type 'function)))
 
 (define-type-method (function :simple-intersection) (type1 type2)
-  (declare (ignore type1 type2))
-  (values (specifier-type 'function) t))
+  (if (type= type1 type2)
+      type1
+      (values (specifier-type 'function) t)))
 
 
 ;;; ### Not very real, but good enough for redefining transforms according to
@@ -1247,12 +1249,15 @@
 	 ;; to do that, so let it handle it.
 	 (type-intersection type1 type2))
 	;;
-	;; (AND (FUNCTION (T) T) GENERIC-FUNCTION) for instance.
+	;; (AND (FUNCTION (T) T) GENERIC-FUNCTION) for instance, but
+	;; not (AND (FUNCTION (T) T) (FUNCTION (T) T)).
 	((let ((function (specifier-type 'function)))
 	   (or (and (function-type-p type1)
+		    (not (or (function-type-p type2) (eq function type2)))
 		    (csubtypep type2 function)
 		    (not (csubtypep function type2)))
 	       (and (function-type-p type2)
+		    (not (or (function-type-p type1) (eq function type1)))
 		    (csubtypep type1 function)
 		    (not (csubtypep function type1)))))
 	 nil)
