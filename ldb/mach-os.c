@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mach-os.c,v 1.1 1991/05/24 19:04:38 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mach-os.c,v 1.2 1991/05/24 19:27:45 wlott Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <mach.h>
+#include "./signal.h"
 #include "ldb.h"
 #include "os.h"
 
@@ -31,7 +32,7 @@ void os_init()
 	os_vm_page_size = vm_page_size;
 }
 
-void os_validate(addr, len)
+os_vm_address_t os_validate(addr, len)
 vm_address_t addr;
 vm_size_t len;
 {
@@ -47,6 +48,8 @@ vm_size_t len;
         mach_error("Could not vm_allocate memory: ", res);
 
     segments = -1;
+
+    return addr;
 }
 
 void os_invalidate(addr, len)
