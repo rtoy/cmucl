@@ -1,3 +1,89 @@
+12/22/91 to 1/17/92
+
+	Mostly minor bug fixes and cosmetic improvements.
+
+Code:
+
+The MIPS disassembler now supports all the bells and whistles of the SPARC
+version.  [Courtesy of Miles]
+
+The pretty printer now ``unparses'' the results of backquote expressions
+and rebuilds the original backquote-comma expression.  This makes reading
+macro definitions, etc. much easier.  [Also courtesy of Miles]
+
+Fixed a few minor bugs in debug-int.lisp:
+- When computing interpreted debug blocks, ignore successors to the component
+tail or other functions.
+- Compute the correct result for DEBUG-FUNCTION-START-LOCATION with
+interpreted debug functions.
+- In parse-debug-blocks, fix typecase to look for I-D-FUNCTION, not BLOCK.
+
+Fixed FORMAT-JUSTIFICATION to assume the charpos is 0 if we can't tell from
+the stream.  This was causing (FORMAT (MAKE-BROADCAST-STREAM) ...) to fail.
+The compiler sometimes binds *ERROR-OUTPUT* to (MAKE-BROADCAST-STREAM) when
+it wants to suppress error output.
+
+Fixed OUTPUT-VECTOR to not consider *PRINT-ARRAY* in string printing.
+
+Changed FEATUREP to barf if it is passed a list form with a strange CAR.
+
+Changed the default list pretty-printer to only print lists that start with
+symbols as function calls if the symbol is fboundp.
+
+Fixed MERGE-DIRECTORIES to correctly handle the case when the second
+directory spec is NIL.  In this case it should just use the first directory
+verbatim.  This fixes (MERGE-PATHNAMES "foo/bar" "").
+
+Changed WITH-PATHNAME to call PARSE-NAMESTRING on the result of FILE-NAME.
+
+
+Compiler:
+
+When we have a :SAFE VOP, flush result type checks when the result has only a
+single use.
+
+In COMPILE-FILE use PATHNAME of the output stream rather than TRUENAME of the
+output-file.  It seems that sometimes the file doesn't appear in the file
+system until some time after we close the file.
+
+When computing costs for references by MOVE VOPs, don't signal an error if a
+cost is missing.
+
+Several minor fixes to the SPARC code generators:
+- Fixed result type assertion on the :SAFE (tagged add) VOPs.  The result type
+must be FIXNUM (when with :SAFE VOPs need not be proven type, only asserted.)
+- Added GENERIC-EQL/FIXNUM VOPs (with higher costs) to prevent spurious
+representation number-consing when a fixnum and a word-integer are compared
+(e.g. in ZEROP.)
+- Added notes for character move/coerce VOPs.
+- Added notes for float move/coerce VOPs.
+- Updated the integer move/coerce VOPs to correspond to the MIPS version. 
+The fixnum cases are split off so that we have a better idea of the cost (for
+efficiency notes.)  Added notes to these VOPs.
+- Added notes for SAP coercion VOPs.  Fixed cost for MOVE-FROM-SAP.
+
+
+Hemlock:
+
+Fixed REVERT-PATHNAME not to call FILE-WRITE-DATE on NIL if there it no
+checkpoint file.
+
+Don't call NAMESTRING on NIL in REGION-COMPILE.
+
+Deleted EVAL-WHEN (COMPILE) around DEFINE-SEARCH-KIND and 
+SEARCH-ONCE-{FORWARD,BACKWARD}-MACRO so that we don't have to compile this file
+to compile search2.
+
+
+CLX:
+
+Fixed DEFTYPE for CHAR-INFO-VEC.  It is not in fact always length six (in
+fact, I believe it never will be.)
+
+Fixed ordering of some forms that got trashed in the last merge.
+
+
+
 12/19/91 to 12/22/91
 
 Various fixes in the new pathname code.  Following is some clarification of the
