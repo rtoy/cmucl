@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.23 1990/06/04 05:18:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.24 1990/06/12 02:29:53 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -709,9 +709,11 @@
 	(inst or a temp)
 	(inst sll b 1)
 	(inst sltu temp a c)
+	(inst sll result 1)
+	(inst or result temp)
 	(maybe-subtract)))
-    (inst nor quo result)
-    (move rem a)))
+    (move rem a)
+    (inst nor quo result zero-tn)))
 
 (define-vop (signify-digit)
   (:translate bignum::%fixnum-digit-with-correct-sign)
