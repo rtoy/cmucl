@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.123 2001/03/04 20:12:18 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.124 2001/06/03 14:11:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3273,38 +3273,41 @@
 
 
 ;;; Warn about incompatible or illegal definitions and add the macro to the
-;;; compiler environment.  
+;;; compiler environment.  This is split up into compile-time processing and
+;;; compilation for load-time effect so that macro definitions, which are split
+;;; into :compile-toplevel and (:load-toplevel :execute) parts by the DEFMACRO
+;;; macro,  will behave properly when not at top level (i.e., no compile time
+;;; effect). 
 ;;;
 ;;; Someday we could check for macro arguments being incompatibly redefined.
 ;;; Doing this right will involve finding the old macro lambda-list and
 ;;; comparing it with the new one.
 ;;;
+(defun do-macro-compile-time (name def)
+  (unless (symbolp name)
+    (compiler-error "Macro name is not a symbol: ~S." name))
+
+  (ecase (info function kind name)
+    ((nil))
+    (:function
+     (remhash name *free-functions*)
+     (undefine-function-name name)
+     (compiler-warning
+      "Defining ~S to be a macro when it was ~(~A~) to be a function."
+      name (info function where-from name)))
+    (:macro)
+    (:special-form
+     (compiler-error "Attempt to redefine special form ~S as a macro." name)))
+
+  (setf (info function kind name) :macro)
+  (setf (info function where-from name) :defined)
+  (when *compile-time-define-macros*
+    (setf (info function macro-function name) (coerce def 'function))))
+
 (def-ir1-translator %defmacro ((name def lambda-list doc) start cont
 			       :kind :function)
   (let ((name (eval name))
 	(def (second def))) ; Don't want to make a function just yet...
-    (unless (symbolp name)
-      (compiler-error "Macro name is not a symbol: ~S." name))
-
-    (ecase (info function kind name)
-      ((nil))
-      (:function
-       (remhash name *free-functions*)
-       (undefine-function-name name)
-       (compiler-warning
-	"Defining ~S to be a macro when it was ~(~A~) to be a function."
-	name (info function where-from name)))
-      (:macro)
-      (:special-form
-       (compiler-error "Attempt to redefine special form ~S as a macro."
-		       name)))
-
-    (setf (info function kind name) :macro)
-    (setf (info function where-from name) :defined)
-
-    (when *compile-time-define-macros*
-      (setf (info function macro-function name)
-	    (coerce def 'function)))
 
     (let* ((*current-path* (revert-source-path 'defmacro))
 	   (fun (ir1-convert-lambda def name 'defmacro)))
@@ -3318,20 +3321,19 @@
       (compiler-mumble "Converted ~S.~%" name))))
 
 
+(defun do-compiler-macro-compile-time (name def)
+  (when (eq (info function kind name) :special-form)
+    (compiler-error "Attempt to define a compiler-macro for special form ~S."
+		    name))
+  (when *compile-time-define-macros*
+    (setf (info function compiler-macro-function name)
+	  (coerce def 'function))))
+
 (def-ir1-translator %define-compiler-macro ((name def lambda-list doc)
 					    start cont
 					    :kind :function)
   (let ((name (eval name))
 	(def (second def))) ; Don't want to make a function just yet...
-
-    (when (eq (info function kind name) :special-form)
-      (compiler-error "Attempt to define a compiler-macro for special form ~S."
-		      name))
-
-    (when *compile-time-define-macros*
-      (setf (info function compiler-macro-function name)
-	    (coerce def 'function)))
-
     (let* ((*current-path* (revert-source-path 'define-compiler-macro))
 	   (fun (ir1-convert-lambda def name 'define-compiler-macro)))
       (setf (leaf-name fun)

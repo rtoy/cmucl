@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.68 2001/03/13 16:52:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.69 2001/06/03 14:11:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,7 +83,11 @@
 		    ,@local-decs
 		    (block ,name
 		      ,body))))
-	`(c::%defmacro ',name #',def ',lambda-list ,doc)))))
+	`(progn
+	   (eval-when (:compile-toplevel)
+	     (c::do-macro-compile-time ',name #',def))
+	   (eval-when (:load-toplevel :execute)
+	     (c::%defmacro ',name #',def ',lambda-list ,doc)))))))
 
 
 ;;; %Defmacro, %%Defmacro  --  Internal
@@ -126,7 +130,12 @@
 		    ,@local-decs
 		    (block ,name
 		      ,body))))
-	`(c::%define-compiler-macro ',name #',def ',lambda-list ,doc)))))
+	`(progn
+	   (eval-when (:compile-toplevel)
+	     (c::do-compiler-macro-compile-time ',name #',def))
+	   (eval-when (:load-toplevel :execute)
+	     (c::%define-compiler-macro ',name #',def ',lambda-list ,doc)))))))
+
 
 (defun c::%define-compiler-macro (name definition lambda-list doc)
   (assert (eval:interpreted-function-p definition))
