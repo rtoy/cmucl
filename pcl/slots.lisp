@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.9 1998/12/20 04:30:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.10 1999/02/03 12:01:58 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -161,7 +161,7 @@
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
     (if (null slot-definition)
-	(slot-missing class object slot-name 'setf)
+	(slot-missing class object slot-name 'setf new-value)
 	(setf (slot-value-using-class class object slot-definition) 
 	      new-value))))
 
