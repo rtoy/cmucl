@@ -256,14 +256,14 @@
 
 (defun use-graphics-interface (&optional (kind *interface-style*))
   (cond
-   ((and (member kind '(:window :windows :graphics :graphical :x))
-	 (assoc :display ext:*environment-list*))
-    t)
+   ((not (assoc :display ext:*environment-list*)) nil)
+   ((member kind '(:window :windows :graphics :graphical :x)) t)
    ((member kind '(:command-line :tty)) nil)
    (t
-    (error "Interface specification must be one of :window, :windows, ~%~
-	    :graphics, :graphical, :x, :command-line, or :tty -- ~%~
-	    not ~S." kind))))
+    (let ((*interface-style* :tty))
+      (error "Interface specification must be one of :window, :windows, ~%~
+	      :graphics, :graphical, :x, :command-line, or :tty -- ~%~
+	      not ~S." kind)))))
 
 (defun close-connection-hook (connection)
   (declare (ignore connection))
