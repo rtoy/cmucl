@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.25 1993/05/19 16:11:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.26 1993/07/10 16:14:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,21 +18,24 @@
 ;;;
 (in-package "KERNEL")
 
-(export '(layout layout-hash layout-hash-length layout-class layout-invalid
+(export '(layout layout-hash layout-hash-length layout-hash-max
+		 initialize-layout-hash layout-class layout-invalid
 		 layout-inherits layout-inheritance-depth layout-length
 		 layout-info layout-pure
 		 layout-of structure-class-p
 		 basic-structure-class-print-function
 		 structure-class-make-load-form-fun find-layout
 		 class-proper-name class-layout class-state class-subclasses
-		 class-init
+		 class-init register-layout
 		 basic-structure-class funcallable-instance
 		 funcallable-structure-class
 		 make-funcallable-structure-class
-		 funcallable-structure-class-p))
+		 funcallable-structure-class-p make-standard-class
+		 random-pcl-class make-random-pcl-class))
 
 (in-package "LISP")
-(export '(class structure-class class-name find-class class-of built-in-class))
+(export '(class structure-class standard-class class-name find-class class-of
+		built-in-class))
 
 (in-package "KERNEL")
 
@@ -40,14 +43,19 @@
 
 ;;; Table mapping class names to layouts for classes we have referenced but not
 ;;; yet loaded.  This is initialized from an ALIST created by Genesis
-;;; describing the layouts it created at cold-load time.
+;;; describing the layouts it created at cold-load time.  *LAYOUT-HASH-INITS*
+;;; is a list of all the layouts whose hash hasn't been initialized.  We delay
+;;; this because the random-number generator needs top-level forms to work.
 ;;;
 (defvar *forward-referenced-layouts*)
 (defvar lisp::*initial-layouts*)
+(defvar *layout-hash-inits*)
 (cold-load-init
   (setq *forward-referenced-layouts* (make-hash-table :test #'equal))
+  (setq *layout-hash-inits* ())
   (dolist (x lisp::*initial-layouts*)
-    (setf (gethash (car x) *forward-referenced-layouts*) (cdr x)))
+    (setf (gethash (car x) *forward-referenced-layouts*) (cdr x))
+    (push (cdr x) *layout-hash-inits*))
   (makunbound 'lisp::*initial-layouts*))
 
 
@@ -129,6 +137,26 @@
   (declare (type layout layout) (type index new-value i))
   (setf (%instance-ref layout (1+ i)) new-value))
 
+(defconstant layout-hash-max (ash most-positive-fixnum -3)
+  "The inclusive upper bound on LAYOUT-HASH values.")
+
+(defvar *layout-hash-seed* nil)
+
+;;; INITIALIZE-LAYOUT-HASH  --  Interface
+;;;
+;;;    Set the layout-hash slots to non-zero random numbers between 1 and
+;;; layout-hash-max (inclusive.)  The layout is returned.
+;;;
+(defun initialize-layout-hash (layout)
+  (let ((seed *layout-hash-seed*))
+    (unless seed
+      (setq seed (setq *layout-hash-seed* (make-random-state))))
+    (dotimes (i layout-hash-length)
+      (setf (layout-hash layout i)
+	    (1+ (random layout-hash-max seed)))))
+  layout)
+
+
 ;;; The CLASS structure is a supertype of all CLASS types.  A CLASS is also a
 ;;; CTYPE structure as recognized by the type system.
 ;;;
@@ -154,7 +182,10 @@
   ;; class.  NIL if no subclasses or not initalized yet.  Otherwise, an EQ
   ;; hash-table mapping class-objects to the subclass layout that was in effect
   ;; at the time the subclass was created.
-  (subclasses nil :type (or hash-table null)))
+  (subclasses nil :type (or hash-table null))
+  ;;
+  ;; The PCL class object, or NIL if none assigned yet.
+  (pcl-class nil))
 ;;;
 (defun class-make-load-form-fun (class)
   (let ((name (class-name class)))
@@ -698,7 +729,7 @@
 ;;;
 (defun invalidate-layout (layout)
   (declare (type layout layout))
-  (setf (layout-invalid layout) t)
+  (setf (layout-invalid layout) :invalid)
   (setf (layout-inheritance-depth layout) -1)
   (let ((inherits (layout-inherits layout))
 	(class (layout-class layout)))
@@ -848,6 +879,9 @@
 			   :inherits inherits
 			   :inheritance-depth depth
 			   :length length)))
+    (if *type-system-initialized*
+	(initialize-layout-hash res)
+	(push res *layout-hash-inits*))
     (cond ((not old)
 	   (setf (gethash name *forward-referenced-layouts*) res))
 	  ((not *type-system-initialized*)
@@ -883,9 +917,19 @@
 	  (t old))))
 
 
+;;; PCL stuff:
+
+(defstruct (std-class (:include class)))
+(defstruct (standard-class (:include std-class)))
+(defstruct (random-pcl-class (:include std-class)))
+
+
 ;;;; Cold loading initializations.
 
 (defun class-finalize ()
+  (dolist (layout *layout-hash-inits*)
+    (initialize-layout-hash layout))
+  (makunbound '*layout-hash-inits*)
   (do-hash (name layout *forward-referenced-layouts*)
     (let ((class (find-class name nil)))
       (cond ((not class)
