@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.39 1992/01/25 14:05:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.40 1992/02/11 22:47:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -842,7 +842,7 @@
 	   (let ((leaf (ref-leaf use)))
 	     (cond ((eq (combination-kind call) :local)
 		    (unless (member (functional-kind leaf)
-				    '(:let :assignment))
+				    '(:let :assignment :deleted))
 		      (derive-node-type
 		       call (tail-set-type (lambda-tail-set leaf)))))
 		   ((not (eq (ref-inlinep use) :notinline))
