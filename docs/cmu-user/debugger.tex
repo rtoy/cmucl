@@ -534,7 +534,7 @@ available, and even then, values are only available at known locations.
 When the debugger command loop establishes variable bindings for available
 variables, these variable bindings have lexical scope and dynamic
 extent.\footnote{The variable bindings are actually created using the \clisp{}
-\code{symbol-macro-let} special form.}  You can close over them, but such closures
+\code{symbol-macrolet} special form.}  You can close over them, but such closures
 can't be used as upward funargs.
 
 You can also set local variables using \code{setq}, but if the variable was closed

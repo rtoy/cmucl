@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.30 2002/08/09 20:18:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.31 2002/10/07 14:31:06 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 (in-package :new-assem)
 (export '(emit-byte emit-skip emit-back-patch emit-chooser emit-postit
 	  define-emitter define-instruction define-instruction-macro
-	  def-assembler-params branch flushable variable-length reads writes
+	  def-assembler-params branch flushable variable-length
 
 	  segment make-segment segment-name segment-collect-dynamic-statistics
 	  assemble align inst without-scheduling 
@@ -292,7 +292,7 @@
 		      (function-lambda-expression emitter)
 		    (declare (ignore lambda lexenv-p))
 		    name)
-		  '<flushed>)))
+		  "<flushed>")))
     (when (inst-depth inst)
       (format stream ", depth=~D" (inst-depth inst)))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.32 2002/08/27 22:18:26 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.33 2002/10/07 14:31:06 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,6 @@
 	  sap-ref-dchunk
 	  get-inst-space
 	  find-inst
-	  make-decoded-inst
 
 	  ;; getting at the dstate (usually from mach-dep code)
 	  disassem-state dstate-cur-offs dstate-next-offs

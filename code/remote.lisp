@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.6 1999/03/29 14:16:05 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.7 2002/10/07 14:31:05 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -239,7 +239,7 @@ to aborting due to a throw."
 	  (setf worked t))
       (if worked
 	(remote *current-wire*
-	  (return-1-values result values))
+	  (return-1-value result values))
 	(remote *current-wire*
 	  (remote-return-abort result)))
       (wire-force-output *current-wire*))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.1 1997/01/18 14:30:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.2 2002/10/07 14:31:04 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,8 +19,6 @@
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
 (export '(get-system-info get-page-size os-init))
-#+nil
-(export '(*task-self* *task-data* *task-notify*))
 
 (pushnew :linux *features*)
 
@@ -43,8 +41,6 @@
 (defvar *task-self*)
 
 (defun os-init ()			; don't know what to do here
-  #+nil
-  (setf *task-self* (mach:mach-task_self))
   #+sparc ;; Can't use #x20000000 thru #xDFFFFFFF, but mach tries to let us.
   (system:allocate-system-memory-at (system:int-sap #x20000000) #xc0000000))
 

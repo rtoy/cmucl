@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.18 2002/01/15 20:43:06 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.19 2002/10/07 14:31:07 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,8 +62,7 @@
 	  primitive-object-lowtag primitive-object-options
 	  primitive-object-slots primitive-object-size
 	  primitive-object-variable-length slot-name slot-docs slot-rest-p
-	  slot-offset slot-length slot-options *primitive-objects*
-	  define-for-each-primitive-object))
+	  slot-offset slot-length slot-options *primitive-objects*))
 
 
 (defun remove-keywords (options keywords)

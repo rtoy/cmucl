@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.31 2002/07/22 17:05:00 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.32 2002/10/07 14:31:05 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -700,7 +700,7 @@
    stream, T (for *TERMINAL-IO*), or NIL (for *STANDARD-OUTPUT*).  The printer
    control variable *PRINT-LEVEL* is automatically handled."
   (when (and prefix per-line-prefix)
-    (error "Cannot specify both a prefix and a per-line-perfix."))
+    (error "Cannot specify both a prefix and a per-line-prefix."))
   (multiple-value-bind
       (stream-var stream-expression)
       (case stream-symbol

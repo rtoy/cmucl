@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.82 2002/01/18 19:45:49 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.83 2002/10/07 14:31:05 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -331,11 +331,7 @@
    is assigned at this time.  Note: CHECK-FOR-CIRCULARITY must be called
    *EXACTLY* once with ASSIGN T, or the circularity detection noise will get
    confused about when to use #n= and when to use #n#.  If this returns
-   non-NIL when ASSIGN is T, then you must call HANDLE-CIRCULARITY on it.
-   If you are not using this inside a WITH-CIRCULARITY-DETECTION, then you
-   have to be prepared to handle a return value of :INITIATE which means it
-   needs to initiate the circularity detection noise.  See the source for
-   info on how to do that."
+   non-NIL when ASSIGN is T, then you must call HANDLE-CIRCULARITY on it."
   (cond ((null *print-circle*)
 	 ;; Don't bother, nobody cares.
 	 nil)

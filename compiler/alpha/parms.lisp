@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/parms.lisp,v 1.7 2002/03/31 14:48:37 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/parms.lisp,v 1.8 2002/10/07 14:31:07 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,17 +130,23 @@
 
 (export '(target-read-only-space-start
 	  target-static-space-start
-	  target-dynamic-space-start))
+	  target-dynamic-space-start
+          target-foreign-linkage-space-start
+	  target-foreign-linkage-entry-size))
 
 ;;; Where to put the different spaces.
 ;;; 
 #-linux (defparameter target-read-only-space-start #x20000000)
 #-linux (defparameter target-static-space-start    #x28000000)
 #-linux (defparameter target-dynamic-space-start   #x30000000)
+#-linux (defparameter target-foreign-linkage-space-start #x0fc00000)
+#-linux (defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
 #+linux (defparameter target-read-only-space-start #x10000000)
 #+linux (defparameter target-static-space-start    #x28000000)
 #+linux (defparameter target-dynamic-space-start   #x30000000)
+#+linux (defparameter target-foreign-linkage-space-start #x0fc00000)
+#+linux (defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
 ;; The space-register holding the lisp heap.
 (defconstant lisp-heap-space 4)

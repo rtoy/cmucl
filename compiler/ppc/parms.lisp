@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.3 2002/03/31 14:48:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.4 2002/10/07 14:31:09 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,8 +137,9 @@
 ;;;; Description of the target address space.
 (export '(target-read-only-space-start
 	  target-static-space-start
-	  target-dynamic-space-start))
-
+	  target-dynamic-space-start
+          target-foreign-linkage-space-start
+	  target-foreign-linkage-entry-size))
 
 
 ;;; Where to put the different spaces.
@@ -146,6 +147,8 @@
 (defparameter target-read-only-space-start #x01000000)
 (defparameter target-static-space-start    #x05000000)
 (defparameter target-dynamic-space-start   #x07000000)
+(defparameter target-foreign-linkage-space-start #x0fc00000)
+(defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
 
 

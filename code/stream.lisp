@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.52 2002/08/12 20:53:37 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.53 2002/10/07 14:31:05 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1805,8 +1805,9 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
   (declare (type (integer 0 *) start end))
   (if (or (endp l) (= start end))
       start
-      (let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
-	(cond ((eq el '%%RWSEQ-EOF%%) start)
+      (let* ((eof-marker (load-time-value (list 'eof-marker)))
+             (el (funcall read-function stream nil eof-marker)))
+	(cond ((eq el eof-marker) start)
 	      (t (setf (first l) el)
 		 (read-into-list-1 (rest l)
 				   (1+ start)
@@ -1830,11 +1831,11 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
       ((or (endp lis) (>= i end)) i)
     (declare (type list lis))
     (declare (type index i))
-    (let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
-      (when (eq el '%%RWSEQ-EOF%%)
+    (let* ((eof-marker (load-time-value (list 'eof-marker)))
+           (el (funcall read-function stream nil eof-marker)))
+      (when (eq el eof-marker)
 	(return i))
-      (setf (first lis) el))
-    ))
+      (setf (first lis) el))))
 
 
 ;;; READ-INTO-SIMPLE-STRING --
@@ -1871,12 +1872,12 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
        )
       ((or (>= i s-len) (>= i end)) i)
     (declare (type index i s-len))
-    (let ((el (read-char stream nil '%%RWSEQ-EOF%%)))
-      (declare (type (or character (member %%RWSEQ-EOF%%)) el))
-      (when (eq el '%%RWSEQ-EOF%%)
+    (let* ((eof-marker (load-time-value (list 'eof-marker)))
+	   (el (read-char stream nil eof-marker)))
+      (declare (type (or character stream) el))
+      (when (eq el eof-marker)
 	(return i))
-      (setf (char s i) (the character el)))
-    ))
+      (setf (char s i) (the character el)))))
 
 
 ;;; READ-INTO-SIMPLE-ARRAY --
@@ -2027,11 +2028,11 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	 )
 	((or (>= i a-len) (>= i end)) i)
       (declare (type index i a-len))
-      (let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
-	(when (eq el '%%RWSEQ-EOF%%)
+      (let* ((eof-marker (load-time-value (list 'eof-marker)))
+	     (el (funcall read-function stream nil eof-marker)))
+	(when (eq el eof-marker)
 	  (return i))
-	(setf (aref v i) el))
-      )))
+	(setf (aref v i) el)))))
 
 (declaim (end-block))			; READ-SEQUENCE block
 
