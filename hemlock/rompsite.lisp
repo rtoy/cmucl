@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.25 1992/05/22 19:05:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.26 1992/12/18 07:44:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -714,7 +714,9 @@
   (typecase function
     (symbol (fun-defined-from-pathname (fdefinition function)))
     (compiled-function
-     (let ((info (di::code-debug-info (di::function-code-header function))))
+     (let ((info (kernel:%code-debug-info
+		  (kernel:function-code-header
+		   (kernel:%function-self function)))))
        (when info
 	 (let ((sources (c::compiled-debug-info-source info)))
 	   (when sources
@@ -746,8 +748,7 @@
    *standard-output*."
   (describe fun)
   (when (and (compiled-function-p fun)
-	     (not (eq (kernel:%function-header-name
-		       (kernel:%closure-function fun))
+	     (not (eq (kernel:%function-name (kernel:%closure-function fun))
 		      sym)))
     (let ((doc (documentation sym 'function)))
       (when doc
