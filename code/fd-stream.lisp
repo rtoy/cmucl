@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.20 1992/02/21 21:59:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.21 1992/03/09 20:17:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -445,7 +445,6 @@
 	     (setf (fd-stream-ibuf-head stream) 0)
 	     (setf (fd-stream-ibuf-tail stream) tail))))
     (setf (fd-stream-listen stream) nil)
-    #+serve-event
     (multiple-value-bind
 	(count errno)
 	(unix:unix-select (1+ fd) (ash 1 fd) 0 0 0)
@@ -465,16 +464,15 @@
 			(system:int-sap (+ (system:sap-int ibuf-sap) tail))
 			(- buflen tail))
       (cond ((null count)
-	     (if #+serve-event (eql errno unix:ewouldblock)
-		 #-serve-event nil
-	       (progn
-		 (unless (system:wait-until-fd-usable
-			  fd :input (fd-stream-timeout stream))
-		   (error 'io-timeout :stream stream :direction :read))
-		 (do-input stream))
-	       (error "Error reading ~S: ~A"
-		      stream
-		      (unix:get-unix-error-msg errno))))
+	     (if (eql errno unix:ewouldblock)
+		 (progn
+		   (unless (system:wait-until-fd-usable
+			    fd :input (fd-stream-timeout stream))
+		     (error 'io-timeout :stream stream :direction :read))
+		   (do-input stream))
+		 (error "Error reading ~S: ~A"
+			stream
+			(unix:get-unix-error-msg errno))))
 	    ((zerop count)
 	     (setf (fd-stream-listen stream) :eof)
 	     (throw 'eof-input-catcher nil))
@@ -1008,7 +1006,6 @@ non-server method is also significantly more efficient for large reads.
      (flush-output-buffer stream))
     (:finish-output
      (flush-output-buffer stream)
-     #+serve-event
      (do ()
 	 ((null (fd-stream-output-later stream)))
        (system:serve-all-events)))
