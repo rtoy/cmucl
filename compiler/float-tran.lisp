@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.50 1997/12/14 17:32:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.51 1997/12/16 02:21:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,9 +293,9 @@
 
 (macrolet
     ((frob (fun type)
-       (let ((aux-name (concatenate 'string (string fun) "-DERIVE-TYPE-AUX")))
+       (let ((aux-name (symbolicate fun "-DERIVE-TYPE-AUX")))
 	 `(progn
-	   (defun ,(intern aux-name) (num)
+	   (defun ,aux-name (num)
 	     ;; When converting a number to a float, the limits are
 	     ;; the same.
 	     (let* ((lo (bound-func #'(lambda (x)
@@ -307,7 +307,7 @@
 	       (specifier-type `(,',type ,(or lo '*) ,(or hi '*)))))
 	   
 	   (defoptimizer (,fun derive-type) ((num))
-	     (one-arg-derive-type num #',(intern aux-name)))))))
+	     (one-arg-derive-type num #',aux-name))))))
   (frob %single-float single-float)
   (frob %double-float double-float))
 ) ; end progn  
@@ -833,51 +833,35 @@
        :low lo
        :high hi))))
   
-(defun merged-interval-expt (x-type y-type)
-  (labels ((flatten-helper (x r)      ;; 'r' is the stuff to the 'right'.
-	     (cond ((null x) r)
-		   ((atom x)
-		    (cons x r))
-		   (t (flatten-helper (car x)
-				      (flatten-helper (cdr x) r)))))
-	   (flatten (x) (flatten-helper x nil)))
-    (let* ((x-int (numeric-type->interval x-type))
-	   (y-int (numeric-type->interval y-type))
-	   (bnd (interval-expt x-int y-int))
-	   (union '()))
-      (dolist (type (flatten bnd))
-	(push (fixup-interval-expt type x-int y-int x-type y-type) union))
-      (let ((merged (derive-merged-union-types union)))
-	(assert (null (rest merged)))	; There should be only one thing left!
-	(first merged)))))
+(defun merged-interval-expt (x y)
+  (let* ((x-int (numeric-type->interval x))
+	 (y-int (numeric-type->interval y)))
+    (mapcar #'(lambda (type)
+		(fixup-interval-expt type x-int y-int x y))
+	    (flatten-list (interval-expt x-int y-int)))))
 
-;; Derive the type of (expt x-type y-type)
-(defun expt-derive-type-aux-numeric (x-type y-type)
-  (if (or (eq (numeric-type-complexp x-type) :complex)
-	  (eq (numeric-type-complexp y-type) :complex))
-      (numeric-contagion x-type y-type)
-      (if (eq (numeric-type-class y-type) 'integer)
-	  ;; A real raised to an integer power is well-defined
-	  (merged-interval-expt x-type y-type)
-	  ;; A real raised to a non-integral power can be a float or
-	  ;; a complex number.
-	  (cond ((and (bound-value (numeric-type-low x-type))
-		      (>= (bound-value (numeric-type-low x-type)) 0))
-		 ;; A non-negative real to some power is fairly easy
-		 ;; to handle.
-		 (merged-interval-expt x-type y-type))
-		(t
-		 ;; A number to some power.  We punt here.
-		 (format t "x-type, y-type = ~a ~a~%" x-type y-type)
-		 (error "Can't happen!")
-		 (specifier-type '(or float (complex float))))))))
+(defun expt-derive-type-aux (x y same-arg)
+  (declare (ignore same-arg))
+  (cond ((or (eq (numeric-type-complexp x) :complex)
+	     (eq (numeric-type-complexp x) :complex))
+	 ;; Use numeric contagion if either is complex
+	 (numeric-contagion x y))
+	((csubtypep y (specifier-type 'integer))
+	 ;; A real raised to an integer power is well-defined
+	 (merged-interval-expt x y))
+	(t
+	 ;; A real raised to a non-integral power can be a float or a
+	 ;; complex number.
+	 (cond ((csubtypep x (specifier-type '(real 0d0)))
+		;; But a positive real to any power is well-defined.
+		(merged-interval-expt x y))
+	       (t
+		;; A real to some power.  The result could be a real
+		;; or a complex.
+		(float-or-complex-type (numeric-contagion x y)))))))
 
-(defun expt-derive-type-aux (x-type y-type)
-  (let ((result (expt-derive-type-aux-numeric x-type y-type)))
-    (values (numeric-type-low result)
-	    (numeric-type-high result)
-	    (numeric-type-class result)
-	    (numeric-type-format result))))
+(defoptimizer (expt derive-type) ((x y))
+  (two-arg-derive-type x y #'expt-derive-type-aux))
 
 
 ;;; Note must assume that a type including 0.0 may also include -0.0
