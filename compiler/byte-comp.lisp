@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.40 2003/09/26 15:38:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.41 2003/10/09 11:12:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,10 +143,12 @@
 	  segment 2 1
 	  #'(lambda (segment posn delta)
 	      (declare (ignore segment) (type index posn delta))
-	      (when (zerop (- (new-assem:label-position label posn delta)
-			      posn 2))
+	      (when (and (eql kind byte-branch-always)
+			 (zerop (- (new-assem:label-position label posn delta)
+				   posn 2)))
 		;; Don't emit anything, because the branch is to the following
-		;; instruction.
+		;; instruction.  Only do this for unconditional branches,
+		;; because the conditional ones pop the byte stack.
 		t))
 	  #'(lambda (segment posn)
 	      ;; We know we fit in one byte.
