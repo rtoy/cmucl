@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.91 2004/01/09 04:34:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.92 2004/06/01 23:40:09 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -81,6 +81,12 @@
   (comf "target:assembly/x86/array" :assem t)
   (comf "target:assembly/x86/arith" :assem t)
   (comf "target:assembly/x86/alloc" :assem t))
+
+(when (c:backend-featurep :amd64)
+  (comf "target:assembly/amd64/assem-rtns" :assem t)
+  (comf "target:assembly/amd64/array" :assem t)
+  (comf "target:assembly/amd64/arith" :assem t)
+  (comf "target:assembly/amd64/alloc" :assem t))
 
 (when (c:backend-featurep :alpha)
   (comf "target:assembly/alpha/assem-rtns" :assem t)
@@ -180,6 +186,8 @@
   (comf "target:code/hppa-vm"))
 (when (c:backend-featurep :x86)
   (comf "target:code/x86-vm"))
+(when (c:backend-featurep :amd64)
+  (comf "target:code/amd64-vm"))
 (when (c:backend-featurep :alpha)
   (comf "target:code/alpha-vm"))
 (when (c:backend-featurep :sgi)

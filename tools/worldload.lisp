@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.102 2004/01/09 04:34:18 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.103 2004/06/01 23:43:03 cwang Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,6 +62,7 @@
 	#+rt "c:rt/"
 	#+hppa "c:hppa/"
 	#+x86 "c:x86/"
+	#+amd64 "c:amd64/"
 	#+alpha "c:alpha/"
 	#+ppc "c:ppc/"
 	"c:generic/"))
@@ -71,6 +72,7 @@
 	#+rt "target:assembly/rt/"
 	#+hppa "target:assembly/hppa/"
 	#+x86 "target:assembly/x86/"
+	#+amd64 "target:assembly/amd64/"
 	#+alpha "target:assembly/alpha/"
 	#+ppc "target:assembly/ppc/"
 	"target:assembly/"))
@@ -92,6 +94,8 @@
 (rename-package "RT" "RT" '("VM" "OLD-RT"))
 #+x86
 (rename-package "X86" "X86" '("VM" "OLD-X86"))
+#+amd64
+(rename-package "AMD64" "AMD64" '("VM" "OLD-AMD64"))
 #+hppa
 (rename-package "HPPA" "HPPA" '("VM" "OLD-HPPA"))
 #+alpha

@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.38 2003/07/20 13:57:24 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.39 2004/06/01 23:36:07 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -302,12 +302,13 @@
 	  ((c:target-featurep :alpha) "alpha/")
 	  ((c:target-featurep :sgi) "mips/")
 	  ((c:target-featurep :ppc) "ppc/")
+	  ((c:target-featurep :amd64) "amd64/")
 	  (t
 	   (error "What machine is this?")))
     (make-pathname :directory (pathname-directory f)))))
 
 
-;;; CAT-IF-ANYTHING-CHAGNED
+;;; CAT-IF-ANYTHING-CHANGED
 
 (defun cat-if-anything-changed (output-file &rest input-files)
   (flet ((add-correct-type (pathname)

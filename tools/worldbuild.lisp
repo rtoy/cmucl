@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.50 2003/09/08 16:07:04 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.51 2004/06/01 23:37:45 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,6 +47,11 @@
 	  "target:assembly/x86/array.assem"
 	  "target:assembly/x86/arith.assem"
 	  "target:assembly/x86/alloc.assem"))
+    ,@(when (c:backend-featurep :amd64)
+	'("target:assembly/amd64/assem-rtns.assem"
+	  "target:assembly/amd64/array.assem"
+	  "target:assembly/amd64/arith.assem"
+	  "target:assembly/amd64/alloc.assem"))
     ,@(when (c:backend-featurep :alpha)
 	'("target:assembly/alpha/assem-rtns.assem"
 	  "target:assembly/alpha/array.assem"
@@ -159,6 +164,8 @@
 	'("target:code/hppa-vm"))
     ,@(when (c:backend-featurep :x86)
 	'("target:code/x86-vm"))
+    ,@(when (c:backend-featurep :amd64)
+	'("target:code/amd64-vm"))
     ,@(when (c:backend-featurep :alpha)
 	'("target:code/alpha-vm"))
     ,@(when (c:backend-featurep :sgi)
