@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.39 1993/08/19 17:15:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.40 1993/08/19 17:23:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,7 +118,7 @@
     (when (eq keyword (car remaining))
       (return t))))
 
-(in-package "CONDTIIONS")
+(in-package "CONDITIONS")
 
 (defvar *break-on-signals* nil
   "When (typep condition *break-on-signals*) is true, then calls to SIGNAL will
