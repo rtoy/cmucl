@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.30 1992/03/09 14:55:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.31 1992/03/13 17:58:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -231,8 +231,9 @@
 ;;;    Parse a slot description for DEFSTRUCT and add it to the description.
 ;;; If supplied, ISLOT is a pre-initialized DSD that we modify to get the new
 ;;; slot.  This is supplied when handling included slots.  If the new accessor
-;;; name is EQ to the included name, then set the DSD-ACCESSOR to NIL so that
-;;; we don't clobber the more general accessor.
+;;; name is already an accessor for same slot in some included structure, then
+;;; set the DSD-ACCESSOR to NIL so that we don't clobber the more general
+;;; accessor.
 ;;;
 (defun parse-1-dsd (defstruct spec &optional
 		     (islot (make-defstruct-slot-description
@@ -255,11 +256,17 @@
       (error "Duplicate slot name ~S." name))
     (setf (dsd-%name islot) (string name))
     (setf (dd-slots defstruct) (nconc (dd-slots defstruct) (list islot)))
-    (let ((aname (concat-pnames (dd-conc-name defstruct) name)))
-      (setf (dsd-accessor islot)
-	    (if (eq aname (dsd-accessor islot))
-		nil
-		aname)))
+
+    (let* ((aname (concat-pnames (dd-conc-name defstruct) name))
+	   (existing (info function accessor-for aname)))
+      (if (and existing
+	       (string= (dsd-name (find aname (dd-slots existing)
+					:key #'dsd-accessor))
+			name)
+	       (member (dd-name existing)
+		       (cons (dd-name defstruct) (dd-includes defstruct))))
+	  (setf (dsd-accessor islot) nil)
+	  (setf (dsd-accessor islot) aname)))
     
     (when default-p
       (setf (dsd-default islot) default))
