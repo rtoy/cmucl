@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defgeneric.lisp,v 1.2 2003/03/22 16:15:15 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defgeneric.lisp,v 1.3 2003/04/13 16:39:22 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -60,3 +60,16 @@
       t)
   t)
 
+;;;
+;;; This used to enter a vicious metacircle.
+;;;
+(deftest method-class.0
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass method-class.0 (mop:standard-method) ())
+	  (defgeneric method-class.0.gf (x)
+	    (:method-class method-class.0))
+	  (defmethod method-class.0.gf ((x integer)) x)
+	  t)
+      (values r (null c)))
+  t t)

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.22 2003/03/28 16:07:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.23 2003/04/13 16:39:22 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1120,9 +1120,9 @@ And so, we are saved.
 (defvar *cmv-stack* ())
 
 (defun cache-miss-values-internal (gf arg-info wrappers classes types state)
-  (if (and classes (equal classes (cdr (assq gf *cmv-stack*))))
+  (if (and wrappers (equal wrappers (cdr (assq gf *cmv-stack*))))
       (break-vicious-metacircle gf classes arg-info)
-      (let ((*cmv-stack* (cons (cons gf classes) *cmv-stack*))
+      (let ((*cmv-stack* (cons (cons gf wrappers) *cmv-stack*))
 	    (cam-std-p (or (null arg-info)
 			   (gf-info-c-a-m-emf-std-p arg-info))))
 	(multiple-value-bind (methods all-applicable-and-sorted-p)
@@ -1136,6 +1136,11 @@ And so, we are saved.
 					    gf methods types nil
 					    (and for-cache-p wrappers)
 					    all-applicable-and-sorted-p)))
+			    ;;
+			    ;; MAKE-CALLABLE can call GET-METHOD-FUNCTION,
+			    ;; which can do a PV-TABLE-LOOKUP, which
+			    ;; can call CACHE-MISS-VALUES-INTERNAL again
+			    ;; for the same emf we are computing.
 			    (make-callable gf methods generator nil
 					   (and for-cache-p wrappers)))
 			  (let ((fn (default-secondary-dispatch-function gf)))

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.27 2003/04/06 09:10:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.28 2003/04/13 16:39:22 gerd Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -1019,99 +1019,6 @@
 			      cache location sep limit))))
 	(setq location (next-location location))))))
 
-#+nil
-(defun probe-cache (cache wrappers default)
-  (declare #.*optimize-speed*)
-  (assert wrappers)
-  (macrolet ((probe (nwrappers)
-	       `(loop with primary of-type fixnum
-			= (compute-primary-cache-location (cache-field cache)
-							  (cache-mask cache)
-							  wrappers)
-		      with line-size of-type fixnum
-			= (cache-line-size cache)
-		      with max-location of-type fixnum
-			= (cache-max-location cache)
-		      with nkeys of-type fixnum
-			= (cache-nkeys cache)
-		      with cache-vector of-type simple-vector
-			= (cache-vector cache)
-		      for location of-type fixnum = primary
-		        then (if (= location max-location)
-				 1
-				 (the fixnum (+ location line-size)))
-		      for i of-type fixnum upto limit
-		      for w = wrappers do
-			(when (and ,@(loop for i below nwrappers
-					   collect `(eq (%svref cache-vector (+ ,i location))
-							(pop w))))
-			  (return-from probe-cache
-			    (or (not (cache-valuep cache))
-				(%svref cache-vector
-					(+ location ,nwrappers))))))))
-    (let ((limit (default-limit-fn (cache-nlines cache))))
-      (declare (fixnum limit))
-      (case (cache-nkeys cache)
-	(1
-	 (loop with primary of-type fixnum
-		 = (logand (cache-mask cache)
-			   (the fixnum (kernel:layout-hash
-					(if (listp wrappers)
-					    (car wrappers)
-					    wrappers)
-					(cache-field cache))))
-		 with line-size of-type fixnum = (cache-line-size cache)
-		 with max-location of-type fixnum = (cache-max-location cache)
-		 with cache-vector of-type simple-vector = (cache-vector cache)
-		 for location of-type fixnum
-		 = (if (zerop primary)
-		       (if (= primary max-location)
-			   line-size
-			   (the fixnum (+ primary line-size)))
-		       primary)
-		 then (if (= location max-location)
-			  line-size
-			  (the fixnum (+ location line-size)))
-		 for i of-type fixnum upto limit
-		 when (eq wrappers (%svref cache-vector location)) do
-		 (return-from probe-cache
-		   (or (not (cache-valuep cache))
-		       (%svref cache-vector (1+ location))))))
-	(2 (probe 2))
-	(3 (probe 3))
-	(4 (probe 4))
-	(5 (probe 5))
-	(6 (probe 6))
-	(otherwise
-	 (loop with primary of-type fixnum
-		 = (compute-primary-cache-location (cache-field cache)
-						   (cache-mask cache)
-						   wrappers)
-		 with line-size of-type fixnum = (cache-line-size cache)
-		 with max-location of-type fixnum = (cache-max-location cache)
-		 with nkeys of-type fixnum = (cache-nkeys cache)
-		 with cache-vector of-type simple-vector = (cache-vector cache)
-		 for location of-type fixnum = primary
-		 then (if (= location max-location)
-			  1
-			  (the fixnum (+ location line-size)))
-		 for i of-type fixnum upto limit do
-		 (loop with w = wrappers
-		       for i of-type fixnum from location 
-		       repeat nkeys
-		       while (eq (%svref cache-vector i) (pop w))
-		       finally
-		       (when (null w)
-			 (return-from probe-cache
-			   (or (not (cache-valuep cache))
-			       (%svref cache-vector (+ location nkeys))))))))))
-    (loop for entry in (cache-overflow cache)
-	  when (equal (car entry) wrappers) do
-	    (return-from probe-cache (or (not (cache-valuep cache))
-					 (cdr entry))))
-    default))
-
-#-nil
 (defun probe-cache (cache wrappers &optional default)
   (declare #.*optimize-speed*)
   (assert wrappers)
