@@ -131,6 +131,10 @@
 (dolist (x '(sap-ref-8 sap-ref-16 sap-ref-32))
   (fmakunbound x))
 
+(in-package "C")
+(define-condition parse-unknown-type (condition)
+		  (specifier))
+
 (in-package "USER")
 
 ;;; Hack until real definition exists:
