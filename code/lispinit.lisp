@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.11 1990/09/06 19:42:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.12 1990/09/23 17:44:13 wlott Exp $
 ;;;
 ;;; Initialization and low-level interrupt support for the Spice Lisp system.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -67,6 +67,8 @@
 (proclaim '(special *gc-inhibit* *already-maybe-gcing*
 		    *need-to-collect-garbage* *gc-verbose*
 		    *before-gc-hooks* *after-gc-hooks*
+		    mach::*interrupts-enabled*
+		    mach::*interrupt-pending*
 		    c::*type-system-initialized*))
 
 
@@ -75,15 +77,9 @@
 
 ;;; These are filled in by Genesis.
 
-(defvar *the-undefined-function*)
 (defvar *current-catch-block*)
 (defvar *current-unwind-block*)
 (defvar *free-interrupt-context-index*)
-
-
-;;;
-
-(defvar %sp-interrupts-inhibited nil)
 
 
 
@@ -129,9 +125,9 @@
 ;;; things initialize right at OS-Init time.
 ;;;
 (defun reset-reply-port-stack ()
-  (setq *reply-port-pointer* 0  *reply-port-depth* 0)
+  (setf *reply-port-pointer* 0  *reply-port-depth* 0)
   (fill (the simple-vector *reply-port-stack*) nil)
-  (setq *allocate-reply-port* (mach:mach-task_data)))
+  (setf *allocate-reply-port* (mach:mach-task_data)))
 (pushnew 'reset-reply-port-stack *before-save-initializations*)
 
 ;;; Allocate-New-Reply-Ports  --  Internal
@@ -147,7 +143,7 @@
     (when (eql pointer (1- len))
       (let ((new (make-array (* len 2))))
 	(replace new stack :end1 len :end2 len)
-	(setq stack new  *reply-port-stack* new)))
+	(setf stack new  *reply-port-stack* new)))
     (setf (svref stack pointer) *allocate-reply-port*)
     (let ((port (gr-call* mach:port_allocate (mach:mach-task_self))))
       (gr-call mach:port_disable (mach:mach-task_self) port)
@@ -490,14 +486,15 @@
 
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
-  (setq *already-maybe-gcing* t)
+  (setf *already-maybe-gcing* t)
   (setf *gc-inhibit* t)
   (setf *need-to-collect-garbage* nil)
-  (setq *gc-verbose* t)
-  (setq *before-gc-hooks* ())
-  (setq *after-gc-hooks* ())
-  (setq %sp-interrupts-inhibited nil)
-  (setq c::*type-system-initialized* nil)
+  (setf *gc-verbose* t)
+  (setf *before-gc-hooks* nil)
+  (setf *after-gc-hooks* nil)
+  (setf mach::*interrupts-enabled* t)
+  (setf mach::*interrupt-pending* nil)
+  (setf c::*type-system-initialized* nil)
   (%primitive print "In initial-function, and running.")
 
   ;; Many top-level forms call INFO, (SETF INFO).
@@ -506,7 +503,7 @@
   ;; Some of the random top-level forms call Make-Array, which calls Subtypep...
   (print-and-call type-init)
 
-  (setq *lisp-initialization-functions*
+  (setf *lisp-initialization-functions*
 	(nreverse *lisp-initialization-functions*))
   (%primitive print "Calling top-level forms.")
   (dolist (fun *lisp-initialization-functions*)
@@ -515,7 +512,7 @@
 
   ;; Only do this after top level forms have run, 'cause thats where
   ;; deftypes are.
-  (setq c::*type-system-initialized* t)
+  (setf c::*type-system-initialized* t)
 
   (print-and-call os-init)
   (print-and-call filesys-init)
@@ -527,7 +524,7 @@
   (print-and-call sharp-init)
   ;; After the various reader subsystems have done their thing to the standard
   ;; readtable, copy it to *readtable*.
-  (setq *readtable* (copy-readtable std-lisp-readtable))
+  (setf *readtable* (copy-readtable std-lisp-readtable))
 
   (print-and-call stream-init)
   (print-and-call loader-init)
@@ -540,7 +537,7 @@
 
   (%primitive print "Done initializing.")
 
-  (setq *already-maybe-gcing* nil)
+  (setf *already-maybe-gcing* nil)
   (terpri)
   (princ "CMU Common Lisp kernel core image ")
   (princ (lisp-implementation-version))
@@ -564,11 +561,11 @@
 (defun reinit ()
   (%primitive print "In REINIT.")
   (without-interrupts
-   (setq *already-maybe-gcing* t)
+   (setf *already-maybe-gcing* t)
    (print-and-call os-init)
    (print-and-call kernel::signal-init)
    (print-and-call stream-reinit)
-   (setq *already-maybe-gcing* nil))
+   (setf *already-maybe-gcing* nil))
   #+nil
   (mach:port_enable (mach:mach-task_self) *task-notify*)
   #+nil
@@ -579,9 +576,9 @@
 ;;; that set up the argument blocks for the server interfaces.
 
 (defun os-init ()
-  (setq *task-self* (mach:mach-task_self))
-  (setq *task-data* (mach:mach-task_data))
-  (setq *task-notify* (mach:mach-task_notify)))
+  (setf *task-self* (mach:mach-task_self))
+  (setf *task-data* (mach:mach-task_data))
+  (setf *task-notify* (mach:mach-task_notify)))
 
 
 ;;; Setup-path-search-list returns a list of the directories that are
