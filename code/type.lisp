@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.3 1993/02/10 23:41:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.4 1993/02/14 12:27:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -873,7 +873,7 @@
    (frob t *universal-type*)))
 
 (define-type-method (named :simple-=) (type1 type2)
-  (eq type1 type2))
+  (values (eq type1 type2) t))
 
 (define-type-method (named :simple-subtypep) (type1 type2)
   (values (or (eq type1 *empty-type*) (eq type2 *wild-type*)) t))
