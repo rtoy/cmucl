@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.47 2003/08/07 10:31:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.48 2003/08/19 12:23:36 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -652,7 +652,7 @@
 			  (numerator divisor))))
 	 (values q (- number (* q divisor)))))
       ((fixnum bignum)
-       (values 0 number))
+       (bignum-truncate (make-small-bignum number) divisor))
       ((ratio (or float rational))
        (let ((q (truncate (numerator number)
 			  (* (denominator number) divisor))))
