@@ -5,12 +5,13 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.4 1999/02/20 15:54:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.5 1999/02/22 11:26:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the UNIX low-level support for glibc2.  Based
-;;; on unix.lisp 1.56, converted for glibc2 by Peter Van Eynde (1998)
+;;; on unix.lisp 1.56, converted for glibc2 by Peter Van Eynde (1998).
+;;; Alpha support by Julian Dolby, 1999.
 ;;;
 ;;; All the functions with #+nil in front are work in progress,
 ;;; and mostly don't work.

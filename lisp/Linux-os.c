@@ -13,8 +13,9 @@
  * Much hacked by Paul Werkowski
  * Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
  * GENCGC support by Douglas Crosher, 1996, 1997.
+ * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.6 1999/02/20 15:54:42 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.7 1999/02/22 11:26:41 dtc Exp $
  *
  */
 
@@ -105,7 +106,7 @@ os_init(void)
 #endif
 }
 
-#ifndef __alpha__
+#ifdef i386
 int
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 sc_reg(struct sigcontext *c, int offset)
@@ -335,21 +336,3 @@ os_install_interrupt_handlers(void)
   interrupt_install_low_level_handler(SIGSEGV,sigsegv_handler);
   interrupt_install_low_level_handler(SIGBUS,sigbus_handler);
 }
-
-#if 0
-/* functions that disapear ! */
-#define Force_Fct(fct) int * Force_ ## fct (void) {return &fct;}
-
-Force_Fct(select)
-Force_Fct(stat)
-Force_Fct(lstat)
-Force_Fct(fstat)
-Force_Fct(socket)
-Force_Fct(connect)
-Force_Fct(listen)
-Force_Fct(recv)
-Force_Fct(accept)
-Force_Fct(bind)
-#endif
-
-

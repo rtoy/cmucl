@@ -1,9 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.8 1999/02/20 15:54:42 pw Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.9 1999/02/22 11:26:42 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
  Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
+ Alpha support by Julian Dolby, 1999.
+
 */
 
 #include <stdlib.h>
@@ -60,7 +62,7 @@ typedef struct sigcontext_struct sigcontext;
    so there is no need to define the following for Alpha 
    Linux 
 */
-#ifndef __alpha__ 
+#ifdef i386
 
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define HANDLER_ARGS int signal, struct sigcontext contextstruct
@@ -70,13 +72,7 @@ typedef struct sigcontext_struct sigcontext;
 #define GET_CONTEXT int code=0; struct sigcontext_struct *context=&contextstruct;
 #endif
 
-#endif /* __alpha__ */
-
-#ifdef i386
 #define setfpucw(cw)	asm("fldcw %0" : : "m" (cw));
-#endif
-
-#if 0
 
 #define sigvec          sigaction
 #define sv_mask         sa_mask
@@ -94,8 +90,6 @@ typedef struct sigcontext_struct sigcontext;
 #else
 #define sigcontext	sigcontext_struct 
 #endif
-#define sa_sigaction	sa_handler
-#define SA_SIGINFO	0
 #define sc_efl		eflags
 
 #define sc_eax eax
@@ -107,16 +101,12 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_esi esi
 #define sc_edi edi
 
-#endif /* 0 */
+#define SA_SIGINFO	0
+
+#endif /* i386 */
 
 #ifdef alpha
 #define uc_sigmask	sc_mask
-#else
-#define uc_sigmask 	oldmask
-#define sc_pc		eip
-#define sc_mask		oldmask 
-#define sc_efl		eflags
-#define sc_sp		esp
-#endif
+#endif /* alpha */
+
 #define sa_sigaction	sa_handler
-#define SA_SIGINFO	0
