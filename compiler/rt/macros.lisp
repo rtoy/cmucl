@@ -492,3 +492,29 @@
        (inst bc :eq ,label)
        (inst break pending-interrupt-trap)
        (emit-label ,label))))
+
+;;;; Float stuff:
+;;;
+;;;    Since moving between memory and a FP register reqires *two* temporaries,
+;;; we need a special temporary to form the magic address we store to do a
+;;; floating point operation.  We get this temp by always spilling NL0 on the
+;;; number stack.  This appears rather grody, but actually the 68881 is so slow
+;;; compared to the ROMP that this overhead is not very great.
+;;;
+;;; Note: The RT interrupt handler preserves 64 bytes beyond the current stack
+;;; pointer, so we don't need to dink the stack pointer.  We can just use the
+;;; space beyond it.
+;;;
+;;; We also use LIP to form the address of the data location that we are
+;;; reading or writing.
+
+(defvar *in-with-fp-temp* nil)
+
+(defmacro with-fp-temp ((var) &body body)
+  `(if *in-with-fp-temp*
+       (error "Can only have one FP temp.")
+       (let ((,var nl0-tn)
+	     (*in-with-fp-temp* t))
+	 (storew ,var nsp-tn -1)
+	 (multiple-value-prog1 (progn ,@body)
+	   (loadw ,var nsp-tn -1)))))
