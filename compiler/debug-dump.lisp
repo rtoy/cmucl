@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.29 1992/05/21 23:16:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.30 1992/07/14 03:41:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,7 +112,8 @@
 ;;;
 (defun dump-1-location (node block kind tlf-num label live var-locs vop)
   (declare (type node node) (type ir2-block block)
-	   (type local-tn-bit-vector live) (type label label)
+	   (type local-tn-bit-vector live)
+	   (type (or label index) label)
 	   (type location-kind kind) (type (or index null) tlf-num)
 	   (type hash-table var-locs) (type (or vop null) vop))
   
@@ -122,7 +123,7 @@
 	0)
    *byte-buffer*)
   
-  (let ((loc (label-position label)))
+  (let ((loc (if (fixnump label) label (label-position label))))
     (write-var-integer (- loc *previous-location*) *byte-buffer*)
     (setq *previous-location* loc))
 
