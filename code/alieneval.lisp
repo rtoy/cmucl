@@ -314,6 +314,7 @@
 ;;;    Allocate enough storage to hold the specified number of bits
 ;;; and return the address.
 ;;;
+#+new-compiler
 (defun allocate-static-alien (bits)
   (declare (fixnum bits))
   (let* ((alien *current-alien-free-pointer*)
@@ -493,6 +494,7 @@
 ;;; aligned.  In this case, we absorb the offset into the SAP, and make the
 ;;; bound offset 0.
 ;;;
+#+new-compiler
 (defun %aligned-sap (sap offset form)
   (unless (zerop (logand offset #x1F))
     (error "Offset ~S was declared to be word aligned, but isn't:~% ~S"
