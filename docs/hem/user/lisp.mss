@@ -1,4 +1,4 @@
-@comment{-*- Dictionary: bld:scribe/hem/hem; Mode: spell; Package: Hemlock; Log: /usr/lisp/scribe/hem/hem-docs.log -*-}
+@comment{-*- Dictionary: /afs/cs/project/clisp/scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
 @chap[Interacting With Lisp]
 @index[lisp, interaction with]
 
