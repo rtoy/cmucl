@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.6 2004/08/08 11:15:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.7 2004/08/09 01:36:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,9 +145,9 @@
   (:ignore dynamic-extent)
   (:generator 10
     (let ((size (+ length closure-info-offset)))
-      (pseudo-atomic (pa-flag :extra (pad-data-block size))
-	(inst clrrwi. result alloc-tn lowtag-bits)
-	(inst ori result result function-pointer-type)
+      (pseudo-atomic (pa-flag)
+     
+	(allocation result (pad-data-block size) function-pointer-type :temp-tn temp)
 	(inst lr temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
     #+PPC-FUN-HACK
@@ -186,12 +186,9 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
   (:generator 4
-    (pseudo-atomic (pa-flag :extra (pad-data-block words))
-      (cond ((logbitp 2 lowtag)
-	     (inst ori result alloc-tn lowtag))
-	    (t
-	     (inst clrrwi result alloc-tn lowtag-bits)
-	     (inst ori result  result lowtag)))
+    ;; Could this be replaced with with-fixed-allocation?
+    (pseudo-atomic (pa-flag)
+      (allocation result (pad-data-block words) lowtag :temp-tn temp)
       (when type
 	(inst lr temp (logior (ash (1- words) type-bits) type))
 	(storew temp result 0 lowtag)))))
@@ -210,10 +207,5 @@
     (inst addi header header (+ (ash -2 type-bits) type))
     (inst clrrwi bytes bytes lowtag-bits)
     (pseudo-atomic (pa-flag)
-      (cond ((logbitp 2 lowtag)
-	     (inst ori result alloc-tn lowtag))
-	    (t
-	     (inst clrrwi result alloc-tn lowtag-bits)
-	     (inst ori result result lowtag)))
-      (storew header result 0 lowtag)
-      (inst add alloc-tn alloc-tn bytes))))
+      (allocation result bytes lowtag :temp-tn temp)
+      (storew header result 0 lowtag))))

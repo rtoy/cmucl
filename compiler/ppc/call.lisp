@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.5 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.6 2004/08/09 01:36:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1198,11 +1198,9 @@ default-value-8
     (pseudo-atomic (pa-flag)
       (assemble ()
 	;; Allocate a cons (2 words) for each item.
-	(inst clrrwi result alloc-tn lowtag-bits)
-	(inst ori result result list-pointer-type)
-	(move dst result)
 	(inst slwi temp count 1)
-	(inst add alloc-tn alloc-tn temp)
+        (allocation result temp list-pointer-type :temp-tn dst)
+	(move dst result)
 	(inst b enter)
 
 	;; Compute the next cons and store it in the current one.
