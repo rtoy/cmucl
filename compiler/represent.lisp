@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.27 1991/06/19 16:39:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.28 1991/11/08 15:25:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,58 +240,91 @@
 
 ;;;; Representation selection:
 
-;;; VOPs that we ignore in initial cost computation.  We ignore MOVE because
-;;; moves will be changed to appropriate representation specific moves, so
-;;; looking at the costs of the standard MOVE will just confuse us.  We ignore
-;;; SET in the hopes that nobody is setting specials inside of loops.  We
-;;; ignore TYPE-CHECK-ERROR because we don't want the possibility of error to
-;;; bias the result.  Notes are suppressed for T-C-E as well, since we don't
-;;; need to worry about the efficiency of that case.
+;;; VOPs that we ignore in initial cost computation.  We ignore SET in the
+;;; hopes that nobody is setting specials inside of loops.  We ignore
+;;; TYPE-CHECK-ERROR because we don't want the possibility of error to bias the
+;;; result.  Notes are suppressed for T-C-E as well, since we don't need to
+;;; worry about the efficiency of that case.
 ;;;
-(defconstant ignore-cost-vops '(move set type-check-error))
+(defconstant ignore-cost-vops '(set type-check-error))
 (defconstant suppress-note-vops '(type-check-error))
+
+(declaim (start-block select-tn-representation))
+
+;;; ADD-REPRESENTATION-COSTS  --  Local
+;;;
+;;;    We special-case the move VOP, since using this costs for the normal MOVE
+;;; would spuriously encourage descriptor representations.  We won't actually
+;;; need to coerce to descriptor and back, since we will replace the MOVE with
+;;; a specialized move VOP.  What we do is look at the other operand.  If its
+;;; representation has already been chosen (e.g.  if it is wired), then we use
+;;; the appropriate move costs, otherwise we just ignore the references.
+;;;
+(defun add-representation-costs (refs scs costs
+				      ops-slot costs-slot more-costs-slot
+				      write-p)
+  (do ((ref refs (tn-ref-next ref)))
+      ((null ref))
+    (flet ((add-costs (cost)
+	     (dolist (scn scs)
+	       (let ((res (svref cost scn)))
+		 (unless res
+		   (bad-costs-error ref))
+		 (incf (svref costs scn) res)))))
+      (let* ((vop (tn-ref-vop ref))
+	     (info (vop-info vop)))
+	(case (vop-info-name info)
+	  (#.ignore-cost-vops)
+	  (move
+	   (let ((rep (tn-sc
+		       (tn-ref-tn
+			(if write-p
+			    (vop-args vop)
+			    (vop-results vop))))))
+	     (when rep
+	       (if write-p
+		   (dolist (scn scs)
+		     (let ((res (svref (sc-move-costs
+					(svref (backend-sc-numbers *backend*)
+					       scn))
+				       (sc-number rep))))
+		       (when res
+			 (incf (svref costs scn) res))))
+		   (add-costs (sc-move-costs rep))))))
+	  (t
+	   (do ((cost (funcall costs-slot info) (cdr cost))
+		(op (funcall ops-slot vop) (tn-ref-across op)))
+	       ((null cost)
+		(add-costs (funcall more-costs-slot info)))
+	     (when (eq op ref)
+	       (add-costs (car cost))
+	       (return))))))))
+  (undefined-value))
+
 
 ;;; SELECT-TN-REPRESENTATION  --  Internal
 ;;;
 ;;;    Return the best representation for a normal TN.  SCs is a list of the SC
 ;;; numbers of the SCs to select from.  Costs is a scratch vector.
 ;;;
-;;;     What we do is sum the costs for each reference to TN in each of the
-;;; SCs, and then return the SC having the lowest cost.  We ignore references
-;;; by the MOVE VOP, since counting them would spuriously encourage descriptor
-;;; representations.  We won't actually need to coerce to descriptor and back,
-;;; since we will replace the MOVE with a specialized move VOP.
+;;;    What we do is sum the costs for each reference to TN in each of the
+;;; SCs, and then return the SC having the lowest cost.
 ;;;
 (defun select-tn-representation (tn scs costs)
-  (declare (type tn tn) (type sc-vector costs))
+  (declare (type tn tn) (type sc-vector costs)
+	   (inline add-representation-costs))
   (dolist (scn scs)
     (setf (svref costs scn) 0))
   
-  (macrolet ((scan-refs (refs ops-slot costs-slot more-costs-slot)
-	       `(do ((ref ,refs (tn-ref-next ref)))
-		    ((null ref))
-		  (let* ((vop (tn-ref-vop ref))
-			 (info (vop-info vop)))
-		    (unless (member (vop-info-name info) ignore-cost-vops)
-		      (do ((cost (,costs-slot info) (cdr cost))
-			   (op (,ops-slot vop) (tn-ref-across op)))
-			  ((null cost)
-			   (add-costs (,more-costs-slot info)))
-			(when (eq op ref)
-			  (add-costs (car cost))
-			  (return)))))))
-	     (add-costs (cost)
-	       `(let ((cost ,cost))
-		  (dolist (scn scs)
-		    (let ((res (svref cost scn)))
-		      (unless res
-			(bad-costs-error ref))
-		      (incf (svref costs scn) res))))))
-    
-    (scan-refs (tn-reads tn) vop-args vop-info-arg-costs
-	       vop-info-more-arg-costs)
-    (scan-refs (tn-writes tn) vop-results vop-info-result-costs
-	       vop-info-more-result-costs))
+  
+  (add-representation-costs (tn-reads tn) scs costs
+			    #'vop-args #'vop-info-arg-costs
+			    #'vop-info-more-arg-costs
+			    nil)
+  (add-representation-costs (tn-writes tn) scs costs
+			    #'vop-results #'vop-info-result-costs
+			    #'vop-info-more-result-costs
+			    t)
   
   (let ((min most-positive-fixnum)
 	(min-scn nil))
@@ -302,6 +335,8 @@
 	  (setq min-scn scn))))
     
     (svref (backend-sc-numbers *backend*) min-scn)))
+
+(declaim (end-block))
 
 
 ;;; NOTE-NUMBER-STACK-TN  --  Internal
