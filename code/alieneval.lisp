@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.16 1990/06/08 17:59:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.17 1990/06/11 01:18:06 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -139,17 +139,6 @@
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (signed-sap-ref-32 sap offset))
-
-(defsetf sap-ref-8 %set-sap-ref-8)
-(defsetf signed-sap-ref-8 %set-sap-ref-8)
-
-(defsetf sap-ref-16 %set-sap-ref-16)
-(defsetf signed-sap-ref-16 %set-sap-ref-16)
-
-(defsetf sap-ref-32 %set-sap-ref-32)
-(defsetf signed-sap-ref-32 %set-sap-ref-32)
-
-(defsetf sap-ref-sap %set-sap-ref-sap)
 
 (defun %set-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
@@ -534,34 +523,36 @@
 #+new-compiler
 ;;; Naturalize-Integer  --  Internal
 ;;;
-;;;    Read a possibly signed integer somewhere.  For the 16 and 32 bit
-;;; cases we let the transform do the work, for random fields we do it
-;;; by hand.
+;;;    Read a possibly signed integer somewhere.
 ;;;
 (defun naturalize-integer (signed sap offset size form)
-  (multiple-value-bind (q r) (truncate offset alien-alignment)
+  (declare (type boolean signed)
+	   (type system-area-pointer sap)
+	   (type index offset size))
+  (let ((bit-offset (logand offset #x1f)))
     (cond
-     ((and (= size 32) (zerop r))
+     ((and (= size 32) (zerop bit-offset))
       (if signed
-	  (signed-sap-ref-32 sap q)
-	  (sap-ref-32 sap q)))
-     ((and (= size 16) (zerop (logand r #xf)))
+	  (signed-sap-ref-32 sap (ash offset -5))
+	  (sap-ref-32 sap (ash offset -5))))
+     ((and (= size 16) (zerop (logand offset #xf)))
       (if signed
 	  (signed-sap-ref-16 sap (ash offset -4))
 	  (sap-ref-16 sap (ash offset -4))))
-     ((and (= size 8) (zerop (logand r #x7)))
+     ((and (= size 8) (zerop (logand offset #x7)))
       (if signed
 	  (signed-sap-ref-8 sap (ash offset -3))
 	  (sap-ref-8 sap (ash offset -3))))
      ((> size 32)
       (error "Access of ~D bit integers is not supported:~% ~S" size form))
-     ((zerop r)
-      (let ((value (ldb (byte size 0) (sap-ref-32 sap q))))
+     ((zerop bit-offset)
+      (let ((value (ldb (byte size 0) (sap-ref-32 sap (ash offset -5)))))
 	(if (and signed (logbitp value (1- size)))
 	    (logior value (ash -1 size))
 	    value)))
-     ((<= (+ size r) 32)
-      (let ((value (ldb (byte size r) (sap-ref-32 sap q))))
+     ((<= (+ size bit-offset) 32)
+      (let ((value (ldb (byte size bit-offset)
+			(sap-ref-32 sap (ash offset -5)))))
 	(if (and signed (logbitp value (1- size)))
 	    (logior value (ash -1 size))
 	    value)))
@@ -574,7 +565,7 @@
 			    (ecase vm:target-byte-order
 			      (:little-endian '(1+ offset))
 			      (:bit-endian 'offset))))
-	(let* ((high-bits (- 32 r))
+	(let* ((high-bits (- 32 bit-offset))
 	       (low-bits (- size high-bits))
 	       (value (logior (ash (ldb (byte high-bits 0)
 					(sap-ref-32 sap (high-byte)))
@@ -583,7 +574,7 @@
 				   (- (- 32 low-bits))))))
 	  (if (and signed (logbitp value (1- size)))
 	      (logior value (ash -1 size))
-	      value)))))))
+	      value))))))
 
 
 #+new-compiler
@@ -592,6 +583,10 @@
 ;;;    Like Naturalize-Integer, but writes an integer.
 ;;;
 (defun deport-integer (signed sap offset size value form)
+  (declare (type boolean signed)
+	   (type system-area-pointer sap)
+	   (type index offset size)
+	   (type integer value))
   (declare (ignore signed))
   (multiple-value-bind (q r) (truncate offset 32)
     (declare (fixnum r))
@@ -636,11 +631,16 @@
 ;;;
 #+new-compiler
 (defun naturalize-boolean (sap offset size form)
+  (declare (type system-area-pointer sap)
+	   (type index offset size))
   (declare (notinline naturalize-integer))
   (not (zerop (naturalize-integer nil sap offset size form))))
 ;;;
 #+new-compiler
 (defun deport-boolean (sap offset size value form)
+  (declare (type system-area-pointer sap)
+	   (type index offset size)
+	   (type boolean value))
   (declare (notinline deport-integer))
   (deport-integer nil sap offset size (if value 1 0) form)
   nil)
