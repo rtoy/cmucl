@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.11 1993/08/06 13:04:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.12 1993/08/21 00:21:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2163,7 +2163,11 @@
 (defun extract-function-type (fun)
   (if (eval:interpreted-function-p fun)
       (eval:interpreted-function-type fun)
-      (specifier-type (%function-type (%closure-function fun)))))
+      (typecase fun
+	(byte-function (byte-function-type fun))
+	(byte-closure (byte-function-type (byte-closure-function fun)))
+	(t
+	 (specifier-type (%function-type (%closure-function fun)))))))
 
 
 ;;; Ctype-Of  --  Interface
