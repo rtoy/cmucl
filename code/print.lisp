@@ -1245,7 +1245,7 @@
 (defun finish-random (random-object stream)
   (write-string " {" stream)
   (let ((*print-base* 16))
-    (output-integer (%primitive make-fixnum random-object)) stream)
+    (output-integer (%primitive make-fixnum random-object) stream))
   (write-string "}>" stream))
 
 ;;; Functions Objects and other implmentation specific objects 
