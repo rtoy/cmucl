@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.11 2002/10/24 20:39:00 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.12 2003/08/15 18:35:36 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -73,10 +73,15 @@
 #define CONTROL_STACK_SIZE  	(0x07ff8000) /* 128 MB - 32 KB, 128 MB max */
 
 #define DYNAMIC_0_SPACE_START	(0x40000000)
+/* This isn't used with GENCGC */
 #define DYNAMIC_1_SPACE_START	(0x80000000)
 
 /* The default dynamic space to allocate */
 #define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x0fff8000) /* 256 MB - 32 KB */
 
 /* The maximum dynamic space that we can allocate */
+#ifdef GENCGC
 #define DYNAMIC_SPACE_SIZE      (0x3ff80000)    /* 1GB - 32 KB max */
+#else
+#define DYNAMIC_SPACE_SIZE      (0x3ff80000)    /* 1GB - 32 KB max */
+#endif
