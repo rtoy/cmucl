@@ -8,15 +8,6 @@ The results of (machine-type) are not machine-type specific.
 
 
 
-;;;; Debugger
-
-The debugger ``h'' command requires two returns before it will display any
-output.
-
-The debugger ``f'' command does not force-output the ``frame:'' prompt.
-
-
-
 ;;;; Garbage Collector
 
 GC doesn't fix the LIP correctly if it is a raw function address and nobody
