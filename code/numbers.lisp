@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.41 2002/03/14 21:29:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.42 2002/06/19 15:08:55 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -244,12 +244,17 @@
 (declaim (inline build-ratio))
 (defun build-ratio (num den)
   (multiple-value-bind (num den)
-		       (if (minusp den)
-			   (values (- num) (- den))
-			   (values num den))
-    (if (eql den 1)
-	num
-	(%make-ratio num den))))
+      (if (minusp den)
+	  (values (- num) (- den))
+	  (values num den))
+    (cond ((eql den 1)
+	   num)
+	  ((eql den 0)
+	   (error 'division-by-zero
+		  :operands (list num den)
+		  :operation 'build-ratio))
+	  (t
+	   (%make-ratio num den)))))
 
 
 ;;; MAYBE-TRUNCATE  --  Internal
