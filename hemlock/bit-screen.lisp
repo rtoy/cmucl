@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.8 1991/07/26 21:44:08 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.9 1991/08/12 07:17:35 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -861,7 +861,7 @@
       (let* ((cw (xlib:drawable-width cwin))
 	     (ch (xlib:drawable-height cwin))
 	     (cy (xlib:drawable-y cwin))
-	     (new-ch (truncate (* ch proportion)))
+	     (new-ch (truncate (* ch (- 1 proportion))))
 	     (font-height (font-family-height font-family))
 	     (font-width (font-family-width font-family))
 	     (cwin-min (minimum-window-height
