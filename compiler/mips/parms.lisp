@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.45 1990/05/06 05:25:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.46 1990/05/09 06:40:23 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -56,6 +56,12 @@
   "The byte order of the target machine.  Should either be :big-endian
   which has the MSB first (RT) or :little-endian which has the MSB last
   (VAX).")
+
+(defparameter target-most-positive-fixnum (1- (ash 1 29))
+  "most-positive-fixnum in the target architecture.")
+
+(defparameter target-most-negative-fixnum (ash -1 29)
+  "most-negative-fixnum in the target architecture.")
 
 ;;; ### This should be somewhere else.
 (defconstant native-byte-order :big-endian
