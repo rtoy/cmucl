@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.1 1990/11/30 17:03:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.2 1990/12/01 22:33:57 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the SPARC.
 ;;;
@@ -141,7 +141,8 @@
   (base-character-stack non-descriptor-stack) ; non-descriptor characters.
   (sap-stack non-descriptor-stack) ; System area pointers.
   (single-stack non-descriptor-stack) ; single-floats
-  (double-stack non-descriptor-stack :element-size 2) ; double floats.
+  (double-stack non-descriptor-stack
+		:element-size 2 :alignment 2) ; double floats.
 
 
   ;; **** Things that can go in the integer registers.
@@ -212,7 +213,7 @@
   (double-reg float-registers
    :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
    ;; ### Note: load-tns don't work with an element-size other than 1.
-   ;; :element-size 2
+   ;; :element-size 2 :alignment 2
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
