@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.8 2003/05/04 13:11:22 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.9 2003/05/12 16:30:42 emarsden Exp $")
 
 (in-package "PCL")
 
@@ -175,7 +175,8 @@
 	       (let ((ps #(.p0. .p1. .p2. .p3. .p4. .p5.)))
 		 (if (array-in-bounds-p ps i)
 		     (aref ps i)
-		     (intern (format nil ".P~D." i) *the-pcl-package*))))
+                     (ext:without-package-locks
+                      (intern (format nil ".P~D." i) *the-pcl-package*)))))
 	     ;;
 	     ;; Check if CLASS-NAME is a constant symbol.  Give up if
 	     ;; not.
@@ -220,10 +221,11 @@
 	  ;; Return code constructing a ctor at load time, which, when
 	  ;; called, will set its funcallable instance function to an
 	  ;; optimized constructor function.
-	  `(let ((.x. (load-time-value
-		       (ensure-ctor ',function-name ',class-name ',initargs))))
-	     (declare (ignore .x.))
-	     (funcall (function ,function-name) ,@value-forms)))))))
+	  `(ext:without-package-locks
+            (let ((.x. (load-time-value
+                        (ensure-ctor ',function-name ',class-name ',initargs))))
+              (declare (ignore .x.))
+              (funcall (function ,function-name) ,@value-forms))))))))
 
 
 ;;; **************************************************
@@ -493,7 +495,8 @@
 	       (let ((ps #(.d0. .d1. .d2. .d3. .d4. .d5.)))
 		 (if (array-in-bounds-p ps i)
 		     (aref ps i)
-		     (intern (format nil ".D~D." i) *the-pcl-package*)))))
+                     (ext:without-package-locks
+                      (intern (format nil ".D~D." i) *the-pcl-package*))))))
       ;;
       ;; Loop over supplied initargs and values and record which
       ;; instance and class slots they initialize.

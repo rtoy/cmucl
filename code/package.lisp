@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.65 2003/05/09 14:15:55 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.66 2003/05/12 16:30:41 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,8 @@
 
 (in-package "EXTENSIONS")
 (export '(*keyword-package* *lisp-package* *default-package-use-list*
-	  map-apropos package-children package-parent))
+	  map-apropos package-children package-parent
+          package-lock package-definition-lock without-package-locks))
 
 (in-package "KERNEL")
 (export '(%in-package old-in-package %defpackage))
@@ -75,6 +76,15 @@
   ;; List of shadowing symbols.
   (%shadowing-symbols () :type list)
   ;;
+  ;; Locks for this package. The PACKAGE-LOCK is a lock on the
+  ;; structure of the package, and controls modifications to its list
+  ;; of symbols and its export list. The PACKAGE-DEFINITION-LOCK
+  ;; protects all symbols in the package from being redefined. These
+  ;; are initially disabled, and are enabled by the function
+  ;; PACKAGE-LOCKS-INIT during after-save-initializations. 
+  (lock nil :type boolean)
+  (definition-lock nil :type boolean)
+
   ;; Documentation string for this package
   (doc-string nil :type (or simple-string null)))
 
@@ -82,11 +92,15 @@
 (defun %print-package (s stream d)
   (declare (ignore d) (stream stream))
   (if (package-%name s)
-      (multiple-value-bind (iu it) (internal-symbol-count s)
-	(multiple-value-bind (eu et) (external-symbol-count s)
-	  (print-unreadable-object (s stream)
-	    (format stream "The ~A package, ~D/~D internal, ~D/~D external"
-		    (package-%name s) iu it eu et))))
+      (cond (*print-escape*
+             (multiple-value-bind (iu it) (internal-symbol-count s)
+               (multiple-value-bind (eu et) (external-symbol-count s)
+                 (print-unreadable-object (s stream)
+                   (format stream "The ~A package, ~D/~D internal, ~D/~D external"
+                           (package-%name s) iu it eu et)))))
+            (t
+             (print-unreadable-object (s stream)
+               (format stream "The ~A package" (package-%name s)))))
       (print-unreadable-object (s stream :identity t)
 	(format stream "deleted package"))))
 
@@ -114,6 +128,74 @@
 ;;;
 (defvar *lisp-package*)
 (defvar *keyword-package*)
+
+
+(defvar *enable-package-locked-errors* nil)
+
+
+(define-condition package-locked-error (simple-package-error)
+  ()
+  (:report (lambda (condition stream)
+             (format stream "~&~@<Attempt to modify the locked package ~A, by ~3i~:_~?~:>"
+                     (package-name (package-error-package condition))
+                     (simple-condition-format-control condition)
+                     (simple-condition-format-arguments condition)))))
+
+(defun package-locks-init ()
+  (let ((package-names '("COMMON-LISP" "PCL" "CLOS-MOP" "EVAL"
+                         "NEW-ASSEM" "DISASSEM" "LOOP" "ANSI-LOOP" "INSPECT"
+                         "C" "PROFILE" "WIRE" "BIGNUM" "VM"
+                         "FORMAT" "DFIXNUM" "PRETTY-PRINT" "C-CALL" "ALIEN"
+                         "ALIEN-INTERNALS" "UNIX"
+                         "CONDITIONS" "DEBUG" "DEBUG-INTERNALS" "SYSTEM"
+                         "KERNEL" "EXTENSIONS" #+mp "MULTIPROCESSING"
+                         "WALKER" "XREF")))
+    (dolist (p package-names)
+      (let ((p (find-package p)))
+        (when p
+          (setf (package-definition-lock p) t)
+          (setf (package-lock p) t))))
+    (setf *enable-package-locked-errors* t)
+    (push 'redefining-function ext:*setf-fdefinition-hook*))
+  (values))
+
+(pushnew 'package-locks-init ext:*after-save-initializations*)
+
+
+(defmacro without-package-locks (&body body)
+  `(let ((*enable-package-locked-errors* nil))
+      ,@body))
+
+
+;; trap attempts to redefine a function in a locked package, and
+;; signal a continuable error.
+(defun redefining-function (function replacement)
+  (declare (ignore replacement))
+  (when *enable-package-locked-errors*
+    (multiple-value-bind (valid block-name)
+        (ext:valid-function-name-p function)
+      (declare (ignore valid))
+      (let ((package (symbol-package block-name)))
+        (when package
+          (when (package-definition-lock package)
+            (when (and (consp function)
+                       (member (first function)
+                               '(pcl::slot-accessor
+                                 pcl::method
+                                 pcl::fast-method
+                                 pcl::effective-method
+                                 pcl::ctor)))
+              (return-from redefining-function nil))
+            (restart-case
+                (error 'package-locked-error
+                       :package package
+                       :format-control "redefining function ~A"
+                       :format-arguments (list function))
+              (continue ()
+                :report "Ignore the lock and continue")
+              (unlock-package ()
+                :report "Disable package's definition-lock then continue"
+                (setf (ext:package-definition-lock package) nil)))))))))
 
 
 ;;; This magical variable is T during initialization so Use-Package's of packages
@@ -173,7 +255,7 @@
 ;;;
 #+relative-package-names
 (defun package-parent (package-specifier)
-  "Given package-specifier, a package, symbol or string, return the
+  "Given PACKAGE-SPECIFIER, a package, symbol or string, return the
   parent package.  If there is not a parent, signal an error."
   (declare (optimize (speed 3)))
   (flet ((find-last-dot (name)
@@ -205,7 +287,7 @@
 ;;;
 #+relative-package-names
 (defun package-children (package-specifier &key (recurse t))
-  "Given package-specifier, a package, symbol or string, return all the
+  "Given PACKAGE-SPECIFIER, a package, symbol or string, return all the
   packages which are in the hierarchy 'under' the given package.  If
   :recurse is nil, then only return the immediate children of the package."
   (declare (optimize (speed 3)))
@@ -893,7 +975,7 @@
 		    ',imports ',interns ',exports ',doc))))
 
 (defun check-disjoint (&rest args)
-  ;; Check wether all given arguments specify disjoint sets of symbols.
+  ;; Check whether all given arguments specify disjoint sets of symbols.
   ;; Each argument is of the form (:key . set).
   (loop for (current-arg . rest-args) on args
         do
@@ -950,7 +1032,7 @@
 	(let ((laterize (set-difference old-use-list new-use-list)))
 	  (when laterize
 	    (unuse-package laterize package)
-	    (warn "~A used to use the following packages:~%  ~S"
+	    (warn "~A previously used the following packages:~%  ~S"
 		  name
 		  laterize)))))
     ;; Import and Intern.
@@ -1055,9 +1137,9 @@
 ;;;    Like Make-Package, only different.  Should go away someday.
 ;;;
 (defun old-in-package (name &rest keys &key nicknames use)
-  "Sets *package* to package with given name, creating the package if
+  "Sets *PACKAGE* to package with given NAME, creating the package if
    it does not exist.  If the package already exists then it is modified
-   to agree with the :Use and :Nicknames arguments.  Any new nicknames
+   to agree with the :USE and :NICKNAMES arguments.  Any new nicknames
    are added without removing any old ones not specified.  If any package
    in the :Use list is not currently used, then it is added to the use
    list."
@@ -1120,7 +1202,7 @@
 ;;; Delete-Package -- Public
 ;;;
 (defun delete-package (package-or-name)
-  "Delete the package-or-name from the package system data structures."
+  "Delete the PACKAGE-OR-NAME from the package system data structures."
   (let ((package (if (packagep package-or-name)
 		     package-or-name
 		     (find-package package-or-name))))
@@ -1174,17 +1256,17 @@
 ;;;
 (defun intern (name &optional package)
   "Returns a symbol having the specified name, creating it if necessary."
-  (let ((name (if (simple-string-p name) name (coerce name 'simple-string))))
-    (declare (simple-string name))
-    (intern* name (length name)
-	     (if package (package-or-lose package) *package*))))
+  (let ((name (if (simple-string-p name) name (coerce name 'simple-string)))
+        (package (if package (package-or-lose package) *package*)))
+    (declare (type simple-string name))
+    (intern* name (length name) package)))
 
 ;;; Find-Symbol  --  Public
 ;;;
 ;;;    Ditto.
 ;;;
 (defun find-symbol (name &optional package)
-  "Returns the symbol named String in Package.  If such a symbol is found
+  "Returns the symbol NAME in PACKAGE.  If such a symbol is found
   then the second value is :internal, :external or :inherited to indicate
   how the symbol is accessible.  If no symbol is found then both values
   are NIL."
@@ -1203,14 +1285,28 @@
   (multiple-value-bind (symbol where) (find-symbol* name length package)
     (if where
 	(values symbol where)
-	(let ((symbol (make-symbol (subseq name 0 length))))
-	  (%set-symbol-package symbol package)
-	  (cond ((eq package *keyword-package*)
-		 (add-symbol (package-external-symbols package) symbol)
-		 (%set-symbol-value symbol symbol))
-		(t
-		 (add-symbol (package-internal-symbols package) symbol)))
-	  (values symbol nil)))))
+        (progn
+          #+nil
+          (when *enable-package-locked-errors*
+            (when (ext:package-lock package)
+              (restart-case
+                  (error 'package-locked-error
+                         :package package
+                         :format-control "interning symbol ~A"
+                         :format-arguments (list (subseq name 0 length)))
+                (continue ()
+                  :report "Ignore the lock and continue")
+                (unlock-package ()
+                  :report "Unlock package then continue"
+                  (setf (ext:package-lock package) nil)))))
+          (let ((symbol (make-symbol (subseq name 0 length))))
+            (%set-symbol-package symbol package)
+            (cond ((eq package *keyword-package*)
+                   (add-symbol (package-external-symbols package) symbol)
+                   (%set-symbol-value symbol symbol))
+                  (t
+                   (add-symbol (package-internal-symbols package) symbol)))
+            (values symbol nil))))))
 
 ;;; find-symbol*  --  Internal
 ;;;
@@ -1264,13 +1360,25 @@
 ;;; result, otherwise just nuke the symbol.
 ;;;
 (defun unintern (symbol &optional (package *package*))
-  "Makes Symbol no longer present in Package.  If Symbol was present
-  then T is returned, otherwise NIL.  If Package is Symbol's home
+  "Makes SYMBOL no longer present in PACKAGE.  If SYMBOL was present
+  then T is returned, otherwise NIL.  If PACKAGE is SYMBOL's home
   package, then it is made uninterned."
   (let* ((package (package-or-lose package))
 	 (name (symbol-name symbol))
 	 (shadowing-symbols (package-%shadowing-symbols package)))
     (declare (list shadowing-symbols) (simple-string name))
+    (when *enable-package-locked-errors*
+      (when (ext:package-lock package)
+        (restart-case
+            (error 'package-locked-error
+                   :package package
+                   :format-control "uninterning symbol ~A"
+                   :format-arguments (list name))
+          (continue ()
+            :report "Ignore the lock and continue")
+          (unlock-package ()
+            :report "Disable package's lock then continue"
+            (setf (ext:package-lock package) nil)))))
     ;;
     ;; If a name conflict is revealed, give use a chance to shadowing-import
     ;; one of the accessible symbols.
@@ -1350,7 +1458,7 @@
 ;;;    Do more stuff.
 ;;;
 (defun export (symbols &optional (package *package*))
-  "Exports Symbols from Package, checking that no name conflicts result."
+  "Exports SYMBOLS from PACKAGE, checking that no name conflicts result."
   (let ((package (package-or-lose package))
 	(syms ()))
     ;;
@@ -1427,9 +1535,21 @@
 ;;; internal.
 ;;;
 (defun unexport (symbols &optional (package *package*))
-  "Makes Symbols no longer exported from Package."
+  "Makes SYMBOLS no longer exported from PACKAGE."
   (let ((package (package-or-lose package))
 	(syms ()))
+    (when *enable-package-locked-errors*
+      (when (ext:package-lock package)
+        (restart-case
+            (error 'package-locked-error
+                   :package package
+                   :format-control "unexporting symbols ~A"
+                   :format-arguments (list symbols))
+          (continue ()
+            :report "Ignore the lock and continue")
+          (unlock-package ()
+            :report "Disable package's lock then continue"
+            (setf (ext:package-lock package) nil)))))
     (dolist (sym (symbol-listify symbols))
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)
 	(cond ((or (not w) (not (eq s sym)))
@@ -1452,7 +1572,7 @@
 ;;; shadowing-import if there is.
 ;;;
 (defun import (symbols &optional (package *package*))
-  "Make Symbols accessible as internal symbols in Package.  If a symbol
+  "Make SYMBOLS accessible as internal symbols in PACKAGE.  If a symbol
   is already accessible then it has no effect.  If a name conflict
   would result from the importation, then a correctable error is signalled."
   (let ((package (package-or-lose package))
@@ -1495,7 +1615,7 @@
 ;;; stick the symbol in.
 ;;;
 (defun shadowing-import (symbols &optional (package *package*))
-  "Import Symbols into package, disregarding any name conflict.  If
+  "Import SYMBOLS into PACKAGE, disregarding any name conflict.  If
   a symbol of the same name is present, then it is uninterned.
   The symbols are added to the Package-Shadowing-Symbols."
   (let* ((package (package-or-lose package))
@@ -1518,9 +1638,9 @@
 ;;;
 ;;;
 (defun shadow (symbols &optional (package *package*))
-  "Make an internal symbol in Package with the same name as each of the
-  specified symbols, adding the new symbols to the Package-Shadowing-Symbols.
-  If a symbol with the given name is already present in Package, then
+  "Make an internal symbol in PACKAGE with the same name as each of the
+  specified SYMBOLS, adding the new symbols to the Package-Shadowing-Symbols.
+  If a symbol with the given name is already present in PACKAGE, then
   the existing symbol is placed in the shadowing symbols list if it is
   not already present."
   (let* ((package (package-or-lose package))
@@ -1543,9 +1663,9 @@
 ;;; checking.
 ;;;
 (defun use-package (packages-to-use &optional (package *package*))
-  "Add all the Package-To-Use to the use list for Package so that
+  "Add all the PACKAGES-TO-USE to the use list for PACKAGE so that
   the external symbols of the used packages are accessible as internal
-  symbols in Package."
+  symbols in PACKAGE."
   (let ((packages (package-listify packages-to-use))
 	(package (package-or-lose package)))
     ;;
@@ -1607,7 +1727,7 @@
 ;;;
 ;;;
 (defun unuse-package (packages-to-unuse &optional (package *package*))
-  "Remove Packages-To-Unuse from the use list for Package."
+  "Remove PACKAGES-TO-UNUSE from the use list for PACKAGE."
   (let ((package (package-or-lose package)))
     (dolist (p (package-listify packages-to-unuse))
       (setf (package-%use-list package)
@@ -1746,9 +1866,9 @@
 ;;; APROPOS -- public.
 ;;; 
 (defun apropos (string &optional package external-only)
-  "Briefly describe all symbols which contain the specified String.
-  If Package is supplied then only describe symbols present in
-  that package.  If External-Only is true then only describe
+  "Briefly describe all symbols which contain the specified STRING.
+  If PACKAGE is supplied then only describe symbols present in
+  that package.  If EXTERNAL-ONLY is non-NIL then only describe
   external symbols in the specified package."
   (map-apropos #'briefly-describe-symbol string package external-only)
   (values))
@@ -1756,7 +1876,7 @@
 ;;; APROPOS-LIST -- public.
 ;;; 
 (defun apropos-list (string &optional package external-only)
-  "Identical to Apropos, except that it returns a list of the symbols
+  "Identical to APROPOS, except that it returns a list of the symbols
   found instead of describing them."
   (collect ((result))
     (map-apropos #'(lambda (symbol)

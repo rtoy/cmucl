@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.27 2003/05/04 13:11:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.28 2003/05/12 16:30:42 emarsden Exp $")
 ;;;
 
 (in-package :pcl)
@@ -73,7 +73,8 @@
 ;;; 
 (defmacro defclass (name direct-superclasses direct-slots
 		    &rest options &environment env)
-  (expand-defclass name direct-superclasses direct-slots options env))
+  (ext:without-package-locks
+   (expand-defclass name direct-superclasses direct-slots options env)))
 
 ;;; The following functions were moved here from slots-boot.lisp
 ;;; because expand-defclass now depends on them to generate ftype

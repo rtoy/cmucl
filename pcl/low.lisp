@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.26 2003/05/07 17:15:48 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.27 2003/05/12 16:30:42 emarsden Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -106,23 +106,24 @@
   (declare (special *boot-state* *the-class-standard-generic-function*))
   (when (valid-function-name-p function)
     (setq function (fdefinition function)))
-  (when (funcallable-instance-p function)
-    (if (if (eq *boot-state* 'complete)
-	    (typep function 'generic-function)
-	    (eq (class-of function) *the-class-standard-generic-function*))
-	(setf (kernel:%funcallable-instance-info function 1) new-name)
-	(typecase function
-	  (kernel:byte-closure
-	   (set-function-name (kernel:byte-closure-function function)
-			      new-name))
-	  (kernel:byte-function
-	   (setf (kernel:byte-function-name function) new-name))
-	  (eval:interpreted-function
-	   (setf (eval:interpreted-function-name function) new-name)))))
+  (ext:without-package-locks
+   (when (funcallable-instance-p function)
+     (if (if (eq *boot-state* 'complete)
+             (typep function 'generic-function)
+             (eq (class-of function) *the-class-standard-generic-function*))
+         (setf (kernel:%funcallable-instance-info function 1) new-name)
+         (typecase function
+           (kernel:byte-closure
+            (set-function-name (kernel:byte-closure-function function)
+                               new-name))
+           (kernel:byte-function
+            (setf (kernel:byte-function-name function) new-name))
+           (eval:interpreted-function
+            (setf (eval:interpreted-function-name function) new-name))))))
   (when (memq (car-safe new-name) '(method fast-method slot-accessor))
     (setf (fdefinition new-name) function))
   function)
-	
+
 (defun symbolicate* (pkg &rest things)
   (let ((*package* pkg))
     (apply #'symbolicate things)))

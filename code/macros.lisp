@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.92 2003/04/19 20:52:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.93 2003/05/12 16:30:41 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,6 +75,23 @@
 ;;; definition is done by %defmacro which we expand into.
 ;;;
 (defmacro defmacro (name lambda-list &body body)
+  (when cl::*enable-package-locked-errors*
+    (multiple-value-bind (valid block-name)
+        (ext:valid-function-name-p name)
+      (declare (ignore valid))
+      (let ((package (symbol-package block-name)))
+        (when package
+          (when (ext:package-definition-lock package)
+            (restart-case
+                (error 'cl::package-locked-error
+                       :package package
+                       :format-control "defining macro ~A"
+                       :format-arguments (list name))
+              (continue ()
+                :report "Ignore the lock and continue")
+              (unlock-package ()
+                :report "Disable the package's definition-lock then continue"
+                (setf (ext:package-definition-lock package) nil))))))))
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
     (multiple-value-bind
@@ -105,8 +122,7 @@
 ;;;
 (defun c::%defmacro (name definition lambda-list doc)
   (assert (eval:interpreted-function-p definition))
-  (setf (eval:interpreted-function-name definition)
-	(format nil "DEFMACRO ~S" name))
+  (setf (eval:interpreted-function-name definition) name)
   (setf (eval:interpreted-function-arglist definition) lambda-list)
   (c::%%defmacro name definition doc))
 ;;;
@@ -188,7 +204,19 @@
   "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
     (simple-program-error "~S -- Type name not a symbol." name))
-  
+  (and cl::*enable-package-locked-errors*
+       (symbol-package name)
+       (ext:package-definition-lock (symbol-package name))
+       (restart-case
+           (error 'cl::package-locked-error
+                  :package (symbol-package name)
+                  :format-control "defining type ~A"
+                  :format-arguments (list name))
+         (continue ()
+           :report "Ignore the lock and continue")
+         (unlock-package ()
+           :report "Disable package's definition-lock then continue"
+           (setf (ext:package-definition-lock (symbol-package name)) nil))))
   (let ((whole (gensym "WHOLE-")))
     (multiple-value-bind (body local-decs doc)
 			 (parse-defmacro arglist whole body name 'deftype

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.206 2003/04/19 20:52:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.207 2003/05/12 16:30:41 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,9 @@
 (if (find-package "PCL")
     (rename-package "PCL" "PCL" 'nil)
     (make-package "PCL" :nicknames 'nil :use nil))
-
+(if (find-package "CLOS-MOP")
+    (rename-package "CLOS-MOP" "CLOS-MOP" 'nil)
+    (make-package "CLOS-MOP" :nicknames 'nil :use nil))
 (if (find-package "C-CALL")
     (rename-package "C-CALL" "C-CALL" 'nil)
     (make-package "C-CALL" :nicknames 'nil :use nil))
@@ -187,7 +189,9 @@
             (:export "CADDR-T" "D-INO" "D-NAME" "D-NAMLEN" "D-OFF" "D-RECLEN"
              "DADDR-T" "DEV-T" "DIRECT" "EXECGRP" "EXECOTH" "EXECOWN" "F-DUPFD"
              "F-GETFD" "F-GETFL" "F-GETOWN" "F-SETFD" "F-SETFL" "F-SETOWN"
+             "FSFILCNT-T" "FSBLKCNT-T" "BLKCNT-T"
              "FAPPEND" "FASYNC" "FCREAT" "FEXCL" "FIONREAD" "FNDELAY" "FTRUNC"
+             "F_TEST" "F_TLOCK" "UNIX-LOCKF" "F_LOCK" "F_ULOCK"
              "F_OK" "GET-UNIX-ERROR-MSG" "GID-T" "INO-T" "IT-INTERVAL"
              "IT-VALUE" "ITIMERVAL" "UNIX-SETITIMER" "UNIX-GETITIMER"
 	     "BLKCNT-T" "FSBLKCNT-T" "FSFILCNT-T"
@@ -990,6 +994,7 @@
              "OBJECT-SET-EVENT-HANDLER" "OLD-TRACE" "OLD-UNTRACE" "ONCE-ONLY"
              "OPEN-CLX-DISPLAY" "OPTIMIZE-INTERFACE"
 	     "PACKAGE-CHILDREN" "PACKAGE-PARENT" "PARSE-TIME"
+             "PACKAGE-LOCK" "PACKAGE-DEFINITION-LOCK" "WITHOUT-PACKAGE-LOCKS"
              "PRINT-DIRECTORY" "PRINT-HERALD" "PRINT-PRETTY-KEY"
              "PRINT-PRETTY-KEY-EVENT" "PROCESS-ALIVE-P" "PROCESS-CLOSE"
              "PROCESS-CORE-DUMPED" "PROCESS-ERROR" "PROCESS-EXIT-CODE"

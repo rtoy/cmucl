@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.134 2003/04/11 14:24:22 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.135 2003/05/12 16:30:42 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1189,7 +1189,8 @@
    (let* ((*lexical-environment* (make-null-environment))
 	  (lambda (ir1-top-level form *current-path* for-value)))
      (setf (leaf-name lambda) name)
-     (compile-top-level (list lambda) t)
+     (ext:without-package-locks
+      (compile-top-level (list lambda) t))
      lambda)))
 
 ;;; COMPILE-LOAD-TIME-VALUE-LAMBDA  --  internal.
@@ -1269,13 +1270,15 @@
 	(creation-form init-form)
 	(handler-case
 	    (if (fboundp 'lisp::make-load-form)
-		(locally
-		 (declare (optimize (inhibit-warnings 3)))
-		 (lisp::make-load-form constant (make-null-environment)))
-		(make-structure-load-form constant))
+                (locally
+                    (declare (optimize (inhibit-warnings 3)))
+                  (ext:without-package-locks
+                   (lisp::make-load-form constant (make-null-environment))))
+                (ext:without-package-locks
+                 (make-structure-load-form constant)))
 	  (error (condition)
-		 (compiler-error "(while making load form for ~S)~%~A"
-				 constant condition)))
+            (compiler-error "(while making load form for ~S)~%~A"
+                            constant condition)))
       (case creation-form
 	(:just-dump-it-normally
 	 (fasl-validate-structure constant *compile-object*)
@@ -1806,7 +1809,8 @@
 		;; Hack around filesystem race condition...
 		(or (probe-file output-file-pathname) output-file-pathname)
 		nil)
-	    (not (null error-severity))
+            (if (member error-severity '(:warning :error)) t nil)
+            ;; FIXME in the following we should not return t for a STYLE-WARNING
 	    (if (member error-severity '(:warning :error)) t nil))))
 
 ;;;; COMPILE and UNCOMPILE:

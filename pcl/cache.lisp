@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.29 2003/05/04 13:11:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.30 2003/05/12 16:30:42 emarsden Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -725,7 +725,8 @@
 
 (defun dfun-arg-symbol (arg-number)
   (or (nth arg-number (the list *dfun-arg-symbols*))
-      (intern (format nil ".ARG~A." arg-number) *the-pcl-package*)))
+      (ext:without-package-locks
+       (intern (format nil ".ARG~A." arg-number) *the-pcl-package*))))
 
 (defun dfun-arg-symbol-list (metatypes)
   (loop for i from 0 and s in metatypes
@@ -735,7 +736,8 @@
 
 (defun slot-vector-symbol (arg-number)
   (or (nth arg-number (the list *slot-vector-symbols*))
-      (intern (format nil ".SLOTS~A." arg-number) *the-pcl-package*)))
+      (ext:without-package-locks
+       (intern (format nil ".SLOTS~A." arg-number) *the-pcl-package*))))
 
 (defun make-dfun-lambda-list (metatypes applyp)
   (if applyp

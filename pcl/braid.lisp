@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.37 2003/05/11 11:30:35 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.38 2003/05/12 16:30:42 emarsden Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -518,14 +518,15 @@
 	   (let* ((class (kernel::find-class name))
 		  (kernel-supers (kernel:%class-direct-superclasses class))
 		  (supers (mapcar #'kernel:%class-name kernel-supers)))
-	     (if slotsp
-		 (ensure-class-using-class
-		  existing-class name :metaclass metaclass :name name
-		  :direct-superclasses supers
-		  :direct-slots slots)
-		 (ensure-class-using-class
-		  existing-class name :metaclass metaclass :name name
-		  :direct-superclasses supers))))
+             (ext:without-package-locks
+              (if slotsp
+                  (ensure-class-using-class
+                   existing-class name :metaclass metaclass :name name
+                   :direct-superclasses supers
+                   :direct-slots slots)
+                  (ensure-class-using-class
+                   existing-class name :metaclass metaclass :name name
+                   :direct-superclasses supers)))))
 	 (slot-initargs-from-structure-slotd (slotd)
 	   (let ((accessor (structure-slotd-accessor-symbol slotd)))
 	     `(:name ,(structure-slotd-name slotd)
