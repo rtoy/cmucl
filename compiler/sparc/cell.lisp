@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.2 1990/12/08 22:53:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.3 1991/01/09 02:10:50 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the SPARC.
@@ -295,37 +295,48 @@
   (:variant vm:closure-info-offset vm:function-pointer-type)
   (:translate %closure-index-ref))
 
+(define-vop (set-funcallable-instance-info word-index-set)
+  (:variant funcallable-instance-info-offset function-pointer-type)
+  (:translate %set-funcallable-instance-info))
+
 
 ;;;; Structure hackery:
 
-(define-vop (structure-length cell-ref)
-  (:variant vm:vector-length-slot vm:other-pointer-type)
+(define-vop (structure-length)
   (:policy :fast-safe)
-  (:translate structure-length))
+  (:translate structure-length)
+  (:args (struct :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 4
+    (loadw temp struct 0 structure-pointer-type)
+    (inst srl res temp vm:type-bits)))
 
 (define-vop (structure-ref slot-ref)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:variant structure-slots-offset structure-pointer-type)
   (:policy :fast-safe)
   (:translate structure-ref)
-  (:arg-types structure (:constant (integer 0 #.(1- (ash 1 29))))))
+  (:arg-types structure (:constant index)))
 
 (define-vop (structure-set slot-set)
   (:policy :fast-safe)
   (:translate structure-set)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
-  (:arg-types structure (:constant (integer 0 #.(1- (ash 1 29)))) *))
+  (:variant structure-slots-offset structure-pointer-type)
+  (:arg-types structure (:constant index) *))
 
 (define-vop (structure-index-ref word-index-ref)
   (:policy :fast-safe) 
   (:translate structure-ref)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:variant structure-slots-offset structure-pointer-type)
   (:arg-types structure positive-fixnum))
 
 (define-vop (structure-index-set word-index-set)
   (:policy :fast-safe) 
   (:translate structure-set)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:variant structure-slots-offset structure-pointer-type)
   (:arg-types structure positive-fixnum *))
+
 
 
 
