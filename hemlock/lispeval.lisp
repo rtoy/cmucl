@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.7 1991/10/18 17:20:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.8 1991/11/12 01:14:36 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -686,7 +686,10 @@
 			 :help "The name of the file to load"))))
     (setv load-pathname-defaults name)
     (string-eval (format nil "(load ~S)"
-			 (namestring (pathname-for-remote-access name))))))
+			 (namestring
+			  (if (value remote-compile-file)
+			      (pathname-for-remote-access name)
+			      name))))))
 
 (defcommand "Compile File" (p)
   "Prompts for file to compile.  Does not compare source and binary write
