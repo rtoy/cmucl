@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.7 1991/06/26 17:30:56 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.8 1991/07/07 17:31:24 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -985,10 +985,13 @@
    beginning of the line to be indented."
   (with-mark ((m mark)
 	      (temp mark))
+    ;; See if we are in a quoted context.
     (unless (valid-spot m nil)
       (return-from lisp-indentation (lisp-generic-indentation m)))
+    ;; Look for the paren that opens the containing form.
     (unless (backward-up-list m)
       (return-from lisp-indentation 0))
+    ;; Move after the paren, save the start, and find the form name.
     (mark-after m)
     (with-mark ((start m))
       (unless (and (scan-char m :lisp-syntax
@@ -1003,6 +1006,7 @@
 				      (string= fname "DEF" :end1 3)
 				      (value indent-defanything)))))
 	  (declare (simple-string fname))
+	  ;; Now that we have the form name, did it have special syntax?
 	  (cond (special-args
 		 (with-mark ((spec m))
 		   (cond ((and (form-offset spec special-args)
@@ -1012,6 +1016,12 @@
 			  (mark-column m))
 			 (t
 			  (+ (mark-column start) 3)))))
+		;; See if the user seems to have altered the editor's
+		;; indentation, and if so, try to adhere to it.  This usually
+		;; happens when you type in a quoted list constant that line
+		;; wraps.  You want all the items on successive lines to fall
+		;; under the first character after the opening paren, not as if
+		;; you are calling a function.
 		((and (form-offset temp -1)
 		      (or (blank-before-p temp) (not (same-line-p temp fstart)))
 		      (not (same-line-p temp mark)))
@@ -1019,10 +1029,54 @@
 		   (line-start temp)
 		   (find-attribute temp :space #'zerop))
 		 (mark-column temp))
+		;; Appears to be a normal form.  Is the first arg on the same
+		;; line as the form name?
 		((skip-valid-space m)
-		 (mark-column m))
+		 (or (lisp-indentation-check-for-local-def
+		      mark temp fstart start t)
+		     (mark-column m)))
+		;; Okay, fall under the first character after the opening paren.
 		(t
-		 (mark-column start))))))))
+		 (or (lisp-indentation-check-for-local-def
+		      mark temp fstart start nil)
+		     (mark-column start)))))))))
+
+;;; LISP-INDENTATION-CHECK-FOR-LOCAL-DEF -- Internal.
+;;;
+;;; This is a temporary hack to see how it performs.  When we are indenting
+;;; what appears to be a function call, let's look for FLET or MACROLET to see
+;;; if we really are indenting a local definition.  If we are, return the
+;;; indentation for a DEFUN; otherwise, nil
+;;;
+;;; Mark is the argument to LISP-INDENTATION.  Start is just inside the paren
+;;; of what looks like a function call.  If we are in an FLET, arg-list
+;;; indicates whether the local function's arg-list has been entered, that is,
+;;; whether we need to normally indent for a DEFUN body or indent specially for
+;;; the arg-list.
+;;;
+(defun lisp-indentation-check-for-local-def (mark temp1 temp2 start arg-list)
+  ;; We know this succeeds from LISP-INDENTATION.
+  (backward-up-list (move-mark temp1 mark))
+  (cond ((and (mark-before temp1)
+	      (eq (character-attribute :lisp-syntax (next-character temp1))
+		  :open-paren)
+	      (backward-up-list temp1))
+	 ;; We have FLET structure, so see if that's the name of the form.
+	 (mark-after temp1)
+	 (unless (and (scan-char temp1 :lisp-syntax
+				 (not (or :space :prefix :char-quote)))
+		      (test-char (next-character temp1) :lisp-syntax
+				 :constituent))
+	   (return-from lisp-indentation-check-for-local-def nil))
+	 (move-mark temp2 temp1)
+	 (scan-char temp2 :lisp-syntax (not :constituent))
+	 (let ((fname (nstring-upcase (region-to-string (region temp1 temp2)))))
+	   (cond ((and (string/= fname "FLET") (string/= fname "MACROLET"))
+		  nil)
+		 (arg-list
+		  (1+ (mark-column start)))
+		 (t
+		  (+ (mark-column start) 3)))))))
 
 ;;; LISP-GENERIC-INDENTATION -- Internal.
 ;;;
