@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.1 1991/07/26 01:45:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.2 1991/08/02 03:37:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,6 +24,11 @@
 
      (:temp nl0 non-descriptor-reg nl0-offset)
      (:temp nl1 non-descriptor-reg nl1-offset)
+
+     (:temp nl3 non-descriptor-reg nl3-offset)
+     (:temp nl4 non-descriptor-reg nl4-offset)
+     (:temp nl5 non-descriptor-reg nl5-offset)
+     (:temp nargs non-descriptor-reg nargs-offset)
 
      (:temp a2 any-reg a2-offset)
      (:temp a3 any-reg a3-offset)
@@ -77,6 +82,12 @@
     ;; Move offset to one of the saved registers.
     (inst move l1 offset)
 
+    ;; Move the other non-descriptor regs into saved regs.
+    (inst move l2 nl3)
+    (inst move l3 nl4)
+    (inst move nfp nl5)
+    (inst move ocfp nargs)
+
     ;; Allocate the stack frame.
     (inst subu nsp-tn nsp-tn (* 4 word-bytes))
 
@@ -93,7 +104,13 @@
     ;; Restore offset from the saved reg.
     (inst move offset l1)
 
-    ;; Trun pseudo-atomic back on.
+    ;; Restore the other non-descriptor regs.
+    (inst move nl3 l2)
+    (inst move nl4 l3)
+    (inst move nl5 nfp)
+    (inst move nargs ocfp)
+
+    ;; Turn pseudo-atomic back on.
     (start-pseudo-atomic)
 
     ;; No longer in foreign-foreign-call land.
@@ -192,6 +209,12 @@
     ;; Turn off pseudo-atomic.
     (end-pseudo-atomic nl0)
 
+    ;; Move the other non-descriptor regs into saved regs.
+    (inst move l2 nl3)
+    (inst move l3 nl4)
+    (inst move nfp nl5)
+    (inst move ocfp nargs)
+
     ;; Allocate the stack frame.
     (inst subu nsp-tn nsp-tn (* 4 word-bytes))
 
@@ -205,7 +228,13 @@
     ;; Deallocate the stack frame.
     (inst addu nsp-tn nsp-tn (* 4 word-bytes))
 
-    ;; Trun pseudo-atomic back on.
+    ;; Restore the other non-descriptor regs.
+    (inst move nl3 l2)
+    (inst move nl4 l3)
+    (inst move nl5 nfp)
+    (inst move nargs ocfp)
+
+    ;; Turn pseudo-atomic back on.
     (start-pseudo-atomic)
 
     ;; No longer in foreign-foreign-call land.
