@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.70 2004/04/06 17:30:12 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.71 2004/04/07 11:03:38 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -970,6 +970,17 @@ streams."
 	 (dolist (stream streams min)
 	   (let ((res (line-length stream)))
 	     (when res (setq min (if min (min res min) res)))))))
+      ;; CLHS: The functions file-length, file-position, file-string-length, and
+      ;; stream-external-format return the value from the last component
+      ;; stream; if there are no component streams, file-length and
+      ;; file-position return 0, file-string-length returns 1, and
+      ;; stream-external-format returns :default.
+      (:file-length
+       (if (null streams) 0
+           (file-length (last streams))))
+      (:file-position
+       (if (null streams) 0
+           (file-position (last streams))))
       (:element-type
        #+nil ; old, arguably more logical, version
        (let (res)
