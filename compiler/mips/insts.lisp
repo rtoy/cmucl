@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.2 1990/02/05 22:52:55 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.3 1990/02/07 00:13:31 ch Exp $
 ;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
@@ -335,3 +335,73 @@
   ((most-negative-twos-complement-number 18)
    (most-positive-twos-complement-number 18)
    (bgezal-inst rs label)))
+
+
+;;;; Pseduo Instructions to Support Component Dumping
+
+(defun component-header-length (&optional (component *compile-component*))
+  (let* ((2comp (component-info component))
+	 (constants (ir2-component-constants 2comp))
+	 (num-consts (length constants)))
+    (* 4 num-consts))) ; ### need constant offset here
+
+
+;;; COMPUTE-CODE-FROM-FN
+;;;
+;;; code = fn - fn-tag - header - label-offset + other-pointer-tag
+;;; 
+(def-instruction-format (compute-code-from-fn-format 4) (rt rs immed)
+  (op :unsigned 6 :instruction-constant)
+  (rs :unsigned 5 :register)
+  (rt :unsigned 5 :register)
+  (immed :signed 16
+	 :label #'(lambda (label-offset instr-offset)
+		    (declare (ignore instr-offset))
+		    (- other-pointer-type function-pointer-type label-offset
+		       (component-header-length)))))
+
+(def-instruction compute-code-from-fn-inst compute-code-from-fn-format
+  :op #b001000)
+
+(def-label-ref compute-code-from-fn (rt rs label) label
+  compute-code-from-fn-inst)
+
+
+;;; COMPUTE-CODE-FROM-LRA
+;;;
+;;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
+;;; 
+(def-instruction-format (compute-code-from-lra-format 4) (rt rs immed)
+  (op :unsigned 6 :instruction-constant)
+  (rs :unsigned 5 :register)
+  (rt :unsigned 5 :register)
+  (immed :signed 16
+	 :label #'(lambda (label-offset instr-offset)
+		    (declare (ignore instr-offset))
+		    (- (+ label-offset (component-header-length))))))
+
+(def-instruction compute-code-from-lra-inst compute-code-from-lra-format
+  :op #b001000)
+
+(def-label-ref compute-code-from-lra (rt rs label) label
+  compute-code-from-lra-inst)
+
+
+;;; COMPUTE-LRA-FROM-CODE
+;;;
+;;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
+;;; 
+(def-instruction-format (compute-lra-from-code-format 4) (rt rs immed)
+  (op :unsigned 6 :instruction-constant)
+  (rs :unsigned 5 :register)
+  (rt :unsigned 5 :register)
+  (immed :signed 16
+	 :label #'(lambda (label-offset instr-offset)
+		    (declare (ignore instr-offset))
+		    (+ label-offset (component-header-length)))))
+
+(def-instruction compute-lra-from-code-inst compute-lra-from-code-format
+  :op #b001000)
+
+(def-label-ref compute-lra-from-code (rt rs label) label
+  compute-lra-from-code-inst)
