@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.5 1993/07/15 00:09:23 hallgren Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.6 1993/09/01 10:01:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1258,7 +1258,8 @@
 	 (fp-reg-tn-encoding to)
        (assert (eq from-double-p to-double-p))
        (emit-fp-class-0-inst segment #x0C from-encoding 0
-			     (+ 2 (position op funops))
+			     (+ 2 (or (position op funops)
+				      (error "Bogus FUNOP: ~S" op)))
 			     (if to-double-p 1 0) 0 0 0 to-encoding)))))
 
 (eval-when (compile eval)
@@ -1333,7 +1334,8 @@
 	   (fp-reg-tn-encoding result)
 	 (assert (eq r1-double-p result-double-p))
 	 (emit-fp-class-0-inst segment #x0C r1-encoding r2-encoding
-			       (position op fbinops)
+			       (or (position op fbinops)
+				   (error "Bogus FBINOP: ~S" op))
 			       (if r1-double-p 1 0) 3 0 0
 			       result-encoding))))))
 
