@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.126 2003/09/11 18:22:39 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.127 2004/12/09 21:48:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -404,11 +404,18 @@
 (defknown nreverse (sequence) sequence ()
   :derive-type #'result-type-first-arg/reverse)
 
-(defknown make-sequence (type-specifier index &key (:initial-element t)) consed-sequence
+;; I (rtoy) changed the result types for make-sequence and concatenate
+;; from consed-sequence to t because the compiler will sometimes
+;; delete all following code when given a bad type-specifier.  For
+;; example (defun foo () (concatenate 'fixnum '(a b c))) deletes
+;; everything, including the return from foo, so we get an illegal
+;; instruction when the PC runs into the arg-count error.  Similar
+;; thing happens with make-sequence.
+(defknown make-sequence (type-specifier index &key (:initial-element t)) t
   (movable flushable unsafe)
   :derive-type (result-type-specifier-nth-arg 1))
 
-(defknown concatenate (type-specifier &rest sequence) consed-sequence
+(defknown concatenate (type-specifier &rest sequence) t
   (flushable)
   :derive-type (result-type-specifier-nth-arg 1))
 
