@@ -2,15 +2,13 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.14 1994/07/26 17:37:17 hallgren Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.15 1994/10/27 16:58:21 ram Exp $
 
 set features = ()
 set misfeatures = ()
 set target = "@sys"
 set subdir = alpha
 set core = ""
-set clean = 0
-set update = 1
 set interactive = "nil"
 set bootstrap = "target:bootstrap"
 
@@ -52,14 +50,6 @@ while ($#argv > 0)
 				set interactive = "t"
 				breaksw
 
-# Source tree management:
-			case "-clean":
-				set clean = 1
-				breaksw
-			case "-noupdate":
-			        set update = 0
-				breaksw
-
 # Select what to compile:
 			case "-compile":
 			        set systems = $argv[2]
@@ -94,12 +84,6 @@ Try these:
   -misfeature <feature>
 	Remove <feature> from the features when compiling.  May be used more
 	than once.
-
-  -clean <no arg>
-	Delete *.*f, *.fasl, *.assem, *.log and *.log.OLD in the destination.
-
-  -noupdate <no arg>
-	If specified, inhibits rcsupdate of the source tree.
 
   -compile	[All systems]
 	A comma-separated list of system names, e.g. "code,compiler".  Order is
@@ -156,11 +140,6 @@ if (-e $thissrc/MISFEATURES) then
 	set misfeatures = ($misfeatures $tmp)
 endif
 
-if $update then
-    echo "Updating source directory $thissrc ..."
-    (cd $thissrc; rcsupdate -q)
-endif
-
 if (-e $thissrc/SHADOW) then
     set thissrc = `cat $thissrc/SHADOW`
     goto nother_source
@@ -171,29 +150,22 @@ echo "Source directory(ies): $src"
 set dest = /afs/cs/project/clisp/build/$target/$subdir
 echo "Target directory: $dest"
 
-if $clean then
-    echo "Cleaning up binaries and logs in $dest ..."
-    (cd  $dest;\
-     find . \( -name '*.*f' -o -name '*.assem' -o -name '*.fasl' \) \
-	     -print -exec rm {} \; ;\
-     rm *.log *.log.OLD)
-else
-    if ({(echo $dest/*.log>/dev/null)}) then
-	echo "Preserving log files in $dest as .OLD ..."
-	foreach foo ( $dest/*.log )
-	    set old = "${foo}.OLD"
-	    if (-e $old) then
-	        echo "" >>$old
-		date >>$old
-		echo "_________________________________________">>$old
-		cat $foo >>$old
-		rm $foo
-	    else
-		mv $foo $old
-	    endif
-        end
-    endif
+if ({(echo $dest/*.log>/dev/null)}) then
+    echo "Preserving log files in $dest as .OLD ..."
+    foreach foo ( $dest/*.log )
+	set old = "${foo}.OLD"
+	if (-e $old) then
+	    echo "" >>$old
+	    date >>$old
+	    echo "_________________________________________">>$old
+	    cat $foo >>$old
+	    rm $foo
+	else
+	    mv $foo $old
+	endif
+    end
 endif
+
 
 if ($?LISP) then
 	echo "LISP environment variable override: $LISP"
