@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.12 1998/12/20 04:30:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.13 1999/03/11 16:51:21 pw Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -1055,9 +1055,6 @@
 		  ((fsc-instance-p arg)
 		   (fsc-instance-wrapper arg))
 		  (t
-		   #+new-kcl-wrapper
-		   (built-in-wrapper-of arg)
-		   #-new-kcl-wrapper
 		   (built-in-or-structure-wrapper arg))))
       (unless (eq 't (wrapper-state w))
 	(setq w (check-wrapper-validity arg)))

@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.18 1998/12/20 04:30:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.19 1999/03/11 16:51:05 pw Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -145,33 +145,7 @@ and load your system with:
 ;;; the way they work.
 ;;; 
 (defvar *port*
-        '(#+Genera               Genera
-;         #+Genera-Release-6     Rel-6
-;         #+Genera-Release-7-1   Rel-7
-          #+Genera-Release-7-2   Rel-7
-	  #+Genera-Release-7-3   Rel-7
-          #+Genera-Release-7-1   Rel-7-1
-          #+Genera-Release-7-2   Rel-7-2
-	  #+Genera-Release-7-3   Rel-7-2	;OK for now
-	  #+Genera-Release-7-4   Rel-7-2	;OK for now
-	  #+Genera-Release-8	 Rel-8
-	  #+imach                Ivory
-	  #+Cloe-Runtime	 Cloe
-          #+Lucid                Lucid
-          #+Xerox                Xerox
-	  #+Xerox-Lyric          Xerox-Lyric
-	  #+Xerox-Medley         Xerox-Medley
-          #+TI                   TI
-          #+(and dec vax common) Vaxlisp
-          #+KCL                  KCL
-          #+IBCL                 IBCL
-          #+excl                 excl
-	  #+(and excl sun4)      excl-sun4
-          #+:CMU                 CMU
-          #+HP-HPLabs            HP-HPLabs
-          #+:gclisp              gclisp
-          #+pyramid              pyramid
-          #+:coral               coral))
+        '(#+:CMU                 CMU))
 
 ;;;
 ;;; When you get a copy of PCL (by tape or by FTP), the sources files will
@@ -199,35 +173,7 @@ and load your system with:
 ;;;       "mv *.lisp *.lsp".
 ;;;
 (defvar *default-pathname-extensions*
-  (car '(#+(and (not imach) genera)          ("lisp"  . "bin")
-	 #+(and imach genera)                ("lisp"  . "ibin")
-	 #+Cloe-Runtime                      ("l"     . "fasl")
-	 #+(and dec common vax (not ultrix)) ("LSP"   . "FAS")
-	 #+(and dec common vax ultrix)       ("lsp"   . "fas")
-	 #+KCL                               ("lsp"   . "o")
-	 #+IBCL                              ("lsp"   . "o")
-	 #+Xerox                             ("lisp"  . "dfasl")
-	 #+(and Lucid MC68000)               ("lisp"  . "lbin")
-	 #+(and Lucid VAX)                   ("lisp"  . "vbin")
-	 #+(and Lucid Prime)                 ("lisp"  . "pbin")
-	 #+(and Lucid SUNRise)               ("lisp"  . "sbin")
-	 #+(and Lucid SPARC)                 ("lisp"  . "sbin")
-	 #+(and Lucid IBM-RT-PC)             ("lisp"  . "bbin")
-	 #+(and Lucid MIPS)                  ("lisp"  . "mbin")
-	 #+(and Lucid PRISM)                 ("lisp"  . "abin")
-	 #+(and Lucid PA)                    ("lisp"  . "hbin")
-	 #+(and excl SPARC)                  ("cl"    . "sparc")
-	 #+(and excl m68k)                   ("cl"    . "m68k")
-	 #+excl                              ("cl"    . "fasl")
-         #+cmu ("lisp" . #.(c:backend-fasl-file-type c:*backend*))
-	 #+HP-HPLabs                         ("l"     . "b")
-	 #+TI ("lisp" . #.(string (si::local-binary-file-type)))
-	 #+:gclisp                           ("LSP"   . "F2S")
-	 #+pyramid                           ("clisp" . "o")
-	 #+:coral                            ("lisp"  . "fasl")
-	 #-(or symbolics (and dec common vax) KCL IBCL Xerox 
-	       lucid excl :CMU HP TI :gclisp pyramid coral)
-	                                     ("lisp"  . "lbin"))))
+  (car '(#+cmu ("lisp" . #.(c:backend-fasl-file-type c:*backend*)))))
 
 (defvar *pathname-extensions*
   (let ((proper-extensions *default-pathname-extensions*))
@@ -517,8 +463,7 @@ and load your system with:
 
 (defun load-truename (&optional (errorp nil))
   (declare (ignore errorp))
-  #+(and dec vax common) (truename (sys::source-file #'load-truename))
-  #+cmu17 *load-truename*)
+  *load-truename*)
 
 #-(or cmu Symbolics)
 (defvar *pcl-directory*
@@ -539,52 +484,19 @@ and load your system with:
   ;;                                          of this file
   ;;                                          
   (
-;  (rel-6-patches   t            t            ()                rel-6)
-;  (rel-7-1-patches t            t            ()                rel-7-1)
-   (rel-7-2-patches t            t            ()                rel-7-2)
-   (rel-8-patches   t            t            ()                rel-8)
-   (ti-patches      t            t            ()                ti)
-   (pyr-patches     t            t            ()                pyramid)
-   (xerox-patches   t            t            ()                xerox)
-   (kcl-patches     t            t            ()                kcl)
-   (ibcl-patches    t            t            ()                ibcl)
-   (gcl-patches     t            t            ()                gclisp)
-   
    (pkg             t            t            ())
-   (sys-proclaim    t            t            ()                kcl)
    (walk            (pkg)        (pkg)        ())
    (iterate         t            t            ())
    (macros          t            t            ())
    (low             (pkg macros) t            (macros))
    
-   
-   (genera-low     (low)         (low)        (low)            Genera)
-   (cloe-low	   (low)	 (low)	      (low)            Cloe)
-   (lucid-low      (low)         (low)        (low)            Lucid)
-   (Xerox-low      (low)         (low)        (low)            Xerox)
-   (ti-low         (low)         (low)        (low)            TI)
-   (vaxl-low       (low)         (low)        (low)            vaxlisp)
-   (kcl-low        (low)         (low)        (low)            KCL)
-   (ibcl-low       (low)         (low)        (low)            IBCL)
-   (excl-low       (low)         (low)        (low)            excl)
    (cmu-low        (low)         (low)        (low)            CMU)
-   (hp-low         (low)         (low)        (low)            HP-HPLabs)
-   (gold-low       (low)         (low)        (low)            gclisp) 
-   (pyr-low        (low)         (low)        (low)            pyramid) 
-   (coral-low      (low)         (low)        (low)            coral)
    
    (fin         t                                   t (low))
    (defclass    t                                   t (low))
    (defs        t                                   t (defclass macros iterate))
    (fngen       t                                   t (low))
    (cache       t                                   t (low defs))
-   ;;(lap         t                                   t (low)    excl-sun4)
-   ;;(plap        t                                   t (low)    excl-sun4)
-   ;;(cpatch      t                                   t (low)    excl-sun4)
-   ;;(quadlap     t                                   t (low)    excl-sun4)
-   ;;(dlap        t                                   t (defs low fin cache lap) 
-   ;;	                                                         excl-sun4)
-   ;;#-excl-sun4
    (dlisp       t                                   t (defs low fin cache))
    (dlisp2      t                                   t (low fin cache dlisp))
    (boot        t                                   t (defs fin))
@@ -614,11 +526,7 @@ and load your system with:
    ))
 
 (defun compile-pcl (&optional m)
-  (let (#+:coral(ccl::*warn-if-redefine-kernel* nil)
-	#+Lucid (lcl:*redefinition-action* nil)
-	#+excl  (excl::*redefinition-warnings* nil)
-	#+Genera (sys:inhibit-fdefine-warnings t)
-	)
+  (let ()
     (cond ((null m)        (operate-on-system 'pcl :compile))
 	  ((eq m :print)   (operate-on-system 'pcl :compile () t))
 	  ((eq m :query)   (operate-on-system 'pcl :query-compile))
@@ -628,11 +536,7 @@ and load your system with:
 	  ((symbolp m)     (operate-on-system 'pcl :recompile-some `(,m))))))
 
 (defun load-pcl (&optional m)
-  (let (#+:coral(ccl::*warn-if-redefine-kernel* nil)
-	#+Lucid (lcl:*redefinition-action* nil)
-	#+excl  (excl::*redefinition-warnings* nil)
-	#+Genera (sys:inhibit-fdefine-warnings t)
-	)
+  (let ()
     (cond ((null m)      (operate-on-system 'pcl :load))
 	  ((eq m :query) (operate-on-system 'pcl :query-load)))))
 

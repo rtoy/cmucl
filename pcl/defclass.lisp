@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.13 1999/01/12 17:51:08 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.14 1999/03/11 16:51:04 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -54,61 +54,13 @@
 		       (capitalize-words (car name) ()) (cdr name))
 	       (format nil "~S" name))))
     (definition-name)
-    #+Genera
-    (progn
-      #-Genera-Release-8
-      (let ((thunk-name (gensym "TOP-LEVEL-FORM")))
-	`(eval-when ,times
-	   (defun ,thunk-name ()
-	     (declare (sys:function-parent
-			,(cond ((listp name)
-				(case (first name)
-				  (defmethod `(method ,@(rest name)))
-				  (otherwise (second name))))
-			       (t name))
-			,(cond ((listp name)
-				(case (first name)
-				  ((defmethod defgeneric) 'defun)
-				  ((defclass) 'defclass)
-				  (otherwise (first name))))
-			       (t 'defun))))
-	     ,form)
-	   (,thunk-name)))
-      #+Genera-Release-8
-      `(compiler-let ((compiler:default-warning-function ',name))
-	 (eval-when ,times
-	   (funcall #'(lambda ()
-			(declare ,(cond ((listp name)
-					 (case (first name)
-					   ((defclass)
-					    `(sys:function-parent ,(second name) defclass))
-					   ((defmethod)
-					    `(sys:function-name (method ,@(rest name))))
-					   ((defgeneric)
-					    `(sys:function-name ,(second name)))
-					   (otherwise
-					     `(sys:function-name ,name))))
-					(t
-					 `(sys:function-name ,name))))
-			,form)))))
-    #+LCL3.0
-    `(compiler-let ((lucid::*compiler-message-string*
-		      (or lucid::*compiler-message-string*
-			  ,(definition-name))))
-       (eval-when ,times ,form))
+
     #+cmu
     (if (member 'compile times)
         `(eval-when ,times ,form)
         form)
-    #+kcl
-    (let* ((*print-pretty* nil)
-           (thunk-name (gensym (definition-name))))
-      (gensym "G") ; set the prefix back to something less confusing.
-      `(eval-when ,times
-         (defun ,thunk-name ()
-           ,form)
-         (,thunk-name)))
-    #-(or Genera LCL3.0 cmu kcl)
+
+    #-(or cmu)
     (make-progn `',name `(eval-when ,times ,form))))
 
 (defun make-progn (&rest forms)

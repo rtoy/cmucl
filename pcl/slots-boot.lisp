@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.6 1998/12/20 04:30:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.7 1999/03/11 16:51:16 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -59,7 +59,7 @@
 
 (defmacro asv-funcall (sym slot-name type &rest args)
   (declare (ignore type))
-  `(if (#-akcl fboundp #+akcl %fboundp ',sym)
+  `(if (fboundp ',sym)
        (,sym ,@args)
        (no-slot ',sym ',slot-name)))
 
@@ -114,7 +114,6 @@
 	 (fun #'(lambda (object)
 		  (not (eq (funcall reader object) *slot-unbound*)))))
     (declare (type function reader))
-    #+(and kcl turbo-closure) (si:turbo-closure fun)
     fun))		    
 
 (defun get-optimized-std-accessor-method-function (class slotd name)

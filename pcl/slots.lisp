@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.10 1999/02/03 12:01:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.11 1999/03/11 16:51:16 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -61,30 +61,15 @@
 
 (defun set-wrapper (inst new)
   (cond ((std-instance-p inst)
-	 #+new-kcl-wrapper
-	 (set-structure-def inst new)
-	 #-new-kcl-wrapper
 	 (setf (std-instance-wrapper inst) new))
 	((fsc-instance-p inst)
 	 (setf (fsc-instance-wrapper inst) new))
 	(t
 	 (error "What kind of instance is this?"))))
 
-#+ignore ; can't do this when using #+new-kcl-wrapper
-(defun set-slots (inst new)
-  (cond ((std-instance-p inst)
-	 (setf (std-instance-slots inst) new))
-	((fsc-instance-p inst)
-	 (setf (fsc-instance-slots inst) new))
-	(t
-	 (error "What kind of instance is this?"))))
-
 (defun swap-wrappers-and-slots (i1 i2)
   (without-interrupts
    (cond ((std-instance-p i1)
-	  #+new-kcl-wrapper
-	  (swap-structure-contents i1 i2)
-	  #-new-kcl-wrapper
 	  (let ((w1 (std-instance-wrapper i1))
 		(s1 (std-instance-slots i1)))
 	    (setf (std-instance-wrapper i1) (std-instance-wrapper i2))
@@ -341,12 +326,7 @@
 	   ((class structure-class) 
 	    (object structure-object)
 	    (slotd structure-effective-slot-definition))
-  #-new-kcl-wrapper t
-  #+new-kcl-wrapper
-  (let* ((function (slot-definition-internal-reader-function slotd))
-	 (value (funcall function object)))
-    #+cmu (declare (type function function))
-    (not (eq value *slot-unbound*))))
+	   t)
 
 (defmethod slot-makunbound-using-class
 	   ((class structure-class)
@@ -388,12 +368,9 @@
 
 (defmethod allocate-instance ((class structure-class) &rest initargs)
   (declare (ignore initargs))
-  #-new-kcl-wrapper
   (let ((constructor (class-defstruct-constructor class)))
     (if constructor
 	(funcall constructor)
-	(error "Can't allocate an instance of class ~S" (class-name class))))
-  #+new-kcl-wrapper
-  (allocate-standard-instance (class-wrapper class)))
+	(error "Can't allocate an instance of class ~S" (class-name class)))))
 
 

@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.11 1998/12/20 04:30:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.12 1999/03/11 16:51:02 pw Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -159,9 +159,6 @@
   (printing-random-thing (cache stream)
     (format stream "cache ~D ~S ~D" 
 	    (cache-nkeys cache) (cache-valuep cache) (cache-nlines cache))))
-
-#+akcl
-(si::freeze-defstruct 'cache)
 
 (defmacro cache-lock-count (cache)
   `(cache-vector-lock-count (cache-vector ,cache)))
@@ -420,7 +417,7 @@
 #+structure-wrapper
 (progn
 
-#-(or new-kcl-wrapper cmu17)
+#-(or cmu17)
 (defun make-wrapper-cache-number-vector ()
   (let ((cnv (make-array #.wrapper-cache-number-vector-length
 			 :element-type 'fixnum)))
@@ -431,33 +428,20 @@
 
 #-cmu17
 (defstruct (wrapper
-	     #+new-kcl-wrapper (:include si::basic-wrapper)
 	     (:print-function print-wrapper)
-	     #-new-kcl-wrapper
-	     (:constructor make-wrapper (no-of-instance-slots &optional class))
-	     #+new-kcl-wrapper
-	     (:constructor make-wrapper-internal))
-  #-new-kcl-wrapper
+	     (:constructor make-wrapper (no-of-instance-slots &optional class)))
   (cache-number-vector (make-wrapper-cache-number-vector)
 		       :type cache-number-vector)
-  #-new-kcl-wrapper
   (state t :type (or (member t) cons)) 
   ;;  either t or a list (state-sym new-wrapper)
   ;;           where state-sym is either :flush or :obsolete
   (instance-slots-layout nil :type list)
   (class-slots nil :type list)
-  #-new-kcl-wrapper
   (no-of-instance-slots 0 :type fixnum)
-  #-new-kcl-wrapper
   (class *the-class-t* :type class))
 
 
 (unless (boundp '*the-class-t*) (setq *the-class-t* nil))
-
-#+new-kcl-wrapper
-(defmacro wrapper-no-of-instance-slots (wrapper)
-  `(si::s-data-length ,wrapper))
-
 
 ;;; Note that for CMU, the WRAPPER of a built-in or structure class will be
 ;;; some other kind of KERNEL:LAYOUT, but this shouldn't matter, since the only
@@ -504,24 +488,6 @@
   (defmacro wrapper-class-slots (wrapper)
     `(%wrapper-class-slots ,wrapper))
   (defmacro wrapper-cache-number-vector (x) x))
-
-
-#+new-kcl-wrapper
-(defun make-wrapper (size &optional class)
-  (multiple-value-bind (raw slot-positions)
-      (if (< size 50)
-	  (values si::*all-t-s-type* si::*standard-slot-positions*)
-	  (values (make-array size :element-type 'unsigned-char)
-		  (let ((array (make-array size :element-type 'unsigned-short)))
-		    (dotimes (i size)
-		      (declare (fixnum i))
-		      (setf (aref array i) (* #.(si::size-of t) i))))))
-    (make-wrapper-internal :length size
-			   :raw raw
-			   :print-function 'print-std-instance
-			   :slot-position slot-positions
-			   :size (* size #.(si::size-of t))
-			   :class class)))
 
 #+cmu17
 ;;; BOOT-MAKE-WRAPPER  --  Interface
@@ -608,7 +574,7 @@
 
 #-cmu17
 (defmacro cache-number-vector-ref (cnv n)
-  `(#-kcl svref #+kcl aref ,cnv ,n))
+  `(svref ,cnv ,n))
 
 #+cmu17
 (defmacro cache-number-vector-ref (cnv n)
@@ -629,13 +595,12 @@
   `(wrapper-no-of-instance-slots (class-wrapper ,class)))
 
 (defmacro wrapper-class* (wrapper)
-  #-(or new-kcl-wrapper cmu17)
+  #-(or cmu17)
   `(wrapper-class ,wrapper)
-  #+(or new-kcl-wrapper cmu17)
+  #+(or cmu17)
   `(let ((wrapper ,wrapper))
      (or (wrapper-class wrapper)
          (find-structure-class
-	  #+new-kcl-wrapper (si::s-data-name wrapper)
 	  #+cmu17 (lisp:class-name (kernel:layout-class wrapper))))))
 
 ;;;
@@ -718,9 +683,6 @@
 			     (std-instance-wrapper ,object))
 			    ((fsc-instance-p ,object)
 			     (fsc-instance-wrapper ,object))
-			    #+new-kcl-wrapper
-			    (t (built-in-wrapper-of ,object))
-			    #-new-kcl-wrapper
 			    (t (wrapper-of ,object)))))
        (if (eq 't (wrapper-state ,owrapper))
 	   ,owrapper

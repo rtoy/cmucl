@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.17 1998/10/22 00:32:30 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.18 1999/03/11 16:51:01 pw Exp $")
 
 (in-package :pcl)
 
@@ -242,7 +242,6 @@ work during bootstrapping.
 ;;;
 ;;;
 (defmacro DEFMETHOD (&rest args &environment env)
-  #+(or (not :lucid) :lcl3.0)	
   (declare (arglist name
 		    {method-qualifier}*
 		    specialized-lambda-list
@@ -622,7 +621,6 @@ work during bootstrapping.
 #+cmu
 (declaim (ext:freeze-type fast-method-call))
 
-#-akcl
 (defmacro fmc-funcall (fn pv-cell next-method-call &rest args)
   `(funcall ,fn ,pv-cell ,next-method-call ,@args))
 
@@ -853,8 +851,6 @@ work during bootstrapping.
 	 `(call-next-method-bind
 	    (flet (,@(and call-next-method-p
 		       '((call-next-method (&rest cnm-args)
-			  #+Genera
-			  (declare (dbg:invisible-frame :clos-internal))
 			  #+copy-&rest-arg (setq args (copy-list args))
 			  (call-next-method-body cnm-args))))
 		     ,@(and next-method-p-p
@@ -863,9 +859,6 @@ work during bootstrapping.
 	      ,@body)))))
 
 (defmacro bind-args ((lambda-list args) &body body)
-  #|| ; Lucid and Allegro don't compile the function inline
-  `(apply #'(lambda ,lambda-list ,@body) ,args)
-  ||#
   (let ((args-tail '.args-tail.)
 	(key '.key.)
 	(state 'required))
@@ -1054,7 +1047,7 @@ work during bootstrapping.
 	  *mf1p* (gethash method-function *method-function-plist*)))
   *mf1p*)
 
-(defun #-setf SETF\ PCL\ METHOD-FUNCTION-PLIST #+setf (setf method-function-plist)
+(defun (setf method-function-plist)
        (val method-function)
   (unless (eq method-function *mf1*)
     (rotatef *mf1* *mf2*)
@@ -1069,7 +1062,7 @@ work during bootstrapping.
 (defun method-function-get (method-function key &optional default)
   (getf (method-function-plist method-function) key default))
 
-(defun #-setf SETF\ PCL\ METHOD-FUNCTION-GET #+setf (setf method-function-get)
+(defun (setf method-function-get)
        (val method-function key)
   (setf (getf (method-function-plist method-function) key) val))
 
@@ -1251,7 +1244,7 @@ work during bootstrapping.
 	(decl `(ftype ,(ftype-declaration-from-lambda-list lambda-list #+cmu spec)
 		      ,spec)))
     #+cmu (proclaim decl)
-    #+kcl (setf (get spec 'compiler::proclaimed-closure) t)))
+   ))
 
 ;;;; Early generic-function support
 ;;;
@@ -1274,7 +1267,6 @@ work during bootstrapping.
 	       existing function-specifier all-keys))))
 
 (defun generic-clobbers-function (function-specifier)
-  #+Lispm (zl:signal 'generic-clobbers-function :name function-specifier)
   #+cmu
   (error 'kernel:simple-program-error
 	 :format-control
@@ -1284,39 +1276,13 @@ work during bootstrapping.
 	  definition.~%~
 	  The PCL-specific function MAKE-SPECIALIZABLE may be useful to you."
 	 :format-arguments (list function-specifier))
-  #-(or lispm cmu)
+  #-(or cmu)
   (error "~S already names an ordinary function or a macro,~%~
 	  you may want to replace it with a generic function, but doing so~%~
 	  will require that you decide what to do with the existing function~%~
 	  definition.~%~
 	  The PCL-specific function MAKE-SPECIALIZABLE may be useful to you."
 	 function-specifier))
-
-#+Lispm
-(zl:defflavor generic-clobbers-function (name) (si:error)
-  :initable-instance-variables)
-
-#+Lispm
-(zl:defmethod #+Genera (dbg:report generic-clobbers-function)
-	      #+ti (generic-clobbers-function :report)
-	      (stream)
- (format stream
-	 "~S aready names a ~a"
-	 name
-	 (if (and (symbolp name) (macro-function name)) "macro" "function")))
-
-#+Genera
-(zl:defmethod (sys:proceed generic-clobbers-function :specialize-it) ()
-  "Make it specializable anyway?"
-  (make-specializable name))
-
-#+ti
-(zl:defmethod
-     (generic-clobbers-function :case :proceed-asking-user :specialize-it)
-     (continuation ignore)
-  "Make it specializable anyway?"
-  (make-specializable name)
-  (funcall continuation :specialize-it))
 
 (defvar *sgf-wrapper* 
   (boot-make-wrapper (early-class-size 'standard-generic-function)
@@ -2110,64 +2076,6 @@ work during bootstrapping.
 
 (eval-when (load eval)
   (setq *boot-state* 'early))
-
-
-#-cmu ;; CMUCL Has a real symbol-macrolet
-(progn
-(defmacro symbol-macrolet (bindings &body body &environment env)
-  (let ((specs (mapcar #'(lambda (binding)
-			   (list (car binding)
-				 (variable-lexical-p (car binding) env)
-				 (cadr binding)))
-		       bindings)))
-    (walk-form `(progn ,@body)
-	       env
-	       #'(lambda (f c e)
-		   (expand-symbol-macrolet-internal specs f c e)))))
-
-(defun expand-symbol-macrolet-internal (specs form context env)
-  (let ((entry nil))
-    (cond ((not (eq context :eval)) form)
-	  ((symbolp form)
-	   (if (and (setq entry (assoc form specs))
-		    (eq (cadr entry) (variable-lexical-p form env)))
-	       (caddr entry)
-	       form))
-	  ((not (listp form)) form)
-	  ((member (car form) '(setq setf))
-	   ;; Have to be careful.  We must only convert the form to a SETF
-	   ;; form when we convert one of the 'logical' variables to a form
-	   ;; Otherwise we will get looping in implementations where setf
-	   ;; is a macro which expands into setq.
-	   (let ((kind (car form)))
-	     (labels ((scan-setf (tail)
-			(if (null tail)
-			    nil
-			    (walker::relist*
-			      tail
-			      (if (and (setq entry (assoc (car tail) specs))
-				       (eq (cadr entry)
-					   (variable-lexical-p (car tail)
-							       env)))
-				  (progn (setq kind 'setf)
-					 (caddr entry))
-				  (car tail))
-			      (cadr tail)
-			      (scan-setf (cddr tail))))))
-	       (let (new-tail)
-		 (setq new-tail (scan-setf (cdr form)))
-		 (walker::recons form kind new-tail)))))
-	  ((eq (car form) 'multiple-value-setq)
-	   (let* ((vars (cadr form))
-		  (gensyms (mapcar #'(lambda (i) (declare (ignore i)) (gensym))
-				   vars)))
-	     `(multiple-value-bind ,gensyms 
-		  ,(caddr form)
-		.,(reverse (mapcar #'(lambda (v g) `(setf ,v ,g))
-				   vars
-				   gensyms)))))
-	  (t form))))
-)
 
 (defmacro with-slots (slots instance &body body)
   (let ((in (gensym)))

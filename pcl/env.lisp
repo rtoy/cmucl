@@ -26,63 +26,30 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.10 1998/12/20 04:30:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.11 1999/03/11 16:51:05 pw Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
 
 (in-package :pcl)
 
-#+Lucid
-(progn
-
-(defun pcl-arglist (function &rest other-args)
-  (let ((defn nil))
-    (cond ((and (fsc-instance-p function)
-		(generic-function-p function))
-	   (generic-function-pretty-arglist function))
-	  ((and (symbolp function)
-		(fboundp function)
-		(setq defn (symbol-function function))
-		(fsc-instance-p defn)
-		(generic-function-p defn))
-	   (generic-function-pretty-arglist defn))
-	  (t (apply (original-definition 'sys::arglist)
-		    function other-args)))))
-
-(redefine-function 'sys::arglist 'pcl-arglist)
-
-)
-
-
 ;;;
 ;;;
 ;;;
 
 (defgeneric describe-object (object stream))
 
-#-Genera
-(progn
-
-(defun pcl-describe (object #+Lispm &optional #+Lispm no-complaints)
-  (let (#+Lispm (*describe-no-complaints* no-complaints))
-    #+Lispm (declare (special *describe-no-complaints*))
-    (describe-object object *standard-output*)
-    (values)))
+#-cmu
+(defun pcl-describe (object)
+  (describe-object object *standard-output*)
+  (values))
 
 (defmethod describe-object (object stream)
-  #-cmu
-    (cond ((or #+kcl (packagep object))
-	   (describe-package object stream))
-	  (t
-	   (funcall (original-definition 'describe) object)))
   #+cmu
   (describe object stream))
 
 #-cmu
 (redefine-function 'describe 'pcl-describe)
-
-)
 
 (defmethod describe-object ((object slot-object) stream)
   (let* ((class (class-of object))
@@ -321,7 +288,6 @@
 ;    (setf (method-function method) (symbol-function name))))
 
 (defmacro undefmethod (&rest args)
-  #+(or (not :lucid) :lcl3.0)
   (declare (arglist name {method-qualifier}* specializers))
   `(undefmethod-1 ',args))
 

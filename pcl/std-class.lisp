@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.22 1999/02/12 21:47:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.23 1999/03/11 16:51:16 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -99,7 +99,6 @@
 	(if (eq *boot-state* 'complete)
 	    (get-accessor-method-function gf type class slotd)
 	    (get-optimized-std-accessor-method-function class slotd type))
-      #+kcl (si:turbo-closure function)
       (setf (slot-accessor-std-p slotd type) std-p)
       (setf (slot-accessor-function slotd type) function))
     (when (and old-slotd (not (eq old-std-p (slot-accessor-std-p slotd 'all))))
@@ -159,7 +158,7 @@
   (with-slots (prototype wrapper defstruct-constructor) class
     (or prototype 
 	(setq prototype 
-	      (if #-new-kcl-wrapper defstruct-constructor #+new-kcl-wrapper nil 
+	      (if defstruct-constructor 
 		  (allocate-instance class)
 		  (allocate-standard-instance wrapper))))))
 
@@ -569,17 +568,13 @@
   (setf (slot-value class 'class-precedence-list) 
 	(compute-class-precedence-list class))
   (setf (slot-value class 'slots) (compute-slots class))
-  #-(or cmu17 new-kcl-wrapper)
+  #-(or cmu17)
   (unless (slot-value class 'wrapper) 
     (setf (slot-value class 'wrapper) (make-wrapper 0 class)))
   #+cmu17
  (let ((lclass (lisp:find-class (class-name class))))
     (setf (kernel:class-pcl-class lclass) class)
     (setf (slot-value class 'wrapper) (kernel:class-layout lclass)))
-  #+new-kcl-wrapper
-  (let ((wrapper (get (class-name class) 'si::s-data)))
-    (setf (slot-value class 'wrapper) wrapper)
-    (setf (wrapper-class wrapper) class))
   (update-pv-table-cache-info class)
   (setq predicate-name (if predicate-name-p
 			   (setf (slot-value class 'predicate-name)
@@ -715,8 +710,6 @@
 		   (class-wrapper class)))))
 
       (with-slots (wrapper slots) class
-	#+new-kcl-wrapper
-	(setf (si::s-data-name nwrapper) (class-name class))
 	#+cmu17
 	(update-lisp-class-layout class nwrapper)
 	(setf slots eslotds
@@ -1133,12 +1126,10 @@
 	     (type-of (obsolete-structure-datum condition))))))
 
 (defun obsolete-instance-trap (owrapper nwrapper instance)
-  (if (not #-(or cmu17 new-kcl-wrapper)
+  (if (not #-(or cmu17)
            (or (std-instance-p instance) (fsc-instance-p instance))
 	   #+cmu17
-           (pcl-instance-p instance)
-           #+new-kcl-wrapper
-           nil)
+           (pcl-instance-p instance))
       (if *in-obsolete-instance-trap*
           *the-wrapper-of-structure-object* 
            (let ((*in-obsolete-instance-trap* t))
@@ -1209,16 +1200,13 @@
 ;;;
 ;;;
 (defmacro copy-instance-internal (instance)
-  `(#+new-kcl-wrapper if #-new-kcl-wrapper progn
-			 #+new-kcl-wrapper (not (std-instance-p ,instance))
+  `(progn
       (let* ((class (class-of instance))
 	     (copy (allocate-instance class)))
 	 (if (std-instance-p ,instance)
 	     (setf (std-instance-slots ,instance) (std-instance-slots ,instance))
 	     (setf (fsc-instance-slots ,instance) (fsc-instance-slots ,instance)))
-	 copy)
-      #+new-kcl-wrapper
-      (copy-structure-header ,instance)))
+	 copy)))
 
 (defun change-class-internal (instance new-class)
   (let* ((old-class (class-of instance))

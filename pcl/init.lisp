@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.9 1998/12/20 04:30:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.10 1999/03/11 16:51:09 pw Exp $")
 ;;;
 ;;; This file defines the initialization and related protocols.
 ;;; 
@@ -191,7 +191,7 @@
 	  (if (and slot-names
 		   (or (eq slot-names 't)
 		       (memq slot-name slot-names))
-		   (or #-new-kcl-wrapper (and (not std-p) (eq slot-names 't))
+		   (or (and (not std-p) (eq slot-names 't))
 		       (not (slot-boundp-using-class class instance slotd))))
 	      (let ((initfunction (slot-definition-initfunction slotd)))
 		(when initfunction

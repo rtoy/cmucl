@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.9 1998/12/20 04:30:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.10 1999/03/11 16:51:10 pw Exp $")
 ;;;
 ;;; This file contains portable versions of low-level functions and macros
 ;;; which are ripe for implementation specific customization.  None of the
@@ -130,30 +130,6 @@
   `(svref ,slots ,index))
 )
 
-#+new-kcl-wrapper
-(progn
-(defvar *init-vector* (make-array 40 :fill-pointer 1 :adjustable t 
-				  :initial-element nil))
-
-(defun get-init-list (i)
-  (declare (fixnum i)(special *slot-unbound*))
-  (loop (when (< i (fill-pointer *init-vector*))
-	  (return (aref *init-vector* i)))
-	(vector-push-extend 
-	 (cons *slot-unbound*
-	       (aref *init-vector* (1- (fill-pointer *init-vector*))))
-	 *init-vector*)))
-
-(defmacro %std-instance-wrapper (instance)
-  `(structure-def ,instance))
-
-(defmacro %std-instance-slots (instance)
-  instance)
-
-(defmacro std-instance-p (x)
-  `(structurep ,x))
-)
-
 (defmacro std-instance-wrapper (x) `(%std-instance-wrapper ,x))
 (defmacro std-instance-slots   (x) `(%std-instance-slots ,x))
 
@@ -198,11 +174,7 @@
 (defconstant *slot-unbound* '..slot-unbound..)
 
 (defmacro %allocate-static-slot-storage--class (no-of-slots)
-  #+new-kcl-wrapper (declare (ignore no-of-slots))
-  #-new-kcl-wrapper
-  `(make-array ,no-of-slots :initial-element *slot-unbound*)
-  #+new-kcl-wrapper
-  (error "don't call this"))
+  `(make-array ,no-of-slots :initial-element *slot-unbound*))
 
 (defmacro std-instance-class (instance)
   `(wrapper-class* (std-instance-wrapper ,instance)))
@@ -303,8 +275,6 @@
 	#-(and (not XKCL) (or KCL IBCL)) t)
 
 (defun in-the-compiler-p ()
-  #+(and (not xkcl) (or KCL IBCL))compiler::*compiler-in-use*
-  #+gclisp (typep (eval '(function (lambda ()))) 'lexical-closure)
   )
 
 (defvar *compile-lambda-break-p* nil)
@@ -362,7 +332,7 @@
 (defun doctor-dfun-for-the-debugger (gf dfun) (declare (ignore gf)) dfun)
 
 ;; From braid.lisp
-#-new-kcl-wrapper
+
 (defmacro built-in-or-structure-wrapper (x)
   (once-only (x)
     (if (structure-functions-exist-p) ; otherwise structurep is too slow for this
