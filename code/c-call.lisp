@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.4 1991/02/08 13:31:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.5 1991/02/13 21:41:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
   (size nil :type (or unsigned-byte null))
   ;;
   ;; The bit alignment used for allocating objects of this type.
-  (alignment nil :type (integer 1 32)))
+  (alignment (required-argument) :type (integer 1 32)))
 
 (defun %print-c-type (s stream d)
   (declare (ignore d))
@@ -84,13 +84,13 @@
   (name nil :type symbol)
   ;;
   ;; The c-type of this field.
-  (type nil :type c-type)
+  (type (required-argument) :type c-type)
   ;;
   ;; The bit offset from the start of the record that this field is located at.
-  (offset nil :type unsigned-byte)
+  (offset (required-argument) :type unsigned-byte)
   ;;
   ;; The number of bits in this field.
-  (size nil :type unsigned-byte))
+  (size (required-argument) :type unsigned-byte))
 
 
 ;;; The Array-Type represents a C array type.
@@ -100,11 +100,11 @@
 	    (:print-function %print-c-type))
   ;;
   ;; The c-type of the elements in the array.
-  (element-type nil :type c-type)
+  (element-type (required-argument) :type c-type)
   ;;
   ;; The number of bits used to store each element.  May be larger than the
   ;; Size in the Element-Type due to padding.
-  (element-size nil :type unsigned-byte))
+  (element-size (required-argument) :type unsigned-byte))
 
 
 ;;; The Pointer-Type represents a C pointer type.
@@ -114,7 +114,7 @@
 	    (:print-function %print-c-type))
   ;;
   ;; The type of object pointed to.
-  (to nil :type c-type))
+  (to (required-argument) :type c-type))
 
 
 ;;; An EQ hashtable from the names of c-types to the structures describing them.
@@ -426,22 +426,22 @@
   ;;
   ;; String name of the routine and symbol name of the interface function.
   (name "" :type string)
-  (function-name nil :type symbol)
+  (function-name (required-argument) :type symbol)
   ;;
   ;; List of all the doc strings.
   docs
   ;;
   ;; List of Arg-Info structures describing the args.
-  (args nil :type list)
+  (args (required-argument) :type list)
   )
 
 (defstruct arg-info
   ;;
   ;; Symbol name of the arg.
-  (name nil :type symbol)
+  (name (required-argument) :type symbol)
   ;;
   ;; C-Type describing the actual argument to the routine.
-  (type nil :type c-type)
+  (type (required-argument) :type c-type)
   ;;
   ;; Specified mode and options.
   mode
