@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.62 2001/03/04 20:12:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.63 2001/04/07 14:10:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,6 +84,7 @@
 ;;; Determine if key-list is a valid list of keyword/value pairs.  Do not
 ;;; signal the error directly, 'cause we don't know how it should be signaled.
 ;;; 
+
 (defun verify-keywords (key-list valid-keys allow-other-keys)
   (do ((already-processed nil)
        (unknown-keyword nil)
@@ -98,6 +99,7 @@
 	   (return (values :dotted-list key-list)))
 	  ((null (cdr remaining))
 	   (return (values :odd-length key-list)))
+	  #+nil ;; Not ANSI compliant to disallow duplicate keywords.
 	  ((member (car remaining) already-processed)
 	   (return (values :duplicate (car remaining))))
 	  ((or (eq (car remaining) :allow-other-keys)
