@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: KERNEL; Log: code.log -*-
+;;; -*- Mode: Lisp; Package: C; Log: code.log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.1 1990/07/02 16:28:01 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.2 1990/07/05 11:00:10 wlott Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -56,7 +56,7 @@
 (defknown make-single-float ((signed-byte 32)) single-float
   (movable foldable flushable))
 
-(defknown make-double-float ((signed-byte 32) (unsigned-byte 32)) single-float
+(defknown make-double-float ((signed-byte 32) (unsigned-byte 32)) double-float
   (movable foldable flushable))
 
 (defknown single-float-bits (single-float) (signed-byte 32)
