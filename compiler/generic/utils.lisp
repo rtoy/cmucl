@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.3 1992/03/12 15:25:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.4 1992/07/13 01:45:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.3 1992/03/12 15:25:02 wlott Exp $
 ;;;
 ;;; Utility functions needed by the back end to generate code.
 ;;;
@@ -38,27 +36,32 @@
 ;;;; Routines for dealing with static symbols.
 
 (defun static-symbol-p (symbol)
-  (member symbol static-symbols))
+  (or (null symbol)
+      (and (member symbol static-symbols) t)))
 
 (defun static-symbol-offset (symbol)
   "Returns the byte offset of the static symbol Symbol."
-  (let ((posn (position symbol static-symbols)))
-    (unless posn (error "~S is not a static symbol." symbol))
-    (+ (* posn (pad-data-block symbol-size))
-       (pad-data-block (1- symbol-size))
-       other-pointer-type
-       (- list-pointer-type))))
+  (if symbol
+      (let ((posn (position symbol static-symbols)))
+	(unless posn (error "~S is not a static symbol." symbol))
+	(+ (* posn (pad-data-block symbol-size))
+	   (pad-data-block (1- symbol-size))
+	   other-pointer-type
+	   (- list-pointer-type)))
+      0))
 
 (defun offset-static-symbol (offset)
   "Given a byte offset, Offset, returns the appropriate static symbol."
-  (multiple-value-bind
-      (n rem)
-      (truncate (+ offset list-pointer-type (- other-pointer-type)
-		   (- (pad-data-block (1- symbol-size))))
-		(pad-data-block symbol-size))
-    (unless (and (zerop rem) (<= 0 n (1- (length static-symbols))))
-      (error "Byte offset, ~D, is not correct." offset))
-    (elt static-symbols n)))
+  (if (zerop offset)
+      nil
+      (multiple-value-bind
+	  (n rem)
+	  (truncate (+ offset list-pointer-type (- other-pointer-type)
+		       (- (pad-data-block (1- symbol-size))))
+		    (pad-data-block symbol-size))
+	(unless (and (zerop rem) (<= 0 n (1- (length static-symbols))))
+	  (error "Byte offset, ~D, is not correct." offset))
+	(elt static-symbols n))))
 
 (defun static-function-offset (name)
   "Return the (byte) offset from NIL to the start of the fdefn object
