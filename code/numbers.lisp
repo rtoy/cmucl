@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.18 1991/02/25 18:54:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.19 1991/11/14 09:32:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.18 1991/02/25 18:54:17 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.19 1991/11/14 09:32:11 wlott Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -558,6 +558,8 @@
 	     (values res (- number (coerce res '(dispatch-type number)))))
 	   (truncate-float (dispatch-type number))))
       ((double-float (or single-float double-float))
+       (truncate-float double-float))
+      ((single-float double-float)
        (truncate-float double-float))
       (((foreach fixnum bignum ratio) (foreach single-float double-float))
        (truncate-float (dispatch-type divisor))))))
