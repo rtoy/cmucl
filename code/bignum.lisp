@@ -391,26 +391,27 @@
 ;;;
 (defmacro subtract-bignum-loop (a len-a b len-b res len-res return-fun)
   (let ((borrow (gensym))
-	(shorter-len (gensym))
+	(a-digit (gensym))
+	(a-sign (gensym))
+	(b-digit (gensym))
+	(b-sign (gensym))
 	(i (gensym))
 	(v (gensym))
 	(k (gensym)))
     `(let* ((,borrow 1)
-	    (,shorter-len (min ,len-a ,len-b)))
-       (declare (type bignum-index))
-       (dotimes (,i ,shorter-len)
-	 (multiple-value-bind (,v ,k)
-			      (%subtract-with-borrow (%bignum-ref ,a ,i)
-						     (%bignum-ref ,b ,i)
-						     ,borrow)
-	   (setf (%bignum-ref ,res ,i) ,v)
-	   (setf ,borrow ,k)))
-       (cond ((> ,len-a ,len-b)
-	      (finish-subtract-a ,a ,res ,borrow (%sign-digit ,b ,len-b)
-				 ,len-b ,len-a))
-	     ((> ,len-b ,len-a)
-	      (finish-subtract-b (%sign-digit ,a ,len-a) ,res ,borrow ,b
-				 ,len-a ,len-b)))
+	    (,a-sign (%sign-digit ,a ,len-a))
+	    (,b-sign (%sign-digit ,b ,len-b)))
+       (declare (type bignum-element-type ,a-sign ,b-sign))
+       (dotimes (,i ,len-res)
+	 (declare (type bignum-index ,i))
+	 (let ((,a-digit (if (< ,i ,len-a) (%bignum-ref ,a ,i) ,a-sign))
+	       (,b-digit (if (< ,i ,len-b) (%bignum-ref ,b ,i) ,b-sign)))
+	   (declare (type bignum-element-type ,a-digit ,b-digit))
+	   (multiple-value-bind
+	       (,v ,k)
+	       (%subtract-with-borrow ,a-digit ,b-digit ,borrow)
+	     (setf (%bignum-ref ,res ,i) ,v)
+	     (setf ,borrow ,k))))
        (,return-fun ,res ,len-res))))
 
 ) ;EVAL-WHEN
@@ -436,35 +437,6 @@
   (let ((len-res (max len-a len-b)))
     (subtract-bignum-loop a len-a b len-b result len-res
 			  %normalize-bignum-buffer)))
-
-
-(defun finish-subtract-a (a res borrow sign-digit-b start end)
-  (declare (type bignum-type a res)
-	   (type (mod 2) borrow)
-	   (type bignum-element-type sign-digit-b)
-	   (type bignum-index start end))
-  (do ((i start (1+ i)))
-      ((= i end))
-    (declare (type bignum-index i))
-    (multiple-value-bind (v k)
-			 (%subtract-with-borrow (%bignum-ref a i) sign-digit-b
-						borrow)
-      (setf (%bignum-ref res i) v)
-      (setf borrow k))))
-
-(defun finish-subtract-b (sign-digit-a res borrow b start end)
-  (declare (type bignum-element-type sign-digit-a)
-	   (type bignum-type res b)
-	   (type (mod 2) borrow)
-	   (type bignum-index start end))
-  (do ((i start (1+ i)))
-      ((= i end))
-    (declare (type bignum-index i))
-    (multiple-value-bind (v k)
-			 (%subtract-with-borrow sign-digit-a (%bignum-ref b i)
-						borrow)
-      (setf (%bignum-ref res i) v)
-      (setf borrow k))))
 
 
 
