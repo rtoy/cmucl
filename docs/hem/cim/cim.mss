@@ -1,11 +1,11 @@
-@make[Manual] @comment{-*- Dictionary: /usr/lisp/scribe/hem/hem; Mode: spell; Package: Hemlock; Log: /usr/lisp/scribe/hem/hem-docs.log -*-}
+@make[Manual] @comment{-*- Dictionary: /afs/cs/project/clisp/new-compiler/scribe/hem/hem; Mode: spell; Package: Hemlock; Log: /usr/lisp/scribe/hem/hem-docs.log -*-}
 @Device[postscript]
 @style(FontFamily = TimesRoman)
 @Style(Spacing = 1.2 lines)
 @Style(StringMax = 5000)
 @style(Hyphenation = On)
 @style(Date="March 1952")
-@use(database "/usr/lisp/scribe/database/")
+@use(database "/afs/cs/project/clisp/new-compiler/scribe/database/")
 @Style [DoubleSided]
 @Libraryfile[ArpaCredit]
 @Libraryfile[Hem]
@@ -2252,6 +2252,12 @@ displayed.  Moving the end is meaningless, since redisplay always moves it to
 after the last character.
 @enddefun
 
+@defun[fun {window-display-recentering}, args {@i[window]}]
+This function returns whether redisplay will ensure the buffer's point of
+@i[window]'s buffer is visible after redisplay.  This is @f[setf]'able, and
+changing @i[window]'s buffer sets this to @nil via @hid[Window Buffer Hook].
+@enddefun
+
 @defun[fun {window-point}, args {@i[window]}]
 This function returns as a mark the position in the buffer where the cursor is
 displayed.  This may be set with @f[setf].  If @i[window] is the current
@@ -2344,24 +2350,31 @@ displayed by @i[window], then this returns @nil, otherwise @true.
 
 
 @section(Redisplay)
-Redisplay is the process by which the editor translates changes in the internal
-representation of text into changes on the screen.  Ideally this process finds
-the minimal transformation of the screen that brings it into correspondence
-with the text, in order to maximize the speed of redisplay.
+Redisplay translates changes in the internal representation of text into
+changes on the screen.  Ideally this process finds the minimal transformation
+to make the screen correspond to the text in order to maximize the speed of
+redisplay.
 
 @defun[fun {redisplay}]
 @defhvar1[var "Redisplay Hook"]
-@f[redisplay] invokes the redisplay process, and the command interpreter
-typically causes this after the completion of each command.  The redisplay
-process repeatedly checks for input, and if any is detected, redisplay aborts.
+@f[redisplay] executes the redisplay process, and @hemlock typically invokes
+this whenever it looks for input.  The redisplay process frequently checks for
+input, and if it detects any, it aborts.
+
 This function invokes the functions in @hid[Redisplay Hook] on the current
-window after completely preparing for but not executing redisplay.  After
-invoking the hook, it recomputes the redisplay again and then finally executes
-it on the current window.
+window after computing screen transformations but before executing them.  After
+invoking the hook, this recomputes the redisplay and then executes it on the
+current window.
+
+For the current window and any window with @f[window-display-recentering] set,
+this ensures the buffer's point for the window's buffer is visible after
+redisplay.
 @enddefun
 
 @defun[fun {redisplay-all}]
-This causes all editor windows to be completely redisplayed.
+This causes all editor windows to be completely redisplayed.  For the current
+window and any window with @f[window-display-recentering] set, this ensures the
+buffer's point for the window's buffer is visible after redisplay.
 @enddefun
 
 @defun[fun {editor-finish-output}, args {@i[window]}]
@@ -2683,7 +2696,7 @@ repeat without further execution in the current branch.
 @enddefmac
 
 
-@defun[fun {prompt-for-key-evnet}, keys {[prompt][change-window]}]
+@defun[fun {prompt-for-key-event}, keys {[prompt][change-window]}]
 This function prompts for a key-event returning immediately when the user types
 the next key-event.  @macref[command-case] is more useful for most purposes.
 When appropriate, use logical key-events @w<(page
