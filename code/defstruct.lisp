@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.73 2001/03/15 18:01:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.74 2001/09/21 12:00:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -328,7 +328,6 @@
   (declare (ignore depth))
   (format stream "#<Defstruct-Slot-Description for ~S>" (dsd-name structure)))
 
-
 (defun dd-maybe-make-print-method (defstruct)
   ;; Maybe generate CLOS DEFMETHOD forms for :print-function/:print-object.
   (let ((print-function-value (dd-print-function defstruct)))
@@ -337,17 +336,17 @@
 	    (function (cdr print-function-value)))
 	(unless (eq kind 'lambda)
 	  (setf (dd-print-function defstruct) nil)
-	  (let* ((name (dd-name defstruct))
-		 (function (if (symbolp function) `',function `#',function))
-		 (mcall `(funcall ,function o s))
-		 (fcall `(funcall ,function o s *current-level*)))
+	  (let* ((class (dd-name defstruct))
+		 (func (if (symbolp function) `',function `#',function)))
 	    ;; We can only generate this code if CLOS is loaded. Maybe should
 	    ;; signal an error instead of quietly ignoring the defmethod?
 	    `((when (fboundp 'print-object)
-		(defmethod print-object ((o ,name) s)
-		  ,(ecase kind
-		     (:print-object mcall)
-		     (:print-function fcall)))))))))))
+		(defmethod print-object ((object ,class) stream)
+		  (funcall
+		   ,func object stream
+		   ,@(when (or (eq kind :print-function)
+			       (eq function 'default-structure-print))
+		       '(*current-level*))))))))))))
 
 
 ;;; The legendary macro itself.
