@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.38 1993/01/27 10:03:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.39 1993/02/04 14:37:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
     (inst srl header 2)
     (pseudo-atomic (pa-flag)
       (inst or result alloc-tn other-pointer-type)
-      (storew header alloc-tn)
+      (storew header result 0 other-pointer-type)
       (inst addu alloc-tn bytes))))
 
 #+gengc
