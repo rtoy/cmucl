@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.3 1991/03/07 18:42:29 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.4 1991/04/17 21:36:54 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
@@ -216,7 +216,7 @@
 	 (:results (result :scs (unsigned-reg)))
 	 (:result-types positive-fixnum)
 	 (:temporary (:scs (non-descriptor-reg)) temp old offset)
-	 (:temporary (:scs (non-descriptor-reg) :from :eval) shift)
+	 (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) shift)
 	 (:generator 25
 	   (inst srl offset index ,bit-shift)
 	   (inst sll offset 2)
