@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.14 1990/10/10 13:13:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.15 1990/10/10 22:02:26 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -685,7 +685,7 @@
 ;;; overhead on types of objects that might be circular.
 ;;;
 (defun dump-object (x file)
-  (if (or (arrayp x) (consp x))
+  (if (or (arrayp x) (consp x) (structurep x))
       (let ((*circularities-detected* ())
 	    (circ (fasl-file-circularity-table file)))
 	(clrhash circ)
