@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.49 1993/03/01 19:07:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.50 1993/03/13 09:17:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,7 +85,11 @@
 (defvar *original-%deftype* #'lisp::%deftype)
 (setf (fdefinition 'lisp::%deftype) #'list)
 (comf "target:code/typedefs")
-(comf "target:code/class")
+
+(with-compilation-unit
+  (:optimize '(optimize (safety 2) (debug 2)))
+  (comf "target:code/class"))
+
 (comf "target:code/type")
 (comf "target:compiler/generic/vm-type")
 (comf "target:code/type-init")
