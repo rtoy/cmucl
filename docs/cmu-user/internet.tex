@@ -174,10 +174,13 @@ remote hosts.
 \end{defun}
 
 \section{Out-of-Band Data}
+\label{internet-oob}
 
 Out-of-band data is data transmitted with a higher priority than
 ordinary data. This is usually used by either side of the connection
-to signal exceptional conditions.
+to signal exceptional conditions. Due to the fact that most TCP/IP
+implementations are broken in this respect, only single characters can
+reliably be sent this way.
 
 \begin{defun}{extensions:}{add-oob-handler}{%
     \args{\var{fd} \var{char} \var{handler}}}
@@ -191,8 +194,8 @@ to signal exceptional conditions.
 
 \begin{defun}{extensions:}{remove-oob-handler}{%
     \args{\var{fd} \var{char}}}
-
-  Removes the handler for the character \var{char} on the connection
+  
+  Removes the handler for the character \var{char} from the connection
   with the file descriptor \var{fd}
 
 \end{defun}
@@ -262,11 +265,3 @@ Finally, the function
   Closes the socket given by the file descriptor \var{socket}.
 
 \end{defun}
-
-%(export '(htonl ntohl htons ntohs lookup-host-entry host-entry host-entry-name
-%         host-entry-aliases host-entry-addr-list host-entry-addr
-%         create-unix-socket connect-to-unix-socket create-inet-socket
-%         connect-to-inet-socket create-inet-listener accept-tcp-connection
-%         close-socket ipproto-tcp ipproto-udp inaddr-any add-oob-handler
-%         remove-oob-handler remove-all-oob-handlers
-%         send-character-out-of-band))
