@@ -548,22 +548,22 @@
 
 (defun multiply-fixnums (a b)
   (declare (fixnum a b))
-  (let* ((a-plusp (plusp a))
-	 (b-plusp (plusp b)))
+  (let* ((a-minusp (minusp a))
+	 (b-minusp (minusp b)))
     (multiple-value-bind (high low)
-			 (%multiply (%fixnum-to-digit (if a-plusp a (- a)))
-				    (%fixnum-to-digit (if b-plusp b (- b))))
+			 (%multiply (%fixnum-to-digit (if a-minusp (- a) a))
+				    (%fixnum-to-digit (if b-minusp (- b) b)))
       (if (and (zerop high)
 	       (%digit-0-or-plusp low))
-	  (let ((low (truly-the (unsigned-byte 31)
-				(%fixnum-digit-with-correct-sign low))))
-	    (if (eq a-plusp b-plusp)
+	  (let ((low (ext:truly-the (unsigned-byte 31)
+				    (%fixnum-digit-with-correct-sign low))))
+	    (if (eq a-minusp b-minusp)
 		low
 		(- low)))
 	  (let ((res (%allocate-bignum 2)))
 	    (%bignum-set res 0 low)
 	    (%bignum-set res 1 high)
-	    (unless (eq a-plusp b-plusp) (negate-bignum-in-place res))
+	    (unless (eq a-minusp b-minusp) (negate-bignum-in-place res))
 	    (%normalize-bignum res 2))))))
 
 
