@@ -25,6 +25,7 @@ New in this release:
        LISP:STRUCTURE-CLASS name CLOS class.  It is no longer
        necessary to SHADOWING-IMPORT these from PCL when doing MOP
        programming, and it fixes some non-compliances as well.
+     - Weak hash tables have been added for x86 systems.
 
   * Numerous ANSI compliance fixes:
 
@@ -36,6 +37,9 @@ New in this release:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
        AMOP non-compliances, and adds various new optimizations (also
        see the CMU User Manual).
+     - PCL's class hierarchy has been changed to conform to AMOP, for
+       instance, GENERIC-FUNCTION is now a subclass of
+       STANDARD-OBJECT.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
