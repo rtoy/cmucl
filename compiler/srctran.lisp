@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.34 1992/02/02 23:05:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.35 1992/02/03 22:15:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -958,8 +958,7 @@
 	       (setf result
 		     (tub32
 		      (if result
-			  `(+ ,(tub32 next-factor)
-			      ,result)
+			  `(+ ,result ,(tub32 next-factor))
 			  next-factor)))))
       (declare (inline add))
       (dotimes (bitpos 32)
@@ -1079,11 +1078,16 @@
     result))
 
 
-;;; This is restricted to rationals, because (- 0 0.0) is 0.0, not -0.0.
+;;; These are restricted to rationals, because (- 0 0.0) is 0.0, not -0.0, and
+;;; (* 0 -4.0) is -0.0.
 ;;;
-(deftransform - ((x y) ((member 0) rational))
+(deftransform - ((x y) ((constant-argument (member 0)) rational))
   "convert (- 0 x) to negate"
   '(%negate y))
+;;;
+(deftransform * ((x y) (rational (constant-argument (member 0))))
+  "convert (* x 0) to 0."
+  0)
 
 
 ;;; NOT-MORE-CONTAGIOUS  --  Interface
@@ -1099,32 +1103,22 @@
     (values (type= (numeric-contagion x y)
 		   (numeric-contagion y y)))))
 
-;;; OK-ZERO-OR-LOSE  --  Interface
-;;;
-;;;    If y is not constant, not zerop, or is -0.0, or is contagious, then give
-;;; up.  We throw out negative zero because it is likely to cause sign changes,
-;;; and is not likely to appear in places where we actually case about
-;;; optimizing identities.
-;;;
-(defun ok-zero-or-lose (x y)
-  (unless (constant-continuation-p y) (give-up))
-  (let ((val (continuation-value y)))
-    (unless (and (zerop val)
-		 (not (and (floatp val) (minusp (float-sign val))))
-		 (not-more-contagious y x))
-	(give-up))))
-
 
 ;;; Fold (OP x 0).
 ;;;
+;;;    If y is not constant, not zerop, or is contagious, then give up.
+;;;
 (loop for (name result) in
-  '((* 0)
-    (+ x)
+  '((+ x)
     (- x)
     (expt 1)) do
-  (deftransform name ((x y) '* '* :eval-name t)
+  (deftransform name ((x y) '(t (constant-argument t)) '* :eval-name t)
     "fold zero arg"
-    (ok-zero-or-lose x y)
+    (let ((val (continuation-value y)))
+      (unless (and (zerop val)
+		   (not (and (floatp val) (minusp (float-sign val))))
+		   (not-more-contagious y x))
+	(give-up)))
     result))
 
 ;;; Fold (OP x +/-1)
@@ -1133,9 +1127,8 @@
   '((* x (%negate x))
     (/ x (%negate x))
     (expt x (/ 1 x))) do
-  (deftransform name ((x y) '* '* :eval-name t)
+  (deftransform name ((x y) '(t (constant-argument t)) '* :eval-name t)
     "fold identity operations"
-    (unless (constant-continuation-p y) (give-up))
     (let ((val (continuation-value y)))
       (unless (and (= (abs val) 1)
 		   (not-more-contagious y x))
