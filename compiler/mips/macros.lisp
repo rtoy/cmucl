@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.23 1990/03/08 11:13:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.24 1990/03/12 23:47:15 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -472,17 +472,31 @@
 
 ;;;; Error Code
 
+(eval-when (compile load eval)
+  (defun emit-error-break (kind code values)
+    `((inst break ,kind)
+      (inst byte ,code)
+      ,@(mapcar #'(lambda (tn)
+		    `(let ((tn ,tn))
+		       (assert (eq (sb-name (sc-sb (tn-sc tn))) 'registers))
+		       (inst byte (tn-offset tn))))
+		values)
+      (inst byte 0)
+      (align vm:word-shift))))
+
 (defmacro error-call (error-code &rest values)
+  "Cause an error.  ERROR-CODE is the error to cause."
+  (cons 'progn
+	(emit-error-break vm:error-trap error-code values)))
+
+
+
+(defmacro cerror-call (label error-code &rest values)
+  "Cause a continuable error.  If the error is continued, execution resumes at
+  LABEL."
   `(progn
-     (inst break vm:error-trap)
-     (inst byte ,error-code)
-     (inst byte ,(length values))
-     ,@(mapcar #'(lambda (value)
-		   `(let ((tn ,value))
-		      (assert (eq (sb-name (sc-sb (tn-sc tn))) 'registers))
-		      (inst byte (tn-offset tn))))
-	       values)
-     (align vm:word-shift)))
+     (b ,label)
+     ,@(emit-error-break vm:cerror-trap error-code values)))
 
 (defmacro generate-error-code (node error-code &rest values)
   "Generate-Error-Code Node Error-code Value*
@@ -495,6 +509,21 @@
 	 (error-call ,error-code ,@values)
 	 start-lab))))
 
+(defmacro generate-cerror-code (node error-code &rest values)
+  "Generate-CError-Code Node Error-code Value*
+  Emit code for a continuable error with the specified Error-Code and
+  context Values.  Node is used for source context.  If the error is continued,
+  execution resumes after the GENERATE-CERROR-CODE form."
+  (let ((continue (gensym "CONTINUE-LABEL-"))
+	(error (gensym "ERROR-LABEL-")))
+    `(let ((,continue (gen-label)))
+       (emit-label ,continue)
+       (unassemble
+	(assemble-elsewhere ,node
+	  (let ((,error (gen-label)))
+	    (emit-label ,error)
+	    (cerror-call ,continue ,error-code ,@values)
+	    ,error))))))
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
