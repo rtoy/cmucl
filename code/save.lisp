@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.15 1992/05/25 21:37:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.16 1992/08/06 01:44:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -81,6 +81,7 @@
 ;;; search lists.
 ;;;
 (defun environment-init ()
+  (setq *environment-list* ())
   (dolist (ele lisp-environment-list)
     (let ((=pos (position #\= (the simple-string ele))))
       (when =pos
