@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.5 1990/03/14 16:06:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.6 1990/03/20 00:09:42 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -82,6 +82,10 @@
   (:generator 1
     (move res csp-tn)))
 
+(define-vop (current-binding-pointer)
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:generator 1
+    (move res bsp-tn)))
 
 
 
