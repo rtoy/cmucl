@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.2 1992/02/21 22:01:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.3 1992/12/18 20:40:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,10 +97,10 @@
 
 ;;;; Transforms for converting sap relation operators.
 
-(loop
-  for (sap-fun int-fun) in '((sap< <) (sap<= <=) (sap= =) (sap>= >=) (sap> >))
-  do (deftransform sap-fun ((x y) '* '* :eval-name t)
-       `(,int-fun (sap-int x) (sap-int y))))
+(dolist (info '((sap< <) (sap<= <=) (sap= =) (sap>= >=) (sap> >)))
+  (destructuring-bind (sap-fun int-fun) info
+    (deftransform sap-fun ((x y) '* '* :eval-name t)
+      `(,int-fun (sap-int x) (sap-int y)))))
 
 
 ;;;; Transforms for optimizing sap+
