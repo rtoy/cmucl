@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.23 1991/04/24 11:24:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.24 1991/04/24 11:27:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -360,10 +360,10 @@
 			       (template-name op-info)))
 		  (arg-p (not (tn-ref-write-p op)))
 		  (name (get-operand-name op-tn arg-p))
-		  (pos (position-in #'tn-ref-across op
-				    (if arg-p
-					(vop-args op-vop)
-					(vop-results op-vop)))))
+		  (pos (1+ (position-in #'tn-ref-across op
+					(if arg-p
+					    (vop-args op-vop)
+					    (vop-results op-vop))))))
 	     (compiler-note
 	      "Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
 	       The ~:R ~:[result~;argument~] of ~A."
