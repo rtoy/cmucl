@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.19 1998/05/15 01:01:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.20 1999/12/08 18:36:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,25 +174,31 @@
   (when *read-suppress*
     (read stream t nil t)
     (return-from sharp-A nil))
-  (unless dimensions (%reader-error stream "No dimensions argument to #A."))
-  (collect ((dims))
-    (let* ((contents (read stream t nil t))
-	   (seq contents))
-      (dotimes (axis dimensions
-		     (make-array (dims) :initial-contents contents))
-	(unless (typep seq 'sequence)
-	  (%reader-error stream
-			 "#~DA axis ~D is not a sequence:~%  ~S"
-			 dimensions axis seq))
-	(let ((len (length seq)))
-	  (dims len)
-	  (unless (= axis (1- dimensions))
-	    (when (zerop len)
-	      (%reader-error stream
-			     "#~DA axis ~D is empty, but is not ~
-			      the last dimension."
-			     dimensions axis))
-	    (setq seq (elt seq 0))))))))
+  (cond (dimensions
+	 (collect ((dims))
+	   (let* ((contents (read stream t nil t))
+		  (seq contents))
+	     (dotimes (axis dimensions
+		       (make-array (dims) :initial-contents contents))
+	       (unless (typep seq 'sequence)
+		 (%reader-error stream
+				"#~DA axis ~D is not a sequence:~%  ~S"
+				dimensions axis seq))
+	       (let ((len (length seq)))
+		 (dims len)
+		 (unless (= axis (1- dimensions))
+		   (when (zerop len)
+		     (%reader-error stream
+				    "#~DA axis ~D is empty, but is not ~
+				     the last dimension."
+				    dimensions axis))
+		   (setq seq (elt seq 0))))))))
+	(t
+	 (destructuring-bind (element-type dims contents)
+	     (read stream t nil t)
+	   (make-array dims :element-type element-type
+		       :initial-contents contents)))))
+	 
 
 
 (defun sharp-S (stream sub-char numarg)

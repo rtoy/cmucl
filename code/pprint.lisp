@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.25 1998/06/30 10:58:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.26 1999/12/08 18:36:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1119,8 +1119,7 @@
 	     (bit-vector-p array))
 	 (output-ugly-object array stream))
 	((and *print-readably* (not (eq (array-element-type array) 't)))
-	 (let ((*print-readably* nil))
-	   (error 'print-not-readable :object array)))
+	 (pprint-raw-array stream array))
 	((vectorp array)
 	 (pprint-vector stream array))
 	(t
@@ -1135,31 +1134,45 @@
 	(pprint-newline :fill stream))
       (output-object (aref vector i) stream))))
 
-(defun pprint-multi-dim-array (stream array)
-  (funcall (formatter "#~DA") stream (array-rank array))
+(defun pprint-array-contents (stream array)
   (lisp::with-array-data ((data array) (start) (end))
     (declare (ignore end))
     (labels ((output-guts (stream index dimensions)
 	       (if (null dimensions)
 		   (output-object (aref data index) stream)
 		   (pprint-logical-block
-		       (stream nil :prefix "(" :suffix ")")
-		     (let ((dim (car dimensions)))
-		       (unless (zerop dim)
-			 (let* ((dims (cdr dimensions))
-				(index index)
-				(step (reduce #'* dims))
-				(count 0))
-			   (loop				
-			     (pprint-pop)
-			     (output-guts stream index dims)
-			     (when (= (incf count) dim)
-			       (return))
-			     (write-char #\space stream)
-			     (pprint-newline (if dims :linear :fill)
-					     stream)
-			     (incf index step)))))))))
+		    (stream nil :prefix "(" :suffix ")")
+		    (let ((dim (car dimensions)))
+		      (unless (zerop dim)
+			(let* ((dims (cdr dimensions))
+			       (index index)
+			       (step (reduce #'* dims))
+			       (count 0))
+			  (loop				
+			   (pprint-pop)
+			   (output-guts stream index dims)
+			   (when (= (incf count) dim)
+			     (return))
+			   (write-char #\space stream)
+			   (pprint-newline (if dims :linear :fill)
+					   stream)
+			   (incf index step)))))))))
       (output-guts stream start (array-dimensions array)))))
+
+(defun pprint-multi-dim-array (stream array)
+  (funcall (formatter "#~DA") stream (array-rank array))
+  (pprint-array-contents stream array))
+
+(defun pprint-raw-array (stream array)
+  (write-string "#A" stream)
+  (pprint-logical-block (stream nil :prefix "(" :suffix ")")
+    (output-object (array-element-type array) stream)
+    (write-char #\Space stream)
+    (pprint-newline :fill stream)
+    (output-object (array-dimensions array) stream)
+    (write-char #\Space stream)
+    (pprint-newline :fill stream)
+    (pprint-array-contents stream array)))
 
 (defun pprint-lambda-list (stream lambda-list &rest noise)
   (declare (ignore noise))
