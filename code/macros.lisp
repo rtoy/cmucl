@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.48 1997/02/08 17:16:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.49 1997/05/08 20:52:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1200,6 +1200,7 @@
 				   ',expected-type ',keys)))
 		      (go ,again))))))))
       `(let ((,keyform-value ,keyform))
+	 ,keyform-value ; prevent warnings when key not used eg (case key (t))
 	 (cond
 	  ,@(nreverse clauses)
 	  ,@(if errorp
