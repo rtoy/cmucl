@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/afpa.lisp,v 1.1 1991/07/23 12:14:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/afpa.lisp,v 1.2 1991/08/25 19:04:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,9 +30,9 @@
 
 ;;; The condition code bits.
 ;;;
-(defconstant afpa-compare-lss #b00)
+(defconstant afpa-compare-gtr #b00)
 (defconstant afpa-compare-eql #b01)
-(defconstant afpa-compare-gtr #b10)
+(defconstant afpa-compare-lss #b10)
 (defconstant afpa-compare-unordered #b11)
 
 
@@ -346,7 +346,7 @@
 		(:generator 10
 		  (note-this-location vop :internal-error)
 		  (inst afpa-unop fp-temp x ,op temp)
-		  (inst afpa-get-float y temp fp-temp)))))
+		  (inst afpa-get-float y fp-temp temp)))))
 
   (frob %unary-round %unary-round/afpa-single-float
     afpa-single-reg afpa-single-float :rsw)
