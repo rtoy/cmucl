@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.21 1990/07/28 01:03:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.22 1990/08/02 03:28:43 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -101,6 +101,10 @@
 
 ;;;; Accessors/Setters
 
+;;; Variants built on top of word-index-ref, etc.  I.e. those vectors whos
+;;; elements are represented in integer registers and are built out of
+;;; 8, 16, or 32 bit elements.
+
 (defmacro def-data-vector-frobs (type variant element-type &rest scs)
   `(progn
      (define-vop (,(intern (concatenate 'simple-string
@@ -141,6 +145,10 @@
 (def-data-vector-frobs simple-array-unsigned-byte-32 word-index
   unsigned-num unsigned-reg)
 
+
+;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
+;;; and 4-bit vectors.
+;;; 
 
 (defmacro def-small-data-vector-frobs (type bits)
   (let* ((elements-per-word (floor vm:word-bits bits))
@@ -298,6 +306,91 @@
 (def-small-data-vector-frobs simple-array-unsigned-byte-2 2)
 (def-small-data-vector-frobs simple-array-unsigned-byte-4 4)
 
+
+;;; And the float variants.
+;;; 
+
+(define-vop (data-vector-ref/simple-array-single-float)
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-single-float positive-fixnum)
+  (:results (value :scs (single-reg)))
+  (:result-types single-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 20
+    (inst add lip object index)
+    (inst lwc1 value lip
+	  (- (* vm:vector-data-offset vm:word-bytes)
+	     vm:other-pointer-type))
+    (inst nop)))
+
+(define-vop (data-vector-set/simple-array-single-float)
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (single-reg) :target result))
+  (:arg-types simple-array-single-float positive-fixnum single-float)
+  (:results (result :scs (single-reg)))
+  (:result-types single-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 20
+    (inst add lip object index)
+    (inst swc1 value lip
+	  (- (* vm:vector-data-offset vm:word-bytes)
+	     vm:other-pointer-type))
+    (move result value)))
+
+(define-vop (data-vector-ref/simple-array-double-float)
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-double-float positive-fixnum)
+  (:results (value :scs (double-reg)))
+  (:result-types double-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 20
+    (inst add lip object index)
+    (inst add lip index)
+    (inst lwc1 value lip
+	  (- (* vm:vector-data-offset vm:word-bytes)
+	     vm:other-pointer-type))
+    (inst lwc1-odd value lip
+	  (+ (- (* vm:vector-data-offset vm:word-bytes)
+		vm:other-pointer-type)
+	     vm:word-bytes))
+    (inst nop)))
+
+(define-vop (data-vector-set/simple-array-double-float)
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (double-reg) :target result))
+  (:arg-types simple-array-double-float positive-fixnum double-float)
+  (:results (result :scs (double-reg)))
+  (:result-types double-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 20
+    (inst add lip object index)
+    (inst add lip index)
+    (inst swc1 value lip
+	  (- (* vm:vector-data-offset vm:word-bytes)
+	     vm:other-pointer-type))
+    (inst swc1-odd value lip
+	  (+ (- (* vm:vector-data-offset vm:word-bytes)
+		vm:other-pointer-type)
+	     vm:word-bytes))
+    (move result value)))
+
+
+
+;;; These vops are useful for accessing the bits of a vector irrespective of
+;;; what type of vector it is.
+;;; 
 
 (define-vop (raw-bits word-index-ref)
   (:note "raw-bits VOP")
