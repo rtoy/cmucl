@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.27 2002/11/20 16:14:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.28 2003/04/18 12:00:37 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -813,6 +813,7 @@
 ;;; the correct operation is performed depending on whether splice is at the
 ;;; top of the list or not
 
+#+nil
 (defun nset-exclusive-or (list1 list2 &key (test #'eql) (test-not nil notp)
 				key)
   "Destructively return a list with elements which appear but once in list1
@@ -842,6 +843,20 @@
 		 (rplacd splicey (cdr y)))
 	     (return ()))			; assume lists are really sets
 	    (t (setq splicey y))))))
+
+;;;
+;;; The above #+nil'ed out version returns different results than
+;;; SET-EXCLUSIVE-OR, for instance, for (SET-EXCLUSIVE-OR '(1 1)
+;;; '(1)).  Let's use SET-EXCLUSIVE-OR, and wait for someone who cares
+;;; enough to fix the above algorithm.
+;;;
+(defun nset-exclusive-or (list1 list2 &key (test #'eql) (test-not nil notp)
+				key)
+  "Destructively return a list with elements which appear but once in list1
+   and list2."
+  (if notp
+      (set-exclusive-or list1 list2 :key key :test-not test-not)
+      (set-exclusive-or list1 list2 :key key :test test)))
 
 (defun subsetp (list1 list2 &key key (test #'eql testp) (test-not nil notp))
   "Returns T if every element in list1 is also in list2."
