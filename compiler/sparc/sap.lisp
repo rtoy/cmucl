@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.1 1990/11/30 17:05:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.2 1992/01/14 16:03:35 ram Exp $
 ;;;
 ;;; This file contains the SPARC VM definition of SAP operations.
 ;;;
@@ -23,6 +23,7 @@
 (define-vop (move-to-sap)
   (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (sap-reg)))
+  (:note "pointer to SAP coercion")
   (:generator 1
     (loadw y x sap-pointer-slot other-pointer-type)))
 
@@ -37,7 +38,8 @@
   (:args (sap :scs (sap-reg) :to :save))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:results (res :scs (descriptor-reg)))
-  (:generator 1
+  (:note "SAP to pointer coercion") 
+  (:generator 20
     (with-fixed-allocation (res ndescr sap-type sap-size)
       (storew sap res sap-pointer-slot other-pointer-type))))
 ;;;
@@ -53,6 +55,7 @@
 	    :load-if (not (location= x y))))
   (:results (y :scs (sap-reg)
 	       :load-if (not (location= x y))))
+  (:note "SAP move")
   (:effects)
   (:affected)
   (:generator 0
@@ -70,6 +73,7 @@
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y sap-reg))))
   (:results (y))
+  (:note "SAP argument move")
   (:generator 0
     (sc-case y
       (sap-reg
