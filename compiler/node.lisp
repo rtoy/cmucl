@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.16 1991/04/20 14:14:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.17 1991/07/18 02:11:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 	    (:constructor internal-make-lexenv
 			  (functions variables blocks tags type-restrictions
 				     inlines lambda cleanup cookie
-				     interface-cookie)))
+				     interface-cookie options)))
   ;;
   ;; Alist (name . what), where What is either a Functional (a local function)
   ;; or a list (MACRO . <function>) (a local macro, with the specifier
@@ -82,7 +82,11 @@
   ;; The policy that takes effect in XEPs and related syntax parsing functions.
   ;; Slots in this cookie may be null to indicate that the normal value in
   ;; effect.
-  (interface-cookie *default-interface-cookie* :type cookie))
+  (interface-cookie *default-interface-cookie* :type cookie)
+  ;;
+  ;; AList of random options that are associated with the lexical
+  ;; environment.  They can be established with COMPILER-OPTION-BIND.
+  (options nil :type list))
 
 
 ;;; The front-end data structure (IR1) is composed of nodes and continuations.
