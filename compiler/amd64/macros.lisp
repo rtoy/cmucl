@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.2 2004/06/10 01:39:53 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.3 2004/07/06 20:18:42 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,7 +190,15 @@
 			 (#.rdx-offset "alloc_overflow_rdx")
 			 (#.rbx-offset "alloc_overflow_rbx")
 			 (#.rsi-offset "alloc_overflow_rsi")
-			 (#.rdi-offset "alloc_overflow_rdi")))
+			 (#.rdi-offset "alloc_overflow_rdi")
+			 (#.r8-offset "alloc_overflow_r8")
+			 (#.r9-offset "alloc_overflow_r9")
+			 (#.r10-offset "alloc_overflow_r10")
+			 (#.r11-offset "alloc_overflow_r11")
+			 (#.r12-offset "alloc_overflow_r12")
+			 (#.r13-offset "alloc_overflow_r13")
+			 (#.r14-offset "alloc_overflow_r14")
+			 (#.r15-offset "alloc_overflow_r15")))
 		      :foreign))
     (inst call temp-tn)
     (emit-label ok)
@@ -226,6 +234,38 @@
     (#.rdi-offset
      (load-size alloc-tn rdi-tn size)
      (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_rdi")
+				       :foreign)))
+    (#.r8-offset
+     (load-size alloc-tn r8-tn size)
+     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r8")
+				       :foreign)))
+    (#.r9-offset
+     (load-size alloc-tn r9-tn size)
+     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r9")
+				       :foreign)))
+    (#.r10-offset
+     (load-size alloc-tn r10-tn size)
+     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r10")
+				       :foreign)))
+    (#.r11-offset
+     (load-size alloc-tn r11-tn size)
+     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r11")
+				       :foreign)))
+    (#.r12-offset
+     (load-size alloc-tn r12-tn size)
+     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r12")
+				       :foreign)))
+    (#.r13-offset
+     (load-size alloc-tn r13-tn size)
+     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r13")
+				       :foreign)))
+    (#.r14-offset
+     (load-size alloc-tn r14-tn size)
+     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r14")
+				       :foreign)))
+    (#.r15-offset
+     (load-size alloc-tn r15-tn size)
+     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r15")
 				       :foreign))))
   (inst call temp-tn)
   (values))
