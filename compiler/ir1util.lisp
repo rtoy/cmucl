@@ -737,11 +737,9 @@
   (let* ((last (block-last block))
 	 (cont (node-cont last)))
     (delete-continuation-use last)
-    (cond ((eq (continuation-kind cont) :unused)
-	   (assert (not (continuation-dest cont)))
-	   (delete-continuation cont))
-	  (t
-	   (reoptimize-continuation cont))))
+    (if (eq (continuation-kind cont) :unused)
+	(delete-continuation cont)
+	(reoptimize-continuation cont)))
 
   (dolist (b (block-pred block))
     (unlink-blocks b block))
