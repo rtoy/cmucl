@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.43 2003/05/25 14:33:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.44 2003/06/06 14:00:05 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -469,19 +469,20 @@
   ;; In the second pass, we initialize the class objects.
   (let ((class-eq-wrapper (class-wrapper (find-class 'class-eq-specializer))))
     (dolist (e *built-in-classes*)
-      (destructuring-bind (name supers subs cpl prototype) e
+      (destructuring-bind (name supers subs prototype) e
 	(let* ((class (find-class name))
 	       (lclass (kernel::find-class name))
 	       (wrapper (kernel:%class-layout lclass)))
 	  (set (get-built-in-class-symbol name) class)
 	  (set (get-built-in-wrapper-symbol name) wrapper)
 	  (setf (kernel:%class-pcl-class lclass) class)
-
-	  (bootstrap-initialize-class 'built-in-class class
-				      name class-eq-wrapper nil
-				      supers subs
-				      (cons name cpl)
-				      wrapper prototype)))))
+	  (let* ((kernel-class (kernel::find-class name))
+		 (cpl (kernel:std-compute-class-precedence-list kernel-class))
+		 (cpl-class-names (mapcar #'kernel:%class-name cpl)))
+	    (bootstrap-initialize-class 'built-in-class class
+					name class-eq-wrapper nil
+					supers subs cpl-class-names
+					wrapper prototype))))))
   ;;
   (dolist (e *built-in-classes*)
     (let* ((name (car e))

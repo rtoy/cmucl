@@ -370,11 +370,6 @@
 	  (res `(,name
 		 ,(mapcar #'kernel:%class-name (direct-supers class))
 		 ,(mapcar #'kernel:%class-name (direct-subs class))
-		 ,(map 'list (lambda (x)
-			       (kernel:%class-name (kernel:layout-class x)))
-		       (reverse
-			(kernel:layout-inherits
-			 (kernel:%class-layout class))))
 		 ,(let ((found (assoc name *built-in-classes*)))
 		    (if found (fifth found) 42)))))))
     (setq *built-in-classes* (res))))
@@ -698,8 +693,7 @@ was inherited."
 
 (defclass method (metaobject) ())
 
-(defclass standard-method (definition-source-mixin documentation-mixin
-			      method)
+(defclass standard-method (method definition-source-mixin documentation-mixin)
   ((generic-function
     :initform nil	
     :accessor method-generic-function)

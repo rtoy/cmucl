@@ -103,6 +103,9 @@ New in this release:
        standard characters, BOOLEAN for T, (INTEGER <N> <N>) for
        integers N, non-list types for functions, and CLOS classes for
        instances whose class doesn't have a proper name.
+     - Class precedence list of NULL not having SYMBOL before LIST,
+       precedence list of STANDARD-METHOD not having METHOD before
+       STANDARD-OBJECT.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
