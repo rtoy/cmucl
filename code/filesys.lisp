@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.47 1998/04/20 11:32:51 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.48 1998/04/24 13:10:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1236,7 +1236,7 @@
 			  (error 'file-error
 				 :pathname pathspec
 				 :format-control "Can't create directory ~A."
-				 :format-arguments (list namestring))))
+				 :format-arguments (list namestring)))
 			(setf created-p t)))))
 	 ;; Only the first path in a search-list is considered.
 	 (return (values pathname created-p))))))
