@@ -16,14 +16,15 @@
 
 ;;; Stuff to set up the packages Hemlock uses.
 ;;;
-(in-package "HEMLOCK-INTERNALS"
-	    :nicknames '("HI")
-	    :use '("LISP" "EXTENSIONS" "SYSTEM"))
+(unless (find-package "HEMLOCK-INTERNALS")
+  (make-package "HEMLOCK-INTERNALS"
+		:nicknames '("HI")
+		:use '("LISP" "EXTENSIONS" "SYSTEM")))
 
-;;;
-(in-package "HEMLOCK"
-	    :nicknames '("ED")
-	    :use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM"))
+(unless (find-package "HEMLOCK")
+  (make-package "HEMLOCK"
+		:nicknames '("ED")
+		:use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM")))
 ;;;
 (export 'c::compile-from-stream (find-package "C"))
 
