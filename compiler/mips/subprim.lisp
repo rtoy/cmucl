@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.2 1990/03/18 23:47:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.3 1990/04/01 17:43:30 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -49,7 +49,7 @@
 
       (emit-label done)
       (move result count))))
-       
 
-(define-static-function length (object))
+
+(define-static-function length (object) :translate length)
 
