@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.16 1999/09/11 13:27:26 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.17 1999/10/06 14:32:36 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -281,7 +281,7 @@ GNAME(undefined_tramp):
 	.type	GNAME(closure_tramp),@function
 GNAME(closure_tramp):
 	movl	FDEFN_FUNCTION_OFFSET(%eax),%eax
-	jmp	CLOSURE_FUNCTION_OFFSET(%eax)
+	jmp	*CLOSURE_FUNCTION_OFFSET(%eax)
 	.size	GNAME(closure_tramp), .-GNAME(closure_tramp)
 
 /*
