@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.16 1991/01/02 19:15:35 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.17 1991/01/30 01:23:35 ram Exp $
 ;;;
 ;;;    This file provides a functional interface to global information about
 ;;; named things in the system.  Information is considered to be global if it
@@ -636,6 +636,10 @@
 ;;; it has, then build the result.  This code assumes that all the entries for
 ;;; a name well be iterated over contiguously, which holds true for the
 ;;; implementation of iteration over both kinds of environments.
+;;;
+;;;    When building the table, we sort the entries by POINTER< in an attempt
+;;; to preserve any VM locality present in the original load order, rather than
+;;; randomizing with the original hash function.
 ;;; 
 (defun compact-info-environment (env &key (name (info-env-name env)))
   "Return a new compact info environment that holds the same information as
@@ -643,29 +647,38 @@
   (let ((name-count 0)
 	(prev-name 0)
 	(entry-count 0))
-    (do-info (env :name name)
-      (unless (eq name prev-name)
-	(incf name-count)
-	(setq prev-name name))
-      (incf entry-count))
-    
-    (let* ((table-size
-	    (primify
-	     (+ (truncate (* name-count 100) compact-info-environment-density)
-		3)))
-	   (table (make-array table-size :initial-element 0))
-	   (index (make-array table-size
-			      :element-type 'compact-info-entries-index))
-	   (entries (make-array entry-count))
-	   (entries-info (make-array entry-count
-				     :element-type 'compact-info-entry)))
-
-      (let ((prev-name 0)
-	    (entries-idx 0))
+    (collect ((names))
+      (let ((types ()))
 	(do-info (env :name name :type-number num :value value)
-	  (unless (eq prev-name name)
+	  (unless (eq name prev-name)
+	    (incf name-count)
+	    (unless (eql prev-name 0)
+	      (names (cons prev-name types)))
 	    (setq prev-name name)
-	    (let* ((hash (info-hash name))
+	    (setq types ()))
+	  (incf entry-count)
+	  (push (cons num value) types))
+	(unless (eql prev-name 0)
+	  (names (cons prev-name types))))
+      
+      (let* ((table-size
+	      (primify
+	       (+ (truncate (* name-count 100)
+			    compact-info-environment-density)
+		  3)))
+	     (table (make-array table-size :initial-element 0))
+	     (index (make-array table-size
+				:element-type 'compact-info-entries-index))
+	     (entries (make-array entry-count))
+	     (entries-info (make-array entry-count
+				       :element-type 'compact-info-entry))
+	     (sorted (sort (names) #'(lambda (x y)
+				       (< (%primitive make-fixnum x)
+					  (%primitive make-fixnum y))))))
+	(let ((entries-idx 0))
+	  (dolist (types sorted)
+	    (let* ((name (first types))
+		   (hash (info-hash name))
 		   (len-2 (- table-size 2))
 		   (hash2 (- len-2 (rem hash len-2))))
 	      (do ((probe (rem hash table-size)
@@ -677,26 +690,27 @@
 		    (setf (aref index probe) entries-idx)
 		    (return))
 		  (assert (not (equal entry name))))))
-	    
+
 	    (unless (zerop entries-idx)
 	      (setf (aref entries-info (1- entries-idx)) 
 		    (logior (aref entries-info (1- entries-idx))
-			    compact-info-entry-last))))
-	  
-	  (setf (aref entries-info entries-idx) num)
-	  (setf (aref entries entries-idx) value)
-	  (incf entries-idx)))
+			    compact-info-entry-last)))
 
-      (unless (zerop entry-count)
-	(setf (aref entries-info (1- entry-count)) 
-	      (logior (aref entries-info (1- entry-count))
-		      compact-info-entry-last)))
-      
-      (make-compact-info-env :name name
-			     :table table
-			     :index index
-			     :entries entries
-			     :entries-info entries-info))))
+	    (loop for (num . value) in (rest types) do
+	      (setf (aref entries-info entries-idx) num)
+	      (setf (aref entries entries-idx) value)
+	      (incf entries-idx)))
+	  
+	  (unless (zerop entry-count)
+	    (setf (aref entries-info (1- entry-count)) 
+		  (logior (aref entries-info (1- entry-count))
+			  compact-info-entry-last)))
+	  
+	  (make-compact-info-env :name name
+				 :table table
+				 :index index
+				 :entries entries
+				 :entries-info entries-info))))))
       
       
 
