@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.29 1992/09/04 15:22:16 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.30 1993/07/15 17:59:50 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -717,11 +717,13 @@
 ;;;
 ;;;    Return Home:, which is set up for us at initialization time.
 ;;;
+#|
 (defun user-homedir-pathname (&optional host)
   "Returns the home directory of the logged in user as a pathname.
   This is obtained from the logical name \"home:\"."
   (declare (ignore host))
   #p"home:")
+|#
 
 ;;; File-Write-Date  --  Public
 ;;;
