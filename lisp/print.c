@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.9 1998/06/03 02:24:11 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.10 1998/12/20 04:19:32 dtc Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -139,7 +139,7 @@ static boolean continue_p(boolean newline)
             printf("More? [y] ");
             fflush(stdout);
 
-            gets(buffer);
+            fgets(buffer, sizeof(buffer), stdin);
 
             if (buffer[0] == 'n' || buffer[0] == 'N')
                 throw_to_monitor();
