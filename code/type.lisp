@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.58 2003/04/23 17:36:57 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.59 2003/04/24 10:32:23 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1857,8 +1857,8 @@
    (and (eq (numeric-type-class type1) (numeric-type-class type2))
 	(eq (numeric-type-format type1) (numeric-type-format type2))
 	(eq (numeric-type-complexp type1) (numeric-type-complexp type2))
-	(equal (numeric-type-low type1) (numeric-type-low type2))
-	(equal (numeric-type-high type1) (numeric-type-high type2)))
+	(equalp (numeric-type-low type1) (numeric-type-low type2))
+	(equalp (numeric-type-high type1) (numeric-type-high type2)))
    t))
 
 (define-type-method (number :unparse) (type)
