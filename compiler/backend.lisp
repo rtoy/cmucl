@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.24 1992/06/09 23:45:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.25 1992/07/22 23:31:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,8 @@
 	  backend-assembler-params backend-page-size
 	  
 	  ;; The various backends need to call these support routines
-	  make-stack-pointer-tn primitive-type primitive-type-of))
+	  make-stack-pointer-tn primitive-type primitive-type-of
+	  emit-nop tn-location))
 
 
 ;;;; VM support routine stuff.
@@ -89,7 +90,11 @@
   
   ;; From SUPPORT.LISP
   generate-call-sequence
-  generate-return-sequence)
+  generate-return-sequence
+
+  ;; For use with scheduler.
+  emit-nop
+  tn-location)
 
 (defprinter vm-support-routines)
 
