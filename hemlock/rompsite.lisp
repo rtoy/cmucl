@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.10 1991/02/08 16:37:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.11 1991/06/22 00:08:05 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,6 +167,8 @@
 	  (return-with-slash (merge-pathnames pathname default-directory))))))
 
 (defun directoryp (pathname)
+  "Returns whether pathname names a directory, that is whether it has no
+   name and no type components."
   (not (or (pathname-name pathname) (pathname-type pathname))))
 
 
