@@ -62,6 +62,16 @@
 
 ;;;; Stuff for checking a call against a function type.
 
+;;; ALWAYS-SUBTYPEP  --  Interface
+;;;
+;;;    A dummy version of SUBTYPEP useful when we want a functional like
+;;; subtypep that always returns true.
+;;;
+(defun always-subtypep (type1 type2)
+  (declare (ignore type1 type2))
+  (values t t))
+
+
 ;;; Valid-Function-Use  --  Interface
 ;;;
 ;;;    Determine whether a use of a function is consistent with its type.  The
