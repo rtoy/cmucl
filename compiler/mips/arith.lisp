@@ -17,6 +17,34 @@
 (in-package "C")
 
 
+
+;;;; Unary operations.
+
+(define-vop (fixnum-unop)
+  (:args (x :scs (any-reg descriptor-reg)))
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:note "inline fixnum arithmetic")
+  (:arg-types fixnum)
+  (:result-types fixnum)
+  (:policy :fast-safe))
+
+(define-vop (fast-negate/fixnum fixnum-unop)
+  (:translate %negate)
+  (:generator 1
+    (inst sub res zero-tn x)))
+
+(define-vop (fast-lognot/fixnum fixnum-unop)
+  (:temporary (:scs (any-reg) :type fixnum :to (result 0))
+	      temp)
+  (:translate lognot)
+  (:generator 1
+    (loadi temp (fixnum -1))
+    (inst xor res x temp)))
+
+
+
+;;;; Binary operations.
+
 ;;; Assume that any constant operand is the second arg...
 
 (defmacro define-fixnum-binop (name inherits translate op
@@ -33,11 +61,10 @@
 	     `(((immediate
 		 ,(if unsigned 'unsigned-immediate 'negative-immediate))
 		(inst ,immed-op r x
-		      ,(if function
-			   `(,function (tn-value y))
-			   '(tn-value y))))))))))
+		      (fixnum ,(if function
+				   `(,function (tn-value y))
+				   '(tn-value y)))))))))))
 
-
 ;;;; Arithmetic:
 
 (define-vop (fast-binop/fixnum)
@@ -60,24 +87,6 @@
   :immed-op addi :function -)
 
 
-(define-vop (fixnum-unop)
-  (:args (x :scs (any-reg descriptor-reg)))
-  (:results (res :scs (any-reg descriptor-reg)))
-  (:note "inline fixnum arithmetic")
-  (:arg-types fixnum)
-  (:result-types fixnum)
-  (:policy :fast-safe))
-
-(macrolet ((frob (name inst trans)
-	     `(define-vop (,name fixnum-unop)
-		(:translate ,trans)
-		(:generator 1
-		  (inst ,inst res zero-tn x)))))
-  (frob fast-negate/fixnum sub %negate)
-  (frob fast-lognot/fixnum nor lognot))
-
-
-
 ;;;; Logic operations:
 
 ;;; Like fast-binop/fixnum, except the immediate operand is unsigned, and
@@ -127,7 +136,7 @@
 	   (inst bgez x target)
 	   (inst bltz x target)))
       ((negative-immediate immediate)
-       (inst slti temp x (tn-value y))
+       (inst slti temp x (fixnum (tn-value y)))
        (if not-p
 	   (inst beq temp zero-tn target)
 	   (inst bne temp zero-tn target)))
@@ -150,7 +159,7 @@
 	   (inst blez x target)
 	   (inst bgtz x target)))
       ((negative-immediate immediate)
-       (inst slti temp x (1+ (tn-value y)))
+       (inst slti temp x (fixnum (1+ (tn-value y))))
        (if not-p
 	   (inst bne temp zero-tn target)
 	   (inst beq temp zero-tn target)))
