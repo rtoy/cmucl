@@ -7,16 +7,16 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.10 1992/03/02 02:27:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.11 1992/03/04 18:15:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 (in-package "SYSTEM")
 
-(in-package "EXT")
+(in-package "ALIEN")
 (export '(load-foreign))
 (in-package "SYSTEM")
-(import 'ext:load-foreign)
+(import 'alien:load-foreign)
 
 (defvar *previous-linked-object-file* nil)
 (defvar *foreign-segment-free-pointer* foreign-segment-start)
@@ -164,30 +164,26 @@
 	    (setf (gethash symbol symbol-table) address)))))
     (setf lisp::*foreign-symbols* symbol-table)))
 
-(defun load-foreign (files &optional
+(defun load-foreign (files &key
 			   (libraries '("-lc"))
-			   (linker "library:load-foreign.csh")
 			   (base-file "path:lisp")
 			   (env ext:*environment-list*))
-  "Load-foreign loads a list of C object files into a running Lisp.  The
-  files argument should be a single file or a list of files.  The files
-  may be specified as namestrings or as pathnames.  The libraries
-  argument should be a list of library files as would be specified to
-  ld.  They will be searched in the order given.  The default is just
-  \"-lc\", i.e., the C library.  The linker argument is used to specifier
-  the Unix linker to use to link the object files (the default is
-  /usr/cs/bin/ld).  The base-file argument is used to specify a file to
-  use as the starting place for defined symbols.  The default is the C
-  start up code for Lisp.  The env argument is the Unix environment
-  variable definitions for the invocation of the linker.  The default is
-  the environment passed to Lisp."
+  "Load-foreign loads a list of C object files into a running Lisp.  The files
+  argument should be a single file or a list of files.  The files may be
+  specified as namestrings or as pathnames.  The libraries argument should be a
+  list of library files as would be specified to ld.  They will be searched in
+  the order given.  The default is just \"-lc\", i.e., the C library.  The
+  base-file argument is used to specify a file to use as the starting place for
+  defined symbols.  The default is the C start up code for Lisp.  The env
+  argument is the Unix environment variable definitions for the invocation of
+  the linker.  The default is the environment passed to Lisp."
   (let ((output-file (pick-temporary-file-name))
 	(symbol-table-file (pick-temporary-file-name))
 	(error-output (make-string-output-stream)))
 
-    (format t ";;; Running ~A...~%" linker)
+    (format t ";;; Running library:load-foreign.csh...~%")
     (force-output)
-    (let ((proc (ext:run-program linker
+    (let ((proc (ext:run-program "library:load-foreign.csh"
 				 (list* (or *previous-linked-object-file*
 					    (namestring (truename base-file)))
 					(format nil "~X"
@@ -203,11 +199,11 @@
 				 :output error-output
 				 :error :output)))
       (unless proc
-	(error "Could not run ~S" linker))
+	(error "Could not run library:load-foreign.csh"))
       (unless (zerop (ext:process-exit-code proc))
 	(system:serve-all-events 0)
-	(error "~S failed:~%~A"
-	       linker (get-output-stream-string error-output)))
+	(error "library:load-foreign.csh failed:~%~A"
+	       (get-output-stream-string error-output)))
       (load-object-file output-file)
       (parse-symbol-table symbol-table-file)
       (unix:unix-unlink symbol-table-file)
