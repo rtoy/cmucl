@@ -137,7 +137,7 @@
 	  (t *any-primitive-type*))))
 
 
-;;; Primitive-Type  --  Interface
+;;; PRIMITIVE-TYPE  --  Interface
 ;;;
 ;;;    Return the primitive type corresponding to a type descriptor structure.
 ;;; If a fixnum or an interesting simple vector, then return the appropriate
@@ -147,9 +147,36 @@
 ;;; In a bootstrapping situation, we should be careful to use the correct
 ;;; values for the system parameters.
 ;;;
-(defun primitive-type (type)
+;;; Note: DEFUN-CACHED caches this translation; If the primitive type
+;;; translation is ever changed (due to hardware configuration switches, etc.),
+;;; then PRIMITIVE-TYPE-CACHE-CLEAR must be called to clear old cached
+;;; information.
+;;;
+(defun-cached (primitive-type
+	       :hash-function (lambda (x)
+				(logand (cache-hash-eq x) #x1FF))
+	       :hash-bits 9
+	       :values 2
+	       :default (values nil :empty))
+	      ((type eq))
   (declare (type ctype type))
   (etypecase type
+    (named-type
+     (case (named-type-name type)
+       ((t bignum ratio string-char function)
+	(values (primitive-type-or-lose (named-type-name type)) t))
+       (cons
+	(values (primitive-type-or-lose 'list) nil))
+       (standard-char
+	(values (primitive-type-or-lose 'string-char) nil))
+       (t
+	(values *any-primitive-type* nil))))
+    (member-type
+     (let* ((members (member-type-members type))
+	    (res (primitive-type-of (first members))))
+       (dolist (mem (rest members) (values res nil))
+	 (unless (eq (primitive-type-of mem) res)
+	   (return (values *any-primitive-type* nil))))))
     (numeric-type
      (if (not (eq (numeric-type-complexp type) :real))
 	 (values *any-primitive-type* nil)
@@ -198,22 +225,6 @@
 		 (unless ptype-exact (setq exact nil))
 		 (unless (eq ptype res)
 		   (return (values *any-primitive-type* nil)))))))))
-    (member-type
-     (let* ((members (member-type-members type))
-	    (res (primitive-type-of (first members))))
-       (dolist (mem (rest members) (values res nil))
-	 (unless (eq (primitive-type-of mem) res)
-	   (return (values *any-primitive-type* nil))))))
-    (named-type
-     (case (named-type-name type)
-       ((t bignum ratio string-char function)
-	(values (primitive-type-or-lose (named-type-name type)) t))
-       (cons
-	(values (primitive-type-or-lose 'list) nil))
-       (standard-char
-	(values (primitive-type-or-lose 'string-char) nil))
-       (t
-	(values *any-primitive-type* nil))))
     (ctype
      (values *any-primitive-type* nil))))
 
