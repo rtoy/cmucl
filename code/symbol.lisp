@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.6 1991/04/23 17:02:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.7 1992/02/09 17:56:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,6 +29,7 @@
 
 (in-package "LISP")
 
+(declaim (maybe-inline get %put getf remprop %putf get-properties keywordp))
 
 (defun set (variable new-value)
   "VARIABLE must evaluate to a symbol.  This symbol's special value cell is
