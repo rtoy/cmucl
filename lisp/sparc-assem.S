@@ -41,14 +41,25 @@
         sethi %hi(sym), reg_L0; st reg, [reg_L0+%lo(sym)]
 
 
+/*
+ * Our frame size needs to be large enough to hold our window, 
+ * the structure return pointer, and some temp space.  The temp space
+ * is to hold the 64-bit %o registers that might be converted to %i 
+ * registers.  A task switch will will not preserve all 64 bits of the
+ * %i registers, so we need to save our %o registers before entering C.
+ * Since %o0 and %o1 contain the return results, we do not have to save 
+ * these.
+ */
+#ifdef v8plus	
+#define FRAMESIZE (SA(WINDOWSIZE+4 + 6*8))
+#else	
 #define FRAMESIZE (SA(WINDOWSIZE+4))
-
+#endif
         .seg    "text"
         .global _call_into_lisp
 	FUNCDEF(_call_into_lisp)
 _call_into_lisp:
         save    %sp, -FRAMESIZE, %sp
-
 	/* Flush all of C's register windows to the stack. */
 	ta	ST_FLUSH_WINDOWS
 
@@ -148,6 +159,14 @@ lra:
         .global _call_into_c
 	FUNCDEF(_call_into_c)
 _call_into_c:
+#ifdef v8plus
+	stx	%o2, [%fp - 8 - 1*8]
+	stx	%o3, [%fp - 8 - 2*8]
+	stx	%o4, [%fp - 8 - 3*8]
+	stx	%o5, [%fp - 8 - 4*8]
+	stx	%o6, [%fp - 8 - 5*8]
+	stx	%o7, [%fp - 8 - 6*8]
+#endif		
         /* Build a lisp stack frame */
         mov     reg_CFP, reg_OCFP
         mov     reg_CSP, reg_CFP
@@ -223,6 +242,14 @@ _call_into_c:
         mov     reg_CFP, reg_CSP
         mov     reg_OCFP, reg_CFP
 
+#ifdef v8plus
+	ldx	[%fp - 8 - 1*8], %o2
+	ldx	[%fp - 8 - 2*8], %o3
+	ldx	[%fp - 8 - 3*8], %o4
+	ldx	[%fp - 8 - 4*8], %o5
+	ldx	[%fp - 8 - 5*8], %o6
+	ldx	[%fp - 8 - 6*8], %o7
+#endif		
         /* And back into lisp. */
         ret
         nop
