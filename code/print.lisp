@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.51 1993/03/14 16:53:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.52 1993/05/02 14:48:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1104,7 +1104,7 @@
 			#'default-structure-print)
 		    instance stream *current-level*))
 	  ((fboundp 'pcl:print-object)
-	   (pcl:print-object instance))
+	   (pcl:print-object instance stream))
 	  (t
 	   (print-unreadable-object (instance stream :identity t)
 	     (write-string "Unprintable Instance" stream))))))
