@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.26 2003/01/07 17:19:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.27 2003/01/23 21:05:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -205,10 +205,10 @@ this, the functions are listed.  If NIL, then always list the functions.")
 (defvar *profile-info* (make-hash-table :test #'equal))
 (defstruct profile-info
   (name nil)
-  (old-definition (error "Required keyword arg not supplied.") :type function)
-  (new-definition (error "Required keyword arg not supplied.") :type function)
-  (read-time (error "Required keyword arg not supplied.") :type function)
-  (reset-time (error "Required keyword arg not supplied.") :type function))
+  (old-definition (required-argument) :type function)
+  (new-definition (required-argument) :type function)
+  (read-time (required-argument) :type function)
+  (reset-time (required-argument) :type function))
 
 ;;; PROFILE-INFO-OR-LOSE  --  Internal
 ;;;
@@ -229,7 +229,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
 ;;; for each nested call is added into the appropriate variable.  When the
 ;;; outer function returns, these amounts are subtracted from the total.
 ;;;
-;;; *enclosed-consing-hi* and *enclosed-consing* represent the total
+;;; *enclosed-consing-h* and *enclosed-consing-l* represent the total
 ;;; consing as a pair of fixnum-sized integers to reduce consing and
 ;;; allow for about 2^58 bytes of total consing.  (Assumes positive
 ;;; fixnums are 29 bits long).

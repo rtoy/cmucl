@@ -1,13 +1,14 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.26 2002/08/27 22:18:32 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.27 2003/01/23 21:05:38 toy Exp $
  *
  */
 
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <sys/file.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -92,9 +93,6 @@ int main(int argc, char *argv[], char *envp[])
     boolean monitor;
     lispobj initial_function;
 
-#ifdef MACH
-    mach_init();
-#endif
 #if defined(SVR4) || defined(__linux__)
     tzset();
 #endif
@@ -155,7 +153,7 @@ int main(int argc, char *argv[], char *envp[])
 #ifdef MACH
 	extern char *getenv(char *var);
 #endif
-	static char buf[MAXPATHLEN];
+	static char buf[_POSIX_PATH_MAX];
 	char *lib = getenv("CMUCLLIB");
 
 	if (lib != NULL) {
@@ -271,4 +269,5 @@ int main(int argc, char *argv[], char *envp[])
 	printf("Initial function returned?\n");
 	exit(1);
     }
+    return 0;                   /* not reached */
 }

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.52 2002/08/27 22:18:23 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.53 2003/01/23 21:05:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1357,7 +1357,7 @@
   (setf (info variable alien-info lisp-name)
 	(make-heap-alien-info :type type
 			      :sap-form `(foreign-symbol-address
-					  ',alien-name :flavor :data))))
+					  ,alien-name :flavor :data))))
 
 ;;; EXTERN-ALIEN -- public.
 ;;; 
@@ -1955,7 +1955,7 @@
        (error "~S is not an alien function." alien)))))
 
 (defmacro def-alien-routine (name result-type &rest args)
-  "Def-C-Routine Name Result-Type
+  "Def-Alien-Routine Name Result-Type
                     {(Arg-Name Arg-Type [Style])}*
 
   Define a foreign interface function for the routine with the specified Name,

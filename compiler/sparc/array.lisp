@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.24 2002/09/09 14:08:48 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.25 2003/01/23 21:05:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,7 +103,7 @@
 
 ;;;; Accessors/Setters
 
-;;; Variants built on top of word-index-ref, etc.  I.e. those vectors whos
+;;; Variants built on top of word-index-ref, etc.  I.e. those vectors whose
 ;;; elements are represented in integer registers and are built out of
 ;;; 8, 16, or 32 bit elements.
 

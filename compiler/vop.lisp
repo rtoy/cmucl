@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.40 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.41 2003/01/23 21:05:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1131,7 +1131,7 @@
 
 ;;; The Global-Conflicts structure represents the conflicts for global TNs.
 ;;; Each global TN has a list of these structures, one for each block that it
-;;; is live in.  In addition to repsenting the result of lifetime analysis, the
+;;; is live in.  In addition to representing the result of lifetime analysis, the
 ;;; global conflicts structure is used during lifetime analysis to represent
 ;;; the set of TNs live at the start of the IR2 block.
 ;;;

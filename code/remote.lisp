@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.7 2002/10/07 14:31:05 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.8 2003/01/23 21:05:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,8 +47,8 @@
 
 ;;; REMOTE -- public
 ;;;
-;;; Execute the body remotly. Subforms are executed locally in the lexical
-;;; envionment of the macro call. No values are returned.
+;;; Execute the body remotely. Subforms are executed locally in the lexical
+;;; environment of the macro call. No values are returned.
 ;;;
 (defmacro remote (wire-form &body forms)
   "Evaluates the given forms remotly. No values are returned, as the remote
@@ -71,9 +71,9 @@ evaluation is asyncronus."
 ;;; return, cause we can kind of guess at what the currect results would be.
 ;;;
 (defmacro remote-value-bind (wire-form vars form &rest body)
-  "Bind vars to the multiple values of form (which is executed remotly). The
-forms in body are only executed if the remote function returned as apposed
-to aborting due to a throw."
+  "Bind VARS to the multiple values of FORM (which is executed remotely). The
+forms in BODY are only executed if the remote function returned (as apposed
+to aborting due to a throw)."
   (cond
    ((null vars)
     `(progn

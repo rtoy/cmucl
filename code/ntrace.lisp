@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.17 1997/11/30 13:54:57 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.18 2003/01/23 21:05:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -600,7 +600,7 @@
    :PRINT Form
    :PRINT-AFTER Form
    :PRINT-ALL Form
-       In addition to the usual prinout, he result of evaluating Form is
+       In addition to the usual printout, the result of evaluating FORM is
        printed at the start of the function, at the end of the function, or
        both, according to the respective option.  Multiple print options cause
        multiple values to be printed.

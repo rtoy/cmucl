@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.45 2002/12/20 17:59:44 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.46 2003/01/23 21:05:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,7 +33,7 @@
 	  
 ;;; Spice-Lisp specific stuff and utilities:
 	  
-(eval-when (compile)
+(eval-when (:compile-toplevel)
 
 ;;; Seq-Dispatch does an efficient type-dispatch on the given Sequence.
 
@@ -392,7 +392,7 @@
 
 ;;; Replace:
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
 
 ;;; If we are copying around in the same vector, be careful not to copy the
 ;;; same elements over repeatedly.  We do this by copying backwards.

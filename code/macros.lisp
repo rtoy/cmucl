@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.84 2002/11/22 18:12:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.85 2003/01/23 21:05:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,7 +159,7 @@
 ;;; define-symbol-macro  --  Public
 ;;;
 (defmacro define-symbol-macro (name expansion)
-  `(eval-when (compile load eval)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
      (%define-symbol-macro ',name ',expansion)))
 ;;;
 (defun %define-symbol-macro (name expansion)
@@ -187,13 +187,13 @@
 (defmacro deftype (name arglist &body body)
   "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
-    (error "~S -- Type name not a symbol." name))
+    (simple-program-error "~S -- Type name not a symbol." name))
   
   (let ((whole (gensym "WHOLE-")))
     (multiple-value-bind (body local-decs doc)
 			 (parse-defmacro arglist whole body name 'deftype
 					 :default-default ''*)
-      `(eval-when (compile load eval)
+      `(eval-when (:compile-toplevel :load-toplevel :execute)
 	 (%deftype ',name
 		   #'(lambda (,whole)
 		       ,@local-decs
@@ -233,7 +233,7 @@
   "Syntax like DEFMACRO, but creates a Setf-Expansion generator.  The body
   must be a form that returns the five magical values."
   (unless (symbolp access-fn)
-    (error "~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
+    (simple-program-error "~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
 	   access-fn))
 
   (let ((whole (gensym "WHOLE-"))
@@ -242,7 +242,7 @@
 			 (parse-defmacro lambda-list whole body access-fn
 					 'define-setf-expander
 					 :environment environment)
-      `(eval-when (load compile eval)
+      `(eval-when (:compile-toplevel :load-toplevel :execute)
 	 (%define-setf-macro
 	  ',access-fn
 	  #'(lambda (,whole ,environment)
@@ -748,7 +748,7 @@
     (do ((a args (cddr a)))
 	((endp a))
       (if (endp (cdr a))
-	  (error "Odd number of args to PSETF."))
+	  (simple-program-error "Odd number of args to PSETF."))
       (multiple-value-bind
 	  (dummies vals newval setter getter)
 	  (get-setf-expansion (car a) env)
@@ -1223,7 +1223,7 @@
 
 ;;;; CASE, TYPECASE, & Friends.
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
 ;;; CASE-BODY returns code for all the standard "case" macros.  Name is the
 ;;; macro name, and keyform is the thing to case on.  Multi-p indicates whether
@@ -1519,7 +1519,7 @@
 
 
 (defmacro with-output-to-string ((var &optional string) &body (forms decls))
-  "If *string* is specified, it must be a string with a fill pointer; 
+  "If STRING is specified, it must be a string with a fill pointer;
    the output is incrementally appended to the string (as if by use of
    VECTOR-PUSH-EXTEND)."
   (if string
@@ -1628,7 +1628,7 @@
 
 ;;;; With-Compilation-Unit:
 
-;;; True if we are within a With-Compilation-Unit form, which normally causes
+;;; True if we are within a WITH-COMPILATION-UNIT form, which normally causes
 ;;; nested uses to be NOOPS.
 ;;;
 (defvar *in-compilation-unit* nil)

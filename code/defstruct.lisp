@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.78 2003/01/03 18:02:58 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.79 2003/01/23 21:05:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1644,7 +1644,7 @@
 	      (unless (accessor-inherited-data aname info)
 		(undefine-function-name aname)
 		(unless (dsd-read-only slot)
-		  (undefine-function-name `(setf ,aname))))))))
+		  (undefine-function-name `(setf ,aname))))
 	      
 	      ))))
       ;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.12 2001/01/02 13:01:17 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.13 2003/01/23 21:05:35 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,7 +109,7 @@
 (define-condition wire-eof (wire-error)
   ()
   (:report (lambda (condition stream)
-	     (format stream "Recieved EOF on ~A."
+	     (format stream "Received EOF on ~A."
 		     (wire-error-wire condition)))))
 
 (define-condition wire-io-error (wire-error)

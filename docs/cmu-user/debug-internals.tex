@@ -643,7 +643,7 @@ may not be a place for which the compiler dumped debug information.
 \begin{defun}{}{code-location-unknown-p}{\args{\var{basic-code-location}}}
   
   This function returns whether \var{basic-code-location} is unknown.
-  It returns \nil when the code-location is known.
+  It returns \nil{} when the code-location is known.
 \end{defun}
 
 
@@ -711,7 +711,7 @@ subform corresponding to the code-location.
 \begin{defun}{}{debug-source-compiled}{\args{\var{debug-source}}}
   
   This function returns the time someone compiled the source.  This is
-  \nil if the source is uncompiled.
+  \nil{} if the source is uncompiled.
 \end{defun}
 
 
@@ -734,10 +734,10 @@ actual source form:
 
 \begin{defun}{}{debug-source-start-positions}{\args{\var{debug-source}}}
   
-  This function returns the file position of each top-level form a
+  This function returns the file position of each top-level form as a
   vector if \var{debug-source} is from a \kwd{file}.  If
   \code{debug-source-from} is \kwd{lisp} or \kwd{stream}, or the file
-  is byte-compiled, then the result is \false.
+  is byte-compiled, then the result is \false{}.
 \end{defun}
 
 

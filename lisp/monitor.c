@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.12 2000/10/27 19:25:55 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.13 2003/01/23 21:05:38 toy Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -412,7 +412,7 @@ static void catchers_cmd(char **ptr)
             printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ",
 		   (unsigned long)catch, (unsigned long)(catch->current_uwp),
 		   (unsigned long)(catch->current_cont),
-		   component_ptr_from_pc(catch->entry_pc) + type_OtherPointer,
+		   component_ptr_from_pc((lispobj *)catch->entry_pc) + type_OtherPointer,
 		   catch->entry_pc);
 #endif
             brief_print((lispobj)catch->tag);

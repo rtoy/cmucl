@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.46 2002/10/25 14:36:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.47 2003/01/23 21:05:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2120,7 +2120,9 @@
 		(interpret-format-logical-block stream orig-args args
 						prefix per-line-p insides
 						suffix atsignp))
-	      (let ((count (apply #'+ (mapcar (lambda (x) (count-if #'illegal-inside-justification-p x)) segments))))
+	      (let ((count (reduce #'+ (mapcar (lambda (x)
+                                                 (count-if #'illegal-inside-justification-p x))
+                                               segments))))
 		(when (> count 0)
 		  ;; ANSI specifies that "an error is signalled" in this
 		  ;; situation.

@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.21 2002/11/08 20:01:41 toy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.22 2003/01/23 21:05:39 toy Exp $ 
 
    */
 #include <stdio.h>
@@ -32,7 +32,7 @@
 
 #undef PRINTNOISE
 
-#if defined(ibmrt) || defined(i386)
+#ifdef i386
 static lispobj *current_dynamic_space_free_pointer;
 #endif
 
@@ -1573,7 +1573,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     else
       cgc_free_heap();
 #else
-#if defined GENCGC
+#ifdef GENCGC
     gc_free_heap();
 #else
     /* ibmrt using GC */
@@ -1586,7 +1586,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
   /* Call the scavenger hook functions */
   {
     struct scavenger_hook *sh;
-    for (sh = PTR((int)scavenger_hooks); sh != PTR(NIL);) {
+    for (sh = PTR((int)scavenger_hooks); (lispobj)sh != PTR(NIL);) {
       struct scavenger_hook *sh_next = PTR((int) sh->next);
       funcall0(sh->function);
       sh->next = NULL;
