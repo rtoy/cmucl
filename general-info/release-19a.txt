@@ -208,6 +208,8 @@ New in this release:
        conservative. 
      - Search in /usr/lib/cmucl for the lisp core file as well, to
        support x86/Linux
+     - The trap for floating-point underflow is turned off by default
+       for all platforms now.
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
