@@ -5,9 +5,9 @@
  * codes from Carnegie Mellon University. This code has been placed in
  * the public domain, and is provided 'as is'.
  *
- * Douglas Crosher, 1996, 1997.
+ * Douglas Crosher, 1996, 1997, 1998.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.7 1997/12/25 09:33:48 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.8 1997/12/31 18:07:42 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -4310,15 +4310,31 @@ scavenge_thread_stacks(void)
       lispobj stack_obj = vector->data[i];
       if (LowtagOf(stack_obj) == type_OtherPointer) {
 	struct vector *stack = (struct vector *) PTR(stack_obj);
-	int length, j;
+	int vector_length;
 	if (TypeOf(stack->header) != type_SimpleArrayUnsignedByte32)
 	  return;
-	length = fixnum_value(stack->length);
-	if (gencgc_verbose > 1)
-	  fprintf(stderr,"Scavenging control stack %d of length %d words\n",
-		  i,length);
-	for (j = 0; j < length; j++)
-	  preserve_pointer((void *)stack->data[j]);
+	vector_length = fixnum_value(stack->length);
+	if ((gencgc_verbose > 1) && (vector_length <= 0))
+	  fprintf(stderr,"*W control stack vector length %d\n", vector_length);
+	if (vector_length > 0) {
+	  unsigned int stack_pointer = stack->data[0];
+	  if ((stack_pointer < control_stack) ||
+	      (stack_pointer > control_stack_end))
+	    fprintf(stderr,"*E Invalid stack pointer %x\n", stack_pointer);
+	  if ((stack_pointer > control_stack) &&
+	      (stack_pointer < control_stack_end)) {
+	    unsigned int length = ((int)control_stack_end - stack_pointer) / 4;
+	    int j;
+	    if (length >= vector_length)
+	      fprintf(stderr,"*E Invalid stack size %d >= vector length %d\n",
+		      length, vector_length);
+	    if (gencgc_verbose > 1)
+	      fprintf(stderr,"Scavenging %d words of control stack %d of length %d words.\n",
+		      length,i,vector_length);
+	    for (j = 0; j < length; j++)
+	      preserve_pointer((void *)stack->data[1+j]);
+	  }
+	}
       }
     }
   }
