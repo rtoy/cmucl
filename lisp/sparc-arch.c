@@ -131,6 +131,7 @@ struct sigcontext *scp;
 
 	switch (trap) {
 	  case trap_PendingInterrupt:
+	    arch_skip_instruction(scp);
 	    interrupt_handle_pending(scp);
 	    break;
 

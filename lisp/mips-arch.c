@@ -128,6 +128,7 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 
     switch (code) {
       case trap_PendingInterrupt:
+	arch_skip_instruction(scp);
 	interrupt_handle_pending(scp);
 	break;
 
