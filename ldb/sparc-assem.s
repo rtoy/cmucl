@@ -136,9 +136,8 @@ _call_into_c:
         st      CODE, [CFP+8]
 
         /* Turn on pseudo-atomic. */
-        set     1, NL1
         sethi   %hi(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET), L0
-        st      NL1, [L0+%lo(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET)]
+        st      CSP, [L0+%lo(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET)]
 
         /* Store LISP state */
         store(ALLOC,current_dynamic_space_free_pointer)
@@ -147,7 +146,7 @@ _call_into_c:
         store(CFP,current_control_frame_pointer)
 
         /* No longer in Lisp. */
-        store(NL1,foreign_function_call_active)
+        store(CSP,foreign_function_call_active)
 
         /* Were we interrupted? */
         sethi   %hi(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET), L0
@@ -214,8 +213,29 @@ _undefined_tramp:
         .word   NIL
         .word   NIL
         .word   NIL
+        .word   NIL
 
         unimp   trap_Error
+
+
+
+	.global	_closure_tramp
+	.align	8
+	.byte	0
+_closure_tramp:
+	.byte	0, 0, type_FunctionHeader
+	.word	_closure_tramp
+	.word	NIL
+        .word   NIL
+	.word	NIL
+	.word	NIL
+
+	ld	[CNAME+SYMBOL_FUNCTION_OFFSET], LEXENV
+	ld	[LEXENV+CLOSURE_FUNCTION_OFFSET], CODE
+	jmp	CODE+FUNCTION_HEADER_CODE_OFFSET
+	nop
+
+
 
 
 /****************************************************************\
