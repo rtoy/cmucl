@@ -18,9 +18,8 @@
 	  package-use-list package-used-by-list package-shadowing-symbols
 	  list-all-packages intern find-symbol unintern export
 	  unexport import shadowing-import shadow use-package
-	  unuse-package find-all-symbols do-symbols
+	  unuse-package find-all-symbols do-symbols with-package-iterator
 	  do-external-symbols do-all-symbols apropos apropos-list))
-
 
 (in-package "EXTENSIONS")
 (export '(*keyword-package* *lisp-package*))
@@ -420,6 +419,138 @@
        ,@internal-code
       ,TAG
        ,@external-code)))
+
+;;;; WITH-PACKAGE-ITERATOR
+
+(defmacro with-package-iterator ((mname package-list &rest symbol-types)
+				 &body body)
+  (let* ((packages (gensym))
+	 (these-packages (gensym))
+	 (ordered-types (let ((res nil))
+			  (dolist (kind '(:inherited :external :internal)
+					res)
+			    (when (member kind symbol-types)
+			      (push kind res)))))  ; Order symbol-types.
+	 (counter (gensym))
+	 (kind (gensym))
+	 (hash-vector (gensym))
+	 (vector (gensym))
+	 (package-use-list (gensym))
+	 (init-macro (gensym))
+	 (end-test-macro (gensym))
+	 (real-symbol-p (gensym))
+	 (BLOCK (gensym)))
+    `(let* ((,these-packages ,package-list)
+	    (,packages `,(mapcar #'(lambda (package)
+				     (if (packagep package)
+					 package
+					 (find-package package)))
+				 (if (consp ,these-packages)
+				     ,these-packages
+				     (list ,these-packages))))
+	    (,counter nil)
+	    (,kind (car ,packages))
+	    (,hash-vector nil)
+	    (,vector nil)
+	    (,package-use-list nil))
+       ,(if (member :inherited ordered-types)
+	    `(setf ,package-use-list (package-use-list (car ,packages)))
+	    `(declare (ignore ,package-use-list)))
+       (macrolet ((,init-macro (next-kind)
+ 	 (let ((symbols (gensym)))
+	   `(progn
+	      (setf ,',kind ,next-kind)
+	      (setf ,',counter nil)
+	      ,(case next-kind
+		 (:internal
+		  `(let ((,symbols (package-internal-symbols
+				    (car ,',packages))))
+		     (setf ,',vector (package-hashtable-table ,symbols))
+		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))
+		 (:external
+		  `(let ((,symbols (package-external-symbols
+				    (car ,',packages))))
+		     (setf ,',vector (package-hashtable-table ,symbols))
+		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))
+		 (:inherited
+		  `(let ((,symbols (package-external-symbols
+				    (car ,',package-use-list))))
+		     (setf ,',vector (package-hashtable-table ,symbols))
+		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))))))
+		  (,end-test-macro (this-kind)
+		     `,(let ((next-kind (cadr (member this-kind
+						      ',ordered-types))))
+			 (if next-kind
+			     `(,',init-macro ,next-kind)
+			     `(if (endp (setf ,',packages (cdr ,',packages)))
+				  (return-from ,',BLOCK)
+				  (,',init-macro ,(car ',ordered-types)))))))
+	 (when ,packages
+	   ,(when (null symbol-types)
+	      (error "Must supply at least one of :internal, :external, or ~
+	      :inherited."))
+	   ,(dolist (symbol symbol-types)
+	      (unless (member symbol '(:internal :external :inherited))
+		(error "~S is not one of :internal, :external, or :inherited."
+		       symbol)))
+	   (,init-macro ,(car ordered-types))
+	   (flet ((,real-symbol-p (number)
+		    (> number 1)))
+	     (macrolet ((,mname ()
+	      `(block ,',BLOCK
+		 (loop
+		   (case ,',kind
+		     ,@(when (member :internal ',ordered-types)
+			 `((:internal
+			    (setf ,',counter
+				  (position-if #',',real-symbol-p ,',hash-vector
+					       :start (if ,',counter
+							  (1+ ,',counter)
+							  0)))
+			    (if ,',counter
+				(return-from ,',BLOCK
+				 (values t (svref ,',vector ,',counter)
+					 ,',kind (car ,',packages)))
+				(,',end-test-macro :internal)))))
+		     ,@(when (member :external ',ordered-types)
+			 `((:external
+			    (setf ,',counter
+				  (position-if #',',real-symbol-p ,',hash-vector
+					       :start (if ,',counter
+							  (1+ ,',counter)
+							  0)))
+			    (if ,',counter
+				(return-from ,',BLOCK
+				 (values t (svref ,',vector ,',counter)
+					 ,',kind (car ,',packages)))
+				(,',end-test-macro :external)))))
+		     ,@(when (member :inherited ',ordered-types)
+			 `((:inherited
+			    (setf ,',counter
+				  (position-if #',',real-symbol-p ,',hash-vector
+					       :start (if ,',counter
+							  (1+ ,',counter)
+							  0)))
+			    (cond (,',counter
+				   (return-from
+				    ,',BLOCK
+				    (values t (svref ,',vector ,',counter)
+					    ,',kind (car ,',packages))))
+				  (t
+				   (setf ,',package-use-list
+					 (cdr ,',package-use-list))
+				   (cond ((endp ,',package-use-list)
+					  (setf ,',packages (cdr ,',packages))
+					  (when (endp ,',packages)
+					    (return-from ,',BLOCK))
+					  (setf ,',package-use-list
+						(package-use-list
+						 (car ,',packages)))
+					  (,',init-macro ,(car ',ordered-types)))
+					 (t (,',init-macro :inherited)
+					    (setf ,',counter nil)))))))))))))
+	       ,@body)))))))
+
 
 ;;; Enter-New-Nicknames  --  Internal
 ;;;
