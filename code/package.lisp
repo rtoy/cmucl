@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.34 1993/11/30 17:46:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.35 1994/02/04 15:24:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -650,7 +650,7 @@
 		       (acons package-name names shadowing-imports))))))
 	(:use
 	 (let ((new (stringify-names (cdr option) "package")))
-	   (setf use (append-unique new nicknames :use))
+	   (setf use (append-unique new use :use))
 	   (setf use-p t)))
 	(:import-from
 	 (let ((package-name (stringify-name (second option) "package"))
@@ -664,11 +664,11 @@
 	(:intern
 	 (let ((new (stringify-names (cdr option) "symbol")))
 	   (setf incomming (append-unique new incomming :intern))
-	   (setf outgoing (append-unique new incomming :intern))
+	   (setf outgoing (append-unique new outgoing :intern))
 	   (setf interns (append interns new))))
 	(:export
 	 (let ((new (stringify-names (cdr option) "symbol")))
-	   (setf outgoing (append-unique new incomming :export))
+	   (setf outgoing (append-unique new outgoing :export))
 	   (setf exports (append exports new))))
 	(t
 	 (error "Bogus DEFPACKAGE option: ~S" option))))
