@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.37 1992/02/24 06:09:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.38 1992/02/25 22:55:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,8 @@
 (load "c:array-tran")
 (load "c:seqtran")
 (load "c:typetran")
+(load "vm:vm-typetran")
+
 (load "c:float-tran")
 (load "c:saptran")
 (load "c:locall")
@@ -72,3 +74,5 @@
 
 (load "c:eval-comp")
 (load "c:eval")
+
+(load "vm:core")
