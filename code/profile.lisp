@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.17 1997/07/21 14:37:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.18 1998/01/19 05:54:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,12 +112,23 @@
 #-cmu
 (deftype consing-type () 'unsigned-byte)
 
+;;; On the CMUCL x86 port the return address is represented as a SAP
+;;; and to save the costly calculation of the SAPs code object the
+;;; profiler maintains callers as SAPs. These SAPs will become invalid
+;;; if a caller code object moves, so this should be prevented by the
+;;; use of purify or by moving code objects into an older generation
+;;; when using GENCGC.
+;;;
 #+cmu
 (progn
   (defmacro get-caller-info ()
     `(nth-value 1 (kernel:%caller-frame-and-pc)))
+  #-(and cmu x86)
   (defun print-caller-info (info stream)
-    (prin1 (kernel:lra-code-header info) stream)))
+    (prin1 (kernel:lra-code-header info) stream))
+  #+(and cmu x86)
+  (defun print-caller-info (info stream)
+    (prin1 (nth-value 1 (di::compute-lra-data-from-pc info)) stream)))
 
 #-cmu
 (progn
@@ -232,7 +243,10 @@
 			   ((null current)
 			    (push (cons caller 1) callers))
 			 (let ((old-caller-info (car current)))
-			   (when (eq caller (car old-caller-info))
+			   (when #-(and cmu x86) (eq caller
+						     (car old-caller-info))
+				 #+(and cmu x86) (sys:sap=
+						  caller (car old-caller-info))
 			     (if prev
 				 (setf (cdr prev) (cdr current))
 				 (setq callers (cdr current)))
