@@ -98,7 +98,7 @@
       (setq name-and-options (list name-and-options)))
   (do* ((options (cdr name-and-options) (cdr options))
 	(name (car name-and-options))
-	(print-function #'default-structure-print)
+	(print-function nil)
 	(pf-supplied-p)
 	(conc-name (concat-pnames name '-))
 	(constructor (concat-pnames 'make- name))
@@ -170,7 +170,7 @@
 	       (unless pf-supplied-p
 		 (setf print-function included-print-function))))
 	    (:print-function
-	     (setf print-function (or (car args) #'default-structure-print))
+	     (setf print-function (car args))
 	     (setf pf-supplied-p t))
 	    (:type (setf saw-type t type (car args)))
 	    (:named (error "The Defstruct option :NAMED takes no arguments."))
