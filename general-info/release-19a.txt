@@ -264,6 +264,14 @@ New in this release:
   * Improvements to Hemlock, the Emacs-like editor:
 
   * Changes to rebuilding procedure:
+     - When rebuilding CMUCL, *features* do not need to be set by
+       hand.  As files are loaded, the appropriate *features* are set
+       so that the resulting build has the same set of *features*.
+       There should also be fewer warnings about internals.h changing,
+       since that now just contains things in sys:*runtime-features*.
+       Use sys:register-lisp-feature and
+       sys:register-lisp-runtime-feature to set *features* and
+       sys:*runtime-features*, respectively.
       
   * Deprecated features:
      - EXT:ENCAPSULATE and associated functions; use fwrappers instead.
