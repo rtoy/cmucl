@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.60 1999/09/15 15:12:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.61 2000/04/14 03:50:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1146,12 +1146,6 @@
 ;;; RESTART-CASE allowing keyform to be set and retested.
 ;;;
 (defun case-body (name keyform cases multi-p test errorp proceedp)
-  (when (null cases)
-    (error 'simple-type-error
-	   :datum cases
-	   :expected-type 'list
-	   :format-control "~S was called without any clauses."
-	   :format-arguments (list name)))
   (let ((keyform-value (gensym))
 	(clauses ())
 	(keys ()))
