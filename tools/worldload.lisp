@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.68 1993/08/19 21:40:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.69 1993/08/20 00:40:56 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,10 +26,9 @@
 
 ;;; Load the rest of the reader (may be byte-compiled.)
 (load "target:code/sharpm")
-(sharp-init)
 (load "target:code/backq")
-(backq-init)
-(setf *readtable* (copy-readtable std-lisp-readtable))
+(setq std-lisp-readtable (copy-readtable *readtable*))
+
 (load "target:code/extensions")
 (load "target:code/defmacro")
 (load "target:code/sysmacs")
