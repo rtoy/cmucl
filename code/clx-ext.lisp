@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.7 1991/05/23 17:01:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.8 1991/09/04 14:02:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -108,10 +108,21 @@
   path."
   (let ((font-path (xlib:font-path display))
 	(result ()))
-    (dolist (elt font-pathnames)
-      (let ((font-dir (namestring elt)))
-	(unless (member font-dir font-path :test #'string=)
-	  (push font-dir result))))
+    (flet ((add (font-dir)
+	     (unless (member font-dir font-path :test #'string=)
+	       (push font-dir result))))
+      (dolist (elt font-pathnames)
+	(let* ((pn (pathname elt))
+	       (dev (pathname-device pn)))
+	  (cond ((stringp dev)
+		 (dolist (dir (lisp::resolve-search-list dev nil))
+		   (add (concatenate 'string dir
+				     (namestring
+				      (make-pathname :device nil
+						     :defaults pn))))))
+		(t
+		 (add (namestring pn)))))))
+
     (when result
       (ecase operation
 	(:prepend
