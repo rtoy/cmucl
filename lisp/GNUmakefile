@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.8 1993/11/17 15:40:13 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.9 1994/10/24 19:19:29 ram Exp $
 
 all: lisp.nm
 
@@ -22,10 +22,10 @@ lisp.nm: lisp
 	$(NM) lisp >> ,lisp.nm
 	mv ,lisp.nm lisp.nm
 
-lisp: ${OBJS} version
+lisp: version.c ${OBJS} version
 	echo '1 + ' `cat version` | bc > ,version
 	mv ,version version
-	$(CC) ${CFLAGS} -DVERSION=`cat version` -c version.c
+	$(CC) ${CFLAGS} -DVERSION=`cat version` -c $<
 	$(CC) -g ${OS_LINK_FLAGS} -o ,lisp \
 		${OBJS} version.o \
 		${OS_LIBS} -lm
@@ -36,7 +36,7 @@ version:
 
 ### Socket.c needs to be compiled with UNIXCONN defined.
 socket.o: socket.c
-	$(COMPILE.c) -DUNIXCONN socket.c
+	$(COMPILE.c) -DUNIXCONN $<
 
 internals.h:
 	@echo "You must run genesis to create internals.h!"
@@ -45,8 +45,8 @@ internals.h:
 clean:
 	rm -f Depends *.o lisp lisp.nm core
 
-depend:
-	$(CC) -MM -E ${CFLAGS} ${CPPFLAGS} ${SRCS} > ,depends
+depend: ${SRCS}
+	$(CC) -MM -E ${CFLAGS} ${CPPFLAGS} $? > ,depends
 	mv ,depends Depends
 
 include Depends
