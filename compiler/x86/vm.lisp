@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.2 1997/03/29 10:49:43 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.2.2.1 1997/07/26 17:09:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -420,7 +420,7 @@
      (when (or (eql value 0f0) (eql value 1f0))
        (sc-number-or-lose 'fp-single-constant *backend*)))
     (double-float
-     (when (or (eql value 0f0) (eql value 1f0))
+     (when (or (eql value 0d0) (eql value 1d0))
        (sc-number-or-lose 'fp-double-constant *backend*)))))
 
 
