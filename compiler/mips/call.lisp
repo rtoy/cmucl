@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.49 1992/07/28 20:37:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.50 1992/08/20 16:29:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -732,7 +732,7 @@ default-value-8
 	 '((:temporary (:scs (descriptor-reg) :from :eval) move-temp)))
 
      ,@(unless (eq return :tail)
-	 '((:temporary (:scs (non-descriptor-reg) :from :eval) temp)
+	 '((:temporary (:scs (non-descriptor-reg)) temp)
 	   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
 
      (:temporary (:scs (interior-reg)) lip)
