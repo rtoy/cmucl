@@ -1029,30 +1029,23 @@
 		      ((plusp shift))
 		    (dump-byte (logand (ash int shift) #xFF) file)))))))
 	  (t
+	   (macrolet ((frob (initial step done)
+			`(let ((shift ,initial)
+			       (byte 0))
+			   (dotimes (i len)
+			     (let ((int (aref vec i)))
+			       (setq byte (logior byte (ash int shift)))
+			       (,step shift size))
+			     (when ,done
+			       (dump-byte byte file)
+			       (setq shift ,initial  byte 0)))
+			   (unless (= shift ,initial) (dump-byte byte file)))))
 	   (ecase target-byte-order
 	     (:little-endian
-	      (let ((shift 0)
-		    (byte 0))
-		(dotimes (i len)
-		  (let ((int (aref vec i)))
-		    (setq byte (logior byte (ash int shift)))
-		    (incf shift size))
-		  (when (= shift 8)
-		    (dump-byte byte file)
-		    (setq shift 0  byte 0)))
-		(unless (zerop shift) (dump-byte byte file))))
+	      (frob 0 incf (= shift 8)))
 	     (:big-endian
-	      (let* ((initial-shift (- 8 size))
-		     (shift initial-shift)
-		     (byte 0))
-		(dotimes (i len)
-		  (let ((int (aref vec i)))
-		    (setq byte (logior byte (ash int shift)))
-		    (decf shift size))
-		  (when (minusp shift)
-		    (dump-byte byte file)
-		    (setq shift initial-shift  byte 0)))
-		(unless (= shift initial-shift) (dump-byte byte file)))))))))
+	      (let ((initial-shift (- 8 size)))
+		(frob initial-shift decf (minusp shift))))))))))
 
 
 ;;; Dump a character.
