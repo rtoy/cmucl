@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.43 2001/06/05 13:58:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.44 2002/05/02 03:35:44 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,18 +318,32 @@
 		 (error "Argument and/or result bit arrays not the same length:~
 			 ~%  ~S~%  ~S  ~%  ~S"
 			bit-array-1 bit-array-2 result-bit-array))))
-	 (do ((index vm:vector-data-offset (1+ index))
-	      (end (+ vm:vector-data-offset
-		      (truncate (the index
-				     (+ (length bit-array-1)
-					vm:word-bits -1))
-				vm:word-bits))))
-	     ((= index end) result-bit-array)
-	   (declare (optimize (speed 3) (safety 0))
-		    (type index index end))
-	   (setf (%raw-bits result-bit-array index)
-		 (,wordfun (%raw-bits bit-array-1 index)
-			   (%raw-bits bit-array-2 index))))))))
+	 (let ((length (length result-bit-array)))
+	   (if (= length 0)
+	       ;; We avoid doing anything to 0-length
+	       ;; bit-vectors, or rather, the memory that
+	       ;; follows them. Other divisible-by-32 cases
+	       ;; are handled by the (1- length), below.
+	       ;; CSR, 2002-04-24
+	       result-bit-array
+	       (do ((index vm:vector-data-offset (1+ index))
+		    (end-1 (+ vm:vector-data-offset
+			      ;; bit-vectors of length 1-32
+			      ;; need precisely one (SETF
+			      ;; %RAW-BITS), done in the
+			      ;; epilogue. - CSR, 2002-04-24
+			      (truncate (truly-the index (1- length))
+					vm:word-bits))))
+		   ((= index end-1)
+		    (setf (%raw-bits result-bit-array index)
+			  (,wordfun (%raw-bits bit-array-1 index)
+				    (%raw-bits bit-array-2 index)))
+		    result-bit-array)
+		 (declare (optimize (speed 3) (safety 0))
+			  (type index index end-1))
+		 (setf (%raw-bits result-bit-array index)
+		       (,wordfun (%raw-bits bit-array-1 index)
+				 (%raw-bits bit-array-2 index))))))))))
 
 (deftransform bit-not
 	      ((bit-array result-bit-array)
@@ -342,17 +356,27 @@
 	     (error "Argument and result bit arrays not the same length:~
 	     	     ~%  ~S~%  ~S"
 		    bit-array result-bit-array))))
-     (do ((index vm:vector-data-offset (1+ index))
-	  (end (+ vm:vector-data-offset
-		  (truncate (the index
-				 (+ (length bit-array)
-				    (1- vm:word-bits)))
-			    vm:word-bits))))
-	 ((= index end) result-bit-array)
-       (declare (optimize (speed 3) (safety 0))
-		(type index index end))
-       (setf (%raw-bits result-bit-array index)
-	     (32bit-logical-not (%raw-bits bit-array index))))))
+    (let ((length (length result-bit-array)))
+      (if (= length 0)
+	  ;; We avoid doing anything to 0-length bit-vectors, or
+	  ;; rather, the memory that follows them. Other
+	  ;; divisible-by-32 cases are handled by the (1- length),
+	  ;; below.  CSR, 2002-04-24
+	  result-bit-array
+	  (do ((index vm:vector-data-offset (1+ index))
+	       (end-1 (+ vm:vector-data-offset
+			 ;; bit-vectors of length 1-32 need precisely
+			 ;; one (SETF %RAW-BITS), done in the epilogue.
+			 (truncate (truly-the index (1- length))
+				   vm:word-bits))))
+	      ((= index end-1)
+	       (setf (%raw-bits result-bit-array index)
+		     (32bit-logical-not (%raw-bits bit-array index)))
+	       result-bit-array)
+	    (declare (optimize (speed 3) (safety 0))
+		     (type index index end-1))
+	    (setf (%raw-bits result-bit-array index)
+		  (32bit-logical-not (%raw-bits bit-array index))))))))
 
 
 ;;;; Primitive translator for byte-blt
