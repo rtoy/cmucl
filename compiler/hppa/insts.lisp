@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.4 1992/10/23 19:26:30 hallgren Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.5 1993/07/15 00:09:23 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -842,7 +842,7 @@
 		     (type (member t nil) nullify))
 	   (:printer branch12 ((op1 ,i-opcode) (r1 nil :type 'im5)
 			       (c nil :type ',conditional))
-		     '(:name c n :tab r1 "," r2 w))
+		     '(:name c n :tab r1 "," r2 "," w))
 	   ,@(unless (= r-opcode #x32)
 	       `((:printer branch12 ((op1 ,(+ 2 i-opcode)) (r1 nil :type 'im5)
 				     (c nil :type ',false-conditional))
