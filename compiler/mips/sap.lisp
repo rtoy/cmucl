@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.5 1990/04/25 21:45:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.6 1990/04/25 23:33:11 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -191,7 +191,7 @@
 	 (offset :scs (descriptor-reg any-reg negative-immediate
 				      zero immediate))
 	 (value :scs (signed-reg unsigned-reg) :target result))
-  (:results (result :scs (signed-reg unsigned-reg sap-reg)))
+  (:results (result :scs (signed-reg unsigned-reg)))
   (:temporary (:scs (sap-reg) :from (:argument 0))
 	      sap)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -236,6 +236,7 @@
 				      zero immediate))
 	 (value :scs (sap-reg) :target result))
   (:arg-types system-area-pointer fixnum system-area-pointer)
+  (:results (result :scs (sap-reg)))
   (:variant :pointer))
 
 
