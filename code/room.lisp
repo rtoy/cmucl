@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.13 1992/01/02 22:45:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.14 1992/02/09 18:29:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,7 +146,7 @@
 (proclaim '(inline vector-total-size))
 (defun vector-total-size (obj info)
   (let ((shift (room-info-length info))
-	(len (+ (length (the vector obj))
+	(len (+ (length (the (simple-array * (*)) obj))
 		(ecase (room-info-kind info)
 		  (:vector 0)
 		  (:string 1)))))
@@ -174,8 +174,10 @@
   (without-gcing
     (multiple-value-bind (start end)
 			 (space-bounds space)
+      (declare (type system-area-pointer start end))
       (declare (optimize (speed 3) (safety 0)))
       (let ((current start)
+	    #+nil
 	    (prev nil))
 	(loop
 	  (let* ((header (sap-ref-32 current 0))
@@ -209,6 +211,7 @@
 		(assert (zerop (logand size lowtag-mask)))
 		#+nil
 		(when (> size 200000) (break "Implausible size, prev ~S" prev))
+		#+nil
 		(setq prev current)
 		(setq current (sap+ current size))))
 	     (t
@@ -239,12 +242,14 @@
 		#+nil
 		(when (> size 200000)
 		  (break "Implausible size, prev ~S" prev))
+		#+nil
 		(setq prev current)
 		(setq current (sap+ current size))))))
 	  (unless (pointer< current end)
 	    (assert (not (pointer> current end)))
 	    (return)))
-	
+
+	#+nil
 	prev))))
 
 
@@ -412,7 +417,7 @@
 	     (type unsigned-byte total-bytes))
     (map-allocated-objects
      #'(lambda (obj type size)
- 	 (declare (fixnum size) (optimize (speed 3) (safety 0)))
+ 	 (declare (fixnum size) (optimize (safety 0)))
 	 (when (eql type code-header-type)
 	   (incf total-bytes size)
 	   (let ((words (truly-the fixnum (%primitive code-code-size obj)))
@@ -443,7 +448,7 @@
       (declare (inline map-allocated-objects))
       (map-allocated-objects
        #'(lambda (obj type size)
-	   (declare (fixnum size) (optimize (speed 3) (safety 0)))
+	   (declare (fixnum size) (optimize (safety 0)))
 	   (case type
 	     (#.code-header-type
 	      (let ((inst-words
@@ -602,7 +607,7 @@
 	       (fixnum pages-so-far count-so-far pagesize))
       (map-allocated-objects
        #'(lambda (obj obj-type size)
-	   (declare (optimize (speed 3) (safety 0)))
+	   (declare (optimize (safety 0)))
 	   (let ((addr (get-lisp-obj-address obj)))
 	     (when (>= addr start)
 	       (when (if count
