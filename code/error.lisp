@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.21 1993/06/24 12:25:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.22 1993/06/24 13:59:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,8 @@
 	  type-error type-error-datum
 	  type-error-expected-type simple-type-error program-error
 	  control-error stream-error stream-error-stream end-of-file file-error
-	  file-error-pathname cell-error unbound-variable undefined-function
+	  file-error-pathname cell-error cell-error-name unbound-variable
+	  undefined-function
 	  arithmetic-error arithmetic-error-operation arithmetic-error-operands
 	  package-error package-error-package division-by-zero
 	  floating-point-overflow floating-point-underflow
@@ -758,7 +759,11 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 (define-condition stream-error (error) (stream))
 
-(define-condition end-of-file (stream-error) ())
+(define-condition end-of-file (stream-error) ()
+  (:report
+   (lambda (condition stream)
+     (format stream "End-of-File on ~S"
+	     (stream-error-stream condition)))))
 
 (define-condition file-error (error) (pathname))
 
