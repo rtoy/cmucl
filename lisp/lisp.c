@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.32 2003/07/28 18:52:15 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.33 2003/08/04 21:27:30 toy Exp $
  *
  */
 
@@ -97,6 +97,13 @@ static char* cmucllib_search_list[] =
     NULL
 };
 
+/*
+ * Define this to get some debugging printfs for searching for the
+ * lisp core file.  Sometimes needed because you can't debug this with
+ * gdb which always seems to set argv[0] to the full pathname.
+ */
+
+/* #define DEBUG_LISP_SEARCH */
 
 /*
  * From the current location of the lisp executable, create a suitable
@@ -108,17 +115,17 @@ default_cmucllib(const char const* argv0arg)
     char* p;
     char* defpath;
     char* cwd;
-    char *argv0 = strdup(argv0arg);
+    char *argv0_dir = strdup(argv0arg);
     
     /*
      * From argv[0], create the appropriate directory by lopping off the
      * executable name
      */
 
-    p = strrchr(argv0, '/');
+    p = strrchr(argv0_dir, '/');
     if (p == NULL) {
-        *argv0 = '\0';
-    } else if (p != argv0) {
+        *argv0_dir = '\0';
+    } else if (p != argv0_dir) {
         *p = '\0';
     }
     
@@ -126,22 +133,85 @@ default_cmucllib(const char const* argv0arg)
      * Create the full pathname of the directory containing the
      * executable.  argv[0] can be an absolute or relative path.
      */
-    if (argv0[0] == '/') {
-        cwd = malloc(strlen(argv0) + 2);
-        strcpy(cwd, argv0);
+#ifdef DEBUG_LISP_SEARCH
+    fprintf(stderr, "argv[0] = %s\n", argv0arg);
+    fprintf(stderr, "argv_dir = %s\n", argv0_dir);
+#endif
+    
+    if (argv0_dir[0] == '/') {
+        cwd = malloc(strlen(argv0_dir) + 2);
+        strcpy(cwd, argv0_dir);
         strcat(cwd, "/");
-    } else {
+#ifdef DEBUG_LISP_SEARCH
+        fprintf(stderr, "absolute path, argv[0] = %s\n", cwd);
+#endif
+    } else if (*argv0_dir != '\0') {
         /*
          * argv[0] is a relative path.  Get the current directory and
          * append argv[0], after stripping off the executable name.
          */
-        cwd = malloc(MAXPATHLEN + strlen(argv0) + 100);
+        cwd = malloc(MAXPATHLEN + strlen(argv0_dir) + 100);
         getcwd(cwd, MAXPATHLEN);
         strcat(cwd, "/");
-        if (*argv0 != '\0') {
-            strcat(cwd, argv0);
+        if (*argv0_dir != '\0') {
+            strcat(cwd, argv0_dir);
             strcat(cwd, "/");
         }
+#ifdef DEBUG_LISP_SEARCH
+        fprintf(stderr, "relative path, argv[0] = %s\n", cwd);
+#endif
+    } else {
+       /*
+        * argv[0] is someplace on the user's PATH
+        *
+        */
+       char *path = getenv("PATH");
+       char *p1, *p2 = NULL;
+       struct stat buf;
+
+#ifdef DEBUG_LISP_SEARCH
+        fprintf(stderr, "User's PATH = %s\n", path);
+#endif
+       cwd = malloc(MAXPATHLEN + strlen(argv0arg) + 100);
+
+       if (p == NULL) {
+         p = argv0arg;
+       }
+
+       for (p1 = path ; *p1 != '\0' ; p1 = p2) {
+           p2 = strchr(p1, ':');
+           if (p2 == NULL)
+               p2 = p1 + strlen(p1);
+           strncpy(cwd, p1, p2 - p1);
+           cwd[p2 - p1] = '/';
+           cwd[p2 - p1 + 1] = '\0';
+           strcpy(cwd + (p2 - p1 + 1), p);
+
+#ifdef DEBUG_LISP_SEARCH
+           fprintf(stderr, "User's PATH, trying %s\n", cwd);
+#endif
+           if (stat(cwd, &buf) == 0) {
+
+#ifdef DEBUG_LISP_SEARCH
+             fprintf(stderr, "User's PATH, found %s\n", cwd);
+#endif
+             break;
+           }
+           
+           if (*p2 == ':') {
+               p2++;
+           }
+           
+       }
+       if (p1 == p2) {
+         cwd[0] = '\0';
+       } else {
+         cwd[p2 - p1 + 1] = '\0';
+       }
+#ifdef DEBUG_LISP_SEARCH
+             fprintf(stderr, "User's PATH, Final cwd %s\n", cwd);
+#endif
+       
     }
 
     /* Create the appropriate value for CMUCLLIB */
@@ -189,7 +259,7 @@ default_cmucllib(const char const* argv0arg)
 	}
     }
 
-    free(argv0);
+    free(argv0_dir);
     free(cwd);
 
     return defpath;
@@ -227,6 +297,10 @@ search_core(const char* lib, const char* default_core)
 	    *dst++ = '/';
 	strcpy(dst, default_core);
 	/* If it exists, we are done! */
+
+#ifdef DEBUG_LISP_SEARCH
+        fprintf(stderr, "Looking at `%s'\n", buf);
+#endif
 	if (stat(buf, &statbuf) == 0) {
 	    return buf;
 	}
@@ -453,6 +527,7 @@ int main(int argc, char *argv[], char *envp[])
                 fprintf(stderr, " %s", core);
             }
             fprintf(stderr, "\n");
+            fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
 	    exit(1);
 	}
     }
