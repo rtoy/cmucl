@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.11 1997/12/30 06:03:17 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.12 1997/12/30 16:36:27 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -792,13 +792,16 @@
   (declare (type process process))
   (assert (not (eq process *current-process*)))
   (unless (eq (process-state process) :killed)
-    ;; Place the a throw to end-of-the-world at the start of process's
-    ;; interrupts queue, to be called the next time the process is
-    ;; scheduled.
     (without-scheduling
+     ;; Place a throw to end-of-the-world at the start of process's
+     ;; interrupts queue, to be called the next time the process is
+     ;; scheduled.
      (push #'(lambda ()
 	       (throw '%end-of-the-process nil))
-	   (process-interrupts process)))
+	   (process-interrupts process))
+     ;; Ensure that the process is active so that it can accept this
+     ;; interrupt.
+     (setf (process-state process) :active))
     ;; Should we wait until it's dead?
     (process-yield)))
 
@@ -910,24 +913,58 @@
 	       (not (process-wait-function process)))
       (return nil))))
 
+;;; Shutdown-multi-processing.
+;;;
+;;; Try to gracefully destroy all the processes giving them some
+;;; chance to unwinding, before shutting down multi-processing. Can be
+;;; restarted by init-multi-processing.
+;;;
+(defun shutdown-multi-processing ()
+  (assert (eq *current-process* *initial-process*) ()
+	  "Only the *initial-process* can shutdown multi-processing")
+
+  (let ((destroyed-processes nil))
+    (do ((cnt 0 (1+ cnt)))
+	((> cnt 10))
+      (declare (type lisp::index cnt))
+      (dolist (process *all-processes*)
+	(when (and (not (eq process *current-process*))
+		   (process-active-p process)
+		   (not (member process destroyed-processes)))
+	  (destroy-process process)
+	  (push process destroyed-processes)))
+      (unless (rest *all-processes*)
+	(return))
+      (format t "Destroyed ~d process~:P; remaining ~d~%"
+	      (length destroyed-processes) (length *all-processes*))
+      (process-yield)))
+
+  (start-sigalrm-yield 0 0)	; Off with the interrupts.
+  ;; Reset the multi-processing state.
+  (setf *inhibit-scheduling* t)
+  (setf *initial-process* nil)
+  (setf *idle-process* nil)
+  (setf *current-process* nil)
+  (setf *all-processes* nil)
+  (setf *remaining-processes* nil)
+  ;; Cleanup the stack groups.
+  (setf x86::*control-stacks*
+	(make-array 0 :element-type '(or null (unsigned-byte 32))
+		    :initial-element nil))
+  (setf *current-stack-group* nil)
+  (setf *initial-stack-group* nil))
+
 ;;; A useful idle process loop, waiting on events using the select
 ;;; based event server, which is assumed to be setup to call
 ;;; process-yielding periodically.
 ;;;
 (defun idle-process-loop ()
+  (assert (eq *current-process* *initial-process*) ()
+	  "Only the *initial-process* is intended to run this idle loop")
   (do ()
       (*quitting-lisp*)
     (sys:serve-all-events))
-  ;; Try to gracefully destroy all the processes.
-  (dolist (process *all-processes*)
-    (unless (eq process *current-process*)
-      (destroy-process process)))
-  (do ((cnt 0 (1+ cnt)))
-      ((or (null (rest *all-processes*))
-	   (> cnt 10)))
-    (declare (type lisp::index cnt))
-    (format t " ~d" (length *all-processes*))
-    (process-yield))
+  (shutdown-multi-processing)
   (throw 'lisp::%end-of-the-world *quitting-lisp*))
 
 ;;; Process-Yield
@@ -1132,10 +1169,12 @@
   (unix:unix-setitimer :real sec usec 0 1)
   (values))
 
-;;; Initialise the initial process, must be called before use of the
-;;; other multi-process function.
+;;; Init-Multi-Processing.
 ;;;
-(defun init-processes ()
+;;; Startup multi-processing, initialising the initial process. This
+;;; must be called before use of the other multi-process functions.
+;;;
+(defun init-multi-processing ()
   (unless *initial-process*
     (init-stack-groups)
     (setf *initial-process*
@@ -1148,11 +1187,9 @@
     (setf *remaining-processes* *all-processes*)
     ;;
     #+nil (start-sigalrm-yield)
-    (setf *inhibit-scheduling* nil))
-  ;;
-  (values))
+    (setf *inhibit-scheduling* nil)))
 
-(pushnew 'init-processes ext:*after-save-initializations*)
+(pushnew 'init-multi-processing ext:*after-save-initializations*)
 
 ;;; Show-Processes
 ;;;
