@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.3 1999/02/25 12:41:02 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.4 1999/08/25 14:25:06 dtc Exp $
  *
  */
 
@@ -183,40 +183,17 @@ sigbus_handler(int signal, int code, struct sigcontext *context,
 
   /* Check if the fault is within the dynamic space. */
   if (page_index != -1) {
-      /* Un-protect the page */
+    /* Un-protect the page */
 
-      /* The page should have been marked write_protected */
-      if (page_table[page_index].write_protected != 1)
-	fprintf(stderr,"*** Sigbus in page not marked as write protected");
+    /* The page should have been marked write_protected */
+    if (!PAGE_WRITE_PROTECTED(page_index))
+      fprintf(stderr,"*** Sigbus in page not marked as write protected");
 
-      os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-      page_table[page_index].write_protected = 0;
-      page_table[page_index].write_protected_cleared = 1;
-
-#if SIGBUS_VERBOSE
-      fprintf(stderr,"* page: gen=%d bytes_used=%d first_object_offset=%d dont_move=%d\n",
-	      page_table[page_index].gen,
-	      page_table[page_index].bytes_used,
-	      page_table[page_index].first_object_offset,
-	      page_table[page_index].dont_move);
-      fprintf(stderr,"* data: %x %x %x %x\n",
-	      *(((long *)fault_addr)-1),
-	      *(((long *)fault_addr)-0),
-	      *(((long *)fault_addr)+1),
-	      *(((long *)fault_addr)+2)); 
-      {
-	int  pi2 = find_page_index(*(((long *)fault_addr)-0));
-	
-	if ( pi2!=-1 )
-	  fprintf(stderr,"* pi2: gen=%d bytes_used=%d first_object_offset=%d dont_move=%d\n",
-		  page_table[pi2].gen,
-		  page_table[pi2].bytes_used,
-		  page_table[pi2].first_object_offset,
-		  page_table[pi2].dont_move);
-      }
-#endif
+    os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
+    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
+    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
       
-      return;
+    return;
     }
 #endif
 

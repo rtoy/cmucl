@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.14 1999/08/21 18:03:25 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.15 1999/08/25 14:25:06 dtc Exp $
  *
  */
 
@@ -279,11 +279,14 @@ static int count_write_protect_generation_pages(int generation)
 {
   int i;
   int cnt = 0;
+  int mmask, mflags;
+
+  mmask = PAGE_ALLOCATED_MASK | PAGE_WRITE_PROTECTED_MASK
+    | PAGE_GENERATION_MASK;
+  mflags = PAGE_ALLOCATED_MASK | PAGE_WRITE_PROTECTED_MASK | generation;
 
   for (i = 0; i < last_free_page; i++)
-    if (page_table[i].allocated != FREE_PAGE
-	&& page_table[i].gen == generation
-	&& page_table[i].write_protected == 1)
+    if (PAGE_FLAGS(i, mmask) == mflags)
       cnt++;
   return cnt;
 }
@@ -295,10 +298,13 @@ static int count_generation_pages(int generation)
 {
   int i;
   int cnt = 0;
+  int mmask, mflags;
+
+  mmask = PAGE_ALLOCATED_MASK | PAGE_GENERATION_MASK;
+  mflags = PAGE_ALLOCATED_MASK | generation;
 
   for (i = 0; i < last_free_page; i++)
-    if (page_table[i].allocated != 0
-	&& page_table[i].gen == generation)
+    if (PAGE_FLAGS(i, mmask) == mflags)
       cnt++;
   return cnt;
 }
@@ -310,10 +316,12 @@ static int count_dont_move_pages(void)
 {
   int i;
   int cnt = 0;
+  int mmask;
+
+  mmask = PAGE_ALLOCATED_MASK | PAGE_DONT_MOVE_MASK;
 
   for (i = 0; i < last_free_page; i++)
-    if (page_table[i].allocated != 0
-	&& page_table[i].dont_move != 0)
+    if (PAGE_FLAGS(i, mmask) == mmask)
       cnt++;
   return cnt;
 }
@@ -326,10 +334,13 @@ static int generation_bytes_allocated (int generation)
 {
   int i;
   int bytes_allocated = 0;
+  int mmask, mflags;
+
+  mmask = PAGE_ALLOCATED_MASK | PAGE_GENERATION_MASK;
+  mflags = PAGE_ALLOCATED_MASK | generation;
 
   for (i = 0; i < last_free_page; i++) {
-    if (page_table[i].allocated != 0 &&
-	page_table[i].gen == generation)
+    if (PAGE_FLAGS(i, mmask) == mflags)
       bytes_allocated += page_table[i].bytes_used;
   }
   return bytes_allocated;
@@ -378,22 +389,27 @@ static void print_generation_stats(int  verbose)
     int large_boxed_cnt = 0;
     int large_unboxed_cnt = 0;
 
-    for (j = 0; j < last_free_page; j++)
-      if (page_table[j].gen == i) {
-	/* Count the number of boxed pages within the given generation */
-	if (page_table[j].allocated == BOXED_PAGE)
-	  if (page_table[j].large_object)
-	    large_boxed_cnt++;
+    for (j = 0; j < last_free_page; j++) {
+      int flags = page_table[j].flags;
+      if ((flags & PAGE_GENERATION_MASK) == i) {
+	if (flags & PAGE_ALLOCATED_MASK) {
+	  /*
+	   * Count the number of boxed and unboxed pages within the
+	   * given generation.
+	   */
+	  if (flags & PAGE_UNBOXED_MASK)
+	    if (flags & PAGE_LARGE_OBJECT_MASK)
+	      large_unboxed_cnt++;
+	    else
+	      unboxed_cnt++;
 	  else
-	    boxed_cnt++;
-
-	/* Count the number of unboxed pages within the given generation */
-	if (page_table[j].allocated == UNBOXED_PAGE)
-	  if (page_table[j].large_object)
-	    large_unboxed_cnt++;
-	  else
-	    unboxed_cnt++;
+	    if (flags & PAGE_LARGE_OBJECT_MASK)
+	      large_boxed_cnt++;
+	    else
+	      boxed_cnt++;
+	}
       }
+    }
 
     gc_assert(generations[i].bytes_allocated == generation_bytes_allocated(i));
     fprintf(stderr, "   %8d: %5d %5d %5d %5d %8d %5d %8d %4d %3d %7.4lf\n",
@@ -511,6 +527,7 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
   int bytes_found;
   int num_pages;
   int i;
+  int mmask, mflags;
 
 #if 0
   fprintf(stderr, "alloc_new_region for %d bytes from gen %d\n",
@@ -529,8 +546,16 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
 
   /*
    * Search for a contiguous free region of at least nbytes with the
-   * given properties: boxed/unboxed, generation.
+   * given properties: boxed/unboxed, generation. First setting up the
+   * mask and matching flags.
    */
+
+  mmask = PAGE_ALLOCATED_MASK | PAGE_WRITE_PROTECTED_MASK
+    | PAGE_LARGE_OBJECT_MASK | PAGE_DONT_MOVE_MASK
+    | PAGE_UNBOXED_MASK | PAGE_GENERATION_MASK;
+  mflags = PAGE_ALLOCATED_MASK | (unboxed << PAGE_UNBOXED_SHIFT)
+    | gc_alloc_generation;
+
   do {
     first_page = restart_page;
 
@@ -538,17 +563,16 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
      * First search for a page with at least 32 bytes free, that is
      * not write protected, or marked dont_move.
      */
-    while (first_page < NUM_PAGES
-	   && page_table[first_page].allocated != FREE_PAGE /* Not free page */
-	   && ((unboxed && page_table[first_page].allocated != UNBOXED_PAGE)
-	       || (!unboxed &&
-		   page_table[first_page].allocated != BOXED_PAGE)
-	       || page_table[first_page].large_object != 0
-	       || page_table[first_page].gen != gc_alloc_generation
-	       || page_table[first_page].bytes_used >= 4096 - 32
-	       || page_table[first_page].write_protected != 0
-	       || page_table[first_page].dont_move != 0))
+
+    while (first_page < NUM_PAGES) {
+      int flags = page_table[first_page].flags;
+      if (!(flags & PAGE_ALLOCATED_MASK)
+	  || ((flags & mmask) == mflags &&
+	      page_table[first_page].bytes_used < 4096 - 32))
+	break;
       first_page++;
+    }
+
     /* Check for a failure */
     if (first_page >= NUM_PAGES) {
       fprintf(stderr, "*A2 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
@@ -556,7 +580,7 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
       exit(1);
     }
 
-    gc_assert(page_table[first_page].write_protected == 0);
+    gc_assert(!PAGE_WRITE_PROTECTED(first_page));
 
 #if 0
     fprintf(stderr, "  first_page=%d bytes_used=%d\n",
@@ -574,11 +598,11 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
     num_pages = 1;
     while ((bytes_found < nbytes || num_pages < 2)
 	   && last_page < NUM_PAGES - 1
-	   && page_table[last_page + 1].allocated == FREE_PAGE) {
+	   && !PAGE_ALLOCATED(last_page + 1)) {
       last_page++;
       num_pages++;
       bytes_found += 4096;
-      gc_assert(page_table[last_page].write_protected == 0);
+      gc_assert(!PAGE_WRITE_PROTECTED(last_page));
     }
 
     region_size = (4096 - page_table[first_page].bytes_used)
@@ -628,29 +652,20 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
 
   /* The first page may have already been in use. */
   if (page_table[first_page].bytes_used == 0) {
-    if (unboxed)
-      page_table[first_page].allocated = UNBOXED_PAGE;
-    else
-      page_table[first_page].allocated = BOXED_PAGE;
-    page_table[first_page].gen = gc_alloc_generation;
-    page_table[first_page].large_object = 0;
+    PAGE_FLAGS_UPDATE(first_page, mmask, mflags);
     page_table[first_page].first_object_offset = 0;
   }
 
-  if (unboxed)
-    gc_assert(page_table[first_page].allocated == UNBOXED_PAGE);
-  else
-    gc_assert(page_table[first_page].allocated == BOXED_PAGE);
-  gc_assert(page_table[first_page].gen == gc_alloc_generation);
-  gc_assert(page_table[first_page].large_object == 0);
+  gc_assert(PAGE_ALLOCATED(first_page));
+  gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
+  gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
+  gc_assert(!PAGE_LARGE_OBJECT(first_page));
 
-  for (i = first_page+1; i <= last_page; i++) {
-    if (unboxed)
-      page_table[i].allocated = UNBOXED_PAGE;
-    else
-      page_table[i].allocated = BOXED_PAGE;
-    page_table[i].gen = gc_alloc_generation;
-    page_table[i].large_object = 0;
+  for (i = first_page + 1; i <= last_page; i++) {
+    PAGE_FLAGS_UPDATE(i, PAGE_ALLOCATED_MASK | PAGE_LARGE_OBJECT_MASK
+		      | PAGE_UNBOXED_MASK | PAGE_GENERATION_MASK,
+		      PAGE_ALLOCATED_MASK | (unboxed << PAGE_UNBOXED_SHIFT)
+		      | gc_alloc_generation);
     /*
      * This may not be necessary for unboxed regions (think it was
      * broken before!)
@@ -817,12 +832,10 @@ void gc_alloc_update_page_tables(int unboxed,
     if (page_table[first_page].bytes_used == 0)
       gc_assert(page_table[first_page].first_object_offset == 0);
 
-    if (unboxed)
-      gc_assert(page_table[first_page].allocated == UNBOXED_PAGE);
-    else
-      gc_assert(page_table[first_page].allocated == BOXED_PAGE);
-    gc_assert(page_table[first_page].gen == gc_alloc_generation);
-    gc_assert(page_table[first_page].large_object == 0);
+    gc_assert(PAGE_ALLOCATED(first_page));
+    gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
+    gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
+    gc_assert(!PAGE_LARGE_OBJECT(first_page));
 
     byte_cnt = 0;
 
@@ -848,13 +861,11 @@ void gc_alloc_update_page_tables(int unboxed,
 #if 0
       fprintf(stderr, "+")
 #endif
-      if (unboxed)
-	gc_assert(page_table[next_page].allocated == UNBOXED_PAGE);
-      else
-	gc_assert(page_table[next_page].allocated == BOXED_PAGE);
+      gc_assert(PAGE_ALLOCATED(next_page));
+      gc_assert(PAGE_UNBOXED_VAL(next_page) == unboxed);
       gc_assert(page_table[next_page].bytes_used == 0);
-      gc_assert(page_table[next_page].gen == gc_alloc_generation);
-      gc_assert(page_table[next_page].large_object == 0);
+      gc_assert(PAGE_GENERATION(next_page) == gc_alloc_generation);
+      gc_assert(!PAGE_LARGE_OBJECT(next_page));
 
       gc_assert(page_table[next_page].first_object_offset ==
 		alloc_region->start_addr - page_address(next_page));
@@ -901,12 +912,12 @@ void gc_alloc_update_page_tables(int unboxed,
      * No bytes allocated. Unallocate the first_page if there are 0 bytes_used.
      */
     if (page_table[first_page].bytes_used == 0)
-      page_table[first_page].allocated = FREE_PAGE;
+      page_table[first_page].flags &= ~PAGE_ALLOCATED_MASK;
 
   /* Unallocate any unused pages. */
   while (next_page <= alloc_region->last_page) {
     gc_assert(page_table[next_page].bytes_used == 0);
-    page_table[next_page].allocated = FREE_PAGE;
+    page_table[next_page].flags &= ~PAGE_ALLOCATED_MASK;
     next_page++;
   }
 
@@ -944,6 +955,7 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
   int bytes_used;
   int next_page;
   int large = (nbytes >= large_object_size);
+  int mmask, mflags;
 
 #if 0
   if (nbytes > 200000)
@@ -982,26 +994,29 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
   if (restart_page <= alloc_region->last_page)
     restart_page = alloc_region->last_page + 1;
 
+  /* Setup the mask and matching flags. */
+
+  mmask = PAGE_ALLOCATED_MASK | PAGE_WRITE_PROTECTED_MASK
+    | PAGE_LARGE_OBJECT_MASK | PAGE_DONT_MOVE_MASK
+    | PAGE_UNBOXED_MASK | PAGE_GENERATION_MASK;
+  mflags = PAGE_ALLOCATED_MASK | (unboxed << PAGE_UNBOXED_SHIFT)
+    | gc_alloc_generation;
+
   do {
     first_page = restart_page;
 
     if (large)
-      while (first_page < NUM_PAGES
-	     && page_table[first_page].allocated != FREE_PAGE)
+      while (first_page < NUM_PAGES && PAGE_ALLOCATED(first_page))
 	first_page++;
     else
-      while (first_page < NUM_PAGES
-	     && page_table[first_page].allocated != FREE_PAGE
-	     && ((unboxed &&
-		  page_table[first_page].allocated != UNBOXED_PAGE)
-		 || (!unboxed &&
-		     page_table[first_page].allocated != BOXED_PAGE)
-		 || page_table[first_page].large_object != 0
-		 || page_table[first_page].gen != gc_alloc_generation
-		 || page_table[first_page].bytes_used >= 4096 - 32
-		 || page_table[first_page].write_protected != 0
-		 || page_table[first_page].dont_move != 0))
+      while (first_page < NUM_PAGES) {
+	int flags = page_table[first_page].flags;
+	if (!(flags & PAGE_ALLOCATED_MASK)
+	    || ((flags & mmask) == mflags &&
+		page_table[first_page].bytes_used < 4096 - 32))
+	  break;
 	first_page++;
+      }
 
     /* Check for a failure */
     if (first_page >= NUM_PAGES) {
@@ -1010,7 +1025,7 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
       exit(1);
     }
 
-    gc_assert(page_table[first_page].write_protected == 0);
+    gc_assert(!PAGE_WRITE_PROTECTED(first_page));
 
 #if 0
     fprintf(stderr, "  first_page=%d bytes_used=%d\n",
@@ -1022,11 +1037,11 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
     num_pages = 1;
     while (bytes_found < nbytes
 	   && last_page < NUM_PAGES - 1
-	   && page_table[last_page+1].allocated == FREE_PAGE) {
+	   && !PAGE_ALLOCATED(last_page + 1)) {
       last_page++;
       num_pages++;
       bytes_found += 4096;
-      gc_assert(page_table[last_page].write_protected == 0);
+      gc_assert(!PAGE_WRITE_PROTECTED(last_page));
     }
 
     region_size = (4096 - page_table[first_page].bytes_used)
@@ -1071,22 +1086,18 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
    * If the first page was free then setup the gen, and
    * first_object_offset.
    */
+
+  if (large)
+    mflags |= PAGE_LARGE_OBJECT_MASK;
   if (page_table[first_page].bytes_used == 0) {
-    if (unboxed)
-      page_table[first_page].allocated = UNBOXED_PAGE;
-    else
-      page_table[first_page].allocated = BOXED_PAGE;
-    page_table[first_page].gen = gc_alloc_generation;
+    PAGE_FLAGS_UPDATE(first_page, mmask, mflags);
     page_table[first_page].first_object_offset = 0;
-    page_table[first_page].large_object = large;
   }
 
-  if (unboxed)
-    gc_assert(page_table[first_page].allocated == UNBOXED_PAGE);
-  else
-    gc_assert(page_table[first_page].allocated == BOXED_PAGE);
-  gc_assert(page_table[first_page].gen == gc_alloc_generation);
-  gc_assert(page_table[first_page].large_object == large);
+  gc_assert(PAGE_ALLOCATED(first_page));
+  gc_assert(PAGE_UNBOXED_VAL(first_page) == unboxed);
+  gc_assert(PAGE_GENERATION(first_page) == gc_alloc_generation);
+  gc_assert(PAGE_LARGE_OBJECT_VAL(first_page) == large);
 
   byte_cnt = 0;
 
@@ -1115,14 +1126,9 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
     fprintf(stderr, "+");
 #endif
 
-    gc_assert(page_table[next_page].allocated == FREE_PAGE);
+    gc_assert(!PAGE_ALLOCATED(next_page));
     gc_assert(page_table[next_page].bytes_used == 0);
-    if (unboxed)
-      page_table[next_page].allocated = UNBOXED_PAGE;
-    else
-      page_table[next_page].allocated = BOXED_PAGE;
-    page_table[next_page].gen = gc_alloc_generation;
-    page_table[next_page].large_object = large;
+    PAGE_FLAGS_UPDATE(next_page, mmask, mflags);
 
     page_table[next_page].first_object_offset =
       orig_first_page_bytes_used - 4096 * (next_page - first_page);
@@ -1429,7 +1435,7 @@ static inline boolean from_space_p(lispobj obj)
   int page_index = (void*) obj - heap_base;
   return page_index >= 0
     && (page_index = (unsigned int) page_index / 4096) < NUM_PAGES
-    && page_table[page_index].gen == from_space;
+    && PAGE_GENERATION(page_index) == from_space;
 }
 
 static inline boolean new_space_p(lispobj obj)
@@ -1437,7 +1443,7 @@ static inline boolean new_space_p(lispobj obj)
   int page_index = (void*) obj - heap_base;
   return page_index >= 0
     && (page_index = (unsigned int)page_index / 4096) < NUM_PAGES
-    && page_table[page_index].gen == new_space;
+    && PAGE_GENERATION(page_index) == new_space;
 }
 
 
@@ -1503,12 +1509,13 @@ static lispobj copy_large_object(lispobj object, int nwords)
   first_page = find_page_index((void *) object);
   gc_assert(first_page >= 0);
 
-  if (page_table[first_page].large_object) {
+  if (PAGE_LARGE_OBJECT(first_page)) {
     /* Promote the object. */
     int remaining_bytes;
     int next_page;
     int bytes_freed;
     int old_bytes_used;
+    int mmask, mflags;
 
     /*
      * Note: Any page write protection must be removed, else a later
@@ -1523,22 +1530,23 @@ static lispobj copy_large_object(lispobj object, int nwords)
     next_page = first_page;
     remaining_bytes = nwords * 4;
     while (remaining_bytes > 4096) {
-      gc_assert(page_table[next_page].gen == from_space);
-      gc_assert(page_table[next_page].allocated == BOXED_PAGE);
-      gc_assert(page_table[next_page].large_object);
+      gc_assert(PAGE_GENERATION(next_page) == from_space);
+      gc_assert(PAGE_ALLOCATED(next_page));
+      gc_assert(!PAGE_UNBOXED(next_page));
+      gc_assert(PAGE_LARGE_OBJECT(next_page));
       gc_assert(page_table[next_page].first_object_offset ==
 		4096 * (first_page - next_page));
       gc_assert(page_table[next_page].bytes_used == 4096);
 
-      page_table[next_page].gen = new_space;
+      PAGE_FLAGS_UPDATE(next_page, PAGE_GENERATION_MASK, new_space);
 
       /*
        * Remove any write protection.  Should be able to religh on the
        * WP flag to avoid redundant calls.
        */
-      if (page_table[next_page].write_protected) {
+      if (PAGE_WRITE_PROTECTED(next_page)) {
 	os_protect(page_address(next_page), 4096, OS_VM_PROT_ALL);
-	page_table[next_page].write_protected = 0;
+	page_table[next_page].flags &= ~PAGE_WRITE_PROTECTED_MASK;
       }
       remaining_bytes -= 4096;
       next_page++;
@@ -1552,8 +1560,9 @@ static lispobj copy_large_object(lispobj object, int nwords)
     /* Object may have shrunk but shouldn't have grown - check. */
     gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
 
-    page_table[next_page].gen = new_space;
-    gc_assert(page_table[next_page].allocated = BOXED_PAGE);
+    PAGE_FLAGS_UPDATE(next_page, PAGE_GENERATION_MASK, new_space);
+    gc_assert(PAGE_ALLOCATED(next_page));
+    gc_assert(!PAGE_UNBOXED(next_page));
 
     /* Adjust the bytes_used. */
     old_bytes_used = page_table[next_page].bytes_used;
@@ -1561,24 +1570,26 @@ static lispobj copy_large_object(lispobj object, int nwords)
 
     bytes_freed = old_bytes_used - remaining_bytes;
 
+    mmask = PAGE_ALLOCATED_MASK | PAGE_UNBOXED_MASK | PAGE_LARGE_OBJECT_MASK
+      | PAGE_GENERATION_MASK;
+    mflags = PAGE_ALLOCATED_MASK | PAGE_LARGE_OBJECT_MASK | from_space;
+
     /* Free any remaining pages; needs care. */
     next_page++;
     while (old_bytes_used == 4096 &&
-	   page_table[next_page].gen == from_space &&
-	   page_table[next_page].allocated == BOXED_PAGE &&
-	   page_table[next_page].large_object &&
-	   (page_table[next_page].first_object_offset ==
-	    (first_page - next_page) * 4096)) {
+	   PAGE_FLAGS(next_page, mmask) == mflags &&
+	   page_table[next_page].first_object_offset == (first_page
+							 - next_page) * 4096) {
       /*
        * Checks out OK, free the page. Don't need to both zeroing
        * pages as this should have been done before shrinking the
        * object. These pages shouldn't be write protected as they
        * should be zero filled.
        */
-      gc_assert(page_table[next_page].write_protected == 0);
+      gc_assert(!PAGE_WRITE_PROTECTED(next_page));
 
       old_bytes_used = page_table[next_page].bytes_used;
-      page_table[next_page].allocated = FREE_PAGE;
+      page_table[next_page].flags &= ~PAGE_ALLOCATED_MASK;
       page_table[next_page].bytes_used = 0;
       bytes_freed += old_bytes_used;
       next_page++;
@@ -1680,7 +1691,7 @@ static lispobj copy_large_unboxed_object(lispobj object, int nwords)
   first_page = find_page_index((void *) object);
   gc_assert(first_page >= 0);
 
-  if (page_table[first_page].large_object) {
+  if (PAGE_LARGE_OBJECT(first_page)) {
     /*
      * Promote the object. Note: Unboxed objects may have been
      * allocated to a BOXED region so it may be necessary to change
@@ -1690,22 +1701,22 @@ static lispobj copy_large_unboxed_object(lispobj object, int nwords)
     int next_page;
     int bytes_freed;
     int old_bytes_used;
+    int mmask, mflags;
 
     gc_assert(page_table[first_page].first_object_offset == 0);
 
     next_page = first_page;
     remaining_bytes = nwords * 4;
     while (remaining_bytes > 4096) {
-      gc_assert(page_table[next_page].gen == from_space);
-      gc_assert(page_table[next_page].allocated == UNBOXED_PAGE
-		|| page_table[next_page].allocated == BOXED_PAGE);
-      gc_assert(page_table[next_page].large_object);
+      gc_assert(PAGE_GENERATION(next_page) == from_space);
+      gc_assert(PAGE_ALLOCATED(next_page));
+      gc_assert(PAGE_LARGE_OBJECT(next_page));
       gc_assert(page_table[next_page].first_object_offset ==
 		4096 * (first_page - next_page));
       gc_assert(page_table[next_page].bytes_used == 4096);
 
-      page_table[next_page].gen = new_space;
-      page_table[next_page].allocated = UNBOXED_PAGE;
+      PAGE_FLAGS_UPDATE(next_page, PAGE_UNBOXED_MASK | PAGE_GENERATION_MASK,
+			PAGE_UNBOXED_MASK | new_space);
       remaining_bytes -= 4096;
       next_page++;
     }
@@ -1718,8 +1729,9 @@ static lispobj copy_large_unboxed_object(lispobj object, int nwords)
     /* Object may have shrunk but shouldn't have grown - check. */
     gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
 
-    page_table[next_page].gen = new_space;
-    page_table[next_page].allocated = UNBOXED_PAGE;
+    PAGE_FLAGS_UPDATE(next_page, PAGE_ALLOCATED_MASK | PAGE_UNBOXED_MASK
+		      | PAGE_GENERATION_MASK,
+		      PAGE_ALLOCATED_MASK | PAGE_UNBOXED_MASK | new_space);
 
     /* Adjust the bytes_used. */
     old_bytes_used = page_table[next_page].bytes_used;
@@ -1727,25 +1739,26 @@ static lispobj copy_large_unboxed_object(lispobj object, int nwords)
 
     bytes_freed = old_bytes_used - remaining_bytes;
 
+    mmask = PAGE_ALLOCATED_MASK | PAGE_LARGE_OBJECT_MASK
+      | PAGE_GENERATION_MASK;
+    mflags = PAGE_ALLOCATED_MASK | PAGE_LARGE_OBJECT_MASK | from_space;
+
     /* Free any remaining pages; needs care. */
     next_page++;
     while (old_bytes_used == 4096 &&
-	   page_table[next_page].gen == from_space &&
-	   (page_table[next_page].allocated == UNBOXED_PAGE
-	    || page_table[next_page].allocated == BOXED_PAGE) &&
-	   page_table[next_page].large_object &&
-	   (page_table[next_page].first_object_offset ==
-	    (first_page - next_page) * 4096)) {
+	   PAGE_FLAGS(next_page, mmask) == mflags &&
+	   page_table[next_page].first_object_offset == (first_page
+							 - next_page) * 4096) {
       /*
        * Checks out OK, free the page. Don't need to both zeroing
        * pages as this should have been done before shrinking the
        * object. These pages shouldn't be write protected, even if
        * boxed they should be zero filled.
        */
-      gc_assert(page_table[next_page].write_protected == 0);
+      gc_assert(!PAGE_WRITE_PROTECTED(next_page));
 
       old_bytes_used = page_table[next_page].bytes_used;
-      page_table[next_page].allocated = FREE_PAGE;
+      page_table[next_page].flags &= ~PAGE_ALLOCATED_MASK;
       page_table[next_page].bytes_used = 0;
       bytes_freed += old_bytes_used;
       next_page++;
@@ -4185,7 +4198,7 @@ lispobj* search_dynamic_space(lispobj *pointer)
   lispobj *start;
 
   /* Address may be invalid - do some checks. */
-  if (page_index == -1 || page_table[page_index].allocated == FREE_PAGE)
+  if (page_index == -1 || !PAGE_ALLOCATED(page_index))
     return NULL;
   start = (lispobj *) ((void *) page_address(page_index)
 		       + page_table[page_index].first_object_offset);
@@ -4417,12 +4430,13 @@ static void maybe_adjust_large_object(lispobj *where)
   int next_page;
   int bytes_freed;
   int old_bytes_used;
-  int boxed;
+  int unboxed;
+  int mmask, mflags;
 
   /* Check if it's a vector or bignum object. */
   switch (TypeOf(where[0])) {
   case type_SimpleVector:
-    boxed = BOXED_PAGE;
+    unboxed = FALSE;
     break;
   case type_Bignum:
   case type_SimpleString:
@@ -4458,7 +4472,7 @@ static void maybe_adjust_large_object(lispobj *where)
 #ifdef type_SimpleArrayComplexLongFloat
   case type_SimpleArrayComplexLongFloat:
 #endif
-    boxed = UNBOXED_PAGE;
+    unboxed = TRUE;
     break;
   default:
     return;
@@ -4482,21 +4496,21 @@ static void maybe_adjust_large_object(lispobj *where)
   next_page = first_page;
   remaining_bytes = nwords*4;
   while (remaining_bytes > 4096) {
-    gc_assert(page_table[next_page].gen == from_space);
-    gc_assert(page_table[next_page].allocated == BOXED_PAGE
-	      || page_table[next_page].allocated == UNBOXED_PAGE);
-    gc_assert(page_table[next_page].large_object);
+    gc_assert(PAGE_GENERATION(next_page) == from_space);
+    gc_assert(PAGE_ALLOCATED(next_page));
+    gc_assert(PAGE_LARGE_OBJECT(next_page));
     gc_assert(page_table[next_page].first_object_offset ==
 	      4096 * (first_page - next_page));
     gc_assert(page_table[next_page].bytes_used == 4096);
 
-    page_table[next_page].allocated = boxed;
+    PAGE_FLAGS_UPDATE(next_page, PAGE_UNBOXED_MASK,
+		      unboxed << PAGE_UNBOXED_SHIFT);
 
     /*
      * Shouldn't be write protected at this stage. Essential that the
      * pages aren't.
      */
-    gc_assert(!page_table[next_page].write_protected);
+    gc_assert(!PAGE_WRITE_PROTECTED(next_page));
     remaining_bytes -= 4096;
     next_page++;
   }
@@ -4509,9 +4523,10 @@ static void maybe_adjust_large_object(lispobj *where)
   /* Object may have shrunk but shouldn't have grown - check. */
   gc_assert(page_table[next_page].bytes_used >= remaining_bytes);
 
-  page_table[next_page].allocated = boxed;
-  gc_assert(page_table[next_page].allocated ==
-	    page_table[first_page].allocated);
+  page_table[next_page].flags |= PAGE_ALLOCATED_MASK;
+  PAGE_FLAGS_UPDATE(next_page, PAGE_UNBOXED_MASK,
+		    unboxed << PAGE_UNBOXED_SHIFT);
+  gc_assert(PAGE_UNBOXED(next_page) == PAGE_UNBOXED(first_page));
 
   /* Adjust the bytes_used. */
   old_bytes_used = page_table[next_page].bytes_used;
@@ -4519,25 +4534,25 @@ static void maybe_adjust_large_object(lispobj *where)
 
   bytes_freed = old_bytes_used - remaining_bytes;
 
+  mmask = PAGE_ALLOCATED_MASK | PAGE_LARGE_OBJECT_MASK | PAGE_GENERATION_MASK;
+  mflags = PAGE_ALLOCATED_MASK | PAGE_LARGE_OBJECT_MASK | from_space;
+
   /* Free any remaining pages; needs care. */
   next_page++;
   while (old_bytes_used == 4096 &&
-	 page_table[next_page].gen == from_space &&
-	 (page_table[next_page].allocated == UNBOXED_PAGE
-	  || page_table[next_page].allocated == BOXED_PAGE) &&
-	 page_table[next_page].large_object &&
-	 page_table[next_page].first_object_offset ==
-	  (first_page - next_page) * 4096 ) {
+	 PAGE_FLAGS(next_page, mmask) == mflags &&
+	 page_table[next_page].first_object_offset == (first_page
+						       - next_page) * 4096) {
     /*
      * Checks out OK, free the page. Don't need to bother zeroing
      * pages as this should have been done before shrinking the
      * object. These pages shouldn't be write protected as they should
      * be zero filled.
      */
-    gc_assert(page_table[next_page].write_protected == 0);
+    gc_assert(!PAGE_WRITE_PROTECTED(next_page));
 
     old_bytes_used = page_table[next_page].bytes_used;
-    page_table[next_page].allocated = FREE_PAGE;
+    page_table[next_page].flags &= ~PAGE_ALLOCATED_MASK;
     page_table[next_page].bytes_used = 0;
     bytes_freed += old_bytes_used;
     next_page++;
@@ -4575,18 +4590,18 @@ static void preserve_pointer(void *addr)
   int addr_page_index = find_page_index(addr);
   int first_page;
   int i;
-  unsigned region_allocation;
+  unsigned region_unboxed;
 
   /* Address is quite likely to have been invalid - do some checks. */
   if (addr_page_index == -1
-      || page_table[addr_page_index].allocated == FREE_PAGE
+      || !PAGE_ALLOCATED(addr_page_index)
       || page_table[addr_page_index].bytes_used == 0
-      || page_table[addr_page_index].gen != from_space
+      || PAGE_GENERATION(addr_page_index) != from_space
       /* Skip if already marked dont_move */
-      || page_table[addr_page_index].dont_move != 0)
+      || PAGE_DONT_MOVE(addr_page_index))
     return;
 
-  region_allocation = page_table[addr_page_index].allocated;
+  region_unboxed = PAGE_UNBOXED(addr_page_index);
 
   /* Check the offset within the page */
   if (((int) addr & 0xfff) > page_table[addr_page_index].bytes_used)
@@ -4605,22 +4620,23 @@ static void preserve_pointer(void *addr)
     first_page--;
     /* Do some checks */
     gc_assert(page_table[first_page].bytes_used == 4096);
-    gc_assert(page_table[first_page].gen == from_space);
-    gc_assert(page_table[first_page].allocated == region_allocation);
+    gc_assert(PAGE_GENERATION(first_page) == from_space);
+    gc_assert(PAGE_ALLOCATED(first_page));
+    gc_assert(PAGE_UNBOXED(first_page) == region_unboxed);
   }
 
   /*
    * Adjust any large objects before promotion as they won't be copied
    * after promotion.
    */
-  if (page_table[first_page].large_object) {
+  if (PAGE_LARGE_OBJECT(first_page)) {
     maybe_adjust_large_object(page_address(first_page));
     /*
      * If a large object has shrunk then addr may now point to a free
      * adea in which case it's ignored here. Note it gets through the
      * valid pointer test above because the tail looks like conses.
      */
-    if (page_table[addr_page_index].allocated == FREE_PAGE
+    if (!PAGE_ALLOCATED(addr_page_index)
 	|| page_table[addr_page_index].bytes_used == 0
 	/* Check the offset within the page */
 	|| ((int) addr & 0xfff) > page_table[addr_page_index].bytes_used) {
@@ -4629,18 +4645,19 @@ static void preserve_pointer(void *addr)
       return;
     }
     /* May have moved to unboxed pages. */
-    region_allocation = page_table[first_page].allocated;
+    region_unboxed = PAGE_UNBOXED(first_page);
   }
 
   /*
    * Now work forward until the end of this contiguous area is found,
    * marking all pages as dont_move.
    */
-  for (i = first_page; ; i++) {
-    gc_assert(page_table[i].allocated == region_allocation);
+  for (i = first_page; ;i++) {
+    gc_assert(PAGE_ALLOCATED(i));
+    gc_assert(PAGE_UNBOXED(i) == region_unboxed);
 
     /* Mark the page static */
-    page_table[i].dont_move = 1;
+    page_table[i].flags |= PAGE_DONT_MOVE_MASK;
 #if 0
     fprintf(stderr, "#%d,", i);
 #endif
@@ -4651,7 +4668,7 @@ static void preserve_pointer(void *addr)
      * remaining in the from space. This also requires the generation
      * bytes_allocated counters be updated.
      */
-    page_table[i].gen = new_space;
+    PAGE_FLAGS_UPDATE(i, PAGE_GENERATION_MASK, new_space);
     generations[new_space].bytes_allocated += page_table[i].bytes_used;
     generations[from_space].bytes_allocated -= page_table[i].bytes_used;
 
@@ -4660,20 +4677,20 @@ static void preserve_pointer(void *addr)
      * have pointers into the old-space which need
      * scavenging. Shouldn't be write protected at this stage.
      */
-    gc_assert(!page_table[i].write_protected);
+    gc_assert(!PAGE_WRITE_PROTECTED(i));
 
     /* Check if this is the last page in this contiguous block */
     if (page_table[i].bytes_used < 4096
 	/* Or it is 4096 and is the last in the block */
-	|| page_table[i+1].allocated == FREE_PAGE
-	|| page_table[i+1].bytes_used == 0 /* Next page free */
-	|| page_table[i+1].gen != from_space /* Diff. gen */
-	|| page_table[i+1].first_object_offset == 0)
+	|| !PAGE_ALLOCATED(i + 1)
+	|| page_table[i + 1].bytes_used == 0 /* Next page free */
+	|| PAGE_GENERATION(i + 1) != from_space /* Diff. gen */
+	|| page_table[i + 1].first_object_offset == 0)
       break;
   }
 
   /* Check that the page is now static */
-  gc_assert(page_table[addr_page_index].dont_move != 0);
+  gc_assert(PAGE_DONT_MOVE(addr_page_index));
 
   return;
 }
@@ -4745,19 +4762,18 @@ static void scavenge_thread_stacks(void)
  */
 static int update_page_write_prot(page)
 {
-  int gen = page_table[page].gen;
+  int gen = PAGE_GENERATION(page);
   int j;
   int wp_it = 1;
   void **page_addr = (void **) page_address(page);
   int num_words = page_table[page].bytes_used / 4;
 
   /* Shouldn't be a free page. */
-  gc_assert(page_table[page].allocated != FREE_PAGE);
+  gc_assert(PAGE_ALLOCATED(page));
   gc_assert(page_table[page].bytes_used != 0);
 
   /* Skip if it's already write protected or an unboxed page. */
-  if (page_table[page].write_protected
-      || page_table[page].allocated == UNBOXED_PAGE)
+  if (PAGE_WRITE_PROTECTED(page) || PAGE_UNBOXED(page))
     return 0;
 
   /*
@@ -4772,10 +4788,10 @@ static int update_page_write_prot(page)
     /* Check that it's in the dynamic space */
     if (index != -1)
       if (/* Does it point to a younger or the temp. generation? */
-	  (page_table[index].allocated != FREE_PAGE
+	  (PAGE_ALLOCATED(index)
 	   && page_table[index].bytes_used != 0
-	   && (page_table[index].gen < gen
-	       || page_table[index].gen == NUM_GENERATIONS))
+	   && (PAGE_GENERATION(index) < gen
+	       || PAGE_GENERATION(index) == NUM_GENERATIONS))
 
 	  /* Or does it point within a current gc_alloc region? */
 	  || (boxed_region.start_addr <= ptr
@@ -4796,7 +4812,7 @@ static int update_page_write_prot(page)
     os_protect((void *) page_addr, 4096, OS_VM_PROT_READ | OS_VM_PROT_EXECUTE);
 
     /* Note the page as protected in the page tables */
-    page_table[page].write_protected = 1;
+    page_table[page].flags |= PAGE_WRITE_PROTECTED_MASK;
   }
 
   return wp_it;
@@ -4845,13 +4861,13 @@ static void scavenge_generation(int generation)
 #if SC_GEN_CK
   /* Clear the write_protected_cleared flags on all pages */
   for (i = 0; i < NUM_PAGES; i++)
-    page_table[i].write_protected_cleared = 0;
+    page_table[i].flags &= ~PAGE_WRITE_PROTECTED_CLEADED_MASK;
 #endif
 
   for (i = 0; i < last_free_page; i++) {
-    if (page_table[i].allocated == BOXED_PAGE
+    if (PAGE_ALLOCATED(i) && !PAGE_UNBOXED(i)
 	&& page_table[i].bytes_used != 0
-	&& page_table[i].gen == generation) {
+	&& PAGE_GENERATION(i) == generation) {
       int last_page;
 
       /* This should be the start of a contiguous block */
@@ -4871,10 +4887,11 @@ static void scavenge_generation(int generation)
 	/* Check if this is the last page in this contiguous block */
 	if (page_table[last_page].bytes_used < 4096
 	    /* Or it is 4096 and is the last in the block */
-	    || page_table[last_page+1].allocated != BOXED_PAGE
-	    || page_table[last_page+1].bytes_used == 0
-	    || page_table[last_page+1].gen != generation
-	    || page_table[last_page+1].first_object_offset == 0)
+	    || !PAGE_ALLOCATED(last_page + 1)
+	    || PAGE_UNBOXED(last_page + 1)
+	    || page_table[last_page + 1].bytes_used == 0
+	    || PAGE_GENERATION(last_page + 1) != generation
+	    || page_table[last_page + 1].first_object_offset == 0)
 	  break;
 
       /*
@@ -4884,7 +4901,7 @@ static void scavenge_generation(int generation)
       {
 	int j, all_wp = 1;
 	for (j = i; j <= last_page; j++)
-	  if (page_table[j].write_protected == 0) {
+	  if (!PAGE_WRITE_PROTECTED(j)) {
 	    all_wp = 0;
 	    break;
 	  }
@@ -4917,16 +4934,15 @@ static void scavenge_generation(int generation)
    * have been written to.
    */
   for (i = 0; i < NUM_PAGES; i++)
-    if (page_table[i].allocation != FREE_PAGE
+    if (PAGE_ALLOCATED(i)
 	&& page_table[i].bytes_used != 0
-	&& page_table[i].gen == generation
-	&& page_table[i].write_protected_cleared != 0) {
-      fprintf(stderr, "*** scavenge_generation %d: write protected page %d written to?\n",
-	      generation, i);
+	&& PAGE_GENERATION(i) == generation
+	&& PAGE_WRITE_PROTECTED_CLEARED(i)) {
+      fprintf(stderr, "*** scavenge_generation %d: write protected page %d written to?\n", generation, i);
       fprintf(stderr, "*** page: bytes_used=%d first_object_offset=%d dont_move=%d\n",
 	      page_table[i].bytes_used,
 	      page_table[i].first_object_offset,
-	      page_table[i].dont_move);
+	      PAGE_DONT_MOVE(i));
     }
 #endif
 
@@ -4974,15 +4990,12 @@ static void scavenge_newspace_generation_one_scan(int generation)
 #endif
 
   for (i = 0; i < last_free_page; i++) {
-    if (page_table[i].allocated == BOXED_PAGE
+    if (PAGE_ALLOCATED(i) && !PAGE_UNBOXED(i)
 	&& page_table[i].bytes_used != 0
-	&& page_table[i].gen == generation
-	&& (page_table[i].write_protected == 0
-	    /*
-	     * This may be redundant as WP is now cleared before
-	     * promotion.
-	     */
-	    || page_table[i].dont_move == 1)) {
+	&& PAGE_GENERATION(i) == generation
+	&& (!PAGE_WRITE_PROTECTED(i)
+	    /* This may be redundant as WP is now cleared before promotion. */
+	    || PAGE_DONT_MOVE(i))) {
       int last_page;
 
       /* The scavenge will start at the first_object_offset of page i */
@@ -5001,10 +5014,11 @@ static void scavenge_newspace_generation_one_scan(int generation)
 	/* Check if this is the last page in this contiguous block */
 	if (page_table[last_page].bytes_used < 4096
 	    /* Or it is 4096 and is the last in the block */
-	    || page_table[last_page+1].allocated != BOXED_PAGE
-	    || page_table[last_page+1].bytes_used == 0
-	    || page_table[last_page+1].gen != generation
-	    || page_table[last_page+1].first_object_offset == 0)
+	    || !PAGE_ALLOCATED(last_page + 1)
+	    || PAGE_UNBOXED(last_page + 1)
+	    || page_table[last_page + 1].bytes_used == 0
+	    || PAGE_GENERATION(last_page + 1) != generation
+	    || page_table[last_page + 1].first_object_offset == 0)
 	  break;
 
       /*
@@ -5015,8 +5029,7 @@ static void scavenge_newspace_generation_one_scan(int generation)
       {
 	int j, all_wp = 1;
 	for (j = i; j <= last_page; j++)
-	  if (page_table[j].write_protected == 0
-	      || page_table[j].dont_move != 0) {
+	  if (!PAGE_WRITE_PROTECTED(j) || PAGE_DONT_MOVE(j)) {
 	    all_wp = 0;
 	    break;
 	  }
@@ -5060,9 +5073,9 @@ static void scavenge_newspace_generation_one_scan(int generation)
 		fprintf(stderr, "*** page: bytes_used=%d first_object_offset=%d dont_move=%d wp=%d wpc=%d\n",
 			page_table[i].bytes_used,
 			page_table[i].first_object_offset,
-			page_table[i].dont_move,
-			page_table[i].write_protected,
-			page_table[i].write_protected_cleared);
+			PAGE_DONT_MOVE(i),
+			PAGE_WRITE_PROTECTED(i),
+			PAGE_PROTECTED_CLEARED(i));
 	      }
 #endif
 	    }
@@ -5094,7 +5107,7 @@ static void scavenge_newspace_generation(int generation)
 #if SC_NS_GEN_CK
   /* Clear the write_protected_cleared flags on all pages */
   for (i = 0; i < NUM_PAGES; i++)
-    page_table[i].write_protected_cleared = 0;
+    page_table[i].flags &= ~PAGE_WRITE_PROTECTED_CLEARED;
 #endif
 
   /* Flush the current regions updating the tables. */
@@ -5213,13 +5226,13 @@ static void scavenge_newspace_generation(int generation)
    * have been written to.
    */
   for (i = 0; i < NUM_PAGES; i++)
-    if (page_table[i].allocation != FREE_PAGE
+    if (PAGE_ALLOCATED(i)
 	&& page_table[i].bytes_used != 0
-	&& page_table[i].gen == generation
-	&& page_table[i].write_protected_cleared != 0
-	&& page_table[i].dont_move == 0)
+	&& PAGE_GENERATION(i) == generation
+	&& PAGE_WRITE_PROTECTED_CLEARED(i)
+	&& !PAGE_DONT_MOVE(i))
       fprintf(stderr, "*** scav.new.gen. %d: write protected page %d written to? dont_move=%d\n",
-	      generation, i, page_table[i].dont_move);
+	      generation, i, PAGE_DONT_MOVE(i));
 #endif
 }
 
@@ -5238,9 +5251,9 @@ static void unprotect_oldspace(void)
   int i;
 
   for (i = 0; i < last_free_page; i++)
-    if (page_table[i].allocated != FREE_PAGE
+    if (PAGE_ALLOCATED(i)
 	&& page_table[i].bytes_used != 0
-	&& page_table[i].gen == from_space) {
+	&& PAGE_GENERATION(i) == from_space) {
       void *page_start, *addr;
 
       page_start = (void *) page_address(i);
@@ -5249,9 +5262,9 @@ static void unprotect_oldspace(void)
        * Remove any write protection.  Should be able to rely on the
        * WP flag to avoid redundant calls.
        */
-      if (page_table[i].write_protected) {
+      if (PAGE_WRITE_PROTECTED(i)) {
 	os_protect(page_start, 4096, OS_VM_PROT_ALL);
-	page_table[i].write_protected = 0;
+	page_table[i].flags &= ~PAGE_WRITE_PROTECTED_MASK;
       }
     }
 }
@@ -5273,9 +5286,9 @@ static int free_oldspace(void)
   do {
     /* Find a first page for the next region of pages. */
     while (first_page < last_free_page
-	   && (page_table[first_page].allocated == FREE_PAGE
+	   && (!PAGE_ALLOCATED(first_page)
 	       || page_table[first_page].bytes_used == 0
-	       || page_table[first_page].gen != from_space))
+	       || PAGE_GENERATION(first_page) != from_space))
       first_page++;
 
     if (first_page >= last_free_page)
@@ -5287,8 +5300,8 @@ static int free_oldspace(void)
     do {
       /* Free the page */
       bytes_freed += page_table[last_page].bytes_used;
-      generations[page_table[last_page].gen].bytes_allocated -= page_table[last_page].bytes_used;
-      page_table[last_page].allocated = FREE_PAGE;
+      generations[PAGE_GENERATION(last_page)].bytes_allocated -= page_table[last_page].bytes_used;
+      page_table[last_page].flags &= ~PAGE_ALLOCATED_MASK;
       page_table[last_page].bytes_used = 0;
 
       /*
@@ -5298,17 +5311,17 @@ static int free_oldspace(void)
       {
 	void  *page_start = (void *)page_address(last_page);
 
-	if (page_table[last_page].write_protected) {
+	if (PAGE_WRITE_PROTECTED(last_page)) {
 	  os_protect(page_start, 4096, OS_VM_PROT_ALL);
-	  page_table[last_page].write_protected = 0;
+	  page_table[last_page].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 	}
       }
       last_page++;
     }
     while (last_page < last_free_page
-	   && page_table[last_page].allocated != FREE_PAGE
+	   && PAGE_ALLOCATED(last_page)
 	   && page_table[last_page].bytes_used != 0
-	   && page_table[last_page].gen == from_space);
+	   && PAGE_GENERATION(last_page) == from_space);
 
     /* Zero pages from first_page to (last_page - 1) */
     if (gencgc_unmap_zero) {
@@ -5345,13 +5358,14 @@ static void print_ptr(lispobj *addr)
   int pi1 = find_page_index((void*) addr);
 
   if(pi1 != -1)
-    fprintf(stderr, "  %x: page %d  alloc %d  gen %d  bytes_used %d  offset %d  dont_move %d\n",
+    fprintf(stderr, "  %x: page %d  alloc %d unboxed %d gen %d  bytes_used %d  offset %d  dont_move %d\n",
 	    addr, pi1,
-	    page_table[pi1].allocated,
-	    page_table[pi1].gen,
+	    PAGE_ALLOCATED(pi1),
+	    PAGE_UNBOXED(pi1),
+	    PAGE_GENERATION(pi1),
 	    page_table[pi1].bytes_used,
 	    page_table[pi1].first_object_offset,
-	    page_table[pi1].dont_move);
+	    PAGE_DONT_MOVE(pi1));
   fprintf(stderr, "  %x %x %x %x (%x) %x %x %x %x\n",
 	  *(addr - 4), *(addr - 3), *(addr - 2), *(addr - 1), *(addr - 0),
 	  *(addr + 1), *(addr + 2), *(addr + 3), *(addr + 4));
@@ -5382,7 +5396,7 @@ static void verify_space(lispobj*start, size_t words)
 	 * If it's within the dynamic space it should point to a used
 	 * page.  X Could check the offset too.
 	 */
-	if (page_table[page_index].allocated != FREE_PAGE
+	if (PAGE_ALLOCATED(page_index)
 	    && page_table[page_index].bytes_used == 0) {
 	  fprintf(stderr, "*** Ptr %x @ %x sees free page.\n", thing, start);
 	  print_ptr(start);
@@ -5580,11 +5594,11 @@ static void verify_generation(int  generation)
   int i;
 
   for (i = 0; i < last_free_page; i++) {
-    if (page_table[i].allocated != FREE_PAGE
+    if (PAGE_ALLOCATED(i)
 	&& page_table[i].bytes_used != 0
-	&& page_table[i].gen == generation) {
+	&& PAGE_GENERATION(i) == generation) {
       int last_page;
-      int region_allocation = page_table[i].allocated;
+      int region_unboxed = PAGE_UNBOXED(i);
 
       /* This should be the start of a contiguous block */
       gc_assert(page_table[i].first_object_offset == 0);
@@ -5602,10 +5616,11 @@ static void verify_generation(int  generation)
 	/* Check if this is the last page in this contiguous block */
 	if (page_table[last_page].bytes_used < 4096
 	    /* Or it is 4096 and is the last in the block */
-	    || page_table[last_page+1].allocated != region_allocation
-	    || page_table[last_page+1].bytes_used == 0
-	    || page_table[last_page+1].gen != generation
-	    || page_table[last_page+1].first_object_offset == 0)
+	    || !PAGE_ALLOCATED(last_page + 1)
+	    || PAGE_UNBOXED(last_page + 1) != region_unboxed
+	    || page_table[last_page + 1].bytes_used == 0
+	    || PAGE_GENERATION(last_page + 1) != generation
+	    || page_table[last_page + 1].first_object_offset == 0)
 	  break;
 
       verify_space(page_address(i),
@@ -5621,7 +5636,7 @@ static void verify_zero_fill(void)
   int page;
 
   for (page = 0; page < last_free_page; page++) {
-    if (page_table[page].allocated == FREE_PAGE) {
+    if (!PAGE_ALLOCATED(page)) {
       /* The whole page should be zero filled. */
       int *start_addr = (int *) page_address(page);
       int size = 1024;
@@ -5681,9 +5696,9 @@ static void write_protect_generation_pages(int generation)
   gc_assert(generation < NUM_GENERATIONS);
 
   for (i = 0; i < last_free_page; i++)
-    if (page_table[i].allocated == BOXED_PAGE &&
-	page_table[i].bytes_used != 0 &&
-	page_table[i].gen == generation)  {
+    if (PAGE_ALLOCATED(i) && !PAGE_UNBOXED(i)
+	&& page_table[i].bytes_used != 0
+	&& PAGE_GENERATION(i) == generation)  {
       void *page_start;
 
       page_start = (void *) page_address(i);
@@ -5691,7 +5706,7 @@ static void write_protect_generation_pages(int generation)
       os_protect(page_start, 4096, OS_VM_PROT_READ | OS_VM_PROT_EXECUTE);
 
       /* Note the page as protected in the page tables */
-      page_table[i].write_protected = 1;
+      page_table[i].flags |= PAGE_WRITE_PROTECTED_MASK;
     }
 
   if (gencgc_verbose > 1)
@@ -5751,7 +5766,7 @@ static void	garbage_collect_generation(int generation, int raise)
    * pages need to be cleared.
    */
   for (i = 0; i < last_free_page; i++)
-    page_table[i].dont_move = 0;
+    page_table[i].flags &= ~PAGE_DONT_MOVE_MASK;
 
   /*
    * Un-write-protect the old-space pages. This is essential for the
@@ -5875,9 +5890,9 @@ static void	garbage_collect_generation(int generation, int raise)
    */
   if (!raise) {
     for (i = 0; i < last_free_page; i++)
-      if (page_table[i].bytes_used != 0 &&
-	  page_table[i].gen == NUM_GENERATIONS)
-	page_table[i].gen = generation;
+      if (page_table[i].bytes_used != 0
+	  && PAGE_GENERATION(i) == NUM_GENERATIONS)
+	PAGE_FLAGS_UPDATE(i, PAGE_GENERATION_MASK, generation);
     gc_assert(generations[generation].bytes_allocated == 0);
     generations[generation].bytes_allocated = generations[NUM_GENERATIONS].bytes_allocated;
     generations[NUM_GENERATIONS].bytes_allocated = 0;
@@ -5915,8 +5930,7 @@ int	update_x86_dynamic_space_free_pointer(void)
   int i;
 
   for (i = 0; i < NUM_PAGES; i++)
-    if (page_table[i].allocated != FREE_PAGE &&
-	page_table[i].bytes_used != 0)
+    if (PAGE_ALLOCATED(i) && page_table[i].bytes_used != 0)
       last_page = i;
 
   last_free_page = last_page + 1;
@@ -6098,16 +6112,16 @@ void	gc_free_heap(void)
 
   for (page = 0; page < NUM_PAGES; page++)
     /* Skip Free pages which should already be zero filled. */
-    if (page_table[page].allocated != FREE_PAGE) {
+    if (PAGE_ALLOCATED(page)) {
       void *page_start, *addr;
 
       /*
        * Mark the page free. The other slots are assumed invalid when
-       * it is a FREE_PAGE and bytes_used is 0 and it should not be
+       * it is unallocated and bytes_used is 0 and it should not be
        * write protected - except that the generation is used for the
        * current region but it sets that up.
        */
-      page_table[page].allocated = FREE_PAGE;
+      page_table[page].flags &= ~PAGE_ALLOCATED_MASK;
       page_table[page].bytes_used = 0;
 
       /* Zero the page. */
@@ -6115,7 +6129,7 @@ void	gc_free_heap(void)
 
       /* First remove any write protection */
       os_protect(page_start, 4096, OS_VM_PROT_ALL);
-      page_table[page].write_protected = 0;
+      page_table[page].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 
       os_invalidate(page_start,4096);
       addr = os_validate(page_start, 4096);
@@ -6127,7 +6141,7 @@ void	gc_free_heap(void)
       unsigned i;
 
       /* Double check that the page is zero filled. */
-      gc_assert(page_table[page].allocated == FREE_PAGE);
+      gc_assert(!PAGE_ALLOCATED(page));
       gc_assert(page_table[page].bytes_used == 0);
 
       page_start = (int *) page_address(page);
@@ -6199,11 +6213,11 @@ void gc_init(void)
   /* Initialise each page structure. */
   for (i = 0; i < NUM_PAGES; i++) {
     /* Initial all pages as free. */
-    page_table[i].allocated = FREE_PAGE;
+    page_table[i].flags &= ~PAGE_ALLOCATED_MASK;
     page_table[i].bytes_used = 0;
 
     /* Pages are not write protected at startup. */
-    page_table[i].write_protected = 0;
+    page_table[i].flags &= ~PAGE_WRITE_PROTECTED_MASK;
   }
 
   bytes_allocated = 0;
@@ -6261,10 +6275,10 @@ void	gencgc_pickup_dynamic(void)
 
   /* Initialise the first region. */
   do {
-    page_table[page].allocated = BOXED_PAGE;
-    page_table[page].gen = 0;
+    page_table[page].flags |= PAGE_ALLOCATED_MASK;
+    page_table[page].flags &= ~(PAGE_UNBOXED_MASK | PAGE_GENERATION_MASK
+				| PAGE_LARGE_OBJECT_MASK);
     page_table[page].bytes_used = 4096;
-    page_table[page].large_object = 0;
     page_table[page].first_object_offset =
       (void *) DYNAMIC_0_SPACE_START - page_address(page);
     addr += 4096;

@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.1 1997/11/25 17:59:20 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.2 1999/08/25 14:25:07 dtc Exp $
  *
  */
 
@@ -19,48 +19,103 @@ inline int  find_page_index(void *);
 inline void  *page_address(int);
 
 
+
+/*
+ * Set when the page is write protected. If it is writen into it is
+ * made writable and this flag is cleared. This should always reflect
+ * the actual write_protect status of a page.
+ */
+
+#define PAGE_WRITE_PROTECTED_MASK	0x00000010
+#define PAGE_WRITE_PROTECTED(page) \
+	(page_table[page].flags & PAGE_WRITE_PROTECTED_MASK)
+
+/*
+ * This flag is set when the above write protect flag is clear by the
+ * sigbus handler. This is useful for re-scavenging pages that are
+ * written during a GC.
+ */
+
+#define PAGE_WRITE_PROTECT_CLEARED_MASK	0x00000020
+#define PAGE_WRITE_PROTECT_CLEARED(page) \
+	(page_table[page].flags & PAGE_WRITE_PROTECT_CLEARED_MASK)
+
+/*
+ * Page allocated flag: 0 for a free page; 1 when allocated. If
+ * the page is free then the following slots are invalid - well
+ * the bytes_used must be 0.
+ */
+
+#define PAGE_ALLOCATED_MASK	0x00000040
+#define PAGE_ALLOCATED(page)	(page_table[page].flags & PAGE_ALLOCATED_MASK)
+
+/*
+ * Unboxed region flag: 1 for unboxed objects, 0 for boxed objects.
+ */
+#define PAGE_UNBOXED_MASK		0x00000080
+#define PAGE_UNBOXED_SHIFT		7
+#define PAGE_UNBOXED(page)	(page_table[page].flags & PAGE_UNBOXED_MASK)
+#define PAGE_UNBOXED_VAL(page)	(PAGE_UNBOXED(page) >> PAGE_UNBOXED_SHIFT)
+
+/*
+ * If this page should not be moved during a GC then this flag is
+ * set. It's only valid during a GC for allocated pages.
+ */
+
+#define PAGE_DONT_MOVE_MASK		0x00000100
+#define PAGE_DONT_MOVE(page) \
+	(page_table[page].flags & PAGE_DONT_MOVE_MASK)
+
+/*
+ * If the page is part of a large object then this flag is set. No
+ * other objects should be allocated to these pages. This is only
+ * valid when the page is allocated.
+ */
+
+#define PAGE_LARGE_OBJECT_MASK		0x00000200
+#define PAGE_LARGE_OBJECT_SHIFT		9
+#define PAGE_LARGE_OBJECT(page) \
+	(page_table[page].flags & PAGE_LARGE_OBJECT_MASK)
+#define PAGE_LARGE_OBJECT_VAL(page) \
+	(PAGE_LARGE_OBJECT(page) >> PAGE_LARGE_OBJECT_SHIFT)
+
+/*
+ * The generation that this page belongs to. This should be valid for
+ * all pages that may have objects allocated, even current allocation
+ * region pages - this allows the space of an object to be easily
+ * determined.
+ */
+
+#define PAGE_GENERATION_MASK		0x0000000f
+#define PAGE_GENERATION(page) \
+	(page_table[page].flags & PAGE_GENERATION_MASK)
+
+#define PAGE_FLAGS(page, mask) (page_table[page].flags & (mask))
+#define PAGE_FLAGS_UPDATE(page, mmask, mflags) \
+     (page_table[page].flags = (page_table[page].flags & ~(mmask)) | (mflags))
+
 struct page {
-  /* Set when the page is write protected. If it is writen into it
-     is made writable and this flag is cleared. This should always
-     reflect the actual write_protect status of a page. */
-  unsigned  write_protected :1,
-    /* This flag is set when the above write protect flag is clear by
-       the sigbus handler. This is useful for re-scavenging pages that
-       are written during a GC. */
-    write_protected_cleared :1,
-    /* The region the page is allocated to: 0 for a free page; 1 for
-       boxed objects; 2 for unboxed objects. If the page is free the
-       following slots are invalid (well the bytes_used must be 0). */
-    allocated :2,
-    /* If this page should not be moved during a GC then this flag is
-       set. It's only valid during a GC for allocated pages. */
-    dont_move :1,
-    /* If the page is part of a large object then this flag is set. No
-       other objects should be allocated to these pages. This is only
-       valid when the page is allocated. */
-    large_object :1;
+  /*
+   * Page flags.
+   */
 
-  /* The generation that this page belongs to. This should be valid
-     for all pages that may have objects allocated, even current
-     allocation region pages - this allows the space of an object to
-     be easily determined. */
-  int  gen;
+  unsigned	flags;
+
+  /*
+   * It is important to know the offset to the first object in the
+   * page. Currently it's only important to know if an object starts
+   * at the begining of the page in which case the offset would be 0
+   */
+  int	first_object_offset;
   
-  /* The number of bytes of this page that are used. This may be less
-     than the actual bytes used for pages within the current
-     allocation regions. It should be 0 for all unallocated pages (not
-     hard to achieve). */
-  int  bytes_used;
-
-  /* It is important to know the offset to the first object in the
-     page. Currently it's only important to know if an object starts
-     at the begining of the page in which case the offset would be 0 */
-  int  first_object_offset;
+  /*
+   * The number of bytes of this page that are used. This may be less
+   * than the actual bytes used for pages within the current
+   * allocation regions. It should be 0 for all unallocated pages (not
+   * hard to achieve).
+   */
+  int	bytes_used;
 };
-
-#define FREE_PAGE 0
-#define BOXED_PAGE 1
-#define UNBOXED_PAGE 2
 
 
 /* The number of pages needed for the dynamic space - rounding up. */
@@ -68,8 +123,10 @@ struct page {
 extern struct page page_table[NUM_PAGES];
 
 
-/* Abstract out the data for an allocation region allowing a single
-   routine to be used for allocation and closing. */
+/*
+ * Abstract out the data for an allocation region allowing a single
+ * routine to be used for allocation and closing.
+ */
 struct alloc_region {
   /* These two are needed for quick allocation */
   void  *free_pointer;
