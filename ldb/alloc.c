@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.3 1990/05/25 23:55:32 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/alloc.c,v 1.4 1990/09/27 06:32:32 wlott Exp $ */
 #include "lisp.h"
 #include "ldb.h"
 #include "alloc.h"
@@ -91,7 +91,7 @@ char *str;
 lispobj alloc_sap(ptr)
 char *ptr;
 {
-    struct sap *sap = (struct sap *)alloc_unboxed(type_Sap, 2);
+    struct sap *sap = (struct sap *)alloc_unboxed(type_Sap, 1);
 
     sap->pointer = ptr;
 
