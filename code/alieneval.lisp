@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.32 1993/08/18 21:47:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.33 1993/08/26 15:27:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1399,11 +1399,11 @@
 ;;;; Runtime C values that don't correspond directly to Lisp types.
 
 ;;; ALIEN-VALUE
-;;; 
-(defstruct (alien-value
-	    (:print-function %print-alien-value))
-  (sap (required-argument) :type system-area-pointer)
-  (type (required-argument) :type alien-type))
+;;;
+;;; The defstruct for alien-value lives in struct.lisp 'cause it has to be
+;;; real early in the cold-load order.
+;;;
+(declaim (freeze-type alien-value))
 ;;;
 (defun %print-alien-value (value stream depth)
   (declare (ignore depth))
@@ -1412,8 +1412,6 @@
 	     stream 
 	     (unparse-alien-type (alien-value-type value))
 	     (sap-int (alien-value-sap value)))))
-
-(declaim (freeze-type alien-value))
 
 (declaim (inline null-alien))
 (defun null-alien (x)

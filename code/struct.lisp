@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.16 1993/04/04 10:00:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.17 1993/08/26 15:26:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,3 +50,14 @@
                       (:predicate nil)
                       (:print-function condition-print))
   )
+
+
+
+;;; Alien value structures:
+
+(in-package "ALIEN")
+
+(defstruct (alien-value
+	    (:print-function %print-alien-value))
+  (sap (required-argument) :type system-area-pointer)
+  (type (required-argument) :type alien-type))
