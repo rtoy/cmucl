@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.9 1998/02/13 16:09:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.10 2001/03/04 23:37:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,6 +50,8 @@
 
 (defmacro with-one-string (string start end cum-offset &rest forms)
   `(let ((,string (if (stringp ,string) ,string (string ,string))))
+     ;; Optimizer may prove STRING is one.
+     (declare (optimize (ext:inhibit-warnings 3)))
      (with-array-data ((,string ,string :offset-var ,cum-offset)
 		       (,start ,start)
 		       (,end (or ,end (length (the vector ,string)))))

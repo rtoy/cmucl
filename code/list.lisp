@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.25 2001/03/04 21:32:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.26 2001/03/04 23:37:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -988,7 +988,8 @@
 
 (defun memq (item list)
   "Returns tail of list beginning with first element eq to item"
-  (declare (inline member))
+  (declare (inline member)
+	   (optimize (inhibit-warnings 3))) ; from MEMBER optimizations
   (member item list :test #'eq))
 
 (defun assq (item alist)
