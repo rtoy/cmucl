@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.51 2003/04/07 11:13:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.52 2003/04/13 11:57:16 gerd Exp $")
 
 (in-package :pcl)
 
@@ -930,7 +930,7 @@
 	  (return
 	    (loop for (name . slots) in names/slots collect
 		    (compute-effective-slot-definition
-		     class (nreverse slots))))))
+		     class name (nreverse slots))))))
 
 ;;;
 ;;; These are the specified AMOP methods.
@@ -1009,7 +1009,8 @@
 (defmethod compute-slots ((class structure-class))
   (mapcan (lambda (superclass)
 	    (mapcar (lambda (dslotd)
-		      (compute-effective-slot-definition class (list dslotd)))
+		      (compute-effective-slot-definition
+		       class (slot-definition-name dslotd) (list dslotd)))
 		    (class-direct-slots superclass)))
 	  (reverse (slot-value class 'class-precedence-list))))
 
@@ -1018,7 +1019,9 @@
     (mapc #'initialize-internal-slot-functions eslotds)
     eslotds))
 
-(defmethod compute-effective-slot-definition ((class slot-class) dslotds)
+(defmethod compute-effective-slot-definition
+    ((class slot-class) slot-name dslotds)
+  (declare (ignore slot-name))
   (let* ((initargs (compute-effective-slot-definition-initargs class dslotds))
 	 (class (effective-slot-definition-class class initargs)))
     (apply #'make-instance class initargs)))

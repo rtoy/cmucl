@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.53 2003/03/26 12:35:29 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.54 2003/04/13 11:57:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -505,8 +505,8 @@
 	    (declare (ignore layout))
 	    (when (gethash subclass o-sub)
 	      (res (specifier-type subclass))))
-	  (values (res) t))
-	(values *empty-type* t))))
+	  (res))
+	*empty-type*)))
 
     
 ;;; If one is a subclass of the other, then that is the intersection, but we
@@ -519,19 +519,36 @@
   (cond ((eq class1 class2) class1)
 	((let ((subclasses (%class-subclasses class2)))
 	   (and subclasses (gethash class1 subclasses)))
-	 (values class1 t))
+	 class1)
 	((let ((subclasses (%class-subclasses class1)))
 	   (and subclasses (gethash class2 subclasses)))
-	 (values class2 t))
+	 class2)
 	((or (basic-structure-class-p class1)
 	     (basic-structure-class-p class2))
-	 (values *empty-type* t))
+	 *empty-type*)
 	((eq (%class-state class1) :sealed)
 	 (sealed-class-intersection class1 class2))
 	((eq (%class-state class2) :sealed)
 	 (sealed-class-intersection class2 class1))
 	(t
-	 (values class1 nil))))
+	 nil)))
+
+;;;
+;;; KLUDGE: we need this because of the need to represent
+;;; intersections of two classes, even when empty at a given time, as
+;;; uncanonicalized intersections because of the possibility of later
+;;; defining a subclass of both classes.  The necessity for changing
+;;; the default return value from SUBTYPEP to NIL, T if no alternate
+;;; method is present comes about because, unlike the other places we
+;;; use INVOKE-COMPLEX-SUBTYPEP-ARG1-METHOD, in HAIRY methods and the
+;;; like, classes are in their own hierarchy with no possibility of
+;;; mixtures with other type classes.
+;;;
+(define-type-method (class :complex-subtypep-arg2) (type1 class2)
+  (if (and (intersection-type-p type1)
+	   (> (count-if #'class-p (intersection-type-types type1)) 1))
+      (values nil nil)
+      (invoke-complex-subtypep-arg1-method type1 class2 nil t)))
 
 (define-type-method (class :unparse) (type)
   (class-proper-name type))

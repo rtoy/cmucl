@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.21 2003/03/30 00:48:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.22 2003/04/13 11:57:16 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -501,8 +501,7 @@
 (defgeneric compute-applicable-methods-using-classes (generic-function classes))
 ;          (generic-function t)
 
-(defgeneric compute-effective-slot-definition (class dslotds))
-;          (slot-class t)
+(defgeneric compute-effective-slot-definition (class slot-name dslotds))
 
 (defgeneric compute-effective-slot-definition-initargs (class direct-slotds))
 ;          (slot-class t)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.204 2003/03/23 21:23:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.205 2003/04/13 11:57:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1561,6 +1561,7 @@
 	   "BIT-BASH-ORC1" "BIT-BASH-ORC2" "BIT-BASH-SET" "BIT-BASH-XOR"
 	   "BIT-INDEX" "BOGUS-ARGUMENT-TO-VALUES-LIST-ERROR" "BOOLE-CODE"
 	   "BOOLEAN" "BYTE-SPECIFIER" "CALLABLE" "CHAR-INT"
+	   "SEQUENCE-COUNT"
 	   "CHECK-FOR-CIRCULARITY" "CODE-COMPONENT" "CODE-COMPONENT-P"
 	   "CODE-DEBUG-INFO" "CODE-HEADER-REF" "CODE-HEADER-SET"
 	   "CODE-INSTRUCTIONS" "COMPLEX-DOUBLE-FLOAT-P" "COMPLEX-FLOAT-P"
@@ -1588,6 +1589,8 @@
 	   "FUNCTION-WORD-OFFSET" "GET-CLOSURE-LENGTH" "GET-HEADER-DATA"
 	   "GET-LISP-OBJ-ADDRESS" "GET-LOWTAG" "GET-TYPE" "HAIRY-TYPE"
 	   "HAIRY-TYPE-CHECK-TEMPLATE" "HAIRY-TYPE-SPECIFIER"
+	   "NEGATION-TYPE" "NEGATION-TYPE-TYPE"
+	   "INTERSECTION-TYPE" "INTERSECTION-TYPE-TYPES"
 	   "HANDLE-CIRCULARITY" "INDEX" "INIT-RANDOM-STATE" "INTEGER-DECODE-DOUBLE-FLOAT"
 	   "INTEGER-DECODE-LONG-FLOAT" "INTEGER-DECODE-SINGLE-FLOAT"
 	   "INTERNAL-TIME"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.40 2003/03/22 16:15:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.41 2003/04/13 11:57:16 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,8 +82,9 @@
 (defun ir1-transform-type-predicate (object type)
   (declare (type continuation object) (type ctype type))
   (let ((otype (continuation-type object)))
-    (cond ((not (types-intersect otype type)) 'nil)
-	  ((csubtypep otype type) 't)
+    (cond ((not (types-intersect otype type)) nil)
+	  ((csubtypep otype type) t)
+	  ((eq type *empty-type*) nil)
 	  (t (give-up)))))
 
 
@@ -303,6 +304,10 @@
 					      `(typep ,n-obj ',x))
 					  (rest spec))))))))))
 
+(defun source-transform-negation-typep (object type)
+  (declare (type negation-type type))
+  (let ((spec (type-specifier (negation-type-type type))))
+    `(not (typep ,object ',spec))))
 
 ;;; Source-Transform-Union-Typep  --  Internal
 ;;;
@@ -331,6 +336,12 @@
 	     `(or ,@(mapcar #'(lambda (x)
 				`(typep ,n-obj ',(type-specifier x)))
 			    types)))))))
+
+(defun source-transform-intersection-typep (object type)
+  (once-only ((n-obj object))
+    `(and ,@(mapcar (lambda (x)
+		      `(typep ,n-obj ',(type-specifier x)))
+		    (intersection-type-types type)))))
 
 
 ;;; Source-Transform-Cons-Typep  --  Internal
@@ -406,9 +417,12 @@
 ;;; %TYPEP.
 ;;;
 (defun source-transform-array-typep (obj type)
-  (multiple-value-bind (pred stype)
-		       (find-supertype-predicate type)
+  (multiple-value-bind (pred stype) (find-supertype-predicate type)
     (if (and (array-type-p stype)
+	     ;; (If the element type hasn't been defined yet, it's
+	     ;; not safe to assume here that it will eventually
+	     ;; have (UPGRADED-ARRAY-ELEMENT-TYPE type)=T, so punt.)
+	     (not (unknown-type-p (array-type-element-type type)))
 	     (type= (array-type-specialized-element-type stype)
 		    (array-type-specialized-element-type type))
 	     (eq (array-type-complexp stype) (array-type-complexp type)))
@@ -416,7 +430,6 @@
 	  `(and (,pred ,n-obj)
 		,@(test-array-dimensions n-obj type stype)))
 	`(%typep ,obj ',(type-specifier type)))))
-
 
 ;;; Instance typep IR1 transform  --  Internal
 ;;;
@@ -537,8 +550,12 @@
 	    (typecase type
 	      (hairy-type
 	       (source-transform-hairy-typep object type))
+	      (negation-type
+	       (source-transform-negation-typep object type))
 	      (union-type
 	       (source-transform-union-typep object type))
+	      (intersection-type
+	       (source-transform-intersection-typep object type))
 	      (member-type
 	       `(member ,object ',(member-type-members type)))
 	      (args-type

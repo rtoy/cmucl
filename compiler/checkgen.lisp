@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.30 2000/07/09 13:59:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.31 2003/04/13 11:57:16 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,6 +68,11 @@
 	(union-type
 	 (collect ((res 0 +)) 
 	   (dolist (mem (union-type-types type))
+	     (res (type-test-cost mem)))
+	   (res)))
+	(intersection-type
+	 (collect ((res 0 +)) 
+	   (dolist (mem (intersection-type-types type))
 	     (res (type-test-cost mem)))
 	   (res)))
 	(member-type
@@ -156,10 +161,17 @@
 	     (args-type-allowp atype))
 	 (values nil :unknown))
 	(t
-	 (let* ((ptype (kernel::coerce-to-values ptype))
-		(preq (args-type-required ptype))
-		(popt (args-type-optional ptype))
-		(prest (args-type-rest ptype)))
+	 ;;
+	 ;; This converted PTYPE with COERCE-TO-VALUES originally, but
+	 ;; that function was changed to return (VALUES PTYPE &REST T)
+	 ;; instead of (VALUES PTYPE) with the port of subtypep fixes
+	 ;; from SBCL.  The new &REST would confuse the logic here.
+	 (multiple-value-bind (preq popt prest)
+	     (if (values-type-p ptype)
+		 (values (args-type-required ptype)
+			 (args-type-optional ptype)
+			 (args-type-rest ptype))
+		 (values (list ptype) nil nil))
 	   (collect ((types))
 	     (do ((args (args-type-required atype) (rest args)))
 		 ((endp args))

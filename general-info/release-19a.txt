@@ -30,6 +30,9 @@ New in this release:
        (LABELS <name> ...).
 
   * Numerous ANSI compliance fixes:
+     - Many bugs in CMUCL's type system detected by Paul Dietz'
+       ANSI test suite have been fixed.
+     - Non-keyword keyword names in lambda lists are now accepted.
 
   * Numerous bugfixes:
 
@@ -44,6 +47,8 @@ New in this release:
        STANDARD-OBJECT.
      - ENSURE-CLASS-USING-CLASS's argument list has been changed
        to conform to AMOP.
+     - COMPUTE-EFFECTIVE-SLOT-DEFINITION now takes a slot name as
+       argument, for AMOP compliance.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

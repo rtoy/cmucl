@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.39 2003/04/11 14:24:22 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.40 2003/04/13 11:58:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1049,7 +1049,7 @@
   (default nil :type t)
   ;;
   ;; The actual keyword for a keyword argument.
-  (keyword nil :type (or keyword null)))
+  (keyword nil :type symbol))
 
 (defprinter arg-info
   (specialp :test specialp)

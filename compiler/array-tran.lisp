@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.31 2003/02/22 16:11:12 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.32 2003/04/13 11:57:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -369,7 +369,7 @@
 		  '(%array-dimension array 0))
 		 ((nil)
 		  '(length array))
-		 (*
+		 ((:maybe *)
 		  (give-up "Can't tell if array is simple."))))
 	      (t
 	       '(%array-dimension array axis)))))))

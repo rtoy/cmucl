@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.56 2003/03/22 16:15:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.57 2003/04/13 11:57:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,7 +270,7 @@
 	  (ecase (array-type-complexp type)
 	    ((t) (not (typep object 'simple-array)))
 	    ((nil) (typep object 'simple-array))
-	    (* t))
+	    ((* :maybe) t))
 	  (or (eq (array-type-dimensions type) '*)
 	      (do ((want (array-type-dimensions type) (cdr want))
 		   (got (array-dimensions object) (cdr got)))
@@ -279,18 +279,26 @@
 			     (or (eq (car want) '*)
 				 (= (car want) (car got))))
 		  (return nil))))
+	  (if (unknown-type-p (array-type-element-type type))
+	      ;; better to fail this way than to get bogosities like
+	      ;;   (TYPEP (MAKE-ARRAY 11) '(ARRAY SOME-UNDEFINED-TYPE)) => T
+	      (error "~@<unknown element type in array type: ~2I~_~S~:>"
+		     (type-specifier type))
+	      t)
 	  (or (eq (array-type-element-type type) *wild-type*)
-	      (values
-	       (type= (array-type-specialized-element-type type)
-		      (specifier-type (array-element-type object)))))))
+	      (values (type= (array-type-specialized-element-type type)
+			     (specifier-type (array-element-type
+					      object)))))))
     (member-type
      (if (member object (member-type-members type)) t))
     (kernel::class
      (class-typep (layout-of object) type object))
     (union-type
-     (dolist (type (union-type-types type))
-       (when (%%typep object type)
-	 (return t))))
+     (some (lambda (type) (%%typep object type))
+	   (union-type-types type)))
+    (intersection-type
+     (every (lambda (type) (%%typep object type))
+	    (intersection-type-types type)))
     (cons-type
      (and (consp object)
 	  (%%typep (car object) (cons-type-car-type type))
@@ -302,16 +310,20 @@
 	   (error "Unknown type specifier: ~S"
 		  (unknown-type-specifier reparse))
 	   (%%typep object reparse))))
+    (negation-type
+     (not (%%typep object (negation-type-type type))))
     (hairy-type
      ;; Now the tricky stuff.
      (let* ((hairy-spec (hairy-type-specifier type))
 	    (symbol (if (consp hairy-spec) (car hairy-spec) hairy-spec)))
        (ecase symbol
 	 (and
-	  (or (atom hairy-spec)
-	      (dolist (spec (cdr hairy-spec) t)
-		(unless (%%typep object (specifier-type spec))
-		  (return nil)))))
+	  (every (lambda (spec) (%%typep object (specifier-type spec)))
+		 (rest hairy-spec)))
+	 ;; Note: it should be safe to skip OR here, because union
+	 ;; types can always be represented as UNION-TYPE in general
+	 ;; or other CTYPEs in special cases; we never need to use
+	 ;; HAIRY-TYPE for them.
 	 (not
 	  (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
 	    (error "Invalid type specifier: ~S" hairy-spec))

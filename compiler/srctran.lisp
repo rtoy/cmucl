@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.115 2003/03/26 15:41:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.116 2003/04/13 11:57:16 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1063,8 +1063,7 @@
 ;;;
 ;;; Take a list of types and return a canonical type specifier, combining any
 ;;; members types together. If both positive and negative members types are
-;;; present they are converted to a float type. X This would be far simpler if
-;;; the type-union methods could handle member/number unions.
+;;; present they are converted to a float type.
 ;;;
 (defun make-canonical-union-type (type-list)
   (let ((members '())
@@ -1092,21 +1091,9 @@
       #+negative-zero-is-not-zero
       (push (specifier-type '(single-float -0f0 0f0)) misc-types)
       (setf members (set-difference members '(-0f0 0f0))))
-    (cond ((null members)
-	   (let ((res (first misc-types)))
-	     (dolist (type (rest misc-types))
-	       (setq res (type-union res type)))
-	     res))
-	  ((null misc-types)
-	   (make-member-type :members members))
-	  (t
-	   (let ((res (first misc-types)))
-	     (dolist (type (rest misc-types))
-	       (setq res (type-union res type)))
-	     (dolist (type members)
-	       (setq res (type-union
-			  res (make-member-type :members (list type)))))
-	     res)))))
+    (if members
+	(apply #'type-union (make-member-type :members members) misc-types)
+	(apply #'type-union misc-types))))
 
 ;;; Convert-Member-Type
 ;;;
@@ -3099,12 +3086,12 @@
 ;;; X are less than all types of Y, then X < Y. Similarly, if all types of X
 ;;; are >= all types of Y, then X >= Y.
 ;;;
-
 (defun ir1-transform-<-helper (x y)
   (flet ((maybe-convert (type)
-	   (numeric-type->interval (if (member-type-p type)
-				       (convert-member-type type)
-				       type))))
+	   (numeric-type->interval
+	    (cond ((numeric-type-p type) type)
+		  ((member-type-p type) (convert-member-type type))
+		  (t (give-up))))))
     (let ((xi (mapcar #'maybe-convert
 		      (prepare-arg-for-derive-type (continuation-type x))))
 	  (yi (mapcar #'maybe-convert
@@ -3132,21 +3119,19 @@
       (multiple-value-bind (definitely-true definitely-false)
 	  (ir1-transform-<-helper x y)
 	(cond (definitely-true
-		  t)
+	       t)
 	      (definitely-false
-		  nil)
+	       nil)
               ((and (constant-continuation-p first)
                     (not (constant-continuation-p second)))
                `(,inverse y x))
               (t
                (give-up))))))
 
-(deftransform < ((x y) (real real)
-		 * :when :both)
+(deftransform < ((x y) (real real) * :when :both)
   (ir1-transform-< x y x y '>))
 
-(deftransform > ((x y) (real real)
-		 * :when :both)
+(deftransform > ((x y) (real real) * :when :both)
   (ir1-transform-< y x x y '<))
 
 
