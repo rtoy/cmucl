@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.72 2004/04/06 20:44:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.72.2.1 2004/07/16 14:06:24 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -173,6 +173,10 @@
 	      (if defstruct-constructor 
 		  (allocate-instance class)
 		  (allocate-standard-instance wrapper))))))
+
+(defmethod class-prototype ((class condition-class))
+  (with-slots (prototype) class
+    (or prototype (setf prototype (allocate-instance class)))))
 
 (defmethod class-direct-default-initargs ((class slot-class))
   (plist-value class 'direct-default-initargs))
@@ -1612,7 +1616,6 @@
       (setq direct-supers direct-superclasses)
       (setq wrapper (kernel:%class-layout kernel-class))
       (setq class-precedence-list (compute-class-precedence-list class))
-      (setq prototype (make-condition (class-name class)))
       (add-direct-subclasses class direct-superclasses)
       (setq predicate-name (make-class-predicate-name (class-name class)))
       (make-class-predicate class predicate-name)
