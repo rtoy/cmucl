@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.7 1992/03/23 22:38:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.8 1992/03/24 19:45:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,7 +278,7 @@
 (defstruct (key-event (:print-function %print-key-event)
 		      (:constructor %make-key-event (keysym bits)))
   (bits nil :type fixnum)
-  (keysym nil :type :fixnum))
+  (keysym nil :type fixnum))
 
 (defun %print-key-event (object stream ignore)
   (declare (ignore ignore))
