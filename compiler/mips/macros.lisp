@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.37 1990/07/16 13:17:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.38 1990/08/12 00:45:51 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -35,9 +35,9 @@
   (once-only ((n-dst dst)
 	      (n-src src))
     (if always-emit-code-p
-	`(inst addu ,n-dst ,n-src zero-tn)
+	`(inst move ,n-dst ,n-src)
 	`(unless (location= ,n-dst ,n-src)
-	   (inst addu ,n-dst ,n-src zero-tn)))))
+	   (inst move ,n-dst ,n-src)))))
 
 (defmacro def-mem-op (op inst shift load)
   `(defmacro ,op (object base &optional (offset 0) (lowtag 0))
@@ -415,47 +415,45 @@
 	       (error "Lost big.  Should not be here.")))))))
 
 
-;;;; Test-Special-Value
-
-;;; ### We may want this.
-
-#+nil
-(defmacro test-special-value (reg temp value target not-p)
-  "Test whether Reg holds the specified special Value (T, NIL, %Trap-Object).
-  Temp is an unboxed register."
-  (once-only ((n-reg reg)
-	      (n-temp temp)
-	      (n-value value)
-	      (n-target target)
-	      (n-not-p not-p))
-    `(progn
-       (inst xiu ,n-temp ,n-reg
-	     (or (cdr (assoc ,n-value
-			     `((t . ,',clc::t-16)
-			       (nil . ,',clc::nil-16)
-			       (%trap-object . ,',clc::trap-16))))
-		 (error "Unknown special value: ~S." ,n-value)))
-       (if ,n-not-p
-	   (inst bnb :eq ,n-target)
-	   (inst bb :eq ,n-target)))))
-
-
 ;;;; Error Code
+
+
+(defvar *adjustable-vectors* nil)
+
+(defmacro with-adjustable-vector ((var) &rest body)
+  `(let ((,var (or (pop *adjustable-vectors*)
+		   (make-array 16
+			       :element-type '(unsigned-byte 8)
+			       :fill-pointer 0
+			       :adjustable t))))
+     (setf (fill-pointer ,var) 0)
+     (unwind-protect
+	 (progn
+	   ,@body)
+       (push ,var *adjustable-vectors*))))
 
 (eval-when (compile load eval)
   (defun emit-error-break (vop kind code values)
-    `((let ((vop ,vop))
-	(when vop
-	  (note-this-location vop :internal-error)))
-      (inst break ,kind)
-      (inst byte (error-number-or-lose ',code))
-      ,@(mapcar #'(lambda (tn)
-		    `(let ((tn ,tn))
-		       (assert (eq (sb-name (sc-sb (tn-sc tn))) 'registers))
-		       (inst byte (tn-offset tn))))
-		values)
-      (inst byte 0)
-      (align vm:word-shift))))
+    (let ((vector (gensym)))
+      `((let ((vop ,vop))
+	  (when vop
+	    (note-this-location vop :internal-error)))
+	(inst break ,kind)
+	;; ### Temporary compatibility marker.
+	(inst byte 255) 
+	(with-adjustable-vector (,vector)
+	  (write-var-integer (error-number-or-lose ',code) ,vector)
+	  ,@(mapcar #'(lambda (tn)
+			`(let ((tn ,tn))
+			   (write-var-integer (make-sc-offset (sc-number
+							       (tn-sc tn))
+							      (tn-offset tn))
+					      ,vector)))
+		    values)
+	  (inst byte (length ,vector))
+	  (dotimes (i (length ,vector))
+	    (inst byte (aref ,vector i))))
+	(align vm:word-shift)))))
 
 (defmacro error-call (vop error-code &rest values)
   "Cause an error.  ERROR-CODE is the error to cause."
