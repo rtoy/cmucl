@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.54 1990/06/06 03:57:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.55 1990/06/06 20:53:54 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -430,10 +430,17 @@
 
 (define-primitive-object (weak-pointer :lowtag other-pointer-type
 				       :header weak-pointer-type
-				       :alloc-vop c::make-weak-pointer)
-  (value :ref-vop c::weak-pointer-value
-	 :setf-vop c::set-weak-pointer-value
+				       :alloc-trans c::%make-weak-pointer)
+  (value :ref-trans c::%weak-pointer-value
+	 :ref-known (c::flushable)
+	 :set-trans (setf c::%weak-pointer-value)
+	 :set-known (c::unsafe)
 	 :init :arg)
+  (broken :ref-trans c::%weak-pointer-broken
+	  :ref-known (c::flushable)
+	  :set-trans (setf c::%weak-pointer-broken)
+	  :set-known (c::unsafe)
+	  :init :arg)
   (next :c-type "struct weak_pointer *"))
   
 
