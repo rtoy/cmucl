@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.3 1990/03/22 12:01:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.4 1990/03/29 21:29:45 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -106,3 +106,183 @@
   (maybe-invoke-gc vector words)
   (move result vector))
 
+
+
+
+
+;;;; Hash primitives
+
+(define-assembly-routine (sxhash-simple-string
+			  (:arg string)
+			  (:res result)
+
+			  (:temp lip :sc interior-reg :type interior)
+			  (:temp length :sc any-reg :type fixnum)
+			  (:temp accum :sc non-descriptor-reg :type random)
+			  (:temp data :sc non-descriptor-reg :type random)
+			  (:temp byte :sc non-descriptor-reg :type random))
+  (loadw length string vm:vector-length-slot vm:other-pointer-type)
+  (inst addiu lip string
+	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
+  (b test)
+  (move accum zero-tn)
+
+  loop
+
+  (inst andi byte data #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  (inst srl byte data 8)
+  (inst andi byte byte #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  (inst srl byte data 16)
+  (inst andi byte byte #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  (inst srl byte data 24)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  (inst addiu lip lip 4)
+
+  test
+
+  (inst addiu length length (fixnum -4))
+  (inst bgez length loop)
+  (inst lw data lip 0)
+
+  (inst addiu length length (fixnum 3))
+  (inst beq length zero-tn one-more)
+  (inst addiu length length (fixnum -1))
+  (inst beq length zero-tn two-more)
+  (inst addiu length length (fixnum -1))
+  (inst bne length zero-tn done)
+  (nop)
+
+  (inst srl byte data 16)
+  (inst andi byte byte #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  two-more
+
+  (inst srl byte data 8)
+  (inst andi byte byte #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  one-more
+
+  (inst andi byte data #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  done
+
+  (inst sll result accum 2))
+
+
+(define-assembly-routine (sxhash-simple-substring
+			  (:arg string)
+			  (:arg length)
+			  (:res result)
+
+			  (:temp lip :sc interior-reg :type interior)
+			  (:temp accum :sc non-descriptor-reg :type random)
+			  (:temp data :sc non-descriptor-reg :type random)
+			  (:temp byte :sc non-descriptor-reg :type random))
+  (loadw length string vm:vector-length-slot vm:other-pointer-type)
+  (inst addiu lip string
+	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
+  (b test)
+  (move accum zero-tn)
+
+  loop
+
+  (inst andi byte data #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  (inst srl byte data 8)
+  (inst andi byte byte #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  (inst srl byte data 16)
+  (inst andi byte byte #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  (inst srl byte data 24)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  (inst addiu lip lip 4)
+
+  test
+
+  (inst addiu length length (fixnum -4))
+  (inst bgez length loop)
+  (inst lw data lip 0)
+
+  (inst addiu length length (fixnum 3))
+  (inst beq length zero-tn one-more)
+  (inst addiu length length (fixnum -1))
+  (inst beq length zero-tn two-more)
+  (inst addiu length length (fixnum -1))
+  (inst bne length zero-tn done)
+  (nop)
+
+  (inst srl byte data 16)
+  (inst andi byte byte #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  two-more
+
+  (inst srl byte data 8)
+  (inst andi byte byte #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  one-more
+
+  (inst andi byte data #xff)
+  (inst xor accum accum byte)
+  (inst sll byte accum 5)
+  (inst srl accum accum 27)
+  (inst or accum accum byte)
+
+  done
+
+  (inst sll result accum 2))
