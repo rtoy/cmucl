@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.14 1992/09/08 23:29:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.15 1992/10/08 22:10:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.14 1992/09/08 23:29:40 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
@@ -22,7 +20,7 @@
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
-	  extern-alien-name))
+	  extern-alien-name sanctify-for-execution))
 
 
 ;;;; The sigcontext structure.
@@ -241,3 +239,15 @@
 (defun extern-alien-name (name)
   (declare (type simple-base-string name))
   (concatenate 'string "_" name))
+
+
+
+;;; SANCTIFY-FOR-EXECUTION -- Interface.
+;;;
+;;; Do whatever is necessary to make the given code component executable.
+;;; On the sparc, we don't need to do anything, because the i and d caches
+;;; are unified.
+;;; 
+(defun sanctify-for-execution (component)
+  (declare (ignore component))
+  nil)

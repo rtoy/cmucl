@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.4 1992/07/09 16:36:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.5 1992/10/08 22:10:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
-	  extern-alien-name))
+	  extern-alien-name sanctify-for-execution))
 
 
 ;;;; The sigcontext structure.
@@ -213,3 +213,20 @@
   name)
 
 
+
+;;; SANCTIFY-FOR-EXECUTION -- Interface.
+;;;
+;;; Do whatever is necessary to make the given code component executable.
+;;; On the PA-RISC, this means flushing the data cache and purging the
+;;; inst cache.
+;;; 
+(defun sanctify-for-execution (component)
+  (without-gcing
+    (alien-funcall (extern-alien "sanctify_for_execution"
+				 (function void
+					   system-area-pointer
+					   unsigned-long))
+		   (code-instructions component)
+		   (* (code-header-ref component code-code-size-slot)
+		      word-bytes)))
+  nil)

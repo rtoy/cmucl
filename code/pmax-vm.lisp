@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.11 1992/07/09 16:43:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.12 1992/10/08 22:10:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.11 1992/07/09 16:43:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.12 1992/10/08 22:10:34 wlott Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
@@ -24,7 +24,7 @@
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
-	  extern-alien-name))
+	  extern-alien-name sanctify-for-execution))
 
 
 ;;;; The sigcontext structure.
@@ -197,3 +197,13 @@
 (defun extern-alien-name (name)
   (declare (type simple-base-string name))
   name)
+
+
+
+;;; SANCTIFY-FOR-EXECUTION -- Interface.
+;;;
+;;; Do whatever is necessary to make the given code component executable.
+;;; 
+(defun sanctify-for-execution (component)
+  (declare (ignore component))
+  nil)
