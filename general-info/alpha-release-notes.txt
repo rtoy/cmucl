@@ -1,3 +1,55 @@
+4/4/93 to 5/4/93
+
+Initial cut at making PCL work again w/ the new class support.  We just
+shadow find-class, etc.
+
+Motif interface and inspector back, and have been fixed to work with the new
+structure format.  Some past changes in the inspector/debugger sources will now
+be visible: see below.
+
+Changed core saving to no longer save the stacks.  Instead, when the core is
+restored, a (supplied) initial function is invoked which can do whatever kind
+of setup it wants.  This makes a saved lisp totally independent of the location
+of the C stack. [fixing the sun4m sunos problem] Save-lisp must now be called
+with an init function, and after it finishes, it terminates the saving lisp
+process, instead of returning.  In addition to the change in the save-lisp
+interface, the main user-visible difference is that there are fewer junk frames
+on the stack in saved cores.
+
+Added the built-in-class REAL.
+Added the read-only collection built-in-classes needed by dylan.
+
+Compiler:
+ -- Don't do assumed function stuff if we have a :NOTINLINE function.  This
+    was breaking an assertion.
+ -- Changed FIN-FUNCTION special form to be a new kind of LAMBDA so that we
+    can COMPILE them.
+ -- Moved def-source-context for DEFMETHOD to PCL sources.
+ -- [MIPS only] Fixed unbind-to-here to not dereference past the end of the
+    binding stack.
+
+Interface:
+
+The debugger will now reuse old debugging panes rather than creating
+new ones all the time.  In addition, the stack backtrace is no longer
+displayed by default.
+
+Replaced uses of Motif gadgets with corresponding widgets.  This
+also fixes the problem with warnings about 'alignment' not being
+a valid resource.
+
+Invoking LISP-CONTROL-PANEL from the TTY now works correctly and
+QUIT will kill off any Motif servers that you have started.
+The "Edit Source" button now works.
+A new button, "Dump Backtrace" has been added.  This is for dumping
+a copy of the stack backtrace for use in bug reports.  At the moment,
+it just prints a copy of the backtrace on the standard output stream.
+
+Added support for deleting all active inspection panes.
+Added comments and descriptions on how to implement inspector
+display methods for view customization.
+
+
 4/3/93 to 4/4/93
 
 Added serveral new classes needed to bootstrap dylan.  There should be no
@@ -26,27 +78,6 @@ Purify:
 Fixed ptrans_instance to actually return the result of calling ptrans_boxed
 instead of relying on the result still being in the correct register.
 
-
-
-Interface: [note, not loaded in this release, because of PCL]
-The debugger will now reuse old debugging panes rather than creating
-new ones all the time.  In addition, the stack backtrace is no longer
-displayed by default.
-
-Replaced uses of Motif gadgets with corresponding widgets.  This
-also fixes the problem with warnings about 'alignment' not being
-a valid resource.
-
-Invoking LISP-CONTROL-PANEL from the TTY now works correctly and
-QUIT will kill off any Motif servers that you have started.
-The "Edit Source" button now works.
-A new button, "Dump Backtrace" has been added.  This is for dumping
-a copy of the stack backtrace for use in bug reports.  At the moment,
-it just prints a copy of the backtrace on the standard output stream.
-
-Added support for deleting all active inspection panes.
-Added comments and descriptions on how to implement inspector
-display methods for view customization.
 
 
 3/1/93 to 3/15/93 [PMAX only, no PCL]
