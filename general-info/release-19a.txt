@@ -40,6 +40,7 @@ New in this release:
      - TRACE automatically using encapsulation when function-end
        breakpoints cannot be used.
      - INSPECT working on CLOS instances.
+     - Callbacks from foreign code to Lisp.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
