@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.21 1999/08/13 15:57:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.22 1999/11/18 14:25:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -898,7 +898,8 @@
       (reads src1)
       (reads src2)
       (writes :fsr))
-     (:delay 1)
+     ;; The Sparc V9 doesn't need a delay after a FP compare.
+     (:delay #-sparc-v9 1 #+sparc-v9 0)
      (:emitter (emit-format-3-fpop segment #b10 0 #b110101
 		(fp-reg-tn-encoding src1) ,opf (fp-reg-tn-encoding src2)))))
 
@@ -949,7 +950,8 @@
       (reads src1)
       (reads src2)
       (writes :fsr))
-     (:delay 1)
+     ;; The Sparc V9 doesn't need a delay after a FP compare.
+     (:delay #-sparc-v9 1 #+sparc-v9 0)
      (:emitter (emit-format-3-fpop segment #b10 0 #b110101
 		(fp-reg-tn-encoding src1) ,opf (fp-reg-tn-encoding src2)))))
 

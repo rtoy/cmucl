@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.24 1998/07/24 17:22:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.25 1999/11/18 14:25:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -790,7 +790,10 @@
       (:single (inst fcmps x y))
       (:double (inst fcmpd x y))
       (:long (inst fcmpx x y)))
-    (inst nop)
+    ;; The SPARC V9 doesn't need an instruction between a
+    ;; floating-point compare and a floating-point branch.
+    (unless (backend-featurep :sparc-v9)
+      (inst nop))
     (inst fb (if not-p nope yep) target)
     (inst nop)))
 
