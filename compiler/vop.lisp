@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.27 1991/02/20 15:00:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.28 1991/05/15 19:41:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -393,11 +393,11 @@
   ;;
   ;; A string representing the argument list that the function was defined
   ;; with.
-  (arguments "<not computed>" :type simple-string)
+  (arguments nil :type (or simple-string null))
   ;;
   ;; A function type specifier representing the arguments and results of this
   ;; function.
-  (type nil :type (or list (member function))))
+  (type 'function :type (or list (member function))))
 
 
 ;;; The IR2-Environment is used to annotate non-let lambdas with their passing
