@@ -63,6 +63,7 @@
 #-pmax (load "vm:macros")
 (load "vm:utils")
 (load "c:aliencomp")
+(load "c:ltv")
 (load "c:debug-dump")
 
 (load "c:dump")
