@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.57 1990/11/21 07:15:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.58 1990/11/21 09:27:30 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -641,6 +641,7 @@
 	  code-constant-set allocate-code-object
 	  code-instructions compute-function
 	  get-vector-subtype set-vector-subtype
+	  hash make-fixnum make-other-immediate-type
 	  ))
 
 (in-package "LISP")
