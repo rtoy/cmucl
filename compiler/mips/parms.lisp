@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.28 1990/03/18 23:46:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.29 1990/03/19 23:18:34 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -18,7 +18,7 @@
 ;;; Converted to MIPS by William Lott.
 ;;;
 
-(in-package "VM")
+(in-package "VM" :use "EXT")
 
 (export '(sc-number-limit most-positive-cost word-bits byte-bits word-shift
 	  word-bytes target-byte-order target-read-only-space-start
@@ -43,8 +43,14 @@
 	  closure-header-type value-cell-header-type symbol-header-type
 	  base-character-type sap-type unbound-marker-type atomic-flag
 	  interrupted-flag halt-trap pending-interrupt-trap error-trap
-	  cerror-trap fixnum static-symbols static-symbol-offset
-	  offset-static-symbol static-symbol-p *assembly-unit-length*
+	  cerror-trap *primitive-objects* slot-name slot-docs slot-rest-p
+	  slot-offset slot-length slot-options primitive-object-name
+	  primitive-object-header primitive-object-lowtag
+	  primitive-object-options primitive-object-slots
+	  primitive-object-size primitive-object-variable-length
+	  define-for-each-primitive-object
+	  static-symbols static-symbol-offset offset-static-symbol
+	  static-symbol-p fixnum *assembly-unit-length*
 	  target-fasl-code-format vm-version))
 	  
 
@@ -216,6 +222,236 @@
   pending-interrupt
   error
   cerror)
+
+
+;;;; Primitive data objects definition noise.
+
+(eval-when (compile load eval)
+
+(defstruct (slot
+	    (:constructor %make-slot
+			  (name docs rest-p length options)))
+  (name nil :type symbol)
+  (docs nil :type (or null simple-string))
+  (rest-p nil :type (member t nil))
+  (offset 0 :type fixnum)
+  (length 1 :type fixnum)
+  (options nil :type list))
+
+(defun make-slot (name &rest options
+		       &key docs rest-p (length (if rest-p 0 1))
+		       &allow-other-keys)
+  (remf options :docs)
+  (remf options :rest-p)
+  (remf options :length)
+  (%make-slot name docs rest-p length options))
+
+(defstruct (primitive-object
+	    )
+  (name nil :type symbol)
+  (header nil :type (or (member t nil) fixnum))
+  (lowtag nil :type (or null fixnum))
+  (options nil :type list)
+  (slots nil :type list)
+  (size 0 :type fixnum)
+  (variable-length nil :type (member t nil)))
+
+
+(defmacro define-primitive-object ((name &rest options
+					 &key header lowtag
+					 &allow-other-keys)
+				   &rest slots)
+  (remf options :header)
+  (remf options :lowtag)
+  (let ((prim-obj
+	 (eval `(make-primitive-object
+		 :name ',name
+		 :header ,header
+		 :lowtag ,lowtag
+		 :options ',options
+		 :slots (list ,@(mapcar #'(lambda (slot)
+					    (if (atom slot)
+						`(make-slot ',slot)
+						`(apply #'make-slot ',slot)))
+					slots))))))
+    (collect ((forms) (exports))
+      (let ((offset (if (primitive-object-header prim-obj) 1 0))
+	    (variable-length nil))
+	(dolist (slot (primitive-object-slots prim-obj))
+	  (when variable-length
+	    (error "~S is anything after a :rest-p t slot." slot))
+	  (let* ((rest-p (slot-rest-p slot))
+		 (offset-sym
+		  (intern (concatenate 'simple-string
+				       (string name)
+				       "-"
+				       (string (slot-name slot))
+				       (if rest-p "-OFFSET" "-SLOT")))))
+	    (forms `(defconstant ,offset-sym ,offset
+		      ,@(when (slot-docs slot) (list (slot-docs slot)))))
+	    (setf (slot-offset slot) offset)
+	    (exports offset-sym)
+	    (incf offset (slot-length slot))
+	    (when rest-p (setf variable-length t))))
+	(setf (primitive-object-variable-length prim-obj) variable-length)
+	(unless variable-length
+	  (let ((size (intern (concatenate 'simple-string
+					   (string name)
+					   "-SIZE"))))
+	    (forms `(defconstant ,size ,offset
+		      ,(format nil
+			       "Number of slots used by each ~S~
+			       ~@[~* including the header~]."
+			       name header)))
+	    (exports size)))
+	(setf (primitive-object-size prim-obj) offset))
+      `(eval-when (compile load eval)
+	 (setf *primitive-objects*
+	       (cons ',prim-obj
+		     (delete ',name *primitive-objects*
+			     :key #'primitive-object-name)))
+	 (export ',(exports))
+	 ,@(forms)))))
+
+(defvar *primitive-objects* nil)
+
+(defmacro define-for-each-primitive-object ((var) &body body)
+  `(c::expand
+    `(progn
+       ,@(remove nil
+		 (mapcar #'(lambda (,var)
+			     ,@body)
+			 *primitive-objects*)))))
+
+
+) ; eval-when
+
+
+
+
+;;;; The primitive objects themselves.
+
+
+(define-primitive-object (cons :lowtag list-pointer-type
+			       :alloc-trans cons)
+  (car :ref-vop car :ref-trans car
+       :setf-vop c::set-car :set-trans c::%rplaca
+       :init :arg)
+  (cdr :ref-vop cdr :ref-trans cdr
+       :setf-vop c::set-cdr :set-trans c::%rplacd
+       :init :arg))
+
+(define-primitive-object (bignum :lowtag other-pointer-type
+				 :header bignum-type)
+  (digits :rest-p t :c-type "long"))
+
+(define-primitive-object (ratio :lowtag other-pointer-type
+				:header ratio-type
+				:alloc-vop c::make-ratio)
+  (numerator :ref-vop numerator :init :arg)
+  (denominator :ref-vop denominator :init :arg))
+
+(define-primitive-object (single-float :lowtag other-pointer-type
+				       :header single-float-type)
+  (value :c-type "float"))
+
+(define-primitive-object (double-float :lowtag other-pointer-type
+				       :header double-float-type)
+  (value :c-type "double" :length 2))
+
+(define-primitive-object (complex :lowtag other-pointer-type
+				  :header complex-type
+				  :alloc-vop c::make-complex)
+  (real :ref-vop realpart :init :arg)
+  (imag :ref-vop imagpart :init :arg))
+
+(define-primitive-object (array :lowtag other-pointer-type :header t)
+  fill-pointer
+  elements
+  data
+  displacement
+  displaced-p
+  (dimensions :rest-p t))
+
+(define-primitive-object (vector :lowtag other-pointer-type :header t)
+  (length :ref-vop c::vector-length)
+  (data :rest-p t :c-type "unsigned long"))
+
+(define-primitive-object (code :lowtag other-pointer-type :header t)
+  code-size
+  entry-points
+  debug-info
+  (constants :rest-p t))
+
+(define-primitive-object (function-header :lowtag function-pointer-type
+					  :header function-header-type)
+  self
+  next
+  name
+  arglist
+  type
+  (code :rest-p t :c-type "unsigned char"))
+
+(define-primitive-object (return-pc :lowtag other-pointer-type :header t)
+  (return-point :c-type "unsigned char" :rest-p t))
+
+(define-primitive-object (closure :lowtag function-pointer-type
+				  :header closure-header-type
+				  :alloc-vop c::make-closure)
+  (function :init :arg)
+  (info :rest-p t :set-vop c::closure-init :ref-vop c::closure-ref))
+
+(define-primitive-object (value-cell :lowtag other-pointer-type
+				     :header value-cell-header-type
+				     :alloc-vop c::make-value-cell)
+  (value :set-vop c::value-cell-set
+	 :ref-vop c::value-cell-ref
+	 :init :arg))
+
+(define-primitive-object (symbol :lowtag other-pointer-type
+				 :header symbol-header-type
+				 :alloc-trans make-symbol)
+  (value :set-trans set
+	 :init :unbound)
+  (function :setf-vop c::set-symbol-function
+	    :set-trans c::%sp-set-definition
+	    :init :unbound)
+  (plist :ref-trans symbol-plist
+	 :setf-vop c::set-symbol-plist
+	 :set-trans c::%sp-set-plist
+	 :init :null)
+  (name :ref-trans symbol-name
+	:init :arg)
+  (package :ref-trans symbol-package
+	   :setf-vop c::set-package
+	   :init :null))
+
+(define-primitive-object (sap :lowtag other-pointer-type
+			      :header sap-type)
+  (pointer :c-type "char *"))
+
+
+;;; Other non-heap data blocks.
+
+(define-primitive-object (binding)
+  value
+  symbol)
+
+(define-primitive-object (unwind-block)
+  current-uwp
+  current-cont
+  current-code
+  entry-pc)
+
+(define-primitive-object (catch-block)
+  current-uwp
+  current-cont
+  current-code
+  entry-pc
+  tag
+  previous-catch
+  size)
+
 
 
 ;;;; Static symbols.
