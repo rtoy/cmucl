@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.13 1990/03/05 21:12:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.14 1990/03/06 20:03:39 ch Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -187,9 +187,10 @@
 ;;; 
 (def-primitive-type fixnum (any-reg control-stack))
 
-(def-primitive-type base-character (base-character-reg any-reg
-						       base-character-stack
-						       control-stack))
+(def-primitive-type base-character
+		    (base-character-reg any-reg base-character-stack
+					control-stack)
+  :type string-char) ; ### base-character
 
 ;;; 
 (def-primitive-type function (descriptor-reg control-stack))
