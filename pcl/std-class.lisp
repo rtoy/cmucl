@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.74 2004/09/25 22:09:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.75 2005/01/27 14:45:58 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -870,7 +870,7 @@
 (defun update-slots (class eslotds)
   (collect ((instance-slots) (class-slots))
     (dolist (eslotd eslotds)
-      (ecase (slot-definition-allocation eslotd)
+      (case (slot-definition-allocation eslotd)
 	(:instance (instance-slots eslotd))
 	(:class (class-slots eslotd))))
     ;;
@@ -1002,7 +1002,7 @@
   (loop with slotds = (call-next-method) and location = -1
 	for slot in slotds do
 	  (setf (slot-definition-location slot)
-		(ecase (slot-definition-allocation slot)
+		(case (slot-definition-allocation slot)
 		  (:instance
 		   (incf location))
 		  (:class
@@ -1048,7 +1048,7 @@
 	  (instance-slots ())
 	  (class-slots ()))
       (loop for slotd in all-slotds do
-	      (ecase (slot-definition-allocation slotd)
+	      (case (slot-definition-allocation slotd)
 		(:instance (push slotd instance-slots))
 		(:class    (push slotd class-slots))))
       (loop with layout = (compute-layout instance-slots)

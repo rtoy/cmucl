@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.9 2003/06/03 10:28:23 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.10 2005/01/27 14:45:58 rtoy Exp $")
 
 (in-package "PCL")
 
@@ -58,8 +58,8 @@
 (defstruct slot-info
   (name nil :type symbol)
   ;;
-  ;; Specified slot allocation.or :INSTANCE.
-  (allocation :instance :type (member :class :instance))
+  ;; Specified slot allocation.
+  (allocation :instance :type (or (member :class :instance) t))
   ;;
   ;; Specified slot type or T.
   (type t :type (or symbol list)))

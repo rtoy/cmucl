@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.25 2003/06/17 13:16:45 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.26 2005/01/27 14:45:58 rtoy Rel $")
 ;;;
 
 (in-package :pcl)
@@ -198,7 +198,12 @@
 	       (let ((value (cdr index)))
 		 (if (eq value +slot-unbound+)
 		     (values (slot-unbound (class-of instance) instance slot-name))
-		     value)))))
+		     value))))
+     (null   (lambda (instance)
+	       (check-obsolete-instance instance)
+	       (error "~@<Slot ~S in class ~S ~
+                       does not have standard allocation.~@:>"
+		      slot-name (class-of instance)))))
    `(reader ,slot-name)))
 
 (defun make-optimized-std-writer-method-function (fsc-p slot-name index)
@@ -214,7 +219,12 @@
 		   (setf (%slot-ref (std-instance-slots instance) index) nv))))
      (cons   (lambda (nv instance)
 	       (check-obsolete-instance instance)
-	       (setf (cdr index) nv))))
+	       (setf (cdr index) nv)))
+     (null   (lambda (instance)
+	       (check-obsolete-instance instance)
+	       (error "~@<Slot ~S in class ~S ~
+                       does not have standard allocation.~@:>"
+		      slot-name (class-of instance)))))
    `(writer ,slot-name)))
 
 (defun make-optimized-std-boundp-method-function (fsc-p slot-name index)
@@ -232,7 +242,12 @@
 			    +slot-unbound+)))))
      (cons   (lambda (instance)
 	       (check-obsolete-instance instance)
-	       (not (eq (cdr index) +slot-unbound+)))))
+	       (not (eq (cdr index) +slot-unbound+))))
+     (null   (lambda (instance)
+	       (check-obsolete-instance instance)
+	       (error "~@<Slot ~S in class ~S ~
+                       does not have standard allocation.~@:>"
+		      slot-name (class-of instance)))))
    `(boundp ,slot-name)))
 
 (defun make-optimized-structure-slot-value-using-class-method-function (function)
@@ -322,7 +337,13 @@
 	      (let ((value (cdr index)))
 		(if (eq value +slot-unbound+)
 		    (values (slot-unbound class instance slot-name))
-		    value))))))
+		    value))))
+    (null   (lambda (class instance slotd)
+	      (declare (ignore slotd))
+	      (check-obsolete-instance instance)
+	      (error "~@<Slot ~S in class ~S ~
+                      does not have standard allocation.~@:>"
+		     slot-name class)))))
 
 (defun make-optimized-std-setf-slot-value-using-class-method-function
     (fsc-p slot-name index)
@@ -341,7 +362,13 @@
     (cons   (lambda (nv class instance slotd)
 	      (declare (ignore class slotd))
 	      (check-obsolete-instance instance)
-	      (setf (cdr index) nv)))))
+	      (setf (cdr index) nv)))
+    (null   (lambda (class instance slotd)
+	      (declare (ignore slotd))
+	      (check-obsolete-instance instance)
+	      (error "~@<Slot ~S in class ~S ~
+                      does not have standard allocation.~@:>"
+		     slot-name class)))))
 
 (defun make-optimized-std-slot-boundp-using-class-method-function
     (fsc-p slot-name index)
@@ -362,7 +389,13 @@
     (cons   (lambda (class instance slotd)
 	      (declare (ignore class slotd))
 	      (check-obsolete-instance instance)
-	      (not (eq (cdr index) +slot-unbound+))))))
+	      (not (eq (cdr index) +slot-unbound+))))
+    (null   (lambda (class instance slotd)
+	      (declare (ignore slotd))
+	      (check-obsolete-instance instance)
+	      (error "~@<Slot ~S in class ~S ~
+                      does not have standard allocation.~@:>"
+		     slot-name class)))))
 
 (defun make-internal-reader-method-function (class-name slot-name)
   (list* :method-spec `(internal-reader-method ,class-name ,slot-name)

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.35 2003/08/27 09:02:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.36 2005/01/27 14:45:58 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -1613,7 +1613,7 @@ And so, we are saved.
      (case (car ntype)
        (class
 	(let* ((class (type-class specl))
-	       (cpl (cpl-or-nil class)))
+	       (cpl (cpl-maybe-early class)))
 	  (not (memq (cadr ntype) cpl))))
        (class-eq
 	(let ((class (case (car specl)
@@ -1626,7 +1626,7 @@ And so, we are saved.
 			(class-eq (cadr specl))
 			(prototype (cadr specl))
 			(class (cadr specl))))
-	       (cpl (cpl-or-nil class)))
+	       (cpl (cpl-maybe-early class)))
 	  (not (memq (cadr ntype) cpl))))
        (eql
 	(case (car specl)
@@ -1640,7 +1640,7 @@ And so, we are saved.
   (if (eq 'class (car specl))
       (let* ((specl (cadr specl))
 	     (type (cadr type))
-	     (cpl (cpl-or-nil type))
+	     (cpl (cpl-maybe-early type))
 	     (pred (memq specl cpl)))
 	(values pred
 		(or pred
@@ -1651,7 +1651,7 @@ And so, we are saved.
 			(classes-have-common-subclass-p specl type)))))
       (values nil
 	      (let* ((class (type-class specl))
-		     (cpl (cpl-or-nil class)))
+		     (cpl (cpl-maybe-early class)))
 		(memq (cadr type) cpl)))))
 
 (defun classes-have-common-subclass-p (class1 class2)
@@ -1671,7 +1671,7 @@ And so, we are saved.
 		    (class      
 		     (or (eq (cadr specl) (cadr type))
 			 (memq (cadr specl)
-			       (cpl-or-nil (cadr type))))))))
+			       (cpl-maybe-early (cadr type))))))))
 	(values pred pred))))
 
 (defun saut-prototype (specl type)
@@ -1686,7 +1686,7 @@ And so, we are saved.
 		 (eq (cadr specl) (class-of (cadr type))))
 		(class
 		 (memq (cadr specl)
-		       (cpl-or-nil (class-of (cadr type))))))))
+		       (cpl-maybe-early (class-of (cadr type))))))))
     (values pred pred)))
 
 
