@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.64 1998/02/24 18:12:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.65 1998/03/21 07:53:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1193,7 +1193,16 @@
 		 '(complex (realpart z) (- (imagpart z))))
 	       ;; Cis.
 	       (deftransform cis ((z) ((,type)) *)
-		 '(complex (cos z) (sin z))))))
+		 '(complex (cos z) (sin z)))
+	       ;; Comparison
+	       (deftransform = ((w z) ((complex ,type) (complex ,type)) *)
+		 '(and (= (realpart w) (realpart z))
+		       (= (imagpart w) (imagpart z))))
+	       (deftransform = ((w z) ((complex ,type) ,type) *)
+		 '(and (= (realpart w) z) (zerop (imagpart w))))
+	       (deftransform = ((w z) (,type (complex ,type)) *)
+		 '(and (= (realpart z) w) (zerop (imagpart z))))
+	       )))
 
   (frob single-float)
   (frob double-float))
