@@ -112,6 +112,21 @@
 	   (funcall #'enable-interrupt (car ,it) (cadr ,it) (caddr ,it)))))))
 
 
+(defvar hi::*in-the-editor* nil)
+
+(defmacro without-hemlock (&body body)
+  `(progn
+     (when (and hi::*in-the-editor* (null debug::*in-the-debugger*))
+       (let ((device (hi::device-hunk-device
+		      (hi::window-hunk (hi::current-window)))))
+	 (funcall (hi::device-exit device) device)))
+     ,@body
+     (when (and hi::*in-the-editor* (null debug::*in-the-debugger*))
+       (let ((device (hi::device-hunk-device
+		      (hi::window-hunk (hi::current-window)))))
+	 (funcall (hi::device-init device) device)))))
+
+
 ;;; With-Reply-Port  --  Public    
 ;;;
 ;;;    If we find that the number of ports in use (as indicated by
