@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.93 2004/07/07 15:03:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.94 2004/07/15 13:46:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,6 +234,27 @@
   (def-alien-type uid-t unsigned-long)
   (def-alien-type gid-t unsigned-long))
 
+;;; Large file support for Solaris.  Define some of the 64-bit types
+;;; we need.  Unlike unix-glibc's large file support, Solaris's
+;;; version is a little simpler because all of the 64-bit versions of
+;;; the functions actually exist as functions.  So instead of calling
+;;; the 32-bit versions of the functions, we call the 64-bit versions.
+;;;
+;;; These functions are: creat64, open64, truncate64, ftruncate64,
+;;; stat64, lstat64, fstat64, readdir64.
+;;;
+;;; There are also some new structures for large file support:
+;;; dirent64, stat64.
+;;;
+;;; FIXME: We should abstract this better, but I (rtoy) don't have any
+;;; other system to test this out on, so it's a Solaris hack for now.
+#+solaris
+(progn
+  (deftype file-offset64 () '(signed-byte 64))
+  (def-alien-type off64-t int64-t)
+  (def-alien-type ino64-t u-int64-t)
+  (def-alien-type blkcnt64-t u-int64-t))
+
 (def-alien-type mode-t
     #-(or alpha svr4) unsigned-short
     #+alpha unsigned-int
@@ -407,6 +428,8 @@
     #+(or bsd osf1) (c-ospeed unsigned-int)))
 
 ;;; From sys/dir.h
+;;;
+;;; (For Solaris, this is not struct direct, but struct dirent!)
 #-bsd
 (def-alien-type nil
   (struct direct
@@ -426,6 +449,16 @@
     (d-type unsigned-char)
     (d-namlen unsigned-char)		; length of string in d-name
     (d-name (array char 256))))		; name must be no longer than this
+
+;;; The 64-bit version of struct dirent.
+#+solaris
+(def-alien-type nil
+  (struct dirent64
+    (d-ino ino64-t); inode number of entry
+    (d-off off64-t) ; offset of next disk directory entry
+    (d-reclen unsigned-short)		; length of this record
+    (d-name (array char 256))))		; name must be no longer than this
+
 
 ;;; From sys/stat.h
 ;; oh boy, in linux-> 2 stat(s)!!
@@ -505,6 +538,28 @@
     #-linux (st-blocks long)
     #-linux (st-fstype (array char 16))
     #-linux (st-pad4 (array long 8))))
+
+;;; 64-bit stat for Solaris
+#+solaris
+(def-alien-type nil
+  (struct stat64
+    (st-dev dev-t)
+    (st-pad1 (array long 3))
+    (st-ino ino64-t)
+    (st-mode unsigned-long)
+    (st-nlink short)
+    (st-uid uid-t)
+    (st-gid gid-t)
+    (st-rdev dev-t)
+    (st-pad2 (array long 2))
+    (st-size off64-t)
+    (st-atime (struct timestruc-t))
+    (st-mtime (struct timestruc-t))
+    (st-ctime (struct timestruc-t))
+    (st-blksize long)
+    (st-blocks blkcnt64-t)
+    (st-fstype (array char 16))
+    (st-pad4 (array long 8))))
 
 (defconstant s-ifmt   #o0170000)
 (defconstant s-ifdir  #o0040000)
@@ -1195,7 +1250,7 @@
   
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (int-syscall ("creat" c-string int) name mode))
+  (int-syscall (#+solaris "creat64" #-solaris "creat" c-string int) name mode))
 
 ;;; Unix-dup returns a duplicate copy of the existing file-descriptor
 ;;; passed as an argument.
@@ -1377,7 +1432,7 @@
   (declare (type unix-pathname path)
 	   (type fixnum flags)
 	   (type unix-file-mode mode))
-  (int-syscall ("open" c-string int int) path flags mode))
+  (int-syscall (#+solaris "open64" #-solaris "open" c-string int int) path flags mode))
 
 (defun unix-pipe ()
   "Unix-pipe sets up a unix-piping mechanism consisting of
@@ -1564,9 +1619,9 @@
    bytes) specified by len.  NIL and an error number is returned
    if the call is unsuccessful."
   (declare (type unix-pathname name)
-	   (type (unsigned-byte 32) len))
+	   (type (unsigned-byte #+solaris 64 #-solaris 32) len))
   #-(and bsd x86)
-  (void-syscall ("truncate" c-string int) name len)
+  (void-syscall (#+solaris "truncate64" #-solaris "truncate" c-string int) name len)
   #+(and bsd x86)
   (void-syscall ("truncate" c-string unsigned-long unsigned-long) name len 0))
 
@@ -1574,9 +1629,9 @@
   "Unix-ftruncate is similar to unix-truncate except that the first
    argument is a file descriptor rather than a file name."
   (declare (type unix-fd fd)
-	   (type (unsigned-byte 32) len))
+	   (type (unsigned-byte #+solaris 64 #-solaris 32) len))
   #-(and bsd x86)
-  (void-syscall ("ftruncate" int int) fd len)
+  (void-syscall (#+solaris "ftruncate64" #-solaris "ftruncate" int int) fd len)
   #+(and bsd x86)
   (void-syscall ("ftruncate" int unsigned-long unsigned-long) fd len 0))
 
@@ -2020,6 +2075,8 @@
 	   (slot ,buf 'st-blksize)
 	   (slot ,buf 'st-blocks)))
 
+#-solaris
+(progn
 (defun unix-stat (name)
   "Unix-stat retrieves information about the specified
    file returning them in the form of multiple values.
@@ -2033,7 +2090,6 @@
     (syscall ("stat" c-string (* (struct stat)))
 	     (extract-stat-results buf)
 	     name (addr buf))))
-
 
 (defun unix-lstat (name)
   "Unix-lstat is similar to unix-stat except the specified
@@ -2052,6 +2108,43 @@
     (syscall ("fstat" int (* (struct stat)))
 	     (extract-stat-results buf)
 	     fd (addr buf))))
+)
+
+;;; 64-bit versions of stat and friends
+#+solaris
+(progn
+(defun unix-stat (name)
+  "Unix-stat retrieves information about the specified
+   file returning them in the form of multiple values.
+   See the UNIX Programmer's Manual for a description
+   of the values returned.  If the call fails, then NIL
+   and an error number is returned instead."
+  (declare (type unix-pathname name))
+  (when (string= name "")
+    (setf name "."))
+  (with-alien ((buf (struct stat64)))
+    (syscall ("stat64" c-string (* (struct stat64)))
+	     (extract-stat-results buf)
+	     name (addr buf))))
+
+(defun unix-lstat (name)
+  "Unix-lstat is similar to unix-stat except the specified
+   file must be a symbolic link."
+  (declare (type unix-pathname name))
+  (with-alien ((buf (struct stat64)))
+    (syscall ("lstat64" c-string (* (struct stat64)))
+	     (extract-stat-results buf)
+	     name (addr buf))))
+
+(defun unix-fstat (fd)
+  "Unix-fstat is similar to unix-stat except the file is specified
+   by the file descriptor fd."
+  (declare (type unix-fd fd))
+  (with-alien ((buf (struct stat64)))
+    (syscall ("fstat64" int (* (struct stat64)))
+	     (extract-stat-results buf)
+	     fd (addr buf))))
+)
 
 
 (defconstant rusage_self 0 "The calling process.")
@@ -2331,7 +2424,7 @@
       (t
        (values nil enotdir)))))
 
-#-bsd
+#-(and bsd (not solaris))
 (defun read-dir (dir)
   (declare (type %directory dir))
   (let ((daddr (alien-funcall (extern-alien "readdir"
@@ -2355,7 +2448,34 @@
 	  #+(or linux svr4)
 	  (values (cast (slot direct 'd-name) c-string)
 		  (slot direct 'd-ino))))))
-#+bsd
+
+;;; 64-bit readdir for Solaris
+#+solaris
+(defun read-dir (dir)
+  (declare (type %directory dir))
+  (let ((daddr (alien-funcall (extern-alien "readdir64"
+					    (function system-area-pointer
+						      system-area-pointer))
+			      (directory-dir-struct dir))))
+    (declare (type system-area-pointer daddr))
+    (if (zerop (sap-int daddr))
+	nil
+	(with-alien ((direct (* (struct dirent64)) daddr))
+	  #-(or linux svr4)
+	  (let ((nlen (slot direct 'd-namlen))
+		(ino (slot direct 'd-ino)))
+	    (declare (type (unsigned-byte 16) nlen))
+	    (let ((string (make-string nlen)))
+	      (kernel:copy-from-system-area
+	       (alien-sap (addr (slot direct 'd-name))) 0
+	       string (* vm:vector-data-offset vm:word-bits)
+	       (* nlen vm:byte-bits))
+	      (values string ino)))
+	  #+(or linux svr4)
+	  (values (cast (slot direct 'd-name) c-string)
+		  (slot direct 'd-ino))))))
+
+#+(and bsd (not solaris))
 (defun read-dir (dir)
   (declare (type %directory dir))
   (let ((daddr (alien-funcall (extern-alien "readdir"
