@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.33 1998/07/19 01:41:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.34 2000/06/12 13:09:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2044,7 +2044,7 @@
 )
 
 (defun find-if (test sequence &key from-end (start 0) end key)
-  "Returns the zero-origin index of the first element satisfying the test."
+  "Returns the first element in SEQUENCE satisfying the test."
   (declare (fixnum start))
   (let ((end (or end (length sequence))))
     (declare (type index end))
@@ -2066,7 +2066,7 @@
 )
 
 (defun find-if-not (test sequence &key from-end (start 0) end key)
-  "Returns the zero-origin index of the first element not satisfying the test."
+  "Returns the first element in SEQUENCE not satisfying the test."
   (declare (fixnum start))
   (let ((end (or end (length sequence))))
     (declare (type index end))
