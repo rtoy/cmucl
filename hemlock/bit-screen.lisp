@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.12 1991/10/30 12:21:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.13 1991/11/23 21:48:32 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1196,18 +1196,30 @@
 	   (win (cond (window
 		       (setf (xlib:drawable-height window) actual-height)
 		       window)
-		      ((xlib:create-window
-			:parent root
-			:x *random-typeout-start-x*
-			:y *random-typeout-start-y*
-			:width *random-typeout-start-width*
-			:height actual-height
-			:background *default-background-pixel*
-			:border-width xwindow-border-width
-			:border *default-border-pixmap*
-			:event-mask random-typeout-xevents-mask
-			:override-redirect :on :class :input-output
-			:cursor *hemlock-cursor*))))
+		      (t
+		       (let ((win (xlib:create-window
+				   :parent root
+				   :x *random-typeout-start-x*
+				   :y *random-typeout-start-y*
+				   :width *random-typeout-start-width*
+				   :height actual-height
+				   :background *default-background-pixel*
+				   :border-width xwindow-border-width
+				   :border *default-border-pixmap*
+				   :event-mask random-typeout-xevents-mask
+				   :override-redirect :on :class :input-output
+				   :cursor *hemlock-cursor*)))
+			 (xlib:set-wm-properties
+			  win :name "Pop-up Display" :icon-name "Pop-up Display"
+			  :resource-name "Hemlock"
+			  :x *random-typeout-start-x*
+			  :y *random-typeout-start-y*
+			  :width *random-typeout-start-width*
+			  :height actual-height
+			  :user-specified-position-p t :user-specified-size-p t
+			  ;; Tell OpenLook pseudo-X11 server we want input.
+			  :input :on)
+			 win))))
 	   (gcontext (if (not window) (default-gcontext win))))
       (values win gcontext)))
 
@@ -1728,20 +1740,6 @@
      :input :on)
     win))
 
-#|
-;;; SET-WINDOW-ROOT-Y moves xwin to the y position relative to the root.  Some
-;;; window managers reparent Hemlock's window, so we have to mess around
-;;; possibly to get this right.  In this case we want to move the parent to the
-;;; root y position less how far down our window is inside this new parent.
-;;;
-(defun set-window-root-y (xwin y)
-  (multiple-value-bind (children parent root)
-		       (xlib:query-tree xwin)
-    (declare (ignore children))
-    (if (eq parent root)
-	(setf (xlib:drawable-y xwin) y)
-	(setf (xlib:drawable-y parent) (- y (xlib:drawable-y xwin))))))
-|#
 
 ;;; SET-WINDOW-HOOK-RAISE-FUN is a "Set Window Hook" function controlled by
 ;;; "Set Window Autoraise".  When autoraising, check that it isn't only the
