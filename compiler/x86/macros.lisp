@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.3 1997/02/13 01:20:33 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.4 1997/04/01 17:44:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -249,10 +249,8 @@
        (:results (value :scs ,scs))
        (:result-types ,el-type)
        (:generator 3			; pw was 5
-	 (inst mov
-	       value
-	       (make-ea :dword :base object :index index
-			:disp (- (* ,offset word-bytes) ,lowtag)))))
+	 (inst mov value (make-ea :dword :base object :index index
+				  :disp (- (* ,offset word-bytes) ,lowtag)))))
      (define-vop (,(symbolicate name "-C"))
        ,@(when translate
 	   `((:translate ,translate)))
@@ -263,11 +261,9 @@
        (:results (value :scs ,scs))
        (:result-types ,el-type)
        (:generator 2			; pw was 5
-	 (inst mov
-	       value
-	       (make-ea :dword :base object
-			:disp (- (* (+ ,offset index) word-bytes)
-				 ,lowtag)))))))
+	 (inst mov value (make-ea :dword :base object
+				  :disp (- (* (+ ,offset index) word-bytes)
+					   ,lowtag)))))))
 
 (defmacro define-full-setter (name type offset lowtag scs el-type &optional translate)
   `(progn
@@ -282,9 +278,8 @@
        (:results (result :scs ,scs))
        (:result-types ,el-type)
        (:generator 4			; was 5
-	 (inst mov
-	       (make-ea :dword :base object :index index
-			:disp (- (* ,offset word-bytes) ,lowtag))
+	 (inst mov (make-ea :dword :base object :index index
+			    :disp (- (* ,offset word-bytes) ,lowtag))
 	       value)
 	 (move result value)))
      (define-vop (,(symbolicate name "-C"))
@@ -298,10 +293,8 @@
        (:results (result :scs ,scs))
        (:result-types ,el-type)
        (:generator 3			; was 5
-	 (inst mov
-	       (make-ea :dword :base object
-			:disp (- (* (+ ,offset index) word-bytes)
-				 ,lowtag))
+	 (inst mov (make-ea :dword :base object
+			    :disp (- (* (+ ,offset index) word-bytes) ,lowtag))
 	       value)
 	 (move result value)))))
 
