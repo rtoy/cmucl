@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.47 1997/02/05 16:15:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.48 1997/02/08 17:16:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1512,6 +1512,13 @@
       (push `(,gen ,(cadr pairs)) lets)
       (push (car pairs) setqs)
       (push gen setqs))))
+
+;;; LAMBDA -- from the ANSI spec.
+;;;
+(defmacro lambda (&whole form &rest bvl-decls-and-body)
+  (declare (ignore bvl-decls-and-body))
+  `#',form) 
+
 
 
 ;;;; With-Compilation-Unit:
