@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.11 1991/12/14 13:09:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.12 1992/04/23 14:11:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -343,7 +343,7 @@
 
 (defun maphash (map-function hash-table)
   "For each entry in HASH-TABLE, calls MAP-FUNCTION on the key and value
-  of the entry; returns T."
+  of the entry; returns NIL."
   (let ((vector (hash-table-table hash-table)))
     (declare (simple-vector vector))
     (rehash-if-needed)
