@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.1 1992/07/28 20:15:23 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.2 1992/08/20 02:43:37 wlott Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -318,7 +318,7 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
         *old = result;
 
         /* Scavenge it. */
-        pscav(new, nwords, TRUE);
+        pscav(new, nwords, FALSE);
 
         return result;
     }
