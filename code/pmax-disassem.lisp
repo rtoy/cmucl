@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.2 1990/02/03 18:05:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.3 1990/02/05 13:04:49 wlott Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -207,7 +207,7 @@
 	    name (register-name rd) (register-name rt) (register-name rs))))
 
 (def-mips-instruction-type (:break-type)
-  (let ((code (ldb (byte 10 16) word))) ; the whole field is (byte 20 6)
+  (let ((code (ldb (byte 20 6) word))) ; sandro's adb uses (byte 10 16)
     (format stream "~8,8T~A~8,8T#x~X~%" name code)))
 
 (def-mips-instruction-type (:syscall-type)
