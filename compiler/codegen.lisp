@@ -108,6 +108,12 @@
 		      (template-name (vop-info vop))))))))
   (assemble (*code-segment* nil)
     (insert-segment *elsewhere*))
+  (expand-pseudo-instructions *code-segment*)
+  (when (policy (lambda-bind
+		 (block-home-lambda
+		  (block-next (component-head component))))
+		(or (>= speed cspeed) (>= space cspeed)))
+    (optimize-segment *code-segment*))
   (finalize-segment *code-segment*))
 
 
