@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/memory.lisp,v 1.1 1992/07/13 03:48:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/memory.lisp,v 1.2 1993/01/15 01:33:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,49 +40,6 @@
   (:policy :fast-safe)
   (:generator 1
     (storew value object offset lowtag)))
-;;;
-(define-vop (cell-setf)
-  (:args (object :scs (descriptor-reg))
-	 (value :scs (descriptor-reg any-reg)
-		:target result))
-  (:results (result :scs (descriptor-reg any-reg)))
-  (:variant-vars offset lowtag)
-  (:policy :fast-safe)
-  (:generator 1
-    (storew value object offset lowtag)
-    (move value result)))
-;;;
-(define-vop (cell-setf-function)
-  (:args (value :scs (descriptor-reg any-reg)
-		:target result)
-	 (object :scs (descriptor-reg)))
-  (:results (result :scs (descriptor-reg any-reg)))
-  (:variant-vars offset lowtag)
-  (:policy :fast-safe)
-  (:generator 1
-    (storew value object offset lowtag)
-    (move value result)))
-
-;;; Define-Cell-Accessors  --  Interface
-;;;
-;;;    Define accessor VOPs for some cells in an object.  If the operation name
-;;; is NIL, then that operation isn't defined.  If the translate function is
-;;; null, then we don't define a translation.
-;;;
-(defmacro define-cell-accessors (offset lowtag
-					ref-op ref-trans set-op set-trans)
-  `(progn
-     ,@(when ref-op
-	 `((define-vop (,ref-op cell-ref)
-	     (:variant ,offset ,lowtag)
-	     ,@(when ref-trans
-		 `((:translate ,ref-trans))))))
-     ,@(when set-op
-	 `((define-vop (,set-op cell-setf)
-	     (:variant ,offset ,lowtag)
-	     ,@(when set-trans
-		 `((:translate ,set-trans))))))))
-
 
 ;;; Slot-Ref and Slot-Set are used to define VOPs like Closure-Ref, where the
 ;;; offset is constant at compile time, but varies for different uses.  We add
