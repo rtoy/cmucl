@@ -19,12 +19,18 @@ over the Internet, and is mostly in the public domain.
 New in this release:
        
   * Feature enhancements:
+      - Added a much faster and much less consy bignum printer and a
+        faster bignum reader.
+      - Extended REQUIRE to support *MODULE-PROVIDER-FUNCTIONS* from
+        SBCL.
+      - NetBSD supported
       - SIMPLE-STREAM fixes:
            o READ-SEQUENCE and WRITE-SEQUENCE for
              signed-byte/unsigned-byte 8 streams.
 	   o Memory-mapped file streams.
 
   * Numerous ANSI compliance fixes:
+      - FILE-AUTHOR should signal errors appropriately.
       - CMUCL was computing the wrong value for some special functions
         when the argument was on the branch cut for the function.
       - MULTIPLE-VALUE-BIND accepts &REST and friends in the var list.
@@ -33,7 +39,10 @@ New in this release:
         fixes an issue with ASDF and logical pathnames.
 
   * Numerous bugfixes:
-       
+      - FFLOOR and friends preserve the sign of the arg, so -0.0 is
+        returned for negative args.
+      - EXPT sometimes returne NaN instead of 1 when the power was 0.
+        
   * Other changes:
      
   * Numerous improvements to the PCL implementation of CLOS:
