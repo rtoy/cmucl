@@ -266,14 +266,15 @@
        (loadi (first register-argument-tns) ,n-error-code))))
 
 
-(defmacro generate-error-code (node error-code &rest values)
-  "Generate-Error-Code Node Error-code Value*
+(defmacro generate-error-code (vop error-code &rest values)
+  "Generate-Error-Code VOP Error-code Value*
   Emit code for an error with the specified Error-Code and context Values.
-  Node is used for source context."
-  `(unassemble
-     (assemble-elsewhere ,node
-       (let ((start-lab (gen-label)))
-	 (emit-label start-lab)
-	 (error-call ,error-code ,@values)
-	 start-lab))))
+  VOP is used for source context and lifetime information."
+  (once-only ((n-vop vop))
+    `(unassemble
+       (assemble-elsewhere (vop-node ,n-vop)
+	 (let ((start-lab (gen-label)))
+	   (emit-label start-lab)
+	   (error-call ,error-code ,@values)
+	   (note-this-location ,n-vop :internal-error)
 	   start-lab)))))
