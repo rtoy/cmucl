@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.2 1993/05/07 15:41:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.3 1993/05/18 19:19:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -776,6 +776,9 @@
 		 (or *cold-symbol-allocation-step* *dynamic*) vm:symbol-size
 		 vm:other-pointer-type vm:symbol-header-type)))
     (write-descriptor symbol vm:symbol-value-slot unbound-marker)
+    (write-descriptor symbol vm:symbol-hash-slot
+		      (make-fixnum-descriptor
+		       (random vm:target-most-positive-fixnum)))
     (write-descriptor symbol vm:symbol-plist-slot *nil-descriptor*)
     (write-descriptor symbol vm:symbol-name-slot (string-to-core name))
     (write-descriptor symbol vm:symbol-package-slot *nil-descriptor*)
@@ -869,7 +872,9 @@
 			(make-other-immediate-descriptor
 			 0 vm:symbol-header-type))
       (write-descriptor nil-des vm:symbol-value-slot *nil-descriptor*)
-      (write-descriptor nil-des (1+ vm:symbol-value-slot) *nil-descriptor*)
+      ;; The hash symbol slot is located at the same place as the cdr,
+      ;; so we fill it in with nil so that (cdr nil) returns nil.
+      (write-descriptor nil-des vm:symbol-hash-slot *nil-descriptor*)
       (write-descriptor nil-des vm:symbol-plist-slot *nil-descriptor*)
       (write-descriptor nil-des vm:symbol-name-slot (string-to-core "NIL"))
       (write-descriptor nil-des vm:symbol-package-slot *nil-descriptor*)
