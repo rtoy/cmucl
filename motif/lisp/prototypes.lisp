@@ -40,7 +40,7 @@
 	(code (fill-pointer *request-table*)))
     `(progn
        (eval-when (compile load eval)
-	 (vector-push-extend (format nil "R~a" string-name) *request-table*))
+	 (vector-push-extend (format nil "R~a" ,string-name) *request-table*))
        (defun ,symbol-name ,arg-list
 	 ,doc-string
 	 ;; *** This generates lots of warnings at the moment
