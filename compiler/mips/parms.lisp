@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.29 1990/03/19 23:18:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.30 1990/03/20 00:17:17 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -366,11 +366,16 @@
   (imag :ref-vop imagpart :init :arg))
 
 (define-primitive-object (array :lowtag other-pointer-type :header t)
-  fill-pointer
-  elements
-  data
-  displacement
-  displaced-p
+  (fill-pointer :ref-trans lisp::%array-fill-pointer
+		:set-trans (setf lisp::%array-fill-pointer))
+  (elements :ref-trans lisp::%array-available-elements
+	    :set-trans (setf lisp::%array-available-elements))
+  (data :ref-trans lisp::%array-data-vector
+	:set-trans (setf lisp::%array-data-vector))
+  (displacement :ref-trans lisp::%array-displacement
+		:set-trans (setf lisp::%array-displacement))
+  (displaced-p :ref-trans lisp::%array-displaced-p
+	       :set-trans (setf lisp::%array-displaced-p))
   (dimensions :rest-p t))
 
 (define-primitive-object (vector :lowtag other-pointer-type :header t)
