@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.16 1997/11/01 22:58:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.17 1997/12/13 11:57:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,132 +208,170 @@
 	       `(values (primitive-type-or-lose ',type *backend*) t))
 	     (part-of (type)
 	       `(values (primitive-type-or-lose ',type *backend*) nil)))
-    (etypecase type
-      (numeric-type
-       (let ((lo (numeric-type-low type))
-	     (hi (numeric-type-high type)))
-	 (case (numeric-type-complexp type)
-	   (:real
-	    (case (numeric-type-class type)
-	      (integer
-	       (cond ((and hi lo)
-		      (dolist (spec
-			       '((positive-fixnum 0 #.(1- (ash 1 29)))
-				 #-alpha
-				 (unsigned-byte-31 0 #.(1- (ash 1 31)))
-				 #-alpha
-				 (unsigned-byte-32 0 #.(1- (ash 1 32)))
-				 #+alpha
-				 (unsigned-byte-63 0 #.(1- (ash 1 63)))
-				 #+alpha
-				 (unsigned-byte-64 0 #.(1- (ash 1 64)))
-				 (fixnum #.(ash -1 29) #.(1- (ash 1 29)))
-				 #-alpha
-				 (signed-byte-32 #.(ash -1 31)
-						 #.(1- (ash 1 31)))
-				 #+alpha
-				 (signed-byte-64 #.(ash -1 63)
-						 #.(1- (ash 1 63))))
-			       (if (or (< hi (ash -1 29))
-				       (> lo (1- (ash 1 29))))
-				   (part-of bignum)
-				   (any)))
-			(let ((type (car spec))
-			      (min (cadr spec))
-			      (max (caddr spec)))
-			  (when (<= min lo hi max)
-			    (return (values (primitive-type-or-lose type
-								    *backend*)
-					    (and (= lo min) (= hi max))))))))
-		     ((or (and hi (< hi most-negative-fixnum))
-			  (and lo (> lo most-positive-fixnum)))
-		      (part-of bignum))
+    (flet ((maybe-numeric-type-union (t1 t2)
+	     (let ((t1-name (c::primitive-type-name t1))
+		   (t2-name (c::primitive-type-name t2)))
+	       (case t1-name
+		 (positive-fixnum
+		  (if (or (eq t2-name 'fixnum)
+			  (eq t2-name #-alpha 'signed-byte-32
+				      #+alpha 'signed-byte-64)
+			  (eq t2-name #-alpha 'unsigned-byte-31
+				      #+alpha 'unsigned-byte-63)
+			  (eq t2-name #-alpha 'unsigned-byte-32
+				      #+alpha 'unsigned-byte-64))
+		      t2))
+		 (fixnum
+		  (case t2-name
+		    (#-alpha signed-byte-32 #+alpha signed-byte-64 t2)
+		    (#-alpha unsigned-byte-31 #+alpha unsigned-byte-63 
+		     (primitive-type-or-lose
+		      #-alpha 'signed-byte-32 #+alpha 'signed-byte-64
+		      *backend*))))
+		 (#-alpha signed-byte-32 #+alpha signed-byte-64
+		  (if (eq t2-name #-alpha 'unsigned-byte-31
+				  #+alpha 'unsigned-byte-63)
+		      t1))
+		 (#-alpha unsigned-byte-31 #+alpha unsigned-byte-63
+		  (if (eq t2-name #-alpha 'unsigned-byte-32
+				  #+alpha 'unsigned-byte-64)
+		      t2))))))
+      (etypecase type
+	(numeric-type
+	 (let ((lo (numeric-type-low type))
+	       (hi (numeric-type-high type)))
+	   (case (numeric-type-complexp type)
+	     (:real
+	      (case (numeric-type-class type)
+		(integer
+		 (cond ((and hi lo)
+			(dolist (spec
+				  '((positive-fixnum 0 #.(1- (ash 1 29)))
+				    #-alpha
+				    (unsigned-byte-31 0 #.(1- (ash 1 31)))
+				    #-alpha
+				    (unsigned-byte-32 0 #.(1- (ash 1 32)))
+				    #+alpha
+				    (unsigned-byte-63 0 #.(1- (ash 1 63)))
+				    #+alpha
+				    (unsigned-byte-64 0 #.(1- (ash 1 64)))
+				    (fixnum #.(ash -1 29) #.(1- (ash 1 29)))
+				    #-alpha
+				    (signed-byte-32 #.(ash -1 31)
+						    #.(1- (ash 1 31)))
+				    #+alpha
+				    (signed-byte-64 #.(ash -1 63)
+						    #.(1- (ash 1 63))))
+				 (if (or (< hi (ash -1 29))
+					 (> lo (1- (ash 1 29))))
+				     (part-of bignum)
+				     (any)))
+			  (let ((type (car spec))
+				(min (cadr spec))
+				(max (caddr spec)))
+			    (when (<= min lo hi max)
+			      (return (values
+				       (primitive-type-or-lose type *backend*)
+				       (and (= lo min) (= hi max))))))))
+		       ((or (and hi (< hi most-negative-fixnum))
+			    (and lo (> lo most-positive-fixnum)))
+			(part-of bignum))
+		       (t
+			(any))))
+		(float
+		 (let ((exact (and (null lo) (null hi))))
+		   (case (numeric-type-format type)
+		     ((short-float single-float)
+		      (values (primitive-type-or-lose 'single-float *backend*)
+			      exact))
+		     ((double-float long-float)
+		      (values (primitive-type-or-lose 'double-float *backend*)
+			      exact))
 		     (t
-		      (any))))
-	      (float
-	       (let ((exact (and (null lo) (null hi))))
-		 (case (numeric-type-format type)
-		   ((short-float single-float)
-		    (values (primitive-type-or-lose 'single-float *backend*)
-			    exact))
-		   ((double-float long-float)
-		    (values (primitive-type-or-lose 'double-float *backend*)
-			    exact))
-		   (t
-		    (any)))))
-	      (t
-	       (any))))
-	   (:complex
-	    #+complex-float
-	    (if (eq (numeric-type-class type) 'float)
-		(let ((exact (and (null lo) (null hi))))
-		  (case (numeric-type-format type)
-		    ((short-float single-float)
-		     (values (primitive-type-or-lose 'complex-single-float
-						     *backend*)
-			     exact))
-		    ((double-float long-float)
-		     (values (primitive-type-or-lose 'complex-double-float
-						     *backend*)
-			     exact))
-		    (t
-		     (part-of complex))))
-		(part-of complex))
-	    #-complex-float
-	    (part-of complex))
+		      (any)))))
+		(t
+		 (any))))
+	     (:complex
+	      #+complex-float
+	      (if (eq (numeric-type-class type) 'float)
+		  (let ((exact (and (null lo) (null hi))))
+		    (case (numeric-type-format type)
+		      ((short-float single-float)
+		       (values (primitive-type-or-lose 'complex-single-float
+						       *backend*)
+			       exact))
+		      ((double-float long-float)
+		       (values (primitive-type-or-lose 'complex-double-float
+						       *backend*)
+			       exact))
+		      (t
+		       (part-of complex))))
+		  (part-of complex))
+	      #-complex-float
+	      (part-of complex))
+	     (t
+	      (any)))))
+	(array-type
+	 (if (array-type-complexp type)
+	     (any)
+	     (let* ((dims (array-type-dimensions type))
+		    (etype (array-type-specialized-element-type type))
+		    (type-spec (type-specifier etype))
+		    (ptype (cdr (assoc type-spec *simple-array-primitive-types*
+				       :test #'equal))))
+	       (if (and (consp dims) (null (rest dims)) ptype)
+		   (values (primitive-type-or-lose ptype *backend*)
+			   (eq (first dims) '*))
+		   (any)))))
+	(union-type
+	 (if (type= type (specifier-type 'list))
+	     (exactly list)
+	     (let ((types (union-type-types type)))
+	       (multiple-value-bind (res exact)
+		   (primitive-type (first types))
+		 (dolist (type (rest types) (values res exact))
+		   (multiple-value-bind (ptype ptype-exact)
+		       (primitive-type type)
+		     (unless ptype-exact (setq exact nil))
+		     (unless (eq ptype res)
+		       (let ((new-ptype
+			      (or (maybe-numeric-type-union res ptype)
+				  (maybe-numeric-type-union ptype res))))
+			 (if new-ptype
+			     (setq res new-ptype)
+			     (return (any)))))))))))
+	(member-type
+	 (let* ((members (member-type-members type))
+		(res (primitive-type-of (first members))))
+	   (dolist (mem (rest members) (values res nil))
+	     (let ((ptype (primitive-type-of mem)))
+	       (unless (eq ptype res)
+		 (let ((new-ptype (or (maybe-numeric-type-union res ptype)
+				      (maybe-numeric-type-union ptype res))))
+		   (if new-ptype
+		       (setq res new-ptype)
+		       (return (any)))))))))
+	(named-type
+	 (ecase (named-type-name type)
+	   ((t *) (values *any-primitive-type* t))
+	   ((nil) (any))))
+	(built-in-class
+	 (case (class-name type)
+	   ((complex function instance system-area-pointer weak-pointer)
+	    (values (primitive-type-or-lose (class-name type) *backend*) t))
+	   (funcallable-instance
+	    (part-of function))
+	   (base-char
+	    (exactly base-char))
+	   (cons
+	    (part-of list))
 	   (t
-	    (any)))))
-      (array-type
-       (if (array-type-complexp type)
-	   (any)
-	   (let* ((dims (array-type-dimensions type))
-		  (etype (array-type-specialized-element-type type))
-		  (type-spec (type-specifier etype))
-		  (ptype (cdr (assoc type-spec *simple-array-primitive-types*
-				     :test #'equal))))
-	     (if (and (consp dims) (null (rest dims)) ptype)
-		 (values (primitive-type-or-lose ptype *backend*)
-			 (eq (first dims) '*))
-		 (any)))))
-      (union-type
-       (if (type= type (specifier-type 'list))
-	   (exactly list)
-	   (let ((types (union-type-types type)))
-	     (multiple-value-bind (res exact)
-				  (primitive-type (first types))
-	       (dolist (type (rest types) (values res exact))
-		 (multiple-value-bind (ptype ptype-exact)
-				      (primitive-type type)
-		   (unless ptype-exact (setq exact nil))
-		   (unless (eq ptype res)
-		     (return (any)))))))))
-      (member-type
-       (let* ((members (member-type-members type))
-	      (res (primitive-type-of (first members))))
-	 (dolist (mem (rest members) (values res nil))
-	   (unless (eq (primitive-type-of mem) res)
-	     (return (values *any-primitive-type* nil))))))
-      (named-type
-       (ecase (named-type-name type)
-	 ((t *) (values *any-primitive-type* t))
-	 ((nil) (values *any-primitive-type* nil))))
-      (built-in-class
-       (case (class-name type)
-	 ((complex function instance system-area-pointer weak-pointer)
-	  (values (primitive-type-or-lose (class-name type) *backend*) t))
-	 (funcallable-instance
-	  (part-of function))
-	 (base-char
-	  (exactly base-char))
-	 (cons
-	  (part-of list))
-	 (t
-	  (any))))
-      (function-type
-       (exactly function))
-      (class
-       (if (csubtypep type (specifier-type 'function))
-	   (part-of function)
-	   (part-of instance)))
-      (ctype
-       (any)))))
+	    (any))))
+	(function-type
+	 (exactly function))
+	(class
+	 (if (csubtypep type (specifier-type 'function))
+	     (part-of function)
+	     (part-of instance)))
+	(ctype
+	 (any))))))
