@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.16 1991/12/01 18:06:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.17 1991/12/02 18:56:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1357,7 +1357,7 @@
 		 :complaint "Cannot specify both colon and at-sign.")
 	  (expand-bind-defaults ((posn 0)) params
 	    `(if (<= 0 ,posn (length orig-args))
-		 (setf args (subseq orig-args ,posn))
+		 (setf args (nthcdr ,posn orig-args))
 		 (error 'format-error
 			:complaint "Index ~D out of bounds.  Should have been ~
 				    between 0 and ~D."
@@ -1370,7 +1370,7 @@
 		 ((eq arg-ptr args)
 		  (let ((new-posn (- cur-posn ,n)))
 		    (if (<= 0 new-posn (length orig-args))
-			(setf args (subseq orig-args new-posn))
+			(setf args (nthcdr new-posn orig-args))
 			(error 'format-error
 			       :complaint
 			       "Index ~D out of bounds.  Should have been ~
@@ -1391,7 +1391,7 @@
 		 :complaint "Cannot specify both colon and at-sign.")
 	  (interpret-bind-defaults ((posn 0)) params
 	    (if (<= 0 posn (length orig-args))
-		(setf args (subseq orig-args posn))
+		(setf args (nthcdr posn orig-args))
 		(error 'format-error
 		       :complaint "Index ~D out of bounds.  Should have been ~
 				   between 0 and ~D."
@@ -1403,7 +1403,7 @@
 		((eq arg-ptr args)
 		 (let ((new-posn (- cur-posn n)))
 		   (if (<= 0 new-posn (length orig-args))
-		       (setf args (subseq orig-args new-posn))
+		       (setf args (nthcdr new-posn orig-args))
 		       (error 'format-error
 			      :complaint
 			      "Index ~D out of bounds.  Should have been ~
@@ -1465,7 +1465,7 @@
 	     :complaint "No corresponding close paren."))
     (let* ((posn (position close directives))
 	   (before (subseq directives 0 posn))
-	   (after (subseq directives (1+ posn))))
+	   (after (nthcdr (1+ posn) directives)))
       (values
        (expand-bind-defaults () params
 	 `(let ((stream (make-case-frob-stream stream
@@ -1487,7 +1487,7 @@
     (interpret-bind-defaults () params
       (let* ((posn (position close directives))
 	     (before (subseq directives 0 posn))
-	     (after (subseq directives (1+ posn)))
+	     (after (nthcdr (1+ posn) directives))
 	     (stream (make-case-frob-stream stream
 					    (if colonp
 						(if atsignp
@@ -1521,7 +1521,7 @@
 		 :complaint "No corresponding close bracket."))
 	(let ((posn (position close-or-semi remaining)))
 	  (push (subseq remaining 0 posn) sublists)
-	  (setf remaining (subseq remaining (1+ posn)))
+	  (setf remaining (nthcdr (1+ posn) remaining))
 	  (when (char= (format-directive-character close-or-semi) #\])
 	    (return))
 	  (setf last-semi-with-colon-p
@@ -1747,7 +1747,7 @@
 	    (setf loop
 		  `(let ((inside-string (next-arg)))
 		     ,loop)))
-	  (values loop (subseq directives (1+ posn))))))))
+	  (values loop (nthcdr (1+ posn) directives)))))))
 
 (def-complex-format-interpreter #\{
 				(colonp atsignp params string end directives)
@@ -1802,7 +1802,7 @@
 	      (setf args (do-loop orig-args args))
 	      (let ((arg (next-arg)))
 		(do-loop arg arg)))
-	  (subseq directives (1+ posn)))))))
+	  (nthcdr (1+ posn) directives))))))
 
 (def-complex-format-directive #\} ()
   (error 'format-error
@@ -1854,7 +1854,7 @@
 		   :complaint "No corresponding close bracket."))
 	  (let ((posn (position close-or-semi remaining)))
 	    (segments (subseq remaining 0 posn))
-	    (setf remaining (subseq remaining (1+ posn))))
+	    (setf remaining (nthcdr (1+ posn) remaining)))
 	  (when (char= (format-directive-character close-or-semi)
 		       #\>)
 	    (setf close close-or-semi)
@@ -1911,7 +1911,7 @@
 	      (when (and first-semi (format-directive-colonp first-semi))
 		(interpret-bind-defaults
 		    ((extra 0)
-		     (line-len (or (lisp::line-length stream) 72)))
+		     (len (or (lisp::line-length stream) 72)))
 		    (format-directive-params first-semi)
 		  (setf newline-string
 			(with-output-to-string (stream)
@@ -1921,20 +1921,21 @@
 							  orig-args
 							  args))))
 		  (setf extra-space extra)
-		  (setf line-len line-len)))
+		  (setf line-len len)))
 	      (dolist (segment segments)
 		(push (with-output-to-string (stream)
 			(setf args
 			      (interpret-directive-list stream segment
 							orig-args args)))
-		      strings))))
+		      strings))
+	      args))
       (format-justification stream newline-string extra-space line-len strings
 			    colonp atsignp mincol colinc minpad padchar)))
   args)
 
 (defun format-justification (stream newline-prefix extra-space line-len strings
 			     pad-left pad-right mincol colinc minpad padchar)
-  
+  (setf strings (reverse strings))
   (when (and (not pad-left) (not pad-right) (null (cdr strings)))
     (setf pad-left t))
   (let* ((num-gaps (+ (1- (length strings))
