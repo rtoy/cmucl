@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.27 1993/02/26 08:38:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.28 1993/03/01 16:16:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,10 +50,9 @@
 ;;;    Given any non-negative integer, return a prime number >= to it.
 ;;;
 (defun primify (x)
-  (declare (type unsigned-byte x))
+  (declare (type unsigned-byte x) (optimize (inhibit-warnings 2)))
   (do ((n (logior x 1) (+ n 2)))
       ((system:primep n) n)))
-
 
 
 ;;;; Defining info types:
@@ -298,10 +297,8 @@
       (when (listp next)
 	(let ((name (car next)))
 	  (when (and (symbolp name) (null (cdr next)))
-	    (return-from info-hash
-			 (logxor (%sxhash-simple-string (symbol-name name))
-				 110680597))))))
-    (sxhash x))
+	    (logxor (%sxhash-simple-string (symbol-name name))
+		    110680597))))))
    (t
     (sxhash x))))
 
@@ -416,6 +413,7 @@
     (once-only ((n-table `(volatile-info-env-table ,n-env))
 		(n-type-numbers '*type-numbers*))
       `(dotimes (,n-index (length ,n-table))
+	 (declare (type index ,n-index))
 	 (do-anonymous ((,n-names (svref ,n-table ,n-index)
 				  (cdr ,n-names)))
 		       ((null ,n-names))
@@ -1172,3 +1170,5 @@
 (define-info-type random-documentation stuff list ())
 
 ); defun other-info-init
+
+(declaim (freeze-type info-env))
