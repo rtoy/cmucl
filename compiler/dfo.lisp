@@ -195,7 +195,8 @@
 
 ;;; DFO-Walk-Call-Graph  --  Internal
 ;;;
-;;;    Move the code for Fun and all functions called by it into Component.
+;;;    Move the code for Fun and all functions called by it into Component.  If
+;;; Fun is already in Component, then we just return that component.
 ;;;
 ;;;    If the function is in an initial component, then we move its head and
 ;;; tail to Component and add it to Component's lambdas.  We then do a
@@ -205,17 +206,16 @@
 ;;; all functions called from Fun, moving code into whichever component the
 ;;; preceding call returned.
 ;;;
+;;;    If Fun is in the initial component, but the Block-Flag is set in the
+;;; bind block, then we just return Component, since we must have already
+;;; reached this function in the current walk (or the component would have been
+;;; changed).
+;;;
 ;;;    If the function is an XEP, then we also walk all functions that contain
 ;;; references to the XEP.  This is done so that environment analysis doesn't
 ;;; need to cross component boundries.  This also ensures that conversion of a
 ;;; full call to a local call won't result in a need to join components, since
 ;;; the components will already be one.
-;;;
-;;;    If Fun is in the initial component, but the Block-Flag is set in the
-;;; bind block, then we just return Component, since we must have already
-;;; reached this function in the current walk (or the component would have been
-;;; changed).  If Fun is already in Component, then we just return that
-;;; component.
 ;;;
 (defun dfo-walk-call-graph (fun component)
   (declare (type clambda fun) (type component component))
