@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.17 1991/03/24 18:41:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.18 1991/05/08 17:52:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -124,6 +124,12 @@
 	   (arg args (cdr arg)))
 	  ((null arg))
 	(check-arg-type (car arg) *wild-type* i)))
+     ((not (or optional keyp rest))
+      (if (/= nargs min-args)
+	  (note-lossage
+	   "Function called with ~R argument~:P, but wants exactly ~R."
+	   nargs min-args)
+	  (check-fixed-and-rest args required nil)))
      ((< nargs min-args)
       (note-lossage
        "Function called with ~R argument~:P, but wants at least ~R."
