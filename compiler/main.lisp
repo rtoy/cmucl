@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.75 1992/09/23 17:05:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.76 1992/09/23 17:09:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1069,7 +1069,11 @@
 (defun compile-load-time-value
        (form &optional
 	     (name (let ((*print-level* 2) (*print-length* 3))
-		     (format nil "Load Time Value of ~S" form))))
+		     (format nil "Load Time Value of ~S"
+			     (if (and (listp form)
+				      (eq (car form) 'make-value-cell))
+				 (second form)
+				 form)))))
   (let ((lambda (compile-load-time-stuff form name t)))
     (values
      (fasl-dump-load-time-value-lambda lambda *compile-object*)
