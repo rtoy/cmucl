@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.32 1994/10/26 15:12:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.33 1994/10/26 17:33:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
 (def-alien-type ino-t #-alpha unsigned-long #+alpha unsigned-int)
 (def-alien-type swblk-t long)
 (def-alien-type size-t #-alpha long #+alpha unsigned-long)
-(def-alien-type time-t #-alpha long #+alpha int)
+(def-alien-type time-t #-alpha unsigned-long #+alpha unsigned-int)
 (def-alien-type dev-t #-(or alpha svr4) short #+alpha int #+svr4 unsigned-long)
 (def-alien-type off-t #-alpha long #+alpha unsigned-long)
 (def-alien-type uid-t #-(or alpha svr4) unsigned-short #+alpha unsigned-int
@@ -144,8 +144,8 @@
 
 (def-alien-type nil
   (struct timeval
-    (tv-sec #-alpha long #+alpha int)		; seconds
-    (tv-usec #-alpha long #+alpha int)))		; and microseconds
+    (tv-sec time-t)		; seconds
+    (tv-usec time-t)))		; and microseconds
 
 (def-alien-type nil
   (struct timezone
@@ -157,6 +157,13 @@
   (struct itimerval
     (it-interval (struct timeval))	; timer interval
     (it-value (struct timeval))))	; current value
+
+#+svr4
+; High-res time.  Actually posix definition under svr4 name.
+(def-alien-type nil
+  (struct timestruc-t
+    (tv-sec time-t)
+    (tv-nsec long)))
 
 ;;; From ioctl.h
 
@@ -184,7 +191,7 @@
     (sg-ospeed char)			; output speed
     (sg-erase char)			; erase character
     (sg-kill char)			; kill character
-    (sg-flags #-(or hpux svr4) short #+(or hpux svr4) int))); mode flags
+    (sg-flags #+mach short #-mach int))) ; mode flags
 
 (def-alien-type nil
   (struct winsize
@@ -212,10 +219,7 @@
 (def-alien-type nil
   (struct direct
     #+(and sunos (not svr4)) (d-off long) ; offset of next disk directory entry
-    (d-ino unsigned-long)		; inode number of entry
-    #+svr4 (d-off long)
-    #+sunos (d-off long)		; offset of next disk directory entry
-    (d-ino #-alpha unsigned-long #+alpha unsigned-int); inode number of entry
+    (d-ino ino-t); inode number of entry
     #+svr4 (d-off long)
     (d-reclen unsigned-short)		; length of this record
     #-svr4
@@ -228,19 +232,13 @@
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
-#+svr4
-    (st-pad1 (array long 3))
     (st-ino ino-t)
     (st-mode mode-t)
     (st-nlink nlink-t)
     (st-uid uid-t)
     (st-gid gid-t)
     (st-rdev dev-t)
-#+svr4
-    (st-pad2 (array long 2))
     (st-size off-t)
-#+svr4
-    (st-pad3 long)
     (st-atime time-t)
     (st-spare1 int)
     (st-mtime time-t)
@@ -250,12 +248,6 @@
     (st-blksize #-alpha long #+alpha unsigned-int)
     (st-blocks #-alpha long #+alpha int)
     (st-spare4 (array long 2))))
-
-#+svr4
-(def-alien-type nil
-  (struct timestruc-t
-    (tv-sec time-t)
-    (tv-nsec long)))
 
 #+svr4
 (def-alien-type nil
