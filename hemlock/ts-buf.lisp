@@ -158,12 +158,13 @@
   nil)
 
 (defun ts-buffer-set-stream (ts stream)
-  (setf (ts-data-stream (if (wire:remote-object-p ts)
-			  (wire:remote-object-value ts)
-			  ts))
-	stream)
+  (let ((ts (if (wire:remote-object-p ts)
+		(wire:remote-object-value ts)
+		ts)))
+    (setf (ts-data-stream ts) stream)
+    (wire:remote (ts-data-wire ts)
+      (ts-stream-set-line-length (ts-buffer-line-length ts))))
   nil)
-
 
 
 ;;;; Typescript mode.
