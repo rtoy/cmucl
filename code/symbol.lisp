@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.36 2004/05/18 01:14:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.37 2004/06/10 01:36:09 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,13 +96,13 @@
 
 (defun make-symbol (string)
   "Make and return a new symbol with the STRING as its print name."
-  #-(or gengc x86 sparc) (make-symbol string)
+  #-(or gengc x86 amd64 sparc) (make-symbol string)
   #+gengc (%make-symbol (random most-positive-fixnum) string)
   ;; Initialize the symbol-hash to -1 to make this fast.  It will get
   ;; computed correctly later on.
-  #+(or sparc x86) (%make-symbol -1 string))
+  #+(or sparc x86 amd64) (%make-symbol -1 string))
 
-#+(or gengc x86 sparc)
+#+(or gengc x86 amd64 sparc)
 (defun symbol-hash (symbol)
   "Return the hash value for symbol."
   (symbol-hash symbol))
