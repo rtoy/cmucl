@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.3 1990/11/10 19:39:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.4 1990/11/13 06:16:57 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -71,7 +71,7 @@
 ;;; AREF  --  derive-type optimizer.
 ;;;
 (defoptimizer (aref derive-type) ((array &rest indices))
-  (assert-array-rank array indices)
+  (assert-array-rank array (length indices))
   (extract-element-type array))
 
 ;;; %ASET  --  derive-type optimizer.
