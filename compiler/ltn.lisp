@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.21 1991/02/20 14:58:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.22 1991/04/09 17:34:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -623,16 +623,9 @@
      (t t))))
 
 
-;;; Find-Template  --  Internal
+;;; IS-OK-TEMPLATE-USE  --  Internal
 ;;;
-;;;    Use operand type information to choose a template from the list
-;;; Templates for a known Call.  We return three values:
-;;; 1] The template we found.
-;;; 2] Some template that we rejected due to unsatisfied type restrictions, or
-;;;    NIL if none.
-;;; 3] The tail of Templates for templates we haven't examined yet.
-;;;
-;;; What we do:
+;;; Return true if Call is an ok use of Template according to Safe-P.  
 ;;; -- If the template has a Guard that isn't true, then we ignore the
 ;;;    template, not even considering it to be rejected.
 ;;; -- If the argument type restrictions aren't satisfied, then we reject the
@@ -646,31 +639,60 @@
 ;;;    doing the intersection, since the node type must be a subtype of the
 ;;;    assertion.
 ;;;
+;;; If the template is *not* ok, then the second value is a keyword indicating
+;;; which aspect failed.
+;;;
+(defun is-ok-template-use (template call safe-p)
+  (declare (type template template) (type combination call))
+  (let* ((guard (template-guard template))
+	 (cont (node-cont call))
+	 (atype (continuation-asserted-type cont))
+	 (dtype (node-derived-type call)))
+    (cond ((and guard (not (funcall guard)))
+	   (values nil :guard))
+	  ((not (template-args-ok template call safe-p))
+	   (values nil
+		   (if (and safe-p (template-args-ok template call nil))
+		       :arg-check
+		       :arg-types)))
+	  ((eq (template-result-types template) :conditional)
+	   (let ((dest (continuation-dest cont)))
+	     (if (and (if-p dest)
+		      (immediately-used-p (if-test dest) call))
+		 (values t nil)
+		 (values nil :conditional))))
+	  ((template-results-ok
+	    template
+	    (if (and (or (eq (template-policy template) :safe)
+			 (not safe-p))
+		     (continuation-type-check cont))
+		(values-type-intersection dtype atype)
+		dtype))
+	   (values t nil))
+	  (t
+	   (values nil :result-types)))))
+
+
+;;; Find-Template  --  Internal
+;;;
+;;;    Use operand type information to choose a template from the list
+;;; Templates for a known Call.  We return three values:
+;;; 1] The template we found.
+;;; 2] Some template that we rejected due to unsatisfied type restrictions, or
+;;;    NIL if none.
+;;; 3] The tail of Templates for templates we haven't examined yet.
+;;;
+;;; We just call IS-OK-TEMPLATE-USE until it returns true.
+;;;
 (defun find-template (templates call safe-p)
   (declare (list templates) (type combination call))
   (do ((templates templates (rest templates))
        (rejected nil))
       ((null templates)
        (values nil rejected nil))
-    (let* ((template (first templates))
-	   (guard (template-guard template)))
-      (when (and (or (not guard) (funcall guard))
-		 (template-args-ok template call safe-p))
-	(let* ((cont (node-cont call))
-	       (atype (continuation-asserted-type cont))
-	       (dtype (node-derived-type call)))
-	  (when (if (eq (template-result-types template) :conditional)
-		    (let ((dest (continuation-dest cont)))
-		      (and (if-p dest)
-			   (immediately-used-p (if-test dest) call)))
-		    (template-results-ok
-		     template
-		     (if (and (or (eq (template-policy template) :safe)
-				  (not safe-p))
-			      (continuation-type-check cont))
-			 (values-type-intersection dtype atype)
-			 dtype)))
-	    (return (values template rejected (rest templates))))))
+    (let ((template (first templates)))
+      (when (is-ok-template-use template call safe-p)
+	(return (values template rejected (rest templates))))
       (setq rejected template))))
 
 
@@ -734,6 +756,42 @@
 (proclaim '(type index *efficency-note-cost-threshold*))
 
 
+;;; STRANGE-TEMPLATE-FAILURE  --  Internal
+;;;
+;;;    This function is called by NOTE-REJECTED-TEMPLATES when it can't figure
+;;; out any reason why Template was rejected.  Users should never see these
+;;; messages, but they can happen in situations where the VM definition is
+;;; messed up somehow.
+;;;
+(defun strange-template-failure (template call policy frob)
+  (declare (type template template) (type combination call)
+	   (type policies policy) (type function frob))
+  (funcall frob "This shouldn't happen!  Bug?")
+  (multiple-value-bind (win why)
+		       (is-ok-template-use template call
+					   (policy-safe-p policy))
+    (assert (not win))
+    (ecase why
+      (:guard
+       (funcall frob "Template guard failed."))
+      (:arg-check
+       (funcall frob "Template is not safe, yet we were counting on it."))
+      (:arg-types
+       (funcall frob "Argument types invalid.")
+       (funcall frob "Argument primitive types:~%  ~S"
+		(mapcar #'(lambda (x)
+			    (primitive-type-name
+			     (ir2-continuation-primitive-type
+			      (continuation-info x))))
+			(combination-args call)))
+       (funcall frob "Argument type assertions:~%  ~S"
+		(template-arg-types template)))
+      (:conditional
+       (funcall frob "Conditional in a non-conditional context."))
+      (:result-types
+       (funcall frob "Result types invalid.")))))
+
+
 ;;; Note-Rejected-Templates  --  Internal
 ;;;
 ;;;    This function emits efficiency notes describing all of the templates
@@ -764,25 +822,25 @@
   (collect ((losers))
     (let ((safe-p (policy-safe-p policy))
 	  (verbose-p (policy call (= brevity 0)))
-	  (max-cost (- (template-cost (or template
-					  (template-or-lose 'call-named
-							    *backend*)))
+	  (max-cost (- (template-cost
+			(or template
+			    (template-or-lose 'call-named *backend*)))
 		       *efficency-note-cost-threshold*)))
       (dolist (try (function-info-templates (basic-combination-kind call)))
 	(when (> (template-cost try) max-cost) (return))
 	(let ((guard (template-guard try)))
-	  (when (and (template-note try)
-		     (or (not guard) (funcall guard))
+	  (when (and (or (not guard) (funcall guard))
 		     (or (not safe-p)
 			 (policy-safe-p (template-policy try)))
 		     (or verbose-p
-			 (valid-function-use
-			  call (template-type try)
-			  :argument-test #'types-intersect
-			  :result-test #'values-types-intersect)))
+			 (and (template-note try)
+			      (valid-function-use
+			       call (template-type try)
+			       :argument-test #'types-intersect
+			       :result-test #'values-types-intersect))))
 	    (losers try)))))
 
-    (when (and (losers))
+    (when (losers)
       (collect ((messages)
 		(count 0 +))
 	(flet ((frob (string &rest stuff)
@@ -797,19 +855,21 @@
 		   (valid (valid-function-use call type))
 		   (strict-valid (valid-function-use call type
 						     :strict-result t)))
-	      (when (or (not valid) (not strict-valid))
-		(frob "Unable to do ~A (cost ~D) because:"
-		      (template-note loser) (template-cost loser))
-		
-		(cond ((not valid)
-		       (valid-function-use call type
-					   :error-function #'frob
-					   :warning-function #'frob))
-		      (t
-		       (assert (policy-safe-p policy))
-		       (frob "Can't trust output type assertion under safe ~
-		              policy.")))
-		(count 1)))))
+	      (frob "Unable to do ~A (cost ~D) because:"
+		    (or (template-note loser) (template-name loser))
+		    (template-cost loser))
+	      (cond
+	       ((and valid strict-valid)
+		(strange-template-failure loser call policy #'frob))
+	       ((not valid)
+		(assert (not (valid-function-use call type
+						 :error-function #'frob
+						 :warning-function #'frob))))
+	       (t
+		(assert (policy-safe-p policy))
+		(frob "Can't trust output type assertion under safe ~
+		       policy.")))
+	      (count 1))))
 
 	(let ((*compiler-error-context* call))
 	  (compiler-note "~{~?~^~&~6T~}"
