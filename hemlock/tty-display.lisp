@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.6 1991/03/14 16:32:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.7 1991/03/15 22:17:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -111,10 +111,12 @@
     (when (window-modeline-buffer window)
       (let ((dl (window-modeline-dis-line window))
 	    (y (tty-hunk-modeline-pos hunk)))
-	(funcall (tty-device-standout-init device) hunk)
-	(funcall (tty-device-clear-to-eol device) hunk 0 y)
-	(tty-dumb-line-redisplay device hunk dl y)
-	(funcall (tty-device-standout-end device) hunk)
+	(unwind-protect
+	    (progn
+	      (funcall (tty-device-standout-init device) hunk)
+	      (funcall (tty-device-clear-to-eol device) hunk 0 y)
+	      (tty-dumb-line-redisplay device hunk dl y))
+	  (funcall (tty-device-standout-end device) hunk))
 	(setf (dis-line-flags dl) unaltered-bits)))))
 
 
@@ -166,10 +168,11 @@
     (when (window-modeline-buffer window)
       (let ((dl (window-modeline-dis-line window)))
 	(when (/= (dis-line-flags dl) unaltered-bits)
-	  (funcall (tty-device-standout-init device) hunk)
 	  (unwind-protect
-	      (tty-smart-line-redisplay device hunk dl
-					(tty-hunk-modeline-pos hunk))
+	      (progn
+		(funcall (tty-device-standout-init device) hunk)
+		(tty-smart-line-redisplay device hunk dl
+					  (tty-hunk-modeline-pos hunk)))
 	    (funcall (tty-device-standout-end device) hunk)))))))
 
 ;;; NEXT-DIS-LINE is used in DO-SEMI-DUMB-LINE-WRITES and
@@ -269,6 +272,8 @@
 (defvar *tty-line-deletions* (make-array (* 2 tty-hunk-height-limit)))
 
 (defvar *tty-line-writes* (make-array tty-hunk-height-limit))
+
+(defvar *tty-line-moves* (make-array tty-hunk-height-limit))
 
 (eval-when (compile eval)
 
@@ -401,7 +406,7 @@
 	    ;; One line-changed.
 	    (tty-smart-line-redisplay device hunk (car first-changed))
 	    ;; More lines changed.
-	    (multiple-value-bind (ins outs writes)
+	    (multiple-value-bind (ins outs writes moves)
 				 (compute-tty-changes
 				  first-changed last-changed
 				  (tty-hunk-modeline-pos hunk))
@@ -415,6 +420,7 @@
 		      (t
 		       (do-line-insertions hunk ins
 					   (do-line-deletions hunk outs))
+		       (note-line-moves moves)
 		       (do-line-writes hunk writes))))))
 	;; Set the bounds so we know we displayed...
 	(setf (window-first-changed window) the-sentinel
@@ -430,10 +436,11 @@
     (when (window-modeline-buffer window)
       (let ((dl (window-modeline-dis-line window)))
 	(when (/= (dis-line-flags dl) unaltered-bits)
-	  (funcall (tty-device-standout-init device) hunk)
 	  (unwind-protect
-	      (tty-smart-line-redisplay device hunk dl
-					(tty-hunk-modeline-pos hunk))
+	      (progn
+		(funcall (tty-device-standout-init device) hunk)
+		(tty-smart-line-redisplay device hunk dl
+					  (tty-hunk-modeline-pos hunk)))
 	    (funcall (tty-device-standout-end device) hunk)))))))
 
 
@@ -548,11 +555,11 @@
   (declare (fixnum modeline-pos))
   (let* ((dl first-changed)
 	 (flags (dis-line-flags (car dl)))
-	 (ins 0) (outs 0) (writes 0)
+	 (ins 0) (outs 0) (writes 0) (moves 0)
 	 (prev-delta 0) (cum-deletes 0) (net-delta 0) (cum-inserts 0)
 	 prev)
-    (declare (fixnum flags ins outs writes prev-delta cum-deletes net-delta
-		     cum-inserts))
+    (declare (fixnum flags ins outs writes moves prev-delta cum-deletes
+		     net-delta cum-inserts))
     (loop
       (cond
        ((logtest flags new-bit)
@@ -579,11 +586,13 @@
 		   (incf net-delta num)
 		   (incf cum-inserts num))))
 	  (loop
-	    (when (logtest flags (logior changed-bit new-bit))
-	      (queue car-dl *tty-line-writes* writes))
+	    (if (logtest flags (logior changed-bit new-bit))
+		(queue car-dl *tty-line-writes* writes)
+		(queue car-dl *tty-line-moves* moves))
 	    (next-dis-line)
 	    (setf car-dl (car dl))
-	    (when (/= (the fixnum (dis-line-delta car-dl)) curr-delta)
+	    (when (or (eq prev last-changed)
+		      (/= (the fixnum (dis-line-delta car-dl)) curr-delta))
 	      (setf prev-delta curr-delta)
 	      (return)))))
        ((logtest flags (logior changed-bit new-bit))
@@ -602,7 +611,7 @@
 			  *tty-line-insertions* ins)
 		   (queue (the fixnum (- net-delta))
 			  *tty-line-insertions* ins))))
-	(return (values ins outs writes))))))
+	(return (values ins outs writes moves))))))
 
 
 ;;;; Smart window redisplay -- operation methods.
@@ -625,6 +634,18 @@
 	(unless (zerop (si-line-length si-line))
 	  (funcall clear-to-eol hunk 0 y)
 	  (setf (si-line-length si-line) 0))))))
+
+;;; NOTE-LINE-MOVES  --  Internal
+;;;
+;;;    Clear out the flags and delta of lines that have been moved.
+;;;
+(defun note-line-moves (moves)
+  (let ((i 0))
+    (loop
+      (when (= i moves) (return))
+      (let ((dl (dequeue *tty-line-moves* i)))
+	(setf (dis-line-flags dl) unaltered-bits)
+	(setf (dis-line-delta dl) 0)))))
 
 ;;; DO-LINE-DELETIONS pops elements off the *tty-lines-deletions* queue,
 ;;; deleting lines from hunk's area of the screen.  The internal screen
