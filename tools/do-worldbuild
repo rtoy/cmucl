@@ -2,7 +2,7 @@
 #
 #  do-worldbuild -- script to run worldbuild
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/do-worldbuild,v 1.2 1991/12/13 10:32:28 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/do-worldbuild,v 1.3 1992/02/26 01:11:18 wlott Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -21,6 +21,7 @@ endif
 
 $lisp -noinit << EOF
 (setf (search-list "target:") '("$dest/" "$src/"))
+(load "target:bootstrap" :if-does-not-exist nil)
 (load "target:tools/setup")
 (load "target:compiler/generic/genesis")
 (load "target:tools/worldbuild")
