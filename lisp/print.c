@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.16 2004/08/06 21:53:37 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.17 2005/02/07 22:10:07 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -386,6 +386,22 @@ static char *symbol_slots[] = {"value: ", "unused: ",
 static char *ratio_slots[] = {"numer: ", "denom: ", NULL};
 static char *complex_slots[] = {"real: ", "imag: ", NULL};
 static char *code_slots[] = {"words: ", "entry: ", "debug: ", NULL};
+static char *array_slots[] = {"fill-pointer:   ",
+                              "fill-pointer-p: ",
+                              "elements:       ",
+                              "data:           ",
+                              "displacement:   ",
+                              "displaced-p:    ",
+                              /* Some reasonable number of dimensions */
+                              "dimension 1:    ",
+                              "dimension 2:    ",
+                              "dimension 3:    ",
+                              "dimension 4:    ",
+                              "dimension 5:    ",
+                              "dimension 6:    ",
+                              "dimension 7:    ",
+                              NULL};
+
 
 #if (defined(i386) || defined(__x86_64))
 static char *fn_slots[] = {"inst start: ", "next: ", "name: ", "arglist: ", "type: ", NULL};
@@ -574,6 +590,7 @@ static void print_otherptr(lispobj obj)
             case type_ComplexBitVector:
             case type_ComplexVector:
             case type_ComplexArray:
+                print_slots(array_slots, count, ptr);
                 break;
 
             case type_CodeHeader:
