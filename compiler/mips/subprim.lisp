@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.5 1990/04/24 02:56:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.6 1990/04/25 21:46:44 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -39,7 +39,7 @@
       (emit-label loop)
 
       (inst beq ptr null-tn done)
-      (nop)
+      (inst nop)
 
       (simple-test-simple-type ptr temp not-list t vm:list-pointer-type)
 
@@ -55,3 +55,69 @@
 
 (define-static-function length (object) :translate length)
 
+
+
+
+;;;; Debugger support
+
+(define-vop (current-sp)
+  (:results (res :scs (sap-reg)))
+  (:generator 1
+    (move res csp-tn)))
+
+(define-vop (read-control-stack sap-ref)
+  (:results (result :scs (descriptor-reg)))
+  (:variant :pointer nil))
+
+(define-vop (write-control-stack sap-set)
+  (:arg-types system-area-pointer fixnum *)
+  (:results (result :scs (descriptor-reg)))
+  (:variant :pointer nil))
+
+
+
+
+;;;; Foreign function call interfaces.
+
+(define-vop (foreign-symbol-address)
+  (:info foreign-symbol)
+  (:result (res :scs (sap-reg)))
+  (:generator 2
+    (inst li res (make-fixup foreign-symbol :foreign))))
+
+(define-vop (call-out)
+  (:args (args :more t))
+  (:ignore args)
+  (:save-p t)
+  (:info function)
+  (:results (result :scs (sap-reg signed-reg unsigned-reg)))
+  (:temporary (:sc any-reg :offset 2) v0)
+  (:temporary (:sc any-reg :offset lra-offset) lra)
+  (:temporary (:sc any-reg :offset code-offset) code)
+  (:temporary (:scs (any-reg) :type fixnum) temp)
+  (:generator 0
+    (let ((lra-label (gen-label)))
+      (inst li v0 (make-fixup function :foreign))
+      (inst li temp (make-fixup "call_into_c" :foreign))
+      (inst j temp)
+      (inst compute-lra-from-code lra code lra-label)
+      (align vm:lowtag-bits)
+      (emit-label lra-label)
+      (inst lra-header-word)
+      (move result v0))))
+
+
+(define-vop (alloc-number-stack-space)
+  (:info amount)
+  (:translate %alloc-number-stack-space)
+  (:results (result :scs (sap-reg)))
+  (:generator 0
+    (inst addu nsp-tn nsp-tn (- amount))
+    (move result nsp-tn)))
+
+(define-vop (dealloc-number-stack-space)
+  (:info amount)
+  (:policy :fast-safe)
+  (:translate %dealloc-number-stack-space)
+  (:generator 0
+    (inst addu nsp-tn nsp-tn amount)))
