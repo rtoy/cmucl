@@ -12,11 +12,12 @@
 ;;;
 
 (in-package "BIGNUM")
+(use-package "VM")
 
 (export '(add-bignums multiply-bignums negate-bignum subtract-bignum
 	  multiply-bignum-and-fixnum multiply-fixnums
 	  bignum-ashift-right bignum-ashift-left bignum-gcd
-	  bignum-to-single-float bignum-to-double-float bignum-integer-length
+	  bignum-to-float float-bignum-ratio bignum-integer-length
 	  bignum-logical-and bignum-logical-ior bignum-logical-xor
 	  bignum-logical-not bignum-load-byte bignum-deposit-byte
 	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
@@ -54,15 +55,13 @@
 ;;;       %LOGAND
 ;;;       %LOGIOR
 ;;;       %LOGXOR
-;;;    Float conversion:
-;;;       %SIGNED-DIGIT-TO-SINGLE-FLOAT
-;;;       %DIGIT-TO-SINGLE-FLOAT
-;;;       %SIGNED-DIGIT-TO-DOUBLE-FLOAT
-;;;       %DIGIT-TO-DOUBLE-FLOAT
 ;;;    LDB
 ;;;       %FIXNUM-TO-DIGIT
 ;;;    TRUNCATE
 ;;;       %FLOOR
+;;;
+;;;
+;;; Note: The floating routines know about the float representation.
 ;;;
 ;;; PROBLEM 1:
 ;;; There might be a problem with various LET's and parameters that take a
@@ -241,50 +240,6 @@
   (if (logbitp (1- digit-size) digit)
       (logior digit (ash -1 digit-size))
       digit))
-
-#|
-;;; %SIGNED-DIGIT-TO-SINGLE-FLOAT -- Internal.
-;;;
-;;; Convert the digit into a single float treating the digit as a signed number.
-;;; 
-(defun %signed-digit-to-single-float (digit)
-  (declare (type bignum-element-type digit))
-  (coerce (%fixnum-digit-with-correct-sign digit) 'single-float))
-
-;;; %SIGNED-DIGIT-TO-SINGLE-FLOAT -- Internal.
-;;;
-;;; Convert the digit into a single float treating the digit as an unsigned
-;;; number.
-;;; 
-(proclaim '(inline %digit-to-single-float))
-(defun %digit-to-single-float (digit)
-  (declare (type bignum-element-type digit))
-  (+ (* (%signed-digit-to-single-float (ash digit #.(- (floor digit-size 2))))
-	#.(coerce (ash 1 (floor digit-size 2)) 'single-float))
-     (%signed-digit-to-single-float
-      (logand digit #.(1- (ash 1 (floor digit-size 2)))))))
-
-;;; %SIGNED-DIGIT-TO-DOUBLE-FLOAT -- Internal.
-;;;
-;;; Convert the digit into a double float treating the digit as a signed number.
-;;; 
-(defun %signed-digit-to-double-float (digit)
-  (declare (type bignum-element-type digit))
-  (coerce (%fixnum-digit-with-correct-sign digit) 'double-float))
-
-;;; %SIGNED-DIGIT-TO-DOUBLE-FLOAT -- Internal.
-;;;
-;;; Convert the digit into a double float treating the digit as an unsigned
-;;; number.
-;;; 
-(proclaim '(inline %digit-to-double-float))
-(defun %digit-to-double-float (digit)
-  (declare (type bignum-element-type digit))
-  (+ (* (%signed-digit-to-double-float (ash digit #.(- (floor digit-size 2))))
-	#.(coerce (ash 1 (floor digit-size 2)) 'double-float))
-     (%signed-digit-to-double-float
-      (logand digit #.(1- (ash 1 (floor digit-size 2)))))))
-|#
 
 ;;; %ASHR -- Internal.
 ;;;
@@ -1011,7 +966,7 @@
 	   (if a-plusp 1 -1))
 	  ((= len-a len-b)
 	   (do ((i (1- len-a) (1- i)))
-	       ((zerop i) 0)
+	       (())
 	     (declare (type bignum-index i))
 	     (let ((a-digit (%bignum-ref a i))
 		   (b-digit (%bignum-ref b i)))
@@ -1019,7 +974,8 @@
 	       (when (> a-digit b-digit)
 		 (return 1))
 	       (when (> b-digit a-digit)
-		 (return -1)))))
+		 (return -1)))
+	     (when (zerop i) (return 0))))
 	  ((> len-a len-b)
 	   (if a-plusp 1 -1))
 	  (t
@@ -1029,48 +985,127 @@
 
 ;;;; Float conversion.
 
-#|
-
-(eval-when (compile eval)
-
-;;; BIGNUM-TO-FLOAT -- Internal.
+;;; FLOAT-BIGNUM-RATIO  --  Internal
 ;;;
-;;; This macro takes the float format to generate, a function that will
-;;; convert a *signed* digit into that format, and a dunction that will
-;;; convert an *unsigned* digit into that format.
+;;;    Given a Ratio with arbitrarily large numerator and denominator, convert
+;;; it to a float in the specified Format without causing spurious floating
+;;; overflows.  What we do is discard all of the numerator and denominator
+;;; except for the format's precision + guard bits.  We float these
+;;; integers, do the floating division, and then scaled the result accordingly.
 ;;;
-(defmacro bignum-to-float (format signed-conv unsigned-conv)
-  `(do* ((posn (1- (%bignum-length bignum)) (1- posn))
-	 (res (,signed-conv (%bignum-ref bignum posn))
-	      (+ (* res ,(coerce (ash 1 digit-size) format))
-		 (,unsigned-conv (%bignum-ref bignum posn)))))
-	((= posn 0) res)))
-
-) ;EVAL-WHEN
-     
-
-;;; BIGNUM-TO-SINGLE-FLOAT -- Public.
+;;;    The use of digit-size as the number of guard bits is relatively
+;;; arbitrary.  We want to keep around some extra bits so that we rarely do
+;;; round-to-even when there were low bits that could have caused us to round
+;;; up.  We really only need to discard enough bits to ensure that floating the
+;;; result doesn't overflow.
 ;;;
-;;; This converts bignum into a single float.
-;;;
-(defun bignum-to-single-float (bignum)
-  (declare (type bignum-type bignum))
-  (bignum-to-float single-float
-		   %signed-digit-to-single-float
-		   %digit-to-single-float))
+(defun float-bignum-ratio (ratio format)
+  (let* ((bits-to-keep (+ (float-format-digits format) digit-size))
+	 (num (numerator ratio))
+	 (num-len (integer-length num))
+	 (num-shift (min (- bits-to-keep num-len) 0))
+	 (den (denominator ratio))
+	 (den-len (integer-length den))
+	 (den-shift (min (- bits-to-keep den-len) 0)))
+    (multiple-value-bind
+	(decoded exp sign)
+	(decode-float (/ (coerce (ash num num-shift) format)
+			 (coerce (ash den den-shift) format)))
+      (* sign (scale-float decoded (+ exp (- num-shift) den-shift))))))
 
-;;; BIGNUM-TO-DOUBLE-FLOAT -- Public.
-;;;
-;;; This converts bignum into a double float.
-;;;
-(defun bignum-to-double-float (bignum)
-  (declare (type bignum-type bignum))
-  (bignum-to-float double-float
-		   %signed-digit-to-double-float
-		   %digit-to-double-float))
 
-|#
+;;; xxx-FLOAT-FROM-BITS  --  Internal
+;;;
+;;;    Make a single or double float with the specified significand, exponent
+;;; and sign.
+;;;
+(defun single-float-from-bits (bits exp plusp)
+  (let ((res (dpb exp
+		  single-float-exponent-byte
+		  (logandc2 (ext:truly-the (unsigned-byte 31)
+					   (%bignum-ref bits 1))
+			    single-float-hidden-bit))))
+    (make-single-float
+     (if plusp
+	 res
+	 (logior res (ash -1 float-sign-shift))))))
+;;;
+(defun double-float-from-bits (bits exp plusp)
+  (let ((hi (dpb exp
+		 double-float-exponent-byte
+		 (logandc2 (ext:truly-the (unsigned-byte 31)
+					  (%bignum-ref bits 2))
+			   double-float-hidden-bit))))
+    (make-double-float
+     (if plusp
+	 hi
+	 (logior hi (ash -1 float-sign-shift)))
+     (%bignum-ref bits 1))))
 
+
+;;; BIGNUM-TO-FLOAT   --  Interface
+;;;
+;;;    Convert Bignum to a float in the specified Format, rounding to the best
+;;; approximation.
+;;;
+(defun bignum-to-float (bignum format)
+  (let* ((plusp (bignum-plus-p bignum))
+	 (x (if plusp bignum (negate-bignum bignum)))
+	 (len (bignum-integer-length x))
+	 (digits (float-format-digits format))
+	 (keep (+ digits digit-size))
+	 (shift (- keep len))
+	 (shifted (if (minusp shift)
+		      (bignum-ashift-right x (- shift))
+		      (bignum-ashift-left x shift)))
+	 (low (%bignum-ref shifted 0))
+	 (round-bit (ash 1 (1- digit-size))))
+    (labels ((round-up ()
+	       (let ((rounded (add-bignums shifted round-bit)))
+		 (if (> (integer-length rounded) keep)
+		     (float-from-bits (bignum-ashift-right rounded 1)
+				      (1+ len))
+		     (float-from-bits rounded len))))
+	     (float-from-bits (bits len)
+	       (ecase format
+		 (single-float
+		  (single-float-from-bits
+		   bits
+		   (check-exponent len single-float-bias
+		                   single-float-normal-exponent-max)
+		   plusp))
+		 (double-float
+		  (double-float-from-bits
+		   bits
+		   (check-exponent len double-float-bias
+		                   double-float-normal-exponent-max)
+		   plusp))))
+	     (check-exponent (exp bias max)
+	       (let ((exp (+ exp bias)))
+		 (when (> exp max)
+		   (error "Too large to be represented as a ~S:~%  ~S"
+			  format x))
+		 exp)))
+
+    (cond
+     ;;
+     ;; Round down if round bit is 0.
+     ((zerop (logand round-bit low))
+      (float-from-bits shifted len))
+     ;;
+     ;; If only round bit is set, then round to even.
+     ((and (= low round-bit)
+	   (dotimes (i (- (%bignum-length x) (ceiling keep digit-size))
+		       t)
+	     (unless (zerop (%bignum-ref x i)) (return nil))))
+      (let ((next (%bignum-ref shifted 1)))
+	(if (oddp next)
+	    (round-up)
+	    (float-from-bits shifted len))))
+     ;;
+     ;; Otherwise, round up.
+     (t
+      (round-up))))))
 
 
 ;;;; Integer length and logcount
