@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.12 1990/10/11 17:32:59 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.13 1990/10/13 05:08:58 wlott Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -881,7 +881,7 @@
 (defknown describe (t &optional stream) (values))
 (defknown inspect (t) (values))
 
-(defknown room (&optional (member t nil) t) void)
+(defknown room (&optional (member t nil :default)) void)
 (defknown ed (&optional filename) t)
 (defknown dribble (&optional filename &key (if-exists t)) t)
 
