@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.81 1998/05/09 22:11:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.82 1998/05/11 14:32:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -890,11 +890,11 @@
 (defknown read-from-string
   (string &optional t t &key (:start index) (:end sequence-end)
 	  (:preserve-whitespace t))
-  t)
+  (values t index))
 (defknown parse-integer
   (string &key (:start index) (:end sequence-end) (:radix (integer 2 36))
 	  (:junk-allowed t)) 
-  (or integer null ()))
+  (values (or integer null ()) index))
 
 (defknown read-byte (stream &optional t t) t (explicit-check))
 
