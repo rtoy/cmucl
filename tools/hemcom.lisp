@@ -241,6 +241,7 @@
  "target:hemlock/ts-buf"
  "target:hemlock/ts-stream"
  "target:hemlock/eval-server"
+ "target:hemlock/dylan"
  "target:hemlock/lispbuf"
  "target:hemlock/lispeval"
  "target:hemlock/spell-rt"
