@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.10 1990/10/13 04:50:01 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.11 1990/10/22 12:38:51 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -36,22 +36,22 @@ static void fake_foreign_function_call(context)
     
     /* Build a fake stack frame */
     current_control_frame_pointer = (lispobj *) context->sc_regs[CSP];
-    if ((lispobj *)context->sc_regs[CONT]==current_control_frame_pointer) {
+    if ((lispobj *)context->sc_regs[CFP]==current_control_frame_pointer) {
         /* There is a small window during call where the callee's frame */
         /* isn't built yet. */
         if (LowtagOf(context->sc_regs[CODE]) == type_FunctionPointer) {
             /* We have called, but not built the new frame, so
                build it for them. */
-            current_control_frame_pointer[0] = context->sc_regs[OLDCONT];
+            current_control_frame_pointer[0] = context->sc_regs[OCFP];
             current_control_frame_pointer[1] = context->sc_regs[LRA];
             current_control_frame_pointer += 8;
             /* Build our frame on top of it. */
-            oldcont = (lispobj)context->sc_regs[CONT];
+            oldcont = (lispobj)context->sc_regs[CFP];
         }
         else {
             /* We haven't yet called, build our frame as if the
                partial frame wasn't there. */
-            oldcont = (lispobj)context->sc_regs[OLDCONT];
+            oldcont = (lispobj)context->sc_regs[OCFP];
         }
     }
     /* ### We can't tell if we are still in the caller if it had to
@@ -59,7 +59,7 @@ static void fake_foreign_function_call(context)
     /* ### Can anything strange happen during return? */
     else
         /* Normal case. */
-        oldcont = (lispobj)context->sc_regs[CONT];
+        oldcont = (lispobj)context->sc_regs[CFP];
     
     current_control_stack_pointer = current_control_frame_pointer + 8;
     current_control_frame_pointer[0] = oldcont;
@@ -268,8 +268,13 @@ struct sigcontext *context;
 
     if (dest < 32) {
         set_global_pointer(saved_global_pointer);
+        current_dynamic_space_free_pointer =
+            (lispobj *) context->sc_regs[ALLOC];
 
         context->sc_regs[dest] = alloc_number(result);
+
+	context->sc_regs[ALLOC] =
+	    (unsigned long) current_dynamic_space_free_pointer;
 
         skip_instruction(context);
 

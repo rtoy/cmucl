@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.6 1990/07/02 05:22:23 wlott Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.7 1990/10/22 12:38:28 wlott Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -92,13 +92,13 @@ struct sigcontext *csp;
     info->interrupted = 1;
     if (LowtagOf(csp->sc_regs[CODE]) == type_FunctionPointer) {
         /* We tried to call a function, but crapped out before $CODE could be fixed up.  Probably an undefined function. */
-        info->frame = (struct call_frame *)csp->sc_regs[OLDCONT];
+        info->frame = (struct call_frame *)csp->sc_regs[OCFP];
         info->lra = (lispobj)csp->sc_regs[LRA];
         info->code = code_pointer(info->lra);
         pc = (unsigned long)PTR(info->lra);
     }
     else {
-        info->frame = (struct call_frame *)csp->sc_regs[CONT];
+        info->frame = (struct call_frame *)csp->sc_regs[CFP];
         info->code = code_pointer(csp->sc_regs[CODE]);
         info->lra = NIL;
         pc = csp->sc_pc;
@@ -136,7 +136,7 @@ struct call_info *info;
         free = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
         while (free-- > 0) {
             csp = lisp_interrupt_contexts[free];
-            if ((struct call_frame *)(csp->sc_regs[CONT]) == info->frame) {
+            if ((struct call_frame *)(csp->sc_regs[CFP]) == info->frame) {
                 info_from_sigcontext(info, csp);
                 break;
             }

@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.16 1990/10/22 12:28:20 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.17 1990/10/22 12:38:46 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -372,7 +372,7 @@ scavenge_interrupt_contexts()
 
 static int boxed_registers[] = {
 	A0, A1, A2, A3, A4, A5, CNAME, LEXENV,
-	ARGS, OLDCONT, LRA, L0, L1, L2, CODE
+	NFP, OCFP, LRA, L0, L1, L2, CODE
 };
 
 scavenge_interrupt_context(context)
