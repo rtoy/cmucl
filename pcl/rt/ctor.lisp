@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.3 2003/04/24 13:44:15 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.4 2003/04/24 13:52:55 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -240,6 +240,7 @@
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
   (let ()
+    (declare (ignorable))
     (setf (pcl::%svref pcl::.slots. 0) (the t b))
     (setf (pcl::%svref pcl::.slots. 1) (the t a))))
 
@@ -250,6 +251,7 @@
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
   (let ()
+    (declare (ignorable))
     (setf (pcl::%svref pcl::.slots. 0) (the t '2))
     (setf (pcl::%svref pcl::.slots. 1) (the t a))))
 
@@ -264,6 +266,7 @@
       (setf (pcl::ctor-class ctor) (find-class 'foo5))
       (pcl::slot-init-forms ctor nil))
   (let ()
+    (declare (ignorable))
     (setf (pcl::%svref pcl::.slots. 0) pcl::+slot-unbound+)
     (setf (pcl::%svref pcl::.slots. 1) (the t a))))
 
@@ -278,6 +281,7 @@
       (setf (pcl::ctor-class ctor) (find-class 'foo5a))
       (pcl::slot-init-forms ctor nil))
   (let ()
+    (declare (ignorable))
     (setf (pcl::%svref pcl::.slots. 0) (the t '0))
     (setf (pcl::%svref pcl::.slots. 1) (the t '0))))
 
@@ -292,6 +296,7 @@
       (setf (pcl::ctor-class ctor) (find-class 'foo6))
       (pcl::slot-init-forms ctor nil))
   (let ()
+    (declare (ignorable))
     (setf (pcl::%svref pcl::.slots. 0) pcl::+slot-unbound+)
     (setf (cdr '(a . 0)) (the t a))))
 
@@ -308,10 +313,10 @@
 		 'foo7 '())))
       (setf (pcl::ctor-class ctor) (find-class 'foo7))
       (let ((form (pcl::slot-init-forms ctor nil)))
-	(values (third form)
-		(second (fourth form))
-		(first (third (third (fourth form))))
-		(functionp (second (third (third (fourth form))))))))
+	(values (fourth form)
+		(second (fifth form))
+		(first (third (third (fifth form))))
+		(functionp (second (third (third (fifth form))))))))
   (setf (pcl::%svref pcl::.slots. 0) pcl::+slot-unbound+)
   (pcl::%svref pcl::.slots. 1)
   funcall
@@ -324,6 +329,7 @@
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
   (let ()
+    (declare (ignorable))
     (setf (pcl::%svref pcl::.slots. 0) (the t '2))
     (setf (pcl::%svref pcl::.slots. 1) (the t '(foo)))))
 
@@ -334,31 +340,12 @@
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
   (let ()
+    (declare (ignorable))
     (setf (pcl::%svref pcl::.slots. 0) (the t '2))
     (setf (pcl::%svref pcl::.slots. 1) (the t 'x))))
 
 (defmethod bar1 ((x integer))
   (* x 2))
-
-#+nil
-(deftest invoke-method.0
-    (let ((methods (pcl::compute-applicable-methods #'bar1 (list 1))))
-      (eval `(pcl::invoke-method ,(first methods) ',(list 1))))
-  2)
-
-#+nil
-(deftest invoke-method.1
-    (let ((methods (pcl::compute-applicable-methods #'bar1 (list 1)))
-	  (args (list 2)))
-      (eval `(pcl::invoke-method ,(first methods) ',args)))
-  4)
-
-#+nil
-(deftest invoke-method.2
-    (let ((methods (pcl::compute-applicable-methods #'bar1 (list 1))))
-      (eval `(let ((.args. (list 3)))
-	       (pcl::invoke-method ,(first methods) .args.))))
-  6)
 
 (defmethod bar2 ((x integer)) x)
 (defmethod bar2 :around ((x integer)) x)
