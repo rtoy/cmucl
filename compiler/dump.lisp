@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.34 1991/11/24 23:00:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.35 1991/12/14 18:12:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.34 1991/11/24 23:00:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.35 1991/12/14 18:12:00 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -88,8 +88,11 @@
   ;;
   ;; Except with list objects, the key and the value are always the same.  In a
   ;; list, the key will be some tail of the value.
-  (circularity-table (make-hash-table :test #'eq) :type hash-table))
-
+  (circularity-table (make-hash-table :test #'eq) :type hash-table)
+  ;;
+  ;; Hash table of structures that are allowed to be dumped.  If we try to
+  ;; dump a structure that isn't in this hash table, we lose.
+  (valid-structures (make-hash-table :test #'eq) :type hash-table))
 
 ;;; This structure holds information about a circularity.
 ;;;
@@ -124,6 +127,11 @@
 ;;; loader.
 ;;;
 (defvar *cold-load-dump* nil)
+
+
+;;; Used to turn off the structure validation during dumping of source info.
+;;;
+(defvar *dump-only-valid-structures* t)
 
 
 ;;;; Utilities:
@@ -458,7 +466,8 @@
 	     (dump-fop 'lisp::fop-misc-trap file)))))
 
       ;; Dump the debug info.
-      (let ((info (debug-info-for-component component)))
+      (let ((info (debug-info-for-component component))
+	    (*dump-only-valid-structures* nil))
 	(dump-object info file)
 	(let ((info-handle (dump-pop file)))
 	  (dump-push info-handle file)
@@ -634,7 +643,8 @@
 ;;;
 (defun fasl-dump-source-info (info file)
   (declare (type source-info info) (type fasl-file file))
-  (let ((res (debug-source-for-info info)))
+  (let ((res (debug-source-for-info info))
+	(*dump-only-valid-structures* nil))
     (dump-object res file)
     (let ((res-handle (dump-pop file)))
       (dolist (info-handle (fasl-file-debug-info file))
@@ -790,7 +800,10 @@
 ;;; if it's in the EQ table.
 ;;; 
 (defun fasl-constant-already-dumped (constant file)
-  (if (gethash constant (fasl-file-eq-table file)) t nil))
+  (if (or (gethash constant (fasl-file-eq-table file))
+	  (gethash constant (fasl-file-valid-structures file)))
+      t
+      nil))
 
 ;;; FASL-NOTE-HANDLE-FOR-CONSTANT -- interface.
 ;;;
@@ -802,6 +815,15 @@
     (when (gethash constant table)
       (error "~S already dumped?" constant))
     (setf (gethash constant table) handle))
+  (undefined-value))
+
+;;; FASL-VALIDATE-STRUCTURE -- interface.
+;;;
+;;; Note that the specified structure can just be dumped by enumerating the
+;;; slots.
+;;; 
+(defun fasl-validate-structure (structure file)
+  (setf (gethash structure (fasl-file-valid-structures file)) t)
   (undefined-value))
 
 
@@ -1235,6 +1257,10 @@
 ;;; Dump a structure.
 
 (defun dump-structure (struct file)
+  (when *dump-only-valid-structures*
+    (unless (gethash struct (fasl-file-valid-structures file))
+      (error "Attempt to dump invalid structure:~%  ~S~%How did this happen?"
+	     struct)))
   (note-potential-circularity struct file)
   (do ((index 0 (1+ index))
        (length (structure-length struct))
