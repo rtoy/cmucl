@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.28 2002/10/19 14:56:02 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.29 2003/03/04 00:46:46 pmai Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -70,7 +70,7 @@
 (defvar *pcl-system-date* "September 16 92 PCL (f)")
 
 (setf (getf ext:*herald-items* :pcl)
-      `("    CLOS based on PCL version:  " ,*pcl-system-date*))
+      `("    CLOS 18e (based on PCL " ,*pcl-system-date* ")"))
 
 
 ;;; Yet Another Sort Of General System Facility and friends.
