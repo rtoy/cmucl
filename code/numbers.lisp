@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.15 1990/12/11 23:59:54 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.16 1990/12/12 18:14:58 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -560,9 +560,12 @@
 ;;; Declare these guys inline to let them get optimized a little.  Round and
 ;;; Fround are not declared inline since they seem too obscure and too
 ;;; big to inline-expand by default.  Also, this gives the compiler a chance to
-;;; pick off the unary float case.
+;;; pick off the unary float case.  Simlarly, ceiling and floor are only
+;;; maybe-inline for now, so that the power-of-2 ceiling and floor transforms
+;;; get a chance.
 ;;;
-(proclaim '(inline ceiling floor rem mod fceiling ffloor ftruncate))
+(declaim (inline rem mod fceiling ffloor ftruncate))
+(declaim (maybe-inline ceiling floor))
 
 ;;; If the numbers do not divide exactly and the result of (/ number divisor)
 ;;; would be negative then decrement the quotient and augment the remainder by
