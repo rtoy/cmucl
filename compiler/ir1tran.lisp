@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.54 1991/10/20 14:36:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.55 1991/10/23 12:50:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2498,19 +2498,27 @@
 
 ;;; Process-1-Ftype-Proclamation  --  Internal
 ;;;
-;;;    For now, just update the type of any old var and remove the name from
-;;; the list of undefined functions.  Eventually we whould check for
-;;; incompatible redefinition.
+;;; Update function type info cached in *free-functions*.  If:
+;;; -- there is a GLOBAL-VAR, then just update the type and remove the name
+;;;    from the list of undefined functions.  Someday we should check for
+;;;    incompatible redeclaration.
+;;; -- there is a FUNCTIONAL, then apply the type assertion to that function.
+;;;    This will only happen during block compilation.
 ;;;
 (defun process-1-ftype-proclamation (name type)
   (declare (type function-type type))
   (let ((var (gethash (define-function-name name) *free-functions*)))
-    (when var
-      (let ((new (copy-global-var var))
-	    (name (leaf-name var)))
-	(setf (leaf-type new) type)
-	(setf (leaf-where-from new) :declared)
-	(setf (gethash name *free-functions*) new))))
+    (etypecase var
+      (null)
+      (global-var
+       (let ((new (copy-global-var var))
+	     (name (leaf-name var)))
+	 (setf (leaf-type new) type)
+	 (setf (leaf-where-from new) :declared)
+	 (setf (gethash name *free-functions*) new)))
+      (functional
+       (assert-definition-type var type :warning-function #'compiler-note
+			       :where "this declaration"))))
 
   (undefined-value))
 
@@ -3260,7 +3268,9 @@
 			  (ir1-attributep
 			   (function-info-attributes function-info)
 			   explicit-check))))
-	   :where (if for-real "declaration" "definition"))))
+	   :where (if for-real
+		      "previous declaration"
+		      "previous definition"))))
 
       (ir1-convert
        start cont
