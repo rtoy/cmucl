@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.16 1992/05/18 17:55:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.17 1992/05/21 22:46:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,11 +272,15 @@
       (assem:assemble (*elsewhere* nil)
 	(assem:emit-label label))))
 
-(defun label-elsewhere-p (label)
+(defun label-elsewhere-p (label-or-posn)
   (<= (label-position (if (backend-featurep :new-assembler)
 			  *elsewhere-label*
 			  *elsewhere*))
-      (label-position label)))
+      (etypecase label-or-posn
+	(label
+	 (label-position label-or-posn))
+	(index
+	 label-or-posn))))
 
 (defun trace-table-entry (state)
   (let ((label (gen-label)))
