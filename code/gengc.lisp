@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gengc.lisp,v 1.2 1993/05/20 14:16:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gengc.lisp,v 1.3 1993/06/18 06:14:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; 
 
 (in-package "EXTENSIONS")
-(export '(*before-gc-hooks* *after-gc-hooks* gc
+(export '(*before-gc-hooks* *after-gc-hooks* gc purify
 	  *gc-verbose* *gc-notify-before* *gc-notify-after*))
 
 (in-package "LISP")
@@ -119,3 +119,8 @@
 
 (alien:def-alien-routine ("collect_garbage" gc) c-call:void
   "Force a garbage collection.")
+
+
+(defun purify (&key root-structures constants)
+  (declare (ignore root-structures constants))
+  (gc))
