@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.61 2003/04/27 14:52:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.62 2003/05/08 14:52:04 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -766,6 +766,13 @@
 (def-type-translator values (&rest values)
   (let ((res (make-values-type)))
     (parse-args-types values res)
+    ;;
+    ;; Signal an error if the spec has &KEY or &ALLOW-OTHER-KEYS.
+    ;; Actually, CLHS lists &ALLOW-OTHER-KEYS without listing &KEYS,
+    ;; but keys clearly don't make any sense.
+    (when (or (values-type-keyp res) (values-type-allowp res))
+      (simple-program-error "&KEY or &ALLOW-OTHER-KEYS in values type: ~s"
+			    res))
     res))
 
 
@@ -879,13 +886,13 @@
 ;;; Coerce-To-Values  --  Internal
 ;;;
 ;;; If Type isn't a values type, then make it into one:
-;;;    <type>  ==>  (values type &rest t)
+;;;    <type>  ==>  (values type)
 ;;;
 (defun coerce-to-values (type)
   (declare (type ctype type))
   (if (values-type-p type)
       type
-      (make-values-type :required (list type) :rest *universal-type*)))
+      (make-values-type :required (list type))))
 
 ;;; Args-Type-Op  --  Internal
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.149 2003/04/30 07:25:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.150 2003/05/08 14:52:03 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3013,13 +3013,23 @@
   Assert that Form evaluates to the specified type (which may be a VALUES
   type.)"
   (let ((ctype (values-specifier-type type)))
-    (unless (values-type-p ctype)
-      (setf ctype (make-values-type :optional (list ctype)
-				    :rest *universal-type*)))
+    (cond ((values-type-p ctype)
+	   (flet ((or-null (type)
+		    (specifier-type `(or null ,(type-specifier type)))))
+	     (setq ctype
+		   (make-values-type
+		    :required (mapcar #'or-null (values-type-required ctype))
+		    :optional (values-type-optional ctype)
+		    :rest (or (values-type-rest ctype) *universal-type*)))))
+	  ((csubtypep (specifier-type 'null) ctype)
+	   (setq ctype (make-values-type :optional (list ctype)
+					 :rest *universal-type*)))
+	  (t
+	   (setq ctype (make-values-type :required (list ctype)
+					 :rest *universal-type*))))
     (let ((*lexical-environment*
 	   (do-the-stuff ctype cont *lexical-environment* 'the)))
       (ir1-convert start cont value))))
-
 
 ;;; Truly-The IR1 convert  --  Internal
 ;;;
@@ -3090,7 +3100,7 @@
 (defun set-variable (start cont var value)
   (declare (type continuation start cont) (type basic-var var))
   (let ((dest (make-continuation))
-	(opt-type (make-values-type :optional (list (leaf-type var))
+	(opt-type (make-values-type :required (list (leaf-type var))
 				    :rest *universal-type*)))
     (setf (continuation-asserted-type dest) opt-type)
     (ir1-convert start dest value)

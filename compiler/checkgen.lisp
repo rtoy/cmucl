@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.32 2003/04/29 11:58:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.33 2003/05/08 14:52:04 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,44 +153,58 @@
 ;;;
 (defun values-types-asserted (atype ptype)
   (declare (type ctype atype ptype))
-  (cond ((eq atype *wild-type*)
-	 (values nil :unknown))
-	((not (values-type-p atype))
-	 (values (list atype) 1))
-	((or (args-type-keyp atype)
-	     (args-type-allowp atype))
-	 (values nil :unknown))
-	(t
-	 ;;
-	 ;; This converted PTYPE with COERCE-TO-VALUES originally, but
-	 ;; that function was changed to return (VALUES PTYPE &REST T)
-	 ;; instead of (VALUES PTYPE) with the port of subtypep fixes
-	 ;; from SBCL.  The new &REST would confuse the logic here.
-	 (multiple-value-bind (preq popt prest)
-	     (if (values-type-p ptype)
-		 (values (args-type-required ptype)
-			 (args-type-optional ptype)
-			 (args-type-rest ptype))
-		 (values (list ptype) nil nil))
-	   (collect ((types))
-	     (do ((args (args-type-required atype) (rest args)))
-		 ((endp args))
-	       (if (or (pop preq) (pop popt) prest)
-		   (types (single-value-type (first args)))
-		   (return-from values-types-asserted (values nil :unknown))))
-	     (do ((args (args-type-optional atype) (rest args)))
-		 ((endp args))
-	       (if (pop preq)
-		   (types (single-value-type (first args)))
-		   (return-from values-types-asserted (values nil :unknown))))
-	     (let ((arest (args-type-rest atype)))
-	       (when arest
-		 (do ((arg (pop preq) (pop preq)))
-		     ((null arg))
-		   (types (single-value-type arest)))
-		 (when (or popt prest)
-		   (return-from values-types-asserted (values nil :unknown)))))
-	     (values (types) (length (types))))))))
+  (flet ((give-up ()
+	   (return-from values-types-asserted (values nil :unknown))))
+    (cond ((eq atype *wild-type*)
+	   (give-up))
+	  ((not (values-type-p atype))
+	   (values (list atype) 1))
+	  ((or (values-type-keyp atype)
+	       (values-type-allowp atype))
+	   (give-up))
+	  ;;
+	  ;; FIXME: Values type checking is done with a form like
+	  ;;
+	  ;; (multiple-value-bind (x y z) <form>
+	  ;;   <type checks for x y z>
+	  ;;   (values x y z))
+	  ;;
+	  ;; see Make-Type-Check-Form.  This has the unfortunate
+	  ;; effect of chopping values when <form> actually returns
+	  ;; more values than are being checked.  The downside of
+	  ;; including this is that it produces a lot of notes.
+	  #+nil
+	  ((or (eq *wild-type* ptype)
+	       (and (values-type-p ptype)
+		    (or (values-type-optional ptype)
+			(values-type-rest ptype))))
+	   (give-up))
+	  (t
+	   (let* ((ptype (kernel::coerce-to-values ptype))
+		  (preq (values-type-required ptype))
+		  (popt (values-type-optional ptype))
+		  (prest (values-type-rest ptype)))
+	     ;;
+	     ;; FIXME: ptype = * is not handled right, I think
+	     ;; because * = (VALUES &REST T).  It never was
+	     ;; handled right.  Gerd 2003-05-08.
+	     (collect ((types))
+	       (dolist (type (values-type-required atype))
+		 (if (or (pop preq) (pop popt) prest)
+		     (types (single-value-type type))
+		     (give-up)))
+	       (dolist (type (values-type-optional atype))
+		 (if (pop preq)
+		     (types (single-value-type type))
+		     (give-up)))
+	       (let ((arest (values-type-rest atype)))
+		 (when arest
+		   (loop with rest-type = (single-value-type arest)
+			 for arg = (pop preq) while arg do
+			   (types rest-type))
+		   (when (or popt prest)
+		     (give-up))))
+	       (values (types) (length (types)))))))))
 
 
 ;;; Switch to disable check complementing, for evaluation.
@@ -293,10 +307,11 @@
 (defun continuation-check-types (cont &optional force-hairy)
   (declare (type continuation cont))
   (let ((atype (continuation-asserted-type cont))
-	(dest (continuation-dest cont)))
+	(dest (continuation-dest cont))
+	(proven (continuation-proven-type cont)))
     (assert (not (eq atype *wild-type*)))
     (multiple-value-bind (types count)
-	(values-types-asserted atype (continuation-proven-type cont))
+	(values-types-asserted atype proven)
       (cond ((not (eq count :unknown))
 	     (let ((types (no-function-types types)))
 	       (if (or (exit-p dest)
@@ -308,6 +323,9 @@
 			      (eq count :unknown))))
 		   (maybe-negate-check cont types t)
 		   (maybe-negate-check cont types force-hairy))))
+	    #+nil
+	    ((eq *wild-type* proven)
+	     (values :too-hairy nil))
 	    ((and (mv-combination-p dest)
 		  (eq (basic-combination-kind dest) :local))
 	     (assert (values-type-p atype))

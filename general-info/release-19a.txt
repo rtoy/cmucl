@@ -59,6 +59,8 @@ New in this release:
      - Stricter checking of keyword argument list in CLOS methods.
      - &ENVIRONMENT variable bound bound before other vars, regardless
        of where it appears in a lambda-list.
+     - VALUES types no longer accepting &KEY or &ALLOW-OTHER-KEYS.
+     - THE conforming to ANSI.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
