@@ -7,22 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.38 1992/03/06 10:36:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.39 1992/03/06 10:46:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.38 1992/03/06 10:36:03 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
 ;;; Written by William Lott
 ;;;
-
-#|
-(eval-when (compile load eval)
-  (unless (find-package "OLD-MIPS")
-    (rename-package (find-package "MIPS") "OLD-MIPS" '("VM"))))
-|#
 
 (in-package "MIPS")
 (use-package "ASSEM")
