@@ -7,14 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 ;(ext:file-comment
-;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.1 1997/01/18 14:30:50 ram Exp $")
+;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.2 1997/04/13 21:07:29 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the X86 specific runtime stuff.
 ;;;
 
-(in-package :x86)
+(in-package :vm)
 (use-package "SYSTEM")
 (use-package "ALIEN")
 (use-package "C-CALL")

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.3 1997/03/26 20:25:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.4 1997/04/13 21:07:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,11 +104,11 @@
 	(t
 	 (format stream "~A PTR [" (symbol-name (ea-size ea)))
 	 (when (ea-base ea)
-	   (write-string (x86-location-print-name (ea-base ea)) stream)
+	   (write-string (c::location-print-name (ea-base ea)) stream)
 	   (when (ea-index ea)
 	     (write-string "+" stream)))
 	 (when (ea-index ea)
-	   (write-string (x86-location-print-name (ea-index ea)) stream))
+	   (write-string (c::location-print-name (ea-index ea)) stream))
 	 (unless (= (ea-scale ea) 1)
 	   (format stream "*~A" (ea-scale ea)))
 	 (typecase (ea-disp ea)

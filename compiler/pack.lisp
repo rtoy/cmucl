@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.54 1997/01/18 14:31:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.55 1997/04/13 21:07:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1595,7 +1595,7 @@
        ;; identified by being on the stack in their standard save
        ;; locations.
        (when (and (not (eq (tn-kind tn) :specified-save))
-		  (not (and (eq (sb-name sb) 'vm::stack)
+		  (not (and (string= (sb-name sb) "STACK")
 			    (or (= offset 0)
 				(= offset 1))))
 		  (conflicts-in-sc original sc offset))
