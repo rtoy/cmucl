@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.40 2003/06/08 12:15:53 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.41 2003/06/11 12:52:55 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2019,9 +2019,9 @@
     (vm:function-header-type
      (- (kernel:get-lisp-obj-address function) vm:function-pointer-type))
     (vm:closure-header-type
-     (fun-address (kernel:%closure-function fun)))
+     (fun-address (kernel:%closure-function function)))
     (vm:funcallable-instance-header-type
-     (fun-address (kernel:funcallable-instance-function fun)))))
+     (fun-address (kernel:funcallable-instance-function function)))))
 
 (defun fun-insts-offset (function)
   "Offset of FUNCTION from the start of its code-component's instruction area."
