@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.10 1991/12/11 16:48:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.11 1992/04/21 04:16:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,12 +30,12 @@
 ;;;    Insert Block in the emission order after the block After.
 ;;;
 (defun add-to-emit-order (block after)
-  (declare (type ir2-block block after))
-  (let ((next (ir2-block-next after)))
-    (setf (ir2-block-next after) block)
-    (setf (ir2-block-prev block) after)
-    (setf (ir2-block-next block) next)
-    (setf (ir2-block-prev next) block))
+  (declare (type block-annotation block after))
+  (let ((next (block-annotation-next after)))
+    (setf (block-annotation-next after) block)
+    (setf (block-annotation-prev block) after)
+    (setf (block-annotation-next block) next)
+    (setf (block-annotation-prev next) block))
   (undefined-value))
 
 
@@ -111,15 +111,16 @@
 ;;; in an error, NLX or tail full call.)  This is to discourage making error
 ;;; code the drop-through.
 ;;;
-(defun control-analyze-block (block tail)
-  (declare (type cblock block) (type ir2-block tail))
+(defun control-analyze-block (block tail block-info-constructor)
+  (declare (type cblock block) (type block-annotation tail))
   (unless (block-flag block)
     (let ((block (find-rotated-loop-head block)))
       (setf (block-flag block) t)
       (assert (and (block-component block) (not (block-delete-p block))))
       (add-to-emit-order (or (block-info block)
-			     (setf (block-info block) (make-ir2-block block)))
-			 (ir2-block-prev tail))
+			     (setf (block-info block)
+				   (funcall block-info-constructor block)))
+			 (block-annotation-prev tail))
       
       (let ((last (block-last block)))
 	(cond ((and (combination-p last) (node-tail-p last)
@@ -133,10 +134,11 @@
 		     (fun nil))
 		 (dolist (succ block-succ)
 		   (unless (eq (first (block-succ succ)) component-tail)
-		     (let ((res (control-analyze-block succ tail)))
+		     (let ((res (control-analyze-block
+				 succ tail block-info-constructor)))
 		       (when res (setq fun res)))))
 		 (dolist (succ block-succ)
-		   (control-analyze-block succ tail))
+		   (control-analyze-block succ tail block-info-constructor))
 		 fun)))))))
 
 
@@ -152,27 +154,31 @@
 ;;; start over again there to help the call drop through.  Of course, it will
 ;;; never get a drop-through if either function has NLX code.
 ;;;
-(defun control-analyze-1-fun (fun component)
+(defun control-analyze-1-fun (fun component block-info-constructor)
   (declare (type clambda fun) (type component component))
   (let* ((tail-block (block-info (component-tail component)))
-	 (prev-block (ir2-block-prev tail-block))
+	 (prev-block (block-annotation-prev tail-block))
 	 (bind-block (node-block (lambda-bind fun))))
     (unless (block-flag bind-block)
       (dolist (nlx (environment-nlx-info (lambda-environment fun)))
-	(control-analyze-block (nlx-info-target nlx) tail-block))
+	(control-analyze-block (nlx-info-target nlx) tail-block
+			       block-info-constructor))
       (cond
        ((block-flag bind-block)
-	(let* ((2block (block-info bind-block))
-	       (prev (ir2-block-prev 2block))
-	       (next (ir2-block-next 2block)))
-	  (setf (ir2-block-prev next) prev)
-	  (setf (ir2-block-next prev) next)
-	  (add-to-emit-order 2block prev-block)))
+	(let* ((block-note (block-info bind-block))
+	       (prev (block-annotation-prev block-note))
+	       (next (block-annotation-next block-note)))
+	  (setf (block-annotation-prev next) prev)
+	  (setf (block-annotation-next prev) next)
+	  (add-to-emit-order block-note prev-block)))
        (t
 	(let ((new-fun (control-analyze-block bind-block
-					      (ir2-block-next prev-block))))
+					      (block-annotation-next
+					       prev-block)
+					      block-info-constructor)))
 	  (when new-fun
-	    (control-analyze-1-fun new-fun component)))))))
+	    (control-analyze-1-fun new-fun component
+				   block-info-constructor)))))))
   (undefined-value))
 
   
@@ -187,32 +193,36 @@
 ;;; COMPONENT-REANALYZE.  We remove all deleted blocks from the IR2-COMPONENT
 ;;; VALUES-RECEIVERS to keep stack analysis from getting confused.
 ;;;
-(defun control-analyze (component)
+(defun control-analyze (component block-info-constructor)
+  (declare (type component component)
+	   (type function block-info-constructor))
   (let* ((head (component-head component))
-	 (head-block (make-ir2-block head))
+	 (head-block (funcall block-info-constructor head))
 	 (tail (component-tail component))
-	 (tail-block (make-ir2-block tail)))
+	 (tail-block (funcall block-info-constructor tail)))
     (setf (block-info head) head-block)
     (setf (block-info tail) tail-block)
-    (setf (ir2-block-prev tail-block) head-block)
-    (setf (ir2-block-next head-block) tail-block)
+    (setf (block-annotation-prev tail-block) head-block)
+    (setf (block-annotation-next head-block) tail-block)
 
     (clear-flags component)
 
     (dolist (fun (component-lambdas component))
       (when (external-entry-point-p fun)
-	(control-analyze-1-fun fun component)))
+	(control-analyze-1-fun fun component block-info-constructor)))
 
     (dolist (fun (component-lambdas component))
-      (control-analyze-1-fun fun component))
+      (control-analyze-1-fun fun component block-info-constructor))
 
     (do-blocks (block component)
       (unless (block-flag block)
 	(delete-block block))))
 
   (let ((2comp (component-info component)))
-    (setf (ir2-component-values-receivers 2comp)
-	  (delete-if-not #'block-component
-			 (ir2-component-values-receivers 2comp))))
+    (when (ir2-component-p 2comp)
+      ;; If it's not an ir2-component, don't worry about it.
+      (setf (ir2-component-values-receivers 2comp)
+	    (delete-if-not #'block-component
+			   (ir2-component-values-receivers 2comp)))))
 
   (undefined-value))
