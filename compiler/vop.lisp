@@ -568,7 +568,7 @@
   ;; Local-TN bit vector representing the set of TNs live after args are read
   ;; and before results are written.  This is only filled in when
   ;; VOP-INFO-SAVE-P is non-null.
-  (save-set nil :type (or ltn-bit-vector null)))
+  (save-set nil :type (or local-tn-bit-vector null)))
 
 (defprinter vop
   (info :prin1 (vop-info-name info))
