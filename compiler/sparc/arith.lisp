@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.7 1992/01/10 17:14:06 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.8 1992/01/31 17:18:31 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -355,7 +355,7 @@
 
 (defmacro define-conditional-vop (tran cond unsigned not-cond not-unsigned)
   `(progn
-     ,@(mapcar #'(lambda (suffix signed)
+     ,@(mapcar #'(lambda (suffix cost signed)
 		   (unless (and (member suffix '(/fixnum -c/fixnum))
 				(eq tran 'eql))
 		     `(define-vop (,(intern (format nil "~:@(FAST-IF-~A~A~)"
@@ -364,7 +364,7 @@
 				     (format nil "~:@(FAST-CONDITIONAL~A~)"
 					     suffix)))
 			(:translate ,tran)
-			(:generator 3
+			(:generator ,cost
 			  (inst cmp x
 				,(if (eq suffix '-c/fixnum) '(fixnum y) 'y))
 			  (inst b (if not-p
@@ -373,6 +373,7 @@
 				target)
 			  (inst nop)))))
 	       '(/fixnum -c/fixnum /signed -c/signed /unsigned -c/unsigned)
+	       '(4 3 6 5 6 5)
 	       '(t t t t nil nil))))
 
 (define-conditional-vop < :lt :ltu :ge :geu)
@@ -397,7 +398,7 @@
   (:arg-types tagged-num tagged-num)
   (:note "inline fixnum comparison")
   (:translate eql)
-  (:generator 3
+  (:generator 4
     (inst cmp x y)
     (inst b (if not-p :ne :eq) target)
     (inst nop)))
