@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.3 1991/03/22 14:00:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.4 1991/03/23 15:01:37 wlott Exp $
 ;;;
 ;;; This file contains the VM definition of function call for the SPARC.
 ;;;
@@ -404,7 +404,7 @@ default-value-8
       (move count nargs)
       (inst b done)
       (inst nop)
-      (trace-table-entry trace-table-function-normal)))
+      (trace-table-entry trace-table-normal)))
   (undefined-value))
 
 
