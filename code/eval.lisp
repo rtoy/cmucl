@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.34 2003/01/24 16:05:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.35 2003/02/05 11:08:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,7 +173,7 @@
 		     :format-arguments (list exp)))
 	    (let ((name (second exp)))
 	      (cond ((consp name)
-		     (if (eq (car name) 'setf)
+		     (if (valid-function-name-p name)
 			 (fdefinition name)
 			 (eval:make-interpreted-function name)))
 		    ((macro-function name)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.38 2002/12/07 18:21:22 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.39 2003/02/05 11:08:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,8 +112,7 @@
     (array (describe-array x))
     (fixnum (describe-fixnum x))
     (cons
-     (if (and (eq (car x) 'setf) (consp (cdr x)) (null (cddr x))
-	      (symbolp (cadr x))
+     (if (and (valid-function-name-p x)
 	      (fboundp x))
 	 (describe-function (fdefinition x) :function x)
 	 (default-describe x)))
@@ -217,7 +216,7 @@
 	(*print-length* nil))
     (multiple-value-bind
 	(type where)
-	(if (or (symbolp name) (and (listp name) (eq (car name) 'setf)))
+	(if (valid-function-name-p name)
 	    (values (type-specifier (info function type name))
 		    (info function where-from name))
 	    (values type-spec :defined))

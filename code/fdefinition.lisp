@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.19 2001/12/10 02:53:16 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.20 2003/02/05 11:08:44 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,8 @@
 (in-package "EXTENSIONS")
 
 (export '(encapsulate unencapsulate encapsulated-p
-	  basic-definition argument-list *setf-fdefinition-hook*))
+	  basic-definition argument-list *setf-fdefinition-hook*
+	  define-function-name-syntax valid-function-name-p))
 
 
 (in-package "KERNEL")
@@ -35,6 +36,56 @@
 
 (export '(fdefinition fboundp fmakunbound))
 
+
+
+;;;; Function names.
+
+(defvar *valid-function-names* ())
+
+(defun %define-function-name-syntax (name syntax-checker)
+  (let ((found (assoc name *valid-function-names* :test #'eq)))
+    (if found
+	(setf (cdr found) syntax-checker)
+	(setq *valid-function-names*
+	      (acons name syntax-checker *valid-function-names*)))))
+
+(defmacro define-function-name-syntax (name (var) &body body)
+  "Define (NAME ...) to be a valid function name whose syntax is checked
+  by BODY.  In BODY, VAR is bound to an actual function name of the
+  form (NAME ...) to check.  BODY should return two values.
+  First value true means the function name is valid.  Second value
+  is the name, a symbol, of the function for use in the BLOCK of DEFUNs
+  and in similar situations."
+  (let ((syntax-checker (symbolicate '%check- name '-function-name)))
+    `(progn
+       (defun ,syntax-checker (,var) ,@body)
+       (%define-function-name-syntax ',name #',syntax-checker))))
+
+(defun valid-function-name-p (name)
+  "First value is true if NAME has valid function name syntax.
+  Second value is the name, a symbol, to use as a block name in DEFUNs
+  and in similar situations."
+  (typecase name
+    (cons
+     (when (and (symbolp (car name))
+		(consp (cdr name)))
+       (let ((syntax-checker (cdr (assoc (car name) *valid-function-names*
+					 :test #'eq))))
+	 (when syntax-checker
+	   (funcall syntax-checker name)))))
+    (symbol (values t name))
+    (otherwise nil)))
+
+(define-function-name-syntax setf (name)
+  (destructuring-bind (setf fn &rest rest) name
+    (declare (ignore setf))
+    (when (null rest)
+      (typecase fn
+	(symbol
+	 (values t fn))
+	(cons
+	 (unless (eq 'setf (car fn))
+	   (valid-function-name-p fn)))))))
 
 
 ;;;; Fdefinition (fdefn) objects.
@@ -83,13 +134,7 @@
   "Return the fdefn object for NAME.  If it doesn't already exist and CREATE
    is non-NIL, create a new (unbound) one."
   (declare (values (or fdefn null)))
-  (unless (or (symbolp name)
-	      (and (consp name)
-		   (eq (car name) 'setf)
-		   (let ((cdr (cdr name)))
-		     (and (consp cdr)
-			  (symbolp (car cdr))
-			  (null (cdr cdr))))))
+  (unless (valid-function-name-p name)
     (error 'simple-type-error
 	   :datum name
 	   :expected-type '(or symbol list)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.85 2003/01/23 21:05:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.86 2003/02/05 11:08:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,13 +301,12 @@
 ;;; lambda-list.
 ;;;
 (defmacro defun (&whole source name lambda-list &body (body decls doc))
-  (let ((def `(lambda ,lambda-list
-		,@decls
-		(block ,(if (and (consp name) (eq (car name) 'setf))
-			    (cadr name)
-			    name)
-		  ,@body))))
-    `(c::%defun ',name #',def ,doc ',source)))
+  (multiple-value-bind (valid block-name)
+      (valid-function-name-p name)
+    (let ((def `(lambda ,lambda-list
+		  ,@decls
+		  (block ,block-name ,@body))))
+      `(c::%defun ',name #',def ,doc ',source))))
 
 
 ;;; %Defun, %%Defun  --  Internal

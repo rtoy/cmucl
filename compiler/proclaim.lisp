@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.37 2002/07/22 17:02:43 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.38 2003/02/05 11:08:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,9 +189,7 @@
 (defun check-function-name (name)
   (typecase name
     (list
-     (unless (and (consp name) (consp (cdr name))
-		  (null (cddr name)) (eq (car name) 'setf)
-		  (symbolp (cadr name)))
+     (unless (valid-function-name-p name)
        (compiler-error "Illegal function name: ~S." name))
      name)
     (symbol

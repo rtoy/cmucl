@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.28 2003/01/26 22:09:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.29 2003/02/05 11:08:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -720,15 +720,14 @@ this, the functions are listed.  If NIL, then always list the functions.")
 		  "~%These functions were not called:~%~{~<~%~:; ~S~>~}~%"
 		  (sort no-call #'string<
 			:key #'(lambda (n)
-				 (cond ((symbolp n)
-					(symbol-name n))
-				       ((and (listp n)
-					     (eq (car n) 'setf)
-					     (consp (cdr n))
-					     (symbolp (cadr n)))
-					(symbol-name (cadr n)))
-				       (t
-					(princ-to-string n))))))))
+				 (if (symbolp n)
+				     (symbol-name n)
+				     (multiple-value-bind (valid block-name)
+					 (ext:valid-function-name-p n)
+				       (declared (ignore valid))
+				       (if block-name
+					   block-name
+					   (princ-to-string n)))))))))
     (values)))
 
 

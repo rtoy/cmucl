@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.197 2003/01/26 22:09:38 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.198 2003/02/05 11:08:44 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1036,6 +1036,8 @@
 	     "PURIFY" "MAP-APROPOS"
 	     "*BATCH-MODE*"
 	     "COMPILER-LET"
+	     "DEFINE-FUNCTION-NAME-SYNTAX"
+	     "VALID-FUNCTION-NAME-P"
 
 	     ;; Gray streams extension.
 	     "FUNDAMENTAL-BINARY-STREAM" "FUNDAMENTAL-BINARY-INPUT-STREAM"

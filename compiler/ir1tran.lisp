@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.135 2003/01/06 15:10:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.136 2003/02/05 11:08:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2441,17 +2441,17 @@
       (case (car thing)
 	((lambda)
 	 (reference-leaf start cont (ir1-convert-lambda thing nil 'function)))
-	((setf)
-	 (let ((var (find-lexically-apparent-function
-		     thing "as the argument to FUNCTION")))
-	   (reference-leaf start cont var)))
 	((instance-lambda)
 	 (let ((res (ir1-convert-lambda `(lambda ,@(cdr thing))
 					nil 'function)))
 	   (setf (getf (functional-plist res) :fin-function) t)
 	   (reference-leaf start cont res)))
 	(t
-	 (compiler-error "Illegal function name: ~S" thing)))
+	 (if (valid-function-name-p thing)
+	     (let ((var (find-lexically-apparent-function
+			 thing "as the argument to FUNCTION")))
+	       (reference-leaf start cont var))
+	     (compiler-error "Illegal function name: ~S" thing))))
       (let ((var (find-lexically-apparent-function
 		  thing "as the argument to FUNCTION")))
 	(reference-leaf start cont var))))
