@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.8 2003/01/23 21:05:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/remote.lisp,v 1.9 2003/07/20 13:49:43 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -321,13 +321,14 @@ to aborting due to a throw)."
 ;;; Create a TCP/IP listener on the given port.  If anyone tries to connect to
 ;;; it, call NEW-CONNECTION to do the connecting.
 ;;;
-(defun create-request-server (port &optional on-connect)
+(defun create-request-server (port &optional on-connect &key reuse-address)
   "Create a request server on the given port.  Whenever anyone connects to it,
    call the given function with the newly created wire and the address of the
    connector.  If the function returns NIL, the connection is destroyed;
    otherwise, it is accepted.  This returns a manifestation of the server that
    DESTROY-REQUEST-SERVER accepts to kill the request server."
-  (let* ((socket (ext:create-inet-listener port))
+  (let* ((socket (ext:create-inet-listener port :stream
+                                           :reuse-address reuse-address))
 	 (handler (system:add-fd-handler socket :input
 		    #'(lambda (socket)
 			(multiple-value-bind
