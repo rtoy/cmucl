@@ -1,6 +1,6 @@
 #!/bin/csh -f
 
-if ($?argv != 4) then
+if ($#argv != 4) then
 	echo usage: mk-release dst-sys dst-release src-sys src-release
 	exit 1
 endif
@@ -33,7 +33,10 @@ else
 	ln -s $src/cmucl bin/cmucl
 endif
 ln -s cmucl bin/lisp
-ln -s $clisp/etc/* lib
+ln -s $clisp/etc/XKeysymDB lib
+ln -s $clisp/etc/hemlock11.cursor lib
+ln -s $clisp/etc/hemlock11.mask lib
+ln -s $clisp/etc/mh-scan lib
 ln -s $clisp/releases/$srcrelease/common/* lib
 ln -s $src/{*.core,mot*,site-init.*,spell*} lib
 mkdir doc
