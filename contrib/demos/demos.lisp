@@ -293,7 +293,7 @@
 			     (xlib:draw-rectangle window draw-gcontext
 						  x y w h t)
 			     (xlib:draw-arc window draw-gcontext
-					    x y w h 0 6.4 t)))
+					    x y w h 0 (* 2 pi) t)))
 		       (let ((p1-x (+ border-x
 				      (random (- width (* 2 border-x)))))
 			     (p1-y (+ border-y
