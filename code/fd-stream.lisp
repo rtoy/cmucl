@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.63 2002/12/12 19:11:11 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.64 2003/06/02 14:42:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1055,7 +1055,7 @@
 		:format-arguments (list stream (unix:get-unix-error-msg dev))))
        (if (zerop mode)
 	   nil
-	   (truncate size (fd-stream-element-size stream)))))
+	   (values (truncate size (fd-stream-element-size stream))))))
     (:file-position
      (fd-stream-file-position stream arg1))))
 
