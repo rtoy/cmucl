@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-lisp; Package: XLIB; Base: 10; Lowercase: Yes -*-
+;;; -*- Package: XLIB; Log: clx.log -*-
 
 ;;; GContext
 
@@ -86,6 +86,9 @@
 
 (defconstant *gcontext-fast-change-length* #.(length *gcontext-components*))
 
+;;; CMU Common Lisp's old compiler has a bug in compiling DEFCONSTANT's within
+;;; MACROLET's.
+#-CMU
 (macrolet ((def-gc-internals (name &rest extras)
 	    (let ((macros nil)
 		  (indexes nil)
@@ -120,6 +123,44 @@
 				',(coerce (nreverse masks) 'simple-vector)))))))
   (def-gc-internals ignore
     (:clip :clip-mask) (:dash :dashes) (:font-obj :font) (:timestamp)))
+
+#+CMU
+(defmacro def-gc-internals (name &rest extras)
+  (let ((macros nil)
+	(indexes nil)
+	(masks nil)
+	(index 0))
+    (dolist (name *gcontext-components*)
+      (push `(defmacro ,(xintern 'gcontext-internal- name) (state)
+	       `(svref ,state ,,index))
+	    macros)
+      (setf (getf indexes name) index)
+      (push (ash 1 index) masks)
+      (incf index))
+    (dolist (extra extras)
+      (push `(defmacro ,(xintern 'gcontext-internal- (first extra)) (state)
+	       `(svref ,state ,,index))
+	    macros)
+      ;; don't override already correct index entries
+      (unless (or (getf indexes (second extra)) (getf indexes (first extra)))
+	(setf (getf indexes (or (second extra) (first extra))) index))
+      (push (logior (ash 1 index)
+		    (if (second extra)
+			(ash 1 (position (second extra) *gcontext-components*))
+			0))
+	    masks)
+      (incf index))
+    `(within-definition (def-gc-internals ,name)
+			,@(nreverse macros)
+			(eval-when (eval compile load)
+			  (defconstant *gcontext-data-length* ,index)
+			  (defconstant *gcontext-indexes* ',indexes)
+			  (defconstant *gcontext-masks*
+			    ',(coerce (nreverse masks) 'simple-vector))))))
+
+#+CMU
+(def-gc-internals ignore
+  (:clip :clip-mask) (:dash :dashes) (:font-obj :font) (:timestamp))
 
 ) ;; end EVAL-WHEN
 
@@ -576,7 +617,9 @@
 	    (temp-var (gensym)))
 	(when value
 	  (push `(,temp-var ,value) temp-vars)
-	  (push `(setf ,accessor ,temp-var) setfs))))
+	  (push #-CMU `(setf ,accessor ,temp-var)
+		#+CMU `(when ,temp-var (setf ,accessor ,temp-var))
+		setfs))))
     (if setfs
 	`(multiple-value-bind (,gc ,saved-state ,temp-mask ,temp-gc)
 	     (copy-gcontext-local-state ,gcontext ',indexes ,@extension-indexes)
