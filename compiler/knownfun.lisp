@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.18 1993/02/26 08:38:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.19 1993/05/11 13:55:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,9 +159,12 @@
   (note (required-argument) :type string)
   ;;
   ;; T if we should spew a failure note even if speed=brevity.
-  (important nil :type (member t nil)))
+  (important nil :type (member t nil))
+  ;;
+  ;; Usable for byte code, native code, or both.
+  (when :native :type (member :byte :native :both)))
 
-(defprinter transform type note)
+(defprinter transform type note important when)
 
 
 ;;; %Deftransform  --  Internal
@@ -171,20 +174,21 @@
 ;;;
 (proclaim '(function %deftransform
 		     (t list function &optional (or string null)
-			(member t nil))))
-(defun %deftransform (name type fun &optional note important)
+			(member t nil) (member :native :byte :both))))
+(defun %deftransform (name type fun &optional note important when)
   (let* ((ctype (specifier-type type))
 	 (note (or note "optimize"))
 	 (info (function-info-or-lose name))
 	 (old (find-if #'(lambda (x)
 			   (and (type= (transform-type x) ctype)
 				(string-equal (transform-note x) note)
-				(eq (transform-important x) important)))
+				(eq (transform-important x) important)
+				(eq (transform-when x) when)))
 		       (function-info-transforms info))))
     (if old
 	(setf (transform-function old) fun (transform-note old) note)
 	(push (make-transform :type ctype :function fun :note note
-			      :important important)
+			      :important important :when when)
 	      (function-info-transforms info)))
     name))
 
