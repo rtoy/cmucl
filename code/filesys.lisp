@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.12 1991/09/03 20:44:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.13 1991/10/22 16:31:32 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -256,19 +256,18 @@
 				 (defaults *default-pathname-defaults*)
 				 default-version)
   "Fills in unspecified slots of Pathname from Defaults (defaults to
-  *default-pathname-defaults*).  If the version remains unspecified,
-  gets it from Default-Version."
+   *default-pathname-defaults*).  If the version remains unspecified,
+   gets it from Default-Version."
   ;;
   ;; finish hairy argument defaulting
   (let ((pathname (pathname pathname))
 	(defaults (pathname defaults)))
     ;;
     ;; make a new pathname
-    (let ((name (%pathname-name pathname))
-	  (device (%pathname-device pathname)))
+    (let ((name (%pathname-name pathname)))
       (%make-pathname
        (or (%pathname-host pathname) (%pathname-host defaults))
-       (or device (%pathname-device defaults))
+       (or (%pathname-device pathname) (%pathname-device defaults))
        (or (%pathname-directory pathname) (%pathname-directory defaults))
        (or name (%pathname-name defaults))
        (or (%pathname-type pathname) (%pathname-type defaults))
@@ -689,13 +688,13 @@
   (let* ((pathname (if (pathnamep pathname) pathname (pathname pathname)))
 	 (device (%pathname-device pathname))
 	 (pattern (parse-pattern pathname))
-	 (results nil)
-	 (really-won nil))
+	 (results nil))
     (if (or (eq device :absolute)
 	    (null device)
 	    (string= device "Default"))
-	(multiple-value-setq (results really-won)
-	  (matching-files-in-dir (directory-namestring pathname) pattern all))
+	(setf results
+	      (matching-files-in-dir (directory-namestring pathname)
+				     pattern all))
 	(let ((remainder (namestring-without-device
 			  (directory-namestring pathname))))
 	  (do-search-list (dir device)
@@ -709,11 +708,7 @@
 	      (when won
 		(setf really-won t))
 	      (setf results (append results files))))))
-    (unless really-won
-      (error "Could not find ~S." pathname))
-    (setf results
-	  (sort (delete-duplicates results :test #'string=)
-		#'string<))
+    (setf results (sort (delete-duplicates results :test #'string=) #'string<))
     (mapcar #'(lambda (name)
 		(if (and check-for-subdirs
 			 (eq (mach:unix-file-kind name) :directory))
@@ -937,14 +932,12 @@
 
 ;;;; File completion.
 
+;;; COMPLETE-FILE -- Public
+;;;
 (defun complete-file (pathname &key (defaults *default-pathname-defaults*)
 			       ignore-types)
-  ;; Find all possible pathnames.
   (let ((files
-	 (directory (concatenate 'string
-				 (namestring (merge-pathnames pathname
-							      defaults))
-				 "*")
+	 (directory (complete-file-directory-arg pathname defaults)
 		    :check-for-subdirs nil)))
     (cond ((null files)
 	   (values nil nil))
@@ -981,12 +974,49 @@
 	       (values (merge-pathnames common pathname)
 		       nil)))))))
 
+;;; COMPLETE-FILE-DIRECTORY-ARG -- Internal.
+;;;
+;;; This is necessary to make COMPLETE-FILE reasonable.  The problem is that
+;;; MERGE-PATHNAMES of pathname and defaults fails us when pathname has a
+;;; non-nil directory slot, and pathname is relative to the "default" device.
+;;; There is no good argument for making MERGE-PATHNAMES do what COMPLETE-FILE
+;;; wants, but since COMPLETE-FILE is used in the context of the defaults
+;;; argument, it should always complete relative to the defaults, not relative
+;;; to the "default" logical name.  That is, what users want when pathname is
+;;; not absolute and specifies directories is something relative to the
+;;; absolute defaults supplied.
+;;;
+(defun complete-file-directory-arg (pathname defaults)
+  (let ((pathname (pathname pathname))
+	(defaults (pathname defaults)))
+    (concatenate 'simple-string
+		 (namestring
+		  (cond
+		   ((not (and (string= (pathname-device pathname) "Default")
+			      (pathname-directory pathname)))
+		    (merge-pathnames pathname defaults))
+		   ((eq (pathname-device defaults) :absolute)
+		    ;;
+		    (make-pathname
+		     :host (or (pathname-host pathname) (pathname-host defaults))
+		     :device :absolute
+		     :directory (concatenate 'simple-vector
+					     (pathname-directory defaults)
+					     (pathname-directory pathname))
+		     :name (or (pathname-name pathname) (pathname-name defaults))
+		     :type (or (pathname-type pathname)
+			       (pathname-type defaults))))
+		   (t
+		    ;; This branch should never fire, but just in case ...
+		    (merge-pathnames pathname defaults))))
+		 "*")))
+
 ;;; Ambiguous-Files  --  Public
 ;;;
 (defun ambiguous-files (pathname &optional defaults)
   "Return a list of all files which are possible completions of Pathname.
-  We look in the directory specified by Defaults as well as looking down
-  the search list."
+   We look in the directory specified by Defaults as well as looking down
+   the search list."
   (directory (concatenate 'string
 			  (namestring
 			   (merge-pathnames pathname
