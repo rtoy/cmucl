@@ -1,3 +1,62 @@
+10/21/92 to 11/23/92:
+
+Code:
+
+Fixed ``enum'' alien types to always use up 32 bits to be compatable with
+the various C compilers on the machines we are using.
+
+Fixed a bug in the ~<...~:> FORMAT directive where ~^ would blow out of
+whatever the ~<...~:> was inside instead of just the ~<...~:>.
+
+Extended hash tables to allow user defined :tests.  There is now a function
+DEFINE-HASH-TABLE-TEST that takes three arguments: the symbol name of the
+hash table test, the test function, and the hash function.  It registers
+the name, test function, and hash function so that MAKE-HASH-TABLE can be
+called with either the name or the test function for the :test argument.
+The hash function should take one argument (the object) and return a
+positive fixnum hash value.
+
+Delete-package function added according to X3J13/92 specification.
+
+Fixed pprint-lambda-list to print a space before the dot when the tail of
+the lambda list is shared.  In other words, print (foo . #1=(bar baz))
+instead of (foo. #1=(bar baz)).
+
+The newest implementation of LOOP employs a recursive descent parser with
+an intermediate representation in terms of variable, clause and loop
+structures.  After the entire expression is parsed the loop template is
+filled according to a set of rules determined by the clause operator.  Parts
+of this system are based on code in Peter Norvig's book Paradigm's of 
+Artificial Intelligence Programming: Case Studies in Common Lisp (Ch 24.5).
+The complete implementation satisfies all the test cases in the MIT test 
+suite and in the less complete ANSI Loop specification.
+
+
+Compiler:
+
+Fixed FIND-RESULT-TYPE to correctly handle assignment conversion.
+
+Only try to generate a disassembly when making a trace file if the
+disassembler has been set up for the backend we are using.
+
+Added a ``variable-lenght'' instruction attribute that indicates that the
+instruction can be a variable length, and hence cannot be used in a branch
+delay slot.
+
+
+C Support Code:
+
+[SPARC only] Fixed a bug were it would sometimes not save the floating
+point state on a signal.  This was causing all sorts of lossage.
+
+
+Tools:
+
+Added clmcom.lisp, as script to compile the clm stuff.  And added stuff to
+compile-all to invoke it.
+
+
+
 10/9/92 to 10/21/92:
 
 Compiler:
