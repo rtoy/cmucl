@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.96 1993/08/19 17:50:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.97 1993/08/19 23:13:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3546,3 +3546,43 @@
 
 	(when *compile-print*
 	  (compiler-mumble "Converted ~S.~%" name))))))
+
+
+;;;; Some support for Dylan module-variables
+
+
+(def-ir1-translator dylan::%var
+		    ((name module-name &optional type (where-from :assumed))
+		     start cont)
+  (reference-leaf
+   start cont
+   (make-dylan-var
+    :name name
+    :module-name module-name
+    :type (or type *universal-type*)
+    :where-from where-from)))
+    
+(def-ir1-translator dylan::%set-var
+		    ((value name module-name
+			    &optional type (where-from :assumed))
+		     start cont)
+  (set-variable
+   start cont
+   (make-dylan-var
+    :name name
+    :module-name module-name
+    :type (or type *universal-type*)
+    :where-from where-from)
+   value))
+  
+(def-ir1-translator dylan::%func ((name module-name &optional type info)
+				  start cont)
+  (reference-leaf
+   start cont 
+   (make-dylan-function-var
+    :kind :global-function
+    :name (list :dylan-function name module-name)
+    :type (or type (specifier-type 'function))
+    :where-from :assumed
+    :function-info info)))
+
