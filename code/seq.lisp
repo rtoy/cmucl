@@ -1615,9 +1615,9 @@
   except that all elements satisfying the Test are replaced with New.  The
   Sequence may be destroyed.  See manual for details."
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((incrementer 1))
-    (declare (fixnum incrementer))
+  (let ((incrementer 1)
+	(end (or end (length sequence))))
+    (declare (fixnum incrementer end))
     (if from-end
 	(psetq start (1- end)
 	       end (1- start)
@@ -1657,22 +1657,23 @@
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements not satisfying the Test are replaced with New.
   The Sequence may be destroyed.  See manual for details."
-  (declare (fixnum start end count))
-  (when (null end) (setf end (length sequence)))
-  (let ((incrementer 1))
-    (if from-end
-	(psetq start (1- end)
-	       end (1- start)
-	       incrementer -1))
-    (if (listp sequence)
-	(if from-end
-	    (nreverse (nlist-substitute-if-not*
-		       new test (nreverse (the list sequence))
-		       start end count key))
-	    (nlist-substitute-if-not* new test sequence
-				      start end count key))
-	(nvector-substitute-if-not* new test sequence incrementer
-				    start end count key))))
+  (declare (fixnum start count))
+  (let ((end (or end (length sequence))))
+    (declare (fixnum end))
+    (let ((incrementer 1))
+      (if from-end
+	  (psetq start (1- end)
+		 end (1- start)
+		 incrementer -1))
+      (if (listp sequence)
+	  (if from-end
+	      (nreverse (nlist-substitute-if-not*
+			 new test (nreverse (the list sequence))
+			 start end count key))
+	      (nlist-substitute-if-not* new test sequence
+					start end count key))
+	  (nvector-substitute-if-not* new test sequence incrementer
+				      start end count key)))))
 
 (defun nlist-substitute-if-not* (new test sequence start end count key)
   (declare (fixnum end))
