@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.10 1991/04/24 21:04:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.11 1991/05/04 12:29:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -309,17 +309,20 @@
   variable to the result, and wrapping the Let* around the result of the
   evaluation of Body.  Within the body, each Var is bound to the corresponding
   temporary variable."
-  (collect ((gensym-binds)
-	    (temp-binds))
-    (dolist (spec specs)
-      (when (/= (length spec) 2)
-	(error "Malformed Once-Only binding spec: ~S." spec))
-      (let ((name (first spec))
-	    (exp (second spec)))
-	(gensym-binds `(,name (gensym "OO-")))
-	(temp-binds ``(,,name ,,exp))))
-    `(let ,(gensym-binds)
-       (list 'let* (list ,@(temp-binds)) (progn ,@body)))))
+  (iterate frob
+	   ((specs specs)
+	    (body body))
+    (if (null specs)
+	`(progn ,@body)
+	(let ((spec (first specs)))
+	  (when (/= (length spec) 2)
+	    (error "Malformed Once-Only binding spec: ~S." spec))
+	  (let ((name (first spec))
+		(exp-temp (gensym)))
+	    `(let ((,exp-temp ,(second spec))
+		   (,name (gensym "OO-")))
+	       `(let ((,,name ,,exp-temp))
+		  ,,(frob (rest specs) body))))))))
 
 
 ;;;; DO-ANONYMOUS:
