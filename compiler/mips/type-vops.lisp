@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.16 1990/06/04 06:07:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.17 1990/06/04 06:13:43 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -30,7 +30,6 @@
 	  :scs (any-reg descriptor-reg)))
   (:results
    (result :scs (any-reg descriptor-reg)))
-  (:variant-vars type-code error-code)
   (:temporary (:type random :scs (non-descriptor-reg)) temp))
 
 (define-vop (simple-type-predicate)
@@ -39,6 +38,7 @@
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
+  (:variant-vars type-code)
   (:temporary (:type random :scs (non-descriptor-reg)) temp)
   (:generator 4
     (test-simple-type value temp target not-p type-code)))
