@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.73 1992/02/16 15:15:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.74 1992/02/29 03:08:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.73 1992/02/16 15:15:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.74 1992/02/29 03:08:03 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -63,9 +63,18 @@
 (if (find-package "ITERATE")
     (rename-package "ITERATE" "ITERATE" 'nil)
     (make-package "ITERATE" :nicknames 'nil :use nil))
+#+pmax
 (if (find-package "MIPS")
     (rename-package "MIPS" "MIPS" '("VM" "OLD-MIPS"))
     (make-package "MIPS" :nicknames '("VM" "OLD-MIPS") :use nil))
+#+sparc
+(if (find-package "SPARC")
+    (rename-package "SPARC" "SPARC" '("VM" "OLD-SPARC"))
+    (make-package "SPARC" :nicknames '("VM" "OLD-SPARC") :use nil))
+#+ibmrt
+(if (find-package "RT")
+    (rename-package "RT" "RT" '("VM" "OLD-RT"))
+    (make-package "RT" :nicknames '("VM" "OLD-RT") :use nil))
 (if (find-package "CONDITIONS")
     (rename-package "CONDITIONS" "CONDITIONS" 'nil)
     (make-package "CONDITIONS" :nicknames 'nil :use nil))
@@ -135,7 +144,7 @@
 (use-package
  '("C-CALL" "ALIEN-INTERNALS" "ALIEN" "BIGNUM" "LISP" "KERNEL" "EXTENSIONS"
    "SYSTEM" "ASSEMBLER" "C")
- "MIPS")
+ "VM")
 (use-package '("EXTENSIONS" "LISP") "CONDITIONS")
 (use-package '("LISP") "DISASSEM")
 (use-package '("EXTENSIONS" "LISP" "SYSTEM") "DEBUG")
@@ -724,7 +733,7 @@
      '("%SP-SET-DEFINITION" "%SP-SET-PLIST" "ARRAY-HEADER-P" "BASE-CHAR-P"
        "DOUBLE-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
   (intern name "KERNEL"))
-(defpackage "MIPS"
+(defpackage #+pmax "MIPS" #+sparc "SPARC" #+ibmrt "RT"
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
              "%SET-DOCUMENTATION" "%SET-FDEFINITION" "%SET-FILL-POINTER"
