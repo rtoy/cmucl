@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.37 1991/04/04 14:31:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.38 1991/04/09 23:34:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -668,7 +668,8 @@
 	      (t
 	       (normal-read-error stream pos condition)
 	       (ignore-error-form stream pos))))
-      '(error "Attempt to load a file having a compile-time read error."))))
+      '(cerror "Skip this form."
+	       "Attempt to load a file having a compile-time read error."))))
 
 
 ;;; Get-Source-Stream  --  Internal
@@ -861,18 +862,17 @@
 	       (compiler-mumble "~&Comment: ~A~2&" comment)))))))
 
 
-;;; PROCESS-PACKAGE-FROBBER  --  Internal
+;;; PROCESS-COLD-LOAD-FORM  --  Internal
 ;;;
 ;;;    Force any pending top-level forms to be compiled and dumped so that they
-;;; will be evaluated in the correct package environment.  Then eval the
-;;; package form and dump it.  At least for now, always dump package frobbing
-;;; as interpreted cold load forms.  This might want to be on a switch someday.
+;;; will be evaluated in the correct package environment.  Eval the form if
+;;; Eval is true, then dump the form to evaled at (cold) load time.
 ;;;
-(defun process-package-frobber (form path object)
+(defun process-cold-load-form (form path object eval)
   (typecase object
     (fasl-file
      (compile-top-level-lambdas () t object)))
-  (eval form)
+  (when eval (eval form))
   (etypecase object
     (fasl-file
      (fasl-dump-cold-load-form form object))
@@ -927,7 +927,9 @@
 	  (case (car form)
 	    ((make-package in-package shadow shadowing-import export
 			   unexport use-package unuse-package import)
-	     (process-package-frobber form path object))
+	     (process-cold-load-form form path object t))
+	    ((error cerror break signal)
+	     (process-cold-load-form form path object nil))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
 	       (compiler-error "EVAL-WHEN form is too short: ~S." form))
