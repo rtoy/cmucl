@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.19 1993/08/03 13:26:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.20 1993/08/04 09:39:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1382,7 +1382,9 @@
 	 ,result))))
 
 (defun %enumerate-search-list (pathname function)
-  (let ((search-list (extract-search-list pathname nil)))
+  (let ((search-list (extract-search-list
+		      (translate-logical-pathname pathname)
+		      nil)))
     (cond
      ((not search-list)
       (funcall function pathname))
