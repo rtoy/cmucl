@@ -19,6 +19,7 @@
 (in-package "EXTENSIONS")
 (export '(grindef))
 (in-package "LISP")
+
 #|
 (defun pprin1 (object &optional stream)
   "Prettily outputs the Object to the Stream slashifying special characters."
@@ -45,6 +46,7 @@
 (defun output-pretty-object (object stream)
   (assert *print-pretty*)
   (typecase object
+    #+nil
     ((or list structure vector array)
      (xp::basic-write object stream))
     (t (let ((*print-pretty* nil))
@@ -83,8 +85,5 @@
 
 ;;; Initialize Water's pretty printer.
 (defun pprint-init ()
-  (xp::install :shadow nil)
-  (define-print-dispatch (cons (and symbol (satisfies fboundp)))
-			 ((:priority 5) (:table *print-dispatch*))
-    #'fill-style))
+  (xp::install :package "XP" :shadow nil))
 
