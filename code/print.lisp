@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.15 1990/11/19 15:00:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.16 1990/11/21 10:10:19 wlott Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -717,7 +717,7 @@
 ;;; Defstruct code.
 
 (defun output-structure (structure stream currlevel)
-  (funcall (or (info type printer (%primitive c::structure-ref structure 0))
+  (funcall (or (info type printer (structure-ref structure 0))
 	       #'c::default-structure-print)
 	   structure stream currlevel))
 
