@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.22 1990/12/04 19:36:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.23 1990/12/12 00:07:24 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -139,10 +139,14 @@
 ;;; Note that all the integer division functions are available for inline
 ;;; expansion.
 
-(def-source-transform truncate (x &optional y)
-  (if y
-      (values nil t)
-      `(truncate ,x 1)))
+(macrolet ((frob (fun)
+	     `(def-source-transform ,fun (x &optional (y nil y-p))
+		(declare (ignore y))
+		(if y-p
+		    (values nil t)
+		    `(,',fun ,x 1)))))
+  (frob truncate)
+  (frob round))
 
 (def-source-transform lognand (x y) `(lognot (logand ,x ,y)))
 (def-source-transform lognor (x y) `(lognot (logior ,x ,y)))
