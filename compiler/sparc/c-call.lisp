@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.8 1992/03/27 23:26:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.9 1992/04/28 15:41:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,10 @@
 
 (defstruct arg-state
   (register-args 0)
-  (stack-frame-size 0))
+  ;; No matter what we have to allocate at least 7 stack frame slots.  One
+  ;; because the C call convention requries it, and 6 because whoever we call
+  ;; is going to expect to be able to save his 6 register arguments there.
+  (stack-frame-size 7))
 
 (defun int-arg (state prim-type reg-sc stack-sc)
   (let ((reg-args (arg-state-register-args state)))
@@ -37,7 +40,7 @@
 	  (t
 	   (let ((frame-size (arg-state-stack-frame-size state)))
 	     (setf (arg-state-stack-frame-size state) (1+ frame-size))
-	     (my-make-wired-tn prim-type stack-sc (+ frame-size 16 1 6)))))))
+	     (my-make-wired-tn prim-type stack-sc (+ frame-size 16)))))))
 
 (def-alien-type-method (integer :arg-tn) (type state)
   (if (alien-integer-type-signed type)
@@ -157,7 +160,11 @@
 	      (t
 	       (inst li temp delta)
 	       (inst sub nsp-tn temp)))))
-    (inst add result nsp-tn number-stack-displacement)))
+    (unless (location= result nsp-tn)
+      ;; They are only location= when the result tn was allocated by
+      ;; make-call-out-tns above, which takes the number-stack-displacement
+      ;; into account itself.
+      (inst add result nsp-tn number-stack-displacement))))
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
