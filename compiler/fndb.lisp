@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.21 1991/04/25 00:47:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.22 1991/04/28 11:55:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -622,7 +622,7 @@
   ((array bit) (array bit) &optional (or (array bit) (member t)))
   (array bit)
   (foldable)
-  #|:derive-type #'result-type-last-arg|#
+  #|:derive-type #'result-type-last-arg|#)
 
 (defknown bit-not ((array bit) &optional (or (array bit) (member t)))
   (array bit)
