@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.102 1994/02/11 15:09:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.103 1994/02/12 09:38:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,13 +351,11 @@
 ;;;
 ;;;    Return our best guess for whether we will byte compile code currently
 ;;; being IR1 converted.  Only a guess because the decision is made on a
-;;; per-component basis.  If :CONSERVATIVE is true, return T if there is any
-;;; doubt.
+;;; per-component basis.
 ;;;
-(defun byte-compiling (&key conservative)
+(defun byte-compiling ()
   (if (eq *byte-compiling* :maybe)
-      (or conservative
-	  (eq *byte-compile* t)
+      (or (eq *byte-compile* t)
 	  (policy nil (zerop speed) (<= debug 1)))
       (and *byte-compile* *byte-compiling*)))
 
