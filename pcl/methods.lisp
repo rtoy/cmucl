@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.18 2002/11/28 16:23:34 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.19 2002/12/18 00:57:05 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -987,7 +987,7 @@
 				       (sdfun-for-caching generic-function classes))
 				      ((eq valuep :constant-value)
 				       (value-for-caching generic-function classes)))))
-		     (setq cache (fill-cache cache wrappers value t))))))))
+		     (setq cache (fill-cache cache wrappers value))))))))
       (if classes-list
 	  (mapc #'add-class-list classes-list)
 	  (dolist (method (generic-function-methods generic-function))

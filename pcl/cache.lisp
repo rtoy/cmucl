@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.22 2002/11/21 22:09:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.23 2002/12/18 00:57:04 pmai Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -164,69 +164,12 @@
 
 
 ;;;
-;;; Some facilities for allocation and freeing caches as they are needed.
-;;; This is done on the assumption that a better port of PCL will arrange
-;;; to cons these all the same static area.  Given that, the fact that
-;;; PCL tries to reuse them should be a win.
-;;; 
-(defvar *free-cache-vectors* (make-hash-table :size 16 :test 'eql))
-
-;;;
 ;;; Return a cache that has had flush-cache-vector-internal called on it.  This
 ;;; returns a cache of exactly the size requested, it won't ever return a
 ;;; larger cache.
 ;;; 
 (defun get-cache-vector (size)
-  (let ((entry (gethash size *free-cache-vectors*)))
-    (with-pcl-lock
-      (cond ((null entry)
-	     (setf (gethash size *free-cache-vectors*) (cons 0 nil))
-	     (get-cache-vector size))
-	    ((null (cdr entry))
-	     (incf (car entry))
-	     (flush-cache-vector-internal (allocate-cache-vector size)))
-	    (t
-	     (let ((cache (cdr entry)))
-	       (setf (cdr entry) (cache-vector-ref cache 0))
-	       (flush-cache-vector-internal cache)))))))
-
-(defun free-cache-vector (cache-vector)
-  (let ((entry (gethash (cache-vector-size cache-vector) *free-cache-vectors*)))
-    (with-pcl-lock
-      (if (null entry)
-	  (error "Attempt to free a cache-vector not allocated by GET-CACHE-VECTOR.")
-	  (let ((thread (cdr entry)))
-	    (loop (unless thread (return))
-		  (when (eq thread cache-vector) (error "Freeing a cache twice."))
-		  (setq thread (cache-vector-ref thread 0)))	  
-	    (flush-cache-vector-internal cache-vector)		;Help the GC
-	    (setf (cache-vector-ref cache-vector 0) (cdr entry))
-	    (setf (cdr entry) cache-vector)
-	    nil)))))
-
-;;;
-;;; This is just for debugging and analysis.  It shows the state of the free
-;;; cache resource.
-;;; 
-(defun show-free-cache-vectors ()
-  (let ((elements ()))
-    (maphash (lambda (s e) (push (list s e) elements)) *free-cache-vectors*)
-    (setq elements (sort elements #'< :key #'car))
-    (dolist (e elements)
-      (let* ((size (car e))
-	     (entry (cadr e))
-	     (allocated (car entry))
-	     (head (cdr entry))
-	     (free 0))
-	(loop (when (null head) (return t))
-	      (setq head (cache-vector-ref head 0))
-	      (incf free))
-	(format t
-		"~&There  ~4D are caches of size ~4D. (~D free  ~3D%)"
-		allocated
-		size
-		free
-		(floor (* 100 (/ free (float allocated)))))))))
+  (flush-cache-vector-internal (make-array size)))
 
 
 ;;;
@@ -481,10 +424,8 @@
 
 
 
-(defvar *free-caches* nil)
-
 (defun get-cache (nkeys valuep limit-fn nlines)
-  (let ((cache (or (with-pcl-lock (pop *free-caches*)) (make-cache))))
+  (let ((cache (make-cache)))
     (declare (type cache cache))
     (multiple-value-bind (cache-mask actual-size line-size nlines)
 	(compute-cache-parameters nkeys valuep nlines)
@@ -508,7 +449,7 @@
 			     &optional (new-field (first-wrapper-cache-number-index)))
   (let ((nkeys (cache-nkeys old-cache))
 	(valuep (cache-valuep old-cache))
-	(cache (or (with-pcl-lock (pop *free-caches*)) (make-cache))))
+	(cache (make-cache)))
     (declare (type cache cache))
     (multiple-value-bind (cache-mask actual-size line-size nlines)
 	(if (= new-nlines (cache-nlines old-cache))
@@ -543,13 +484,6 @@
       (setf (svref new-vector i) (svref old-vector i)))
     (setf (cache-vector new-cache) new-vector)
     new-cache))
-
-(defun free-cache (cache)
-  (free-cache-vector (cache-vector cache))
-  (setf (cache-vector cache) #())
-  (setf (cache-owner cache) nil)
-  (push cache *free-caches*)
-  nil)
 
 (defun compute-line-size (x)
   (power-of-two-ceiling x))
@@ -1028,17 +962,17 @@
 ;;;
 (defvar *cache-expand-threshold* 1.25)
 
-(defun fill-cache (cache wrappers value &optional free-cache-p)
+(defun fill-cache (cache wrappers value)
   ;;(declare (values cache))
-  (unless wrappers ; fill-cache won't return if wrappers is nil, might as well check.
-    (error "fill-cache: wrappers arg is NIL!"))
+  ;; fill-cache won't return if wrappers is nil, might as well check.
+  (assert wrappers)
   (or (fill-cache-p nil cache wrappers value)
       (and (< (ceiling (* (cache-count cache) 1.25))
 	      (if (= (cache-nkeys cache) 1)
 		  (1- (cache-nlines cache))
 		  (cache-nlines cache)))
-	   (adjust-cache cache wrappers value free-cache-p))
-      (expand-cache cache wrappers value free-cache-p)))
+	   (adjust-cache cache wrappers value))
+      (expand-cache cache wrappers value)))
 
 (defvar *check-cache-p* nil)
 
@@ -1203,11 +1137,13 @@
 ;;; field for which all of the entries could be put in the cache (within the
 ;;; limit).  
 ;;;
-(defun adjust-cache (cache wrappers value free-old-cache-p)
+(defun adjust-cache (cache wrappers value)
   (with-local-cache-functions (cache)
     (let ((ncache (get-cache-from-cache cache (nlines) (field))))
-      (do ((nfield (cache-field ncache) (next-wrapper-cache-number-index nfield)))
-	  ((null nfield) (free-cache ncache) nil)
+      (do ((nfield (cache-field ncache)
+		   (when (< nfield (1- kernel:layout-hash-length))
+		     (1+ nfield))))
+	  ((null nfield) nil)
 	(setf (cache-field ncache) nfield)
 	(labels ((try-one-fill-from-line (line)
 		   (fill-cache-from-cache-p nil ncache cache line))
@@ -1222,15 +1158,14 @@
 		     (unless (try-one-fill (car wrappers+value) (cdr wrappers+value))
 		       (return nil)))
 		   (try-one-fill wrappers value))
-	      (progn (when free-old-cache-p (free-cache cache))
+	      (progn 
 		     (return (maybe-check-cache ncache)))
 	      (flush-cache-vector-internal (cache-vector ncache))))))))
-
 		       
 ;;;
 ;;; returns: (values <cache>)
 ;;;
-(defun expand-cache (cache wrappers value free-old-cache-p)
+(defun expand-cache (cache wrappers value)
   ;;(declare (values cache))
   (with-local-cache-functions (cache)
     (let ((ncache (get-cache-from-cache cache (* (nlines) 2))))
@@ -1238,7 +1173,7 @@
 		 (unless (fill-cache-from-cache-p nil ncache cache line)
 		   (do-one-fill (line-wrappers line) (line-value line))))
 	       (do-one-fill (wrappers value)
-		 (setq ncache (or (adjust-cache ncache wrappers value t)
+		 (setq ncache (or (adjust-cache ncache wrappers value)
 				  (fill-cache-p t ncache wrappers value))))
 	       (try-one-fill (wrappers value)
 		 (fill-cache-p nil ncache wrappers value)))
@@ -1252,7 +1187,6 @@
 	    (do-one-fill (car wrappers+value) (cdr wrappers+value))))
 	(unless (try-one-fill wrappers value)
 	  (do-one-fill wrappers value))
-	(when free-old-cache-p (free-cache cache))
 	(maybe-check-cache ncache)))))
 
 

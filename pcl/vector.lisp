@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.24 2002/12/18 00:16:33 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.25 2002/12/18 00:57:05 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -241,8 +241,7 @@
 	       (pv-cell (cons pv calls))
 	       (new-cache (fill-cache cache pv-wrappers pv-cell)))
 	  (unless (eq new-cache cache)
-	    (setf (pv-table-cache pv-table) new-cache)
-	    (free-cache cache))
+	    (setf (pv-table-cache pv-table) new-cache))
 	  pv-cell))))
 
 (defun make-pv-type-declaration (var)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.16 2002/11/28 16:23:32 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.17 2002/12/18 00:57:04 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -685,8 +685,7 @@ And so, we are saved.
     (maphash (lambda (classes value)
 	       (setq cache (fill-cache cache
 				       (class-wrapper classes)
-				       value
-				       t)))
+				       value)))
 	     table)
     cache))
 
@@ -1537,15 +1536,13 @@ And so, we are saved.
   (let* ((early-p (early-gf-p generic-function))
 	 (gf-name (if early-p
 		      (early-gf-name generic-function)
-		      (generic-function-name generic-function)))
-	 (ocache (gf-dfun-cache generic-function)))
+		      (generic-function-name generic-function))))
     (set-dfun generic-function dfun cache info)
     (let ((dfun (if early-p
 		    (or dfun (make-initial-dfun generic-function))
 		    (compute-discriminating-function generic-function))))
       (set-funcallable-instance-function generic-function dfun)
       (set-function-name generic-function gf-name)
-      (when (and ocache (not (eq ocache cache))) (free-cache ocache))
       dfun)))
 
 
