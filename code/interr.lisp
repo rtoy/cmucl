@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.36 1998/12/19 16:05:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.37 1999/05/01 04:32:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -316,7 +316,12 @@
   (error 'simple-error
 	 :function-name name
 	 :format-control
-	 "Invalid array index, ~D for ~S.  Should have been less than ~D"
+	 (cond ((zerop bound)
+		"Invalid array index, ~D for ~S.  Array has no elements.")
+	       ((minusp index)
+		"Invalid array index, ~D for ~S.  Should have greater than or equal to 0.")
+	       (t
+		"Invalid array index, ~D for ~S.  Should have been less than ~D"))
 	 :format-arguments (list index array bound)))
 
 (deferr object-not-simple-array-error (object)
