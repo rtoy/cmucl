@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.8 1990/08/14 16:27:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.9 1990/08/14 16:34:25 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -107,7 +107,7 @@
 	      ,(meta-error-number name)
 	      ,description
 	      #'(lambda (name ,fp ,sigcontext ,sc-offsets)
-		  (declare (ignorable name ,fp ,sigcontext ,sc-offset))
+		  (declare (ignorable name ,fp ,sigcontext ,sc-offsets))
 		  (macrolet ((set-value (var value)
 			       (let ((pos (position var ',required)))
 				 (unless pos
