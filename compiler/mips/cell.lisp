@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.26 1990/03/19 23:55:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.27 1990/03/20 00:43:16 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -45,7 +45,7 @@
 		 (ref-vop (getf slot-opts :ref-vop ref-trans))
 		 (set-trans (getf slot-opts :set-trans))
 		 (setf-vop (getf slot-opts :setf-vop
-				 (when (and (list set-trans)
+				 (when (and (listp set-trans)
 					    (= (length set-trans) 2)
 					    (eq (car set-trans) 'setf))
 				   (intern (concatenate
