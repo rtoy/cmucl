@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.96 2003/10/09 13:25:25 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.97 2003/10/11 10:49:51 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -760,18 +760,14 @@
 	(let* ((bind-block (node-block bind))
 	       (component (block-component bind-block))
 	       (return (lambda-return leaf)))
-
-	  ;; DELETE-LAMBDA can now remove a recursive lambda.  Check
-	  ;; that all calls are from the lambda being deleted.
 	  (dolist (ref (lambda-refs leaf))
-	    (let ((home (node-home-lambda ref)))
-	      (assert (eq home leaf))))
-	  
+	    (mark-for-deletion (node-block ref)))
 	  (unless (leaf-ever-used leaf)
 	    (let ((*compiler-error-context* bind))
 	      (compiler-note "Deleting unused function~:[.~;~:*~%  ~S~]"
 			     (leaf-name leaf))))
-	  (unlink-blocks (component-head component) bind-block)
+          (unless (block-delete-p bind-block)
+	    (unlink-blocks (component-head component) bind-block))
 	  (when return
 	    (unlink-blocks (node-block return) (component-tail component)))
 	  (setf (component-reanalyze component) t)
@@ -1006,7 +1002,8 @@
 
   (do-nodes (node cont block)
     (typecase node
-      (ref (delete-ref node))
+      (ref
+       (delete-ref node))
       (cif
        (flush-dest (if-test node)))
       ;;
@@ -1030,10 +1027,12 @@
       (bind
        (let ((lambda (bind-lambda node)))
 	 (unless (eq (functional-kind lambda) :deleted)
-	   (assert (member (functional-kind lambda)
-			   '(:let :mv-let :assignment)))
 	   (delete-lambda lambda))))
       (entry
+       (dolist (exit (entry-exits node))
+         (mark-for-deletion (node-block exit)))
+       (let ((home (node-home-lambda node)))
+         (setf (lambda-entries home) (delq node (lambda-entries home))))
        ;;
        ;; Delete stale entries from the block's home lambda, otherwise
        ;; COMPILE-FOR-EVAL stumbles over them.  FIXME: There is still
