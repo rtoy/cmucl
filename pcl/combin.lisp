@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.16 2003/05/25 14:33:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.17 2003/05/28 10:41:47 gerd Exp $")
 
 (in-package "PCL")
 
@@ -466,37 +466,129 @@
 		,@check-applicable-keywords
 		,body))))))
 
+;;;
+;;; Return a method function name of METHOD.  If FAST-FUNCTION
+;;; is true, return the fast method function name, otherwise
+;;; return the slow method function name.
+;;;
+(defun method-function-name (method &optional (fast-function t))
+  (let ((name (nth-value 2 (parse-method-or-spec method))))
+    (if fast-function
+	(cons 'fast-method (cdr name))
+	name)))
+
+;;;
+;;; Return a form for calling METHOD's fast function.  METATYPES is a
+;;; list of metatypes, whose length is used to figure out the names of
+;;; required emf parameters.  APPLY? true means the method has a &rest
+;;; arg.  CALLABLE-VAR is the name of a closed-over variable
+;;; containing a FAST-METHOD-CALL instance corresponding to the
+;;; method invocation.
+;;;
+(defun make-direct-call (method metatypes rest? callable-var)
+  (let* ((fn-name (method-function-name method))
+	 (fn `(the function #',fn-name))
+	 (cell `(fast-method-call-pv-cell ,callable-var))
+	 (next `(fast-method-call-next-method-call ,callable-var))
+	 (req (dfun-arg-symbol-list metatypes)))
+    (assert (fboundp fn-name))
+    `(funcall ,fn ,cell ,next ,@req ,@(when rest? `(.dfun-rest-arg.)))))
+
+;;;
+;;; Return a form for successive calls to the fast functions of
+;;; the methods in METHODS.  LIST-VAR is the name of a 
+;;; variable containing a list of FAST-METHOD-CALL structures
+;;; corresponding to the method function calls.
+;;;
+(defun make-direct-calls (methods metatypes apply? list-var)
+  (collect ((calls))
+    (dolist (method methods)
+      (calls `(let ((.call. (pop .list.)))
+		,(make-direct-call method metatypes apply? '.call.))))
+    `(let ((.list. ,list-var))
+       (declare (ignorable .list.))
+       ,@(calls))))
+
+;;;
+;;; Return the list of methods from a CALL-METHOD-LIST form.
+;;;
+(defun call-method-list-methods (call-method-list)
+  (mapcar (lambda (call-method) (cadr call-method))
+	  (cdr call-method-list)))
+
+;;;
+;;; Compute a key from FORM.  This function is called via the
+;;; GET-FUNCTION mechanism on forms of an emf lambda.  Values returned
+;;; that are not EQ to FORM are considered keys.  All keys are
+;;; collected and serve GET-FUNCTION as a key in its table of already
+;;; computed functions.  That is, if two emf lambdas produce the same
+;;; key, a previously compiled function can be used.
+;;;
 (defun memf-test-converter (form gf method-alist-p wrappers-p)
   (case (car-safe form)
+    ;;
     (call-method
      (case (get-method-call-type gf form method-alist-p wrappers-p)
-       (fast-method-call '.fast-call-method.)
+       (fast-method-call
+	(let ((method (cadr form)))
+	  (if (and (eq *boot-state* 'complete) *inline-methods-in-emfs*)
+	      (method-function-name method)
+	      '.fast-call-method.)))
        (t '.call-method.)))
+    ;;
     (call-method-list
      (case (get-method-list-call-type gf form method-alist-p wrappers-p)
-       (fast-method-call '.fast-call-method-list.)
+       (fast-method-call
+	(if (and (eq *boot-state* 'complete) *inline-methods-in-emfs*)
+	    (mapcar #'method-function-name (call-method-list-methods form))
+	    '.fast-call-method-list.))
        (t '.call-method-list.)))
+    ;;
     (check-applicable-keywords
      'check-applicable-keywords)
     (t
      (default-test-converter form))))
 
+;;;
+;;; This function is called via the GET-FUNCTION mechanism on forms of
+;;; an emf lambda.  First value returned replaces FORM in the emf
+;;; lambda.  Second value is a list of variable names that become
+;;; closure variables.
+;;;
 (defun memf-code-converter (form gf metatypes applyp method-alist-p
 			    wrappers-p)
   (case (car-safe form)
+    ;;
+    ;; (CALL-METHOD <method-object> &optional <next-methods>)
     (call-method
-     (let ((gensym (gensym "MEMF")))
-       (values (make-emf-call metatypes applyp gensym
-			      (get-method-call-type gf form method-alist-p
-						    wrappers-p))
-	       (list gensym))))
-    (call-method-list
-     (let ((gensym (gensym "MEMF"))
-	   (type (get-method-list-call-type gf form method-alist-p
+     (let ((method (cadr form))
+	   (callable-var (gensym))
+	   (call-type (get-method-call-type gf form method-alist-p
 					    wrappers-p)))
-       (values `(dolist (emf ,gensym nil)
-		  ,(make-emf-call metatypes applyp 'emf type))
-	       (list gensym))))
+       (if (and (eq call-type 'fast-method-call)
+		(eq *boot-state* 'complete)
+		*inline-methods-in-emfs*)
+	   (values (make-direct-call method metatypes applyp callable-var)
+		   (list callable-var))
+	   (values (make-emf-call metatypes applyp callable-var call-type)
+		   (list callable-var)))))
+    ;;
+    ;; (CALL-METHOD-LIST <call-method-form>*)
+    ;; where each CALL-METHOD form is (CALL-METHOD <method>)
+    (call-method-list
+     (let ((list-var (gensym))
+	   (call-type (get-method-list-call-type gf form method-alist-p
+						 wrappers-p)))
+       (if (and (eq call-type 'fast-method-call)
+		(eq *boot-state* 'complete)
+		*inline-methods-in-emfs*)
+	   (let ((methods (call-method-list-methods form)))
+	     (values (make-direct-calls methods metatypes applyp list-var)
+		     (list list-var)))
+	   (values `(dolist (.tem. ,list-var)
+		      ,(make-emf-call metatypes applyp '.tem. call-type))
+		   (list list-var)))))
+    ;;
     (check-applicable-keywords
      (values `(check-applicable-keywords .dfun-rest-arg.
 					 .keyargs-start. .valid-keys.)
@@ -576,24 +668,13 @@
 (defun make-callable (gf methods generator method-alist wrappers)
   (let* ((*applicable-methods* methods)
 	 (callable (function-funcall generator method-alist wrappers)))
-    (set-emf-name gf methods callable)))
-
-;;;
-;;; When *NAME-EMFS-P* is true, give the effective method represented
-;;; by CALLABLE a suitable global name of the form (EFFECTIVE-METHOD
-;;; ...).  GF is the generic function the effective method is for, and
-;;; METHODS is the list of applicable methods.
-;;;
-(defun set-emf-name (gf methods callable)
-  (when *named-emfs-p*
-    (let ((function (typecase callable
-		      (fast-method-call (fast-method-call-function callable))
-		      (method-call (method-call-function callable))
-		      (t callable)))
-	  (name (make-emf-name gf methods)))
-      (setf (fdefinition name) function)
-      (set-function-name function name)))
-  callable)
+    (when *named-emfs-p*
+      (let ((fn (etypecase callable
+		  (fast-method-call (fast-method-call-function callable))
+		  (method-call (method-call-function callable))
+		  (function callable))))
+	(setf (fdefinition (make-emf-name gf methods)) fn)))
+    callable))
 
 ;;;
 ;;; Return a name for an effective method of generic function GF,

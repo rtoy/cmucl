@@ -2101,6 +2101,59 @@ itself, PCL will then print a warning that the method must be
 recompiled manually when classes are changed.
 
 
+
+\subsection{Inlineing Methods in Effective Methods}
+\cindex{effective method}
+\cpsubindex{methods}{inlineing in effective methods}
+\cpsubindex{effective method}{inlineing of methods}
+\cindex{inline}
+
+When a generic function is called, an effective method is constructed
+from applicable methods.  The effective method is called with the
+original arguments, and itself calls applicable methods according to
+the generic function's method combination.  Some of the function call
+overhead in effective methods can be removed by inlineing methods in
+effective methods, at the expense of increased code size.
+
+Inlineing of methods is controlled by the usual \code{inline}
+declaration.  In the following example, both \code{foo} methods shown
+will be inlined in effective methods:
+
+\begin{example}
+(declaim (inline (method foo (foo))
+                 (method foo :before (foo))))
+(defmethod foo ((x foo)) ...)
+(defmethod foo :before ((x foo)) ...)
+\end{example}
+
+Please note that this form of inlineing has no noticeable effect for
+effective methods that consist of a primary method only, which doesn't
+have keyword arguments.  In such cases, PCL uses the primary method
+directly for the effective method.
+
+When the definition of an inlined method is changed, effective methods
+are \textbf{not} automatically updated to reflect the change.  This is
+just as it is when inlineing normal functions.  Different from the
+normal case is that users do not have direct access to effective
+methods, as it would be the case when a function is inlined somewhere
+else.  Because of this, the function \code{pcl:flush-emf-cache} is
+provided for forcing such an update of effective methods.
+
+\begin{defun}{pcl:}{flush-emf-cache}{\&optional gf}
+  Flush cached effective method functions.  If \code{gf} is supplied,
+  it should be a generic function metaobject or the name of a generic
+  function, and this function flushes all cached effective methods for
+  the given generic function.  If \code{gf} is not supplied, all
+  cached effective methods are flushed.
+\end{defun}
+
+\begin{defvar}{pcl::}{inline-methods-in-emfs}
+  If true, the default, perform method inlineing as described above.
+  If false, don't.
+\end{defvar}
+
+
+
 \subsection{Sealing}
 \cindex{sealing}
 \cpsubindex{sealing}{subclasses}

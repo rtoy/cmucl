@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.26 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.27 2003/05/28 10:41:47 gerd Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 
@@ -97,6 +97,8 @@
   ;; Function names.
   (:export "EFFECTIVE-METHOD" "FAST-METHOD" "SLOT-ACCESSOR"
 	   "CLASS-PREDICATE")
+
+  (:export "FLUSH-EMF-CACHE")
   
   (:export "STANDARD-INSTANCE"
 	   "FUNCALLABLE-STANDARD-INSTANCE"

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.61 2003/05/25 16:54:40 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.62 2003/05/28 10:41:47 gerd Exp $")
 
 (in-package :pcl)
 
@@ -378,6 +378,9 @@ work during bootstrapping.
 (defvar *inline-access*)
 (defvar *method-source-info*)
 
+(defvar *inline-methods-in-emfs* t
+  "If true, allow inlining of methods in effective methods.")
+
 (defun expand-defmethod (name proto-gf proto-method qualifiers
 			 lambda-list body env)
   (let ((*inline-access* ()))
@@ -402,12 +405,35 @@ work during bootstrapping.
                    non-null lexical environment means that it cannot be ~
                    automatically recompiled.~@:>"
 		  name qualifiers lambda-list))
-	  (let ((initargs-form (make-method-initargs-form 
+	  (let* ((method-name `(method ,name ,@qualifiers ,specializers))
+		 (initargs-form (make-method-initargs-form 
 				proto-gf proto-method
 				method-function-lambda initargs env)))
 	    (tell-compiler-about-gf name unspecialized-lambda-list)
 	    `(progn
 	       (proclaim-defgeneric ',name ',unspecialized-lambda-list)
+	       ;;
+	       ;; Set inlining information in the global enviroment
+	       ;; for the fast function if there is an INLINE
+	       ;; declaration for the method name, which is the name
+	       ;; of the "slow" function.  FIXME: Maybe the function
+	       ;; names should be METHOD and SLOW-METHOD.
+	       ,@(let ((inline (and *inline-methods-in-emfs*
+				    (info function inlinep method-name))))
+		   (when inline
+		     (let ((fast-name (cons 'fast-method (cdr method-name)))
+			   (lambda (getf (cdr initargs-form) :fast-function)))
+		       `((setf (info function inlinep ',fast-name)
+			       ',inline
+			       (info function inline-expansion ',fast-name)
+			       ',lambda)))))
+	       ;;
+	       ;; This expands to a LOAD-DEFMETHOD with compiled or
+	       ;; interpreted lambdas for the method functions.  The
+	       ;; LOAD-DEFMETHOD will construct the method metaobject
+	       ;; with initargs from INITARGS-FORM etc.  FIXME: We
+	       ;; could as well produce DEFUNs here, now that we have
+	       ;; generalized function names.
 	       ,(make-defmethod-form name qualifiers specializers
 				     unspecialized-lambda-list
 				     (if proto-method
@@ -522,7 +548,7 @@ work during bootstrapping.
 (defmethod make-method-initargs-form ((proto-gf standard-generic-function)
 				      (proto-mothed standard-method)
 				      method-lambda initargs env)
-  (unless (and (consp method-lambda) (eq (car method-lambda) 'lambda))
+  (unless (eq (car-safe method-lambda) 'lambda)
     (error "The method-lambda argument to make-method-function, ~S,~
             is not a lambda form" method-lambda))
   (make-method-initargs-form-internal method-lambda initargs env))

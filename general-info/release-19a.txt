@@ -132,6 +132,8 @@ New in this release:
        in other implementations.
      - The declaration identifiers SLOTS, AUTO-COMPILE,
        NOT-AUTO-COMPILE have been moved from PCL to EXT.
+     - Support for inlineing methods in effective methods; see the 
+       CMU User Manual.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
