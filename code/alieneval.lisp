@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.33 1993/08/26 15:27:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.34 1994/04/06 16:59:05 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,6 +128,7 @@
 
 (defun guess-alignment (bits)
   (cond ((null bits) nil)
+	((> bits 32) 64)
 	((> bits 16) 32)
 	((> bits 8) 16)
 	((> bits 1) 8)
@@ -637,11 +638,13 @@
 	  (case (alien-integer-type-bits type)
 	    (8 'signed-sap-ref-8)
 	    (16 'signed-sap-ref-16)
-	    (32 'signed-sap-ref-32))
+	    (32 'signed-sap-ref-32)
+	    #+alpha (64 'signed-sap-ref-64))
 	  (case (alien-integer-type-bits type)
 	    (8 'sap-ref-8)
 	    (16 'sap-ref-16)
-	    (32 'sap-ref-32)))))
+	    (32 'sap-ref-32)
+	    #+alpha (64 'sap-ref-64)))))
     (if ref-fun
 	`(,ref-fun ,sap (/ ,offset vm:byte-bits))
 	(error "Cannot extract ~D bit integers."
@@ -852,7 +855,7 @@
 (def-alien-type-class (system-area-pointer))
 
 (def-alien-type-translator system-area-pointer ()
-  (make-alien-system-area-pointer-type :bits vm:word-bits))
+  (make-alien-system-area-pointer-type :bits #-alpha vm:word-bits #+alpha 64))
 
 (def-alien-type-method (system-area-pointer :unparse) (type)
   (declare (ignore type))
@@ -898,7 +901,9 @@
 
 ;;;; The POINTER type.
 
-(def-alien-type-class (pointer :include (alien-value (:bits vm:word-bits)))
+(def-alien-type-class (pointer :include (alien-value (:bits
+						      #-alpha vm:word-bits
+						      #+alpha 64)))
   (to nil :type (or alien-type null)))
 
 (def-alien-type-translator * (to)
