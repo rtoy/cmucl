@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/call.lisp,v 1.4 2004/07/14 20:56:24 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/call.lisp,v 1.5 2004/07/27 23:30:41 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -870,6 +870,11 @@
      (:sc descriptor-reg :offset rax-offset :from (:argument 0) :to :eval)
      rax)
 
+    ;; linkage table will trash r11 when calling closure-tramp
+    (:temporary
+     (:sc descriptor-reg :offset r11-offset :from (:argument 0) :to :eval)
+     r11)
+
     ;; We pass the number of arguments in RCX.
     (:temporary (:sc unsigned-reg :offset rcx-offset :to :eval) rcx)
 
@@ -1231,7 +1236,7 @@
   (:generator 20
     ;; Avoid the copy if there are no more args.
     (cond ((zerop fixed)
-	   (inst jecxz just-alloc-frame))
+	   (inst jrcxz just-alloc-frame))
 	  (t
 	   (inst cmp rcx-tn (fixnumize fixed))
 	   (inst jmp :be just-alloc-frame)))
@@ -1381,7 +1386,7 @@
       (move rcx count)
       ;; Check to see if there are no arguments, and just return NIL if so.
       (inst mov result nil-value)
-      (inst jecxz done)
+      (inst jrcxz done)
       (inst lea dst (make-ea :qword :index rcx :scale 4)) ; 2 words for each arg
       (let ((*enable-pseudo-atomic* (unless dynamic-extent
 				      *enable-pseudo-atomic*)))
