@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.18 1990/07/24 21:38:59 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.19 1990/07/28 01:05:12 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -154,6 +154,7 @@
 
 ;;; Transforms for getting at arrays of unsigned-byte n when n < 8.
 
+#+nil
 (macrolet
     ((frob (type bits)
        (let ((elements-per-word (truncate vm:word-bits bits)))
