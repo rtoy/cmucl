@@ -43,15 +43,15 @@
 (with-compiler-log-file
     ("target:compile-hemlock.log"
      :optimize
-     '(optimize (debug-info #-small 2 #+small .5) 
+     '(optimize (debug #-small 2 #+small .5) 
 		(speed 2) (inhibit-warnings 2)
 		(safety #-small 1 #+small 0))
      :optimize-interface
-     '(optimize-interface (debug-info .5))
+     '(optimize-interface (debug .5))
      :context-declarations
      '(((:or :external (:match "$%SET-"))
 	(declare (optimize (safety 2))
-		 (optimize-interface (debug-info 1))))
+		 (optimize-interface (debug 1))))
        (:macro (declare (optimize (speed 0))))))
 
 (comf "target:code/globals")
@@ -92,7 +92,7 @@
 (comf "target:hemlock/display")
 #+clx (comf "target:hemlock/bit-display")
 (comf "target:hemlock/tty-disp-rt")
-(with-compilation-unit (:optimize '(optimize (safety 2) (debug-info 3)))
+(with-compilation-unit (:optimize '(optimize (safety 2) (debug 3)))
   (comf "target:hemlock/tty-display")) ; Buggy...
 ;(comf "target:hemlock/tty-stream")
 (comf "target:hemlock/pop-up-stream")
