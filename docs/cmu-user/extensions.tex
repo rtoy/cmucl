@@ -382,6 +382,46 @@ by \cmucl.
 If no \kwd{initial-value} is specified, arrays are initialized to zero.
 
 
+\subsection{Hash tables}
+
+The \tindexed{hash-tables} defined by \clisp{} have limited utility because they
+are limited to testing their keys using the equality predicates
+provided by (pre-CLOS) \clisp{}.  \cmucl{} overcomes this limitation
+by allowing its users to specify new hash table tests and hashing
+methods.  The hashing method must also be specified, since the
+compiler is unable to determine a good hashing function for an
+arbitrary equality (equivalence) predicate.
+
+\begin{defun}{extensions:}{define-hash-table-test}%
+  {\args{\var{hash-table-test-name} \var{test-function} \var{hash-function}}}
+      
+      The \var{hash-table-test-name} must be a symbol.
+      % I just assumed the above. [2002/10/10:rpg]
+      The \var{test-function} takes two objects and returns true
+      iff they are the same.  The \var{hash-function} takes one object and
+      returns two values: the (positive fixnum) hash value and true if
+      the hashing depends on pointer values and will have to be redone
+      if the object moves.
+      
+      To create a hash-table using this new ``test'' (really, a
+      test/hash-function pair), use
+      \code{(\index[funs]{make-hash-table}make-hash-table :test
+        \var{hash-table-test-name} \ldots)}.
+
+      Note that it is the \var{hash-table-test-name} that will be
+      returned by the function \findexed{hash-table-test}, when applied to
+      a hash-table created using this function.
+
+      This function updates \vindexed{hash-table-tests}, which is now
+      internal.  
+\end{defun}
+
+% NOTE: This should be further updated with discussion of weak
+% hash-tables.  I've never used them, so haven't bothered to figure
+% them out, and am not qualified to write even the most rudimentary
+% docs. [2002/10/10:rpg]
+
+
 
 \section{Default Interrupts for Lisp}
 
