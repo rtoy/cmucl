@@ -320,4 +320,4 @@
 (define-static-function two-arg-= (x y) :translate =)
 (define-static-function two-arg-/= (x y) :translate /=)
 
-(define-static-function negate (x) :translate -)
+(define-static-function %negate (x) :translate %negate)
