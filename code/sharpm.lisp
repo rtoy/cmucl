@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.6 1991/08/22 16:01:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.7 1991/11/28 21:08:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,15 +118,21 @@
 		 (error "Illegal terminating character after a colon."))))
 	  (T (make-symbol token)))))
 
+;;;; #. handling.
+
+(export '(*read-eval*))
+
+(defvar *read-eval* t
+  "If false, then the #. read macro is disabled.")
+
 (defun sharp-dot (stream ignore1 ignore2)
   (declare (ignore ignore1 ignore2))
-  (let ((token (read stream t nil t)))
-    (unless *read-suppress*  (eval token))))
+  (if *read-eval*
+      (let ((token (read stream t nil t)))
+	(unless *read-suppress*
+	  (eval token)))
+      (error "Attemt to read #. while *READ-EVAL* is bound to NIL.")))
 
-(defun sharp-comma (stream ignore1 ignore2)
-  (declare (ignore ignore1 ignore2))
-  (let ((token (read stream t nil t)))
-    (unless *read-suppress*  (eval token))))
 
 (defun sharp-R (stream ignore radix)
   (declare (ignore ignore))
