@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.60 2001/04/19 16:40:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.61 2002/02/01 12:54:53 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1084,7 +1084,7 @@
 					 ((not (cdr body))
 					  (car body))
 					 (t
-					  `(progn ,@body)))))))
+					  `(locally ,@body)))))))
 			   annotated-cases))))))))
 
 (defmacro ignore-errors (&rest forms)
