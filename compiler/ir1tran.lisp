@@ -2082,7 +2082,7 @@
 ;;; arguments.
 ;;;
 (defun do-macrolet-stuff (definitions fun)
-  (declare (list definitions) (function fun))
+  (declare (list definitions) (type function fun))
   (let ((whole (gensym))
 	(environment (gensym)))
     (collect ((new-fenv))
