@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.12.2.4 2000/08/01 15:21:04 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.12.2.5 2000/10/04 15:54:59 dtc Exp $")
 
 (in-package :pcl)
 
@@ -899,7 +899,7 @@ work during bootstrapping.
 				   (if (consp (car var))
 				       (values (caar var) (cadar var))
 				       (values (make-keyword (car var)) (car var)))
-				 `((,key (get-key-arg1 ,keyword ,args-tail))
+				 `((,key (get-key-arg1 ',keyword ,args-tail))
 				   (,variable (if (consp ,key)
 						  (car ,key)
 						  ,(cadr var))))))
@@ -908,7 +908,7 @@ work during bootstrapping.
 				   (if (consp (car var))
 				       (values (caar var) (cadar var))
 				       (values (make-keyword (car var)) (car var)))
-				 `((,key (get-key-arg1 ,keyword ,args-tail))
+				 `((,key (get-key-arg1 ',keyword ,args-tail))
 				   (,(caddr var) ,key)
 				   (,variable (if (consp ,key)
 						  (car ,key)

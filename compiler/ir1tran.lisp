@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.8 2000/08/10 10:56:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.9 2000/10/04 15:54:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1251,7 +1251,7 @@
 ;;; magical :allow-other-keys.
 ;;;
 (defun make-keyword (symbol vars keywordify)
-  (declare (symbol symbol) (list vars) (values keyword))
+  (declare (symbol symbol) (list vars) (values symbol))
   (let ((key (if (and keywordify (not (keywordp symbol)))
 		 (intern (symbol-name symbol) "KEYWORD")
 		 symbol)))
@@ -1697,12 +1697,12 @@
 		       (let ((n-supplied (gensym)))
 			 (temps n-supplied)
 			 (arg-vals n-value n-supplied)
-			 (tests `((eq ,n-key ,keyword)
+			 (tests `((eq ,n-key ',keyword)
 				  (setq ,n-supplied t)
 				  (setq ,n-value ,n-value-temp)))))
 		      (t
 		       (arg-vals n-value)
-		       (tests `((eq ,n-key ,keyword)
+		       (tests `((eq ,n-key ',keyword)
 				(setq ,n-value ,n-value-temp)))))))
 
 	    (unless allowp
