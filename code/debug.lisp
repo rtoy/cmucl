@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.26 1992/02/14 23:44:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.27 1992/03/10 15:21:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,6 +52,7 @@
 
 (defvar *in-the-debugger* nil
   "If this is bound before the debugger is invoked, it is used as the stack
+   top by the debugger.")
 (defvar *stack-top* nil)
 
 ;;;; Breakpoint state:
@@ -323,8 +324,9 @@
 		(setf max-name-len len))))))
       (unless (zerop max-name-len)
 	(incf max-name-len 3))
-  (let ((*debug-command-level* (1+ *debug-command-level*))
-	(*current-frame* (di:top-frame)))
+      (dolist (restart restarts)
+	 (*current-frame* (di:top-frame))
+		 (format s "~& ~2D: [~VA] ~A~%"
 			 count (- max-name-len 3) name restart)
 		 (push name names-used))))
 	(incf count)))))
@@ -632,35 +634,47 @@
 	;; Return the right value.
 	(cond ((not res) nil)
 	      ((= (length res) 1)
-    (if next
-	(print-frame-call (setf *current-frame* next))
-	(format t "~&Top of stack."))))
+	       (cdar res))
+	      (t ;Just return the names.
+	       (do ((cmds res (cdr cmds)))
+		   ((not cmds) res)
+		 (setf (car cmds) (caar cmds))))))))
+
 
 ;;;
 ;;; Returns a list of debug commands (in the same format as *debug-commands*)
-    (if next
-	(print-frame-call (setf *current-frame* next))
-	(format t "~&Bottom of stack."))))
+;;; that invoke each active restart.
+;;;
+;;; Two commands are made for each restart: one for the number, and one for
+;;; the restart name (unless it's been shadowed by an earlier restart of the
+;;; same name.
+;;;
 (defun make-restart-commands (&optional (restarts *debug-restarts*))
+  (let ((commands)
+	(num 0))			; better be the same as show-restarts!
     (dolist (restart restarts)
-  (print-frame-call
-   (setf *current-frame*
-	 (do ((prev *current-frame* lead)
-	      (lead (di:frame-up *current-frame*) (di:frame-up lead)))
-	     ((null lead) prev)))))
+      (let ((name (string (restart-name restart))))
+	(unless (find name commands :key #'car :test #'string=)
+	  (let ((restart-fun
+		 #'(lambda ()
+		     (invoke-restart-interactively restart))))
+	    (push (cons name restart-fun) commands)
 	    (push (cons (format nil "~d" num) restart-fun) commands))))
       (incf num))
-  (print-frame-call
-   (setf *current-frame*
-	 (do ((prev *current-frame* lead)
-	      (lead (di:frame-down *current-frame*) (di:frame-down lead)))
-	     ((null lead) prev)))))
+    commands))
 
+
+;;;
+;;; Frame changing commands.
+;;;
+
+(def-debug-command "UP" ()
   (let ((next (di:frame-up *current-frame*)))
     (cond (next
 	   (setf *current-frame* next)
 	   (print-frame-call next))
 	  (t
+	   (format t "~&Top of stack.")))))
   
 (def-debug-command "DOWN" ()
   (let ((next (di:frame-down *current-frame*)))
@@ -809,16 +823,22 @@
 
 (def-debug-command-alias "PP" "VPRINT")
 
-  (print-frame-source-form *current-frame* (read-if-available 0)))
+(def-debug-command "LIST-LOCALS" ()
+  (let ((d-fun (di:frame-debug-function *current-frame*)))
+    (if (di:debug-variable-info-available d-fun)
+	(let ((*print-level* (or *debug-print-level* *print-level*))
 	      (*print-length* (or *debug-print-length* *print-level*))
 	      (*standard-output* *debug-io*)
-  (print-frame-source-form *current-frame* (read-if-available 0) t))
+	      (location (di:frame-code-location *current-frame*))
+	      (prefix (read-if-available nil))
+	      (any-p nil)
+	      (any-valid-p nil))
+	  (dolist (v (di:ambiguous-debug-variables
 			d-fun
-
-;;; PRINT-FRAME-SOURCE-FORM -- Internal.
+			(if prefix (string prefix) "")))
 	    (setf any-p t)
-(defun print-frame-source-form (frame context &optional verbose)
-  (let* ((location (maybe-block-start-location (di:frame-code-location frame)))
+	    (when (eq (di:debug-variable-validity v location) :valid)
+	      (setf any-valid-p t)
 	      (format t "~A~:[#~D~;~*~]  =  ~S~%"
 		      (di:debug-variable-name v)
 		      (zerop (di:debug-variable-id v))
@@ -907,6 +927,17 @@
 	       (setf break (di:preprocess-for-eval break code-loc))
 	       (setf condition (di:preprocess-for-eval condition code-loc))
 	       (dolist (form print)
+		 (push (cons (di:preprocess-for-eval form code-loc) form)
+		       print-functions))))
+	   (setup-function-end ()
+	     (setf bp
+		   (di:make-breakpoint #'main-hook-function place
+					  :kind :function-end))
+	     (setf break
+		   (coerce `(lambda (dummy)
+				    (declare (ignore dummy)) ,break)
+				 'function))
+	     (setf condition (coerce `(lambda (dummy)
 					(declare (ignore dummy)) ,condition)
 				     'function))
 	     (dolist (form print)
@@ -917,7 +948,8 @@
 		     print-functions)))
 	   (setup-code-location ()
 	     (setf place (nth index *possible-breakpoints*))
-		    (di:frame-code-location *current-frame*)))
+	     (setf bp (di:make-breakpoint #'main-hook-function place
+					  :kind :code-location))
 	     (dolist (form print)
 	       (push (cons
 		      (di:preprocess-for-eval form place)
