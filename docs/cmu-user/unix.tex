@@ -110,8 +110,9 @@ structures.
    (cdr (assoc :display ext:*environment-list*))
 \end{lisp}
 
-  Note that the case of the variable name is lost in the conversion
-  to a keyword.
+  Note that the case of the variable name is preserved when converting
+  to a keyword.  Therefore, you need to specify the keyword properly for
+  variable names containing lower-case letters,
 \end{defvar}
 
 
