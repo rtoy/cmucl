@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.3 1991/06/13 15:05:31 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.4 1991/10/12 20:57:29 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -101,7 +101,7 @@
   :error)
 
 (define-debugger-command "Backtrace"
-  "Executes the previous abort restart."
+  "Executes the debugger's BACKTRACE command."
   :backtrace)
 
 (define-debugger-command "Print"
@@ -146,9 +146,9 @@
 (defvar *debug-editor-source-data* nil)
 
 (defcommand "Debug Edit Source" (p)
-  "Give the \"Current Eval Server\"'s current debugger frame, place the user
+  "Given the \"Current Eval Server\"'s current debugger frame, place the user
    at the location's source in the editor."
-  "Give the \"Current Eval Server\"'s current debugger frame, place the user
+  "Given the \"Current Eval Server\"'s current debugger frame, place the user
    at the location's source in the editor."
   (declare (ignore p))
   (let* ((server-info (get-current-eval-server t))
@@ -215,47 +215,12 @@
 				   (s (region point (buffer-end-mark buffer)))
 				 (read s))
 			       tlf-offset)
-			      form-number)))))
-	      (quote-or-function nil))
+			      form-number))))))
 	  ;;
-	  ;; Walk down to the form.
+	  ;; Walk down to the form.  Change to buffer in case we get an error
+	  ;; while finding the form.
 	  (change-to-buffer buffer)
-	  (pre-command-parse-check point)
-	  (dolist (n path)
-	    (when quote-or-function
-	      (editor-error
-	       "Apparently settled on the symbol QUOTE or FUNCTION via their ~
-		read macros, which is odd, but furthermore there seems to be ~
-		more source-path left."))
-	    (unless (form-offset point 1)
-	      ;; Want to use the following and delete the next FORM-OFFSET -1.
-	      ;; (scan-direction-valid point t (or :open-paren :prefix))
-	      (editor-error
-	       "Ran out of text in buffer with more source-path remaining."))
-	    (form-offset point -1)
-	    (ecase (next-character point)
-	      (#\(
-	       (mark-after point)
-	       (form-offset point n))
-	      (#\'
-	       (case n
-		 (0 (setf quote-or-function t))
-		 (1 (mark-after point))
-		 (t (editor-error "Next form is QUOTE, but source-path index ~
-				   is other than zero or one."))))
-	      (#\#
-	       (case (next-character (mark-after point))
-		 (#\'
-		  (case n
-		    (0 (setf quote-or-function t))
-		    (1 (mark-after point))
-		    (t (editor-error "Next form is FUNCTION, but source-path ~
-				      index is other than zero or one."))))
-		 (t (editor-error
-		     "Can only parse ' and #' read macros."))))))
-	  ;; Get to the beginning of the form.
-	  (form-offset point 1)
-	  (form-offset point -1)))))
+	  (mark-to-debug-source-path point path)))))
   (setf *debug-editor-source-data* t)
   ;;
   ;; While Hemlock was setting up the source edit, the user could have typed
@@ -270,20 +235,294 @@
 (defun cannot-edit-source-location ()
   (throw 'editor-top-level nil))
 
-#|
+
+
+;;;; Breakpoints.
+
+;;;
+;;; Breakpoint information for editor management.
+;;;
+
+;;; This holds all the stuff we might want to know about a breakpoint in some
+;;; slave.
+;;;
+(defstruct (breakpoint-info (:print-function print-breakpoint-info)
+			    (:constructor make-breakpoint-info
+					  (slave buffer remote-object name)))
+  (slave nil :type server-info)
+  (buffer nil :type buffer)
+  (remote-object nil :type wire:remote-object)
+  (name nil :type simple-string))
+;;;
+(defun print-breakpoint-info (obj str n)
+  (declare (ignore n))
+  (format str "#<Breakpoint-Info for ~S>" (breakpoint-info-name obj)))
+
+(defvar *breakpoints* nil)
+
+(macrolet ((frob (name accessor)
+	     `(defun ,name (key)
+		(let ((res nil))
+		  (dolist (bpt-info *breakpoints* res)
+		    (when (eq (,accessor bpt-info) key)
+		      (push bpt-info res)))))))
+  (frob slave-breakpoints breakpoint-info-slave)
+  (frob buffer-breakpoints breakpoint-info-buffer))
+
+(defun delete-breakpoints-buffer-hook (buffer)
+  (let ((server-info (value current-eval-server)))
+    (when server-info
+      (let ((bpts (buffer-breakpoints buffer))
+	    (wire (server-info-wire server-info)))
+	(dolist (b bpts)
+	  (setf *breakpoints* (delete b *breakpoints*))
+	  (wire:remote wire
+	    (di:delete-breakpoint (breakpoint-info-remote-object b))))
+	(wire:wire-force-output wire)))))
+;;;
+(add-hook delete-buffer-hook 'delete-breakpoints-buffer-hook)
+
+;;;
+;;; Setting breakpoints.
+;;;
+
+;;; "Debug Breakpoint" uses this to prompt for :function-end and
+;;; :function-start breakpoints.
+;;;
+(defvar *function-breakpoint-strings*
+  (make-string-table :initial-contents
+		     '(("Start" . :function-start) ("End" . :function-end))))
+;;;
+;;; Maybe this should use the wire level directly and hold onto remote-objects
+;;; identifying the breakpoints.  Then we could write commands to show where
+;;; the breakpoints were and to individually deactivate or delete them.  As it
+;;; is now we probably have to delete all for a given function.  What about
+;;; setting user supplied breakpoint hook-functions, or Hemlock supplying a
+;;; nice set such as something to simply print all locals at a certain
+;;; location.
+;;;
 (defcommand "Debug Breakpoint" (p)
   "This tries to set a breakpoint in the \"Current Eval Server\" at the
    location designated by the current point.  If there is no known code
    location at the point, then this moves the point to the closest location
-   before the point."
+   before the point.  With an argument, this sets a breakpoint at the start
+   or end of the function, prompting the user for which one to use."
   "This tries to set a breakpoint in the \"Current Eval Server\" at the
    location designated by the current point.  If there is no known code
    location at the point, then this moves the point to the closest location
-   before the point."
+   before the point.  With an argument, this sets a breakpoint at the start
+   or end of the function, prompting the user for which one to use."
+  (let ((point (current-point)))
+    (pre-command-parse-check point)
+    (let ((name (find-defun-for-breakpoint point)))
+      (if p
+	  (multiple-value-bind (str place)
+			       (prompt-for-keyword
+				(list *function-breakpoint-strings*)
+				:prompt "Set breakpoint at function: "
+				:default :start :default-string "Start")
+	    (declare (ignore str))
+	    (set-breakpoint-in-slave (get-current-eval-server t) name place))
+	  (let* ((path (find-path-for-breakpoint point))
+		 (server-info (get-current-eval-server t))
+		 (res (set-breakpoint-in-slave server-info name path)))
+	    (cond ((not res)
+		   (message "No code locations correspond with point."))
+		  ((wire:remote-object-p res)
+		   (push (make-breakpoint-info server-info (current-buffer)
+					       res name)
+			 *breakpoints*)
+		   (message "Breakpoint set."))
+		  (t
+		   (resolve-ambiguous-breakpoint-location server-info
+							  name res))))))))
+
+;;; FIND-PATH-FOR-BREAKPOINT -- Internal.
+;;;
+;;; This walks up from point to the beginning of its containing DEFUN to return
+;;; the pseudo source-path (no form-number, no top-level form offset, and in
+;;; descent order from start of the DEFUN).
+;;;
+(defun find-path-for-breakpoint (point)
+  (with-mark ((m point)
+	      (end point))
+    (let ((path nil))
+      (top-level-offset end -1)
+      (with-mark ((containing-form m))
+	(loop
+	  (when (mark= m end) (return))
+	  (backward-up-list containing-form)
+	  (do ((count 0 (1+ count)))
+	      ((mark= m containing-form)
+	       ;; Count includes moving from the first form inside the
+	       ;; containing-form paren to the outside of the containing-form
+	       ;; paren -- one too many.
+	       (push (1- count) path))
+	    (form-offset m -1))))
+      path)))
+
+;;; SET-BREAKPOINT-IN-SLAVE -- Internal.
+;;;
+;;; This tells the slave to set a breakpoint for name.  Path is a modified
+;;; source-path (with no form-number or top-level-form offset) or a symbol
+;;; (:function-start or :function-end).  If the server dies while evaluating
+;;; form, then this signals an editor-error.
+;;;
+(defun set-breakpoint-in-slave (server-info name path)
+  (when (server-info-notes server-info)
+    (editor-error "Server ~S is currently busy.  See \"List Operations\"."
+		  (server-info-name server-info)))
+  (multiple-value-bind (res error)
+		       (wire:remote-value (server-info-wire server-info)
+			 (di:set-breakpoint-for-editor (value current-package)
+						       name path))
+    (when error (editor-error "The server died before finishing."))
+    res))
+
+;;; RESOLVE-AMBIGUOUS-BREAKPOINT-LOCATION -- Internal.
+;;;
+;;; This helps the user select an ambiguous code location for "Debug
+;;; Breakpoint".
+;;;
+(defun resolve-ambiguous-breakpoint-location (server-info name locs)
+  (declare (list locs))
+  (let ((point (current-point))
+	(loc-num (length locs))
+	(count 1)
+	(cur-loc locs))
+    (flet ((show-loc ()
+	     (top-level-offset point -1)
+	     (mark-to-debug-source-path point (cdar cur-loc))))
+      (show-loc)
+      (command-case (:prompt `("Ambiguous location ~D of ~D: " ,count ,loc-num)
+		      :help "Pick a location to set a breakpoint."
+		      :change-window nil)
+	(#\space "Move point to next possible location."
+	  (setf cur-loc (cdr cur-loc))
+	  (cond (cur-loc
+		 (incf count))
+		(t
+		 (setf cur-loc locs)
+		 (setf count 1)))
+	  (show-loc)
+	  (reprompt))
+	(:confirm "Choose the current location."
+	  (let ((res (wire:remote-value (server-info-wire server-info)
+		       (di:set-location-breakpoint-for-editor (caar cur-loc)))))
+	    (unless (wire:remote-object-p res)
+	      (editor-error "Couldn't set breakpoint from location?"))
+	    (push (make-breakpoint-info server-info (current-buffer) res name)
+		  *breakpoints*))
+	  (message "Breakpoint set."))))))
+
+;;; MARK-TO-DEBUG-SOURCE-PATH -- Internal.
+;;;
+;;; This takes a mark at the beginning of a top-level form and modified debugger
+;;; source-path.  Path has no form number or top-level-form offset element, and
+;;; it has been reversed to actually be usable.
+;;;
+(defun mark-to-debug-source-path (mark path)
+  (let ((quote-or-function nil))
+    (pre-command-parse-check mark)
+    (dolist (n path)
+      (when quote-or-function
+	(editor-error
+	 "Apparently settled on the symbol QUOTE or FUNCTION via their ~
+	  read macros, which is odd, but furthermore there seems to be ~
+	  more source-path left."))
+      (unless (form-offset mark 1)
+	;; Want to use the following and delete the next FORM-OFFSET -1.
+	;; (scan-direction-valid mark t (or :open-paren :prefix))
+	(editor-error
+	 "Ran out of text in buffer with more source-path remaining."))
+      (form-offset mark -1)
+      (ecase (next-character mark)
+	(#\(
+	 (mark-after mark)
+	 (form-offset mark n))
+	(#\'
+	 (case n
+	   (0 (setf quote-or-function t))
+	   (1 (mark-after mark))
+	   (t (editor-error "Next form is QUOTE, but source-path index ~
+			     is other than zero or one."))))
+	(#\#
+	 (case (next-character (mark-after mark))
+	   (#\'
+	    (case n
+	      (0 (setf quote-or-function t))
+	      (1 (mark-after mark))
+	      (t (editor-error "Next form is FUNCTION, but source-path ~
+				index is other than zero or one."))))
+	   (t (editor-error
+	       "Can only parse ' and #' read macros."))))))
+    ;; Get to the beginning of the form.
+    (form-offset mark 1)
+    (form-offset mark -1)))
+
+;;;
+;;; Deleting breakpoints.
+;;;
+
+(defhvar "Delete Breakpoints Confirm"
+  "This determines whether \"Debug Delete Breakpoints\" should ask for
+   confirmation before deleting breakpoints."
+  :value t)
+
+(defcommand "Debug Delete Breakpoints" (p)
+  "This deletes all breakpoints for the named DEFUN containing the point.
+   This affects the \"Current Eval Server\"."
+  "This deletes all breakpoints for the named DEFUN containing the point.
+   This affects the \"Current Eval Server\"."
   (declare (ignore p))
-  (with-mark ((m (current-point)))
-    (
-|#
+  (let* ((server-info (get-current-eval-server t))
+	 (wire (server-info-wire server-info))
+	 (name (find-defun-for-breakpoint (current-point)))
+	 (bpts (slave-breakpoints server-info)))
+    (cond ((not bpts)
+	   (message "No breakpoints recorded for ~A." name))
+	  ((or (not (value delete-breakpoints-confirm))
+	       (prompt-for-y-or-n :prompt `("Delete breakpoints for ~A? " ,name)
+				  :default t
+				  :default-string "Y"))
+	   (dolist (b bpts)
+	     (when (string= name (breakpoint-info-name b))
+	       (setf *breakpoints* (delete b *breakpoints*))
+	       (wire:remote wire
+		 (di:delete-breakpoint-for-editor
+		  (breakpoint-info-remote-object b)))))
+	   (wire:wire-force-output wire)))))
+
+;;;
+;;; Breakpoint utilities.
+;;;
+
+;;; FIND-DEFUN-FOR-BREAKPOINT -- Internal.
+;;;
+;;; This returns as a string the name of the DEFUN containing point.  It
+;;; signals any errors necessary to ensure "we are in good form".
+;;;
+(defun find-defun-for-breakpoint (point)
+  (with-mark ((m1 point)
+	      (m2 point))
+    (unless (top-level-offset m2 -1)
+      (editor-error "Must be inside a DEFUN."))
+    ;;
+    ;; Check for DEFUN.
+    (mark-after (move-mark m1 m2))
+    (unless (find-attribute m1 :whitespace #'zerop)
+      (editor-error "Must be inside a DEFUN."))
+    (word-offset (move-mark m2 m1) 1)
+    (unless (string-equal (region-to-string (region m1 m2)) "defun")
+      (editor-error "Must be inside a DEFUN."))
+    ;;
+    ;; Find name.
+    (unless (find-attribute m2 :whitespace #'zerop)
+      (editor-error "Function unnamed?"))
+    (form-offset (move-mark m1 m2) 1)
+    (region-to-string (region m2 m1))))
+
+
 
 ;;;; Miscellaneous commands.
 
