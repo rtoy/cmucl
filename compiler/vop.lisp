@@ -363,7 +363,12 @@
   ;; somewhere else.  Spilled-TNs has T for every "interesting" TN that is ever
   ;; spilled, providing a representation that is more convenient some places.
   (spilled-vops (make-hash-table :test #'eq) :type hash-table)
-  (spilled-tns (make-hash-table :test #'eq) :type hash-table))
+  (spilled-tns (make-hash-table :test #'eq) :type hash-table)
+  ;;
+  ;; Dynamic vop count info.  This is needed by both ir2-convert and
+  ;; setup-dynamic-count-info.  (But only if we are generating code to
+  ;; collect dynamic statistics.)
+  (dyncount-info nil :type (or null dyncount-info)))
 
 
 ;;; The Entry-Info structure condenses all the information that the dumper
