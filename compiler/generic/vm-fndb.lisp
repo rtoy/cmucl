@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.34 1991/02/20 15:17:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.35 1991/03/14 14:22:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.34 1991/02/20 15:17:28 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.35 1991/03/14 14:22:55 ram Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -22,7 +22,12 @@
 (import '(lisp::%raw-bits lisp::simple-array-p))
 
 (in-package "KERNEL")
-(export '(funcallable-instance-p %set-funcallable-instance-info))
+(export '(
+	  current-sp current-fp 
+	  stack-ref %set-stack-ref lra-code-header
+	  function-code-header make-lisp-obj get-lisp-obj-address
+	  function-word-offset
+	  funcallable-instance-p %set-funcallable-instance-info))
 
 (in-package "C")
 
@@ -139,6 +144,18 @@
 				      control-stack-pointer-sap)  ()
   system-area-pointer
   (flushable))
+
+;;;; Debugger support:
+
+(defknown current-sp () system-area-pointer (movable flushable))
+(defknown current-fp () system-area-pointer (movable flushable))
+(defknown stack-ref (system-area-pointer index) t (flushable))
+(defknown %set-stack-ref (system-area-pointer index t) t (unsafe))
+(defknown lra-code-header (t) t (movable flushable))
+(defknown function-code-header (t) t (movable flushable))
+(defknown make-lisp-obj ((unsigned-byte 32)) t (movable flushable))
+(defknown get-lisp-obj-address (t) (unsigned-byte 32) (movable flushable))
+(defknown function-word-offset (function) index (movable flushable))
 
 
 ;;;; 32bit logical operations
