@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.15 1998/01/24 03:12:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.16 1998/03/03 16:35:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -729,6 +729,24 @@
       (storew new nfp (tn-offset temp))
       (inst ldfsr nfp (* word-bytes (tn-offset temp)))
       (move res new))))
+
+
+;;;; Special functions.
+
+(define-vop (fsqrt)
+  (:args (x :scs (double-reg)))
+  (:results (y :scs (double-reg)))
+  (:translate %sqrt)
+  (:policy :fast-safe)
+  (:guard (backend-featurep :sparc-v7))
+  (:arg-types double-float)
+  (:result-types double-float)
+  (:note "inline float arithmetic")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 1
+    (note-this-location vop :internal-error)
+    (inst fsqrtd y x)))
 
 
 ;;;; Complex float VOPs
