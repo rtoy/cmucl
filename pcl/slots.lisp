@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.15 2002/10/29 16:20:45 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.16 2002/11/21 22:09:13 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -133,15 +133,6 @@
 	(slot-missing class object slot-name 'slot-value)
 	(slot-value-using-class class object slot-definition))))
 
-(setf (gdefinition 'slot-value-normal) #'slot-value)
-
-(define-compiler-macro slot-value (object-form slot-name-form)
-  (if (and (constantp slot-name-form)
-	   (let ((slot-name (eval slot-name-form)))
-	     (and (symbolp slot-name) (symbol-package slot-name))))
-      `(accessor-slot-value ,object-form ,slot-name-form)
-      `(slot-value-normal ,object-form ,slot-name-form)))
-
 (defun set-slot-value (object slot-name new-value)
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
@@ -150,14 +141,17 @@
 	(setf (slot-value-using-class class object slot-definition) 
 	      new-value))))
 
-(setf (gdefinition 'set-slot-value-normal) #'set-slot-value)
+(define-compiler-macro slot-value (&whole form object slot-name)
+  (if (and (constantp slot-name)
+	   (interned-symbol-p (eval slot-name)))
+      `(accessor-slot-value ,object ,slot-name)
+      form))
 
-(define-compiler-macro set-slot-value (object-form slot-name-form new-value-form)
-  (if (and (constantp slot-name-form)
-	   (let ((slot-name (eval slot-name-form)))
-	     (and (symbolp slot-name) (symbol-package slot-name))))
-      `(accessor-set-slot-value ,object-form ,slot-name-form ,new-value-form)
-      `(set-slot-value-normal ,object-form ,slot-name-form ,new-value-form)))
+(define-compiler-macro set-slot-value (&whole form object slot-name value)
+  (if (and (constantp slot-name)
+	   (interned-symbol-p (eval slot-name)))
+      `(accessor-set-slot-value ,object ,slot-name ,value)
+      form))
 
 (defconstant *optimize-slot-boundp* nil)
 
