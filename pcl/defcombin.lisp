@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.19 2003/01/02 13:11:57 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.20 2003/01/03 18:50:23 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -219,17 +219,6 @@
 ;;;
 ;;;
 
-(defvar *combined-method-args*)
-(defvar *generic-function*)
-
-(defclass long-method-combination (standard-method-combination)
-  ((function
-    :initarg :function
-    :reader long-method-combination-function)
-   (arguments-lambda-list
-    :initarg :arguments-lambda-list
-    :reader long-method-combination-arguments-lambda-list)))
-
 (defun expand-long-defcombin (form)
   (let ((type (cadr form))
 	(lambda-list (caddr form))
@@ -284,23 +273,6 @@
     (add-method #'find-method-combination new-method)
     type))
 
-(defmethod compute-discriminating-function :around
-    ((gf standard-generic-function))
-  (let ((dfun (call-next-method)))
-    (if (let ((combin (generic-function-method-combination gf)))
-          (and (typep combin 'long-method-combination)
-               (long-method-combination-arguments-lambda-list combin)))
-        #'(kernel:instance-lambda (&rest args)
-            (let ((old (kernel:funcallable-instance-function gf))
-                  (*combined-method-args* args)
-                  (*generic-function* gf))
-              (unwind-protect
-                   (progn
-                     (set-funcallable-instance-function gf dfun)
-                     (apply gf args))
-                (set-funcallable-instance-function gf old))))
-        dfun)))
-
 (defmethod compute-effective-method ((generic-function generic-function)
 				     (combin long-method-combination)
 				     applicable-methods)
@@ -314,23 +286,22 @@
 ;;;
 ;;;
 (defun make-long-method-combination-function
-       (type ll method-group-specifiers arguments-option gf-var body)
-  ;;(declare (values documentation function))
+    (type ll method-group-specifiers arguments-option gf-var body)
   (declare (ignore type))
   (multiple-value-bind (real-body declarations documentation)
       ;; Note that PARSE-BODY ignores its second arg ENVIRONMENT.
       (system:parse-body body nil)
 
     (let ((wrapped-body
-	    (wrap-method-group-specifier-bindings method-group-specifiers
-						  declarations
-						  real-body)))
+	   (wrap-method-group-specifier-bindings method-group-specifiers
+						 declarations
+						 real-body)))
       (when gf-var
 	(push `(,gf-var .generic-function.) (cadr wrapped-body)))
       
       (when arguments-option
-	(setq wrapped-body (deal-with-arguments-option wrapped-body
-						       arguments-option)))
+	(setq wrapped-body
+	      (deal-with-arguments-option wrapped-body arguments-option)))
 
       (when ll
 	(setq wrapped-body
@@ -338,10 +309,11 @@
 		      (method-combination-options .method-combination.))))
 
       (values
-	documentation
-	`(lambda (.generic-function. .method-combination. .applicable-methods.)
-	   (progn .generic-function. .method-combination. .applicable-methods.)
-	   (block .long-method-combination-function. ,wrapped-body))))))
+       documentation
+       `(lambda (.generic-function. .method-combination. .applicable-methods.)
+	   (declare (ignorable .generic-function. .method-combination.
+		               .applicable-methods.))
+	  (block .long-method-combination-function. ,wrapped-body))))))
 ;;
 ;; parse-method-group-specifiers parse the method-group-specifiers
 ;;
@@ -448,33 +420,34 @@
 
 
 ;;;
-;;; This baby is a complete mess.  I can't believe we put it in this
-;;; way.  No doubt this is a large part of what drives MLY crazy.
+;;; Return a form that deals with the :ARGUMENTS lambda-list of a long
+;;; method combination.  WRAPPED-BODY is the body of the method
+;;; combination so far, and ARGUMENTS-LAMBDA-LIST is the arguments
+;;; lambda-list of the method combination.
 ;;;
-;;; At runtime (when the effective-method is run), we bind an intercept
-;;; lambda-list to the arguments to the generic function.
-;;; 
-;;; At compute-effective-method time, the symbols in the :arguments
-;;; option are bound to the symbols in the intercept lambda list.
-;;;
-(defun deal-with-arguments-option (wrapped-body args-lambda-list)
+(defun deal-with-arguments-option (wrapped-body arguments-lambda-list)
   (let ((intercept-rebindings
-	 (loop for arg in args-lambda-list
+	 (loop for arg in arguments-lambda-list
 	       unless (memq arg lambda-list-keywords)
 	       collect `(,arg ',arg)))
         (nreq 0)
         (nopt 0)
 	whole)
+    ;;
+    ;; Count the number of required and optional parameters in
+    ;; ARGUMENTS-LAMBDA-LIST into NREQ and NOPT, and set WHOLE to the
+    ;; name of a &WHOLE parameter, if any.
     (loop with state = 'required
-          for arg in args-lambda-list do
+          for arg in arguments-lambda-list do
             (if (memq arg lambda-list-keywords)
                 (setq state arg)
                 (case state
                   (required (incf nreq))
                   (&optional (incf nopt))
-                  (&whole (setq whole arg)))))
+                  (&whole (setq whole arg
+				state 'required)))))
     ;;
-    ;; This assumes that the cadr of the WRAPPED-BODY is a let, and it
+    ;; This assumes that the WRAPPED-BODY is a let/let* form, and it
     ;; injects let-bindings of the form (ARG 'SYM) for all variables
     ;; of the argument-lambda-list; SYM is a gensym.
     (assert (memq (first wrapped-body) '(let let*)))
@@ -483,72 +456,74 @@
     ;;
     ;; Be sure to fill out the args lambda list so that it can be too
     ;; short if it wants to.
-    (unless (or (memq '&rest args-lambda-list)
-                (memq '&allow-other-keys args-lambda-list))
-      (let ((aux (memq '&aux args-lambda-list)))
-        (setq args-lambda-list
-              (append (ldiff args-lambda-list aux)
-                      (if (memq '&key args-lambda-list)
+    (unless (or (memq '&rest arguments-lambda-list)
+                (memq '&allow-other-keys arguments-lambda-list))
+      (let ((aux (memq '&aux arguments-lambda-list)))
+        (setq arguments-lambda-list
+              (append (ldiff arguments-lambda-list aux)
+                      (if (memq '&key arguments-lambda-list)
                           '(&allow-other-keys)
                           '(&rest .ignore.))
                       aux))))
-
     ;;
-    ;; the DESTRUCTURING-BIND binds the parameters of the
-    ;; ARGS-LAMBDA-LIST to actual generic function arguments.
-    ;; *COMBINEND-METHOD-ARGS* is bound to the generic function
-    ;; arguments by the discriminating functions created for generic
-    ;; functions having a method combination that uses :ARGUMENTS.
+    ;; .GENERIC-FUNCTION. is bound to the generic function in the
+    ;; method combination function, and .GF-ARGS* is bound to the
+    ;; generic function arguments in effective method functions
+    ;; created for generic functions having a method combination that
+    ;; uses :ARGUMENTS.
+    ;;
+    ;; The DESTRUCTURING-BIND binds the parameters of the
+    ;; ARGUMENTS-LAMBDA-LIST to actual generic function arguments.
+    ;; Because ARGUMENTS-LAMBDA-LIST may be shorter or longer than the
+    ;; generic function's lambda list, which is only known at run time,
+    ;; this destructuring has to be done on a slighly modified list of
+    ;; actual arguments, from which values might be stripped or added.
     ;;
     ;; Using one of the variable names in the body inserts a symbol
     ;; into the effective method, and running the effective method
     ;; produces the value of actual argument that is bound to the
     ;; symbol.
-    `(let ((inner-result. ,wrapped-body))
-       `(destructuring-bind ,',args-lambda-list
-            (frob-args *combined-method-args*
-                       (generic-function-lambda-list *generic-function*)
-                       ,',nreq ,',nopt)
-          ,,(when (memq '.ignore. args-lambda-list)
-              ''(declare (ignore .ignore.)))
-          ;; If there is a &WHOLE in the args-lambda-list, let
-          ;; it result in the actual arguments of the generic-function
-          ;; not the frobbed list.
-          ,,(when whole
-              ``(setq ,',whole *combined-method-args*))
-          ,inner-result.))))
+    `(let ((inner-result. ,wrapped-body)
+           (gf-lambda-list (generic-function-lambda-list .generic-function.)))
+       `(destructuring-bind ,',arguments-lambda-list
+	    (frob-combined-method-args
+             .gf-args. ',gf-lambda-list
+             ,',nreq ,',nopt)
+	  ,,(when (memq '.ignore. arguments-lambda-list)
+	      ''(declare (ignore .ignore.)))
+	  ;; If there is a &WHOLE in the arguments-lambda-list, let
+	  ;; it result in the actual arguments of the generic-function
+	  ;; not the frobbed list.
+	  ,,(when whole
+	      ``(setq ,',whole .gf-args.))
+	  ,inner-result.))))
 
 ;;;
 ;;; Partition VALUES into three sections required, optional, and the
 ;;; rest, according to required, optional, and other parameters in
 ;;; LAMBDA-LIST.  Make the required and optional sections NREQ and
 ;;; NOPT elements long by discarding values or adding NILs.  Value is
-;;; the concatenated list of required and optional sections, plus what
+;;; the concatenated list of required and optional sections, and what
 ;;; is left as rest from VALUES.
 ;;;
-(defun frob-args (values lambda-list nreq nopt)
+(defun frob-combined-method-args (values lambda-list nreq nopt)
   (loop with section = 'required
-        with required = () and optional = ()
-        with nr = 0 and no = 0
-        for arg in lambda-list do
-          (if (member arg lambda-list-keywords :test #'eq)
-              (unless (eq (setq section arg) '&optional)
-                (loop-finish))
-              (case section
-                (required
-                 (incf nr)
-                 (push (pop values) required))
-                (&optional
-                 (incf no)
-                 (push (pop values) optional))))
-        finally
-          (flet ((frob (list n to)
-                   (cond ((> n to)
-                          (butlast (nreverse list) (- n to)))
-                         ((< n to)
-                          (nconc (nreverse list) (make-list (- to n))))
-                         (t
-                          (nreverse list)))))
-            (return (append (frob required nr nreq)
-                            (frob optional no nopt)
-                            values)))))
+        for arg in lambda-list
+        if (memq arg lambda-list-keywords) do
+	  (setq section arg)
+          (unless (eq section '&optional)
+            (loop-finish))
+	else if (eq section 'required)
+	  count t into nr
+          and collect (pop values) into required
+	else if (eq section '&optional)
+	  count t into no
+          and collect (pop values) into optional
+	finally
+	  (flet ((frob (list n m)
+                   (cond ((> n m) (butlast list (- n m)))
+                         ((< n m) (nconc list (make-list (- m n))))
+                         (t list))))
+            (return (nconc (frob required nr nreq)
+                           (frob optional no nopt)
+                           values)))))

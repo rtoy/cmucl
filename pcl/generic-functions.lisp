@@ -2,7 +2,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.16 2002/12/18 19:16:28 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.17 2003/01/03 18:50:23 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -51,6 +51,9 @@
 ;          (short-method-combination)
 ;          (t)
 
+(defgeneric long-method-combination-p (object))
+;          (long-method-combination)
+;          (t)
 (defgeneric slot-class-p (object))
 ;          (t)
 ;          (slot-class)

@@ -740,6 +740,14 @@
       (options       :reader method-combination-options
 	             :initarg :options)))
 
+(defclass long-method-combination (standard-method-combination)
+  ((function
+    :initarg :function
+    :reader long-method-combination-function)
+   (arguments-lambda-list
+    :initarg :arguments-lambda-list
+    :reader long-method-combination-arguments-lambda-list)))
+
 (defparameter *early-class-predicates*
   '((specializer specializerp)
     (exact-class-specializer exact-class-specializer-p)
@@ -760,5 +768,6 @@
     (standard-boundp-method standard-boundp-method-p)
     (generic-function generic-function-p)
     (standard-generic-function standard-generic-function-p)
-    (method-combination method-combination-p)))
+    (method-combination method-combination-p)
+    (long-method-combination long-method-combination-p)))
 
