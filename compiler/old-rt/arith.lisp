@@ -102,7 +102,7 @@
 	    :scs (any-reg descriptor-reg))
 	 (y :target r
 	    :scs (any-reg descriptor-reg short-immediate unsigned-immediate)))
-  (:result-types t))
+  (:result-types *))
 
 (define-fixnum-binop fast-logior/fixnum fast-logic-binop/fixnum logior o
   :immed-op oil :unsigned t :commute-op o)
@@ -113,13 +113,26 @@
 (define-fixnum-binop fast-logxor/fixnum fast-logic-binop/fixnum logxor x
   :immed-op xil :unsigned t :commute-op x)
 
-#|
+
 (define-vop (fast-ash/fixnum fast-binop/fixnum)
+  (:args (i :scs (any-reg descriptor-reg)
+	    :target r))
+  (:arg-types fixnum (:constant (integer -31 31)))
+  (:info n)
+  (:translate ash)
   (:generator 1
-    (sc-case y
-      ((any-reg descriptor-reg)
-       ))))
-|#
+    (cond ((plusp n)
+	   (if (> n 15)
+	       (inst sli16 r (- n 16))
+	       (inst sli r n)))
+	  ((minusp n)
+	   (if (> n 15)
+	       (inst sari16 r (- n 16))
+	       (inst sari r n))))
+
+    (unless (location= i r)
+      (inst lr r i))))
+
 
 (define-miscop-variants effectless-unaffected-two-arg-miscop
 			logand logior logxor)
