@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.30 1993/02/21 16:28:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.31 1993/07/15 23:33:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -400,7 +400,8 @@
 		      (dotimes (i (length sym-vec))
 			(when (>= (aref hash-vec i) 2)
 			  (let ((sym (aref sym-vec i)))
-			    (unless (member sym ignore)
+			    (declare (inline member))
+			    (unless (member sym ignore :test #'eq)
 			      (,flet-name sym))))))))
 	     (iterate-over-hash-table (package-internal-symbols package) nil)
 	     (iterate-over-hash-table (package-external-symbols package) nil)
@@ -881,41 +882,32 @@
 
 ;;; Delete-Package -- Public
 ;;;
-;;; Delete the package (string or package) from the package system data
-;;; structures.
-;;;
-(defun delete-package (package)
-  (let ((pack-struc nil)
-	(pack-name nil)
-	(use-list nil))
-    (cond ((packagep package) ; Package argument is a package-object.
-	   (setf pack-name (package-name package)
-		 pack-struc package
-		 use-list (package-used-by-list package)))
-	  ((stringp package) ; Package argument is a name.
-	   (setf pack-struc (find-package package))
-	   (if pack-struc
-	       (setf pack-name (package-name pack-struc)))
-	   (unless pack-struc
-	     ;; Package argument is a name, but there is no package-object
-	     ;; of that name.
-	     (cerror "Return NIL" "No package of name ~S." package)
-	     (return-from delete-package nil))
-	  (setf use-list (package-used-by-list pack-struc))))
-    (when (and pack-struc (not pack-name)) ; Package already deleted.
-      (return-from delete-package nil))
-    (when use-list ; The package is used by other packages.
-      ;; Correctable error, if continued, then unuse-package on all.
-      (cerror "Remove dependency in other packages."
-	      "~S is used by package(s) ~S" package use-list)
-      (dolist (p use-list)
-	(unuse-package pack-name p)))
-    ;; Delete package slot for all symbols in the package by uninterning them.
-    (loop for s being each present-symbol of pack-struc
-      do (unintern s pack-struc))
-    (setf (package-%name pack-struc) nil
-	  (package-%nicknames pack-struc) nil)
-    (return-from delete-package t)))
+(defun delete-package (package-or-name)
+  "Delete the package-or-name from the package system data structures."
+  (let ((package (if (packagep package-or-name)
+		     package-or-name
+		     (find-package package-or-name))))
+    (cond ((not package)
+	   (cerror "Return NIL" "No package of name ~S." package-or-name)
+	   nil)
+	  ((not (package-name package)) nil)
+	  (t
+	   (let ((use-list (package-used-by-list package)))
+	     (when use-list
+	       (cerror "Remove dependency in other packages."
+		       "Package ~S is used by package(s):~%  ~S"
+		       (package-name package) (mapcar #'package-name use-list))
+	       (dolist (p use-list)
+		 (unuse-package package p))))
+	   (dolist (used (package-use-list package))
+	     (unuse-package used package))
+	   (do-symbols (sym package)
+	     (unintern sym package))
+	   (remhash (package-name package) *package-names*)
+	   (dolist (nick (package-nicknames package))
+	     (remhash nick *package-names*))
+	   (setf (package-%name package) nil)
+	   t))))
 
 ;;; List-All-Packages  --  Public
 ;;;
