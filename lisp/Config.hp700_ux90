@@ -9,7 +9,7 @@ UNDEFSYMPATTERN=-u &
 ASSEM_SRC = hppa-assem.S
 ARCH_SRC = hppa-arch.c
 OS_SRC = hpux-os.c
-OS_LINK_FLAGS=
+OS_LINK_FLAGS= -Wl,-a,archive
 OS_LIBS= -lBSD
 
 %.o: %.S
