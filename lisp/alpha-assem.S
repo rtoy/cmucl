@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.4 1994/06/10 20:34:10 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.5 1997/03/15 17:35:03 pw Exp $ */
 #include <machine/regdef.h>
 #include <machine/pal.h>
 
@@ -81,7 +81,7 @@ call_into_lisp:
 	.globl	call_into_lisp_LRA
 call_into_lisp_LRA:	
 
-	.word	type_ReturnPcHeader
+	.long	type_ReturnPcHeader
 
 	mov	reg_OCFP,reg_CSP
 	nop
@@ -259,7 +259,7 @@ end_of_tramps:
 	.set	noreorder
 	.globl	function_end_breakpoint_guts
 function_end_breakpoint_guts:
-	.word	type_ReturnPcHeader
+	.long	type_ReturnPcHeader
 	br	zero, function_end_breakpoint_trap
 	nop
 	mov	reg_CSP, reg_OCFP
