@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.32 1997/10/02 18:31:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.33 1998/02/09 15:19:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1164,7 +1164,7 @@ a host-structure or string."
 		 (when (listp match)
 		   (error ":WILD-INFERIORS not paired in from and to ~
 			   patterns:~%  ~S ~S" from to))
-		 (maybe-diddle-case match diddle-case)))
+		 (res (maybe-diddle-case match diddle-case))))
 	      ((member :wild-inferiors)
 	       (assert subs-left)
 	       (let ((match (pop subs-left)))
@@ -1178,7 +1178,7 @@ a host-structure or string."
 		   (new new-subs-left)
 		   (substitute-into to-part subs-left diddle-case)
 		 (setf subs-left new-subs-left)
-		 new))
+		 (res new)))
 	      (t (res to-part)))))
 	(res))))
 
