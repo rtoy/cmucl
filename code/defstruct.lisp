@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.79 2003/01/23 21:05:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.80 2003/01/23 21:40:31 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1028,7 +1028,7 @@
 				  name-spec)))
 		    (multiple-value-bind (type slot-def) (get-slot name)
 		      (arglist
-		       `(,name
+		       `(,name-spec
 			 ,(if def-p def slot-def)
 			 ,@(if supplied-test-p `(,supplied-test) nil)))
 		      (vars name)
