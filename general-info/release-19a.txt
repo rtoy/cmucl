@@ -88,6 +88,8 @@ New in this release:
        defined on MAKE-LOAD-FORM.
      - Compliant MAKE-LOAD-FORM-SAVING-SLOTS.
      - DEFSTRUCT recording slot-names as specified by users.
+     - Generic function call keyword argument checking according to
+       ANSI 7.6.5.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
