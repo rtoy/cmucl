@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.79 1997/12/03 20:05:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.80 1997/12/05 00:48:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3135,9 +3135,7 @@
 	(system:sap-ref-double fp (- (* (+ (c::sc-offset-offset sc-offset) 4)
 					vm:word-bytes)))))
       (#.vm:control-stack-sc-number
-       (make-valid-lisp-obj
-	(system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
-				    vm:word-bytes)))))
+       (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
        (code-char
 	(system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
