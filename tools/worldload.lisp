@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.92 2001/07/08 16:35:13 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.93 2001/07/10 22:50:46 pw Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,7 +224,7 @@
   (let ((root-structures
          #-(or runtime no-hemlock) `(ed ,hi::*global-command-table*)
          #+(or runtime no-hemlock) ())
-        (purify (featurep :runtime)))
+        (purify (not (featurep :runtime))))
     ;; the following features are only used to control the build
     ;; process, so we remove them from the generated image
     (dolist (f '(:runtime :no-compiler :no-pcl :no-clx :no-clm :no-hemlock))
