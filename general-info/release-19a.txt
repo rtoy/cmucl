@@ -54,6 +54,8 @@ New in this release:
      - A basic implementation of simple-streams added.  Some
        functionality may be missing.
      - UNIX:UNIX-LSEEK working with files > 2G on BSDs.
+     - Type declarations on local bindings of special variables no
+       longer being ignored.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
