@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.22 2000/10/04 15:53:19 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.23 2000/12/19 14:26:29 pw Exp $")
 
 (in-package :pcl)
 
@@ -1921,7 +1921,7 @@ work during bootstrapping.
 ;;; implemented.
 ;;; 
 (defun parse-defmethod (cdr-of-form)
-  ;;(declare (values name qualifiers specialized-lambda-list body))
+  (declare (list cdr-of-form))
   (let ((name (pop cdr-of-form))
 	(qualifiers ())
 	(spec-ll ()))
@@ -1932,6 +1932,7 @@ work during bootstrapping.
     (values name qualifiers spec-ll cdr-of-form)))
 
 (defun parse-specializers (specializers)
+  (declare (list specializers))
   (flet ((parse (spec)
 	   (let ((result (specializer-from-type spec)))
 	     (if (specializerp result)
