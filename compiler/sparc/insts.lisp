@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.44 2003/09/10 15:41:26 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.45 2003/09/22 16:21:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1386,7 +1386,7 @@ about function addresses and register values.")
 
 (define-instruction prefetch (segment fcn src1 src2)
   (:declare (type tn src1)
-	    (type (or tn (signed-byte 13) src2))
+	    (type (or tn (signed-byte 13)) src2)
 	    (type (or (unsigned-byte 5) prefetch-type) fcn))
   (:printer format-3-reg
 	    ((op #b11) (op3 #b101101) (i 0) (rd nil :type 'prefetch-fcn))
