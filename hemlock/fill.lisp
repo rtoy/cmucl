@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/fill.lisp,v 1.1.1.3 1991/02/08 16:34:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/fill.lisp,v 1.1.1.4 1993/05/13 21:00:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,7 +83,6 @@
 (setf (character-attribute :sentence-closing-char #\]) 1)
 (setf (character-attribute :sentence-closing-char #\|) 1)
 (setf (character-attribute :sentence-closing-char #\>) 1)
-
 
 
 ;;;; -- Commands --
@@ -226,6 +225,7 @@
 	  :value val  :buffer (current-buffer))
 	(message "Fill Prefix now ~:[empty~;~:*~S~]" val)))))
 
+(declaim (optimize (speed 2))); turn off byte compilation.
 
 ;;;; -- Auto Filling --
 
