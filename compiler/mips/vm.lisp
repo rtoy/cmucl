@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.30 1990/06/16 15:36:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.31 1990/06/17 22:28:27 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -115,8 +115,7 @@
   ;; Pointer descriptor objects.  Must be seen by GC.
   (descriptor-reg registers
    :locations (8 9 10 11 12 13 14 15 16 17 18 19 28 31)
-   :constant-scs (constant negative-immediate zero immediate unsigned-immediate
-			   immediate-base-character random-immediate null)
+   :constant-scs (constant null random-immediate)
    :save-p t
    :alternate-scs (control-stack))
 
