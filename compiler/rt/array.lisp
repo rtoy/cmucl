@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.1 1991/02/18 15:07:37 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.2 1991/04/04 13:50:49 chiles Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -34,7 +34,7 @@
       ;; and its three low bits are zero.
       (load-symbol-value alloc *allocation-pointer*)
       (inst cal header alloc vm:other-pointer-type)
-      (inst cal alloc
+      (inst cal alloc alloc
 	    (+ (* vm:array-dimensions-offset vm:word-bytes)
 	       vm:lowtag-mask))
       ;; Rank is the dimensions as a fixnum which happens to be the number of
