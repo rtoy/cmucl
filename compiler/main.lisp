@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.121 2001/03/04 20:12:23 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.122 2001/03/13 15:58:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1552,7 +1552,7 @@
 	(error "Can't compile with no source files."))
       (mapcar #'(lambda (x)
 		  (let ((x (pathname x)))
-		    (cond ((logical-pathname-p x)
+		    (cond ((typep x 'logical-pathname)
 			   (try-with-type x "LISP" t))
 			  ((probe-file x) x)
 			  ((try-with-type x "lisp"  nil))
@@ -1717,7 +1717,7 @@
 		   (if (eq file t)
 		       (make-pathname :type type
 				      :defaults
-				      (if (logical-pathname-p default)
+				      (if (typep default 'logical-pathname)
 					  (translate-logical-pathname default)
 					  default))
 		       (pathname file))))
@@ -1925,7 +1925,7 @@
     (cond ((not (eq output-file t))
 	   (when output-file
 	     (translate-logical-pathname (pathname output-file))))
-	  ((and (logical-pathname-p pathname) (not (eq byte-compile t)))
+	  ((and (typep pathname 'logical-pathname) (not (eq byte-compile t)))
 	   (make-pathname :type "FASL" :defaults pathname
 			  :case :common))
 	  (t
