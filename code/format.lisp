@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.56 2004/09/02 18:26:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.57 2004/09/09 16:46:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2074,8 +2074,8 @@
 			  (*logical-block-popper* nil)
 			  (*outside-args* args))
 		     (catch 'up-and-out
-		       (do-guts arg arg)
-		       args))
+		       (do-guts arg arg))
+		     args)
 		   (do-guts orig-args args)))
 	     (do-loop (orig-args args)
 	       (catch (if colonp 'up-up-and-out 'up-and-out)
