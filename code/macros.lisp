@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.97 2003/08/08 11:32:52 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.98 2004/04/14 17:01:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1289,14 +1289,16 @@
       (cond ((atom case)
 	     (error "~S -- Bad clause in ~S." case name))
 	    ((and (not allow-otherwise)
-		  (null (cdr case-list))
 		  (memq (car case) '(t otherwise)))
-	     ;; The CLHS says OTHERWISE clause is an OTHERWISE clause
-	     ;; only if it's the last case.  Otherwise, it's just a
-	     ;; normal clause.
-	     (if errorp
-		 (error "No default clause allowed in ~S: ~S" name case)
-		 (push `(t nil ,@(rest case)) clauses)))
+	     (cond ((null (cdr case-list))
+		    ;; The CLHS says OTHERWISE clause is an OTHERWISE clause
+		    ;; only if it's the last case.  Otherwise, it's just a
+		    ;; normal clause.
+		    (if errorp
+			(error "No default clause allowed in ~S: ~S" name case)
+			(push `(t nil ,@(rest case)) clauses)))
+		   ((and (eq name 'case))
+		    (error "T and OTHERWISE may not be used as key designators for ~A" name))))
 	    ((and multi-p (listp (first case)))
 	     (setf keys (append (first case) keys))
 	     (push `((or ,@(mapcar #'(lambda (key)
