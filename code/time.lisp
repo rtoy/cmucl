@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.25 2003/07/26 17:42:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.26 2004/10/09 01:08:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -281,13 +281,13 @@
 		       (system:get-system-info)
     (values user sys faults (get-bytes-consed))))
 
-#+(or pentium sparc-v9)
+#+(or pentium sparc-v9 ppc)
 (defun cycle-count/float ()
   (multiple-value-bind (lo hi)
       (vm::read-cycle-counter)
     (+ (* hi (expt 2.0d0 32)) lo)))
 
-#-(or pentium sparc-v9)
+#-(or pentium sparc-v9 ppc)
 (defun cycle-count/float () 0.0)
 
 (defvar *time-consing* nil)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/system.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/system.lisp,v 1.2 2004/10/09 01:08:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -247,3 +247,43 @@
       (inst lwz count count-vector offset)
       (inst addi count count 1)
       (inst stw count count-vector offset))))
+
+(defknown read-time-base ()
+  (values (unsigned-byte 32) (unsigned-byte 32)))
+
+(define-vop (read-time-base)
+  (:translate read-time-base)
+  (:args)
+  (:policy :fast-safe)
+  (:results (lo :scs (unsigned-reg))
+	    (hi :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:temporary (:sc unsigned-reg) temp)
+  (:temporary (:sc unsigned-reg :target hi) temp-hi)
+  (:temporary (:sc unsigned-reg :target lo) temp-lo)
+  (:generator 7
+    ;; From 2.2.1
+    (let ((loop (gen-label)))
+      (emit-label loop)
+      (inst mftbu temp-hi)
+      (inst mftb temp-lo)
+      (inst mftbu temp)
+      (inst cmpw temp temp-hi)
+      (inst bne loop)
+      (move hi temp-hi)
+      (move lo temp-lo))))
+
+(defun read-cycle-counter ()
+  (multiple-value-bind (lo hi)
+      (read-time-base)
+    ;; Based on some simple tests by reading the time-base, sleeping
+    ;; for 1 sec, and reading the time-base again, it seems that on an
+    ;; iMac G3/400 MHz, the time base value is incremented once for
+    ;; each clock cycle.  Is that true for other iMacs?  I hope so.
+    ;;
+    ;; So, left shift the time-base value by 4 to figure out how many
+    ;; cycles have elapsed.
+    (let ((overflow (ldb (byte 4 28) lo)))
+      (values (ldb (byte 32 0) (ash lo 4))
+	      (ldb (byte 32 0) (+ overflow 
+				  (ash hi 4)))))))
