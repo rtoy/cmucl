@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.46 1992/06/04 17:48:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.47 1992/07/22 23:22:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1214,6 +1214,7 @@
 		   leaf var))
 		t)))))
        ((and (null (rest (leaf-refs var)))
+	     (not *byte-compiling*)
 	     (substitute-single-use-continuation arg var)))
        (t
 	(propagate-to-refs var (continuation-type arg))))))
