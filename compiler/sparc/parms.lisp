@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.19 1992/07/09 19:52:42 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.20 1992/12/07 22:25:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,9 +143,9 @@
 
 ;;; Where to put the different spaces.
 ;;; 
-(defparameter target-read-only-space-start #x01000000)
-(defparameter target-static-space-start    #x05000000)
-(defparameter target-dynamic-space-start   #x07000000)
+(defparameter target-read-only-space-start #x00200000)
+(defparameter target-static-space-start    #x0c000000)
+(defparameter target-dynamic-space-start   #x10000000)
 
 
 
