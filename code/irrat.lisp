@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.11 1993/03/01 15:24:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.12 1993/05/08 04:49:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -320,23 +320,41 @@
 (defun atan (y &optional (x nil xp))
   "Return the arc tangent of Y if X is omitted or Y/X if X is supplied."
   (if xp
-      (if (and (zerop x) (zerop y))
-	  (if (plusp (float-sign (float x)))
-	      y
-	      (if (minusp (float-sign (float y)))
-		  (- pi)
-		  pi))
-	  (number-dispatch ((y real) (x real))
-	    (((foreach fixnum bignum ratio single-float)
-	      (foreach fixnum bignum ratio single-float))
-	     (coerce (%atan2 (coerce y 'double-float)
-			     (coerce x 'double-float))
-		     'single-float))
-	    ((double-float (foreach fixnum bignum ratio single-float))
-	     (%atan2 y (coerce x 'double-float)))
-	    (((foreach fixnum bignum ratio single-float double-float)
-	      double-float)
-	     (%atan2 (coerce y 'double-float) x))))
+      (flet ((atan2 (y x)
+	       (declare (type double-float y x))
+	       (if (plusp (float-sign x))
+		   ;; X is either +0.0 or > 0.0
+		   (if (zerop x)
+		       ;; X is +0.0.
+		       (if (plusp (float-sign y))
+			   ;; Y is either +0.0 or > 0.0
+			   (if (zerop y) +0.0d0 (/ pi 2))
+			   ;; Y is either -0.0 or < 0.0
+			   (if (zerop y) -0.0d0 (/ pi 2)))
+		       ;; X is > 0.0
+		       (if (plusp (float-sign y))
+			   ;; Y is either +0.0 or > 0.0
+			   (if (zerop y) +0.0d0 (%atan2 y x))
+			   ;; Y is either -0.0 or < 0.0
+			   (if (zerop y) -0.0d0 (%atan2 y x))))
+		   ;; X is either -0.0 or < 0.0
+		   (if (zerop x)
+		       ;; X is -0.0
+		       (if (plusp (float-sign y))
+			   ;; Y is either +0.0 or > 0.0
+			   (if (zerop y) pi (/ pi 2))
+			   ;; Y is either -0.0 or < 0.0
+			   (if (zerop y) (- pi) (- (/ pi 2))))
+		       ;; X is < 0.0
+		       (if (zerop y) pi (%atan2 y x))))))
+	(atan2 (number-dispatch ((y real))
+		 (((foreach fixnum bignum ratio single-float))
+		  (coerce y 'double-float))
+		 ((double-float) y))
+	       (number-dispatch ((x real))
+		 (((foreach fixnum bignum ratio single-float))
+		  (coerce x 'double-float))
+		 ((double-float) x))))
       (number-dispatch ((y number))
 	(handle-reals %atan y)
 	((complex)
