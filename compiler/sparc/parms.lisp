@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.48 2003/10/27 18:33:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.49 2003/12/02 17:40:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,13 +208,15 @@
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
 	  after-breakpoint-trap allocation-trap
-	  dynamic-space-overflow-error-trap
-	  dynamic-space-overflow-warning-trap
 	  pseudo-atomic-trap
 	  object-not-list-trap object-not-instance-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
 
+#+heap-overflow-check
+(export '(dynamic-space-overflow-error-trap
+	  dynamic-space-overflow-warning-trap))
+	  
 (defenum (:suffix -trap :start 8)
   halt
   pending-interrupt
@@ -223,7 +225,9 @@
   breakpoint
   function-end-breakpoint
   after-breakpoint
+  #+heap-overflow-check
   dynamic-space-overflow-warning
+  #+heap-overflow-check
   dynamic-space-overflow-error
   )
 
