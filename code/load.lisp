@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.14 1990/10/25 18:49:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.15 1990/11/06 14:06:32 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -396,7 +396,8 @@
 	       (tn (probe-file pn)))
 	  (cond
 	   (tn
-	    (if (string-equal (pathname-type tn) #.vm:target-fasl-file-type)
+	    (if (string-equal (pathname-type tn)
+			      #.(c:backend-fasl-file-type c:*backend*))
 		(with-open-file (file tn
 				      :direction :input
 				      :element-type '(unsigned-byte 8))
@@ -414,7 +415,8 @@
 	   (t
 	    (let* ((srcn (make-pathname :type "lisp" :defaults pn))
 		   (src (probe-file srcn))
-		   (objn (make-pathname :type #.vm:target-fasl-file-type
+		   (objn (make-pathname :type
+					#.(c:backend-fasl-file-type c:*backend*)
 					:defaults pn))
 		   (obj (probe-file objn)))
 	      (cond
@@ -758,31 +760,32 @@
   `(if *current-code-format*
        (let ((implementation (car *current-code-format*))
 	     (version (cdr *current-code-format*)))
-	 (unless (= implementation #.vm:target-fasl-file-implementation)
+	 (unless (= implementation
+		    #.(c:backend-fasl-file-implementation *backend*))
 	   (error "~A was compiled for a ~A, but this is a ~A"
 		  *Fasl-file*
-		  (or (elt vm:fasl-file-implementations implementation)
+		  (or (elt c:fasl-file-implementations implementation)
 		      "unknown machine")
-		  (or (elt vm:fasl-file-implementations
-			   #.vm:target-fasl-file-implementation)
+		  (or (elt c:fasl-file-implementations
+			   #.(c:backend-fasl-file-implementation *backend*))
 		      "unknown machine")))
-	 (unless (= version #.vm:target-fasl-file-version)
+	 (unless (= version #.(c:backend-fasl-file-version *backend*))
 	   (error "~A was compiled for fasl-file version ~A, ~
 	           but this is version ~A"
-	    *Fasl-file* version #.vm:target-fasl-file-version))
+	    *Fasl-file* version #.(c:backend-fasl-file-version *backend*)))
 	 (let ((box-num ,nitems)
 	       (code-length ,size))
 	   (declare (fixnum box-num code-length))
-	   (let ((code (%primitive c::allocate-code-object
+	   (let ((code (%primitive vm:allocate-code-object
 				   box-num code-length)))
 	     (%primitive c::set-code-debug-info code (pop-stack))
 	     (do ((index (1- box-num) (1- index)))
 		 ((minusp index))
 	       (declare (fixnum index))
-	       (%primitive c::code-constant-set code index (pop-stack)))
+	       (%primitive vm:code-constant-set code index (pop-stack)))
 	     (system:without-gcing
 	      (let ((inst (truly-the system-area-pointer
-				     (%primitive c::code-instructions code))))
+				     (%primitive vm:code-instructions code))))
 		(read-n-bytes *fasl-file* inst 0 code-length)))
 	     code)))
        (error
@@ -808,7 +811,7 @@
 	(code (pop-stack))
 	(index (- (clone-arg) vm:code-constants-offset)))
     (declare (type index index))
-    (%primitive c::code-constant-set code index value)
+    (%primitive vm:code-constant-set code index value)
     (undefined-value)))
 
 (define-fop (fop-function-entry 142)
