@@ -159,7 +159,7 @@
     (setq *last-file-position* (file-position *log-file*))
     (force-output *log-file*))
 
-  (let* ((src (pathname (concatenate 'string name ".lisp")))
+  (let* ((src (merge-pathnames name (make-pathname :type "lisp")))
 	 (obj (if output-file
 		  (pathname output-file)
 		  (make-pathname :defaults src
