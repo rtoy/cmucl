@@ -121,7 +121,7 @@ void greet_client(int socket) {
   if( global_will_trace ) {
     printf("Opening display on '%s' for app '%s' class '%s'\n",dpy_name,
 	   app_name,app_class);
-    fflush(stdout)};
+    fflush(stdout);};
   display = XtOpenDisplay(app_context, dpy_name,
 			  app_name, app_class,
 			  NULL, 0,
