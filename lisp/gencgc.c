@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.48 2004/01/09 15:10:52 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.49 2004/01/09 15:14:57 toy Exp $
  *
  */
 
@@ -2097,6 +2097,17 @@ static lispobj copy_large_unboxed_object(lispobj object, int nwords)
 
 
 /* Scavenging */
+
+/*
+ * Douglas Crosher says:
+ *
+ * There were two different ways in which the scavenger dispatched,
+ * and DIRECT_SCAV was one option.  This code did work at one stage
+ * but testing showed it to be slower.  When DIRECT_SCAV is enabled
+ * the scavenger dispatches via the scavtab for all objects, and when
+ * disabled the scavenger firstly detects and handles some common
+ * cases itself before dispatching.
+ */
 
 #define DIRECT_SCAV 0
 
