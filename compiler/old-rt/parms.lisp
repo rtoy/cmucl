@@ -21,11 +21,10 @@
 ;;;
 (defconstant sc-number-limit 32)
 
-;;; The inclusive upper bound on a cost.  We want to write cost frobbing
-;;; code so that it is portable, but works on fixnums.  This constant should be
-;;; defined so that adding two costs cannot result in fixnum overflow.
+;;; The number of references that a TN must have to offset the overhead of
+;;; saving the TN across a call.
 ;;;
-(defconstant most-positive-cost (1- (expt 2 20)))
+(defconstant register-save-penalty 3)
 
 
 ;;;; Assembler parameters:
