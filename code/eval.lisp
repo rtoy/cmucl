@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.35 2003/02/05 11:08:45 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.36 2003/03/21 23:43:08 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -251,10 +251,11 @@
 ;;; Dummy stubs for EVAL:INTERNAL-EVAL and EVAL:MAKE-INTERPRETED-FUNCTION in
 ;;; case the compiler isn't loaded yet.
 ;;;
-(defun eval:internal-eval (x)
+(defun eval:internal-eval (form &optional quietly env)
+  (declare (ignore quietly env))
   (error "Attempt to evaluation a complex expression:~%     ~S~@
 	  This expression must be compiled, but the compiler is not loaded."
-	 x))
+	 form))
 ;;;
 (defun eval:make-interpreted-function (x)
   (error "EVAL called on #'(lambda (x) ...) when the compiler isn't loaded:~
