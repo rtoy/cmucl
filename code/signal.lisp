@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.7 1990/10/14 19:08:58 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.8 1990/11/16 04:35:34 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -26,6 +26,8 @@
 ;;; 
 (defconstant sig_dfl 0)
 (defconstant sig_ign 1)
+
+(proclaim '(special lisp::lisp-command-line-list))
 
 
 
@@ -222,9 +224,10 @@
 			       scp)
 		   mach:sigcontext
 		   t))
-       (,function ,(concatenate 'simple-string what " at #x~x.")
-		  (sap-int
-		   (alien-access (mach:sigcontext-pc (alien-value sc))))))))
+       (system:without-hemlock
+	(,function ,(concatenate 'simple-string what " at #x~x.")
+		   (sap-int
+		    (alien-access (mach:sigcontext-pc (alien-value sc)))))))))
 
 (define-signal-handler sigint-handler "Interrupted" break)
 (define-signal-handler sigill-handler "Illegal Instruction")
@@ -242,7 +245,8 @@
 
 (defun signal-init ()
   "Enable all the default signals that Lisp knows how to deal with."
-  #+nil (enable-interrupt :sigint #'sigint-handler)
+  (unless (member "-monitor" lisp::lisp-command-line-list :test #'string=)
+    (enable-interrupt :sigint #'sigint-handler))
   (enable-interrupt :sigquit #'sigquit-handler)
   (enable-interrupt :sigill #'sigill-handler)
   (enable-interrupt :sigtrap #'kernel::internal-error)
