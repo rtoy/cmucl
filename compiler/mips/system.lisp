@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.18 1990/05/27 16:50:48 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.19 1990/05/31 00:22:55 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -74,9 +74,12 @@
   (:results (result :scs (any-reg descriptor-reg)))
   (:generator 10
     (let ((other-ptr (gen-label))
-	  (shift (gen-label)))
+	  (shift (gen-label))
+	  (function-ptr (gen-label)))
       (simple-test-simple-type object ndescr other-ptr
 			       nil vm:other-pointer-type)
+      (simple-test-simple-type object ndescr function-ptr
+			       nil vm:function-pointer-type)
       (inst and ndescr object (logand (logeqv vm:other-immediate-0-type
 					      vm:other-immediate-1-type)
 				      vm:lowtag-mask))
@@ -88,6 +91,11 @@
       (inst b shift)
       (inst and ndescr object vm:type-mask)
       
+      (emit-label function-ptr)
+      (load-type ndescr object (- vm:function-pointer-type))
+      (inst b shift)
+      (inst nop)
+
       (emit-label other-ptr)
       (load-type ndescr object (- vm:other-pointer-type))
       (inst nop)
@@ -168,7 +176,7 @@
     (loadw ndescr code 0 vm:other-pointer-type)
     (inst srl ndescr vm:type-bits)
     (inst sll ndescr vm:word-shift)
-    (inst subu ndescr vm:code-header-type)
+    (inst subu ndescr vm:other-pointer-type)
     (inst addu sap code ndescr)))
 
 (define-vop (compute-function)
