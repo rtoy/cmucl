@@ -1,4 +1,4 @@
-	    Release notes for CMU Common Lisp 15c, 23 January 92
+	    Release notes for CMU Common Lisp 15d, 2 February 92
 
 These release notes cover changes since the beta release of version 15b on 6
 June 91.  Execpt for Miles Bader's portable disassembler and a few minor
@@ -20,6 +20,7 @@ Bug fixes:
  -- Bignum printing now works correctly in base 36.
  -- Fixed EXPT to deal with SINGLE-FLOAT x SINGLE-FLOAT arg type combination.
  -- Fixed TRUNCATE to handle the SINGLE-FLOAT/DOUBLE-FLOAT case.
+ -- The PROFILE package works once again.
 
 Enhancements:
  -- A new retargetable disassembler provides DISASSEMBLE support on the SPARC,
