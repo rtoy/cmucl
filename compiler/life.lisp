@@ -644,7 +644,8 @@
 		(do-live-tns (tn ss block)
 		  (unless (eq (tn-kind tn) :component)
 		    (force-tn-to-stack tn)
-		    (convert-to-environment-tn tn)))))))
+		    (unless (eq (tn-kind tn) :environment)
+		      (convert-to-environment-tn tn))))))))
 	
 	(do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
 	    ((null ref))
