@@ -321,6 +321,12 @@
 ;;; compile-time type errors and determine if and how to do run-time type
 ;;; checks.
 ;;;
+;;;    If there is a compile-time type error, then we mark the continuation
+;;; with a :ERROR kind, emit a warning if appropriate, and clear any
+;;; FUNCTION-INFO if the continuation is an argument to a known call.  The last
+;;; is done so that the back end doesn't have to worry about type errors in
+;;; arguments to known functions.
+;;;
 ;;;    If a continuation is too complex to be checked by the back end, or is
 ;;; better checked with explicit code, then convert to an explicit test.
 ;;; Assertions that can checked by the back end are passed through.  Assertions
@@ -343,6 +349,10 @@
 		(atype (continuation-asserted-type cont)))
 	    (unless (values-types-intersect dtype atype)
 	      (setf (continuation-%type-check cont) :error)
+	      (let ((dest (continuation-dest cont)))
+		(when (and (combination-p dest)
+			   (function-info-p (basic-combination-kind dest)))
+		  (setf (basic-combination-kind dest) :full)))
 	      (when (policy node (>= safety brevity))
 		(let ((*compiler-error-context* node))
 		  (compiler-warning "Result is a ~S, not a ~S."
