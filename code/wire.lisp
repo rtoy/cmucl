@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.4 1991/10/01 13:17:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.5 1991/10/03 16:35:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,13 +18,14 @@
 
 (in-package "WIRE")
 
-(remote-object-p remote-object-local-p remote-object-eq
+(export '(remote-object-p
+	  remote-object-local-p remote-object-eq
 	  remote-object-value make-remote-object forget-remote-translation
 	  make-wire wire-p wire-fd wire-listen wire-get-byte wire-get-number
 	  wire-get-string wire-get-object wire-force-output wire-output-byte
 	  wire-output-number wire-output-string wire-output-object
 	  wire-output-funcall wire-error wire-eof wire-io-error
-	  *current-wire* wire-get-bignum wire-output-bignum)
+	  *current-wire* wire-get-bignum wire-output-bignum))
 
 
 (eval-when (compile load eval) ;For macros in remote.lisp.
