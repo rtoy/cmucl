@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.131 2003/09/12 10:36:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.132 2003/09/12 11:29:37 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2444,56 +2444,30 @@
 	      (specifier-type 'unsigned-byte)))
 	*universal-type*)))
 
+(defun %dpb-derive-type-aux (size posn int)
+  (when (and (numeric-type-p size)
+	     (numeric-type-p posn)
+	     (numeric-type-p int))
+    (let ((size-high (numeric-type-high size))
+	  (posn-high (numeric-type-high posn))
+	  (high (numeric-type-high int))
+	  (low (numeric-type-low int)))
+      (when (and size-high posn-high high low
+		 (<= (+ size-high posn-high) vm:word-bits))
+	(let ((raw-bit-count (max (integer-length high)
+				  (integer-length low)
+				  (+ size-high posn-high))))
+	  (specifier-type
+	   (if (minusp low)
+	       `(signed-byte ,(1+ raw-bit-count))
+	       `(unsigned-byte ,raw-bit-count))))))))
+
 (defoptimizer (%dpb derive-type) ((newbyte size posn int))
-  (let ((size (continuation-type size))
-	(posn (continuation-type posn))
-	(int (continuation-type int)))
-    (if (and (numeric-type-p size)
-	     (csubtypep size (specifier-type 'integer))
-	     (numeric-type-p posn)
-	     (csubtypep posn (specifier-type 'integer))
-	     (numeric-type-p int)
-	     (csubtypep int (specifier-type 'integer)))
-	(let ((size-high (numeric-type-high size))
-	      (posn-high (numeric-type-high posn))
-	      (high (numeric-type-high int))
-	      (low (numeric-type-low int)))
-	  (if (and size-high posn-high high low
-		   (<= (+ size-high posn-high) vm:word-bits))
-	      (specifier-type
-	       (list (if (minusp low) 'signed-byte 'unsigned-byte)
-		     (max (integer-length high)
-			  (integer-length low)
-			  (+ size-high posn-high))))
-	      *universal-type*))
-	*universal-type*)))
-
+  (%dpb-derive-type-aux size posn int))
+  
 (defoptimizer (%deposit-field derive-type) ((newbyte size posn int))
-  (let ((size (continuation-type size))
-	(posn (continuation-type posn))
-	(int (continuation-type int)))
-    (if (and (numeric-type-p size)
-	     (csubtypep size (specifier-type 'integer))
-	     (numeric-type-p posn)
-	     (csubtypep posn (specifier-type 'integer))
-	     (numeric-type-p int)
-	     (csubtypep int (specifier-type 'integer)))
-	(let ((size-high (numeric-type-high size))
-	      (posn-high (numeric-type-high posn))
-	      (high (numeric-type-high int))
-	      (low (numeric-type-low int)))
-	  (if (and size-high posn-high high low
-		   (<= (+ size-high posn-high) vm:word-bits))
-	      (specifier-type
-	       (list (if (minusp low) 'signed-byte 'unsigned-byte)
-		     (max (integer-length high)
-			  (integer-length low)
-			  (+ size-high posn-high))))
-	      *universal-type*))
-	*universal-type*)))
-
-
-
+  (%dpb-derive-type-aux size posn int))
+  
 (deftransform %ldb ((size posn int)
 		    (fixnum fixnum integer)
 		    (unsigned-byte #.vm:word-bits))
