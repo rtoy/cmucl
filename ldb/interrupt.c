@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.2 1990/03/28 22:51:10 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.3 1990/03/29 21:19:34 ch Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -9,26 +9,13 @@
 #include "ldb.h"
 #include "globals.h"
 #include "lispregs.h"
+#include "interrupt.h"
 
-#define MAX_INTERRUPTS (4096)
+struct sigcontext *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
-struct sigcontext interrupt_contexts[MAX_INTERRUPTS];
-
-static union handler {
-	lispobj lisp;
-	int (*c)();
-} Handler[NSIG];
+union interrupt_handler interrupt_handlers[NSIG];
       
 static int pending_signal, pending_code, pending_mask;
-
-#define BLOCKABLE (sigmask(SIGHUP) | sigmask(SIGINT) | \
-		   sigmask(SIGQUIT) | sigmask(SIGPIPE) | \
-		   sigmask(SIGALRM) | sigmask(SIGURG) | \
-		   sigmask(SIGTSTP) | sigmask(SIGCHLD) | \
-		   sigmask(SIGIO) | sigmask(SIGXCPU) | \
-		   sigmask(SIGXFSZ) | sigmask(SIGVTALRM) | \
-		   sigmask(SIGPROF) | sigmask(SIGWINCH) | \
-		   sigmask(SIGUSR1) | sigmask(SIGUSR2))
 
 
 static handle_now(signal, code, context)
@@ -36,13 +23,16 @@ int signal, code;
 struct sigcontext *context;
 {
 	int were_in_lisp;
-	union handler handler = Handler[signal];
+	union interrupt_handler handler;
 	lispobj args[6];	/* Six is the minimum */
 	lispobj callname, function;
 
+	handler = interrupt_handlers[signal];
 	were_in_lisp = !foreign_function_call_active;
 
 	if (were_in_lisp) {
+		int context_index;
+
 		/* Get current LISP state from context */
 		current_dynamic_space_free_pointer =
 			(lispobj *) context->sc_regs[ALLOC];
@@ -55,6 +45,22 @@ struct sigcontext *context;
 		/* Restore the GP */
 		set_global_pointer(saved_global_pointer);
 
+		/* Do dynamic binding of the active interrupt context index
+		   and save the context in the context array. */
+		context_index = SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)>>2;
+		
+		if (context_index >= MAX_INTERRUPTS) {
+			fprintf("Maximum number (%d) of interrupts exceeded.  Exiting.\n",
+				MAX_INTERRUPTS);
+			exit(1);
+		}
+
+		bind_variable(FREE_INTERRUPT_CONTEXT_INDEX,
+			      fixnum(context_index + 1));
+
+		lisp_interrupt_contexts[context_index] = context;
+
+		/* No longer in Lisp now. */
 		foreign_function_call_active = 1;
 	}
 
@@ -74,12 +80,22 @@ struct sigcontext *context;
 	}
 
 	if (were_in_lisp) {
+		int context_index;
+
+		/* Block all blockable signals */
 		sigblock(BLOCKABLE);
+
+		/* Going back into lisp. */
 		foreign_function_call_active = 0;
+
+		/* Undo dynamic binding. */
+		/* ### Do I really need to unbind_to_here()? */
+		unbind();
 
 		/* Put the dynamic space free pointer back into the context. */
 		context->sc_regs[ALLOC] =
 			(unsigned long) current_dynamic_space_free_pointer;
+
 	}
 }
 
@@ -152,7 +168,7 @@ struct sigcontext *context;
 
 void install_handler(signal, handler)
 int signal;
-union handler handler;
+union interrupt_handler handler;
 {
 	struct sigvec sv;
 
@@ -169,7 +185,21 @@ union handler handler;
 	sv.sv_mask = BLOCKABLE;
 	sv.sv_flags = 0;
 
-	Handler[signal] = handler;
+	interrupt_handlers[signal] = handler;
 
 	sigvec(signal, &sv, NULL);
+}
+
+void unistall_handler(signal)
+int signal;
+{
+
+}
+
+interrupt_init()
+{
+	int i;
+
+	for (i = 0; i < NSIG; i++)
+		interrupt_handlers[i].lisp = (lispobj) fixnum(0);
 }
