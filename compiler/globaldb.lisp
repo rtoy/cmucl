@@ -477,11 +477,12 @@
 	 #x3FF)))
 
 
-(eval-when (compile #-new-compiler load eval)
+(eval-when (compile load eval)
 
 ;;; INFO-CACHE-INIT  --  Internal
 ;;;
 ;;;    Set up the info cache.  This is also called in GLOBALDB-INIT.
+;;;
 (defmacro info-cache-init ()
   `(progn
      (setq *cached-info-environment* nil)
@@ -493,7 +494,7 @@
 
 (info-cache-init)
 
-); Eval-When (Compile Eval)
+); Eval-When (Compile Load Eval)
 
 
 ;;; Whenever we GC, we must blow away the INFO cache, otherwise values might
