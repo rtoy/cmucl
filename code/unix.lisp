@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.21 1992/07/28 00:22:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.22 1992/07/30 17:15:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,8 +114,9 @@
        (logbitp ,bit (deref (slot ,fd-set 'fds-bits) ,word)))))
 
 (defmacro fd-zero (fd-set)
-  `(dotimes (index (/ fd-setsize 32))
-     (setf (deref (slot ,fd-set 'fds-bits) index) 0)))
+  `(progn
+     ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+	 collect `(setf (deref (slot ,fd-set 'fds-bits) ,index) 0))))
 
 ;;; From sys/time.h
 
@@ -811,6 +812,24 @@
 ;;; Unix-select accepts sets of file descriptors and waits for an event
 ;;; to happen on one of them or to time out.
 
+(defmacro num-to-fd-set (fdset num)
+  `(if (fixnump ,num)
+       (progn
+	 (setf (deref (slot ,fdset 'fds-bits) 0) ,num)
+	 ,@(loop for index upfrom 1 below (/ fd-setsize 32)
+	     collect `(setf (deref (slot ,fdset 'fds-bits) ,index) 0)))
+       (progn
+	 ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+	     collect `(setf (deref (slot ,fdset 'fds-bits) ,index)
+			    (ldb (byte 32 ,(* index 32)) ,num))))))
+
+(defmacro fd-set-to-num (nfds fdset)
+  `(if (<= ,nfds 32)
+       (deref (slot ,fdset 'fds-bits) 0)
+       (+ ,@(loop for index upfrom 0 below (/ fd-setsize 32)
+	      collect `(ash (deref (slot ,fdset 'fds-bits) ,index)
+			    ,(* index 32))))))
+
 (defun unix-select (nfds rdfds wrfds xpfds to-secs &optional (to-usecs 0))
   "Unix-select examines the sets of descriptors passed as arguments
    to see if they are ready for reading and writing.  See the UNIX
@@ -819,7 +838,7 @@
 	   (type unsigned-byte rdfds wrfds xpfds)
 	   (type (or (unsigned-byte 31) null) to-secs)
 	   (type (unsigned-byte 31) to-usecs)
-	   (optimize (speed 3) (safety 0)))
+	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
   (with-alien ((tv (struct timeval))
 	       (rdf (struct fd-set))
 	       (wrf (struct fd-set))
@@ -827,56 +846,22 @@
     (when to-secs
       (setf (slot tv 'tv-sec) to-secs)
       (setf (slot tv 'tv-usec) to-usecs))
-    (cond
-     ((< nfds 32)
-      (macrolet ((frob (lisp-var alien-var)
-		   `(unless (zerop ,lisp-var)
-		      (setf (deref (slot ,alien-var 'fds-bits) 0) ,lisp-var))))
-	(frob rdfds rdf)
-	(frob wrfds wrf)
-	(frob xpfds xpf))
-      (macrolet ((frob (lispvar alienvar)
-		   `(if (zerop ,lispvar)
-			(int-sap 0)
-			(alien-sap (addr ,alienvar)))))
-	(syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
-		  (* (struct fd-set)) (* (struct timeval)))
-		 (values result
-			 (deref (slot rdf 'fds-bits) 0)
-			 (deref (slot wrf 'fds-bits) 0)
-			 (deref (slot xpf 'fds-bits) 0))
-		 nfds (frob rdfds rdf) (frob wrfds wrf) (frob xpfds xpf)
-		 (if to-secs (alien-sap (addr tv)) (int-sap 0)))))
-     (t
-      (dotimes (index (ceiling nfds 32))
-	(macrolet ((frob (lisp-var alien-var)
-		     `(setf (deref (slot ,alien-var 'fds-bits) index)
-			    (ldb (byte 32 0) ,lisp-var)
-			    ,lisp-var (ash ,lisp-var -32))))
-	  (frob rdfds rdf)
-	  (frob wrfds wrf)
-	  (frob xpfds xpf)))
-      (macrolet ((frob (lispvar alienvar)
-		   `(if (zerop ,lispvar)
-			(int-sap 0)
-		        (alien-sap (addr ,alienvar)))))
-	(syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
-		  (* (struct fd-set)) (* (struct timeval)))
-		 (let ((rdfds 0) (wrfds 0) (xpfds 0))
-		   (do ((index (1- (ceiling nfds 32)) (1- index)))
-		       ((minusp index))
-		     (macrolet ((frob (lisp-var alien-var)
-				  `(setf ,lisp-var
-					 (logior (ash ,lisp-var 32)
-						 (deref (slot ,alien-var
-							      'fds-bits)
-							index)))))
-		       (frob rdfds rdf)
-		       (frob wrfds wrf)
-		       (frob xpfds xpf)))
-		   (values result rdfds wrfds xpfds))
+    (num-to-fd-set rdf rdfds)
+    (num-to-fd-set wrf wrfds)
+    (num-to-fd-set xpf xpfds)
+    (macrolet ((frob (lispvar alienvar)
+		 `(if (zerop ,lispvar)
+		      (int-sap 0)
+		      (alien-sap (addr ,alienvar)))))
+      (syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
+		(* (struct fd-set)) (* (struct timeval)))
+	       (values result
+		       (fd-set-to-num nfds rdf)
+		       (fd-set-to-num nfds wrf)
+		       (fd-set-to-num nfds xpf))
 	       nfds (frob rdfds rdf) (frob wrfds wrf) (frob xpfds xpf)
-	       (if to-secs (alien-sap (addr tv)) (int-sap 0))))))))
+	       (if to-secs (alien-sap (addr tv)) (int-sap 0))))))
+
 
 ;;; Unix-sync writes all information in core memory which has been modified
 ;;; to permanent storage (i.e. disk).
