@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.12 1991/11/09 02:42:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.13 1991/11/09 18:57:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.12 1991/11/09 02:42:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.13 1991/11/09 18:57:19 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -176,7 +176,7 @@
 ;;; Just convert it into a make-array.
 ;;;
 (def-source-transform make-string (length &key (initial-element #\NULL))
-  `(make-array ,length
+  `(make-array (the index ,length)
 	       :element-type 'base-char
 	       :initial-element ,initial-element))
 
