@@ -1436,7 +1436,7 @@
 ;;;    Return a form that creates a VOP-Info structure which describes VOP.
 ;;;
 (defun set-up-vop-info (iparse parse)
-  (declare (type vop-parse iparse parse))
+  (declare (type vop-parse parse) (type (or vop-parse null) iparse))
   (let ((same-operands
 	 (and iparse
 	      (equal (vop-parse-operands parse)
