@@ -1121,7 +1121,6 @@
       (let ((form root)
 	    (current (rest rpath)))
 	(loop
-	  (when (null current) (return))
 	  (let ((head (first form)))
 	    (when (symbolp head)
 	      (let ((name (symbol-name head)))
@@ -1136,6 +1135,7 @@
 				   (car next)
 				   next))))
 		      (context (list head)))))))
+	  (when (null current) (return))
 	  (setq form (nth (pop current) form)))
 	
 	(cond ((context)
