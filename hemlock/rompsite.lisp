@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.20 1992/02/15 13:13:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.21 1992/02/16 15:56:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -950,19 +950,19 @@
 	    (error "Could not get tty tchars information, unix error ~S."
 		   (unix:get-unix-error-msg err))))
 	(setq old-tchars
-	      (vector (alien:slot tc 't-intrc)
-		      (alien:slot tc 't-quitc)
-		      (alien:slot tc 't-startc)
-		      (alien:slot tc 't-stopc)
-		      (alien:slot tc 't-eofc)
-		      (alien:slot tc 't-brkc)))
-	(setf (alien:slot tc 't-intrc)
+	      (vector (alien:slot tc 'unix:t-intrc)
+		      (alien:slot tc 'unix:t-quitc)
+		      (alien:slot tc 'unix:t-startc)
+		      (alien:slot tc 'unix:t-stopc)
+		      (alien:slot tc 'unix:t-eofc)
+		      (alien:slot tc 'unix:t-brkc)))
+	(setf (alien:slot tc 'unix:t-intrc)
 	      (if *editor-windowed-input* -1 28))
-	(setf (alien:slot tc 't-quitc) -1)
-	(setf (alien:slot tc 't-startc) -1)
-	(setf (alien:slot tc 't-stopc) -1)
-	(setf (alien:slot tc 't-eofc) -1)
-	(setf (alien:slot tc 't-brkc) -1)
+	(setf (alien:slot tc 'unix:t-quitc) -1)
+	(setf (alien:slot tc 'unix:t-startc) -1)
+	(setf (alien:slot tc 'unix:t-stopc) -1)
+	(setf (alien:slot tc 'unix:t-eofc) -1)
+	(setf (alien:slot tc 'unix:t-brkc) -1)
 	(multiple-value-bind
 	    (val err)
 	    (unix:unix-ioctl fd unix:TIOCSETC (alien:alien-sap tc))
