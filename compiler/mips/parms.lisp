@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.53 1990/06/03 16:19:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.54 1990/06/06 03:57:03 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -370,7 +370,7 @@
   (data :rest-p t :c-type "unsigned long"))
 
 (define-primitive-object (code :lowtag other-pointer-type :header t)
-  code-size
+  (code-size :ref-vop c::code-code-size)
   (entry-points :ref-vop c::code-entry-points
 		:set-vop c::set-code-entry-points)
   (debug-info :type t
