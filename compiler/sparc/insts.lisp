@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.32 2001/06/25 16:49:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.33 2002/03/21 19:38:49 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,7 +379,7 @@ about function addresses and register values.")
 (disassem:define-argument-type relative-label
   :sign-extend t
   :use-label #'(lambda (value dstate)
-		 (declare (type (signed-byte 13) value)
+		 (declare (type (signed-byte 22) value)
 			  (type disassem:disassem-state dstate))
 		 (+ (ash value 2) (disassem:dstate-cur-addr dstate))))
 
