@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.1 2005/02/21 17:14:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream-vector-io.lisp,v 1.2 2005/03/30 15:46:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,52 +167,68 @@
        (simple-array double-float (*))	; not previously supported by read-sequence
        ))
 
+;;; New versions of READ-VECTOR and WRITE-VECTOR that deal with octet positions
+;;; rather than element-positions, for compatibility with Allegro.
+
+;;; WARNING: START and END must be a multiple of octets-per-element.
+;;; (Should we enforce this constraint?)
+;;; WARNING: Element-types
+;;; smaller than 8-bits are not supported.
+
 ;;; READ-VECTOR --
 (defun read-vector (vector stream &key (start 0) end (endian-swap :byte-8))
-  (declare (type vector vector))
-  (declare (type stream stream))
-  (declare (type (integer 0 *) start))	; a list does not have a limit
-  (declare (type (or null (integer 0 *)) end))
-  (declare (values (integer 0 *)))
-
-  ;; START and END are octet offsets, not vector indices!  [Except for strings]
-  ;; Return value is index of next octet to be read into (i.e.,start+count)
+  (declare (type vector vector)
+	   (type stream stream)
+	   (type unsigned-byte start)	; a list does not have a limit
+	   (type (or null unsigned-byte) end)
+	   (values unsigned-byte))
+  ;;(declare (optimize (speed 3)(safety 0)))
+  ;; START and END are octet offsets, not vector indices! [Except for strings]
+  ;; Return value is index of next octet to be read into (i.e., start+count)
 
   (unless (typep vector '(or string simple-numeric-vector))
-    (error "Wrong vector type ~a for read-vector on stream ~a."
-	   (type-of vector) stream))
-  (let ((next-index (read-sequence vector stream :start (or start 0) :end end)))
+    (error "Wrong vector type ~a for read-vector on stream ~a." (type-of vector) stream))
+  (let* ((octets-per-element (vector-elt-width vector))
+	 ;; read-sequence is parameterized by element position.
+	 (next-index (read-sequence vector stream
+				    :start (floor (or start 0) octets-per-element)
+				    :end (and end (floor end octets-per-element)))))
+    (declare (fixnum octets-per-element next-index))
     (endian-swap-vector vector (or start 0) next-index
 			(endian-swap-value vector endian-swap))
-    next-index))
-
+    (* next-index octets-per-element)))
 
 ;;; WRITE VECTOR --
-
+;;; returns the next octet-position in vector.
 (defun write-vector (vector stream &key (start 0) (end nil) (endian-swap :byte-8))
-  (declare (type vector vector))
-  (declare (type stream stream))
-  (declare (type (integer 0 *) start))	; a list does not have a limit
-  (declare (type (or null (integer 0 *)) end))
-  (declare (values vector))
+  (declare (type vector vector)
+	   (type stream stream)
+	   (type unsigned-byte start)	; a list does not have a limit
+	   (type (or null unsigned-byte) end)
+	   (values unsigned-byte))
 
-  (let ((end (or end (length vector)))
-	(swap-mask (endian-swap-value vector endian-swap)))
-    (declare (type fixnum swap-mask))
+  (let* ((end (or end (length vector)))
+	 (octets-per-element (vector-elt-width vector))
+	 (swap-mask (endian-swap-value vector endian-swap))
+	 (next-index end))
+    (declare (type fixnum swap-mask end octets-per-element next-index))
     (cond ((= swap-mask 0)
-	   (write-sequence vector stream :start start :end end))
+	   (write-sequence vector stream
+			   :start (floor start octets-per-element)
+			   :end (and end (floor end octets-per-element))))
+
 	  (t
-	   ;; In a multiprocessing situation, WITHOUT-INTERRUPTS might
-	   ;; be required here otherwise the vector could be seen by
-	   ;; another process in the modified state.
+	   ;; In a multiprocessing situation, WITHOUT-INTERRUPTS might be required here
+	   ;; otherwise the vector could be seen by another process in the modified state.
 	   (unless (typep vector '(or string simple-numeric-vector))
-	     (error "Wrong vector type ~a for write-vector on stream ~a."
-		    (type-of vector) stream))
+	     (error "Wrong vector type ~a for write-vector on stream ~a." (type-of vector)
+		    stream))
 	   (endian-swap-vector vector start end swap-mask)
-	   (unwind-protect 
+	   (unwind-protect
 		(write-sequence vector stream :start start :end end)
 	     (endian-swap-vector vector start end swap-mask))
-	   vector))))
+	   vector))
+    (* next-index octets-per-element)))
 
 
 (declaim (end-block)) ; READ-VECTOR WRITE-VECTOR block
