@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.8 1991/03/22 14:05:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.9 1991/05/24 20:22:37 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -147,7 +147,8 @@
   pending-interrupt
   error
   cerror
-  breakpoint)
+  breakpoint
+  function-end-breakpoint)
 
 (defenum (:prefix object-not- :suffix -trap :start 16)
   list
