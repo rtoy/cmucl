@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.52 2004/08/27 03:20:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.53 2004/08/27 11:31:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1091,7 +1091,7 @@
 	       t)
 	      (t
 	       (when w (dotimes (i spaceleft) (write-char pad stream)))
-	       (if (minusp number)
+	       (if (minusp (float-sign number))
 		   (write-char #\- stream)
 		   (if atsign (write-char #\+ stream)))
 	       (when lpoint (write-char #\0 stream))
