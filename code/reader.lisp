@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.21 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.22 1997/03/20 21:53:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1193,9 +1193,9 @@
 	   (do* ((ch char (inch-read-buffer))
 		 (dig (and (not (eofp ch)) (digit-char-p ch))
 		      (and (not (eofp ch)) (digit-char-p ch))))
-	       ((not dig)
-		(setq exponent (if negative-exponent (- exponent) exponent)))
-	       (setq exponent (+ (* exponent 10) dig)))
+		((not dig)
+		 (setq exponent (if negative-exponent (- exponent) exponent)))
+	     (setq exponent (+ (* exponent 10) dig)))
 	   ;;generate and return the float, depending on float-char:
 	   (let* ((float-format (case (char-upcase float-char)
 				  (#\E *read-default-float-format*)
@@ -1203,9 +1203,41 @@
 				  (#\F 'single-float)
 				  (#\D 'double-float)
 				  (#\L 'long-float)))
-		  (num (make-float-aux number divisor float-format)))
-	     (setq num (* num (expt 10 exponent)))
-	     (return-from make-float (if negative-fraction (- num) num))))
+		  num)
+	     ;; toy@rtp.ericsson.se: We need to watch out if the
+	     ;; exponent is too small or too large.  We add enough to
+	     ;; EXPONENT to make it within range and scale NUMBER
+	     ;; appropriately.  This should avoid any unnecessary
+	     ;; underflow or overflow problems.
+	     (multiple-value-bind (min-expo max-expo)
+		 (case float-format
+		   (short-float
+		    (values 
+		     #.(log least-positive-normalized-short-float 10s0)
+		     #.(log most-positive-short-float 10s0)))
+		   (single-float
+		    (values 
+		     #.(log least-positive-normalized-single-float 10f0)
+		     #.(log most-positive-single-float 10f0)))
+		   (double-float
+		    (values
+		     #.(log least-positive-normalized-double-float 10d0)
+		     #.(log most-positive-double-float 10d0)))
+		   (long-float
+		    (values 
+		     #.(log least-positive-normalized-long-float 10L0)
+		     #.(log most-positive-long-float 10L0))))
+	       (let ((correction (cond ((<= exponent min-expo)
+					(ceiling (- min-expo exponent)))
+				       ((>= exponent max-expo)
+					(floor (- max-expo exponent)))
+				       (t
+					0))))
+		 (incf exponent correction)
+		 (setf number (/ number (expt 10 correction)))
+		 (setq num (make-float-aux number divisor float-format))
+		 (setq num (* num (expt 10 exponent)))
+		 (return-from make-float (if negative-fraction (- num) num))))))
 	  ;;should never happen:	
 	  (t (error "Internal error in floating point reader.")))))
 
