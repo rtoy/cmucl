@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.25 1991/02/08 13:33:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.26 1991/02/28 03:16:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.25 1991/02/08 13:33:54 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.26 1991/02/28 03:16:49 ram Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -243,6 +243,8 @@
 ;;; Fasload:
 
 (defun fasload (stream)
+  (unless (listen stream)
+    (error "Attempt to load an empty FASL FILE:~%  ~S" stream))
   (when *load-verbose*
     (format t "~&; Loading stuff from ~S.~%" stream))
   (let* ((*fasl-file* stream)
