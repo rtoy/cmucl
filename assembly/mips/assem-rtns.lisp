@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.13 1990/06/03 16:29:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.14 1990/06/04 05:39:57 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -36,11 +36,11 @@
   (dotimes (i (1- vm:function-header-code-offset))
     (inst word 0))
   ;; Cause the error.
-  (cerror-call continue di:undefined-symbol-error cname)
+  (cerror-call continue undefined-symbol-error cname)
 
   continue
 
-  (let ((not-sym (generate-cerror-code di:object-not-symbol-error cname)))
+  (let ((not-sym (generate-cerror-code object-not-symbol-error cname)))
     (test-simple-type cname temp not-sym t vm:symbol-header-type))
 
   (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
@@ -65,7 +65,7 @@
 			  (:temp target-uwp any-reg nl2-offset))
   (declare (ignore start count))
 
-  (let ((error (generate-error-code di:invalid-unwind-error)))
+  (let ((error (generate-error-code invalid-unwind-error)))
     (inst beq block zero-tn error))
   
   (load-symbol-value cur-uwp lisp::*current-unwind-protect-block*)
@@ -103,7 +103,7 @@
   
   loop
   
-  (let ((error (generate-error-code di:unseen-throw-tag-error target)))
+  (let ((error (generate-error-code unseen-throw-tag-error target)))
     (inst beq catch zero-tn error)
     (inst nop))
   
