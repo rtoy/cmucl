@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.19 1992/02/28 15:12:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.20 1992/03/04 09:05:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,19 +221,19 @@
 
 ;;;; Type parsing and unparsing.
 
+(defvar *auxiliary-type-definitions* nil)
+(defvar *new-auxiliary-types*)
 
-(defvar *additional-type-definitions*)
-
-(defmacro with-additional-alien-types ((symbol) &body body)
-  `(let ((*additional-type-definitions*
-	  (if (boundp '*additional-type-definitions*)
-	      *additional-type-definitions*
-	      nil)))
-     (symbol-macrolet ((,symbol *additional-type-definitions*))
-       ,@body)))
-
-(defmacro locally-introduce-additional-types ((additional-types) &body body)
-  `(compiler-let ((*additional-type-definitions* ',additional-types))
+;;; WITH-AUXILIARY-ALIEN-TYPES -- internal.
+;;;
+;;; Process stuff in a new scope.
+;;;
+(defmacro with-auxiliary-alien-types (&body body)
+  `(let ((*auxiliary-type-definitions*
+	  (if (boundp '*new-auxiliary-types*)
+	      (append *new-auxiliary-types* *auxiliary-type-definitions*)
+	      *auxiliary-type-definitions*))
+	 (*new-auxiliary-types* nil))
      ,@body))
 
 ;;; PARSE-ALIEN-TYPE -- public
@@ -241,9 +241,9 @@
 (defun parse-alien-type (type)
   "Parse the list structure TYPE as an alien type specifier and return
    the resultant alien-type structure."
-  (if (boundp '*additional-type-definitions*)
+  (if (boundp '*new-auxiliary-types*)
       (%parse-alien-type type)
-      (let ((*additional-type-definitions* nil))
+      (let ((*new-auxiliary-types* nil))
 	(%parse-alien-type type))))
 
 (defun %parse-alien-type (type)
@@ -265,27 +265,45 @@
 	 (error "Unknown alien type: ~S" type)))))
 
 (defun auxiliary-alien-type (kind name)
-  (let ((in-additionals (find-if #'(lambda (x)
-				     (and (eq (first x) kind)
-					  (eq (second x) name)))
-				 *additional-type-definitions*)))
-    (if in-additionals
-	(values (third in-additionals) t)
-	(ecase kind
-	  (:struct
-	   (info alien-type struct name))
-	  (:union
-	   (info alien-type union name))
-	  (:enum
-	   (info alien-type enum name))))))
+  (flet ((aux-defn-matches (x)
+	   (and (eq (first x) kind) (eq (second x) name))))
+    (let ((in-auxiliaries
+	   (or (find-if #'aux-defn-matches *new-auxiliary-types*)
+	       (find-if #'aux-defn-matches *auxiliary-type-definitions*))))
+      (if in-auxiliaries
+	  (values (third in-auxiliaries) t)
+	  (ecase kind
+	    (:struct
+	     (info alien-type struct name))
+	    (:union
+	     (info alien-type union name))
+	    (:enum
+	     (info alien-type enum name)))))))
 
 (defun %set-auxiliary-alien-type (kind name defn)
-  (push (list kind name defn)
-	*additional-type-definitions*)
+  (flet ((aux-defn-matches (x)
+	   (and (eq (first x) kind) (eq (second x) name))))
+    (when (find-if #'aux-defn-matches *new-auxiliary-types*)
+      (error "Attempt to multiple define ~A ~S." kind name))
+    (when (find-if #'aux-defn-matches *auxiliary-type-definitions*)
+      (error "Attempt to shadow definition of ~A ~S." kind name)))
+  (push (list kind name defn) *new-auxiliary-types*)
   defn)
 
 (defsetf auxiliary-alien-type %set-auxiliary-alien-type)
 
+(defun verify-local-auxiliaries-okay ()
+  (dolist (info *new-auxiliary-types*)
+    (destructuring-bind (kind name defn) info
+      (declare (ignore defn))
+      (when (ecase kind
+	      (:struct
+	       (info alien-type struct name))
+	      (:union
+	       (info alien-type union name))
+	      (:enum
+	       (info alien-type enum name)))
+	(error "Attempt to shadow definition of ~A ~S." kind name)))))
 
 ;;; *record-type-already-unparsed* -- internal
 ;;;
@@ -346,24 +364,27 @@
 
 (defmacro def-alien-type (name type)
   "Define the alien type NAME to be equivalent to TYPE."
-  (with-additional-alien-types (additional-types)
+  (with-auxiliary-alien-types
     (let ((alien-type (parse-alien-type type)))
       `(eval-when (compile load eval)
-	 ,@(when additional-types
-	     `((%def-additional-alien-types ',additional-types)))
+	 ,@(when *new-auxiliary-types*
+	     `((%def-auxiliary-alien-types ',*new-auxiliary-types*)))
 	 ,@(when name
 	     `((%def-alien-type ',name ',alien-type)))))))
 
-(defun %def-additional-alien-types (types)
+(defun %def-auxiliary-alien-types (types)
   (dolist (info types)
     (destructuring-bind (kind name defn) info
-      (ecase kind
-	(:struct
-	 (setf (info alien-type struct name) defn))
-	(:union
-	 (setf (info alien-type union name) defn))
-	(:enum
-	 (setf (info alien-type enum name) defn))))))
+      (macrolet ((frob (kind)
+		   `(let ((old (info alien-type ,kind name)))
+		      (unless (or (null old) (alien-type-= old defn))
+			(warn "Redefining ~A ~S to be:~%  ~S,~%was:~%  ~S"
+			      kind name defn old))
+		      (setf (info alien-type ,kind name) defn))))
+	(ecase kind
+	  (:struct (frob struct))
+	  (:union (frob union))
+	  (:enum (frob enum)))))))
 
 (defun %def-alien-type (name new)
   (ecase (info alien-type kind name)
@@ -929,15 +950,21 @@
   (parse-alien-record-type :union name fields))
 
 (defun parse-alien-record-type (kind name fields)
-  (let ((result
-	 (if name
-	     (or (auxiliary-alien-type kind name)
-		 (setf (auxiliary-alien-type kind name)
-		       (make-alien-record-type :name name :kind kind)))
-	     (make-alien-record-type :kind kind))))
-    (when fields
-      (parse-alien-record-fields result fields))
-    result))
+  (if fields
+      (let* ((old (and name (auxiliary-alien-type kind name)))
+	     (result (if (or (null old)
+			     (alien-record-type-fields old))
+			 (make-alien-record-type :name name :kind kind)
+			 old)))
+	(when (and name (not (eq old result)))
+	  (setf (auxiliary-alien-type kind name) result))
+	(parse-alien-record-fields result fields)
+	result)
+      (if name
+	  (or (auxiliary-alien-type kind name)
+	      (setf (auxiliary-alien-type kind name)
+		    (make-alien-record-type :name name :kind kind)))
+	  (make-alien-record-type :kind kind))))
 
 ;;; PARSE-ALIEN-RECORD-FIELDS -- internal
 ;;;
@@ -976,8 +1003,7 @@
 	    (:union
 	     (setf total-bits (max total-bits bits)))))))
     (let ((new (nreverse parsed-fields)))
-      (unless (record-fields-match (alien-record-type-fields result) new)
-	(setf (alien-record-type-fields result) new)))
+      (setf (alien-record-type-fields result) new))
     (setf (alien-record-type-alignment result) overall-alignment)
     (setf (alien-record-type-bits result)
 	  (align-offset total-bits overall-alignment))))
@@ -1172,11 +1198,11 @@
   (multiple-value-bind
       (lisp-name alien-name)
       (pick-lisp-and-alien-names name)
-    (with-additional-alien-types (additional-types)
+    (with-auxiliary-alien-types
       (let ((alien-type (parse-alien-type type)))
 	`(eval-when (compile load eval)
-	   ,@(when additional-types
-	       `((%def-additional-alien-types ',additional-types)))
+	   ,@(when *new-auxiliary-types*
+	       `((%def-auxiliary-alien-types ',*new-auxiliary-types*)))
 	   (%def-alien-variable ',lisp-name
 				',alien-name
 				',alien-type))))))
@@ -1221,7 +1247,7 @@
      :EXTERN
        No alien is allocated, but VAR is established as a local name for
        the external alien given by EXTERNAL-NAME."
-  (with-additional-alien-types (additional-types)
+  (with-auxiliary-alien-types
     (dolist (binding (reverse bindings))
       (destructuring-bind
 	  (symbol type &optional (opt1 nil opt1p) (opt2 nil opt2p))
@@ -1258,25 +1284,28 @@
 				  :sap-form `(foreign-symbol-address
 					      ',initial-value))))
 		       `((symbol-macrolet
-			     ((,symbol (%heap-alien ',info)))
-			   ,@body))))
+			  ((,symbol (%heap-alien ',info)))
+			  ,@body))))
 		    (:local
 		     (let ((var (gensym))
 			   (initval (if initial-value (gensym)))
 			   (info (make-local-alien-info
-				  :type (parse-alien-type type))))
+				  :type alien-type)))
 		       `((let ((,var (make-local-alien ',info))
 			       ,@(when initial-value
 				   `((,initval ,initial-value))))
 			   (note-local-alien-type ',info ,var)
 			   (multiple-value-prog1
 			       (symbol-macrolet
-				   ((,symbol (local-alien ',info ,var)))
-				 ,@(when initial-value
-				     `((setq ,symbol ,initval)))
-				 ,@body)
+				((,symbol (local-alien ',info ,var)))
+				,@(when initial-value
+				    `((setq ,symbol ,initval)))
+				,@body)
 			     (dispose-local-alien ',info ,var))))))))))))
-    `(locally-introduce-additional-types (,additional-types)
+    (verify-local-auxiliaries-okay)
+    `(compiler-let (*auxiliary-type-definitions*
+		    ',(append *new-auxiliary-types*
+			      *auxiliary-type-definitions*))
        ,@body)))
 
 
@@ -1394,7 +1423,8 @@
 ;;; 
 (defun slot (alien slot)
   (declare (type alien-value alien)
-	   (type symbol slot))
+	   (type symbol slot)
+	   (optimize (inhibit-warnings 3)))
   (let ((type (alien-value-type alien)))
     (etypecase type
       (alien-pointer-type
@@ -1413,7 +1443,8 @@
 ;;; 
 (defun %set-slot (alien slot value)
   (declare (type alien-value alien)
-	   (type symbol slot))
+	   (type symbol slot)
+	   (optimize (inhibit-warnings 3)))
   (let ((type (alien-value-type alien)))
     (etypecase type
       (alien-pointer-type
@@ -1433,7 +1464,8 @@
 ;;; 
 (defun %slot-addr (alien slot)
   (declare (type alien-value alien)
-	   (type symbol slot))
+	   (type symbol slot)
+	   (optimize (inhibit-warnings 3)))
   (let ((type (alien-value-type alien)))
     (etypecase type
       (alien-pointer-type
@@ -1496,7 +1528,8 @@
 ;;; 
 (defun deref (alien &rest indices)
   (declare (type alien-value alien)
-	   (type list indices))
+	   (type list indices)
+	   (optimize (inhibit-warnings 3)))
   (multiple-value-bind
       (target-type offset)
       (deref-guts alien indices)
@@ -1508,7 +1541,8 @@
 ;;; 
 (defun %set-deref (alien value &rest indices)
   (declare (type alien-value alien)
-	   (type list indices))
+	   (type list indices)
+	   (optimize (inhibit-warnings 3)))
   (multiple-value-bind
       (target-type offset)
       (deref-guts alien indices)
@@ -1524,7 +1558,8 @@
 ;;;
 (defun %deref-addr (alien &rest indices)
   (declare (type alien-value alien)
-	   (type list indices))
+	   (type list indices)
+	   (optimize (inhibit-warnings 3)))
   (multiple-value-bind
       (target-type offset)
       (deref-guts alien indices)
@@ -1535,13 +1570,15 @@
 ;;;; Accessing heap alien variables.
 
 (defun %heap-alien (info)
-  (declare (type heap-alien-info info))
+  (declare (type heap-alien-info info)
+	   (optimize (inhibit-warnings 3)))
   (extract-alien-value (eval (heap-alien-info-sap-form info))
 		       0
 		       (heap-alien-info-type info)))
 
 (defun %set-heap-alien (info value)
-  (declare (type heap-alien-info info))
+  (declare (type heap-alien-info info)
+	   (optimize (inhibit-warnings 3)))
   (deposit-alien-value (eval (heap-alien-info-sap-form info))
 		       0
 		       (heap-alien-info-type info)
@@ -1550,7 +1587,8 @@
 (defsetf %heap-alien %set-heap-alien)
 
 (defun %heap-alien-addr (info)
-  (declare (type heap-alien-info info))
+  (declare (type heap-alien-info info)
+	   (optimize (inhibit-warnings 3)))
   (%sap-alien (eval (heap-alien-info-sap-form info))
 	      (make-alien-pointer-type :to (heap-alien-info-type info))))
 
@@ -1647,7 +1685,9 @@
   `(%cast ,alien ',(parse-alien-type type)))
 
 (defun %cast (alien target-type)
-  (declare (type alien-value alien) (type alien-type target-type))
+  (declare (type alien-value alien)
+	   (type alien-type target-type)
+	   (optimize (inhibit-warnings 3)))
   (if (or (alien-pointer-type-p target-type)
 	  (alien-array-type-p target-type)
 	  (alien-function-type-p target-type))
