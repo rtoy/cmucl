@@ -547,8 +547,6 @@
 
 ;;;; Float mode hackery:
 
-#|
-
 (deftype float-modes () '(unsigned-byte 32))
 (defknown floating-point-modes () float-modes (flushable))
 (defknown ((setf floating-point-modes)) (float-modes)
@@ -559,13 +557,15 @@
   (:result-types unsigned-num)
   (:translate floating-point-modes)
   (:policy :fast-safe)
-  (:vop-var vop)
-  (:temporary (:sc unsigned-stack) temp)
+  #+nil (:vop-var vop)
+  #+nil (:temporary (:sc unsigned-stack) temp)
   (:generator 3
+    #+nil
     (let ((nfp (current-nfp-tn vop)))
       (inst stfsr nfp (* word-bytes (tn-offset temp)))
       (loadw res nfp (tn-offset temp))
-      (inst nop))))
+      (inst nop))
+    (inst li res 0)))
 
 (define-vop (set-floating-point-modes)
   (:args (new :scs (unsigned-reg) :target res))
@@ -574,11 +574,12 @@
   (:result-types unsigned-num)
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-stack) temp)
-  (:vop-var vop)
+  #+nil (:temporary (:sc unsigned-stack) temp)
+  #+nil (:vop-var vop)
   (:generator 3
+    #+nil
     (let ((nfp (current-nfp-tn vop)))
       (storew new nfp (tn-offset temp))
       (inst ldfsr nfp (* word-bytes (tn-offset temp)))
-      (move res new))))
-|#
+      (move res new))
+    (move res new)))
