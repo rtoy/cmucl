@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.9 1990/10/10 13:11:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.10 1990/10/13 20:24:52 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -884,7 +884,7 @@
   (makunbound '*initial-foreign-symbols*))
 
 
-(define-fop (fop-foreign-fixup 143)
+(define-fop (fop-old-foreign-fixup 143)
   (let* ((code-object (pop-stack))
 	 (offset (read-arg 4))
 	 (len (read-arg 1))
@@ -898,13 +898,31 @@
       (fixup-code-object code-object offset value))
     code-object))
 
+(define-fop (fop-foreign-fixup 147)
+  (let* ((code-object (pop-stack))
+	 (len (read-arg 1))
+	 (sym (make-string len)))
+    (read-n-bytes *fasl-file* sym 0 len)
+    (multiple-value-bind
+	(value found)
+	(gethash sym *foreign-symbols* 0)
+      (unless found
+	(error "Unknown foreign symbol: ~S" sym))
+      (let* ((offset (read-arg 4))
+	     (byte (read-arg 1))
+	     (kind (car (or (find byte vm:*fixup-values*
+				  :key #'cdr :test #'eql)
+			    (error "Unknown fixup kind: ~D" byte)))))
+	(fixup-code-object code-object offset value kind)))
+    code-object))
+
 (define-fop (fop-assembler-code 144)
   (error "Cannot load assembler code."))
 
 (define-fop (fop-assembler-routine 145)
   (error "Cannot load assembler code."))
 
-(define-fop (fop-assembler-fixup 146)
+(define-fop (fop-old-assembler-fixup 146)
   (let ((routine (pop-stack))
 	(code-object (pop-stack))
 	(offset (read-arg 4)))
@@ -916,26 +934,49 @@
       (fixup-code-object code-object offset value)
       code-object)))
 
-(defun fixup-code-object (code offset fixup)
+(define-fop (fop-assembler-fixup 148)
+  (let* ((routine (pop-stack))
+	 (code-object (pop-stack))
+	 (offset (read-arg 4))
+	 (byte (read-arg 1))
+	 (kind (car (or (find byte vm:*fixup-values* :key #'cdr :test #'eql)
+			(error "Unknown fixup kind: ~D" byte)))))
+    (multiple-value-bind
+	(value found)
+	(gethash routine *assembler-routines*)
+      (unless found
+	(error "Undefined assembler routine: ~S" routine))
+      (fixup-code-object code-object offset value kind))
+    code-object))
+
+(defun fixup-code-object (code offset fixup &optional (kind :both))
   ;; Currently, the only kind of fixup we can have is a lui followed by an
   ;; addi.
-  (multiple-value-bind
-      (word-offset rem)
-      (truncate offset vm:word-bytes)
-    (unless (zerop rem)
-      (error "Unaligned instruction?  offset=#x~X." offset))
-    (system:without-gcing
-     (let* ((sap (truly-the system-area-pointer
-			    (%primitive c::code-instructions code)))
-	    (half-word-offset (* word-offset 2))
-	    (new-val (+ fixup
-			(ash (sap-ref-16 sap half-word-offset) 16)
-			(signed-sap-ref-16 sap (+ half-word-offset 2))))
-	    (low (logand new-val (1- (ash 1 16))))
-	    (high (+ (ash new-val -16)
-		     (if (logbitp 15 low) 1 0))))
-       (setf (sap-ref-16 sap half-word-offset) high)
-       (setf (sap-ref-16 sap (+ half-word-offset 2)) low)))))
+  (cond ((eq kind :both)
+	 (fixup-code-object code offset fixup :lui)
+	 (fixup-code-object code (+ offset vm:word-bytes) fixup :addi))
+	(t
+	 (multiple-value-bind
+	     (word-offset rem)
+	     (truncate offset vm:word-bytes)
+	   (unless (zerop rem)
+	     (error "Unaligned instruction?  offset=#x~X." offset))
+	   (system:without-gcing
+	    (let ((sap (truly-the system-area-pointer
+				  (%primitive c::code-instructions code))))
+	      (ecase kind
+		(:jump
+		 (assert (zerop (ash fixup -26)))
+		 (setf (ldb (byte 26 0)
+			    (system:sap-ref-32 sap word-offset))
+		       (ash fixup -2)))
+		(:lui
+		 (setf (sap-ref-16 sap (* word-offset 2))
+		       (+ (ash fixup -16)
+			  (if (logbitp 15 fixup) 1 0))))
+		(:addi
+		 (setf (sap-ref-16 sap (* word-offset 2))
+		       (ldb (byte 16 0) fixup))))))))))
 
 
 (proclaim '(notinline read-byte))
