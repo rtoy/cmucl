@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.21 1993/05/12 16:16:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.22 1993/07/25 21:17:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -800,7 +800,7 @@
 ;;; closure, block, last-cont, and set-block-p.
 ;;;
 (defun internal-apply-loop (first frame-ptr lambda args closure)
-  (declare (optimize (debug-info 2)))
+  (declare (optimize (debug 2)))
   (let* ((block (c::node-block first))
 	 (last-cont (c::node-cont (c::block-last block)))
 	 (node first)
