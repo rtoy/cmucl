@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.86 1993/03/13 15:13:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.87 1993/05/02 14:54:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 (export '(ignorable symbol-macrolet))
 
 (in-package "KERNEL")
-(export '(lambda-with-environment fin-function))
+(export '(lambda-with-environment instance-lambda))
 
 (in-package "C")
 
@@ -2384,16 +2384,24 @@
   "FUNCTION Name
   Return the lexically apparent definition of the function Name.  Name may also
   be a lambda."
-  (if (and (consp thing) (eq (car thing) 'lambda))
-      (reference-leaf start cont (ir1-convert-lambda thing nil 'function))
+  (if (consp thing)
+      (case (car thing)
+	((lambda)
+	 (reference-leaf start cont (ir1-convert-lambda thing nil 'function)))
+	((setf)
+	 (let ((var (find-lexically-apparent-function
+		     thing "as the argument to FUNCTION")))
+	   (reference-leaf start cont var)))
+	((instance-lambda)
+	 (let ((res (ir1-convert-lambda `(lambda ,@(cdr thing))
+					nil 'function)))
+	   (setf (getf (functional-plist res) :fin-function) t)
+	   (reference-leaf start cont res)))
+	(t
+	 (compiler-error "Illegal function name: ~S" thing)))
       (let ((var (find-lexically-apparent-function
 		  thing "as the argument to FUNCTION")))
 	(reference-leaf start cont var))))
-
-(def-ir1-translator fin-function ((thing) start cont)
-  (let ((res (ir1-convert-lambda thing nil 'function)))
-    (setf (getf (functional-plist res) :fin-function) t)
-    (reference-leaf start cont res)))
 
 
 ;;;; Funcall:
