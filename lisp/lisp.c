@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.35 2003/08/18 20:48:38 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.36 2003/08/21 15:26:36 gerd Exp $
  *
  */
 
@@ -356,15 +356,22 @@ prepend_core_path(char* lib, char* corefile)
 }
 
 
-/* The symbol initial_function_addr is used globally as a flag to
-   indicate whether the executable contains the lisp image.  The
-   reason for this is that we use the linker to set the value of the
-   symbol.  But the symbol is an address, not a variable value.  So
-   for this to work as a flag, it must end up pointing to a valid
-   place in memory or we'll get a bus error or segmentation violation
-   when we check it.  The initial function address will be a valid
-   place in memory (or else we have worse problems).  FMG */
+/*
+  The symbol builtin_image_flag is used globally as a flag to indicate
+  whether the executable contains the lisp image.  Note that we use
+  the linker to set the value of the symbol.  But the symbol is an
+  address, not a variable value.  So for this to work as a flag, it
+  must end up pointing to a valid place in memory or we'll get a bus
+  error or segmentation violation when we check it.  If the lisp image
+  is built in, we'll set this symbol to point to the beginning of the
+  process.
 
+  We also use the linker to set initial_function_addr so that if the
+  lisp core is built in, taking the address of initial_function_addr
+  will give the address of the initial function.
+*/
+
+int builtin_image_flag = 0;
 int initial_function_addr = 0;
 
 /* And here be main. */
@@ -380,7 +387,7 @@ int main(int argc, char *argv[], char *envp[])
     boolean monitor;
     lispobj initial_function = 0;
 
-    if (initial_function_addr != 0)
+    if (builtin_image_flag != 0)
       initial_function = &initial_function_addr;
 
 #if defined(SVR4) || defined(__linux__)
@@ -402,7 +409,7 @@ int main(int argc, char *argv[], char *envp[])
       {
         if (strcmp(arg, "-core") == 0)
 	  {
-	    if (initial_function_addr) {
+	    if (builtin_image_flag) {
 	      fprintf(stderr, "Cannot specify core file in executable image --- sorry about that.\n");
 	      exit(1);
 	    }	      
@@ -454,6 +461,8 @@ int main(int argc, char *argv[], char *envp[])
 	default_core = "lisp.core";
 
     os_init();
+    if (builtin_image_flag != 0)
+      map_core_sections(argv[0]);
     validate();
     gc_init();
 
@@ -526,7 +535,7 @@ int main(int argc, char *argv[], char *envp[])
 
 
     /* Only look for a core file if we're not using a built-in image.*/
-    if (initial_function_addr == 0) {
+    if (builtin_image_flag == 0) {
       /*
        * If no core file specified, search for it in CMUCLLIB
        */
@@ -562,7 +571,7 @@ int main(int argc, char *argv[], char *envp[])
 
     globals_init();
 
-    if(initial_function_addr != 0) {
+    if(builtin_image_flag != 0) {
       extern int image_dynamic_space_size;
       int allocation_pointer = dynamic_0_space + (int)&image_dynamic_space_size;
 #ifdef i386
