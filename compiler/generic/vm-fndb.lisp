@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.5 1990/05/09 06:41:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.6 1990/05/14 01:59:03 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -26,8 +26,11 @@
 
 (defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
 	   long-float-p base-char-p %string-char-p %standard-char-p structurep
-	   array-header-p simple-array-p system-area-pointer-p realp
-	   unsigned-byte-32-p signed-byte-32-p)
+	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
+	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
+	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
+	   simple-array-single-float-p simple-array-double-float-p
+	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p)
   (t) boolean (movable foldable flushable))
 
 

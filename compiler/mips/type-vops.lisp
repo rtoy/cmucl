@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.11 1990/05/06 05:27:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.12 1990/05/14 01:58:57 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -53,29 +53,32 @@
 		(define-vop (,pred-name simple-type-predicate)
 		  (:variant ,type-code)
 		  (:translate ,pred-name))
-
-		,@(when check-name
-		    `((define-vop (,check-name check-simple-type)
-			(:variant ,type-code ,error-code))
-		      (primitive-type-vop ,check-name (:check) ,ptype))))))
+		(define-vop (,check-name check-simple-type)
+		  (:variant ,type-code ,error-code))
+		(primitive-type-vop ,check-name (:check) ,ptype))))
 
   ;; ### Want to tweek costs so that checks that do dereferences are
   ;; more expensive.
   ;; 
-  ;; ### May want to add all of the (simple-array <mumble> (*))
-  ;; primitive types.
-  ;;
   (frob functionp check-function function
     vm:function-pointer-type di:object-not-function-error)
 
   (frob listp check-list list
     vm:list-pointer-type di:object-not-list-error)
 
+  #+nil ;; ### Only after we have real structures.
+  (frob structurep check-structure structure
+    vm:structure-pointer-type di:object-not-structure)
+
   (frob bignump check-bigunm bignum
     vm:bignum-type di:object-not-bignum-error)
 
   (frob ratiop check-ratio ratio
     vm:ratio-type di:object-not-ratio-error)
+
+  #+nil ;; ### Need to verify the existance of this predicate.
+  (frob complexp check-complex complex
+    vm:complex-type di:object-not-complex)
 
   (frob single-float-p check-single-float single-float
     vm:single-float-type di:object-not-single-float-error)
@@ -91,6 +94,34 @@
 
   (frob simple-vector-p check-simple-vector simple-vector
     vm:simple-vector-type di:object-not-simple-vector-error)
+
+  (frob simple-array-unsigned-byte-2-p check-simple-array-unsigned-byte-2
+    simple-array-unsigned-byte-2 vm:simple-array-unsigned-byte-2-type
+    di:object-not-simple-array-unsigned-byte-2-error)
+
+  (frob simple-array-unsigned-byte-4-p check-simple-array-unsigned-byte-4
+    simple-array-unsigned-byte-4 vm:simple-array-unsigned-byte-4-type
+    di:object-not-simple-array-unsigned-byte-4-error)
+
+  (frob simple-array-unsigned-byte-8-p check-simple-array-unsigned-byte-8
+    simple-array-unsigned-byte-8 vm:simple-array-unsigned-byte-8-type
+    di:object-not-simple-array-unsigned-byte-8-error)
+
+  (frob simple-array-unsigned-byte-16-p check-simple-array-unsigned-byte-16
+    simple-array-unsigned-byte-16 vm:simple-array-unsigned-byte-16-type
+    di:object-not-simple-array-unsigned-byte-16-error)
+
+  (frob simple-array-unsigned-byte-32-p check-simple-array-unsigned-byte-32
+    simple-array-unsigned-byte-32 vm:simple-array-unsigned-byte-32-type
+    di:object-not-simple-array-unsigned-byte-32-error)
+
+  (frob simple-array-single-float-p check-simple-array-single-float
+    simple-array-single-float vm:simple-array-single-float-type
+    di:object-not-simple-array-single-float-error)
+
+  (frob simple-array-double-float-p check-simple-array-double-float
+    simple-array-double-float vm:simple-array-double-float-type
+    di:object-not-simple-array-double-float-error)
 
   (frob base-char-p check-base-character base-character
     vm:base-character-type di:object-not-base-character-error)

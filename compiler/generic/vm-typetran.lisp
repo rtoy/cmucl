@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.4 1990/05/06 05:31:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.5 1990/05/14 01:59:07 wlott Exp $
 ;;;
 ;;; This file contains the implimentation specific type transformation magic.
 ;;; Basically, the various non-standard predicates that can be used in typep
@@ -33,6 +33,20 @@
 (define-type-predicate short-float-p short-float)
 (define-type-predicate single-float-p single-float)
 (define-type-predicate simple-array-p simple-array)
+(define-type-predicate simple-array-unsigned-byte-2-p
+		       (simple-array (unsigned-byte 2) (*)))
+(define-type-predicate simple-array-unsigned-byte-4-p
+		       (simple-array (unsigned-byte 4) (*)))
+(define-type-predicate simple-array-unsigned-byte-8-p
+		       (simple-array (unsigned-byte 8) (*)))
+(define-type-predicate simple-array-unsigned-byte-16-p
+		       (simple-array (unsigned-byte 16) (*)))
+(define-type-predicate simple-array-unsigned-byte-32-p
+		       (simple-array (unsigned-byte 32) (*)))
+(define-type-predicate simple-array-single-float-p
+		       (simple-array single-float (*)))
+(define-type-predicate simple-array-double-float-p
+		       (simple-array double-float (*)))
 (define-type-predicate system-area-pointer-p system-area-pointer)
 (define-type-predicate unsigned-byte-32-p (unsigned-byte 32))
 (define-type-predicate signed-byte-32-p (signed-byte 32))
