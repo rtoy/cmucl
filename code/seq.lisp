@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.7 1991/05/14 16:24:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.8 1991/05/16 16:03:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,6 +60,25 @@
 
 
 
+
+;;; RESULT-TYPE-OR-LOSE  --  Internal
+;;;
+;;;    Given an arbitrary type specifier, return a sane sequence type specifier
+;;; that we can directly match.
+;;;
+(defun result-type-or-lose (type &optional nil-ok)
+  (cond
+   ((subtypep type 'nil)
+    (if nil-ok
+	nil
+	(error "NIL output type invalid for this sequence function.")))
+   ((dolist (seq-type '(list bit-vector string vector) nil)
+      (when (subtypep type seq-type)
+	(return seq-type))))
+   (t
+    (error "~S is a bad type specifier for sequence functions." type))))
+
+  
 (defun make-sequence-of-type (type length)
   "Returns a sequence of the given TYPE and LENGTH."
   (declare (fixnum length))
@@ -73,14 +92,9 @@
      (if (listp type)
 	 (make-array length :element-type (cadr type))
 	 (make-array length)))
-    ((bit-vector simple-bit-vector)
-     (make-array length :element-type '(mod 2)))
     (t
-     (let ((exp (type-expand type)))
-       (if (eq exp type)
-	   (error "~S is a bad type specifier for sequence functions." type)
-	   (make-sequence-of-type exp length))))))
-
+     (make-sequence-of-type (result-type-or-lose type) length))))
+  
 (defun elt (sequence index)
   "Returns the element of SEQUENCE specified by INDEX."
   (etypecase sequence
@@ -542,13 +556,14 @@
   "Returns a new sequence of all the argument sequences concatenated together
   which shares no structure with the original argument sequences of the
   specified OUTPUT-TYPE-SPEC."
-  (let ((output-type-spec (type-expand output-type-spec)))
-    (case (type-specifier-atom output-type-spec)
-      (list (apply #'concat-to-list* sequences))
-      ((simple-vector simple-string vector string array simple-array
-	bit-vector simple-bit-vector base-string simple-base-string)
-       (apply #'concat-to-simple* output-type-spec sequences))
-      (t (error "~S: invalid output type specification." output-type-spec)))))
+  (case (type-specifier-atom output-type-spec)
+    ((simple-vector simple-string vector string array simple-array
+		    bit-vector simple-bit-vector base-string
+		    simple-base-string)
+     (apply #'concat-to-simple* output-type-spec sequences))
+    (list (apply #'concat-to-list* sequences))
+    (t
+     (apply #'concatenate (result-type-or-lose output-type-spec) sequences))))
 
 ;;; Internal Frobs:
 
@@ -618,15 +633,16 @@
   "FUNCTION must take as many arguments as there are sequences provided.  The 
    result is a sequence such that element i is the result of applying FUNCTION
    to element i of each of the argument sequences."
-  (let ((sequences (cons first-sequence more-sequences))
-	(output-type-spec (type-expand output-type-spec)))
+  (let ((sequences (cons first-sequence more-sequences)))
     (case (type-specifier-atom output-type-spec)
       ((nil) (map-for-effect function sequences))
       (list (map-to-list function sequences))
       ((simple-vector simple-string vector string array simple-array
 		    bit-vector simple-bit-vector base-string simple-base-string)
        (map-to-simple output-type-spec function sequences))
-      (t (error "~S: invalid output type specifier." output-type-spec)))))
+      (t
+       (apply #'map (result-type-or-lose output-type-spec t)
+	      function sequences)))))
 
 
 ;;; Quantifiers:
