@@ -24,6 +24,7 @@
 
 (defparameter *known-authorizations* '("MIT-MAGIC-COOKIE-1"))
 
+
 (defun get-best-authorization (host display protocol)
   (labels ((read-short (stream &optional (eof-errorp t))
 	     (let ((high-byte (read-byte stream eof-errorp)))
@@ -41,39 +42,43 @@
 		 (dotimes (k length)
 		   (setf (aref vector k) (read-byte stream)))
 		 vector))))
-    (let ((pathname (authority-pathname)))
-      (when pathname
-	(with-open-file (stream pathname :element-type '(unsigned-byte 8)
-				:if-does-not-exist nil)
-	  (when stream
-	    (let* ((host-family (ecase protocol
-				  ((:tcp :internet nil) 0)
-				  ((:dna :DECnet) 1)
-				  ((:chaos) 2)))
-		   (host-address (rest (host-address host host-family)))
-		   (best-name nil)
-		   (best-data nil))
-	      (loop
-		(let ((family (read-short stream nil)))
-		  (when (null family)
-		    (return))
-		  (let* ((address (read-short-length-vector stream))
-			 (number (parse-integer (read-short-length-string stream)))
-			 (name (read-short-length-string stream))
-			 (data (read-short-length-vector stream)))
-		    (when (and (= family host-family)
-			       (equal host-address (coerce address 'list))
-			       (= number display)
-			       (let ((pos1 (position name *known-authorizations* :test #'string=)))
-				 (and pos1
-				      (or (null best-name)
-					  (< pos1 (position best-name *known-authorizations*
-							    :test #'string=))))))
-		      (setf best-name name)
-		      (setf best-data data)))))
-	      (when best-name
-		(return-from get-best-authorization
-		  (values best-name best-data)))))))))
+    ;; pw--code in socket.c allows "0" and "unix" as means to use AF_UNIX
+    ;; which might be more efficient than using the internet interface. So,
+    ;; just use the default authorization in that case.
+    (unless (and (stringp host)(or (eq (char host 0) #\0)(string= host "unix")))
+      (let ((pathname (authority-pathname)))
+	(when pathname
+	  (with-open-file (stream pathname :element-type '(unsigned-byte 8)
+				  :if-does-not-exist nil)
+	    (when stream
+	      (let* ((host-family (ecase protocol
+				    ((:tcp :internet nil) 0)
+				    ((:dna :DECnet) 1)
+				    ((:chaos) 2)))
+		     (host-address (rest (host-address host host-family)))
+		     (best-name nil)
+		     (best-data nil))
+		(loop
+		  (let ((family (read-short stream nil)))
+		    (when (null family)
+		      (return))
+		    (let* ((address (read-short-length-vector stream))
+			   (number (parse-integer (read-short-length-string stream)))
+			   (name (read-short-length-string stream))
+			   (data (read-short-length-vector stream)))
+		      (when (and (= family host-family)
+				 (equal host-address (coerce address 'list))
+				 (= number display)
+				 (let ((pos1 (position name *known-authorizations* :test #'string=)))
+				   (and pos1
+					(or (null best-name)
+					    (< pos1 (position best-name *known-authorizations*
+							      :test #'string=))))))
+			(setf best-name name)
+			(setf best-data data)))))
+		(when best-name
+		  (return-from get-best-authorization
+			       (values best-name best-data))))))))))
   (values "" ""))
 
 ;;
