@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.14 1992/12/16 20:27:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.15 1993/03/01 14:51:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -235,42 +235,42 @@
 
 
 
-;;;; Structure hackery:
+;;;; Instance hackery:
 
-(define-vop (structure-length)
+(define-vop (instance-length)
   (:policy :fast-safe)
-  (:translate structure-length)
+  (:translate %instance-length)
   (:args (struct :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 4
-    (loadw temp struct 0 structure-pointer-type)
+    (loadw temp struct 0 instance-pointer-type)
     (inst srl res temp vm:type-bits)))
 
-(define-vop (structure-ref slot-ref)
-  (:variant structure-slots-offset structure-pointer-type)
+(define-vop (instance-ref slot-ref)
+  (:variant instance-slots-offset instance-pointer-type)
   (:policy :fast-safe)
-  (:translate structure-ref)
-  (:arg-types structure (:constant index)))
+  (:translate %instance-ref)
+  (:arg-types instance (:constant index)))
 
-(define-vop (structure-set slot-set)
+(define-vop (instance-set slot-set)
   (:policy :fast-safe)
-  (:translate structure-set)
-  (:variant structure-slots-offset structure-pointer-type)
-  (:arg-types structure (:constant index) *))
+  (:translate %instance-set)
+  (:variant instance-slots-offset instance-pointer-type)
+  (:arg-types instance (:constant index) *))
 
-(define-vop (structure-index-ref word-index-ref)
+(define-vop (instance-index-ref word-index-ref)
   (:policy :fast-safe) 
-  (:translate structure-ref)
-  (:variant structure-slots-offset structure-pointer-type)
-  (:arg-types structure positive-fixnum))
+  (:translate %instance-ref)
+  (:variant instance-slots-offset instance-pointer-type)
+  (:arg-types instance positive-fixnum))
 
-(define-vop (structure-index-set word-index-set)
+(define-vop (instance-index-set word-index-set)
   (:policy :fast-safe) 
-  (:translate structure-set)
-  (:variant structure-slots-offset structure-pointer-type)
-  (:arg-types structure positive-fixnum *))
+  (:translate %instance-set)
+  (:variant instance-slots-offset instance-pointer-type)
+  (:arg-types instance positive-fixnum *))
 
 
 

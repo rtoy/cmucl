@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.12 1992/12/05 21:57:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.13 1993/03/01 14:52:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -85,14 +85,14 @@
     (move result value)))
 (primitive-type-vop check-list (:check) list)
 
-(def-type-vops structurep nil nil nil vm:structure-pointer-type)
-(define-vop (check-structure check-type)
+(def-type-vops %instancep nil nil nil vm:instance-pointer-type)
+(define-vop (check-instance check-type)
   (:generator 3
     (inst and temp value lowtag-mask)
-    (inst cmp temp structure-pointer-type)
-    (inst t :ne (logior (ash (tn-offset value) 8) object-not-structure-trap))
+    (inst cmp temp instance-pointer-type)
+    (inst t :ne (logior (ash (tn-offset value) 8) object-not-instance-trap))
     (move result value)))
-(primitive-type-vop check-structure (:check) structure)
+(primitive-type-vop check-instance (:check) instance)
 
 (def-type-vops bignump check-bigunm bignum
   object-not-bignum-error vm:bignum-type)
