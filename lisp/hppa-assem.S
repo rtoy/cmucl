@@ -257,7 +257,7 @@ closure_tramp
 	/* reg_FDEFN holds the fdefn object. */
 	ldw	FDEFN_FUNCTION_OFFSET(0,reg_FDEFN),reg_LEXENV
 	ldw	CLOSURE_FUNCTION_OFFSET(0,reg_LEXENV),reg_L0
-	addi	FUNCTION_HEADER_CODE_OFFSET, reg_L0, reg_LIP
+	addi	FUNCTION_CODE_OFFSET, reg_L0, reg_LIP
 	bv,n	0(reg_LIP)
 
 	.EXPORT undefined_tramp

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.2 1992/08/16 13:41:50 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.3 1993/01/10 17:27:07 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "internals.h"
@@ -262,7 +262,7 @@ undefined_tramp:
 closure_tramp:
         lw      reg_LEXENV, FDEFN_FUNCTION_OFFSET(reg_FDEFN)
         lw      reg_L0, CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
-        addu    reg_LIP, reg_L0, FUNCTION_HEADER_CODE_OFFSET
+        addu    reg_LIP, reg_L0, FUNCTION_CODE_OFFSET
         j       reg_LIP
         .end    closure_tramp
 

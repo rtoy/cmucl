@@ -76,7 +76,7 @@ _call_into_lisp:
         /* Indirect closure */
         ld      [reg_LEXENV+CLOSURE_FUNCTION_OFFSET], reg_CODE
 
-        jmp     reg_CODE+FUNCTION_HEADER_CODE_OFFSET
+        jmp     reg_CODE+FUNCTION_CODE_OFFSET
         nop
 
         .align  8
@@ -201,7 +201,7 @@ _undefined_tramp:
 	.align	4
 1:
 	ld	[reg_FDEFN+FDEFN_RAW_ADDR_OFFSET], reg_CODE
-	jmp	reg_CODE+FUNCTION_HEADER_CODE_OFFSET
+	jmp	reg_CODE+FUNCTION_CODE_OFFSET
 	nop
 
 	.global	_closure_tramp
@@ -217,7 +217,7 @@ _closure_tramp:
 
 	ld	[reg_FDEFN+FDEFN_FUNCTION_OFFSET], reg_LEXENV
 	ld	[reg_LEXENV+CLOSURE_FUNCTION_OFFSET], reg_CODE
-	jmp	reg_CODE+FUNCTION_HEADER_CODE_OFFSET
+	jmp	reg_CODE+FUNCTION_CODE_OFFSET
 	nop
 
 
