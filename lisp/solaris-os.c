@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.11 2004/01/09 04:39:06 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.12 2004/01/10 05:10:42 toy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -189,7 +189,9 @@ valid_addr(os_vm_address_t addr)
   return (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
           || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
           || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size  )
+#ifndef GENCGC
           || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size  )
+#endif
           || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
           || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ));
 }
