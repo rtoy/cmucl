@@ -1,4 +1,4 @@
-@comment{-*- Dictionary: bld:scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
+@comment{-*- Dictionary: target:scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
 @chap[Introduction]
 
 @hemlock is a text editor which follows in the tradition of @emacs
@@ -611,7 +611,7 @@ determine the width and height for interactive window creation, such as making
 a window with @comref[New Window].
 @enddefhvar
 
-@defhvar[var "Cursor Bitmap File", val {"/usr/misc/.lisp/lib/hemlock.cursor"}]
+@defhvar[var "Cursor Bitmap File", val {"library:hemlock.cursor"}]
 This variable determines where the mouse cursor bitmap is read from when
 @hemlock starts up.  The mask is found by merging this name with "@f[.mask]".
 This has to be a full pathname for the C routine.
@@ -631,6 +631,31 @@ When @nil, the display type is used to choose a font.
 with ASCII terminals and terminal emulators.  Capabilities that depend on
 @windows (such as mouse commands) are not available, but nearly everything else
 can be done.
+
+@subsection[Terminal Initialization]
+
+@index[terminal speed]
+@index[speed, terminal]
+@index[slow terminals]
+@index[incremental redisplay]
+For best redisplay performance, it is very important to set the terminal speed:
+@lisp
+stty 2400
+@endlisp
+Often when running @hemlock using TTY redisplay, Hemlock will actually be
+talking to a PTY whose speed is initialized to infinity.  In reality, the
+terminal will be much slower, resulting in @hemlock's output getting way ahead
+of the terminal.  This prevents @hemlock from briefly stopping redisplay to
+allow the terminal to catch up.  See also @hvarref<Scroll Redraw Ratio>.
+
+The terminal control sequences are obtained from the termcap database using the
+normal Unix conventions.  The @f["TERM"] environment variable holds the
+terminal type.  The @f["TERMCAP"] environment variable can be used to override
+the default termcap database (in @f["/etc/termcap"]).  The size of the terminal
+can be altered from the termcap default through the use of:
+@lisp
+stty rows @i{height} columns @i{width}
+@endlisp
 
 @subsection[Terminal Input]
 @index[ASCII keyboard translation]
