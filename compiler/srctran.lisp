@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.76 1998/01/11 07:15:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.77 1998/02/02 18:01:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -873,10 +873,9 @@
       ;; Not real float.
       type))
 
-;;; Convert from the standard type convention for which -0.0 and 0.0
-;;; and equal to an intermediate convention for which they are
-;;; considered different which is more natural for some of the
-;;; optimisers.
+;;; Convert back from the intermediate convention for which -0.0 and
+;;; 0.0 are considered different to the standard type convention for
+;;; which and equal.
 ;;;
 #-negative-zero-is-not-zero
 (defun convert-back-numeric-type (type)
@@ -929,7 +928,7 @@
 	     (t
 	      ;; (float +0.0 x) => (or (member 0.0) (float (0.0) x))
 	      ;; (float (-0.0) x) => (or (member 0.0) (float (0.0) x))
-	      (list (specifier-type `(member ,(float 0.0 lo-val)))
+	      (list (make-member-type :members (list (float 0.0 lo-val)))
 		    (make-numeric-type :class (numeric-type-class type)
 				       :format (numeric-type-format type)
 				       :complexp :real
@@ -954,7 +953,7 @@
 	     (t
 	      ;; (float x (+0.0)) => (or (member -0.0) (float x (0.0)))
 	      ;; (float x -0.0) => (or (member -0.0) (float x (0.0)))
-	      (list (specifier-type `(member ,(float -0.0 hi-val)))
+	      (list (make-member-type :members (list (float -0.0 hi-val)))
 		    (make-numeric-type :class (numeric-type-class type)
 				       :format (numeric-type-format type)
 				       :complexp :real
@@ -1052,9 +1051,9 @@
 		 (member-type
 		  (with-float-traps-masked
 		      (:underflow :overflow :divide-by-zero)
-		    (specifier-type
-		     `(member
-		       ,(funcall fcn (first (member-type-members x)))))))
+		    (make-member-type
+		     :members (list (funcall
+				     fcn (first (member-type-members x)))))))
 		 (numeric-type
 		  #-negative-zero-is-not-zero
 		  (if convert-type
@@ -1106,13 +1105,13 @@
 					:invalid)
 				     (funcall fcn x y))))
 		      (cond ((null result))
-			    ((float-nan-p result)
+			    ((and (floatp result) (float-nan-p result))
 			     (make-numeric-type
 			      :class 'float
 			      :format (type-of result)
 			      :complexp :real))
 			    (t
-			     (specifier-type `(member ,result))))))
+			     (make-member-type :members (list result))))))
 		   ((and (member-type-p x) (numeric-type-p y))
 		    (let* ((x (convert-member-type x))
 			   (y (if convert-type (convert-numeric-type y) y))
@@ -1145,7 +1144,7 @@
 				       (:underflow :overflow :divide-by-zero)
 				     (funcall fcn x y))))
 		      (if result
-			  (specifier-type `(member ,result)))))
+			  (make-member-type :members (list result)))))
 		   ((and (member-type-p x) (numeric-type-p y))
 		    (let ((x (convert-member-type x)))
 		      (funcall derive-fcn x y same-arg)))
