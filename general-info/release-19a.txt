@@ -98,6 +98,9 @@ New in this release:
        an internal compiler error when compiled.
      - PARSE-INTEGER signaling PARSE-ERROR.
      - Compiler eliminating some type checks in safe code.
+     - Byte-compiler and -interpreter not handling C:&MORE.
+     - Some TYPE-ERRORs being signaled with unbound slots, which
+       made them undisplayable.
 
   * Other changes:
      - Removed obsolete alias from MAKE-VECTOR to MAKE-ARRAY
