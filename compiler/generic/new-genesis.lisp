@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.36 1998/07/24 17:22:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.37 1998/11/26 11:46:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -754,6 +754,29 @@
 
     (frob *lisp-initialization-functions* *current-init-functions-cons*)
 
+    (when (c:backend-featurep :x86)
+      (macrolet ((frob (name pkg value)
+		   `(cold-setq (cold-intern (intern ,name ,pkg)) ,value)))
+	(frob "*FP-CONSTANT-0D0*" "X86" (number-to-core 0d0))
+	(frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
+	(frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
+	(frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
+	#+long-float
+	(when (c:backend-featurep :long-float)
+	  (frob "*FP-CONSTANT-0L0*" "X86" (number-to-core 0l0))
+	  (frob "*FP-CONSTANT-1L0*" "X86" (number-to-core 1l0))
+	  (frob "*FP-CONSTANT-PI*" "X86" (number-to-core pi))
+	  (frob "*FP-CONSTANT-L2T*" "X86" (number-to-core (log 10l0 2l0)))
+	  (frob "*FP-CONSTANT-L2E*" "X86"
+		(number-to-core
+		 (log 2.718281828459045235360287471352662L0 2l0)))
+	  (frob "*FP-CONSTANT-LG2*" "X86" (number-to-core (log 2l0 10l0)))
+	  (frob "*FP-CONSTANT-LN2*" "X86"
+		(number-to-core
+		 (log 2l0 2.718281828459045235360287471352662L0))))
+	(when (c:backend-featurep :gencgc)
+	  (frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil)))))
+
     ;; Nothing should be allocated after this.
     ;;
     (frob *read-only-space-free-pointer*
@@ -761,29 +784,7 @@
     (frob *static-space-free-pointer*
       (allocate-descriptor *static* 0 vm:even-fixnum-type))
     (frob *initial-dynamic-space-free-pointer*
-      (allocate-descriptor *dynamic* 0 vm:even-fixnum-type)))
-
-  (when (c:backend-featurep :x86)
-    (macrolet ((frob (name pkg value)
-		 `(cold-setq (cold-intern (intern ,name ,pkg)) ,value)))
-      (frob "*FP-CONSTANT-0D0*" "X86" (number-to-core 0d0))
-      (frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
-      (frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
-      (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
-      #+long-float
-      (when (c:backend-featurep :long-float)
-	(frob "*FP-CONSTANT-0L0*" "X86" (number-to-core 0l0))
-	(frob "*FP-CONSTANT-1L0*" "X86" (number-to-core 1l0))
-	(frob "*FP-CONSTANT-PI*" "X86" (number-to-core pi))
-	(frob "*FP-CONSTANT-L2T*" "X86" (number-to-core (log 10l0 2l0)))
-	(frob "*FP-CONSTANT-L2E*" "X86"
-	      (number-to-core (log 2.718281828459045235360287471352662L0 2l0)))
-	(frob "*FP-CONSTANT-LG2*" "X86" (number-to-core (log 2l0 10l0)))
-	(frob "*FP-CONSTANT-LN2*" "X86"
-	      (number-to-core
-	       (log 2l0 2.718281828459045235360287471352662L0))))
-      (when (c:backend-featurep :gencgc)
-	(frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil))))))
+      (allocate-descriptor *dynamic* 0 vm:even-fixnum-type))))
 
 ;;; Make-Make-Package-Args  --  Internal
 ;;;
