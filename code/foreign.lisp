@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.45 2004/04/22 12:12:04 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.46 2004/04/28 13:01:57 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -727,7 +727,12 @@ environment passed to Lisp."
                                   "--no-whole-archive"
                                   #+solaris "-z" #+solaris "defaultextract")
                                  libraries))
-                        :env env
+                        ;; on Linux/AMD64, we need to tell the platform linker to use the 32-bit
+                        ;; linking mode instead of the default 64-bit mode. This can be done either
+                        ;; via the LDEMULATION environment variable, or via the "-m" command-line
+                        ;; option. Here we assume that LDEMULATION will be ignored by the platform
+                        ;; linker on Linux/i386 platforms. 
+                        :env `(#+(and x86 linux) ("LDEMULATION" . "elf_i386") ,@env)
                         :input nil
                         :output error-output
                         :error :output)))
