@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/alloc.lisp,v 1.4 2003/08/06 21:10:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/alloc.lisp,v 1.5 2003/08/25 20:50:59 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,21 @@
 (in-package "ALPHA")
 
 
+;;;; Dynamic-Extent (not implemented).
+
+(define-vop (%dynamic-extent-start)
+  (:args (saved-stack-pointer :scs (any-reg)))
+  (:results)
+  (:policy :safe)
+  (:generator 0))
+
+(define-vop (%dynamic-extent-end)
+  (:args (saved-stack-pointer :scs (any-reg)))
+  (:results)
+  (:policy :safe)
+  (:generator 0))
+
+
 ;;;; LIST and LIST*
 
 (define-vop (list-or-list*)
@@ -26,7 +41,7 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :type list :to (:result 0) :target result)
 	      res)
-  (:info num)
+  (:info num dynamic-extent)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
   (:policy :safe)
@@ -155,7 +170,7 @@
 
 (define-vop (fixed-alloc)
   (:args)
-  (:info name words type lowtag)
+  (:info name words type lowtag dynamic-extent)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)

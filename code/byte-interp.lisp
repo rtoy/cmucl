@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.39 2003/07/16 09:51:57 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.40 2003/08/25 20:51:01 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,6 +41,18 @@
 
 (deftype return-pc ()
   `(integer ,(- max-pc) ,max-pc))
+
+
+;;; These dummies are defined here, to make a build without compiler
+;;; work.
+
+(defun %dynamic-extent (kind sp)
+  (declare (ignore kind sp)))
+
+(defun %dynamic-extent-start ())
+
+(defun %dynamic-extent-end (kind sp)
+  (declare (ignore kind sp)))
 
 
 ;;;; Byte functions:
@@ -987,8 +999,8 @@
 ;;; dispatch tree.
 ;;; 
 
-#+nil (declaim (start-block byte-interpret byte-interpret-byte
-			    invoke-xep invoke-local-entry-point))
+(declaim (start-block byte-interpret byte-interpret-byte
+		      invoke-xep invoke-local-entry-point))
 
 (defvar *byte-trace* nil)
 
@@ -1521,5 +1533,5 @@
 	  (push-eval-stack num-results)
 	  (byte-interpret old-component (- old-pc) old-fp)))))
 
-;(declaim (end-block byte-interpret byte-interpret-byte invoke-xep))
+(declaim (end-block byte-interpret byte-interpret-byte invoke-xep))
 

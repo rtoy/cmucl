@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.29 2003/06/03 12:22:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.30 2003/08/25 20:51:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,6 +49,7 @@
   
   (find-non-local-exits component)
   (find-cleanup-points component)
+  (find-dynamic-extent-safe-closures component)
   (tail-annotate component)
 
   (dolist (fun (component-lambdas component))
@@ -348,7 +349,11 @@
 			(code `(%lexical-exit-breakup ',nlx)))))
 		   (t
 		    (dolist (nlx (cleanup-nlx-info cleanup))
-		      (code `(%lexical-exit-breakup ',nlx)))))))))
+		      (code `(%lexical-exit-breakup ',nlx))))))
+	    (:dynamic-extent
+	     (let ((kind (continuation-value (first args)))
+		   (sp (unless *byte-compiling* (second args))))
+	       (code `(%dynamic-extent-end ',kind ',sp)))))))
 
       (when (code)
 	(assert (not (node-tail-p (block-last block1))))
@@ -358,7 +363,7 @@
 	(dolist (fun (reanalyze-funs))
 	  (local-call-analyze-1 fun)))))
 
-  (undefined-value))
+  (values))
 
 
 ;;; Find-Cleanup-Points  --  Internal
@@ -409,3 +414,78 @@
 			   (eq (basic-combination-kind use) :local)))
 		(setf (node-tail-p use) t)))))))
   (undefined-value))
+
+
+;;;; Dynamic-Extent Closures
+
+(defvar *suppress-dynamic-extent-safe-closures* nil)
+
+;;;
+;;; Mark closures that can be allocated on the stack because they are
+;;; passed to functions that are known as dynamic-extent-closure-safe.
+;;; Return a list of combinations taking such closures.
+;;;
+(defun mark-dynamic-extent-safe-closures (component)
+  (declare (type component component))
+  (collect ((combinations))
+    (do-blocks (block component)
+      (do-nodes (node cont block)
+	(when (and (combination-p node)
+		   (let ((info (basic-combination-kind node)))
+		     (and (function-info-p info)
+			  (ir1-attributep (function-info-attributes info)
+					  dynamic-extent-closure-safe))))
+	  (dolist (arg (combination-args node))
+	    (when (and arg
+		       (not (continuation-dynamic-extent arg))
+		       (ref-p (continuation-use arg))
+		       (let ((leaf (ref-leaf (continuation-use arg))))
+			 (and (lambda-p leaf)
+			      (environment-closure
+			       (get-lambda-environment leaf)))))
+	      (setf (continuation-dynamic-extent arg) t)
+	      (combinations node))))))
+    (combinations)))
+
+;;;
+;;; Find some more closures that can be allocated with dynamic extent
+;;; because they are arguments to functions that are declared
+;;; dynamic-extent-safe.
+;;;
+(defun find-dynamic-extent-safe-closures (component)
+  (declare (type component component))
+  (flet ((insert-dynamic-extent-start (combination)
+	 (declare (type combination combination))
+	 (let ((fun (basic-combination-fun combination)))
+	   (ensure-block-start fun)
+	   (let* ((block (continuation-block fun))
+		  (pred (first (block-pred block))))
+	     (assert (= 1 (length (block-pred block))))
+	     (assert (= 1 (length (block-succ pred))))
+	     (assert (not (eq pred (component-head (block-component block)))))
+	     (let ((cleanup (insert-cleanup-code
+			     pred block combination
+			     `(%dynamic-extent :closure
+					       (%dynamic-extent-start)))))
+	       (second (basic-combination-args (block-last cleanup)))))))
+	   
+	 (insert-dynamic-extent-end (combination start-cont)
+	   (declare (type combination combination)
+		    (type continuation start-cont))
+	   (let* ((call-block (node-block combination)))
+	     (ensure-block-start (node-cont combination))
+	     (assert (= 1 (length (block-succ call-block))))
+	     (insert-cleanup-code
+	      call-block (first (block-succ call-block)) combination
+	      `(%dynamic-extent-end :closure ',start-cont)))))
+    
+    (unless (or *byte-compiling* *suppress-dynamic-extent-safe-closures*)
+      (dolist (combination (mark-dynamic-extent-safe-closures component))
+	(let ((cont (insert-dynamic-extent-start combination)))
+	  (insert-dynamic-extent-end combination cont)
+	  (when *dynamic-extent-trace*
+	    (format t "~&===> dynamic-extent-safe closure in ~s~%"
+		    (component-name component))))))
+    
+    (values)))
+

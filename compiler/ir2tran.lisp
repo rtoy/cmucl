@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.73 2003/08/06 21:10:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.74 2003/08/25 20:51:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,10 @@ compilation policy")
 #+sparc
 (defvar *enable-stack-clearing* t
   "If non-NIL and the compilation policy allows, stack clearing is enabled.")
+
+(defun ir2-stack-allocate (node)
+  (declare (type node node))
+  (continuation-dynamic-extent (node-cont node)))
 
 
 ;;;; Moves and type checks:
@@ -218,15 +222,13 @@ compilation policy")
 		    (assert (eq (functional-kind leaf) :top-level-xep))
 		    nil))))
     (cond (closure
-	   (let* ((this-env (node-environment node))
-		  (entry-fn (functional-entry-function leaf))
-		  (dynamic-extent
-		   (or (leaf-dynamic-extent entry-fn)
-		       (memq entry-fn
-			     (lexenv-dynamic-extent (node-lexenv node))))))
+	   (let ((this-env (node-environment node))
+		 (dynamic-extent (ir2-stack-allocate node)))
+	     (when *dynamic-extent-trace*
+	       (format t "~&===> make-closure ~s (~d)~%"
+		       dynamic-extent (length closure)))
 	     (vop make-closure node block entry (length closure)
-		  dynamic-extent
-		  res)
+		  dynamic-extent res)
 	     (loop for what in closure and n from 0 do
 	       (unless (and (lambda-var-p what)
 			    (null (leaf-refs what)))
@@ -236,7 +238,7 @@ compilation policy")
 		      n)))))
 	  (t
 	   (emit-move node block entry res))))
-  (undefined-value))
+  (values))
 
 
 ;;; IR2-Convert-Set  --  Internal
@@ -711,15 +713,15 @@ compilation policy")
 ;;;
 (defun ir2-convert-let (node block fun)
   (declare (type combination node) (type ir2-block block) (type clambda fun))
-  (mapc #'(lambda (var arg)
-	    (when arg
-	      (let ((src (continuation-tn node block arg))
-		    (dest (leaf-info var)))
-		(if (lambda-var-indirect var)
-		    (do-make-value-cell node block src dest)
-		    (emit-move node block src dest)))))
-	(lambda-vars fun) (basic-combination-args node))
-  (undefined-value))
+  (loop for var in (lambda-vars fun)
+	and arg in (basic-combination-args node)
+	when arg do
+	  (let ((src (continuation-tn node block arg))
+		(dest (leaf-info var)))
+	    (if (lambda-var-indirect var)
+		(do-make-value-cell node block src dest)
+		(emit-move node block src dest))))
+    (values))
 
 
 ;;; EMIT-PSETQ-MOVES  --  Internal
@@ -1404,6 +1406,29 @@ compilation policy")
 		  nil)
 		 ((reference-tn-list locs t)))))))))
 
+
+;;;; Dynamic-Extent
+
+(defoptimizer (%dynamic-extent ir2-convert) ((kind sp) node block)
+  node block sp kind)
+
+(defoptimizer (%dynamic-extent-start ir2-convert) (() node block)
+  (let ((tn (environment-live-tn (make-stack-pointer-tn)
+				 (node-environment node)))
+	(2cont (continuation-info (node-cont node))))
+    (setf (ir2-continuation-locs 2cont) (list tn))
+    (when *dynamic-extent-trace*
+      (format t "~&===> %dynamic-extent-start ~s ~s~%" tn
+	      (node-cont node)))
+    (vop %dynamic-extent-start node block tn)))
+
+(defoptimizer (%dynamic-extent-end ir2-convert) ((kind sp) node block)
+  (let* ((sp (continuation-value sp))
+	 (tn (first (ir2-continuation-locs (continuation-info sp)))))
+    (when *dynamic-extent-trace*
+      (format t "~&===> %dynamic-extent-end ~s ~s ~s~%"
+	      (continuation-value kind) sp tn))
+    (vop %dynamic-extent-end node block tn)))
 
 
 ;;;; Special binding:
@@ -1657,9 +1682,12 @@ compilation policy")
 		       (cont (node-cont node))
 		       (res (continuation-result-tns
 			     cont
-			     (list (primitive-type (specifier-type 'list))))))
+			     (list (primitive-type (specifier-type 'list)))))
+		       (dynamic-extent (ir2-stack-allocate node)))
+		  (when (and dynamic-extent *dynamic-extent-trace*)
+		    (format t "~&===> list/list* ~d~%" (length args)))
 		  (vop* ,name node block (refs) ((first res) nil)
-			(length args))
+			(length args) dynamic-extent)
 		  (move-continuation-result node block res cont)))))
   (frob list)
   (frob list*))
@@ -1776,8 +1804,7 @@ compilation policy")
 				tn)))))))
 	      ((not (eq (ir2-block-next 2block) (block-info target)))
 	       (vop branch last 2block (block-label target)))))))
-  
-  (undefined-value))
+  (values))
 
 
 ;;; IR2-Convert-Block  --  Internal
@@ -1833,8 +1860,9 @@ compilation policy")
 	 (when (exit-entry node)
 	   (ir2-convert-exit node 2block)))
 	(entry
-	 (ir2-convert-entry node 2block)))))
+	 (ir2-convert-entry node 2block))))
 
-  (finish-ir2-block block)
+    (finish-ir2-block block)
+    (values)))
 
-  (undefined-value))
+;;; End of file.

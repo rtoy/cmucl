@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.35 2003/07/16 09:51:57 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.36 2003/08/25 20:51:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -695,7 +695,7 @@
 		  ;;
 		  ;; If for a lexical exit, we will see a breakup later, so
 		  ;; don't consume :NLX-ENTRY now.
-		  (:tagbody)
+		  ((:tagbody :dynamic-extent))
 		  (:block
 		   (let ((cont (nlx-info-continuation nlx-info)))
 		     (when (interesting cont)

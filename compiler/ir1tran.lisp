@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.161 2003/08/07 09:48:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.162 2003/08/25 20:51:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,25 +121,147 @@
   DEFUNs is used when compiling calls to that function.  If false, only
   information from FTYPE proclamations will be used.")
 
-
-;; returns non-nil if X and Y name the same function. This is more
-;; involved than a simple call to EQ due to support for generalized
-;; function names. In the IR1 representation, the local function INNER
-;; in the following
-;;
-;;   (defun outer (a)
-;;      (flet ((inner (x) (random x)))
-;;         (declaim (inline inner))
-;;         (inner a)))
-;;
-;; will have a lambda-name of (FLET INNER OUTER). Some parts of the
-;; compiler may search for it under the name INNER. 
+;;;
+;;; Returns non-nil if X and Y name the same function. This is more
+;;; involved than a simple call to EQ due to support for generalized
+;;; function names. In the IR1 representation, the local function INNER
+;;; in the following
+;;;
+;;;   (defun outer (a)
+;;;      (flet ((inner (x) (random x)))
+;;;         (declaim (inline inner))
+;;;         (inner a)))
+;;;
+;;; will have a lambda-name of (FLET INNER OUTER). Some parts of the
+;;; compiler may search for it under the name INNER.
+;;;
 (defun function-name-eqv-p (x y)
   (or (equal x y)
       (and (consp y)
            (member (car y) '(flet labels))
            (equal x (cadr y)))))
 
+
+;;;; Dynamic-Extent
+
+(defvar *trust-dynamic-extent-declarations* #+x86 t #-x86 nil
+  "If null, don't trust dynamic-extent declarations.
+
+   If T, always trust dynamic-extent declarations.
+
+   Otherwise, the value of this variable must be a function of four
+   arguments SAFETY, SPACE, SPEED, and DEBUG.  If the function returns
+   true when called, dynamic-extent declarations are trusted,
+   otherwise they are not trusted.")
+
+(defvar *dynamic-extent-trace* nil)
+
+(defun trust-dynamic-extent-declaration-p
+    (&optional (lexenv *lexical-environment*))
+  (declare (type lexenv lexenv))
+  (let ((trust *trust-dynamic-extent-declarations*))
+    (if (functionp trust)
+	(let ((cookie (lexenv-cookie lexenv)))
+	  (funcall trust (cookie-safety cookie) (cookie-space cookie)
+		   (cookie-speed cookie) (cookie-debug cookie)))
+	trust)))
+
+
+(defun process-dynamic-extent-declaration (spec vars fvars lexenv)
+  (declare (list spec vars fvars) (type lexenv lexenv))
+  (if (trust-dynamic-extent-declaration-p lexenv)
+      (collect ((dynamic-extent))
+	(dolist (name (cdr spec))
+	  (cond ((symbolp name)
+		 (let* ((bound-var (find-in-bindings vars name))
+			(var (or bound-var
+				 (lexenv-find name variables)
+				 (find-free-variable name))))
+		   (if (leaf-p var)
+		       (if bound-var
+			   (setf (leaf-dynamic-extent var) t)
+			   (dynamic-extent var)))))
+		((and (consp name)
+		      (eq (car name) 'function)
+		      (null (cddr name))
+		      (valid-function-name-p (cadr name)))
+		 (let* ((fn-name (cadr name))
+			(fn (find fn-name fvars
+				  :key #'leaf-name
+				  :test #'function-name-eqv-p)))
+		   (if fn
+		       (setf (leaf-dynamic-extent fn) t)
+		       (dynamic-extent (find-lexically-apparent-function
+					fn-name
+					"in a dynamic-extent declaration")))))
+		(t
+		 (compiler-warning
+		  "~@<Invalid name ~s in a dynamic-extent declaration.~@:>"
+		  name))))
+	(if (dynamic-extent)
+	    (make-lexenv :default lexenv :dynamic-extent (dynamic-extent))
+	    lexenv))
+      lexenv))
+  
+;;;
+;;; Value is true if some dynamic-extent allocation can be done in the
+;;; initialization of variables Vars with values Vals.
+;;;
+(defun dynamic-extent-allocation-p (vars vals)
+  (loop for var in vars and val in vals
+	thereis (and (leaf-dynamic-extent var)
+		     (consp val)
+		     (memq (car val) '(list list* cons)))))
+
+;;;
+;;; Return a list of indices for arguments in Args which might end up
+;;; as dynamic-extent closures.  We can't tell for sure here because
+;;; environment analysis runs after IR1 conversion, so we don't know
+;;; yet what are closures and what not.
+;;;
+(defun dynamic-extent-closure-args (args)
+  (declare (list args))
+  (flet ((find-local-function (name)
+	   (let ((var (lexenv-find-function name)))
+	     (when (leaf-p var)
+	       var))))
+    (let ((dynamic-extent (lexenv-dynamic-extent *lexical-environment*)))
+      (collect ((indices))
+	(do* ((i 0 (1+ i))
+	      (tail args (cdr tail))
+	      (arg (car tail) (car tail)))
+	     ((null tail))
+	  (when (and (consp arg)
+		     (eq (car arg) 'function)
+		     (valid-function-name-p (cadr arg))
+		     (let ((fn (find-local-function (cadr arg))))
+		       (and fn
+			    (or (leaf-dynamic-extent fn)
+				(and (functional-p fn)
+				     (or (memq fn dynamic-extent)
+					 (memq (functional-entry-function fn)
+					       dynamic-extent)))))))
+	    (indices i)))
+	(indices)))))
+
+;;;
+;;; Evaluate Body wrapped in a dynamic-extent cleanup.
+;;; FIXME: Maybe don't %dynamic-extent-start if kind = :rest.
+;;;
+(defun gen-%dynamic-extent (kind)
+  `(%dynamic-extent ,kind (%dynamic-extent-start)))
+
+(defmacro with-dynamic-extent ((start cont nnext-cont kind) &body body)
+  `(progn
+     (continuation-starts-block ,cont)
+     (let ((.cleanup. (make-cleanup :kind :dynamic-extent))
+	   (.next-cont. (make-continuation))
+	   (,nnext-cont (make-continuation)))
+       (ir1-convert ,start .next-cont. (gen-%dynamic-extent ,kind))
+       (setf (cleanup-mess-up .cleanup.) (continuation-use .next-cont.))
+       (let ((*lexical-environment* (make-lexenv :cleanup .cleanup.)))
+	 (ir1-convert .next-cont. ,nnext-cont '(%cleanup-point))
+	 (locally ,@body)))))
 
 
 ;;;; Namespace management utilities:
@@ -771,10 +893,18 @@
 (defun ir1-convert-combination (start cont form fun)
   (declare (type continuation start cont) (list form) (type leaf fun)
 	   (values combination))
-  (let ((fun-cont (make-continuation)))
-    (reference-leaf start fun-cont fun)
-    (ir1-convert-combination-args fun-cont cont (cdr form))))
-
+  (let ((indices (dynamic-extent-closure-args (cdr form))))
+    (if indices
+	(with-dynamic-extent (start cont nnext-cont :closure)
+	  (when *dynamic-extent-trace*
+	    (format t "~&dynamic-extent args ~:s in ~s~%" indices form))
+	  (let ((fun-cont (make-continuation)))
+	    (reference-leaf nnext-cont fun-cont fun)
+	    (ir1-convert-combination-args fun-cont cont (cdr form) indices)))
+	(let ((fun-cont (make-continuation)))
+	  (reference-leaf start fun-cont fun)
+	  (ir1-convert-combination-args fun-cont cont (cdr form))))))
+      
 
 ;;; IR1-Convert-Combination-Args  --  Internal
 ;;;
@@ -783,19 +913,30 @@
 ;;; for the call.  Args is the list of arguments for the call, which defaults
 ;;; to the cdr of source.  We return the Combination node.
 ;;;
-(defun ir1-convert-combination-args (fun-cont cont args)
+(defun ir1-convert-combination-args (fun-cont cont args
+				     &optional dynamic-extent-args)
   (declare (type continuation fun-cont cont) (list args))
   (let ((node (make-combination fun-cont)))
     (setf (continuation-dest fun-cont) node)
     (assert-continuation-type
      fun-cont (values-specifier-type '(values (or function symbol) &rest t)))
     (collect ((arg-conts))
-      (let ((this-start fun-cont))
+      (let ((this-start fun-cont)
+	    (lambda-vars (let* ((use (continuation-use fun-cont))
+				(leaf (when use (ref-leaf use))))
+			   (when (lambda-p leaf)
+			     (lambda-vars leaf))))
+	    (i 0))
 	(dolist (arg args)
 	  (let ((this-cont (make-continuation node)))
+	    (when (or (and lambda-vars
+			   (leaf-dynamic-extent (pop lambda-vars)))
+		      (member i dynamic-extent-args))
+	      (setf (continuation-dynamic-extent this-cont) t))
 	    (ir1-convert this-start this-cont arg)
 	    (setq this-start this-cont)
-	    (arg-conts this-cont)))
+	    (arg-conts this-cont)
+	    (incf i)))
 	(prev-link node this-start)
 	(use-continuation node cont)
 	(setf (combination-args node) (arg-conts))))
@@ -897,7 +1038,8 @@
 
 ;;;; PROCESS-DECLARATIONS:
 
-(declaim (start-block process-declarations make-new-inlinep))
+(declaim (start-block process-declarations make-new-inlinep
+		      find-in-bindings))
 
 ;;; Find-In-Bindings  --  Internal
 ;;;
@@ -1141,40 +1283,6 @@
 	(setf (lambda-var-ignorep var) t)))))
   (undefined-value))
 
-(defun process-dynamic-extent-declaration (spec vars fvars lexenv)
-  (declare (list spec vars fvars) (type lexenv lexenv))
-  (collect ((dynamic-extent))
-    (dolist (name (cdr spec))
-      (cond ((symbolp name)
-	     (let* ((bound-var (find-in-bindings vars name))
-		    (var (or bound-var
-			     (lexenv-find name variables)
-			     (find-free-variable name))))
-	       (if (leaf-p var)
-		   (if bound-var
-		       (setf (leaf-dynamic-extent var) t)
-		       (dynamic-extent var)))))
-	    ((and (consp name)
-		  (eq (car name) 'function)
-		  (null (cddr name))
-		  (valid-function-name-p (cadr name)))
-	     (let* ((fn-name (cadr name))
-		    (fn (find fn-name fvars
-			      :key #'leaf-name
-			      :test #'function-name-eqv-p)))
-	       (if fn
-		   (setf (leaf-dynamic-extent fn) t)
-		   (dynamic-extent (find-lexically-apparent-function
-				    fn-name
-				    "in a dynamic-extent declaration")))))
-	    (t
-	     (compiler-warning
-	      "~@<Invalid name ~s in a dynamic-extent declaration.~@:>"
-	      name))))
-    (if (dynamic-extent)
-	(make-lexenv :default lexenv :dynamic-extent (dynamic-extent))
-	lexenv)))
-  
 (defvar *suppress-values-declaration* nil
   "If true, processing of the VALUES declaration is inhibited.")
 
@@ -1296,7 +1404,8 @@
 ;;;; Lambda hackery:  
 
 (declaim (start-block ir1-convert-lambda ir1-convert-lambda-body
-		      ir1-convert-aux-bindings varify-lambda-arg))
+		      ir1-convert-aux-bindings varify-lambda-arg
+		      ir1-convert-dynamic-extent-bindings))
 
 ;;; Varify-Lambda-Arg  --  Internal
 ;;;
@@ -1500,7 +1609,17 @@
 		   *lexical-environment*)))
 	  (ir1-convert-combination-args fun-cont cont
 					(list (first aux-vals))))))
-  (undefined-value))
+  (values))
+
+(defun ir1-convert-dynamic-extent-bindings (start cont body aux-vars
+					    aux-vals interface)
+  (declare (type continuation start cont) (list body aux-vars aux-vals))
+  (if (dynamic-extent-allocation-p aux-vars aux-vals)
+      (with-dynamic-extent (start cont nnext-cont :bind)
+	(ir1-convert-aux-bindings nnext-cont cont body aux-vars
+				  aux-vals interface))
+      (ir1-convert-aux-bindings start cont body aux-vars aux-vals interface))
+  (values))
 
 
 ;;; IR1-Convert-Special-Bindings  --  Internal
@@ -1516,12 +1635,13 @@
 ;;; cleanup, causing cleanup code to be emitted when the scope is exited.
 ;;;
 (defun ir1-convert-special-bindings (start cont body aux-vars aux-vals
-					   interface svars)
+				     interface svars)
   (declare (type continuation start cont)
 	   (list body aux-vars aux-vals svars))
   (cond
    ((null svars)
-    (ir1-convert-aux-bindings start cont body aux-vars aux-vals interface))
+    (ir1-convert-dynamic-extent-bindings start cont body aux-vars aux-vals
+					 interface))
    (t
     (continuation-starts-block cont)
     (let ((cleanup (make-cleanup :kind :special-bind))
@@ -1535,7 +1655,7 @@
 	(ir1-convert next-cont nnext-cont '(%cleanup-point))
 	(ir1-convert-special-bindings nnext-cont cont body aux-vars aux-vals
 				      interface (rest svars))))))
-  (undefined-value))
+  (values))
 
 
 ;;; IR1-Convert-Lambda-Body  --  Internal
@@ -1565,7 +1685,8 @@
 	   (type (or continuation null) result))
   (let* ((bind (make-bind))
 	 (lambda (make-lambda :vars vars  :bind bind))
-	 (result (or result (make-continuation))))
+	 (result (or result (make-continuation)))
+	 (dynamic-extent-rest nil))
     (setf (lambda-home lambda) lambda)
     (collect ((svars)
 	      (new-venv nil cons))
@@ -1577,21 +1698,31 @@
 		 (svars var)
 		 (new-venv (cons (leaf-name specvar) specvar)))
 		(t
-		 (new-venv (cons (leaf-name var) var))))))
-      
-      (let ((*lexical-environment*
-	     (make-lexenv :variables (new-venv)  :lambda lambda
-			  :cleanup nil)))
+		 (new-venv (cons (leaf-name var) var)))))
+	(let ((info (lambda-var-arg-info var)))
+	  (when (and info
+		     (eq :rest (arg-info-kind info))
+		     (leaf-dynamic-extent var))
+	    (setq dynamic-extent-rest var))))
+
+      (let* ((*lexical-environment*
+	      (make-lexenv :variables (new-venv)  :lambda lambda
+			   :cleanup nil)))
 	(setf (bind-lambda bind) lambda)
 	(setf (node-lexenv bind) *lexical-environment*)
-	
+
 	(let ((cont1 (make-continuation))
 	      (cont2 (make-continuation)))
 	  (continuation-starts-block cont1)
 	  (prev-link bind cont1)
 	  (use-continuation bind cont2)
-	  (ir1-convert-special-bindings cont2 result body aux-vars aux-vals
-					interface (svars)))
+	  (if dynamic-extent-rest
+	      (with-dynamic-extent (cont2 result nnext-cont :rest)
+		(ir1-convert-special-bindings nnext-cont result body
+					      aux-vars aux-vals
+					      interface (svars)))
+	      (ir1-convert-special-bindings cont2 result body aux-vars aux-vals
+					    interface (svars))))
 
 	(let ((block (continuation-block result)))
 	  (when block
@@ -2530,24 +2661,24 @@
   "FUNCTION Name
   Return the lexically apparent definition of the function Name.  Name may also
   be a lambda."
-  (if (consp thing)
-      (case (car thing)
-	((lambda)
-	 (reference-leaf start cont (ir1-convert-lambda thing nil 'function)))
-	((instance-lambda)
-	 (let ((res (ir1-convert-lambda `(lambda ,@(cdr thing))
-					nil 'function)))
-	   (setf (getf (functional-plist res) :fin-function) t)
-	   (reference-leaf start cont res)))
-	(t
-	 (if (valid-function-name-p thing)
-	     (let ((var (find-lexically-apparent-function
-			 thing "as the argument to FUNCTION")))
-	       (reference-leaf start cont var))
-	     (compiler-error "Illegal function name: ~S" thing))))
-      (let ((var (find-lexically-apparent-function
-		  thing "as the argument to FUNCTION")))
-	(reference-leaf start cont var))))
+  (flet ((reference-it ()
+	   (let ((fn (find-lexically-apparent-function
+		      thing "as the argument to FUNCTION")))
+	     (reference-leaf start cont fn))))
+    (if (consp thing)
+	(case (car thing)
+	  ((lambda)
+	   (reference-leaf start cont (ir1-convert-lambda thing nil 'function)))
+	  ((instance-lambda)
+	   (let ((res (ir1-convert-lambda `(lambda ,@(cdr thing))
+					  nil 'function)))
+	     (setf (getf (functional-plist res) :fin-function) t)
+	     (reference-leaf start cont res)))
+	  (t
+	   (if (valid-function-name-p thing)
+	       (reference-it)
+	       (compiler-error "Illegal function name: ~S" thing))))
+	(reference-it))))
 
 
 ;;;; Funcall:
@@ -2883,7 +3014,6 @@
 
     (values (vars) (vals) (names))))
 
-
 (def-ir1-translator let ((bindings &parse-body (body decls))
 			 start cont)
   "LET ({(Var [Value]) | Var}*) Declaration* Form*
@@ -2892,11 +3022,17 @@
   evaluated."
   (multiple-value-bind (vars values)
       (extract-let-variables bindings 'let)
-    (let* ((*lexical-environment* (process-declarations decls vars nil cont))
-	   (fun-cont (make-continuation))
-	   (fun (ir1-convert-lambda-body body vars)))
-      (reference-leaf start fun-cont fun)
-      (ir1-convert-combination-args fun-cont cont values))))
+    (let ((*lexical-environment* (process-declarations decls vars nil cont)))
+      (if (dynamic-extent-allocation-p vars values)
+	  (with-dynamic-extent (start cont nnext-cont :bind)
+	    (let ((fun-cont (make-continuation))
+		  (fun (ir1-convert-lambda-body body vars)))
+	      (reference-leaf nnext-cont fun-cont fun)
+	      (ir1-convert-combination-args fun-cont cont values)))
+	  (let ((fun-cont (make-continuation))
+		(fun (ir1-convert-lambda-body body vars)))
+	    (reference-leaf start fun-cont fun)
+	    (ir1-convert-combination-args fun-cont cont values))))))
 
 (def-ir1-translator locally ((&parse-body (body decls))
                             start cont)
@@ -2905,8 +3041,6 @@
    where the given Declaration's have effect."
   (let* ((*lexical-environment* (process-declarations decls nil nil cont)))
     (ir1-convert-progn-body start cont body)))
-        
-
 
 (def-ir1-translator let* ((bindings &parse-body (body decls))
 			  start cont)
@@ -2914,9 +3048,9 @@
   Similar to LET, but the variables are bound sequentially, allowing each Value
   form to reference any of the previous Vars."
   (multiple-value-bind (vars values)
-		       (extract-let-variables bindings 'let*)
+      (extract-let-variables bindings 'let*)
     (let ((*lexical-environment* (process-declarations decls vars nil cont)))
-      (ir1-convert-aux-bindings start cont body vars values nil))))
+      (ir1-convert-dynamic-extent-bindings start cont body vars values nil))))
 
 
 ;;;; Flet and Labels:
@@ -2968,7 +3102,7 @@
   do not enclose the definitions; any use of Name in the Forms will refer to
   the lexically apparent function definition in the enclosing environment."
   (multiple-value-bind (names defs)
-		       (extract-flet-variables definitions 'flet)
+      (extract-flet-variables definitions 'flet)
     (let* ((fvars (mapcar #'(lambda (n d)
 			      (ir1-convert-lambda d n 'flet))
 			  names defs))

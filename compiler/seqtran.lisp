@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.27 2003/04/27 13:58:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.28 2003/08/25 20:50:59 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,6 +37,7 @@
 	     (let ((temp (gensym))
 		   (map-result (gensym)))
 	       `(let ((,map-result (list nil)))
+		  (declare (dynamic-extent ,map-result))
 		  (do-anonymous ((,temp ,map-result) . ,(do-clauses))
 				 (,endtest (cdr ,map-result))
 		    (setq ,temp (last (nconc ,temp ,call)))))))
@@ -44,6 +45,7 @@
 	     (let ((temp (gensym))
 		   (map-result (gensym)))
 	       `(let ((,map-result (list nil)))
+		  (declare (dynamic-extent ,map-result))
 		  (do-anonymous ((,temp ,map-result) . ,(do-clauses))
 				 (,endtest (cdr ,map-result))
 		    (rplacd ,temp (setq ,temp (list ,call)))))))

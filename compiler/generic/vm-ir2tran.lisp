@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.9 1997/01/18 14:31:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.10 2003/08/25 20:50:59 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,7 +80,8 @@
 
 #-gengc
 (defun do-fixed-alloc (node block name words type lowtag result)
-  (vop fixed-alloc node block name words type lowtag result))
+  (vop fixed-alloc node block name words type lowtag
+       (ir2-stack-allocate node) result))
 
 (defoptimizer ir2-convert-fixed-allocation
 	      ((&rest args) node block name words type lowtag inits)

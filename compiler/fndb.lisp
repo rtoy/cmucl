@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.124 2003/08/16 11:45:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.125 2003/08/25 20:51:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,9 +133,10 @@
 (defknown funcall (callable &rest t) *)
 
 (defknown (mapcar maplist mapcan mapcon) (callable list &rest list) list
-  (call))
+  (call dynamic-extent-closure-safe))
 
-(defknown (mapc mapl) (callable list &rest list) list (foldable call))
+(defknown (mapc mapl) (callable list &rest list) list
+  (foldable call dynamic-extent-closure-safe))
 
 ;;; We let values-list be foldable, since constant-folding will turn it into
 ;;; VALUES.  VALUES is not foldable, since MV constants are represented by a
@@ -412,27 +413,27 @@
   :derive-type (result-type-specifier-nth-arg 1))
 
 (defknown map (type-specifier callable sequence &rest sequence) consed-sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
 ;  :derive-type 'type-spec-arg1  Nope... (map nil ...) returns null, not nil.
   )
 
 (defknown map-into (sequence callable &rest sequence)
   sequence
-  (call)
+  (call dynamic-extent-closure-safe)
   :derive-type #'result-type-first-arg)
 
 ;;; Returns predicate result... 
 (defknown some (callable sequence &rest sequence) t
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown (every notany notevery) (callable sequence &rest sequence) boolean
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 ;;; Unsafe for :Initial-Value...
 (defknown reduce (callable sequence &key (:from-end t) (:start index)
 			   (:end sequence-end) (:initial-value t) (:key callable))
   t
-  (foldable flushable call unsafe))
+  (foldable flushable call unsafe dynamic-extent-closure-safe))
 
 (defknown fill (sequence t &key (:start index) (:end sequence-end)) sequence
   (unsafe)
@@ -448,7 +449,7 @@
      (:test-not callable) (:start index) (:end sequence-end)
      (:count sequence-count) (:key callable))
   consed-sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown substitute
@@ -456,21 +457,21 @@
      (:test-not callable) (:start index) (:end sequence-end)
      (:count sequence-count) (:key callable))
   consed-sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown (remove-if remove-if-not)
   (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
 	    (:count sequence-count) (:key callable))
   consed-sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown (substitute-if substitute-if-not)
   (t callable sequence &key (:from-end t) (:start index) (:end sequence-end)
      (:count sequence-count) (:key callable))
   consed-sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown delete
@@ -478,7 +479,7 @@
      (:test-not callable) (:start index) (:end sequence-end)
      (:count sequence-count) (:key callable))
   sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown nsubstitute
@@ -486,88 +487,88 @@
      (:test-not callable) (:start index) (:end sequence-end)
      (:count sequence-count) (:key callable))
   sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown (delete-if delete-if-not)
   (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
 	    (:count sequence-count) (:key callable))
   sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown (nsubstitute-if nsubstitute-if-not)
   (t callable sequence &key (:from-end t) (:start index) (:end sequence-end)
      (:count sequence-count) (:key callable))
   sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown remove-duplicates
   (sequence &key (:test callable) (:test-not callable) (:start index) (:from-end t)
 	    (:end sequence-end) (:key callable))
   consed-sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 1))
 
 (defknown delete-duplicates
   (sequence &key (:test callable) (:test-not callable) (:start index) (:from-end t)
 	    (:end sequence-end) (:key callable))
   sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 1))
 
 (defknown find (t sequence &key (:test callable) (:test-not callable)
 		  (:start index) (:from-end t) (:end sequence-end) (:key callable))
   t
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown (find-if find-if-not)
   (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
 	    (:key callable))
   t
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown position (t sequence &key (:test callable) (:test-not callable)
 		      (:start index) (:from-end t) (:end sequence-end)
 		      (:key callable))
   (or index null)
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown (position-if position-if-not)
   (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
 	    (:key callable))
   (or index null)
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown count (t sequence &key (:test callable) (:test-not callable)
 		      (:start index) (:from-end t) (:end sequence-end)
 		      (:key callable))
   index
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown (count-if count-if-not)
   (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
 	    (:key callable))
   index
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown (mismatch search)
   (sequence sequence &key (:from-end t) (:test callable) (:test-not callable)
 	    (:start1 index) (:end1 sequence-end) (:start2 index) (:end2 sequence-end)
 	    (:key callable))
   (or index null)
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 ;;; Not flushable, since vector sort guaranteed in-place...
 (defknown (stable-sort sort) (sequence callable &key (:key callable)) sequence
-  (call)
+  (call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 1))
 
 (defknown merge (type-specifier sequence sequence callable
 				&key (:key callable))
   sequence
-  (flushable call)
+  (flushable call dynamic-extent-closure-safe)
   :derive-type (result-type-specifier-nth-arg 1))
 
 (defknown read-sequence (sequence stream &key (:start index)
@@ -593,7 +594,7 @@
 (defknown cons (t t) cons (movable flushable unsafe))
 
 (defknown tree-equal (t t &key (:test callable) (:test-not callable)) boolean
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 (defknown endp (list) boolean (foldable flushable movable))
 (defknown list-length (list) (or index null) (foldable flushable))
 (defknown (nth nthcdr) (unsigned-byte list) t (foldable flushable))
@@ -620,51 +621,52 @@
 
 (defknown (nsubst subst) (t t t &key (:key callable) (:test callable)
 			    (:test-not callable))
-  list (flushable unsafe call))
+  list (flushable unsafe call dynamic-extent-closure-safe))
 
 (defknown (subst-if subst-if-not nsubst-if nsubst-if-not)
 	  (t t t &key (:key callable))
-  list (flushable unsafe call))
+  list (flushable unsafe call dynamic-extent-closure-safe))
 
 (defknown (sublis nsublis) (list t &key (:key callable) (:test callable)
 				 (:test-not callable))
-  list (flushable unsafe call))
+  list (flushable unsafe call dynamic-extent-closure-safe))
 
 (defknown member (t list &key (:key callable) (:test callable)
 		    (:test-not callable))
-  list (foldable flushable call))
+  list (foldable flushable call dynamic-extent-closure-safe))
 (defknown (member-if member-if-not) (callable list &key (:key callable))
-  list (foldable flushable call))
+  list (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown tailp (t list) boolean (foldable flushable))
 
 (defknown adjoin (t list &key (:key callable) (:test callable)
 		    (:test-not callable))
-  list (foldable flushable unsafe call))
+  list (foldable flushable unsafe call dynamic-extent-closure-safe))
 
 (defknown (union intersection set-difference set-exclusive-or)
 	  (list list &key (:key callable) (:test callable) (:test-not callable))
   list
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown (nunion nintersection nset-difference nset-exclusive-or)
 	  (list list &key (:key callable) (:test callable) (:test-not callable))
   list
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
-(defknown subsetp 
-	  (list list &key (:key callable) (:test callable) (:test-not callable))
+(defknown subsetp (list list &key (:key callable) (:test callable)
+			(:test-not callable))
   boolean
-  (foldable flushable call))
+  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown acons (t t t) list (movable flushable unsafe))
 (defknown pairlis (t t &optional t) list (flushable unsafe))
 
 (defknown (rassoc assoc)
 	  (t list &key (:key callable) (:test callable) (:test-not callable))
-  list (foldable flushable call))
+  list (foldable flushable call dynamic-extent-closure-safe))
 (defknown (assoc-if-not assoc-if rassoc-if rassoc-if-not)
-	  (callable list &key (:key callable)) list (foldable flushable call))
+	  (callable list &key (:key callable)) list
+	  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown (memq assq) (t list) list (foldable flushable unsafe))
 (defknown delq (t list) list (flushable unsafe))
@@ -684,7 +686,8 @@
   (foldable flushable unsafe))
 (defknown %puthash (t hash-table t) t (unsafe))
 (defknown remhash (t hash-table) boolean ())
-(defknown maphash (callable hash-table) null (foldable flushable call))
+(defknown maphash (callable hash-table) null
+  (foldable flushable call dynamic-extent-closure-safe))
 (defknown clrhash (hash-table) hash-table ())
 (defknown hash-table-count (hash-table) index (foldable flushable))
 (defknown hash-table-rehash-size (hash-table) (or (integer 1) (float (1.0)))
@@ -1143,6 +1146,9 @@
 (defknown %instance-typep (t (or type-specifier ctype)) boolean
   (movable flushable explicit-check))
 
+(defknown %dynamic-extent (t t) void)
+(defknown %dynamic-extent-start () t)
+(defknown %dynamic-extent-end (t t) void)
 (defknown %cleanup-point () void)
 (defknown %special-bind (t t) void)
 (defknown %special-unbind (t) void)

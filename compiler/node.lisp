@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.42 2003/08/06 19:01:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.43 2003/08/25 20:50:59 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,7 +233,11 @@
   (%type-check t :type (member t nil :deleted :no-check :error))
   ;;
   ;; Something or other that the back end annotates this continuation with.
-  (info nil))
+  (info nil)
+  ;;
+  ;; True if this value can be allocated with dynamic extent.
+  (dynamic-extent nil :type boolean))
+
 
 (defun %print-continuation (s stream d)
   (declare (ignore d))
@@ -531,7 +535,8 @@
   ;;
   ;; The kind of thing that has to be cleaned up.
   (kind (required-argument)
-	:type (member :special-bind :catch :unwind-protect :block :tagbody))
+	:type (member :special-bind :catch :unwind-protect :block :tagbody
+		      :dynamic-extent))
   ;;
   ;; The node that messes things up.  This is the last node in the
   ;; non-messed-up environment.  Null only temporarily.  This could be deleted

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.10 2003/08/06 19:01:17 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.11 2003/08/25 20:50:58 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,13 +22,32 @@
 (in-package :x86)
 
 
+;;;; Dynamic-Extent
+
+;;;
+;;; Take an arg where to move the stack pointer instead of returning
+;;; it via :results, because the former generates a single move.
+;;;
+(define-vop (%dynamic-extent-start)
+  (:args (saved-stack-pointer :scs (any-reg control-stack)))
+  (:results)
+  (:policy :safe)
+  (:generator 0 (inst mov saved-stack-pointer esp-tn)))
+
+(define-vop (%dynamic-extent-end)
+  (:args (saved-stack-pointer :scs (any-reg control-stack)))
+  (:results)
+  (:policy :safe)
+  (:generator 0 (inst mov esp-tn saved-stack-pointer)))
+
+
 ;;;; LIST and LIST*
 
 (define-vop (list-or-list*)
   (:args (things :more t))
   (:temporary (:sc unsigned-reg) ptr temp)
   (:temporary (:sc unsigned-reg :to (:result 0) :target result) res)
-  (:info num)
+  (:info num dynamic-extent)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
   (:policy :safe)
@@ -49,9 +68,12 @@
 			     (move temp ,tn)
 			     temp))))
 		     (storew reg ,list ,slot vm:list-pointer-type))))
-	     (let ((cons-cells (if star (1- num) num)))
+	     (let ((cons-cells (if star (1- num) num))
+		   (*enable-pseudo-atomic* (unless dynamic-extent
+					     *enable-pseudo-atomic*)))
 	       (pseudo-atomic
-		(allocation res (* (pad-data-block cons-size) cons-cells) node)
+		(allocation res (* (pad-data-block cons-size) cons-cells) node
+			    dynamic-extent)
 		(inst lea res
 		      (make-ea :byte :base res :disp list-pointer-type))
 		(move ptr res)
@@ -195,16 +217,18 @@
 
 (define-vop (fixed-alloc)
   (:args)
-  (:info name words type lowtag)
+  (:info name words type lowtag dynamic-extent)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
   (:generator 50
-    (pseudo-atomic
-     (allocation result (pad-data-block words) node)
-     (inst lea result (make-ea :byte :base result :disp lowtag))
-     (when type
-       (storew (logior (ash (1- words) type-bits) type) result 0 lowtag)))))
+    (let ((*enable-pseudo-atomic* (unless dynamic-extent
+				    *enable-pseudo-atomic*)))
+      (pseudo-atomic
+       (allocation result (pad-data-block words) node dynamic-extent)
+       (inst lea result (make-ea :byte :base result :disp lowtag))
+       (when type
+	 (storew (logior (ash (1- words) type-bits) type) result 0 lowtag))))))
 
 (define-vop (var-alloc)
   (:args (extra :scs (any-reg)))

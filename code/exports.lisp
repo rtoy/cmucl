@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.222 2003/08/08 11:32:52 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.223 2003/08/25 20:51:01 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1582,7 +1582,9 @@
 	   "%SET-FUNCTION-SELF"
 	   "IR2-COMPONENT-DYNCOUNT-INFO"
 	   "DYNCOUNT-INFO" "DYNCOUNT-INFO-P"
-	   "TRUST-DYNAMIC-EXTENT-DECLARATION-P")
+	   "TRUST-DYNAMIC-EXTENT-DECLARATION-P"
+	   "IR2-STACK-ALLOCATE"
+	   "%DYNAMIC-EXTENT" "%DYNAMIC-EXTENT-START" "%DYNAMIC-EXTENT-END")
   )
 (defpackage "XREF"
   (:export "INIT-XREF-DATABASE"

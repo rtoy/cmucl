@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.25 2003/08/02 11:52:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.26 2003/08/25 20:50:59 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,7 +77,10 @@
   ;;
   ;; Function does explicit argument type checking, so the declared type should
   ;; not be asserted when a definition is compiled.
-  explicit-check)
+  explicit-check
+  ;;
+  ;; Safe to stack-allocate function args that are closures.
+  dynamic-extent-closure-safe)
 
 (defstruct (function-info
 	    (:print-function %print-function-info)

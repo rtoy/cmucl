@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.20 2003/08/06 19:00:12 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.21 2003/08/25 20:50:58 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -245,12 +245,10 @@
 ;;; Allocate SIZE bytes from the stack, storing a pointer to the
 ;;; allocated memory in ALLOC-TN.
 ;;;
-(defun stack-allocation (alloc-tn size)
-  (load-size alloc-tn alloc-tn size)
-  (inst neg alloc-tn)
-  (inst add alloc-tn esp-tn)
-  (inst and alloc-tn #xfffffff8)	;align on double-word boundary
-  (inst mov esp-tn alloc-tn)
+(defun dynamic-extent-allocation (alloc-tn nbytes)
+  (inst sub esp-tn nbytes)
+  (inst and esp-tn #xfffffff8)
+  (inst mov alloc-tn esp-tn)
   (values))
 
 (defun allocation (alloc-tn size &optional inline dynamic-extent)
@@ -259,10 +257,8 @@
    If Inline is a VOP node-var then it is used to make an appropriate
    speed vs size decision.  If Dynamic-Extent is true, and otherwise
    appropriate, allocate from the stack."
-  (cond ((and inline
-	      dynamic-extent
-	      (trust-dynamic-extent-declaration-p inline))
-	 (stack-allocation alloc-tn size))
+  (cond (dynamic-extent
+	 (dynamic-extent-allocation alloc-tn size))
 	((and *maybe-use-inline-allocation*
 	      (or (null inline)
 		  (policy inline (>= speed space)))

@@ -180,13 +180,13 @@ New in this release:
        default to preserve current behavior.  Set the version to
        :NEWEST to create versions.
      - LDB backtrace on x86.
-     - DYNAMIC-EXTENT support on x86 and sparc for &REST arg lists and
-       closures.  Stack-allocation can be controlled with the new
-       variable EXT:*TRUST-DYNAMIC-EXTENT-DECLARATIONS*, which see.
-       Default is to stack-allocate if speed >= safety.  Be warned
-       that all bets are off if a stack-allocated object or parts of
-       it escape; CMUCL might crash or format your hard disk.
-     - Generation GC (gencgc) available for Sparc/Solaris on an
+     - DYNAMIC-EXTENT support on x86 and sparc.  Stack-allocation can
+       be controlled by the setting of
+       EXT:*TRUST-DYNAMIC-EXTENT-DECLARATIONS*.  See also the CMU User
+       Manual.  Be warned that all bets are off if a stack-allocated
+       object or parts of it escape; CMUCL might crash or format your
+       hard disk.
+     - Generational GC (gencgc) available for Sparc/Solaris on an
        experimental basis.  Despite the name and feature, it is not
        conservative. 
 
@@ -230,11 +230,13 @@ New in this release:
        The default method of this generic function signals a
        continuable error of type PCL:NO-PRIMARY-METHOD-ERROR.
      - Effective methods are no longer precomputed at method load
-       time, for conformance with CLtS.
-       PCL:*MAX-EMF-PRECOMPUTATION-METHODS* can be set to a number >
-       0 to allow effective method precomputation when the generic
-       function in question has less than the specified number of
-       methods.
+       time, if the generic function has more than 
+       PCL:*MAX-EMF-PRECOMPUTATION-METHODS* methods (default 100).
+     - The loading of methods with invalid qualifiers no longer
+       signals an error, for standard's conformance.  Instead, a
+       warning is printed at method load time.  An error is
+       signaled if the generic function is called with arguments such
+       that the method is used.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

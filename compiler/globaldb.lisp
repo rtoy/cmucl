@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.43 2003/08/06 19:00:13 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.44 2003/08/25 20:51:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1167,30 +1167,4 @@
 ); defun other-info-init
 
 (declaim (freeze-type info-env))
-
-(defvar *trust-dynamic-extent-declarations*
-  (lambda (safety space speed debug)
-    (declare (ignore space speed debug) (fixnum safety))
-    (< safety 3))
-  "If null, don't trust dynamic-extent declarations.
-
-   If T, always trust dynamic-extent declarations.
-
-   Otherwise, the value of this variable must be a function of four
-   arguments SAFETY, SPACE, SPEED, and DEBUG.  If the function returns
-   true when called, dynamic-extent declarations are trusted,
-   otherwise, they are not trusted.
-
-   Default is a function that returns true if SAFETY < 3.")
-
-(defun trust-dynamic-extent-declaration-p (&optional node)
-  (declare (type (or null node) node))
-  (let ((trust *trust-dynamic-extent-declarations*))
-    (if (functionp trust)
-	(let ((cookie (lexenv-cookie (if node
-					 (node-lexenv node)
-					 *lexical-environment*))))
-	  (funcall trust (cookie-safety cookie) (cookie-space cookie)
-		   (cookie-speed cookie) (cookie-debug cookie)))
-	trust)))
 

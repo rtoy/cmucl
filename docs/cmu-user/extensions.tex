@@ -2203,16 +2203,16 @@ actual arguments and constructs an effective method function from
 applicable methods, using the generic function's method combination.
 
 Effective methods can be precomputed at method load time instead of
-when the generic function is called by setting
-\code{pcl:*max-emf-precomputation-methods*} to a nonzero number.
+when the generic function is called depending on the value of
+\code{pcl:*max-emf-precomputation-methods*}.
 
 \begin{defvar}{pcl:}{*max-emf-precomputation-methods*}
-  If nonzero, precompute effective methods when methods are loaded,
-  and the method's generic function has less than the specified
-  number of methods.
+  If nonzero, the default value is 100, precompute effective methods
+  when methods are loaded, and the method's generic function has less
+  than the specified number of methods.
   
-  If zero, the default, compute effective methods only when the
-  generic function is called.
+  If zero, compute effective methods only when the generic function is
+  called.
 \end{defvar}
 
 
@@ -2462,3 +2462,106 @@ innermost fwrapper.
   object from a function name.
 \end{defmac}
 
+\section{Dynamic-Extent Declarations}
+\cindex{dynamic-extent}
+
+On x86 and sparc, \cmucl{} can exploit \code{dynamic-extent}
+declarations by allocating objects on the stack instead of the heap.
+
+You can tell \cmucl{} to trust or not trust \code{dynamic-extent}
+declarations by setting the variable
+\code{*trust-dynamic-extent-declarations*}.
+
+\begin{defvar}{ext:}{*trust-dynamic-extent-declarations*}
+  If the value of \code{*trust-dynamic-extent-declarations*} is 
+  \code{NIL}, \code{dynamic-extent} declarations are effectively
+  ignored.
+
+  If the value of this variable is a function, the function is called
+  with four arguments to determine if a \code{dynamic-extent} 
+  declaration should be trusted.  The arguments are the safety,
+  space, speed, and debug settings at the point where the 
+  \code{dynamic-extent} declaration is used.  If the function
+  returns true, the declaration is trusted, otherwise it is not
+  trusted.
+
+  In all other cases, \code{dynamic-extent} declarations are
+  trusted.
+\end{defvar}
+
+Please note that stack-allocation is inherently unsafe.  If you make a
+mistake, and a stack-allocated object or part of it escapes, \cmucl{}
+is likely to crash, or format your hard disk.
+
+\subsection{\code{&rest} argument lists}
+\cpsubindex{dynamic-extent}{rest lists}
+
+Rest argument lists can be allocated on the stack by declaring the
+rest argument variable \code{dynamic-extent}.  Examples:
+
+\begin{lisp}
+(defun foo (x &rest rest)
+  (declare (dynamic-extent rest))
+  ...)
+
+(defun bar ()
+  (lambda (&rest rest)
+    (declare (dynamic-extent rest))
+    ...))
+\end{lisp}
+
+\subsection{Closures}
+\cpsubindex{dynamic-extent}{closures}
+
+Closures for local functions can be allocated on the stack if the
+local function is declared \code{dynamic-extent}, and the closure
+appears as an argument in the call of a named function.  In the
+example:
+
+\begin{lisp}
+(defun foo (x)
+  (flet ((bar () x))
+    (declare (dynamic-extent #'bar))
+    (baz #'bar)))
+\end{lisp}
+
+the closure passed to function \code{baz} is allocated on the stack.
+Likewise in the example:
+
+\begin{lisp}
+(defun foo (x)
+  (flet ((bar () x))
+    (baz #'bar)
+    (locally (declare (dynamic-extent #'bar))
+      (baz #'bar))))
+\end{lisp}
+
+\cpsubindex{dynamic-extent}{known CL functions}
+
+Stack-allocation of closures can also automatically take place when
+calling certain known CL functions taking function arguments, for
+example \code{some} or \code{find-if}.
+
+\subsection{\code{list}, \code{list*}, and \code{cons}}
+\cpsubindex{dynamic-extent}{list, list*, cons}
+
+New conses allocated by \code{list}, \code{list*}, or \code{cons}
+which are used to initialize variables can be allocated from the stack
+if the variables are declared \code{dynamic-extent}.  In the case of
+\code{cons}, only the outermost cons cell is allocated from the stack;
+this is an arbitrary restriction.
+
+\begin{lisp}
+(let ((x (list 1 2))
+      (y (list* 1 2 x))
+      (z (cons 1 (cons 2 nil))))
+  (declare (dynamic-extent x y z))
+  ...
+  (setq x (list 2 3))
+  ...)
+\end{lisp}
+
+Please note that the \code{setq} of \code{x} in the example program
+assigns to \code{x} a list that is allocated from the heap.  This is
+another arbitrary restriction that exists because other Lisps behave
+that way.
