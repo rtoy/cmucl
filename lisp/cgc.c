@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.1 1997/01/21 00:28:13 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.2 1997/02/05 17:53:37 pw Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -300,6 +300,7 @@ static void compact_cluster(struct cluster *cluster)
   struct region *end =
     (struct region *)((char *)region + cluster->num_blocks * BLOCK_BYTES);
   int grown = 0;
+  unsigned max_chunks = cluster->num_blocks * BLOCK_CHUNKS;
   struct region *large_additions = NULL;
   struct region **large_prev = &large_additions;
   struct region *small_additions = NULL;
@@ -311,10 +312,12 @@ static void compact_cluster(struct cluster *cluster)
       (struct region *) ((char *)region + region->num_chunks*CHUNK_BYTES);
     if (region->space != newspace) {	/* was == NULL */
       if (next < end && next->space != newspace) { /* was == NULL */
+	gc_assert(region >= cluster->first_region);
 	gc_assert(region->space == NULL);
-	gc_assert(next->space == NULL);
+	gc_assert(next  ->space == NULL);
 	gc_assert(region->num_chunks > 0);
-	gc_assert(next->num_chunks > 0);
+	gc_assert(next  ->num_chunks > 0);
+	gc_assert((region->num_chunks+next->num_chunks) <= max_chunks);
 	region->num_chunks += next->num_chunks;
 	grown = 1;
       }
@@ -1709,7 +1712,7 @@ verify_gc()
   lispobj*cs0 = (lispobj*)&rs0;
   lispobj*csz = (lispobj*)BOS;
   /* can't check stack easily because there may be non-valid 
-   * objects there (thats why we're doing this cgc stuff. In
+   * objects there (thats why we're doing this cgc stuff). In
    * particular there are raw return addresses which can be very
    * descriptorish looking!!!
 
@@ -1719,6 +1722,42 @@ verify_gc()
   verify_space(ss0, ssz-ss0);
   verify_space(bs0, bsz-bs0);
 }
+static void fixup_regions(struct region*region)
+{
+  do
+    {    
+      lispobj header = (lispobj)OBJECT_AT(region)->header;
+      if(static_space_p(header))
+	{
+	  /* Purify thought this header was a cons? Why? */
+	  struct cons*wrong = (struct cons*)PTR(header);
+	  struct cons*fixme = (struct cons*)region;
+	  dprintf(1,("\n--Fixing region header @ %x.",region));
+	  fixme->car = wrong->car; /* restore region header */
+	  fixme->cdr = wrong->cdr; /* restore prev pointer  */
+	  wrong->car = wrong->cdr = 0;
+	}
+      region = region->next;
+    }
+  while (region != NULL);
+}
+
+static void post_purify_fixup(struct space*space)
+{
+  /* Purify may have messed up the region headers. This can happen
+   * if there is a dead list pointer on the stack that now aims
+   * at a region header (previously was valid memory). Purify attempts
+   * to at least check for a valid object header but loses with lists.
+   * This hack recovers the correct values and keeps us going. Can
+   * this occur with other dead objects?
+   */
+  if(large_region_free_list)
+    fixup_regions(large_region_free_list);
+  if(small_region_free_list)
+    fixup_regions(small_region_free_list);
+  fixup_regions(space->regions);
+}
+
 
 static int dolog=0;			/* log copy ops to file */
 static int dover=0;			/* hunt pointers to oldspace */
@@ -1769,6 +1808,7 @@ void cgc_free_heap()
    */
   unsigned long allocated =  cgc_bytes_allocated;
   flip_spaces();
+  post_purify_fixup(oldspace);
   free_oldspace();
   compact_free_regions();
 #if 0 /* purify is currently running on the C stack so don't do this */

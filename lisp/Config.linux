@@ -16,5 +16,5 @@ ARCH_SRC = x86-arch.c
 OS_SRC = Linux-os.c os-common.c
 OS_LINK_FLAGS=
 #-static
-OS_LIBS= -lieee -lm  -ldl
+OS_LIBS= -lm  -ldl
 GC_SRC= cgc.c
