@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.15 1992/02/24 01:28:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.16 1992/02/24 02:28:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -894,7 +894,7 @@
 	  (%set-symbol-package symbol package)
 	  (cond ((eq package *keyword-package*)
 		 (add-symbol (package-external-symbols package) symbol)
-		 (set symbol symbol))
+		 (%set-symbol-value symbol symbol))
 		(t
 		 (add-symbol (package-internal-symbols package) symbol)))
 	  (values symbol nil)))))
