@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.25 1998/01/20 19:03:35 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.26 1998/01/25 19:37:13 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -350,6 +350,19 @@
 	  (declare (type kernel:index i))
 	  (setf (svref eval-stack i) nil))))))
 
+;;; Initial-binding-stack  --  Internal
+;;;
+;;; Generate the initial bindings for a newly created stack-group.
+;;; This function may be redefined to return a vector with other bindings
+;;; but *interrupts-enabled* and *gc-inhibit* must be the last two.
+;;;
+(defun initial-binding-stack ()
+  (vector
+   (find-package "COMMON-LISP-USER") '*package*
+   ;; Other bindings may be added here.
+   nil 'unix::*interrupts-enabled*
+   t 'lisp::*gc-inhibit*))
+  
 ;;; Make-Stack-Group -- Interface
 ;;;
 ;;; Fork a new stack-group from the *current-stack-group*. Execution
@@ -422,7 +435,7 @@
 		    :state :active
 		    :control-stack-id control-stack-id
 		    ;; Save the Eval stack.
-		    :eval-stack (copy-seq (the (simple-array t (*))
+		    :eval-stack (copy-seq (the simple-vector
 					       kernel:*eval-stack*))
 		    :eval-stack-top kernel:*eval-stack-top*
 		    ;; Misc stacks.
@@ -442,33 +455,31 @@
 		    :resumer resumer))))))
 	 ;; Allocate a new stack group with fresh stacks and bindings.
 	 (allocate-new-stack-group (control-stack-id)
-	   ;; Allocate a stack-group structure.
-	   (%make-stack-group
-	    :name name
-	    :state :active
-	    :control-stack-id control-stack-id
-	    ;; Eval stack. Needs at least one element be because push
-	    ;; doubles the size when full.
-	    :eval-stack (make-array 32)
-	    :eval-stack-top 0
-	    ;; Misc stacks.
-	    :current-catch-block 0
-	    :current-unwind-protect-block 0
-	    ;; Alien stack.
-	    :alien-stack (make-array 0 :element-type '(unsigned-byte 32))
-	    :alien-stack-size 0
-	    :alien-stack-pointer *alien-stack-top*
-	    ;; Interrupt contexts
-	    :interrupt-contexts (make-array 0 :element-type
-					    '(unsigned-byte 32))
-	    ;; Binding stack - some initial bindings.
-	    :binding-stack (vector
-			    (find-package "COMMON-LISP-USER") '*package*
-			    nil 'unix::*interrupts-enabled*
-			    t 'lisp::*gc-inhibit*)
-	    :binding-stack-size (* 2 12)
-	    ;; Resumer
-	    :resumer resumer)))
+	   (let ((binding-stack (initial-binding-stack)))
+	     ;; Allocate a stack-group structure.
+	     (%make-stack-group
+	      :name name
+	      :state :active
+	      :control-stack-id control-stack-id
+	      ;; Eval stack. Needs at least one element be because
+	      ;; push doubles the size when full.
+	      :eval-stack (make-array 32)
+	      :eval-stack-top 0
+	      ;; Misc stacks.
+	      :current-catch-block 0
+	      :current-unwind-protect-block 0
+	      ;; Alien stack.
+	      :alien-stack (make-array 0 :element-type '(unsigned-byte 32))
+	      :alien-stack-size 0
+	      :alien-stack-pointer *alien-stack-top*
+	      ;; Interrupt contexts
+	      :interrupt-contexts (make-array 0 :element-type
+					      '(unsigned-byte 32))
+	      ;; Binding stack - some initial bindings.
+	      :binding-stack binding-stack
+	      :binding-stack-size (length binding-stack)
+	      ;; Resumer
+	      :resumer resumer))))
     (let ((child-stack-group nil))
       (let ((unix::*interrupts-enabled* nil)
 	    (lisp::*gc-inhibit* t))
