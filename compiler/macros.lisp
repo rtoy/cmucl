@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.32 1992/09/07 16:04:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.33 1993/01/14 21:33:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -206,7 +206,14 @@
   
   If the desirability of the transformation depends on the current Optimize
   parameters, then the Policy macro should be used to determine when to pass."
-  (let ((fn-name (symbolicate "SOURCE-TRANSFORM-" name))
+  (let ((fn-name
+	 (if (listp name)
+	     (collect ((pieces))
+	       (dolist (piece name)
+		 (pieces "-")
+		 (pieces piece))
+	       (apply #'symbolicate "SOURCE-TRANSFORM" (pieces)))
+	     (symbolicate "SOURCE-TRANSFORM-" name)))
 	(n-form (gensym))
 	(n-env (gensym)))
     (multiple-value-bind
