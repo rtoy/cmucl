@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.28 1993/08/04 10:39:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.29 1993/08/04 12:23:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -991,14 +991,7 @@ non-server method is also significantly more efficient for large reads.
 	   nil
 	   (truncate (the index size) (fd-stream-element-size stream)))))
     (:file-position
-     (fd-stream-file-position stream arg1))
-    (:file-name
-     (cond (arg1
-	    (setf (fd-stream-pathname stream) arg1)
-	    (setf (fd-stream-file stream) (unix-namestring arg1 nil))
-	    t)
-	   (t
-	    (fd-stream-pathname stream))))))
+     (fd-stream-file-position stream arg1))))
 
 
 ;;; FD-STREAM-FILE-POSITION -- internal.
@@ -1449,7 +1442,14 @@ non-server method is also significantly more efficient for large reads.
 ;;; stuff to get and set the file name.
 ;;;
 (defun file-name (stream &optional new-name)
-  (funcall (stream-misc stream) stream :file-name new-name))
+  (when (typep stream 'fd-stream)
+      (cond (arg1
+	     (setf (fd-stream-pathname stream) arg1)
+	     (setf (fd-stream-file stream) (unix-namestring arg1 nil))
+	     t)
+	    (t
+	     (fd-stream-pathname stream)))))
+
 
 ;;;; Degenerate international character support:
 
