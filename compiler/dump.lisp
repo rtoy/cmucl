@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.18 1990/10/13 20:23:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.19 1990/10/22 20:44:57 ram Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -303,6 +303,7 @@
 ;;;
 (defun close-fasl-file (file abort-p)
   (declare (type fasl-file file))
+  (assert (zerop (hash-table-count (fasl-file-patch-table file))))
   (dump-fop 'lisp::fop-verify-empty-stack file)
   (dump-fop 'lisp::fop-verify-table-size file)
   (quick-dump-number (fasl-file-table-free file) 4 file)
@@ -502,9 +503,6 @@
 	    (dolist (patch old)
 	      (alter-code-object (car patch) (cdr patch) entry-handle file))
 	    (remhash entry (fasl-file-patch-table file)))))))
-
-  (assert (zerop (hash-table-count (fasl-file-patch-table file))))
-
   (undefined-value))
 
 
