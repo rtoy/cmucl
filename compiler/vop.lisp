@@ -313,13 +313,17 @@
   ;; being a cons (Kind . What).  Kind is a keyword indicating how the constant
   ;; is computed, and What is some context.
   ;; 
-  ;; For now, the only meaningful load-time constant is:
+  ;; These load-time constants are recognized:
   ;; 
   ;; (:entry . <function>)
   ;;    Is replaced by the code pointer for the specified function.  This is
   ;; 	how compiled code (including DEFUN) gets its hands on a function.
   ;; 	<function> is the XEP lambda for the called function; it's Leaf-Info
   ;; 	should be an Entry-Info structure.
+  ;;
+  ;; (:label . <label>)
+  ;;    Is replaced with the byte offset of that label from the start of the
+  ;;    code vector (including the header length.)
   ;;
   ;; A null entry in this vector is a placeholder for implementation overhead
   ;; that is eventually stuffed in somehow.
