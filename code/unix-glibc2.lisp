@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.32 2004/07/25 19:32:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.33 2004/08/31 12:39:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1869,7 +1869,30 @@ length LEN and type TYPE."
    number if an error occured."
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) len))
-
+  #+gencgc
+  ;; With gencgc, the collector tries to keep raw objects like strings
+  ;; in separate pages that are not write-protected.  However, this
+  ;; isn't always true.  Thus, BUF will sometimes be write-protected
+  ;; and the kernel doesn't like writing to write-protected pages.  So
+  ;; go through and touch each page to give the segv handler a chance
+  ;; to unprotect the pages.  (This is taken from unix.lisp.)
+  (without-gcing
+   (let* ((page-size (get-page-size))
+	  (1-page-size (1- page-size))
+	  (sap (etypecase buf
+		 (system-area-pointer buf)
+		 (vector (vector-sap buf))))
+	  (end (sap+ sap len)))
+     (declare (type (and fixnum unsigned-byte) page-size 1-page-size)
+	      (type system-area-pointer sap end)
+	      (optimize (speed 3) (safety 0)))
+     ;; Touch the beginning of every page
+     (do ((sap (int-sap (logand (sap-int sap)
+				(logxor 1-page-size (ldb (byte 32 0) -1))))
+	       (sap+ sap page-size)))
+	 ((sap>= sap end))
+       (declare (type system-area-pointer sap))
+       (setf (sap-ref-8 sap 0) (sap-ref-8 sap 0)))))
   (int-syscall ("read" int (* char) int) fd buf len))
 
 

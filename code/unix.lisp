@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.97 2004/08/13 11:33:46 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.98 2004/08/31 12:39:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1520,12 +1520,21 @@
    number if an error occured."
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) len))
-  #+sunos
+  #+(or sunos gencgc)
   ;; Note: Under sunos we touch each page before doing the read to give
   ;; the segv handler a chance to fix the permissions.  Otherwise,
   ;; read will return EFAULT.  This also bypasses a bug in 4.1.1 in which
   ;; read fails with EFAULT if the page has never been touched even if
   ;; the permissions are okay.
+  ;;
+  ;; (Is this true for Solaris?)
+  ;;
+  ;; Also, with gencgc, the collector tries to keep raw objects like
+  ;; strings in separate pages that are not write-protected.  However,
+  ;; this isn't always true.  Thus, BUF will sometimes be
+  ;; write-protected and the kernel doesn't like writing to
+  ;; write-protected pages.  So go through and touch each page to give
+  ;; the segv handler a chance to unprotect the pages.
   (without-gcing
    (let* ((page-size (get-page-size))
 	  (1-page-size (1- page-size))
@@ -1536,8 +1545,8 @@
      (declare (type (and fixnum unsigned-byte) page-size 1-page-size)
 	      (type system-area-pointer sap end)
 	      (optimize (speed 3) (safety 0)))
-     (do ((sap (int-sap (logand (the (unsigned-byte 32)
-				     (+ (sap-int sap) 1-page-size))
+     ;; Touch the beginning of every page
+     (do ((sap (int-sap (logand (sap-int sap)
 				(logxor 1-page-size (ldb (byte 32 0) -1))))
 	       (sap+ sap page-size)))
 	 ((sap>= sap end))
