@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.36 2003/08/05 11:00:49 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.37 2003/09/25 02:40:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,6 +24,9 @@
 
 (in-package "LISP")
 (export '(room))
+
+#+gencgc
+(sys:register-lisp-runtime-feature :gencgc)
 
 
 ;;;; DYNAMIC-USAGE and friends.

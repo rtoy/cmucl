@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.58 2003/08/20 16:53:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.59 2003/09/25 02:40:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2306,8 +2306,8 @@
 		   (if symbol (vm:static-symbol-offset symbol) 0)))))
   ;;
   ;; Write out features.
-  (format t "~%/* Features when built. */~2%")
-  (dolist (feature (c:backend-features c:*backend*))
+  (format t "~%/* Runtime features when built. */~2%")
+  (dolist (feature sys:*runtime-features*)
     (format t "#define FEATURE_~a 1~%"
 	    (nsubstitute #\_ #\-
 			 (remove-if #'(lambda (char)

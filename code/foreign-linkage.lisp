@@ -1,5 +1,7 @@
 (in-package "LISP")
 
+(sys:register-lisp-runtime-feature :linkage-table)
+
 ;;; This gets created by genesis and lives in the static area.
 (defvar *linkage-table-data*)
 

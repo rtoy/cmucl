@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.11 2003/03/06 09:31:06 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.12 2003/09/25 02:40:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,6 +25,8 @@
 
 (in-package "KERNEL")
 (export '(%random-single-float %random-double-float random-chunk init-random-state))
+
+(sys:register-lisp-feature :random-mt19937)
 
 
 ;;;; Random state hackery:

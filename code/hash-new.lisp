@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.26 2003/07/15 19:47:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.27 2003/09/25 02:40:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,6 +27,8 @@
 (export '(define-hash-table-test))
 
 (in-package :lisp)
+
+(register-lisp-runtime-feature :hash-new)
 
 
 ;;;; The hash-table structures.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.135 2003/09/24 22:38:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.136 2003/09/25 02:40:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,9 @@
 ;;; Propagate-float-type extension by Raymond Toy.
 ;;;
 (in-package "C")
+
+#+conservative-float-type
+(sys:register-lisp-feature :conservative-float-type)
 
 ;;; Source transform for Not, Null  --  Internal
 ;;;

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.71 2003/08/08 11:32:52 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.72 2003/09/25 02:40:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,6 +35,9 @@
 (export '(%in-package old-in-package %defpackage))
 
 (in-package "LISP")
+
+#+relative-package-names
+(sys:register-lisp-feature :relative-package-names)
 
 (defvar *default-package-use-list* '("COMMON-LISP")
   "The list of packages to use by default of no :USE argument is supplied

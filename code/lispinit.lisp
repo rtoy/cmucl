@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.71 2003/09/12 20:06:05 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.72 2003/09/25 02:40:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,13 +19,24 @@
 (export '(most-positive-fixnum most-negative-fixnum sleep
 	  ++ +++ ** *** // ///))
 
+(defvar *features* '(:common :common-lisp :ansi-cl :ieee-floating-point :cmu)
+  "Holds a list of symbols that describe features provided by the
+   implementation.")
+
+
 (in-package :system)
-(export '(compiler-version scrub-control-stack))
+(export '(compiler-version scrub-control-stack *runtime-features*))
+
+(defvar *runtime-features* nil
+  "Features affecting the runtime")
 
 (in-package :extensions)
 (export '(quit *prompt*))
 
 (in-package :lisp)
+
+#+stack-checking
+(sys:register-lisp-runtime-feature :stack-checking)
 
 ;;; Make the error system enable interrupts.
 

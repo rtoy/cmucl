@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.27 2003/07/20 11:11:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.28 2003/09/25 02:40:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,9 +14,22 @@
 (in-package "LISP")
 
 (in-package "SYSTEM")
-(export '(without-gcing without-hemlock))
+(export '(without-gcing without-hemlock
+	  register-lisp-feature register-lisp-runtime-feature))
+
+(defmacro register-lisp-feature (feature)
+  "Register the feature as having influenced the CMUCL build process."
+  `(pushnew ',feature *features*))
+
+(defmacro register-lisp-runtime-feature (feature)
+  "Register the feature as having influenced the CMUCL build process,
+and also the CMUCL C runtime."
+   `(progn
+     (pushnew ',feature *features*)
+     (pushnew ',feature sys::*runtime-features*)))
 
 (in-package "LISP")
+
 
 
 ;;; WITH-ARRAY-DATA  --  Interface

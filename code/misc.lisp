@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.31 2003/04/11 15:28:11 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.32 2003/09/25 02:40:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,9 +112,17 @@
   string)
 
 
+#+nil
 (defvar *features* '(:common :common-lisp :ansi-cl :ieee-floating-point :cmu)
   "Holds a list of symbols that describe features provided by the
    implementation.")
+
+;;; Register various Lisp features
+#+i486
+(sys:register-lisp-runtime-feature :i486)
+
+#+pentium
+(sys:register-lisp-runtime-feature :pentium)
 
 (defun featurep (x)
   "If X is an atom, see if it is present in *FEATURES*.  Also
