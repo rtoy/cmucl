@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.52 1990/05/31 00:21:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.53 1990/06/03 16:19:41 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -444,18 +444,18 @@
   symbol)
 
 (define-primitive-object (unwind-block)
-  current-uwp
-  current-cont
+  (current-uwp :c-type "struct unwind_block *")
+  (current-cont :c-type "lispobj *")
   current-code
   entry-pc)
 
 (define-primitive-object (catch-block)
-  current-uwp
-  current-cont
+  (current-uwp :c-type "struct unwind_block *")
+  (current-cont :c-type "lispobj *")
   current-code
   entry-pc
   tag
-  previous-catch
+  (previous-catch :c-type "struct catch_block *")
   size)
 
 
