@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.13 1993/05/12 16:15:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.14 1993/05/12 21:03:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1057,9 +1057,9 @@
 		     (let ((args ())
 			   (end (+ start num-args)))
 		       (declare (type stack-pointer end))
-		       (do ((i start (1+ i)))
-			   ((= i end))
-			 (declare (type stack-pointer i))
+		       (do ((i (1- end) (1- i)))
+			   ((< i start))
+			 (declare (fixnum i))
 			 (push (eval-stack-ref i) args))
 		       (setf (current-stack-pointer) restore-sp)
 		       (apply function args)))))
