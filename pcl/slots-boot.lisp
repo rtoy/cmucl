@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.19 2003/04/25 17:43:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.20 2003/04/28 15:18:49 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -95,11 +95,18 @@
 					     slot-name)))))
     (unless (fboundp gf-name)
       (let ((gf (ensure-generic-function gf-name)))
+	;;
+	;; Initialize this here, In case the LOAD-TIME-VALUE is
+	;; executed before INITIALIZE-INTERNAL-SLOT-FUNCTIONS had a
+	;; chance to run.
+	(unless (gethash slot-name *name->class->slotd-table*)
+	  (setf (gethash slot-name *name->class->slotd-table*)
+		(make-hash-table :test 'eq)))
+	(setf (plist-value gf 'slot-missing-method) t)
 	(ecase type
 	  (reader (add-slot-missing-method gf slot-name 'slot-value))
 	  (boundp (add-slot-missing-method gf slot-name 'slot-boundp))
-	  (writer (add-slot-missing-method gf slot-name 'setf)))
-	(setf (plist-value gf 'slot-missing-method) t))
+	  (writer (add-slot-missing-method gf slot-name 'setf)))))
       t)))
 
 (defmacro accessor-slot-value (object slot-name)
