@@ -652,7 +652,10 @@
 			  (setq win nil)))))
 		(:required (res (pop req)))
 		(:optional (res (pop opt)))
-		(:rest (res (function-type-rest type))))
+		(:rest
+		 (let ((rest (function-type-rest type)))
+		   (when rest
+		     (res rest)))))
 	      (vars arg)
 	      (when (arg-info-supplied-p info)
 		(res *universal-type*)
