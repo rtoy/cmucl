@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.73 2004/07/09 22:00:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.74 2004/09/25 22:09:29 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -348,7 +348,10 @@
 
 (defmethod shared-initialize :after ((specl eql-specializer) slot-names &key)
   (declare (ignore slot-names))
-  (setf (slot-value specl 'type) `(eql ,(specializer-object specl))))
+  (setf (slot-value specl 'type) `(eql ,(specializer-object specl)))
+  ;; Tell the type system about this eql specializer type.
+  (setf (info type translator specl)
+	(constantly (kernel:make-member-type :members (list (specializer-object specl))))))
 
 
 
