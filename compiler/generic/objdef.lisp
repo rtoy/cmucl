@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.42 1998/01/17 10:24:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.43 1998/03/21 07:55:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,15 +21,15 @@
 	  even-fixnum-type function-pointer-type other-immediate-0-type
 	  list-pointer-type odd-fixnum-type instance-pointer-type
 	  other-immediate-1-type other-pointer-type bignum-type ratio-type
-	  single-float-type double-float-type complex-type
+	  single-float-type double-float-type long-float-type complex-type
 	  simple-array-type simple-string-type simple-bit-vector-type
 	  simple-vector-type simple-array-unsigned-byte-2-type
 	  simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
 	  simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
 	  simple-array-signed-byte-8-type simple-array-signed-byte-16-type
 	  simple-array-signed-byte-30-type simple-array-signed-byte-32-type
-	  simple-array-single-float-type
-	  simple-array-double-float-type complex-string-type
+	  simple-array-single-float-type simple-array-double-float-type
+	  simple-array-long-float-type complex-string-type
 	  complex-bit-vector-type complex-vector-type complex-array-type
 	  code-header-type function-header-type closure-header-type
 	  closure-function-header-type return-pc-header-type
@@ -42,8 +42,10 @@
 	  vector-valid-hashing-subtype vector-must-rehash-subtype
 	  forwarding-pointer-type scavenger-hook-type
 	  complex-single-float-type complex-double-float-type
+	  complex-long-float-type
 	  simple-array-complex-single-float-type
-	  simple-array-complex-double-float-type))
+	  simple-array-complex-double-float-type
+	  simple-array-complex-long-float-type))
 
 (in-package "KERNEL")
 (export '(%make-funcallable-instance
@@ -112,9 +114,11 @@
   ratio
   single-float
   double-float
+  #+long-float long-float
   complex
   #+complex-float complex-single-float
   #+complex-float complex-double-float
+  #+(and complex-float long-float) complex-long-float
   
   simple-array
   simple-string
@@ -131,8 +135,10 @@
   #+signed-array simple-array-signed-byte-32
   simple-array-single-float
   simple-array-double-float
+  #+long-float simple-array-long-float
   #+complex-float simple-array-complex-single-float
   #+complex-float simple-array-complex-double-float
+  #+(and complex-float long-float) simple-array-complex-long-float
   complex-string
   complex-bit-vector
   complex-vector
@@ -207,6 +213,12 @@
 				       :header double-float-type)
   (filler)
   (value :c-type "double" :length 2))
+
+#+long-float
+(define-primitive-object (long-float :lowtag other-pointer-type
+				     :header long-float-type)
+  #+sparc (filler)
+  (value :c-type "long double" :length #+x86 3 #+sparc 4))
 
 (define-primitive-object (complex :type complex
 				  :lowtag other-pointer-type
@@ -487,3 +499,11 @@
   (filler)
   (real :c-type "double" :length 2)
   (imag :c-type "double" :length 2))
+
+#+(and complex-float long-float)
+(define-primitive-object (complex-long-float
+			  :lowtag other-pointer-type
+			  :header complex-long-float-type)
+  #+sparc (filler)
+  (real :c-type "long double" :length #+x86 3 #+sparc 4)
+  (imag :c-type "long double" :length #+x86 3 #+sparc 4))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.18 1998/02/03 19:22:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.19 1998/03/21 07:55:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,12 +84,17 @@
 (def-primitive-type complex (descriptor-reg))
 (def-primitive-type single-float (single-reg descriptor-reg))
 (def-primitive-type double-float (double-reg descriptor-reg))
+#+long-float
+(def-primitive-type long-float (long-reg descriptor-reg))
 #+complex-float
 (def-primitive-type complex-single-float (complex-single-reg descriptor-reg)
   :type (complex single-float))
 #+complex-float
 (def-primitive-type complex-double-float (complex-double-reg descriptor-reg)
   :type (complex double-float))
+#+(and complex-float long-float)
+(def-primitive-type complex-long-float (complex-long-reg descriptor-reg)
+  :type (complex long-float))
 
 ;;; Primitive other-pointer array types.
 ;;; 
@@ -122,12 +127,18 @@
   :type (simple-array single-float (*)))
 (def-primitive-type simple-array-double-float (descriptor-reg)
   :type (simple-array double-float (*)))
+#+long-float
+(def-primitive-type simple-array-long-float (descriptor-reg)
+  :type (simple-array long-float (*)))
 #+complex-float
 (def-primitive-type simple-array-complex-single-float (descriptor-reg)
   :type (simple-array (complex single-float) (*)))
 #+complex-float
 (def-primitive-type simple-array-complex-double-float (descriptor-reg)
   :type (simple-array (complex double-float) (*)))
+#+(and complex-float long-float)
+(def-primitive-type simple-array-complex-long-float (descriptor-reg)
+  :type (simple-array (complex long-float) (*)))
 
 ;;; Note: The complex array types are not inclueded, 'cause it is pointless to
 ;;; restrict VOPs to them.
@@ -172,10 +183,13 @@
     #+signed-array ((signed-byte 32) . simple-array-signed-byte-32)
     (single-float . simple-array-single-float)
     (double-float . simple-array-double-float)
+    #+long-float (long-float . simple-array-long-float)
     #+complex-float
     ((complex single-float) . simple-array-complex-single-float)
     #+complex-float
     ((complex double-float) . simple-array-complex-double-float)
+    #+(and complex-float long-float)
+    ((complex long-float) . simple-array-complex-long-float)
     (t . simple-vector))
   "An a-list for mapping simple array element types to their
   corresponding primitive types.")
@@ -283,8 +297,12 @@
 		     ((short-float single-float)
 		      (values (primitive-type-or-lose 'single-float *backend*)
 			      exact))
-		     ((double-float long-float)
+		     ((double-float #-long-float long-float)
 		      (values (primitive-type-or-lose 'double-float *backend*)
+			      exact))
+		     #+long-float
+		     (long-float
+		      (values (primitive-type-or-lose 'long-float *backend*)
 			      exact))
 		     (t
 		      (any)))))
@@ -299,8 +317,13 @@
 		       (values (primitive-type-or-lose 'complex-single-float
 						       *backend*)
 			       exact))
-		      ((double-float long-float)
+		      ((double-float #-long-float long-float)
 		       (values (primitive-type-or-lose 'complex-double-float
+						       *backend*)
+			       exact))
+		      #+long-float
+		      (long-float
+		       (values (primitive-type-or-lose 'complex-long-float
 						       *backend*)
 			       exact))
 		      (t

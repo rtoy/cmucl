@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.35 1998/01/25 15:11:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.36 1998/03/21 07:55:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,9 @@
 ;;; This is be expanded before the translator gets a chance, so we will get
 ;;; precedence.
 ;;;
+#-long-float
 (setf (info type kind 'long-float) :defined)
+#-long-float
 (deftype long-float (&optional low high)
   `(double-float ,low ,high))
 ;;;
@@ -44,8 +46,12 @@
 ;;;
 ;;; Worst case values for float attributes.
 ;;;
-(deftype float-exponent () 'double-float-exponent)
-(deftype float-digits () `(integer 0 ,vm:double-float-digits))
+(deftype float-exponent ()
+  #-long-float 'double-float-exponent
+  #+long-float 'long-float-exponent)
+(deftype float-digits ()
+  #-long-float `(integer 0 ,vm:double-float-digits)
+  #+long-float `(integer 0 ,vm:long-float-digits))
 (deftype float-radix () '(integer 2 2))
 ;;;
 ;;; A code for Boole.
@@ -92,7 +98,9 @@
     #+signed-array (signed-byte 30) #+signed-array (signed-byte 32)
     #+complex-float (complex single-float)
     #+complex-float (complex double-float)
-    base-char single-float double-float))
+    #+(and complex-float long-float) (complex long-float)
+    base-char single-float double-float
+    #+long-float long-float))
 
 (deftype unboxed-array (&optional dims)
   (collect ((types (list 'or)))
@@ -119,7 +127,8 @@
 (defun float-format-name (x)
   (etypecase x
     (single-float 'single-float)
-    (double-float 'double-float)))
+    (double-float 'double-float)
+    #+long-float (long-float 'long-float)))
 
 ;;; Specialize-Array-Type  --  Internal
 ;;;

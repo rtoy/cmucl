@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.35 1997/01/18 14:31:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.36 1998/03/21 07:55:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,7 @@
 ;;; equivalent types.
 ;;;
 (def-source-transform short-float-p (x) `(single-float-p ,x))
+#-long-float
 (def-source-transform long-float-p (x) `(double-float-p ,x))
 
 (def-source-transform compiled-function-p (x)

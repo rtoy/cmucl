@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.14 1998/02/03 19:22:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.15 1998/03/21 07:55:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,8 @@
 (define-type-predicate complex-double-float-p (complex double-float))
 #+complex-float
 (define-type-predicate complex-single-float-p (complex single-float))
+#+(and complex-float long-float)
+(define-type-predicate complex-long-float-p (complex long-float))
 (define-type-predicate double-float-p double-float)
 (define-type-predicate fixnump fixnum)
 (define-type-predicate long-float-p long-float)
@@ -64,12 +66,18 @@
 		       (simple-array single-float (*)))
 (define-type-predicate simple-array-double-float-p
 		       (simple-array double-float (*)))
+#+long-float
+(define-type-predicate simple-array-long-float-p
+		       (simple-array long-float (*)))
 #+complex-float
 (define-type-predicate simple-array-complex-single-float-p
 		       (simple-array (complex single-float) (*)))
 #+complex-float
 (define-type-predicate simple-array-complex-double-float-p
 		       (simple-array (complex double-float) (*)))
+#+(and complex-float long-float)
+(define-type-predicate simple-array-complex-long-float-p
+		       (simple-array (complex long-float) (*)))
 (define-type-predicate system-area-pointer-p system-area-pointer)
 (define-type-predicate unsigned-byte-32-p (unsigned-byte 32))
 (define-type-predicate signed-byte-32-p (signed-byte 32))

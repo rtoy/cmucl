@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.32 1998/02/15 15:34:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.33 1998/03/21 07:55:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -437,6 +437,22 @@
 	 (:big-endian
 	  (write-indexed des vm:double-float-value-slot high-bits)
 	  (write-indexed des (1+ vm:double-float-value-slot) low-bits)))
+       des))
+    #+(and long-float x86)
+    (long-float
+     (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					 (1- vm:long-float-size)
+					 vm:long-float-type))
+	   (exp-bits (make-random-descriptor (long-float-exp-bits num)))
+	   (high-bits (make-random-descriptor (long-float-high-bits num)))
+	   (low-bits (make-random-descriptor (long-float-low-bits num))))
+       (ecase (c:backend-byte-order c:*backend*)
+	 (:little-endian
+	  (write-indexed des vm:long-float-value-slot low-bits)
+	  (write-indexed des (1+ vm:long-float-value-slot) high-bits)
+	  (write-indexed des (+ 2 vm:long-float-value-slot) exp-bits))
+	 (:big-endian
+	  (error "Long-Float not supported")))
        des))))
 
 #+complex-float
@@ -492,6 +508,9 @@
     ((complex single-float) (complex-single-float-to-core number))
     #+complex-float
     ((complex double-float) (complex-double-float-to-core number))
+    #+(and complex-float long-float)
+    ((complex long-float)
+     (error "~S isn't a cold-loadable number at all!" number))
     (complex (number-pair-to-core (number-to-core (realpart number))
 				  (number-to-core (imagpart number))
 				  vm:complex-type))
@@ -755,6 +774,18 @@
       (frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
       (frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
       (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
+      #+long-float
+      (when (c:backend-featurep :long-float)
+	(frob "*FP-CONSTANT-0L0*" "X86" (number-to-core 0l0))
+	(frob "*FP-CONSTANT-1L0*" "X86" (number-to-core 1l0))
+	(frob "*FP-CONSTANT-PI*" "X86" (number-to-core pi))
+	(frob "*FP-CONSTANT-L2T*" "X86" (number-to-core (log 10l0 2l0)))
+	(frob "*FP-CONSTANT-L2E*" "X86"
+	      (number-to-core (log 2.718281828459045235360287471352662L0 2l0)))
+	(frob "*FP-CONSTANT-LG2*" "X86" (number-to-core (log 2l0 10l0)))
+	(frob "*FP-CONSTANT-LN2*" "X86"
+	      (number-to-core
+	       (log 2l0 2.718281828459045235360287471352662L0))))
       (when (c:backend-featurep :gencgc)
 	(frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil))))))
 
@@ -1301,6 +1332,11 @@
 		    (* len vm:word-bytes 2)))
     result))
 
+#+long-float (not-cold-fop fop-long-float-vector)
+#+complex-float (not-cold-fop fop-complex-single-float-vector)
+#+complex-float (not-cold-fop fop-complex-double-float-vector)
+#+(and complex-float long-float) (not-cold-fop fop-complex-long-float-vector)
+
 (define-cold-fop (fop-array)
   (let* ((rank (read-arg 4))
 	 (data-vector (pop-stack))
@@ -1346,6 +1382,94 @@
 (cold-number fop-byte-integer)
 #+complex-float (cold-number fop-complex-single-float)
 #+complex-float (cold-number fop-complex-double-float)
+
+#+long-float
+(define-cold-fop (fop-long-float)
+  (ecase (c:backend-fasl-file-implementation c:*backend*)
+    (#.c:x86-fasl-file-implementation		; 80 bit long-float format.
+     (prepare-for-fast-read-byte *fasl-file*
+       (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					    (1- vm:long-float-size)
+					    vm:long-float-type))
+	      (low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (exp-bits (make-random-descriptor (fast-read-s-integer 2))))
+	 (done-with-fast-read-byte)
+	 (write-indexed des vm:long-float-value-slot low-bits)
+	 (write-indexed des (1+ vm:long-float-value-slot) high-bits)
+	 (write-indexed des (+ 2 vm:long-float-value-slot) exp-bits)
+	 des)))
+    (#.c:sparc-fasl-file-implementation		; 128 bit long-float format.
+     (prepare-for-fast-read-byte *fasl-file*
+       (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					    (1- vm:long-float-size)
+					    vm:long-float-type))
+	      (low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (mid-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (exp-bits (make-random-descriptor (fast-read-s-integer 4))))
+	 (done-with-fast-read-byte)
+	 (write-indexed des vm:long-float-value-slot exp-bits)
+	 (write-indexed des (1+ vm:long-float-value-slot) high-bits)
+	 (write-indexed des (+ 2 vm:long-float-value-slot) mid-bits)
+	 (write-indexed des (+ 3 vm:long-float-value-slot) low-bits)
+	 des)))))
+
+#+(and complex-float long-float)
+(define-cold-fop (fop-complex-long-float)
+  (ecase (c:backend-fasl-file-implementation c:*backend*)
+    (#.c:x86-fasl-file-implementation		; 80 bit long-float format.
+     (prepare-for-fast-read-byte *fasl-file*
+       (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					    (1- vm:complex-long-float-size)
+					    vm:complex-long-float-type))
+	      (real-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-exp-bits (make-random-descriptor (fast-read-s-integer 2)))
+	      (imag-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-exp-bits (make-random-descriptor (fast-read-s-integer 2))))
+	 (done-with-fast-read-byte)
+	 (write-indexed des vm:complex-long-float-real-slot real-low-bits)
+	 (write-indexed des (1+ vm:complex-long-float-real-slot)
+			real-high-bits)
+	 (write-indexed des (+ 2 vm:complex-long-float-real-slot)
+			real-exp-bits)
+	 (write-indexed des vm:complex-long-float-imag-slot imag-low-bits)
+	 (write-indexed des (1+ vm:complex-long-float-imag-slot)
+			imag-high-bits)
+	 (write-indexed des (+ 2 vm:complex-long-float-imag-slot)
+			imag-exp-bits)
+	 des)))
+    (#.c:sparc-fasl-file-implementation		; 128 bit long-float format.
+     (prepare-for-fast-read-byte *fasl-file*
+       (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					    (1- vm:complex-long-float-size)
+					    vm:complex-long-float-type))
+	      (real-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-mid-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (real-exp-bits (make-random-descriptor (fast-read-s-integer 4)))
+	      (imag-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-mid-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-high-bits (make-random-descriptor (fast-read-u-integer 4)))
+	      (imag-exp-bits (make-random-descriptor (fast-read-s-integer 4))))
+	 (done-with-fast-read-byte)
+	 (write-indexed des vm:complex-long-float-real-slot real-exp-bits)
+	 (write-indexed des (1+ vm:complex-long-float-real-slot)
+			real-high-bits)
+	 (write-indexed des (+ 2 vm:complex-long-float-real-slot)
+			real-mid-bits)
+	 (write-indexed des (+ 3 vm:complex-long-float-real-slot)
+			real-low-bits)
+	 (write-indexed des vm:complex-long-float-real-slot imag-exp-bits)
+	 (write-indexed des (1+ vm:complex-long-float-real-slot)
+			imag-high-bits)
+	 (write-indexed des (+ 2 vm:complex-long-float-real-slot)
+			imag-mid-bits)
+	 (write-indexed des (+ 3 vm:complex-long-float-real-slot)
+			imag-low-bits)
+	 des)))))
 
 (define-cold-fop (fop-ratio)
   (let ((den (pop-stack)))

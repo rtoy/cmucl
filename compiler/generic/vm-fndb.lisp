@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.59 1998/03/03 17:35:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.60 1998/03/21 07:55:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,6 +51,7 @@
 	   #+complex-float complex-rational-p #+complex-float complex-float-p
 	   #+complex-float complex-single-float-p
 	   #+complex-float complex-double-float-p
+	   #+(and complex-float long-float) complex-long-float-p
 	   base-char-p %standard-char-p %instancep
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
@@ -60,8 +61,10 @@
 	   #+signed-array simple-array-signed-byte-30-p
 	   #+signed-array simple-array-signed-byte-32-p
 	   simple-array-single-float-p simple-array-double-float-p
+	   #+long-float simple-array-long-float-p
 	   #+complex-float simple-array-complex-single-float-p
 	   #+complex-float simple-array-complex-double-float-p
+	   #+(and complex-float long-float) simple-array-complex-long-float-p
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
 	   weak-pointer-p scavenger-hook-p code-component-p lra-p
 	   funcallable-instance-p dylan::dylan-function-p)
@@ -120,14 +123,15 @@
   (foldable flushable))
 (defknown %raw-ref-double (raw-vector index) double-float
   (foldable flushable))
+#+long-float
+(defknown %raw-ref-long (raw-vector index) long-float
+  (foldable flushable))
 (defknown %raw-set-single (raw-vector index single-float) single-float
   (unsafe))
 (defknown %raw-set-double (raw-vector index double-float) double-float
   (unsafe))
-
-(defknown %raw-bits (t fixnum) (unsigned-byte 32)
-  (foldable flushable))
-(defknown (%set-raw-bits) (t fixnum (unsigned-byte 32)) (unsigned-byte 32)
+#+long-float
+(defknown %raw-set-long (raw-vector index long-float) long-float
   (unsafe))
 
 #+complex-float
@@ -150,6 +154,11 @@
   (complex long-float)
   (unsafe))
 ) ; end progn complex-float
+
+(defknown %raw-bits (t fixnum) (unsigned-byte 32)
+  (foldable flushable))
+(defknown (%set-raw-bits) (t fixnum (unsigned-byte 32)) (unsigned-byte 32)
+  (unsafe))
 
 
 (defknown allocate-vector ((unsigned-byte 8) index index) (simple-array * (*))
