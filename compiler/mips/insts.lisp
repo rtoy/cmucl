@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.36 1992/01/18 02:02:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.37 1992/02/24 00:43:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.36 1992/01/18 02:02:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.37 1992/02/24 00:43:55 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -355,7 +355,7 @@
       (when (and lui-note
 		 (= (disassem:dstate-curpos dstate)
 		    (lui-note-following-addr lui-note))
-		 (= (disassem:arg-value 'rd chunk inst)
+		 (= (disassem:arg-value 'rt chunk inst)
 		    (lui-note-target-reg lui-note)))
 	(let ((value
 	       (+ (lui-note-high-bits lui-note)
