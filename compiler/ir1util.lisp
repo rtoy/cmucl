@@ -1308,7 +1308,7 @@
     (setq *last-source-context* nil)
     (setq *last-format-string* nil))
   (apply #'format *compiler-error-output* format-string format-args)
-  (force-output))
+  (force-output *compiler-error-output*))
 
 
 ;;; Find-Component-Name  --  Interface
