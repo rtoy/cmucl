@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.12 2004/07/12 23:44:07 pmai Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.13 2004/08/04 18:33:58 cwang Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -255,7 +255,7 @@ static int
 stack_pointer_p (unsigned long p)
 {
   return (p < CONTROL_STACK_START + CONTROL_STACK_SIZE
-	  && p > (unsigned) &p
+	  && p > (unsigned long) &p
 	  && (p & 3) == 0);
 }
 
@@ -268,7 +268,7 @@ ra_pointer_p (unsigned ra)
 static unsigned
 deref (unsigned long p, int offset)
 {
-  return *((unsigned *) p + offset);
+  return *((unsigned long *) p + offset);
 }
 
 static void
@@ -343,7 +343,7 @@ x86_call_context (unsigned fp, unsigned *ra, unsigned *ocfp)
 {
   unsigned lisp_ocfp, lisp_ra, c_ocfp, c_ra;
   int lisp_valid_p, c_valid_p;
-  
+
   if (!stack_pointer_p (fp))
     return 0;
 
