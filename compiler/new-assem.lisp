@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.10 1992/07/27 16:49:38 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.11 1992/07/27 16:52:05 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,9 +19,10 @@
 
 (export '(emit-byte emit-skip emit-back-patch emit-chooser emit-postit
 	  define-emitter define-instruction define-instruction-macro
-	  def-assembler-params without-scheduling
+	  def-assembler-params branch flushable
 
-	  segment make-segment segment-name assemble align inst
+	  segment make-segment segment-name
+	  assemble align inst without-scheduling 
 	  label label-p gen-label emit-label label-position
 	  append-segment finalize-segment
 	  segment-map-output release-segment))
