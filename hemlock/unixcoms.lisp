@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.7 1993/08/25 02:11:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.8 1993/11/17 15:58:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,5 +248,5 @@
   (ext:run-program
    "/bin/sh"
    (list "-c"
-	 (format nil "man ~a|cat -s|sed -e 's/_//g' -e 's/o//g'" topic))
+	 (format nil "man ~a| ul -t adm3" topic))
    :output stream))
