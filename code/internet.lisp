@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.38 2002/12/03 01:43:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.39 2003/05/05 11:53:40 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -268,10 +268,7 @@ struct in_addr {
       socket)))
 
 (defun create-unix-listener (path &optional (kind :stream)
-				  &key
-				  reuse-address
-				  (backlog 5)
-				  )
+                             &key (backlog 5))
   (declare (simple-string path))
   (let ((socket (create-unix-socket kind)))
     (with-alien ((sockaddr unix-sockaddr)) ;; I'm here (MSM)
