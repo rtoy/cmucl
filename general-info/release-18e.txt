@@ -21,14 +21,10 @@ New in this release:
   * Feature enhancements:
      - Karatsuba multiplier added to give faster multiplication for
        big bignums.
-     - The sparc port has experimental support for native 64-bit
-       integers (unsigned-byte 64) and (signed-byte 64) on sparc v9
-       (64-bit) architectures.  Enabled if the feature :sparc-v8plus
-       is set.
-     - The x86 port better support for linking foreign libraries.  You
-       can now dump cores with foreign libraries and reload the core
-       without having to reload the libraries.  Available if the feature
-       :linkage-table is set.
+     - Better support for linking foreign libraries. You can now dump
+       cores with foreign libraries and reload the core without having
+       to reload the libraries. Available if the feature
+       :linkage-table is present.
 
   * Numerous ANSI compliance fixes:
      - SYMBOL-MACROLET signals an error when an attempt is made to
@@ -61,6 +57,16 @@ New in this release:
      - the sequence functions check to make sure sequences are
        specified and that, if lengths are given, the result matches
        the given length.
+     - when the argument to TRANSLATE-LOGICAL-PATHNAME is a physical
+       pathname, return it instead of signalling an error.
+     - the function DEFAULT-DIRECTORY returns a pathname with an
+       explicit Unix host, instead of leaving it unspecified.
+     - logical pathnames are now externalizable
+     - bad directives in FORMAT-LOGICAL-BLOCK: an error is now signalled
+       if ~W, ~_, ~<...~:>, ~I, or ~:T is used inside "~<..~>"
+       (without the colon modifier on the closing syntax).
+     - the SUBTYPEP function is more intelligent when dealing with
+       certain hairy types (such as those based on SATISFIES).
 
   * Numerous bugfixes:
      - READ-BYTE on certain types of multi-byte elements was incorrect
@@ -87,18 +93,22 @@ New in this release:
        error
      - PPRINT-LOGICAL-BLOCK with a numeric prefix no longer causes the
        system to crash
-     - in the byte-compiler, string comparisons STRING< and STRING>
+     - byte-compiled calls to two-argument STRING< and STRING>
        returned incorrect results
      - the function READ-SEQUENCE returned incorrect results for
        specialized arrays when the internal READ-N-BYTES function read
        short
      - when a sequence type specifies a length, CMUCL checks that the
        length of sequence arguments match the length of the sequence type
+     - the function REMOVE was not correctly handling all possible
+       combinations of the :start, :end and :from options.
      - the function COMPILE-FILE-PATHNAME computes the output file
        name by merging the input file name and the supplied output file name
      - the functions MAKE-BROADCAST-STREAM, MAKE-TWO-WAY-STREAM,
        MAKE-CONCATENATED-STREAM and MAKE-ECHO-STREAM check that their
        argument is an input or output stream, as appropriate
+     - STREAM-READ-SEQUENCE and STREAM-WRITE-SEQUENCE were getting
+       called with arguments in the wrong order.
      - numerous error conditions are signalled using a more specific
        condition type than a generic error
      - many (all?) cases where the unused labels functions were
@@ -109,8 +119,14 @@ New in this release:
        specific and/or ANSI compliant. 
      - error detection of defclass options in line with ANSI
        requirements. 
+     - the compiler now checks type declarations on array elements
+       before believing them.
 
   * Other changes:
+     - The sparc port has experimental support for native 64-bit
+       integers (unsigned-byte 64) and (signed-byte 64) on sparc v9
+       (64-bit) architectures.  Enabled if the feature :sparc-v8plus
+       is present (you will need to rebuild CMUCL).
      - the function PROFILE:REPORT-TIME no longer prints out a long
        list of functions that were not profiled. The cutoff is
        user-configurable by setting the new variable
@@ -118,14 +134,32 @@ New in this release:
      - reinstated the ability to build small runtime images (excluding
        the compiler)
      - DESCRIBE will print a note if a symbol names a type-specifier
+     - numeric types with empty ranges are accepted silently (instead
+       of signalling an error), and treated as the empty type.
   
   * Code cleanups:
+     - very numerous changes to the PCL implementation of CLOS, to
+       delete unused code, improve error checking.     
+     - a number of stale symbols have been deleted from CMUCL images
+
+  * Numerous improvements to the PCL implementation of CLOS:
+     - superfluous SLOT-BOUNDP checking for structure-classes has been
+       removed 
+     - the preallocation of caches for generic functions has been
+       removed, since benchmarking indicated that this doesn't provide a
+       noticeable performance increase
 
   * Changes to rebuilding procedure:
      - the search-list "modules:" tracks the "library:" search-list,
        instead of being set to whatever "library:subsystems/" is at
        startup. 
       
+  * Deprecated features:
+     - the HASH-NEW, NEW-COMPILER and RANDOM-MT19937 elements of the
+       *FEATURES* list are deprecated. Starting from the next release of
+       CMUCL, the corresponding code will be included in default CMUCL
+       builds.
+  
 
 This release is not binary compatible with code compiled using CMUCL
 18d; you will need to recompile FASL files. 
