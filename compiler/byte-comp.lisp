@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.2 1992/07/29 20:51:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.3 1992/08/02 19:50:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,12 +22,10 @@
 
 ;;; ### Remaining work:
 ;;;
-;;; - Add type-testing noise.  In other words, hack over checkgen to know
-;;; about the byte-compiler.
+;;; - add more inline operations & calls to two-arg functions.  structure slots
 ;;; - Breakpoints/debugging info.
-;;; - When a lambda-list has zero optionals (e.g. (foo &rest bar)) the
-;;; entry point for min/max-args is deleted.
-;;; - The XEP needs to have the name, arglist, etc. in it.
+;;; - The XEP needs to have the name, arglist, etc. in it. (?)
+;;;   compact small integer XEP slots into fixnum sub-fields.
 ;;;
 
 
@@ -44,28 +42,38 @@
 	   (type (unsigned-byte 8) byte))
   (new-assem:emit-byte segment byte))
 
+
+;;; OUTPUT-EXTENDED-OPERAND  --  Internal
+;;;
+;;;    Output Operand as 1 or 4 bytes, using #xFF as the extend code.
+;;;
+(defun output-extended-operand (segment operand)
+  (declare (type (unsigned-byte 24) operand))
+  (cond ((<= operand 254)
+	 (output-byte segment operand))
+	(t
+	 (output-byte segment #xFF)
+	 (output-byte segment (ldb (byte 8 16) operand))
+	 (output-byte segment (ldb (byte 8 8) operand))
+	 (output-byte segment (ldb (byte 8 0) operand)))))
+
+
 ;;; OUTPUT-BYTE-WITH-OPERAND -- internal.
 ;;;
 ;;; Output a byte, logior'ing in a 4 bit immediate constant.  If that
-;;; immediate won't fit, then emit it as the next 4 bytes.
+;;; immediate won't fit, then emit it as the next 1-4 bytes.
 ;;; 
 (defun output-byte-with-operand (segment byte operand)
   (declare (type new-assem:segment segment)
 	   (type (unsigned-byte 8) byte)
-	   (type (unsigned-byte 32) operand))
+	   (type (unsigned-byte 24) operand))
   (cond ((<= operand 14)
 	 (output-byte segment (logior byte operand)))
-	((<= operand 254)
-	 (output-byte segment (logior byte 15))
-	 (output-byte segment operand))
 	(t
 	 (output-byte segment (logior byte 15))
-	 (output-byte segment #xff)
-	 (output-byte segment (ldb (byte 8 24) operand))
-	 (output-byte segment (ldb (byte 8 16) operand))
-	 (output-byte segment (ldb (byte 8 8) operand))
-	 (output-byte segment (ldb (byte 8 0) operand))))
+	 (output-extended-operand segment operand)))
   (undefined-value))
+
 
 ;;; OUTPUT-LABEL -- internal.
 ;;;
@@ -151,30 +159,43 @@
 ;;;; System constants, Xops, and inline functions.
 
 (defvar *system-constants* (make-array 256))
+(defvar *system-constant-codes* (make-hash-table :test #'eq))
 
 (eval-when (compile eval)
   (defmacro def-system-constant (index form)
-    `(setf (svref *system-constants* ,index)
-	   ,form)))
+    `(let ((val ,form))
+       (setf (svref *system-constants* ,index) val)
+       (setf (gethash val *system-constant-codes*) ,index))))
 
 (def-system-constant 0 nil)
 (def-system-constant 1 t)
-
+(def-system-constant 2 :start)
+(def-system-constant 3 :end)
+(def-system-constant 4 :test)
+(def-system-constant 5 :count)
+(def-system-constant 6 :test-not)
+(def-system-constant 7 :key)
+(def-system-constant 8 :from-end)
+(def-system-constant 9 :type)
 
 (defparameter *xop-names*
-  '(breakpoint
-    dup
-    make-closure
+  '(breakpoint; 0
+    dup; 1
+    type-check; 2
+    fdefn-function-or-lose; 3
+    default-unknown-values; 4
+    xop5
+    xop6
+    xop7
     merge-unknown-values
-    default-unknown-values
+    make-closure
     throw
     catch
     breakup
     return-from
     tagbody
     go
-    unwind-protect
-    fdefn-function-or-lose))
+    unwind-protect))
 
 (defun xop-index-or-lose (name)
   (or (position name *xop-names* :test #'eq)
@@ -349,6 +370,12 @@
   (annotate-basic-combination-args call)
   (annotate-continuation (basic-combination-fun call) 0))
 
+;;; ANNOTATE-FULL-CALL  --  Internal
+;;;
+;;;    Annotate the values for any :full combination.  This includes inline
+;;; functions, multiple value calls & throw.  If a real full call, clear any
+;;; type-check annotations.
+;;;
 (defun annotate-full-call (call)
   (let* ((fun (basic-combination-fun call))
 	 (name (continuation-function-name fun))
@@ -369,16 +396,12 @@
 	   (annotate-continuation fun 0))
 	  (t
 	   (annotate-basic-combination-args call)
+	   (dolist (arg (basic-combination-args call))
+	     (when (continuation-type-check arg)
+	       (setf (continuation-%type-check arg) :deleted)))
 	   (annotate-continuation
 	    fun
-	    (let ((use (continuation-use fun)))
-	      (if (ref-p use)
-		  (let ((leaf (ref-leaf use)))
-		    (if (and (global-var-p leaf)
-			     (eq (global-var-kind leaf) :global-function))
-			:fdefinition
-			1))
-		  1))))))
+	    (if (continuation-function-name fun) :fdefinition 1)))))
   (undefined-value))
 
 (defun annotate-known-call (call)
@@ -679,7 +702,7 @@
 
 (defun output-push-int (segment int)
   (declare (type new-assem:segment segment)
-	   (type (integer #.(- (ash 1 32)) #.(1- (ash 1 32)))))
+	   (type (integer #.(- (ash 1 24)) #.(1- (ash 1 24)))))
   (if (minusp int)
       (output-byte-with-operand segment byte-push-neg-int (- (1+ int)))
       (output-byte-with-operand segment byte-push-int int)))
@@ -697,11 +720,11 @@
 				     byte-push-constant))
 				  (cdr info))
 	(let ((const (constant-value constant)))
-	  (if (and (integerp const) (< (- (ash 1 32)) const (ash 1 32)))
+	  (if (and (integerp const) (< (- (ash 1 24)) const (ash 1 24)))
 	      ;; It can be represented as an immediate.
 	      (output-push-int segment const)
 	      ;; We need to store it in the constants pool.
-	      (let* ((posn (position const *system-constants*))
+	      (let* ((posn (gethash const *system-constant-codes*))
 		     (new-info (if posn
 				   (cons :system-constant posn)
 				   (cons :local-constant
@@ -714,19 +737,33 @@
 
 (defun output-push-constant (segment value)
   (if (and (integerp value)
-	   (< (- (ash 1 32)) value (ash 1 32)))
+	   (< (- (ash 1 24)) value (ash 1 24)))
       (output-push-int segment value)
       (output-push-constant-leaf segment (find-constant value))))
 
+
+;;; BYTE-LOAD-TIME-CONSTANT-INDEX  --  Internal
+;;;
+;;;    Return the offset of a load-time constant in the constant pool, adding
+;;; it if absent.
+;;;
+(defun byte-load-time-constant-index (kind datum)
+  (let ((constants (byte-component-info-constants *byte-component-info*)))
+    (or (position-if #'(lambda (x)
+			 (and (consp x)
+			      (eq (car x) kind)
+			      (typecase datum
+				(cons (equal (cdr x) datum))
+				(ctype (type= (cdr x) datum))
+				(t
+				 (eq (cdr x) datum)))))
+		     constants)
+	(vector-push-extend (cons kind datum) constants))))
+
+
 (defun output-push-load-time-constant (segment kind datum)
-  (let* ((constants (byte-component-info-constants *byte-component-info*))
-	 (index (or (position-if #'(lambda (x)
-				     (and (consp x)
-					  (eq (car x) kind)
-					  (eq (cdr x) datum)))
-				 constants)
-		    (vector-push-extend (cons kind datum) constants))))
-    (output-byte-with-operand segment byte-push-constant index))
+  (output-byte-with-operand segment byte-push-constant
+			    (byte-load-time-constant-index kind datum))
   (undefined-value))
 
 (defun output-do-inline-function (segment function)
@@ -826,6 +863,62 @@
 	 (output-byte-with-operand segment byte-pop-n (- supplied desired))))
   (undefined-value))
 
+
+(defparameter *byte-type-weakenings*
+  (mapcar #'specifier-type
+	  '(fixnum single-float double-float simple-vector simple-bit-vector
+		   bit-vector)))
+
+;;; BYTE-GENERATE-TYPE-CHECK  --  Internal
+;;;
+;;;    Emit byte code to check that the value on TOS is of the specified Type.
+;;; Node is used for policy information.  We weaken or entirely omit the type
+;;; check if speed is more important than safety.
+;;;
+(defun byte-generate-type-check (segment type node)
+  (declare (type ctype type) (type node node))
+  (unless (or (policy node (zerop safety))
+	      (csubtypep *universal-type* type))
+    (let ((type (if (policy node (> speed safety))
+		    (dolist (super *byte-type-weakenings* type)
+		      (when (csubtypep type super) (return super)))
+		    type)))
+      (output-do-xop segment 'type-check)
+      (output-extended-operand
+       segment
+       (byte-load-time-constant-index :type-predicate type)))))
+
+
+;;; CHECKED-CANONICALIZE-VALUES  --  Internal
+;;;
+;;;    This function is used when we are generating code which delivers values
+;;; to a continuation.  If this continuation needs a type check, and has a
+;;; single value, then we do a type check.  We also CANONICALIZE-VALUES for the
+;;; continuation's desired number of values.
+;;;
+(defun checked-canonicalize-values (segment cont supplied)
+  (let ((info (continuation-info cont)))
+    (if info
+	(let ((desired (byte-continuation-info-results info)))
+	  (flet ((do-check ()
+		   (byte-generate-type-check
+		    segment
+		    (single-value-type (continuation-asserted-type cont))
+		    (continuation-dest cont))))
+	    (cond
+	     ((member (continuation-type-check cont) '(nil :deleted))
+	      (canonicalize-values segment desired supplied))
+	     ((eql supplied 1)
+	      (do-check)
+	      (canonicalize-values segment desired supplied))
+	     ((eql desired 1)
+	      (canonicalize-values segment desired supplied)
+	      (do-check))
+	     (t
+	      (canonicalize-values segment desired supplied)))))
+	(canonicalize-values segment 0 supplied))))
+
+
 (defun generate-byte-code-for-bind (segment bind cont)
   (declare (type new-assem:segment segment) (type bind bind)
 	   (ignore cont))
@@ -854,6 +947,35 @@
        )))
   (undefined-value))
 
+
+;;; This hashtable translates from n-ary function names to the two-arg specific
+;;; versions which we call to avoid rest-arg consing.
+;;;
+(defvar *two-arg-functions* (make-hash-table :test #'eq))
+
+(dolist (fun '((KERNEL:TWO-ARG-IOR  LOGIOR)
+	       (KERNEL:TWO-ARG-*  *)
+	       (KERNEL:TWO-ARG-+  +)
+	       (KERNEL:TWO-ARG-/  /)
+	       (KERNEL:TWO-ARG--  -)
+	       (KERNEL:TWO-ARG->  >)
+	       (KERNEL:TWO-ARG-<  <)
+	       (KERNEL:TWO-ARG-=  =)
+	       (KERNEL:TWO-ARG-LCM  LCM)
+	       (KERNEL:TWO-ARG-AND  LOGAND)
+	       (KERNEL:TWO-ARG-GCD  GCD)
+	       (KERNEL:TWO-ARG-XOR  LOGXOR)
+
+	       (two-arg-char= char=)
+	       (two-arg-char< char<)
+	       (two-arg-char> char>)
+	       (two-arg-char-equal char-equal)
+	       (two-arg-char-lessp char-lessp)
+	       (two-arg-char-greaterp char-greaterp)))
+
+  (setf (gethash (second fun) *two-arg-functions*) (first fun)))
+
+
 (defun generate-byte-code-for-ref (segment ref cont)
   (declare (type new-assem:segment segment) (type ref ref)
 	   (type continuation cont))
@@ -867,9 +989,15 @@
 	  (assert (and (global-var-p leaf)
 		       (eq (global-var-kind leaf)
 			   :global-function)))
-	  (output-push-load-time-constant segment
-					  :fdefinition
-					  (global-var-name leaf)))
+	  (let* ((name (global-var-name leaf))
+		 (found (gethash name *two-arg-functions*)))
+	    (output-push-load-time-constant
+	     segment :fdefinition
+	     (if (and found
+		      (= (length (combination-args (continuation-dest cont)))
+			 2))
+		 found
+		 name))))
 	 ((eql values 0)
 	  ;; Real easy!
 	  nil)
@@ -906,7 +1034,7 @@
 						:fdefinition
 						(global-var-name leaf))
 		(output-do-xop segment 'fdefn-function-or-lose)))))
-	  (canonicalize-values segment values 1))))))
+	  (checked-canonicalize-values segment cont 1))))))
   (undefined-value))
 
 (defun generate-byte-code-for-set (segment set cont)
@@ -929,18 +1057,26 @@
       (lambda-var
        (output-set-lambda-var segment leaf (node-environment set))))
     (unless (eql values 0)
-      (canonicalize-values segment values 1)))
+      (checked-canonicalize-values segment cont 1)))
   (undefined-value))
 
 (defun generate-byte-code-for-local-call (segment call cont num-args)
   (let* ((lambda (combination-lambda call))
+	 (vars (lambda-vars lambda))
 	 (env (lambda-environment lambda)))
     (ecase (functional-kind lambda)
-      ((:let :mv-let :assignment)
-       (let ((vars (lambda-vars lambda)))
+      ((:let :assignment)
+       (dolist (var (reverse vars))
+	 (when (lambda-var-refs var)
+	   (output-set-lambda-var segment var env t))))
+      (:mv-let
+       (let ((do-check (member (continuation-type-check
+				(first (basic-combination-args call)))
+			       '(t :error))))
 	 (dolist (var (reverse vars))
-	   (when (lambda-var-refs var)
-	     (output-set-lambda-var segment var env t)))))
+	   (when do-check
+	     (byte-generate-type-check segment (leaf-type var) call))
+	   (output-set-lambda-var segment var env t))))
       ((nil :optional :cleanup)
        ;; We got us a local call.  
        (assert (not (eq num-args :unknown)))
@@ -982,16 +1118,8 @@
 	 ;; ### :unknown-return
 	 ;; Fix up the results.
 	 (unless (node-tail-p call)
-	   (case results
-	     ((:unknown 1)
-	      ;; Don't need to do anything.
-	      )
-	     (0
-	      ;; Get rid of the one value.
-	      (output-byte-with-operand segment byte-pop-n 1))
-	     (t
-	      ;; Something strange.
-	      (canonicalize-values segment results :unknown))))))))
+	   (checked-canonicalize-values segment cont
+					(if (eql results 0) 1 results)))))))
   (undefined-value))
 
 (defun generate-byte-code-for-full-call (segment call cont num-args)
@@ -1013,9 +1141,9 @@
 	(canonicalize-values segment desired-args num-args)
 	;; ### :call-site
 	(output-byte segment (logior byte-inline-function
-				    (inline-function-info-number info)))
+				     (inline-function-info-number info)))
 	;; ### :known-return
-	(canonicalize-values segment results supplied-results)))
+	(checked-canonicalize-values segment cont supplied-results)))
      (t
       (let ((operand
 	     (cond ((eq num-args :unknown)
@@ -1031,25 +1159,21 @@
 		  :fdefinition)
 	  (setf operand (logior operand byte-named)))
 	;; ### :call-site
-	(if (node-tail-p call)
-	    (output-byte segment (logior byte-tail-call operand))
-	    (case results
-	      (:unknown
-	       (output-byte segment (logior byte-multiple-call operand))
-	       ;; ### :unknown-return
-	       )
-	      (0
-	       (output-byte segment (logior byte-call operand))
-	       ;; ### :unknown-return
-	       (output-byte-with-operand segment byte-pop-n 1))
-	      (1
-	       (output-byte segment (logior byte-call operand))
-	       ;; ### :unknown-return
-	       )
-	      (t
-	       (output-byte segment (logior byte-multiple-call operand))
-	       ;; ### :unknown-return
-	       (canonicalize-values segment results :unknown)))))))))
+	(cond
+	 ((node-tail-p call)
+	  (output-byte segment (logior byte-tail-call operand)))
+	 (t
+	  (output-byte segment
+		       (logior
+			(case results
+			  (:unknown byte-multiple-call)
+			  ((0 1) byte-call)
+			  (t byte-multiple-call))
+			operand))
+	  ;; ### :unknown-return
+	  (checked-canonicalize-values segment cont
+				       (if (eql results 0) 1 results)))))))))
+
 
 (defun generate-byte-code-for-known-call (segment call cont num-args)
   (block nil
@@ -1116,11 +1240,7 @@
 	      (eq (continuation-function-name (basic-combination-fun call))
 		  '%throw))
 	 ;; ### :internal-error
-	 (output-do-xop segment 'throw)
-	 (canonicalize-values segment
-			      (byte-continuation-info-results
-			       (continuation-info cont))
-			      0))
+	 (output-do-xop segment 'throw))
 	(t
 	 (generate-byte-code-for-generic-combination segment call cont))))
 
@@ -1223,19 +1343,19 @@
       (when (block-interesting block)
 	(output-label segment (byte-block-info-label info))
 	(do-nodes (node cont block)
-		  (etypecase node
-		    (bind (generate-byte-code-for-bind segment node cont))
-		    (ref (generate-byte-code-for-ref segment node cont))
-		    (cset (generate-byte-code-for-set segment node cont))
-		    (basic-combination
-		     (generate-byte-code-for-basic-combination
-		      segment node cont))
-		    (cif (generate-byte-code-for-if segment node cont))
-		    (creturn (generate-byte-code-for-return segment node cont))
-		    (entry (generate-byte-code-for-entry segment node cont))
-		    (exit
-		     (when (exit-entry node)
-		       (generate-byte-code-for-exit segment node cont)))))
+	  (etypecase node
+	    (bind (generate-byte-code-for-bind segment node cont))
+	    (ref (generate-byte-code-for-ref segment node cont))
+	    (cset (generate-byte-code-for-set segment node cont))
+	    (basic-combination
+	     (generate-byte-code-for-basic-combination
+	      segment node cont))
+	    (cif (generate-byte-code-for-if segment node cont))
+	    (creturn (generate-byte-code-for-return segment node cont))
+	    (entry (generate-byte-code-for-entry segment node cont))
+	    (exit
+	     (when (exit-entry node)
+	       (generate-byte-code-for-exit segment node cont)))))
 	(let* ((succ (block-succ block))
 	       (first-succ (car succ)))
 	  (unless (or (cdr succ)
@@ -1281,10 +1401,8 @@
 
 (defoptimizer (%byte-pop-stack byte-compile)
 	      ((count) node results num-args segment)
-  (assert (eql num-args 0))
-  (output-byte-with-operand segment byte-pop-n (continuation-value count))
-  (canonicalize-values segment results 0))
-
+  (assert (and (zerop num-args) (zerop results)))
+  (output-byte-with-operand segment byte-pop-n (continuation-value count)))
 
 (defoptimizer (%special-bind byte-annotate) ((var value) node)
   (annotate-continuation var 0)
@@ -1295,10 +1413,9 @@
 
 (defoptimizer (%special-bind byte-compile)
 	      ((var value) node results num-args segment)
-  (assert (eql num-args 1))
+  (assert (and (eql num-args 1) (zerop results)))
   (output-push-constant segment (leaf-name (continuation-value var)))
-  (output-do-inline-function segment '%byte-special-bind)
-  (canonicalize-values segment results 0))
+  (output-do-inline-function segment '%byte-special-bind))
 
 (defoptimizer (%special-unbind byte-annotate) ((var) node)
   (annotate-continuation var 0)
@@ -1308,9 +1425,8 @@
   
 (defoptimizer (%special-unbind byte-compile)
 	      ((var) node results num-args segment)
-  (assert (eql num-args 0))
-  (output-do-inline-function segment '%byte-special-unbind)
-  (canonicalize-values segment results 0))
+  (assert (and (zerop num-args) (zerop results)))
+  (output-do-inline-function segment '%byte-special-unbind))
 
 (defoptimizer (%catch byte-annotate) ((nlx-info tag) node)
   (annotate-continuation nlx-info 0)
@@ -1322,23 +1438,20 @@
 (defoptimizer (%catch byte-compile)
 	      ((nlx-info tag) node results num-args segment)
   (progn node) ; ignore
-  (assert (= num-args 1))
+  (assert (and (= num-args 1) (zerop results)))
   (output-do-xop segment 'catch)
   (let ((info (nlx-info-info (continuation-value nlx-info))))
-    (output-reference segment (byte-nlx-info-label info)))
-  (canonicalize-values segment results 0))
+    (output-reference segment (byte-nlx-info-label info))))
 
 (defoptimizer (%cleanup-point byte-compile) (() node results num-args segment)
-  (progn node) ; ignore
-  (assert (eql num-args 0))
-  (canonicalize-values segment results 0))
+  (progn node segment) ; ignore
+  (assert (and (zerop num-args) (zerop results))))
 
 
 (defoptimizer (%catch-breakup byte-compile) (() node results num-args segment)
   (progn node) ; ignore
-  (assert (eql num-args 0))
-  (output-do-xop segment 'breakup)
-  (canonicalize-values segment results 0))
+  (assert (and (zerop num-args) (zerop results)))
+  (output-do-xop segment 'breakup))
 
 
 (defoptimizer (%lexical-exit-breakup byte-annotate) ((nlx-info) node)
@@ -1349,7 +1462,7 @@
 
 (defoptimizer (%lexical-exit-breakup byte-compile)
 	      ((nlx-info) node results num-args segment)
-  (assert (eql num-args 0))
+  (assert (and (zerop num-args) (zerop results)))
   (let ((nlx-info (continuation-value nlx-info)))
     (when (ecase (cleanup-kind (nlx-info-cleanup nlx-info))
 	    (:catch t)
@@ -1360,8 +1473,7 @@
 	    (:tagbody
 	     ;; Only want to do it once per tagbody.
 	     (not (byte-nlx-info-duplicate (nlx-info-info nlx-info)))))
-      (output-do-xop segment 'breakup)
-      (canonicalize-values segment results 0))))
+      (output-do-xop segment 'breakup))))
 
 
 (defoptimizer (%nlx-entry byte-annotate) ((nlx-info) node)
@@ -1380,12 +1492,9 @@
     ;; ### :non-local-entry
     (ecase (cleanup-kind (nlx-info-cleanup info))
       ((:catch :block)
-       (let ((cont-info (continuation-info (nlx-info-continuation info))))
-	 (canonicalize-values segment
-			      (if cont-info
-				  (byte-continuation-info-results cont-info)
-				  0)
-			      :unknown)))
+       (checked-canonicalize-values segment
+				    (nlx-info-continuation info)
+				    :unknown))
       ((:tagbody :unwind-protect)))))
 
 
@@ -1399,20 +1508,18 @@
   
 (defoptimizer (%unwind-protect byte-compile)
 	      ((nlx-info cleanup-fun) node results num-args segment)
-  (assert (eql num-args 0))
+  (assert (and (zerop num-args) (zerop results)))
   (output-do-xop segment 'unwind-protect)
   (output-reference segment
 		    (byte-nlx-info-label
 		     (nlx-info-info
-		      (continuation-value nlx-info))))
-  (canonicalize-values segment results 0))
+		      (continuation-value nlx-info)))))
 
 (defoptimizer (%unwind-protect-breakup byte-compile)
 	      (() node results num-args segment)
   (progn node) ; ignore
-  (assert (eql num-args 0))
-  (output-do-xop segment 'breakup)
-  (canonicalize-values segment results 0))
+  (assert (and (zerop num-args) (zerop results)))
+  (output-do-xop segment 'breakup))
 
 (defoptimizer (%continue-unwind byte-annotate) ((a b c) node)
   (annotate-continuation a 0)
