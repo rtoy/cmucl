@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.1 1990/03/05 21:13:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.2 1990/03/08 15:48:58 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -55,7 +55,7 @@
   (temp nil :type '(or null reg-spec))
   (sc nil :type '(or null sc))
   (offset nil :type '(or null fixnum))
-  (type nil :type '(or null primitive-type))
+  (type nil :type '(or null symbol))
   (from '(:eval 1))
   (to '(:eval 2))
   (keys :type 'list))
@@ -73,7 +73,7 @@
 	    (reg-spec-temp spec)
 	    (maybe sc-name (reg-spec-sc spec))
 	    (reg-spec-offset spec)
-	    (maybe primitive-type-name (reg-spec-type spec)))))
+	    (reg-spec-type spec))))
 
 (defun parse-reg-spec (kind name &rest keys &key sc offset type
 			    (from '(:eval 1)) (to '(:eval 2))
@@ -82,7 +82,7 @@
 		 :name name
 		 :sc (if sc (sc-or-lose sc))
 		 :offset (eval offset)
-		 :type (if type (primitive-type-or-lose type))
+		 :type type
 		 :from from
 		 :to to
 		 :keys keys))
@@ -264,8 +264,7 @@
 				   :offset ,(reg-spec-offset temp)
 				   ,@(when (reg-spec-type temp)
 				       `(:type
-					 ,(primitive-type-name
-					   (reg-spec-type temp))))
+					 ,(reg-spec-type temp)))
 				   ,@(when (reg-spec-from temp)
 				       `(:from ,(reg-spec-from temp)))
 				   ,@(when (reg-spec-to temp)
