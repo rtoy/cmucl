@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.9.4.1 2003/03/23 15:25:13 pmai Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.9.4.2 2003/03/25 16:10:21 pmai Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -140,12 +140,14 @@ find a possible core file.
 When the environment variable CMUCLLIB is set or the -lib option is
 given, the lisp core file is searched in the places specified
 therein.  This is a colon-separated list of directories, just like
-PATH.  This is of directories is searched in order for a file named
+PATH.  This list of directories is searched in order for a file named
 `lisp.core'.  The first one found will be the core to be used.
 
 When the CMUCLLIB is not set and -lib is not given, a set of default
-paths is used.  Let the lisp C executable be located at `<bin>/lisp'.
-Then the following directories are searched for the core file:
+paths is used to initialize the library: search-list, and this list is
+also used to search for the core file.  Let the lisp C executable be
+located at `<bin>/lisp'.  Then the following directories are searched
+for the core file:
 
 .TP 10n
 .BR `<bin>'
