@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.22 1990/07/02 16:34:30 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.23 1990/07/05 10:59:15 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -553,7 +553,7 @@
 	 (ft :constant 0)
 	 (fd :argument fp-reg)
 	 (fs :argument fp-reg)
-	 (funct :constant #b000101))
+	 (funct :constant #b000111))
   (float (format :argument float-format)
 	 (ft :constant 0)
 	 (fd :argument fp-reg)
