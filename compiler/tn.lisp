@@ -77,41 +77,34 @@
   (declare (type primitive-type type))
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal type nil))
-	 (costs (tn-costs res)))
-    (dolist (scn (primitive-type-scs type))
-      (setf (svref costs scn) 0))
+		       :normal type nil)))
     (push-in tn-next res (ir2-component-normal-tns component))
-    res))
-
-
-;;; Make-Environment-TN  --  Interface
-;;;
-;;;    Like Make-Normal-TN, but give it a :Environment kind and note it in the
-;;; specified Environment.
-;;;
-(defun make-environment-tn (type env)
-  (declare (type primitive-type type) (type environment env))
-  (let ((res (make-normal-tn type)))
-    (setf (tn-kind res) :environment)
-    (push res (ir2-environment-live-tns (environment-info env)))
     res))
 
 
 ;;; Make-Restricted-TN  --  Interface
 ;;;
-;;;    Create a packed TN restricted to some subset of the SCs normally allowed
-;;; by Type.  SCs is a list of the legal SC numbers.
+;;;    Create a packed TN restricted to the SC with number SCN.
 ;;;
-(defun make-restricted-tn (type scs)
-  (declare (type primitive-type type) (type list scs))
+(defun make-restricted-tn (scn)
+  (declare (type sc-number scn))
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal type nil))
-	 (costs (tn-costs res)))
-    (dolist (scn scs)
-      (setf (svref costs scn) 0))
+		       :normal nil (svref *sc-numbers* scn))))
     (push-in tn-next res (ir2-component-restricted-tns component))
+    res))
+
+
+;;; MAKE-REPRESENTATION-TN  --  Interface
+;;;
+;;;    Create a normal packed TN with representation indicated by SCN.
+;;;
+(defun make-representation-tn (scn)
+  (declare (type sc-number scn))
+  (let* ((component (component-info *compile-component*))
+	 (res (make-tn (incf (ir2-component-global-tn-counter component))
+		       :normal nil (svref *sc-numbers* scn))))
+    (push-in tn-next res (ir2-component-normal-tns component))
     res))
 
 
@@ -119,31 +112,41 @@
 ;;;
 ;;;    Create a TN wired to a particular location in an SC.  We set the Offset
 ;;; and FSC to record where it goes, and then put it on the current component's
-;;; Wired-TNs list.  Type is used to determine the move/coerce operations.
+;;; Wired-TNs list.
 ;;;
-(defun make-wired-tn (type scn offset)
-  (declare (type primitive-type type) (type sc-number scn)
-	   (type unsigned-byte offset))
+(defun make-wired-tn (scn offset)
+  (declare (type sc-number scn) (type unsigned-byte offset))
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal type (svref *sc-numbers* scn))))
+		       :normal nil (svref *sc-numbers* scn))))
     (setf (tn-offset res) offset)
     (push-in tn-next res (ir2-component-wired-tns component))
     res))
 
 
-;;; Make-Wired-Environment-TN  --  Interface
+;;; Environment-Live-TN  --  Interface
 ;;;
-;;;    Like Make-Wired-TN, but give it a :Environment kind and note it in the
-;;; specified Environment.
+;;;    Make TN be live throughout environment.  TN must be referenced only in
+;;; Env.  Return TN.
 ;;;
-(defun make-wired-environment-tn (type scn offset env)
-  (declare (type primitive-type type) (type sc-number scn)
-	   (type unsigned-byte offset) (type environment env))
-  (let ((res (make-wired-tn type scn offset)))
-    (setf (tn-kind res) :environment)
-    (push res (ir2-environment-live-tns (environment-info env)))
-    res))
+(defun environment-live-tn (tn env)
+  (declare (type tn tn) (type environment env))
+  (assert (eq (tn-kind tn) :normal))
+  (setf (tn-kind tn) :environment)
+  (push tn (ir2-environment-live-tns (environment-info env)))
+  tn)
+
+
+;;; Component-Live-TN  --  Interface
+;;;
+;;;    Make TN be live throughout the current component.  Return TN.
+;;;
+(defun component-live-tn (tn)
+  (declare (type tn tn))
+  (assert (eq (tn-kind tn) :normal))
+  (setf (tn-kind tn) :component)
+  (push tn (ir2-component-component-tns (component-info *compile-component*)))
+  tn)
 
 
 ;;; Make-Constant-TN  --  Interface
@@ -262,6 +265,151 @@
 
 ;;;; Random utilities:
 
+
+;;; Emit-Move-Template  --  Internal
+;;;
+;;;    Emit a move-like template determined at run-time, with X as the argument
+;;; and Y as the result.  Useful for move, coerce and type-check templates.  If
+;;; supplied, then insert before VOP, otherwise insert at then end of the
+;;; block.  Returns the last VOP inserted.
+;;;
+(defun emit-move-template (node block template x y &optional before)
+  (declare (type node node) (type ir2-block block)
+	   (type template template) (type tn x y))
+  (let ((arg (reference-tn x nil))
+	(result (reference-tn y t)))
+    (multiple-value-bind
+	(first last)
+	(funcall (template-emit-function template) node block template arg
+		 result)
+      (insert-vop-sequence first last block before)
+      last)))
+
+
+;;; EMIT-LOAD-TEMPLATE  --  Internal
+;;;
+;;;    Like EMIT-MOVE-TEMPLATE, except that we pass in Info args too.
+;;;
+(defun emit-load-template (node block template x y info &optional before)
+  (declare (type node node) (type ir2-block block)
+	   (type template template) (type tn x y))
+  (let ((arg (reference-tn x nil))
+	(result (reference-tn y t)))
+    (multiple-value-bind
+	(first last)
+	(funcall (template-emit-function template) node block template arg
+		 result info)
+      (insert-vop-sequence first last block before)
+      last)))
+
+
+;;; EMIT-MOVE-ARG-TEMPLATE  --  Internal
+;;;
+;;;    Like EMIT-MOVE-TEMPLATE, except that the VOP takes two args.
+;;;
+(defun emit-move-arg-template (node block template x f y &optional before)
+  (declare (type node node) (type ir2-block block)
+	   (type template template) (type tn x f y))
+  (let ((x-ref (reference-tn x nil))
+	(f-ref (reference-tn f nil))
+	(y-ref (reference-tn y t)))
+    (setf (tn-ref-across x-ref) f-ref)
+    (multiple-value-bind
+	(first last)
+	(funcall (template-emit-function template) node block template x-ref
+		 y-ref)
+      (insert-vop-sequence first last block before)
+      last)))
+
+
+;;; EMIT-CONTEXT-TEMPLATE  --  Internal
+;;;
+;;;    Like EMIT-MOVE-TEMPLATE, except that the VOP takes no args.
+;;;
+(defun emit-context-template (node block template y &optional before)
+  (declare (type node node) (type ir2-block block)
+	   (type template template) (type tn y))
+  (let ((y-ref (reference-tn y t)))
+    (multiple-value-bind
+	(first last)
+	(funcall (template-emit-function template) node block template nil
+		 y-ref)
+      (insert-vop-sequence first last block before)
+      last)))
+
+
+;;; Block-Label  --  Interface
+;;;
+;;;    Return the label marking the start of Block, assigning one if necessary.
+;;;
+(defun block-label (block)
+  (declare (type cblock block))
+  (let ((2block (block-info block)))
+    (or (ir2-block-%label 2block)
+	(setf (ir2-block-%label 2block) (gen-label)))))
+
+
+;;; Drop-Thru-P  --  Interface
+;;;
+;;;    Return true if Block is emitted immediately after the block ended by
+;;; Node.
+;;;
+(defun drop-thru-p (node block)
+  (declare (type node node) (type cblock block))
+  (let ((next-block (ir2-block-next (block-info (node-block node)))))
+    (assert (eq node (block-last (node-block node))))
+    (eq next-block (block-info block))))
+
+
+;;; Insert-VOP-Sequence  --  Interface
+;;;
+;;;    Link a list of VOPs from First to Last into Block, Before the specified
+;;; VOP.  If Before is NIL, insert at the end.
+;;;
+(defun insert-vop-sequence (first last block before)
+  (declare (type vop first last) (type ir2-block block)
+	   (type (or vop null) before))
+  (if before
+      (let ((prev (vop-prev before)))
+	(setf (vop-prev first) prev)
+	(if prev
+	    (setf (vop-next prev) first)
+	    (setf (ir2-block-start-vop block) first))
+	(setf (vop-next last) before)
+	(setf (vop-prev before) last))
+      (let ((current (ir2-block-last-vop block)))
+	(setf (vop-prev first) current)
+	(setf (ir2-block-last-vop block) last)
+	(if current
+	    (setf (vop-next current) first)
+	    (setf (ir2-block-start-vop block) first))))
+  (undefined-value))
+
+
+;;; DELETE-VOP  --  Interface
+;;;
+;;;    Delete all of the TN-Refs associated with VOP and remove VOP from the
+;;; IR2.
+;;;
+(defun delete-vop (vop)
+  (declare (type vop vop))
+  (do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
+      ((null ref))
+    (delete-tn-ref ref))
+
+  (let ((prev (vop-prev vop))
+	(next (vop-next vop))
+	(block (vop-block vop)))
+    (if prev
+	(setf (vop-next prev) next)
+	(setf (ir2-block-start-vop block) next))
+    (if next
+	(setf (vop-prev next) prev)
+	(setf (ir2-block-last-vop block) prev)))
+
+  (undefined-value))
+
+
 ;;; Make-N-TNs  --  Interface
 ;;;
 ;;;    Return a list of N normal TNs of the specified primitive type.
@@ -300,29 +448,36 @@
 
 ;;; Force-TN-To-Stack  --  Interface
 ;;;
-;;;    Force TN not to be allocated in a register by clearing the cost for each
-;;; SC that has a Save-SC.
+;;;    Force TN to be allocated in a SC that doesn't need to be saved: an
+;;; unbounded non-save-p SC.  We don't actually make it a real "restricted" TN,
+;;; but since we change the SC to an unbounded one, we should always succeed in
+;;; packing it in that SC.
 ;;;
 (defun force-tn-to-stack (tn)
   (declare (type tn tn))
-  (let ((costs (tn-costs tn)))
-    (dotimes (i sc-number-limit)
-      (when (svref *save-scs* i)
-	(setf (svref costs i) nil))))
+  (let ((sc (tn-sc tn)))
+    (unless (and (not (sc-save-p sc))
+		 (eq (sb-kind (sc-sb sc)) :unbounded))
+      (dolist (alt (sc-alternate-scs sc)
+		   (error "SC ~S has no :unbounded :save-p NIL alternate SC."
+			  (sc-name sc)))
+	(when (and (not (sc-save-p alt))
+		   (eq (sb-kind (sc-sb alt)) :unbounded))
+	  (setf (tn-sc tn) alt)
+	  (return)))))
   (undefined-value))
 
 
 ;;; TN-Environment  --  Interface
 ;;;
-;;;    Return some IR2-Environment that TN is referenced in.  TN must have at
-;;; least one reference (either read or write.)  Note that some TNs are
-;;; referenced in multiple environments.
+;;;    Return some Environment that TN is referenced in.  TN must have at least
+;;; one reference (either read or write.)  Note that some TNs are referenced in
+;;; multiple environments.
 ;;;
 (defun tn-environment (tn)
   (declare (type tn tn))
   (let ((ref (or (tn-reads tn) (tn-writes tn))))
     (assert ref)
-    (environment-info
-     (lambda-environment
-      (block-lambda
-       (ir2-block-block (vop-block (tn-ref-vop ref))))))))
+    (lambda-environment
+     (block-lambda
+      (ir2-block-block (vop-block (tn-ref-vop ref)))))))
