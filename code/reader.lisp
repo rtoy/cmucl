@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.22 1997/03/20 21:53:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.23 1998/03/26 13:20:48 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
 
 ;;;; Reader errors:
 
-(define-condition reader-error (simple-condition stream-error) ()
+(define-condition reader-error (parse-error stream-error) ()
   (:report
    (lambda (condition stream)
      (let ((error-stream (stream-error-stream condition)))
