@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.71 1993/09/04 22:52:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.72 1994/02/11 13:38:00 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,13 +25,13 @@
 (set '*lisp-implementation-version* (read-line))
 
 ;;; Load the rest of the reader (may be byte-compiled.)
-(load "target:code/sharpm")
-(load "target:code/backq")
+(maybe-byte-load "target:code/sharpm")
+(maybe-byte-load "target:code/backq")
 (setq std-lisp-readtable (copy-readtable *readtable*))
 
-(load "target:code/extensions")
-(load "target:code/defmacro")
-(load "target:code/sysmacs")
+(maybe-byte-load "target:code/extensions")
+(maybe-byte-load "target:code/defmacro")
+(maybe-byte-load "target:code/sysmacs")
 
 ;;; Define a bunch of search lists relative to target:
 ;;;
@@ -60,38 +60,46 @@
 
 ;;; Make sure the package structure is correct.
 ;;;
-(load "code:exports")
+(maybe-byte-load "code:exports")
 
 ;;; Load random code sources.
 
-(load "code:format-time")
-(load "code:parse-time")
-#-gengc (load "code:purify")
-(load "code:commandline")
-(load "code:sort")
-(load "code:time")
-(load "code:tty-inspect")
-(load "code:describe")
-(load "code:rand")
-(load "code:ntrace")
-(load "code:profile")
-(load "code:weak")
-(load "code:final")
-(load "code:sysmacs")
-#-gengc (load "code:run-program")
-(load "code:query")
-(load "code:loop")
-(load "code:internet")
-(load "code:wire")
-(load "code:remote")
-(load "code:foreign")
-(load "code:setf-funs")
-(load "code:module")
-#-gengc (load "code:room")
+(maybe-byte-load "code:format-time")
+(maybe-byte-load "code:parse-time")
+#-gengc (maybe-byte-load "code:purify")
+(maybe-byte-load "code:commandline")
+(maybe-byte-load "code:sort")
+(maybe-byte-load "code:time")
+(maybe-byte-load "code:tty-inspect")
+(maybe-byte-load "code:describe")
+(maybe-byte-load "code:rand")
+(maybe-byte-load "code:ntrace")
+#-runtime (maybe-byte-load "code:profile")
+(maybe-byte-load "code:weak")
+(maybe-byte-load "code:final")
+(maybe-byte-load "code:sysmacs")
+#-gengc (maybe-byte-load "code:run-program")
+(maybe-byte-load "code:query")
+(maybe-byte-load "code:loop")
+#-runtime (maybe-byte-load "code:internet")
+#-runtime (maybe-byte-load "code:wire")
+#-runtime (maybe-byte-load "code:remote")
+(maybe-byte-load "code:foreign")
+(maybe-byte-load "code:setf-funs")
+(maybe-byte-load "code:module")
+#-(or gengc runtime) (maybe-byte-load "code:room")
 
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
-#-gengc (load "target:code/debug.*bytef" :if-does-not-exist nil)
-#-gengc (load "target:code/error.*bytef" :if-does-not-exist nil)
+#-gengc
+(progn
+  (byte-load-over "target:code/debug")
+  (byte-load-over "target:code/error")
+  (maybe-byte-load "target:code/pprint" nil)
+  (maybe-byte-load "target:code/format" nil)
+  (maybe-byte-load "target:code/reader" nil)
+  (maybe-byte-load "target:code/pathname" nil)
+  (maybe-byte-load "target:code/filesys" nil)
+  (maybe-byte-load "target:code/macros" nil))
 
 (defvar *old-ie*)
 
@@ -108,9 +116,9 @@
 	`(lisp::%top-level extensions:save-lisp ,lisp::fop-codes))
 
 ;;; Load the compiler.
-#-no-compiler
+#-(or no-compiler runtime)
 (progn
-  (load "c:loadcom.lisp")
+  (maybe-byte-load "c:loadcom.lisp")
   (setq *old-ie* (car *info-environment*))
   (setq *info-environment*
 	(list* (make-info-environment)
@@ -119,7 +127,7 @@
 	       (rest *info-environment*)))
   (lisp::shrink-vector (c::volatile-info-env-table *old-ie*) 0)
 
-  (load "c:loadbackend.lisp")
+  (maybe-byte-load "c:loadbackend.lisp")
   ;; If we want a small core, blow away the meta-compile time VOP info.
   #+small (setf (c::backend-parsed-vops c:*backend*)
 		(make-hash-table :test #'eq))
@@ -142,28 +150,28 @@
 ;;; until after the compiler is loaded because it compiles some lambdas
 ;;; to help with the dispatching.
 ;;; 
-#-no-pp
+#-(or no-pp runtime)
 (pp::pprint-init)
 
 ;;; CLX.
 ;;;
-#-no-clx
-(load "clx:clx-library")
+#-(or no-clx runtime)
+(maybe-byte-load "clx:clx-library")
 
 ;;; Hemlock.
 ;;;
-#-no-hemlock
-(load "target:hemlock/hemlock-library")
+#-(or no-hemlock runtime)
+(maybe-byte-load "target:hemlock/hemlock-library")
 
 ;;; PCL.
 ;;;
-#-no-pcl (load "pcl:pclload")
-; #+(and no-clm (not (or no-pcl no-clx))) (load "code:inspect")
+#-(or no-pcl runtime) (maybe-byte-load "pcl:pclload")
+; #+(and no-clm (not (or no-pcl no-clx))) (maybe-byte-load "code:inspect")
 
 ;;; CLM.
 ;;;
-#-no-clm
-(load "target:interface/clm-library")
+#-(or no-clm runtime)
+(maybe-byte-load "target:interface/clm-library")
 
 (defvar *target-sl*)
 (setq *target-sl* (search-list "target:"))
