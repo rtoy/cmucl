@@ -260,7 +260,7 @@
      (i :argument (signed-byte 16)))
   (d (op :constant #xC8)
      (r2 :argument register)
-     (r3 :constant 0)
+     (r3 :same-as r2)
      (i :argument (signed-byte 16)))
   (d (op :constant #xC8)
      (r2 :argument register)
