@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.21 1997/02/22 12:49:35 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.22 1997/02/23 09:53:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,8 +152,6 @@
     (declare (fixnum array-rank))
     (when (and displaced-index-offset (null displaced-to))
       (error "Can't specify :displaced-index-offset without :displaced-to"))
-    (when (and fill-pointer (realp fill-pointer) (minusp fill-pointer))
-      (error "Can't specify a negative fill-pointer"))
     (if (and simple (= array-rank 1))
 	;; Its a (simple-array * (*))
 	(multiple-value-bind (type bits)
@@ -198,10 +196,18 @@
 	  (cond (fill-pointer
 		 (unless (= array-rank 1)
 		   (error "Only vectors can have fill pointers."))
-		 (setf (%array-fill-pointer array)
-		       (if (eq fill-pointer t)
-			   (car dimensions)
-			   fill-pointer))
+		 (let ((length (car dimensions)))
+		   (declare (fixnum length))
+		   (setf (%array-fill-pointer array)
+		     (cond ((eq fill-pointer t)
+			    length)
+			   (t
+			    (unless (and (fixnump fill-pointer)
+					 (>= fill-pointer 0)
+					 (<= fill-pointer length))
+				    (error "Invalid fill-pointer ~D"
+					   fill-pointer))
+			    fill-pointer))))
 		 (setf (%array-fill-pointer-p array) t))
 		(t
 		 (setf (%array-fill-pointer array) total-size)
