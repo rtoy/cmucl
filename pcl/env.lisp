@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.13 2001/03/14 23:25:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.14 2002/06/05 23:00:11 pmai Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -329,8 +329,8 @@
 
 (defmethod make-instance ((class lisp:class) &rest stuff)
   (apply #'make-instance (coerce-to-pcl-class class) stuff))
-(defmethod change-class (instance (class lisp:class))
-  (apply #'change-class instance (coerce-to-pcl-class class)))
+(defmethod change-class (instance (class lisp:class) &rest initargs)
+  (apply #'change-class instance (coerce-to-pcl-class class) initargs))
 
 (macrolet ((frob (&rest names)
 	     `(progn

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.28 2001/11/29 03:50:35 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.29 2002/06/05 23:00:12 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -1198,7 +1198,7 @@
 	     (setf (fsc-instance-slots ,instance) (fsc-instance-slots ,instance)))
 	 copy)))
 
-(defun change-class-internal (instance new-class)
+(defun change-class-internal (instance new-class initargs)
   (let* ((old-class (class-of instance))
 	 (copy (allocate-instance new-class))
 	 (new-wrapper (get-wrapper copy))
@@ -1234,31 +1234,37 @@
     ;; old instance point to the new storage.
     (swap-wrappers-and-slots instance copy)
 
-    (update-instance-for-different-class copy instance)
+    (apply #'update-instance-for-different-class copy instance initargs)
     instance))
 
 (defmethod change-class ((instance standard-object)
-			 (new-class standard-class))
-  (change-class-internal instance new-class))
+			 (new-class standard-class)
+			 &rest initargs)
+  (change-class-internal instance new-class initargs))
 
 (defmethod change-class ((instance funcallable-standard-object)
-			 (new-class funcallable-standard-class))
-  (change-class-internal instance new-class))
+			 (new-class funcallable-standard-class)
+			 &rest initargs)
+  (change-class-internal instance new-class initargs))
 
 (defmethod change-class ((instance standard-object)
-			 (new-class funcallable-standard-class))
+			 (new-class funcallable-standard-class)
+			 &rest initargs)
+  (declare (ignore initargs))
   (error "Can't change the class of ~S to ~S~@
           because it isn't already an instance with metaclass ~S."
 	 instance new-class 'standard-class))
 
 (defmethod change-class ((instance funcallable-standard-object)
-			 (new-class standard-class))
+			 (new-class standard-class)
+			 &rest initargs)
+  (declare (ignore initargs))
   (error "Can't change the class of ~S to ~S~@
           because it isn't already an instance with metaclass ~S."
 	 instance new-class 'funcallable-standard-class))
 
-(defmethod change-class ((instance t) (new-class-name symbol))
-  (change-class instance (find-class new-class-name)))
+(defmethod change-class ((instance t) (new-class-name symbol) &rest initargs)
+  (apply #'change-class instance (find-class new-class-name) initargs))
 
 
 

@@ -2,7 +2,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.9 1999/05/30 23:14:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.10 2002/06/05 23:00:11 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -489,7 +489,7 @@
 (defgeneric add-method (generic-function method))
 ;          (standard-generic-function method)
 
-(defgeneric change-class (instance new-class-name))
+(defgeneric change-class (instance new-class-name &rest initargs))
 ;          (standard-object standard-class)
 ;          (funcallable-standard-object funcallable-standard-class)
 ;          (t symbol)
