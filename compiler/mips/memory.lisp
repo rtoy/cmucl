@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.2 1990/02/08 19:40:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.3 1990/02/18 02:22:44 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions of some general purpose memory
 ;;; reference VOPs inherited by basic memory reference operations.
@@ -111,6 +111,7 @@
 	    (index :scs (any-reg descriptor-reg immediate negative-immediate))
 	    ,@(when write-p
 		'((value :scs (any-reg descriptor-reg) :target result))))
+     (:temporary (:scs (interior-reg) :type interior) lip)
      (:results (,(if write-p 'result 'value)
 		:scs (any-reg descriptor-reg)))
      (:variant-vars offset lowtag)
@@ -127,10 +128,10 @@
 	       '(nop)))
 	 (t
 	  ,@(if (zerop shift)
-		`((inst add lip-tn object index))
-		`((inst srl lip-tn index ,shift)
-		  (inst add lip-tn lip-tn object)))
-	  (inst ,op value lip-tn (- (ash offset word-shift) lowtag))
+		`((inst add lip object index))
+		`((inst srl lip index ,shift)
+		  (inst add lip lip object)))
+	  (inst ,op value lip (- (ash offset word-shift) lowtag))
 	  ,@(when write-p
 	      `((move result value))))))))
 
