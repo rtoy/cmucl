@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.13 1990/02/22 16:57:14 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.14 1990/02/22 16:59:27 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -464,7 +464,7 @@
        (inst andi ,ndescr-temp flags-tn (ash 1 interrupted-flag))
        (inst beq ,ndescr-temp zero-tn ,label)
        (nop)
-       (inst load-foreign-address ,ndescr-temp "interrupt-resumer")
+       (inst load-foreign-address ,ndescr-temp "interrupt_resumer")
        (inst jr ,ndescr-temp)
        (nop)
        (emit-label ,label))))
