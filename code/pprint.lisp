@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.22 1994/12/02 23:27:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.23 1998/02/24 17:36:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -568,7 +568,7 @@
 
 (defun fits-on-line-p (stream until force-newlines-p)
   (let ((available (pretty-stream-line-length stream)))
-    (when (and *print-lines*
+    (when (and (not *print-readably*) *print-lines*
 	       (= *print-lines* (pretty-stream-line-number stream)))
       (decf available 3) ; for the `` ..''
       (decf available (logical-block-suffix-length
@@ -602,7 +602,8 @@
     (write-string buffer target :end amount-to-print)
     (let ((line-number (pretty-stream-line-number stream)))
       (incf line-number)
-      (when (and *print-lines* (>= line-number *print-lines*))
+      (when (and (not *print-readably*)
+		 *print-lines* (>= line-number *print-lines*))
 	(write-string " .." target)
 	(let ((suffix-length (logical-block-suffix-length
 			      (car (pretty-stream-blocks stream)))))
@@ -730,7 +731,8 @@
 				    (write-string ". " ,stream-var)
 				    (output-object ,object-var ,stream-var)
 				    (return-from ,block-name nil))))
-			    (when (eql ,count-name *print-length*)
+			    (when (and (not *print-readably*)
+				       (eql ,count-name *print-length*))
 			      (write-string "..." ,stream-var)
 			      (return-from ,block-name nil))
 			    ,@(when object
