@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.29.2.3 2000/08/12 15:05:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.29.2.4 2000/08/19 17:48:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -999,6 +999,10 @@
    (setf (process-wait-timeout process) nil)
    (setf (process-wait-return-value process) nil)
    (setf (process-interrupts process) nil)
+   (setf (process-scheduled-real-time process) (get-real-time))
+   (setf (process-scheduled-run-time process) (get-run-time))
+   (setf (process-%real-time process) 0d0)
+   (setf (process-%run-time process) 0d0)
    (setf (process-state process) :active)
    (push process *all-processes*))
   process)
