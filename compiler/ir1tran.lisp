@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.110 1997/08/21 18:38:50 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.111 1998/05/15 03:26:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1149,6 +1149,13 @@
     (t
      (let ((what (first spec)))
        (cond ((member what type-specifier-symbols)
+	      (process-type-declaration spec res vars))
+	     ((and (not (and (symbolp what)
+			     (string= (symbol-name what) "CLASS"))) ; pcl hack
+		   (or (info type kind what)
+		       (and (consp what) (info type translator (car what)))))
+	      (unless (policy nil (= brevity 3))
+		(compiler-note "Abbreviated type declaration: ~S." spec))
 	      (process-type-declaration spec res vars))
 	     ((info declaration recognized what)
 	      res)
