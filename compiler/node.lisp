@@ -14,6 +14,8 @@
 ;;;
 (in-package 'c)
 
+(export '(component component-info))
+
 ;;; Defvars for these variables appear later.
 (proclaim '(special *current-path* *lexical-environment* *current-component*
 		    *default-cookie*))
