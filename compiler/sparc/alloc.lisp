@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.3 1992/03/11 21:28:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.4 1992/04/14 02:51:46 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the SPARC port.
 ;;;
@@ -49,7 +49,7 @@
 		    (alloc (* (pad-data-block cons-size) cons-cells)))
 	       (pseudo-atomic (:extra alloc)
 		 (inst andn res alloc-tn lowtag-mask)
-		 (inst or res alloc-tn list-pointer-type)
+		 (inst or res list-pointer-type)
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (storew (maybe-load (tn-ref-tn things)) ptr
