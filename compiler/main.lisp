@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.68 1992/07/30 13:24:54 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.69 1992/08/02 19:40:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -343,8 +343,11 @@
 	    ((t) t)
 	    ((nil) nil)
 	    (:maybe
-	     ;; ### Need some heuristic
-	     nil))))
+	     (dolist (fun (component-lambdas component) t)
+	       (unless (policy (lambda-bind fun)
+			       (eql (max space cspeed) 3))
+		 (return nil)))))))
+
     (when *compile-print*
       (compiler-mumble "~&~:[~;Byte ~]Compiling ~A: "
 		       *byte-compiling*
