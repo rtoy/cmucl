@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.8 2003/08/03 11:27:50 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.9 2004/04/07 01:27:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,6 +63,7 @@
   (loadw length string vector-length-slot other-pointer-type)
   (inst jmp (make-fixup 'sxhash-simple-substring :assembly-routine)))
 
+#+nil
 (define-assembly-routine (sxhash-simple-substring
 			  (:translate %sxhash-simple-substring)
 			  (:policy :fast-safe)
@@ -125,6 +126,69 @@
 
   DONE
 
+  ;; Force result to be a positive fixnum.
+  (inst and result #x7ffffffc)
+  (inst ret))
+
+(define-assembly-routine (sxhash-simple-substring
+			  (:translate %sxhash-simple-substring)
+			  (:policy :fast-safe)
+			  (:arg-types * positive-fixnum)
+			  (:result-types positive-fixnum))
+			 ((:arg string descriptor-reg ebx-offset)
+			  (:arg length any-reg edi-offset)
+			  (:res result any-reg edx-offset)
+
+			  (:temp esi unsigned-reg esi-offset)
+			  (:temp ecx unsigned-reg ecx-offset)
+			  (:temp eax unsigned-reg eax-offset))
+  ;; Compute a pointer to where we are going to be extracting the bits.
+  (inst lea esi	(make-ea :byte :base string
+			 :disp (- (* vector-data-offset word-bytes)
+				  other-pointer-type)))
+  ;; Initialize the result.
+  (inst xor result result)
+  ;; Get the count.  If it's zero, blow out.
+  (inst mov ecx length)
+  (inst jecxz done)
+  (inst shr ecx 2)			; Convert fixnum to byte count
+  ;; Clear the direction flag, so we advance through memory.
+  (inst cld)
+
+  LOOP
+  ;; Merge each successive word with the result.
+  (inst movzx eax (make-ea :byte :base esi-tn))
+  (inst inc esi)
+
+  ;; hash += key[i]
+  (inst add result eax)
+  ;; hash += (hash << 10)
+  (move eax result)
+  (inst shl eax 10)
+  (inst add result eax)
+
+  ;; hash ^= (hash >> 6)
+  (move eax result)
+  (inst shr eax 6)
+  (inst xor result eax)
+  (inst loop loop)
+
+  ;; hash += (hash << 3)
+  (move eax result)
+  (inst shl eax 3)
+  (inst add result eax)
+
+  ;; hash ^= (hash >> 11)
+  (move eax result)
+  (inst shr eax 11)
+  (inst xor result eax)
+
+  ;; hash += (hash << 15)
+  (move eax result)
+  (inst shl eax 15)
+  (inst add result eax)
+
+  DONE
   ;; Force result to be a positive fixnum.
   (inst and result #x7ffffffc)
   (inst ret))
