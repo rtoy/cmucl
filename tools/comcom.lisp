@@ -302,9 +302,7 @@
 (comf "target:compiler/dump")
 
 (comf "target:compiler/generic/core")
-(if (c:target-featurep '(or :hppa :x86 :pmax))
-    (comf "target:compiler/generic/new-genesis")
-    (comf "target:compiler/generic/genesis"))
+(comf "target:compiler/generic/new-genesis")
 
 (comf "target:compiler/eval-comp")
 (comf "target:compiler/eval")
