@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.41 1993/07/02 15:12:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.42 1993/07/02 20:59:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1279,7 +1279,7 @@
 		   `(setf ,place (assert-prompt ',place ,place)))
 	       places)))
 
-(defun assert-error (test-form places datum &rest arguments)
+(defun assert-error (assertion places datum &rest arguments)
   (let ((cond (if datum
 		  (conditions::coerce-to-condition
 		   datum arguments
