@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.13 1997/02/19 01:19:53 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.14 1997/02/19 02:04:09 dtc Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -185,11 +185,9 @@ atan2,
 sinh,
 cosh,
 tanh,
-#ifndef hpux
 asinh,
 acosh,
 atanh,
-#endif
 exp,
 #ifndef hpux
 expm1,
