@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.8 1993/03/13 17:07:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.9 1993/03/14 17:16:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,8 @@
 (export '(constant-argument instance *use-implementation-types*))
 
 (in-package "KERNEL")
+
+(export '(extract-function-type))
 
 (with-cold-load-init-forms)
 
@@ -2153,6 +2155,16 @@
 		   (values nil nil))))))))))
 
 
+;;; EXTRACT-FUNCTION-TYPE  --  Interface
+;;;
+;;;    Pull the type specifier out of a function object.
+;;;
+(defun extract-function-type (fun)
+  (if (eval:interpreted-function-p fun)
+      (eval:interpreted-function-type fun)
+      (specifier-type (%function-type (%closure-function fun)))))
+
+
 ;;; Ctype-Of  --  Interface
 ;;;
 ;;;    Like Type-Of, only returns a Type structure instead of a type
@@ -2170,9 +2182,10 @@
 	       :init-form cold-load-init)
 	      ((x eq))
   (typecase x
-    (base-char (specifier-type 'base-char))
-    (function (specifier-type 'function))
-    (cons (specifier-type 'cons))
+    (function
+     (if (funcallable-instance-p x)
+	 (class-of x)
+	 (extract-function-type x)))
     (symbol
      (make-member-type :members (list x)))
     (number
@@ -2194,8 +2207,6 @@
 	      (setf (numeric-type-low res) num)
 	      (setf (numeric-type-high res) num)))
        res))
-    (instance
-     (layout-class (%instance-layout x)))
     (array
      (let ((etype (specifier-type (array-element-type x))))
        (make-array-type :dimensions (array-dimensions x)
@@ -2203,7 +2214,8 @@
 			:element-type etype
 			:specialized-element-type etype)))
     (t
-     *universal-type*)))
+     (class-of x))))
+
 
 ;;; Clear this cache on GC so that we don't hold onto too much garbage.
 ;;;
