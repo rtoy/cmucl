@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.20 1990/07/03 06:30:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.21 1990/07/28 01:03:42 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -141,6 +141,162 @@
 (def-data-vector-frobs simple-array-unsigned-byte-32 word-index
   unsigned-num unsigned-reg)
 
+
+(defmacro def-small-data-vector-frobs (type bits)
+  (let* ((elements-per-word (floor vm:word-bits bits))
+	 (bit-shift (1- (integer-length elements-per-word))))
+    `(progn
+       (define-vop (,(symbolicate 'data-vector-ref/ type))
+	 (:translate data-vector-ref)
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg))
+		(index :scs (unsigned-reg)))
+	 (:arg-types ,type positive-fixnum)
+	 (:results (value :scs (any-reg)))
+	 (:result-types positive-fixnum)
+	 (:temporary (:scs (interior-reg)) lip)
+	 (:temporary (:scs (non-descriptor-reg) :to (:result 0)) temp result)
+	 (:generator 20
+	   (inst srl temp index ,bit-shift)
+	   (inst sll temp 2)
+	   (inst add lip object temp)
+	   (inst lw result lip
+		 (- (* vm:vector-data-offset vm:word-bytes)
+		    vm:other-pointer-type))
+	   (inst and temp index ,(1- elements-per-word))
+	   ,@(unless (= bits 1)
+	       `((inst sll temp ,(1- (integer-length bits)))))
+	   (inst srl result temp)
+	   (inst and result ,(1- (ash 1 bits)))
+	   (inst sll value result 2)))
+       (define-vop (,(symbolicate 'data-vector-ref-c/ type))
+	 (:translate data-vector-ref)
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg)))
+	 (:arg-types ,type
+		     (:constant
+		      (integer 0
+			       ,(1- (* (1+ (- (floor (+ #x7fff
+							vm:other-pointer-type)
+						     vm:word-bytes)
+					      vm:vector-data-offset))
+				       elements-per-word)))))
+	 (:info index)
+	 (:results (result :scs (unsigned-reg)))
+	 (:result-types positive-fixnum)
+	 (:generator 15
+	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
+	     (loadw result object (+ word vm:vector-data-offset) 
+		    vm:other-pointer-type)
+	     (unless (zerop extra)
+	       (inst srl result (* extra ,bits)))
+	     (unless (= extra ,(1- elements-per-word))
+	       (inst and result ,(1- (ash 1 bits)))))))
+       (define-vop (,(symbolicate 'data-vector-set/ type))
+	 (:translate data-vector-set)
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg))
+		(index :scs (unsigned-reg) :target shift)
+		(value :scs (unsigned-reg zero immediate) :target result))
+	 (:arg-types ,type positive-fixnum positive-fixnum)
+	 (:results (result :scs (unsigned-reg)))
+	 (:result-types positive-fixnum)
+	 (:temporary (:scs (interior-reg)) lip)
+	 (:temporary (:scs (non-descriptor-reg)) temp old)
+	 (:temporary (:scs (non-descriptor-reg) :from :eval) shift)
+	 (:generator 25
+	   (inst srl temp index ,bit-shift)
+	   (inst sll temp 2)
+	   (inst add lip object temp)
+	   (inst lw old lip
+		 (- (* vm:vector-data-offset vm:word-bytes)
+		    vm:other-pointer-type))
+	   (inst and shift index ,(1- elements-per-word))
+	   ,@(unless (= bits 1)
+	       `((inst sll shift ,(1- (integer-length bits)))))
+	   (unless (and (sc-is value immediate)
+			(= (tn-value value) ,(1- (ash 1 bits))))
+	     (inst li temp ,(1- (ash 1 bits)))
+	     (inst sll temp shift)
+	     (inst nor temp temp zero-tn)
+	     (inst and old temp))
+	   (unless (sc-is value zero)
+	     (sc-case value
+	       (immediate
+		(inst li temp (logand (tn-value value) ,(1- (ash 1 bits)))))
+	       (unsigned-reg
+		(inst and temp value ,(1- (ash 1 bits)))))
+	     (inst sll temp shift)
+	     (inst or old temp))
+	   (inst sw old lip
+		 (- (* vm:vector-data-offset vm:word-bytes)
+		    vm:other-pointer-type))
+	   (sc-case value
+	     (immediate
+	      (inst li result (tn-value value)))
+	     (zero
+	      (move result zero-tn))
+	     (unsigned-reg
+	      (move result value)))))
+       (define-vop (,(symbolicate 'data-vector-set-c/ type))
+	 (:translate data-vector-set)
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg))
+		(value :scs (unsigned-reg zero immediate) :target result))
+	 (:arg-types ,type
+		     (:constant
+		      (integer 0
+			       ,(1- (* (1+ (- (floor (+ #x7fff
+							vm:other-pointer-type)
+						     vm:word-bytes)
+					      vm:vector-data-offset))
+				       elements-per-word))))
+		     positive-fixnum)
+	 (:info index)
+	 (:results (result :scs (unsigned-reg)))
+	 (:result-types positive-fixnum)
+	 (:temporary (:scs (non-descriptor-reg)) temp old)
+	 (:generator 20
+	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
+	     (inst lw old object
+		   (- (* (+ word vm:vector-data-offset) vm:word-bytes)
+		      vm:other-pointer-type))
+	     (unless (and (sc-is value immediate)
+			  (= (tn-value value) ,(1- (ash 1 bits))))
+	       (cond ((= extra ,(1- elements-per-word))
+		      (inst sll old ,bits)
+		      (inst srl old ,bits))
+		     (t
+		      (inst li temp
+			    (lognot (ash ,(1- (ash 1 bits)) (* extra ,bits))))
+		      (inst and old temp))))
+	     (sc-case value
+	       (zero)
+	       (immediate
+		(let ((value (ash (logand (tn-value value) ,(1- (ash 1 bits)))
+				  (* extra ,bits))))
+		  (cond ((< value #x10000)
+			 (inst or old value))
+			(t
+			 (inst li temp value)
+			 (inst or old temp)))))
+	       (unsigned-reg
+		(inst sll temp value (* extra ,bits))
+		(inst or old temp)))
+	     (inst sw old object
+		   (- (* (+ word vm:vector-data-offset) vm:word-bytes)
+		      vm:other-pointer-type))
+	     (sc-case value
+	       (immediate
+		(inst li result (tn-value value)))
+	       (zero
+		(move result zero-tn))
+	       (unsigned-reg
+		(move result value)))))))))
+
+(def-small-data-vector-frobs simple-bit-vector 1)
+(def-small-data-vector-frobs simple-array-unsigned-byte-2 2)
+(def-small-data-vector-frobs simple-array-unsigned-byte-4 4)
 
 
 (define-vop (raw-bits word-index-ref)
