@@ -86,7 +86,7 @@ _call_into_lisp:
         /* No longer atomic, and check for interrupt. */
 	sub	reg_ALLOC, 4, reg_ALLOC
 	andcc	reg_ALLOC, 3, reg_ZERO
-	tne	16
+	tne	trap_PseudoAtomic
 
         /* Pass in the args. */
         sll     %i2, 2, reg_NARGS
@@ -135,7 +135,7 @@ lra:
         /* Were we interrupted? */
 	sub	reg_ALLOC, 4, reg_ALLOC
 	andcc	reg_ALLOC, 3, reg_ZERO
-	tne	16
+	tne	trap_PseudoAtomic
 
         /* Back to C we go. */
 	ld	[%sp+FRAMESIZE-4], %i7
@@ -178,7 +178,7 @@ _call_into_c:
         /* Were we interrupted? */
 	sub	reg_ALLOC, 4, reg_ALLOC
 	andcc	reg_ALLOC, 3, reg_ZERO
-	tne	16
+	tne	trap_PseudoAtomic
 
         /* Into C we go. */
         call    reg_CFUNC
@@ -216,7 +216,7 @@ _call_into_c:
         /* No longer atomic. */
 	sub	reg_ALLOC, 4, reg_ALLOC
 	andcc	reg_ALLOC, 3, reg_ZERO
-	tne	16
+	tne	trap_PseudoAtomic
 
         /* Reset the lisp stack. */
         /* Note: OCFP is in one of the locals, it gets preserved across C. */
