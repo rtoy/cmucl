@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.6 1990/11/07 02:25:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.7 1991/02/11 17:32:13 ram Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -16,9 +16,8 @@
 (in-package "MIPS")
 
 (in-package "DI")
-(import '(c::current-fp))
-(import '(current-sp current-fp stack-ref %set-stack-ref lra-code-header
-		     function-code-header make-lisp-obj get-lisp-obj-address)
+(import '(stack-ref %set-stack-ref lra-code-header
+		    function-code-header make-lisp-obj get-lisp-obj-address)
 	(find-package "MIPS"))
 
 (in-package "MIPS")
