@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.32 2003/08/05 15:51:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.33 2003/08/06 14:45:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1178,6 +1178,7 @@ default-value-8
   (:results (result :scs (descriptor-reg)))
   (:translate %listify-rest-args)
   (:policy :safe)
+  (:node-var node)
   (:generator 20
     (move context context-arg)
     (move count count-arg)
@@ -1191,7 +1192,10 @@ default-value-8
       (assemble ()
 	;; Allocate a cons (2 words) for each item.
 	(inst sll temp count 1)
-	(allocation result temp list-pointer-type)
+	(allocation result temp list-pointer-type
+		    :stack-p dynamic-extent
+		    :node node
+		    :temp-tn dst)
 	(inst b enter)
 	(move dst result)
 

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.18 2002/09/05 15:19:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.19 2003/08/06 14:45:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.18 2002/09/05 15:19:50 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.19 2003/08/06 14:45:50 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -194,19 +194,39 @@
 ;; The allocated space is stored in RESULT-TN with the lowtag LOWTAG
 ;; applied.  The amount of space to be allocated is SIZE bytes (which
 ;; must be a multiple of the lisp object size).
-(defmacro allocation (result-tn size lowtag)
+;;
+;; If STACK-P is given, then allocation occurs on the control stack
+;; (for dynamic-extent).  In this case, you MUST also specify NODE, so
+;; that the appropriate compiler policy can be used, and TEMP-TN,
+;; which is needed for work-space.  TEMP-TN MUST be a non-descriptor
+;; reg.
+(defmacro allocation (result-tn size lowtag &key stack-p node temp-tn)
   ;; We assume we're in a pseudo-atomic so the pseudo-atomic bit is
   ;; set.  If the lowtag also has a 1 bit in the same position, we're all
   ;; set.  Otherwise, we need to zap out the lowtag from alloc-tn, and
   ;; then or in the lowtag.
-  `(if (logbitp (1- lowtag-bits) ,lowtag)
-     (progn
-       (inst or ,result-tn alloc-tn ,lowtag)
-       (inst add alloc-tn ,size))
-     (progn
-       (inst andn ,result-tn alloc-tn lowtag-mask)
-       (inst or ,result-tn ,lowtag)
-       (inst add alloc-tn ,size))))
+  `(cond ((and ,stack-p ,node (policy ,node (>= speed safety)))
+	  ;; Stack allocation
+	  ;;
+	  ;; The control stack grows up, so round up CSP to a
+	  ;; multiple of 8 (lispobj size).  Use that as the
+	  ;; allocation pointer.  Then add SIZE bytes to the
+	  ;; allocation and set CSP to that, so we have the desired
+	  ;; space.
+	  (inst add ,temp-tn csp-tn #.(1- (expt 2 lowtag-bits)))
+	  (inst andn ,temp-tn #.(1- (expt 2 lowtag-bits)))
+	  (inst or ,result-tn ,temp-tn ,lowtag)
+	  (inst add csp-tn ,temp-tn ,size))
+	 (t
+	  ;; Normal allocation to the heap.
+	  (if (logbitp (1- lowtag-bits) ,lowtag)
+	      (progn
+		(inst or ,result-tn alloc-tn ,lowtag)
+		(inst add alloc-tn ,size))
+	      (progn
+		(inst andn ,result-tn alloc-tn lowtag-mask)
+		(inst or ,result-tn ,lowtag)
+		(inst add alloc-tn ,size))))))
 
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size)
