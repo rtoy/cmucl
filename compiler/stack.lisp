@@ -120,16 +120,27 @@
 ;;; continuation that isn't live, it must be the case that all continuations
 ;;; pushed after (on top of) it aren't live.
 ;;;
+;;;    If we see a pushed continuation that is the CONT of a tail call, then we
+;;; ignore it, since the tail call didn't actually push anything.  The tail
+;;; call must always the last in the block. 
+;;;
 (defun annotate-dead-values (block)
   (declare (type cblock block))
   (let* ((2block (block-info block))
-	 (stack (ir2-block-end-stack 2block)))
-    (do ((pushes (ir2-block-pushed 2block) (rest pushes)))
+	 (stack (ir2-block-end-stack 2block))
+	 (last (block-last block))
+	 (tailp-cont (if (node-tail-p last) (node-cont last))))
+    (do ((pushes (ir2-block-pushed 2block) (rest pushes))
+	 (popping nil))
 	((null pushes))
-      (unless (member (first pushes) stack)
-	(dolist (push pushes)
-	  (assert (not (member push stack)))
-	  (push push (ir2-block-end-stack 2block))))))
+      (let ((push (first pushes)))
+	(cond ((member push stack)
+	       (assert (not popping)))
+	      ((eq push tailp-cont)
+	       (assert (null (rest pushes))))
+	      (t
+	       (push push (ir2-block-end-stack 2block))
+	       (setq popping t))))))
   
   (undefined-value))
 
@@ -174,13 +185,32 @@
   (undefined-value))
 
 
+;;;; Stack analyze:
+
+
+;;; FIND-VALUES-GENERATORS  --  Internal
+;;;
+;;;    Return a list of all the blocks containing genuine uses of one of the
+;;; Receivers.  Exits are excluded, since they don't drop through to the
+;;; receiver.
+;;;
+(defun find-values-generators (receivers)
+  (declare (list receivers))
+  (collect ((res nil adjoin))
+    (dolist (rec receivers)
+      (dolist (pop (ir2-block-popped (block-info rec)))
+	(do-uses (use pop)
+	  (unless (exit-p use)
+	    (res (node-block use))))))
+    (res)))
+
+
 ;;; Stack-Analyze  --  Interface
 ;;;
 ;;;    Analyze the use of unknown-values continuations in Component, inserting
 ;;; cleanup code to discard values that are generated but never received.  This
 ;;; phase doesn't need to be run when Values-Receivers is null, i.e. there are
 ;;; no unknown-values continuations used across block boundaries.
-;;; Values-Generators is always null when Values-Receivers is null.
 ;;;
 ;;;    Do the backward graph walk, starting at each values receiver.  We ignore
 ;;; receivers that already have a non-null Start-Stack.  These are nested
@@ -191,7 +221,7 @@
   (declare (type component component))
   (let* ((2comp (component-info component))
 	 (receivers (ir2-component-values-receivers 2comp))
-	 (generators (ir2-component-values-generators 2comp)))
+	 (generators (find-values-generators receivers)))
 
     (dolist (block generators)
       (find-pushed-continuations block))
