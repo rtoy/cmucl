@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.75 2004/03/26 18:22:54 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.76 2004/04/06 08:43:29 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1344,39 +1344,39 @@
         (:io (values t t unix:o_rdwr))
         (:probe (values t nil unix:o_rdonly)))
     (declare (type index mask))
+    ;; Process if-exists argument if we are doing any output.
+    (cond (output
+           (unless if-exists-given
+             (setf if-exists
+                   (if (eq (pathname-version pathname) :newest)
+                       :new-version
+                       :error)))
+           (case if-exists
+             ((:error nil)
+              (setf mask (logior mask unix:o_excl)))
+             ((:new-version :rename :rename-and-delete)
+              (setf mask (logior mask unix:o_creat)))
+             (:supersede
+              (setf mask (logior mask unix:o_trunc)))))
+          (t
+           (setf if-exists nil)))     ; :ignore-this-arg
+    
+    (unless if-does-not-exist-given
+      (setf if-does-not-exist
+            (cond ((eq direction :input) :error)
+                  ((and output
+                        (member if-exists '(:overwrite :append)))
+                   :error)
+                  ((eq direction :probe)
+                   nil)
+                  (t
+                   :create))))
+    (if (eq if-does-not-exist :create)
+        (setf mask (logior mask unix:o_creat)))
+    
     (let ((name (cond ((unix-namestring pathname input))
                       ((and input (eq if-does-not-exist :create))
                        (unix-namestring pathname nil)))))
-      ;; Process if-exists argument if we are doing any output.
-      (cond (output
-             (unless if-exists-given
-               (setf if-exists
-                     (if (eq (pathname-version pathname) :newest)
-                         :new-version
-                         :error)))
-             (case if-exists
-               ((:error nil)
-                (setf mask (logior mask unix:o_excl)))
-               ((:new-version :rename :rename-and-delete)
-                (setf mask (logior mask unix:o_creat)))
-               (:supersede
-                (setf mask (logior mask unix:o_trunc)))))
-            (t
-             (setf if-exists nil)))     ; :ignore-this-arg
-
-      (unless if-does-not-exist-given
-        (setf if-does-not-exist
-              (cond ((eq direction :input) :error)
-                    ((and output
-                          (member if-exists '(:overwrite :append)))
-                     :error)
-                    ((eq direction :probe)
-                     nil)
-                    (t
-                     :create))))
-      (if (eq if-does-not-exist :create)
-          (setf mask (logior mask unix:o_creat)))
-
       (let ((original (cond ((eq if-exists :new-version)
 			     (next-version name))
 			    ((member if-exists '(:rename :rename-and-delete))
