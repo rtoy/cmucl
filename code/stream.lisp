@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.65 2003/10/24 16:53:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.66 2004/01/19 20:04:09 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -479,7 +479,7 @@
 	  ((eql ,peek-type t)
 	   (do ((,char-var ,char-var ,read-form))
 	       ((or (eql ,char-var ,eof-value)
-		    (not (whitespace-char-p ,char-var)))
+		    (not (eql (get-cat-entry ,char-var *readtable*) whitespace)))
 		(cond ((eql ,char-var ,eof-value)
 		       ,(if eof-detected-form
 			    eof-detected-form
