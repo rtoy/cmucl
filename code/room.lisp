@@ -7,18 +7,19 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.6 1991/04/14 16:49:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.7 1991/04/14 23:57:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.6 1991/04/14 16:49:54 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.7 1991/04/14 23:57:14 ram Exp $
 ;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
 (in-package "VM")
 (use-package "SYSTEM")
 (export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
-		       structure-usage find-holes print-allocated-objects))
+		       structure-usage find-holes print-allocated-objects
+		       code-package-breakdown uninterned-symbol-count))
 (in-package "LISP")
 (import '(
 	  dynamic-0-space-start dynamic-1-space-start read-only-space-start
@@ -602,3 +603,41 @@
 			    (subseq str 0 (min (length str) 60)))))))))
        space)))
   (values))
+
+;;;; Misc:
+
+(defun uninterned-symbol-count (space)
+  (declare (type spaces space))
+  (let ((total 0)
+	(uninterned 0))
+    (map-allocated-objects
+     #'(lambda (obj type size)
+	 (declare (ignore type size))
+	 (when (symbolp obj)
+	   (incf total)
+	   (unless (symbol-package obj)
+	     (incf uninterned))))
+     space)
+    (values uninterned (float (/ uninterned total)))))
+
+(defun code-package-breakdown (space)
+  (let ((info (make-hash-table :test #'equal)))
+    (map-allocated-objects
+     #'(lambda (obj type size)
+	 (when (eql type code-header-type)
+	   (let* ((dinfo (code-debug-info obj))
+		  (name (if dinfo
+			    (c::compiled-debug-info-package dinfo)
+			    "UNKNOWN"))
+		  (found (or (gethash name info)
+			     (setf (gethash name info) (cons 0 0)))))
+	     (incf (car found))
+	     (incf (cdr found) size))))
+     space)
+
+    (collect ((res))
+      (maphash #'(lambda (k v)
+		   (res (list v k)))
+	       info)
+      (loop for ((count . size) name) in (sort (res) #'> :key #'cdar) do
+	(format t "~20@A: ~:D bytes, ~:D objects.~%" name size count))))
