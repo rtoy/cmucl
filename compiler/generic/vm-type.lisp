@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.23 1990/12/02 15:57:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.24 1990/12/18 20:45:08 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -91,6 +91,8 @@
 (deftype bignum-element-type () `(unsigned-byte ,vm:word-bits))
 (deftype bignum-type () 'bignum)
 (deftype bignum-index () 'index)
+
+(deftype structure-index () `(unsigned-byte ,(- vm:word-bits vm:type-bits)))
 
 
 ;;;; Hooks into type system:
