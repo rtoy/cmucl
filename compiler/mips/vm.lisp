@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.44 1991/11/09 02:37:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.45 1992/05/21 02:10:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.44 1991/11/09 02:37:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.45 1992/05/21 02:10:32 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -377,6 +377,12 @@
 			      :offset n))
 	  register-arg-offsets))
 
+;;; SINGLE-VALUE-RETURN-BYTE-OFFSET
+;;;
+;;; This is used by the debugger.
+;;;
+(export 'single-value-return-byte-offset)
+(defconstant single-value-return-byte-offset 8)
 
 
 ;;; LOCATION-PRINT-NAME  --  Interface
