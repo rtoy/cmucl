@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.3.1.3 1993/02/16 21:55:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.3.1.4 1993/02/21 16:11:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -832,7 +832,7 @@
 ;;;
 (defvar *layout-layout*)
 
-(defparameter target-layout-length 15)
+(defparameter target-layout-length 16)
 
 (defun make-cold-layout (name length inherits depth)
   (let ((result (allocate-boxed-object *dynamic* (1+ target-layout-length)
@@ -848,7 +848,8 @@
       (write-indexed result (+ base 2) inherits)
       (write-indexed result (+ base 3) depth)
       (write-indexed result (+ base 4) length)
-      (write-indexed result (+ base 5) *nil-descriptor*)); info
+      (write-indexed result (+ base 5) *nil-descriptor*); info
+      (write-indexed result (+ base 6) *nil-descriptor*)); pure
     (setf (gethash name *cold-layouts*) result)
     result))
 
