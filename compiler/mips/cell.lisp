@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.21 1990/03/08 11:11:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.22 1990/03/18 23:29:25 ch Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -365,7 +365,7 @@
   (:translate symbol-function)
   (:generator 10
     (move obj-temp object)
-    (loadw value obj-temp symbol-function-slot)
+    (loadw value obj-temp vm:symbol-function-slot vm:other-pointer-type)
     (let ((err-lab (generate-error-code node di:undefined-symbol-error
 					obj-temp)))
       (test-simple-type value temp err-lab t vm:function-pointer-type))))
