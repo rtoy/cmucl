@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.19 2003/05/15 12:16:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.20 2003/05/16 12:20:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -425,12 +425,14 @@ pointer to the arguments."
 		  (inst jal %o7 %l0 (ldb (byte 10 0) addr))
 		  (inst nop))
 
-		;; Ok, we're back.  The value returned is actually stored in the args
+		;; Ok, we're back.  The value returned is actually
+		;; stored in the return area.  Need to get that into
+		;; the right registers for return.
 		(etypecase return-type
 		  (alien::integer-64$
 		   ;; A 64-bit bignum, stored big-endian
-		   (inst ld %o0 %fp (- return-value-size))
-		   (inst ld %o1 %fp (- (- return-value-size vm:word-bytes))))
+		   (inst ld %i0 %fp (- return-value-size))
+		   (inst ld %i1 %fp (- (- return-value-size vm:word-bytes))))
 		  ((or alien::integer$ alien::pointer$ alien::sap$)
 		   (inst ld %i0 %fp (- return-value-size)))
 		  (alien::single$
