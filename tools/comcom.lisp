@@ -16,9 +16,22 @@
 	  old-c::defstruct-slot-description)
 	"C")
 
-(with-compiler-log-file ("target:compile-compiler.log")
-
-(declaim (optimize (speed 2) (space 2) (inhibit-warnings 2)))
+(with-compiler-log-file
+    ("target:compile-compiler.log"
+     :optimize
+     '(optimize (speed 2) (space 2) (inhibit-warnings 2)
+		(safety #+small 0 #-small 1)
+		(debug-info #+small 1 #-small 2))
+     :optimize-interface
+     '(optimize-interface (safety #+small 1 #-small 2)
+			  (debug-info 1))
+     :context-declarations
+     '(#+small
+       ((:or :macro
+	     (:match "$SOURCE-TRANSFORM-" "$IR1-CONVERT-"
+		     "$PRIMITIVE-TRANSLATE-" "$PARSE-"))
+	(declare (optimize (safety 1))))
+       (:external (declare (optimize-interface (safety 2))))))
 
 (comf "target:compiler/macros" :load *load-stuff*)
 (comf "target:compiler/generic/vm-macs" :load *load-stuff* :proceed t)
@@ -53,9 +66,12 @@
 (comf "target:compiler/generic/vm-fndb")
 (comf "target:compiler/main")
 
-(comf "target:compiler/ir1tran")
-(comf "target:compiler/ir1util")
-(comf "target:compiler/ir1opt")
+(with-compilation-unit
+    (:optimize '(optimize (debug-info 2) (safety 1)))
+  (comf "target:compiler/ir1tran")
+  (comf "target:compiler/ir1util")
+  (comf "target:compiler/ir1opt"))
+
 (comf "target:compiler/ir1final")
 (comf "target:compiler/srctran")
 (comf "target:compiler/array-tran")
@@ -79,7 +95,9 @@
 (comf "target:compiler/generic/utils")
 (comf "target:assembly/assemfile" :load *load-stuff*)
 
-#+small (declaim (optimize (safety 0) (debug-info 1)))
+(with-compilation-unit
+    (:optimize '(optimize (safety 0) (debug-info 1)))
+
 (when (string= (old-c:backend-name old-c:*backend*) "PMAX")
   (comf "target:compiler/mips/mips-insts")
   (comf "target:compiler/mips/mips-macs" :load *load-stuff*)
@@ -148,20 +166,28 @@
 
 (comf "target:compiler/pseudo-vops")
 
-#+small (declaim (optimize (safety 1) (debug-info 2)))
+); with-compilation-unit for back end.
 
 (comf "target:compiler/aliencomp")
 (comf "target:compiler/gtn")
-(comf "target:compiler/ltn")
+(with-compilation-unit
+    (:optimize '(optimize (debug-info 2) (safety 1)))
+  (comf "target:compiler/ltn"))
 (comf "target:compiler/stack")
 (comf "target:compiler/control")
 (comf "target:compiler/entry")
-(comf "target:compiler/ir2tran")
+(with-compilation-unit
+    (:optimize '(optimize (debug-info 2) (safety 1)))
+  (comf "target:compiler/ir2tran"))
 (comf "target:compiler/copyprop")
 (comf "target:compiler/assem-opt")
-(comf "target:compiler/represent")
+(with-compilation-unit
+    (:optimize '(optimize (debug-info 2) (safety 1)))
+  (comf "target:compiler/represent"))
 (comf "target:compiler/generic/vm-tran")
-(comf "target:compiler/pack")
+(with-compilation-unit
+    (:optimize '(optimize (debug-info 2) (safety 1)))
+  (comf "target:compiler/pack"))
 (comf "target:compiler/codegen")
 (comf "target:compiler/debug")
 (comf "target:compiler/statcount")
