@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.98 2000/04/13 05:29:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.99 2000/06/21 17:01:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1820,35 +1820,22 @@
 						 divisor-interval))))
 	       (specifier-type `(integer ,(or (interval-low quot) '*)
 				         ,(or (interval-high quot) '*)))))
+
 	   ;; Compute type of remainder
 	   (defun ,r-aux (number-type divisor-type)
 	     (let* ((divisor-interval
 		     (numeric-type->interval divisor-type))
 		    (rem (,r-name divisor-interval))
 		    (result-type (rem-result-type number-type divisor-type)))
-	       (multiple-value-bind (class format)
-		   (ecase result-type
-		     (integer
-		      (values 'integer nil))
-		     (rational
-		      (values 'rational nil))
-		     ((or single-float double-float #+long-float long-float)
-		      (values 'float result-type))
-		     (float
-		      (values 'float nil))
-		     (real
-		      (values nil nil)))
-		 (when (member result-type '(float single-float double-float
-					     #+long-float long-float))
-		   ;; Make sure the limits on the interval have
-		   ;; the right type.
-		   (setf rem (interval-func #'(lambda (x)
-						(coerce x result-type))
-					    rem)))
-		 (make-numeric-type :class class
-				    :format format
-				    :low (interval-low rem)
-				    :high (interval-high rem)))))
+	       (when (member result-type '(float single-float double-float
+					   #+long-float long-float))
+		 ;; Make sure the limits on the interval have the right type.
+		 (setf rem (interval-func #'(lambda (x)
+					      (coerce x result-type))
+					  rem)))
+	       (specifier-type `(,result-type ,(or (interval-low rem) '*)
+					      ,(or (interval-high rem) '*)))))
+
 	   ;; The optimizer itself
 	   (defoptimizer (,name derive-type) ((number divisor))
 	     (flet ((derive-q (n d same-arg)
