@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.43 2003/01/21 20:55:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.44 2003/05/26 14:16:58 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -654,7 +654,15 @@ to skip undefined symbols which don't have an address."
   (let* ((filename (namestring file ))
 	 (sap (dlopen filename (logior rtld-now rtld-global))))
     (cond ((zerop (sap-int sap))
-	   (error "Can't open object ~S: ~S" file (dlerror)))
+	   (let ((err-string (dlerror))
+		 (sap (dlopen filename (logior rtld-lazy rtld-global))))
+	     ;; For some reason dlerror always seems to return NIL,
+	     ;; which isn't very informative.
+	     (when (zerop (sap-int sap))
+	       (error "Can't open object ~S: ~S" file err-string))
+	     (dlclose sap)
+	     (error "LOAD-OBJECT-FILE: Unresolved symbols in file ~S: ~S"
+		    file err-string)))
 	  ((null (assoc sap *global-table* :test #'sap=))
 	   (setf *global-table* (acons sap file *global-table*)))
 	  (t nil))))
