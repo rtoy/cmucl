@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.28 1998/03/30 03:05:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.29 1998/03/30 03:17:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1588,7 +1588,7 @@
   #-negative-zero-is-not-zero
   (:arg-types long-float (:constant (long-float 0l0 0l0)))
   #+negative-zero-is-not-zero
-  (:arg-types double-float (:constant (long-float -0l0 0l0)))
+  (:arg-types long-float (:constant (long-float -0l0 0l0)))
   (:variant #x40))
 
 (define-vop (<0/single-float float-test)
