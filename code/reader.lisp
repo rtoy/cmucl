@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.34 2003/06/02 16:29:23 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.35 2003/06/14 12:21:39 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1098,7 +1098,11 @@
 	(t (go SYMBOL)))
       RETURN-SYMBOL
       (casify-read-buffer escapes)
-      (let ((found (if package (find-package package) *package*)))
+      (let ((found (if package
+		       (if (zerop (length package))
+			   *keyword-package*
+			   (find-package package))
+		       *package*)))
 	(unless found
 	  (error 'reader-package-error :stream stream
 		 :format-arguments (list package)

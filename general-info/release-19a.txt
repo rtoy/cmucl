@@ -116,6 +116,7 @@ New in this release:
      - ADD-METHOD returning its first argument, the generic function.
      - DEFCLASS redefining a class with the given name only if the
        name is the proper name of an existing class.
+     - KEYWORD package no longer having nickname "".
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
