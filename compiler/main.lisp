@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.85 1993/05/12 11:30:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.86 1993/05/13 11:37:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,8 +53,8 @@
 ;;; Exported:
 (defvar *byte-compile-top-level* t
   "Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-level
-   forms (evaluated at load-time.)  If T, byte-compile top-level forms (unless
-   :BYTE-COMPILE nil was specified.")
+   forms (evaluated at load-time) when the :BYTE-COMPILE argument is :MAYBE
+   (the default.)  When true, we decide to byte-compile.")
 
 ;;; Value of the :byte-compile argument to the compiler.
 (defvar *byte-compile* :maybe)
@@ -1311,7 +1311,9 @@
       (multiple-value-bind (component tll)
 			   (merge-top-level-lambdas pending)
 	(setq *pending-top-level-lambdas* ())
-	(let ((*byte-compile* (and *byte-compile* *byte-compile-top-level*)))
+	(let ((*byte-compile* (if (eq *byte-compile* :maybe)
+				  *byte-compile-top-level*
+				  *byte-compile*)))
 	  (compile-component component))
 	(clear-ir1-info component)
 	(object-call-top-level-lambda tll))))
@@ -1379,12 +1381,17 @@
 	(check-ir1-consistency *all-components*))
       
       (dolist (component (append hairy-top top-components))
-	(pre-environment-analyze-top-level component))
-      
-      (dolist (component components)
-	(compile-component component)
-	(when (replace-top-level-xeps component)
+	(when (pre-environment-analyze-top-level component)
 	  (setq top-level-closure t)))
+
+      (let ((*byte-compile*
+	     (if (and top-level-closure (eq *byte-compile* :maybe))
+		 nil
+		 *byte-compile*)))
+	(dolist (component components)
+	  (compile-component component)
+	  (when (replace-top-level-xeps component)
+	    (setq top-level-closure t))))
       
       (when *check-consistency*
 	(maybe-mumble "[Check]~%")
