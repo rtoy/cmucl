@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.8 1993/02/17 17:12:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.9 1993/02/17 18:01:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -296,7 +296,7 @@
 ;;;
 (defun class-proper-name (class)
   (let ((name (class-name class)))
-    (if (and name (eq (find-class name) class))
+    (if (and name (eq (find-class name nil) class))
 	name
 	class)))
 
