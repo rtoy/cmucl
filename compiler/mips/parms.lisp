@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.23 1990/03/05 21:09:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.24 1990/03/06 19:39:38 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -212,6 +212,7 @@
   interrupted)
 
 (defenum (:suffix -trap :start 8)
+  halt
   pending-interrupt
   error
   cerror)
