@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.16 1992/02/16 19:40:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.17 1992/02/19 19:44:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,7 +127,7 @@
 	(return (make-alien-type-type slot-type))))
     *wild-type*))
 
-(deftransform slot ((alien slot))
+(deftransform slot ((alien slot) * * :important t)
   (multiple-value-bind (slot-offset slot-type)
 		       (find-slot-offset-and-type alien slot)
     `(extract-alien-value (alien-sap alien)
@@ -146,7 +146,7 @@
 	  (return type))))
     *wild-type*))
 
-(deftransform %set-slot ((alien slot value))
+(deftransform %set-slot ((alien slot value) * * :important t)
   (multiple-value-bind (slot-offset slot-type)
 		       (find-slot-offset-and-type alien slot)
     `(deposit-alien-value (alien-sap alien)
@@ -164,7 +164,7 @@
 		 (make-alien-pointer-type :to slot-type)))))
     *wild-type*))
 
-(deftransform %slot-addr ((alien slot))
+(deftransform %slot-addr ((alien slot) * * :important t)
   (multiple-value-bind (slot-offset slot-type)
 		       (find-slot-offset-and-type alien slot)
     `(%sap-alien (sap+ (alien-sap alien) (/ ,slot-offset vm:byte-bits))
@@ -250,7 +250,7 @@
       (return (make-alien-type-type (find-deref-element-type alien))))
     *wild-type*))
 
-(deftransform deref ((alien &rest indices))
+(deftransform deref ((alien &rest indices) * * :important t)
   (multiple-value-bind
       (indices-args offset-expr element-type)
       (compute-deref-guts alien indices)
@@ -271,7 +271,7 @@
 	(return type)))
     *wild-type*))
 
-(deftransform %set-deref ((alien value &rest indices))
+(deftransform %set-deref ((alien value &rest indices) * * :important t)
   (multiple-value-bind
       (indices-args offset-expr element-type)
       (compute-deref-guts alien indices)
@@ -290,7 +290,7 @@
 		:to (find-deref-element-type alien)))))
     *wild-type*))
 
-(deftransform %deref-addr ((alien &rest indices))
+(deftransform %deref-addr ((alien &rest indices) * * :important t)
   (multiple-value-bind
       (indices-args offset-expr element-type)
       (compute-deref-guts alien indices)
@@ -319,7 +319,7 @@
 	(return (make-alien-type-type type))))
     *wild-type*))
 
-(deftransform %heap-alien ((info))
+(deftransform %heap-alien ((info) * * :important t)
   (multiple-value-bind (sap type)
 		       (heap-alien-sap-and-type info)
     `(extract-alien-value ,sap 0 ',type)))
@@ -336,7 +336,7 @@
 	  (return type))))
     *wild-type*))
 
-(deftransform %set-heap-alien ((info value) (heap-alien-info *))
+(deftransform %set-heap-alien ((info value) (heap-alien-info *) * :important t)
   (multiple-value-bind (sap type)
 		       (heap-alien-sap-and-type info)
     `(deposit-alien-value ,sap 0 ',type value)))
@@ -350,7 +350,7 @@
 	(return (make-alien-type-type (make-alien-pointer-type :to type)))))
     *wild-type*))
 
-(deftransform %heap-alien-addr ((info))
+(deftransform %heap-alien-addr ((info) * * :important t)
   (multiple-value-bind (sap type)
 		       (heap-alien-sap-and-type info)
     `(%sap-alien ,sap ',type)))
@@ -358,11 +358,14 @@
 
 ;;;; Local (stack or register) alien support.
 
-(deftransform make-local-alien ((info))
+(deftransform make-local-alien ((info) * * :important t)
   (unless (constant-continuation-p info)
     (abort-transform "Local Alien Info isn't constant?"))
   (let* ((info (continuation-value info))
-	 (alien-type (local-alien-info-type info)))
+	 (alien-type (local-alien-info-type info))
+	 (bits (alien-type-bits alien-type)))
+    (unless bits
+      (abort-transform "Unknown size: ~S" (unparse-alien-type alien-type)))
     (if (local-alien-info-force-to-memory-p info)
 	`(truly-the system-area-pointer
 		    (%primitive alloc-number-stack-space
@@ -381,7 +384,7 @@
 		  "Aliens of type ~S cannot be represented immediately."
 		  (unparse-alien-type alien-type))))))))
 
-(deftransform note-local-alien-type ((info var))
+(deftransform note-local-alien-type ((info var) * * :important t)
   (unless (constant-continuation-p info)
     (abort-transform "Local Alien Info isn't constant?"))
   (let ((info (continuation-value info)))
@@ -394,7 +397,7 @@
 			       (local-alien-info-type info))))))))
   'nil)
 
-(deftransform local-alien ((info var))
+(deftransform local-alien ((info var) * * :important t)
   (unless (constant-continuation-p info)
     (abort-transform "Local Alien Info isn't constant?"))
   (let* ((info (continuation-value info))
@@ -403,13 +406,13 @@
 	`(extract-alien-value var 0 ',alien-type)
 	`(naturalize var ',alien-type))))
 
-(deftransform %local-alien-forced-to-memory-p ((info))
+(deftransform %local-alien-forced-to-memory-p ((info) * * :important t)
   (unless (constant-continuation-p info)
     (abort-transform "Local Alien Info isn't constant?"))
   (let ((info (continuation-value info)))
     (local-alien-info-force-to-memory-p info)))
 
-(deftransform %set-local-alien ((info var value))
+(deftransform %set-local-alien ((info var value) * * :important t)
   (unless (constant-continuation-p info)
     (abort-transform "Local Alien Info isn't constant?"))
   (let* ((info (continuation-value info))
@@ -425,7 +428,7 @@
 	(make-alien-type-type (make-alien-pointer-type :to alien-type)))
       *wild-type*))
 
-(deftransform %local-alien-addr ((info var))
+(deftransform %local-alien-addr ((info var) * * :important t)
   (unless (constant-continuation-p info)
     (abort-transform "Local Alien Info isn't constant?"))
   (let* ((info (continuation-value info))
@@ -434,7 +437,7 @@
 	`(%sap-alien var ',(make-alien-pointer-type :to alien-type))
 	(error "This shouldn't happen."))))
 
-(deftransform dispose-local-alien ((info var))
+(deftransform dispose-local-alien ((info var) * * :important t)
   (unless (constant-continuation-p info)
     (abort-transform "Local Alien Info isn't constant?"))
   (let* ((info (continuation-value info))
@@ -455,7 +458,7 @@
 	    (make-alien-type-type alien-type))))
       *wild-type*))
 
-(deftransform %cast ((alien target-type))
+(deftransform %cast ((alien target-type) * * :important t)
   (unless (constant-continuation-p target-type)
     (give-up "Alien type not constant; cannot open code."))
   (let ((target-type (continuation-value target-type)))
@@ -469,7 +472,7 @@
 
 ;;;; alien-sap, %sap-alien, %addr, etc
 
-(deftransform alien-sap ((alien))
+(deftransform alien-sap ((alien) * * :important t)
   (let ((alien-node (continuation-use alien)))
     (typecase alien-node
       (combination
@@ -496,25 +499,25 @@
        (error (condition)
 	 (compiler-error "~A" condition)))))
 
-(deftransform naturalize ((object type))
+(deftransform naturalize ((object type) * * :important t)
   (unless (constant-continuation-p type)
     (give-up "Type not constant at compile time; can't open code."))
   (compiler-error-if-loses
    (compute-naturalize-lambda (continuation-value type))))
 
-(deftransform deport ((alien type))
+(deftransform deport ((alien type) * * :important t)
   (unless (constant-continuation-p type)
     (give-up "Type not constant at compile time; can't open code."))
   (compiler-error-if-loses
    (compute-deport-lambda (continuation-value type))))
 
-(deftransform extract-alien-value ((sap offset type))
+(deftransform extract-alien-value ((sap offset type) * * :important t)
   (unless (constant-continuation-p type)
     (give-up "Type not constant at compile time; can't open code."))
   (compiler-error-if-loses
    (compute-extract-lambda (continuation-value type))))
 
-(deftransform deposit-alien-value ((sap offset type value))
+(deftransform deposit-alien-value ((sap offset type value) * * :important t)
   (unless (constant-continuation-p type)
     (give-up "Type not constant at compile time; can't open code."))
   (compiler-error-if-loses
@@ -599,12 +602,13 @@
 ;;;; ALIEN-FUNCALL support.
 
 (deftransform alien-funcall ((function &rest args)
-			     ((alien (* t)) &rest *))
+			     ((alien (* t)) &rest *) *
+			     :important t)
   (let ((names (loop repeat (length args) collect (gensym))))
     `(lambda (function ,@names)
        (alien-funcall (deref function) ,@names))))
 
-(deftransform alien-funcall ((function &rest args))
+(deftransform alien-funcall ((function &rest args) * * :important t)
   (let ((type (continuation-type function)))
     (unless (alien-type-type-p type)
       (give-up "Can't tell function type at compile time."))
@@ -638,6 +642,15 @@
 		(setf body `(naturalize ,body ',return-type)))
 	    `(lambda (function ,@(params))
 	       ,body)))))))
+
+(defoptimizer (%alien-funcall derive-type) ((function type &rest args))
+  (declare (ignore function args))
+  (unless (constant-continuation-p type)
+    (error "Something is broken."))
+  (let ((type (continuation-value type)))
+    (unless (alien-function-type-p type)
+      (error "Something is broken."))
+    (make-alien-type-type (alien-function-type-result-type type))))
 
 (defoptimizer (%alien-funcall ltn-annotate)
 	      ((function type &rest args) node policy)
