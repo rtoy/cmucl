@@ -444,7 +444,9 @@
 ;;;
 (defun setup-environment-tn-conflicts (component tn env debug-p)
   (declare (type component component) (type tn tn) (type environment env))
-  (when (and debug-p (not (tn-global-conflicts tn)))
+  (when (and debug-p
+	     (not (tn-global-conflicts tn))
+	     (tn-local tn))
     (convert-to-global tn))
   (setf (tn-current-conflict tn) (tn-global-conflicts tn))
   (do-blocks-backwards (block component)
@@ -460,7 +462,7 @@
   (undefined-value))
 
   
-;;; SETUP-ENVIRONMENT-[DEBUG-]LIVE-CONFLICTS  --  Internal
+;;; SETUP-ENVIRONMENT-LIVE-CONFLICTS  --  Internal
 ;;;
 ;;;    Iterate over all the environment TNs, adding always-live conflicts as
 ;;; appropriate.
@@ -468,16 +470,11 @@
 (defun setup-environment-live-conflicts (component)
   (declare (type component component))
   (dolist (fun (component-lambdas component))
-    (let ((env (lambda-environment fun)))
-      (dolist (tn (ir2-environment-live-tns (environment-info env)))
-	(setup-environment-tn-conflicts component tn env nil))))
-  (undefined-value))
-;;;
-(defun setup-environment-debug-live-conflicts (component)
-  (declare (type component component))
-  (dolist (fun (component-lambdas component))
-    (let ((env (lambda-environment fun)))
-      (dolist (tn (ir2-environment-debug-live-tns (environment-info env)))
+    (let* ((env (lambda-environment fun))
+	   (2env (environment-info env)))
+      (dolist (tn (ir2-environment-live-tns 2env))
+	(setup-environment-tn-conflicts component tn env nil))
+      (dolist (tn (ir2-environment-debug-live-tns 2env))
 	(setup-environment-tn-conflicts component tn env t))))
   (undefined-value))
 
@@ -893,11 +890,14 @@
 ;;;
 (defun ensure-global-tn (tn)
   (declare (type tn tn))
-  (unless (tn-global-conflicts tn)
-    (convert-to-global tn)
-    (bit-ior (global-conflicts-conflicts (tn-global-conflicts tn))
-	     (tn-local-conflicts tn)
-	     t))
+  (cond ((tn-global-conflicts tn))
+	((tn-local tn)
+	 (convert-to-global tn)
+	 (bit-ior (global-conflicts-conflicts (tn-global-conflicts tn))
+		  (tn-local-conflicts tn)
+		  t))
+	(t
+	 (assert (and (null (tn-reads tn)) (null (tn-writes tn))))))
   (undefined-value))
 
   
@@ -928,6 +928,14 @@
 	    (oconf (tn-global-conflicts original))
 	    (oprev nil))
 	(loop
+	  (unless oconf
+	    (if oprev
+		(setf (global-conflicts-tn-next oprev) conf)
+		(setf (tn-global-conflicts original) conf))
+	    (do ((current conf (global-conflicts-tn-next current)))
+		((null current))
+	      (change-global-conflicts-tn current original))
+	    (return))
 	  (let* ((block (global-conflicts-block conf))
 		 (num (ir2-block-number block))
 		 (onum (ir2-block-number (global-conflicts-block oconf))))
@@ -944,14 +952,6 @@
 		   (merge-alias-block-conflicts conf oconf)
 		   (shiftf oprev oconf (global-conflicts-tn-next oconf))
 		   (setf conf (global-conflicts-tn-next conf)))))
-	  (unless oconf
-	    (if oprev
-		(setf (global-conflicts-tn-next oprev) conf)
-		(setf (tn-global-conflicts original) conf))
-	    (do ((current conf (global-conflicts-tn-next current)))
-		((null current))
-	      (change-global-conflicts-tn current original))
-	    (return))
 	  (unless conf (return))))
 
       (flet ((frob (refs)
@@ -976,7 +976,6 @@
   (lifetime-pre-pass component)
   (setup-environment-live-conflicts component)
   (lifetime-flow-analysis component)
-  (setup-environment-debug-live-conflicts component)
   (lifetime-post-pass component)
   (merge-alias-conflicts component))
 
@@ -1060,4 +1059,3 @@
 	   (and (eq (tn-local x) (tn-local y))
 		(not (zerop (sbit (tn-local-conflicts x)
 				  (tn-local-number y)))))))))
-
