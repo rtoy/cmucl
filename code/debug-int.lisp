@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.104 2003/07/21 13:41:53 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.105 2003/08/24 07:52:56 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3728,8 +3728,7 @@
 	(fun (code-location-debug-function loc)))
     (unless (debug-variable-info-available fun)
       (debug-signal 'no-debug-variables :debug-function fun))
-    (ext:collect ((binds)
-		  (specs))
+    (ext:collect ((binds) (symbol-macros) (special-binds))
       (do-debug-function-variables (var fun)
 	(let ((validity (debug-variable-validity var loc)))
 	  (unless (eq validity :invalid)
@@ -3743,16 +3742,22 @@
 	      (var (third bind)))
 	  (ecase (second bind)
 	    (:valid
-	     (specs `(,name (debug-variable-value ',var ,n-frame))))
+	     (let ((binding `(,name (debug-variable-value ',var ,n-frame))))
+	       (if (eq (info variable kind name) :special)
+		   (special-binds binding)
+		   (symbol-macros binding))))
 	    (:unknown
-	     (specs `(,name (debug-signal 'invalid-value :debug-variable ',var
-					  :frame ,n-frame))))
+	     (symbol-macros
+	      `(,name (debug-signal 'invalid-value :debug-variable ',var
+				    :frame ,n-frame))))
 	    (:ambiguous
-	     (specs `(,name (debug-signal 'ambiguous-variable-name :name ',name
-					  :frame ,n-frame)))))))
+	     (symbol-macros
+	      `(,name (debug-signal 'ambiguous-variable-name :name ',name
+				    :frame ,n-frame)))))))
       (let ((res (coerce `(lambda (,n-frame)
 			    (declare (ignorable ,n-frame))
-			    (symbol-macrolet ,(specs) ,form))
+			    (let ,(special-binds)
+			      (symbol-macrolet ,(symbol-macros) ,form)))
 			 'function)))
 	#'(lambda (frame)
 	    ;; This prevents these functions from use in any location other
