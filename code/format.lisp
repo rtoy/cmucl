@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.21 1991/12/16 10:04:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.22 1992/01/17 19:56:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2175,7 +2175,9 @@
 		     mincol))
 	 (padding (- length chars)))
     (when (and newline-prefix
-	       (> (+ (lisp::charpos stream) length extra-space) line-len))
+	       (> (+ (or (lisp::charpos stream) 0)
+		     length extra-space)
+		  line-len))
       (write-string newline-prefix stream))
     (flet ((do-padding ()
 	     (let ((pad-len (truncate padding num-gaps)))
