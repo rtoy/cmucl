@@ -189,16 +189,19 @@
    Alloc-tn is a register to hold the heap pointer, and it can be any register
    since raw heap pointers look like fixnums (dual-word aligned objects).  The
    body is placed inside PSEUDO-ATOMIC, and presumably initializes the object."
-  `(pseudo-atomic (,header-tn)
-     (load-symbol-value ,alloc-tn *allocation-pointer*)
-     ;; Take free pointer and make descriptor pointer.
-     ;; Just add in three low-tag bits since alloc ptr is dual-word aligned.
-     (inst cal ,result-tn ,alloc-tn other-pointer-type)
-     (inst cal ,alloc-tn ,alloc-tn (pad-data-block ,size))
-     (store-symbol-value ,alloc-tn *allocation-pointer*)
-     (inst li ,header-tn (logior (ash (1- ,size) type-bits) ,type-code))
-     (storew ,header-tn ,result-tn 0 other-pointer-type)
-     ,@body))
+  `(progn
+     (pseudo-atomic (,header-tn)
+       (load-symbol-value ,alloc-tn *allocation-pointer*)
+       ;; Take free pointer and make descriptor pointer.
+       ;; Just add in three low-tag bits since alloc ptr is dual-word aligned.
+       (inst cal ,result-tn ,alloc-tn other-pointer-type)
+       (inst cal ,alloc-tn ,alloc-tn (pad-data-block ,size))
+       (store-symbol-value ,alloc-tn *allocation-pointer*)
+       (inst li ,header-tn (logior (ash (1- ,size) type-bits) ,type-code))
+       (storew ,header-tn ,result-tn 0 other-pointer-type)
+       ,@body)
+     (load-symbol-value ,header-tn *internal-gc-trigger*)
+     (inst tlt ,alloc-tn ,header-tn)))
 
 
 

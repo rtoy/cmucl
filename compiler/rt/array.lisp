@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.7 1991/08/25 19:06:23 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.8 1991/10/22 16:43:21 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -52,6 +52,8 @@
       (inst o ndescr type)
       (inst sr ndescr 2)
       (storew ndescr header 0 vm:other-pointer-type))
+    (load-symbol-value ndescr *internal-gc-trigger*)
+    (inst tlt ndescr alloc)
     (move result header)))
 
 

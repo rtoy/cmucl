@@ -1092,6 +1092,8 @@ default-value-5
 
 	;; NIL out the last cons.
 	(storew null-tn dst -1 vm:list-pointer-type))
+      (load-symbol-value ndescr *internal-gc-trigger*)
+      (inst tlt ndescr alloc)
       (emit-label done))))
 
 

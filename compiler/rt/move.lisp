@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.3 1991/05/09 16:30:06 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.4 1991/10/22 16:42:18 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of operand loading/saving and the
 ;;; Move VOP.
@@ -303,6 +303,8 @@
 	  (store-symbol-value alloc *allocation-pointer*)
 	  (storew temp y 0 other-pointer-type)
 	  (storew x y bignum-digits-offset other-pointer-type))
+	(load-symbol-value temp *internal-gc-trigger*)
+	(inst tlt temp alloc)
 	(inst b done)))))
 ;;;
 (define-move-vop move-from-unsigned :move

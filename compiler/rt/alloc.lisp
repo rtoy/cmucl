@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.3 1991/04/23 17:23:50 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.4 1991/10/22 16:43:17 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the IBM RT port.
 ;;;
@@ -72,7 +72,9 @@
 			(storew null-tn ptr
 				cons-cdr-slot list-pointer-type)))
 		 (assert (null (tn-ref-across things)))
-		 (move result res))))))))
+		 (move result res))
+	       (load-symbol-value ndescr *internal-gc-trigger*)
+	       (inst tlt ndescr alloc)))))))
 
 (define-vop (list list-or-list*)
   (:variant nil))
@@ -112,7 +114,9 @@
       (storew ndescr result 0 other-pointer-type)
       (storew unboxed result code-code-size-slot other-pointer-type)
       (storew null-tn result code-entry-points-slot other-pointer-type)
-      (storew null-tn result code-debug-info-slot other-pointer-type))))
+      (storew null-tn result code-debug-info-slot other-pointer-type))
+    (load-symbol-value ndescr *internal-gc-trigger*)
+    (inst tlt ndescr alloc)))
 
 (define-vop (make-symbol)
   (:args (name :scs (descriptor-reg) :to :eval))
