@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.31 1993/08/19 12:44:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.32 1993/08/19 21:02:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,7 +143,7 @@
 (deftransform copy-seq ((seq) (simple-string))
   '(let* ((length (length seq))
 	  (res (make-string length)))
-     (declare (optimize (safety 0))
+     (declare (optimize (safety 0)))
      (bit-bash-copy seq
 		    vector-data-bit-offset
 		    res
