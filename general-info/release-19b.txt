@@ -53,6 +53,7 @@ New in this release:
          2.5.
       - Simple support for datagram networking added: INET-RECVFROM,
         INET-SENDTO, INET-SHUTDOWN.
+      - Linkage table support for PPC and Darwin.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
