@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.15 1990/09/21 00:48:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.16 1990/10/13 21:25:40 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -189,8 +189,7 @@
 		     args)
 	   (inst compute-lra-from-code
 		 ,return-pc code-tn ,return-pc-label ,ndescr)
-	   (inst li ,ndescr (make-fixup ',name :assembly-routine))
-	   (inst j ,ndescr)
+	   (inst j (make-fixup ',name :assembly-routine))
 	   (inst nop)
 	   (emit-return-pc ,return-pc-label)
 	   
