@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.71 1994/10/24 19:11:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.72 1997/01/18 14:31:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -147,6 +147,10 @@
   (comf "target:code/osf1-os"))
 (when (c:backend-featurep :irix)
   (comf "target:code/irix-os"))
+(when (c:backend-featurep :BSD)
+  (comf "target:code/bsd-os"))
+(when (c:backend-featurep :Linux)
+  (comf "target:code/linux-os"))
 
 (when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.59 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.60 1997/01/18 14:31:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1133,11 +1133,15 @@
   (declare (type bind node) (type ir2-block block) (type clambda fun))
   (let ((start-label (entry-info-offset (leaf-info fun)))
 	(env (environment-info (node-environment node))))
-    (vop xep-allocate-frame node block start-label)
     (let ((ef (functional-entry-function fun)))
-      (when (and (optional-dispatch-p ef)
-		 (optional-dispatch-more-entry ef))
-	(vop copy-more-arg node block (optional-dispatch-max-args ef)))
+      (if (and (optional-dispatch-p ef)
+	       (optional-dispatch-more-entry ef))
+	  ;; Special case the xep-allocate-frame + copy-more-arg case.
+	  (progn 
+	    (vop xep-allocate-frame node block start-label #+x86 t)
+	    (vop copy-more-arg node block (optional-dispatch-max-args ef)))
+	;; No more args, so normal entry.
+	(vop xep-allocate-frame node block start-label #+x86 nil))
       
       (if (ir2-environment-environment env)
 	  (let ((closure

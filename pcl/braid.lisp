@@ -41,8 +41,8 @@
   #-new-kcl-wrapper
   (let ((instance (%%allocate-instance--class))
 	(no-of-slots (wrapper-no-of-instance-slots wrapper)))
-    (setf (%std-instance-wrapper instance) wrapper)
-    (setf (%std-instance-slots instance) 
+    (setf (std-instance-wrapper instance) wrapper)
+    (setf (std-instance-slots instance) 
 	  (if slots-init-p
 	      (make-array no-of-slots :initial-contents slots-init)
 	      (make-array no-of-slots :initial-element *slot-unbound*)))
@@ -75,10 +75,11 @@
 (defun allocate-funcallable-instance (wrapper &optional (slots-init nil slots-init-p))
   (let ((fin (allocate-funcallable-instance-1)))
     (set-funcallable-instance-function
-     fin #'(lambda (&rest args)
-	     (declare (ignore args))
-	     (error "The function of the funcallable-instance ~S has not been set"
-		    fin)))
+     fin
+     #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+         (declare (ignore args))
+	 (error "The function of the funcallable-instance ~S has not been set"
+		fin)))
     (setf (fsc-instance-wrapper fin) wrapper
 	  (fsc-instance-slots fin) (allocate-funcallable-instance-slots
 				    wrapper slots-init-p slots-init))
@@ -113,7 +114,12 @@
 				     *the-pcl-package*)))
 		     `(setf ,wr ,(if (eq class 'standard-generic-function)
 				     '*sgf-wrapper*
-				     `(make-wrapper (early-class-size ',class)))
+				     #-cmu17
+				     `(make-wrapper (early-class-size ',class))
+				     #+cmu17
+				     `(boot-make-wrapper
+				       (early-class-size ',class)
+				       ',class))
 		            ,class (allocate-standard-instance
 				    ,(if (eq class 'standard-generic-function)
 					 'funcallable-standard-class-wrapper
@@ -197,7 +203,11 @@
 				   class-eq-specializer-wrapper)
 				  ((eq class standard-generic-function)
 				   standard-generic-function-wrapper)
-				  (t (make-wrapper (length slots) class))))
+				  (t
+				   #-cmu17
+				   (make-wrapper (length slots) class)
+				   #+cmu17
+				   (boot-make-wrapper (length slots) name))))
 		   (proto nil))
 	      (when (eq name 't) (setq *the-wrapper-of-t* wrapper))
 	      (set (intern (format nil "*THE-CLASS-~A*" (symbol-name name))
@@ -207,10 +217,11 @@
 		(unless (eq (getf slot :allocation :instance) :instance)
 		  (error "Slot allocation ~S not supported in bootstrap.")))
 	      
-	      (setf (wrapper-instance-slots-layout wrapper)
-		    (mapcar #'canonical-slot-name slots))
-	      (setf (wrapper-class-slots wrapper)
-		    ())
+	      (when #+cmu17 (typep wrapper 'wrapper) #-cmu17 t
+		(setf (wrapper-instance-slots-layout wrapper)
+		      (mapcar #'canonical-slot-name slots))
+		(setf (wrapper-class-slots wrapper)
+		      ()))
 	      
 	      (setq proto (if (eq meta 'funcallable-standard-class)
 			      (allocate-funcallable-instance wrapper)
@@ -460,10 +471,15 @@
     (dolist (e *built-in-classes*)
       (destructuring-bind (name supers subs cpl prototype) e
 	(let* ((class (find-class name))
-	       (wrapper (make-wrapper 0 class)))
+	       #+cmu17
+	       (lclass (lisp:find-class name))
+	       (wrapper #-cmu17(make-wrapper 0 class)
+			#+cmu17(kernel:class-layout lclass)))
 	  (set (get-built-in-class-symbol name) class)
 	  (set (get-built-in-wrapper-symbol name) wrapper)
-
+	  #+cmu17
+	  (setf (kernel:class-pcl-class lclass) class)
+	  #-cmu17
 	  (setf (wrapper-instance-slots-layout wrapper) ()
 		(wrapper-class-slots wrapper) ())
 
@@ -483,7 +499,7 @@
 ;;;
 ;;;
 ;;;
-#-new-kcl-wrapper
+#-(or new-kcl-wrapper cmu17)
 (progn
 (defvar *built-in-or-structure-wrapper-table*
   (make-hash-table :test 'eq))
@@ -541,6 +557,7 @@
 	     (built-in-or-structure-wrapper1 ,x)))))
 ||#
 
+#-cmu17
 (defmacro wrapper-of-macro (x)
   `(cond ((std-instance-p ,x)
 	  (std-instance-wrapper ,x))
@@ -551,12 +568,19 @@
 	   #-new-kcl-wrapper built-in-or-structure-wrapper
 	   ,x))))
 
+#+cmu17
+(defmacro wrapper-of-macro (x)
+  `(kernel:layout-of ,x))
+
 (defun class-of (x)
   (wrapper-class* (wrapper-of-macro x)))
 
+#+cmu17
+(declaim (inline wrapper-of))
 (defun wrapper-of (x)
   (wrapper-of-macro x))
 
+#-cmu17
 (defun structure-wrapper (x)
   (class-wrapper (find-class (structure-type x))))
 
@@ -582,13 +606,18 @@
 			:metaclass 'structure-class
 			:name symbol
 			:direct-superclasses
-			(when (structure-type-included-type-name symbol)
-			  (list (structure-type-included-type-name symbol)))
+			(cond ((lisp:subtypep symbol 'condition)
+			       (list (lisp:class-name
+				      (first (kernel:class-direct-superclasses
+					      (lisp:find-class symbol))))))
+			      ((structure-type-included-type-name symbol)
+			       (list (structure-type-included-type-name symbol))))
 			:direct-slots
 			(mapcar #'slot-initargs-from-structure-slotd
 				(structure-type-slot-description-list symbol)))))
       (error "~S is not a legal structure class name." symbol)))
 
+#-cmu17
 (eval-when (compile eval)
 
 (defun make-built-in-class-subs ()
@@ -631,6 +660,7 @@
 		 symbol)))))
 )
 
+#-cmu17
 (defun built-in-wrapper-of (x)
   #.(when (fboundp 'make-built-in-wrapper-of-body) ; so we can at least read this file
       (make-built-in-wrapper-of-body)))
@@ -676,6 +706,20 @@
 	(add-method gf class-method)))
     gf))
 
+
+#+cmu17
+;;; Set inherits from CPL and register layout.  This actually installs the
+;;; class in the lisp type system.
+;;;
+(defun update-lisp-class-layout (class layout)
+  (unless (eq (kernel:class-layout (kernel:layout-class layout))
+	      layout)
+    (setf (kernel:layout-inherits layout)
+	  (map 'vector #'class-wrapper
+	       (reverse (rest (class-precedence-list class)))))
+
+    (kernel:register-layout layout :invalidate nil)))
+
 (eval-when (load eval)
   (clrhash *find-class*)
   (bootstrap-meta-braid)
@@ -684,9 +728,29 @@
   (bootstrap-accessor-definitions nil)
   (bootstrap-class-predicates nil)
   (bootstrap-built-in-classes)
+
+  #+cmu17
+  (ext:do-hash (name x *find-class*)
+    (let* ((class (find-class-from-cell name x))
+	   (layout (class-wrapper class))
+	   (lclass (kernel:layout-class layout))
+	   (lclass-pcl-class (kernel:class-pcl-class lclass))
+	   (olclass (lisp:find-class name nil)))
+      (if lclass-pcl-class
+	  (assert (eq class lclass-pcl-class))
+	  (setf (kernel:class-pcl-class lclass) class))
+
+      (update-lisp-class-layout class layout)
+
+      (cond (olclass
+	     (assert (eq lclass olclass)))
+	    (t
+	     (setf (lisp:find-class name) lclass)))))
+
   (setq *boot-state* 'braid)
   )
 
+#-cmu17
 (deftype slot-object ()
   '(or standard-object structure-object))
 

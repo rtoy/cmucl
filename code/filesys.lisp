@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.40 1996/07/12 19:21:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.41 1997/01/18 14:30:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -632,8 +632,14 @@
 (defun unix-namestring (pathname &optional (for-input t) executable-only)
   "Convert PATHNAME into a string that can be used with UNIX system calls.
    Search-lists and wild-cards are expanded."
+  ;; toy@rtp.ericsson.se: Let unix-namestring also handle logical
+  ;; pathnames too.
+  (let ((path (let ((lpn (pathname pathname)))
+		(if (logical-pathname-p lpn)
+		    (namestring (translate-logical-pathname lpn))
+		    pathname))))
   (enumerate-search-list
-      (pathname pathname)
+      (pathname path)
     (collect ((names))
       (enumerate-matches (name pathname nil :verify-existance for-input)
 	(when (or (not executable-only)
@@ -644,7 +650,7 @@
 	(when names
 	  (when (cdr names)
 	    (error "~S is ambiguous:~{~%  ~A~}" pathname names))
-	  (return (car names)))))))
+	  (return (car names))))))))
 
 
 ;;;; TRUENAME and PROBE-FILE.
@@ -753,7 +759,7 @@
     (unless name
       (error "~S doesn't exist." file))
     (multiple-value-bind (winp dev ino mode nlink uid)
-			 (unix:unix-stat file)
+			 (unix:unix-stat name)
       (declare (ignore dev ino mode nlink))
       (if winp (lookup-login-name uid)))))
 

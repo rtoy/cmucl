@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.19 1996/05/08 13:24:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.20 1997/01/18 14:31:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -228,26 +228,30 @@
 		  (push-let-binding var nil nil))))
 	      (t
 	       (error "Non-symbol in lambda-list - ~S." var)))))
-    (push `(unless (<= ,minimum
-		       (length (the list ,(if top-level
-					      `(cdr ,arg-list-name)
-					      arg-list-name)))
-		       ,@(unless restp
-			   (list maximum)))
-	     ,(let ((arg (if top-level
-			     `(cdr ,arg-list-name)
-			     arg-list-name)))
-		(if (eq error-fun 'error)
-		    `(do-arg-count-error ',error-kind ',name ,arg ',lambda-list
-					 ,minimum ,(unless restp maximum))
-		    `(,error-fun 'defmacro-ll-arg-count-error
+    ;; Generate code to check the number of arguments, unless dotted
+    ;; in which case length will not work.
+    (unless restp
+       (push `(unless (<= ,minimum
+			  (length (the list ,(if top-level
+						 `(cdr ,arg-list-name)
+					       arg-list-name)))
+			  ,@(unless restp
+				    (list maximum)))
+		      ,(let ((arg (if top-level
+				      `(cdr ,arg-list-name)
+				    arg-list-name)))
+			 (if (eq error-fun 'error)
+			     `(do-arg-count-error ',error-kind ',name ,arg
+						  ',lambda-list ,minimum
+						  ,(unless restp maximum))
+			   `(,error-fun 'defmacro-ll-arg-count-error
 				 :kind ',error-kind
 				 ,@(when name `(:name ',name))
 				 :argument ,arg
 				 :lambda-list ',lambda-list
 				 :minimum ,minimum
 				 ,@(unless restp `(:maximum ,maximum))))))
-	  *arg-tests*)
+	     *arg-tests*))
     (if keys
 	(let ((problem (gensym "KEY-PROBLEM-"))
 	      (info (gensym "INFO-")))

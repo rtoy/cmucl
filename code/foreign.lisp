@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.20 1995/02/16 22:41:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.21 1997/01/18 14:30:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,13 @@
 #+hppa (defconstant foreign-segment-start #x10C00000)
 #+hppa (defconstant foreign-segment-size  #x00400000)
 
+#+(and (not linux) x86)
+ (defconstant foreign-segment-start #x7000000) ; just an unused space
+#+(and (not linux) x86) 
+ (defconstant foreign-segment-size  #x00400000)
+
 (defvar *previous-linked-object-file* nil)
+#-linux
 (defvar *foreign-segment-free-pointer* foreign-segment-start)
 
 (defun pick-temporary-file-name (&optional (base "/tmp/tmp~D~C"))
@@ -51,7 +57,7 @@
 		(t
 		 (incf code))))))))
 
-#+(and sparc (not svr4))
+#+(or FreeBSD (and sparc (not svr4)))
 (alien:def-alien-type exec
   (alien:struct nil
     (magic c-call:unsigned-long)
@@ -63,7 +69,7 @@
     (trsize c-call:unsigned-long)
     (drsize c-call:unsigned-long)))
 
-#-svr4
+#-(or linux svr4)
 (defun allocate-space-in-foreign-segment (bytes)
   (let* ((pagesize-1 (1- (get-page-size)))
 	 (memory-needed (logandc2 (+ bytes pagesize-1) pagesize-1))
@@ -75,7 +81,10 @@
     (allocate-system-memory-at addr memory-needed)
     addr))
 
-#+(and sparc (not svr4))
+;;; pw-- This seems to work for FreeBSD. The MAGIC field is not tested
+;;; for correct file format so it may croak if ld fails to produce the
+;;; expected results. It is probably good enough for now.
+#+(or FreeBSD (and sparc (not svr4)))
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
@@ -275,7 +284,7 @@
             ))
       (unix:unix-close fd))))
 
-#-solaris
+#-(or linux solaris)
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))
@@ -286,14 +295,16 @@
 	    (return))
 	  (let* ((symbol (subseq line 11))
 		 (address (parse-integer line :end 8 :radix 16))
+		 #+FreeBSD (kind (aref line 9))	; filter out .o file names
 		 (old-address (gethash symbol lisp::*foreign-symbols*)))
-	    (unless (or (null old-address) (= address old-address))
+	    (unless (or (null old-address) (= address old-address)
+			#+FreeBSD (char= kind #\F))
 	      (warn "~S moved from #x~8,'0X to #x~8,'0X.~%"
 		    symbol old-address address))
 	    (setf (gethash symbol symbol-table) address)))))
     (setf lisp::*foreign-symbols* symbol-table)))
 
-#-solaris
+#-(or linux solaris)
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
 			   (base-file
@@ -364,10 +375,13 @@
 
 (export '(alternate-get-global-address))
 
-#-solaris
-(defun alternate-get-global-address (symbol) 0)
+#-(or freebsd solaris linux)
+(defun alternate-get-global-address (symbol)
+  (declare (type simple-string symbol)
+	   (ignore symbol))
+  0)
 
-#+solaris
+#+(or linux solaris)
 (progn
 
 (defconstant rtld-lazy 1)
@@ -428,10 +442,12 @@
 		      (concatenate 'string "/tmp/~D~S" (string (gensym)))))
 	(error-output (make-string-output-stream)))
 
-    (format t ";;; Running /usr/ccs/bin/ld...~%")
+    #-linux (format t ";;; Running /usr/ccs/bin/ld...~%")
+    #+linux (format t ";;; Running /usr/bin/ld...~%")
     (force-output)
     (let ((proc (ext:run-program
-		 "/usr/ccs/bin/ld"
+		 #-linux "/usr/ccs/bin/ld"
+		 #+linux "/usr/bin/ld"
 		 (list*
 			"-G"
 			"-o"
@@ -447,10 +463,12 @@
 		 :output error-output
 		 :error :output)))
       (unless proc
-	(error "Could not run /usr/ccs/bin/ld"))
+	(error  #+linux "Could not run /usr/bin/ld"
+                #-linux "Could not run /usr/ccs/bin/ld"))
       (unless (zerop (ext:process-exit-code proc))
 	(system:serve-all-events 0)
-	(error "/usr/ccs/bin/ld failed:~%~A"
+	(error #-linux "/usr/ccs/bin/ld failed:~%~A" 
+               #+linux "/usr/bin/ld failed:~%~A"
 	       (get-output-stream-string error-output)))
       (load-object-file output-file)
       (unix:unix-unlink output-file)

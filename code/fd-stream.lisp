@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.37 1996/05/07 20:47:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.38 1997/01/18 14:31:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -980,17 +980,18 @@ non-server method is also significantly more efficient for large reads.
      (setf (fd-stream-unread stream) nil)
      (setf (fd-stream-ibuf-head stream) 0)
      (setf (fd-stream-ibuf-tail stream) 0)
-     (loop
-       (let ((count (unix:unix-select (1+ (fd-stream-fd stream))
-				      (the (unsigned-byte 32)
-					   (ash 1 (fd-stream-fd stream)))
-				      0 0 0)))
-	 (cond ((eql count 1)
-		(do-input stream)
-		(setf (fd-stream-ibuf-head stream) 0)
-		(setf (fd-stream-ibuf-tail stream) 0))
-	       (t
-		(return))))))
+     (catch 'eof-input-catcher
+       (loop
+	(let ((count (unix:unix-select (1+ (fd-stream-fd stream))
+				       (the (unsigned-byte 32)
+					    (ash 1 (fd-stream-fd stream)))
+				       0 0 0)))
+	  (cond ((eql count 1)
+		 (do-input stream)
+		 (setf (fd-stream-ibuf-head stream) 0)
+		 (setf (fd-stream-ibuf-tail stream) 0))
+		(t
+		 (return t)))))))
     (:force-output
      (flush-output-buffer stream))
     (:finish-output

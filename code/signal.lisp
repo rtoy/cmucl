@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.24 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.25 1997/01/18 14:30:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.24 1994/10/31 04:11:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.25 1997/01/18 14:30:33 ram Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -51,7 +51,9 @@
 (defvar *unix-signals* nil
   "A list of unix signal structures.")
 
+
 (eval-when (compile eval)
+;(setf *unix-signals* nil) ; pve: sigh or else...
 (defmacro def-unix-signal (name number description)
   (let ((symbol (intern (symbol-name name))))
     `(progn
@@ -92,34 +94,42 @@
 ;;; Known signals
 ;;; 
 (def-unix-signal :CHECK 0 "Check")
+
 (def-unix-signal :SIGHUP 1 "Hangup")
 (def-unix-signal :SIGINT 2 "Interrupt")
 (def-unix-signal :SIGQUIT 3 "Quit")
 (def-unix-signal :SIGILL 4 "Illegal instruction")
 (def-unix-signal :SIGTRAP 5 "Trace trap")
 (def-unix-signal :SIGIOT 6 "Iot instruction")
+#-linux
 (def-unix-signal :SIGEMT 7 "Emt instruction")
 (def-unix-signal :SIGFPE 8 "Floating point exception")
 (def-unix-signal :SIGKILL 9 "Kill")
-(def-unix-signal :SIGBUS 10 "Bus error")
+(def-unix-signal :SIGBUS #-linux 10 #+linux 7 "Bus error")
 (def-unix-signal :SIGSEGV 11 "Segmentation violation")
+#-linux
 (def-unix-signal :SIGSYS 12 "Bad argument to system call")
 (def-unix-signal :SIGPIPE 13 "Write on a pipe with no one to read it")
 (def-unix-signal :SIGALRM 14 "Alarm clock")
 (def-unix-signal :SIGTERM 15 "Software termination signal")
-(def-unix-signal :SIGURG #+svr4 21 #-(or hpux svr4) 16 #+hpux 29 
-  "Urgent condition present on socket")
-(def-unix-signal :SIGSTOP #-(or hpux svr4) 17 #+hpux 24 #+svr4 23 "Stop")
-(def-unix-signal :SIGTSTP #-(or hpux svr4) 18 #+hpux 25 #+svr4 24
-  "Stop signal generated from keyboard")
-(def-unix-signal :SIGCONT #-(or hpux svr4) 19 #+hpux 26 #+svr4 25
-    "Continue after stop")
-(def-unix-signal :SIGCHLD #-hpux 20 #+hpux 18 "Child status has changed")
+#+linux
+(def-unix-signal :SIGSTKFLT 16 "Stack fault on coprocessor")
+(def-unix-signal :SIGURG #+svr4 21 #-(or hpux svr4 linux) 16 #+hpux 29
+  #+linux 23 "Urgent condition present on socket")
+(def-unix-signal :SIGSTOP #-(or hpux svr4 linux) 17 #+hpux 24 #+svr4 23 
+  #+linux 19 "Stop")
+(def-unix-signal :SIGTSTP #-(or hpux svr4 linux) 18 #+hpux 25 #+svr4 24
+  #+linux 20 "Stop signal generated from keyboard")
+(def-unix-signal :SIGCONT #-(or hpux svr4 linux) 19 #+hpux 26 #+svr4 25
+  #+linux 18 "Continue after stop")
+(def-unix-signal :SIGCHLD #-(or linux hpux) 20 
+  #+hpux 18 #+linux 17 "Child status has changed")
 (def-unix-signal :SIGTTIN #-(or hpux svr4) 21 #+hpux 27 #+svr4 26
   "Background read attempted from control terminal")
 (def-unix-signal :SIGTTOU #-(or hpux svr4) 22 #+hpux 28 #+svr4 27
   "Background write attempted to control terminal")
-(def-unix-signal :SIGIO #-(or hpux irix) 23 #+(or hpux irix) 22
+(def-unix-signal :SIGIO #-(or hpux irix linux) 23 #+(or hpux irix) 22
+  #+linux 29
   "I/O is possible on a descriptor")
 #-hpux
 (def-unix-signal :SIGXCPU #-svr4 24 #+svr4 30  "Cpu time limit exceeded")
@@ -127,14 +137,14 @@
 (def-unix-signal :SIGXFSZ #-svr4 25 #+svr4 31 "File size limit exceeded")
 (def-unix-signal :SIGVTALRM #-(or hpux svr4) 26 #+hpux 20 #+svr4 28
     "Virtual time alarm")
-(def-unix-signal :SIGPROF #-(or hpux svr4) 27 #+hpux 21 #+svr4 29
-    "Profiling timer alarm")
+(def-unix-signal :SIGPROF #-(or hpux svr4 linux) 27 #+hpux 21 #+svr4 29
+  #+linux 30 "Profiling timer alarm")
 (def-unix-signal :SIGWINCH #-(or hpux svr4) 28 #+hpux 23 #+svr4 20
     "Window size change")
-(def-unix-signal :SIGUSR1 #-(or hpux svr4) 30 #+(or hpux svr4) 16
-    "User defined signal 1")
-(def-unix-signal :SIGUSR2 #-(or hpux svr4) 31 #+(or hpux svr4) 17
-    "User defined signal 2")
+(def-unix-signal :SIGUSR1 #-(or hpux svr4 linux) 30 #+(or hpux svr4) 16
+  #+linux 10 "User defined signal 1")
+(def-unix-signal :SIGUSR2 #-(or hpux svr4 linux) 31 #+(or hpux svr4) 17
+  #+linux 12 "User defined signal 2")
 ;;; 
 ;;; These are Mach Specific
 #+mach
@@ -145,6 +155,7 @@
 ;;; SVR4 (or Solaris?) specific signals
 #+svr4
 (def-unix-signal :SIGWAITING 32 "Process's lwps are blocked")
+
 
 ;;; SIGMASK -- Public
 ;;;
@@ -256,9 +267,11 @@
 (define-signal-handler sigill-handler "Illegal Instruction")
 (define-signal-handler sigtrap-handler "Breakpoint/Trap")
 (define-signal-handler sigiot-handler "SIGIOT")
+#-linux
 (define-signal-handler sigemt-handler "SIGEMT")
 (define-signal-handler sigbus-handler "Bus Error")
 (define-signal-handler sigsegv-handler "Segmentation Violation")
+#-linux
 (define-signal-handler sigsys-handler "Bad Argument to a System Call")
 (define-signal-handler sigpipe-handler "SIGPIPE")
 (define-signal-handler sigalrm-handler "SIGALRM")
@@ -275,10 +288,12 @@
   (enable-interrupt :sigill #'sigill-handler)
   (enable-interrupt :sigtrap #'sigtrap-handler)
   (enable-interrupt :sigiot #'sigiot-handler)
+  #-linux
   (enable-interrupt :sigemt #'sigemt-handler)
   (enable-interrupt :sigfpe #'vm:sigfpe-handler)
   (enable-interrupt :sigbus #'sigbus-handler)
   (enable-interrupt :sigsegv #'sigsegv-handler)
+  #-linux
   (enable-interrupt :sigsys #'sigsys-handler)
   (enable-interrupt :sigpipe #'sigpipe-handler)
   (enable-interrupt :sigalrm #'sigalrm-handler)

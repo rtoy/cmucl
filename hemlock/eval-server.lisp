@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.5 1995/02/16 23:04:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.6 1997/01/18 14:31:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -724,7 +724,13 @@
 	    
       (do ((i 0 (1+ i))
 	   (frame (di:top-frame) (di:frame-down frame)))
-	  ((= i 3)
+	  (#-x86(= i 3)
+	   #+x86
+	   (and (> i 6)		; get past extra cruft
+		(let ((name (di:debug-function-name
+			     (di:frame-debug-function frame))))
+		  (and (not (string= name "Bogus stack frame"))
+		       (not (string= name "Foreign function call land")))))
 	   (prin1 (di:debug-function-name (di:frame-debug-function frame))
 		  *error-output*))
 	(unless frame (return)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.31 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.32 1997/01/18 14:31:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,13 +95,21 @@
 	     (gethash name lisp::*assembler-routines*))
 	    (:foreign
 	     (assert (stringp name))
-	     (gethash name lisp::*foreign-symbols*)))
+	     (gethash name lisp::*foreign-symbols*))
+	    ;;; pw -- don't the RISC systems need this too?
+	    #+x86
+	    (:code-object
+	     (values
+	      (get-lisp-obj-address code)
+	      t)))
 	(unless found
 	  (error (ecase flavor
 		   (:assembly-routine "Undefined assembler routine: ~S")
 		   (:foreign "Unknown foreign symbol: ~S"))
 		 name))
 	(vm:fixup-code-object code offset value kind)))))
+
+
 
 
 ;;; REFERENCE-CORE-FUNCTION  --  Internal

@@ -18,6 +18,7 @@
 	  old-c::defstruct-slot-description)
 	"C")
 
+
 (with-compiler-log-file
     ("target:compile-compiler.log"
      :optimize
@@ -37,13 +38,19 @@
 	(declare (optimize (speed 0))))
        (:external (declare (optimize-interface (safety 2) (debug 1))))))
 
+
 (comf "target:compiler/macros" :load *load-stuff* :byte-compile *byte-compile*)
-(comf "target:compiler/generic/vm-macs" :load *load-stuff* :proceed t)
-(comf "target:compiler/backend" :load *load-stuff* :proceed t)
+
+(comf "target:compiler/generic/vm-macs" :load *load-stuff* :proceed t
+	:byte-compile #+bootstrap t #-bootstrap nil)
+
+(comf "target:compiler/backend" :load *load-stuff* :proceed t
+	:byte-compile #+bootstrap t #-bootstrap nil)
 
 (defvar c::*target-backend* (c::make-backend))
 
 (comf (vmdir "target:compiler/parms") :proceed t)
+
 (comf "target:compiler/generic/objdef" :proceed t)
 (comf "target:compiler/generic/interr")
 
@@ -57,10 +64,12 @@
 (comf "target:compiler/ctype")
 (comf "target:compiler/vop" :proceed t)
 (comf "target:compiler/vmdef")
+
 (comf "target:compiler/meta-vmdef" :proceed t)
+#+bootstrap ;; pw adds
+(comf "target:compiler/meta-vmdef" :byte-compile t)
 (when *load-stuff*
   (load "target:compiler/meta-vmdef"))
-
 (comf "target:compiler/disassem" :byte-compile *byte-compile*)
 (comf "target:compiler/new-assem")
 (comf "target:compiler/alloc")
@@ -79,18 +88,20 @@
   (comf "target:compiler/ir1opt"))
 
 (comf "target:compiler/ir1final")
-(comf "target:compiler/srctran")
+;;try(comf "target:compiler/srctran")
 (comf "target:compiler/array-tran" :byte-compile *byte-compile*)
 (comf "target:compiler/seqtran" :byte-compile *byte-compile*)
 (comf "target:compiler/typetran" :byte-compile *byte-compile*)
 (comf "target:compiler/generic/vm-typetran" :byte-compile *byte-compile*)
 (comf "target:compiler/float-tran" :byte-compile *byte-compile*)
 (comf "target:compiler/saptran" :byte-compile *byte-compile*)
+(comf "target:compiler/srctran") ;; try
 (comf "target:compiler/locall")
 (comf "target:compiler/dfo")
 (comf "target:compiler/checkgen")
 (comf "target:compiler/constraint")
 (comf "target:compiler/envanal")
+
 
 (comf "target:compiler/tn")
 (comf "target:compiler/life")
@@ -100,16 +111,35 @@
 (comf "target:compiler/debug-dump")
 (comf "target:compiler/generic/utils")
 (comf "target:assembly/assemfile")
+#+bootstrap
+(comf "target:assembly/assemfile" :byte-compile t)
 (when *load-stuff* (load "target:assembly/assemfile"))
-		   
+
+
 (with-compilation-unit
     (:optimize '(optimize (safety #+small 0 #-small 1) #+small (debug 0)))
 
-(comf (vmdir "target:compiler/insts"))
-(comf (vmdir "target:compiler/macros") :load *load-stuff*)
-(comf (vmdir "target:compiler/vm"))
+  #-x86
+  (progn				; this is distributed order
+    (comf (vmdir "target:compiler/insts"))
+    (comf (vmdir "target:compiler/macros") :load *load-stuff*)
+    (comf (vmdir "target:compiler/vm")))
+  #+nil
+  (progn				; this works for x86
+    (comf (vmdir "target:compiler/vm"))
+    (comf (vmdir "target:compiler/macros") :load *load-stuff*)
+    (comf (vmdir "target:compiler/insts")))
+  #+x86
+  (progn				; this is needed for cross compile
+    (comf (vmdir "target:compiler/vm"))
+    (comf (vmdir "target:compiler/insts"))
+    (comf (vmdir "target:compiler/macros") :load *load-stuff*
+	   :byte-compile #+bootstrap t #-bootstrap nil)
+    )	
+  
 (comf "target:compiler/generic/primtype")
-(comf (vmdir "target:assembly/support") :load *load-stuff*)
+(comf (vmdir "target:assembly/support") :load *load-stuff*
+       :byte-compile #+bootstrap t #-bootstrap nil) ; pw
 (comf (vmdir "target:compiler/move"))
 (comf (vmdir "target:compiler/float") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/sap") :byte-compile *byte-compile*)
@@ -119,6 +149,7 @@
 (comf (vmdir "target:compiler/static-fn"))
 (comf (vmdir "target:compiler/arith"))
 (comf (vmdir "target:compiler/subprim") :byte-compile *byte-compile*)
+
 (comf (vmdir "target:compiler/debug") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/c-call") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/cell"))
@@ -141,6 +172,7 @@
 ); with-compilation-unit for back end.
 
 (comf "target:compiler/aliencomp" :byte-compile *byte-compile*)
+
 (comf "target:compiler/ltv")
 (comf "target:compiler/gtn")
 (with-compilation-unit

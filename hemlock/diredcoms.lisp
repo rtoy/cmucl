@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/diredcoms.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/diredcoms.lisp,v 1.5 1997/01/18 14:31:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -330,8 +330,9 @@
   (declare (ignore p))
   (unless (hemlock-bound-p 'dired-information)
     (editor-error "Not in Dired buffer."))
-  (let ((dirs (pathname-directory
-	       (dired-info-pathname (value dired-information)))))
+  (let ((dirs (or (pathname-directory
+		   (dired-info-pathname (value dired-information)))
+		  '(:relative))))
     (dired-command nil
 		   (truename (make-pathname :directory (nconc dirs '(:UP)))))))
 

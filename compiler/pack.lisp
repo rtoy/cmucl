@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.53 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.54 1997/01/18 14:31:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1118,6 +1118,17 @@
 ;;;
 (defun select-load-tn-location (op sc)
   (declare (type tn-ref op) (type sc sc))
+
+  ;; Check any target location first.
+  (let ((target (tn-ref-target op)))
+    (when target
+      (let* ((tn (tn-ref-tn target))
+	     (loc (tn-offset tn)))
+	(when (and (eq (sc-sb sc) (sc-sb (tn-sc tn)))
+		   (member (the index loc) (sc-locations sc))
+		   (not (load-tn-conflicts-in-sc op sc loc nil)))
+	      (return-from select-load-tn-location loc)))))
+  
   (dolist (loc (sc-locations sc) nil)
     (unless (load-tn-conflicts-in-sc op sc loc nil)
       (return loc))))
@@ -1267,16 +1278,38 @@
 (proclaim '(inline check-operand-restrictions))
 (defun check-operand-restrictions (scs ops)
   (declare (list scs) (type (or tn-ref null) ops))
+
+  ;; Check the targeted operands first.
   (do ((scs scs (cdr scs))
        (op ops (tn-ref-across op)))
       ((null scs))
-    (let* ((load-tn (tn-ref-load-tn op))
-	   (load-scs (svref (car scs)
-			    (sc-number (tn-sc (or load-tn (tn-ref-tn op)))))))
-      (if load-tn
-	  (assert (eq load-scs t))
-	  (unless (eq load-scs t)
-	    (setf (tn-ref-load-tn op) (pack-load-tn (car scs) op))))))
+      (let ((target (tn-ref-target op)))
+	(when target
+	   (let* ((load-tn (tn-ref-load-tn op))
+		  (load-scs (svref (car scs)
+				   (sc-number
+				    (tn-sc (or load-tn (tn-ref-tn op)))))))
+	     (if load-tn
+		 (assert (eq load-scs t))
+	       (unless (eq load-scs t)
+		       (setf (tn-ref-load-tn op)
+			     (pack-load-tn (car scs) op))))))))
+
+  (do ((scs scs (cdr scs))
+       (op ops (tn-ref-across op)))
+      ((null scs))
+      (let ((target (tn-ref-target op)))
+	(unless target
+	   (let* ((load-tn (tn-ref-load-tn op))
+		  (load-scs (svref (car scs)
+				   (sc-number
+				    (tn-sc (or load-tn (tn-ref-tn op)))))))
+	     (if load-tn
+		 (assert (eq load-scs t))
+	       (unless (eq load-scs t)
+		       (setf (tn-ref-load-tn op)
+			     (pack-load-tn (car scs) op))))))))
+
   (undefined-value))
 	
 
@@ -1528,11 +1561,47 @@
       (unless (eq (sb-kind sb) :unbounded)
 	(error "~S wired to a location that is out of bounds." tn))
       (grow-sc sc end))
+
+    ;; For non x86 ports the presence of a save-tn associated with a
+    ;; tn is used to identify the old-fp and return-pc tns. It depends
+    ;; on the old-fp and return-pc being passed in registers.
+    (unless (backend-featurep :x86)
+      (when (and (not (eq (tn-kind tn) :specified-save))
+		 (conflicts-in-sc original sc offset))
+	    (error "~S wired to a location that it conflicts with." tn)))
+
+    ;; Use the above check, but only print a verbose warning. Helpful
+    ;; for debugging the x86 port.
+    #+x86-debug-pack-wired-tn
     (when (and (not (eq (tn-kind tn) :specified-save))
 	       (conflicts-in-sc original sc offset))
-      (error "~S wired to a location that it conflicts with." tn))
+	  (format t "~&* Pack-wired-tn possible conflict:~%  ~
+                     tn: ~s; tn-kind: ~s~%  ~
+                     sc: ~s~%  ~
+                     sb: ~s; sb-name: ~s; sb-kind: ~s~%  ~
+                     offset: ~s; end: ~s~%  ~
+                     original ~s~%  ~
+                     tn-save-tn: ~s; tn-kind of tn-save-tn: ~s~%"
+		  tn (tn-kind tn) sc
+		  sb (sb-name sb) (sb-kind sb)
+		  offset end
+		  original 
+		  (tn-save-tn tn) (tn-kind (tn-save-tn tn))))
+    
+    (when (backend-featurep :x86)
+       ;; On the x86 ports the old-fp and return-pc are often passed
+       ;; on the stack so the above hack for the other ports does not
+       ;; always work.  Here the old-fp and return-pc tns are
+       ;; identified by being on the stack in their standard save
+       ;; locations.
+       (when (and (not (eq (tn-kind tn) :specified-save))
+		  (not (and (eq (sb-name sb) 'vm::stack)
+			    (or (= offset 0)
+				(= offset 1))))
+		  (conflicts-in-sc original sc offset))
+	     (error "~S wired to a location that it conflicts with." tn)))
+    
     (add-location-conflicts original sc offset)))
-
 
 (defevent repack-block "Repacked a block due to TN unpacking.")
 

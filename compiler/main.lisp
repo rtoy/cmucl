@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.107 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.108 1997/01/18 14:31:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1712,12 +1712,14 @@
 	 (error-severity nil)
 	 (source (verify-source-files source))
 	 (source-info (make-file-source-info source))
-	 (default (pathname (first source))))
+	 (default (pathname (first source)))
+	 (diddle-case (logical-pathname-p (pathname default))))
     (unwind-protect
 	(progn
 	  (flet ((frob (file type)
 		   (if (eq file t)
-		       (make-pathname :type type  :defaults default)
+		       (make-pathname :type (lisp::maybe-diddle-case type diddle-case)
+				      :defaults default)
 		       (pathname file))))
 	    
 	    (when output-file

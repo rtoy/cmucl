@@ -53,6 +53,9 @@
   (slot-name-lists nil :type list)
   (call-list nil :type list))
 
+#+cmu
+(declaim (ext:freeze-type pv-table))
+
 (defvar *initial-pv-table* (make-pv-table-internal nil nil))
 
 ; help new slot-value-using-class methods affect fast iv access
@@ -170,12 +173,15 @@
 	    (iterate ((slot-names (list-elements slot-name-lists)))
 	      (when slot-names
 		(let* ((wrapper     (pop wrappers))
+		       (std-p #+cmu17 (typep wrapper 'wrapper)
+			      #-cmu17 t)
 		       (class       (wrapper-class* wrapper))
-		       (class-slots (wrapper-class-slots wrapper)))
+		       (class-slots (and std-p (wrapper-class-slots wrapper))))
 		  (dolist (slot-name (cdr slot-names))
 		    (gather1
-		     (compute-pv-slot slot-name wrapper class 
-				      class-slots not-simple-p-cell)))))))))
+		     (when std-p
+		       (compute-pv-slot slot-name wrapper class 
+					class-slots not-simple-p-cell))))))))))
     (if (car not-simple-p-cell)
 	(make-permutation-vector (cons t elements))
 	(or (gethash elements *pvs*)
@@ -271,13 +277,15 @@
 
 (defun update-all-pv-table-caches (class slot-names)
   (let* ((cwrapper (class-wrapper class))
-	 (class-slots (wrapper-class-slots cwrapper))
+	 (std-p #+cmu17 (typep cwrapper 'wrapper) #-cmu17 t)
+	 (class-slots (and std-p (wrapper-class-slots cwrapper)))
 	 (class-slot-p-cell (list nil))
 	 (new-values (mapcar #'(lambda (slot-name)
 				 (cons slot-name
-				       (compute-pv-slot 
-					slot-name cwrapper class 
-					class-slots class-slot-p-cell)))
+				       (when std-p
+					 (compute-pv-slot 
+					  slot-name cwrapper class 
+					  class-slots class-slot-p-cell))))
 			     slot-names))
 	 (pv-tables nil))
     (dolist (slot-name slot-names)
@@ -290,7 +298,7 @@
       (let* ((cache (pv-table-cache pv-table))
 	     (slot-name-lists (pv-table-slot-name-lists pv-table))
 	     (pv-size (pv-table-pv-size pv-table))
-	     (pv-map (make-array pv-size)))
+	     (pv-map (make-array pv-size :initial-element nil)))
 	(let ((map-index 1)(param-index 0))
 	  (dolist (slot-name-list slot-name-lists)
 	    (dolist (slot-name (cdr slot-name-list))
@@ -864,7 +872,7 @@
      ,@forms))
 
 (defvar *non-variable-declarations*
-  '(method-name method-lambda-list
+  '(#+cmu values method-name method-lambda-list
     optimize ftype inline notinline))
 
 (defvar *variable-declarations-with-argument*
@@ -1029,15 +1037,18 @@
 	 (pv-wrappers (make-list nkeys))
 	 w (w-t pv-wrappers))
     (dolist (arg args)
-      (setq w (cond ((std-instance-p arg)
-		     (std-instance-wrapper arg))
-		    ((fsc-instance-p arg)
-		     (fsc-instance-wrapper arg))
-		    (t
-		     #+new-kcl-wrapper
-		     (built-in-wrapper-of arg)
-		     #-new-kcl-wrapper
-		     (built-in-or-structure-wrapper arg))))
+      (setq w
+	    #+cmu17 (wrapper-of arg)
+	    #-cmu17
+	    (cond ((std-instance-p arg)
+		   (std-instance-wrapper arg))
+		  ((fsc-instance-p arg)
+		   (fsc-instance-wrapper arg))
+		  (t
+		   #+new-kcl-wrapper
+		   (built-in-wrapper-of arg)
+		   #-new-kcl-wrapper
+		   (built-in-or-structure-wrapper arg))))
       (unless (eq 't (wrapper-state w))
 	(setq w (check-wrapper-validity arg)))
       (setf (car w-t) w))

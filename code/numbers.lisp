@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.26 1995/02/17 18:04:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.27 1997/01/18 14:30:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.26 1995/02/17 18:04:08 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.27 1997/01/18 14:30:37 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -475,16 +475,28 @@
      (let* ((rx (realpart x))
 	    (ix (imagpart x))
 	    (ry (realpart y))
-	    (iy (imagpart y))
-	    (dn (+ (* ry ry) (* iy iy))))
-       (canonical-complex (/ (+ (* rx ry) (* ix iy)) dn)
-			  (/ (- (* ix ry) (* rx iy)) dn))))
+	    (iy (imagpart y)))
+       (if (> (abs ry) (abs iy))
+	   (let* ((r (/ iy ry))
+		  (dn (* ry (+ 1 (* r r)))))
+	     (canonical-complex (/ (+ rx (* ix r)) dn)
+				(/ (- ix (* rx r)) dn)))
+	   (let* ((r (/ ry iy))
+		  (dn (* iy (+ 1 (* r r)))))
+	     (canonical-complex (/ (+ (* rx r) ix) dn)
+				(/ (- (* ix r) rx) dn))))))
     (((foreach integer ratio single-float double-float) complex)
      (let* ((ry (realpart y))
-	    (iy (imagpart y))
-	    (dn (+ (* ry ry) (* iy iy))))
-       (canonical-complex (/ (* x ry) dn)
-			  (/ (- (* x iy)) dn))))
+	    (iy (imagpart y)))
+       (if (> (abs ry) (abs iy))
+	   (let* ((r (/ iy ry))
+		  (dn (* ry (+ 1 (* r r)))))
+	     (canonical-complex (/ x dn)
+				(/ (- (* x r)) dn)))
+	   (let* ((r (/ ry iy))
+		  (dn (* iy (+ 1 (* r r)))))
+	     (canonical-complex (/ (* x r) dn)
+				(/ (- x) dn))))))
     ((complex (or rational float))
      (canonical-complex (/ (realpart x) y)
 			(/ (imagpart x) y)))

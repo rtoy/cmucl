@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.31 1996/05/08 14:44:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.32 1997/01/18 14:31:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,7 +136,10 @@
 		 (incf posn)
 		 (push (cons posn (get-char)) params))
 		((char= char #\,)
-		 (push (cons (1- posn) nil) params))
+		 (push (cons (1- posn) nil) params)
+		 (incf posn)
+		 (if (not (char= (get-char) #\,))
+		     (decf posn)))
 		((char= char #\:)
 		 (if colonp
 		     (error 'format-error

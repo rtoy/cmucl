@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.47 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.48 1997/01/18 14:31:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,6 @@
 (load "c:ir1util")
 (load "c:ir1tran")
 (load "c:ir1final")
-(load "c:srctran")
 (load "c:array-tran")
 (load "c:seqtran")
 (load "c:typetran")
@@ -33,6 +32,7 @@
 (load "vm:vm-tran")
 (load "c:float-tran")
 (load "c:saptran")
+(load "c:srctran")
 (load "c:locall")
 (load "c:dfo")
 (load "c:ir1opt")

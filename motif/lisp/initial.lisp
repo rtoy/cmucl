@@ -3,7 +3,9 @@
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of CMU Common Lisp, please contact;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/initial.lisp,v 1.3 1997/01/18 14:31:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,7 +186,7 @@
 	   "COMPOUND-STRING-COMPARE" "COMPOUND-STRING-CONCAT"
 	   "COMPOUND-STRING-COPY" "COMPOUND-STRING-CREATE"
 	   "COMPOUND-STRING-CREATE-LTOR" "COMPOUND-STRING-CREATE-SIMPLE"
-	   "COMPOUND-STRING-CREATE-EMPTY" "COMPOUND-STRING-CREATE-EXTENT"
+	   "COMPOUND-STRING-CREATE-EMPTY" "COMPOUND-STRING-EXTENT"
 	   "COMPOUND-STRING-FREE" "COMPOUND-STRING-HAS-SUBSTRING"
 	   "COMPOUND-STRING-HEIGHT" "COMPOUND-STRING-LENGTH"
 	   "COMPOUND-LINE-COUNT" "COMPOUND-STRING-NCONCAT"

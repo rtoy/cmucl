@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.21 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.22 1997/01/18 14:30:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2483,9 +2483,10 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 		     (%bignum-ref result (- len 2)))
 	 (sign-digit (%bignum-ref result (1- len)) next-digit))
 	((not (zerop (logxor sign-digit (%ashr next-digit (1- digit-size))))))
-      (when (= (decf len) 1)
-	(return))
-      (setf (%bignum-ref result len) 0)))
+	(decf len)
+	(setf (%bignum-ref result len) 0)	
+	(when (= len 1)
+	      (return))))
   len)
 
 ;;; %NORMALIZE-BIGNUM -- Internal.

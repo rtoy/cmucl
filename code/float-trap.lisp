@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.8 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.9 1997/01/18 14:30:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,8 +152,25 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
+
+#+FreeBSD
+(define-condition floating-point-exception (arithmetic-error)
+  ((flags :initarg :traps
+	  :reader floating-point-exception-traps))
+  (:report (lambda (condition stream)
+	     (format stream "Arithmetic error ~S signalled.~%"
+		     (type-of condition))
+	     (let ((traps (floating-point-exception-traps condition)))
+	       (if traps
+		   (format stream
+			   "Trapping conditions are: ~%~{ ~s~^~}~%"
+			   traps)
+		   (write-line
+		    "No traps are enabled? How can this be?"
+		    stream))))))
+
 (defun sigfpe-handler (signal code scp)
-  (declare (ignore signal code)
+  (declare (ignore signal code #+FreeBSD scp)
 	   (type system-area-pointer scp))
   (let* ((modes (sigcontext-floating-point-modes
 		 (alien:sap-alien scp (* unix:sigcontext))))
@@ -169,5 +186,12 @@
 	   (error 'floating-point-underflow))
 	  ((not (zerop (logand float-inexact-trap-bit traps)))
 	   (error 'ext:floating-point-inexact))
+	  #+FreeBSD
+	  ((zerop (ldb float-exceptions-byte modes))
+	   ;; I can't tell what caused the exception!!
+	   (error 'floating-point-exception
+		  :traps (getf (get-floating-point-modes) :traps)))
 	  (t
 	   (error "SIGFPE with no exceptions currently enabled?")))))
+
+

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.25 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.26 1997/01/18 14:31:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -762,13 +762,16 @@
 	    (:include annotation)
 	    (:conc-name alignment-)
 	    (:predicate alignment-p)
-	    (:constructor make-alignment (bits size)))
+	    (:constructor make-alignment (bits size fill-byte)))
   ;;
   ;; The minimum number of low-order bits that must be zero.
   (bits 0 :type alignment)
   ;;
   ;; The amount of filler we are assuming this alignment op will take.
-  (size 0 :type (integer 0 #.(1- (ash 1 max-alignment)))))
+  (size 0 :type (integer 0 #.(1- (ash 1 max-alignment))))
+  ;;
+  ;; The byte used as filling.
+  (fill-byte 0 :type (or assembly-unit (signed-byte #.assembly-unit-bits))))
 
 ;;; BACK-PATCH -- a reference to someplace that needs to be back-patched when
 ;;; we actually know what label positions, etc. are.
@@ -913,12 +916,12 @@
 
 ;;; EMIT-SKIP -- interface.
 ;;; 
-(defun emit-skip (segment amount)
+(defun emit-skip (segment amount &optional (fill-byte 0))
   "Output AMOUNT zeros (in bytes) to SEGMENT."
   (declare (type segment segment)
 	   (type index amount))
   (dotimes (i amount)
-    (emit-byte segment 0))
+    (emit-byte segment fill-byte))
   (ext:undefined-value))
 
 ;;; EMIT-ANNOTATION -- internal.
@@ -1044,7 +1047,7 @@
 ;;; number of bytes.  If so, we do so.  Otherwise, we create and emit
 ;;; an alignment note.
 ;;; 
-(defun emit-alignment (segment vop bits)
+(defun emit-alignment (segment vop bits &optional (fill-byte 0))
   (when (segment-run-scheduler segment)
     (schedule-pending-instructions segment))
   (let ((hook (segment-inst-hook segment)))
@@ -1059,12 +1062,12 @@
 	   ;; note to cover the rest.
 	   (let ((slop (logand offset (1- (ash 1 alignment)))))
 	     (unless (zerop slop)
-	       (emit-skip segment (- (ash 1 alignment) slop))))
+	       (emit-skip segment (- (ash 1 alignment) slop) fill-byte)))
 	   (let ((size (logand (1- (ash 1 bits))
 			       (lognot (1- (ash 1 alignment))))))
 	     (assert (> size 0))
-	     (emit-annotation segment (make-alignment bits size))
-	     (emit-skip segment size))
+	     (emit-annotation segment (make-alignment bits size fill-byte))
+	     (emit-skip segment size fill-byte))
 	   (setf (segment-alignment segment) bits)
 	   (setf (segment-sync-posn segment) (segment-current-posn segment)))
 	  (t
@@ -1073,10 +1076,10 @@
 	   ;; the last alignment was met.
 	   (let* ((mask (1- (ash 1 bits)))
 		  (new-offset (logand (+ offset mask) (lognot mask))))
-	     (emit-skip segment (- new-offset offset)))
+	     (emit-skip segment (- new-offset offset) fill-byte))
 	   ;; But we emit an alignment with size=0 so we can verify
 	   ;; that everything works.
-	   (emit-annotation segment (make-alignment bits 0)))))
+	   (emit-annotation segment (make-alignment bits 0 fill-byte)))))
   (ext:undefined-value))
 
 
@@ -1179,7 +1182,8 @@
 		(setf (segment-fill-pointer segment) (system:int-sap 0))
 		(setf (segment-block-end segment) (system:int-sap 0))
 		(setf (segment-last-annotation segment) prev)
-		(emit-alignment segment nil (alignment-bits note))
+		(emit-alignment segment nil (alignment-bits note)
+				(alignment-fill-byte note))
 		(let* ((new-index (segment-current-index segment))
 		       (size (- new-index index))
 		       (old-size (alignment-size note))
@@ -1374,9 +1378,9 @@
 
 ;;; ALIGN -- interface.
 ;;; 
-(defmacro align (bits)
+(defmacro align (bits &optional (fill-byte 0))
   "Emit an alignment restriction to the current segment."
-  `(emit-alignment *current-segment* *current-vop* ,bits))
+  `(emit-alignment *current-segment* *current-vop* ,bits ,fill-byte))
 
 ;;; LABEL-POSITION -- interface.
 ;;; 
@@ -1399,7 +1403,9 @@
     (setf (segment-postits segment) (segment-postits other-segment))
     (dolist (postit postits)
       (emit-back-patch segment 0 postit)))
-  (emit-alignment segment nil max-alignment)
+  (if (c:backend-featurep :x86)
+      (emit-alignment segment nil max-alignment #x90)
+    (emit-alignment segment nil max-alignment))
   (let ((offset-in-last-block (rem (segment-current-index segment)
 				   output-block-size)))
     (unless (zerop offset-in-last-block)

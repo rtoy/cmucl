@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.15 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.16 1997/01/18 14:31:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,8 +186,7 @@
   (let ((info (function-info-or-lose name)))
     (setf (function-info-ir2-convert info)
 	  #'(lambda (node block)
-	      (ir2-convert-reffer node block name offset lowtag)))
-    (setf (function-info-ltn-annotate info) #'annotate-funny-call))
+	      (ir2-convert-reffer node block name offset lowtag))))
   name)
 
 (defmacro def-reffer (name offset lowtag)
@@ -200,8 +199,7 @@
 	      #'(lambda (node block)
 		  (ir2-convert-setfer node block name offset lowtag))
 	      #'(lambda (node block)
-		  (ir2-convert-setter node block name offset lowtag))))
-    (setf (function-info-ltn-annotate info) #'annotate-funny-call))
+		  (ir2-convert-setter node block name offset lowtag)))))
   name)
 
 (defmacro def-setter (name offset lowtag)
@@ -216,8 +214,7 @@
 						   lowtag inits))
 	      #'(lambda (node block)
 		  (ir2-convert-fixed-allocation node block name words header
-						lowtag inits))))
-    (setf (function-info-ltn-annotate info) #'annotate-funny-call))
+						lowtag inits)))))
   name)
 
 (defmacro def-alloc (name words variable-length header lowtag inits)
@@ -244,8 +241,8 @@
 ;;; one place to make sure they are all unique.
 
 (defparameter fasl-file-implementations
-  '(nil "Pmax" "Sparc" "RT" "RT/AFPA" "x86" "HPPA" "Alpha" "SGI"
-	"Big-endian byte-code" "Little-endian byte-code"))
+  '(nil "Pmax" "Sparc" "RT" "RT/AFPA" "x86" "HPPA"
+	"Big-endian byte-code" "Little-endian byte-code" "Alpha" "SGI"))
 (defconstant pmax-fasl-file-implementation 1)
 (defconstant sparc-fasl-file-implementation 2)
 (defconstant rt-fasl-file-implementation 3)

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.19 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.20 1997/01/18 14:31:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -419,14 +419,14 @@
   (etypecase num
     (single-float
      (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
-					 vm:single-float-size
+					 (1- vm:single-float-size)
 					 vm:single-float-type)))
        (write-indexed des vm:single-float-value-slot
 		      (make-random-descriptor (single-float-bits num)))
        des))
     (double-float
      (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
-					 vm:double-float-size
+					 (1- vm:double-float-size)
 					 vm:double-float-type))
 	   (high-bits (make-random-descriptor (double-float-high-bits num)))
 	   (low-bits (make-random-descriptor (double-float-low-bits num))))
@@ -456,7 +456,7 @@
 
 (defun sap-to-core (sap)
   (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
-				      vm:sap-size vm:sap-type)))
+				      (1- vm:sap-size) vm:sap-type)))
     (write-indexed des vm:sap-pointer-slot
 		   (make-random-descriptor (sap-int sap)))
     des))
@@ -554,7 +554,7 @@
 ;;;
 ;;;    Return a handle on an interned symbol.  If necessary allocate
 ;;; the symbol and record which package the symbol was referenced in.
-;;; When we allocatethe symbol, make sure we record a reference to
+;;; When we allocate the symbol, make sure we record a reference to
 ;;; the symbol in the home package so that the package gets set.
 ;;;
 (defun cold-intern (symbol &optional (package (symbol-package symbol)))
@@ -698,7 +698,13 @@
     (frob *static-space-free-pointer*
       (allocate-descriptor *static* 0 vm:even-fixnum-type))
     (frob *initial-dynamic-space-free-pointer*
-      (allocate-descriptor *dynamic* 0 vm:even-fixnum-type))))
+      (allocate-descriptor *dynamic* 0 vm:even-fixnum-type))
+    
+    (when (c:backend-featurep :x86)
+	  (frob x86::*fp-constant-0d0* (number-to-core 0d0))
+	  (frob x86::*fp-constant-1d0* (number-to-core 1d0))
+	  (frob x86::*fp-constant-0s0* (number-to-core 0s0))
+	  (frob x86::*fp-constant-1s0* (number-to-core 1s0)))))
 
 ;;; Make-Make-Package-Args  --  Internal
 ;;;
@@ -1425,9 +1431,12 @@
 	     ;; Note: we round the number of constants up to assure that
 	     ;; the code vector will be properly aligned.
 	     (round-up raw-header-size 2))
-	    (des (allocate-descriptor *dynamic*
-				      (+ (ash header-size vm:word-shift) size)
-				      vm:other-pointer-type)))
+	    (des (allocate-descriptor
+		  (if (c:backend-featurep :x86)
+		      *static*
+		    *dynamic*)
+		  (+ (ash header-size vm:word-shift) size)
+		  vm:other-pointer-type)))
        (write-memory des
 		     (make-other-immediate-descriptor header-size
 						      vm:code-header-type))
@@ -1597,12 +1606,54 @@
 	    (return))
 	  (multiple-value-bind
 	      (value name)
-	      (if (string= "0x" line :end2 2)
-		  (values (parse-integer line :start 2 :end 10 :radix 16)
-			  (subseq line 13))
-		  (values (parse-integer line :end #-alpha 8 #+alpha 16
-					 :radix 16)
-			  (subseq line #-alpha 11 #+alpha 19)))
+ 	      (if (string= "0x" line :end2 2)
+;;;		  (values (parse-integer line :start 2
+;;;					 :end #-alpha 10 #+alpha 18 :radix 16)
+;;;			  (subseq line #-alpha 13 #+alpha 19))
+;;;		  (values (parse-integer line :end #-alpha 8 #+alpha 16
+;;;					 :radix 16)
+;;;			  (subseq line #-alpha 11 #+alpha 19)))
+;;; If your nm produces 64-bit addresses, there's 3 ways to get 
+;;; new-genesis to work: Yet another is to use 'sed' in your Config file.
+;; OPTION 1 --- hard-wire 16 bit values into line
+;;              i.e. replace above six lines with these
+;		  (values (parse-integer line :start 2 :end 18 :radix 16)
+;			  (subseq line #-alpha 21 #+alpha 19))
+;		  (values (parse-integer line :end 16 :radix 16)
+;			  (subseq line #-alpha 19 #+alpha 19)))
+;; OPTION 2 --- scan line, read junk, and do subseq until non-int char found
+;		  (values (parse-integer line :start 2 :end 16 :radix 16
+;					 :junk-allowed t)
+;			  (let ((pos 2))
+;			      (loop
+;			        (setq pos (+ pos 8))
+;				(if (not (digit-char-p (char line pos) 16))
+;				    (return)))
+;			      (subseq line (+ pos 3))))
+;		  (values (parse-integer line :end 16 :radix 16
+;					 :junk-allowed t)
+;			  (let ((pos 0))
+;			      (loop
+;			        (setq pos (+ pos 8))
+;				(if (not (digit-char-p (char line pos) 16))
+;				    (return)))
+;			      (subseq line (+ pos 3)))))
+;;; OPTION 3 --- use environment variable for 64 bit linux 
+;;              i.e.  in setenv.lsp add (pushnew :linux64 *features*)
+;;              (using the alpha flag also works, but I don't know if it has
+;;               side-effects)
+		  (values (parse-integer line :start 2 :radix 16 
+					 :end #-(or alpha linux64) 10 
+					      #+(or alpha linux64) 18)
+			  (subseq line #-(or alpha linux64) 13 
+				       #+(or alpha linux64) 19))
+		  (values (parse-integer line :radix 16
+					 :end #-(or alpha linux64) 8 
+					      #+(or alpha linux64) 16)
+			  (subseq line #-(or alpha linux64) 11 
+				       #+(or alpha linux64) 19)))
+;; END OPTIONS
+
 	    (multiple-value-bind
 		(old-value found)
 		(gethash name *cold-foreign-symbol-table*)
@@ -1612,13 +1663,28 @@
       version)))
 
 (defun lookup-foreign-symbol (name)
-  (multiple-value-bind
-      (value found)
-      (gethash name *cold-foreign-symbol-table* 0)
-    (unless found
-      (warn "Undefined foreign symbol: ~S" name))
-    value))
+  (let ((is-linux (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			   #.c:x86-fasl-file-implementation)
+		       (c:backend-featurep :linux))))
 
+    (cond
+     ((and is-linux (gethash (concatenate 'string "PVE_stub_" name)
+			     *cold-foreign-symbol-table* nil)))
+     ;; Non-linux case
+     ((gethash name *cold-foreign-symbol-table* nil))
+     ((and is-linux (gethash (concatenate 'string "__libc_" name)
+			     *cold-foreign-symbol-table* nil)))
+     ((and is-linux (gethash (concatenate 'string "__" name)
+			     *cold-foreign-symbol-table* nil)))
+     ((and is-linux (gethash (concatenate 'string "_" name)
+			     *cold-foreign-symbol-table* nil)))
+     (t
+      (warn "Undefined foreign symbol: ~S" name)
+      0))))
+
+;; FreeBSD wants C language symbols prefixed with "_" including all the
+;; syscalls and Unix library things. Linux doesn't or maybe does
+;; depending on things I don't know about yet?
 (defun lookup-maybe-prefix-foreign-symbol (name)
   (lookup-foreign-symbol
    (concatenate 'string
@@ -1626,7 +1692,6 @@
 		  ((#.c:pmax-fasl-file-implementation
 		    #.c:rt-fasl-file-implementation
 		    #.c:rt-afpa-fasl-file-implementation
-		    #.c:x86-fasl-file-implementation
 		    #.c:hppa-fasl-file-implementation
 		    #.c:alpha-fasl-file-implementation
 		    #.c:sgi-fasl-file-implementation)
@@ -1634,7 +1699,12 @@
 		  (#.c:sparc-fasl-file-implementation
 		   (if (c:backend-featurep :svr4)
 		       ""
-		       "_")))
+		       "_"))
+		  (#.c:x86-fasl-file-implementation
+		   (if (c:backend-featurep :freebsd)
+		       "_" ; FreeBSD
+		       "")) ; Linux
+		  )
 		name)))
 
 (defvar *cold-assembler-routines* nil)

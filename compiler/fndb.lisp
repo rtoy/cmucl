@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.67 1996/07/08 19:01:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68 1997/01/18 14:31:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -947,7 +947,9 @@
   (flushable))
 
 (defknown make-pathname
- (&key (:defaults pathnamelike) (:host pathname-host) (:device pathname-device)
+ (&key (:defaults pathnamelike)
+       (:host (or string pathname-host))
+       (:device pathname-device)
        (:directory (or pathname-directory string (member :wild)))
        (:name (or pathname-name string (member :wild)))
        (:type (or pathname-type string (member :wild)))
@@ -1046,7 +1048,7 @@
   (or string null)
   (flushable))
 
-(defknown describe (t &optional stream) (values))
+(defknown describe (t &optional (or stream (member t nil))) (values))
 (defknown inspect (t) (values))
 
 (defknown room (&optional (member t nil :default)) void)

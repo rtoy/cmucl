@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.5 1997/01/18 14:31:51 ram Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -757,11 +757,10 @@
 	       (file-compile tn)))))))
 
 (defun older-or-non-existent-fasl-p (pathname &optional definitely)
-  (let ((obj-pn (probe-file (make-pathname :type "fasl" :defaults pathname))))
+  (let ((obj-pn (probe-file (compile-file-pathname pathname))))
     (or definitely
 	(not obj-pn)
 	(< (file-write-date obj-pn) (file-write-date pathname)))))
-
 
 
 ;;;; Error hacking stuff.

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.26 1996/05/07 13:14:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.27 1997/01/18 14:30:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -532,19 +532,24 @@
 	      (and default-host pathname-host
 		   (not (eq (host-customary-case default-host)
 			    (host-customary-case pathname-host))))))
-	(%make-pathname (or pathname-host default-host)
-			(or (%pathname-device pathname)
+	(make-pathname :host (or pathname-host default-host)
+		       :device
+		       (or (%pathname-device pathname)
 			    (maybe-diddle-case (%pathname-device defaults)
 					       diddle-case))
+		       :directory
 			(merge-directories (%pathname-directory pathname)
 					   (%pathname-directory defaults)
 					   diddle-case)
+			:name
 			(or (%pathname-name pathname)
 			    (maybe-diddle-case (%pathname-name defaults)
 					       diddle-case))
+			:type
 			(or (%pathname-type pathname)
 			    (maybe-diddle-case (%pathname-type defaults)
 					       diddle-case))
+			:version
 			(or (%pathname-version pathname)
 			    default-version))))))
 
@@ -593,9 +598,9 @@
 			   (version nil versionp)
 			   defaults
 			   (case :local))
-  "Makes a new pathname from the component arguments.  Note that host is a host-
-   structure."
-  (declare (type (or host component-tokens) host)
+  "Makes a new pathname from the component arguments.  Note that host is
+a host-structure or string."
+  (declare (type (or string host component-tokens) host)
 	   (type component-tokens device)
 	   (type (or list string pattern component-tokens) directory)
 	   (type (or string pattern component-tokens) name type)
@@ -607,7 +612,10 @@
 	 (default-host (if defaults
 			   (%pathname-host defaults)
 			   (pathname-host *default-pathname-defaults*)))
-	 (host (or host default-host))
+	 ;; toy@rtp.ericsson.se: CLHS says make-pathname can take a
+	 ;; string (as a logical-host) for the host part.  We map that
+	 ;; string into the corresponding logical host structure.
+	 (host (or (gethash host *logical-hosts*) host default-host))
 	 (diddle-args (and (eq (host-customary-case host) :lower)
 			   (eq case :common)))
 	 (diddle-defaults
@@ -821,10 +829,11 @@
        (%parse-namestring (coerce thing 'simple-string)
 			  host defaults start end junk-allowed))
       (pathname
-       (let ((host (if host host (%pathname-host defaults))))
-	 (unless (eq host (%pathname-host thing))
+       (let* ((host (if host host (%pathname-host defaults)))
+	      (hosts-name (funcall (host-unparse-host host) host)))
+	 (unless (eq hosts-name (%pathname-host thing))
 	   (error "Hosts do not match: ~S and ~S."
-		  host (%pathname-host thing))))
+		  hosts-name (%pathname-host thing))))
        (values thing start))
       (stream
        (let ((name (file-name thing)))
@@ -1181,12 +1190,25 @@
 			    (if (eq result :error)
 				(error "~S doesn't match ~S" source from)
 				result))))
+	      #+nil ;; pw- 1/3/97 This doesn't work.
 	      (%make-pathname (or to-host source-host)
 			      (frob %pathname-device)
 			      (frob %pathname-directory translate-directories)
 			      (frob %pathname-name)
 			      (frob %pathname-type)
-			      (frob %pathname-version))))))))
+			      (frob %pathname-version))
+
+	      (let ((host      (or to-host source-host))
+		    (device    (frob %pathname-device))
+		    (directory (frob %pathname-directory translate-directories))
+		    (name      (frob %pathname-name))
+		    (type      (frob %pathname-type))
+		    (version   (frob %pathname-version)))
+		(if (logical-host-p host)
+		     (%make-logical-pathname
+		      host :unspecific directory name type version)
+		     (%make-pathname 
+		      host device directory name type version)))))))))
 
 
 ;;;; Search lists.
@@ -1750,9 +1772,10 @@
     (with-open-file (in-str (make-pathname :defaults "library:"
 					   :name host
 					   :type "translations"))
-      (format *error-output*
-	      ";; Loading pathname translations from ~A~%"
-	      (namestring (truename in-str)))
+      (if *load-verbose*
+	  (format *error-output*
+		  ";; Loading pathname translations from ~A~%"
+		  (namestring (truename in-str))))
       (setf (logical-pathname-translations host) (read in-str)))
     t))
 

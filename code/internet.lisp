@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.17 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18 1997/01/18 14:30:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,13 +40,32 @@
 (defconstant sock-raw 3)
 #+svr4
 (defconstant sock-raw 4)
+#+linux
+(defconstant sock-rdm 4)
+#+linux
+(defconstant sock-seqpacket 5)
+#+linux
+(defconstant sock-packet 10)
 
 (defconstant af-unix 1)
 (defconstant af-inet 2)
-
+#+linux
+(progn
+ (defconstant af-ax25 3)
+ (defconstant af-ipx 4)
+ (defconstant af-appletalk 5)
+ (defconstant af-netrom 6)
+ (defconstant af-bridge 7)
+ (defconstant af-aal5 9)
+ (defconstant af-x25 9)
+ (defconstant af-inet6 10)
+ (defconstant af-max 12))
+ 
 (defconstant msg-oob 1)
 (defconstant msg-peek 2)
 (defconstant msg-dontroute 4)
+#+linux
+(defconstant msg-proxy 16)
 
 (defvar *internet-protocols*
   (list (list :stream 6 sock-stream)
@@ -96,17 +115,58 @@
   (declare (type host-entry host))
   (car (host-entry-addr-list host)))
 
+#-FreeBSD
 (def-alien-type unix-sockaddr
   (struct nil
-    (family #-alpha short #+alpha unsigned-short)
+    (family #-(or linux alpha) short #+(or linux alpha)  unsigned-short)
     (path (array char 108))))
+#|
+struct  sockaddr_un {
+        u_char  sun_len;                /* sockaddr len including null */
+        u_char  sun_family;             /* AF_UNIX */
+        char    sun_path[104];          /* path name (gag) */
+};
+|#
 
+#+FreeBSD
+(def-alien-type unix-sockaddr
+    (struct nil
+      (sun-len unsigned-char)
+      (family unsigned-char)
+      (path (array char 104))))
+#|
+/*
+ * Socket address, internet style.
+ */
+struct sockaddr_in {
+        u_char  sin_len;
+        u_char  sin_family;
+        u_short sin_port;
+        struct  in_addr sin_addr;
+        char    sin_zero[8];
+};
+struct in_addr {
+        u_long s_addr;
+};
+
+|#
+#+FreeBSD
+(def-alien-type inet-sockaddr
+    (struct nil
+      (sin-len unsigned-char)
+      (family  unsigned-char)
+      (port    unsigned-short)
+      (addr    unsigned-long)
+      (zero    (array char 8))))
+
+#-FreeBSD
 (def-alien-type inet-sockaddr
   (struct nil
     (family #-alpha short #+alpha unsigned-short)
     (port unsigned-short)
     (addr #-alpha unsigned-long #+alpha unsigned-int)
     (zero (array char 8))))
+
 
 (def-alien-type hostent
   (struct nil
@@ -158,8 +218,11 @@
 				    index))
 		      (results))
 		     (t
-		      (results (deref (deref (slot hostent 'addr-list) index)))
-		      (repeat (1+ index)))))))))))
+		      (results 
+#-linux (deref (deref (slot hostent 'addr-list) index))
+#+linux (ntohl (deref (deref (slot hostent 'addr-list) index)))
+                      )
+		      (repeat (1+ index))))))))))) 
 
 (defun create-unix-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
@@ -203,7 +266,9 @@
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
-      (setf (slot sockaddr 'addr) (host-entry-addr hostent))
+      (setf (slot sockaddr 'addr) 
+         #-linux (host-entry-addr hostent)
+         #+linux (htonl (host-entry-addr hostent)))
       (when (minusp (unix:unix-connect socket
 				       (alien-sap sockaddr)
 				       (alien-size inet-sockaddr :bytes)))
@@ -241,7 +306,8 @@
 				       (alien-size inet-sockaddr :bytes))))
       (when (minusp connected)
 	(error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
-      (values connected (slot sockaddr 'addr)))))
+      (values connected #-linux (slot sockaddr 'addr)
+		        #+linux (ntohl (slot sockaddr 'addr))))))
 
 (defun close-socket (socket)
   (multiple-value-bind (ok err)

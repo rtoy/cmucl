@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.22 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.23 1997/01/18 14:31:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -679,15 +679,21 @@
 	(let* ((arg (pop args))
 	       (sc (tn-sc tn))
 	       (scn (sc-number sc))
-	       (temp-tn (make-representation-tn (tn-primitive-type tn) scn))
+	       (temp-tn
+		(unless (backend-featurep :x86)
+		  (make-representation-tn (tn-primitive-type tn) scn)))
 	       (move-arg-vops (svref (sc-move-arg-vops sc) scn)))
 	  (assert arg)
 	  (assert (= (length move-arg-vops) 1) ()
 		  "No unique move-arg-vop for moves in SC ~S."
 		  (sc-name sc))
-	  (emit-move call block (continuation-tn call block arg) temp-tn)
-	  (emit-move-arg-template call block (first move-arg-vops)
-				  temp-tn nsp tn)))
+	  (if (backend-featurep :x86)
+	      (emit-move-arg-template call block (first move-arg-vops)
+				      (continuation-tn call block arg) nsp tn)
+	    (progn
+	      (emit-move call block (continuation-tn call block arg) temp-tn)
+	      (emit-move-arg-template call block (first move-arg-vops)
+				      temp-tn nsp tn)))))
       (assert (null args))
       (unless (listp result-tns)
 	(setf result-tns (list result-tns)))

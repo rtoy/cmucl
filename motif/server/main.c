@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.7 1994/10/30 22:09:49 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.8 1997/01/18 14:31:42 ram Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -8,6 +8,7 @@
 */
 
 #include <stdio.h>
+#include <sys/param.h>		/* for define of BSD */
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -19,6 +20,13 @@
 #include <signal.h>
 
 #include <sys/wait.h>
+
+#ifdef __linux__
+#include <asm/posix_types.h>
+#define FD_ZERO __FD_ZERO
+#define FD_SET __FD_SET
+#define FD_ISSET __FD_ISSET
+#endif
 
 #ifdef SVR4
 #define bzero(a,n) memset(a, 0, n)
@@ -52,6 +60,18 @@ int use_unix_socket=1;
 
 enum { Global, Normal, Local } socket_choice = Normal;
 
+#if defined BSD
+void bury_zombie ()
+{
+  /* This is called to handle SIGCHLD. Wait3 lets BSD lay
+   * the dead child process to rest. Otherwise it hangs 
+   * around until the server dies. During development this can
+   * eat up a lot of swap space.
+   */
+  int status;
+  wait3(&status, WNOHANG, NULL);
+}
+#endif
 void close_sockets()
 {
   close(unix_socket);
@@ -223,6 +243,9 @@ main(int argc, char **argv)
   signal(SIGHUP, server_shutdown);
   signal(SIGINT, server_shutdown);
   signal(SIGQUIT, server_shutdown);
+#if defined BSD
+  signal(SIGCHLD, bury_zombie);
+#endif
 
   printf("Waiting for connection.\n");
   fflush(stdout);
@@ -233,22 +256,23 @@ main(int argc, char **argv)
     if( use_unix_socket ) FD_SET(unix_socket, &rfds);
     if( use_inet_socket ) FD_SET(inet_socket, &rfds);
     nfound = select(nfds, &rfds, NULL, NULL, 0);
-    if( nfound < 0 )
+    if( nfound < 0 && errno != EINTR )
       main_err("main:  Unable to select on sockets.");
-
-    if( FD_ISSET(unix_socket, &rfds) ) {
-      printf("Accepting client on Unix socket.\n");
-      fflush(stdout);
-      establish_client(unix_socket);
-    }
-    if( FD_ISSET(inet_socket, &rfds) ) {
-      printf("Accepting client on Inet socket.\n");
-      fflush(stdout);
-      establish_client(inet_socket);
-    }
-    /* Prevent zombie children under Mach */
+    else {
+      if( FD_ISSET(unix_socket, &rfds) ) {
+	printf("Accepting client on Unix socket.\n");
+	fflush(stdout);
+	establish_client(unix_socket);
+      }
+      if( FD_ISSET(inet_socket, &rfds) ) {
+	printf("Accepting client on Inet socket.\n");
+	fflush(stdout);
+	establish_client(inet_socket);
+      }
+      /* Prevent zombie children under Mach */
 #ifdef MACH
-    wait3(&status,WNOHANG,NULL);
+      wait3(&status,WNOHANG,NULL);
 #endif
+    }
   }
 }

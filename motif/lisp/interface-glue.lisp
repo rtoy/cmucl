@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-glue.lisp,v 1.3 1994/10/27 17:44:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-glue.lisp,v 1.4 1997/01/18 14:31:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,8 +21,7 @@
 ;;;; Functions for handling server requests
 
 (defvar reply-table
-  (vector :confirm :values :callback :event :error :warning :protocol :action
-	  :timeout))
+  (vector :confirm :values :callback :event :error :warning :protocol :action))
 
 (defun wait-for-server-reply (fd)
   (wait-for-input fd)
@@ -40,7 +39,6 @@
       (:protocol (handle-protocol reply))
       (:action   (handle-action reply))
       (:event    (handle-event reply))
-      (:timeout  (handle-timeout reply))
       (:error
        (let ((errmsg (toolkit-read-value reply)))
 	 (destroy-message reply)

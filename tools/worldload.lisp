@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.80 1994/10/04 12:26:38 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.81 1997/01/18 14:31:47 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,7 +96,7 @@
 #-(or gengc runtime) (maybe-byte-load "code:room")
 
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
-#-gengc
+#-(or x86 gengc)			; x86 has stuff in static space
 (progn
   (byte-load-over "target:code/debug")
   (byte-load-over "target:code/error")

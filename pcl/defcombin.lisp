@@ -107,10 +107,14 @@
 	    :qualifiers ()
 	    :specializers specializers
 	    :lambda-list '(generic-function type options)
-	    :function #'(lambda (gf type options)
-			  (declare (ignore gf))
-			  (do-short-method-combination
-			    type options operator ioa new-method doc))
+	    :function #'(lambda(args nms &rest cm-args)
+			  (declare (ignore nms cm-args))
+			  (apply 
+			   #'(lambda (gf type options)
+			       (declare (ignore gf))
+			       (do-short-method-combination
+				type options operator ioa new-method doc))
+			   args))
 	    :definition-source `((define-method-combination ,type) ,truename)))
     (when old-method
       (remove-method #'find-method-combination old-method))
@@ -222,14 +226,17 @@
 	     :qualifiers ()
 	     :specializers specializers
 	     :lambda-list '(generic-function type options)
-	     :function #'(lambda (generic-function type options)
-			   (declare (ignore generic-function))
-			   (make-instance 'long-method-combination
-			     :type type
-			     :documentation doc
-			     :options options))
-	     :definition-source `((define-method-combination ,type)
-				  ,(load-truename)))))
+	     :function #'(lambda (args nms &rest cm-args)
+			   (declare (ignore nms cm-args))
+			   (apply
+			    #'(lambda (generic-function type options)
+				(declare (ignore generic-function options))
+				(make-instance 'long-method-combination
+					       :type type
+					       :documentation doc))
+			    args))
+	 :definition-source `((define-method-combination ,type)
+			      ,(load-truename)))))
     (setf (gethash type *long-method-combination-functions*) function)
     (when old-method (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lisp-lib.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lisp-lib.lisp,v 1.4 1997/01/18 14:31:52 ram Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,7 @@
       (with-output-to-mark (s (buffer-point *selected-library-buffer*))
 	(dolist (lib-spec lib-directory)
 	  (let* ((path-parts (pathname-directory lib-spec))
-		 (last (svref path-parts (1- (length path-parts))))
+		 (last (elt path-parts (1- (length path-parts))))
 		 (raw-pathname (merge-pathnames last lib-spec)))
 	    (when (and (directoryp lib-spec)
 		       (probe-file (merge-pathnames
@@ -141,17 +141,20 @@
 						 error-msg)))
 	 (parts (pathname-directory base-name))
 	 (load-name (concatenate 'simple-string
-				 "load-" (svref parts (1- (length parts)))))
+				 "load-" (elt parts (1- (length parts)))))
 	 (load-pathname (merge-pathnames load-name base-name))
 	 (file-to-load
-	  (or (probe-file (merge-pathnames (make-pathname :type "fasl")
-					   load-pathname))
-	      (probe-file (merge-pathnames (make-pathname :type "lisp")
-					   load-pathname))
-	      (probe-file (merge-pathnames (make-pathname :type "fasl")
-					   base-name))
-	      (probe-file (merge-pathnames (make-pathname :type "lisp")
-					   base-name)))))
+	  (or
+	   (probe-file (compile-file-pathname load-pathname))
+	   (probe-file (merge-pathnames (make-pathname :type "fasl")
+					load-pathname))
+	   (probe-file (merge-pathnames (make-pathname :type "lisp")
+					load-pathname))
+	   (probe-file (compile-file-pathname base-name))
+	   (probe-file (merge-pathnames (make-pathname :type "fasl")
+					base-name))
+	   (probe-file (merge-pathnames (make-pathname :type "lisp")
+					base-name)))))
     (unless file-to-load (editor-error "You'll have to load it yourself."))
     file-to-load))
 

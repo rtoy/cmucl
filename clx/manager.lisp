@@ -317,8 +317,8 @@
 		(decode-type (member-vector *win-gravity-vector*) (aref vector 17)))))
       ;; Obsolete fields
       (when (or (logbitp 0 flags) (logbitp 2 flags))
-	(setf (wm-size-hints-x hints) (aref vector 1)
-	      (wm-size-hints-y hints) (aref vector 2)))
+	(setf (wm-size-hints-x hints) (card32->int32 (aref vector 1))
+	      (wm-size-hints-y hints) (card32->int32 (aref vector 2))))
       (when (or (logbitp 1 flags) (logbitp 3 flags))
 	(setf (wm-size-hints-width hints) (aref vector 3)
 	      (wm-size-hints-height hints) (aref vector 4)))

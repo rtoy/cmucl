@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.48 1996/05/07 20:19:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49 1997/01/18 14:30:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -263,6 +263,20 @@
     `(progn
        (%primitive print ,(symbol-name name))
        (,name))))
+#+nil
+(defun hexstr(thing)
+  (let ((addr (kernel:get-lisp-obj-address thing))
+	(str (make-string 10)))
+    (setf (char str 0) #\0
+	  (char str 1) #\x)
+    (dotimes (i 8)
+      (let* ((nib (ldb (byte 4 0) addr))
+	     (chr (char "0123456789abcdef" nib)))
+	(declare (type (unsigned-byte 4) nib)
+		 (base-char chr))
+	(setf (char str (- 9 i)) chr
+	      addr (ash addr -4))))
+    str))
 
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
@@ -292,7 +306,7 @@
 
   (let ((funs (nreverse *lisp-initialization-functions*)))
     (%primitive print "Calling top-level forms.")
-    (dolist (fun funs)
+    (dolist (fun funs) #+nil (%primitive print (hexstr fun))
       (typecase fun
 	(function
 	 (funcall fun))
@@ -335,7 +349,8 @@
   (print-and-call package-init)
   (print-and-call kernel::signal-init)
   (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
-  (set-floating-point-modes :traps '(:overflow :underflow :invalid
+
+  (set-floating-point-modes :traps '(:overflow #-x86 :underflow :invalid
 					       :divide-by-zero))
   ;; This is necessary because some of the initial top level forms might
   ;; have changed the compliation policy in strange ways.
@@ -388,6 +403,11 @@
 
 ;;;; Initialization functions:
 
+;;; Print seems to not like x86 NPX denormal floats like
+;;; least-negative-single-float, so the :underflow exceptions
+;;; is disabled by default. Joe User can explicitly enable them
+;;; if desired.
+
 (defun reinit ()
   (without-interrupts
    (without-gcing
@@ -397,7 +417,7 @@
     (gc-init)
     (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
     (set-floating-point-modes :traps
-			      '(:overflow :underflow :invalid
+			      '(:overflow #-x86 :underflow :invalid
 					  :divide-by-zero)))))
 
 
@@ -436,6 +456,7 @@
 
 (defconstant bytes-per-scrub-unit 2048)
 
+#-x86
 (defun scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."
@@ -469,6 +490,45 @@
       (scrub (int-sap (- csp initial-offset))
 	     (* (floor initial-offset vm:word-bytes) vm:word-bytes)
 	     0))))
+
+#+x86 ;; Stack grows downwards
+(defun scrub-control-stack ()
+  "Zero the unused portion of the control stack so that old objects are not
+   kept alive because of uninitialized stack variables."
+  (declare (optimize (speed 3) (safety 0))
+	   (values (unsigned-byte 20)))
+  (labels
+      ((scrub (ptr offset count)
+	 (declare (type system-area-pointer ptr)
+		  (type (unsigned-byte 16) offset)
+		  (type (unsigned-byte 20) count)
+		  (values (unsigned-byte 20)))
+	 (let ((loc (int-sap (- (sap-int ptr) (+ offset vm:word-bytes)))))
+	   (cond ((= offset bytes-per-scrub-unit)
+		  (look (int-sap (- (sap-int ptr) bytes-per-scrub-unit))
+			0 count))
+		 (t ;; need to fix bug in %set-stack-ref
+		  (setf (sap-ref-32 loc 0) 0)
+		  (scrub ptr (+ offset vm:word-bytes) count)))))
+       (look (ptr offset count)
+	 (declare (type system-area-pointer ptr)
+		  (type (unsigned-byte 16) offset)
+		  (type (unsigned-byte 20) count)
+		  (values (unsigned-byte 20)))
+	 (let ((loc (int-sap (- (sap-int ptr) offset))))
+	   (cond ((= offset bytes-per-scrub-unit)
+		  count)
+		 ((zerop (stack-ref loc 0))
+		  (look ptr (+ offset vm:word-bytes) count))
+		 (t
+		  (scrub ptr offset (+ count vm:word-bytes)))))))
+    (let* ((csp (sap-int (c::control-stack-pointer-sap)))
+	   (initial-offset (logand csp (1- bytes-per-scrub-unit))))
+      (declare (type (unsigned-byte 32) csp))
+      (scrub (int-sap (+ csp initial-offset))
+	     (* (floor initial-offset vm:word-bytes) vm:word-bytes)
+	     0))))
+
 
 
 

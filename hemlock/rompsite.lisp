@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.8 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.9 1997/01/18 14:31:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -264,7 +264,8 @@
 #+clx
 (defconstant font-map-size 16
   "The number of possible fonts in a font-map.")
-
+#-clx
+(defconstant font-map-size 16)
 
 ;;; SETUP-FONT-FAMILY sets *default-font-family*, opening the three font names
 ;;; passed in.  The font family structure is filled in from the first argument.
@@ -934,7 +935,7 @@
 
 (defvar old-ltchars)
 
-#+(or hpux irix)
+#+(or hpux irix freebsd)
 (progn
   (defvar old-c-iflag)
   (defvar old-c-oflag)
@@ -945,7 +946,7 @@
 (defun setup-input ()
   (let ((fd *editor-file-descriptor*))
     (when (unix:unix-isatty 0)
-      #+(or hpux irix)
+      #+(or hpux irix freebsd)
       (alien:with-alien ((tios (alien:struct unix:termios)))
 	(multiple-value-bind
 	    (val err)
@@ -991,7 +992,7 @@
 	  (when (null val)
 	    (error "Could not tcsetattr, unix error ~S."
 		   (unix:get-unix-error-msg err)))))
-      #-(or hpux irix)
+      #-(or hpux irix freebsd)
       (alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	(multiple-value-bind
 	    (val err)
@@ -1002,7 +1003,7 @@
 	(let ((flags (alien:slot sg 'unix:sg-flags)))
 	  (setq old-flags flags)
 	  (setf (alien:slot sg 'unix:sg-flags)
-		(logand #-(or hpux irix) (logior flags unix:tty-cbreak)
+		(logand #-(or hpux irix freebsd) (logior flags unix:tty-cbreak)
 			(lognot unix:tty-echo)
 			(lognot unix:tty-crmod)))
 	  (multiple-value-bind
@@ -1011,7 +1012,7 @@
 	    (if (null val)
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err))))))
-      #-(or hpux irix)
+      #-(or hpux irix freebsd)
       (alien:with-alien ((tc (alien:struct unix:tchars)))
 	(multiple-value-bind
 	    (val err)
@@ -1072,7 +1073,7 @@
 (defun reset-input ()
   (when (unix:unix-isatty 0)
     (let ((fd *editor-file-descriptor*))
-      #+(or hpux irix)
+      #+(or hpux irix freebsd)
       (when (boundp 'old-c-lflag)
 	(alien:with-alien ((tios (alien:struct unix:termios)))
 	  (multiple-value-bind
@@ -1109,7 +1110,7 @@
 	    (when (null val)
 	      (error "Could not tcsetattr, unix error ~S."
 		     (unix:get-unix-error-msg err))))))
-      #-(or hpux irix)
+      #-(or hpux irix freebsd)
       (when (boundp 'old-flags)
 	(alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	  (multiple-value-bind
@@ -1125,7 +1126,7 @@
 	      (unless val
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err)))))))
-      #-(or hpux irix)
+      #-(or hpux irix freebsd)
       (when (and (boundp 'old-tchars)
 		 (simple-vector-p old-tchars)
 		 (eq (length old-tchars) 6))

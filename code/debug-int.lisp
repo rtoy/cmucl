@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.68 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.69 1997/01/18 14:31:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -836,16 +836,193 @@
 (defun kernel:function-word-offset (fun) (kernel:function-word-offset fun))
 ;;;
 (defsetf kernel:stack-ref kernel:%set-stack-ref)
-
+
 (proclaim '(inline cstack-pointer-valid-p))
+;;; This must come before any use (of course) else the cross compiler
+;;; uses it's own version which is WRONG for x86!!!
 (defun cstack-pointer-valid-p (x)
   (declare (type system:system-area-pointer x))
+  #-:x86
   (and (system:sap< x (kernel:current-sp))
        (system:sap<= #-gengc (alien:alien-sap
 			      (alien:extern-alien "control_stack" (* t)))
 		     #+gengc (kernel:mutator-control-stack-base)
 		     x)
+       (zerop (logand (system:sap-int x) #b11)))
+  #+:x86 ;; stack grows to low address values
+  (and (system:sap>= x (kernel:current-sp))
+       (system:sap>   (alien:alien-sap
+		       (alien:extern-alien "control_stack_end" (* t)))
+		      x)
        (zerop (logand (system:sap-int x) #b11))))
+
+;;;; X86 support. Don't have lra objects so will search back for code header.
+
+(eval-when (compile eval)
+  (defmacro c-var-frob (lisp-fun c-var-name)
+    `(progn
+       (declaim (inline ,lisp-fun))
+       (defun ,lisp-fun ()
+	 (alien:extern-alien ,c-var-name (alien:unsigned 32))))))
+
+(c-var-frob static-space-start "static_space")
+(c-var-frob read-only-space-start "read_only_space")
+
+(defun compiled-function-from-pc (pc &optional (limit 50000))
+  ;;; x86 hack around not having lra objects.
+  (declare (type system-area-pointer pc)
+	   (fixnum limit))
+  (let ((base (int-sap (kernel:32bit-logical-and
+			(sap-int pc)
+			(kernel:32bit-logical-not vm:lowtag-mask)))))
+    (declare (type system-area-pointer base))
+    (do ((hdrp (- (sap-int base) vm:word-bytes)
+	       (- hdrp vm:word-bytes))
+	 (times limit (1- times)))
+	((or (zerop times)
+	     (> (read-only-space-start) hdrp))
+	 nil)
+      (declare (type (unsigned-byte 32) hdrp)
+	       (fixnum times))
+      (let ((hdrval (sap-ref-32 (int-sap hdrp) 0)))
+	(declare (type (unsigned-byte 32) hdrval))
+	#+nil (format t "~&~x ~x~%" hdrp hdrval)
+	(when (and (= (kernel:32bit-logical-and hdrval vm:type-mask)
+		      vm:function-header-type)
+		   (= (sap-ref-32 (int-sap hdrp)
+				  (* vm:function-self-slot vm:word-bytes))
+		      (+ hdrp (* vm:function-code-offset vm:word-bytes))))
+	  (let ((maybe-fcn (kernel:make-lisp-obj
+			    (+ hdrp vm:function-pointer-type))))
+	    (when (and (functionp maybe-fcn) (compiled-function-p maybe-fcn))
+	      (return maybe-fcn))))))))
+
+
+
+(defun compute-lra-data-from-pc(pc)
+  ;; pc is offset from dualword aligned function header
+  (declare (type system-area-pointer pc))
+  (let ((function (compiled-function-from-pc pc)))
+    (when function
+      (let* ((code (kernel:function-code-header function))
+	     (code-header-len (* (kernel:get-header-data code)
+				 vm:word-bytes))
+	     (pc-offset
+	      (- (sap-int pc)
+		 (- (kernel:get-lisp-obj-address code)
+		    vm:other-pointer-type)
+		 code-header-len)))
+;	(format t "c-lra-fpc ~a ~a ~a~%" pc code pc-offset)
+	(values pc-offset code)))))
+
+;;; maybe these should be generalized in xxx-vm.lisp
+;;;(proclaim '(inline old-frame-pointer lisp-return-pc))
+(defun old-frame-pointer(scp)
+  (declare (type (alien:alien (* unix:sigcontext)) scp))
+  (let* #+x86 ((cfp (vm:sigcontext-register scp vm::ebp-offset))
+	       (ofp (kernel:stack-ref (int-sap cfp) vm::ocfp-save-offset)))
+	#-x86 ((ofp (vm:sigcontext-register scp vm::ocfp-offset)))
+	(declare (type (unsigned-byte 32) #+x86 cfp ofp))
+	(int-sap ofp)))
+
+
+#+x86
+(defun lisp-return-pc(scp)
+  ;;; return a value that can be used in computation
+  (declare (type (alien:alien (* unix:sigcontext)) scp))
+  (let* ((cfp (vm:sigcontext-register scp vm::ebp-offset))
+	 (lra (kernel:stack-ref (int-sap cfp) vm::return-pc-save-offset)))
+    lra))
+#-x86
+(defun lisp-return-pc(scp)
+  (declare (type (alien:alien (* unix:sigcontext)) scp))
+  (vm:sigcontext-register scp vm::lra-offset))
+
+#+x86
+(defconstant vm::nargs-offset #.vm::ecx-offset)
+#+x86
+(progn
+(defun lisp-return-pc-valid-p(loc)
+  (declare (type system-area-pointer loc))
+  (let ((code-beg (int-sap (static-space-start)))
+	(code-end (int-sap (* lisp::*static-space-free-pointer*
+			      vm:word-bytes))))
+    (and (sap< code-beg loc)
+	 (sap< loc code-end))))
+
+(declaim (inline make-fixnum))
+(defun make-fixnum (sap)
+  (kernel:make-lisp-obj (ash (sap-int sap) 2)))
+
+;; These return hopefully correct ofp ret values at a call site
+(defun maybe-lisp-from-c(fp)
+  (declare (type system-area-pointer fp))
+  (let ((s0 (kernel:stack-ref fp vm::old-fp-save-offset))
+	(s1 (kernel:stack-ref fp vm::return-pc-save-offset)))
+    (when (and (kernel:make-lisp-obj s0)(kernel:make-lisp-obj s1))
+      (let ((lisp-ofp (int-sap s0))
+	    (lisp-lra (int-sap s1)))
+	;;(format t "~&cf? ~a ~a~%" lisp-ofp lisp-lra)
+	;; Check  this logic now that C calls with lra.
+	(when (sap= lisp-ofp lisp-lra)	; Can't happen via Lisp
+	  (let ((cfp (sap-ref-sap fp (* 0 vm:word-bytes)))
+		(cra (sap-ref-sap fp (* 1 vm:word-bytes))))
+	    ;;(format t "~&cf! ~a ~a~%" cfp cra)
+	    (list (make-fixnum cra) cfp)))))))
+
+(defun maybe-lisp-from-lisp(fp)
+    (declare (type system-area-pointer fp))
+    (when (cstack-pointer-valid-p fp)
+      (let ((s0 (kernel:stack-ref fp vm::old-fp-save-offset))
+	    (s1 (kernel:stack-ref fp vm::return-pc-save-offset)))
+	(when (and (kernel:make-lisp-obj s0)
+		   (kernel:make-lisp-obj s1))
+	  (let ((ofp (int-sap s0))
+		(lra (int-sap s1)))
+	    ;;(format t "~&mlf ~a ~a~%" ofp lra)
+	    (and (cstack-pointer-valid-p ofp)
+		 (lisp-return-pc-valid-p lra)
+		 (list (kernel:make-lisp-obj s1) ofp)))))))
+
+(defun maybe-c-from-c(fp)
+  (declare (type system-area-pointer fp))
+  (let ((cfp (sap-ref-sap fp (* 0 vm:word-bytes)))
+	(cra (sap-ref-sap fp (* 1 vm:word-bytes)))
+	(end (int-sap (* lisp::*static-space-free-pointer* vm:word-bytes))))
+    ;;(format t "~&cfc? ~a ~a" cfp cra)
+    (when (cstack-pointer-valid-p cfp)
+      (cond ((sap< cra (int-sap (static-space-start)))
+	     ;;(format t "~&cfc!~%")
+	     (list (make-fixnum cra) cfp))
+	  ;; sigtrap handler from interrupt
+	  ((sap> cra end)
+	   ;;(format t "~&INT~%")
+	   (list nil cfp))))))
+
+;;; ^C a running program and get C call semantics with Lisp return address.
+(defun maybe-c-from-lisp(fp)
+  (declare (type system-area-pointer fp))
+  (let ((cfp (sap-ref-sap fp (* 0 vm:word-bytes)))
+	(cra (sap-ref-sap fp (* 1 vm:word-bytes)))
+	(end (int-sap (* lisp::*static-space-free-pointer* vm:word-bytes))))
+    ;;(format t "~&cfl? ~a ~a" cfp cra)
+    (when (cstack-pointer-valid-p cfp)
+      (cond ((sap< cra end)
+	     ;;(format t "~&cfl!~%")
+	     (list (make-fixnum cra) cfp))))))
+
+(defun x86-call-context(fp)
+  (declare (type system-area-pointer fp))
+  (let ((pair (cond ((maybe-lisp-from-lisp fp))
+		    ((maybe-lisp-from-c fp))
+		    ((maybe-c-from-c fp))
+		    ((maybe-c-from-lisp fp)))))
+    (if pair
+      (apply #'values pair)
+      (error "Debug can't resolve frame ~a" fp))))
+)
+;;; end of x86 hacks
+
 
 ;;; DESCRIPTOR-SAP -- internal
 ;;;
@@ -899,7 +1076,7 @@
 				 debug-fun)))
 		     (possibly-an-interpreted-frame
 		      (compute-calling-frame
-		       (descriptor-sap
+		       ( #-x86 descriptor-sap #+x86 int-sap
 			(get-context-value
 			 real vm::ocfp-save-offset
 			 (c::compiled-debug-function-old-fp c-d-f)))
@@ -917,15 +1094,18 @@
 		  (bogus-debug-function
 		   (let ((fp (frame-pointer real)))
 		     (when (cstack-pointer-valid-p fp)
+		       #+x86
+		        (multiple-value-bind (ra ofp) (x86-call-context fp)
+			  (compute-calling-frame ofp ra frame))
+			#-x86
 		       (compute-calling-frame
 			#-alpha
-			(system:sap-ref-sap fp (* vm::ocfp-save-offset
-						  vm:word-bytes))
+			(system:sap-ref-sap
+			 fp (* vm::ocfp-save-offset vm:word-bytes))
 			#+alpha
 			(kernel::int-sap
-			 (system:sap-ref-32 fp (* vm::ocfp-save-offset
-						  vm:word-bytes)))
-
+			 (system:sap-ref-32
+			  fp (* vm::ocfp-save-offset vm:word-bytes)))
 			#-gengc
 			(kernel:stack-ref fp vm::lra-save-offset)
 			#+gengc
@@ -941,6 +1121,7 @@
 ;;; location offset on the stack.  Loc is the saved sc-offset describing the
 ;;; main location.
 ;;;
+#-x86
 (defun get-context-value (frame stack-slot loc)
   (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
 	   (type c::sc-offset loc))
@@ -949,6 +1130,25 @@
     (if escaped
 	(sub-access-debug-var-slot pointer loc escaped)
 	(kernel:stack-ref pointer stack-slot))))
+#+x86
+(defun get-context-value (frame stack-slot loc)
+  (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
+	   (type c::sc-offset loc))
+  (let ((pointer (frame-pointer frame))
+	(escaped (compiled-frame-escaped frame)))
+    (if escaped
+	(ecase stack-slot
+	  (#.vm::ocfp-save-offset
+	   (sub-access-debug-var-slot pointer loc escaped))
+	  (#.vm::lra-save-offset
+	   (kernel:make-lisp-obj
+	    (sub-access-debug-var-slot pointer loc escaped))))
+	(ecase stack-slot
+	  (#.vm::ocfp-save-offset
+	   (kernel:stack-ref pointer stack-slot))
+	  (#.vm::lra-save-offset
+	   (kernel:make-lisp-obj (kernel:stack-ref pointer stack-slot)))))))
+
 ;;;
 (defun (setf get-context-value) (value frame stack-slot loc)
   (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
@@ -1023,23 +1223,36 @@
 ;;; Note: Sometimes LRA is actually a fixnum.  This happens when lisp calls
 ;;; into C.  In this case, the code object is stored on the stack after the
 ;;; LRA, and the LRA is the word offset.
-;;; 
+;;;
+;;;; x86 note. The non-lra version has not been tested with the
+;;;; recent changes. I'm probably going to move to just using lra
+;;;; and remove the x86-lra feature at some point.
 #-gengc
 (defun compute-calling-frame (caller lra up-frame)
   (declare (type system:system-area-pointer caller))
+  ;;(format t "ccf: ~x ~a ~a~%" (sap-int caller) lra up-frame)
   (when (cstack-pointer-valid-p caller)
     (multiple-value-bind
 	(code pc-offset escaped)
 	(if lra
 	    (multiple-value-bind
-		(word-offset code)
+		  (word-offset code)
 		(if (ext:fixnump lra)
 		    (let ((fp (frame-pointer up-frame)))
-		      (values lra
-			      (kernel:stack-ref fp (1+ vm::lra-save-offset))))
+		      #+x86 (declare (ignore fp))
+		      (values
+		       lra
+		       #-x86 ;; fake-foreign-fcn sticks CODE pointer here
+		       (kernel:stack-ref fp (1+ vm::lra-save-offset))))
+		    #+(or x86-lra (not x86))
 		    (values (kernel:get-header-data lra)
-			    (kernel:lra-code-header lra)))
+			    (kernel:lra-code-header lra))
+		    #+(and x86 (not x86-lra))
+		    (compute-lra-data-from-pc (int-sap lra)))
+			
 	      (if code
+		  #+(and x86 (not x86-lra))(values code word-offset nil)
+		  #+(or x86-lra (not x86))
 		  (values code
 			  (* (1+ (- word-offset (kernel:get-header-data code)))
 			     vm:word-bytes)
@@ -1070,7 +1283,7 @@
 				 (if up-frame (1+ (frame-number up-frame)) 0)
 				 escaped))))))
 
-#-gengc
+#-(or gengc x86)
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
@@ -1103,7 +1316,7 @@
 		 ;; We were in an assembly routine.  Therefore, use the LRA as
 		 ;; the pc.
 		 (setf pc-offset
-		       (- (vm:sigcontext-register scp vm::lra-offset)
+		       (- (lisp-return-pc scp)
 			  (kernel:get-lisp-obj-address code)
 			  code-header-len)))
 	       (return
@@ -1114,6 +1327,29 @@
 			      (kernel:get-header-data real-lra)
 			      nil))
 		    (values code pc-offset scp)))))))))))
+#+x86
+(defun find-escaped-frame (frame-pointer)
+  (declare (type system:system-area-pointer frame-pointer))
+  (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
+    (alien:with-alien
+	((lisp-interrupt-contexts (array (* unix:sigcontext) nil) :extern))
+      (let ((scp (alien:deref lisp-interrupt-contexts index)))
+	(when (sap= frame-pointer
+		    (int-sap (vm:sigcontext-register scp vm::cfp-offset)))
+	  (system:without-gcing
+	   (multiple-value-bind
+		 (pc-offset code)
+	       (compute-lra-data-from-pc (vm:sigcontext-program-counter scp))
+	     (when (symbolp code)
+	       (return (values code 0 scp)))
+	     (return
+	       (if (eq (kernel:%code-debug-info code) :bogus-lra)
+		   (let ((real-lra (kernel:code-header-ref
+				    code real-lra-slot)))
+		     (values (kernel:lra-code-header real-lra)
+			     (kernel:get-header-data real-lra)
+			     nil))
+		   (values code pc-offset scp))))))))))
 
 ;;; CODE-OBJECT-FROM-BITS  --  internal.
 ;;;
@@ -1246,8 +1482,7 @@
 		;; ### Need to do something real.
 		(values (make-bogus-debug-function "Assembler routine.")
 			0
-			(system:int-sap
-			 (vm:sigcontext-register state vm::ocfp-offset))))
+			(old-frame-pointer state)))
 	       (#.vm:trace-table-function-prologue
 		(values (make-bogus-debug-function
 			 "Function-Prologue in an assembler routine?")
@@ -1272,8 +1507,7 @@
 	       (#.vm:trace-table-call-site
 		(values (debug-function-from-pc component pc-offset)
 			pc-offset
-			(system:int-sap
-			 (vm:sigcontext-register state vm::ocfp-offset))))
+			(old-frame-pointer state)))
 	       (#.vm:trace-table-function-prologue
 		#+nil ;; ### Need to do something real.
 		(let* ((ra (system:int-sap
@@ -1363,6 +1597,8 @@
 ;;; the component, for function constants, and the c::compiled-debug-function.
 ;;;
 (defun debug-function-from-pc (component pc)
+  #+x86 ;; until no more bugs at least.
+  (declare (optimize (safety 1)(debug .5)))
   (let ((info (kernel:%code-debug-info component)))
     (cond
      ((not info)
@@ -2705,24 +2941,25 @@
 	 (frame-pointer frame)
 	 (or (compiled-debug-variable-save-sc-offset debug-var)
 	     (compiled-debug-variable-sc-offset debug-var))))))
-
+
 ;;; SUB-ACCESS-DEBUG-VAR-SLOT -- Internal.
 ;;;
+#-x86
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
-		    (let ((,var (vm:sigcontext-register
-				 escaped
-				 (c::sc-offset-offset sc-offset))))
-		      ,@forms)
-		    :invalid-value-for-unescaped-register-storage))
+		 (let ((,var (vm:sigcontext-register
+			      escaped
+			      (c::sc-offset-offset sc-offset))))
+		   ,@forms)
+		 :invalid-value-for-unescaped-register-storage))
 	     (escaped-float-value (format)
 	       `(if escaped
-		    (vm:sigcontext-float-register
-		     escaped
-		     (c::sc-offset-offset sc-offset)
-		     ',format)
-		    :invalid-value-for-unescaped-register-storage))
+		 (vm:sigcontext-float-register
+		  escaped
+		  (c::sc-offset-offset sc-offset)
+		  ',format)
+		 :invalid-value-for-unescaped-register-storage))
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(system:int-sap
@@ -2775,6 +3012,8 @@
 				       vm:word-bytes))))
       (#.vm:control-stack-sc-number
        (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
+      (#.vm:immediate-stack-sc-number
+       (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
        (with-nfp (nfp)
 	 (code-char (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
@@ -2792,6 +3031,90 @@
 	 (system:sap-ref-sap nfp (* (c::sc-offset-offset sc-offset)
 				    vm:word-bytes)))))))
 
+#+x86
+(defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
+  (declare (type system:system-area-pointer fp))
+  (macrolet ((with-escaped-value ((var) &body forms)
+	       `(if escaped
+		 (let ((,var (vm:sigcontext-register
+			      escaped
+			      (c::sc-offset-offset sc-offset))))
+		   ,@forms)
+		 :invalid-value-for-unescaped-register-storage))
+	     (escaped-float-value (format)
+	       `(if escaped
+		 (vm:sigcontext-float-register
+		  escaped
+		  (c::sc-offset-offset sc-offset)
+		  ',format)
+		 :invalid-value-for-unescaped-register-storage)))
+    (case (c::sc-offset-scn sc-offset)
+      ((#.vm:any-reg-sc-number
+	#.vm:descriptor-reg-sc-number)
+       (system:without-gcing
+	(with-escaped-value (val)
+	  (kernel:make-lisp-obj val))))
+      (#.vm:base-char-reg-sc-number
+       (with-escaped-value (val)
+	 (code-char val)))
+      (#.vm:sap-reg-sc-number
+       (with-escaped-value (val)
+	 (system:int-sap val)))
+      (#.vm:signed-reg-sc-number
+       (with-escaped-value (val)
+	 (if (logbitp (1- vm:word-bits) val)
+	     (logior val (ash -1 vm:word-bits))
+	     val)))
+      (#.vm:unsigned-reg-sc-number
+       (with-escaped-value (val)
+	 val))
+      (#.vm:non-descriptor-reg-sc-number
+       (error "Local non-descriptor register access?"))
+      (#.vm:interior-reg-sc-number
+       (error "Local interior register access?"))
+      (#.vm:single-reg-sc-number
+       (escaped-float-value single-float))
+      (#.vm:double-reg-sc-number
+       (escaped-float-value double-float))
+      (#.vm:single-stack-sc-number
+       (system:sap-ref-single
+	(system:int-sap (- (system:sap-int fp)
+			   (* (1+ (c::sc-offset-offset sc-offset))
+			      vm:word-bytes))) 0))
+      (#.vm:double-stack-sc-number
+	(system:sap-ref-double
+	  (system:int-sap (- (system:sap-int fp)
+			  (* (+ (c::sc-offset-offset sc-offset) 2)
+				vm:word-bytes))) 0))
+      ((#.vm:control-stack-sc-number #.vm:immediate-stack-sc-number)
+       (kernel:make-lisp-obj
+	(kernel:stack-ref fp (c::sc-offset-offset sc-offset))))
+      (#.vm:base-char-stack-sc-number
+       (code-char
+	(system:sap-ref-32
+	 (system:int-sap (- (system:sap-int fp)
+			    (* (1+ (c::sc-offset-offset sc-offset))
+			       vm:word-bytes))) 0)))
+      (#.vm:unsigned-stack-sc-number
+       (system:sap-ref-32
+	(system:int-sap (- (system:sap-int fp)
+			   (* (1+ (c::sc-offset-offset sc-offset))
+			      vm:word-bytes))) 0))
+      (#.vm:signed-stack-sc-number
+       (system:signed-sap-ref-32
+	(system:int-sap (- (system:sap-int fp)
+			   (* (1+ (c::sc-offset-offset sc-offset))
+			      vm:word-bytes))) 0))
+      (#.vm:sap-stack-sc-number
+       (system:sap-ref-sap 
+	(system:int-sap (- (system:sap-int fp)
+			   (* (1+ (c::sc-offset-offset sc-offset))
+			      vm:word-bytes))) 0))
+      ;; Not using ecase to avoid recursive processing.
+      ;; I would rather see some hint as to what is wrong
+      (t (format t "Sc-offset-scn ~a fell through CASE ~%"
+		 (c::sc-offset-scn sc-offset)) nil))
+    ))
 
 ;;; %SET-DEBUG-VARIABLE-VALUE -- Internal.
 ;;;
@@ -2842,6 +3165,7 @@
 
 ;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
 ;;;
+#-x86 ;; preserve original
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
@@ -2929,6 +3253,81 @@
 					  vm:word-bytes))
 	       (the system:system-area-pointer value)))))))
 
+#+x86 
+(defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
+  (macrolet ((set-escaped-value (val)
+	       `(if escaped
+		    (setf (vm:sigcontext-register
+			   escaped
+			   (c::sc-offset-offset sc-offset))
+			  ,val)
+		    value)))
+    #+nil ;; debug
+    (format t "~&sdvs ~a ~a ~a  <= ~a~%" 
+	    (sc-number-name (c::sc-offset-scn sc-offset))
+	    (disassem::get-sc-name sc-offset c:*native-backend*)
+	    (not (null escaped))
+	    value)
+    (ecase (c::sc-offset-scn sc-offset)
+      ((#.vm:any-reg-sc-number
+	#.vm:descriptor-reg-sc-number
+	#+rt #.vm:word-pointer-reg-sc-number)
+       (system:without-gcing
+	(set-escaped-value
+	  (kernel:get-lisp-obj-address value))))
+      (#.vm:base-char-reg-sc-number
+       (set-escaped-value (char-code value)))
+      (#.vm:sap-reg-sc-number
+       (set-escaped-value (system:sap-int value)))
+      (#.vm:signed-reg-sc-number
+       (set-escaped-value (logand value (1- (ash 1 vm:word-bits)))))
+      (#.vm:unsigned-reg-sc-number
+       (set-escaped-value value))
+      (#.vm:non-descriptor-reg-sc-number
+       (error "Local non-descriptor register access?"))
+      (#.vm:interior-reg-sc-number
+       (error "Local interior register access?"))
+      (#.vm:single-reg-sc-number
+	#+nil ;; don't have escaped floats.
+       (set-escaped-float-value single-float value))
+      (#.vm:double-reg-sc-number
+	#+nil ;;  don't have escaped floats -- still in npx?
+       (set-escaped-float-value double-float value))
+      (#.vm:single-stack-sc-number
+       (setf (system:sap-ref-single
+	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
+				 (- vm:word-bytes))) 0)
+	     (the single-float value)))
+      (#.vm:double-stack-sc-number
+       (setf (system:sap-ref-double
+	      (system:sap+ fp (* (+ (c::sc-offset-offset sc-offset) 2)
+				 (- vm:word-bytes))) 0)
+	     (the double-float value)))
+      ((#.vm:control-stack-sc-number #.vm:immediate-stack-sc-number)
+       (setf (kernel:stack-ref fp (c::sc-offset-offset sc-offset)) value))
+      (#.vm:base-char-stack-sc-number
+       (setf (system:sap-ref-32
+	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
+				 (- vm:word-bytes))) 0)
+  	     (char-code (the character value))))
+      (#.vm:unsigned-stack-sc-number
+       (setf (system:sap-ref-32
+	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
+				 (- vm:word-bytes))) 0)
+	     (the (unsigned-byte 32) value)))
+      (#.vm:signed-stack-sc-number
+       (setf (system:signed-sap-ref-32
+	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
+				 (- vm:word-bytes))) 0)
+ 	     (the (signed-byte 32) value)))
+      (#.vm:sap-stack-sc-number
+       (setf (system:sap-ref-sap
+	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
+				 (- vm:word-bytes))) 0)
+	     (the system:system-area-pointer value))))))
+
+
+
 (defsetf debug-variable-value %set-debug-variable-value)
 
 
@@ -2973,6 +3372,8 @@
 ;;; This is the method for DEBUG-VARIABLE-VALIDITY for compiled-debug-variables.
 ;;; For safety, make sure basic-code-loc is what we think.
 ;;;
+;;#+x86-compile-botch ;; tn conflict S1
+
 (defun compiled-debug-variable-validity (debug-var basic-code-loc)
   (check-type basic-code-loc compiled-code-location)
   (cond ((debug-variable-alive-p debug-var)
@@ -3025,6 +3426,7 @@
 ;;; Temporary buffer used to build form-number => source-path translation in
 ;;; FORM-NUMBER-TRANSLATIONS.
 ;;;
+
 (defvar *form-number-temp* (make-array 10 :fill-pointer 0 :adjustable t))
 
 ;;; Table used to detect CAR circularities in FORM-NUMBER-TRANSLATIONS.
@@ -3609,6 +4011,18 @@
 ;;; handle breaks for internal errors.
 ;;;
 (defun handle-breakpoint (offset component signal-context)
+#+x86
+  (multiple-value-bind (byte-offset code)
+      (let* ((pc (vm:sigcontext-program-counter
+		  (alien:sap-alien signal-context (* unix:sigcontext))))
+	     (fn (compiled-function-from-pc pc)))
+	(values (- (sap-int pc)
+		   (- (kernel:get-lisp-obj-address fn)
+		      vm:function-pointer-type))
+		(kernel:function-code-header fn)))
+    (setq offset byte-offset
+	  component code))
+
   (let ((data (breakpoint-data component offset nil)))
     (unless data
       (error "Unknown breakpoint in ~S at offset ~S."
@@ -3712,7 +4126,7 @@
 	       cookie))))
 
 (defun get-function-end-breakpoint-values (scp)
-  (let ((ocfp (system:int-sap (vm:sigcontext-register scp vm::ocfp-offset)))
+  (let ((ocfp (old-frame-pointer scp))
 	(nargs (kernel:make-lisp-obj
 		(vm:sigcontext-register scp vm::nargs-offset)))
 	(reg-arg-offsets '#.vm::register-arg-offsets)

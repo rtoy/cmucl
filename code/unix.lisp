@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.42 1996/07/25 20:46:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.43 1997/01/18 14:30:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 	  t-stopc t-eofc t-brkc ltchars t-suspc t-dsuspc t-rprntc t-flushc
 	  t-werasc t-lnextc sgttyb sg-ispeed sg-ospeed sg-erase sg-kill
 	  sg-flags winsize ws-row ws-col ws-xpixel ws-ypixel
-	  direct d-off d-ino d-reclen #-svr4 d-namlen d-name
+	  direct d-off d-ino d-reclen #-(or linux svr4) d-namlen d-name
 	  stat st-dev st-mode st-nlink st-uid st-gid st-rdev st-size
 	  st-atime st-mtime st-ctime st-blksize st-blocks
 	  s-ifmt s-ifdir s-ifchr s-ifblk s-ifreg s-iflnk s-ifsock
@@ -45,32 +45,32 @@
 	  unix-fcntl f-dupfd f-getfd f-setfd f-getfl f-setfl f-getown f-setown
 	  fndelay fappend fasync fcreat ftrunc fexcl unix-link unix-lseek
 	  l_set l_incr l_xtnd unix-mkdir unix-open o_rdonly o_wronly o_rdwr
-	  #+svr4 o_ndelay
+	  #+(or svr4 freebsd linux) o_ndelay
 	  o_append o_creat o_trunc o_excl unix-pipe unix-read unix-readlink
 	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
 	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
 	  tcsetpgrp tcgetpgrp tty-process-group
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase
-	  #-(or hpux svr4) tty-cbreak #-(or hpux svr4) tty-tandem
-	  #+(or hpux svr4) termios #+(or hpux svr4) c-lflag
-	  #+(or hpux svr4) c-iflag #+(or hpux svr4) c-oflag
-	  #+(or hpux svr4) tty-icrnl #+(or hpux svr4) tty-ocrnl
-	  #+(or hpux svr4) vdsusp #+(or hpux svr4) veof
-	  #+(or hpux svr4) vintr #+(or hpux svr4) vquit #+(or hpux svr4) vstart
-	  #+(or hpux svr4) vstop #+(or hpux svr4) vsusp
-	  #+(or hpux svr4) c-cflag
-	  #+(or hpux svr4) c-cc #+(or hpux svr4) tty-icanon
-	  #+(or hpux svr4) vmin #+(or hpux svr4) vtime
-	  #+(or hpux svr4) tty-ixon
-	  #+(or hpux svr4) tcsaflush #+(or hpux svr4)
-	  unix-tcgetattr #+(or hpux svr4) unix-tcsetattr
+	  #-(or hpux svr4 freebsd) tty-cbreak #-(or hpux svr4) tty-tandem
+	  #+(or hpux svr4 linux freebsd) termios #+(or hpux svr4 freebsd) c-lflag
+	  #+(or hpux svr4 freebsd) c-iflag #+(or hpux svr4 freebsd) c-oflag
+	  #+(or hpux svr4 freebsd) tty-icrnl #+(or hpux svr4 freebsd) tty-ocrnl
+	  #+(or hpux svr4 freebsd) vdsusp #+(or hpux svr4 freebsd) veof
+	  #+(or hpux svr4 freebsd) vintr #+(or hpux svr4 freebsd) vquit #+(or hpux svr4 freebsd) vstart
+	  #+(or hpux svr4 freebsd) vstop #+(or hpux svr4 freebsd) vsusp
+	  #+(or hpux svr4 freebsd) c-cflag
+	  #+(or hpux svr4 freebsd) c-cc #+(or hpux svr4 freebsd) tty-icanon
+	  #+(or hpux svr4 freebsd) vmin #+(or hpux svr4 freebsd) vtime
+	  #+(or hpux svr4 freebsd) tty-ixon
+	  #+(or hpux svr4 freebsd) tcsaflush #+(or hpux svr4 linux freebsd)
+	  unix-tcgetattr #+(or hpux svr4 linux freebsd) unix-tcsetattr
 	  TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
 	  TIOCSIGSEND
 
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
-	  KBDSCLICK FIONREAD #+hpux siocspgrp
+	  KBDSCLICK FIONREAD #+(or hpux freebsd) siocspgrp
 	  unix-exit unix-stat unix-lstat unix-fstat
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
@@ -88,30 +88,48 @@
 
 ;;;; Common machine independent structures.
 
+#+bsd
+(def-alien-type quad-t (array unsigned-long 2))
+
 ;;; From sys/types.h
 
-(def-alien-type daddr-t #-alpha long #+alpha int)
+(def-alien-type daddr-t #-(or linux alpha) long #+(or linux alpha) int)
 (def-alien-type caddr-t (* char))
 (def-alien-type ino-t #-alpha unsigned-long #+alpha unsigned-int)
 (def-alien-type swblk-t long)
-(def-alien-type size-t #-alpha long #+alpha unsigned-long)
-(def-alien-type time-t #-alpha unsigned-long #+alpha unsigned-int)
-(def-alien-type dev-t #-(or alpha svr4) short #+alpha int #+svr4 unsigned-long)
+(def-alien-type size-t #-(or linux alpha) long #+linux unsigned-int 
+  #+alpha unsigned-long)
+(def-alien-type time-t #-(or linux alpha) unsigned-long #+linux long
+  #+alpha unsigned-int)
+
+(def-alien-type dev-t #-(or alpha svr4 bsd linux) short #+linux unsigned-short
+	 #+alpha int #+(and (not linux) (or bsd svr4)) unsigned-long)
+#-FreeBSD
 (def-alien-type off-t #-alpha long #+alpha unsigned-long)
+#+FreeBSD
+(def-alien-type off-t quad-t)
+#-FreeBSD
 (def-alien-type uid-t #-(or alpha svr4) unsigned-short #+alpha unsigned-int
   #+svr4 long)
+#+FreeBSD
+(def-alien-type uid-t unsigned-long)
+#-FreeBSD
 (def-alien-type gid-t #-(or alpha svr4) unsigned-short #+alpha unsigned-int
   #+svr4 long)
+#+FreeBSD
+(def-alien-type gid-t unsigned-long)
 (def-alien-type mode-t #-(or alpha svr4) unsigned-short
   #+alpha unsigned-int #+svr4 unsigned-long)
 (def-alien-type nlink-t #-svr4 unsigned-short #+svr4 unsigned-long)
 
-(defconstant FD-SETSIZE #-(or hpux alpha) 256 #+hpux 2048 #+alpha 4096)
+(defconstant FD-SETSIZE #-(or hpux alpha linux) 256 #+hpux 2048 #+alpha 4096 #+linux 1024)
 
+;; not checked for linux...
 (def-alien-type nil
   (struct fd-set
     (fds-bits (array #-alpha unsigned-long #+alpha int #.(/ fd-setsize 32)))))
 
+;; not checked for linux...
 (defmacro fd-set (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
@@ -120,6 +138,7 @@
 	     (logior (truly-the (unsigned-byte 32) (ash 1 ,bit))
 		     (deref (slot ,fd-set 'fds-bits) ,word))))))
 
+;; not checked for linux...
 (defmacro fd-clr (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
@@ -129,12 +148,14 @@
 		     (32bit-logical-not
 		      (truly-the (unsigned-byte 32) (ash 1 ,bit))))))))
 
+;; not checked for linux...
 (defmacro fd-isset (offset fd-set)
   (let ((word (gensym))
 	(bit (gensym)))
     `(multiple-value-bind (,word ,bit) (floor ,offset 32)
        (logbitp ,bit (deref (slot ,fd-set 'fds-bits) ,word)))))
 
+;; not checked for linux...
 (defmacro fd-zero (fd-set)
   `(progn
      ,@(loop for index upfrom 0 below (/ fd-setsize 32)
@@ -144,54 +165,80 @@
 
 (def-alien-type nil
   (struct timeval
-    (tv-sec time-t)		; seconds
-    (tv-usec time-t)))		; and microseconds
+    (tv-sec #-linux time-t #+linux int)		; seconds
+    (tv-usec #-linux time-t #+linux int)))		; and microseconds
 
 (def-alien-type nil
   (struct timezone
     (tz-minuteswest int)		; minutes west of Greenwich
     (tz-dsttime				; type of dst correction
-     (enum nil :none :usa :aust :wet :met :eet :can))))
+     #-linux (enum nil :none :usa :aust :wet :met :eet :can)
+     #+linux int)))
 
 (def-alien-type nil
   (struct itimerval
     (it-interval (struct timeval))	; timer interval
     (it-value (struct timeval))))	; current value
 
-#+svr4
+#+(or linux svr4)
 ; High-res time.  Actually posix definition under svr4 name.
 (def-alien-type nil
   (struct timestruc-t
     (tv-sec time-t)
     (tv-nsec long)))
 
-;;; From ioctl.h
+#+(or linux FreeBSD)
+(def-alien-type nil
+  (struct timespec-t
+    (ts-sec long)
+    (ts-nsec long)))
 
+;;; From ioctl.h
 (def-alien-type nil
   (struct tchars
     (t-intrc char)			; interrupt
     (t-quitc char)			; quit
+    #+linux (t-eofc char)
     (t-startc char)			; start output
     (t-stopc char)			; stop output
-    (t-eofc char)			; end-of-file
+    #-linux (t-eofc char)			; end-of-file
     (t-brkc char)))			; input delimiter (like nl)
 
+;; not found (semi) linux
 (def-alien-type nil
   (struct ltchars
+    #+linux (t-werasc char)			; word erase 	  
     (t-suspc char)			; stop process signal
     (t-dsuspc char)			; delayed stop process signal
     (t-rprntc char)			; reprint line
     (t-flushc char)			; flush output (toggles)
-    (t-werasc char)			; word erase
+    #-linux (t-werasc char)			; word erase
     (t-lnextc char)))			; literal next character
+
+
+
+#+(or svr4 hpux linux)
+(def-alien-type nil
+  (struct termios
+    (c-iflag unsigned-int)
+    (c-oflag unsigned-int)
+    (c-cflag unsigned-int)
+    (c-lflag unsigned-int)
+    #+(or linux hpux)
+    (c-reserved #-linux unsigned-int #+linux unsigned-char)
+    (c-cc (array unsigned-char #+hpux 16 #+(or linux solaris) 19 #+irix 23))))
 
 (def-alien-type nil
   (struct sgttyb
+    #+linux (sg-flags #+mach short #-mach int) ; mode flags 	  
     (sg-ispeed char)			; input speed.
     (sg-ospeed char)			; output speed
     (sg-erase char)			; erase character
-    (sg-kill char)			; kill character
-    (sg-flags #+mach short #-mach int))) ; mode flags
+    #-linux (sg-kill char)			; kill character
+    #-linux (sg-flags #+mach short #-mach int) ; mode flags
+    #+linux (sg-kill char)
+    #+linux (t (struct termios))
+    #+linux (check int)))
 
 (def-alien-type nil
   (struct winsize
@@ -203,32 +250,44 @@
 
 ;;; From sys/termio.h
 
-#+(or svr4 hpux)
+#+(or svr4 hpux freebsd linux)
 (def-alien-type nil
   (struct termios
     (c-iflag unsigned-int)
     (c-oflag unsigned-int)
     (c-cflag unsigned-int)
     (c-lflag unsigned-int)
-    #+hpux
-    (c-reserved unsigned-int)
-    (c-cc (array unsigned-char #+hpux 16 #+solaris 19 #+irix 23))))
+    #+(or linux hpux)
+    (c-reserved #-linux unsigned-int #+linux unsigned-char)
+    (c-cc (array unsigned-char #+hpux 16 #+(or linux solaris) 19 #+irix 23 #+freebsd 20))
+    ;; FreeBSD also has c-ispeed and c-ospeed?
+    ))
 
 ;;; From sys/dir.h
-
+#-bsd
 (def-alien-type nil
   (struct direct
     #+(and sunos (not svr4)) (d-off long) ; offset of next disk directory entry
     (d-ino ino-t); inode number of entry
-    #+svr4 (d-off long)
+    #+(or linux svr4) (d-off long)
     (d-reclen unsigned-short)		; length of this record
-    #-svr4
+    #-(or linux svr4)
     (d-namlen unsigned-short)		; length of string in d-name
     (d-name (array char 256))))		; name must be no longer than this
 
-;;; From sys/stat.h
+#+bsd
+(def-alien-type nil
+  (struct direct
+    (d-fileno unsigned-long)
+    (d-reclen unsigned-short)
+    (d-type unsigned-char)
+    (d-namlen unsigned-char)		; length of string in d-name
+    (d-name (array char 256))))		; name must be no longer than this
 
-#-svr4
+;;; From sys/stat.h
+;; oh boy, in linux-> 2 stat(s)!!
+
+#-(or svr4 freebsd linux)
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
@@ -249,34 +308,68 @@
     (st-blocks #-alpha long #+alpha int)
     (st-spare4 (array long 2))))
 
-#+svr4
+#+FreeBSD
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
-    (st-pad1 (array long 3))
     (st-ino ino-t)
-    (st-mode unsigned-long)
-    (st-nlink short)
+    (st-mode mode-t)
+    (st-nlink nlink-t)
     (st-uid uid-t)
     (st-gid gid-t)
     (st-rdev dev-t)
-    (st-pad2 (array long 2))
-    (st-size off-t)
-    (st-pad3 long)
-    (st-atime (struct timestruc-t))
-    (st-mtime (struct timestruc-t))
-    (st-ctime (struct timestruc-t))
-    (st-blksize long)
-    (st-blocks long)
-    (st-fstype (array char 16))
-    (st-pad4 (array long 8))))
+    (st-atime (struct timespec-t))
+    (st-mtime (struct timespec-t))
+    (st-ctime (struct timespec-t))
+    (st-size    unsigned-long)		; really quad
+    (st-sizeh   unsigned-long)		;
+    (st-blocks  unsigned-long)		; really quad
+    (st-blocksh unsigned-long)
+    (st-blksize unsigned-long)
+    (st-flags   unsigned-long)
+    (st-gen     unsigned-long)
+    (st-lspare  long)
+    (st-qspare (array long 4))))	; 2 quads
 
-(defconstant s-ifmt #o0170000)
-(defconstant s-ifdir #o0040000)
-(defconstant s-ifchr #o0020000)
-(defconstant s-ifblk #o0060000)
-(defconstant s-ifreg #o0100000)
-(defconstant s-iflnk #o0120000)
+#+(or linux svr4)
+(def-alien-type nil
+  (struct stat
+    (st-dev dev-t)
+    (st-pad1 #-linux (array long 3) #+linux unsigned-short)
+    (st-ino ino-t)
+    (st-mode #-linux unsigned-long #+linux unsigned-short)
+    (st-nlink #-linux short #+linux unsigned-short)
+    (st-uid #-linux uid-t #+linux unsigned-short)
+    (st-gid #-linux gid-t #+linux unsigned-short)
+    (st-rdev dev-t)
+    (st-pad2 #-linux (array long 2) #+linux unsigned-short)
+    (st-size off-t)
+    #-linux (st-pad3 long)
+    #+linux (st-blksize unsigned-long)
+    #+linux (st-blocks unsigned-long)
+    #-linux (st-atime (struct timestruc-t))
+    #+linux (st-atime unsigned-long)
+    #+linux (unused-1 unsigned-long)
+    #-linux (st-mtime (struct timestruc-t))
+    #+linux (st-mtime unsigned-long)
+    #+linux (unused-2 unsigned-long)
+    #-linux (st-ctime (struct timestruc-t))
+    #+linux (st-ctime unsigned-long)
+    #+linux (unused-3 unsigned-long)
+    #+linux (unused-4 unsigned-long)
+    #+linux (unused-5 unsigned-long)
+    #-linux(st-blksize long)
+    #-linux (st-blocks long)
+    #-linux (st-fstype (array char 16))
+    #-linux (st-pad4 (array long 8))))
+
+(defconstant s-ifmt   #o0170000)
+(defconstant s-ifdir  #o0040000)
+(defconstant s-ifchr  #o0020000)
+#+linux (defconstant s-ififo #x0010000)
+(defconstant s-ifblk  #o0060000)
+(defconstant s-ifreg  #o0100000)
+(defconstant s-iflnk  #o0120000)
 (defconstant s-ifsock #o0140000)
 (defconstant s-isuid #o0004000)
 (defconstant s-isgid #o0002000)
@@ -308,8 +401,8 @@
 
 (def-alien-type nil
   (struct rlimit
-    (rlim-cur #-alpha int #+alpha unsigned-int)	 ; current (soft) limit
-    (rlim-max #-alpha int #+alpha unsigned-int))); maximum value for rlim-cur
+    (rlim-cur #-(or linux alpha) int #+linux long #+alpha unsigned-int)	 ; current (soft) limit
+    (rlim-max #-(or linux alpha) int #+linux long #+alpha unsigned-int))); maximum value for rlim-cur
 
 
 
@@ -341,7 +434,7 @@
 ;;; From <errno.h>
 ;;; 
 (def-unix-error ESUCCESS 0 "Successful")
-(def-unix-error EPERM 1 "Not owner")
+(def-unix-error EPERM 1 #-linux "Not owner" #+linux "Operation not permitted")
 (def-unix-error ENOENT 2 "No such file or directory")
 (def-unix-error ESRCH 3 "No such process")
 (def-unix-error EINTR 4 "Interrupted system call")
@@ -351,12 +444,12 @@
 (def-unix-error ENOEXEC 8 "Exec format error")
 (def-unix-error EBADF 9 "Bad file number")
 (def-unix-error ECHILD 10 "No children")
-(def-unix-error EAGAIN 11 "No more processes")
-(def-unix-error ENOMEM 12 "Not enough core")
+(def-unix-error EAGAIN 11 #-linux "No more processes" #+linux "Try again")
+(def-unix-error ENOMEM 12 #-linux "Not enough core" #+linux "Out of memory")
 (def-unix-error EACCES 13 "Permission denied")
 (def-unix-error EFAULT 14 "Bad address")
 (def-unix-error ENOTBLK 15 "Block device required")
-(def-unix-error EBUSY 16 "Mount device busy")
+(def-unix-error EBUSY 16 #-linux "Mount device busy" #+linux "Device or resource busy")
 (def-unix-error EEXIST 17 "File exists")
 (def-unix-error EXDEV 18 "Cross-device link")
 (def-unix-error ENODEV 19 "No such device")
@@ -375,10 +468,10 @@
 (def-unix-error EPIPE 32 "Broken pipe")
 ;;; 
 ;;; Math
-(def-unix-error EDOM 33 "Argument too large")
-(def-unix-error ERANGE 34 "Result too large")
+(def-unix-error EDOM 33 #-linux "Argument too large" #+linux "Math argument out of domain")
+(def-unix-error ERANGE 34 #-linux "Result too large" #+linux "Math result not representable")
 ;;; 
-#-svr4
+#-(or linux svr4)
 (progn
 ;;; non-blocking and interrupt i/o
 (def-unix-error EWOULDBLOCK 35 "Operation would block")
@@ -523,6 +616,98 @@
 (def-unix-error EINPROGRESS 150 "Operation now in progress")
 (def-unix-error ESTALE 151 "Stale NFS file handle")
 )
+#+linux
+(progn
+(def-unix-error  EDEADLK         35     "Resource deadlock would occur")
+(def-unix-error  ENAMETOOLONG    36     "File name too long")
+(def-unix-error  ENOLCK          37     "No record locks available")
+(def-unix-error  ENOSYS          38     "Function not implemented")
+(def-unix-error  ENOTEMPTY       39     "Directory not empty")
+(def-unix-error  ELOOP           40     "Too many symbolic links encountered")
+(def-unix-error  EWOULDBLOCK     11     "Operation would block")
+(def-unix-error  ENOMSG          42     "No message of desired type")
+(def-unix-error  EIDRM           43     "Identifier removed")
+(def-unix-error  ECHRNG          44     "Channel number out of range")
+(def-unix-error  EL2NSYNC        45     "Level 2 not synchronized")
+(def-unix-error  EL3HLT          46     "Level 3 halted")
+(def-unix-error  EL3RST          47     "Level 3 reset")
+(def-unix-error  ELNRNG          48     "Link number out of range")
+(def-unix-error  EUNATCH         49     "Protocol driver not attached")
+(def-unix-error  ENOCSI          50     "No CSI structure available")
+(def-unix-error  EL2HLT          51     "Level 2 halted")
+(def-unix-error  EBADE           52     "Invalid exchange")
+(def-unix-error  EBADR           53     "Invalid request descriptor")
+(def-unix-error  EXFULL          54     "Exchange full")
+(def-unix-error  ENOANO          55     "No anode")
+(def-unix-error  EBADRQC         56     "Invalid request code")
+(def-unix-error  EBADSLT         57     "Invalid slot")
+(def-unix-error  EDEADLOCK       EDEADLK     "File locking deadlock error")
+(def-unix-error  EBFONT          59     "Bad font file format")
+(def-unix-error  ENOSTR          60     "Device not a stream")
+(def-unix-error  ENODATA         61     "No data available")
+(def-unix-error  ETIME           62     "Timer expired")
+(def-unix-error  ENOSR           63     "Out of streams resources")
+(def-unix-error  ENONET          64     "Machine is not on the network")
+(def-unix-error  ENOPKG          65     "Package not installed")
+(def-unix-error  EREMOTE         66     "Object is remote")
+(def-unix-error  ENOLINK         67     "Link has been severed")
+(def-unix-error  EADV            68     "Advertise error")
+(def-unix-error  ESRMNT          69     "Srmount error")
+(def-unix-error  ECOMM           70     "Communication error on send")
+(def-unix-error  EPROTO          71     "Protocol error")
+(def-unix-error  EMULTIHOP       72     "Multihop attempted")
+(def-unix-error  EDOTDOT         73     "RFS specific error")
+(def-unix-error  EBADMSG         74     "Not a data message")
+(def-unix-error  EOVERFLOW       75     "Value too large for defined data type")
+(def-unix-error  ENOTUNIQ        76     "Name not unique on network")
+(def-unix-error  EBADFD          77     "File descriptor in bad state")
+(def-unix-error  EREMCHG         78     "Remote address changed")
+(def-unix-error  ELIBACC         79     "Can not access a needed shared library")
+(def-unix-error  ELIBBAD         80     "Accessing a corrupted shared library")
+(def-unix-error  ELIBSCN         81     ".lib section in a.out corrupted")
+(def-unix-error  ELIBMAX         82     "Attempting to link in too many shared libraries")
+(def-unix-error  ELIBEXEC        83     "Cannot exec a shared library directly")
+(def-unix-error  EILSEQ          84     "Illegal byte sequence")
+(def-unix-error  ERESTART        85     "Interrupted system call should be restarted ")
+(def-unix-error  ESTRPIPE        86     "Streams pipe error")
+(def-unix-error  EUSERS          87     "Too many users")
+(def-unix-error  ENOTSOCK        88     "Socket operation on non-socket")
+(def-unix-error  EDESTADDRREQ    89     "Destination address required")
+(def-unix-error  EMSGSIZE        90     "Message too long")
+(def-unix-error  EPROTOTYPE      91     "Protocol wrong type for socket")
+(def-unix-error  ENOPROTOOPT     92     "Protocol not available")
+(def-unix-error  EPROTONOSUPPORT 93     "Protocol not supported")
+(def-unix-error  ESOCKTNOSUPPORT 94     "Socket type not supported")
+(def-unix-error  EOPNOTSUPP      95     "Operation not supported on transport endpoint")
+(def-unix-error  EPFNOSUPPORT    96     "Protocol family not supported")
+(def-unix-error  EAFNOSUPPORT    97     "Address family not supported by protocol")
+(def-unix-error  EADDRINUSE      98     "Address already in use")
+(def-unix-error  EADDRNOTAVAIL   99     "Cannot assign requested address")
+(def-unix-error  ENETDOWN        100    "Network is down")
+(def-unix-error  ENETUNREACH     101    "Network is unreachable")
+(def-unix-error  ENETRESET       102    "Network dropped connection because of reset")
+(def-unix-error  ECONNABORTED    103    "Software caused connection abort")
+(def-unix-error  ECONNRESET      104    "Connection reset by peer")
+(def-unix-error  ENOBUFS         105    "No buffer space available")
+(def-unix-error  EISCONN         106    "Transport endpoint is already connected")
+(def-unix-error  ENOTCONN        107    "Transport endpoint is not connected")
+(def-unix-error  ESHUTDOWN       108    "Cannot send after transport endpoint shutdown")
+(def-unix-error  ETOOMANYREFS    109    "Too many references: cannot splice")
+(def-unix-error  ETIMEDOUT       110    "Connection timed out")
+(def-unix-error  ECONNREFUSED    111    "Connection refused")
+(def-unix-error  EHOSTDOWN       112    "Host is down")
+(def-unix-error  EHOSTUNREACH    113    "No route to host")
+(def-unix-error  EALREADY        114    "Operation already in progress")
+(def-unix-error  EINPROGRESS     115    "Operation now in progress")
+(def-unix-error  ESTALE          116    "Stale NFS file handle")
+(def-unix-error  EUCLEAN         117    "Structure needs cleaning")
+(def-unix-error  ENOTNAM         118    "Not a XENIX named type file")
+(def-unix-error  ENAVAIL         119    "No XENIX semaphores available")
+(def-unix-error  EISNAM          120    "Is a named type file")
+(def-unix-error  EREMOTEIO       121    "Remote I/O error")
+(def-unix-error  EDQUOT          122    "Quota exceeded")
+)
+
 ;;;
 ;;; And now for something completely different ...
 (emit-unix-errors)
@@ -763,27 +948,35 @@
 (defconstant F-SETFD    2  "Set file desc. flags")
 (defconstant F-GETFL    3  "Get file flags")
 (defconstant F-SETFL    4  "Set file flags")
-#-svr4
+#-(or linux svr4)
 (defconstant F-GETOWN   5  "Get owner")
 #+svr4
 (defconstant F-GETOWN   23  "Get owner")
-#-svr4
+#+linux
+(defconstant F-GETLK    5   "Get lock")
+#-(or linux svr4)
 (defconstant F-SETOWN   6  "Set owner")
 #+svr4
 (defconstant F-SETOWN   24  "Set owner")
-
+#+linux 
+(defconstant F-SETLK    6   "Set lock")
+#+linux
+(defconstant F-SETLKW   7   "Set lock, wait for release")
+#+linux
+(defconstant F-SETOWN   8  "Set owner")
 
 ;;; File flags for F-GETFL and F-SETFL:
 
 (defconstant FNDELAY  #-osf1 #o0004 #+osf1 #o100000 "Non-blocking reads")
-(defconstant FAPPEND  #o0010   "Append on each write")
-(defconstant FASYNC   #-svr4 #o0100 #+svr4 #o10000
+(defconstant FAPPEND  #-linux #o0010 #+linux #o2000  "Append on each write") 
+(defconstant FASYNC   #-(or linux svr4) #o0100 #+svr4 #o10000 #+linux #o20000
   "Signal pgrp when data ready")
-(defconstant FCREAT   #-(or hpux svr4) #o1000 #+(or hpux svr4) #o0400
-  "Create if nonexistant")
-(defconstant FTRUNC   #-(or hpux svr4) #o2000 #+(or hpux svr4) #o1000
+;; doesn't exist in Linux ;-(
+#-linux (defconstant FCREAT   #-(or hpux svr4) #o1000 #+(or hpux svr4) #o0400
+   "Create if nonexistant")
+#-linux (defconstant FTRUNC   #-(or hpux svr4) #o2000 #+(or hpux svr4) #o1000
   "Truncate to zero length")
-(defconstant FEXCL    #-(or hpux svr4) #o4000 #+(or hpux svr4) #o2000
+#-linux (defconstant FEXCL    #-(or hpux svr4) #o4000 #+(or hpux svr4) #o2000
   "Error if already created")
 
 (defun unix-fcntl (fd cmd arg)
@@ -837,7 +1030,11 @@
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) offset)
 	   (type (integer 0 2) whence))
-  (int-syscall ("lseek" int off-t int) fd offset whence))
+  #-(and x86 freebsd) (int-syscall ("lseek" int off-t int) fd offset whence)
+  ;; Need a 64-bit return value type for this. TBD. For now,
+  ;; don't use this with any 2G+ partitions.
+  #+(and freebsd x86) (int-syscall ("lseek" int unsigned-long unsigned-long int)
+		     fd offset 0 whence ))
 
 ;;; Unix-mkdir accepts a name and a mode and attempts to create the
 ;;; corresponding directory with mode mode.
@@ -856,14 +1053,20 @@
 (defconstant o_rdonly 0 "Read-only flag.") 
 (defconstant o_wronly 1 "Write-only flag.")
 (defconstant o_rdwr 2   "Read-write flag.")
-(defconstant o_append #o10   "Append flag.")
-#+svr4 (defconstant o_ndelay 4 "Non-blocking I/O")
-#+(or hpux svr4)
+#+(or linux svr4 freebsd)
+(defconstant o_ndelay #-linux 4 #+linux #o4000 "Non-blocking I/O")
+(defconstant o_append #-linux #o10 #+linux #o2000   "Append flag.")
+#+(or hpux svr4 linux)
 (progn
-  (defconstant o_creat #o400  "Create if nonexistant flag.") 
+  (defconstant o_creat #-linux #o400 #+linux #o100 "Create if nonexistant flag.") 
   (defconstant o_trunc #o1000  "Truncate flag.")
-  (defconstant o_excl #o2000  "Error if already exists."))
-#-(or hpux svr4)
+  (defconstant o_excl #-linux #o2000 #+linux #o200 "Error if already exists."))
+#+linux
+(progn
+   (defconstant o_noctty #o400 "Don't become controlling terminal")
+   (defconstant o_sync #o10000 "Synchronous writes (on ext2)"))
+
+#-(or hpux svr4 linux)
 (progn
   (defconstant o_creat #o1000  "Create if nonexistant flag.") 
   (defconstant o_trunc #o2000  "Truncate flag.")
@@ -1126,18 +1329,19 @@
 
 
 (defconstant terminal-speeds
-  '#(nil 50 75 110 nil 150 200 300 600 1200 1800 2400 4800 9600 nil nil))
+  '#(0 50 75 110 134 150 200 300 600 1200 1800 2400 4800 9600 nil nil
+       57600 115200))
 
-(defconstant tty-raw #o40)
-(defconstant tty-crmod #o20)
-(defconstant tty-echo #o10)
-(defconstant tty-lcase #o4)
+(defconstant tty-raw #-linux #o40 #+linux 1)
+(defconstant tty-crmod #-linux #o20 #+linux 4)
+(defconstant tty-echo #o10) ;; 8
+(defconstant tty-lcase #-linux #o4 #+linux 2)
 #-hpux
-(defconstant tty-cbreak #o2)
-#-hpux
+(defconstant tty-cbreak #-linux #o2 #+linux 64)
+#-(or linux hpux)
 (defconstant tty-tandem #o1)
 
-#+(or hpux svr4)
+#+(or hpux svr4 linux)
 (progn
   (defconstant tty-icanon #o2)
   (defconstant tty-icrnl #o400)
@@ -1146,6 +1350,16 @@
   (defconstant veof 4)
   (defconstant vintr 0)
   (defconstant vquit 1))
+
+#+freebsd
+(progn
+  (defconstant tty-icanon #x100)
+  (defconstant tty-icrnl #x100)
+  (defconstant tty-ocrnl #x2)
+  (defconstant tty-ixon #x200)
+  (defconstant veof 0)
+  (defconstant vintr 8)
+  (defconstant vquit 9))
 
 #+hpux
 (progn
@@ -1157,26 +1371,38 @@
   (defconstant vtime 12)
   (defconstant tcsaflush 2))
 
-#+svr4
+#+(or linux svr4)
 (progn
-  (defconstant vdsusp 11)
+  #-linux (defconstant vdsusp 11)
   (defconstant vstart 8)
   (defconstant vstop 9)
   (defconstant vsusp 10)
-  (defconstant vmin 4)
+  (defconstant vmin #-linux 4 #+linux 6)
   (defconstant vtime 5)
-  (defconstant tcsaflush #x5410))
+  (defconstant tcsaflush #-linux #x5410 #+linux 2))
+
+#+freebsd
+(progn
+  (defconstant vdsusp 11)
+  (defconstant vstart 12)
+  (defconstant vstop 13)
+  (defconstant vsusp 10)
+  (defconstant vmin 16)
+  (defconstant vtime 17)
+  (defconstant tcsaflush #x2))
 
 
 (eval-when (compile load eval)
 
-(defconstant iocparm-mask #x7f)
-(defconstant ioc_void #x20000000)
-(defconstant ioc_out #x40000000)
-(defconstant ioc_in #x80000000)
-(defconstant ioc_inout (logior ioc_in ioc_out))
+#-(or svr4 linux)
+(progn
+ (defconstant iocparm-mask #x7f) ; Freebsd: #x1fff ?
+ (defconstant ioc_void #x20000000)
+ (defconstant ioc_out #x40000000)
+ (defconstant ioc_in #x80000000)
+ (defconstant ioc_inout (logior ioc_in ioc_out)))
 
-#-svr4
+#-(or linux svr4)
 (defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
   (let* ((ptype (ecase parm-type
 		  (:void ioc_void)
@@ -1193,7 +1419,7 @@
     `(eval-when (eval load compile)
        (defconstant ,name ,code))))
 
-#+svr4
+#+(or linux svr4)
 (defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
   (declare (ignore dev arg parm-type))
   `(eval-when (eval load compile)
@@ -1203,21 +1429,21 @@
 
 ;;; TTY ioctl commands.
 
-(define-ioctl-command TIOCGETP #\t 8 (struct sgttyb) :out)
-(define-ioctl-command TIOCSETP #\t 9 (struct sgttyb) :in)
-(define-ioctl-command TIOCFLUSH #\t 16 int :in)
-(define-ioctl-command TIOCSETC #\t 17 (struct tchars) :in)
-(define-ioctl-command TIOCGETC #\t 18 (struct tchars) :out)
+(define-ioctl-command TIOCGETP #\t #-linux 8 #+linux #x5481 (struct sgttyb) :out)
+(define-ioctl-command TIOCSETP #\t #-linux 9 #+linux #x5482 (struct sgttyb) :in)
+(define-ioctl-command TIOCFLUSH #\t #-linux 16 #+linux #x5489 int :in)
+(define-ioctl-command TIOCSETC #\t #-linux 17 #+linux #x5484 (struct tchars) :in)
+(define-ioctl-command TIOCGETC #\t #-linux 18 #+linux #x5483 (struct tchars) :out)
 (define-ioctl-command TIOCGWINSZ #\t #-hpux 104 #+hpux 107 (struct winsize)
   :out)
 (define-ioctl-command TIOCSWINSZ #\t #-hpux 103 #+hpux 106 (struct winsize)
   :in)
 
-(define-ioctl-command TIOCNOTTY #\t 113 nil :void)
+(define-ioctl-command TIOCNOTTY #\t #-linux 113 #+linux #x5422 nil :void)
 #-hpux
 (progn
-  (define-ioctl-command TIOCSLTC #\t 117 (struct ltchars) :in)
-  (define-ioctl-command TIOCGLTC #\t 116 (struct ltchars) :out)
+  (define-ioctl-command TIOCSLTC #\t #-linux 117 #+linux #x5484 (struct ltchars) :in)
+  (define-ioctl-command TIOCGLTC #\t #-linux 116 #+linux #x5485 (struct ltchars) :out)
   (define-ioctl-command TIOCSPGRP #\t #-svr4 118 #+svr4 21 int :in)
   (define-ioctl-command TIOCGPGRP #\t #-svr4 119 #+svr4 20 int :out))
 #+hpux
@@ -1229,7 +1455,7 @@
   (define-ioctl-command TIOCSIGSEND #\t 93 nil))
 
 ;;; File ioctl commands.
-(define-ioctl-command FIONREAD #\f 127 int :out)
+(define-ioctl-command FIONREAD #\f #-linux 127 #+linux #x541B int :out)
 
 
 (defun unix-ioctl (fd cmd arg)
@@ -1240,13 +1466,13 @@
 	   (type (unsigned-byte 32) cmd))
   (void-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
 
-#+(or svr4 hpux)
+#+(or svr4 hpux freebsd linux)
 (defun unix-tcgetattr (fd termios)
   "Get terminal attributes."
   (declare (type unix-fd fd))
   (void-syscall ("tcgetattr" int (* (struct termios))) fd termios))
 
-#+(or svr4 hpux)
+#+(or svr4 hpux freebsd linux)
 (defun unix-tcsetattr (fd opt termios)
   "Set terminal attributes."
   (declare (type unix-fd fd))
@@ -1312,10 +1538,13 @@
 
 ;;; Socket options.
 
-#+hpux
+#+(or hpux freebsd)
 (define-ioctl-command SIOCSPGRP #\s 8 int :in)
 
-#+hpux
+#+linux
+(define-ioctl-command SIOCSPGRP #\s #x8904 int :in)
+
+#+(or hpux freebsd linux)
 (defun siocspgrp (fd pgrp)
   "Set the socket process-group for the unix file-descriptor FD to PGRP."
   (alien:with-alien ((alien-pgrp c-call:int pgrp))
@@ -1344,12 +1573,15 @@
 	   (slot ,buf 'st-gid)
 	   (slot ,buf 'st-rdev)
 	   (slot ,buf 'st-size)
-	   #-svr4 (slot ,buf 'st-atime)
-	   #+svr4 (slot (slot ,buf 'st-atime) 'tv-sec)
-	   #-svr4 (slot ,buf 'st-mtime)
-	   #+svr4 (slot (slot ,buf 'st-mtime) 'tv-sec)
-	   #-svr4 (slot ,buf 'st-ctime)
-	   #+svr4 (slot (slot ,buf 'st-ctime) 'tv-sec)
+	   #-(or svr4 FreeBSD) (slot ,buf 'st-atime)
+	   #+svr4    (slot (slot ,buf 'st-atime) 'tv-sec)
+           #+FreeBSD (slot (slot ,buf 'st-atime) 'ts-sec)
+	   #-(or svr4 FreeBSD)(slot ,buf 'st-mtime)
+	   #+svr4   (slot (slot ,buf 'st-mtime) 'tv-sec)
+           #+FreeBSD(slot (slot ,buf 'st-mtime) 'ts-sec)
+	   #-(or svr4 FreeBSD) (slot ,buf 'st-ctime)
+	   #+svr4   (slot (slot ,buf 'st-ctime) 'tv-sec)
+           #+FreeBSD(slot (slot ,buf 'st-ctime) 'ts-sec)
 	   (slot ,buf 'st-blksize)
 	   (slot ,buf 'st-blocks)))
 
@@ -1413,7 +1645,7 @@
    child processes (rusage_children).  NIL and an error number
    is returned if the call fails."
   (with-alien ((usage (struct rusage)))
-    (syscall* ("getrusage" int (* (struct rusage)))
+    (syscall ("getrusage" int (* (struct rusage)))
 	      (values t
 		      (+ (* (slot (slot usage 'ru-utime) 'tv-sec) 1000000)
 			 (slot (slot usage 'ru-utime) 'tv-usec))
@@ -1437,7 +1669,7 @@
 
 ;; Requires call to tzset() in main.
 ;; Don't use this now: we 
-#+svr4
+#+(or linux svr4)
 (progn
     (def-alien-variable ("daylight" unix-daylight) int)
     (def-alien-variable ("timezone" unix-timezone) time-t)
@@ -1618,6 +1850,7 @@
       (t
        (values nil enotdir)))))
 
+#-bsd
 (defun read-dir (dir)
   (declare (type directory dir))
   (let ((daddr (alien-funcall (extern-alien "readdir"
@@ -1628,7 +1861,7 @@
     (if (zerop (sap-int daddr))
 	nil
 	(with-alien ((direct (* (struct direct)) daddr))
-	  #-svr4
+	  #-(or linux svr4)
 	  (let ((nlen (slot direct 'd-namlen))
 		(ino (slot direct 'd-ino)))
 	    (declare (type (unsigned-byte 16) nlen))
@@ -1638,9 +1871,31 @@
 	       string (* vm:vector-data-offset vm:word-bits)
 	       (* nlen vm:byte-bits))
 	      (values string ino)))
-	  #+svr4
+	  #+(or linux svr4)
 	  (values (cast (slot direct 'd-name) c-string)
 		  (slot direct 'd-ino))))))
+#+bsd
+(defun read-dir (dir)
+  (declare (type directory dir))
+  (let ((daddr (alien-funcall (extern-alien "readdir"
+					    (function system-area-pointer
+						      system-area-pointer))
+			      (directory-dir-struct dir))))
+    (declare (type system-area-pointer daddr))
+    (if (zerop (sap-int daddr))
+	nil
+	(with-alien ((direct (* (struct direct)) daddr))
+	  (let ((nlen (slot direct 'd-namlen))
+		(fino (slot direct 'd-fileno)))
+	    (declare (type (unsigned-byte 8) nlen)
+		     (type (unsigned-byte 32) fino))
+	    (let ((string (make-string nlen)))
+	      (kernel:copy-from-system-area
+	       (alien-sap (addr (slot direct 'd-name))) 0
+	       string (* vm:vector-data-offset vm:word-bits)
+	       (* nlen vm:byte-bits))
+	      (values string fino)))))))
+
 
 (defun close-dir (dir)
   (declare (type directory dir))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.31 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.32 1997/01/18 14:31:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,11 +163,13 @@
 	(when (hairy-byte-function-rest-arg-p x)
 	  (res '&rest 't))
 	(ecase (hairy-byte-function-keywords-p x)
-	  ((t) (res '&key))
-	  (:allow-others (res '&key '&allow-other-keys))
+	  ((t :allow-others)
+	   (res '&key)
+	   (dolist (key (hairy-byte-function-keywords x))
+		   (res `(,(car key) t)))
+	   (if (eql (hairy-byte-function-keywords-p x) :allow-others)
+	       (res '&allow-other-keys)))
 	  ((nil)))
-	(dolist (key (hairy-byte-function-keywords x))
-	  (res `(,(car key) t)))
 	`(function ,(res) *))))))
 
 

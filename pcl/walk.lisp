@@ -1806,7 +1806,8 @@
 
 (defun walk-symbol-macrolet (form context old-env)
   (declare (ignore context))
-  (let* ((bindings (cadr form)))
+  (let* ((bindings (cadr form))
+	 (body (cddr form)))
     (walker-environment-bind
 	(new-env old-env
 		 :lexical-variables
@@ -1816,7 +1817,7 @@
 				 bindings)
 			 (env-lexical-variables old-env)))
       (relist* form 'symbol-macrolet bindings
-	       (walk-repeat-eval (cddr form) new-env)))))
+	       (walk-declarations body #'walk-repeat-eval new-env)))))
 
 (defun walk-tagbody (form context env)
   (recons form (car form) (walk-tagbody-1 (cdr form) context env)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.19 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.20 1997/01/18 14:30:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,15 +42,19 @@
 (c-var-frob dynamic-0-space-start "dynamic_0_space")
 (c-var-frob dynamic-1-space-start "dynamic_1_space")
 (c-var-frob control-stack-start "control_stack")
+#+x86 (c-var-frob control-stack-end "control_stack_end")
 (c-var-frob binding-stack-start "binding_stack")
 (c-var-frob current-dynamic-space-start "current_dynamic_space")
-
 (declaim (inline dynamic-usage))
 
+#-cgc
 (defun dynamic-usage ()
   (the (unsigned-byte 32)
        (- (system:sap-int (c::dynamic-space-free-pointer))
 	  (current-dynamic-space-start))))
+
+#+cgc
+(c-var-frob dynamic-usage "cgc_bytes_allocated")
 
 (defun static-space-usage ()
   (- (* lisp::*static-space-free-pointer* vm:word-bytes)
@@ -61,7 +65,8 @@
      (read-only-space-start)))
 
 (defun control-stack-usage ()
-  (- (system:sap-int (c::control-stack-pointer-sap)) (control-stack-start)))
+#-x86 (- (system:sap-int (c::control-stack-pointer-sap)) (control-stack))
+#+x86 (- (control-stack-end) (system:sap-int (c::control-stack-pointer-sap))) )
 
 (defun binding-stack-usage ()
   (- (system:sap-int (c::binding-stack-pointer-sap)) (binding-stack-start)))
@@ -93,7 +98,7 @@
   (room-minimal-info)
   (vm:memory-usage :count-spaces '(:dynamic)
 		   :print-spaces t
-		   :cutoff 0.05
+		   :cutoff 0.05s0
 		   :print-summary nil))
 
 (defun room-maximal-info ()
@@ -189,9 +194,11 @@
 
 ;;; On the RT, we store the GC trigger in a ``static'' symbol instead of
 ;;; letting magic C code handle it.  It gets initialized by the startup
-;;; code.
-#+ibmrt
-(defvar rt::*internal-gc-trigger*)
+;;; code. The X86 port defines this here because it uses the `ibmrt'
+;;; feature in the C code for allocation and binding stack access and
+;;; a lot of stuff wants this INTERNAL_GC_TRIGGER available as well.
+#+(or ibmrt x86)
+(defvar vm::*internal-gc-trigger*)
 
 ;;;
 ;;; The following specials are used to control when garbage collection
@@ -392,7 +399,8 @@
 	      (when verbose-p
 		(carefully-funcall *gc-notify-after*
 				   post-gc-dyn-usage bytes-freed
-				   *gc-trigger*))))))
+				   *gc-trigger*))))
+	  (scrub-control-stack)))
       (incf *gc-run-time* (- (get-internal-run-time) start-time))))
   nil)
 

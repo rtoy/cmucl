@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.45 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.46 1997/01/18 14:31:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1405,9 +1405,14 @@
   "Binds the Var to an input stream that returns characters from String and
   executes the body.  See manual for details."
   `(let ((,var
-	  ,(if end
-	       `(make-string-input-stream ,string ,(or start 0) ,end)
-	       `(make-string-input-stream ,string ,(or start 0)))))
+	  ,(cond ((null end)
+		  `(make-string-input-stream ,string ,(or start 0)))
+		 ((symbolp end)
+		  `(if ,end
+		       (make-string-input-stream ,string ,(or start 0) ,end)
+		     (make-string-input-stream ,string ,(or start 0))))
+		 (t
+		  `(make-string-input-stream ,string ,(or start 0) ,end)))))
      ,@decls
      (unwind-protect
        (progn ,@forms)

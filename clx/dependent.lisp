@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-lisp; Package: XLIB; Base: 10; Lowercase: Yes -*-
+;;; -*- Mode: Lisp; Package: Xlib; Log: clx.log -*-
 
 ;; This file contains some of the system dependent code for CLX
 
@@ -19,6 +19,12 @@
 ;;;
 
 (in-package :xlib)
+
+(proclaim '(declaration array-register))
+
+#+cmu
+(setf (getf ext:*herald-items* :xlib)
+      `("    CLX X Library " ,*version*))
 
 ;;; The size of the output buffer.  Must be a multiple of 4.
 (defparameter *output-buffer-size* 8192)
@@ -67,6 +73,9 @@
 ;;; declaration is available, it would be a good idea to make it here when
 ;;; *buffer-speed* is 3 and *buffer-safety* is 0.
 (defun declare-buffun ()
+  #+(and cmu clx-debugging)
+  '(declare (optimize (speed 1) (safety 1)))
+  #-(and cmu clx-debugging)
   `(declare (optimize (speed ,*buffer-speed*) (safety ,*buffer-safety*))))
 
 )
@@ -677,6 +686,25 @@
   #.(declare-buffun)
   (the short-float (* (the int16 value) #.(coerce (/ pi 180.0 64.0) 'short-float))))
 
+
+#+cmu (progn
+
+;;; This overrides the (probably incorrect) definition in clx.lisp.  Since PI
+;;; is irrational, there can't be a precise rational representation.  In
+;;; particular, the different float approximations will always be /=.  This
+;;; causes problems with type checking, because people might compute an
+;;; argument in any precision.  What we do is discard all the excess precision
+;;; in the value, and see if the protocal encoding falls in the desired range
+;;; (64'ths of a degree.)
+;;;
+(deftype angle () '(satisfies anglep))
+
+(defun anglep (x)
+  (and (typep x 'real)
+       (<= (* -360 64) (radians->int16 x) (* 360 64))))
+
+)
+
 
 ;;-----------------------------------------------------------------------------
 ;; Character transformation
@@ -873,16 +901,18 @@
 ;;; against re-entering request functions.  This can happen if an interrupt
 ;;; occurs and the handler attempts to use X over the same display connection.
 ;;; This can happen if the GC hooks are used to notify the user over the same
-;;; display connection.  We lock out GC's just as a dummy check for our users.
-;;; Locking out interrupts has the problem that CLX always waits for replies
-;;; within this dynamic scope, so if the server cannot reply for some reason,
-;;; we potentially dead-lock without interrupts.
+;;; display connection.  We inhibit GC notifications since display of them
+;;; could cause recursive entry into CLX.
 ;;;
 #+CMU
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
 			&body body)
-  (declare (ignore locator display whostate timeout))
-  `(lisp::without-gcing (system:without-interrupts (progn ,@body))))
+  `(let ((ext:*gc-verbose* nil)
+	 (ext:*gc-inhibit-hook* nil)
+	 (ext:*before-gc-hooks* nil)
+	 (ext:*after-gc-hooks* nil))
+     ,locator ,display ,whostate ,timeout
+     (system:without-interrupts (progn ,@body))))
 
 #+Genera
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
@@ -1335,7 +1365,12 @@
 ;;; The file descriptor here just gets tossed into the stream slot of the
 ;;; display object instead of a stream.
 ;;;
-#+CMU
+#+cmu
+(alien:def-alien-routine ("connect_to_server" xlib::connect-to-server)
+			 c-call:int
+  (host c-call:c-string)
+  (port c-call:int))
+#+cmu
 (defun open-x-stream (host display protocol)
   (declare (ignore protocol))
   (let ((server-fd (connect-to-server host display)))
@@ -1344,15 +1379,6 @@
     (system:make-fd-stream server-fd :input t :output t
 			   :element-type '(unsigned-byte 8))))
 
-;;; This loads the C foreign function used to make an IPC connection
-;;; to the X11 server.  It also defines the necessary types and things
-;;; to actually make the foreign call.  See the OPEN-X-STREAM function
-;;; in the dependent.lisp file.
-;;;
-#+CMU
-(ext:def-c-routine ("connect_to_server" connect-to-server) (ext:int)
-  (host system:null-terminated-string)
-  (port ext:int))
 
 ;;; BUFFER-READ-DEFAULT - read data from the X stream
 
@@ -1454,15 +1480,16 @@
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null (real 0 *)) timeout))
+	   (type (or null fixnum) timeout))
   #.(declare-buffun)
-  (cond ((and (and timeout (= timeout 0))
+  (cond ((and (eql timeout 0)
 	      (not (listen (display-input-stream display))))
 	 :timeout)
 	(t
 	 (system:read-n-bytes (display-input-stream display)
 			      vector start (- end start))
 	 nil)))
+
 
 ;;; WARNING:
 ;;;	CLX performance will suffer if your lisp uses read-byte for
@@ -1573,6 +1600,15 @@
 	  (declare (type array-index index))
 	  (write-byte (aref vector index) stream))))))
 
+#+CMU
+(defun buffer-write-default (vector display start end)
+  (declare (type buffer-bytes vector)
+	   (type display display)
+	   (type array-index start end))
+  #.(declare-buffun)
+  (system:output-raw-bytes (display-output-stream display) vector start end)
+  nil)
+
 ;;; buffer-force-output-default - force output to the X stream
 
 #+excl
@@ -1580,7 +1616,7 @@
   ;; buffer-write-default does the actual writing.
   (declare (ignore display)))
 
-#-excl
+#-(or excl)
 (defun buffer-force-output-default (display)
   ;; The default buffer force-output function for use with common-lisp streams
   (declare (type display display))
@@ -1599,7 +1635,7 @@
   #.(declare-buffun)
   (excl::filesys-checking-close (display-output-stream display)))
 
-#-excl
+#-(or excl)
 (defun buffer-close-default (display &key abort)
   ;; The default buffer close function for use with common-lisp streams
   (declare (type display display))
@@ -1647,12 +1683,12 @@
 #+CMU
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
-	   (type (or null (real 0 *)) timeout))
+	   (type (or null number) timeout))
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (cond ((null stream))
 	  ((listen stream) nil)
-	  ((and timeout (= timeout 0)) :timeout)
+	  ((eql timeout 0) :timeout)
 	  (t
 	   (if (system:wait-until-fd-usable (system:fd-stream-fd stream)
 					    :input timeout)
@@ -1782,7 +1818,7 @@
 ;;; buffer. This should never block, so it can be called from the scheduler.
 
 ;;; The default implementation is to just use listen.
-#-excl
+#-(or excl)
 (defun buffer-listen-default (display)
   (declare (type display display))
   (let ((stream (display-input-stream display)))
@@ -2114,21 +2150,13 @@
 #+CMU
 (defun x-error (condition &rest keyargs)
   (let ((condx (apply #'make-condition condition keyargs)))
-    (typecase condx
-      ;; This condition no longer exists.
-      #||
-      (server-disconnect
-	(let ((disp (server-disconnect-display condx)))
-	  (warn "Disabled event handling on ~S." disp)
-	  (ext::disable-clx-event-handling disp)))
-      ||#
-      (closed-display
-	(let ((disp (closed-display-display condx)))
-	  (warn "Disabled event handling on ~S." disp)
-	  (ext::disable-clx-event-handling disp))))
+    (when (eq condition 'closed-display)
+      (let ((disp (closed-display-display condx)))
+	(warn "Disabled event handling on ~S." disp)
+	(ext::disable-clx-event-handling disp)))
     (error condx)))
 
-#-(or lispm clx-ansi-common-lisp excl lcl3.0 CMU)
+#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
 (defun x-error (condition &rest keyargs)
   (error "X-Error: ~a"
 	 (princ-to-string (apply #'make-condition condition keyargs))))
@@ -2589,7 +2617,7 @@
 ;; WITH-STANDARD-IO-SYNTAX equivalent, used in (SETF WM-COMMAND)
 ;;-----------------------------------------------------------------------------
 
-#-(or clx-ansi-common-lisp Genera)
+#-(or clx-ansi-common-lisp Genera CMU)
 (defun with-standard-io-syntax-function (function)
   (declare #+lispm
 	   (sys:downward-funarg function))
@@ -2611,7 +2639,7 @@
 	#+lucid (lucid::*print-structure* t))
     (funcall function)))
 
-#-(or clx-ansi-common-lisp Genera)
+#-(or clx-ansi-common-lisp Genera CMU)
 (defmacro with-standard-io-syntax (&body body)
   `(flet ((.with-standard-io-syntax-body. () ,@body))
      (with-standard-io-syntax-function #'.with-standard-io-syntax-body.)))
@@ -2691,22 +2719,22 @@
   #+(or Genera Minima) 'fixnum)
 
 (deftype pixarray-1  ()
-  '(array pixarray-1-element-type (* *)))
+  '(#+cmu simple-array #-cmu array pixarray-1-element-type (* *)))
 
 (deftype pixarray-4  ()
-  '(array pixarray-4-element-type (* *)))
+  '(#+cmu simple-array #-cmu array pixarray-4-element-type (* *)))
 
 (deftype pixarray-8  ()
-  '(array pixarray-8-element-type (* *)))
+  '(#+cmu simple-array #-cmu array pixarray-8-element-type (* *)))
 
 (deftype pixarray-16 ()
-  '(array pixarray-16-element-type (* *)))
+  '(#+cmu simple-array #-cmu array pixarray-16-element-type (* *)))
 
 (deftype pixarray-24 ()
-  '(array pixarray-24-element-type (* *)))
+  '(#+cmu simple-array #-cmu array pixarray-24-element-type (* *)))
 
 (deftype pixarray-32 ()
-  '(array pixarray-32-element-type (* *)))
+  '(#+cmu simple-array #-cmu array pixarray-32-element-type (* *)))
 
 (deftype pixarray ()
   '(or pixarray-1 pixarray-4 pixarray-8 pixarray-16 pixarray-24 pixarray-32))
@@ -2746,6 +2774,19 @@
   `(let ((,variable (cdr (excl::ah_data ,pixarray))))
      (declare (type (simple-array ,element-type (*)) ,variable))
      ,@body))
+
+#+CMU
+;;; We do *NOT* support viewing an array as having a different element type.
+;;; Element-type is ignored.
+;;;
+(defmacro with-underlying-simple-vector 
+	  ((variable element-type pixarray) &body body)
+  (declare (ignore element-type))
+  `(lisp::with-array-data ((,variable ,pixarray)
+			   (start)
+			   (end))
+      (declare (ignore start end))
+      ,@body))
 
 ;;; These are used to read and write pixels from and to CARD8s.
 
@@ -2916,14 +2957,16 @@
 			   (index-ceiling x 8))
 		   (index+ start padded-bytes-per-line))
 	    (y 0 (index1+ y))
-	    (left-bits (index-mod (index- x) 8))
+	    (left-bits (the array-index (mod (the fixnum (- x)) 8)))
 	    (right-bits (index-mod (index- width left-bits) 8))
-	    (middle-bits (index- width left-bits right-bits))
+	    (middle-bits (the fixnum (- (the fixnum (- width left-bits))
+					right-bits)))
 	    (middle-bytes (index-floor middle-bits 8)))
 	   ((index>= y height))
 	(declare (type array-index start y
-		       left-bits right-bits middle-bits middle-bytes))
-	(cond ((index< middle-bits 0)
+		       left-bits right-bits middle-bytes)
+		 (fixnum middle-bits))
+	(cond ((< middle-bits 0)
 	       (let ((byte (aref buffer-bbuf (index1- start)))
 		     (x (array-row-major-index array y left-bits)))
 		 (declare (type card8 byte)
@@ -2988,7 +3031,7 @@
 		     (unless (index-zerop right-bits)
 		       (let ((byte (aref buffer-bbuf end))
 			     (x (array-row-major-index
-				  array y (index+ left-bits middle-bits))))
+				 array y (index+ left-bits middle-bits))))
 			 (declare (type card8 byte)
 				  (type array-index x))
 			 (setf (aref vector (index+ x 0))
@@ -3032,7 +3075,7 @@
 		   (setf (aref vector (index+ x 7))
 			 (read-image-load-byte 1 7 byte))))
 	       )))))
-  t)
+    t)
 
 #+(or lcl3.0 excl)
 (defun fast-read-pixarray-4 (buffer-bbuf index array x y width height 
@@ -3051,7 +3094,8 @@
 			   (index-ceiling x 2))
 		   (index+ start padded-bytes-per-line))
 	    (y 0 (index1+ y))
-	    (left-nibbles (index-mod (index- x) 2))
+	    (left-nibbles (the array-index (mod (the fixnum (- (the fixnum x)))
+						2)))
 	    (right-nibbles (index-mod (index- width left-nibbles) 2))
 	    (middle-nibbles (index- width left-nibbles right-nibbles))
 	    (middle-bytes (index-floor middle-nibbles 2)))
@@ -3079,7 +3123,7 @@
 	)))
   t)
 
-#+(or Genera lcl3.0 excl)
+#+(or Genera lcl3.0 excl CMU)
 (defun fast-read-pixarray-24 (buffer-bbuf index array x y width height 
 			      padded-bytes-per-line bits-per-pixel)
   (declare (type buffer-bytes buffer-bbuf)
@@ -3123,6 +3167,63 @@
 	 :displaced-to bbuf
 	 :displaced-index-offset (floor (* boffset 8) bits-per-pixel))))
    (sys:bitblt boole-1 width height a x y pixarray 0 0))
+  t)
+
+#+CMU
+(defun pixarray-element-size (pixarray)
+  (let ((eltype (array-element-type pixarray)))
+    (cond ((eq eltype 'bit) 1)
+	  ((and (consp eltype) (eq (first eltype) 'unsigned-byte))
+	   (second eltype))
+	  (t
+	   (error "Invalid pixarray: ~S." pixarray)))))
+
+#+CMU
+;;; COPY-BIT-RECT  --  Internal
+;;;
+;;;    This is the classic BITBLT operation, copying a rectangular subarray
+;;; from one array to another (but source and destination must not overlap.)
+;;; Widths are specified in bits.  Neither array can have a non-zero
+;;; displacement.  We allow extra random bit-offset to be thrown into the X.
+;;;
+(defun copy-bit-rect (source source-width sx sy dest dest-width dx dy
+			     height width)
+  (declare (type array-index source-width sx sy dest-width dx dy height width))
+   #.(declare-buffun)
+   (lisp::with-array-data ((sdata source)
+			   (sstart)
+			   (send))
+     (declare (ignore send))
+     (lisp::with-array-data ((ddata dest)
+			     (dstart)
+			     (dend))
+       (declare (ignore dend))
+       (assert (and (zerop sstart) (zerop dstart)))
+       (do ((src-idx (index+ (* vm:vector-data-offset vm:word-bits)
+			     sx (index* sy source-width))
+		     (index+ src-idx source-width))
+	    (dest-idx (index+ (* vm:vector-data-offset vm:word-bits)
+			      dx (index* dy dest-width))
+		      (index+ dest-idx dest-width))
+	    (count height (1- count)))
+	   ((zerop count))
+	 (declare (type array-index src-idx dest-idx count))
+	 (kernel:bit-bash-copy sdata src-idx ddata dest-idx width)))))
+
+#+CMU
+(defun fast-read-pixarray-using-bitblt
+       (bbuf boffset pixarray x y width height padded-bytes-per-line
+	bits-per-pixel)
+  (declare (type (array * 2) pixarray))
+  #.(declare-buffun)
+  (copy-bit-rect bbuf
+		 (index* padded-bytes-per-line vm:byte-bits)
+		 (index* boffset vm:byte-bits) 0
+		 pixarray
+		 (index* (array-dimension pixarray 1) bits-per-pixel)
+		 x y
+		 height
+		 (index* width bits-per-pixel))
   t)
 
 #+(or Genera lcl3.0 excl)
@@ -3199,13 +3300,16 @@
 				 bits-per-pixel)
 			      32))
 		     #'fast-read-pixarray-using-bitblt)
+		#+CMU
+		(and (index= (pixarray-element-size pixarray) bits-per-pixel)
+		     #'fast-read-pixarray-using-bitblt)
 		#+(or lcl3.0 excl)
 		(and (index= bits-per-pixel 1)
 		     #'fast-read-pixarray-1)
 		#+(or lcl3.0 excl)
 		(and (index= bits-per-pixel 4)
 		     #'fast-read-pixarray-4)
-		#+(or Genera lcl3.0 excl)
+		#+(or Genera lcl3.0 excl CMU)
 		(and (index= bits-per-pixel 24)
 		     #'fast-read-pixarray-24))))
       (when function
@@ -3321,7 +3425,7 @@
 		  (aref vector (index+ x 1))))))))
   t)
 
-#+(or Genera lcl3.0 excl)
+#+(or Genera lcl3.0 excl CMU)
 (defun fast-write-pixarray-24 (buffer-bbuf index array x y width height
 			       padded-bytes-per-line bits-per-pixel)
   (declare (type buffer-bytes buffer-bbuf)
@@ -3367,6 +3471,21 @@
 	 :displaced-to bbuf
 	 :displaced-index-offset (floor (* boffset 8) bits-per-pixel))))
    (sys:bitblt boole-1 width height pixarray x y a 0 0))
+  t)
+
+#+CMU
+(defun fast-write-pixarray-using-bitblt
+       (bbuf boffset pixarray x y width height padded-bytes-per-line
+	bits-per-pixel)
+  #.(declare-buffun)
+  (copy-bit-rect pixarray
+		 (index* (array-dimension pixarray 1) bits-per-pixel)
+		 x y
+		 bbuf
+		 (index* padded-bytes-per-line vm:byte-bits)
+		 (index* boffset vm:byte-bits) 0
+		 height
+		 (index* width bits-per-pixel))
   t)
 
 #+(or Genera lcl3.0 excl)
@@ -3440,13 +3559,16 @@
 				 bits-per-pixel)
 			      32))
 		     #'fast-write-pixarray-using-bitblt)
+		#+CMU
+		(and (index= (pixarray-element-size pixarray) bits-per-pixel)
+		     #'fast-write-pixarray-using-bitblt)
 		#+(or lcl3.0 excl)
 		(and (index= bits-per-pixel 1)
 		     #'fast-write-pixarray-1)
 		#+(or lcl3.0 excl)
 		(and (index= bits-per-pixel 4)
 		     #'fast-write-pixarray-4)
-		#+(or Genera lcl3.0 excl)
+		#+(or Genera lcl3.0 excl CMU)
 		(and (index= bits-per-pixel 24)
 		     #'fast-write-pixarray-24))))
       (when function
@@ -3464,7 +3586,7 @@
 	   (type (member 1 4 8 16 24 32) bits-per-pixel))
   (progn pixarray copy x y width height bits-per-pixel nil)
   (or
-    #+lispm
+    #+(or lispm CMU)
     (let* ((pixarray-padded-pixels-per-line
 	     #+Genera (sys:array-row-span pixarray)
 	     #-Genera (array-dimension pixarray 1))
@@ -3475,11 +3597,22 @@
 	     #-Genera (array-dimension copy 1))
 	   (copy-padded-bits-per-line
 	     (* copy-padded-pixels-per-line bits-per-pixel)))
+      #-CMU
       (when (and (= (sys:array-element-size pixarray) bits-per-pixel)
 		 (zerop (index-mod pixarray-padded-bits-per-line 32))
 		 (zerop (index-mod copy-padded-bits-per-line 32)))
 	(sys:bitblt boole-1 width height pixarray x y copy 0 0)
+	t)
+      #+CMU
+      (when (index= (pixarray-element-size pixarray)
+		    (pixarray-element-size copy)
+		    bits-per-pixel)
+	(copy-bit-rect pixarray pixarray-padded-bits-per-line x y
+		       copy copy-padded-bits-per-line 0 0
+		       height
+		       (index* width bits-per-pixel))
 	t))
+	
     #+(or lcl3.0 excl)
     (unless (index= bits-per-pixel 24)
       (let ((pixarray-padded-bits-per-line

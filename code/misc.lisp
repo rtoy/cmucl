@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.22 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.23 1997/01/18 14:31:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
      (variable (info variable documentation name))
      (function (info function documentation name))
      (structure
-      (when (eq (info type kind name) :structure)
+      (when (eq (info type kind name) :instance)
 	(info type documentation name)))
      (type
       (info type documentation name))
@@ -51,7 +51,7 @@
     (variable (setf (info variable documentation name) string))
     (function (setf (info function documentation name) string))
     (structure
-     (unless (eq (info type kind name) :structure)
+     (unless (eq (info type kind name) :instance)
        (error "~S is not the name of a structure type." name))
      (setf (info type documentation name) string))
     (type (setf (info type documentation name) string))

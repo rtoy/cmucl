@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.44 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.45 1997/01/18 14:30:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -681,7 +681,7 @@
    If a string, the string is printed.
 
    Condition types are classes, but (as allowed by ANSI and not as described in
-   CLtL2) and neither STANDARD-OBJECTs nor STRUCTURE-OBJECTs.  WITH-SLOTS and
+   CLtL2) are neither STANDARD-OBJECTs nor STRUCTURE-OBJECTs.  WITH-SLOTS and
    SLOT-VALUE may not be used on condition objects."
   (let* ((parent-types (or parent-types '(condition)))
 	 (layout (find-condition-layout name parent-types))
@@ -807,7 +807,10 @@
 	  (cons (list ,@(mapcar #'(lambda (x) `(cons ',(car x) ,(cadr x)))
 				bindings))
 		*handler-clusters*)))
-     ,@forms))
+     (multiple-value-prog1
+      ,@forms
+      ;; Wait for any float exceptions
+      #+x86 (float-wait))))
 
 
 ;;;; Condition definitions.
@@ -916,7 +919,8 @@
 	     (cell-error-name condition)))))
 
 (define-condition arithmetic-error (error)
-  ((operation :reader arithmetic-error-operation :initarg :operation)
+  ((operation :reader arithmetic-error-operation :initarg :operation
+	      :initform nil)
    (operands :reader arithmetic-error-operands :initarg :operands))
   (:report (lambda (condition stream)
 	     (format stream "Arithmetic error ~S signalled."

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.34 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.35 1997/01/18 14:30:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -193,10 +193,10 @@
 	      (rational (rationalp num))
 	      (float
 	       (ecase (numeric-type-format type)
-		 (short-float (typep object 'short-float))
-		 (single-float (typep object 'single-float))
-		 (double-float (typep object 'double-float))
-		 (long-float (typep object 'long-float))
+		 (short-float (typep num 'short-float))
+		 (single-float (typep num 'single-float))
+		 (double-float (typep num 'double-float))
+		 (long-float (typep num 'long-float))
 		 ((nil) (floatp num))))
 	      ((nil) t)))
 	  (flet ((bound-test (val)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echo.lisp,v 1.7 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echo.lisp,v 1.8 1997/01/18 14:31:53 ram Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,6 +176,7 @@
 ;;; INIT-BITMAP-SCREEN-MANAGER in bit-screen.lisp adds this hook when
 ;;; initializing the bitmap screen manager.
 ;;;
+#+clx
 (defun raise-echo-area-when-modified (buffer modified)
   (when (and (value ed::raise-echo-area-when-modified)
 	     (eq buffer *echo-area-buffer*)

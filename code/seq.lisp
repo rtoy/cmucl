@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.21 1996/07/12 18:05:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.22 1997/01/18 14:30:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,7 +115,7 @@
     (list
      (do ((count index (1- count))
 	  (seq sequence))
-	 ((= count 0) (rplaca seq newval) sequence)
+ 	 ((= count 0) (rplaca seq newval) newval)
        (declare (fixnum count))
        (if (atom (cdr seq))
 	   (error "~S: index too large." index)
@@ -811,12 +811,23 @@
 	       (%double-float object))
 	      ((csubtypep type (specifier-type 'float))
 	       (%single-float object))
+	      ((csubtypep type (specifier-type '(complex single-float)))
+	       (complex (%single-float (realpart object))
+			(%single-float (imagpart object))))
+	      ((csubtypep type (specifier-type '(complex double-float)))
+	       (complex (%double-float (realpart object))
+			(%double-float (imagpart object))))
 	      ((csubtypep type (specifier-type 'complex))
 	       (complex object))
 	      (t
 	       (error "~S can't be converted to type ~S."
 		      object output-type-spec)))))
-	(unless (typep res output-type-spec)
+	;; If RES has the wrong type, that means that rule of
+	;; canonical representation for complex rationals was invoked.
+	;; According to the Hyperspec, (coerce 7/2 'complex) returns
+	;; 7/2.  Thus, if the object was a rational, there is no error
+	;; here.
+	(unless (or (typep res output-type-spec) (rationalp object))
 	  (error "~S can't be converted to type ~S."
 		 object output-type-spec))
 	res))

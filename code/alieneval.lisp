@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.37 1996/07/12 20:51:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.38 1997/01/18 14:30:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1391,12 +1391,20 @@
 				,@(when initial-value
 				    `((setq ,symbol ,initval)))
 				,@body)
-			     (dispose-local-alien ',info ,var))))))))))))
+			     ;; This is a (temporary?) hack to
+			     ;; counter resetting the stack BEFORE
+			     ;; recovering values at stack top. We just
+			     ;; let normal stack resetting to occur. This
+			     ;; might be bad in a loop of with-alien forms.
+			     #-x86 
+			     (dispose-local-alien ',info ,var)
+			     )))))))))))
     (verify-local-auxiliaries-okay)
     `(compiler-let (*auxiliary-type-definitions*
 		    ',(append *new-auxiliary-types*
 			      *auxiliary-type-definitions*))
        ,@body)))
+
 
 
 ;;;; Runtime C values that don't correspond directly to Lisp types.

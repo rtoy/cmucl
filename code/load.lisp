@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.58 1994/11/04 06:02:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.59 1997/01/18 14:30:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -594,10 +594,16 @@
 ;;;
 (defun try-default-types (pathname types)
   (dolist (type types (values nil nil))
-    (let* ((pn (make-pathname :type type :defaults pathname))
+    ;; toy@rtp.ericsson.se: add diddle-case so that this can handle
+    ;; both unix-namestrings and logical pathname namestrings.  The
+    ;; case handling seems to be the opposite between these two
+    ;; styles.
+    (let* ((pn (make-pathname
+		:type (maybe-diddle-case
+		       type (logical-pathname-p (pathname pathname)))
+		:defaults pathname))
 	   (tn (probe-file pn)))
       (when tn (return (values pn tn))))))
-
 
 ;;; INTERNAL-LOAD-DEFAULT-TYPE  --  Internal
 ;;;
@@ -1009,6 +1015,7 @@
 ;;; Load-Code loads a code object.  NItems objects are popped off the stack for
 ;;; the boxed storage section, then Size bytes of code are read in.
 ;;;
+#-x86
 (defun load-code (box-num code-length)
   (declare (fixnum box-num code-length))
   (with-fop-stack t
@@ -1026,6 +1033,101 @@
 		      #-gengc code-length
 		      #+gengc (* code-length vm:word-bytes)))
       code)))
+
+
+;;; Moving native code during a GC or purify is not trivial on the x86
+;;; port, so there are a few options for code placement.
+;;;
+;;; Byte-compiled code objects can always be moved so can be place in
+;;; the dynamics heap.  This is enabled with
+;;; *load-byte-compiled-code-to-dynamic-space*.
+;;;
+;;; Native code top level forms only have a short life so can be
+;;; safely loaded into the dynamic heap (without fixups) so long as
+;;; the GC is not active. This could be handy during a world load to
+;;; save core space without the need to enable the support for moving
+;;; x86 native code. Enable with *load-x86-tlf-to-dynamic-space*.
+;;;
+;;; One strategy for allowing the loading of x86 native code into the
+;;; dynamic heap requires that the addresses of fixups be saved for
+;;; all these code objects.  After a purify these fixups can be
+;;; dropped. This is enabled with *enable-dynamic-space-code*.
+;;;
+;;; A little analysis of the header information is used to determine
+;;; if a code object is byte compiled, or native code.
+;;;
+#+x86
+(eval-when (compile)
+  (let ((ht (c::backend-template-names c:*backend*)))
+    (unless (gethash 'c::allocate-dynamic-code-object ht)
+      (setf (gethash 'c::allocate-dynamic-code-object ht)
+	    (gethash 'vm::allocate-dynamic-code-object ht)))))
+
+(defvar *load-byte-compiled-code-to-dynamic-space* t)
+(defvar *load-x86-tlf-to-dynamic-space* nil)  ; potentially dangerous.
+(defvar *load-code-verbose* nil)
+(defvar *enable-dynamic-space-code* nil) ; experimental
+
+#+x86
+(defun load-code (box-num code-length)
+  (declare (fixnum box-num code-length))
+  (with-fop-stack t
+    (let ((stuff (list (pop-stack))))
+      (dotimes (i box-num)
+	(declare (fixnum i))
+	(push (pop-stack) stuff))
+      (let* ((dbi (car (last stuff)))	; debug-info
+	     (tto (first stuff))	; trace-table-offset
+	     (load-to-dynamic-space
+	      (or *enable-dynamic-space-code*
+	       ;; Definitely Byte compiled code?
+	       (and *load-byte-compiled-code-to-dynamic-space*
+		    (c::debug-info-p dbi)
+		    (not (c::compiled-debug-info-p dbi)))
+	       ;; Or a x86 top level form.
+	       (and *load-x86-tlf-to-dynamic-space*
+		    (c::compiled-debug-info-p dbi)
+		    (string= (c::compiled-debug-info-name dbi)
+			     "Top-Level Form")))) )
+
+	(setq stuff (nreverse stuff))
+
+	;; Check that tto is always a list for byte-compiled
+	;; code. Could be used an alternate check.
+	(when (and (typep tto 'list)
+		   (not (and (c::debug-info-p dbi)
+			     (not (c::compiled-debug-info-p dbi)))))
+	      (format t "* tto list on non-bc code: ~s~% ~s ~s~%" 
+		      stuff dbi tto))
+	
+	(when *load-code-verbose*
+	      (format t "stuff: ~s~%" stuff)
+	      (format t "   : ~s ~s ~s ~s~%" 
+		      (c::compiled-debug-info-p dbi)
+		      (c::debug-info-p dbi)
+		      (c::compiled-debug-info-name dbi)
+		      tto)
+	      (if load-to-dynamic-space
+		  (format t "   Loading to the dynamic space~%")
+		(format t "   Loading to the static space~%")))
+      
+	(let ((code
+	       (if load-to-dynamic-space
+		   (%primitive
+		    allocate-dynamic-code-object box-num code-length)
+		   (%primitive allocate-code-object box-num code-length)))
+	      (index (+ vm:code-trace-table-offset-slot box-num))) 
+	  (declare (type index index)) 
+	  (when *load-code-verbose*
+		(format t "  obj addr=~x~%"
+			(kernel::get-lisp-obj-address code)))
+	  (setf (%code-debug-info code) (pop stuff))
+	  (dotimes (i box-num)
+	    (declare (fixnum i))
+	    (setf (code-header-ref code (decf index)) (pop stuff)))
+	  (system:without-gcing
+	   (read-n-bytes *fasl-file* (code-instructions code) 0 code-length))
+	  code)))))
 
 (define-fop (fop-code 58 :nope)
   (load-code (read-arg 4) (read-arg 4)))

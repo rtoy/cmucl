@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.8 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-ir2tran.lisp,v 1.9 1997/01/18 14:31:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,10 +127,6 @@
 	(vop make-array-header node block (continuation-tn node block type)
 	     (continuation-tn node block rank) result))
     (move-continuation-result node block locs cont)))
-
-#+gengc
-(setf (function-info-ltn-annotate (function-info-or-lose 'make-array-header))
-      #'annotate-funny-call)
 
 
 ;;;; Replacements for stuff in ir2tran to make gengc work.

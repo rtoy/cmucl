@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.15 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.16 1997/01/18 14:31:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -305,6 +305,60 @@
       res)))
 
   
+;;; FLOAT-TYPE-P  --  Internal
+;;;
+;;;    Return true if X is a float NUMERIC-TYPE.
+;;;
+(defun float-type-p (x)
+  (declare (type ctype x))
+  (and (numeric-type-p x)
+       (eq (numeric-type-class x) 'float)
+       (eq (numeric-type-complexp x) :real)))
+
+;;; CONSTRAIN-FLOAT-TYPE  --  Internal
+;;;
+;;; Exactly the same as CONSTRAIN-INTEGER-TYPE, but for float numbers.
+;;;
+(defun constrain-float-type (x y greater or-equal)
+  (declare (type numeric-type x y))
+  (flet ((exclude (x)
+	   (cond ((not x) nil)
+		 (or-equal x)
+		 (greater
+		  (if (consp x)
+		      (car x)
+		      x))
+		 (t
+		  (if (consp x)
+		      x
+		      (list x)))))
+	 (bound (x)
+	   (if greater (numeric-type-low x) (numeric-type-high x))))
+    #+nil
+    (format t "~%constraint-float-type:~%  ~s~%  ~s~%  ~s~%  ~s~%"
+	    x y greater or-equal)
+    (let* ((x-bound (bound x))
+	   (y-bound (exclude (bound y)))
+	   (new-bound (cond ((not x-bound)
+			     y-bound)
+			    ((not y-bound)
+			     x-bound)
+			    (greater
+			     (max-bound x-bound y-bound))
+			    (t
+			     (min-bound x-bound y-bound))))
+	   (res (copy-numeric-type x)))
+      #+nil
+      (format t "x-bound, y-bound, new-bound = ~s, ~s, ~s~%"
+	      x-bound y-bound new-bound)
+      (if greater
+	  (setf (numeric-type-low res) new-bound)
+	  (setf (numeric-type-high res) new-bound))
+      #+nil
+      (format t "~&constrain-float-type returns ~s~%" res)
+      res)))
+
+  
 ;;; CONSTRAIN-REF-TYPE  --  Internal
 ;;;
 ;;;    Given the set of Constraints for a variable and the current set of
@@ -341,11 +395,18 @@
 		       (change-ref-leaf ref other)
 		       (when (constant-p other) (return)))))))
 	    ((< >)
-	     (when (and (integer-type-p res) (integer-type-p y))
-	       (let ((greater (eq kind '>)))
-		 (let ((greater (if not-p (not greater) greater)))
-		   (setq res
-			 (constrain-integer-type res y greater not-p)))))))))
+	     (cond ((and (integer-type-p res) (integer-type-p y))
+		    (let ((greater (eq kind '>)))
+		      (let ((greater (if not-p (not greater) greater)))
+			(setq res
+			      (constrain-integer-type res y greater not-p)))))
+		   #+constrain-float-type
+		   ((and (float-type-p res) (float-type-p y))
+		    (let ((greater (eq kind '>)))
+		      (let ((greater (if not-p (not greater) greater)))
+			(setq res
+			      (constrain-float-type res y greater not-p)))))
+		   )))))
       
       (let* ((cont (node-cont ref))
 	     (dest (continuation-dest cont)))
@@ -514,3 +575,4 @@
     (use-result-constraints block))
 
   (undefined-value))
+

@@ -325,6 +325,10 @@ And so, we are saved.
      #'(lambda (new arg)
 	 (declare (pcl-fast-call))
 	 (accessor-miss gf new arg dfun-info)))))
+
+#+cmu
+(declaim (ext:freeze-type dfun-info))
+
 
 ;;;
 ;;; ONE-CLASS-ACCESSOR
@@ -552,24 +556,111 @@ And so, we are saved.
 (defun use-dispatch-dfun-p (gf &optional (caching-p (use-caching-dfun-p gf)))
   (when (eq *boot-state* 'complete)
     (unless caching-p
-      (let* ((methods (generic-function-methods gf))
-	     (arg-info (gf-arg-info gf))
-	     (mt (arg-info-metatypes arg-info))
-	     (nreq (length mt)))
-	;;Is there a position at which every specializer is eql or non-standard?
-	(dotimes (i nreq nil)
-	  (when (not (eq 't (nth i mt)))
-	    (let ((some-std-class-specl-p nil))
-	      (dolist (method methods)
-		(let ((specl (nth i (method-specializers method))))
-		  (when (and (not (eql-specializer-p specl))
-			     (let ((sclass (specializer-class specl)))
-			       (or (null (class-finalized-p sclass))
-				   (member *the-class-standard-object*
-					   (class-precedence-list sclass)))))
-		    (setq some-std-class-specl-p t))))
-	      (unless some-std-class-specl-p
-		(return-from use-dispatch-dfun-p t)))))))))
+      ;; This should return T when almost all dispatching is by
+      ;; eql specializers or built-in classes.  In other words,
+      ;; return NIL if we might ever need to do more than
+      ;; one (non built-in) typep.
+      ;; Otherwise, it is probably at least as fast to use
+      ;; a caching dfun first, possibly followed by secondary dispatching.
+
+      #||;;; Original found in cmu 17f -- S L O W 
+      (< (dispatch-dfun-cost gf) (caching-dfun-cost gf))
+      ||#
+      ;; This uses improved dispatch-dfun-cost below
+      (let ((cdc  (caching-dfun-cost gf))) ; fast
+	(> cdc (dispatch-dfun-cost gf cdc))))))
+
+;; Try this on print-object, find-method-combination, and documentation.
+;; Look at pcl/generic-functions.lisp for other potential test cases.
+(defun show-dfun-costs (gf)
+  (when (or (symbolp gf) (consp gf))
+    (setq gf (fdefinition gf)))
+  (format t "~&Name ~S  caching cost ~D  dispatch cost ~D~%"
+	  (generic-function-name gf)
+	  (caching-dfun-cost gf)
+	  (dispatch-dfun-cost gf)))
+
+(defparameter *non-built-in-typep-cost* 1)
+(defparameter *structure-typep-cost* 1)
+(defparameter *built-in-typep-cost* 0)
+
+;; The execution time of this is exponential to some function
+;; of number of gf methods and argument lists. It was taking
+;; literally hours to load the presentation methods from the
+;; cl-http w3p kit.
+#+nil
+(defun dispatch-dfun-cost (gf)
+  (generate-discrimination-net-internal 
+   gf (generic-function-methods gf) nil
+   #'(lambda (methods known-types)
+       (declare (ignore methods known-types))
+       0)
+   #'(lambda (position type true-value false-value)
+       (declare (ignore position))
+       (+ (max true-value false-value)
+	  (if (eq 'class (car type))
+	      (let ((cpl (class-precedence-list (class-of (cadr type)))))
+		(cond((memq *the-class-built-in-class* cpl)
+		      *built-in-typep-cost*)
+		     ((memq *the-class-structure-class* cpl)
+		      *structure-typep-cost*)
+		     (t
+		      *non-built-in-typep-cost*)))
+	      0)))
+   #'identity))
+
+;; This version is from the pcl found in the gcl-2.1 distribution.
+;; Someone added a cost limit so as to keep the execution time controlled
+(defun dispatch-dfun-cost (gf &optional limit)
+  (generate-discrimination-net-internal 
+   gf (generic-function-methods gf) nil
+   #'(lambda (methods known-types)
+       (declare (ignore methods known-types))
+       0)
+   #'(lambda (position type true-value false-value)
+       (declare (ignore position))
+       (let* ((type-test-cost
+	       (if (eq 'class (car type))
+		   (let* ((metaclass (class-of (cadr type)))
+			  (mcpl (class-precedence-list metaclass)))
+		     (cond ((memq *the-class-built-in-class* mcpl)
+			    *built-in-typep-cost*)
+			   ((memq *the-class-structure-class* mcpl)
+			    *structure-typep-cost*)
+			   (t
+			    *non-built-in-typep-cost*)))
+		   0))
+	      (max-cost-so-far
+	       (+ (max true-value false-value) type-test-cost)))
+	 (when (and limit (<= limit max-cost-so-far))
+	   (return-from dispatch-dfun-cost max-cost-so-far))
+	   max-cost-so-far))
+   #'identity))
+
+
+(defparameter *cache-lookup-cost* 1)
+(defparameter *wrapper-of-cost* 0)
+(defparameter *secondary-dfun-call-cost* 1)
+
+(defun caching-dfun-cost (gf)
+  (let* ((arg-info (gf-arg-info gf))
+         (nreq (length (arg-info-metatypes arg-info))))
+    (+ *cache-lookup-cost*
+       (* *wrapper-of-cost* nreq)
+       (if (methods-contain-eql-specializer-p 
+	    (generic-function-methods gf))
+	   *secondary-dfun-call-cost*
+	   0))))
+
+#+cmu
+(progn
+  (setq *non-built-in-typep-cost* 100)
+  (setq *structure-typep-cost* 15)
+  (setq *built-in-typep-cost* 5)
+  (setq *cache-lookup-cost* 30)
+  (setq *wrapper-of-cost* 15)
+  (setq *secondary-dfun-call-cost* 30))
+  
 
 (defun make-dispatch-dfun (gf)
   (values (get-dispatch-function gf) nil (dispatch-dfun-info)))
@@ -647,7 +738,7 @@ And so, we are saved.
 
 (defun make-initial-dfun (gf)
   (let ((initial-dfun 
-	 #'(lambda (&rest args)
+	 #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
 	     #+copy-&rest-arg (setq args (copy-list args))
 	     (initial-dfun gf args))))
     (multiple-value-bind (dfun cache info)
@@ -682,11 +773,11 @@ And so, we are saved.
   (let* ((methods (early-gf-methods gf))
 	 (slot-name (early-method-standard-accessor-slot-name (car methods))))
     (ecase type
-      (reader #'(lambda (instance)
+      (reader #'(#+cmu kernel:instance-lambda #-cmu lambda (instance)
 		  (let* ((class (class-of instance))
 			 (class-name (bootstrap-get-slot 'class class 'name)))
 		    (bootstrap-get-slot class-name instance slot-name))))
-      (writer #'(lambda (new-value instance)
+      (writer #'(#+cmu kernel:instance-lambda #-cmu lambda (new-value instance)
 		  (let* ((class (class-of instance))
 			 (class-name (bootstrap-get-slot 'class class 'name)))
 		    (bootstrap-set-slot class-name instance slot-name new-value)))))))
@@ -773,7 +864,7 @@ And so, we are saved.
 	specls all-same-p)
     (cond ((null methods)
 	   (values
-	    #'(lambda (&rest args)
+	    #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
 		(apply #'no-applicable-method gf args))
 	    nil
 	    (no-methods-dfun-info)))
@@ -830,8 +921,11 @@ And so, we are saved.
 	       (caching))
 	      ((or invalidp
 		   (null nindex)))
-	      ((not (or (std-instance-p object)
-			(fsc-instance-p object)))
+	      ((not #-cmu17
+		    (or (std-instance-p object)
+			(fsc-instance-p object))
+		    #+cmu17
+		    (pcl-instance-p object))
 	       (caching))
 	      ((or (neq ntype otype) (listp wrappers))
 	       (caching))
@@ -989,6 +1083,11 @@ And so, we are saved.
     (accessor-values-internal accessor-type accessor-class methods)))
 
 (defun accessor-values-internal (accessor-type accessor-class methods)
+  (dolist (meth methods)
+    (when (if (consp meth) 
+	      (early-method-qualifiers meth)
+	      (method-qualifiers meth))
+      (return-from accessor-values-internal (values nil nil))))
   (let* ((meth (car methods))
 	 (early-p (not (eq *boot-state* 'complete)))
 	 (slot-name (when accessor-class
@@ -1378,10 +1477,15 @@ And so, we are saved.
 					    &optional all-applicable-p
 					    (all-sorted-p t) function-p)
   (if (null methods)
-      #'(lambda (method-alist wrappers)
-	  (declare (ignore method-alist wrappers))
-	  #'(lambda (&rest args)
-	      (apply #'no-applicable-method gf args)))
+      (if function-p
+          #'(lambda (method-alist wrappers)
+	      (declare (ignore method-alist wrappers))
+	      #'(#+cmu kernel:instance-lambda #-cmu lambda (&rest args)
+	          (apply #'no-applicable-method gf args)))
+	  #'(lambda (method-alist wrappers)
+	      (declare (ignore method-alist wrappers))
+	      #'(lambda (&rest args)
+		  (apply #'no-applicable-method gf args))))
       (let* ((key (car methods))
 	     (ht-value (or (gethash key *effective-method-table*)
 			   (setf (gethash key *effective-method-table*)

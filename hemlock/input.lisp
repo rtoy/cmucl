@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.5 1995/02/17 21:10:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.6 1997/01/18 14:31:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -420,7 +420,7 @@
       (let* ((xwindow (make-xwindow-like-hwindow window))
 	     (window (make-window start :window xwindow)))
 	(unless window
-	  (xlib:destroy-window xwindow)
+	  #+clx(xlib:destroy-window xwindow)
 	  (editor-error "Could not create random typeout window."))))))
 
 (defun end-random-typeout (stream)
