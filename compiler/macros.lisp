@@ -15,18 +15,13 @@
 
 (export '(lisp::with-compilation-unit) "LISP")
 
+(export '(policy symbolicate def-ir1-translator def-source-transform
+	  def-primitive-translator deftransform defknown defoptimizer
+	  derive-type optimizer ltn-annotate ir2-convert attributes
+	  def-boolean-attribute attributes-union attributes-intersection
+	  attributes=))
+
 (proclaim '(special *wild-type* *universal-type* *compiler-error-context*))
-
-
-;;; Undefined-Value  --  Public
-;;;
-;;;    This is here until we figure out what to do with it.
-;;;
-(proclaim '(inline undefined-value))
-(eval-when (#-new-compiler compile load eval)
-(defun undefined-value ()
-  '%undefined%)
-);
 
 ;;;; Deftypes:
 
