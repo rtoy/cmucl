@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.6 1990/02/17 21:26:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.7 1990/02/18 05:25:44 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -210,6 +210,7 @@
 (def-primitive-type simple-array-double-float (descriptor-reg control-stack))
 
 (def-primitive-type random (non-descriptor-reg))
+(def-primitive-type interior (interior-reg))
 
 ;;;
 #|
@@ -450,18 +451,23 @@
 (defconstant oldcont-offset 17)
 (defconstant lra-offset 18)
 
+;;; Offsets of special stack frame locations
+(defconstant oldcont-save-offset 0)
+(defconstant lra-save-offset 1)
+(defconstant lexenv-save-offset 2)
+
 ); Eval-When (Compile Load Eval)  
 
 
 (defparameter nargs-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
-		  :offset argument-count-offset))
+		  :offset nargs-offset))
 
 (defparameter args-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'descriptor-reg)
-		  :offset argument-pointer-offset))
+		  :offset args-offset))
 
 (defparameter lra-tn
   (make-random-tn :kind :normal
