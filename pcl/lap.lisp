@@ -264,7 +264,7 @@
   (flet ((check (x)
 	   (ecase x
 	     (:symbol           (symbolp arg))
-	     (:register-number  (and (integerp arg) (>= x 0)))
+	     (:register-number  (and (integerp arg) (>= arg 0)))
 	     (:t                t)
 	     (:reg              (and (consp arg) (eq (car arg) :reg)))
 	     (:fixnum           (typep arg 'fixnum)))))
@@ -478,3 +478,4 @@
 		 (eq (funcall closure 'foo) (svref array 0)))
       (error "LAP TEST 5 failed."))))
 
+|#
