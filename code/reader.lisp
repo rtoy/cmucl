@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.16 1992/06/04 17:03:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.17 1993/02/17 16:29:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,8 +33,13 @@
 ;;;Random global variables
 
 (defvar *read-default-float-format* 'single-float "Float format for 1.0E1")
+(declaim (type (member short-float single-float double-float long-float)
+	       *read-default-float-format*))
 
-(defvar *readtable* () "Variable bound to current readtable.")
+(defvar *readtable*)
+(declaim (type readtable *readtable*))
+(setf (documentation '*readtable* 'variable)
+       "Variable bound to current readtable.")
 
 
 ;;;; Reader errors:
@@ -79,6 +84,9 @@
   "Standard lisp readtable. This is for recovery from broken
    read-tables, and should not normally be user-visible.")
 
+(deftype attribute-table ()
+  '(simple-array (unsigned-byte 8) (#.char-code-limit)))
+
 (defstruct (readtable
 	    (:conc-name nil)
 	    (:predicate readtablep)
@@ -99,15 +107,19 @@
   ;; In order to make the READ-TOKEN fast, all this information is
   ;; stored in the character attribute table by having different varieties of
   ;; constituents.
-  (character-attribute-table (make-character-attribute-table)
-			     :type simple-vector)
+  (character-attribute-table
+   (make-array char-code-limit :element-type '(unsigned-byte 8)
+	       :initial-element constituent)
+   :type attribute-table)
   ;;
   ;; The CHARACTER-MACRO-TABLE is a vector of CHAR-CODE-LIMIT functions.  One
   ;; of these functions called with appropriate arguments whenever any
   ;; non-WHITESPACE character is encountered inside READ-PRESERVING-WHITESPACE.
   ;; These functions are used to implement user-defined read-macros, system
   ;; read-macros, and the number-symbol reader.
-  (character-macro-table (make-character-macro-table) :type simple-vector)
+  (character-macro-table 
+   (make-array char-code-limit :initial-element #'undefined-macro-char)
+   :type (simple-vector #.char-code-limit))
   ;;
   ;; DISPATCH-TABLES entry, which is an alist from dispatch characters to
   ;; vectors of CHAR-CODE-LIMIT functions, for use in defining dispatching
@@ -151,29 +163,23 @@
 
 (defmacro get-cat-entry (char rt)
   ;;only give this side-effect-free args.
-  `(elt (the simple-vector (character-attribute-table ,rt))
+  `(elt (character-attribute-table ,rt)
 	(char-code ,char)))
 
 (defun set-cat-entry (char newvalue &optional (rt *readtable*))
-  (setf (elt (the simple-vector (character-attribute-table rt))
+  (setf (elt (character-attribute-table rt)
 	     (char-code char))
 	newvalue))
 
 (defmacro get-cmt-entry (char rt)
-  `(elt (the simple-vector (character-macro-table ,rt))
-	(char-code ,char)))
+  `(the function
+	(elt (the simple-vector (character-macro-table ,rt))
+	     (char-code ,char))))
 
 (defun set-cmt-entry (char newvalue &optional (rt *readtable*))
   (setf (elt (the simple-vector (character-macro-table rt))
 	     (char-code char))
-	newvalue))
-
-(defun make-character-attribute-table ()
-  (make-array char-code-limit :element-type t :initial-element #.constituent))
-
-(defun make-character-macro-table ()
-  (make-array char-code-limit :element-type t
-	      :initial-element #'undefined-macro-char))
+	(coerce newvalue 'function)))
 
 (defun undefined-macro-char (stream char)
   (unless *read-suppress*
@@ -215,16 +221,17 @@
 ;;; There are a number of "secondary" attributes which are constant properties
 ;;; of characters characters (as long as they are constituents).
 
-(defvar secondary-attribute-table ())
+(defvar secondary-attribute-table)
+(declaim (type attribute-table secondary-attribute-table))
 
 (defun set-secondary-attribute (char attribute)
-  (setf (elt (the simple-vector secondary-attribute-table) (char-code char))
+  (setf (elt secondary-attribute-table (char-code char))
 	attribute))
 
 
 (defun init-secondary-attribute-table ()
   (setq secondary-attribute-table
-	(make-array char-code-limit :element-type t
+	(make-array char-code-limit :element-type '(unsigned-byte 8)
 		    :initial-element #.constituent))
   (set-secondary-attribute #\: #.package-delimiter)
   (set-secondary-attribute #\| #.multiple-escape)	; |) [For EMACS]
@@ -247,7 +254,7 @@
   (set-secondary-attribute #\l #.constituent-expt))
 
 (defmacro get-secondary-attribute (char)
-  `(elt (the simple-vector secondary-attribute-table)
+  `(elt secondary-attribute-table
 	(char-code ,char)))
 
 
@@ -328,7 +335,7 @@
   (prepare-for-fast-read-char stream
     (do ((attribute-table (character-attribute-table *readtable*))
 	 (char (fast-read-char t) (fast-read-char t)))
-      ((/= (the fixnum (svref attribute-table (char-code char))) #.whitespace)
+      ((/= (the fixnum (aref attribute-table (char-code char))) #.whitespace)
        (done-with-fast-read-char)
        char))))
 
@@ -378,12 +385,13 @@
 (defvar inch-ptr)
 (defvar ouch-ptr)
 
+(declaim (type index read-buffer-length inch-ptr ouch-ptr))
+(declaim (simple-string read-buffer))
+
 (defmacro reset-read-buffer ()
   ;;turn read-buffer into an empty read-buffer.
   ;;ouch-ptr always points to next char to write
   `(progn
-    ;;next is in case interrupt processor has re-bound read-buffer to nil.
-    (unless (or (boundp 'read-buffer) read-buffer) (init-read-buffer))
     (setq ouch-ptr 0)
     ;;inch-ptr always points to next char to read
     (setq inch-ptr 0)))
@@ -650,7 +658,7 @@
 ;;; return the character class for a char
 ;;;
 (defmacro char-class (char attable)
-  `(let ((att (svref ,attable (char-code ,char))))
+  `(let ((att (aref ,attable (char-code ,char))))
      (declare (fixnum att))
      (if (<= att #.terminating-macro)
 	 #.delimiter
@@ -660,7 +668,7 @@
 ;;; number
 ;;;
 (defmacro char-class2 (char attable)
-  `(let ((att (svref ,attable (char-code ,char))))
+  `(let ((att (aref ,attable (char-code ,char))))
      (declare (fixnum att))
      (if (<= att #.terminating-macro)
 	 #.delimiter
@@ -674,7 +682,7 @@
 ;;; floating number (assume that it is a digit if it could be)
 ;;;
 (defmacro char-class3 (char attable)
-  `(let ((att (svref ,attable (char-code ,char))))
+  `(let ((att (aref ,attable (char-code ,char))))
      (declare (fixnum att))
      (if possibly-rational
 	 (setq possibly-rational
@@ -701,7 +709,7 @@
 
 (defvar *read-base* 10
   "The radix that Lisp reads numbers in.")
-
+(declaim (type (integer 2 36) *read-base*))
 
 ;;; CASIFY-READ-BUFFER  --  Internal
 ;;;
@@ -1090,6 +1098,8 @@
      33554432 39135393 45435424 52521875 60466176)
   "Holds the largest fixnum power of the base for make-integer.")
 
+(declaim (simple-vector *integer-reader-safe-digits*
+			*integer-reader-base-power*))
 #|
 (defun init-integer-reader ()
   (do ((base 2 (1+ base)))
@@ -1108,17 +1118,12 @@
 (defun make-integer (stream)
   "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
   then multiplying by a power of the base and adding."
-  (let* ((base (if (boundp '*read-base*)
-		  (if (and (fixnump *read-base*)
-			   (<= 1 *read-base* 36))
-		      *read-base*
-		      (%reader-error stream "~A not a valid number for *read-base*."
-			     *read-base*))
-		  10.))
+  (let* ((base *read-base*)
 	 (digits-per (aref *integer-reader-safe-digits* base))
 	 (base-power (aref *integer-reader-base-power* base)) 
 	 (negativep nil)
 	 (number 0))
+    (declare (type index digits-per base-power))
     (read-unwind-read-buffer)
     (let ((char (inch-read-buffer)))
       (cond ((char= char #\-)
@@ -1127,6 +1132,7 @@
 	    (t (unread-buffer))))
     (loop
      (let ((num 0))
+       (declare (type index num))
        (dotimes (digit digits-per)
 	 (let* ((ch (inch-read-buffer)))
 	   (cond ((or (eofp ch) (char= ch #\.))
@@ -1136,7 +1142,8 @@
 					  (+ num (* number
 						    (expt base digit))))))
 				 (if negativep (- res) res))))
-		 (t (setq num (+ (digit-char-p ch base) (* num base)))))))
+		 (t (setq num (+ (digit-char-p ch base)
+				 (the index (* num base))))))))
        (setq number (+ num (* number base-power)))))))
 
 
@@ -1280,7 +1287,7 @@
     (if dpair
 	(setf (elt (the simple-vector (cdr dpair))
 		   (char-code sub-char))
-	      function)
+	      (coerce function 'function))
 	(error "~S is not a dispatch char." disp-char))))
 
 (defun get-dispatch-macro-character (disp-char sub-char &optional rt)
@@ -1316,8 +1323,9 @@
     (let ((dpair (find char (dispatch-tables *readtable*)
 		       :test #'char= :key #'car)))
       (if dpair
-	  (funcall (elt (the simple-vector (cdr dpair))
-			(char-code sub-char))
+	  (funcall (the function
+			(elt (the simple-vector (cdr dpair))
+			     (char-code sub-char)))
 		   stream sub-char (if numargp numarg nil))
 	  (%reader-error stream "No dispatch table for dispatch char.")))))
 
