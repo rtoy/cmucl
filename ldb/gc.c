@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.8 1990/06/04 01:30:47 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.9 1990/07/01 04:40:45 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -238,139 +238,6 @@ collect_garbage()
 	os_zero((os_vm_address_t) current_control_stack_pointer,
 		(os_vm_size_t) (CONTROL_STACK_SIZE -
 				control_stack_size * sizeof(lispobj)));
-
-	(void) sigsetmask(oldmask);
-
-
-	gettimeofday(&stop_tv, (struct timezone *) 0);
-	getrusage(RUSAGE_SELF, &stop_rusage);
-
-	printf("done.]\n");
-
-	
-	percent_retained = (((float) size_retained) /
-			     ((float) size_discarded)) * 100.0;
-
-	printf("Total of %d bytes out of %d bytes retained (%3.2f%%).\n",
-	       size_retained, size_discarded, percent_retained);
-
-	real_time = tv_diff(&stop_tv, &start_tv);
-	user_time = tv_diff(&stop_rusage.ru_utime, &start_rusage.ru_utime);
-	system_time = tv_diff(&stop_rusage.ru_stime, &start_rusage.ru_stime);
-
-	printf("Statistics:\n");
-	printf("%10.2f sec of real time\n", real_time);
-	printf("%10.2f sec of user time,\n", user_time);
-	printf("%10.2f sec of system time.\n", system_time);
-	
-	gc_rate = ((float) size_retained / (float) (1<<20)) / real_time;
-
-	printf("%10.2f M bytes/sec collected.\n", gc_rate);
-}
-
-
-/* Purify */
-
-/* First attempt at a purify. */
-
-purify()
-{
-	struct timeval start_tv, stop_tv;
-	struct rusage start_rusage, stop_rusage;
-	double real_time, system_time, user_time;
-	double percent_retained, gc_rate;
-	lispobj *current_static_space_free_pointer;
-	unsigned long control_stack_size, binding_stack_size;
-	unsigned long size_retained, size_discarded;
-	int oldmask;
-	
-	printf("[Purifying ... \n");
-
-	getrusage(RUSAGE_SELF, &start_rusage);
-	gettimeofday(&start_tv, (struct timezone *) 0);
-
-	oldmask = sigblock(BLOCKABLE);
-
-	current_static_space_free_pointer =
-		(lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER);
-
-	/* Set up from space and new space pointers. */
-
-	from_space = current_dynamic_space;
-	from_space_free_pointer = current_dynamic_space_free_pointer;
-
-	new_space = static_space;
-	new_space_free_pointer = current_static_space_free_pointer;
-
-
-	/* Initialize the weak pointer list. */
-	weak_pointers = (struct weak_pointer *) NULL;
-
-
-	/* Scavenge all of the roots. */
-	printf("Scavenging interrupt contexts ...\n");
-	scavenge_interrupt_contexts();
-
-	printf("Scavenging interrupt handlers (%d bytes) ...\n",
-	       sizeof(interrupt_handlers));
-	scavenge((lispobj *) interrupt_handlers,
-		 sizeof(interrupt_handlers) / sizeof(lispobj));
-
-	control_stack_size = current_control_stack_pointer - control_stack;
-	printf("Scavenging the control stack (%d bytes) ...\n",
-	       control_stack_size * sizeof(lispobj));
-	scavenge(control_stack, control_stack_size);
-
-	binding_stack_size = current_binding_stack_pointer - binding_stack;
-	printf("Scavenging the binding stack (%d bytes) ...\n",
-	       binding_stack_size * sizeof(lispobj));
-	scavenge(binding_stack, binding_stack_size);
-
-
-	/* Scavenge newspace. */
-	printf("Scavenging new (static) space (%d bytes) ...\n",
-	       (new_space_free_pointer - new_space) * sizeof(lispobj));
-	scavenge_newspace();
-
-
-#if defined(DEBUG_PRINT_GARBAGE)
-	print_garbage(from_space, from_space_free_pointer);
-#endif
-
-	/* Scan the weak pointers. */
-	printf("Scanning weak pointers ...\n");
-	scan_weak_pointers();
-
-
-	/* Save the static space free pointer. */
-	SetSymbolValue(STATIC_SPACE_FREE_POINTER,
-		       (lispobj) new_space_free_pointer);
-
-	/* Flip spaces. */
-	printf("Flipping spaces (sort of) ...\n");
-
-	os_zero((os_vm_address_t) current_dynamic_space,
-		(os_vm_size_t) DYNAMIC_SPACE_SIZE);
-
-	current_dynamic_space_free_pointer = current_dynamic_space;
-
-	size_discarded = (from_space_free_pointer - from_space) * sizeof(lispobj);
-	size_retained = (new_space_free_pointer - new_space) * sizeof(lispobj);
-
-
-	/* Flush the icache. */
-	printf("Flushing instruction cache ...\n");
-	os_flush_icache((os_vm_address_t) new_space,
-			(os_vm_size_t) size_retained);
-
-
-	/* Zero stack. */
-	printf("Zeroing empty part of control stack ...\n");
-	os_zero((os_vm_address_t) current_control_stack_pointer,
-		(os_vm_size_t) (CONTROL_STACK_SIZE -
-				control_stack_size * sizeof(lispobj)));
-
-
 
 	(void) sigsetmask(oldmask);
 
