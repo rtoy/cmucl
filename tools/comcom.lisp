@@ -284,8 +284,6 @@
     (:optimize '(optimize (debug-info 2) (safety 1)))
   (comf "target:compiler/ir2tran"))
 (comf "target:compiler/copyprop")
-(unless (c:target-featurep '(or :hppa :x86))
-  (comf "target:compiler/assem-opt"))
 (with-compilation-unit
     (:optimize '(optimize (debug-info 2) (safety 1)))
   (comf "target:compiler/represent"))
@@ -297,7 +295,6 @@
 (with-compilation-unit
     (:optimize '(optimize (debug-info 2) (safety 2)))
   (comf "target:compiler/debug"))
-(comf "target:compiler/assem-check")
 (comf "target:compiler/statcount")
 (comf "target:compiler/dyncount")
 
