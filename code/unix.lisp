@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.79 2002/11/19 12:52:25 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.80 2003/01/29 13:45:46 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
 	  fndelay fappend fasync fcreat ftrunc fexcl unix-link unix-lseek
 	  l_set l_incr l_xtnd unix-mkdir unix-open o_rdonly o_wronly o_rdwr
 	  #+(or hpux svr4 bsd linux) o_ndelay
-	  #+(or hpux svr4 bsd linux) o_noctty #+(or hpux svr4) o_nonblock
+	  #+(or hpux svr4 bsd linux) o_noctty #+(or hpux svr4 bsd) o_nonblock
 	  o_append o_creat o_trunc o_excl unix-pipe unix-read unix-readlink
 	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
@@ -1214,7 +1214,7 @@
 (defconstant o_rdonly 0 "Read-only flag.") 
 (defconstant o_wronly 1 "Write-only flag.")
 (defconstant o_rdwr 2   "Read-write flag.")
-#+(or hpux linux svr4 bsd)
+#+(or hpux linux svr4)
 (defconstant o_ndelay #-linux 4 #+linux #o4000 "Non-blocking I/O")
 (defconstant o_append #-linux #o10 #+linux #o2000   "Append flag.")
 #+(or hpux svr4 linux)
@@ -1224,9 +1224,11 @@
   (defconstant o_excl #-linux #o2000 #+linux #o200 "Error if already exists.")
   (defconstant o_noctty #+linux #o400 #+hpux #o400000 #+(or irix solaris) #x800
                "Don't assign controlling tty"))
-#+(or hpux svr4)
-(defconstant o_nonblock #+hpux #o200000 #+(or irix solaris) #x80
-             "Non-blocking mode")
+#+(or hpux svr4 BSD)
+(defconstant o_nonblock #+hpux #o200000 #+(or irix solaris) #x80 #+BSD #x04
+  "Non-blocking mode")
+#+BSD
+(defconstant o_ndelay o_nonblock) ; compatibility
 #+linux
 (progn
    (defconstant o_sync #o10000 "Synchronous writes (on ext2)"))
