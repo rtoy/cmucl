@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.46 1993/03/14 16:54:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.47 1993/03/15 00:11:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -268,7 +268,7 @@
   (let ((name (dd-name defstruct)))
     `(,@(let ((pf (dd-print-function defstruct)))
 	  (when pf
-	    `((setf (structure-class-print-function (find-class ',name))
+	    `((setf (basic-structure-class-print-function (find-class ',name))
 		    ,(if (symbolp pf)
 			 `',pf
 			 `#',pf)))))
