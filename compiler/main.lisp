@@ -115,7 +115,11 @@
       (setf (component-reanalyze component) t)))
   (undefined-value))
 
-(defvar *constraint-propagate* t)
+(defparameter *constraint-propagate* t)
+(defparameter *reoptimize-after-type-check-max* 5)
+
+(defevent reoptimize-maxed-out
+  "*REOPTIMIZE-AFTER-TYPE-CHECK-MAX* exceeded.")
 
 ;;; IR1-Phases  --  Internal
 ;;;
@@ -123,12 +127,14 @@
 ;;;
 (defun ir1-phases (component)
   (declare (type component component))
-  (let ((*constraint-number* 0))
+  (let ((*constraint-number* 0)
+	(loop-count 1))
     (declare (special *constraint-number*))
-    (tagbody
-     TOP
+    (loop
       (ir1-optimize-until-done component)
-      (when (component-reanalyze component) (go DFO))
+      (when (component-reanalyze component)
+	(maybe-mumble "DFO ")
+	(find-dfo component))
       (when *constraint-propagate*
 	(maybe-mumble "Constraint ")
 	(constraint-propagate component))
@@ -136,15 +142,13 @@
       (generate-type-checks component)
       (unless (or (component-reoptimize component)
 		  (component-reanalyze component))
-	(go DONE))
-      
-      (go TOP)
-     DFO
-      (maybe-mumble "DFO ")
-      (find-dfo component)
-      (go TOP)
-     DONE)
-    (undefined-value)))
+	(return))
+      (when (>= loop-count *reoptimize-after-type-check-max*)
+	(maybe-mumble "[Reoptimize Limit]")
+	(event reoptimize-maxed-out)
+	(return))
+      (incf loop-count)))
+  (undefined-value))
 
 
 ;;; Compile-Component  --  Internal
@@ -723,7 +727,9 @@
 		 `(error "Execution of a form compiled with errors:~% ~S"
 			 ',form)
 		 tlf-num object)
-		(throw 'process-form-error-abort nil))))
+		(throw 'process-form-error-abort nil)))
+	   (*current-path* (or (gethash form *source-paths*)
+			       *current-path*)))
       (if (atom form)
 	  (convert-and-maybe-compile form tlf-num object)
 	  (case (car form)
@@ -886,6 +892,7 @@
 		(compiler-mumble
 		 "~2&Fatal error, aborting compilation...~%")
 		(return-from sub-compile-file :error)))
+	   (*current-path* nil)
 	   (*last-source-context* nil)
 	   (*last-original-source* nil)
 	   (*last-source-form* nil)
@@ -1136,6 +1143,7 @@
 		  (return-from compile (values nil t nil))))
 	     (*compiler-error-output* *error-output*)
 	     (*compiler-trace-output* nil)
+	     (*current-path* nil)
 	     (*last-source-context* nil)
 	     (*last-original-source* nil)
 	     (*last-source-form* nil)
