@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.49 1997/12/14 15:28:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.50 1997/12/14 17:32:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -887,7 +887,6 @@
   (elfun-derive-type-simple
    arg #'log #'(lambda (lo hi)
 		 (declare (ignore hi))
-		 (format t "*D1 ~s~%"  lo)
 		 (typecase lo
 		   (cons (>= (car lo) 0))
 		   (rational (>= lo 0))
