@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.32 2003/07/16 15:33:13 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.32.10.1 2004/07/16 14:05:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,6 +86,9 @@
 
 (declaim (inline dotted-list-length))
 (defun dotted-list-length (list)
+  ;; this is a workaround for spurious efficiency notes when compiling
+  ;; DEFTYPE declarations in code under high optimization
+  (declare (optimize (ext:inhibit-warnings 3)))
   (loop for tail on list until (atom tail) count t))
 
 (defun parse-defmacro-lambda-list
@@ -388,7 +391,7 @@
 
 ;;;; Conditions signaled at runtime by the resultant body.
 
-(define-condition defmacro-lambda-list-bind-error (error)
+(define-condition defmacro-lambda-list-bind-error (program-error)
   ((kind :reader defmacro-lambda-list-bind-error-kind
 	 :initarg :kind)
    (name :reader defmacro-lambda-list-bind-error-name
