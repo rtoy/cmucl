@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.39 1997/12/18 07:20:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.40 1998/02/11 05:49:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -753,7 +753,8 @@
     (dolist (imports-from imports)
       (let ((other-package (package-or-lose (car imports-from))))
 	(dolist (sym-name (cdr imports-from))
-	  (import (find-or-make-symbol sym-name other-package) package))))
+	  (import (list (find-or-make-symbol sym-name other-package))
+		  package))))
     ;; Exports.
     (let ((old-exports nil)
 	  (exports (mapcar #'(lambda (sym-name) (intern sym-name package))
