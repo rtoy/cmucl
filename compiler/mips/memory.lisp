@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.2 1990/02/08 19:40:59 wlott Exp $
+;;;
 ;;;    This file contains the MIPS definitions of some general purpose memory
 ;;; reference VOPs inherited by basic memory reference operations.
 ;;;
@@ -28,7 +30,7 @@
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
-    (ld value object offset lowtag)))
+    (loadw value object offset lowtag)))
 ;;;
 (define-vop (cell-set)
   (:args (object :scs (descriptor-reg))
@@ -36,7 +38,7 @@
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
-    (st value object offset lowtag)))
+    (storew value object offset lowtag)))
 ;;;
 (define-vop (cell-setf)
   (:args (object :scs (descriptor-reg))
@@ -46,7 +48,7 @@
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
-    (st value object offset lowtag)
+    (storew value object offset lowtag)
     (move result value)))
 
 ;;; Define-Cell-Accessors  --  Interface
@@ -80,7 +82,7 @@
   (:variant-vars base lowtag)
   (:info offset)
   (:generator 4
-    (ld value object (+ base offset) lowtag)))
+    (loadw value object (+ base offset) lowtag)))
 ;;;
 (define-vop (slot-set)
   (:args (object :scs (descriptor-reg))
@@ -88,7 +90,7 @@
   (:variant-vars base lowtag)
   (:info offset)
   (:generator 4
-    (st value object (+ base offset) lowtag)))
+    (storew value object (+ base offset) lowtag)))
 
 
 
@@ -105,44 +107,30 @@
 ;;;
 (defmacro define-indexer (name write-p op shift)
   `(define-vop (,name)
-     (:args (object :scs (descriptor-reg)
-		    ,@(unless (zerop shift)
-			'(:target object-temp)))
-	    (index :scs (any-reg descriptor-reg immediate negative-immediate)
-		   :target index-temp)
+     (:args (object :scs (descriptor-reg))
+	    (index :scs (any-reg descriptor-reg immediate negative-immediate))
 	    ,@(when write-p
 		'((value :scs (any-reg descriptor-reg) :target result))))
      (:results (,(if write-p 'result 'value)
 		:scs (any-reg descriptor-reg)))
-     (:variant-vars offset)
-     ,@(unless (zerop shift)
-	 `((:temporary (:scs (descriptor-reg)
-			     :from (:argument 0))
-		       object-temp)))
-     (:temporary (:scs (descriptor-reg)
-		       :from (:argument 0))
-		 index-temp)
+     (:variant-vars offset lowtag)
      (:policy :fast-safe)
      (:generator 5
        (sc-case index
 	 ((immediate negative-immediate)
 	  (inst ,op value object
-		;; ### Is this right?  Is index supposed to be a byte or word
-		;; offset?
-		(- (+ (tn-value index) offset) other-pointer-type))
+		(- (+ (ash (tn-value index) (- word-shift ,shift))
+		      (ash offset word-shift))
+		   lowtag))
 	  ,(if write-p
 	       '(move result value)
 	       '(nop)))
 	 (t
-	  ;; This code assumes that object has other-pointer low tag bits.
-	  ;; Note: the temporary reg causes GC problems.
 	  ,@(if (zerop shift)
-		`((inst add index-temp object index))
-		`((move object-temp object)
-		  (inst srl index-temp index ,shift)
-		  (inst add index-temp object-temp index-temp)))
-	  (inst ,op value index-temp (- offset other-pointer-type))
-	  (move index-temp zero-tn)
+		`((inst add lip-tn object index))
+		`((inst srl lip-tn index ,shift)
+		  (inst add lip-tn lip-tn object)))
+	  (inst ,op value lip-tn (- (ash offset word-shift) lowtag))
 	  ,@(when write-p
 	      `((move result value))))))))
 
