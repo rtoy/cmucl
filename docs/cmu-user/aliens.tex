@@ -631,10 +631,12 @@ function to initialize it, then returns a Lisp vector of all the
   (let* ((num (slot f 'a))
          (result (make-array num)))
     ;;
-    ;; Get a pointer to the array so that we don't have to keep extracting it:
+    ;; Get a pointer to the array so that we don't have to keep
+    ;; extracting it:
     (with-alien ((a (* (array (* (struct foo)) 100)) (addr (slot f 'b))))
       ;;
-      ;; Loop over the first N elements and stash them in the result vector.
+      ;; Loop over the first N elements and stash them in the
+      ;; result vector.
       (dotimes (i num)
         (setf (svref result i) (deref (deref a) i)))
       result)))
@@ -809,22 +811,23 @@ must be an array of one of the following types:
     ;;      ...         ...
     ;;
     (let ((addr (+ 8 (logandc1 7 (kernel:get-lisp-obj-address data))))
-          (type-size (let ((type (array-element-type data)))
-                       (cond ((or (equal type '(signed-byte 8))
-                                  (equal type '(unsigned-byte 8)))
-                              1)
-                             ((or (equal type '(signed-byte 16))
-                                  (equal type '(unsigned-byte 16)))
-                              2)
-                             ((or (equal type '(signed-byte 32))
-                                  (equal type '(unsigned-byte 32)))
-                              4)
-                             ((equal type 'single-float)
-                              4)
-                             ((equal type 'double-float)
-                              8)
-                             (t
-                              (error "Unknown specialized array element type"))))))
+          (type-size
+           (let ((type (array-element-type data)))
+             (cond ((or (equal type '(signed-byte 8))
+                        (equal type '(unsigned-byte 8)))
+                    1)
+                   ((or (equal type '(signed-byte 16))
+                        (equal type '(unsigned-byte 16)))
+                    2)
+                   ((or (equal type '(signed-byte 32))
+                        (equal type '(unsigned-byte 32)))
+                    4)
+                   ((equal type 'single-float)
+                    4)
+                   ((equal type 'double-float)
+                    8)
+                   (t
+                    (error "Unknown specialized array element type"))))))
       (declare (type (unsigned-byte 32) addr)
                (optimize (speed 3) (safety 0) (ext:inhibit-warnings 3)))
       (system:int-sap (the (unsigned-byte 32)
@@ -952,7 +955,7 @@ whose contents is:
     (setf (slot c-struct 's) "A Lisp String")
 
     (with-alien ((res (* (struct c-struct))
-                      (c-function 5 "Another Lisp String" (addr c-struct) ar)))
+                 (c-function 5 "Another Lisp String" (addr c-struct) ar)))
       (format t "Returned from C function.~%")
       (multiple-value-prog1
           (values (slot res 'x)
