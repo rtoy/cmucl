@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.8 1991/05/14 16:04:36 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.9 1991/09/04 14:22:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,8 +98,8 @@
 
 (defhvar "Slave Utility"
   "This is the pathname of the utility to fire up slave Lisps.  It defaults
-   to /usr/misc/.cmucl/bin/lisp."
-  :value "/usr/misc/.cmucl/bin/lisp")
+   to \"lisp\"."
+  :value "lisp")
 
 (defhvar "Slave Utility Switches"
   "These are additional switches to pass to the Slave Utility.
