@@ -102,9 +102,9 @@ Source availability:
 
 Lisp and documentation sources are available via anonymous FTP ftp to any CMU
 CS machine.  [See the "Distribution" section for FTP instructions.]  All CMU
-written code is public domain, but CMU CL also makes use of several imported
-packages: PCL, CLX and XP.  Although these packages are copyrighted, they may
-be freely distributed without any licensing agreement or fee.
+written code is public domain, but CMU CL also makes use of two imported
+packages: PCL and CLX.  Although these packages are copyrighted, they may be
+freely distributed without any licensing agreement or fee.
 
 The release area contains a source distribution, which is an image of all the
 ".lisp" source files used to build version 16d:
