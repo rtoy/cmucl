@@ -1015,6 +1015,7 @@
 (defconstant blow-away-feebs-character #\q)
 (defconstant single-step-feebs-character #\s)
 (defconstant auto-mode-feebs-character #\a)
+(defconstant feebs-noop-character #\z)
 
 ;;; Create an object set of windows to receive certain events from X.
 
@@ -1062,7 +1063,12 @@
 
 
 (defun translate-character (scan-code bits)
-  (ext:key-event-char (ext:translate-key-event *display* scan-code bits)))
+  (let ((key-event (ext:translate-key-event *display* scan-code bits))
+        (retval feebs-noop-character))
+    (if key-event
+        (let ((char (ext:key-event-char key-event)))
+          (if char (setf retval char))))
+    retval))
 
 ;;; Check which key was pressed and do the appropriate thing.
 
