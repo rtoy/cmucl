@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.32 1990/04/24 19:07:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.33 1990/04/24 19:09:03 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -126,7 +126,7 @@
 				   (fixnum (1- ,size)))
 			     (inst addu alloc-tn alloc-tn temp)
 			     (inst sll temp temp
-				   (- vm:type-bits vm:word-bits))
+				   (- vm:type-bits vm:word-shift))
 			     (inst or temp temp ,header)
 			     (storew temp result 0 ,lowtag)
 			     (inst addu alloc-tn alloc-tn
