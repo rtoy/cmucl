@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.37 2003/10/27 16:58:58 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.38 2003/11/06 22:19:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -701,8 +701,7 @@
 	(destructuring-bind (shift bit-mask)
 	    stuff
 	  ;; Set mask
-	  (inst sethi mask (ldb (byte 22 10) bit-mask))
-	  (inst add mask (ldb (byte 10 0) bit-mask))
+	  (inst li mask bit-mask)
 
 	  (inst and temp res mask)
 	  (inst srln res shift)
