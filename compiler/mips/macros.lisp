@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.48 1993/01/13 16:08:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.49 1993/02/04 13:39:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,8 +92,7 @@
 (defmacro lisp-jump (function lip)
   "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
-     (inst addu ,lip ,function (- (ash vm:function-header-code-offset
-					vm:word-shift)
+     (inst addu ,lip ,function (- (ash vm:function-code-offset vm:word-shift)
 				   vm:function-pointer-type))
      (inst j ,lip)
      (move code-tn ,function)))
