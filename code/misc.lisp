@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.15 1992/03/03 12:12:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.16 1992/03/07 13:25:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,6 +24,10 @@
 
 (in-package "SYSTEM")
 (export '(*software-type* *short-site-name* *long-site-name*))
+
+(in-package "EXT")
+(export 'featurep)
+
 (in-package "LISP")
 
 
