@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.2 1997/12/03 15:34:10 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/static-fn.lisp,v 1.3 1997/12/05 06:55:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,8 +28,6 @@
   (:variant-vars function)
   (:vop-var vop)
   (:node-var node)
-  (:temporary (:sc dword-reg :offset eax-offset :from (:eval 0) :to (:eval 2))
-	      eax)
   (:temporary (:sc dword-reg :offset ebx-offset :from (:eval 0) :to (:eval 2))
 	      ebx)
   (:temporary (:sc dword-reg :offset ecx-offset :from (:eval 0) :to (:eval 2))
@@ -107,27 +105,27 @@
 		;; original ESP, so we fix it up afterwards.
 		(inst add ebp-tn (fixnum 1))))
 	 
-	 ;; Static-function-offset gives the offset from the start of
-	 ;; the nil object to the static function fdefn and has the
-	 ;; low tag of 1 added.  When the nil symbol value with its
-	 ;; low tag of 3 is added the resulting value points to the
-	 ;; entry point of the fdefn (at +4).
-	 (inst mov eax (make-ea :dword
-				:disp (+ nil-value
-					 (static-function-offset function))))
-	 
 	 ,(if (zerop num-args)
 	      '(inst xor ecx ecx)
 	      `(inst mov ecx (fixnum ,num-args)))
 	 
 	 (note-this-location vop :call-site)
+	 ;; Static-function-offset gives the offset from the start of
+	 ;; the nil object to the static function fdefn and has the
+	 ;; low tag of 1 added.  When the nil symbol value with its
+	 ;; low tag of 3 is added the resulting value points to the
+	 ;; raw address slot of the fdefn (at +4).
 	 #-x86-lra
-	 (inst call eax)
+	 (inst call (make-ea :dword
+			     :disp (+ nil-value
+				      (static-function-offset function))))
 	 #+x86-lra
 	 (progn
 	   ;; Push the return address.
 	   (inst push (make-fixup nil :code-object return))
-	   (inst jmp eax)
+	   (inst jmp (make-ea :dword
+			      :disp (+ nil-value
+				       (static-function-offset function))))
 	   (align lowtag-bits #x90)
 	   (inst lra-header-word)
 	   (inst nop)

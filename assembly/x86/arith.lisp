@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.7 1997/12/03 15:40:59 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.8 1997/12/05 06:55:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,9 +40,8 @@
 			     (:temp eax dword-reg eax-offset)
 			     (:temp ebx dword-reg ebx-offset)
 			     (:temp ecx dword-reg ecx-offset))
-    ;; for now, pass this off
-    ;; (inst jmp DO-STATIC-FUN)
-    ;; ebx ; ignorable
+    (declare (ignorable ebx))
+
     (inst test x 3)			; fixnum?
     (inst jmp :nz DO-STATIC-FUN)	; no - do generic
     (inst test y 3)			; fixnum?
@@ -55,13 +54,9 @@
     (inst sub esp-tn (fixnum 2))
     (inst push eax)			; callers return addr
     (inst mov ecx (fixnum 2))		; arg count
-
-    (inst mov ebx
-	  (make-ea :dword
-		   :disp (+ nil-value (static-function-offset
-				       ',(symbolicate "TWO-ARG-" fun)))))
-    
-    (inst jmp ebx)
+    (inst jmp (make-ea :dword
+	       	       :disp (+ nil-value (static-function-offset
+					   ',(symbolicate "TWO-ARG-" fun)))))
     
     DO-BODY
     ,@body))
@@ -154,11 +149,8 @@
   (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 1))		; arg count
-
-  (inst mov eax
-	(make-ea :dword
-		 :disp (+ nil-value (static-function-offset '%negate))))
-  (inst jmp eax)
+  (inst jmp (make-ea :dword
+		     :disp (+ nil-value (static-function-offset '%negate))))
   
   FIXNUM
   (move res x)
@@ -204,22 +196,20 @@
     (inst sub esp-tn (fixnum 2))
     (inst push eax)
     (inst mov ecx (fixnum 2))
-
-    (inst mov eax (make-ea :dword
-			   :disp (+ nil-value
-				    (static-function-offset ',static-fn))))
+    (inst jmp (make-ea :dword
+	       	       :disp (+ nil-value
+				(static-function-offset ',static-fn))))
+    
+    DO-COMPARE
+    (inst cmp x y)
+    (inst jmp ,test TRUE)
+    (inst mov res nil-value)
+    (inst pop eax)
+    (inst add eax 2)
     (inst jmp eax)
     
-     DO-COMPARE
-     (inst cmp x y)
-     (inst jmp ,test TRUE)
-     (inst mov res nil-value)
-     (inst pop eax)
-     (inst add eax 2)
-     (inst jmp eax)
-
-     TRUE
-     (load-symbol res t)))
+    TRUE
+    (load-symbol res t)))
 
 ); eval-when
 
@@ -259,10 +249,8 @@
   (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 2))
-
-  (inst mov eax (make-ea :dword
-			 :disp (+ nil-value (static-function-offset 'eql))))
-  (inst jmp eax)
+  (inst jmp (make-ea :dword
+		     :disp (+ nil-value (static-function-offset 'eql))))
   
   RETURN-T
   (load-symbol res t))
@@ -300,10 +288,8 @@
   (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 2))
-
-  (inst mov eax (make-ea :dword
-		 :disp (+ nil-value (static-function-offset 'two-arg-=))))
-  (inst jmp eax)
+  (inst jmp (make-ea :dword
+		     :disp (+ nil-value (static-function-offset 'two-arg-=))))
   
   RETURN-T
   (load-symbol res t))
