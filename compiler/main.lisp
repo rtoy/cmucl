@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.111 1999/02/25 13:03:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.112 1999/11/25 15:54:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,6 @@
 (proclaim '(special *constants* *free-variables* *compile-component*
 		    *code-vector* *next-location* *result-fixups*
 		    *free-functions* *source-paths*
-		    *seen-blocks* *seen-functions* *list-conflicts-table*
 		    *continuation-number* *continuation-numbers*
 		    *number-continuations* *tn-id* *tn-ids* *id-tns*
 		    *label-ids* *label-id* *id-labels*
@@ -503,11 +502,6 @@
     (clrhash *free-functions*)
     (clrhash *free-variables*)
     (clrhash *constants*))
-  ;;
-  ;; Clear debug counters and tables.
-  (clrhash *seen-blocks*)
-  (clrhash *seen-functions*)
-  (clrhash *list-conflicts-table*)
 
   (when debug-too
     (clrhash *continuation-numbers*)
