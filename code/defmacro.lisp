@@ -389,10 +389,10 @@
   of the calling form containing keywords.  LEGAL is the list of legal
   keywords.  If the keyword :allow-other-keyws is present in KEYLIST,
   just return without complaining about anything."
-  (cond ((memq ':allow-other-keys keylist) nil)
+  (cond ((member ':allow-other-keys keylist :test #'eq) nil)
 	(t (do ((kl keylist (cddr kl)))
 	       ((atom kl) nil)
-	     (cond ((memq (car kl) legal))
+	     (cond ((member (car kl) legal :test #'eq))
 		   (t (cerror "Ignore it."
 			      "~S illegal or unknown keyword." (car kl))))))))
 

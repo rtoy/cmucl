@@ -15,6 +15,12 @@
 	  gethash remhash maphash clrhash
 	  hash-table-count sxhash))
 
+;;; Vector subtype codes.
+
+(defconstant valid-hashing 2)
+(defconstant must-rehash 3)
+
+
 ;;; What a hash-table is:
 
 (defstruct (hash-table (:constructor make-hash-table-structure)
@@ -132,7 +138,7 @@
 		     (setf (hash-table-table structure) new-vector)))
 	      (if (not (eq (hash-table-kind structure) 'equal))
 		  (%primitive set-vector-subtype new-vector
-			      (+ 2 (%primitive newspace-bit)))))))
+			      valid-hashing)))))
     (declare (fixnum i size))
     (do ((bucket (aref hash-vector i) (cdr bucket)))
 	((null bucket))
@@ -178,8 +184,7 @@
 (defmacro eq-rehash-if-needed ()
   `(let ((subtype (%primitive get-vector-subtype vector)))
      (declare (fixnum subtype))
-     (cond ((or (= subtype 4)
-		(/= subtype (+ 2 (%primitive newspace-bit))))
+     (cond ((/= subtype valid-hashing)
 	    (rehash hash-table vector size)
 	    (setq vector (hash-table-table hash-table)))
 	   ((> (hash-table-number-entries hash-table)
@@ -200,8 +205,7 @@
 	 (size (length vector)))
      (declare (fixnum subtype size))
      (cond ((and (not (eq (hash-table-kind hash-table) 'equal))
-		 (or (= subtype 4)
-		     (/= subtype (the fixnum (+ 2 (the fixnum (%primitive newspace-bit)))))))
+		 (/= subtype valid-hashing))
 	    (rehash hash-table vector size)
 	    (setq vector (hash-table-table hash-table))
 	    (setq size (length vector)))
@@ -222,7 +226,7 @@
   (cond ((eq test #'eq) (setq test 'eq))
 	((eq test #'eql) (setq test 'eql))
 	((eq test #'equal) (setq test 'equal)))
-  (if (not (memq test '(eq eql equal)))
+  (if (not (member test '(eq eql equal) :test #'eq))
       (error "~S is an illegal :Test for hash tables." test))
   (setq size (if (<= size 37) 37 (almost-primify size)))
   (cond ((null rehash-threshold)
@@ -236,8 +240,8 @@
 			     (if (eq test 'equal)
 				 (make-array size)
 				 (%primitive set-vector-subtype
-				  (make-array size)
-				  (the fixnum (+ 2 (the fixnum (%primitive newspace-bit))))))
+					     (make-array size)
+					     valid-hashing))
 			     :kind test)))
 
 ;;; Manipulating hash tables:
@@ -362,7 +366,7 @@
   (let ((n-x (gensym)))
     `(let ((,n-x ,x))
        (declare (fixnum ,n-x))
-       (abs (logxor (the fixnum (%primitive lsh ,n-x ,num)) ,n-x)))))
+       (abs (logxor (the fixnum (ash ,n-x ,num)) ,n-x)))))
 
 (defmacro sxhash-simple-string (sequence)
   `(%primitive sxhash-simple-string ,sequence))
@@ -373,8 +377,7 @@
 	(end (gensym)))
     `(with-array-data ((,data ,sequence)
 		       (,start)
-		       (,end (%primitive header-ref ,sequence
-					 %array-fill-pointer-slot)))
+		       (,end))
        (if (zerop ,start)
 	   (%primitive sxhash-simple-substring ,data ,end)
 	   (sxhash-simple-string (coerce (the string ,sequence)
@@ -425,5 +428,6 @@
 			     (internal-sxhash (denominator s-expr) 0))))
        (complex (the fixnum (+ (internal-sxhash (realpart s-expr) 0)
 			       (internal-sxhash (imagpart s-expr) 0))))))
+    #+nil
     (compiled-function (%primitive header-length s-expr))
     (t (%primitive make-fixnum s-expr))))

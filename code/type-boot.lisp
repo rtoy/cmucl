@@ -24,7 +24,7 @@
 ;;;
 (defun pathnamep (x)
   (and (structurep x)
-       (eq (%primitive header-ref x %g-vector-structure-name-slot)
+       (eq (%primitive structure-ref x 0)
 	   'pathname)))
 
 ;;; Define so that we can test for VOLATILE-INFO-ENVs from the beginning of
@@ -32,7 +32,7 @@
 ;;;
 (defun volatile-info-env-p (x)
   (and (structurep x)
-       (eq (%primitive header-ref x %g-vector-structure-name-slot)
+       (eq (%primitive structure-ref x 0)
 	   'volatile-info-env)))
 
 
