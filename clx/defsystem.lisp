@@ -371,10 +371,8 @@
 ;;;
 #+:CMU
 (defun clx-foreign-files ()
-  (ext:def-c-type c-string (ext::null-terminated-string 256))
-  (ext:def-c-pointer *c-string c-string)
   (ext:def-c-routine ("connect_to_server" xlib::connect-to-server) (ext:int)
-    (host *c-string)
+    (host system:null-terminated-string)
     (port ext:int)))
 
 
