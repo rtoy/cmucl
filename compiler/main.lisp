@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.55 1992/03/23 14:47:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.56 1992/03/29 21:38:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -819,20 +819,19 @@
 ;;;
 (defun convert-and-maybe-compile (form path)
   (declare (list path))
-  ;;
-  ;; This W/O GC is pretty much of a hack, and should be replaced with a less
-  ;; drastic GC procrastination mechanism.  The problem is that in addition to
-  ;; wasting time GC'ing during a compilation (when there is lots of dynamic
-  ;; stuff), it also seems to cause a memory leak.
-  (without-gcing
-    (let* ((*lexical-environment*
-	    (make-lexenv :cookie *default-cookie*
-			 :interface-cookie *default-interface-cookie*))
-	   (tll (ir1-top-level form path nil)))
-      (cond ((eq *block-compile* t) (push tll *top-level-lambdas*))
-	    (t
-	     (compile-top-level (list tll) nil))))))
-
+  (let ((orig (bytes-consed-between-gcs)))
+    (unwind-protect
+	(progn
+	  (setf (bytes-consed-between-gcs) (* orig 4))
+	  (let* ((*lexical-environment*
+		  (make-lexenv :cookie *default-cookie*
+			       :interface-cookie *default-interface-cookie*))
+		 (tll (ir1-top-level form path nil)))
+	    (cond ((eq *block-compile* t) (push tll *top-level-lambdas*))
+		  (t
+		   (compile-top-level (list tll) nil)))))
+      (system:scrub-control-stack)
+      (setf (bytes-consed-between-gcs) orig))))
 
 ;;; PROCESS-PROGN  --  Internal
 ;;;
