@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.29 2003/08/08 11:37:21 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.30 2003/08/31 10:50:15 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,7 +248,7 @@
 	   (type (unsigned-byte 32) length)
            (type (integer 1 7) prot)
 	   (type (unsigned-byte 32) flags)
-	   (type unix-fd fd)
+	   (type (or null unix-fd) fd)
 	   (type (signed-byte 32) offset))
   (syscall ("mmap" system-area-pointer size-t int int int off-t)
 	   (sys:int-sap result)

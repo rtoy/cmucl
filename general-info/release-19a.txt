@@ -169,6 +169,9 @@ New in this release:
      - FFLOOR and FCEILING return types sometimes being inferred as
        being the nil type.
      - PARSE-TIME accepting GMT offsets with a leading plus sign.
+     - UNIX-MMAP not accepting a null fd, preventing anonymous
+       mappings.
+     - SIGPROF having the wrong value on GNU/Linux.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword

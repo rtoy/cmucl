@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.34 2002/11/14 16:54:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.35 2003/08/31 10:50:15 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,7 +138,7 @@
 (def-unix-signal :SIGVTALRM #-(or hpux svr4) 26 #+hpux 20 #+svr4 28
     "Virtual time alarm")
 (def-unix-signal :SIGPROF #-(or hpux svr4 linux) 27 #+hpux 21 #+svr4 29
-  #+linux 30 "Profiling timer alarm")
+  #+linux 27 "Profiling timer alarm")
 (def-unix-signal :SIGWINCH #-(or hpux svr4) 28 #+hpux 23 #+svr4 20
     "Window size change")
 (def-unix-signal :SIGUSR1 #-(or hpux svr4 linux) 30 #+(or hpux svr4) 16
