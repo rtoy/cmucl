@@ -268,6 +268,9 @@
   ;;    The following location is the supplied-p value for the preceding
   ;;    keyword or optional.
   ;;
+  ;; OPTIONAL-ARGS
+  ;;    Indicates that following unqualified args are optionals, not required.
+  ;;
   ;; REST-ARG
   ;;    The following location holds the list of rest args.
   ;;
