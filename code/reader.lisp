@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.11 1992/02/12 01:33:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.12 1992/02/14 17:46:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -997,6 +997,7 @@
       (setq package (read-buffer-to-string))
 
       (reset-read-buffer)
+      (setq escapes ())
       (setq char (read-char stream nil nil))
       (unless char (reader-eof-error stream "after reading a colon"))
       (case (char-class char attribute-table)
@@ -1025,26 +1026,26 @@
 	(t (go SYMBOL)))
       RETURN-SYMBOL
       (casify-read-buffer escapes)
-      (let ((package (if package (find-package package) *package*)))
-	(unless package
+      (let ((found (if package (find-package package) *package*)))
+	(unless found
 	  (error 'reader-package-error :stream stream
 		 :format-arguments (list package)
 		 :format-control "Package ~S not found."))
 
-	(if (or (zerop colons) (= colons 2) (eq package *keyword-package*))
-	    (return (intern* read-buffer ouch-ptr package))
+	(if (or (zerop colons) (= colons 2) (eq found *keyword-package*))
+	    (return (intern* read-buffer ouch-ptr found))
 	    (multiple-value-bind (symbol test)
-				 (find-symbol* read-buffer ouch-ptr package)
+				 (find-symbol* read-buffer ouch-ptr found)
 	      (when (eq test :external) (return symbol))
 	      (let ((name (read-buffer-to-string)))
 		(with-simple-restart (continue "Use symbol anyway.")
 		  (error 'reader-package-error :stream stream
-			 :format-arguments (list name (package-name package))
+			 :format-arguments (list name (package-name found))
 			 :format-control
 			 (if test
 			     "The symbol ~S is not external in the ~A package."
 			     "Symbol ~S not found in the ~A package.")))
-		(return (intern name package)))))))))
+		(return (intern name found)))))))))
 
 
 (defun read-extended-token (stream &optional (*readtable* *readtable*))
