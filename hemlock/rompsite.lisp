@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.29 1993/08/19 13:57:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.30 1993/09/14 12:18:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -709,21 +709,26 @@
 ;;; not defined in some file, then nil is returned.
 ;;; 
 (defun fun-defined-from-pathname (function)
-  "Takes a symbol or function and returns the pathname for the file the function
-   was defined in.  If it was not defined in some file, nil is returned."
-  (typecase function
-    (symbol (fun-defined-from-pathname (fdefinition function)))
-    (compiled-function
-     (let ((info (kernel:%code-debug-info
-		  (kernel:function-code-header
-		   (kernel:%function-self function)))))
-       (when info
-	 (let ((sources (c::compiled-debug-info-source info)))
-	   (when sources
-	     (let ((source (car sources)))
-	       (when (eq (c::debug-source-from source) :file)
-		 (c::debug-source-name source))))))))
-    (t nil)))
+  "Takes a symbol or function and returns the pathname for the file the
+   function was defined in.  If it was not defined in some file, nil is
+   returned."
+  (flet ((frob (code)
+	   (let ((info (kernel:%code-debug-info code)))
+	     (when info
+	       (let ((sources (c::debug-info-source info)))
+		 (when sources
+		   (let ((source (car sources)))
+		     (when (eq (c::debug-source-from source) :file)
+		       (c::debug-source-name source)))))))))
+    (typecase function
+      (symbol (fun-defined-from-pathname (fdefinition function)))
+      (kernel:byte-closure
+       (fun-defined-from-pathname (kernel:byte-closure-function function)))
+      (kernel:byte-function
+       (frob (c::byte-function-component function)))
+      (function
+       (frob (kernel:function-code-header (kernel:%function-self function))))
+      (t nil))))
 
 
 (defvar *editor-describe-stream*
