@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.32 1992/03/14 12:05:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.33 1992/04/02 02:28:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -690,7 +690,8 @@
 		 (loop
 		   (pprint-pop)
 		   (let ((slot (pop slots)))
-		     (princ (dsd-%name slot) stream)
+		     (write-char #\: stream)
+		     (output-symbol-name (dsd-%name slot) stream)
 		     (write-char #\space stream)
 		     (pprint-newline :miser stream)
 		     (output-object (structure-ref structure (dsd-index slot))
@@ -713,7 +714,8 @@
 		    (write-string "...)" stream)))
 	     (declare (type index index))
 	     (write-char #\space stream)
-	     (princ (dsd-%name (car slots)) stream)
+	     (write-char #\: stream)
+	     (output-symbol-name (dsd-%name (car slots)) stream)
 	     (write-char #\space stream)
 	     (output-object (structure-ref structure index) stream))))))
 
