@@ -22,27 +22,27 @@
 ;;; table.  If the node has been deleted or is no longer a known call, then do
 ;;; nothing; some other optimization must have gotten to it.
 ;;;
-(proclaim '(function note-failed-optimization (combination (or list ctype))
-		     void))
-(defun note-failed-optimization (node what)
+(defun note-failed-optimization (node failures)
+  (declare (type combination node) (list failures))
   (unless (or (node-deleted node)
 	      (not (function-info-p (combination-kind node))))
     (let ((*compiler-error-context* node))
-      (cond ((listp what)
-	     (compiler-note "Unable to optimize because:~%~6T~?"
-			    (first what) (rest what)))
-	    (t
-	     (collect ((messages))
-	       (flet ((frob (string &rest stuff)
-			(messages string)
-			(messages stuff)))
-		 (valid-function-use node what
-				     :warning-function #'frob
-				     :error-function #'frob))
-	       
-	       (compiler-note "Unable to optimize due to type uncertainty:~@
-	                       ~{~6T~?~^~&~}"
-			      (messages))))))))
+      (dolist (failure failures)
+	(let ((what (cdr failure)))
+	  (if (consp what)
+	      (compiler-note "Unable to optimize because:~%~6T~?"
+			     (first what) (rest what))
+	      (collect ((messages))
+		(flet ((frob (string &rest stuff)
+			 (messages string)
+			 (messages stuff)))
+		  (valid-function-use node what
+				      :warning-function #'frob
+				      :error-function #'frob))
+		
+		(compiler-note "Unable to optimize due to type uncertainty:~@
+		                ~{~6T~?~^~&~}"
+			       (messages)))))))))
 
 	  
 ;;; Check-Free-Function  --  Interface
