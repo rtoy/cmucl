@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.33 1993/08/15 16:41:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.34 1993/11/30 17:46:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,8 @@
 	  do-external-symbols do-all-symbols apropos apropos-list defpackage))
 
 (in-package "EXTENSIONS")
-(export '(*keyword-package* *lisp-package* *default-package-use-list*))
+(export '(*keyword-package* *lisp-package* *default-package-use-list*
+			    map-apropos))
 
 (in-package "KERNEL")
 (export '(%in-package old-in-package))
@@ -1400,46 +1401,52 @@
 	      (return nil))))
 	(return t))))
 
+;;; MAP-APROPOS -- public (extension).
+;;;
+(defun map-apropos (fun string &optional package external-only)
+  "Call FUN with each symbol that contains STRING.
+  If PACKAGE is supplied then only use symbols present in
+  that package.  If EXTERNAL-ONLY is true then only use
+  symbols exported from the specified package."
+  (let ((string (string-upcase string)))
+    (declare (simple-string string))
+    (flet ((apropos-in-package (package)
+             (if external-only
+                 (do-external-symbols (symbol package)
+                   (if (and (eq (symbol-package symbol) package)
+                            (apropos-search symbol string))
+                       (funcall fun symbol)))
+                 (do-symbols (symbol package)
+                   (if (and (eq (symbol-package symbol) package)
+                            (apropos-search symbol string))
+                       (funcall fun symbol))))))
+      (if (null package)
+          (mapc #'apropos-in-package (list-all-packages))
+          (apropos-in-package (package-or-lose package))))
+    nil))
+
+;;; APROPOS -- public.
+;;; 
 (defun apropos (string &optional package external-only)
   "Briefly describe all symbols which contain the specified String.
   If Package is supplied then only describe symbols present in
   that package.  If External-Only is true then only describe
   external symbols in the specified package."
-  (let ((string (string-upcase string)))
-    (declare (simple-string string))
-    (if (null package)
-	(do-all-symbols (symbol)
-	   (if (apropos-search symbol string)
-	       (briefly-describe-symbol symbol)))
-	(let ((package (package-or-lose package)))
-	  (if external-only
-	      (do-external-symbols (symbol package)
-		(if (apropos-search symbol string)
-		    (briefly-describe-symbol symbol)))
-	      (do-symbols (symbol package)
-		(if (apropos-search symbol string)
-		    (briefly-describe-symbol symbol))))))
-    (values)))
+  (map-apropos #'briefly-describe-symbol string package external-only)
+  (values))
 
+;;; APROPOS-LIST -- public.
+;;; 
 (defun apropos-list (string &optional package external-only)
   "Identical to Apropos, except that it returns a list of the symbols
   found instead of describing them."
-  (let ((string (string-upcase string))
-	(list '()))
-    (declare (simple-string string))
-    (if (null package)
-	(do-all-symbols (symbol)
-	   (if (apropos-search symbol string)
-	       (push symbol list)))
-	(let ((package (package-or-lose package)))
-	  (if external-only
-	      (do-external-symbols (symbol package)
-		(if (apropos-search symbol string)
-		    (push symbol list)))
-	      (do-symbols (symbol package)
-		(if (apropos-search symbol string)
-		    (push symbol list))))))
-    list))
+  (collect ((result))
+    (map-apropos #'(lambda (symbol)
+		     (result symbol))
+		 string package external-only)
+    (result)))
+
+
 
 ;;; Initialization.
 
