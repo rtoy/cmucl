@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.2 1990/10/28 06:40:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.3 1990/10/28 08:21:54 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -23,10 +23,10 @@
 			  (:translate +)
 			  (:policy :safe)
 			  (:save-p t))
-			 ((:arg x descriptor-reg a0-offset)
-			  (:arg y descriptor-reg a1-offset)
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
 
-			  (:res res descriptor-reg a0-offset)
+			  (:res res (descriptor-reg any-reg) a0-offset)
 
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
@@ -59,10 +59,10 @@
 			  (:translate -)
 			  (:policy :safe)
 			  (:save-p t))
-			 ((:arg x descriptor-reg a0-offset)
-			  (:arg y descriptor-reg a1-offset)
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
 
-			  (:res res descriptor-reg a0-offset)
+			  (:res res (descriptor-reg any-reg) a0-offset)
 
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
@@ -95,10 +95,10 @@
 			  (:translate *)
 			  (:policy :safe)
 			  (:save-p t))
-			 ((:arg x descriptor-reg a0-offset)
-			  (:arg y descriptor-reg a1-offset)
+			 ((:arg x (descriptor-reg any-reg) a0-offset)
+			  (:arg y (descriptor-reg any-reg) a1-offset)
 
-			  (:res res descriptor-reg a0-offset)
+			  (:res res (descriptor-reg any-reg) a0-offset)
 
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lo non-descriptor-reg nl1-offset)
