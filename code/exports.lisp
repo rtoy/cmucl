@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.20 1990/05/09 06:48:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.21 1990/05/11 17:51:32 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -30,6 +30,7 @@
   (nuke "INDEX" "LISP")
   (nuke "LEXICAL-ENVIRONMENT" "LISP")
   (nuke "NEGATE" "LISP")
+  (nuke "TYPE-EXPAND" "LISP")
   (nuke "STRUCTURE-TYPE" "XP")
   (nuke "CONCAT-PNAMES" "LISP")
   (nuke "ONCE-ONLY" "COMPILER")
@@ -293,12 +294,13 @@
 	  pathname-type pathname-version pathnamelike sequence-end
 	  single-value-type specifier-type streamlike stringable stringlike
 	  structure-type structure-type-name structure-type-p truth
-	  type-init two-arg-* two-arg-+ two-arg-- two-arg-/ two-arg-/=
-	  two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->= two-arg-and
-	  two-arg-ior two-arg-xor type-difference type-intersect
-	  type-intersection type-specifier type-specifier-symbols
-	  type-union type/= type= types-intersect unboxed-array union-type
-	  union-type-p union-type-types unknown-type unknown-type-p
+	  type-expand type-init two-arg-* two-arg-+ two-arg-- two-arg-/
+	  two-arg-/= two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->=
+	  two-arg-and two-arg-ior two-arg-xor type-difference
+	  type-intersect type-intersection type-specifier
+	  type-specifier-symbols type-union type/= type= types-intersect
+	  unboxed-array union-type union-type-p union-type-types
+	  unknown-type unknown-type-p unknown-type-specifier
 	  values-subtypep values-type values-type-allowp
 	  values-type-intersect values-type-intersection values-type-keyp
 	  values-type-keywords values-type-optional values-type-p
