@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.26 1998/03/21 07:54:38 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.27 1998/03/30 02:41:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2995,7 +2995,7 @@
 	     (inst fldln2)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
-					:offset (- (tn-offset x) 2))))))
+					:offset (1- (tn-offset x)))))))
 	((double-stack descriptor-reg)
 	 (inst fstp fr0)
 	 (inst fstp fr0)
@@ -4015,7 +4015,7 @@
 	     (inst fldln2)
 	     (inst fldd (make-random-tn :kind :normal
 					:sc (sc-or-lose 'double-reg *backend*)
-					:offset (- (tn-offset x) 2))))))
+					:offset (1- (tn-offset x)))))))
 	((long-stack descriptor-reg)
 	 (inst fstp fr0)
 	 (inst fstp fr0)
