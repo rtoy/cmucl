@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.17 2001/02/11 14:22:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.18 2002/01/15 20:43:06 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,7 +243,7 @@
 
 (defparameter fasl-file-implementations
   '(nil "Pmax" "Sparc" "RT" "RT/AFPA" "x86" "HPPA"
-	"Big-endian byte-code" "Little-endian byte-code" "Alpha" "SGI"))
+	"Big-endian byte-code" "Little-endian byte-code" "Alpha" "SGI" "PPC"))
 (defconstant pmax-fasl-file-implementation 1)
 (defconstant sparc-fasl-file-implementation 2)
 (defconstant rt-fasl-file-implementation 3)
