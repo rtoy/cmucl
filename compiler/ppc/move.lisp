@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/move.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/move.lisp,v 1.4 2004/08/08 11:18:07 rtoy Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -239,6 +239,7 @@
 ;;; Check for fixnum, and possibly allocate one or two word bignum result.  Use
 ;;; a worst-case cost to make sure people know they may be number consing.
 ;;;
+#+nil
 (define-vop (move-from-unsigned)
   (:args (arg :scs (signed-reg unsigned-reg) :target x))
   (:results (y :scs (any-reg descriptor-reg)))
@@ -265,6 +266,33 @@
 	(inst li temp (logior (ash 2 type-bits) bignum-type))
 	(emit-label one-word)
 	(storew temp y 0 other-pointer-type)
+	(storew x y bignum-digits-offset other-pointer-type))
+      (emit-label done))))
+
+(define-vop (move-from-unsigned)
+  (:args (arg :scs (signed-reg unsigned-reg) :target x))
+  (:results (y :scs (any-reg descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+  (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
+  (:note "unsigned word to integer coercion")
+  (:generator 20
+    (move x arg)
+    (let ((done (gen-label))
+	  (one-word (gen-label))
+	  (initial-alloc (pad-data-block (+ 2 bignum-digits-offset))))
+      (inst srawi. temp x 29)
+      (inst slwi y x 2)
+      (inst beq done)
+
+      ;; We always allocate 2 words even if we don't need it.  (The
+      ;; copying GC will take care of freeing the unused extra word.)
+      (with-fixed-allocation
+	  (y pa-flag temp bignum-type (+ 2 bignum-digits-offset))
+	(inst cmpwi x 0)
+	(inst li temp (logior (ash 1 type-bits) bignum-type))
+	(inst bge one-word)
+	(inst li temp (logior (ash 2 type-bits) bignum-type))
+	(emit-label one-word)
 	(storew x y bignum-digits-offset other-pointer-type))
       (emit-label done))))
 ;;;
