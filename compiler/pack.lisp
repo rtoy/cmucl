@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.37 1991/06/25 19:41:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.38 1991/07/10 17:52:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -891,6 +891,7 @@
     (if (and (eq target-sb (sc-sb sc))
 	     (or (eq (sb-kind target-sb) :unbounded)
 		 (member loc (sc-locations sc)))
+	     (not (member loc (sc-reserve-locations sc)))
 	     (= (sc-element-size target-sc) (sc-element-size sc))
 	     (not (conflicts-in-sc tn sc loc))
 	     (zerop (mod loc (sc-alignment sc))))
