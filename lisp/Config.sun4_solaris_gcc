@@ -1,12 +1,29 @@
-# For Solaris 2.4 or earlier, remove -DSOLARIS25 from CPPFLAGS.
-# For v8plus support (allows 64-bit integer support on V9 architectures), add -Dv8plus.
-# The -Wa,xarch=v8plus option tells the assembler to accept v8plus instructions 
-# and generate a v8plus object files and executable
+# -*- Mode: makefile -*-
+# These tell gmake where to look for .h, .c and .S files.  Mostly for
+# building the binary outside of the src tree.
 
-CPPFLAGS = -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 -Dv8plus
+
+PATH1 = ../../src/lisp
+vpath %.h .:$(PATH1)
+vpath %.c .:$(PATH1)
+vpath %.S .:$(PATH1)
+
+# For Solaris 2.4 or earlier, remove -DSOLARIS25 from CPPFLAGS.
+
+# For v8plus support (allows 64-bit integer support on V9
+# architectures), uncomment the definitions for CC_V8PLUS and
+# AS_V8PLUS.  The -Wa,xarch=v8plus option tells the assembler to
+# accept v8plus instructions and generate a v8plus object files and
+# executable
+
+#CC_V8PLUS = -xarch=v8plus
+#AS_V8PLUS = -Wa
+
+CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS)
 CC = gcc
 CPP = gcc -E
-CFLAGS = -g -O3 -Wa,-xarch=v8plus
+CFLAGS = -g -O3 $(AS_V8PLUS)
+
 # Needed for sys/asm_linkage.h and sparc-assem.S (at least in 2.3)
 # Note that the sys/asm_linkage.h braindamage breaks make depend
 ASFLAGS = -g -traditional-cpp
