@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.17 1993/08/05 17:17:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.18 1994/02/14 11:51:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,6 +104,7 @@
   (vm:instance-usage :dynamic :top-n 10)
   (vm:instance-usage :static :top-n 10))
 
+
 (defun room (&optional (verbosity :default))
   "Prints to *STANDARD-OUTPUT* information about the state of internal
   storage and its management.  The optional argument controls the
@@ -113,16 +114,18 @@
   an intermediate amount of information.  See also VM:MEMORY-USAGE and
   VM:INSTANCE-USAGE for finer report control."
   (fresh-line)
-  (case verbosity
-    ((t)
-     (room-maximal-info))
-    ((nil)
-     (room-minimal-info))
-    (:default
-     (room-intermediate-info))
-    (t
-     (error "No way man!  The optional argument to ROOM must be T, NIL, ~
-     or :DEFAULT.~%What do you think you are doing?")))
+  (if (fboundp 'vm:memory-usage)
+      (case verbosity
+	((t)
+	 (room-maximal-info))
+	((nil)
+	 (room-minimal-info))
+	(:default
+	 (room-intermediate-info))
+	(t
+	 (error "No way man!  The optional argument to ROOM must be T, NIL, ~
+		 or :DEFAULT.~%What do you think you are doing?")))
+      (room-minimal-info))
   (values))
 
 
