@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.26 1993/07/10 16:14:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.27 1993/07/17 00:52:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,12 +26,14 @@
 		 basic-structure-class-print-function
 		 structure-class-make-load-form-fun find-layout
 		 class-proper-name class-layout class-state class-subclasses
-		 class-init register-layout
+		 class-pcl-class class-init register-layout
 		 basic-structure-class funcallable-instance
 		 funcallable-structure-class
 		 make-funcallable-structure-class
 		 funcallable-structure-class-p make-standard-class
-		 random-pcl-class make-random-pcl-class))
+		 random-pcl-class make-random-pcl-class
+		 built-in-class-direct-superclasses
+		 find-class-cell class-cell-name class-cell-class))
 
 (in-package "LISP")
 (export '(class structure-class standard-class class-name find-class class-of
@@ -83,7 +85,8 @@
 		      (print-unreadable-object (s stream :identity t)
 			(format stream "Layout for ~S~@[, Invalid=~S~]"
 				(layout-class s) (layout-invalid s)))))
-		   (:make-load-form-fun :ignore-it))
+		   (:make-load-form-fun :ignore-it)
+		   (:constructor %make-layout))
   ;;
   ;; Some hash bits for this layout.  Sleazily accessed via %INSTANCE-REF, see
   ;; LAYOUT-HASH.
@@ -126,6 +129,19 @@
   ;;
   ;; ### this slot is known to the C startup code.
   (pure nil :type boolean))
+
+;;; MAKE-LAYOUT  --  Interface
+;;;
+;;;    Make a layout and initialize it.  If type system is initialized
+;;; (actually, the top-level forms for RANDOM run), then initialize the hash
+;;; now, otherwise, delay initialization.
+;;;
+(defun make-layout (&rest args &key &allow-other-keys)
+  (let ((res (apply #'%make-layout args)))
+    (if *type-system-initialized*
+	(initialize-layout-hash res)
+	(push res *layout-hash-inits*))
+    res))
 
 (defconstant layout-hash-length 8)
 (declaim (inline layout-hash))
@@ -224,8 +240,11 @@
 (defstruct (built-in-class (:include class))
   ;;
   ;; Type we translate to on parsing.  If NIL, then this class stands on its
-  ;; own.  Only :INITIALIZING during for a period during cold-load.  See below. 
-  (translation nil :type (or ctype (member nil :initializing))))
+  ;; own.  Only :INITIALIZING during for a period during cold-load.  See below.
+  (translation nil :type (or ctype (member nil :initializing)))
+  ;;
+  ;; Direct superclasses of this class.
+  (direct-superclasses () :type list))
 
 
 ;;; STRUCTURE-CLASS represents what we need to know about structure classes.
@@ -258,13 +277,31 @@
 
 ;;;; Class namespace:
 
+;;; FIND-CLASS-CELL, CLASS-CELL-NAME, CLASS-CELL-CLASS  --  Interface
+;;;
+;;;    We use an indirection to allow forward referencing of class definitions
+;;; with load-time resolution.
+;;;
+(defstruct (class-cell (:constructor make-class-cell (name &optional class)))
+  ;;
+  ;; Name of class we expect to find.
+  (name nil :type symbol :read-only t)
+  ;;
+  ;; Class or NIL if not yet defined.
+  (class nil :type (or class null)))
+
+(defun find-class-cell (name)
+  (or (info type class name)
+      (setf (info type class name) (make-class-cell name))))
+
+
 ;;; FIND-CLASS  --  Public
 ;;;
 (defun find-class (name &optional (errorp t) environment)
   "Return the class with the specified Name.  If ERRORP is false, then NIL is
    returned when no such class exists."
   (declare (type symbol name) (ignore environment))
-  (let ((res (info type class name)))
+  (let ((res (class-cell-class (find-class-cell name))))
     (if (or res (not errorp))
 	res
 	(error "Class not yet defined:~%  ~S" name))))
@@ -274,7 +311,7 @@
   (ecase (info type kind name)
     ((nil))
     (:instance
-     (let ((old (class-of (info type class name)))
+     (let ((old (class-of (find-class name)))
 	   (new (class-of new-value)))
        (unless (eq old new)
 	 (warn "Changing meta-class of ~S from ~S to ~S."
@@ -289,7 +326,7 @@
   (remhash name *forward-referenced-layouts*)
   (%note-type-defined name)
   (setf (info type kind name) :instance)
-  (setf (info type class name) new-value))
+  (setf (class-cell-class (find-class-cell name)) new-value))
 
 
 ;;; INSURED-FIND-CLASS  --  Interface
@@ -425,6 +462,9 @@
 ;;; :INHERITS (default this class & T)
 ;;;     The class-precedence list for this class, with this class and T
 ;;;     implicit.
+;;;
+;;; :DIRECT-SUPERCLASSES (default to head of CPL)
+;;;     List of the direct superclasses of this class.
 ;;; 
 
 (defvar built-in-classes)
@@ -461,9 +501,11 @@
 	  (generic-sequence :inherits (collection)  :state :read-only)
 	  (mutable-explicit-key-collection
 	   :state :read-only
+	   :direct-superclasses (explicit-key-collection mutable-collection)
 	   :inherits (explicit-key-collection mutable-collection collection))
 	  (mutable-sequence
 	   :state :read-only
+	   :direct-superclasses (mutable-collection generic-sequence)
 	   :inherits (mutable-collection generic-sequence collection))
 	  (sequence
 	   :translation (or cons (member nil) vector)
@@ -577,11 +619,11 @@
 		      mutable-collection generic-sequence collection))
 
 	  (generic-number :state :read-only)
-	  (number :translation number)
+	  (number :translation number :inherits (generic-number))
 	  (complex :translation complex :inherits (number generic-number)
 		   :codes (#.vm:complex-type))
 	  (real :translation real :inherits (number generic-number))
-	  (float :translation float :inherits (number generic-number))
+	  (float :translation float :inherits (real number generic-number))
 	  (single-float
 	   :translation single-float
 	   :inherits (float real number generic-number)
@@ -618,7 +660,8 @@
 			   generic-sequence collection))
 	  (null :translation (member nil)
 		:inherits (list sequence mutable-sequence mutable-collection
-			   generic-sequence collection symbol)))))
+			   generic-sequence collection symbol)
+		:direct-superclasses (list symbol)))))
 
 ;;; See also type-init.lisp where we finish setting up the translations for
 ;;; built-in types.
@@ -626,18 +669,24 @@
 (cold-load-init
   (dolist (x built-in-classes)
     (destructuring-bind (name &key (translation nil trans-p) inherits codes
-			      enumerable state (hierarchical t))
+			      enumerable state (hierarchical t)
+			      (direct-superclasses
+			       (if inherits (list (car inherits)) '(t))))
 			x
       (declare (ignore codes state translation))
-      (let ((class (make-built-in-class
+      (let ((inherits (if (eq name 't)
+			  ()
+			  (cons 't (reverse inherits))))
+	    (class (make-built-in-class
 		    :enumerable enumerable
 		    :name name
-		    :translation (if trans-p :initializing nil)))
-	    (inherits (if (eq name 't)
-			  ()
-			  (cons 't (reverse inherits)))))
+		    :translation (if trans-p :initializing nil)
+		    :direct-superclasses
+		    (if (eq name 't)
+			()
+			(mapcar #'find-class direct-superclasses)))))
 	(setf (info type kind name) :primitive)
-	(setf (info type class name) class)
+	(setf (class-cell-class (find-class-cell name)) class)
 	(unless trans-p
 	  (setf (info type builtin name) class))
 	(let* ((inheritance-depth (if hierarchical (length inherits) -1))
@@ -879,9 +928,6 @@
 			   :inherits inherits
 			   :inheritance-depth depth
 			   :length length)))
-    (if *type-system-initialized*
-	(initialize-layout-hash res)
-	(push res *layout-hash-inits*))
     (cond ((not old)
 	   (setf (gethash name *forward-referenced-layouts*) res))
 	  ((not *type-system-initialized*)
