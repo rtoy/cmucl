@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.54 2003/05/07 16:59:30 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.55 2003/05/09 17:09:52 gerd Exp $")
 
 (in-package :pcl)
 
@@ -375,13 +375,14 @@ work during bootstrapping.
 
 (defvar *inline-access*)
 (defvar *method-source-info*)
+(defvar *make-method-lambda-gf-name* nil)
 
 (defun expand-defmethod (name proto-gf proto-method qualifiers
 			 lambda-list body env)
-  (let ((*inline-access* ()))
+  (let ((*inline-access* ())
+	(*make-method-lambda-gf-name* name))
     (multiple-value-bind (method-lambda unspecialized-lambda-list specializers)
 	(add-method-declarations name qualifiers lambda-list body env)
-
       (let* ((auto-compile-p (auto-compile-p name qualifiers specializers))
 	     (*method-source-info*
 	      (when (and auto-compile-p
@@ -389,10 +390,8 @@ work during bootstrapping.
 			     (and (null (c::lexenv-functions env))
 				  (null (c::lexenv-variables env)))))
 		(list (copy-tree body) lambda-list))))
-	
 	(multiple-value-bind (method-function-lambda initargs)
 	    (make-method-lambda proto-gf proto-method method-lambda env)
-
 	  (when (and *inline-access*
 		     auto-compile-p
 		     env
@@ -403,7 +402,6 @@ work during bootstrapping.
                    non-null lexical environment means that it cannot be ~
                    automatically recompiled.~@:>"
 		  name qualifiers lambda-list))
-
 	  (let ((initargs-form (make-method-initargs-form 
 				proto-gf proto-method
 				method-function-lambda initargs env)))
@@ -560,6 +558,11 @@ work during bootstrapping.
       (when (and (consp form) (eq (car form) name))
 	(return-from get-declaration (cdr form))))))
 
+(defun gf-key-p (gf-name)
+  (let ((info (and gf-name (info function type gf-name))))
+    (and (kernel::function-type-p info)
+	 (kernel::function-type-keyp info))))
+  
 (defun make-method-lambda-internal (method-lambda &optional env)
   (unless (and (consp method-lambda) (eq (car method-lambda) 'lambda))
     (error "~@<The ~s argument to ~s, ~s, is not a lambda form.~@:>"
@@ -573,6 +576,7 @@ work during bootstrapping.
 	   (specialized-lambda-list (or sll-decl (cadr method-lambda))))
       (multiple-value-bind (parameters lambda-list specializers)
 	  (parse-specialized-lambda-list specialized-lambda-list)
+	;;
 	(let* ((required-parameters
 		(mapcar (lambda (r s) (declare (ignore s)) r)
 			parameters
@@ -654,6 +658,20 @@ work during bootstrapping.
 			    `((pv-binding (,required-parameters ,slot-name-lists
 					   ,pv-table-symbol)
 			       ,@walked-lambda-body))))))
+		;;
+		;; When the GF contains &KEY, and the method has no
+		;; &KEY, add &KEY to the method function's
+		;; lambda-list, so that it checks for invalid keyword
+		;; arguments lists.  This is hack that works only for
+		;; methods defined with DEFMETHOD.  Don't know how to
+		;; do any better, though.  MAKE-METHOD-LAMBDA really
+		;; wants a NAME argument telling it the name of the
+		;; generic function for which the method lambda is
+		;; made, or maybe the lambda-list of the generic
+		;; function, or something.
+		(when (and (gf-key-p *make-method-lambda-gf-name*)
+			   (not (memq '&key lambda-list)))
+		  (setq lambda-list (append lambda-list '(&key))))
 		;;
 		;; When the lambda-list contains &KEY but not
 		;; &ALLOW-OTHER-KEYS, insert an &ALLOW-OTHER-KEYS
@@ -1155,7 +1173,7 @@ work during bootstrapping.
   "When true, compile interpreted method functions.")
 
 (defun load-defmethod-internal
-    (method-class gf-spec qualifiers specializers lambda-list 
+    (method-class gf-name qualifiers specializers lambda-list 
      initargs pv-table-symbol inline-access method-info)
   (when pv-table-symbol
     (setf (getf (getf initargs :plist) :pv-table-symbol)
@@ -1171,17 +1189,17 @@ work during bootstrapping.
 		 (let* ((type (ecase key
 				(:fast-function 'fast-method)
 				(:function 'method)))
-			(name `(,type ,gf-spec ,@qualifiers ,specializers)))
+			(name `(,type ,gf-name ,@qualifiers ,specializers)))
 		   (compile name fn)
 		   (setf (getf initargs key) (fdefinition name)))))))
       (maybe-compile :fast-function)
       (maybe-compile :function)))
   ;;
   (let ((method (apply #'add-named-method
-		       gf-spec qualifiers specializers lambda-list
-		       :definition-source `((defmethod ,gf-spec
+		       gf-name qualifiers specializers lambda-list
+		       :definition-source `((defmethod ,gf-name
 						,@qualifiers
-					      ,specializers)
+						,specializers)
 					    ,*load-pathname*)
 		       initargs)))
     ;;
@@ -1195,7 +1213,7 @@ work during bootstrapping.
                was compiled, the method class for that generic function was ~
                ~S.  But, the method class is now ~S, this ~
                may mean that this method was compiled improperly.~@:>"
-	      qualifiers specializers gf-spec
+	      qualifiers specializers gf-name
 	      method-class (class-name (class-of method))))
     method))
 
