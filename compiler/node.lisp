@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.28 1993/03/12 15:37:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.29 1993/05/06 10:20:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -906,7 +906,8 @@
   (entries () :type list)
   ;;
   ;; A list of all the functions directly called from this function (or one of
-  ;; its lets) using a non-let local call.
+  ;; its lets) using a non-let local call.  May include deleted functions
+  ;; because nobody bothers to clear them out.
   (calls () :type list)
   ;;
   ;; The Tail-Set that this lambda is in.  Null during creation and in let
