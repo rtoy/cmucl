@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.39 2003/05/13 10:16:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.40 2003/05/13 10:49:01 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -548,7 +548,8 @@
 		 (let ((form-or-fn (conditions::condition-slot-initform slot)))
 		   (if (functionp form-or-fn)
 		       `(:initfunction ,form-or-fn)
-		       `(:initform ,form-or-fn))))
+		       `(:initform ,form-or-fn
+			 :initfunction ,(lambda () form-or-fn)))))
 	     :allocation ,(conditions::condition-slot-allocation slot)
 	     :documentation ,(conditions::condition-slot-documentation slot))))
     (cond ((structure-type-p name)

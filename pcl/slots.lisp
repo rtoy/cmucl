@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.23 2003/05/11 11:30:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.24 2003/05/13 10:49:01 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -338,3 +338,6 @@
 	(error "~@<Can't allocate an instance of class ~S.~@:>"
 	       (class-name class)))))
 
+(defmethod allocate-instance ((class condition-class) &rest initargs &key)
+  (declare (ignore initargs))
+  (make-condition (class-name class)))

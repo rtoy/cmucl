@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.11 2003/05/13 10:16:59 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.12 2003/05/13 10:49:01 gerd Exp $")
 
 (in-package "PCL")
 
@@ -286,7 +286,8 @@
     ;; MAKE-INSTANCE and/or ALLOCATE-INSTANCE, these will show up
     ;; together with the system-defined ones in what
     ;; COMPUTE-APPLICABLE-METHODS returns.
-    (or (and (null (cdr make-instance-methods))
+    (or (and (not (condition-class-p class))
+	     (null (cdr make-instance-methods))
 	     (null (cdr allocate-instance-methods))
 	     (null (check-initargs class (plist-keys (ctor-initargs ctor))
 				   (append ii-methods si-methods) nil nil))
