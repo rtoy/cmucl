@@ -38,7 +38,7 @@ endif
 CPPFLAGS = -Dinline= -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
 
 
-CC = cc -O
+CC = cc -O -xlibmieee
 CPP = cc -E
 # -xs so we can use gdb
 CFLAGS = -g $(CC_V8PLUS)
