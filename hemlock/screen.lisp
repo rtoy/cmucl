@@ -176,7 +176,7 @@
   (list (make-modeline-field
 	 :name :more-prompt
 	 :function #'(lambda (buffer window)
-		       (declare (ignore buffer window))
+		       (declare (ignore window))
 		       (ecase *more-prompt-action*
 			 (:more "--More--")
 			 (:flush "--Flush--")
