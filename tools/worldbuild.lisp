@@ -79,7 +79,6 @@
     "target:code/mach-os"
     #+sunos
     "target:code/sunos-os"
-    "target:code/
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"
