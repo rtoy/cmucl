@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.37 2003/06/16 13:07:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.38 2004/05/04 14:29:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -555,14 +555,21 @@ this, the functions are listed.  If NIL, then always list the functions.")
     (if (minusp compensated) 0.0 compensated)))
 
 
-;; Compute and return the total time, total cons, total-calls, and the
-;; width of the field needed to hold the total time, total cons,
-;; total-calls, and the max time/call.
-(defun compute-totals-and-widths (info)
+(defstruct width-info
+  cons
+  calls
+  time
+  time/call
+  cons/call)
+	   
+;; Compute and return the width of the field needed to hold the total
+;; time, total cons, total-calls, and the max time/call.
+(defun compute-widths (info)
   (let ((total-time 0)
 	(total-cons 0)
 	(total-calls 0)
-	(max-time/call 0))
+	(max-time/call 0)
+	(max-cons/call 0))
     ;; Find the total time, total consing, total calls, and the max
     ;; time/call
     (dolist (item info)
@@ -571,7 +578,10 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	(incf total-cons (time-info-consing item))
 	(incf total-calls (time-info-calls item))
 	(setf max-time/call (max max-time/call
-				 (/ time (float (time-info-calls item)))))))
+				 (/ time (float (time-info-calls item)))))
+	(setf max-cons/call (max max-cons/call
+				 (/ (time-info-consing item)
+				    (float (time-info-calls item)))))))
 
     ;; Figure out the width needed for total-time, total-cons,
     ;; total-calls and the max-time/call.  The total-cons is more
@@ -585,15 +595,19 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	     (if (zerop x)
 		 0.0
 		 (log x 10))))
-      (let ((cons-length (ceiling (safe-log10 total-cons))))
+      (let ((cons-length (ceiling (safe-log10 total-cons)))
+	    (calls-length (ceiling (safe-log10 total-calls)))
+	    (cons/call-len (ceiling (safe-log10 max-cons/call))))
+	;; Adjust these to include the number of commas that will be
+	;; printed.
 	(incf cons-length (floor (safe-log10 total-cons) 3))
-	(values total-time
-		total-cons
-		total-calls
-		(+ 3 (max 7 (ceiling (safe-log10 total-time))))
-		(max 9 cons-length)
-		(max 7 (ceiling (safe-log10 total-calls)))
-		(+ 5 (max 5 (ceiling (safe-log10 max-time/call)))))))))
+	(incf calls-length (floor (safe-log10 total-calls) 3))
+	(incf cons/call-len (floor (safe-log10 max-cons/call) 3))
+	(make-width-info :cons (max 9 cons-length)
+			 :calls (max 7 calls-length)
+			 :time (+ 4 (ceiling (safe-log10 total-time)))
+			 :time/call (+ 6 (max 2 (ceiling (safe-log10 max-time/call))))
+			 :cons/call (max 8 cons/call-len))))))
 
 (defstruct (time-info
 	    (:constructor make-time-info
@@ -610,35 +624,53 @@ this, the functions are listed.  If NIL, then always list the functions.")
   (consed 0)
   (calls 0))
 
-(defun report-times-time (time action)
-  (case action
-    (:head
-     (format *trace-output*
-	     "~&  Consed    |   Calls   |    Secs   | Sec/Call  | Bytes/C.  | Name:~@
-	       -----------------------------------------------------------------------~%")
-     (return-from report-times-time))
+(defun report-times-time (time action &optional field-widths)
+  (multiple-value-bind (time-width cons-width calls-width time/call-width cons/call-width)
+      (if field-widths
+	  (values (width-info-time field-widths)
+		  (width-info-cons field-widths)
+		  (width-info-calls field-widths)
+		  (width-info-time/call field-widths)
+		  (width-info-cons/call field-widths))
+	  (values 9 9 7 10 10))
+    (case action
+      (:head
+       (format *trace-output*
+	       "~&~V@A | ~V@A | ~V@A | ~V@A | ~V@A | Name:~@
+	       -----------------------------------------------------------------------~%"
+	       cons-width "Consed"
+	       calls-width "Calls"
+	       time-width "Secs"
+	       time/call-width "Sec/Call"
+	       cons/call-width "Bytes/C."
+	       )
+       (return-from report-times-time))
 
-    (:tail
-     (format *trace-output*
-	     "-------------------------------------------------------------------~@
-	      ~11:D |~10:D |~10,3F |           |           | Total~%"
-	     (time-totals-consed time) (time-totals-calls time)
-	     (time-totals-time time)))
-    (:sort (sort time #'>= :key #'time-info-time))
-    (:one-function
-     (format *trace-output*
-	     "~11:D |~10:D |~10,3F |~10,5F |~10:D | ~S~%"
-	     (floor (time-info-consing time))
-	     (time-info-calls time)
-	     (time-info-time time)
-	     (/ (time-info-time time) (float (time-info-calls time)))
-	     (round
-	       (/ (time-info-consing time) (float (time-info-calls time))))
-	     (time-info-name time)))
-    (t
-     (error "Unknown action for profiler report: ~s" action))))
+      (:tail
+       (format *trace-output*
+	       "-------------------------------------------------------------------~@
+	      ~V:D | ~V:D | ~V,3F | ~V:A | ~V:A | Total~%"
+	       cons-width (time-totals-consed time)
+	       calls-width (time-totals-calls time)
+	       time-width (time-totals-time time)
+	       time/call-width ""
+	       cons/call-width ""))
+      (:sort (sort time #'>= :key #'time-info-time))
+      (:one-function
+       (format *trace-output*
+	       "~V:D | ~V:D | ~V,3F | ~V,5F | ~V:D | ~S~%"
+	       cons-width (floor (time-info-consing time))
+	       calls-width (time-info-calls time)
+	       time-width (time-info-time time)
+	       time/call-width (/ (time-info-time time) (float (time-info-calls time)))
+	       cons/call-width
+	       (round
+		(/ (time-info-consing time) (float (time-info-calls time))))
+	       (time-info-name time)))
+      (t
+       (error "Unknown action for profiler report: ~s" action)))))
 
-(defun report-times-space (time action)
+(defun report-times-space (time action &optional field-widths)
   (case action
     (:head
      (format *trace-output*
@@ -673,7 +705,8 @@ this, the functions are listed.  If NIL, then always list the functions.")
   (unless (boundp '*call-overhead*)
     (compute-time-overhead))
   (let ((info ())
-	(no-call ()))
+	(no-call ())
+	(widths ()))
     (dolist (name names)
       (let ((pinfo (pi-or-lose name)))
 	(multiple-value-bind (calls time consing consing-w/c profile callers)
@@ -690,7 +723,9 @@ this, the functions are listed.  If NIL, then always list the functions.")
     
     (setq info (funcall printfunction info :sort))
 
-    (funcall printfunction nil :head)
+    (setf widths (compute-widths info))
+
+    (funcall printfunction nil :head widths)
 
     (let ((totals (make-time-totals)))
       (dolist (time info)
@@ -698,7 +733,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	(incf (time-totals-calls totals) (time-info-calls time))
 	(incf (time-totals-consed totals) (time-info-consing time))
 
-	(funcall printfunction time :one-function)
+	(funcall printfunction time :one-function widths)
 
 	(let ((callers (time-info-callers time))
 	      (*print-readably* nil))
@@ -708,7 +743,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	      (print-caller-info (car x) *trace-output*)
 	      (terpri *trace-output*))
 	    (terpri *trace-output*))))
-      (funcall printfunction totals :tail))
+      (funcall printfunction totals :tail widths))
     
     (when no-call
       (setf *no-calls* no-call)
