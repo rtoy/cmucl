@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.226 2003/10/09 19:06:20 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.227 2003/10/09 21:55:45 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -976,7 +976,7 @@
 	   #+sparc
 	   "PSEUDO-ATOMIC-VALUE"
 	   #+sparc
-	   "PSEUDO-ATOMIC-INTERRUPED-VALUE"
+	   "PSEUDO-ATOMIC-INTERRUPTED-VALUE"
 	   "RANDOM-IMMEDIATE-SC-NUMBER" "RATIO-DENOMINATOR-SLOT"
 	   "RATIO-NUMERATOR-SLOT" "RATIO-SIZE" "RATIO-TYPE"
 	   "REGISTER-SAVE-PENALTY" "RETURN-PC-HEADER-TYPE"

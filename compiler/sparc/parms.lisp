@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.45 2003/10/09 19:01:22 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.46 2003/10/09 21:55:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -330,7 +330,7 @@
 
 
 (export '(pseudo-atomic-trap allocation-trap
-	  pseudo-atomic-value pseudo-atomic-interrupted-mask))
+	  pseudo-atomic-value pseudo-atomic-interrupted-value))
 ;;;; Pseudo-atomic trap number.
 ;;;;
 ;;;; This is the trap number to use when a pseudo-atomic section has
