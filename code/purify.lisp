@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.12 1992/02/14 23:45:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.13 1992/03/26 03:18:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,16 +23,19 @@
   (read-only-roots c-call:unsigned-long))
 
 (defun purify (&key root-structures constants)
-  (write-string "[Doing purification: ")
-  (force-output)
-  (without-gcing
-   (clear-auto-gc-trigger)
-   (%purify (get-lisp-obj-address root-structures)
-	    (get-lisp-obj-address constants))
-   (when *gc-trigger*
-     (setf *gc-trigger* *bytes-consed-between-gcs*)
-     (set-auto-gc-trigger *gc-trigger*)))
-  (write-line "Done.]")
-  (force-output)
+  (let ((*gc-notify-before*
+	 #'(lambda (bytes-in-use)
+	     (declare (ignore bytes-in-use))
+	     (write-string "[Doing purification: ")
+	     (force-output)))
+	(*internal-gc*
+	 #'(lambda ()
+	     (%purify (get-lisp-obj-address root-structures)
+		      (get-lisp-obj-address constants))))
+	(*gc-notify-after*
+	 #'(lambda (&rest ignore)
+	     (declare (ignore ignore))
+	     (write-line "Done.]"))))
+    (gc t))
   nil)
 
