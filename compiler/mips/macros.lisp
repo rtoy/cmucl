@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.9 1990/02/16 08:36:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.10 1990/02/18 05:58:53 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -98,7 +98,7 @@
   `(progn
      ,@(mapcar #'(lambda (arg value)
 		   `(move ',arg ,value))
-	       (subseq register-argument-tns 0 (length values))
+	       (subseq register-arg-tns 0 (length values))
 	       values)
      (inst break ,error-code)))
 
@@ -112,3 +112,20 @@
 	 (emit-label start-lab)
 	 (error-call ,error-code ,@values)
 	 start-lab))))
+
+
+;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
+;;;
+(defmacro pseudo-atomic ((ndescr-temp) &rest forms)
+  (let ((label (gensym "LABEL-")))
+    `(let ((,label (gen-label)))
+       (inst ori flags-tn flags-tn (ash 1 atomic-flag))
+       ,@forms
+       (inst andi flags-tn flags-tn (lognot (ash 1 atomic-flag)))
+       (inst andi ,ndescr-temp flags-tn (ash 1 interrupted-flag))
+       (inst beq ,ndescr-temp zero-tn ,label)
+       (nop)
+       (load-foreign ,ndescr-temp "interrupt-resumer")
+       (inst jr ,ndescr-temp)
+       (nop)
+       (emit-label ,label))))
