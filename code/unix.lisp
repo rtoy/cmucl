@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.86 2003/06/06 17:52:45 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.87 2003/06/06 18:41:37 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -859,6 +859,7 @@
 ;; The return value from mmap that means mmap failed.
 (defconstant map_failed -1)
 
+#-freebsd
 (defun unix-mmap (addr length prot flags fd offset)
   (declare (type (or null system-area-pointer) addr)
 	   (type (unsigned-byte 32) length)
@@ -873,6 +874,28 @@
 	 (alien-funcall (extern-alien "mmap" (function int system-area-pointer
 						       size-t int int int off-t))
 			(or addr +null+) length prot flags (or fd -1) offset)))
+    (if (= result map_failed)
+	(values nil unix-errno)
+	(sys:int-sap result))))
+
+#+freebsd
+(defun unix-mmap (addr length prot flags fd offset)
+  (declare (type (or null system-area-pointer) addr)
+	   (type (unsigned-byte 32) length)
+           (type (integer 1 7) prot)
+	   (type (unsigned-byte 32) flags)
+	   (type unix-fd fd)
+	   (type (signed-byte 32) offset))
+  ;; Can't use syscall, because the address that is returned could be
+  ;; "negative".  Hence we explicitly check for mmap returning
+  ;; MAP_FAILED.
+  (let ((result
+	 (alien-funcall
+	  (extern-alien "mmap"
+			(function int system-area-pointer
+				  size-t int int int
+				  unsigned-long unsigned-long))
+	  (or addr +null+) length prot flags (or fd -1) offset 0)))
     (if (= result map_failed)
 	(values nil unix-errno)
 	(sys:int-sap result))))
