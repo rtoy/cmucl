@@ -1,13 +1,9 @@
-RM=rm
-RMDIR=rmdir
-CP=cp
 LATEX=latex
 PDFLATEX=pdflatex
 DVIPS=dvips
 DVIPSRES=1200
 DVIPSOPTS=-t a4 -D $(DVIPSRES)
 RM=rm
-RMDIR=rmdir
 CP=cp
 MV=mv
 
@@ -61,9 +57,8 @@ html : $(MASTERFILE).dvi $(FILES) $(FIGURES)
         -split $(HTML_SPLIT_LEVEL) -transparent -white $(MASTERFILE).tex
 
 clean distclean cvsclean :
-	-$(RM) *.log *.toc *.aux *.dvi *~ *.bak *.ps *.pdf core *.eps
-	-$(RM) design/*
-	-$(RMDIR) design
+	-$(RM) -f *.log *.toc *.aux *.dvi *~ *.bak *.ps *.pdf core *.eps
+	-$(RM) -rf design
 
 .PHONY : allformats
 allformats: $(FILES) $(FIGURES)
