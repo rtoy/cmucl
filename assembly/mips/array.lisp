@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.11 1990/06/22 17:28:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.12 1990/06/22 17:58:04 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -120,7 +120,8 @@
 
 (define-assembly-routine (sxhash-simple-string
 			  ((:translate %sxhash-simple-string)
-			   (:policy :fast-safe))
+			   (:policy :fast-safe)
+			   (:result-types positive-fixnum))
 			  (:arg string descriptor-reg a0-offset)
 			  (:res result any-reg a0-offset)
 
@@ -212,7 +213,9 @@
 
 (define-assembly-routine (sxhash-simple-substring
 			  ((:translate %sxhash-simple-substring)
-			   (:policy :fast-safe))
+			   (:policy :fast-safe)
+			   (:arg-types * positive-fixnum)
+			   (:result-types positive-fixnum))
 			  (:arg string descriptor-reg a0-offset)
 			  (:arg length any-reg a1-offset)
 			  (:res result any-reg a0-offset)
