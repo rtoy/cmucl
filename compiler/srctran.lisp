@@ -260,16 +260,35 @@
 			    nil))))))))
 
 (defoptimizer (ash derive-type) ((n shift))
-  (let ((type (continuation-type n)))
-    (if (and (numeric-type-p type)
-	     (constant-continuation-p shift))
-	(let ((low (numeric-type-low type))
-	      (high (numeric-type-high type))
-	      (shift (continuation-value shift)))
-	  (make-numeric-type :class 'integer  :complexp :real
-			     :low (when low (ash low shift))
-			     :high (when high (ash high shift))))
-	*universal-type*)))
+  (or (let ((n-type (continuation-type n)))
+	(when (numeric-type-p n-type)
+	  (let ((n-low (numeric-type-low n-type))
+		(n-high (numeric-type-high n-type)))
+	    (if (constant-continuation-p shift)
+		(let ((shift (continuation-value shift)))
+		  (make-numeric-type :class 'integer  :complexp :real
+				     :low (when n-low (ash n-low shift))
+				     :high (when n-high (ash n-high shift))))
+		(let ((s-type (continuation-type shift)))
+		  (format *trace-output* "~&n-type: ~S~%s-type: ~S~%"
+			  n-type s-type)
+		  (when (numeric-type-p s-type)
+		    (let ((s-low (numeric-type-low s-type))
+			  (s-high (numeric-type-high s-type)))
+		      (let ((new-type
+	     (if (and s-low s-high (<= s-low 32) (<= s-high 32))
+		 (make-numeric-type :class 'integer  :complexp :real
+				    :low (when n-low
+					   (min (ash n-low s-high)
+						(ash n-low s-low)))
+				    :high (when n-high
+					    (max (ash n-high s-high)
+						 (ash n-high s-low))))
+		 (make-numeric-type :class 'integer
+				    :complexp :real))))
+			(format *trace-output* "new-type: ~S~2%" new-type)
+			new-type))))))))
+      *universal-type*))
 
 
 ;;; Negative-Integer-P  --  Internal
@@ -452,10 +471,25 @@
       (give-up))
     (values size pos)))
 
-(deftransform %ldb ((size pos int) (t t fixnum))
-  (multiple-value-bind (size pos)
-		       (check-fixnum-byte size pos)
-    `(logand (ash int ,(- pos)) ,(ldb (byte size 0) -1))))
+(defun max-value (cont)
+  (if (constant-continuation-p cont)
+      (continuation-value cont)
+      (let ((type (continuation-type cont)))
+	(or (and (numeric-type-p type)
+		 (numeric-type-high type))
+	    (give-up
+	     "Size is not constant and its upper bound is not known.")))))
+
+(deftransform %ldb ((size pos int) (fixnum fixnum integer))
+  (let ((size-len (max-value size)))
+    (unless (<= size-len (integer-length most-positive-fixnum))
+      (format *trace-output* "~&max-size=~D~%" size-len)
+      (give-up "result might be up to ~D bits, can't open code %ldb." size-len))
+    (if (zerop size-len)
+	0
+	`(logand (ash int (- pos))
+		 (ash ,(1- (ash 1 (integer-length most-positive-fixnum)))
+		      (- size ,(integer-length most-positive-fixnum)))))))
 
 (deftransform %dpb ((new size pos int) (t t t fixnum))
   (multiple-value-bind (size pos)
@@ -531,6 +565,69 @@
     (if (minusp y)
 	`(- (ash x ,len))
 	`(ash x ,len))))
+
+;;; If arg is a constant power of two, turn floor into a shift and mask.
+;;; 
+(deftransform floor ((x y) (integer integer))
+  (unless (constant-continuation-p y) (give-up))
+  (let* ((y (continuation-value y))
+	 (y-abs (abs y))
+	 (len (1- (integer-length y-abs))))
+    (unless (= y-abs (ash 1 len)) (give-up))
+    (let ((shift (- len))
+	  (mask (1- y-abs)))
+      (if (minusp y)
+	  `(values (ash (- x) ,shift)
+		   (- (logand (- x) ,mask)))
+	  `(values (ash x ,shift)
+		   (logand x ,mask))))))
+
+;;; Do the same for mod.
+;;;
+(deftransform mod ((x y) (integer integer))
+  (unless (constant-continuation-p y) (give-up))
+  (let* ((y (continuation-value y))
+	 (y-abs (abs y))
+	 (len (1- (integer-length y-abs))))
+    (unless (= y-abs (ash 1 len)) (give-up))
+    (let ((mask (1- y-abs)))
+      (if (minusp y)
+	  `(- (logand (- x) ,mask))
+	  `(logand x ,mask)))))
+
+
+;;; If arg is a constant power of two, turn truncate into a shift and mask.
+;;;
+(deftransform truncate ((x y) (integer integer))
+  (unless (constant-continuation-p y) (give-up))
+  (let* ((y (continuation-value y))
+	 (y-abs (abs y))
+	 (len (1- (integer-length y-abs))))
+    (unless (= y-abs (ash 1 len)) (give-up))
+    (let* ((shift (- len))
+	   (mask (1- y-abs)))
+      `(if (minusp x)
+	   (values ,(if (minusp y)
+			`(ash (- x) ,shift)
+			`(- (ash (- x) ,shift)))
+		   (- (logand (- x) ,mask)))
+	   (values ,(if (minusp y)
+			`(- (ash (- x) ,shift))
+			`(ash x ,shift))
+		   (logand x ,mask))))))
+
+;;; And the same for rem.
+;;;
+(deftransform rem ((x y) (integer integer))
+  (unless (constant-continuation-p y) (give-up))
+  (let* ((y (continuation-value y))
+	 (y-abs (abs y))
+	 (len (1- (integer-length y-abs))))
+    (unless (= y-abs (ash 1 len)) (give-up))
+    (let ((mask (1- y-abs)))
+      `(if (minusp x)
+	   (- (logand (- x) ,mask))
+	   (logand x ,mask)))))
 
 
 ;;;; Character operations:
