@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.123 2003/07/03 17:11:21 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.124 2003/07/26 19:21:24 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3375,31 +3375,32 @@
 		"Too many args (~d) to FORMAT, wants at most ~d"
 		nargs max-args)))))))
 
-(deftransform format ((dest control &rest args) (t simple-string &rest t) *
-		      :policy (> speed space))
-  (unless (constant-continuation-p control)
-    (give-up "Control string is not a constant."))
-  (let ((string (continuation-value control)))
-    (check-format-args string args)
-    (let ((arg-names (mapcar (lambda (x) (declare (ignore x)) (gensym)) args)))
-      `(lambda (dest control ,@arg-names)
-	 (declare (ignore control))
-	 (format dest (formatter ,string) ,@arg-names)))))
-
-(deftransform format ((dest control &rest args) (t simple-string &rest t) *
-		      :policy (<= speed space))
-  (when (constant-continuation-p control)
-    (check-format-args (continuation-value control) args))
-  (give-up))
-
 ;;;
+;;; Note that two DEFTRANSFORMs differing in their :POLICY only cannot
+;;; be defined; one replaces the other.
+;;;
+(deftransform format ((dest control &rest args) (t simple-string &rest t) *)
+  (cond ((policy nil (> speed space))
+	 (unless (constant-continuation-p control)
+	   (give-up "Control string is not a constant."))
+	 (let ((string (continuation-value control)))
+	   (check-format-args string args)
+	   (let ((arg-names (loop repeat (length args) collect (gensym))))
+	     `(lambda (dest control ,@arg-names)
+		(declare (ignore control))
+		(format dest (formatter ,string) ,@arg-names)))))
+	(t
+	 (when (constant-continuation-p control)
+	   (check-format-args (continuation-value control) args))
+	 (give-up))))
+
 (deftransform format ((stream control &rest args) (stream function &rest t) *
 		      :policy (> speed space))
   (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
     `(lambda (stream control ,@arg-names)
        (funcall control stream ,@arg-names)
        nil)))
-;;;
+
 (deftransform format ((tee control &rest args) ((member t) function &rest t) *
 		      :policy (> speed space))
   (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
