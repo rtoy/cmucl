@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.38 2001/04/16 16:11:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.39 2001/09/28 14:56:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -844,12 +844,13 @@
      (,op x (coerce y 'double-float)))
     (((foreach single-float double-float #+long-float long-float) rational)
      ;; Comparing infinity against any rational produces the same
-     ;; answer as comparing infinity against 0.
-     (if (float-infinity-p x)
+     ;; answer as comparing infinity against 0.  Comparison against
+     ;; zero is quite common, so add a special case for that.
+     (if (or (eql y 0) (float-infinity-p x))
 	 (,op x (coerce 0 '(dispatch-type x)))
 	 (,op (rational x) y)))
     (((foreach bignum fixnum ratio) float)
-     (if (float-infinity-p y)
+     (if (or (eql x 0) (float-infinity-p y))
 	 (,op (coerce 0 '(dispatch-type y)) y)
 	 (,op x (rational y))))))
 
