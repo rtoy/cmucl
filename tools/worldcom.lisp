@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.75 1997/11/04 16:31:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.76 1997/12/12 15:28:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -231,7 +231,9 @@
 (comf "target:code/debug" :byte-compile t)
 
 (comf "target:code/query" :byte-compile *byte-compile*)
-(comf "target:code/rand")
+(if (c:backend-featurep :random-mt19937)
+    (comf "target:code/rand-mt19937")
+    (comf "target:code/rand"))
 (comf "target:code/ntrace" :byte-compile *byte-compile*)
 (comf "target:code/profile")
 (comf "target:code/sort")
