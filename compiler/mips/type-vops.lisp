@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.21 1990/10/04 23:25:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.22 1990/10/14 22:39:06 ram Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -46,21 +46,20 @@
     (test-simple-type value temp target not-p type-code)))
 
 (macrolet ((frob (pred-name check-name ptype type-code error-code)
-	     `(progn
-		(define-vop (,pred-name simple-type-predicate)
-		  (:variant ,type-code)
-		  (:translate ,pred-name))
-		(define-vop (,check-name check-simple-type)
-		  (:generator 4
-		    (let ((err-lab
-			   (generate-error-code vop ,error-code value)))
-		      (test-simple-type value temp err-lab t ,type-code)
-		      (move result value))))
-		(primitive-type-vop ,check-name (:check) ,ptype))))
+	     (let ((cost (if (< (eval type-code) vm:lowtag-limit) 4 9)))
+	       `(progn
+		  (define-vop (,pred-name simple-type-predicate)
+		    (:variant ,type-code)
+		    (:variant-cost ,cost)
+		    (:translate ,pred-name))
+		  (define-vop (,check-name check-simple-type)
+		    (:generator ,cost
+		      (let ((err-lab
+			     (generate-error-code vop ,error-code value)))
+			(test-simple-type value temp err-lab t ,type-code)
+			(move result value))))
+		  (primitive-type-vop ,check-name (:check) ,ptype)))))
 
-  ;; ### Want to tweek costs so that checks that do dereferences are
-  ;; more expensive.
-  ;; 
   (frob functionp check-function function
     vm:function-pointer-type object-not-function-error)
 
