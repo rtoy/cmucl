@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.33 1992/02/02 22:43:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.34 1992/02/02 23:05:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1079,6 +1079,13 @@
     result))
 
 
+;;; This is restricted to rationals, because (- 0 0.0) is 0.0, not -0.0.
+;;;
+(deftransform - ((x y) ((member 0) rational))
+  "convert (- 0 x) to negate"
+  '(%negate y))
+
+
 ;;; NOT-MORE-CONTAGIOUS  --  Interface
 ;;;
 ;;;    Return T if in an arithmetic op including continuations X and Y, the
@@ -1091,7 +1098,6 @@
 	(y (continuation-type y)))
     (values (type= (numeric-contagion x y)
 		   (numeric-contagion y y)))))
-
 
 ;;; OK-ZERO-OR-LOSE  --  Interface
 ;;;
@@ -1108,10 +1114,6 @@
 		 (not-more-contagious y x))
 	(give-up))))
 
-(deftransform - ((x y))
-  "convert (- 0 x) to negate"
-  (ok-zero-or-lose y x)
-  '(%negate y))
 
 ;;; Fold (OP x 0).
 ;;;
@@ -1494,20 +1496,21 @@
 ;;; Source-Transform-Intransitive  --  Internal
 ;;;
 ;;;    Do source transformations for intransitive n-arg functions such as /.
-;;; With one arg, we form the inverse using the indentity, with two args we
-;;; pass, otherwise we associate into two-arg calls.
+;;; With one arg, we form the inverse.  With two args we pass.  Otherwise we
+;;; associate into two-arg calls.
 ;;;
 (proclaim '(function source-transform-intransitive (symbol list t) list))
-(defun source-transform-intransitive (function args identity)
+(defun source-transform-intransitive (function args inverse)
   (case (length args)
     ((0 2) (values nil t))
-    (1 `(,function ,identity ,(first args)))
+    (1 `(,@inverse ,(first args)))
     (t
      (associate-arguments function (first args) (rest args)))))
 
-(def-source-transform - (&rest args) (source-transform-intransitive '- args 0))
-(def-source-transform / (&rest args) (source-transform-intransitive '/ args 1))
-
+(def-source-transform - (&rest args)
+  (source-transform-intransitive '- args '(%negate)))
+(def-source-transform / (&rest args)
+  (source-transform-intransitive '/ args '(/ 1)))
 
 
 ;;;; Apply:
