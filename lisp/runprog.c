@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.3 2000/10/27 19:25:56 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.4 2004/07/07 22:22:59 rtoy Exp $
  *
  * Support for run-program.
  *
@@ -10,6 +10,9 @@
 #include <sys/ioctl.h>
 #if defined(SVR4) || defined(__linux__)
 #include <unistd.h>
+#endif
+#if defined(SOLARIS)
+#include <fcntl.h>
 #endif
 
 int spawn(char *program, char *argv[], char *envp[], char *pty_name,

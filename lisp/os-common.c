@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.15 2004/07/07 20:31:06 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.16 2004/07/07 22:22:59 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -18,6 +18,7 @@
 #include "globals.h"
 #include "interr.h"
 #include "arch.h"
+#include "interrupt.h"
 
 /* Except for os_zero, these routines are only called by Lisp code.  These
    routines may also be replaced by os-dependent versions instead.  See

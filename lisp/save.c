@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.8 2003/08/22 13:20:03 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.9 2004/07/07 22:22:59 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -67,7 +67,7 @@ static void output_space(FILE *file, int id, lispobj *addr, lispobj *end)
 
     bytes = words * sizeof(lispobj);
 
-    printf("Writing %d bytes from the %s space at 0x%08X.\n",
+    printf("Writing %d bytes from the %s space at 0x%08lX.\n",
            bytes, names[id], (unsigned long)addr);
 
     data = write_bytes(file, (char *)addr, bytes);

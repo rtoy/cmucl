@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.9 2004/05/18 22:41:23 cwang Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.10 2004/07/07 22:22:59 rtoy Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -134,7 +134,7 @@ previous_info(struct call_info *info)
     struct sigcontext *csp;
 
     if (!cs_valid_pointer_p(info->frame)) {
-        printf("Bogus callee value (0x%08x).\n", (unsigned long)info->frame);
+        printf("Bogus callee value (0x%08lx).\n", (unsigned long)info->frame);
         return 0;
     }
 
@@ -182,13 +182,13 @@ backtrace(int nframes)
     info_from_lisp_state(&info);
 
     do {
-        printf("<Frame 0x%08x%s, ", (unsigned long) info.frame,
+        printf("<Frame 0x%08lx%s, ", (unsigned long) info.frame,
                 info.interrupted ? " [interrupted]" : "");
         
         if (info.code != (struct code *) 0) {
             lispobj function;
 
-            printf("CODE: 0x%08X, ", (unsigned long) info.code | type_OtherPointer);
+            printf("CODE: 0x%08lX, ", (unsigned long) info.code | type_OtherPointer);
 
 #ifndef alpha
             function = info.code->entry_points;
@@ -231,7 +231,7 @@ backtrace(int nframes)
             printf("CODE: ???, ");
 
         if (info.lra != NIL)
-            printf("LRA: 0x%08x, ", (unsigned long)info.lra);
+            printf("LRA: 0x%08lx, ", (unsigned long)info.lra);
         else
             printf("<no LRA>, ");
 

@@ -1,7 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.5 2004/05/19 23:33:44 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.6 2004/07/07 22:22:59 rtoy Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "lisp.h"
 #include "internals.h"

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.7 2004/07/07 15:03:12 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.8 2004/07/07 22:22:59 rtoy Exp $ */
 
 #if !defined(_INCLUDE_INTERRUPT_H_)
 #define _INCLUDE_INTERRUPT_H_
@@ -26,6 +26,9 @@ extern void interrupt_install_low_level_handler
      void handler(HANDLER_ARGS));
 extern unsigned long install_handler(int signal,
 				     void handler(HANDLER_ARGS));
+
+extern void build_fake_control_stack_frame(os_context_t* context);
+extern void interrupt_handle_space_overflow(lispobj error, os_context_t *context);
 
 extern union interrupt_handler interrupt_handlers[NSIG];
 
