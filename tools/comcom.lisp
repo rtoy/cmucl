@@ -56,8 +56,7 @@
 (comf "c:rt/parms")
 (comf "c:vop" :always-once *new-compile*)
 
-(unless *new-compile*
-  (comf "c:vmdef" :load t :bootstrap-macros :both))
+(comf "c:vmdef" :load t :bootstrap-macros :both)
 
 (comf "c:tn" :bootstrap-macros :both)
 (comf "c:bit-util")
@@ -73,8 +72,14 @@
       :bootstrap-macros :both
       :always-once *new-compile*)
 
-(unless *new-compile*
-  (comf "c:rt/assem-insts" :load t))
+(comf "c:rt/assem-insts" :load t)
+
+(when *new-compile*
+  (comf "c:eval-comp")
+  (comf "c:eval" :bootstrap-macros :both)
+  (let ((c:*compile-time-define-macros* nil))
+    (comf "c:macros" :load t)))
+
 
 (comf "c:aliencomp")
 (comf "c:debug-dump")
@@ -85,8 +90,7 @@
   (comf "assem:assembler")
   (comf "c:fop"))
 
-(unless *new-compile*
-  (comf "c:rt/assem-macs" :load t :bootstrap-macros :both))
+(comf "c:rt/assem-macs" :load t :bootstrap-macros :both)
 
 (comf "c:rt/dump")
 
@@ -142,13 +146,5 @@
   (comf "c:globaldb" :output-file "c:boot-globaldb.fasl"
 	:bootstrap-macros :both))
 
-(when *new-compile*
-  (comf "c:eval-comp")
-  (comf "c:eval" :bootstrap-macros :both)
-  (let ((c:*compile-time-define-macros* nil))
-    (comf "c:rt/assem-insts")
-    (comf "c:rt/assem-macs")
-    (comf "c:vmdef")
-    (comf "c:macros")))
 
 ); with-compiler-error-log
