@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.33 1992/04/21 04:15:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.34 1992/06/02 19:13:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -253,13 +253,18 @@
   ;; The primitive-type of the first value of this continuation.  This is
   ;; primarily for internal use during LTN, but it also records the type
   ;; restriction on delayed references.  In multiple-value contexts, this is
-  ;; null to indicate that it is meaningless.
+  ;; null to indicate that it is meaningless.  This is always (primitive-type
+  ;; (continuation-type cont)), which may be more restrictive than the
+  ;; tn-primitive-type of the value TN.  This is becase the value TN must hold
+  ;; any possible type that could be computed (before type checking.)
   (primitive-type nil :type (or primitive-type null))
   ;;
   ;; Locations used to hold the values of the continuation.  If the number
   ;; of values if fixed, then there is one TN per value.  If the number of
   ;; values is unknown, then this is a two-list of TNs holding the start of the
-  ;; values glob and the number of values.
+  ;; values glob and the number of values.  Note that since type checking is
+  ;; the responsibility of the values receiver, these TNs primitive type is
+  ;; only based on the proven type information.
   (locs nil :type list))
 
 (defprinter ir2-continuation
