@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.15 1990/05/06 05:20:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.16 1990/05/07 14:14:08 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -395,6 +395,7 @@
 	 (y :target r :scs (signed-reg)))
   (:results (q :scs (signed-reg))
 	    (r :scs (signed-reg)))
+  (:result-types signed-num signed-num)
   (:generator 11
     (let ((zero (generate-error-code di:division-by-zero-error x y)))
       (inst beq y zero-tn zero))
