@@ -575,7 +575,7 @@
 ;;;
 (defun compute-initial-conflicts (block)
   (declare (type ir2-block block))
-  (let ((live-bits (copy-seq (ir2-block-live-in block)))
+  (let ((live-bits (bit-vector-copy (ir2-block-live-in block)))
 	(live-list nil))
 
     (do ((conf (ir2-block-global-tns block)
