@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.22 1992/02/26 14:14:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.23 1992/09/07 15:35:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 
 ;;; Find-DFO  --  Interface
@@ -188,12 +188,12 @@
 ;;;    Return a list of all the home lambdas that reference Fun (may contain
 ;;; duplications).
 ;;;
-;;;    References to XEP lambdas in top-level lambdas are excluded
-;;; to keep run-time definitions from being joined to load-time code.  We mark
-;;; any such top-level references as :notinline to prevent the (unlikely)
-;;; possiblity that they might later be converted.  This preserves the
-;;; invariant that local calls are always intra-component without joining in
-;;; all top-level code.
+;;;    References to functions which local call analysis could not (or were
+;;; chosen not) to local call convert will appear as references to XEP lambdas.
+;;; We can ignore references to XEPs that appear in :TOP-LEVEL components,
+;;; since environment analysis goes to special effort to allow closing over of
+;;; values from a separate top-level component.  All other references must
+;;; cause components to be joined. 
 ;;;
 ;;;   References in deleted functions are also ignored, since this code will be
 ;;; deleted eventually.
@@ -201,14 +201,12 @@
 (defun find-reference-functions (fun)
   (collect ((res))
     (dolist (ref (leaf-refs fun))
-      (let* ((home (lambda-home (lexenv-lambda (node-lexenv ref))))
+      (let* ((home (node-home-lambda ref))
 	     (home-kind (functional-kind home)))
-	(cond ((and (eq home-kind :top-level)
-		    (eq (functional-kind fun) :external))
-	       (setf (ref-inlinep ref) :notinline))
-	      ((eq home-kind :deleted))
-	      (t
-	       (res home)))))
+	(unless (or (and (eq home-kind :top-level)
+			 (eq (functional-kind fun) :external))
+		    (eq home-kind :deleted))
+	  (res home))))
     (res)))
 
 
@@ -307,7 +305,9 @@
 		     (and has-top (rest funs)))
 		 (setf (component-name com) (find-component-name com))
 		 (real com)
-		 (when has-top (real-top com)))
+		 (when has-top
+		   (setf (component-kind com) :complex-top-level)
+		   (real-top com)))
 		(has-top 
 		 (setf (component-kind com) :top-level)
 		 (setf (component-name com) "Top-Level Form")
