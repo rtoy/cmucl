@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27.1.2 1993/01/23 14:45:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27.1.3 1993/02/08 23:11:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,21 +40,6 @@
 ;;;
 (def-source-transform %set-instance-layout (x val)
   `(%instance-set ,x 0 (the layout ,val)))
-
-
-(macrolet ((frob (name primitive)
-	     `(def-source-transform ,name (&rest foo)
-		`(truly-the nil
-			    (%primitive ,',primitive ,@foo)))))
-  (frob %type-check-error type-check-error)
-  (frob %layout-invalid-error layout-invalid-error)
-  (frob %odd-keyword-arguments-error odd-keyword-arguments-error)
-  (frob %unknown-keyword-argument-error unknown-keyword-argument-error)
-  (frob %argument-count-error argument-count-error))
-
-
-(def-source-transform %verify-argument-count (&rest foo)
-  `(%primitive verify-argument-count ,@foo))
 
 
 ;;;; Charater support.
