@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.32 2001/05/18 18:05:39 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.33 2001/10/03 14:03:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,7 +188,7 @@
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
-	  after-breakpoint-trap
+	  after-breakpoint-trap pseudo-atomic-trap
 	  object-not-list-trap object-not-instance-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
@@ -202,6 +202,7 @@
   function-end-breakpoint
   after-breakpoint)
 
+;; Make sure this starts AFTER the last element of the above enum!
 (defenum (:prefix object-not- :suffix -trap :start 16)
   list
   instance)
@@ -274,5 +275,12 @@
 (defparameter *assembly-unit-length* 8)
 
 
-;;;; Pseudo-atomic trap number
+;;;; Pseudo-atomic trap number.
+;;;;
+;;;; This should be any valid trap number. According to the Sparc
+;;;; Compliance Definition 2.4.1, only traps 16-31 are allowed for
+;;;; user applications.  All others are reserved.  It's ok if this
+;;;; number matches any of the other trap enums above because those
+;;;; are only used in an illtrap instruction, not the trap
+;;;; instruction.  This needs to be coordinated with the C code.
 (defconstant pseudo-atomic-trap 16)
