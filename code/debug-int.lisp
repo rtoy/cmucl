@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.120 2005/03/17 23:13:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.121 2005/03/18 05:33:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -4566,9 +4566,6 @@ The result is a symbol or nil if the routine cannot be found."
 	(logandc2 (+ vm:code-constants-offset bogus-lra-constants 1)
 		  1))
        (vm:sanctify-for-execution code-object)
-       (format t "real-lra = ~A~%" real-lra)
-       (format t "new-lra at ~A~%" dst-start)
-       (format t "offset  = ~A~%" (system:sap- trap-loc src-start))
        (values new-lra code-object (system:sap- trap-loc src-start))))))
 
 
