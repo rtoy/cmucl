@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.58 1993/08/17 22:32:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.59 1993/08/20 08:10:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1104,19 +1104,26 @@
 ;;; Otherwise, call PCL if it's loaded.  If not, print unreadably.
 
 (defun output-instance (instance stream)
-  (let ((class (class-of instance)))
-    (cond ((typep class 'basic-structure-class)
-	   (funcall (or (basic-structure-class-print-function class)
-			#'default-structure-print)
-		    instance stream *current-level*))
-	  ((and (fboundp 'dylan::dylan-instance-p)
-		(dylan::dylan-instance-p instance))
-	   (dylan::%print-dylan-instance instance stream))
-	  ((fboundp 'print-object)
-	   (print-object instance stream))
-	  (t
-	   (print-unreadable-object (instance stream :identity t)
-	     (write-string "Unprintable Instance" stream))))))
+  (let ((layout (typecase instance
+		  (funcallable-instance (%instance-ref instance 0))
+		  (instance (%funcallable-instance-layout instance)))))
+
+    (if (typep layout 'layout)
+	(let ((class (layout-class layout)))
+	  (cond ((typep class 'basic-structure-class)
+		 (funcall (or (basic-structure-class-print-function class)
+			      #'default-structure-print)
+			  instance stream *current-level*))
+		((and (fboundp 'dylan::dylan-instance-p)
+		      (dylan::dylan-instance-p instance))
+		 (dylan::%print-dylan-instance instance stream))
+		((fboundp 'print-object)
+		 (print-object instance stream))
+		(t
+		 (print-unreadable-object (instance stream :identity t)
+		   (write-string "Unprintable Instance" stream)))))
+	(print-unreadable-object (instance stream :identity t)
+	  (write-string "Unprintable Instance" stream)))))
 
 
 ;;;; Integer, ratio, and complex printing.  (i.e. everything but floats)
