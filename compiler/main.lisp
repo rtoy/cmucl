@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.70 1992/08/03 12:36:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.71 1992/09/07 16:05:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 
 (proclaim '(special *constants* *free-variables* *compile-component*
 		    *code-vector* *next-location* *result-fixups*
-		    *free-functions* *source-paths* *failed-optimizations*
+		    *free-functions* *source-paths*
 		    *seen-blocks* *seen-functions* *list-conflicts-table*
 		    *continuation-number* *continuation-numbers*
 		    *number-continuations* *tn-id* *tn-ids* *id-tns*
@@ -355,9 +355,11 @@
     (environment-analyze component)
     (dfo-as-needed component)
 
-    (if *byte-compiling*
-	(byte-compile-component component)
-	(native-compile-component component)))
+    (unless (eq (block-next (component-head component))
+		(component-tail component))
+      (if *byte-compiling*
+	  (byte-compile-component component)
+	  (native-compile-component component))))
 
   (when *compile-print*
     (compiler-mumble "~&"))
@@ -433,7 +435,6 @@
     (clrhash *free-functions*)
     (clrhash *free-variables*)
     (clrhash *constants*))
-  (clrhash *failed-optimizations*)
   ;;
   ;; Clear debug counters and tables.
   (clrhash *seen-blocks*)
@@ -1340,7 +1341,7 @@
       (dolist (component components)
 	(compile-component component)
 	(when (replace-top-level-xeps component)
-	    (setq top-level-closure t)))
+	  (setq top-level-closure t)))
       
       (when *check-consistency*
 	(maybe-mumble "[Check]~%")
@@ -1703,10 +1704,7 @@
 		 (node-cont (lambda-bind lambda))))))
       (setf (leaf-name fun) name)
       (let ((old (gethash name *free-functions*)))
-	(when old
-	  (substitute-leaf-if #'(lambda (x)
-				  (not (eq (ref-inlinep x) :notinline)))
-			      fun old)))
+	(when old (substitute-leaf fun old)))
       name)))
 
 
