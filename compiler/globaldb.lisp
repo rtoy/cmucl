@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.23 1992/03/13 23:17:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.24 1992/04/02 15:32:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1015,18 +1015,22 @@
 ;;; A macro-like function which transforms a call to this function into some
 ;;; other Lisp form.  This expansion is inhibited if inline expansion is
 ;;; inhibited.
-(define-info-type function source-transform (or function null list))
+(define-info-type function source-transform (or function null))
 
 ;;; The macroexpansion function for this macro.
-(define-info-type function macro-function (or function null list)
+(define-info-type function macro-function (or function null)
+  nil)
+
+;;; The compiler-macroexpansion function for this macro.
+(define-info-type function compiler-macro-function (or function null)
   nil)
 
 ;;; A function which converts this special form into IR1.
-(define-info-type function ir1-convert (or function null list))
+(define-info-type function ir1-convert (or function null))
 
 ;;; A function which gets a chance to do stuff to the IR1 for any call to this
 ;;; function.
-(define-info-type function ir1-transform (or function null list))
+(define-info-type function ir1-transform (or function null))
 
 ;;; If a function is a defstruct slot accessor or setter, then this is the
 ;;; defstruct-definition for the structure that it belongs to.
@@ -1091,10 +1095,10 @@
       nil))
 
 ;;; Expander function for a defined type.
-(define-info-type type expander (or function null list) nil)
+(define-info-type type expander (or function null) nil)
 
 ;;; Print function for a type.
-(define-info-type type printer (or function symbol null list) nil)
+(define-info-type type printer (or function symbol null) nil)
 
 ;;; Make-load-form function for a type.
 (define-info-type type load-form-maker (or function symbol null) nil)
@@ -1116,7 +1120,7 @@
 
 ;;; Function that parses type specifiers into CTYPE structures.
 ;;;
-(define-info-type type translator (or function null list) nil)
+(define-info-type type translator (or function null) nil)
 
 ;;; If true, then the type coresponding to this name.
 ;;;
@@ -1141,7 +1145,7 @@
 
 (define-info-type setf documentation (or string null) nil)
 
-(define-info-type setf expander (or function null list) nil)
+(define-info-type setf expander (or function null) nil)
 
 ;;; Used for storing random documentation types.  The stuff is an alist
 ;;; translating documentation kinds to values.
