@@ -47,4 +47,4 @@
 ;;;
 (defun bit-vector-copy (vec)
   (declare (type simple-bit-vector vec))
-  (bit-ior vec vec))
+  (bit-ior vec vec (make-array (length vec) :element-type 'bit)))
