@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.18 1990/07/04 21:02:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.19 1990/07/07 01:02:29 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -172,7 +172,7 @@
 
 (defknown bignum::%fixnum-digit-with-correct-sign
 	  (bignum-element-type)
-  fixnum
+  (signed-byte #.vm:word-bits)
   (foldable flushable movable))
 
 (defknown (bignum::%signed-digit-to-single-float bignum::%digit-to-single-float)
