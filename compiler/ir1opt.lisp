@@ -1054,8 +1054,8 @@
 				 (values-subtypep
 				  (node-derived-type use)
 				  (continuation-asserted-type arg)))
-			(substitute-leaf leaf var)
 			(propagate-to-refs var (continuation-type arg))
+			(substitute-leaf leaf var)
 			t)))))
 	       ((and (null (rest (leaf-refs var)))
 		     (substitute-single-use-continuation arg var)))
