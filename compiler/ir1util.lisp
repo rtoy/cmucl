@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.87 2003/01/06 15:10:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.88 2003/03/10 11:29:02 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1848,14 +1848,14 @@
   (let ((*print-level* (or *error-print-level* *print-level*))
 	(*print-length* (or *error-print-length* *print-length*))
 	(*print-lines* (or *error-print-lines* *print-lines*)))
-    (multiple-value-bind
-	(format-string format-args)
-	(if (typep condition 'simple-condition)
+    (multiple-value-bind (format-string format-args)
+	(if (member (type-of condition)
+		    '(simple-warning simple-error simple-style-warning)
+		    :test #'eq)
 	    (values (simple-condition-format-control condition)
 		    (simple-condition-format-arguments condition))
-	    (values (with-output-to-string (s)
-		      (princ condition s))
-		    ()))
+	    (values "~a"
+		    (with-output-to-string (s) (princ condition s))))
       (let ((stream *compiler-error-output*)
 	    (context (find-error-context format-args)))
 	(cond
