@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.4 1997/02/22 19:19:56 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.4.2.1 1997/09/09 01:23:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,8 +105,8 @@
     (storew ebp-tn block unwind-block-current-cont-slot)
     ;; The code slot is unused - fill with 0.
     (storew 0 block vm:unwind-block-current-code-slot)
-    (inst lea temp (make-fixup nil :code-object entry-label))
-    (storew temp block catch-block-entry-pc-slot)))
+    (storew (make-fixup nil :code-object entry-label)
+	    block catch-block-entry-pc-slot)))
 
 ;;; Like Make-Unwind-Block, except that we also store in the specified tag, and
 ;;; link the block into the Current-Catch list.
@@ -125,8 +125,8 @@
     (storew ebp-tn block  unwind-block-current-cont-slot)
     ;; The code slot is unused - fill with 0.
     (storew 0 block vm:catch-block-current-code-slot)
-    (inst lea temp (make-fixup nil :code-object entry-label))
-    (storew temp block  catch-block-entry-pc-slot)
+    (storew (make-fixup nil :code-object entry-label)
+	    block catch-block-entry-pc-slot)
     (storew tag block catch-block-tag-slot)
     (load-symbol-value temp lisp::*current-catch-block*)
     (storew temp block catch-block-previous-catch-slot)
