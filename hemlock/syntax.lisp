@@ -164,12 +164,12 @@
 ;;;
 (defun new-cache-attribute (attribute function)
   (let* ((hash (hash-it attribute function))
-	 (values (gethash attribute *character-attributes*))
+	 (values (or (gethash attribute *character-attributes*)
+		     (error "~S is not a defined character attribute."
+			    attribute)))
 	 (bucket (svref *character-attribute-cache* hash))
 	 (bit (nthcdr (- character-attribute-bucket-size 2) bucket))
 	 (end-wins (funcall function (attribute-descriptor-end-value values))))
-    (unless values
-      (error "~S is not a defined character attribute." attribute))
     (shiftf bit (cdr bit) nil)
     (setf (svref *character-attribute-cache* hash) bit
 	  (cdr bit) bucket  bit (car bit))
