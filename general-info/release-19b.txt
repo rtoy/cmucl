@@ -40,6 +40,8 @@ New in this release:
       - DEBUG-RETURN implemented which allows you to return a value
         from function.  Only enabled with DEBUG 3.
       - Lazy sxhash on symbols implemented for ppc.
+      - Pretty-printer for LOOP.
+      - Added some more pprinters for various forms.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -63,6 +65,24 @@ New in this release:
       - When a pathname can't be printed readably, signal a
         PRINT-NOT-READABLE condition
       - Printing arrays readably was sometimes wrong.
+      - FOR-AS-ON-LIST works with dotted lists.
+      - DEFSTRUCT predicates for list structures don't produce errors
+        anymore on dotted or short lists.
+      - UNBOUND-SLOT condition no longer takes the :slot keyword.  It
+        uses the ANSI-specified :name keyword.  This is not backward
+        compatible!
+      - MAKE-SYMBOL takes STRING's, not just SIMPLE-STRING's.
+      - PPRINT-POP did not return NIL when the list arg to
+        PPRINT-LOGICAL-BLOCK was NIL.
+      - Signal appropriate error conditions instead of a plain error
+        condition in many situations.
+      - TYPECASE was treating the type T as an otherwise clause even
+        though it was not the last clause.  It's should be just a
+        regular clause.
+      - ASIN, ACOS, ACOSH, and ATANH were returning the wrong values
+        when the arg was a real number on the branch cut.
+      - Missed some places where loop variables were duplicated, which
+        should signal a program-error.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -75,16 +95,26 @@ New in this release:
       - The compiler would give an error on deriving the result type
         of RANDOM when the arg to RANDOM was a union type.
       - "~*~" was not being parsed to mean a wildcard version.
-      - If a pathname has a version, but no name, we can't print it
-        readably.
       - UNIX-GETPWUID implemented for Darwin.  Needed for FILE-AUTHOR.
       - The compiler no longer gives errors when deriving the result type of
         coerce when converting a integer to a float that would not fit
         in a float.
       - Fix bug in reading from streams with element-type SIGNED-BYTE
-        for sizes greater than 32:  positive numbers were incorrectly
+        for sizes greater than 32:  Positive numbers were incorrectly
         being returned as negative.
       - REMOVE-DUPLICATES was not honoring the :START option.
+      - PPRINT-LOGICAL-BLOCK sometimes didn't close the block properly
+        because PPRINT-EXIT-IF-LIST-EXHAUSTED caused an early exit.
+      - Macro expansion was not looking in the local environment
+        properly for local definitions.
+      - Circular Weak pointers can now be printed when *print-circle*
+        is T.
+      - "foo.lisp.*" is interpreted to have version :wild, just like
+        "foo.lisp.~*~". 
+      - DIRECTORY will report all versions of a file if the pathname
+        has version :wild.
+      - Fixed bug with CLX on MacOS X where the WM-SIZE-HINTS were
+        larger than CLX expected.  Replaced card16 with card32.
 
   * Other changes:
      
