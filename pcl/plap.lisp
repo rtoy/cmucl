@@ -89,8 +89,11 @@
 	   (*lap-rest-p* (not (null rest))))
       `(lambda ,cvars
 	 #'(lambda ,args
-	     (declare (optimize . ,*lap-optimize-declaration*))
-	     ,(make-lap-prog-internal i-regs v-regs t-regs lap))))))
+	     ;;
+	     ;; Use LOCALLY instead of a declare on the lambda so that we don't
+	     ;; suppress arg count checking...
+	     (locally (declare (optimize . ,*lap-optimize-declaration*))
+	       ,(make-lap-prog-internal i-regs v-regs t-regs lap)))))))
 
 (defun make-lap-prog (i-regs v-regs t-regs lap)
   (let* ((*lap-args* 'lap-in-lisp)
