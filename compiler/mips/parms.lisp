@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.5 1990/02/14 21:58:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.6 1990/02/18 05:29:41 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -37,8 +37,9 @@
 	  complex-bit-vector-type complex-vector-type complex-array-type
 	  code-header-type function-header-type return-pc-header-type
 	  closure-header-type symbol-header-type character-type SAP-type
-	  unbound-marker-type fixnum *assembly-unit-length*
-	  target-fasl-code-format vm-version))
+	  unbound-marker-type atomic-flag interrupted-flag fixnum
+	  initial-symbols initial-symbol-offset
+	  *assembly-unit-length* target-fasl-code-format vm-version))
 	  
 
 (eval-when (compile load eval)
@@ -179,7 +180,43 @@
   SAP
   unbound-marker)
 
-;;; Handy routine for making fixnums.
+
+;;;; Other non-type constants.
+
+(defenum (:suffix -flag)
+  atomic
+  interrupted)
+
+
+
+;;;; Initial symbols.
+
+;;; These symbols are loaded into static space directly after NIL so that
+;;; the system can compute their address by adding a constant amount to NIL.
+;;;
+
+(defparameter initial-symbols
+  '(t
+    lisp::lisp-environment-list
+    lisp::lisp-command-line-list
+    lisp::*initial-symbols*
+    lisp::*lisp-initialization-functions*))
+
+
+(defun initial-symbol-offset (symbol)
+  "Return the byte offset of SYMBOL from NIL."
+  (let ((posn (position symbol initial-symbols)))
+    (unless posn
+      (error "~S isn't one of the initial symbols." symbol))
+    (macrolet ((round-to-dual-word (x) `(logandc2 (1+ ,x) 1)))
+      (+ (* posn (round-to-dual-word symbol-size) word-bytes)
+	 (round-to-dual-word (1- symbol-size))
+	 other-pointer-type
+	 (- list-pointer-type)))))
+
+
+
+;;;; Handy routine for making fixnums:
 
 (defun fixnum (num)
   "Make a fixnum out of NUM.  (i.e. shift by two bits if it will fit.)"
