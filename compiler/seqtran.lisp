@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.24 2000/05/02 04:44:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.25 2003/02/21 16:06:57 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -183,11 +183,13 @@
 
 (deftransform find ((item sequence &key from-end (test #'eql) (start 0) end)
 		    (t simple-string &rest t))
-  `(if (position item sequence
-		 ,@(when from-end `(:from-end from-end))
-		 :test test :start start :end end)
-       item
-       nil))
+  (let ((index (gensym)))
+    `(let ((,index (position item sequence
+			     ,@(when from-end `(:from-end from-end))
+			     :test test :start start :end end)))
+      (if ,index
+	  (elt sequence ,index)
+	  nil))))
 
 
 ;;;; Utilities:
