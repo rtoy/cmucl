@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.9.2.3 2000/10/21 12:42:34 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.9.2.4 2000/10/21 13:01:08 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -360,14 +360,6 @@ maybe_now_maybe_later(HANDLER_ARGS)
 
     SAVE_CONTEXT(); /**/
 
-#if defined(__linux__) && defined(i386)
-    /*
-     * Restore the FPU control word, setting the rounding mode to nearest.
-     */
-
-    setfpucw(contextstruct.fpstate->cw & ~0xc00);
-#endif
-
     if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
         pending_signal = signal;
         pending_code = DEREFCODE(code);
@@ -420,12 +412,22 @@ maybe_now_maybe_later(HANDLER_ARGS)
 #endif /* POSIX_SIGS */
 
 	arch_set_pseudo_atomic_interrupted(context);
-    } else
+    } else {
+#if defined(__linux__) && defined(i386)
+      /*
+       * Restore the FPU control word, setting the rounding mode to nearest.
+       */
+
+      if (contextstruct.fpstate)
+	setfpucw(contextstruct.fpstate->cw & ~0xc00);
+#endif
+
 #if ( defined( __linux__ ) && defined( i386 ) )
         interrupt_handle_now(signal, contextstruct);
 #else
         interrupt_handle_now(signal, code, context);
 #endif
+    }
 }
 
 /****************************************************************\
