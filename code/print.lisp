@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.91 2004/04/22 18:04:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.92 2004/04/22 21:31:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -648,10 +648,13 @@
 ;;; 
 (defun output-symbol-name (name stream &optional (maybe-quote t))
   (declare (type simple-base-string name))
-  (setup-printer-state)
-  (if (and maybe-quote (symbol-quotep name))
-      (output-quoted-symbol-name name stream)
-      (funcall *internal-symbol-output-function* name stream)))
+  (let ((*readtable* (if *print-readably*
+			 std-lisp-readtable
+			 *readtable*)))
+    (setup-printer-state)
+    (if (and maybe-quote (symbol-quotep name))
+	(output-quoted-symbol-name name stream)
+	(funcall *internal-symbol-output-function* name stream))))
 
 
 ;;;; Escaping symbols:
