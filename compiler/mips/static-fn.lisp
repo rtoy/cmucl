@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.8 1990/05/11 06:53:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.9 1990/05/18 00:56:39 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -22,6 +22,7 @@
   (:save-p t)
   (:policy :safe)
   (:variant-vars symbol)
+  (:vop-var vop)
   (:temporary (:scs (any-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
@@ -30,7 +31,8 @@
   (:temporary (:scs (descriptor-reg)) function)
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
-  (:temporary (:sc any-reg :offset old-fp-offset) old-fp))
+  (:temporary (:sc any-reg :offset old-fp-offset) old-fp)
+  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save))
 
 
 (eval-when (compile load eval)
@@ -84,11 +86,14 @@
 	 ,@(temps)
 	 (:results ,@(results))
 	 (:generator ,(+ 50 num-args num-results)
-	   (let ((lra-label (gen-label)))
+	   (let ((lra-label (gen-label))
+		 (cur-nfp (current-nfp-tn vop)))
 	     ,@(moves (temp-names) (arg-names))
 	     (inst li nargs (fixnum ,num-args))
 	     (load-symbol cname symbol)
 	     (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
+	     (when cur-nfp
+	       (store-stack-tn nfp-save cur-nfp))
 	     (move old-fp fp-tn)
 	     (move fp-tn csp-tn)
 	     (inst compute-lra-from-code lra code-tn lra-label)
@@ -110,7 +115,9 @@
 		   ,@(links)
 		   (default-unknown-values
 		       ,(if (zerop num-results) nil 'values)
-		       ,num-results move-temp temp lra-label))))
+		       ,num-results move-temp temp lra-label)))
+	     (when cur-nfp
+	       (load-stack-tn cur-nfp nfp-save))
 	     ,@(moves (result-names) (temp-names))))))))
 
 
