@@ -246,14 +246,39 @@
 	     (funs calls (rest funs)))
 	    ((null funs) res)
 	  (declare (type component res))))))))
+
+
+;;; FIND-TOP-LEVEL-COMPONENTS  --  Internal
+;;;
+;;;    Compute the result of FIND-INITIAL-DFO given the list of all resulting
+;;; components.  We find components that contain a :Top-Level lambda, marking
+;;; them as :Top-Level.
+;;;
+(defun find-top-level-components (components)
+  (declare (list components))
+  (collect ((real)
+	    (top))
+    (dolist (com components)
+      (unless (eq (block-next (component-head com)) (component-tail com))
+	(let ((funs (component-lambdas com)))
+	  (cond ((find :top-level funs :key #'functional-kind)
+		 (assert (not (find :external funs :key #'functional-kind)))
+		 (setf (component-kind com) :top-level)
+		 (setf (component-name com) "Top-Level Form")
+		 (top com))
+		(t
+		 (setf (component-name com) (find-component-name com))
+		 (real com))))))
+    (values (real) (top))))
 	    
 
 ;;; Find-Initial-DFO  --  Interface
 ;;;
-;;;    Given a list of top-level lambdas, return a list of components
-;;; representing the actual component division.  We assign the DFO for each
-;;; component, and delete any unreachable blocks.  We assume that the Flags
-;;; have already been cleared.
+;;;    Given a list of top-level lambdas, return two lists of components
+;;; representing the actual component division.  The first value is the
+;;; non-top-level components, and the second is the top-level ones.  We assign
+;;; the DFO for each component, and delete any unreachable blocks.  We assume
+;;; that the Flags have already been cleared.
 ;;;
 ;;;     We iterate over the lambdas in each initial component, trying to put
 ;;; each function in its own component, but joining it to an existing component
@@ -266,11 +291,7 @@
 ;;; left will be in deleted functions or not reachable from the entry to the
 ;;; function.
 ;;;
-;;;   We also find components that contain a :Top-Level lambda and no :External
-;;; lambdas, marking them as :Top-Level.  Top-Level components are returned at
-;;; the end of the list so that we compile all real functions before we start
-;;; compiling any Top-Level references to them.  This allows DEFUN, etc., to
-;;; reference functions not in their component (which is normally forbidden).
+;;;    We then call FIND-TOP-LEVEL-COMPONENTS to pull out top-level code.
 ;;;
 (defun find-initial-dfo (lambdas)
   (declare (list lambdas))
@@ -289,22 +310,91 @@
       
 	  (do-blocks (block component)
 	    (delete-block block)))))
+
+    (dolist (com (components))
+      (let ((num 0))
+	(declare (fixnum num))
+	(do-blocks-backwards (block com :both)
+	  (setf (block-number block) (incf num)))))
+
+    (find-top-level-components (components))))
+
+
+;;; MERGE-TOP-LEVEL-LAMBDAS  --  Interface
+;;;
+;;;    Given a non-empty list of top-level lambdas, smash them into a top-level
+;;; lambda and component, returning these as values.  We use the first lambda
+;;; and its component, putting the other code in that component and deleting
+;;; the other lambdas.  We depend on there being at least a reference to NIL
+;;; preceding the RETURN node in each top-level lambda.
+;;;
+(defun merge-top-level-lambdas (lambdas)
+  (declare (cons lambdas))
+  (let* ((result-lambda (first lambdas))
+	 (result-component
+	  (block-component (node-block (lambda-bind result-lambda))))
+	 (result-return (lambda-return result-lambda)))
+    (let ((pnode (continuation-use
+		  (node-prev
+		   (continuation-use (return-result result-return)))))
+	  (new (make-continuation)))
+      (node-ends-block pnode)
+      (delete-continuation-use pnode)
+      (add-continuation-use pnode new))
+
+    (let ((result-return-block (node-block result-return)))
+      (dolist (lambda (rest lambdas))
+	(dolist (let (lambda-lets lambda))
+	  (setf (lambda-home let) result-lambda)
+	  (push let (lambda-lets result-lambda)))
+
+	(setf (lambda-entries result-lambda)
+	      (nconc (lambda-entries result-lambda)
+		     (lambda-entries lambda)))
+
+	(let* ((bind (lambda-bind lambda))
+	       (bind-block (node-block bind))
+	       (return (lambda-return lambda))
+	       (return-block (node-block return))
+	       (result (return-result return))
+	       (component (block-component bind-block)))
+
+	  (do-blocks (block component)
+	    (setf (block-component block) result-component)
+	    (macrolet ((frob (slot)
+			 `(when (eq (,slot block) lambda)
+			    (setf (,slot block) result-lambda))))
+	      (frob block-lambda)
+	      (frob block-start-cleanup)
+	      (frob block-end-cleanup)))
+
+	  (let* ((head (component-head component))
+		 (first (block-next head))
+		 (tail (component-tail component))
+		 (last (block-prev tail))
+		 (prev (block-prev result-return-block)))
+	    (setf (block-next prev) first)
+	    (setf (block-prev first) prev)
+	    (setf (block-next last) result-return-block)
+	    (setf (block-prev result-return-block) last)
+	    (dolist (succ (block-succ head))
+	      (unlink-blocks head succ))
+	    (dolist (pred (block-pred tail))
+	      (unlink-blocks pred tail)))
+
+	  (assert (every #'(lambda (x)
+			     (eq (functional-kind x) :top-level))
+			 (component-lambdas component)))
+
+	  (dolist (pred (block-pred result-return-block))
+	    (unlink-blocks pred result-return-block)
+	    (link-blocks pred bind-block))
+
+	  (setf (block-last return-block) (continuation-use result))
+	  (flush-dest result)
+	  (delete-continuation result)
+	  (link-blocks return-block result-return-block)
+
+	  (unlink-node bind))))
     
-    (collect ((real)
-	      (top))
-      (dolist (com (components))
-	(let ((num 0))
-	  (declare (fixnum num))
-	  (do-blocks-backwards (block com :both)
-	    (setf (block-number block) (incf num)))
-	  (unless (= num 2)
-	    (setf (component-name com) (find-component-name com))
-	    (let ((funs (component-lambdas com)))
-	      (cond ((find :top-level funs :key #'functional-kind)
-		     (unless (find :external funs :key #'functional-kind)
-		       (setf (component-kind com) :top-level)
-		       (setf (component-name com) "Top-Level Form"))
-		     (top com))
-		    (t
-		     (real com)))))))
-      (nconc (real) (top)))))
+    (values result-component result-lambda)))
