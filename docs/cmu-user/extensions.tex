@@ -2182,3 +2182,16 @@ Method profiling is done analogously to \code{trace}:
   true, that is, method functions are compiled.
 \end{defvar}
 
+\section{Differences from ANSI Common Lisp}
+This section describes some of the known differences between \cmucl{}
+and ANSI \clisp{}.  Some may be non-compliance issues; same may be
+extensions.
+
+\subsection{Extensions}
+
+\begin{defun}{}{constantly}{value \&optional val1 val2 \&rest
+    more-values}
+  As an extension, \cmucl{} allows \code{constantly} to accept more
+  than one value which are returned as multiple values.
+\end{defun}
+
