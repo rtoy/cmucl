@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.10 1990/04/24 02:55:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.11 1990/04/27 19:19:27 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -105,7 +105,6 @@
 					"-REF")))
        (:variant vm:vector-data-offset vm:other-pointer-type)
        (:translate data-vector-ref)
-       (:policy :fast-safe)
        (:arg-types ,type *)
        ,@(when sc
 	   `((:results (value :scs (,sc)))
@@ -118,37 +117,41 @@
 					"-SET")))
        (:variant vm:vector-data-offset vm:other-pointer-type)
        (:translate data-vector-set)
-       (:policy :fast-safe)
        (:arg-types ,type * ,element-type)
        ,@(when sc
 	   `((:args (object :scs (descriptor-reg))
 		    (index :scs (any-reg descriptor-reg
 					 immediate unsigned-immediate))
 		    (value :scs (,sc)))
-	     (:results (result :scs (,sc)))
-	     (:result-types ,element-type))))))
+	     (:results (result :scs (,sc))))))))
 
 (def-data-vector-frobs simple-string byte-index
   base-character base-character-reg)
 (def-data-vector-frobs simple-vector word-index)
-#|
+
 (def-data-vector-frobs simple-array-unsigned-byte-8 byte-index
-  unsigned-32-reg)
+  unsigned-reg)
 (def-data-vector-frobs simple-array-unsigned-byte-16 halfword-index
-  unsigned-32-reg)
+  unsigned-reg)
 (def-data-vector-frobs simple-array-unsigned-byte-32 word-index
-  unsigned-32-reg)
-|#
+  unsigned-reg)
 
 
 
-(define-vop (raw-bits halfword-index-ref)
+(define-vop (raw-bits word-index-ref)
+  (:note "raw-bits VOP")
   (:translate %raw-bits)
-  (:variant 1 vm:other-pointer-type))
+  (:results (result :scs (unsigned-reg)))
+  (:variant 0 vm:other-pointer-type))
 
-(define-vop (set-raw-bits halfword-index-set)
+(define-vop (set-raw-bits word-index-set)
+  (:note "setf raw-bits VOP")
   (:translate (setf %raw-bits))
-  (:variant 1 vm:other-pointer-type))
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg descriptor-reg immediate unsigned-immediate))
+	 (value :scs (unsigned-reg)))
+  (:results (result :scs (unsigned-reg)))
+  (:variant 0 vm:other-pointer-type))
 
 
 
