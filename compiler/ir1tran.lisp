@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.106 1994/04/12 13:20:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.107 1994/09/29 19:26:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -554,7 +554,9 @@
 		  (t
 		   (assert (and (consp lexical-def)
 				(eq (car lexical-def) 'macro)))
-		   (ir1-convert-macro start cont (cdr lexical-def) form)))))
+		   (ir1-convert start cont
+				(careful-expand-macro (cdr lexical-def)
+						      form))))))
 	     ((or (atom fun) (not (eq (car fun) 'lambda)))
 	      (compiler-error "Illegal function call."))
 	     (t
@@ -656,31 +658,40 @@
      (translator (funcall translator start cont form))
      ((and cmacro (not *converting-for-interpreter*)
 	   (not (eq (info function inlinep fun) :notinline)))
-      (ir1-convert-macro start cont cmacro form))
+      (let ((res (careful-expand-macro cmacro form)))
+	(if (eq res form)
+	    (ir1-convert-global-functoid-no-cmacro start cont form fun)
+	    (ir1-convert start cont res))))
      (t
-      (ecase (info function kind fun)
-	(:macro
-	 (ir1-convert-macro start cont (info function macro-function fun)
-			    form))
-	((nil :function)
-	 (ir1-convert-srctran start cont (find-free-function fun "Eh?")
-			      form))))))
-  (undefined-value))
+      (ir1-convert-global-functoid-no-cmacro start cont form fun)))))
 
 
-;;; IR1-Convert-Macro  --  Internal
+;;; IR1-Convert-Global-Functoid-No-Cmacro  --  Internal
+;;;
+;;;     Handle the case of where the call was not a compiler macro, or was a
+;;; compiler macro and passed.
+;;;
+(defun ir1-convert-global-functoid-no-cmacro (start cont form fun)
+  (declare (type continuation start cont) (list form))
+  (ecase (info function kind fun)
+    (:macro
+     (ir1-convert start cont
+		  (careful-expand-macro (info function macro-function fun)
+					form)))
+    ((nil :function)
+     (ir1-convert-srctran start cont (find-free-function fun "Eh?")
+			  form))))
+
+
+;;; Careful-Expand-Macro  --  Internal
 ;;;
 ;;;    Trap errors during the macroexpansion.
 ;;;
-(defun ir1-convert-macro (start cont fun form)
-  (declare (type continuation start cont))
-  (ir1-convert start cont
-	       (handler-case (invoke-macroexpand-hook fun form
-						      *lexical-environment*)
-		 (error (condition)
-		   (compiler-error "(during macroexpansion)~%~A"
-				   condition)))))
-
+(defun careful-expand-macro (fun form)
+  (handler-case (invoke-macroexpand-hook fun form *lexical-environment*)
+    (error (condition)
+	   (compiler-error "(during macroexpansion)~%~A"
+			   condition))))
 
 
 ;;;; Conversion utilities:
