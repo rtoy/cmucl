@@ -41,6 +41,8 @@
 		    *software-interrupt-vector* *load-verbose*
 		    *load-print-stuff* *in-compilation-unit*
 		    *aborted-compilation-units*
+		    char-name-alist *default-pathname-defaults*
+		    *beep-function* *gc-notify-before* *gc-notify-after*
 
 		    ;; hack to get these args to with-trap-arg-block to work in
 		    ;; the bootstrapping env, since the var must be known to be
