@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.11 1993/02/08 20:05:09 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.12 1993/03/16 04:15:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -551,8 +551,8 @@
        (nt "Halt trap"))
       (#.vm:function-end-breakpoint-trap
        (nt "Function end breakpoint trap"))
-      (#.vm:object-not-structure-trap
-       (nt "Object not structure trap"))
+      (#.vm:object-not-instance-trap
+       (nt "Object not instance trap"))
     )))
 
 (define-instruction unimp (segment data)
