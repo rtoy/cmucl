@@ -22,6 +22,17 @@
 	  send-character-out-of-band))
 
 
+(defconstant sock-stream 1)
+(defconstant sock-dgram 2)
+(defconstant sock-raw 3)
+
+(defconstant af-unix 1)
+(defconstant af-inet 2)
+
+(defconstant msg-oob 1)
+(defconstant msg-peek 2)
+(defconstant msg-dontroute 4)
+
 (defvar *internet-protocols*
   (list (list :stream 6 sock-stream)
 	(list :data-gram 17 sock-dgram))
@@ -35,48 +46,27 @@
 	    (caddr entry))))
 
 
+(defmacro maybe-byte-swap (var bytes)
+  (ecase vm:target-byte-order
+    (:big-endian
+     var)
+    (:little-endian
+     (let ((ldbs nil))
+       (dotimes (i bytes `(logior ,@ldbs))
+	 (push `(ash (ldb (byte 8 ,(* i 8)) ,var)
+		     ,(* (- bytes 1 i) 8))
+	       ldbs))))))
 
-(eval-when (compile load eval)
-  #+ :IBM-RT-PC
-  (pushnew :NETWORK-BYTE-ORDER *features*)
-  )
+(proclaim '(inline htonl ntohl htons ntohs))
 
-#+ :NETWORK-BYTE-ORDER
-(progn
-  (defmacro htonl (x) x)
-  (defmacro ntohl (x) x)
-  (defmacro htons (x) x)
-  (defmacro ntohs (x) x))
-
-#- :NETWORK-BYTE-ORDER
-(progn
-  (defmacro htonl (x)
-    (let ((val (gensym)))
-      `(let ((,val ,x))
-	 (logior (ash (ldb (byte 8 0)
-			   ,val)
-		      24)
-		 (ash (ldb (byte 8 8)
-			   ,val)
-		      16)
-		 (ash (ldb (byte 8 16)
-			   ,val)
-		      8)
-		 (ldb (byte 8 24)
-		      ,val)))))
-  (defmacro ntohl (x)
-    `(htonl ,x))
-  (defmacro htons (x)
-    (let ((val (gensym)))
-      `(let ((,val ,x))
-	 (logior (ash (ldb (byte 8 0)
-			   ,val)
-		      8)
-		 (ldb (byte 8 8)
-		      ,val)))))
-  (defmacro ntohs (x)
-    `(htons ,x)))
-
+(defun htonl (x)
+  (maybe-byte-swap x 4))
+(defun ntohl (x)
+  (maybe-byte-swap x 4))
+(defun htons (x)
+  (maybe-byte-swap x 2))
+(defun ntohs (x)
+  (maybe-byte-swap x 2))
 
 
 ;;;; Host entry operations.
@@ -92,7 +82,8 @@
 
 
 (def-c-pointer *char (null-terminated-string 256))
-(def-c-type pointer (unsigned-byte 32))
+(def-c-pointer *int int)
+(def-c-pointer *ulong unsigned-long)
 
 (def-c-record inet-sockaddr
   (family short)
@@ -102,82 +93,58 @@
 
 (def-c-record hostent
   (name *char)
-  (aliases pointer)
+  (aliases system-area-pointer)
   (addrtype int)
   (length int)
-  (addr_list pointer))
+  (addr-list system-area-pointer))
 
 (def-c-routine "gethostbyname" (*hostent)
-  (name *char))
+  (name null-terminated-string))
+
 (def-c-routine "gethostbyaddr" (*hostent)
-  (addr pointer)
+  (addr *ulong :copy)
   (len int)
   (type int))
 
-(defalien *alien-ulong* (unsigned-byte 32) 32)
-(defalien *alien-sockaddr* inet-sockaddr (c-sizeof 'inet-sockaddr))
+(def-c-routine ("socket" unix-socket) (int)
+  (domain int)
+  (type int)
+  (protocol int))
 
-(defoperator (my-hostent-aliases pointer)
-	     ((hostent hostent))
-  `(alien-index (alien-value ,hostent)
-		(long-words 1)
-		(long-words 1)))
+(def-c-routine ("connect" unix-connect) (int)
+  (socket int)
+  (sockaddr system-area-pointer)
+  (len int))
 
-(defoperator (my-hostent-addr_list pointer)
-	     ((hostent hostent))
-  `(alien-index (alien-value ,hostent)
-		(long-words 4)
-		(long-words 1)))
+(def-c-routine ("bind" unix-bind) (int)
+  (socket int)
+  (sockaddr system-area-pointer)
+  (len int))
 
-(defoperator (pointer-index pointer)
-	     ((pointer pointer)
-	      index)
-  `(alien-index (alien-value ,pointer)
-		(long-words ,index)
-		(long-words 1)))
+(def-c-routine ("listen" unix-listen) (int)
+  (socket int)
+  (backlog int))
 
-(defoperator (pointer-indirect pointer)
-	     ((pointer pointer)
-	      index)
-  `(alien-indirect (alien-index (alien-value ,pointer)
-				0
-				(long-words 1))
-		   (long-words (1+ ,index))))
+(def-c-routine ("accept" unix-accept) (int)
+  (socket int)
+  (sockaddr system-area-pointer)
+  (len *int :in-out))
 
-(defun mumble (array)
-  (alien-bind ((foo array pointer t)
-	       (bar (pointer-indirect (alien-value foo) 0) pointer t)
-	       (baz (pointer-index (alien-value bar) 0) pointer t))
-    (alien-value baz)))
 
-(defoperator (deref-string-ptr (null-terminated-string 512))
-	     ((alien pointer))
-  `(alien-indirect (alien-value ,alien)
-		   (bytes 512)))
-
-(defoperator (deref-ulong-ptr (unsigned-byte 32))
-	     ((alien pointer))
-  `(alien-indirect (alien-value ,alien)
-		   (long-words 1)))
-
-(defmacro listify-c-array (array derefer)
-  (let ((results (gensym))
-	(index (gensym))
-	(p1 (gensym))
-	(p2 (gensym))
-	(p3 (gensym)))
-    `(let ((,results nil)
-	   (,index 0))
-       (loop
-	 (alien-bind
-	     ((,p1 (pointer-indirect ,array ,index) pointer t)
-	      (,p2 (pointer-index (alien-value ,p1) ,index) pointer t)
-	      (,p3 (,derefer (alien-value ,p2))))
-	   (when (zerop (alien-address (alien-value ,p3)))
-	     (return (nreverse ,results)))
-	   (push (alien-access (alien-value ,p3))
-		 ,results))
-	 (incf ,index)))))
+(defmacro listify-c-array (array alien-type)
+  `(do* ((array ,array)
+	 (results nil
+		  (alien-bind ((alien
+				(make-alien ',alien-type
+					    ,(c-sizeof alien-type)
+					    sap)
+				,alien-type
+				t))
+		    (cons (alien-access alien)
+			  results)))
+	 (index 0 (1+ index))
+	 (sap (sap-ref-sap array index) (sap-ref-sap array index)))
+	((zerop (sap-int sap)) (nreverse results))))
 
 (defun lookup-host-entry (host)
   (if (typep host 'host-entry)
@@ -187,111 +154,110 @@
 	     (string
 	      (gethostbyname host))
 	     ((unsigned-byte 32)
-	      (setf (system:alien-access *alien-ulong*) host)
-	      (gethostbyaddr (system:alien-sap *alien-ulong*)
-			     4 ; bytes per ulong
-			     af-inet))
+	      (gethostbyaddr host 4 af-inet))
 	     (t
-	      (error "Invalid host ~S for ~S -- must be either a string or (unsigned-byte 32)")))))
-      (if (not (null hostent))
-	(alien-bind ((alien hostent hostent t)
-		     (name
-		      (alien-access (hostent-name (alien-value alien))
-				    '(alien (null-terminated-string 256)
-					    2048))
-		      (null-terminated-string 256)
-		      t)
-		     (aliases
-		      (my-hostent-aliases (alien-value alien))
-		      pointer
-		      t)
-		     (addr-list
-		      (my-hostent-addr_list (alien-value alien))
-		      pointer
-		      t))
+	      (error "Invalid host ~S for ~S -- must be either a string ~
+	              or (unsigned-byte 32)"
+		     host 'lookup-host-entry)))))
+      (when hostent
+	(alien-bind ((alien hostent hostent t))
 	  (make-host-entry
-	   :name (alien-access (alien-value name))
-	   :aliases (listify-c-array (alien-value aliases) deref-string-ptr)
+	   :name (alien-access
+		  (indirect-*char (hostent-name (alien-value alien))))
+	   :aliases (listify-c-array
+		     (alien-access (hostent-aliases (alien-value alien)))
+		     (null-terminated-string 256))
 	   :addr-type (alien-access (hostent-addrtype (alien-value alien)))
-	   :addr-list (listify-c-array (alien-value addr-list)
-				       deref-ulong-ptr)))))))
-
-(defun fill-in-sockaddr (addr port)
-  (setf (alien-access (inet-sockaddr-family (alien-value *alien-sockaddr*)))
-	af-inet)
-  (setf (alien-access (inet-sockaddr-port (alien-value *alien-sockaddr*)))
-	port)
-  (setf (alien-access (inet-sockaddr-addr (alien-value *alien-sockaddr*)))
-	addr)
-  (values))
+	   :addr-list (listify-c-array
+		       (alien-access (hostent-addr-list (alien-value alien)))
+		       (unsigned-byte 32))))))))
 
 (defun create-inet-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
 		       (internet-protocol kind)
-    (multiple-value-bind (socket err)
-			 (unix-socket af-inet type proto)
-      (when (null socket)
-	(error "Error creating socket: ~A"
-	       (get-unix-error-msg err)))
+    (let ((socket (unix-socket af-inet type proto)))
+      (when (minusp socket)
+	(error "Error creating socket: ~A" (get-unix-error-msg)))
       socket)))
 
 (defun connect-to-inet-socket (host port &optional (kind :stream))
   (let ((socket (create-inet-socket kind))
 	(hostent (lookup-host-entry host)))
-    (fill-in-sockaddr (host-entry-addr hostent) port)
-    (multiple-value-bind (ok err)
-			 (unix-connect socket
-				       *alien-sockaddr*)
-      (unless ok
+    (with-stack-alien (sockaddr inet-sockaddr (c-sizeof 'inet-sockaddr))
+      (setf (alien-access (inet-sockaddr-family (alien-value sockaddr)))
+	    af-inet)
+      (setf (alien-access (inet-sockaddr-port (alien-value sockaddr)))
+	    (htons port))
+      (setf (alien-access (inet-sockaddr-addr (alien-value sockaddr)))
+	    (host-entry-addr hostent))
+      (when (minusp (unix-connect socket
+				  (alien-sap (alien-value sockaddr))
+				  #.(truncate (c-sizeof 'inet-sockaddr)
+					      (c-sizeof 'char))))
 	(unix-close socket)
 	(error "Error connecting socket to [~A:~A]: ~A"
 	       (host-entry-name hostent)
 	       port
-	       (get-unix-error-msg err)))
+	       (get-unix-error-msg)))
       socket)))
 
 (defun create-inet-listener (port &optional (kind :stream))
   (let ((socket (create-inet-socket kind)))
-    (fill-in-sockaddr 0 port)
-    (multiple-value-bind (ok err)
-			 (unix-bind socket
-				    *alien-sockaddr*)
-      (unless ok
+    (with-stack-alien (sockaddr inet-sockaddr (c-sizeof 'inet-sockaddr))
+      (setf (alien-access (inet-sockaddr-family (alien-value sockaddr)))
+	    af-inet)
+      (setf (alien-access (inet-sockaddr-port (alien-value sockaddr)))
+	    (htons port))
+      (setf (alien-access (inet-sockaddr-addr (alien-value sockaddr)))
+	    0)
+      (when (minusp (unix-bind socket
+			       (alien-sap (alien-value sockaddr))
+			       #.(truncate (c-sizeof 'inet-sockaddr)
+					   (c-sizeof 'char))))
 	(unix-close socket)
 	(error "Error binding socket to port ~a: ~a"
 	       port
-	       (get-unix-error-msg err))))
+	       (get-unix-error-msg))))
     (when (eq kind :stream)
-      (multiple-value-bind (ok err)
-			   (unix-listen socket 5)
-	(unless ok
-	  (unix-close socket)
-	  (error "Error listening to socket: ~a"
-		 (get-unix-error-msg err)))))
+      (when (minusp (unix-listen socket 5))
+	(unix-close socket)
+	(error "Error listening to socket: ~A" (get-unix-error-msg))))
     socket))
 
 (defun accept-tcp-connection (unconnected)
   (declare (fixnum unconnected))
-  (multiple-value-bind (connected err)
-		       (unix-accept unconnected
-				    *alien-sockaddr*)
-    (when (null connected)
-      (error "Error accepting a connection: ~a"
-	     (get-unix-error-msg err)))
-    (values connected
-	    (alien-access (inet-sockaddr-addr *alien-sockaddr*)))))
+  (with-stack-alien (sockaddr inet-sockaddr (c-sizeof 'inet-sockaddr))
+    (let ((connected (unix-accept unconnected
+				  (alien-sap (alien-value sockaddr))
+				  #.(truncate (c-sizeof 'inet-sockaddr)
+					      (c-sizeof 'char)))))
+      (when (minusp connected)
+	(error "Error accepting a connection: ~A" (get-unix-error-msg)))
+      (values connected
+	      (alien-access (inet-sockaddr-addr (alien-value sockaddr)))))))
 
 (defun close-socket (socket)
   (multiple-value-bind (ok err)
 		       (unix-close socket)
     (unless ok
-      (error "Error closing socket: ~a"
-	     (get-unix-error-msg err))))
-  (values))
+      (error "Error closing socket: ~A" (get-unix-error-msg err))))
+  (undefined-value))
 
 
 
 ;;;; Out of Band Data.
+
+(def-c-routine ("recv" unix-recv) (int)
+  (fd int)
+  (buffer null-terminated-string)
+  (length int)
+  (flags int))
+
+(def-c-routine ("send" unix-send) (int)
+  (fd int)
+  (buffer null-terminated-string)
+  (length int)
+  (flags int))
 
 
 ;;; Two level AList. First levels key is the file descriptor, second levels
@@ -312,35 +278,30 @@
     (declare (simple-string buffer))
     (dolist (handlers *oob-handlers*)
       (declare (list handlers))
-      (multiple-value-bind (value err)
-			   (mach:unix-recv (car handlers)
-					   buffer
-					   1
-					   mach:msg-oob)
-	(cond ((null value)
-	       (cerror "Ignore it"
-		       "Error recving oob data on ~A: ~A"
-		       (car handlers)
-		       (mach:get-unix-error-msg err)))
-	      (t
-	       (setf handled t)
-	       (let ((char (schar buffer 0))
-		     (handled nil))
-		 (declare (string-char char))
-		 (dolist (handler (cdr handlers))
-		   (declare (list handler))
-		   (when (eql (car handler) char)
-		     (funcall (cdr handler))
-		     (setf handled t)))
-		 (unless handled
-		   (cerror "Ignore it"
-			   "No oob handler defined for ~S on ~A"
-			   char
-			   (car handlers))))))))
+      (cond ((minusp (mach:unix-recv (car handlers) buffer 1 msg-oob))
+	     (cerror "Ignore it"
+		     "Error recving oob data on ~A: ~A"
+		     (car handlers)
+		     (mach:get-unix-error-msg)))
+	    (t
+	     (setf handled t)
+	     (let ((char (schar buffer 0))
+		   (handled nil))
+	       (declare (base-character char))
+	       (dolist (handler (cdr handlers))
+		 (declare (list handler))
+		 (when (eql (car handler) char)
+		   (funcall (cdr handler))
+		   (setf handled t)))
+	       (unless handled
+		 (cerror "Ignore it"
+			 "No oob handler defined for ~S on ~A"
+			 char
+			 (car handlers)))))))
     (unless handled
       (cerror "Ignore it"
 	      "Got a SIGURG, but couldn't find any out-of-band data.")))
-  (values))
+  (undefined-value))
 
 ;;; ADD-OOB-HANDLER -- public
 ;;;
@@ -353,7 +314,7 @@
 (defun add-oob-handler (fd char handler)
   "Arange to funcall HANDLER when CHAR shows up out-of-band on FD."
   (declare (integer fd)
-	   (string-char char))
+	   (base-character char))
   (let ((handlers (assoc fd *oob-handlers*)))
     (declare (list handlers))
     (cond (handlers
@@ -377,7 +338,7 @@
 (defun remove-oob-handler (fd char)
   "Remove any handlers for CHAR on FD."
   (declare (integer fd)
-	   (string-char char))
+	   (base-character char))
   (let ((handlers (assoc fd *oob-handlers*)))
     (declare (list handlers))
     (when handlers
@@ -412,13 +373,11 @@
 
 (defun send-character-out-of-band (fd char)
   (declare (integer fd)
-	   (string-char char))
+	   (base-character char))
   (let ((buffer (make-string 1 :initial-element char)))
     (declare (simple-string buffer))
-    (multiple-value-bind (value err)
-			 (mach:unix-send fd buffer 1 mach:msg-oob)
-      (unless value
-	(error "Error sending ~S OOB to across ~A: ~A"
-	       char
-	       fd
-	       (mach:get-unix-error-msg err))))))
+    (when (minusp (mach:unix-send fd buffer 1 msg-oob))
+      (error "Error sending ~S OOB to across ~A: ~A"
+	     char
+	     fd
+	     (mach:get-unix-error-msg)))))
