@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.19 1990/06/25 21:12:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.20 1990/06/25 23:00:08 ram Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -112,7 +112,8 @@
 
 (define-argument-type odd-fp-reg
   :type (satisfies fp-reg-p)
-  :function (1+ tn-offset))
+  :function (lambda (tn)
+	      (1+ (tn-offset tn))))
 
 (defun label-offset (label)
   (1- (ash (- (label-position label) *current-position*) -2)))
