@@ -32,7 +32,7 @@ sed_fix ()
 	)
 }
 
-mkdir_if_needed () { if test ! -d "$1"; then mkdir "$1"; fi }
+mkdir_if_needed () { if test ! -d "$1"; then mkdir "$1"; fi; }
 
 usage ()
 {
