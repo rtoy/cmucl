@@ -128,7 +128,7 @@ subdirectory holds code that is shared across most backends.
 
 \item[{\tt hemlock/}] The Hemlock editor.
 
-\item[{\tt ldb/}] The C runtime system code and low-level ``Lisp DeBugger''.
+\item[{\tt lisp/}] The C runtime system code and low-level Lisp debugger.
 
 \item[{\tt pcl/}] CMU version of the PCL implementation of CLOS.
 
@@ -228,22 +228,23 @@ have to edit them before they will work.}
 
 \section{Compiling the C Startup Code}
 
-There is a circular dependancy between ldb/lisp.h and ldb/ldb.map that causes
-bootstrapping problems.  To the easiest way to get around this problem is to
-make a fake ldb.map file that has nothing in it by a version number:
+There is a circular dependancy between lisp/internals.h and lisp/lisp.map that
+causes bootstrapping problems.  To the easiest way to get around this problem
+is to make a fake lisp.nm file that has nothing in it by a version number:
+
 \begin{verbatim}
-	% echo "Map file for ldb version 0" > ldb.map
+	% echo "Map file for lisp version 0" > lisp.nm
 \end{verbatim}
 and then run genesis with NIL for the list of files:
 \begin{verbatim}
 	* (load ".../compiler/generic/genesis")
-	* (lisp::genesis nil ".../ldb/ldb.map" "/dev/null"
-		".../ldb/lisp.map" ".../ldb/lisp.h")
+	* (lisp::genesis nil ".../lisp/lisp.nm" "/dev/null"
+		".../lisp/lisp.map" ".../lisp/lisp.h")
 \end{verbatim}
 It will generate
 a whole bunch of warnings about things being undefined, but ignore
 that, because it will also generate a correct lisp.h.  You can then
-compile ldb producing a correct ldb.map:
+compile lisp producing a correct lisp.map:
 \begin{verbatim}
 	% make
 \end{verbatim}
@@ -276,7 +277,7 @@ drivers:
 \begin{description}
 \item[do-worldbuild*] Builds a kernel core for the current machine.  The
 version to build is indicated by an optional argument, which defaults to
-``alpha''.  The \verb|kernel.core| file is written either in the \verb|ldb/|
+``alpha''.  The \verb|kernel.core| file is written either in the \verb|lisp/|
 directory in the build area, or in \verb|/usr/tmp/|.  The directory which
 already contains \verb|kernel.core| is chosen.  You can create a dummy version
 with e.g. ``touch'' to select the initial build location.
