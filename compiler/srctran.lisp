@@ -478,7 +478,6 @@
 (deftransform %ldb ((size pos int) (fixnum fixnum integer))
   (let ((size-len (max-value size)))
     (unless (<= size-len (integer-length most-positive-fixnum))
-      (format *trace-output* "~&max-size=~D~%" size-len)
       (give-up "result might be up to ~D bits, can't open code %ldb." size-len))
     (if (zerop size-len)
 	0
