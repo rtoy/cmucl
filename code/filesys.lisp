@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.71 2002/11/15 15:08:11 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.72 2003/02/14 19:47:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -456,11 +456,17 @@
 	     (defaults-directory (%pathname-directory defaults))
 	     (prefix-len (length defaults-directory))
 	     (result-dir
-	      (cond ((and (> prefix-len 1)
-			  (>= (length pathname-directory) prefix-len)
-			  (compare-component (subseq pathname-directory
-						     0 prefix-len)
-					     defaults-directory))
+	      (cond ((null pathname-directory)
+		     ;; No directory, so relative to default.
+		     (list :relative))
+		    ((eq (first pathname-directory) :relative)
+		     ;; Relative directory so relative to default.
+		     pathname-directory)
+		    ((and (> prefix-len 1)
+			      (>= (length pathname-directory) prefix-len)
+			      (compare-component (subseq pathname-directory
+							 0 prefix-len)
+						 defaults-directory))
 		     ;; Pathname starts with a prefix of default.  So just
 		     ;; use a relative directory from then on out.
 		     (cons :relative (nthcdr prefix-len pathname-directory)))
