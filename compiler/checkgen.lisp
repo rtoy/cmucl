@@ -342,16 +342,12 @@
 	(node-ends-block (continuation-use prev)))
       
       (let* ((prev-block (continuation-block prev))
-	     (prev-cleanup (block-start-cleanup prev-block))
 	     (new-block (continuation-block new-start))
 	     (dummy (make-continuation)))
 	(dolist (block (block-pred prev-block))
 	  (change-block-successor block prev-block new-block))
 	(ir1-convert new-start dummy (make-type-check-form types))
 	(assert (eq (continuation-block dummy) new-block))
-
-	(setf (block-start-cleanup new-block) prev-cleanup)
-	(setf (block-end-cleanup new-block) prev-cleanup)
 
 	(let ((node (continuation-use dummy)))
 	  (setf (block-last new-block) node)
