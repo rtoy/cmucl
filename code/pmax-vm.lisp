@@ -1,4 +1,4 @@
-;;; -*- Package: VM -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.2 1990/10/23 14:44:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.3 1990/11/26 15:16:43 wlott Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
-(in-package "VM")
+(in-package "MIPS")
 (use-package "SYSTEM")
 
-(export '(fixup-code-object))
+(export '(fixup-code-object internal-error-arguments))
 
 
 ;;;; Add machine specific features to *features*
@@ -46,3 +46,47 @@
 	 (:addi
 	  (setf (sap-ref-16 sap (* word-offset 2))
 		(ldb (byte 16 0) fixup))))))))
+
+
+
+
+;;;; Internal-error-arguments.
+
+;;; INTERNAL-ERROR-ARGUMENTS -- interface.
+;;;
+;;; Given the sigcontext, extract the internal error arguments from the
+;;; instruction stream.
+;;; 
+(defun internal-error-arguments (scp)
+  (alien-bind ((sc (make-alien 'mach:sigcontext
+			       #.(c-sizeof 'mach:sigcontext)
+			       scp)
+		   mach:sigcontext
+		   t)
+	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+    (let* ((original-pc (alien-access (mach:sigcontext-pc (alien-value sc))))
+	   (pc (sap+ original-pc
+		     (+ (if (logbitp 31
+				     (alien-access
+				      (mach:sigcontext-cause
+				       (alien-value sc))))
+			    4
+			    0)
+			(if (= (sap-ref-8 original-pc 4) 255)
+			    1
+			    0))))
+	   (length (sap-ref-8 pc 4))
+	   (vector (make-array length :element-type '(unsigned-byte 8))))
+      (copy-from-system-area pc (* vm:byte-bits 5)
+			     vector (* vm:word-bits
+				       vm:vector-data-offset)
+			     (* length vm:byte-bits))
+      (let* ((index 0)
+	     (error-number (c::read-var-integer vector index)))
+	(collect ((sc-offsets))
+	  (loop
+	    (when (>= index length)
+	      (return))
+	    (sc-offsets (c::read-var-integer vector index)))
+	  (values error-number (sc-offsets)))))))
+

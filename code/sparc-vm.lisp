@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.1 1990/11/23 20:17:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.2 1990/11/26 15:16:18 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
 (in-package "SPARC")
 (use-package "SYSTEM")
 
-(export '(fixup-code-object))
+(export '(fixup-code-object internal-error-arguments))
 
 
 ;;;; Add machine specific features to *features*
@@ -43,3 +43,38 @@
 	 (:add
 	  (setf (ldb (byte 10 0) (sap-ref-32 sap word-offset))
 		(ldb (byte 10 0) fixup))))))))
+
+
+
+;;;; Internal-error-arguments.
+
+;;; INTERNAL-ERROR-ARGUMENTS -- interface.
+;;;
+;;; Given the sigcontext, extract the internal error arguments from the
+;;; instruction stream.
+;;; 
+(defun internal-error-arguments (scp)
+  (alien-bind ((sc (make-alien 'mach:sigcontext
+			       #.(c-sizeof 'mach:sigcontext)
+			       scp)
+		   mach:sigcontext
+		   t)
+	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+    (let* ((pc (alien-access (mach:sigcontext-pc (alien-value sc))))
+	   (length (sap-ref-8 pc 4))
+	   (vector (make-array length :element-type '(unsigned-byte 8))))
+      (copy-from-system-area pc (* vm:byte-bits 5)
+			     vector (* vm:word-bits
+				       vm:vector-data-offset)
+			     (* length vm:byte-bits))
+      (let* ((index 0)
+	     (error-number (c::read-var-integer vector index)))
+	(collect ((sc-offsets))
+	  (loop
+	    (when (>= index length)
+	      (return))
+	    (sc-offsets (c::read-var-integer vector index)))
+	  (values error-number (sc-offsets)))))))
+
+
+
