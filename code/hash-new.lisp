@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.3 1998/07/02 10:44:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.4 1998/07/31 08:31:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -793,18 +793,20 @@
 (defmacro with-hash-table-iterator ((function hash-table) &body body)
   "WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)
    provides a method of manually looping over the elements of a hash-table.
-   function is bound to a generator-macro that, withing the scope of the
-   invocation, returns three values.  First, whether there are any more objects
-   in the hash-table, second, the key, and third, the value."
+   FUNCTION is bound to a generator-macro that, withing the scope of the
+   invocation, returns one or three values. The first value tells whether
+   any objects remain in the hash table. When the first value is non-NIL, 
+   the second and third values are the key and the value of the next object."
   (let ((n-function (gensym "WITH-HASH-TABLE-ITERRATOR-")))
     `(let ((,n-function
 	    (let* ((table ,hash-table)
 		   (length (length (hash-table-next-vector table)))
 		   (index 1))
+              (declare (type (integer 0 #.(1- (floor most-positive-fixnum 2))) index))
 	      (labels
 		  ((,function ()
-		     ;; Grab the table again on each itteration just
-		     ;; in-case it was rehashed by a puthash.
+		     ;; Grab the table again on each iteration just
+		     ;; in case it was rehashed by a PUTHASH.
 		     (let ((kv-vector (hash-table-table table)))
 		       (do ()
 			   ((>= index length) (values nil))
