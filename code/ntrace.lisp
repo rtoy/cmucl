@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.4 1991/11/26 17:54:03 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.5 1992/03/10 15:55:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -229,8 +229,6 @@
 		       (when (and *traced-entries*
 				  (not (di:function-end-cookie-valid-p
 					frame (car *traced-entries*))))
-			 (format t "~&WARNING: dynamic flow of control occurred ~
-				    while TRACE'ing.~%")
 			 (loop
 			   (pop *traced-entries*)
 			   (when (or (not *traced-entries*)
@@ -273,9 +271,7 @@
 (defun print-trace-end (frame bpt values cookie &optional print-after)
   (declare (ignore frame bpt))
   (unless (eq cookie (car *traced-entries*))
-    (setf *traced-entries* (member cookie *traced-entries*))
-    (fresh-line)
-    (write-line "WARNING: dynamic flow of control occurred while TRACE'ing."))
+    (setf *traced-entries* (member cookie *traced-entries*)))
   (print-trace-indentation)
   (write-string "returned ")
   (dolist (v values)
