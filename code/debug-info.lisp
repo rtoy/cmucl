@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.21 1991/02/11 13:36:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.22 1991/03/12 17:18:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,8 +190,10 @@
 ;;;        environment-live
 ;;;        has distinct save location
 ;;;        has ID (name not unique in this fun)
-;;;    name length in bytes (as var-length integer)
-;;;    ...name bytes...
+;;;        minimal debug-info argument (name generated as ARG-0, ...)
+;;;        deleted: placeholder for unused minimal argument
+;;;    [name length in bytes (as var-length integer), if not minimal]
+;;;    [...name bytes..., if not minimal]
 ;;;    [if packaged, var-length integer that is package name length]
 ;;;     ...package name bytes...]
 ;;;    [If has ID, ID as var-length integer]
@@ -203,6 +205,8 @@
 (defconstant compiled-debug-variable-environment-live	#b00000100)
 (defconstant compiled-debug-variable-save-loc-p		#b00001000)
 (defconstant compiled-debug-variable-id-p		#b00010000)
+(defconstant compiled-debug-variable-minimal-p		#b00100000)
+(defconstant compiled-debug-variable-deleted-p		#b01000000)
 
 
 ;;;; Compiled debug blocks:
@@ -249,9 +253,8 @@
   ;; function.  These are in alphabetical order by name.  This ordering is used
   ;; in lifetime info to refer to variables: the first entry is 0, the second
   ;; entry is 1, etc.  Variable numbers are *not* the byte index at which the
-  ;; representation of the location starts.  The entire vector must be parsed
-  ;; before function, alphabetically sorted by the NAME.  This slot may be NIL
-  ;; to save space.
+  ;; representation of the location starts.  This slot may be NIL to save
+  ;; space.
   (variables nil :type (or (simple-array (unsigned-byte 8) (*)) null))
   ;;
   ;; A vector of the packed binary representation of the COMPILED-DEBUG-BLOCKS
@@ -292,8 +295,12 @@
   ;;    specified name.
   ;;
   ;; This may be NIL to save space.  If no symbols are present, then this will
-  ;; be represented with an I-vector with sufficiently large element type.
-  (arguments nil :type (or (simple-array * (*)) null))
+  ;; be represented with an I-vector with sufficiently large element type.  If
+  ;; this is :MINIMAL, then this means that the VARIABLES are all required
+  ;; arguments, and are in the order they appear in the VARIABLES vector.  In
+  ;; other words, :MINIMAL stands in for a vector where every element holds its
+  ;; index.
+  (arguments nil :type (or (simple-array * (*)) (member :minimal nil)))
   ;;
   ;; There are three alternatives for this slot:
   ;; 
@@ -324,6 +331,92 @@
   ;; The start of elsewhere code for this function (if any.)
   (elsewhere-pc (required-argument) :type index))
 
+
+;;;; Minimal debug function:
+
+;;; The minimal debug info format compactly represents debug-info for some
+;;; cases where the other debug info (variables, blocks) is small enough so
+;;; that the per-function overhead becomes relatively large.  The minimal
+;;; debug-info format can represent any function at level 0, and any fixed-arg
+;;; function at level 1.
+;;;
+;;; In the minimal format, the debug functions and function map are packed into
+;;; a single byte-vector which is placed in the
+;;; COMPILED-DEBUG-INFO-FUNCTION-MAP.  Because of this, all functions in a
+;;; component must be representable in minimal format for any function to
+;;; actually be dumped in minimal format.  The vector is a sequence of records
+;;; in this format:
+;;;    name representation + kind + return convention (single byte)
+;;;    bit flags (single byte)
+;;;        setf, nfp, variables
+;;;    [package name length (as var-length int), if name is packaged]
+;;;    [...package name bytes, if name is packaged]
+;;;    [name length (as var-length int), if there is a name]
+;;;    [...name bytes, if there is a name]
+;;;    [variables length (as var-length int), if variables flag]
+;;;    [...bytes holding variable descriptions]
+;;;        If variables are dumped (level 1), then the variables are all
+;;;        arguments (in order) with the minimal-arg bit set.
+;;;    [If returns is specified, then the number of return values]
+;;;    [...sequence of var-length ints holding sc-offsets of the return
+;;;        value locations, if fixed return values are specified.]
+;;;    return-pc location sc-offset (as var-length int)
+;;;    old-fp location sc-offset (as var-length int)
+;;;    [nfp location sc-offset (as var-length int), if nfp flag]
+;;;    code-start-pc (as a var-length int)
+;;;        This field implicitly encodes start of this function's code in the
+;;;        function map, as a delta from the previous function's code start.
+;;;        If the first function in the component, then this is the delta from
+;;;        0 (i.e. the absolute offset.)
+;;;    start-pc (as a var-length int)
+;;;        This encodes the environment start PC as an offset from the
+;;;        code-start PC.
+;;;    elsewhere-pc
+;;;        This encodes the elsewhere code start for this function, as a delta
+;;;        from the previous function's elsewhere code start. (i.e. the
+;;;        encoding is the same as for code-start-pc.)
+;;;    
+;;;    
+
+#|
+### For functions with XEPs, name could be represented more simply and
+compactly as some sort of info about with how to find the function-entry that
+this is a function for.  Actually, you really hardly need any info.  You can
+just chain through the functions in the component until you find the right one.
+Well, I guess you need to at least know which function is an XEP for the real
+function (which would be useful info anyway).
+|#
+
+;;; Following are definitions of bit-fields in the first byte of the minimal
+;;; debug function:
+;;;
+(defconstant minimal-debug-function-name-symbol 0)
+(defconstant minimal-debug-function-name-packaged 1)
+(defconstant minimal-debug-function-name-uninterned 2)
+(defconstant minimal-debug-function-name-component 3)
+(defconstant minimal-debug-function-name-style-byte (byte 2 0))
+(defconstant minimal-debug-function-kind-byte (byte 3 2))
+(defconstant minimal-debug-function-kinds
+  '#(nil :optional :external :top-level :cleanup))
+(defconstant minimal-debug-function-returns-standard 0)
+(defconstant minimal-debug-function-returns-specified 1)
+(defconstant minimal-debug-function-returns-fixed 2)
+(defconstant minimal-debug-function-returns-byte (byte 2 5))
+
+;;; The following are bit-flags in the second byte of the minimal debug
+;;; function:
+
+;;; If true, wrap (SETF ...) around the name.
+(defconstant minimal-debug-function-setf-bit (ash 1 0))
+
+;;; If true, there is a NFP.
+(defconstant minimal-debug-function-nfp-bit (ash 1 1))
+
+;;; If true, variables (hence arguments) have been dumped.
+(defconstant minimal-debug-function-variables-bit (ash 1 2))
+
+
+;;;; Debug source:
 
 (defstruct debug-source
   ;;
@@ -360,6 +453,8 @@
   ;; COMPILE-FROM-STREAM.
   (info nil))
 
+
+;;;; The DEBUG-INFO structure:
 
 (defstruct debug-info)
 
@@ -379,11 +474,16 @@
   ;; to.  Locations that aren't packaged are in this package.
   (package (required-argument) :type simple-string)
   ;;
-  ;; A simple-vector of alternating Debug-Function structures and fixnum
-  ;; PCs.  This is used to map PCs to functions, so that we can figure out
-  ;; what function we were running in.  The function is valid between the PC
-  ;; before it (inclusive) and the PC after it (exclusive).  The PCs are in
-  ;; sorted order, so we can binary-search.  We omit the first and last PC,
-  ;; since their values are 0 and the length of the code vector.  Null only
-  ;; temporarily.
-  (function-map nil :type (or simple-vector null)))
+  ;; Either a simple-vector or a byte-vector holding the debug functions for
+  ;; this component.  This is used to map PCs to functions, so that we can
+  ;; figure out what function we were running in.  If a byte-vector, then it is
+  ;; a sequence of minimal debug functions in a packed binary representation.
+  ;;
+  ;; If a simple-vector, then it alternates Debug-Function structures and
+  ;; fixnum PCs.  The function is valid between the PC before it (inclusive)
+  ;; and the PC after it (exclusive).  The PCs are in sorted order, so we can
+  ;; binary-search.  We omit the first and last PC, since their values are 0
+  ;; and the length of the code vector.  Null only temporarily.
+  (function-map nil :type (or simple-vector
+			      (simple-array (unsigned-byte 8) (*))
+			      null)))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.20 1991/02/08 13:31:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.21 1991/03/12 17:18:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1041,7 +1041,6 @@
 ;;;
 (defsetf escape-float-register %set-escape-float-register)
 
-
 ;;; DEBUG-FUNCTION-FROM-PC -- Internal.
 ;;;
 ;;; This returns a compiled-debug-function for code and pc.  We fetch the
@@ -1053,7 +1052,7 @@
   (let ((info (code-debug-info component)))
     (unless info
       (debug-signal 'no-debug-info))
-    (let* ((function-map (c::compiled-debug-info-function-map info))
+    (let* ((function-map (get-debug-info-function-map info))
 	   (len (length function-map)))
       (declare (simple-vector function-map))
       (if (= len 1)
@@ -1437,55 +1436,59 @@
   (let ((args (c::compiled-debug-function-arguments
 	       (compiled-debug-function-compiler-debug-fun
 		debug-function))))
-    (declare (type (or (simple-array * (*)) null) args))
-    (if (not args)
-	(values nil nil)
-	(let ((vars (debug-function-debug-variables debug-function))
-	      (i 0)
-	      (len (length args))
-	      (res nil))
-	  (declare (type (or null simple-vector) vars))
-	  (loop
-	    (when (>= i len) (return))
-	    (let ((ele (aref args i)))
-	      (if (symbolp ele)
-		  (case ele
-		    (c::deleted
-		     ;; Deleted required arg at beginning of args array.
-		     (push :deleted res))
-		    (c::optional-args
-		     ;; When I fill this in, I can remove the (typep last 'cons)
-		     ;; below.
-		     )
-		    (c::supplied-p
-		     ;; supplied-p var immediately following keyword or optional.
-		     ;; Stick the extra var in the result element representing
-		     ;; the keyword or optional.
-		     ;; ACTUALLY, WE DON'T HANDLE OPTIONALS CORRECTLY YET. ???
-		     (let ((last (car res))
-			   (v (compiled-debug-function-lambda-list-var
-			       args (incf i) vars)))
-		       (if (typep last 'cons)
-			   (nconc last (list v))
-			   (setf (car res) (list :optional last v)))))
-		    (c::rest-arg
-		     (push (list :rest
-				 (compiled-debug-function-lambda-list-var
-				  args (incf i) vars))
-			   res))
-		    (c::more-arg
-		     (error "I thought I'd never see a more-arg?"))
-		    (t
-		     ;; Keyword arg.
-		     (push (list :keyword
-				 ele
-				 (compiled-debug-function-lambda-list-var
-				  args (incf i) vars))
-			   res)))
-		  ;; Required arg at beginning of args array.
-		  (push (svref vars ele) res)))
-	    (incf i))
-	  (values (nreverse res) t)))))
+    (cond
+     ((not args)
+      (values nil nil))
+     ((eq args :minimal)
+      (values (coerce (debug-function-debug-variables debug-function) 'list)
+	      t))
+     (t
+      (let ((vars (debug-function-debug-variables debug-function))
+	    (i 0)
+	    (len (length args))
+	    (res nil))
+	(declare (type (or null simple-vector) vars))
+	(loop
+	  (when (>= i len) (return))
+	  (let ((ele (aref args i)))
+	    (if (symbolp ele)
+		(case ele
+		  (c::deleted
+		   ;; Deleted required arg at beginning of args array.
+		   (push :deleted res))
+		  (c::optional-args
+		   ;; When I fill this in, I can remove the (typep last 'cons)
+		   ;; below.
+		   )
+		  (c::supplied-p
+		   ;; supplied-p var immediately following keyword or optional.
+		   ;; Stick the extra var in the result element representing
+		   ;; the keyword or optional.
+		   ;; ACTUALLY, WE DON'T HANDLE OPTIONALS CORRECTLY YET. ???
+		   (let ((last (car res))
+			 (v (compiled-debug-function-lambda-list-var
+			     args (incf i) vars)))
+		     (if (typep last 'cons)
+			 (nconc last (list v))
+			 (setf (car res) (list :optional last v)))))
+		  (c::rest-arg
+		   (push (list :rest
+			       (compiled-debug-function-lambda-list-var
+				args (incf i) vars))
+			 res))
+		  (c::more-arg
+		   (error "I thought I'd never see a more-arg?"))
+		  (t
+		   ;; Keyword arg.
+		   (push (list :keyword
+			       ele
+			       (compiled-debug-function-lambda-list-var
+				args (incf i) vars))
+			 res)))
+		;; Required arg at beginning of args array.
+		(push (svref vars ele) res)))
+	  (incf i))
+	(values (nreverse res) t))))))
 
 ;;; COMPILED-DEBUG-FUNCTION-LAMBDA-LIST-VAR -- Internal
 ;;;
@@ -1514,9 +1517,9 @@
 ;;;
 ;;; WITH-PARSING-BUFFER -- Internal.
 ;;;
-;;; PARSE-DEBUG-BLOCKS and PARSE-DEBUG-VARIABLES use this to unpack binary
-;;; encoded information.  It returns the values returned by the last form
-;;; in body.
+;;; PARSE-DEBUG-BLOCKS, PARSE-DEBUG-VARIABLES and UNCOMPACT-FUNCTION-MAP use
+;;; this to unpack binary encoded information.  It returns the values returned
+;;; by the last form in body.
 ;;;
 ;;; This binds buffer-var to *parsing-buffer*, makes sure it starts at element
 ;;; zero, and makes sure if we unwind, we nil out any set elements for GC
@@ -1734,16 +1737,36 @@
 		(when (= j len) (return))))))))
     vars))
 
+
+;;; ASSIGN-MINIMAL-VAR-NAMES  --  Internal
+;;;
+;;;    Vars is the parsed variables for a minimal debug function.  We need to
+;;; assign names of the form ARG-NNN.  We must pad with leading zeros, since
+;;; the arguments must be in alphabetical order.
+;;;
+(defun assign-minimal-var-names (vars)
+  (declare (simple-vector vars))
+  (let* ((len (length vars))
+	 (width (length (format nil "~D" (1- len)))))
+    (dotimes (i len)
+      (setf (compiled-debug-variable-name (svref vars i))
+	    (format nil "ARG-~V,'0D" width i)))))
+
+  
 ;;; PARSE-COMPILED-DEBUG-VARIABLES -- Internal.
 ;;;
 ;;; This parses the packed binary representation of debug-variables from
 ;;; debug-function's c::compiled-debug-function.
 ;;;
 (defun parse-compiled-debug-variables (debug-function)
-  (let* ((debug-fun (compiled-debug-function-compiler-debug-fun debug-function))
+  (let* ((debug-fun
+	  (compiled-debug-function-compiler-debug-fun debug-function))
 	 (packed-vars (c::compiled-debug-function-variables debug-fun))
-	 (default-package (c::compiled-debug-info-package
-			   (compiled-debug-function-debug-info debug-function))))
+	 (default-package
+	  (c::compiled-debug-info-package
+	   (compiled-debug-function-debug-info debug-function)))
+	 (args-minimal (eq (c::compiled-debug-function-arguments debug-fun)
+			   :minimal)))
     (unless packed-vars
       (return-from parse-compiled-debug-variables nil))
     (when (zerop (length packed-vars))
@@ -1753,42 +1776,146 @@
 	  (len (length packed-vars)))
       (with-parsing-buffer (buffer)
 	(loop
-	  (let ((flags (aref packed-vars i)))
-	    (declare (type (unsigned-byte 8) flags))
-	    (incf i)
-	    ;; The routines in the "C" package are macros that advance the index.
-	    (let ((name (c::read-var-string packed-vars i))
-		  (package (cond ((not
-				   (zerop
-				    (logand c::compiled-debug-variable-packaged
-					    flags)))
-				  (c::read-var-string packed-vars i))
-				 ((zerop
-				   (logand c::compiled-debug-variable-uninterned
-					   flags))
-				  default-package)
-				 (t nil)))
-		  (id (if (zerop (logand c::compiled-debug-variable-id-p
-					 flags))
-			  0
-			  (c::read-var-integer packed-vars i)))
-		  (sc-offset (c::read-var-integer packed-vars i))
-		  (save-sc-offset (if (zerop
-				       (logand
-					c::compiled-debug-variable-save-loc-p
-					flags))
-				      nil
-				      (c::read-var-integer packed-vars i))))
-	      (vector-push-extend
-	       (make-compiled-debug-variable
-		name package id
-		(not (zerop (logand c::compiled-debug-variable-environment-live
-				    flags)))
-		sc-offset save-sc-offset)
-	       buffer)))
+	  ;; The routines in the "C" package are macros that advance the
+	  ;; index.
+	  (let* ((flags (prog1 (aref packed-vars i) (incf i)))
+		 (minimal (logtest c::compiled-debug-variable-minimal-p flags))
+		 (deleted (logtest c::compiled-debug-variable-deleted-p flags))
+		 (name (if minimal "" (c::read-var-string packed-vars i)))
+		 (package (cond
+			   (minimal default-package)
+			   ((logtest c::compiled-debug-variable-packaged
+				     flags)
+			    (c::read-var-string packed-vars i))
+			   ((logtest c::compiled-debug-variable-uninterned
+				     flags)
+			    nil)
+			   (t
+			    default-package)))
+		  (id (if (logtest c::compiled-debug-variable-id-p flags)
+			  (c::read-var-integer packed-vars i)
+			  0))
+		  (sc-offset
+		   (if deleted 0 (c::read-var-integer packed-vars i)))
+		  (save-sc-offset
+		   (if (logtest c::compiled-debug-variable-save-loc-p flags)
+		       (c::read-var-integer packed-vars i)
+		       nil)))
+	    (assert (not (and args-minimal (not minimal))))
+	    (vector-push-extend
+	     (make-compiled-debug-variable
+	      name package id
+	      (logtest c::compiled-debug-variable-environment-live flags)
+	      sc-offset save-sc-offset)
+	     buffer))
 	  (when (>= i len) (return)))
-	(result buffer)))))
+	(let ((res (result buffer)))
+	  (when args-minimal
+	    (assign-minimal-var-names res))
+	  res)))))
 
+
+;;;; Unpacking minimal debug functions:
+
+(eval-when (compile eval)
+;;;
+;;; Sleazoid "macro" to keep our indentation sane...
+(defmacro make-uncompacted-debug-fun ()
+  '(c::make-compiled-debug-function
+    :name
+    (let ((base (ecase (ldb c::minimal-debug-function-name-style-byte
+			    options)
+		  (#.c::minimal-debug-function-name-symbol
+		   (intern (c::read-var-string map i)
+			   (c::compiled-debug-info-package info)))
+		  (#.c::minimal-debug-function-name-packaged
+		   (let ((pkg (c::read-var-string map i)))
+		     (intern (c::read-var-string map i) pkg)))
+		  (#.c::minimal-debug-function-name-uninterned
+		   (make-symbol (c::read-var-string map i)))
+		  (#.c::minimal-debug-function-name-component
+		   (c::compiled-debug-info-name info)))))
+      (if (logtest flags c::minimal-debug-function-setf-bit)
+	  `(setf ,base)
+	  base))
+    :kind (svref c::minimal-debug-function-kinds
+		 (ldb c::minimal-debug-function-kind-byte options))
+    :variables
+    (when vars-p
+      (let ((len (c::read-var-integer map i)))
+	(prog1 (subseq map i (+ i len))
+	  (incf i len))))
+    :arguments (when vars-p :minimal)
+    :returns
+    (ecase (ldb c::minimal-debug-function-returns-byte options)
+      (#.c::minimal-debug-function-returns-standard
+       :standard)
+      (#.c::minimal-debug-function-returns-fixed
+       :fixed)
+      (#.c::minimal-debug-function-returns-specified
+       (with-parsing-buffer (buf)
+	 (dotimes (idx (c::read-var-integer map i))
+	   (vector-push-extend (c::read-var-integer map i) buf))
+	 (result buf))))
+    :return-pc (c::read-var-integer map i)
+    :old-fp (c::read-var-integer map i)
+    :nfp (when (logtest flags c::minimal-debug-function-nfp-bit)
+	   (c::read-var-integer map i))
+    :start-pc
+    (progn
+      (setq code-start-pc (+ code-start-pc (c::read-var-integer map i)))
+      (+ code-start-pc (c::read-var-integer map i)))
+    :elsewhere-pc
+    (setq elsewhere-pc (+ elsewhere-pc (c::read-var-integer map i)))))
+
+); eval-when (compile eval)
+
+;;; UNCOMPACT-FUNCTION-MAP  --  Internal
+;;;
+;;;    Return a normal function map derived from a minimal debug info function
+;;; map.  This involves looping parsing minimal-debug-functions and then
+;;; building a vector out of them.
+;;;
+(defun uncompact-function-map (info)
+  (declare (type c::compiled-debug-info info))
+  (let* ((map (c::compiled-debug-info-function-map info))
+	 (i 0)
+	 (len (length map))
+	 (code-start-pc 0)
+	 (elsewhere-pc 0))
+    (declare (type (simple-array (unsigned-byte 8) (*)) map))
+    (collect ((res))
+      (loop
+	(when (= i len) (return))
+	(let* ((options (prog1 (aref map i) (incf i)))
+	       (flags (prog1 (aref map i) (incf i)))
+	       (vars-p (logtest flags c::minimal-debug-function-variables-bit))
+	       (dfun (make-uncompacted-debug-fun)))
+	  (print dfun)
+	  (res code-start-pc)
+	  (res dfun)))
+      
+      (coerce (cdr (res)) 'simple-vector))))
+
+    
+;;; This variable maps minimal debug-info function maps to an unpacked version
+;;; thereof.
+;;;
+(defvar *uncompacted-function-maps* (make-hash-table :test #'eq))
+
+;;; GET-DEBUG-INFO-FUNCTION-MAP  --  Internal
+;;;
+;;;    Return a function-map for a given compiled-debug-info object.  If the
+;;; info is minimal, and has not been parsed, then parse it.
+;;;
+(defun get-debug-info-function-map (info)
+  (declare (type c::compiled-debug-info info))
+  (let ((map (c::compiled-debug-info-function-map info)))
+    (if (simple-vector-p map)
+	map
+	(or (gethash map *uncompacted-function-maps*)
+	    (setf (gethash map *uncompacted-function-maps*)
+		  (uncompact-function-map info))))))
 
 
 ;;;; Code-locations.
