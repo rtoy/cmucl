@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.5 2002/10/24 20:38:57 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.6 2003/04/01 21:19:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,11 +33,40 @@
     (ss-size unsigned-long)
     (ss-flags unsigned-long)))
 
-; In the include files this structure consists of 3 structures:
-; struct ucontext, that includes struct mcontext which includes; struct fpu.
-; Because the fpu structure contains doubles, it must be aligned on
-; 8 byte bounderies, consequently so must struct mcontext and struct
-; ucontext.
+;; The prxregset structure for the extra register info for V8+.  See
+;; struct prxregset in procfs_isa.h.
+
+(def-alien-type prxregset
+    (struct prxregset
+      (pr-type unsigned-long)
+      (pr-align unsigned-long)
+      ;; The pr_v8p
+      (pr-xfr
+       (union pr-xfr
+	;; Extra FP registers
+	(pr-regs (array unsigned-long 32))
+	(pr-dregs (array double-float 16))
+	#+long-float
+	(pr-qregs (array long-float 8))
+	))
+      (pr-xfsr unsigned-long)		; Upper 32 bits, FP state reg
+      (pr-fprs unsigned-long)		; FP registers state
+      ;; The upper parts of the %G and %O registers.  Hmm, should we
+      ;; treat this as just one array of 16 values, or two separate
+      ;; arrays of length 8 each?  The header file has them as two
+      ;; arrays.  But it's more convenient for us if it's one array of 16.
+      (pr-xgo (array unsigned-long 16))	; Upper 32 bits, G and O registers
+      (pr-tstate (array unsigned-long 2)) ; TSTATE register (really a 64-bit integer)
+      (pr-filler (array unsigned-long 8))))
+
+;; This means the XRS entry is valid.
+(defconstant +xrs-id-valid+ #x78727300)
+
+; In the include files (sys/ucontext.h) this structure consists of 3
+; structures: struct ucontext, that includes struct mcontext which
+; includes; struct fpu. Because the fpu structure contains doubles, it
+; must be aligned on 8 byte bounderies, consequently so must struct
+; mcontext and struct ucontext.
 (def-alien-type sigcontext
   (struct nil
     (uc-flags unsigned-long)
@@ -45,7 +74,10 @@
     (uc-mask sigset)
     (uc-stack sigaltstack)
     (uc-pad unsigned-long)  ;; align on 8.
-    ; struct mcontext 
+    ;; struct mcontext (See sys/regset.h) regset defines this as
+    ;; several structs, but we've smashed them all together here.
+
+    ;; gregset begins here
     (uc-psr unsigned-long)
     (uc-pc system-area-pointer)
     (uc-npc system-area-pointer)
@@ -56,9 +88,10 @@
        (struct mcontext-regs
         (uc-y unsigned-long)
         (uc-fill1 (array unsigned-long 13)) ; %g1 - %g7 , %o0 - %o5
-        (uc-sp (* unsigned-long)) ; pointer to %l0 - %l7, %i0 - %i7
+        (uc-sp (* unsigned-long))	; pointer to %l0 - %l7, %i0 - %i7
         (uc-o7 unsigned-long)))))
-    (uc-windows system-area-pointer)	 ; usually nil
+    ;; gregset ends here
+    (uc-windows system-area-pointer)	; usually nil (possible pointer to register windows)
     ;; struct fpu, already aligned at 8 bytes in mcontext
     (fpregs (array unsigned-long 32))
     (fpq    system-area-pointer)
@@ -68,7 +101,11 @@
     (fpu-en unsigned-char)
     (fpu-sparc-pad unsigned-long)	; align length to 8.
     ;; end of struct fpu
-    (filler (array long 22))		; 21 from definition + 1 padding
+    ;; The XRS (extra register) structure
+    (xrs-id unsigned-long)		; #x78727300 if xrs-ptr is valid
+    (xrs-ptr (* prxregset))		; Points to the XRS
+    ;; End struct xrs
+    (filler (array long 19))		; 21 from definition + 1 padding - 2 for XRS
     ; end of mcontext
     (filler2 (array long 24))))		; 23 from def + 1 padding
 
@@ -90,11 +127,13 @@
 
 (defun machine-type ()
   "Returns a string describing the type of the local machine."
-  "SPARCstation")
+  #-sparc-v9 "SPARCstation"
+  #+sparc-v9 "Ultrasparc")
 
 (defun machine-version ()
   "Returns a string describing the version of the local machine."
-  "SPARCstation")
+  #-sparc-v9 "SPARCstation"
+  #+sparc-v9 "Ultrasparc")
 
 
 
@@ -222,9 +261,13 @@
     (if (zerop index)
 	0
 	(if (< index 16)
-	    (deref (slot (slot scp 'uc-regs) 'regs) index)
-	    (deref (slot (slot (slot scp 'uc-regs) 'regs2) 'uc-sp) (- index 16))
-	    ))))
+	    (let ((reg-value (deref (slot (slot scp 'uc-regs) 'regs) index)))
+	      (when (= (slot scp 'xrs-id) +xrs-id-valid+)
+		(let* ((prx (deref (slot scp 'xrs-ptr) 0))
+		       (hi-part (deref (slot prx 'pr-xgo) index)))
+		  (incf reg-value (ash hi-part 32))))
+	      reg-value)
+	    (deref (slot (slot (slot scp 'uc-regs) 'regs2) 'uc-sp) (- index 16))))))
 
 (defun %set-sigcontext-register (scp index new)
   (declare (type (alien (* sigcontext)) scp))
@@ -232,7 +275,13 @@
     (if (zerop index)
 	0
 	(if (< index 16)
-	    (setf (deref (slot (slot scp 'uc-regs) 'regs) index) new)
+	    (let ((low-part (ldb (byte 32 0) new)))
+	      (setf (deref (slot (slot scp 'uc-regs) 'regs) index) low-part)
+	      (when (= (slot scp 'xrs-id) +xrs-id-valid+)
+		(let* ((prx (deref (slot scp 'xrs-ptr) 0))
+		       (hi-reg (slot prx 'pr-xgo))
+		       (high-part (ldb (byte 32 32) new)))
+		  (setf (deref hi-reg index) high-part))))
 	    (setf (deref (slot (slot (slot scp 'uc-regs) 'regs2) 'uc-sp)
 			 (- index 16)) new))
 	))
@@ -246,13 +295,32 @@
 ;;; Like sigcontext-REGISTER, but returns the value of a float register.
 ;;; Format is the type of float to return.
 ;;;
+
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
     (let ((sap (alien-sap (slot scp 'fpregs))))
       (ecase format
-	(single-float (system:sap-ref-single sap (* index vm:word-bytes)))
-	(double-float (system:sap-ref-double sap (* index vm:word-bytes)))))))
+	(single-float
+	 (system:sap-ref-single sap (* index vm:word-bytes)))
+	(double-float
+	 ;; The indexing for double-float registers is different.  See
+	 ;; fp-reg-tn-encoding in sparc/insts.lisp for an explanation.
+	 ;; Briefly for double-float registers are even numbers, but
+	 ;; for registers above 30, the MSB if the number is stored in
+	 ;; the LSB.
+	 (cond ((< index 32)
+		(system:sap-ref-double sap (* index vm:word-bytes)))
+	       (t
+		;; The extra double-float registers for Sparc V8plus
+		;; ABI are stored in the pxregset structure.  (The
+		;; constant is the C string "xrs", in big-endian
+		;; order, of course.)
+		(unless (= (slot scp 'xrs-id) +xrs-id-valid+)
+		  (error "XRS ID invalid but attempting to accessing double-float register ~d!" (ash index 1)))
+		(let* ((xrs-ptr (slot scp 'xrs-ptr))
+		       (fp-sap (alien-sap (slot (slot (deref xrs-ptr 0) 'pr-xfr) 'pr-regs))))
+		  (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes))))))))))
 ;;;
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (type (alien (* sigcontext)) scp))
@@ -262,7 +330,14 @@
 	(single-float
 	 (setf (sap-ref-single sap (* index vm:word-bytes)) new-value))
 	(double-float
-	 (setf (sap-ref-double sap (* index vm:word-bytes)) new-value))))))
+	 (cond ((< index 32)
+		(setf (sap-ref-double sap (* index vm:word-bytes)) new-value))
+	       (t
+		(unless (= (slot scp 'xrs-id) +xrs-id-valid+)
+		  (error "XRS ID invalid but attempting to accessing double-float register ~d!" (ash index 1)))
+		(let* ((xrs-ptr (slot scp 'xrs-ptr))
+		       (fp-sap (alien-sap (slot (slot (deref xrs-ptr 0) 'pr-xfr) 'pr-regs))))
+		  (setf (system:sap-ref-double fp-sap (* (- index 32) vm:word-bytes)) new-value)))))))))
 ;;;
 (defsetf sigcontext-float-register %set-sigcontext-float-register)
 
