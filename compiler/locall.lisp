@@ -260,12 +260,18 @@
   (loop
     (unless (component-new-functions component) (return))
     (let ((fun (pop (component-new-functions component))))
-      (unless (eq (functional-kind fun) :deleted)
-	(when (lambda-p fun)
-	  (push fun (component-lambdas component)))
-	(local-call-analyze-1 fun)
-	(when (lambda-p fun)
-	  (maybe-let-convert fun)))))
+      (cond ((eq (functional-kind fun) :deleted))
+	    ((and (null (leaf-refs fun))
+		  (ecase (functional-kind fun)
+		    ((nil :escape :cleanup) t)
+		    ((:optional :top-level) nil)))
+	     (delete-functional fun))
+	    (t
+	     (when (lambda-p fun)
+	       (push fun (component-lambdas component)))
+	     (local-call-analyze-1 fun)
+	     (when (lambda-p fun)
+	       (maybe-let-convert fun))))))
 
   (undefined-value))
 
