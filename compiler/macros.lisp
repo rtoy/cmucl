@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.28 1991/12/10 16:59:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.29 1992/02/19 16:13:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,9 +387,10 @@
 ;;;    Parse the lambda-list and generate code to test the policy and
 ;;; automatically create the result lambda.
 ;;;
-(defmacro deftransform (name (lambda-list &optional (arg-types '*) (result-type '*)
+(defmacro deftransform (name (lambda-list &optional (arg-types '*)
+					  (result-type '*)
 					  &key result policy node defun-only
-					  eval-name)
+					  eval-name important)
 			     &body (body decls doc))
   "Deftransform Name (Lambda-List [Arg-Types] [Result-Type] {Key Value}*)
                Declaration* [Doc-String] Form*
@@ -441,7 +442,11 @@
     :Defun-Only
             - Don't actually instantiate a transform, instead just DEFUN
               Name with the specified transform definition function.  This may
-              be later instantiated with %Deftransform."
+              be later instantiated with %Deftransform.
+    :Important
+            - If supplied and non-NIL, note this transform as ``important,''
+              which means effeciency notes will be generated when this
+              transform fails even if brevity=speed (but not if brevity>speed)"
 
   (when (and eval-name defun-only)
     (error "Can't specify both DEFUN-ONLY and EVAL-NAME."))
@@ -479,7 +484,8 @@
 		   ``(function ,,arg-types ,,result-type)
 		   `'(function ,arg-types ,result-type))
 	      #'(lambda ,@stuff)
-	      ,doc))))))
+	      ,doc
+	      ,(if important t nil)))))))
 
 ;;;; Defknown, Defoptimizer:
 
@@ -853,22 +859,22 @@
 	     
       `(defun ,(symbolicate "%PRINT-" name) (structure stream depth)
 	 (declare (ignore depth))
-	 (flet ((do-prints ()
+	 (flet ((do-prints (stream)
 		  ,@(prints)))
 	   (cond (*print-pretty*
 		  (pprint-logical-block (stream nil :prefix "#<" :suffix ">")
+		    (pprint-indent :current 2 stream)
 		    (prin1 ',name stream)
 		    (write-char #\space stream)
-		    (pprint-indent :current 0 stream)
 		    (let ((*print-base* 16)
 			  (*print-radix* t))
 		      (prin1 (get-lisp-obj-address structure) stream))
-		    (do-prints)))
+		    (do-prints stream)))
 		 (t
 		  (format stream "#<~S ~X"
 			  ',name
 			  (get-lisp-obj-address structure))
-		  (do-prints)
+		  (do-prints stream)
 		  (format stream ">"))))
 	 nil))))
 
