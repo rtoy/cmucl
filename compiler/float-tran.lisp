@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.56 1997/12/19 02:39:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.57 1997/12/20 15:40:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -890,6 +890,7 @@
 		;; or a complex.
 		(float-or-complex-type (numeric-contagion x y)))))))
 
+#+nil
 (defoptimizer (expt derive-type) ((x y))
   (two-arg-derive-type x y #'expt-derive-type-aux #'expt))
 
