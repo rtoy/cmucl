@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.6 1997/11/19 02:57:16 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.7 1997/12/03 15:40:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
     (inst pop eax)
     (inst push ebp-tn)
     (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-    (inst sub esp-tn (fixnum 3))	; pw -- was 2
+    (inst sub esp-tn (fixnum 2))
     (inst push eax)			; callers return addr
     (inst mov ecx (fixnum 2))		; arg count
 
@@ -151,7 +151,7 @@
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 3))		; pw -- was 2
+  (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 1))		; arg count
 
@@ -201,7 +201,7 @@
     (inst pop eax)
     (inst push ebp-tn)
     (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-    (inst sub esp-tn (fixnum 3))	; pw -- was 2
+    (inst sub esp-tn (fixnum 2))
     (inst push eax)
     (inst mov ecx (fixnum 2))
 
@@ -256,7 +256,7 @@
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 3))		; pw -- was 2
+  (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 2))
 
@@ -297,7 +297,7 @@
   (inst pop eax)
   (inst push ebp-tn)
   (inst lea ebp-tn (make-ea :dword :base esp-tn :disp word-bytes))
-  (inst sub esp-tn (fixnum 3))		; pw -- was 2
+  (inst sub esp-tn (fixnum 2))
   (inst push eax)
   (inst mov ecx (fixnum 2))
 
