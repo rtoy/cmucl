@@ -369,8 +369,12 @@ default-value-5
 ;;; Target is a continuation pointing to the start of the called function.
 ;;; Nvals is the number of values received.
 ;;;
+;;; Note: we can't use normal load-tn allocation for the fixed args, since all
+;;; registers may be tied up by the more operand.  Instead, we use
+;;; MAYBE-LOAD-STACK-TN.
+;;;
 (define-vop (call-local)
-  (:args (fp :scs (any-reg descriptor-reg))
+  (:args (fp)
 	 (nfp)
 	 (args :more t))
   (:results (values :more t))
@@ -386,7 +390,7 @@ default-value-5
 	      env-save)
   (:generator 5
     (store-stack-tn env-save env-tn)
-    (inst lr fp-tn fp)
+    (maybe-load-stack-tn fp-tn fp)
     (inst bali (callee-return-pc-tn callee) target)
     (note-this-location vop :unknown-return)
     (unassemble
@@ -399,7 +403,7 @@ default-value-5
 ;;; glob and the number of values received.
 ;;;
 (define-vop (multiple-call-local unknown-values-receiver)
-  (:args (fp :scs (any-reg descriptor-reg))
+  (:args (fp)
 	 (nfp)
 	 (args :more t))
   (:save-p t)
@@ -412,7 +416,7 @@ default-value-5
 	      env-save)
   (:generator 20
     (store-stack-tn env-save env-tn)
-    (inst lr fp-tn fp)
+    (maybe-load-stack-tn fp-tn fp)
     (inst bali (callee-return-pc-tn callee) target)
     (note-this-location vop :unknown-return)
     (unassemble
@@ -426,7 +430,7 @@ default-value-5
 ;;; just like argument passing in local call.
 ;;;
 (define-vop (known-call-local)
-  (:args (fp :scs (any-reg descriptor-reg))
+  (:args (fp)
 	 (nfp)
 	 (args :more t))
   (:results
@@ -437,7 +441,7 @@ default-value-5
   (:ignore arg-locs args res nfp)
   (:vop-var vop)
   (:generator 5
-    (inst lr fp-tn fp)
+    (maybe-load-stack-tn fp-tn fp)
     (inst bali (callee-return-pc-tn callee) target)
     (note-this-location vop :known-return)))
 
@@ -446,15 +450,23 @@ default-value-5
 ;;; arguments to terminate their lifetimes in the returning function.  We
 ;;; restore FP and SP and jump to the Return-PC.
 ;;;
+;;; Note: we can't use normal load-tn allocation for the fixed args, since all
+;;; registers could get tied up by the more operand.  Instead, we use
+;;; MAYBE-LOAD-STACK-TN into preallocated temporaries.
+;;;
 (define-vop (known-return)
   (:args
-   (old-fp :scs (descriptor-reg))
-   (return-pc :scs (descriptor-reg))
+   (old-fp)
+   (return-pc)
    (vals :more t))
+  (:temporary (:sc descriptor-reg :from (:argument 0)) old-fp-temp)
+  (:temporary (:sc descriptor-reg :from (:argument 1)) return-pc-temp)
   (:move-args :known-return)
   (:info val-locs)
   (:ignore val-locs vals)
   (:generator 6
+    (maybe-load-stack-tn old-fp-temp old-fp)
+    (maybe-load-stack-tn return-pc-temp return-pc)
     (inst lr sp-tn fp-tn)
     (inst bnbrx :pz return-pc)
     (inst lr fp-tn old-fp)))
