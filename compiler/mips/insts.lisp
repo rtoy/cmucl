@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.41 1992/07/09 16:33:12 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.42 1992/07/12 20:41:20 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -621,8 +621,8 @@
   (:writes to)
   (:delay 1) ;; ### Is this delay correct?
   (:emitter
-   (emit-register-inst segment cop1-op #b00000 (1+ (reg-tn-encoding to))
-		       (fp-reg-tn-encoding from) 0 0)))
+   (emit-register-inst segment cop1-op #b00000 (reg-tn-encoding to)
+		       (1+ (fp-reg-tn-encoding from)) 0 0)))
 
 (define-instruction cfc1 (segment reg cr)
   (:declare (type tn reg) (type (unsigned-byte 5) cr))
