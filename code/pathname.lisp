@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.43 2001/03/08 21:06:12 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.44 2001/03/11 22:02:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,10 +28,14 @@
 
 (in-package "EXTENSIONS")
 (export '(search-list search-list-defined-p clear-search-list
-		      enumerate-search-list))
+		      enumerate-search-list *autoload-translations*))
 
 (in-package "LISP")
 
+(defvar *autoload-translations* nil
+  "When non-nil, attempt to load \"library:<host>.translations\" to resolve
+   an otherwise undefined logical host.")
+							    
 
 ;;;; HOST structures
 
@@ -830,10 +834,8 @@ a host-structure or string."
 	   (values (or logical-host null)))
   (let ((colon-pos (position #\: namestr :start start :end end)))
     (if colon-pos
-	(values (gethash (nstring-upcase (subseq namestr start colon-pos))
-			 *logical-hosts*))
+	(values (find-logical-host (nstring-upcase (subseq namestr start colon-pos)) nil))
 	nil)))
-
 
 ;;; PARSE-NAMESTRING -- Interface
 ;;;
@@ -1844,7 +1846,6 @@ a host-structure or string."
 
 ;;; LOAD-LOGICAL-PATHNAME-TRANSLATIONS -- Public
 ;;;
-#+ORIGINAL
 (defun load-logical-pathname-translations (host)
   "Search for a logical pathname named host, if not already defined. If already
    defined no attempt to find or load a definition is attempted and NIL is
@@ -1852,73 +1853,18 @@ a host-structure or string."
    successfully, T is returned, else error."
   (declare (type string host)
 	   (values (member t nil)))
-  (unless (find-logical-host host nil)
-    (with-open-file (in-str (make-pathname :defaults "library:"
-					   :name host
-					   :type "translations"))
-      (if *load-verbose*
-	  (format *error-output*
-		  ";; Loading pathname translations from ~A~%"
-		  (namestring (truename in-str))))
-      (setf (logical-pathname-translations host) (read in-str)))
-    t))
-
-(defun load-logical-pathname-translations (host)
-  "Search for a logical pathname named host, if not already defined. If already
-   defined no attempt to find or load a definition is attempted and NIL is
-   returned. If host is not already defined, but definition is found and loaded
-   successfully, T is returned, else error."
-
-  (declare (type string host)
-	   (values (member t nil)))
-  (unless (find-logical-host host nil)
-    (let* ((filename
-	    (cond #+notyet
-		  ((find-logical-host "LIBRARY" nil)
-		   (make-pathname
-		    :defaults #p"LIBRARY:"
-		    :name (logical-word-or-lose host)
-		    :type (logical-word-or-lose "translations")))
-		  ((find-search-list "library" nil)
-		   (make-pathname :defaults #p"library:"
-				  :name host
-				  :type "translations"))
-		  (t (error
-		      'simple-file-error
-		      :format-control
-		      "No search-list for #p\"library:\"."
-		      :pathname "library:"))))
-	   (truename (and filename (probe-file filename))))
-      (if truename
-	  (with-open-file (in-str truename)
-	    (when *load-verbose*
-	      (format *error-output*
-		      ";; Loading pathname translations from ~s~%"
-		      (namestring truename)))
-	    (let ((definition (read in-str)))
-	      (declare (list definition))
-	      (unless (and (every #'listp definition)
-			   (loop for item in definition
-			     unless (and (<= 2 (length item))
-					 (typep (first item) 'string)
-					 (typep (second item) 'string))
-			     do (return nil)
-			     finally (return t)))
-		(error 'simple-file-error
-		       :format-control 
-		       "Bad syntax for logical-pathname-translations: ~S"
-		       :format-arguments (list definition)))
-	      (unless (plusp (length definition))
-		(warn
-		 "Loading NULL definition for logical-pathname-host ~A."
-		 host))
-	      (setf (logical-pathname-translations host) definition))
-	    t)
-	  (error 'simple-file-error
-		 :format-control
-		 "Logical-pathname-translation file ~A not found."
-		 :format-arguments (list filename)
-		 :pathname filename)))))
+  (let ((*autoload-translations* nil))
+    (unless (or (string-equal host "library")
+		(find-logical-host host nil))
+      (with-open-file (in-str (make-pathname :defaults "library:"
+					     :name (string-downcase host)
+					     :type "translations"))
+	(if *load-verbose*
+	    (format *error-output*
+		    ";; Loading pathname translations from ~A~%"
+		    (namestring (truename in-str))))
+	(setf (logical-pathname-translations host) (read in-str)))
+      t)))
 
 ;;; TRANSLATE-LOGICAL-PATHNAME  -- Public
 ;;;
