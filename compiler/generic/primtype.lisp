@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.7 1992/10/11 21:09:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.8 1992/12/05 22:11:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.7 1992/10/11 21:09:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.8 1992/12/05 22:11:35 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation and primitive types.
@@ -251,6 +251,11 @@
 	  (part-of base-char))
 	 (cons
 	  (part-of list))
+	 ((dylan::dylan-function dylan::generic-function dylan::exit-function
+	   dylan::next-method-func dylan::method dylan::defined-method
+	   dylan::builtin-method dylan::slot-accessor-method
+	   dylan::slot-setter-method dylan::slot-getter-method)
+	  (part-of function))
 	 (t
 	  (any))))
       (function-type
