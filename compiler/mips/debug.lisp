@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.11 1992/02/21 22:03:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.12 1992/05/18 19:54:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.11 1992/02/21 22:03:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.12 1992/05/18 19:54:03 ram Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -53,7 +53,8 @@
        (inst lw result object (* (tn-value offset) vm:word-bytes)))
       ((any-reg)
        (inst addu sap object offset)
-       (inst lw result sap 0)))))
+       (inst lw result sap 0)))
+    (inst nop)))
 
 (define-vop (write-control-stack)
   (:translate %set-stack-ref)
