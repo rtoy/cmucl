@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.31 1991/04/16 20:10:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.32 1991/05/24 19:40:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.31 1991/04/16 20:10:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.32 1991/05/24 19:40:55 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -182,6 +182,8 @@
 		 (- (* vm:vector-data-offset vm:word-bytes)
 		    vm:other-pointer-type))
 	   (inst and temp index ,(1- elements-per-word))
+	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
+	       `((inst xor temp ,(1- elements-per-word))))
 	   ,@(unless (= bits 1)
 	       `((inst sll temp ,(1- (integer-length bits)))))
 	   (inst srl result temp)
@@ -204,6 +206,8 @@
 	 (:result-types positive-fixnum)
 	 (:generator 15
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
+	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
+		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (loadw result object (+ word vm:vector-data-offset) 
 		    vm:other-pointer-type)
 	     (unless (zerop extra)
@@ -231,6 +235,8 @@
 		 (- (* vm:vector-data-offset vm:word-bytes)
 		    vm:other-pointer-type))
 	   (inst and shift index ,(1- elements-per-word))
+	   ,@(when (eq (backend-byte-order *backend*) :big-endian)
+	       `((inst xor shift ,(1- elements-per-word))))
 	   ,@(unless (= bits 1)
 	       `((inst sll shift ,(1- (integer-length bits)))))
 	   (unless (and (sc-is value immediate)
@@ -277,6 +283,8 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp old)
 	 (:generator 20
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
+	     ,@(when (eq (backend-byte-order *backend*) :big-endian)
+		 `((setf extra (logxor extra (1- ,elements-per-word)))))
 	     (inst lw old object
 		   (- (* (+ word vm:vector-data-offset) vm:word-bytes)
 		      vm:other-pointer-type))
