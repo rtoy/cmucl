@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.1 2001/02/11 14:22:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.2 2001/02/17 20:02:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,13 +138,16 @@
   (:temporary (:sc any-reg :offset cfunc-offset
 		   :from (:argument 0) :to (:result 0)) cfunc)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:vop-var vop)
   (:generator 0
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
+      (inst lr temp (make-fixup "call_into_c" :foreign))
+      (inst mtctr temp)
       (move cfunc function)
-      (inst bla (make-fixup "call_into_c" :foreign))
+      (inst bctrl)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save)))))
 
