@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.20 1991/04/16 01:28:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.21 1991/07/18 13:51:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.20 1991/04/16 01:28:25 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.21 1991/07/18 13:51:31 ram Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -307,24 +307,21 @@
      ((null package)
       (when *print-gensym* (write-string "#:" stream)))
      (t
-      (let ((found (car (memq package (package-use-list *package*)))))
-	(multiple-value-bind (symbol externalp)
-			     (find-external-symbol name package)
-	  ;; If the symbol's home package is in our use list and is an external
-	  ;; symbol there, then it needs no qualification.
-	  (unless (and found externalp (eq symbol object))
-	    (multiple-value-bind (symbol accessible)
-				 (find-symbol name *package*)
-	      ;; If we can find the symbol by looking it up, it need not be
-	      ;; qualified.  This can happen if the symbol has been inherited
-	      ;; from a package other than its home package.
-	      (unless (and accessible (eq symbol object))
-		(funcall *internal-symbol-output-function*
-			 (package-name package)
-			 stream)
-		(if externalp
-		    (write-char #\: stream)
-		    (write-string "::" stream)))))))))
+      (multiple-value-bind (symbol accessible)
+			   (find-symbol name *package*)
+	;; If we can find the symbol by looking it up, it need not be
+	;; qualified.  This can happen if the symbol has been inherited
+	;; from a package other than its home package.
+	(unless (and accessible (eq symbol object))
+	  (funcall *internal-symbol-output-function*
+		   (package-name package)
+		   stream)
+	  (multiple-value-bind (symbol externalp)
+			       (find-external-symbol name package)
+	    (declare (ignore symbol))
+	    (if externalp
+		(write-char #\: stream)
+		(write-string "::" stream)))))))
     (funcall *internal-symbol-output-function* name stream)))
 
 
