@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.88 2004/04/22 14:26:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.89 2004/04/22 14:38:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1673,44 +1673,6 @@
 			  output-float-free-format-exponent-min
 			  output-float-free-format-exponent-max)))))))
 
-#+(or)
-(defmacro output-float-free-format-p (x)
-  "Returns true if x can be printed in free format, as per ANSI CL."
-  (loop with x-var = (gensym)
-	for type in '(short-float single-float double-float long-float)
-	collect
-	`(,type
-	  (and (>= ,x-var ,(coerce output-float-free-format-min type))
-	       (< ,x-var ,(coerce output-float-free-format-max type))))
-	into clauses
-	finally
-	(return
-	  `(let ((,x-var ,x))
-	     (etypecase ,x-var
-	       ,@clauses)))))
-
-#+(or)
-(defun output-float-aux (x stream)
-  (if (output-float-free-format-p x)
-      ;;free format
-      (multiple-value-bind (str len lpoint tpoint)
-			   (flonum-to-string x)
-	(declare (ignore len))
-	(when lpoint (write-char #\0 stream))
-	(write-string str stream)
-	(when tpoint (write-char #\0 stream))
-	(print-float-exponent x 0 stream))
-      ;;exponential format 
-      (multiple-value-bind (f ex)
-			   (scale-exponent x)
-	(multiple-value-bind (str len lpoint tpoint)
-			     (flonum-to-string f nil nil 1)
-	  (declare (ignore len))
-	  (when lpoint (write-char #\0 stream))
-	  (write-string str stream)
-	  (when tpoint (write-char #\0 stream))
-	  ;; subtract out scale factor of 1 passed to flonum-to-string
-	  (print-float-exponent x (1- ex) stream)))))
 
 ;; Smallest possible (unbiased) exponents
 (defconstant double-float-min-e
