@@ -17,6 +17,10 @@
 (use-package "ASSEM")
 (use-package "EXT")
 
+
+;;;; Resources:
+
+(define-resources memory float-status high low)
 
 
 ;;;; Formats.
@@ -781,3 +785,288 @@
 (define-compute-instruction compute-lra-from-code
 			    (+ (label-position label)
 			       (component-header-length)))
+
+;;;; 68881 instruction set details:
+
+;;; The low 7 bits of the 68881 instructions.
+;;; 
+(defconstant mc68881-opcodes
+  '((:move . #x00)
+    (:int . #x01)
+    (:sinh . #x02)
+    (:intrz . #x03)
+    (:sqrt . #x04)
+    (:lognp1 . #x06)
+    (:etoxm1 . #x08)
+    (:tanh . #x09)
+    (:atan . #x0A)
+    (:asin . #x0C)
+    (:atanh . #x0D)
+    (:sin . #x0E)
+    (:tan . #x0F)
+    (:etox . #x10)
+    (:twotox . #x11)
+    (:tentox . #x12)
+    (:logn . #x14)
+    (:log10 . #x15)
+    (:log2 . #x16)
+    (:abs . #x18)
+    (:cosh . #x19)
+    (:neg . #x1A)
+    (:acos . #x1C)
+    (:cos . #x1D)
+    (:getexp . #x1E)
+    (:getman . #x1F)
+    (:div . #x20)
+    (:mod . #x21)
+    (:add . #x22)
+    (:mul . #x23)
+    (:sgldiv . #x24)
+    (:rem . #x25)
+    (:scale . #x26)
+    (:sglmul . #x27)
+    (:sub . #x28)
+    (:sincos . #x30)
+    (:cmp . #x38)
+    (:tst . #x3A)))
+
+
+;;; Names of interesting 68881 control registers.
+;;;
+(defconstant mc68881-control-regs
+  '((:fpsr . 2)
+    (:fpcr . 4)
+    (:fpiar . 1)))
+
+
+;;; The encoding of operand format in memory (bits 10..12 in the 68881
+;;; instruction.)
+;;;
+(defconstant mc68881-operand-types
+  '((:integer . 0)	      ; 32 bit integer.
+    (:single . 1)	      ; 32 bit float.
+    (:double . 5)))	      ; 64 bit float.
+
+
+;;; Bits 13..15 in the 68881 instruction.  Controls where operands are found.
+;;;
+(defconstant mc68881-instruction-classes
+  '((:freg-to-freg . 0)
+    (:mem-to-freg . 2)
+    (:freg-to-mem . 3)
+    (:mem-to-scr . 4)
+    (:scr-to-mem . 5)))
+
+
+;;; Length in words of memory data to transfer.  This is part of the RT
+;;; hardware assist protocol, and is placed in the low two bits of the address
+;;; to the store instruction.
+;;;
+(defconstant mc68881-operand-lengths
+  '((nil . 0) ; No transfer...
+    (:integer . 1)
+    (:single . 1)
+    (:double . 2)))
+
+;;; RT hardware assist protocol for whether to read or write memory, here
+;;; represented as a function of the mc68881 instruction class.
+;;; 
+(defconstant mc68881-transfer-control-field-alist
+  '((:freg-to-freg . 0)
+    (:mem-to-freg . 0)
+    (:freg-to-mem . #x3c0000)
+    (:mem-to-scr . 0)
+    (:scr-to-mem . #x3c0000)))
+
+
+(defun mc68881-fp-reg-p (object)
+  (and (tn-p object)
+       (eq (sb-name (sc-sb (tn-sc object)))
+	   'mc68881-float-registers)))
+
+(define-argument-type mc68881-fp-reg
+  :type '(satisfies mc68881-fp-reg-p)
+  :function tn-offset)
+
+;;; This is really a ST (store word) instruction, but we have magic extra
+;;; arguments to represent the reading and writing of the FP registers.  R3
+;;; will already have been set up with the high bits of the FP instruction by a
+;;; preceding CAL.
+;;;
+(define-format (mc68881-inst 32)
+  (fpn (byte 0 0) :read t :write t)
+  (fpm (byte 0 0) :read t)
+  (op (byte 8 24) :default #xDD)
+  (r2 (byte 4 20) :read t)
+  (r3 (byte 4 16) :read t)
+  (i (byte 16 0)))
+
+
+;;; DO-68881-INST  --  Internal
+;;;
+;;;    Utility used to emit a 68881 operation.  We emit the CAU that sets up
+;;; the high bits of the operation in Temp, and we return the low bits that
+;;; should be passed as the I field of the actual FP operation instruction.
+;;;
+(defun do-68881-inst (op temp &key fpn fpm (class :freg-to-freg)
+			 data optype creg)
+  (assert (if fpm
+	      (and (mc68881-fp-reg-p fpm)
+		   (not (or optype data))
+		   (eql class :freg-to-freg)
+		   (tn-p data)
+		   (eq (sb-name (sc-sb (tn-sc data))) 'registers)
+		   optype)
+	      (not (eql class :freg-to-freg))))
+  (assert (if fpn
+	      (mc68881-fp-reg-p fpn)
+	      creg))
+		   
+  (let* ((opcode
+	  (logior #xFC000000
+		  (or (cdr (assoc class mc68881-transfer-control-field-alist))
+		      (error "Unknown instruction class ~S." class))
+		  (ash (cdr (assoc class mc68881-instruction-classes))
+		       15)
+		  (ash (if fpm
+			   (tn-offset fpm)
+			   (or (cdr (assoc optype mc68881-operand-types))
+			       (error "Unknown operation type ~S." optype)))
+		       12)
+		  (ash (if fpn
+			   (tn-offset fpn)
+			   (or (cdr (assoc creg mc68881-control-regs))
+			       (error "Unknown control register ~S." creg)))
+		       9)
+		  (ash (or (cdr (assoc op mc68881-opcodes))
+			   (error "Unknown opcode ~S." op))
+		       2)
+		  (or (cdr (assoc optype mc68881-operand-lengths))
+		      (error "Unknown operation type ~S." optype))))
+	 (low (logand opcode #xFFFF))
+	 (high (+ (logand (ash opcode -16) #xFFFF)
+		  (if (eql (logand low #x8000) 0) 0 1))))
+    (inst cau temp high)
+    low))
+
+
+(define-instruction (mc68881-binop-inst)
+  (mc68881-inst
+   (fpn :argument mc68881-fp-reg)
+   (fpm :argument mc68881-fp-reg)
+   (r2 :constant null-offset)
+   (r3 :argument address-register)
+   (i :argument (signed-byte 16))))
+
+;;; This pseudo-instruction emits a floating-point binop on the 68881.  FPN is
+;;; the destination float register (and second arg) FPM is the source float
+;;; register.  Op is the 68881 opcode.  Temp is a sap-reg (i.e. non-zero,
+;;; non-descriptor) register that we form the FP instruction in.
+;;;
+(define-pseudo-instruction mc68881-binop 64 (fpn fpm op temp)
+  (inst mc68881-binop-inst fpn fpm temp
+	(do-68881-inst op temp :fpm fpm :fpn fpn)))
+
+
+;;; Unop is like binop, but we don't read FPN before we write it.
+;;;
+(define-instruction (mc68881-unop-inst)
+  (mc68881-inst
+   (fpn :argument mc68881-fp-reg :read nil)
+   (fpm :argument mc68881-fp-reg)
+   (r2 :constant null-offset)
+   (r3 :argument address-register)
+   (i :argument (signed-byte 16))))
+
+(define-pseudo-instruction mc68881-unop 64 (fpn fpm op temp)
+  (inst mc68881-unop-inst fpn fpm temp
+	(do-68881-inst op temp :fpm fpm :fpn fpn)))
+
+;;; Compare is like binop, but we don't write FPN.
+;;;
+(define-instruction (mc68881-compare-inst)
+  (mc68881-inst
+   (fpn :argument mc68881-fp-reg :write nil)
+   (fpm :argument mc68881-fp-reg)
+   (r2 :constant null-offset)
+   (r3 :argument address-register)
+   (i :argument (signed-byte 16))))
+
+(define-pseudo-instruction mc68881-compare 64 (fpn fpm op temp)
+  (inst mc68881-compare-inst fpn fpm temp
+	(do-68881-inst op temp :fpm fpm :fpn fpn)))
+
+;;; Move FPM to FPN.
+;;;
+(define-pseudo-instruction mc68881-move 64 (fpn fpm temp)
+  (inst mc68881-unop fpn fpm :move temp))
+
+
+
+(define-format (s 16)
+  (op (byte 12 4))
+  (n (byte 4 0)))
+			   
+;;; This is a "setcb 8", which is used to wait for a result from the FPA to
+;;; appear in memory (or something...)
+;;;
+(define-instruction (mc68881-wait)
+  (s
+   (op :constant #x97F)
+   (n :constant 8)))
+
+
+(define-instruction (mc68881-load-inst :use (memory))
+  (mc68881-inst
+   (fpn :argument mc68881-fp-reg :read nil)
+   (fpm :constant 0)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (signed-byte 16))))
+
+(define-pseudo-instruction mc68881-load 64 (fpn data optype temp)
+  (inst mc68881-load-inst fpn data temp
+	(do-68881-inst :move temp :fpn fpn :data data :optype optype
+		       :class :mem-to-freg)))
+
+(define-instruction (mc68881-store-inst :clobber (memory))
+  (mc68881-inst
+   (fpn :argument mc68881-fp-reg :write nil)
+   (fpm :constant 0)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (signed-byte 16))))
+
+(define-pseudo-instruction mc68881-store 64 (fpn data optype temp)
+  (inst mc68881-store-inst fpn data temp
+	(do-68881-inst :move temp :fpn fpn :data data :optype optype
+		       :class :freg-to-mem)))
+
+
+(define-instruction (mc68881-load-status-inst :use (memory)
+					      :clobber (float-status))
+  (mc68881-inst
+   (fpn :constant 0)
+   (fpm :constant 0)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (signed-byte 16))))
+
+(define-pseudo-instruction mc68881-load-status 64 (creg data temp)
+  (inst mc68881-load-status-inst data temp
+	(do-68881-inst :move temp :creg creg :data data :optype :integer
+		       :class :mem-to-scr)))
+
+(define-instruction (mc68881-store-status-inst :clobber (memory)
+					       :use (float-status))
+  (mc68881-inst
+   (fpn :constant 0)
+   (fpm :constant 0)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (signed-byte 16))))
+
+(define-pseudo-instruction mc68881-store-status 64 (creg data temp)
+  (inst mc68881-store-status-inst data temp
+	(do-68881-inst :move temp :creg creg :data data :optype :integer
+		       :class :scr-to-mem)))
