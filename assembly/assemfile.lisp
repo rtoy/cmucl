@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.16 1990/10/13 21:25:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.17 1990/10/13 21:45:47 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -73,7 +73,7 @@
   (name nil :type symbol)
   (temp nil :type symbol)
   (scs nil :type (or list symbol))
-  (offset 0 :type fixnum))
+  (offset nil))
 
 (defun %print-reg-spec (spec stream depth)
   (declare (ignore depth))
