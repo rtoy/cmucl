@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.8 1990/02/11 19:25:45 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.9 1990/02/16 08:36:54 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -92,16 +92,15 @@
 ;;;
 
 (defmacro error-call (error-code &rest values)
-  (once-only ((n-error-code error-code))
-    (unless (< (length values) register-arg-count)
-      (error "Can't use ERROR-CALL with ~D values"
-	     (length values)))
-    `(progn
-       ,@(collect ((args))
-	   (dotimes (i (length values))
-	     (args `(move (nth ,i register-argument-tns) ,(nth i values))))
-	   (args))
-       (inst break ,error-code))))
+  (unless (< (length values) register-arg-count)
+    (error "Can't use ERROR-CALL with ~D values"
+	   (length values)))
+  `(progn
+     ,@(mapcar #'(lambda (arg value)
+		   `(move ',arg ,value))
+	       (subseq register-argument-tns 0 (length values))
+	       values)
+     (inst break ,error-code)))
 
 (defmacro generate-error-code (node error-code &rest values)
   "Generate-Error-Code Node Error-code Value*
