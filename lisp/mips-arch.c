@@ -48,15 +48,11 @@ boolean arch_pseudo_atomic_atomic(struct sigcontext *scp)
     return (scp->sc_regs[reg_ALLOC] & 1);
 }
 
+#define PSEUDO_ATOMIC_INTERRUPTED_BIAS 0x7f000000
+
 void arch_set_pseudo_atomic_interrupted(struct sigcontext *scp)
 {
-    scp->sc_regs[reg_NL4] += 0x70000000;
-}
-
-void arch_clear_pseudo_atomic_interrupted(struct sigcontext *scp)
-{
-    scp->sc_regs[reg_ALLOC] += (scp->sc_regs[reg_NL4]-0x70000000);
-    arch_skip_instruction(scp);
+    scp->sc_regs[reg_NL4] += PSEUDO_ATOMIC_INTERRUPTED_BIAS;
 }
 
 unsigned long arch_install_breakpoint(void *pc)
@@ -183,7 +179,8 @@ static void sigfpe_handler(int signal, int code, struct sigcontext *scp)
 		    /* Check to see if this is really a pa_interrupted hit */
 		    if (rs == reg_ALLOC && rt == reg_NL4) {
 			scp->sc_regs[reg_ALLOC] +=
-			    (scp->sc_regs[reg_NL4] - 0x70000000);
+			    (scp->sc_regs[reg_NL4] -
+			     PSEUDO_ATOMIC_INTERRUPTED_BIAS);
 			arch_skip_instruction(scp);
 			interrupt_handle_pending(scp);
 			return;
