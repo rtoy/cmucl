@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.28 1998/03/01 21:46:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.29 1998/04/27 10:06:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1458,27 +1458,27 @@
 	     (setf (first rem) el)))))
       (vector
        (with-array-data ((data seq) (offset-start start) (offset-end end))
-	 (typecase data
-	   ((or simple-string (simple-array (unsigned-byte 8) (*))
-		#+signed-array (simple-array (signed-byte 8) (*)))
-	    (let* ((numbytes (- end start))
-		   (bytes-read (system:read-n-bytes
-				stream data offset-start numbytes nil)))
-	      (if (< bytes-read numbytes)
-		  (+ start bytes-read)
-		  end)))
-	   (t
-	    (let ((read-function
-		   (if (subtypep (stream-element-type stream) 'character)
-		       #'read-char
-		       #'read-byte)))
-	      (do ((i offset-start (1+ i)))
-		  ((>= i offset-end) end)
-		(declare (type index i))
-		(let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
-		  (when (eq el '%%RWSEQ-EOF%%)
-		    (return (- i offset-start)))
-		  (setf (aref data i) el)))))))))))
+	 (if (or (typep data '(simple-array (unsigned-byte 8) (*)))
+		 #+signed-array
+		 (typep data '(simple-array (signed-byte 8) (*)))
+		 (and (simple-string-p data) (fd-stream-p stream)))
+	     (let* ((numbytes (- end start))
+		    (bytes-read (system:read-n-bytes
+				 stream data offset-start numbytes nil)))
+	       (if (< bytes-read numbytes)
+		   (+ start bytes-read)
+		   end))
+	     (let ((read-function
+		    (if (subtypep (stream-element-type stream) 'character)
+			#'read-char
+			#'read-byte)))
+	       (do ((i offset-start (1+ i)))
+		   ((>= i offset-end) end)
+		 (declare (type index i))
+		 (let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
+		   (when (eq el '%%RWSEQ-EOF%%)
+		     (return (- i offset-start)))
+		   (setf (aref data i) el))))))))))
 
 ;;; WRITE-SEQUENCE -- Public
 ;;;
