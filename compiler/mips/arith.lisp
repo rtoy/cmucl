@@ -47,11 +47,35 @@
 
 ;;; Assume that any constant operand is the second arg...
 
-(defmacro define-fixnum-binop (name inherits translate op
-				    &key unsigned immed-op function)
-  `(define-vop (,name ,inherits)
+(define-vop (fast-binop)
+  (:args (x :target r
+	    :scs (any-reg descriptor-reg))
+	 (y :target r
+	    :scs (any-reg descriptor-reg)))
+  (:arg-types fixnum fixnum)
+  (:results (r :scs (any-reg descriptor-reg)))
+  (:effects)
+  (:affected)
+  (:note "inline fixnum arithmetic")
+  (:policy :fast-safe))
+
+(defmacro define-fixnum-binop ((name translate cost result-type)
+			       op
+			       &key unsigned immed-op function)
+  `(define-vop (,name fast-binop)
+     (:args (x :target r
+	       :scs (any-reg descriptor-reg))
+	    (y :target r
+	       :scs (any-reg descriptor-reg
+			     ,@(when immed-op
+				 (list (if unsigned
+					   'unsigned-immediate
+					   'negative-immediate)
+				       'immediate
+				       'zero)))))
      (:translate ,translate)
-     (:generator 1
+     (:result-types ,result-type)
+     (:generator ,cost
        (sc-case y
 	 ((any-reg descriptor-reg)
 	  (inst ,op r x y))
@@ -65,48 +89,85 @@
 				   `(,function (tn-value y))
 				   '(tn-value y)))))))))))
 
-;;;; Arithmetic:
+;;; Plus and minus.
 
-(define-vop (fast-binop/fixnum)
-  (:args (x :target r
-	    :scs (any-reg descriptor-reg))
-	 (y :target r
-	    :scs (any-reg descriptor-reg negative-immediate immediate zero)))
-  (:results (r :scs (any-reg descriptor-reg)))
-  (:arg-types fixnum fixnum)
+(define-fixnum-binop (fast-+/fixnum=>fixnum + 1 fixnum)
+		     addu :immed-op addiu))
+(define-fixnum-binop (fast-+/fixnum + 2 t)
+		     add :immed-op addi)
+
+(define-fixnum-binop (fast--/fixnum=>fixnum - 1 fixnum)
+		     subu :immed-op addiu :function -)
+(define-fixnum-binop (fast--/fixnum - 2 t)
+		     sub :immed-op addi :function -)
+
+
+;;; Logical operatons.
+
+(define-fixnum-binop (fast-logior/fixnum logior 1 t)
+		     or :immed-op ori :unsigned t)
+
+(define-fixnum-binop (fast-logand/fixnum logand 1 t)
+		     and :immed-op andi :unsigned t)
+
+(define-fixnum-binop (fast-logxor/fixnum logxor 1 t)
+		     xor :immed-op xori :unsigned t)
+
+
+;;; Multiply and Divide.
+
+(define-vop (fast-*/fixnum=>fixnum fast-binop)
+  (:temporary (:scs (non-descriptor-reg) :type random) temp)
   (:result-types fixnum)
-  (:effects)
-  (:affected)
-  (:note "inline fixnum arithmetic")
-  (:policy :fast-safe))
+  (:translate *)
+  (:generator 4
+    (inst sra temp y 2)
+    (inst mult x temp)
+    (inst mflo r)))
 
-(define-fixnum-binop fast-+/fixnum fast-binop/fixnum + add
-  :immed-op addi)
+(define-vop (fast-*/fixnum fast-binop)
+  (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:translate *)
+  (:generator 4
+    (let ((fixnum (gen-label)))
+      (inst sra temp y 2)
+      (inst mult x temp)
+      (inst mfhi temp)
+      (inst beq temp zero-tn fixnum)
+      (inst mflo r)
+      ;; ### Need to make a bignum out of the high and low regs.
 
-(define-fixnum-binop fast--/fixnum fast-binop/fixnum - sub
-  :immed-op addi :function -)
+      (emit-label fixnum))))
 
+(define-vop (fast-truncate/fixnum fast-binop)
+  (:translate truncate)
+  (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
+  (:results (q :scs (any-reg descriptor-reg))
+	    (r :scs (any-reg descriptor-reg)))
+  (:node-var node)
+  (:generator 5
+    (let ((zero (generate-error-code node di:division-by-zero-error x y)))
+      (inst beq y zero-tn zero))
+    (inst sra t1 x 2)
+    (inst sra t2 y 2)
+    (inst div t1 t2)
+    (inst mflo t1)
+    (inst sll q t1 2)
+    (inst mfhi t1)
+    (inst sll r t1 2)))
 
-;;;; Logic operations:
+(define-vop (fast-rem/fixnum fast-binop)
+  (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
+  (:translate rem)
+  (:generator 4
+    (let ((zero (generate-error-code di:division-by-zero-error x y)))
+      (inst beq y zero-tn zero))
+    (inst sra t1 x 2)
+    (inst sra t2 y 2)
+    (inst div t1 t2)
+    (inst mfhi t1)
+    (inst sll r t1 2)))
 
-;;; Like fast-binop/fixnum, except the immediate operand is unsigned, and
-;;; a fixnum result assertion isn't needed.
-;;;
-(define-vop (fast-logic-binop/fixnum fast-binop/fixnum)
-  (:args (x :target r
-	    :scs (any-reg descriptor-reg))
-	 (y :target r
-	    :scs (any-reg descriptor-reg immediate unsigned-immediate zero)))
-  (:result-types t))
-
-(define-fixnum-binop fast-logior/fixnum fast-logic-binop/fixnum logior or
-  :immed-op ori :unsigned t)
-
-(define-fixnum-binop fast-logand/fixnum fast-logic-binop/fixnum logand and
-  :immed-op andi :unsigned t)
-
-(define-fixnum-binop fast-logxor/fixnum fast-logic-binop/fixnum logxor xor
-  :immed-op xori :unsigned t)
 
 
 
