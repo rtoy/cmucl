@@ -771,6 +771,12 @@
     (typecase node
       (ref (delete-ref node))
       (basic-combination
+       (when (and (eq (basic-combination-kind node) :local)
+		  ;; Not already deleted...
+		  (continuation-use (basic-combination-fun node)))
+	 (let ((fun (combination-lambda node)))
+	   (when (member (functional-kind fun) '(:let :mv-let))
+	     (delete-lambda fun))))
        (flush-dest (basic-combination-fun node))
        (dolist (arg (basic-combination-args node))
 	 (when arg (flush-dest arg))))
