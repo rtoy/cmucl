@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/inspect.lisp,v 1.10 1994/10/31 04:53:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/inspect.lisp,v 1.11 2003/12/03 07:56:09 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,6 +173,9 @@
   (if (listp (cdr l))
       (format nil "List of length ~a" (length l))
       (format nil "Dotted Pair")))
+
+(defmethod inspector-pane-title ((i integer))
+  (format nil "Integer ~D" i))
 
 
 
