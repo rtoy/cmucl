@@ -851,11 +851,11 @@
     (setf (string-output-stream-index stream) dst-end)))
 
 (defun string-out-misc (stream operation &optional arg1 arg2)
-  (declare (ignore arg1 arg2))
+  (declare (ignore arg2))
   (case operation
     (:file-position
      (if (null arg1)
-       (string-output-stream-index stream)))
+	 (string-output-stream-index stream)))
     (:charpos
      (do ((index (1- (the fixnum (string-output-stream-index stream)))
 		 (1- index))
