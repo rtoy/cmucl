@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.10 1992/03/02 17:22:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.11 1992/03/08 18:33:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,8 +26,7 @@
 	  boundp set))
 
 (in-package "KERNEL")
-(export '(%set-symbol-value %set-symbol-definition %set-symbol-plist
-			    %set-symbol-package fset))
+(export '(%set-symbol-value %set-symbol-plist %set-symbol-package fset))
 
 (in-package "LISP")
 
@@ -70,19 +69,12 @@
 
 (defun symbol-function (variable)
   "VARIABLE must evaluate to a symbol.  This symbol's current definition
-  is returned."
-  (declare (optimize (safety 1)))
-  (symbol-function variable))
+   is returned.  Settable with SETF."
+  (raw-definition variable))
 
 (defun fset (symbol new-value)
   (declare (type symbol symbol) (type function new-value))
-  (if symbol
-      (%set-symbol-function symbol new-value)
-      (error "Can't define NIL.")))
-
-(defun %set-symbol-function (symbol new-value)
-  (declare (type symbol symbol) (type function new-value))
-  (%set-symbol-function symbol new-value))
+  (setf (raw-definition variable) new-value))
 
 
 (defun symbol-plist (variable)
