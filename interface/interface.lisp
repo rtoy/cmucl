@@ -285,17 +285,19 @@
 
 (defun system-server-status-hook (process)
   (let ((status (ext:process-status process)))
-    (when (or (eq status :exited)
-	      (eq status :signaled))
-      (setf *system-motif-server* nil))))
+    (unless (ext:process-alive-p process)
+      (setf *system-motif-server* nil)
+      (warn "Motif server died.~@
+	     Status = ~S, exit code = ~D."
+	    (ext:process-status process)
+	    (ext:process-exit-code process)))))
 
 (defvar *server-startup-timeout* 30)
 
 (defun verify-system-server-exists ()
   (when (and (not xt:*default-server-host*)
-	     (or (not *system-motif-server*)
-		 (and *system-motif-server*
-		      (not (ext:process-alive-p *system-motif-server*)))))
+	     (not (and *system-motif-server*
+		       (ext:process-alive-p *system-motif-server*))))
     (let ((process (ext:run-program
 		    (merge-pathnames *clm-binary-name*
 				     *clm-binary-directory*)
@@ -323,6 +325,7 @@
 	  (when (> (get-internal-real-time) end-time)
 	    (xti:toolkit-error
 	     "Timed out waiting for Motif server to start up.")))
+
 	(setf *system-motif-server* process)))))
 
 
