@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.11 1993/05/11 21:09:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.12 1993/05/12 15:32:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,8 +300,8 @@
 
 (defun initialize-byte-compiled-function (xep)
   (declare (type byte-function xep))
-  (setf (%funcallable-instance-function xep)
-	#'(lambda (&rest args)
+  (setf (funcallable-instance-function xep)
+	#'(instance-lambda (&rest args)
 	    (let ((old-sp (current-stack-pointer))
 		  (num-args (length args)))
 	      (declare (type stack-pointer old-sp))
@@ -314,8 +314,8 @@
   (declare (type byte-function xep)
 	   (type simple-vector closure-vars))
   (let ((res (make-byte-closure xep closure-vars)))
-    (setf (%funcallable-instance-function res)
-	  #'(lambda (&rest args)
+    (setf (funcallable-instance-function res)
+	  #'(instance-lambda (&rest args)
 	      (let ((old-sp (current-stack-pointer))
 		    (num-args (length args)))
 		(declare (type stack-pointer old-sp))
