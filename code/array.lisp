@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.12 1991/05/28 17:13:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.13 1991/06/05 10:54:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -257,17 +257,20 @@
 		      (setf (aref vector index) contents)
 		      (incf index))
 		     (t
+		      (unless (typep contents 'sequence)
+			(error "Malformed :initial-contents.  ~S is not a ~
+			        sequence, but ~D more layer~:P needed."
+			       contents
+			       (- (length dimensions) axis)))
 		      (unless (= (length contents) (car dims))
 			(error "Malformed :initial-contents.  Dimension of ~
 			        axis ~D is ~D, but ~S is ~D long."
 			       axis (car dims) contents (length contents)))
-		      (unless (listp contents)
-			(error "Malformed :initial-contents.  ~S is an atom, ~
-			but ~D more layer~:P needed."
-			       contents
-			       (- (length dimensions) axis)))
-		      (dolist (content contents)
-			(frob (1+ axis) (cdr dims) content))))))
+		      (if (listp contents)
+			  (dolist (content contents)
+			    (frob (1+ axis) (cdr dims) content))
+			  (dotimes (i (length contents))
+			    (frob (1+ axis) (cdr dims) (aref contents i))))))))
       (frob 0 dimensions initial-contents))))
 
 
@@ -560,7 +563,7 @@
 (defun vector-push (new-el array)
   "Attempts to set the element of Array designated by the fill pointer
    to New-El and increment fill pointer by one.  If the fill pointer is
-   too large, Nil is returned, otherwise the new fill pointer value is 
+   too large, Nil is returned, otherwise the index of the pushed element is 
    returned."
   (declare (vector array))
   (let ((fill-pointer (fill-pointer array)))
@@ -569,7 +572,8 @@
 	   nil)
 	  (t
 	   (setf (aref array fill-pointer) new-el)
-	   (setf (%array-fill-pointer array) (1+ fill-pointer))))))
+	   (setf (%array-fill-pointer array) (1+ fill-pointer))
+	   fill-pointer))))
 
 (defun vector-push-extend (new-el array &optional
 				  (extension (if (zerop (length array))
@@ -583,22 +587,21 @@
     (when (= fill-pointer (%array-available-elements array))
       (adjust-array array (+ fill-pointer extension)))
     (setf (aref array fill-pointer) new-el)
-    (setf (%array-fill-pointer array) (1+ fill-pointer))))
+    (setf (%array-fill-pointer array) (1+ fill-pointer))
+    fill-pointer))
 
 (defun vector-pop (array)
   "Attempts to decrease the fill-pointer by 1 and return the element
-   pointer to by the new fill pointer.  If the new value of the fill
+   pointer to by the new fill pointer.  If the original value of the fill
    pointer is 0, an error occurs."
   (declare (vector array))
   (let ((fill-pointer (fill-pointer array)))
     (declare (fixnum fill-pointer))
-    (cond ((zerop fill-pointer)
-	   (error "Nothing left to pop."))
-	  (t
-	   (setf (%array-fill-pointer array)
-		 (1- fill-pointer))
-	   (aref array fill-pointer)))))
-
+    (if (zerop fill-pointer)
+	(error "Nothing left to pop.")
+	(aref array
+	      (setf (%array-fill-pointer array)
+		    (1- fill-pointer))))))
 
 
 ;;;; Adjust-array
