@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.9 1990/10/13 04:50:03 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.10 1990/11/24 07:52:32 wlott Exp $ */
 /* Extra random routines for testing stuff. */
 
 #include <signal.h>
@@ -20,6 +20,32 @@ static char *signames[] = {
 
 static char *errors[] = ERRORS;
 
+#ifdef mips
+#define any_reg_sc 16
+#define descriptor_reg_sc 17
+#define base_char_reg_sc 18
+#define sap_reg_sc 19
+#define signed_reg_sc 20
+#define unsigned_reg_sc 21
+#define non_descr_reg_sc 22
+#define interior_reg_sc 23
+#define single_float_reg_sc 24
+#define double_float_reg_sc 25
+#endif
+
+#ifdef sparc
+#define any_reg_sc 11
+#define descriptor_reg_sc 12
+#define base_char_reg_sc 13
+#define sap_reg_sc 14
+#define signed_reg_sc 15
+#define unsigned_reg_sc 16
+#define non_descr_reg_sc 17
+#define interior_reg_sc 18
+#define single_float_reg_sc 19
+#define double_float_reg_sc 20
+#endif
+
 
 signal_handler(signal, code, context)
 int signal, code;
@@ -28,6 +54,7 @@ struct sigcontext *context;
     int mask;
     unsigned long *ptr, bad_inst;
     unsigned char *cptr;
+    int len, scoffset, sc, offset, ch;
 
     printf("Hit with %s, code = %d, context = 0x%x\n", signames[signal], code, context);
 
@@ -36,11 +63,26 @@ struct sigcontext *context;
         ptr = (unsigned long *)(context->sc_pc + 4);
     else
         ptr = (unsigned long *)(context->sc_pc);
+#endif
+#ifdef sparc
+    ptr = (unsigned long *)(context->sc_pc);
+#endif
+
     bad_inst = *ptr;
 
+#ifdef mips
     if ((bad_inst >> 26) == 0 && (bad_inst & 0x3f) == 0xd) {
         /* It was a break. */
         switch ((bad_inst >> 16) & 0x3ff) {
+#if 0
+        }
+    }
+#endif
+#endif
+#ifdef sparc
+    if ((bad_inst & 0xc1c00000) == 0) {
+        switch (bad_inst & 0x3fffff) {
+#endif
             case trap_Halt:
                 printf("%primitive halt called; the party is over.\n");
                 break;
@@ -52,95 +94,93 @@ struct sigcontext *context;
             case trap_Error:
             case trap_Cerror:
                 cptr = (unsigned char *)(ptr+1);
-                if (*cptr == 0xff) {
-                    int len, scoffset, sc, offset, ch;
-
+                if (*cptr == 0xff)
                     cptr++;
-                    len = *cptr++;
-                    printf("Error: %s\n", errors[*cptr++]);
+
+                len = *cptr++;
+                printf("Error: %s\n", errors[*cptr++]);
+                len--;
+                while (len > 0) {
+                    scoffset = *cptr++;
                     len--;
-                    while (len > 0) {
+                    if (scoffset == 253) {
                         scoffset = *cptr++;
                         len--;
-                        if (scoffset == 253) {
-                            scoffset = *cptr++;
-                            len--;
-                        }
-                        else if (scoffset == 254) {
-                            scoffset = cptr[0] + cptr[1]*256;
-                            cptr += 2;
-                            len -= 2;
-                        }
-                        else if (scoffset == 255) {
-                            scoffset = cptr[0] + (cptr[1]<<8) +
-                                (cptr[2]<<16) + (cptr[3]<<24);
-                            cptr += 4;
-                            len -= 4;
-                        }
-                        sc = scoffset & 0x1f;
-                        offset = scoffset >> 5;
-
-                        printf("    SC: %d, Offset: %d", sc, offset);
-                        switch (sc) {
-                          case 16: /* Any reg */
-                          case 17: /* Descriptor reg */
-                            putchar('\t');
-                            brief_print(context->sc_regs[offset]);
-                            break;
-                          case 18: /* base char reg */
-                            ch = context->sc_regs[offset];
-                            switch (ch) {
-                              case '\n': printf("\t'\\n'\n"); break;
-                              case '\b': printf("\t'\\b'\n"); break;
-                              case '\t': printf("\t'\\t'\n"); break;
-                              case '\r': printf("\t'\\r'\n"); break;
-                              default:
-                                if (ch < 32 || ch > 127)
-                                    printf("\\%03o", ch);
-                                else
-                                    printf("\t'%c'\n", ch);
-                                break;
-                            }
-                            break;
-                          case 19: /* sap reg */
-                            printf("\t0x%08x\n", context->sc_regs[offset]);
-                            break;
-                          case 20: /* signed reg */
-                            printf("\t%ld\n", context->sc_regs[offset]);
-                            break;
-                          case 21: /* unsigned reg */
-                            printf("\t%lu\n", context->sc_regs[offset]);
-                            break;
-                          case 22: /* non-descr reg */
-                          case 23: /* interior reg */
-                            printf("\t???\n");
-                            break;
-                          case 24: /* single-float reg */
-                            printf("\t%g\n",
-                                   *(float *)&context->sc_fpregs[offset]);
-                            break;
-                          case 25: /* double-float reg */
-                            printf("\t%g\n",
-                                   *(double *)&context->sc_fpregs[offset]);
-                            break;
-                          default:
-                            printf("\t???\n");
-                            break;
-                        }
                     }
-                }
-                else {
-                    printf("Error: %s\n", errors[*cptr]);
-                    while (*++cptr != 0)
-                        printf("    R%d: 0x%x\n", *cptr,
-                               context->sc_regs[*cptr]);
+                    else if (scoffset == 254) {
+                        scoffset = cptr[0] + cptr[1]*256;
+                        cptr += 2;
+                        len -= 2;
+                    }
+                    else if (scoffset == 255) {
+                        scoffset = cptr[0] + (cptr[1]<<8) +
+                            (cptr[2]<<16) + (cptr[3]<<24);
+                            cptr += 4;
+                        len -= 4;
+                    }
+                    sc = scoffset & 0x1f;
+                    offset = scoffset >> 5;
+
+                    printf("    SC: %d, Offset: %d", sc, offset);
+                    switch (sc) {
+                      case any_reg_sc:
+                      case descriptor_reg_sc:
+                        putchar('\t');
+                        brief_print(context->sc_regs[offset]);
+                        break;
+                      case base_char_reg_sc:
+                        ch = context->sc_regs[offset];
+                        switch (ch) {
+                          case '\n': printf("\t'\\n'\n"); break;
+                          case '\b': printf("\t'\\b'\n"); break;
+                          case '\t': printf("\t'\\t'\n"); break;
+                          case '\r': printf("\t'\\r'\n"); break;
+                          default:
+                            if (ch < 32 || ch > 127)
+                                printf("\\%03o", ch);
+                            else
+                                printf("\t'%c'\n", ch);
+                            break;
+                        }
+                        break;
+                      case sap_reg_sc:
+                        printf("\t0x%08x\n", context->sc_regs[offset]);
+                        break;
+                      case signed_reg_sc:
+                        printf("\t%ld\n", context->sc_regs[offset]);
+                        break;
+                      case unsigned_reg_sc:
+                        printf("\t%lu\n", context->sc_regs[offset]);
+                        break;
+                      case non_descr_reg_sc:
+                      case interior_reg_sc:
+                        printf("\t???\n");
+                        break;
+                      case single_float_reg_sc:
+                        printf("\t%g\n",
+                               *(float *)&context->sc_fpregs[offset]);
+                        break;
+                      case double_float_reg_sc:
+                        printf("\t%g\n",
+                               *(double *)&context->sc_fpregs[offset]);
+                        break;
+                      default:
+                        printf("\t???\n");
+                        break;
+                    }
                 }
                 if (code == trap_Cerror) {
                     printf("Hit a break.  Use ``exit'' to continue.\n");
+#ifdef mips
                     if (context->sc_cause & CAUSE_BD)
                         emulate_branch(context, *(unsigned long *)context->sc_pc);
                     else
                         context->sc_pc += 4;
+#endif
+#ifdef sparc
+                    context->sc_pc = context->sc_npc;
+                    context->sc_npc = context->sc_npc + 4;
+#endif
                 }
                 break;
 
@@ -149,7 +189,6 @@ struct sigcontext *context;
                 break;
         }
     }
-#endif
 
     mask = sigsetmask(0);
 
@@ -163,7 +202,12 @@ struct sigcontext *context;
 test_init()
 {
     install_handler(SIGINT, signal_handler);
+#ifdef mips
     install_handler(SIGTRAP, signal_handler);
+#endif
+#ifdef sparc
+    install_handler(SIGILL, signal_handler);
+#endif
 }
 
 
