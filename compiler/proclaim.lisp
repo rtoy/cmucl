@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.17 1991/05/23 17:53:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.18 1991/05/28 17:54:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,7 +270,7 @@
 		(safety (setf (cookie-safety res) value))
 		(compilation-speed (setf (cookie-cspeed res) value))
 		((inhibit-warnings brevity) (setf (cookie-brevity res) value))
-		(debug-info (setf (cookie-debug res) value))
+		((debug-info debug) (setf (cookie-debug res) value))
 		(t
 		 (compiler-warning "Unknown optimization quality ~S in ~S."
 				   (car quality) spec))))
