@@ -304,6 +304,22 @@
      (eq (info variable kind object) :constant))
     (list (eq (car object) 'quote))))
 
+
+;;; Type-Expand  --  Interface
+;;;
+;;;    Similar to Macroexpand, but expands deftypes.  We don't bother returning
+;;; a second value.
+;;;
+(defun type-expand (form)
+  (let ((def (cond ((symbolp form)
+		    (info type expander form))
+		   ((and (consp form) (symbolp (car form)))
+		    (info type expander (car form)))
+		   (t nil))))
+    (if def
+	(type-expand (funcall def (if (consp form) form (list form))))
+	form)))
+
 
 ;;; Function invocation:
 
