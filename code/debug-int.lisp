@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.46 1992/05/26 10:33:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.47 1992/05/26 11:18:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3117,7 +3117,8 @@
 	    (breakpoint-install (kernel:get-lisp-obj-address
 				 (breakpoint-data-component data))
 				(breakpoint-data-offset data)))))
-   (push breakpoint (breakpoint-data-breakpoints data))
+   (setf (breakpoint-data-breakpoints data)
+	 (nconc (breakpoint-data-breakpoints data) (list breakpoint)))
    (setf (breakpoint-internal-data breakpoint) data)))
 
 ;;;
