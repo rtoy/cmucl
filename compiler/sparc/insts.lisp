@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.5 1991/11/15 15:29:08 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.6 1991/11/26 22:47:01 wlott Exp $
 ;;;
 ;;; Description of the SPARC architecture.
 ;;;
@@ -26,6 +26,13 @@
 
 (defvar *disassem-use-lisp-reg-names* t)
 
+(defconstant reg-name-vec
+  (map 'vector
+       #'(lambda (name)
+	   (cond ((null name) nil)
+		 (t (make-symbol name))))
+       *register-names*))
+
 (define-argument-type reg
   :type '(and tn
 	      (satisfies (lambda (object)
@@ -38,18 +45,17 @@
 		(null null-offset)
 		(zero 0)
 		(t (tn-offset tn))))
-  :disassem-printer #'(lambda (value stream)
-			(declare (stream stream) (fixnum value))
+  :disassem-printer #'(lambda (value stream dstate)
+			(declare (stream stream) (fixnum value) (ignore dstate))
 			(cond (*disassem-use-lisp-reg-names*
  			       (write-char #\% stream)
-			       (princ (aref *register-names* value) stream))
+			       (princ (aref reg-name-vec value) stream))
  			      (t
 			       (multiple-value-bind (set num)
 				   (truncate value 8)
 				 (format stream "%~a~d"
-					 (aref #("g" "o" "l" "i") set)
-					 num)))))
-)
+					 (aref #(g o l i) set)
+					 num))))))
 
 
 (define-argument-type fp-reg
@@ -58,8 +64,7 @@
 			   (eq (sb-name (sc-sb (tn-sc object)))
 			       'float-registers))))
   :function tn-offset
-  :disassem-printer "%f~d"
-  )
+  :disassem-printer "%f~d")
 
 (define-argument-type odd-fp-reg
   :type '(and tn
@@ -76,8 +81,7 @@
   :sign-extend t
   :disassem-use-label #'(lambda (value dstate)
 			  (declare (type disassem:disassem-state dstate))
-			  (+ (ash value 2) (disassem:dstate-curpos dstate)))
-  )
+			  (+ (ash value 2) (disassem:dstate-curpos dstate))))
 
 
 (eval-when (compile eval load)
@@ -88,13 +92,12 @@
 ;;; they're a bit more readable (e.g., "eq" instead of "e").  You could just
 ;;; put a vector of the normal ones here too.
 (defconstant branch-cond-name-vec
-  #.(map 'vector #'symbol-name branch-conditions))
+  (coerce branch-conditions 'vector))
 
 (define-argument-type branch-condition
   :type '(member . #.branch-conditions)
   :function (lambda (cond) (position cond branch-conditions))
-  :disassem-printer branch-cond-name-vec
-  )
+  :disassem-printer branch-cond-name-vec)
 
 (defconstant branch-cond-true
   #b1000)
@@ -104,19 +107,19 @@
     '(:f :ne :lg :ul :l :ug :g :u :t :eq :ue :ge :uge :le :ule :o)))
 
 (defconstant branch-fp-cond-name-vec
-  #.(map 'vector #'symbol-name branch-fp-conditions))
+  (coerce branch-fp-conditions 'vector))
 
 (define-argument-type branch-fp-condition
   :type '(member . #.branch-fp-conditions)
   :function (lambda (fp-cond) (position fp-cond branch-fp-conditions))
-  :disassem-printer branch-fp-cond-name-vec
-  )
+  :disassem-printer branch-fp-cond-name-vec)
 
 
 (define-fixup-type :call :disassem-use-label t)
 (define-fixup-type :sethi
-  :disassem-printer #'(lambda (value stream)
-			  (format stream "%hi(#x~8,'0x)" (ash value 10))))
+  :disassem-printer #'(lambda (value stream dstate)
+			(declare (ignore dstate))
+			(format stream "%hi(#x~8,'0x)" (ash value 10))))
 (define-fixup-type :add)
 
 
@@ -136,9 +139,13 @@
   (op2 (byte 3 22))
   (immed (byte 22 0) :default-type (signed-byte 22)))
 
-(define-format (format-2-branch 32
-		:disassem-printer
-		  `(:name (:unless (:constant ,branch-cond-true) cond) :tab disp))
+(defconstant branch-printer
+  `(:name (:unless (:constant ,branch-cond-true) cond)
+	  (:unless (a :constant 0) "," 'A)
+	  :tab
+	  disp))
+
+(define-format (format-2-branch 32 :disassem-printer branch-printer)
   (op (byte 2 30) :default 0)
   (a (byte 1 29))
   (cond (byte 4 25) :default-type branch-condition)
@@ -451,8 +458,7 @@
 		   (op2 :constant #b010)
 		   (disp :argument relative-label)))
 
-(define-instruction (ba
-		     :disassem-printer '("B" cond ",A" :tab disp))
+(define-instruction (ba)
   (format-2-branch (op :constant #b00)
 		   (a :constant 1)
 		   (cond :argument branch-condition)
@@ -463,6 +469,7 @@
 		   (cond :constant #b1000)
 		   (op2 :constant #b010)
 		   (disp :argument relative-label)))
+(disassem:specialize (ba :name 'b))
 
 (define-instruction (t
 		     :disassem-printer '(:name rd :tab immed))
@@ -522,7 +529,7 @@
 		  (rs1 :argument reg)
 		  (immed :argument (signed-byte 13))))
 
-(define-instruction (rdy :disassem-printer '("RD" :tab "%Y, " rd))
+(define-instruction (rdy :disassem-printer '('RD :tab '%Y ", " rd))
   (format-3-immed (op :constant #b10)
 		  (rd :argument reg)
 		  (op3 :constant #b101000)
@@ -531,10 +538,10 @@
 
 (define-instruction (wry
 		     :disassem-printer
-		         '("WR" :tab
+		         '('WR :tab
 			        rs1
 				(:unless (:constant 0) ", " (:choose immed rs2))
-				", %y"))
+				", " '%Y))
   (format-3-reg (op :constant #b10)
 		(rd :constant 0)
 		(op3 :constant #b110000)
