@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.15 1992/03/26 03:17:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.16 1992/07/17 18:16:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,47 +222,6 @@
 	 (when ,handler
 	   (remove-fd-handler ,handler))))))
 
-;;; WAIT-UNTIL-FD-USABLE -- Public.
-;;;
-;;; Wait until FD is usable for DIRECTION. The timeout given to serve-event is
-;;; recalculated each time through the loop so that WAIT-UNTIL-FD-USABLE will
-;;; timeout at the correct time irrespective of how many events are handled in
-;;; the meantime.
-;;;
-(defun wait-until-fd-usable (fd direction &optional timeout)
-  "Wait until FD is usable for DIRECTION. DIRECTION should be either :INPUT or
-  :OUTPUT. TIMEOUT, if supplied, is the number of seconds to wait before giving
-  up."
-  (declare (type (or index null) timeout))
-  (let (usable)
-    (multiple-value-bind
-	(stop-sec stop-usec)
-	(if timeout
-	    (multiple-value-bind (okay sec usec)
-				 (unix:unix-gettimeofday)
-	      (declare (ignore okay))
-	      (values (the (unsigned-byte 32) (+ sec timeout))
-		      usec))
-	    (values 0 0))
-      (declare (type (unsigned-byte 32) stop-sec stop-usec))
-      (with-fd-handler (fd direction #'(lambda (fd)
-					 (declare (ignore fd))
-					 (setf usable t)))
-	(loop
-	  (serve-event timeout)
-	  
-	  (when usable
-	    (return t))
-	  
-	  (when timeout
-	    (multiple-value-bind (okay sec usec)
-				 (unix:unix-gettimeofday)
-	      (declare (ignore okay))
-	      (when (or (> sec stop-sec)
-			(and (= sec stop-sec) (>= usec stop-usec)))
-		(return nil))
-	      (setq timeout (- stop-sec sec)))))))))
-
 
 ;;; HANDLER-DESCRIPTORS-ERROR -- Internal.
 ;;;
@@ -290,7 +249,76 @@
 
 ;;;; Serve-all-events, serve-event, and friends.
 
-(declaim (start-block serve-event serve-all-events))
+(declaim (start-block wait-until-fd-usable start-block serve-event
+		      serve-all-events))
+
+;;; DECODE-TIMEOUT  --  Internal
+;;;
+;;;    Break a real timeout into seconds and microseconds.
+;;;
+(defun decode-timeout (timeout)
+  (declare (values (or index null) index))
+  (typecase timeout
+    (integer (values timeout 0))
+    (null (values nil 0))
+    (real
+     (multiple-value-bind (q r)
+			  (truncate (coerce timeout 'single-float))
+       (declare (type index q) (single-float r))
+       (values q (the index (truncate (* r 1f6))))))
+    (t
+     (error "Timeout is not a real number or NIL: ~S" timeout))))
+
+
+;;; WAIT-UNTIL-FD-USABLE -- Public.
+;;;
+;;; Wait until FD is usable for DIRECTION. The timeout given to serve-event is
+;;; recalculated each time through the loop so that WAIT-UNTIL-FD-USABLE will
+;;; timeout at the correct time irrespective of how many events are handled in
+;;; the meantime.
+;;;
+(defun wait-until-fd-usable (fd direction &optional timeout)
+  "Wait until FD is usable for DIRECTION. DIRECTION should be either :INPUT or
+  :OUTPUT. TIMEOUT, if supplied, is the number of seconds to wait before giving
+  up."
+  (declare (type (or real null) timeout))
+  (let (usable)
+    (multiple-value-bind (to-sec to-usec)
+			 (decode-timeout timeout)
+      (declare (type (or index null) to-sec to-usec))
+      (multiple-value-bind
+	  (stop-sec stop-usec)
+	  (if to-sec
+	      (multiple-value-bind (okay start-sec start-usec)
+				   (unix:unix-gettimeofday)
+		(declare (ignore okay))
+		(let ((usec (+ to-usec start-usec))
+		      (sec (+ to-sec start-sec)))
+		  (declare (type (unsigned-byte 31) usec sec))
+		  (if (>= usec 1000000)
+		      (values (1+ sec) (- usec 1000000))
+		      (values sec usec))))
+	      (values 0 0))
+	(declare (type (unsigned-byte 31) stop-sec stop-usec))
+	(with-fd-handler (fd direction #'(lambda (fd)
+					   (declare (ignore fd))
+					   (setf usable t)))
+	  (loop
+	    (sub-serve-event to-sec to-usec)
+	    
+	    (when usable
+	      (return t))
+	    
+	    (when timeout
+	      (multiple-value-bind (okay sec usec)
+				   (unix:unix-gettimeofday)
+		(declare (ignore okay))
+		(when (or (> sec stop-sec)
+			  (and (= sec stop-sec) (>= usec stop-usec)))
+		  (return nil))
+		(setq to-sec (- stop-sec sec))
+		(setq to-usec (- stop-usec usec))))))))))
+
 
 (defvar *display-event-handlers* nil
   "This is an alist mapping displays to user functions to be called when
@@ -323,8 +351,15 @@
   function.  If timeout is specified, server will wait the specified time (in
   seconds) and then return, otherwise it will wait until something happens.
   Server returns T if something happened and NIL otherwise."
-  ;; First, check any X displays for any pending events.
-  #+clx
+  (multiple-value-bind (to-sec to-usec)
+		       (decode-timeout timeout)
+    (sub-serve-event to-sec to-usec)))
+
+
+;;; Check for any X displays with pending events.
+;;;
+#+clx
+(defun handle-queued-clx-event ()
   (dolist (d/h *display-event-handlers*)
     (let* ((d (car d/h))
 	   (disp-fd (fd-stream-fd (xlib::display-input-stream d))))
@@ -345,41 +380,61 @@
 	    (disable-clx-event-handling d)
 	    (error "Event-listen was true, but handler didn't handle: ~%~S"
 		   d/h)))
-	(return-from serve-event t))))
+	(return-from handle-queued-clx-event t)))))
+
+
+;;; Call file descriptor handlers according to the readable and writable masks
+;;; returned by select.
+;;;
+(defun call-fd-handler (readable writeable)
+  (let ((result nil))
+    (dolist (handler *descriptor-handlers*)
+      (when (logbitp (handler-descriptor handler)
+		     (ecase (handler-direction handler)
+		       (:input readable)
+		       (:output writeable)))
+	(unwind-protect
+	    (progn
+	      ;; Doesn't work -- ACK
+	      ;(setf (handler-active handler) t)
+	      (funcall (handler-function handler)
+		       (handler-descriptor handler)))
+	  (setf (handler-active handler) nil))
+	(macrolet ((frob (var)
+		     `(setf ,var
+			    (logand (32bit-logical-not
+				     (ash 1
+					  (handler-descriptor
+					   handler)))
+				    ,var))))
+	  (ecase (handler-direction handler)
+	    (:input (frob readable))
+	    (:output (frob writeable))))
+	(setf result t)))
+    result))
+
+
+;;; SUB-SERVE-EVENT  --  Internal
+;;;
+;;;    Takes timeout broken into seconds and microseconds.
+;;;
+(defun sub-serve-event (to-sec to-usec)
+  #+clx
+  (when (handle-queued-clx-event) (return-from sub-serve-event t))
+
   ;; Next, wait for something to happen.
   (multiple-value-bind
       (value readable writeable)
-      (wait-for-event timeout)
+      (multiple-value-bind (count read-mask write-mask except-mask)
+			   (calc-masks)
+	;; Do the select.
+	(unix:unix-select count read-mask write-mask except-mask
+			  to-sec to-usec))
     (declare (type (unsigned-byte 32) readable writeable))
     ;; Now see what it was (if anything)
     (cond ((fixnump value)
 	   (unless (zerop value)
-	     ;; Check the descriptors.
-	     (let ((result nil))
-	       (dolist (handler *descriptor-handlers*)
-		 (when (logbitp (handler-descriptor handler)
-				(ecase (handler-direction handler)
-				  (:input readable)
-				  (:output writeable)))
-		   (unwind-protect
-		       (progn
-			 ;; Doesn't work -- ACK
-			 ;(setf (handler-active handler) t)
-			 (funcall (handler-function handler)
-				  (handler-descriptor handler)))
-		     (setf (handler-active handler) nil))
-		   (macrolet ((frob (var)
-				`(setf ,var
-				       (logand (32bit-logical-not
-						(ash 1
-						     (handler-descriptor
-						      handler)))
-					       ,var))))
-		     (ecase (handler-direction handler)
-		       (:input (frob readable))
-		       (:output (frob writeable))))
-		   (setf result t)))
-	       result)))
+	     (call-fd-handler readable writeable)))
 	  ((eql readable unix:eintr)
 	   ;; We did an interrupt.
 	   t)
@@ -421,28 +476,3 @@
 	    read-mask
 	    write-mask
 	    except-mask)))
-
-;;; WAIT-FOR-EVENT -- internal
-;;;
-;;;   Wait for something to happen. 
-;;;
-(defun wait-for-event (&optional timeout)
-  "Wait for an something to show up on one of the file descriptors or a message
-  interupt to fire. Timeout is in seconds."
-  (multiple-value-bind
-      (timeout-sec timeout-usec)
-      (typecase timeout
-	(integer (values timeout 0))
-	(null (values nil 0))
-	(t
-	 (multiple-value-bind (q r)
-			      (truncate (coerce timeout 'single-float))
-	   (declare (type index q) (single-float r))
-	   (values q (truncate (* r 1f6))))))
-    (declare (type index timeout-usec)
-	     (type (or index null) timeout-sec))
-    (multiple-value-bind (count read-mask write-mask except-mask)
-			 (calc-masks)
-      ;; Do the select.
-      (unix:unix-select count read-mask write-mask except-mask
-			timeout-sec timeout-usec))))
