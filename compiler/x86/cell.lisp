@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.3 1997/09/29 04:40:34 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.4 1997/09/29 05:06:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -317,7 +317,7 @@
   (:generator 5
     (move eax old-value)
     (move temp new-value)
-    (inst cmpxchg (make-ea :dword :base object :index slot :scale 4
+    (inst cmpxchg (make-ea :dword :base object :index slot :scale 1
 			   :disp (- (* instance-slots-offset word-bytes)
 				    instance-pointer-type))
 	  temp)
