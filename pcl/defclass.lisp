@@ -114,9 +114,10 @@
 	    (return t))))
 
     (let ((*initfunctions* ())
-	  (*accessors* ()))			;Truly a crock, but we got
-						;to have it to live nicely.
-      (declare (special *initfunctions* *accessors*))
+	  (*accessors* ())			   ;Truly a crock, but we got
+	  (*readers* ())			   ;to have it to live nicely.
+	  (*writers* ()))
+      (declare (special *initfunctions* *accessors* *readers* *writers*))
       (let ((canonical-slots
 	      (mapcar #'(lambda (spec)
 			  (canonicalize-slot-specification name spec))
@@ -128,13 +129,21 @@
 	(do-standard-defsetfs-for-defclass *accessors*)
 	(make-top-level-form `(defclass ,name)
 			     *defclass-times*
-	  `(let ,(mapcar #'cdr *initfunctions*)
-	     (load-defclass ',name
-			    ',metaclass
-			    ',supers
-			    (list ,@canonical-slots)
-			    (list ,@(apply #'append other-initargs))
-			    ',*accessors*)))))))
+	  `(progn
+	     ,@(mapcar #'(lambda (x)
+			   `(declaim (ftype (function (t) t) ,x)))
+		       *readers*)
+	     ,@(mapcar #'(lambda (x)
+			   `(declaim (ftype (function (t t) t) ,x)))
+		       *writers*)
+	     ,@(declare-accessor-methods canonical-slots)
+	     (let ,(mapcar #'cdr *initfunctions*)
+	       (load-defclass ',name
+			      ',metaclass
+			      ',supers
+			      (list ,@canonical-slots)
+			      (list ,@(apply #'append other-initargs))
+			      ',*accessors*))))))))
 
 (defun make-initfunction (initform)
   (declare (special *initfunctions*))
@@ -157,7 +166,7 @@
 	   (cadr entry)))))
 
 (defun canonicalize-slot-specification (class-name spec)
-  (declare (special *accessors*))
+  (declare (special *accessors* *readers* *writers*))
   (cond ((and (symbolp spec)
 	      (not (keywordp spec))
 	      (not (memq spec '(t nil))))		   
@@ -189,6 +198,8 @@
 	   (loop (unless (remf spec :reader)   (return)))
 	   (loop (unless (remf spec :writer)   (return)))
 	   (loop (unless (remf spec :initarg)  (return)))
+	   (setq *writers* (append writers *writers*))
+	   (setq *readers* (append readers *readers*))
 	   (setq spec `(:name     ',name
 			:readers  ',readers
 			:writers  ',writers
