@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.31 1990/06/08 15:06:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.32 1990/06/09 17:30:12 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -535,6 +535,10 @@
 	  %set-fdefinition
 	  %set-fill-pointer
 	  %set-row-major-aref
+	  %set-sap-ref-sap
+	  %set-sap-ref-32
+	  %set-sap-ref-16
+	  %set-sap-ref-8
 	  %setelt
 	  %setnth
 	  %sp-set-definition
