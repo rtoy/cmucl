@@ -1,0 +1,59 @@
+#!/bin/csh -f
+#
+#  compile-all -- script to compile everything but PCL
+#
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.1 1991/10/15 15:30:52 ram Exp $
+
+if ($#argv) then
+	set subdir = $argv[1]
+else
+	set subdir = alpha
+endif
+set lisp = /afs/cs/project/clisp/@sys/$subdir
+
+lisp -noinit << EOF
+(setf (search-list "target:") '("$lisp/"))
+(load "target:tools/setup")
+(comf "target:tools/setup")
+(comf "target:tools/rcs")
+(quit)
+EOF
+
+lisp -noinit << EOF
+(setf (search-list "target:") '("$lisp/"))
+(load "target:tools/setup")
+(push :small *features*)
+(setf *interactive* nil *gc-verbose* nil)
+(load "target:tools/worldcom")
+(quit)
+EOF
+
+lisp -noinit << EOF
+(setf (search-list "target:") '("$lisp/"))
+(setf (search-list "clx:") '("target:clx/"))
+(load "target:tools/setup")
+(push :small *features*)
+(setf *interactive* nil *gc-verbose* nil)
+(load "target:tools/clxcom")
+(quit)
+EOF
+
+lisp -noinit << EOF
+(setf (search-list "target:") '("$lisp/"))
+(load "target:tools/setup")
+(push :small *features*)
+(setf *interactive* nil *gc-verbose* nil)
+(load "target:tools/hemcom")
+(quit)
+EOF
+
+lisp -noinit << EOF
+(setf (search-list "target:") '("$lisp/"))
+(load "target:tools/setup")
+(push :small *features*)
+(setf *interactive* nil *gc-verbose* nil)
+(load "target:tools/comcom")
+(quit)
+EOF
+
+echo "Done..."
