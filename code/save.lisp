@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.48 2003/03/03 23:48:31 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.49 2003/03/04 00:29:35 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,9 +20,7 @@
 
 (in-package "EXTENSIONS")
 (export '(print-herald *herald-items* save-lisp *before-save-initializations*
-	  *after-save-initializations* *environment-list* *editor-lisp-p*
-	  *cmucl-lib* *cmucl-core-path*
-	  *cmucl-core-dump-time* *cmucl-core-dump-host*))
+	  *after-save-initializations* *environment-list* *editor-lisp-p*))
 (in-package "LISP")
 
 (defvar *before-save-initializations* nil
