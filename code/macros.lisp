@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.91 2003/03/22 16:15:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.92 2003/04/19 20:52:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,7 +300,7 @@
 ;;;    Very similar to Defmacro, but simpler.  We don't have to parse the
 ;;; lambda-list.
 ;;;
-(defmacro defun (&whole source name lambda-list &body (body decls doc))
+(defmacro defun (&whole source name lambda-list &parse-body (body decls doc))
   (multiple-value-bind (valid block-name)
       (valid-function-name-p name)
     (declare (ignore valid))
@@ -416,13 +416,13 @@
 (defmacro return (&optional (value nil))
   `(return-from nil ,value))
 
-(defmacro prog (varlist &body (body decls))
+(defmacro prog (varlist &parse-body (body decls))
   `(block nil
      (let ,varlist
        ,@decls
        (tagbody ,@body))))
 
-(defmacro prog* (varlist &body (body decls))
+(defmacro prog* (varlist &parse-body (body decls))
   `(block nil
      (let* ,varlist
        ,@decls
@@ -1469,7 +1469,7 @@
 
 
 ;;;; With-XXX
-(defmacro with-open-file ((var &rest open-args) &body (forms decls))
+(defmacro with-open-file ((var &rest open-args) &parse-body (forms decls))
   "Bindspec is of the form (Stream File-Name . Options).  The file whose
    name is File-Name is opened using the Options and bound to the variable
    Stream. If the call to open is unsuccessful, the forms are not
@@ -1487,7 +1487,7 @@
 	   (close ,var :abort ,abortp))))))
 
 
-(defmacro with-open-stream ((var stream) &body (forms decls))
+(defmacro with-open-stream ((var stream) &parse-body (forms decls))
   "The form stream should evaluate to a stream.  VAR is bound
    to the stream and the forms are evaluated as an implicit
    progn.  The stream is closed upon exit."
@@ -1503,7 +1503,8 @@
 	   (close ,var :abort ,abortp))))))
 
 
-(defmacro with-input-from-string ((var string &key index start end) &body (forms decls))
+(defmacro with-input-from-string ((var string &key index start end)
+				  &parse-body (forms decls))
   "Binds the Var to an input stream that returns characters from String and
   executes the body.  See manual for details."
   ;; The once-only inhibits compiler note for unreachable code when 'end' is true.
@@ -1524,7 +1525,8 @@
 	 ,@(if index `((setf ,index (string-input-stream-current ,var))))))))
 
 
-(defmacro with-output-to-string ((var &optional string) &body (forms decls))
+(defmacro with-output-to-string ((var &optional string)
+				 &parse-body (forms decls))
   "If STRING is specified, it must be a string with a fill pointer;
    the output is incrementally appended to the string (as if by use of
    VECTOR-PUSH-EXTEND)."
@@ -1582,7 +1584,7 @@
 	     ,@forms))))))
 
 
-(defmacro do (varlist endlist &body (body decls))
+(defmacro do (varlist endlist &parse-body (body decls))
   "DO ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
   Iteration construct.  Each Var is initialized in parallel to the value of the
   specified Init form.  On subsequent iterations, the Vars are assigned the
@@ -1595,7 +1597,7 @@
   (do-do-body varlist endlist body decls 'let 'psetq 'do nil))
 
 
-(defmacro do* (varlist endlist &body (body decls))
+(defmacro do* (varlist endlist &parse-body (body decls))
   "DO* ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
   Iteration construct.  Each Var is initialized sequentially (like LET*) to the
   value of the specified Init form.  On subsequent iterations, the Vars are

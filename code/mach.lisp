@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach.lisp,v 1.4 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach.lisp,v 1.5 2003/04/19 20:52:43 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,7 +91,7 @@
 
 ;;; GR-Bind  --  Public
 ;;;
-(defmacro gr-bind (vars (fun . args) &body (body decls))
+(defmacro gr-bind (vars (fun . args) &parse-body (body decls))
   "GR-Bind ({Var}*) (Function {Arg}*) {Form}*
   Call the function with the specified Args and signal an error if the
   first value returned is not mach:Kern-Success.  If the call succeeds,

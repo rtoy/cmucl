@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.145 2003/04/16 13:31:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.146 2003/04/19 20:52:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2538,7 +2538,8 @@
 
 ;;;; Symbol macros:
 
-(def-ir1-translator symbol-macrolet ((specs &body (body decls)) start cont)
+(def-ir1-translator symbol-macrolet ((specs &parse-body (body decls))
+				     start cont)
   "SYMBOL-MACROLET ({(Name Expansion)}*) Decl* Form*
   Define the Names as symbol macros with the given Expansions.  Within the
   body, references to a Name will effectively be replaced with the Expansion."
@@ -2828,7 +2829,7 @@
     (values (vars) (vals) (names))))
 
 
-(def-ir1-translator let ((bindings &body (body decls))
+(def-ir1-translator let ((bindings &parse-body (body decls))
 			 start cont)
   "LET ({(Var [Value]) | Var}*) Declaration* Form*
   During evaluation of the Forms, Bind the Vars to the result of evaluating the
@@ -2842,7 +2843,7 @@
       (reference-leaf start fun-cont fun)
       (ir1-convert-combination-args fun-cont cont values))))
 
-(def-ir1-translator locally ((&body (body decls))
+(def-ir1-translator locally ((&parse-body (body decls))
                             start cont)
   "LOCALLY Declaration* Form*
    Sequentially evaluates a body of Form's in a lexical environment
@@ -2852,7 +2853,7 @@
         
 
 
-(def-ir1-translator let* ((bindings &body (body decls))
+(def-ir1-translator let* ((bindings &parse-body (body decls))
 			  start cont)
   "LET* ({(Var [Value]) | Var}*) Declaration* Form*
   Similar to LET, but the variables are bound sequentially, allowing each Value
@@ -2905,7 +2906,7 @@
        (values (names) (defs)))))
 
 
-(def-ir1-translator flet ((definitions &body (body decls))
+(def-ir1-translator flet ((definitions &parse-body (body decls))
 			  start cont)
   "FLET ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
   Evaluate the Body-Forms with some local function definitions.   The bindings
@@ -2928,7 +2929,7 @@
 ;;; leaves.  We also backpatch the FENV so that if the lexical environment is
 ;;; used for inline expansion we will get the right functions.
 ;;;
-(def-ir1-translator labels ((definitions &body (body decls)) start cont)
+(def-ir1-translator labels ((definitions &parse-body (body decls)) start cont)
   "LABELS ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
   Evaluate the Body-Forms with some local function definitions.  The bindings
   enclose the new definitions, so the defined functions can call themselves or

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.205 2003/04/13 11:57:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.206 2003/04/19 20:52:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1064,7 +1064,9 @@
 	     "STREAM-READ-CHAR" "STREAM-READ-CHAR-NO-HANG" "STREAM-READ-LINE"
 	     "STREAM-START-LINE-P" "STREAM-TERPRI" "STREAM-UNREAD-CHAR"
 	     "STREAM-WRITE-BYTE" "STREAM-WRITE-CHAR" "STREAM-WRITE-STRING"
-	     "STREAM-READ-SEQUENCE" "STREAM-WRITE-SEQUENCE"))
+	     "STREAM-READ-SEQUENCE" "STREAM-WRITE-SEQUENCE"
+
+	     "&PARSE-BODY"))
 
 (defpackage "LOOP")
 (dolist

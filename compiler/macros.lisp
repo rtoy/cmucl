@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.50 2003/04/11 15:28:11 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.51 2003/04/19 20:52:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -341,7 +341,7 @@
 					  (result-type '*)
 					  &key result policy node defun-only
 					  eval-name important (when :native))
-			     &body (body decls doc))
+			     &parse-body (body decls doc))
   "Deftransform Name (Lambda-List [Arg-Types] [Result-Type] {Key Value}*)
                Declaration* [Doc-String] Form*
   Define an IR1 transformation for Name.  An IR1 transformation computes a

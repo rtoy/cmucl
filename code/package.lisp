@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.62 2003/03/22 16:15:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.63 2003/04/19 20:52:42 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -547,7 +547,7 @@
 ;;;; Iteration macros.
 
 (defmacro do-symbols ((var &optional (package '*package*) result-form)
-		      &body (body decls))
+		      &parse-body (body decls))
   "DO-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECLARATION}* {TAG | FORM}*
    Executes the FORMs at least once for each symbol accessible in the given
    PACKAGE with VAR bound to the current symbol."
@@ -581,7 +581,7 @@
 	 ,result-form))))
 
 (defmacro do-external-symbols ((var &optional (package '*package*) result-form)
-			       &body (body decls))
+			       &parse-body (body decls))
   "DO-EXTERNAL-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECL}* {TAG | FORM}*
    Executes the FORMs once for each external symbol in the given PACKAGE with
    VAR bound to the current symbol."
@@ -605,7 +605,7 @@
 	 ,@decls
 	 ,result-form))))
 
-(defmacro do-all-symbols ((var &optional result-form) &body (body decls))
+(defmacro do-all-symbols ((var &optional result-form) &parse-body (body decls))
   "DO-ALL-SYMBOLS (VAR [RESULT-FORM]) {DECLARATION}* {TAG | FORM}*
    Executes the FORMs once for each symbol in every package with VAR bound
    to the current symbol."

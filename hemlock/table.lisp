@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.4 2001/03/13 15:50:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.5 2003/04/19 20:52:42 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,7 +243,7 @@
 
 (eval-when (compile eval)
 
-(defmacro do-words ((start-var end-var) &body (body decls))
+(defmacro do-words ((start-var end-var) &parse-body (body decls))
   (let ((sep-pos (gensym)))
     `(dolist (,sep-pos *separator-positions*)
        (let ((,start-var (car ,sep-pos))
@@ -252,7 +252,7 @@
 	 ,@body))))
 
 (defmacro with-folded-string ((str-var len-var orig-str separator)
-			      &body (body decls))
+			      &parse-body (body decls))
   `(let ((,str-var *string-buffer*))
      (declare (simple-string ,str-var))
      ;; make the string simple if it isn't already

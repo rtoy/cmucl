@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.37 2003/03/22 01:25:43 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.38 2003/04/19 20:52:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,7 +60,8 @@
 
 
 (defconstant lambda-list-keywords
-  '(&optional &rest &key &aux &body &whole &allow-other-keys &environment)
+  '(&optional &rest &key &aux &body &whole &allow-other-keys &environment
+    &parse-body)
   "Keywords that you can put in a lambda-list, supposing you should want
   to do such a thing.")
 

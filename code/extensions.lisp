@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.26 2002/09/19 17:48:17 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.27 2003/04/19 20:52:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,7 +364,7 @@
 	 (return-from ,BLOCK (progn ,@(cdr endlist))))))))
 
 
-(defmacro do-anonymous (varlist endlist &body (body decls))
+(defmacro do-anonymous (varlist endlist &parse-body (body decls))
   "DO-ANONYMOUS ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form*
   Like DO, but has no implicit NIL block.  Each Var is initialized in parallel
   to the value of the specified Init form.  On subsequent iterations, the Vars
@@ -376,7 +376,7 @@
 		    'do-anonymous (gensym)))
 
 (defmacro do-hash ((key-var value-var table &optional result)
-		   &body (body decls))
+		   &parse-body (body decls))
   "DO-HASH (Key-Var Value-Var Table [Result]) Declaration* Form*
    Iterate over the entries in a hash-table."
   (let ((gen (gensym))
@@ -572,7 +572,7 @@
 ;;;
 (defmacro defun-cached ((name &rest options &key (values 1) default
 			      &allow-other-keys)
-			args &body (body decls doc))
+			args &parse-body (body decls doc))
   "DEFUN-CACHED (Name {Key Value}*) ({(Arg-Name Test-Function)}*) Form*
   Some syntactic sugar for defining a function whose values are cached by
   DEFINE-HASH-CACHE."

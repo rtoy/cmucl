@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.8 2001/03/13 15:49:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.9 2003/04/19 20:52:42 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -521,7 +521,7 @@
 
 
 (defmacro with-pop-up-display ((var &key height (buffer-name "Random Typeout"))
-			       &body (body decls))
+			       &parse-body (body decls))
   "Execute body in a context with var bound to a stream.  Output to the stream
    appears in the buffer named buffer-name.  The pop-up display appears after
    the body completes, but if you supply :height, the output is line buffered,

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.24 2003/02/24 10:04:10 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.25 2003/04/19 20:52:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,6 +123,15 @@
 			  `(progn
 			    (setf ,arg-list-name (cdr ,arg-list-name)))))
 		      (push-let-binding (car rest-of-args) arg-list-name nil))
+		     ((and (cdr rest-of-args) (consp (cadr rest-of-args)))
+		      (pop rest-of-args)
+		      (let* ((destructuring-lambda-list (car rest-of-args))
+			     (sub (gensym "WHOLE-SUBLIST")))
+			(push-sub-list-binding
+			 sub arg-list-name destructuring-lambda-list
+			 name error-kind error-fun)
+			(parse-defmacro-lambda-list
+			 destructuring-lambda-list sub name error-kind error-fun)))
 		     (t
 		      (defmacro-error "&WHOLE" error-kind name))))
 	      ((eq var '&environment)
@@ -138,7 +147,41 @@
 		      (setf env-arg-used t))
 		     (t
 		      (defmacro-error "&ENVIRONMENT" error-kind name))))
-	      ((or (eq var '&rest) (eq var '&body))
+	      ;;
+	      ;; This branch implements an extension to Common Lisp
+	      ;; that was formerly implemented for &body.  In place of
+	      ;; a symbol following &body, there could be a list of up
+	      ;; to three elements which will be bound to the body,
+	      ;; declarations, and doc-string of the body.
+	      ((eq var '&parse-body)
+	       (unless (and (cdr rest-of-args)
+			    (consp (cadr rest-of-args))
+			    (symbolp (caadr rest-of-args)))
+		 (simple-program-error "Invalid ~a" '&parse-body))
+		(setf rest-of-args (cdr rest-of-args))
+		(setf restp t)
+		(let ((body-name (caar rest-of-args))
+		      (declarations-name (cadar rest-of-args))
+		      (doc-string-name (caddar rest-of-args))
+		      (parse-body-values (gensym)))
+		  (push-let-binding
+		   parse-body-values
+		   `(multiple-value-list
+		     (parse-body ,path ,env-arg-name
+				 ,(not (null doc-string-name))))
+		   t)
+		  (setf env-arg-used t)
+		  (when body-name
+		    (push-let-binding body-name
+				      `(car ,parse-body-values) nil))
+		  (when declarations-name
+		    (push-let-binding declarations-name
+				      `(cadr ,parse-body-values) nil))
+		  (when doc-string-name
+		    (push-let-binding doc-string-name
+				      `(caddr ,parse-body-values) nil))))
+	      ;;
+	      ((member var '(&rest &body))
 	       (cond ((and (cddr rest-of-args)
 			   (not (member (caddr rest-of-args) lambda-list-keywords)))
 		      (defmacro-error (symbol-name var) error-kind name))
@@ -146,37 +189,15 @@
 		      (setf rest-of-args (cdr rest-of-args))
 		      (setf restp t)
 		      (push-let-binding (car rest-of-args) path nil))
-		     ;;
-		     ;; This branch implements an incompatible extension to
-		     ;; Common Lisp.  In place of a symbol following &body,
-		     ;; there may be a list of up to three elements which will
-		     ;; be bound to the body, declarations, and doc-string of
-		     ;; the body.
-		     ((and (cdr rest-of-args)
-			   (consp (cadr rest-of-args))
-			   (symbolp (caadr rest-of-args)))
-		      (setf rest-of-args (cdr rest-of-args))
-		      (setf restp t)
-		      (let ((body-name (caar rest-of-args))
-			    (declarations-name (cadar rest-of-args))
-			    (doc-string-name (caddar rest-of-args))
-			    (parse-body-values (gensym)))
-			(push-let-binding
-			 parse-body-values
-			 `(multiple-value-list
-			   (parse-body ,path ,env-arg-name
-				       ,(not (null doc-string-name))))
-			 t)
-			(setf env-arg-used t)
-			(when body-name
-			  (push-let-binding body-name
-					    `(car ,parse-body-values) nil))
-			(when declarations-name
-			  (push-let-binding declarations-name
-					    `(cadr ,parse-body-values) nil))
-			(when doc-string-name
-			  (push-let-binding doc-string-name
-					    `(caddr ,parse-body-values) nil))))
+		     ((and (cdr rest-of-args) (consp (cadr rest-of-args)))
+		      (pop rest-of-args)
+		      (setq restp t)
+		      (let* ((destructuring-lambda-list (car rest-of-args))
+			     (sub (gensym "REST-SUBLIST")))
+			(push-sub-list-binding sub path destructuring-lambda-list
+			 name error-kind error-fun)
+			(parse-defmacro-lambda-list
+			 destructuring-lambda-list sub name error-kind error-fun)))
 		     (t
 		      (defmacro-error (symbol-name var) error-kind name))))
 	      ((eq var '&optional)
