@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.24 1993/08/15 19:18:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.25 1993/08/19 23:11:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1008,6 +1008,8 @@
     (constant (format stream "'~S" (constant-value leaf)))
     (global-var
      (format stream "~S {~A}" (leaf-name leaf) (global-var-kind leaf)))
+    (dylan-var
+     (format stream "~A ~A" (leaf-name leaf) (dylan-var-module-name leaf)))
     (clambda
       (format stream "lambda ~S ~S" (leaf-name leaf)
 	      (mapcar #'leaf-name (lambda-vars leaf))))
