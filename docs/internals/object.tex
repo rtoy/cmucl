@@ -49,8 +49,9 @@ heap, so it does not look at a word of raw bits and interpret it as a pointer
 descriptor.  These data-blocks require headers for GC as well as for operations
 that need to know how to interpret the raw bits.  When GC is scanning, and it
 sees a header-word, then it can determine how to skip that data-block if
-necessary.  Header-Words are tagged as other-immediates.  See the sections
-``Other-Immediates" and ``Data-Blocks and Header-Words" for comments on
+necessary.  Header-Words are tagged as other-immediates.  See 
+``Other-Immediates'', section~\ref{sec:other-immediates} and
+``Data-Blocks and Header-Words'', section~\ref{sec:data-blocks-and-header} for comments on
 distinguishing header-words from other-immediate data.  This distinction is
 necessary since we scan through data-blocks containing only descriptors just as
 we scan through the heap looking for header-words introducing data-blocks.
@@ -133,6 +134,9 @@ words for arithmetic, but division and multiplication require special shifting.
 
 
 \section{Other-immediates}
+\label{sec:other-immediates}
+
+
 
 As for fixnums, there are two different three-bit lowtag codes for
 other-immediate, allowing 64 other-immediate types:
@@ -143,7 +147,7 @@ other-immediate, allowing 64 other-immediate types:
 \end{verbatim}
 
 The type-code for an other-immediate type is considered to include the two
-lowtag bits.  This supports the concept of a single "type code" namespace for
+lowtag bits.  This supports the concept of a single ``type code'' namespace for
 all descriptors, since the normal lowtag codes are disjoint from the
 other-immediate codes.
 
@@ -156,11 +160,13 @@ The system uses the other-immediate format for characters,
 the {\tt symbol-value} unbound trap value, and header-words for data-blocks on
 the heap.  The type codes are laid out to facilitate range checks for common
 subtypes; for example, all numbers will have contiguous type codes which are
-distinct from the contiguous array type codes.  See section
-\ref{data-blocks-and-o-i} for details.
+distinct from the contiguous array type codes.  See
+section~\ref{sec:data-blocks-and-o-i}
+for details.
 
 
 \section{Data-Blocks and Header-Word Format}
+\label{sec:data-blocks-and-header}
 
 Pointers to data-blocks have the following format:
 \begin{verbatim}
@@ -206,7 +212,7 @@ any array is the same code sequence.
 
 \section{Data-Blocks and Other-immediates Typing}
 
-\label{data-blocks-and-o-i}
+\label{sec:data-blocks-and-o-i}
 These are the other-immediate types.  We specify them including all low eight
 bits, including the other-immediate tag, so we can think of the type bits as
 one type -- not an other-immediate major type and a subtype.  Also, fetching a
@@ -278,8 +284,8 @@ libraries that save reimplementation of higher level operating system
 functionality (such as pathname resolution or current directory computation),
 saving on copying strings for C should make C call out more efficient.
 
-The length word in a string header, see section ``Data-Blocks and Header-Word
-Format", counts only the characters truly in the Common Lisp string.
+The length word in a string header, see ``Data-Blocks and Header-Word
+Format'', section~\ref{sec:data-blocks-and-header}, counts only the characters truly in the Common Lisp string.
 Allocation and GC will have to know to handle the extra C-null byte, and GC
 already has to deal with rounding up various objects to dual-word alignment.
 
@@ -384,8 +390,8 @@ The array-header data-block has the following format:
                               .
 
 \end{verbatim}
-The array type in the header-word is one of the eight-bit patterns from section
-"Data-Blocks and Other-immediates Typing", indicating that this is a complex
+The array type in the header-word is one of the eight-bit patterns from 
+``Data-Blocks and Other-immediates Typing'', section~\ref{sec:data-blocks-and-header}, indicating that this is a complex
 string, complex vector, complex bit-vector, or a multi-dimensional array.  The
 data portion of the other-immediate word is the length of the array header
 data-block.  Due to its format, its length is always five greater than the
@@ -408,8 +414,8 @@ interpretations and types:
    \item[Data Vector:]
       This is a pointer descriptor referencing the actual data of the array.
       This a data-block whose first word is a header-word with an array type as
-      described in sections "Data-Blocks and Header-Word Format" and
-      "Data-Blocks and Other-immediates Typing"
+      described in ``Data-Blocks and Header-Word Format'', section~\ref{sec:data-blocks-and-header} and
+      ``Data-Blocks and Other-immediates Typing'', section~\ref{sec:data-blocks-and-o-i}
    \item[Displacement:]
       This is a fixnum added to the computed row-major index for any array.
       This is typically zero.
@@ -451,10 +457,10 @@ sign information is in the high end of the last element.
 
 \section{Code Data-Blocks}
 
-A code data-block is the run-time representation of a ``component".  A component
+A code data-block is the run-time representation of a ``component''.  A component
 is a connected portion of a program's flow graph that is compiled as a single
 unit, and it contains code for many functions.  Some of these functions are
-callable from outside of the component, and these are termed "entry points".
+callable from outside of the component, and these are termed ``entry points''.
 
 Each entry point has an associated user-visible function data-block (of type
 {\tt function}).  The full call convention provides for calling an entry point
@@ -472,11 +478,11 @@ return-PC for a call.  The system represents a return-PC somewhat similarly to
 a function, so GC can also recognize a return-PC as a reference to a code
 data-block.  This representation is known as a Lisp Return Address (LRA).
 
-It is incorrect to think of a code data-block as a concatenation of "function
-data-blocks".  Code for a function is not emitted in any particular order with
+It is incorrect to think of a code data-block as a concatenation of ``function
+data-blocks''.  Code for a function is not emitted in any particular order with
 respect to that function's function-header (if any).  The code following a
 function-header may only be a branch to some other location where the
-function's "real" definition is.
+function's ``real'' definition is.
 
 
 The following are the three kinds of pointers to code data-blocks:
@@ -503,7 +509,7 @@ The following are the three kinds of pointers to code data-blocks:
       Information about functions that is only useful for entry points is kept
       in some descriptors following the function's self-pointer descriptor.
       All of these together with the function's header-word are known as the
-      ``function header".  GC must be able to locate the function header.  We
+      ``function header''.  GC must be able to locate the function header.  We
       provide for this by chaining together the function headers in a NIL
       terminated list kept in a known slot in the code data-block.
 \end{description}
@@ -603,7 +609,7 @@ The following are detailed slot descriptions:
    \item[Self-pointer back to header-word:]
       In a non-closure function, this self-pointer to the previous header-word
       allows the call sequence to always indirect through the second word in a
-      user callable function.  See section "Closure Format".  With a closure,
+      user callable function.  See section ``Closure Format''.  With a closure,
       indirecting through the second word gets you a function header-word.  The
       system ignores this slot in the function header for a closure, since it
       has already indirected once, and this slot could be some random thing
@@ -724,7 +730,7 @@ A system area pointer data-block has the following format:
 -------------------------------------------------------
 \end{verbatim}
 
-``SAP" means ``system area pointer", and much of our code contains this naming
+``SAP'' means ``system area pointer'', and much of our code contains this naming
 scheme.  We don't currently restrict system pointers to one area of memory, but
 if they do point onto the heap, it is up to the user to prevent being screwed
 by GC or whatever.
