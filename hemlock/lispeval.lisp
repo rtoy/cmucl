@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.4 1991/04/26 17:37:11 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.5 1991/10/01 17:10:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,7 +161,7 @@
 	 (line (mark-line
 		(buffer-end-mark
 		 (server-info-background-buffer server))))
-	 (message (format nil "~:(~A~) in ~A during ~A."
+	 (message (format nil "~:(~A~) ~@[in ~A ]during ~A."
 			  severity
 			  function
 			  (note-context note)))
