@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.14 1990/05/09 06:39:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.15 1990/05/11 06:52:03 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -148,4 +148,140 @@
   (:generator 666
     (error-call di:object-not-type-error x type)))
 
+
+
+;;;; Moves and coercions:
+
+;;; Move a tagged number to an untagged representation.
+;;;
+(define-vop (move-to-signed/unsigned)
+  (:args (x :scs (any-reg descriptor-reg)))
+  (:results (y :scs (signed-reg unsigned-reg)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:generator 4
+    (sc-case x
+      (any-reg
+       (inst sra y x 2))
+      (descriptor-reg
+       (let ((done (gen-label)))
+	 (inst and temp x 3)
+	 (inst beq temp done)
+	 (sc-case y
+	   (signed-reg
+	    (inst sra y x 2))
+	   (unsigned-reg
+	    (inst srl y x 2)))
+
+	 (loadw y x vm:bignum-digits-offset vm:other-pointer-type)
+
+	 (emit-label done))))))
+
+;;;
+(define-move-vop move-to-signed/unsigned :move
+  (any-reg descriptor-reg) (signed-reg unsigned-reg))
+
+
+;;; Move an untagged number to a tagged representation.
+;;;
+(define-vop (move-from-signed/unsigned)
+  (:args (arg :scs (signed-reg unsigned-reg) :target x))
+  (:results (y :scs (any-reg descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) x temp)
+  (:generator 20
+    (sc-case y
+      (any-reg
+       ;; The results must be a fixnum, so we can just do the shift.
+       (inst sll y arg 2))
+      (descriptor-reg
+       ;; The results might be a bignum, so we have to make sure.
+       (move x arg)
+       (sc-case arg
+	 (signed-reg
+	  (let ((fixnum (gen-label))
+		(done (gen-label)))
+	    (inst sra temp x 29)
+	    (inst beq temp fixnum)
+	    (inst nor temp zero-tn)
+	    (inst beq temp done)
+	    (inst sll y x 2)
+
+	    (pseudo-atomic (temp)
+	      (inst addu y alloc-tn vm:other-pointer-type)
+	      (inst addu alloc-tn
+		    (vm:pad-data-block (1+ vm:bignum-digits-offset)))
+	      (inst li temp (logior (ash 1 vm:type-bits) vm:bignum-type))
+	      (storew temp y 0 vm:other-pointer-type)
+	      (storew x y vm:bignum-digits-offset vm:other-pointer-type))
+	    (inst b done)
+	    (inst nop)
+
+	    (emit-label fixnum)
+	    (inst sll y x 2)
+	    (emit-label done)))
+	 (unsigned-reg
+	  (let ((done (gen-label))
+		(one-word (gen-label)))
+	    (inst sra temp x 29)
+	    (inst beq temp done)
+	    (inst sll y x 2)
+
+	    (pseudo-atomic (temp)
+	      (inst addu y alloc-tn vm:other-pointer-type)
+	      (inst addu alloc-tn
+		    (vm:pad-data-block (1+ vm:bignum-digits-offset)))
+	      (inst bgez x one-word)
+	      (inst li temp (logior (ash 1 vm:type-bits) vm:bignum-type))
+	      (inst addu alloc-tn (vm:pad-data-block 1))
+	      (inst li temp (logior (ash 2 vm:type-bits) vm:bignum-type))
+	      (emit-label one-word)
+	      (storew temp y 0 vm:other-pointer-type)
+	      (storew x y vm:bignum-digits-offset vm:other-pointer-type))
+	    (emit-label done))))))))
+      
+;;;
+(define-move-vop move-from-signed/unsigned :move
+  (signed-reg unsigned-reg) (any-reg descriptor-reg))
+
+
+;;; Move untagged numbers.
+;;;
+(define-vop (signed/unsigned-move)
+  (:args (x :target y
+	    :scs (signed-reg unsigned-reg)
+	    :load-if (not (location= x y))))
+  (:results (y :scs (signed-reg unsigned-reg)
+	       :load-if (not (location= x y))))
+  (:effects)
+  (:affected)
+  (:generator 1
+    (move y x)))
+;;;
+(define-move-vop signed/unsigned-move :move
+  (signed-reg unsigned-reg) (signed-reg unsigned-reg))
+
+
+;;; Move untagged number arguments/return-values.
+;;;
+(define-vop (move-signed/unsigned-argument)
+  (:args (x :target y
+	    :scs (signed-reg unsigned-reg))
+	 (fp :scs (any-reg descriptor-reg)
+	     :load-if (not (sc-is y sap-reg))))
+  (:results (y))
+  (:generator 0
+    (sc-case y
+      ((signed-reg unsigned-reg)
+       (move y x))
+      ((signed-stack unsigned-stack)
+       (storew x fp (tn-offset y))))))
+;;;
+(define-move-vop move-signed/unsigned-argument :move-argument
+  (descriptor-reg any-reg signed-reg unsigned-reg) (signed-reg unsigned-reg))
+
+
+;;; Use standard MOVE-ARGUMENT + coercion to move an untagged number to a
+;;; descriptor passing location.
+;;;
+(define-move-vop move-argument :move-argument
+  (signed-reg unsigned-reg) (any-reg descriptor-reg))
 
