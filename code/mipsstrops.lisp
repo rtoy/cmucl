@@ -90,56 +90,45 @@ be simple strings."
 	(if (char/= (schar string1 index1) (schar string2 index2))
 	    (return index1)))))))
 
-;(defun %sp-find-character-with-attribute (string start end table mask)
-;  (declare (type (simple-array (mod 256) char-code-max) table))
-;  (declare (simple-string string))
-;  (declare (fixnum start end))
-;  "%SP-Find-Character-With-Attribute  String, Start, End, Table, Mask
-;  The codes of the characters of String from Start to End are used as indices
-;  into the Table, which is a U-Vector of 8-bit bytes. When the number picked
-;  up from the table bitwise ANDed with Mask is non-zero, the current
-;  index into the String is returned. The corresponds to SCANC on the Vax."
-;  (%primitive find-character-with-attribute string start end table mask))
+(defun %sp-find-character-with-attribute (string start end table mask)
+  (declare (type (simple-array (unsigned-byte 8) (256)) table)
+	   (simple-string string)
+	   (fixnum start end mask))
+  "%SP-Find-Character-With-Attribute  String, Start, End, Table, Mask
+  The codes of the characters of String from Start to End are used as indices
+  into the Table, which is a U-Vector of 8-bit bytes. When the number picked
+  up from the table bitwise ANDed with Mask is non-zero, the current
+  index into the String is returned. The corresponds to SCANC on the Vax."
+  (do ((index start (1+ index)))
+      ((>= index end) nil)
+    (declare (fixnum index))
+    (unless (zerop (logand (aref table (char-code (schar string index))) mask))
+      (return index))))
 
-;;;; ### Warning ###  ### Warning ###  ### Warning ###  ### Warning ###
-;;;
-;;;    This will lose big if a GC can happen during its execution, since
-;;; a pointer to after the header of the table is maintained.  Currently
-;;; GC's happen only immediately after allocation, so we're safe.
-;;;
 (defun %sp-reverse-find-character-with-attribute (string start end table mask)
   "Like %SP-Find-Character-With-Attribute, only sdrawkcaB."
-  (declare (fixnum start end mask))
-  (incf start 8)
-  (do ((table (%primitive sap+ table 8))
-       (index (+ end 7) (1- index)))
+  (declare (simple-string string)
+	   (fixnum start end mask)
+	   (type (array (unsigned-byte 8) (256)) table))
+  (do ((index (1- end) (1- index)))
       ((< index start) nil)
     (declare (fixnum index))
-    (unless (eql (logand (the fixnum
-			      (%primitive 8bit-system-ref table
-					  (%primitive 8bit-system-ref string index)))
-			 mask)
-		 0)
-      (return (- index 8)))))
+    (unless (zerop (logand (aref table (char-code (schar string index))) mask))
+      (return index))))
 
-;(defun %sp-find-character (string start end character)
-;  "%SP-Find-Character  String, Start, End, Character
-;  Searches String for the Character from Start to End.  If the character is
-;  found, the corresponding index into String is returned, otherwise NIL is
-;  returned."
-;  (%primitive find-character string start end character))
-
-(defun %sp-skip-character (string start end character)
-  (declare (simple-string string))
-  (declare (fixnum start end))
-  "%SP-Skip-Character  String, Start, End, Character
-  Returns the index of the first character between Start and End which
-  is not Char=  to Character, or NIL if there is no such character."
+(defun %sp-find-character (string start end character)
+  "%SP-Find-Character  String, Start, End, Character
+  Searches String for the Character from Start to End.  If the character is
+  found, the corresponding index into String is returned, otherwise NIL is
+  returned."
+  (declare (fixnum start end)
+	   (simple-string string)
+	   (base-character character))
   (do ((index start (1+ index)))
-      ((= index end) nil)
+      ((>= index end) nil)
     (declare (fixnum index))
-    (if (char/= (char string index) character)
-	(return index))))
+    (when (char= (schar string index) character)
+      (return index))))
 
 (defun %sp-reverse-find-character (string start end character)
   (declare (simple-string string))
@@ -153,6 +142,18 @@ be simple strings."
       ((= index terminus) nil)
     (declare (fixnum terminus index))
     (if (char= (char string index) character)
+	(return index))))
+
+(defun %sp-skip-character (string start end character)
+  (declare (simple-string string))
+  (declare (fixnum start end))
+  "%SP-Skip-Character  String, Start, End, Character
+  Returns the index of the first character between Start and End which
+  is not Char=  to Character, or NIL if there is no such character."
+  (do ((index start (1+ index)))
+      ((= index end) nil)
+    (declare (fixnum index))
+    (if (char/= (char string index) character)
 	(return index))))
 
 (defun %sp-reverse-skip-character (string start end character)
@@ -183,25 +184,3 @@ be simple strings."
 	(return index2))))
 
 
-(defun %sp-char-upcase (character)
-  "%SP-Char-Upcase  Character
-  Returns a character with the same font and bits, but with an upper case
-  code if it was alphabetic."
-  (char-upcase character))
-
-(defun %sp-char-downcase (character)
-  "%SP-Char-Downcase  Character
-  Returns a character with the same font and bits, but with a lower
-  case character code if it was alphabetic."
-  (char-downcase character))
-
-(defun %sp-string-upcase (string start end)
-  "Creates a new string with the chars from start to end uppercased."
-  (string-upcase string :start start :end end))
-
-(defun %sp-string-downcase (string start end)
-  "Creates a new string with the chars from start to end lowercased."
-  (string-downcase string :start start :end end))
-
-;(defun %sp-sxhash-simple-string (string)
-;  (%primitive sxhash-simple-string string))
