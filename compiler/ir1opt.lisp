@@ -335,10 +335,7 @@
 	 (setf (node-reoptimize node) t)
 	 (ir1-optimize-return node))
 	(mv-combination
-	 (when (and (eq (basic-combination-kind node) :local)
-		    (continuation-reoptimize
-		     (first (basic-combination-args node))))
-	   (ir1-optimize-mv-bind node)))
+	 (ir1-optimize-mv-combination node))
 	(exit
 	 (let ((value (exit-value node)))
 	   (when value
@@ -1199,6 +1196,36 @@
 
 ;;;; Multiple values optimization:
 
+;;; IR1-OPTIMIZE-MV-COMBINATION  --  Internal
+;;;
+;;;    Do stuff to notice a change to a MV combination node.
+;;;
+(defun ir1-optimize-mv-combination (node)
+  (if (eq (basic-combination-kind node) :local)
+      (let ((arg (first (basic-combination-args node))))
+	(when (continuation-reoptimize arg)
+	  (unless (convert-mv-bind-to-let node)
+	    (ir1-optimize-mv-bind node))))
+      (let* ((fun (basic-combination-fun node))
+	     (fun-changed (continuation-reoptimize fun))
+	     (args (basic-combination-args node)))
+	(when fun-changed
+	  (setf (continuation-reoptimize fun) nil)
+	  (let ((use (continuation-use fun)))
+	    (when (and (ref-p use) (functional-p (ref-leaf use))
+		       (not (eq (ref-inlinep use) :notinline)))
+	      (convert-call-if-possible use node)
+	      (when (eq (basic-combination-kind node) :local))
+	      (maybe-let-convert (ref-leaf use)))))
+	(when (and (not (eq (basic-combination-kind node) :local))
+		   (or fun-changed (find-if #'continuation-reoptimize args))
+		   (not (eq (continuation-function-name fun) '%throw)))
+	  (ir1-optimize-mv-call node))
+	(dolist (arg args)
+	  (setf (continuation-reoptimize arg) nil))))
+  (undefined-value))
+
+  
 ;;; IR1-OPTIMIZE-MV-BIND  --  Internal
 ;;;
 ;;;    Propagate derived type info from the values continuation to the vars.
@@ -1223,7 +1250,87 @@
   (undefined-value))
 
 
-;;; VALUES IR1 optimizer  --  Internal
+;;; IR1-OPTIMIZE-MV-CALL  --  Internal
+;;;
+;;;    If possible, convert a general MV call to an MV-BIND.  We can do this
+;;; if:
+;;; -- The function has a known fixed number of arguments, or
+;;; -- All the arguments yield a known fixed number of values.
+;;;
+;;; What we do is change the function in the MV-CALL to be a lambda that "looks
+;;; like an MV bind", which allows IR1-OPTIMIZE-MV-COMBINATION to notice that
+;;; this call can be converted (the next time around.)  This new lambda just
+;;; calls the actual function with the MV-BIND variables as arguments.
+;;;
+;;; In order to avoid loss of argument count checking, we only do the
+;;; transformation according to a known number of expected argument if safety
+;;; is unimportant.  We can always convert if we know the number of actual
+;;; values, since the normal call that we build will still do any appropriate
+;;; argument count checking.
+;;;
+;;; We only attempt the transformation if the called function is a constant
+;;; reference.  This allows us to just splice the leaf into the new function,
+;;; instead of trying to somehow bind the function expression.  The leaf must
+;;; be constant because we are evaluating it again in a different place.  This
+;;; also has the effect of squelching multiple warnings when there is an
+;;; argument count error.
+;;;
+(defun ir1-optimize-mv-call (node)
+  (let ((fun (basic-combination-fun node))
+	(total-nvals 0)
+	(*compiler-error-context* node)
+	(ref (continuation-use (basic-combination-fun node))))
+
+    (unless (and (ref-p ref) (constant-reference-p ref))
+      (return-from ir1-optimize-mv-call))
+
+    (multiple-value-bind (min max)
+			 (function-type-nargs (continuation-type fun))
+      (dolist (arg (basic-combination-args node))
+	(multiple-value-bind (types nvals)
+			     (values-types (continuation-derived-type arg))
+	  (declare (ignore types))
+	  (when (eq nvals :unknown)
+	    (setq total-nvals nil)
+	    (return))
+	  (incf total-nvals nvals)))
+
+      (when total-nvals
+	(when (and min (< total-nvals min))
+	  (compiler-warning
+	   "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
+	    at least ~R."
+	   total-nvals min)
+	  (setf (ref-inlinep ref) :notinline)
+	  (return-from ir1-optimize-mv-call))
+	(when (and max (> total-nvals max))
+	  (compiler-warning
+	   "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
+	    at most ~R."
+	   total-nvals max)
+	  (setf (ref-inlinep ref) :notinline)
+	  (return-from ir1-optimize-mv-call)))
+
+      (let ((count (cond (total-nvals)
+			 ((and (policy node (zerop safety)) (eql min max))
+			  min)
+			 (t nil))))
+	(when count
+	  (with-ir1-environment node
+	    (let* ((dums (loop repeat count collect (gensym)))
+		   (ignore (gensym))
+		   (fun (ir1-convert-lambda
+			 `(lambda (&optional ,@dums &rest ,ignore)
+			    (declare (ignore ,ignore))
+			    (funcall ,(ref-leaf ref) ,@dums)))))
+	      (change-ref-leaf ref fun)
+	      (setf (basic-combination-kind node) :full)
+	      (local-call-analyze *current-component*)))))))
+
+  (undefined-value))
+
+
+;;; CONVERT-MV-BIND-TO-LET  --  Internal
 ;;;
 ;;; If we see:
 ;;;    (multiple-value-bind (x y)
@@ -1239,46 +1346,75 @@
 ;;; VALUES, discard the corresponding continuations.  If there are insufficient
 ;;; args, insert references to NIL.
 ;;;
-(defoptimizer (values optimizer) ((&rest ignore) node)
-  (declare (ignore ignore))
-  (let ((dest (continuation-dest (node-cont node))))
-    (when (and (mv-combination-p dest)
-	       (eq (basic-combination-kind dest) :local)
-	       (eq (continuation-use (first (basic-combination-args dest)))
-		   node))
-      (let* ((fun (combination-lambda dest))
+(defun convert-mv-bind-to-let (call)
+  (declare (type mv-combination call))
+  (let* ((arg (first (basic-combination-args call)))
+	 (use (continuation-use arg)))
+    (when (and (combination-p use)
+	       (eq (continuation-function-name (combination-fun use))
+		   'values))
+      (let* ((fun (combination-lambda call))
 	     (vars (lambda-vars fun))
-	     (vals (combination-args node))
+	     (vals (combination-args use))
 	     (nvars (length vars))
 	     (nvals (length vals)))
 	(cond ((> nvals nvars)
 	       (mapc #'flush-dest (subseq vals nvars))
 	       (setq vals (subseq vals 0 nvars)))
 	      ((< nvals nvars)
-	       (with-ir1-environment node
-		 (let ((node-prev (node-prev node)))
-		   (setf (node-prev node) nil)
+	       (with-ir1-environment use
+		 (let ((node-prev (node-prev use)))
+		   (setf (node-prev use) nil)
 		   (setf (continuation-next node-prev) nil)
 		   (collect ((res vals))
-		     (loop as cont = (make-continuation node)
+		     (loop as cont = (make-continuation use)
 			   and prev = node-prev then cont
 			   repeat (- nvars nvals)
 			   do (reference-constant prev cont nil)
 			      (res cont))
 		     (setq vals (res)))
-		   (prev-link node (car (last vals)))))))
-	(setf (combination-args node) vals)
-	(flush-dest (combination-fun node))
-	(let ((fun-cont (basic-combination-fun dest)))
-	  (setf (continuation-dest fun-cont) node)
-	  (setf (combination-fun node) fun-cont))
-	(setf (combination-kind node) :local)
+		   (prev-link use (car (last vals)))))))
+	(setf (combination-args use) vals)
+	(flush-dest (combination-fun use))
+	(let ((fun-cont (basic-combination-fun call)))
+	  (setf (continuation-dest fun-cont) use)
+	  (setf (combination-fun use) fun-cont))
+	(setf (combination-kind use) :local)
 	(setf (functional-kind fun) :let)
-	(flush-dest (first (basic-combination-args dest)))
-	(unlink-node dest)
+	(flush-dest (first (basic-combination-args call)))
+	(unlink-node call)
 	(when vals
 	  (reoptimize-continuation (first vals)))
-	(propagate-to-args node fun))
+	(propagate-to-args use fun))
+      t)))
+
+
+;;; VALUES-LIST IR1 optimizer  --  Internal
+;;;
+;;; If we see:
+;;;    (values-list (list x y z))
+;;;
+;;; Convert to:
+;;;    (values x y z)
+;;;
+;;; In implementation, this is somewhat similar to CONVERT-MV-BIND-TO-LET.  We
+;;; grab the args of LIST and make them args of the VALUES-LIST call, flushing
+;;; the old argument continuation (allowing the LIST to be flushed.)
+;;;
+(defoptimizer (values-list optimizer) ((list) node)
+  (let ((use (continuation-use list)))
+    (when (and (combination-p use)
+	       (eq (continuation-function-name (combination-fun use))
+		   'list))
+      (change-ref-leaf (continuation-use (combination-fun node))
+		       (find-free-function 'values "in a strange place"))
+      (setf (combination-kind node) :full)
+      (let ((args (combination-args use)))
+	(dolist (arg args)
+	  (setf (continuation-dest arg) node))
+	(setf (combination-args use) nil)
+	(flush-dest list)
+	(setf (combination-args node) args))
       t)))
 
 
