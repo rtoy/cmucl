@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.58 2004/12/14 21:56:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.59 2004/12/15 04:03:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -849,12 +849,16 @@
 (def-format-directive #\R (colonp atsignp params)
   (if params
       (expand-bind-defaults
-	  ((base 10) (mincol 0) (padchar #\space) (commachar #\,)
+	  ((base nil) (mincol 0) (padchar #\space) (commachar #\,)
 	   (commainterval 3))
 	  params
-	`(format-print-integer stream ,(expand-next-arg) ,colonp ,atsignp
-			       ,base ,mincol
-			       ,padchar ,commachar ,commainterval))
+	(let ((r-arg (gensym "R-ARG-")))
+	  `(let ((,r-arg ,(expand-next-arg)))
+	     (if ,base
+		 (format-print-integer stream ,r-arg ,colonp ,atsignp
+				       ,base ,mincol
+				       ,padchar ,commachar ,commainterval)
+		 (format-print-cardinal stream ,r-arg)))))
       (if atsignp
 	  (if colonp
 	      `(format-print-old-roman stream ,(expand-next-arg))
@@ -1922,18 +1926,31 @@
   (when (and colonp (not *up-up-and-out-allowed*))
     (error 'format-error
 	   :complaint "Attempt to use ~~:^ outside a ~~:{...~~} construct."))
+  ;; See the #\^ interpreter below for what happens here.
   `(when ,(case (length params)
 	    (0 (if colonp
 		   '(null outside-args)
 		   (progn
 		     (setf *only-simple-args* nil)
 		     '(null args))))
-	    (1 (expand-bind-defaults ((count 0)) params
-		 `(zerop ,count)))
-	    (2 (expand-bind-defaults ((arg1 0) (arg2 0)) params
-		 `(= ,arg1 ,arg2)))
-	    (t (expand-bind-defaults ((arg1 0) (arg2 0) (arg3 0)) params
-		 `(<= ,arg1 ,arg2 ,arg3))))
+	    (1 (expand-bind-defaults ((count nil)) params
+		 `(if ,count
+		      (eql ,count 0)
+		      ,(if colonp
+			   '(null outside-args)
+			   (progn
+			     (setf *only-simple-args* nil)
+			     '(null args))))))
+	    (2 (expand-bind-defaults ((arg1 nil) (arg2 nil)) params
+		 `(if ,arg2
+		      (eql ,arg1 ,arg2)
+		      (eql ,arg1 0))))
+	    (t (expand-bind-defaults ((arg1 nil) (arg2 nil) (arg3 nil)) params
+		 `(if ,arg2
+		      (if ,arg3
+			  (<= ,arg1 ,arg2 ,arg3)
+			  (eql ,arg1 ,arg2))
+		      (eql ,arg1 0)))))
      ,(if colonp
 	  '(return-from outside-loop nil)
 	  '(return))))
@@ -1945,16 +1962,39 @@
   (when (and colonp (not *up-up-and-out-allowed*))
     (error 'format-error
 	   :complaint "Attempt to use ~~:^ outside a ~~:{...~~} construct."))
+  ;; This is messy because, as I understand it, and as tested by
+  ;; ansi-tests, a NIL parameter is the same as not given.  Thus for 2
+  ;; args, if the second is nil, we have to pretend that only 1 was
+  ;; given.  Similarly for 3 args.
+  ;;
+  ;; Also, ansi-tests interprets CLHS 22.3.9.2 such that "equal"
+  ;; parameter means equal (or at least eql).
+  ;;
+  ;; FIXME: This needs to be done in a better way!
   (when (case (length params)
 	  (0 (if colonp
 		 (null *outside-args*)
 		 (null args)))
-	  (1 (interpret-bind-defaults ((count 0)) params
-	       (zerop count)))
-	  (2 (interpret-bind-defaults ((arg1 0) (arg2 0)) params
-	       (= arg1 arg2)))
-	  (t (interpret-bind-defaults ((arg1 0) (arg2 0) (arg3 0)) params
-	       (<= arg1 arg2 arg3))))
+	  (1 (interpret-bind-defaults ((count nil)) params
+	       (if count
+		   (eql count 0)
+		   (if colonp
+		       (null *outside-args*)
+		       (null args)))))
+	  (2 (interpret-bind-defaults ((arg1 nil) (arg2 nil)) params
+	       (if arg2
+		   (eql arg1 arg2)
+		   ;; Should we duplicate the previous case here?
+		   (eql arg1 0))))
+	  (t (interpret-bind-defaults ((arg1 nil) (arg2 nil) (arg3 nil)) params
+	       (if arg2
+		   (if arg3
+		       (<= arg1 arg2 arg3)
+		       ;; Duplicate 2 arg case here?
+		       (eql arg1 arg2))
+		   ;; What if arg2 is nil and arg3 is not?  Does that
+		   ;; mean this becomes 2 arg case instead?
+		   (eql arg1 0)))))
     (throw (if colonp 'up-up-and-out 'up-and-out)
 	   args)))
 
