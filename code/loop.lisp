@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.12 2002/07/30 16:40:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.13 2002/11/14 04:12:37 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1838,12 +1838,6 @@ collected result will be returned as the value of the LOOP."
 	    ((and USING-allowed (loop-tequal token 'using))
 	     (loop-pop-source)
 	     (do ((z (loop-pop-source) (loop-pop-source)) (tem)) (nil)
-	       (when (or (atom z)
-			 (atom (cdr z))
-			 (not (null (cddr z)))
-			 (not (symbolp (car z)))
-			 (and (cadr z) (not (symbolp (cadr z)))))
-		 (loop-error "~S bad variable pair in path USING phrase." z))
 	       (when (cadr z)
 		 (if (setq tem (loop-tassoc (car z) *loop-named-variables*))
 		     (loop-error
@@ -2014,11 +2008,12 @@ collected result will be returned as the value of the LOOP."
       ;; into multiple-value-setq variable lists.
       #-Genera (setq other-p t
 		     dummy-predicate-var (loop-when-it-variable))
-      (let ((key-var nil)
-	    (val-var nil)
-	    (bindings `((,variable nil ,data-type)
-			(,ht-var ,(cadar prep-phrases))
-			,@(and other-p other-var `((,other-var nil))))))
+      (let* ((key-var nil)
+	     (val-var nil)
+	     (variable (or variable (loop-gentemp)))
+	     (bindings `((,variable nil ,data-type)
+			 (,ht-var ,(cadar prep-phrases))
+			 ,@(and other-p other-var `((,other-var nil))))))
 	(if (eq which 'hash-key)
 	    (setq key-var variable val-var (and other-p other-var))
 	    (setq key-var (and other-p other-var) val-var variable))
@@ -2046,7 +2041,8 @@ collected result will be returned as the value of the LOOP."
   (unless (symbolp variable)
     (loop-error "Destructuring is not valid for package symbol iteration."))
   (let ((pkg-var (loop-gentemp 'loop-pkgsym-))
-	(next-fn (loop-gentemp 'loop-pkgsym-next-)))
+	(next-fn (loop-gentemp 'loop-pkgsym-next-))
+	(variable (or variable (loop-gentemp))))
     (push `(with-package-iterator (,next-fn ,pkg-var ,@symbol-types)) *loop-wrappers*)
     `(((,variable nil ,data-type) (,pkg-var ,(cadar prep-phrases)))
       ()
