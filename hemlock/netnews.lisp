@@ -586,7 +586,7 @@
 
 ;;;
 (defconstant netnews-space-string
-  (make-array 70 :element-type 'string-char :initial-element #\space))
+  (make-string 70 :initial-element #\space))
 ;;;
 (defconstant missing-message (cons nil nil)
   "Use this as a marker so nn-write-headers-to-mark doesn't try to insert
@@ -1564,7 +1564,6 @@
 				   (nn-info-message-ids nn-info)
 				   "No header under point.")))
 	     (with-open-file (file file :direction :output
-				   :element-type 'string-char
 				   :if-exists :append
 				   :if-does-not-exist :create)
 	       (nntp-article article-number stream)
