@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.26 2003/06/15 14:06:26 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.27 2003/06/17 11:57:57 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -83,6 +83,7 @@
     (when (eq slot-name (slot-definition-name slot))
       (return slot))))
 
+(declaim (ftype (function (t symbol) t) slot-value))
 (defun slot-value (object slot-name)
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
@@ -90,6 +91,7 @@
 	(values (slot-missing class object slot-name 'slot-value))
 	(slot-value-using-class class object slot-definition))))
 
+(declaim (ftype (function (t symbol t) t) set-slot-value))
 (defun set-slot-value (object slot-name new-value)
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
@@ -111,6 +113,7 @@
       `(accessor-set-slot-value ,object ,slot-name ,value)
       form))
 
+(declaim (ftype (function (t symbol) boolean) slot-boundp))
 (defun slot-boundp (object slot-name)
   (let* ((class (class-of object))
 	 (slot-definition (find-slot-definition class slot-name)))
@@ -124,6 +127,7 @@
       `(accessor-slot-boundp ,object ,slot-name)
       form))
 
+(declaim (ftype (function (t symbol) t) slot-makunbound))
 (defun slot-makunbound (object slot-name)
   (let* ((class (class-of object))
          (slot-definition (find-slot-definition class slot-name)))
@@ -132,6 +136,7 @@
         (slot-makunbound-using-class class object slot-definition))
     object))
 
+(declaim (ftype (function (t symbol) boolean) slot-exists-p))
 (defun slot-exists-p (object slot-name)
   (let ((class (class-of object)))
     (not (null (find-slot-definition class slot-name)))))
