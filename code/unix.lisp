@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.85 2003/06/06 17:02:38 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.86 2003/06/06 17:52:45 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -842,18 +842,22 @@
 
 (defconstant +null+ (sys:int-sap 0))
 
-(defconstant prot_read 1)
-(defconstant prot_write 2)
-(defconstant prot_exec 4)
-(defconstant prot_none 0)
+(defconstant prot_read 1)		; Readable
+(defconstant prot_write 2)		; Writable
+(defconstant prot_exec 4)		; Executable
+(defconstant prot_none 0)		; No access
 
-(defconstant map_shared 1)
-(defconstant map_private 2)
-(defconstant map_fixed 16)
+(defconstant map_shared 1)		; Changes are shared
+(defconstant map_private 2)		; Changes are private
+(defconstant map_fixed 16)		; Fixed, user-defined address
+(defconstant map_noreserve #x40)	; Don't reserve swap space
 (defconstant map_anonymous
   #+solaris #x100			; Solaris
   #+linux 32				; Linux
   #+freebsd #x1000)
+
+;; The return value from mmap that means mmap failed.
+(defconstant map_failed -1)
 
 (defun unix-mmap (addr length prot flags fd offset)
   (declare (type (or null system-area-pointer) addr)
@@ -862,9 +866,16 @@
 	   (type (unsigned-byte 32) flags)
 	   (type unix-fd fd)
 	   (type (signed-byte 32) offset))
-  (syscall ("mmap" system-area-pointer size-t int int int off-t)
-	   (sys:int-sap result)
-	   (or addr +null+) length prot flags (or fd -1) offset))
+  ;; Can't use syscall, because the address that is returned could be
+  ;; "negative".  Hence we explicitly check for mmap returning
+  ;; MAP_FAILED.
+  (let ((result
+	 (alien-funcall (extern-alien "mmap" (function int system-area-pointer
+						       size-t int int int off-t))
+			(or addr +null+) length prot flags (or fd -1) offset)))
+    (if (= result map_failed)
+	(values nil unix-errno)
+	(sys:int-sap result))))
 
 (defun unix-munmap (addr length)
   (declare (type system-area-pointer addr)
