@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.56 1998/01/11 17:36:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.57 1998/01/29 07:22:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1870,6 +1870,32 @@
 		      (slot usage 'ru-nvcsw)
 		      (slot usage 'ru-nivcsw))
 	      who (addr usage))))
+
+;;; Getrusage is not provided in the C library on Solaris 2.4, and is
+;;; rather slow on later versions so the "times" system call is
+;;; provided.
+#+(and sparc svr4)
+(progn
+(def-alien-type nil
+  (struct tms
+    (tms-utime #-alpha long #+alpha int)	; user time used
+    (tms-stime #-alpha long #+alpha int)	; system time used.
+    (tms-cutime #-alpha long #+alpha int)	; user time, children
+    (tms-cstime #-alpha long #+alpha int)))	; system time, children
+
+(declaim (inline unix-times))
+(defun unix-times ()
+  "Unix-times returns information about the cpu time usage of the process
+   and its children."
+  (with-alien ((usage (struct tms)))
+    (syscall* ("times" (* (struct tms)))
+	      (values t
+		      (slot usage 'tms-utime)
+		      (slot usage 'tms-stime)
+		      (slot usage 'tms-cutime)
+		      (slot usage 'tms-cstime))
+	      (addr usage))))
+) ; end progn
 
 ;; Requires call to tzset() in main.
 ;; Don't use this now: we 
