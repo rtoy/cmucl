@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.14 1992/03/29 21:54:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.15 1992/05/25 21:37:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 (in-package "LISP")
 
 (in-package "EXTENSIONS")
-(export '(print-herald save-lisp *before-save-initializations*
+(export '(print-herald *herald-items* save-lisp *before-save-initializations*
 	  *after-save-initializations* *environment-list* *editor-lisp-p*))
 (in-package "LISP")
 
@@ -181,24 +181,51 @@
     (funcall init-function)))
 
 
-(defun print-herald ()
-  (macrolet ((frob (variable)
-	       `(if (boundp ',variable)
-		    ,variable
-		    "<not loaded>")))
-    (write-string "CMU Common Lisp ")
-    (write-string (lisp-implementation-version))
-    (write-string ", running on ")
-    (write-line (machine-instance))
-    (write-string "Hemlock ")
-    (write-string (frob *hemlock-version*))
-    (write-string ", Python ")
-    (write-string (frob compiler-version))
-    (when (boundp 'c:*backend*)
-      (write-string ", target ")
-      (write-string (c:backend-version c:*backend*)))
-    (terpri)
-    (write-line "Send bug reports and questions to cmucl-bugs@cs.cmu.edu."))
+(defvar *herald-items* ()
+  "Determines what PRINT-HERALD prints (the system startup banner.)  This is a
+   database which can be augmented by each loaded system.  The format is a
+   property list which maps from subsystem names to the banner information for
+   that system.  This list can be manipulated with GETF -- entries are printed
+   in, reverse order, so the newest entry is printed last.  Usually the system
+   feature keyword is used as the system name.  A given banner is a list of
+   strings and functions (or function names).  Strings are printed, and
+   functions are called with an output stream argument.")
+
+(setf (getf *herald-items* :common-lisp)
+      `("CMU Common Lisp "
+	,#'(lambda (stream)
+	     (write-string (lisp-implementation-version) stream))
+	", running on "
+	,#'(lambda (stream) (write-string (machine-instance) stream))))
+
+(setf (getf *herald-items* :bugs)
+      '("Send bug reports and questions to cmucl-bugs@cs.cmu.edu."
+	terpri
+	"Loaded subsystems:"))
+
+;;; PRINT-HERALD  --  Public
+;;;
+(defun print-herald (&optional (stream *standard-output*))
+  "Print some descriptive information about the Lisp system version and
+   configuration."
+  (let ((res ()))
+    (do ((item *herald-items* (cddr item)))
+	((null item))
+      (push (second item) res))
+
+    (fresh-line stream)
+    (dolist (item res)
+      (dolist (thing item)
+	(typecase thing
+	  (string
+	   (write-string thing stream))
+	  (function (funcall thing stream))
+	  ((or symbol cons)
+	   (funcall (fdefinition thing) stream))
+	  (t
+	   (error "Unrecognized *HERALD-ITEMS* entry: ~S." thing))))
+      (fresh-line stream)))
+
   (values))
 
 
