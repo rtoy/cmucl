@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.29 1993/11/02 16:07:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.30 1994/02/04 15:29:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,13 +367,12 @@
   (push xep (code-header-ref (byte-function-component xep)
 			     vm:code-trace-table-offset-slot))
   (setf (funcallable-instance-function xep)
-	#'(instance-lambda (&rest args)
-	    (let ((old-sp (current-stack-pointer))
-		  (num-args (length args)))
+	#'(instance-lambda (&more context count)
+	    (let ((old-sp (current-stack-pointer)))
 	      (declare (type stack-pointer old-sp))
-	      (dolist (arg args)
-		(push-eval-stack arg))
-	      (invoke-xep nil 0 old-sp 0 num-args xep))))
+	      (dotimes (i count)
+		(push-eval-stack (%more-arg context i)))
+	      (invoke-xep nil 0 old-sp 0 count xep))))
   xep)
 
 (defun make-byte-compiled-closure (xep closure-vars)
@@ -381,13 +380,12 @@
 	   (type simple-vector closure-vars))
   (let ((res (make-byte-closure xep closure-vars)))
     (setf (funcallable-instance-function res)
-	  #'(instance-lambda (&rest args)
-	      (let ((old-sp (current-stack-pointer))
-		    (num-args (length args)))
+	  #'(instance-lambda (&more context count)
+	      (let ((old-sp (current-stack-pointer)))
 		(declare (type stack-pointer old-sp))
-		(dolist (arg args)
-		  (push-eval-stack arg))
-		(invoke-xep nil 0 old-sp 0 num-args
+		(dotimes (i count)
+		  (push-eval-stack (%more-arg context i)))
+		(invoke-xep nil 0 old-sp 0 count
 			    (byte-closure-function res)
 			    (byte-closure-data res)))))
     res))
