@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.74 1992/09/22 00:06:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.75 1992/09/23 17:05:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1105,15 +1105,18 @@
 ;;;
 ;;; Called by COMPILE-TOP-LEVEL when it was pased T for LOAD-TIME-VALUE-P
 ;;; (which happens in COMPILE-LOAD-TIME-STUFF).  We don't try to combine
-;;; this component with anything else and frob the name.
+;;; this component with anything else and frob the name.  If not in a
+;;; :TOP-LEVEL component, then don't bother compiling, because it was merged
+;;; with a run-time component.
 ;;; 
 (defun compile-load-time-value-lambda (lambdas)
   (assert (null (cdr lambdas)))
   (let* ((lambda (car lambdas))
 	 (component (block-component (node-block (lambda-bind lambda)))))
-    (setf (component-name component) (leaf-name lambda))
-    (compile-component component)
-    (clear-ir1-info component)))
+    (when (eq (component-kind component) :top-level)
+      (setf (component-name component) (leaf-name lambda))
+      (compile-component component)
+      (clear-ir1-info component))))
 
 
 ;;; EMIT-MAKE-LOAD-FORM  --  interface.
