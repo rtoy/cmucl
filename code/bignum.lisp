@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.16 1991/02/08 13:30:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.17 1991/05/24 19:35:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -406,7 +406,8 @@
     (multiple-value-bind (v k)
 			 (%add-with-carry (%bignum-ref a i) sign-digit-b carry)
       (setf (%bignum-ref res i) v)
-      (setf carry k))))
+      (setf carry k)))
+  (ext:undefined-value))
 
 
 ;;;; Subtraction.
@@ -740,6 +741,8 @@
 	       ,carry))
 	    (i 1)
 	    (,end ,bignum-len))
+       (declare (type bit ,carry)
+		(type bignum-index i ,end))
        (loop
 	 (when (= i ,end) (return))
 	 (multiple-value-bind (,value temp)
@@ -949,7 +952,8 @@
 ;;; 
 (defun bignum-ashift-left-unaligned (bignum digits n-bits res-len
 				     &optional (res nil resp))
-  (declare (type bignum-index digits res-len))
+  (declare (type bignum-index digits res-len)
+	   (type (mod #.digit-size) n-bits))
   (let* ((remaining-bits (- digit-size n-bits))
 	 (res-len-1 (1- res-len))
 	 (res (or res (%allocate-bignum res-len))))
@@ -1031,6 +1035,7 @@
 ;;; result doesn't overflow.
 ;;;
 (defun float-bignum-ratio (ratio format)
+  (declare (optimize (ext:inhibit-warnings 3)))
   (let* ((bits-to-keep (+ (float-format-digits format) digit-size))
 	 (num (numerator ratio))
 	 (num-len (integer-length num))
@@ -1052,6 +1057,7 @@
 ;;;
 (defun single-float-from-bits (bits exp plusp)
   (declare (fixnum exp))
+  (declare (optimize (ext:inhibit-warnings 3)))
   (let ((res (dpb exp
 		  vm:single-float-exponent-byte
 		  (logandc2 (ext:truly-the (unsigned-byte 31)
@@ -1064,6 +1070,7 @@
 ;;;
 (defun double-float-from-bits (bits exp plusp)
   (declare (fixnum exp))
+  (declare (optimize (ext:inhibit-warnings 3)))
   (let ((hi (dpb exp
 		 vm:double-float-exponent-byte
 		 (logandc2 (ext:truly-the (unsigned-byte 31)
@@ -1101,6 +1108,7 @@
 				      (1+ len))
 		     (float-from-bits rounded len))))
 	     (float-from-bits (bits len)
+	       (declare (type bignum-index len))
 	       (ecase format
 		 (single-float
 		  (single-float-from-bits
@@ -1115,6 +1123,7 @@
 		                   vm:double-float-normal-exponent-max)
 		   plusp))))
 	     (check-exponent (exp bias max)
+	       (declare (type bignum-index len))
 	       (let ((exp (+ exp bias)))
 		 (when (> exp max)
 		   (error "Too large to be represented as a ~S:~%  ~S"
@@ -2173,6 +2182,9 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 ;;; tells us how many high zeros there are which is one more than the shift
 ;;; amount sought.
 ;;;
+;;; Note: This is exactly the same as one less than the integer-length of the
+;;; last digit subtracted from the digit-size.
+;;; 
 ;;; We shift y to make it sufficiently large that doing the 64-bit by 32-bit
 ;;; %FLOOR calls ensures the quotient and remainder fit in 32-bits.
 ;;;
@@ -2181,15 +2193,7 @@ IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
 	 (last (%bignum-ref y (1- len))))
     (declare (type bignum-index len)
 	     (type bignum-element-type last))
-    (if (zerop last)
-	(1- digit-size)
-	(- digit-size
-	   (do ((i 0 (1+ i)))
-	       ((zerop last)
-		;; I is guaranteed to be less than digit-size.
-		i)
-	     (setf last (ash last -1)))
-	   1))))
+    (- digit-size (integer-length last) 1)))
 
 ;;; SHIFT-AND-STORE-TRUNCATE-BUFFERS -- Internal.
 ;;;
