@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.40 2002/10/28 22:24:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.41 2002/11/13 19:47:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1190,7 +1190,17 @@
     (if test-not
 	(not (funcall test-not item (apply-key key (car current))))
 	(funcall test item (apply-key key (car current))))))
+
+(defmacro real-count (count)
+  `(cond ((null ,count) most-positive-fixnum)
+	 ((fixnump ,count) (if (minusp ,count) 0 ,count))
+	 ((integerp ,count) (if (minusp ,count) 0 most-positive-fixnum))
+	 (t ,count)))
+
 )
+
+
+
 
 (defun delete (item sequence &key from-end (test #'eql) test-not (start 0)
 		end count key)
@@ -1199,7 +1209,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum)))
+	 (count (real-count count)))
     (declare (type index length end)
 	     (fixnum count))
     (seq-dispatch sequence
@@ -1236,7 +1246,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum)))
+	 (count (real-count count)))
     (declare (type index length end)
 	     (fixnum count))
     (seq-dispatch sequence
@@ -1273,7 +1283,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum)))
+	 (count (real-count count)))
     (declare (type index length end)
 	     (fixnum count))
     (seq-dispatch sequence
@@ -1422,7 +1432,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum)))
+	 (count (real-count count)))
     (declare (type index length end)
 	     (fixnum count))
     (seq-dispatch sequence
@@ -1439,7 +1449,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum)))
+	 (count (real-count count)))
     (declare (type index length end)
 	     (fixnum count))
     (seq-dispatch sequence
@@ -1456,7 +1466,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum)))
+	 (count (real-count count)))
     (declare (type index length end)
 	     (fixnum count))
     (seq-dispatch sequence
@@ -1736,7 +1746,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum)))
+	 (count (real-count count)))
     (declare (type index length end)
 	     (fixnum count))
     (subst-dispatch 'normal)))
@@ -1751,7 +1761,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum))
+	 (count (real-count count))
 	 test-not
 	 old)
     (declare (type index length end)
@@ -1769,7 +1779,7 @@
   (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
-	 (count (or count most-positive-fixnum))
+	 (count (real-count count))
 	 test-not
 	 old)
     (declare (type index length end)
@@ -1787,7 +1797,7 @@
   may be destroyed.  See manual for details."
   (declare (fixnum start))
   (let ((end (or end (length sequence)))
-	(count (or count most-positive-fixnum)))
+	(count (real-count count)))
     (declare (fixnum count))
     (if (listp sequence)
 	(if from-end
@@ -1835,7 +1845,7 @@
    Sequence may be destroyed.  See manual for details."
   (declare (fixnum start))
   (let ((end (or end (length sequence)))
-	(count (or count most-positive-fixnum)))
+	(count (real-count count)))
     (declare (fixnum end count))
     (if (listp sequence)
 	(if from-end
@@ -1877,7 +1887,7 @@
    The Sequence may be destroyed.  See manual for details."
   (declare (fixnum start))
   (let ((end (or end (length sequence)))
-	(count (or count most-positive-fixnum)))
+	(count (real-count count)))
     (declare (fixnum end count))
     (if (listp sequence)
 	(if from-end

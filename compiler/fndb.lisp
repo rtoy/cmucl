@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.98 2002/03/07 00:04:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.99 2002/11/13 19:47:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -432,7 +432,7 @@
 (defknown remove
   (t sequence &key (:from-end t) (:test callable)
      (:test-not callable) (:start index) (:end sequence-end)
-     (:count sequence-end) (:key callable))
+     (:count sequence-count) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 2))
@@ -440,21 +440,21 @@
 (defknown substitute
   (t t sequence &key (:from-end t) (:test callable)
      (:test-not callable) (:start index) (:end sequence-end)
-     (:count sequence-end) (:key callable))
+     (:count sequence-count) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown (remove-if remove-if-not)
   (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
-	    (:count sequence-end) (:key callable))
+	    (:count sequence-count) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown (substitute-if substitute-if-not)
   (t callable sequence &key (:from-end t) (:start index) (:end sequence-end)
-     (:count sequence-end) (:key callable))
+     (:count sequence-count) (:key callable))
   consed-sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 3))
@@ -462,7 +462,7 @@
 (defknown delete
   (t sequence &key (:from-end t) (:test callable)
      (:test-not callable) (:start index) (:end sequence-end)
-     (:count sequence-end) (:key callable))
+     (:count sequence-count) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 2))
@@ -470,21 +470,21 @@
 (defknown nsubstitute
   (t t sequence &key (:from-end t) (:test callable)
      (:test-not callable) (:start index) (:end sequence-end)
-     (:count sequence-end) (:key callable))
+     (:count sequence-count) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 3))
 
 (defknown (delete-if delete-if-not)
   (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
-	    (:count sequence-end) (:key callable))
+	    (:count sequence-count) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 2))
 
 (defknown (nsubstitute-if nsubstitute-if-not)
   (t callable sequence &key (:from-end t) (:start index) (:end sequence-end)
-     (:count sequence-end) (:key callable))
+     (:count sequence-count) (:key callable))
   sequence
   (flushable call)
   :derive-type (sequence-result-nth-arg 3))

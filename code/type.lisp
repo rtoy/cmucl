@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.45 2002/10/23 00:47:38 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.46 2002/11/13 19:47:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2708,6 +2708,9 @@
 ;;;
 ;;; The :end arg to a sequence...
 (deftype sequence-end () '(or null index))
+;;;
+;;; The :count arg to a sequence...
+(deftype sequence-count () '(or null integer))
 ;;;
 ;;; A valid argument to a stream function...
 (deftype streamlike () '(or stream (member nil t)))
