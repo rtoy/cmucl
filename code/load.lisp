@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.84 2002/08/27 22:18:24 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.85 2002/11/12 02:05:32 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1365,7 +1365,7 @@
     (if (or #-linkage-table t (eq flavor :code))
 	(int-sap maybe-link-table-addr)
 	;;; Get address out of linkage table
-	(int-sap (sap-ref-32 maybe-link-table-addr 0)))))
+	(int-sap (sap-ref-32 (int-sap maybe-link-table-addr) 0)))))
 
 (define-fop (fop-foreign-fixup 147)
   (let* ((kind (pop-stack))
