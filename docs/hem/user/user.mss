@@ -1556,17 +1556,21 @@ unmoved.  This is undo-able.
 
 @defcom[com "Fill Lisp Comment Paragraph",
 	stuff <bound to @bf[M-q] in @hid[Lisp] mode>]
- This command fills a flushleft or indented Lisp comment.  This also fills
-lines all beginning with the same initial, non-empty blankspace, so it is
-useful for string literals and in general for indented paragraphs.  However, it
-will not fill with the first line of a string literal when the additional lines
-are indented one column further than the opening double quote.
+@defhvar1[var "Fill Lisp Comment Paragraph Confirm", val {t}]
+This fills a flushleft or indented Lisp comment.  This also fills Lisp string
+literals using the proper indentation as a filling prefix.  When invoked
+outside of a comment or string, this tries to fill all contiguous lines
+beginning with the same initial, non-empty blankspace.  When filling a comment,
+the current line is used to determine a fill prefix by taking all the initial
+whitespace on the line, the semicolons, and any whitespace following the
+semicolons.
 
-When filling a comment, the current line is used to determine a fill prefix by
-taking all the initial whitespace on the line, the semicolons, and the first
-initial whitespace character following the semicolons.  If there is no comment,
-we simply take all the initial whitespace on the current line.  Then every
-adjacent line, above and below, with the prefix is filled as one paragraph.
+When invoked outside of a comment or string, this command prompts for
+confirmation before filling.  It is useful to use this for filling long
+@f[export] lists or other indented text or symbols, but since this is a less
+common use, this command tries to make sure that is what you wanted.  Setting
+@hid[Fill Lisp Comment Paragraph Confirm] to @nil inhibits the confirmation
+prompt.
 @enddefcom
 
 @defcom[com "Defindent", bind (C-M-#)]
