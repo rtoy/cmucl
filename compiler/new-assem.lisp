@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.11 1992/07/27 16:52:05 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.12 1992/07/29 16:04:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,9 @@
 ;;; Written by William Lott.
 ;;;
 (in-package :new-assem)
+
+(import 'c:branch)
+(import 'c:flushable)
 
 (export '(emit-byte emit-skip emit-back-patch emit-chooser emit-postit
 	  define-emitter define-instruction define-instruction-macro
