@@ -1,5 +1,12 @@
 #include <stdio.h>
+
+#ifdef mach
 #include <mips/cpu.h>
+#else
+#ifdef irix
+#include <sys/sbd.h>
+#endif
+#endif
 
 #include "lisp.h"
 #include "globals.h"
@@ -30,7 +37,11 @@ struct sigcontext *scp;
 {
     /* Skip the offending instruction */
     if (scp->sc_cause & CAUSE_BD)
+#ifdef mach
         emulate_branch(scp, *(unsigned long *)scp->sc_pc);
+#else
+      ;
+#endif
     else
         scp->sc_pc += 4;
 }
@@ -107,7 +118,9 @@ void arch_do_displaced_inst(struct sigcontext *scp,
     opcode = next_inst >> 26;
     if (opcode == 1 || ((opcode & 0x3c) == 0x4) || ((next_inst & 0xf00e0000) == 0x80000000)) {
 	tmp = *scp;
-	emulate_branch(&tmp, next_inst);
+#ifdef mach
+        emulate_branch(&tmp, next_inst);
+#endif
         next_pc = (unsigned long *)tmp.sc_pc;
     }
     else
@@ -117,7 +130,9 @@ void arch_do_displaced_inst(struct sigcontext *scp,
     *next_pc = (trap_AfterBreakpoint << 16) | 0xd;
     os_flush_icache((os_vm_address_t)next_pc, sizeof(unsigned long));
 
+#ifdef mach
     sigreturn(scp);
+#endif
 }
 
 static void sigtrap_handler(int signal, int code, struct sigcontext *scp)

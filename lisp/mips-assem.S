@@ -1,5 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.3 1993/01/10 17:27:07 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.4 1994/07/06 20:55:18 hallgren Exp $ */
+#ifdef mach
 #include <machine/regdef.h>
+#else
+#ifdef irix
+#include <sys/regdef.h>
+#endif
+#endif
 
 #include "internals.h"
 #include "lispregs.h"
@@ -186,6 +192,9 @@ call_into_c:
 	.set	reorder
 
 	/* Into C land we go. */
+#ifdef irix
+	move	t9, reg_CFUNC
+#endif
 	jal	reg_CFUNC
 
 	/* Clear unsaved descriptor regs */
