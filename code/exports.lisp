@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.39 1990/07/04 21:21:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.40 1990/07/07 00:19:25 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -435,13 +435,14 @@
 	  remove-port-death-handler remove-port-object
 	  remove-xwindow-object resolve-loaded-assembler-references sap+
 	  sap- sap-int sap-ref-16 sap-ref-32 sap-ref-8 sap-ref-sap
-	  serve-all-events serve-event server server-message
-	  short-float-radix signed-sap-ref-16 signed-sap-ref-32
-	  signed-sap-ref-8 single-float-radix symbol-macro-let
-	  system-area-pointer system-area-pointer-p unproclaim unstructured
-	  vector-sap wait-until-fd-usable with-enabled-interrupts
-	  with-fd-handler with-interrupts with-reply-port with-stack-alien
-	  without-gcing without-hemlock without-interrupts words))
+	  sap-ref-single sap-ref-double sap-ref-descriptor serve-all-events
+	  serve-event server server-message short-float-radix
+	  signed-sap-ref-16 signed-sap-ref-32 signed-sap-ref-8
+	  single-float-radix symbol-macro-let system-area-pointer
+	  system-area-pointer-p unproclaim unstructured vector-sap
+	  wait-until-fd-usable with-enabled-interrupts with-fd-handler
+	  with-interrupts with-reply-port with-stack-alien without-gcing
+	  without-hemlock without-interrupts words))
 
 
 (in-package "USER")
