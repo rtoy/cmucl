@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.16 1990/06/06 20:56:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.17 1990/06/09 00:49:33 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -147,7 +147,7 @@
       (when nfp-tn
 	(move nfp-tn nsp-tn)
 	(inst addu nsp-tn nsp-tn
-	      (- (* (sb-allocated-size 'non-descriptor-stack)
+	      (- (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
 		    vm:word-bytes)))))))
 
 (define-vop (allocate-frame)
@@ -161,9 +161,9 @@
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (when (ir2-environment-number-stack-p callee)
       (move nfp nsp-tn)
-      (inst addu nsp-tn nsp-tn
-	    (- (* (sb-allocated-size 'non-descriptor-stack)
-		  vm:word-bytes))))))
+	(inst addu nsp-tn nsp-tn
+	      (- (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
+		    vm:word-bytes))))))
 
 ;;; Allocate a partial frame for passing stack arguments in a full call.  Nargs
 ;;; is the number of arguments passed.  If no stack arguments are passed, then
