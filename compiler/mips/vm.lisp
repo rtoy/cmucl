@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.31 1990/06/17 22:28:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.32 1990/07/14 09:27:52 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -549,9 +549,12 @@
     (system-area-pointer
      (sc-number-or-lose 'immediate-sap))
     (character
+     #-new-compiler
      (if (string-char-p value)
 	 (sc-number-or-lose 'immediate-base-character)
-	 nil))))
+	 nil)
+     #+new-compiler
+     (sc-number-or-lose 'immediate-base-character))))
 
 
 ;;;; Function Call Parameters
