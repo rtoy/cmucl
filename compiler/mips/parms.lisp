@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.63 1990/07/07 13:10:58 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.64 1990/07/10 18:34:18 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -92,11 +92,6 @@
 
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
-
-(defun float-format-digits (format)
-  (ecase format
-    ((short-float single-float) single-float-digits)
-    ((double-float long-float) double-float-digits)))
 
 
 ;;;; Description of the target address space.
@@ -264,19 +259,20 @@
 					 &key header lowtag
 					 &allow-other-keys)
 				   &rest slots)
+  (setf options (copy-list options))
   (remf options :header)
   (remf options :lowtag)
   (let ((prim-obj
-	 (eval `(make-primitive-object
-		 :name ',name
-		 :header ,header
-		 :lowtag ,lowtag
-		 :options ',options
-		 :slots (list ,@(mapcar #'(lambda (slot)
-					    (if (atom slot)
-						`(make-slot ',slot)
-						`(apply #'make-slot ',slot)))
-					slots))))))
+	 (make-primitive-object :name name
+				:header header
+				:lowtag lowtag
+				:options options
+				:slots (mapcar #'(lambda (slot)
+						   (if (atom slot)
+						       (make-slot slot)
+						       (apply #'make-slot
+							      slot)))
+					       slots))))
     (collect ((forms) (exports))
       (let ((offset (if (primitive-object-header prim-obj) 1 0))
 	    (variable-length nil))
@@ -315,6 +311,7 @@
 			     :key #'primitive-object-name)))
 	 (export ',(exports))
 	 ,@(forms)))))
+
 
 (defvar *primitive-objects* nil)
 
