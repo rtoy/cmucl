@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.84 2003/06/06 16:23:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.85 2003/06/06 17:02:38 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -853,7 +853,7 @@
 (defconstant map_anonymous
   #+solaris #x100			; Solaris
   #+linux 32				; Linux
-  )
+  #+freebsd #x1000)
 
 (defun unix-mmap (addr length prot flags fd offset)
   (declare (type (or null system-area-pointer) addr)
