@@ -1024,8 +1024,8 @@
 
 (defhvar "Netnews Headers Proportion"
   "Determines how much of the current window will display headers when
-   \"Netnews Read Style\" is :multiple.  Defaults to .25"
-  :value .25)
+   \"Netnews Read Style\" is :multiple.  Defaults to 0.25"
+  :value 0.25)
 
 (defun nn-assure-multi-windows (nn-info)
   (let ((newp nil))
