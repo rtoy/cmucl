@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.31 1998/03/04 14:56:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.32 1999/04/30 11:50:55 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -182,7 +182,7 @@
 		 (:single
 		  '((inst lwc1 result sap 0)))
 		 (:double
-		  (ecase (backend-byte-order *backend*)
+		  (ecase (backend-byte-order *target-backend*)
 		    (:big-endian
 		     '((inst lwc1 result sap word-bytes)
 		       (inst lwc1-odd result sap 0)))
@@ -218,7 +218,7 @@
 	       (:single
 		'((inst lwc1 result object offset)))
 	       (:double
-		(ecase (backend-byte-order *backend*)
+		(ecase (backend-byte-order *target-backend*)
 		  (:big-endian
 		   '((inst lwc1 result object (+ offset word-bytes))
 		     (inst lwc1-odd result object offset)))
@@ -253,7 +253,7 @@
 		  (unless (location= result value)
 		    (inst fmove :single result value))))
 	       (:double
-		(ecase (backend-byte-order *backend*)
+		(ecase (backend-byte-order *target-backend*)
 		  (:big-endian
 		   '((inst swc1 value sap word-bytes)
 		     (inst swc1-odd value sap 0)
@@ -295,7 +295,7 @@
 		  (unless (location= result value)
 		    (inst fmove :single result value))))
 	       (:double
-		(ecase (backend-byte-order *backend*)
+		(ecase (backend-byte-order *target-backend*)
 		  (:big-endian
 		   '((inst swc1 value object (+ offset word-bytes))
 		     (inst swc1-odd value object (+ offset word-bytes))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.26 1998/07/24 17:22:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.27 1999/04/30 11:50:55 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,7 +115,7 @@
 		  (:results (y :scs (,sc)))
 		  (:note "pointer to float coercion")
 		  (:generator 2
-		    ,@(ecase (backend-byte-order *backend*)
+		    ,@(ecase (backend-byte-order *target-backend*)
 			(:big-endian
 			 (cond 
 			  (double-p
@@ -154,7 +154,7 @@
 			 (inst fmove ,format y x)))
 		      (,stack-sc
 		       (let ((offset (* (tn-offset y) word-bytes)))
-			 ,@(ecase (backend-byte-order *backend*)
+			 ,@(ecase (backend-byte-order *target-backend*)
 			     (:big-endian
 			      (cond
 			       (double-p
