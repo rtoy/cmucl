@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.25 1992/03/09 14:56:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.26 1992/09/15 16:10:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -380,10 +380,12 @@
 	 (unless (symbolp decl)
 	   (error "Declaration to be RECOGNIZED is not a symbol: ~S." decl))
 	 (setf (info declaration recognized decl) t)))
+      ((start-block end-block)) ; ignore.
       (t
-       (if (member kind type-specifier-symbols)
-	   (%proclaim `(type . ,form))
-	   (error "Unrecognized proclamation: ~S." form)))))
+       (cond ((member kind type-specifier-symbols)
+	      (%proclaim `(type . ,form)))
+	     ((not (info declaration recognized kind))
+	      (warn "Unrecognized proclamation: ~S." form))))))
   (undefined-value))
 ;;;
 (setf (symbol-function 'proclaim) #'%proclaim)
