@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.6 1991/02/28 20:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.7 1991/12/16 19:45:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,8 @@
 ;;; The C-Type structure is used to represent aspects of C data representations
 ;;; that aren't directly implemented by Aliens.
 ;;;
-(defstruct c-type
+(defstruct (c-type
+	    (:make-load-form-fun :just-dump-it-normally))
   ;;
   ;; A form which is a printable representation of this type.
   description
@@ -78,7 +79,8 @@
 ;;; be allocated to the field than are actually necessary to hold a value of
 ;;; that type.
 ;;;
-(defstruct field-info
+(defstruct (field-info
+	    (:make-load-form-fun :just-dump-it-normally))
   ;;
   ;; The symbol name of this field.
   (name nil :type symbol)
