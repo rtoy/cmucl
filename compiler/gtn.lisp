@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.12 1991/12/11 18:26:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.13 1992/04/01 15:30:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,19 +161,21 @@
 		     (compiler-note
 		      "Return value count mismatch prevents known return ~
 		       from these functions:~
-		      ~{~%  ~A~}"
+		       ~{~%  ~A~}"
 		      (remove nil (mapcar #'leaf-name funs)))))
-	(let ((rtype (return-result-type (lambda-return fun))))
-	  (multiple-value-bind (ignore count)
-			       (values-types rtype)
-	    (declare (ignore ignore))
-	    (when (eq count :unknown)
-	      (let ((*compiler-error-context* (lambda-bind fun)))
-		(compiler-note
-		 "Return type not fixed values, so can't use known return ~
-		 convention:~%  ~S"
-		 (type-specifier rtype)))
-	      (return)))))))
+	(let ((ret (lambda-return fun)))
+	  (when ret
+	    (let ((rtype (return-result-type ret)))
+	      (multiple-value-bind (ignore count)
+				   (values-types rtype)
+		(declare (ignore ignore))
+		(when (eq count :unknown)
+		  (let ((*compiler-error-context* (lambda-bind fun)))
+		    (compiler-note
+		     "Return type not fixed values, so can't use known return ~
+		      convention:~%  ~S"
+		     (type-specifier rtype)))
+		  (return)))))))))
   (undefined-value))
 
 
