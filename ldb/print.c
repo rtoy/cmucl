@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.1 1990/02/24 19:37:28 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.2 1990/02/26 19:11:04 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -7,7 +7,7 @@
 #include "vars.h"
 
 static int max_lines = 20, cur_lines = 0;
-static int max_depth = 4, cur_depth = 0;
+static int max_depth = 5, cur_depth = 0;
 static boolean dont_decend = FALSE, skip_newline = FALSE;
 static cur_clock = 0;
 
@@ -18,11 +18,11 @@ static void print_obj();
 char *lowtag_Names[] = {
     "even fixnum",
     "function pointer",
-    "other immediate",
+    "other immediate [0]",
     "list pointer",
     "odd fixnum",
     "structure pointer",
-    "short float",
+    "other immediate [1]",
     "other pointer"
 };
 
