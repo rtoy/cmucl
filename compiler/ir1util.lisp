@@ -17,15 +17,20 @@
 
 ;;;; Cleanup hackery:
 
-;;; Find-Enclosing-Cleanup  --  Interface
+
+;;; Node-Enclosing-Cleanup  --  Interface
 ;;;
-;;;    Chain up the Lambda-Cleanup thread until we find a Cleanup or null.
+;;;    Return the innermost cleanup enclosing Node, or NIL if there is none in
+;;; its function.  If Node has no cleanup, but is in a let, then we must still
+;;; check the environment that the call is in.
 ;;;
-(defun find-enclosing-cleanup (thing)
-  (declare (type (or cleanup clambda null) thing))
-  (etypecase thing
-    ((or cleanup null) thing)
-    (clambda (find-enclosing-cleanup (lambda-cleanup thing)))))
+(defun node-enclosing-cleanup (node)
+  (declare (type node node))
+  (let ((env (node-lexenv node)))
+    (or (lexenv-cleanup env)
+	(let ((lambda (lexenv-lambda env)))
+	  (and (member (functional-kind lambda) '(:mv-let :let))
+	       (node-enclosing-cleanup (let-combination lambda)))))))
 
 
 ;;; Insert-Cleanup-Code  --  Interface
@@ -34,15 +39,20 @@
 ;;; implicit MV-Prog1.  The inserted block is returned.  Node is used for IR1
 ;;; context when converting the form.  Note that the block is not assigned a
 ;;; number, and is linked into the DFO at the beginning.  We indicate that we
-;;; have trashed the DFO by setting Component-Reanalyze.
+;;; have trashed the DFO by setting Component-Reanalyze.  If Cleanup is
+;;; supplied, then convert with that cleanup.
 ;;;
-(defun insert-cleanup-code (block1 block2 node form)
-  (declare (type cblock block1 block2) (type node node))
+(defun insert-cleanup-code (block1 block2 node form &optional cleanup)
+  (declare (type cblock block1 block2) (type node node)
+	   (type (or cleanup null) cleanup))
   (with-ir1-environment node
-    (setf (component-reanalyze *current-component*) t)
     (let* ((start (make-continuation))
 	   (block (continuation-starts-block start))
-	   (cont (make-continuation)))
+	   (cont (make-continuation))
+	   (*lexical-environment*
+	   (if cleanup
+	       (make-lexenv :cleanup cleanup)
+	       *lexical-environment*)))
       (change-block-successor block1 block2 block)
       (link-blocks block block2)
       (ir1-convert start cont form)
@@ -190,9 +200,7 @@
 	 (cond ((or (eq kind :unused)
 		    (eq (node-cont (block-last block)) cont))
 		(setf (continuation-block cont)
-		      (make-block-key :start cont :lambda nil
-				      :start-cleanup nil :end-cleanup nil
-				      :component nil))
+		      (make-block-key :start cont  :component nil))
 		(setf (continuation-kind cont) :deleted-block-start))
 	       (t
 		(node-ends-block (continuation-use cont))))))))
@@ -202,11 +210,8 @@
 ;;; Substitute-Continuation-Uses  --  Interface
 ;;;
 ;;;    Replace all uses of Old with uses of New, where New has an arbitary
-;;; number of uses.  If a use is an Exit, then we also substitute New for Old
-;;; in the Entry's Exits to maintain consistency between the two.
-;;;
-;;;    If New will end up with more than one use, then we must arrange for it
-;;; to start a block if it doesn't already.
+;;; number of uses.  If New will end up with more than one use, then we must
+;;; arrange for it to start a block if it doesn't already.
 ;;;
 (defun substitute-continuation-uses (new old)
   (declare (type continuation old new))
@@ -215,53 +220,140 @@
     (ensure-block-start new))
   
   (do-uses (node old)
-    (when (exit-p node)
-      (let ((entry (exit-entry node)))
-	(when entry
-	  (setf (entry-exits entry)
-		(nsubst new old (entry-exits entry))))))
     (delete-continuation-use node)
     (add-continuation-use node new))
 
   (reoptimize-continuation new)
   (undefined-value))
 
-#|
-;;; Substitute-Node-Cont  --  Interface
-;;;
-;;;    Replace Old's single use with a use of New.  This is used in contexts
-;;; where we know that New has no use and Old has a single use.
-;;;
-(defun substitute-node-cont (new old)
-  (declare (type continuation new old))
-  (assert (member (continuation-kind new) '(:block-start :unused)))
-  (assert (eq (continuation-kind old) :inside-block))
-
-  (let ((use (continuation-use old)))
-    (delete-continuation-use use)
-    (add-continuation-use use new))
-
-  (undefined-value))
-|#
-
 
-;;; NODE-BLOCK, NODE-ENVIRONMENT, NODE-TLF-NUMBER  --  Interface
+;;;; Misc shortand functions:
+
+;;; NODE-xxx  --  Interface
 ;;;
-;;;    Shorthand for common idiom.
-;;;
-(proclaim '(inline node-block node-environment node-tlf-number))
+(proclaim '(inline node-block node-home-lambda node-environment
+		   node-tlf-number))
 (defun node-block (node)
   (declare (type node node))
   (the cblock (continuation-block (node-prev node))))
 ;;;
+(defun node-home-lambda (node)
+  (declare (type node node))
+  (lambda-home (lexenv-lambda (node-lexenv node))))
+;;;
 (defun node-environment (node)
   (declare (type node node))
-  (the environment (lambda-environment (block-lambda (node-block node)))))
-;;;
-(defun node-tlf-number (node)
-  (declare (type node node))
-  (car (last (node-source-path node))))
+  (the environment (lambda-environment (lexenv-lambda (node-lexenv node)))))
 
+
+
+;;; BLOCK-xxx-CLEANUP  --  Interface
+;;;
+;;;    Return the enclosing cleanup for environment of the first or last node
+;;; in Block.
+;;;
+(defun block-start-cleanup (block)
+  (declare (type cblock block))
+  (node-enclosing-cleanup (continuation-next (block-start block))))
+;;;
+(defun block-end-cleanup (block)
+  (declare (type cblock block))
+  (node-enclosing-cleanup (block-last block)))
+
+
+;;; BLOCK-HOME-LAMBDA  --  Interface
+;;;
+;;;    Return the non-let lambda that holds Block's code.
+;;;
+(defun block-home-lambda (block)
+  (declare (type cblock block))
+  (lambda-home (lexenv-lambda (node-lexenv (block-last block)))))
+
+
+;;; BLOCK-ENVIRONMENT  --  Interface
+;;;
+;;;    Return the IR1 environment for Block.
+;;;
+(defun block-environment (block)
+  (declare (type cblock block))
+  (lambda-environment (lexenv-lambda (node-lexenv (block-last block)))))
+
+
+;;; SOURCE-PATH-TLF-NUMBER  --  Interface
+;;;
+;;;    Return the Top Level Form number of path, i.e. the ordinal number of
+;;; its orignal source's top-level form in its compilation unit.
+;;;
+(defun source-path-tlf-number (path)
+  (declare (list path))
+  (car (last path)))
+
+
+;;; SOURCE-PATH-ORIGINAL-SOURCE  --  Interface
+;;;
+;;;    Return the (reversed) list for the path in the orignal source (with the
+;;; TLF number last.)
+;;; 
+(defun source-path-original-source (path)
+  (declare (list path))
+  (cddr (member 'original-source-start path)))
+
+
+;;; SOURCE-PATH-FORM-NUMBER  --  Interface
+;;;
+;;;    Return the Form Number of Path's orignal source inside the Top Level
+;;; Form that contains it.  This is determined by the order that we walk the
+;;; subforms of the top level source form.
+;;;
+(defun source-path-form-number (path)
+  (declare (list path))
+  (cadr (member 'original-source-start path)))
+
+
+;;; SOURCE-PATH-FORMS  --  Interface
+;;;
+;;;    Return a list of all the enclosing forms not in the original source that
+;;; converted to get to this form, with the immediate source for node at the
+;;; start of the list.
+;;;
+(defun source-path-forms (path)
+  (subseq path 0 (position 'original-source-start path)))
+
+
+;;; MAKE-LEXENV  --  Interface
+;;;
+;;;    Return a new LEXENV just like Default except for the specified slot
+;;; values.  Values for the alist slots are NCONC'ed to the beginning of the
+;;; current value, rather than replacing it entirely.
+;;; 
+(defun make-lexenv (&key (default *lexical-environment*)
+			 functions variables blocks tags type-restrictions
+			 inlines
+			 (lambda (lexenv-lambda default))
+			 (cleanup (lexenv-cleanup default))
+			 (cookie (lexenv-cookie default)))
+  (macrolet ((frob (var slot)
+	       `(let ((old (,slot default)))
+		  (if ,var
+		      (nconc ,var old)
+		      old))))
+    (internal-make-lexenv
+     (frob functions lexenv-functions)
+     (frob variables lexenv-variables)
+     (frob blocks lexenv-blocks)
+     (frob tags lexenv-tags)
+     (frob type-restrictions lexenv-type-restrictions)
+     (frob inlines lexenv-inlines)
+     lambda cleanup cookie)))
+#|
+functions
+variables
+blocks
+tags
+type-restrictions
+inlines
+|#
+			   
 
 ;;;; Flow/DFO/Component hackery:
 
@@ -269,18 +361,21 @@
 ;;;
 ;;;    Join or separate Block1 and Block2.
 ;;;
-(proclaim '(ftype (function (block block) void) link-blocks unlink-blocks))
 (defun link-blocks (block1 block2)
+  (declare (type cblock block1 block2))
   (assert (not (member block2 (block-succ block1))))
   (push block2 (block-succ block1))
-  (push block1 (block-pred block2)))
+  (push block1 (block-pred block2))
+  (undefined-value))
 ;;;
 (defun unlink-blocks (block1 block2)
+  (declare (type cblock block1 block2))
   (assert (member block2 (block-succ block1)))
   (setf (block-succ block1)
 	(delete block2 (block-succ block1)))
   (setf (block-pred block2)
-	(delete block1 (block-pred block2))))
+	(delete block1 (block-pred block2)))
+  (undefined-value))
 
 
 ;;; Change-Block-Successor  --  Internal
@@ -324,14 +419,15 @@
 ;;;    Add Block to the next/prev chain following After.  We also set the
 ;;; Component to be the same as for After.
 ;;;
-(proclaim '(function add-to-dfo (block block) void))
 (defun add-to-dfo (block after)
+  (declare (type cblock block after))
   (let ((next (block-next after)))
     (setf (block-component block) (block-component after))
     (setf (block-next after) block)
     (setf (block-prev block) after)
     (setf (block-next block) next)
-    (setf (block-prev next) block)))
+    (setf (block-prev next) block))
+  (undefined-value))
 
 
 ;;; Clear-Flags  --  Interface
@@ -356,10 +452,8 @@
 ;;;
 (proclaim '(function make-empty-component () component))
 (defun make-empty-component ()
-  (let* ((head (make-block-key :start nil :lambda nil :start-cleanup nil
-			       :end-cleanup nil :component nil))
-	 (tail (make-block-key :start nil :lambda nil :start-cleanup nil
-			       :end-cleanup nil :component nil))
+  (let* ((head (make-block-key :start nil :component nil))
+	 (tail (make-block-key :start nil :component nil))
 	 (res (make-component :head head  :tail tail)))
     (setf (block-flag head) t)
     (setf (block-flag tail) t)
@@ -375,14 +469,6 @@
 ;;;    Makes Node the Last node in its block, splitting the block if necessary.
 ;;; The new block is added to the DFO immediately following Node's block.
 ;;;
-;;;    If the mess-up for one of Block's End-Cleanups is moved into the new
-;;; block, then we must adjust the end/start cleanups of the new and old blocks
-;;; to reflect the movement of the mess-up.  If any of the old end cleanups
-;;; were in the new block, then we scan up from that cleanup trying to find one
-;;; that isn't.  When we do, that becomes the new start/end cleanup of the
-;;; old/new block.  We set the start/end as a pair, since we don't want anyone
-;;; to think that a cleanup is necessary.
-;;;
 (defun node-ends-block (node)
   (declare (type node node))
   (let* ((block (node-block node))
@@ -392,12 +478,8 @@
     (unless (eq last node)
       (assert (eq (continuation-kind start) :inside-block))
       (let* ((succ (block-succ block))
-	     (cleanup (block-end-cleanup block))
 	     (new-block
 	      (make-block-key :start start
-			      :lambda (block-lambda block)
-			      :start-cleanup cleanup
-			      :end-cleanup cleanup
 			      :component (block-component block)
 			      :start-uses (list (continuation-use start))
 			      :succ succ :last last)))
@@ -415,24 +497,6 @@
 	     (when (eq (continuation-kind last-cont) :inside-block)
 	       (setf (continuation-block last-cont) new-block)))
 	  (setf (continuation-block cont) new-block))
-
-	(let ((start-cleanup (block-start-cleanup block)))
-	  (do ((cup (find-enclosing-cleanup cleanup)
-		    (find-enclosing-cleanup (cleanup-enclosing cup))))
-	      ((null cup))
-	    (when (eq (node-block (continuation-use (cleanup-start cup)))
-		      new-block)
-	      (do ((cup (find-enclosing-cleanup (cleanup-enclosing cup))
-			(find-enclosing-cleanup (cleanup-enclosing cup))))
-		  ((null cup)
-		   (setf (block-end-cleanup block) start-cleanup)
-		   (setf (block-start-cleanup new-block) start-cleanup))
-		(let ((cb (node-block (continuation-use (cleanup-start cup)))))
-		  (unless (eq cb new-block)
-		    (setf (block-end-cleanup block) cup)
-		    (setf (block-start-cleanup new-block) cup)
-		    (return))))
-	      (return))))
 
 	(setf (block-type-asserted block) t)
 	(setf (block-test-modified block) t))))
@@ -646,8 +710,8 @@
 ;;;
 ;;;    This function is called by people who delete nodes; it provides a way to
 ;;; indicate that the value of a continuation is no longer used.  We null out
-;;; the Continuation-Dest, set Block-Flush-P in the blocks containing uses of
-;;; Cont and set Component-Reoptimize.
+;;; the Continuation-Dest, set Flush-P in the blocks containing uses of Cont
+;;; and set Component-Reoptimize.
 ;;;
 ;;;    If the continuation is :Deleted, then we don't do anything, since all
 ;;; semantics have already been flushed.  If the continuation is a
@@ -673,9 +737,9 @@
      (do-uses (use cont)
        (let ((prev (node-prev use)))
 	 (unless (eq (continuation-kind prev) :deleted)
-	   (let ((block (continuation-block prev)))
-	     (setf (block-flush-p block) t)
-	     (setf (block-type-asserted block) t)))))))
+	   (setf (block-attributep (block-flags (continuation-block prev))
+				   flush-p type-asserted)
+		 t))))))
 
   (setf (continuation-%type-check cont) nil)
   
@@ -716,8 +780,7 @@
     (let ((prev (node-prev use)))
       (unless (eq (continuation-kind prev) :deleted)
 	(let ((block (continuation-block prev)))
-	  (setf (block-flush-p block) t)
-	  (setf (block-type-asserted block) t)
+	  (setf (block-attributep (block-flags block) flush-p type-asserted) t)
 	  (setf (component-reoptimize (block-component block)) t)))))
 
   (let ((dest (continuation-dest cont)))
@@ -788,9 +851,13 @@
 	   (assert (member (functional-kind lambda) '(:let :mv-let)))
 	   (delete-lambda lambda))))
       (exit
-       (let ((value (exit-value node)))
+       (let ((value (exit-value node))
+	     (entry (exit-entry node)))
 	 (when value
-	   (flush-dest value))))
+	   (flush-dest value))
+	 (when entry
+	   (setf (entry-exits entry)
+		 (delete node (entry-exits entry))))))
       (creturn
        (flush-dest (return-result node))
        (delete-return node))
@@ -860,7 +927,7 @@
 	     (cond
 	      ((member block succ)
 	       (with-ir1-environment node
-		 (let ((exit (make-exit :source (node-source node)))
+		 (let ((exit (make-exit))
 		       (dummy (make-continuation)))
 		   (setf (continuation-next prev) nil)
 		   (prev-link exit prev)
@@ -869,8 +936,8 @@
 	       (setf (node-prev node) nil)
 	       nil)
 	      (t
-	       (assert (eq (find-enclosing-cleanup (block-start-cleanup block))
-			   (find-enclosing-cleanup (block-end-cleanup block))))
+	       (assert (eq (block-start-cleanup block)
+			   (block-end-cleanup block)))
 	       (unlink-blocks block next)
 	       (dolist (pred (block-pred block))
 		 (change-block-successor pred block next))
@@ -948,15 +1015,10 @@
 ;;;
 (defun find-nlx-info (entry cont)
   (declare (type entry entry) (type continuation cont))
-  (dolist (nlx (environment-nlx-info (node-environment entry)) nil)
-    (let* ((cleanup (nlx-info-cleanup nlx))
-	   (entry-cleanup (ecase (cleanup-kind cleanup)
-			    ((:catch :unwind-protect)
-			     (cleanup-enclosing cleanup))
-			    (:entry cleanup))))
+  (let ((entry-cleanup (entry-cleanup entry)))
+    (dolist (nlx (environment-nlx-info (node-environment entry)) nil)
       (when (and (eq (nlx-info-continuation nlx) cont)
-		 (eq (continuation-use (cleanup-start entry-cleanup))
-		     entry))
+		 (eq (nlx-info-cleanup nlx) entry-cleanup))
 	(return nlx)))))
 
 
@@ -967,7 +1029,7 @@
 ;;;    If Functional is a Lambda, just return it; if it is an
 ;;; optional-dispatch, return the main-entry.
 ;;;
-(proclaim '(function main-entry (functional) lambda))
+(proclaim '(function main-entry (functional) clambda))
 (defun main-entry (functional)
   (if (lambda-p functional)
       functional
@@ -1008,13 +1070,14 @@
 
 ;;; Continuation-Function-Name  --  Interface
 ;;;
-;;;    If Cont's only use is a global function reference, then return the
-;;; referenced symbol, otherwise NIL.
+;;;    If Cont's only use is a non-notinline global function reference, then
+;;; return the referenced symbol, otherwise NIL.
 ;;;
 (defun continuation-function-name (cont)
   (declare (type continuation cont))
   (let ((use (continuation-use cont)))
-    (if (ref-p use)
+    (if (and (ref-p use)
+	     (not (eq (ref-inlinep use) :notinline)))
 	(let ((leaf (ref-leaf use)))
 	  (if (and (global-var-p leaf)
 		   (eq (global-var-kind leaf) :global-function))
@@ -1029,7 +1092,7 @@
 ;;;
 (defun let-combination (fun)
   (declare (type clambda fun))
-  (assert (eq (functional-kind fun) :let))
+  (assert (member (functional-kind fun) '(:let :mv-let)))
   (continuation-dest (node-cont (first (leaf-refs fun)))))
 
 
@@ -1056,14 +1119,41 @@
 
 ;;;; Compiler error context determination:
 
-(proclaim '(special *current-path* *current-form*))
+(proclaim '(special *current-path*))
+
+
+;;; We bind print level and length when printing out messages so that we don't
+;;; dump huge amounts of garbage.
+;;;
+(proclaim '(type (or unsigned-byte null) *error-print-level*
+		 *error-print-length*))
+
+(defvar *error-print-level* 3
+  "The value for *Print-Level* when printing compiler error messages.")
+(defvar *error-print-length* 5
+  "The value for *Print-Length* when printing compiler error messages.")
+
+
+(defvar *enclosing-source-cutoff* 1
+  "The maximum number of enclosing non-original source forms (i.e. from
+  macroexpansion) that we print in full.  For additional enclosing forms, we
+  print only the CAR.")
+(proclaim '(type unsigned-byte *enclosing-source-cutoff*))
+
+
+(defparameter *defmumble-take-car-forms* '(defstruct)
+  "A list of \"DEFxxx\" forms for which we should we should compute the source
+  context by taking the CAR of the first arg when it is a list.")
 
 
 ;;; We separate the determination of compiler error contexts from the actual
 ;;; signalling of those errors by objectifying the error context.  This allows
 ;;; postponement of the determination of how (and if) to signal the error.
+;;;
 ;;; We take care not to reference any of the IR1 so that pending potential
-;;; error messages won't prevent the IR1 from being GC'd.
+;;; error messages won't prevent the IR1 from being GC'd.  To this end, we
+;;; convert source forms to strings so that source forms that contain IR1
+;;; references (e.g. %DEFUN) don't hold onto the IR.
 ;;;
 (defstruct (compiler-error-context
 	    (:print-function
@@ -1071,23 +1161,18 @@
 	       (declare (ignore s d))
 	       (format stream "#<Compiler-Error-Context>"))))
   ;;
-  ;; The form immediately responsible for this error (may be the result of
-  ;; mecroexpansion, etc.)
-  source
+  ;; A list of the stringified CARs of the enclosing non-original source forms
+  ;; exceeding the *enclosing-source-cutoff*.
+  (enclosing-source nil :type list)
   ;;
-  ;; The form in the original source that expanded into Source.
-  original-source
+  ;; A list of stringified enclosing non-original source forms.
+  (source nil :type list)
+  ;;
+  ;; The stringified form in the original source that expanded into Source.
+  (original-source nil :type simple-string)
   ;;
   ;; A list of prefixes of "interesting" forms that enclose original-source.
-  context
-  ;;
-  ;; Source for a form enclosing this one, or NIL if unknown.
-  enclosing-source
-  ;;
-  ;; Description of how the value of SOURCE is used by ENCLOSING-SOURCE such as
-  ;; "third argument", "set value", etc.  Null when there is no
-  ;; ENCLOSING-SOURCE.
-  (enclosed-how nil :type (or simple-string null)))
+  (context nil :type list))
 
   
 ;;; If true, this is the node which is used as context in compiler warning
@@ -1096,12 +1181,6 @@
 (proclaim '(type (or null compiler-error-context node)
 		 *compiler-error-context*))
 (defvar *compiler-error-context* nil)
-
-
-;;; A list of "DEFxxx" forms for which we should we should compute the source
-;;; context by taking the CAR of the first arg when it is a list.
-;;;
-(defparameter defmumble-take-car-forms '(defstruct))
 
 
 ;;; Find-Original-Source  --  Internal
@@ -1120,8 +1199,7 @@
 ;;;
 (defun find-original-source (path)
   (declare (list path))
-  (assert path)
-  (let* ((rpath (reverse (rest path)))
+  (let* ((rpath (reverse (source-path-original-source path)))
 	 (root (find-source-root (first rpath) *source-info*)))
     (collect ((context))
       (let ((form root)
@@ -1140,7 +1218,7 @@
 			 (list head
 			       (if (and (listp next)
 					(member head
-						defmumble-take-car-forms))
+						*defmumble-take-car-forms*))
 				   (car next)
 				   next))))
 		      (context (list head)))))))
@@ -1158,86 +1236,58 @@
 		       '((some strange place)))))))))
 
 
-;;; FIND-ENCLOSING-SOURCE  --  Internal
-;;;
-;;;    Look at the DEST of node, and return the source for it, along with a
-;;; description of how the value is used by the DEST.  This is inhibited when
-;;; the DEST has a different source path from NODE.  This ensures that the
-;;; enclosing source results from macroexpansion of the orignal source (or is
-;;; the orignal source).  Otherwise, we might return a form enclosing the
-;;; orignal source, which would be confusing.
-;;;
-(defun find-enclosing-source (node)
-  (declare (type node node))
-  (let* ((cont (node-cont node))
-	 (dest (continuation-dest cont)))
-    (when (and dest
-	       (equal (node-source-path dest) (node-source-path node)))
-      (values
-	(node-source dest)
-	(etypecase dest
-	  (cif "conditional test value")
-	  (cset "assigned value")
-	  (creturn "function return value")
-	  (exit "RETURN'ed value")
-	  (basic-combination
-	   (if (eq cont (basic-combination-fun dest))
-	       "called function"
-	       (format nil "~:R argument"
-		       (1+ (position cont
-				     (basic-combination-args dest)))))))))))
-	  
-
-;;; We bind print level and length when printing out messages so that we don't
-;;; dump huge amounts of garbage.
-;;;
-(proclaim '(type (or unsigned-byte null) *error-print-level*
-		 *error-print-length*))
-
-(defvar *error-print-level* 3
-  "The value for *Print-Level* when printing compiler error messages.")
-(defvar *error-print-length* 5
-  "The value for *Print-Length* when printing compiler error messages.")
-
-
 ;;; STRINGIFY-FORM  --  Internal
 ;;;
 ;;;    Convert a source form to a string, formatted suitably for use in
 ;;; compiler warnings.
 ;;;
-(defun stringify-form (form)
+(defun stringify-form (form &optional (pretty t))
   (let ((*print-level* *error-print-level*)
 	(*print-length* *error-print-length*)
-	(*print-circle* t))
-    (format nil "  ~S~%" form)))
+	(*print-pretty* pretty))
+    (if pretty
+	(format nil "  ~S~%" form)
+	(prin1-to-string form))))
 
-
+	  
 ;;; FIND-ERROR-CONTEXT  --  Interface
 ;;;
 ;;;    Return a COMPILER-ERROR-CONTEXT structure describing the current error
-;;; context, or NIL if we can't figure anything out.
+;;; context, or NIL if we can't figure anything out.  Args is a list of things
+;;; that are going to be printed out in the error message, and can thus be
+;;; blown off when they appear in the source context.
 ;;;
-(defun find-error-context ()
+(defun find-error-context (args)
   (let ((context *compiler-error-context*))
     (if (compiler-error-context-p context)
 	context
-	(let ((source (cond (*current-form*)
-			    (context (node-source context))
-			    (t nil)))
-	      (path (if context (node-source-path context) *current-path*)))
+	(let ((path (or *current-path*
+			(if context
+			    (node-source-path context)
+			    nil))))
 	  (when (and *source-info* path)
 	    (multiple-value-bind (form src-context)
 				 (find-original-source path)
-	      (multiple-value-bind (enclosing how)
-				   (when (and context (not *current-form*))
-				     (find-enclosing-source context))
+	      (collect ((full nil cons)
+			(short nil cons))
+		(let ((forms (source-path-forms path))
+		      (n 0))
+		  (dolist (src (if (member (first forms) args)
+				   (rest forms)
+				   forms))
+		    (if (>= n *enclosing-source-cutoff*)
+			(short (stringify-form (if (consp src)
+						   (car src)
+						   src)
+					       nil))
+			(full (stringify-form src)))
+		    (incf n)))
+		
 		(make-compiler-error-context
-		 :source (stringify-form source)
+		 :enclosing-source (short)
+		 :source (full)
 		 :original-source (stringify-form form)
-		 :context src-context
-		 :enclosing-source (when enclosing
-				     (stringify-form enclosing))
-		 :enclosed-how how))))))))
+		 :context src-context))))))))
 
 
 ;;;; Printing error messages:
@@ -1248,24 +1298,29 @@
 (defvar *compiler-error-bailout*
   #'(lambda () (error "Compiler-Error with no bailout.")))
 
+;;; The stream that compiler error output is directed to.
+;;;
+(defvar *compiler-error-output* (make-synonym-stream '*error-output*))
+(proclaim '(type stream *compiler-error-output*))
 
 ;;; We save the context information that we printed out most recently so that
 ;;; we don't print it out redundantly.
+
+;;; The last COMPILER-ERROR-CONTEXT that we printed.
 ;;;
-(proclaim '(list *last-source-context*))
-(defvar *last-source-context* nil)
-(defvar *last-original-source* nil)
-(defvar *last-source-form* nil)
-(defvar *last-enclosing-source* nil)
+(defvar *last-error-context* nil)
+(proclaim '(type (or compiler-error-context null) *last-error-context*))
+
+;;; The format string and args for the last error we printed.
+;;;
 (defvar *last-format-string* nil)
 (defvar *last-format-args* nil)
-(defvar *last-message-count* 0)
+(proclaim '(type (or string null) *last-format-string*))
+(proclaim '(type list *last-format-args*))
 
-;;; The stream that compiler error output is directed to, or NIL if error
-;;; output is inhibited.
-;;;
-(defvar *compiler-error-output* (make-synonym-stream '*error-output*))
-(proclaim '(type (or stream null) *compiler-error-output*))
+;;; The number of times that the last error message has been emitted, so that
+;;; we can compress duplicate error messages.
+(defvar *last-message-count* 0)
 
 
 ;;; Note-Message-Repeats  --  Internal
@@ -1299,52 +1354,53 @@
   (let* ((*print-level* *error-print-level*)
 	 (*print-length* *error-print-length*)
 	 (stream *compiler-error-output*)
-	 (context (find-error-context)))
+	 (context (find-error-context format-args)))
     
     (unless stream (return-from print-error-message (undefined-value)))
     
     (cond
      (context
-      (let ((context (compiler-error-context-context context))
+      (let ((in (compiler-error-context-context context))
 	    (form (compiler-error-context-original-source context))
-	    (source (compiler-error-context-source context))
 	    (enclosing (compiler-error-context-enclosing-source context))
-	    (how (compiler-error-context-enclosed-how context)))
+	    (source (compiler-error-context-source context))
+	    (last *last-error-context*))
 	
-	(unless (equal context *last-source-context*)
+	(unless (and last
+		     (equal in (compiler-error-context-context last)))
 	  (note-message-repeats)
-	  (setq *last-source-context* context)
-	  (setq *last-original-source* nil)
-	  (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" context))
+	  (setq last nil)
+	  (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" in))
 	
-	(unless (equal form *last-original-source*)
+	(unless (and last
+		     (string= form
+			      (compiler-error-context-original-source last)))
 	  (note-message-repeats)
-	  (setq *last-original-source* form)
-	  (setq *last-enclosing-source* nil)
-	  (setq *last-format-string* nil)
+	  (setq last nil)
 	  (write-string form stream))
 	
-	(unless (equal source form)
-	  (unless (or (equal enclosing *last-enclosing-source*)
-		      (equal enclosing form))
+	(unless (and last
+		     (equal enclosing
+			    (compiler-error-context-enclosing-source last)))
+	  (when enclosing
 	    (note-message-repeats)
-	    (setq *last-source-form* nil)
-	    (setq *last-enclosing-source* enclosing)
-	    (when enclosing
+	    (setq last nil)
+	    (format stream "--> ~{~<~%--> ~1:;~A~> ~}~%" enclosing)))
+	
+	(unless (and last
+		     (equal source (compiler-error-context-source last)))
+	  (setq *last-format-string* nil)
+	  (when source
+	    (note-message-repeats)
+	    (dolist (src source)
 	      (write-line "==>" stream)
-	      (write-string enclosing stream)))
-	  
-	  (unless (tree-equal source *last-source-form*)
-	    (note-message-repeats)
-	    (setq *last-source-form* source)
-	    (setq *last-format-string* nil)
-	    (if *last-enclosing-source*
-		(format stream "The ~A:~%" how)
-		(write-line "==>" stream))
-	    (write-string source stream)))))
+	      (write-string src stream))))))
      (t
       (note-message-repeats)
+      (setq *last-format-string* nil)
       (format stream "~2&")))
+
+    (setq *last-error-context* context)
     
     (unless (and (equal format-string *last-format-string*)
 		 (tree-equal format-args *last-format-args*))
@@ -1408,8 +1464,7 @@
 (proclaim '(function compiler-mumble (string &rest t) void))
 (defun compiler-mumble (format-string &rest format-args)
   (note-message-repeats)
-  (setq *last-source-context* nil)
-  (setq *last-format-string* nil)
+  (setq *last-error-context* nil)
   (apply #'format *compiler-error-output* format-string format-args)
   (force-output *compiler-error-output*))
 
@@ -1466,7 +1521,7 @@
     (unless found (push res *undefined-warnings*))
     (when (or (not *undefined-warning-limit*)
 	      (< (undefined-warning-count res) *undefined-warning-limit*))
-	(push (find-error-context)
+	(push (find-error-context (list name))
 	      (undefined-warning-warnings res)))
     (incf (undefined-warning-count res)))
   (undefined-value))
