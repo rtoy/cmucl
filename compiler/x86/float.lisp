@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.18 1998/01/05 22:35:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.19 1998/01/12 16:54:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Re-written and enhanced by Douglas Crosher, 1996, 1997.
+;;; Re-written and enhanced by Douglas Crosher, 1996, 1997, 1998.
 ;;;
 
 (in-package :x86)
@@ -2800,3 +2800,30 @@
   (:variant 1))
 
 ) ; complex-float
+
+
+;;; A hack dummy VOP to bias the representation selection of its
+;;; argument towards a FP register which can help avoid consing at
+;;; inappropriate locations.
+
+(defknown double-float-reg-bias (double-float) (values))
+;;;
+(define-vop (double-float-reg-bias)
+  (:translate double-float-reg-bias)
+  (:args (x :scs (double-reg double-stack) :load-if nil))
+  (:arg-types double-float)
+  (:policy :fast-safe)
+  (:note "inline dummy FP register bias")
+  (:ignore x)
+  (:generator 0))
+
+(defknown single-float-reg-bias (single-float) (values))
+;;;
+(define-vop (single-float-reg-bias)
+  (:translate single-float-reg-bias)
+  (:args (x :scs (single-reg single-stack) :load-if nil))
+  (:arg-types single-float)
+  (:policy :fast-safe)
+  (:note "inline dummy FP register bias")
+  (:ignore x)
+  (:generator 0))
