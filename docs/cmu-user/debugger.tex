@@ -356,6 +356,11 @@ doubt about how one function called another, it can usually be
 eliminated by finding the source location in the calling frame (section
 \ref{source-locations}.)
 
+The elimination of tail-recursive frames can be prevented by disabling
+tail-recursion optimization, which happens when the \code{debug}
+optimization quality is greater than \code{2}
+(\pxlref{debugger-policy}.)
+
 For a more thorough discussion of tail recursion, \pxlref{tail-recursion}.
 
 
@@ -754,11 +759,17 @@ information, and lifetime information that tells the debugger when arguments
 are available (even when \code{speed} is \code{3} or the argument is set.)  This is
 the default.
 
+\item[\code{\w{$>$ 2}}]
+Any level greater than \code{2} gives level \code{2} and in addition
+disables tail-call optimization, so that the backtrace will contain
+frames for all invoked functions, even those in tail positions.
+
 \item[\code{3}]
 Level \code{2} plus all uninterned variables.  In addition, lifetime
-analysis is disabled (even when \code{speed} is \code{3}), ensuring that all variable
-values are available at any known location within the scope of the binding.
-This has a speed penalty in addition to the obvious space penalty.
+analysis is disabled (even when \code{speed} is \code{3}), ensuring
+that all variable values are available at any known location within
+the scope of the binding.  This has a speed penalty in addition to the
+obvious space penalty. 
 \end{Lentry}
 
 As you can see, if the \code{speed} quality is \code{3}, debugger performance is

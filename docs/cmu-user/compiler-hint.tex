@@ -1660,7 +1660,8 @@ will not show some calls that would have been displayed in a
 non-tail-recursive implementation.  In practice, this is not as bad as
 it sounds\dash{}in fact it isn't really clearly worse, just different.
 \xlref{debug-tail-recursion} for information about the debugger
-implications of tail recursion.
+implications of tail recursion, and how to turn it off for the sake of
+more conservative backtrace information.
 
 In order to ensure that tail-recursion is preserved in arbitrarily
 complex calling patterns across separately compiled functions, the
@@ -1699,6 +1700,10 @@ These dynamic extent binding forms inhibit tail recursion because they
 allocate stack space to represent the binding.  Shallow-binding
 implementations of dynamic scoping also require cleanup code to be
 evaluated when the scope is exited.
+
+In addition, optimization of tail-recursive calls is inhibited when
+the \code{debug} optimization quality is greater than \code{2}
+(\pxlref{debugger-policy}.)
 
 
 \section{Local Call}
