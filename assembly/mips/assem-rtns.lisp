@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.21 1990/10/16 20:24:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.22 1990/10/18 23:07:52 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -92,7 +92,7 @@
   (inst addu csp-tn fp-tn nvals)
   
   ;; Return.
-  (lisp-return return-pc lip))
+  (lisp-return lra lip))
 
 
 
