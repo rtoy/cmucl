@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.50 1991/08/23 16:28:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.51 1991/09/03 21:50:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -908,7 +908,7 @@
      (if *suppress-values-declaration*
 	 res
 	 (let ((types (cdr spec)))
-	   (do-the-stuff (if (null (cdr types))
+	   (do-the-stuff (if (eql (length types) 1)
 			     (car types)
 			     `(values ,@types))
 			 cont res 'values))))
