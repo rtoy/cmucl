@@ -161,6 +161,7 @@
 (comf "target:code/sysmacs")
 (comf "target:code/time")
 (comf "target:code/weak")
+(comf "target:code/final")
 
 ;;; Later so that miscellaneous structures are defined (not crucial, but nice.)
 (comf "target:code/describe")
