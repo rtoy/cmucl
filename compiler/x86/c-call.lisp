@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.3 1997/04/27 18:12:43 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.4 1997/09/07 23:27:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -151,7 +151,6 @@
   ;; eax is already wired
   (:temporary (:sc dword-reg :offset ecx-offset) ecx)
   (:temporary (:sc dword-reg :offset edx-offset) edx)
-  (:temporary (:sc unsigned-stack :from (:eval 0) :to (:eval 1)) cw-temp)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
@@ -161,15 +160,20 @@
 	   (move eax-tn function)
 	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
 	  (t
-	   (inst wait)  ; Catch any pending FPE exceptions
 	   (inst mov (make-ea :dword :disp (make-fixup
 					    (extern-alien-name
 					     "foreign_function_call_active")
 					    :foreign))  1)
-	   ;; Setup the NPX for C
-	   (inst fnstcw cw-temp) ; save exception masks
-	   (inst fninit)
-	   (inst fldcw cw-temp) ; restore exception masks
+	   ;; Setup the NPX for C; all the FP registers need to be
+	   ;; empty; pop them all.
+	   (inst fstp fr0-tn)
+	   (inst fstp fr0-tn)
+	   (inst fstp fr0-tn)
+	   (inst fstp fr0-tn)
+	   (inst fstp fr0-tn)
+	   (inst fstp fr0-tn)
+	   (inst fstp fr0-tn)
+	   (inst fstp fr0-tn)
 	   
 	   (inst call function)
 	   ;; To give the debugger a clue. XX not really internal-error?
@@ -188,7 +192,7 @@
 		    (location= (tn-ref-tn results) fr0-tn))
 	       ;; The return result is in fr0.
 	       (inst fxch fr7-tn) ; move the result back to fr0
-	     (inst fldz)) ; insure no regs are empty
+	       (inst fldz)) ; insure no regs are empty
 	   
 	   (inst mov (make-ea :dword :disp (make-fixup
 					    (extern-alien-name
@@ -199,6 +203,7 @@
   (:info amount)
   (:results (result :scs (sap-reg any-reg)))
   (:generator 0
+    (assert (location= result esp-tn))
     (unless (zerop amount)
       (let ( (delta (logandc2 (+ amount 3) 3)) )
 	(inst sub esp-tn delta)))
