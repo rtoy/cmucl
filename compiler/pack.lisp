@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.48 1993/08/12 20:33:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.49 1993/08/12 20:46:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,6 +237,7 @@
 	 (block-size (if (zerop (length conflicts))
 			 (ir2-block-count *compile-component*)
 			 (length (the simple-vector (svref conflicts 0))))))
+    (declare (type index inc new-size))
     (assert (eq (sb-kind sb) :unbounded))
 
     (when (> new-size (length conflicts))
@@ -480,7 +481,8 @@
 
 ;;;; Register saving:
 
-(declaim (start-block optimized-emit-saves emit-saves assign-tn-costs))
+(declaim (start-block optimized-emit-saves emit-saves assign-tn-costs
+		      pack-save-tn))
 
 ;;; Note-Spilled-TN  --  Internal
 ;;;
