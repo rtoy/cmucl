@@ -1,6 +1,6 @@
 -*- Mode: Text, Fill -*-
 
-$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/random-doc.txt,v 1.2 1990/02/05 22:29:53 ch Exp $
+$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/random-doc.txt,v 1.3 1990/03/02 17:40:56 ch Rel $
 
 DEFINE-STORAGE-BASE
 
@@ -343,3 +343,9 @@ CTYPE-OF
   rather than trying to come up with the one that the user might find
   most informative.
 
+
+SC-IS
+
+  SC-Is TN SC*
+
+  Returns true if TNs SC is any of the named SCs, false otherwise.
