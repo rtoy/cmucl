@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.14 1991/11/15 15:27:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.15 1992/03/07 13:32:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -215,3 +215,27 @@
 			   args)))
 	     vm-support-routines))))
   (frob))
+
+
+
+;;;; Other utility functions for accessing the backend.
+
+(export '(target-featurep backend-featurep native-featurep))
+
+(defun target-featurep (feature)
+  "Same as EXT:FEATUREP, except use the features found in *TARGET-BACKEND*."
+  (let ((*features* (or (backend-features *target-backend*)
+			*features*)))
+    (featurep feature)))
+
+(defun backend-featurep (feature)
+  "Same as EXT:FEATUREP, except use the features found in *BACKEND*."
+  (let ((*features* (or (backend-features *target-backend*)
+			*features*)))
+    (featurep feature)))
+
+(defun native-featurep (feature)
+  "Same as EXT:FEATUREP, except use the features found in *NATIVE-BACKEND*."
+  (let ((*features* (or (backend-features *native-backend*)
+			*features*)))
+    (featurep feature)))
