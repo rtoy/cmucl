@@ -55,7 +55,8 @@ all: cmu-user.ps
 	@while ( grep Rerun $*.log > /dev/null ); do \
 	   $(LATEX) $<; \
 	done
-	$(MAKE) index
+	if [ "$<" = "cmu-user.tex" ]; then $(MAKE) index; else $(MAKE) index-letter; fi
+
 	$(LATEX) $<
 	rm $*.log
 
@@ -64,7 +65,7 @@ all: cmu-user.ps
 	@while ( grep Rerun $*.log > /dev/null ); do \
 	   $(PDFLATEX) $<; \
 	done
-	$(MAKE) index
+	if [ "$<" = "cmu-user.tex" ]; then $(MAKE) index; else $(MAKE) index-letter; fi
 	$(PDFLATEX) $<
 	rm $*.log
 
@@ -103,6 +104,12 @@ index:
 	makeindex cmu-user.vdx -o cmu-user.vnd
 	makeindex cmu-user.fdx -o cmu-user.fnd
 	makeindex cmu-user.cdx -o cmu-user.cnd
+
+index-letter:
+	makeindex cmu-user-letter.tdx -o cmu-user-letter.tnd
+	makeindex cmu-user-letter.vdx -o cmu-user-letter.vnd
+	makeindex cmu-user-letter.fdx -o cmu-user-letter.fnd
+	makeindex cmu-user-letter.cdx -o cmu-user-letter.cnd
 
 .PHONY: clean index
 
