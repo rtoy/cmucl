@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.12 1993/02/26 08:26:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.13 1993/05/20 13:43:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,7 @@
        (declare (ignorable ,offset-var))
        ,@forms)))
 
-
+#-gengc
 (defmacro without-gcing (&rest body)
   "Executes the forms in the body without doing a garbage collection."
   `(unwind-protect
@@ -61,6 +61,11 @@
 	 ,@body)
      (when (and *need-to-collect-garbage* (not *gc-inhibit*))
        (maybe-gc nil))))
+
+#+gengc
+(defmacro without-gcing (&rest body)
+  "Executes the forms in the body without doing a garbage collection."
+  `(without-interrupts ,@body))
 
 (defvar hi::*in-the-editor* nil)
 
