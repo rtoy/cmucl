@@ -212,10 +212,10 @@
 				      (make-keyword variable)))
 			 (supplied-p (caddr var)))
 		    (push-optional-binding variable (cadr var) supplied-p
-					   `(keyword-supplied-p ,keyword
+					   `(keyword-supplied-p ',keyword
 								,rest-name)
-					   `(keyword-argument ,keyword
-							      ,rest-name)
+					   `(lookup-keyword ',keyword
+							    ,rest-name)
 					   name error-kind error-fun)
 		    (push keyword keys)))
 		 (:auxs (push-let-binding (car var) (cadr var) nil)))))))
