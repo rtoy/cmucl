@@ -21,17 +21,17 @@
      :optimize
      '(optimize (speed 2) (space 2) (inhibit-warnings 2)
 		(safety #+small 0 #-small 1)
-		(debug-info #+small 1 #-small 2))
+		(debug-info #+small .5 #-small 2))
      :optimize-interface
      '(optimize-interface (safety #+small 1 #-small 2)
-			  (debug-info 1))
+			  (debug-info .5))
      :context-declarations
      '(#+small
        ((:or :macro
 	     (:match "$SOURCE-TRANSFORM-" "$IR1-CONVERT-"
 		     "$PRIMITIVE-TRANSLATE-" "$PARSE-"))
 	(declare (optimize (safety 1))))
-       (:external (declare (optimize-interface (safety 2))))))
+       (:external (declare (optimize-interface (safety 2) (debug-info 1))))))
 
 (comf "target:compiler/macros" :load *load-stuff*)
 (comf "target:compiler/generic/vm-macs" :load *load-stuff* :proceed t)
