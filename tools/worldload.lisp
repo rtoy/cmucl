@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.24 1991/05/06 13:31:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.25 1991/05/08 15:49:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,8 +62,7 @@
 (setq *load-verbose* t)
 
 ;;; Load random code sources.
-;(load "code:lfloatcon")
-;(load "code:spirrat")
+
 (load "code:format-time")
 (load "code:parse-time")
 (load "code:purify")
@@ -85,6 +84,7 @@
 (load "code:wire")
 (load "code:remote")
 (load "code:foreign")
+(load "code:setf-funs")
 
 ;;; Load the compiler.
 #-no-compiler
