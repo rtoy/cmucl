@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.24 1991/07/11 16:30:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.25 1991/10/03 18:32:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -390,9 +390,9 @@
 (defmacro deftransform (name (lambda-list &optional (arg-types '*) (result-type '*)
 					  &key result policy node defun-only
 					  eval-name)
-			     &body body)
+			     &body (body decls doc))
   "Deftransform Name (Lambda-List [Arg-Types] [Result-Type] {Key Value}*)
-               Declaration* Form*
+               Declaration* [Doc-String] Form*
   Define an IR1 transformation for Name.  An IR1 transformation computes a
   lambda that replaces the function variable reference for the call.  A
   transform may pass (decide not to transform the call) by calling the Give-Up
@@ -407,7 +407,8 @@
   automatically passes.  The Declarations apply to the bindings made by
   Deftransform at transformation time, rather than to the variables of the
   resulting lambda.  Bound-but-not-referenced warnings are suppressed for the
-  lambda-list variables.
+  lambda-list variables.  The Doc-String is used when printing efficiency notes
+  about the defined transform.
 
   Normally, the body evaluates to a form which becomes the body of an
   automatically constructed lambda.  We make Lambda-List the lambda-list for
@@ -446,7 +447,8 @@
   (let ((n-args (gensym))
 	(n-node (or node (gensym)))
 	(n-decls (gensym))
-	(n-lambda (gensym)))
+	(n-lambda (gensym))
+	(body `(,@decls ,@body)))
     (multiple-value-bind (parsed-form vars)
 			 (parse-deftransform
 			  lambda-list
@@ -469,11 +471,12 @@
 			  ,@,n-decls
 			  ,,n-lambda)))))))
 	(if defun-only
-	    `(defun ,name ,@stuff)
+	    `(defun ,name ,@(when doc `(,doc)) ,@stuff)
 	    `(%deftransform
 	      ,(if eval-name name `',name)
 	      '(function ,arg-types ,result-type)
-	      #'(lambda ,@stuff)))))))
+	      #'(lambda ,@stuff)
+	      ,doc))))))
 
 ;;;; Defknown, Defoptimizer:
 
