@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.8 1990/07/09 14:13:42 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.9 1990/07/10 13:17:58 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -964,13 +964,11 @@
 			  (> (+ length count)
 			     (integer-length most-positive-fixnum)))
 		     (bignum-ashift-left (make-small-bignum integer) count))
-		    ((and (minusp count) (< count (- length)))
-		     -1)
 		    (t
 		     (truly-the fixnum
 				(ash (truly-the fixnum integer) count))))))
 	   ((minusp count)
-	    -1)
+	    (if (minusp integer) -1 0))
 	   (t
 	    (bignum-ashift-left (make-small-bignum integer) count))))
     (bignum
