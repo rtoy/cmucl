@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.68 1990/09/06 17:46:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.69 1990/09/09 20:39:02 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -544,13 +544,44 @@
 
     ;; Static functions.
     two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
-    two-arg-<= two-arg->= two-arg-/= %negate two-arg-and two-arg-ior two-arg-xor
+    two-arg-<= two-arg->= two-arg-/= %negate
+    two-arg-and two-arg-ior two-arg-xor
     length two-arg-gcd two-arg-lcm
+
+    ;; Stuff for without interrupts.  ### Should be with free-interrupt-context
+    ;; above, but we don't want to have to recompile everything just right now.
+    mach::*interrupts-enabled* mach::*interrupt-pending*
     ))
 
 (defparameter exported-static-symbols
-  (subseq static-symbols 0 (1+ (position 'lisp::*free-interrupt-context-index*
-					 static-symbols))))
+  '(t
+
+    ;; Random stuff needed for initialization.
+    lisp::lisp-environment-list
+    lisp::lisp-command-line-list
+    lisp::*initial-symbols*
+    lisp::*lisp-initialization-functions*
+    lisp::%initial-function
+    lisp::*the-undefined-function*
+
+    ;; Free Pointers
+    lisp::*read-only-space-free-pointer*
+    lisp::*static-space-free-pointer*
+    lisp::*initial-dynamic-space-free-pointer*
+
+    ;; Things needed for non-local-exit.
+    lisp::*current-catch-block*
+    lisp::*current-unwind-protect-block*
+    *eval-stack-top*
+
+    ;; Interrupt Handling
+    lisp::*free-interrupt-context-index*
+    mach::*interrupts-enabled*
+    mach::*interrupt-pending*
+    ))
+
+
+
 
 (defun static-symbol-p (symbol)
   (member symbol static-symbols))
