@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.11 1991/05/23 17:55:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.12 1991/10/24 21:05:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -238,7 +238,7 @@
 	   `(%typep ,object ',spec))
 	  (t
 	   (ecase (first spec)
-	     (satisfies `(funcall #',(second spec) ,object))
+	     (satisfies `(if (funcall #',(second spec) ,object) t nil))
 	     ((not and)
 	      (once-only ((n-obj object))
 		`(,(first spec) ,@(mapcar #'(lambda (x) 
