@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.30 1991/10/22 18:37:56 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.31 1991/11/10 22:32:46 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1790,7 +1790,7 @@ gc_init()
 #else
         scavtab[type_SymbolHeader] = scav_boxed;
 #endif
-	scavtab[type_BaseCharacter] = scav_immediate;
+	scavtab[type_BaseChar] = scav_immediate;
 	scavtab[type_Sap] = scav_unboxed;
 	scavtab[type_UnboundMarker] = scav_immediate;
 	scavtab[type_WeakPointer] = scav_weak_pointer;
@@ -1829,7 +1829,7 @@ gc_init()
 	transother[type_FuncallableInstanceHeader] = trans_boxed;
 	transother[type_ValueCellHeader] = trans_boxed;
 	transother[type_SymbolHeader] = trans_boxed;
-	transother[type_BaseCharacter] = trans_immediate;
+	transother[type_BaseChar] = trans_immediate;
 	transother[type_Sap] = trans_unboxed;
 	transother[type_UnboundMarker] = trans_immediate;
 	transother[type_WeakPointer] = trans_weak_pointer;
@@ -1882,7 +1882,7 @@ gc_init()
 	sizetab[type_FuncallableInstanceHeader] = size_boxed;
 	sizetab[type_ValueCellHeader] = size_boxed;
 	sizetab[type_SymbolHeader] = size_boxed;
-	sizetab[type_BaseCharacter] = size_immediate;
+	sizetab[type_BaseChar] = size_immediate;
 	sizetab[type_Sap] = size_unboxed;
 	sizetab[type_UnboundMarker] = size_immediate;
 	sizetab[type_WeakPointer] = size_weak_pointer;

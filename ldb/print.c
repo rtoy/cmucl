@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.15 1990/12/18 23:25:34 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.16 1991/11/10 22:32:59 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -142,7 +142,7 @@ lispobj obj;
 
     type = TypeOf(obj);
     switch (type) {
-        case type_BaseCharacter:
+        case type_BaseChar:
             c = (obj>>8)&0xff;
             switch (c) {
                 case '\0':
@@ -200,7 +200,7 @@ lispobj obj;
 	    printf(", unknown type (0x%0x)", type);
 
     switch (TypeOf(obj)) {
-        case type_BaseCharacter:
+        case type_BaseChar:
             printf(": ");
             brief_otherimm(obj);
             break;
@@ -480,7 +480,7 @@ lispobj obj;
 		print_slots(weak_pointer_slots, 1, ptr);
                 break;
 
-            case type_BaseCharacter:
+            case type_BaseChar:
             case type_UnboundMarker:
                 NEWLINE;
                 printf("pointer to an immediate?");
