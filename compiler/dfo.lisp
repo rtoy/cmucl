@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.11 1991/04/04 14:01:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.12 1991/08/28 02:18:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,21 +184,29 @@
 ;;; Find-Reference-Functions  --  Internal
 ;;;
 ;;;    Return a list of all the home lambdas that reference Fun (may contain
-;;; duplications).  References to XEP lambdas in top-level lambdas are excluded
+;;; duplications).
+;;;
+;;;    References to XEP lambdas in top-level lambdas are excluded
 ;;; to keep run-time definitions from being joined to load-time code.  We mark
 ;;; any such top-level references as :notinline to prevent the (unlikely)
 ;;; possiblity that they might later be converted.  This preserves the
 ;;; invariant that local calls are always intra-component without joining in
 ;;; all top-level code.
 ;;;
+;;;   References in deleted functions are also ignored, since this code will be
+;;; deleted eventually.
+;;;
 (defun find-reference-functions (fun)
   (collect ((res))
     (dolist (ref (leaf-refs fun))
-      (let ((home (lambda-home (lexenv-lambda (node-lexenv ref)))))
-	(if (and (eq (functional-kind home) :top-level)
-		 (eq (functional-kind fun) :external))
-	    (setf (ref-inlinep ref) :notinline)
-	    (res home))))
+      (let* ((home (lambda-home (lexenv-lambda (node-lexenv ref))))
+	     (home-kind (functional-kind home)))
+	(cond ((and (eq (functional-kind home) :top-level)
+		    (eq home-kind :external))
+	       (setf (ref-inlinep ref) :notinline))
+	      ((eq home-kind :deleted))
+	      (t
+	       (res home)))))
     (res)))
 
 
