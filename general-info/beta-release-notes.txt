@@ -1,3 +1,173 @@
+	    Release notes for CMU Common Lisp 15a, 17 October 91
+
+These release notes cover changes since the beta release of version 14c on 6
+June 91.  SPARCstations and Sun4's are now supported under SunOS (as well as
+Mach), which makes CMU CL more usable outside of the CMU environment.  CMU CL
+also runs on Mach (or OSF/1) DECstations, and IBM RT support is coming real
+soon now.
+
+
+			    GENERAL SYSTEM CODE
+
+Bug fixes:
+ -- MAKE-ARRAY now to allows :INITIAL-CONTENTS any kind of of sequence, not
+    just a list.
+ -- VECTOR-PUSH and VECTOR-PUSH-EXTEND now return the original fill
+    pointer, not the new fill pointer.
+ -- VECTOR-POP now returns the value indexed by the new fill pointer, not
+    the original fill pointer.
+ -- Fixed two bugs in bignum division.
+ -- FORMAT-PRINT-NUMBER now correctly inserts commas for negative numbers
+    (don't print -,123).
+ -- Fixed GET-SETF-METHOD to only inhibit setf macros when there is a local
+    function, not also when there is a local macro.
+ -- Changed the debugger to use *READ-SUPPRESS* when skipping over top-level
+    forms in the source file to prevent spurious read errors.
+ -- In the printer, deleted an incorrect and questionably optimal
+    optimization of symbol package qualification.
+ -- When printing characters, prefer the semi-standard character-names
+    NEWLINE, ESCAPE and DELETE to the old LINEFEED, ALTMODE and RUBOUT.
+ -- Fixed one-off error in list REMOVE-DUPLICATES :FROM-END.  Fixed
+    SUBSTITUTE & friends to pass arguments to the TEST in the right order.
+    Fixed SUBSTITUTE not to randomly apply the KEY to the OLD value.  Changed
+    LIST NSUBSTITUTE & friends to work in the :FROM-END case.
+ -- Several bug-fixes to RUN-PROGRAM and subprocess I/O.
+ -- Fixed all recursive READ calls in sharp-macros to specify eof-error-p T, so
+    that EOF errors are signalled when appropriate.
+ -- The REMOTE RPC protocol (used for slave control) can now send bignums.
+ -- Passing of unused arguments to interpreted functions now works.  Previously
+    the variables would be bound to the wrong arguments.
+ -- Many fixes to the time parsing and printing extensions.
+
+X3J13 cleanups:
+ -- Added #P pathname read syntax, and changed the pathname printer to use it.
+ -- Added :KEY argument to REDUCE.
+
+Enhancements:
+ -- Added code to compile the argument to TIME when possible, and print a
+    warning when it isn't.  Optimized the TIME macro to keep the consing
+    overhead of using it zero.
+ -- Changed all places absolute pathnames were used to indirect search-lists,
+    mostly library:.  "lisp" must now be findable on your PATH for Hemlock to
+    be able to start slaves.
+ -- Increased readability of DESCRIBE function output by printing function and
+    macro doc strings before arg and result info.
+ -- The CMUCLLIB search path environment variable is now used to find lisp.core
+    and other library files, instead of always assuming the path
+    /usr/misc/.cmucl/lib.
+
+
+				 COMPILER
+
+Bug fixes:
+ -- EVAL now uses the constant value recorded in the compiler environment
+    that compile-time references to constants works better.  Now
+    (defconstant a 3) (defconstant b (+ a 4)) works again.
+ -- Don't try to infer the bounds of non-simple arrays, since they can change.
+ -- Fixed some problems with block compilation, maybe-inline functions and
+    unused function deletion.
+ -- DEFMETHODs can now use &ALLOW-OTHER-KEYS without killing the compiler.
+ -- Fixed VALUES declaration to work correctly when zero values are specified.
+ -- The FORMAT transform now warns if there are to many or too few args.
+ -- Changed SYMBOL-MACRO-LET to SYMBOL-MACROLET.
+
+X3J13 cleanups:
+ -- Make all non-symbol atoms self-evaluate.
+
+Enhancements:
+ -- Made the default for COMPILE-FILE's :error-file argument be nil.
+ -- Changed notes about incompatible changes in function arguments lists to be
+    a warning rather than a note.
+ -- Source-level optimization efficiency notes now print out a
+    transform-specific string to describe what the transform was trying to do,
+    instead of just saying "unable to optimize."
+
+
+				  HEMLOCK
+
+This is version 3.5.
+
+Note: The default value of "Slave Utility" is now just "lisp" which hopefully
+will be found on path:.  If you don't have lisp on your path, you need to set
+"Slave Utility" to the full pathname of lisp, /usr/misc/.cmucl/bin/lisp on CMU
+machines.
+
+Bug fixes:
+ -- Under TTY screen management, a MAKE-WINDOW - DELETE-WINDOW sequence now
+    leaves the screen unchanged.
+ -- Fixed some character attribute constants to make 8-bit chars work.
+ -- "Center Line" now works when invoked on the last line of the buffer.
+ -- Fixed "Move Over )" to use a permanent mark instead of a temporary mark
+    because it deletes text.
+ -- Fixed sentence motion to be able to move to the end of the buffer.
+ -- Fixed the hemlock banner in the status line to not have "!" after
+    the date.
+
+Enhancements:
+ -- Removed the definitions of the obsolete COMMAND-CHAR-BITS-LIMIT and
+    COMMAND-CHAR-CODE-LIMIT.
+ -- Modified "Visit File" to issue a loud message whenever another buffer
+    already contains the file visited. The quiet message often went unnoticed,
+    defeating its purpose.
+ -- The definitions in FLET, LABELS and MACROLET are now indented correctly.
+ -- Added DEFINDENT's for the "DEBUG-INTERNALS" interface.
+ -- Modified Lisp indentation to check if the mark in was in a string context.
+    If it is, then we go to the column after the opening double quote.
+    Otherwise, we use the first preceding non-blank line's indentation.  This
+    fixes the problem with doc strings and ERROR strings which got indented
+    respectively at the beginning of the line and under the paren for the ERROR
+    call.
+ -- Added some prototype netnews support.  Details to be anounced later.
+ -- Added font support for the TTY.  Allow active region highlighting and open
+    paren highlighting when on the TTY, as they now work.
+ -- Changed the compile-in-slave utilities to count notes and display in
+    completion message.  Also fixed not to print echo area messages "Error in
+    NIL ..."
+
+New commands:
+
+"Fill Lisp Comment Paragraph"	Lisp: M-q
+   Fills a flushleft or indented Lisp comment, or lines all beginning with the
+   same initial, non-empty blankspace.  When filling a comment, the current
+   line is used to determine a fill prefix by scanning for the first semicolon,
+   skipping any others, and finding the first non-whitespace character;
+   otherwise, the initial whitespace is used.
+
+"Shell Complete Filename"	Process: M-Escape
+    In a shell buffer, attempts to complete the filename immediately before
+    point.  The commands that start "Process" buffers with shells establish a
+    stream with the shell that tries to track the current working directory of
+    the shell.  It uses the variable "Current Working Directory" to do this.
+    For it to work, you should add the following to your .cshrc file:
+       if ($term == emacs) then
+	  alias cd 'cd \!* ; echo ""`pwd`"/"'
+	  alias popd 'popd \!* ; echo ""`pwd`"/"'
+	  alias pushd 'pushd \!* ; echo ""`pwd`"/"'
+       endif
+
+"Manual Page"
+    Runs man(1) in a scratch buffer and displays it in the current window.
+
+"Typescript Slave Status"	Typescript: H-s
+   Interrupt the slave and cause it to print status information.
+
+
+Hemlock-internals changes:
+ -- CREATE-WINDOW-FROM-CURRENT now creates a window according to its new
+    proportion argument instead of simply splitting the current window in two.
+    It returns nil without doing anything if either window is too small.
+ -- WINDOW-GROUP-CHANGED no longer unifies the sizes of window when the
+    user resizes a group.  It now tries to distribute the new size of the group
+    according to the proportions of the old size consumed by the windows.
+ -- Changed ARRAY-ELEMENT-FROM-MARK to use AREF for the Netnews stuff.  I
+    documented this to be an internal interface since a few other modes use it.
+ -- WRITE-FILE now takes an :append argument.
+ -- Modified %SET-MODELINE-FIELD-FUNCTION to allow its function argument to be
+    a symbol or function since the purpose is to FUNCALL the thing.  Since the
+    new system is up to spec on the disjointedness of functions, this needed to
+    be fixed for usefulness.
+
+
 	Release notes for CMU Common Lisp 14c, 6 June 91
 
   ** The FASL file format has changed, so all files must be recompiled. **
@@ -6,23 +176,6 @@ These notes describe changes since the beta release of 3 February 91.  This is
 the first CMU CL release to run on Mach SPARCs as well as on PMAXen (DECstation
 3100 or 5000).  Version 14c will go out to both beta and default, since there
 is currently no default release.
-
-To get CMU Common Lisp, run:
-    /usr/cs/etc/modmisc - cs.misc.cmucl
-This establishes /usr/misc/.cmucl as a symbolic link to the release area.
-Add /usr/misc/.cmucl/bin to your PATH, then run "lisp".  Note that the first
-time you run Lisp, it will take AFS several minutes to copy the image into its
-local cache.  Subsequent starts will be much faster.
-
-These release notes are in /usr/misc/.cmucl/doc/release.txt.  An introduction
-to CMU CL is in intro.txt in the same directory.  Hardcopy documentation is
-available in the document room.  For documentation of recent compiler
-extensions (block compilation, etc.) you can print:
-    /afs/cs/project/clisp/new-compiler/scribe/cmu-user/compiler-update.ps
-This replaces chapters 6 and 7 of the hardcopy User's Manual.
-
-Send bug reports and questions to cmucl-bugs@cs.cmu.edu.  If you send a bug
-report to gripe, they will just forward it to this mailing list.
 
 This release has a substantial space reduction due to compiling with debug-info
 1 and reduced safety.  The core is currently 19.2 meg, which is 7 meg smaller
