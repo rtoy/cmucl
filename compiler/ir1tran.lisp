@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.125 2001/10/15 14:36:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.126 2001/10/28 14:35:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2489,6 +2489,8 @@
 	    (def (second spec)))
 	(unless (symbolp name)
 	  (compiler-error "Symbol macro name is not a symbol: ~S." name))
+        (when (eq (info variable kind name) :special)
+          (compiler-error "Attempt to bind a special variable with SYMBOL-MACROLET: ~S." name))
 	(when (assoc name (res) :test #'eq)
 	  (compiler-warning "Repeated name in SYMBOL-MACROLET: ~S." name))
 	(res `(,name . (MACRO . ,def)))))
