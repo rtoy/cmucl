@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.96 2004/01/09 04:20:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.97 2004/01/10 05:01:41 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -590,6 +590,15 @@
   '(coerce (%hypot (coerce (realpart x) 'double-float)
 		   (coerce (imagpart x) 'double-float))
 	  'single-float))
+
+(deftransform abs ((x) (real) real)
+  (let ((x-type (continuation-type x)))
+    ;; If the arg is known to non-negative, we can just return the
+    ;; arg.  However, (abs -0.0) is 0.0, so this transform only works
+    ;; on floats that are known not to include negative zero.
+    (if (csubtypep x-type (specifier-type '(or (rational 0) (float (0d0)) (member 0f0 0d0))))
+	'x
+	(give-up))))
 
 (deftransform phase ((x) ((complex double-float)) double-float :when :both)
   '(%atan2 (imagpart x) (realpart x)))
