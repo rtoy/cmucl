@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.9 1992/03/11 18:30:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.10 1992/03/25 16:14:44 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -22,7 +22,7 @@
 
 
 
-;;;; Make-call-out-argument-tns and support stuff.
+;;;; Make-call-out-tns and support stuff.
 
 (defun c-call-wired-tn (primitive-type sc-name offset)
   (make-wired-tn (primitive-type-or-lose primitive-type)
@@ -70,7 +70,7 @@
 	      (invoke-alien-type-method :result-tn type state))
 	  (alien-values-type-values type)))
 
-(def-vm-support-routine make-call-out-argument-tns (type)
+(def-vm-support-routine make-call-out-tns (type)
   (declare (type alien-function-type type))
   (let ((arg-state (make-arg-state)))
     (collect ((arg-tns))
