@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.58 1993/05/27 01:30:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.59 1993/05/27 01:33:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -923,7 +923,7 @@ default-value-8
    (args-arg :scs (any-reg) :target args)
    (function-arg :scs (descriptor-reg) :target lexenv)
    (ocfp-arg :scs (any-reg) :target ocfp)
-   (lra-arg :scs (descriptor-reg) :target lra))
+   (lra-arg :scs (#-gengc descriptor-reg #+gengc any-reg) :target lra))
 
   (:temporary (:sc any-reg :offset nl0-offset :from (:argument 0)) args)
   (:temporary (:sc any-reg :offset lexenv-offset :from (:argument 1)) lexenv)
