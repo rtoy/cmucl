@@ -155,6 +155,15 @@
   (:generator 1
     (inst lr val cont-tn)))
 
+
+;;; Notes the place at which the environment is properly initialized, for
+;;; debug-info purposes.
+;;;
+(define-vop (note-environment-start)
+  (:info start-lab)
+  (:generator 0
+    (emit-label start-lab)))
+
 
 ;;; Default-Unknown-Values  --  Internal
 ;;;
@@ -844,9 +853,15 @@ default-value-5
 ;;;; XEP hackery:
 
 
+;;; We get to emit the start label, since we might need to emit variable cruft
+;;; to align it, etc.
+;;;
 (define-vop (allocate-frame)
+  (:info start-lab)
   (:generator 1
+    (emit-label start-lab)
     (inst cal sp-tn cont-tn (current-frame-size))))
+
 
 ;;; Fetch the constant pool from the function entry structure.
 ;;;
