@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.18 2000/01/16 20:12:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.19 2000/01/17 18:08:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -209,7 +209,7 @@
   (:args (number :scs (unsigned-reg) :to :save)
 	 (amount :scs (signed-reg immediate)))
   (:arg-types unsigned-num signed-num)
-  (:results (result :scs unsigned-reg))
+  (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:translate ash)
   (:policy :fast-safe)
@@ -243,10 +243,10 @@
 
 (define-vop (fast-ash/signed=>signed)
   (:note "inline ASH")
-  (:args (number :scs signed-reg :to :save)
+  (:args (number :scs (signed-reg) :to :save)
 	 (amount :scs (signed-reg immediate)))
   (:arg-types signed-num signed-num)
-  (:results (result :scs signed-reg))
+  (:results (result :scs (signed-reg)))
   (:result-types signed-num)
   (:translate ash)
   (:policy :fast-safe)
