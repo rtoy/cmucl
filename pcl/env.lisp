@@ -201,7 +201,7 @@
     (when used
       (format stream "It uses the packages ~{~S~^, ~}.~%"
 	      (mapcar #'package-name used))))
-  (let ((users (package-use-list object)))
+  (let ((users (package-used-by-list object)))
     (when users
       (format stream "It is used by the packages ~{~S~^, ~}.~%"
 	      (mapcar #'package-name users)))))
