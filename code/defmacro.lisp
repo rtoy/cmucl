@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.30 2003/07/15 13:39:02 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.31 2003/07/15 17:52:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,6 +83,9 @@
 		       (unless (null tail) (new '&rest tail))
 		       (new)))
       (new (car tail)))))
+
+(defun dotted-list-length (list)
+  (loop for tail on list until (atom tail) count t))
 
 (defun parse-defmacro-lambda-list
        (lambda-list arg-list-name name error-kind error-fun
@@ -273,9 +276,9 @@
 	      (t
 	       (simple-program-error "Non-symbol in lambda-list - ~S." var)))))
     (push `(unless (<= ,minimum
-		       (length (the list ,(if top-level
-					      `(cdr ,arg-list-name)
-					      arg-list-name)))
+		       (dotted-list-length (the list ,(if top-level
+							  `(cdr ,arg-list-name)
+							  arg-list-name)))
 		       ,@(unless restp
 			   (list maximum)))
 	     ,(let ((arg (if top-level
