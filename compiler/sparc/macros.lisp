@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.22 2003/08/26 11:50:04 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.23 2003/08/27 17:18:00 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.22 2003/08/26 11:50:04 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.23 2003/08/27 17:18:00 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -218,8 +218,11 @@
 	  ;; allocation pointer.  Then add SIZE bytes to the
 	  ;; allocation and set CSP to that, so we have the desired
 	  ;; space.
-	  (inst add ,temp-tn csp-tn #.(1- (expt 2 lowtag-bits)))
-	  (inst andn ,temp-tn #.(1- (expt 2 lowtag-bits)))
+
+	  ;; Make sure the temp-tn is a non-descriptor register!
+	  (assert (sc-is ,temp-tn non-descriptor-reg))
+	  (inst add ,temp-tn csp-tn vm:lowtag-mask)
+	  (inst andn ,temp-tn vm:lowtag-mask)
 	  (inst or ,result-tn ,temp-tn ,lowtag)
 	  (inst add csp-tn ,temp-tn ,size))
 	 #-gencgc
