@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.23 2001/06/26 03:14:43 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.24 2002/09/19 17:46:03 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -433,7 +433,7 @@
 							   nil
 							   dstate)
 		    (let ((offs (- offset disassem::nil-addr)))
-		      (when (typep offs 'offset)
+		      (when (typep offs 'disassem::offset)
 			(or (disassem::maybe-note-nil-indexed-symbol-slot-ref offs
 									      dstate)
 			    (disassem::maybe-note-static-function offs dstate))))))
@@ -445,7 +445,7 @@
     (if (zerop offset)
 	(format stream "#x~X" value)
 	(format stream "~A" value))
-    (when (typep offset 'offset)
+    (when (typep offset 'disassem::offset)
       (or (disassem::maybe-note-nil-indexed-object offset dstate)
 	  (disassem::maybe-note-assembler-routine value stream dstate)
 	  (nth-value 1
@@ -1553,7 +1553,7 @@
 	     ((register-p that)
 	      (test-reg-and-something that this))
 	     (t
-	      (error "Bogus operans for TEST: ~S and ~S" this that)))))))
+	      (error "Bogus operands for TEST: ~S and ~S" this that)))))))
 
 (define-instruction or (segment dst src)
   (:printer-list
