@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.95 2004/08/27 03:08:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.96 2004/08/27 12:25:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1433,6 +1433,35 @@ radix-R.  If you have a power-list then pass it in as PL."
 	       (setf (schar s 0) #\.)
 	       (values s (length s) t (zerop fdigits) 0))
 	     (values "." 1 t t 0)))
+	((not (or width fdigits scale fmin))
+	 ;; This is a hacky way to make ~f produce the same results as
+	 ;; prin1 for the range of numbers where prin1 and ~f should
+	 ;; agree.
+	 (multiple-value-bind (e string)
+	     (flonum-to-digits x)
+	   (let* ((len (length string))
+		  (lpoint (not (plusp e)))
+		  (tpoint (>= e len))
+		  (slen (+ 1 (if (> e len)
+				 e
+				 (+ len (max 0 (- e))))))
+		  (s (make-string slen)))
+	     (cond ((minusp e)
+		    (setf (aref s 0) #\.)
+		    (fill s #\0 :start 1 :end (1+ (- e)))
+		    (replace s string :start1 (1+ (- e))))
+		   (lpoint
+		    (setf (aref s 0) #\.)
+		    (replace s string :start1 1))
+		   (tpoint
+		    (replace s string)
+		    (fill s #\0 :start len :end e)
+		    (setf (aref s e) #\.))
+		   (t
+		    (replace s string :end2 e)
+		    (replace s string :start1 (1+ e) :start2 e)
+		    (setf (aref s e) #\.)))
+	     (values s slen lpoint tpoint (max 0 e)))))
 	(t
 	 (multiple-value-bind (sig exp)
 			      (integer-decode-float x)
