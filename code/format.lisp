@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.39 1998/06/19 15:09:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.40 1998/06/25 20:10:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2352,8 +2352,7 @@
   (let ((symbol (extract-user-function-name string start end)))
     (collect ((param-names) (bindings))
       (dolist (param-and-offset params)
-	(let ((offset (car param-and-offset))
-	      (param (cdr param-and-offset)))
+	(let ((param (cdr param-and-offset)))
 	  (let ((param-name (gensym)))
 	    (param-names param-name)
 	    (bindings `(,param-name
@@ -2369,8 +2368,7 @@
   (let ((symbol (extract-user-function-name string start end)))
     (collect ((args))
       (dolist (param-and-offset params)
-	(let ((offset (car param-and-offset))
-	      (param (cdr param-and-offset)))
+	(let ((param (cdr param-and-offset)))
 	  (case param
 	    (:arg (args (next-arg)))
 	    (:remaining (args (length args)))
