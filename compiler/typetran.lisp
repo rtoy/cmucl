@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.27 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.28 1996/07/12 21:01:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -365,10 +365,10 @@
 		       nil))))
     (multiple-value-bind
 	(pred get-layout)
-	(cond ((csubtypep class (specifier-type 'instance))
-	       (values '%instancep '%instance-layout))
-	      ((csubtypep class (specifier-type 'funcallable-instance))
+	(cond ((csubtypep class (specifier-type 'funcallable-instance))
 	       (values 'funcallable-instance-p '%funcallable-instance-layout))
+	      ((csubtypep class (specifier-type 'instance))
+	       (values '%instancep '%instance-layout))
 	      (t
 	       (values '(lambda (x) (declare (ignore x)) t) 'layout-of)))
       (cond
