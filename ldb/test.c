@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.5 1990/05/26 01:23:30 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.6 1990/07/01 04:49:00 wlott Exp $ */
 /* Extra random routines for testing stuff. */
 
 #include <signal.h>
@@ -37,7 +37,7 @@ struct sigcontext *context;
 
     if ((bad_inst >> 26) == 0 && (bad_inst & 0x3f) == 0xd) {
         /* It was a break. */
-        switch (code) {
+        switch ((bad_inst >> 16) & 0x3ff) {
             case trap_Halt:
                 printf("%primitive halt called; the party is over.\n");
                 break;
@@ -69,7 +69,7 @@ struct sigcontext *context;
 
     mask = sigsetmask(0);
 
-    monitor();
+    ldb_monitor();
 
     sigsetmask(mask);
 }
@@ -165,10 +165,9 @@ struct sigcontext *context;
 
 test_init()
 {
-    extern int throw_to_top(), throw_to_monitor();
+    extern int throw_to_monitor();
 
     install_handler(SIGINT, signal_handler);
-    install_handler(SIGQUIT, throw_to_top);
     install_handler(SIGTRAP, signal_handler);
     install_handler(SIGFPE, sigfpe_handler);
 }
