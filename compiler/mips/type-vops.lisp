@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.3 1990/02/26 22:53:50 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.4 1990/03/13 00:03:17 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -21,7 +21,7 @@
 ;;; ### These belongs in compiler/fundb.lisp
 ;;; 
 (defknown realp (t) boolean (movable foldable flushable))
-(defknown sap-p (t) boolean (movable foldable flushable))
+(defknown system-area-pointer-p (t) boolean (movable foldable flushable))
 
 
 ;;;; Simple type checking and testing:
@@ -105,7 +105,7 @@
   (frob string-char-p check-base-character base-character
     vm:base-character-type di:object-not-base-character-error)
 
-  (frob sap-p check-sap sap
+  (frob system-area-pointer-p check-system-area-pointer system-area-pointer
     vm:sap-type di:object-not-sap-error))
 
 
