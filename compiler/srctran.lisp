@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.27 1991/02/20 14:59:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.28 1991/09/03 17:35:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.27 1991/02/20 14:59:43 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -1398,6 +1396,11 @@
 	    ;; Write out the final part of the string.
 	    (forms `(write-string ,(subseq control index end)
 				  ,@stream-form))
+	    (when args
+	      (compiler-warning "~R extra format argument~:P.  Ignoring..."
+				(length args))
+	      (forms `(progn ,@args)))
+
 	    (return `(lambda (stream control ,@arg-vars)
 		       (declare (ignorable stream control))
 		       ,@(forms)
@@ -1414,30 +1417,34 @@
 		     ,@stream-form)))
 	  
 	  ;; Get the format directive.
-	  (forms
-	   (case (schar control (1+ command-index))
-	     ((#\b #\B) `(let ((*print-base* 2))
-			   (princ ,(pop args) ,@stream-form)))
-	     ((#\o #\O) `(let ((*print-base* 8))
-			   (princ ,(pop args) ,@stream-form)))
-	     ((#\d #\D) `(let ((*print-base* 10))
-			   (princ ,(pop args) ,@stream-form)))
-	     ((#\x #\X) `(let ((*print-base* 16))
-			   (princ ,(pop args) ,@stream-form)))
-	     ((#\a #\A) `(princ ,(pop args) ,@stream-form))
-	     ((#\s #\S) `(prin1 ,(pop args) ,@stream-form))
-	     (#\% `(terpri ,@stream-form))
-	     (#\& `(fresh-line ,@stream-form))
-	     (#\| `(write-char #\form ,@stream-form))
-	     (#\~ `(write-char #\~ ,@stream-form))
-	     (#\newline
-	      (let ((new-pos (position-if-not
-			      #'lisp::whitespace-char-p
-			      control
-			      :start (+ command-index 2))))
-		(if new-pos
-		    (setq command-index (- new-pos 2)))))
-	     (t
-	      (give-up))))
+	  (flet ((next-arg ()
+		   (unless args
+		     (abort-transform "Missing FORMAT argument."))
+		   (pop args)))
+	    (forms
+	     (case (schar control (1+ command-index))
+	       ((#\b #\B) `(let ((*print-base* 2))
+			     (princ ,(next-arg) ,@stream-form)))
+	       ((#\o #\O) `(let ((*print-base* 8))
+			     (princ ,(next-arg) ,@stream-form)))
+	       ((#\d #\D) `(let ((*print-base* 10))
+			     (princ ,(next-arg) ,@stream-form)))
+	       ((#\x #\X) `(let ((*print-base* 16))
+			     (princ ,(next-arg) ,@stream-form)))
+	       ((#\a #\A) `(princ ,(next-arg) ,@stream-form))
+	       ((#\s #\S) `(prin1 ,(next-arg) ,@stream-form))
+	       (#\% `(terpri ,@stream-form))
+	       (#\& `(fresh-line ,@stream-form))
+	       (#\| `(write-char #\form ,@stream-form))
+	       (#\~ `(write-char #\~ ,@stream-form))
+	       (#\newline
+		(let ((new-pos (position-if-not
+				#'lisp::whitespace-char-p
+				control
+				:start (+ command-index 2))))
+		  (if new-pos
+		      (setq command-index (- new-pos 2)))))
+	       (t
+		(give-up)))))
 
 	  (setq index (+ command-index 2)))))))
