@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.23 1992/02/21 23:57:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.24 1992/02/25 04:17:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,82 +159,132 @@
 
 (defmacro def-system-ref-and-set
 	  (ref-name set-name sc type size &optional signed)
-  `(progn
-     (define-vop (,ref-name)
-       (:translate ,ref-name)
-       (:policy :fast-safe)
-       (:args (object :scs (sap-reg) :target sap)
-	      (offset :scs (unsigned-reg negative-immediate zero immediate)))
-       (:arg-types system-area-pointer unsigned-num)
-       (:results (result :scs (,sc)))
-       (:result-types ,type)
-       (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
-       (:generator 5
-	 (multiple-value-bind
-	     (base offset)
-	     (sc-case offset
-	       ((zero)
-		(values object 0))
-	       ((negative-immediate immediate)
-		(values object (tn-value offset)))
-	       ((unsigned-reg)
-		(inst addu sap object offset)
-		(values sap 0)))
+  (let ((ref-name-c (symbolicate ref-name "-C"))
+	(set-name-c (symbolicate set-name "-C")))
+    `(progn
+       (define-vop (,ref-name)
+	 (:translate ,ref-name)
+	 (:policy :fast-safe)
+	 (:args (object :scs (sap-reg) :target sap)
+		(offset :scs (unsigned-reg)))
+	 (:arg-types system-area-pointer unsigned-num)
+	 (:results (result :scs (,sc)))
+	 (:result-types ,type)
+	 (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
+	 (:generator 5
+	   (inst addu sap object offset)
 	   ,@(ecase size
 	       (:byte
 		(if signed
-		    '((inst lb result base offset))
-		    '((inst lbu result base offset))))
+		    '((inst lb result sap 0))
+		    '((inst lbu result sap 0))))
+		 (:short
+		  (if signed
+		      '((inst lh result sap 0))
+		      '((inst lhu result sap 0))))
+		 (:long
+		  '((inst lw result sap 0)))
+		 (:single
+		  '((inst lwc1 result sap 0)))
+		 (:double
+		  '((inst lwc1 result sap 0)
+		    (inst lwc1-odd result sap vm:word-bytes))))
+	   (inst nop)))
+       (define-vop (,ref-name-c)
+	 (:translate ,ref-name)
+	 (:policy :fast-safe)
+	 (:args (object :scs (sap-reg)))
+	 (:arg-types system-area-pointer
+		     (:constant ,(if (eq size :double)
+				     ;; We need to be able to add 4.
+				     `(integer ,(- (ash 1 16))
+					       ,(- (ash 1 16) 5))
+				     '(signed-byte 16))))
+	 (:info offset)
+	 (:results (result :scs (,sc)))
+	 (:result-types ,type)
+	 (:generator 4
+	   ,@(ecase size
+	       (:byte
+		(if signed
+		    '((inst lb result object offset))
+		    '((inst lbu result object offset))))
 	       (:short
 		(if signed
-		    '((inst lh result base offset))
-		    '((inst lhu result base offset))))
+		    '((inst lh result object offset))
+		    '((inst lhu result object offset))))
 	       (:long
-		'((inst lw result base offset)))
+		'((inst lw result object offset)))
 	       (:single
-		'((inst lwc1 result base offset)))
+		'((inst lwc1 result object offset)))
 	       (:double
-		'((inst lwc1 result base offset)
-		  (inst lwc1-odd result base (+ offset vm:word-bytes)))))
-	   (inst nop))))
-     (define-vop (,set-name)
-       (:translate ,set-name)
-       (:policy :fast-safe)
-       (:args (object :scs (sap-reg) :target sap)
-	      (offset :scs (unsigned-reg negative-immediate zero immediate))
-	      (value :scs (,sc) :target result))
-       (:arg-types system-area-pointer unsigned-num ,type)
-       (:results (result :scs (,sc)))
-       (:result-types ,type)
-       (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
-       (:generator 5
-	 (multiple-value-bind
-	     (base offset)
-	     (sc-case offset
-	       ((zero)
-		(values object 0))
-	       ((negative-immediate immediate)
-		(values object (tn-value offset)))
-	       ((unsigned-reg)
-		(inst addu sap object offset)
-		(values sap 0)))
+		'((inst lwc1 result object offset)
+		  (inst lwc1-odd result object (+ offset vm:word-bytes)))))
+	   (inst nop)))
+       (define-vop (,set-name)
+	 (:translate ,set-name)
+	 (:policy :fast-safe)
+	 (:args (object :scs (sap-reg) :target sap)
+		(offset :scs (unsigned-reg))
+		(value :scs (,sc) :target result))
+	 (:arg-types system-area-pointer unsigned-num ,type)
+	 (:results (result :scs (,sc)))
+	 (:result-types ,type)
+	 (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
+	 (:generator 5
+	   (inst addu sap object offset)
 	   ,@(ecase size
 	       (:byte
-		'((inst sb value base offset)
+		'((inst sb value sap 0)
 		  (move result value)))
 	       (:short
-		'((inst sh value base offset)
+		'((inst sh value sap 0)
 		  (move result value)))
 	       (:long
-		'((inst sw value base offset)
+		'((inst sw value sap 0)
 		  (move result value)))
 	       (:single
-		'((inst swc1 value base offset)
+		'((inst swc1 value sap 0)
 		  (unless (location= result value)
 		    (inst move :single result value))))
 	       (:double
-		'((inst swc1 value base offset)
-		  (inst swc1-odd value base (+ offset vm:word-bytes))
+		'((inst swc1 value sap 0)
+		  (inst swc1-odd value sap vm:word-bytes)
+		  (unless (location= result value)
+		    (inst move :double result value)))))))
+       (define-vop (,set-name-c)
+	 (:translate ,set-name)
+	 (:policy :fast-safe)
+	 (:args (object :scs (sap-reg))
+		(value :scs (,sc) :target result))
+	 (:arg-types system-area-pointer
+		     (:constant ,(if (eq size :double)
+				     ;; We need to be able to add 4.
+				     `(integer ,(- (ash 1 16))
+					       ,(- (ash 1 16) 5))
+				     '(signed-byte 16)))
+		     ,type)
+	 (:info offset)
+	 (:results (result :scs (,sc)))
+	 (:result-types ,type)
+	 (:generator 5
+	   ,@(ecase size
+	       (:byte
+		'((inst sb value object offset)
+		  (move result value)))
+	       (:short
+		'((inst sh value object offset)
+		  (move result value)))
+	       (:long
+		'((inst sw value object offset)
+		  (move result value)))
+	       (:single
+		'((inst swc1 value object offset)
+		  (unless (location= result value)
+		    (inst move :single result value))))
+	       (:double
+		'((inst swc1 value object offset)
+		  (inst swc1-odd value object (+ offset vm:word-bytes))
 		  (unless (location= result value)
 		    (inst move :double result value))))))))))
 
@@ -272,26 +322,3 @@
     (inst addu sap vector
 	  (- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))))
 
-
-
-;;;; ### Noise to allow old forms to continue to work until they are gone.
-
-(macrolet ((frob (prim func)
-	     `(def-primitive-translator ,prim (&rest args)
-		(warn "Someone used %primitive ~S -- should be ~S."
-		      ',prim ',func)
-		`(,',func ,@args))))
-  (frob 32bit-system-ref sap-ref-32)
-  (frob unsigned-32bit-system-ref sap-ref-32)
-  (frob 16bit-system-ref sap-ref-16)
-  (frob 8bit-system-ref sap-ref-8))
-
-(macrolet ((frob (prim func)
-	     `(def-primitive-translator ,prim (&rest args)
-		(warn "Someone used %primitive ~S -- should be ~S."
-		      ',prim (list 'setf ',func))
-		`(setf ,',func ,@args))))
-  (frob 32bit-system-set sap-ref-32)
-  (frob signed-32bit-system-set sap-ref-32)
-  (frob 16bit-system-set sap-ref-16)
-  (frob 8bit-system-set sap-ref-8))
