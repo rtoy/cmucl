@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.34 1990/06/22 18:10:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.35 1990/06/29 11:01:25 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -265,17 +265,18 @@
 (use-package "SYSTEM")
 (use-package "BIGNUM")
 
-(export '(%array-fill-pointer %array-available-elements %array-data-vector
-	  %array-displacement %array-displaced-p %array-dimension
-	  %check-bound %dpb %ldb %negate %sxhash-simple-string
-	  %sxhash-simple-substring *empty-type* *eval-stack-top*
-	  *null-type* *universal-type* *unparse-function-type-simplify*
-	  *wild-type* 32bit-logical-not 32bit-logical-nor 32bit-logical-and
-	  32bit-logical-or 32bit-logical-xor always-subtypep args-type
-	  args-type-allowp args-type-keyp args-type-keywords
-	  args-type-optional args-type-p args-type-required args-type-rest
-	  array-rank array-total-size array-type array-type-complexp
-	  array-type-dimensions array-type-element-type array-type-p
+(export '(%array-fill-pointer %array-fill-pointer-p
+	  %array-available-elements %array-data-vector %array-displacement
+	  %array-displaced-p %array-dimension %check-bound %dpb %ldb
+	  %negate %sxhash-simple-string %sxhash-simple-substring
+	  *empty-type* *eval-stack-top* *null-type* *universal-type*
+	  *unparse-function-type-simplify* *wild-type* 32bit-logical-not
+	  32bit-logical-nor 32bit-logical-and 32bit-logical-or
+	  32bit-logical-xor always-subtypep args-type args-type-allowp
+	  args-type-keyp args-type-keywords args-type-optional args-type-p
+	  args-type-required args-type-rest array-rank array-total-size
+	  array-type array-type-complexp array-type-dimensions
+	  array-type-element-type array-type-p
 	  array-type-specialized-element-type ash-index bit-bash-clear
 	  bit-bash-set bit-bash-not bit-bash-copy bit-bash-and bit-bash-ior
 	  bit-bash-xor bit-bash-eqv bit-bash-lognand bit-bash-lognor
