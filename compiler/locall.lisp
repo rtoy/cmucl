@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.43 1993/11/16 18:28:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.44 1994/01/06 18:07:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -817,11 +817,13 @@
 	  (setf (node-tail-p this-call) nil)
 	  (ecase (functional-kind called)
 	    ((nil :cleanup :optional)
-	     (let ((block (node-block this-call)))
+	     (let ((block (node-block this-call))
+		   (cont (node-cont call)))
+	       (ensure-block-start cont)
 	       (unlink-blocks block (first (block-succ block)))
 	       (link-blocks block next-block)
 	       (delete-continuation-use this-call)
-	       (add-continuation-use this-call (node-cont call))))
+	       (add-continuation-use this-call cont)))
 	    (:deleted)
 	    (:assignment
 	     (assert (eq called fun))))))))
