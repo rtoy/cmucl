@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.2.2.5 2000/07/09 14:03:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.2.2.6 2000/11/04 17:10:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -230,7 +230,7 @@
 	     (length (if (<= scaled-size 37) 37 (almost-primify scaled-size))))
 	(declare (type index size+1 scaled-size length))
 	(when weak-p
-	  (format t "* Creating unsupported weak-p hash table~%"))
+	  (format *debug-io* "* Creating unsupported weak-p hash table~%"))
 	(let* ((index-vector
 		(make-array length :element-type '(unsigned-byte 32)
 			    :initial-element 0))
