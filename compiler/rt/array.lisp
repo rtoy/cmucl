@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.5 1991/05/04 18:29:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.6 1991/05/05 15:37:01 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -287,6 +287,7 @@
 	      (inst nilz shift index ,(ash (1- elements-per-word) 2))
 	      ,@(unless (= bits 4)
 		  `((inst sr shift ,(- 3 (integer-length bits)))))))
+	   (inst xil shift ,(1- elements-per-word))
 	      
 	   ;; Unless our immediate is all 1's, zero the destination bits.
 	   (unless (and (sc-is value immediate)
