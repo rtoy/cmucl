@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/undo.lisp,v 1.2 1991/02/08 16:39:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/undo.lisp,v 1.3 1993/08/25 02:11:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; This file contains the implementation of the undo mechanism.
 
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 
 

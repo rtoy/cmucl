@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.6 1991/09/04 14:24:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.7 1993/08/25 02:11:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,10 +166,7 @@
 		     (list* (namestring pathname)
 			    (value scribe-utility-switches))
      :output stream :error stream
-     :wait nil
-     :before-execve
-     #'(lambda ()
-	 (setf (default-directory) (directory-namestring pathname))))))
+     :wait nil)))
 
 
 

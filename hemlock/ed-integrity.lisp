@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ed-integrity.lisp,v 1.2 1991/02/14 00:25:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ed-integrity.lisp,v 1.3 1993/08/25 02:08:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
 ;;; conjunction with some alternate versions of COMPUTE-TTY-CHANGES and
 ;;; TTY-SMART-WINDOW-REDISPLAY.  When something went wrong with on
 
-(in-package 'ed)
+(in-package "ED")
 
 
 (proclaim '(special hemlock-internals::*debugging-tty-redisplay*

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/hunk-draw.lisp,v 1.3 1991/02/08 16:35:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/hunk-draw.lisp,v 1.4 1993/08/25 02:09:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; Hemlock screen painting routines for the IBM RT running X.
 ;;;
-(in-package 'hemlock-internals)
+(in-package "HEMLOCK"-internals)
 
 
 (defparameter hunk-height-limit 80 "Maximum possible height for any hunk.")

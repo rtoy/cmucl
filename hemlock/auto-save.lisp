@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/auto-save.lisp,v 1.3 1992/03/24 00:38:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/auto-save.lisp,v 1.4 1993/08/25 02:07:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -15,7 +15,7 @@
 ;;; Written by Christopher Hoover
 ;;;
 
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 
 ;;;; Per Buffer State Information

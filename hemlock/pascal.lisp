@@ -7,13 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/pascal.lisp,v 1.2 1991/02/08 16:36:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/pascal.lisp,v 1.3 1993/08/25 02:10:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Just barely enough to be a Pascal/C mode.  Maybe more some day.
 ;;; 
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 (defmode "Pascal" :major-p t)
 (defcommand "Pascal Mode" (p)

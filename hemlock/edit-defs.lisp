@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/edit-defs.lisp,v 1.4 1991/12/18 22:36:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/edit-defs.lisp,v 1.5 1993/08/25 02:08:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;; code for moved and/or different sources.
 ;;;
 
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 
 ;;; Directory translation for definition editing commands.
@@ -99,7 +99,7 @@
 ;;; 
 (defun get-definition-pattern (type name)
   (declare (simple-string name))
-  (let ((string (case type
+  (let ((string (ecase type
 		  ((:function :unknown-function)
 		   (concatenate 'simple-string "(defun " name " "))
 		  ((:macro :unknown-macro)

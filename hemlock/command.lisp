@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/command.lisp,v 1.6 1991/05/22 14:45:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/command.lisp,v 1.7 1993/08/25 02:08:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
     (ring-push (copy-mark (buffer-point buff) :right-inserting) ring)))
 
 (add-hook make-buffer-hook #'hcmd-new-buffer-hook-fun)
-(dolist (buff *buffer-list*) (hcmd-new-buffer-hook-fun buff)))
+(dolist (buff *buffer-list*) (hcmd-new-buffer-hook-fun buff))
 
 (defcommand "Exit Hemlock" (p)
   "Exit hemlock returning to the Lisp top-level read-eval-print loop."
@@ -291,13 +291,6 @@
    3/4 of the window is being deleted upward and inserted downward, hence a
    redraw); however, commands line \"New Line\" and \"Open Line\" will still
    efficiently, insert a line moving the rest of the window's text downward."
-  :value nil)
-
-  "This is a cut-off point at which the insert/delete line terminal optimization
-   will not be used (in number of lines).  For example, if the value is non-nil,
-   and that number (or more) of lines wants to be inserted or deleted from the
-   screen, then redisplay will simply paint the entire screen from the first
-   altered line down."
   :value nil)
 
 (defcommand "Scroll Window Down" (p &optional (window (current-window)))

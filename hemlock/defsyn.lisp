@@ -7,13 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/defsyn.lisp,v 1.2 1991/02/08 16:33:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/defsyn.lisp,v 1.3 1993/08/25 02:08:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains definitions of various character attributes.
 ;;;
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 (defattribute "Whitespace"
   "A value of 1 for this attribute indicates that the corresponding character

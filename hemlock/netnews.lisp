@@ -1907,7 +1907,7 @@
 	   (variable-value 'netnews-message-info
 			   :buffer (variable-value 'message-buffer
 						   :buffer buffer)))
-	  nil))))
+	  nil)))
 
 ;;; NN-REPLYIFY-SUBJECT simply adds "Re: " to the front of a string if it is
 ;;; not already there.

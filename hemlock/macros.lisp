@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.3 1991/02/08 16:36:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/macros.lisp,v 1.4 1993/08/25 02:09:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -323,8 +323,10 @@
 	    (editor-error-format-arguments condx)))
 
 (define-condition editor-error (error)
-  ((format-string "")
-   (format-arguments '()))
+  ((format-string :initform "" :initarg :format-string
+		  :reader editor-error-format-string)
+   (format-arguments :initform '() :initarg :format-arguments
+		     :reader editor-error-format-arguments))
   (:report print-editor-error))
 ;;;
 (setf (documentation 'editor-error-format-string 'function)
@@ -471,7 +473,7 @@
 ;;;; Some random macros used everywhere.
 
 (defmacro strlen (str) `(length (the simple-string ,str)))
-(defmacro neq (a b) `(not (eq ,a ,b))))
+(defmacro neq (a b) `(not (eq ,a ,b)))
 
 
 

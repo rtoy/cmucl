@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.5 1991/11/07 22:18:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.6 1993/08/25 02:11:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 ;;; for initializing a redisplay methods device.
 ;;;
 
-(in-package 'hemlock-internals)
+(in-package "HEMLOCK"-internals)
 
 
 

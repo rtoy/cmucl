@@ -7,14 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/overwrite.lisp,v 1.3 1991/02/08 16:36:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/overwrite.lisp,v 1.4 1993/08/25 02:10:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Written by Bill Chiles.
 ;;;
 
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 
 (defmode "Overwrite")
