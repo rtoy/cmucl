@@ -422,14 +422,20 @@
       (let ((var-locs (make-hash-table :test #'eq)))
 	(dolist (fun (component-lambdas component))
 	  (clrhash var-locs)
-	  (let ((dfun (make-compiled-debug-function
-		       :name (cond ((leaf-name fun))
-				   ((let ((ef (functional-entry-function fun)))
-				      (and ef (leaf-name ef))))
-				   (t
-				    (component-name component)))
-		       :kind (functional-kind fun)
-		       :start-pc 0)))
+	  (let* ((2env (environment-info (lambda-environment fun)))
+		 (dfun (make-compiled-debug-function
+			:name (cond ((leaf-name fun))
+				    ((let ((ef (functional-entry-function fun)))
+				       (and ef (leaf-name ef))))
+				    (t
+				     (component-name component)))
+			:kind (functional-kind fun)
+			:return-pc (tn-sc-offset
+				    (ir2-environment-return-pc 2env))
+			:old-cont (tn-sc-offset
+				   (ir2-environment-old-cont 2env))
+			;; Not right...
+			:start-pc 0)))
 	    
 	    (when (>= level 1)
 	      (setf (compiled-debug-function-variables dfun)
