@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.5 1997/04/24 20:27:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.6 1997/05/11 11:43:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1019,7 +1019,7 @@
 		(:translate ,translate)
 		(:vop-var vop)
 		(:save-p :compute-only)
-		(:generator 5
+		(:generator 6
 		 (inst push 0)
 		 (inst push x)
 		 (with-empty-tn@fp-top(y)
