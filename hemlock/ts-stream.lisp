@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.5 1991/05/27 11:56:28 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.6 1991/05/27 11:58:33 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 (in-package "EXT")
 
 (export '(get-stream-command stream-command stream-command-p stream-command-name
-	  stream-command-args make-stream-command))
+	  stream-command-args))
 
 (defstruct (stream-command (:print-function print-stream-command)
 			   (:constructor make-stream-command
