@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-corr.lisp,v 1.1.1.8 1993/08/25 02:34:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-corr.lisp,v 1.1.1.9 1993/08/25 02:40:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -159,13 +159,6 @@
 ;;; 
 ;;; "M" FLAG:
 ;;;         ... => ...'S  as in DOG => DOG'S
-
-(defpackage "SPELL"
-  (:use "LISP" "EXTENSIONS" "SYSTEM")
-  (:export spell-try-word spell-root-word spell-collect-close-words
-	   maybe-read-spell-dictionary correct-spelling max-entry-length
-	   spell-read-dictionary spell-add-entry spell-root-flags
-	   spell-remove-entry))
 
 (in-package "SPELL")
 
