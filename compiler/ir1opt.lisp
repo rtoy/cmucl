@@ -17,14 +17,6 @@
 ;;;
 (in-package 'c)
 
-;;;
-;;;    A hashtable from combination nodes to things describing how an
-;;; optimization of the node failed.  If the thing is a list, then it is format
-;;; arguments.  If it is a type, then the type is a type that the call failed
-;;; to match.
-;;;
-(defvar *failed-optimizations* (make-hash-table :test #'eq))
-
 
 ;;;; Interface for obtaining results of constant folding:
 
@@ -784,6 +776,33 @@
 
 ;;;; Known function optimization:
 
+;;;
+;;;    A hashtable from combination nodes to things describing how an
+;;; optimization of the node failed.  The value is an alist
+;;; (Fun . Args), where Fun is the transformation function that failed and Args
+;;; is either a list for format arguments for the note or the FUNCTION-TYPE
+;;; that would have enabled the transformation but failed to match.
+;;;
+(defvar *failed-optimizations* (make-hash-table :test #'eq))
+
+
+;;; RECORD-OPTIMIZATION-FAILURE  --  Internal
+;;;
+;;;    Add a failed optimization note to *FAILED-OPTIMZATIONS* for Node, Fun
+;;; and Args.  If there is already a note for Node and Fun, replace it,
+;;; otherwise add a new one.
+;;;
+(defun record-optimization-failure (node fun args)
+  (declare (type combination node) (type function fun)
+	   (type (or function-type list) args))
+  (let ((found (assoc fun (gethash node *failed-optimizations*))))
+    (if found
+	(setf (cdr found) args)
+	(push (cons fun args)
+	      (gethash node *failed-optimizations*))))
+  (undefined-value))
+
+
 ;;; IR1-Transform  --  Internal
 ;;;
 ;;;    Attempt to transform Node using Function, subject to the call type
@@ -805,26 +824,32 @@
 	       (severity args)
 	       (catch 'give-up
 		 (transform-call node (funcall fun node))
-		 (remhash node *failed-optimizations*)
 		 (values :none nil))
 	     (ecase severity
-	       (:none nil)
+	       (:none
+		(remhash node *failed-optimizations*)
+		nil)
 	       (:aborted
 		(setf (combination-kind node) :full)
 		(setf (ref-inlinep (continuation-use (combination-fun node)))
 		      :notinline)
 		(when args
 		  (apply #'compiler-warning args))
+		(remhash node *failed-optimizations*)
 		nil)
 	       (:failure 
-		(when (and flame args)
-		  (setf (gethash node *failed-optimizations*) args))
+		(if args
+		    (when flame
+		      (record-optimization-failure node fun args))
+		    (setf (gethash node *failed-optimizations*)
+			  (remove fun (gethash node *failed-optimizations*)
+				  :key #'car)))
 		t))))
 	  ((and flame
 		(valid-function-use node type
 				    :argument-test #'types-intersect
 				    :result-test #'values-types-intersect))
-	   (setf (gethash node *failed-optimizations*) type)
+	   (record-optimization-failure node fun type)
 	   t)
 	  (t
 	   t))))
