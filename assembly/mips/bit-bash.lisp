@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.5 1990/06/16 14:42:34 wlott Exp $
+;;;
 ;;; Stuff to implement bit bashing.
 ;;;
 ;;; Written by William Lott.
@@ -305,9 +307,9 @@
 (define-assembly-routine (bit-bash-copy
 			  ((:policy :fast-safe)
 			   (:translate bit-bash-copy))
-			  (:arg src-arg any-reg a0-offset)
+			  (:arg src-arg descriptor-reg a0-offset)
 			  (:arg src-offset any-reg a1-offset)
-			  (:arg dst-arg any-reg a2-offset)
+			  (:arg dst-arg descriptor-reg a2-offset)
 			  (:arg dst-offset any-reg a3-offset)
 			  (:arg length any-reg a4-offset)
 			  (:res res descriptor-reg null-offset)
