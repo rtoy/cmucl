@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.61 1991/12/03 17:09:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.62 1991/12/14 18:15:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1792,7 +1792,9 @@
 		  (dotimes (i (array-total-size value))
 		    (grovel (row-major-aref value i))))
 		 (structure
-		  (emit-make-load-form value))
+		  (when (emit-make-load-form value)
+		    (dotimes (i (structure-length value))
+		      (grovel (structure-ref value i)))))
 		 (t
 		  (compiler-error
 		   "Cannot dump objects of type ~S into fasl files."
