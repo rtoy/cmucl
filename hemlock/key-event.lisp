@@ -111,6 +111,7 @@
 
 ;;; TRANSLATE-KEY-EVENT -- Public.
 ;;;
+#+nil
 (defun translate-key-event (display scan-code bits)
   "Translates the X scan-code and X bits to a key-event.  First this maps
    scan-code to an X keysym using XLIB:KEYCODE->KEYSYM looking at bits and
@@ -471,7 +472,7 @@
 
 ;;; DEFINE-CLX-MODIFIER -- Public.
 ;;;
-(defun define-clx-modifier (clx-mask modifier-name)
+(defun <define-clx-modifier (clx-mask modifier-name)
   "This establishes a mapping from clx-mask to a define key-event modifier-name.
    TRANSLATE-KEY-EVENT and TRANSLATE-MOUSE-KEY-EVENT can only return key-events
    with bits defined by this routine."
@@ -735,8 +736,10 @@
   (define-key-event-modifier "Control" "C")
   (define-key-event-modifier "Shift" "Shift")
   (define-key-event-modifier "Lock" "Lock")
-  
+#|  
   (define-clx-modifier (xlib:make-state-mask :shift) "Shift")
   (define-clx-modifier (xlib:make-state-mask :mod-1) "Meta")
   (define-clx-modifier (xlib:make-state-mask :control) "Control")
-  (define-clx-modifier (xlib:make-state-mask :lock) "Lock"))
+  (define-clx-modifier (xlib:make-state-mask :lock) "Lock")
+|#
+)
