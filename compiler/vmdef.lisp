@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.42 1992/05/21 22:49:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.43 1992/07/14 03:40:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2464,5 +2464,6 @@
    instruction for the code location, wherever the scheduler decided to put
    it."
   (assert (backend-featurep :new-assembler))
-  (new-assem:emit-postit #'(lambda (posn)
+  (new-assem:emit-postit #'(lambda (segment posn)
+			     (declare (ignore segment))
 			     (note-debug-location vop posn kind))))
