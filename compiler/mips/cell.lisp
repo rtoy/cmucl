@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.17 1990/03/05 20:47:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.18 1990/03/06 19:38:14 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -236,9 +236,10 @@
 (defslots (bignum :lowtag other-pointer-type :header bignum-type)
   (digits :rest t :c-type "long"))
 
-(defslots (ratio :lowtag other-pointer-type :header ratio-type)
-  numerator
-  denominator)
+(defslots (ratio :lowtag other-pointer-type :header ratio-type
+		 :alloc-vop make-ratio)
+  (numerator :ref-vop numerator)
+  (denominator :ref-vop denominator))
 
 (defslots (single-float :lowtag other-pointer-type :header single-float-type)
   (value :c-type "float"))
@@ -246,9 +247,10 @@
 (defslots (double-float :lowtag other-pointer-type :header double-float-type)
   (value :c-type "double" :length 2))
 
-(defslots (complex :lowtag other-pointer-type :header complex-type)
-  real
-  imag)
+(defslots (complex :lowtag other-pointer-type :header complex-type
+		   :alloc-vop make-complex)
+  (real :ref-vop realpart)
+  (imag :ref-vop imagpart))
 
 (defslots (array :lowtag other-pointer-type :header t)
   fill-pointer
@@ -259,7 +261,7 @@
   (dimensions :rest t))
 
 (defslots (vector :lowtag other-pointer-type :header t)
-  length
+  (length :ref-vop vector-length)
   (data :rest t :c-type "unsigned long"))
 
 (defslots (code :lowtag other-pointer-type :header t)
