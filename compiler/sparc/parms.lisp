@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.5 1990/12/17 19:38:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.6 1991/03/19 18:48:28 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -138,12 +138,13 @@
 ;;;; Other random constants.
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
-	  object-not-list-trap object-not-structure-trap))
+	  breakpoint-trap object-not-list-trap object-not-structure-trap))
 
 (defconstant halt-trap 8)
 (defconstant pending-interrupt-trap 9)
 (defconstant error-trap 10)
 (defconstant cerror-trap 11)
+(defconstant breakpoint-trap 12)
 
 
 (defconstant object-not-list-trap 16)
@@ -173,6 +174,7 @@
     lisp::%initial-function
     lisp::maybe-gc
     kernel::internal-error
+    di::handle-breakpoint
 
     ;; Free Pointers.
     lisp::*read-only-space-free-pointer*
