@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.64 2003/08/04 17:30:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.65 2003/10/09 15:50:01 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3175,13 +3175,20 @@
 	    
 (define-type-method (cons :simple-intersection) (type1 type2)
   (declare (type cons-type type1 type2))
-  (let (car-int2
-	cdr-int2)
-    (and (setf car-int2 (type-intersection2 (cons-type-car-type type1)
-					    (cons-type-car-type type2)))
-	 (setf cdr-int2 (type-intersection2 (cons-type-cdr-type type1)
-					    (cons-type-cdr-type type2)))
-	 (make-cons-type car-int2 cdr-int2))))
+  (let ((car-int2 (type-intersection2 (cons-type-car-type type1)
+				      (cons-type-car-type type2)))
+	(cdr-int2 (type-intersection2 (cons-type-cdr-type type1)
+				      (cons-type-cdr-type type2))))
+    (cond ((and car-int2 cdr-int2)
+	   (make-cons-type car-int2 cdr-int2))
+	  (car-int2
+	   (make-cons-type car-int2
+			   (type-intersection (cons-type-cdr-type type1)
+					      (cons-type-cdr-type type2))))
+	  (cdr-int2
+	   (make-cons-type (type-intersection (cons-type-car-type type1)
+					      (cons-type-car-type type2))
+			   cdr-int2)))))
 
 
 ;;; TYPE-DIFFERENCE  --  Interface
