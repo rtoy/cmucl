@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.43 2003/11/08 11:45:48 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.44 2003/11/24 18:54:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1587,7 +1587,7 @@
 		(incf index)
 		(setq any-digits t)
 		(setq result (+ (* radix result) weight)))
-	  (skip-whitespace)
+	  (unless junk-allowed (skip-whitespace))
 	  ;;
 	  ;; May be /= index if string is displaced.
 	  (let ((real-index (+ (- index start) orig-start)))
