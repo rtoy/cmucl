@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.26 1990/05/09 06:43:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.27 1990/05/19 09:45:24 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -558,6 +558,7 @@
 (defconstant nl2-offset 4)
 (defconstant nl3-offset 5)
 (defconstant l0-offset 19)
+(defconstant l1-offset 28)
 
 ;;; Offsets of special stack frame locations
 (defconstant old-fp-save-offset 0)
