@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.64 2003/07/30 16:51:43 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.65 2003/10/24 16:53:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2104,11 +2104,17 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	   :format-control "Trying to read characters from a binary stream."))
   ;; Let's go as low level as it seems reasonable.
   (let* ((numbytes (- end start))
-	 (bytes-read (system:read-n-bytes stream s start numbytes nil))
-	 )
-    (if (< bytes-read numbytes)
-	(+ start bytes-read)
-	end)))
+	 (total-bytes 0))
+    ;; read-n-bytes may return fewer bytes than requested, so we need
+    ;; to keep trying.
+    (loop while (plusp numbytes) do
+	  (let ((bytes-read (system:read-n-bytes stream s start numbytes nil)))
+	    (when (zerop bytes-read)
+	      (return-from read-into-simple-string total-bytes))
+	    (incf total-bytes bytes-read)
+	    (incf start bytes-read)
+	    (decf numbytes bytes-read)))
+    total-bytes))
 
 
 (defun read-into-string (s stream start end)
