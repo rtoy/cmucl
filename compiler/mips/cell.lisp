@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.67 1993/03/12 18:22:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.68 1993/03/13 10:50:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,6 +233,8 @@
   funcallable-instance-info-offset function-pointer-type
   (descriptor-reg any-reg) * %funcallable-instance-info)
 
+(define-vop (funcallable-instance-lexenv slot-ref)
+  (:variant funcallable-instance-lexenv-offset function-pointer-type))
 
 (define-vop (closure-ref slot-ref)
   (:variant closure-info-offset function-pointer-type))
