@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.37 1991/04/15 15:13:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.38 1991/10/02 18:11:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -672,17 +672,20 @@
 ;;;
 ;;;    Find the operand or temporary with the specifed Name in the VOP Parse.
 ;;; If there is no such operand, signal an error.  Also error if the operand
-;;; kind isn't one of the specified Kinds.
+;;; kind isn't one of the specified Kinds.  If Error-P is NIL, just return NIL
+;;; if there is no such operand.
 ;;;
 (defun find-operand (name parse &optional
-			  (kinds '(:argument :result :temporary)))
+			  (kinds '(:argument :result :temporary))
+			  (error-p t))
   (declare (symbol name) (type vop-parse parse) (list kinds))
   (let ((found (find name (vop-parse-operands parse)
 		     :key #'operand-parse-name)))
-    (unless found
-      (error "~S is not an operand to ~S." name (vop-parse-name parse)))
-    (unless (member (operand-parse-kind found) kinds)
-      (error "Operand ~S isn't one of these kinds: ~S." name kinds))
+    (if found
+	(unless (member (operand-parse-kind found) kinds)
+	  (error "Operand ~S isn't one of these kinds: ~S." name kinds))
+	(when error-p
+	  (error "~S is not an operand to ~S." name (vop-parse-name parse))))
     found))
 
 
@@ -1204,9 +1207,10 @@
 ;;;
 ;;;    Given a list of operand specifications as given to Define-VOP, return a
 ;;; list of Operand-Parse structures describing the fixed operands, and a
-;;; single Operand-Parse describing any more operand.
+;;; single Operand-Parse describing any more operand.  If we are inheriting a
+;;; VOP, we default attributes to the inherited operand of the same name.
 ;;;
-(defun parse-operands (specs kind)
+(defun parse-operands (parse specs kind)
   (declare (list specs)
 	   (type (member :argument :result) kind))
   (let ((num -1)
@@ -1217,17 +1221,35 @@
 	  (error "Malformed operand specifier: ~S." spec))
 	(when more
 	  (error "More operand isn't last: ~S." specs)) 
-	(let ((res (ecase kind
-		     (:argument
-		      (make-operand-parse
-		       :name (first spec)  :kind :argument
-		       :born (parse-time-spec :load)
-		       :dies (parse-time-spec `(:argument ,(incf num)))))
-		     (:result
-		      (make-operand-parse
-		       :name (first spec)  :kind :result
-		       :born (parse-time-spec `(:result ,(incf num)))
-		       :dies (parse-time-spec :save))))))
+	(let* ((name (first spec))
+	       (old (if (vop-parse-inherits parse)
+			(find-operand name
+				      (vop-parse-or-lose
+				       (vop-parse-inherits parse))
+				      (list kind)
+				      nil)
+			nil))
+	       (res (if old
+			(make-operand-parse
+			 :name name
+			 :kind kind
+			 :target (operand-parse-target old)
+			 :born (operand-parse-born old)
+			 :dies (operand-parse-dies old)
+			 :scs (operand-parse-scs old)
+			 :load-tn (operand-parse-load-tn old)
+			 :load (operand-parse-load old))
+			(ecase kind
+			  (:argument
+			   (make-operand-parse
+			    :name (first spec)  :kind :argument
+			    :born (parse-time-spec :load)
+			    :dies (parse-time-spec `(:argument ,(incf num)))))
+			  (:result
+			   (make-operand-parse
+			    :name (first spec)  :kind :result
+			    :born (parse-time-spec `(:result ,(incf num)))
+			    :dies (parse-time-spec :save)))))))
 	  (do ((key (rest spec) (cddr key)))
 	      ((null key))
 	    (let ((value (second key)))
@@ -1351,13 +1373,13 @@
       (:args
        (multiple-value-bind
 	   (fixed more)
-	   (parse-operands (rest spec) :argument)
+	   (parse-operands parse (rest spec) :argument)
 	 (setf (vop-parse-args parse) fixed)
 	 (setf (vop-parse-more-args parse) more)))
       (:results
        (multiple-value-bind
 	   (fixed more)
-	   (parse-operands (rest spec) :result)
+	   (parse-operands parse (rest spec) :result)
 	 (setf (vop-parse-results parse) fixed)
 	 (setf (vop-parse-more-results parse) more))
        (setf (vop-parse-conditional-p parse) nil))
@@ -1944,7 +1966,9 @@
   :Args {(Name {Key Value}*)}*
   :Results {(Name {Key Value}*)}*
       The Args and Results are specifications of the operand TNs passed to the
-      VOP.  The following operand options are defined:
+      VOP.  If there is an inherited VOP, any unspecified options are defaulted
+      from the inherited argument (or result) of the same name.  The following
+      operand options are defined: 
 
       :SCs (SC*)
 	  :SCs specifies good SCs for this operand.  Other SCs will be
