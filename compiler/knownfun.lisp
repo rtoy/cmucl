@@ -16,7 +16,7 @@
 ;;;
 (in-package 'c)
 
-(export '(call unsave unwind any foldable flushable movable predicate))
+(export '(call unsafe unwind any foldable flushable movable predicate))
 
 ;;;; IR1 boolean function attributes:
 ;;;
