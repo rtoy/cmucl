@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.13 1990/04/24 19:10:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.14 1990/04/26 20:13:41 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -261,16 +261,16 @@
 (defmacro define-load/store-instruction (name op)
   `(define-instruction (,name)
      (immediate (op :constant ,op)
-		(rs :argument register)
 		(rt :argument register)
+		(rs :argument register)
 		(immediate :argument (signed-byte 16)))
      (immediate (op :constant ,op)
-		(rs :argument register)
 		(rt :argument register)
+		(rs :argument register)
 		(immediate :argument addi-fixup))
      (immediate (op :constant ,op)
-		(rs :argument register)
 		(rt :argument register)
+		(rs :argument register)
 		(immediate :constant 0))))
 
 (define-load/store-instruction lb #b100000)
@@ -485,20 +485,31 @@
   (header-object (type :constant #x66)))
 
 
-(define-pseudo-instruction compute-code-from-fn 64 (code fn label)
-  ;; code = fn - fn-tag - header - label-offset + other-pointer-tag
-  (let ((offset (- vm:other-pointer-type
-		   vm:function-pointer-type
-		   (label-position label)
-		   (component-header-length))))
-    (inst addu code fn offset)))
+(defmacro define-compute-instruction (name calculation)
+  `(progn
+     (defun ,name (label)
+       ,calculation)
+     (define-instruction (,name)
+       (immediate (op :constant #b001001)
+		  (rt :argument register)
+		  (rs :argument register)
+		  (immediate :argument label
+			     :function ,name)))))
 
-(define-pseudo-instruction compute-code-from-lra 64 (code lra label)
-  ;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
-  (let ((offset (- (+ (label-position label) (component-header-length)))))
-    (inst addu code lra offset)))
+;; code = fn - fn-tag - header - label-offset + other-pointer-tag
+(define-compute-instruction compute-code-from-fn
+			    (- vm:other-pointer-type
+			       vm:function-pointer-type
+			       (label-position label)
+			       (component-header-length)))
 
-(define-pseudo-instruction compute-lra-from-code 64 (lra code label)
-  ;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
-  (let ((offset (+ (label-position label) (component-header-length))))
-    (inst addu lra code offset)))
+;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
+(define-compute-instruction compute-code-from-lra
+			    (- (+ (label-position label)
+				  (component-header-length))))
+
+;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
+(define-compute-instruction compute-lra-from-code
+			    (+ (label-position label)
+			       (component-header-length)))
+
