@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.29 1991/03/10 18:32:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.30 1991/03/10 19:41:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.29 1991/03/10 18:32:55 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -75,7 +73,8 @@
 ;;;    Return the TN that holds the value of Thing in the environment Env.
 ;;;
 (defun find-in-environment (thing env)
-  (declare (type (or nlx-info lambda-var) thing) (type environment env))
+  (declare (type (or nlx-info lambda-var) thing) (type environment env)
+	   (values tn))
   (or (cdr (assoc thing (ir2-environment-environment (environment-info env))))
       (etypecase thing
 	(lambda-var
@@ -197,6 +196,12 @@
 ;;; function, since local call analysis converts all closure references.  If a
 ;;; TL-XEP, we know it is not a closure.
 ;;;
+;;; If a closed-over lambda-var has no refs (is deleted), then we don't
+;;; initialize that slot.  This can happen with closures over top-level
+;;; variables, where optimization of the closure deleted the variable.  Since
+;;; we committed to the closure format when we pre-analyzed the top-level code,
+;;; we just leva an empty slot.
+;;;
 (defun ir2-convert-closure (node block leaf res)
   (declare (type ref node) (type ir2-block block)
 	   (type functional leaf) (type tn res))
@@ -213,11 +218,13 @@
 	   (let ((this-env (node-environment node)))
 	     (vop make-closure node block (emit-constant (length closure))
 		  entry res)
-	     (let ((n -1))
-	       (dolist (what closure)
+	     (loop for what in closure and n from 0 do
+	       (unless (and (lambda-var-p what)
+			    (null (leaf-refs what)))
 		 (vop closure-init node block
-		      res (find-in-environment what this-env)
-		      (incf n))))))
+		      res
+		      (find-in-environment what this-env)
+		      n)))))
 	  (t
 	   (emit-move node block entry res))))
   (undefined-value))
