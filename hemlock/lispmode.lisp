@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.14 1991/11/18 15:27:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.15 1991/12/10 16:58:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1070,7 +1070,10 @@
   ;; We know this succeeds from LISP-INDENTATION.
   (backward-up-list (move-mark temp1 mark)) ;Paren for local definition.
   (cond ((and (backward-up-list temp1)	    ;Paren opening the list of defs
-	      (backward-up-list temp1))	    ;Paren for FLET or MACROLET.
+	      (form-offset (move-mark temp2 temp1) -1)
+	      (mark-before temp2)
+	      (backward-up-list temp1)	    ;Paren for FLET or MACROLET.
+	      (mark= temp1 temp2))	    ;Must be in first arg form.
 	 ;; See if the containing form is named FLET or MACROLET.
 	 (mark-after temp1)
 	 (unless (and (scan-char temp1 :lisp-syntax
