@@ -7,13 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.5 1991/02/08 13:32:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.6 1991/08/30 17:09:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.5 1991/02/08 13:32:52 ram Exp $
-;;;
-;;; Load-foreign and support routines.
 ;;;
 (in-package "SYSTEM")
 
@@ -21,10 +17,6 @@
 (export '(load-foreign))
 (in-package "SYSTEM")
 (import 'ext:load-foreign)
-
-
-(defconstant foreign-segment-start #x00C00000)
-(defconstant foreign-segment-size  #x00400000)
 
 (defvar *previous-linked-object-file* nil)
 (defvar *foreign-segment-free-pointer* foreign-segment-start)
@@ -64,7 +56,7 @@
   (drsize ext:unsigned-long))
 
 (defun allocate-space-in-foreign-segment (bytes)
-  (let* ((pagesize-1 (1- (gr-call* mach:vm_statistics *task-self*)))
+  (let* ((pagesize-1 (1- (get-page-size)))
 	 (memory-needed (logandc2 (+ bytes pagesize-1) pagesize-1))
 	 (addr (int-sap *foreign-segment-free-pointer*))
 	 (new-ptr (+ *foreign-segment-free-pointer* bytes)))
@@ -232,6 +224,3 @@
 	(when old-file
 	  (mach:unix-unlink old-file)))))
   (format t ";;; Done.~%"))
-
-
-
