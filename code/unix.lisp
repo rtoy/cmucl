@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.16 1992/02/23 21:17:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.17 1992/03/06 11:29:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,6 +51,7 @@
 	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
 	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
+	  tcsetpgrp tcgetpgrp tty-process-group
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase tty-cbreak
 	  tty-tandem TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
@@ -1005,6 +1006,64 @@
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) cmd))
   (void-syscall ("ioctl" int int (* char)) fd cmd arg))
+
+(defun tcsetpgrp (fd pgrp)
+  "Set the tty-process-group for the unix file-descriptor FD to PGRP."
+  (alien:with-alien ((alien-pgrp c-call:int pgrp))
+    (unix-ioctl fd
+		tiocspgrp
+		(alien:alien-sap (alien:addr alien-pgrp)))))
+
+(defun tcgetpgrp (fd)
+  "Get the tty-process-group for the unix file-descriptor FD."
+  (alien:with-alien ((alien-pgrp c-call:int))
+    (multiple-value-bind (ok err)
+	(unix-ioctl fd
+		     tiocgpgrp
+		     (alien:alien-sap (alien:addr alien-pgrp)))
+      (if ok
+	  (values alien-pgrp nil)
+	  (values nil err)))))
+
+(defun tty-process-group (&optional fd)
+  "Get the tty-process-group for the unix file-descriptor FD.  If not supplied,
+  FD defaults to /dev/tty."
+  (if fd
+      (tcgetpgrp fd)
+      (multiple-value-bind (tty-fd errno)
+	  (unix-open "/dev/tty" o_rdwr 0)
+	(cond (tty-fd
+	       (multiple-value-prog1
+		   (tcgetpgrp tty-fd)
+		 (unix-close tty-fd)))
+	      (t
+	       (values nil errno))))))
+
+(defun %set-tty-process-group (pgrp &optional fd)
+  "Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not
+  supplied, FD defaults to /dev/tty."
+  (let ((old-sigs
+	 (unix-sigblock
+	  (sigmask :sigttou :sigttin :sigtstp :sigchld))))
+    (declare (type (unsigned-byte 32) old-sigs))
+    (unwind-protect
+	(if fd
+	    (tcsetpgrp fd pgrp)
+	    (multiple-value-bind (tty-fd errno)
+		(unix-open "/dev/tty" o_rdwr 0)
+	      (cond (tty-fd
+		     (multiple-value-prog1
+			 (tcsetpgrp tty-fd pgrp)
+		       (unix-close tty-fd)))
+		    (t
+		     (values nil errno)))))
+      (unix-sigsetmask old-sigs))))
+  
+(defsetf tty-process-group (&optional fd) (pgrp)
+  "Set the tty-process-group for the unix file-descriptor FD to PGRP.  If not
+  supplied, FD defaults to /dev/tty."
+  `(%set-tty-process-group ,pgrp ,fd))
+
 
 ;;; Unix-exit terminates a program.
 
