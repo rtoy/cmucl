@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.3 1993/02/04 22:36:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.4 1993/02/08 22:24:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,7 +190,7 @@
   (etypecase type
     (named-type
      (ecase (named-type-name type)
-       (* t)
+       ((* t) t)
        ((nil) nil)))
     (numeric-type
      (and (numberp object)
