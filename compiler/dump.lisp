@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.67 1998/03/01 21:55:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.68 1998/03/10 18:33:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1476,11 +1476,13 @@
 	     (= element-size vm:byte-bits))
 	 (dump-bytes data-vector bytes file))
 	((>= element-size vm:word-bits)
-	 (let ((words-per-element (/ element-size vm:word-bits))
-	       (result (make-array bytes :element-type '(unsigned-byte 8))))
+	 (let* ((words-per-element (/ element-size vm:word-bits))
+		(bytes-per-element (* words-per-element vm:word-bytes))
+		(elements (/ bytes bytes-per-element))
+		(result (make-array bytes :element-type '(unsigned-byte 8))))
 	   (declare (type (integer 1 #.most-positive-fixnum)
-			  words-per-element))
-	   (dotimes (index (the integer (/ bytes words-per-element)))
+			  words-per-element bytes-per-element elements))
+	   (dotimes (index elements)
 	     (dotimes (offset words-per-element)
 	       (let ((word (%raw-bits data-vector
 				      (+ (* index words-per-element)
