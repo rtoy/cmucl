@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.32 2000/07/07 11:04:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.33 2001/01/18 03:12:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -405,6 +405,9 @@
       ((start-block end-block)) ; ignore.
       (t
        (cond ((member kind type-specifier-symbols)
+	      (%proclaim `(type . ,form)))
+	     ((or (info type kind kind)
+		  (and (consp kind) (info type translator (car kind))))
 	      (%proclaim `(type . ,form)))
 	     ((not (info declaration recognized kind))
 	      (warn "Unrecognized proclamation: ~S." form))))))
