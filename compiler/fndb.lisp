@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.19 1991/04/04 14:30:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.20 1991/04/23 13:29:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.19 1991/04/04 14:30:57 ram Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -89,7 +87,7 @@
 
 
 (defknown (eq eql) (t t) boolean (movable foldable flushable))
-(defknown (equal equalp) (t t) boolean (foldable flushable))
+(defknown (equal equalp) (t t) boolean (foldable flushable recursive))
 
 
 ;;;; In the "Control Structure" chapter:
@@ -191,73 +189,75 @@
 
 ;;;; In the "Numbers" chapter:
 
-(defknown zerop (number) boolean (movable foldable flushable))
-(defknown (plusp minusp) (real) boolean (movable foldable flushable))
-(defknown (oddp evenp) (integer) boolean (movable foldable flushable))
-(defknown (= /=) (number &rest number) boolean (movable foldable flushable))
-(defknown (< > <= >=) (real &rest real) boolean (movable foldable flushable))
-(defknown (max min) (real &rest real) real (movable foldable flushable))
-(defknown + (&rest number) number (movable foldable flushable))
-(defknown - (number &rest number) number (movable foldable flushable))
-(defknown * (&rest number) number (movable foldable flushable))
-(defknown / (number &rest number) number (movable foldable flushable))
-(defknown (1+ 1-) (number) number (movable foldable flushable))
-(defknown conjugate (number) number (movable foldable flushable))
-(defknown gcd (&rest integer) unsigned-byte (movable foldable flushable)
+(defknown zerop (number) boolean (movable foldable flushable explicit-check))
+(defknown (plusp minusp) (real) boolean (movable foldable flushable explicit-check))
+(defknown (oddp evenp) (integer) boolean (movable foldable flushable explicit-check))
+(defknown (= /=) (number &rest number) boolean (movable foldable flushable explicit-check))
+(defknown (< > <= >=) (real &rest real) boolean (movable foldable flushable explicit-check))
+(defknown (max min) (real &rest real) real (movable foldable flushable explicit-check))
+(defknown + (&rest number) number (movable foldable flushable explicit-check))
+(defknown - (number &rest number) number (movable foldable flushable explicit-check))
+(defknown * (&rest number) number (movable foldable flushable explicit-check))
+(defknown / (number &rest number) number (movable foldable flushable explicit-check))
+(defknown (1+ 1-) (number) number (movable foldable flushable explicit-check))
+(defknown conjugate (number) number (movable foldable flushable explicit-check))
+(defknown gcd (&rest integer) unsigned-byte (movable foldable flushable explicit-check)
   #|:derive-type 'boolean-result-type|#)
-(defknown lcm (&rest integer) unsigned-byte (movable foldable flushable))
+(defknown lcm (&rest integer) unsigned-byte (movable foldable flushable explicit-check))
 
-(defknown exp (number) irrational (movable foldable flushable))
-(defknown expt (number number) number (movable foldable flushable))
-(defknown log (number &optional real) irrational (movable foldable flushable))
-(defknown sqrt (number) irrational (movable foldable flushable))
-(defknown isqrt (unsigned-byte) unsigned-byte (movable foldable flushable))
-(defknown (abs phase signum) (number) number (movable foldable flushable))
-(defknown cis (real) (complex float) (movable foldable flushable))
-(defknown atan (number &optional real) irrational (movable foldable flushable))
+(defknown exp (number) irrational
+  (movable foldable flushable explicit-check recursive))
+(defknown expt (number number) number
+  (movable foldable flushable explicit-check recursive))
+(defknown log (number &optional real) irrational (movable foldable flushable explicit-check))
+(defknown sqrt (number) irrational (movable foldable flushable explicit-check))
+(defknown isqrt (unsigned-byte) unsigned-byte (movable foldable flushable explicit-check))
+(defknown (abs phase signum) (number) number (movable foldable flushable explicit-check))
+(defknown cis (real) (complex float) (movable foldable flushable explicit-check))
+(defknown atan (number &optional real) irrational (movable foldable flushable explicit-check))
 (defknown (sin cos tan asin acos sinh cosh tanh asinh acosh atanh)
-  (number) irrational (movable foldable flushable))
-(defknown float (real &optional float) float (movable foldable flushable))
-(defknown (rational rationalize) (real) rational (movable foldable flushable))
+  (number) irrational (movable foldable flushable explicit-check recursive))
+(defknown float (real &optional float) float (movable foldable flushable explicit-check))
+(defknown (rational rationalize) (real) rational (movable foldable flushable explicit-check))
 (defknown (numerator denominator) (rational) integer
   (movable foldable flushable))
 (defknown (floor ceiling truncate round)
-  (real &optional real) (values integer real) (movable foldable flushable))
-(defknown (mod rem) (real real) real (movable foldable flushable))
+  (real &optional real) (values integer real) (movable foldable flushable explicit-check))
+(defknown (mod rem) (real real) real (movable foldable flushable explicit-check))
 (defknown (ffloor fceiling fround ftruncate)
-  (real &optional real) (values float float) (movable foldable flushable))
+  (real &optional real) (values float float) (movable foldable flushable explicit-check))
 
 (defknown decode-float (float) (values float float-exponent float)
-  (movable foldable flushable))
+  (movable foldable flushable explicit-check))
 (defknown scale-float (float float-exponent) float
-  (movable foldable flushable))
-(defknown float-radix (float) float-radix (movable foldable flushable))
+  (movable foldable flushable explicit-check))
+(defknown float-radix (float) float-radix (movable foldable flushable explicit-check))
 (defknown float-sign (float &optional float) float
-  (movable foldable flushable))
+  (movable foldable flushable explicit-check))
 (defknown (float-digits float-precision) (float) float-digits
-  (movable foldable flushable))
+  (movable foldable flushable explicit-check))
 (defknown integer-decode-float (float)
 	  (values integer float-exponent (member -1 1))
-	  (movable foldable flushable))
-(defknown complex (real &optional real) number (movable foldable flushable))
+	  (movable foldable flushable explicit-check))
+(defknown complex (real &optional real) number (movable foldable flushable explicit-check))
 (defknown (realpart imagpart) (number) real (movable foldable flushable))
 
 (defknown (logior logxor logand logeqv) (&rest integer) integer
-  (movable foldable flushable))
+  (movable foldable flushable explicit-check))
 
 (defknown (lognand lognor logandc1 logandc2 logorc1 logorc2)
 	  (integer integer) integer
-  (movable foldable flushable))
+  (movable foldable flushable explicit-check))
 
 (defknown boole (integer integer boole-code) integer
   (movable foldable flushable))
 
-(defknown lognot (integer) integer (movable foldable flushable))
+(defknown lognot (integer) integer (movable foldable flushable explicit-check))
 (defknown logtest (integer integer) boolean (movable foldable flushable))
 (defknown logbitp (bit-index integer) boolean (movable foldable flushable))
-(defknown ash (integer ash-index) integer (movable foldable flushable))
+(defknown ash (integer ash-index) integer (movable foldable flushable explicit-check))
 (defknown (logcount integer-length) (integer) bit-index
-  (movable foldable flushable))
+  (movable foldable flushable explicit-check))
 (defknown byte (bit-index bit-index) byte-specifier
   (movable foldable flushable))
 (defknown (byte-size byte-position) (byte-specifier) bit-index
@@ -741,16 +741,21 @@
   (flushable))
 
 ;;; May return any type due to eof-value...
-(defknown (read read-preserving-whitespace read-char read-char-no-hang)
-  (&optional streamlike t t t) t)
+(defknown (read read-preserving-whitespace read-char-no-hang read-char)
+  (&optional streamlike t t t) t  (explicit-check))
 
-(defknown read-delimited-list (character &optional streamlike t) t)
-(defknown read-line (&optional streamlike t t t) (values t boolean))
-(defknown unread-char (character &optional streamlike) t)
-(defknown peek-char (&optional (or character (member nil t)) streamlike t t t) t)
-(defknown listen (&optional streamlike) boolean (flushable))
+(defknown read-delimited-list (character &optional streamlike t) t
+  (explicit-check))
+(defknown read-line (&optional streamlike t t t) (values t boolean)
+  (explicit-check))
+(defknown unread-char (character &optional streamlike) t
+  (explicit-check))
+(defknown peek-char (&optional (or character (member nil t)) streamlike t t t)
+  t
+  (explicit-check))
+(defknown listen (&optional streamlike) boolean (flushable explicit-check))
 
-(defknown clear-input (&optional stream) null)
+(defknown clear-input (&optional stream) null (explicit-check))
 
 (defknown read-from-string
   (string &optional t t &key (start index) (end sequence-end)
@@ -761,16 +766,16 @@
 	  (junk-allowed t)) 
   (or integer null ()))
 
-(defknown read-byte (stream &optional t t) t)
+(defknown read-byte (stream &optional t t) t (explicit-check))
 
 (defknown write
   (t &key (stream streamlike) (escape t) (radix t) (base (integer 2 36))
      (circle t) (pretty t) (level (or unsigned-byte null))
      (length (or unsigned-byte null)) (case t) (array t) (gensym t)) t
-  (any)
+  (any explicit-check)
   #|:derive-type 'result-type-arg1|#)
 
-(defknown (prin1 print princ) (t &optional streamlike) t (any)
+(defknown (prin1 print princ) (t &optional streamlike) t (any explicit-check)
   #|:derive-type 'result-type-arg1|#)
 
 ;;; xxx-TO-STRING not foldable because they depend on the dynamic environment. 
@@ -779,25 +784,32 @@
      (circle t) (pretty t) (level (or unsigned-byte null))
      (length (or unsigned-byte null)) (case t) (array t) (gensym t))
   simple-string
-  (foldable flushable))
+  (foldable flushable explicit-check))
 
 (defknown (prin1-to-string princ-to-string) (t) simple-string (flushable))
 
-(defknown write-char (character &optional streamlike) character)
+(defknown write-char (character &optional streamlike) character
+  (explicit-check))
 (defknown (write-string write-line)
   (string &optional streamlike &key (start index) (end sequence-end))
-  string)
+  string
+  (explicit-check))
 
 (defknown (terpri finish-output force-output clear-output)
-  (&optional streamlike) null)
+  (&optional streamlike) null
+  (explicit-check))
 
-(defknown fresh-line (&optional streamlike) boolean)
+(defknown fresh-line (&optional streamlike) boolean
+  (explicit-check))
 
-(defknown write-byte (integer stream) integer)
+(defknown write-byte (integer stream) integer
+  (explicit-check))
 
-(defknown format ((or streamlike string) string &rest t) (or string null))
+(defknown format ((or streamlike string) string &rest t) (or string null)
+  (explicit-check))
 
-(defknown (y-or-n-p yes-or-no-p) (&optional string &rest t) boolean)
+(defknown (y-or-n-p yes-or-no-p) (&optional string &rest t) boolean
+  (explicit-check))
 
 
 ;;;; In the "File System Interface" chapter:
@@ -943,7 +955,11 @@
 
 ;;;; Magical compiler frobs:
 
-(defknown %typep (t type-specifier) boolean)
+;;; Can't fold in general because of SATISFIES.  There is a special optimizer
+;;; anyway.
+(defknown %typep (t (or type-specifier ctype)) boolean
+  (movable flushable explicit-check))
+
 (defknown %special-bind (t t) void)
 (defknown %special-unbind (t) void)
 (defknown %listify-rest-args (t t) list (flushable))
@@ -965,13 +981,13 @@
 (defknown %odd-keyword-arguments-error () nil)
 (defknown %unknown-keyword-argument-error (t) nil)
 (defknown (%ldb %mask-field) (bit-index bit-index integer) unsigned-byte
-  (movable foldable flushable))
+  (movable foldable flushable explicit-check))
 (defknown (%dpb %deposit-field) (integer bit-index bit-index integer) integer
-  (movable foldable flushable))
-(defknown %negate (number) number (movable foldable flushable))
+  (movable foldable flushable explicit-check))
+(defknown %negate (number) number (movable foldable flushable explicit-check))
 (defknown %check-bound (array index fixnum) index (movable foldable flushable))
-(defknown data-vector-ref (array index) t (foldable flushable))
-(defknown data-vector-set (array index t) t (unsafe))
+(defknown data-vector-ref (array index) t (foldable flushable explicit-check))
+(defknown data-vector-set (array index t) t (unsafe explicit-check))
 (defknown kernel:%caller-frame-and-pc () (values t t) (flushable))
 
 
