@@ -57,6 +57,8 @@ New in this release:
      - Behavior of (... &KEY &ALLOW-OTHER-KEYS) fixed for 
        DESTRUCTURING-BIND and macros.
      - Stricter checking of keyword argument list in CLOS methods.
+     - &ENVIRONMENT variable bound bound before other vars, regardless
+       of where it appears in a lambda-list.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
