@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.49 1993/03/12 16:50:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.50 1993/03/12 18:20:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,9 @@
 	  stack-ref %set-stack-ref lra-code-header
 	  function-code-header make-lisp-obj get-lisp-obj-address
 	  function-word-offset
-	  funcallable-instance-p %set-funcallable-instance-info
+	  funcallable-instance-p %funcallable-instance-info
+	  %set-funcallable-instance-info %funcallable-instance-function
+	  %funcallable-instance-lexenv
 	  code-header-ref code-header-set code-instructions
 	  shift-towards-start shift-towards-end
 	  function-subtype
@@ -300,10 +302,8 @@
 (defknown %make-funcallable-instance (index function function layout) function
   (unsafe))
 
-(defknown %set-funcallable-instance-function (function function) function
-  (unsafe))
+(defknown %funcallable-instance-info (function index) t (flushable))
 (defknown %set-funcallable-instance-info (function index t) t (unsafe))
-
 
 
 ;;;; Mutator accessors.
