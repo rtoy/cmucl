@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.2 1990/03/29 21:18:11 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.3 1990/04/02 00:30:22 ch Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -516,8 +516,6 @@ struct code *code;
 	unsigned long displacement;
 	lispobj fheaderl, *prev_pointer;
 
-	gc_assert(TypeOf(code->header) == type_CodeHeader);
-
 #if defined(DEBUG_CODE_GC)
 	printf("\nTransporting code object located at 0x%08x.\n",
 	       (unsigned long) code);
@@ -528,6 +526,8 @@ struct code *code;
 	if (pointerp(first) && new_space_p(first))
 		return (struct code *) PTR(first);
 	
+	gc_assert(TypeOf(first) == type_CodeHeader);
+
 	/* prepare to transport the code vector */
 	l_code = (lispobj) code | type_OtherPointer;
 
