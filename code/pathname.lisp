@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.10 1992/05/15 17:51:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.11 1992/06/01 16:24:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,7 +412,12 @@
        ,(maybe-diddle-case (coerce directory 'simple-string)
 			   diddle-case)))))
 
-(defun make-pathname (&key host device directory name type version
+(defun make-pathname (&key (host nil hostp)
+			   (device nil devp)
+			   (directory nil dirp)
+			   (name nil namep)
+			   (type nil typep)
+			   (version nil versionp)
 			   defaults (case :local))
   (declare (type (or host null) host)
 	   (type (member nil :unspecific) device)
@@ -427,13 +432,13 @@
 	 (default-host (if defaults
 			   (%pathname-host defaults)
 			   (pathname-host *default-pathname-defaults*)))
-	 (host (or host default-host))
+	 (host (if hostp host default-host))
 	 (diddle-args (and (eq case :common)
 			   (eq (host-customary-case host) :lower)))
 	 (diddle-defaults
 	  (not (eq (host-customary-case host)
 		   (host-customary-case default-host)))))
-    (macrolet ((pick (var field)
+    (macrolet ((pick (var varp field)
 		 `(cond ((eq ,var :wild)
 			 (make-pattern (list :multi-char-wild)))
 			((or (simple-string-p ,var)
@@ -442,7 +447,7 @@
 			((stringp ,var)
 			 (maybe-diddle-case (coerce ,var 'simple-string)
 					    diddle-args))
-			(,var
+			(,varp
 			 (maybe-diddle-case ,var diddle-args))
 			(defaults
 			 (maybe-diddle-case (,field defaults)
@@ -451,19 +456,19 @@
 			 nil))))
       (%make-pathname
        host
-       (or device (if defaults (%pathname-device defaults)))
+       (if devp device (if defaults (%pathname-device defaults)))
        (let ((dir (import-directory directory diddle-args)))
-	 (if defaults
+	 (if (and defaults (not dirp))
 	     (merge-directories dir
 				(%pathname-directory defaults)
 				diddle-defaults)
 	     dir))
-       (pick name %pathname-name)
-       (pick type %pathname-type)
+       (pick name namep %pathname-name)
+       (pick type typep %pathname-type)
        (cond
-	   (version version)
-	   (defaults (%pathname-version defaults))
-	   (t nil))))))
+	 (versionp version)
+	 (defaults (%pathname-version defaults))
+	 (t nil))))))
 
 (defun pathname-host (pathname &key (case :local))
   (declare (type pathnamelike pathname)
