@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.21 1992/12/16 19:07:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.22 1992/12/16 19:41:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,7 +165,7 @@
 ;;; The compiler likes to be able to directly make value cells.
 ;;; 
 (define-vop (make-value-cell)
-  (:args (value :to :save :scs (descriptor-reg)))
+  (:args (value :to :save :scs (descriptor-reg any-reg)))
   (:temporary (:scs (non-descriptor-reg)) temp)
   #-gengc (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
