@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/arith.lisp,v 1.2 1992/08/04 14:14:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/arith.lisp,v 1.3 1993/08/20 03:49:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -533,7 +533,7 @@
     (inst bci := not-p (fixnum y) x target)))
 ;;;
 (define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
-  (:arg-types * (:constant (signed-byte 14)))
+  (:arg-types * (:constant (signed-byte 9)))
   (:variant-cost 6))
   
 
