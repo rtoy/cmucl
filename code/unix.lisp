@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.11 1992/02/15 01:07:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.12 1992/02/16 23:39:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1520,7 +1520,7 @@
 	      (result error-code)
 	    (int-syscall ("execve"
 			  (* char) system-area-pointer system-area-pointer)
-			 program argv envp)))
+			 (vector-sap program) argv envp)))
       ;; 
       ;; Deallocate memory
       (when argv
