@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.30 1998/05/19 02:07:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.31 1998/08/19 15:19:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1617,7 +1617,15 @@
 		:format (ecase class2
 			  (float (float-format-max format1 format2))
 			  ((integer rational) format1)
-			  ((nil) nil))
+			  ((nil)
+			   ;; A double-float with any real number is a
+			   ;; double-float.
+			   #-long-float
+			   (if (eq format1 'double-float) 'double-float nil)
+			   ;; A long-float with any real number is a
+			   ;; long-float.
+			   #+long-float
+			   (if (eq format1 'long-float) 'long-float nil)))
 		:complexp (if (or (eq complexp1 :complex)
 				  (eq complexp2 :complex))
 			      :complex
