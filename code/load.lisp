@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.78 2001/04/11 17:37:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.79 2001/05/02 22:05:03 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,13 @@
     "fasl")
   "A list of the object file types recognized by LOAD.")
 
-(declaim (list *load-source-types* *load-object-types*))
+(defvar *load-lp-object-types*
+  '(#.(string-upcase (c:backend-fasl-file-type c:*backend*))
+    #.(string-upcase (c:backend-byte-fasl-file-type c:*backend*))
+    "FASL")
+  "A list of the object file types recognized by LOAD for logical pathnames.")
+
+(declaim (list *load-source-types* *load-object-types* *load-lp-object-types*))
 
 (defvar *load-verbose* t
   "The default for the :VERBOSE argument to Load.")
@@ -496,9 +502,9 @@
    The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-NEWER*
    determine the defaults for the corresponding keyword arguments.  These
    variables are also bound to the specified argument values, so specifying a
-   keyword affects nested loads.  The variables EXT:*LOAD-SOURCE-TYPES* and
-   EXT:*LOAD-OBJECT-TYPES* determine the file types that we use for defaulting
-   when none is specified."
+   keyword affects nested loads.  The variables EXT:*LOAD-SOURCE-TYPES*,
+   EXT:*LOAD-OBJECT-TYPES*, and EXT:*LOAD-LP-OBJECT-TYPES* determine the file
+   types that we use for defaulting when none is specified."
   (declare (type (member :default :source :binary) external-format))
   (collect ((vars)
 	    (vals))
@@ -598,18 +604,18 @@
 
 ;;; TRY-DEFAULT-TYPES  --  Internal
 ;;;
-(defun try-default-types (pathname types lp-type)
-  ;; Modified 18-Jan-97/pw for logical-pathname support.
+(defun try-default-types (pathname types lp-types)
   (flet ((frob (pathname type)
 	   (let* ((pn (make-pathname :type type :defaults pathname))
 		  (tn (probe-file pn)))
 	     (values pn tn))))
-    (if (logical-pathname-p pathname)
-	(frob pathname lp-type)
-	(dolist (type types (values nil nil))
-	  (multiple-value-bind (pn tn)(frob pathname type)
-	    (when tn
-	      (return (values pn tn))))))))
+    (dolist (type (if (logical-pathname-p pathname)
+		      lp-types types)
+	     (values nil nil))
+      (multiple-value-bind (pn tn)
+	  (frob pathname type)
+	(when tn
+	  (return (values pn tn)))))))
 
 ;;; INTERNAL-LOAD-DEFAULT-TYPE  --  Internal
 ;;;
@@ -618,10 +624,10 @@
 (defun internal-load-default-type (pathname if-does-not-exist)
   (multiple-value-bind
       (src-pn src-tn)
-      (try-default-types pathname *load-source-types* "LISP")
+      (try-default-types pathname *load-source-types* '("LISP"))
     (multiple-value-bind
 	(obj-pn obj-tn)
-	(try-default-types pathname *load-object-types* "FASL")
+	(try-default-types pathname *load-object-types* *load-lp-object-types*)
       (cond
        ((and obj-tn src-tn
 	     (> (file-write-date src-tn) (file-write-date obj-tn)))
