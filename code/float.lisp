@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.1 1990/10/01 15:02:04 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.2 1990/10/01 17:14:01 ram Exp $
 ;;;
 ;;;    This file contains the definitions of float specific number support
 ;;; (other than irrational stuff, which is in irrat.)  There is code in here
@@ -29,8 +29,7 @@
 	  single-float-negative-infinity short-float-negative-infinity
 	  double-float-negative-infinity long-float-negative-infinity
 	  set-floating-point-modes float-denormalized-p float-nan-p
-	  float-trapping-nan-p float-infinity-p floating-point-imprecise
-	  floating-point-invalid))
+	  float-trapping-nan-p float-infinity-p))
 
 (in-package "KERNEL")
 
@@ -129,60 +128,6 @@
 (defconstant double-float-negative-epsilon
   (double-from-bits 0 (- double-float-bias double-float-digits) 1))
 (defconstant long-float-negative-epsilon double-float-negative-epsilon)
-
-
-;;;; Floating point mode control:
-
-(defvar *current-float-traps* 0)
-
-(eval-when (compile load eval)
-
-(defconstant float-trap-alist
-  (list (cons :underflow float-underflow-trap-bit)
-	(cons :overflow float-overflow-trap-bit)
-	(cons :imprecise float-imprecise-trap-bit)
-	(cons :invalid float-invalid-trap-bit)
-	(cons :divide-by-zero float-divide-by-zero-trap-bit)))
-#|
-(define-condition floating-point-imprecise (arithmetic-error) ())
-(define-condition floating-point-invalid (arithmetic-error) ())
-|#
-  
-;;; FLOAT-TRAP-MASK  --  Internal
-;;;
-;;;    Return a mask with all the specified float trap bits set.
-;;;
-(defun float-trap-mask (names)
-  (reduce #'logior
-	  (mapcar #'(lambda (x)
-		      (or (cdr (assoc x float-trap-alist))
-			  (error "Unknown float trap kind: ~S." x)))
-		  names)))
-  
-); Eval-When (Compile Load Eval)
-
-
-;;; SET-FLOATING-POINT-MODES  --  Public
-;;;
-(defun set-floating-point-modes (&key traps)
-  "Set options for the floating point hardware:
-   :Traps
-       A list of the exception conditions that should cause traps.  Possible
-       exceptions are :underflow, :overflow, :imprecise, :invalid and
-       :divide-by-zero."
-  (let ((new (float-trap-mask traps)))
-    (set-float-trap-bits new)
-    (setq *current-float-traps* new))
-  (values))
-
-
-;;; CURRENT-FLOAT-TRAP  --  Interface
-;;;
-(defmacro current-float-trap (&rest traps)
-  "Current-Float-Trap Trap-Name*
-  Return true if any of the named traps are currently trapped, false
-  otherwise."
-  `(not (zerop (logand ,(float-trap-mask traps) *current-float-traps*))))
 
 
 ;;;; Float predicates and environment query:
@@ -554,8 +499,8 @@
 	     (single-float single-float-normal-exponent-min)
 	     (double-float double-float-normal-exponent-min)))
 	(when (and (not (float-denormalized-p x))
-		   (current-float-trap :imprecise))
-	  (error 'floating-point-imprecise :operation 'scale-float
+		   (current-float-trap :inexact))
+	  (error 'floating-point-inexact :operation 'scale-float
 		 :operands (list x exp)))
 	(let ((shift (1- new-exp)))
 	  (cond
@@ -595,8 +540,8 @@
     (when (current-float-trap :overflow)
       (error 'floating-point-overflow :operator 'scale-float
 	     :operands (list x exp)))
-    (when (current-float-trap :imprecise)
-      (error 'floating-point-imprecise :operator 'scale-float
+    (when (current-float-trap :inexact)
+      (error 'floating-point-inexact :operator 'scale-float
 	     :operands (list x exp)))
     (* (float-sign x)
        (etypecase x
