@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.3 1991/05/24 19:39:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.4 1992/05/22 15:32:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.3 1991/05/24 19:39:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.4 1992/05/22 15:32:46 wlott Exp $
 ;;;
 ;;; Functions and utilities for collecting statistics on static vop usages.
 ;;;
@@ -45,6 +45,7 @@
 ;;; component.
 ;;; 
 (defun count-vops (component)
+  (assert (not (backend-featurep :new-assembler)))
   (flet ((vop-entry (vop)
 	   (let* ((name (vop-info-name (vop-info vop)))
 		  (entry (gethash name *vop-counts*)))
@@ -58,13 +59,14 @@
       (do ((vop (ir2-block-start-vop block) (vop-next vop)))
 	  ((null vop))
 	(incf (svref (vop-entry vop) 1))))
-    (count-instructions #'(lambda (vop count elsewherep)
-			    (incf (svref (vop-entry vop)
-					 (if elsewherep 3 2))
-				  count))
-			*code-segment*
-			*elsewhere*
-			:size))
+    (assem:count-instructions
+     #'(lambda (vop count elsewherep)
+	 (incf (svref (vop-entry vop)
+		      (if elsewherep 3 2))
+	       count))
+     *code-segment*
+     *elsewhere*
+     :size))
   (undefined-value))
 
 

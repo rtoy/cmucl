@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.4 1992/02/03 18:54:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.5 1992/05/22 15:32:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,6 +41,7 @@
   vops)
 
 (defun setup-dynamic-count-info (component)
+  (assert (not (backend-featurep :new-assembler)))
   (let* ((info (ir2-component-dyncount-info (component-info component)))
 	 (vops (dyncount-info-vops info)))
     (when (producing-fasl-file)
@@ -68,7 +69,7 @@
 		       (setf (svref counts i) vop-name))
 		     (incf (svref counts (1+ i)))))))
 	    (setf (svref vops index) counts)))))
-    (count-instructions
+    (assem:count-instructions
      #'(lambda (vop bytes elsewherep)
 	 (let ((block-number (block-number (ir2-block-block (vop-block vop)))))
 	   (when block-number
