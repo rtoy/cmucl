@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.77 2004/04/15 01:34:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.78 2004/04/23 03:26:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1547,6 +1547,10 @@
    :external-format - :default
   See the manual for details."
   (declare (ignore external-format input-handle output-handle))
+
+  ;; OPEN signals a file-error if the filename is wild.
+  (when (wild-pathname-p filename)
+    (error 'file-error :pathname filename))
   
   ;; First, make sure that DIRECTION is valid. Allow it to be changed if not.
   (setq direction
