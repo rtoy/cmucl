@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.83 1997/11/25 18:58:24 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.84 1997/11/27 02:02:14 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,9 +18,18 @@
 
 (in-package "LISP")
 
-;;; Uncomment for GENCGC.
-;(setf *load-x86-tlf-to-dynamic-space* t)  ; potentially dangerous.
+;;; Since it is unlikely that native code top-level forms are moved
+;;; before being executed during worldload it is probably safe to load
+;;; these into the dynamic space under CGC even without enabling
+;;; dynamic space code above.
+;(setf *load-x86-tlf-to-dynamic-space* t)
+
+;;; Purify and GENCGC can move native code so all code can be loading
+;;; into the dynamic space during worldload; overrides the above when
+;;; enabled. Enable this for GENCGC.  May also be safe with CGC but
+;;; untested.
 ;(setf cl::*enable-dynamic-space-code* t)
+
 
 ;;; Get some data on this core.
 ;;;
@@ -199,8 +208,16 @@
   #-gengc (gc-on)
   (setf *gc-run-time* 0)
 
-  #+x86 (setf *load-x86-tlf-to-dynamic-space* nil)  ; potentially dangerous.
+  ;; Disable the loading of native code top level forms into the
+  ;; dynamic space under CGC as it is potentially dangerous if a
+  ;; native code top level form is executed after being moved without
+  ;; fixups.
+  #+x86 (setf *load-x86-tlf-to-dynamic-space* nil)
+
+  ;;; GENCGC can move native code so all code can be loaded into the
+  ;;; dynamic space; overrides the above when enabled.
   #+gencgc (setf cl::*enable-dynamic-space-code* t)
+  ;;; Reset the counter of the number of native code fixups.
   #+x86 (setf x86::*num-fixups* 0)
 
   ;;
