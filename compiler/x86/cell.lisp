@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.8 1999/03/08 00:53:34 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.9 1999/03/23 12:14:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -106,6 +106,14 @@
   (:variant symbol-value-slot other-pointer-type)
   (:policy :fast)
   (:translate symbol-value))
+
+(export 'kernel::set-symbol-value-conditional "KERNEL")
+(defknown kernel::set-symbol-value-conditional (symbol t t) t (unsafe))
+
+(define-vop (set-symbol-value-conditional cell-set-conditional)
+  (:translate kernel::set-symbol-value-conditional)
+  (:variant symbol-value-slot other-pointer-type)
+  (:policy :fast-safe))
 
 (defknown fast-symbol-value-xadd (symbol fixnum) fixnum ())
 (define-vop (fast-symbol-value-xadd cell-xadd)
