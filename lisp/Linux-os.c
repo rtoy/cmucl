@@ -12,8 +12,9 @@
  * This is the OSF1 version.  By Sean Hallgren.
  * Much hacked by Paul Werkowski
  * Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
+ * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.2 1997/06/07 15:25:38 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.3 1997/11/25 17:59:17 dtc Exp $
  *
  */
 
@@ -50,6 +51,10 @@ size_t os_vm_page_size;
 /* make sure the stack is 8 byte aligned */
 #if defined USE_SIG_STACK
 static double estack_buf[SIG_STACK_SIZE];
+#endif
+
+#if defined GENCGC
+#include "gencgc.h"
 #endif
 
 
@@ -229,27 +234,51 @@ valid_addr(os_vm_address_t addr)
 }
 
 
+
+#if defined GENCGC
+void sigsegv_handler(HANDLER_ARGS)
+{
+  GET_CONTEXT
+
+  int  fault_addr = ((struct sigcontext_struct *)(&contextstruct))->cr2;
+  int  page_index = find_page_index(fault_addr);
+
+  /*signal(sig,sigsegv_handler);  /* Re-install; necessary? */
+
+  /* Check if the fault is within the dynamic space. */
+  if ( page_index!=-1 ) {
+    /* Un-protect the page */
+    /* The page should have been marked write_protected */
+    if (page_table[page_index].write_protected != 1)
+      fprintf(stderr,"*** Sigsegv in page not marked as write protected");
+    os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
+    page_table[page_index].write_protected = 0;
+    page_table[page_index].write_protected_cleared = 1;
+    return;
+  }
+
+  DPRINTF(0,(stderr,"sigsegv: eip: %p\n",context->eip));
+  interrupt_handle_now(signal, contextstruct);
+  return;
+}
+#else
+static void
+sigsegv_handler(HANDLER_ARGS)
+{
+  GET_CONTEXT
+
+  DPRINTF(1,(stderr,"sigsegv\n"));
+  interrupt_handle_now(signal,contextstruct);
+}
+#endif
+
 static void
 sigbus_handler(HANDLER_ARGS)
 {
   GET_CONTEXT
 
   DPRINTF(1,(stderr,"sigbus:\n")); /* there is no sigbus in linux??? */
-#if defined NOTYET
-  if(!interrupt_maybe_gc(signal, code, context))
-#endif
-    interrupt_handle_now(signal,contextstruct);
-}
-static void
-sigsegv_handler(HANDLER_ARGS)
-{
-  GET_CONTEXT
-
-  DPRINTF(0,(stderr,"os_sigsegv\n"));
-#if defined NOTYET
-  if(!interrupt_maybe_gc(signal, code, context))
-#endif
-    interrupt_handle_now(signal,contextstruct);
+  interrupt_handle_now(signal,contextstruct);
 }
 
 void 

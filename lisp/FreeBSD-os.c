@@ -10,20 +10,15 @@
  *
  * This is the OSF1 version.  By Sean Hallgren.
  * Much hacked by Paul Werkowski
+ * GENCGC support by Douglas Crosher, 1996, 1997.
+ *
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.2 1997/11/25 17:59:16 dtc Exp $
  *
  */
 
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/param.h>
-#include <signal.h>
-#include <sys/user.h>
-#include <sys/ptrace.h>
-#include <sys/wait.h>
 #include <sys/param.h>
 #include <sys/file.h>
-#include <sys/proc.h>
 #include <errno.h>
 #include "./signal.h"
 #include "os.h"
@@ -33,6 +28,10 @@
 #include "lispregs.h"
 #include "internals.h"
 
+#include <sys/types.h>
+#include <signal.h>
+/* #include <sys/sysinfo.h> */
+#include <sys/proc.h>
 #include "x86-validate.h"
 vm_size_t os_vm_page_size;
 #define DPRINTF(t,a) {if(t)fprintf a;}
@@ -45,6 +44,11 @@ vm_size_t os_vm_page_size;
 #if defined USE_SIG_STACK
 static double estack_buf[SIG_STACK_SIZE];
 #endif
+
+#if defined GENCGC
+#include "gencgc.h"
+#endif
+
 
 void
 os_init()
@@ -111,8 +115,10 @@ void
 os_invalidate(os_vm_address_t addr, os_vm_size_t len)
 {
   DPRINTF(0,(stderr,"os_invalidate %x %d\n",addr,len));
-  if(munmap(addr,len) == -1)
+  if(munmap(addr,len) == -1) {
+    fprintf(stderr,"munmap(0x%x,%d)==-1\n",addr,len);
     perror("munmap");
+  }
 }
 
 os_vm_address_t
@@ -164,22 +170,64 @@ valid_addr(os_vm_address_t addr)
 
 
 static void
-sigbus_handler(int signal, int code, struct sigcontext *context)
+sigbus_handler(int signal, int code, struct sigcontext *context,
+	       void *fault_addr)
 {
-  DPRINTF(0,(stderr,"sigbus:\n"));
-#if defined NOTYET
-  if(!interrupt_maybe_gc(signal, code, context))
+#if defined GENCGC
+  int  page_index = find_page_index(fault_addr);
+
+#if SIGBUS_VERBOSE
+  fprintf(stderr,"Signal %d, fault_addr=%x, page_index=%d:\n",
+	  signal,fault_addr,page_index);
 #endif
-    interrupt_handle_now(signal, code, context);
+
+  /* Check if the fault is within the dynamic space. */
+  if (page_index != -1) {
+      /* Un-protect the page */
+
+      /* The page should have been marked write_protected */
+      if (page_table[page_index].write_protected != 1)
+	fprintf(stderr,"*** Sigbus in page not marked as write protected");
+
+      os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
+      page_table[page_index].write_protected = 0;
+      page_table[page_index].write_protected_cleared = 1;
+
+#if SIGBUS_VERBOSE
+      fprintf(stderr,"* page: gen=%d bytes_used=%d first_object_offset=%d dont_move=%d\n",
+	      page_table[page_index].gen,
+	      page_table[page_index].bytes_used,
+	      page_table[page_index].first_object_offset,
+	      page_table[page_index].dont_move);
+      fprintf(stderr,"* data: %x %x %x %x\n",
+	      *(((long *)fault_addr)-1),
+	      *(((long *)fault_addr)-0),
+	      *(((long *)fault_addr)+1),
+	      *(((long *)fault_addr)+2)); 
+      {
+	int  pi2 = find_page_index(*(((long *)fault_addr)-0));
+	
+	if ( pi2!=-1 )
+	  fprintf(stderr,"* pi2: gen=%d bytes_used=%d first_object_offset=%d dont_move=%d\n",
+		  page_table[pi2].gen,
+		  page_table[pi2].bytes_used,
+		  page_table[pi2].first_object_offset,
+		  page_table[pi2].dont_move);
+      }
+#endif
+      
+      return;
+    }
+#endif
+
+  DPRINTF(0,(stderr,"sigbus:\n"));
+  interrupt_handle_now(signal, code, context);
 }
 static void
 sigsegv_handler(int signal, int code, struct sigcontext *context)
 {
   DPRINTF(0,(stderr,"os_sigsegv\n"));
-#if defined NOTYET
-  if(!interrupt_maybe_gc(signal, code, context))
-#endif
-    interrupt_handle_now(signal, code, context);
+  interrupt_handle_now(signal, code, context);
 }
 
 void 
@@ -188,72 +236,3 @@ os_install_interrupt_handlers(void)
   interrupt_install_low_level_handler(SIGSEGV,sigsegv_handler);
   interrupt_install_low_level_handler(SIGBUS,sigbus_handler);
 }
-
-
-/* All this is needed to get the floating-point status register
- * that was stuffed in process context on a SIGFPE. We need it
- * to determine what kind of condition occured. This code also
- * sets up the possibility of defining some local structs to
- * make up for lack of sigcontext registers and have a low level
- * SIGFPE handler dummy something up.
- */
-#ifdef not_now_maybe_not_ever
-struct user u;
-unsigned int
-BSD_get_fp_modes()
-{
-  /* All this is highly dependent on FreeBSD internals. Watch Out! */
-  /* offset to where NPX state is saved in a process */
-  unsigned int fpoff = (char*)&u.u_pcb.pcb_savefpu - (char*)&u;
-  unsigned int fplen = sizeof u.u_pcb.pcb_savefpu / sizeof(int);
-  /* offset to the last exception status word */
-  unsigned int swoff = (char*)&u.u_pcb.pcb_savefpu.sv_ex_sw - (char*)&u;
-  pid_t pid;
-  /* fork to capture NPX state in another process */
-  pid =  fork();
-  if(pid)
-    {
-      u_long ex_sw, ex_cw;
-      int status;
-      printf("p: wait1\n"); fflush(stdout);
-      wait4(pid, &status, WUNTRACED, NULL);
-      printf("P: wait over\n"); fflush(stdout);
-      ex_sw = ptrace(PT_READ_U, pid, (caddr_t)swoff, 0);
-      if(ex_sw == -1)
-	perror("ptrace");
-      {
-	/* Might as well get the rest  of the saved state. */
-	int i, *ip = (int*)&u.u_pcb.pcb_savefpu;
-	unsigned int*uaddr = (unsigned int*)fpoff;
-	for(i=0; i<fplen; i++, uaddr++)
-	  *ip++ = ptrace(PT_READ_U, pid, (caddr_t)uaddr, 0);
-	ex_cw = u.u_pcb.pcb_savefpu.sv_env.en_cw & 0xffff;
-      }
-      printf("sw %x cw %x\n",ex_sw,ex_cw); fflush(stdout);
-      printf("p: Kill\n"); fflush(stdout);
-      ptrace(PT_CONTINUE, pid, NULL, 0);
-      printf("p: wait2\n"); fflush(stdout);
-      wait4(pid, &status, 0, NULL);
-      printf("p: wait over\n"); fflush(stdout);
-      ex_sw &= 0xffff;
-      ex_cw &= 0xffff;
-      ex_cw ^= 0x3f;
-      return (ex_sw << 16) | ex_cw ;
-    }
-  else
-    {
-      /* As child, notify OS to allow ptrace calls */
-      int status = ptrace(PT_TRACE_ME, getpid(), NULL, 0);
-      if(status == -1)
-	perror("kid");
-      printf("c:\n"); fflush(stdout);
-      /* Go idle so parent can poke at process contents. */
-      raise(SIGSTOP);
-      printf("c: stopped?\n");
-      while(0)
-	{ sigsuspend(0); printf("c:\n"); fflush(stdout); }
-      exit(1);
-    }
-}
-#endif
-

@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.6 1997/11/25 15:53:32 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.7 1997/11/25 17:59:15 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -128,6 +128,7 @@ Lfp_rtn_value:
 
 	.size	GNAME(call_into_c), . - GNAME(call_into_c)
 
+#ifdef WANT_CGC
 	.align	align_16byte,0x90
 	.type prep_mind_warp,@function
 /* Purify wants to mess with the control stack and I can't really
@@ -160,8 +161,7 @@ prep_mind_warp:
 	jmp	%ebx
 	.size	prep_mind_warp, . - prep_mind_warp
 
-
-
+	
 	.type	GNAME(do_purify),@function
 	.global	GNAME(do_purify)
 /* This is called from save to purge dynamic memory.
@@ -194,11 +194,10 @@ GNAME(do_purify):
 	
 	ret
 	.size	GNAME(do_purify), . - GNAME(do_purify)
-
+#endif
 
 	.global GNAME(call_into_lisp)
 	.type  GNAME(call_into_lisp),@function
-fpmask:	.word	0x33f		# 64-bit precision | all execptions masked
 		
 /* The C conventions require that ebx, esi, edi, and ebp be preserved
 	across function calls. */
@@ -381,6 +380,7 @@ GNAME(do_pending_interrupt):
 	ret
 	.size	GNAME(do_pending_interrupt),.-GNAME(do_pending_interrupt)
 
+#ifdef WANT_CGC
 /* A copy function optimized for the Pentium and works ok on
  * 486 as well. This assumes (does not check) that the input
  * byte count is a multiple of 8-bytes (one lisp object).
@@ -436,6 +436,29 @@ Lend:
 	ret
 	.size	GNAME(fastcopy16),.-GNAME(fastcopy16)
 	.end
+#endif
+
+#ifdef GENCGC
+/* Fast bzero using the FPU. The first argument is the start address
+   which needs to be aligned on an 8 byte boundary, the second argument
+   is the number of bytes which needs to be a multiple of 8 bytes and
+   not zero. */
+	.text
+	.globl	GNAME(i586_bzero)
+	.type	GNAME(i586_bzero),@function
+	.align	align_4byte,0x90
+GNAME(i586_bzero):
+	movl	4(%esp),%edx	# Load the start address
+	movl	8(%esp),%eax	# Load the number of bytes
+	fldz
+l1:	fstl	0(%edx)
+	addl	$8,%edx
+	subl	$8,%eax
+	jnz	l1
+	fstp	%st(0)
+	ret
+	.size	GNAME(i586_bzero),.-GNAME(i586_bzero)
+#endif	
 
 
 /*
@@ -745,3 +768,139 @@ GNAME(alloc_16_to_edi):
 	.size	GNAME(alloc_16_to_edi),.-GNAME(alloc_16_to_edi)
 		
 	.end
+
+
+
+#ifdef GENCGC
+
+/* Called from lisp when an inline allocation overflows.
+   Every register except the result needs to be preserved.
+   We depend on C to preserve ebx, esi, edi, and ebp.
+   But where necessary must save eax, ecx, edx. */
+
+/* This routine handles an overflow with eax=crfp+size. So the
+   size=eax-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_eax)
+	.type	GNAME(alloc_overflow_eax),@function
+GNAME(alloc_overflow_eax):
+	pushl	%ecx		# Save ecx
+	pushl	%edx		# Save edx
+	/* Calculate the size for the allocation. */
+	subl	GNAME(current_region_free_pointer),%eax
+	pushl	%eax		# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	popl	%edx	# Restore edx.
+	popl	%ecx	# Restore ecx.
+	addl	$6,(%esp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_eax),.-GNAME(alloc_overflow_eax)
+
+/* This routine handles an overflow with ecx=crfp+size. So the
+   size=ecx-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_ecx)
+	.type	GNAME(alloc_overflow_ecx),@function
+GNAME(alloc_overflow_ecx):
+	pushl	%eax		# Save eax
+	pushl	%edx		# Save edx
+	/* Calculate the size for the allocation. */
+	subl	GNAME(current_region_free_pointer),%ecx
+	pushl	%ecx		# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%ecx	# setup the destination.
+	popl	%edx	# Restore edx.
+	popl	%eax	# Restore eax.
+	addl	$6,(%esp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_ecx),.-GNAME(alloc_overflow_ecx)
+
+/* This routine handles an overflow with edx=crfp+size. So the
+   size=edx-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_edx)
+	.type	GNAME(alloc_overflow_edx),@function
+GNAME(alloc_overflow_edx):
+	pushl	%eax		# Save eax
+	pushl	%ecx		# Save ecx
+	/* Calculate the size for the allocation. */
+	subl	GNAME(current_region_free_pointer),%edx
+	pushl	%edx		# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%edx	# setup the destination.
+	popl	%ecx	# Restore ecx.
+	popl	%eax	# Restore eax.
+	addl	$6,(%esp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_edx),.-GNAME(alloc_overflow_edx)
+
+/* This routine handles an overflow with ebx=crfp+size. So the
+   size=ebx-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_ebx)
+	.type	GNAME(alloc_overflow_ebx),@function
+GNAME(alloc_overflow_ebx):
+	pushl	%eax		# Save eax
+	pushl	%ecx		# Save ecx
+	pushl	%edx		# Save edx
+	/* Calculate the size for the allocation. */
+	subl	GNAME(current_region_free_pointer),%ebx
+	pushl	%ebx		# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%ebx	# setup the destination.
+	popl	%edx	# Restore edx.
+	popl	%ecx	# Restore ecx.
+	popl	%eax	# Restore eax.
+	addl	$6,(%esp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_ebx),.-GNAME(alloc_overflow_ebx)
+
+/* This routine handles an overflow with esi=crfp+size. So the
+   size=esi-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_esi)
+	.type	GNAME(alloc_overflow_esi),@function
+GNAME(alloc_overflow_esi):
+	pushl	%eax		# Save eax
+	pushl	%ecx		# Save ecx
+	pushl	%edx		# Save edx
+	/* Calculate the size for the allocation. */
+	subl	GNAME(current_region_free_pointer),%esi
+	pushl	%esi		# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%esi	# setup the destination.
+	popl	%edx	# Restore edx.
+	popl	%ecx	# Restore ecx.
+	popl	%eax	# Restore eax.
+	addl	$6,(%esp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_esi),.-GNAME(alloc_overflow_esi)
+
+/* This routine handles an overflow with edi=crfp+size. So the
+   size=edi-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_edi)
+	.type	GNAME(alloc_overflow_edi),@function
+GNAME(alloc_overflow_edi):
+	pushl	%eax		# Save eax
+	pushl	%ecx		# Save ecx
+	pushl	%edx		# Save edx
+	/* Calculate the size for the allocation. */
+	subl	GNAME(current_region_free_pointer),%edi
+	pushl	%edi		# Push the size
+	call	GNAME(alloc)
+	addl	$4,%esp	# pop the size arg.
+	movl	%eax,%edi	# setup the destination.
+	popl	%edx	# Restore edx.
+	popl	%ecx	# Restore ecx.
+	popl	%eax	# Restore eax.
+	addl	$6,(%esp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_edi),.-GNAME(alloc_overflow_edi)
+
+#endif
