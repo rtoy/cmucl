@@ -450,6 +450,73 @@
 ); Eval-When (Compile Load Eval)
 
 
+;;;; INFO cache:
+;;;
+;;;    We use a hash cache to cache name X type => value for the current value
+;;; of *INFO-ENVIRONMENT*.  This is in addition to the per-environment caching
+;;; of name => types.
+;;;
+
+;;; The value of *INFO-ENVIRONMENT* that has cached values.  *INFO-ENVIRONMENT*
+;;; should nevern be destructively modified, so it is EQ to this, then the
+;;; cache is valid.
+;;;
+(defvar *cached-info-environment*)
+
+(eval-when (compile eval)
+
+;;; INFO-CACHE-INIT  --  Internal
+;;;
+;;;    Set up the info cache.  This is also called in GLOBALDB-INIT.
+(defmacro info-cache-init ()
+  `(progn
+     (setq *cached-info-environment* nil)
+     (define-hash-cache info ((name eq) (type eq))
+       :values 2
+       :hash-function info-cache-hash
+       :hash-bits 10
+       :default (values nil :empty))))
+
+(info-cache-init)
+
+); Eval-When (Compile Eval)
+
+
+;;; Whenever we GC, we must blow away the INFO cache, otherwise values might
+;;; become unreachable (and hence not be updated), and then could become
+;;; reachable again in a future GC.
+;;;
+(defun info-cache-gc-hook ()
+  (setq *cached-info-environment* nil))
+;;;
+(pushnew 'info-cache-gc-hook *after-gc-hooks*)
+
+
+;;; INFO-CACHE-HASH  --  Internal
+;;;
+;;;    Hash function used for INFO cache.
+;;;
+(defmacro info-cache-hash (name type)
+  `(the fixnum
+	(logand
+	 (the fixnum
+	      (logxor (the fixnum (cache-hash-eq ,name))
+		      (the fixnum (ash (the fixnum ,type) 7))))
+	 #x3FF)))
+
+
+;;; CLEAR-INVALID-INFO-CACHE  --  Internal
+;;;
+;;;    If the info cache is invalid, then clear it.
+;;;
+(proclaim '(inline clear-invalid-info-cache))
+(defun clear-invalid-info-cache ()
+  (unless (eq *info-environment* *cached-info-environment*)
+    (without-interrupts
+      (info-cache-clear)
+      (setq *cached-info-environment* *info-environment*))))
+
+
 ;;;; Compact environments:
 
 ;;; The upper limit on the size of the ENTRIES vector in a COMPACT-INFO-ENV.
@@ -747,6 +814,8 @@
 	   (inline assoc))
   (when (eql name 0)
     (error "0 is not a legal INFO name."))
+  (clear-invalid-info-cache)
+  (info-cache-enter name type new-value t)
   (with-info-bucket (table index name env)
     (let ((types (if (symbolp name)
 		     (assoc name (svref table index) :test #'eq)
@@ -810,6 +879,8 @@
 ;;;
 (defun clear-info-value (name type)
   (declare (type type-number type) (inline assoc))
+  (clear-invalid-info-cache)
+  (info-cache-enter name type nil :empty)
   (with-info-bucket (table index name (get-write-info-env))
     (let ((types (assoc name (svref table index) :test #'equal)))
       (when (and types
@@ -819,7 +890,11 @@
 	t))))
 
 
-;;; GET-INFO-VALUE  --  Internal
+;;;; GET-INFO-VALUE:
+
+(eval-when (compile eval)
+
+;;; GET-INFO-VALUE-SEARCH  --  Internal
 ;;;
 ;;;    Return the value from the first environment which has it defined, or
 ;;; return the default if none does.  We have a cache for the last name looked
@@ -828,31 +903,50 @@
 ;;; the lookup routine to eliminate the possiblity of the cache being
 ;;; partially updated if the lookup is interrupted.
 ;;;
+(defmacro get-info-value-search ()
+  '(let ((hash nil))
+     (dolist (env *info-environment*
+		  (multiple-value-bind
+		      (val winp)
+		      (funcall (type-info-default (svref *type-numbers* type))
+			       name)
+		    (values val winp)))
+       (macrolet ((frob (lookup cache slot)
+		    `(progn
+		       (unless (eq name (,slot env))
+			 (unless hash
+			   (setq hash (info-hash name)))
+			 (setf (,slot env) 0)
+			 (,lookup env name hash))
+		       (multiple-value-bind
+			   (value winp)
+			   (,cache env type)
+			 (when winp (return (values value t)))))))
+	 (if (typep env 'volatile-info-env)
+	     (frob volatile-info-lookup volatile-info-cache-hit
+	       volatile-info-env-cache-name)
+	     (frob compact-info-lookup compact-info-cache-hit
+	       compact-info-env-cache-name))))))
+
+); Eval-When (Compile Eval)
+
+
+;;; GET-INFO-VALUE  --  Internal
+;;;
+;;;    Check if the name and type is in our cache, if so return it.  Otherwise,
+;;; search for the value and encache it.
+;;;
 (defun get-info-value (name type)
   (declare (type type-number type))
-  (let ((hash nil))
-    (dolist (env *info-environment*
-		 (multiple-value-bind
-		     (val winp)
-		     (funcall (type-info-default (svref *type-numbers* type))
-			       name)
-		   (values val winp)))
-      (macrolet ((frob (lookup cache slot)
-		   `(progn
-		      (unless (eq name (,slot env))
-			(unless hash
-			  (setq hash (info-hash name)))
-			(setf (,slot env) 0)
-			(,lookup env name hash))
-		      (multiple-value-bind
-			  (value winp)
-			  (,cache env type)
-			(when winp (return (values value t)))))))
-      (if (typep env 'volatile-info-env)
-	  (frob volatile-info-lookup volatile-info-cache-hit
-	        volatile-info-env-cache-name)
-	  (frob compact-info-lookup compact-info-cache-hit
-	        compact-info-env-cache-name))))))
+  (clear-invalid-info-cache)
+  (multiple-value-bind (val winp)
+		       (info-cache-lookup name type)
+    (if (eq winp :empty)
+	(multiple-value-bind (val winp)
+			     (get-info-value-search)
+	  (info-cache-enter name type val winp)
+	  (values val winp))
+	(values val winp))))
 
 
 ;;;; Initialization:
@@ -863,15 +957,18 @@
 ;;; file, we must initialize the database before processing any top-level
 ;;; forms.  This requires a special initialization function that is called from
 ;;; %INITIAL-FUNCTION.  We replicate the init forms of the variables that
-;;; maintain the class/type namespace.
+;;; maintain the class/type namespace.  We also initialize the info cache.
 ;;;
 (defun globaldb-init ()
-  (setq *info-environment*
-	(list (make-info-environment :name "Initial Global")))
+  (unless (boundp '*info-environment*)
+    (setq *info-environment*
+	  (list (make-info-environment :name "Initial Global"))))
   (unless (boundp '*info-classes*)
     (setq *info-classes* (make-hash-table :test #'equal))
     (setq *type-numbers*
 	  (make-array (ash 1 type-number-bits)  :initial-element nil)))
+
+  (info-cache-init)  
   (function-info-init)
   (other-info-init))
 
@@ -1034,6 +1131,15 @@
   nil)
 
 (define-info-type type documentation (or string null))
+
+;;; Function that parses type specifiers into CTYPE structures.
+;;;
+(define-info-type type translator (or function null list) nil)
+
+;;; If true, then the type coresponding to this name.
+;;;
+(define-info-type type builtin (or ctype null) nil)
+
 
 (define-info-class declaration)
 (define-info-type declaration recognized boolean)
