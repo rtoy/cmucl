@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.13 1992/09/08 16:27:00 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.14 1992/10/16 15:07:28 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2084,7 +2084,9 @@
 	   (ignore chunk)
 	   (type (or null stream) stream)
 	   (type disassem-state dstate))
-  (when (and (aligned-p (dstate-cur-offs dstate) (* 2 vm:word-bytes))
+  (when (and (aligned-p (+ (seg-virtual-location (dstate-segment dstate))
+			   (dstate-cur-offs dstate))
+			(* 2 vm:word-bytes))
 	     ;; check type
 	     (= (system:sap-ref-8 (dstate-segment-sap dstate)
 				  (if (eq (dstate-byte-order dstate)
@@ -2132,14 +2134,17 @@
 	   (ignore chunk)
 	   (type (or null stream) stream)
 	   (type disassem-state dstate))
-  (let ((offs (dstate-cur-offs dstate))
+  (let ((location
+	 (+ (seg-virtual-location (dstate-segment dstate))
+	    (dstate-cur-offs dstate)))
 	(alignment (dstate-alignment dstate)))
-    (unless (aligned-p offs alignment)
+    (unless (aligned-p location alignment)
       (when stream
 	(format stream "~a~vt~d~%" '.align
 		(dstate-argument-column dstate)
 		alignment))
-      (setf (dstate-next-offs dstate) (align offs alignment)))
+      (incf(dstate-next-offs dstate)
+	   (- (align location alignment) location)))
     nil))
 
 (defun rewind-current-segment (dstate segment)
@@ -2462,12 +2467,23 @@
 	   (type disassem-state dstate))
   (format stream "~a~vt" 'WORD (dstate-argument-column dstate))
   (let ((sap (dstate-segment-sap dstate))
-	(start-offs (dstate-cur-offs dstate)))
-    (dotimes (offs num)
-      (unless (zerop offs)
+	(start-offs (dstate-cur-offs dstate))
+	(byte-order (dstate-byte-order dstate)))
+    (dotimes (word-offs num)
+      (unless (zerop word-offs)
 	(write-string ", " stream))
-      (format stream "#x~8,'0x"
-	      (system:sap-ref-32 sap (+ offs start-offs))))))
+      (let ((word 0) (bit-shift 0))
+	(dotimes (byte-offs vm:word-bytes)
+	  (let ((byte
+		 (system:sap-ref-8
+			sap
+			(+ start-offs (* word-offs vm:word-bytes) byte-offs))))
+	    (setf word
+		  (if (eq byte-order :big-endian)
+		      (+ (ash word vm:byte-bits) byte)
+		      (+ word (ash byte bit-shift))))
+	    (incf bit-shift vm:byte-bits)))
+	(format stream "#x~v,'0x" (ash vm:word-bits -2) word)))))
 
 ;;; ----------------------------------------------------------------
 
