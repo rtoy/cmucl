@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.84 1993/05/12 11:26:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.85 1993/05/12 11:30:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -362,6 +362,7 @@
 ;;;
 (defun compile-component (component)
   (let* ((*compile-component* component)
+	 (*byte-compiling*
 	  (ecase *byte-compile*
 	    ((t) t)
 	    ((nil) nil)
