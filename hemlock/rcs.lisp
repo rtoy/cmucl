@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.18 1991/11/07 21:54:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.19 1991/11/07 21:58:55 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -325,7 +325,10 @@
     (when (buffer-modified buffer)
       (save-file-command nil))
     (rcs-check-in-file buffer pathname p)
-    (visit-file-command nil pathname buffer)))
+    (when (member buffer *buffer-list*)
+      ;; If the buffer has not been deleted, make sure it is up to date
+      ;; with respect to the file.
+      (visit-file-command nil pathname buffer))))
 
 (defcommand "RCS Check In File" (p)
   "Prompt for a file, and attempt to check it in.  With an argument, do
