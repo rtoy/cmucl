@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.38 1996/05/08 16:03:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.39 1997/07/13 20:02:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -940,10 +940,14 @@
 
 ;;; Flush-Type-Checks-According-To-Policy  --  Internal
 ;;;
-;;;    Flush type checks according to policy.  If the policy is unsafe, then we
-;;; never do any checks.  If our policy is safe, and we are using a safe
-;;; template, then we can also flush arg and result type checks.  Result type
-;;; checks are only flushed when the continuation as a single use.
+;;;    Flush type checks according to policy.  If the policy is
+;;; unsafe, then we never do any checks.  If our policy is safe, and
+;;; we are using a safe template, then we can also flush arg and
+;;; result type checks.  Result type checks are only flushed when the
+;;; continuation as a single use. Result type checks are not flush if
+;;; the policy is safe because the selection of template for results
+;;; readers assumes the type check is done (uses the derived type
+;;; which is the intersection of the proven and asserted types).
 ;;;
 (defun flush-type-checks-according-to-policy (call policy template)
   (declare (type combination call) (type policies policy)
@@ -954,7 +958,8 @@
 	(flush-type-check arg)))
     (when safe-op
       (let ((cont (node-cont call)))
-	(when (eq (continuation-use cont) call)
+	(when (and (eq (continuation-use cont) call)
+		   (not (policy-safe-p policy)))
 	  (flush-type-check cont)))))
 
   (undefined-value))
