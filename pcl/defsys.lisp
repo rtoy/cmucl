@@ -858,6 +858,8 @@ and load your system with:
    (dfun        t                                   t (boot low cache))
    (fast-init   t                                   t (boot low))
    (braid       (+ precom1 precom2)                 t (boot defs low fin cache))
+   #+ignore
+   (dlisp3      t                                   t (dlisp2 boot braid))
    (generic-functions t                             t (boot))
    (slots       t                                   t (vector boot defs low cache fin))
    (init        t                                   t (vector boot defs low fast-init))
