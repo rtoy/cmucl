@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.32 1994/01/06 19:50:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.33 1994/01/08 18:42:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -743,9 +743,10 @@ non-server method is also significantly more efficient for large reads.
 		(unless count
 		  (error "Error reading ~S: ~A" stream
 			 (unix:get-unix-error-msg err)))
-		(when (zerop count)
-		  (return (eof-or-lose stream eof-error-p
-				       (- requested now-needed))))
+		(if eof-error-p
+		    (when (zerop count)
+		      (error 'end-of-file :stream stream))
+		    (return (- requested now-needed)))
 		(decf now-needed count)
 		(when (zerop now-needed) (return requested))
 		(incf offset count)))))
@@ -762,9 +763,9 @@ non-server method is also significantly more efficient for large reads.
 	      (unless count
 		(error "Error reading ~S: ~A" stream
 		       (unix:get-unix-error-msg err)))
-	      (when (zerop count)
-		(return (eof-or-lose stream eof-error-p
-				     (- requested now-needed))))
+	      (when (and eof-error-p (zerop count))
+		(error 'end-of-file :stream stream))
+
 	      (let* ((copy (min now-needed count))
 		     (copy-bits (* copy vm:byte-bits))
 		     (buffer-start-bits
@@ -781,10 +782,10 @@ non-server method is also significantly more efficient for large reads.
 					   copy-bits))
 
 		(decf now-needed copy)
-		(when (zerop now-needed)
+		(when (or (zerop now-needed) (not eof-error-p))
 		  (setf (fd-stream-ibuf-head stream) copy)
 		  (setf (fd-stream-ibuf-tail stream) count)
-		  (return requested))
+		  (return (- requested now-needed)))
 		(incf offset copy)))))))))))
 
 
