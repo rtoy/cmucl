@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.3 1997/02/10 17:06:35 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.4 1997/09/15 10:40:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,7 +221,7 @@
      (inst jmp eax)
 
      TRUE
-     (inst mov res t-value)))
+     (load-symbol res t)))
 
 ); eval-when
 
@@ -267,7 +267,7 @@
   (inst jmp eax)
   
   RETURN-T
-  (inst mov res t-value))
+  (load-symbol res t))
 
 (define-assembly-routine (generic-=
 			  (:cost 10)
