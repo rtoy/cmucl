@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.9 1992/07/03 00:09:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.10 1993/02/07 21:17:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,9 +24,6 @@
 (pushnew :mach *features*)
 (setq *software-type* "MACH/4.3BSD")
 
-(defconstant foreign-segment-start #x00C00000)
-(defconstant foreign-segment-size  #x00400000)
- 
 (defun software-version ()
   "Returns a string describing version of the supporting software."
   (string-trim '(#\newline)

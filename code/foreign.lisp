@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.12 1992/07/17 16:03:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.13 1993/02/07 21:17:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,12 @@
 (export '(load-foreign))
 (in-package "SYSTEM")
 (import 'alien:load-foreign)
+
+#+sparc (defconstant foreign-segment-start #xe0000000)
+#+sparc (defconstant foreign-segment-size  #x00100000)
+
+#+pmax (defconstant foreign-segment-start #x00C00000)
+#+pmax (defconstant foreign-segment-size  #x00400000)
 
 (defvar *previous-linked-object-file* nil)
 (defvar *foreign-segment-free-pointer* foreign-segment-start)
