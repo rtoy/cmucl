@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.2 1990/07/02 05:21:04 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.3 1990/07/18 10:57:55 wlott Exp $ */
 
 
 #include <mach.h>
@@ -63,6 +63,31 @@ static lispobj ptrans_boxed(thing, header)
         
     /* Scavenge it. */
     pscav(new, nwords);
+
+    return result;
+}
+
+static lispobj ptrans_symbol(thing, header)
+{
+    int nwords;
+    lispobj result, *new, *old;
+
+    nwords = 1 + HeaderValue(header);
+
+    /* Allocate it */
+    old = (lispobj *)PTR(thing);
+    new = static_free;
+    static_free += CEILING(nwords, 2);
+
+    /* Copy it. */
+    bcopy(old, new, nwords * sizeof(lispobj));
+
+    /* Deposit forwarding pointer. */
+    result = (lispobj)new | LowtagOf(thing);
+    *old = result;
+        
+    /* Scavenge it. */
+    pscav(&((struct symbol *)new)->function, 1);
 
     return result;
 }
@@ -281,9 +306,11 @@ static lispobj ptrans_otherptr(thing, header)
       case type_ComplexArray:
       case type_ClosureHeader:
       case type_ValueCellHeader:
-      case type_SymbolHeader:
       case type_WeakPointer:
         return ptrans_boxed(thing, header);
+
+      case type_SymbolHeader:
+        return ptrans_symbol(thing, header);
 
       case type_SimpleString:
         return ptrans_vector(thing, 8, 1, FALSE);
@@ -491,11 +518,14 @@ lispobj roots;
 {
     lispobj *clean;
 
+#ifdef PRINTNOISE
     printf("[Doing purification:");
     fflush(stdout);
+#endif
 
     if (FIXNUM_TO_INT(SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)) != 0) {
-        printf(" Ack! Can't purify interrupt contexts.]\n");
+        printf(" Ack! Can't purify interrupt contexts. ");
+        fflush(stdout);
         return;
     }
 
@@ -504,31 +534,43 @@ lispobj roots;
     static_end = static_free =
         (lispobj *)SymbolValue(STATIC_SPACE_FREE_POINTER);
 
+#ifdef PRINTNOISE
     printf(" roots");
     fflush(stdout);
+#endif
     pscav(&roots, 1);
 
+#ifdef PRINTNOISE
     printf(" handlers");
     fflush(stdout);
+#endif
     pscav((lispobj *) interrupt_handlers,
           sizeof(interrupt_handlers) / sizeof(lispobj));
 
+#ifdef PRINTNOISE
     printf(" stack");
     fflush(stdout);
+#endif
     pscav(control_stack, current_control_stack_pointer - control_stack);
 
+#ifdef PRINTNOISE
     printf(" bindings");
     fflush(stdout);
+#endif
     pscav(binding_stack, current_binding_stack_pointer - binding_stack);
 
+#ifdef PRINTNOISE
     printf(" static");
     fflush(stdout);
+#endif
     clean = static_space;
     while (clean != static_free)
         clean = pscav(clean, static_free - clean);
 
+#ifdef PRINTNOISE
     printf(" cleanup");
     fflush(stdout);
+#endif
     os_zero((os_vm_address_t) current_dynamic_space,
             (os_vm_size_t) DYNAMIC_SPACE_SIZE);
 
@@ -542,8 +584,10 @@ lispobj roots;
     SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj)read_only_free);
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj)static_free);
 
+#ifdef PRINTNOISE
     printf(" Done.]\n");
     fflush(stdout);
+#endif
 
     return 0;
 }
