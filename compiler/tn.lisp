@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.12 1991/02/20 14:59:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.13 1991/11/13 19:36:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,25 +56,47 @@
 ;;; properly packed TNs.
 ;;;
 (defun delete-unreferenced-tns (component)
-  (macrolet ((frob (name)
-	       `(let ((prev nil))
-		  (do ((tn ,name (tn-next tn)))
-		      ((null tn))
-		    (cond ((or (tn-reads tn)
-			       (tn-writes tn)
-			       (member (tn-kind tn)
-				       '(:component :specified-save)))
-			   (setq prev tn))
-			  (t
-			   (if prev
-			       (setf (tn-next prev) (tn-next tn))
-			       (setf ,name (tn-next tn)))
-			   (setf (tn-offset tn) nil)))))))
-    (let ((2comp (component-info component)))
-      (frob (ir2-component-normal-tns 2comp))
-      (frob (ir2-component-restricted-tns 2comp))
-      (frob (ir2-component-wired-tns 2comp))
-      (frob (ir2-component-alias-tns 2comp))))
+  (let ((2comp (component-info component)))
+    (labels ((delete-some (getter setter)
+	       (let ((prev nil))
+		 (do ((tn (funcall getter 2comp) (tn-next tn)))
+		     ((null tn))
+		   (let ((kind (tn-kind tn)))
+		     (cond
+		      ((or (tn-reads tn) (tn-writes tn)
+			   (eq kind :component))
+		       (setq prev tn))
+		      ((eq kind :specified-save)
+		       (let ((actual (tn-save-tn tn)))
+			 (unless (or (tn-reads actual) (tn-writes actual)
+				     (eq (tn-kind actual) :component))
+			   (delete-1 tn prev setter))))
+		      (t
+		       (delete-1 tn prev setter)))))))
+	     (delete-1 (tn prev setter)
+	       (if prev
+		   (setf (tn-next prev) (tn-next tn))
+		   (funcall setter (tn-next tn) 2comp))
+	       (setf (tn-offset tn) nil)
+	       (case (tn-kind tn)
+		 (:environment
+		  (clear-live tn #'ir2-environment-live-tns
+			      #'(setf ir2-environment-live-tns)))
+		 (:debug-environment
+		  (clear-live tn #'ir2-environment-debug-live-tns
+			      #'(setf ir2-environment-debug-live-tns)))))
+	     (clear-live (tn getter setter)
+	       (let ((env (environment-info (tn-environment tn))))
+		 (funcall setter (delete tn (funcall getter env)) env))))
+      (declare (inline delete-some delete-1 clear-live))
+      (delete-some #'ir2-component-normal-tns
+		   #'(setf ir2-component-normal-tns))
+      (delete-some #'ir2-component-restricted-tns
+		   #'(setf ir2-component-restricted-tns))
+      (delete-some #'ir2-component-wired-tns
+		   #'(setf ir2-component-wired-tns))
+      (delete-some #'ir2-component-alias-tns
+		   #'(setf ir2-component-alias-tns))))
   (undefined-value))
 
 
