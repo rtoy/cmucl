@@ -21,7 +21,7 @@
 		    *seen-blocks* *seen-functions* *list-conflicts-table*
 		    *continuation-number* *continuation-numbers*
 		    *number-continuations* *tn-id* *tn-ids* *id-tns*
-		    *label-ids* *label-id* *id-labels* *sb-list*
+		    *label-ids* *label-id* *id-labels*
 		    *compiler-error-count*
 		    *compiler-warning-count* *compiler-note-count*
 		    *compiler-error-output* *compiler-error-bailout*
