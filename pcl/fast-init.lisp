@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.10 2002/09/07 13:16:48 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.11 2002/10/18 23:31:03 pmai Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 
@@ -135,8 +135,11 @@
 		(*print-length* nil) (*print-level* nil)
 		(*print-circle* nil) (*print-case* :upcase)
 		(*print-pretty* nil))
-	    (intern (format nil "MAKE-INSTANCE ~S ~S ~S"
-			    class-name keys allow-other-keys-p))))))))
+	    (intern (format nil "MAKE-INSTANCE ~A::~A ~S ~S"
+                            (package-name (symbol-package class-name))
+                            (symbol-name class-name)
+			    keys
+			    allow-other-keys-p))))))))
 
 (defun make-instance-1 (class initargs)
   (apply #'make-instance class initargs))
