@@ -50,7 +50,9 @@
 	       `(let ((prev nil))
 		  (do ((tn ,name (tn-next tn)))
 		      ((null tn))
-		    (cond ((or (tn-reads tn) (tn-writes tn))
+		    (cond ((or (not (eq (tn-kind tn) :normal))
+			       (tn-reads tn)
+			       (tn-writes tn))
 			   (setq prev tn))
 			  (t
 			   (if prev
