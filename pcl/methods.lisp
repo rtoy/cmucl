@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.16 2002/09/09 15:02:56 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.17 2002/10/11 15:15:03 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -504,6 +504,14 @@
 ;;;
 ;;;
 ;;;
+
+(defmethod generic-function-argument-precedence-order
+    ((gf standard-generic-function))
+  (assert (eq *boot-state* 'complete))
+  (loop with arg-info = (gf-arg-info gf)
+	with lambda-list = (arg-info-lambda-list arg-info)
+	for argument-position in (arg-info-precedence arg-info)
+	collect (nth argument-position lambda-list)))
 
 (defmethod generic-function-lambda-list ((gf generic-function))
   (gf-lambda-list gf))

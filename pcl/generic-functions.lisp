@@ -2,7 +2,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.11 2002/10/09 14:19:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.12 2002/10/11 15:15:03 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -148,6 +148,9 @@
 ;          (standard-generic-function)
 
 (defgeneric generic-function-name (standard-generic-function))
+;          (standard-generic-function)
+
+(defgeneric generic-function-argument-precedence-order (generic-function))
 ;          (standard-generic-function)
 
 (defgeneric gf-arg-info (standard-generic-function))
