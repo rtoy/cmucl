@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.2 1997/02/05 15:34:13 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.3 1997/03/25 16:59:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
 	 (bound :scs (any-reg))
 	 (index :scs (any-reg immediate) :target result))
   (:arg-types * positive-fixnum tagged-num)
-  (:results (result :scs (any-reg immediate-stack)))
+  (:results (result :scs (any-reg descriptor-reg)))
   (:result-types positive-fixnum)
   (:vop-var vop)
   (:save-p :compute-only)
@@ -109,8 +109,7 @@
       ;; we get the < 0 and >= bound test all rolled into one.
       (inst jmp :be error)
       (unless (and (tn-p index) (location= result index))
-        (inst mov result index))
-      )))
+        (inst mov result index)))))
 
 
 ;;;; Accessors/Setters
@@ -583,8 +582,7 @@
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to (:eval 0))
 	 (index :scs (unsigned-reg) :to (:eval 0))
-	 (value :scs (unsigned-reg unsigned-stack signed-reg signed-stack)
-		:target eax))
+	 (value :scs (unsigned-reg signed-reg) :target eax))
   (:arg-types simple-array-unsigned-byte-8 positive-fixnum positive-fixnum)
   (:temporary (:sc dword-reg :offset eax-offset :target result
 		   :from (:argument 2) :to (:result 0))
@@ -604,8 +602,7 @@
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to (:eval 0))
-	 (value :scs (unsigned-reg unsigned-stack signed-reg signed-stack)
-		:target eax))
+	 (value :scs (unsigned-reg signed-reg) :target eax))
   (:info index)
   (:arg-types simple-array-unsigned-byte-8 (:constant (signed-byte 30))
 	      positive-fixnum)
@@ -662,8 +659,7 @@
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to (:eval 0))
 	 (index :scs (unsigned-reg) :to (:eval 0))
-	 (value :scs (unsigned-reg unsigned-stack signed-reg signed-stack)
-		:target eax))
+	 (value :scs (unsigned-reg signed-reg) :target eax))
   (:arg-types simple-array-unsigned-byte-16 positive-fixnum positive-fixnum)
   (:temporary (:sc dword-reg :offset eax-offset :target result
 		   :from (:argument 2) :to (:result 0))
@@ -683,8 +679,7 @@
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to (:eval 0))
-	 (value :scs (unsigned-reg unsigned-stack signed-reg signed-stack)
-		:target eax))
+	 (value :scs (unsigned-reg signed-reg) :target eax))
   (:info index)
   (:arg-types simple-array-unsigned-byte-16 (:constant (signed-byte 30)) positive-fixnum)
   (:temporary (:sc dword-reg :offset eax-offset :target result
@@ -778,3 +773,81 @@
 			       other-pointer-type))
 	 value)
    (move result value)))
+
+
+;;; signed-byte-16
+
+#+nil
+(define-vop (data-vector-ref/simple-array-signed-byte-16)
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (unsigned-reg)))
+  (:arg-types simple-array-signed-byte-16 positive-fixnum)
+  (:results (value :scs (signed-reg)))
+  (:result-types tagged-num)
+  (:generator 5
+    (inst movsx value
+	  (make-ea :word :base object :index index :scale 2
+		   :disp (- (* vector-data-offset word-bytes)
+			    other-pointer-type)))))
+
+#+nil
+(define-vop (data-vector-ref-c/simple-array-signed-byte-16)
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types simple-array-signed-byte-16 (:constant (signed-byte 30)))
+  (:results (value :scs (signed-reg)))
+  (:result-types tagged-num)
+  (:generator 4
+    (inst movsx value
+	  (make-ea :word :base object
+		   :disp (- (+ (* vector-data-offset word-bytes)
+			       (* 2 index))
+			    other-pointer-type)))))
+
+#+nil
+(define-vop (data-vector-set/simple-array-signed-byte-16)
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to (:eval 0))
+	 (index :scs (unsigned-reg) :to (:eval 0))
+	 (value :scs (signed-reg) :target eax))
+  (:arg-types simple-array-signed-byte-16 positive-fixnum tagged-num)
+  (:temporary (:sc dword-reg :offset eax-offset :target result
+		   :from (:argument 2) :to (:result 0))
+	      eax)
+  (:results (result :scs (signed-reg)))
+  (:result-types tagged-num)
+  (:generator 5
+    (move eax value)
+    (inst mov (make-ea :word :base object :index index :scale 2
+		       :disp (- (* vector-data-offset word-bytes)
+				other-pointer-type))
+	  ax-tn)
+    (move result eax)))
+
+#+nil
+(define-vop (data-vector-set-c/simple-array-signed-byte-16)
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to (:eval 0))
+	 (value :scs (signed-reg) :target eax))
+  (:info index)
+  (:arg-types simple-array-signed-byte-16 (:constant (signed-byte 30)) tagged-num)
+  (:temporary (:sc dword-reg :offset eax-offset :target result
+		   :from (:argument 1) :to (:result 0))
+	      eax)
+  (:results (result :scs (signed-reg)))
+  (:result-types tagged-num)
+  (:generator 4
+    (move eax value)
+    (inst mov
+	  (make-ea :word :base object
+		   :disp (- (+ (* vector-data-offset word-bytes)
+			       (* 2 index))
+			    other-pointer-type))
+	  ax-tn)
+    (move result eax)))
