@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.5 1999/02/22 11:26:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.6 1999/03/13 06:23:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1919,23 +1919,30 @@ length LEN and type TYPE."
   "Unix-getppid returns the process-id of the parent of the current process.")
 
 ;;; Unix-getpgrp returns the group-id associated with the
-;;; process whose process-id is specified as an argument.
-;;; As usual, if the process-id is 0, it refers to the current
-;;; process.
+;;; current process.
 
-(defun unix-getpgrp (pid)
-  "Unix-getpgrp returns the group-id of the process associated
-   with pid."
-  (int-syscall ("getpgrp" int) pid))
+(defun unix-getpgrp ()
+  "Unix-getpgrp returns the group-id of the calling process."
+  (int-syscall ("getpgrp")))
 
-;;; Unix-setpgrp sets the group-id of the process specified by 
+;;; Unix-setpgid sets the group-id of the process specified by 
 ;;; "pid" to the value of "pgrp".  The process must either have
 ;;; the same effective user-id or be a super-user process.
 
+;;; setpgrp(int int)[freebsd] is identical to setpgid and is retained
+;;; for backward compatibility. setpgrp(void)[solaris] is being phased
+;;; out in favor of setsid().
+
 (defun unix-setpgrp (pid pgrp)
   "Unix-setpgrp sets the process group on the process pid to
-   pgrp.  NIL and an error number is returned upon failure."
-  (void-syscall ( "setpgrp" int int) pid pgrp))
+   pgrp.  NIL and an error number are returned upon failure."
+  (void-syscall ("setpgid" int int) pid pgrp))
+
+(defun unix-setpgid (pid pgrp)
+  "Unix-setpgid sets the process group of the process pid to
+   pgrp. If pgid is equal to pid, the process becomes a process
+   group leader. NIL and an error number are returned upon failure."
+  (void-syscall ("setpgid" int int) pid pgrp))
 
 #+nil
 (defun unix-setsid ()

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.63 1999/03/08 18:03:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.64 1999/03/13 06:23:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2055,15 +2055,13 @@
   "Unix-getegid returns the effective group-id of the current process.")
 
 ;;; Unix-getpgrp returns the group-id associated with the
-;;; process whose process-id is specified as an argument.
-;;; As usual, if the process-id is 0, it refers to the current
-;;; process.
+;;; current process.
 
 (defun unix-getpgrp ()
   "Unix-getpgrp returns the group-id of the calling process."
   (int-syscall ("getpgrp")))
 
-;;; Unix-setpgrp sets the group-id of the process specified by 
+;;; Unix-setpgid sets the group-id of the process specified by 
 ;;; "pid" to the value of "pgrp".  The process must either have
 ;;; the same effective user-id or be a super-user process.
 
