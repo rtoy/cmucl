@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.7 1991/04/21 23:45:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.8 1991/05/14 16:04:36 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -981,7 +981,8 @@
   (let ((editor (ext:cmd-switch-arg switch)))
     (unless editor
       (error "Editor to connect to unspecified."))
-    (start-slave editor)))
+    (start-slave editor)
+    (setf debug:*help-line-scroll-count* most-positive-fixnum)))
 ;;;
 (defswitch "slave" 'slave-switch-demon)
 (defswitch "slave-buffer")
