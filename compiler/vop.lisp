@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.32 1992/03/23 14:46:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.33 1992/04/21 04:15:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,23 +143,13 @@
 ;;; associated block.
 ;;;
 (defstruct (ir2-block
+	    (:include block-annotation)
 	    (:constructor really-make-ir2-block (block))
 	    (:print-function %print-ir2-block))
   ;;
   ;; The IR2-Block's number, which differs from Block's Block-Number if any
   ;; blocks are split.  This is assigned by lifetime analysis.
   (number nil :type (or index null))
-  ;;
-  ;; The IR1 block that this block is in the Info for.  
-  (block (required-argument) :type cblock)
-  ;;
-  ;; The next and previous block in emission order (not DFO).  This determines
-  ;; which block we drop though to, and also used to chain together overflow
-  ;; blocks that result from splitting of IR2 blocks in lifetime analysis.
-  (next nil :type (or ir2-block null))
-  (prev nil :type (or ir2-block null))
-  ;;
-  unused-slot
   ;;
   ;; Information about unknown-values continuations that is used by stack
   ;; analysis to do stack simulation.  A unknown-values continuation is Pushed
