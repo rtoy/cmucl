@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.31 2002/08/23 18:31:05 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.32 2003/04/16 14:04:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,7 +157,11 @@
   (do ((plist place (cddr plist)))
       ((null plist) default)
     (cond ((atom (cdr plist))
-	   (simple-program-error "~S is a malformed property list." place))
+	   (error 'simple-type-error
+		  :datum place
+		  :expected-type 'list
+		  :format-control "Malformed property list: ~S"
+		  :format-arguments (list place)))	   
 	  ((eq (car plist) indicator)
 	   (return (cadr plist))))))
 
@@ -178,7 +182,11 @@
   (do ((plist place (cddr plist)))
       ((null plist) (values nil nil nil))
     (cond ((atom (cdr plist))
-	   (simple-program-error "~S is a malformed property list." place))
+	   (error 'simple-type-error
+		  :datum place
+		  :expected-type 'list
+		  :format-control "Malformed property list: ~S"
+		  :format-arguments (list place)))
 	  ((memq (car plist) indicator-list)
 	   (return (values (car plist) (cadr plist) plist))))))
 
