@@ -128,6 +128,12 @@
   (declare (ignore stuff))
   (error "Can't funcall the SYMBOL-FUNCTION of special forms."))
 
+;;; SPECIAL-FORM-ARG-COUNT-ERROR
+;;;
+(defun special-form-arg-count-error (name kind continue string &rest args)
+  (declare (ignore continue))
+  (compiler-error "While expanding ~A ~S:~%  ~?" kind name string args))
+
 ;;; Def-IR1-Translator  --  Interface
 ;;;
 ;;;    Parse defmacro style lambda-list, setting things up so that a compiler
@@ -151,15 +157,14 @@
 	(body decls doc)
 	(lisp::parse-defmacro lambda-list n-form body name 'special-form
 			      :doc-string-allowed t
-			      :environment n-env)
+			      :environment n-env
+			      :error-fun 'special-form-arg-count-error)
       `(progn
 	 (proclaim '(function ,fn-name (continuation continuation t) void))
 	 (defun ,fn-name (,start-var ,cont-var ,n-form)
 	   (let ((,n-env *lexical-environment*))
 	     ,@decls
-	     (macrolet ((error (&rest args)
-			       `(compiler-error ,@args)))
-	       ,body)))
+	     ,body))
 	 ,@(when doc
 	     `((setf (documentation ',name 'function) ,doc)))
 	 (setf (info function ir1-convert ',name) #',fn-name)
@@ -196,17 +201,24 @@
 	(body decls)
 	(lisp::parse-defmacro lambda-list n-form body name
 			      'def-source-transform
-			      :environment n-env)
+			      :environment n-env
+			      :error-fun `(lambda (&rest stuff)
+					    (declare (ignore stuff))
+					    (return-from ,fn-name
+							 (values nil t))))
       `(progn
 	 (defun ,fn-name (,n-form)
 	   (let ((,n-env *lexical-environment*))
 	     ,@decls
-	     (macrolet ((error (&rest stuff)
-			       (declare (ignore stuff))
-			       `(return-from ,',fn-name (values nil t))))
-	       ,body)))
+	     ,body))
 	 (setf (info function source-transform ',name) #',fn-name)))))
 
+
+;;; PRIMITIVE-ARG-COUNT-ERROR
+;;;
+(defun primitive-count-error (name kind continue string &rest args)
+  (declare (ignore continue))
+  (compiler-error "While expanding ~A ~S:~%  ~?" kind name string args))
 
 (defmacro def-primitive-translator (name lambda-list &body body)
   "Def-Primitive-Translator Name Lambda-List Form*
@@ -219,14 +231,13 @@
 	(body decls)
 	(lisp::parse-defmacro lambda-list n-form body name
 			      'def-primitive-translator
-			      :environment n-env)
+			      :environment n-env
+			      :error-fun 'primitive-arg-count-error)
       `(progn
 	 (defun ,fn-name (,n-form)
 	   (let ((,n-env *lexical-environment*))
 	     ,@decls
-	     (macrolet ((error (&rest args)
-			       `(compiler-error ,@args)))
-	       ,body)))
+	     ,body))
 	 (setf (gethash ',name *primitive-translators*) ',fn-name)))))
 
 
