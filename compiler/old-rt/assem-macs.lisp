@@ -116,7 +116,7 @@
        ((any-reg descriptor-reg string-char-reg)
 	(sc-case ,n-stack
 	  ((stack string-char-stack)
-	   (loadw ,n-reg cont-tn (tn-offset ,n-stack))))))))
+	   (loadw ,n-reg fp-tn (tn-offset ,n-stack))))))))
 
 
 (defmacro store-stack-tn (stack reg)
@@ -126,7 +126,7 @@
        ((any-reg descriptor-reg string-char-reg)
 	(sc-case ,n-stack
 	  ((stack string-char-stack)
-	   (storew ,n-reg cont-tn (tn-offset ,n-stack))))))))
+	   (storew ,n-reg fp-tn (tn-offset ,n-stack))))))))
 
 
 
