@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.18 2002/08/28 13:29:25 pmai Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.19 2002/11/02 23:47:28 toy Exp $ 
  *
  */
 
@@ -345,13 +345,14 @@ lispobj  funcall3(lispobj function, lispobj arg0, lispobj arg1, lispobj arg2)
 
 #ifdef LINKAGE_TABLE
 
-/* Linkage entry size is 8, for no good reason. */
-#define LINKAGE_ENTRY_SIZE 8
+#ifndef LinkageEntrySize
+#define LinkageEntrySize 8
+#endif
 
 void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
 {
     char *reloc_addr = (char *)(FOREIGN_LINKAGE_SPACE_START
-				+ linkage_entry * LINKAGE_ENTRY_SIZE);
+				+ linkage_entry * LinkageEntrySize);
 
     if (type == 1) {			/* code reference */
         /* Make JMP to function entry. */
@@ -376,7 +377,7 @@ void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
 void arch_make_lazy_linkage(long linkage_entry)
 {
     char *reloc_addr = (char *)(FOREIGN_LINKAGE_SPACE_START
-				+ linkage_entry * LINKAGE_ENTRY_SIZE);
+				+ linkage_entry * LinkageEntrySize);
     long offset = (char *)(FOREIGN_LINKAGE_SPACE_START) - (reloc_addr + 5);
     int i;
 
@@ -395,6 +396,6 @@ void arch_make_lazy_linkage(long linkage_entry)
 
 long arch_linkage_entry(unsigned long retaddr)
 {
-    return ((retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LINKAGE_ENTRY_SIZE;
+    return ((retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LinkageEntrySize;
 }
 #endif /* LINKAGE_TABLE */
