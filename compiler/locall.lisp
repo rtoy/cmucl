@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.32 1992/06/10 13:57:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.33 1992/07/21 17:27:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,12 +70,12 @@
 ;;; If we do merge, we reoptimize the RETURN-RESULT continuation to cause
 ;;; IR1-OPTIMIZE-RETURN to recompute the tail set type.
 ;;;
-(defun merge-tail-sets (call)
-  (declare (type basic-combination call))
+(defun merge-tail-sets (call &optional (new-fun (combination-lambda call)))
+  (declare (type basic-combination call) (type clambda new-fun))
   (let ((return (continuation-dest (node-cont call))))
     (when (return-p return)
       (let ((call-set (lambda-tail-set (node-home-lambda call)))
-	    (fun-set (lambda-tail-set (combination-lambda call))))
+	    (fun-set (lambda-tail-set new-fun)))
 	(unless (eq call-set fun-set)
 	  (let ((funs (tail-set-functions fun-set)))
 	    (dolist (fun funs)
@@ -90,19 +90,23 @@
 ;;;
 ;;;    Convert a combination into a local call.  We PROPAGATE-TO-ARGS, set the
 ;;; combination kind to :Local, add Fun to the Calls of the function that the
-;;; call is in, replace the function in the Ref node with the new function,
-;;; then MERGE-TAIL-SETS.
+;;; call is in, call MERGE-TAIL-SETS, then replace the function in the Ref node
+;;; with the new function.
 ;;;
-;;;    We change the Ref last, since changing the reference can trigger let
+;;; We change the Ref last, since changing the reference can trigger let
 ;;; conversion of the new function, but will only do so if the call is local.
+;;; Note that the replacement may trigger let conversion or other changes in
+;;; IR1.  We must call MERGE-TAIL-SETS with NEW-FUN before the substitution,
+;;; since after the substitution (and let conversion), the call may no longer
+;;; be recognizable as tail-recursive.
 ;;;
 (defun convert-call (ref call fun)
   (declare (type ref ref) (type combination call) (type clambda fun))
   (propagate-to-args call fun)
   (setf (basic-combination-kind call) :local)
   (pushnew fun (lambda-calls (node-home-lambda call)))
+  (merge-tail-sets call fun)
   (change-ref-leaf ref fun)
-  (merge-tail-sets call)
   (undefined-value))
 
 
