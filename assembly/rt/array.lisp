@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.2 1991/04/07 15:13:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.3 1991/04/09 16:57:34 wlott Exp $
 ;;;
 ;;; This file contains the support routines for arrays and vectors.
 ;;;
@@ -42,7 +42,8 @@
     (move ndescr type)
     (inst sr ndescr vm:word-shift)
     (storew ndescr vector 0 vm:other-pointer-type)
-    (storew length vector vm:vector-length-slot vm:other-pointer-type))
+    (storew length vector vm:vector-length-slot vm:other-pointer-type)
+    (store-symbol-value alloc *allocation-pointer*))
   (move result vector))
 
 
@@ -62,7 +63,7 @@
 			  (:temp data non-descriptor-reg nargs-offset)
 			  (:temp temp non-descriptor-reg ocfp-offset))
   (declare (ignore result accum data temp))
-  (inst b sxhash-simple-substring-entry)
+  (inst bx sxhash-simple-substring-entry)
   (loadw length string vm:vector-length-slot vm:other-pointer-type))
 
 
@@ -105,6 +106,7 @@
   (inst bc :eq done)
   (inst neg length)
   (inst sl length 1)
+  (inst nilz length #x1f)
   (inst sr data length)
   (inst x accum data)
   DONE
