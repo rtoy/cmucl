@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.4 1990/05/06 05:28:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.5 1990/05/09 06:41:53 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -80,7 +80,7 @@
   bignum-element-type
   (unsafe))
 
-(defknown bignum::%digit-0-or-plusp (bignum-element-type) (mod 2)
+(defknown bignum::%digit-0-or-plusp (bignum-element-type) boolean
   (foldable flushable movable))
 
 (defknown (bignum::%add-with-carry bignum::%subtract-with-borrow)
@@ -100,6 +100,9 @@
   bignum-element-type
   (foldable flushable movable))
 
+(defknown bignum::%fixnum-to-digit (fixnum) bignum-element-type
+  (foldable flushable movable))
+
 (defknown bignum::%floor
 	  (bignum-element-type bignum-element-type bignum-element-type)
   (values bignum-element-type bignum-element-type)
@@ -108,4 +111,18 @@
 (defknown bignum::%fixnum-digit-with-correct-sign
 	  (bignum-element-type)
   fixnum
+  (foldable flushable movable))
+
+(defknown (bignum::%signed-digit-to-single-float bignum::%digit-to-single-float)
+	  (bignum-element-type)
+  (single-float)
+  (foldable flushable movable))
+
+(defknown (bignum::%signed-digit-to-double-float bignum::%digit-to-double-float)
+	  (bignum-element-type)
+  (double-float)
+  (foldable flushable movable))
+
+(defknown (bignum::%ashl bignum::%ashr)
+	  (bignum-element-type (mod 32)) bignum-element-type
   (foldable flushable movable))
