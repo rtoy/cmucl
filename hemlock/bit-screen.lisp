@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.6 1991/02/08 16:32:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.7 1991/07/26 09:52:17 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -606,8 +606,7 @@
 (defun hunk-mouse-entered (hunk event-key event-window root child same-screen-p
 			   x y root-x root-y state time mode kind send-event-p)
   (declare (ignore event-key event-window child root same-screen-p
-		   x y root-x root-y state time mode kind focus-p
-		   send-event-p))
+		   x y root-x root-y state time mode kind send-event-p))
   (when (and *cursor-dropped* (not *hemlock-listener*))
     (cursor-invert-center))
   (setf *hemlock-listener* t)
@@ -628,8 +627,7 @@
 (defun hunk-mouse-left (hunk event-key event-window root child same-screen-p
 			x y root-x root-y state time mode kind send-event-p)
   (declare (ignore event-key event-window child root same-screen-p
-		   x y root-x root-y state time mode kind focus-p
-		   send-event-p))
+		   x y root-x root-y state time mode kind send-event-p))
   (setf *hemlock-listener* nil)
   (when *cursor-dropped* (cursor-invert-center))
   (when *current-highlighted-border*
@@ -739,7 +737,7 @@
 ;;; BITMAP-MAKE-WINDOW -- Internal.
 ;;; 
 (defun bitmap-make-window (device start modelinep window font-family
-				  ask-user x y width-arg height-arg)
+				  ask-user x y width-arg height-arg proportion)
   (let* ((display (bitmap-device-display device))
 	 (thumb-bar-p (value ed::thumb-bar-meter))
 	 (hunk (make-bitmap-hunk
@@ -752,7 +750,7 @@
 	(xparent xwindow)
 	(maybe-make-x-window-and-parent window display start ask-user x y
 					width-arg height-arg font-family
-					modelinep thumb-bar-p)
+					modelinep thumb-bar-p proportion)
       (unless xwindow (return-from bitmap-make-window nil))
       (let ((window-group (make-window-group xparent
 					     (xlib:drawable-width xparent)
@@ -808,7 +806,8 @@
 ;;; CURRENT-WINDOW's parent.
 ;;;
 (defun maybe-make-x-window-and-parent (xparent display start ask-user x y width
-				       height font-family modelinep thumb-p)
+				       height font-family modelinep thumb-p
+				       proportion)
   (let ((icon-name (buffer-name (line-buffer (mark-line start)))))
     (cond (xparent
 	   (check-type xparent xlib:window)
@@ -830,7 +829,8 @@
 			    (window-hunk (current-window))))))
 	     (values xparent
 		     (create-window-from-current
-		      font-family modelinep thumb-p xparent icon-name)))))))
+		      proportion font-family modelinep thumb-p xparent
+		      icon-name)))))))
 
 ;;; XWINDOW-FOR-XPARENT -- Internal.
 ;;;
@@ -852,51 +852,48 @@
 ;;; height is odd, the extra pixel stays with it, and the new window is one
 ;;; pixel smaller.
 ;;;
-(defun create-window-from-current (font-family modelinep thumb-p
+(defun create-window-from-current (proportion font-family modelinep thumb-p
 				   parent icon-name)
   (let* ((cur-hunk (window-hunk *current-window*))
 	 (cwin (bitmap-hunk-xwindow cur-hunk)))
-    ;; Compute current window's height and divide by 2.
+    ;; Compute current window's height and take a proportion of it.
     (xlib:with-state (cwin)
-      (let ((cw (xlib:drawable-width cwin))
-	    (ch (xlib:drawable-height cwin)))
-	(declare (fixnum cw ch))
-	(let ((cy (xlib:drawable-y cwin)))
-	  (declare (fixnum cy))
-	  (multiple-value-bind (ch/2 rem) (truncate ch 2)
-	    (declare (fixnum ch/2 rem))
-		   ;; See if we have room for a new window.  This should really
-		   ;; check the current window and the new one against their
-		   ;; relative fonts and the minimal window columns and line
-		   ;; (including whether there is a modeline).
-
-
-	    (let* ((font-height (font-family-height font-family))
-		   (font-width (font-family-width font-family))
-		   (cwin-min (minimum-window-height
-			      (font-family-height
-			       (bitmap-hunk-font-family cur-hunk))
-			      (bitmap-hunk-modeline-pos cur-hunk)
-			      (bitmap-hunk-thumb-bar-p cur-hunk)))
-		   (new-min (minimum-window-height font-height modelinep
-						   thumb-p)))
-	      (if (< (+ cwin-min new-min) ch)
-		  (let ((win (create-window-with-properties
-			      parent 0 (+ cy ch/2 rem)
-			      cw ch/2 font-width font-height
-			      icon-name)))
-		    ;; No need to reshape current Hemlock window structure here
-		    ;; since this call will send an appropriate event.
-		    (setf (xlib:drawable-height cwin) (+ ch/2 rem))
-		    ;; Set hints on parent, so the user can't resize it to be
-		    ;; smaller than what will hold the current number of
-		    ;; children.
-		    (modify-parent-properties :add parent modelinep
-					      thumb-p
-					      (font-family-width font-family)
-					      font-height)
-		    win)
-		  nil))))))))
+      (let* ((cw (xlib:drawable-width cwin))
+	     (ch (xlib:drawable-height cwin))
+	     (cy (xlib:drawable-y cwin))
+	     (new-ch (truncate (* ch (- 1 proportion))))
+	     (font-height (font-family-height font-family))
+	     (font-width (font-family-width font-family))
+	     (cwin-min (minimum-window-height
+			(font-family-height
+			 (bitmap-hunk-font-family cur-hunk))
+			(bitmap-hunk-modeline-pos cur-hunk)
+			(bitmap-hunk-thumb-bar-p cur-hunk)))
+	     (new-min (minimum-window-height font-height modelinep
+					     thumb-p)))
+	(declare (fixnum cw cy ch new-ch))
+	;; See if we have room for a new window.  This should really
+	;; check the current window and the new one against their
+	;; relative fonts and the minimal window columns and line
+	;; (including whether there is a modeline).
+	(if (and (> new-ch cwin-min)
+		 (> (- ch new-ch) new-min))
+	    (let ((win (create-window-with-properties
+			parent 0 (+ cy new-ch)
+			cw (- ch new-ch) font-width font-height
+			icon-name)))
+	      ;; No need to reshape current Hemlock window structure here
+	      ;; since this call will send an appropriate event.
+	      (setf (xlib:drawable-height cwin) new-ch)
+	      ;; Set hints on parent, so the user can't resize it to be
+	      ;; smaller than what will hold the current number of
+	      ;; children.
+	      (modify-parent-properties :add parent modelinep
+					thumb-p
+					(font-family-width font-family)
+					font-height)
+	      win)
+	    nil)))))
 
 
 ;;; MAKE-XWINDOW-LIKE-HWINDOW -- Interface.
@@ -1095,14 +1092,9 @@
      :min-height
      (let ((delta (minimum-window-height font-height modelinep thumb-p)))
        (ecase type
-	 (:delete
-	  (let ((min-height (xlib:wm-size-hints-min-height hints)))
-	    (unless hints
-	      (error "Existing parent has no min-height hit?!"))
-	    (- min-height delta)))
-	 (:add
-	  (+ (or (xlib:wm-size-hints-min-height hints) 0)
-	     delta))
+	 (:delete (- (xlib:wm-size-hints-min-height hints) delta))
+	 (:add (+ (or (xlib:wm-size-hints-min-height hints) 0)
+		  delta))
 	 (:set delta))))))
 
 ;;; MINIMUM-WINDOW-HEIGHT -- Internal.
@@ -1544,19 +1536,30 @@
 		     :height (bitmap-hunk-height hunk))
     (hunk-draw-bottom-border hunk)))
 
-;;; HUNK-CHANGED is called from the changed window handler and HUNK-RESET.
-;;; Don't go through REDISPLAY-WINDOW-ALL since the window changed handler
-;;; updates the window image.
-;;; 
+;;; HUNK-CHANGED -- Internal.
+;;;
+;;; HUNK-RESET and the changed window handler call this.  Don't go through
+;;; REDISPLAY-WINDOW-ALL since the window changed handler updates the window
+;;; image.
+;;;
 (defun hunk-changed (hunk new-width new-height redisplay)
   (set-hunk-size hunk new-width new-height)
   (funcall (bitmap-hunk-changed-handler hunk) hunk)
   (when redisplay (dumb-window-redisplay (bitmap-hunk-window hunk))))
 
+;;; WINDOW-GROUP-CHANGED -- Internal.
+;;;
+;;; HUNK-RECONFIGURED calls this when the hunk was a window-group.  This finds
+;;; the windows in the changed group, sorts them by their vertical stacking
+;;; order, and tries to resize the windows proportioned by their old sizes
+;;; relative to the old group size.  If that fails, this tries to make all the
+;;; windows the same size, dividing up the new group's size.
+;;;
 (defun window-group-changed (window-group new-width new-height)
   (let ((xparent (window-group-xparent window-group))
 	(affected-windows nil)
-	(count 0))
+	(count 0)
+	(old-xparent-height (window-group-height window-group)))
     (setf (window-group-width window-group) new-width)
     (setf (window-group-height window-group) new-height)
     (dolist (window *window-list*)
@@ -1565,6 +1568,46 @@
 	(when (eq test xparent)
 	  (push window affected-windows)
 	  (incf count))))
+    ;; Probably shoulds insertion sort them, but I'm lame.
+    ;;
+    (xlib:with-state (xparent)
+      (sort affected-windows #'<
+	    :key #'(lambda (window)
+		     (xlib:drawable-y
+		      (bitmap-hunk-xwindow (window-hunk window))))))
+    (let ((start 0))
+      (declare (fixnum start))
+      (do ((windows affected-windows (cdr windows)))
+	  ((endp windows))
+	(let* ((xwindow (bitmap-hunk-xwindow (window-hunk (car windows))))
+	       (new-child-height (round
+				  (* new-height
+				     (/ (xlib:drawable-height xwindow)
+					old-xparent-height))))
+	       (hunk (window-hunk (car windows))))
+	  ;; If there is not enough room for one of the windows, space them out
+	  ;; evenly so there will be room.
+	  ;; 
+	  (when (< new-child-height (minimum-window-height
+				     (font-family-height
+				      (bitmap-hunk-font-family hunk))
+				     (bitmap-hunk-modeline-pos hunk)
+				     (bitmap-hunk-thumb-bar-p hunk)))
+	    (reconfigure-windows-evenly affected-windows new-width new-height)
+	    (return))
+	  (xlib:with-state (xwindow)
+	    (setf (xlib:drawable-y xwindow) start
+		  ;; Make the last window absorb or lose the number of pixels
+		  ;; lost in rounding.
+		  ;;
+		  (xlib:drawable-height xwindow) (if (cdr windows)
+						     new-child-height
+						     (- new-height start))
+		  (xlib:drawable-width xwindow) new-width
+		  start (+ start new-child-height 1))))))))
+
+(defun reconfigure-windows-evenly (affected-windows new-width new-height)
+  (let ((count (length affected-windows)))
     (multiple-value-bind
 	(pixels-per-window remainder)
 	(truncate new-height count)
