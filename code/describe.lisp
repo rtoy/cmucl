@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.10 1991/05/23 17:02:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.11 1991/08/07 14:55:49 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -180,8 +180,8 @@
   (cond ((macro-function x)
 	 (let ((fun (macro-function x)))
 	   (format t "~&Its macroexpansion function is ~A." fun)
-	   (describe-function fun t)
-	   (desc-doc x 'function "Macro documentation:")))
+	   (desc-doc x 'function "Macro documentation:")
+	   (describe-function fun t)))
 	((special-form-p x)
 	 (desc-doc x 'function "Special form documentation:"))
 	((fboundp x)
@@ -249,14 +249,15 @@
      (format t "~&It is an unknown type of function."))))
 
 (defun describe-function-compiled (x macro-p)
-  (let ((args (%function-header-arglist x)))
-    (if args
-	(describe-function-arg-list
-	 *current-describe-object* (string= args "()") (write-string args))
-	(format t "~&No argument information available.")))
-
-  (unless macro-p
-    (let ((name (%function-header-name x)))
+  (let ((name (%function-header-name x)))
+    (when (symbolp name)
+      (desc-doc name 'function "Function Documention:"))
+    (let ((args (%function-header-arglist x)))
+      (if args
+	  (describe-function-arg-list
+	   *current-describe-object* (string= args "()") (write-string args))
+	  (format t "~&No argument information available.")))
+    (unless macro-p
       (let ((*print-level* nil)
 	    (*print-length* nil))
 	(multiple-value-bind
@@ -270,16 +271,12 @@
 	    (format t "~&Its ~(~A~) argument types are:~%  ~S"
 		    where (second type))
 	    (format t "~&Its result type is:~%  ~S" (third type)))))
-
+      
       (let ((inlinep (info function inlinep name)))
 	(when inlinep
 	  (format t "~&It is currently declared ~(~A~);~
-	             ~:[no~;~] expansion is available."
-		  inlinep (info function inline-expansion name))))
-    
-      (when (symbolp name)
-	(desc-doc name 'function "Function Documention:"))))
-  
+		     ~:[no~;~] expansion is available."
+		  inlinep (info function inline-expansion name))))))
   (let ((info (di::code-debug-info (di::function-code-header x))))
     (when info
       (let ((sources (c::compiled-debug-info-source info)))
