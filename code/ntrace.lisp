@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.24 2003/05/15 12:28:56 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.25 2003/05/23 13:34:04 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,8 @@
 
 (export '(*trace-values* *max-trace-indentation* *trace-encapsulate-default*
 	  *trace-encapsulate-package-names*))
+
+(use-package :fwrappers)
 
 (defvar *trace-values* nil
   "This is bound to the returned values when evaluating :BREAK-AFTER and
@@ -370,26 +372,27 @@
 			     "after" frame)))))
 
 
-;;; TRACE-CALL  --  Internal
+;;; TRACE-FWRAPPER  --  Internal
 ;;;
 ;;;    This function is called by the trace encapsulation.  It calls the
 ;;; breakpoint hook functions with NIL for the breakpoint and cookie, which
 ;;; we have cleverly contrived to work for our hook functions.
 ;;;
-(defun trace-call (info)
-  (let* ((name (trace-info-what info))
-	 (fdefn (lisp::fdefinition-object name nil)))
-    (letf (((lisp::fdefn-function fdefn) (fdefinition name)))
+(define-fwrapper trace-fwrapper (&rest args)
+  (let* ((info (fwrapper-user-data fwrapper))
+	 (name (trace-info-what info))
+	 (fdefn (lisp::fdefinition-object name nil))
+	 (basic-definition (fwrapper-next fwrapper))
+	 (argument-list args))
+    (declare (special basic-definition argument-list))
+    (letf (((lisp::fdefn-function fdefn) basic-definition))
       (multiple-value-bind (start cookie)
 	  (trace-start-breakpoint-fun info)
 	(let ((frame (di:frame-down (di:top-frame))))
 	  (funcall start frame nil)
 	  (let ((*traced-entries* *traced-entries*))
-	    (declare (special basic-definition argument-list))
 	    (funcall cookie frame nil)
-	    (let ((vals
-		   (multiple-value-list
-		    (apply basic-definition argument-list))))
+	    (let ((vals (multiple-value-list (call-next-function))))
 	      (funcall (trace-end-breakpoint-fun info) frame nil vals nil)
 	      (values-list vals))))))))
 
@@ -459,8 +462,8 @@
 	(unless named
 	  (error "Can't use encapsulation to trace anonymous function ~S."
 		 fun))
-	(without-package-locks
-	 (encapsulate function-or-name 'trace `(trace-call ',info))))
+	(fwrap function-or-name #'trace-fwrapper :type 'trace
+	       :user-data info))
        (t
 	(multiple-value-bind
 	    (start-fun cookie-fun)
@@ -636,7 +639,7 @@
        evaluates to true at the time of the call.  :CONDITION-AFTER is
        similar, but suppresses the initial printout, and is tested when the
        function returns.  :CONDITION-ALL tries both before and after.
-
+p
    :WHEREIN Names
        If specified, Names is a function name or list of names.  TRACE does
        nothing unless a call to one of those functions encloses the call to
@@ -698,8 +701,7 @@
 	   (warn "Function is not TRACE'd -- ~S." function-or-name))
 	  (t
 	   (cond ((trace-info-encapsulated info)
-		  (without-package-locks
-		   (unencapsulate (trace-info-what info) 'trace)))
+		  (funwrap (trace-info-what info) :type 'trace))
 		 (t
 		  (di:delete-breakpoint (trace-info-start-breakpoint info))
 		  (di:delete-breakpoint (trace-info-end-breakpoint info))))

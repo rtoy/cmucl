@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.211 2003/05/20 20:08:05 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.212 2003/05/23 13:34:05 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1719,6 +1719,7 @@
 	   "VALUES-TYPES" "VALUES-TYPES-INTERSECT" "VOID"
 	   "WITH-CIRCULARITY-DETECTION" "WRONG-NUMBER-OF-INDICES-ERROR"
 	   "FDEFN" "MAKE-FDEFN" "FDEFN-P" "FDEFN-NAME" "FDEFN-FUNCTION"
+	   "FDEFN-OR-LOSE"
 	   "FDEFN-MAKUNBOUND" "%COERCE-TO-FUNCTION" "FUNCTION-SUBTYPE"
 	   "*MAXIMUM-ERROR-DEPTH*" "%SET-SYMBOL-PLIST"
 	   "INFINITE-ERROR-PROTECT"
@@ -1828,3 +1829,37 @@
 	   "PROCESS-WHOSTATE" "PROCESS-YIELD" "PROCESSP" "RESTART-PROCESS" 
 	   "SHOW-PROCESSES" "STACK-GROUP-RESUME" "WITHOUT-SCHEDULING"
 	   "WITH-LOCK-HELD" "WITH-TIMEOUT"))
+
+(defpackage "WALKER"
+  (:use "COMMON-LISP" "EXT")
+  (:export "DEFINE-WALKER-TEMPLATE"
+	   "WALK-FORM"
+	   "WALK-FORM-EXPAND-MACROS-P"
+	   "NESTED-WALK-FORM"
+	   "VARIABLE-LEXICAL-P"
+	   "VARIABLE-SPECIAL-P"
+	   "VARIABLE-GLOBALLY-SPECIAL-P"
+	   "*VARIABLE-DECLARATIONS*"
+	   "VARIABLE-DECLARATION"
+	   "MACROEXPAND-ALL"))
+
+(defpackage "FWRAPPERS"
+  (:use "COMMON-LISP" "EXT" "KERNEL")
+  (:export "DEFINE-FWRAPPER"
+	   "FWRAPPER"
+	   "CALL-NEXT-FUNCTION"
+	   "FWRAP"
+	   "FUNWRAP"
+	   "FIND-FWRAPPER"
+	   "FWRAPPER-TYPE" "FWRAPPER-NEXT" "FWRAPPER-USER-DATA"
+	   "FWRAPPER-CONSTRUCTOR"
+	   "UPDATE-FWRAPPER" "UPDATE-FWRAPPERS"
+	   "SET-FWRAPPERS"
+	   "LIST-FWRAPPERS"
+	   "PUSH-FWRAPPER"
+	   "DELETE-FWRAPPER"
+	   "LAST-FWRAPPER"
+	   "DO-FWRAPPERS"
+	   ))
+
+

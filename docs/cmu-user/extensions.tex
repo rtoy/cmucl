@@ -2182,6 +2182,10 @@ Method profiling is done analogously to \code{trace}:
   true, that is, method functions are compiled.
 \end{defvar}
 
+
+
+
+
 \section{Differences from ANSI Common Lisp}
 This section describes some of the known differences between \cmucl{}
 and ANSI \clisp{}.  Some may be non-compliance issues; same may be
@@ -2194,4 +2198,144 @@ extensions.
   As an extension, \cmucl{} allows \code{constantly} to accept more
   than one value which are returned as multiple values.
 \end{defun}
+
+
+
+
+\section{Function Wrappers}
+\cindex{function wrappers}
+\cindex{fwrappers}
+
+Function wrappers, fwrappers for short, are a facility for efficiently
+encapsulating functions.
+
+Functions in \cmucl{} are represented by \code{kernel:fdefn}
+objects.  Each \code{fdefn} object contains a reference to its
+function's actual code, which we call the function's primary function.
+
+A function wrapper replaces the primary function in the \code{fdefn}
+object with a function of its own, and records the original function
+in an fwrapper object, a funcallable instance.  Thus, when the
+function is called, the fwrapper gets called, which in turn might call
+the primary function, or a previously installed fwrapper that was
+found in the \code{fdefn} object when the second fwrapper was
+installed.
+
+Example:
+
+\begin{lisp}
+(use-package :fwrappers)
+
+(define-fwrapper foo (x y)
+  (format t "x = ~s, y = ~s, user-data = ~s~%"
+          x y (fwrapper-user-data fwrapper))
+  (let ((value (call-next-function)))
+    (format t "value = ~s~%" value)
+    value))
+
+(defun bar (x y)
+  (+ x y))
+
+(fwrap 'bar #'foo :type 'foo :user-data 42)
+
+(bar 1 2)
+ =>
+ x = 1, y = 2, user-data = 42
+ value = 3
+ 3   
+\end{lisp}
+
+Fwrappers are used in the implementation of \code{trace} and
+\code{profile}.
+
+\begin{defmac}{fwrappers:}{define-fwrapper}{name lambda-list \ampbody body}
+  This macro is like \code{defun}, but defines a function named
+  \var{name} that can be used as an fwrapper definition.
+  
+  In \var{body}, the symbol \code{fwrapper} is bound to the current
+  fwrapper object.
+
+  The macro \code{call-next-function} can be used to invoke the next
+  fwrapper, or the primary function being fwrapped.  When called
+  with no arguments, \code{call-next-function} invokes the next
+  function with the original arguments passed to the fwrapper, unless
+  you modify one of the parameters.  When called with arguments,
+  \code{call-next-function} invokes the next function with the given
+  arguments.
+\end{defmac}
+
+\begin{defun}{fwrappers:}{fwrap}{function-name fwrapper \&key type
+    user-data}
+  This function wraps function \code{function-name} in an fwrapper
+  \var{fwrapper} which was defined with \code{define-fwrapper}.
+
+  The value of \var{type}, if supplied, is used as an identifying
+  tag that can be used in various other operations.
+  
+  The value of \var{user-data} is stored as user-supplied data in the
+  fwrapper object that is created for the function encapsulation.
+  User-data is accessible in the body of fwrappers defined with
+  \code{define-fwrapper} as \code{(fwrapper-user-data fwrapper)}.
+
+  Value is the fwrapper object created.
+\end{defun}
+
+\begin{defun}{fwrappers:}{funwrap}{function-name \&key type test}
+  Remove fwrappers from the function named \var{function-name}.  If
+  \var{type} is supplied, remove fwrappers whose type is \code{equal}
+  to \var{type}.  If \var{test} is supplied, remove fwrappers
+  satisfying \var{test}.
+\end{defun}
+
+\begin{defun}{fwrappers:}{find-fwrapper}{function-name \&key type test}
+  Find an fwrapper of \var{function-name}.  If \var{type} is supplied,
+  find an fwrapper whose type is \code{equal} to \var{type}.  If
+  \var{test} is supplied, find an fwrapper satisfying \var{test}.
+\end{defun}
+
+\begin{defun}{fwrappers:}{update-fwrapper}{fwrapper}
+  Update the funcallable instance function of the fwrapper object
+  \var{fwrapper} from the definition of its function that was 
+  defined with \code{define-fwrapper}.  This can be used to update
+  fwrappers after changing a \code{define-fwrapper}.
+\end{defun}
+
+\begin{defun}{fwrappers:}{update-fwrappers}{function-name \&key type test}
+  Update fwrappers of \var{function-name}; see \code{update-fwrapper}.
+  If \var{type} is supplied, update fwrappers whose type is
+  \code{equal} to \var{type}.  If \var{test} is supplied, update fwrappers
+  satisfying \var{test}.
+\end{defun}
+
+\begin{defun}{fwrappers:}{set-fwrappers}{function-name fwrappers}
+  Set \var{function-names}'s fwrappers to elements of the list
+  \var{fwrappers}, which is assumed to be ordered from outermost to
+  innermost.  \var{fwrappers} null means remove all fwrappers.
+\end{defun}
+
+\begin{defun}{fwrappers:}{list-fwrappers}{function-name}
+  Return a list of all fwrappers of \var{function-name}, ordered
+  from outermost to innermost.
+\end{defun}
+
+\begin{defun}{fwrappers:}{push-fwrapper}{fwrapper function-name}
+  Prepend fwrapper \var{fwrapper} to the definition of
+  \var{function-name}.  Signal an error if \var{function-name} is an
+  undefined function.
+\end{defun}
+
+\begin{defun}{fwrappers:}{delete-fwrapper}{fwrapper function-name}
+  Remove fwrapper \var{fwrapper} from the definition of
+  \var{function-name}.  Signal an error if \var{function-name} is an
+  undefined function.
+\end{defun}
+
+\begin{defmac}{fwrappers:}{do-fwrappers}{(var fdefn \ampoptional
+  result) \ampbody body}
+  Evaluate \var{body} with \var{var} bound to consecutive fwrappers of
+  \var{fdefn}.  Return \var{result} at the end.  Note that \var{fdefn}
+  must be an \code{fdefn} object.  You can use
+  \code{kernel:fdefn-or-lose}, for instance, to get the \code{fdefn}
+  object from a function name.
+\end{defmac}
 

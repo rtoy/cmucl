@@ -44,6 +44,12 @@ New in this release:
      - Functions like GETHASH that are used in the implementation of 
        TRACE can now be traced.  See also
        DEBUG:*TRACE-ENCAPSULATE-PACKAGE-NAMES*.
+     - New facility for encapsulating functions, FWRAPPERS;
+       see also the CMUCL User Manual.
+     - TRACE and PROFILE have been reimplemented using fwrappers,
+       with the effect of tracing and profiling now working more
+       nicely together.
+     - When a profiled function is redefined, it is re-profiled.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
@@ -127,7 +133,7 @@ New in this release:
   * Changes to rebuilding procedure:
       
   * Deprecated features:
-  
+     - EXT:ENCAPSULATE and associated functions; use fwrappers instead.
 
 This release is not binary compatible with code compiled using CMUCL
 18e; you will need to recompile FASL files. 

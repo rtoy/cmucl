@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.23 2003/05/17 11:06:29 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.24 2003/05/23 13:34:05 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 (in-package "KERNEL")
 
 (export '(fdefn make-fdefn fdefn-p fdefn-name fdefn-function fdefn-makunbound
-	  %coerce-to-function raw-definition))
+	  fdefn-or-lose %coerce-to-function raw-definition))
 
 
 (in-package "LISP")
@@ -138,6 +138,7 @@
 (defvar *initial-fdefn-objects*)
 
 (defun fdefn-init ()
+  (setq *valid-function-names* nil)
   (dolist (fdefn *initial-fdefn-objects*)
     (setf (info function definition (fdefn-name fdefn)) fdefn))
   (makunbound '*initial-fdefn-objects*))
@@ -192,91 +193,6 @@
   (let ((fdefn (fdefinition-object name t)))
     (setf (fdefn-function fdefn) function)))
 
-
-
-;;;; Definition Encapsulation.
-
-(defstruct (encapsulation
-	    (:alternate-metaclass funcallable-instance
-				  funcallable-structure-class
-				  make-funcallable-structure-class)
-	    (:type funcallable-structure))
-  ;;
-  ;; Something like the symbol TRACE for an encapsulation done
-  ;; by TRACE, for instance.
-  type
-  ;;
-  ;; The function definition before this encapsulation was added.
-  (next #'null :type function))
-
-(defmacro do-encapsulations ((var fdefn &optional result) &body body)
-  "Evaluate BODY with VAR bound to consecutive encapsulations of
-   FDEFN.  Return RESULT at the end."
-  `(loop for ,var = (encapsulation (fdefn-function ,fdefn))
-	 then (encapsulation (encapsulation-next ,var))
-	 while ,var do (locally ,@body)
-	 finally (return ,result)))
-
-(defun encapsulation (fun)
-  "Return FUN if it is an encapsulation or NIL if it isn't."
-  (and (functionp fun)
-       ;; Necessary for cold-load reasons.
-       (= (get-type fun) vm:funcallable-instance-header-type)
-       (encapsulation-p fun)
-       fun))
-
-(declaim (inline last-encapsulation))
-(defun last-encapsulation (fdefn)
-  "Return tha last encapsulation of FDEFN or NIL if none."
-  (declare (type fdefn fdefn))
-  (do-encapsulations (e fdefn)
-    (when (null (encapsulation (encapsulation-next e)))
-      (return e))))
-
-(defun push-encapsulation (e name)
-  "Prepend encapsulation E to the definition of NAME.
-   Signal an error if NAME is an undefined function."
-  (declare (type encapsulation e))
-  (let ((fdefn (fdefn-or-lose name)))
-    (setf (encapsulation-next e) (fdefn-function fdefn))
-    (setf (fdefn-function fdefn) e)))
-
-(defun encapsulate (name type body)
-  "Replace the definition of NAME with a function that binds NAME's
-   arguments to a variable named ARGUMENT-LIST, binds NAME's
-   definition to a variable named BASIC-DEFINITION, and evaluates BODY
-   in that context.  TYPE is whatever you would like to associate with
-   this encapsulation for identification in case you need multiple
-   encapsulations of the same name."
-  (let ((e (make-encapsulation :type type)))
-    (setf (funcallable-instance-function e)
-	  #'(instance-lambda (&rest argument-list)
-	      (declare (special argument-list))
-	      (let ((basic-definition (encapsulation-next e)))
-		(declare (special basic-definition))
-		(eval body))))
-    (push-encapsulation e name)))
-
-(defun unencapsulate (name type)
-  "Remove the first encapsulation of type TYPE, if any, from the
-  definition of NAME."
-  (let ((fdefn (fdefinition-object name nil))
-	(prev nil))
-    (do-encapsulations (e fdefn)
-      (when (eq (encapsulation-type e) type)
-	(if prev
-	    (setf (encapsulation-next prev) (encapsulation-next e))
-	    (setf (fdefn-function fdefn) (encapsulation-next e)))
-	  (return))
-      (setq prev e))))
-
-(defun encapsulated-p (name type)
-  "Return true if NAME has an encapsulation of type TYPE."
-  (do-encapsulations (e (fdefinition-object name nil))
-    (when (eq (encapsulation-type e) type)
-      (return t))))
-
-
 
 ;;;; FDEFINITION.
 
@@ -285,9 +201,9 @@
    encapsulations and to return the innermost encapsulated definition.
    This is SETF'able."
   (let* ((fdefn (fdefn-or-lose name))
-	 (last (last-encapsulation fdefn)))
+	 (last (fwrappers:last-fwrapper fdefn)))
       (if last
-	  (encapsulation-next last)
+	  (fwrappers:fwrapper-next last)
 	  (fdefn-function fdefn))))
 
 (defvar *setf-fdefinition-hook* nil
@@ -301,9 +217,9 @@
     (when (boundp '*setf-fdefinition-hook*)
       (dolist (f *setf-fdefinition-hook*)
 	(funcall f name new-value)))
-    (let ((last (last-encapsulation fdefn)))
+    (let ((last (fwrappers:last-fwrapper fdefn)))
       (if last
-	  (setf (encapsulation-next last) new-value)
+	  (setf (fwrappers:fwrapper-next last) new-value)
 	  (setf (fdefn-function fdefn) new-value)))))
 
 (defsetf fdefinition %set-fdefinition)

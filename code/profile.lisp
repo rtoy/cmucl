@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.35 2003/05/15 12:28:56 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.36 2003/05/23 13:34:04 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,7 @@
 ;;;
 
 (defpackage "PROFILE"
-  (:use :common-lisp :ext)
+  (:use :common-lisp :ext :fwrappers)
   (:export *timed-functions* profile profile-all unprofile reset-time 
 	   report-time report-time-custom *default-report-time-printfunction*
 	   with-spacereport print-spacereports reset-spacereports
@@ -44,36 +44,21 @@
 
 ;;;; Implementation dependent interfaces:
 
-
-(progn
-  #-cmu
-  (eval-when (compile eval)
-    (warn
-     "You may want to supply an implementation-specific ~
-     Quickly-Get-Time function."))
-
-  ;; In CMUCL, get-internal-run-time is good enough, so we just use it.
-
-  (defconstant quick-time-units-per-second internal-time-units-per-second)
+(defconstant quick-time-units-per-second internal-time-units-per-second)
   
-  (defmacro quickly-get-time ()
-    `(the time-type (get-internal-run-time))))
+(defmacro quickly-get-time ()
+  `(the time-type (get-internal-run-time)))
 
-
+;;;
 ;;; The type of the result from quickly-get-time.
-#+cmu
+;;;
 (deftype time-type () '(unsigned-byte 29))
-#-cmu
-(deftype time-type () 'unsigned-byte)
 
-
-;;; To avoid unnecessary consing in the "encapsulation" code, we find out the
-;;; number of required arguments, and use &rest to capture only non-required
-;;; arguments.  The function Required-Arguments returns two values: the first
-;;; is the number of required arguments, and the second is T iff there are any
-;;; non-required arguments (e.g. &optional, &rest, &key).
-
-#+cmu 
+;;; 
+;;; Return two values: the first is the number of required arguments,
+;;; and the second is T iff NAME has any non-required arguments
+;;; (e.g. &OPTIONAL, &REST, &KEY).
+;;;
 (defun required-arguments (name)
   (let ((type (ext:info function type name)))
     (cond ((not (kernel:function-type-p type))
@@ -85,45 +70,19 @@
 			   (kernel:function-type-rest type))
 		       t nil))))))
 
-#-cmu
-(progn
- (eval-when (compile eval)
-   (warn
-    "You may want to add an implementation-specific Required-Arguments function."))
- (eval-when (load eval)
-   (defun required-arguments (name)
-     (declare (ignore name))
-     (values 0 t))))
-
-
-
-;;; The Total-Consing macro is called to find the total number of bytes consed
+;;;
+;;; TOTAL-CONSING is called to find the total number of bytes consed
 ;;; since the beginning of time.
-
+;;;
 (declaim (inline total-consing))
-#+cmu
 (defun total-consing () (ext:get-bytes-consed-dfixnum))
 
-#-cmu
-(eval-when (compile eval)
-  (error "No consing will be reported unless a Total-Consing function is ~
-           defined."))
-
-#-cmu
-(progn
-  (eval-when (compile eval)
-    (warn "No consing will be reported unless a Total-Consing function is ~
-           defined."))
-
-  (defmacro total-consing () '0))
-
-
+;;;
 ;;; The type of the result of TOTAL-CONSING.
-#+cmu
+;;;
 (deftype consing-type () '(and fixnum unsigned-byte))
-#-cmu
-(deftype consing-type () 'unsigned-byte)
 
+;;;
 ;;; On the CMUCL x86 port the return address is represented as a SAP
 ;;; and to save the costly calculation of the SAPs code object the
 ;;; profiler maintains callers as SAPs. These SAPs will become invalid
@@ -131,69 +90,91 @@
 ;;; use of purify or by moving code objects into an older generation
 ;;; when using GENCGC.
 ;;;
-#+cmu
-(progn
-  (defmacro get-caller-info ()
-    `(nth-value 1 (kernel:%caller-frame-and-pc)))
-  #-(and cmu x86)
-  (defun print-caller-info (info stream)
-    (prin1 (kernel:lra-code-header info) stream))
-  #+(and cmu x86)
-  (defun print-caller-info (info stream)
-    (prin1 (nth-value 1 (di::compute-lra-data-from-pc info)) stream)))
+(defmacro get-caller-info ()
+  `(nth-value 1 (kernel:%caller-frame-and-pc)))
 
-#-cmu
-(progn
-  (defmacro get-caller-info () 'unknown)
-  (defun print-caller-info (info stream)
-    (prin1 "no caller info" stream)))
+#-x86
+(defun print-caller-info (info stream)
+  (prin1 (kernel:lra-code-header info) stream))
+
+#+x86
+(defun print-caller-info (info stream)
+  (prin1 (nth-value 1 (di::compute-lra-data-from-pc info)) stream))
 
 
 ;;;; Global data structures:
 
 (defvar *timed-functions* ()
   "List of functions that are currently being timed.")
+
 (defvar *no-calls* nil
   "A list of profiled functions which weren't called.")
+
 (defvar *no-calls-limit* 20
   "If the number of profiled functions that were not called is less than
 this, the functions are listed.  If NIL, then always list the functions.")
 
-;;; We associate a PROFILE-INFO structure with each profiled function name.
-;;; This holds the functions that we call to manipulate the closure which
-;;; implements the encapsulation.
 ;;;
-(defvar *profile-info* (make-hash-table :test #'equal))
-(defstruct profile-info
-  (name nil)
-  (old-definition (ext:required-argument) :type function)
-  (new-definition (ext:required-argument) :type function)
-  (read-time (ext:required-argument) :type function)
-  (reset-time (ext:required-argument) :type function))
-
-;;; PROFILE-INFO-OR-LOSE  --  Internal
+;;; This is stored as user-data of profile fwrappers.
 ;;;
-(defun profile-info-or-lose (name)
-  (or (gethash name *profile-info*)
-      (error "~S is not a profiled function." name)))
+(defstruct (profile-info
+	     (:conc-name pi-)
+	     (:constructor make-profile-info (function-name callers-p)))
+  ;;
+  ;; The name of the function being profiled.
+  function-name
+  ;;
+  ;; True if :CALLERS arg was given to PROFILE.
+  (callers-p nil :type boolean)
+  ;;
+  ;; Various counters for profiling.
+  (count 0 :type fixnum)
+  (time 0 :type time-type)
+  (consed-h 0 :type dfixnum:dfparttype)
+  (consed-l 0 :type dfixnum:dfparttype)
+  (consed-w/c-h 0 :type dfixnum:dfparttype)
+  (consed-w/c-l 0 :type dfixnum:dfparttype)
+  (profile 0 :type integer)
+  (callers () :type list))
 
-
-;;; We keep around a bunch of functions that make encapsulations, one of each
-;;; (min-args . optional-p) signature we have encountered so far.  We also
-;;; precompute a bunch of encapsulation functions.
 ;;;
-(defvar *existing-encapsulations* (make-hash-table :test #'equal))
-
-
-;;; These variables are used to subtract out the time and consing for recursive
-;;; and other dynamically nested profiled calls.  The total resource consumed
-;;; for each nested call is added into the appropriate variable.  When the
-;;; outer function returns, these amounts are subtracted from the total.
+;;; Reset counters of the given PROFILE-INFO
 ;;;
-;;; *enclosed-consing-h* and *enclosed-consing-l* represent the total
+(defun reset-profile-info (info)
+  (setf (pi-count info) 0
+	(pi-time info) 0
+	(pi-consed-h info) 0
+	(pi-consed-l info) 0
+	(pi-consed-w/c-h info) 0
+	(pi-consed-w/c-l info) 0
+	(pi-profile info) 0
+	(pi-callers info) ()))
+
+;;;
+;;; Return various profiling information from INFO as multiple values.
+;;;
+(defun profile-info-profiling-values (info)
+  (values (pi-count info)
+	  (pi-time info)
+	  (dfixnum:dfixnum-pair-integer (pi-consed-h info)
+					(pi-consed-l info))
+	  (dfixnum:dfixnum-pair-integer (pi-consed-w/c-h info)
+					(pi-consed-w/c-l info))
+	  (pi-profile info)
+	  (pi-callers info)))
+
+;;;
+;;; These variables are used to subtract out the time and consing for
+;;; recursive and other dynamically nested profiled calls.  The total
+;;; resource consumed for each nested call is added into the
+;;; appropriate variable.  When the outer function returns, these
+;;; amounts are subtracted from the total.
+;;;
+;;; *ENCLOSED-CONSING-H* and *ENCLOSED-CONSING-L* represent the total
 ;;; consing as a pair of fixnum-sized integers to reduce consing and
 ;;; allow for about 2^58 bytes of total consing.  (Assumes positive
 ;;; fixnums are 29 bits long).
+;;;
 (defvar *enclosed-time* 0)
 (defvar *enclosed-consing-h* 0)
 (defvar *enclosed-consing-l* 0)
@@ -204,17 +185,21 @@ this, the functions are listed.  If NIL, then always list the functions.")
 (declaim (fixnum *enclosed-profilings*))
 
 
-;;; The number of seconds a bare function call takes.  Factored into the other
-;;; overheads, but not used for itself.
+;;;
+;;; The number of seconds a bare function call takes.  Factored into
+;;; the other overheads, but not used for itself.
 ;;;
 (defvar *call-overhead*)
 
-;;; The number of seconds that will be charged to a profiled function due to
-;;; the profiling code.
+;;;
+;;; The number of seconds that will be charged to a profiled function
+;;; due to the profiling code.
+;;;
 (defvar *internal-profile-overhead*)
 
-;;; The number of seconds of overhead for profiling that a single profiled call
-;;; adds to the total runtime for the program.
+;;;
+;;; The number of seconds of overhead for profiling that a single
+;;; profiled call adds to the total runtime for the program.
 ;;;
 (defvar *total-profile-overhead*)
 
@@ -224,174 +209,158 @@ this, the functions are listed.  If NIL, then always list the functions.")
 
 ;;;; Profile encapsulations:
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
-(defun make-profile-encapsulation (min-args optionals-p)
-  (let ((required-args ()))
-    (dotimes (i min-args)
-      (push (gensym) required-args))
-    `(lambda (name callers-p)
-       (let* ((time 0)
-	      (count 0)
-	      (consed-h 0)
-	      (consed-l 0)
-	      (consed-w/c-h 0)
-	      (consed-w/c-l 0)
-	      (profile 0)
-	      (callers ())
-	      (old-definition (fdefinition name)))
-	 (declare (type time-type time)
-		  (type dfixnum:dfparttype consed-h consed-l)
-		  (type dfixnum:dfparttype consed-w/c-h consed-w/c-l)
-		  (fixnum count))
-	 (pushnew name *timed-functions*)
+   ;;;
+   ;;; Names of fwrappers look like (PROFILE <nreq> <optionals-p>).
+   ;;; <Nreq> is the number of required parameters, <optionals-p> is
+   ;;; true if the fwrapper is for functions with optional arguments.
+   ;;;
+  (define-function-name-syntax profile (name)
+    (when (integerp (cadr name))
+      (values t 'profile)))
 
-	 (without-package-locks
-	  (setf (fdefinition name)
-		#'(lambda (,@required-args
-			   ,@(if optionals-p
-				 #+cmu
-				 `(c:&more arg-context arg-count)
-				 #-cmu
-				 `(&rest optional-args)))
-		    (incf count)
-		    (when callers-p
-		      (let ((caller (get-caller-info)))
-			(do ((prev nil current)
-			     (current callers (cdr current)))
-			    ((null current)
-			     (push (cons caller 1) callers))
-			  (let ((old-caller-info (car current)))
-			    (when #-(and cmu x86) (eq caller
-						      (car old-caller-info))
-				  #+(and cmu x86) (sys:sap=
-						   caller (car old-caller-info))
-				  (if prev
-				      (setf (cdr prev) (cdr current))
-				      (setq callers (cdr current)))
-				  (setf (cdr old-caller-info)
-					(the fixnum
-					  (+ (cdr old-caller-info) 1)))
-				  (setf (cdr current) callers)
-				  (setq callers current)
-				  (return))))))
+  ;;;
+  ;;; Return the profile fwrapper name for profiling a function
+  ;;; with NREQ required arguments and optional arguments according
+  ;;; to OPTIONALS-P.
+  ;;;
+  (defun make-profile-fwrapper-name (nreq optionals-p)
+    `(profile ,nreq ,optionals-p))
+
+  ;;;
+  ;;; Return a DEFINE-FWRAPPER form for profiling a function with
+  ;;; arguments according to NREQ and OPTIONALS-P.
+  ;;;
+  (defun make-profile-fwrapper (nreq optionals-p)
+    (let ((req (loop repeat nreq collect (gensym)))
+	  (name (make-profile-fwrapper-name nreq optionals-p)))
+      `(define-fwrapper ,name (,@req ,@(if optionals-p `(&rest .rest.)))
+	 (let* ((info (fwrapper-user-data fwrapper))
+		(fn-name (pi-function-name info))
+		(fdefn (lisp::fdefinition-object fn-name nil)))
+	   ;;
+	   ;; "Deactivate" the profile fwrapper for the time it is
+	   ;; running to ease profiling of functions used in the
+	   ;; implementation of PROFILE itself.
+	   (letf (((lisp::fdefn-function fdefn) (fwrapper-next fwrapper)))
+	     (incf (pi-count info))
+	     ;;
+	     ;; If :CALLERS was specified for profiling, record caller
+	     ;; information.
+	     (when (pi-callers-p info)
+	       (let ((caller (get-caller-info)))
+		 (do ((prev nil current)
+		      (current (pi-callers info) (cdr current)))
+		     ((null current)
+		      (push (cons caller 1) (pi-callers info)))
+		   (let ((old-caller-info (car current)))
+		     (when (progn #-x86 (eq caller (car old-caller-info))
+				  #+x86 (sys:sap= caller (car old-caller-info)))
+		       (if prev
+			   (setf (cdr prev) (cdr current))
+			   (setf (pi-callers info) (cdr current)))
+		       (setf (cdr old-caller-info)
+			     (the fixnum (+ (cdr old-caller-info) 1)))
+		       (setf (cdr current) (pi-callers info))
+		       (setf (pi-callers info) current)
+		       (return))))))
 			       
-		    (let ((time-inc 0)
-			  (cons-inc-h 0)
-			  (cons-inc-l 0)
-			  (profile-inc 0))
-		      (declare (type time-type time-inc)
-			       (type dfixnum:dfparttype cons-inc-h cons-inc-l)
-			       (fixnum profile-inc))
-		      (multiple-value-prog1
-			  (let ((start-time (quickly-get-time))
-				(start-consed-h 0)
-				(start-consed-l 0)
-				(end-consed-h 0)
-				(end-consed-l 0)
-				(*enclosed-time* 0)
-				(*enclosed-consing-h* 0)
-				(*enclosed-consing-l* 0)
-				(*enclosed-profilings* 0))
-			    (dfixnum:dfixnum-set-pair start-consed-h
-						      start-consed-l
-						      (total-consing))
-			    (multiple-value-prog1
-				,(if optionals-p
-				     #+cmu
-				     `(multiple-value-call
-					  old-definition
-					(values ,@required-args)
-					(c:%more-arg-values arg-context
-							    0
-							    arg-count))
-				     #-cmu
-				     `(apply old-definition
-					     ,@required-args optional-args)
-				     `(funcall old-definition ,@required-args))
-			      (setq time-inc
-				    #-BSD
-				    (- (quickly-get-time) start-time)
-				    #+BSD
-				    (max (- (quickly-get-time) start-time) 0))
-			      ;; How much did we cons so far?
-			      (dfixnum:dfixnum-set-pair end-consed-h
-							end-consed-l
-							(total-consing))
-			      (dfixnum:dfixnum-copy-pair cons-inc-h cons-inc-l
-							 end-consed-h
-							 end-consed-l)
-			      (dfixnum:dfixnum-dec-pair cons-inc-h cons-inc-l
-							start-consed-h
-							start-consed-l)
-			      ;; (incf consed (- cons-inc *enclosed-consing*))
-			      (dfixnum:dfixnum-inc-pair consed-h consed-l
-							cons-inc-h cons-inc-l)
-			      (dfixnum:dfixnum-inc-pair consed-w/c-h
-							consed-w/c-l
-							cons-inc-h cons-inc-l)
+	     (let ((time-inc 0)
+		   (cons-inc-h 0)
+		   (cons-inc-l 0)
+		   (profile-inc 0))
+	       (declare (type time-type time-inc)
+			(type dfixnum:dfparttype cons-inc-h cons-inc-l)
+			(fixnum profile-inc))
+	       (multiple-value-prog1
+		   (let ((start-time (quickly-get-time))
+			 (start-consed-h 0)
+			 (start-consed-l 0)
+			 (end-consed-h 0)
+			 (end-consed-l 0)
+			 (*enclosed-time* 0)
+			 (*enclosed-consing-h* 0)
+			 (*enclosed-consing-l* 0)
+			 (*enclosed-profilings* 0))
+		     (dfixnum:dfixnum-set-pair start-consed-h
+					       start-consed-l
+					       (total-consing))
+		     (multiple-value-prog1
+			 (call-next-function)
+		       (setq time-inc
+			     #-BSD (- (quickly-get-time) start-time)
+			     #+BSD (max (- (quickly-get-time) start-time) 0))
+		       ;; How much did we cons so far?
+		       (dfixnum:dfixnum-set-pair end-consed-h
+						 end-consed-l
+						 (total-consing))
+		       (dfixnum:dfixnum-copy-pair cons-inc-h cons-inc-l
+						  end-consed-h
+						  end-consed-l)
+		       (dfixnum:dfixnum-dec-pair cons-inc-h cons-inc-l
+						 start-consed-h
+						 start-consed-l)
+		       ;; (incf consed (- cons-inc *enclosed-consing*))
+		       (dfixnum:dfixnum-inc-pair (pi-consed-h info)
+						 (pi-consed-l info)
+						 cons-inc-h cons-inc-l)
+		       (dfixnum:dfixnum-inc-pair (pi-consed-w/c-h info)
+						 (pi-consed-w/c-l info)
+						 cons-inc-h cons-inc-l)
+		       (setq profile-inc *enclosed-profilings*)
+		       (incf (pi-time info)
+			     (the time-type
+			       #-BSD
+			       (- time-inc *enclosed-time*)
+			       #+BSD
+			       (max (- time-inc *enclosed-time*) 0)))
+		       (dfixnum:dfixnum-dec-pair (pi-consed-h info)
+						 (pi-consed-l info)
+						 *enclosed-consing-h*
+						 *enclosed-consing-l*)
+		       (incf (pi-profile info) profile-inc)))
+		 (incf *enclosed-time* time-inc)
+		 ;; *enclosed-consing* = *enclosed-consing + cons-inc
+		 (dfixnum:dfixnum-inc-pair *enclosed-consing-h*
+					   *enclosed-consing-l*
+					   cons-inc-h
+					   cons-inc-l)))))))))
 
-			      (setq profile-inc *enclosed-profilings*)
-			      (incf time
-				    (the time-type
-				      #-BSD
-				      (- time-inc *enclosed-time*)
-				      #+BSD
-				      (max (- time-inc *enclosed-time*) 0)))
-			      (dfixnum:dfixnum-dec-pair consed-h consed-l
-							*enclosed-consing-h*
-							*enclosed-consing-l*)
-			      (incf profile profile-inc)))
-			(incf *enclosed-time* time-inc)
-			;; *enclosed-consing* = *enclosed-consing + cons-inc
-			(dfixnum:dfixnum-inc-pair *enclosed-consing-h*
-						  *enclosed-consing-l*
-						  cons-inc-h
-						  cons-inc-l))))))
-	 
-	 (setf (gethash name *profile-info*)
-	       (make-profile-info
-		:name name
-		:old-definition old-definition
-		:new-definition (fdefinition name)
-		:read-time
-		#'(lambda ()
-		    (values count time
-			    (dfixnum:dfixnum-pair-integer consed-h consed-l)
-			    (dfixnum:dfixnum-pair-integer consed-w/c-h
-							  consed-w/c-l)
-			    profile callers))
-		:reset-time
-		#'(lambda ()
-		    (setq count 0)
-		    (setq time 0)
-		    (setq consed-h 0)
-		    (setq consed-l 0)
-		    (setq consed-w/c-h 0)
-		    (setq consed-w/c-l 0)
-		    (setq profile 0)
-		    (setq callers ())
-		    t)))))))
-
-); EVAL-WHEN (COMPILE LOAD EVAL)
-
-
-
-;;; Precompute some encapsulation functions:
 ;;;
-(macrolet ((frob ()
-	     (let ((res ()))
-	       (dotimes (i 4)
-		 (push `(setf (gethash '(,i . nil) *existing-encapsulations*)
-			      #',(make-profile-encapsulation i nil))
-		       res))
-	       (dotimes (i 2)
-		 (push `(setf (gethash '(,i . t) *existing-encapsulations*)
-			      #',(make-profile-encapsulation i t))
-		       res))
-	       `(progn ,@res))))
-  (frob))
+;;; Pre-define some profile fwrappers.
+;;;
+(macrolet ((def-profile-fwrapper (nreq)
+	     `(progn
+	       ,(make-profile-fwrapper nreq t)
+	       ,(make-profile-fwrapper nreq nil))))
+  (def-profile-fwrapper 0)
+  (def-profile-fwrapper 1)
+  (def-profile-fwrapper 2)
+  (def-profile-fwrapper 3))
 
+(defun ensure-profile-fwrapper (nreq optionals-p)
+  "Ensure that a profile fwrapper for functions with NREQ required
+   arguments and optional arguments according to OPTIONALS-P exists.
+   Return the name of that fwrapper."
+  (let ((name (make-profile-fwrapper-name nreq optionals-p)))
+    (unless (fboundp name)
+      (without-package-locks
+       (eval (make-profile-fwrapper nreq optionals-p))
+       (compile name)))
+    name))
+
+(defun find-profile-fwrapper (name)
+  "Return the profile FWRAPPER object on function NAME, if any."
+  (find-fwrapper name :type 'profile))
+
+(defun pi-or-lose (name)
+  "Return the PROFILE-INFO for function NAME.
+   Signal an error if NAME is not profiled."
+  (let ((f (find-profile-fwrapper name)))
+    (if f
+	(fwrapper-user-data f)
+	(error "No profile info for ~s" name))))
 
 
 ;;; Interfaces:
@@ -401,22 +370,17 @@ this, the functions are listed.  If NIL, then always list the functions.")
 ;;;    Profile the function Name.  If already profiled, unprofile first.
 ;;;
 (defun profile-1-function (name callers-p)
-  (cond ((fboundp name)
-	 (when (gethash name *profile-info*)
-	   (warn "~S already profiled, so unprofiling it first." name)
-	   (unprofile-1-function name))
-	 (multiple-value-bind (min-args optionals-p)
-			      (required-arguments name)
-	   (funcall (or (gethash (cons min-args optionals-p)
-				 *existing-encapsulations*)
-			(setf (gethash (cons min-args optionals-p)
-				       *existing-encapsulations*)
-			      (compile nil (make-profile-encapsulation
-					    min-args optionals-p))))
-		    name
-		    callers-p)))
-	(t
-	 (warn "Ignoring undefined function ~S." name))))
+  (if (fboundp name)
+      (multiple-value-bind (nreq optionals-p)
+	  (required-arguments name)
+	(when (find-profile-fwrapper name)
+	  (warn "~s already profiled, unprofiling it first" name)
+	  (unprofile-1-function name))
+	(let ((ctor (ensure-profile-fwrapper nreq optionals-p)))
+	  (fwrap name ctor :type 'profile
+		 :user-data (make-profile-info name callers-p))
+	  (push name *timed-functions*)))
+      (warn "Ignoring undefined function ~s" name)))
 
 
 ;;; PROFILE  --  Public
@@ -553,16 +517,20 @@ this, the functions are listed.  If NIL, then always list the functions.")
 ;;; UNPROFILE-1-FUNCTION  --  Internal
 ;;;
 (defun unprofile-1-function (name)
-  (let ((info (profile-info-or-lose name)))
-    (remhash name *profile-info*)
-    (setq *timed-functions*
-	  (delete name *timed-functions*
-		  :test #'equal))
-    (without-package-locks
-     (if (eq (fdefinition name) (profile-info-new-definition info))
-	 (setf (fdefinition name) (profile-info-old-definition info))
-	 (warn "Preserving current definition of redefined function ~S."
-	       name)))))
+  (funwrap name :type 'profile)
+  (setq *timed-functions* (delete name *timed-functions* :test #'equal)))
+
+
+(defun re-profile-redefined-function (name new-value)
+  (declare (ignore new-value))
+  (let (f)
+    (when (and (fboundp name)
+	       (setq f (find-profile-fwrapper name)))
+      (profile-1-function name (pi-callers (fwrapper-user-data f))))))
+
+(push #'re-profile-redefined-function ext:*setf-fdefinition-hook*)
+
+
 
 ;;; COMPENSATE-TIME  --  Internal
 ;;;
@@ -707,15 +675,9 @@ this, the functions are listed.  If NIL, then always list the functions.")
   (let ((info ())
 	(no-call ()))
     (dolist (name names)
-      (let ((pinfo (profile-info-or-lose name)))
-	(unless (eq (fdefinition name)
-		    (profile-info-new-definition pinfo))
-	  (warn "Function ~S has been redefined, so times may be inaccurate.~@
-	         PROFILE it again to record calls to the new definition."
-		name))
-	(multiple-value-bind
-	    (calls time consing consing-w/c profile callers)
-	    (funcall (profile-info-read-time pinfo))
+      (let ((pinfo (pi-or-lose name)))
+	(multiple-value-bind (calls time consing consing-w/c profile callers)
+	    (profile-info-profiling-values pinfo)
 	  (if (zerop calls)
 	      (push name no-call)
 	      (push (make-time-info name calls
@@ -759,15 +721,15 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	  (format *trace-output*
 		  "~%These functions were not called:~%~{~<~%~:; ~S~>~}~%"
 		  (sort no-call #'string<
-			:key #'(lambda (n)
-				 (if (symbolp n)
-				     (symbol-name n)
-				     (multiple-value-bind (valid block-name)
-					 (ext:valid-function-name-p n)
-				       (declare (ignore valid))
-				       (if block-name
-					   block-name
-					   (princ-to-string n)))))))))
+			:key (lambda (n)
+			       (if (symbolp n)
+				   (symbol-name n)
+				   (multiple-value-bind (valid block-name)
+				       (ext:valid-function-name-p n)
+				     (declare (ignore valid))
+				     (if block-name
+					 block-name
+					 (princ-to-string n)))))))))
     (values)))
 
 
@@ -778,7 +740,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
 
 (defun %reset-time (names)
   (dolist (name names)
-    (funcall (profile-info-reset-time (profile-info-or-lose name))))
+    (reset-profile-info (pi-or-lose name)))
   (values))
 
 
@@ -841,9 +803,9 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	   (profile compute-time-overhead-aux)
 	   (frob *total-profile-overhead*)
 	   (decf *total-profile-overhead* *call-overhead*)
-	   (let ((pinfo (profile-info-or-lose 'compute-time-overhead-aux)))
+	   (let ((pinfo (pi-or-lose 'compute-time-overhead-aux)))
 	     (multiple-value-bind (calls time)
-		 (funcall (profile-info-read-time pinfo))
+		 (profile-info-profiling-values pinfo)
 	       (declare (ignore calls))
 	       (setq *internal-profile-overhead*
 		     (/ (float time)
@@ -851,9 +813,8 @@ this, the functions are listed.  If NIL, then always list the functions.")
 			(float timer-overhead-iterations))))))
       (unprofile compute-time-overhead-aux))))
 
-#+cmu
-(pushnew #'(lambda ()
-	     (makunbound '*call-overhead*))
+(pushnew (lambda ()
+	   (makunbound '*call-overhead*))
 	 ext:*before-save-initializations*)
 
 
@@ -908,7 +869,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
       (when (listp e)
 	(incf length (deep-list-length e)))
       (incf length))
-    length))      
+    length))
 
 ;; bunch for tests for above
 #+nil
@@ -979,33 +940,33 @@ this, the functions are listed.  If NIL, then always list the functions.")
 				      start-l))))))
 
 (defun print-spacereports (&optional (stream *trace-output*))
-  (maphash #'(lambda (key value)
-	       (format
-		stream
-		"~&~10:D bytes ~9:D calls ~a b/call: ~a (sz ~d)~%"
-		(dfixnum:dfixnum-pair-integer
-		 (spacereport-info-consed-h value)
-		 (spacereport-info-consed-l value))
-		(spacereport-info-n value)
-		(format-quotient (dfixnum:dfixnum-pair-integer
-				  (spacereport-info-consed-h value)
-				  (spacereport-info-consed-l value))
-				 (spacereport-info-n value)
-				 10 2)
-		key
-		(spacereport-info-codesize value)))
+  (maphash (lambda (key value)
+	     (format
+	      stream
+	      "~&~10:D bytes ~9:D calls ~a b/call: ~a (sz ~d)~%"
+	      (dfixnum:dfixnum-pair-integer
+	       (spacereport-info-consed-h value)
+	       (spacereport-info-consed-l value))
+	      (spacereport-info-n value)
+	      (format-quotient (dfixnum:dfixnum-pair-integer
+				(spacereport-info-consed-h value)
+				(spacereport-info-consed-l value))
+			       (spacereport-info-n value)
+			       10 2)
+	      key
+	      (spacereport-info-codesize value)))
 	   *spacereports*))
 
 (defun reset-spacereports ()
-  (maphash #'(lambda (key value)
-	       (declare (ignore key))
-	       (setf (spacereport-info-consed-h value) 0)
-	       (setf (spacereport-info-consed-l value) 0)
-	       (setf (spacereport-info-n value) 0))
+  (maphash (lambda (key value)
+	     (declare (ignore key))
+	     (setf (spacereport-info-consed-h value) 0)
+	     (setf (spacereport-info-consed-l value) 0)
+	     (setf (spacereport-info-n value) 0))
 	   *spacereports*))
 
 (defun delete-spacereports ()
-  (maphash #'(lambda (key value)
-	       (declare (ignore value))
-	       (remhash key *spacereports*))
+  (maphash (lambda (key value)
+	     (declare (ignore value))
+	     (remhash key *spacereports*))
 	   *spacereports*))

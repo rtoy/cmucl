@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.86 2003/04/18 10:24:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.87 2003/05/23 13:34:04 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,6 +109,7 @@
 (comf "target:code/globals")
 (comf "target:code/kernel")
 (comf "target:code/lispinit")
+(comf "target:code/fwrappers")
 (comf "target:code/fdefinition")
 
 (comf "target:code/error")

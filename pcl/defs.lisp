@@ -59,12 +59,7 @@
 (declaim (inline gdefinition))
 
 (defun gdefinition (name)
-  (let ((fdefn (fdefinition name))
-	(info (gethash name profile::*profile-info*)))
-    (if (and info
-	     (eq fdefn (profile::profile-info-new-definition info)))
-	(profile::profile-info-old-definition info)
-	fdefn)))
+  (fdefinition name))
 
 ;;;
 ;;; If symbol names a function which is traced or advised, redefine
