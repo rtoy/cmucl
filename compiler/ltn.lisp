@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.32 1992/06/02 19:42:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.33 1992/09/07 16:04:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,6 +233,8 @@
 	   (setf (basic-combination-info call) :funny)
 	   (setf (node-tail-p call) nil))
 	  (t
+	   (when (eq kind :error)
+	     (setf (basic-combination-kind call) :full))
 	   (setf (basic-combination-info call) :full)
 	   (flush-full-call-tail-transfer call))))
   
@@ -1026,7 +1028,7 @@
        (combination
 	(case (basic-combination-kind node)
 	  (:local (ltn-analyze-local-call node policy))
-	  (:full (ltn-default-call node policy))
+	  ((:full :error) (ltn-default-call node policy))
 	  (t
 	   (ltn-analyze-known-call node policy))))
        (cif
@@ -1040,7 +1042,7 @@
        (mv-combination
 	(ecase (basic-combination-kind node)
 	  (:local (ltn-analyze-mv-bind node policy))
-	  (:full (ltn-analyze-mv-call node policy)))))
+	  ((:full :error) (ltn-analyze-mv-call node policy)))))
 
      (when (eq node (block-last block)) (return))))
 
