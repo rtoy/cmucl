@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.26.1.3 1993/01/27 12:57:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.26.1.4 1993/02/23 11:58:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,8 +222,8 @@
        (when for
 	 (compiler-warning
 	  "Undefining structure type:~%  ~S~@
-	  so that this slot accessor can be redefined:~%  ~S"
-	  (dd-name for) name)
+	   so that this slot accessor can be redefined:~%  ~S"
+	  (class-name for) name)
 	 (undefine-structure for)
 	 (setf (info function kind name) :function))))
     (:macro
