@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.6 1990/03/20 00:09:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.7 1990/04/23 16:45:11 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -15,6 +15,15 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+
+;;; MAKE-NLX-SP-TN  --  Interface
+;;;
+;;;    Make an environment-live stack TN for saving the SP for NLX entry.
+;;;
+(defun make-nlx-sp-tn (env)
+  (environment-live-tn (make-representation-tn (sc-number-or-lose 'any-reg))
+		       env))
+
 
 
 ;;; Save and restore dynamic environment.
@@ -33,25 +42,32 @@
 ;;; use with the Save/Restore-Dynamic-Environment VOPs.
 ;;;
 (defun make-dynamic-state-tns ()
-  (make-n-tns 4 *any-primitive-type*))
+  (make-n-tns 5 *any-primitive-type*))
 
 (define-vop (save-dynamic-state)
   (:results (catch :scs (descriptor-reg))
 	    (special :scs (descriptor-reg))
-	    (number :scs (descriptor-reg))
+	    (nfp :scs (descriptor-reg))
+	    (nsp :scs (descriptor-reg))
 	    (eval :scs (descriptor-reg)))
+  (:vop-var vop)
   (:generator 13
     (load-symbol-value catch lisp::*current-catch-block*)
     (move special bsp-tn)
-    (move number nsp-tn)
+    (let ((cur-nfp (current-nfp-tn vop)))
+      (when cur-nfp
+	(move nfp cur-nfp)))
+    (move nsp nsp-tn)
     (load-symbol-value eval lisp::*eval-stack-top*)))
 
 (define-vop (restore-dynamic-state)
   (:args (catch :scs (descriptor-reg))
 	 (special :scs (descriptor-reg))
-	 (number :scs (descriptor-reg))
+	 (nfp :scs (descriptor-reg))
+	 (nsp :scs (descriptor-reg))
 	 (eval :scs (descriptor-reg)))
   (:temporary (:scs (descriptor-reg)) symbol value)
+  (:vop-var vop)
   (:generator 10
     (let ((done (gen-label))
 	  (skip (gen-label))
@@ -59,7 +75,10 @@
 
       (store-symbol-value catch lisp::*current-catch-block*)
       (store-symbol-value eval lisp::*eval-stack-top*)
-      (move nsp-tn number)
+      (let ((cur-nfp (current-nfp-tn vop)))
+	(when cur-nfp
+	  (move cur-nfp nfp)))
+      (move nsp-tn nsp)
       
       (inst beq special bsp-tn done)
       (nop)
@@ -92,7 +111,7 @@
 ;;;; Unwind block hackery:
 
 ;;; Compute the address of the catch block from its TN, then store into the
-;;; block the current Cont, Env, Unwind-Protect, and the entry PC.
+;;; block the current Fp, Env, Unwind-Protect, and the entry PC.
 ;;;
 (define-vop (make-unwind-block)
   (:args (tn))
@@ -101,10 +120,10 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
   (:generator 22
-    (inst addiu result cont-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addiu result fp-tn (* (tn-offset tn) vm:word-bytes))
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp result vm:unwind-block-current-uwp-slot)
-    (storew cont-tn result vm:unwind-block-current-cont-slot)
+    (storew fp-tn result vm:unwind-block-current-cont-slot)
     (storew code-tn result vm:unwind-block-current-code-slot)
     (inst compute-lra-from-code temp code-tn entry-label)
     (storew temp result vm:catch-block-entry-pc-slot)
@@ -116,16 +135,16 @@
 ;;;
 (define-vop (make-catch-block)
   (:args (tn)
-	 (tag :scs (any-reg descriptor-reg)))
+	 (tag :scs (descriptor-reg)))
   (:info entry-label)
   (:results (block :scs (descriptor-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
   (:generator 44
-    (inst addiu result cont-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addiu result fp-tn (* (tn-offset tn) vm:word-bytes))
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp result vm:catch-block-current-uwp-slot)
-    (storew cont-tn result vm:catch-block-current-cont-slot)
+    (storew fp-tn result vm:catch-block-current-cont-slot)
     (storew code-tn result vm:catch-block-current-code-slot)
     (inst compute-lra-from-code temp code-tn entry-label)
     (storew temp result vm:catch-block-entry-pc-slot)
@@ -145,7 +164,7 @@
   (:args (tn))
   (:temporary (:scs (descriptor-reg)) new-uwp)
   (:generator 7
-    (inst addiu new-uwp cont-tn (* (tn-offset tn) vm:word-bytes))
+    (inst addiu new-uwp fp-tn (* (tn-offset tn) vm:word-bytes))
     (store-symbol-value new-uwp lisp::*current-unwind-protect-block*)))
 
 
@@ -232,12 +251,9 @@
 	 (count :target num))
   (:results (new-start) (new-count))
   (:info label)
-  (:temporary (:scs (any-reg descriptor-reg) :type fixnum :from (:argument 0))
-	      dst)
-  (:temporary (:scs (any-reg descriptor-reg) :type fixnum :from (:argument 1))
-	      src)
-  (:temporary (:scs (any-reg descriptor-reg) :type fixnum :from (:argument 2))
-	      num)
+  (:temporary (:scs (any-reg) :type fixnum :from (:argument 0)) dst)
+  (:temporary (:scs (any-reg) :type fixnum :from (:argument 1)) src)
+  (:temporary (:scs (any-reg) :type fixnum :from (:argument 2)) num)
   (:temporary (:scs (descriptor-reg)) temp)
   (:save-p :force-to-stack)
   (:generator 30

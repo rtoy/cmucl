@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.2 1990/03/22 23:50:34 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.3 1990/04/23 16:45:19 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -15,58 +15,83 @@
 ;;;
 (in-package "C")
 
-
 
-;;;; The SAP-MOVE vop.
+;;;; Moves and coercions:
 
+;;; Move a tagged SAP to an untagged representation.
+;;;
+(define-vop (move-to-sap)
+  (:args (x :scs (any-reg descriptor-reg)))
+  (:results (y :scs (sap-reg)))
+  (:generator 1
+    (loadw y x vm:sap-pointer-slot vm:other-pointer-type)))
+
+;;;
+(define-move-vop move-to-sap :move
+  (descriptor-reg) (sap-reg))
+
+
+;;; Move an untagged SAP to a tagged representation.
+;;;
+(define-vop (move-from-sap)
+  (:args (x :scs (sap-reg) :target sap))
+  (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:results (y :scs (descriptor-reg)))
+  (:generator 1
+    (move sap x)
+    (pseudo-atomic (ndescr)
+      (inst addiu y alloc-tn vm:other-pointer-type)
+      (inst addiu alloc-tn alloc-tn (vm:pad-data-block vm:sap-size))
+      (loadi ndescr (logior (ash vm:sap-size vm:type-bits) vm:sap-type))
+      (storew y ndescr 0 vm:other-pointer-type)
+      (storew y sap vm:sap-pointer-slot vm:other-pointer-type))))
+;;;
+(define-move-vop move-from-sap :move
+  (sap-reg) (descriptor-reg))
+
+
+;;; Move untagged sap values.
+;;;
 (define-vop (sap-move)
-  (:args (x :target y :scs (sap-reg) :load nil))
-  (:results (y :scs (sap-reg) :load nil))
-  (:temporary (:scs (sap-reg) :type system-area-pointer
-		    :from :argument :to :result) sap)
-  (:temporary (:scs (descriptor-reg) :from :argument :to :result) temp)
-  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:args (x :target y
+	    :scs (sap-reg)
+	    :load-if (not (location= x y))))
+  (:results (y :scs (sap-reg)
+	       :load-if (not (location= x y))))
   (:effects)
   (:affected)
   (:generator 0
-    (sc-case x ((sap-reg sap-stack immediate-sap descriptor-reg control-stack)))
-    (sc-case y ((sap-reg sap-stack descriptor-reg control-stack)))
+    (move y x)))
+;;;
+(define-move-vop sap-move :move
+  (sap-reg) (sap-reg))
 
-    (let* ((x-sap-p (sc-is x sap-reg sap-stack immediate-sap))
-	   (y-sap-p (sc-is y sap-reg sap-stack))
-	   (src (cond ((sc-is x sap-reg descriptor-reg) x)
-		      (x-sap-p sap)
-		      (t temp)))
-	   (dst (cond ((sc-is y sap-reg descriptor-reg) y)
-		      (y-sap-p sap)
-		      (t temp))))
 
-      (sc-case x
-	((control-stack sap-stack)
-	 (load-stack-tn src x))
-	((descriptor-reg sap-reg))
-	(immediate-sap
-	 (loadi src (tn-value x))))
-      (cond ((and x-sap-p (not y-sap-p))
-	     (pseudo-atomic (ndescr)
-	       (inst addiu dst alloc-tn vm:other-pointer-type)
-	       (inst addiu alloc-tn alloc-tn (pad-data-block vm:sap-size))
-	       (loadi ndescr (logior (ash vm:sap-size vm:type-bits)
-				     vm:sap-type))
-	       (storew ndescr dst 0 vm:other-pointer-type)
-	       (storew src dst vm:sap-pointer-slot vm:other-pointer-type)))
-	    ((and y-sap-p (not x-sap-p))
-	     (loadw sap src vm:sap-pointer-slot vm:other-pointer-type))
-	    (t
-	     (move dst src)))
-      (sc-case y
-	((control-stack sap-stack)
-	 (store-stack-tn y dst))
-	((sap-reg descriptor-reg))))))
+;;; Move untagged sap arguments/return-values.
+;;;
+(define-vop (move-sap-argument)
+  (:args (x :target y
+	    :scs (sap-reg))
+	 (fp :scs (descriptor-reg)
+	     :load-if (not (sc-is y sap-reg))))
+  (:results (y))
+  (:generator 0
+    (sc-case y
+      (sap-reg
+       (move y x))
+      (sap-stack
+       (storew x fp (tn-offset y))))))
+;;;
+(define-move-vop move-sap-argument :move-argument
+  (descriptor-reg sap-reg) (sap-reg))
 
-(primitive-type-vop sap-move
-		    (:coerce-to-t :coerce-from-t :move)
-		    system-area-pointer)
+
+;;; Use standard MOVE-ARGUMENT + coercion to move an untagged sap to a
+;;; descriptor passing location.
+;;;
+(define-move-vop move-argument :move-argument
+  (sap-reg) (descriptor-reg))
 
 
 
@@ -88,7 +113,7 @@
   (:translate int-sap)
   (:policy :fast-safe)
   (:generator 0
-    ;; ### Need to check to see if it is a bignum.
+    ;; ### Need to check to see if it is a bignum first.
     (inst srl sap int 2)))
 
 

@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.4 1990/04/03 12:43:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.5 1990/04/23 16:45:22 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -23,7 +23,7 @@
   (:policy :fast-safe)
   (:variant-vars symbol)
   (:node-var node)
-  (:temporary (:scs (descriptor-reg any-reg)) temp)
+  (:temporary (:scs (any-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
   (:temporary (:sc descriptor-reg :offset cname-offset) cname)
@@ -31,8 +31,7 @@
   (:temporary (:scs (descriptor-reg)) function)
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
-  (:temporary (:sc any-reg :offset args-offset) args)
-  (:temporary (:sc any-reg :offset oldcont-offset) old-cont))
+  (:temporary (:sc any-reg :offset old-fp-offset) old-fp))
 
 
 (eval-when (compile load eval)
@@ -91,9 +90,8 @@
 	     (loadi nargs (fixnum ,num-args))
 	     (load-symbol cname symbol)
 	     (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
-	     (move args cont-tn)
-	     (move old-cont cont-tn)
-	     (move cont-tn csp-tn)
+	     (move old-fp fp-tn)
+	     (move fp-tn csp-tn)
 	     (inst compute-lra-from-code lra code-tn lra-label)
 	     (loadw function lexenv vm:closure-function-slot
 		    vm:function-pointer-type)

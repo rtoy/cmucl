@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.43 1990/04/12 16:33:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.44 1990/04/23 16:45:16 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -27,7 +27,7 @@
 
 ;;; Maximum number of SCs allowed.
 ;;;
-(defconstant sc-number-limit 26)
+(defconstant sc-number-limit 32)
 
 ;;; The inclusive upper bound on a cost.  We want to write cost frobbing
 ;;; code so that it is portable, but works on fixnums.  This constant
@@ -56,6 +56,10 @@
   "The byte order of the target machine.  Should either be :big-endian
   which has the MSB first (RT) or :little-endian which has the MSB last
   (VAX).")
+
+;;; ### This should be somewhere else.
+(defconstant native-byte-order :big-endian
+  "The byte order we are running under.")
 
 
 

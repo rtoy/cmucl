@@ -7,64 +7,88 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.4 1990/03/22 23:53:02 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.5 1990/04/23 16:44:49 wlott Exp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;; Converted for the MIPS R2000 by Christopher Hoover.
 ;;;
-(in-package 'c)
+(in-package "C")
 
+
+
+;;;; Moves and coercions:
+
+;;; Move a tagged char to an untagged representation.
+;;;
+(define-vop (move-to-base-character)
+  (:args (x :scs (any-reg descriptor-reg)))
+  (:results (y :scs (base-character-reg)))
+  (:generator 1
+    (inst srl y x vm:type-bits)))
+;;;
+(define-move-vop move-to-base-character :move
+  (any-reg descriptor-reg) (base-character-reg))
+
+
+;;; Move an untagged char to a tagged representation.
+;;;
+(define-vop (move-from-base-character)
+  (:args (x :scs (base-character-reg)))
+  (:results (y :scs (any-reg descriptor-reg)))
+  (:generator 1
+    (inst sll y x vm:type-bits)
+    (inst ori y y vm:base-character-type)))
+;;;
+(define-move-vop move-from-base-character :move
+  (base-character-reg) (any-reg descriptor-reg))
+
+;;; Move untagged base-character values.
+;;;
 (define-vop (base-character-move)
   (:args (x :target y
 	    :scs (base-character-reg)
-	    :load nil))
+	    :load-if (not (location= x y))))
   (:results (y :scs (base-character-reg)
-	       :load nil))
-  (:temporary (:scs (base-character-reg) :type base-character
-		    :from :argument  :to :result)
-	      temp)
+	       :load-if (not (location= x y))))
   (:effects)
   (:affected)
   (:generator 0
-    (sc-case x ((base-character-reg base-character-stack
-				    immediate-base-character descriptor-reg
-				    any-reg control-stack)))
-    (sc-case y ((base-character-reg base-character-stack
-				 descriptor-reg any-reg control-stack)))
+    (move y x)))
+;;;
+(define-move-vop base-character-move :move
+  (base-character-reg) (base-character-reg))
 
-    (let* ((x-char (sc-is x base-character-reg base-character-stack
-			  immediate-base-character))
-	   (y-char (sc-is y base-character-reg base-character-stack))
-	   (same-rep (if x-char y-char (not y-char)))
-	   (src (if (sc-is x control-stack base-character-stack
-			   immediate-base-character)
-		    temp x))
-	   (dest (if (sc-is y control-stack base-character-stack) temp y)))
 
-      (unless (and same-rep (location= x y))
+;;; Move untagged base-character arguments/return-values.
+;;;
+(define-vop (move-base-character-argument)
+  (:args (x :target y
+	    :scs (base-character-reg))
+	 (fp :scs (descriptor-reg)
+	     :load-if (not (sc-is y base-character-reg))))
+  (:results (y))
+  (:generator 0
+    (sc-case y
+      (base-character-reg
+       (move y x))
+      (base-character-stack
+       (storew x fp (tn-offset y))))))
+;;;
+(define-move-vop move-base-character-argument :move-argument
+  (any-reg descriptor-reg base-character-reg) (base-character-reg))
 
-	(unless (eq x src)
-	  (sc-case x
-	    ((base-character-stack control-stack)
-	     (load-stack-tn src x))
-	    (immediate-base-character
-	     (loadi src (char-code (tn-value x))))))
 
-	(cond (same-rep
-	       (move dest src))
-	      (x-char
-	       (inst sll dest src vm:type-bits)
-	       (inst ori dest dest vm:base-character-type))
-	      (t
-	       (inst srl dest src vm:type-bits)))
+;;; Use standard MOVE-ARGUMENT + coercion to move an untagged base-character
+;;; to a descriptor passing location.
+;;;
+(define-move-vop move-argument :move-argument
+  (base-character-reg) (any-reg descriptor-reg))
 
-	(unless (eq y dest)
-	  (store-stack-tn y dest))))))
 
-(primitive-type-vop base-character-move (:coerce-to-t :coerce-from-t :move)
-  base-character)
+
+;;;; Other operations:
 
 (define-vop (char-code)
   (:args (ch :scs (base-character-reg) :target res))
@@ -84,8 +108,8 @@
   (:generator 0
     (inst srl res code 2)))
 
-;;; Comparison of base-characters -- works for boxed and unboxed
-;;; characters since we don't have bits, etc.
+
+;;; Comparison of base-characters.
 ;;;
 (define-vop (base-character-compare pointer-compare)
   (:args (x :scs (base-character-reg))
@@ -103,3 +127,4 @@
 (define-vop (fast-char>/base-character base-character-compare)
   (:translate char>)
   (:variant :gt))
+
