@@ -932,7 +932,7 @@
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
   (setq *already-maybe-gcing* t)
-  (setf *gc-inhibit* nil)
+  (setf *gc-inhibit* t)
   (setf *need-to-collect-garbage* nil)
   (%primitive print "In initial-function, and running.")
 
