@@ -1930,7 +1930,7 @@
 	   (do ((,n-conf (ir2-block-global-tns ,n-block)
 			 (global-conflicts-next ,n-conf)))
 	       ((null ,n-conf))
-	     (when (eq (global-conflicts-kind ,n-conf) :always-live)
+	     (when (eq (global-conflicts-kind ,n-conf) :live)
 	       (,n-bod (global-conflicts-tn ,n-conf))))
 	   ;;
 	   ;; Do TNs locally live in the designated live set.
