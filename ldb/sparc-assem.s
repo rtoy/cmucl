@@ -131,8 +131,8 @@ _call_into_c:
 	st	L0, [CFP+4]
 
         /* Store LISP state */
-	andn	ALLOC, 7, L0
-        store(L0,current_dynamic_space_free_pointer)
+	andn	ALLOC, 7, L1
+        store(L1,current_dynamic_space_free_pointer)
         store(BSP,current_binding_stack_pointer)
         store(CSP,current_control_stack_pointer)
         store(CFP,current_control_frame_pointer)
