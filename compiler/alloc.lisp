@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.8 1991/02/20 14:56:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.9 1992/08/03 08:18:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -249,16 +249,7 @@
     (setf (global-conflicts-kind structure) kind)
     (setf (global-conflicts-tn structure) tn)
     (setf (global-conflicts-block structure) block)
-    (setf (global-conflicts-number structure) number)))
-  
-  ((instruction (prev info . #.assem::instruction-slot-order)) assem::node-prev
-   ((setf (assem::node-next structure) nil))
-   ((setf (assem::node-vop structure) assem::*current-vop*)
-    (setf (assem::node-prev structure) prev)
-    (setf (assem::instruction-info structure) info)
-    . #.(mapcar #'(lambda (slot)
-		    `(setf (,slot structure) ,slot))
-		assem::instruction-slot-order))))
+    (setf (global-conflicts-number structure) number))))
 
 
 ;;; NUKE-IR2-COMPONENT  --  Interface
