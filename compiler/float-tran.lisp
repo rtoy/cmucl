@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.37 1997/09/20 11:51:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.38 1997/10/08 19:41:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -461,16 +461,26 @@
 		 `(,prim x)))
 	  `(,prim x)))))
 
-(dolist (stuff '((expt %pow t)
-		 (atan %atan2 t)))
-  (destructuring-bind (name prim rtype) stuff
-    (deftransform name ((x y) '(single-float single-float) rtype :eval-name t)
-      `(coerce (,prim (coerce x 'double-float)
-		      (coerce y 'double-float))
-	       'single-float))
-    (deftransform name ((x y) '(double-float double-float)
-			rtype :eval-name t :when :both)
-      `(,prim x y))))
+(deftransform atan ((x y) (single-float single-float) *)
+  `(coerce (%atan2 (coerce x 'double-float) (coerce y 'double-float))
+    'single-float))
+(deftransform atan ((x y) (double-float double-float) * :when :both)
+  `(%atan2 x y))
+
+(deftransform expt ((x y) ((single-float 0f0) single-float) *)
+  "convert to inline float expt"
+  `(coerce (%pow (coerce x 'double-float) (coerce y 'double-float))
+    'single-float))
+(deftransform expt ((x y) ((double-float 0d0) double-float) * :when :both)
+  "convert to inline float expt"
+  `(%pow x y))
+(deftransform expt ((x y) ((single-float 0f0) (signed-byte 32)) *)
+  "convert to inline float expt"
+  `(coerce (%pow (coerce x 'double-float) (coerce y 'double-float))
+    'single-float))
+(deftransform expt ((x y) ((double-float 0d0) (signed-byte 32)) * :when :both)
+  "convert to inline float expt"
+  `(%pow x (coerce y 'double-float)))
 
 ;;; ANSI says log with base zero returns zero.
 (deftransform log ((x y) (float float) float)
