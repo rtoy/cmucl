@@ -1,10 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.12 1991/05/03 07:55:49 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.13 1991/05/24 17:52:21 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
-#include <mach.h>
 
 #include "ldb.h"
 #include "lisp.h"
@@ -73,6 +72,7 @@ char *envp[];
     if (core == NULL)
         core = "/usr/misc/.cmucl/lib/lisp.core";
 
+    arch_init();
     os_init();
 
 #if defined(EXT_PAGER)
@@ -93,6 +93,9 @@ char *envp[];
 #endif
 
     interrupt_init();
+
+    arch_install_interrupt_handlers();
+    os_install_interrupt_handlers();
 
     /* Convert the argv and envp to something Lisp can grok. */
     SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
