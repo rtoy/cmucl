@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.21 1990/11/10 18:42:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.22 1990/11/26 22:52:43 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -173,22 +173,22 @@
   (typecase type
     (named-type
      (case (named-type-name type)
-       (cons 'vm:check-cons)
-       (symbol 'vm:check-symbol)
+       (cons 'c:check-cons)
+       (symbol 'c:check-symbol)
        (t nil)))
     (numeric-type
      (cond ((type= type (specifier-type 'fixnum))
-	    'vm:check-fixnum)
+	    'c:check-fixnum)
 	   ((type= type (specifier-type '(signed-byte 32)))
-	    'vm:check-signed-byte-32)
+	    'c:check-signed-byte-32)
 	   ((type= type (specifier-type '(unsigned-byte 32)))
-	    'vm:check-unsigned-byte-32)
+	    'c:check-unsigned-byte-32)
 	   (t nil)))
     (union-type
      (if (type= type (specifier-type '(or function symbol)))
-	 'vm:check-function-or-symbol
+	 'c:check-function-or-symbol
 	 nil))
     (function-type
-     'vm:check-function)
+     'c:check-function)
     (t
      nil)))
