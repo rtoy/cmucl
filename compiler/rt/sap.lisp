@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.8 1991/10/01 14:36:56 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.9 1991/10/03 13:28:26 ram Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -360,8 +360,7 @@
       (sap-stack
        (loadw save (current-nfp-tn vop) (* (tn-offset data) vm:word-bytes))))
        
-    (move base offset)
-    (inst cas base base object)
+    (inst cas base offset object)
     (inst st save base)
     (move result save)))
 
