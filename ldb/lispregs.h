@@ -1,8 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/lispregs.h,v 1.1 1990/02/24 19:37:22 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/lispregs.h,v 1.2 1990/03/29 21:20:22 ch Exp $ */
+
 #ifdef LANGUAGE_ASSEMBLY
 #define REG(num) $num
 #else
 #define REG(num) num
+
+extern char *lisp_register_names[];
 #endif
 
 #define ZERO    REG(0)
