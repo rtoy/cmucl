@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.11 1991/10/28 14:49:37 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.12 1991/10/30 12:21:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1466,7 +1466,7 @@
   (add-hook ed::window-buffer-hook 'set-window-name-for-window-buffer)
   (add-hook ed::buffer-name-hook 'set-window-name-for-buffer-name)
   (add-hook ed::set-window-hook 'set-window-hook-raise-fun)
-  (add-hook buffer-modified-hook 'raise-echo-area-when-modified))
+  (add-hook ed::buffer-modified-hook 'raise-echo-area-when-modified))
 
 (defun make-default-bitmap-device (display)
   (make-bitmap-device
