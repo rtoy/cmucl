@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.40 1993/06/24 12:55:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.41 1993/07/02 15:12:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1280,19 +1280,18 @@
 	       places)))
 
 (defun assert-error (test-form places datum &rest arguments)
-  (restart-case (if datum
-		    (apply #'error datum arguments)
-		    (simple-assertion-failure test-form))
+  (let ((cond (if datum
+		  (conditions::coerce-to-condition
+		   datum arguments
+		   'simple-error 'error)
+		  (make-condition 'simple-error
+				  :format-control "The assertion ~S failed."
+				  :format-arguments (list assertion)))))
+  (restart-case (error cond)
     (continue ()
       :report (lambda (stream) (assert-report places stream))
-      nil)))
+      nil))))
 
-(defun simple-assertion-failure (assertion)
-  (error 'simple-type-error
-	 :datum assertion
-	 :expected-type nil ;this needs some work in next revision. -kmp
-	 :format-control "The assertion ~S failed."
-	 :format-arguments (list assertion)))
 
 (defun assert-report (names stream)
   (format stream "Retry assertion")
@@ -1333,25 +1332,26 @@
 	       (check-type-error ',place ,place-value ',type ,type-string))))))
 
 (defun check-type-error (place place-value type type-string)
-  (restart-case (if type-string
-		    (error 'simple-type-error
-			   :datum place :expected-type type
-			   :format-control
-			   "The value of ~S is ~S, which is not ~A."
-			   :format-arguments
-			   (list place place-value type-string))
-		    (error 'simple-type-error
-			   :datum place :expected-type type
-			   :format-control
-			   "The value of ~S is ~S, which is not of type ~S."
-			   :format-arguments
-			   (list place place-value type)))
-    (store-value (value)
-      :report (lambda (stream)
-		(format stream "Supply a new value of ~S."
-			place))
-      :interactive read-evaluated-form
-      value)))
+  (let ((cond (if type-string
+		  (make-condition 'simple-type-error
+				  :datum place :expected-type type
+				  :format-control
+				  "The value of ~S is ~S, which is not ~A."
+				  :format-arguments
+				  (list place place-value type-string))
+		  (make-condition 'simple-type-error
+				  :datum place :expected-type type
+				  :format-control
+			  "The value of ~S is ~S, which is not of type ~S."
+				  :format-arguments
+				  (list place place-value type)))))
+    (restart-case (error cond)
+      (store-value (value)
+	:report (lambda (stream)
+		  (format stream "Supply a new value of ~S."
+			  place))
+	:interactive read-evaluated-form
+	value))))
 
 ;;; READ-EVALUATED-FORM is used as the interactive method for restart cases
 ;;; setup by the Common Lisp "casing" (e.g., CCASE and CTYPECASE) macros
