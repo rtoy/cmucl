@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.13 1997/12/03 15:28:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.14 1998/01/29 07:15:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Debugging and enhancements by Douglas Crosher 1996, 1997.
+;;; Debugging and enhancements by Douglas Crosher 1996, 1997, 1998.
 ;;;
 
 (in-package :x86)
@@ -1895,13 +1895,11 @@
 
 ;;;; Interrupt instructions.
 
-(disassem:define-instruction-format
- (break 16 :default-printer '(:name :tab code))
- (op :field (byte 8 0) :value #b11001100)
+;;; Single byte instruction with an immediate byte argument.
+(disassem:define-instruction-format (byte-imm 16
+				     :default-printer '(:name :tab code))
+ (op :field (byte 8 0))
  (code :field (byte 8 8)))
-
-(define-emitter emit-break-inst 16
-  (byte 8 0) (byte 8 8))
 
 (defun snarf-error-junk (sap offset &optional length-only)
   (let* ((length (system:sap-ref-8 sap offset))
@@ -1944,7 +1942,7 @@
 (defun break-control (chunk inst stream dstate)
   (declare (ignore inst))
   (flet ((nt (x) (if stream (disassem:note x dstate))))
-    (case (break-code chunk dstate)
+    (case (byte-imm-code chunk dstate)
       (#.vm:error-trap
        (nt "Error trap")
        (disassem:handle-break-args #'snarf-error-junk stream dstate))
@@ -1963,14 +1961,15 @@
 
 (define-instruction break (segment code)
   (:declare (type (unsigned-byte 8) code))
-  (:printer break ((op #b11001100))
-	    '(:name :tab code)
-	    :control #'break-control )
+  (:printer byte-imm ((op #b11001100)) '(:name :tab code)
+	    :control #'break-control)
   (:emitter
-   (emit-break-inst segment #b11001100 code)))
+   (emit-byte segment #b11001100)
+   (emit-byte segment code)))
 
 (define-instruction int (segment number)
   (:declare (type (unsigned-byte 8) number))
+  (:printer byte-imm ((op #b11001101)))
   (:emitter
    (etypecase number
      ((member 3)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.7 1997/12/31 18:03:32 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.8 1998/01/29 07:15:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -285,13 +285,11 @@
   (:policy :fast-safe)
   (:translate unix::do-pending-interrupt)
   (:generator 1
-    (inst int 3)
-    (inst byte pending-interrupt-trap)))
+    (inst break pending-interrupt-trap)))
 
 (define-vop (halt)
   (:generator 1
-    (inst int 3)
-    (inst byte halt-trap)))
+    (inst break halt-trap)))
 
 (defknown float-wait () (values))
 (define-vop (float-wait)
