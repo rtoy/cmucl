@@ -214,7 +214,11 @@
   ;;
   ;; The assembler label that points to the beginning of the code for this
   ;; block.  Null when we haven't assigned a label yet.
-  (%label nil))
+  (%label nil)
+  ;;
+  ;; List of Location-Info structures describing all the interesting (to the
+  ;; debugger) locations in this block.
+  (locations nil :type list))
 
 
 (defprinter ir2-block
@@ -554,16 +558,17 @@
   ;; and a write) for each temporary.
   (refs nil :type (or tn-ref null))
   ;;
-  ;; If this VOP has multiple generators, then this is the number of the
-  ;; generator chosen by the selection function.
-  (generator-number 0 :type unsigned-byte)
-  ;;
   ;; Stuff that is passed uninterpreted from IR2 conversion to codegen.  The
   ;; meaning of this slot is totally dependent on the VOP.
   codegen-info
   ;;
   ;; Node that generated this VOP, for keeping track of debug info.
-  (node nil :type (or node null)))
+  (node nil :type (or node null))
+  ;;
+  ;; Local-TN bit vector representing the set of TNs live after args are read
+  ;; and before results are written.  This is only filled in when
+  ;; VOP-INFO-SAVE-P is non-null.
+  (save-set nil :type (or ltn-bit-vector null)))
 
 (defprinter vop
   (info :prin1 (vop-info-name info))
