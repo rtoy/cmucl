@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.14 1992/03/29 21:37:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.15 1992/06/23 14:56:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -135,7 +135,7 @@
 (defvar *total-bytes-consed* 0)
 
 (declaim (type (or index null) *last-bytes-in-use*))
-(declaim (type index *total-bytes-consed*))
+(declaim (type integer *total-bytes-consed*))
 
 ;;; GET-BYTES-CONSED -- Exported
 ;;; 
