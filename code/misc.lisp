@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.11 1991/10/20 23:38:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.12 1991/12/20 15:34:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,12 +118,12 @@
 ;;;; Dribble stuff:
 
 ;;; Each time we start dribbling to a new stream, we put it in
-;;; *dribble-stream*, and push a list of *dribble-stream*,
-;;; *standard-input*, and *standard-output* in *previous-streams*.
-;;; *standard-output* is changed to a broadcast stream that broadcasts
-;;; to *dribble-stream* and to the old value of *standard-output*.
-;;; *standard-input* is changed to an echo stream that echos input from
-;;; the old value of standard input to *dribble-stream*.
+;;; *dribble-stream*, and push a list of *dribble-stream*, *standard-input*,
+;;; *standard-output* and *error-output* in *previous-streams*.
+;;; *standard-output* and *error-output* is changed to a broadcast stream that
+;;; broadcasts to *dribble-stream* and to the old values of the variables.
+;;; *standard-input* is changed to an echo stream that echos input from the old
+;;; value of standard input to *dribble-stream*.
 ;;;
 ;;; When dribble is called with no arguments, *dribble-stream* is closed,
 ;;; and the values of *dribble-stream*, *standard-input*, and
@@ -142,13 +142,17 @@
 		       :if-does-not-exist :create))
 		(new-standard-output
 		 (make-broadcast-stream *standard-output* new-dribble-stream))
+		(new-error-output
+		 (make-broadcast-stream *error-output* new-dribble-stream))
 		(new-standard-input
 		 (make-echo-stream *standard-input* new-dribble-stream)))
-	   (push (list *dribble-stream* *standard-input* *standard-output*)
+	   (push (list *dribble-stream* *standard-input* *standard-output*
+		       *error-output*)
 		 *previous-streams*)
 	   (setf *dribble-stream* new-dribble-stream)
 	   (setf *standard-input* new-standard-input)
-	   (setf *standard-output* new-standard-output)))
+	   (setf *standard-output* new-standard-output)
+	   (setf *error-output* new-error-output)))
 	((null *dribble-stream*)
 	 (error "Not currently dribbling."))
 	(t
@@ -156,5 +160,6 @@
 	   (close *dribble-stream*)
 	   (setf *dribble-stream* (first old-streams))
 	   (setf *standard-input* (second old-streams))
-	   (setf *standard-output* (third old-streams)))))
+	   (setf *standard-output* (third old-streams))
+	   (setf *error-output* (fourth old-streams)))))
   (values))
