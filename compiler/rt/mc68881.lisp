@@ -43,9 +43,9 @@
 	 (error "Can only have one FP temp.")
 	 (let ((,var nl0-tn)
 	       (*in-with-fp-temp* t))
-	   (storew ,var nsp-tn 1)
+	   (storew ,var nsp-tn -1)
 	   (multiple-value-prog1 (progn ,@body)
-	     (loadw ,var nsp-tn 1))))))
+	     (loadw ,var nsp-tn -1))))))
 
 (define-move-function (load-single 7) (vop x y)
   ((single-stack) (mc68881-single-reg))
