@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.4 1990/12/17 17:59:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.5 1991/07/19 16:54:13 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -303,9 +303,22 @@
 			   (* (tn-offset stack-temp) vm:word-bytes))))))))
   (frob %unary-truncate single-reg single-float fstoi)
   (frob %unary-truncate double-reg double-float fdtoi)
+  #-sun4
   (frob %unary-round single-reg single-float fstoir)
+  #-sun4
   (frob %unary-round double-reg double-float fdtoir))
 
+#+sun4
+(deftransform %unary-round ((x) (float) (signed-byte 32))
+  '(let* ((trunc (truly-the (signed-byte 32) (%unary-truncate x)))
+	  (extra (- x trunc))
+	  (absx (abs extra))
+	  (one-half (float 1/2 x)))
+     (if (if (oddp trunc)
+	     (>= absx one-half)
+	     (> absx one-half))
+	 (truly-the (signed-byte 32) (%unary-truncate (+ x extra)))
+	 trunc)))
 
 (define-vop (make-single-float)
   (:args (bits :scs (signed-reg) :target res
