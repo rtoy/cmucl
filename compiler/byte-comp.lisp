@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.18 1993/08/20 20:04:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.19 1993/08/20 23:55:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,6 +201,8 @@
 (def-system-constant 23 '(%fdefinition-marker% . nconc))
 (def-system-constant 24 '(%fdefinition-marker% . list))
 (def-system-constant 25 '(%fdefinition-marker% . list*))
+(def-system-constant 26 '(%fdefinition-marker% . %coerce-to-function))
+(def-system-constant 27 '(%fdefinition-marker% . values-list))
 
 (defparameter *xop-names*
   '(breakpoint; 0
@@ -1429,10 +1431,6 @@
 	       ;; None of the arugments supply :unknown values, so
 	       ;; we know exactly how many there are.
 	       num-fixed)
-	      ((null (car args))
-	       ;; A local call arg has been deleted, but we have to pass
-	       ;; a place-holder anyway. (MVs impossible here.)
-	       (examine (cdr args) (1+ num-fixed)))
 	      (t
 	       (let* ((vals
 		       (byte-continuation-info-results
@@ -1453,14 +1451,19 @@
 		   :unknown)
 		  (t
 		   (examine (cdr args) (+ num-fixed vals)))))))))
-  (let ((num-args (examine (basic-combination-args call) 0)))
-    (case (basic-combination-kind call)
-      (:local
-       (generate-byte-code-for-local-call segment call cont num-args))
-      (:full
-       (generate-byte-code-for-full-call segment call cont num-args))
-      (t
-       (generate-byte-code-for-known-call segment call cont num-args))))))
+    (let* ((args (basic-combination-args call))
+	   (kind (basic-combination-kind call))
+	   (num-args (if (and (eq kind :local)
+			      (combination-p call))
+			 (length args)
+			 (examine args 0))))
+      (case kind
+	(:local
+	 (generate-byte-code-for-local-call segment call cont num-args))
+	(:full
+	 (generate-byte-code-for-full-call segment call cont num-args))
+	(t
+	 (generate-byte-code-for-known-call segment call cont num-args))))))
 
 (defun generate-byte-code-for-basic-combination (segment call cont)
   (cond ((and (mv-combination-p call)
@@ -2252,7 +2255,7 @@
 		      (case xop
 			((catch go unwind-protect)
 			 (extract-24-bits))
-			(type-check
+			((type-check push-n-under)
 			 (get-constant (extract-extended-op)))))))
 			 
 	     ((#b11100000 #b11100000)
