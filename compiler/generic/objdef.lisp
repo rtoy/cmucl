@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.48 2003/06/18 09:23:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.49 2003/06/18 14:29:23 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,9 +379,11 @@
 				       :header weak-pointer-type
 				       :alloc-trans make-weak-pointer)
   (value :ref-trans c::%weak-pointer-value :ref-known (flushable)
+	 :set-trans c::%set-weak-pointer-value :set-known (unsafe)
 	 :init :arg)
   (broken :type (member t nil)
 	  :ref-trans c::%weak-pointer-broken :ref-known (flushable)
+	  :set-trans c::%set-weak-pointer-broken :set-known (unsafe)
 	  :init :null)
   (next :c-type #-alpha "struct weak_pointer *" #+alpha "u32"))
 

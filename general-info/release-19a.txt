@@ -56,7 +56,9 @@ New in this release:
      - UNIX:UNIX-LSEEK working with files > 2G on BSDs.
      - Type declarations on local bindings of special variables no
        longer being ignored.
-     - DISASSEMBLE disassembling closure/funcallable instance functions.
+     - DISASSEMBLE disassembling closure/funcallable instance
+       functions.
+     - (SETF EXT:WEAK-POINTER-VALUE) has been added.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'

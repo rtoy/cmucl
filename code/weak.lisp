@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.5 1999/03/17 19:30:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.6 2003/06/18 14:29:24 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.5 1999/03/17 19:30:14 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/weak.lisp,v 1.6 2003/06/18 14:29:24 gerd Rel $
 ;;;
 ;;; Weak Pointer Support.
 ;;;
@@ -40,6 +40,13 @@
 	(broken (c::%weak-pointer-broken weak-pointer)))
     (values value (not broken))))
 
+(declaim (inline (setf weak-pointer-value)))
+(defun (setf weak-pointer-value) (object weak-pointer)
+  "Updates WEAK-POINTER to point to a new object."
+  (declare (type weak-pointer weak-pointer))
+  (c::%set-weak-pointer-broken weak-pointer nil)
+  (c::%set-weak-pointer-value weak-pointer object))
+
 ;;; For the interpreter..
 
 (defun c::%weak-pointer-value (w)
@@ -50,3 +57,10 @@
   (declare (type weak-pointer w))
   (c::%weak-pointer-broken w))
 
+(defun c::%set-weak-pointer-value (w v)
+  (declare (type weak-pointer w))
+  (c::%set-weak-pointer-value w v))
+
+(defun c::%set-weak-pointer-broken (w v)
+  (declare (type weak-pointer w) (type boolean v))
+  (c::%set-weak-pointer-broken w v))
