@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.54 1993/05/13 19:51:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.55 1993/05/14 09:06:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -715,7 +715,7 @@
 	      (dump-fop 'lisp::fop-funcall file)
 	      (dump-byte 1 file))
 	     (:xep
-	      (xep-patches (cons (cdr entry) i))
+	      (xep-patches (cons (cdr entry) (+ i vm:code-constants-offset)))
 	      (dump-fop 'lisp::fop-misc-trap file)))))))
 
     ;; For now, just the component name as debug info:
@@ -748,7 +748,8 @@
 ;;;
 (defun dump-byte-function (xep code-handle file)
   (let ((nslots (- (get-closure-length xep)
-		   vm:funcallable-instance-info-offset)))
+		   ;; 1- for header
+		   (1- vm:funcallable-instance-info-offset))))
     (dotimes (i nslots)
       (if (zerop i)
 	  (dump-push code-handle file)
