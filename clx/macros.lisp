@@ -218,7 +218,7 @@
    (let ((value (gensym)))
      `(let ((,value (read-card8 ,index)))
 	(declare (type (integer 0 (,(length keywords))) ,value))
-	(type-check ,value (integer 0 (,(length keywords))))
+	(type-check ,value '(integer 0 (,(length keywords))))
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card8 ,index (position ,thing
@@ -238,7 +238,7 @@
    (let ((value (gensym)))
      `(let ((,value (read-card16 ,index)))
 	(declare (type (integer 0 (,(length keywords))) ,value))
-	(type-check ,value (integer 0 (,(length keywords))))
+	(type-check ,value '(integer 0 (,(length keywords))))
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card16 ,index (position ,thing
@@ -258,7 +258,7 @@
    (let ((value (gensym)))
      `(let ((,value (read-card29 ,index)))
 	(declare (type (integer 0 (,(length keywords))) ,value))
-	(type-check ,value (integer 0 (,(length keywords))))
+	(type-check ,value '(integer 0 (,(length keywords))))
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card29 ,index (position ,thing
@@ -307,7 +307,7 @@
    (let ((value (gensym)))
      `(let ((,value (read-card29 ,index)))
 	(declare (type (integer 0 (,(length *boole-vector*))) ,value))
-	(type-check ,value (integer 0 (,(length *boole-vector*))))
+	(type-check ,value '(integer 0 (,(length *boole-vector*))))
 	(svref *boole-vector* ,value))))
   ((index thing)
    `(write-card29 ,index (position ,thing (the simple-vector *boole-vector*))))

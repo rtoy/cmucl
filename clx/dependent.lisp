@@ -2528,7 +2528,7 @@
 
 (defun getenv (name)
   #+excl (sys:getenv name)
-  #+lcl3.0 (lcl:environment-value name)
+  #+lcl3.0 (lcl:environment-variable name)
   #+CMU (cdr (assoc name ext:*environment-list* :test #'string=))
   #-(or excl lcl3.0 CMU) (progn name nil))
 

@@ -1803,7 +1803,7 @@
   ;;       macros for getting error fields. See DECODE-CORE-ERROR for
   ;;       an example.
   (declare (type symbol error-key)
-	   (type function function))
+	   (type (or symbol list) function))
   ;; First ensure the name is for a declared extension
   (unless (or (find error-key *xerror-vector*)
 	      (dolist (extension *extensions*)
