@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.7 1991/02/24 19:08:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.8 1991/05/24 19:37:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.7 1991/02/24 19:08:03 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.8 1991/05/24 19:37:33 wlott Exp $
 ;;;
 ;;; Loop facility, written by William Lott.
 ;;; 
@@ -536,12 +536,12 @@
     (cond ((atom name)
 	   (queue-var *for-as-sub-vars* name type
 		      :initer initer :stepper stepper)
-	   (push `(null ,name) *for-as-sub-term-tests*))
+	   (push `(endp ,name) *for-as-sub-term-tests*))
 	  (t
 	   (queue-var *for-as-vars* temp type
 		      :initer initer :stepper stepper)
 	   (queue-var *for-as-sub-vars* name type :stepper temp)
-	   (push `(null ,temp) *for-as-term-tests*)))))
+	   (push `(endp ,temp) *for-as-term-tests*)))))
 
 (defun parse-equals-for-as (name type)
   (let ((initer (pop *remaining-stuff*)))
@@ -587,6 +587,7 @@
 	     (multiple-value-bind
 		 (using using-type)
 		 (when (preposition-p "USING")
+		   ;; ### This is wrong.
 		   (parse-var-and-type-spec))
 	       (multiple-value-bind
 		   (key-var key-type value-var value-type)
