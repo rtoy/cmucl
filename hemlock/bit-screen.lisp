@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.17 2001/03/13 15:49:50 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.18 2001/12/11 00:56:51 pmai Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -652,9 +652,9 @@
 ;;; The width must be that of a tab for the screen image builder, and the
 ;;; height must be one line (two with a modeline).
 ;;; 
-(defconstant minimum-window-lines 1
+(defconstant minimum-window-lines 2
   "Windows must have at least this many lines.")
-(defconstant minimum-window-columns 8
+(defconstant minimum-window-columns 10
   "Windows must be at least this many characters wide.")
 
 (eval-when (compile eval load)

@@ -17,9 +17,6 @@
   (setf (window-old-lines window) 0))
 
 (defparameter hunk-width-limit 256)
-(defparameter minimum-window-lines 2)
-(defparameter minimum-window-columns 10)
-(defparameter font-map-size 16)
 
 (defun reverse-video-hook-fun (&rest foo)
   (declare (ignore foo)))
