@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.39 2004/06/04 13:25:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.40 2004/06/09 14:48:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -203,7 +203,17 @@
 (defun expt (base power)
   "Returns BASE raised to the POWER."
   (if (zerop power)
-      (1+ (* base power))
+      ;; CLHS says that if the power is 0, the result is 1, subject to
+      ;; numeric contagion.  But what happens if base is infinity or
+      ;; NaN?  Do we silently return 1?  For now, I think we should
+      ;; signal an error if the FP modes say so.
+      (let ((result (1+ (* base power))))
+	;; If we get an NaN here, that means base*power above didn't
+	;; produce 0 and FP traps were disabled, so we handle that
+	;; here.  Should this be a continuable restart?
+	(if (and (floatp result) (float-nan-p result))
+	    (float 1 result)
+	    result))
     (labels (;; determine if the double float is an integer.
 	     ;;  0 - not an integer
 	     ;;  1 - an odd int
