@@ -15,21 +15,7 @@
 (in-package 'c)
 
 
-;;; IR1-Finalize  --  Interface
-;;;
-;;; We do a number of things:
-;;;  2] Find any unknown free functions.
-;;;  3] Accumulate approximate function type info for unknown functions.
-;;;  4] Update the global type for functions newly defined.
-;;;  5] Emit any delayed notes about failed optimizations.
-;;;
-(proclaim '(function ir1-finalize () void))
-(defun ir1-finalize ()
-  (maphash #'check-free-function *free-functions*)
-  (maphash #'note-failed-optimization *failed-optimizations*))
-
-
-;;; Note-Failed-Optimization  --  Internal
+;;; Note-Failed-Optimization  --  Interface
 ;;;
 ;;;    Give the user grief about optimizations that we weren't able to do.  It
 ;;; is assumed that they want to hear, or there wouldn't be any entries in the
@@ -59,7 +45,7 @@
 			      (messages))))))))
 
 	  
-;;; Check-Free-Function  --  Internal
+;;; Check-Free-Function  --  Interface
 ;;;
 ;;;    If the entry is a functional, then we update the global environment
 ;;; according to the new definition, checking for inconsistency.  If the entry
