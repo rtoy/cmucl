@@ -488,12 +488,16 @@
   ;; what kind of exit is being done.
   (cleanup nil :type cleanup)
   ;;
-  ;; The continuation exited to (the CONT of the EXIT nodes.)  This is
-  ;; primarily an indication of where this exit delivers its values to (if
-  ;; any), but it is also used as a sort of name to allow us to find the
-  ;; NLX-Info that corresponds to a given exit.  For this purpose, the Entry
-  ;; must also be used to disambiguate, since exits to different places may
-  ;; deliver their result to the same continuation.
+  ;; The continuation exited to (the CONT of the EXIT nodes.)  If this exit is
+  ;; from an escape function (CATCH or UNWIND-PROTECT), then environment
+  ;; analysis deletes the escape function and instead has the %NLX-ENTRY use
+  ;; this continuation.
+  ;;
+  ;; This slot is primarily an indication of where this exit delivers its
+  ;; values to (if any), but it is also used as a sort of name to allow us to
+  ;; find the NLX-Info that corresponds to a given exit.  For this purpose, the
+  ;; Entry must also be used to disambiguate, since exits to different places
+  ;; may deliver their result to the same continuation.
   (continuation nil :type continuation)
   ;;
   ;; The entry stub inserted by environment analysis.  This is a block
