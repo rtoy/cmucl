@@ -258,7 +258,7 @@
 	     (code `(%unwind-protect-breakup))
 	     (let ((fun (ref-leaf (continuation-use (second args)))))
 	       (reanalyze-funs fun)
-	       (code `(funcall ,fun))))
+	       (code `(%funcall ,fun))))
 	    (:entry
 	     (dolist (nlx (cleanup-nlx-info cleanup))
 	       (code `(%lexical-exit-breakup ',nlx)))))))
