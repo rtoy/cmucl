@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.22 1991/12/15 08:20:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.23 1992/02/23 17:43:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -408,7 +408,10 @@
   ;;     The result of initial IR1 conversion, on which component analysis has
   ;;     not been done.
   ;;
-  (kind nil :type (member nil :top-level :initial))
+  ;; :Deleted
+  ;;     Debris left over from component analysis.
+  ;;
+  (kind nil :type (member nil :top-level :initial :deleted))
   ;;
   ;; The blocks that are the dummy head and tail of the DFO.  Entry/exit points
   ;; have these blocks as their predecessors/successors.  Null temporarily.
