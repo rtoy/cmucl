@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.75 1998/01/07 23:30:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.76 1998/01/11 07:15:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1620,13 +1620,13 @@
       *empty-type*))
 
 (defoptimizer (truncate derive-type) ((number divisor))
-  (make-values-type
-   :required
-   (list
-    (two-arg-derive-type number divisor
-			 #'truncate-derive-type-quot-aux #'truncate)
-    (two-arg-derive-type number divisor
-			 #'truncate-derive-type-rem-aux #'rem))))
+  (let ((quot (two-arg-derive-type number divisor
+				   #'truncate-derive-type-quot-aux #'truncate))
+	(rem (two-arg-derive-type number divisor
+				  #'truncate-derive-type-rem-aux #'rem)))
+    (when (and quot rem)
+      (make-values-type :required (list quot rem)))))
+
 
 (defun ftruncate-derive-type-quot (number-type divisor-type)
   ;; The bounds are the same as for truncate.  However, the first
@@ -1647,13 +1647,13 @@
       *empty-type*))
 
 (defoptimizer (ftruncate derive-type) ((number divisor))
-  (make-values-type
-   :required
-   (list
-    (two-arg-derive-type number divisor
-			 #'ftruncate-derive-type-quot-aux #'ftruncate)
-    (two-arg-derive-type number divisor
-			 #'truncate-derive-type-rem-aux #'rem))))
+  (let ((quot
+	 (two-arg-derive-type number divisor
+			      #'ftruncate-derive-type-quot-aux #'ftruncate))
+	(rem (two-arg-derive-type number divisor
+				  #'truncate-derive-type-rem-aux #'rem)))
+    (when (and quot rem)
+      (make-values-type :required (list quot rem)))))
 
 
 (defun %unary-truncate-derive-type-aux (number)
@@ -1722,12 +1722,14 @@
 			       (numeric-type-real-p d))
 			  (,r-aux n d)
 			  *empty-type*)))
-	       (make-values-type
-		:required
-		(list (two-arg-derive-type number divisor #'derive-q #',name)
-		      (two-arg-derive-type number divisor #'derive-r #'mod)))))
+	       (let ((quot (two-arg-derive-type
+			    number divisor #'derive-q #',name))
+		     (rem (two-arg-derive-type
+			   number divisor #'derive-r #'mod)))
+		 (when (and quot rem)
+		   (make-values-type :required (list quot rem))))))
 	   ))))
-  
+
   (frob-opt floor floor-quotient-bound floor-rem-bound)
   (frob-opt ceiling ceiling-quotient-bound ceiling-rem-bound))
 
@@ -1765,11 +1767,13 @@
 			       (numeric-type-real-p d))
 			  (,r-aux n d)
 			  *empty-type*)))
-	       (make-values-type
-		:required
-		(list (two-arg-derive-type number divisor #'derive-q #',name)
-		      (two-arg-derive-type number divisor #'derive-r #'mod)))))))))
-  
+	       (let ((quot (two-arg-derive-type
+			    number divisor #'derive-q #',name))
+		     (rem (two-arg-derive-type
+			   number divisor #'derive-r #'mod)))
+		 (when (and quot rem)
+		   (make-values-type :required (list quot rem))))))))))
+
   (frob-opt ffloor floor-quotient-bound floor-rem-bound)
   (frob-opt fceiling ceiling-quotient-bound ceiling-rem-bound))
 
