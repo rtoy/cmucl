@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.25 2002/08/26 02:23:12 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.26 2002/08/26 02:40:55 pmai Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -494,7 +494,6 @@ and load your system with:
    (ctypes      t                                   t (defclass defcombin))
    (construct   t                                   t (defclass boot defs low))
    (env         t                                   t (defclass boot defs low fin))
-   (compat      t                                   t ())
    (cmucl-documentation t			    t () CMU)
    (precom1     (dlisp)                             t (defs low cache fin dfun))
    (precom2     (dlisp)                             t (defs low cache fin dfun))
