@@ -159,6 +159,8 @@
 	  (when prev
 	    (let* ((block (continuation-block prev))
 		   (component (block-component block)))
+	      (when (typep dest 'cif)
+		(setf (block-test-modified block) t))
 	      (setf (block-reoptimize block) t)
 	      (setf (component-reoptimize component) t))))))
     (do-uses (node cont)
@@ -689,13 +691,13 @@
 		    (continuation-dest (node-cont node)))
 	   (constant-fold-call node)
 	   (return-from ir1-optimize-combination)))
-       
+
        (let ((fun (function-info-derive-type kind)))
 	 (when fun
 	   (let ((res (funcall fun node)))
 	     (when res
 	       (derive-node-type node res)))))
-       
+
        (let ((fun (function-info-optimizer kind)))
 	 (unless (and fun (funcall fun node))
 	   (dolist (x (function-info-transforms kind))
