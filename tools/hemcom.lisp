@@ -163,7 +163,7 @@
 (comf "target:hemlock/shell")
 (comf "target:hemlock/debug")
 (comf "target:hemlock/netnews")
-(comf "target:tools/rcs")
+(comf "target:hemlock/rcs")
 
 ) ;WITH-COMPILATION-UNIT for commands
 
@@ -270,4 +270,5 @@
  "target:hemlock/shell"
  "target:hemlock/debug"
  "target:hemlock/netnews"
+ "target:hemlock/rcs"
  "target:hemlock/bindings")
