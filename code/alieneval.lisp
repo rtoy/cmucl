@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.17 1992/02/22 02:54:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.18 1992/02/24 01:43:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -739,7 +739,7 @@
   value)
 
 
-(def-alien-type-class (single-float :include float))
+(def-alien-type-class (single-float :include (float (:bits 32))))
 
 (def-alien-type-translator single-float ()
   (make-alien-single-float-type :type 'single-float))
@@ -749,7 +749,7 @@
   `(sap-ref-single ,sap (/ ,offset vm:byte-bits)))
 
 
-(def-alien-type-class (double-float :include float))
+(def-alien-type-class (double-float :include (float (:bits 64))))
 
 (def-alien-type-translator double-float ()
   (make-alien-double-float-type :type 'double-float))
