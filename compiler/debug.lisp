@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.16 1991/11/15 13:39:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.17 1991/12/11 16:50:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.16 1991/11/15 13:39:36 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.17 1991/12/11 16:50:17 ram Exp $
 ;;; 
 ;;;    Utilities for debugging the compiler.  Currently contains only stuff for
 ;;; checking the consistency of the IR1.
@@ -200,14 +200,15 @@
 	 (barf "Function for XEP ~S has kind." functional))
        (unless (eq (functional-entry-function fun) functional)
 	 (barf "Bad back-pointer in function for XEP ~S." functional))))
-    ((:let :mv-let)
+    ((:let :mv-let :assignment)
      (check-function-reached (lambda-home functional) functional)
      (when (functional-entry-function functional)
        (barf "Let ~S has entry function." functional))
      (unless (member functional (lambda-lets (lambda-home functional)))
        (barf "Let ~S not in Lets for Home." functional))
-     (when (rest (leaf-refs functional))
-       (barf "Let ~S has multiple refernces." functional))
+     (unless (eq (functional-kind functional) :assignment)
+       (when (rest (leaf-refs functional))
+	 (barf "Let ~S has multiple refernces." functional)))
      (when (lambda-lets functional)
        (barf "Lets in a Let: ~S." functional)))
     (:optional
@@ -1106,22 +1107,13 @@
 (defun print-tn (tn &optional (stream *standard-output*))
   (declare (type tn tn))
   (let ((leaf (tn-leaf tn)))
-    (cond #-new-compiler
-	  (leaf
-	   (xp::princ (with-output-to-string (stream)
-			(print-leaf leaf stream))
-		      stream)
-	   (xp::format stream "!~D" (tn-id tn)))
-	  #+new-compiler
-	  (leaf
+    (cond (leaf
 	   (print-leaf leaf stream)
 	   (format stream "!~D" (tn-id tn)))
 	  (t
-	   (#-new-compiler xp::format #+new-compiler format
-			   stream "t~D" (tn-id tn))))
+	   (format stream "t~D" (tn-id tn))))
     (when (and (tn-sc tn) (tn-offset tn))
-      (#-new-compiler xp::format #+new-compiler format
-		      stream "[~A]" (location-print-name tn)))))
+      (format stream "[~A]" (location-print-name tn)))))
 
 
 ;;; Print-Operands  --  Internal
@@ -1131,8 +1123,7 @@
 ;;;
 (defun print-operands (refs)
   (declare (type (or tn-ref null) refs))
-  (#-new-compiler xp:within-logical-block #-new-compiler (nil nil)
-		  #+new-compiler progn
+  (pprint-logical-block (*standard-output* nil)
     (do ((ref refs (tn-ref-across ref)))
 	((null ref))
       (let ((tn (tn-ref-tn ref))
@@ -1141,50 +1132,34 @@
 	       (print-tn tn))
 	      (t
 	       (print-tn tn)
-	       (#-new-compiler xp::princ #+new-compiler princ
-			       (if (tn-ref-write-p ref) #\< #\>))
+	       (princ (if (tn-ref-write-p ref) #\< #\>))
 	       (print-tn ltn)))
-	(#-new-compiler xp::princ #+new-compiler princ #\space)
-	#-new-compiler
-	(xp:conditional-newline :fill)))))
+	(princ #\space)
+	(pprint-newline :fill)))))
 
 
 ;;; Print-Vop -- internal
 ;;;
-;;; Print the vop on a single line.
+;;; Print the vop, putting args, info and results on separate lines, if
+;;; necessary.
 ;;;
 (defun print-vop (vop)
-  #-new-compiler
-  (xp:within-logical-block (nil nil)
-    (xp::princ (vop-info-name (vop-info vop)))
-    (xp::princ #\space)
-    (xp:logical-block-indent :current 0)
-    (print-operands (vop-args vop))
-    (xp:conditional-newline :linear)
-    (when (vop-codegen-info vop)
-      (xp::princ (with-output-to-string (stream)
-		   (let ((*print-level* 1)
-			 (*print-length* 3))
-		     (format stream "{~{~S~^ ~}} " (vop-codegen-info vop)))))
-      (xp:conditional-newline :linear))
-    (when (vop-results vop)
-      (xp::princ "=> ")
-      (print-operands (vop-results vop))))
-  #-new-compiler
-  (xp::terpri)
-  #+new-compiler
-  (progn
+  (pprint-logical-block (*standard-output* nil)
     (princ (vop-info-name (vop-info vop)))
     (princ #\space)
+    (pprint-indent :current 0)
     (print-operands (vop-args vop))
+    (pprint-newline :linear)
     (when (vop-codegen-info vop)
-      (let ((*print-level* 1)
-	    (*print-length* 3))
-	(format t "{~{~S~^ ~}} " (vop-codegen-info vop))))
+      (princ (with-output-to-string (stream)
+	       (let ((*print-level* 1)
+		     (*print-length* 3))
+		 (format stream "{~{~S~^ ~}} " (vop-codegen-info vop)))))
+      (pprint-newline :linear))
     (when (vop-results vop)
       (princ "=> ")
-      (print-operands (vop-results vop)))
-    (terpri)))
+      (print-operands (vop-results vop))))
+  (terpri))
 
 ;;; Print-IR2-Block  --  Internal
 ;;;
