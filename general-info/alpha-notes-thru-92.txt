@@ -1,3 +1,57 @@
+2/3/92 to 2/12/92
+
+Code:
+
+Several changes to the reader.  Specifically:
+- READTABLE-CASE is now supported.
+- Several bugs with respect to #+, #-, #n=, and #n# have been fixed.
+- The reader now signals the correct type of error when things go wrong
+instead of always signaling a simple-error.
+- Export new variable *ignore-extra-close-parentheses* if true (the
+default), extra close parens are only a warning, not an error.  They used
+to be quietly ignored.
+- # is now a non-terminating macro character, so foo#bar is read as a
+symbol.
+- Added Ted's changes to make INTERNAL-READ-EXTENDED-TOKEN work when there
+are `|' escapes.  The main significance of this is that #+nil '|foo;bar|
+and #:|foobar| now work properly.  Also change this function to recognize
+unquoted colons so that #:foo:bar will error, but not #:foo\:bar.
+
+Print unbound-markers to the correct stream instead of always printing them
+to *standard-output*.
+
+Added UPGRADED-COMPLEX-PART-TYPE and UPGRADED-ARRAY-ELEMENT-TYPE.
+
+Fixed (typep x '(and ...)) to not always return NIL.
+
+When restarting a core, process the command line before printing the herald
+so that we can eval some form and quit without printing anything.
+
+Added exports for LEAST-NEGATIVE-NORMALIZED-mumble-FLOAT.
+
+The ``LISP'' package has been renamed ``COMMON-LISP'' with the nicknames
+``LISP'' and ``CL.''
+
+
+Compiler:
+
+Don't look at the LAMBDA-TAIL-SET of deleted functions to find out the result
+type, because there isn't any.
+
+Changed LET* and &AUX to allow duplicate variable names.
+
+Properly qualify kernel::*values-specifier-type-cache-vector* in BOUNDP check
+in %NOTE-TYPE-DEFINED.  We were never clearing the cache.
+
+More tweaking of arithmetic identities.   (* x 0) transform is also
+rational-specific.  Include CONSTANT-ARGUMENT in various arg type restrictions
+so that we don't get silly efficiency notes.
+
+Changed multiplier recoding to left-associate the sum so that we are less
+likely to run out of non-descriptor registers.
+
+
+
 1/26/92 to 2/3/92
 
 Fixed filename parsing to correctly handle "/foo".
