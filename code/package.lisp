@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.43 1998/05/01 10:37:12 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.44 1998/05/04 00:03:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -384,13 +384,15 @@
 ;;;; Iteration macros.
 
 (defmacro do-symbols ((var &optional (package '*package*) result-form)
-		      &body body)
+		      &body (body decls))
   "DO-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECLARATION}* {TAG | FORM}*
    Executes the FORMs at least once for each symbol accessible in the given
    PACKAGE with VAR bound to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
     `(block nil
-       (flet ((,flet-name (,var) ,@body))
+       (flet ((,flet-name (,var)
+		,@decls
+		(tagbody ,@body)))
 	 (let* ((package (package-or-lose ,package))
 		(shadows (package-%shadowing-symbols package)))
 	   (flet ((iterate-over-hash-table (table ignore)
@@ -412,17 +414,19 @@
 					shadows)))))
        (let ((,var nil))
 	 (declare (ignorable ,var))
+	 ,@decls
 	 ,result-form))))
 
 (defmacro do-external-symbols ((var &optional (package '*package*) result-form)
-			       &body body)
+			       &body (body decls))
   "DO-EXTERNAL-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECL}* {TAG | FORM}*
    Executes the FORMs once for each external symbol in the given PACKAGE with
    VAR bound to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
     `(block nil
        (flet ((,flet-name (,var)
-		,@body))
+		,@decls
+		(tagbody ,@body)))
 	 (let* ((package (package-or-lose ,package))
 		(table (package-external-symbols package))
 		(hash-vec (package-hashtable-hash table))
@@ -435,16 +439,18 @@
 	       (,flet-name (aref sym-vec i))))))
        (let ((,var nil))
 	 (declare (ignorable ,var))
+	 ,@decls
 	 ,result-form))))
 
-(defmacro do-all-symbols ((var &optional result-form) &body body)
+(defmacro do-all-symbols ((var &optional result-form) &body (body decls))
   "DO-ALL-SYMBOLS (VAR [RESULT-FORM]) {DECLARATION}* {TAG | FORM}*
    Executes the FORMs once for each symbol in every package with VAR bound
    to the current symbol."
   (let ((flet-name (gensym "DO-SYMBOLS-")))
     `(block nil
        (flet ((,flet-name (,var)
-		,@body))
+		,@decls
+		(tagbody ,@body)))
 	 (dolist (package (list-all-packages))
 	   (flet ((iterate-over-hash-table (table)
 		    (let ((hash-vec (package-hashtable-hash table))
@@ -459,6 +465,7 @@
 	     (iterate-over-hash-table (package-external-symbols package)))))
        (let ((,var nil))
 	 (declare (ignorable ,var))
+	 ,@decls
 	 ,result-form))))
 
 
