@@ -2,7 +2,7 @@
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.10 1992/02/18 19:09:18 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.11 1992/02/24 19:01:06 ram Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -15,7 +15,7 @@ endif
 if $?CMUCL_ROOT then
 	set root = $CMUCL_ROOT
 else
-	set root = /afs/cs/projcet/clisp
+	set root = /afs/cs/project/clisp
 endif
 
 set dest = $root/build/@sys/$subdir
