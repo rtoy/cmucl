@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.47 1993/08/12 17:32:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.48 1993/08/12 20:33:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,6 +26,8 @@
 (defparameter pack-assign-costs t)
 (defparameter pack-optimize-saves t)
 (defparameter pack-save-once t)
+
+(declaim (ftype (function (component) index) ir2-block-count))
 
 
 ;;;; Conflict determination:
@@ -166,39 +168,52 @@
 ;;;
 (defun init-sb-vectors (component)
   (let ((nblocks (ir2-block-count component)))
-    (declare (type index nblocks))
     (dolist (sb (backend-sb-list *backend*))
       (unless (eq (sb-kind sb) :non-packed)
 	(let* ((conflicts (finite-sb-conflicts sb))
 	       (always-live (finite-sb-always-live sb))
-	       (max-locs (length conflicts)))
+	       (max-locs (length conflicts))
+	       (last-count (finite-sb-last-block-count sb)))
 	  (unless (zerop max-locs)
 	    (let ((current-size (length (the simple-vector
 					     (svref conflicts 0)))))
-	      (when (> nblocks current-size)
+	      (cond
+	       ((> nblocks current-size)
 		(let ((new-size (max nblocks (* current-size 2))))
-		  (dotimes (i (length conflicts))
+		  (declare (type index new-size))
+		  (dotimes (i max-locs)
 		    (declare (type index i))
 		    (let ((new-vec (make-array new-size)))
-		      (dotimes (j new-size)
+		      (let ((old (svref conflicts i)))
+			(declare (simple-vector old))
+			(dotimes (j current-size)
+			  (declare (type index j))
+			  (setf (svref new-vec j)
+				(clear-ltn-bit-vector (svref old j)))))
+
+		      (do ((j current-size (1+ j)))
+			  ((= j new-size))
 			(declare (type index j))
 			(setf (svref new-vec j)
-			      (make-array local-tn-limit :element-type 'bit)))
+			      (make-array local-tn-limit :element-type 'bit
+					  :initial-element 0)))
 		      (setf (svref conflicts i) new-vec))
-		    (setf (svref always-live i)  
-			  (make-array new-size :element-type 'bit))))))
-	    
-	    (dotimes (i (length conflicts))
-	      (declare (type index i))
-	      (let ((conf (svref conflicts i)))
-		(declare (simple-vector conf))
-		(dotimes (j (length conf))
-		  (declare (type index j))
-		  (clear-ltn-bit-vector (svref conf j))))
-	      (clear-bit-vector (svref always-live i)))))
+		    (setf (svref always-live i)
+			  (make-array new-size :element-type 'bit
+				      :initial-element 0)))))
+	       (t
+		(dotimes (i (finite-sb-current-size sb))
+		  (declare (type index i))
+		  (let ((conf (svref conflicts i)))
+		    (declare (simple-vector conf))
+		    (dotimes (j last-count)
+		      (declare (type index j))
+		      (clear-ltn-bit-vector (svref conf j))))
+		  (clear-bit-vector (svref always-live i)))))))
 
-	(setf (finite-sb-current-size sb) (sb-size sb))
-	(setf (finite-sb-last-offset sb) 0)))))
+	  (setf (finite-sb-last-block-count sb) nblocks)
+	  (setf (finite-sb-current-size sb) (sb-size sb))
+	  (setf (finite-sb-last-offset sb) 0))))))
 
 
 ;;; Grow-SC  --  Internal
@@ -745,6 +760,7 @@
 	(saves-list ())
 	(restores-list ())
 	(skipping nil))
+    (declare (list saves-list restores-list))
     (clear-bit-vector saves)
     (clear-bit-vector restores)
     (do-live-tns (tn (ir2-block-live-in block) block)
@@ -782,11 +798,13 @@
 		     (num (tn-number tn)))
 		(unless (zerop (sbit restores num))
 		  (setf (sbit restores num) 0)
-		  (setq restores-list (delete tn restores-list)))
+		  (setq restores-list
+			(delete tn restores-list :test #'eq)))
 		(unless (zerop (sbit saves num))
 		  (setf (sbit saves num) 0)
 		  (save-if-necessary tn (vop-next vop) vop)
-		  (setq saves-list (delete tn saves-list))))))
+		  (setq saves-list
+			(delete tn saves-list :test #'eq))))))
 
 	  (case (vop-info-save-p info)
 	    ((t)
