@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.95 1993/08/19 12:43:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.96 1993/08/19 17:50:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2195,7 +2195,9 @@
 	 (lisp::*already-evaled-this* t))
     (when do-eval
       (eval `(progn ,@body)))
-    (if (intersection '(:load-top-level load :execute eval) situations)
+    (if (or (intersection '(:load-top-level load) situations)
+	    (and *converting-for-interpreter*
+		 (intersection '(:execute eval) situations)))
 	(funcall fun body)
 	(funcall fun '(nil)))))
 
