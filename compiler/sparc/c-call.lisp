@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.1 1990/11/30 17:04:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.2 1991/04/21 16:58:26 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -51,7 +51,7 @@
 	      (single-float
 	       (error "Can't deal with floats yet."))))))
       (values (tns)
-	      (logandc2 (1+ stack-frame-size) 1)))))
+	      (* stack-frame-size word-bytes)))))
 
 (def-vm-support-routine make-call-out-result-tn (type)
   (let ((name (if (consp type) (car type) type)))

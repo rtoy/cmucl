@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.5 1991/02/20 15:14:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.6 1991/04/21 16:57:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.5 1991/02/20 15:14:15 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.6 1991/04/21 16:57:16 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -95,7 +95,7 @@
 	     (incf stack-frame-size)
 	     (incf float-args)))))
       (values (tns)
-	      (logandc2 (1+ stack-frame-size) 1)))))
+	      (* stack-frame-size word-bytes)))))
 
 (def-vm-support-routine make-call-out-result-tn (type)
   (let ((name (if (consp type) (car type) type)))
