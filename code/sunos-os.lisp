@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.3 1992/02/29 00:45:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.4 1992/02/29 02:29:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;;
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
-(export '(get-system-info get-page-size))
+(export '(get-system-info get-page-size os-init))
 
 (pushnew :sunos *features*)
 (setq *software-type* "SunOS")
@@ -45,12 +45,14 @@
 	      (subseq version-line (1+ second-space) third-space)))))
   *software-version*)
 
-;;; Decache version on save, because it might not be the same when we restart.
-;;;
-(pushnew #'(lambda ()
-	     (setq *sofware-version* nil))
-	 ext:*before-save-initializations*)
 
+;;; OS-INIT -- interface.
+;;;
+;;; Other OS dependent initializations.
+;;; 
+(defun os-init ()
+  ;; Decache version on save, because it might not be the same when we restart.
+  (setq *sofware-version* nil))
 
 ;;; GET-SYSTEM-INFO  --  Interface
 ;;;

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.30 1992/02/21 21:59:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.31 1992/02/29 02:29:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -586,14 +586,6 @@
   #+nil
   (add-port-object *task-notify* nil *kernel-messages*))
 
-;;; OS-Init initializes our operating-system interface.  It sets the values
-;;; of the global port variables to what they should be and calls the functions
-;;; that set up the argument blocks for the server interfaces.
-
-(defun os-init ()
-  (setf *task-self* (mach:mach-task_self))
-  (setf *task-data* (mach:mach-task_data))
-  (setf *task-notify* (mach:mach-task_notify)))
 
 
 ;;;; Miscellaneous external functions:
