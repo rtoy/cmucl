@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.36 1993/05/25 18:39:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.37 1993/08/19 11:38:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,6 +88,8 @@
     `(progn
        (%primitive print ,(symbol-name name))
        (,name))))
+
+(defvar hi::*in-the-editor* nil)
 
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
