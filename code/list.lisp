@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.6 1991/02/08 13:33:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.7 1991/02/25 23:58:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -352,10 +352,9 @@
 
 (defun butlast (list &optional (n 1))
   "Returns a new list the same as List without the N last elements."
-  (unless (integerp n)
-    (error "Wrong type argument, ~S, should have been of type INTEGER."))
+  (declare (list list) (type integer n))
   (if (< n 0) (setq n 0))
-  (let ((length (1- (length (the list list)))))
+  (let ((length (1- (length list))))
     (declare (fixnum length))
     (if (< length n)
 	()
@@ -368,10 +367,9 @@
 
 (defun nbutlast (list &optional (n 1))
   "Modifies List to remove the last N elements."
-  (unless (integerp n)
-    (error "Wrong type argument, ~S, should have been of type INTEGER."))
+  (declare (list list) (type integer n))
   (if (< n 0) (setq n 0))
-  (let ((length (1- (length (the list list)))))
+  (let ((length (1- (length list))))
     (declare (fixnum length))
     (if (< length n) ()
 	(do ((1st (cdr list) (cdr 1st))
