@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.1 1992/07/24 04:08:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.2 1992/07/29 20:51:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,10 @@
 ;;; - Add type-testing noise.  In other words, hack over checkgen to know
 ;;; about the byte-compiler.
 ;;; - Breakpoints/debugging info.
-;;; 
+;;; - When a lambda-list has zero optionals (e.g. (foo &rest bar)) the
+;;; entry point for min/max-args is deleted.
+;;; - The XEP needs to have the name, arglist, etc. in it.
+;;;
 
 
 ;;;; Stuff to emit noise.
@@ -854,53 +857,56 @@
 (defun generate-byte-code-for-ref (segment ref cont)
   (declare (type new-assem:segment segment) (type ref ref)
 	   (type continuation cont))
-  (let ((values (byte-continuation-info-results (continuation-info cont)))
-	(leaf (ref-leaf ref)))
-    (cond
-     ((eq values :fdefinition)
-      (assert (and (global-var-p leaf)
-		   (eq (global-var-kind leaf)
-		       :global-function)))
-      (output-push-load-time-constant segment
-				      :fdefinition
-				      (global-var-name leaf)))
-     ((eql values 0)
-      ;; Real easy!
-      nil)
-     (t
-      (etypecase leaf
-	(constant
-	 (output-push-constant-leaf segment leaf))
-	(clambda
-	 (let* ((refered-env (lambda-environment leaf))
-		(closure (environment-closure refered-env)))
-	   (if (null closure)
-	       (output-push-load-time-constant segment :entry leaf)
-	       (let ((my-env (node-environment ref)))
-		 (output-push-load-time-constant segment :xep leaf)
-		 (dolist (thing closure)
-		   (etypecase thing
-		     (lambda-var
-		      (output-ref-lambda-var segment thing my-env nil))
-		     (nlx-info
-		      (output-ref-nlx-info segment thing my-env))))
-		 (output-push-int segment (length closure))
-		 (output-do-xop segment 'make-closure)))))
-	(functional
-	 (output-push-load-time-constant segment :entry leaf))
-	(lambda-var
-	 (output-ref-lambda-var segment leaf (node-environment ref)))
-	(global-var
-	 (ecase (global-var-kind leaf)
-	   ((:special :global :constant)
-	    (output-push-constant segment (global-var-name leaf))
-	    (output-do-inline-function segment 'symbol-value))
-	   (:global-function
-	    (output-push-load-time-constant segment
-					    :fdefinition
-					    (global-var-name leaf))
-	    (output-do-xop segment 'fdefn-function-or-lose)))))
-      (canonicalize-values segment values 1))))
+  (let ((info (continuation-info cont)))
+    ;; If there is no info, then nobody wants the result.
+    (when info
+      (let ((values (byte-continuation-info-results info))
+	    (leaf (ref-leaf ref)))
+	(cond
+	 ((eq values :fdefinition)
+	  (assert (and (global-var-p leaf)
+		       (eq (global-var-kind leaf)
+			   :global-function)))
+	  (output-push-load-time-constant segment
+					  :fdefinition
+					  (global-var-name leaf)))
+	 ((eql values 0)
+	  ;; Real easy!
+	  nil)
+	 (t
+	  (etypecase leaf
+	    (constant
+	     (output-push-constant-leaf segment leaf))
+	    (clambda
+	     (let* ((refered-env (lambda-environment leaf))
+		    (closure (environment-closure refered-env)))
+	       (if (null closure)
+		   (output-push-load-time-constant segment :entry leaf)
+		   (let ((my-env (node-environment ref)))
+		     (output-push-load-time-constant segment :xep leaf)
+		     (dolist (thing closure)
+		       (etypecase thing
+			 (lambda-var
+			  (output-ref-lambda-var segment thing my-env nil))
+			 (nlx-info
+			  (output-ref-nlx-info segment thing my-env))))
+		     (output-push-int segment (length closure))
+		     (output-do-xop segment 'make-closure)))))
+	    (functional
+	     (output-push-load-time-constant segment :entry leaf))
+	    (lambda-var
+	     (output-ref-lambda-var segment leaf (node-environment ref)))
+	    (global-var
+	     (ecase (global-var-kind leaf)
+	       ((:special :global :constant)
+		(output-push-constant segment (global-var-name leaf))
+		(output-do-inline-function segment 'symbol-value))
+	       (:global-function
+		(output-push-load-time-constant segment
+						:fdefinition
+						(global-var-name leaf))
+		(output-do-xop segment 'fdefn-function-or-lose)))))
+	  (canonicalize-values segment values 1))))))
   (undefined-value))
 
 (defun generate-byte-code-for-set (segment set cont)
@@ -975,16 +981,17 @@
 			   (byte-lambda-info-label (lambda-info lambda)))
 	 ;; ### :unknown-return
 	 ;; Fix up the results.
-	 (case results
-	   ((:unknown 1)
-	    ;; Don't need to do anything.
-	    )
-	   (0
-	    ;; Get rid of the one value.
-	    (output-byte-with-operand segment byte-pop-n 1))
-	   (t
-	    ;; Something strange.
-	    (canonicalize-values segment results :unknown)))))))
+	 (unless (node-tail-p call)
+	   (case results
+	     ((:unknown 1)
+	      ;; Don't need to do anything.
+	      )
+	     (0
+	      ;; Get rid of the one value.
+	      (output-byte-with-operand segment byte-pop-n 1))
+	     (t
+	      ;; Something strange.
+	      (canonicalize-values segment results :unknown))))))))
   (undefined-value))
 
 (defun generate-byte-code-for-full-call (segment call cont num-args)
@@ -1373,11 +1380,12 @@
     ;; ### :non-local-entry
     (ecase (cleanup-kind (nlx-info-cleanup info))
       ((:catch :block)
-       (canonicalize-values segment
-			    (byte-continuation-info-results
-			     (continuation-info
-			      (nlx-info-continuation info)))
-			    :unknown))
+       (let ((cont-info (continuation-info (nlx-info-continuation info))))
+	 (canonicalize-values segment
+			      (if cont-info
+				  (byte-continuation-info-results cont-info)
+				  0)
+			      :unknown)))
       ((:tagbody :unwind-protect)))))
 
 
@@ -1492,8 +1500,9 @@
 	      :min-args (optional-dispatch-min-args entry)
 	      :max-args (optional-dispatch-max-args entry)
 	      :entry-points
-	      (mapcar #'entry-point-for
-		      (optional-dispatch-entry-points entry))
+	      ;; ### Some of these entry points are :Deleted.  This needs to
+	      ;; be fixed somehow.
+	      (mapcar #'entry-point-for (optional-dispatch-entry-points entry))
 	      :more-args-entry-point
 	      (entry-point-for (optional-dispatch-main-entry entry))
 	      :rest-arg-p rest-arg-p
