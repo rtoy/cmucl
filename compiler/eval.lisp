@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.30 1997/02/08 17:24:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.31 1997/02/08 21:44:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -205,7 +205,8 @@
 		  (or (interpreted-function-%name x)
 		      (c::component-name
 		       (c::block-component
-			(c::node-block (c::lambda-bind fun))))))))))
+ 			(c::node-block
+ 			 (c::lambda-bind (c::main-entry fun)))))))))))
 
 
 ;;; INTERPRETED-FUNCTION-TYPE  --  Interface
