@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.18 1993/05/04 15:48:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.19 1994/10/24 22:55:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,7 +128,7 @@
       (inst cmp type function-header-type)
       (inst b :eq normal-fn)
       (inst move lip function)
-      (inst li lip (make-fixup "_closure_tramp" :foreign))
+      (inst li lip (make-fixup (extern-alien-name "closure_tramp") :foreign))
       (emit-label normal-fn)
       (storew function fdefn fdefn-function-slot other-pointer-type)
       (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
@@ -142,7 +142,7 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (storew null-tn fdefn fdefn-function-slot other-pointer-type)
-    (inst li temp (make-fixup "_undefined_tramp" :foreign))
+    (inst li temp (make-fixup (extern-alien-name "undefined_tramp") :foreign))
     (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result fdefn)))
 

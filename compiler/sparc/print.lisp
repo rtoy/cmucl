@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/print.lisp,v 1.1 1990/11/30 17:05:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/print.lisp,v 1.2 1994/10/24 22:56:39 ram Exp $
 ;;;
 ;;; This file contains VOPs for things like printing during %initial-function
 ;;; before the world is initialized.
@@ -32,8 +32,8 @@
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
       (move nl0 object)
-      (inst li cfunc (make-fixup "_debug_print" :foreign))
-      (inst li temp (make-fixup "_call_into_c" :foreign))
+      (inst li cfunc (make-fixup (extern-alien-name "debug_print") :foreign))
+      (inst li temp (make-fixup (extern-alien-name "call_into_c") :foreign))
       (inst jal lip temp)
       (inst nop)
       (when cur-nfp

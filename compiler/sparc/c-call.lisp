@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.9 1992/04/28 15:41:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.10 1994/10/24 22:54:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,7 +121,7 @@
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:generator 2
-    (inst li res (make-fixup (concatenate 'simple-string "_" foreign-symbol)
+    (inst li res (make-fixup (extern-alien-name foreign-symbol)
 			     :foreign))))
 
 (define-vop (call-out)
@@ -141,7 +141,7 @@
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
       (move cfunc function)
-      (inst li temp (make-fixup "_call_into_c" :foreign))
+      (inst li temp (make-fixup (extern-alien-name "call_into_c") :foreign))
       (inst jal lip temp)
       (inst nop)
       (when cur-nfp

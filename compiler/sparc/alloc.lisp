@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.9 1992/12/17 08:59:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.10 1994/10/24 22:53:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,7 +112,7 @@
   (:translate make-fdefn)
   (:generator 37
     (with-fixed-allocation (result temp fdefn-type fdefn-size)
-      (inst li temp (make-fixup "_undefined_tramp" :foreign))
+      (inst li temp (make-fixup (extern-alien-name "undefined_tramp") :foreign))
       (storew name result fdefn-name-slot other-pointer-type)
       (storew null-tn result fdefn-function-slot other-pointer-type)
       (storew temp result fdefn-raw-addr-slot other-pointer-type))))
