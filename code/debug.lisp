@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.17 1991/05/27 11:45:45 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.18 1991/05/29 11:42:01 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -793,7 +793,6 @@
 	               in function."
 		    prefix))
 	   ((not any-valid-p)
-
 	    (format t "All variables ~@[starting with ~A ~]currently ~
 	               have invalid values."
 		    prefix))))
@@ -824,12 +823,10 @@
 (declaim (type (or stream null) *cached-source-stream*))
 
 (pushnew #'(lambda ()
-	 (let* ((tlf-offset (di:code-location-top-level-form-offset
-			     location))
+	     (setq *cached-debug-source* nil *cached-source-stream* nil))
 	 ext:*before-save-initializations*)
 
-		(char-offset (aref (or (di:debug-source-start-positions
-					d-source)
+
 ;;; We also cache the last top-level form that we printed a source for so that
 ;;; we don't have to do repeated reads and calls to FORM-NUMBER-TRANSLATIONS.
 ;;;
@@ -850,8 +847,7 @@
 	     (eql (di:code-location-top-level-form-offset location)
 		  *cached-top-level-form-offset*))
 	(values *cached-form-number-translations* *cached-top-level-form*)
-  (let ((translations (di:form-number-translations tlf tlf-offset))
-	(*print-level* (if verbose
+	(let* ((offset (di:code-location-top-level-form-offset location))
 	       (res
 		(ecase (di:debug-source-from d-source)
 		  (:file (get-file-top-level-form location))
@@ -859,7 +855,7 @@
 		   (svref (di:debug-source-name d-source) offset)))))
 	  (setq *cached-top-level-form-offset* offset)
 	  (values (setq *cached-form-number-translations*
-	    (svref translations
+			(di:form-number-translations res offset))
 		  (setq *cached-top-level-form* res))))))
 
 		  (setf *possible-breakpoints*
@@ -871,6 +867,38 @@
 					    :kind :function-start))
 	       (setf break (di:preprocess-for-eval break code-loc))
 	       (setf condition (di:preprocess-for-eval condition code-loc))
+	       (dolist (form print)
+					(declare (ignore dummy)) ,condition)
+				     'function))
+	     (dolist (form print)
+	       (push (cons
+		      (coerce `(lambda (dummy)
+				 (declare (ignore dummy)) ,form) 'function)
+		      form)
+		     print-functions)))
+	   (setup-code-location ()
+	     (setf place (nth index *possible-breakpoints*))
+		    (di:frame-code-location *current-frame*)))
+	     (dolist (form print)
+	       (push (cons
+		      (di:preprocess-for-eval form place)
+		      form)
+		     print-functions))
+	     (setf break (di:preprocess-for-eval break place))
+	     (setf condition (di:preprocess-for-eval condition place))))
+      (set-vars-from-command-line (get-command-line))
+      (cond
+       ((or (eq index :start) (eq index :s))
+	(setup-function-start))
+       ((or (eq index :end) (eq index :e))
+	(setup-function-end))
+       (t
+	(setup-code-location)))
+      (di:activate-breakpoint bp)
+      (let* ((new-bp-info (create-breakpoint-info place bp index
+						  :break break
+						  :print print-functions
+						  :condition condition))
 	     (old-bp-info (location-in-list new-bp-info *breakpoints*)))
 	(when old-bp-info
 	  (di:deactivate-breakpoint (breakpoint-info-breakpoint old-bp-info))
