@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.19 1992/09/25 23:31:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.20 1992/10/26 03:44:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,11 @@
 	  hash-table-rehash-size hash-table-rehash-threshold
 	  hash-table-size hash-table-test
 	  sxhash))
+
+(in-package :ext)
+(export '(*hash-table-tests*))
+
+(in-package :common-lisp)
 
 
 ;;;; The hash-table structure.
@@ -133,6 +138,10 @@
 
 ;;;; Construction and simple accessors.
 
+;;; *HASH-TABLE-TESTS* -- Public.
+;;; 
+(defvar *hash-table-tests* nil)
+
 ;;; MAKE-HASH-TABLE -- public.
 ;;; 
 (defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 1.5)
@@ -161,7 +170,14 @@
 	    ((or (eq test #'equal) (eq test 'equal))
 	     (values 'equal #'equal #'equal-hash))
 	    (t
-	     (error "Unknown :TEST for MAKE-HASH-TABLE: ~S" test)))
+	     (dolist (info *hash-table-tests*
+			   (error "Unknown :TEST for MAKE-HASH-TABLE: ~S"
+				  test))
+	       (destructuring-bind
+		   (test-name test-fun hash-fun)
+		   info
+		 (when (or (eq test test-name) (eq test test-fun))
+		   (return (values test-name test-fun hash-fun)))))))
     (let* ((size (ceiling size rehash-threshold))
 	   (length (if (<= size 37) 37 (almost-primify size)))
 	   (vector (make-array length :initial-element nil)))
