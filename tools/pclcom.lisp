@@ -2,8 +2,38 @@
 (in-package "USER")
 
 (when (find-package "PCL")
+  ;;
+  ;; Undefine all generic functions exported from Lisp so that bootstrapping
+  ;; doesn't get confused.
+  (let ((class (find-class 'generic-function nil)))
+    (when class
+      (do-external-symbols (sym "LISP")
+	(when (and (fboundp sym)
+		   (typep (fdefinition sym) class))
+	  (fmakunbound sym))
+	(let ((ssym `(setf ,sym)))
+	  (when (and (fboundp ssym)
+		     (typep (fdefinition ssym) class))
+	    (fmakunbound ssym))))))
+
+  ;; Undefine all PCL classes, and clear CLASS-PCL-CLASS slots.
+  (let ((wot (find-symbol "*FIND-CLASS*" "PCL")))
+    (when (and wot (boundp wot))
+      (do-hash (name ignore (symbol-value wot))
+	(declare (ignore ignore))
+	(let ((class (find-class name nil)))
+	  (cond ((not class))
+		((typep class 'kernel::std-class)
+		 (setf (kernel:class-cell-class
+			(kernel:find-class-cell name))
+		       nil)
+		 (setf (info type kind name) nil))
+		(t
+		 (setf (kernel:class-pcl-class class) nil)))))))
+
   (rename-package "PCL" "OLD-PCL")
   (make-package "PCL"))
+
 (when (find-package  "SLOT-ACCESSOR-NAME")
   (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
 
