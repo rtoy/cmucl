@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.18 2003/03/22 16:15:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.19 2003/03/25 12:40:04 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -747,7 +747,7 @@
 ;          (slot-object)
 ;  :after  (standard-generic-function)
 
-(defgeneric make-instance (class &rest initargs))
+(defgeneric make-instance (class &rest initargs &key &allow-other-keys))
 ;          (symbol)
 ;          (class)
 
