@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.25 1993/06/12 20:34:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.26 1993/08/27 18:56:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,7 +133,7 @@
   (:args (boxed :scs (any-reg))
 	 (unboxed :scs (any-reg)))
   (:results (result :scs (descriptor-reg)))
-  (:temporary (:sc any-reg :offset a0-offset :to (:result 0) :target result)
+  (:temporary (:sc any-reg :offset nargs-offset :to (:result 0) :target result)
 	      words)
   (:temporary (:sc non-descriptor-reg :offset nl0-offset) lowtag)
   (:temporary (:sc any-reg :offset nl1-offset) header)
