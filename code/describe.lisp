@@ -248,7 +248,7 @@
   
   (let ((name (%primitive header-ref x %function-name-slot)))
     (when (symbolp name)
-      (desc-doc 'function name "Function Documention:")))
+      (desc-doc name 'function "Function Documention:")))
   
   (let ((info (%primitive header-ref
 			  (%primitive header-ref x
