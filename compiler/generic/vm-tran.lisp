@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27 1992/10/20 23:38:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.28 1993/01/15 22:42:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27 1992/10/20 23:38:21 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -35,38 +33,6 @@
 (deftransform abs ((x) (rational))
   '(if (< x 0) (- x) x))
 
-
-
-(macrolet ((frob (name primitive)
-	     `(def-source-transform ,name (&rest foo)
-		`(truly-the nil
-			    (%primitive ,',primitive ,@foo)))))
-  (frob %type-check-error type-check-error)
-  (frob %odd-keyword-arguments-error odd-keyword-arguments-error)
-  (frob %unknown-keyword-argument-error unknown-keyword-argument-error)
-  (frob %argument-count-error argument-count-error))
-
-
-(def-source-transform %verify-argument-count (&rest foo)
-  `(%primitive verify-argument-count ,@foo))
-
-
-
-;;; Let these pass for now.
-
-(def-primitive-translator header-ref (obj slot)
-  (warn "Someone used HEADER-REF.")
-  `(%primitive data-vector-ref/simple-vector ,obj ,slot))
-
-(def-primitive-translator header-set (obj slot value)
-  (warn "Someone used HEADER-SET.")
-  `(%primitive data-vector-set/simple-vector ,obj ,slot ,value))
-
-(def-primitive-translator header-length (obj)
-  (warn "Someone used HEADER-LENGTH.")
-  `(%primitive vector-length ,obj))
-
-
 
 ;;;; Charater support.
 
@@ -74,13 +40,6 @@
 ;;;
 (def-source-transform characterp (obj)
   `(base-char-p ,obj))
-
-;;; Keep this around in case someone uses it.
-;;;
-(def-source-transform %string-char-p (obj)
-  (warn "Someone used %string-char-p.")
-  `(base-char-p ,obj))
-
 
 
 
