@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.28 2001/10/28 14:35:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.29 2001/10/31 13:16:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,7 @@
 ;;;
 (defmacro def-assembler-params (&rest options)
   "Set up the assembler."
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
+  `(eval-when (compile load eval)
      (setf (c:backend-assembler-params c:*target-backend*)
 	   (make-assem-params :backend c:*target-backend*
 			      ,@options))))
@@ -306,7 +306,7 @@
 
 ;;; WITHOUT-SCHEDULING -- interface.
 ;;;
-(defmacro without-scheduling ((&optional (segment (%%current-segment%%)))
+(defmacro without-scheduling ((&optional (segment '*current-segment*))
 			      &body body)
   "Execute BODY (as a progn) without scheduling any of the instructions
    generated inside it.  DO NOT throw or return-from out of it."
@@ -1304,28 +1304,28 @@
 
 ;;;; Interface to the rest of the compiler.
 
-;;; Macro %%CURRENT-SEGMENT%% -- internal.
+;;; *CURRENT-SEGMENT* -- internal.
 ;;;
-;;; Returns the current segment while assembling. Use ASSEMBLE to
-;;; change it.
+;;; The holds the current segment while assembling.  Use ASSEMBLE to change
+;;; it.
 ;;; 
-;;; Using a macro to access the underlying special variable
-;;; *CURRENT-SEGMENT* allows us to play scoping tricks in
-;;; DEFINE-INSTRUCTION to detect calls to the INST macro which aren't
-;;; inside the scope of an ASSEMBLE. 
-;;; 
-(defvar *current-segment* nil)
-(defmacro %%current-segment%% () '*current-segment*)
+(defvar *current-segment*)
 
-;;; Macro %%CURRENT-VOP%% -- internal.
+;;; *CURRENT-VOP* -- internal.
 ;;;
-;;; Just like %%CURRENT-SEGMENT%%, but holds the current vop.  Used only to keep
+;;; Just like *CURRENT-SEGMENT*, but holds the current vop.  Used only to keep
 ;;; track of which vops emit which insts.
 ;;; 
 (defvar *current-vop* nil)
-(defmacro %%current-vop%% () '*current-vop*)
 
 ;;; ASSEMBLE -- interface.
+;;;
+;;; We also symbol-macrolet *current-segment* to a local holding the segment
+;;; so uses of *current-segment* inside the body don't have to keep
+;;; dereferencing the symbol.  Given that ASSEMBLE is the only interface to
+;;; *current-segment*, we don't have to worry about the special value becomming
+;;; out of sync with the lexical value.  Unless some bozo closes over it,
+;;; but nobody does anything like that...
 ;;;
 (defmacro assemble ((&optional segment vop &key labels) &body body
 		    &environment env)
@@ -1348,14 +1348,18 @@
       (when (intersection labels inherited-labels)
 	(error "Duplicate nested labels: ~S"
 	       (intersection labels inherited-labels)))
-      `(let* ((,seg-var ,(or segment (%%current-segment%%)))
-              (,vop-var ,(or vop (%%current-vop%%)))
-              (*current-segment* ,seg-var)
-              (*current-vop* ,vop-var)
+      `(let* ((,seg-var ,(or segment '*current-segment*))
+	      (,vop-var ,(or vop '*current-vop*))
+	      ,@(when segment
+		  `((*current-segment* ,seg-var)))
+	      ,@(when vop
+		  `((*current-vop* ,vop-var)))
 	      ,@(mapcar #'(lambda (name)
 			    `(,name (gen-label)))
 			new-labels))
-        (symbol-macrolet (,@(when (or inherited-labels nested-labels)
+	 (symbol-macrolet ((*current-segment* ,seg-var)
+			   (*current-vop* ,vop-var)
+			   ,@(when (or inherited-labels nested-labels)
 			       `((..inherited-labels.. ,nested-labels))))
 	   ,@(mapcar #'(lambda (form)
 			 (if (label-name-p form)
@@ -1375,24 +1379,24 @@
 	  ((functionp inst)
 	   (funcall inst (cdr whole) env))
 	  (t
-	   `(,inst (%%current-segment%%) (%%current-vop%%) ,@args)))))
+	   `(,inst *current-segment* *current-vop* ,@args)))))
 
 ;;; EMIT-LABEL -- interface.
 ;;; 
 (defmacro emit-label (label)
   "Emit LABEL at this location in the current segment."
-  `(%emit-label (%%current-segment%%) (%%current-vop%%) ,label))
+  `(%emit-label *current-segment* *current-vop* ,label))
 
 ;;; EMIT-POSTIT -- interface.
 ;;;
 (defmacro emit-postit (function)
-  `(%emit-postit (%%current-segment%%) ,function))
+  `(%emit-postit *current-segment* ,function))
 
 ;;; ALIGN -- interface.
 ;;; 
 (defmacro align (bits &optional (fill-byte 0))
   "Emit an alignment restriction to the current segment."
-  `(emit-alignment (%%current-segment%%) (%%current-vop%%) ,bits ,fill-byte))
+  `(emit-alignment *current-segment* *current-vop* ,bits ,fill-byte))
 
 ;;; LABEL-POSITION -- interface.
 ;;; 
@@ -1804,18 +1808,21 @@
 	       `((declare ,@decls)))
 	   (let ((,postits (segment-postits ,segment-name)))
 	     (setf (segment-postits ,segment-name) nil)
-             (macrolet ((%%current-segment%% ()
-                          (error "Can't use INST without an ASSEMBLE inside emitters.")))
+	     (symbol-macrolet
+		 ((*current-segment*
+		   (macrolet ((lose ()
+				(error "Can't use INST without an ASSEMBLE ~
+					inside emitters.")))
+		     (lose))))
 	       ,@emitter))
 	   (ext:undefined-value))
-        (eval-when (:compile-toplevel :load-toplevel :execute)
+	 (eval-when (compile load eval)
 	   (%define-instruction ,sym-name ',defun-name))
 	 ,@(extract-nths 1 'progn pdefs)
 	 ,@(when pdefs
 	     `((disassem:install-inst-flavors
 		',name
 		(append ,@(extract-nths 0 'list pdefs)))))))))
-
 
 ;;; DEFINE-INSTRUCTION-MACRO -- interface.
 ;;;
@@ -1826,7 +1833,7 @@
 	(body local-defs)
 	(lisp::parse-defmacro lambda-list whole body name 'instruction-macro
 			      :environment env)
-      `(eval-when (:compile-toplevel :load-toplevel :execute)
+      `(eval-when (compile load eval)
 	 (%define-instruction ,(symbol-name name)
 			      #'(lambda (,whole ,env)
 				  ,@local-defs
