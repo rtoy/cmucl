@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.6.2.2 2000/10/16 17:32:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.6.2.3 2000/10/24 13:33:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,3 +201,4 @@
 (defswitch "noinit")
 (defswitch "hinit")
 (defswitch "batch")
+(defswitch "dynamic-space-size")
