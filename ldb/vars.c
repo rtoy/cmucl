@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/vars.c,v 1.1 1990/02/24 19:37:32 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/vars.c,v 1.2 1992/03/24 04:25:09 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -133,6 +133,7 @@ boolean perm;
     int index;
 
     var->obj = obj;
+    var->update_fn = NULL;
 
     if (lookup_by_obj(obj) == NULL) {
         var->map_back = TRUE;
