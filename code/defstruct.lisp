@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.49 1993/07/22 00:42:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.50 1993/07/30 12:08:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,7 @@
 (export '(
 	  default-structure-print make-structure-load-form 
 	  %compiler-defstruct %%compiler-defstruct
+	  %compiler-only-defstruct
 	  %make-instance
 	  %instance-length %instance-ref %instance-set %instance-layout
 	  %set-instance-layout
@@ -332,8 +333,7 @@
 	(let ((inherits (inherits-for-structure defstruct)))
 	  `(progn
 	     (%defstruct ',defstruct ',inherits)
-	     (eval-when (compile eval)
-	       (%compiler-only-defstruct ',defstruct ',inherits))
+	     (%compiler-only-defstruct ',defstruct ',inherits)
 	     ,@(when (eq (dd-type defstruct) 'structure)
 		 `((%compiler-defstruct ',defstruct)))
 	     ,@(define-raw-accessors defstruct)
@@ -1337,10 +1337,11 @@
 
 ;;; %COMPILER-ONLY-DEFSTRUCT  --  Internal
 ;;;
-;;;    This function is called by an EVAL-WHEN to do the compile-time-only
+;;;    This function is called at compile-time to do the compile-time-only
 ;;; actions for defining a structure type.  It installs the class in the type
 ;;; system in a similar way to %DEFSTRUCT, but is quieter and safer in the case
-;;; of redefinition.
+;;; of redefinition.  Eval-when doesn't do the right thing when nested or
+;;; non-top-level, so this is magically called by the compiler.
 ;;;
 ;;;    Basically, this function avoids trashing the compiler by only actually
 ;;; defining the class if there is no current definition.  Instead, we just set
