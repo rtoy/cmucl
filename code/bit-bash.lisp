@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.14 1992/02/21 23:24:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.15 1992/02/21 23:56:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,7 +137,7 @@
 	   (optimize (speed 3) (safety 0)))
   (sap-ref-32 sap (the index (ash offset 2))))
 ;;;
-(defun %set-word-sap-ref) (sap offset value)
+(defun %set-word-sap-ref (sap offset value)
   (declare (type system-area-pointer sap)
 	   (type index offset)
 	   (type (unsigned-byte 32) value)
