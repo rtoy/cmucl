@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.17 1990/06/18 21:34:59 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.18 1990/06/25 14:58:58 ram Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -65,6 +65,10 @@
   (funct (byte 6 0) :default #b001101))
 
 
+(define-format (coproc-branch 32)
+  (op (byte 6 26))
+  (funct (byte 10 16))
+  (offset (byte 16 0)))
 
 (define-format (float 32)
   (op (byte 6 26) :default #b010001)
@@ -106,7 +110,9 @@
   :type (satisfies fp-reg-p)
   :function tn-offset)
 
-
+(define-argument-type odd-fp-reg
+  :type (satisfies fp-reg-p)
+  :function (1+ tn-offset))
 
 (defun label-offset (label)
   (1- (ash (- (label-position label) *current-position*) -2)))
@@ -133,6 +139,8 @@
 (defconstant compare-kinds
   '(:f :un :eq :ueq :olt :ult :ole :ule :sf :ngle :seq :ngl :lt :nge :le :ngt))
 
+(defconstant float-operations '(+ - * /))
+
 ); eval-when
 
 (defun compare-kind (kind)
@@ -145,6 +153,15 @@
   :type (member #.compare-kinds)
   :function compare-kind)
 
+(defun float-operation (op)
+  (or (position op float-operations)
+      (error "Unknown floating point operation: ~S~%Must be one of: ~S"
+	     op
+	     float-operations)))
+
+(define-argument-type float-operation
+  :type (member #.float-operations)
+  :function float-operation)
 
 
 (define-fixup-type :jump)
@@ -266,6 +283,16 @@
 	     (rt :constant #b01001)
 	     (immediate :argument relative-label)))
 
+(define-instruction (bc1f)
+  (coproc-branch (op :constant cop1-op)
+		 (funct :constant #x100)
+		 (offset :argument relative-label)))
+
+(define-instruction (bc1t)
+  (coproc-branch (op :constant cop1-op)
+		 (funct :constant #x101)
+		 (offset :argument relative-label)))
+
 (define-instruction (break)
   (break (code :argument (unsigned-byte 10)))
   (break (code :argument (unsigned-byte 10))
@@ -309,18 +336,18 @@
 	(target :argument jump-fixup)))
 
 
-(defmacro define-load/store-instruction (name op)
+(defmacro define-load/store-instruction (name op &optional (rt-kind 'register))
   `(define-instruction (,name)
      (immediate (op :constant ,op)
-		(rt :argument register)
+		(rt :argument ,rt-kind)
 		(rs :argument register)
 		(immediate :argument (signed-byte 16)))
      (immediate (op :constant ,op)
-		(rt :argument register)
+		(rt :argument ,rt-kind)
 		(rs :argument register)
 		(immediate :argument addi-fixup))
      (immediate (op :constant ,op)
-		(rt :argument register)
+		(rt :argument ,rt-kind)
 		(rs :argument register)
 		(immediate :constant 0))))
 
@@ -331,11 +358,15 @@
 (define-load/store-instruction lbu #b100100)
 (define-load/store-instruction lhu #b100101)
 (define-load/store-instruction lwr #b100110)
+(define-load/store-instruction lwc1 #o61 fp-reg)
+(define-load/store-instruction lwc1-odd #o61 odd-fp-reg)
 (define-load/store-instruction sb #b101000)
 (define-load/store-instruction sh #b101001)
 (define-load/store-instruction swl #b101010)
 (define-load/store-instruction sw #b101011)
 (define-load/store-instruction swr #b101110)
+(define-load/store-instruction swc1 #o71 fp-reg)
+(define-load/store-instruction swc1-odd #o71 odd-fp-reg)
 
 (define-instruction (lui)
   (immediate (op :constant #b001111)
@@ -474,6 +505,35 @@
 
 ;;;; Floating point instructions.
 
+(macrolet ((frob (name kind)
+	     `(define-instruction (,name)
+		(register (op :constant #b010001)
+			  (rs :constant #b00100)
+			  (rd :argument ,kind)
+			  (rt :argument register)
+			  (funct :constant 0)))))
+  (frob mtc1 fp-reg)
+  (frob mtc1-odd odd-fp-reg))
+
+(macrolet ((frob (name kind)
+	     `(define-instruction (,name)
+		(register (op :constant #b010001)
+			  (rs :constant #b00000)
+			  (rt :argument register)
+			  (rd :argument ,kind)
+			  (funct :constant 0)))))
+  (frob mfc1 fp-reg)
+  (frob mfc1-odd odd-fp-reg))
+
+
+(define-instruction (float-op)
+  (float (funct :argument float-operation)
+	 (format :argument float-format)
+	 (fd :argument fp-reg)
+	 (fs :argument fp-reg)
+	 (ft :argument fp-reg)))
+
+
 (define-instruction (fabs)
   (float (format :argument float-format)
 	 (ft :constant 0)
@@ -485,57 +545,6 @@
 	 (fd :argument fp-reg)
 	 (fs :same-as fd)
 	 (funct :constant #b000101)))
-
-(define-instruction (fadd)
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :argument fp-reg)
-	 (ft :argument fp-reg)
-	 (funct :constant #b000000)) ;; #b0 added by djz
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :same-as fd)
-	 (ft :argument fp-reg)
-	 (funct :constant #b000000)))
-
-(define-instruction (fcmp)
-  (float-aux (sub-funct :argument compare-kind)
-	     (format :argument float-format)
-	     (fd :constant 0)
-	     (fs :argument fp-reg)
-	     (ft :argument fp-reg)
-	     (funct :constant #b11)))
-
-(define-instruction (fcvt)
-  (float-aux (sub-funct :argument float-format)
-	     (format :argument float-format)
-	     (fd :argument fp-reg)
-	     (fs :argument fp-reg) ;; changed from ft by djz
-	     (funct :constant #b10)))
-
-(define-instruction (fdiv)
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :argument fp-reg)
-	 (ft :argument fp-reg)
-	 (funct :constant #b000011)) ;; #b11 added by djz
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :same-as fd)
-	 (ft :argument fp-reg)
-	 (funct :constant #b000011)))
-
-(define-instruction (fmul)
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :argument fp-reg)
-	 (ft :argument fp-reg)
-	 (funct :constant #b000010)) ;; #b10 added by djz
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :same-as fd)
-	 (ft :argument fp-reg)
-	 (funct :constant #b000010)))
 
 (define-instruction (fneg)
   (float (format :argument float-format)
@@ -549,17 +558,22 @@
 	 (fs :same-as fd)
 	 (funct :constant #b000111)))
 
-(define-instruction (fsub)
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :argument fp-reg)
-	 (ft :argument fp-reg)
-	 (funct :constant #b000001)) ;; #b1 added by djz
-  (float (format :argument float-format)
-	 (fd :argument fp-reg)
-	 (fs :same-as fd)
-	 (ft :argument fp-reg)
-	 (funct :constant #b000001)))
+
+(define-instruction (fcvt)
+  (float-aux (sub-funct :argument float-format)
+	     (format :argument float-format)
+	     (fd :argument fp-reg)
+	     (fs :argument fp-reg)
+	     (funct :constant #b10)))
+
+  
+(define-instruction (fcmp)
+  (float-aux (sub-funct :argument compare-kind)
+	     (format :argument float-format)
+	     (fd :constant 0)
+	     (fs :argument fp-reg)
+	     (ft :argument fp-reg)
+	     (funct :constant #b11)))
 
 
 ;;;; Pseudo-instructions
@@ -574,17 +588,7 @@
 	 (fd :argument fp-reg)
 	 (fs :argument fp-reg)
 	 (ft :constant 0)
-	 (funct :constant #b000110))
-  (register (op :constant #b010001)
-	    (rs :constant #b00100)
-	    (rd :argument fp-reg)
-	    (rt :argument register)
-	    (funct :constant 0))
-  (register (op :constant #b010001)
-	    (rs :constant #b00000)
-	    (rt :argument register)
-	    (rd :argument fp-reg)
-	    (funct :constant 0)))
+	 (funct :constant #b000110)))
 
 (define-pseudo-instruction li 64 (reg value)
   (etypecase value
