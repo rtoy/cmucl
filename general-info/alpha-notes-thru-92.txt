@@ -1,3 +1,193 @@
+6/3/92 to 6/12/92
+
+Code:
+
+Don't destructively modify the breakpoint list in SUB-ACTIVATE-BREAKPOINT so
+that any breakpoints activated while we are already at this location will not
+be processed this time around.
+
+Fixed dispatch macro characters to be case-insensitive, and to disallow digits
+as sub-characters.
+
+
+Compiler:
+
+Moved the page size into the backend structure.
+
+Changed not to barf if a block has no predecessors.  This really shouldn't
+happen, since we do DFO before constraint if it is needed, and that should
+flush any blocks with no predecessors (or that are otherwise unreachable), but
+it is happening...
+
+Moved tail-set merging out of IR1-OPTIMIZE-RETURN into LTN.  Changed
+MAYBE-DELETE-EXIT to call MERGE-TAIL-SETS.
+
+Set COMPONENT-REANALYZE in MAYBE-TERMINATE-BLOCK if we do terminate.
+
+Added setting of COMPONENT-REANALYZE all places where we do UNLINK-BLOCKS and
+might create dead code.
+
+Changed CONVERT-CALL-IF-POSSIBLE to not attempt to convert when the call is in
+a deleted function or a delete-p block.
+
+Moved tail-set merging here from IR1-OPTIMIZE-RETURN, since it wasn't being
+triggered reliably (and required IR1 optimization to run to completion for
+correctness.)  Now we merge tail sets whenever we convert a local call that
+delivers its value to a return (regardless of whether it is truly TR.)  This
+liberalization actually improves type inference: previously non-TR calls would
+mess up type inference.
+
+Now MERGE-TAIL-SETS must be called whenever IR1 is modified so that a local
+call is changed to be potentially tail recursive (i.e. deliver its value to a
+return.)  It seems that the only such place is in MAYBE-DELETE-EXIT in ir1opt.
+
+Changed to bind *features* to (backend-features *target-backend*) just
+before doing the read instead of binding *features* to (backend-features
+*backend*) for the duration of the compile.  This way, the compiler can use
+(backend-featurep :foo) to tell how to compile, and cross compilers can be
+compiled correctly with respect to #+foo.
+
+Fixed RANDOM derive-type method when the class is NIL, or is FLOAT and FORMAT
+is specified (need to get the right type of zero.)
+
+
+Hemlock:
+
+Couple fixes to dired:
+- Updated function merge-dirs to reflect updated pathname-directory returns a 
+list rather than a simple vector and amended its use of make-pathname to
+set :device argument to :unspecific rather than :absolute.
+- In set-write-date spliced in the *utimes-buffer* list into the
+unix:unix-utimes function call.
+
+
+CLX:
+
+Fixed ANGLE to handle ratios.  In now discards all unnecessary precision
+when doing the bounds check.
+
+
+PCL:
+
+Fixed function environment hackery to work even when *LEXICAL-ENVIRONMENT* is
+NIL (i.e. we aren't in the compiler.)
+
+
+
+5/25/92 to 6/3/92
+
+New PCL, version March 92 2a.  Supposed to have many bug fixes and some
+performance enhancements.
+
+Code:
+
+Merged Mile's fix to MAKE-PATHNAME so that it knows the difference between
+an arg being NIL and being unsupplied.
+
+Fixed ACTIVATE-BREAKPOINT to build the breakpoints list in forward order to
+preserve the desired hook invocation order.
+
+Made function-end breakpoints for known-return functions signal an error, since
+they aren't implemented.
+
+Defined new parameterized PRINT-HERALD, exported *HERALD-ITEMS*.  Doc for
+*herald-items*:
+   Determines what PRINT-HERALD prints (the system startup banner.)  This is a
+   database which can be augmented by each loaded system.  The format is a
+   property list which maps from subsystem names to the banner information for
+   that system.  This list can be manipulated with GETF -- entries are printed
+   in, reverse order, so the newest entry is printed last.  Usually the system
+   feature keyword is used as the system name.  A given banner is a list of
+   strings and functions (or function names).  Strings are printed, and
+   functions are called with an output stream argument.
+
+Trace has been substantially rewritten, and has a new syntax as well as new
+functionality.  It now subsumes the old encapsulation-based trace via the
+:ENCAPSULATE option.  Interpreted functions and generic functions are traced
+via encapsulation by default, which works.  Conditional stuff works much
+better.  *debug-print-level* is used instead of a separate
+*trace-print-level*.  Here is the new doc string:
+   TRACE {Option Global-Value}* {Name {Option Value}*}*
+   TRACE is a debugging tool that prints information when specified functions
+   are called.  In its simplest form:
+       (trace Name-1 Name-2 ...)
+
+   TRACE causes a printout on *TRACE-OUTPUT* each time that one of the named
+   functions is entered or returns (the Names are not evaluated.)  The output
+   is indented according to the number of pending traced calls, and this trace
+   depth is printed at the beginning of each line of output.
+
+   Options allow modification of the default behavior.  Each option is a pair
+   of an option keyword and a value form.  Options may be interspersed with
+   function names.  Options only affect tracing of the function whose name they
+   appear immediately after.  Global options are specified before the first
+   name, and affect all functions traced by a given use of TRACE.
+
+   The following options are defined:
+
+   :CONDITION Form
+   :CONDITION-AFTER Form
+   :CONDITION-ALL Form
+       If :CONDITION is specified, then TRACE does nothing unless Form
+       evaluates to true at the time of the call.  :CONDITION-AFTER is
+       similar, but suppresses the initial printout, and is tested when the
+       function returns.  :CONDITION-ALL tries both before and after.
+
+   :WHEREIN Names
+       If specified, Names is a function name or list of names.  TRACE does
+       nothing unless a call to one of those functions encloses the call to
+       this function (i.e. it would appear in a backtrace.)  Anonymous
+       functions have string names like "DEFUN FOO".
+
+   :BREAK Form
+   :BREAK-AFTER Form
+   :BREAK-ALL Form
+       If specified, and Form evaluates to true, then the debugger is invoked
+       at the start of the function, at the end of the function, or both,
+       according to the respective option.
+
+   :PRINT Form
+   :PRINT-AFTER Form
+   :PRINT-ALL Form
+       In addition to the usual prinout, he result of evaluating Form is
+       printed at the start of the function, at the end of the function, or
+       both, according to the respective option.  Multiple print options cause
+       multiple values to be printed.
+
+   :FUNCTION Function-Form
+       This is a not really an option, but rather another way of specifying
+       what function to trace.  The Function-Form is evaluated immediately,
+       and the resulting function is traced.
+
+   :ENCAPSULATE {:DEFAULT | T | NIL}
+       If T, the tracing is done via encapsulation (redefining the function
+       name) rather than by modifying the function.  :DEFAULT is the default,
+       and means to use encapsulation for interpreted functions and funcallable
+       instances, breakpoints otherwise.  When encapsulation is used, forms are
+       *not* evaluated in the function's lexical environment, but DEBUG:ARG can
+       still be used.
+
+   :CONDITION, :BREAK and :PRINT forms are evaluated in the lexical environment
+   of the called function; DEBUG:VAR and DEBUG:ARG can be used.  The -AFTER and
+   -ALL forms are evaluated in the null environment.
+
+
+Compiler:
+
+Fixed several uses of FIND to use EQUAL instead of EQL to compare function
+names, because (SETF mumble) is now a valid function name, and isn't
+necessarily EQL.
+
+More stuff in preperation for more ports and the byte-compiler.
+
+Changed NEW-BACKEND to call DEFINE-STANDARD-TYPE-PREDICATES to fill in
+the BACKEND-TYPE-PREDICATES and BACKEND-PREDICATE-TYPES slots.
+
+Fixed some bugs revealed by the new PCL and William's hackery.  Support for
+"assignments" (local functions used for iteration) was rather proken, and still
+has at least one problem.
+
+
 5/17/92 to 5/25/92
 
 Code:
