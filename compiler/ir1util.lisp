@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.100 2003/10/26 17:31:25 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.101 2004/03/24 13:27:43 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -756,7 +756,7 @@
   (declare (type clambda leaf))
   (let ((kind (functional-kind leaf))
 	(bind (lambda-bind leaf)))
-    (assert (not (member kind '(:deleted :optional :top-level))))
+    (assert (not (member kind '(:deleted :optional))))
     (setf (functional-kind leaf) :deleted)
     (setf (lambda-bind leaf) nil)
     (dolist (let (lambda-lets leaf))
@@ -2019,7 +2019,7 @@ these can be NIL if unavailable or inapplicable.")
       (declare (ignore form))
       (let ((*print-level* 2)
 	    (*print-pretty* nil))
-	(format nil "~{~{~S~^ ~}~^ => ~}" context)))))
+	(format nil "~{~{~A~^ ~}~^ => ~}" context)))))
 
 
 ;;;; Condition system interface:
