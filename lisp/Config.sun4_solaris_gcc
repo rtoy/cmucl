@@ -40,7 +40,7 @@ endif
 
 CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
 
-CC = gcc -O
+CC = gcc -O -Wall
 CPP = gcc -E
 CFLAGS = -g $(AS_V8PLUS)
 
