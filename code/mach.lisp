@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach.lisp,v 1.1 1992/01/24 04:31:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach.lisp,v 1.2 1992/02/15 12:49:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,18 +20,90 @@
 (use-package "C-CALL")
 (use-package "SYSTEM")
 
-(export '(
-	  port mach-task_self mach-task_data mach-task_notify
+(export '(port mach-task_self mach-task_data mach-task_notify
+	  kern-success get-mach-error-msg
+	  gr-error gr-call gr-call* gr-bind
 	  vm_allocate vm_copy vm_deallocate vm_statistics))
-
-(def-alien-type port int)
 
 
 ;;;; Standard ports.
 
-(def-alien-routine ("task_self" mach-task_self) int)
-(def-alien-routine ("thread_reply" mach-task_data) int)
-(def-alien-routine ("task_notify" mach-task_notify) int)
+(def-alien-type port int)
+
+(def-alien-routine ("task_self" mach-task_self) port)
+(def-alien-routine ("thread_reply" mach-task_data) port)
+(def-alien-routine ("task_notify" mach-task_notify) port)
+
+
+
+;;;; Return codes.
+
+(def-alien-type kern-return int)
+
+(defconstant kern-success 0)
+(defconstant kern-invalid-address 1)
+(defconstant kern-protection-failure 2)
+(defconstant kern-no-space 3)
+(defconstant kern-invalid-argument 4)
+(defconstant kern-failure 5)
+(defconstant kern-resource-shortage 6)
+(defconstant kern-not-receiver 7)
+(defconstant kern-no-access 8)
+(defconstant kern-memory-failure 9)
+(defconstant kern-memory-error 10)
+(defconstant kern-already-in-set 11)
+(defconstant kern-not-in-set 12)
+(defconstant kern-name-exists 13)
+(defconstant kern-aborted 14)
+(defconstant kern-memory-present 23)
+
+(def-alien-routine ("mach_error_string" get-mach-error-msg) c-string
+  (kern-return errno))
+
+;;; GR-Error  --  Public
+;;;
+(defun gr-error (function gr &optional context)
+  "Signal an error indicating that Function returned code GR.  If the code
+  is success, then do nothing."
+  (unless (eql gr kern-success)
+    (error "~S~@[ ~A~], ~(~A~)." function context (get-mach-error-msg gr))))
+
+;;; GR-Call  --  Public
+;;;
+(defmacro gr-call (fun &rest args)
+  "GR-Call Function {Arg}*
+  Call the function with the specified Args and signal an error if the
+  first value returned is not mach:kern-success.  Nil is returned."
+  (let ((n-gr (gensym)))
+    `(let ((,n-gr (,fun ,@args)))
+       (unless (eql ,n-gr kern-success) (gr-error ',fun ,n-gr)))))
+
+;;; GR-Call*  --  Public
+;;;
+(defmacro gr-call* (fun &rest args)
+  "GR-Call* Function {Arg}*
+  Call the function with the specified Args and signal an error if the
+  first value returned is not mach:kern-success.  The second value is
+  returned."
+  (let ((n-gr (gensym))
+	(n-res (gensym)))
+    `(multiple-value-bind (,n-gr ,n-res) (,fun ,@args)
+       (unless (eql ,n-gr kern-success) (gr-error ',fun ,n-gr))
+       ,n-res)))
+
+;;; GR-Bind  --  Public
+;;;
+(defmacro gr-bind (vars (fun . args) &body (body decls))
+  "GR-Bind ({Var}*) (Function {Arg}*) {Form}*
+  Call the function with the specified Args and signal an error if the
+  first value returned is not mach:Kern-Success.  If the call succeeds,
+  the Forms are evaluated with remaining return values bound to the
+  Vars."
+  (let ((n-gr (gensym)))
+    `(multiple-value-bind (,n-gr ,@vars) (,fun ,@args)
+       ,@decls
+       (unless (eql ,n-gr kern-success) (gr-error ',fun ,n-gr))
+       ,@body)))
 
 
 
