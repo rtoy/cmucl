@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.10 2003/05/29 22:03:01 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.11 2003/05/30 01:07:20 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -319,7 +319,7 @@ os_stack_grows_down (void)
 static void
 guard_zones (char **yellow_start, char **red_start)
 {
-#ifdef x86
+#ifdef i386
   if (os_stack_grows_down ())
     {
       char *end = (char *) CONTROL_STACK_START;
