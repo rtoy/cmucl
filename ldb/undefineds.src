@@ -1,5 +1,11 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/undefineds.src,v 1.3 1991/02/16 01:19:05 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/undefineds.src,v 1.4 1991/09/13 20:43:00 wlott Exp $ */
+
+#ifdef sun
+#ifndef MACH
+#define SUNOS
+#endif
+#endif
 
 /* Pick up all the syscalls. */
 accept
@@ -61,7 +67,9 @@ open
 pipe
 profil
 ptrace
+#ifndef SUNOS
 quota
+#endif
 read
 readlink
 readv
@@ -77,12 +85,16 @@ send
 sendmsg
 sendto
 setgroups
+#ifndef SUNOS
 sethostid
+#endif
 sethostname
 setitimer
 setpgrp
 setpriority
+#ifndef SUNOS
 setquota
+#endif
 setregid
 setreuid
 setrlimit
@@ -106,7 +118,9 @@ sync
 syscall
 truncate
 umask
+#ifndef SUNOS
 umount
+#endif
 unlink
 utimes
 vfork
