@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.53 2002/10/07 14:31:05 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.54 2002/10/07 17:49:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1753,6 +1753,9 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
   (declare (type (or null (integer 0 *)) end))
   (declare (values (integer 0 *)))
 
+  (when (not (cl::lisp-stream-p stream))
+     (return-from read-sequence (stream-read-sequence seq stream start end)))
+
   (let ((end (or end (length seq))))
     (declare (type (integer 0 *) start end))
 
@@ -2060,6 +2063,10 @@ SEQ:	a proper SEQUENCE
   (declare (type (integer 0 *) start))	; a list does not have a limit
   (declare (type (or null (integer 0 *)) end))
   (declare (values (or list vector)))
+
+  (when (not (cl::lisp-stream-p stream))
+    (return-from write-sequence (stream-write-sequence seq stream start end)))
+  
   (let ((end (or end (length seq))))
     (declare (type (integer 0 *) start end))
 
@@ -2201,14 +2208,13 @@ SEQ:	a proper SEQUENCE
   ;; (declare (type (simple-array (or unsigned-byte signed-byte) (*)) s))
   ;; (declare (type (simple-array * (*)) s))
   (declare (type (or (simple-array (unsigned-byte 8) (*))
-		     #+:signed-array (simple-array (signed-byte 8) (*))
+		     (simple-array (signed-byte 8) (*))
 		     (simple-array (unsigned-byte 16) (*))
-		     #+:signed-array (simple-array (signed-byte 16) (*))
+		     (simple-array (signed-byte 16) (*))
 		     (simple-array (unsigned-byte 32) (*))
-		     #+:signed-array (simple-array (signed-byte 32) (*))
+		     (simple-array (signed-byte 32) (*))
 		     (simple-array (unsigned-byte *) (*))
-		     (simple-array (signed-byte *) (*))
-		     )
+		     (simple-array (signed-byte *) (*)))
 		    seq))
   (when (not (subtypep (stream-element-type stream) 'integer))
     (error 'type-error
@@ -2217,11 +2223,10 @@ SEQ:	a proper SEQUENCE
 	   :format-control "Trying to output binary data to a text stream."))
   (cond ((system:fd-stream-p stream)
 	 (flet ((write-n-x8-bytes (stream data start end byte-size)
-		  (let* ((x8-mult (truncate byte-size 8))
-			 (numbytes (* (- end start) x8-mult))
-			 )
-		    (system:output-raw-bytes stream data start numbytes)))
-		)
+		  (let ((x8-mult (truncate byte-size 8)))
+		    (system:output-raw-bytes stream data
+					     (* x8-mult start)
+					     (* x8-mult end)))))
 	   (with-array-data ((data seq)
 			     (start start)
 			     (end   end))
