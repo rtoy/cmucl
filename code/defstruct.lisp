@@ -158,8 +158,7 @@
 	     (setf include args)
 	     (let* ((name (car include))
 		    (included-structure
-		     (or (get name '%structure-definition-in-compiler)
-			 (get name '%structure-definition)))
+		     (info type structure-info name))
 		    (included-print-function
 		     (if included-structure
 			 (dd-print-function included-structure))))
@@ -546,8 +545,7 @@
 ;;; desired.  This is only called for typed structures, since the default
 ;;; structure predicate is implemented as a closure. 
 
-
-		     **** END OF MERGE LOSSAGE ****(defun define-predicate (defstruct)
+(defun define-predicate (defstruct)
   (let ((name (dd-name defstruct))
 	(pred (dd-predicate defstruct)))
     (when (and pred (dd-named defstruct))
