@@ -313,7 +313,7 @@
 	(make-alien ',name ,(c-type-size res)))
       (defoperator (,(symbolicate "INDIRECT-" pname)
 		    ,(record-type-description res))
-		   ((pointer ,pname))
+		   ((pointer ,(c-type-description pres)))
 	`(alien-indirect (alien-value ,pointer) ,,pos))
       ,@(define-record-operators res))))
 
@@ -387,7 +387,7 @@
 	(setf (gethash ',name *c-type-names*) ',res))
       (defoperator (,(symbolicate "INDIRECT-" name)
 		    ,(c-type-description type))
-		   ((pointer ,name)
+		   ((pointer ,(c-type-description res))
 		    ,@(unless (c-type-size type)
 			'(size)))
 	`(alien-indirect (alien-value ,pointer)
