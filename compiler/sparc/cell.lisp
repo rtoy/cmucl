@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.22 2003/10/20 01:25:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.23 2004/03/29 16:33:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -273,7 +273,13 @@
 
 (define-vop (instance-set slot-set)
   (:policy :fast-safe)
-  (:translate %instance-set)
+  ;; This is an invalid translation because %instance-set needs a
+  ;; return value, and this VOP doesn't return anything.  I (RLT)
+  ;; don't know how to fix this so that this VOP returns a value and
+  ;; still works correctly when it is called directly by the compiler.
+  ;; However, disabling the translation works around the bug.
+  
+  ;;(:translate %instance-set)
   (:variant instance-slots-offset instance-pointer-type)
   (:arg-types instance (:constant index) *))
 
