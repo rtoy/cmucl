@@ -304,5 +304,6 @@
 
 (comf "target:compiler/eval-comp")
 (comf "target:compiler/eval")
+(comf "target:compiler/byte-comp")
 
 ); with-compiler-error-log
