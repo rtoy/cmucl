@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.8 1991/02/01 18:37:47 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.9 1991/07/14 04:09:21 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -33,7 +33,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
-			  (:temp ocfp any-reg old-fp-offset))
+			  (:temp ocfp any-reg ocfp-offset))
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FUN)
   (inst and temp y 3)
@@ -48,9 +48,9 @@
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
-  (inst move ocfp fp-tn)
+  (inst move ocfp cfp-tn)
   (inst j lip)
-  (inst move fp-tn csp-tn))
+  (inst move cfp-tn csp-tn))
 
 
 (define-assembly-routine (generic--
@@ -69,7 +69,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
-			  (:temp ocfp any-reg old-fp-offset))
+			  (:temp ocfp any-reg ocfp-offset))
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FUN)
   (inst and temp y 3)
@@ -84,9 +84,9 @@
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
-  (inst move ocfp fp-tn)
+  (inst move ocfp cfp-tn)
   (inst j lip)
-  (inst move fp-tn csp-tn))
+  (inst move cfp-tn csp-tn))
 
 
 (define-assembly-routine (generic-*
@@ -107,7 +107,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
-			  (:temp ocfp any-reg old-fp-offset))
+			  (:temp ocfp any-reg ocfp-offset))
   ;; If either arg is not a fixnum, call the static function.
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FUN)
@@ -160,9 +160,9 @@
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
-  (inst move ocfp fp-tn)
+  (inst move ocfp cfp-tn)
   (inst j lip)
-  (inst move fp-tn csp-tn)
+  (inst move cfp-tn csp-tn)
 
   DONE)
 
@@ -187,7 +187,7 @@
 				  (:temp lip interior-reg lip-offset)
 				  (:temp nargs any-reg nargs-offset)
 				  (:temp cname descriptor-reg cname-offset)
-				  (:temp ocfp any-reg old-fp-offset))
+				  (:temp ocfp any-reg ocfp-offset))
 	  (inst and temp x 3)
 	  (inst bne temp DO-STATIC-FN)
 	  (inst and temp y 3)
@@ -200,9 +200,9 @@
 	  (inst lw lip cname
 		(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 		   vm:other-pointer-type))
-	  (inst move ocfp fp-tn)
+	  (inst move ocfp cfp-tn)
 	  (inst j lip)
-	  (inst move fp-tn csp-tn)
+	  (inst move cfp-tn csp-tn)
 	  
 	  DO-COMPARE
 	  (inst ,(if not-p 'bne 'beq) temp done)
@@ -211,11 +211,7 @@
 	  DONE)))
 
   (define-cond-assem-rtn generic-< < two-arg-< (inst slt temp x y) nil)
-; <=, >= should never be emitted.
-;  (define-cond-assem-rtn generic-<= <= two-arg-<= (inst slt temp y x) t)
-  (define-cond-assem-rtn generic-> > two-arg-> (inst slt temp y x) nil)
-;  (define-cond-assem-rtn generic->= >= two-arg->= (inst slt temp x y) t)
-  )
+  (define-cond-assem-rtn generic-> > two-arg-> (inst slt temp y x) nil))
 
 
 (define-assembly-routine (generic-eql
@@ -234,7 +230,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
-			  (:temp ocfp any-reg old-fp-offset))
+			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-T)
   (inst and temp x 3)
   (inst beq temp RETURN-NIL)
@@ -252,9 +248,9 @@
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
-  (inst move ocfp fp-tn)
+  (inst move ocfp cfp-tn)
   (inst j lip)
-  (inst move fp-tn csp-tn)
+  (inst move cfp-tn csp-tn)
 
   RETURN-T
   (load-symbol res t))
@@ -275,7 +271,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
-			  (:temp ocfp any-reg old-fp-offset))
+			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-T)
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FN)
@@ -292,9 +288,9 @@
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
-  (inst move ocfp fp-tn)
+  (inst move ocfp cfp-tn)
   (inst j lip)
-  (inst move fp-tn csp-tn)
+  (inst move cfp-tn csp-tn)
 
   RETURN-T
   (load-symbol res t))
@@ -315,7 +311,7 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
-			  (:temp ocfp any-reg old-fp-offset))
+			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-NIL)
   (inst and temp x 3)
   (inst bne temp DO-STATIC-FN)
@@ -332,9 +328,9 @@
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
-  (inst move ocfp fp-tn)
+  (inst move ocfp cfp-tn)
   (inst j lip)
-  (inst move fp-tn csp-tn)
+  (inst move cfp-tn csp-tn)
 
   RETURN-NIL
   (inst move res null-tn))
