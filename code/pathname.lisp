@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.20 1993/08/04 09:39:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.21 1993/08/04 10:40:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -399,7 +399,7 @@
 		 (etypecase ,var
 		   (pathname ,var)
 		   (string (parse-namestring ,var))
-		   (stream (parse-namestring (file-name ,var)))))))
+		   (stream (file-name ,var))))))
      ,@body))
 
 ;;; WITH-HOST -- Internal
@@ -829,13 +829,11 @@
 		  hosts-name (%pathname-host thing))))
        (values thing start))
       (stream
-       ;; ### file-name really ought to retain the original pathname so that we
-       ;; know if it was logical.
-       (let ((namestr (file-name thing)))
-	 (unless namestr
+       (let ((name (file-name thing)))
+	 (unless name
 	   (error "Can't figure out the file associated with stream:~%  ~S"
 		  thing))
-	 (%parse-namestring namestr host defaults 0 nil nil)))))
+	 name))))
 
 
 ;;; NAMESTRING -- Interface
@@ -1211,13 +1209,7 @@
   ;;
   ;; The list of expansions for this search-list.  Each expansion is the list
   ;; of directory components to use in place of this search-list.
-  (%expansions (%primitive c:make-value-cell nil)));  :type list))
-
-(defun search-list-expansions (x)
-  (%primitive c:value-cell-ref (search-list-%expansions x)))
-
-(defun (setf search-list-expansions) (val x)
-  (%primitive c:value-cell-set (search-list-%expansions x) val))
+  (expansions nil :type list))
 
 (defun %print-search-list (sl stream depth)
   (declare (ignore depth))
@@ -1382,9 +1374,8 @@
 	 ,result))))
 
 (defun %enumerate-search-list (pathname function)
-  (let ((search-list (extract-search-list
-		      (translate-logical-pathname pathname)
-		      nil)))
+  (let* ((pathname (translate-logical-pathname pathname))
+	 (search-list (extract-search-list pathname nil)))
     (cond
      ((not search-list)
       (funcall function pathname))
