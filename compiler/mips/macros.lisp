@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.3 1990/02/03 20:54:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.4 1990/02/06 02:49:14 ch Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -16,12 +16,9 @@
 
 (in-package "C")
 
-
-
 (defmacro nop ()
   "Emit a nop."
   '(inst or zero-tn zero-tn zero-tn))
-
 
 (defmacro move (dst src)
   "Move SRC into DST (unless they are already the same)."
@@ -29,6 +26,17 @@
 	      (n-src src))
     `(unless (location= ,n-dst ,n-src)
        (inst or ,n-dst ,n-src zero-tn))))
+
+(defmacro li (dst immed)
+  "Load Immediate"
+  (cond ((minusp immed)
+	 `(inst addi ,dst zero-tn ,immed))
+	(t
+	 `(inst addiu ,dst zero-tn ,immed))))
+
+(defmacro b (label)
+  "Unconditional branch"
+  `(inst beq zero-tn zero-tn ,label))
 
 
 (defmacro def-mem-op (op inst shift load)
