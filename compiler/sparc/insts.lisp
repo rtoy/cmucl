@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.26 2000/02/21 22:24:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.27 2000/02/24 14:38:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1675,6 +1675,7 @@
 	    ((op #b10)
 	     (op3 #b101100)
 	     (cc2 #b0)
+	     (cond nil :type 'branch-fp-condition)
 	     (i 0)
 	     (cc nil :type 'fp-condition-register))
 	     cond-move-printer
@@ -1683,6 +1684,7 @@
 	    ((op #b10)
 	     (op3 #b101100)
 	     (cc2 #b0)
+	     (cond nil :type 'branch-fp-condition)
 	     (i 1)
 	     (cc nil :type 'fp-condition-register))
 	     cond-move-printer
