@@ -1049,7 +1049,7 @@
   `(;; Current directory
     "./"
     #+:lucid                (working-directory)
-    #+(or :allegro ACLPC)   (current-directory)
+    #+(or :allegro ACLPC)   (excl:current-directory)
     #+:cmu                  (ext:default-directory)
     #+:lispworks 
     ,(multiple-value-bind (major minor) (system::lispworks-version)
