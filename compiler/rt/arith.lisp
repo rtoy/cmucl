@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.8 1991/04/22 07:29:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.9 1991/05/06 15:01:22 chiles Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -634,10 +634,11 @@
 	 (b :scs (unsigned-reg))
 	 (borrow-in :scs (any-reg)))
   (:arg-types unsigned-num unsigned-num positive-fixnum)
-  (:results (result :scs (unsigned-reg))
+  (:results (result :scs (unsigned-reg) :from (:argument 0))
 	    (borrow :scs (unsigned-reg) :from :eval))
   (:result-types unsigned-num positive-fixnum)
-  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)
+		    :from (:argument 0) :to (:argument 2)) temp)
   (:generator 5
     (move result a)
     ;; Set the carry condition bit.
@@ -803,6 +804,11 @@
 ;;; divisor value.  This means we don't have to worry about using the RT's
 ;;; signed divide instruction to get an unsigned division result.
 ;;;
+;;; We are going to copy the GENERIC-TRUNCATE assembly routine to implement
+;;; this since FLOOR and TRUNCATE return the same values for positive
+;;; arguments.  However, we do modify it slightly to make use of the positive
+;;; nature of the arguments.
+;;;
 (define-vop (bignum-floor)
   (:translate bignum::%floor)
   (:policy :fast-safe)
@@ -826,7 +832,28 @@
       (inst bc :c0 rem-okay)
       (inst a rem divisor)
       (emit-label rem-okay))
+
+    (let ((move-results (gen-label)))
+      ;; The RT gives us some random division concept, but we're writing
+      ;; TRUNCATE.  The fixup involves adding one to the quotient and
+      ;; subtracting the divisor from the remainder under certain
+      ;; circumstances (for this VOP, as opposed to the assembly routine,
+      ;; this boils down to one test):
+      ;;
+      ;; IF the remainder is equal to the divisor, we can obviously take
+      ;; one more divisor out of the dividend, so do it.
+      (inst c rem divisor)
+      (inst bnc :eq move-results) ;Just fall through to do it.
+
+      ;; Add 1 to quotient and subtract divisor from remainder.
+      (inst mfmqscr quo)
+      (inst inc quo 1)
+      (inst s rem divisor)
+      
+      (emit-label move-results))
+
     (inst mfmqscr quo)))
+
 
 ;;; SIGNIFY-DIGIT -- VOP.
 ;;;
@@ -848,25 +875,34 @@
   (:translate bignum::%ashr)
   (:policy :fast-safe)
   (:args (digit :scs (unsigned-reg) :target result)
-	 (count :scs (unsigned-reg)))
+	 (count :scs (unsigned-reg immediate)))
   (:arg-types unsigned-num positive-fixnum)
-  (:results (result :scs (unsigned-reg)))
+  (:results (result :scs (unsigned-reg) :from (:argument 0)))
   (:result-types unsigned-num)
   (:generator 2
     (move result digit)
-    (inst sar result count)))
+    (inst sar result
+	  (sc-case count
+	    (unsigned-reg count)
+	    (immediate (tn-value count))))))
 
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
   (:generator 2
     (move result digit)
-    (inst sr result count)))
+    (inst sr result
+	  (sc-case count
+	    (unsigned-reg count)
+	    (immediate (tn-value count))))))
 
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
   (:generator 2
     (move result digit)
-    (inst sl result count)))
+    (inst sl result
+	  (sc-case count
+	    (unsigned-reg count)
+	    (immediate (tn-value count))))))
 
 
 
