@@ -1020,7 +1020,7 @@
 (define-info-type type expander (or function null) nil)
 
 ;;; Print function for a type.
-(define-info-type type printer (or function null) nil)
+(define-info-type type printer (or function symbol null) nil)
 
 ;;; Defstruct description information for a structure type.  DEFINED is the
 ;;; current global definition, and is not shadowed by compilation of
