@@ -3,9 +3,7 @@
 (in-package "USER")
 
 #+bootstrap
-(copy-packages (cons (c::backend-name c::*target-backend*) '("ASSEM" "C")))
-#+bootstrap
-(export '(assem::nop) "ASSEM")
+(copy-packages (cons (c::backend-name c::*target-backend*) '("NEW-ASSEM" "C")))
 
 (defparameter *load-stuff*
   #+bootstrap t
