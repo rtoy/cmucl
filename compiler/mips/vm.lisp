@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.3 1990/02/02 21:42:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.4 1990/02/03 13:06:38 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -430,7 +430,7 @@
 ;;;
 ;;; Offset of special registers used during calls
 (defconstant lra-offset 23)
-(defconstant env-offset 13)
+(defconstant lexenv-offset 13)
 (defconstant argument-pointer-offset 22)
 (defconstant argument-count-offset 7)
 (defconstant old-cont-offset 14)
@@ -440,7 +440,7 @@
 ;;; Offsets of special stack frame locations
 (defconstant old-cont-save-offset 0)
 (defconstant lra-save-offset 1)
-(defconstant env-save-offset 2))
+(defconstant lexenv-save-offset 2)
 
 ); Eval-When (Compile Load Eval)  
 
