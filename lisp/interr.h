@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.h,v 1.2 2004/07/12 23:44:07 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.h,v 1.3 2005/01/13 19:55:00 fgilham Exp $
  */
 
 #ifndef _INTERR_H_
@@ -13,4 +13,4 @@ extern void internal_error(os_context_t *context);
 
 extern lispobj debug_print(lispobj string);
 
-#endif
+#endif /* _INTERR_H_ */

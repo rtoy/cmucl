@@ -1,4 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-lispregs.h,v 1.1 1992/07/28 20:16:54 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-lispregs.h,v 1.2 2005/01/13 19:55:00 fgilham Rel $ */
+
+#ifndef _MIPS_LISPREGS_H_
+#define _MIPS_LISPREGS_H_
 
 #ifdef LANGUAGE_ASSEMBLY
 #define REG(num) $num
@@ -56,3 +59,5 @@
 
 #define SC_REG(sc, n) ((sc)->sc_regs[n])
 #define SC_PC(sc) ((sc)->sc_pc)
+
+#endif /* _MIPS_LISPREGS_H_ */

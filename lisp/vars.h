@@ -1,5 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.h,v 1.1 1992/07/28 20:15:39 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.h,v 1.2 2005/01/13 19:55:01 fgilham Exp $ */
 
+#ifndef _VARS_H_
+#define _VARS_H_
 
 extern void flush_vars(void);
 extern struct var *lookup_by_name(char *name);
@@ -13,3 +15,5 @@ extern char *var_name(struct var *var);
 extern lispobj var_value(struct var *var);
 extern long var_clock(struct var *var);
 extern void var_setclock(struct var *var, long value);
+
+#endif /* _VARS_H_ */

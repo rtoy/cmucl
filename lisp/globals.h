@@ -1,7 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.8 2004/07/13 00:26:22 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.h,v 1.9 2005/01/13 19:55:00 fgilham Exp $ */
 
-#if !defined(_INCLUDE_GLOBALS_H_)
-#define _INCLUDED_GLOBALS_H_
+#ifndef _GLOBALS_H_
+#define _GLOBALS_H_
 
 #ifndef LANGUAGE_ASSEMBLY
 
@@ -81,4 +81,4 @@ EXTERN(current_flags_register, 4)
 
 #endif /* LANGUAGE_ASSEMBLY */
 
-#endif /* _INCLUDED_GLOBALS_H_ */
+#endif /* _GLOBALS_H_ */

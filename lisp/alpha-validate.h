@@ -1,11 +1,14 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-validate.h,v 1.3 1999/02/20 15:54:43 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-validate.h,v 1.4 2005/01/13 19:55:00 fgilham Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
+
+#ifndef _ALPHA_VALIDATE_H_
+#define _ALPHA_VALIDATE_H_
 
 #ifndef linux
 
@@ -44,3 +47,5 @@
 #define BINDING_STACK_SIZE	(0x01000000)
 
 #endif
+
+#endif /* _ALPHA_VALIDATE_H_ */

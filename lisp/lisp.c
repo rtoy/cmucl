@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.44 2004/08/17 20:19:57 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.45 2005/01/13 19:55:01 fgilham Exp $
  *
  */
 
@@ -34,14 +34,6 @@
 #include "save.h"
 #include "lispregs.h"
 
-#ifdef irix
-#include <string.h>
-#include "interr.h"
-#endif
-
-#ifdef sparc
-#include <string.h>
-#endif
 
 
 /* SIGINT handler that invokes the monitor. */

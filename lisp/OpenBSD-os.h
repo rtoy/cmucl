@@ -1,11 +1,15 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.h,v 1.1 2001/12/06 19:15:44 pmai Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.h,v 1.2 2005/01/13 19:55:00 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
+
+#ifndef _OPENBSD_OS_H_
+#define _OPENBSD_OS_H_
+
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -31,3 +35,5 @@ typedef int os_vm_prot_t;
 
 #define uc_sigmask sc_mask
 int sc_reg(struct sigcontext*,int);
+
+#endif /* _OPENBSD_OS_H_ */

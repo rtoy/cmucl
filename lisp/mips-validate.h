@@ -1,12 +1,14 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-validate.h,v 1.3 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-validate.h,v 1.4 2005/01/13 19:55:00 fgilham Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
 
+#ifndef _MIPS_VALIDATE_H_
+#define _MIPS_VALIDATE_H_
 
 #define READ_ONLY_SPACE_START   (0x01000000)
 #define READ_ONLY_SPACE_SIZE    (0x04000000)
@@ -23,3 +25,5 @@
 
 #define BINDING_STACK_START	(0x60000000)
 #define BINDING_STACK_SIZE	(0x00100000)
+
+#endif /* _MIPS_VALIDATE_H_ */

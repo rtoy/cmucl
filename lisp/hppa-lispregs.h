@@ -1,4 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hppa-lispregs.h,v 1.2 1993/07/27 15:04:16 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hppa-lispregs.h,v 1.3 2005/01/13 19:55:00 fgilham Rel $ */
+
+#ifndef _HPPA_LISPREGS_H_
+#define _HPPA_LISPREGS_H_
 
 #define NREGS	(32)
 
@@ -63,3 +66,5 @@
 #define SC_PC(sc) ((sc)->sc_pcoqh)
 #define SC_NPC(sc) ((sc)->sc_pcoqt)
 #endif
+
+#endif /* _HPPA_LISPREGS_H_ */

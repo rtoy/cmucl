@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.15 2004/05/18 22:18:03 cwang Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.16 2005/01/13 19:55:00 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -7,6 +7,9 @@
  Alpha support by Julian Dolby, 1999.
 
 */
+
+#ifndef _LINUX_OS_H_
+#define _LINUX_OS_H_
 
 #include <stdlib.h>
 #include <signal.h>
@@ -135,3 +138,5 @@ typedef struct sigcontext_struct sigcontext;
 #endif
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
+
+#endif /* _LINUX_OS_H_ */

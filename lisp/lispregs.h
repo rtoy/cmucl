@@ -1,4 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lispregs.h,v 1.7 2004/07/30 00:53:41 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lispregs.h,v 1.8 2005/01/13 19:55:00 fgilham Rel $ */
+
+#ifndef _LISPREGS_H_
+#define _LISPREGS_H_
 
 #if defined(mips) || defined(irix)
 #include "mips-lispregs.h"
@@ -47,3 +50,5 @@
 #ifndef LANGUAGE_ASSEMBLY
 extern char *lisp_register_names[];
 #endif
+
+#endif /* _LISPREGS_H_ */

@@ -1,11 +1,14 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.h,v 1.2 2004/07/07 15:03:11 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.h,v 1.3 2005/01/13 19:55:00 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
+
+#ifndef _NETBSD_OS_H_
+#define _NETBSD_OS_H_
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -34,3 +37,5 @@ typedef int os_vm_prot_t;
 int sc_reg(ucontext_t *,int);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
+
+#endif /* _NETBSD_OS_H_ */

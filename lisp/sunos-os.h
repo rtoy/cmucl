@@ -1,17 +1,21 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.5 2004/07/07 18:07:53 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.6 2005/01/13 19:55:01 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
 
+#ifndef _SUNOS_OS_H_
+#define _SUNOS_OS_H_
+
 #ifdef SOLARIS
 #undef boolean
 #endif /* SOLARIS */
 
 #include <sys/types.h>
+#include <string.h>
 
 #ifdef SOLARIS
 #define boolean int
@@ -61,3 +65,5 @@ extern void save_context(void);
 #endif /* SOLARIS */
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
+
+#endif /* _SUNOS_OS_H_ */

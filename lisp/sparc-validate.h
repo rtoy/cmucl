@@ -1,11 +1,14 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.18 2004/05/13 14:32:08 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.19 2005/01/13 19:55:00 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
+
+#ifndef _SPARC_VALIDATE_H_
+#define _SPARC_VALIDATE_H_
 
 /*
  * Address map:
@@ -119,3 +122,5 @@
 #else
 #define DYNAMIC_SPACE_SIZE      (0x40000000 - SPARSE_BLOCK_SIZE)    /* 1GB - 32 KB max */
 #endif
+
+#endif /* _SPARC_VALIDATE_H_ */

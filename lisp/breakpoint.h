@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.h,v 1.2 2004/07/07 15:03:11 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.h,v 1.3 2005/01/13 19:55:00 fgilham Exp $
  */
 
 #ifndef _BREAKPOINT_H_
@@ -14,4 +14,4 @@ extern void handle_breakpoint(int signal, int subcode, os_context_t *scp);
 extern void *handle_function_end_breakpoint(int signal, int subcode,
 					    os_context_t *scp);
 
-#endif
+#endif /* _BREAKPOINT_H_ */

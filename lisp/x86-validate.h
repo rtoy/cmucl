@@ -3,9 +3,12 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.22 2004/07/08 03:18:15 rtoy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.23 2005/01/13 19:55:01 fgilham Exp $
  *
  */
+
+#ifndef _X86_VALIDATE_H_
+#define _X86_VALIDATE_H_
 
 /*
  * Address map:
@@ -179,3 +182,5 @@
 
 /* Note that GENCGC only uses dynamic_space 0. */
 #define DYNAMIC_1_SPACE_START	(DYNAMIC_0_SPACE_START + DYNAMIC_SPACE_SIZE)
+
+#endif /* _X86_VALIDATE_H_ */

@@ -1,6 +1,9 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.3 2004/07/07 15:03:12 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.4 2005/01/13 19:55:01 fgilham Exp $
  */
+
+#ifndef _X86_LISPREGS_H_
+#define _X86_LISPREGS_H_
 
 /* These register names and offsets correspond to definitions
  * in compiler/x86/vm.lisp. They map into accessors in the
@@ -50,3 +53,4 @@
 #define SC_SP(sc) ((sc)->sc_esp)
 #endif
 
+#endif /* _X86_LISPREGS_H_ */

@@ -1,5 +1,8 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.35 2004/09/21 11:59:17 emarsden Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.36 2005/01/13 19:55:01 fgilham Exp $ */
+
+#ifndef _UNDEFINEDS_H_
+#define _UNDEFINEDS_H_
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -299,3 +302,5 @@ F(getgrgid)
 F(setpwent)
 F(getpwent)
 F(endpwent)  
+
+#endif /* _UNDEFINEDS_H_ */

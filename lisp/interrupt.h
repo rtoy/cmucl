@@ -1,7 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.8 2004/07/07 22:22:59 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.9 2005/01/13 19:55:00 fgilham Exp $ */
 
-#if !defined(_INCLUDE_INTERRUPT_H_)
-#define _INCLUDE_INTERRUPT_H_
+#ifndef _INTERRUPT_H_
+#define _INTERRUPT_H_
 
 #include <signal.h>
 
@@ -61,4 +61,5 @@ extern union interrupt_handler interrupt_handlers[NSIG];
 		   sigmask(SIGUSR1) | sigmask(SIGUSR2))
 #endif
 #endif
-#endif
+
+#endif /* _INTERRUPT_H_ */

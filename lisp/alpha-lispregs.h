@@ -1,4 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-lispregs.h,v 1.3 1999/02/20 15:54:43 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-lispregs.h,v 1.4 2005/01/13 19:55:00 fgilham Rel $ */
+
+#ifndef _ALPHA_LISPREGS_H_
+#define _ALPHA_LISPREGS_H_
 
 #define NREGS	(32)
 
@@ -64,3 +67,5 @@
 #define SC_PC(sc) ((sc)->sc_pc)
 
 #define call_into_lisp_LRA_page 0x10000
+
+#endif /* _ALPHA_LISPREGS_H_ */

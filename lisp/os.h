@@ -1,13 +1,12 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.14 2004/07/13 00:26:22 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.15 2005/01/13 19:55:00 fgilham Exp $
  *
  * Common interface for os-dependent functions.
  *
  */
 
-#if !defined(_OS_H_INCLUDED_)
-
-#define _OS_H_INCLUDED_
+#ifndef _OS_H_
+#define _OS_H_
 
 #include "lisp.h"
 
@@ -117,4 +116,4 @@ extern int os_stack_grows_down (void);
 extern void os_guard_control_stack (int zone, int guard);
 extern int os_control_stack_overflow (void *, os_context_t *);
 
-#endif
+#endif /* _OS_H_ */

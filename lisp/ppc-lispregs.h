@@ -1,3 +1,6 @@
+#ifndef _PPC_LISPREGS_H_
+#define _PPC_LISPREGS_H_
+
 #if defined DARWIN
 #if defined LANGUAGE_ASSEMBLY
 #define REG(num) r##num
@@ -109,3 +112,5 @@
 #endif
 
 #endif
+
+#endif /* _PPC_LISPREGS_H_ */

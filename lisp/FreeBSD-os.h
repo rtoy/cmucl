@@ -1,11 +1,14 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.6 2003/03/27 12:42:10 gerd Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.7 2005/01/13 19:55:00 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
+
+#ifndef _FREEBSD_OS_H_
+#define _FREEBSD_OS_H_
 
 #include <osreldate.h>
 #include <sys/types.h>
@@ -43,3 +46,6 @@ void os_save_context (void);
 #endif
 
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
+
+
+#endif /* _FREEBSD_OS_H_ */

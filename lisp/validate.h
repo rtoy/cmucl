@@ -1,7 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.h,v 1.5 2004/07/13 00:26:22 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.h,v 1.6 2005/01/13 19:55:01 fgilham Rel $ */
 
-#if !defined(_INCLUDE_VALIDATE_H_)
-#define _INCLUDE_VALIDATE_H_
+#ifndef _VALIDATE_H_
+#define _VALIDATE_H_
 
 #ifdef parisc
 #include "hppa-validate.h"
@@ -33,4 +33,4 @@
 
 extern void validate(void);
 
-#endif
+#endif /* _VALIDATE_H_ */

@@ -1,11 +1,14 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.3 2004/10/20 11:30:47 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.4 2005/01/13 19:55:00 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
+
+#ifndef _PPC_VALIDATE_H_
+#define _PPC_VALIDATE_H_
 
 /* 
  * The read-only space must be in low memory because the BA
@@ -46,3 +49,5 @@
 #define HOLES {0x04ff8000, 0x06ff8000, 0x0aff8000, 0x1fff8000}
 #define HOLE_SIZE 0x2000
 #endif
+
+#endif /* _PPC_VALIDATE_H_ */

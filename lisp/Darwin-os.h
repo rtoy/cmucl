@@ -1,11 +1,14 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.h,v 1.1 2004/07/13 00:26:22 pmai Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.h,v 1.2 2005/01/13 19:55:00 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
+
+#ifndef _DARWIN_OS_H_
+#define _DARWIN_OS_H_
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -38,3 +41,5 @@ typedef int os_vm_prot_t;
 int* sc_reg(os_context_t *,int);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
+
+#endif /* _DARWIN_OS_H_ */

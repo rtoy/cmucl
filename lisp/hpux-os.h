@@ -1,11 +1,14 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.h,v 1.2 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.h,v 1.3 2005/01/13 19:55:00 fgilham Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
+
+#ifndef _HPUX_OS_H_
+#define _HPUX_OS_H_
 
 #include <sys/mman.h>
 
@@ -19,3 +22,5 @@ typedef int os_vm_prot_t;
 #define OS_VM_PROT_EXECUTE PROT_EXEC
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
+
+#endif /* _HPUX_OS_H_ */

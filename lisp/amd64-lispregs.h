@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.2 2004/10/19 19:07:17 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.3 2005/01/13 19:55:00 fgilham Exp $
  */
 
 /* These register names and offsets correspond to definitions
@@ -7,6 +7,9 @@
  * os dependent <machine/signal.h> structure via the sc_reg
  * os dependent function.
  */
+
+#ifndef _AMD64_LISPREGS_H_
+#define _AMD64_LISPREGS_H_
 
 #define NREGS	(16)
 
@@ -51,3 +54,4 @@
 #define SC_REG(sc, n) sc_reg(sc,n)
 #define SC_PC(sc) ((sc)->sc_pc)
 
+#endif /* _AMD64_LISPREGS_H_ */

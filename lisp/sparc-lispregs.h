@@ -1,6 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.7 2004/07/30 00:53:41 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.8 2005/01/13 19:55:00 fgilham Exp $ */
 
-
+#ifndef _SPARC_LISPREGS_H_
+#define _SPARC_LISPREGS_H_
 
 #ifdef LANGUAGE_ASSEMBLY
 
@@ -146,3 +147,5 @@ extern int * solaris_register_address(struct ucontext *, int);
 #endif /* SOLARIS */
 
 #endif
+
+#endif /* _SPARC_LISPREGS_H_ */

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.h,v 1.2 1993/04/28 01:58:37 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.h,v 1.3 2005/01/13 19:55:00 fgilham Exp $
  */
 
 #ifndef _SAVE_H_
@@ -9,4 +9,4 @@
 
 extern boolean save(char *filename, lispobj initfun);
 
-#endif
+#endif /* _SAVE_H_ */
