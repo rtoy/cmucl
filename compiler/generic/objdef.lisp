@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.2 1990/11/13 22:53:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.3 1990/11/16 04:40:43 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -41,7 +41,7 @@
 	  primitive-object-lowtag primitive-object-options
 	  primitive-object-slots primitive-object-size
 	  primitive-object-variable-length slot-name slot-docs slot-rest-p
-	  slot-offset slot-length slot-options
+	  slot-offset slot-length slot-options *primitive-objects*
 	  define-for-each-primitive-object))
 
 
