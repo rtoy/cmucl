@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.147 2004/04/07 15:03:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.148 2004/07/15 21:37:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2595,22 +2595,25 @@
 	*universal-type*)))
 
 (defun %dpb-derive-type-aux (size posn int)
-  (when (and (numeric-type-p size)
-	     (numeric-type-p posn)
-	     (numeric-type-p int))
-    (let ((size-high (numeric-type-high size))
-	  (posn-high (numeric-type-high posn))
-	  (high (numeric-type-high int))
-	  (low (numeric-type-low int)))
-      (when (and size-high posn-high high low
-		 (<= (+ size-high posn-high) vm:word-bits))
-	(let ((raw-bit-count (max (integer-length high)
-				  (integer-length low)
-				  (+ size-high posn-high))))
-	  (specifier-type
-	   (if (minusp low)
-	       `(signed-byte ,(1+ raw-bit-count))
-	       `(unsigned-byte ,raw-bit-count))))))))
+  (let ((size (continuation-type size))
+	(posn (continuation-type posn))
+	(int (continuation-type int)))
+    (when (and (numeric-type-p size)
+	       (numeric-type-p posn)
+	       (numeric-type-p int))
+      (let ((size-high (numeric-type-high size))
+	    (posn-high (numeric-type-high posn))
+	    (high (numeric-type-high int))
+	    (low (numeric-type-low int)))
+	(when (and size-high posn-high high low
+		   (<= (+ size-high posn-high) vm:word-bits))
+	  (let ((raw-bit-count (max (integer-length high)
+				    (integer-length low)
+				    (+ size-high posn-high))))
+	    (specifier-type
+	     (if (minusp low)
+		 `(signed-byte ,(1+ raw-bit-count))
+		 `(unsigned-byte ,raw-bit-count)))))))))
 
 (defoptimizer (%dpb derive-type) ((newbyte size posn int))
   (%dpb-derive-type-aux size posn int))
