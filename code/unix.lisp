@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.24 1993/02/26 08:26:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.25 1993/07/03 00:41:54 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -681,10 +681,16 @@
 (defconstant o_wronly 1 "Write-only flag.")
 (defconstant o_rdwr 2   "Read-write flag.")
 (defconstant o_append #o10   "Append flag.")
-(defconstant o_creat #o1000  "Create if nonexistant flag.") 
-(defconstant o_trunc #o2000  "Truncate flag.")
-
-(defconstant o_excl #o4000  "Error if already exists.")
+#+hpux
+(progn
+  (defconstant o_creat #o400  "Create if nonexistant flag.") 
+  (defconstant o_trunc #o1000  "Truncate flag.")
+  (defconstant o_excl #o2000  "Error if already exists."))
+#-hpux
+(progn
+  (defconstant o_creat #o1000  "Create if nonexistant flag.") 
+  (defconstant o_trunc #o2000  "Truncate flag.")
+  (defconstant o_excl #o4000  "Error if already exists."))
 
 (defun unix-open (path flags mode)
   "Unix-open opens the file whose pathname is specified by path
