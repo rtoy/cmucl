@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.78 1997/11/29 16:11:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.79 1997/12/03 20:05:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1085,35 +1085,12 @@
   (let ((pointer (frame-pointer frame))
 	(escaped (compiled-frame-escaped frame)))
     (if escaped
+	(sub-access-debug-var-slot pointer loc escaped)
 	(ecase stack-slot
-	       (#.vm::ocfp-save-offset
-		(sub-access-debug-var-slot pointer loc escaped))
-	       (#.vm::lra-save-offset
-;		(format t "escaped ra: pointer=~s loc=~s (~s ~s)~%"
-;			pointer loc
-;			(c:sc-offset-scn loc) (c::sc-offset-offset loc))
-		(case (c::sc-offset-scn loc)
-		      ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
-		       (format t "escaped ra: pointer=~s loc=~s (~s ~s)~%"
-			       pointer loc
-			       (c:sc-offset-scn loc) (c::sc-offset-offset loc))
-		       ;; Translate to sap-reg at the same offset.
-		       (setf loc (c::make-sc-offset vm:sap-reg-sc-number
-						    (c:sc-offset-scn loc))))
-		      (#.vm:control-stack-sc-number
-		       ;; Translate to sap-stack at the same offset.
-		       (setf loc (c::make-sc-offset vm:sap-stack-sc-number
-						    (c:sc-offset-offset loc))))
-		      (t
-		       (format t "unexpected RA sc location?~%")))
-;		(format t " translated to loc=~s (~s ~s)~%" loc
-;			(c:sc-offset-scn loc) (c::sc-offset-offset loc))
-		(sub-access-debug-var-slot pointer loc escaped)))
-      (ecase stack-slot
-	     (#.vm::ocfp-save-offset
-	      (kernel:stack-ref pointer stack-slot))
-	     (#.vm::lra-save-offset
-	      (sap-ref-sap pointer (- (* (1+ stack-slot) 4))))))))
+	  (#.vm::ocfp-save-offset
+	   (kernel:stack-ref pointer stack-slot))
+	  (#.vm::lra-save-offset
+	   (sap-ref-sap pointer (- (* (1+ stack-slot) 4))))))))
 
 ;;;
 #-x86
@@ -1133,35 +1110,12 @@
   (let ((pointer (frame-pointer frame))
 	(escaped (compiled-frame-escaped frame)))
     (if escaped
+	(sub-set-debug-var-slot pointer loc value escaped)
 	(ecase stack-slot
-	       (#.vm::ocfp-save-offset
-		(sub-set-debug-var-slot pointer loc value escaped))
-	       (#.vm::lra-save-offset
-;		(format t "escaped ra: pointer=~s loc=~s (~s ~s)~%"
-;			pointer loc
-;			(c:sc-offset-scn loc) (c::sc-offset-offset loc))
-		(case (c::sc-offset-scn loc)
-		      ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
-		       (format t "escaped ra: pointer=~s loc=~s (~s ~s)~%"
-			       pointer loc
-			       (c:sc-offset-scn loc) (c::sc-offset-offset loc))
-		       ;; Translate to sap-reg at the same offset.
-		       (setf loc (c::make-sc-offset vm:sap-reg-sc-number
-						    (c:sc-offset-scn loc))))
-		      (#.vm:control-stack-sc-number
-		       ;; Translate to sap-stack at the same offset.
-		       (setf loc (c::make-sc-offset vm:sap-stack-sc-number
-						    (c:sc-offset-offset loc))))
-		      (t
-		       (format t "unexpected RA sc location?~%")))
-;		(format t " translated to loc=~s (~s ~s)~%" loc
-;			(c:sc-offset-scn loc) (c::sc-offset-offset loc))
-		(sub-set-debug-var-slot pointer loc value escaped)))
-      (ecase stack-slot
-	     (#.vm::ocfp-save-offset
-	      (setf (kernel:stack-ref pointer stack-slot) value))
-	     (#.vm::lra-save-offset
-	      (setf (sap-ref-sap pointer (- (* (1+ stack-slot) 4))) value))))))
+	  (#.vm::ocfp-save-offset
+	   (setf (kernel:stack-ref pointer stack-slot) value))
+	  (#.vm::lra-save-offset
+	   (setf (sap-ref-sap pointer (- (* (1+ stack-slot) 4))) value))))))
 
 
 (defvar *debugging-interpreter* nil
