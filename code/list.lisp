@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.32 2003/07/01 15:04:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.33 2003/07/16 15:43:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -191,14 +191,16 @@
 
 (defun last (list &optional (n 1))
   "Returns the last N conses (not the last element!) of a list."
-  (declare (type index n))
-  (do ((checked-list list (cdr checked-list))
-       (returned-list list)
-       (index 0 (1+ index)))
-      ((atom checked-list) returned-list)
-    (declare (type index index))
-    (if (>= index n)
-	(pop returned-list))))
+  (declare (type unsigned-byte n))
+  (if (typep n 'index)
+      (do ((checked-list list (cdr checked-list))
+	   (returned-list list)
+	   (index 0 (1+ index)))
+	  ((atom checked-list) returned-list)
+	(declare (type index index))
+	(if (>= index n)
+	    (pop returned-list)))
+      list))
 
 (defun list (&rest args)
   "Returns constructs and returns a list of its arguments."
@@ -385,8 +387,8 @@
 (defun butlast (list &optional (n 1))
   "Returns a new list the same as List without the last N conses.
    List must not be circular."
-  (declare (list list) (type index n))
-  (unless (null list)
+  (declare (list list) (type unsigned-byte n))
+  (when (and list (typep n 'index))
     (let ((length (do ((list list (cdr list))
 		       (i 0 (1+ i)))
 		      ((atom list) (1- i)))))
@@ -402,8 +404,8 @@
 
 (defun nbutlast (list &optional (n 1))
   "Modifies List to remove the last N conses. List must not be circular."
-  (declare (list list) (type index n))
-  (unless (null list)
+  (declare (list list) (type unsigned-byte n))
+  (when (and list (typep n 'index))
     (let ((length (do ((list list (cdr list))
 		       (i 0 (1+ i)))
 		      ((atom list) (1- i)))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.117 2003/07/01 15:44:40 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.118 2003/07/16 15:43:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -597,7 +597,7 @@
 (defknown endp (list) boolean (foldable flushable movable))
 (defknown list-length (list) (or index null) (foldable flushable))
 (defknown (nth nthcdr) (unsigned-byte list) t (foldable flushable))
-(defknown last (list &optional index) list (foldable flushable))
+(defknown last (list &optional unsigned-byte) list (foldable flushable))
 (defknown list (&rest t) list (movable flushable unsafe))
 (defknown list* (t &rest t) t (movable flushable unsafe))
 (defknown make-list (index &key (:initial-element t)) list
@@ -613,8 +613,8 @@
 (defknown revappend (list t) t (flushable))
 (defknown nconc (&rest t) t ())
 (defknown nreconc (list t) list ())
-(defknown butlast (list &optional index) list (flushable))
-(defknown nbutlast (list &optional index) list ())
+(defknown butlast (list &optional unsigned-byte) list (flushable))
+(defknown nbutlast (list &optional unsigned-byte) list ())
 (defknown ldiff (list t) list (flushable))
 (defknown (rplaca rplacd) (cons t) list (unsafe))
 

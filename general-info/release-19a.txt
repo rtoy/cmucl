@@ -133,6 +133,7 @@ New in this release:
      - First arg of CERROR may be a function.
      - Lambda-lists of the form (X . Y) in DESTRUCTURING-BIND and macros
        are now equivalent to (X &REST Y).
+     - LAST, BUTLAST, NBUTLAST accepting bignum counts.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
