@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.14 1991/02/20 15:14:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.15 1991/03/20 03:06:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.14 1991/02/20 15:14:03 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.15 1991/03/20 03:06:34 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -92,7 +92,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
     (inst li ndescr (lognot vm:lowtag-mask))
-    (inst addu boxed boxed-arg (fixnum (1+ vm:code-constants-offset)))
+    (inst addu boxed boxed-arg (fixnum (1+ vm:code-trace-table-offset-slot)))
     (inst and boxed ndescr)
     (inst srl unboxed unboxed-arg vm:word-shift)
     (inst addu unboxed unboxed vm:lowtag-mask)
