@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.8 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.9 1999/04/11 13:05:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,6 +97,7 @@
   (loop
    (let ((char (read-char stream nil #\:)))
      (case char
+       (#\Linefeed (init-termcap-string-buffer))
        (#\# (read-line stream nil))
        (#\| (return nil))
        (#\: (return t))
@@ -121,13 +122,13 @@
   (loop
    (multiple-value-bind (line eofp)
 			(read-line stream nil)
-     (let ((len (length line)))
-       (declare (simple-string line))
-       (when (and (not (zerop len))
-		  (not (char= (schar line 0) #\#))
-		  (char= (schar line (1- len)) #\:))
-	 (if eofp
-	     (return nil)
+     (if eofp
+	 (return nil)
+	 (let ((len (length line)))
+	   (declare (simple-string line))
+	   (when (and (not (zerop len))
+		      (not (char= (schar line 0) #\#))
+		      (char= (schar line (1- len)) #\:))
 	     (let ((char (read-char stream nil :eof)))
 	       (if (eq char :eof)
 		   (return nil)
