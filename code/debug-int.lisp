@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.32 1991/11/10 22:24:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.33 1991/11/26 18:02:32 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3187,11 +3187,12 @@
   (declare (type breakpoint breakpoint)
 	   (type breakpoint-data data)
 	   (type c::index offset))
-  (system:without-gcing
-   (breakpoint_remove (kernel:get-lisp-obj-address component)
-		      offset (breakpoint-data-instruction data)))
-  (setf (breakpoint-data-breakpoints data)
-	(delete breakpoint (breakpoint-data-breakpoints data)))
+  (let ((bpts (delete breakpoint (breakpoint-data-breakpoints data))))
+    (unless bpts
+      (system:without-gcing
+       (breakpoint_remove (kernel:get-lisp-obj-address component)
+			  offset (breakpoint-data-instruction data))))
+    (setf (breakpoint-data-breakpoints data) bpts))
   (setf (breakpoint-status breakpoint) :inactive))
 
 ;;;
@@ -3364,12 +3365,18 @@
 	(let ((*executing-breakpoint-hooks* (cons data
 						  *executing-breakpoint-hooks*)))
 	  (invoke-breakpoint-hooks breakpoints component offset after)))
-      ;; Restore instruction.  Do this before SET-AFTER-BREAKPOINTS which uses
-      ;; CALL-BREAKPOINT_AFTER_OFFSET.
-      (system:without-gcing
-       (breakpoint_remove (kernel:get-lisp-obj-address component) offset
-			  (breakpoint-data-instruction data)))
-      (set-after-breakpoints component data signal-context)
+      ;; At this point breakpoints may not hold the same list as
+      ;; BREAKPOINT-DATA-BREAKPOINTS since invoking hooks may have allowed
+      ;; a breakpoint deactivation.  If there are no more active at this
+      ;; location, then the normal instruction has been put back, and we do
+      ;; no need an after breakpoint to re-install a break instruction.
+      (when (breakpoint-data-breakpoints data)
+	;; Restore instruction.  Do this before SET-AFTER-BREAKPOINTS which
+	;; uses CALL-BREAKPOINT_AFTER_OFFSET.
+	(system:without-gcing
+	 (breakpoint_remove (kernel:get-lisp-obj-address component) offset
+			    (breakpoint-data-instruction data)))
+	(set-after-breakpoints component data signal-context))
       ;; Set the sigmask, to keep the system running until we can
       ;; remove the after breakpoints and re-install the user breakpoints.
       (setf (breakpoint-data-sigmask data)
