@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.43 2002/11/19 18:23:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.44 2002/11/20 16:17:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -834,6 +834,7 @@
 	    (args (make-list (length sequences))))
        (declare (type index min-length))
        (dolist (seq sequences)
+	 (check-type seq sequence)
 	 (when (vectorp seq)
 	   (let ((length (length seq)))
 	     (when (< length min-length)
@@ -1830,9 +1831,10 @@
     (declare (fixnum count))
     (if (listp sequence)
 	(if from-end
-	    (nreverse (nlist-substitute*
-		       new old (nreverse (the list sequence))
-		       test test-not start end count key))
+	    (let ((length (length sequence)))
+	      (nreverse (nlist-substitute*
+			 new old (nreverse (the list sequence))
+			 test test-not (- length end) (- length start) count key)))
 	    (nlist-substitute* new old sequence
 			       test test-not start end count key))
 	(if from-end
@@ -1878,9 +1880,10 @@
     (declare (fixnum end count))
     (if (listp sequence)
 	(if from-end
-	    (nreverse (nlist-substitute-if*
-		       new test (nreverse (the list sequence))
-		       start end count key))
+	    (let ((length (length sequence)))
+	      (nreverse (nlist-substitute-if*
+			 new test (nreverse (the list sequence))
+			 (- length end) (- length start) count key)))
 	    (nlist-substitute-if* new test sequence
 				  start end count key))
 	(if from-end
@@ -1920,9 +1923,10 @@
     (declare (fixnum end count))
     (if (listp sequence)
 	(if from-end
-	    (nreverse (nlist-substitute-if-not*
-		       new test (nreverse (the list sequence))
-		       start end count key))
+	    (let ((length (length sequence)))
+	      (nreverse (nlist-substitute-if-not*
+			 new test (nreverse (the list sequence))
+			 (- length end) (- length start) count key)))
 	    (nlist-substitute-if-not* new test sequence
 				      start end count key))
 	(if from-end
