@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.10 1991/10/23 11:10:27 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.11 1991/10/28 14:49:37 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1723,7 +1723,9 @@
      :x x :y y :width w :height h
      :user-specified-position-p t :user-specified-size-p t
      :width-inc font-width :height-inc font-height
-     :min-width min-width :min-height min-height)
+     :min-width min-width :min-height min-height
+     ;; Tell OpenLook pseudo-X11 server we want input.
+     :input :on)
     win))
 
 #|
