@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.1 2001/02/11 14:22:04 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.2 2001/02/11 16:43:18 dtc Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -227,7 +227,7 @@
 
 ;;; Special case fixnum + and - that trap on overflow.  Useful when we
 ;;; don't know that the output type is a fixnum.
-
+;;;
 (define-vop (+/fixnum fast-+/fixnum=>fixnum)
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
@@ -238,18 +238,10 @@
       (inst mcrxr :cr0)
       (inst addo. r x y)
       (inst bns no-overflow)
-      (inst unimp (logior (ash (reg-tn-encoding r) 5) fixnum-additive-overflow-trap))
+      (inst unimp (logior (ash (reg-tn-encoding r) 5)
+			  fixnum-additive-overflow-trap))
       (emit-label no-overflow))))
 
-#|
-(define-vop (+-c/fixnum fast-+-c/fixnum=>fixnum)
-  (:policy :safe)
-  (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types tagged-num)
-  (:note "safe inline fixnum arithmetic")
-  (:generator 3
-    (inst taddcctv r x (fixnum y))))
-|#
 
 (define-vop (-/fixnum fast--/fixnum=>fixnum)
   (:policy :safe)
@@ -261,27 +253,20 @@
       (inst mcrxr :cr0)
       (inst subo. r x y)
       (inst bns no-overflow)
-      (inst unimp (logior (ash (reg-tn-encoding r) 5) fixnum-additive-overflow-trap))
+      (inst unimp (logior (ash (reg-tn-encoding r) 5)
+			  fixnum-additive-overflow-trap))
       (emit-label no-overflow))))
 
-#|
-(define-vop (--c/fixnum fast---c/fixnum=>fixnum)
-  (:policy :safe)
-  (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types tagged-num)
-  (:note "safe inline fixnum arithmetic")
-  (:generator 3
-    (inst tsubcctv r x (fixnum y))))
-|#
+
 ;;; Shifting
 
-(define-vop (fast-ash)
+(define-vop (fast-ash/unsigned=>unsigned)
   (:note "inline ASH")
-  (:args (number :scs (signed-reg unsigned-reg) :to :save)
+  (:args (number :scs (unsigned-reg) :to :save)
 	 (amount :scs (signed-reg immediate)))
-  (:arg-types (:or signed-num unsigned-num) signed-num)
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:arg-types (:or unsigned-num) signed-num)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:translate ash)
   (:policy :fast-safe)
   (:temporary (:sc non-descriptor-reg) ndesc)
@@ -294,13 +279,9 @@
 	 (inst neg ndesc amount)
 	 (inst bge positive)
 	 (inst cmpwi ndesc 31)
-	 (sc-case number
-	   (signed-reg (inst sraw result number ndesc))
-	   (unsigned-reg (inst srw result number ndesc)))
+	 (inst srw result number ndesc)
 	 (inst ble done)
-	 (sc-case number
-	   (signed-reg (inst srawi result number 31))
-	   (unsigned-reg (inst srwi result number 31)))
+	 (inst srwi result number 31)
 	 (inst b done)
 
 	 (emit-label positive)
@@ -313,11 +294,45 @@
        (let ((amount (tn-value amount)))
 	 (if (minusp amount)
 	     (let ((amount (min 31 (- amount))))
-	       (sc-case number
-		 (unsigned-reg
-		  (inst srwi result number amount))
-		 (signed-reg
-		  (inst srawi result number amount))))
+	       (inst srwi result number amount))
+	     (inst slwi result number amount)))))))
+
+
+(define-vop (fast-ash/signed=>signed)
+  (:note "inline ASH")
+  (:args (number :scs (signed-reg) :to :save)
+	 (amount :scs (signed-reg immediate)))
+  (:arg-types (:or signed-num) signed-num)
+  (:results (result :scs (signed-reg)))
+  (:result-types (:or signed-num))
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:generator 3
+    (sc-case amount
+      (signed-reg
+       (let ((positive (gen-label))
+	     (done (gen-label)))
+	 (inst cmpwi amount 0)
+	 (inst neg ndesc amount)
+	 (inst bge positive)
+	 (inst cmpwi ndesc 31)
+	 (inst sraw result number ndesc)
+	 (inst ble done)
+	 (inst srawi result number 31)
+	 (inst b done)
+
+	 (emit-label positive)
+	 ;; The result-type assures us that this shift will not overflow.
+	 (inst slw result number amount)
+
+	 (emit-label done)))
+
+      (immediate
+       (let ((amount (tn-value amount)))
+	 (if (minusp amount)
+	     (let ((amount (min 31 (- amount))))
+	       (inst srawi result number amount))
 	     (inst slwi result number amount)))))))
 
 

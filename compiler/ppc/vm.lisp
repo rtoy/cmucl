@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.2 2001/02/11 16:43:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,6 +142,8 @@
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
+  (complex-single-stack non-descriptor-stack :element-size 2)
+  (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
 
   ;; **** Things that can go in the integer registers.
@@ -201,7 +203,7 @@
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
-   :locations (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31)
+   :locations #.(loop for i from 0 to 31 collect i)
    ;; ### Note: We really should have every location listed, but then we
    ;; would have to make load-tns work with element-sizes other than 1.
    :constant-scs ()
@@ -210,13 +212,26 @@
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-   :locations (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31)
+   :locations #.(loop for i from 0 to 31 collect i)
    ;; ### Note: load-tns don't work with an element-size other than 1.
    ;; :element-size 2 :alignment 2
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
 
+  (complex-single-reg float-registers
+   :locations #.(loop for i from 0 to 30 by 2 collect i)
+   :element-size 2
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-single-stack))
+
+  (complex-double-reg float-registers
+   :locations #.(loop for i from 0 to 30 by 2 collect i)
+   :element-size 2
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-stack))
 
   ;; A catch or unwind block.
   (catch-block control-stack :element-size vm:catch-block-size))

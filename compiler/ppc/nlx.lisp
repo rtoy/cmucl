@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/nlx.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/nlx.lisp,v 1.2 2001/02/11 16:43:19 dtc Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -25,6 +25,13 @@
    (make-representation-tn *fixnum-primitive-type* immediate-arg-scn)
    env))
 
+;;; Make-NLX-Entry-Argument-Start-Location  --  Interface
+;;;
+;;;    Make a TN for the argument count passing location for a
+;;; non-local entry.
+;;;
+(def-vm-support-routine make-nlx-entry-argument-start-location ()
+  (make-wired-tn *fixnum-primitive-type* immediate-arg-scn ocfp-offset))
 
 
 ;;; Save and restore dynamic environment.

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.1 2001/02/11 14:22:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.2 2001/02/11 16:43:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,7 +168,8 @@
 
 
 (define-vop (xep-allocate-frame)
-  (:info start-lab)
+  (:info start-lab copy-more-arg-follows)
+  (:ignore copy-more-arg-follows)
   (:vop-var vop)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 1

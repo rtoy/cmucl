@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.1 2001/02/11 14:22:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.2 2001/02/11 16:43:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -498,7 +498,7 @@
 
 ;;;;
 
-(def-ppc-iformat (xfx 32)
+(def-ppc-iformat (xfx)
   rt spr (xo xo21-30))
 
 (def-ppc-iformat (xfx-fxm '(:name :tab fxm "," rs))

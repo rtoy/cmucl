@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.2 2001/02/11 16:43:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,6 @@
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :big-endian)
 (setf (backend-page-size *target-backend*) 4096)
-(setf (c::backend-%features *target-backend*) '(:ppc :linux :new-assembler :new-random :signed-array))
 
 ); eval-when
 
@@ -199,6 +198,7 @@
     ;; The C startup code must fill these in.
     lisp::lisp-environment-list
     lisp::lisp-command-line-list
+    ext::*batch-mode*
     lisp::*initial-fdefn-objects*
 
     ;; Functions that the C code needs to call

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/type-vops.lisp,v 1.1 2001/02/11 14:22:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/type-vops.lisp,v 1.2 2001/02/11 16:43:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -113,7 +113,23 @@
   object-not-ratio-error vm:ratio-type)
 
 (def-type-vops complexp check-complex complex
-  object-not-complex-error vm:complex-type)
+  object-not-complex-error vm:complex-type
+  complex-single-float-type complex-double-float-type)
+
+(def-type-vops complex-rational-p check-complex-rational nil
+  object-not-complex-rational-error complex-type)
+
+(def-type-vops complex-float-p check-complex-float nil
+  object-not-complex-float-error
+  complex-single-float-type complex-double-float-type)
+
+(def-type-vops complex-single-float-p check-complex-single-float
+  complex-single-float object-not-complex-single-float-error
+  complex-single-float-type)
+
+(def-type-vops complex-double-float-p check-complex-double-float
+  complex-double-float object-not-complex-double-float-error
+  complex-double-float-type)
 
 (def-type-vops single-float-p check-single-float single-float
   object-not-single-float-error vm:single-float-type)
@@ -160,28 +176,24 @@
   object-not-simple-array-unsigned-byte-32-error
   vm:simple-array-unsigned-byte-32-type)
 
-#+signed-array
 (def-type-vops simple-array-signed-byte-8-p
   check-simple-array-signed-byte-8
   simple-array-signed-byte-8
   object-not-simple-array-signed-byte-8-error
   simple-array-signed-byte-8-type)
 
-#+signed-array
 (def-type-vops simple-array-signed-byte-16-p
   check-simple-array-signed-byte-16
   simple-array-signed-byte-16
   object-not-simple-array-signed-byte-16-error
   simple-array-signed-byte-16-type)
 
-#+signed-array
 (def-type-vops simple-array-signed-byte-30-p
   check-simple-array-signed-byte-30
   simple-array-signed-byte-30
   object-not-simple-array-signed-byte-30-error
   simple-array-signed-byte-30-type)
 
-#+signed-array
 (def-type-vops simple-array-signed-byte-32-p
   check-simple-array-signed-byte-32
   simple-array-signed-byte-32
@@ -195,6 +207,18 @@
 (def-type-vops simple-array-double-float-p check-simple-array-double-float
   simple-array-double-float object-not-simple-array-double-float-error
   vm:simple-array-double-float-type)
+
+(def-type-vops simple-array-complex-single-float-p
+  check-simple-array-complex-single-float
+  simple-array-complex-single-float
+  object-not-simple-array-complex-single-float-error
+  simple-array-complex-single-float-type)
+
+(def-type-vops simple-array-complex-double-float-p
+  check-simple-array-complex-double-float
+  simple-array-complex-double-float
+  object-not-simple-array-complex-double-float-error
+  simple-array-complex-double-float-type)
 
 (def-type-vops base-char-p check-base-char base-char
   object-not-base-char-error vm:base-char-type)
@@ -234,32 +258,45 @@
   vm:simple-bit-vector-type vm:complex-bit-vector-type)
 
 (def-type-vops vectorp check-vector nil object-not-vector-error
-  vm:simple-string-type vm:simple-bit-vector-type vm:simple-vector-type
-  vm:simple-array-unsigned-byte-2-type vm:simple-array-unsigned-byte-4-type
-  vm:simple-array-unsigned-byte-8-type vm:simple-array-unsigned-byte-16-type
-  vm:simple-array-unsigned-byte-32-type vm:simple-array-single-float-type
-  vm:simple-array-double-float-type vm:complex-string-type
-  vm:complex-bit-vector-type vm:complex-vector-type)
+  simple-string-type simple-bit-vector-type simple-vector-type
+  simple-array-unsigned-byte-2-type simple-array-unsigned-byte-4-type
+  simple-array-unsigned-byte-8-type simple-array-unsigned-byte-16-type
+  simple-array-unsigned-byte-32-type
+  simple-array-signed-byte-8-type simple-array-signed-byte-16-type
+  simple-array-signed-byte-30-type simple-array-signed-byte-32-type
+  simple-array-single-float-type simple-array-double-float-type
+  simple-array-complex-single-float-type
+  simple-array-complex-double-float-type
+  complex-string-type complex-bit-vector-type complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
-  vm:simple-array-type vm:simple-string-type vm:simple-bit-vector-type
-  vm:simple-vector-type vm:simple-array-unsigned-byte-2-type
-  vm:simple-array-unsigned-byte-4-type vm:simple-array-unsigned-byte-8-type
-  vm:simple-array-unsigned-byte-16-type vm:simple-array-unsigned-byte-32-type
-  vm:simple-array-single-float-type vm:simple-array-double-float-type)
+  simple-array-type simple-string-type simple-bit-vector-type
+  simple-vector-type simple-array-unsigned-byte-2-type
+  simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
+  simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
+  simple-array-signed-byte-8-type simple-array-signed-byte-16-type
+  simple-array-signed-byte-30-type simple-array-signed-byte-32-type
+  simple-array-single-float-type simple-array-double-float-type
+  simple-array-complex-single-float-type
+  simple-array-complex-double-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
-  vm:simple-array-type vm:simple-string-type vm:simple-bit-vector-type
-  vm:simple-vector-type vm:simple-array-unsigned-byte-2-type
-  vm:simple-array-unsigned-byte-4-type vm:simple-array-unsigned-byte-8-type
-  vm:simple-array-unsigned-byte-16-type vm:simple-array-unsigned-byte-32-type
-  vm:simple-array-single-float-type vm:simple-array-double-float-type
-  vm:complex-string-type vm:complex-bit-vector-type vm:complex-vector-type
-  vm:complex-array-type)
+  simple-array-type simple-string-type simple-bit-vector-type
+  simple-vector-type simple-array-unsigned-byte-2-type
+  simple-array-unsigned-byte-4-type simple-array-unsigned-byte-8-type
+  simple-array-unsigned-byte-16-type simple-array-unsigned-byte-32-type
+  simple-array-signed-byte-8-type simple-array-signed-byte-16-type
+  simple-array-signed-byte-30-type simple-array-signed-byte-32-type
+  simple-array-single-float-type simple-array-double-float-type
+  simple-array-complex-single-float-type
+  simple-array-complex-double-float-type
+  complex-string-type complex-bit-vector-type complex-vector-type
+  complex-array-type)
 
 (def-type-vops numberp check-number nil object-not-number-error
-  vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type vm:ratio-type
-  vm:single-float-type vm:double-float-type vm:complex-type)
+  even-fixnum-type odd-fixnum-type bignum-type ratio-type
+  single-float-type double-float-type complex-type
+  complex-single-float-type complex-double-float-type)
 
 (def-type-vops rationalp check-rational nil object-not-rational-error
   vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type)
