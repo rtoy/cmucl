@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.26 1991/11/09 22:07:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.27 1991/12/11 17:19:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,7 +171,8 @@
 ;;;
 (defun flush-full-call-tail-transfer (call)
   (declare (type basic-combination call))
-  (let ((tails (node-tail-p call)))
+  (let ((tails (and (node-tail-p call)
+		    (lambda-tail-set (node-home-lambda call)))))
     (when tails
       (cond ((eq (return-info-kind (tail-set-info tails)) :unknown)
 	     (node-ends-block call)
@@ -411,9 +412,11 @@
 
 ;;; LTN-Analyze-Local-Call  --  Internal
 ;;;
-;;;    Annotate the arguments as ordinary single-value continuations.  If a
-;;; tail call, swing the successor link to the start of the called function so
-;;; that the return can be deleted.
+;;;    Annotate the arguments as ordinary single-value continuations.  If the
+;;; call is a tail call, make sure that is linked directly to the bind node.
+;;; Usually it will be, but calls from XEPs and calls that might have needed a
+;;; cleanup after them won't have been swung over yet, since we weren't sure
+;;; they would really be TR until now.
 ;;;
 (defun ltn-analyze-local-call (call policy)
   (declare (type combination call)
@@ -425,12 +428,14 @@
       (annotate-ordinary-continuation arg policy)))
 
   (when (node-tail-p call)
-    (node-ends-block call)
-    (let ((block (node-block call)))
-      (unlink-blocks block (first (block-succ block)))
-      (link-blocks block
-		   (node-block (lambda-bind (combination-lambda call))))))
-
+    (let ((caller (node-home-lambda call))
+	  (callee (combination-lambda call)))
+      (assert (eq (lambda-tail-set caller)
+		  (lambda-tail-set (lambda-home callee))))
+      (node-ends-block call)
+      (let ((block (node-block call)))
+	(unlink-blocks block (first (block-succ block)))
+	(link-blocks block (node-block (lambda-bind callee))))))
   (undefined-value))
 
 
