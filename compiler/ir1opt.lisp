@@ -976,6 +976,56 @@
   (undefined-value))
 
 
+;;; CONSTANT-REFERENCE-P  --  Internal
+;;;
+;;;    Return true if the value of Ref will always be the same (and is thus
+;;; legal to substitute.)
+;;;
+(defun constant-reference-p (ref)
+  (declare (type ref ref))
+  (let ((leaf (ref-leaf ref)))
+    (typecase leaf
+      (constant t)
+      (functional t)
+      (lambda-var
+       (null (lambda-var-sets leaf)))
+      (global-var
+       (case (global-var-kind leaf)
+	 (:global-function
+	  (not (eq (ref-inlinep ref) :notinline)))
+	 (:constant t))))))
+
+
+;;; SUBSTITUTE-SINGLE-USE-CONTINUATION  --  Internal
+;;;
+;;;    If we have a non-set let var with a single use, then (if possible)
+;;; replace the variable reference's CONT with the arg continuation.  This is
+;;; inhibited when:
+;;; -- CONT has other uses, or
+;;; -- CONT receives multiple values, or
+;;; -- the reference is in a different environment from the variable.
+;;;
+;;;    We change the Ref to be a reference to NIL with unused value, and let it
+;;; be flushed as dead code.  A side-effect of this substitution is to delete
+;;; the variable.
+;;;
+(defun substitute-single-use-continuation (arg var)
+  (declare (type continuation arg) (type lambda-var var))
+  (let* ((ref (first (leaf-refs var)))
+	 (cont (node-cont ref))
+	 (dest (continuation-dest cont)))
+    (when (and (eq (continuation-use cont) ref)
+	       dest
+	       (not (typep dest '(or creturn exit mv-combination)))
+	       (eq (lambda-home (block-lambda (node-block ref)))
+		   (lambda-var-home var)))
+      (assert-continuation-type arg (continuation-asserted-type cont))
+      (change-ref-leaf ref (find-constant nil))
+      (substitute-continuation arg cont)
+      (reoptimize-continuation arg)
+      t)))
+
+
 ;;; Propagate-Let-Args  --  Internal
 ;;;
 ;;;    This function is called when one of the arguments to a LET changes.  We
@@ -1001,18 +1051,19 @@
 	      (cond
 	       ((lambda-var-sets var)
 		(propagate-from-sets var (continuation-type arg)))
-	       (t
-		(let ((use (continuation-use arg)))
+	       ((let ((use (continuation-use arg)))
 		  (when (ref-p use)
 		    (let ((leaf (ref-leaf use)))
-		      (when (and (or (constant-p leaf)
-				     (functional-p leaf)
-				     (and (lambda-var-p leaf)
-					  (null (lambda-var-sets leaf))))
+		      (when (and (constant-reference-p use)
 				 (values-subtypep
 				  (node-derived-type use)
 				  (continuation-asserted-type arg)))
-			(substitute-leaf leaf var)))))
+			(substitute-leaf leaf var)
+			(propagate-to-refs var (continuation-type arg))
+			t)))))
+	       ((and (null (rest (leaf-refs var)))
+		     (substitute-single-use-continuation arg var)))
+	       (t
 		(propagate-to-refs var (continuation-type arg))))))
 	(basic-combination-args call)
 	(lambda-vars fun))
