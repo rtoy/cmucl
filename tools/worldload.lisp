@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.47 1992/05/25 21:17:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.48 1992/07/13 01:51:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,11 +33,15 @@
       '(#+pmax "c:mips/"
         #+sparc "c:sparc/"
 	#+rt "c:rt/"
+	#+hppa "c:hppa/"
+	#+x86 "c:x86/"
 	"c:generic/"))
 (setf (ext:search-list "assem:")
       '(#+pmax "lisp:assembly/mips/"
 	#+sparc "lisp:assembly/sparc/"
 	#+rt "lisp:assembly/rt/"
+	#+hppa "lisp:assembly/hppa/"
+	#+x86 "lisp:assembly/x86/"
 	"lisp:assembly/"))
 (setf (ext:search-list "hem:") '("lisp:hemlock/"))
 (setf (ext:search-list "clx:") '("lisp:clx/"))
