@@ -1352,6 +1352,7 @@ work during bootstrapping.
 
 
 
+#-cmu ;; CMUCL Has a real symbol-macrolet
 (defmacro symbol-macrolet (bindings &body body &environment env)
   (let ((specs (mapcar #'(lambda (binding)
 			   (list (car binding)
@@ -1397,6 +1398,7 @@ work during bootstrapping.
 			       slots)
           ,@body))))))
 
+#-cmu ;; CMUCL Has a real symbol-macrolet
 (defun expand-symbol-macrolet-internal (specs form context env)
   (let ((entry nil))
     (cond ((not (eq context :eval)) form)
