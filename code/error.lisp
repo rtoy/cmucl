@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.34 1993/08/30 21:24:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.35 1993/08/31 09:02:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -541,6 +541,12 @@
 	  (mapcar #'find-class direct-supers))
     (cond ((not old-layout)
 	   (register-layout layout))
+	  ((not *type-system-initialized*)
+	   (setf (layout-info old-layout) (layout-info layout))
+	   (setf (layout-class old-layout) class)
+	   (setq layout old-layout)
+	   (unless (eq (class-layout class) layout)
+	     (register-layout layout)))
 	  ((redefine-layout-warning old-layout "current"
 				    layout "new")
 	   (register-layout layout :invalidate t)))
@@ -910,6 +916,12 @@
 (define-condition floating-point-underflow (arithmetic-error) ())
 (define-condition floating-point-inexact   (arithmetic-error) ())
 (define-condition floating-point-invalid-operation   (arithmetic-error) ())
+
+;;; This condition is signalled whenever we make a UNKNOWN-TYPE so that
+;;; compiler warnings can be emitted as appropriate.
+;;;
+(define-condition parse-unknown-type (condition)
+  ((specifier :reader parse-unknown-type-specifier :initarg :specifier)))
 
 
 ;;;; HANDLER-CASE and IGNORE-ERRORS.
