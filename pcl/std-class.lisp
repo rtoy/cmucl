@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.48 2003/03/30 21:17:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.49 2003/04/03 11:40:37 gerd Exp $")
 
 (in-package :pcl)
 
@@ -368,7 +368,7 @@
   (multiple-value-bind (meta initargs)
       (ensure-class-values class args)
     (unless (eq (class-of class) meta)
-      (change-class class meta))
+      (apply #'change-class class meta initargs))
     (apply #'reinitialize-instance class initargs)
     (setf (find-class name) class)
     (inform-type-system-about-class class name)
