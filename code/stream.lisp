@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.68 2004/03/26 18:22:54 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.69 2004/04/06 11:41:54 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -972,7 +972,7 @@ streams."
 	     (when res (setq min (if min (min res min) res)))))))
       (:element-type
        (let (res)
-	 (dolist (stream streams (if (> (length res) 1) `(and ,@res) res))
+	 (dolist (stream streams (if (> (length res) 1) `(and ,@res) t))
 	   (pushnew (stream-element-type stream) res :test #'equal))))
       (:close)
       (t
@@ -1419,7 +1419,11 @@ output to Output-stream"
      (if arg1
 	 (setf (string-input-stream-current stream) arg1)
 	 (string-input-stream-current stream)))
-    (:file-length (length (string-input-stream-string stream)))
+    (:file-length
+     ;; emarsden2004-04-06 this is not ANSI-conforming: if the stream
+     ;; argument to FILE-LENGTH is not a stream associated with a file,
+     ;; we should signal a type-error 
+     (length (string-input-stream-string stream)))
     (:unread (decf (string-input-stream-current stream)))
     (:listen (or (/= (the fixnum (string-input-stream-current stream))
 		     (the fixnum (string-input-stream-end stream)))
@@ -2530,19 +2534,17 @@ SEQ:	a proper SEQUENCE
 	     (declare (type index i sv-len))
 	     (write-byte (aref seq i) stream)))))
 
-
 (defun write-vector-out (seq stream start end)
-  (when (not (subtypep (stream-element-type stream) 'integer))
-    (error 'type-error
-	   :datum (elt seq 0)
-	   :expected-type (stream-element-type stream)
-	   :format-control "Trying to output binary data to a text stream."))
-  (do ((i start (1+ i))
-       (a-len (length seq))
-       )
-      ((or (>= i end) (>= i a-len)) seq)
-    (declare (type index i a-len))
-    (write-byte (aref seq i) stream)))
+  (let ((write-function
+         (if (subtypep (stream-element-type stream) 'character)
+             #'write-char
+             #'write-byte)))
+    (do ((i start (1+ i))
+         (a-len (length seq))
+         )
+        ((or (>= i end) (>= i a-len)) seq)
+      (declare (type index i a-len))
+      (funcall write-function (aref seq i) stream))))
 
 (declaim (end-block))			; WRITE-SEQUENCE block.
 #||
