@@ -844,7 +844,9 @@
 			 (index-ceiling x 8))
 		 (index+ start padded-bytes-per-line))
 	  (y 0 (index1+ y))
-	  (left-bits (index-mod (index- x) 8))
+	  (left-bits (the array-index
+			  (mod (the (integer #x-FFFF 0) (- x))
+			       8)))
 	  (right-bits (index-mod (index- width left-bits) 8))
 	  (middle-bits (index- width left-bits right-bits))
 	  (middle-bytes (index-floor middle-bits 8)))
