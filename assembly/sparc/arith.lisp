@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.13 1994/10/31 04:57:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.14 1999/11/11 16:40:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -466,12 +466,12 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst cmp x y)
-  (inst b :eq RETURN-T)
   (inst andcc zero-tn x 3)
   (inst b :ne DO-STATIC-FN)
   (inst andcc zero-tn y 3)
   (inst b :ne DO-STATIC-FN)
+  (inst cmp x y)
+  (inst b :eq RETURN-T)
   (inst nop)
 
   (inst move res null-tn)
