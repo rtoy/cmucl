@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.87 2004/06/01 23:14:26 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.88 2004/07/25 19:25:25 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1342,6 +1342,7 @@
     (setf (gethash (car symbol) *foreign-symbols*) (cdr symbol)))
   (makunbound '*initial-assembler-routines*)
   (makunbound '*initial-foreign-symbols*)
+  #+linkage-table
   (foreign-linkage-init))
 
 #-linkage-table
