@@ -33,8 +33,9 @@
 ;;; continuation can represent the case of a discarded result by having no
 ;;; DEST. 
 
-(defstruct (continuation (:print-function %print-continuation)
-			 (:constructor make-continuation (&optional dest)))
+(defstruct (continuation
+	    (:print-function %print-continuation)
+	    (:constructor really-make-continuation (&optional dest)))
   ;;
   ;; An indication of the way that this continuation is currently used:
   ;;
@@ -176,13 +177,13 @@
   ;; null.  The real value is then found in the Default-Cookie.  The
   ;; Default-Cookie must also be kept in the node since it changes when
   ;; we run into a Proclaim duing IR1 conversion.
-  (cookie *current-cookie* :type cookie :read-only t)
-  (default-cookie *default-cookie* :type cookie :read-only t)
+  (cookie *current-cookie* :type cookie)
+  (default-cookie *default-cookie* :type cookie)
   ;;
   ;; Source code for this node.  This is used to provide context in messages to
   ;; the user, since it may be hard to reconstruct the source from the internal
   ;; representation.
-  (source nil :type t :read-only t)
+  (source nil :type t)
   ;;
   ;; A representation of the location in the original source of the form
   ;; responsible for generating this node.  The first element in this list is
@@ -200,7 +201,7 @@
   ;; code resulting from macroexpansion.  The last element in the list is the
   ;; top-level form number, which is the ordinal number (in this call to the
   ;; compiler) of the truly top-level form containing the orignal source
-  (source-path *current-path* :type list :read-only t)
+  (source-path *current-path* :type list)
   ;;
   ;; If this node is in a tail-recursive position, then this is set to the
   ;; corresponding Tail-Set.  This is first computed at the end of IR1 (after
@@ -216,7 +217,7 @@
 ;;;
 (defstruct (cblock (:print-function %print-block)
 		   (:include sset-element)
-		   (:constructor make-block (start))
+		   (:constructor really-make-block (start))
 		   (:constructor make-block-key)
 		   (:conc-name block-)
 		   (:predicate block-p)
@@ -619,8 +620,12 @@
 ;;; someone wants to know, an approximation is there.
 ;;;
 (defstruct (functional (:include leaf
-			 (:where-from :defined)
-			 (:type (specifier-type 'function))))
+				 (:where-from :defined)
+				 (:type (specifier-type 'function)))
+		       (:print-function %print-functional))
+  ;;        
+  ;;        
+  ;;        
   ;;
   ;; Some information about how this function is used.  These values are
   ;; meaningful:
@@ -654,6 +659,12 @@
   ;;        context.  A top-level lambda should have *no* references.  Its
   ;;        Entry-Function is a self-pointer.
   ;;
+  ;;    :Top-Level-XEP
+  ;;        After a component is compiled, we clobber any top-level code
+  ;;        references to its non-closure XEPs with dummy FUNCTIONAL structures
+  ;;        having this kind.  This prevents the retained top-level code from
+  ;;        holding onto the IR for the code it references.
+  ;;
   ;;    :Escape
   ;;    :Cleanup
   ;;        Special functions used internally by Catch and Unwind-Protect.
@@ -668,7 +679,7 @@
   ;;        marked for deletion.
   ;;
   (kind nil :type (member nil :optional :deleted :external :top-level :escape
-			  :cleanup :let :mv-let))
+			  :cleanup :let :mv-let :top-level-xep))
   ;;
   ;; In a normal function, this is the external entry point (XEP) lambda for
   ;; this function, if any.  Each function that is used other than in a local
@@ -697,6 +708,9 @@
   (venv *venv*)
   (benv *benv*)
   (tenv *tenv*))
+
+(defprinter functional
+  name)
 
 
 ;;; The Lambda only deals with required lexical arguments.  Special, optional,
@@ -930,9 +944,10 @@
 ;;; forever) NIL, since Refs don't receive any values and don't have any IR1
 ;;; optimizer.
 ;;;
-(defstruct (ref (:include node (:reoptimize nil))
-		(:constructor make-ref (derived-type source leaf inlinep))
-		(:print-function %print-ref))
+(defstruct (ref
+	    (:include node (:reoptimize nil))
+	    (:constructor really-make-ref (derived-type source leaf inlinep))
+	    (:print-function %print-ref))
   ;;
   ;; The leaf referenced.
   (leaf nil :type leaf)
@@ -1022,7 +1037,7 @@
 ;;; isn't Combination-P.
 ;;;
 (defstruct (combination (:include basic-combination)
-			(:constructor make-combination (source fun))
+			(:constructor really-make-combination (source fun))
 			(:print-function %print-combination)))
 
 (defprinter combination
