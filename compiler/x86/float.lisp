@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.11 1997/11/04 09:11:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.12 1997/11/05 14:59:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -258,7 +258,7 @@
        (let ((x-real (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
 				     :offset (tn-offset x)))
 	     (y-real (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				     :offset (tn-offset x))))
+				     :offset (tn-offset y))))
 	 (cond ((zerop (tn-offset y-real))
 		(copy-fp-reg-to-fr0 x-real))
 	       ((zerop (tn-offset x-real))
@@ -270,7 +270,7 @@
        (let ((x-imag (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
 				     :offset (1+ (tn-offset x))))
 	     (y-imag (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				     :offset (1+ (tn-offset x)))))
+				     :offset (1+ (tn-offset y)))))
 	 (inst fxch x-imag)
 	 (inst fstd y-imag)
 	 (inst fxch x-imag)))))
@@ -298,9 +298,10 @@
 (define-vop (move-from-single)
   (:args (x :scs (single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:node-var node)
   (:note "float to pointer coercion")
   (:generator 13
-     (fixed-allocation y vm:single-float-type vm:single-float-size)
+     (fixed-allocation y vm:single-float-type vm:single-float-size node)
      (with-tn@fp-top(x)
        (inst fst (ea-for-sf-desc y)))))
 (define-move-vop move-from-single :move
@@ -319,9 +320,10 @@
 (define-vop (move-from-double)
   (:args (x :scs (double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:node-var node)
   (:note "float to pointer coercion")
   (:generator 13
-     (fixed-allocation y vm:double-float-type vm:double-float-size)
+     (fixed-allocation y vm:double-float-type vm:double-float-size node)
      (with-tn@fp-top(x)
        (inst fstd (ea-for-df-desc y)))))
 (define-move-vop move-from-double :move
@@ -365,10 +367,11 @@
 (define-vop (move-from-complex-single)
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:node-var node)
   (:note "complex float to pointer coercion")
   (:generator 13
      (fixed-allocation y vm:complex-single-float-type
-		       vm:complex-single-float-size)
+		       vm:complex-single-float-size node)
      (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
 				    :offset (tn-offset x))))
        (with-tn@fp-top(real-tn)
@@ -383,10 +386,11 @@
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
+  (:node-var node)
   (:note "complex float to pointer coercion")
   (:generator 13
      (fixed-allocation y vm:complex-double-float-type
-		       vm:complex-double-float-size)
+		       vm:complex-double-float-size node)
      (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
 				    :offset (tn-offset x))))
        (with-tn@fp-top(real-tn)
@@ -499,7 +503,7 @@
 			       (y-real
 				(make-random-tn :kind :normal
 						:sc (sc-or-lose 'double-reg)
-						:offset (tn-offset x))))
+						:offset (tn-offset y))))
 			   (cond ((zerop (tn-offset y-real))
 				  (copy-fp-reg-to-fr0 x-real))
 				 ((zerop (tn-offset x-real))
@@ -515,7 +519,7 @@
 			       (y-imag
 				(make-random-tn :kind :normal
 						:sc (sc-or-lose 'double-reg)
-						:offset (1+ (tn-offset x)))))
+						:offset (1+ (tn-offset y)))))
 			   (inst fxch x-imag)
 			   (inst fstd y-imag)
 			   (inst fxch x-imag))))
@@ -2562,11 +2566,6 @@
 	    complex-single-float-real complex-double-float-real
 	    complex-single-float-imag complex-double-float-imag)))
 
-(defknown make-complex-single-float (single-float single-float)
-  (complex single-float) (flushable))
-(defknown make-complex-double-float (double-float double-float)
-  (complex double-float) (flushable))
-
 (define-vop (make-complex-float)
   (:args (x :target r)
 	 (y :to :save))
@@ -2595,7 +2594,7 @@
 	       (inst fxch y)))))))
 
 (define-vop (make-complex-single-float make-complex-float)
-  (:translate make-complex-single-float)
+  (:translate complex)
   (:args (x :scs (single-reg) :target r)
 	 (y :scs (single-reg) :to :save))
   (:arg-types single-float single-float)
@@ -2603,7 +2602,7 @@
   (:result-types complex-single-float))
 
 (define-vop (make-complex-double-float make-complex-float)
-  (:translate make-complex-double-float)
+  (:translate complex)
   (:args (x :scs (double-reg) :target r)
 	 (y :scs (double-reg) :to :save))
   (:arg-types double-float double-float)

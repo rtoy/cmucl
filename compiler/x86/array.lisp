@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.7 1997/11/04 09:10:58 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.8 1997/11/05 14:59:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,6 +33,7 @@
   (:temporary (:sc any-reg :to :eval) bytes)
   (:temporary (:sc any-reg :to :result) header)
   (:results (result :scs (descriptor-reg) :from :eval))
+  (:node-var node)
   (:generator 13
     (inst lea bytes
 	  (make-ea :dword :base rank
@@ -44,7 +45,7 @@
     (inst shl header type-bits)
     (inst or  header type)
     (inst shr header 2)
-    (var-allocation result bytes)
+    (allocation result bytes node)
     (inst lea result (make-ea :dword :base result :disp other-pointer-type))
     (storew header result 0 other-pointer-type)))
 

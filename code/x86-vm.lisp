@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 ;(ext:file-comment
-;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.5 1997/11/01 22:58:21 dtc Exp $")
+;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.6 1997/11/05 14:59:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -403,11 +403,11 @@
 (progn
 (defun make-complex-single-float (x y)
   (declare (type single-float x y))
-  (the (complex single-float) (make-complex-single-float x y)))
+  (truly-the (complex single-float) (complex x y)))
 
 (defun make-complex-double-float (x y)
   (declare (type double-float x y))
-  (the (complex double-float) (make-complex-double-float x y)))
+  (truly-the (complex double-float) (complex x y)))
 
 (defun complex-single-float-real (x)
   (declare (type (complex single-float) x))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.3 1997/11/04 09:11:11 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.4 1997/11/05 14:59:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,6 +300,7 @@
   (:args (x :scs (signed-reg unsigned-reg) :to :result))
   (:results (y :scs (any-reg descriptor-reg) :from :argument))
   (:note "signed word to integer coercion")
+  (:node-var node)
   (:generator 20
      (assert (not (location= x y)))
      (let ((bignum (gen-label))
@@ -313,7 +314,7 @@
 
        (assemble (*elsewhere*)
           (emit-label bignum)
-	  (fixed-allocation y bignum-type (+ bignum-digits-offset 1))
+	  (fixed-allocation y bignum-type (+ bignum-digits-offset 1) node)
 	  (storew x y bignum-digits-offset other-pointer-type)
 	  (inst jmp done)))))
 ;;;
@@ -346,6 +347,7 @@
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
   (:temporary (:sc dword-reg) alloc)
   (:results (y :scs (any-reg descriptor-reg)))
+  (:node-var node)
   (:note "unsigned word to integer coercion")
   (:generator 20
     (assert (not (location= x y)))
@@ -377,7 +379,7 @@
 	 (inst mov y (logior (ash (1- (+ bignum-digits-offset 1)) vm:type-bits)
 			     bignum-type))
 	 (emit-label l1)
-	 (allocation alloc (pad-data-block (+ bignum-digits-offset 2)))
+	 (allocation alloc (pad-data-block (+ bignum-digits-offset 2)) node)
 	 (storew y alloc)
 	 (inst lea y (make-ea :byte :base alloc :disp other-pointer-type))
 	 (storew x y bignum-digits-offset other-pointer-type)

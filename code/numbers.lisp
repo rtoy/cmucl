@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.29 1997/11/01 22:58:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.30 1997/11/05 14:59:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.29 1997/11/01 22:58:17 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.30 1997/11/05 14:59:45 dtc Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -215,10 +215,12 @@
       #+complex-float
       (cond ((and (typep realpart 'double-float)
 		  (typep imagpart 'double-float))
-	     (vm::make-complex-double-float realpart imagpart))
+	     (truly-the (complex double-float)
+			(complex realpart imagpart)))
 	    ((and (typep realpart 'single-float)
 		  (typep imagpart 'single-float))
-	     (vm::make-complex-single-float realpart imagpart))
+	     (truly-the (complex single-float)
+			(complex realpart imagpart)))
 	    (t
 	     (%make-complex realpart imagpart)))
       #-complex-float
@@ -275,10 +277,12 @@
   (flet ((%%make-complex (realpart imagpart)
 	   (cond ((and (typep realpart 'double-float)
 		       (typep imagpart 'double-float))
-		  (vm::make-complex-double-float realpart imagpart))
+		  (truly-the (complex double-float)
+			     (complex realpart imagpart)))
 		 ((and (typep realpart 'single-float)
 		       (typep imagpart 'single-float))
-		  (vm::make-complex-single-float realpart imagpart))
+		  (truly-the (complex single-float)
+			     (complex realpart imagpart)))
 		 (t
 		  (%make-complex realpart imagpart)))))
   (number-dispatch ((realpart real) (imagpart real))

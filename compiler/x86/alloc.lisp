@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.3 1997/11/04 09:10:55 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.4 1997/11/05 14:59:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,7 @@
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
   (:policy :safe)
+  (:node-var node)
   (:generator 0
     (cond ((zerop num)
 	   ;; (move result nil-value)
@@ -49,7 +50,7 @@
 			     temp))))
 		     (storew reg ,list ,slot vm:list-pointer-type))))
 	     (let ((cons-cells (if star (1- num) num)))
-	       (allocation res (* (pad-data-block cons-size) cons-cells))
+	       (allocation res (* (pad-data-block cons-size) cons-cells) node)
 	       (inst lea res (make-ea :byte :base res :disp list-pointer-type))
 	       (move ptr res)
 	       (dotimes (i (1- cons-cells))
@@ -114,6 +115,7 @@
   (:results (result :scs (descriptor-reg) :from :eval))
   (:temporary (:sc dword-reg :from (:argument 0)) boxed)
   (:temporary (:sc dword-reg :from (:argument 1)) unboxed)
+  (:node-var node)
   (:generator 100
     (move boxed boxed-arg)
     (inst add boxed (fixnum (1+ code-trace-table-offset-slot)))
@@ -124,7 +126,7 @@
     (inst and unboxed (lognot lowtag-mask))
     (inst mov result boxed)
     (inst add result unboxed)
-    (var-allocation result result)
+    (allocation result result node)
     (inst lea result (make-ea :byte :base result :disp other-pointer-type))
     (inst shl boxed (- type-bits word-shift))
     (inst or boxed code-header-type)
@@ -139,8 +141,9 @@
   (:translate make-fdefn)
   (:args (name :scs (descriptor-reg) :to :eval))
   (:results (result :scs (descriptor-reg) :from :argument))
+  (:node-var node)
   (:generator 37
-    (fixed-allocation result fdefn-type fdefn-size)
+    (fixed-allocation result fdefn-type fdefn-size node)
     (storew name result fdefn-name-slot other-pointer-type)
     (storew nil-value result fdefn-function-slot other-pointer-type)
     (storew (make-fixup (extern-alien-name "undefined_tramp") :foreign) result
@@ -152,9 +155,10 @@
   (:info length)
   (:temporary (:sc any-reg) temp)
   (:results (result :scs (descriptor-reg)))
+  (:node-var node)
   (:generator 10
    (let ((size (+ length closure-info-offset)))
-     (allocation result (pad-data-block size))
+     (allocation result (pad-data-block size) node)
      (inst lea result (make-ea :byte :base result :disp function-pointer-type))
      (storew (logior (ash (1- size) type-bits) closure-header-type)
 	     result 0 function-pointer-type))
@@ -166,8 +170,9 @@
 (define-vop (make-value-cell)
   (:args (value :scs (descriptor-reg any-reg) :to :result))
   (:results (result :scs (descriptor-reg) :from :eval))
+  (:node-var node)
   (:generator 10
-    (fixed-allocation result value-cell-header-type value-cell-size)
+    (fixed-allocation result value-cell-header-type value-cell-size node)
     (storew value result value-cell-value-slot other-pointer-type)))
 
 
@@ -185,8 +190,9 @@
   (:info name words type lowtag)
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
+  (:node-var node)
   (:generator 50
-    (allocation result (pad-data-block words))
+    (allocation result (pad-data-block words) node)
     (inst lea result (make-ea :byte :base result :disp lowtag))
     (when type
       (storew (logior (ash (1- words) type-bits) type) result 0 lowtag))))
@@ -199,6 +205,7 @@
   (:results (result :scs (descriptor-reg) :from (:eval 1)))
   (:temporary (:sc any-reg :from :eval :to (:eval 1)) bytes)
   (:temporary (:sc any-reg :from :eval :to :result) header)
+  (:node-var node)
   (:generator 50
     (inst lea bytes
 	  (make-ea :dword :base extra :disp (* (1+ words) word-bytes)))
@@ -208,7 +215,7 @@
     (inst lea header			; (w-1 << 8) | type
 	  (make-ea :dword :base header :disp (+ (ash -2 type-bits) type)))
     (inst and bytes (lognot lowtag-mask))
-    (var-allocation result bytes)
+    (allocation result bytes node)
     (inst lea result (make-ea :byte :base result :disp lowtag))
     (storew header result 0 lowtag)))
 
@@ -220,8 +227,9 @@
   (:args (name :scs (descriptor-reg) :to :eval))
   (:temporary (:sc dword-reg :from :eval) temp)
   (:results (result :scs (descriptor-reg) :from :argument))
+  (:node-var node)
   (:generator 37
-    (fixed-allocation result symbol-header-type symbol-size)
+    (fixed-allocation result symbol-header-type symbol-size node)
     (storew name result symbol-name-slot other-pointer-type)
     (storew unbound-marker-type result symbol-value-slot other-pointer-type)
     ;; Setup a random hash value for the symbol.  Perhaps the object

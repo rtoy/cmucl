@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.4 1997/11/04 09:11:00 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.5 1997/11/05 14:59:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1434,6 +1434,7 @@
   (:temporary (:sc dword-reg :offset eax-offset) eax)
   (:temporary (:sc dword-reg) dst)
   (:results (result :scs (descriptor-reg)))
+  (:node-var node)
   (:generator 20
     (move src context)
     (move ecx count)
@@ -1441,7 +1442,7 @@
     (inst mov result nil-value)
     (inst jecxz done)
     (inst lea dst (make-ea :dword :index ecx :scale 2))
-    (var-allocation dst dst)
+    (allocation dst dst node)
     (inst lea dst (make-ea :byte :base dst :disp list-pointer-type))
     ;; Convert the count into a raw value, so we can use the LOOP inst.
     (inst shr ecx 2)

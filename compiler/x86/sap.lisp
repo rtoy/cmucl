@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.4 1997/11/04 09:11:15 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.5 1997/11/05 14:59:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,8 +42,9 @@
   (:args (sap :scs (sap-reg) :to :result))
   (:results (res :scs (descriptor-reg) :from :argument))
   (:note "SAP to pointer coercion") 
+  (:node-var node)
   (:generator 20
-    (fixed-allocation res sap-type sap-size)
+    (fixed-allocation res sap-type sap-size node)
     (storew sap res sap-pointer-slot other-pointer-type)))
 	   
 ;;;
