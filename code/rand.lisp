@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.9 1997/06/05 00:20:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.10 1997/06/11 18:32:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -239,7 +239,7 @@
 #+new-random
 (in-package "KERNEL")
 #+new-random
-(export '(%random-single-float %random-double-float random-chunk-max))
+(export '(%random-single-float %random-double-float))
 
 
 #+new-random
@@ -479,14 +479,17 @@
 
 ;;;; Random integers:
 
-;;; We generate a random float and extract this many bits from it. The
-;;; random integer is created by concatenating a bunch of these
-;;; together.  31 has the nice property that Python doesn't have to
-;;; box it up, and that Python can optimize the truncate call because
-;;; the result is a (signed-byte 32).
+;;; Random integers are created by concatenating a bunch of chunks
+;;; together. Chunks are generated without consing by truncating a
+;;; random float to an integer. With the latest propagate-float-type
+;;; code the compiler can inline truncate (signed-byte 32) allowing 31
+;;; bits, and (unsigned-byte 32) 32 bits on the x86. When not using the
+;;; propagate-float-type feature the best size that can be inlined is
+;;; 29 bits.  Use of sizes greater than 29 bits causes consing in
+;;; argument passing to generic functions, so 29 bits is a good
+;;; default.
 ;;;
 (defconstant random-chunk-size 29)
-(defconstant random-chunk-max (1- (expt 2 random-chunk-size)))
 
 ;;; %RANDOM-INTEGER -- Internal
 ;;;
@@ -497,7 +500,7 @@
   (declare (type (integer 1) arg)
 	   (type random-state state))
   (flet ((random-chunk (state)
-	   (values (truncate (* (float (1+ random-chunk-max) 1d0)
+	   (values (truncate (* (float (expt 2 random-chunk-size) 1d0)
 				(new-random-float state))))))
     (let ((shift random-chunk-size))
       (do ((bits (random-chunk state)
