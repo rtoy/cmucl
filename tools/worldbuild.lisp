@@ -82,6 +82,7 @@
     "target:code/stream"
     "target:code/fd-stream"
     "target:code/print"
+    "target:code/pprint"
     "target:code/format"
     "target:code/package"
     "target:code/reader"
