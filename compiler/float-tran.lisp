@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.70 1998/07/24 17:22:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.71 1998/08/22 11:23:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1146,15 +1146,15 @@
 	       (deftransform - ((w z) ((complex ,type) (complex ,type)) *)
 		 '(complex (- (realpart w) (realpart z))
 			   (- (imagpart w) (imagpart z))))
-	       ;; Add and subtract a complex and a float
-	       (deftransform + ((w z) ((complex ,type) ,type) *)
+	       ;; Add and subtract a complex and a real
+	       (deftransform + ((w z) ((complex ,type) real) *)
 		 '(complex (+ (realpart w) z) (imagpart w)))
-	       (deftransform + ((z w) (,type (complex ,type)) *)
+	       (deftransform + ((z w) (real (complex ,type)) *)
 		 '(complex (+ (realpart w) z) (imagpart w)))
-	       ;; Add and subtract a float and a complex number
-	       (deftransform - ((w z) ((complex ,type) ,type) *)
+	       ;; Add and subtract a real and a complex number
+	       (deftransform - ((w z) ((complex ,type) real) *)
 		 '(complex (- (realpart w) z) (imagpart w)))
-	       (deftransform - ((z w) (,type (complex ,type)) *)
+	       (deftransform - ((z w) (real (complex ,type)) *)
 		 '(complex (- z (realpart w)) (- (imagpart w))))
 	       ;; Multiply and divide two complex numbers
 	       (deftransform * ((x y) ((complex ,type) (complex ,type)) *)
@@ -1178,13 +1178,13 @@
 			       (dn (* iy (+ 1 (* r r)))))
 			  (complex (/ (+ (* rx r) ix) dn)
 				   (/ (- (* ix r) rx) dn))))))
-	       ;; Multiply a complex by a float or vice versa
-	       (deftransform * ((w z) ((complex ,type) ,type) *)
+	       ;; Multiply a complex by a real or vice versa
+	       (deftransform * ((w z) ((complex ,type) real) *)
 		 '(complex (* (realpart w) z) (* (imagpart w) z)))
-	       (deftransform * ((z w) (,type (complex ,type)) *)
+	       (deftransform * ((z w) (real (complex ,type)) *)
 		 '(complex (* (realpart w) z) (* (imagpart w) z)))
-	       ;; Divide a complex by a float
-	       (deftransform / ((w z) ((complex ,type) ,type) *)
+	       ;; Divide a complex by a real
+	       (deftransform / ((w z) ((complex ,type) real) *)
 		 '(complex (/ (realpart w) z) (/ (imagpart w) z)))
 	       ;; Conjugate of complex number
 	       (deftransform conjugate ((z) ((complex ,type)) *)
