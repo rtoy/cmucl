@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.18 1992/08/03 12:44:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.19 1992/10/09 14:16:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,6 +162,8 @@
       (dolist (entry (ir2-component-entries 2comp))
 	(make-function-entry entry code-obj object))
       
+      (vm:sanctify-for-execution code-obj)
+
       (let ((info (debug-info-for-component component)))
 	(push info (core-object-debug-info object))
 	(setf (code-header-ref code-obj vm:code-debug-info-slot) info))
