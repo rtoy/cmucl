@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.66 1997/11/07 19:24:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.67 1998/01/16 07:22:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1126,9 +1126,9 @@
 ;;;
 
 (defvar *load-byte-compiled-code-to-dynamic-space* t)
-(defvar *load-x86-tlf-to-dynamic-space* nil)  ; potentially dangerous.
+(defvar *load-x86-tlf-to-dynamic-space* nil)  ; potentially dangerous with CGC.
 (defvar *load-code-verbose* nil)
-(defvar *enable-dynamic-space-code* nil) ; experimental
+(defvar *enable-dynamic-space-code* #-gencgc nil #+gencgc t)
 
 #+x86
 (defun load-code (box-num code-length)

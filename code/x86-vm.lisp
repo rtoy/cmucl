@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.11 1997/12/17 22:46:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.12 1998/01/16 07:22:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,73 +125,117 @@
 
 
 
-;;; FIXUP-CODE-OBJECT -- Interface
+;;; Fixup-Code-Object -- Interface
+;;;
 ;;; This gets called by LOAD to resolve newly positioned objects
 ;;; with things (like code instructions) that have to refer to them.
-
+;;;
 ;;; Add a fixup offset to the vector of fixup offsets for the given
 ;;; code object.
 ;;;
 ;;; Counter to measure the storage overhead.
 (defvar *num-fixups* 0)
 ;;;
-(defun add-fixup (code offset)
-  ;; Although this could check for and ignore fixups for code objects
-  ;; in the read-only and static spaces, this should only be the case
-  ;; when *enable-dynamic-space-code* is True.
-  (when lisp::*enable-dynamic-space-code*
-    (incf *num-fixups*)
-    (let ((fixups (code-header-ref code code-constants-offset)))
-      (cond ((typep fixups '(simple-array (unsigned-byte 32) (*)))
-	     (let ((new-fixups
-		    (adjust-array fixups (1+ (length fixups))
-				  :element-type '(unsigned-byte 32))))
-	       (setf (aref new-fixups (length fixups)) offset)
-	       (setf (code-header-ref code code-constants-offset)
-		     new-fixups)))
-	    (t
-	     (unless (or (eq (get-type fixups) x86:unbound-marker-type)
-			 (zerop fixups))
-	       (format t "** Init. code FU = ~s~%" fixups))
-	     (setf (code-header-ref code code-constants-offset)
-		   (make-array 1 :element-type '(unsigned-byte 32)
-			       :initial-element offset)))))))
-
-
 (defun fixup-code-object (code offset fixup kind)
   (declare (type index offset))
-  (system:without-gcing
-   (let* ((sap (truly-the system-area-pointer (c::code-instructions code)))
-	  (obj-start-addr (logand (kernel::get-lisp-obj-address code)
-				  #xfffffff8))
-	  #+nil (const-start-addr (+ obj-start-addr (* 5 4)))
-	  (code-start-addr (c::sap-int (kernel::code-instructions code)))
-	  (ncode-words (kernel::code-header-ref code 1))
-	  (code-end-addr (+ code-start-addr (* ncode-words 4))))
-     (unless (member kind '(:absolute :relative))
-       (error "Unknown code-object-fixup kind ~s." kind))
-     (ecase kind
-       (:absolute
-	;; word at sap + offset contains a value to be replaced by
-	;; adding that value to fixup.
-	(setf (sap-ref-32 sap offset) (+ fixup (sap-ref-32 sap offset)))
-	;; Record absolute fixups that point within the code object.
-	(when (> code-end-addr (sap-ref-32 sap offset) obj-start-addr)
-	  (add-fixup code offset)))
-       (:relative
-	;; Fixup is the actual address wanted.
-	;;
-	;; Record relative fixups that point outside the code object.
-	(when (or (< fixup obj-start-addr) (> fixup code-end-addr))
-	  (add-fixup code offset))
-	;; Replace word with value to add to that loc to get there.
-	(let* ((loc-sap (+ (sap-int sap) offset))
-	       (rel-val (- fixup loc-sap 4)))
-	  (declare (type (unsigned-byte 32) loc-sap)
-		   (type (signed-byte 32) rel-val))
-	  (setf (signed-sap-ref-32 sap offset) rel-val))))))
-  nil)
+  (flet ((add-fixup (code offset)
+	   ;; Although this could check for and ignore fixups for code
+	   ;; objects in the read-only and static spaces, this should
+	   ;; only be the case when *enable-dynamic-space-code* is
+	   ;; True.
+	   (when lisp::*enable-dynamic-space-code*
+	     (incf *num-fixups*)
+	     (let ((fixups (code-header-ref code code-constants-offset)))
+	       (cond ((typep fixups '(simple-array (unsigned-byte 32) (*)))
+		      (let ((new-fixups
+			     (adjust-array fixups (1+ (length fixups))
+					   :element-type '(unsigned-byte 32))))
+			(setf (aref new-fixups (length fixups)) offset)
+			(setf (code-header-ref code code-constants-offset)
+			      new-fixups)))
+		     (t
+		      (unless (or (eq (get-type fixups) vm:unbound-marker-type)
+				  (zerop fixups))
+			(format t "** Init. code FU = ~s~%" fixups))
+		      (setf (code-header-ref code code-constants-offset)
+			    (make-array 1 :element-type '(unsigned-byte 32)
+					:initial-element offset))))))))
+    (system:without-gcing
+     (let* ((sap (truly-the system-area-pointer
+			    (kernel:code-instructions code)))
+	    (obj-start-addr (logand (kernel:get-lisp-obj-address code)
+				    #xfffffff8))
+	    #+nil (const-start-addr (+ obj-start-addr (* 5 4)))
+	    (code-start-addr (sys:sap-int (kernel:code-instructions code)))
+	    (ncode-words (kernel:code-header-ref code 1))
+	    (code-end-addr (+ code-start-addr (* ncode-words 4))))
+       (unless (member kind '(:absolute :relative))
+	 (error "Unknown code-object-fixup kind ~s." kind))
+       (ecase kind
+	 (:absolute
+	  ;; Word at sap + offset contains a value to be replaced by
+	  ;; adding that value to fixup.
+	  (setf (sap-ref-32 sap offset) (+ fixup (sap-ref-32 sap offset)))
+	  ;; Record absolute fixups that point within the code object.
+	  (when (> code-end-addr (sap-ref-32 sap offset) obj-start-addr)
+	    (add-fixup code offset)))
+	 (:relative
+	  ;; Fixup is the actual address wanted.
+	  ;;
+	  ;; Record relative fixups that point outside the code
+	  ;; object.
+	  (when (or (< fixup obj-start-addr) (> fixup code-end-addr))
+	    (add-fixup code offset))
+	  ;; Replace word with value to add to that loc to get there.
+	  (let* ((loc-sap (+ (sap-int sap) offset))
+		 (rel-val (- fixup loc-sap 4)))
+	    (declare (type (unsigned-byte 32) loc-sap)
+		     (type (signed-byte 32) rel-val))
+	    (setf (signed-sap-ref-32 sap offset) rel-val))))))
+    nil))
 
+;;; Do-Load-Time-Code-Fixups
+;;;
+;;; Add a code fixup to a code object generated by new-genesis. The
+;;; fixup has already been applied, it's just a matter of placing the
+;;; fixup in the code's fixup vector if necessary.
+;;;
+#+gencgc
+(defun do-load-time-code-fixup (code offset fixup kind)
+  (flet ((add-load-time-code-fixup (code offset)
+	   (let ((fixups (code-header-ref code vm:code-constants-offset)))
+	     (cond ((typep fixups '(simple-array (unsigned-byte 32) (*)))
+		    (let ((new-fixups
+			   (adjust-array fixups (1+ (length fixups))
+					 :element-type '(unsigned-byte 32))))
+		      (setf (aref new-fixups (length fixups)) offset)
+		      (setf (code-header-ref code vm:code-constants-offset)
+			    new-fixups)))
+		   (t
+		    (unless (or (eq (get-type fixups) vm:unbound-marker-type)
+				(zerop fixups))
+		      (%primitive print "** Init. code FU"))
+		    (setf (code-header-ref code vm:code-constants-offset)
+			  (make-array 1 :element-type '(unsigned-byte 32)
+				      :initial-element offset)))))))
+    (let* ((sap (truly-the system-area-pointer
+			   (kernel:code-instructions code)))
+	   (obj-start-addr
+	    (logand (kernel:get-lisp-obj-address code) #xfffffff8))
+	   (code-start-addr (sys:sap-int (kernel:code-instructions code)))
+	   (ncode-words (kernel:code-header-ref code 1))
+	 (code-end-addr (+ code-start-addr (* ncode-words 4))))
+      (ecase kind
+	(:absolute
+	 ;; Record absolute fixups that point within the
+	 ;; code object.
+	 (when (> code-end-addr (sap-ref-32 sap offset) obj-start-addr)
+	   (add-load-time-code-fixup code offset)))
+	(:relative
+	 ;; Record relative fixups that point outside the
+	 ;; code object.
+	 (when (or (< fixup obj-start-addr) (> fixup code-end-addr))
+	   (add-load-time-code-fixup code offset)))))))
 
 
 ;;;; Internal-error-arguments.
@@ -419,7 +463,7 @@
 (defvar *fp-constant-1d0* 1d0)
 
 ;;; Enable/Disable scavenging of the read-only space.
-(defvar *scavenge-read-only-space*)
+(defvar *scavenge-read-only-space* nil)
 
 ;;; The current alien stack pointer; saved/restored for non-local
 ;;; exits.
@@ -432,3 +476,12 @@
   "Atomically compare object's slot value to test-value and if EQ store
    new-value in the slot. The original value of the slot is returned."
   (kernel::%instance-set-conditional object slot test-value new-value))
+
+;;; Support for the MT19937 random number generator. The update
+;;; function is implemented as an assembly routine. This definition is
+;;; transformed to a call to this routine allowing its use in byte
+;;; compiled code.
+;;;
+(defun random-mt19937 (state)
+  (declare (type (simple-array (unsigned-byte 32) (627)) state))
+  (random-mt19937 state))

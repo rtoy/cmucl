@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.54 1998/01/04 22:41:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.55 1998/01/16 07:22:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -324,6 +324,10 @@
 		   (svref *load-time-values* (third fun))))
 	    #+gengc
 	    (do-load-time-value-fixup (second fun) (third fun) (fourth fun)))
+	   #+(and x86 gencgc)
+	   (:load-time-code-fixup
+	    (vm::do-load-time-code-fixup (second fun) (third fun) (fourth fun)
+					 (fifth fun)))
 	   (t
 	    (%primitive print
 			"Bogus fixup in *lisp-initialization-functions*")

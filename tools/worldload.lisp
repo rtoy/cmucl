@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.87 1997/12/13 16:49:43 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.88 1998/01/16 07:22:25 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,8 +26,8 @@
 
 ;;; Purify and GENCGC can move native code so all code can be loading
 ;;; into the dynamic space during worldload; overrides the above when
-;;; enabled. Enable this for GENCGC.  May also be safe with CGC but
-;;; untested.
+;;; enabled. Enable by default for GENCGC.  May also be safe with CGC
+;;; but untested.
 ;(setf cl::*enable-dynamic-space-code* t)
 
 
@@ -85,19 +85,14 @@
 
 (maybe-byte-load "code:format-time")
 (maybe-byte-load "code:parse-time")
-
-;;; Better not move purify, or it will die on return!
-#+gencgc (setf cl::*enable-dynamic-space-code* nil)
 #-gengc (maybe-byte-load "code:purify")
-#+gencgc (setf cl::*enable-dynamic-space-code* t)
-
 (maybe-byte-load "code:commandline")
 (maybe-byte-load "code:sort")
 (maybe-byte-load "code:time")
 (maybe-byte-load "code:tty-inspect")
 (maybe-byte-load "code:describe")
-#+(and random-mt19937 (not x86)) (maybe-byte-load "code:rand-mt19937")
-#-(or random-mt19937 x86) (maybe-byte-load "code:rand")
+#+random-mt19937 (maybe-byte-load "code:rand-mt19937")
+#-random-mt19937 (maybe-byte-load "code:rand")
 (maybe-byte-load "code:ntrace")
 #-runtime (maybe-byte-load "code:profile")
 (maybe-byte-load "code:weak")
@@ -115,7 +110,7 @@
 #-(or gengc runtime) (maybe-byte-load "code:room")
 
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
-#-(or x86 gengc)			; x86 has stuff in static space
+#-(or gengc cgc)	; x86/cgc has stuff in static space.
 (progn
   (byte-load-over "target:code/debug")
   (byte-load-over "target:code/error")
@@ -130,9 +125,6 @@
 	`(lisp::%top-level extensions:save-lisp ,lisp::fop-codes)
 	:environment-name "Kernel")
 
-;;; Can turn off scavenging of the read-only-space now.
-#+x86 (setf x86::*scavenge-read-only-space* nil)
-
 ;;; Load the compiler.
 #-(or no-compiler runtime)
 (progn
@@ -143,7 +135,7 @@
   (maybe-byte-load "c:loadbackend.lisp")
   ;;
   ;; If we want a small core, blow away the meta-compile time VOP info.
-  ;; Redundant clarhash to work around gc leakage.
+  ;; Redundant clrhash to work around gc leakage.
   #+small
   (progn
     (clrhash (c::backend-parsed-vops c:*backend*))

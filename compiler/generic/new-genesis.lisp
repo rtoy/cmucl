@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.29 1997/11/11 18:51:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.30 1998/01/16 07:22:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -756,7 +756,7 @@
       (frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
       (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
       (when (c:backend-featurep :gencgc)
-	(frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern t))))))
+	(frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern nil))))))
 
 ;;; Make-Make-Package-Args  --  Internal
 ;;;
@@ -1486,11 +1486,9 @@
 	     ;; the code vector will be properly aligned.
 	     (round-up raw-header-size 2))
 	    (des (allocate-descriptor
-		  (if (c:backend-featurep :x86)
-		      (if (c:backend-featurep :gencgc)
-			  *read-only*
-			*static*)
-		    *dynamic*)
+		  (if (and (c:backend-featurep :x86) (c:backend-featurep :cgc))
+		      *static*
+		      *dynamic*)
 		  (+ (ash header-size vm:word-shift) size)
 		  vm:other-pointer-type)))
        (write-memory des
@@ -1570,8 +1568,11 @@
 	 (len (read-arg 1))
 	 (sym (make-string len)))
     (read-n-bytes *fasl-file* sym 0 len)
-    (let ((offset (calc-offset code-object (read-arg 4))))
-      (do-cold-fixup code-object offset (lookup-foreign-symbol sym) kind))
+    (let ((offset (read-arg 4))
+	  (value (lookup-foreign-symbol sym)))
+      (when (c:backend-featurep :x86)
+	(note-load-time-code-fixup code-object offset value kind))
+      (do-cold-fixup code-object (calc-offset code-object offset) value kind))
     code-object))
 
 (define-cold-fop (fop-assembler-code)
@@ -1612,17 +1613,18 @@
   (let* ((routine (pop-stack))
 	 (kind (pop-stack))
 	 (code-object (pop-stack))
-	 (offset (calc-offset code-object (read-arg 4))))
+	 (offset (read-arg 4)))
     (record-cold-assembler-fixup routine code-object offset kind)
     code-object))
 
 (define-cold-fop (fop-code-object-fixup)
   (let* ((kind (pop-stack))
 	 (code-object (pop-stack))
-	 (offset (calc-offset code-object (read-arg 4))))
-    (do-cold-fixup code-object offset
-		   (descriptor-bits code-object)
-		   kind)
+	 (offset (read-arg 4))
+	 (value (descriptor-bits code-object)))
+    (when (c:backend-featurep :x86)
+      (note-load-time-code-fixup code-object offset value kind))
+    (do-cold-fixup code-object (calc-offset code-object offset) value kind)
     code-object))
 
 
@@ -1762,7 +1764,47 @@
     (let* ((routine (car fixup))
 	   (value (lookup-assembler-reference routine)))
       (when value
-	(do-cold-fixup (second fixup) (third fixup) value (fourth fixup))))))
+	(when (c:backend-featurep :x86)
+	  (note-load-time-code-fixup (second fixup) (third fixup) value
+				     (fourth fixup)))
+	(do-cold-fixup (second fixup)
+	  (calc-offset (second fixup) (third fixup))
+	  value (fourth fixup))))))
+
+;;; The x86 port needs to store code fixups along with code objects if
+;;; they are to be moved, so fixups for code objects in the dynamic
+;;; heap need to be noted.
+;;;
+(defvar *load-time-code-fixups* nil)
+
+(defun note-load-time-code-fixup (code-object offset value kind)
+  (assert (c:backend-featurep :x86))
+  (when (= (space-identifier (descriptor-space code-object)) dynamic-space-id)
+    (push (list code-object offset value kind) *load-time-code-fixups*)))
+
+(defun output-load-time-code-fixups ()
+  (dolist (fixups *load-time-code-fixups*)
+    (let ((code-object (first fixups))
+	  (offset (second fixups))
+	  (value (third fixups))
+	  (kind (fourth fixups)))
+      (cold-push (allocate-cons
+		  *dynamic*
+		  (cold-intern :load-time-code-fixup)
+		  (allocate-cons
+		   *dynamic*
+		   code-object
+		   (allocate-cons
+		    *dynamic*
+		    (number-to-core offset)
+		    (allocate-cons
+		     *dynamic*
+		     (number-to-core value)
+		     (allocate-cons
+		      *dynamic*
+		      (cold-intern kind)
+		      *nil-descriptor*)))))
+		 *current-init-functions-cons*))))
 
 (defun do-cold-fixup (code-object offset value kind)
   (let ((sap (sap+ (descriptor-sap code-object) offset)))
@@ -2122,6 +2164,8 @@
 		(cold-load file))
 	      (maybe-gc))
 	    (resolve-assembler-fixups)
+	    (when (c:backend-featurep :x86)
+	      (output-load-time-code-fixups))
 	    (linkage-info-to-core)
 	    (finish-symbols)
 	    (finalize-load-time-value-noise)

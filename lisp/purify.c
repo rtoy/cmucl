@@ -3,14 +3,14 @@
    This code is based on public domain codes from CMUCL. It is placed
    in the public domain and is provided as-is.
 
-   Stack direction changes, more conservative decisions about pointers
-   (carefully_pscave_stack), and static blue bag feature, by Paul
-   Werkowski, 1995, 1996.
+   Stack direction changes, the x86/CGC stack scavenging, and static
+   blue bag feature, by Paul Werkowski, 1995, 1996.
  
-   Bug fixes, x86 code movement support, and scavenger hook support,
-   by Douglas Crosher, 1996, 1997.
+   Bug fixes, x86 code movement support, the scavenger hook support,
+   and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
+   1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.13 1997/11/17 23:39:04 dtc Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.14 1998/01/16 07:22:10 dtc Exp $ 
 
    */
 #include <stdio.h>
@@ -99,7 +99,13 @@ dynamic_pointer_p(lispobj ptr)
 	    ptr < (lispobj)current_dynamic_space_free_pointer);
 #endif
 }
+
 
+#ifdef i386
+
+#ifdef WANT_CGC
+/* Original x86/CGC stack scavenging code by Paul Werkowski */
+
 static int
 maybe_can_move_p(lispobj thing)
 {
@@ -170,7 +176,7 @@ maybe_can_move_p(lispobj thing)
       }}}
   return 0;
 }
-
+
 static int pverbose=0;
 #define PVERBOSE pverbose
 static void
@@ -191,6 +197,262 @@ carefully_pscav_stack(lispobj*lowaddr, lispobj*base)
       sp++;
     }
 }
+#endif
+
+#ifdef GENCGC
+/*
+ * Enhanced x86/GENCGC stack scavenging by Douglas Crosher.
+ *
+ * Scavenging the stack on the i386 is problematic due to conservative
+ * roots and raw return addresses. Here it is handled in two passes:
+ * the first pass runs before any objects are moved and tries to
+ * identify valid pointers and return address on the stack, the second
+ * pass scavenges these.
+ */
+
+static unsigned pointer_filter_verbose = 0;
+
+static int
+valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
+{
+  /* If it's not a return address then it needs to be a valid lisp
+     pointer. */
+  if (!Pointerp((lispobj)pointer))
+    return FALSE;
+
+  /* Check that the object pointed to is consistent with the pointer
+     low tag. */
+  switch (LowtagOf((lispobj)pointer)) {
+  case type_FunctionPointer:
+    /* Start_addr should be the enclosing code object, or a closure
+       header. */
+    switch (TypeOf(*start_addr)) {
+    case type_CodeHeader:
+      /* This case is probably caught above. */
+      break;
+    case type_ClosureHeader:
+    case type_FuncallableInstanceHeader:
+    case type_ByteCodeFunction:
+    case type_ByteCodeClosure:
+    case type_DylanFunctionHeader:
+      if ((int)pointer != ((int)start_addr+type_FunctionPointer)) {
+	if (pointer_filter_verbose)
+	  fprintf(stderr,"*Wf2: %x %x %x\n", pointer, start_addr, *start_addr);
+	return FALSE;
+      }
+      break;
+    default:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wf3: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    break;
+  case type_ListPointer:
+    if ((int)pointer != ((int)start_addr+type_ListPointer)) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wl1: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    /* Is it plausible cons? */
+    if((Pointerp(start_addr[0])
+	|| ((start_addr[0] & 3) == 0) /* fixnum */
+	|| (TypeOf(start_addr[0]) == type_BaseChar)
+	|| (TypeOf(start_addr[0]) == type_UnboundMarker))
+       && (Pointerp(start_addr[1])
+	   || ((start_addr[1] & 3) == 0) /* fixnum */
+	   || (TypeOf(start_addr[1]) == type_BaseChar)
+	   || (TypeOf(start_addr[1]) == type_UnboundMarker)))
+      break;
+    else {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wl2: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+  case type_InstancePointer:
+    if ((int)pointer != ((int)start_addr+type_InstancePointer)) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wi1: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    if (TypeOf(start_addr[0]) != type_InstanceHeader) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wi2: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    break;
+  case type_OtherPointer:
+    if ((int)pointer != ((int)start_addr+type_OtherPointer)) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo1: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    /* Is it plausible?  Not a cons. X should check the headers. */
+    if(Pointerp(start_addr[0]) || ((start_addr[0] & 3) == 0)) {
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo2: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    switch (TypeOf(start_addr[0])) {
+    case type_UnboundMarker:
+    case type_BaseChar:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo3: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+      
+      /* Only pointed to by function pointers? */
+    case type_ClosureHeader:
+    case type_FuncallableInstanceHeader:
+    case type_ByteCodeFunction:
+    case type_ByteCodeClosure:
+    case type_DylanFunctionHeader:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo4: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+      
+    case type_InstanceHeader:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo5: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+      
+      /* The valid other immediate pointer objects */
+    case type_SimpleVector:
+    case type_Ratio:
+    case type_Complex:
+#ifdef type_ComplexSingleFloat
+    case type_ComplexSingleFloat:
+#endif
+#ifdef type_ComplexDoubleFloat
+    case type_ComplexDoubleFloat:
+#endif
+    case type_SimpleArray:
+    case type_ComplexString:
+    case type_ComplexBitVector:
+    case type_ComplexVector:
+    case type_ComplexArray:
+    case type_ValueCellHeader:
+    case type_SymbolHeader:
+    case type_Fdefn:
+    case type_CodeHeader:
+    case type_Bignum:
+    case type_SingleFloat:
+    case type_DoubleFloat:
+    case type_SimpleString:
+    case type_SimpleBitVector:
+    case type_SimpleArrayUnsignedByte2:
+    case type_SimpleArrayUnsignedByte4:
+    case type_SimpleArrayUnsignedByte8:
+    case type_SimpleArrayUnsignedByte16:
+    case type_SimpleArrayUnsignedByte32:
+#ifdef type_SimpleArraySignedByte8
+    case type_SimpleArraySignedByte8:
+#endif
+#ifdef type_SimpleArraySignedByte16
+    case type_SimpleArraySignedByte16:
+#endif
+#ifdef type_SimpleArraySignedByte30
+    case type_SimpleArraySignedByte30:
+#endif
+#ifdef type_SimpleArraySignedByte32
+    case type_SimpleArraySignedByte32:
+#endif
+    case type_SimpleArraySingleFloat:
+    case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayComplexSingleFloat
+    case type_SimpleArrayComplexSingleFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+    case type_SimpleArrayComplexDoubleFloat:
+#endif
+    case type_Sap:
+    case type_WeakPointer:
+    case type_ScavengerHook:
+      break;
+
+    default:
+      if (pointer_filter_verbose)
+	fprintf(stderr,"*Wo6: %x %x %x\n", pointer, start_addr, *start_addr);
+      return FALSE;
+    }
+    break;
+  default:
+    if (pointer_filter_verbose)
+      fprintf(stderr,"*W?: %x %x %x\n", pointer, start_addr, *start_addr);
+    return FALSE;
+  }
+  
+  /* Looks good */
+  return TRUE;
+}
+
+#define MAX_STACK_POINTERS 256
+lispobj *valid_stack_locations[MAX_STACK_POINTERS];
+unsigned int num_valid_stack_locations;
+
+#define MAX_STACK_RETURN_ADDRESSES 128
+lispobj *valid_stack_ra_locations[MAX_STACK_RETURN_ADDRESSES];
+lispobj *valid_stack_ra_code_objects[MAX_STACK_RETURN_ADDRESSES];
+unsigned int num_valid_stack_ra_locations;
+
+/* Identify valid stack slots. */
+static void
+setup_i386_stack_scav(lispobj *lowaddr, lispobj *base)
+{
+  lispobj *sp = lowaddr;
+  num_valid_stack_locations = 0;  
+  num_valid_stack_ra_locations = 0;  
+  for (sp = lowaddr; sp < base; sp++) {
+    lispobj thing = *sp;
+    lispobj* start_addr;
+    /* Find the object start address */
+    if ((start_addr = search_dynamic_space((void *)thing)) != NULL) {
+      /* Need to allow raw pointers into Code objects for return
+	 addresses. This will also pickup pointers to functions in code
+	 objects. */
+      if (TypeOf(*start_addr) == type_CodeHeader) {
+	gc_assert(num_valid_stack_ra_locations < MAX_STACK_RETURN_ADDRESSES);
+	valid_stack_ra_locations[num_valid_stack_ra_locations] = sp;
+	valid_stack_ra_code_objects[num_valid_stack_ra_locations++] =
+	  (lispobj *)((int)start_addr + type_OtherPointer);
+      } else {
+	if (valid_dynamic_space_pointer((void *)thing, start_addr)) {
+	  gc_assert(num_valid_stack_locations < MAX_STACK_POINTERS);
+	  valid_stack_locations[num_valid_stack_locations++] = sp;
+	}
+      }
+    }
+  }
+  if (pointer_filter_verbose) {
+    fprintf(stderr, "Number of valid stack pointers = %d\n",
+	    num_valid_stack_locations);
+    fprintf(stderr, "Number of stack return addresses = %d\n",
+	    num_valid_stack_ra_locations);
+  }
+}
+
+static void
+pscav_i386_stack(void)
+{
+  int i;
+
+  for (i = 0; i < num_valid_stack_locations; i++)
+    pscav(valid_stack_locations[i], 1, FALSE);
+
+  for (i = 0; i < num_valid_stack_ra_locations; i++) {
+    lispobj code_obj = valid_stack_ra_code_objects[i];
+    pscav(&code_obj, 1, FALSE);
+    fprintf(stderr,"*C moved RA %x to %x; for code object %x to %x\n",
+	    *valid_stack_ra_locations[i],
+	    (int)(*valid_stack_ra_locations[i])
+	    - ((int)valid_stack_ra_code_objects[i] - (int)code_obj),
+	    valid_stack_ra_code_objects[i], code_obj);
+    *valid_stack_ra_locations[i] = 
+      (lispobj *)((int)(*valid_stack_ra_locations[i])
+		  - ((int)valid_stack_ra_code_objects[i] - (int)code_obj));
+  }
+}
+#endif
+#endif
+
 
 static void 
 pscav_later(lispobj *where, int count)
@@ -1083,6 +1345,12 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     printf(" roots");
     fflush(stdout);
 #endif
+
+#ifdef GENCGC
+    gc_assert(control_stack_end > ((&read_only_roots)+1));
+    setup_i386_stack_scav(((&static_roots)-2), control_stack_end);
+#endif
+
     pscav(&static_roots, 1, FALSE);
     pscav(&read_only_roots, 1, TRUE);
 
@@ -1101,8 +1369,13 @@ int purify(lispobj static_roots, lispobj read_only_roots)
 #ifndef i386
     pscav(control_stack, current_control_stack_pointer - control_stack, FALSE);
 #else
+#ifdef GENCGC
+    pscav_i386_stack();
+#endif
+#ifdef WANT_CGC
     gc_assert(control_stack_end > ((&read_only_roots)+1));
     carefully_pscav_stack(((&read_only_roots)+1), control_stack_end);
+#endif
 #endif
 
 #ifdef PRINTNOISE
