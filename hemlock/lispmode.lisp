@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.7 1997/07/28 13:44:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.8 1998/04/10 11:14:54 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -848,6 +848,7 @@
 (defindent "ctypecase" 1)
 (defindent "defconstant" 1)
 (defindent "define-setf-method" 2)
+(defindent "destructuring-bind" 2)
 (defindent "defmacro" 2)
 (defindent "defpackage" 1)
 (defindent "defparameter" 1)
@@ -974,6 +975,8 @@
 (defindent "alien-bind" 1)
 (defindent "def-c-record" 1)
 (defindent "defrecord" 1)
+(defindent "add-fd-handler" 2)
+(defindent "with-fd-handler" 1)
 
 ;;; Wire forms.
 (defindent "remote" 1)
@@ -983,6 +986,9 @@
 (defindent "remote-value-bind" 3)
 (defindent "wire:remote-value-bind" 3)
 
+;;; Multiprocessing forms.
+(defindent "with-lock-held" 1)
+(defindent "process-wait" 1)
 
 
 ;;;; Indentation.
