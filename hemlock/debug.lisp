@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.4 1991/10/12 20:57:29 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.5 1993/05/31 20:26:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,11 +274,13 @@
     (when server-info
       (let ((bpts (buffer-breakpoints buffer))
 	    (wire (server-info-wire server-info)))
-	(dolist (b bpts)
-	  (setf *breakpoints* (delete b *breakpoints*))
-	  (wire:remote wire
-	    (di:delete-breakpoint (breakpoint-info-remote-object b))))
-	(wire:wire-force-output wire)))))
+	  (dolist (b bpts)
+	    (setf *breakpoints* (delete b *breakpoints*))
+	    (when wire
+	      (wire:remote wire
+		(di:delete-breakpoint (breakpoint-info-remote-object b))))
+	(when wire
+	  (wire:wire-force-output wire)))))))
 ;;;
 (add-hook delete-buffer-hook 'delete-breakpoints-buffer-hook)
 
