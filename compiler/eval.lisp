@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.20 1992/09/07 15:37:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.21 1993/05/12 16:16:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,11 +33,6 @@
 
 
 ;;;; Interpreter stack.
-
-(defvar *eval-stack* (make-array 100)
-  "This is the interpreter's evaluation stack.")
-(defvar *eval-stack-top* 0
-  "This is the next free element of the interpreter's evaluation stack.")
 
 ;;; Setting this causes the stack operations to dump a trace.
 ;;;
