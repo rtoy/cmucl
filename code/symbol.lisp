@@ -1,11 +1,11 @@
-;;; -*- Log: code.log; Package: Lisp -*-
+/;; -*- Log: code.log; Package: Lisp -*-
 ;;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.19 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.20 1997/02/22 12:49:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,7 +145,7 @@
 	   (cond (prev (rplacd (cdr prev) (cddr pl)))
 		 (t
 		  (setf (symbol-plist symbol) (cddr pl))))
-	   (return pl)))))
+	   (return t)))))
 
 (defun getf (place indicator &optional (default ()))
   "Searches the property list stored in Place for an indicator EQ to Indicator.

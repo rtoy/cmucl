@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.22 1997/01/18 14:30:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23 1997/02/22 12:49:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,8 +152,12 @@
 	       (make-array length :element-type '(mod 2))))
 	  ((csubtypep type (specifier-type 'vector))
 	   (if (typep type 'array-type)
-	       (let ((etype (type-specifier
-			     (array-type-specialized-element-type type))))
+               (let ((etype (type-specifier
+                             (array-type-specialized-element-type type)))
+                     (vlen (car (array-type-dimensions type))))
+                 (if (and (numberp vlen) (/= vlen length))
+                   (error "The length of ~S does not match the specified length  of ~S."
+                          (type-specifier type) length))
 		 (if iep
 		     (make-array length :element-type etype
 				 :initial-element initial-element)

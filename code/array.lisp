@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.20 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.21 1997/02/22 12:49:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -152,6 +152,8 @@
     (declare (fixnum array-rank))
     (when (and displaced-index-offset (null displaced-to))
       (error "Can't specify :displaced-index-offset without :displaced-to"))
+    (when (and fill-pointer (realp fill-pointer) (minusp fill-pointer))
+      (error "Can't specify a negative fill-pointer"))
     (if (and simple (= array-rank 1))
 	;; Its a (simple-array * (*))
 	(multiple-value-bind (type bits)

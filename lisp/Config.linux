@@ -1,9 +1,8 @@
-PATH1=../../p86/lisp
-PATH2=../../17f/lisp
-vpath %.h $(PATH1):$(PATH2)
-vpath %.c $(PATH1):$(PATH2)
+PATH1=../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
 vpath %.S $(PATH1)
-CPPFLAGS = -I. -I$(PATH1) -I$(PATH2) -I- -I/usr/X11R6/include
+CPPFLAGS = -I. -I$(PATH1) -I- -I/usr/X11R6/include
 CC = gcc  -Wstrict-prototypes -O2 -fno-strength-reduce # -Wall
 LD = ld
 CPP = cpp
