@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.42 1992/04/01 13:38:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.43 1992/04/02 15:25:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1130,6 +1130,8 @@
 ;;; -- CONT receives multiple values, or
 ;;; -- the reference is in a different environment from the variable, or
 ;;; -- either continuation has a funky TYPE-CHECK annotation.
+;;; -- the continuations have incompatible assertions, so the new asserted type
+;;;    would be NIL.
 ;;; -- the var's DEST has a different policy than the ARG's (think safety).
 ;;;
 ;;;    We change the Ref to be a reference to NIL with unused value, and let it
@@ -1140,6 +1142,7 @@
   (declare (type continuation arg) (type lambda-var var))
   (let* ((ref (first (leaf-refs var)))
 	 (cont (node-cont ref))
+	 (cont-atype (continuation-asserted-type cont))
 	 (dest (continuation-dest cont)))
     (when (and (eq (continuation-use cont) ref)
 	       dest
@@ -1148,11 +1151,15 @@
 		   (lambda-home (lambda-var-home var)))
 	       (member (continuation-type-check arg) '(t nil))
 	       (member (continuation-type-check cont) '(t nil))
+	       (not (eq (values-type-intersection
+			 cont-atype
+			 (continuation-asserted-type arg))
+			*empty-type*))
 	       (eq (lexenv-cookie (node-lexenv dest))
 		   (lexenv-cookie (node-lexenv (continuation-dest arg)))))
       (assert (member (continuation-kind arg)
 		      '(:block-start :deleted-block-start :inside-block)))
-      (assert-continuation-type arg (continuation-asserted-type cont))
+      (assert-continuation-type arg cont-atype)
       (setf (node-derived-type ref) *wild-type*)
       (change-ref-leaf ref (find-constant nil))
       (substitute-continuation arg cont)
