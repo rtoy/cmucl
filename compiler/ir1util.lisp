@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.35 1991/04/03 12:45:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.36 1991/04/04 14:11:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1150,6 +1150,7 @@ inlines
 ;;;
 (defun delete-component (component)
   (declare (type component component))
+  (assert (null (component-new-functions component)))
   (do-blocks (block component)
     (setf (block-delete-p block) t))
   (dolist (fun (component-lambdas component))
