@@ -38,12 +38,15 @@ New in this release:
        and EXT:VALID-FUNCTION-NAME-P.
      - Access to the hardware cycle counters on Pentium and UltraSPARC
        processors has been added, and is reported by the TIME macro.
+     - On Linux, it is possible to read and write files larger than 2GiB
+       (Large File Support implementation). Full support for this
+       requires a 2.4 or a 2.2 kernel with LFS patches.
 
   * Numerous ANSI compliance fixes:
      - SYMBOL-MACROLET signals an error when an attempt is made to
        bind a special variable or a constant
-     - the function COMPILE no longer coalesces constants (however,
-       COMPILE-FILE continues to do so)
+     - the function COMPILE no longer coalesces constants, as required
+       by the specification (however, COMPILE-FILE continues to do so)
      - WITH-OUTPUT-TO-STRING accepts the :external-format keyword
        argument
      - the function WRITE-STRING accepts a NIL value for the :end
@@ -82,6 +85,9 @@ New in this release:
        (without the colon modifier on the closing syntax).
      - the SUBTYPEP function is more intelligent when dealing with
        certain hairy types (such as those based on SATISFIES).
+     - the optional environment argument to the functions TYPEP,
+       SUBTYPEP and friends are now accepted (but ignored).
+     - system classes FILE-STREAM and STRING-STREAM have been added.
 
   * Numerous bugfixes:
      - READ-BYTE on certain types of multi-byte elements was incorrect
@@ -92,6 +98,8 @@ New in this release:
      - fix to CLX handling of :any event-spec
      - fix to boa-constructors ??
      - EXPT was not correctly handling a zero exponent
+     - PROGV was not handling special variables correctly.
+     - MULTIPLE-VALUE-SETQ and PSETQ were not handling symbol macros correctly.
      - index calculations for operations bitvectors of sizes near the
        ARRAY-DIMENSION-LIMIT could overflow
      - redefining a class with a changed class precedence list didn't
