@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.54 2003/04/15 23:07:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.55 2003/04/16 13:07:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,16 +35,318 @@
 
 (with-cold-load-init-forms)
 
-;;; ### Remaining incorrectnesses:
-;;;
-;;; Type-Union (and the OR type) doesn't properly canonicalize an exhaustive
-;;; partition or coalesce contiguous ranges of numeric types.
-;;;
-;;; There are all sorts of nasty problems with open bounds on float types (and
-;;; probably float types in general.)
-;;;
-;;; ratio and bignum are not recognized as numeric types.
+;;; Structures & Type Classes
 
+(define-type-class values)
+(define-type-class function)
+(define-type-class constant values)
+(define-type-class named)
+(define-type-class hairy)
+(define-type-class negation)
+(define-type-class number)
+(define-type-class array)
+(define-type-class member)
+(define-type-class union)
+(define-type-class intersection)
+(define-type-class alien)
+(define-type-class cons)
+
+;;; The Args-Type structure is used both to represent Values types and
+;;; and Function types.
+;;;
+(defstruct (args-type (:include ctype)
+		      (:print-function %print-type))
+  ;;
+  ;; Lists of the type for each required and optional argument.
+  (required nil :type list)
+  (optional nil :type list)
+  ;;
+  ;; The type for the rest arg.  NIL if there is no rest arg.
+  (rest nil :type (or ctype null))
+  ;;
+  ;; True if keyword arguments are specified.
+  (keyp nil :type boolean)
+  ;;
+  ;; List of key-info structures describing the keyword arguments.
+  (keywords nil :type list)
+  ;;
+  ;; True if other keywords are allowed.
+  (allowp nil :type boolean))
+
+(defstruct (key-info (:pure t))
+  ;;
+  ;; The keyword.
+  (name (required-argument) :type symbol)
+  ;;
+  ;; Type of this argument.
+  (type (required-argument) :type ctype))
+
+(defstruct (values-type
+	    (:include args-type
+		      (:class-info (type-class-or-lose 'values)))
+	    (:print-function %print-type)))
+
+(declaim (freeze-type values-type))
+
+(defstruct (function-type
+	    (:include args-type
+		      (:class-info (type-class-or-lose 'function)))
+	    (:print-function %print-type))
+  ;;
+  ;; True if the arguments are unrestrictive, i.e. *.
+  (wild-args nil :type boolean)
+  ;;
+  ;; Type describing the return values.  This is a values type
+  ;; when multiple values were specified for the return.
+  (returns (required-argument) :type ctype))
+
+;;; The CONSTANT-TYPE structure represents a use of the CONSTANT-ARGUMENT "type
+;;; specifier", which is only meaningful in function argument type specifiers
+;;; used within the compiler.
+;;;
+(defstruct (constant-type (:include ctype
+				    (:class-info (type-class-or-lose 'constant)))
+			  (:print-function %print-type))
+  ;;
+  ;; The type which the argument must be a constant instance of for this type
+  ;; specifier to win.
+  (type (required-argument) :type ctype))
+
+;;; The NAMED-TYPE is used to represent *, T and NIL.  These types must be
+;;; super or sub types of all types, not just classes and * & NIL aren't
+;;; classes anyway, so it wouldn't make much sense to make them built-in
+;;; classes.
+;;;
+(defstruct (named-type (:include ctype
+				 (:class-info (type-class-or-lose 'named)))
+		       (:print-function %print-type))
+  (name nil :type symbol))
+
+;;; The Hairy-Type represents anything too wierd to be described reasonably or
+;;; to be useful, such as AND, NOT and SATISFIES and unknown types.  We just
+;;; remember the original type spec.
+;;;
+(defstruct (hairy-type (:include ctype
+				 (:class-info (type-class-or-lose 'hairy))
+				 (:enumerable t))
+		       (:print-function %print-type)
+		       (:pure nil))
+  ;;
+  ;; The Common Lisp type-specifier.
+  (specifier nil :type t))
+
+(defstruct (negation-type (:include ctype
+				    (:class-info (type-class-or-lose 'negation))
+				    ;; FIXME: is this right?  It's
+				    ;; what they had before, anyway
+				    (:enumerable t))
+			  (:copier nil)
+			  (:pure nil))
+  (type (required-argument) :type ctype))
+
+;;; An UNKNOWN-TYPE is a type not known to the type system (not yet defined).
+;;; We make this distinction since we don't want to complain about types that
+;;; are hairy but defined.
+;;;
+(defstruct (unknown-type (:include hairy-type)))
+
+;;; The Numeric-Type is used to represent all numeric types, including things
+;;; such as FIXNUM.
+(defstruct (numeric-type (:include ctype
+				   (:class-info (type-class-or-lose 'number)))
+			 (:constructor %make-numeric-type)
+			 (:print-function %print-type))
+  ;;
+  ;; The kind of numeric type we have.  NIL if not specified (just NUMBER or
+  ;; COMPLEX).
+  (class nil :type (member integer rational float nil))
+  ;;
+  ;; Format for a float type.  NIL if not specified or not a float.  Formats
+  ;; which don't exist in a given implementation don't appear here.
+  (format nil :type (or float-format null))
+  ;;
+  ;; Is this a complex numeric type?  Null if unknown (only in NUMBER.)
+  (complexp :real :type (member :real :complex nil))
+  ;;
+  ;; The upper and lower bounds on the value.  If null, there is no bound.  If
+  ;; a list of a number, the bound is exclusive.  Integer types never have
+  ;; exclusive bounds.
+  (low nil :type (or number cons null))
+  (high nil :type (or number cons null)))
+
+(defun type-bound-number (x)
+  (if (consp x)
+      (destructuring-bind (result) x result)
+      x))
+
+(defun make-numeric-type (&key class format (complexp :real) low high
+			       enumerable)
+  ;; if interval is empty
+  (if (and low
+	   high
+	   (if (or (consp low) (consp high)) ; if either bound is exclusive
+	       (>= (type-bound-number low) (type-bound-number high))
+	       (> low high)))
+      *empty-type*
+      (multiple-value-bind (canonical-low canonical-high)
+	  (case class
+	    (integer
+	     ;; INTEGER types always have their LOW and HIGH bounds
+	     ;; represented as inclusive, not exclusive values.
+	     (values (if (consp low)
+			 (1+ (type-bound-number low))
+			 low)
+		     (if (consp high)
+			 (1- (type-bound-number high))
+			 high)))
+	    #+negative-zero-is-not-zero
+	    (float
+	     ;; Canonicalize a low bound of (-0.0) to 0.0, and a high
+	     ;; bound of (+0.0) to -0.0.
+	     (values (if (and (consp low)
+			      (floatp (car low))
+			      (zerop (car low))
+			      (minusp (float-sign (car low))))
+			 (float 0.0 (car low))
+			 low)
+		     (if (and (consp high)
+			      (floatp (car high))
+			      (zerop (car high))
+			      (plusp (float-sign (car high))))
+			 (float -0.0 (car high))
+			 high)))
+	    (t 
+	     ;; no canonicalization necessary
+	     (values low high)))
+	(when (and (eq class 'rational)
+		   (integerp canonical-low)
+		   (integerp canonical-high)
+		   (= canonical-low canonical-high))
+	  (setf class 'integer))
+	(%make-numeric-type :class class
+			    :format format
+			    :complexp complexp
+			    :low canonical-low
+			    :high canonical-high
+			    :enumerable enumerable))))
+ 
+(defun modified-numeric-type (base
+			      &key
+			      (class      (numeric-type-class      base))
+			      (format     (numeric-type-format     base))
+			      (complexp   (numeric-type-complexp   base))
+			      (low        (numeric-type-low        base))
+			      (high       (numeric-type-high       base))
+			      (enumerable (numeric-type-enumerable base)))
+  (make-numeric-type :class class
+		     :format format
+		     :complexp complexp
+		     :low low
+		     :high high
+		     :enumerable enumerable))
+
+;;; The Array-Type is used to represent all array types, including things such
+;;; as SIMPLE-STRING.
+;;;
+(defstruct (array-type (:include ctype
+				 (:class-info (type-class-or-lose 'array)))
+		       (:print-function %print-type))
+  ;;
+  ;; The dimensions of the array.  * if unspecified.  If a dimension is
+  ;; unspecified, it is *.
+  (dimensions '* :type (or list (member *)))
+  ;;
+  ;; Is this not a simple array type?
+  (complexp :maybe :type (member t nil :maybe))
+  ;;
+  ;; The element type as originally specified.
+  (element-type (required-argument) :type ctype)
+  ;;
+  ;; The element type as it is specialized in this implementation.
+  (specialized-element-type *wild-type* :type ctype))
+
+;;; The Member-Type represents uses of the MEMBER type specifier.  We bother
+;;; with this at this level because MEMBER types are fairly important and union
+;;; and intersection are well defined.
+
+(defstruct (member-type (:include ctype
+				  (:class-info (type-class-or-lose 'member))
+				  (:enumerable t))
+			(:print-function %print-type)
+			(:pure nil))
+  ;;
+  ;; The things in the set, with no duplications.
+  (members nil :type list))
+
+;;; The Union-Type represents uses of the OR type specifier which can't be
+;;; canonicalized to something simpler.  Canonical form:
+;;;
+;;; 1] There is never more than one Member-Type component.
+;;; 2] There are never any Union-Type components.
+;;;
+(defstruct (union-type (:include ctype
+				 (:class-info (type-class-or-lose 'union)))
+		       (:constructor %make-union-type (enumerable types))
+		       (:print-function %print-type))
+  ;;
+  ;; The types in the union.
+  (types nil :type list :read-only t))
+
+(defun make-union-type (types)
+  (declare (list types))
+  (%make-union-type (every #'type-enumerable types) types))
+
+(defstruct (intersection-type
+	     (:include ctype
+		       (:class-info (type-class-or-lose 'intersection)))
+	     (:constructor make-intersection-type (enumerable types))
+	     (:print-function %print-type))
+  (types nil :type list :read-only t))
+
+(defstruct (alien-type-type
+	    (:include ctype
+		      (:class-info (type-class-or-lose 'alien)))
+	    (:print-function %print-type)
+	    (:constructor %make-alien-type-type (alien-type)))
+  (alien-type nil :type alien-type))
+
+;;; The Cons-Type is used to represent cons types.
+;;;
+(defun type-*-to-t (type)
+  (if (type= type *wild-type*)
+      *universal-type*
+      type))
+
+(defstruct (cons-type (:include ctype
+				(:class-info (type-class-or-lose 'cons)))
+		      (:constructor
+		       ;; ANSI says that for CAR and CDR subtype
+		       ;; specifiers '* is equivalent to T. In order
+		       ;; to avoid special cases in SUBTYPEP and
+		       ;; possibly elsewhere, we slam all CONS-TYPE
+		       ;; objects into canonical form w.r.t. this
+		       ;; equivalence at creation time.
+		       %make-cons-type (car-raw-type
+					cdr-raw-type
+					&aux
+					(car-type (type-*-to-t car-raw-type))
+					(cdr-type (type-*-to-t cdr-raw-type))))
+		      (:print-function %print-type)
+		      (:copier nil))
+  ;; the CAR and CDR element types (to support ANSI (CONS FOO BAR) types)
+  ;;
+  ;; FIXME: Most or all other type structure slots could also be :READ-ONLY.
+  (car-type (required-argument) :type ctype :read-only t)
+  (cdr-type (required-argument) :type ctype :read-only t))
+
+(defun make-cons-type (car-type cdr-type)
+  (if (or (eq car-type *empty-type*)
+	  (eq cdr-type *empty-type*))
+      *empty-type*
+      (%make-cons-type car-type cdr-type)))
+
+
+
 ;;;
 (defvar *use-implementation-types* t
   "*Use-Implementation-Types* is a semi-public flag which determines how
@@ -226,39 +528,6 @@
 ;;;    annotated function or values types.
 
 
-;;; The Args-Type structure is used both to represent Values types and
-;;; and Function types.
-;;;
-(defstruct (args-type (:include ctype)
-		      (:print-function %print-type))
-  ;;
-  ;; Lists of the type for each required and optional argument.
-  (required nil :type list)
-  (optional nil :type list)
-  ;;
-  ;; The type for the rest arg.  NIL if there is no rest arg.
-  (rest nil :type (or ctype null))
-  ;;
-  ;; True if keyword arguments are specified.
-  (keyp nil :type boolean)
-  ;;
-  ;; List of key-info structures describing the keyword arguments.
-  (keywords nil :type list)
-  ;;
-  ;; True if other keywords are allowed.
-  (allowp nil :type boolean))
-
-(defstruct (key-info (:pure t))
-  ;;
-  ;; The keyword.
-  (name (required-argument) :type symbol)
-  ;;
-  ;; Type of this argument.
-  (type (required-argument) :type ctype))
-
-
-(define-type-class values)
-
 (define-type-method (values :simple-subtypep :complex-subtypep-arg1)
     (type1 type2)
   (declare (ignore type2))
@@ -269,16 +538,8 @@
   (declare (ignore type1))
   (error "Subtypep is illegal on this type:~%  ~S" (type-specifier type2)))
 
-(defstruct (values-type
-	    (:include args-type
-		      (:class-info (type-class-or-lose 'values)))
-	    (:print-function %print-type)))
-
-(declaim (freeze-type values-type))
-
 (define-type-method (values :unparse) (type)
   (cons 'values (unparse-args-types type)))
-
 
 ;;; TYPE=-LIST  --  Internal
 ;;;
@@ -320,20 +581,6 @@
 			     (values-type-optional type2))
 	       (values (and req-val opt-val) (and req-win opt-win))))))))
 
-(define-type-class function)
-
-(defstruct (function-type
-	    (:include args-type
-		      (:class-info (type-class-or-lose 'function)))
-	    (:print-function %print-type))
-  ;;
-  ;; True if the arguments are unrestrictive, i.e. *.
-  (wild-args nil :type boolean)
-  ;;
-  ;; Type describing the return values.  This is a values type
-  ;; when multiple values were specified for the return.
-  (returns (required-argument) :type ctype))
-
 ;;; A flag that we can bind to cause complex function types to be unparsed as
 ;;; FUNCTION.  Useful when we want a type that we can pass to TYPEP.
 ;;;
@@ -349,7 +596,6 @@
 		(unparse-args-types type))
 	    (type-specifier
 	     (function-type-returns type)))))
-
 
 ;;; Since all function types are equivalent to FUNCTION, they are all subtypes
 ;;; of each other.
@@ -423,20 +669,6 @@
 (define-type-method (function :simple-=) (type1 type2)
   (values (equalp type1 type2) t))
 
-
-(define-type-class constant values)
-
-;;; The CONSTANT-TYPE structure represents a use of the CONSTANT-ARGUMENT "type
-;;; specifier", which is only meaningful in function argument type specifiers
-;;; used within the compiler.
-;;;
-(defstruct (constant-type (:include ctype
-				    (:class-info (type-class-or-lose 'constant)))
-			  (:print-function %print-type))
-  ;;
-  ;; The type which the argument must be a constant instance of for this type
-  ;; specifier to win.
-  (type (required-argument) :type ctype))
 
 (define-type-method (constant :unparse) (type)
   `(constant-argument ,(type-specifier (constant-type-type type))))
@@ -875,7 +1107,6 @@
 ;;; thus is not a UNION type unless there is no other way to represent the
 ;;; result.
 ;;;
-
 (defun type-union (&rest input-types)
   (%type-union input-types))
 
@@ -883,130 +1114,39 @@
                            :hash-function (lambda (x)
                                             (logand (sxhash x) #xff)))
     ((input-types equal))
-  (let ((simplified (simplify-union-types input-types)))
+  (let ((simplified (simplify-unions input-types)))
     (cond ((null simplified) *empty-type*)
 	  ((null (cdr simplified)) (car simplified))
 	  (t (make-union-type simplified)))))
 
-;;;
-;;; FIXME: Recode the simplification of union and intersection types,
-;;; so that it doesn't have the somewhat twisted cycle TYPE-UNION ->
-;;; SIMPLIFY-UNION-TYPES -> TYPE-UNION2 -> TYPE-UNION.
-;;;
-(defvar *ctype-arrays*)
-(cold-load-init (setq *ctype-arrays* nil))
-
-(defmacro with-types-array ((var) &body body)
-  `(let ((,var (or (pop *ctype-arrays*)
-		   (make-array 10 :fill-pointer 0 :adjustable t
-			       :element-type 'ctype))))
-     (setf (fill-pointer ,var) 0)
-     (locally ,@body)
-     (prog1 (loop for tp across ,var collect tp)
-       (push ,var *ctype-arrays*))))
-
-(defun simplify-union-types (types)
-  (with-types-array (result)
-    (labels ((accumulate1 (type)
-	       (dotimes (i (length result) (vector-push-extend type result))
-		 (let ((simple (type-union2 type (aref result i))))
-		   (when simple
-		     (setf (aref result i) (vector-pop result))
-		     (return (accumulate simple))))))
-	     (accumulate (type)
-	       (if (union-type-p type)
-		   (map nil #'accumulate1 (union-type-types type))
-		   (accumulate1 type))))
-      (dolist (type types)
-	(accumulate type)))))
-
-(defun %type-union2 (type1 type2)
-  ;; As in %TYPE-INTERSECTION2, it seems to be a good idea to give
-  ;; both argument orders a chance at COMPLEX-INTERSECTION2. Unlike
-  ;; %TYPE-INTERSECTION2, though, I don't have a specific case which
-  ;; demonstrates this is actually necessary. Also unlike
-  ;; %TYPE-INTERSECTION2, there seems to be no need to distinguish
-  ;; between not finding a method and having a method return NIL.
-  (flet ((1way (x y)
-	   (invoke-type-method :simple-union :complex-union
-				x y
-				:default nil)))
-    (or (1way type1 type2)
-	(1way type2 type1))))
+(defun simplify-unions (types)
+  (when types
+    (multiple-value-bind (first rest)
+	(if (union-type-p (car types))
+	    (values (car (union-type-types (car types)))
+		    (append (cdr (union-type-types (car types)))
+			    (cdr types)))
+	    (values (car types) (cdr types)))
+      (let ((rest (simplify-unions rest)) u)
+	(dolist (r rest (cons first rest))
+	  (when (setq u (type-union2 first r))
+	    (return (simplify-unions (nsubstitute u r rest)))))))))
 
 (defun-cached (type-union2 :hash-function type-cache-hash
 			   :hash-bits 8
 			   :init-form cold-load-init)
 	      ((type1 eq) (type2 eq))
   (declare (type ctype type1 type2))
-  (cond ((eq type1 type2)
-	 type1)
+  (cond ((eq type1 type2) type1)
 	((csubtypep type1 type2) type2)
 	((csubtypep type2 type1) type1)
-	((or (union-type-p type1)
-	     (union-type-p type2))
-	 ;; Unions of UNION-TYPE should have the UNION-TYPE-TYPES
-	 ;; values broken out and united separately. The full TYPE-UNION
-	 ;; function knows how to do this, so let it handle it.
-	 (type-union type1 type2))
 	(t
-	 ;; the ordinary case: we dispatch to type methods
-	 (%type-union2 type1 type2))))
-
-(defun %type-intersection2 (type1 type2)
-  ;; We want to give both argument orders a chance at
-  ;; COMPLEX-INTERSECTION2. Without that, the old CMU CL type
-  ;; methods could give noncommutative results, e.g.
-  ;;   (TYPE-INTERSECTION2 *EMPTY-TYPE* SOME-HAIRY-TYPE)
-  ;;     => NIL, NIL
-  ;;   (TYPE-INTERSECTION2 SOME-HAIRY-TYPE *EMPTY-TYPE*)
-  ;;     => #<NAMED-TYPE NIL>, T
-  ;; We also need to distinguish between the case where we found a
-  ;; type method, and it returned NIL, and the case where we fell
-  ;; through without finding any type method. An example of the first
-  ;; case is the intersection of a HAIRY-TYPE with some ordinary type.
-  ;; An example of the second case is the intersection of two
-  ;; completely-unrelated types, e.g. CONS and NUMBER, or SYMBOL and
-  ;; ARRAY.
-  ;;
-  ;; (Why yes, CLOS probably *would* be nicer..)
-  (flet ((1way (x y)
-	   (invoke-type-method :simple-intersection :complex-intersection
-				x y
-				:default :no-type-method-found)))
-    (let ((xy (1way type1 type2)))
-      (or (and (not (eql xy :no-type-method-found)) xy)
-	  (let ((yx (1way type2 type1)))
-	    (or (and (not (eql yx :no-type-method-found)) yx)
-		(cond ((and (eql xy :no-type-method-found)
-			    (eql yx :no-type-method-found))
-		       *empty-type*)
-		      (t
-		       (assert (and (not xy) (not yx))) ; else handled above
-		       nil))))))))
-
-(defun-cached (type-intersection2 :hash-function type-cache-hash
-				  :hash-bits 8
-				  :values 1
-				  :default nil
-				  :init-form cold-load-init)
-    ((type1 eq) (type2 eq))
-  (declare (type ctype type1 type2))
-  (cond ((eq type1 type2)
-	 ;; FIXME: For some reason, this doesn't catch e.g. type1 =
-	 ;; type2 = (SPECIFIER-TYPE
-	 ;; 'SOME-UNKNOWN-TYPE). Investigate. - CSR, 2002-04-10
-	 type1)
-	((or (intersection-type-p type1)
-	     (intersection-type-p type2))
-	 ;; Intersections of INTERSECTION-TYPE should have the
-	 ;; INTERSECTION-TYPE-TYPES values broken out and intersected
-	 ;; separately. The full TYPE-INTERSECTION function knows how
-	 ;; to do that, so let it handle it.
-	 (type-intersection type1 type2))
-	(t
-	 ;; the ordinary case: we dispatch to type methods
-	 (%type-intersection2 type1 type2))))
+	 (flet ((1way (x y)
+		  (invoke-type-method :simple-union :complex-union
+				      x y
+				      :default nil)))
+	   (or (1way type1 type2)
+	       (1way type2 type1))))))
 
 ;;; Return as restrictive and simple a type as we can discover that is
 ;;; no more restrictive than the intersection of TYPE1 and TYPE2. At
@@ -1031,7 +1171,7 @@
                                   :hash-function (lambda (x)
                                                    (logand (sxhash x) #xff)))
     ((input-types equal))
-  (let ((simplified (simplify-intersection-types input-types)))
+  (let ((simplified (simplify-intersections input-types)))
     ;(declare (type (vector ctype) simplified))
     ;; We want to have a canonical representation of types (or failing
     ;; that, punt to HAIRY-TYPE). Canonical representation would have
@@ -1056,20 +1196,52 @@
 	      (some #'type-enumerable simplified)
 	      simplified))))))
 
-(defun simplify-intersection-types (types)
-  (with-types-array (result)
-    (labels ((accumulate1 (type)
-	       (dotimes (i (length result) (vector-push-extend type result))
-		 (let ((simple (type-intersection2 type (aref result i))))
-		   (when simple
-		     (setf (aref result i) (vector-pop result))
-		     (return (accumulate simple))))))
-	     (accumulate (type)
-	       (if (intersection-type-p type)
-		   (map nil #'accumulate1 (intersection-type-types type))
-		   (accumulate1 type))))
-      (dolist (type types)
-	(accumulate type)))))
+(defun simplify-intersections (types)
+  (when types
+    (multiple-value-bind (first rest)
+	(if (intersection-type-p (car types))
+	    (values (car (intersection-type-types (car types)))
+		    (append (cdr (intersection-type-types (car types)))
+			    (cdr types)))
+	    (values (car types) (cdr types)))
+      (let ((rest (simplify-intersections rest)) u)
+	(dolist (r rest (cons first rest))
+	  (when (setq u (type-intersection2 first r))
+	    (return (simplify-intersections (nsubstitute u r rest)))))))))
+
+(defun-cached (type-intersection2 :hash-function type-cache-hash
+				  :hash-bits 8
+				  :init-form cold-load-init)
+    ((type1 eq) (type2 eq))
+  (declare (type ctype type1 type2))
+  (cond ((eq type1 type2)
+	 ;; FIXME: For some reason, this doesn't catch e.g. type1 =
+	 ;; type2 = (SPECIFIER-TYPE
+	 ;; 'SOME-UNKNOWN-TYPE). Investigate. - CSR, 2002-04-10
+	 type1)
+	((or (intersection-type-p type1)
+	     (intersection-type-p type2))
+	 ;; Intersections of INTERSECTION-TYPE should have the
+	 ;; INTERSECTION-TYPE-TYPES values broken out and intersected
+	 ;; separately. The full TYPE-INTERSECTION function knows how
+	 ;; to do that, so let it handle it.
+	 (type-intersection type1 type2))
+	(t
+	 (flet ((1way (x y)
+		  (invoke-type-method :simple-intersection
+				      :complex-intersection
+				      x y
+				      :default :no-type-method-found)))
+	   (let ((xy (1way type1 type2)))
+	     (or (and (not (eql xy :no-type-method-found)) xy)
+		 (let ((yx (1way type2 type1)))
+		   (or (and (not (eql yx :no-type-method-found)) yx)
+		       (cond ((and (eql xy :no-type-method-found)
+				   (eql yx :no-type-method-found))
+			      *empty-type*)
+			     (t
+			      (assert (and (not xy) (not yx)))
+			      nil))))))))))
 
 (defun maybe-distribute-one-union (union-type types)
   (let* ((intersection (apply #'type-intersection types))
@@ -1204,18 +1376,6 @@
 
 ;;;; Builtin types.
 
-;;; The NAMED-TYPE is used to represent *, T and NIL.  These types must be
-;;; super or sub types of all types, not just classes and * & NIL aren't
-;;; classes anyway, so it wouldn't make much sense to make them built-in
-;;; classes.
-;;;
-(defstruct (named-type (:include ctype
-				 (:class-info (type-class-or-lose 'named)))
-		       (:print-function %print-type))
-  (name nil :type symbol))
-
-(define-type-class named)
-
 (defvar *wild-type*)
 (defvar *empty-type*)
 (defvar *universal-type*)
@@ -1324,21 +1484,6 @@
 
 ;;;; Hairy and unknown types:
 
-;;; The Hairy-Type represents anything too wierd to be described reasonably or
-;;; to be useful, such as AND, NOT and SATISFIES and unknown types.  We just
-;;; remember the original type spec.
-;;;
-(defstruct (hairy-type (:include ctype
-				 (:class-info (type-class-or-lose 'hairy))
-				 (:enumerable t))
-		       (:print-function %print-type)
-		       (:pure nil))
-  ;;
-  ;; The Common Lisp type-specifier.
-  (specifier nil :type t))
-
-(define-type-class hairy)
-
 (define-type-method (hairy :unparse) (x)
   (hairy-type-specifier x))
 
@@ -1396,17 +1541,6 @@
 
 
 ;;;; Negation Types
-
-(defstruct (negation-type (:include ctype
-				    (:class-info (type-class-or-lose 'negation))
-				    ;; FIXME: is this right?  It's
-				    ;; what they had before, anyway
-				    (:enumerable t))
-			  (:copier nil)
-			  (:pure nil))
-  (type (required-argument) :type ctype))
-
-(define-type-class negation)
 
 (define-type-method (negation :unparse) (x)
   `(not ,(type-specifier (negation-type-type x))))
@@ -1642,12 +1776,6 @@
 	  (t (error "Weird CONS type ~S" not-type)))))
       (t (make-negation-type :type not-type)))))
 
-;;; An UNKNOWN-TYPE is a type not known to the type system (not yet defined).
-;;; We make this distinction since we don't want to complain about types that
-;;; are hairy but defined.
-;;;
-(defstruct (unknown-type (:include hairy-type)))
-
 
 ;;;; Numeric types.
 
@@ -1661,103 +1789,6 @@
 ;;;
 (deftype float-format () `(member ,@float-formats))
 
-
-;;; The Numeric-Type is used to represent all numeric types, including things
-;;; such as FIXNUM.
-(defstruct (numeric-type (:include ctype
-				   (:class-info (type-class-or-lose 'number)))
-			 (:constructor %make-numeric-type)
-			 (:print-function %print-type))
-  ;;
-  ;; The kind of numeric type we have.  NIL if not specified (just NUMBER or
-  ;; COMPLEX).
-  (class nil :type (member integer rational float nil))
-  ;;
-  ;; Format for a float type.  NIL if not specified or not a float.  Formats
-  ;; which don't exist in a given implementation don't appear here.
-  (format nil :type (or float-format null))
-  ;;
-  ;; Is this a complex numeric type?  Null if unknown (only in NUMBER.)
-  (complexp :real :type (member :real :complex nil))
-  ;;
-  ;; The upper and lower bounds on the value.  If null, there is no bound.  If
-  ;; a list of a number, the bound is exclusive.  Integer types never have
-  ;; exclusive bounds.
-  (low nil :type (or number cons null))
-  (high nil :type (or number cons null)))
-
-(defun type-bound-number (x)
-  (if (consp x)
-      (destructuring-bind (result) x result)
-      x))
-
-(defun make-numeric-type (&key class format (complexp :real) low high
-			       enumerable)
-  ;; if interval is empty
-  (if (and low
-	   high
-	   (if (or (consp low) (consp high)) ; if either bound is exclusive
-	       (>= (type-bound-number low) (type-bound-number high))
-	       (> low high)))
-      *empty-type*
-      (multiple-value-bind (canonical-low canonical-high)
-	  (case class
-	    (integer
-	     ;; INTEGER types always have their LOW and HIGH bounds
-	     ;; represented as inclusive, not exclusive values.
-	     (values (if (consp low)
-			 (1+ (type-bound-number low))
-			 low)
-		     (if (consp high)
-			 (1- (type-bound-number high))
-			 high)))
-	    #+negative-zero-is-not-zero
-	    (float
-	     ;; Canonicalize a low bound of (-0.0) to 0.0, and a high
-	     ;; bound of (+0.0) to -0.0.
-	     (values (if (and (consp low)
-			      (floatp (car low))
-			      (zerop (car low))
-			      (minusp (float-sign (car low))))
-			 (float 0.0 (car low))
-			 low)
-		     (if (and (consp high)
-			      (floatp (car high))
-			      (zerop (car high))
-			      (plusp (float-sign (car high))))
-			 (float -0.0 (car high))
-			 high)))
-	    (t 
-	     ;; no canonicalization necessary
-	     (values low high)))
-	(when (and (eq class 'rational)
-		   (integerp canonical-low)
-		   (integerp canonical-high)
-		   (= canonical-low canonical-high))
-	  (setf class 'integer))
-	(%make-numeric-type :class class
-			    :format format
-			    :complexp complexp
-			    :low canonical-low
-			    :high canonical-high
-			    :enumerable enumerable))))
- 
-(defun modified-numeric-type (base
-			      &key
-			      (class      (numeric-type-class      base))
-			      (format     (numeric-type-format     base))
-			      (complexp   (numeric-type-complexp   base))
-			      (low        (numeric-type-low        base))
-			      (high       (numeric-type-high       base))
-			      (enumerable (numeric-type-enumerable base)))
-  (make-numeric-type :class class
-		     :format format
-		     :complexp complexp
-		     :low low
-		     :high high
-		     :enumerable enumerable))
-
-(define-type-class number)
 
 (define-type-method (number :simple-=) (type1 type2)
   (values
@@ -2482,28 +2513,6 @@
 
 ;;;; Array types:
 
-;;; The Array-Type is used to represent all array types, including things such
-;;; as SIMPLE-STRING.
-;;;
-(defstruct (array-type (:include ctype
-				 (:class-info (type-class-or-lose 'array)))
-		       (:print-function %print-type))
-  ;;
-  ;; The dimensions of the array.  * if unspecified.  If a dimension is
-  ;; unspecified, it is *.
-  (dimensions '* :type (or list (member *)))
-  ;;
-  ;; Is this not a simple array type?
-  (complexp :maybe :type (member t nil :maybe))
-  ;;
-  ;; The element type as originally specified.
-  (element-type (required-argument) :type ctype)
-  ;;
-  ;; The element type as it is specialized in this implementation.
-  (specialized-element-type *wild-type* :type ctype))
-
-(define-type-class array)
-
 ;;; Specialized-Element-Type-Maybe  --  Internal
 ;;;
 ;;;      What this does depends on the setting of the
@@ -2753,22 +2762,6 @@
 
 ;;;; Member types.
 
-;;; The Member-Type represents uses of the MEMBER type specifier.  We bother
-;;; with this at this level because MEMBER types are fairly important and union
-;;; and intersection are well defined.
-
-(defstruct (member-type (:include ctype
-				  (:class-info (type-class-or-lose 'member))
-				  (:enumerable t))
-			(:print-function %print-type)
-			(:pure nil))
-  ;;
-  ;; The things in the set, with no duplications.
-  (members nil :type list))
-
-
-(define-type-class member)
-
 (define-type-method (member :unparse) (type)
   (let ((members (member-type-members type)))
     (cond
@@ -2862,26 +2855,6 @@
 
 ;;;; Union types:
 
-;;; The Union-Type represents uses of the OR type specifier which can't be
-;;; canonicalized to something simpler.  Canonical form:
-;;;
-;;; 1] There is never more than one Member-Type component.
-;;; 2] There are never any Union-Type components.
-;;;
-(defstruct (union-type (:include ctype
-				 (:class-info (type-class-or-lose 'union)))
-		       (:constructor %make-union-type (enumerable types))
-		       (:print-function %print-type))
-  ;;
-  ;; The types in the union.
-  (types nil :type list :read-only t))
-
-(defun make-union-type (types)
-  (declare (list types))
-  (%make-union-type (every #'type-enumerable types) types))
-
-(define-type-class union)
-
 (define-type-method (union :unparse) (type)
   (declare (type ctype type))
   (cond
@@ -2970,15 +2943,6 @@
 
 
 ;;;; Intersection Types
-
-(defstruct (intersection-type
-	     (:include ctype
-		       (:class-info (type-class-or-lose 'intersection)))
-	     (:constructor make-intersection-type (enumerable types))
-	     (:print-function %print-type))
-  (types nil :type list :read-only t))
-
-(define-type-class intersection)
 
 (define-type-method (intersection :unparse) (type)
   (declare (type ctype type))
@@ -3074,15 +3038,6 @@
 
 ;;;; Alien-type types
 
-(defstruct (alien-type-type
-	    (:include ctype
-		      (:class-info (type-class-or-lose 'alien)))
-	    (:print-function %print-type)
-	    (:constructor %make-alien-type-type (alien-type)))
-  (alien-type nil :type alien-type))
-
-(define-type-class alien)
-
 (define-type-method (alien :unparse) (type)
   `(alien ,(unparse-alien-type (alien-type-type-alien-type type))))
 
@@ -3120,43 +3075,6 @@
 
 
 ;;;; Cons types:
-
-;;; The Cons-Type is used to represent cons types.
-;;;
-(defun type-*-to-t (type)
-  (if (type= type *wild-type*)
-      *universal-type*
-      type))
-
-(defstruct (cons-type (:include ctype
-				(:class-info (type-class-or-lose 'cons)))
-		      (:constructor
-		       ;; ANSI says that for CAR and CDR subtype
-		       ;; specifiers '* is equivalent to T. In order
-		       ;; to avoid special cases in SUBTYPEP and
-		       ;; possibly elsewhere, we slam all CONS-TYPE
-		       ;; objects into canonical form w.r.t. this
-		       ;; equivalence at creation time.
-		       %make-cons-type (car-raw-type
-					cdr-raw-type
-					&aux
-					(car-type (type-*-to-t car-raw-type))
-					(cdr-type (type-*-to-t cdr-raw-type))))
-		      (:print-function %print-type)
-		      (:copier nil))
-  ;; the CAR and CDR element types (to support ANSI (CONS FOO BAR) types)
-  ;;
-  ;; FIXME: Most or all other type structure slots could also be :READ-ONLY.
-  (car-type (required-argument) :type ctype :read-only t)
-  (cdr-type (required-argument) :type ctype :read-only t))
-
-(defun make-cons-type (car-type cdr-type)
-  (if (or (eq car-type *empty-type*)
-	  (eq cdr-type *empty-type*))
-      *empty-type*
-      (%make-cons-type car-type cdr-type)))
-
-(define-type-class cons)
 
 (def-type-translator cons (&optional (car-type-spec '*) (cdr-type-spec '*))
   (let ((car-type (specifier-type car-type-spec))
