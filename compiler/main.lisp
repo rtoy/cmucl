@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.31 1991/02/26 22:06:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.32 1991/03/05 00:17:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,7 @@
 
 (defparameter compiler-version "0.0")
 
-(defvar *check-consistency* t)
+(defvar *check-consistency* nil)
 (defvar *all-components*)
 
 ;;; The value of the :Block-Compile argument that Compile-File was called with.
