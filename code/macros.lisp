@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.35 1992/09/01 17:41:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.35.1.1 1993/02/04 22:35:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,12 +166,23 @@
 (defun %deftype (name expander &optional doc)
   (ecase (info type kind name)
     (:primitive
-     (error "Illegal to redefine standard type: ~S." name))
+     (when *type-system-initialized*
+       (error "Illegal to redefine standard type: ~S." name)))
+    #+ns-boot
     (:structure
      (warn "Redefining structure type ~S with DEFTYPE." name)
-     (c::undefine-structure (info type structure-info name)))
-    ((nil :defined)))
-  (setf (info type kind name) :defined)
+     (c::undefine-structure (info type structure-info name))
+     (setf (info type kind name) :defined))
+    (:instance
+     (warn "Redefining class ~S to be a DEFTYPE." name)
+     (undefine-structure (layout-info (class-layout (info type class name))))
+     (setf (info type class name) nil)
+     (setf (info type compiler-layout name) nil)
+     (setf (info type kind name) :defined))
+    (:defined)
+    ((nil)
+     (setf (info type kind name) :defined)))
+
   (setf (info type expander name) expander)
   (when doc
     (setf (documentation name 'type) doc))
