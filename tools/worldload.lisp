@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.55 1993/02/27 01:51:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.56 1993/02/27 02:13:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,9 +153,6 @@
 #-no-hemlock
 (load "lisp:hemlock/hemlock-library")
 
-#-(and no-clx no-hemlock)
-(purify :root-structures `(ed #-no-hemlock ,hi::*global-command-table*))
-
 ;;; PCL.
 ;;;
 #-no-pcl (load "pcl:pclload")
@@ -224,4 +221,5 @@
   (gc-on)
   ;;
   ;; Save the lisp.
-  (save-lisp "lisp.core"))
+  (save-lisp "lisp.core" :root-structures
+	     `(ed #-no-hemlock ,hi::*global-command-table*)))
