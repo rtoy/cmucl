@@ -53,7 +53,7 @@ header.
 On the Lisp side, there are two supporting data structures for the
 linkage table: \code{*linkage-table-data*} and
 \code{*foreign-linkage-symbols*}. The latter is a hash table whose key
-is the foriegn symbol (a string) and whose value is an index into
+is the foreign symbol (a string) and whose value is an index into
 \code{*linkage-table-data*}.
 
 \code{*linkage-table-data*} is a vector with an unlispy layout. Each
@@ -76,7 +76,7 @@ address of the symbol can be determined.  The type tells the C code
 how to fill in the entry in the linkage-table itself.
 
 % (Should say something about genesis too, but I don't know how that
-% works other than the initial table is setup with the apropriate first
+% works other than the initial table is setup with the appropriate first
 % entry.)
 
 
