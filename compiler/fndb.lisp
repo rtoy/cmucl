@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.86 2000/02/25 15:00:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.87 2000/07/09 16:08:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -837,7 +837,7 @@
 (defknown stream-element-type (stream) type-specifier (movable foldable flushable))
 (defknown (output-stream-p input-stream-p) (stream) boolean (movable foldable
 								     flushable))
-(defknown close (stream &key (:abort t)) stream ())
+(defknown close (stream &key (:abort t)) t ())
 
 
 ;;;; In the "Input/Output" chapter:
@@ -1076,19 +1076,19 @@
 
 (defknown disassemble (callable &key (:stream stream) (:backend backend)
 				(:use-labels t))
-  void)
+  (values))
 
 (defknown documentation (t symbol)
   (or string null)
   (flushable))
 
 (defknown describe (t &optional (or stream (member t nil))) (values))
-(defknown inspect (t) (values))
+(defknown inspect (t) t)
 
-(defknown room (&optional (member t nil :default)) void)
+(defknown room (&optional (member t nil :default)) (values))
 (defknown ed (&optional (or symbol cons filename) &key (:init t) (:display t))
   t)
-(defknown dribble (&optional filename &key (:if-exists t)) t)
+(defknown dribble (&optional filename &key (:if-exists t)) (values))
 
 (defknown apropos (stringable &optional packagelike t) (values))
 (defknown apropos-list (stringable &optional packagelike t) list (flushable))
