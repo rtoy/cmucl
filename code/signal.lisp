@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.17 1992/07/09 19:27:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.18 1993/05/20 13:58:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.17 1992/07/09 19:27:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.18 1993/05/20 13:58:02 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -294,15 +294,17 @@
 ;;; with the cost of delivering the signal in the first place.
 ;;;
 
-(defvar *interrupts-enabled* t)
-(defvar *interrupt-pending* nil)
-
 ;;; DO-PENDING-INTERRUPT  --  internal
 ;;;
 ;;; Magically converted by the compiler into a break instruction.
 ;;; 
 (defun do-pending-interrupt ()
   (do-pending-interrupt))
+
+#-gengc (progn
+
+(defvar *interrupts-enabled* t)
+(defvar *interrupt-pending* nil)
 
 ;;; WITHOUT-INTERRUPTS  --  puiblic
 ;;; 
@@ -331,6 +333,30 @@
 	     (when *interrupt-pending*
 	       (do-pending-interrupt))
 	     (,name))))))
+
+); #-gengc progn
+
+;;; On the GENGC system, we have to do it slightly differently because of the
+;;; existance of threads.  Each thread has a suspends_disabled_count in its
+;;; mutator structure.  When this value is other then zero, the low level stuff
+;;; will not suspend the thread, but will instead set the suspend_pending flag
+;;; (also in the mutator).  So when we finish the without-interrupts, we just
+;;; check the suspend_pending flag and trigger a do-pending-interrupt if
+;;; necessary.
+
+#+gengc
+(defmacro without-interrupts (&body body)
+  `(unwind-protect
+       (progn
+	 (locally
+	   (declare (optimize (speed 3) (safety 0)))
+	   (incf (kernel:mutator-suspends-disabled-count)))
+	 ,@body)
+     (locally
+       (declare (optimize (speed 3) (safety 0)))
+       (when (and (zerop (decf (kernel:mutator-suspends-disabled-count)))
+		  (not (zerop (kernel:mutator-suspend-pending))))
+	 (do-pending-interrupt)))))
 
 
 ;;;; WITH-ENABLED-INTERRUPTS
