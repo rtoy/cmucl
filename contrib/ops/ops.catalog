@@ -12,34 +12,29 @@ Author:
 CMU Common Lisp mods by Dario Guise, Skef Wholey, and Dan Kuokka.
 
 Maintainer:
-   CMU Common Lisp Group.
-
-Net Address:
-   slisp-group@b
+   Not really maintained.
 
 Copyright Status:
    Public domain.
 
 Files:
    ops.lisp, ops-backup.lisp, ops-compile.lisp, ops-io.lisp, ops-main.lisp,
-ops-match.lisp, ops-rhs.lisp, ops-util.lisp, ops.catalog, ops-demo-mab.lisp,
-ops-demo-ttt.lisp, and binaries.
-
-How to Get:
-   The following unix command will copy the pertinent files into directory
-<spec>.
-   cp /afs/cs.cmu.edu/project/slisp/library/ops/* <spec>
+ops-match.lisp, ops-rhs.lisp, ops-util.lisp, ops.catalog, *.ops
 
 Portability:
    Should run in any legal Common Lisp implementation.
 
 Instructions:
-   From Lisp, load "ops" and then go into the OPS package with (in-package
-'ops).  Now you can load your OPS5 code or start typing in productions.
 
-There are two demos -- interactive tic-tac-toe and the monkey and banana
-problem.  To run the former just load it and call RUN.  For the latter, first
-enter "(make start 1)" and then call RUN.
+To compile for CMU Common Lisp, (load "library:contrib/ops/compile-ops").
+After OPS has been compiled, you can (load "library:contrib/ops/ops.fasl").
+Then go into the OPS package with (in-package :ops).  Now you can load your
+OPS5 code or start typing in productions.
+
+There are a number of demos and sample programs; particularly amusing is the
+Haunt adventure game.  Do (load "<name>.ops"), then "(run)".  Many systems
+require an initial "(make start)" before the "(run)" --- if this is missing,
+"(run)" will do nothing.  Set *ptrace* to NIL to eliminate production tracing.
 
 See the OPS5 User's Manual, July 1981, by Forgy, CMU CSD.
 
