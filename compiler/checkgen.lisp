@@ -388,7 +388,7 @@
 		(when (and (combination-p dest)
 			   (function-info-p (basic-combination-kind dest)))
 		  (setf (basic-combination-kind dest) :full)))
-	      (when (policy node (>= safety brevity))
+	      (unless (policy node (= brevity 3))
 		(let ((*compiler-error-context* node))
 		  (if (and (ref-p node) (constant-p (ref-leaf node)))
 		      (compiler-warning "This is not a ~S:~%  ~S"
