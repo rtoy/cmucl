@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.12 1992/03/14 13:46:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.13 1992/08/05 20:08:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,12 +74,18 @@
 (defun get-internal-run-time ()
   "Return the run time in the internal time format.  This is useful for
   finding CPU usage."
+  (declare (values (unsigned-byte 32)))
   (locally (declare (optimize (speed 3) (safety 0)))
-    (multiple-value-bind (ignore utime stime)
-			 (unix:unix-getrusage unix:rusage_self)
-      (declare (ignore ignore))
-      (values (truncate (the (unsigned-byte 32) (+ utime stime))
-			micro-seconds-per-internal-time-unit)))))
+    (multiple-value-bind (ignore utime-sec utime-usec stime-sec stime-usec)
+			 (unix:unix-fast-getrusage unix:rusage_self)
+      (declare (ignore ignore)
+	       (type (unsigned-byte 31) utime-sec stime-sec)
+	       (type (mod 1000000) utime-usec stime-usec))
+      (+ (the (unsigned-byte 32)
+	      (* (the (unsigned-byte 32) (+ utime-sec stime-sec))
+		 internal-time-units-per-second))
+	 (truncate (+ utime-usec stime-usec)
+		   micro-seconds-per-internal-time-unit)))))
 
 
 ;;; Subtract from the returned Internal_Time to get the universal time.
