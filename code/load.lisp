@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.50 1993/05/11 13:41:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.51 1993/05/11 17:28:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1075,11 +1075,19 @@
       fun)))
 
 (define-fop (fop-make-byte-compiled-function 143)
-  (let ((fun (c::make-byte-compiled-function (pop-stack))))
+  (let* ((size (read-arg 1))
+	 (layout (pop-stack))
+	 (res (%make-funcallable-instance size layout)))
+    (declare (type index size))
+    (do ((n (1- size) (1- n)))
+	((minusp n))
+      (declare (type (integer -1 #.most-positive-fixnum) n))
+      (setf (%funcallable-instance-info res n) (pop-stack)))
+    (initialize-byte-compiled-function res)
     (when *load-print*
       (load-fresh-line)
-      (format t "~S defined~%" fun))
-    fun))
+      (format t "~S defined~%" res))
+    res))
 
 
 ;;;; Linkage fixups.
