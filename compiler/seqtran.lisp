@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.14 1991/12/08 16:55:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.15 1992/03/14 02:16:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,6 +109,15 @@
 (defconstant char=-functions '(eql equal char=))
 
 
+(deftransform search ((string1 string2 &key (start1 0) end1 (start2 0) end2
+			       test)
+		      (simple-string simple-string &rest t))
+  (unless (or (not test)
+	      (continuation-function-is test char=-functions))
+    (give-up))
+  '(lisp::%sp-string-search string1 start1 (or end1 (length string1))
+			    string2 start2 (or end2 (length string2))))
+			      
 (deftransform position ((item sequence &key from-end test (start 0) end)
 			(t simple-string &rest t))
   (unless (or (not test)
