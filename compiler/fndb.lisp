@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.119 2003/07/19 15:30:30 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.120 2003/07/30 16:51:43 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -820,7 +820,9 @@
 (defknown make-two-way-stream (stream stream) stream (flushable))
 (defknown make-echo-stream (stream stream) stream (flushable))
 (defknown make-string-input-stream (string &optional index index) stream (flushable unsafe))
-(defknown make-string-output-stream () stream (flushable))
+(defknown make-string-output-stream (&key (:element-type type-specifier))
+  stream
+  (flushable))
 (defknown get-output-stream-string (stream) simple-string ())
 (defknown streamp (t) boolean (movable foldable flushable))
 (defknown stream-element-type (stream) type-specifier (movable foldable flushable))

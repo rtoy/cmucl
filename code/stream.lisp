@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.63 2003/06/18 09:23:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.64 2003/07/30 16:51:43 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1439,7 +1439,7 @@ output to Output-stream"
 		      (sout #'string-sout)
 		      (misc #'string-out-misc))
 	    (:print-function %print-string-output-stream)
-	    (:constructor make-string-output-stream ()))
+	    (:constructor %make-string-output-stream ()))
   ;; The string we throw stuff in.
   (string (make-string 40) :type simple-string)
   ;; Index of the next location to use.
@@ -1449,9 +1449,11 @@ output to Output-stream"
   (declare (ignore s d))
   (write-string "#<String-Output Stream>" stream))
 
-(setf (documentation 'make-string-output-stream 'function)
+(defun make-string-output-stream (&key (element-type 'character))
   "Returns an Output stream which will accumulate all output given to it for
-   the benefit of the function Get-Output-Stream-String.")
+   the benefit of the function Get-Output-Stream-String."
+  (declare (ignore element-type))
+  (%make-string-output-stream))
 
 (defun string-ouch (stream character)
   (let ((current (string-output-stream-index stream))
