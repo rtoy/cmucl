@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.33 1998/02/09 15:19:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.34 1998/12/19 16:09:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1458,7 +1458,10 @@ a host-structure or string."
 			   *logical-hosts*)))
        (if (or found (not errorp))
 	   found
-	   (error "Logical host not yet defined: ~S" thing))))
+	   (error 'simple-file-error
+		  :pathname thing
+		  :format-control "Logical host not yet defined: ~S"
+		  :format-arguments (list thing)))))
     (logical-host thing)))
 
 
@@ -1795,7 +1798,10 @@ a host-structure or string."
   (typecase pathname
     (logical-pathname
      (dolist (x (logical-host-canon-transls (%pathname-host pathname))
-		(error "No translation for ~S" pathname))
+		(error 'simple-file-error
+		       :pathname pathname
+		       :format-control "No translation for ~S"
+		       :format-arguments (list pathname)))
        (destructuring-bind (from to) x
 	 (when (pathname-match-p pathname from)
 	   (return (translate-logical-pathname
