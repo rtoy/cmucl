@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.10 1993/05/11 18:36:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.11 1993/05/11 21:09:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1136,7 +1136,7 @@
 	     (type return-pc old-pc)
 	     (type (or fdefn function) fun-or-fdefn)
 	     (type function function))
-    (case (function-subtype function)
+    (typecase function
       (byte-function
        (stack-copy old-sp start-of-args num-args)
        (invoke-xep old-component old-pc old-sp old-fp num-args function))
