@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.23 2002/05/10 14:48:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.24 2002/09/09 14:08:48 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,6 +156,9 @@
 
 ;;; Integer vectors whos elements are smaller than a byte.  I.e. bit, 2-bit,
 ;;; and 4-bit vectors.
+;;;
+;;; The elements are stored in the word with the first element in the
+;;; most-significant parts of the word.
 ;;; 
 
 (eval-when (compile eval)
@@ -175,11 +178,16 @@
 	 (:result-types positive-fixnum)
 	 (:temporary (:scs (non-descriptor-reg) :to (:result 0)) temp result)
 	 (:generator 20
+	   ;; temp = floor(index bit-shift), to get address of word
+	   ;; containing our bits.
 	   (inst srl temp index ,bit-shift)
 	   (inst sll temp fixnum-tag-bits)
 	   (inst add temp (- (* vm:vector-data-offset vm:word-bytes)
 			     vm:other-pointer-type))
 	   (inst ld result object temp)
+	   ;; temp = mod(index, bit-shift) to figure out what part of
+	   ;; word we want.  (XOR is a quick way of computing
+	   ;; elements-per-word minus temp.)
 	   (inst and temp index ,(1- elements-per-word))
 	   (inst xor temp ,(1- elements-per-word))
 	   ,@(unless (= bits 1)
@@ -197,8 +205,11 @@
 	 (:result-types positive-fixnum)
 	 (:temporary (:scs (non-descriptor-reg)) temp)
 	 (:generator 15
-	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
-	     (setf extra (logxor extra (1- ,elements-per-word)))
+	   (multiple-value-bind (word extra)
+	       (floor index ,elements-per-word)
+	     ;; Compute how many "units" we need to right shift to get
+	     ;; the bits we want.
+	     (setf extra (- ,(1- elements-per-word) extra))
 	     (let ((offset (- (* (+ word vm:vector-data-offset) vm:word-bytes)
 			      vm:other-pointer-type)))
 	       (cond ((typep offset '(signed-byte 13))
@@ -207,8 +218,9 @@
 		      (inst li temp offset)
 		      (inst ld result object temp))))
 	     (unless (zerop extra)
-	       (inst srl result
-		     (logxor (* extra ,bits) ,(1- elements-per-word))))
+	       (inst srl result (* ,bits extra)))
+	     ;; Always need the mask unless the bits we wanted were the
+	     ;; most significant bits of the word.
 	     (unless (= extra ,(1- elements-per-word))
 	       (inst and result ,(1- (ash 1 bits)))))))
        (define-vop (,(symbolicate 'data-vector-set/ type))
