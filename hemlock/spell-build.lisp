@@ -180,7 +180,7 @@
 			       descriptor-ptr string-ptr)
   (declare (simple-string line string-table)
 	   (fixnum word-end descriptor-ptr string-ptr)
-	   (type (array (unsigned-byte 16) 1) dictionary descriptors))
+	   (type (array (unsigned-byte 16) (*)) dictionary descriptors))
   (nstring-upcase line :end word-end)
   (let* ((hash-loc (new-hash-entry line word-end dictionary))
 	 (descriptor-ptr+1 (1+ descriptor-ptr))
@@ -204,7 +204,7 @@
 (defun new-add-flags (descriptors loc line word-end)
   (declare (simple-string line)
 	   (fixnum word-end)
-	   (type (array (unsigned-byte 16) 1) descriptors))
+	   (type (array (unsigned-byte 16) (*)) descriptors))
   (do ((flag (1+ word-end) (+ 2 flag))
        (line-end (length line)))
       ((>= flag line-end))
@@ -219,7 +219,7 @@
 
 (defun write-dictionary (f dictionary descriptors entry-count
 			   string-table string-table-length)
-  (declare (type (array (unsigned-byte 16) 1) dictionary descriptors)
+  (declare (type (array (unsigned-byte 16) (*)) dictionary descriptors)
 	   (simple-string string-table)
 	   (fixnum string-table-length))
   (let ((filename (lisp::predict-name (namestring (pathname f)) nil)))
