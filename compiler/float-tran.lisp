@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.18 1993/05/12 11:11:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.19 1993/08/21 08:16:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,13 +96,6 @@
 
 (defknown double-float-low-bits (double-float) (unsigned-byte 32)
   (movable foldable flushable))
-
-
-(defun make-single-float (x) (make-single-float x))
-(defun make-double-float (hi lo) (make-double-float hi lo))
-(defun single-float-bits (x) (single-float-bits x))
-(defun double-float-high-bits (x) (double-float-high-bits x))
-(defun double-float-low-bits (x) (double-float-low-bits x))
 
 (def-source-transform float-sign (float1 &optional (float2 nil f2-p))
   (cond ((byte-compiling) (values nil t))
