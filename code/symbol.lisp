@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.5 1991/02/08 13:36:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.6 1991/04/23 17:02:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,11 +47,13 @@
 (defun symbol-value (variable)
   "VARIABLE must evaluate to a symbol.  This symbol's current special
   value is returned."
+  (declare (optimize (safety 1)))
   (symbol-value variable))
 
 (defun symbol-function (variable)
   "VARIABLE must evaluate to a symbol.  This symbol's current definition
   is returned."
+  (declare (optimize (safety 1)))
   (symbol-function variable))
 
 (defun %sp-set-definition (symbol new-value)
@@ -186,14 +188,11 @@
   alter the prefix if it is a string, or the decimal number if it is a
   number, of this symbol.  The number, defaultly *gensym-counter*, is
   incremented by each call to GENSYM."
-  (let* ((*print-base* 10)
-	 (*print-radix* nil)
-	 (*print-pretty* nil)
-	 (prefix (if (stringp string) string "G"))
-	 (number (prin1-to-string (if (numberp string)
-				      string
-				      (incf *gensym-counter*)))))
-    (make-symbol (concatenate 'simple-string prefix number))))
+  (make-symbol
+   (concatenate 'simple-string
+		(if (stringp string) string "G")
+		(quick-integer-to-string
+		 (if (integerp string) string (incf *gensym-counter*))))))
 
 (defun gentemp (&optional (prefix t) (package *package*))
   "Creates a new symbol interned in package Package with the given Prefix."
