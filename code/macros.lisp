@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.11 1990/09/06 19:43:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.12 1990/10/11 18:18:16 ram Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -219,6 +219,13 @@
 	      (member :new-compiler *features*))
     (setf (get name 'deftype-expander)
 	  expander))
+  (ecase (info type kind name)
+    (:primitive
+     (error "Illegal to redefine standard type: ~S." name))
+    (:structure
+     (warn "Redefining structure type ~S with DEFTYPE." name)
+     (c::undefine-structure (info type structure-info name)))
+    ((nil :defined)))
   (when #-new-compiler *bootstrap-deftype* #+new-compiler t
     (setf (info type kind name) :defined)
     (setf (info type expander name) expander))
@@ -226,7 +233,7 @@
     (setf (documentation name 'type) doc))
   ;; ### Bootstrap hack -- we need to define types before %note-type-defined
   ;; is defined.
-  (when (fboundp 'c::note-type-defined)
+  (when (fboundp 'c::%note-type-defined)
     (c::%note-type-defined name))
   name)
 
@@ -295,13 +302,11 @@
     (if (and (consp name) (eq (first name) 'setf))
 	(setf (documentation (second name) 'setf) doc)
 	(setf (documentation name 'function) doc)))
-
-  (unless (eq (info function kind name) :function)
-    (setf (info function kind name) :function))
-
-  (when (info function accessor-for name)
-    (setf (info function accessor-for name) nil))
-    
+  (c::define-function-name name)
+  (when (eq (info function where-from name) :assumed)
+    (setf (info function where-from name) :defined)
+    (when (info function assumed-type name)
+      (setf (info function assumed-type name) nil)))
   (when (or inline-expansion
 	    (info function inline-expansion name))
     (setf (info function inline-expansion name) inline-expansion))
