@@ -176,6 +176,13 @@
     (:big)
     (:little (pushnew :clx-little-endian *features*))))
 
+#+cmu
+(eval-when (compile eval load)
+  (ecase #.(c:backend-byte-order c:*backend*)
+    (:big-endian)
+    (:little-endian (pushnew :clx-little-endian *features*))))
+
+
 ;;; Steele's Common-Lisp states:  "It is an error if the array specified
 ;;; as the :displaced-to argument  does not have the same :element-type
 ;;; as the array being created" If this is the case on your lisp, then
