@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.53 1993/02/27 01:04:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.54 1993/02/27 01:31:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,5 +224,4 @@
   (gc-on)
   ;;
   ;; Save the lisp.
-  (purify)
   (save-lisp "lisp.core"))
