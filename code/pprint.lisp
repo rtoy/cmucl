@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.5 1991/12/06 05:23:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.6 1991/12/13 06:06:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,7 +246,7 @@
 	(replace total-suffix suffix
 		 :start1 (- total-suffix-len new-suffix-len)
 		 :end1 (- total-suffix-len suffix-length))
-	(setf suffix-length new-suffix-len))))
+	(setf (logical-block-suffix-length block) new-suffix-len))))
   nil)
 
 (defun set-indentation (stream column)
@@ -603,6 +603,7 @@
 		    0)))))
     (write-string buffer target :end amount-to-print)
     (let ((line-number (pretty-stream-line-number stream)))
+      (incf line-number)
       (when (and *print-lines* (>= line-number *print-lines*))
 	(write-string " .." target)
 	(let ((suffix-length (logical-block-suffix-length
@@ -614,7 +615,6 @@
 			    :start (- len suffix-length)
 			    :end len))))
 	(throw 'line-limit-abbreviation-happened t))
-      (incf line-number)
       (setf (pretty-stream-line-number stream) line-number)
       (write-char #\newline target)
       (setf (pretty-stream-buffer-start-column stream) 0)
@@ -624,12 +624,23 @@
 	      (if literal-p
 		  (logical-block-per-line-prefix-end block)
 		  (logical-block-prefix-length block)))
-	     (shift (- amount-to-consume prefix-len)))
-	(replace buffer buffer
+	     (shift (- amount-to-consume prefix-len))
+	     (new-fill-ptr (- fill-ptr shift))
+	     (new-buffer buffer)
+	     (buffer-length (length buffer)))
+	(when (> new-fill-ptr buffer-length)
+	  (setf new-buffer
+		(make-string (max (* buffer-length 2)
+				  (+ buffer-length
+				     (floor (* (- new-fill-ptr buffer-length)
+					       5)
+					    4)))))
+	  (setf (pretty-stream-buffer stream) new-buffer))
+	(replace new-buffer buffer
 		 :start1 prefix-len :start2 amount-to-consume :end2 fill-ptr)
-	(replace buffer (pretty-stream-prefix stream)
+	(replace new-buffer (pretty-stream-prefix stream)
 		 :end1 prefix-len)
-	(setf (pretty-stream-buffer-fill-pointer stream) (- fill-ptr shift))
+	(setf (pretty-stream-buffer-fill-pointer stream) new-fill-ptr)
 	(incf (pretty-stream-buffer-offset stream) shift)
 	(unless literal-p
 	  (setf (logical-block-section-column block) prefix-len)
@@ -676,13 +687,13 @@
     #'(lambda (,stream-var)
 	,@body)))
 
-
-
 
 ;;;; User interface to the pretty printer.
 
 (defmacro pprint-logical-block
-	  ((stream-symbol list &key prefix per-line-prefix suffix)
+	  ((stream-symbol object &key prefix per-line-prefix suffix
+			  allow-atoms (descend t) (check-for-circularity t)
+			  (initiate-pretty-printing t))
 	   &body body)
   "Group some output into a logical block.  STREAM-SYMBOL should be either a
    stream, T (for *TERMINAL-IO*), or NIL (for *STANDARD-OUTPUT*).  The printer
@@ -704,63 +715,71 @@
 		      ((nil) *standard-output*)
 		      ((t) *terminal-io*)
 		      (t ,stream))))))
-    (let* ((list-var (and list (gensym)))
+    (let* ((object-var (gensym))
 	   (block-name (gensym))
 	   (count-name (gensym))
-	   (pp-pop-name (gensym))
-	   (guts
-	    `(lisp::decend-into (,list-var ,stream-var)
-	       (with-pretty-stream (,stream-var)
-		 (start-logical-block ,stream-var
-				      ,(or prefix per-line-prefix)
-				      ,(if per-line-prefix t nil)
-				      ,suffix)
-		 (let (,@(when list `((,list-var ,list-var)))
-		       (,count-name (if *print-readably* nil *print-length*)))
-		   (declare (ignorable ,count-name))
-		   (block ,block-name
-		     (flet ((,pp-pop-name ()
-			      ,@(when list-var
-				  `((unless (listp ,list-var)
-				      (write-string ". " ,stream-var)
-				      (output-object ,list-var ,stream-var)
-				      (return-from ,block-name nil))))
-			      (when (and ,count-name
-					 (minusp (decf ,count-name)))
-				(write-string "..." ,stream-var)
-				(return-from ,block-name nil))
-			      ,@(when list-var
-				  `((when (lisp::check-for-circularity
-					   ,list-var)
-				      (write-string ". " ,stream-var)
-				      (output-object ,list-var ,stream-var)
-				      (return-from ,block-name nil))
-				    (pop ,list-var)))))
-		       ;#',pp-pop-name ;; Ignorable
-		       (macrolet
-			   ((pprint-pop ()
-			      `(,',pp-pop-name))
-			    (pprint-exit-if-list-exhausted ()
-			      ,(if list
-				   ``(unless ,',list-var
-				       (return-from ,',block-name nil))
-				   '(error
-			     "Cannot use PPRINT-EXIT-IF-LIST-EXHAUSTED ~
-			      when NIL was supplied as the list ~@
-			      argument to PPRINT-LOGICAL-BLOCK because ~
-			      there is no associated list."))))
-			 ,@body))))
-		 (end-logical-block ,stream-var)))))
-      `(progn
-	 ,(if list
-	      `(let ((,stream-var ,stream-expression)
-		     (,list-var ,list))
-		 (if (listp ,list-var)
-		     ,guts
-		     (output-object ,list-var ,stream-var)))
-	      `(let ((,stream-var ,stream-expression))
-		 ,guts))
-	 nil))))
+	   (pp-pop-name (gensym)))
+      `(%pprint-logical-block
+	,stream-expression ,object ,(or prefix per-line-prefix)
+	,(not (null per-line-prefix)) ,suffix
+	,allow-atoms ,descend ,check-for-circularity ,initiate-pretty-printing
+	#'(lambda (,stream-var ,object-var)
+	    (let ((,count-name 0))
+	      (declare (type index ,count-name) (ignorable ,count-name))
+	      (block ,block-name
+		(flet ((,pp-pop-name ()
+			 (unless (listp ,object-var)
+			   (write-string ". " ,stream-var)
+			   (output-object ,object-var ,stream-var)
+			   (return-from ,block-name nil))
+			 (when (eql ,count-name *print-length*)
+			   (write-string "..." ,stream-var)
+			   (return-from ,block-name nil))
+			 (when (and ,object-var
+				    (plusp ,count-name)
+				    (check-for-circularity ,object-var))
+			   (write-string ". " ,stream-var)
+			   (output-object ,object-var ,stream-var)
+			   (return-from ,block-name nil))
+			 (incf ,count-name)
+			 (pop ,object-var)))
+		  (declare (ignorable #',pp-pop-name))
+		  (macrolet ((pprint-pop ()
+			       '(,pp-pop-name))
+			     (pprint-exit-if-list-exhausted ()
+			       `(when (null ,',object-var)
+				  (return-from ,',block-name nil))))
+		    ,@body)))))))))
+
+(defun %pprint-logical-block (stream object prefix per-line-p suffix
+				     allow-atoms descend check-circularity
+				     initiate-pretty-printing body)
+  (if (or allow-atoms (listp object))
+      (labels ((do-body (stream)
+		 (start-logical-block stream prefix per-line-p suffix)
+		 (funcall body stream (if allow-atoms nil object))
+		 (end-logical-block stream))
+	       (maybe-init (stream)
+		 (cond ((pretty-stream-p stream)
+			(do-body stream))
+		       (initiate-pretty-printing
+			(with-pretty-stream (stream)
+			  (do-body stream)))
+		       (t
+			(write-string prefix stream)
+			(funcall body stream (if allow-atoms nil object))
+			(write-string suffix stream))))
+	       (maybe-circular ()
+		 (if (and object check-circularity)
+		     (with-circularity-detection (object stream)
+		       (maybe-init stream))
+		     (maybe-init stream))))
+	(if descend
+	    (descend-into (nil stream)
+	      (maybe-circular))
+	    (maybe-circular)))
+      (output-object object stream))
+  nil)
 
 (defmacro pprint-exit-if-list-exhausted ()
   "Cause the closest enclosing use of PPRINT-LOGICAL-BLOCK to return
@@ -1097,19 +1116,17 @@
 	 (pprint-multi-dim-array stream array))))
 
 (defun pprint-vector (stream vector)
-  (decend-into (vector stream)
-    (with-pretty-stream (stream)
-      (start-logical-block stream "#(" nil ")")
-      (dotimes (i (length vector))
-	(punt-if-too-long i stream)
-	(unless (zerop i)
-	  (write-char #\space stream)
-	  (pprint-newline :fill stream))
-	(output-object (aref vector i) stream))
-      (end-logical-block stream))))
+  (pprint-logical-block (stream vector :allow-atoms t
+				:prefix "#(" :suffix ")")
+    (dotimes (i (length vector))
+      (pprint-pop)
+      (unless (zerop i)
+	(write-char #\space stream)
+	(pprint-newline :fill stream))
+      (output-object (aref vector i) stream))))
 
 (defun pprint-multi-dim-array (stream array)
-  (decend-into (array stream)
+  (pprint-logical-block (stream array :descend nil :allow-atoms t)
     (funcall (formatter "#~DA") stream (array-rank array))
     (lisp::with-array-data ((data array) (start) (end))
       (declare (ignore end))
@@ -1354,7 +1371,7 @@
 
 (defun pprint-function-call (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~:<~^~W~^ ~@_~:I~@{~W~^ ~_~}~:>")
+  (funcall (formatter "~:<~^~W~^ ~:_~:I~@{~W~^ ~_~}~:>")
 	   stream
 	   list))
 
