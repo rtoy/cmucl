@@ -1133,20 +1133,23 @@
 
 ;;;; Miscellaneous IR1 structures:
 
-(defstruct (unknown-function
+(defstruct (undefined-warning
 	    (:print-function
 	     (lambda (s stream d)
 	       (declare (ignore d))
-	       (format stream "#<Unknown-Function ~S>"
-		       (unknown-function-name s)))))
+	       (format stream "#<Delayed-Warning ~S>"
+		       (undefined-warning-name s)))))
   ;;
-  ;; The name of the unknown function called.
+  ;; The name of the unknown thing.
   (name nil :type (or symbol list))
   ;;
-  ;; The number of times this function was called.
+  ;; The kind of reference to Name.
+  (kind nil :type (or :function :type))
+  ;;
+  ;; The number of times this thing was used.
   (count 0 :type unsigned-byte)
   ;;
   ;; A list of COMPILER-ERROR-CONTEXT structures describing places where this
-  ;; function was called.  Note that we only record the first
-  ;; *UNKNOWN-FUNCTION-WARNING-LIMIT* calls.
+  ;; thing was used.  Note that we only record the first
+  ;; *UNDEFINED-WARNING-LIMIT* calls.
   (warnings () :type list))
