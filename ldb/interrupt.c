@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.13 1990/11/03 16:32:44 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.14 1990/11/24 07:45:50 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -333,7 +333,7 @@ struct sigcontext *context;
 
 unsigned long install_handler(signal, handler)
 int signal;
-union interrupt_handler handler;
+int (*handler)();
 {
     struct sigvec sv;
     int oldmask;
@@ -347,8 +347,8 @@ union interrupt_handler handler;
     else if (signal == SIGBUS)
         sv.sv_handler = sigbus_handler;
 #endif
-    else if (handler.c == SIG_DFL || handler.c == SIG_IGN)
-        sv.sv_handler = handler.c;
+    else if (handler == SIG_DFL || handler == SIG_IGN)
+        sv.sv_handler = handler;
     else if (sigmask(signal)&BLOCKABLE)
         sv.sv_handler = maybe_now_maybe_later;
     else
@@ -359,7 +359,7 @@ union interrupt_handler handler;
     oldmask = sigblock(sigmask(signal));
 
     oldhandler = interrupt_handlers[signal];
-    interrupt_handlers[signal] = handler;
+    interrupt_handlers[signal].c = handler;
     sigvec(signal, &sv, NULL);
 
     sigsetmask(oldmask);
