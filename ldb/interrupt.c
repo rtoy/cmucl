@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.19 1990/12/18 01:01:00 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.20 1990/12/18 23:25:00 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -147,20 +147,24 @@ static void internal_error(signal, code, context, continuable)
 {
     lispobj *args;
 
-    sigsetmask(context->sc_mask);
-    fake_foreign_function_call(context);
-    args = current_control_stack_pointer;
-    current_control_stack_pointer += 2;
-    args[0] = alloc_sap(context);
-    if (continuable)
-	args[1] = T;
+    if (internal_errors_enabled) {
+	sigsetmask(context->sc_mask);
+	fake_foreign_function_call(context);
+	args = current_control_stack_pointer;
+	current_control_stack_pointer += 2;
+	args[0] = alloc_sap(context);
+	if (continuable)
+	    args[1] = T;
+	else
+	    args[1] = NIL;
+	call_into_lisp(INTERNAL_ERROR, SymbolFunction(INTERNAL_ERROR),
+		       args, 2);
+	undo_fake_foreign_function_call(context);
+	if (continuable)
+	    skip_instruction(context);
+    }
     else
-	args[1] = NIL;
-    call_into_lisp(INTERNAL_ERROR, SymbolFunction(INTERNAL_ERROR),
-		   args, 2);
-    undo_fake_foreign_function_call(context);
-    if (continuable)
-	skip_instruction(context);
+	handle_now(signal, code, context);
 }
 
 static void handle_pending_interrupt(context)
