@@ -714,14 +714,15 @@
   ;; results:
   ;; -- If T, all such TNs that are allocated in a SC with a defined save-sc
   ;;    will be saved in a TN in the save SC before the VOP and restored after
-  ;;    the VOP.  This is used by call VOPs.  The list of TNs live TNs is
-  ;;    stored in the first codegen info argument, which must exist (with a
-  ;;    dummy value.)
+  ;;    the VOP.  This is used by call VOPs.  A bit vector representing the
+  ;;    live TNs is stored in the VOP-SAVE-SET.
   ;; -- If :Force-To-Stack, all such TNs will made into :Environment TNs and
   ;;    forced to be allocated in SCs without any save-sc.  This is used by NLX
   ;;    entry vops.
+  ;; -- If :Compute-Only, just compute the save set, don't do any saving.  This
+  ;;    is used to get the live variables for debug info.
   ;;
-  (save-p nil :type (member t nil :force-to-stack))
+  (save-p nil :type (member t nil :force-to-stack :compute-only))
   ;;
   ;; A list of sc-vectors representing the loading costs of each fixed argument
   ;; and result.
