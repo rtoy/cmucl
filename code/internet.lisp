@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.13 1993/12/09 12:56:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.14 1994/04/06 17:03:51 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,14 +91,14 @@
 
 (def-alien-type unix-sockaddr
   (struct nil
-    (family short)
+    (family #-alpha short #+alpha unsigned-short)
     (path (array char 108))))
 
 (def-alien-type inet-sockaddr
   (struct nil
-    (family short)
+    (family #-alpha short #+alpha unsigned-short)
     (port unsigned-short)
-    (addr unsigned-long)
+    (addr #-alpha unsigned-long #+alpha unsigned-int)
     (zero (array char 8))))
 
 (def-alien-type hostent
@@ -135,7 +135,7 @@
 	     (iterate repeat ((index 0))
 	       (declare (type kernel:index index))
 	       (cond ((zerop (deref (cast (slot hostent 'aliases)
-					  (* (unsigned 32)))
+					  (* (unsigned #-alpha 32 #+alpha 64)))
 				    index))
 		      (results))
 		     (t
@@ -147,7 +147,7 @@
 	     (iterate repeat ((index 0))
 	       (declare (type kernel:index index))
 	       (cond ((zerop (deref (cast (slot hostent 'addr-list)
-					  (* (unsigned 32)))
+					  (* (unsigned #-alpha 32 #+alpha 64)))
 				    index))
 		      (results))
 		     (t

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.16 1992/07/31 17:50:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.17 1994/04/06 17:00:16 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,7 +126,8 @@
 	   (type index offset)
 	   (values system-area-pointer index))
   (let ((address (sap-int sap)))
-    (values (int-sap (32bit-logical-andc2 address 3))
+    (values (int-sap #-alpha (32bit-logical-andc2 address 3)
+		     #+alpha (ash (ash address -2) 2))
 	    (+ (* (logand address 3) byte-bits) offset))))
 
 (declaim (inline word-sap-ref %set-word-sap-ref))

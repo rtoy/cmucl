@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.64 1993/11/08 00:22:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.65 1994/04/06 17:02:40 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -920,8 +920,14 @@
 		   (let ((fp (frame-pointer real)))
 		     (when (cstack-pointer-valid-p fp)
 		       (compute-calling-frame
+			#-alpha
 			(system:sap-ref-sap fp (* vm::ocfp-save-offset
 						  vm:word-bytes))
+			#+alpha
+			(kernel::int-sap
+			 (system:sap-ref-32 fp (* vm::ocfp-save-offset
+						  vm:word-bytes)))
+
 			#-gengc
 			(kernel:stack-ref fp vm::lra-save-offset)
 			#+gengc
@@ -1421,9 +1427,15 @@
     (loop
       (when (zerop (sap-int catch)) (return (nreverse res)))
       (when (sap= fp
+		  #-alpha
 		  (system:sap-ref-sap catch
 				      (* vm:catch-block-current-cont-slot
-					 vm:word-bytes)))
+					 vm:word-bytes))
+		  #+alpha
+		  (kernel::int-sap
+		   (system:sap-ref-32 catch
+				      (* vm:catch-block-current-cont-slot
+					 vm:word-bytes))))
 	(let* (#-gengc
 	       (lra (kernel:stack-ref catch vm:catch-block-entry-pc-slot))
 	       #+gengc
@@ -1445,9 +1457,15 @@
 		       offset (frame-debug-function frame)))
 		res)))
       (setf catch
+	    #-alpha
 	    (system:sap-ref-sap catch
 				(* vm:catch-block-previous-catch-slot
-				   vm:word-bytes))))))
+				   vm:word-bytes))
+	    #+alpha
+	    (kernel::int-sap
+	     (system:sap-ref-32 catch
+				(* vm:catch-block-previous-catch-slot
+				   vm:word-bytes)))))))
 
 ;;; FRAME-REAL-FRAME -- Internal.
 ;;;
@@ -2712,8 +2730,13 @@
 				(system:int-sap
 				 (vm:sigcontext-register escaped
 							 vm::nfp-offset))
+				#-alpha
 				(system:sap-ref-sap fp (* vm::nfp-save-offset
-							  vm:word-bytes)))))
+							  vm:word-bytes))
+				#+alpha
+				(alpha::make-number-stack-pointer
+				 (system:sap-ref-32 fp (* vm::nfp-save-offset
+							  vm:word-bytes))))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number
@@ -2842,9 +2865,15 @@
 				(system:int-sap
 				 (vm:sigcontext-register escaped
 							 vm::nfp-offset))
+				#-alpha
 				(system:sap-ref-sap fp
 						    (* vm::nfp-save-offset
-						       vm:word-bytes)))))
+						       vm:word-bytes))
+				#+alpha
+				(alpha::make-number-stack-pointer
+				 (system:sap-ref-32 fp
+						    (* vm::nfp-save-offset
+						       vm:word-bytes))))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number
