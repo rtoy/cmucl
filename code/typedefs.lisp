@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.8 1993/09/01 00:15:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.9 1993/09/01 10:24:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,7 +318,7 @@
 ;;; Just dump it as a specifier, and convert it back upon loading.
 ;;;
 (defun make-type-load-form (type)
-  `(specifier-type ',(type-specifier s)))
+  `(specifier-type ',(type-specifier type)))
 
 
 ;;;; Utilities:
