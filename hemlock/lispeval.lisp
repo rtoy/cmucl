@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.11 1993/07/22 11:45:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.12 1993/09/01 03:29:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,7 +189,7 @@
       (:warning (incf (note-warnings note)))
       (:note (incf (note-notes note))))
     (let ((region (case (note-kind note)
-		    (:compile
+		    ((:compile :dylan-compile)
 		     (note-region note))
 		    (:compile-file
 		     (let ((buff (note-buffer note)))
