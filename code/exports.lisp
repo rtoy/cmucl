@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.138 1998/01/29 07:22:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.139 1998/02/03 19:22:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -517,8 +517,8 @@
              "STORAGE-CONDITION" "STORE-VALUE" "STREAM"
              "STREAM-ELEMENT-TYPE" "STREAM-ERROR" "STREAM-ERROR-STREAM"
 	     "STREAM-EXTERNAL-FORMAT"
-	     "STREAMP" "STRING" "STRING-CAPITALIZE" "STRING-CHAR"
-             "STRING-CHAR-P" "STRING-DOWNCASE" "STRING-EQUAL"
+	     "STREAMP" "STRING" "STRING-CAPITALIZE"
+             "STRING-DOWNCASE" "STRING-EQUAL"
              "STRING-GREATERP" "STRING-LEFT-TRIM" "STRING-LESSP"
              "STRING-NOT-EQUAL" "STRING-NOT-GREATERP" "STRING-NOT-LESSP"
              "STRING-RIGHT-TRIM" "STRING-STREAM"
@@ -600,7 +600,7 @@
        "READ-ONLY-SPACE-START" "SHORT-FLOAT-P" "STATIC-SPACE-START" "STRING/=*"
        "STRING<*" "STRING<=*" "STRING=*" "STRING>*" "STRING>=*"))
   (intern name "LISP"))
-(dolist (name '("%PRIMITIVE" "%STANDARD-CHAR-P" "%STRING-CHAR-P"))
+(dolist (name '("%PRIMITIVE" "%STANDARD-CHAR-P"))
   (intern name "SYSTEM"))
 (intern "BIGNUM-TYPE" "BIGNUM")
 (dolist
@@ -1214,7 +1214,7 @@
              "%SP-BYTE-BLT" "%SP-FIND-CHARACTER"
              "%SP-FIND-CHARACTER-WITH-ATTRIBUTE"
              "%SP-REVERSE-FIND-CHARACTER-WITH-ATTRIBUTE" "%STANDARD-CHAR-P"
-             "%STRING-CHAR-P" "*BEEP-FUNCTION*"
+             "*BEEP-FUNCTION*"
 	     "*LONG-SITE-NAME*" "*SHORT-SITE-NAME*"
              "*SOFTWARE-TYPE*" "*STDERR*" "*STDIN*" "*STDOUT*" "*TASK-DATA*"
              "*TASK-NOTIFY*" "*TASK-SELF*" "*TTY*" "*TYPESCRIPTPORT*"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.13 1997/11/01 22:58:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.14 1998/02/03 19:22:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,5 +82,4 @@
 ;;; Unlike the un-%'ed versions, these are true type predicates, accepting any
 ;;; type object.
 ;;;
-;(define-type-predicate %string-char-p string-char)
 (define-type-predicate %standard-char-p standard-char)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.17 1997/12/13 11:57:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.18 1998/02/03 19:22:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,6 @@
 ;;; 
 (defvar *simple-array-primitive-types*
   '((base-char . simple-string)
-    (string-char . simple-string)
     (bit . simple-bit-vector)
     ((unsigned-byte 2) . simple-array-unsigned-byte-2)
     ((unsigned-byte 4) . simple-array-unsigned-byte-4)

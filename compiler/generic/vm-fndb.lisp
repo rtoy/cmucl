@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.57 1997/11/15 04:39:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.58 1998/02/03 19:22:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,7 +51,7 @@
 	   #+complex-float complex-rational-p #+complex-float complex-float-p
 	   #+complex-float complex-single-float-p
 	   #+complex-float complex-double-float-p
-	   base-char-p %string-char-p %standard-char-p %instancep
+	   base-char-p %standard-char-p %instancep
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p

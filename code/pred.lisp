@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.44 1998/01/05 22:34:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.45 1998/02/03 19:22:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 	  fixnum float function integer keyword list long-float nil
 	  null number ratio rational real sequence short-float signed-byte
 	  simple-array simple-bit-vector simple-string simple-vector
-	  single-float standard-char string string-char symbol t
+	  single-float standard-char base-char string symbol t
 	  unsigned-byte vector satisfies))
 
 
