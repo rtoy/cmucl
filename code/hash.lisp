@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.22 1993/02/26 08:25:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.23 1993/05/17 21:22:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 	  gethash remhash maphash clrhash
 	  hash-table-count with-hash-table-iterator
 	  hash-table-rehash-size hash-table-rehash-threshold
-	  hash-table-size hash-table-test
+	  hash-table-size hash-table-test hash-table-weak-p
 	  sxhash))
 
 (in-package :ext)
@@ -30,8 +30,10 @@
 (in-package :common-lisp)
 
 
-;;;; The hash-table structure.
+;;;; The hash-table structures.
 
+;;; HASH-TABLE -- defstruct.
+;;;
 (defstruct (hash-table
 	    (:constructor %make-hash-table)
 	    (:print-function %print-hash-table)
@@ -67,7 +69,17 @@
   (number-entries 0 :type index)
   ;;
   ;; Vector of ht-buckets.
-  (table (required-argument) :type simple-vector))
+  (table (required-argument) :type simple-vector)
+  ;;
+  ;; True if this is a weak hash table, meaning that key->value mappings will
+  ;; disappear if there are no other references to the key.  Note: this only
+  ;; matters if the hash function indicates that the hashing is EQ based.
+  (weak-p nil :type (member t nil))
+  ;;
+  #+gengc
+  ;; Chain of buckets that need to be rehashed because their hashing is EQ
+  ;; based and the key has been moved by the garbage collector.
+  (needing-rehash nil :type (or null hash-table-bucket)))
 ;;;
 (defun %print-hash-table (ht stream depth)
   (declare (ignore depth) (stream stream))
@@ -82,20 +94,92 @@
   `(integer 0 ,max-hash))
 
 
-(defstruct hash-table-bucket
+(defstruct (hash-table-bucket
+	    (:print-function %print-hash-table-bucket))
   ;;
   ;; The hashing associated with key, kept around so we don't have to recompute
-  ;; it each time.  When NIL, then just use %primitive make-fixnum.  We don't
-  ;; cache the results of make-fixnum, because it can change with a GC.
-  (hash nil :type (or hash null))
+  ;; it each time.  In the non-gengc system, if this is NIL it means that the
+  ;; hashing is EQ based, so use the address of the value.  If the gengc
+  ;; system, we use the presence of the scavhook to tell that.
+  #-gengc (hash nil :type (or hash null))
+  #+gengc (hash 0 :type hash)
   ;;
-  ;; The key and value, originally supplied by the user.
+  ;; The key and value, originally supplied by the user.  If the hash table
+  ;; is weak, and this is eq based, then the key is really a weak pointer to
+  ;; the key.
   (key nil :type t)
   (value nil :type t)
   ;;
   ;; The next bucket, or NIL if there are no more.
   (next nil :type (or hash-table-bucket null)))
+;;;
+(defun %print-hash-table-bucket (bucket stream depth)
+  (declare (ignore depth))
+  (print-unreadable-object (bucket stream :type t)
+    (format stream "for ~S->~S~@[ ~D~]"
+	    (hash-table-bucket-key bucket)
+	    (hash-table-bucket-value bucket)
+	    (hash-table-bucket-hash bucket))))
 
+#+gengc
+(defstruct (hash-table-eq-bucket
+	    (:include hash-table-bucket))
+  ;;
+  ;; The scavenger-hook object used to detect when the EQ hashing of key will
+  ;; change.  Only NIL during creation.
+  (scavhook nil :type (or null scavenger-hook))
+  ;;
+  ;; True iff this bucket is still linked into the corresponding hash table's
+  ;; vector.
+  (linked nil :type (member t nil)))
+
+#|
+
+;;; SCAN-STATE -- defstruct.
+;;;
+;;; Holds the state of a MAPHASH or WITH-HASH-TABLE-ITERATOR.
+;;;
+(defstruct (scan-state)
+  ;;
+  ;; The index into the hash-table-table.
+  (index 0 :type index)
+  ;;
+  ;; The current bucket in that chain.
+  (bucket nil :type (or null hash-table-bucket))
+  ;;
+  )
+
+;;; Non-gengc:
+;;;
+;;; %puthash: if there are any active scans, then make sure the current bucket
+;;; for each scan holds the key we are trying to puthash, and flame out of it
+;;; isn't.  Given that we have our hands directly on the correct bucket, just 
+;;; go for it.
+;;; 
+;;; remhash: make the same check as with %puthash.  If it checks out, then
+;;; just scan down the correct bucket chain and yank it.
+;;;
+;;; rehash: because of the above two tests, rehash will only be called by
+;;; gethash.  And we need to do the rehash in order to look anything up.  So
+;;; make a list of all the remaining buckets, and stick them in the scan-state.
+;;;
+;;; Gengc:
+;;;
+;;; %puthash & remhash: same as above.
+;;;
+;;; rehash: is only ever called by puthash, so doesn't need anything special to
+;;; account for active scans.
+;;;
+;;; flush-needing-rehash: will only be called by gethash for the same reason
+;;; rehash is only called by gethash in the non-gengc system.  And basically
+;;; needs to do the same thing rehash does in the non-gengc system.
+;;;
+;;; hash-table-scavenger-hook: needs to check to see if the bucket being
+;;; unlinked is after the current bucket in any of the active scans.  If so,
+;;; it needs to add it to a list of buckets that will be processed after all
+;;; the buckets visable in the hash-table-table have been delt with.
+
+|#
 
 
 ;;;; Utility functions.
@@ -161,7 +245,7 @@
 ;;; MAKE-HASH-TABLE -- public.
 ;;; 
 (defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 1.5)
-			     (rehash-threshold 1))
+			     (rehash-threshold 1) (weak-p nil))
   "Creates and returns a new hash table.  The keywords are as follows:
      :TEST -- Indicates what kind of test to use.  Only EQ, EQL, and EQUAL
        are currently supported.
@@ -174,9 +258,12 @@
      :REHASH-THRESHOLD -- Indicates how dense the table can become before
        forcing a rehash.  Can be any positive number <= to 1, with density
        approaching zero as the threshold approaches 0.  Density 1 means an
-       average of one entry per bucket."
-  (declare (type (or function (member eq eql equal)) test)
-	   (type index size))
+       average of one entry per bucket.
+   CMUCL Extension:
+     :WEAK-P -- If T, don't keep entries if the key would otherwise be
+       garbage."
+  (declare (type (or function symbol) test)
+	   (type index size) (type (member t nil) weak-p))
   (let ((rehash-size (if (integerp rehash-size)
 			 rehash-size
 			 (float rehash-size 1.0)))
@@ -210,7 +297,8 @@
 	 :rehash-size rehash-size
 	 :rehash-threshold rehash-threshold
 	 :rehash-trigger (round (* (float length) rehash-threshold))
-	 :table vector)))))
+	 :table vector
+	 :weak-p weak-p)))))
 
 (defun hash-table-count (hash-table)
   "Returns the number of entries in the given HASH-TABLE."
@@ -233,6 +321,10 @@
 (setf (documentation 'hash-table-test 'function)
       "Return the test HASH-TABLE was created with.")
 
+(setf (documentation 'hash-table-weak-p 'function)
+      "Return T if HASH-TABLE will not keep entries for keys that would
+   otherwise be garbage, and NIL if it will.")
+
 
 ;;;; Accessing functions.
 
@@ -254,7 +346,8 @@
 		  (float
 		   (the index (round (* rehash-size old-length))))))
 	      old-length))
-	 (new-vector (make-array new-length :initial-element nil)))
+	 (new-vector (make-array new-length :initial-element nil))
+	 #-gengc (weak-p (hash-table-weak-p table)))
     (declare (type index new-length))
     (dotimes (i old-length)
       (declare (type index i))
@@ -262,17 +355,28 @@
 	   (next nil))
 	  ((null bucket))
 	(setf next (hash-table-bucket-next bucket))
-	(let* ((old-hashing (hash-table-bucket-hash bucket))
-	       (hashing (cond
-			 (old-hashing old-hashing)
-			 (t
-			  (set-header-data new-vector
-					   vm:vector-valid-hashing-subtype)
-			  (pointer-hash (hash-table-bucket-key bucket)))))
-	       (index (rem hashing new-length)))
-	  (declare (type index hashing index))
-	  (setf (hash-table-bucket-next bucket) (svref new-vector index))
-	  (setf (svref new-vector index) bucket)))
+	(block deal-with-one-bucket
+	  (let* ((hashing
+		  #-gengc
+		  (or (hash-table-bucket-hash bucket)
+		      (let ((key (hash-table-bucket-key bucket)))
+			(set-header-data new-vector
+					 vm:vector-valid-hashing-subtype)
+			(if weak-p
+			    (multiple-value-bind
+				(real-key valid)
+				(weak-pointer-value key)
+			      (cond (valid
+				     (pointer-hash real-key))
+				    (t
+				     (decf (hash-table-number-entries table))
+				     (return-from deal-with-one-bucket nil))))
+			    (pointer-hash key))))
+		  #+gengc (hash-table-bucket-hash bucket))
+		 (index (rem hashing new-length)))
+	    (declare (type index hashing index))
+	    (setf (hash-table-bucket-next bucket) (svref new-vector index))
+	    (setf (svref new-vector index) bucket))))
       ;; We clobber the old vector contents so that if it is living in
       ;; static space it won't keep ahold of pointers into dynamic space.
       (setf (svref old-vector i) nil))
@@ -281,6 +385,34 @@
       (setf (hash-table-rehash-trigger table)
 	    (round (* (hash-table-rehash-threshold table)
 		      (float new-length))))))
+  (undefined-value))
+
+#+gengc
+(defun flush-needing-rehash (table)
+  (let* ((weak-p (hash-table-weak-p table))
+	 (vector (hash-table-table table))
+	 (length (length vector)))
+    (do ((bucket (hash-table-needing-rehash table) next)
+	 (next nil))
+	((null bucket))
+      (setf next (hash-table-bucket-next bucket))
+      (flet ((relink-bucket (key)
+	       (let* ((hashing (pointer-hash key))
+		      (index (rem hashing length)))
+		 (setf (hash-table-bucket-hash bucket) hashing)
+		 (setf (hash-table-bucket-next bucket) (svref vector index))
+		 (setf (svref vector index) bucket)
+		 (setf (hash-table-eq-bucket-linked bucket) t))))
+	(let ((key (hash-table-bucket-key bucket)))
+	  (if weak-p
+	      (multiple-value-bind
+		  (real-key valid)
+		  (weak-pointer-value key)
+		(if valid
+		    (relink-bucket real-key)
+		    (decf (hash-table-number-entries table))))
+	      (relink-bucket key))))))
+  (setf (hash-table-needing-rehash table) nil)
   (undefined-value))
 
 ;;; GETHASH -- Public.
@@ -292,23 +424,84 @@
   (declare (type hash-table hash-table)
 	   (values t (member t nil)))
   (without-gcing
+   #-gengc
    (when (= (get-header-data (hash-table-table hash-table))
 	    vm:vector-must-rehash-subtype)
      (rehash hash-table nil))
-   (let* ((vector (hash-table-table hash-table))
-	  (length (length vector))
-	  (hashing (funcall (hash-table-hash-fun hash-table) key))
-	  (index (rem hashing length))
-	  (test-fun (hash-table-test-fun hash-table)))
-     (declare (type index hashing))
-     (do ((bucket (svref vector index) (hash-table-bucket-next bucket)))
-	 ((null bucket) (values default nil))
-       (let ((bucket-hashing (hash-table-bucket-hash bucket)))
-	 (when (if bucket-hashing
-		   (and (= bucket-hashing hashing)
-			(funcall test-fun key (hash-table-bucket-key bucket)))
-		   (eq key (hash-table-bucket-key bucket)))
-	   (return (values (hash-table-bucket-value bucket) t))))))))
+   #+gengc
+   (when (hash-table-needing-rehash hash-table)
+     (flush-needing-rehash hash-table))
+   (multiple-value-bind
+       (hashing eq-based)
+       (funcall (hash-table-hash-fun hash-table) key)
+     (let* ((vector (hash-table-table hash-table))
+	    (length (length vector))
+	    (index (rem hashing length)))
+       (declare (type index hashing))
+       (if eq-based
+	   (if (hash-table-weak-p hash-table)
+	       (do ((bucket (svref vector index)
+			    (hash-table-bucket-next bucket)))
+		   ((null bucket) (values default nil))
+		 (when #+gengc (hash-table-eq-bucket-p bucket)
+		       #-gengc (null (hash-table-bucket-hash bucket))
+		   (multiple-value-bind
+		       (bucket-key valid)
+		       (weak-pointer-value (hash-table-bucket-key bucket))
+		     (assert valid)
+		     (when (eq key bucket-key)
+		       (return (values (hash-table-bucket-value bucket)
+				       t))))))
+	       (do ((bucket (svref vector index)
+			    (hash-table-bucket-next bucket)))
+		   ((null bucket) (values default nil))
+		 (when (eq key (hash-table-bucket-key bucket))
+		   (return (values (hash-table-bucket-value bucket) t)))))
+	   (do ((test-fun (hash-table-test-fun hash-table))
+		(bucket (svref vector index) (hash-table-bucket-next bucket)))
+	       ((null bucket) (values default nil))
+	     (let ((bucket-hashing (hash-table-bucket-hash bucket)))
+	       (when (and #-gengc bucket-hashing
+			  (= bucket-hashing hashing)
+			  #+gengc (not (hash-table-eq-bucket-p bucket))
+			  (funcall test-fun key
+				   (hash-table-bucket-key bucket)))
+		 (return (values (hash-table-bucket-value bucket) t))))))))))
+
+
+#+gengc
+(defun get-hash-table-scavenger-hook (hash-table bucket)
+  (declare (type hash-table hash-table)
+	   (type hash-table-eq-bucket bucket))
+  (flet ((hash-table-scavenger-hook ()
+	   (when (hash-table-eq-bucket-linked bucket)
+	     (let* ((vector (hash-table-table hash-table))
+		    (length (length vector))
+		    (index (rem (hash-table-eq-bucket-hash bucket) length)))
+	       (declare (type index index))
+	       (do ((prev nil next)
+		    (next (svref vector index) (hash-table-bucket-next next)))
+		   ((null next)
+		    (warn "Couldn't find where ~S was linked inside ~S"
+			  bucket hash-table))
+		 (when (eq next bucket)
+		   (if prev
+		       (setf (hash-table-bucket-next prev)
+			     (hash-table-bucket-next bucket))
+		       (setf (svref vector index)
+			     (hash-table-bucket-next bucket)))
+		   (setf (hash-table-eq-bucket-linked bucket) nil)
+		   (return)))
+	       (if (and (hash-table-weak-p hash-table)
+			(not (nth-value 1
+					(weak-pointer-value
+					 (hash-table-bucket-key bucket)))))
+		   (decf (hash-table-number-entries hash-table))
+		   (setf (hash-table-bucket-next bucket)
+			   (hash-table-needing-rehash hash-table)
+			 (hash-table-needing-rehash hash-table)
+			   bucket))))))
+    #'hash-table-scavenger-hook))
 
 ;;; %PUTHASH -- public setf method.
 ;;; 
@@ -319,9 +512,13 @@
      (setf (hash-table-number-entries hash-table) entries)
      (cond ((> entries (hash-table-rehash-trigger hash-table))
 	    (rehash hash-table t))
+	   #-gengc
 	   ((= (get-header-data (hash-table-table hash-table))
 	       vm:vector-must-rehash-subtype)
 	    (rehash hash-table nil))))
+   #+gengc
+   (when (hash-table-needing-rehash hash-table)
+     (flush-needing-rehash hash-table))
    (multiple-value-bind
        (hashing eq-based)
        (funcall (hash-table-hash-fun hash-table) key)
@@ -329,28 +526,77 @@
      (let* ((vector (hash-table-table hash-table))
 	    (length (length vector))
 	    (index (rem hashing length))
-	    (first-bucket (svref vector index))
-	    (test-fun (hash-table-test-fun hash-table)))
+	    (first-bucket (svref vector index)))
        (declare (type index index))
-       (do ((bucket first-bucket (hash-table-bucket-next bucket)))
-	   ((null bucket)
-	    (when eq-based
-	      (set-header-data vector vm:vector-valid-hashing-subtype))
-	    (setf (svref vector index)
-		  (make-hash-table-bucket
-		   :hash (unless eq-based hashing)
-		   :key key
-		   :value value
-		   :next first-bucket)))
-	 (let ((bucket-hashing (hash-table-bucket-hash bucket)))
-	   (when (if bucket-hashing
-		     (and (= bucket-hashing hashing)
-			  (funcall test-fun
-				   key (hash-table-bucket-key bucket)))
-		     (eq key (hash-table-bucket-key bucket)))
-	     (setf (hash-table-bucket-value bucket) value)
-	     (decf (hash-table-number-entries hash-table))
-	     (return)))))))
+       (block scan
+	 (if eq-based
+	     (if (hash-table-weak-p hash-table)
+		 (do ((bucket first-bucket (hash-table-bucket-next bucket)))
+		     ((null bucket))
+		   (when #+gengc (hash-table-eq-bucket-p bucket)
+		         #-gengc (null (hash-table-bucket-hash bucket))
+		     (multiple-value-bind
+			 (bucket-key valid)
+			 (weak-pointer-value (hash-table-bucket-key bucket))
+		       (assert valid)
+		       (when (eq key bucket-key)
+			 (setf (hash-table-bucket-value bucket) value)
+			 (decf (hash-table-number-entries hash-table))
+			 (return-from scan nil)))))
+		 (do ((bucket first-bucket (hash-table-bucket-next bucket)))
+		     ((null bucket))
+		   (when (eq key (hash-table-bucket-key bucket))
+		     (setf (hash-table-bucket-value bucket) value)
+		     (decf (hash-table-number-entries hash-table))
+		     (return-from scan nil))))
+	     (do ((test-fun (hash-table-test-fun hash-table))
+		  (bucket first-bucket (hash-table-bucket-next bucket)))
+		 ((null bucket))
+	       (let ((bucket-hashing (hash-table-bucket-hash bucket)))
+		 (when (and #-gengc bucket-hashing
+			    (= bucket-hashing hashing)
+			    #+gengc (not (hash-table-eq-bucket-p bucket))
+			    (funcall test-fun
+				     key
+				     (hash-table-bucket-key bucket)))
+		   (setf (hash-table-bucket-value bucket) value)
+		   (decf (hash-table-number-entries hash-table))
+		   (return-from scan nil)))))
+	 #-gengc
+	 (when eq-based
+	   (set-header-data vector vm:vector-valid-hashing-subtype))
+	 (setf (svref vector index)
+	       #-gengc
+	       (if eq-based
+		   (make-hash-table-bucket
+		    :hash nil
+		    :key (make-weak-pointer key)
+		    :value value
+		    :next first-bucket)
+		   (make-hash-table-bucket
+		    :hash hashing
+		    :key key
+		    :value value
+		    :next first-bucket))
+	       #+gengc
+	       (if eq-based
+		   (let ((bucket (make-hash-table-eq-bucket
+				  :hash hashing
+				  :key (make-weak-pointer key)
+				  :value value
+				  :next first-bucket
+				  :linked t)))
+		     (setf (hash-table-eq-bucket-scavhook bucket)
+			   (make-scavenger-hook
+			    :value key
+			    :function (get-hash-table-scavenger-hook
+				       hash-table bucket)))
+		     bucket)
+		   (make-hash-table-bucket
+		    :hash hashing
+		    :key key
+		    :value value
+		    :next first-bucket)))))))
   value)
 
 ;;; REMHASH -- public.
@@ -361,30 +607,75 @@
   (declare (type hash-table hash-table)
 	   (values (member t nil)))
   (without-gcing
+   #-gengc
    (when (= (get-header-data (hash-table-table hash-table))
 	    vm:vector-must-rehash-subtype)
      (rehash hash-table nil))
-   (let* ((vector (hash-table-table hash-table))
-	  (length (length vector))
-	  (hashing (funcall (hash-table-hash-fun hash-table) key))
-	  (index (rem hashing length))
-	  (test-fun (hash-table-test-fun hash-table)))
-     (declare (type index hashing index))
-     (do ((prev nil bucket)
-	  (bucket (svref vector index) (hash-table-bucket-next bucket)))
-	 ((null bucket) nil)
-       (let ((bucket-hashing (hash-table-bucket-hash bucket)))
-	 (when (if bucket-hashing
-		   (and (= bucket-hashing hashing)
-			(funcall test-fun key (hash-table-bucket-key bucket)))
-		   (eq key (hash-table-bucket-key bucket)))
-	   (if prev
-	       (setf (hash-table-bucket-next prev)
-		     (hash-table-bucket-next bucket))
-	       (setf (svref vector index)
-		     (hash-table-bucket-next bucket)))
-	   (decf (hash-table-number-entries hash-table))
-	   (return t)))))))
+   #+gengc
+   (when (hash-table-needing-rehash hash-table)
+     (flush-needing-rehash hash-table))
+   (multiple-value-bind
+       (hashing eq-based)
+       (funcall (hash-table-hash-fun hash-table) key)
+     (let* ((vector (hash-table-table hash-table))
+	    (length (length vector))
+	    (index (rem hashing length)))
+       (declare (type index hashing index))
+       (if eq-based
+	   (if (hash-table-weak-p hash-table)
+	       (do ((prev nil bucket)
+		    (bucket (svref vector index)
+			    (hash-table-bucket-next bucket)))
+		   ((null bucket) nil)
+		 (when #+gengc (hash-table-eq-bucket-p bucket)
+		       #-gengc (null (hash-table-bucket-hash bucket))
+		   (multiple-value-bind
+		       (bucket-key valid)
+		       (weak-pointer-value (hash-table-bucket-key bucket))
+		     (assert valid)
+		     (when (eq key bucket-key)
+		       #+gengc
+		       (setf (hash-table-eq-bucket-linked bucket) nil)
+		       (if prev
+			   (setf (hash-table-bucket-next prev)
+				 (hash-table-bucket-next bucket))
+			   (setf (svref vector index)
+				 (hash-table-bucket-next bucket)))
+		       (decf (hash-table-number-entries hash-table))
+		       (return t)))))
+	       (do ((prev nil bucket)
+		    (bucket (svref vector index)
+			    (hash-table-bucket-next bucket)))
+		   ((null bucket) nil)
+		 (when (eq key (hash-table-bucket-key bucket))
+		   #+gengc
+		   (setf (hash-table-eq-bucket-linked bucket) nil)
+		   (if prev
+		       (setf (hash-table-bucket-next prev)
+			     (hash-table-bucket-next bucket))
+		       (setf (svref vector index)
+			     (hash-table-bucket-next bucket)))
+		   (decf (hash-table-number-entries hash-table))
+		   (return t))))
+	   (do ((test-fun (hash-table-test-fun hash-table))
+		(prev nil bucket)
+		(bucket (svref vector index)
+			(hash-table-bucket-next bucket)))
+	       ((null bucket) nil)
+	     (let ((bucket-hashing (hash-table-bucket-hash bucket)))
+	       (when (and #-gengc bucket-hashing
+			  (= bucket-hashing hashing)
+			  #+gengc (not (hash-table-eq-bucket-p bucket))
+			  (funcall test-fun key
+				   (hash-table-bucket-key bucket)))
+		 (if prev
+		     (setf (hash-table-bucket-next prev)
+			   (hash-table-bucket-next bucket))
+		     (setf (svref vector index)
+			   (hash-table-bucket-next bucket)))
+		 (decf (hash-table-number-entries hash-table))
+		 (return t)))))))))
+
 
 ;;; CLRHASH -- public.
 ;;; 
@@ -393,8 +684,14 @@
    itself."
   (let ((vector (hash-table-table hash-table)))
     (dotimes (i (length vector))
+      #+gengc
+      (do ((bucket (aref vector i) (hash-table-bucket-next bucket)))
+	  ((null bucket))
+	(when (hash-table-eq-bucket-p bucket)
+	  (setf (hash-table-eq-bucket-linked bucket) nil)))
       (setf (aref vector i) nil))
     (setf (hash-table-number-entries hash-table) 0)
+    #-gengc
     (set-header-data vector vm:vector-normal-subtype))
   hash-table)
 
@@ -414,13 +711,30 @@
 	       (symbol
 		(symbol-function map-function))))
 	(vector (hash-table-table hash-table)))
-    (dotimes (i (length vector))
-      (declare (type index i))
-      (do ((bucket (svref vector i) (hash-table-bucket-next bucket)))
-	  ((null bucket))
-	(funcall fun
-		 (hash-table-bucket-key bucket)
-		 (hash-table-bucket-value bucket))))))
+    (declare (type function fun))
+    (if (hash-table-weak-p hash-table)
+	(dotimes (i (length vector))
+	  (declare (type index i))
+	  (do ((bucket (svref vector i) (hash-table-bucket-next bucket)))
+	      ((null bucket))
+	    (if #-gengc (null (hash-table-bucket-hash bucket))
+		#+gengc (hash-table-eq-bucket-p bucket)
+		(let ((weak-pointer (hash-table-bucket-key bucket)))
+		  (multiple-value-bind
+		      (key valid)
+		      (weak-pointer-value weak-pointer)
+		    (when valid
+		      (funcall fun key (hash-table-bucket-value bucket)))))
+		(funcall fun
+			 (hash-table-bucket-key bucket)
+			 (hash-table-bucket-value bucket)))))
+	(dotimes (i (length vector))
+	  (declare (type index i))
+	  (do ((bucket (svref vector i) (hash-table-bucket-next bucket)))
+	      ((null bucket))
+	    (funcall fun
+		     (hash-table-bucket-key bucket)
+		     (hash-table-bucket-value bucket)))))))
 
 
 (defmacro with-hash-table-iterator ((function hash-table) &body body)
@@ -432,6 +746,7 @@
   (let ((n-function (gensym "WITH-HASH-TABLE-ITERRATOR-")))
     `(let ((,n-function
 	    (let* ((table ,hash-table)
+		   (weak-p (hash-table-weak-p ,hash-table))
 		   (vector (hash-table-table table))
 		   (length (length vector))
 		   (index 0)
@@ -440,11 +755,23 @@
 		  ((,function ()
 		     (cond
 		      (bucket
-		       (multiple-value-prog1
-			   (values t
-				   (hash-table-bucket-key bucket)
-				   (hash-table-bucket-value bucket))
-			 (setf bucket (hash-table-bucket-next bucket))))
+		       (let ((orig bucket))
+			 (setf bucket (hash-table-bucket-next orig))
+			 (if (and weak-p
+				  #-gengc (null (hash-table-bucket-hash orig))
+				  #+gengc (hash-table-eq-bucket-p orig))
+			     (multiple-value-bind
+				 (key valid)
+				 (weak-pointer-value
+				  (hash-table-bucket-key orig))
+			       (if valid
+				   (values t
+					   key
+					   (hash-table-bucket-value orig))
+				   (,function)))
+			     (values t
+				     (hash-table-bucket-key orig)
+				     (hash-table-bucket-value orig)))))
 		      ((= (incf index) length)
 		       (values nil))
 		      (t
@@ -560,7 +887,6 @@
        (t (array-rank s-expr))))
     ;; Everything else.
     (t 42)))
-
 
 
 ;;;; Dumping one as a constant.
