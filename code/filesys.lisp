@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.56 1999/06/03 15:55:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.57 2000/08/23 15:52:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -499,18 +499,18 @@
 ;;;; Wildcard matching stuff.
 
 (defmacro enumerate-matches ((var pathname &optional result
-				  &key (verify-existance t))
+				  &key (verify-existance t) (follow-links t))
 			     &body body)
   (let ((body-name (gensym)))
     `(block nil
        (flet ((,body-name (,var)
 		,@body))
 	 (%enumerate-matches (pathname ,pathname)
-			     ,verify-existance
+			     ,verify-existance ,follow-links
 			     #',body-name)
 	 ,result))))
 
-(defun %enumerate-matches (pathname verify-existance function)
+(defun %enumerate-matches (pathname verify-existance follow-links function)
   (when (pathname-type pathname)
     (unless (pathname-name pathname)
       (error "Cannot supply a type without a name:~%  ~S" pathname)))
@@ -522,45 +522,96 @@
 	(ecase (car directory)
 	  (:absolute
 	   (%enumerate-directories "/" (cdr directory) pathname
-				   verify-existance function))
+				   verify-existance follow-links
+				   nil function))
 	  (:relative
 	   (%enumerate-directories "" (cdr directory) pathname
-				   verify-existance function)))
+				   verify-existance follow-links
+				   nil function)))
 	(%enumerate-files "" pathname verify-existance function))))
 
-(defun %enumerate-directories (head tail pathname verify-existance function)
+;;; %enumerate-directories  --   Internal
+;;;
+;;; The directory node and device numbers are maintained for the current path
+;;; during the search for the detection of paths loops upon :wild-inferiors.
+;;;
+(defun %enumerate-directories (head tail pathname verify-existance
+			       follow-links nodes function)
   (declare (simple-string head))
-  (if tail
-      (let ((piece (car tail)))
-	(etypecase piece
-	  (simple-string
-	   (%enumerate-directories (concatenate 'string head piece "/")
-				   (cdr tail) pathname verify-existance
-				   function))
-	  ((or pattern (member :wild :wild-inferiors))
-	   (let ((dir (unix:open-dir head)))
-	     (when dir
-	       (unwind-protect
-		   (loop
-		     (let ((name (unix:read-dir dir)))
-		       (cond ((null name)
-			      (return))
-			     ((string= name "."))
-			     ((string= name ".."))
-			     ((pattern-matches piece name)
-			      (let ((subdir (concatenate 'string
-							 head name "/")))
-				(when (eq (unix:unix-file-kind subdir)
-					  :directory)
-				  (%enumerate-directories
-				   subdir (cdr tail) pathname verify-existance
-				   function)))))))
-		 (unix:close-dir dir)))))
-	  ((member :up)
-	   (%enumerate-directories (concatenate 'string head "../")
-				   (cdr tail) pathname verify-existance
-				   function))))
-      (%enumerate-files head pathname verify-existance function)))
+  (macrolet ((unix-xstat (name)
+	       `(if follow-links
+		    (unix:unix-stat ,name)
+		    (unix:unix-lstat ,name)))
+	     (with-directory-node-noted ((head) &body body)
+	       `(multiple-value-bind (res dev ino mode)
+		    (unix-xstat ,head)
+		  (when (and res (eql (logand mode unix:s-ifmt) unix:s-ifdir))
+		    (let ((nodes (cons (cons dev ino) nodes)))
+		      ,@body))))
+	     (do-directory-entries ((name directory) &body body)
+	       `(let ((dir (unix:open-dir ,directory)))
+		  (when dir
+		    (unwind-protect
+			 (loop
+			  (let ((,name (unix:read-dir dir)))
+			    (cond ((null ,name)
+				   (return))
+				  ((string= ,name "."))
+				  ((string= ,name ".."))
+				  (t
+				   ,@body))))
+		      (unix:close-dir dir))))))
+    (if tail
+	(let ((piece (car tail)))
+	  (etypecase piece
+	    (simple-string
+	     (let ((head (concatenate 'string head piece)))
+	       (with-directory-node-noted (head)
+		 (%enumerate-directories (concatenate 'string head "/")
+					 (cdr tail) pathname
+					 verify-existance follow-links
+					 nodes function))))
+	    ((member :wild-inferiors)
+	     (%enumerate-directories head (rest tail) pathname
+				     verify-existance follow-links
+				     nodes function)
+	     (do-directory-entries (name head)
+	       (let ((subdir (concatenate 'string head name)))
+		 (multiple-value-bind (res dev ino mode)
+		     (unix-xstat subdir)
+		   (declare (type (or fixnum null) mode))
+		   (when (and res (eql (logand mode unix:s-ifmt) unix:s-ifdir))
+		     (unless (dolist (dir nodes nil)
+			       (when (and (eql (car dir) dev)
+					  (eql (cdr dir) ino))
+				 (return t)))
+		       (let ((nodes (cons (cons dev ino) nodes))
+			     (subdir (concatenate 'string subdir "/")))
+			 (%enumerate-directories subdir tail pathname
+						 verify-existance follow-links
+						 nodes function))))))))
+	    ((or pattern (member :wild))
+	     (do-directory-entries (name head)
+	       (when (or (eq piece :wild) (pattern-matches piece name))
+		 (let ((subdir (concatenate 'string head name)))
+		   (multiple-value-bind (res dev ino mode)
+		       (unix-xstat subdir)
+		     (declare (type (or fixnum null) mode))
+		     (when (and res
+				(eql (logand mode unix:s-ifmt) unix:s-ifdir))
+		       (let ((nodes (cons (cons dev ino) nodes))
+			     (subdir (concatenate 'string subdir "/")))
+			 (%enumerate-directories subdir (rest tail) pathname
+						 verify-existance follow-links
+						 nodes function))))))))
+	    ((member :up)
+	     (let ((head (concatenate 'string head "..")))
+	       (with-directory-node-noted (head)
+		 (%enumerate-directories (concatenate 'string head "/")
+					 (rest tail) pathname
+					 verify-existance follow-links
+					 nodes function))))))
+	(%enumerate-files head pathname verify-existance function))))
 
 (defun %enumerate-files (directory pathname verify-existance function)
   (declare (simple-string directory))
@@ -651,7 +702,8 @@
   (enumerate-search-list
       (pathname path)
     (collect ((names))
-      (enumerate-matches (name pathname nil :verify-existance for-input)
+      (enumerate-matches (name pathname nil :verify-existance for-input
+			       :follow-links t)
 	(when (or (not executable-only)
 		  (and (eq (unix:unix-file-kind name) :file)
 		       (unix:unix-access name unix:x_ok)))
@@ -831,7 +883,7 @@
 				   (make-pathname :name :wild
 						  :type :wild
 						  :version :wild)))
-      (enumerate-matches (name pathname)
+      (enumerate-matches (name pathname nil :follow-links follow-links)
 	(when (or all
 		  (let ((slash (position #\/ name :from-end t)))
 		    (or (null slash)
