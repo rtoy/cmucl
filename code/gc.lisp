@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.38 2003/10/15 15:21:49 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.39 2004/01/09 04:22:48 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,6 +49,12 @@
 #+x86 (c-var-frob control-stack-end "control_stack_end")
 (c-var-frob binding-stack-start "binding_stack")
 (c-var-frob current-dynamic-space-start "current_dynamic_space")
+
+(c-var-frob read-only-space-size "read_only_space_size")
+(c-var-frob binding-stack-size "binding_stack_size")
+(c-var-frob static-space-size "static_space_size")
+(c-var-frob control-stack-size "control_stack_size")
+(c-var-frob dynamic-space-size "dynamic_space_size")
 (declaim (inline dynamic-usage))
 
 #-(or cgc gencgc)
@@ -101,14 +107,22 @@
 ;;;; Room.
 
 (defun room-minimal-info ()
-  (format t "Dynamic Space Usage:    ~13:D bytes.~%" (dynamic-usage))
-  (format t "Read-Only Space Usage:  ~13:D bytes.~%" (read-only-space-usage))
-  (format t "Static Space Usage:     ~13:D bytes.~%" (static-space-usage))
-  (format t "Control Stack Usage:    ~13:D bytes.~%" (control-stack-usage))
-  (format t "Binding Stack Usage:    ~13:D bytes.~%" (binding-stack-usage))
-  (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
-  (format t "Garbage collection is currently ~:[enabled~;DISABLED~].~%"
-	  *gc-inhibit*))
+  (flet ((megabytes (bytes)
+	   ;; Convert bytes to nearest megabyte
+	   (ceiling bytes (* 1024 1024))))
+    (format t "Dynamic Space Usage:    ~13:D bytes (out of ~4:D MB).~%"
+	    (dynamic-usage) (megabytes (dynamic-space-size)))
+    (format t "Read-Only Space Usage:  ~13:D bytes (out of ~4:D MB).~%"
+	    (read-only-space-usage) (megabytes (read-only-space-size)))
+    (format t "Static Space Usage:     ~13:D bytes (out of ~4:D MB).~%"
+	    (static-space-usage) (megabytes (static-space-size)))
+    (format t "Control Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+	    (control-stack-usage) (megabytes (control-stack-size)))
+    (format t "Binding Stack Usage:    ~13:D bytes (out of ~4:D MB).~%"
+	    (binding-stack-usage) (megabytes (binding-stack-size)))
+    (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
+    (format t "Garbage collection is currently ~:[enabled~;DISABLED~].~%"
+	    *gc-inhibit*)))
 
 (defun room-intermediate-info ()
   (room-minimal-info)
