@@ -644,17 +644,18 @@
 	(let* ((cont (node-cont call))
 	       (atype (continuation-asserted-type cont))
 	       (dtype (node-derived-type call)))
-	  (when (or (and (eq (template-result-types template) :conditional)
-			 (let ((dest (continuation-dest cont)))
-			   (and (if-p dest)
-				(immediately-used-p (if-test dest) call))))
-		    (template-results-ok template dtype)
-		    (and (not (and (eq (template-policy template) :fast-safe)
-				   safe-p))
-			 (continuation-type-check cont)
-			 (template-results-ok template
-					      (values-type-intersection
-					       dtype atype))))
+	  (when (if (eq (template-result-types template) :conditional)
+		    (let ((dest (continuation-dest cont)))
+		      (and (if-p dest)
+			   (immediately-used-p (if-test dest) call)))
+		    (or (template-results-ok template dtype)
+			(and (or (not (eq (template-policy template)
+					  :fast-safe))
+				 (not safe-p))
+			     (continuation-type-check cont)
+			     (template-results-ok template
+						  (values-type-intersection
+						   dtype atype)))))
 	    (return (values template rejected (rest templates))))))
       (setq rejected template))))
 
