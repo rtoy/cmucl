@@ -1,4 +1,141 @@
-	    Release notes for CMU Common Lisp 15a, 17 October 91
+	    Release notes for CMU Common Lisp 15c, 23 January 92
+
+These release notes cover changes since the beta release of version 15b on 6
+June 91.  Execpt for Miles Bader's portable disassembler and a few minor
+performance enhancements, this is mostly a bug-fix release.  We've been
+working on ANSI complaince, foreign function interface and more advanced
+compiler optimizations, but we're not going to inflict that on the general
+public just yet.
+
+
+			     GENERAL SYSTEM CODE
+
+Bug fixes:
+ -- (SETF AREF) now checks to make sure that the new value is of the correct
+    type.
+ -- Improved checking for invalid syntax in DEFSTRUCT.  In some cases, syntax
+    errors would cause cryptic internal errors due to inadequate type
+    checking.
+ -- DRIBBLE now monitors *ERROR-OUTPUT* (in addition to *STANDARD-OUTPUT*).
+ -- Bignum printing now works correctly in base 36.
+ -- Fixed EXPT to deal with SINGLE-FLOAT x SINGLE-FLOAT arg type combination.
+ -- Fixed TRUNCATE to handle the SINGLE-FLOAT/DOUBLE-FLOAT case.
+
+Enhancements:
+ -- A new retargetable disassembler provides DISASSEMBLE support on the SPARC,
+    and also greatly improved disassembly on the MIPS.  The output is
+    annotated with source-code correspondences if debug-info permits.
+ -- Added INLINE MEMBER declarations in definitions of the set functions
+    (UNION, etc.) so that when the set functions are inlined, the MEMBER calls
+    will also.
+ -- Merged Lange's improved type declarations for nthcdr/butlast/nbutlast.
+    Also, NTH-VALUE now doesn't cons for non-constant N less than 3.
+ -- The loader now supports appending fasl files.  You can:
+    	cat a.fasl b.fasl c.fasl >all.fasl
+ -- Added :UNIX to the features list.
+
+The new variable EXT:*TOP-LEVEL-AUTO-DECLARE* controls whether assignments to
+unknown variables at top-level (or in any other call to EVAL of SETQ) will
+implicitly declare the variable SPECIAL.  These values are meaningful:
+     :WARN  -- Print a warning, but declare the variable special (the default.)
+      T     -- Quietly declare the variable special.
+      NIL   -- Never declare the variable, giving warnings on each use. (The
+               old behavior.) 
+
+The reader now ignores undefined read macro errors when *read-suppress* is T.
+All reader character lookup tables are now CHAR-CODE-LIMIT in size.  Formerly,
+some where only 128.  In the standard readtable, these additional characters
+are all undefined.
+
+There are various changes in the DEBUG-INTERNALS interface related to
+breakpoint support, but we haven't yet implemented a satisfactory user
+interface to breakpoints.  Changed name of DI:DO-BLOCKS to
+DI:DO-DEBUG-FUNCTION-BLOCKS.  Added DI:FUNCTION-END-COOKIE-VALID-P and
+DI:DEBUG-FUNCTION-START-LOCATION.
+
+This release fixes a few problems with Aliens, but they are still pretty
+broken.  In particular, Alien and C interface operations don't work at all in
+interpreted code.  We are in the process of integrating a new-and-improved
+implementation of Aliens that works much more smoothly with C.
+
+
+				 COMPILER
+
+Enhancements:
+ -- Various SPARC-specific reductions in spurious type checks and coercions.
+ -- FTYPE declarations on local functions are now propagated to the variables
+    of the local definition.
+ -- Improved representation selection by not totally ignoring references by
+    move VOPs.  This is particularly useful for avoiding spurious number
+    consing of float arguments that are passed on as arguments.
+ -- The warning about assignments to the arguments of functions having FTYPE
+    declarations is now suppressed when the FTYPE declaration gives no useful
+    information.
+ -- Improved readability of *COMPILE-PROGRESS* output.
+ -- Fixed TYPES-INTERSECT to consider any supertype of T to definitely
+    intersect with anything (including unknown or not-yet-defined types.)
+
+Bug fixes:
+ -- Fixed some bugs in dead code deletion.
+ -- Lambdas with &KEY and no specified keywords are now compiled correctly
+    (instead of the &KEY being ignored.)
+ -- The compiler now knows that INTERN can return NIL as its second value.
+ -- Global FTYPE declarations on DEFSTRUCT slot accessors are now quietly
+    ignored, instead of causing the structure definition to be removed.
+ -- Fixed a problem with resulting from an interaction between block
+    compilation and global FTYPE declarations.
+ -- Fixed TAGBODY not to consider NIL to be a tag.
+ -- Fixed an internal error during register allocation which could happen when
+    compilation-speed > speed.
+ -- If we undefine a structure type, unfreeze it also.
+ -- Fixed TYPEP SATISFIES to always return T-or-NIL, regardless of what the
+    predicate returns.
+
+PCL/CLOS:
+ -- Added generalized source context parsing with EXT:DEF-SOURCE-CONTEXT.
+    Added a parser for DEFMETHOD that gets qualifiers and specializers.
+ -- FUNCALLABLE-INSTANCE-P is now compiled much more efficiently.
+ -- Fixed SET-FUNCTION-NAME to correctly set the name of interpreted methods,
+    instead of clobbering the name of an internal interpreter function.
+
+
+				  HEMLOCK
+
+Bug fixes:
+ -- Changed X font specs in the generic site-init file to use point size
+    instead of pixel size so that they work on 100dpi devices. 
+ -- Added :INPUT :ON wm-hints to Hemlock windows, which is necessary to
+    receive input in OpenLook windowing systems.
+ -- Fixed Lisp mode indentation for FLET&c to check that we are actually in
+    the first arg form before doing funny indentation.  Generalized to
+    reference the variable "Lisp Indentation Local Definers", and also to
+    recognize LABELS (as well as MACROLET and FLET.)
+ -- When we reallocate string-table vectors to grow them, clear the old vector
+    so that it won't hold onto garbage (in case the vector was in static
+    space, but pointed to dynamic values.)  This was a major cause of memory
+    leakage in Hemlock.
+ -- Fixed sentence motion to work at the end of the buffer.
+
+Enhancements:
+ -- The site file now contains a template for file directory translation (for
+    "Edit Definition"), and some of the comments have been improved.
+ -- There's a new "Buffer Modified Hook" function that raises the "Echo Area"
+    window when it becomes modified.  You can control this with the Hemlock
+    variable: "Raise Echo Area When Modified".
+ -- In "Edit Definition" and related commands, before doing directory
+    translations, try a probe-file of the source file first.  This can reduce
+    the number of translations needed.
+ -- Added DEFINDENT's for the "WIRE" package.
+ -- Made the X visual bell look less spastic by adding a finish-output.
+ -- The termcap parser now recognizes entries for things like begin/end bold,
+    underline, etc.  Fixed a problem with font halding in TTY redisplay.
+ -- The MH interface now uses the correct name for the MailDrop profile
+    component.
+ -- The netnews interface has been improved in various ways, including the
+    addition of server timeouts, but should still be considered experimental.
+
+
+	    Release notes for CMU Common Lisp 15b, 19 October 91
 
 These release notes cover changes since the beta release of version 14c on 6
 June 91.  SPARCstations and Sun4's are now supported under SunOS (as well as
