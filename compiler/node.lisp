@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.17 1991/07/18 02:11:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.18 1991/11/05 14:38:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -905,6 +905,8 @@
   (type :test (not (eq type *universal-type*)))
   (where-from :test (not (eq where-from :assumed)))
   arglist
+  allowp
+  keyp
   min-args
   max-args
   (entry-points :test entry-points)
