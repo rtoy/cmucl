@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.31 1991/02/24 19:59:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.32 1991/02/25 18:12:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1008,10 +1008,10 @@
 		   (let ((sc (tn-sc tn))
 			 (tn-offset (tn-offset tn)))
 		     (and (eq (sc-sb sc) sb)
-			  (<= tn-offset
-			      offset
-			      (the index
-				   (+ tn-offset (sc-element-size sc)))))))
+			  (<= tn-offset offset)
+			  (< offset
+			     (the index
+				  (+ tn-offset (sc-element-size sc)))))))
 		 (same (ref)
 		   (let ((tn (tn-ref-tn ref))
 			 (ltn (tn-ref-load-tn ref)))
