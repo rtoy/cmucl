@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.19 1990/02/26 18:54:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.20 1990/02/26 20:46:57 ch Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -41,7 +41,7 @@
 	  code-header-type function-header-type
 	  closure-function-header-type return-pc-header-type
 	  closure-header-type value-cell-header-type symbol-header-type
-	  character-type SAP-type unbound-marker-type atomic-flag
+	  base-character-type sap-type unbound-marker-type atomic-flag
 	  interrupted-flag pending-interrupt-trap error-trap cerror-trap
 	  fixnum static-symbols static-symbol-offset offset-static-symbol
 	  static-symbol-p
