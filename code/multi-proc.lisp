@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.4 1997/09/29 11:01:10 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.5 1997/11/21 12:14:27 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,13 +33,18 @@
 	       (sys:sap-int (sys:sap-ref-sap binding-stack binding))))
 	     (symbol
 	      (kernel:make-lisp-obj
-	       (sys:sap-int (sys:sap-ref-sap binding-stack (+ binding 4)))))
-	     (symbol-value (c::%primitive c:fast-symbol-value symbol)))
-	#+nil
-	(format t "Undoing: ~s ~s <-> ~s~%" symbol value symbol-value)
-	(kernel:%set-symbol-value symbol value)
-	(setf (sys:sap-ref-sap binding-stack binding)
-	      (sys:int-sap (kernel:get-lisp-obj-address symbol-value)))))))
+	       (sys:sap-int (sys:sap-ref-sap binding-stack (+ binding 4))))))
+	(cond ((symbolp symbol)
+	       (let ((symbol-value (c::%primitive c:fast-symbol-value symbol)))
+		 #+nil
+		 (format t "Undoing: ~s ~s <-> ~s~%" symbol value symbol-value)
+		 (kernel:%set-symbol-value symbol value)
+		 (setf (sys:sap-ref-sap binding-stack binding)
+		       (sys:int-sap (kernel:get-lisp-obj-address
+				     symbol-value)))))
+	      (t
+	       #+nil
+	       (format t "Ignoring undoing: ~s ~s~%" symbol value)))))))
 
 ;;; Re-apply the bindings in a binding stack after an
 ;;; unbind-binding-stack.
@@ -58,13 +63,19 @@
 	       (sys:sap-int (sys:sap-ref-sap binding-stack binding))))
 	     (symbol
 	      (kernel:make-lisp-obj
-	       (sys:sap-int (sys:sap-ref-sap binding-stack (+ binding 4)))))
-	     (symbol-value (c::%primitive c:fast-symbol-value symbol)))
-	#+nil
-	(format t "Rebinding: ~s ~s <-> ~s~%" symbol value symbol-value)
-	(kernel:%set-symbol-value symbol value)
-	(setf (sys:sap-ref-sap binding-stack binding)
-	      (sys:int-sap (kernel:get-lisp-obj-address symbol-value)))))))
+	       (sys:sap-int (sys:sap-ref-sap binding-stack (+ binding 4))))))
+	(cond ((symbolp symbol)
+	       (let ((symbol-value (c::%primitive c:fast-symbol-value symbol)))
+		 #+nil
+		 (format t "Rebinding: ~s ~s <-> ~s~%"
+			 symbol value symbol-value)
+		 (kernel:%set-symbol-value symbol value)
+		 (setf (sys:sap-ref-sap binding-stack binding)
+		       (sys:int-sap (kernel:get-lisp-obj-address
+				     symbol-value)))))
+	      (t
+	       #+nil
+	       (format t "Ignoring rebinding: ~s ~s~%" symbol value)))))))
 
 (defun save-binding-stack (binding-save-stack)
   (declare (type (simple-array t (*)) binding-save-stack)
@@ -274,8 +285,8 @@
 ;;;
 ;;; Fork a new stack-group from the *current-stack-group*. Execution
 ;;; continues with the *current-stack-group* returning the new stack
-;;; group. Control may be transfer to the child by resume and it
-;;; executes the initial-function.
+;;; group. Control may be transfer to the child by stack-group-resume
+;;; and it executes the initial-function.
 ;;;
 (defun make-stack-group (name initial-function &optional
 			      (resumer *current-stack-group*))
@@ -311,90 +322,101 @@
 	     (setf (aref x86::*control-stacks* control-stack-id) control-stack)
 	     (values control-stack control-stack-id)))
 	 (allocate-child-stack-group (control-stack-id)
-	   (sys:without-gcing
-	    ;; Save the binding stack.
-	    (unbind-binding-stack)
-	    (multiple-value-bind (binding-stack binding-stack-size)
-		(save-binding-stack #())
-	      (rebind-binding-stack)
-	      ;; Save the Alien stack
-	      (multiple-value-bind (alien-stack alien-stack-size
-						alien-stack-pointer)
-		  (save-alien-stack
-		   (make-array 0 :element-type '(unsigned-byte 32)))
-		;; Allocate a stack-group structure.
-		(%make-stack-group
-		 :name name
-		 :state :active
-		 :control-stack-id control-stack-id
-		 ;; Save the Eval stack.
-		 :eval-stack (copy-seq (the (simple-array t (*))
-					    kernel:*eval-stack*))
-		 :eval-stack-top kernel:*eval-stack-top*
-		 ;; Misc stacks.
-		 :current-catch-block lisp::*current-catch-block*
-		 :current-unwind-protect-block
-		 lisp::*current-unwind-protect-block*
-		 ;; Alien stack.
-		 :alien-stack alien-stack
-		 :alien-stack-size alien-stack-size
-		 :alien-stack-pointer alien-stack-pointer
-		 ;; Binding stack.
-		 :binding-stack binding-stack
-		 :binding-stack-size binding-stack-size
-		 ;; Resumer
-		 :resumer resumer))))))
-    (sys:without-interrupts
-     (multiple-value-bind (control-stack control-stack-id)
-	 (allocate-control-stack)
-       (let ((child-stack-group
-	      (allocate-child-stack-group control-stack-id)))
-	 ;; Fork the control-stack
-	 (if (x86:control-stack-fork control-stack)
-	     ;; Current-stack-group returns the child-stack-group.
-	     child-stack-group
-	     ;; Child starts.
-	     (unwind-protect
-		  (progn
-		    (setq *current-stack-group* child-stack-group)
-		    (sys:with-interrupts
-			(funcall initial-function)))
-	       (let ((resumer (stack-group-resumer child-stack-group)))
-		 (inactivate-stack-group child-stack-group)
-		 ;; Verify the resumer.
-		 (unless (and resumer
-			      (eq (stack-group-state resumer) :active))
-		   (setq resumer *initial-stack-group*))
-		 ;; Restore the resumer state.
-		 (setq *current-stack-group* resumer)
-		 ;; Eval-stack
-		 (setf kernel:*eval-stack* (stack-group-eval-stack resumer))
-		 (setf kernel:*eval-stack-top*
-		       (stack-group-eval-stack-top resumer))
-		 ;; The binding stack.
-		 (sys:without-gcing
+	   ;; Save the binding stack.
+	   (unbind-binding-stack)
+	   (multiple-value-bind (binding-stack binding-stack-size)
+	       (save-binding-stack #())
+	     (rebind-binding-stack)
+	     ;; Save the Alien stack
+	     (multiple-value-bind (alien-stack alien-stack-size
+					       alien-stack-pointer)
+		 (save-alien-stack
+		  (make-array 0 :element-type '(unsigned-byte 32)))
+	       ;; Allocate a stack-group structure.
+	       (%make-stack-group
+		:name name
+		:state :active
+		:control-stack-id control-stack-id
+		;; Save the Eval stack.
+		:eval-stack (copy-seq (the (simple-array t (*))
+					   kernel:*eval-stack*))
+		:eval-stack-top kernel:*eval-stack-top*
+		;; Misc stacks.
+		:current-catch-block lisp::*current-catch-block*
+		:current-unwind-protect-block
+		lisp::*current-unwind-protect-block*
+		;; Alien stack.
+		:alien-stack alien-stack
+		:alien-stack-size alien-stack-size
+		:alien-stack-pointer alien-stack-pointer
+		;; Binding stack.
+		:binding-stack binding-stack
+		:binding-stack-size binding-stack-size
+		;; Resumer
+		:resumer resumer)))))
+    (let ((child-stack-group nil))
+      (let ((unix::*interrupts-enabled* nil)
+	    (lisp::*gc-inhibit* t))
+	(multiple-value-bind (control-stack control-stack-id)
+	    (allocate-control-stack)
+	  (setq child-stack-group
+		(allocate-child-stack-group control-stack-id))
+	  ;; Fork the control-stack
+	  (if (x86:control-stack-fork control-stack)
+	      ;; Current-stack-group returns the child-stack-group.
+	      child-stack-group
+	      ;; Child starts.
+	      (unwind-protect
+		   (progn
+		     (setq *current-stack-group* child-stack-group)
+		     ;; Child start with interrupts and GC enabled.
+		     (let ((unix::*interrupts-enabled* t)
+			   (lisp::*gc-inhibit* nil))
+		       (when unix::*interrupt-pending*
+			 (unix::do-pending-interrupt))
+		       (when lisp::*need-to-collect-garbage*
+			 (lisp::maybe-gc))
+		       (funcall initial-function)))
+		(let ((resumer (stack-group-resumer child-stack-group)))
+		  (inactivate-stack-group child-stack-group)
+		  ;; Verify the resumer.
+		  (unless (and resumer
+			       (eq (stack-group-state resumer) :active))
+		    (setq resumer *initial-stack-group*))
+		  ;; Restore the resumer state.
+		  (setq *current-stack-group* resumer)
+		  ;; Eval-stack
+		  (setf kernel:*eval-stack* (stack-group-eval-stack resumer))
+		  (setf kernel:*eval-stack-top*
+			(stack-group-eval-stack-top resumer))
+		  ;; The binding stack.
 		  (unbind-binding-stack)
 		  (restore-binding-stack
 		   (stack-group-binding-stack resumer)
 		   (stack-group-binding-stack-size resumer))
-		  (rebind-binding-stack))
-		 ;; Misc stacks.
-		 (setf lisp::*current-catch-block*
-		       (stack-group-current-catch-block resumer))
-		 (setf lisp::*current-unwind-protect-block*
-		       (stack-group-current-unwind-protect-block resumer))
-		 ;; The Alien stack
-		 (restore-alien-stack
-		  (stack-group-alien-stack resumer)
-		  (stack-group-alien-stack-size resumer)
-		  (stack-group-alien-stack-pointer resumer))
-		 ;; 
-		 (let ((new-control-stack
-			(aref x86::*control-stacks*
-			      (stack-group-control-stack-id resumer))))
-		   (declare (type (simple-array (unsigned-byte 32) (*))
-				  new-control-stack))
-		   (x86:control-stack-return new-control-stack))))))))))
+		  (rebind-binding-stack)
+		  ;; Misc stacks.
+		  (setf lisp::*current-catch-block*
+			(stack-group-current-catch-block resumer))
+		  (setf lisp::*current-unwind-protect-block*
+			(stack-group-current-unwind-protect-block resumer))
+		  ;; The Alien stack
+		  (restore-alien-stack
+		   (stack-group-alien-stack resumer)
+		   (stack-group-alien-stack-size resumer)
+		   (stack-group-alien-stack-pointer resumer))
+		  ;; 
+		  (let ((new-control-stack
+			 (aref x86::*control-stacks*
+			       (stack-group-control-stack-id resumer))))
+		    (declare (type (simple-array (unsigned-byte 32) (*))
+				   new-control-stack))
+		    (x86:control-stack-return new-control-stack)))))))
+      (when (and unix::*interrupts-enabled* unix::*interrupt-pending*)
+	(unix::do-pending-interrupt))
+      (when (and lisp::*need-to-collect-garbage* (not lisp::*gc-inhibit*))
+	(lisp::maybe-gc))
+      child-stack-group)))
 
 
 ;;; Stack-Group-Resume -- Interface
@@ -406,52 +428,52 @@
   (declare (type stack-group new-stack-group))
   (assert (and (eq (stack-group-state new-stack-group) :active)
 	       (not (eq new-stack-group *current-stack-group*))))
-  (sys:without-interrupts
-   (let* (;; Save the current stack-group on its stack.
-	  (stack-group *current-stack-group*)
-	  ;; Find the required stack size.
-	  (control-stack-end
-	   (alien:extern-alien "control_stack_end" alien:unsigned))
-	  (control-stack-pointer (kernel:control-stack-pointer-sap))
-	  (control-stack-size (- control-stack-end
-				 (sys:sap-int control-stack-pointer)))
-	  ;; Stack-save array needs three extra elements. The stack
-	  ;; pointer will be stored in the first, and the frame
-	  ;; pointer and return address push onto the bottom of the
-	  ;; stack.
-	  (save-stack-size (+ (ceiling control-stack-size 4) 3))
-	  ;; The save-stack vector.
-	  (control-stack (aref x86::*control-stacks*
-			       (stack-group-control-stack-id stack-group))))
-     (declare (type (unsigned-byte 29) control-stack-size save-stack-size)
-	      (type (simple-array (unsigned-byte 32) (*)) control-stack))
-     ;; Increase the save-stack size if necessary.
-     (when (> save-stack-size (length control-stack))
-       (setf control-stack (adjust-array control-stack save-stack-size
-					 :element-type '(unsigned-byte 32)
-					 :initial-element 0))
-       (setf (aref x86::*control-stacks*
-		   (stack-group-control-stack-id stack-group))
-	     control-stack))
-     
-     ;; Eval-stack
-     (setf (stack-group-eval-stack stack-group) kernel:*eval-stack*)
-     (setf (stack-group-eval-stack-top stack-group) kernel:*eval-stack-top*)
-     (setf kernel:*eval-stack* (stack-group-eval-stack new-stack-group))
-     (setf kernel:*eval-stack-top*
-	   (stack-group-eval-stack-top new-stack-group))
-     
-     ;; Misc stacks.
-     (setf (stack-group-current-catch-block stack-group)
-	   lisp::*current-catch-block*)
-     (setf (stack-group-current-unwind-protect-block stack-group)
-	   lisp::*current-unwind-protect-block*)
-     (setf lisp::*current-catch-block*
-	   (stack-group-current-catch-block new-stack-group))
-     (setf lisp::*current-unwind-protect-block*
-	   (stack-group-current-unwind-protect-block new-stack-group))
-     
-     (sys:without-gcing
+  (let ((unix::*interrupts-enabled* nil)
+	(lisp::*gc-inhibit* t))
+    (let* (;; Save the current stack-group on its stack.
+	   (stack-group *current-stack-group*)
+	   ;; Find the required stack size.
+	   (control-stack-end
+	    (alien:extern-alien "control_stack_end" alien:unsigned))
+	   (control-stack-pointer (kernel:control-stack-pointer-sap))
+	   (control-stack-size (- control-stack-end
+				  (sys:sap-int control-stack-pointer)))
+	   ;; Stack-save array needs three extra elements. The stack
+	   ;; pointer will be stored in the first, and the frame
+	   ;; pointer and return address push onto the bottom of the
+	   ;; stack.
+	   (save-stack-size (+ (ceiling control-stack-size 4) 3))
+	   ;; The save-stack vector.
+	   (control-stack (aref x86::*control-stacks*
+				(stack-group-control-stack-id stack-group))))
+      (declare (type (unsigned-byte 29) control-stack-size save-stack-size)
+	       (type (simple-array (unsigned-byte 32) (*)) control-stack))
+      ;; Increase the save-stack size if necessary.
+      (when (> save-stack-size (length control-stack))
+	(setf control-stack (adjust-array control-stack save-stack-size
+					  :element-type '(unsigned-byte 32)
+					  :initial-element 0))
+	(setf (aref x86::*control-stacks*
+		    (stack-group-control-stack-id stack-group))
+	      control-stack))
+      
+      ;; Eval-stack
+      (setf (stack-group-eval-stack stack-group) kernel:*eval-stack*)
+      (setf (stack-group-eval-stack-top stack-group) kernel:*eval-stack-top*)
+      (setf kernel:*eval-stack* (stack-group-eval-stack new-stack-group))
+      (setf kernel:*eval-stack-top*
+	    (stack-group-eval-stack-top new-stack-group))
+      
+      ;; Misc stacks.
+      (setf (stack-group-current-catch-block stack-group)
+	    lisp::*current-catch-block*)
+      (setf (stack-group-current-unwind-protect-block stack-group)
+	    lisp::*current-unwind-protect-block*)
+      (setf lisp::*current-catch-block*
+	    (stack-group-current-catch-block new-stack-group))
+      (setf lisp::*current-unwind-protect-block*
+	    (stack-group-current-unwind-protect-block new-stack-group))
+      
       ;; The binding stack.
       (unbind-binding-stack)
       (multiple-value-bind (stack size)
@@ -460,26 +482,31 @@
 	(setf (stack-group-binding-stack-size stack-group) size))
       (restore-binding-stack (stack-group-binding-stack new-stack-group)
 			     (stack-group-binding-stack-size new-stack-group))
-      (rebind-binding-stack))
-     
-     ;; The Alien stack
-     (multiple-value-bind (save-stack size alien-stack)
-	 (save-alien-stack (stack-group-alien-stack stack-group))
-       (setf (stack-group-alien-stack stack-group) save-stack)
-       (setf (stack-group-alien-stack-size stack-group) size)
-       (setf (stack-group-alien-stack-pointer stack-group) alien-stack))
-     (restore-alien-stack (stack-group-alien-stack new-stack-group)
-			  (stack-group-alien-stack-size new-stack-group)
-			  (stack-group-alien-stack-pointer new-stack-group))
-     ;; 
-     (let ((new-control-stack
-	    (aref x86::*control-stacks*
-		  (stack-group-control-stack-id new-stack-group))))
-       (declare (type (simple-array (unsigned-byte 32) (*))
-		      new-control-stack))
-       (x86:control-stack-resume control-stack new-control-stack))
-     ;; Thread returns.
-     (setq *current-stack-group* stack-group))))
+      (rebind-binding-stack)
+      
+      ;; The Alien stack
+      (multiple-value-bind (save-stack size alien-stack)
+	  (save-alien-stack (stack-group-alien-stack stack-group))
+	(setf (stack-group-alien-stack stack-group) save-stack)
+	(setf (stack-group-alien-stack-size stack-group) size)
+	(setf (stack-group-alien-stack-pointer stack-group) alien-stack))
+      (restore-alien-stack (stack-group-alien-stack new-stack-group)
+			   (stack-group-alien-stack-size new-stack-group)
+			   (stack-group-alien-stack-pointer new-stack-group))
+      ;; 
+      (let ((new-control-stack
+	     (aref x86::*control-stacks*
+		   (stack-group-control-stack-id new-stack-group))))
+	(declare (type (simple-array (unsigned-byte 32) (*))
+		       new-control-stack))
+	(x86:control-stack-resume control-stack new-control-stack))
+      ;; Thread returns.
+      (setq *current-stack-group* stack-group)))
+  (when (and unix::*interrupts-enabled* unix::*interrupt-pending*)
+    (unix::do-pending-interrupt))
+  (when (and lisp::*need-to-collect-garbage* (not lisp::*gc-inhibit*))
+    (lisp::maybe-gc))
+  (values))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Multi-process support. The interface is based roughly on the
@@ -859,14 +886,15 @@
 (defun start-sigalrm-yield (&optional (sec 0) (usec 500000))
   (declare (fixnum sec usec))
   ;; Disable the gencgc pointer filter to improve interrupt safety.
-  #+gencgc
+  #+(and gencgc nil)
   (setf (alien:extern-alien "enable_pointer_filter" alien:unsigned) 0)
   (flet ((sigalrm-handler (signal code scp)
 	   (declare (ignore signal code scp))
-	   (process-yield)))
-    (sys:enable-interrupt :sigalrm #'sigalrm-handler)
+	   (when (<= lisp::*free-interrupt-context-index* 1)
+	     (process-yield))))
+    (sys:enable-interrupt :sigalrm #'sigalrm-handler))
   (unix:unix-setitimer :real sec usec 0 1)
-  (values)))
+  (values))
 
 ;;; Initialise the initial process, must be called before use of the
 ;;; other multi-process function.
