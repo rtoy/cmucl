@@ -243,5 +243,8 @@ shell
 ; stuff for talking to slave Lisps to do debugging.
 debug
 
+; site dependent NNTP interface for reading Netnews.
+netnews
+
 ; File that sets up all the default key bindings; implementation dependant.
 Bindings
