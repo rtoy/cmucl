@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.40 1992/05/22 17:37:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.41 1992/06/12 04:00:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,18 @@
   (comf "target:assembly/rt/arith" :assem t)
   (comf "target:assembly/rt/alloc" :assem t))
 
+(when (c:backend-featurep :hppa)
+  (comf "target:assembly/hppa/assem-rtns" :assem t)
+  (comf "target:assembly/hppa/array" :assem t)
+  (comf "target:assembly/hppa/arith" :assem t)
+  (comf "target:assembly/hppa/alloc" :assem t))
+
+(when (c:backend-featurep :x86)
+  (comf "target:assembly/x86/assem-rtns" :assem t)
+  (comf "target:assembly/x86/array" :assem t)
+  (comf "target:assembly/x86/arith" :assem t)
+  (comf "target:assembly/x86/alloc" :assem t))
+
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
 
@@ -89,9 +101,11 @@
 (comf "target:code/mipsstrops")
 
 (comf "target:code/unix")
-#+mach (comf "target:code/mach")
-#+mach (comf "target:code/mach-os")
-#+sunos (comf "target:code/sunos-os")
+(when (target-featurep :mach)
+  (comf "target:code/mach")
+  (comf "target:code/mach-os"))
+(when (target-featurep :sunos)
+  (comf "target:code/sunos-os"))
 
 (when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))
@@ -99,6 +113,10 @@
   (comf "target:code/sparc-vm"))
 (when (c:backend-featurep :rt)
   (comf "target:code/rt-vm"))
+(when (c:backend-featurep :hppa)
+  (comf "target:code/hppa-vm"))
+(when (c:backend-featurep :x86)
+  (comf "target:code/x86-vm"))
 
 (comf "target:code/symbol")
 (comf "target:code/bignum")
