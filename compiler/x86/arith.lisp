@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.13 2000/09/12 07:36:01 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.14 2001/11/03 22:27:01 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -652,7 +652,7 @@
     (inst shl result :cl)))
 
 (define-vop (fast-ash-c/unsigned=>unsigned)
-  (:translate ash)
+	    (:translate ash)
   (:policy :fast-safe)
   (:args (number :scs (unsigned-reg) :target result
 		 :load-if (not (and (sc-is number unsigned-stack)
@@ -679,8 +679,10 @@
 		  ;; We don't have to worry about overflow because of the
 		  ;; result type restriction.
 		  (inst shl result amount))
+		 ((< amount -31)
+		  (inst mov result 0))
 		 (t
-		  (inst shr result (min 31 (- amount)))))))))
+		  (inst shr result (- amount))))))))
 
 (define-vop (fast-ash-c/signed=>signed)
   (:translate ash)
@@ -761,7 +763,7 @@
     (inst shl result :cl)))
 
 (define-vop (fast-ash/unsigned=>unsigned)
-  (:translate ash)
+	    (:translate ash)
   (:policy :fast-safe)
   (:args (number :scs (unsigned-reg) :target result)
 	 (amount :scs (signed-reg) :target ecx))
@@ -774,19 +776,20 @@
     (move result number)
     (move ecx amount)
     (inst or ecx ecx)
-    (inst jmp :ns positive)
+    (inst jmp :ns POSITIVE)
     (inst neg ecx)
     (inst cmp ecx 31)
-    (inst jmp :be okay)
-    (inst mov ecx 31)
+    (inst jmp :be OKAY)
+    (inst xor result result)
+    (inst jmp DONE)
     OKAY
     (inst shr result :cl)
-    (inst jmp done)
-      
+    (inst jmp DONE)
+    
     POSITIVE
     ;; The result-type assures us that this shift will not overflow.
     (inst shl result :cl)
-      
+    
     DONE))
 
 (define-vop (fast-ash/signed=>signed)
