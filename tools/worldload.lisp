@@ -7,23 +7,24 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.62 1993/08/03 11:06:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.63 1993/08/19 12:54:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file loads the parts of the system that aren't cold loaded and saves
 ;;; the resulting core image.  It writes "lisp.core" in the DEFAULT-DIRECTORY.
-;;;
-;;; ####### NOTE: HACK ALERT!!!!
-;;; 
-;;; This file must be loaded by:
-;;;    (load (open "...worldload.lisp"))
-;;;
-;;; The OPEN call is needed to prevent the stream buffer from the previous
-;;; incarnation (which is no longer valid) from being added to the stream
-;;; buffer freelist.  If you don't do this, you will probably get a memory
-;;; access violation when you first try to do file I/O in the new core.
-;;;
+
+;;; Load the rest of the reader (may be byte-compiled.)
+(load "target:code/sharpm")
+(sharp-init)
+(load "target:code/backq")
+(backq-init)
+(setf *readtable* (copy-readtable std-lisp-readtable))
+
+;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
+(load "target:code/debug.*bytef" :if-does-not-exist nil)
+(load "target:code/defmacro.*bytef" :if-does-not-exist nil) 
+(load "target:code/error.*bytef" :if-does-not-exist nil)
 
 ;;; Define a bunch of search lists relative to target:
 ;;;
