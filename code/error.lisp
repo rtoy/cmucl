@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.18 1992/07/10 17:48:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.19 1992/12/10 02:05:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,10 +41,8 @@
 	  file-error-pathname cell-error unbound-variable undefined-function
 	  arithmetic-error arithmetic-error-operation arithmetic-error-operands
 	  package-error package-error-package division-by-zero
-	  floating-point-overflow floating-point-underflow))
-
-(in-package "EXTENSIONS")
-(export '(floating-point-inexact floating-point-invalid))
+	  floating-point-overflow floating-point-underflow
+	  floating-point-inexact floating-point-invalid-operation))
 
 (in-package "CONDITIONS")
 
@@ -793,7 +791,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 (define-condition floating-point-overflow  (arithmetic-error) ())
 (define-condition floating-point-underflow (arithmetic-error) ())
 (define-condition floating-point-inexact   (arithmetic-error) ())
-(define-condition floating-point-invalid   (arithmetic-error) ())
+(define-condition floating-point-invalid-operation   (arithmetic-error) ())
 
 
 ;;;; HANDLER-CASE and IGNORE-ERRORS.
