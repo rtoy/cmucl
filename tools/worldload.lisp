@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.73 1994/02/11 15:20:07 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.74 1994/02/12 14:24:24 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,6 +28,12 @@
 (maybe-byte-load "target:code/sharpm")
 (maybe-byte-load "target:code/backq")
 (setq std-lisp-readtable (copy-readtable *readtable*))
+
+;;; The pretty printer is part of the kernel core, but we don't turn it in
+;;; until now.
+;;;
+(pp::pprint-init)
+
 
 (maybe-byte-load "target:code/extensions")
 (maybe-byte-load "target:code/defmacro")
@@ -145,13 +151,6 @@
   (setq *old-ie* nil))
 
 (purify :root-structures '(compile-file)))
-
-;;; The pretty printer is part of the kernel core, but we can't turn in on
-;;; until after the compiler is loaded because it compiles some lambdas
-;;; to help with the dispatching.
-;;; 
-#-(or no-pp runtime)
-(pp::pprint-init)
 
 ;;; CLX.
 ;;;
