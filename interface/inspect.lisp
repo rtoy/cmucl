@@ -137,7 +137,7 @@
   (typecase object
     (pcl::std-instance
      (format nil "Instance ~a of Class ~a"
-	     object (pcl:class-name (pcl:class-of object))))
+	     object (pcl::class-name (pcl::class-of object))))
     (function (format nil "~a" object))
     (structure
      (let ((default (format nil "~a" object)))
@@ -494,7 +494,7 @@
 
 (defun display-clos-pane (object)
   (with-inspector-pane (object)
-    (let* ((class (pcl:class-of object))
+    (let* ((class (pcl::class-of object))
 	   (slotds (pcl::slots-to-inspect class object))
 	   (view (create-row-column form "rowColumn"
 				    :left-attachment :attach-form
