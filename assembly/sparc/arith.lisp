@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.3 1990/11/30 10:16:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.4 1990/11/30 11:44:11 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -166,8 +166,8 @@
   (inst xorcc temp hi)
   (inst b :eq LOW-FITS-IN-FIXNUM)
   ;; Shift the double word hi:lo down two bits to get rid of the fixnum tag.
-  (inst srl lo 2)
   (inst sll temp hi 30)
+  (inst srl lo 2)
   (inst or lo temp)
   (inst sra hi 2)
   ;; Allocate a BIGNUM for the result.
