@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.2 1990/06/25 21:00:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.3 1990/07/02 04:36:58 wlott Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.
@@ -85,8 +85,6 @@
   :print-herald
       If true, print out the lisp system herald when starting."
   
-  (declare (ignore purify root-structures))
-  #+nil
   (if purify
       (purify :root-structures root-structures)
       (gc))
