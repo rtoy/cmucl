@@ -239,7 +239,7 @@
 (defknown copy-symbol (symbol &optional t) symbol (flushable))
 (defknown gensym (&optional (or string unsigned-byte)) symbol ())
 (defknown gentemp (&optional string package) symbol)
-(defknown symbol-package (symbol) package (flushable))
+(defknown symbol-package (symbol) (or package null) (flushable))
 (defknown keywordp (t) boolean (flushable))	  ; If someone uninterns it...
 
 
