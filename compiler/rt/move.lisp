@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.1 1991/02/18 15:08:01 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/move.lisp,v 1.2 1991/05/05 13:51:48 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of operand loading/saving and the
 ;;; Move VOP.
@@ -159,7 +159,7 @@
 ;;; Arg is a fixnum, so just put it in a non-descriptor register and shift it.
 ;;;
 (define-vop (move-to-word/fixnum)
-  (:args (x :scs (any-reg) :target y))
+  (:args (x :scs (any-reg descriptor-reg) :target y))
   (:results (y :scs (signed-reg unsigned-reg)))
   (:note "fixnum untagging")
   (:generator 2
@@ -167,7 +167,7 @@
     (inst sar y 2)))
 ;;;
 (define-move-vop move-to-word/fixnum :move
-  (any-reg) (signed-reg unsigned-reg))
+  (any-reg descriptor-reg) (signed-reg unsigned-reg))
 
 ;;; MOVE-TO-WORD-C -- VOP.
 ;;; 
