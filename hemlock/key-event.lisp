@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.10 1992/09/07 16:50:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/key-event.lisp,v 1.1.1.11 1993/02/22 14:36:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -674,8 +674,9 @@
   "This prints key, a key-event or vector of key-events, to stream in a
    user-expected fashion.  Long-names-p indicates whether modifiers should
    print with their long or short name."
+  (declare (type (or vector key-event) key) (type stream stream))
   (etypecase key
-    (structure (print-pretty-key-event key stream long-names-p))
+    (key-event (print-pretty-key-event key stream long-names-p))
     (vector
      (let ((length-1 (1- (length key))))
        (dotimes (i (length key))
