@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.9 1990/05/24 13:26:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.10 1990/06/26 06:27:44 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -957,13 +957,20 @@
 ;;; a displaced array looks like, we can fix this.
 ;;;
 (defun dump-array (array file)
-  (unless (zerop (%primitive header-ref array %array-displacement-slot))
+  (unless (zerop #-new-compiler
+		 (%primitive header-ref array %array-displacement-slot)
+		 #+new-compiler
+		 (lisp::%array-displaced-p array))
     (compiler-error
      "Attempt to dump an array with a displacement, you lose big."))
   (let ((rank (array-rank array)))
     (dotimes (i rank)
       (dump-integer (array-dimension array i) file))
-    (sub-dump-object (%primitive header-ref array %array-data-slot) file)
+    (sub-dump-object #-new-compiler
+		     (%primitive header-ref array %array-data-slot)
+		     #+new-compiler
+		     (lisp::%array-data-vector array)
+		     file)
     (dump-fop 'lisp::fop-array file)
     (quick-dump-number rank 4 file)))
 
@@ -977,11 +984,20 @@
 ;;; and write the vector one element at a time.
 ;;;
 (defun dump-i-vector (vec file)
-  (let* ((vec (if #+new-compiler (array-header-p vec)
-		  #-new-compiler (%primitive complex-array-p vec)
+  (let* ((vec (if #-new-compiler (%primitive complex-array-p vec)
+		  #+new-compiler (array-header-p vec)
 		  (coerce vec 'simple-array)
 		  vec))
-	 (ac (%primitive get-vector-access-code vec))
+	 (ac #-new-compiler
+	     (%primitive get-vector-access-code vec)
+	     #+new-compiler
+	     (etypecase vec
+	       (simple-bit-vector 0)
+	       ((simple-array (unsigned-byte 2) (*)) 1)
+	       ((simple-array (unsigned-byte 4) (*)) 2)
+	       ((simple-array (unsigned-byte 8) (*)) 3)
+	       ((simple-array (unsigned-byte 16) (*)) 4)
+	       ((simple-array (unsigned-byte 32) (*)) 5)))
 	 (len (length vec))
 	 (size (ash 1 ac))
 	 (bytes (ash (+ (ash len ac) 7) -3)))
@@ -989,6 +1005,12 @@
     (dump-fop 'lisp::fop-int-vector file)
     (quick-dump-number len 4 file)
     (dump-byte size file)
+    #+new-compiler
+    (if (eq target-byte-order native-byte-order)
+	(system:output-raw-bytes (fasl-file-stream file)
+				 vec 0 bytes)
+	(compiler-error "Can't byte-swap on the MIPS yet."))
+    #-new-compiler
     (cond ((or (eq target-byte-order native-byte-order)
 	       (= size 8))
 	   (dotimes (i bytes)
@@ -1029,9 +1051,11 @@
 
 (defun dump-character (ch file)
   (cond
-   ((string-char-p ch)
+   (#+new-compiler t
+    #-new-compiler (string-char-p ch)
     (dump-fop 'lisp::fop-short-character file)
     (dump-byte (char-code ch) file))
+   #-new-compiler
    (t
     (dump-fop 'lisp::fop-character file)
     (dump-byte (char-code ch) file)
