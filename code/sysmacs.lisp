@@ -7,13 +7,19 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.10 1991/07/25 22:24:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.11 1992/03/26 03:15:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Miscellaneous system hacking macros.
 ;;;
 (in-package "LISP" :use '("SYSTEM" "DEBUG"))
+
+(in-package "SYSTEM")
+(export '(without-gcing without-hemlock))
+
+(in-package "LISP")
+
 
 ;;; WITH-ARRAY-DATA  --  Interface
 ;;;
@@ -55,37 +61,6 @@
 	 ,@body)
      (when (and *need-to-collect-garbage* (not *gc-inhibit*))
        (maybe-gc nil))))
-
-
-(defmacro with-enabled-interrupts (interrupt-list &body body)
-  "With-enabled-interrupts ({(interrupt function [character])}*) {form}*
-  Establish function as a handler for the Unix signal interrupt which
-  should be a number between 1 and 31 inclusive.  For the signals that
-  can be generated from the keyboard, the optional character specifies
-  the character to use to generate the signal."
-  (let ((il (gensym))
-	(fn (gensym))
-	(ch (gensym))
-	(it (gensym)))
-    `(let ((,il NIL))
-       (unwind-protect
-	   (progn
-	     ,@(do* ((item interrupt-list (cdr item))
-		     (intr (caar item) (caar item))
-		     (ifcn (cadar item) (cadar item))
-		     (ichr (caddar item) (caddar item))
-		     (forms NIL))
-		    ((null item) (nreverse forms))
-		 (if (symbolp intr)
-		     (setq intr (symbol-value intr)))
-		 (push `(multiple-value-bind (,fn ,ch)
-					     (enable-interrupt ,intr ,ifcn
-							       ,ichr)
-			  (push `(,,intr ,,fn ,,ch) ,il)) forms))
-	     ,@body)
-	 (dolist (,it (nreverse ,il))
-	   (funcall #'enable-interrupt (car ,it) (cadr ,it) (caddr ,it)))))))
-
 
 (defvar hi::*in-the-editor* nil)
 
