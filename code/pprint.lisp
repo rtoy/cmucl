@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.39 2004/08/31 19:36:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.40 2004/09/01 03:23:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -401,7 +401,7 @@
 	   (if (zerop colinc)
 	       0
 	       (- colinc
-		  (rem (- column origin) colinc)))))))
+		  (rem (- column origin colnum) colinc)))))))
 
 (defun index-column (index stream)
   (let ((column (pretty-stream-buffer-start-column stream))
