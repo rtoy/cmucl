@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.5 2003/03/23 21:23:41 gerd Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.6 2003/03/27 12:42:10 gerd Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -27,7 +27,7 @@ typedef int       os_vm_prot_t;
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
 int sc_reg (struct sigcontext*,int);
-void os_save_context ();
+void os_save_context (void);
 
 /* I *think* this is when things became incompatible with old
    signals.  */

@@ -7,11 +7,12 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.31 2003/02/12 20:52:37 emarsden Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.32 2003/03/27 12:42:10 gerd Exp $
  *
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include "lisp.h"
 #include "arch.h"
@@ -32,7 +33,7 @@
 	if (!(ex)) gc_abort(); \
 } while (0)
 #else
-#define gc_assert(ex)
+#define gc_assert(ex)  (void) 0
 #endif
 
 
@@ -459,7 +460,7 @@ void print_generation_stats(int  verbose)
 	    generations[i].num_gc,
 	    gen_av_mem_age(i));
   }
-  fprintf(stderr, "   Total bytes alloc=%d\n", bytes_allocated);
+  fprintf(stderr, "   Total bytes alloc=%ld\n", bytes_allocated);
 
   fpu_restore(fpu_state);
 }
@@ -724,7 +725,7 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
     for(p = (int *)alloc_region->start_addr;
 	p < (int *)alloc_region->end_addr; p++)
       if (*p != 0)
-	fprintf(stderr, "** new region not zero @ %x\n",p);
+	fprintf(stderr, "** new region not zero @ %lx\n", (unsigned long) p);
   }
 
   /* Setup the pages. */
@@ -1320,6 +1321,7 @@ static void *gc_alloc(int nbytes)
 
   /* Shouldn't happen? */
   gc_assert(0);
+  return 0;
 }
 
 /*
@@ -1444,6 +1446,7 @@ static void *gc_alloc_unboxed(int nbytes)
 
   /* Shouldn't happen? */
   gc_assert(0);
+  return 0;
 }
 
 static inline void *gc_quick_alloc_unboxed(int nbytes)
@@ -2111,9 +2114,10 @@ void sniff_code_object(struct code *code, unsigned displacement)
       /* Push imm32 */
       if (d1 == 0x68) {
 	fixup_found = 1;
-	fprintf(stderr, "Code ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		p, d6,d5,d4,d3,d2,d1, data);
-	fprintf(stderr, "***  Push $0x%.8x\n", data);
+	fprintf(stderr, "Code ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		(unsigned long) p, d6,d5,d4,d3,d2,d1,
+		(unsigned long) data);
+	fprintf(stderr, "***  Push $0x%.8lx\n", (unsigned long) data);
       }
       /* Mov [reg-8],imm32 */
       if (d3 == 0xc7
@@ -2121,16 +2125,16 @@ void sniff_code_object(struct code *code, unsigned displacement)
 	      || d2 == 0x45 || d2 == 0x46 || d2 == 0x47)
 	  && d1 == 0xf8) {
 	fixup_found = 1;
-	fprintf(stderr, "Code ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		p, d6,d5,d4,d3,d2,d1, data);
-	fprintf(stderr, "***  Mov [reg-8],$0x%.8x\n", data);
+	fprintf(stderr, "Code ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		(unsigned long) p, d6,d5,d4,d3,d2,d1, (unsigned long) data);
+	fprintf(stderr, "***  Mov [reg-8],$0x%.8lx\n", (unsigned long) data);
       }
       /* Lea reg, [disp32] */
       if (d2 == 0x8d && (d1 & 0xc7) == 5) {
 	fixup_found = 1;
-	fprintf(stderr, "Code ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		p, d6,d5,d4,d3,d2,d1, data);
-	fprintf(stderr, "***  Lea reg,[$0x%.8x]\n", data);
+	fprintf(stderr, "Code ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		(unsigned long) p, d6,d5,d4,d3,d2,d1, (unsigned long) data);
+	fprintf(stderr, "***  Lea reg,[$0x%.8lx]\n", (unsigned long) data);
       }
     }
 
@@ -2147,26 +2151,26 @@ void sniff_code_object(struct code *code, unsigned displacement)
       /*  Mov eax,m32 */
       if (d1 == 0xa1) {
 	fixup_found = 1;
-	fprintf(stderr, "Abs. const. ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		p, d6, d5, d4, d3, d2, d1, data);
-	fprintf(stderr, "***  Mov eax,0x%.8x\n", data);
+	fprintf(stderr, "Abs. const. ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		(unsigned long) p, d6, d5, d4, d3, d2, d1, (unsigned long) data);
+	fprintf(stderr, "***  Mov eax,0x%.8lx\n", (unsigned long) data);
       }
 
       /*  Mov m32,eax */
       if (d1 == 0xa3) {
 	fixup_found = 1;
-	fprintf(stderr, "Abs. const. ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		p, d6, d5, d4, d3, d2, d1, data);
-	fprintf(stderr, "***  Mov 0x%.8x,eax\n", data);
+	fprintf(stderr, "Abs. const. ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		(unsigned long) p, d6, d5, d4, d3, d2, d1, (unsigned long) data);
+	fprintf(stderr, "***  Mov 0x%.8lx,eax\n", (unsigned long) data);
       }
 
       /* Cmp m32,imm32 */		
       if (d1 == 0x3d && d2 == 0x81) {
 	fixup_found = 1;
-	fprintf(stderr, "Abs. const. ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		p, d6, d5, d4, d3, d2, d1, data);
+	fprintf(stderr, "Abs. const. ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		(unsigned long) p, d6, d5, d4, d3, d2, d1, (unsigned long) data);
 	/* XX Check this */
-	fprintf(stderr, "***  Cmp 0x%.8x,immed32\n", data);
+	fprintf(stderr, "***  Cmp 0x%.8lx,immed32\n", (unsigned long) data);
       }
 
       /* Check for a mod=00, r/m=101 byte. */
@@ -2174,37 +2178,37 @@ void sniff_code_object(struct code *code, unsigned displacement)
 	/* Cmp m32,reg */
 	if (d2 == 0x39) {
 	  fixup_found = 1;
-	  fprintf(stderr, "Abs. const. ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		  p, d6, d5, d4, d3, d2, d1, data);
-	  fprintf(stderr, "***  Cmp 0x%.8x,reg\n", data);
+	  fprintf(stderr, "Abs. const. ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		  (unsigned long) p, d6, d5, d4, d3, d2, d1, (unsigned long) data);
+	  fprintf(stderr, "***  Cmp 0x%.8lx,reg\n", (unsigned long) data);
 	}
 	/* Cmp reg32,m32 */
 	if (d2 == 0x3b) {
 	  fixup_found = 1;
-	  fprintf(stderr, "Abs. const. ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		  p, d6, d5, d4, d3, d2, d1, data);
-	  fprintf(stderr, "***  Cmp reg32,0x%.8x\n", data);
+	  fprintf(stderr, "Abs. const. ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		  (unsigned long) p, d6, d5, d4, d3, d2, d1, (unsigned long) data);
+	  fprintf(stderr, "***  Cmp reg32,0x%.8lx\n", (unsigned long) data);
 	}
 	/* Mov m32,reg32 */
 	if (d2 == 0x89) {
 	  fixup_found = 1;
-	  fprintf(stderr, "Abs. const. ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		  p, d6, d5, d4, d3, d2, d1, data);
-	  fprintf(stderr, "***  Mov 0x%.8x,reg32\n", data);
+	  fprintf(stderr, "Abs. const. ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		  (unsigned long) p, d6, d5, d4, d3, d2, d1, (unsigned long) data);
+	  fprintf(stderr, "***  Mov 0x%.8lx,reg32\n", (unsigned long) data);
 	}
 	/* Mov reg32,m32 */
 	if (d2 == 0x8b) {
 	  fixup_found = 1;
-	  fprintf(stderr, "Abs. const. ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		  p, d6, d5, d4, d3, d2, d1, data);
-	  fprintf(stderr, "***  Mov reg32,0x%.8x\n", data);
+	  fprintf(stderr, "Abs. const. ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		  (unsigned long) p, d6, d5, d4, d3, d2, d1, (unsigned long) data);
+	  fprintf(stderr, "***  Mov reg32,0x%.8lx\n", (unsigned long) data);
 	}
 	/* Lea reg32,m32 */
 	if (d2 == 0x8d) {
 	  fixup_found = 1;
-	  fprintf(stderr, "Abs. const. ref. @ %x: %.2x %.2x %.2x %.2x %.2x %.2x (%.8x)\n",
-		  p, d6, d5, d4, d3, d2, d1, data);
-	  fprintf(stderr, "***  Lea reg32,0x%.8x\n", data);
+	  fprintf(stderr, "Abs. const. ref. @ %lx: %.2x %.2x %.2x %.2x %.2x %.2x (%.8lx)\n",
+		  (unsigned long) p, d6, d5, d4, d3, d2, d1, (unsigned long) data);
+	  fprintf(stderr, "***  Lea reg32,0x%.8lx\n", (unsigned long) data);
 	}
       }
     }
@@ -2212,11 +2216,11 @@ void sniff_code_object(struct code *code, unsigned displacement)
 
   /* If anything was found print out some info. on the code object. */
   if (fixup_found) {
-    fprintf(stderr, "*** Compiled code object at %x: header_words=%d code_words=%d .\n",
-	    code, nheader_words, ncode_words);
-    fprintf(stderr, "*** Const. start = %x; end= %x; Code start = %x; end = %x\n",
-	    constants_start_addr, constants_end_addr,
-	    code_start_addr, code_end_addr);
+    fprintf(stderr, "*** Compiled code object at %lx: header_words=%d code_words=%d .\n",
+	    (unsigned long) code, nheader_words, ncode_words);
+    fprintf(stderr, "*** Const. start = %lx; end= %lx; Code start = %lx; end = %lx\n",
+	    (unsigned long) constants_start_addr, (unsigned long) constants_end_addr,
+	    (unsigned long) code_start_addr, (unsigned long) code_end_addr);
   }
 }
 
@@ -2488,7 +2492,7 @@ static int scav_return_pc_header(lispobj *where, lispobj object)
 {
     fprintf(stderr, "GC lossage.  Should not be scavenging a ");
     fprintf(stderr, "Return PC Header.\n");
-    fprintf(stderr, "where = 0x%08x, object = 0x%08x",
+    fprintf(stderr, "where = 0x%08lx, object = 0x%08lx",
 	    (unsigned long) where, (unsigned long) object);
     lose(NULL);
     return 0;
@@ -2538,7 +2542,7 @@ static int scav_function_header(lispobj *where, lispobj object)
 {
     fprintf(stderr, "GC lossage.  Should not be scavenging a ");
     fprintf(stderr, "Function Header.\n");
-    fprintf(stderr, "where = 0x%08x, object = 0x%08x",
+    fprintf(stderr, "where = 0x%08lx, object = 0x%08lx",
 	    (unsigned long) where, (unsigned long) object);
     lose(NULL);
     return 0;
@@ -2996,239 +3000,352 @@ static int size_string(lispobj *where)
 	return nwords;
 }
 
-#if 0
-static int scav_vector(lispobj *where, lispobj object)
+
+/************************************************************************
+			     Hash Tables
+************************************************************************/
+
+/* This struct corresponds to the Lisp HASH-TABLE structure defined in
+   hash-new.lisp.  */
+
+struct hash_table
 {
-    if (HeaderValue(object) == subtype_VectorValidHashing)
-        *where = (subtype_VectorMustRehash << type_Bits) | type_SimpleVector;
+  lispobj instance_header;	/* 0 */
+  lispobj dummy2;
+  lispobj test;
+  lispobj test_fun;
+  lispobj hash_fun;
+  lispobj rehash_size;		/* 5 */
+  lispobj rehash_threshold;
+  lispobj rehash_trigger;
+  lispobj number_entries;
+  lispobj table;
+  lispobj weak_p;		/* 10 */
+  lispobj needing_rehash;
+  lispobj next_free_kv;
+  lispobj index_vector;
+  lispobj next_vector;
+  lispobj hash_vector;		/* 15 */
+};
 
+/* The size of a hash-table in Lisp objects.  */
+
+#define HASH_TABLE_SIZE (sizeof (struct hash_table) / sizeof (lispobj))
+
+/* Compute the EQ-hash of KEY.  This must be the same as what's used
+   in hash-new.lisp.  */
+
+#define EQ_HASH(key) ((key) & 0x1fffffff)
+
+/* List of weak hash tables chained through their WEAK-P slot.  Set to
+   NIL at the start of a collection.
+   
+   This is not optimal because, when a table is tenured, it won't be
+   processed automatically; only the yougest generation is GC'd by
+   default.  On the other hand, all applications will need an
+   occasional full GC anyway, so it's not that bad either.  */
+
+static lispobj weak_hash_tables;
+
+/* Return true if OBJ will survive the current GC.  */
+
+static inline int
+survives_gc (lispobj obj)
+{
+  if (!Pointerp (obj) || !from_space_p (obj))
     return 1;
+  return *(lispobj *) PTR (obj) == 1;
 }
-#endif
 
-int gencgc_hash = 1;
+/* If OBJ is a (UNSIGNED-BYTE 32) array, return a pointer to its first
+   element, otherwise return null.  If LENGTH is not null, return in it
+   the array's length.  */
 
-static int scav_vector(lispobj *where, lispobj object)
+static inline unsigned *
+u32_vector (lispobj obj, unsigned *length)
+{
+  unsigned *ptr = NULL;
+    
+  if (Pointerp (obj))
+    {
+      lispobj *p = (lispobj *) PTR (obj);
+	
+      if (TypeOf (p[0]) == type_SimpleArrayUnsignedByte32)
+	{
+	  ptr = (unsigned *) (p + 2);
+	  if (length)
+	    *length = fixnum_value (p[1]);
+	}
+    }
+
+  return ptr;
+}
+
+/* Free an entry of hash-table HASH-TABLE whose hash index (index in
+   the hash-table's INDEX-VECTOR) is HASH_INDEX, and whose index
+   in the hash-table's TABLE vector is KV_INDEX.  */
+
+static inline void
+free_hash_entry (struct hash_table *hash_table, int hash_index,
+		 int kv_index)
+{
+  unsigned *index_vector = u32_vector (hash_table->index_vector, 0);
+  unsigned *next_vector = u32_vector (hash_table->next_vector, 0);
+  int free_p = 1;
+	    
+  if (index_vector[hash_index] == kv_index)
+    /* The entry is the first in the collinion chain.
+       Pop it from the list.  */
+    index_vector[hash_index] = next_vector[kv_index];
+  else
+    {
+      /* The entry is not the first in the collision chain.  */
+      unsigned prev = index_vector[hash_index];
+      unsigned i = next_vector[prev];
+
+      while (i && i != kv_index)
+	prev = i, i = next_vector[i];
+
+      if (i == kv_index)
+	next_vector[prev] = next_vector[kv_index];
+      else
+	free_p = 0;
+    }
+
+  if (free_p)
+    {
+      unsigned count = fixnum_value (hash_table->number_entries);
+      gc_assert (count > 0);
+      hash_table->number_entries = make_fixnum (count - 1);
+      next_vector[kv_index] = hash_table->next_free_kv;
+      hash_table->next_free_kv = make_fixnum (kv_index);
+    }
+}
+	    
+/* Record an entry of hash-table HASH-TABLE whose hash index (index in
+   the hash-table's INDEX-VECTOR) is HASH_INDEX, and whose index
+   in the hash-table's TABLE vector is KV_INDEX, for rehashing.  */
+
+static inline void
+record_for_rehashing (struct hash_table *hash_table, int hash_index,
+		      int kv_index)
+{
+  unsigned *index_vector = u32_vector (hash_table->index_vector, 0);
+  unsigned *next_vector = u32_vector (hash_table->next_vector, 0);
+  int rehash_p = 1;
+
+  if (index_vector[hash_index] == kv_index)
+    /* This entry is at the head of the collision chain.
+       Pop it from that list. */
+    index_vector[hash_index] = next_vector[kv_index];
+  else
+    {
+      unsigned prev = index_vector[hash_index];
+      unsigned i = next_vector[prev];
+
+      while (i && i != kv_index)
+	prev = i, i = next_vector[i];
+	
+      if (i == kv_index)
+	next_vector[prev] = next_vector[kv_index];
+      else
+	rehash_p = 0;
+    }
+
+  if (rehash_p)
+    {
+      next_vector[kv_index] = fixnum_value (hash_table->needing_rehash);
+      hash_table->needing_rehash = make_fixnum (kv_index);
+    }
+}
+
+/* Scavenge the keys and values of hash-table HASH_TABLE.  WEAK
+   non-zero means this function is called for a weak hash-table at the
+   end of a GC.  WEAK zero means this function is called for
+   scavenging a non-weak hash-table.  Value is the number of entries
+   scheduled for rehashing or removed.  */
+	    
+static void
+scav_hash_entries (struct hash_table *hash_table, int weak)
+{
+  unsigned kv_length;
+  lispobj *kv_vector;
+  unsigned *index_vector, *next_vector, *hash_vector;
+  unsigned length;
+  lispobj empty_symbol;
+  unsigned next_vector_length;
+  unsigned i;
+
+  kv_vector = (lispobj *) PTR (hash_table->table);
+  kv_length = fixnum_value (kv_vector[1]);
+  kv_vector += 2;
+
+  empty_symbol = kv_vector[1];
+    
+  index_vector = u32_vector (hash_table->index_vector, &length);
+  next_vector = u32_vector (hash_table->next_vector, &next_vector_length);
+  hash_vector = u32_vector (hash_table->hash_vector, 0);
+    
+  gc_assert (index_vector && next_vector);
+  gc_assert (next_vector_length * 2 == kv_length);
+
+  for (i = 1; i < next_vector_length; i++)
+    {
+      lispobj old_key = kv_vector[2 * i];
+      unsigned int old_index = EQ_HASH (old_key) % length;
+      lispobj new_key;
+      unsigned int new_index;
+
+      if (weak
+	  && !survives_gc (old_key)
+	  && index_vector[old_index] != 0
+	  && (hash_vector == 0 || hash_vector[i] == 0x80000000))
+	free_hash_entry (hash_table, old_index, i);
+      else
+	{
+	  /* If the key is EQ-hashed and moves, schedule it for rehashing. */
+	  scavenge (&kv_vector[2 * i], 2);
+	  new_key = kv_vector[2 * i];
+	  new_index = EQ_HASH (new_key) % length;
+
+	  if (old_index != new_index
+	      && index_vector[old_index] != 0
+	      && (hash_vector == 0 || hash_vector[i] == 0x80000000)
+	      && (new_key != empty_symbol
+		  || kv_vector[2 * i + 1] != empty_symbol))
+	    record_for_rehashing (hash_table, old_index, i);
+	}
+    }
+}
+
+/* Scavenge entries of the weak hash-table HASH_TABLE that haven't
+   been already.  Value is 1 if anything new has been scavenged, 0
+   otherwise.  */
+
+static int
+scav_weak_entries (struct hash_table *hash_table)
+{
+  lispobj *kv_vector;
+  unsigned *index_vector, *hash_vector;
+  unsigned length;
+  unsigned next_vector_length;
+  unsigned i, scavenged = 0;
+
+  kv_vector = (lispobj *) PTR (hash_table->table) + 2;
+    
+  index_vector = u32_vector (hash_table->index_vector, &length);
+  u32_vector (hash_table->next_vector, &next_vector_length);
+  hash_vector = u32_vector (hash_table->hash_vector, 0);
+
+  for (i = 1; i < next_vector_length; i++)
+    {
+      lispobj old_key = kv_vector[2 * i];
+      unsigned int old_index = EQ_HASH (old_key) % length;
+
+      /* If the key survives, scavenge its value, for the case that
+	 the only reference to a key in a weak table is a value in
+	 another weak table.  */
+      if (survives_gc (old_key)
+	  && index_vector[old_index] != 0
+	  && (hash_vector == 0 || hash_vector[old_index] == 0x80000000))
+	{
+	  scavenge (&kv_vector[2 * i + 1], 1);
+	  scavenged = 1;
+	}
+    }
+
+  return scavenged;
+}
+
+/* Process weak hash-tables at the end of a GC.  */
+
+static void
+scan_weak_tables (void)
+{
+  lispobj table, next;
+  int more_scavenged;
+
+  /* Scavenge hash values of surviving keys, until there is nothing
+     new.  This is for the case that the only reference to a weak key
+     is a value in another weak table.  */
+  do
+    {
+      more_scavenged = 0;
+      
+      for (table = weak_hash_tables; table != NIL; table = next)
+	{
+	  struct hash_table *ht = (struct hash_table *) PTR (table);
+	  next = ht->weak_p;
+	  if (scav_weak_entries (ht))
+	    more_scavenged = 1;
+	}
+    }
+  while (more_scavenged);
+  
+  for (table = weak_hash_tables; table != NIL; table = next)
+    {
+      struct hash_table *ht = (struct hash_table *) PTR (table);
+      next = ht->weak_p;
+      ht->weak_p = T;
+      scav_hash_entries (ht, 1);
+    }
+
+  weak_hash_tables = NIL;
+}
+
+/* Scavenge a key/value vector of a hash-table.  */
+
+static int
+scav_hash_vector (lispobj *where, lispobj object)
 {
   unsigned int kv_length;
   lispobj *kv_vector;
-  unsigned int  length;
-  lispobj *hash_table;
-  lispobj empty_symbol;
-  unsigned int  *index_vector, *next_vector, *hash_vector;
-  lispobj weak_p_obj;
-  unsigned next_vector_length;
+  lispobj empty_symbol, hash_table_obj;
+  struct hash_table *hash_table;
 
-  if (HeaderValue(object) != subtype_VectorValidHashing)
+  if (HeaderValue (object) != subtype_VectorValidHashing)
     return 1;
 
-  if (!gencgc_hash) {
-    /* Set for backward compatibility. */
-    *where = (subtype_VectorMustRehash << type_Bits) | type_SimpleVector;
-    return 1;
-  }
+  /* WHERE is a hash table key/value vector.  First word is header,
+     second is vector length.  Keys and values follow after the
+     length.  The first value is the symbol :empty, the first key is a
+     reference to the hash-table containing the key/value vector.
+     (See hash-new.lisp, MAKE-HASH-TABLE.)  */
+    
+  kv_length = fixnum_value (where[1]);
+  kv_vector = where + 2;
+  scavenge (kv_vector, 2);
+    
+  gc_assert (Pointerp (kv_vector[0]));
+  gc_assert (Pointerp (kv_vector[1]));
 
-  kv_length = fixnum_value(where[1]);
-  kv_vector = where+2;  /* Skip the header and length. */
-#if 0
-  fprintf(stderr, "* kv_length = %d\n", kv_length);
-#endif
+  hash_table_obj = kv_vector[0];
+  hash_table = (struct hash_table *) PTR (hash_table_obj);
+  empty_symbol = kv_vector[1];
 
-  /* Scavenge element 0 which may be a hash-table structure. */
-  scavenge(where + 2, 1);
-  if (!Pointerp(where[2])) {
-    fprintf(stderr, "* Not hash table pointer? %x\n", where[2]);
-    return 3;
-  }
-  hash_table = (lispobj *) PTR(where[2]);
-#if 0
-  fprintf(stderr, "* hash_table = %x\n", hash_table);
-#endif
-  if (TypeOf(hash_table[0]) != type_InstanceHeader) {
-    fprintf(stderr, "* Hash table not instance? %x\n", hash_table[0]);
-    return 3;
-  }
+  gc_assert (where == (lispobj *) PTR (hash_table->table));
+  gc_assert (TypeOf (hash_table->instance_header) == type_InstanceHeader);
+  gc_assert (TypeOf (*(lispobj *) PTR (empty_symbol)) == type_SymbolHeader);
 
-  /* Scavenge element 1 which should be an :empty symbol. */
-  scavenge(where + 3, 1);
-  if (!Pointerp(where[3])) {
-    fprintf(stderr, "* Not :empty symbol pointer? %x\n", where[3]);
-    return 4;
-  }
-  empty_symbol = where[3];
-#if 0
-  fprintf(stderr, "* empty_symbol = %x\n", empty_symbol);
-#endif
-  if (TypeOf(*(lispobj *) PTR(empty_symbol)) != type_SymbolHeader) {
-    fprintf(stderr, "* empty symbol not symbol? %x\n",
-	    *(lispobj *) PTR(empty_symbol));
-    return 4;
-  }
+  /* Scavenging the hash table which fix the positions of the other
+     needed objects.  */
+  scavenge ((lispobj *) hash_table, HASH_TABLE_SIZE);
 
-  /*
-   * Scavenge hash table which will fix the positions of the other
-   * needed objects.
-   */
-  scavenge(hash_table,16);
-
-  /* Cross check the kv_vector. */
-  if (where != (lispobj *) PTR(hash_table[9])) {
-    fprintf(stderr, "* hash_table table!=this table? %x\n", hash_table[9]);
-    return 4;
-  }
-
-  /* Weak-p */
-  weak_p_obj = hash_table[10];
-#if 0
-  fprintf(stderr, "* weak-p = %x\n", weak_p_obj);
-#endif
-
-  /* Index vector */
-  {
-    lispobj index_vector_obj = hash_table[13];
-
-    if (Pointerp(index_vector_obj) &&
-	TypeOf(*(lispobj *) PTR(index_vector_obj)) == type_SimpleArrayUnsignedByte32) {
-      index_vector = (unsigned int *) PTR(index_vector_obj) + 2;
-#if 0
-      fprintf(stderr, "* index_vector = %x\n", index_vector);
-#endif
-      length = fixnum_value(((unsigned int *) PTR(index_vector_obj))[1]);
-#if 0
-      fprintf(stderr, "* length = %d\n", length);
-#endif
-    } else {
-      fprintf(stderr, "* invalid index_vector? %x\n", index_vector_obj);
-      return 4;
+  /* Testing for T here instead of NIL automatially makes sure we
+     don't add the same table twice to the list of weak tables, should
+     this function ever be called twice for the same object.  */
+  if (hash_table->weak_p == T)
+    {
+      hash_table->weak_p = weak_hash_tables;
+      weak_hash_tables = hash_table_obj;
     }
-  }
-
-  /* Next vector */
-  {
-    lispobj next_vector_obj = hash_table[14];
-
-    if (Pointerp(next_vector_obj) &&
-	TypeOf(*(lispobj *) PTR(next_vector_obj)) == type_SimpleArrayUnsignedByte32) {
-      next_vector = (unsigned int *) PTR(next_vector_obj) + 2;
-#if 0
-      fprintf(stderr, "* next_vector = %x\n", next_vector);
-#endif
-      next_vector_length = fixnum_value(((unsigned int *) PTR(next_vector_obj))[1]);
-#if 0
-      fprintf(stderr, "* next_vector_length = %d\n", next_vector_length);
-#endif
-    } else {
-      fprintf(stderr, "* invalid next_vector? %x\n", next_vector_obj);
-      return 4;
-    }
-  }
-
-  /* Maybe Hash vector */
-  {
-    lispobj hash_vector_obj = hash_table[15];
-
-    if (Pointerp(hash_vector_obj) &&
-	TypeOf(*(lispobj *) PTR(hash_vector_obj)) == type_SimpleArrayUnsignedByte32) {
-      hash_vector = (unsigned int *) PTR(hash_vector_obj) + 2;
-#if 0
-      fprintf(stderr, "* hash_vector = %x\n", hash_vector);
-#endif
-      gc_assert(fixnum_value(((unsigned int *) PTR(hash_vector_obj))[1])
-		== next_vector_length);
-    } else {
-      hash_vector = NULL;
-#if 0
-      fprintf(stderr, "* No hash_vector: %x\n", hash_vector_obj);
-#endif
-    }
-  }
-
-  /*
-   * These lengths could be different as the index_vector can be a
-   * different length to the others, a larger index_vector could help
-   * reduce collisions.
-   */
-  gc_assert(next_vector_length * 2 == kv_length);
-
-  /* Now all setup */
-
-  /* Work through the KV vector */
-  {
-    int i;
-    for (i = 1; i < next_vector_length; i++) {
-      lispobj old_key = kv_vector[2 * i];
-      unsigned int  old_index = (old_key & 0x1fffffff) % length;
-
-      /* Scavenge the Key and Value */
-      scavenge(&kv_vector[2 * i], 2);
-
-      /* Check if the Key has moved and is EQ based */
-      {
-	lispobj new_key = kv_vector[2 * i];
-	unsigned int new_index = (new_key & 0x1fffffff) % length;
-
-	if (old_index != new_index &&
-	    (!hash_vector || hash_vector[i] == 0x80000000) &&
-	    (new_key != empty_symbol || kv_vector[2 * i] != empty_symbol)) {
-
-#if 0
-	  fprintf(stderr, "* EQ key %d moved from %x to %x; index %d to %d\n",
-		  i, old_key, new_key, old_index, new_index);
-#endif
-
-	  if (index_vector[old_index] != 0) {
-#if 0
-	    fprintf(stderr, "*P1 %d\n", index_vector[old_index]);
-#endif
-
-	    /* Unlink the key from the old_index chain. */
-	    if (index_vector[old_index] == i) {
-#if 0
-	      fprintf(stderr, "*P2a %d\n", next_vector[i]);
-#endif
-	      index_vector[old_index] = next_vector[i];
-	      /* Link it into the needing rehash chain. */
-	      next_vector[i] = fixnum_value(hash_table[11]);
-	      hash_table[11] = make_fixnum(i);
-#if 0
-	      fprintf(stderr, "*P2\n");
-#endif
-	    } else {
-	      unsigned prior = index_vector[old_index];
-	      unsigned next = next_vector[prior];
-
-#if 0
-	      fprintf(stderr, "*P3a %d %d\n", prior, next);
-#endif
-
-	      while (next != 0) {
-#if 0
-		fprintf(stderr, "*P3b %d %d\n", prior, next);
-#endif
-		if (next == i) {
-		  /* Unlink it */
-		  next_vector[prior] = next_vector[next];
-		  /* Link it into the needing rehash chain. */
-		  next_vector[next] = fixnum_value(hash_table[11]);
-		  hash_table[11] = make_fixnum(next);
-#if 0
-		  fprintf(stderr, "*P3\n");
-#endif
-		  break;
-		}
-		prior = next;
-		next = next_vector[next];
-	      };
-	    }
-	  }
-	}
-      }
-    }
-  }
-  return CEILING(kv_length + 2, 2);
+  else
+    scav_hash_entries (hash_table, 0);
+    
+  return CEILING (kv_length + 2, 2);
 }
 
-
+
 static lispobj trans_vector(lispobj object)
 {
 	struct vector *vector;
@@ -3744,109 +3861,58 @@ static int size_vector_complex_long_float(lispobj *where)
 #define WEAK_POINTER_NWORDS \
 	CEILING((sizeof(struct weak_pointer) / sizeof(lispobj)), 2)
 
-static int scav_weak_pointer(lispobj *where, lispobj object)
+static int
+scav_weak_pointer (lispobj *where, lispobj object)
 {
-  struct weak_pointer *wp = weak_pointers;
-  /*
-   * Push the weak pointer onto the list of weak pointers.  Do I have
-   * to watch for duplicates? Originally this was part of trans_weak_pointer
-   * but that didn't work in the case where the WP was in a promoted region.
-   */
-
-  /* Check if it's already in the list. */
-  while(wp != NULL) {
-    if(wp == (struct weak_pointer*) where)
-      break;
-    wp = wp->next;
-  }
-  if(wp == NULL) {
-    /* Add it to the start of the list. */
-    wp = (struct weak_pointer*) where;
-    if (wp->next != weak_pointers)
-      wp->next = weak_pointers;
-#if 0
-    else 
-      fprintf(stderr, "Avoided write to weak pointer.\n");
-#endif
-    weak_pointers = wp;
-  }
-
-  /*
-   * Do not let GC scavenge the value slot of the weak pointer (that
-   * is why it is a weak pointer).
-   */
-
-  return WEAK_POINTER_NWORDS;
-}
-
-static lispobj trans_weak_pointer(lispobj object)
-{
-  lispobj copy;
+  struct weak_pointer *this_wp = (struct weak_pointer *) where;
   struct weak_pointer *wp;
 
-  gc_assert(Pointerp(object));
+  for (wp = weak_pointers; wp && wp != this_wp; wp = wp->next)
+    ;
 
-#if defined(DEBUG_WEAK)
-  printf("Transporting weak pointer from 0x%08x\n", object);
-#endif
-
-  /*
-   * Need to remember where all the weak pointers are that have been
-   * transported so they can be fixed up in a post-GC pass.
-   */
-
-  copy = copy_object(object, WEAK_POINTER_NWORDS);
-#if 0
-  wp = (struct weak_pointer *) PTR(copy);
-#endif
-
-  /* Push the weak pointer onto the list of weak pointers. */
-#if 0
-  wp->next = weak_pointers;
-  weak_pointers = wp;
-#endif
-
-  return copy;
-}
-
-static int size_weak_pointer(lispobj *where)
-{
-  return WEAK_POINTER_NWORDS;
-}
-
-void scan_weak_pointers(void)
-{
-  struct weak_pointer *wp;
-  for (wp = weak_pointers; wp != NULL; wp = wp->next) {
-    lispobj value = wp->value;
-    lispobj *first_pointer;
-
-    first_pointer = (lispobj *) PTR(value);
-
-#if 0    
-    fprintf(stderr, "Weak pointer at 0x%08x\n", (unsigned long) wp);
-    fprintf(stderr, "Value: 0x%08x\n", (unsigned long) value);
-#endif
-
-    if (Pointerp(value) && from_space_p(value)) {
-      /*
-       * Now, we need to check if the object has been forwarded.  If
-       * it has been, the weak pointer is still good and needs to be
-       * updated. Otherwise, the weak pointer needs to be nil'ed out.
-       */
-
-      if (first_pointer[0] == 0x01)
-	wp->value = first_pointer[1];
-      else {
-	/* Break it */
-#if 0
-	fprintf(stderr, "Broken.\n");
-#endif
-	wp->value = NIL;
-	wp->broken = T;
-      }
+  if (wp == NULL)
+    {
+      this_wp->next = weak_pointers;
+      weak_pointers = this_wp;
     }
-  }
+
+  return WEAK_POINTER_NWORDS;
+}
+
+static lispobj
+trans_weak_pointer (lispobj object)
+{
+  gc_assert (Pointerp (object));
+  return copy_object (object, WEAK_POINTER_NWORDS);
+}
+
+static int
+size_weak_pointer (lispobj *where)
+{
+  return WEAK_POINTER_NWORDS;
+}
+
+void
+scan_weak_pointers (void)
+{
+  struct weak_pointer *wp;
+  
+  for (wp = weak_pointers; wp; wp = wp->next)
+    {
+      lispobj value = wp->value;
+      lispobj *first_pointer = (lispobj *) PTR (value);
+
+      if (Pointerp (value) && from_space_p (value))
+	{
+	  if (first_pointer[0] == 0x01)
+	    wp->value = first_pointer[1];
+	  else
+	    {
+	      wp->value = NIL;
+	      wp->broken = T;
+	    }
+	}
+    }
 }
 
 
@@ -3914,7 +3980,7 @@ size_scavenger_hook(lispobj *where)
 
 static int scav_lose(lispobj *where, lispobj object)
 {
-    fprintf(stderr, "GC lossage.  No scavenge function for object 0x%08x\n",
+    fprintf(stderr, "GC lossage.  No scavenge function for object 0x%08lx\n",
 	    (unsigned long) object);
     lose(NULL);
     return 0;
@@ -3922,7 +3988,7 @@ static int scav_lose(lispobj *where, lispobj object)
 
 static lispobj trans_lose(lispobj object)
 {
-    fprintf(stderr, "GC lossage.  No transport function for object 0x%08x\n",
+    fprintf(stderr, "GC lossage.  No transport function for object 0x%08lx\n",
 	    (unsigned long) object);
     lose(NULL);
     return NIL;
@@ -3930,9 +3996,9 @@ static lispobj trans_lose(lispobj object)
 
 static int size_lose(lispobj *where)
 {
-	fprintf(stderr, "Size lossage.  No size function for object at 0x%08x\n",
+	fprintf(stderr, "Size lossage.  No size function for object at 0x%08lx\n",
 		(unsigned long) where);
-	fprintf(stderr, "First word of object: 0x%08x\n",
+	fprintf(stderr, "First word of object: 0x%08lx\n",
 		(unsigned long) *where);
 	return 1;
 }
@@ -3976,7 +4042,7 @@ static void gc_init_tables(void)
 	scavtab[type_SimpleArray] = scav_boxed;
 	scavtab[type_SimpleString] = scav_string;
 	scavtab[type_SimpleBitVector] = scav_vector_bit;
-	scavtab[type_SimpleVector] = scav_vector;
+	scavtab[type_SimpleVector] = scav_hash_vector;
 	scavtab[type_SimpleArrayUnsignedByte2] = scav_vector_unsigned_byte_2;
 	scavtab[type_SimpleArrayUnsignedByte4] = scav_vector_unsigned_byte_4;
 	scavtab[type_SimpleArrayUnsignedByte8] = scav_vector_unsigned_byte_8;
@@ -4326,22 +4392,15 @@ static int valid_dynamic_space_pointer(lispobj *pointer)
     case type_ByteCodeClosure:
     case type_DylanFunctionHeader:
       if ((int) pointer != (int) start_addr + type_FunctionPointer) {
-	if (gencgc_verbose)
-	  fprintf(stderr, "*Wf2: %x %x %x\n",
-		  pointer, start_addr, *start_addr);
 	return FALSE;
       }
       break;
     default:
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wf3: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   case type_ListPointer:
     if ((int) pointer != (int) start_addr + type_ListPointer) {
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wl1: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     /* Is it plausible cons? */
@@ -4355,39 +4414,27 @@ static int valid_dynamic_space_pointer(lispobj *pointer)
 	   || TypeOf(start_addr[1]) == type_UnboundMarker))
       break;
     else {
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wl2: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
   case type_InstancePointer:
     if ((int) pointer != (int) start_addr + type_InstancePointer) {
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wi1: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     if (TypeOf(start_addr[0]) != type_InstanceHeader) {
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wi2: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   case type_OtherPointer:
     if ((int) pointer != (int) start_addr + type_OtherPointer) {
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wo1: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     /* Is it plausible?  Not a cons. X should check the headers. */
     if(Pointerp(start_addr[0]) || (start_addr[0] & 3) == 0) {
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wo2: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     switch (TypeOf(start_addr[0])) {
     case type_UnboundMarker:
     case type_BaseChar:
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wo3: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
 
       /* Only pointed to by function pointers? */
@@ -4396,13 +4443,9 @@ static int valid_dynamic_space_pointer(lispobj *pointer)
     case type_ByteCodeFunction:
     case type_ByteCodeClosure:
     case type_DylanFunctionHeader:
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wo4: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
 
     case type_InstanceHeader:
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wo5: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
 
       /* The valid other immediate pointer objects */
@@ -4472,14 +4515,10 @@ static int valid_dynamic_space_pointer(lispobj *pointer)
       break;
 
     default:
-      if (gencgc_verbose)
-	fprintf(stderr, "*Wo6: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   default:
-    if (gencgc_verbose)
-      fprintf(stderr, "*W?: %x %x %x\n", pointer, start_addr, *start_addr);
     return FALSE;
   }
 
@@ -4715,8 +4754,8 @@ static void preserve_pointer(void *addr)
 	|| page_table[addr_page_index].bytes_used == 0
 	/* Check the offset within the page */
 	|| ((int) addr & 0xfff) > page_table[addr_page_index].bytes_used) {
-      fprintf(stderr, "*W ignore pointer 0x%x to freed area of large object\n",
-	      addr);
+      fprintf(stderr, "*W ignore pointer 0x%lx to freed area of large object\n",
+	      (unsigned long) addr);
       return;
     }
     /* May have moved to unboxed pages. */
@@ -4775,7 +4814,6 @@ static void preserve_pointer(void *addr)
 static void scavenge_thread_stacks(void)
 {
   lispobj thread_stacks = SymbolValue(CONTROL_STACKS);
-  int type = TypeOf(thread_stacks);
 
   if (LowtagOf(thread_stacks) == type_OtherPointer) {
     struct vector *vector = (struct vector *) PTR(thread_stacks);
@@ -4796,11 +4834,11 @@ static void scavenge_thread_stacks(void)
 		  vector_length);
 	if (vector_length > 0) {
 	  unsigned int stack_pointer = stack->data[0];
-	  if (stack_pointer < control_stack ||
-	      stack_pointer > control_stack_end)
+	  if ((char *) stack_pointer < (char *) control_stack ||
+	      (char *) stack_pointer > (char *) control_stack_end)
 	    fprintf(stderr, "*E Invalid stack pointer %x\n", stack_pointer);
-	  if (stack_pointer > control_stack &&
-	      stack_pointer < control_stack_end) {
+	  if ((char *) stack_pointer > (char *) control_stack &&
+	      (char *) stack_pointer < (char *) control_stack_end) {
 	    unsigned int length = ((int) control_stack_end - stack_pointer) / 4;
 	    int j;
 	    if (length >= vector_length)
@@ -5406,8 +5444,8 @@ static int free_oldspace(void)
       os_invalidate(page_start, PAGE_SIZE * (last_page - first_page));
       addr = os_validate(page_start, PAGE_SIZE * (last_page - first_page));
       if(addr == NULL || addr != page_start)
-	fprintf(stderr, "gc_zero: page moved, 0x%08x ==> 0x%08x!\n",
-		page_start, addr);
+	fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
+		(unsigned long) page_start, (unsigned long) addr);
     } else {
       int *page_start;
 
@@ -5432,15 +5470,15 @@ static void print_ptr(lispobj *addr)
   int pi1 = find_page_index((void*) addr);
 
   if(pi1 != -1)
-    fprintf(stderr, "  %x: page %d  alloc %d unboxed %d gen %d  bytes_used %d  offset %d  dont_move %d\n",
-	    addr, pi1,
+    fprintf(stderr, "  %lx: page %d  alloc %d unboxed %d gen %d  bytes_used %d  offset %d  dont_move %d\n",
+	    (unsigned long) addr, pi1,
 	    PAGE_ALLOCATED(pi1),
 	    PAGE_UNBOXED(pi1),
 	    PAGE_GENERATION(pi1),
 	    page_table[pi1].bytes_used,
 	    page_table[pi1].first_object_offset,
 	    PAGE_DONT_MOVE(pi1));
-  fprintf(stderr, "  %x %x %x %x (%x) %x %x %x %x\n",
+  fprintf(stderr, "  %lx %lx %lx %lx (%lx) %lx %lx %lx %lx\n",
 	  *(addr - 4), *(addr - 3), *(addr - 2), *(addr - 1), *(addr - 0),
 	  *(addr + 1), *(addr + 2), *(addr + 3), *(addr + 4));
 }
@@ -5472,14 +5510,15 @@ static void verify_space(lispobj*start, size_t words)
 	 */
 	if (PAGE_ALLOCATED(page_index)
 	    && page_table[page_index].bytes_used == 0) {
-	  fprintf(stderr, "*** Ptr %x @ %x sees free page.\n", thing, start);
+	  fprintf(stderr, "*** Ptr %lx @ %lx sees free page.\n",
+		  (unsigned long) thing, (unsigned long) start);
 	  print_ptr(start);
 	}
 
 	/* Check that it doesn't point to a forwarding pointer! */
 	if (*((lispobj *) PTR(thing)) == 0x01) {
-	  fprintf(stderr, "*** Ptr %x @ %x sees forwarding ptr.\n",
-		  thing, start);
+	  fprintf(stderr, "*** Ptr %lx @ %lx sees forwarding ptr.\n",
+		  (unsigned long) thing, (unsigned long) start);
 	  print_ptr(start);
 	}
 
@@ -5488,8 +5527,8 @@ static void verify_space(lispobj*start, size_t words)
 	 * pointer from the RO to the dynamic space.
 	 */
 	if (readonly_space) {
-	  fprintf(stderr, "*** Ptr to dynamic space %x, from RO space %x\n",
-		  thing, start);
+	  fprintf(stderr, "*** Ptr to dynamic space %lx, from RO space %lx\n",
+		  (unsigned long) thing, (unsigned long) start);
 	  print_ptr(start);
 	}
 
@@ -5507,7 +5546,8 @@ static void verify_space(lispobj*start, size_t words)
 	/* Verify that it points to another valid space */
 	if (!to_readonly_space && !to_static_space
 	    && thing != (int) &undefined_tramp) {
-	  fprintf(stderr, "*** Ptr %x @ %x sees Junk\n", thing, start);
+	  fprintf(stderr, "*** Ptr %lx @ %lx sees Junk\n",
+		  (unsigned long) thing, (unsigned long) start);
 	  print_ptr(start);
 	}
     } else
@@ -5556,8 +5596,8 @@ static void verify_space(lispobj*start, size_t words)
 		&& !(code->trace_table_offset & 0x3)
 		/* Only when enabled */
 		&& verify_dynamic_code_check)
-	      fprintf(stderr, "*** Code object at %x in the dynamic space\n",
-		      start);
+	      fprintf(stderr, "*** Code object at %lx in the dynamic space\n",
+		      (unsigned long) start);
 
 	    ncode_words = fixnum_value(code->code_size);
 	    nheader_words = HeaderValue(object);
@@ -5718,7 +5758,8 @@ static void verify_zero_fill(void)
       int i;
       for(i = 0; i < size; i++)
 	if (start_addr[i] != 0)
-	  fprintf(stderr, "** free page not zero @ %x\n", start_addr + i);
+	  fprintf(stderr, "** free page not zero @ %lx\n",
+		  (unsigned long) (start_addr + i));
     } else {
       int free_bytes = PAGE_SIZE - page_table[page].bytes_used;
       if (free_bytes > 0) {
@@ -5728,7 +5769,8 @@ static void verify_zero_fill(void)
 	int i;
 	for(i = 0; i < size; i++)
 	  if (start_addr[i] != 0)
-	    fprintf(stderr, "** free region not zero @ %x\n", start_addr + i);
+	    fprintf(stderr, "** free region not zero @ %lx\n",
+		    (unsigned long) (start_addr + i));
       }
     }
   }
@@ -5739,7 +5781,7 @@ void gencgc_verify_zero_fill(void)
 {
   /* Flush the alloc regions updating the tables. */
   
-  boxed_region.free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER);
+  boxed_region.free_pointer = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
   gc_alloc_update_page_tables(0, &boxed_region);
   gc_alloc_update_page_tables(1, &unboxed_region);
   fprintf(stderr, "* Verifying zero fill\n");
@@ -5810,6 +5852,7 @@ static void	garbage_collect_generation(int generation, int raise)
 
   /* Initialise the weak pointer list. */
   weak_pointers = NULL;
+  weak_hash_tables = NIL;
 
   /*
    * When a generation is not being raised it is transported to a
@@ -5879,7 +5922,8 @@ static void	garbage_collect_generation(int generation, int raise)
 
   for (i = 0; i < NSIG; i++) {
     union interrupt_handler handler = interrupt_handlers[i];
-    if ((handler.c != SIG_IGN) && (handler.c != SIG_DFL))
+    if (handler.c != (void (*) (HANDLER_ARGS)) SIG_IGN
+	&& handler.c != (void (*) (HANDLER_ARGS)) SIG_DFL)
       scavenge((lispobj *) (interrupt_handlers + i), 1);
   }
 
@@ -5899,7 +5943,7 @@ static void	garbage_collect_generation(int generation, int raise)
   if (SymbolValue(SCAVENGE_READ_ONLY_SPACE) != NIL) {
     read_only_space_size = (lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER)
       - read_only_space;
-    fprintf(stderr, "Scavenge read only space: %d bytes\n",
+    fprintf(stderr, "Scavenge read only space: %ld bytes\n",
 	    read_only_space_size * sizeof(lispobj));
     scavenge(read_only_space, read_only_space_size);
   }
@@ -5907,7 +5951,7 @@ static void	garbage_collect_generation(int generation, int raise)
   static_space_size = (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER)
     - static_space;
   if (gencgc_verbose > 1)
-    fprintf(stderr, "Scavenge static space: %d bytes\n",
+    fprintf(stderr, "Scavenge static space: %ld bytes\n",
 	    static_space_size * sizeof(lispobj));
   scavenge(static_space, static_space_size);
 
@@ -5954,6 +5998,7 @@ static void	garbage_collect_generation(int generation, int raise)
 #endif
 
   scan_weak_pointers();
+  scan_weak_tables();
 
   /* Flush the current regions, updating the tables. */
   gc_alloc_update_page_tables(0, &boxed_region);
@@ -6035,7 +6080,7 @@ void	collect_garbage(unsigned last_gen)
   int gen_to_wp;
   int i;
 
-  boxed_region.free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER);
+  boxed_region.free_pointer = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
 
   /* Check last_gen */
   if (last_gen > NUM_GENERATIONS) {
@@ -6057,7 +6102,7 @@ void	collect_garbage(unsigned last_gen)
   if (gencgc_verbose > 1)
     print_generation_stats(0);
 
-  scavenger_hooks = NIL;
+  scavenger_hooks = (struct scavenger_hook *) NIL;
 
   do {
     /* Collect the generation */
@@ -6145,8 +6190,8 @@ void	collect_garbage(unsigned last_gen)
 
   update_x86_dynamic_space_free_pointer();
 
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
 
   /* Call the scavenger hook functions */
   {
@@ -6206,8 +6251,8 @@ void	gc_free_heap(void)
       os_invalidate(page_start, PAGE_SIZE);
       addr = os_validate(page_start, PAGE_SIZE);
       if(addr == NULL || addr != page_start)
-	fprintf(stderr, "gc_zero: page moved, 0x%08x ==> 0x%08x!\n",
-		page_start, addr);
+	fprintf(stderr, "gc_zero: page moved, 0x%08lx ==> 0x%08lx!\n",
+		(unsigned long) page_start, (unsigned long) addr);
     } else if (gencgc_zero_check_during_free_heap && page < 16384) {
       int *page_start;
       unsigned i;
@@ -6220,7 +6265,8 @@ void	gc_free_heap(void)
 
       for(i = 0; i < 1024; i++)
 	if (page_start[i] != 0)
-	  fprintf(stderr, "** Free region not zero @ %x\n", page_start + i);
+	  fprintf(stderr, "** Free region not zero @ %lx\n",
+		  (unsigned long) (page_start + i));
     }
 
   bytes_allocated = 0;
@@ -6257,8 +6303,8 @@ void	gc_free_heap(void)
   last_free_page = 0;
   SetSymbolValue(ALLOCATION_POINTER, (lispobj) heap_base);
 
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
 
   if (verify_after_free_heap) {
     /* Check if purify has left any bad pointers. */
@@ -6333,8 +6379,8 @@ void gc_init(void)
 
   last_free_page = 0;
 
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
 }
 
 /*
@@ -6367,8 +6413,8 @@ void	gencgc_pickup_dynamic(void)
   generations[0].bytes_allocated = PAGE_SIZE * page;
   bytes_allocated = PAGE_SIZE * page;
 
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
 }
 
 
@@ -6414,12 +6460,12 @@ char *alloc(int nbytes)
       fprintf(stderr,"* Alloc re-entered\n");
 
     /* Check if there is room in the current region. */
-    new_free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER) + nbytes;
+    new_free_pointer = (void *) (SymbolValue(CURRENT_REGION_FREE_POINTER) + nbytes);
 
     if (new_free_pointer <= boxed_region.end_addr) {
       /* If so then allocate from the current region. */
-      void  *new_obj = SymbolValue(CURRENT_REGION_FREE_POINTER);
-      SetSymbolValue(CURRENT_REGION_FREE_POINTER, new_free_pointer);
+      void  *new_obj = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
+      SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) new_free_pointer);
       alloc_entered--;
       return (void *) new_obj;
     }
@@ -6440,11 +6486,11 @@ char *alloc(int nbytes)
       goto retry1;
     }
     /* Call gc_alloc */
-    boxed_region.free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER);
+    boxed_region.free_pointer = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
     {
       void *new_obj = gc_alloc(nbytes);
-      SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
-      SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
+      SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
+      SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
       alloc_entered--;
       return new_obj;
     }
@@ -6473,12 +6519,12 @@ char *alloc(int nbytes)
       fprintf(stderr,"* Alloc re-entered\n");
 
     /* Check if there is room in the current region. */
-    new_free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER) + nbytes;
+    new_free_pointer = (void *) (SymbolValue(CURRENT_REGION_FREE_POINTER) + nbytes);
 
     if (new_free_pointer <= boxed_region.end_addr) {
       /* If so then allocate from the current region. */
-      void *new_obj = SymbolValue(CURRENT_REGION_FREE_POINTER);
-      SetSymbolValue(CURRENT_REGION_FREE_POINTER, new_free_pointer);
+      void *new_obj = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
+      SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) new_free_pointer);
 
       alloc_entered--;
       SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
@@ -6504,10 +6550,10 @@ char *alloc(int nbytes)
     }
 
     /* Else call gc_alloc */
-    boxed_region.free_pointer = SymbolValue(CURRENT_REGION_FREE_POINTER);
+    boxed_region.free_pointer = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
     result = gc_alloc(nbytes);
-    SetSymbolValue(CURRENT_REGION_FREE_POINTER, boxed_region.free_pointer);
-    SetSymbolValue(CURRENT_REGION_END_ADDR, boxed_region.end_addr);
+    SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
+    SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
 
     alloc_entered--;
     SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
@@ -6566,7 +6612,7 @@ int get_bytes_consed_upper(void)
 }
 
 #define current_region_free_pointer SymbolValue(CURRENT_REGION_FREE_POINTER)
-#define current_region_end_addr     SymbolValue(CURRENT_REGION_END_ADDR)
+#define current_region_end_addr     ((void *) SymbolValue(CURRENT_REGION_END_ADDR))
 
 int get_bytes_allocated_lower(void)
 {
@@ -6574,9 +6620,10 @@ int get_bytes_allocated_lower(void)
   static int previous = -1;
 
   if (current_region_end_addr != boxed_region.end_addr) {
-    fprintf(stderr, "NOT BOXED: %d %d %d\n"
-	    ,current_region_end_addr, boxed_region.end_addr
-	    ,unboxed_region.end_addr);
+    fprintf(stderr, "NOT BOXED: %lx %lx %lx\n",
+	    (unsigned long) current_region_end_addr,
+	    (unsigned long) boxed_region.end_addr,
+	    (unsigned long) unboxed_region.end_addr);
   }
 
   if (current_region_end_addr == boxed_region.end_addr) {
@@ -6586,14 +6633,13 @@ int get_bytes_allocated_lower(void)
   }
 
   if (counters_verbose)
-    fprintf(stderr, ">%10d%10d%10d%10d%10d (max%d @0x%X)\n", size
-	    ,previous != -1? size - previous: -1
-	    ,current_region_free_pointer - (int)boxed_region.start_addr
-	    ,(int)boxed_region.free_pointer - (int)boxed_region.start_addr
-	    ,(int)unboxed_region.free_pointer - (int)unboxed_region.start_addr
-	    ,boxed_region.end_addr - (int)boxed_region.start_addr
-	    ,boxed_region.start_addr
-	    );
+    fprintf(stderr, ">%10d%10d%10d%10d%10d (max%d @0x%lX)\n", size,
+	    previous != -1 ? size - previous : -1,
+	    (int)current_region_free_pointer - (int)boxed_region.start_addr,
+	    (int)boxed_region.free_pointer - (int)boxed_region.start_addr,
+	    (int)unboxed_region.free_pointer - (int)unboxed_region.start_addr,
+	    (int)boxed_region.end_addr - (int)boxed_region.start_addr,
+	    (unsigned long) boxed_region.start_addr);
 
   previous = size;
 
@@ -6604,7 +6650,7 @@ int get_bytes_allocated_upper(void)
 {
   int size = bytes_allocated;
 
-  if (current_region_end_addr == boxed_region.end_addr) {
+  if ((void *) current_region_end_addr == boxed_region.end_addr) {
     size += current_region_free_pointer - (int)boxed_region.start_addr;
   } else {
     size += current_region_free_pointer - (int)unboxed_region.start_addr;
