@@ -162,6 +162,8 @@ New in this release:
        cases.
      - Fixed error wherein certain uses of 2 arg ATAN caused a
        compiler error on x86.
+     - Compiler wrongly signaling a type error in VOLATILE-INFO-LOOKUP or
+       COMPACT-INFO-LOOKUP for hash values equal to MOST-POSITIVE-FIXNUM.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
