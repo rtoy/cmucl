@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.30 1994/11/05 18:39:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.31 1996/05/08 14:44:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1034,15 +1034,18 @@
     (format-fixed stream (next-arg) w d k ovf pad atsignp)))
 
 (defun format-fixed (stream number w d k ovf pad atsign)
-  (if (floatp number)
-      (format-fixed-aux stream number w d k ovf pad atsign)
-      (if (rationalp number)
-	  (format-fixed-aux stream
-			    (coerce number 'single-float)
-			    w d k ovf pad atsign)
-	  (format-write-field stream
-			      (decimal-string number)
-			      w 1 0 #\space t))))
+  (if (numberp number)
+      (if (floatp number)
+	  (format-fixed-aux stream number w d k ovf pad atsign)
+	  (if (rationalp number)
+	      (format-fixed-aux stream
+				(coerce number 'single-float)
+				w d k ovf pad atsign)
+	      (format-write-field stream
+				  (decimal-string number)
+				  w 1 0 #\space t)))
+      (format-princ stream number nil nil w 1 0 pad)))
+
 
 ;;; We return true if we overflowed, so that ~G can output the overflow char
 ;;; instead of spaces.
@@ -1109,15 +1112,18 @@
     (format-exponential stream (next-arg) w d e k ovf pad mark atsignp)))
 
 (defun format-exponential (stream number w d e k ovf pad marker atsign)
-  (if (floatp number)
-      (format-exp-aux stream number w d e k ovf pad marker atsign)
-      (if (rationalp number)
-	  (format-exp-aux stream
-			  (coerce number 'single-float)
-			  w d e k ovf pad marker atsign)
-	  (format-write-field stream
-			      (decimal-string number)
-			      w 1 0 #\space t))))
+  (if (numberp number)
+      (if (floatp number)
+	  (format-exp-aux stream number w d e k ovf pad marker atsign)
+	  (if (rationalp number)
+	      (format-exp-aux stream
+			      (coerce number 'single-float)
+			      w d e k ovf pad marker atsign)
+	      (format-write-field stream
+				  (decimal-string number)
+				  w 1 0 #\space t)))
+      (format-princ stream number nil nil w 1 0 pad)))
+
 
 (defun format-exponent-marker (number)
   (if (typep number *read-default-float-format*)
@@ -1203,18 +1209,18 @@
     (format-general stream (next-arg) w d e k ovf pad mark atsignp)))
 
 (defun format-general (stream number w d e k ovf pad marker atsign)
-  ;;The Excelsior edition does not say what to do if
-  ;;the argument is not a float.  Here, we adopt the
-  ;;conventions used by ~F and ~E.
-  (if (floatp number)
-      (format-general-aux stream number w d e k ovf pad marker atsign)
-      (if (rationalp number)
-	  (format-general-aux stream
-			      (coerce number 'single-float)
-			      w d e k ovf pad marker atsign)
-	  (format-write-field stream
-			      (decimal-string number)
-			      w 1 0 #\space t))))
+  (if (numberp number)
+      (if (floatp number)
+	  (format-general-aux stream number w d e k ovf pad marker atsign)
+	  (if (rationalp number)
+	      (format-general-aux stream
+				  (coerce number 'single-float)
+				  w d e k ovf pad marker atsign)
+	      (format-write-field stream
+				  (decimal-string number)
+				  w 1 0 #\space t)))
+      (format-princ stream number nil nil w 1 0 pad)))
+
 
 (defun format-general-aux (stream number w d e k ovf pad marker atsign)
   (multiple-value-bind (ignore n) 
