@@ -261,7 +261,7 @@
 (defknown package-shadowing-symbols (package) list (flushable))
 (defknown list-all-packages () list (flushable))
 (defknown intern (string &optional packagelike)
-  (values symbol (member :internal :external :inherited nil))
+  (values symbol (member :internal :external :inherited))
   ())
 (defknown find-symbol (string &optional packagelike)
 	  (values symbol (member :internal :external :inherited nil))
