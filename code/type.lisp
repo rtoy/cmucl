@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.15 1993/08/31 09:01:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.16 1993/08/31 13:26:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,8 +114,10 @@
 		       (cons (find-class super) guard)))
 		 specs)))
     `(cold-load-init
-       (define-type-method (,type-class :complex-subtypep-arg1) (type1 type2)
-	 (has-superclasses-complex-subtypep-arg1 type1 type2 ',info))
+      (setf (type-class-complex-subtypep-arg1
+	     (type-class-or-lose ',type-class))
+	    #'(lambda (type1 type2)
+		(has-superclasses-complex-subtypep-arg1 type1 type2 ',info)))
        
        (setf (type-class-complex-subtypep-arg2
 	      (type-class-or-lose ',type-class))
