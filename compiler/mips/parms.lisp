@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.64 1990/07/10 18:34:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.65 1990/07/12 12:58:35 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -64,9 +64,9 @@
   "most-negative-fixnum in the target architecture.")
 
 ;;; ### This should be somewhere else.
+#-new-compiler
 (defconstant native-byte-order :big-endian
   "The byte order we are running under.")
-
 
 (defconstant float-sign-shift 31)
 
