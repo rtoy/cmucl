@@ -898,9 +898,9 @@
 		      (compiler-warning "Ignoring extra file comment:~%  ~S."
 					form))
 		     (t
-		      (setf (file-info-comment file)
-			    (coerce (second form) 'simple-string))
-		      (compiler-mumble "~&Comment:~%  ~A~&")))))
+		      (let ((comment (coerce (second form) 'simple-string)))
+			(setf (file-info-comment file) comment)
+			(compiler-mumble "~&Comment: ~A~2&" comment))))))
 	    (t
 	     (let ((exp (preprocessor-macroexpand form)))
 	       (if (eq exp form)
