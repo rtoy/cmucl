@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.2 1994/02/11 21:53:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.3 1994/10/07 20:51:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,6 +145,7 @@
 ;;; Clean up the server. Remove any references to it from variables, etc.
 ;;;
 (defun server-died (server)
+  (declare (special *breakpoints*))
   (let ((name (server-info-name server)))
     (delete-string name *server-names*)
     (message "Server ~A just died." name))
