@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.11 1990/05/06 05:25:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.12 1990/05/09 06:40:50 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -111,14 +111,13 @@
   (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
   (:generator 6
     (loadw t1 x 0 vm:other-pointer-type)
-    (inst li t2 vm:type-mask)
-    (inst and t1 t1 t2)
+    (inst and t1 vm:type-mask)
     (sc-case data
       (any-reg
        (inst sll t2 data (- vm:type-bits 2))
-       (inst or t1 t1 t2))
+       (inst or t1 t2))
       (immediate
-       (inst or t1 t1 (ash (tn-value data) vm:type-bits))))
+       (inst or t1 (ash (tn-value data) vm:type-bits))))
     (storew t1 x 0 vm:other-pointer-type)
     (move res x)))
 
