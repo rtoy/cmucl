@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.24 1992/03/10 11:24:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.25 1992/03/10 12:52:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,6 +38,9 @@
 	  alien-integer-type alien-integer-type-p alien-integer-type-signed
 	  alien-boolean-type alien-boolean-type-p
 	  alien-enum-type alien-enum-type-p
+	  alien-float-type alien-float-type-p
+	  alien-single-float-type alien-single-float-type-p
+	  alien-double-float-type alien-double-float-type-p
 	  alien-pointer-type alien-pointer-type-p alien-pointer-type-to
 	  make-alien-pointer-type
 	  alien-array-type alien-array-type-p alien-array-type-element-type
@@ -45,9 +48,10 @@
 	  alien-record-type alien-record-type-p alien-record-type-fields
 	  alien-record-field alien-record-field-p alien-record-field-name
 	  alien-record-field-type alien-record-field-offset
-	  alien-function-type alien-function-type-p
+	  alien-function-type alien-function-type-p make-alien-function-type
 	  alien-function-type-result-type alien-function-type-arg-types
 	  alien-values-type alien-values-type-p alien-values-type-values
+	  *values-type-okay*
 
 	  %set-slot %slot-addr %set-deref %deref-addr
 
@@ -79,6 +83,9 @@
 	  alien-integer-type alien-integer-type-p alien-integer-type-signed
 	  alien-boolean-type alien-boolean-type-p
 	  alien-enum-type alien-enum-type-p
+	  alien-float-type alien-float-type-p
+	  alien-single-float-type alien-single-float-type-p
+	  alien-double-float-type alien-double-float-type-p
 	  alien-pointer-type alien-pointer-type-p alien-pointer-type-to
 	  make-alien-pointer-type
 	  alien-array-type alien-array-type-p alien-array-type-element-type
@@ -86,9 +93,10 @@
 	  alien-record-type alien-record-type-p alien-record-type-fields
 	  alien-record-field alien-record-field-p alien-record-field-name
 	  alien-record-field-type alien-record-field-offset
-	  alien-function-type alien-function-type-p
+	  alien-function-type alien-function-type-p make-alien-function-type
 	  alien-function-type-result-type alien-function-type-arg-types
 	  alien-values-type alien-values-type-p alien-values-type-values
+	  *values-type-okay*
 
 	  %set-slot %slot-addr %set-deref %deref-addr
 
@@ -136,7 +144,6 @@
   (include nil :type (or null alien-type-class))
   (unparse nil :type (or null function))
   (type= nil :type (or null function))
-  ;; subtypep?
   (lisp-rep nil :type (or null function))
   (alien-rep nil :type (or null function))
   (extract-gen nil :type (or null function))
@@ -145,7 +152,8 @@
   (deport-gen nil :type (or null function))
   ;; Cast?
   (arg-tn nil :type (or null function))
-  (result-tn nil :type (or null function)))
+  (result-tn nil :type (or null function))
+  (subtypep nil :type (or null function)))
 
 (defun %print-alien-type-class (type-class stream depth)
   (declare (ignore depth))
@@ -164,12 +172,12 @@
     (if old
 	(setf (alien-type-class-include old) include)
 	(setf (gethash name *alien-type-classes*)
-	      (make-alien-type-class :include include)))))
+	      (make-alien-type-class :name name :include include)))))
 
 (defconstant method-slot-alist
   '((:unparse . alien-type-class-unparse)
     (:type= . alien-type-class-type=)
-    ;; subtypep?
+    (:subtypep . alien-type-class-subtypep)
     (:lisp-rep . alien-type-class-lisp-rep)
     (:alien-rep . alien-type-class-alien-rep)
     (:extract-gen . alien-type-class-extract-gen)
@@ -461,19 +469,8 @@
    subtype of (* t), and any array type first dimension will match 
    (array <eltype> nil ...).  Otherwise, the two types have to be
    ALIEN-TYPE-=."
-  (typecase type1
-    (alien-pointer-type
-     (and (alien-pointer-type-p type2)
-	  (or (null (alien-pointer-type-to type2))
-	      (alien-type-= type1 type2))))
-    (alien-array-type
-     (and (alien-array-type-p type2)
-	  (let ((dims (alien-array-type-dimensions type2)))
-	    (or (and dims (null (first dims)))
-		(alien-type-= type1 type2)))))
-    (t
-     (alien-type-= type1 type2))))
-
+  (or (eq type1 type2)
+      (invoke-alien-type-method :subtypep type1 type2)))
 
 (defun alien-typep (object type)
   "Return T iff OBJECT is an alien of type TYPE."
@@ -543,6 +540,9 @@
 (def-alien-type-method (root :type=) (type1 type2)
   (declare (ignore type1 type2))
   t)
+
+(def-alien-type-method (root :subtypep) (type1 type2)
+  (alien-type-= type1 type2))
 
 (def-alien-type-method (root :lisp-rep) (type)
   (declare (ignore type))
@@ -834,39 +834,39 @@
 
 ;;;; The SAP type
 
-(def-alien-type-class (sap))
+(def-alien-type-class (system-area-pointer))
 
 (def-alien-type-translator system-area-pointer ()
-  (make-alien-sap-type :bits vm:word-bits))
+  (make-alien-system-area-pointer-type :bits vm:word-bits))
 
-(def-alien-type-method (sap :unparse) (type)
+(def-alien-type-method (system-area-pointer :unparse) (type)
   (declare (ignore type))
   'system-area-pointer)
 
-(def-alien-type-method (sap :lisp-rep) (type)
+(def-alien-type-method (system-area-pointer :lisp-rep) (type)
   (declare (ignore type))
   'system-area-pointer)
 
-(def-alien-type-method (sap :alien-rep) (type)
+(def-alien-type-method (system-area-pointer :alien-rep) (type)
   (declare (ignore type))
   'system-area-pointer)
 
-(def-alien-type-method (sap :naturalize-gen) (type alien)
+(def-alien-type-method (system-area-pointer :naturalize-gen) (type alien)
   (declare (ignore type))
   alien)
 
-(def-alien-type-method (sap :deport-gen) (type object)
+(def-alien-type-method (system-area-pointer :deport-gen) (type object)
   (declare (ignore type))
   object)
 
-(def-alien-type-method (sap :extract-gen) (type sap offset)
+(def-alien-type-method (system-area-pointer :extract-gen) (type sap offset)
   (declare (ignore type))
   `(sap-ref-sap ,sap (/ ,offset vm:byte-bits)))
 
 
 ;;;; the ALIEN-VALUE type.
 
-(def-alien-type-class (alien-value :include sap))
+(def-alien-type-class (alien-value :include system-area-pointer))
 
 (def-alien-type-method (alien-value :lisp-rep) (type)
   (declare (ignore type))
@@ -903,6 +903,16 @@
 	    (alien-type-= to1 to2)
 	    nil)
 	(null to2))))
+
+(def-alien-type-method (pointer :subtypep) (type1 type2)
+  (and (alien-pointer-type-p type2)
+       (let ((to1 (alien-pointer-type-to type1))
+	     (to2 (alien-pointer-type-to type2)))
+	 (if to1
+	     (if to2
+		 (alien-subtype-p to1 to2)
+		 t)
+	     nil))))
 
 (def-alien-type-method (pointer :deport-gen) (type value)
   (values
@@ -968,6 +978,17 @@
        (alien-type-= (alien-array-type-element-type type1)
 		     (alien-array-type-element-type type2))))
 
+(def-alien-type-method (array :subtypep) (type1 type2)
+  (and (alien-array-type-p type2)
+       (let ((dim1 (alien-array-type-dimensions type1))
+	     (dim2 (alien-array-type-dimensions type2)))
+	 (and (= (length dim1) (length dim2))
+	      (or (and dim2
+		       (null (car dim2))
+		       (equal (cdr dim1) (cdr dim2)))
+		  (equal dim1 dim2))
+	      (alien-subtype-p (alien-array-type-element-type type1)
+			       (alien-array-type-element-type type2))))))
 
 
 ;;;; The RECORD type.
@@ -1131,7 +1152,6 @@
        (every #'alien-type-p
 	      (alien-function-type-arg-types type1)
 	      (alien-function-type-arg-types type2))))
-
 
 
 (def-alien-type-class (values)
@@ -1464,7 +1484,7 @@
    by MAKE-ALIEN or ``malloc''."
   (alien-funcall (extern-alien "free" (function (values) system-area-pointer))
 		 (alien-sap alien))
-  nil))
+  nil)
 
 
 ;;;; The SLOT operator
