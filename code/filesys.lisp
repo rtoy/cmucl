@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.14 1991/11/16 15:56:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.15 1991/12/01 18:10:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -846,8 +846,8 @@
 	    (when name
 	      (write-string name)
 	      (unless (eql j (1- cols))
-		(tab-over 
-		 (- col-width (length (the simple-string name))))))))
+		(dotimes (i (- col-width (length (the simple-string name))))
+		  (write-char #\space))))))
 	(terpri)))
     (when return-list
       result)))
