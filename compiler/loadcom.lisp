@@ -174,3 +174,5 @@
 	      (compact-info-environment (car *info-environment*))))
   (lisp::purify :root-structures '(ncompile-file))
   (ext:gc-on))
+
+#+pmax (%proclaim '(optimize (speed 1) (safety 1)))
