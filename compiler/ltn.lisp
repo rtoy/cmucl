@@ -518,18 +518,20 @@
 
 ;;;; Known call annotation:
 
-;;; OPERAND-RESTRICTION-OK  --  Internal
+;;; OPERAND-RESTRICTION-OK  --  Interface
 ;;;
-;;;    Return true if Restr is satisfied by Type.  Cont is continuation used to
-;;; test for constant arguments.  If T-OK is true, then a T restriction allows
-;;; any operand type.  This is also called by IR2tran when it determines
-;;; whether a result temporary needs to be made.
+;;;    Return true if Restr is satisfied by Type.  If T-OK is true, then a T
+;;; restriction allows any operand type.  This is also called by IR2tran when
+;;; it determines whether a result temporary needs to be made, and by
+;;; representation selection when it is deciding which move VOP to use.
+;;; Cont and TN are used to test for constant arguments.
 ;;;
 (proclaim '(inline operand-restriction-ok))
-(defun operand-restriction-ok (restr type &key cont (t-ok t))
+(defun operand-restriction-ok (restr type &key cont tn (t-ok t))
   (declare (type (or (member *) cons) restr)
 	   (type primitive-type type)
-	   (type (or continuation null) cont))
+	   (type (or continuation null) cont)
+	   (type (or tn null) tn))
   (if (eq restr '*)
       t
       (ecase (first restr)
@@ -539,8 +541,14 @@
 		     (eq mem type))
 	     (return t))))
 	(:constant
-	 (and (constant-continuation-p cont)
-	      (funcall (second restr) (continuation-value cont)))))))
+	 (cond (cont
+		(and (constant-continuation-p cont)
+		     (funcall (second restr) (continuation-value cont))))
+	       (tn
+		(and (eq (tn-kind tn) :constant)
+		     (funcall (second restr) (tn-value tn))))
+	       (t
+		(error "Neither CONT nor TN supplied.")))))))
 
   
 ;;; Template-Args-OK  --  Internal
