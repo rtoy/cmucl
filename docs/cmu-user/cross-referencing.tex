@@ -231,7 +231,7 @@ false, and that the first clause of the \code{if} will never be taken
 (this optimization is called dead-code elimination). XREF will
 therefore not register a call to the function \code{sin} from the
 function \code{foo}. Likewise, no calls to the functions \code{sqrt}
-and \verb|<| are registered, because the compiler has eliminated the
+and \code{\textless} are registered, because the compiler has eliminated the
 code that evaluates the condition. Finally, no call to the function
 \code{expt} is generated, because the compiler was able to evaluate
 the result of the expression \code{(expt 3 2)} at compile-time (though
