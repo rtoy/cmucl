@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.64 1994/03/07 11:28:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.65 1994/07/11 11:41:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -917,20 +917,24 @@
 
 ;;;; In the "File System Interface" chapter:
 
+;;; No pathname functions are foldable because they all potentially depend on
+;;; *default-pathname-defaults*, e.g. to provide a default host when parsing a
+;;; namestring.
+
 (defknown wild-pathname-p (pathnamelike &optional (member nil :host :device
 							  :directory :name
 							  :type :version))
   boolean
-  (foldable flushable))
+  (flushable))
 (defknown pathname-match-p (pathnamelike pathnamelike) boolean
-  (foldable flushable))
+  (flushable))
 (defknown translate-pathname (pathnamelike pathnamelike pathnamelike &key)
   pathname
-  (foldable flushable))
+  (flushable))
 
 ;;; Need to add the logical pathname stuff here.
 
-(defknown pathname (pathnamelike) pathname (foldable flushable))
+(defknown pathname (pathnamelike) pathname (flushable))
 (defknown truename (pathnamelike) pathname ())
 
 (defknown parse-namestring
@@ -942,7 +946,7 @@
 (defknown merge-pathnames
   (pathnamelike &optional pathnamelike pathname-version)
   pathname
-  (foldable flushable))
+  (flushable))
 
 (defknown make-pathname
  (&key (:defaults pathnamelike) (:host pathname-host) (:device pathname-device)
@@ -950,30 +954,30 @@
        (:name (or pathname-name string (member :wild)))
        (:type (or pathname-type string (member :wild)))
        (:version pathname-version) (:case (member :local :common)))
-  pathname (foldable flushable))
+  pathname (flushable))
 
-(defknown pathnamep (t) boolean (movable foldable flushable))
+(defknown pathnamep (t) boolean (movable  flushable))
 
 (defknown pathname-host (pathnamelike &key (:case (member :local :common)))
-  pathname-host (foldable flushable))
+  pathname-host (flushable))
 (defknown pathname-device (pathnamelike &key (:case (member :local :common)))
-  pathname-device (foldable flushable))
+  pathname-device (flushable))
 (defknown pathname-directory (pathnamelike &key (:case (member :local :common)))
-  pathname-directory (foldable flushable))
+  pathname-directory (flushable))
 (defknown pathname-name (pathnamelike &key (:case (member :local :common)))
-  pathname-name (foldable flushable))
+  pathname-name (flushable))
 (defknown pathname-type (pathnamelike &key (:case (member :local :common)))
-  pathname-type (foldable flushable))
+  pathname-type (flushable))
 (defknown pathname-version (pathnamelike)
-  pathname-version (foldable flushable))
+  pathname-version (flushable))
 
 (defknown (namestring file-namestring directory-namestring host-namestring)
   (pathnamelike) simple-string
-  (foldable flushable))
+  (flushable))
 
 (defknown enough-namestring (pathnamelike &optional pathnamelike)
   simple-string
-  (foldable flushable))
+  (flushable))
 
 (defknown user-homedir-pathname (&optional t) pathname (flushable))
 
