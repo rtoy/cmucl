@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.71 2003/08/05 11:00:49 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.72 2003/08/19 09:26:57 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -726,6 +726,20 @@
 	 (available (- tail head))
 	 (copy (min requested available)))
     (declare (type index offset head tail available copy))
+    ;;
+    ;; If something has been unread, put that at buffer + start,
+    ;; and read the rest to start + 1.
+    (when (fd-stream-unread stream)
+      (etypecase buffer
+	(system-area-pointer
+	 (assert (= 1 (fd-stream-element-size stream)))
+	 (setf (sap-ref-8 buffer start) (char-code (read-char stream))))
+	(vector
+	 (setf (aref buffer start) (read-char stream))))
+      (return-from fd-stream-read-n-bytes
+	(1+ (fd-stream-read-n-bytes stream buffer (1+ start) (1- requested)
+				    eof-error-p))))
+    ;;
     (unless (zerop copy)
       (if (typep buffer 'system-area-pointer)
 	  (system-area-copy sap (* head vm:byte-bits)
