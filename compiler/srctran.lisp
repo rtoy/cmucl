@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.46 1997/01/18 14:31:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.47 1997/02/05 15:41:57 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -396,9 +396,12 @@
       b))
 
 (defun set-bound (val exclusive)
-  (if exclusive
-      `(,val)
-      val))
+  (if (and (floatp val)
+	   (float-infinity-p val))
+      nil
+      (if exclusive
+	  `(,val)
+	  val)))
 
 (defun bound-< (x y)
   (cond ((eq x 'pos-inf)
@@ -775,7 +778,7 @@
 					    nil))))))))
 
 
-;; ;; bugged below?? #-propagate-float-type)
+#-propagate-float-type
 (defoptimizer (truncate derive-type) ((number divisor))
   (let ((number-type (continuation-type number))
 	(divisor-type (continuation-type divisor))
@@ -797,34 +800,56 @@
 
 #+propagate-float-type
 (progn
-#+nil
 (defoptimizer (truncate derive-type) ((number divisor))
   (let ((number-type (continuation-type number))
 	(divisor-type (continuation-type divisor))
-	(integer-type (specifier-type '(or integer real))))
+	(real-type (specifier-type '(or integer real))))
     (if (and (numeric-type-p number-type)
-	     (csubtypep number-type integer-type)
+	     (csubtypep number-type real-type)
 	     (numeric-type-p divisor-type)
-	     (csubtypep divisor-type integer-type))
+	     (csubtypep divisor-type real-type))
 	(let ((number-low (numeric-type-low number-type))
 	      (number-high (numeric-type-high number-type))
 	      (divisor-low (numeric-type-low divisor-type))
 	      (divisor-high (numeric-type-high divisor-type)))
-	  (setf number-low (if (consp number-low) (car number-low) number-low))
-	  (setf number-high (if (consp number-high) (car number-high) number-high))
-	  (setf divisor-low (if (consp divisor-low) (car divisor-low) divisor-low))
-	  (setf divisor-high (if (consp divisor-high) (car divisor-high) divisor-high))
-	  (if (csubtypep number-type (specifier-type 'integer))
+	  (setf number-low (if (consp number-low)
+			       (car number-low)
+			       number-low))
+	  (setf number-high (if (consp number-high)
+				(car number-high)
+				number-high))
+	  (setf divisor-low (if (consp divisor-low)
+				(car divisor-low)
+				divisor-low))
+	  (setf divisor-high (if (consp divisor-high)
+				 (car divisor-high)
+				 divisor-high))
+	  (if (and (csubtypep number-type (specifier-type 'integer))
+		   (csubtypep divisor-type (specifier-type 'integer)))
+	      ;; If both the number and the divisor are integers of
+	      ;; some type, then both results of truncate are
+	      ;; integers.  Figure out the appropriate ranges of the
+	      ;; results.
 	      (values-specifier-type
-	       `(values ,(integer-truncate-derive-type number-low number-high
-						       divisor-low divisor-high)
-		        ,(integer-rem-derive-type number-low number-high
-						  divisor-low divisor-high)))
+	       `(values
+		 ,(integer-truncate-derive-type number-low number-high
+						divisor-low divisor-high
+						divisor-type)
+		 ,(integer-rem-derive-type number-low number-high
+					   divisor-low divisor-high)))
+	      ;; Otherwise, the first result of truncate is an integer
+	      ;; and the second result is a float of some type.
+	      ;; Figure out the ranges of the results and their
+	      ;; appropriate types.
 	      (values-specifier-type
-	       `(values ,(integer-truncate-derive-type number-low number-high
-						       divisor-low divisor-high)
-		        ,(real-rem-derive-type number-low number-high
-					       divisor-low divisor-high)))))
+	       `(values
+		 ,(integer-truncate-derive-type number-low number-high
+						divisor-low divisor-high
+						divisor-type)
+		 ,(real-rem-derive-type number-low number-high
+					divisor-low divisor-high
+					number-type
+					divisor-type)))))
 	*universal-type*)))
 
 (defoptimizer (%unary-truncate derive-type) ((number))
@@ -832,12 +857,19 @@
     (if (and (numeric-type-p number-type)
 	     (csubtypep number-type (specifier-type 'real)))
 	(let ((number-low (numeric-type-low number-type))
-	      (number-high (numeric-type-high number-type)))
-	  (setf number-low (if (consp number-low) (car number-low) number-low))
-	  (setf number-high (if (consp number-high) (car number-high) number-high))
-	  (values-specifier-type
-	   `(values ,(integer-truncate-derive-type number-low number-high 1 1)
-	     ,(real-rem-derive-type number-low number-high 1 1))))
+	      (number-high (numeric-type-high number-type))
+	      (divisor (make-numeric-type
+			:class 'integer
+			:low 1
+			:high 1)))
+	  (setf number-low (if (consp number-low)
+			       (car number-low)
+			       number-low))
+	  (setf number-high (if (consp number-high)
+				(car number-high)
+				number-high))
+	  (specifier-type `,(integer-truncate-derive-type
+			     number-low number-high 1 1 divisor)))
 	*universal-type*)))
 )
 
@@ -924,7 +956,7 @@
 	     ;; The number we are dividing is unbounded, so we can't tell
 	     ;; anything about the result.
 	     'integer)))))
-
+	  
 (defun integer-rem-derive-type
        (number-low number-high divisor-low divisor-high)
   (if (and divisor-low divisor-high)
@@ -957,101 +989,152 @@
 #+propagate-float-type
 (progn
 (defun integer-truncate-derive-type
-       (number-low number-high divisor-low divisor-high)
+    (number-low number-high divisor-low divisor-high divisor-type)
   ;; The result cannot be larger in magnitude than the number, but the sign
   ;; might change.  If we can determine the sign of either the number or
   ;; the divisor, we can eliminate some of the cases.
-  (multiple-value-bind
-      (number-sign number-min number-max)
-      (numeric-range-info number-low number-high)
+  (macrolet ((maybe* (form)
+	       ;; return result of form or * if overflow occurs
+	       `(handler-case ,form
+		  (arithmetic-error () '*))))
     (multiple-value-bind
-	(divisor-sign divisor-min divisor-max)
-	(numeric-range-info divisor-low divisor-high)
-      (when (and divisor-max (zerop divisor-max))
-	;; We've got a problem: guarenteed division by zero.
-	(return-from integer-truncate-derive-type t))
-      (when (zerop divisor-min)
-	;; We'll assume that they arn't going to divide by zero.
-	(if (integerp divisor-min)
-	    (incf divisor-min)
-	    (incf divisor-min (if (typep divisor-min 'single-float)
-				  least-positive-normalized-single-float
-				  least-positive-normalized-double-float))))
-      (cond ((and number-sign divisor-sign)
-	     ;; We know the sign of both.
-	     (if (eq number-sign divisor-sign)
-		 ;; Same sign, so the result will be positive.
-		 `(integer ,(if divisor-max
-				(truncate number-min divisor-max)
-				0)
-			   ,(if number-max
-				(truncate number-max divisor-min)
-				'*))
-		 ;; Different signs, the result will be negative.
-		 `(integer ,(if number-max
-				(- (truncate number-max divisor-min))
-				'*)
-			   ,(if divisor-max
-				(- (truncate number-min divisor-max))
-				0))))
-	    ((eq divisor-sign '+)
-	     ;; The divisor is positive.  Therefore, the number will just
-	     ;; become closer to zero.
-	     `(integer ,(if number-low
-			    (truncate number-low divisor-min)
-			    '*)
-		       ,(if number-high
-			    (truncate number-high divisor-min)
-			    '*)))
-	    ((eq divisor-sign '-)
-	     ;; The divisor is negative.  Therefore, the absolute value of
-	     ;; the number will become closer to zero, but the sign will also
-	     ;; change.
-	     `(integer ,(if number-high
-			    (- (truncate number-high divisor-min))
-			    '*)
-		       ,(if number-low
-			    (- (truncate number-low divisor-min))
-			    '*)))
-	    ;; The divisor could be either positive or negative.
-	    (number-max
-	     ;; The number we are dividing has a bound.  Divide that by the
-	     ;; smallest posible divisor.
-	     (let ((bound (truncate number-max divisor-min)))
-	       `(integer ,(- bound) ,bound)))
-	    (t
-	     ;; The number we are dividing is unbounded, so we can't tell
-	     ;; anything about the result.
-	     'integer)))))
-	  
+	(number-sign number-min number-max)
+	(numeric-range-info number-low number-high)
+      (multiple-value-bind
+	  (divisor-sign divisor-min divisor-max)
+	  (numeric-range-info divisor-low divisor-high)
+	(when (and divisor-max (zerop divisor-max))
+	  ;; We've got a problem: guarenteed division by zero.
+	  (return-from integer-truncate-derive-type t))
+	(when (zerop divisor-min)
+	  ;; We'll assume that they aren't going to divide by zero.  Set
+	  ;; divisor min to be the smallest positive number of the
+	  ;; appropriate type.  (Does this really make sense for floats?
+	  ;; Let's go with it for now.)
+	  (setf divisor-min
+		(cond ((csubtypep divisor-type (specifier-type 'integer))
+		       1)
+		      ((csubtypep divisor-type (specifier-type 'double-float))
+		       least-positive-normalized-double-float)
+		      ((csubtypep divisor-type (specifier-type 'real))
+		       least-positive-normalized-single-float)
+		      (t
+		       (cerror "Return INTEGER as result of truncate"
+			       "This should not have happened!")
+		       (return-from integer-truncate-derive-type t)))))
+	(cond ((and number-sign divisor-sign)
+	       ;; We know the sign of both.
+	       (if (eq number-sign divisor-sign)
+		   ;; Same sign, so the result will be positive.
+		   `(integer
+		     ,(if divisor-max
+			  (maybe* (truncate number-min divisor-max))
+			  0)
+		     ,(if number-max
+			  (maybe* (truncate number-max divisor-min))
+			  '*))
+		   ;; Different signs, the result will be negative.
+		   `(integer
+		     ,(if number-max
+			  (maybe* (- (truncate number-max divisor-min)))
+			  '*)
+		     ,(if divisor-max
+			  (maybe* (- (truncate number-min divisor-max)))
+			  0))))
+	      ((eq divisor-sign '+)
+	       ;; The divisor is positive.  Therefore, the number will just
+	       ;; become closer to zero.
+	       `(integer
+		 ,(if number-low
+		      (maybe* (truncate number-low divisor-min))
+		      '*)
+		 ,(if number-high
+		      (maybe* (truncate number-high divisor-min))
+		      '*)))
+	      ((eq divisor-sign '-)
+	       ;; The divisor is negative.  Therefore, the absolute value of
+	       ;; the number will become closer to zero, but the sign will also
+	       ;; change.
+	       `(integer
+		 ,(if number-high
+		      (maybe* (- (truncate number-high divisor-min)))
+		      '*)
+		 ,(if number-low
+		      (maybe* (- (truncate number-low divisor-min)))
+		      '*)))
+	      ;; The divisor could be either positive or negative.
+	      (number-max
+	       ;; The number we are dividing has a bound.  Divide that by the
+	       ;; smallest posible divisor.
+	       (let ((bound (maybe* (truncate number-max divisor-min))))
+		 (if (numberp bound)
+		     `(integer ,(- bound) ,bound)
+		     `integer)))
+	      (t
+	       ;; The number we are dividing is unbounded, so we can't tell
+	       ;; anything about the result.
+	       'integer))))))
+
+;;; This probably needs a lot of reworking to make sure everything is
+;;; covered.
 (defun real-rem-derive-type
-       (number-low number-high divisor-low divisor-high)
-  (if (and divisor-low divisor-high)
-      ;; We know the range of the divisor, and the remainder must be smaller
-      ;; than the divisor.  We can tell the sign of the remainer if we know
-      ;; the sign of the number.
-      (let ((divisor-max (float (max (abs divisor-low) (abs divisor-high)))))
-	`(float ,(if (or (null number-low)
-			   (minusp number-low))
-		       (- divisor-max)
-		       0.0)
-		  ,(if (or (null number-high)
-			   (plusp number-high))
-		       divisor-max
-		       0.0)))
-      ;; The divisor is potentially either very positive or very negative.
-      ;; Therefore, the remainer is unbounded, but we might be able to tell
-      ;; something about the sign from the number.
-      `(float ,(if (and number-low (not (minusp number-low)))
-		     ;; The number we are dividing is positive.  Therefore,
-		     ;; the remainder must be positive.
-		     0.0
-		     '*)
-		,(if (and number-high (not (plusp number-high)))
-		     ;; The number we are dividing is negative.  Therefore,
-		     ;; the remainder must be negative.
-		     0.0
-		     '*))))
+    (number-low number-high divisor-low divisor-high number-type divisor-type)
+  ;; First figure out what the type of the result should be.
+  (let* ((result-type
+	  (cond ((csubtypep number-type (specifier-type 'integer))
+		 ;; If NUMBER is an integer, the result must be the
+		 ;; type of the divisor.  A numeric-type-format of nil
+		 ;; means either REAL or COMPLEX, but we know at this
+		 ;; point the numbers are not complex.
+		 (or (numeric-type-format divisor-type)
+		     'real))
+		((csubtypep divisor-type (specifier-type 'integer))
+		 ;; The divisor is an integer, so the result must be
+		 ;; the type of the number.
+		 (or (numeric-type-format number-type)
+		     'real))
+		(t
+		 ;; Hmm, neither are integers, so we take the largest format
+		 (or (float-format-max (numeric-type-format number-type)
+				   (numeric-type-format divisor-type))
+		     'real)))))
+    ;; Without the following sexp, RESULT-TYPE can sometimes be NIL!
+    ;; How can that be?  The above code looks like it always returns
+    ;; something besides nil!
+    (unless result-type
+      (setf result-type 'real)
+      (cerror "Use REAL as result type" "Shouldn't happen!  Result type was NIL"))
+    (if (and divisor-low divisor-high)
+	;; We know the range of the divisor, and the remainder must be smaller
+	;; than the divisor.  We can tell the sign of the remainer if we know
+	;; the sign of the number.
+	(let ((divisor-max (float (max (abs divisor-low) (abs divisor-high)))))
+	  `(,result-type ,(coerce (if (or (null number-low)
+					  (minusp number-low))
+				      (- divisor-max)
+				      0.0)
+				  result-type)
+	                  ,(coerce (if (or (null number-high)
+					   (plusp number-high))
+				       divisor-max
+				       0.0)
+				   result-type)))
+	;; The divisor is potentially either very positive or very negative.
+	;; Therefore, the remainer is unbounded, but we might be able to tell
+	;; something about the sign from the number.
+	`(,result-type ,(if (and number-low
+				 (not (minusp number-low)))
+			    ;; The number we are dividing is positive.
+			    ;; Therefore, the remainder must be
+			    ;; positive.
+			    (coerce 0.0 result-type)
+			    '*)
+	               ,(if (and number-high (not (plusp number-high)))
+			    ;; The number we are dividing is negative.
+			    ;; Therefore, the remainder must be
+			    ;; negative.
+			    (coerce 0.0 result-type)
+			    '*)))))
 )
 
 (defoptimizer (random derive-type) ((bound &optional state))

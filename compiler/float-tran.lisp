@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.24 1997/01/18 14:31:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.25 1997/02/05 15:41:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,6 +237,8 @@
   (frob scale-single-float)
   (frob scale-double-float))
 	     
+;;; toy@rtp.ericsson.se:
+;;;
 ;;; Defoptimizers for %single-float and %double-float.  This makes the
 ;;; FLOAT function return the correct ranges if the input has some
 ;;; defined range.  Quite useful if we want to convert some time of
@@ -450,11 +452,27 @@
     (deftransform name ((x y) '(double-float double-float)
 			rtype :eval-name t :when :both)
       `(,prim x y))))
-
+#+nil
 (deftransform log ((x y) (float float) float)
   '(/ (log x) (log y)))
 
+;;; ANSI says log with base zero returns zero.
+(deftransform log ((x y) (float float) float)
+  '(if (zerop y) y (/ (log x) (log y))))
+
 
+;;; Return the float format of the result of an elementary function.
+;;; If the format is NIL (which means type FLOAT), we return NIL.  If
+;;; the format is 'DOUBLE-FLOAT, we return that.  For any other case,
+;;; we return 'SINGLE-FLOAT.
+  
+(proclaim '(inline elfun-format numeric-type-real-p))  
+(defun elfun-float-format (format)
+  (if format
+      (if (eq format 'double-float)
+	  'double-float
+	  'single-float)))
+
 #+propagate-fun-type
 (progn
 ;;;; Optimizers for elementary functions
@@ -487,18 +505,6 @@
       (float 0 x)))
 
 
-;;; Return the float format of the result of an elementary function.
-;;; If the format is NIL (which means type FLOAT), we return NIL.  If
-;;; the format is 'DOUBLE-FLOAT, we return that.  For any other case,
-;;; we return 'SINGLE-FLOAT.
-  
-(proclaim '(inline elfun-format numeric-type-real-p))  
-(defun elfun-float-format (format)
-  (if format
-      (if (eq format 'double-float)
-	  'double-float
-	  'single-float)))
-
 ;;; The number is of type REAL.
 
 (defun numeric-type-real-p (type)
@@ -520,20 +526,40 @@
 (defmacro elfun-derive-type (num cond limit-fun)
   (let ((type (gensym))
 	(lo-lim (gensym))
-	(hi-lim (gensym)))
+	(hi-lim (gensym))
+	(fp-mode (gensym)))
     `(let ((,type (continuation-type ,num)))
       (when (numeric-type-real-p ,type)
 	(let ((lo (numeric-type-low ,type))
 	      (hi (numeric-type-high ,type)))
 	  (when ,cond
-	    (multiple-value-bind (,lo-lim ,hi-lim)
-		(funcall ,limit-fun lo hi)
-	      (make-numeric-type :class 'float
-				 :format (elfun-float-format
-					  (numeric-type-format ,type))
-				 :complexp :real
-				 :low ,lo-lim
-				 :high ,hi-lim))))))))
+	    (let ((,fp-mode (get-floating-point-modes)))
+	      (unwind-protect
+		   (progn
+		     ;; Disable all traps except for :invalid.  We
+		     ;; want standard IEEE handling to return the
+		     ;; appropriate value which we will handle later.
+		     ;; However, for :invalid, there's probably
+		     ;; nothing we can do about it.  We don't need to
+		     ;; do anything else because we don't check any
+		     ;; other flags and they get restored later.
+		     (set-floating-point-modes :traps '(:invalid))
+
+		     ;; The call to the limit-fun has (most) traps
+		     ;; disabled.  It can naively compute the result,
+		     ;; but it must call set-bound to make sure any
+		     ;; overflow is converted to NIL appropriately.
+		     (multiple-value-bind (,lo-lim ,hi-lim)
+			 (funcall ,limit-fun lo hi)
+		       (make-numeric-type :class 'float
+					  :format (elfun-float-format
+						   (numeric-type-format ,type))
+					  :complexp :real
+					  :low ,lo-lim
+					  :high ,hi-lim)))
+		;; Restore the floating-point modes
+		(apply #'set-floating-point-modes ,fp-mode)
+		))))))))
 
 ;;; Handle these monotonic increasing functions whose domain is
 ;;; possibly part of the real line
@@ -732,24 +758,38 @@
       (multiple-value-bind (lo hi)
 	  (extract-bounds type)
 	(let* ((max-bnd (max-bound (bound-abs lo) (bound-abs hi)))
-	       (min-bnd (min-bound (bound-abs lo) (bound-abs hi))))
-	  (make-numeric-type
-	   :class 'float
-	   :format (elfun-float-format (numeric-type-format type))
-	   :complexp :real
-	   :low (if (and (bound-< lo 0) (bound-< 0 hi))
-		    ;; If zero is in the input domain, then the lower
-		    ;; bound is cosh(0).  Otherwise it's the min of
-		    ;; the bounds.
-		    1
-		    (if (symbolp min-bnd)
-			nil
-			(set-bound (cosh (bound-value min-bnd))
-				   (consp min-bnd))))
-	   :high (if (symbolp max-bnd)
-		     nil
-		     (set-bound (cosh (bound-value max-bnd))
-				(consp max-bnd)))))))))
+	       (min-bnd (min-bound (bound-abs lo) (bound-abs hi)))
+	       (fp-modes (get-floating-point-modes)))
+	  (unwind-protect
+	       (progn
+		 ;; Disable all traps except for :invalid.  We want
+		 ;; standard IEEE handling to return the appropriate
+		 ;; value which we will handle later. However, for
+		 ;; :invalid, there's probably nothing we can do about
+		 ;; it.  We don't need to do anything else because we
+		 ;; don't check any other flags and they get restored
+		 ;; later.
+		 (set-floating-point-modes :traps '(:invalid))
+		 
+		 (make-numeric-type
+		  :class 'float
+		  :format (elfun-float-format (numeric-type-format type))
+		  :complexp :real
+		  :low (if (and (bound-< lo 0) (bound-< 0 hi))
+			   ;; If zero is in the input domain, then the lower
+			   ;; bound is cosh(0).  Otherwise it's the min of
+			   ;; the bounds.
+			   1
+			   (if (symbolp min-bnd)
+			       nil
+			       (set-bound (cosh (bound-value min-bnd))
+					  (consp min-bnd))))
+		  :high (if (symbolp max-bnd)
+			    nil
+			    (set-bound (cosh (bound-value max-bnd))
+				       (consp max-bnd)))))
+	    ;; Restore the floating-point modes
+	    (apply #'set-floating-point-modes fp-modes)))))))
 
 (defoptimizer (phase derive-type) ((num))
   (let ((type (continuation-type num)))

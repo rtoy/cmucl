@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.108 1997/01/18 14:31:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.109 1997/02/05 15:41:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -235,12 +235,20 @@
 	(maybe-mumble "Constraint ")
 	(constraint-propagate component))
       (maybe-mumble "Type ")
-      (generate-type-checks component)
-      (unless (or (component-reoptimize component)
-		  (component-reanalyze component)
-		  (component-new-functions component)
-		  (component-reanalyze-functions component))
-	(return))
+      ;; Delay the generation of type checks until the type
+      ;; constraints have had time to propagate, else the compiler can
+      ;; confuse itself.
+      (unless (and (or (component-reoptimize component)
+		       (component-reanalyze component)
+		       (component-new-functions component)
+		       (component-reanalyze-functions component))
+		   (< loop-count (- *reoptimize-after-type-check-max* 2)))
+	      (generate-type-checks component)
+	      (unless (or (component-reoptimize component)
+			  (component-reanalyze component)
+			  (component-new-functions component)
+			  (component-reanalyze-functions component))
+		      (return)))
       (when (>= loop-count *reoptimize-after-type-check-max*)
 	(maybe-mumble "[Reoptimize Limit]")
 	(event reoptimize-maxed-out)
@@ -1541,23 +1549,23 @@
 ;;; exist.
 ;;;
 (defun verify-source-files (stuff)
-  (unless stuff
-    (error "Can't compile with no source files."))
-  (mapcar #'(lambda (x)
-	      (let ((x (pathname x)))
-		(if (probe-file x)
-		    x
-		    (let ((y (merge-pathnames x (make-pathname :type "lisp"))))
-		      (if (probe-file y)
-			  y
-			  (let ((z (merge-pathnames
-				    x
-				    (make-pathname :type "dylan"))))
-			    (if (probe-file z)
-				z
-				(truename y))))))))
-	  (if (listp stuff) stuff (list stuff))))
-
+  (flet ((try-with-type (path type error-p)
+	   (let ((new (merge-pathnames path (make-pathname :type type
+							   :defaults path))))
+	     (if (probe-file new)
+		 new
+		 (and error-p (truename new))))))
+    (unless stuff
+      (error "Can't compile with no source files."))
+    (mapcar #'(lambda (x)
+		(let ((x (pathname x)))
+		  (cond ((logical-pathname-p x)
+			 (try-with-type x "LISP" t))
+			((probe-file x) x)
+			((try-with-type x "lisp"  nil))
+			((try-with-type x "dylan" nil))
+			((try-with-type x "lisp"  t)))))
+	    (if (listp stuff) stuff (list stuff)))))
 
 ;;; COMPILE-FROM-STREAM  --  Public
 ;;;
@@ -1712,22 +1720,23 @@
 	 (error-severity nil)
 	 (source (verify-source-files source))
 	 (source-info (make-file-source-info source))
-	 (default (pathname (first source)))
-	 (diddle-case (logical-pathname-p (pathname default))))
+	 (default (pathname (first source))))
     (unwind-protect
 	(progn
 	  (flet ((frob (file type)
 		   (if (eq file t)
-		       (make-pathname :type (lisp::maybe-diddle-case type diddle-case)
-				      :defaults default)
+		       (make-pathname :type type
+				      :defaults
+				      (if (logical-pathname-p default)
+					  (translate-logical-pathname default)
+					  default))
 		       (pathname file))))
 	    
 	    (when output-file
 	      (setq output-file-name
-		    (frob output-file
-		      (if (eq *byte-compile* t)
-			  (backend-byte-fasl-file-type *backend*)
-			  (backend-fasl-file-type *backend*))))
+		    (compile-file-pathname (first source)
+					   :output-file output-file
+					   :byte-compile *byte-compile*))
 	      (setq fasl-file (open-fasl-file output-file-name
 					      (namestring (first source))
 					      (eq *byte-compile* t))))
@@ -1794,7 +1803,6 @@
 		nil)
 	    (not (null error-severity))
 	    (if (member error-severity '(:warning :error)) t nil))))
-
 
 ;;;; COMPILE and UNCOMPILE:
 
