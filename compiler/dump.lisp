@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.59 1993/08/27 21:13:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.60 1993/09/01 14:15:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -695,8 +695,9 @@
 	    (dump-push info-handle file)
 	    (push info-handle (fasl-file-debug-info file)))))
 
-      ;; No trace table in byte-compiled functions.
-      (dump-object 0 file)
+      ;; "trace table" is initialized by loader to hold a list of all byte
+      ;; functions in this code object (for debug info.)
+      (dump-object nil file)
 
       ;; Dump the constants.
       (dotimes (i (length constants))
