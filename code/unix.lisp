@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.53 1997/08/25 19:18:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.54 1997/10/08 21:03:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -343,6 +343,7 @@
   #+irix 23
   #+(or linux solaris) 19
   #+(or bsd osf1) 20
+  #+(and sunos (not svr4)) 17
   "Size of control character vector.")
 
 (def-alien-type nil
@@ -351,8 +352,9 @@
     (c-oflag unsigned-int)
     (c-cflag unsigned-int)
     (c-lflag unsigned-int)
-    #+(or linux hpux)
-    (c-reserved #-linux unsigned-int #+linux unsigned-char)
+    #+(or linux hpux (and sunos (not svr4)))
+    (c-reserved #-(or linux (and sunos (not svr4))) unsigned-int
+		#+(or linux (and sunos (not svr4))) unsigned-char)
     (c-cc (array unsigned-char #.+NCCS+))
     #+(or bsd osf1) (c-ispeed unsigned-int)
     #+(or bsd osf1) (c-ospeed unsigned-int)))
