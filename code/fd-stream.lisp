@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.29 1993/08/04 12:23:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.30 1993/08/04 12:26:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1443,9 +1443,10 @@ non-server method is also significantly more efficient for large reads.
 ;;;
 (defun file-name (stream &optional new-name)
   (when (typep stream 'fd-stream)
-      (cond (arg1
-	     (setf (fd-stream-pathname stream) arg1)
-	     (setf (fd-stream-file stream) (unix-namestring arg1 nil))
+      (cond (new-name
+	     (setf (fd-stream-pathname stream) new-name)
+	     (setf (fd-stream-file stream)
+		   (unix-namestring new-name nil))
 	     t)
 	    (t
 	     (fd-stream-pathname stream)))))
