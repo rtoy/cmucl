@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.41 2005/01/27 14:54:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.42 2005/01/31 18:02:58 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -435,7 +435,7 @@
 	       integer.  Resetting it to ~D." *bytes-consed-between-gcs*
 	       default-bytes-consed-between-gcs)
 	(setf *bytes-consed-between-gcs* default-bytes-consed-between-gcs))
-      (when (and *gc-trigger* (> pre-gc-dyn-usage *gc-trigger*))
+      (when (and *gc-trigger* (>= pre-gc-dyn-usage *gc-trigger*))
 	(setf *need-to-collect-garbage* t))
       (when (or force-p
 		(and *need-to-collect-garbage* (not *gc-inhibit*)))
