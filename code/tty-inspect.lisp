@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.19 2001/03/04 20:12:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.20 2001/11/21 22:58:34 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,7 +222,10 @@
 
 (defun describe-array-parts (object)
   (let* ((length (min (array-total-size object) inspect-length))
-	 (reference-array (make-array length :displaced-to object))
+	 (reference-array (make-array length
+				      :displaced-to object
+				      :element-type
+				      (array-element-type object)))
 	 (dimensions (array-dimensions object))
 	 (parts ()))
     (push (format nil "Object is ~:[a displaced~;an~] array of ~a.~%~
