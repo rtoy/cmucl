@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.23 1993/05/13 16:49:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.24 1993/05/13 19:19:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -615,7 +615,8 @@
 		     #'(lambda (x)
 			 (let ((super-layout (class-layout (find-class x))))
 			   (when (= (layout-inheritance-depth super-layout) -1)
-			     (setf inheritance-depth -1))))
+			     (setf inheritance-depth -1))
+			   super-layout))
 		     inherits)))
 	  (register-layout
 	   (find-layout name 0 inherit-layouts inheritance-depth)
