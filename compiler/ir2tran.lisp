@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.72 2003/08/06 19:01:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.73 2003/08/06 21:10:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,9 +224,8 @@ compilation policy")
 		   (or (leaf-dynamic-extent entry-fn)
 		       (memq entry-fn
 			     (lexenv-dynamic-extent (node-lexenv node))))))
-	     #-x86 (declare (ignorable dynamic-extent))
 	     (vop make-closure node block entry (length closure)
-		  #+x86 dynamic-extent
+		  dynamic-extent
 		  res)
 	     (loop for what in closure and n from 0 do
 	       (unless (and (lambda-var-p what)

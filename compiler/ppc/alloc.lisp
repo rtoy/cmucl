@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.2 2003/08/03 11:27:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.3 2003/08/06 21:10:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,10 +123,11 @@
 
 (define-vop (make-closure)
   (:args (function :to :save :scs (descriptor-reg)))
-  (:info length)
+  (:info length dynamic-extent)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
+  (:ignore dynamic-extent)
   (:generator 10
     (let ((size (+ length closure-info-offset)))
       (pseudo-atomic (pa-flag :extra (pad-data-block size))

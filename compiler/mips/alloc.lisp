@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.29 2003/08/03 11:27:48 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.30 2003/08/06 21:10:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,12 +171,14 @@
 
 (define-vop (make-closure)
   (:args (function :to :save :scs (descriptor-reg)))
-  (:info length)
+  (:info length dynamic-extent)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl4-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
   #+gengc
   (:ignore function length temp pa-flag result)
+  #-gengc
+  (:ignore dynamic-extent)
   (:generator 10
     #-gengc
     (let ((size (+ length closure-info-offset)))
