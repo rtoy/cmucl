@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.6 1992/03/10 09:01:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.7 1992/03/10 10:01:15 wlott Exp $
 ;;;
 ;;; IBM RT VM definitions of various system hacking operations.
 ;;;
@@ -17,60 +17,6 @@
 ;;;
 
 (in-package "RT")
-
-
-
-;;;; Random pointer comparison VOPs
-
-(define-vop (pointer-compare)
-  (:args (x :scs (sap-reg))
-	 (y :scs (sap-reg)))
-  (:arg-types system-area-pointer system-area-pointer)
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline comparison")
-  (:variant-vars condition)
-  (:generator 6
-    (inst cl x y)
-    (if not-p
-	(inst bnc condition target)
-	(inst bc condition target))))
-
-(macrolet ((frob (name cond)
-	     `(progn
-		(def-primitive-translator ,name (x y) `(,',name ,x ,y))
-		(defknown ,name (t t) boolean (movable foldable flushable))
-		(define-vop (,name pointer-compare)
-		  (:translate ,name)
-		  (:variant ,cond)))))
-  (frob pointer< :lt)
-  (frob pointer> :gt))
-
-
-
-;;;; Random assertions VOPS.
-
-(define-vop (check-op)
-  (:args (x :scs (any-reg descriptor-reg))
-	 (y :scs (any-reg descriptor-reg)))
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:policy :fast-safe))
-
-(define-vop (check<= check-op)
-  (:translate check<=)
-  (:generator 6
-    (let ((target (generate-error-code vop not-<=-error x y)))
-      (inst c x y)
-      (inst bc :gt target))))
-
-(define-vop (check= check-op)
-  (:translate check=)
-  (:generator 6
-    (let ((target (generate-error-code vop not-=-error x y)))
-      (inst c x y)
-      (inst bnc :eq target))))
 
 
 
