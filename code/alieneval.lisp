@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.13 1992/02/14 23:44:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.14 1992/02/19 03:04:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1728,7 +1728,7 @@
   (multiple-value-bind
       (lisp-name alien-name)
       (pick-lisp-and-alien-names name)
-    (collect ((docs) (lisp-args) (arg-types) (alien-vars)
+    (collect ((docs) (lisp-args) (arg-types) (alien-vars) (decls)
 	      (alien-args) (results))
       (dolist (arg args)
 	(if (stringp arg)
@@ -1737,20 +1737,22 @@
 	      (unless (member style '(:in :copy :out :in-out))
 		(error "Bogus argument style ~S in ~S." style arg))
 	      (unless (eq style :out)
-		(lisp-args name))
-	      (if (eq style :in)
-		  (arg-types type)
-		  (arg-types `(* ,type)))
-	      (if (eq style :out)
-		  (alien-vars `(,name ,type))
-		  (alien-vars `(,name ,type ,name)))
-	      (if (eq style :in)
-		  (alien-args name)
-		  (alien-args `(addr ,name)))
+		(lisp-args name)
+		(decls `(type (alien ,type) ,name)))
+	      (cond ((eq style :in)
+		     (arg-types type)
+		     (alien-args name))
+		    (t
+		     (arg-types `(* ,type))
+		     (if (eq style :out)
+			 (alien-vars `(,name ,type))
+			 (alien-vars `(,name ,type ,name)))
+		     (alien-args `(addr ,name))))
 	      (when (or (eq style :out) (eq style :in-out))
 		(results name)))))
       `(defun ,lisp-name ,(lisp-args)
 	 ,@(docs)
+	 (declare ,@(decls))
 	 (with-alien
 	     ((,lisp-name (function ,result-type ,@(arg-types))
 			  :extern ,alien-name)
