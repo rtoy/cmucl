@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.90 1991/03/12 16:45:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.91 1991/03/14 18:44:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.90 1991/03/12 16:45:16 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.91 1991/03/14 18:44:20 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -179,7 +179,12 @@
     two-arg-<= two-arg->= two-arg-/= eql %negate
     two-arg-and two-arg-ior two-arg-xor
     length two-arg-gcd two-arg-lcm
+
+    ;; Extra shit that should really be earlier, but isn't because we don't
+    ;; want to recompile everything.
+    di::handle-breakpoint
     ))
 
 (defparameter exported-static-symbols
-  (subseq static-symbols 0 (position 'two-arg-+ static-symbols)))
+  (append (subseq static-symbols 0 (position 'two-arg-+ static-symbols))
+	  '(di::handle-breakpoint)))
