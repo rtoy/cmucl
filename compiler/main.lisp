@@ -11,7 +11,7 @@
 ;;; 
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 (proclaim '(special *constants* *free-variables* *compile-component*
 		    *code-vector* *next-location* *result-fixups*
@@ -20,7 +20,7 @@
 		    *continuation-number* *continuation-numbers*
 		    *number-continuations* *tn-id* *tn-ids* *id-tns*
 		    *label-ids* *label-id* *id-labels* *sb-list*
-		    *unknown-functions* *compiler-error-count*
+		    *undefined-warnings* *compiler-error-count*
 		    *compiler-warning-count* *compiler-note-count*
 		    *compiler-error-output* *compiler-error-bailout*
 		    *compiler-trace-output*
@@ -166,15 +166,18 @@
     (environment-analyze component)
     (maybe-mumble "GTN ")
     (gtn-analyze component)
-    (maybe-mumble "Control ")
-    (control-analyze component)
     (maybe-mumble "LTN ")
     (ltn-analyze component)
+    (maybe-mumble "Control ")
+    (control-analyze component)
 
     (when (ir2-component-values-receivers (component-info component))
       (maybe-mumble "Stack ")
       (stack-analyze component))
 
+    ;; Assign BLOCK-NUMBER for any cleanup blocks introduced by environment
+    ;; or stack analysis.  There shouldn't be any unreachable code after
+    ;; control, so this won't delete anything.
     (when (component-reanalyze component)
       (find-dfo component))
 
@@ -182,6 +185,8 @@
     (init-assembler)
     (entry-analyze component)
     (ir2-convert component)
+
+    (select-representations component)
 
     (when *check-consistency*
       (maybe-mumble "Check2 ")
@@ -317,25 +322,26 @@
 ;;;
 (defun print-summary (abort-p abort-count)
   (unless abort-p
-    (let ((funs (sort *unknown-functions* #'string<
+    (let ((funs (sort *undefined-warnings* #'string<
 		      :key #'(lambda (x)
-			       (let ((x (unknown-function-name x)))
+			       (let ((x (undefined-warning-name x)))
 				 (if (symbolp x)
 				     (symbol-name x)
-				     (symbol-name (cadr x))))))))
+				     (prin1-to-string x)))))))
       (dolist (fun funs)
-	(let ((name (unknown-function-name fun))
-	      (warnings (unknown-function-warnings fun))
-	      (count (unknown-function-count fun)))
+	(let ((name (undefined-warning-name fun))
+	      (kind (undefined-warning-kind fun))
+	      (warnings (undefined-warning-warnings fun))
+	      (count (undefined-warning-count fun)))
 	  (dolist (*compiler-error-context* warnings)
-	    (compiler-warning "Call to unknown function."))
+	    (compiler-warning "Undefined ~(~A~): ~S" kind name))
 	  
 	  (let ((warn-count (length warnings)))
 	    (when (> count warn-count)
 	      (let ((more (- count warn-count)))
 		(compiler-warning
-		 "~D ~:[~;more ~]call~P to unknown function ~S."
-		 more warnings more name))))))))
+		 "~D ~:[~;more ~]use~P of undefined ~(~A~) ~S."
+		 more warnings more kind name))))))))
 
   (compiler-mumble
    "~2&Compilation unit ~:[finished~;aborted~].~
@@ -442,6 +448,9 @@
   ;;
   ;; The file's write date (if relevant.)
   (write-date nil :type (or unsigned-byte null))
+  ;;
+  ;; This file's FILE-COMMENT, or NIL if none.
+  (comment nil :type (or simple-string null))
   ;;
   ;; The source path root number of the first form in this file (i.e. the
   ;; total number of forms converted previously in this compilation.)
@@ -754,8 +763,10 @@
 ;;; PROCESS-FORM  --  Internal
 ;;;
 ;;;    Process a top-level Form with the specified source Path and output to
-;;; Object.  If this is a magic top-level form, then do stuff, otherwise just
-;;; compile it.
+;;; Object.
+;;; -- If this is a magic top-level form, then do stuff.
+;;; -- If it is a macro expand it.
+;;; -- Otherwise, just compile it.
 ;;;
 ;;; ### At least for now, always dump package frobbing as interpreted cold load
 ;;; forms.  This might want to be on a switch someday.
@@ -769,8 +780,7 @@
 		 `(error "Execution of a form compiled with errors:~% ~S"
 			 ',form)
 		 tlf-num object)
-		(throw 'process-form-error-abort nil)))
-	   (form (preprocessor-macroexpand form)))
+		(throw 'process-form-error-abort nil))))
       (if (atom form)
 	  (convert-and-maybe-compile form tlf-num object)
 	  (case (car form)
@@ -795,8 +805,20 @@
 	      #'(lambda ()
 		  (process-progn (cddr form) tlf-num object))))
 	    (progn (process-progn (cdr form) tlf-num object))
+	    (file-comment
+	     (unless (and (= (length form) 2) (stringp (second form)))
+	       (compiler-error "Bad FILE-COMMENT form: ~S." form))
+	     (let ((file (first (source-info-current-file *source-info*))))
+	       (if (file-info-comment file)
+		   (compiler-warning "Ignoring extra file comment:~%  ~S."
+				     form)
+		   (setf (file-info-comment file)
+			 (coerce (second form) 'simple-string)))))
 	    (t
-	     (convert-and-maybe-compile form tlf-num object))))))
+	     (let ((exp (preprocessor-macroexpand form)))
+	       (if (eq exp form)
+		   (convert-and-maybe-compile form tlf-num object)
+		   (process-form exp tlf-num object))))))))
       
   (undefined-value))
 
@@ -813,52 +835,52 @@
 ;;;
 (defun sub-compile-file (info object)
   (declare (type source-info info) (type object object))
-  (with-compilation-unit ()
-    (let ((start-errors *compiler-error-count*)
-	  (start-warnings *compiler-warning-count*)
-	  (start-notes *compiler-note-count*))
-      (with-ir1-namespace
-	(clear-stuff)
-	(let* ((*package* *package*)
-	       (*initial-package* *package*)
-	       (*initial-cookie* *default-cookie*)
-	       (*default-cookie* (copy-cookie *initial-cookie*))
-	       (*current-cookie* (make-cookie))
-	       (*fenv* ())
-	       (*source-info* info)
-	       (*top-level-lambdas* ())
-	       (*compiler-error-bailout*
-		#'(lambda ()
-		    (compiler-mumble
-		     "~2&Fatal error, aborting compilation...~%")
-		    (return-from sub-compile-file :error)))
-	       (*last-source-context* nil)
-	       (*last-original-source* nil)
-	       (*last-source-form* nil)
-	       (*last-format-string* nil)
-	       (*last-format-args* nil)
-	       (*last-message-count* 0))
-	  (loop
-	    (multiple-value-bind (form tlf eof-p)
-				 (read-source-form info)
-	      (when eof-p (return))
-	      (clrhash *source-paths*)
-	      (find-source-paths form tlf)
-	      (process-form form tlf object)))
-	  
-	  (when *block-compile*
-	    (compile-top-level (nreverse *top-level-lambdas*) object)
-	    (clear-stuff))
-	  
-	  (etypecase object
-	    (fasl-file (fasl-dump-source-info info object))
-	    (core-object (fix-core-source-info info object))
-	    (null))))
-      
-      (cond ((> *compiler-error-count* start-errors) :error)
-	    ((> *compiler-warning-count* start-warnings) :warning)
-	    ((> *compiler-note-count* start-notes) :note)
-	    (t nil)))))
+  (with-ir1-namespace
+    (clear-stuff)
+    (let* ((start-errors *compiler-error-count*)
+	   (start-warnings *compiler-warning-count*)
+	   (start-notes *compiler-note-count*)
+	   (*package* *package*)
+	   (*initial-package* *package*)
+	   (*initial-cookie* *default-cookie*)
+	   (*default-cookie* (copy-cookie *initial-cookie*))
+	   (*current-cookie* (make-cookie))
+	   (*fenv* ())
+	   (*source-info* info)
+	   (*top-level-lambdas* ())
+	   (*compiler-error-bailout*
+	    #'(lambda ()
+		(compiler-mumble
+		 "~2&Fatal error, aborting compilation...~%")
+		(return-from sub-compile-file :error)))
+	   (*last-source-context* nil)
+	   (*last-original-source* nil)
+	   (*last-source-form* nil)
+	   (*last-format-string* nil)
+	   (*last-format-args* nil)
+	   (*last-message-count* 0))
+      (with-compilation-unit ()
+	(loop
+	  (multiple-value-bind (form tlf eof-p)
+			       (read-source-form info)
+	    (when eof-p (return))
+	    (clrhash *source-paths*)
+	    (find-source-paths form tlf)
+	    (process-form form tlf object)))
+	
+	(when *block-compile*
+	  (compile-top-level (nreverse *top-level-lambdas*) object)
+	  (clear-stuff))
+	
+	(etypecase object
+	  (fasl-file (fasl-dump-source-info info object))
+	  (core-object (fix-core-source-info info object))
+	  (null))
+    
+	(cond ((> *compiler-error-count* start-errors) :error)
+	      ((> *compiler-warning-count* start-warnings) :warning)
+	      ((> *compiler-note-count* start-notes) :note)
+	      (t nil))))))
 
 
 ;;; Verify-Source-Files  --  Internal
