@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11.2.3 2000/10/16 17:32:18 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11.2.4 2000/10/23 20:21:14 dtc Exp $
  *
  */
 
@@ -89,7 +89,6 @@ void main(int argc, char *argv[], char *envp[])
     char *arg, **argptr;
     char *core = NULL, *default_core;
     boolean monitor;
-    lispobj batch_mode;
     lispobj initial_function;
 
 #ifdef MACH
@@ -102,7 +101,6 @@ void main(int argc, char *argv[], char *envp[])
     set_lossage_handler(ldb_monitor);
 
     monitor = FALSE;
-    batch_mode = NIL;
 
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
@@ -119,9 +117,6 @@ void main(int argc, char *argv[], char *envp[])
         }
 	else if (strcmp(arg, "-monitor") == 0) {
 	    monitor = TRUE;
-	}
-	else if (strcmp(arg, "-batch") == 0) {
-	    batch_mode = T;
 	}
     }
 
@@ -220,10 +215,23 @@ void main(int argc, char *argv[], char *envp[])
     /* Convert the argv and envp to something Lisp can grok. */
     SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
-    SetSymbolValue(BATCH_MODE, batch_mode);
 
-    /* Pick off sigint until the lisp system gets far enough along to */
-    /* install it's own. */
+    /*
+     * Parse the command line again, picking up values that override
+     * those loaded from the core.
+     */
+
+    argptr = argv;
+    while ((arg = *++argptr) != NULL)
+      {
+	if (strcmp(arg, "-batch") == 0)
+	  SetSymbolGlobalValue(BATCH_MODE, T);
+      }
+
+    /*
+     * Pick off sigint until the lisp system gets far enough along to
+     * install it's own.
+     */
     sigint_init();
 
     if (monitor)
