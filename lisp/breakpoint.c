@@ -37,7 +37,7 @@ void breakpoint_remove(lispobj code_obj, int pc_offset,
 void breakpoint_do_displaced_inst(struct sigcontext *scp,
 				  unsigned long orig_inst)
 {
-#ifndef hpux
+#if !defined(hpux) && !defined(irix)
     undo_fake_foreign_function_call(scp);
 #endif
     arch_do_displaced_inst(scp, orig_inst);
