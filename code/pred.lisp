@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.53 2000/05/14 03:58:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.54 2003/01/23 15:26:51 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -276,8 +276,9 @@
 				 (= (car want) (car got))))
 		  (return nil))))
 	  (or (eq (array-type-element-type type) *wild-type*)
-	      (type= (array-type-specialized-element-type type)
-		     (specifier-type (array-element-type object))))))
+	      (values
+	       (type= (array-type-specialized-element-type type)
+		      (specifier-type (array-element-type object)))))))
     (member-type
      (if (member object (member-type-members type)) t))
     (class
