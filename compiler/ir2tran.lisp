@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.26 1990/12/06 22:24:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.27 1990/12/28 16:52:31 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -279,11 +279,12 @@
 	 (ptype (ir2-continuation-primitive-type 2cont)))
     
     (cond ((eq (continuation-type-check cont) t)
-	   (let ((temp (make-normal-tn ptype)))
-	     (emit-type-check node block cont-tn temp
-			      (single-value-type
-			       (continuation-asserted-type cont)))
-	     temp))
+	   (multiple-value-bind (check types)
+				(continuation-check-types cont)
+	     (assert (eq check :simple))
+	     (let ((temp (make-normal-tn ptype)))
+	       (emit-type-check node block cont-tn temp (first types))
+	       temp)))
 	  ((eq (tn-primitive-type cont-tn) ptype) cont-tn)
 	  (t
 	   (let ((temp (make-normal-tn ptype)))
