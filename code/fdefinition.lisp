@@ -59,10 +59,12 @@
     (functionp (gethash (cadr name) *setf-functions*))))
 
 #+new-compiler
+(defvar *the-undefined-function*)
+
+#+new-compiler
 (defun fmakunbound (name)
   "Make Name have no global function definition."
   (with-function-name name
-    (%primitive set-symbol-function name
-		(%primitive make-immediate-type 0 %trap-type))
+    (%primitive set-symbol-function name *the-undefined-function*)
     (remhash (cadr name) *setf-functions*))
   t)
