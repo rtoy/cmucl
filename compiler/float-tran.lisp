@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.77 1998/10/01 16:01:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.78 1999/01/23 13:59:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -603,9 +603,11 @@
 ;;;
 ;;; Test if the numeric-type ARG is within in domain specified by
 ;;; DOMAIN-LOW and DOMAIN-HIGH, consider negative and positive zero to
-;;; be distinct as for the :negative-zero-is-not-zero feature. With
-;;; the :negative-zero-is-not-zero feature this could be handled by
-;;; the numeric subtype code in type.lisp.
+;;; be distinct as for the :negative-zero-is-not-zero feature. Note
+;;; that only inclusive and open domain limits are handled as these
+;;; are the only types of limits currently used. With the
+;;; :negative-zero-is-not-zero feature this could be handled by the
+;;; numeric subtype code in type.lisp.
 ;;;
 (defun domain-subtypep (arg domain-low domain-high)
   (declare (type numeric-type arg)
@@ -618,28 +620,23 @@
     (when (and arg-lo (floatp arg-lo-val) (zerop arg-lo-val) (consp arg-lo)
 	       (minusp (float-sign arg-lo-val)))
       (compiler-note "Float zero bound ~s not correctly canonicalised?" arg-lo)
-      (setq arg-lo '(0l0) arg-lo-val 0l0))
+      (setq arg-lo 0l0 arg-lo-val 0l0))
     (when (and arg-hi (zerop arg-hi-val) (floatp arg-hi-val) (consp arg-hi)
 	       (plusp (float-sign arg-hi-val)))
       (compiler-note "Float zero bound ~s not correctly canonicalised?" arg-hi)
-      (setq arg-hi '(-0l0) arg-hi-val -0l0))
-    ;;
-    (and (or (null domain-low)
-	     (and arg-lo (>= arg-lo-val domain-low)
-		  (not (and (zerop domain-low) (floatp domain-low)
-			    (plusp (float-sign domain-low))
-			    (zerop arg-lo-val) (floatp arg-lo-val)
-			    (if (consp arg-lo)
-				(plusp (float-sign arg-lo-val))
-				(minusp (float-sign arg-lo-val)))))))
-	 (or (null domain-high)
-	     (and arg-hi (<= arg-hi-val domain-high)
-		  (not (and (zerop domain-high) (floatp domain-high)
-			    (minusp (float-sign domain-high))
-			    (zerop arg-hi-val) (floatp arg-hi-val)
-			    (if (consp arg-hi)
-				(minusp (float-sign arg-hi-val))
-				(plusp (float-sign arg-hi-val))))))))))
+      (setq arg-hi -0l0 arg-hi-val -0l0))
+    (flet ((fp-neg-zero-p (f)	; Is F -0.0?
+	     (and (floatp f) (zerop f) (minusp (float-sign f))))
+	   (fp-pos-zero-p (f)	; Is F +0.0? 
+	     (and (floatp f) (zerop f) (plusp (float-sign f)))))
+      (and (or (null domain-low)
+	       (and arg-lo (>= arg-lo-val domain-low)
+		    (not (and (fp-pos-zero-p domain-low)
+			      (fp-neg-zero-p arg-lo)))))
+	   (or (null domain-high)
+	       (and arg-hi (<= arg-hi-val domain-high)
+		    (not (and (fp-neg-zero-p domain-high)
+			      (fp-pos-zero-p arg-hi)))))))))
 
 ;;; Elfun-Derive-Type-Simple
 ;;; 
