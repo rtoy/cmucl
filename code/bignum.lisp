@@ -225,10 +225,10 @@
 ;;; This takes three digits and returns the FLOOR'ed result of dividing the
 ;;; first two as a 64-bit integer by the third.
 ;;;
-(proclaim '(notinline %floor))
 (defun %floor (a b c)
-  (declare (type bignum-element-type a b c))
-  (error "Can't truncate bignums." a b c))
+  (let ((a a) (b b) (c c))
+    (declare (type bignum-element-type a b c))
+    (%floor a b c)))
 
 
 ;;; %FIXNUM-DIGIT-WITH-CORRECT-SIGN -- Internal.
@@ -1750,7 +1750,7 @@
 |#
 
 
-#|;;;; TRUNCATE.
+;;;; TRUNCATE.
 
 ;;; This is the original sketch of the algorithm from which I implemented this
 ;;; TRUNCATE, assuming both operands are bignums.  I should modify this to work
@@ -1853,12 +1853,14 @@
 	(q r)
 	(cond ((< len-y 2)
 	       (bignum-truncate-single-digit x len-x y))
-	      ((bignum> y x)
+	      ((plusp (bignum-compare y x))
 	       (let ((res (%allocate-bignum len-x)))
 		 (dotimes (i len-x)
 		   (setf (%bignum-ref res i) (%bignum-ref x i)))
 		 (values 0 res)))
 	      (t
+	       (error "Can't hack bignum-truncate with large divisors")
+	       #+nil
 	       (let ((y-shift (shift-y-for-truncate y)))
 		 (multiple-value-bind (len-x len-y)
 				      (shift-and-store-truncate-buffers
@@ -1907,6 +1909,9 @@
     (let ((rem (%allocate-bignum 1)))
       (setf (%bignum-ref rem 0) r)
       (values q rem))))
+
+
+#|
 
 ;;; DO-TRUNCATE -- Internal.
 ;;;
@@ -2055,8 +2060,8 @@
 	    (if (or (> high-guess*y2 middle-digit)
 		    (and (= middle-digit high-guess*y2)
 			 (> low-guess*y2 x-i-2)))
-		(progn (decf guess))
-		(progn (return guess)))))))))
+		(decf guess)
+		(return guess))))))))
 
 ;;; SHIFT-Y-FOR-TRUNCATE -- Internal.
 ;;;
