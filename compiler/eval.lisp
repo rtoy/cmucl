@@ -521,6 +521,10 @@
 		     ;; Fix up the interpreter's stack after having thrown here.
 		     ;; We won't need to do this in the final implementation.
 		     (eval-stack-set-top stack-top)
+		     ;;
+		     ;; Push some bogus values for exit context to keep the
+		     ;; MV-BIND in the UNWIND-PROTECT translation happy. 
+		     (eval-stack-push '(nil nil 0))
 		     (let ((node (c::continuation-next
 				  (c::block-start
 				   (car (c::block-succ
@@ -747,12 +751,21 @@
 	       (unless (eq info :unused)
 		 (value node info (leaf-value node frame-ptr closure)
 			frame-ptr internal-apply-loop))))
+	    (c::combination
+	     (maybe-trace-nodes node)
+	     (combination-node :normal))
 	    (c::cif
 	     (maybe-trace-nodes node)
 	     ;; IF nodes always occur at the end of a block, so pick another.
 	     (set-block (if (eval-stack-pop)
 			    (c::if-consequent node)
 			    (c::if-alternative node))))
+	    (c::bind
+	     (maybe-trace-nodes node)
+	     ;; Ignore bind nodes since INTERNAL-APPLY extends the stack for
+	     ;; all of a lambda's locals, and the c::combination branch
+	     ;; handles LET binds (moving values off stack top into locals).
+	     )
 	    (c::cset
 	     (maybe-trace-nodes node)
 	     (let ((info (c::continuation-info cont))
@@ -760,23 +773,6 @@
 					(eval-stack-pop))))
 	       (unless (eq info :unused)
 		 (value node info res frame-ptr internal-apply-loop))))
-	    (c::mv-combination
-	     (maybe-trace-nodes node)
-	     (combination-node :mv-call))
-	    (c::combination
-	     (maybe-trace-nodes node)
-	     (combination-node :normal))
-	    (c::bind
-	     (maybe-trace-nodes node)
-	     ;; Ignore bind nodes since INTERNAL-APPLY extends the stack for
-	     ;; all of a lambda's locals, and the c::combination branch
-	     ;; handles LET binds (moving values off stack top into locals).
-	     )
-	    (c::creturn
-	     (maybe-trace-nodes node)
-	     (let ((values (eval-stack-pop)))
-	       (eval-stack-set-top frame-ptr)
-	       (return-from internal-apply-loop (values-list values))))
 	    (c::entry
 	     (maybe-trace-nodes node)
 	     (let ((info (cdr (assoc node (c:lambda-eval-info-entries
@@ -866,7 +862,15 @@
 				     :test #'eq))
 		    (if incoming-values
 			(values values (c::nlx-info-target info) nil cont)
-			(values :non-local-go (c::nlx-info-target info))))))))))
+			(values :non-local-go (c::nlx-info-target info)))))))))
+	    (c::creturn
+	     (maybe-trace-nodes node)
+	     (let ((values (eval-stack-pop)))
+	       (eval-stack-set-top frame-ptr)
+	       (return-from internal-apply-loop (values-list values))))
+	    (c::mv-combination
+	     (maybe-trace-nodes node)
+	     (combination-node :mv-call)))
 	  (cond ((not (eq cont last-cont))
 		 (setf node (c::continuation-next cont)))
 		;; Currently only the last node in a block causes this loop to
@@ -879,13 +883,15 @@
 		 (change-blocks (car (c::block-succ block)))))))
     (eval-stack-set-top frame-ptr)))
 	
+
 ;;; SET-LEAF-VALUE -- Internal.
 ;;;
-;;; This sets a c::cset node's var to value, returning value.
-;;; When var is local, we have to compare its home environment to the current
-;;; one, node's environment.  If they're the same, store the value in the
-;;; current stack frame.  Otherwise, var is a closure variable, and since we're
-;;; setting it, we know it's location contains an indirect value object.
+;;; This sets a c::cset node's var to value, returning value.  When var is
+;;; local, we have to compare its home environment to the current one, node's
+;;; environment.  If they're the same, we check to see if the var is indirect,
+;;; and store the value on the stack or in the value cell as appropriate.
+;;; Otherwise, var is a closure variable, and since we're setting it, we know
+;;; it's location contains an indirect value object.
 ;;;
 (defun set-leaf-value (node frame-ptr closure value)
   (let ((var (c::set-var node)))
@@ -894,15 +900,22 @@
        (setf (symbol-value (c::global-var-name var)) value))
       (c::lambda-var
        (let ((env (c::node-environment node)))
-	 (if (eq (c::lambda-environment (c::lambda-var-home var))
-		 env)
-	     (setf (eval-stack-local frame-ptr (c::lambda-var-info var))
-		   value)
-	     (setf (indirect-value
-		    (svref closure
-			   (position var (c::environment-closure env)
-				     :test #'eq)))
-		   value)))))))
+	 (cond
+	  ((not (eq (c::lambda-environment (c::lambda-var-home var))
+		    env))
+	   (setf (indirect-value
+		  (svref closure
+			 (position var (c::environment-closure env)
+				   :test #'eq)))
+		 value))
+	  ((c::lambda-var-indirect var)
+	   (setf (indirect-value
+		  (eval-stack-local frame-ptr (c::lambda-var-info var)))
+		 value))
+	  (t
+	   (setf (eval-stack-local frame-ptr (c::lambda-var-info var))
+		 value))))))))
+
 
 ;;; LEAF-VALUE -- Internal.
 ;;;
