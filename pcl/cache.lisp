@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.19 2002/10/09 15:32:28 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.20 2002/10/19 01:11:41 pmai Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -1373,31 +1373,3 @@
     (otherwise 6)))
 
 (defvar *empty-cache* (make-cache)) ; for defstruct slot initial value forms
-
-;;;
-;;; pre-allocate generic function caches.  The hope is that this will put
-;;; them nicely together in memory, and that that may be a win.  Of course
-;;; the first gc copy will probably blow that out, this really wants to be
-;;; wrapped in something that declares the area static.
-;;;
-;;; This preallocation only creates about 25% more caches than PCL itself
-;;; uses.  Some ports may want to preallocate some more of these.
-;;; 
-(eval-when (:load-toplevel)
-  (dolist (n-size '((1 513)(3 257)(3 129)(14 128)(6 65)(2 64)(7 33)(16 32)
-		    (16 17)(32 16)(64 9)(64 8)(6 5)(128 4)(35 2)))
-    (let ((n (car n-size))
-	  (size (cadr n-size)))
-      (mapcar #'free-cache-vector
-	      (mapcar #'get-cache-vector
-		      (make-list n :initial-element size))))))
-
-(defun caches-to-allocate ()
-  (sort (let ((l nil))
-	  (maphash (lambda (size entry)
-		     (push (list (car entry) size) l))
-		   pcl::*free-caches*)
-	  l)
-	#'> :key #'cadr))
-
-
