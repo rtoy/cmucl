@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.38 1990/11/16 04:44:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.39 1990/12/12 03:09:03 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -239,7 +239,7 @@
       ((immediate negative-immediate)
        (let ((amount (tn-value amount)))
 	 (if (minusp amount)
-	     (sc-case result
+	     (sc-case number
 	       (unsigned-reg
 		(inst srl result number (- amount)))
 	       (t
@@ -310,19 +310,6 @@
     (inst mult x temp)
     (inst mflo r)))
 
-#|
-(define-vop (fast-*/fixnum fast-fixnum-binop)
-  (:temporary (:scs (non-descriptor-reg) :type random) temp)
-  (:translate *)
-  (:result-types *)
-  (:generator 12
-    (inst sra temp y 2)
-    (inst mult x temp)
-    (inst mfhi temp)
-    (
-    (inst mflo r)))
-|#
-
 (define-vop (fast-*/signed=>signed fast-signed-binop)
   (:translate *)
   (:generator 3
@@ -337,37 +324,51 @@
 
 
 
-
-
-(define-vop (fast-truncate/signed fast-signed-binop)
+(define-vop (fast-truncate/fixnum fast-fixnum-binop)
   (:translate truncate)
-  (:args (x :target r :scs (signed-reg))
-	 (y :target r :scs (signed-reg)))
-  (:results (q :scs (signed-reg))
-	    (r :scs (signed-reg)))
+  (:results (q :scs (any-reg))
+	    (r :scs (any-reg)))
   (:result-types signed-num signed-num)
+  (:temporary (:scs (non-descriptor-reg) :to :eval) temp)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 11
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst beq y zero-tn zero))
     (inst div x y)
+    (inst mflo temp)
+    (inst sll q temp 2)
+    (inst mfhi r)))
+
+(define-vop (fast-truncate/unsigned fast-unsigned-binop)
+  (:translate truncate)
+  (:results (q :scs (unsigned-reg))
+	    (r :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 12
+    (let ((zero (generate-error-code vop division-by-zero-error x y)))
+      (inst beq y zero-tn zero))
+    (inst divu x y)
     (inst mflo q)
     (inst mfhi r)))
 
-(define-vop (fast-rem/signed fast-signed-binop)
-  (:translate rem)
-  (:args (x :target r :scs (signed-reg))
-	 (y :target r :scs (signed-reg)))
-  (:results (r :scs (signed-reg)))
-  (:result-types signed-num)
+(define-vop (fast-truncate/signed fast-signed-binop)
+  (:translate truncate)
+  (:results (q :scs (signed-reg))
+	    (r :scs (signed-reg)))
+  (:result-types signed-num signed-num)
   (:vop-var vop)
   (:save-p :compute-only)
-  (:generator 10
+  (:generator 12
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst beq y zero-tn zero))
     (inst div x y)
+    (inst mflo q)
     (inst mfhi r)))
+
+
 
 
 
@@ -667,7 +668,6 @@
   (:results (result :scs (unsigned-reg))
 	    (borrow :scs (unsigned-reg) :from :eval))
   (:result-types unsigned-num positive-fixnum)
-  (:temporary (temp :scs (non-descriptor-reg)))
   (:generator 4
     (let ((no-borrow-in (gen-label))
 	  (done (gen-label)))
