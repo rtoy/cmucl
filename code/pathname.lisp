@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.4 1991/12/20 02:07:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.5 1991/12/22 01:44:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,7 +198,7 @@
 		 (etypecase ,var
 		   (pathname ,var)
 		   (string (parse-namestring ,var))
-		   (stream (file-name ,var))))))
+		   (stream (parse-namestring (file-name ,var)))))))
      ,@body))
 
 (defun %print-namestring-parse-error (condition stream)
