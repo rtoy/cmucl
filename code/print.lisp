@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.75 1999/12/08 18:36:51 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.76 2000/04/29 04:09:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -605,12 +605,12 @@
       (let ((package (symbol-package object))
 	    (name (symbol-name object)))
 	(cond
-	 ;; If the symbol's home package is the current one, then a
-	 ;; prefix is never necessary.
-	 ((eq package *package*))
 	 ;; If the symbol is in the keyword package, output a colon.
 	 ((eq package *keyword-package*)
 	  (write-char #\: stream))
+	 ;; If the symbol's home package is the current one, then a
+	 ;; prefix is never necessary.
+	 ((eq package *package*))
 	 ;; Uninterned symbols print with a leading #:.
 	 ((null package)
 	  (when (or *print-gensym* *print-readably*)
