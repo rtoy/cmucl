@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.11 1997/09/02 04:26:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.12 1997/09/07 23:34:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,8 @@
 	(cons :overflow float-overflow-trap-bit)
 	(cons :inexact float-inexact-trap-bit)
 	(cons :invalid float-invalid-trap-bit)
-	(cons :divide-by-zero float-divide-by-zero-trap-bit)))
+	(cons :divide-by-zero float-divide-by-zero-trap-bit)
+	#+x86 (cons :denormalized-operand float-denormal-trap-bit)))
 
 ;;; FLOAT-TRAP-MASK  --  Internal
 ;;;
@@ -70,8 +71,9 @@
 
    :TRAPS
        A list of the exception conditions that should cause traps.  Possible
-       exceptions are :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID and
-       :DIVIDE-BY-ZERO.  Initially all traps except :INEXACT are enabled.
+       exceptions are :UNDERFLOW, :OVERFLOW, :INEXACT, :INVALID,
+       :DIVIDE-BY-ZERO, and on the X86 :DENORMALIZED-OPERAND. Initially
+       all traps except :INEXACT are enabled.
 
    :ROUNDING-MODE
        The rounding mode to use when the result is not exact.  Possible values
