@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.46 1990/07/23 18:52:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.47 1990/07/23 19:04:22 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -85,7 +85,7 @@
 (in-package "DEBUG-INTERNALS" :nicknames '("DI"))
 (in-package "MACH")
 (in-package "USER")
-(in-pacakge "XP")
+(in-package "XP")
 
 
 (in-package "LISP")
