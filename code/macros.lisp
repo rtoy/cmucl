@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.16 1990/11/19 06:53:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.17 1990/12/11 12:45:13 wlott Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -182,8 +182,7 @@
   (let* ((arg-list-name (gensym "ARG-LIST-")))
     (multiple-value-bind
 	(body local-decls)
-	(parse-defmacro lambda-list arg-list-name body
-			'destructuring-bind 'destructuring-bind
+	(parse-defmacro lambda-list arg-list-name body nil 'destructuring-bind
 			:annonymousp t :doc-string-allowed nil)
       `(let ((,arg-list-name ,arg-list))
 	 ,@local-decls
