@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.94 2001/12/11 00:27:31 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.95 2002/01/28 20:00:30 pmai Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,6 +171,10 @@
 #-no-compiler (defvar *target-sl*)
 (setq *target-sl* (search-list "target:"))
 
+#+no-compiler (proclaim '(special *target-core-name*))
+#-no-compiler (defvar *target-core-name*)
+(setq *target-core-name* (unix-namestring "target:lisp/lisp.core" nil))
+
 ;;; Don't include the search lists used for loading in the resultant core.
 ;;;
 (lisp::clear-all-search-lists)
@@ -228,7 +232,7 @@
 	 (set-difference
 	  *features* 
 	  '(:runtime :no-compiler :no-pcl :no-clx :no-clm :no-hemlock))))
-  (save-lisp "lisp.core"
+  (save-lisp *target-core-name*
              :root-structures
              #-(or runtime no-hemlock) `(ed ,hi::*global-command-table*)
              #+(or runtime no-hemlock) ()
