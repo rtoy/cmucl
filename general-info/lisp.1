@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.9 2003/01/30 15:46:42 toy Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.9.4.1 2003/03/23 15:25:13 pmai Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -33,6 +33,23 @@ Specifies the suspended Lisp image (or `core file') to start up.
 .TP
 .BR \-lib " libpath"
 A colon-separated list of directories to be used for the library: search-list.
+.TP
+.BR \-batch
+Causes Lisp to run in batch mode, where all input is directed from
+standard-input.
+A unix return code of 0 is returned upon encountering an EOF, while any
+unhandled error condition will cause an immediate exit with a return code
+of 1, instead of entering the debugger.
+.TP
+.BR \-quiet
+Causes Lisp to start up silently, disabling printing of the herald, and causing
+most unnecessary noise, like GC messages, load messages, etc. to be suppressed.
+.TP
+.BR \-dynamic-space-size
+Requires an argument that should be the number of megabytes (1048576 bytes)
+that should be allocated to the heap.  If not specified, a platform-specific
+default is used.  The actual maximum allowed heap size is platform-specific.
+Currently, this option is only available for the x86 and sparc platforms. 
 .TP
 .BR \-edit
 Causes Lisp to enter the 
