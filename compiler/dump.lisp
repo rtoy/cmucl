@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.4 1990/02/13 17:07:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.5 1990/03/05 20:48:53 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -390,6 +390,18 @@
 	handle))))
 
 
+(defun dump-assembler-routines (code-vector length routines file)
+  (dump-fop 'lisp::fop-assembler-code file)
+  (quick-dump-number length 4 file)
+  (write-string code-vector (fasl-file-stream file) :end length)
+  (dolist (routine routines)
+    (dump-object (car routine) file)
+    (dump-fop 'lisp::fop-assembler-routine file)
+    (quick-dump-number (label-location (cdr routine)) 4 file))
+  (dump-pop file))
+
+
+
 ;;; Dump-Fixups  --  Internal
 ;;;
 ;;;    Dump all the fixups.  Currently there are only miscop fixups, and we
@@ -405,12 +417,6 @@
       (let ((offset (second fixup))
 	    (value (third fixup)))
 	(ecase (first fixup)
-	  #+nil
-	  (:miscop
-	   (assert (symbolp value))
-	   (dump-object value file)
-	   (dump-fop 'lisp::fop-user-miscop-fixup file)
-	   (quick-dump-number offset 4 file))
 	  (:foreign
 	   (assert (stringp value))
 	   (dump-fop 'lisp::fop-foreign-fixup file)
@@ -419,7 +425,12 @@
 	     (assert (< len 256))
 	     (dump-byte len file)
 	     (dotimes (i len)
-	       (dump-byte (char-code (schar value i)) file)))))))
+	       (dump-byte (char-code (schar value i)) file))))
+	  (:assembly
+	   (assert (symbolp value))
+	   (dump-object value file)
+	   (dump-fop 'lisp::fop-assembler-fixup file)
+	   (quick-dump-number offset 4 file)))))
     (dump-fop 'lisp::fop-pop-for-effect file))
   (undefined-value))
 
