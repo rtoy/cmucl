@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.80 1992/09/23 16:26:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.81 1992/09/29 16:46:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3334,7 +3334,7 @@
 	   nil)
 	  (t
 	   `(lambda-with-environment ,decls ,macros ,symmacs
-				     (rest lambda))))))
+				     . ,(rest lambda))))))
 
 
 ;;; GET-DEFINED-FUNCTION  --  Internal
