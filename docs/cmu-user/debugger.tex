@@ -230,10 +230,10 @@ values displayed will be the argument values, not values of the
 
 If the variable for an argument is never referenced by the function, it will be
 deleted.  The variable value is then unavailable, so the debugger prints
-\code{#<unused-arg>} instead of the value.  Similarly, if for any of a number of
+\code{\#$<$unused-arg$>$} instead of the value.  Similarly, if for any of a number of
 reasons (described in more detail in section \ref{debug-vars}) the value of the
 variable is unavailable or not known to be available, then
-\code{#<unavailable-arg>} will be printed instead of the argument value.
+\code{\#$<$unavailable-arg$>$} will be printed instead of the argument value.
 
 Printing of argument values is controlled by \code{*debug-print-level*} and
 \varref{debug-print-length}.
