@@ -37,6 +37,9 @@ New in this release:
         bits, though.)
       - New command-line switch -debug-lisp-search to show how lisp is
         searching for its core file.
+      - DEBUG-RETURN implemented which allows you to return a value
+        from function.  Only enabled with DEBUG 3.
+      - Lazy sxhash on symbols implemented for ppc.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -52,6 +55,13 @@ New in this release:
       - ~V with the value of NIL in format strings is treated to mean
         as if it weren't given at all, as specified by ANSI CL.
       - Characters print consistently with ~:C and ~S.
+      - Numerous bug fixes for pretty-printing and format strings.
+      - Pathnames are now printed with #P instead of #p.
+      - The types COMPLEX and (COMPLEX REAL) are the same now.
+      - UPGRADED-COMPLEX-PART-TYPE returns RATIONAL for integer types
+        now.  (CMUCL doesn't really have a (COMPLEX INTEGER) type).
+      - When a pathname can't be printed readably, signal a
+        PRINT-NOT-READABLE condition
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -60,6 +70,19 @@ New in this release:
       - Weak pointers don't have O(n^2) GC behavior anymore.
       - X11 authorization changes to solve problems seen with servers
         that don't listen to TCP connection requests.
+      - unix-read fix
+      - The compiler would give an error on deriving the result type
+        of RANDOM when the arg to RANDOM was a union type.
+      - "~*~" was not being parsed to mean a wildcard version.
+      - If a pathname has a version, but no name, we can't print it
+        readably.
+      - UNIX-GETPWUID implemented for Darwin.  Needed for FILE-AUTHOR.
+      - The compiler no longer gives errors when deriving the result type of
+        coerce when converting a integer to a float that would not fit
+        in a float.
+      - Fix bug in reading from streams with element-type SIGNED-BYTE
+        for sizes greater than 32:  positive numbers were incorrectly
+        being returned as negative.
 
   * Other changes:
      
