@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.20 1999/12/08 18:36:51 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.21 2000/05/23 06:37:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,9 +28,7 @@
 
 (defun sharp-backslash (stream backslash numarg)
   (ignore-numarg backslash numarg)
-  (unread-char backslash stream)
-  (let* ((*readtable* std-lisp-readtable)
-	 (charstring (read-extended-token stream)))
+  (let ((charstring (read-extended-token-escaped stream)))
     (declare (simple-string charstring))
     (cond (*read-suppress* nil)
 	  ((= (the fixnum (length charstring)) 1)

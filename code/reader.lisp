@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.28 2000/02/25 14:56:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.29 2000/05/23 06:37:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -635,53 +635,61 @@
 
 ;;; INTERNAL-READ-EXTENDED-TOKEN  --  Internal
 ;;;
-;;; Read from the stream up to the next delimiter.  Leaves resulting token in
-;;; read-buffer, returns two values:
+;;; Read from the stream up to the next delimiter.  If escape-firstchar is
+;;; true then the firstchar is assumed to be escaped.  Leaves resulting token
+;;; in read-buffer, returns two values:
 ;;; -- a list of the escaped character positions, and
 ;;; -- The position of the first package delimiter (or NIL).
 ;;;
-(defun internal-read-extended-token (stream firstchar)
+(defun internal-read-extended-token (stream firstchar escape-firstchar)
   (reset-read-buffer)
-  (do ((char firstchar (read-char stream nil eof-object))
-       (escapes ())
-       (colon nil))
-      ((cond ((eofp char) t)
-	     ((token-delimiterp char)
-	      (unread-char char stream)
-	      t)
-	     (t nil))
-       (values escapes colon))
-    (cond ((escapep char)
-	   ;;it can't be a number, even if it's 1\23.
-	   ;;read next char here, so it won't be casified.
-	   (push ouch-ptr escapes)
-	   (let ((nextchar (read-char stream nil eof-object)))
-	     (if (eofp nextchar)
-		 (reader-eof-error stream "after escape character")
-		 (ouch-read-buffer nextchar))))
-	  ((multiple-escape-p char)
-	   ;; read to next multiple-escape, escaping single chars along
-	   ;; the way
-	   (loop
-	     (let ((ch (read-char stream nil eof-object)))
-	       (cond
-		((eofp ch)
-		 (reader-eof-error stream "inside extended token"))
-		((multiple-escape-p ch) (return))
-		((escapep ch)
-		 (let ((nextchar (read-char stream nil eof-object)))
-		   (if (eofp nextchar)
-		       (reader-eof-error stream "after escape character")
-		       (ouch-read-buffer nextchar))))
-		(t
-		 (push ouch-ptr escapes)
-		 (ouch-read-buffer ch))))))
-	  (t
-	   (when (and (constituentp char)
-		      (eql (get-secondary-attribute char) #.package-delimiter)
-		      (not colon))
-	     (setq colon ouch-ptr))
-	   (ouch-read-buffer char)))))
+  (let ((escapes ()))
+    (when escape-firstchar
+      (push ouch-ptr escapes)
+      (ouch-read-buffer firstchar)
+      (setq firstchar (read-char stream nil eof-object)))
+    (do ((char firstchar (read-char stream nil eof-object))
+	 (colon nil))
+	((cond ((eofp char) t)
+	       ((token-delimiterp char)
+		(unread-char char stream)
+		t)
+	       (t nil))
+	 (values escapes colon))
+      (cond ((escapep char)
+	     ;; It can't be a number, even if it's 1\23.
+	     ;; Read next char here, so it won't be casified.
+	     (push ouch-ptr escapes)
+	     (let ((nextchar (read-char stream nil eof-object)))
+	       (if (eofp nextchar)
+		   (reader-eof-error stream "after escape character")
+		   (ouch-read-buffer nextchar))))
+	    ((multiple-escape-p char)
+	     ;; Read to next multiple-escape, escaping single chars along the
+	     ;; way.
+	     (loop
+	      (let ((ch (read-char stream nil eof-object)))
+		(cond
+		  ((eofp ch)
+		   (reader-eof-error stream "inside extended token"))
+		  ((multiple-escape-p ch) (return))
+		  ((escapep ch)
+		   (let ((nextchar (read-char stream nil eof-object)))
+		     (cond ((eofp nextchar)
+			    (reader-eof-error stream "after escape character"))
+			   (t
+			    (push ouch-ptr escapes)
+			    (ouch-read-buffer nextchar)))))
+		  (t
+		   (push ouch-ptr escapes)
+		   (ouch-read-buffer ch))))))
+	    (t
+	     (when (and (constituentp char)
+			(eql (get-secondary-attribute char)
+			     #.package-delimiter)
+			(not colon))
+	       (setq colon ouch-ptr))
+	     (ouch-read-buffer char))))))
 
 
 ;;;; Character classes.
@@ -798,7 +806,7 @@
   ;;"unqualified-token".  Leave the result in the READ-BUFFER.
   ;;Return next char after token (last char read).
   (when *read-suppress*
-    (internal-read-extended-token stream firstchar)
+    (internal-read-extended-token stream firstchar nil)
     (return-from read-token nil))
   (let ((attribute-table (character-attribute-table *readtable*))
 	(package nil)
@@ -1111,11 +1119,23 @@
   (let ((firstch (read-char stream nil nil t)))
     (cond (firstch
 	   (multiple-value-bind (escapes colon)
-				(internal-read-extended-token stream firstch)
+	       (internal-read-extended-token stream firstch nil)
 	     (casify-read-buffer escapes)
 	     (values (read-buffer-to-string) (not (null escapes)) colon)))
 	  (t
 	   (values "" nil nil)))))
+
+(defun read-extended-token-escaped (stream &optional (*readtable* *readtable*))
+  "For semi-external use: read an extended token with the first character
+  escaped.  Returns the string for the token."
+  (let ((firstch (read-char stream nil nil)))
+    (cond (firstch
+	   (let ((escapes (internal-read-extended-token stream firstch t)))
+	     (casify-read-buffer escapes)
+	     (read-buffer-to-string)))
+	  (t
+	   (reader-eof-error stream "after escape")))))
+
 
 
 ;;;; Number reading functions.
