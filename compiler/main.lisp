@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.141 2004/05/10 16:58:37 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.142 2004/05/10 20:05:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -809,20 +809,20 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
         (res nil))
     (file-position stream pos)
     (loop
-      (let ((line (read-line stream nil nil))) 
-	(unless line (return))
-	(when (or (find #\" line) (find #\( line))
-	  (setq res line)
-	  (return))
-	(unless (or res (zerop (length line)))
-	  (setq res line))))
+       (let ((line (read-line stream nil nil))) 
+	 (unless line (return))
+	 (when (or (find #\" line) (find #\( line))
+	   (setq res line)
+	   (return))
+	 (unless (or res (zerop (length line)))
+	   (setq res line))))
 
     (compiler-error-message
      "Read error in form starting at ~D:~%~@[ \"~A\"~%~]~A"
-     pos res condition))
+     pos res condition)
 
-  (file-position stream eof-pos)
-  (undefined-value))
+    (file-position stream eof-pos)
+    (undefined-value)))
 
 
 ;;; Careful-Read  --  Internal
