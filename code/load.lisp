@@ -657,6 +657,26 @@
     res))
 
 
+;;; FOP-INT-VECTOR  --  Internal
+;;;
+;;; *** NOT *** the FOP-INT-VECTOR as currently documented in rtguts.  Size
+;;; must be a directly supported I-vector element size, with no extra bits.
+;;; This must be packed according to the local byte-ordering, allowing us to
+;;; directly read the bits.
+;;;
+(define-fop (fop-int-vector 43)
+  (prepare-for-fast-read-byte *fasl-file*
+    (let* ((len (fast-read-u-integer 4))
+	   (size (fast-read-byte))
+	   (ac (integer-length size))
+	   (res (%primitive alloc-i-vector len ac)))
+      (done-with-fast-read-byte)
+      (unless (and (<= ac 5) (= size (ash 1 ac)))
+	(error "Losing element size ~S." size))
+      (read-n-bytes *fasl-file* res 0 (ash (+ (ash len ac) 7) -3))
+      res)))
+
+#|
 ;;; Fop-Int-Vector  --  Internal
 ;;;
 ;;;    Load an I-Vector using the Guy Steele memorial faslop.  If there
@@ -691,6 +711,7 @@
 		       (when (= i n) (return))))))
 	       (done-with-fast-read-byte))))
       res)))
+|#
 
 (define-fop (fop-uniform-int-vector 44)
   (prepare-for-fast-read-byte *fasl-file*
