@@ -1,5 +1,4 @@
-
-#define CORE_PAGESIZE (4*1024)
+#define CORE_PAGESIZE OS_VM_DEFAULT_PAGESIZE
 #define CORE_MAGIC (('C' << 24) | ('O' << 16) | ('R' << 8) | 'E')
 #define CORE_END 3840
 #define CORE_NDIRECTORY 3861
