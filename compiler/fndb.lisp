@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.37 1991/12/20 00:11:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.38 1991/12/20 14:56:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -970,7 +970,8 @@
    (contents (or null (member :source :binary))))
   t)
 
-(defknown directory (pathnamelike &key (check-for-subdirs t) (all t))
+(defknown directory (pathnamelike &key (check-for-subdirs t) (all t)
+				  (follow-links t))
   list (flushable))
 
 
