@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.15 1990/06/22 17:31:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.16 1990/07/07 01:01:37 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -73,7 +73,7 @@
 (define-vop (move-sap-argument)
   (:args (x :target y
 	    :scs (sap-reg))
-	 (fp :scs (descriptor-reg)
+	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y sap-reg))))
   (:results (y))
   (:generator 0
@@ -178,7 +178,7 @@
 	     (:short
 	      (inst sra temp offset 1)
 	      (inst addu sap object temp))
-	     (:long
+	     ((:long :single :double)
 	      (inst addu sap object offset)))
 	   (values sap 0)))
       (ecase size
@@ -191,7 +191,12 @@
 	     (inst lh result base offset)
 	     (inst lhu result base offset)))
 	(:long
-	 (inst lw result base offset))))
+	 (inst lw result base offset))
+	(:single
+	 (inst lwc1 result base offset))
+	(:double
+	 (inst lwc1 result base offset)
+	 (inst lwc1-odd result base (+ offset vm:word-bytes)))))
     (inst nop)))
 
 
@@ -225,17 +230,28 @@
 	     (:short
 	      (inst sra temp offset 1)
 	      (inst addu sap object temp))
-	     (:long
+	     ((:long :single :double)
 	      (inst addu sap object offset)))
 	   (values sap 0)))
       (ecase size
 	(:byte
-	 (inst sb value base offset))
+	 (inst sb value base offset)
+	 (move result value))
 	(:short
-	 (inst sh value base offset))
+	 (inst sh value base offset)
+	 (move result value))
 	(:long
-	 (inst sw value base offset))))
-    (move result value)))
+	 (inst sw value base offset)
+	 (move result value))
+	(:single
+	 (inst swc1 value base offset)
+	 (unless (location= result value)
+	   (inst move :single result value)))
+	(:double
+	 (inst swc1 value base offset)
+	 (inst swc1-odd value base (+ offset vm:word-bytes))
+	 (unless (location= result value)
+	   (inst move :double result value)))))))
 
 
 
