@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.3 1991/02/20 14:57:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dyncount.lisp,v 1.4 1992/02/03 18:54:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,8 @@
 
 
 (defstruct (dyncount-info
-	    (:print-function %print-dyncount-info))
+	    (:print-function %print-dyncount-info)
+	    (:make-load-form-fun :just-dump-it-normally))
   for
   (counts (required-argument) :type (simple-array (unsigned-byte 32) (*)))
   (vops (required-argument) :type simple-vector))
@@ -42,6 +43,8 @@
 (defun setup-dynamic-count-info (component)
   (let* ((info (ir2-component-dyncount-info (component-info component)))
 	 (vops (dyncount-info-vops info)))
+    (when (producing-fasl-file)
+      (fasl-validate-structure info *compile-object*))
     (do-ir2-blocks (block component)
       (let* ((start-vop (ir2-block-start-vop block))
 	     (1block (ir2-block-block block))
