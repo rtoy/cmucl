@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.25 1990/10/20 16:26:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.26 1990/10/28 06:01:38 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -18,9 +18,10 @@
 #+assembler ;; we don't want a vop for this one.
 (define-assembly-routine
     (return-multiple
-     ()
+     (:return-style :none))
+
      ;; These four are really arguments.
-     (:temp nvals any-reg nargs-offset)
+    ((:temp nvals any-reg nargs-offset)
      (:temp vals any-reg nl0-offset)
      (:temp old-fp any-reg nl1-offset)
      (:temp lra descriptor-reg lra-offset)
@@ -103,9 +104,10 @@
 #+assembler ;; no vop for this one either.
 (define-assembly-routine
     (tail-call-variable
-     ()
-     ;; These are really args.
-     (:temp args any-reg nl0-offset)
+     (:return-style :none))
+
+    ;; These are really args.
+    ((:temp args any-reg nl0-offset)
      (:temp lexenv descriptor-reg lexenv-offset)
 
      ;; We need to compute this
@@ -166,9 +168,9 @@
 ;;;; Non-local exit noise.
 
 (define-assembly-routine (unwind
-			  ((:translate %continue-unwind)
-			   (:policy :fast-safe))
-			  (:arg block (any-reg descriptor-reg) a0-offset)
+			  (:translate %continue-unwind)
+			  (:policy :fast-safe))
+			 ((:arg block (any-reg descriptor-reg) a0-offset)
 			  (:arg start (any-reg descriptor-reg) old-fp-offset)
 			  (:arg count (any-reg descriptor-reg) nargs-offset)
 			  (:temp lip interior-reg lip-offset)
@@ -202,9 +204,8 @@
   (store-symbol-value next-uwp lisp::*current-unwind-protect-block*))
 
 
-(define-assembly-routine (throw
-			  ()
-			  (:arg target descriptor-reg a0-offset)
+(define-assembly-routine throw
+			 ((:arg target descriptor-reg a0-offset)
 			  (:arg start any-reg old-fp-offset)
 			  (:arg count any-reg nargs-offset)
 			  (:temp catch any-reg a1-offset)

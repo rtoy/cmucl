@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.14 1990/10/23 02:29:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.15 1990/10/28 06:01:20 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -42,9 +42,8 @@
 ); eval-when (compile eval)
 
 
-(define-assembly-routine (allocate-vector
-			  ()
-			  (:arg type any-reg a0-offset)
+(define-assembly-routine allocate-vector
+			 ((:arg type any-reg a0-offset)
 			  (:arg length any-reg a1-offset)
 			  (:arg words any-reg a2-offset)
 			  (:res result descriptor-reg a0-offset)
@@ -56,9 +55,8 @@
   (move result vector))
 
 
-(define-assembly-routine (alloc-g-vector
-			  ()
-			  (:arg length any-reg a0-offset)
+(define-assembly-routine alloc-g-vector
+			 ((:arg length any-reg a0-offset)
 			  (:arg fill (descriptor-reg any-reg) a1-offset)
 			  (:res result descriptor-reg a0-offset)
 
@@ -90,9 +88,8 @@
   (inst addu lip-tn retaddr code-tn))
 
 
-(define-assembly-routine (alloc-string
-			  ()
-			  (:arg length any-reg a0-offset)
+(define-assembly-routine alloc-string
+			 ((:arg length any-reg a0-offset)
 			  (:res result descriptor-reg a0-offset)
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
@@ -127,10 +124,10 @@
 ;;;; Hash primitives
 
 (define-assembly-routine (sxhash-simple-string
-			  ((:translate %sxhash-simple-string)
-			   (:policy :fast-safe)
-			   (:result-types positive-fixnum))
-			  (:arg string descriptor-reg a0-offset)
+			  (:translate %sxhash-simple-string)
+			  (:policy :fast-safe)
+			  (:result-types positive-fixnum))
+			 ((:arg string descriptor-reg a0-offset)
 			  (:res result any-reg a0-offset)
 
 			  (:temp lip interior-reg lip-offset)
@@ -228,11 +225,11 @@
 
 
 (define-assembly-routine (sxhash-simple-substring
-			  ((:translate %sxhash-simple-substring)
-			   (:policy :fast-safe)
-			   (:arg-types * positive-fixnum)
-			   (:result-types positive-fixnum))
-			  (:arg string descriptor-reg a0-offset)
+			  (:translate %sxhash-simple-substring)
+			  (:policy :fast-safe)
+			  (:arg-types * positive-fixnum)
+			  (:result-types positive-fixnum))
+			 ((:arg string descriptor-reg a0-offset)
 			  (:arg length any-reg a1-offset)
 			  (:res result any-reg a0-offset)
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.9 1990/10/23 02:30:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.10 1990/10/28 06:01:42 wlott Exp $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
@@ -222,12 +222,12 @@
 ;;;; The actual routines.
 
 (define-assembly-routine (copy-to-system-area
-			  ((:policy :fast-safe)
-			   (:translate copy-to-system-area)
-			   (:arg-types * tagged-num
-				       system-area-pointer tagged-num
-				       tagged-num))
-			  (:arg src-arg descriptor-reg a0-offset)
+			  (:policy :fast-safe)
+			  (:translate copy-to-system-area)
+			  (:arg-types * tagged-num
+				      system-area-pointer tagged-num
+				      tagged-num))
+			 ((:arg src-arg descriptor-reg a0-offset)
 			  (:arg src-offset any-reg a1-offset)
 			  (:arg dst sap-reg nl0-offset)
 			  (:arg dst-offset any-reg a2-offset)
@@ -262,11 +262,11 @@
   (inst addu lip-tn retaddr code-tn))
 
 (define-assembly-routine (copy-from-system-area
-			  ((:policy :fast-safe)
-			   (:translate copy-from-system-area)
-			   (:arg-types system-area-pointer tagged-num
-				       * tagged-num tagged-num))
-			  (:arg src sap-reg nl0-offset)
+			  (:policy :fast-safe)
+			  (:translate copy-from-system-area)
+			  (:arg-types system-area-pointer tagged-num
+				      * tagged-num tagged-num))
+			 ((:arg src sap-reg nl0-offset)
 			  (:arg src-offset any-reg a0-offset)
 			  (:arg dst-arg descriptor-reg a1-offset)
 			  (:arg dst-offset any-reg a2-offset)
@@ -300,12 +300,12 @@
   (inst add lip-tn retaddr code-tn))
 
 (define-assembly-routine (system-area-copy
-			  ((:policy :fast-safe)
-			   (:translate system-area-copy)
-			   (:arg-types system-area-pointer tagged-num
-				       system-area-pointer tagged-num
-				       tagged-num))
-			  (:arg src sap-reg nl1-offset)
+			  (:policy :fast-safe)
+			  (:translate system-area-copy)
+			  (:arg-types system-area-pointer tagged-num
+				      system-area-pointer tagged-num
+				      tagged-num))
+			 ((:arg src sap-reg nl1-offset)
 			  (:arg src-offset any-reg a0-offset)
 			  (:arg dst sap-reg nl0-offset)
 			  (:arg dst-offset any-reg a1-offset)
@@ -334,10 +334,10 @@
   done)
 
 (define-assembly-routine (bit-bash-copy
-			  ((:policy :fast-safe)
-			   (:translate bit-bash-copy)
-			   (:arg-types * tagged-num * tagged-num tagged-num))
-			  (:arg src-arg descriptor-reg a0-offset)
+			  (:policy :fast-safe)
+			  (:translate bit-bash-copy)
+			  (:arg-types * tagged-num * tagged-num tagged-num))
+			 ((:arg src-arg descriptor-reg a0-offset)
 			  (:arg src-offset any-reg a1-offset)
 			  (:arg dst-arg descriptor-reg a2-offset)
 			  (:arg dst-offset any-reg a3-offset)
