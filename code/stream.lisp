@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.59 2003/03/17 10:36:42 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.60 2003/03/19 03:31:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2001,7 +2001,11 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
   (declare (type stream stream))
   (declare (type index start end))
   (let ((stream-et (stream-element-type stream)))
-    (cond ((subtypep (stream-element-type stream) 'character)
+    ;; What is the purpose of this explicit test for characters?  It
+    ;; prevents reading a string-stream into a vector, like the
+    ;; example in the CLHS.
+    (cond #+nil
+	  ((subtypep (stream-element-type stream) 'character)
 	   (error 'type-error
 		  :datum (read-byte stream nil 0)
 		  :expected-type (stream-element-type stream) ; Bogus?!?
