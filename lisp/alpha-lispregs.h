@@ -1,9 +1,9 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-lispregs.h,v 1.1 1994/03/27 15:29:34 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-lispregs.h,v 1.2 1997/06/18 17:01:22 pw Exp $ */
 
 #define NREGS	(32)
 
 #ifdef LANGUAGE_ASSEMBLY
-#define REG(num) $ ## num
+#define REG(num) $/**/num
 #else
 #define REG(num) num
 #endif
