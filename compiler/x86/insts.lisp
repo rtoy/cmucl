@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.18 1999/11/11 16:09:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.19 1999/11/11 16:12:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2630,6 +2630,18 @@
    (emit-byte segment #b11011001)))
 
 ;;;
+;;; Compare ST(i) to ST0 and update the flags.
+;;;
+;;; Intel syntal: FCOMI ST, ST(i)
+;;;
+(define-instruction fcomi (segment src)
+  (:printer floating-point ((op '(#b011 #b110))))
+  (:emitter
+   (assert (fp-reg-tn-p src))
+   (emit-byte segment #b11011011)
+   (emit-fp-op segment src #b110)))
+
+;;;
 ;;; Unordered comparison
 ;;;
 (define-instruction fucom (segment src)
@@ -2639,6 +2651,18 @@
    (assert (fp-reg-tn-p src))
    (emit-byte segment #b11011101)
    (emit-fp-op segment src #b100)))
+;;;
+;;; Unordered compare ST(i) to ST0 and update the flags.
+;;;
+;;; Intel syntal: FUCOMI ST, ST(i)
+;;;
+(define-instruction fucomi (segment src)
+  ;; XX Printer conflicts with fldl due to the mod bits.
+  #+nil (:printer floating-point ((op '(#b011 #b101))))
+  (:emitter
+   (assert (fp-reg-tn-p src))
+   (emit-byte segment #b11011011)
+   (emit-fp-op segment src #b101)))
 
 (define-instruction ftst (segment)
   (:printer floating-point-no ((op #b00100)))
