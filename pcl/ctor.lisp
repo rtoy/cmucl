@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.9 2003/05/12 16:30:42 emarsden Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.10 2003/05/13 09:38:28 gerd Exp $")
 
 (in-package "PCL")
 
@@ -242,21 +242,24 @@
 (defvar *the-system-si-method* nil)
 
 (defun install-optimized-constructor (ctor)
-  (let ((class (find-class (ctor-class-name ctor))))
-    (unless (class-finalized-p class)
-      (finalize-inheritance class))
-    (setf (ctor-class ctor) class)
-    (pushnew ctor (plist-value class 'ctors))
-    (if (null *cold-boot-state*)
-	(multiple-value-bind (lambda fn)
-	    (constructor-function-form ctor)
-	  (%print "installing optimized constructor")
-	  (setf (kernel:funcallable-instance-function ctor)
-		(or fn (compile-lambda lambda))))
-	(multiple-value-bind (lambda fn)
-	    (fallback-generator ctor nil nil)
-	  (declare (ignore lambda))
-	  (setf (kernel:funcallable-instance-function ctor) fn)))))
+  (flet ((install (optimized-p)
+	   (multiple-value-bind (lambda fn)
+	       (if optimized-p
+		   (constructor-function-form ctor)
+		   (fallback-generator ctor))
+	     (setf (kernel:funcallable-instance-function ctor)
+		   (or fn
+		       (letf (((compiler-macro-function 'make-instance) nil))
+			 (compile-lambda lambda)))))))
+    (let ((class (find-class (ctor-class-name ctor) nil)))
+      (setf (ctor-class ctor) class)
+      (cond ((null class)
+	     (install nil))
+	    (t
+	     (unless (class-finalized-p class)
+	       (finalize-inheritance class))
+	     (pushnew ctor (plist-value class 'ctors))
+	     (install (null *cold-boot-state*)))))))
 
 (defun constructor-function-form (ctor)
   (let* ((class (ctor-class ctor))
@@ -293,7 +296,7 @@
 	     (not (around-or-nonstandard-primary-method-p
 		   si-methods *the-system-si-method*))
 	     (optimizing-generator ctor ii-methods si-methods))
-	(fallback-generator ctor nil nil))))
+	(fallback-generator ctor))))
 
 (defun around-or-nonstandard-primary-method-p
     (methods &optional standard-method)
@@ -309,12 +312,14 @@
 	when (null qualifiers) do
 	  (setq primary-checked-p t)))
 
-(defun fallback-generator (ctor dummy1 dummy2)
-  (declare (ignore dummy1 dummy2))
+(defun fallback-generator (ctor)
   (setf (ctor-state ctor) 'fallback)
   (if (null *cold-boot-state*)
-      `(kernel:instance-lambda ,(make-ctor-parameter-list ctor)
-	 (make-instance ,(ctor-class ctor) ,@(ctor-initargs ctor)))
+      (if (ctor-class ctor)
+	  `(kernel:instance-lambda ,(make-ctor-parameter-list ctor)
+	     (make-instance ,(ctor-class ctor) ,@(ctor-initargs ctor)))
+	  `(kernel:instance-lambda ,(make-ctor-parameter-list ctor)
+	     (make-instance ',(ctor-class-name ctor) ,@(ctor-initargs ctor))))
       (let ((class (ctor-class-name ctor))
 	    (params (copy-list (ctor-initargs ctor)))
 	    (value-cells ()))
