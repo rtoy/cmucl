@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.30.2.1 1997/08/30 18:24:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.30.2.2 1997/09/09 00:44:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,10 +78,20 @@
   "use inline fixnum operations"
   '(rem (random-chunk (or state *random-state*)) num))
 
+;;; With the latest propagate-float-type code the compiler can inline
+;;; truncate (signed-byte 32) allowing 31 bits, and (unsigned-byte 32)
+;;; 32 bits on the x86. When not using the propagate-float-type
+;;; feature the best size that can be inlined is 29 bits.  The choice
+;;; shouldn't cause bootstrap problems just slow code.
 #+new-random
 (deftransform random ((num &optional state)
-		      ((integer 1 #.random-chunk-max) &optional *))
-  "use inline (signed-byte 32) operations"
+		      ((integer 1
+				#+(and propagate-float-type x86) #xffffffff
+				#+(and propagate-float-type (not x86)) #x7fffffff
+				#-propagate-float-type #.most-positive-fixnum)
+		       &optional *))
+  #+x86 "use inline (unsigned-byte 32) operations"
+  #-x86 "use inline (signed-byte 32) operations"
   '(values (truncate (%random-double-float (coerce num 'double-float)
 		      (or state *random-state*)))))
 
