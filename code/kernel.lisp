@@ -7,9 +7,11 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.3 1990/11/05 18:27:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.4 1990/11/10 18:35:32 wlott Exp $
 ;;;    
 (in-package "KERNEL")
+
+(export '(allocate-vector make-array-header))
 
 
 (defun get-header-data (x)
@@ -88,3 +90,14 @@
 (defun %closure-index-ref (closure index)
   "Extract the INDEXth slot from CLOSURE."
   (%closure-index-ref closure index))
+
+
+(defun allocate-vector (type length words)
+  "Allocate a unboxed, simple vector with type code TYPE, length LENGTH, and
+  WORDS words long.  Note: it is your responsibility to assure that the
+  relation between LENGTH and WORDS is correct."
+  (allocate-vector type length words))
+
+(defun make-array-header (type rank)
+  "Allocate an array header with type code TYPE and rank RANK."
+  (make-array-header type rank))
