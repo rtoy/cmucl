@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/assem-rtns.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/assem-rtns.lisp,v 1.4 2005/04/08 04:11:01 rtoy Exp $
 ;;;
 ;;;
 (in-package "PPC")
@@ -27,7 +27,7 @@
      (:temp lra descriptor-reg lra-offset)
 
      ;; These are just needed to facilitate the transfer
-     #-PPC-FUN-HACK
+
      (:temp lip interior-reg lip-offset)
      (:temp count any-reg nl2-offset)
      (:temp src any-reg nl3-offset)
@@ -85,9 +85,6 @@
   (inst add csp-tn ocfp-tn nvals)
   
   ;; Return.
-  #+PPC-FUN-HACK
-  (lisp-return lra)
-  #-PPC-FUN-HACK
   (lisp-return lra lip))
 
 
@@ -111,7 +108,6 @@
      (:temp dst any-reg nl2-offset)
      (:temp count any-reg nl3-offset)
      (:temp temp descriptor-reg l0-offset)
-     #-PPC-FUN-HACK
      (:temp lip interior-reg lip-offset)
 
      ;; These are needed so we can get at the register args.
@@ -149,9 +145,6 @@
   DONE
   ;; We are done.  Do the jump.
   (loadw temp lexenv vm:closure-function-slot vm:function-pointer-type)
-  #+PPC-FUN-HACK
-  (lisp-jump temp)
-  #-PPC-FUN-HACK
   (lisp-jump temp lip))
 
 
@@ -166,7 +159,6 @@
 			  (:arg start (any-reg descriptor-reg) ocfp-offset)
 			  (:arg count (any-reg descriptor-reg) nargs-offset)
 			  (:temp lra descriptor-reg lra-offset)
-			  #-PPC-FUN-HACK
 			  (:temp lip interior-reg lip-offset)
 			  (:temp cur-uwp any-reg nl0-offset)
 			  (:temp next-uwp any-reg nl1-offset)
@@ -189,9 +181,6 @@
   (loadw cfp-tn cur-uwp vm:unwind-block-current-cont-slot)
   (loadw code-tn cur-uwp vm:unwind-block-current-code-slot)
   (loadw lra cur-uwp vm:unwind-block-entry-pc-slot)
-  #+PPC-FUN-HACK
-  (lisp-return lra :frob-code nil)
-  #-PPC-FUN-HACK
   (lisp-return lra lip :frob-code nil)
 
   DO-UWP

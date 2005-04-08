@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6 2005/02/12 03:08:51 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.7 2005/04/08 04:11:02 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -78,15 +78,6 @@
 ;;; Macros to handle the fact that we cannot use the machine native call and
 ;;; return instructions. 
 
-#+PPC-FUN-HACK
-(defmacro lisp-jump (function)
-  "Jump to the lisp function FUNCTION."
-  `(progn
-     (inst mtctr ,function)
-     (move code-tn ,function)
-     (inst bctr)))
-
-#-PPC-FUN-HACK
 (defmacro lisp-jump (function lip)
   "Jump to the lisp function FUNCTION."
   `(progn
@@ -96,17 +87,6 @@
      (move code-tn ,function)
      (inst bctr)))
 
-#+PPC-FUN-HACK
-(defmacro lisp-return (return-pc &key (offset 0) (frob-code t))
-  "Return to RETURN-PC."
-  `(progn
-     (inst addi lip-tn ,return-pc (- (* (1+ ,offset) word-bytes) other-pointer-type))
-     (inst mtlr lip-tn)
-     ,@(if frob-code
-         `((move code-tn ,return-pc)))
-     (inst blr)))
-
-#-PPC-FUN-HACK
 (defmacro lisp-return (return-pc lip &key (offset 0) (frob-code t))
   "Return to RETURN-PC."
   `(progn

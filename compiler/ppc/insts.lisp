@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.7 2005/02/11 05:45:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.8 2005/04/08 04:11:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2095,8 +2095,6 @@
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
 			  (- other-pointer-type
-			     #+PPC-FUN-HACK-MAYBE
-			     function-pointer-type
 			     (label-position label posn delta-if-after)
 			     (component-header-length))))))
 

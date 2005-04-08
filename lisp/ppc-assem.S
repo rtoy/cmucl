@@ -232,12 +232,12 @@ x:
 
 	/* Function is an indirect closure */
 	lwz reg_CODE,CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
-#ifdef PPC_FUN_HACK
-	mtctr reg_CODE
-#else
+	/*
+	 * The 6 is vm:function-code-offset, the 4 is
+	 * the number of bytes in a lispobj.
+	 */
 	addi reg_LIP,reg_CODE,6*4-type_FunctionPointer
 	mtctr reg_LIP
-#endif
 	slwi reg_NARGS,reg_NL2,2
 	bctr
 	.align 3
@@ -395,25 +395,14 @@ lra:
 
 	GFUNCDEF(xundefined_tramp)
 	.globl _undefined_tramp
-	.byte 0,0,0,type_FunctionHeader
+	.byte 0,0,0,type_FunctionHeader	/* Header */
 
-#ifdef PPC_FUN_HACK	
-	/*
-	 * The next 4 bytes are the encoding for a PPC jump instruction.
-	 * The jump should go to the twllei instruction below.
-	 */
-	.byte 18<<2
+	.long _undefined_tramp	/* self slot */
+	.long NIL		/* next slot */
+	.long NIL		/* name slot */
+	.long NIL		/* arglist slot */
+	.long NIL		/* type slot */
 _undefined_tramp:	
-	.byte 0,0,24
-#endif
-	.long _undefined_tramp
-	.long NIL
-	.long NIL
-	.long NIL
-	.long NIL
-#ifndef PPC_FUN_HACK
-_undefined_tramp:	
-#endif		
 	twllei reg_ZERO,trap_Cerror
         /* Number of argument bytes */
 	.byte 4
@@ -428,11 +417,7 @@ _undefined_tramp:
 	.byte 1
 	*/
 	.align 2
-#ifdef PPC_FUN_HACK_MAYBE
-1:	lwz reg_CODE,FDEFN_RAW_ADDR_OFFSET(reg_CNAME)
-#else
 1:	lwz reg_CODE,FDEFN_RAW_ADDR_OFFSET(reg_FDEFN)
-#endif
 	la reg_LIP,FUNCTION_CODE_OFFSET(reg_CODE)
 	mtctr reg_LIP
 	bctr
@@ -444,25 +429,14 @@ _undefined_tramp:
 
 	GFUNCDEF(xclosure_tramp)
 	.globl _closure_tramp
-	.byte 0,0,0,type_FunctionHeader
-#ifdef PPC_FUN_HACK	
-	.byte 18<<2
-_closure_tramp:
-	.byte 0,0,24
-#endif	
+	.byte 0,0,0,type_FunctionHeader	/* Header */
 	.long _closure_tramp
 	.long NIL 
 	.long NIL
 	.long NIL
 	.long NIL
-#ifndef PPC_FUN_HACK
 _closure_tramp:
-#endif		
-#ifdef PPC_FUN_HACK_MAYBE
-	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_CNAME)
-#else
 	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_FDEFN)
-#endif
 	lwz reg_CODE,CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
 	la reg_LIP,FUNCTION_CODE_OFFSET(reg_CODE)
 	mtctr reg_LIP

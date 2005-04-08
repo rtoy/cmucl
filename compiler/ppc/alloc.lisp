@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.9 2005/02/06 19:43:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.10 2005/04/08 04:11:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,10 +158,6 @@
 	(allocation result (pad-data-block size) function-pointer-type :temp-tn temp)
 	(inst lr temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
-    #+PPC-FUN-HACK
-    (inst lis temp (ash 18 10))
-    #+PPC-FUN-HACK
-    (storew temp result closure-jump-insn-slot function-pointer-type)
     (storew function result closure-function-slot function-pointer-type)))
 
 ;;; The compiler likes to be able to directly make value cells.
