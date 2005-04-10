@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.46 2005/02/07 17:27:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.47 2005/04/10 15:01:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3205,8 +3205,13 @@
       #+sparc
       (progn
 	;; Initialize these to a sane value, just in case.
-	(setf sparc::*note-sethi-inst* nil)
-	(setf sparc::*pseudo-atomic-set* nil))
+	(setf vm::*note-sethi-inst* nil)
+	(setf vm::*pseudo-atomic-set* nil))
+      #+ppc
+      (progn
+	;; Initialize these to a sane value, just in case.
+	(setf vm::*note-addis-inst* nil)
+	(setf vm::*pseudo-atomic-set* nil))
       (dolist (seg segments)
 	(disassemble-segment seg stream dstate)))))
 
