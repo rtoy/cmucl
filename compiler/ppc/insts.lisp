@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.8 2005/04/08 04:11:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.9 2005/04/10 02:15:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,6 +83,66 @@
 		 (t (make-symbol (concatenate 'string "$" name)))))
        *register-names*))
 
+(defvar *note-addis-inst* nil
+  "An alist for the disassembler indicating the target register and
+value used in an ADDIS instruction.  This is used to make annotations
+about function addresses and register values.")
+
+(defun handle-ld/st-inst (reg word dstate)
+  (let ((ra (ldb (byte 5 16) word))
+	(d (ldb (byte 16 0) word)))
+    (when (= reg ra)
+      (case ra
+	(19
+	 ;; A referece to a code constant (reg = %CODE)
+	 (disassem:note-code-constant d dstate))
+	(18
+	 ;; A reference to a static symbol or static function (reg =
+	 ;; %NULL)
+	 (or (disassem:maybe-note-nil-indexed-symbol-slot-ref
+	      d dstate)
+	     (disassem:maybe-note-static-function d dstate)))))))
+
+(defun handle-addi-inst (reg word dstate)
+  (let ((ra (ldb (byte 5 16) word))
+	(d (ldb (byte 16 0) word)))
+    (when (= reg ra)
+      (case ra
+	(18
+	 ;; An ADDI rt, $NULL, <n> instruction.  This a
+	 ;; reference to a static symbol.
+	 (disassem::maybe-note-nil-indexed-object d dstate))))))
+
+(defun handle-addis-inst (reg word state)
+  )
+
+;; Look at the current instruction and see if we can't add some notes
+;; about what's happening.
+(defun maybe-add-notes (reg dstate)
+  (let* ((word (disassem::sap-ref-int (disassem:dstate-segment-sap dstate)
+				      (disassem:dstate-cur-offs dstate)
+				      vm:word-bytes
+				      (disassem::dstate-byte-order dstate)))
+	 (opcode (ldb (byte 6 26) word)))
+    ;; At this point we should look at the instruction and figure out
+    ;; what it is so we can print out some notes.
+    ;;
+    ;; What are interesting instructions?
+    ;;
+    ;; o Setting/clearing the pseudo-atomic bit
+    ;; o Load/store
+    ;; o addis/ori (for loading 32-bit values)
+
+    (cond ((or (= 32 opcode)
+	       (= 36 opcode))
+	   ;; An LWZ or STW instruction.  Extract the target and src
+	   ;; register and the offset.
+	   (handle-ld/st-inst reg word dstate))
+	  ((= 14 opcode)
+	   ;; An ADDI instruction.  Extract the target and src register
+	   ;; and the offset.
+	   (handle-addi-inst reg word dstate)))))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defun reg-arg-printer (value stream dstate)
   (declare (type stream stream) (fixnum value))
@@ -91,7 +151,8 @@
     (disassem:maybe-note-associated-storage-ref value
 						'registers
 						regname
-						dstate)))
+						dstate)
+    (maybe-add-notes value dstate)))
 )					; eval-when
 
 (disassem:define-argument-type reg
@@ -842,11 +903,13 @@
        :other-dependencies ,other-dependencies)))
 
 
-(defmacro define-d-si-instruction (name op &key (fixup nil) (cost 1) other-dependencies)
-  (multiple-value-bind (other-reads other-writes) (classify-dependencies other-dependencies)
+(defmacro define-d-si-instruction (name op &key (fixup nil) (cost 1) other-dependencies si-printer)
+  (multiple-value-bind (other-reads other-writes)
+      (classify-dependencies other-dependencies)
   `(define-instruction ,name (segment rt ra si)
      (:declare (type (signed-byte 16)))
-     (:printer d-si ((op ,op)))
+     (:printer d-si ((op ,op)
+		     ,@(if si-printer `((si nil :printer ,si-printer)))))
      (:delay ,cost)
      (:cost ,cost)
      (:dependencies (reads ra) ,@other-reads 
@@ -1056,7 +1119,24 @@
 (define-d-si-instruction addic. 13 :other-dependencies ((writes :xer) (writes :ccr)))
 
 (define-d-si-instruction addi 14 :fixup :l)
-(define-d-si-instruction addis 15 :fixup :ha)
+(eval-when (compile load eval)
+  (defun addis-arg-printer (value stream dstate)
+    (format stream "~D" value)
+    (let ((shifted (ash value 16)))
+      (disassem:note (format nil "0x~x = ~D" shifted shifted) dstate))
+    ;; Save the immediate value and the destination register for this
+    ;; addis instruction.  This is used later to print some possible
+    ;; notes about the value loaded by addis.
+    (let* ((word (disassem::sap-ref-int (disassem:dstate-segment-sap dstate)
+					(disassem:dstate-cur-offs dstate)
+					vm:word-bytes
+					(disassem::dstate-byte-order dstate)))
+	   (si (ldb (byte 0 16) word))
+	   (rd (ldb (byte 5 26) word)))
+      #+nil
+      (push (cons rd si) *note-addis-inst*))))
+  
+(define-d-si-instruction addis 15 :fixup :ha :si-printer #'addis-arg-printer)
 
 ; There's no real support here for branch options that decrement and test the CTR.
 ;  (a) the instruction scheduler doesn't know that anything's happening to the CTR
