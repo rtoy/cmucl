@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.38 2004/04/06 17:18:03 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.39 2005/04/13 11:59:23 pwerkowski Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -398,8 +398,7 @@
 	    (declare (fixnum index dim))
 	    (unless (< -1 index dim)
 	      (if invalid-index-error-p
-		  (error 'simple-type-error
-			 "Invalid index ~D~[~;~:; on axis ~:*~D~] in ~S"
+		  (error "Invalid index ~D~[~;~:; on axis ~:*~D~] in ~S"
 			 index axis array)
 		  (return-from %array-row-major-index nil)))
 	    (incf result (* chunk-size index))
@@ -407,8 +406,7 @@
 	(let ((index (first subscripts)))
 	  (unless (< -1 index (length (the (simple-array * (*)) array)))
 	    (if invalid-index-error-p
-		(error 'simple-type-error
-		       "Invalid index ~D in ~S" index array)
+		(error "Invalid index ~D in ~S" index array)
 		(return-from %array-row-major-index nil)))
 	  index))))
 
