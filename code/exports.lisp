@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.243 2005/04/04 14:33:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.244 2005/04/14 20:52:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1352,7 +1352,9 @@
 	     "INET-RECVFROM" "INET-SENDTO" "INET-SHUTDOWN"
 	     "SHUT-RD" "SHUT-WR" "SHUT-RDWR"
 
-	     "BINARY-TEXT-STREAM"))
+	     "BINARY-TEXT-STREAM" "READ-VECTOR" "WRITE-VECTOR"
+
+	     "INVALID-FASL"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
@@ -1720,7 +1722,9 @@
 	   "OS-INIT" "ALLOCATE-SYSTEM-MEMORY-AT"
 	   "ALTERNATE-GET-GLOBAL-ADDRESS"
 	   "*RUNTIME-FEATURES*" "REGISTER-LISP-FEATURE"
-	   "REGISTER-LISP-RUNTIME-FEATURE"))
+	   "REGISTER-LISP-RUNTIME-FEATURE"
+
+	   "BINARY-TEXT-STREAM"))
 
 (dolist
     (name
