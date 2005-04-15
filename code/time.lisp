@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.27 2004/10/09 02:47:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.28 2005/04/15 01:40:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -281,11 +281,22 @@
 		       (system:get-system-info)
     (values user sys faults (get-bytes-consed))))
 
-#+(or pentium sparc-v9 ppc)
+#+(or pentium sparc-v9)
 (defun cycle-count/float ()
   (multiple-value-bind (lo hi)
       (vm::read-cycle-counter)
     (+ (* hi (expt 2.0d0 32)) lo)))
+#+ppc
+(progn
+(alien:def-alien-variable cycles-per-tick c-call:int)
+(defun cycle-count/float ()
+  (multiple-value-bind (lo hi)
+      (vm::read-cycle-counter)
+    ;; The cycle counter on PPC isn't really a cycle counter.  It
+    ;; counts ticks, so we need to convert ticks to cycles.
+    ;; CYCLES-PER-TICK is the scale factor, computed in C.
+    (* cycles-per-tick (+ (* hi (expt 2.0d0 32)) lo))))
+)
 
 #-(or pentium sparc-v9 ppc)
 (defun cycle-count/float () 0.0)
@@ -379,9 +390,7 @@
 		    (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
 		    (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
 		    (truncate cycle-count)
-		    ;; The counter for PPC isn't the number of CPU
-		    ;; cycles, unlike x86 and Ultrasparc.
-		    #+ppc "time-base" #-ppc "CPU"
+		    "CPU"
 		    (unless (zerop gc-run-time)
 		      (/ (float gc-run-time)
 			 (float internal-time-units-per-second)))

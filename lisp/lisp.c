@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.46 2005/02/04 15:03:52 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.47 2005/04/15 01:40:08 rtoy Exp $
  *
  */
 
@@ -395,6 +395,53 @@ prepend_core_path(char* lib, char* corefile)
 int builtin_image_flag = 0;
 long initial_function_addr = 0;
 
+#ifdef DARWIN
+#include <sys/param.h>
+#include <sys/sysctl.h>
+
+int cycles_per_tick = 1;
+
+/*
+ * Compute the conversion factor from the numbef of time base ticks to
+ * clock frequency.  The timebase counter on PPC is not a cycle
+ * counter; we have to derive the relationship ourselves.
+ */
+
+void timebase_init()
+{
+  int mib[2];
+  int tbfrequency;
+  int cpufrequency;
+  unsigned int miblen;
+  size_t len;
+
+  mib[0] = CTL_HW;
+#ifndef HW_TB_FREQ
+  /*
+   * Mac OS X 10.2.8 doesn't have this, so we take it from 10.3.8,
+   * which does.
+   */
+#define HW_TB_FREQ	23
+#endif  
+  mib[1] = HW_TB_FREQ;
+  miblen = 2;
+  len = sizeof(tbfrequency);
+
+  if (sysctl(mib, miblen, &tbfrequency, &len, NULL, 0) == -1) {
+    perror("Error getting HW_TB_FREQ from sysctl: ");
+  }
+
+  mib[0] = CTL_HW;
+  mib[1] = HW_CPU_FREQ;
+  miblen = 2;
+  len = sizeof(cpufrequency);
+  if (sysctl(mib, miblen, &cpufrequency, &len, NULL, 0) == -1) {
+    perror("Error getting HW_CPU_FREQ from sysctl: ");
+  }
+
+  cycles_per_tick = cpufrequency / tbfrequency;
+}
+#endif
 /* And here be main. */
 
 int main(int argc, char *argv[], char *envp[])
@@ -700,6 +747,9 @@ int main(int argc, char *argv[], char *envp[])
      */
     sigint_init();
 
+#ifdef DARWIN
+    timebase_init();
+#endif
     if (monitor) {
         while (1) {
             ldb_monitor();
