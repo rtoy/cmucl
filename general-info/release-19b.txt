@@ -69,6 +69,8 @@ New in this release:
         streams.  EXT:READ-VECTOR and EXT:WRITE-VECTOR also
         implemented.  This is somewhat experimental right now, and may
         change slightly in a future version.
+      - Loading fasls compiled for a different version of CMUCL will
+        now signal an EXT:INVALID-FASL error instead a generic error.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
