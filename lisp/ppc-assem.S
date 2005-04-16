@@ -203,7 +203,9 @@ x:
 
 	/* Turn on pseudo-atomic */
 
+#if 0	
 	li reg_NL3,-4
+#endif	
 	li reg_ALLOC,4
 	store(reg_ZERO,reg_NL4,_foreign_function_call_active)
 	load(reg_NL4,_current_dynamic_space_free_pointer)
@@ -213,9 +215,10 @@ x:
 	load(reg_OCFP,_current_control_frame_pointer)
 
 	/* No longer atomic, and check for interrupt */
-	add reg_ALLOC,reg_ALLOC,reg_NL3
-	twlti reg_ALLOC,0
-
+	andi. reg_NL3, reg_ALLOC, 1
+	subi reg_ALLOC,reg_ALLOC,4
+	twnei reg_NL3, 0
+	
 	/* Pass in the arguments */
 
 	mr reg_CFP,reg_NL1
@@ -270,9 +273,10 @@ lra:
 	store(reg_NL1,reg_NL2,_foreign_function_call_active)
 
 	/* Check for interrupt */
-	add reg_ALLOC,reg_ALLOC,reg_NL3
-	twlti reg_ALLOC,0
-
+	andi. reg_NL3, reg_ALLOC, 1
+	subi reg_ALLOC, reg_ALLOC, 4
+	twnei reg_NL3,0
+	
 	/* Back to C */
 	C_FULL_EPILOG
 	blr
@@ -301,7 +305,9 @@ lra:
 	mr reg_NARGS,reg_NL3
 	
 	/* Turn on pseudo-atomic */
+#if 0	
 	li reg_NL3,-4
+#endif	
 	la reg_ALLOC,4(reg_ALLOC)
 
 	/* Convert the return address to an offset and save it on the stack. */
@@ -322,8 +328,10 @@ lra:
 	store(reg_CSP,reg_CFUNC,_foreign_function_call_active)
 	/* load(reg_POLL,saver2) */
 	/* Disable pseudo-atomic; check pending interrupt */
-	add reg_ALLOC,reg_ALLOC,reg_NL3
-	twlti reg_ALLOC,0
+	andi. reg_NL3, reg_ALLOC, 1
+	subi reg_ALLOC, reg_ALLOC, 4
+	twnei reg_NL3, 0
+	
 	mr reg_NL3,reg_NARGS
 
 	/* PowerOpen (i.e. OS X) requires the callee address in r12
@@ -357,7 +365,9 @@ lra:
 	li reg_LIP,0
 
 	/* Atomic ... */
+#if 0	
 	li reg_NL3,-4
+#endif	
 	li reg_ALLOC,4
 
 	/* No long in foreign function call. */
@@ -380,8 +390,10 @@ lra:
 	la reg_LIP,-type_OtherPointer(reg_LIP)
 
 	/* No longer atomic */
-	add reg_ALLOC,reg_ALLOC,reg_NL3
-	twlti reg_ALLOC,0
+	andi. reg_NL3, reg_ALLOC, 1
+	subi reg_ALLOC, reg_ALLOC, 4
+	twnei reg_NL3, 0
+	
 	mtlr reg_LIP
 	
 	/* Reset the lisp stack. */

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.3 2005/03/18 05:30:50 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.4 2005/04/16 02:03:22 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -103,7 +103,11 @@ arch_pseudo_atomic_atomic(os_context_t *scp)
 void 
 arch_set_pseudo_atomic_interrupted(os_context_t *scp)
 {
+#if 0
   SC_REG(scp, reg_NL3) += PSEUDO_ATOMIC_INTERRUPTED_BIAS;
+#else
+  SC_REG(scp, reg_ALLOC) |= 1;
+#endif
 }
 
 unsigned long 
@@ -170,9 +174,14 @@ sigill_handler(HANDLER_ARGS)
   fflush(stdout);
 #endif
 
-  if (opcode == ((3 << 26) | (16 << 21) | (reg_ALLOC << 16))) {
-    /* twlti reg_ALLOC,0 - check for deferred interrupt */
+  if (opcode == ((3 << 26) | (0x18 << 21) | (reg_NL3 << 16))) {
+    /* Got a twnei reg_NL3,0 - check for deferred interrupt */
+#if 1
+    /* Clear the pseudo-atomic-interrupted bit */
+    SC_REG(context, reg_ALLOC) &= ~1;
+#else
     (SC_REG(context, reg_ALLOC) -= PSEUDO_ATOMIC_INTERRUPTED_BIAS);
+#endif
     arch_skip_instruction(context);
     interrupt_handle_pending(context);
 #ifdef DARWIN

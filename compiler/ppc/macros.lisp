@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.7 2005/04/08 04:11:02 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.8 2005/04/16 02:03:22 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -453,13 +453,11 @@
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
-;;; flag-tn must be wired to NL3. If a deferred interrupt happens
-;;; while we have the low bits of alloc-tn set, we add a "large"
-;;; constant to flag-tn.  On exit, we add flag-tn to alloc-tn
-;;; which (a) aligns alloc-tn again and (b) makes alloc-tn go
-;;; negative.  We then trap if alloc-tn's negative (handling the
-;;; deferred interrupt) and using flag-tn - minus the large constant -
-;;; to correct alloc-tn.
+;;; flag-tn must be wired to NL3.  If a deferred interrupt has
+;;; happened, the low bit of alloc-tn is set.  We transfer this low
+;;; bit to flag-tn and trap if flag-tn is non-zero.  This makes
+;;; pseudo-atomic behave like it does on sparc (except we need an
+;;; extra register to hold the interrupted bit.)
 (defmacro pseudo-atomic ((flag-tn &key (extra 0)) &rest forms)
   (let ((n-extra (gensym)))
     `(let ((,n-extra ,extra))
@@ -469,12 +467,14 @@
 	(progn
 	  (inst andi. ,flag-tn alloc-tn 7)
 	  (inst twi :ne ,flag-tn 0))
-	(inst lr ,flag-tn (- ,n-extra 4))
 	(inst addi alloc-tn alloc-tn 4))
       ,@forms
       (without-scheduling ()
-       (inst add alloc-tn alloc-tn ,flag-tn)
-       (inst twi :lt alloc-tn 0))
+       ;; Grab PA interrupted bit from alloc-tn
+       (inst andi. ,flag-tn alloc-tn 1)
+       ;; Remove PA bit			  
+       (inst subi alloc-tn alloc-tn 4)			  
+       (inst twi :ne ,flag-tn 0))
       #+debug
       (progn
 	(inst andi. ,flag-tn alloc-tn 7)
