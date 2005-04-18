@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.50 2004/12/22 19:25:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.51 2005/04/18 16:38:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1681,7 +1681,7 @@ the end of the stream."
    and the lisp object built by the reader is returned.  Macro chars
    will take effect."
   (declare (string string))
-  (with-array-data ((string string)
+  (with-array-data ((string string :offset-var offset)
 		    (start start)
 		    (end (or end (length string))))
     (unless read-from-string-spares
@@ -1695,7 +1695,7 @@ the end of the stream."
 	  (values (if preserve-whitespace
 		      (read-preserving-whitespace stream eof-error-p eof-value)
 		      (read stream eof-error-p eof-value))
-		  (string-input-stream-current stream))
+		  (- (string-input-stream-current stream) offset))
 	(push stream read-from-string-spares)))))
 
 
