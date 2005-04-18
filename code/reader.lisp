@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.51 2005/04/18 16:38:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.52 2005/04/18 20:12:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,7 +165,9 @@
   ;; than 10).
   
   (defconstant constituent-decimal-digit 13)
-  (defconstant constituent-digit-or-expt 14))
+  (defconstant constituent-digit-or-expt 14)
+  ;; Invalid constituent character
+  (defconstant constituent-invalid 15))
 
 
 ;;;; Package specials.
@@ -272,7 +274,13 @@
   (set-secondary-attribute #\f #.constituent-expt)
   (set-secondary-attribute #\d #.constituent-expt)
   (set-secondary-attribute #\s #.constituent-expt)
-  (set-secondary-attribute #\l #.constituent-expt))
+  (set-secondary-attribute #\l #.constituent-expt)
+  ;; See CLHS 2.1.4.2 for the list of constituent characters that are
+  ;; invalid constituent characters.
+  (set-secondary-attribute #\Space #.constituent-invalid)
+  (set-secondary-attribute #\Newline #.constituent-invalid)
+  (dolist (c '(#\backspace #\tab #\page #\return #\rubout))
+    (set-secondary-attribute c #.constituent-invalid)))
 
 (defmacro get-secondary-attribute (char)
   `(elt secondary-attribute-table
@@ -397,7 +405,6 @@
     (set-cat-entry #\return #.whitespace)
     (set-cat-entry #\\ #.escape)
     (set-cmt-entry #\\ #'read-token)
-    (set-cat-entry #\rubout #.whitespace)
     (set-cmt-entry #\: #'read-token)
     (set-cmt-entry #\| #'read-token)
     ;;macro definitions
@@ -789,9 +796,12 @@
 (defmacro char-class (char attable)
   `(let ((att (aref ,attable (char-code ,char))))
      (declare (fixnum att))
-     (if (<= att #.terminating-macro)
-	 #.delimiter
-	 att)))
+     (cond ((<= att #.terminating-macro)
+	    #.delimiter)
+	   ((= att #.constituent-invalid)
+	    (%reader-error stream "invalid constituent"))
+	   (t
+	    att))))
 
 ;;; return the character class for a char which might be part of a rational
 ;;; number
@@ -799,13 +809,16 @@
 (defmacro char-class2 (char attable)
   `(let ((att (aref ,attable (char-code ,char))))
      (declare (fixnum att))
-     (if (<= att #.terminating-macro)
-	 #.delimiter
-	 (if (digit-char-p ,char *read-base*)
-	     constituent-digit
-	     (if (= att constituent-digit)
-		 constituent
-		 att)))))
+     (cond ((<= att #.terminating-macro)
+	    #.delimiter)
+	   ((digit-char-p ,char *read-base*)
+	    constituent-digit)
+	   ((= att constituent-digit)
+	    constituent)
+	   ((= att constituent-invalid)
+	    (%reader-error stream "invalid constituent"))
+	   (t
+	    att))))
 
 ;;; return the character class for a char which might be part of a rational or
 ;;; floating number (assume that it is a digit if it could be)
@@ -821,15 +834,18 @@
 	 (setq possibly-float
 	       (or (digit-char-p ,char 10)
 		   (= att constituent-dot))))
-     (if (<= att #.terminating-macro)
-	 #.delimiter
-	 (if (digit-char-p ,char (max *read-base* 10))
+     (cond ((<= att #.terminating-macro)
+	    #.delimiter)
+	   ((digit-char-p ,char (max *read-base* 10))
 	     (if (digit-char-p ,char *read-base*)
 		 (if (= att #.constituent-expt)
 		     constituent-digit-or-expt
 		     constituent-digit)
-		 constituent-decimal-digit)
-	     att))))
+		 constituent-decimal-digit))
+	   ((= att constituent-invalid)
+	    (%reader-error stream "invalid constituent"))
+	   (t
+	    att))))
 
 
 
@@ -922,6 +938,7 @@
 	(#.escape (go ESCAPE))
 	(#.package-delimiter (go COLON))
 	(#.multiple-escape (go MULT-ESCAPE))
+	(#.constituent-invalid (%reader-error stream "invalid constituent"))
 	;; can't have eof, whitespace, or terminating macro as first char!
 	(t (go SYMBOL)))
      SIGN ; saw "sign"
