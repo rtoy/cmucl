@@ -124,6 +124,12 @@ New in this release:
       - Pathname components of type :UNSPECIFIC are not printed in
         namestrings anymore.
       - Dumping of symbols in fasls work according to ANSI now.
+      - READ-FROM-STRING was sometimes not returning the correct
+        second value when the string was a displaced string.
+      - The invalid trait for constituent characters is handled
+        better. 
+      - (formatter "~V[...~]" now returns the correct result for
+        second value.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
