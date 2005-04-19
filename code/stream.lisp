@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.78 2005/02/21 17:14:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.79 2005/04/19 18:26:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1164,6 +1164,10 @@ streams."
        (set-closed-flame stream))
       (:file-length
        (error 'type-error :datum stream :expected-type 'file-stream))
+      (:charpos
+       (charpos out))
+      (:line-length
+       (line-length out))
       (t
        (or (if in-lisp-stream-p
 	       (funcall (lisp-stream-misc in) in operation arg1 arg2)
