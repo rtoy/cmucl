@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.52 2005/04/18 20:12:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.53 2005/04/19 15:34:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1624,7 +1624,8 @@ the end of the stream."
   (set-macro-character char #'read-dispatch-char non-terminating-p rt)
   (let ((dalist (dispatch-tables rt)))
     (setf (dispatch-tables rt)
-          (push (cons char (make-char-dispatch-table)) dalist))))
+          (push (cons char (make-char-dispatch-table)) dalist)))
+  t)
 
 (defun set-dispatch-macro-character
        (disp-char sub-char function &optional (rt *readtable*))
