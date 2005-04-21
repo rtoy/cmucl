@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.30 2004/12/14 21:51:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.31 2005/04/21 18:57:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -516,6 +516,7 @@
 ;;; ordering relationship specified by Lessp and Equalp.  The start and end are
 ;;; also gotten from the environment.  Both strings must be simple strings.
 ;;;
+#+(or)
 (dolist (stuff '((string<* t nil)
 		 (string<=* t t)
 		 (string>* nil nil)
@@ -541,6 +542,43 @@
 		    index)
 		   (t nil))
 	     ,(if equalp 'end1 'nil))))))
+
+(dolist (stuff '((string<* t nil)
+		 (string<=* t t)
+		 (string>* nil nil)
+		 (string>=* nil t)))
+  (destructuring-bind (name lessp equalp) stuff
+    (deftransform name ((string1 string2 start1 end1 start2 end2)
+			'(simple-string simple-string t t t t) '*
+			:eval-name t)
+      `(let* ((end1 (if (not end1) (length string1) end1))
+	      (end2 (if (not end2) (length string2) end2))
+	      (index (lisp::%sp-string-compare
+		      string1 start1 end1 string2 start2 end2)))
+	 ;; FIXME: This is basically the macro body from
+	 ;; string<>=*-body in string.lisp, except I manually replaced
+	 ;; the offset1 var with 0 and simplified.  We should combine
+	 ;; these into one macro.
+	 (if index
+	     (cond ((= index end1)
+		    ,(if lessp
+			 `index
+			 `nil))
+		   ((= (+ index (- start2 start1))
+		       end2)
+		    ,(if lessp
+			 `nil
+			 `index))
+		   ((,(if lessp 'char< 'char>)
+		     (schar string1 index)
+		     (schar string2
+			    (truly-the index
+				       (+ index
+					  (truly-the fixnum
+						     (- start2 start1))))))
+		    index)
+		   (t nil))
+	     ,(if equalp `end1 'nil))))))
 
 
 (dolist (stuff '((string=* not)
