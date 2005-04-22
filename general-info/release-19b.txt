@@ -130,6 +130,9 @@ New in this release:
         better. 
       - (formatter "~V[...~]" now returns the correct result for
         second value.
+      - MAKE-DISPATCH-MACRO-CHARACTER is supposed to return T.
+      - APROPOS and APROPOS-LIST don't take 3 args anymore.  ANSI CL
+        says they only take 2.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -200,6 +203,15 @@ New in this release:
       - ~G output always had a zero for the last digit when
         exponential form was used.  Fix this so the last digit has the
         correct digit.
+      - Output to (make-two-way-stream (make-concatenated-stream)
+        (make-broadcast-stream)) silently discards output instead of
+        producing an error.
+      - STRING<, STRING<=, STRING>, STRING>= no longer produces
+        incorrect results.
+      - COPY-SEQ sometimes produced erroneous results because the
+        compiler was confused by the derived result type of COPY-SEQ.
+      - Many (all?) compiler failures about a STRANGE-TEMPLATE-FAILURE
+        should be fixed.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
