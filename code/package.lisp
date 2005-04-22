@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.73 2004/10/19 15:23:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.74 2005/04/22 15:01:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1891,23 +1891,23 @@
 
 ;;; APROPOS -- public.
 ;;; 
-(defun apropos (string &optional package external-only)
+(defun apropos (string &optional package)
   "Briefly describe all symbols which contain the specified STRING.
   If PACKAGE is supplied then only describe symbols present in
   that package.  If EXTERNAL-ONLY is non-NIL then only describe
   external symbols in the specified package."
-  (map-apropos #'briefly-describe-symbol string package external-only)
+  (map-apropos #'briefly-describe-symbol string package)
   (values))
 
 ;;; APROPOS-LIST -- public.
 ;;; 
-(defun apropos-list (string &optional package external-only)
+(defun apropos-list (string &optional package)
   "Identical to APROPOS, except that it returns a list of the symbols
   found instead of describing them."
   (collect ((result))
     (map-apropos #'(lambda (symbol)
 		     (result symbol))
-		 string package external-only)
+		 string package)
     (result)))
 
 

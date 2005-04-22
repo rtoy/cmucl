@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.130 2005/04/22 14:00:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.131 2005/04/22 15:01:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1100,8 +1100,8 @@
   t)
 (defknown dribble (&optional filename &key (:if-exists t)) (values))
 
-(defknown apropos (stringable &optional packagelike t) (values))
-(defknown apropos-list (stringable &optional packagelike t) list (flushable))
+(defknown apropos (stringable &optional packagelike) (values))
+(defknown apropos-list (stringable &optional packagelike) list (flushable))
 
 (defknown get-decoded-time ()
   (values (integer 0 59) (integer 0 59) (integer 0 23) (integer 1 31)
