@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.5 2005/04/16 14:42:19 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.6 2005/04/22 02:28:57 rtoy Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -39,7 +39,9 @@
     (storew length vector vm:vector-length-slot vm:other-pointer-type))
   ;; Like the sparc port, we need to touch the last word to make sure
   ;; this page is paged in.  Do we need to touch all pages?
-  (storew zero-tn alloc-tn -1)
+  ;;
+  ;; FIXME: This seems to cause some problems.  Turn it off for now.
+  ;; (storew zero-tn alloc-tn -1)
   (move result vector))
 
 
