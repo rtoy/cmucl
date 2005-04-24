@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.100 2004/09/23 13:16:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.101 2005/04/24 01:59:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -360,6 +360,15 @@
 	  (setf new-hi (scale-bound f-hi ex-hi)))
 	(when (and f-lo ex-lo)
 	  (setf new-lo (scale-bound f-lo ex-lo)))
+	;; We're computing bounds for scale-float.  Assume the bounds
+	;; on f are fl and fh, and the bounds on ex are nl and nh.
+	;; The resulting bound should be fl*2^nl and fh*2^nh.
+	;; However, if fh is negative, and we get an underflow, we
+	;; might get bounds like 0 and fh*2^nh < 0.  Our bounds are
+	;; backwards.  Thus, swap the bounds to get the correct
+	;; bounds.
+	(when (and new-lo new-hi (< new-hi new-lo))
+	  (rotatef new-lo new-hi))
 	(make-numeric-type :class (numeric-type-class f)
 			   :format (numeric-type-format f)
 			   :complexp :real
