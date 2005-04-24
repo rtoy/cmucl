@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.69 2005/02/21 14:52:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.70 2005/04/24 02:38:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1151,7 +1151,7 @@
 	(if (and (numberp highest) (numberp type-hi))
 	    (setf highest (max highest type-hi))
 	    (setf highest nil))))
-    (list (specifier-type `(integer ,(or lowest *) ,(or highest *))))))
+    (list (specifier-type `(integer ,(or lowest '*) ,(or highest '*))))))
 	
 
 (defparameter *union-length-threshold* 50
