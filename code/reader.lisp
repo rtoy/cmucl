@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.53 2005/04/19 15:34:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.54 2005/04/28 20:23:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1129,12 +1129,12 @@
      RATIODIGIT ; saw "[sign] {digit}+ slash {digit}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (return (make-ratio)))
+      (unless char (return (make-ratio stream)))
       (case (char-class2 char attribute-table)
 	(#.constituent-digit (go RATIODIGIT))
 	(#.delimiter
 	 (unread-char char stream)
-	 (return (make-ratio)))
+	 (return (make-ratio stream)))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1575,7 +1575,7 @@ the end of the stream."
   (coerce (/ number divisor) float-format))
 
 
-(defun make-ratio ()
+(defun make-ratio (stream)
   ;;assume *read-buffer* contains a legal ratio.  Build the number from
   ;;the string.
   ;;look for optional "+" or "-".
@@ -1598,6 +1598,10 @@ the end of the stream."
 	  (dig ()))
 	 ((or (eofp ch) (not (setq dig (digit-char-p ch *read-base*)))))
 	 (setq denominator (+ (* denominator *read-base*) dig)))
+    (when (zerop denominator)
+      (%reader-error stream "Invalid ratio: ~S/~S"
+		     (if negative-number (- numerator) numerator)
+		     denominator))
     (let ((num (/ numerator denominator)))
       (if negative-number (- num) num))))
 
