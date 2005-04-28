@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.24 2003/03/22 16:15:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.25 2005/04/28 20:32:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,27 +46,32 @@
 
 (defun sharp-left-paren (stream ignore length)
   (declare (ignore ignore) (special *backquote-count*))
-  (let* ((list (read-list stream nil))
-	 (listlength (length list)))
-    (declare (list list)
-	     (fixnum listlength))
-    (cond (*read-suppress* nil)
-	  ((zerop *backquote-count*)
-	   (if length
-	       (cond ((> listlength (the fixnum length))
-		      (%reader-error
-		       stream
-		       "Vector longer than specified length: #~S~S"
-		       length list))
-		     (t
-		      (fill (the simple-vector
-				 (replace (the simple-vector
-					       (make-array length))
-					  list))
-			    (car (last list))
-			    :start listlength)))
-	       (coerce list 'vector)))
-	  (t (cons *bq-vector-flag* list)))))
+  (let* ((list (read-list stream nil)))
+    ;; Watch out for badly formed list (dotted list) and signal an
+    ;; error if so.  Do we need to check for other kinds of badly
+    ;; formed lists?
+    (when (cdr (last list))
+      (%reader-error stream "Ill-formed vector: #~S" list))
+    (let ((listlength (length list)))
+      (declare (list list)
+	       (fixnum listlength))
+      (cond (*read-suppress* nil)
+	    ((zerop *backquote-count*)
+	     (if length
+		 (cond ((> listlength (the fixnum length))
+			(%reader-error
+			 stream
+			 "Vector longer than specified length: #~S~S"
+			 length list))
+		       (t
+			(fill (the simple-vector
+				(replace (the simple-vector
+					   (make-array length))
+					 list))
+			      (car (last list))
+			      :start listlength)))
+		 (coerce list 'vector)))
+	    (t (cons *bq-vector-flag* list))))))
 
 (defun sharp-star (stream ignore numarg)
   (declare (ignore ignore))
