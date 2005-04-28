@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.29 2004/08/04 18:37:25 cwang Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.30 2005/04/28 20:25:48 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -1483,6 +1483,13 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     fflush(stdout);
 #endif
 
+#ifdef GENCGC
+    /* Flush the current_region updating the tables. */
+    gc_alloc_update_page_tables(0,&boxed_region);
+    gc_alloc_update_page_tables(1,&unboxed_region);
+#endif    
+
+#if     
     if (fixnum_value(SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX)) != 0) {
         printf(" Ack! Can't purify interrupt contexts. ");
         fflush(stdout);
