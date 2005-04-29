@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.101 2005/04/24 01:59:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.102 2005/04/29 13:35:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -375,12 +375,9 @@
 			   :low new-lo
 			   :high new-hi)))))
 ;;;
-(defoptimizer (scale-single-float derive-type) ((f ex))
+(defoptimizer (scale-float derive-type) ((f ex))
   (two-arg-derive-type f ex #'scale-float-derive-type-aux
-		       #'scale-single-float t))
-(defoptimizer (scale-double-float derive-type) ((f ex))
-  (two-arg-derive-type f ex #'scale-float-derive-type-aux
-		       #'scale-double-float t))
+		       #'scale-float t))
 	     
 ;;; toy@rtp.ericsson.se:
 ;;;
