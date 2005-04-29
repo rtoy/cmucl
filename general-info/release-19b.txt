@@ -133,6 +133,9 @@ New in this release:
       - MAKE-DISPATCH-MACRO-CHARACTER is supposed to return T.
       - APROPOS and APROPOS-LIST don't take 3 args anymore.  ANSI CL
         says they only take 2.
+      - A reader error is signaled when bad ratios (like 1/0) are
+        read. 
+      - A form like #(1 . 2) signals a reader error now.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -212,6 +215,10 @@ New in this release:
         compiler was confused by the derived result type of COPY-SEQ.
       - Many (all?) compiler failures about a STRANGE-TEMPLATE-FAILURE
         should be fixed.
+      - Type derivation for LOGAND is fixed.  (Affects LOGAND and
+        LOGBITP.)
+      - Type derivation for SCALE-FLOAT is fixed.  Should also work
+        better on x86.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
@@ -233,6 +240,9 @@ New in this release:
       - REQUIRE no longer disables package-locks when loading
         requested file.  But package-locks are disabled for CMUCL's
         own system libraries like gray-streams, clx, etc.
+      - CMUCL should fail gracefully if something is already mapped at
+        addresses CMUCL wants for itself.  Previously, CMUCL would
+        just use it.
 
   * Improvements to the PCL implementation of CLOS:
       - AMOP-style custom slot allocation supported.
