@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.54 2005/04/28 20:23:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.55 2005/04/30 12:35:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1045,13 +1045,13 @@
      RIGHTDIGIT ; saw "[sign] {decimal-digit}* dot {digit}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (return (make-float)))
+      (unless char (return (make-float stream)))
       (case (char-class char attribute-table)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-expt (go EXPONENT))
 	(#.delimiter
 	 (unread-char char stream)
-	 (return (make-float)))
+	 (return (make-float stream)))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1105,12 +1105,12 @@
      EXPTDIGIT ; got to EXPONENT, saw "[sign] {digit}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (return (make-float)))
+      (unless char (return (make-float stream)))
       (case (char-class char attribute-table)
 	(#.constituent-digit (go EXPTDIGIT))
 	(#.delimiter
 	 (unread-char char stream)
-	 (return (make-float)))
+	 (return (make-float stream)))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1333,13 +1333,6 @@
 
 ;;;; Number reading functions.
 
-#+nil
-(defmacro digit* nil
-  `(do ((ch char (inch-read-buffer)))
-       ((or (eofp ch) (not (digit-char-p ch))) (setq char ch))
-     ;;report if at least one digit is seen:
-     (setq one-digit t)))
-
 (defmacro exponent-letterp (letter)
   `(memq ,letter '(#\E #\S #\F #\L #\D #\e #\s #\f #\l #\d)))
 
@@ -1360,7 +1353,8 @@
 
 (declaim (simple-vector *integer-reader-safe-digits*
 			*integer-reader-base-power*))
-#|
+#||
+;; This function was used to initialize the variables above.
 (defun init-integer-reader ()
   (do ((base 2 (1+ base)))
       ((> base 36))
@@ -1374,38 +1368,6 @@
 	    (aref *integer-reader-base-power* base)
 	    (expt base digits)))))
 |#
-
-#+nil
-(defun make-integer ()
-  "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
-  then multiplying by a power of the base and adding."
-  (let* ((base *read-base*)
-	 (digits-per (aref *integer-reader-safe-digits* base))
-	 (base-power (aref *integer-reader-base-power* base)) 
-	 (negativep nil)
-	 (number 0))
-    (declare (type index digits-per base-power))
-    (read-unwind-read-buffer)
-    (let ((char (inch-read-buffer)))
-      (cond ((char= char #\-)
-	     (setq negativep t))
-	    ((char= char #\+))
-	    (t (unread-buffer))))
-    (loop
-     (let ((num 0))
-       (declare (type index num))
-       (dotimes (digit digits-per)
-	 (let* ((ch (inch-read-buffer)))
-	   (cond ((or (eofp ch) (char= ch #\.))
-		  (return-from make-integer
-			       (let ((res
-				      (if (zerop number) num
-					  (+ num (* number
-						    (expt base digit))))))
-				 (if negativep (- res) res))))
-		 (t (setq num (+ (digit-char-p ch base)
-				 (the index (* num base))))))))
-       (setq number (+ num (* number base-power)))))))
 
 (defun make-integer ()
   "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
@@ -1504,7 +1466,7 @@ the end of the stream."
 	       (scan ch nil)))))))
 
 
-(defun make-float ()
+(defun make-float (stream)
   ;; Assume that the contents of *read-buffer* are a legal float, with nothing
   ;; else after it.
   (read-unwind-read-buffer)
@@ -1538,7 +1500,8 @@ the end of the stream."
     (cond ((eofp char)
            ;; If not, we've read the whole number.
            (let ((num (make-float-aux number divisor
-                                      *read-default-float-format*)))
+                                      *read-default-float-format*
+				      stream)))
              (return-from make-float (if negative-fraction (- num) num))))
           ((exponent-letterp char)
            (setq float-char char)
@@ -1564,15 +1527,19 @@ the end of the stream."
                                   (#\D 'double-float)
                                   (#\L 'long-float)))
                   num)
-	     (setq num (make-float-aux (* (expt 10 exponent) number) divisor float-format))
+	     (setq num (make-float-aux (* (expt 10 exponent) number) divisor
+				       float-format stream))
 
 	     (return-from make-float (if negative-fraction
                                              (- num)
                                              num))))
 	  (t (error "Internal error in floating point reader.")))))
 
-(defun make-float-aux (number divisor float-format)
-  (coerce (/ number divisor) float-format))
+(defun make-float-aux (number divisor float-format stream)
+  (handler-case 
+      (coerce (/ number divisor) float-format)
+    (error ()
+	   (%reader-error stream "Floating-point number not representable"))))
 
 
 (defun make-ratio (stream)
