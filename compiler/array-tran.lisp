@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.38 2005/02/25 17:14:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.39 2005/05/02 13:55:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -491,7 +491,7 @@
 	     t)
 	    ((nil)
 	     nil)
-	    (*
+	    (:maybe
 	     (give-up "Array type ambiguous; must call ~
 	              array-has-fill-pointer-p at runtime.")))))))
 
