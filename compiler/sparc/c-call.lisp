@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.23 2004/10/24 16:58:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.24 2005/05/03 20:20:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -388,7 +388,7 @@ pointer to the arguments."
 	     (%l0 (def-reg-tn vm::a0-offset))
 	     (%i0 (def-reg-tn vm::cname-offset))
 	     (%i1 (def-reg-tn vm::lexenv-offset))
-	     (%i2 (def-reg-tn vm::l0-offset))
+	     (%i2 (def-reg-tn 26))
 	     (%i3 (def-reg-tn vm::nfp-offset))
 	     (%i4 (def-reg-tn vm::cfunc-offset))
 	     (%i5 (def-reg-tn vm::code-offset))
