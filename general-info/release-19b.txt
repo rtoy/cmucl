@@ -19,6 +19,7 @@ over the Internet, and is mostly in the public domain.
 New in this release:
        
   * Feature enhancements:
+      - CMUCL ported to Mac OS X.
       - Added a much faster and much less consy bignum printer and a
         faster bignum reader.
       - Extended REQUIRE to support *MODULE-PROVIDER-FUNCTIONS* from
@@ -133,8 +134,8 @@ New in this release:
       - MAKE-DISPATCH-MACRO-CHARACTER is supposed to return T.
       - APROPOS and APROPOS-LIST don't take 3 args anymore.  ANSI CL
         says they only take 2.
-      - A reader error is signaled when bad ratios (like 1/0) are
-        read. 
+      - A reader error is signaled when bad ratios (like 1/0) are read
+        or when a float can't fit into the specified float type.
       - A form like #(1 . 2) signals a reader error now.
 
   * Numerous bugfixes:
@@ -219,6 +220,8 @@ New in this release:
         LOGBITP.)
       - Type derivation for SCALE-FLOAT is fixed.  Should also work
         better on x86.
+      - generic-site.lisp won't give an error when updating
+        *HERALD-ITEMS* when the -quiet flag is used.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
@@ -240,9 +243,9 @@ New in this release:
       - REQUIRE no longer disables package-locks when loading
         requested file.  But package-locks are disabled for CMUCL's
         own system libraries like gray-streams, clx, etc.
-      - CMUCL should fail gracefully if something is already mapped at
-        addresses CMUCL wants for itself.  Previously, CMUCL would
-        just use it.
+      - CMUCL should fail gracefully on x86 if something is already
+        mapped at addresses CMUCL wants for itself.  Previously, CMUCL
+        would just use it.
 
   * Improvements to the PCL implementation of CLOS:
       - AMOP-style custom slot allocation supported.
