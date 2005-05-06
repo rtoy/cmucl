@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.171 2004/08/30 14:55:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.172 2005/05/06 16:42:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1997,9 +1997,9 @@
 		 :type (leaf-type var)
 		 :where-from (leaf-where-from var))))
 
-    (let* ((n-context (gensym))
+    (let* ((n-context (gensym "N-CONTEXT-"))
 	   (context-temp (make-lambda-var :name n-context))
-	   (n-count (gensym))
+	   (n-count (gensym "N-COUNT-"))
 	   (count-temp (make-lambda-var :name n-count
 					:type (specifier-type 'index)))
 	   (*lexical-environment*
@@ -2016,11 +2016,11 @@
 	(arg-vals n-count))
 
       (when (optional-dispatch-keyp res)
-	(let ((n-index (gensym))
-	      (n-key (gensym))
-	      (n-value-temp (gensym))
-	      (n-allowp (gensym))
-	      (n-losep (gensym))
+	(let ((n-index (gensym "N-INDEX-"))
+	      (n-key (gensym "N-KEY-"))
+	      (n-value-temp (gensym "N-VALUE-TEMP"))
+	      (n-allowp (gensym "N-ALLOWP-"))
+	      (n-losep (gensym "N-LOSEP-"))
 	      (allowp (or (optional-dispatch-allowp res)
 			  (policy nil (zerop safety)))))
 	  
@@ -2033,10 +2033,10 @@
 		     (default (arg-info-default info))
 		     (keyword (arg-info-keyword info))
 		     (supplied-p (arg-info-supplied-p info))
-		     (n-value (gensym)))
+		     (n-value (gensym "N-VALUE-")))
 		(temps `(,n-value ,default))
 		(cond (supplied-p
-		       (let ((n-supplied (gensym)))
+		       (let ((n-supplied (gensym "N-SUPPLIED-")))
 			 (temps n-supplied)
 			 (arg-vals n-value n-supplied)
 			 (tests `((eq ,n-key ',keyword)
@@ -2052,7 +2052,7 @@
 	      (tests `((eq ,n-key :allow-other-keys)
 		       (setq ,n-allowp ,n-value-temp)))
 	      (tests `(t
-		       (setq ,n-losep ,n-key))))
+		       (setq ,n-losep ,n-index))))
 
 	    (body
 	     `(when (oddp ,n-count)
@@ -2066,12 +2066,13 @@
 		  (setf ,n-value-temp (%more-arg ,n-context ,n-index))
 		  (decf ,n-index)
 		  (setq ,n-key (%more-arg ,n-context ,n-index))
-		  (decf ,n-index)
-		  (cond ,@(tests)))))
+		  (cond ,@(tests))
+		  (decf ,n-index))))
 
 	    (unless allowp
 	      (body `(when (and ,n-losep (not ,n-allowp))
-		       (%unknown-keyword-argument-error ,n-losep)))))))
+		       (%unknown-keyword-argument-error
+			(%more-arg ,n-context ,n-losep))))))))
       
       (let ((ep (ir1-convert-lambda-body
 		 `((let ,(temps)
