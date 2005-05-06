@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.55 2005/04/30 12:35:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.56 2005/05/06 20:36:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -655,7 +655,9 @@
 	    (let ((nextchar (read-char stream t)))
 	      (cond ((token-delimiterp nextchar)
 		     (cond ((eq listtail thelist)
-			    (%reader-error stream "Nothing appears before . in list."))
+			    (if *read-suppress*
+				(return-from read-list nil)
+				(%reader-error stream "Nothing appears before . in list.")))
 			   ((whitespacep nextchar)
 			    (setq nextchar (flush-whitespace stream))))
 		     (rplacd listtail
