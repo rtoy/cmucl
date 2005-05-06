@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.47 2005/04/10 15:01:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.48 2005/05/06 16:41:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2996,13 +2996,21 @@
 
 ;;; ----------------------------------------------------------------
 
+(defun fun-header-pc (function)
+  "Return the PC of FUNCTION's header."
+  (declare (type compiled-function function))
+  (let ((code (fun-code function)))
+    (* (- (kernel:function-word-offset function)
+	  (kernel:get-header-data code)) ; i.e code header length
+       vm:word-bytes)))
+
 (defun get-function-segments (function)
   "Returns a list of the segments of memory containing machine code
   instructions for FUNCTION."
   (declare (type compiled-function function))
   (let* ((code (fun-code function))
+	 (header-pc (fun-header-pc function))
 	 (function-map (code-function-map code))
-	 (fname (kernel:%function-name function))
 	 (sfcache (make-source-form-cache)))
     (let ((first-block-seen-p nil)
 	  (nil-block-seen-p nil)
@@ -3026,16 +3034,16 @@
 		 (setf last-debug-function nil))
 	       (setf last-offset fmap-entry))
 	      (c::compiled-debug-function
-	       (let ((name (c::compiled-debug-function-name fmap-entry))
+	       (let ((start-pc 
+		      (c::compiled-debug-function-start-pc fmap-entry))
 		     (kind (c::compiled-debug-function-kind fmap-entry)))
 		 #+nil
-		 (format t ";;; SAW ~s ~s ~s,~s ~d,~d~%"
+		 (format t ";;; SAW ~s ~s ~s,~s ~d,~d [~d]~%"
 			 name kind first-block-seen-p nil-block-seen-p
-			 last-offset
-			 (c::compiled-debug-function-start-pc fmap-entry))
-		 (cond (#+nil (eq last-offset fun-offset)
-			      (and (equal name fname) (not first-block-seen-p))
-			      (setf first-block-seen-p t))
+			 last-offset start-pc header-pc)
+		 (cond ((and (<= last-offset header-pc start-pc)
+			     (not first-block-seen-p))
+			(setf first-block-seen-p t))
 		       ((eq kind :external)
 			(when first-block-seen-p
 			  (return)))
@@ -3045,8 +3053,7 @@
 			(when first-block-seen-p
 			  (setf nil-block-seen-p t))))
 		 (setf last-debug-function
-		       (di::make-compiled-debug-function fmap-entry code))
-		 )))))
+		       (di::make-compiled-debug-function fmap-entry code)))))))
 	(let ((max-offset (code-inst-area-length code)))
 	  (when (and first-block-seen-p last-debug-function)
 	    (add-seg last-offset
