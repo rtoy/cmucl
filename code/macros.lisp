@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.103 2004/12/15 16:21:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.104 2005/05/09 20:22:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1510,15 +1510,15 @@
 (defun check-type-error (place place-value type type-string)
   (let ((cond (if type-string
 		  (make-condition 'simple-type-error
-				  :datum place :expected-type type
+				  :datum place-value :expected-type type
 				  :format-control
 				  "The value of ~S is ~S, which is not ~A."
 				  :format-arguments
 				  (list place place-value type-string))
 		  (make-condition 'simple-type-error
-				  :datum place :expected-type type
+				  :datum place-value :expected-type type
 				  :format-control
-			  "The value of ~S is ~S, which is not of type ~S."
+				  "The value of ~S is ~S, which is not of type ~S."
 				  :format-arguments
 				  (list place place-value type)))))
     (restart-case (error cond)
