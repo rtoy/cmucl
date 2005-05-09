@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.22 2004/10/23 18:10:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.23 2005/05/09 13:27:02 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,8 +162,8 @@
     (let ((size (+ length closure-info-offset)))
       (with-fixed-allocation (result temp closure-header-type size
 				     :lowtag function-pointer-type
-				     :stack-p dynamic-extent))
-      (storew function result closure-function-slot function-pointer-type))))
+				     :stack-p dynamic-extent)
+	(storew function result closure-function-slot function-pointer-type)))))
 
 ;;; The compiler likes to be able to directly make value cells.
 ;;; 
@@ -173,8 +173,8 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (with-fixed-allocation
-	(result temp value-cell-header-type value-cell-size))
-    (storew value result value-cell-value-slot other-pointer-type)))
+	(result temp value-cell-header-type value-cell-size)
+      (storew value result value-cell-value-slot other-pointer-type))))
 
 
 
