@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.39 2004/10/09 14:36:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.40 2005/05/09 16:02:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,6 +157,10 @@
 		  (setf (symbol-plist symbol) (cddr pl))))
 	   (return pl)))))
 
+(defun valid-property-list-p (list)
+  (let ((result (proper-list-p list)))
+    (and result (evenp result))))
+
 (defun getf (place indicator &optional (default ()))
   "Searches the property list stored in Place for an indicator EQ to Indicator.
   If one is found, the corresponding value is returned, else the Default is
@@ -166,7 +170,7 @@
     (cond ((atom (cdr plist))
 	   (error 'simple-type-error
 		  :datum place
-		  :expected-type 'list
+		  :expected-type '(satisfies valid-property-list-p)
 		  :format-control "Malformed property list: ~S"
 		  :format-arguments (list place)))	   
 	  ((eq (car plist) indicator)
@@ -191,7 +195,7 @@
     (cond ((atom (cdr plist))
 	   (error 'simple-type-error
 		  :datum place
-		  :expected-type 'list
+		  :expected-type '(satisfies valid-property-list-p)
 		  :format-control "Malformed property list: ~S"
 		  :format-arguments (list place)))
 	  ((memq (car plist) indicator-list)
