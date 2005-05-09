@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.70 2005/04/24 02:38:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.71 2005/05/09 15:56:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2741,8 +2741,8 @@
 				dims1 dims2))))
 	   (values nil t))
 	  ;; See whether complexpness is compatible.
-	  ((not (or (eq complexp1 :maybe)
-		    (eq complexp2 :maybe)
+	  ((not (or complexp1
+		    complexp2
 		    (eq complexp1 complexp2)))
 	   (values nil t))
 	  ;; Old comment:
