@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.43 2004/05/06 14:36:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.44 2005/05/09 13:09:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -151,7 +151,8 @@
 	(element-type (array-element-type x)))
     (cond ((= rank 1)
 	   (format t "~&~S is a ~:[~;displaced ~]vector of length ~D." x
-		   (and (array-header-p x) (%array-displaced-p x)) (length x))
+		   (and (array-header-p x) (%array-displaced-p x))
+		   (array-dimension x 0))
 	   (if (array-has-fill-pointer-p x)
 	       (format t "~&It has a fill pointer, currently ~d"
 		       (fill-pointer x))
@@ -162,7 +163,9 @@
 	   (format t " array of rank ~A." rank)
 	   (format t "~%Its dimensions are ~S." (array-dimensions x))))
     (unless (eq t element-type)
-      (format t "~&Its element type is specialized to ~S." element-type))))
+      (format t "~&Its element type is specialized to ~S." element-type))
+    (unless (adjustable-array-p x)
+      (format t "~&It is adjustable."))))
 
 (defun describe-fixnum (x)
   (cond ((not (or *describe-verbose* (zerop *current-describe-level*))))
