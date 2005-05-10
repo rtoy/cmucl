@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.34 2005/05/09 16:02:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.35 2005/05/10 17:58:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -393,8 +393,12 @@
        (3rd y 2nd))		;3rd follows 2nd down the list.
       ((atom 2nd)
        (if 2nd
+	   ;; KLUDGE.  The datum here is wrong.  We really want X, but
+	   ;; we've already trashed it by the time we get here.  So
+	   ;; use 2nd.  (We could check X before doing anything, but
+	   ;; that makes this more expensive, so we don't.)
 	   (error 'simple-type-error
-		  :datum x
+		  :datum 2nd
 		  :expected-type 'list
 		  :format-control "First argument is not a proper list."
 		  :format-arguments nil)
