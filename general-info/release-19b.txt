@@ -137,6 +137,15 @@ New in this release:
       - A reader error is signaled when bad ratios (like 1/0) are read
         or when a float can't fit into the specified float type.
       - A form like #(1 . 2) signals a reader error now.
+      - NIL as a keyword arg is no longer silently accepted, unless
+        NIL was actually a specified keyword arg.
+      - Some cases of reader errors being signaled when
+        *READ-SUPPRESS* was T no longer occur.
+      - The datum slot for check-type contains the place-value now
+        instead of the place.
+      - The expected-type and datum should be consistent in
+        type-errors now.  (datum is not of the expected-type.)
+        Similar situations in other errors are also corrected.
 
   * Numerous bugfixes:
       - FFLOOR and friends preserve the sign of the arg, so -0.0 is
@@ -219,9 +228,13 @@ New in this release:
       - Type derivation for LOGAND is fixed.  (Affects LOGAND and
         LOGBITP.)
       - Type derivation for SCALE-FLOAT is fixed.  Should also work
-        better on x86.
+        better on x86.  (But there are still bugs in x86's handling of
+        single-floats.)
       - generic-site.lisp won't give an error when updating
         *HERALD-ITEMS* when the -quiet flag is used.
+      - The disassembler handles closures better.
+      - The result array for bit-* operations was sometimes too short
+        if the args had fill pointers.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
