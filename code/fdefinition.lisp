@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.25 2003/05/24 10:47:35 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.26 2005/05/11 12:15:05 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,25 +67,34 @@
   and in similar situations."
   (typecase name
     (cons
-     (when (and (symbolp (car name))
-		(consp (cdr name)))
-       (let ((syntax-checker (cdr (assoc (car name) *valid-function-names*
-					 :test #'eq))))
-	 (when syntax-checker
-	   (funcall syntax-checker name)))))
+     (cond
+       ((and (symbolp (car name))
+	     (consp (cdr name)))
+	(let ((syntax-checker (cdr (assoc (car name) *valid-function-names*
+					  :test #'eq))))
+	  (if syntax-checker
+	      (funcall syntax-checker name)
+	      (values nil name))))
+       (t
+	(values nil name))))
     (symbol (values t name))
-    (otherwise nil)))
+    (otherwise (values nil name))))
 
 (define-function-name-syntax setf (name)
   (destructuring-bind (setf fn &rest rest) name
     (declare (ignore setf))
-    (when (null rest)
-      (typecase fn
-	(symbol
-	 (values t fn))
-	(cons
-	 (unless (eq 'setf (car fn))
-	   (valid-function-name-p fn)))))))
+    (if rest
+	(values nil name)
+	(typecase fn
+	  (symbol
+	   (values t fn))
+	  (cons
+	   (cond ((eq 'setf (car fn))
+		  (values nil fn))
+		 (t
+		  (valid-function-name-p fn))))
+	  (otherwise
+	   (values nil fn))))))
 
 (define-function-name-syntax :macro (name)
   (when (eql 2 (length name))
@@ -149,12 +158,14 @@
   "Return the fdefn object for NAME.  If it doesn't already exist and CREATE
    is non-NIL, create a new (unbound) one."
   (declare (values (or fdefn null)))
-  (unless (valid-function-name-p name)
-    (error 'simple-type-error
-	   :datum name
-	   :expected-type '(or symbol list)
-	   :format-control "Invalid function name: ~S"
-	   :format-arguments (list name)))
+  (multiple-value-bind (valid-name-p fname)
+      (valid-function-name-p name)
+    (unless valid-name-p
+      (error 'simple-type-error
+	     :datum fname
+	     :expected-type '(satisfies valid-function-name-p)
+	     :format-control "Invalid function name: ~S"
+	     :format-arguments (list name))))
   (let ((fdefn (info function definition name)))
     (if (and (null fdefn) create)
 	(setf (info function definition name) (make-fdefn name))
