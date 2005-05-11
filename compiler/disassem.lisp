@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.48 2005/05/06 16:41:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.49 2005/05/11 13:43:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3260,7 +3260,11 @@
 	      (eq (car thing) 'lisp::lambda))
 	 (compile nil thing))
 	(t
-	 (error "Can't make a compiled function from ~S" name))))
+	 (error 'simple-type-error
+		:datum name
+		:expected-type '(satisfies valid-function-name-p)
+		:format-control "Can't make a compiled function from ~S"
+		:format-arguments (list name)))))
 
 (defun disassemble (object &key (stream *standard-output*)
 			   (use-labels t)
