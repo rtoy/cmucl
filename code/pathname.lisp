@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.72 2004/12/23 16:22:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.73 2005/05/11 13:51:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -732,7 +732,21 @@ a host-structure or string."
     (let ((d (or (member :wild-inferiors dir)
 		 (member :absolute dir))))
       (when (and d (rest d) (member (second d) '(:up :back)))
-	(error 'file-error)))
+	;; What should we put in the for pathname part of file-error?
+	;; I'm just going to use the directory but removing the
+	;; offending :up or :back.  Or would just (make-pathname) be
+	;; enough?
+	;;
+	;; Or instead of checking here, we could check whenever we
+	;; "use" the file system (CLHS 19.2.2.4.3).  But that's a lot
+	;; harder to do.
+	(error 'simple-file-error
+	       :pathname (make-pathname :directory (remove-if #'(lambda (x)
+								  (member x '(:up :back)))
+							      dir))
+	       :format-control "Illegal pathname: ~
+                                Directory with ~S immediately followed by ~S"
+	       :format-arguments (list (first d) (second d)))))
     
     (macrolet ((pick (var varp field)
 		 `(cond ((or (simple-string-p ,var)
