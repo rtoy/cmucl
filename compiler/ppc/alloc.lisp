@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.10 2005/04/08 04:11:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.11 2005/05/14 00:48:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -169,8 +169,8 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (with-fixed-allocation
-	(result pa-flag temp value-cell-header-type value-cell-size))
-    (storew value result value-cell-value-slot other-pointer-type)))
+     (result pa-flag temp value-cell-header-type value-cell-size)
+     (storew value result value-cell-value-slot other-pointer-type))))
 
 
 
