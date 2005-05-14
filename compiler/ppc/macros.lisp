@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.8 2005/04/16 02:03:22 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.9 2005/05/14 02:24:01 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -175,14 +175,15 @@
   Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
   by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
   initializes the object."
-  (once-only ((result-tn result-tn) (temp-tn temp-tn) (flag-tn flag-tn)
-	      (type-code type-code) (size size))
+  (once-only ((result-tn result-tn) (temp-tn temp-tn)
+	      (type-code type-code) (size size)
+	      (lowtag lowtag) (flag-tn flag-tn))
     `(pseudo-atomic (,flag-tn)
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
 		   :temp-tn temp-tn)
        (when ,type-code
 	 (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
-	 (storew ,temp-tn ,result-tn 0 other-pointer-type))
+	 (storew ,temp-tn ,result-tn 0 ,lowtag))
        ,@body)))
 
 
