@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.11 2005/05/14 00:48:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.12 2005/05/14 02:22:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,12 +190,9 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
   (:generator 4
-    ;; Could this be replaced with with-fixed-allocation?
-    (pseudo-atomic (pa-flag)
-      (allocation result (pad-data-block words) lowtag :temp-tn temp)
-      (when type
-	(inst lr temp (logior (ash (1- words) type-bits) type))
-	(storew temp result 0 lowtag)))))
+    (with-fixed-allocation (result pa-flag temp type words :lowtag lowtag)
+      )))
+))
 
 (define-vop (var-alloc)
   (:args (extra :scs (any-reg)))
