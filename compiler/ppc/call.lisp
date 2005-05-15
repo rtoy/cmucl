@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.6.2.1 2005/04/05 03:41:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.6.2.2 2005/05/15 20:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,18 +178,6 @@
     (align vm:lowtag-bits)
     (trace-table-entry trace-table-function-prologue)
     (emit-label start-lab)
-    #+PPC-FUN-HACK
-    (let* ((entry-label (gen-label)))
-      ;; Allocate function header.
-      (inst function-header-word)
-      (inst b entry-label)
-      (dotimes (i (1- (1- vm:function-code-offset)))
-	(inst word 0))
-      (emit-label entry-label)
-      ;; The start of the actual code.
-      ;; Fix CODE, cause the function object was passed in.
-      (inst compute-code-from-fn code-tn code-tn start-lab temp))
-    #-PPC-FUN-HACK
     (let* ((entry-label (gen-label)))
       ;; Allocate function header.
       (inst function-header-word)
@@ -706,8 +694,7 @@ default-value-8
 		 return-pc-pass)
 
      ,(if named
-	  `(:temporary (:sc descriptor-reg :offset #+PPC-FUN-HACK cname-offset
-	                                           #-PPC-FUN-HACK fdefn-offset
+	  `(:temporary (:sc descriptor-reg :offset fdefn-offset
 			    :from (:argument ,(if (eq return :tail) 0 1))
 			    :to :eval)
 		       name-pass)
@@ -819,10 +806,6 @@ default-value-8
 		      (loadw name-pass code-tn (tn-offset name)
 			     vm:other-pointer-type)
 		      (do-next-filler)))
-		   #+PPC-FUN-HACK
-		   (loadw function name-pass fdefn-raw-addr-slot
-			  other-pointer-type)
-		   #-PPC-FUN-HACK
 		   (loadw entry-point name-pass fdefn-raw-addr-slot
 			  other-pointer-type)
 		   (do-next-filler))
@@ -838,7 +821,6 @@ default-value-8
 		   (loadw function lexenv vm:closure-function-slot
 			  vm:function-pointer-type)
 		   (do-next-filler)
-		   #-PPC-FUN-HACK
 		   (inst addi entry-point function
 			      (- (ash vm:function-code-offset vm:word-shift)
 			         vm:function-pointer-type))))
@@ -848,8 +830,7 @@ default-value-8
 		 (return)))
 	   
 	   (note-this-location vop :call-site)
-	   (inst mtctr #+PPC-FUN-HACK function #-PPC-FUN-HACK entry-point)
-	   #+PPC-FUN-HACK-MAYBE (inst mr code-tn function)
+	   (inst mtctr entry-point)
 	   (inst bctr)
 	   #|
 	   (inst j function
@@ -934,7 +915,6 @@ default-value-8
 	 (return-pc :scs (descriptor-reg))
 	 (value))
   (:ignore value)
-  #-PPC-FUN-HACK
   (:temporary (:scs (interior-reg)) lip)
   (:vop-var vop)
   (:generator 6
@@ -949,9 +929,6 @@ default-value-8
     (move csp-tn cfp-tn)
     (move cfp-tn old-fp)
     ;; Out of here.
-    #+PPC-FUN-HACK
-    (lisp-return return-pc :offset 2)
-    #-PPC-FUN-HACK
     (lisp-return return-pc lip :offset 2)
     (trace-table-entry trace-table-normal)))
 
@@ -981,7 +958,6 @@ default-value-8
   (:temporary (:sc descriptor-reg :offset a3-offset :from (:eval 0)) a3)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
   (:temporary (:sc any-reg :offset ocfp-offset) val-ptr)
-  #-PPC-FUN-HACK
   (:temporary (:scs (interior-reg)) lip)
   (:vop-var vop)
   (:generator 6
@@ -997,9 +973,6 @@ default-value-8
 	   (move csp-tn cfp-tn)
 	   (move cfp-tn old-fp)
 	   ;; Out of here.
-	   #+PPC-FUN-HACK
-	   (lisp-return return-pc :offset 2)
-	   #-PPC-FUN-HACK
 	   (lisp-return return-pc lip :offset 2))
 	  (t
 	   ;; Establish the values pointer and values count.
@@ -1014,9 +987,6 @@ default-value-8
 	     (dolist (reg (subseq (list a0 a1 a2 a3) nvals))
 	       (move reg null-tn)))
 	   ;; And away we go.
-	   #+PPC-FUN-HACK
-	   (lisp-return return-pc)
-	   #-PPC-FUN-HACK
 	   (lisp-return return-pc lip)))
     (trace-table-entry trace-table-normal)))
 
@@ -1037,7 +1007,6 @@ default-value-8
   (:temporary (:sc any-reg :offset nl0-offset :from (:argument 2)) vals)
   (:temporary (:sc any-reg :offset nargs-offset :from (:argument 3)) nvals)
   (:temporary (:sc descriptor-reg :offset a0-offset) a0)
-  #-PPC-FUN-HACK
   (:temporary (:scs (interior-reg)) lip)
 
 
@@ -1061,9 +1030,6 @@ default-value-8
       ;; Return with one value.
       (move csp-tn cfp-tn)
       (move cfp-tn old-fp-arg)
-      #+PPC-FUN-HACK
-      (lisp-return lra-arg :offset 2)
-      #-PPC-FUN-HACK
       (lisp-return lra-arg lip :offset 2)
 		
       ;; Nope, not the single case.

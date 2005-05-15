@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.81 2005/02/10 17:49:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.81.2.1 2005/05/15 20:01:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,8 @@
 
 (export '(fd-stream fd-stream-p fd-stream-fd make-fd-stream
           io-timeout beep *beep-function* output-raw-bytes
-	  *tty* *stdin* *stdout* *stderr*))
+	  *tty* *stdin* *stdout* *stderr*
+	  binary-text-stream))
 
 
 (in-package "EXTENSIONS")
@@ -122,6 +123,17 @@
   (format stream "#<Stream for ~A>"
 	  (fd-stream-name fd-stream)))
 
+;; CMUCL extension.  This is a FD-STREAM, but it allows reading and
+;; writing of 8-bit characters and unsigned bytes from the stream.
+(defstruct (binary-text-stream
+	     (:print-function %print-binary-text-stream)
+	     (:constructor %make-binary-text-stream)
+	     (:include fd-stream)))
+
+(defun %print-binary-text-stream (fd-stream stream depth)
+  (declare (ignore depth) (stream stream))
+  (format stream "#<Binary-text Stream for ~A>"
+	  (fd-stream-name fd-stream)))
 
 (define-condition io-timeout (stream-error)
   ((direction :reader io-timeout-direction :initarg :direction))
@@ -637,13 +649,15 @@
 ;;;
 ;;;   Macro to wrap around all input routines to handle eof-error noise.
 ;;;
-(defmacro input-wrapper ((stream bytes eof-error eof-value) &body read-forms)
+(defmacro input-wrapper ((stream bytes eof-error eof-value &optional type) &body read-forms)
   (let ((stream-var (gensym))
 	(element-var (gensym)))
     `(let ((,stream-var ,stream))
        (if (fd-stream-unread ,stream-var)
 	   (prog1
-	       (fd-stream-unread ,stream-var)
+	       ,(if (eq type 'character) 
+		    `(fd-stream-unread ,stream-var)
+		    `(char-code (fd-stream-unread ,stream-var)))
 	     (setf (fd-stream-unread ,stream-var) nil)
 	     (setf (fd-stream-listen ,stream-var) nil))
 	   (let ((,element-var
@@ -665,7 +679,7 @@
 			     &rest body)
   `(progn
      (defun ,name (stream eof-error eof-value)
-       (input-wrapper (stream ,size eof-error eof-value)
+       (input-wrapper (stream ,size eof-error eof-value ,type)
 	 (let ((,sap (fd-stream-ibuf-sap stream))
 	       (,head (fd-stream-ibuf-head stream)))
 	   ,@body)))
@@ -871,8 +885,10 @@
 	(system-area-pointer
 	 (assert (= 1 (fd-stream-element-size stream)))
 	 (setf (sap-ref-8 buffer start) (char-code (read-char stream))))
+	(string 
+	 (setf (aref buffer start) (read-char stream)))
 	(vector
-	 (setf (aref buffer start) (read-char stream))))
+	 (setf (aref buffer start) (char-code(read-char stream)))))
       (return-from fd-stream-read-n-bytes
 	(1+ (fd-stream-read-n-bytes stream buffer (1+ start) (1- requested)
 				    eof-error-p))))
@@ -974,7 +990,8 @@
 ;;; output-p indicate what slots to fill. The buffering slot must be set prior
 ;;; to calling this routine.
 ;;;
-(defun set-routines (stream type input-p output-p buffer-p)
+
+(defun set-routines (stream type input-p output-p buffer-p &key binary-stream-p)
   (let ((target-type (case type
 		       ((:default unsigned-byte)
 			'(unsigned-byte 8))
@@ -1006,7 +1023,10 @@
 	(if (subtypep type 'character)
 	    (setf (fd-stream-in stream) routine
 		  (fd-stream-bin stream) #'ill-bin)
-	    (setf (fd-stream-in stream) #'ill-in
+	    (setf (fd-stream-in stream) (if (and binary-stream-p
+						 (eql size 1))
+					    (pick-input-routine 'character) 
+					    #'ill-in)
 		  (fd-stream-bin stream) routine))
 	(when (or (eql size 1)
 		  (eql size 2)
@@ -1319,7 +1339,8 @@
 		       (name (if file
 				 (format nil "file ~S" file)
 				 (format nil "descriptor ~D" fd)))
-		       auto-close)
+		       auto-close
+		       binary-stream-p)
   (declare (type index fd) (type (or index null) timeout)
 	   (type (member :none :line :full) buffering))
   "Create a stream for the given unix file descriptor.
@@ -1336,15 +1357,25 @@
 	 (setf input t))
 	((not (or input output))
 	 (error "File descriptor must be opened either for input or output.")))
-  (let ((stream (%make-fd-stream :fd fd
-				 :name name
-				 :file file
-				 :original original
-				 :delete-original delete-original
-				 :pathname pathname
-				 :buffering buffering
-				 :timeout timeout)))
-    (set-routines stream element-type input output input-buffer-p)
+  (let ((stream (if binary-stream-p
+		    (%make-binary-text-stream :fd fd
+					      :name name
+					      :file file
+					      :original original
+					      :delete-original delete-original
+					      :pathname pathname
+					      :buffering buffering
+					      :timeout timeout)
+		    (%make-fd-stream :fd fd
+				     :name name
+				     :file file
+				     :original original
+				     :delete-original delete-original
+				     :pathname pathname
+				     :buffering buffering
+				     :timeout timeout))))
+    (set-routines stream element-type input output input-buffer-p
+		  :binary-stream-p binary-stream-p)
     (when (and auto-close (fboundp 'finalize))
       (finalize stream
 		#'(lambda ()
@@ -1611,7 +1642,8 @@
 				(element-type 'base-char)
 				(if-exists nil if-exists-given)
 				(if-does-not-exist nil if-does-not-exist-given)
-				(external-format :default))
+				(external-format :default)
+		                class)
   (declare (type pathname pathname)
            (type (member :input :output :io :probe) direction)
            (type (member :error :new-version :rename :rename-and-delete
@@ -1624,6 +1656,8 @@
     (when fd
       (case direction
 	((:input :output :io)
+	 ;; We use the :class option to tell us if we want a
+	 ;; binary-text stream or not.
 	 (make-fd-stream fd
 			 :input (member direction '(:input :io))
 			 :output (member direction '(:output :io))
@@ -1633,7 +1667,8 @@
 			 :delete-original delete-original
 			 :pathname pathname
 			 :input-buffer-p t
-			 :auto-close t))
+			 :auto-close t
+			 :binary-stream-p class))
 	(:probe
 	 (let ((stream (%make-fd-stream :name namestring :fd fd
 					:pathname pathname
@@ -1704,6 +1739,14 @@
            (remf options :input-handle)
            (remf options :output-handle)
            (apply #'open-fd-stream filespec options))
+	  ((eq class 'binary-text-stream)
+	   ;; Like fd-stream, but binary and text allowed.  This is
+	   ;; indicated by leaving the :class option around for
+	   ;; open-fd-stream to see.
+           (remf options :mapped)
+           (remf options :input-handle)
+           (remf options :output-handle)
+	   (apply #'open-fd-stream filespec options))
 	  ((subtypep class 'stream:simple-stream)
 	   (when element-type-given
              (cerror "Do it anyway."

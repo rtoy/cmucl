@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.4 2005/02/06 19:43:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.4.2.1 2005/05/15 20:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -140,9 +140,6 @@
     (let ((normal-fn (gen-label)))
       (load-type type function (- function-pointer-type))
       (inst cmpwi type function-header-type)
-      #+PPC-FUN-HACK
-      (inst mr lip function)
-      #-PPC-FUN-HACK
       (inst addi lip function
                  (- (ash vm:function-code-offset vm:word-shift)
 		    function-pointer-type))

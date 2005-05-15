@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.8.2.1 2005/02/12 16:09:46 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.8.2.2 2005/05/15 20:01:31 rtoy Exp $ */
 
 #include <string.h>
 

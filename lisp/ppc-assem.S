@@ -203,7 +203,9 @@ x:
 
 	/* Turn on pseudo-atomic */
 
+#if 0	
 	li reg_NL3,-4
+#endif	
 	li reg_ALLOC,4
 	store(reg_ZERO,reg_NL4,_foreign_function_call_active)
 	load(reg_NL4,_current_dynamic_space_free_pointer)
@@ -213,14 +215,10 @@ x:
 	load(reg_OCFP,_current_control_frame_pointer)
 
 	/* No longer atomic, and check for interrupt */
-#if 1
 	andi. reg_NL3, reg_ALLOC, 1
 	subi reg_ALLOC,reg_ALLOC,4
 	twnei reg_NL3, 0
-#else
-	add reg_ALLOC,reg_ALLOC,reg_NL3
-	twlti reg_ALLOC,0
-#endif	
+	
 	/* Pass in the arguments */
 
 	mr reg_CFP,reg_NL1
@@ -237,12 +235,12 @@ x:
 
 	/* Function is an indirect closure */
 	lwz reg_CODE,CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
-#ifdef PPC_FUN-HACK
-	mtctr reg_CODE
-#else
+	/*
+	 * The 6 is vm:function-code-offset, the 4 is
+	 * the number of bytes in a lispobj.
+	 */
 	addi reg_LIP,reg_CODE,6*4-type_FunctionPointer
 	mtctr reg_LIP
-#endif
 	slwi reg_NARGS,reg_NL2,2
 	bctr
 	.align 3
@@ -275,14 +273,10 @@ lra:
 	store(reg_NL1,reg_NL2,_foreign_function_call_active)
 
 	/* Check for interrupt */
-#if 1	
 	andi. reg_NL3, reg_ALLOC, 1
 	subi reg_ALLOC, reg_ALLOC, 4
 	twnei reg_NL3,0
-#else
-	add reg_ALLOC,reg_ALLOC,reg_NL3
-	twlti reg_ALLOC,0
-#endif	
+	
 	/* Back to C */
 	C_FULL_EPILOG
 	blr
@@ -311,7 +305,9 @@ lra:
 	mr reg_NARGS,reg_NL3
 	
 	/* Turn on pseudo-atomic */
+#if 0	
 	li reg_NL3,-4
+#endif	
 	la reg_ALLOC,4(reg_ALLOC)
 
 	/* Convert the return address to an offset and save it on the stack. */
@@ -332,14 +328,10 @@ lra:
 	store(reg_CSP,reg_CFUNC,_foreign_function_call_active)
 	/* load(reg_POLL,saver2) */
 	/* Disable pseudo-atomic; check pending interrupt */
-#if 1
 	andi. reg_NL3, reg_ALLOC, 1
 	subi reg_ALLOC, reg_ALLOC, 4
 	twnei reg_NL3, 0
-#else		
-	add reg_ALLOC,reg_ALLOC,reg_NL3
-	twlti reg_ALLOC,0
-#endif	
+	
 	mr reg_NL3,reg_NARGS
 
 	/* PowerOpen (i.e. OS X) requires the callee address in r12
@@ -373,7 +365,9 @@ lra:
 	li reg_LIP,0
 
 	/* Atomic ... */
+#if 0	
 	li reg_NL3,-4
+#endif	
 	li reg_ALLOC,4
 
 	/* No long in foreign function call. */
@@ -396,14 +390,10 @@ lra:
 	la reg_LIP,-type_OtherPointer(reg_LIP)
 
 	/* No longer atomic */
-#if 1
 	andi. reg_NL3, reg_ALLOC, 1
 	subi reg_ALLOC, reg_ALLOC, 4
 	twnei reg_NL3, 0
-#else		
-	add reg_ALLOC,reg_ALLOC,reg_NL3
-	twlti reg_ALLOC,0
-#endif	
+	
 	mtlr reg_LIP
 	
 	/* Reset the lisp stack. */
@@ -417,27 +407,14 @@ lra:
 
 	GFUNCDEF(xundefined_tramp)
 	.globl _undefined_tramp
-	.byte 0,0,0,type_FunctionHeader
+	.byte 0,0,0,type_FunctionHeader	/* Header */
 
-	/*
-	 * The next 4 bytes are the encoding for a PPC jump instruction.
-	 * The jump should go to the twllei instruction below.
-	 */
-#if 0
-	.byte 18<<2
+	.long _undefined_tramp	/* self slot */
+	.long NIL		/* next slot */
+	.long NIL		/* name slot */
+	.long NIL		/* arglist slot */
+	.long NIL		/* type slot */
 _undefined_tramp:	
-	.byte 0,0,24
-	.long _undefined_tramp+1
-#else	
-	.long _xundefined_tramp + 1
-#endif	
-	.long NIL
-	.long NIL
-	.long NIL
-	.long NIL
-#if 1	
-_undefined_tramp:	
-#endif	
 	twllei reg_ZERO,trap_Cerror
         /* Number of argument bytes */
 	.byte 4
@@ -452,11 +429,7 @@ _undefined_tramp:
 	.byte 1
 	*/
 	.align 2
-#ifdef PPC_FUN_HACK_MAYBE
-1:	lwz reg_CODE,FDEFN_RAW_ADDR_OFFSET(reg_CNAME)
-#else
 1:	lwz reg_CODE,FDEFN_RAW_ADDR_OFFSET(reg_FDEFN)
-#endif
 	la reg_LIP,FUNCTION_CODE_OFFSET(reg_CODE)
 	mtctr reg_LIP
 	bctr
@@ -468,27 +441,14 @@ _undefined_tramp:
 
 	GFUNCDEF(xclosure_tramp)
 	.globl _closure_tramp
-	.byte 0,0,0,type_FunctionHeader
-#if 0	
-	.byte 18<<2
-_closure_tramp:
-	.byte 0,0,24
-	.long _closure_tramp+1
-#else
-	.long _xclosure_tramp+1
-#endif	
+	.byte 0,0,0,type_FunctionHeader	/* Header */
+	.long _closure_tramp
 	.long NIL 
 	.long NIL
 	.long NIL
 	.long NIL
-#if 1	
 _closure_tramp:
-#endif	
-#ifdef PPC_FUN_HACK_MAYBE
-	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_CNAME)
-#else
 	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_FDEFN)
-#endif
 	lwz reg_CODE,CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
 	la reg_LIP,FUNCTION_CODE_OFFSET(reg_CODE)
 	mtctr reg_LIP
@@ -496,21 +456,32 @@ _closure_tramp:
 
 	SET_SIZE(xclosure_tramp)
 
-	GFUNCDEF(function_end_breakpoint_trap)
-	.long 0
-	SET_SIZE(function_end_breakpoint_trap)
-
-	GFUNCDEF(function_end_breakpoint)
-	.long 0
-	SET_SIZE(function_end_breakpoint)
-
-	GFUNCDEF(function_end_breakpoint_guts)
-	.long 0
-	SET_SIZE(function_end_breakpoint_guts)
-
-	GFUNCDEF(function_end_breakpoint_end)
-	.long 0
-	SET_SIZE(function_end_breakpoint_end)
+/*
+ * Function-end breakpoint magic.  See MAKE-BOGUS-LRA in
+ * code/debug-int.lisp.
+ */			
+	.text
+	.align 3
+	.globl _function_end_breakpoint_guts
+_function_end_breakpoint_guts:	
+	.long	type_ReturnPcHeader
+	b	1f
+	/*
+	 * Are these really necessary? I'm cargo-culting from the sparc port 
+	 */
+	mr	reg_OCFP, reg_CSP
+	addi	reg_CSP, reg_CSP, 4
+	li	reg_NARGS, 4
+	mr	reg_A1, reg_NULL	
+	mr	reg_A2, reg_NULL
+	mr	reg_A3, reg_NULL
+1:					
+	.globl _function_end_breakpoint_trap
+_function_end_breakpoint_trap:
+	twllei	reg_ZERO, trap_FunctionEndBreakpoint
+	b	1b
+	.globl _function_end_breakpoint_end
+_function_end_breakpoint_end:
 
 
 	GFUNCDEF(ppc_flush_cache_line)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.51 2005/02/07 17:27:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.51.2.1 2005/05/15 20:01:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1553,9 +1553,16 @@ about function addresses and register values.")
        (nt "Object not instance trap"))
     )))
 
+(eval-when (compile load eval)
+  ;; Print Value as a Lisp hex number
+  (defun hex-data-printer (value stream dstate)
+    (declare (ignore dstate))
+    (format stream "#x~X" value)))
+
 (define-instruction unimp (segment data)
   (:declare (type (unsigned-byte 22) data))
-  (:printer format-2-unimp () :default :control #'unimp-control
+  (:printer format-2-unimp ((data nil :printer #'hex-data-printer))
+	    :default :control #'unimp-control
 	    :print-name #-sparc-v9 'unimp #+sparc-v9 'illtrap)
   (:delay 0)
   (:emitter (emit-format-2-unimp segment 0 0 0 data)))

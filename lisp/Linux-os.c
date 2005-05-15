@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.23 2004/12/24 15:11:10 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.23.2.1 2005/05/15 20:01:31 rtoy Exp $
  *
  */
 
@@ -160,25 +160,29 @@ void os_set_context(void)
 os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
   int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
-
-  if (addr)
-    flags |= MAP_FIXED;
-  else
-    flags |= MAP_VARIABLE;
-
+  os_vm_address_t out_addr;
+  
   DPRINTF(0, (stderr, "os_validate %p %d => ", addr, len));
 
-  addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
+  out_addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
 
-  if(addr == (os_vm_address_t) -1)
+  if (out_addr == (os_vm_address_t) -1)
     {
       perror("mmap");
       return NULL;
     }
 
-  DPRINTF(0, (stderr, "%p\n", addr));
+  if (addr && (addr != out_addr))
+    {
+      fprintf(stderr, "Couldn't mmap at %p, len %d; got mapping at %p instead",
+	      addr, len, out_addr);
+      munmap(addr, len);
+      return NULL;
+    }
+  
+  DPRINTF(0, (stderr, "%p\n", out_addr));
 
-  return addr;
+  return out_addr;
 }
 
 void os_invalidate(os_vm_address_t addr, os_vm_size_t len)

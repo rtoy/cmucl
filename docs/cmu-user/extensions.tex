@@ -2310,6 +2310,7 @@ implemented.  Please note that this interface is subject to change.
 
 
 \subsection{Method Tracing and Profiling}
+\label{sec:method-tracing}
 \cindex{tracing}
 \cpsubindex{tracing}{methods}
 \cindex{profiling}
@@ -2318,7 +2319,7 @@ implemented.  Please note that this interface is subject to change.
 \cpsubindex{methods}{profiling}
 
 Methods can be traced with \code{trace}, using function names of the
-form \verb|(method <qualifiers> <specializers>)|.  Example:
+form \code{(method <name> <qualifiers> <specializers>)}.  Example:
 
 \begin{example}
 (defmethod foo ((x integer)) x)
@@ -2335,6 +2336,19 @@ form \verb|(method <qualifiers> <specializers>)|.  Example:
 \begin{example}
 (trace :methods 'foo)
 (untrace :methods 'foo)
+\end{example}
+
+Methods can also be specified for the \kwd{wherein} option to
+\code{trace}.  Because this option is a name or a list of names,
+methods must be specified as a list.  Thus, to trace all calls of
+\code{foo} from the method \code{bar} specialized on integer argument,
+use
+\begin{example}
+  (trace foo :wherein ((method bar (integer))))
+\end{example}
+Before and after methods are supported as well:
+\begin{example}
+  (trace foo :wherein ((method bar :before (integer))))
 \end{example}
 
 Method profiling is done analogously to \code{trace}:
@@ -2443,10 +2457,10 @@ innermost fwrapper.
   
   In \var{body}, the symbol \code{fwrapper} is bound to the current
   fwrapper object.
-
+  
   The macro \code{call-next-function} can be used to invoke the next
-  fwrapper, or the primary function being fwrapped.  When called
-  with no arguments, \code{call-next-function} invokes the next
+  fwrapper, or the primary function that is being fwrapped.  When
+  called with no arguments, \code{call-next-function} invokes the next
   function with the original arguments passed to the fwrapper, unless
   you modify one of the parameters.  When called with arguments,
   \code{call-next-function} invokes the next function with the given

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.89 2004/12/03 22:08:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.89.2.1 2005/05/15 20:01:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,8 @@
 (export '(load *load-verbose* *load-print* *load-truename* *load-pathname*))
 
 (in-package "EXTENSIONS")
-(export '(*load-if-source-newer* *load-source-types* *load-object-types*))
+(export '(*load-if-source-newer* *load-source-types* *load-object-types*
+	  invalid-fasl))
 
 (in-package "SYSTEM")
 (export '(foreign-symbol-address alternate-get-global-address))
@@ -80,6 +81,17 @@
 ;; parameter.
 (defvar *skip-fasl-file-version-check* nil)
 
+(define-condition invalid-fasl (error)
+  ((filename :reader invalid-fasl-pathname :initarg :file)
+   (fasl-version :reader invalid-fasl-version :initarg :fasl-version)
+   (expected-version :reader invalid-fasl-expected-version :initarg :expected-version))
+  (:report
+   (lambda (condition stream)
+     (format stream "~A was compiled for fasl-file version ~X, ~
+                     but this is version ~X"
+	     (invalid-fasl-pathname condition)
+	     (invalid-fasl-version condition)
+	     (invalid-fasl-expected-version condition)))))
 
 ;;; LOAD-FRESH-LINE -- internal.
 ;;;
@@ -1123,9 +1135,8 @@
 	     (when (eql imp implementation)
 	       (unless (eql version vers)
 		 (cerror "Load ~A anyway"
-                         "~A was compiled for fasl-file version ~X, ~
-			 but this is version ~X"
-                         *fasl-file* version vers))
+                         'invalid-fasl :file *fasl-file*
+			 :fasl-version version :expected-version vers))
 	       t))
 	   (imp-name (imp)
              (if (< -1 imp (length '#.c:fasl-file-implementations))

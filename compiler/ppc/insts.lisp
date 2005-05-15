@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.7 2005/02/11 05:45:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.7.2.1 2005/05/15 20:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,6 +83,201 @@
 		 (t (make-symbol (concatenate 'string "$" name)))))
        *register-names*))
 
+(defun get-reg-name (index)
+  (if *disassem-use-lisp-reg-names*
+      (aref reg-symbols index)
+    (format nil "~A~D" 'r index)))
+
+(macrolet
+    ((frob (&rest names)
+       (let ((results (mapcar #'(lambda (n)
+				  (let ((nn (intern (concatenate 'string (string n)
+								 "-TYPE"))))
+				    `(,(eval nn) ,nn)))
+			      names)))
+	 `(eval-when (compile load eval)
+	   (defconstant header-word-type-alist
+	     ',results)))))
+  ;; This is the same list as in objdefs.
+  (frob bignum
+	ratio
+	single-float
+	double-float
+	#+long-float long-float
+	complex
+	complex-single-float
+	complex-double-float
+	#+long-float complex-long-float
+  
+	simple-array
+	simple-string
+	simple-bit-vector
+	simple-vector
+	simple-array-unsigned-byte-2
+	simple-array-unsigned-byte-4
+	simple-array-unsigned-byte-8
+	simple-array-unsigned-byte-16
+	simple-array-unsigned-byte-32
+	simple-array-signed-byte-8
+	simple-array-signed-byte-16
+	simple-array-signed-byte-30
+	simple-array-signed-byte-32
+	simple-array-single-float
+	simple-array-double-float
+	#+long-float simple-array-long-float
+	simple-array-complex-single-float
+	simple-array-complex-double-float
+	#+long-float simple-array-complex-long-float
+	complex-string
+	complex-bit-vector
+	complex-vector
+	complex-array
+  
+	code-header
+	function-header
+	closure-header
+	funcallable-instance-header
+	byte-code-function
+	byte-code-closure
+	dylan-function-header
+	closure-function-header
+	#-gengc return-pc-header
+	#+gengc forwarding-pointer
+	value-cell-header
+	symbol-header
+	base-char
+	sap
+	unbound-marker
+	weak-pointer
+	instance-header
+	fdefn
+	#+(or gengc gencgc) scavenger-hook))
+
+(defvar *note-addis-inst* nil
+  "An alist for the disassembler indicating the target register and
+value used in an ADDIS instruction.  This is used to make annotations
+about function addresses and register values.")
+
+(defvar *pseudo-atomic-set* nil)
+
+(defun handle-ld/st-inst (reg word dstate)
+  (let ((ra (ldb (byte 5 16) word))
+	(d (ldb (byte 16 0) word)))
+    (when (= reg ra)
+      (case ra
+	(19
+	 ;; A referece to a code constant (reg = %CODE)
+	 (disassem:note-code-constant d dstate))
+	(18
+	 ;; A reference to a static symbol or static function (reg =
+	 ;; %NULL)
+	 (or (disassem:maybe-note-nil-indexed-symbol-slot-ref
+	      d dstate)
+	     (disassem:maybe-note-static-function d dstate)))))))
+
+(defun handle-addi-inst (reg word dstate)
+  (let ((rt (ldb (byte 5 21) word))
+	(ra (ldb (byte 5 16) word))
+	(d (ldb (byte 16 0) word)))
+    (when (= reg ra)
+      (let ((addis (assoc ra *note-addis-inst*)))
+	(cond
+	 (addis
+	  ;; RA was used in a ADDIS instruction.  Assume that this is
+	  ;; the offset part of the ADDIS instruction for a full
+	  ;; 32-bit address or value.  Make a note about this usage as
+	  ;; a Lisp assembly routine or a foreign routine.  If note,
+	  ;; just note the final value.
+	  (let ((addr (+ d (ash (cdr addis) 16))))
+	    (or (disassem::note-code-constant-absolute addr dstate)
+		(disassem::maybe-note-assembler-routine addr t dstate)
+		(disassem::note (format nil "~A = #x~8,'0X"
+					(get-reg-name rt) addr)
+				dstate)))
+	  ;; We're done with this ADDIS/ADDI instruction combination.
+	  ;; Remove ADDIS.
+	  (setf *note-addis-inst* (delete addis *note-addis-inst*)))
+	 ((= ra null-offset)
+	  ;; An ADDI rt, $NULL, <n> instruction.  This a
+	  ;; reference to a static symbol.
+	  (disassem::maybe-note-nil-indexed-object d dstate))
+	 ((= ra alloc-offset)
+	  ;; addi rt, $alloc, n.  This must be some allocation or
+	  ;; pseudo-atomic stuff.  Look at the pseudo-atomic macro to
+	  ;; make sure this is right.
+	  (cond ((and (= d 4)
+		      (= rt alloc-offset)
+		      (not *pseudo-atomic-set*))
+		 ;; "ADD $ALLOC, $ALLOC, 4" sets the PA flag
+		 (disassem:note "Set pseudo-atomic flag" dstate)
+		 (setf *pseudo-atomic-set*
+		       (sys:sap+ (disassem:dstate-segment-sap dstate)
+				 (disassem:dstate-cur-offs dstate))))
+		((and (= rt alloc-offset)
+		      *pseudo-atomic-set*
+		      (not (sys:sap= *pseudo-atomic-set*
+				     (sys:sap+ (disassem:dstate-segment-sap dstate)
+					       (disassem:dstate-cur-offs dstate)))))
+		 ;; "ADD $ALLOC, $ALLOC, n" is allocating space
+		 (disassem:note (format nil "Allocating ~D bytes" d)
+				dstate))))
+	 ((and (= ra zero-offset) *pseudo-atomic-set*)
+	  ;; "ADDI RT, $ZERO, n" inside a pseudo-atomic is very likely
+	  ;; loading up a header word.  Make a note to that effect.
+	  (let ((type (second (assoc (logand d #xff) header-word-type-alist)))
+		(size (ldb (byte 24 8) d)))
+	    (when type
+	      (disassem:note (format nil "Header word ~A, size ~D?" type size)
+			     dstate)))))))))
+
+(defun handle-add-inst (reg word dstate)
+  (let ((rt (ldb (byte 5 21) word))
+	(ra (ldb (byte 5 16) word)))
+    (when (and (= reg 6)
+	       (= rt alloc-offset)
+	       (= ra alloc-offset))
+      ;; We have "ADD $ALLOC, $ALLOC, $NL3".  This turns off
+      ;; pseudo-atomic.  (See the pseudo-atomic macro.)
+      (disassem:note "Reset pseudo-atomic flag" dstate)
+      (setf *pseudo-atomic-set* nil))))
+  
+(defun update-addis-notes (word)
+  ;; If this instruction writes to register that was the target of an
+  ;; ADDIS instruction, we should remove it from *note-addis-inst* so
+  ;; we don't get confused an print out erroneous notes.
+  )
+
+;; Look at the current instruction and see if we can't add some notes
+;; about what's happening.
+(defun maybe-add-notes (reg dstate)
+  (let* ((word (disassem::sap-ref-int (disassem:dstate-segment-sap dstate)
+				      (disassem:dstate-cur-offs dstate)
+				      vm:word-bytes
+				      (disassem::dstate-byte-order dstate)))
+	 (opcode (ldb (byte 6 26) word)))
+    ;; At this point we should look at the instruction and figure out
+    ;; what it is so we can print out some notes.
+    ;;
+    ;; What are interesting instructions?
+    ;;
+    ;; o Setting/clearing the pseudo-atomic bit
+    ;; o Load/store
+    ;; o addis/ori (for loading 32-bit values)
+
+    (cond ((or (= 32 opcode)
+	       (= 36 opcode))
+	   ;; An LWZ or STW instruction.
+	   (handle-ld/st-inst reg word dstate))
+	  ((or (= 14 opcode)
+	       (= 24 opcode))
+	   ;; An ADDI or ORI instruction.
+	   (handle-addi-inst reg word dstate))
+	  ((and (= 31 opcode)
+		(= 266 (ldb (byte 9 1) word)))
+	   ;; An ADD instruction
+	   (handle-add-inst reg word dstate)))
+    (update-addis-notes word)))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defun reg-arg-printer (value stream dstate)
   (declare (type stream stream) (fixnum value))
@@ -91,7 +286,8 @@
     (disassem:maybe-note-associated-storage-ref value
 						'registers
 						regname
-						dstate)))
+						dstate)
+    (maybe-add-notes value dstate)))
 )					; eval-when
 
 (disassem:define-argument-type reg
@@ -842,11 +1038,13 @@
        :other-dependencies ,other-dependencies)))
 
 
-(defmacro define-d-si-instruction (name op &key (fixup nil) (cost 1) other-dependencies)
-  (multiple-value-bind (other-reads other-writes) (classify-dependencies other-dependencies)
+(defmacro define-d-si-instruction (name op &key (fixup nil) (cost 1) other-dependencies si-printer)
+  (multiple-value-bind (other-reads other-writes)
+      (classify-dependencies other-dependencies)
   `(define-instruction ,name (segment rt ra si)
      (:declare (type (signed-byte 16)))
-     (:printer d-si ((op ,op)))
+     (:printer d-si ((op ,op)
+		     ,@(if si-printer `((si nil :printer ,si-printer)))))
      (:delay ,cost)
      (:cost ,cost)
      (:dependencies (reads ra) ,@other-reads 
@@ -1056,7 +1254,24 @@
 (define-d-si-instruction addic. 13 :other-dependencies ((writes :xer) (writes :ccr)))
 
 (define-d-si-instruction addi 14 :fixup :l)
-(define-d-si-instruction addis 15 :fixup :ha)
+(eval-when (compile load eval)
+  (defun addis-arg-printer (value stream dstate)
+    (format stream "~D" value)
+    ;; Save the immediate value and the destination register for this
+    ;; addis instruction.  This is used later to print some possible
+    ;; notes about the value loaded by addis.
+    (let* ((shifted (ash value 16))
+	   (word (disassem::sap-ref-int (disassem:dstate-segment-sap dstate)
+					(disassem:dstate-cur-offs dstate)
+					vm:word-bytes
+					(disassem::dstate-byte-order dstate)))
+	   (si (ldb (byte 0 16) word))
+	   (rd (ldb (byte 5 21) word)))
+      (disassem:note (format nil "0x~x = ~D" shifted shifted)
+		     dstate)
+      (push (cons rd value) *note-addis-inst*))))
+  
+(define-d-si-instruction addis 15 :fixup :ha :si-printer #'addis-arg-printer)
 
 ; There's no real support here for branch options that decrement and test the CTR.
 ;  (a) the instruction scheduler doesn't know that anything's happening to the CTR
@@ -2095,8 +2310,6 @@
    (emit-compute-inst segment vop dst src label temp
 		      #'(lambda (label posn delta-if-after)
 			  (- other-pointer-type
-			     #+PPC-FUN-HACK-MAYBE
-			     function-pointer-type
 			     (label-position label posn delta-if-after)
 			     (component-header-length))))))
 

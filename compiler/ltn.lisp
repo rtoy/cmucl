@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.42 2005/01/25 15:49:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.42.2.1 2005/05/15 20:01:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -872,7 +872,7 @@
 	   (type (or template null) template))
 
   (collect ((losers))
-    (let ((safe-p (policy-safe-p policy))
+    (let ((safe-p (eq policy :safe))
 	  (verbose-p (policy call (= brevity 0)))
 	  (max-cost (- (template-cost
 			(or template
@@ -883,7 +883,7 @@
 	(let ((guard (template-guard try)))
 	  (when (and (or (not guard) (funcall guard))
 		     (or (not safe-p)
-			 (policy-safe-p (template-policy try)))
+			 (eq :safe (template-policy try)))
 		     (or verbose-p
 			 (and (template-note try)
 			      (valid-function-use

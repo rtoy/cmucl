@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.77 2004/04/16 20:20:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.77.4.1 2005/05/15 20:01:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1164,6 +1164,10 @@ streams."
        (set-closed-flame stream))
       (:file-length
        (error 'type-error :datum stream :expected-type 'file-stream))
+      (:charpos
+       (charpos out))
+      (:line-length
+       (line-length out))
       (t
        (or (if in-lisp-stream-p
 	       (funcall (lisp-stream-misc in) in operation arg1 arg2)
@@ -2162,6 +2166,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 
 ;;; READ-INTO-SIMPLE-STRING --
 
+#+nil
 (defun read-into-simple-string (s stream start end)
   (declare (type simple-string s))
   (declare (type stream stream))
@@ -2185,6 +2190,32 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	    (decf numbytes bytes-read)))
     start))
 
+
+;;; read-into-simple-string hacked to allow (unsigned-byte 8) stream-element-type
+;;; For some reason applying this change to read-into-simple-string causes CMUCL to die.
+(defun read-into-simple-string (s stream start end)
+  (declare (type simple-string s))
+  (declare (type stream stream))
+  (declare (type index start end))
+  (unless (or (subtypep (stream-element-type stream) 'character)
+	      (equal (stream-element-type stream) '(unsigned-byte 8)))
+    (error 'type-error
+	   :datum (read-char stream nil #\Null)
+	   :expected-type (stream-element-type stream)
+	   :format-control "Trying to read characters from a binary stream."))
+  ;; Let's go as low level as it seems reasonable.
+  (let* ((numbytes (- end start))
+	 (total-bytes 0))
+    ;; read-n-bytes may return fewer bytes than requested, so we need
+    ;; to keep trying.
+    (loop while (plusp numbytes) do
+      (let ((bytes-read (system:read-n-bytes stream s start numbytes nil)))
+	(when (zerop bytes-read)
+	  (return-from read-into-simple-string start))
+	(incf total-bytes bytes-read)
+	(incf start bytes-read)
+	(decf numbytes bytes-read)))
+    start))
 
 (defun read-into-string (s stream start end)
   (declare (type string s))
@@ -2228,6 +2259,8 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
     (signed-byte 8)
     (signed-byte 16)
     (signed-byte 32)
+    single-float             ; not previously supported by read-sequence
+    double-float             ; not previously supported by read-sequence
     ))
 
 (defun read-into-simple-array (s stream start end)
@@ -2246,6 +2279,8 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 		     (simple-array (signed-byte 32) (*))
 		     (simple-array (unsigned-byte *) (*))
 		     (simple-array (signed-byte *) (*))
+		     (simple-array single-float (*))  ; not previously supported by read-sequence
+		     (simple-array double-float (*))  ; not previously supported by read-sequence
 		     simple-bit-vector)
 		 s))
 
@@ -2332,6 +2367,14 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 		 ((simple-array (signed-byte 32) (*))
 		  (read-n-x8-bytes stream data offset-start offset-end 32))
 
+		 ;; not previously supported by read-sequence
+		 ((simple-array single-float (*))
+		  (read-n-x8-bytes stream data offset-start offset-end 32))
+
+		 ;; not previously supported by read-sequence
+		 ((simple-array double-float (*))
+		  (read-n-x8-bytes stream data offset-start offset-end 64))
+
 		 ;; Otherwise we resort to the READ-BYTE based operation.
 		 (simple-bit-vector
 		  (read-into-vector s stream start end))
@@ -2362,7 +2405,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	  (return i))
 	(setf (aref v i) el)))))
 
-(declaim (end-block))			; READ-SEQUENCE block
+;(declaim (end-block))			; READ-SEQUENCE block
 
 
 (declaim (start-block write-sequence))
@@ -2499,7 +2542,8 @@ SEQ:	a proper SEQUENCE
 
 (defun write-simple-string-out (seq stream start end)
   (declare (type simple-string seq))
-  (when (not (subtypep (stream-element-type stream) 'character))
+  (when (and (not (subtypep (stream-element-type stream) 'character))
+	     (not (equal (stream-element-type stream) '(unsigned-byte 8))))
     (error 'type-error
 	   :datum seq
 	   :expected-type (stream-element-type stream)
@@ -2510,7 +2554,8 @@ SEQ:	a proper SEQUENCE
 
 (defun write-string-out (seq stream start end)
   (declare (type string seq))
-  (when (not (subtypep (stream-element-type stream) 'character))
+  (when (and (not (subtypep (stream-element-type stream) 'character))
+	     (not (equal (stream-element-type stream) '(unsigned-byte 8))))
     (error 'type-error
 	   :datum seq
 	   :expected-type (stream-element-type stream)
@@ -2543,7 +2588,9 @@ SEQ:	a proper SEQUENCE
 		     (simple-array (unsigned-byte 32) (*))
 		     (simple-array (signed-byte 32) (*))
 		     (simple-array (unsigned-byte *) (*))
-		     (simple-array (signed-byte *) (*)))
+		     (simple-array (signed-byte *) (*))
+		     (simple-array single-float (*))
+		     (simple-array double-float (*)))		 
 		    seq))
   (when (not (subtypep (stream-element-type stream) 'integer))
     (error 'type-error
@@ -2577,6 +2624,12 @@ SEQ:	a proper SEQUENCE
 
 	       ((simple-array (signed-byte 32) (*))
 		(write-n-x8-bytes stream data start end 32))
+
+	       ((simple-array single-float (*))
+		(write-n-x8-bytes stream data start end 32))
+
+	       ((simple-array double-float (*))
+		(write-n-x8-bytes stream data start end 64))
 
 	       ;; Otherwise we resort to the READ-BYTE based operation.
 	       ((simple-array (unsigned-byte *) (*))

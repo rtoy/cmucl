@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.102 2005/02/08 17:31:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.102.2.1 2005/05/15 20:01:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1665,6 +1665,14 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;; FIXME: Figure 1 is the unoptimized algorithm, and is noticeably
 ;;; slow at finding the exponent.  Figure 2 has an improved algorithm.
 (defun flonum-to-digits (v &optional position relativep)
+  ;; V is the number to be printed.  If RELATIVEP is NIL, POSITION is
+  ;; the number of digits to the left of the decimal point where we
+  ;; want to stop printing.  If RELATIVEP is non-NIL, POSITION is the
+  ;; total number of digits we want printed.
+  ;;
+  ;; Two values are returned: k, and the digit string, without a
+  ;; decimal point.  k is the index into the string, before which the
+  ;; decimal point would go.
   (let ((print-base 10)			; B
 	(float-radix 2)			; b
 	(float-digits (float-digits v)) ; p

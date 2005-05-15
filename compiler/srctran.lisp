@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.155 2005/02/07 17:27:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.155.2.1 2005/05/15 20:01:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2245,15 +2245,15 @@
   ;; Note that the body of the loop doesn't really do anything unless
   ;; ~a&~c&m is non-zero.  So, rather than start m at #x80000000, we
   ;; can start at the most significant bit where ~a&~c is non-zero.
-  (let ((m (ash 1 (1- (integer-length (logandc2 (lognot a) c))))))
+  (let ((m (ash 1 (integer-length (logandc2 (lognot a) c)))))
     (loop while (not (zerop m))
        do
        (when (/= (logand m (lognot a) (lognot c)) 0)
-	 (let ((temp (logandc2 (logior a m) m)))
+	 (let ((temp (logandc2 (logior a m) (- m 1))))
 	   (when (<= temp b)
 	     (setf a temp)
 	     (return)))
-	 (let ((temp (logandc2 (logior c m) m)))
+	 (let ((temp (logandc2 (logior c m) (- m 1))))
 	   (when (<= temp d)
 	     (setf c temp)
 	     (return))))
@@ -2265,7 +2265,7 @@
   ;; b&~d&m is non-zero or ~b&d&m is non-zero.  So, rather than start
   ;; m at #x80000000, we can start at the most significant bit where
   ;; b&~d or ~b&d is non-zero.  That is, b^d is non-zero
-  (let ((m (ash 1 (1- (integer-length (logxor b d))))))
+  (let ((m (ash 1 (integer-length (logxor b d)))))
     (loop while (not (zerop m))
        do
        (cond ((/= (logand b (lognot d) m) 0)
@@ -2286,7 +2286,7 @@
   ;; is non-zero or if ~c&a&m is non-zero.  So rather than start m at
   ;; #x80000000, we can start at the most significant bit where ~a&c
   ;; or ~c&a is non-zero, i.e., where MSB of a^c.
-  (let ((m (ash 1 (1- (integer-length (logxor a c))))))
+  (let ((m (ash 1 (integer-length (logxor a c)))))
     (loop while (not (zerop m))
        do
        (cond ((/= (logandc2 (logand c m) a) 0)
@@ -2307,7 +2307,7 @@
 (defun max-or (a b c d)
   ;; Note that the body of the loop doesn't do anything unless b&d&m
   ;; is non-zero.  That is, when the MSB of b&d is non-zero.
-  (let ((m (ash 1 (1- (integer-length (logand b d))))))
+  (let ((m (ash 1 (integer-length (logand b d)))))
     (loop while (not (zerop m))
        do
        (when (/= (logand m b d) 0)

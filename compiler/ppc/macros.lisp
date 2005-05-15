@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.2 2005/04/05 03:41:09 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.3 2005/05/15 20:01:27 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -78,15 +78,6 @@
 ;;; Macros to handle the fact that we cannot use the machine native call and
 ;;; return instructions. 
 
-#+PPC-FUN-HACK
-(defmacro lisp-jump (function)
-  "Jump to the lisp function FUNCTION."
-  `(progn
-     (inst mtctr ,function)
-     (move code-tn ,function)
-     (inst bctr)))
-
-#-PPC-FUN-HACK
 (defmacro lisp-jump (function lip)
   "Jump to the lisp function FUNCTION."
   `(progn
@@ -96,17 +87,6 @@
      (move code-tn ,function)
      (inst bctr)))
 
-#+PPC-FUN-HACK
-(defmacro lisp-return (return-pc &key (offset 0) (frob-code t))
-  "Return to RETURN-PC."
-  `(progn
-     (inst addi lip-tn ,return-pc (- (* (1+ ,offset) word-bytes) other-pointer-type))
-     (inst mtlr lip-tn)
-     ,@(if frob-code
-         `((move code-tn ,return-pc)))
-     (inst blr)))
-
-#-PPC-FUN-HACK
 (defmacro lisp-return (return-pc lip &key (offset 0) (frob-code t))
   "Return to RETURN-PC."
   `(progn
@@ -200,7 +180,7 @@
       
       ;; Get the end of the current allocation region.
       (load-symbol-value ,flag-tn *current-region-end-addr*)
-      ;; The object starts exactly where alloc-tn is, minus an tag
+      ;; The object starts exactly where alloc-tn is, minus any tag
       ;; bits, etc.
 
       ;; CAUTION: The C code depends on the exact order of
@@ -233,14 +213,15 @@
   by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
   initializes the object."
   (once-only ((result-tn result-tn) (temp-tn temp-tn) (flag-tn flag-tn)
-	      (type-code type-code) (size size))
+	      (type-code type-code) (size size)
+	      (lowtag lowtag))
     `(pseudo-atomic (,flag-tn)
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
 		   :temp-tn ,temp-tn
 		   :flag-tn ,flag-tn)
        (when ,type-code
 	 (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
-	 (storew ,temp-tn ,result-tn 0 other-pointer-type))
+	 (storew ,temp-tn ,result-tn 0 ,lowtag))
        ,@body)))
 
 
@@ -511,13 +492,11 @@
 
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
-;;; flag-tn must be wired to NL3. If a deferred interrupt happens
-;;; while we have the low bits of alloc-tn set, we add a "large"
-;;; constant to flag-tn.  On exit, we add flag-tn to alloc-tn
-;;; which (a) aligns alloc-tn again and (b) makes alloc-tn go
-;;; negative.  We then trap if alloc-tn's negative (handling the
-;;; deferred interrupt) and using flag-tn - minus the large constant -
-;;; to correct alloc-tn.
+;;; flag-tn must be wired to NL3.  If a deferred interrupt has
+;;; happened, the low bit of alloc-tn is set.  We transfer this low
+;;; bit to flag-tn and trap if flag-tn is non-zero.  This makes
+;;; pseudo-atomic behave like it does on sparc (except we need an
+;;; extra register to hold the interrupted bit.)
 (defmacro pseudo-atomic ((flag-tn &key (extra 0)) &rest forms)
   (let ((n-extra (gensym)))
     ;; We're depending on extra being zero here and, currently, no
@@ -529,12 +508,10 @@
 	(progn
 	  (inst andi. ,flag-tn alloc-tn 7)
 	  (inst twi :ne ,flag-tn 0))
-	;; Set the PA flag
 	(inst addi alloc-tn alloc-tn 4))
       ,@forms
       (without-scheduling ()
-       ;; Grab PA interrupted bit from alloc-tn, and save it in
-       ;; flag-tn.
+       ;; Grab PA interrupted bit from alloc-tn
        (inst andi. ,flag-tn alloc-tn 1)
        ;; Remove PA bit			  
        (inst subi alloc-tn alloc-tn 4)			  

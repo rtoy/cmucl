@@ -1014,6 +1014,10 @@ function entry or exit.
   of arguments and return values is controlled by
   \vindexed{debug-print-level} and \vindexed{debug-print-length}.
   
+  Invidiual methods can also be traced using the syntax \code{(method
+    <name> <qualifiers> <specializers>)}.
+  See~\ref{sec:method-tracing} for more information.
+
   If no \var{names} or \var{options} are are given, \code{trace}
   returns the list of all currently traced functions,
   \code{*traced-function-list*}.
@@ -1039,7 +1043,8 @@ function entry or exit.
     function name or list of names.  \code{trace} does nothing unless
     a call to one of those functions encloses the call to this
     function (i.e. it would appear in a backtrace.)  Anonymous
-    functions have string names like \code{"DEFUN FOO"}.
+    functions have string names like \code{"DEFUN FOO"}.  Individual
+    methods can also be traced.  See section~\ref{sec:method-tracing}.
   
   \item[\kwd{break} \var{form}, \kwd{break-after} \var{form},
     \kwd{break-all} \var{form}] If specified, and \var{form} evaluates

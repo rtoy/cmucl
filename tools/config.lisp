@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.7 2003/07/20 13:57:24 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/config.lisp,v 1.7.12.1 2005/05/15 20:01:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,13 +79,13 @@
     
     (gc-off)
     (when load-gray-streams
-      (load "library:subsystems/gray-streams-library"))
+      (require :gray-streams))
     (when load-clx
-      (load "library:subsystems/clx-library"))
+      (require :clx))
     (when load-clm
-      (load "library:subsystems/clm-library"))
+      (require :clm))
     (when load-hemlock
-      (load "library:subsystems/hemlock-library"))
+      (require :hemlock))
     (dolist (f other) (load f))
     
     (setq *info-environment*

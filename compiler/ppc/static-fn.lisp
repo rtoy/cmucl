@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/static-fn.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/static-fn.lisp,v 1.3.2.1 2005/05/15 20:01:27 rtoy Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -26,7 +26,6 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
-  #-PPC-FUN-HACK
   (:temporary (:sc interior-reg :offset lip-offset) entry-point)
   (:temporary (:scs (descriptor-reg)) func)
   (:temporary (:sc any-reg :offset nargs-offset) nargs)
@@ -88,9 +87,6 @@
 	   (let ((lra-label (gen-label))
 		 (cur-nfp (current-nfp-tn vop)))
 	     ,@(moves (temp-names) (arg-names))
-	     #+PPC-FUN-HACK
-	     (inst lwz func null-tn (static-function-offset symbol))
-	     #-PPC-FUN-HACK
 	     (inst lwz entry-point null-tn (static-function-offset symbol))
 	     (inst lr nargs (fixnumize ,num-args))
 	     (when cur-nfp
@@ -99,11 +95,6 @@
 	     (inst mr cfp-tn csp-tn)
 	     (inst compute-lra-from-code lra code-tn lra-label temp)
 	     (note-this-location vop :call-site)
-	     #+PPC-FUN-HACK-MAYBE
-	     (inst mr code-tn func)
-	     #+PPC-FUN-HACK
-	     (inst mtctr func)
-	     #-PPC-FUN-HACK
 	     (inst mtctr entry-point)
 	     (inst bctr)
 	     (emit-return-pc lra-label)

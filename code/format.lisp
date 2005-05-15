@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.61 2005/02/02 17:58:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.61.2.1 2005/05/15 20:01:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1213,7 +1213,9 @@
 	       (estr (decimal-string (abs expt)))
 	       (elen (if e (max (length estr) e) (length estr)))
 	       (fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
-	       (fmin (if (minusp k) (- 1 k) nil))
+	       (fmin (if (minusp k)
+			 (- 1 k)
+			 (if fdig (1+ fdig) nil)))
 	       (spaceleft (if w
 			      (- w 2 elen
 				 (if (or atsign (minusp (float-sign number)))
@@ -1771,9 +1773,10 @@
 		 (error 'format-error
 			:complaint
 			"Must specify exactly two sections."))
-	     (expand-bind-defaults ((index (expand-next-arg))) params
+	     (expand-bind-defaults ((index nil)) params
 	       (setf *only-simple-args* nil)
-	       (let ((clauses nil))
+	       (let ((clauses nil)
+		     (case `(or ,index ,(expand-next-arg))))
 		 (when last-semi-with-colon-p
 		   (push `(t ,@(expand-directive-list (pop sublists)))
 			 clauses))
@@ -1782,7 +1785,7 @@
 		     (push `(,(decf count)
 			     ,@(expand-directive-list sublist))
 			   clauses)))
-		 `(case ,index ,@clauses)))))
+		 `(case ,case ,@clauses)))))
      remaining)))
 
 (defun expand-maybe-conditional (sublist)

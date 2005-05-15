@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.50 2004/12/22 19:25:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.50.2.1 2005/05/15 20:01:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,7 +165,9 @@
   ;; than 10).
   
   (defconstant constituent-decimal-digit 13)
-  (defconstant constituent-digit-or-expt 14))
+  (defconstant constituent-digit-or-expt 14)
+  ;; Invalid constituent character
+  (defconstant constituent-invalid 15))
 
 
 ;;;; Package specials.
@@ -272,7 +274,13 @@
   (set-secondary-attribute #\f #.constituent-expt)
   (set-secondary-attribute #\d #.constituent-expt)
   (set-secondary-attribute #\s #.constituent-expt)
-  (set-secondary-attribute #\l #.constituent-expt))
+  (set-secondary-attribute #\l #.constituent-expt)
+  ;; See CLHS 2.1.4.2 for the list of constituent characters that are
+  ;; invalid constituent characters.
+  (set-secondary-attribute #\Space #.constituent-invalid)
+  (set-secondary-attribute #\Newline #.constituent-invalid)
+  (dolist (c '(#\backspace #\tab #\page #\return #\rubout))
+    (set-secondary-attribute c #.constituent-invalid)))
 
 (defmacro get-secondary-attribute (char)
   `(elt secondary-attribute-table
@@ -397,7 +405,6 @@
     (set-cat-entry #\return #.whitespace)
     (set-cat-entry #\\ #.escape)
     (set-cmt-entry #\\ #'read-token)
-    (set-cat-entry #\rubout #.whitespace)
     (set-cmt-entry #\: #'read-token)
     (set-cmt-entry #\| #'read-token)
     ;;macro definitions
@@ -789,9 +796,12 @@
 (defmacro char-class (char attable)
   `(let ((att (aref ,attable (char-code ,char))))
      (declare (fixnum att))
-     (if (<= att #.terminating-macro)
-	 #.delimiter
-	 att)))
+     (cond ((<= att #.terminating-macro)
+	    #.delimiter)
+	   ((= att #.constituent-invalid)
+	    (%reader-error stream "invalid constituent"))
+	   (t
+	    att))))
 
 ;;; return the character class for a char which might be part of a rational
 ;;; number
@@ -799,13 +809,16 @@
 (defmacro char-class2 (char attable)
   `(let ((att (aref ,attable (char-code ,char))))
      (declare (fixnum att))
-     (if (<= att #.terminating-macro)
-	 #.delimiter
-	 (if (digit-char-p ,char *read-base*)
-	     constituent-digit
-	     (if (= att constituent-digit)
-		 constituent
-		 att)))))
+     (cond ((<= att #.terminating-macro)
+	    #.delimiter)
+	   ((digit-char-p ,char *read-base*)
+	    constituent-digit)
+	   ((= att constituent-digit)
+	    constituent)
+	   ((= att constituent-invalid)
+	    (%reader-error stream "invalid constituent"))
+	   (t
+	    att))))
 
 ;;; return the character class for a char which might be part of a rational or
 ;;; floating number (assume that it is a digit if it could be)
@@ -821,15 +834,18 @@
 	 (setq possibly-float
 	       (or (digit-char-p ,char 10)
 		   (= att constituent-dot))))
-     (if (<= att #.terminating-macro)
-	 #.delimiter
-	 (if (digit-char-p ,char (max *read-base* 10))
+     (cond ((<= att #.terminating-macro)
+	    #.delimiter)
+	   ((digit-char-p ,char (max *read-base* 10))
 	     (if (digit-char-p ,char *read-base*)
 		 (if (= att #.constituent-expt)
 		     constituent-digit-or-expt
 		     constituent-digit)
-		 constituent-decimal-digit)
-	     att))))
+		 constituent-decimal-digit))
+	   ((= att constituent-invalid)
+	    (%reader-error stream "invalid constituent"))
+	   (t
+	    att))))
 
 
 
@@ -922,6 +938,7 @@
 	(#.escape (go ESCAPE))
 	(#.package-delimiter (go COLON))
 	(#.multiple-escape (go MULT-ESCAPE))
+	(#.constituent-invalid (%reader-error stream "invalid constituent"))
 	;; can't have eof, whitespace, or terminating macro as first char!
 	(t (go SYMBOL)))
      SIGN ; saw "sign"
@@ -1028,13 +1045,13 @@
      RIGHTDIGIT ; saw "[sign] {decimal-digit}* dot {digit}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (return (make-float)))
+      (unless char (return (make-float stream)))
       (case (char-class char attribute-table)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-expt (go EXPONENT))
 	(#.delimiter
 	 (unread-char char stream)
-	 (return (make-float)))
+	 (return (make-float stream)))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1088,12 +1105,12 @@
      EXPTDIGIT ; got to EXPONENT, saw "[sign] {digit}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (return (make-float)))
+      (unless char (return (make-float stream)))
       (case (char-class char attribute-table)
 	(#.constituent-digit (go EXPTDIGIT))
 	(#.delimiter
 	 (unread-char char stream)
-	 (return (make-float)))
+	 (return (make-float stream)))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1112,12 +1129,12 @@
      RATIODIGIT ; saw "[sign] {digit}+ slash {digit}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (return (make-ratio)))
+      (unless char (return (make-ratio stream)))
       (case (char-class2 char attribute-table)
 	(#.constituent-digit (go RATIODIGIT))
 	(#.delimiter
 	 (unread-char char stream)
-	 (return (make-ratio)))
+	 (return (make-ratio stream)))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1316,13 +1333,6 @@
 
 ;;;; Number reading functions.
 
-#+nil
-(defmacro digit* nil
-  `(do ((ch char (inch-read-buffer)))
-       ((or (eofp ch) (not (digit-char-p ch))) (setq char ch))
-     ;;report if at least one digit is seen:
-     (setq one-digit t)))
-
 (defmacro exponent-letterp (letter)
   `(memq ,letter '(#\E #\S #\F #\L #\D #\e #\s #\f #\l #\d)))
 
@@ -1343,7 +1353,8 @@
 
 (declaim (simple-vector *integer-reader-safe-digits*
 			*integer-reader-base-power*))
-#|
+#||
+;; This function was used to initialize the variables above.
 (defun init-integer-reader ()
   (do ((base 2 (1+ base)))
       ((> base 36))
@@ -1357,38 +1368,6 @@
 	    (aref *integer-reader-base-power* base)
 	    (expt base digits)))))
 |#
-
-#+nil
-(defun make-integer ()
-  "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
-  then multiplying by a power of the base and adding."
-  (let* ((base *read-base*)
-	 (digits-per (aref *integer-reader-safe-digits* base))
-	 (base-power (aref *integer-reader-base-power* base)) 
-	 (negativep nil)
-	 (number 0))
-    (declare (type index digits-per base-power))
-    (read-unwind-read-buffer)
-    (let ((char (inch-read-buffer)))
-      (cond ((char= char #\-)
-	     (setq negativep t))
-	    ((char= char #\+))
-	    (t (unread-buffer))))
-    (loop
-     (let ((num 0))
-       (declare (type index num))
-       (dotimes (digit digits-per)
-	 (let* ((ch (inch-read-buffer)))
-	   (cond ((or (eofp ch) (char= ch #\.))
-		  (return-from make-integer
-			       (let ((res
-				      (if (zerop number) num
-					  (+ num (* number
-						    (expt base digit))))))
-				 (if negativep (- res) res))))
-		 (t (setq num (+ (digit-char-p ch base)
-				 (the index (* num base))))))))
-       (setq number (+ num (* number base-power)))))))
 
 (defun make-integer ()
   "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
@@ -1487,7 +1466,7 @@ the end of the stream."
 	       (scan ch nil)))))))
 
 
-(defun make-float ()
+(defun make-float (stream)
   ;; Assume that the contents of *read-buffer* are a legal float, with nothing
   ;; else after it.
   (read-unwind-read-buffer)
@@ -1521,7 +1500,8 @@ the end of the stream."
     (cond ((eofp char)
            ;; If not, we've read the whole number.
            (let ((num (make-float-aux number divisor
-                                      *read-default-float-format*)))
+                                      *read-default-float-format*
+				      stream)))
              (return-from make-float (if negative-fraction (- num) num))))
           ((exponent-letterp char)
            (setq float-char char)
@@ -1547,18 +1527,22 @@ the end of the stream."
                                   (#\D 'double-float)
                                   (#\L 'long-float)))
                   num)
-	     (setq num (make-float-aux (* (expt 10 exponent) number) divisor float-format))
+	     (setq num (make-float-aux (* (expt 10 exponent) number) divisor
+				       float-format stream))
 
 	     (return-from make-float (if negative-fraction
                                              (- num)
                                              num))))
 	  (t (error "Internal error in floating point reader.")))))
 
-(defun make-float-aux (number divisor float-format)
-  (coerce (/ number divisor) float-format))
+(defun make-float-aux (number divisor float-format stream)
+  (handler-case 
+      (coerce (/ number divisor) float-format)
+    (error ()
+	   (%reader-error stream "Floating-point number not representable"))))
 
 
-(defun make-ratio ()
+(defun make-ratio (stream)
   ;;assume *read-buffer* contains a legal ratio.  Build the number from
   ;;the string.
   ;;look for optional "+" or "-".
@@ -1581,6 +1565,10 @@ the end of the stream."
 	  (dig ()))
 	 ((or (eofp ch) (not (setq dig (digit-char-p ch *read-base*)))))
 	 (setq denominator (+ (* denominator *read-base*) dig)))
+    (when (zerop denominator)
+      (%reader-error stream "Invalid ratio: ~S/~S"
+		     (if negative-number (- numerator) numerator)
+		     denominator))
     (let ((num (/ numerator denominator)))
       (if negative-number (- num) num))))
 
@@ -1607,7 +1595,8 @@ the end of the stream."
   (set-macro-character char #'read-dispatch-char non-terminating-p rt)
   (let ((dalist (dispatch-tables rt)))
     (setf (dispatch-tables rt)
-          (push (cons char (make-char-dispatch-table)) dalist))))
+          (push (cons char (make-char-dispatch-table)) dalist)))
+  t)
 
 (defun set-dispatch-macro-character
        (disp-char sub-char function &optional (rt *readtable*))
@@ -1681,7 +1670,7 @@ the end of the stream."
    and the lisp object built by the reader is returned.  Macro chars
    will take effect."
   (declare (string string))
-  (with-array-data ((string string)
+  (with-array-data ((string string :offset-var offset)
 		    (start start)
 		    (end (or end (length string))))
     (unless read-from-string-spares
@@ -1695,7 +1684,7 @@ the end of the stream."
 	  (values (if preserve-whitespace
 		      (read-preserving-whitespace stream eof-error-p eof-value)
 		      (read stream eof-error-p eof-value))
-		  (string-input-stream-current stream))
+		  (- (string-input-stream-current stream) offset))
 	(push stream read-from-string-spares)))))
 
 

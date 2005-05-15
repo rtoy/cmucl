@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.9 2004/06/20 17:43:28 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.9.2.1 2005/05/15 20:01:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -94,8 +94,7 @@
       (let ((*load-verbose* *require-verbose*))
         (if pathname
             (dolist (file (if (consp pathname) pathname (list pathname)) t)
-              (ext:without-package-locks
-                (load file)))
+	      (load file))
             (unless (some (lambda (p) (funcall p module-name))
                           *module-provider-functions*)
               (error "Don't know how to load ~A" module-name)))))

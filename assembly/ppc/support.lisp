@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/support.lisp,v 1.2 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/support.lisp,v 1.2.2.1 2005/05/15 20:01:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,6 @@
      `((lisp-return (make-random-tn :kind :normal
 				    :sc (sc-or-lose 'descriptor-reg *backend*)
 				    :offset lra-offset)
-		    #-PPC-FUN-HACK
 		    (make-random-tn :kind :normal
 		                    :sc (sc-or-lose 'interior-reg *backend*)
 				    :offset lip-offset)

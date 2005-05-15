@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.26 2003/08/25 20:50:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.26.8.1 2005/05/15 20:01:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -368,7 +368,7 @@
     ;; and set default values for any that weren't set above
     (when (eq direction not-set) (setq direction :input))
     (when (eq if-exists not-constant) (setq if-exists nil))
-    (when (eq if-does-not-exist not-constant) (set if-does-not-exist nil))
+    (when (eq if-does-not-exist not-constant) (setq if-does-not-exist nil))
     (when (or (eq class not-set) (eq class not-constant)) (setq class 'stream))
     ;; now, NIL is a possible result only in the following cases:
     ;;   direction is :probe or not-constant and :if-does-not-exist is
