@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63 2005/02/06 06:11:00 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.64 2005/05/16 13:16:11 rtoy Exp $
  *
  */
 
@@ -3597,10 +3597,13 @@ scav_weak_entries (struct hash_table *hash_table)
 
       /* If the key survives, scavenge its value, for the case that
 	 the only reference to a key in a weak table is a value in
-	 another weak table.  */
+	 another weak table.  Don't scavenge the value twice;
+	 scan_weak_tables calls this function more than once for the
+	 same hash table.  */
       if (survives_gc (old_key)
 	  && index_vector[old_index] != 0
-	  && (hash_vector == 0 || hash_vector[old_index] == 0x80000000))
+	  && (hash_vector == 0 || hash_vector[old_index] == 0x80000000)
+	  && !survives_gc (kv_vector[2 * i + 1]))
 	{
 	  scavenge (&kv_vector[2 * i + 1], 1);
 	  scavenged = 1;
