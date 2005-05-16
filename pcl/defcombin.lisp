@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.26 2004/04/06 20:44:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.27 2005/05/16 13:12:59 rtoy Rel $")
 
 (in-package :pcl)
 
@@ -424,8 +424,11 @@
 (defun deal-with-arguments-option (wrapped-body args-lambda-list)
   (let ((intercept-rebindings
 	 (loop for arg in args-lambda-list
+	       as var = (if (consp arg) (car arg) arg)
+	       unless (symbolp var) do
+		 (error "Invalid parameter specifier: ~s" arg)
 	       unless (memq arg lambda-list-keywords)
-	       collect `(,arg ',arg)))
+	         collect `(,var ',var)))
 	(nreq 0)
 	(nopt 0)
 	whole)
