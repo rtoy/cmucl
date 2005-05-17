@@ -51,11 +51,11 @@ Setting up a build environment
 
 2.) Fetch the sources and put them into the base directory
 
-    tar xzf /tmp/cmucl-18d.source.tar.gz
+    tar xzf /tmp/cmucl-source.tar.gz
 
     or, if you want to use the CVS sources directly:
 
-    export CVSROOT=:pserver:anonymous@cvs2.cons.org:/home/anoncvs/CVS-cmucl
+    export CVSROOT=:pserver:anonymous@common-lisp.net:/project/cmucl/cvsroot
     cvs login  (password is `anonymous')
     cvs co src
 
@@ -155,6 +155,20 @@ d) Populating the kernel.core, and dumping a new lisp.core file.
    were compiled in phase a) are loaded into it, and a new lisp.core
    file is dumped out.
 
+We're not quite done yet.  This produces just a basic lisp.core.
+To complete the build so that you something similar to what the
+releases of CMUCL do, there are a few more steps:
+
+e) Build the utilities like Gray streams, simple streams, CLX, CLM,
+   and Hemlock.  Use the src/tools/build-utils.sh script for this, as
+   described below
+
+f) Create tarfiles using the src/tools/make-dist.sh script, as
+   explained below.
+
+With these tarfiles, you can install them anywhere.  The contents of
+the tarfiles will be the same as the snapshots and releases of CMUCL.
+
 When cross-compiling, there is additional phase at the beginning, and
 some of the phases happen with different hosts/platforms.  The initial
 phase is setting up and compiling the cross-compilation backend, using
@@ -173,7 +187,7 @@ the scripts included with this little text?
 Overview of the included build scripts
 --------------------------------------
 
-* create-target.sh target-directory [lisp-variant [motif-variant]]
+* src/tools/create-target.sh target-directory [lisp-variant [motif-variant]]
 
 This script creates a new target directory, which is a shadow of the
 source directory, that will contain all the files that are created by
@@ -211,7 +225,7 @@ sample setenv.lisp includes a set of features that should work for the
 intended configuration.  Note also that some adding or removing some
 features may require a cross-compile instead of a normal compile.
 
-* clean-target.sh [-l] target-directory [more dirs]
+* src/tools/clean-target.sh [-l] target-directory [more dirs]
 
 Cleans the given target directory, so that all created files will be
 removed.  This is useful to force recompilation.  If the -l flag is
@@ -219,7 +233,7 @@ given, then the C runtime is also removed, including all the lisp
 executable, any lisp cores, all object files, lisp.nm, internals.h,
 and the config file.
 
-* build-world.sh target-directory [build-binary] [build-flags...]
+* src/tools/build-world.sh target-directory [build-binary] [build-flags...]
 
 Starts a complete world build for the given target, using the lisp
 binary/core specified as a build host.  The recompilation step will
@@ -230,13 +244,13 @@ step of the world build will inform you of that fact.  In that case,
 you'll have to use the rebuild-lisp.sh script, and then restart the
 world build process with build-world.sh
 
-* rebuild-lisp.sh target-directory
+* src/tools/rebuild-lisp.sh target-directory
 
 This script will force a complete recompilation of the C runtime code
 of CMU CL (aka the lisp executable).  Doing this will necessitate
 building a new kernel.core file, using build-world.sh.
 
-* load-world.sh target-directory version
+* src/tools/load-world.sh target-directory version
 
 This will finish the CMU CL rebuilding process, by loading the
 remaining compiled files generated in the world build process into the
@@ -251,23 +265,49 @@ ISO8601 format is often a good idea, e.g. "18d+ 2002-05-06" for a
 binary that is based on sources current on the 6th May, 2002, which is
 post the 18d release.
 
-* build-utils.sh target-directory
+* src/tools/build-utils.sh target-directory
 
 This script will build auxiliary libraries packaged with CMU CL,
 including CLX, CMUCL/Motif, the Motif debugger, inspector, and control
 panel, and the Hemlock editor.  It will use the lisp executable and
 core of the given target.
 
-* make-dist.sh [-bg] [-G group] [-O owner] target-directory version arch os
+* src/tools/make-dist.sh [-bg] [-G group] [-O owner] target-directory version arch os
 
 This script creates both main and extra distribution tarballs from the
 given target directory, using the make-main-dist.sh and
-make-extra-dist.sh scripts.  You can select the compression method via
-the -b (bzip2) and -g (gzip) flags.  The default is gzip compression.
-When making the distribution, you can also select the group and owner
-of the files via the -G and -O options.
+make-extra-dist.sh scripts.  The result will be two tar files.  One
+contains the main distribution including the runtime and lisp.core
+with PCL (CLOS); the second contains the extra libraries such as
+Gray-streams, simple-streams, CLX, CLM, and Hemlock.
 
-* make-main-dist.sh target-directory version arch os
+Some options that are available:
+
+  -b           Use bzip2 compression
+  -g           Use gzip compression
+  -G group     Group to use
+  -O owner     Owner to use
+
+If you specify both -b and -g, you will get two sets of tarfiles.  The
+-G and -O options will attempt to set the owner and group of the files
+when building the tarfiles.  This way, when you extract the tarfiles,
+the owner and group will be set as specified.  You may need to be root
+to do this because many Unix systems don't normally let you change the
+owner and group of a file.
+
+The remaining arguments used to create the name of the tarfiles.  The
+names will have the form:
+
+   cmucl-<version>-<arch>-<os>.tar.bz2
+   cmucl-<version>-<arch>-<os>.extras.tar.bz2
+
+Of course, the "bz2" will be "gz" if you specified gzip compression
+instead of bzip.
+
+* /src/tools/make-main-dist.sh target-directory version arch os
+
+This is script is not normally invoked by the user; make-dist will do
+it appropriately.
 
 This script creates a main distribution tarball (both in gzipped and
 bzipped variants) from the given target directory.  This will include
@@ -277,7 +317,10 @@ simple streams.
 
 This is intended to be run from make-dist.sh.
 
-* make-extra-dist.sh target-directory version arch os
+* src/tools/make-extra-dist.sh target-directory version arch os
+
+This is script is not normally invoked by the user; make-dist will do
+it appropriately.
 
 This script creates an extra distribution tarball (both in gzipped and
 bzipped variants) from the given target directory.  This will include
@@ -402,6 +445,8 @@ a) Bootfiles
    in the order they are numbered.  Be sure to remove the bootstrap
    file once it is no longer needed.
 
+   Alternatively, the bootstrap file can just "load" the individual
+   bootfiles as needed.
 
 b) Cross-compiling
 
@@ -440,62 +485,73 @@ that is up-to-date with the sources.  Otherwise, you may also need to
 add a bootstrap file to get any bootfiles to make your lisp
 up-to-date with the current sources.
 
-Create a cross-compiler directory to hold the cross-compiler and a
-target directory to hold the result:
+1.  Select a directory for the cross-compiler and compiled target:
 
-       src/tools/create-target.sh xcross
-       src/tools/create-target.sh xtarget
+	Create a cross-compiler directory to hold the cross-compiler
+	and a target directory to hold the result:
 
-Copy the src/tools/cross-scripts/cross-sparc-sparc.lisp to
-xtarget/cross.lisp.  Edit it appropriately.  In this case, it should
-look something like:
+	       src/tools/create-target.sh xcross
+	       src/tools/create-target.sh xtarget
 
-    (c::new-backend "SPARC"
-       ;; Features to add here
-       '(:sparc :sparc-v8
-	 :complex-fp-vops
-	 :linkage-table
-	 :gencgc
-	 :stack-checking
-	 :relative-package-names
-	 :conservative-float-type
-	 :hash-new :random-mt19937
-	 :cmu :cmu19 :cmu19a
-	 )
-       ;; Features to remove from current *features* here
-       '(:sparc-v9 :sparc-v7 :x86 :x86-bootstrap :alpha :osf1 :mips
-	 :propagate-fun-type :propagate-float-type :constrain-float-type
-	 :openbsd :freebsd :glibc2 :linux :pentium
-	 :long-float :new-random :small))
+2.  Adjust cross-compilation script
 
-    (setf *features* (remove :sparc-v9 *features*))
-    (pushnew :sparc-v8 *features*)
+	Copy the src/tools/cross-scripts/cross-sparc-sparc.lisp to
+	xtarget/cross.lisp.  Edit it appropriately.  In this case, it
+	should look something like:
 
-It's important to add frob *features* here as well as in the
-new-backend.  If you don't adjust *features*, they won't be set
-appropriately in the result.
+	    (c::new-backend "SPARC"
+	       ;; Features to add here
+	       '(:sparc :sparc-v8
+		 :complex-fp-vops
+		 :linkage-table
+		 :gencgc
+		 :stack-checking
+		 :relative-package-names
+		 :conservative-float-type
+		 :hash-new :random-mt19937
+		 :cmu :cmu19 :cmu19a
+		 )
+	       ;; Features to remove from current *features* here
+	       '(:sparc-v9 :sparc-v7 :x86 :x86-bootstrap :alpha :osf1 :mips
+		 :propagate-fun-type :propagate-float-type :constrain-float-type
+		 :openbsd :freebsd :glibc2 :linux :pentium
+		 :long-float :new-random :small))
 
-Now compile the result:
+	    (setf *features* (remove :sparc-v9 *features*))
+	    (pushnew :sparc-v8 *features*)
 
-	src/tools/cross-build-world.sh xtarget xcross xtarget/cross.lisp [v9 binary]
+	It's important to add frob *features* here as well as in the
+	new-backend.  If you don't adjust *features*, they won't be
+	set appropriately in the result.
 
-When this finishes, you need to compile the C code:
+3.  Build the cross compiler and target
+	Now compile the result:
 
-	src/tools/rebuild-lisp.sh xtarget
+	    src/tools/cross-build-world.sh xtarget xcross xtarget/cross.lisp [v9 binary]
 
-At this point, you may want to run cross-build-world.sh again to
-generate a new kernel.core.  It shouldn't build anything;  just loads
-everything and creates a kernel.core.
+4.  Rebuild the lisp files:
 
-With the new kernel.core, we need to create a lisp.core:
+	When this finishes, you need to compile the C code:
 
-	src/tools/load-world.sh xtarget "new lisp"
+		src/tools/rebuild-lisp.sh xtarget
 
-Test the result with
+	At this point, you may want to run cross-build-world.sh again
+	to generate a new kernel.core.  It shouldn't build anything;
+	just loads everything and creates a kernel.core.
 
-	xtarget/lisp/lisp -noinit
+5.  Build the world:
 
-You may now want to use this cross-compiled lisp to rebuild itself, to
-make sure you haven't messed up.  You can do a normal build as
-described above, except your build-lisp is xtarget/lisp/lisp.
+	With the new kernel.core, we need to create a lisp.core:
+
+		src/tools/load-world.sh xtarget "new lisp"
+
+	Test the result with
+
+		xtarget/lisp/lisp -noinit
+
+However, this lisp will be missing some functionality like PCL.  You
+probably now want to use the compiler to rebuild everything once
+again.  Just follow the directions for a normal build, and use
+xtarget/lisp/lisp as your compiler.  Be sure to use create-target.sh
+to create a new directory where the result can go.
 
