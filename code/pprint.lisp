@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.53 2005/05/12 18:49:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.54 2005/05/17 17:02:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1394,8 +1394,38 @@
 
 (defun pprint-declare (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~:<~W~^~@_ ~:I~W~@{ ~_~W~}~:>")
-	   stream list))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "declare"
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-newline :miser stream)
+    (write-char #\space stream)
+    (pprint-indent :current 0 stream)
+    ;; Print out each spec.
+    (loop
+       (let ((spec (pprint-pop)))
+	 ;; If the spec begins with TYPE, we indent it so that vars
+	 ;; are lined up after the actual type.  Otherwise, we just
+	 ;; make them all line up after the first symbol of the
+	 ;; spec.
+	 (pprint-logical-block (stream spec :prefix "(" :suffix ")")
+	   (when (eq (car spec) 'type)
+	     (output-object (pprint-pop) stream)
+	     (pprint-exit-if-list-exhausted)
+	     (pprint-newline :miser stream)
+	     (write-char #\space stream))
+	   (output-object (pprint-pop) stream)
+	   (pprint-exit-if-list-exhausted)
+	   (pprint-newline :miser stream)
+	   (write-char #\space stream)
+	   (pprint-indent :current 0 stream)
+	   (loop
+	      (output-object (pprint-pop) stream)
+	      (pprint-exit-if-list-exhausted)
+	      (write-char #\space stream)
+	      (pprint-newline :fill stream))))
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :linear stream))))
 
 (defun pprint-defun (stream list &rest noise)
   (declare (ignore noise))
