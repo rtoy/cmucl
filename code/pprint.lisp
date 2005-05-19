@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.54 2005/05/17 17:02:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.55 2005/05/19 14:21:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1425,6 +1425,7 @@
 	      (write-char #\space stream)
 	      (pprint-newline :fill stream))))
        (pprint-exit-if-list-exhausted)
+       (write-char #\space stream)
        (pprint-newline :linear stream))))
 
 (defun pprint-defun (stream list &rest noise)
