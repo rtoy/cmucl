@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.79 2005/04/19 18:26:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.80 2005/05/23 18:02:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -458,45 +458,46 @@
 ;;; EOF-VALUE - the eof-value argument to peek-char
 ;;; CHAR-VAR - the variable which will be used to store the current character
 ;;; READ-FORM - the form which will be used to read a character
+;;; READ-EOF - the result returned from READ-FORM when eof is reached.
 ;;; UNREAD-FORM - ditto for unread-char
 ;;; SKIPPED-CHAR-FORM - the form to execute when skipping a character
 ;;; EOF-DETECTED-FORM - the form to execute when EOF has been detected
 ;;;                     (this will default to CHAR-VAR)
 (defmacro generalized-peeking-mechanism (peek-type eof-value char-var
-					 read-form unread-form
+					 read-form read-eof unread-form
 					 &optional (skipped-char-form nil)
 						   (eof-detected-form nil))
   `(let ((,char-var ,read-form))
-    (cond ((eql ,char-var ,eof-value) 
+    (cond ((eql ,char-var ,read-eof) 
 	   ,(if eof-detected-form
 		eof-detected-form
-		char-var))
+		eof-value))
 	  ((characterp ,peek-type)
 	   (do ((,char-var ,char-var ,read-form))
-	       ((or (eql ,char-var ,eof-value) 
+	       ((or (eql ,char-var ,read-eof) 
 		    (char= ,char-var ,peek-type))
-		(cond ((eql ,char-var ,eof-value)
+		(cond ((eql ,char-var ,read-eof)
 		       ,(if eof-detected-form
 			    eof-detected-form
-			    char-var))
+			    eof-value))
 		      (t ,unread-form
 			 ,char-var)))
 	     ,skipped-char-form))
 	  ((eql ,peek-type t)
 	   (do ((,char-var ,char-var ,read-form))
-	       ((or (eql ,char-var ,eof-value)
+	       ((or (eql ,char-var ,read-eof)
 		    (not (eql (get-cat-entry ,char-var *readtable*) whitespace)))
-		(cond ((eql ,char-var ,eof-value)
+		(cond ((eql ,char-var ,read-eof)
 		       ,(if eof-detected-form
 			    eof-detected-form
-			    char-var))
+			    eof-value))
 		      (t ,unread-form
 			 ,char-var)))
 	     ,skipped-char-form))
 	  ((null ,peek-type)
 	   ,unread-form
 	   ,(if eof-detected-form
-		(when (eql char-var eof-value)
+		(when (eql char-var read-eof)
 		  eof-detected-form))
 	   ,char-var)
 	  (t
@@ -526,7 +527,8 @@
 	  ;; lisp-stream
 	  (generalized-peeking-mechanism
 	   peek-type eof-value char
-	   (read-char stream eof-errorp eof-value)
+	   (read-char stream eof-errorp :eof)
+	   :eof
 	   (unread-char char stream)
 	   nil
 	   (eof-or-lose stream (or eof-errorp recursive-p) eof-value))
@@ -1346,10 +1348,11 @@ output to Output-stream"
 			   (pop (echo-stream-unread-stuff stream)))
 			  (t
 			   (setf unread-char-p nil)
-			   (read-char in eof-errorp eof-value)))))
+			   (read-char in eof-errorp :eof)))))
 	     (generalized-peeking-mechanism
 	      arg1 eof-value char
 	      (infn)
+	      :eof
 	      (unread-char char in)
 	      (outfn char))))))
       (:file-length
