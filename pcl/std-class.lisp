@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.75 2005/01/27 14:45:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.76 2005/05/23 15:38:20 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -402,7 +402,9 @@
 	 (supplied-meta   (getf initargs :metaclass unsupplied))
 	 (supplied-supers (getf initargs :direct-superclasses unsupplied))
 	 (meta (cond ((neq supplied-meta unsupplied)
-		      (find-class supplied-meta))
+		      (if (classp supplied-meta)
+			  supplied-meta
+			  (find-class supplied-meta)))
 		     ((or (null class)
 			  (forward-referenced-class-p class))
 		      *the-class-standard-class*)
