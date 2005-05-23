@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.33 2003/09/25 14:08:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.34 2005/05/23 18:42:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,7 +157,7 @@
 
 (defun lisp-implementation-version ()
   "Returns a string describing the implementation version."
-  *lisp-implementation-version*)
+  (format nil "~A (~X)" *lisp-implementation-version* c:byte-fasl-file-version))
 
 (defun machine-instance ()
   "Returns a string giving the name of the local machine."
