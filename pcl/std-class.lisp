@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.76 2005/05/23 15:38:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.77 2005/05/23 16:10:24 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -1413,6 +1413,14 @@
 	     (added ())
 	     (discarded ())
 	     (plist ()))
+        ;;
+        ;; Collect inherited class slots.  Note that LAYOUT-INHERITS is
+        ;; ordered from most general to most specific.
+        (loop for layout across (reverse (kernel:layout-inherits owrapper))
+              when (typep layout 'wrapper) do
+                (loop for slot in (wrapper-class-slots layout) do
+                        (pushnew slot oclass-slots :key #'car)))
+        ;;
 	;; local  --> local        transfer 
 	;; local  --> shared       discard
 	;; local  -->  --          discard
