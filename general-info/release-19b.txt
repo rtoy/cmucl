@@ -235,6 +235,11 @@ New in this release:
       - The disassembler handles closures better.
       - The result array for bit-* operations was sometimes too short
         if the args had fill pointers.
+      - Weak hash tables don't cause GC to go into infinite loops
+        anymore.
+      - (PEEK-CHAR nil s nil foo)  doesn't remove the character
+        that was read if FOO happens to match the character that
+        PEEK-CHAR returns.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
@@ -262,6 +267,10 @@ New in this release:
 
   * Improvements to the PCL implementation of CLOS:
       - AMOP-style custom slot allocation supported.
+      - The value of a slot that is specified as shared in the old
+        class and as local in the new class is now retained.
+      - CMUCL supports using the class name for the :metaclass
+        argument.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
