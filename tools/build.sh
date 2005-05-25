@@ -46,8 +46,6 @@ OLDLISP="cmulisp -noinit"
 
 SKIPUTILS=no
 
-set -x
-
 usage ()
 {
     echo "build-l4 [-123obvuC]"
