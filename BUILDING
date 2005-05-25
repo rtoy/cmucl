@@ -68,6 +68,64 @@ Setting up a build environment
 
 That's it, you are now ready to build CMU CL.
 
+A quick guide for simple builds
+-------------------------------
+
+We recommend that you read all of this document, but in case you don't
+want to do that and in case you know, somehow, that the version of
+CMUCL you are building from will build the sources you have, here is a
+quick guide.
+
+a) Simple builds
+
+   Use this to build from a version of CMUCL that is very close to the
+   sources you are trying to build now:
+
+   src/tools/build.sh -C "" -o "<name-of-old-lisp> <options-to-lisp>"
+
+   This will build CMUCL 3 times, each time with the result of the
+   previous build.  The last time, the additional libraries like CLX,
+   CLM, and Hemlock are built.  The final result will be in the
+   directory build-4.
+
+   This script basically runs create-target.sh, build-world.sh,
+   load-world.sh three times.  See below for descriptions of these
+   scripts.
+   
+b) Slightly more complicated builds
+
+   For slightly more complicated builds, you may need to use some
+   bootstrap files.  See below for more information about these
+   bootstrap files.  
+
+   For these, you can use this:
+
+   src/tools/build.sh -C "" -o "<old-lisp>" -B boot1.lisp -B boot2.lisp
+
+   The bootstrap files listed with the -B option (as many as needed)
+   are loaded in order, so be sure to get them right.
+
+   As in a) above, three builds are done, and the result is in the
+   directory build-4.
+
+c) More complicated builds
+
+   If you have more complicated builds, this script probably will not
+   work, and definitely does not handle cross-compiles.  In this case,
+   you will have to invoke the individual scripts by hand, as
+   described below.
+
+How do you know which of the three options above apply?  The easiest
+way is to look in src/bootfiles/<version>/* for boot files.  If the
+file date of a boot file is later than the version of CMUCL you are
+building from, then you need to use b) or c) above.  You may need to
+read the bootfiles for additional instructions, if any.  
+
+If there are no bootfiles, then you can use a) above.
+
+The build.sh script supports other options, and src/tools/build.sh -?
+will give a quick summary.  Read src/tools/build.sh for more
+information. 
 
 A general outline of the build process
 --------------------------------------
