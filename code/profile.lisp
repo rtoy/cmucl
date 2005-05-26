@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.40 2005/05/26 13:40:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.41 2005/05/26 19:09:15 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -427,7 +427,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	  (unless names (return))
 	  (let ((name (pop names)))
 	    (cond ((eq name :callers)
-		   (setq callers (not (null (pop names))))
+		   (setq callers (not (null (pop names)))))
 		  ;;
 		  ;; Method functions.
 		  #+pcl
