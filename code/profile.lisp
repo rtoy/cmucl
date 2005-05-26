@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.39 2004/09/28 16:43:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.40 2005/05/26 13:40:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -427,7 +427,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	  (unless names (return))
 	  (let ((name (pop names)))
 	    (cond ((eq name :callers)
-		   (setq callers (pop names)))
+		   (setq callers (not (null (pop names))))
 		  ;;
 		  ;; Method functions.
 		  #+pcl
@@ -542,7 +542,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
   (let (f)
     (when (and (fboundp name)
 	       (setq f (find-profile-fwrapper name)))
-      (profile-1-function name (pi-callers (fwrapper-user-data f))))))
+      (profile-1-function name (pi-callers-p (fwrapper-user-data f))))))
 
 (push #'re-profile-redefined-function ext:*setf-fdefinition-hook*)
 
