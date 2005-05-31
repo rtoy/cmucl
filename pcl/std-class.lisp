@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.77 2005/05/23 16:10:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.78 2005/05/31 18:10:05 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -999,23 +999,46 @@
 
 (defmethod compute-slots ((class standard-class))
   (call-next-method))
-  
+
 (defmethod compute-slots :around ((class standard-class))
-  (loop with slotds = (call-next-method) and location = -1
-	for slot in slotds do
-	  (setf (slot-definition-location slot)
-		(case (slot-definition-allocation slot)
-		  (:instance
-		   (incf location))
-		  (:class
-		   (let* ((name (slot-definition-name slot))
-			  (from-class (slot-definition-allocation-class slot))
-			  (cell (assq name (class-slot-cells from-class))))
-		     (assert (consp cell))
-		     cell))))
-	  (initialize-internal-slot-functions slot)
-	finally
-	  (return slotds)))
+  (let ((eslotds (call-next-method))
+	(location -1)
+	(slot-names ()))
+    (dolist (eslotd eslotds eslotds)
+      (let ((allocation (slot-definition-allocation eslotd))
+	    (name (slot-definition-name eslotd)))
+	;;
+	;; Users are free to override COMPUTE-SLOTS, and they are
+	;; arguably free to MAKE-INSTANCE effective slot definition
+	;; metaobjects.  Such objects won't be initialized completely,
+	;; from the standpoint of PCL, so we have to fix them.
+	;;
+	;; If such an effective slot definition has the same name as
+	;; another slot, we certainly lose, at least if it's a class
+	;; slot.  I'm deliberately ignoring that for now.
+	;;
+	;; Note that COMPUTE-SLOTS can be called multiple times.
+	;; We don't want to create a new class slot cell every time
+	;; around.
+	(when (null (slot-definition-class eslotd))
+	  (setf (slot-definition-class eslotd) class)
+	  (when (eq allocation :class)
+	    (unless (assq name (class-slot-cells class))
+	      (push (cons name +slot-unbound+)
+		    (plist-value class 'class-slot-cells)))
+	    (setf (slot-definition-allocation-class eslotd) class)))
+	;;
+	;; Assign slot locations.
+	(setf (slot-definition-location eslotd)
+	    (case allocation
+	      (:instance
+	       (incf location))
+	      (:class
+	       (let* ((from-class (slot-definition-allocation-class eslotd))
+		      (cell (assq name (class-slot-cells from-class))))
+		 (assert (consp cell))
+		 cell))))
+	(initialize-internal-slot-functions eslotd)))))
 
 (defmethod compute-slots ((class funcallable-standard-class))
   (call-next-method))
