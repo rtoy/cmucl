@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.2 2005/02/06 19:43:15 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.3 2005/06/01 13:30:16 rtoy Exp $
  *
  */
 
@@ -34,6 +34,10 @@
 #include <signal.h>
 /* #include <sys/sysinfo.h> */
 /* #include <sys/proc.h> */
+
+/* Need this to define ppc_saved_state_t (for 10.4) */
+#include <mach/thread_status.h>
+
 #include "validate.h"
 vm_size_t os_vm_page_size;
 
