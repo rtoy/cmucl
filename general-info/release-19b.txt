@@ -1,7 +1,5 @@
 ========================== C M U C L  19 b =============================
 
-[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 19b.
 This is a major release which contains numerous enhancements and
 bugfixes from the 19a release.
@@ -240,6 +238,8 @@ New in this release:
       - (PEEK-CHAR nil s nil foo)  doesn't remove the character
         that was read if FOO happens to match the character that
         PEEK-CHAR returns.
+      - PROFILE sometimes crashes when an internal data structure was
+        set to a non-boolean value.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
@@ -275,6 +275,9 @@ New in this release:
   * Improvements to Hemlock, the Emacs-like editor:
 
   * Changes to rebuilding procedure:
+      - Added a new script to run all of the subscripts needed to
+        build CMUCL.  Won't handle all cases, but will handle the most
+        common builds.
 
   * Deprecated features:
 
