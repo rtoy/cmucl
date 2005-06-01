@@ -37,8 +37,35 @@ done
 	
 shift `expr $OPTIND - 1`
 
-if [ $# -ne 4 ]; then
+# Figure out the architecture and OS
+
+if [ $# -lt 2 ]; then
     usage
+else
+    # Figure out the architecture and OS
+    ARCH=
+    OS=
+    case `uname -s` in
+      SunOS)
+	  ARCH=sparcv9
+	  OS=solaris8
+	  ;;
+      Linux)
+	  ARCH=x86
+	  OS=linux
+	  ;;
+      Darwin)
+	  ARCH=ppc
+	  OS=darwin
+	  ;;
+      esac
+
+      if [ $# -eq 3 ]; then
+	  ARCH=$3
+      elif [ $# -eq 4 ]; then
+	  ARCH=$3
+	  OS=$4
+      fi
 fi
 
 if [ ! -d "$1" ]
@@ -47,10 +74,20 @@ then
 	exit 2
 fi
 
+if [ -z "$ARCH" ]; then
+    echo "Unknown architecture.  Please specify one"
+    usage
+fi
+
+if [ -z "$OS" ]; then
+    echo "Unknown OS.  Please specify one"
+    usage
+fi
+    
+  
 TARGET="`echo $1 | sed 's:/*$::'`"
 VERSION=$2
-ARCH=$3
-OS=$4
+
 ROOT=`dirname $0`
 
 # If no compression options given, default to gzip
@@ -60,5 +97,6 @@ fi
 
 OPTIONS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} $ENABLE_GZIP $ENABLE_BZIP"
 
+echo Creating distribution for $ARCH $OS
 $ROOT/make-main-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 1
 $ROOT/make-extra-dist.sh $OPTIONS $TARGET $VERSION $ARCH $OS || exit 2
