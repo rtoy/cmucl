@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.12 2004/12/23 14:49:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.12.4.1 2005/06/02 13:34:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -405,7 +405,7 @@
 
 (defun date-time-divider (character)
   (and (characterp character)
-       (member character date-dime-dividers :test #'char=)))
+       (member character date-time-dividers :test #'char=)))
 
 
 ;;; Match-substring takes a string argument and tries to match it with
