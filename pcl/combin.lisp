@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.23 2004/04/02 15:24:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.24 2005/06/06 14:32:23 rtoy Exp $")
 
 (in-package "PCL")
 
@@ -178,7 +178,10 @@
 
 (defmacro call-method (&rest args)
   (declare (ignore args))
-  `(error "~@<~S used outsize of a effective method form.~@:>" 'call-method))
+  ;;
+  ;; Hack: The PROGN is here so that RESTART-CASE doesn't see the
+  ;; ERROR.  See MUNGE-RESTART-CASE-EXPRESSION in code:error.lisp.
+  `(progn (error "~@<~S used outsize of a effective method form.~@:>" 'call-method)))
 
 (defmacro call-method-list (&rest calls)
   `(progn ,@calls))
