@@ -22,7 +22,9 @@ New in this release:
         callbacks from foreign code, and linkage-table support (which
         makes it possible to dump images that contain references to
         foreign code).
-      - NetBSD/x86 supported.
+      - the NetBSD/x86 platform is supported, with generational
+        conservative garbage collection (the :gencgc *feature*),
+        linkage-table support, and the Motif interface. 
 
 
   * Feature enhancements:
