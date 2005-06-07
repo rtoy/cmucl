@@ -80,7 +80,7 @@ buildit ()
 	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT
 	(cd $TARGET/lisp; make)
 	#$TOOLDIR/build-world.sh $TARGET $OLDLISP
-	sh -x $TOOLDIR/load-world.sh $TARGET "$VERSION"
+	$TOOLDIR/load-world.sh $TARGET "$VERSION"
 	if [ ! -f $TARGET/lisp/lisp.core ]; then
 	    echo "Failed to build $TARGET!"
 	    exit 1
