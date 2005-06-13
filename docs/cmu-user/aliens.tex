@@ -751,7 +751,7 @@ and two return values (\var{a} and \var{i}).
 macro:
 
 \begin{defmac}{alien:}{def-callback}{\var{name} (\var{return-type}
-    \mstar{(arg-name arg-type)})}
+    \mstar{(arg-name arg-type)}) \ampbody\ body}
   This macro defines a Lisp function that can be called from C and a
   Lisp variable.  The arguments to the function must be alien types,
   and the return type must also be an alien type.  This Lisp function
@@ -792,8 +792,7 @@ Here is a simple example of using callbacks.
   (+ arg1 arg2))
 
 (defun test-foo ()
-  (alien-funcall (sap-alien (callback foo) (function int int int))
-                 555 444444))
+  (callback-funcall foo 555 444444))
 \end{lisp}
 
 In this example, the callback function \code{foo} is defined which
