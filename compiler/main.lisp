@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.144 2004/12/16 21:55:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.145 2005/06/13 14:29:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -907,24 +907,75 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	 (stream (get-source-stream info)))
     (ecase language
       (:lisp
-       (loop
-	 (let* ((pos (file-position stream))
-		(eof '(*eof*))
-		(form (careful-read stream eof pos)))
-	   (if (eq form eof)
-	       (return)
-	       (let* ((forms (file-info-forms file))
-		      (current-idx (+ (fill-pointer forms)
-				      (file-info-source-root file))))
-		 (vector-push-extend form forms)
-		 (vector-push-extend pos (file-info-positions file))
-		 (clrhash *source-paths*)
-		 (find-source-paths form current-idx)
-		 (process-form form
-			       `(original-source-start 0 ,current-idx))))))))
-    (when (advance-source-file info)
-      (process-sources info))))
+       (flet
+	   ((process-one (stream)
+	      (loop
+		 (let* ((pos (file-position stream))
+			(eof '(*eof*))
+			(form (careful-read stream eof pos)))
+		   (if (eq form eof)
+		       (return)
+		       (let* ((forms (file-info-forms file))
+			      (current-idx (+ (fill-pointer forms)
+					      (file-info-source-root file))))
+			 (vector-push-extend form forms)
+			 (vector-push-extend pos (file-info-positions file))
+			 (clrhash *source-paths*)
+			 (find-source-paths form current-idx)
+			 (process-form form
+				       `(original-source-start 0 ,current-idx)))))))
+	    (process-xref-info (pathname)
+	      ;; When we have xref enabled, we save the xref data to the
+	      ;; file by faking it.  What we do is append a bunch of forms
+	      ;; to the file as if the file actually contained them.  These
+	      ;; forms clear out the entries from the xref databases
+	      ;; pertaining to this file, and then registers new entries
+	      ;; based on what we've found out so far from compiling this
+	      ;; file.
+	      ;;
+	      ;; Is this what we really want to do?  A new FOP might be good.
+	      ;;
+	      ;; Also, when compiling a file should we have a file-local
+	      ;; version of the databases?  This makes it easy to figure
+	      ;; out what we need to save to the fasl.  Then we can update
+	      ;; the global tables with the new info when we're done.  Or
+	      ;; we can just wait until the user loads the fasl.  This
+	      ;; latter option, however, changes how xref currently behaves.
 
+	      ;; Set *compile-print* to nil so we don't see any
+	      ;; spurious output from our fake source forms.  (Do we
+	      ;; need more?)
+	      (let ((*compile-print* nil))
+		;; Clear the xref database of all references to this file
+		(when (or (pathnamep pathname)
+			  (stringp pathname))
+		  (process-form `(xref::invalidate-xrefs-for-namestring
+				  ,(namestring pathname))
+				;; What should we use here?
+				`(original-source-start 0 0))
+		  ;; Now dump all the xref info pertaining to this file
+		  (dolist (db-type '(:calls :called :references :binds :sets
+				     :macroexpands))
+		    (dolist (xrefs (xref::find-xrefs-for-pathname db-type pathname))
+		      (destructuring-bind (target contexts)
+			  xrefs
+			(dolist (c contexts)
+			  (process-form
+			   `(xref:register-xref
+			     ,db-type ',target
+			     (xref:make-xref-context :name ',(xref:xref-context-name c)
+						     :file ,(xref:xref-context-file c)
+						     :source-path ',(xref:xref-context-source-path c)))
+
+			   `(original-source-start 0 0))))))))))
+	 ;; Compile the real file.
+	 (process-one stream)
+
+	 (when *record-xref-info*
+	   (process-xref-info (file-info-name file))))
+      
+       (when (advance-source-file info)
+	 (process-sources info))))))
 
 ;;; FIND-FILE-INFO  --  Interface
 ;;;
@@ -1685,7 +1736,9 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 			     *block-compile-default*)
 			    ((:entry-points *entry-points*) nil)
 			    ((:byte-compile *byte-compile*)
-			     *byte-compile-default*))
+			     *byte-compile-default*)
+		            ((:xref *record-xref-info*)
+			     *record-xref-info*))
   "Compiles Source, producing a corresponding .FASL file.  Source may be a list
    of files, in which case the files are compiled as a unit, producing a single
    .FASL file.  The output file names are defaulted from the first (or only)
@@ -1723,7 +1776,10 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
       machine instructions.  Byte code is several times smaller, but much
       slower.  If :MAYBE, then only byte-compile when SPEED is 0 and
       DEBUG <= 1.  The default is the value of EXT:*BYTE-COMPILE-DEFAULT*,
-      which is initially :MAYBE."
+      which is initially :MAYBE.
+   :Xref
+      If non-NIL, enable recording of cross-reference information.  The default
+      is the value of C:*RECORD-XREF-INFO*"
   (declare (ignore external-format))
   (let* ((fasl-file nil)
 	 (error-file-stream nil)

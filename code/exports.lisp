@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.244 2005/04/14 20:52:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.245 2005/06/13 14:29:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1650,7 +1650,9 @@
            "MAKE-XREF-CONTEXT"
            "XREF-CONTEXT-NAME"
            "XREF-CONTEXT-FILE"
-           "XREF-CONTEXT-SOURCE-PATH"))
+           "XREF-CONTEXT-SOURCE-PATH"
+	   "INVALIDATE-XREFS-FOR-NAMESTRING"
+	   "FIND-XREFS-FOR-PATHNAME"))
 
 (defpackage "WIRE"
   (:export "*CURRENT-WIRE*" "CONNECT-TO-REMOTE-SERVER"

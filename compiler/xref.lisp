@@ -3,7 +3,7 @@
 ;;; Author: Eric Marsden <emarsden@laas.fr>
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.5 2003/10/02 19:23:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.6 2005/06/13 14:29:26 rtoy Rel $")
 ;;
 ;; This code was written as part of the CMUCL project and has been
 ;; placed in the public domain.
@@ -30,13 +30,7 @@
 ;;
 ;; Missing functionality:
 ;;
-;;   - there is no mechanism to save cross-reference information in a
-;;     FASL file, so you need to recompile all files in the current image
-;;
-;;   - maybe add macros EXT:WITH-XREF, and an :xref option to
-;;     COMPILE-FILE, as per ACL.
-;;
-;;   - add WHO-MACROEXPANDS
+;;   - maybe add macros EXT:WITH-XREF.
 ;;
 ;;   - in (defun foo (x) (flet ((bar (y) (+ x y))) (bar 3))), we want to see
 ;;     FOO calling (:internal BAR FOO)
@@ -63,7 +57,9 @@
           make-xref-context
           xref-context-name
           xref-context-file
-          xref-context-source-path))
+          xref-context-source-path
+	  invalidate-xrefs-for-namestring
+	  find-xrefs-for-pathname))
 
 
 (defstruct (xref-context
@@ -76,7 +72,7 @@
 (defun %print-xref-context (s stream d)
   (declare (ignore d))
   (cond (*print-readably*
-         (format stream "#S(xref::xref-context :name '~S :file ~S :source-path '~A)"
+         (format stream "#S(xref::xref-context :name '~S ~_ :file ~S ~_ :source-path '~A)"
                  (xref-context-name s)
                  (xref-context-file s)
                  (xref-context-source-path s)))
@@ -119,7 +115,7 @@
                     (:sets *who-sets*)
                     (:macroexpands *who-macroexpands*))))
     (if (gethash target database)
-        (pushnew context (gethash target database) :test 'equal)
+        (pushnew context (gethash target database) :test 'equalp)
         (setf (gethash target database) (list context)))
     context))
 
@@ -193,7 +189,43 @@ be set at runtime."
 (defun who-specializes (class)
   (pcl::specializer-direct-methods class))
 
+;; Go through all the databases and remove entries from that that
+;; reference the given Namestring.
+(defun invalidate-xrefs-for-namestring (namestring)
+  (labels ((matching-context (ctx)
+	     (equal namestring (if (pathnamep (xref-context-file ctx))
+				   (namestring (xref-context-file ctx))
+				   (xref-context-file ctx))))
+	   (invalidate-for-database (db)
+	     (maphash (lambda (target contexts)
+			(let ((valid-contexts (remove-if #'matching-context contexts)))
+			  (if (null valid-contexts)
+			      (remhash target db)
+			      (setf (gethash target db) valid-contexts))))
+		      db)))
+    (dolist (db (list *who-calls* *who-is-called* *who-references* *who-binds*
+		      *who-sets* *who-macroexpands*))
+      (invalidate-for-database db))))
 
+;; Look in Db for entries that reference the supplied Pathname and
+;; return a list of all the matches.  Each element of the list is a
+;; list of the target followed by the entries.
+(defun find-xrefs-for-pathname (db pathname)
+  (let ((entries '()))
+    (maphash #'(lambda (target contexts)
+		 (let ((matches '()))
+		   (dolist (ctx contexts)
+		     (when (equal pathname (xref-context-file ctx))
+		       (push ctx matches)))
+		   (push (list target matches) entries)))
+	     (ecase db
+	       (:calls *who-calls*)
+	       (:called *who-is-called*)
+	       (:references *who-references*)
+	       (:binds *who-binds*)
+	       (:sets *who-sets*)
+	       (:macroexpands *who-macroexpands*)))
+    entries))
 
 (in-package :compiler)
 
