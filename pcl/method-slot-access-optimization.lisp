@@ -52,7 +52,7 @@
 ;;;
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.6 2003/10/29 12:14:35 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.7 2005/06/14 12:34:59 rtoy Rel $")
  
 (in-package "PCL")
 
@@ -684,9 +684,9 @@
     ;;
     ;; Check if CLASS is defined.  If not, we can't use inline
     ;; access because we won't be able to determine slot locations.
-    (unless (classp class)
+    (unless (std-class-p class)
       (let ((real-class (find-class class nil)))
-	(when (null real-class)
+	(unless (std-class-p real-class)
 	  (when (slot-declaration env 'inline class)
 	    (cant-optimize class "The class is not defined at compile time"))
 	  (return-from check-inline-accessor-call-p nil))
