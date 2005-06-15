@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.12 2005/05/14 02:22:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.13 2005/06/15 03:13:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -192,7 +192,6 @@
   (:generator 4
     (with-fixed-allocation (result pa-flag temp type words :lowtag lowtag)
       )))
-))
 
 (define-vop (var-alloc)
   (:args (extra :scs (any-reg)))

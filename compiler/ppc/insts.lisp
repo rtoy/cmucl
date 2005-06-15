@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.10 2005/04/10 15:01:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.11 2005/06/15 03:13:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -469,12 +469,14 @@ about function addresses and register values.")
 				     aa-bit lk-bit)))
 	       t)))
        #'(lambda (segment posn)
+	   (declare (ignore posn))
 	   (let ((bo (logxor 8 bo))) ;; invert the test
 	     (emit-b-form-inst segment 16 bo bi
 			       2 ; skip over next instruction
 			       0 0)
 	     (emit-back-patch segment 4
 			      #'(lambda (segment posn)
+				  (declare (ignore posn))
 				  (emit-i-form-branch segment target lk-p)))))
        ))))
 	     
@@ -1265,7 +1267,6 @@ about function addresses and register values.")
 					(disassem:dstate-cur-offs dstate)
 					vm:word-bytes
 					(disassem::dstate-byte-order dstate)))
-	   (si (ldb (byte 0 16) word))
 	   (rd (ldb (byte 5 21) word)))
       (disassem:note (format nil "0x~x = ~D" shifted shifted)
 		     dstate)
