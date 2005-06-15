@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.104 2005/06/14 15:59:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.105 2005/06/15 12:45:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1451,9 +1451,10 @@ radix-R.  If you have a power-list then pass it in as PL."
 		 (if (and width (> width 1))
 		     (let ((w (multiple-value-list
 			       (flonum-to-digits x
-						 (+ (1- width)
-						    (if (and scale (minusp scale))
-							scale 0))
+						 (max 0
+						      (+ (1- width)
+							 (if (and scale (minusp scale))
+							     scale 0)))
 						 t)))
 			   (f (multiple-value-list
 			       (flonum-to-digits x (- (+ (or fmin 0)
