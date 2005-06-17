@@ -17,7 +17,8 @@ over the Internet, and is mostly in the public domain.
 New in this release:
        
   * Feature enhancements:
-      - CMUCL ported to Mac OS X.
+      - CMUCL ported to Mac OS X.  Supported for versions including
+        10.4. 
       - Added a much faster and much less consy bignum printer and a
         faster bignum reader.
       - Extended REQUIRE to support *MODULE-PROVIDER-FUNCTIONS* from
@@ -55,7 +56,6 @@ New in this release:
       - Linkage table support for PPC and Darwin.
       - A socket reset signals a SOCKET-ERROR condition instead of a
         general ERROR condition.
-      - :LINKAGE-TABLE feature is now supported on PPC.
       - MAKE-INDENTING-STREAM and INDENTING-STREAM-P are exported from
         the EXTENSIONS package instead of being internal.
       - TRACE will work now for the known-return convention, which
@@ -240,6 +240,9 @@ New in this release:
         PEEK-CHAR returns.
       - PROFILE sometimes crashes when an internal data structure was
         set to a non-boolean value.
+      - Various regressions and bugs in the float printer (~E, ~F, ~G)
+        have been fixed.
+      - OPEN-X-STREAM accepts :INTERNET as a protocol again.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
