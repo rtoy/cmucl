@@ -18,7 +18,7 @@
 ;;; express or implied warranty.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.15 2003/07/20 15:55:23 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.15.14.1 2005/06/17 14:58:06 rtoy Exp $")
 
 (in-package :xlib)
 
@@ -640,7 +640,7 @@
   (ecase protocol
     ;; establish a TCP connection to the X11 server, which is
     ;; listening on port 6000 + display-number
-    ((or :tcp nil)
+    ((:internet :tcp nil)
      (let ((fd (ext:connect-to-inet-socket host (+ *x-tcp-port* display))))
        (unless (plusp fd)
          (error 'connection-failure
