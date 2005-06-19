@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.11 2005/06/15 03:13:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.12 2005/06/19 02:41:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,11 +208,17 @@ about function addresses and register values.")
 	  (cond ((and (= d 4)
 		      (= rt alloc-offset)
 		      (not *pseudo-atomic-set*))
-		 ;; "ADD $ALLOC, $ALLOC, 4" sets the PA flag
+		 ;; "ADDI $ALLOC, $ALLOC, 4" sets the PA flag
 		 (disassem:note "Set pseudo-atomic flag" dstate)
 		 (setf *pseudo-atomic-set*
 		       (sys:sap+ (disassem:dstate-segment-sap dstate)
 				 (disassem:dstate-cur-offs dstate))))
+		((and (= d (ldb (byte 16 0) -4))
+		      (= rt alloc-offset)
+		      *pseudo-atomic-set*)
+		 ;; "ADDI $ALLOC, $ALLOC, -4" resets the PA flag
+		 (disassem:note "Reset pseudo-atomic flag" dstate)
+		 (setf *pseudo-atomic-set* nil))
 		((and (= rt alloc-offset)
 		      *pseudo-atomic-set*
 		      (not (sys:sap= *pseudo-atomic-set*
@@ -230,6 +236,7 @@ about function addresses and register values.")
 	      (disassem:note (format nil "Header word ~A, size ~D?" type size)
 			     dstate)))))))))
 
+#+nil
 (defun handle-add-inst (reg word dstate)
   (let ((rt (ldb (byte 5 21) word))
 	(ra (ldb (byte 5 16) word)))
@@ -272,10 +279,12 @@ about function addresses and register values.")
 	       (= 24 opcode))
 	   ;; An ADDI or ORI instruction.
 	   (handle-addi-inst reg word dstate))
+	  #+nil
 	  ((and (= 31 opcode)
 		(= 266 (ldb (byte 9 1) word)))
 	   ;; An ADD instruction
-	   (handle-add-inst reg word dstate)))
+	   (handle-add-inst reg word dstate))
+	  )
     (update-addis-notes word)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
