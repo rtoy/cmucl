@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.102 2005/04/29 13:35:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.103 2005/06/19 02:48:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,7 +221,7 @@
 (defknown double-float-low-bits (double-float) (unsigned-byte 32)
   (movable foldable flushable))
 
-#+sparc
+#+(or sparc ppc)
 (defknown double-float-bits (double-float)
   (values (signed-byte 32) (unsigned-byte 32))
   (movable foldable flushable))
