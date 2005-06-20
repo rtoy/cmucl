@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.34 2003/05/31 09:23:23 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.35 2005/06/20 13:03:21 rtoy Rel $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -411,16 +411,17 @@
 	  ;; previous call to REGISTER-LAYOUT for a superclass of
 	  ;; INSTANCE's class.  See also the comment above
 	  ;; FORCE-CACHE-FLUSHES.  Paul Dietz has test cases for this.
+	  ;; Note that FORCE-CACHE-FLUSHES may change LAYOUT-INVALID,
+	  ;; so we have to recurse.
 	  ((eq state :invalid)
-	   (let ((class (class-of instance)))
-	     (force-cache-flushes class)
-	     (class-wrapper class)))
+	   (force-cache-flushes (class-of instance))
+	   (check-wrapper-validity instance))
+	  ((eq (car state) :flush)
+	   (flush-cache-trap owrapper (second state) instance))
+	  ((eq (car state) :obsolete)
+	   (obsolete-instance-trap owrapper (second state) instance))
 	  (t
-	   (ecase (first state)
-	     (:flush
-	      (flush-cache-trap owrapper (second state) instance))
-	     (:obsolete
-	      (obsolete-instance-trap owrapper (second state) instance)))))))
+	   (internal-error "Unknown wrapper state")))))
 
 (declaim (inline check-obsolete-instance))
 (defun check-obsolete-instance (instance)
