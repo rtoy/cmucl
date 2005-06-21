@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.50 2004/07/25 19:32:37 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.50.4.1 2005/06/21 17:42:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -659,7 +659,7 @@ to skip undefined symbols which don't have an address."
   (ensure-lisp-table-opened)
   ; rtld global: so it can find all the symbols previously loaded
   ; rtld now: that way dlopen will fail if not all symbols are defined.
-  (let* ((filename (namestring file ))
+  (let* ((filename (namestring (truename file)))
 	 (sap (dlopen filename (logior rtld-now rtld-global))))
     (cond ((zerop (sap-int sap))
 	   (let ((err-string (dlerror))

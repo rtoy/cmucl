@@ -270,3 +270,36 @@ Finally, the function
   Closes the socket given by the file descriptor \var{socket}.
 
 \end{defun}
+
+\section{Unix Datagrams}
+
+Datagram network is supported with the following functions.
+
+\begin{defun}{unix:}{inet-recvfrom}{%
+	\args{\var{fd} \var{buffer} \var{size}}
+	\keys{\var{flags}}}
+   A simple interface to the Unix \code{recvfrom} function.
+\end{defun}
+
+\begin{defun}{unix:}{inet-sendto}{%
+	\args{\var{fd} \var{buffer} \var{size} \var{port}}
+	\keys{\var{flags}}}
+   A simple interface to the Unix \code{sendto} function.
+\end{defun}
+
+\begin{defun}{unix:}{inet-shutdown}{%
+	\args{\var{fd} \var{level}}}
+
+   A simple interface to the Unix \code{shutdown} function.  For
+   \code{level}, you may use the following symbols to close one or
+   both ends of a socket: \code{shut-rd}, \code{shut-wr},
+   \code{shut-rdwr}.
+
+\end{defun}
+
+\section{Errors}
+
+Errors that occur during socket operations signal a
+\code{socket-error} condition, a subtype of the \code{error}
+condition.  Currently this condition includes just the Unix
+\code{errno} associated with the error.

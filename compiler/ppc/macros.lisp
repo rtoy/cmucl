@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.9 2005/05/14 02:24:01 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.9.2.1 2005/06/21 17:42:54 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -471,10 +471,10 @@
 	(inst addi alloc-tn alloc-tn 4))
       ,@forms
       (without-scheduling ()
-       ;; Grab PA interrupted bit from alloc-tn
-       (inst andi. ,flag-tn alloc-tn 1)
        ;; Remove PA bit			  
-       (inst subi alloc-tn alloc-tn 4)			  
+       (inst subi alloc-tn alloc-tn 4)
+       ;; Now test to see if the pseudo-atomic interrupted bit is set.
+       (inst andi. ,flag-tn alloc-tn 1)
        (inst twi :ne ,flag-tn 0))
       #+debug
       (progn
