@@ -241,8 +241,10 @@ New in this release:
       - (PEEK-CHAR nil s nil foo) doesn't remove the character
         that was read if FOO happens to match the character that
         PEEK-CHAR returns.
-      - PROFILE sometimes crashes when an internal data structure was
+      - PROFILE no longer crashes when an internal data structure was
         set to a non-boolean value.
+      - Regressions in float printing with ~F, ~E, and ~G are fixed.
+      - OPEN-X-STREAM accepts :INTERNET as a valid protocol again.
 
   * Other changes:
 
