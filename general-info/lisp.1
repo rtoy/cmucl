@@ -6,12 +6,12 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.10 2003/04/11 15:17:45 pmai Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.10.14.1 2005/06/22 18:18:54 rtoy Exp $
 .\"
 .\" **********************************************************************
 .\"
 .\" Man page for CMU CL.
-.TH LISP 1 "October 15, 1991"
+.TH LISP 1 "July, 2005"
 .AT 3
 .SH NAME
 lisp \- CMU Common Lisp programming environment
@@ -104,6 +104,11 @@ is the
 internet host name for the machine and
 .I socket
 is the decimal number of the socket to connect to.
+.TP
+.BR \-debug-lisp-search
+Enables printing of messages indicating how CMUCL is searching for its
+core file.  This is useful if CMUCL is not finding its core file for
+some reason.
 .PP
 
 .SH ENVIRONMENT
