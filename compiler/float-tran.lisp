@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.103 2005/06/19 02:48:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104 2005/06/26 17:21:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -117,14 +117,42 @@
   (or single-float double-float)
   (movable foldable flushable))
 
+#+sparc
+(defoptimizer (fast-unary-ftruncate derive-type) ((f))
+  (one-arg-derive-type f
+		       #'(lambda (n)
+			   (ftruncate-derive-type-quot-aux n
+							   (specifier-type '(integer 1 1))
+							   nil))
+		       #'ftruncate))
+
 ;; Convert %unary-ftruncate to unary-ftruncate/{single,double}-float
-;; if x is known to be of the right type.  Note that we used to do a
-;; range-check here to see if we could use the FP conversion
-;; instructions, but that loses when we have signed zeroes.
+;; if x is known to be of the right type.  Also, if the result is
+;; known to fit in the same range as a (signed-byte 32), convert this
+;; to %unary-truncate, which might be a single instruction, and float
+;; the result.  However, for sparc, we have a vop to do this so call
+;; that, and for Sparc V9, we can actually handle a 64-bit integer
+;; range.
 
 (macrolet ((frob (ftype func)
 	     `(deftransform %unary-ftruncate ((x) (,ftype))
-		'(,func x))))
+	       (let* ((x-type (continuation-type x))
+		      (lo (bound-value (numeric-type-low x-type)))
+		      (hi (bound-value (numeric-type-high x-type)))
+		      (limit-lo (- (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
+		      (limit-hi (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
+		 (if (and (numberp lo) (numberp hi)
+			  (< limit-lo lo)
+			  (< hi limit-hi))
+		     #-sparc '(let ((result (coerce (%unary-truncate x) ',ftype)))
+			        (if (zerop result)
+				    (* result x)
+				    result))
+		     #+sparc '(let ((result (fast-unary-ftruncate x)))
+			        (if (zerop result)
+				    (* result x)
+				    result))
+		     '(,func x))))))
   (frob single-float %unary-ftruncate/single-float)
   (frob double-float %unary-ftruncate/double-float))
 
