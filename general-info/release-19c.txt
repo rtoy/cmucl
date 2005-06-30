@@ -1,0 +1,51 @@
+========================== C M U C L  19 c =============================
+
+[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
+
+The CMUCL project is pleased to announce the release of CMUCL 19c.
+This is a major release which contains numerous enhancements and
+bugfixes from the 19a release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multimethods and a metaobject protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+
+
+  * Feature enhancements:
+
+      - Cross-reference information can now be saved to a fasl file.
+      - COMPILE-FILE accepts the new keyword arg :XREF.  When non-NIL,
+        cross-reference information found during compilation is saved
+        to the fasl file.
+
+  * Numerous ANSI compliance fixes:
+
+  * Numerous bugfixes:
+
+
+
+  * Other changes:
+
+  * Improvements to the PCL implementation of CLOS:
+
+  * Changes to rebuilding procedure:
+
+
+
+This release is not binary compatible with code compiled using CMUCL
+19b; you will need to recompile FASL files. 
+
+See <URL:http://www.cons.org/cmucl/> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!
+
