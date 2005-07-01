@@ -27,6 +27,8 @@ New in this release:
         to the fasl file.
 
   * Numerous ANSI compliance fixes:
+      - FILE-POSITION on string input streams accept :START and :END
+        for the position.
 
   * Numerous bugfixes:
 
