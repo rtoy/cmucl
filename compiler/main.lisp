@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.145 2005/06/13 14:29:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.146 2005/07/01 13:00:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -431,9 +431,11 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		 (return nil)))))))
 
     (when *compile-print*
-      (compiler-mumble "~&; ~:[~;Byte ~]Compiling ~A: "
+      (compiler-mumble "~&")
+      (pprint-logical-block (*compiler-error-output* nil :per-line-prefix "; ")
+	(compiler-mumble "~:[~;Byte ~]Compiling ~A: "
 		       *byte-compiling*
-		       (component-name component)))
+		       (component-name component))))
 
     (ir1-phases component)
 
