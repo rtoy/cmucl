@@ -29,6 +29,7 @@ if [ $# = 1 ]; then
     SunOS) LISP_VARIANT=sun4_solaris_gcc ;;
     Linux) LISP_VARIANT=linux_gencgc ;;
     Darwin) LISP_VARIANT=ppc_darwin ;;
+    FreeBSD) LISP_VARIANT=FreeBSD_gencgc ;;
     # Please fill in some other common systems
     *) echo "Sorry, please specify the desired Lisp variant." 
        exit 1 ;;

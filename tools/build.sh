@@ -46,15 +46,20 @@ OLDLISP="cmulisp -noinit"
 
 SKIPUTILS=no
 
+# If gmake exists, assume it is GNU make and use it.
+if [ -z "$MAKE" ]; then
+    MAKE="`which gmake`" || MAKE="make"
+fi
+
 usage ()
 {
-    echo "build-l4 [-123obvuC]"
+    echo "build.sh [-123obvuC]"
     echo "    -1        Skip build 1"
     echo "    -2        Skip build 2"
     echo "    -3        Skip build 3"
     echo "    -o x      Use specified Lisp to build.  Default is cmulisp"
     echo "               (only applicable for build 1)"
-    echo '    -b d      The different build directoris are named ${d}-2, ${d}-3 ${d}-4'
+    echo '    -b d      The different build directories are named ${d}-2, ${d}-3 ${d}-4'
     echo '               with a default of "build"'
     echo '    -v v      Use the given string as the version.  Default is'
     echo "               today's date"
@@ -78,7 +83,7 @@ buildit ()
     then
 	$TOOLDIR/clean-target.sh $TARGET
 	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT
-	(cd $TARGET/lisp; make)
+	(cd $TARGET/lisp; $MAKE)
 	#$TOOLDIR/build-world.sh $TARGET $OLDLISP
 	$TOOLDIR/load-world.sh $TARGET "$VERSION"
 	if [ ! -f $TARGET/lisp/lisp.core ]; then
