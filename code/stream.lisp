@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.80 2005/05/23 18:02:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.81 2005/07/01 14:54:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1483,7 +1483,11 @@ output to Output-stream"
   (case operation
     (:file-position
      (if arg1
-	 (setf (string-input-stream-current stream) arg1)
+	 (setf (string-input-stream-current stream)
+	       (case arg1
+		 (:start 0)
+		 (:end (length (string-input-stream-string stream)))
+		 (t arg1)))
 	 (string-input-stream-current stream)))
     (:file-length
      (error 'type-error :datum stream :expected-type 'file-stream))
