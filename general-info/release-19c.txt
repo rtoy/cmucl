@@ -25,13 +25,16 @@ New in this release:
       - COMPILE-FILE accepts the new keyword arg :XREF.  When non-NIL,
         cross-reference information found during compilation is saved
         to the fasl file.
+      - UNIX-UNAME added for non-x86 platforms, which already had it.
 
   * Numerous ANSI compliance fixes:
       - FILE-POSITION on string input streams accept :START and :END
         for the position.
 
   * Numerous bugfixes:
-
+      - Regression in MRG32K3A benchmark fixed.
+      - (format t "~8,2f" -0.0) has the right length now.  This
+        happened because we didn't recognize -0.0 is negative.
 
 
   * Other changes:
