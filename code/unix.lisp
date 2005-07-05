@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.104 2005/06/23 13:33:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.105 2005/07/05 18:21:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3301,11 +3301,15 @@
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
 ;; From sys/utsname.h
+#+(or solaris darwin freebsd)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant +sys-namelen+
     #+solaris 257
-    #+darwin 256))
+    #+darwin 256
+    #+freebsd 32))
 
+#+(or solaris darwin freebsd)
+(progn
 (def-alien-type nil
     (struct utsname
 	    (sysname (array char #.+sys-namelen+))
@@ -3329,5 +3333,6 @@
 		(cast (slot names 'release) c-string)
 		(cast (slot names 'version) c-string)
 		(cast (slot names 'machine) c-string))))))
+)
 
 ;; EOF
