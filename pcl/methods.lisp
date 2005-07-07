@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.43 2003/09/05 23:03:36 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.44 2005/07/07 16:44:27 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -413,6 +413,11 @@
   (loop (when (null methods) (return gf))
 	(real-add-method gf (pop methods) methods)))
 
+(defun update-gf-dependents (gf action method)
+  (map-dependents gf
+		  (lambda (dependent)
+		    (update-dependent gf dependent action method))))
+
 (defun real-add-method (gf method &optional skip-dfun-update-p)
   (when (method-generic-function method)
     (error "~@<The method ~S is already part of the generic ~
@@ -483,6 +488,7 @@
 	(update-ctors 'add-method :generic-function gf :method method)
 	(update-dfun gf))
       (update-accessor-pvs 'add-method gf method old)
+      (update-gf-dependents gf 'add-method method)
       gf)))
   
 (defun real-remove-method (gf method)
@@ -496,7 +502,8 @@
       (set-arg-info gf)
       (update-ctors 'remove-method :generic-function gf :method method)
       (update-dfun gf)
-      (update-accessor-pvs 'remove-method gf method)))
+      (update-accessor-pvs 'remove-method gf method)
+      (update-gf-dependents gf 'remove-method method)))
   gf)
 
 
@@ -557,7 +564,11 @@
       (when (and (arg-info-valid-p (gf-arg-info gf))
 		 (not (null args))
 		 (or lambda-list-p (cddr args)))
-	  (update-dfun gf)))))
+	  (update-dfun gf))
+      ;;
+      ;; Update dependent objects.
+      (map-dependents gf (lambda (dependent)
+			   (apply #'update-dependent gf dependent args))))))
 
 
 (defun compute-applicable-methods-function (gf arguments)

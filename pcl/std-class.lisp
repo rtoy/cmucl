@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.79 2005/06/20 13:03:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.80 2005/07/07 16:44:27 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -1636,6 +1636,9 @@
 (defmethod map-dependents ((metaobject dependent-update-mixin) function)
   (dolist (dependent (plist-value metaobject 'dependents))
     (funcall function dependent)))
+
+(defmethod update-dependent (metaobject dependent &rest initargs)
+  (declare (ignore initargs)))
 
 
 ;;;
