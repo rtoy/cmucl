@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.34 2004/07/16 09:07:19 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.35 2005/07/12 20:58:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,7 +272,13 @@
 		  (setf path `(cdr ,path)))
 		 (:keywords
 		  (let ((key (make-keyword var)))
-		    (push-let-binding var `(lookup-keyword ,key ,rest-name)
+		    ;; For deftype, the default value for a keyword is
+		    ;; '*, not NIL.  This hack uses ERROR-KIND to
+		    ;; figure out if we're defining a new type or not.
+		    (push-let-binding var
+				      (if (eq error-kind 'deftype)
+					  `(or (lookup-keyword ,key ,rest-name) ,*default-default*)
+					  `(lookup-keyword ,key ,rest-name))
 				      nil)
 		    (push key keys)))
 		 (:auxs
