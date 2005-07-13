@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.158 2005/07/13 17:16:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.159 2005/07/13 18:24:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3240,7 +3240,7 @@
 ;;;    If y is not constant, not zerop, or is contagious, or a negative
 ;;; float -0.0 then give up because (- -0.0 -0.0) is 0.0, not -0.0.
 ;;;
-(deftransform - ((x y) (t (constant-argument t)) * :when :both)
+(deftransform - ((x y) (t (constant-argument number)) * :when :both)
   "fold zero arg"
   (let ((val (continuation-value y)))
     (unless (and (zerop val)
