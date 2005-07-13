@@ -25,16 +25,30 @@ New in this release:
       - COMPILE-FILE accepts the new keyword arg :XREF.  When non-NIL,
         cross-reference information found during compilation is saved
         to the fasl file.
-      - UNIX-UNAME added for non-x86 platforms, which already had it.
+      - UNIX-UNAME added for non-glibc2 platforms, which already had
+        it.
 
   * Numerous ANSI compliance fixes:
       - FILE-POSITION on string input streams accept :START and :END
         for the position.
-
+      - The default value for keyword args for deftype is '*, not NIL.
+      - ED is now defined (but does nothing).  Loading hemlock will
+        give you an ED that works.
+      - DOCUMENTATION and (SETF DOCUMENTATION) works for more cases
+        now.
+      - MULTIPLE-VALUE-SETQ now always returns the primary value.
+      - (SETF MACRO-FUNCTION) and (SETF COMPILER-MACRO-FUNCTION)
+        accepts the optional environment arg, as specified by ANSI CL.
+        
   * Numerous bugfixes:
       - Regression in MRG32K3A benchmark fixed.
       - (format t "~8,2f" -0.0) has the right length now.  This
         happened because we didn't recognize -0.0 is negative.
+      - Type derivation for FTRUNCATE is now consistent with what
+        FTRUNCATE returns.  Main problem was that -0.0 is now returned
+        by ftruncate instead of +0.0.
+      - Some errors during type derivation are fixed.  We cause the
+        offending function to return NIL to indicate unbounded.
 
 
   * Other changes:
@@ -42,7 +56,7 @@ New in this release:
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to rebuilding procedure:
-
+      - Build scripts should recognize FreeBSD automatically.
 
 
 This release is not binary compatible with code compiled using CMUCL
