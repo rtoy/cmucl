@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.104 2005/05/09 20:22:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.105 2005/07/13 14:46:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -544,7 +544,9 @@
 (defmacro multiple-value-setq (varlist value-form)
   (unless (and (listp varlist) (every #'symbolp varlist))
     (simple-program-error "Varlist is not a list of symbols: ~S." varlist))
-  `(values (setf (values ,@varlist) ,value-form)))
+  (if varlist
+      `(values (setf (values ,@varlist) ,value-form))
+      `(values ,value-form)))
 
 ;;;
 (defmacro multiple-value-bind (varlist value-form &body body)
