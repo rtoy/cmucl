@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.34 2005/05/23 18:42:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.35 2005/07/13 12:43:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,4 +232,9 @@
 	   (setf *standard-input* (second old-streams))
 	   (setf *standard-output* (third old-streams))
 	   (setf *error-output* (fourth old-streams)))))
+  (values))
+
+(defun ed (&optional x)
+  "Default implementation of ed.  This does nothing.  If hemlock is
+  loaded, ed can be used to edit a file"
   (values))
