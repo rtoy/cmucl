@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.41 2004/10/12 16:56:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.42 2005/07/13 17:19:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,7 +367,9 @@
 	  (t
 	   nil))))
 
-(defun (setf macro-function) (function symbol)
+;; This is supposed to take an optional env arg.  But what should we
+;; do with that?  I (rtoy) don't know, so we do nothing right now.
+(defun (setf macro-function) (function symbol &optional env)
   (declare (symbol symbol) (type function function))
 
   (when (eq (info function kind symbol) :special-form)
@@ -439,7 +441,7 @@
 		:notinline)
       (values (info function compiler-macro-function name)))))
 
-(defun (setf compiler-macro-function) (function name)
+(defun (setf compiler-macro-function) (function name &optional env)
   (declare (type (or symbol list) name)
 	   (type (or function null) function))
   (when (eq (info function kind name) :special-form)
