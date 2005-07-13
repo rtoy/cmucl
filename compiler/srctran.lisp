@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.157 2005/07/12 18:23:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.158 2005/07/13 17:16:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -305,11 +305,14 @@
 	 ;; With these traps masked, we might get things like infinity or
 	 ;; negative infinity returned.  Check for this and return NIL to
 	 ;; indicate unbounded.
-	 (let ((y (funcall f (bound-value x))))
+	 ;;
+	 ;; We also ignore any errors that funcall might cause and
+	 ;; return NIL instead to indicate infinity.
+	 (let ((y (ignore-errors (funcall f (bound-value x)))))
 	   (if (and (floatp y)
 		    (float-infinity-p y))
 	       nil
-	       (set-bound (funcall f (bound-value x)) (consp x)))))))
+	       (set-bound y (consp x)))))))
 
 ;;; Apply a binary operator OP to two bounds X and Y.  The result is NIL if
 ;;; either is NIL.  Otherwise bound is computed and the result is open if
