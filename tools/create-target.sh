@@ -117,6 +117,13 @@ case $LISP_VARIANT in
       esac
       sed "s;@@gcname@@;$gcname;" $SETENV/openbsd-features.lisp >> $TARGET/setenv.lisp
       ;;
+  *FreeBSD*)
+      case $LISP_VARIANT in
+        *_gencgc*) gcname=":gencgc" ;;
+	*) gcname=":cgc" ;;
+      esac
+      sed "s;@@gcname@@;$gcname;" $SETENV/freebsd-features.lisp >> $TARGET/setenv.lisp
+      ;;
   *solaris*)
       cat $SETENV/solaris-features.lisp >> $TARGET/setenv.lisp
       ;;
