@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.13 2003/07/20 13:55:11 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.14 2005/07/13 13:43:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,6 +50,12 @@
   new-value)
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'function)))
+  (setf (info function documentation x) new-value))
+
+(defmethod (setf documentation) (new-value (x function) (doc-type (eql 'function)))
+  (setf (info function documentation x) new-value))
+
+(defmethod (setf documentation) (new-value (x function) (doc-type (eql 't)))
   (setf (info function documentation x) new-value))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'setf)))
@@ -126,6 +132,20 @@
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'variable)))
   (setf (info variable documentation x) new-value))
+
+;;; Compiler macros
+(defmethod documentation ((x list) (doc-type (eql 'compiler-macro)))
+  (when (valid-function-name-p x)
+    (if (eq (car x) 'setf)
+	(cdr (assoc doc-type (values (info random-documentation stuff (cadr x)))))
+	(cdr (assoc doc-type (values (info random-documentation stuff x)))))))
+
+(defmethod (setf documentation) (new-value (x list) (doc-type (eql 'compiler-macro)))
+  (when (valid-function-name-p x)
+    (if (eq (car x) 'setf)
+	(set-random-documentation (cadr x) doc-type new-value)
+	(set-random-documentation x doc-type new-value)))
+  new-value)
 
 ;;; CMUCL random documentation. Compiler-macro documentation is stored
 ;;; as random-documentation and handled here.
