@@ -118,6 +118,9 @@ if [ -n "$bootfiles" ]; then
     done
 fi
 
+build_started=`date`
+echo "//starting build: $build_started"
+
 TARGET=$BASE-2
 ENABLE=$ENABLE2
 
@@ -142,3 +145,8 @@ then
     OLDLISP="${BASE}-4/lisp/lisp -noinit -core ${BASE}-4/lisp/lisp.core"
     $TIMER $TOOLDIR/build-utils.sh $TARGET
 fi
+
+build_finished=`date`
+echo
+echo "//build started:  $build_started"
+echo "//build finished: $build_finished"
