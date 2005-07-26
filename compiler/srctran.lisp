@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.159 2005/07/13 18:24:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.160 2005/07/26 12:34:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3977,6 +3977,12 @@
               nil		 ; After fixing above, replace with T.
               )))))))
 
+(defvar *enable-modular-arithmetic* t
+  "When non-NIL, the compiler will generate code utilizing modular
+  arithmetic.  Set to NIL to disable this, if you don't want modular
+  arithmetic in some cases.")
+
 #+modular-arith
 (defoptimizer (logand optimizer) ((x y) node)
-  (logand-defopt-helper x y node))
+  (when *enable-modular-arithmetic*
+    (logand-defopt-helper x y node)))
