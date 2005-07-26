@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.23 2004/04/02 15:24:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.23.8.1 2005/07/26 14:46:24 rtoy Exp $")
 
 (in-package "PCL")
 
@@ -178,7 +178,7 @@
 
 (defmacro call-method (&rest args)
   (declare (ignore args))
-  `(error "~@<~S used outsize of a effective method form.~@:>" 'call-method))
+  `(error "~@<~S used outside of a effective method form.~@:>" 'call-method))
 
 (defmacro call-method-list (&rest calls)
   `(progn ,@calls))
