@@ -29,6 +29,7 @@ New in this release:
         it.
 
   * Numerous ANSI compliance fixes:
+
       - FILE-POSITION on string input streams accept :START and :END
         for the position.
       - The default value for keyword args for deftype is '*, not NIL.
@@ -41,6 +42,7 @@ New in this release:
         accepts the optional environment arg, as specified by ANSI CL.
         
   * Numerous bugfixes:
+
       - Regression in MRG32K3A benchmark fixed.
       - (format t "~8,2f" -0.0) has the right length now.  This
         happened because we didn't recognize -0.0 is negative.
@@ -52,6 +54,12 @@ New in this release:
 
 
   * Other changes:
+
+      - Due to some bugs in modular arithmetic, generating either
+        wrong code or much slower code, you can now disable modular
+        arithmetic by setting c::*enable-modular-arithmetic* to NIL.
+        This is a workaround pending a better solution.
+
 
   * Improvements to the PCL implementation of CLOS:
 
