@@ -76,6 +76,7 @@ New in this release:
         now signal an EXT:INVALID-FASL error instead a generic error.
 
   * Numerous ANSI compliance fixes:
+
       - FILE-AUTHOR should signal errors appropriately.
       - CMUCL was computing the wrong value for some special functions
         when the argument was on the branch cut for the function.
@@ -268,6 +269,10 @@ New in this release:
       - CMUCL should fail gracefully on x86 if something is already
         mapped at addresses CMUCL wants for itself.  Previously, CMUCL
         would just use it.
+      - Due to some bugs in modular arithmetic, generating either
+        wrong code or much slower code, you can now disable modular
+        arithmetic by setting c::*enable-modular-arithmetic* to NIL.
+        This is a workaround pending a better solution.
 
   * Improvements to the PCL implementation of CLOS:
 
