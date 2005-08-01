@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.105 2005/06/15 12:45:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.106 2005/08/01 21:58:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1560,18 +1560,29 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;;
 (defun print-float-exponent (x exp stream)
   (declare (float x) (integer exp) (stream stream))
-  (let ((*print-radix* nil)
-	(plusp (plusp exp)))
+  (let ((*print-radix* nil))
+    ;; CLHS 22.3.3.2 for ~E says (near the bottom) that
+    ;;
+    ;;    If all of w, d, and e are omitted, then the effect is to
+    ;;    print the value using ordinary free-format
+    ;;    exponential-notation output; prin1 uses a similar format for
+    ;;    any non-zero number whose magnitude is less than 10^-3 or
+    ;;    greater than or equal to 10^7. The only difference is that
+    ;;    the ~E directive always prints a plus or minus sign in front
+    ;;    of the exponent, while prin1 omits the plus sign if the
+    ;;    exponent is non-negative.
+    ;;
+    ;; So we don't want a + sign for the exponent.
     (if (typep x *read-default-float-format*)
 	(unless (eql exp 0)
-	  (format stream "e~:[~;+~]~D" plusp exp))
-	(format stream "~C~:[~;+~]~D" 
+	  (format stream "e~D" exp))
+	(format stream "~C~D" 
 		(etypecase x
 		  (single-float #\f)
 		  (double-float #\d)
 		  (short-float #\s)
 		  (long-float #\L))
-		plusp exp))))
+		exp))))
 
 
 ;;; FLOAT-FORMAT-NAME  --  Internal
@@ -1817,6 +1828,9 @@ radix-R.  If you have a power-list then pass it in as PL."
        (write-string string stream :end 1)
        (write-char #\. stream)
        (write-string string stream :start 1)
+       ;; Why this special case?  This makes it inconsistent with how
+       ;; ~E prints out floats like 1d23.
+       #+(or)
        (when (= (length string) 1)
 	 (write-char #\0 stream))
        (print-float-exponent x (1- e) stream)))))
