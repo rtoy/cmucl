@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.3 2004/07/08 17:49:04 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.4 2005/08/01 21:53:00 rtoy Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -103,10 +103,16 @@ lispobj obj;
 
 static struct var *make_var(char *name, boolean perm)
 {
-    struct var *var = (struct var *)malloc(sizeof(struct var));
+    struct var *var;
     char buffer[256];
     int index;
 
+    var = (struct var *)malloc(sizeof(struct var));
+    if (var == NULL) {
+      perror("malloc");
+      exit(1);
+    }
+    
     if (name == NULL) {
         sprintf(buffer, "%d", tempcntr++);
         name = buffer;
