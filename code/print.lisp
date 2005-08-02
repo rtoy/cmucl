@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.106 2005/08/01 21:58:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.107 2005/08/02 17:14:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1473,8 +1473,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 		   (dotimes (i (- e (length string)))
 		     (write-char #\0 stream))
 		   (write-char #\. stream)
-		   (write-string string stream :start (min (length
-							    string) e))
+		   (write-string string stream :start (min (length string)
+							   e))
 		   (when fdigits
 		     (dotimes (i (- fdigits
 				    (- (length string) 

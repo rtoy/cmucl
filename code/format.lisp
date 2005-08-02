@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.65 2005/06/30 12:25:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.66 2005/08/02 17:14:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1209,53 +1209,54 @@
 	       (float-nan-p number)))
       (prin1 number stream)
       (multiple-value-bind (num expt)
-			   (lisp::scale-exponent (abs number))
+	  (lisp::scale-exponent (abs number))
 	(let* ((expt (- expt k))
 	       (estr (decimal-string (abs expt)))
-	       (elen (if e (max (length estr) e) (length estr)))
-	       (fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
-	       (fmin (if (minusp k)
-			 1
-			 fdig))
-	       (spaceleft (if w
-			      (- w 2 elen
-				 (if (or atsign (minusp (float-sign number)))
-				     1 0))
-			      nil)))
+	       (elen (if e (max (length estr) e) (length estr))))
 	  (if (and w ovf e (> elen e)) ;exponent overflow
-	      (dotimes (i w) (write-char ovf stream))
-	      (multiple-value-bind
-		  (fstr flen lpoint tpoint)
-		  (lisp::flonum-to-string num spaceleft fdig k fmin)
-		(when (and d (zerop d)) (setq tpoint nil))
-		(when w 
-		  (decf spaceleft flen)
-		  (when lpoint
-		    (if (or (> spaceleft 0) tpoint)
-			(decf spaceleft)
-			(setq lpoint nil)))
-		  (when (and tpoint (<= spaceleft 0))
-		    (setq tpoint nil)))
-		(cond ((and w (< spaceleft 0) ovf)
-		       ;;significand overflow
-		       (dotimes (i w) (write-char ovf stream)))
-		      (t (when w
-			   (dotimes (i spaceleft) (write-char pad stream)))
-			 (if (minusp (float-sign number))
-			     (write-char #\- stream)
-			     (if atsign (write-char #\+ stream)))
-			 (when lpoint (write-char #\0 stream))
-			 (write-string fstr stream)
-			 (write-char (if marker
-					 marker
-					 (format-exponent-marker number))
-				     stream)
-			 (write-char (if (minusp expt) #\- #\+) stream)
-			 (when e 
-			   ;;zero-fill before exponent if necessary
-			   (dotimes (i (- e (length estr)))
-			     (write-char #\0 stream)))
-			 (write-string estr stream)))))))))
+	      (dotimes (i w)
+		(write-char ovf stream))
+	      (let* ((fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
+		     (fmin (if (minusp k)
+			       1
+			       fdig))
+		     (spaceleft (if w
+				    (- w 2 elen
+				       (if (or atsign (minusp (float-sign number)))
+					   1 0))
+				    nil)))
+		(multiple-value-bind (fstr flen lpoint tpoint)
+		    (lisp::flonum-to-string num spaceleft fdig k fmin)
+		  (when (and d (zerop d)) (setq tpoint nil))
+		  (when w 
+		    (decf spaceleft flen)
+		    (when lpoint
+		      (if (or (> spaceleft 0) tpoint)
+			  (decf spaceleft)
+			  (setq lpoint nil)))
+		    (when (and tpoint (<= spaceleft 0))
+		      (setq tpoint nil)))
+		  (cond ((and w (< spaceleft 0) ovf)
+			 ;;significand overflow
+			 (dotimes (i w) (write-char ovf stream)))
+			(t (when w
+			     (dotimes (i spaceleft)
+			       (write-char pad stream)))
+			   (if (minusp (float-sign number))
+			       (write-char #\- stream)
+			       (if atsign (write-char #\+ stream)))
+			   (when lpoint (write-char #\0 stream))
+			   (write-string fstr stream)
+			   (write-char (if marker
+					   marker
+					   (format-exponent-marker number))
+				       stream)
+			   (write-char (if (minusp expt) #\- #\+) stream)
+			   (when e 
+			     ;;zero-fill before exponent if necessary
+			     (dotimes (i (- e (length estr)))
+			       (write-char #\0 stream)))
+			   (write-string estr stream))))))))))
 
 (def-format-directive #\G (colonp atsignp params)
   (when colonp
