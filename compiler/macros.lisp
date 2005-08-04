@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.54 2004/09/11 19:18:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.55 2005/08/04 16:00:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,7 +178,17 @@
 	 (setf (info function ir1-convert ',name) #',fn-name)
 	 (setf (info function kind ',name) ,kind)
 	 ,@(when (eq kind :special-form)
-	     `((setf (symbol-function ',name) #'special-form-function)))))))
+	     ;; Define a special function that signals an error if we
+	     ;; try to funcall the special form.  And then make this
+	     ;; function the symbol-function for the symbol.
+	     `((defun ,(symbolicate "SPECIAL-FORM-FUNCTION-" name) (&rest stuff)
+		 (declare (ignore stuff))
+		 (error 'simple-undefined-function
+			:name ',name
+			:format-control "Can't funcall the SYMBOL-FUNCTION of the special form ~A."
+			:format-arguments (list ',name)))
+	       (setf (symbol-function ',name)
+		     (function ,(symbolicate "SPECIAL-FORM-FUNCTION-" name)))))))))
 
 
 ;;; Def-Source-Transform  --  Interface
