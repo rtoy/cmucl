@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.6 2005/02/06 19:43:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.7 2005/08/12 18:30:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,8 +364,16 @@
 	  compatible-function-types-p))
 
 (defun callback-accessor-form (type sp offset)
-  ;; Unaligned access is slower, but possible, so this is nice and simple.
-  `(deref (sap-alien (sap+ ,sp ,offset) (* ,type))))
+  ;; Unaligned access is slower, but possible, so this is nice and
+  ;; simple.  Also we're a big-endian machine, so we need to get byte
+  ;; offsets correct.
+  (let ((byte-offset
+	 (- vm:word-bytes
+	    (ceiling (alien::alien-integer-type-bits
+		      (alien::parse-alien-type type))
+		     vm:byte-bits))))
+    `(deref (sap-alien (sap+ ,sp ,(+ byte-offset offset))
+		       (* ,type)))))
 
 (defun compatible-function-types-p (fun-type1 fun-type2)
   (labels ((type-words (type)
