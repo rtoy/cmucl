@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.24 2005/05/03 20:20:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.25 2005/08/12 19:45:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -317,27 +317,35 @@
 	  compatible-function-types-p))
 
 (defun callback-accessor-form (type sp offset)
-  (typecase (alien::parse-alien-type type)
-    (alien::double$
-     ;; Due to sparc calling conventions, a double arg doesn't have to
-     ;; be aligned on a double word boundary.  We have to get the two
-     ;; words separately and create the double from them.  Doubles are
-     ;; stored in big-endian order, naturally.
-     `(kernel:make-double-float
-       (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* c-call:int)))
-       (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset vm:word-bytes))
-			       (* c-call:unsigned-int)))))
-    (alien::integer-64$
-     ;; Same as for double, above
-     `(let ((hi (alien:deref (sap-alien (sys:sap+ ,sp ,offset)
-					(* c-call:int))))
-	    (lo (alien:deref (sap-alien (sys:sap+ ,sp
-						  (+ ,offset vm:word-bytes))
-					(* c-call:unsigned-int)))))
-	(+ (ash hi vm:word-bits) lo)))
-    (t
-     ;; All other objects can be accessed directly.
-     `(deref (sap-alien (sys:sap+ ,sp ,offset) (* ,type))))))
+  (let ((parsed-type (alien::parse-alien-type type)))
+    (typecase parsed-type
+      (alien::double$
+       ;; Due to sparc calling conventions, a double arg doesn't have to
+       ;; be aligned on a double word boundary.  We have to get the two
+       ;; words separately and create the double from them.  Doubles are
+       ;; stored in big-endian order, naturally.
+       `(kernel:make-double-float
+	 (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* c-call:int)))
+	 (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset vm:word-bytes))
+				 (* c-call:unsigned-int)))))
+      (alien::integer-64$
+       ;; Same as for double, above
+       `(let ((hi (alien:deref (sap-alien (sys:sap+ ,sp ,offset)
+					  (* c-call:int))))
+	      (lo (alien:deref (sap-alien (sys:sap+ ,sp
+						    (+ ,offset vm:word-bytes))
+					  (* c-call:unsigned-int)))))
+	  (+ (ash hi vm:word-bits) lo)))
+      (t
+       ;; All other objects can be accessed directly.  But we need to
+       ;; get the offset right, since the offset we're given is the
+       ;; start of the object, and we're a big-endian machine.
+       (let ((byte-offset
+	      (- vm:word-bytes
+		 (ceiling (alien::alien-integer-type-bits parsed-type)
+			  vm:byte-bits))))
+	 `(deref (sap-alien (sys:sap+ ,sp ,(+ byte-offset offset))
+			    (* ,type))))))))
 
 (defun compatible-function-types-p (type1 type2)
   (flet ((machine-rep (type)
