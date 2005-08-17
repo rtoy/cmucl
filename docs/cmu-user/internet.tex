@@ -101,13 +101,13 @@ are documented.
 
 \begin{defun}{extensions:}{create-inet-listener}{%
     \args{\var{port} \ampoptional{} \var{kind}  %
-      \keys{\kwd{reuse-address} \kwd{backlog} \kwd{interface}}}}
+      \keys{\kwd{reuse-address} \kwd{backlog} \kwd{host}}}}
                      
   Creates a socket and binds it to a port, prepared to receive
   connections of kind \var{kind} (which defaults to \kwd{stream}),
   queuing up to \var{backlog} of them. If \kwd{reuse-address} \var{T}
   is used, the option SO\_REUSEADDR is used in the call to \var{bind}.
-  If no value is given for \kwd{interface}, it will try to bind to the
+  If no value is given for \kwd{host}, it will try to bind to the
   default IP address of the machine where the Lisp process is running.
 
 \end{defun}
