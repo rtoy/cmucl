@@ -3,7 +3,7 @@
 
 #if defined DARWIN
 #if defined LANGUAGE_ASSEMBLY
-#define REG(num) r##num
+#define REG(num) r/**/num
 #else
 #define REG(num) num
 #endif

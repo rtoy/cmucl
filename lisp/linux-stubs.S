@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.19 2005/02/07 00:47:45 rtoy Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.20 2005/08/17 03:40:16 rtoy Rel $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -10,19 +10,19 @@
 
 #define doe(fct) \
 .text						@\
-.globl  ldso_stub___ ## fct			@\
-ldso_stub___ ## fct:				@\
-	b ldso_stub__ ## fct ## stub		@\
-.symbol_stub ldso_stub__ ## fct ## stub:	@\
-.indirect_symbol _ ## fct			@\
-	lis	r11,ha16(ldso_stub__ ## fct ## $lazy_ptr)	@\
-	lwz	r12,lo16(ldso_stub__ ## fct ## $lazy_ptr)(r11)	@\
+.globl  ldso_stub___/**/fct			@\
+ldso_stub___/**/fct:				@\
+	b ldso_stub__/**/fct/**/stub		@\
+.symbol_stub ldso_stub__/**/fct/**/stub:	@\
+.indirect_symbol _/**/fct			@\
+	lis	r11,ha16(ldso_stub__/**/fct/**/$lazy_ptr)	@\
+	lwz	r12,lo16(ldso_stub__/**/fct/**/$lazy_ptr)(r11)	@\
 	mtctr	r12				@\
-	addi	r11,r11,lo16(ldso_stub__ ## fct ## $lazy_ptr)	@\
+	addi	r11,r11,lo16(ldso_stub__/**/fct/**/$lazy_ptr)	@\
 	bctr					@\
 .lazy_symbol_pointer				@\
-ldso_stub__ ## fct ## $lazy_ptr:		@\
-	.indirect_symbol _ ## fct		@\
+ldso_stub__/**/fct/**/$lazy_ptr:		@\
+	.indirect_symbol _/**/fct		@\
 	.long dyld_stub_binding_helper
 
 #else
