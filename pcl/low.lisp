@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.32 2003/05/26 16:03:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.33 2005/08/18 16:55:01 rtoy Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -420,6 +420,11 @@ the compiler as completely as possible.  Currently this means that
   (error (format nil "~~@<Internal error: ~?~~@:>"
 		 format-control format-args)))
 
+(defun internal-program-error (name &rest args)
+  (error 'kernel:simple-program-error
+	 :function-name name
+	 :format-control (car args)
+	 :format-arguments (list (cdr args))))
 
 ;;;; Structure-instance stuff:
 

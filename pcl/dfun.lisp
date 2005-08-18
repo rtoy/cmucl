@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.37 2005/06/15 17:30:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.38 2005/08/18 16:55:00 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -1127,8 +1127,13 @@ And so, we are saved.
     (declare (ignore nreq applyp nkeys))
     (with-dfun-wrappers (args metatypes)
       (dfun-wrappers invalid-wrapper-p wrappers classes types)
+      #+nil
       (error "~@<The function ~S requires at least ~D arguments.~@:>"
 	     gf (length metatypes))
+      (error 'kernel:simple-program-error
+	     :name gf
+	     :format-control "~<The function ~S requires at least ~D arguments.~@:>"
+	     :format-arguments (list gf (length metatypes)))
       (multiple-value-bind (emf methods accessor-type index)
 	  (cache-miss-values-internal gf arg-info wrappers classes types state)
 	(values emf methods

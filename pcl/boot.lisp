@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.72 2004/04/06 20:44:02 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.73 2005/08/18 16:55:00 rtoy Rel $")
 
 (in-package :pcl)
 
@@ -910,15 +910,15 @@ work during bootstrapping.
 	   (cond ((null args)
 		  (if (eql nreq 0) 
 		      (invoke-fast-method-call emf)
-		      (internal-error "Wrong number of args.")))
+		      (internal-program-error emf "Wrong number of args.")))
 		 ((null (cdr args))
 		  (if (eql nreq 1) 
 		      (invoke-fast-method-call emf (car args))
-		      (internal-error "Wrong number of args.")))
+		      (internal-program-error emf "Wrong number of args.")))
 		 ((null (cddr args))
 		  (if (eql nreq 2) 
 		      (invoke-fast-method-call emf (car args) (cadr args))
-		      (internal-error "Wrong number of args.")))
+		      (internal-program-error emf "Wrong number of args.")))
 		 (t
 		  (apply (fast-method-call-function emf)
 			 (fast-method-call-pv-cell emf)
@@ -930,7 +930,7 @@ work during bootstrapping.
 	    (method-call-call-method-args emf)))
     (fixnum 
      (cond ((null args)
-	    (internal-error "1 or 2 args expected."))
+	    (internal-program-error emf "1 or 2 args expected."))
 	   ((null (cdr args))
 	    (let ((value (%slot-ref (get-slots (car args)) emf)))
 	      (if (eq value +slot-unbound+)
@@ -940,10 +940,10 @@ work during bootstrapping.
 	    (setf (%slot-ref (get-slots (cadr args)) emf)
 		  (car args)))
 	   (t
-	    (internal-error "1 or 2 args expected."))))
+	    (internal-program-error emf "1 or 2 args expected."))))
     (fast-instance-boundp
      (if (or (null args) (cdr args))
-	 (internal-error "1 arg expected.")
+	 (internal-program-error emf "1 arg expected.")
 	 (not (eq (%slot-ref (get-slots (car args)) 
 			     (fast-instance-boundp-index emf))
 		  +slot-unbound+))))
