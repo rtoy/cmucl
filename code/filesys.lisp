@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.86 2005/02/10 15:57:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.87 2005/08/22 20:29:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1328,17 +1328,22 @@ optionally keeping some of the most recent old versions."
 				  :host (pathname-host pathname)
 				  :device (pathname-device pathname)
 				  :directory (subseq dir 0 i))))
-		    (unless (probe-file newpath)
-		      (let ((namestring (namestring newpath)))
-			(when verbose
-			  (format *standard-output* "~&Creating directory: ~A~%"
-				  namestring))
-			(unix:unix-mkdir namestring mode)
-			(unless (probe-file namestring)
-			  (error 'simple-file-error
-				 :pathname pathspec
-				 :format-control "Can't create directory ~A."
-				 :format-arguments (list namestring)))
-			(setf created-p t)))))
+		    (tagbody
+		     retry
+		       (restart-case
+			   (unless (probe-file newpath)
+			     (let ((namestring (namestring newpath)))
+			       (when verbose
+				 (format *standard-output* "~&Creating directory: ~A~%"
+					 namestring))
+			       (unix:unix-mkdir namestring mode)
+			       (unless (probe-file namestring)
+				 (error 'simple-file-error
+					:pathname pathspec
+					:format-control "Can't create directory ~A."
+					:format-arguments (list namestring)))
+			       (setf created-p t)))
+			 (retry () :report "Try to create the directory again"
+				(go retry))))))
 	 ;; Only the first path in a search-list is considered.
 	 (return (values pathname created-p))))))
