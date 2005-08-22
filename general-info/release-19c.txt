@@ -27,6 +27,15 @@ New in this release:
         to the fasl file.
       - UNIX-UNAME added for non-glibc2 platforms, which already had
         it.
+      - Added annotation support to the pretty printer so various
+        annotations can be produced in sync with the pretty printer
+        output.  (From Matthias Koeppe.)  Arbitrary functions
+        ("annotations") can be queued in sequence with characters that
+        are printed to the pretty stream.  When the characters are
+        forwarded to the target stream, the annotations are invoked at
+        the right position.
+      - Add a restart for ENSURE-DIRECTORIES-EXIST to retry directory
+        creation if necessary.
 
   * Numerous ANSI compliance fixes:
 
@@ -40,6 +49,11 @@ New in this release:
       - MULTIPLE-VALUE-SETQ now always returns the primary value.
       - (SETF MACRO-FUNCTION) and (SETF COMPILER-MACRO-FUNCTION)
         accepts the optional environment arg, as specified by ANSI CL.
+      - PRIN1 no longer prints the sign of the exponent if it is
+        non-negative. 
+      - PRIN1 and ~E are consistent now when printing large numbers. 
+      - Undefined-Function errors from funcalling special forms now
+        have the cell-error name filled in correctly.
         
   * Numerous bugfixes:
 
@@ -51,7 +65,8 @@ New in this release:
         by ftruncate instead of +0.0.
       - Some errors during type derivation are fixed.  We cause the
         offending function to return NIL to indicate unbounded.
-
+      - Errors in callbacks when the integer arg is shorter than an
+        int have been fixed.
 
   * Other changes:
 
@@ -59,13 +74,14 @@ New in this release:
         wrong code or much slower code, you can now disable modular
         arithmetic by setting c::*enable-modular-arithmetic* to NIL.
         This is a workaround pending a better solution.
-
-
+      - Support logical pathnames when using LOAD-OBJECT-FILE.
+      
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to rebuilding procedure:
       - Build scripts should recognize FreeBSD automatically.
-
+      - Should be able to build on either Mac OS X 10.2 or 10.4 using
+        the default version of gcc.
 
 This release is not binary compatible with code compiled using CMUCL
 19b; you will need to recompile FASL files. 
