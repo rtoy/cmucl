@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.41 2004/10/19 15:07:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.42 2005/08/25 21:21:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -531,11 +531,12 @@
 	 (complex-asin number)
 	 (coerce (%asin (coerce number 'double-float)) 'single-float)))
     (((foreach single-float double-float))
-     (if (or (> number (coerce 1 '(dispatch-type number)))
-	     (< number (coerce -1 '(dispatch-type number))))
-	 (complex-asin number)
+     (if (or (float-nan-p number)
+	     (and (<= number (coerce 1 '(dispatch-type number)))
+		  (>= number (coerce -1 '(dispatch-type number)))))
 	 (coerce (%asin (coerce number 'double-float))
-		 '(dispatch-type number))))
+		 '(dispatch-type number))
+	 	 (complex-asin number)))
     ((complex)
      (complex-asin number))))
 
@@ -547,11 +548,12 @@
 	 (complex-acos number)
 	 (coerce (%acos (coerce number 'double-float)) 'single-float)))
     (((foreach single-float double-float))
-     (if (or (> number (coerce 1 '(dispatch-type number)))
-	     (< number (coerce -1 '(dispatch-type number))))
-	 (complex-acos number)
+     (if (or (float-nan-p number)
+	     (and (<= number (coerce 1 '(dispatch-type number)))
+		  (>= number (coerce -1 '(dispatch-type number)))))
 	 (coerce (%acos (coerce number 'double-float))
-		 '(dispatch-type number))))
+		 '(dispatch-type number))
+	 	 (complex-acos number)))
     ((complex)
      (complex-acos number))))
 
