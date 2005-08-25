@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.30 2004/06/18 18:18:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31 2005/08/25 21:25:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1092,9 +1092,15 @@ rounding modes & do ieee round-to-integer.
     ;; For everything else, some of the bits in frac are
     ;; fractional.  Figure which ones they are and set them to
     ;; zero.
-    (cond ((= exp vm:single-float-normal-exponent-max)
-	   ;; Infinity or NaN.
-	   x)
+    ;;
+    (cond ((> exp vm:single-float-normal-exponent-max)
+	   ;; Infinity or NaN.  Convert NaN to quiet NaN.
+	   (let ((signif (ldb vm:single-float-significand-byte bits)))
+	     (if (zerop signif)
+		 ;; Infinity
+		 x
+		 ;; NaN.  Convert to quiet Nan
+		 (make-single-float (logior bits vm:single-float-trapping-nan-bit)))))
 	  ((<= biased 0)
 	   ;; Number is less than 1.  IEEE 754 says it should have the
 	   ;; same sign.  Make it so.
@@ -1123,8 +1129,15 @@ rounding modes & do ieee round-to-integer.
 			    (- exp vm:double-float-bias))))
     (declare (type (signed-byte 32) hi)
 	     (type (unsigned-byte 32) lo))
-    (cond ((= exp vm:double-float-normal-exponent-max)
-	   x)
+    (cond ((> exp vm:double-float-normal-exponent-max)
+	   ;; Infinity or NaN.  Convert NaN to quiet NaN.
+	   (if (and (zerop (ldb vm:double-float-significand-byte hi))
+		    (zerop lo))
+	       ;; Infinity
+	       x
+	       ;; NaN.  Convert to quiet NaN
+	       (make-double-float (logior hi vm:double-float-trapping-nan-bit)
+				  lo)))
 	  ((<= biased 0)
 	   ;; Number is less than 1.  IEEE 754 says it should have the
 	   ;; same sign.  Make it so.
