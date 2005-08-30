@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.62 2004/12/24 15:05:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.63 2005/08/30 21:18:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -708,13 +708,27 @@
   (cond (mappings
 	 (let ((result (parse-enum name mappings)))
 	   (when name
-	     (multiple-value-bind
-		 (old old-p)
+	     (multiple-value-bind (old old-p)
 		 (auxiliary-alien-type :enum name)
 	       (when old-p
 		 (unless (alien-type-= result old)
-		   (warn "Redefining alien enum ~S" name))))
-	     (setf (auxiliary-alien-type :enum name) result))
+		   (warn "Redefining alien enum ~S" name)))
+	       ;; I (rtoy) am not 100% sure about this.  But compare
+	       ;; what this does with what PARSE-ALIEN-RECORD-TYPE
+	       ;; does.  So, if we've seen this type before and it's
+	       ;; the same type, we don't need to setf
+	       ;; auxiliary-alien-type.  This gets around the problem
+	       ;; noted by Nicolas Neuss on cmucl-help, 2004/11/09
+	       ;; where he had something like
+	       ;;
+	       ;; (def-alien-type yes-no-t (enum yes-no-t :no :yes))
+	       ;; (def-alien-type nil
+	       ;;    (struct foo
+	       ;;      (arg1 yes-no-t)
+	       ;;      (arg2 yes-no-t)))
+	       (when (or (not old-p)
+			 (not (alien-type-= result old)))
+		 (setf (auxiliary-alien-type :enum name) result))))
 	   result))
 	(name
 	 (multiple-value-bind
