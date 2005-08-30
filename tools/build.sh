@@ -106,7 +106,7 @@ do
 	C) CREATE_OPT="$OPTARG"
 	   CREATE_DIRS=yes ;;
 	B) bootfiles="$bootfiles $OPTARG" ;;
-	\\?) usage
+	\?) usage
 	    ;;
     esac
 done
