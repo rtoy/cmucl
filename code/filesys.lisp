@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.87 2005/08/22 20:29:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.88 2005/08/31 13:57:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -488,7 +488,7 @@
 		    ((eq (first pathname-directory) :relative)
 		     ;; Relative directory so relative to default.
 		     pathname-directory)
-		    ((and (> prefix-len 1)
+		    ((and (>= prefix-len 1)
 			      (>= (length pathname-directory) prefix-len)
 			      (compare-component (subseq pathname-directory
 							 0 prefix-len)
