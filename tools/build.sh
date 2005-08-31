@@ -53,7 +53,7 @@ fi
 
 usage ()
 {
-    echo "build.sh [-123obvuC]"
+    echo "build.sh [-123obvuBC?]"
     echo "    -1        Skip build 1"
     echo "    -2        Skip build 2"
     echo "    -3        Skip build 3"
@@ -64,9 +64,12 @@ usage ()
     echo '    -v v      Use the given string as the version.  Default is'
     echo "               today's date"
     echo "    -u        Don't build CLX, CLM, or Hemlock"
+    echo "    -B file   Use file as a boot file.  Maybe be specified more than once"
+    echo "               The file is relative to the bootfiles/<version> directory"
     echo '    -C [l m]  Create the build directories.  The args are what'
     echo '               you would give to create-target.sh for the lisp'
     echo '               and motif variant.'
+    echo "    -?        This help message"
 
     exit 1
 }
