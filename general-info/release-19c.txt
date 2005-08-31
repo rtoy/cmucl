@@ -4,7 +4,7 @@
 
 The CMUCL project is pleased to announce the release of CMUCL 19c.
 This is a major release which contains numerous enhancements and
-bugfixes from the 19a release.
+bugfixes from the 19b release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
@@ -54,6 +54,8 @@ New in this release:
       - PRIN1 and ~E are consistent now when printing large numbers. 
       - Undefined-Function errors from funcalling special forms now
         have the cell-error name filled in correctly.
+      - ENOUGH-NAMESTRING was not returning the shortest namestring
+        when the defaults was #p"/".
         
   * Numerous bugfixes:
 
@@ -67,6 +69,11 @@ New in this release:
         offending function to return NIL to indicate unbounded.
       - Errors in callbacks when the integer arg is shorter than an
         int have been fixed.
+      - ASIN and ACOS returns NaN when given NaN args instead of
+        signaling an error.
+      - FTRUNCATE will return a quiet NaN when given a signaling NaN.
+        It also properly handles infinity too.
+      - Fixed a bug in handling of alien enum types in structures.
 
   * Other changes:
 
