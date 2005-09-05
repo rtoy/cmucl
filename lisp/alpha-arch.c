@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.6 2000/10/24 13:32:30 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.7 2005/09/05 06:09:12 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -33,7 +33,7 @@ char *arch_init(void)
 	  OS_VM_PROT_ALL,MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED,-1,0)
      == (os_vm_address_t) -1)
     perror("mmap");
-  bcopy(call_into_lisp_LRA,call_into_lisp_LRA_page,OS_VM_DEFAULT_PAGESIZE);
+  memcpy(call_into_lisp_LRA_page,call_into_lisp_LRA,OS_VM_DEFAULT_PAGESIZE);
   os_flush_icache((os_vm_address_t)call_into_lisp_LRA_page,
 		  OS_VM_DEFAULT_PAGESIZE);
   return NULL;

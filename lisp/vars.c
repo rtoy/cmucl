@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.4 2005/08/01 21:53:00 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.5 2005/09/05 06:09:13 cshapiro Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -62,8 +62,8 @@ void flush_vars()
                 free(var);
             }
         }
-    bzero(NameHash, sizeof(NameHash));
-    bzero(ObjHash, sizeof(ObjHash));
+    memset(NameHash, 0, sizeof(NameHash));
+    memset(ObjHash, 0, sizeof(ObjHash));
     tempcntr = 1;
 
     for (var = perm; var != NULL; var = next) {

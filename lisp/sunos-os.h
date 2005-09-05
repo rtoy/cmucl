@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.6 2005/01/13 19:55:01 fgilham Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.7 2005/09/05 06:09:13 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -55,9 +55,6 @@ typedef int os_vm_prot_t;
 #undef NULL
 #define NULL 0
 #endif
-
-#define bcopy(a,b,n) memmove(b,a,n)
-#define bzero(a,n) memset(a,0,n)
 
 extern void flush_icache(unsigned int*, unsigned int);
 extern void save_context(void);

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.18 2005/02/07 00:49:02 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.19 2005/09/05 06:09:13 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -41,9 +41,9 @@ os_vm_size_t length;
     block_size=os_trunc_size_to_page(length);
 
     if(block_start>addr)
-	bzero((char *)addr,block_start-addr);
+	memset((char *)addr,0,block_start-addr);
     if(block_size<length)
-	bzero((char *)block_start+block_size,length-block_size);
+	memset((char *)block_start+block_size,0,length-block_size);
     
     if (block_size != 0) {
 	/* Now deallocate and allocate the block so that it */
@@ -98,7 +98,7 @@ os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 	      os_vm_address_t new=os_allocate(len);
 
 	      if(new!=NULL){
-		bcopy((char*)addr, (char*)new,old_len);
+		memcpy((char*)new, (char*)addr, old_len);
 		os_invalidate(addr,old_len);
 		}
 		

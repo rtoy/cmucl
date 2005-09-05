@@ -10,13 +10,13 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.32 2005/05/03 14:57:24 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.33 2005/09/05 06:09:13 cshapiro Exp $ 
 
    */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 
 #include "lisp.h"
 #include "arch.h"
@@ -547,7 +547,7 @@ static lispobj ptrans_boxed(lispobj thing, lispobj header, boolean constant)
     }
 
     /* Copy it. */
-    bcopy(old, new, nwords * sizeof(lispobj));
+    memmove(new, old, nwords * sizeof(lispobj));
 
     /* Deposit forwarding pointer. */
     result = (lispobj)new | LowtagOf(thing);
@@ -590,7 +590,7 @@ static lispobj ptrans_instance(lispobj thing, lispobj header, boolean constant)
       assert_static_space_bounds (static_free);
 
       /* Copy it. */
-      bcopy(old, new, nwords * sizeof(lispobj));
+      memmove(new, old, nwords * sizeof(lispobj));
 
       /* Deposit forwarding pointer. */
       result = (lispobj)new | LowtagOf(thing);
@@ -622,7 +622,7 @@ static lispobj ptrans_fdefn(lispobj thing, lispobj header)
     assert_static_space_bounds (static_free);
 
     /* Copy it. */
-    bcopy(old, new, nwords * sizeof(lispobj));
+    memmove(new, old, nwords * sizeof(lispobj));
 
     /* Deposit forwarding pointer. */
     result = (lispobj)new | LowtagOf(thing);
@@ -652,7 +652,7 @@ static lispobj ptrans_unboxed(lispobj thing, lispobj header)
     assert_readonly_space_bounds (read_only_free);
 
     /* Copy it. */
-    bcopy(old, new, nwords * sizeof(lispobj));
+    memmove(new, old, nwords * sizeof(lispobj));
 
     /* Deposit forwarding pointer. */
     result = (lispobj)new | LowtagOf(thing);
@@ -686,7 +686,7 @@ static lispobj ptrans_vector(lispobj thing, int bits, int extra,
         assert_readonly_space_bounds (read_only_free);
     }
 
-    bcopy(vector, new, nwords * sizeof(lispobj));
+    memmove(new, vector, nwords * sizeof(lispobj));
 
     result = (lispobj)new | LowtagOf(thing);
     vector->header = result;
@@ -794,7 +794,7 @@ static lispobj ptrans_code(lispobj thing)
     read_only_free += CEILING(nwords, 2);
     assert_readonly_space_bounds (read_only_free);
 
-    bcopy(code, new, nwords * sizeof(lispobj));
+    memmove(new, code, nwords * sizeof(lispobj));
 
 #if (defined(i386) || defined(__x86_64))
     apply_code_fixups_during_purify(code,new);
@@ -902,7 +902,7 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
             assert_readonly_space_bounds (read_only_free);
 	}
         /* Copy it. */
-        bcopy(old, new, nwords * sizeof(lispobj));
+        memmove(new, old, nwords * sizeof(lispobj));
 
         /* Deposit forwarding pointer. */
         result = (lispobj)new | LowtagOf(thing);

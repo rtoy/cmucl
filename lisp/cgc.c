@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.11 2004/07/12 23:44:07 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.12 2005/09/05 06:09:12 cshapiro Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <signal.h>
+#include <string.h>
 #include "os.h"				/* for SetSymbolValue */
 #include "globals.h"                    /* For dynamic_space_size */
 #include "x86-validate.h"		/* for memory layout  */
@@ -264,7 +265,7 @@ os_vm_size_t length;
   
   
   if(block_start > addr)
-    bzero((char *)addr, MIN(block_start - addr, length));
+    memset((char *)addr, 0, MIN(block_start - addr, length))
 
   if(block_start < end)
     {
@@ -273,7 +274,7 @@ os_vm_size_t length;
       block_size =os_trunc_size_to_page(length);
       
       if(block_size < length)
-	bzero((char *)block_start + block_size,length - block_size);
+	memset((char *)block_start + block_size,0,length - block_size);
   
       if (block_size != 0)
 	{

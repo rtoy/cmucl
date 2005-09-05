@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.21 2004/07/08 18:21:29 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.22 2005/09/05 06:09:13 cshapiro Exp $
  *
  * Memory Validation
  */
@@ -81,9 +81,9 @@ validate(void)
 	 dynamic space segment in the executable), then copy the data
 	 back into it.  This is necessary to make the data in the
 	 dynamic space segment available to the new lisp process.  */
-      bcopy(dynamic_0_space, dynamic_space_data, (int)&image_dynamic_space_size);
+      memcpy(dynamic_space_data, dynamic_0_space, (int)&image_dynamic_space_size);
       ensure_space(dynamic_0_space, dynamic_space_size);
-      bcopy(dynamic_space_data, dynamic_0_space, (int)&image_dynamic_space_size);
+      memcpy(dynamic_0_space, dynamic_space_data, (int)&image_dynamic_space_size);
     } else
       ensure_space(dynamic_0_space, dynamic_space_size);
 

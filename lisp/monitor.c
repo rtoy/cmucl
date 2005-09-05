@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.18 2004/07/08 18:21:29 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.19 2005/09/05 06:09:13 cshapiro Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -486,7 +486,7 @@ void ldb_monitor()
 {
     jmp_buf oldbuf;
 
-    bcopy(curbuf, oldbuf, sizeof(oldbuf));
+    memcpy(oldbuf, curbuf, sizeof(jmp_buf));
 
     printf("LDB monitor\n");
 
@@ -496,7 +496,7 @@ void ldb_monitor()
 
     done = FALSE;
 
-    bcopy(oldbuf, curbuf, sizeof(curbuf));
+    memcpy(curbuf, oldbuf, sizeof(jmp_buf));
 }
 
 void throw_to_monitor()

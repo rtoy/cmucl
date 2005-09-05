@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Attic/socket.c,v 1.4 2000/10/26 19:50:19 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Attic/socket.c,v 1.5 2005/09/05 06:09:13 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -104,9 +104,9 @@ int connect_to_server (char *host, int display)
 	    }
 	  /* Set up the socket data. */
 	  inaddr.sin_family = host_ptr->h_addrtype;
-	  bcopy((char *)host_ptr->h_addr, 
-		(char *)&inaddr.sin_addr, 
-		sizeof(inaddr.sin_addr));
+	  memcpy((char *)&inaddr.sin_addr, 
+		 (char *)host_ptr->h_addr, 
+		 sizeof(inaddr.sin_addr));
 	} 
       else 
 	{

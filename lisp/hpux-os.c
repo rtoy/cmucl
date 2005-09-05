@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.5 2003/07/19 14:10:16 emarsden Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.6 2005/09/05 06:09:13 cshapiro Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -255,7 +255,7 @@ os_zero(os_vm_address_t addr,os_vm_size_t length)
     block_size=os_trunc_size_to_page(length);
 
     if(block_start>addr)
-      bzero((char *)addr,block_start-addr);
+      memset((char *)addr,0,block_start-addr);
     if(block_size<length)
       assert(FALSE);
     
@@ -314,7 +314,7 @@ int getrusage(int who,struct rusage *rusage)
   struct tms buf;
   clock_t uticks, sticks;
 
-  bzero(rusage,sizeof(struct rusage));
+  memset(rusage,0,sizeof(struct rusage));
   if (ticks_per_sec == 0) {
     ticks_per_sec = sysconf(_SC_CLK_TCK);
     usec_per_tick = 1000000 / ticks_per_sec;

@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 
     dprintf("Reading remainder of Segment command (%d bytes)", sizeof(thesegment)-sizeof(struct load_command));
     read(fd,&thesegment.segname,sizeof(thesegment)-sizeof(struct load_command));
-    bzero(segname,17);
+    memset(segname,0,17);
     memcpy(segname,thesegment.segname,16);
     dprintf("Segname: %s\n",segname);
     if (0==strncmp(thesegment.segname,"CMUCLRO",7)) {
