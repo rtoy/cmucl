@@ -1,9 +1,8 @@
 # -*- Mode: makefile -*-
 PATH1 = ../../src/lisp
-PATH2 = ../../p86/lisp
-vpath %.h $(PATH2):$(PATH1)
-vpath %.c $(PATH2):$(PATH1)
-vpath %.S $(PATH2):$(PATH1)
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
 CC = gcc
 LD = ld
 CPP = cpp
