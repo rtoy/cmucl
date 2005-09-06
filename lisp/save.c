@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.10 2004/07/08 18:00:26 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.11 2005/09/06 00:12:12 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -102,7 +102,7 @@ boolean save(char *filename, lispobj init_function)
       SetSymbolValue(ALLOCATION_POINTER,DYNAMIC_0_SPACE_START);
 #endif
     /* Open the file: */
-    unlink(filename);
+    remove(filename);
     file = fopen(filename, "w");
     if (file == NULL) {
         perror(filename);
