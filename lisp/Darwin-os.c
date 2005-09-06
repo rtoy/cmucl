@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.3 2005/06/01 13:30:16 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.4 2005/09/06 13:05:58 rtoy Exp $
  *
  */
 
@@ -34,6 +34,10 @@
 #include <signal.h>
 /* #include <sys/sysinfo.h> */
 /* #include <sys/proc.h> */
+/* For timebase info */
+#include <sys/param.h>
+#include <sys/sysctl.h>
+
 
 /* Need this to define ppc_saved_state_t (for 10.4) */
 #include <mach/thread_status.h>
@@ -44,9 +48,57 @@ vm_size_t os_vm_page_size;
 #define DPRINTF(t,a) {if (t) fprintf a;}
 
 
+/*
+ * This is accessed by Lisp!  Make this a static symbol?
+ */
+int cycles_per_tick = 1;
+
+/*
+ * Compute the conversion factor from the numbef of time base ticks to
+ * clock frequency.  The timebase counter on PPC is not a cycle
+ * counter; we have to derive the relationship ourselves.
+ */
+
+void timebase_init()
+{
+  int mib[2];
+  int tbfrequency;
+  int cpufrequency;
+  unsigned int miblen;
+  size_t len;
+
+  mib[0] = CTL_HW;
+#ifndef HW_TB_FREQ
+  /*
+   * Mac OS X 10.2.8 doesn't have this, so we take it from 10.3.8,
+   * which does.
+   */
+#define HW_TB_FREQ	23
+#endif  
+  mib[1] = HW_TB_FREQ;
+  miblen = 2;
+  len = sizeof(tbfrequency);
+
+  if (sysctl(mib, miblen, &tbfrequency, &len, NULL, 0) == -1) {
+    perror("Error getting HW_TB_FREQ from sysctl: ");
+  }
+
+  mib[0] = CTL_HW;
+  mib[1] = HW_CPU_FREQ;
+  miblen = 2;
+  len = sizeof(cpufrequency);
+  if (sysctl(mib, miblen, &cpufrequency, &len, NULL, 0) == -1) {
+    perror("Error getting HW_CPU_FREQ from sysctl: ");
+  }
+
+  cycles_per_tick = cpufrequency / tbfrequency;
+}
+
+
 void os_init(void)
 {
   os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
+  timebase_init();
 }
 
 int os_get_errno(void)
