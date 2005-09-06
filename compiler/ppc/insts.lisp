@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.12 2005/06/19 02:41:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.13 2005/09/06 00:39:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1182,7 +1182,7 @@ about function addresses and register values.")
        (:printer a-tac ((op ,op) (xo ,xo) (rc ,rc)))
        (:cost ,cost)
        (:delay 1)
-       (:dependencies (reads fra) (reads frb) ,@other-reads
+       (:dependencies (reads fra) (reads frc) ,@other-reads
                       (writes frt) ,@other-writes)
        (:emitter
         (emit-a-form-inst segment 
@@ -1290,6 +1290,7 @@ about function addresses and register values.")
 (define-instruction bc (segment bo bi target)
   (:declare (type label target))
   (:printer b ((op 16) (aa 0) (lk 0)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr))
   (:emitter
@@ -1298,14 +1299,16 @@ about function addresses and register values.")
 (define-instruction bcl (segment bo bi target)
   (:declare (type label target))
   (:printer b ((op 16) (aa 0) (lk 1)))
+  (:attributes branch)
   (:delay 1)
-  (:dependencies (reads :ccr))
+  (:dependencies (reads :ccr) (writes :lr))
   (:emitter
    (emit-conditional-branch segment bo bi target nil t)))
 
 (define-instruction bca (segment bo bi target)
   (:declare (type label target))
   (:printer b ((op 16) (aa 1) (lk 0)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr))
   (:emitter
@@ -1314,8 +1317,9 @@ about function addresses and register values.")
 (define-instruction bcla (segment bo bi target)
   (:declare (type label target))
   (:printer b ((op 16) (aa 1) (lk 1)))
+  (:attributes branch)
   (:delay 1)
-  (:dependencies (reads :ccr))
+  (:dependencies (reads :ccr) (writes :lr))
   (:emitter
    (emit-conditional-branch segment bo bi target t t)))
 
@@ -1326,6 +1330,7 @@ about function addresses and register values.")
   (:declare (type label target))
   (:printer b ((op 16) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (aa 0) (lk 0)) 
             '(:name :tab bd))
+  (:attributes branch)
   (:delay 1)
   (:emitter
    (emit-conditional-branch segment #.(valid-bo-encoding :bo-u) 0 target nil nil)))
@@ -1334,6 +1339,8 @@ about function addresses and register values.")
 (define-instruction bt (segment bi  target)
   (:printer b ((op 16) (bo #.(valid-bo-encoding :bo-t)) (aa 0) (lk 0))
             '(:name :tab bi ", " bd))
+  (:attributes branch)
+  (:dependencies (reads :ccr))
   (:delay 1)
   (:emitter
    (emit-conditional-branch segment #.(valid-bo-encoding :bo-t) bi target nil nil)))
@@ -1341,12 +1348,16 @@ about function addresses and register values.")
 (define-instruction bf (segment bi  target)
   (:printer b ((op 16) (bo #.(valid-bo-encoding :bo-f)) (aa 0) (lk 0))
             '(:name :tab bi ", " bd))
+  (:attributes branch)
+  (:dependencies (reads :ccr))
   (:delay 1)
   (:emitter
    (emit-conditional-branch segment #.(valid-bo-encoding :bo-f) bi target nil nil)))
 
 (define-instruction b? (segment cr-field-name cr-name  &optional (target nil target-p))
   (:delay 1)
+  (:attributes branch)
+  (:dependencies (reads :ccr))
   (:emitter 
    (unless target-p
      (setq target cr-name cr-name cr-field-name cr-field-name :cr0))
@@ -1367,12 +1378,14 @@ about function addresses and register values.")
 
 (define-instruction b (segment target)
   (:printer i ((op 18) (aa 0) (lk 0)))
+  (:attributes branch)
   (:delay 1)
   (:emitter
    (emit-i-form-branch segment target nil)))
 
 (define-instruction ba (segment target)
   (:printer i-abs ((op 18) (aa 1) (lk 0)))
+  (:attributes branch)
   (:delay 1)
   (:emitter
    (when (typep target 'fixup)
@@ -1383,13 +1396,17 @@ about function addresses and register values.")
 
 (define-instruction bl (segment target)
   (:printer i ((op 18) (aa 0) (lk 1)))
+  (:attributes branch)
   (:delay 1)
+  (:dependencies (writes :lr))
   (:emitter
    (emit-i-form-branch segment target t)))
 
 (define-instruction bla (segment target)
   (:printer i-abs ((op 18) (aa 1) (lk 1)))
+  (:attributes branch)
   (:delay 1)
+  (:dependencies (writes :lr))
   (:emitter
    (when (typep target 'fixup)
      (note-fixup segment :ba target)
@@ -1398,6 +1415,7 @@ about function addresses and register values.")
 
 (define-instruction blr (segment)
   (:printer xl-bo-bi ((op 19) (xo 16) (bo #.(valid-bo-encoding :bo-u))(bi 0) (lk 0))  '(:name))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
@@ -1405,6 +1423,7 @@ about function addresses and register values.")
 
 (define-instruction bclr (segment bo bi)
   (:printer xl-bo-bi ((op 19) (xo 16)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :lr))
   (:emitter
@@ -1412,8 +1431,9 @@ about function addresses and register values.")
 
 (define-instruction bclrl (segment bo bi)
   (:printer xl-bo-bi ((op 19) (xo 16) (lk 1)))
+  (:attributes branch)
   (:delay 1)
-  (:dependencies (reads :ccr) (reads :lr))
+  (:dependencies (reads :ccr) (reads :lr) (write :lr))
   (:emitter
    (emit-x-form-inst segment 19 (valid-bo-encoding bo) (valid-bi-encoding bi) 0 16 1)))
 
@@ -1434,6 +1454,7 @@ about function addresses and register values.")
 
 (define-instruction bcctr (segment bo bi)
   (:printer xl-bo-bi ((op 19) (xo 528)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
@@ -1441,6 +1462,7 @@ about function addresses and register values.")
 
 (define-instruction bcctrl (segment bo bi)
   (:printer xl-bo-bi ((op 19) (xo 528) (lk 1)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr) (writes :lr))
   (:emitter
@@ -1448,6 +1470,7 @@ about function addresses and register values.")
 
 (define-instruction bctr (segment)
   (:printer xl-bo-bi ((op 19) (xo 528) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (lk 0))  '(:name))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
@@ -1455,6 +1478,7 @@ about function addresses and register values.")
 
 (define-instruction bctrl (segment)
   (:printer xl-bo-bi ((op 19) (xo 528) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (lk 1))  '(:name))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
