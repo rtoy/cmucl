@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.47 2005/04/15 01:40:08 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.48 2005/09/06 01:33:29 cshapiro Exp $
  *
  */
 
@@ -289,7 +289,6 @@ search_core(const char* lib, const char* default_core)
 {
     char *buf;
     char *dst;
-    struct stat statbuf;
 
     /*
      * A buffer that's large enough to hold lib, default_core, a
