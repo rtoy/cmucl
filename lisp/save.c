@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.11 2005/09/06 00:12:12 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.12 2005/09/06 01:26:41 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
-#include <sys/file.h>
 
 #include "lisp.h"
 #include "os.h"
