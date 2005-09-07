@@ -1,42 +1,39 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.5 2004/07/08 18:00:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.6 2005/09/07 07:05:23 cshapiro Exp $
  *
  * Support for run-program.
  *
  */
 
-#include <stdlib.h>
-#include <sys/file.h>
-#include <sys/fcntl.h>
 #include <sys/ioctl.h>
-#if defined(SVR4) || defined(__linux__)
-#include <unistd.h>
-#endif
-#if defined(SOLARIS)
+#include <errno.h>
 #include <fcntl.h>
-#endif
+#include <signal.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <unistd.h>
 
-int spawn(char *program, char *argv[], char *envp[], char *pty_name,
-	  int stdin, int stdout, int stderr)
+pid_t spawn(char *program, char *argv[], char *envp[], char *pty_name,
+	    int stdin, int stdout, int stderr)
 {
-    int pid = fork();
+    pid_t pid;
+    sigset_t set;
     int fd;
 
+    pid = fork();
     if (pid != 0)
 	return pid;
 
     /* Put us in our own process group. */
-#if defined(hpux)
     setsid();
-#elif defined(SVR4) || defined(__linux__)
-    setpgrp();
-#else
-    setpgrp(0, getpid());
-#endif
+
+    /* Unblock all signals. */
+    sigemptyset(&set);
+    sigprocmask(SIG_SETMASK, &set, NULL);
 
     /* If we are supposed to be part of some other pty, go for it. */
     if (pty_name) {
-#if !defined(hpux) && !defined(SVR4)
+#ifdef TIOCNOTTY
 	fd = open("/dev/tty", O_RDWR, 0);
 	if (fd >= 0) {
 	    ioctl(fd, TIOCNOTTY, 0);
@@ -51,7 +48,7 @@ int spawn(char *program, char *argv[], char *envp[], char *pty_name,
 	close(fd);
     }
 
-    /* Set up stdin, stdout, and stderr */
+    /* Set up stdin, stdout, and stderr. */
     if (stdin >= 0)
 	dup2(stdin, 0);
     if (stdout >= 0)
@@ -60,13 +57,8 @@ int spawn(char *program, char *argv[], char *envp[], char *pty_name,
 	dup2(stderr, 2);
 
     /* Close all other fds. */
-#ifdef SVR4
-    for (fd = sysconf(_SC_OPEN_MAX)-1; fd >= 3; fd--)
+    for (fd = sysconf(_SC_OPEN_MAX) - 1; fd >= 3; fd--)
 	close(fd);
-#else
-    for (fd = getdtablesize()-1; fd >= 3; fd--)
-	close(fd);
-#endif
 
     /* Exec the program. */
     execve(program, argv, envp);
