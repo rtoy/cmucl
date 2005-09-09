@@ -43,7 +43,7 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (comf "target:tools/setup" :load t)
 
 (setq *gc-verbose* nil)
-(setq *interactive* nil)
+(setq *interactive* ${INTERACTIVE-:nil})
 (setq debug:*debug-print-level* nil)
 (setq debug:*debug-print-length* nil)
 

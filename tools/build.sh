@@ -64,6 +64,9 @@ usage ()
     echo '    -v v      Use the given string as the version.  Default is'
     echo "               today's date"
     echo "    -u        Don't build CLX, CLM, or Hemlock"
+    echo '    -i n      Make build "n" interactive, so output is sent to *standard-output*'
+    echo '               instead of the log file. "n" should be a string consisting of'
+    echo '                the numbers 1, 2, or 3.'
     echo "    -B file   Use file as a boot file.  Maybe be specified more than once"
     echo "               The file is relative to the bootfiles/<version> directory"
     echo '    -C [l m]  Create the build directories.  The args are what'
@@ -76,6 +79,12 @@ usage ()
 
 buildit ()
 {
+    if echo $INTERACTIVE_BUILD | grep $BUILD > /dev/null; then
+	INTERACTIVE=t
+    else
+	INTERACTIVE=nil
+    fi
+
     if [ ! -d $TARGET ]; then
 	if [ -n "$CREATE_DIRS" ]; then
 	    $TOOLDIR/create-target.sh $TARGET $CREATE_OPT
@@ -96,7 +105,7 @@ buildit ()
     fi
 }
 
-while getopts "123o:b:v:uB:C:?" arg
+while getopts "123o:b:v:uB:C:i:?" arg
 do
     case $arg in
 	1) ENABLE2="no" ;;
@@ -109,6 +118,7 @@ do
 	C) CREATE_OPT="$OPTARG"
 	   CREATE_DIRS=yes ;;
 	B) bootfiles="$bootfiles $OPTARG" ;;
+        i) INTERACTIVE_BUILD="$OPTARG" ;;
 	\?) usage
 	    ;;
     esac
@@ -126,7 +136,9 @@ echo "//starting build: $build_started"
 
 TARGET=$BASE-2
 ENABLE=$ENABLE2
+export INTERACTIVE
 
+BUILD=1
 buildit
 
 bootfiles=
@@ -135,12 +147,14 @@ TARGET=$BASE-3
 OLDLISP="${BASE}-2/lisp/lisp -noinit -core ${BASE}-2/lisp/lisp.core"
 ENABLE=$ENABLE3
 
+BUILD=2
 buildit
 
 TARGET=$BASE-4
 OLDLISP="${BASE}-3/lisp/lisp -noinit -core ${BASE}-3/lisp/lisp.core"
 ENABLE=$ENABLE4
 
+BUILD=3
 buildit
 
 if [ "$SKIPUTILS" = "no" ];
