@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.79 2004/03/26 18:22:54 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.80 2005/09/09 19:36:34 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,8 @@
 (export '(layout-invalid condition-function-name simple-control-error
 	  simple-file-error simple-program-error simple-parse-error
           simple-style-warning simple-undefined-function
-	  stack-overflow heap-overflow))
+          #+stack-checking stack-overflow
+          #+heap-overflow-check heap-overflow))
 
 (in-package "LISP")
 (export '(break error warn cerror

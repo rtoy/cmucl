@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.245 2005/06/13 14:29:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.246 2005/09/09 19:36:34 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1180,7 +1180,7 @@
   (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"  "BINARY-TEXT-STREAM")
   (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
 	     "DEBUG"
-	     "FLOATING-POINT-INEXACT"
+	     "FLOATING-POINT-INEXACT" "FLOAT-ACCURACY"
 	     "*ALL-MODIFIER-NAMES*" "*ANSI-DEFSTRUCT-OPTIONS-P*"
 	     "*AUTOLOAD-TRANSLATIONS*"
 	     "*BACKUP-EXTENSION*" "*BEFORE-GC-HOOKS*"
