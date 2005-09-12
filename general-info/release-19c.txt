@@ -74,6 +74,13 @@ New in this release:
       - FTRUNCATE will return a quiet NaN when given a signaling NaN.
         It also properly handles infinity too.
       - Fixed a bug in handling of alien enum types in structures.
+      - (MAKE-PATHNAME :DIRECTORY '(:RELATIVE)) now prints as #P"./"
+        instead of #p"", which is the printed form of (MAKE-PATHNAME).
+      - Relative directories for MAKE-PATHNAME now have all "."
+        elements removed.  This makes it consistent with the reader.
+      - A warning is printed if an element of the directory component
+        of a pathname consists of a string containing the "/"
+        character.
 
   * Other changes:
 
