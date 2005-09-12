@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.73 2005/05/11 13:51:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.74 2005/09/12 14:38:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -724,8 +724,24 @@ a host-structure or string."
 		     (warn "Silly argument for a unix ~A: ~S"
 			   name-or-type name)))))))
       (check-component-validity name :pathname-name)
-      (check-component-validity type :pathname-type))
+      (check-component-validity type :pathname-type)
+      (mapc #'(lambda (d)
+		(check-component-validity d :directory))
+	    (cdr dir)))
 
+    ;; More sanity checking
+    (when dir
+      ;; Try to canonicalize the directory component.  :absolute
+      ;; followed by a bunch of "/" deletes the leading "/"'s.
+      ;; :relative followed by "."  anywhere gets them all deleted.
+      (ecase (first dir)
+	(:absolute
+	 (do ((p (cdr dir) (cdr p)))
+	    ((or (null p)
+		 (not (equal "/" (car p))))
+	     (setf (cdr dir) p))))
+	(:relative
+	 (setf (cdr dir) (delete "." (cdr dir) :test #'equal)))))
     ;; CLHS 19.2.2.4.3 says :absolute or :wild-inferiors immediately
     ;; followed by :up or :back signals a file-error.
 

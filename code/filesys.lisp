@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.88 2005/08/31 13:57:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.89 2005/09/12 14:38:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -339,10 +339,21 @@
 		  (cond (absolute
 			 (cons :absolute (dirs)))
 			((dirs)
-			 (cons :relative (dirs)))
+			 ;; "." in a :relative directory is the same
+			 ;; as if it weren't there, so remove them.
+			 (cons :relative (delete "." (dirs) :test #'equal)))
 			(t
-			 nil)))
-		name
+			 ;; If there is no directory and the name is
+			 ;; ".", we really got directory ".", so make it so.
+			 (if (equal name ".")
+			     (list :relative)
+			 nil))))
+		;; A file with name "." can't be the name of file on
+		;; Unix because it's a directory.  This was handled
+		;; above, so we can just set the name to nil.
+		(if (equal name ".")
+		    nil
+		    name)
 		type
 		version)))))
 
@@ -415,7 +426,9 @@
 	       (t
 		(pieces "/"))))
 	(:relative
-	 ;; Nothing special.
+	 ;; Nothing special, except if we were given '(:relative).
+	 (unless directory
+	   (pieces "./"))
 	 ))
       (dolist (dir directory)
 	(typecase dir
