@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.56 2005/08/17 17:59:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.57 2005/09/13 14:40:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -527,11 +527,12 @@ with the arguments RECORD, STREAM and nil."
   "Insert all annotations in STREAM from the queue of pending
 operations into the queue of annotations.  When END is non-nil, 
 stop before reaching the queued-op END."
+  #-(and)
   (loop for tail = (pretty-stream-queue-tail stream) then (cdr tail)
      while (and tail (not (eql (car tail) end)))
      when (annotation-p (car tail)) 
      do (re-enqueue-annotation stream (car tail)))
-  #+nil
+  #+(and)
   (do ((tail (pretty-stream-queue-tail stream) (cdr tail)))
       ((not (and tail (not (eql (car tail) end)))))
     (when (annotation-p (car tail))
@@ -565,7 +566,7 @@ When annotations are present, invoke them at the right positions."
 	(buffer (pretty-stream-buffer stream))
 	(end-posn (index-posn end stream))
 	(start 0))
-    ;;#+nil
+    #-(and)
     (loop
        for annotation = (dequeue-annotation stream :end-posn end-posn)
        while annotation
@@ -576,7 +577,7 @@ When annotations are present, invoke them at the right positions."
 			 :end annotation-index)
 	   (invoke-annotation stream annotation nil)
 	   (setf start annotation-index)))
-    #+nil
+    #+(and)
     (do ((annotation (dequeue-annotation stream :end-posn end-posn)
 		     (dequeue-annotation stream :end-posn end-posn)))
 	((not annotation))
@@ -591,12 +592,12 @@ When annotations are present, invoke them at the right positions."
 (defun flush-annotations (stream end truncatep)
   "Invoke all annotations in STREAM up to (including) the buffer index END."
   (let ((end-posn (index-posn end stream)))
-    ;;#+nil
+    #-(and)
     (loop
        for annotation = (dequeue-annotation stream :end-posn end-posn)
        while annotation
        do (invoke-annotation stream annotation truncatep))
-    #+nil
+    #+(and)
     (do ((annotation (dequeue-annotation stream :end-posn end-posn)
 		     (dequeue-annotation stream :end-posn end-posn)))
 	((not annotation))
