@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.74 2005/09/12 14:38:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.75 2005/09/13 14:38:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1028,7 +1028,13 @@ a host-structure or string."
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
     (when pathname
-      (let ((host (%pathname-host pathname)))
+      (let ((host (or (%pathname-host pathname)
+		      ;; Is this what we really want?  Does a NIL host
+		      ;; really mean to get it from *d-p-d* and, if
+		      ;; that's NIL, use *unix-host*?
+		      (%pathname-host *default-pathname-defaults*)
+		      *unix-host*)
+		      ))
 	(unless host
 	  (error "Cannot determine the namestring for pathnames with no ~
 		  host:~%  ~S" pathname))
