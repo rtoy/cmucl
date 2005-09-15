@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.c,v 1.6 2001/09/24 21:23:18 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.c,v 1.7 2005/09/15 18:26:53 rtoy Rel $ */
 
 #ifdef sun
 #ifndef MACH
@@ -22,14 +22,15 @@ extern func
 #include "undefineds.h"
 #undef F
 #undef D
-exit; /* just a random function known to exist */
- 
+  exit;				/* just a random function known to exist */
+
 #if defined(SOLARIS) || defined(irix)
 
 #ifdef irix
-int errno; /* hack to be sure works with newer libc without having to redump */
-           /* causes libc to be relocated to match cmucl rather than vice
-              versa */
+int errno;			/* hack to be sure works with newer libc without having to redump */
+
+	   /* causes libc to be relocated to match cmucl rather than vice
+	      versa */
 #endif
 
 extern int
@@ -38,16 +39,19 @@ extern int
 #include "undefineds.h"
 #undef F
 #undef D
-errno;                          /* a random variable known to exist */
+  errno;			/* a random variable known to exist */
 
-int reference_random_symbols(void) {
-   int a;
+int
+reference_random_symbols(void)
+{
+    int a;
+
 #if defined(SOLARIS) && defined(__GNUC__)
-   /*
-    * For some reason, gcc 3.0 still deletes function calls here, even
-    * with -O0.  I don't know why.  So, we don't define the functions
-    * here, but define them in the table below.
-    */
+    /*
+     * For some reason, gcc 3.0 still deletes function calls here, even
+     * with -O0.  I don't know why.  So, we don't define the functions
+     * here, but define them in the table below.
+     */
 #define F(x)
 #else
 #define F(x) x(0);
@@ -56,7 +60,7 @@ int reference_random_symbols(void) {
 #include "undefineds.h"
 #undef F
 #undef D
-   return a;
+    return a;
 }
 
 #if defined(SOLARIS) && defined(__GNUC__)
@@ -72,7 +76,7 @@ func *reference_random_symbols_table[] = {
 #include "undefineds.h"
 #undef F
 #undef D
-   exit                         /* a random function known to exist */
+    exit			/* a random function known to exist */
 };
 #endif
 
@@ -86,12 +90,12 @@ extern long timezone;
 #endif
 func *reference_random_symbols[] = {
 #define F(x) x,
-   /* XXXfixme next line is probably wrong but was previous behavior */
+    /* XXXfixme next line is probably wrong but was previous behavior */
 #define D(x) &x,
 #include "undefineds.h"
 #undef F
 #undef D
-   exit                         /* a random function known to exist */
+    exit			/* a random function known to exist */
 };
 
 #endif

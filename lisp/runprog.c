@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.6 2005/09/07 07:05:23 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.7 2005/09/15 18:26:52 rtoy Rel $
  *
  * Support for run-program.
  *
@@ -13,8 +13,9 @@
 #include <termios.h>
 #include <unistd.h>
 
-pid_t spawn(char *program, char *argv[], char *envp[], char *pty_name,
-	    int stdin, int stdout, int stderr)
+pid_t
+spawn(char *program, char *argv[], char *envp[], char *pty_name,
+      int stdin, int stdout, int stderr)
 {
     pid_t pid;
     sigset_t set;
@@ -66,7 +67,7 @@ pid_t spawn(char *program, char *argv[], char *envp[], char *pty_name,
     /* It didn't work, so try /bin/sh. */
     argv[0] = program;
     argv[-1] = "sh";
-    execve("/bin/sh", argv-1, envp);
+    execve("/bin/sh", argv - 1, envp);
 
     /* The exec didn't work, flame out. */
     exit(1);

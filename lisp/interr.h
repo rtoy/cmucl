@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.h,v 1.3 2005/01/13 19:55:00 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.h,v 1.4 2005/09/15 18:26:51 rtoy Rel $
  */
 
 #ifndef _INTERR_H_
@@ -9,7 +9,7 @@
 
 extern void lose(char *fmt, ...);
 extern void set_lossage_handler(void fun(void));
-extern void internal_error(os_context_t *context);
+extern void internal_error(os_context_t * context);
 
 extern lispobj debug_print(lispobj string);
 

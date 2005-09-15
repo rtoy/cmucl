@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.c,v 1.4 2004/05/19 22:24:49 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.c,v 1.5 2005/09/15 18:26:51 rtoy Rel $ */
 
 /* Variables everybody needs to look at or frob on. */
 
@@ -12,6 +12,7 @@ int foreign_function_call_active;
 
 lispobj *current_control_stack_pointer;
 lispobj *current_control_frame_pointer;
+
 #ifndef BINDING_STACK_POINTER
 lispobj *current_binding_stack_pointer;
 #endif
@@ -22,12 +23,14 @@ lispobj *dynamic_0_space;
 lispobj *dynamic_1_space;
 unsigned dynamic_space_size;
 lispobj *control_stack;
+
 #if (defined(i386) || defined(__x86_64))
 lispobj *control_stack_end;
 #endif
 lispobj *binding_stack;
 
 lispobj *current_dynamic_space;
+
 #ifndef ALLOCATION_POINTER
 lispobj *current_dynamic_space_free_pointer;
 #endif
@@ -35,7 +38,8 @@ lispobj *current_dynamic_space_free_pointer;
 lispobj *current_auto_gc_trigger;
 #endif
 
-void globals_init(void)
+void
+globals_init(void)
 {
     /* Space, stack, and free pointer vars are initialized by
        validate() and coreparse(). */
@@ -55,7 +59,7 @@ void globals_init(void)
     current_control_stack_pointer = control_stack_end;
 #endif
 
-    current_control_frame_pointer = (lispobj *)0;
+    current_control_frame_pointer = (lispobj *) 0;
 #ifndef BINDING_STACK_POINTER
     current_binding_stack_pointer = binding_stack;
 #endif

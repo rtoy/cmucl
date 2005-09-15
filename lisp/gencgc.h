@@ -7,18 +7,18 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.11 2004/07/07 18:07:53 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.12 2005/09/15 18:26:51 rtoy Exp $
  *
  */
 
 #ifndef _GENCGC_H_
 #define _GENCGC_H_
 
-void  gc_free_heap(void);
-inline int  find_page_index(void *);
-inline char  *page_address(int);
-
+void gc_free_heap(void);
+inline int find_page_index(void *);
+inline char *page_address(int);
 
+
 
 /*
  * Set when the page is write protected. If it is writen into it is
@@ -95,29 +95,29 @@ inline char  *page_address(int);
      (page_table[page].flags = (page_table[page].flags & ~(mmask)) | (mflags))
 
 struct page {
-  /*
-   * Page flags.
-   */
+    /*
+     * Page flags.
+     */
 
-  unsigned	flags;
+    unsigned flags;
 
-  /*
-   * It is important to know the offset to the first object in the
-   * page. Currently it's only important to know if an object starts
-   * at the begining of the page in which case the offset would be 0
-   */
-  int	first_object_offset;
-  
-  /*
-   * The number of bytes of this page that are used. This may be less
-   * than the actual bytes used for pages within the current
-   * allocation regions. It should be 0 for all unallocated pages (not
-   * hard to achieve).
-   */
-  int	bytes_used;
+    /*
+     * It is important to know the offset to the first object in the
+     * page. Currently it's only important to know if an object starts
+     * at the begining of the page in which case the offset would be 0
+     */
+    int first_object_offset;
+
+    /*
+     * The number of bytes of this page that are used. This may be less
+     * than the actual bytes used for pages within the current
+     * allocation regions. It should be 0 for all unallocated pages (not
+     * hard to achieve).
+     */
+    int bytes_used;
 };
-
 
+
 
 /*
  * The smallest page size that can be independently allocated and
@@ -140,40 +140,41 @@ struct page {
 
 extern unsigned dynamic_space_pages;
 extern struct page *page_table;
-
 
+
 /*
  * Abstract out the data for an allocation region allowing a single
  * routine to be used for allocation and closing.
  */
 struct alloc_region {
-  /* These two are needed for quick allocation */
-  char  *free_pointer;
-  char  *end_addr;     /* Pointer to the byte after the last usable byte */
-  
-  /* Needed when closing the region. */
-  int  first_page;
-  int  last_page;
-  char  *start_addr;
+    /* These two are needed for quick allocation */
+    char *free_pointer;
+    char *end_addr;		/* Pointer to the byte after the last usable byte */
+
+    /* Needed when closing the region. */
+    int first_page;
+    int last_page;
+    char *start_addr;
 };
 
-extern struct alloc_region  boxed_region;
-extern struct alloc_region  unboxed_region;
-
+extern struct alloc_region boxed_region;
+extern struct alloc_region unboxed_region;
 
-void  gencgc_pickup_dynamic(void);
+
+void gencgc_pickup_dynamic(void);
 
 #ifdef i386
 void sniff_code_object(struct code *code, unsigned displacement);
 #endif
-lispobj *search_dynamic_space(lispobj *pointer);
+lispobj *search_dynamic_space(lispobj * pointer);
 void update_dynamic_space_free_pointer(void);
 
-lispobj * component_ptr_from_pc(lispobj *pc);
+lispobj *component_ptr_from_pc(lispobj * pc);
 
 void gc_alloc_update_page_tables(int unboxed,
+
 				 struct alloc_region *alloc_region);
 
-extern char* alloc(int);
+extern char *alloc(int);
 
 #endif /* _GENCGC_H_ */

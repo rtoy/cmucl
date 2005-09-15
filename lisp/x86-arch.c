@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.23 2004/07/08 03:31:15 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.24 2005/09/15 18:26:53 rtoy Exp $ 
  *
  */
 
@@ -23,14 +23,15 @@
 
 #define BREAKPOINT_INST 0xcc	/* INT3 */
 
-unsigned long  fast_random_state = 1;
+unsigned long fast_random_state = 1;
 
-char * arch_init(void)
+char *
+arch_init(void)
 {
-  return "lisp.core";
+    return "lisp.core";
 }
-
 
+
 
 /*
  * Assuming we get here via an INT3 xxx instruction, the PC now
@@ -39,76 +40,81 @@ char * arch_init(void)
  * Cerror-trap then skip the data bytes that follow.
  */
 
-void arch_skip_instruction(os_context_t *context)
+void
+arch_skip_instruction(os_context_t * context)
 {
-  int vlen,code;
+    int vlen, code;
 
-  DPRINTF(0,(stderr,"[arch_skip_inst at %lx>]\n", SC_PC(context)));
+    DPRINTF(0, (stderr, "[arch_skip_inst at %lx>]\n", SC_PC(context)));
 
-  /* Get and skip the lisp error code. */
-  code = *(char*) SC_PC(context)++;
-  switch (code)
-    {
-    case trap_Error:
-    case trap_Cerror:
-      /* Lisp error arg vector length */
-      vlen = *(char*) SC_PC(context)++;
-      /* Skip lisp error arg data bytes */
-      while(vlen-- > 0) 
-	((char*) SC_PC(context))++;
-      break;
+    /* Get and skip the lisp error code. */
+    code = *(char *) SC_PC(context)++;
+    switch (code) {
+      case trap_Error:
+      case trap_Cerror:
+	  /* Lisp error arg vector length */
+	  vlen = *(char *) SC_PC(context)++;
+	  /* Skip lisp error arg data bytes */
+	  while (vlen-- > 0)
+	      ((char *) SC_PC(context))++;
+	  break;
 
-    case trap_Breakpoint:
-    case trap_FunctionEndBreakpoint:
-      break;
+      case trap_Breakpoint:
+      case trap_FunctionEndBreakpoint:
+	  break;
 
-    case trap_PendingInterrupt:
-    case trap_Halt:
-      /* Only needed to skip the Code. */
-      break;
+      case trap_PendingInterrupt:
+      case trap_Halt:
+	  /* Only needed to skip the Code. */
+	  break;
 
-    default:
-      fprintf(stderr, "[arch_skip_inst invalid code %d\n]\n", code);
-      break;
+      default:
+	  fprintf(stderr, "[arch_skip_inst invalid code %d\n]\n", code);
+	  break;
     }
 
-  DPRINTF(0,(stderr,"[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
+    DPRINTF(0, (stderr, "[arch_skip_inst resuming at %lx>]\n", SC_PC(context)));
 }
 
-unsigned char * arch_internal_error_arguments(os_context_t *context)
+unsigned char *
+arch_internal_error_arguments(os_context_t * context)
 {
-  return (unsigned char *) (SC_PC(context) + 1);
+    return (unsigned char *) (SC_PC(context) + 1);
 }
 
-boolean arch_pseudo_atomic_atomic(os_context_t *context)
+boolean
+arch_pseudo_atomic_atomic(os_context_t * context)
 {
-  return SymbolValue(PSEUDO_ATOMIC_ATOMIC);
+    return SymbolValue(PSEUDO_ATOMIC_ATOMIC);
 }
 
-void arch_set_pseudo_atomic_interrupted(os_context_t *context)
+void
+arch_set_pseudo_atomic_interrupted(os_context_t * context)
 {
-  SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(1));
+    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(1));
 }
-
 
 
-unsigned long  arch_install_breakpoint(void *pc)
-{
-  unsigned long result = *(unsigned long*)pc;
 
-  *(char*)pc = BREAKPOINT_INST;		/* x86 INT3       */
-  *((char*)pc+1) = trap_Breakpoint;	/* Lisp trap code */
-  
-  return result;
+unsigned long
+arch_install_breakpoint(void *pc)
+{
+    unsigned long result = *(unsigned long *) pc;
+
+    *(char *) pc = BREAKPOINT_INST;	/* x86 INT3       */
+    *((char *) pc + 1) = trap_Breakpoint;	/* Lisp trap code */
+
+    return result;
 }
 
-void  arch_remove_breakpoint(void *pc, unsigned long orig_inst)
+void
+arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-  *((char *) pc) = orig_inst & 0xff;
-  *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
+    *((char *) pc) = orig_inst & 0xff;
+    *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
 }
-
 
+
 
 /*
  * When single stepping single_stepping holds the original instruction
@@ -116,201 +122,207 @@ void  arch_remove_breakpoint(void *pc, unsigned long orig_inst)
  */
 
 unsigned int *single_stepping = NULL;
+
 #ifndef __linux__
-unsigned int  single_step_save1;
-unsigned int  single_step_save2;
-unsigned int  single_step_save3;
+unsigned int single_step_save1;
+unsigned int single_step_save2;
+unsigned int single_step_save3;
 #endif
 
-void  arch_do_displaced_inst(os_context_t *context,
-			     unsigned long orig_inst)
+void
+arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 {
-  unsigned int *pc = (unsigned int*) SC_PC(context);
+    unsigned int *pc = (unsigned int *) SC_PC(context);
 
-  /*
-   * Put the original instruction back.
-   */
+    /*
+     * Put the original instruction back.
+     */
 
-  *((char *) pc) = orig_inst & 0xff;
-  *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
+    *((char *) pc) = orig_inst & 0xff;
+    *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
 
 #ifdef __linux__
-  context->eflags |= 0x100;
+    context->eflags |= 0x100;
 #else
 
-  /*
-   * Install helper instructions for the single step:
-   * 	pushf; or [esp],0x100; popf.
-   */
+    /*
+     * Install helper instructions for the single step:
+     *    pushf; or [esp],0x100; popf.
+     */
 
-  single_step_save1 = *(pc - 3);
-  single_step_save2 = *(pc - 2);
-  single_step_save3 = *(pc - 1);
-  *(pc - 3) = 0x9c909090;
-  *(pc - 2) = 0x00240c81;
-  *(pc - 1) = 0x9d000001;
+    single_step_save1 = *(pc - 3);
+    single_step_save2 = *(pc - 2);
+    single_step_save3 = *(pc - 1);
+    *(pc - 3) = 0x9c909090;
+    *(pc - 2) = 0x00240c81;
+    *(pc - 1) = 0x9d000001;
 #endif
 
-  single_stepping = (unsigned int*) pc;
+    single_stepping = (unsigned int *) pc;
 
 #ifndef __linux__
-  (unsigned int*) SC_PC(context) = (char *) pc - 9;
+    (unsigned int *) SC_PC(context) = (char *) pc - 9;
 #endif
 }
 
 
-void  sigtrap_handler(HANDLER_ARGS)
+void
+sigtrap_handler(HANDLER_ARGS)
 {
-  unsigned int  trap;
-  
+    unsigned int trap;
+
 #ifdef __linux__
-  GET_CONTEXT
+    GET_CONTEXT
+#endif
+#if 0
+	fprintf(stderr, "x86sigtrap: %8x %x\n",
+		SC_PC(context), *(unsigned char *) (SC_PC(context) - 1));
+    fprintf(stderr, "sigtrap(%d %d %x)\n", signal, code, context);
 #endif
 
+    if (single_stepping && (signal == SIGTRAP)) {
 #if 0
-  fprintf(stderr,"x86sigtrap: %8x %x\n",
-	  SC_PC(context), *(unsigned char *)(SC_PC(context)-1));
-  fprintf(stderr,"sigtrap(%d %d %x)\n",signal,code,context);
-#endif
-
-  if (single_stepping && (signal == SIGTRAP))
-    {
-#if 0
-      fprintf(stderr,"* Single step trap %x\n", single_stepping);
+	fprintf(stderr, "* Single step trap %x\n", single_stepping);
 #endif
 
 #ifndef __linux__
-      /* Un-install single step helper instructions. */
-      *(single_stepping-3) = single_step_save1;
-      *(single_stepping-2) = single_step_save2;
-      *(single_stepping-1) = single_step_save3;
-#else  
-       context->eflags ^= 0x100;
+	/* Un-install single step helper instructions. */
+	*(single_stepping - 3) = single_step_save1;
+	*(single_stepping - 2) = single_step_save2;
+	*(single_stepping - 1) = single_step_save3;
+#else
+	context->eflags ^= 0x100;
 #endif
 
-      /*
-       * Re-install the breakpoint if possible.
-       */
-      if ((int) SC_PC(context) == (int) single_stepping + 1)
-	fprintf(stderr, "* Breakpoint not re-install\n");
-      else
-	{
-	  char *ptr = (char *) single_stepping;
-	  ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
-	  ptr[1] = trap_Breakpoint;
+	/*
+	 * Re-install the breakpoint if possible.
+	 */
+	if ((int) SC_PC(context) == (int) single_stepping + 1)
+	    fprintf(stderr, "* Breakpoint not re-install\n");
+	else {
+	    char *ptr = (char *) single_stepping;
+
+	    ptr[0] = BREAKPOINT_INST;	/* x86 INT3 */
+	    ptr[1] = trap_Breakpoint;
 	}
 
-      single_stepping = NULL;
-      return;
+	single_stepping = NULL;
+	return;
     }
 
-  SAVE_CONTEXT();
+    SAVE_CONTEXT();
 
-  /* This is just for info in case monitor wants to print an approx */
-  current_control_stack_pointer = (unsigned long*) SC_SP(context);
+    /* This is just for info in case monitor wants to print an approx */
+    current_control_stack_pointer = (unsigned long *) SC_SP(context);
 
 #if defined(__linux__) && defined(i386)
-  /*
-   * Restore the FPU control word, setting the rounding mode to nearest.
-   */
+    /*
+     * Restore the FPU control word, setting the rounding mode to nearest.
+     */
 
-  if (contextstruct.fpstate)
-    setfpucw(contextstruct.fpstate->cw & ~0xc00);
+    if (contextstruct.fpstate)
+	setfpucw(contextstruct.fpstate->cw & ~0xc00);
 #endif
 
- /*
-  * On entry %eip points just after the INT3 byte and aims at the
-  * 'kind' value (eg trap_Cerror). For error-trap and Cerror-trap a
-  * number of bytes will follow, the first is the length of the byte
-  * arguments to follow.
-  */
+    /*
+     * On entry %eip points just after the INT3 byte and aims at the
+     * 'kind' value (eg trap_Cerror). For error-trap and Cerror-trap a
+     * number of bytes will follow, the first is the length of the byte
+     * arguments to follow.
+     */
 
-  trap = *(unsigned char *) SC_PC(context);
+    trap = *(unsigned char *) SC_PC(context);
 
-  switch (trap)
-    {
-    case trap_PendingInterrupt:
-      DPRINTF(0,(stderr,"<trap Pending Interrupt.>\n"));
-      arch_skip_instruction(context);
-      interrupt_handle_pending(context);
-      break;
-      
-    case trap_Halt:
-      {
+    switch (trap) {
+      case trap_PendingInterrupt:
+	  DPRINTF(0, (stderr, "<trap Pending Interrupt.>\n"));
+	  arch_skip_instruction(context);
+	  interrupt_handle_pending(context);
+	  break;
+
+      case trap_Halt:
+	  {
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-	int fpu_state[27];
-	fpu_save(fpu_state);
+	      int fpu_state[27];
+
+	      fpu_save(fpu_state);
 #endif
-	fake_foreign_function_call(context);
-	lose("%%primitive halt called; the party is over.\n");
-	undo_fake_foreign_function_call(context);
+	      fake_foreign_function_call(context);
+	      lose("%%primitive halt called; the party is over.\n");
+	      undo_fake_foreign_function_call(context);
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-	fpu_restore(fpu_state);
+	      fpu_restore(fpu_state);
 #endif
-	arch_skip_instruction(context);
-	break;
-      }
-      
-    case trap_Error:
-    case trap_Cerror:
-      DPRINTF(0, (stderr, "<trap Error %d>\n",code));
+	      arch_skip_instruction(context);
+	      break;
+	  }
+
+      case trap_Error:
+      case trap_Cerror:
+	  DPRINTF(0, (stderr, "<trap Error %d>\n", code));
 #ifdef __linux__
-      interrupt_internal_error(signal, contextstruct, code == trap_Cerror);
+	  interrupt_internal_error(signal, contextstruct, code == trap_Cerror);
 #else
-      interrupt_internal_error(signal, code, context, code == trap_Cerror);
+	  interrupt_internal_error(signal, code, context, code == trap_Cerror);
 #endif
-      break;
+	  break;
 
-    case trap_Breakpoint:
+      case trap_Breakpoint:
 #if 0
-      fprintf(stderr,"*C break\n");
+	  fprintf(stderr, "*C break\n");
 #endif
-      (char*) SC_PC(context) -= 1;
+	  (char *) SC_PC(context) -= 1;
 
-      handle_breakpoint(signal, code, context);
+	  handle_breakpoint(signal, code, context);
 #if 0
-      fprintf(stderr,"*C break return\n");
+	  fprintf(stderr, "*C break return\n");
 #endif
-      break;
-      
-    case trap_FunctionEndBreakpoint:
-      (char*) SC_PC(context) -= 1;
-      SC_PC(context) = (int) handle_function_end_breakpoint(signal, code, context);
-      break;
-      
+	  break;
+
+      case trap_FunctionEndBreakpoint:
+	  (char *) SC_PC(context) -= 1;
+	  SC_PC(context) =
+	      (int) handle_function_end_breakpoint(signal, code, context);
+	  break;
+
 #ifdef trap_DynamicSpaceOverflowWarning
-    case trap_DynamicSpaceOverflowWarning:
-	interrupt_handle_space_overflow(SymbolFunction(DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
-					context);
-	break;
+      case trap_DynamicSpaceOverflowWarning:
+	  interrupt_handle_space_overflow(SymbolFunction
+					  (DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
+					  context);
+	  break;
 #endif
 #ifdef trap_DynamicSpaceOverflowError
-    case trap_DynamicSpaceOverflowError:
-	interrupt_handle_space_overflow(SymbolFunction(DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
-					context);
-            break;
+      case trap_DynamicSpaceOverflowError:
+	  interrupt_handle_space_overflow(SymbolFunction
+					  (DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
+					  context);
+	  break;
 #endif
-    default:
-      DPRINTF(0,(stderr,"[C--trap default %d %d %p]\n", signal, code,context));
+      default:
+	  DPRINTF(0,
+		  (stderr, "[C--trap default %d %d %p]\n", signal, code,
+		   context));
 #ifdef __linux__
-      interrupt_handle_now(signal, contextstruct);
+	  interrupt_handle_now(signal, contextstruct);
 #else
-      interrupt_handle_now(signal, code, context);
+	  interrupt_handle_now(signal, code, context);
 #endif
-      break;
+	  break;
     }
 }
 
 #define FIXNUM_VALUE(lispobj) (((int) lispobj) >> 2)
 
-void arch_install_interrupt_handlers()
+void
+arch_install_interrupt_handlers()
 {
     interrupt_install_low_level_handler(SIGILL, sigtrap_handler);
     interrupt_install_low_level_handler(SIGTRAP, sigtrap_handler);
 }
 
 
-extern lispobj call_into_lisp(lispobj fun, lispobj *args, int nargs);
+extern lispobj call_into_lisp(lispobj fun, lispobj * args, int nargs);
 
 /* These next four functions are an interface to the 
  * Lisp call-in facility. Since this is C we can know
@@ -324,31 +336,38 @@ extern lispobj call_into_lisp(lispobj fun, lispobj *args, int nargs);
  * call-in function figure it out.
  */
 
-lispobj  funcall0(lispobj function)
+lispobj
+funcall0(lispobj function)
 {
     lispobj *args = NULL;
 
     return call_into_lisp(function, args, 0);
 }
 
-lispobj  funcall1(lispobj function, lispobj arg0)
+lispobj
+funcall1(lispobj function, lispobj arg0)
 {
     lispobj args[1];
+
     args[0] = arg0;
     return call_into_lisp(function, args, 1);
 }
 
-lispobj  funcall2(lispobj function, lispobj arg0, lispobj arg1)
+lispobj
+funcall2(lispobj function, lispobj arg0, lispobj arg1)
 {
     lispobj args[2];
+
     args[0] = arg0;
     args[1] = arg1;
     return call_into_lisp(function, args, 2);
 }
 
-lispobj  funcall3(lispobj function, lispobj arg0, lispobj arg1, lispobj arg2)
+lispobj
+funcall3(lispobj function, lispobj arg0, lispobj arg1, lispobj arg2)
 {
     lispobj args[3];
+
     args[0] = arg0;
     args[1] = arg1;
     args[2] = arg2;
@@ -361,18 +380,20 @@ lispobj  funcall3(lispobj function, lispobj arg0, lispobj arg1, lispobj arg2)
 #define LinkageEntrySize 8
 #endif
 
-void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
+void
+arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
 {
-    char *reloc_addr = (char *)(FOREIGN_LINKAGE_SPACE_START
-				+ linkage_entry * LinkageEntrySize);
+    char *reloc_addr = (char *) (FOREIGN_LINKAGE_SPACE_START
 
-    if (type == 1) {			/* code reference */
-        /* Make JMP to function entry. */
+				 + linkage_entry * LinkageEntrySize);
+
+    if (type == 1) {		/* code reference */
+	/* Make JMP to function entry. */
 	/* JMP offset is calculated from next instruction. */
-	long offset = (char *)target_addr - (reloc_addr + 5);
+	long offset = (char *) target_addr - (reloc_addr + 5);
 	int i;
-	
-	*reloc_addr++ = 0xe9;		/* opcode for JMP rel32 */
+
+	*reloc_addr++ = 0xe9;	/* opcode for JMP rel32 */
 	for (i = 0; i < 4; i++) {
 	    *reloc_addr++ = offset & 0xff;
 	    offset >>= 8;
@@ -380,20 +401,22 @@ void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
 	/* write a nop for good measure. */
 	*reloc_addr = 0x90;
     } else if (type == 2) {
-	*(unsigned long *)reloc_addr = (unsigned long)target_addr;
+	*(unsigned long *) reloc_addr = (unsigned long) target_addr;
     }
 }
 
 /* Make a call to the first function in the linkage table, which is
    resolve_linkage_tramp. */
-void arch_make_lazy_linkage(long linkage_entry)
+void
+arch_make_lazy_linkage(long linkage_entry)
 {
-    char *reloc_addr = (char *)(FOREIGN_LINKAGE_SPACE_START
-				+ linkage_entry * LinkageEntrySize);
-    long offset = (char *)(FOREIGN_LINKAGE_SPACE_START) - (reloc_addr + 5);
+    char *reloc_addr = (char *) (FOREIGN_LINKAGE_SPACE_START
+
+				 + linkage_entry * LinkageEntrySize);
+    long offset = (char *) (FOREIGN_LINKAGE_SPACE_START) - (reloc_addr + 5);
     int i;
 
-    *reloc_addr++ = 0xe8;		/* opcode for CALL rel32 */
+    *reloc_addr++ = 0xe8;	/* opcode for CALL rel32 */
     for (i = 0; i < 4; i++) {
 	*reloc_addr++ = offset & 0xff;
 	offset >>= 8;
@@ -406,7 +429,8 @@ void arch_make_lazy_linkage(long linkage_entry)
    entry is a CALL; the return address we're passed points to the next
    instruction. */
 
-long arch_linkage_entry(unsigned long retaddr)
+long
+arch_linkage_entry(unsigned long retaddr)
 {
     return ((retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LinkageEntrySize;
 }

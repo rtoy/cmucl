@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.16 2005/01/13 19:55:00 fgilham Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.17 2005/09/15 18:26:50 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/signal.h>
-#include <string.h> 
+#include <string.h>
  /* #include <dlfcn.h> */
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -29,25 +29,25 @@
 
 #define linuxversion(a, b, c) (((a)<<16)+((b)<<8)+(c))
 
-typedef caddr_t os_vm_address_t; /* like hpux */
-typedef size_t os_vm_size_t;     /* like hpux */
-typedef off_t os_vm_offset_t;    /* like hpux */
-typedef int os_vm_prot_t;        /* like hpux */
+typedef caddr_t os_vm_address_t;	/* like hpux */
+typedef size_t os_vm_size_t;	/* like hpux */
+typedef off_t os_vm_offset_t;	/* like hpux */
+typedef int os_vm_prot_t;	/* like hpux */
 
-#define OS_VM_PROT_READ PROT_READ    /* like hpux */
-#define OS_VM_PROT_WRITE PROT_WRITE  /* like hpux */
-#define OS_VM_PROT_EXECUTE PROT_EXEC /* like hpux */
+#define OS_VM_PROT_READ PROT_READ	/* like hpux */
+#define OS_VM_PROT_WRITE PROT_WRITE	/* like hpux */
+#define OS_VM_PROT_EXECUTE PROT_EXEC	/* like hpux */
 
-#ifndef __alpha__     
-#define OS_VM_DEFAULT_PAGESIZE	4096 /* like hpux */ 
+#ifndef __alpha__
+#define OS_VM_DEFAULT_PAGESIZE	4096	/* like hpux */
 #else
-#define OS_VM_DEFAULT_PAGESIZE	8192 /* like hpux */ 
+#define OS_VM_DEFAULT_PAGESIZE	8192	/* like hpux */
 #endif
 
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
-int sc_reg(struct sigcontext *,int);
+int sc_reg(struct sigcontext *, int);
 #else
-int sc_reg(struct sigcontext_struct *,int);
+int sc_reg(struct sigcontext_struct *, int);
 #endif
 void os_save_context(void);
 
@@ -87,7 +87,7 @@ typedef struct sigcontext_struct sigcontext;
 #define sv_flags        sa_flags
 #define sv_handler      sa_handler
 #if (__GNU_LIBRARY__ < 6)
-#define sv_onstack      sa_mask /* ouch, this one really hurts */
+#define sv_onstack      sa_mask	/* ouch, this one really hurts */
 #endif
 #define uc_sigmask 	oldmask
 #if defined (__x86_64)
@@ -97,11 +97,11 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_pc		eip
 #define sc_sp		esp
 #endif
-#define sc_mask		oldmask 
+#define sc_mask		oldmask
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
-#define sigcontext	sigcontext 
+#define sigcontext	sigcontext
 #else
-#define sigcontext	sigcontext_struct 
+#define sigcontext	sigcontext_struct
 #endif
 #define sc_efl		eflags
 

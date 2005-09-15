@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.17 2005/03/19 16:02:40 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.18 2005/09/15 18:26:51 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -36,28 +36,30 @@
 #define BOGUS_LRA_CONSTANTS 3
 #endif
 
-static void *compute_pc(lispobj code_obj, int pc_offset)
+static void *
+compute_pc(lispobj code_obj, int pc_offset)
 {
     struct code *code;
 
-    code = (struct code *)PTR(code_obj);
-    return (void *)((char *)code + HeaderValue(code->header) * sizeof(lispobj)
-		    + pc_offset);
+    code = (struct code *) PTR(code_obj);
+    return (void *) ((char *) code + HeaderValue(code->header) * sizeof(lispobj)
+		     + pc_offset);
 }
 
-unsigned long breakpoint_install(lispobj code_obj, int pc_offset)
+unsigned long
+breakpoint_install(lispobj code_obj, int pc_offset)
 {
     return arch_install_breakpoint(compute_pc(code_obj, pc_offset));
 }
 
-void breakpoint_remove(lispobj code_obj, int pc_offset,
-		       unsigned long orig_inst)
+void
+breakpoint_remove(lispobj code_obj, int pc_offset, unsigned long orig_inst)
 {
     arch_remove_breakpoint(compute_pc(code_obj, pc_offset), orig_inst);
 }
 
-void breakpoint_do_displaced_inst(os_context_t *scp,
-				  unsigned long orig_inst)
+void
+breakpoint_do_displaced_inst(os_context_t * scp, unsigned long orig_inst)
 {
 #if !defined(hpux) && !defined(irix) && !defined(i386)
     undo_fake_foreign_function_call(scp);
@@ -66,7 +68,8 @@ void breakpoint_do_displaced_inst(os_context_t *scp,
 }
 
 #if !defined(i386)
-static lispobj find_code(os_context_t *scp)
+static lispobj
+find_code(os_context_t * scp)
 {
 #ifdef reg_CODE
     lispobj code = SC_REG(scp, reg_CODE), header;
@@ -74,12 +77,12 @@ static lispobj find_code(os_context_t *scp)
     if (LowtagOf(code) != type_OtherPointer)
 	return NIL;
 
-    header = *(lispobj *)(code-type_OtherPointer);
+    header = *(lispobj *) (code - type_OtherPointer);
 
     if (TypeOf(header) == type_CodeHeader)
 	return code;
     else
-	return code - HeaderValue(header)*sizeof(lispobj);
+	return code - HeaderValue(header) * sizeof(lispobj);
 #else
     return NIL;
 #endif
@@ -87,67 +90,74 @@ static lispobj find_code(os_context_t *scp)
 #endif
 
 #if defined(i386)
-static lispobj find_code(os_context_t *scp)
+static lispobj
+find_code(os_context_t * scp)
 {
-  lispobj *codeptr = component_ptr_from_pc(SC_PC(scp));
+    lispobj *codeptr = component_ptr_from_pc(SC_PC(scp));
 
-  if (codeptr == NULL)
-    return NIL;
-  else
-    return (lispobj) codeptr | type_OtherPointer;
+    if (codeptr == NULL)
+	return NIL;
+    else
+	return (lispobj) codeptr | type_OtherPointer;
 }
 #endif
 
-static int compute_offset(os_context_t *scp, lispobj code, boolean function_end)
+static int
+compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 {
     if (code == NIL)
 	return 0;
     else {
 	unsigned long code_start;
-	struct code *codeptr = (struct code *)PTR(code);
+	struct code *codeptr = (struct code *) PTR(code);
+
 #ifdef parisc
 	unsigned long pc = SC_PC(scp) & ~3;
 #else
 	unsigned long pc = SC_PC(scp);
 #endif
 
-	code_start = (unsigned long)codeptr
-	    + HeaderValue(codeptr->header)*sizeof(lispobj);
+	code_start = (unsigned long) codeptr
+	    + HeaderValue(codeptr->header) * sizeof(lispobj);
 	if (pc < code_start)
 	    return 0;
 	else {
 	    int offset = pc - code_start;
-	    if (offset >= codeptr->code_size) {
-              if (function_end) {
-#if defined(sparc) || defined(DARWIN)
-                /*
-                 * We're in a function end breakpoint.  Compute the
-                 * offset from the (known) breakpoint location and the
-                 * beginning of the breakpoint guts.  (See *-assem.S.)
-                 *
-                 * Then make the offset negative so the caller knows
-                 * that the offset is not from the code object.
-                 */
-                extern char function_end_breakpoint_trap;
-                extern char function_end_breakpoint_guts;
 
-                offset = &function_end_breakpoint_trap - &function_end_breakpoint_guts;
-                return make_fixnum(-offset);
+	    if (offset >= codeptr->code_size) {
+		if (function_end) {
+#if defined(sparc) || defined(DARWIN)
+		    /*
+		     * We're in a function end breakpoint.  Compute the
+		     * offset from the (known) breakpoint location and the
+		     * beginning of the breakpoint guts.  (See *-assem.S.)
+		     *
+		     * Then make the offset negative so the caller knows
+		     * that the offset is not from the code object.
+		     */
+		    extern char function_end_breakpoint_trap;
+		    extern char function_end_breakpoint_guts;
+
+		    offset =
+			&function_end_breakpoint_trap -
+			&function_end_breakpoint_guts;
+		    return make_fixnum(-offset);
 #else
-                return 0;
-#endif                
-              } else {
-		return 0;
-              }
+		    return 0;
+#endif
+		} else {
+		    return 0;
+		}
 	    } else {
-              return make_fixnum(offset);
-            }
+		return make_fixnum(offset);
+	    }
 	}
     }
 }
 
 #ifndef i386
-void handle_breakpoint(int signal, int subcode, os_context_t *scp)
+void
+handle_breakpoint(int signal, int subcode, os_context_t * scp)
 {
     lispobj code;
 
@@ -156,16 +166,15 @@ void handle_breakpoint(int signal, int subcode, os_context_t *scp)
     code = find_code(scp);
 
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     compute_offset(scp, code, 0),
-	     code,
-	     alloc_sap(scp));
+	     compute_offset(scp, code, 0), code, alloc_sap(scp));
 
     undo_fake_foreign_function_call(scp);
 }
 #else
-void handle_breakpoint(int signal, int subcode, os_context_t *scp)
+void
+handle_breakpoint(int signal, int subcode, os_context_t * scp)
 {
-    lispobj code, scp_sap=alloc_sap(scp);
+    lispobj code, scp_sap = alloc_sap(scp);
 
     fake_foreign_function_call(scp);
 
@@ -177,31 +186,29 @@ void handle_breakpoint(int signal, int subcode, os_context_t *scp)
      */
 
 #if defined POSIX_SIGS
-    sigprocmask(SIG_SETMASK,&scp->uc_sigmask,NULL);
+    sigprocmask(SIG_SETMASK, &scp->uc_sigmask, NULL);
 #else
     sigsetmask(scp->sc_mask);
 #endif
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     compute_offset(scp, code, 0),
-	     code,
-	     scp_sap);
+	     compute_offset(scp, code, 0), code, scp_sap);
 
     undo_fake_foreign_function_call(scp);
 }
 #endif
 
 #ifndef i386
-void *handle_function_end_breakpoint(int signal, int subcode,
-				     os_context_t *scp)
+void *
+handle_function_end_breakpoint(int signal, int subcode, os_context_t * scp)
 {
     lispobj code, lra;
     struct code *codeptr;
     int offset;
-    
+
     fake_foreign_function_call(scp);
 
     code = find_code(scp);
-    codeptr = (struct code *)PTR(code);
+    codeptr = (struct code *) PTR(code);
     offset = compute_offset(scp, code, 1);
 #if 0
     printf("handle_function_end:\n");
@@ -211,42 +218,39 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     fflush(stdout);
 #endif
 
-    if (offset < 0)
-      {
-        /*
-         * We were in the function end breakpoint.  Which means we are
-         * in a bogus LRA, so compute where the code-component of this
-         * bogus lra object starts.  Adjust code, and codeptr
-         * appropriately so the breakpoint handler can do the right
-         * thing.
-         */
-        unsigned int pc;
+    if (offset < 0) {
+	/*
+	 * We were in the function end breakpoint.  Which means we are
+	 * in a bogus LRA, so compute where the code-component of this
+	 * bogus lra object starts.  Adjust code, and codeptr
+	 * appropriately so the breakpoint handler can do the right
+	 * thing.
+	 */
+	unsigned int pc;
 
-        pc = SC_PC(scp);
-        
-        offset = -offset;
-        /*
-         * Some magic here.  pc points to the trap instruction.  The
-         * offset gives us where the function_end_breakpoint_guts
-         * begins.  But we need to back up some more to get to the
-         * code-component object.  The magic 2 below is 
-         */
-        code = pc - fixnum_value(offset);
-        code -= sizeof(struct code) + BOGUS_LRA_CONSTANTS*sizeof(lispobj);
-        code += type_OtherPointer;
-        codeptr = (struct code *) PTR(code);
+	pc = SC_PC(scp);
+
+	offset = -offset;
+	/*
+	 * Some magic here.  pc points to the trap instruction.  The
+	 * offset gives us where the function_end_breakpoint_guts
+	 * begins.  But we need to back up some more to get to the
+	 * code-component object.  The magic 2 below is 
+	 */
+	code = pc - fixnum_value(offset);
+	code -= sizeof(struct code) + BOGUS_LRA_CONSTANTS * sizeof(lispobj);
+
+	code += type_OtherPointer;
+	codeptr = (struct code *) PTR(code);
 #if 0
 	printf("  pc   = 0x%08x\n", pc);
 	printf("  code    = 0x%08x\n", code);
 	printf("  codeptr = %p\n", codeptr);
 	fflush(stdout);
 #endif
-      }
-    
-    funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     offset,
-	     code,
-	     alloc_sap(scp));
+    }
+
+    funcall3(SymbolFunction(HANDLE_BREAKPOINT), offset, code, alloc_sap(scp));
 
     /*
      * Breakpoint handling done, so get the real LRA where we're
@@ -263,13 +267,13 @@ void *handle_function_end_breakpoint(int signal, int subcode,
 	SC_REG(scp, reg_CODE) = lra;
 #endif
     undo_fake_foreign_function_call(scp);
-    return (void *)(lra-type_OtherPointer+sizeof(lispobj));
+    return (void *) (lra - type_OtherPointer + sizeof(lispobj));
 }
 #else
-void *handle_function_end_breakpoint(int signal, int subcode,
-				     os_context_t *scp)
+void *
+handle_function_end_breakpoint(int signal, int subcode, os_context_t * scp)
 {
-    lispobj code, scp_sap=alloc_sap(scp);
+    lispobj code, scp_sap = alloc_sap(scp);
     struct code *codeptr;
 
     fake_foreign_function_call(scp);
@@ -283,14 +287,12 @@ void *handle_function_end_breakpoint(int signal, int subcode,
      */
 
 #if defined POSIX_SIGS
-    sigprocmask(SIG_SETMASK,&scp->uc_sigmask,NULL);
+    sigprocmask(SIG_SETMASK, &scp->uc_sigmask, NULL);
 #else
     sigsetmask(scp->sc_mask);
 #endif
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     compute_offset(scp, code, 1),
-	     code,
-	     scp_sap);
+	     compute_offset(scp, code, 1), code, scp_sap);
 
     undo_fake_foreign_function_call(scp);
 

@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.24 2005/03/18 17:56:56 rtoy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.25 2005/09/15 18:26:53 rtoy Exp $
  *
  */
 
@@ -67,113 +67,113 @@
 
 #ifdef __FreeBSD__
 #define READ_ONLY_SPACE_START   (0x10000000)
-#define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
+#define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
 
 #define STATIC_SPACE_START	(0x28f00000)
-#define STATIC_SPACE_SIZE	(0x0f0ff000) /* 241MB - 1 page */
+#define STATIC_SPACE_SIZE	(0x0f0ff000)	/* 241MB - 1 page */
 
 #define BINDING_STACK_START	(0x38000000)
-#define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
+#define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
 #define CONTROL_STACK_START	0x40000000
-#define CONTROL_STACK_SIZE	0x07fd8000   /* 128MB - SIGSTKSZ */
+#define CONTROL_STACK_SIZE	0x07fd8000	/* 128MB - SIGSTKSZ */
 #define SIGNAL_STACK_START	0x47fd8000
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(0x48000000)
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x40000000) /* May be up to 2GB */
+#define DYNAMIC_SPACE_SIZE	(0x40000000)	/* May be up to 2GB */
 #else
-#define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
+#define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
 #endif
-#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
 #ifdef LINKAGE_TABLE
-#define FOREIGN_LINKAGE_SPACE_START ((unsigned long) LinkageSpaceStart)  
-#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000) /* 1MB */
+#define FOREIGN_LINKAGE_SPACE_START ((unsigned long) LinkageSpaceStart)
+#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
 #endif
 #endif /* __FreeBSD__ */
 
 
 #ifdef __OpenBSD__
 #define READ_ONLY_SPACE_START   (0x10000000)
-#define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
+#define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
 
 #define STATIC_SPACE_START	(0x28000000)
-#define STATIC_SPACE_SIZE	(0x0ffff000) /* 256MB - 1 page */
+#define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
 
 #define BINDING_STACK_START	(0x38000000)
-#define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
+#define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
 #define CONTROL_STACK_START	(0x40000000)
-#define CONTROL_STACK_SIZE	(0x07fd8000) /* 128MB - SIGSTKSZ */
+#define CONTROL_STACK_SIZE	(0x07fd8000)	/* 128MB - SIGSTKSZ */
 
 #define SIGNAL_STACK_START	(0x47fd8000)
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(0x48000000)
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x68000000) /* 1.625GB */
+#define DYNAMIC_SPACE_SIZE	(0x68000000)	/* 1.625GB */
 #else
-#define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
+#define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
 #endif
-#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
 #endif
 
 #ifdef __NetBSD__
 #define READ_ONLY_SPACE_START   (0x10000000)
-#define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
+#define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
 
 #define STATIC_SPACE_START	(0x28000000)
-#define STATIC_SPACE_SIZE	(0x0ffff000) /* 256MB - 1 page */
+#define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
 
 #define BINDING_STACK_START	(0x38000000)
-#define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
+#define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
 #define CONTROL_STACK_START	(0x40000000)
-#define CONTROL_STACK_SIZE	(0x07fd8000) /* 128MB - SIGSTKSZ */
+#define CONTROL_STACK_SIZE	(0x07fd8000)	/* 128MB - SIGSTKSZ */
 
 #define SIGNAL_STACK_START	(0x47fd8000)
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
 #define DYNAMIC_0_SPACE_START	(0x48800000)
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x67800000) /* 1.656GB */
+#define DYNAMIC_SPACE_SIZE	(0x67800000)	/* 1.656GB */
 #else
-#define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
+#define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
 #endif
-#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
 #ifdef LINKAGE_TABLE
 #define FOREIGN_LINKAGE_SPACE_START (0xb0000000)
-#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000) /* 1MB */
+#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
 #endif
 #endif
 
 #ifdef __linux__
 #define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)
-#define READ_ONLY_SPACE_SIZE    (0x0ffff000) /* 256MB - 1 page */
+#define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
 
 #define STATIC_SPACE_START	(SpaceStart_TargetStatic)
-#define STATIC_SPACE_SIZE	(0x0ffff000) /* 256MB - 1 page */
+#define STATIC_SPACE_SIZE	(0x0ffff000)	/* 256MB - 1 page */
 
 #define BINDING_STACK_START	(0x20000000)
-#define BINDING_STACK_SIZE	(0x07fff000) /* 128MB - 1 page */
+#define BINDING_STACK_SIZE	(0x07fff000)	/* 128MB - 1 page */
 
 #define CONTROL_STACK_START	0x38000000
-#define CONTROL_STACK_SIZE	(0x07fff000 - 8192) 
+#define CONTROL_STACK_SIZE	(0x07fff000 - 8192)
 #define SIGNAL_STACK_START	CONTROL_STACK_END
 #define SIGNAL_STACK_SIZE	8192
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
 
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x66000000) /* 1.632GB */
+#define DYNAMIC_SPACE_SIZE	(0x66000000)	/* 1.632GB */
 #else
-#define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
+#define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
 #endif
-#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
 #ifdef LINKAGE_TABLE
-#define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)  
-#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000) /* 1MB */
+#define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
+#define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
 #endif
 #endif
 

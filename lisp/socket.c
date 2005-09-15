@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Attic/socket.c,v 1.5 2005/09/05 06:09:13 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Attic/socket.c,v 1.6 2005/09/15 18:26:52 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
-#include <netdb.h> 
+#include <netdb.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #ifndef hpux
@@ -50,100 +50,99 @@
  * descriptor (network socket) or 0 if connection fails.
  */
 
-int connect_to_server (char *host, int display)
+int
+connect_to_server(char *host, int display)
 {
-  struct sockaddr_in inaddr;	/* INET socket address. */
-  struct sockaddr *addr;		/* address to connect to */
-  struct hostent *host_ptr;
-  int addrlen;			/* length of address */
-#ifdef UNIXCONN
-  struct sockaddr_un unaddr;	/* UNIX socket address. */
-#endif
-  int fd;				/* Network socket */
-  {
-#ifdef UNIXCONN
-    if ((host[0] == '\0') || (strcmp("unix", host) == 0)) {
-	/* Connect locally using Unix domain. */
-	unaddr.sun_family = AF_UNIX;
-	(void) strcpy(unaddr.sun_path, X_UNIX_PATH);
-	sprintf(&unaddr.sun_path[strlen(unaddr.sun_path)], "%d", display);
-	addr = (struct sockaddr *) &unaddr;
-	addrlen = strlen(unaddr.sun_path) + 2;
-	/*
-	 * Open the network connection.
-	 */
-	if ((fd = socket((int) addr->sa_family, SOCK_STREAM, 0)) < 0) {
-#ifdef hpux /* this is disgusting */  /* cribbed from X11R4 xlib source */
-  	    if (errno == ENOENT) {  /* No such file or directory */
-	      sprintf(unaddr.sun_path, "%s%d", OLD_UNIX_PATH, display);
-              addrlen = strlen(unaddr.sun_path) + 2;
-              if ((fd = socket ((int) addr->sa_family, SOCK_STREAM, 0)) < 0)
-                return(-1);     /* errno set by most recent system call. */
-	    } else 
-#endif /* hpux */
-	    return(-1);	    /* errno set by system call. */
-        }
-    } else 
-#endif /* UNIXCONN */
-    {
-      /* Get the statistics on the specified host. */
-      if ((inaddr.sin_addr.s_addr = inet_addr(host)) == -1) 
-	{
-	  if ((host_ptr = gethostbyname(host)) == NULL) 
-	    {
-	      /* No such host! */
-	      errno = EINVAL;
-	      return(-1);
-	    }
-	  /* Check the address type for an internet host. */
-	  if (host_ptr->h_addrtype != AF_INET) 
-	    {
-	      /* Not an Internet host! */
-	      errno = EPROTOTYPE;
-	      return(-1);
-	    }
-	  /* Set up the socket data. */
-	  inaddr.sin_family = host_ptr->h_addrtype;
-	  memcpy((char *)&inaddr.sin_addr, 
-		 (char *)host_ptr->h_addr, 
-		 sizeof(inaddr.sin_addr));
-	} 
-      else 
-	{
-	  inaddr.sin_family = AF_INET;
-	}
-      addr = (struct sockaddr *) &inaddr;
-      addrlen = sizeof (struct sockaddr_in);
-      inaddr.sin_port = display + X_TCP_PORT;
-      inaddr.sin_port = htons(inaddr.sin_port);
-      /*
-       * Open the network connection.
-       */
-      if ((fd = socket((int) addr->sa_family, SOCK_STREAM, 0)) < 0){
-	return(-1);	    /* errno set by system call. */}
-      /* make sure to turn off TCP coalescence */
-#ifdef TCP_NODELAY
-      {
-	int mi = 1;
-	setsockopt (fd, IPPROTO_TCP, TCP_NODELAY, &mi, sizeof (int));
-      }
-#endif
-    }
+    struct sockaddr_in inaddr;	/* INET socket address. */
+    struct sockaddr *addr;	/* address to connect to */
+    struct hostent *host_ptr;
+    int addrlen;		/* length of address */
 
-    /*
-     * Changed 9/89 to retry connection if system call was interrupted.  This
-     * is necessary for multiprocessing implementations that use timers,
-     * since the timer results in a SIGALRM.	-- jdi
-     */
-    while (connect(fd, addr, addrlen) == -1) {
-	if (errno != EINTR) {
-  	    (void) close (fd);
-  	    return(-1); 	    /* errno set by system call. */
+#ifdef UNIXCONN
+    struct sockaddr_un unaddr;	/* UNIX socket address. */
+#endif
+    int fd;			/* Network socket */
+
+    {
+#ifdef UNIXCONN
+	if ((host[0] == '\0') || (strcmp("unix", host) == 0)) {
+	    /* Connect locally using Unix domain. */
+	    unaddr.sun_family = AF_UNIX;
+	    (void) strcpy(unaddr.sun_path, X_UNIX_PATH);
+	    sprintf(&unaddr.sun_path[strlen(unaddr.sun_path)], "%d", display);
+	    addr = (struct sockaddr *) &unaddr;
+	    addrlen = strlen(unaddr.sun_path) + 2;
+	    /*
+	     * Open the network connection.
+	     */
+	    if ((fd = socket((int) addr->sa_family, SOCK_STREAM, 0)) < 0) {
+#ifdef hpux /* this is disgusting */	/* cribbed from X11R4 xlib source */
+		if (errno == ENOENT) {	/* No such file or directory */
+		    sprintf(unaddr.sun_path, "%s%d", OLD_UNIX_PATH, display);
+		    addrlen = strlen(unaddr.sun_path) + 2;
+		    if ((fd = socket((int) addr->sa_family, SOCK_STREAM, 0)) <
+			0) return (-1);	/* errno set by most recent system call. */
+		} else
+#endif /* hpux */
+		    return (-1);	/* errno set by system call. */
+	    }
+	} else
+#endif /* UNIXCONN */
+	{
+	    /* Get the statistics on the specified host. */
+	    if ((inaddr.sin_addr.s_addr = inet_addr(host)) == -1) {
+		if ((host_ptr = gethostbyname(host)) == NULL) {
+		    /* No such host! */
+		    errno = EINVAL;
+		    return (-1);
+		}
+		/* Check the address type for an internet host. */
+		if (host_ptr->h_addrtype != AF_INET) {
+		    /* Not an Internet host! */
+		    errno = EPROTOTYPE;
+		    return (-1);
+		}
+		/* Set up the socket data. */
+		inaddr.sin_family = host_ptr->h_addrtype;
+		memcpy((char *) &inaddr.sin_addr,
+		       (char *) host_ptr->h_addr, sizeof(inaddr.sin_addr));
+	    } else {
+		inaddr.sin_family = AF_INET;
+	    }
+	    addr = (struct sockaddr *) &inaddr;
+	    addrlen = sizeof(struct sockaddr_in);
+
+	    inaddr.sin_port = display + X_TCP_PORT;
+	    inaddr.sin_port = htons(inaddr.sin_port);
+	    /*
+	     * Open the network connection.
+	     */
+	    if ((fd = socket((int) addr->sa_family, SOCK_STREAM, 0)) < 0) {
+		return (-1);	/* errno set by system call. */
+	    }
+	    /* make sure to turn off TCP coalescence */
+#ifdef TCP_NODELAY
+	    {
+		int mi = 1;
+		setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &mi, sizeof(int));
+	    }
+#endif
 	}
-      }
-  }
-  /*
-   * Return the id if the connection succeeded.
-   */
-  return(fd);
+
+	/*
+	 * Changed 9/89 to retry connection if system call was interrupted.  This
+	 * is necessary for multiprocessing implementations that use timers,
+	 * since the timer results in a SIGALRM.    -- jdi
+	 */
+	while (connect(fd, addr, addrlen) == -1) {
+	    if (errno != EINTR) {
+		(void) close(fd);
+		return (-1);	/* errno set by system call. */
+	    }
+	}
+    }
+    /*
+     * Return the id if the connection succeeded.
+     */
+    return (fd);
 }

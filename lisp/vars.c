@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.5 2005/09/05 06:09:13 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.6 2005/09/15 18:26:53 rtoy Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -16,34 +16,37 @@ static int tempcntr = 1;
 
 struct var {
     lispobj obj;
-    lispobj (*update_fn)(struct var *var);
+      lispobj(*update_fn) (struct var * var);
     char *name;
     long clock;
     boolean map_back, permanent;
 
-    struct var *nnext; /* Next in name list */
-    struct var *onext; /* Next in object list */
+    struct var *nnext;		/* Next in name list */
+    struct var *onext;		/* Next in object list */
 };
 
-static int hash_name(char *name)
+static int
+hash_name(char *name)
 {
     unsigned long value = 0;
 
     while (*name != '\0') {
-        value = (value << 1) ^ *(unsigned char *)(name++);
-        value = (value & (1-(1<<24))) ^ (value >> 24);
+	value = (value << 1) ^ *(unsigned char *) (name++);
+	value = (value & (1 - (1 << 24))) ^ (value >> 24);
     }
 
     return value % NAME_BUCKETS;
 }
 
-static int hash_obj(lispobj obj)
+static int
+hash_obj(lispobj obj)
 {
-    return (unsigned long)obj % OBJ_BUCKETS;
+    return (unsigned long) obj % OBJ_BUCKETS;
 }
 
 
-void flush_vars()
+void
+flush_vars()
 {
     int index;
     struct var *var, *next, *perm = NULL;
@@ -51,86 +54,90 @@ void flush_vars()
     /* Note: all vars in the object hash table also appear in the name hash table, so if we free everything in the name hash table, we free everything in the object hash table. */
 
     for (index = 0; index < NAME_BUCKETS; index++)
-        for (var = NameHash[index]; var != NULL; var = next) {
-            next = var->nnext;
-            if (var->permanent) {
-                var->nnext = perm;
-                perm = var;
-            }
-            else {
-                free(var->name);
-                free(var);
-            }
-        }
+	for (var = NameHash[index]; var != NULL; var = next) {
+	    next = var->nnext;
+	    if (var->permanent) {
+		var->nnext = perm;
+		perm = var;
+	    } else {
+		free(var->name);
+		free(var);
+	    }
+	}
     memset(NameHash, 0, sizeof(NameHash));
     memset(ObjHash, 0, sizeof(ObjHash));
     tempcntr = 1;
 
     for (var = perm; var != NULL; var = next) {
-        next = var->nnext;
-        index = hash_name(var->name);
-        var->nnext = NameHash[index];
-        NameHash[index] = var;
-        if (var->map_back) {
-            index = hash_obj(var->obj);
-            var->onext = ObjHash[index];
-            ObjHash[index] = var;
-        }
+	next = var->nnext;
+	index = hash_name(var->name);
+	var->nnext = NameHash[index];
+	NameHash[index] = var;
+	if (var->map_back) {
+	    index = hash_obj(var->obj);
+	    var->onext = ObjHash[index];
+	    ObjHash[index] = var;
+	}
     }
 }
 
-struct var *lookup_by_name(name)
-char *name;
+struct var *
+lookup_by_name(name)
+     char *name;
 {
     struct var *var;
 
     for (var = NameHash[hash_name(name)]; var != NULL; var = var->nnext)
-        if (strcmp(var->name, name) == 0)
-            return var;
+	if (strcmp(var->name, name) == 0)
+	    return var;
     return NULL;
 }
 
-struct var *lookup_by_obj(obj)
-lispobj obj;
+struct var *
+lookup_by_obj(obj)
+     lispobj obj;
 {
     struct var *var;
 
     for (var = ObjHash[hash_obj(obj)]; var != NULL; var = var->onext)
-        if (var->obj == obj)
-            return var;
+	if (var->obj == obj)
+	    return var;
     return NULL;
 }
 
-static struct var *make_var(char *name, boolean perm)
+static struct var *
+make_var(char *name, boolean perm)
 {
     struct var *var;
     char buffer[256];
     int index;
 
-    var = (struct var *)malloc(sizeof(struct var));
+    var = (struct var *) malloc(sizeof(struct var));
+
     if (var == NULL) {
-      perror("malloc");
-      exit(1);
+	perror("malloc");
+	exit(1);
     }
-    
+
     if (name == NULL) {
-        sprintf(buffer, "%d", tempcntr++);
-        name = buffer;
+	sprintf(buffer, "%d", tempcntr++);
+	name = buffer;
     }
-    var->name = (char *)malloc(strlen(name)+1);
+    var->name = (char *) malloc(strlen(name) + 1);
     strcpy(var->name, name);
     var->clock = 0;
     var->permanent = perm;
     var->map_back = FALSE;
-    
+
     index = hash_name(name);
     var->nnext = NameHash[index];
     NameHash[index] = var;
 
     return var;
-}    
+}
 
-struct var *define_var(char *name, lispobj obj, boolean perm)
+struct var *
+define_var(char *name, lispobj obj, boolean perm)
 {
     struct var *var = make_var(name, perm);
     int index;
@@ -139,17 +146,17 @@ struct var *define_var(char *name, lispobj obj, boolean perm)
     var->update_fn = NULL;
 
     if (lookup_by_obj(obj) == NULL) {
-        var->map_back = TRUE;
-        index = hash_obj(obj);
-        var->onext = ObjHash[index];
-        ObjHash[index] = var;
+	var->map_back = TRUE;
+	index = hash_obj(obj);
+	var->onext = ObjHash[index];
+	ObjHash[index] = var;
     }
 
     return var;
 }
 
-struct var *define_dynamic_var(char *name, lispobj updatefn(struct var *),
-			       boolean perm)
+struct var *
+define_dynamic_var(char *name, lispobj updatefn(struct var *), boolean perm)
 {
     struct var *var = make_var(name, perm);
 
@@ -158,24 +165,28 @@ struct var *define_dynamic_var(char *name, lispobj updatefn(struct var *),
     return var;
 }
 
-char *var_name(struct var *var)
+char *
+var_name(struct var *var)
 {
     return var->name;
 }
 
-lispobj var_value(struct var *var)
+lispobj
+var_value(struct var * var)
 {
     if (var->update_fn != NULL)
-        var->obj = (*var->update_fn)(var);
+	var->obj = (*var->update_fn) (var);
     return var->obj;
 }
 
-long var_clock(struct var *var)
+long
+var_clock(struct var *var)
 {
     return var->clock;
 }
 
-void var_setclock(struct var *var, long val)
+void
+var_setclock(struct var *var, long val)
 {
     var->clock = val;
 }

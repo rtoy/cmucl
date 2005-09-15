@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.7 2005/01/13 19:55:00 fgilham Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.8 2005/09/15 18:26:50 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -18,10 +18,10 @@
 #define MAP_ANONYMOUS MAP_ANON
 #define MAP_VARIABLE 0
 
-typedef caddr_t   os_vm_address_t;
+typedef caddr_t os_vm_address_t;
 typedef vm_size_t os_vm_size_t;
-typedef off_t     os_vm_offset_t;
-typedef int       os_vm_prot_t;
+typedef off_t os_vm_offset_t;
+typedef int os_vm_prot_t;
 
 #define OS_VM_PROT_READ    PROT_READ
 #define OS_VM_PROT_WRITE   PROT_WRITE
@@ -29,8 +29,8 @@ typedef int       os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
-int sc_reg (struct sigcontext*,int);
-void os_save_context (void);
+int sc_reg(struct sigcontext *, int);
+void os_save_context(void);
 
 /* I *think* this is when things became incompatible with old
    signals.  */

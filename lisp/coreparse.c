@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.9 2004/07/08 17:49:04 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.10 2005/09/15 18:26:51 rtoy Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -16,7 +16,8 @@
 
 extern int version;
 
-static void process_directory(int fd, long *ptr, int count)
+static void
+process_directory(int fd, long *ptr, int count)
 {
     long id, offset, len;
     lispobj *free_pointer;
@@ -34,50 +35,51 @@ static void process_directory(int fd, long *ptr, int count)
 
 	if (len != 0) {
 	    os_vm_address_t real_addr;
+
 #ifdef PRINTNOISE
 	    printf("Mapping %ld bytes at 0x%lx.\n", len, addr);
 #endif
-	    real_addr=os_map(fd, offset, addr, len);
-	    if(real_addr!=addr)
-	    fprintf(stderr,
-                    "process_directory: file mapped in wrong place! (0x%p != 0x%p)\n",
-                    (void *) real_addr,
-                    (void *) addr);
+	    real_addr = os_map(fd, offset, addr, len);
+	    if (real_addr != addr)
+		fprintf(stderr,
+			"process_directory: file mapped in wrong place! (0x%p != 0x%p)\n",
+			(void *) real_addr, (void *) addr);
 	}
-
 #if 0
 	printf("Space ID = %d, free pointer = 0x%08x.\n", id, free_pointer);
 #endif
 
 	switch (id) {
 	  case DYNAMIC_SPACE_ID:
-	    if (addr != (os_vm_address_t)dynamic_0_space
-		 && addr != (os_vm_address_t)dynamic_1_space)
-		printf("Strange ... dynamic space lossage.\n");
-		current_dynamic_space = (lispobj *)addr;
+	      if (addr != (os_vm_address_t) dynamic_0_space
+		  && addr != (os_vm_address_t) dynamic_1_space)
+		  printf("Strange ... dynamic space lossage.\n");
+	      current_dynamic_space = (lispobj *) addr;
 #if defined(ibmrt) || defined(i386) || defined(__x86_64)
-	    SetSymbolValue(ALLOCATION_POINTER, (lispobj)free_pointer);
+	      SetSymbolValue(ALLOCATION_POINTER, (lispobj) free_pointer);
 #else
-	    current_dynamic_space_free_pointer = free_pointer;
+	      current_dynamic_space_free_pointer = free_pointer;
 #endif
-	    break;
+	      break;
 	  case STATIC_SPACE_ID:
-	    static_space = (lispobj *) addr;
-	    break;
+	      static_space = (lispobj *) addr;
+	      break;
 	  case READ_ONLY_SPACE_ID:
-	    /* Don't care about read only space */
-	    break;
+	      /* Don't care about read only space */
+	      break;
 	  default:
-	    printf("Strange space ID: %ld; ignored.\n", id);
-	    break;
+	      printf("Strange space ID: %ld; ignored.\n", id);
+	      break;
 	}
 	entry++;
     }
 }
 
-lispobj load_core_file(char *file)
+lispobj
+load_core_file(char *file)
 {
     int fd = open(file, O_RDONLY), count;
+
 #if !(defined(alpha) || defined(__x86_64))
     long header[CORE_PAGESIZE / sizeof(long)], val, len, *ptr;
 #else
@@ -99,14 +101,14 @@ lispobj load_core_file(char *file)
     if (count < CORE_PAGESIZE) {
 	fprintf(stderr, "Premature EOF.\n");
 	exit(1);
-    }   
+    }
 
     ptr = header;
     val = *ptr++;
 
     if (val != CORE_MAGIC) {
 	fprintf(stderr, "Invalid magic number: 0x%lx should have been 0x%x.\n",
-	val, CORE_MAGIC); 
+		val, CORE_MAGIC);
 	exit(1);
     }
 
@@ -116,39 +118,41 @@ lispobj load_core_file(char *file)
 
 	switch (val) {
 	  case CORE_END:
-	    break;
+	      break;
 
 	  case CORE_VERSION:
-	    if (*ptr != version) {
-		fprintf(stderr, "WARNING: startup-code version (%d) different from core version (%ld).\nYou may lose big.\n", version, *ptr);
-	    }
-	    break;
+	      if (*ptr != version) {
+		  fprintf(stderr,
+			  "WARNING: startup-code version (%d) different from core version (%ld).\nYou may lose big.\n",
+			  version, *ptr);
+	      }
+	      break;
 
 	  case CORE_VALIDATE:
-	    fprintf(stderr, "Validation no longer supported; ignored.\n");
-	    break;
+	      fprintf(stderr, "Validation no longer supported; ignored.\n");
+	      break;
 
 	  case CORE_NDIRECTORY:
-	    process_directory(fd, ptr,
+	      process_directory(fd, ptr,
 #if !(defined(alpha) || defined(__x86_64))
-		  (len-2) / (sizeof(struct ndir_entry) / sizeof(long)));
+				(len - 2) / (sizeof(struct ndir_entry) / sizeof(long)));
 #else
-		  (len-2) / (sizeof(struct ndir_entry) / sizeof(u32)));
+				(len - 2) / (sizeof(struct ndir_entry) / sizeof(u32)));
 #endif
-	    break;
+	      break;
 
 	  case CORE_INITIAL_FUNCTION:
-	    initial_function = (lispobj)*ptr;
-	    break;
+	      initial_function = (lispobj) * ptr;
+	      break;
 
 	  case CORE_MACHINE_STATE:
-	    fprintf(stderr, "Obsolete core file.\n");
-	    exit(1);
-	    break;
+	      fprintf(stderr, "Obsolete core file.\n");
+	      exit(1);
+	      break;
 
 	  default:
-	    printf("Unknown core file entry: %ld; skipping.\n", val);
-	    break;
+	      printf("Unknown core file entry: %ld; skipping.\n", val);
+	      break;
 	}
 
 	ptr += len - 2;

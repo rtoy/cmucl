@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/dynbind.c,v 1.3 2004/05/18 22:48:22 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/dynbind.c,v 1.4 2005/09/15 18:26:51 rtoy Rel $
  * 
  * Support for dynamic binding from C.
  */
@@ -17,39 +17,42 @@
 #define SetBSP(value) (current_binding_stack_pointer=(lispobj *)(value))
 #endif
 
-void bind_variable(lispobj symbol, lispobj value)
+void
+bind_variable(lispobj symbol, lispobj value)
 {
-	lispobj old_value;
-	struct binding *binding;
+    lispobj old_value;
+    struct binding *binding;
 
-	old_value = SymbolValue(symbol);
-	binding = GetBSP();
-	SetBSP(binding+1);
+    old_value = SymbolValue(symbol);
+    binding = GetBSP();
+    SetBSP(binding + 1);
 
-	binding->value = old_value;
-	binding->symbol = symbol;
-	SetSymbolValue(symbol, value);
+    binding->value = old_value;
+    binding->symbol = symbol;
+    SetSymbolValue(symbol, value);
 }
 
-void unbind(void)
+void
+unbind(void)
 {
-	struct binding *binding;
-	lispobj symbol;
-	
-	binding = GetBSP() - 1;
-		
-	symbol = binding->symbol;
+    struct binding *binding;
+    lispobj symbol;
 
-	SetSymbolValue(symbol, binding->value);
+    binding = GetBSP() - 1;
 
-	binding->symbol = 0;
+    symbol = binding->symbol;
 
-	SetBSP(binding);
+    SetSymbolValue(symbol, binding->value);
+
+    binding->symbol = 0;
+
+    SetBSP(binding);
 }
 
-void unbind_to_here(lispobj *bsp)
+void
+unbind_to_here(lispobj * bsp)
 {
-    struct binding *target = (struct binding *)bsp;
+    struct binding *target = (struct binding *) bsp;
     struct binding *binding = GetBSP();
     lispobj symbol;
 

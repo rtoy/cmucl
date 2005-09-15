@@ -1,7 +1,7 @@
 /*
  * Header file for GC
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.h,v 1.3 2003/07/28 17:43:11 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.h,v 1.4 2005/09/15 18:26:51 rtoy Rel $
  */
 
 #ifndef _GC_H_
@@ -9,7 +9,7 @@
 
 extern void gc_init(void);
 extern void collect_garbage(void);
-extern lispobj *component_ptr_from_pc (lispobj *pc);
+extern lispobj *component_ptr_from_pc(lispobj * pc);
 
 #ifndef ibmrt
 

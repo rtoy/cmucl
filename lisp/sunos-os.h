@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.7 2005/09/05 06:09:13 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.8 2005/09/15 18:26:52 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -56,7 +56,7 @@ typedef int os_vm_prot_t;
 #define NULL 0
 #endif
 
-extern void flush_icache(unsigned int*, unsigned int);
+extern void flush_icache(unsigned int *, unsigned int);
 extern void save_context(void);
 
 #endif /* SOLARIS */

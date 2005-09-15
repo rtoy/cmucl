@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.2 2004/07/07 15:03:11 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.3 2005/09/15 18:26:50 rtoy Exp $
  *
  */
 
@@ -45,249 +45,267 @@ size_t os_vm_page_size;
 #if defined GENCGC
 #include "gencgc.h"
 #endif
-
 
-void os_init(void)
+
+void
+os_init(void)
 {
-  os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
+    os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
 }
 
-int sc_reg(os_context_t *c, int offset)
+int
+sc_reg(os_context_t * c, int offset)
 {
 #ifdef i386
 #if USE_SA_SIGINFO
-  switch(offset)
-    {
-    case  0: return c->uc_mcontext.__gregs[_REG_EAX];
-    case  2: return c->uc_mcontext.__gregs[_REG_ECX];
-    case  4: return c->uc_mcontext.__gregs[_REG_EDX];
-    case  6: return c->uc_mcontext.__gregs[_REG_EBX];
-    case  8: return c->uc_mcontext.__gregs[_REG_ESP];
-    case 10: return c->uc_mcontext.__gregs[_REG_EBP];
-    case 12: return c->uc_mcontext.__gregs[_REG_ESI];
-    case 14: return c->uc_mcontext.__gregs[_REG_EDI];
+    switch (offset) {
+      case 0:
+	  return c->uc_mcontext.__gregs[_REG_EAX];
+      case 2:
+	  return c->uc_mcontext.__gregs[_REG_ECX];
+      case 4:
+	  return c->uc_mcontext.__gregs[_REG_EDX];
+      case 6:
+	  return c->uc_mcontext.__gregs[_REG_EBX];
+      case 8:
+	  return c->uc_mcontext.__gregs[_REG_ESP];
+      case 10:
+	  return c->uc_mcontext.__gregs[_REG_EBP];
+      case 12:
+	  return c->uc_mcontext.__gregs[_REG_ESI];
+      case 14:
+	  return c->uc_mcontext.__gregs[_REG_EDI];
     }
 #else
-  switch(offset)
-    {
-    case  0: return c->sc_eax;
-    case  2: return c->sc_ecx;
-    case  4: return c->sc_edx;
-    case  6: return c->sc_ebx;
-    case  8: return c->sc_esp;
-    case 10: return c->sc_ebp;
-    case 12: return c->sc_esi;
-    case 14: return c->sc_edi;
+    switch (offset) {
+      case 0:
+	  return c->sc_eax;
+      case 2:
+	  return c->sc_ecx;
+      case 4:
+	  return c->sc_edx;
+      case 6:
+	  return c->sc_ebx;
+      case 8:
+	  return c->sc_esp;
+      case 10:
+	  return c->sc_ebp;
+      case 12:
+	  return c->sc_esi;
+      case 14:
+	  return c->sc_edi;
     }
 #endif
 #endif
-  return 0;
+    return 0;
 }
 
-void os_save_context(void)
+void
+os_save_context(void)
 {
-  /*
-   * Called from interrupt handlers so C stuff knows things set in Lisp.
-   */
+    /*
+     * Called from interrupt handlers so C stuff knows things set in Lisp.
+     */
 }
 
-void os_set_context(void)
+void
+os_set_context(void)
 {
 }
 
-os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
+os_vm_address_t
+os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
-  int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 
-  /*
-   * NetBSD 1.5.2 seems to insist on each mmap being less than 128MB.
-   * So we mmap in 64MB steps.  This is probably inefficient, but the
-   * missing CR2 reporting in signal handlers already ensures that
-   * NetBSD/x86 is not a suitable platform for CMU CL as it stands.
-   */
-  
-  if (addr)
-    flags |= MAP_FIXED;
-  else
-    flags |= MAP_VARIABLE;
+    /*
+     * NetBSD 1.5.2 seems to insist on each mmap being less than 128MB.
+     * So we mmap in 64MB steps.  This is probably inefficient, but the
+     * missing CR2 reporting in signal handlers already ensures that
+     * NetBSD/x86 is not a suitable platform for CMU CL as it stands.
+     */
 
-  DPRINTF(0, (stderr, "os_validate %p %d =>", addr, len));
+    if (addr)
+	flags |= MAP_FIXED;
+    else
+	flags |= MAP_VARIABLE;
 
-  if (addr)
-    {
-      os_vm_address_t curaddr=addr;
+    DPRINTF(0, (stderr, "os_validate %p %d =>", addr, len));
 
-      while (len>0)
-	{
-	  os_vm_address_t resaddr;
-	  int curlen=MIN(64*1024*1024,len);
-	  
-	  resaddr = mmap(curaddr, curlen, OS_VM_PROT_ALL, flags, -1, 0);
-	  
-	  if (resaddr == (os_vm_address_t) -1)
-	    {
-	      perror("mmap");
-	      
-	      while (curaddr>addr)
-		{
-		  curaddr-=64*1024*1024;
-		  munmap(curaddr,64*1024*1024);
+    if (addr) {
+	os_vm_address_t curaddr = addr;
+
+	while (len > 0) {
+	    os_vm_address_t resaddr;
+	    int curlen = MIN(64 * 1024 * 1024, len);
+
+	    resaddr = mmap(curaddr, curlen, OS_VM_PROT_ALL, flags, -1, 0);
+
+	    if (resaddr == (os_vm_address_t) - 1) {
+		perror("mmap");
+
+		while (curaddr > addr) {
+		    curaddr -= 64 * 1024 * 1024;
+		    munmap(curaddr, 64 * 1024 * 1024);
 		}
-	      
-	      return NULL;
+
+		return NULL;
 	    }
 
-	  DPRINTF(0, (stderr, " %p", resaddr));
-	  
-	  curaddr+=curlen;
-	  len-=curlen;
-	}
-      
-      DPRINTF(0, (stderr, "\n"));
-    }
-  else
-    {
-      addr = mmap(0, len, OS_VM_PROT_ALL, flags, -1, 0);
+	    DPRINTF(0, (stderr, " %p", resaddr));
 
-      if (addr == (os_vm_address_t) -1)
-	{
-	  perror("mmap");
-	  return NULL;
+	    curaddr += curlen;
+	    len -= curlen;
 	}
-      
-      DPRINTF(0, (stderr, " %p\n", addr));
+
+	DPRINTF(0, (stderr, "\n"));
+    } else {
+	addr = mmap(0, len, OS_VM_PROT_ALL, flags, -1, 0);
+
+	if (addr == (os_vm_address_t) - 1) {
+	    perror("mmap");
+	    return NULL;
+	}
+
+	DPRINTF(0, (stderr, " %p\n", addr));
     }
 
-  return addr;
+    return addr;
 }
 
-void os_invalidate(os_vm_address_t addr, os_vm_size_t len)
+void
+os_invalidate(os_vm_address_t addr, os_vm_size_t len)
 {
-  DPRINTF(0, (stderr, "os_invalidate %p %d\n", addr, len));
+    DPRINTF(0, (stderr, "os_invalidate %p %d\n", addr, len));
 
-  if (munmap(addr, len) == -1)
-    perror("munmap");
+    if (munmap(addr, len) == -1)
+	perror("munmap");
 }
 
-os_vm_address_t os_map(int fd, int offset, os_vm_address_t addr,
-		       os_vm_size_t len)
+os_vm_address_t
+os_map(int fd, int offset, os_vm_address_t addr, os_vm_size_t len)
 {
-  addr = mmap(addr, len,
-	      OS_VM_PROT_ALL,
-	      MAP_PRIVATE | MAP_FILE | MAP_FIXED,
-	      fd, (off_t) offset);
+    addr = mmap(addr, len,
+		OS_VM_PROT_ALL,
+		MAP_PRIVATE | MAP_FILE | MAP_FIXED, fd, (off_t) offset);
 
-  if (addr == (os_vm_address_t) -1)
-    perror("mmap");
+    if (addr == (os_vm_address_t) - 1)
+	perror("mmap");
 
-  return addr;
+    return addr;
 }
 
-void os_flush_icache(os_vm_address_t address, os_vm_size_t length)
+void
+os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 {
 }
 
-void os_protect(os_vm_address_t address, os_vm_size_t length,
-		os_vm_prot_t prot)
+void
+os_protect(os_vm_address_t address, os_vm_size_t length, os_vm_prot_t prot)
 {
-  if (mprotect(address, length, prot) == -1)
-    perror("mprotect");
+    if (mprotect(address, length, prot) == -1)
+	perror("mprotect");
 }
-
 
 
-static boolean in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
+
+static boolean
+in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 {
-  char* beg = (char*) sbeg;
-  char* end = (char*) sbeg + slen;
-  char* adr = (char*) a;
-  return (adr >= beg && adr < end);
+    char *beg = (char *) sbeg;
+    char *end = (char *) sbeg + slen;
+    char *adr = (char *) a;
+
+    return (adr >= beg && adr < end);
 }
 
-boolean valid_addr(os_vm_address_t addr)
+boolean
+valid_addr(os_vm_address_t addr)
 {
-  os_vm_address_t newaddr;
-  newaddr = os_trunc_to_page(addr);
+    os_vm_address_t newaddr;
 
-  if (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
-      || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
-      || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size  )
+    newaddr = os_trunc_to_page(addr);
+
+    if (in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
+	|| in_range_p(addr, STATIC_SPACE_START, STATIC_SPACE_SIZE)
+	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
 #ifndef GENCGC
-      || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size  )
+	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
 #endif
-      || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
-      || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ))
-    return TRUE;
-  return FALSE;
+	|| in_range_p(addr, CONTROL_STACK_START, CONTROL_STACK_SIZE)
+	|| in_range_p(addr, BINDING_STACK_START, BINDING_STACK_SIZE))
+	return TRUE;
+    return FALSE;
 }
-
 
-static void sigsegv_handler(HANDLER_ARGS)
+
+static void
+sigsegv_handler(HANDLER_ARGS)
 {
 #if defined GENCGC
-  caddr_t  fault_addr = code ? code->si_addr : 0;
-  int  page_index = find_page_index((void*)fault_addr);
+    caddr_t fault_addr = code ? code->si_addr : 0;
+    int page_index = find_page_index((void *) fault_addr);
 
 #if SIGSEGV_VERBOSE
-  fprintf(stderr,"Signal %d, fault_addr=%p, page_index=%d:\n",
-	  signal, fault_addr, page_index);
+    fprintf(stderr, "Signal %d, fault_addr=%p, page_index=%d:\n",
+	    signal, fault_addr, page_index);
 #endif
 
-  /* Check if the fault is within the dynamic space. */
-  if (page_index != -1) {
-    /* Un-protect the page */
+    /* Check if the fault is within the dynamic space. */
+    if (page_index != -1) {
+	/* Un-protect the page */
 
-    /* The page should have been marked write protected */
-    if (!PAGE_WRITE_PROTECTED(page_index))
-      fprintf(stderr, "*** Sigsegv in page not marked as write protected\n");
+	/* The page should have been marked write protected */
+	if (!PAGE_WRITE_PROTECTED(page_index))
+	    fprintf(stderr,
+		    "*** Sigsegv in page not marked as write protected\n");
 
-    os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
+	os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
+	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
+	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
-    return;
+	return;
     }
 #endif
 
-  SAVE_CONTEXT();
+    SAVE_CONTEXT();
 
-  DPRINTF(0, (stderr, "sigsegv:\n"));
-  interrupt_handle_now(signal, code, context);
+    DPRINTF(0, (stderr, "sigsegv:\n"));
+    interrupt_handle_now(signal, code, context);
 }
 
-static void sigbus_handler(HANDLER_ARGS)
+static void
+sigbus_handler(HANDLER_ARGS)
 {
-  SAVE_CONTEXT();
+    SAVE_CONTEXT();
 
-  DPRINTF(0, (stderr, "sigbus:\n"));
-  interrupt_handle_now(signal, code, context);
+    DPRINTF(0, (stderr, "sigbus:\n"));
+    interrupt_handle_now(signal, code, context);
 }
 
-void os_install_interrupt_handlers(void)
+void
+os_install_interrupt_handlers(void)
 {
-  interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
-  interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
+    interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler);
+    interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
 }
 
 void *
-os_dlsym (const char *sym_name, lispobj lib_list)
+os_dlsym(const char *sym_name, lispobj lib_list)
 {
-  if (lib_list != NIL)
-    {
-      lispobj lib_list_head;
+    if (lib_list != NIL) {
+	lispobj lib_list_head;
 
-      for (lib_list_head = lib_list;
-	   lib_list_head != NIL;
-	   lib_list_head = CONS (lib_list_head)->cdr)
-	{
-	  struct cons *lib_cons = CONS (CONS (lib_list_head)->car);
-	  struct sap *dlhandle = (struct sap *) PTR (lib_cons->car);
-	  void *sym_addr = dlsym ((void *) dlhandle->pointer, sym_name);
+	for (lib_list_head = lib_list;
+	     lib_list_head != NIL; lib_list_head = CONS(lib_list_head)->cdr) {
+	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
+	    struct sap *dlhandle = (struct sap *) PTR(lib_cons->car);
+	    void *sym_addr = dlsym((void *) dlhandle->pointer, sym_name);
 
-	  if (sym_addr)
-	    return sym_addr;
+	    if (sym_addr)
+		return sym_addr;
 	}
     }
-  
-  return dlsym (RTLD_DEFAULT, sym_name);
+
+    return dlsym(RTLD_DEFAULT, sym_name);
 }

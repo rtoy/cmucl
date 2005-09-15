@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.20 2005/02/03 15:08:41 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.21 2005/09/15 18:26:52 rtoy Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -87,21 +87,21 @@
  * long).  Hope that's enough!  Make sure this doesn't overlap the
  * READ_ONLY_SPACE_START!
  */
-#define FOREIGN_LINKAGE_SPACE_SIZE  (0x00800000 - SPARSE_BLOCK_SIZE) /* 8 MB - 32 KB */
+#define FOREIGN_LINKAGE_SPACE_SIZE  (0x00800000 - SPARSE_BLOCK_SIZE)	/* 8 MB - 32 KB */
 #endif
 
 
 #define READ_ONLY_SPACE_START	(SpaceStart_TargetReadOnly)
-#define READ_ONLY_SPACE_SIZE	((2*MB_128) - SPARSE_BLOCK_SIZE) /* 256 MB - 32 KB, 256 MB max */
-  
+#define READ_ONLY_SPACE_SIZE	((2*MB_128) - SPARSE_BLOCK_SIZE)	/* 256 MB - 32 KB, 256 MB max */
+
 #define BINDING_STACK_START 	(0x20000000)
-#define BINDING_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
+#define BINDING_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE)	/* 128 MB - 32 KB, 128 MB max */
 
 #define STATIC_SPACE_START  	(SpaceStart_TargetStatic)
-#define STATIC_SPACE_SIZE   	((2*MB_128) - SPARSE_BLOCK_SIZE) /* 256 MB - 32 KB, 256 MB max */
+#define STATIC_SPACE_SIZE   	((2*MB_128) - SPARSE_BLOCK_SIZE)	/* 256 MB - 32 KB, 256 MB max */
 
 #define CONTROL_STACK_START 	(0x38000000)
-#define CONTROL_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
+#define CONTROL_STACK_SIZE  	(MB_128 - SPARSE_BLOCK_SIZE)	/* 128 MB - 32 KB, 128 MB max */
 #define CONTROL_STACK_END       (CONTROL_STACK_START + CONTROL_STACK_SIZE)
 
 #define DYNAMIC_0_SPACE_START	(SpaceStart_TargetDynamic)
@@ -117,9 +117,9 @@
  * how that can be, but we lets not subtract it off.
  */
 #if 0
-#define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x10000000 - SPARSE_BLOCK_SIZE) /* 256 MB - 32 KB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x10000000 - SPARSE_BLOCK_SIZE)	/* 256 MB - 32 KB */
 #else
-#define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x10000000) /* 256 MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x10000000)	/* 256 MB */
 #endif
 
 /* The maximum dynamic space that we can allocate */
@@ -128,9 +128,9 @@
  * For GENCGC, we can use both dynamic spaces, so we get at least
  * double the heap size.
  */
-#define DYNAMIC_SPACE_SIZE      (0xB0000000 - SPARSE_BLOCK_SIZE)    /* 2816 MB - 32 KB max */
+#define DYNAMIC_SPACE_SIZE      (0xB0000000 - SPARSE_BLOCK_SIZE)	/* 2816 MB - 32 KB max */
 #else
-#define DYNAMIC_SPACE_SIZE      (0x40000000 - SPARSE_BLOCK_SIZE)    /* 1GB - 32 KB max */
+#define DYNAMIC_SPACE_SIZE      (0x40000000 - SPARSE_BLOCK_SIZE)	/* 1GB - 32 KB max */
 #endif
 
 #endif /* _SPARC_VALIDATE_H_ */
