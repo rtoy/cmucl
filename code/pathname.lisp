@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.76 2005/09/16 21:27:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.77 2005/09/19 21:04:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,6 +59,11 @@
   (declare (ignore depth))
   (print-unreadable-object (host stream :type t)))
 
+(defun %print-logical-host (host stream depth)
+  (declare (ignore depth))
+  (print-unreadable-object (host stream :type t)
+    (write (logical-host-name host) :stream stream)))
+
 (defstruct (logical-host
 	    (:include host
 		      (:parse #'parse-logical-namestring)
@@ -69,6 +74,7 @@
 		      (:unparse-file #'unparse-unix-file)
 		      (:unparse-enough #'unparse-enough-namestring)
 		      (:customary-case :upper))
+	    (:print-function %print-logical-host)
 	    (:make-load-form-fun make-logical-host-load-form-fun))
   (name "" :type simple-base-string)
   (translations nil :type list)
@@ -1094,7 +1100,12 @@ a host-structure or string."
     (let ((host (%pathname-host pathname)))
       (if host
 	  (with-pathname (defaults defaults)
-	    (funcall (host-unparse-enough host) pathname defaults))
+	    ;; Give up if the hosts are different.  I (rtoy) don't
+	    ;; think it makes sense to do anything if the hosts are
+	    ;; different.
+	    (if (equal host (%pathname-host defaults))
+		(funcall (host-unparse-enough host) pathname defaults)
+		pathname))
 	  (error
 	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
@@ -1930,32 +1941,37 @@ a host-structure or string."
 ;;;
 (defun unparse-enough-namestring (pathname defaults)
   (let* ((path-dir (pathname-directory pathname))
-        (def-dir (pathname-directory defaults))
-        (enough-dir
-         ;; Go down the directory lists to see what matches.  What's
-         ;; left is what we want, more or less.
-         (cond ((and (eq (first path-dir) (first def-dir))
-                     (eq (first path-dir) :absolute))
-                ;; Both paths are :absolute, so find where the common
-                ;; parts end and return what's left
-                (do* ((p (rest path-dir) (rest p))
-                      (d (rest def-dir) (rest d)))
-                     ((or (endp p) (endp d)
-                          (not (equal (first p) (first d))))
-                      `(:relative ,@p))))
-               (t
-                ;; At least one path is :relative, so just return the
-                ;; original path.  If the original path is :relative,
-                ;; then that's the right one.  If PATH-DIR is
-                ;; :absolute, we want to return that except when
-                ;; DEF-DIR is :absolute, as handled above. so return
-                ;; the original directory.
-                path-dir))))
-    (make-pathname :host (%pathname-host pathname)
-                  :directory enough-dir
-                  :name (pathname-name pathname)
-                  :type (pathname-type pathname)
-                  :version (pathname-version pathname))))
+	 (def-dir (pathname-directory defaults))
+	 (enough-dir
+	  ;; Go down the directory lists to see what matches.  What's
+	  ;; left is what we want, more or less.  But there has to be
+	  ;; something in common.
+	  (cond ((and (eq (first path-dir) (first def-dir))
+		      (eq (first path-dir) :absolute)
+		      (second path-dir)
+		      (second def-dir)
+		      (equal (second path-dir) (second def-dir)))
+		 ;; Both paths are :absolute, so find where the common
+		 ;; parts end and return what's left
+		 (do* ((p (rest path-dir) (rest p))
+		       (d (rest def-dir) (rest d)))
+		      ((or (endp p) (endp d)
+			   (not (equal (first p) (first d))))
+		       `(:relative ,@p))))
+		(t
+		 ;; Both paths are absolute, but there's nothing in
+		 ;; common, so return the original.  Or one path is
+		 ;; :relative, so just return the original path.  If
+		 ;; the original path is :relative, then that's the
+		 ;; right one.  If PATH-DIR is :absolute, we want to
+		 ;; return that except when DEF-DIR is :absolute, as
+		 ;; handled above. so return the original directory.
+		 path-dir))))
+    (namestring (make-pathname :host (%pathname-host pathname)
+			       :directory enough-dir
+			       :name (pathname-name pathname)
+			       :type (pathname-type pathname)
+			       :version (pathname-version pathname)))))
 
 ;;; UNPARSE-LOGICAL-NAMESTRING -- Internal
 ;;;
