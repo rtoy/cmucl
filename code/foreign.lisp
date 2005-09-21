@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.52 2005/07/07 14:45:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.53 2005/09/21 11:32:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -241,21 +241,94 @@
 (defconstant mh-bundle        #x8)
 (defconstant mh-dylib-stub    #x9)
 
+;;; Support for loading multi-arch ("fat") shared libraries.
+(alien:def-alien-type fat-header
+  (alien:struct nil
+    (magic       (alien:unsigned 32))
+    (nfat-arch   (alien:unsigned 32))))
+
+(alien:def-alien-type fat-arch
+  (alien:struct nil
+    (cputype     (alien:signed 32))
+    (cpusubtype  (alien:signed 32))
+    (offset      (alien:unsigned 32))
+    (size        (alien:unsigned 32))
+    (align       (alien:unsigned 32))))
+
+(defconstant fat-header-magic #xcafebabe)
+
 (defun mach-o-p (h)
   "Make sure the header starts with the mach-o magic value."
   (eql (alien:slot h 'magic) mh-magic))
+
+;;; Read an unsigned 32-bit big-endian number from STREAM.
+(defun read-u32-be (stream)
+  (let ((n 0))
+    (setf (ldb (byte 8 24) n) (read-byte stream))
+    (setf (ldb (byte 8 16) n) (read-byte stream))
+    (setf (ldb (byte 8 8)  n) (read-byte stream))
+    (setf (ldb (byte 8 0)  n) (read-byte stream))
+    n))
+
+;;; Read the 32-bit magic number from STREAM then rewind it.
+(defun read-object-file-magic (stream)
+  (let ((pos (file-position stream)))
+    (prog1
+        (read-u32-be stream)
+      (file-position stream pos))))
+
+;;; XXX For a Darwin/x86 port, these functions will need to swap the
+;;; byte order of the structure members. Apple's documentation states
+;;; that all the fields of FAT-HEADER and FAT-ARCH are big-endian.
+(defun read-mach-header (stream sap)
+  (unix:unix-read (lisp::fd-stream-fd stream) sap
+                  (alien:alien-size machheader :bytes)))
+
+(defun read-fat-header (stream sap)
+  (unix:unix-read (lisp::fd-stream-fd stream) sap
+                  (alien:alien-size fat-header :bytes)))
+
+(defun read-fat-arch (stream sap)
+  (unix:unix-read (lisp::fd-stream-fd stream) sap
+                  (alien:alien-size fat-arch :bytes)))
+
+;;; Return a list of offsets in STREAM which contain Mach-O headers.
+;;; For single-architecture binaries, this will return (0), emulating
+;;; the previous behavior of loading the header from the start of the
+;;; file.  For fat binaries, there will be one offset in the result
+;;; list for each architecture present in the file.
+(defun read-mach-header-offsets (stream)
+  (let ((magic (read-object-file-magic stream)))
+    (cond ((eql magic mh-magic)
+           (list 0))
+          ((eql magic fat-header-magic)
+           (alien:with-alien ((fat-header fat-header)
+                              (fat-arch fat-arch))
+             (read-fat-header stream (alien:alien-sap fat-header))
+             (loop
+                for i from 0 below (alien:slot fat-header 'nfat-arch)
+                do (read-fat-arch stream (alien:alien-sap fat-arch))
+                collect (alien:slot fat-arch 'offset))))
+          (t nil))))
+
+;;; Return true if the Mach-O HEADER represents a shared library.
+(defun shared-mach-header-p (header)
+  (and (eql (alien:slot header 'magic) mh-magic)
+       (or (eql (alien:slot header 'filetype) mh-dylib)
+           (eql (alien:slot header 'filetype) mh-bundle))))
 
 (defun file-shared-library-p (pathname)
   (with-open-file (obj pathname
                        :direction :input
                        :element-type '(unsigned-byte 8))
-    (let ((fd (lisp::fd-stream-fd obj)))
-      (alien:with-alien ((header machheader))
-        (unix:unix-read fd (alien:alien-sap header)
-	                (alien:alien-size machheader :bytes))
-        (when (mach-o-p header)
-	  (or (eql mh-dylib (alien:slot header 'filetype))
-	      (eql mh-bundle (alien:slot header 'filetype))))))))
+    (let ((offsets (read-mach-header-offsets obj)))
+      (when offsets
+        (alien:with-alien ((header machheader))
+          (loop
+             for offset in offsets
+             do (file-position obj offset)
+                (read-mach-header obj (alien:alien-sap header))
+             thereis (shared-mach-header-p header)))))))
 ) ; #+darwin
 
 
