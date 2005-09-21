@@ -56,6 +56,12 @@ New in this release:
         have the cell-error name filled in correctly.
       - ENOUGH-NAMESTRING was not returning the shortest namestring
         when the defaults was #p"/".
+      - TRANSLATE-PATHNAME signals an error if (PATHNAME-MATCH-P
+        source from-wildcard) is not true.
+      - ENOUGH-NAMESTRING was returning a pathname object instead of a
+        string for logical pathnames.
+      - ENOUGH-NAMESTRING no longer returns relative pathnames if the
+        pathname and the defaults have nothing in common.
         
   * Numerous bugfixes:
 
@@ -81,6 +87,13 @@ New in this release:
       - A warning is printed if an element of the directory component
         of a pathname consists of a string containing the "/"
         character.
+      - Namestrings for pathnames with a NIL host will now be
+        generated using the host from *DEFAULT-PATHNAME-DEFAULTS*, or
+        *UNIX-HOST* instead of producing an error.
+      - ENOUGH-NAMESTRING returns the pathname if the host for the
+        pathname differs from the host for the defaults.
+      - CMUCL recognizes multi-arch (fat) shared libs on Darwin/ppc.
+        It's now possible to load libSystem.dylib.
 
   * Other changes:
 
