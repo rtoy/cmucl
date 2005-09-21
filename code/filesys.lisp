@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.89 2005/09/12 14:38:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.90 2005/09/21 20:01:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,14 +301,25 @@
 		     (setf absolute t)
 		     (setf (car first) new-start))
 		   search-list)))))
-      (multiple-value-bind
-	  (name type version)
+      (multiple-value-bind (name type version)
 	  (let* ((tail (car (last pieces)))
 		 (tail-start (car tail))
 		 (tail-end (cdr tail)))
 	    (unless (= tail-start tail-end)
 	      (setf pieces (butlast pieces))
-	      (extract-name-type-and-version namestr tail-start tail-end)))
+	      (cond ((string= namestr ".." :start1 tail-start :end1 tail-end)
+		     ;; ".." is a directory.  Add this piece to the
+		     ;; list of pieces, and make the name/type/version
+		     ;; nil.
+		     (setf pieces (append pieces (list (cons tail-start tail-end))))
+		     (values nil nil nil))
+		    ((not (find-if-not #'(lambda (c)
+					   (char= c #\.))
+				       namestr :start tail-start :end tail-end))
+		     ;; Got a bunch of dots.  Make it a file of the same name, and type nil.
+		     (values (subseq namestr tail-start tail-end) nil nil))
+		    (t
+		     (extract-name-type-and-version namestr tail-start tail-end)))))
 	;; PVE: Make sure there are no illegal characters in the name
 	;; such as #\Null and #\/.
 	(when (and (stringp name)
