@@ -94,6 +94,14 @@ New in this release:
         pathname differs from the host for the defaults.
       - CMUCL recognizes multi-arch (fat) shared libs on Darwin/ppc.
         It's now possible to load libSystem.dylib.
+      - #p".." is read as a directory instead of as a file with name
+        #"." and type "".
+      - #p"..." and similar forms with more dots is read as a file
+        with name equal to the string and type nil.  Previously, the
+        name had one fewer dot with type "".
+      - MAKE-PATHNAME with :name equal to ".." or "." will generate a
+        warning because CMUCL cannot print that in a form that will be
+        read back the same.
 
   * Other changes:
 
