@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.90 2005/09/21 20:01:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.91 2005/09/22 20:27:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -501,62 +501,65 @@
   (flet ((lose ()
 	   (error "~S cannot be represented relative to ~S"
 		  pathname defaults)))
-    (collect ((strings))
-      (let* ((pathname-directory (%pathname-directory pathname))
-	     (defaults-directory (%pathname-directory defaults))
-	     (prefix-len (length defaults-directory))
-	     (result-dir
-	      (cond ((null pathname-directory)
-		     ;; No directory, so relative to default.
-		     (list :relative))
-		    ((eq (first pathname-directory) :relative)
-		     ;; Relative directory so relative to default.
-		     pathname-directory)
-		    ((and (>= prefix-len 1)
+    ;; Only the first path in a search-list is considered.
+    (enumerate-search-list (pathname pathname)
+      (enumerate-search-list (defaults defaults)
+	(collect ((strings))
+	  (let* ((pathname-directory (%pathname-directory pathname))
+		 (defaults-directory (%pathname-directory defaults))
+		 (prefix-len (length defaults-directory))
+		 (result-dir
+		  (cond ((null pathname-directory)
+			 ;; No directory, so relative to default.
+			 (list :relative))
+			((eq (first pathname-directory) :relative)
+			 ;; Relative directory so relative to default.
+			 pathname-directory)
+			((and (>= prefix-len 1)
 			      (>= (length pathname-directory) prefix-len)
 			      (compare-component (subseq pathname-directory
 							 0 prefix-len)
 						 defaults-directory))
-		     ;; Pathname starts with a prefix of default.  So just
-		     ;; use a relative directory from then on out.
-		     (cons :relative (nthcdr prefix-len pathname-directory)))
-		    ((eq (car pathname-directory) :absolute)
-		     ;; We are an absolute pathname, so we can just use it.
-		     pathname-directory)
-		    (t
-		     ;; We are a relative directory.  So we lose.
-		     (lose)))))
-	(strings (unparse-unix-directory-list result-dir)))
-      (let* ((pathname-version (%pathname-version pathname))
-	     (version-needed (and pathname-version
-				  (not (eq pathname-version :newest))))
-	     (pathname-type (%pathname-type pathname))
-	     (type-needed (or version-needed
-			      (and pathname-type
-				   (not (eq pathname-type :unspecific)))))
-	     (pathname-name (%pathname-name pathname))
-	     (name-needed (or type-needed
-			      (and pathname-name
-				   (not (compare-component pathname-name
-							   (%pathname-name
-							    defaults)))))))
-	(when name-needed
-	  (unless pathname-name (lose))
-	  (strings (unparse-unix-piece pathname-name)))
-	(when type-needed
-	  (when (or (null pathname-type) (eq pathname-type :unspecific))
-	    (lose))
-	  (strings ".")
-	  (strings (unparse-unix-piece pathname-type)))
-	(when version-needed
-	  (typecase pathname-version
-	    ((member :wild)
-	     (strings ".~*~"))
-	    (integer
-	     (strings (format nil ".~~~D~~" pathname-version)))
-	    (t
-	     (lose)))))
-      (apply #'concatenate 'simple-string (strings)))))
+			 ;; Pathname starts with a prefix of default.  So just
+			 ;; use a relative directory from then on out.
+			 (cons :relative (nthcdr prefix-len pathname-directory)))
+			((eq (car pathname-directory) :absolute)
+			 ;; We are an absolute pathname, so we can just use it.
+			 pathname-directory)
+			(t
+			 ;; We are a relative directory.  So we lose.
+			 (lose)))))
+	    (strings (unparse-unix-directory-list result-dir)))
+	  (let* ((pathname-version (%pathname-version pathname))
+		 (version-needed (and pathname-version
+				      (not (eq pathname-version :newest))))
+		 (pathname-type (%pathname-type pathname))
+		 (type-needed (or version-needed
+				  (and pathname-type
+				       (not (eq pathname-type :unspecific)))))
+		 (pathname-name (%pathname-name pathname))
+		 (name-needed (or type-needed
+				  (and pathname-name
+				       (not (compare-component pathname-name
+							       (%pathname-name
+								defaults)))))))
+	    (when name-needed
+	      (unless pathname-name (lose))
+	      (strings (unparse-unix-piece pathname-name)))
+	    (when type-needed
+	      (when (or (null pathname-type) (eq pathname-type :unspecific))
+		(lose))
+	      (strings ".")
+	      (strings (unparse-unix-piece pathname-type)))
+	    (when version-needed
+	      (typecase pathname-version
+		((member :wild)
+		 (strings ".~*~"))
+		(integer
+		 (strings (format nil ".~~~D~~" pathname-version)))
+		(t
+		 (lose)))))
+	  (return-from unparse-unix-enough (apply #'concatenate 'simple-string (strings))))))))
 
 
 (defstruct (unix-host
