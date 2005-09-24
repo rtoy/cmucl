@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.78 2005/09/21 20:01:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.79 2005/09/24 01:26:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1108,7 +1108,7 @@ a host-structure or string."
 	    ;; different.
 	    (if (equal host (%pathname-host defaults))
 		(funcall (host-unparse-enough host) pathname defaults)
-		pathname))
+		(namestring pathname)))
 	  (error
 	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
