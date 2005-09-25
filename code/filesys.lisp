@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.91 2005/09/22 20:27:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.92 2005/09/25 21:47:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -180,18 +180,21 @@
 	 ;; Look for something like "~*~" at the end of the
 	 ;; namestring, where * can be #\* or some digits.  This
 	 ;; denotes a version.
+	 ;;(format t "explicit-version ~S ~A ~A~%" namestr start end)
 	 (cond ((or (< (- end start) 4)
 		    (and (char/= (schar namestr (1- end)) #\~)
 			 (char/= (schar namestr (1- end)) #\*)))
 		;; No explicit version given, so return NIL to
 		;; indicate we don't want file versions, unless
 		;; requested in other ways.
+		;;(format t "case 1: ~A ~A~%" nil end)
 		(values nil end))
 	       ((and (not *ignore-wildcards*)
 		     (char= (schar namestr (- end 2)) #\*)
 		     (char= (schar namestr (- end 3)) #\~)
 		     (char= (schar namestr (- end 4)) #\.))
 		;; Found "~*~", so it's a wild version
+		;;(format t "case 2: ~A ~A~%" :wild (- end 4))
 		(values :wild (- end 4)))
 	       (t
 		;; Look for a version number.  Start at the end, just
@@ -200,7 +203,9 @@
 		;; get it.  If not, we didn't find a version number,
 		;; so we call it :newest
 		(do ((i (- end 2) (1- i)))
-		    ((< i (+ start 1)) (values :newest end))
+		    ((< i (+ start 1))
+		     ;;(format t "case 3: ~A ~A~%" :newest end)
+		     (values :newest end))
 		  (let ((char (schar namestr i)))
 		    (when (eql char #\~)
 		      (return (if (char= (schar namestr (1- i)) #\.)
@@ -209,7 +214,10 @@
 					  (1- i))
 				  (values :newest end))))
 		    (unless (char<= #\0 char #\9)
-		      (return (values :newest end))))))))
+		      ;; It's not a digit.  Give up, and say the
+		      ;; version is NIL.
+		      ;;(format t "case 3 return: ~A ~A~%" nil end)
+		      (return (values nil end))))))))
        (any-version (namestr start end)
 	 ;; process end of string looking for a version candidate.
 	 (multiple-value-bind (version where)
@@ -510,8 +518,12 @@
 		 (prefix-len (length defaults-directory))
 		 (result-dir
 		  (cond ((null pathname-directory)
-			 ;; No directory, so relative to default.
-			 (list :relative))
+			 ;; No directory, so relative to default.  But
+			 ;; if we're relative to default, NIL is as
+			 ;; good as '(:relative) and it results in a
+			 ;; shorter namestring.
+			 #+nil (list :relative)
+			 nil)
 			((eq (first pathname-directory) :relative)
 			 ;; Relative directory so relative to default.
 			 pathname-directory)
