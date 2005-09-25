@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.79 2005/09/24 01:26:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.80 2005/09/25 21:42:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -951,7 +951,7 @@ a host-structure or string."
    a physical host structure or host namestring."
   (declare (type path-designator thing)
 	   (type (or list string host (member :unspecific)) host)
-	   (type pathname defaults)
+	   (type path-designator defaults)
 	   (type index start)
 	   (type (or index null) end))
   ;; Generally, redundant specification of information in software,
@@ -1006,27 +1006,28 @@ a host-structure or string."
 		(host
 		 host))))
     (declare (type (or null host) host))
-    (etypecase thing
-      (simple-string
-       (%parse-namestring thing host defaults start end junk-allowed))
-      (string
-       (%parse-namestring (coerce thing 'simple-string)
-			  host defaults start end junk-allowed))
-      (pathname
-       (let ((host (if host host (%pathname-host defaults))))
-	 (unless (eq host (%pathname-host thing))
-	   (error "Hosts do not match: ~S and ~S."
-		  host (%pathname-host thing))))
-       (values thing start))
-      (stream
-       (let ((name (file-name thing)))
-	 (unless name
-	   (error 'simple-type-error
-		  :datum thing
-		  :expected-type 'pathname
-		  :format-control "Can't figure out the file associated with stream:~%  ~S"
-		  :format-arguments (list thing)))
-	 (values name nil))))))
+    (with-pathname (defaults defaults)
+      (etypecase thing
+	(simple-string
+	 (%parse-namestring thing host defaults start end junk-allowed))
+	(string
+	 (%parse-namestring (coerce thing 'simple-string)
+			    host defaults start end junk-allowed))
+	(pathname
+	 (let ((host (if host host (%pathname-host defaults))))
+	   (unless (eq host (%pathname-host thing))
+	     (error "Hosts do not match: ~S and ~S."
+		    host (%pathname-host thing))))
+	 (values thing start))
+	(stream
+	 (let ((name (file-name thing)))
+	   (unless name
+	     (error 'simple-type-error
+		    :datum thing
+		    :expected-type 'pathname
+		    :format-control "Can't figure out the file associated with stream:~%  ~S"
+		    :format-arguments (list thing)))
+	   (values name nil)))))))
 
 
 ;;; NAMESTRING -- Interface
