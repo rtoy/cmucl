@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.33 2004/09/08 02:10:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.34 2005/09/26 19:59:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -916,6 +916,15 @@
     (cons (sxhash-list s-expr depth))
     (fixnum (ldb sxhash-bits-byte s-expr))
     (character (char-code (char-upcase s-expr)))
+    (pathname
+     ;; Pathnames are EQUAL if all the components are EQUAL, so we
+     ;; hash all of the components of a pathname together.
+     (let ((hash (internal-sxhash (%pathname-host s-expr) depth)))
+       (sxmash hash (internal-sxhash (%pathname-device s-expr) depth))
+       (sxmash hash (internal-sxhash (%pathname-directory s-expr) depth))
+       (sxmash hash (internal-sxhash (%pathname-name s-expr) depth))
+       (sxmash hash (internal-sxhash (%pathname-type s-expr) depth))
+       (sxmash hash (internal-sxhash (%pathname-version s-expr) depth))))
     (instance
      (if (or (typep s-expr 'structure-object)
 	     (typep s-expr 'condition))
