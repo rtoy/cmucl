@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.80 2005/09/25 21:42:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.81 2005/09/27 21:17:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -239,8 +239,12 @@
 ;;; PATH-DESIGNATOR -- internal type
 ;;;
 (deftype path-designator ()
-  "A path specification, either a string, stream or pathname."
-  '(or string stream pathname))
+  "A path specification, either a string, file-stream or pathname."
+  ;; This used to be stream, not file-stream, but ANSI CL says a
+  ;; pathname designator is a string, a pathname or a stream
+  ;; associated with a file.  In the places we use path-designator, we
+  ;; are really talking about ANSI pathname designators.
+  '(or string file-stream pathname))
 
 
 ;;;; Patterns
@@ -1099,7 +1103,7 @@ a host-structure or string."
 			  &optional (defaults *default-pathname-defaults*))
   "Returns an abbreviated pathname sufficent to identify the pathname relative
    to the defaults."
-  (declare (type path-designator pathname))
+  (declare (type path-designator pathname defaults))
   (with-pathname (pathname pathname)
     (let ((host (%pathname-host pathname)))
       (if host
@@ -1147,7 +1151,10 @@ a host-structure or string."
 ;;;
 (defun pathname-match-p (in-pathname in-wildname)
   "Pathname matches the wildname template?"
-  (declare (type path-designator in-pathname))
+  (declare (type path-designator in-pathname)
+	   ;; Not path-designator because a file-stream can't have a
+	   ;; wild pathname.
+	   (type (or string pathname) in-wildname))
   (with-pathname (pathname in-pathname)
     (with-pathname (wildname in-wildname)
       (macrolet ((frob (field &optional (op 'components-match ))
