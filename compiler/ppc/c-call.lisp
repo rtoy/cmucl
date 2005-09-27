@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.7 2005/08/12 18:30:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.8 2005/09/27 02:04:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -368,10 +368,13 @@
   ;; simple.  Also we're a big-endian machine, so we need to get byte
   ;; offsets correct.
   (let ((byte-offset
-	 (- vm:word-bytes
-	    (ceiling (alien::alien-integer-type-bits
-		      (alien::parse-alien-type type))
-		     vm:byte-bits))))
+	 (cond ((alien::alien-integer-type-p type)
+		(- vm:word-bytes
+		   (ceiling (alien::alien-integer-type-bits
+			     (alien::parse-alien-type type))
+			    vm:byte-bits)))
+	       (t
+		0))))
     `(deref (sap-alien (sap+ ,sp ,(+ byte-offset offset))
 		       (* ,type)))))
 
@@ -455,7 +458,8 @@ a pointer to the arguments."
 	;;
 	;; INDEX is fixnumized, ARGS and RETURN-AREA don't need to be because
 	;; they're word-aligned.  Kinda gross, but hey ...
-	(let* ((return-area-size (ceiling (alien-type-bits return-type)
+	(let* ((return-area-size (ceiling (or (alien-type-bits return-type)
+					      0)
 					  vm:word-bits))
 	       (args-size (* 3 vm:word-bytes))
 	       (frame-size (+ linkage-area-size
