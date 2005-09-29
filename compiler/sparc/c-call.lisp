@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.25 2005/08/12 19:45:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.26 2005/09/29 14:43:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -336,7 +336,7 @@
 						    (+ ,offset vm:word-bytes))
 					  (* c-call:unsigned-int)))))
 	  (+ (ash hi vm:word-bits) lo)))
-      (t
+      (alien::integer$
        ;; All other objects can be accessed directly.  But we need to
        ;; get the offset right, since the offset we're given is the
        ;; start of the object, and we're a big-endian machine.
@@ -345,7 +345,10 @@
 		 (ceiling (alien::alien-integer-type-bits parsed-type)
 			  vm:byte-bits))))
 	 `(deref (sap-alien (sys:sap+ ,sp ,(+ byte-offset offset))
-			    (* ,type))))))))
+			    (* ,type)))))
+      (t
+       `(deref (sap-alien (sys:sap+ ,sp ,offset)
+			  (* ,type)))))))
 
 (defun compatible-function-types-p (type1 type2)
   (flet ((machine-rep (type)
