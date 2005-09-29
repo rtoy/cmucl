@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.13 2005/09/06 00:39:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.14 2005/09/29 02:45:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -572,6 +572,11 @@ about function addresses and register values.")
       (rt :field ,(ppc-byte 6 10) :type 'reg)
       (sh :field ,(ppc-byte 16 20) :sign-extend nil)
       (si :field ,(ppc-byte 16 31) :sign-extend t)
+      ;; FIXME?  The spr field is really a split field of length 10.
+      ;; An spr value is encoded as 2 5-bit fields, swapped.  Should
+      ;; we make this explicit and define spr-hi and spr-lo to make it
+      ;; easier?  Or maybe make the register field smarter so we swap
+      ;; the 5 bits automatically?  Or something else entirely?
       (spr :field ,(ppc-byte 11 20) :type 'spr)
       (to :field ,(ppc-byte 6 10) :type 'to-field)
       (u :field ,(ppc-byte 16 19) :sign-extend nil)
@@ -1693,6 +1698,9 @@ about function addresses and register values.")
 (define-x-instruction lhzux 31 311 :other-dependencies ((writes ra)))
 (define-2-x-5-instructions xor 31 316)
 
+;; FIXME: Note that the spr field is split, so we need to convert the
+;; spr value into two 5-bit pieces and swap them to get the right
+;; instruction encoding, and the write printer.
 (define-instruction mfmq (segment rt)
   (:printer xfx ((op 31) (xo 339) (spr 0)) '(:name :tab rt))
   (:delay 1)
@@ -1700,19 +1708,19 @@ about function addresses and register values.")
   (:emitter (emit-xfx-form-inst segment 31 (reg-tn-encoding rt) (ash 0 5) 339 0)))
 
 (define-instruction mfxer (segment rt)
-  (:printer xfx ((op 31) (xo 339) (spr 1)) '(:name :tab rt))
+  (:printer xfx ((op 31) (xo 339) (spr (ash 1 5))) '(:name :tab rt))
   (:delay 1)
   (:dependencies (reads :xer) (writes rt))
   (:emitter (emit-xfx-form-inst segment 31 (reg-tn-encoding rt) (ash 1 5) 339 0)))
 
 (define-instruction mflr (segment rt)
-  (:printer xfx ((op 31) (xo 339) (spr 8)) '(:name :tab rt))
+  (:printer xfx ((op 31) (xo 339) (spr (ash 8 5))) '(:name :tab rt))
   (:delay 1)
   (:dependencies (reads :lr) (writes rt))
   (:emitter (emit-xfx-form-inst segment 31 (reg-tn-encoding rt) (ash 8 5) 339 0)))
 
 (define-instruction mfctr (segment rt)
-  (:printer xfx ((op 31) (xo 339) (spr 9)) '(:name :tab rt))
+  (:printer xfx ((op 31) (xo 339) (spr (ash 9 5))) '(:name :tab rt))
   (:delay 1)
   (:dependencies (reads rt) (reads :ctr))
   (:emitter (emit-xfx-form-inst segment 31 (reg-tn-encoding rt) (ash 9 5) 339 0)))
