@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.14 2005/09/29 02:45:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.15 2005/09/29 03:10:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1473,6 +1473,7 @@ about function addresses and register values.")
   (:emitter
    (emit-x-form-inst segment 19 (valid-bo-encoding bo) (valid-bi-encoding bi) 0 528 1)))
 
+;; Really a bcctr inst
 (define-instruction bctr (segment)
   (:printer xl-bo-bi ((op 19) (xo 528) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (lk 0))  '(:name))
   (:attributes branch)
@@ -1480,6 +1481,15 @@ about function addresses and register values.")
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
    (emit-x-form-inst segment 19 #.(valid-bo-encoding :bo-u) 0 0  528 0)))
+
+;; Really a bclrl inst
+(define-instruction blrl (segment)
+  (:printer xl-bo-bi ((op 19) (xo 16) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (lk 1))  '(:name))
+  (:attributes branch)
+  (:delay 1)
+  (:dependencies (reads :ccr) (reads :ctr))
+  (:emitter
+   (emit-x-form-inst segment 19 #.(valid-bo-encoding :bo-u) 0 0  16 1)))
 
 (define-instruction bctrl (segment)
   (:printer xl-bo-bi ((op 19) (xo 528) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (lk 1))  '(:name))
@@ -2239,10 +2249,6 @@ about function addresses and register values.")
   `(inst bcla :bo-u 0 ,target))
 
 |#
-
-(define-instruction-macro blrl ()
-  `(inst bclrl :bo-u 0))
-
 
 
 ;;; Some more macros 
