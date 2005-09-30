@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.8 2005/09/27 02:04:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.9 2005/09/30 01:51:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -421,99 +421,129 @@ a pointer to the arguments."
 	  (linkage-area-size 24))
       (assemble (segment)
 
-	;; To save our arguments, we follow the algorithm sketched in the
-	;; "PowerPC Calling Conventions" section of that document.
-	(let ((words-processed 0)
-	      (gprs (mapcar #'make-gpr '(3 4 5 6 7 8 9 10)))
-	      (fprs (mapcar #'make-fpr '(1 2 3 4 5 6 7 8 9 10 11 12 13)))
-	      (stack-pointer (make-gpr 1)))
-	  (labels ((handle-arg (type words)
-		     (let ((integerp (not (alien-float-type-p type)))
-			   (offset (+ (* words-processed vm:word-bytes)
-				      linkage-area-size)))
-		       (cond
-			 (integerp
-			  (loop repeat words
-				for gpr = (pop gprs)
-				when gpr do
-				  (inst stw gpr stack-pointer offset)
-				do (incf words-processed)))
-			 ;; The handling of floats is a little ugly because we
-			 ;; hard-code the number of words for single- and
-			 ;; double-floats.
-			 ((alien-single-float-type-p type)
-			  (pop gprs)
-			  (let ((fpr (pop fprs)))
-			    (inst stfs fpr stack-pointer offset))
-			  (incf words-processed))
-			 ((alien-double-float-type-p type)
-			  (setf gprs (cddr gprs))
-			  (let ((fpr (pop fprs)))
-			    (inst stfd fpr stack-pointer offset))
-			  (incf words-processed 2))))))
-	    (mapc #'handle-arg argument-types argument-words)))
+	;; Save the non-volatile (callee-saved) registers.  The caller
+	;; expects r13-r31 to be unchanged!  The linkage table stuff
+	;; uses r13 and r24 (aka reg_NFP and reg_A0), so we have to
+	;; save these.  Are the others we need to save?  We don't save
+	;; other important lisp regs like bsp, cfp, csp, alloc, and
+	;; null, because they should been saved already.  But what
+	;; about the others?  We don't use an FP registers, so no need
+	;; to save any.
+	(let ((sp (make-gpr 1))
+	      (save-gprs (mapcar #'make-gpr '(13 24))))
+	  
+	  (inst addi sp sp (- (* (length save-gprs) vm:word-bytes)))
+	  (let ((save-offset 0))
+	    (dolist (r save-gprs)
+	      (inst stw r sp save-offset)
+	      (incf save-offset vm:word-bytes)))
+	  
+	  ;; To save our arguments, we follow the algorithm sketched in the
+	  ;; "PowerPC Calling Conventions" section of that document.
+	  (let ((words-processed 0)
+		(gprs (mapcar #'make-gpr '(3 4 5 6 7 8 9 10)))
+		(fprs (mapcar #'make-fpr '(1 2 3 4 5 6 7 8 9 10 11 12 13)))
+		(stack-pointer (make-gpr 1)))
+	    (labels ((handle-arg (type words)
+		       (let ((integerp (not (alien-float-type-p type)))
+			     (offset (+ (* words-processed vm:word-bytes)
+					linkage-area-size)))
+			 (cond
+			   (integerp
+			    (loop repeat words
+			      for gpr = (pop gprs)
+			      when gpr do
+			      (inst stw gpr stack-pointer offset)
+			      do (incf words-processed)))
+			   ;; The handling of floats is a little ugly because we
+			   ;; hard-code the number of words for single- and
+			   ;; double-floats.
+			   ((alien-single-float-type-p type)
+			    (pop gprs)
+			    (let ((fpr (pop fprs)))
+			      (inst stfs fpr stack-pointer offset))
+			    (incf words-processed))
+			   ((alien-double-float-type-p type)
+			    (setf gprs (cddr gprs))
+			    (let ((fpr (pop fprs)))
+			      (inst stfd fpr stack-pointer offset))
+			    (incf words-processed 2))))))
+	      (mapc #'handle-arg argument-types argument-words)))
 	
-	;; Set aside room for the return area just below sp, then acutally call
-	;; funcall3: funcall3 (call-callback, index, args, return-area)
-	;;
-	;; INDEX is fixnumized, ARGS and RETURN-AREA don't need to be because
-	;; they're word-aligned.  Kinda gross, but hey ...
-	(let* ((return-area-size (ceiling (or (alien-type-bits return-type)
-					      0)
-					  vm:word-bits))
-	       (args-size (* 3 vm:word-bytes))
-	       (frame-size (+ linkage-area-size
-			      (* return-area-size vm:word-bytes)
-			      args-size)))
-	  (destructuring-bind (sp r0 arg1 arg2 arg3 arg4)
-	      (mapcar #'make-gpr '(1 0 3 4 5 6))
-	    (labels ((load-address-into (reg addr)
+	  ;; Set aside room for the return area just below sp, then
+	  ;; actually call funcall3: funcall3 (call-callback, index,
+	  ;; args, return-area)
+	  ;;
+	  ;; INDEX is fixnumized, ARGS and RETURN-AREA don't need to
+	  ;; be because they're word-aligned.  Kinda gross, but hey
+	  ;; ...
+	  (let* ((return-area-size (ceiling (or (alien-type-bits return-type)
+						0)
+					    vm:word-bits))
+		 (args-size (* 3 vm:word-bytes))
+		 (frame-size (+ linkage-area-size
+				(* return-area-size vm:word-bytes)
+				args-size)))
+	    (destructuring-bind (r0 arg1 arg2 arg3 arg4)
+		(mapcar #'make-gpr '(0 3 4 5 6))
+	      (flet ((load-address-into (reg addr)
 		       (let ((high (ldb (byte 16 16) addr))
 			     (low (ldb (byte 16 0) addr)))
-			 (inst li reg high)
-			 (inst slwi reg reg 16)
-			 (inst ori reg reg low))))
-	      ;; Setup the args
-	      (load-address-into arg1 (alien::address-of-call-callback))
-	      (inst li arg2 (fixnumize index))
-	      (inst addi arg3 sp linkage-area-size)
-	      (inst addi arg4 sp (- (* return-area-size vm:word-bytes)))
-	      ;; FIXME!
-	      ;; Save sp, setup the frame
-	      (inst mflr r0)
-	      (inst stw r0 sp (* 2 vm:word-bytes))
-	      (inst stwu sp sp (- frame-size))
-	      ;; Make the call
-	      (load-address-into r0 (alien::address-of-funcall3))
-	      (inst mtlr r0)
-	      (inst blrl))
+			 #+nil (inst li reg high)
+			 #+nil (inst slwi reg reg 16)
+			 #+nil (inst lis reg high)
+			 #+nil (inst ori reg reg low)
+			 (inst lr reg addr))))
+		;; Setup the args
+		#+nil(load-address-into arg1 (alien::address-of-call-callback))
+		(inst lr arg1 (alien::address-of-call-callback))
+		(inst li arg2 (fixnumize index))
+		(inst addi arg3 sp linkage-area-size)
+		(inst addi arg4 sp (- (* return-area-size vm:word-bytes)))
+		;; FIXME!
+		;; Save sp, setup the frame
+		(inst mflr r0)
+		(inst stw r0 sp (* 2 vm:word-bytes))
+		(inst stwu sp sp (- frame-size))
+		;; Make the call
+		#+nil(load-address-into r0 (alien::address-of-funcall3))
+		(inst lr r0 (alien::address-of-funcall3))
+		(inst mtlr r0)
+		(inst blrl))
 	  
-	    ;; We're back!  Restore sp and lr, load the return value from just
-	    ;; under sp, and return.
-	    (inst lwz sp sp 0)
-	    (inst lwz r0 sp (* 2 vm:word-bytes))
-	    (inst mtlr r0)
-	    (etypecase return-type
-	      ((or alien::integer$ alien::pointer$ alien::sap$
-		   alien::integer-64$)
-	       (loop repeat ;;(ceiling return-area-size vm:word-bytes)
-		 return-area-size
-		 with gprs = (mapcar #'make-gpr '(3 4))
-		 for gpr = (pop gprs)
-		 for offset downfrom (- vm:word-bytes) by vm:word-bytes
-		 do (inst lwz gpr sp offset)))
-	      (alien::single$
-	       ;; Get the FP value into F1
-	       (let ((f1 (make-fpr 1)))
-		 (inst lfs f1 sp (- (* return-area-size vm:word-bytes))))
-	       )
-	      (alien::double$
-	       ;; Get the FP value into F1
-	       (let ((f1 (make-fpr 1)))
-		 (inst lfd f1 sp (- (* return-area-size vm:word-bytes)))))
-	      (alien::void$
-	       ))
-	    (inst blr))))
+	      ;; We're back!  Restore sp and lr, load the return value from just
+	      ;; under sp, and return.
+	      (inst lwz sp sp 0)
+	      (inst lwz r0 sp (* 2 vm:word-bytes))
+	      (inst mtlr r0)
+	      (etypecase return-type
+		((or alien::integer$ alien::pointer$ alien::sap$
+		     alien::integer-64$)
+		 (loop repeat ;;(ceiling return-area-size vm:word-bytes)
+		     return-area-size
+		   with gprs = (mapcar #'make-gpr '(3 4))
+		   for gpr = (pop gprs)
+		   for offset downfrom (- vm:word-bytes) by vm:word-bytes
+		   do (inst lwz gpr sp offset)))
+		(alien::single$
+		 ;; Get the FP value into F1
+		 (let ((f1 (make-fpr 1)))
+		   (inst lfs f1 sp (- (* return-area-size vm:word-bytes))))
+		 )
+		(alien::double$
+		 ;; Get the FP value into F1
+		 (let ((f1 (make-fpr 1)))
+		   (inst lfd f1 sp (- (* return-area-size vm:word-bytes)))))
+		(alien::void$
+		 ;; Nothing to do
+		 ))
+	      ;; Restore the GPRS we saved.
+	      (let ((save-offset 0))
+		(dolist (r save-gprs)
+		  (inst lwz r sp save-offset)
+		  (incf save-offset vm:word-bytes)))
+	      (inst addi sp sp (* (length save-gprs) vm:word-bytes))
+	      (inst blr)))))
 
       (let ((length (finalize-segment segment)))
 	(prog1 (alien::segment-to-trampoline segment length)
