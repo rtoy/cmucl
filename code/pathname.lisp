@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.81 2005/09/27 21:17:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.82 2005/09/30 14:53:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -423,6 +423,12 @@
 	      (compare-component (car this) (car that))
 	      (compare-component (cdr this) (cdr that)))))))
 
+;; Compare the version component.  We treat NIL to be EQUAL to
+;; :NEWEST.
+(defun compare-version-component (this that)
+  (or (eql this that)
+      (and (null this) (eq that :newest))
+      (and (null that) (eq this :newest))))
 
 ;;;; Pathname functions.
 
@@ -445,8 +451,8 @@
 			  (%pathname-name pathname2))
        (compare-component (%pathname-type pathname1)
 			  (%pathname-type pathname2))
-       (compare-component (%pathname-version pathname1)
-			  (%pathname-version pathname2))))
+       (compare-version-component (%pathname-version pathname1)
+				  (%pathname-version pathname2))))
 
 ;;; WITH-PATHNAME -- Internal
 ;;;   Converts the expr, a pathname designator (a pathname, or string, or 
