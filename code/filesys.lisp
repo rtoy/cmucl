@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.92 2005/09/25 21:47:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.93 2005/09/30 15:44:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -306,6 +306,13 @@
 		     (maybe-extract-search-list namestr
 						(car first) (cdr first))
 		   (when search-list
+		     ;; Lose if this search-list is already defined as
+		     ;; a logical host.  Since the syntax for
+		     ;; search-lists and logical pathnames are the
+		     ;; same, we can't allow the creation of one when
+		     ;; the other is defined.
+		     (when (find-logical-host search-list nil)
+		       (error "~A already names a logical host" search-list))
 		     (setf absolute t)
 		     (setf (car first) new-start))
 		   search-list)))))
@@ -476,9 +483,12 @@
 	   (type-supplied (not (or (null type) (eq type :unspecific))))
 	   (logical-p (logical-pathname-p pathname))
 	   (version (%pathname-version pathname))
+	   ;; Preserve version :newest for logical pathnames.
 	   (version-supplied (not (or (null version)
-				      (member version '(:newest
-							:unspecific))))))
+				      (member version (if logical-p
+							  '(:unspecific)
+							  '(:newest
+							    :unspecific)))))))
       (when name
 	(strings (unparse-unix-piece name)))
       (when type-supplied
@@ -494,7 +504,7 @@
       (when version-supplied
 	(strings (if (eq version :wild)
 		     (if logical-p ".*" ".~*~")
-		     (format nil (if logical-p ".~D" ".~~~D~~")
+		     (format nil (if logical-p ".~A" ".~~~D~~")
 			     version)))))
     (and (strings) (apply #'concatenate 'simple-string (strings)))))
 
