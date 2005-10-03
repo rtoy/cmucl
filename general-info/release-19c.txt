@@ -62,6 +62,8 @@ New in this release:
         string for logical pathnames.
       - ENOUGH-NAMESTRING no longer returns relative pathnames if the
         pathname and the defaults have nothing in common.
+      - PARSE-NAMESTRING will accept a string for the DEFAULTS
+        parameter, as specified by ANSI.
         
   * Numerous bugfixes:
 
@@ -73,8 +75,8 @@ New in this release:
         by ftruncate instead of +0.0.
       - Some errors during type derivation are fixed.  We cause the
         offending function to return NIL to indicate unbounded.
-      - Errors in callbacks when the integer arg is shorter than an
-        int have been fixed.
+      - Errors in callbacks for the ppc and sparc ports when the
+        integer arg is shorter than an int have been fixed.
       - ASIN and ACOS returns NaN when given NaN args instead of
         signaling an error.
       - FTRUNCATE will return a quiet NaN when given a signaling NaN.
@@ -102,6 +104,17 @@ New in this release:
       - MAKE-PATHNAME with :name equal to ".." or "." will generate a
         warning because CMUCL cannot print that in a form that will be
         read back the same.
+      - ENOUGH-NAMESTRING will work with search-lists, but only looks
+        at the first path in the search-list.  This is mostly to
+        handle the home: search-list, which only has one path by
+        default.
+      - SXHASH will hash the components of a pathname object together
+        instead of returning the same hash value for all pathname
+        objects.
+      - EQUAL for pathnames treats version NIL and version :NEWEST to
+        be equal.
+      - PPC callbacks were not preserving register values and
+        therefore produced erroneous values.
 
   * Other changes:
 
@@ -110,6 +123,9 @@ New in this release:
         arithmetic by setting c::*enable-modular-arithmetic* to NIL.
         This is a workaround pending a better solution.
       - Support logical pathnames when using LOAD-OBJECT-FILE.
+      - Namestrings that are being parsed will not produce a
+        search-list if a logical host with the same name already
+        exists.  An error is signaled in this case.
       
   * Improvements to the PCL implementation of CLOS:
 
