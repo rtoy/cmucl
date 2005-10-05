@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.93 2005/09/30 15:44:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.94 2005/10/05 12:54:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -534,17 +534,29 @@
 			 ;; shorter namestring.
 			 #+nil (list :relative)
 			 nil)
-			((eq (first pathname-directory) :relative)
-			 ;; Relative directory so relative to default.
-			 pathname-directory)
 			((and (>= prefix-len 1)
 			      (>= (length pathname-directory) prefix-len)
 			      (compare-component (subseq pathname-directory
 							 0 prefix-len)
 						 defaults-directory))
-			 ;; Pathname starts with a prefix of default.  So just
-			 ;; use a relative directory from then on out.
-			 (cons :relative (nthcdr prefix-len pathname-directory)))
+			 ;; Pathname starts with a prefix of default,
+			 ;; which also means both are either :relative
+			 ;; or :absolute directories.  So just use a
+			 ;; relative directory from then on out.
+			 (let ((dir-tail (nthcdr prefix-len pathname-directory)))
+			   ;; If both directories are identical, don't
+			   ;; return just :relative.  Returning NIL
+			   ;; results in a shorter string.
+			   (if dir-tail
+			       (cons :relative dir-tail)
+			       nil)))
+			((and (eq (car pathname-directory) :relative)
+			      (not (eq (car defaults-directory) :absolute)))
+			 ;; Can't represent a relative directory
+			 ;; relative to an absolute directory.  But
+			 ;; there's no problem if both are relative;
+			 ;; we just return our path.
+			 pathname-directory)
 			((eq (car pathname-directory) :absolute)
 			 ;; We are an absolute pathname, so we can just use it.
 			 pathname-directory)
