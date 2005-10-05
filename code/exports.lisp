@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.246 2005/09/09 19:36:34 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.247 2005/10/05 13:07:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1243,7 +1243,7 @@
              "GET-COMMAND-LINE-SWITCH" "GET-DATA-POINTER"
              "GET-FLOATING-POINT-MODES" "GET-PEER-HOST-AND-PORT"
 	     "GET-SOCKET-HOST-AND-PORT"
-	     "GET-STREAM-COMMAND" "GRINDEF"
+	     "GET-STREAM-COMMAND"
              "HOST-ENTRY" "HOST-ENTRY-ADDR" "HOST-ENTRY-ADDR-LIST"
              "HOST-ENTRY-ALIASES" "HOST-ENTRY-NAME" "HTONL" "HTONS"
              "INADDR-ANY" "INDENTING-FURTHER" "INFO"
