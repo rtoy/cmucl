@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.24 2005/09/15 18:26:53 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.25 2005/10/06 21:52:53 rtoy Exp $ 
  *
  */
 
@@ -56,7 +56,7 @@ arch_skip_instruction(os_context_t * context)
 	  vlen = *(char *) SC_PC(context)++;
 	  /* Skip lisp error arg data bytes */
 	  while (vlen-- > 0)
-	      ((char *) SC_PC(context))++;
+	      SC_PC(context)++;
 	  break;
 
       case trap_Breakpoint:
@@ -271,7 +271,7 @@ sigtrap_handler(HANDLER_ARGS)
 #if 0
 	  fprintf(stderr, "*C break\n");
 #endif
-	  (char *) SC_PC(context) -= 1;
+	  SC_PC(context) -= 1;
 
 	  handle_breakpoint(signal, code, context);
 #if 0
@@ -280,7 +280,7 @@ sigtrap_handler(HANDLER_ARGS)
 	  break;
 
       case trap_FunctionEndBreakpoint:
-	  (char *) SC_PC(context) -= 1;
+	  SC_PC(context) -= 1;
 	  SC_PC(context) =
 	      (int) handle_function_end_breakpoint(signal, code, context);
 	  break;
