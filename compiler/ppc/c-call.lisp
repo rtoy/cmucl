@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.10 2005/09/30 03:57:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.11 2005/10/11 01:29:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -364,19 +364,31 @@
 	  compatible-function-types-p))
 
 (defun callback-accessor-form (type sp offset)
-  ;; Unaligned access is slower, but possible, so this is nice and
-  ;; simple.  Also we're a big-endian machine, so we need to get byte
-  ;; offsets correct.
-  (let ((byte-offset
-	 (cond ((alien::alien-integer-type-p type)
-		(- vm:word-bytes
-		   (ceiling (alien::alien-integer-type-bits
-			     (alien::parse-alien-type type))
-			    vm:byte-bits)))
-	       (t
-		0))))
-    `(deref (sap-alien (sap+ ,sp ,(+ byte-offset offset))
-		       (* ,type)))))
+  (let ((parsed-type (alien::parse-alien-type type)))
+    (typecase parsed-type
+      (alien::integer-64$
+       ;; Get both words of a 64-bit integer and combine together, in
+       ;; a big-endian fashion.
+       `(let ((hi (alien:deref (sap-alien (sys:sap+ ,sp ,offset)
+					  (* c-call:int))))
+	      (lo (alien:deref (sap-alien (sys:sap+ ,sp
+						    (+ ,offset vm:word-bytes))
+					  (* c-call:unsigned-int)))))
+	  (+ (ash hi vm:word-bits) lo)))
+      (alien::integer$
+       ;; We can access machine integers directly, but we need to get
+       ;; the offset right, since the offset we're given is the start
+       ;; of the object, and we're a big-endian machine.
+       (let ((byte-offset
+	      (- vm:word-bytes
+		 (ceiling (alien::alien-integer-type-bits parsed-type)
+			  vm:byte-bits))))
+	 `(deref (sap-alien (sys:sap+ ,sp ,(+ byte-offset offset))
+			    (* ,type)))))
+      (t
+       ;; This should work for everything else.
+       `(deref (sap-alien (sys:sap+ ,sp ,offset)
+			  (* ,type)))))))
 
 (defun compatible-function-types-p (fun-type1 fun-type2)
   (labels ((type-words (type)
@@ -423,21 +435,27 @@ a pointer to the arguments."
       (assemble (segment)
 
 	;; Save the non-volatile (callee-saved) registers.  The caller
-	;; expects r13-r31 to be unchanged!  The linkage table stuff
-	;; uses r13 and r24 (aka reg_NFP and reg_A0), so we have to
-	;; save these.  Are the others we need to save?  We don't save
-	;; other important lisp regs like bsp, cfp, csp, alloc, and
-	;; null, because they should been saved already.  But what
-	;; about the others?  We don't use an FP registers, so no need
-	;; to save any.
+	;; expects r13-r31 to be unchanged!  Do we need to save the FP
+	;; registers too?
+	;;
+	;; FIXME: I think we should only save the registers we use
+	;; here, and not all of them.  call_into_lisp (via funcall3)
+	;; should save some too because it clobbers some registers
+	;; before returning.
 	(let ((sp (make-gpr 1))
-	      (save-gprs (mapcar #'make-gpr '(13 24))))
+	      (save-gprs (mapcar #'make-gpr '(13 14 15 16 17 18 19 20
+					      21 22 23 24 25 26 27 28
+					      29 30 31))))
 	  
 	  (let ((save-offset 0))
 	    (inst addi sp sp (- (* (length save-gprs) vm:word-bytes)))
 	    (dolist (r save-gprs)
 	      (inst stw r sp save-offset)
 	      (incf save-offset vm:word-bytes)))
+
+	  ;; Make a new stack frame for us to hold our data
+	  (inst addi sp sp (- (+ (* (+ 8 (* 2 13)) vm:word-bytes)
+				 linkage-area-size)))
 	  
 	  ;; To save our arguments, we follow the algorithm sketched in the
 	  ;; "PowerPC Calling Conventions" section of that document.
@@ -525,13 +543,19 @@ a pointer to the arguments."
 		(alien::void$
 		 ;; Nothing to do
 		 ))
-	      ;; Restore the GPRS we saved.
+	      
+	      ;; Remove the extra stack frame and restore the GPRS we
+	      ;; saved.
+	      (inst addi sp sp (+ (* (+ 8 (* 2 13))  vm:word-bytes)
+				  linkage-area-size))
+	      
 	      (let ((save-offset 0))
 		(dolist (r save-gprs)
 		  (inst lwz r sp save-offset)
 		  (incf save-offset vm:word-bytes))
 		(inst addi sp sp (* (length save-gprs) vm:word-bytes)))
-	      
+
+	      ;; And back we go!
 	      (inst blr)))))
 
       (let ((length (finalize-segment segment)))
