@@ -115,6 +115,8 @@ New in this release:
         be equal.
       - PPC callbacks were not preserving register values and
         therefore produced erroneous values.
+      - PROBE-FILE for a pathname that is actually a directory returns
+        a pathname indicating that it is a directory.
 
   * Other changes:
 
@@ -126,7 +128,11 @@ New in this release:
       - Namestrings that are being parsed will not produce a
         search-list if a logical host with the same name already
         exists.  An error is signaled in this case.
-      
+      - Tracing with :encapsulate nil does not work very well on ppc.
+        The default for tracing on ppc is to encapsulate.  (Tracing
+        functions with the known-return convention using :encapsulate
+        nil works, however.)
+ 
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to rebuilding procedure:
