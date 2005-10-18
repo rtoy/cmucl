@@ -117,6 +117,7 @@ New in this release:
         therefore produced erroneous values.
       - PROBE-FILE for a pathname that is actually a directory returns
         a pathname indicating that it is a directory.
+      - LISTEN on DUAL-CHANNEL-SIMPLE-STREAM should work now.
 
   * Other changes:
 
