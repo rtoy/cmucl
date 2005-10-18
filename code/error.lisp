@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.81 2005/10/14 16:06:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.82 2005/10/18 13:29:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,8 +114,7 @@
 	  (when (and (or (not condition)
 			 (member restart associated)
 			 (not (member restart other)))
-		     (or (not condition)
-			 (funcall (restart-test-function restart) condition)))
+		     (funcall (restart-test-function restart) condition))
 	    (res restart))))
       (res))))
 
