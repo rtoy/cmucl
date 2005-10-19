@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.83 2004/08/30 14:55:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.84 2005/10/19 13:44:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -754,6 +754,15 @@
 	    (dolist (merge (merges))
 	      (merge-tail-sets merge))))))))
 
+(defun check-important-result (node kind)
+  (let ((attr (function-info-attributes kind)))
+    (when (and attr
+	       (ir1-attributep attr important-result)
+	       (null (continuation-dest (node-cont node))))
+      (let ((*compiler-error-context* node))
+	(compiler-warning "The return value of ~A should not be discarded."
+			  (continuation-function-name (basic-combination-fun node)))))))
+
 
 ;;;; Combination IR1 optimization:
 
@@ -785,6 +794,19 @@
 	 (when arg
 	   (setf (continuation-reoptimize arg) nil)))
 
+       (check-important-result node kind)
+       
+       (let ((fun (function-info-destroyed-constant-args kind)))
+	 (when fun
+	   (let ((destroyed-constant-args (funcall fun args)))
+	     (when destroyed-constant-args
+	       (let ((*compiler-error-context* node))
+		 (warn 'kernel:constant-modified
+		       :function-name (continuation-function-name
+				       (basic-combination-fun node)))
+		 (setf (basic-combination-kind node) :error)
+		 (return-from ir1-optimize-combination))))))
+       
        (let ((attr (function-info-attributes kind)))
 	 (when (and (ir1-attributep attr foldable)
 		    (not (ir1-attributep attr call))

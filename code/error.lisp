@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.82 2005/10/18 13:29:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.83 2005/10/19 13:44:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,6 +22,7 @@
 (export '(layout-invalid condition-function-name simple-control-error
 	  simple-file-error simple-program-error simple-parse-error
           simple-style-warning simple-undefined-function
+	  constant-modified
           #+stack-checking stack-overflow
           #+heap-overflow-check heap-overflow))
 
@@ -1046,6 +1047,13 @@
 (define-condition simple-undefined-function (simple-condition
 					     undefined-function) ())
 
+(define-condition constant-modified (warning)
+  ((function-name :initarg :function-name :reader constant-modified-function-name))
+  (:report (lambda (c s)
+             (format s "~@<Destructive function ~S called on ~
+                         constant data.~@:>"
+                     (constant-modified-function-name c)))))
+  
 (define-condition arithmetic-error (error)
   ((operation :reader arithmetic-error-operation :initarg :operation
 	      :initform nil)
