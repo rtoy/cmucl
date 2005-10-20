@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.42 2005/08/25 21:21:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.43 2005/10/20 12:32:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -373,7 +373,7 @@
 		      x)))
 	  (+ n (log (scale-float (float f 1d0) (- exp))
 		    2d0))))))
-  
+
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
   (if base-p
@@ -386,7 +386,42 @@
 	     ;; and the base are positive integers.  Use the rule that
 	     ;; log_b(x) = log_2(x)/log_2(b)
 	     (coerce (/ (log2 number) (log2 base)) 'single-float))
+	    ((and (realp number) (realp base))
+	     ;; CLHS 12.1.4.1 says
+	     ;;
+	     ;;   When rationals and floats are combined by a
+	     ;;   numerical function, the rational is first converted
+	     ;;   to a float of the same format.
+	     ;;
+	     ;; So assume this applies to floats as well convert all
+	     ;; numbers to the largest float format before computing
+	     ;; the log.
+	     ;;
+	     ;; This makes (log 17 10.0) = (log 17.0 10) and so on.
+	     (number-dispatch ((number real) (base real))
+	       ((double-float
+		 (foreach double-float single-float fixnum bignum ratio))
+		(/ (log number) (log (coerce base 'double-float))))
+	       (((foreach single-float fixnum bignum ratio)
+		 double-float)
+		(/ (log (coerce number 'double-float)) (log base)))
+	       (((foreach single-float fixnum bignum ratio)
+		 (foreach single-float fixnum bignum ratio))
+		;; Converting everything to double-float helps the
+		;; cases like (log 17 10) = (/ (log 17) (log 10)).
+		;; This is usually handled above, but if we compute (/
+		;; (log 17) (log 10)), we get a slightly different
+		;; answer due to roundoff.  This makes it a bit more
+		;; consistent.
+		;;
+		;; FIXME: This probably needs more work.
+		(let ((result (/ (log (float number 1d0))
+				 (log (float base 1d0)))))
+		  (if (realp result)
+		      (coerce result 'single-float)
+		      (coerce result '(complex single-float)))))))
 	    (t
+	     ;; FIXME:  This probably needs some work as well.
 	     (/ (log number) (log base))))
       (number-dispatch ((number number))
 	(((foreach fixnum bignum))
