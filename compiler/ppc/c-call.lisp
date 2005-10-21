@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.11 2005/10/11 01:29:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.12 2005/10/21 02:41:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -422,7 +422,11 @@ a pointer to the arguments."
 	   (make-random-tn :kind :normal :sc (sc-or-lose 'any-reg) :offset n))
 	 (make-fpr (n)
 	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-			   :offset n)))
+			   :offset n))
+	 (round-up-16 (n)
+	   ;; Round up to a multiple of 16.  Darwin wants that for the
+	   ;; stack pointer.
+	   (* 16 (ceiling n 16))))
 
     ;; The "Mach-O Runtime Conventions" document for OS X almost specifies
     ;; the calling convention (it neglects to mention that the linkage area
@@ -442,20 +446,25 @@ a pointer to the arguments."
 	;; here, and not all of them.  call_into_lisp (via funcall3)
 	;; should save some too because it clobbers some registers
 	;; before returning.
+	;;
+	;; FIXME: What about FP registers?  We should probably save
+	;; those too.
 	(let ((sp (make-gpr 1))
 	      (save-gprs (mapcar #'make-gpr '(13 14 15 16 17 18 19 20
 					      21 22 23 24 25 26 27 28
 					      29 30 31))))
 	  
 	  (let ((save-offset 0))
-	    (inst addi sp sp (- (* (length save-gprs) vm:word-bytes)))
+	    (inst addi sp sp (- (round-up-16 (* (length save-gprs)
+						vm:word-bytes))))
 	    (dolist (r save-gprs)
 	      (inst stw r sp save-offset)
 	      (incf save-offset vm:word-bytes)))
 
 	  ;; Make a new stack frame for us to hold our data
-	  (inst addi sp sp (- (+ (* (+ 8 (* 2 13)) vm:word-bytes)
-				 linkage-area-size)))
+	  (inst addi sp sp (- (round-up-16 (+ (* (+ 8 (* 2 13))
+						 vm:word-bytes)
+					      linkage-area-size))))
 	  
 	  ;; To save our arguments, we follow the algorithm sketched in the
 	  ;; "PowerPC Calling Conventions" section of that document.
@@ -499,9 +508,9 @@ a pointer to the arguments."
 						0)
 					    vm:word-bits))
 		 (args-size (* 3 vm:word-bytes))
-		 (frame-size (+ linkage-area-size
-				(* return-area-size vm:word-bytes)
-				args-size)))
+		 (frame-size (round-up-16 (+ linkage-area-size
+					     (* return-area-size vm:word-bytes)
+					     args-size))))
 	    (destructuring-bind (r0 arg1 arg2 arg3 arg4)
 		(mapcar #'make-gpr '(0 3 4 5 6))
 	      ;; Setup the args
@@ -546,14 +555,16 @@ a pointer to the arguments."
 	      
 	      ;; Remove the extra stack frame and restore the GPRS we
 	      ;; saved.
-	      (inst addi sp sp (+ (* (+ 8 (* 2 13))  vm:word-bytes)
-				  linkage-area-size))
+	      (inst addi sp sp (round-up-16 (+ (* (+ 8 (* 2 13))
+						  vm:word-bytes)
+					       linkage-area-size)))
 	      
 	      (let ((save-offset 0))
 		(dolist (r save-gprs)
 		  (inst lwz r sp save-offset)
 		  (incf save-offset vm:word-bytes))
-		(inst addi sp sp (* (length save-gprs) vm:word-bytes)))
+		(inst addi sp sp (round-up-16 (* (length save-gprs)
+						 vm:word-bytes))))
 
 	      ;; And back we go!
 	      (inst blr)))))
