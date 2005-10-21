@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.105 2005/07/13 14:46:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.106 2005/10/21 13:13:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1592,9 +1592,11 @@
 		    `(make-string-input-stream ,string ,(or start 0) ,end)))))
        ,@decls
        (unwind-protect
-	   (progn ,@forms)
-	 (close ,var)
-	 ,@(if index `((setf ,index (string-input-stream-current ,var))))))))
+	    (multiple-value-prog1
+		(progn ,@forms)
+	      ,@(when index
+		   `((setf ,index (string-input-stream-current ,var)))))
+	 (close ,var)))))
 
 
 (defmacro with-output-to-string ((var &optional string &key element-type)
