@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.83 2005/10/19 13:44:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.84 2005/10/21 17:56:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -692,6 +692,8 @@
 		    (condition-writer-function x nv slot)))))))
 
 (defun %define-condition (name slots documentation report default-initargs)
+  (when (info declaration recognized name)
+    (error "Condition already names a declaration: ~S." name))
   (let ((class (kernel::find-class name)))
     (setf (slot-class-print-function class) #'%print-condition)
     (setf (condition-class-slots class) slots)

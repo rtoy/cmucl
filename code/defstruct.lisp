@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.95 2004/10/05 21:57:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.96 2005/10/21 17:56:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -465,6 +465,8 @@
         (unlock-all ()
           :report "Unlock all packages, then continue"
           (lisp::unlock-all-packages))))
+    (when (info declaration recognized name)
+      (error "Defstruct already names a declaration: ~S." name))
     (when (stringp (car slot-descriptions))
       (setf (dd-doc defstruct) (pop slot-descriptions)))
     (dolist (slot slot-descriptions)

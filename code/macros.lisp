@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.106 2005/10/21 13:13:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.107 2005/10/21 17:56:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -235,6 +235,8 @@
 		   ,@(when doc `(,doc)))))))
 ;;;
 (defun %deftype (name expander &optional doc)
+  (when (info declaration recognized name)
+    (error "Deftype already names a declaration: ~S." name))
   (ecase (info type kind name)
     (:primitive
      (when *type-system-initialized*
