@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.95 2005/10/21 18:10:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.96 2005/10/22 00:33:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -496,7 +496,8 @@
 	  (error "Cannot specify the type without a file: ~S" pathname))
 	(strings ".")
 	(strings (unparse-unix-piece type)))
-      (when (and version (not name))
+      (when (and (not (member version '(nil :newest :unspecific)))
+		 (not name))
 	;; We don't want version without a name, because when we try
 	;; to read #p".~*~" back, the name is "", not NIL.
 	(error "Cannot specify a version without a file: ~S" pathname))
