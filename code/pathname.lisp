@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.82 2005/09/30 14:53:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.83 2005/10/24 14:55:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,7 +61,7 @@
 
 (defun %print-logical-host (host stream depth)
   (declare (ignore depth))
-  (print-unreadable-object (host stream :type t)
+  (print-unreadable-object (host stream :type t :identity t)
     (write (logical-host-name host) :stream stream)))
 
 (defstruct (logical-host
@@ -1886,6 +1886,17 @@ a host-structure or string."
 ;;; Can't defvar here because not all host methods are loaded yet.
 (declaim (special *logical-pathname-defaults*))
 
+(defun logical-pathname-namestring-p (pathspec)
+  ;; Checks to see if pathspec is a logical pathname or not.
+  (let ((res (parse-namestring pathspec nil *logical-pathname-defaults*)))
+    ;; Even though *logical-pathname-defaults* has a host with name
+    ;; BOGUS, the user can still use BOGUS as a logical host because
+    ;; we compare with EQ here, so the users BOGUS host is never our
+    ;; BOGUS host.
+    (values (not (eq (%pathname-host res)
+		     (%pathname-host *logical-pathname-defaults*)))
+	    res)))
+
 ;;; LOGICAL-PATHNAME -- Public
 ;;;
 (defun logical-pathname (pathspec)
@@ -1894,9 +1905,9 @@ a host-structure or string."
 	   (values logical-pathname))
   (if (typep pathspec 'logical-pathname)
       pathspec
-      (let ((res (parse-namestring pathspec nil *logical-pathname-defaults*)))
-	(when (eq (%pathname-host res)
-		  (%pathname-host *logical-pathname-defaults*))
+      (multiple-value-bind (logical-p res)
+	  (logical-pathname-namestring-p pathspec)
+	(unless logical-p
 	  (error
 	   'simple-type-error
 	   :format-control "Logical namestring does not specify a host:~%  ~S"
