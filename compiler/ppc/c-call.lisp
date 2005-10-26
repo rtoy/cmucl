@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.12 2005/10/21 02:41:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.13 2005/10/26 00:51:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -438,30 +438,31 @@ a pointer to the arguments."
 	  (linkage-area-size 24))
       (assemble (segment)
 
-	;; Save the non-volatile (callee-saved) registers.  The caller
-	;; expects r13-r31 to be unchanged!  Do we need to save the FP
-	;; registers too?
-	;;
-	;; FIXME: I think we should only save the registers we use
-	;; here, and not all of them.  call_into_lisp (via funcall3)
-	;; should save some too because it clobbers some registers
-	;; before returning.
-	;;
-	;; FIXME: What about FP registers?  We should probably save
-	;; those too.
 	(let ((sp (make-gpr 1))
-	      (save-gprs (mapcar #'make-gpr '(13 14 15 16 17 18 19 20
-					      21 22 23 24 25 26 27 28
-					      29 30 31))))
+	      (save-gprs (mapcar #'make-gpr '(13 24))))
 	  
+	  ;; Save the non-volatile (callee-saved) registers.  The
+	  ;; registers used below are all caller-saved, so there's
+	  ;; nothing to do there.  However, when we call funcall3, the
+	  ;; linkage table entry is used, which unconditionally uses
+	  ;; r13 and r24.  (See lisp/ppc-arch.c.)  So these need to be
+	  ;; saved.  funcall3, which calls call_into_lisp, will take
+	  ;; care of saving all the remaining registers that could be
+	  ;; used.
 	  (let ((save-offset 0))
+	    ;; Adjust stack pointer by a multiple of 16, to preserve
+	    ;; requirement that the stack pointer remains aligned to a
+	    ;; 16-byte boundary.  (Yes, we waste some stack space
+	    ;; here.)
 	    (inst addi sp sp (- (round-up-16 (* (length save-gprs)
 						vm:word-bytes))))
 	    (dolist (r save-gprs)
 	      (inst stw r sp save-offset)
 	      (incf save-offset vm:word-bytes)))
 
-	  ;; Make a new stack frame for us to hold our data
+	  ;; Make a new stack frame for us to hold our data.  This is
+	  ;; maximum needed: 8 32-bit registers and 13 double-float
+	  ;; registers.
 	  (inst addi sp sp (- (round-up-16 (+ (* (+ 8 (* 2 13))
 						 vm:word-bytes)
 					      linkage-area-size))))
