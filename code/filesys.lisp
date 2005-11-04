@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.96 2005/10/22 00:33:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.97 2005/11/04 14:22:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -490,10 +490,23 @@
 							  '(:newest
 							    :unspecific)))))))
       (when name
+	(when (stringp name)
+	  (when (find #\/ name)
+	    (error "Cannot specify a directory separator in a pathname name: ~S" name))
+	  (when (find #\. name)
+	    (error "Cannot specify a dot in a pathname name: ~S" name))
+	  (when (or (string= ".." name)
+		    (string= "." name))
+	    (error "Invalid value for a pathname name: ~S" name)))
 	(strings (unparse-unix-piece name)))
       (when type-supplied
 	(unless name
 	  (error "Cannot specify the type without a file: ~S" pathname))
+	(when (stringp type)
+	  (when (find #\/ type)
+	    (error "Cannot specify a directory separator in a pathname type: ~S" type))
+	  (when (find #\. type)
+	    (error "Cannot specify a dot in a pathname type: ~S" type)))
 	(strings ".")
 	(strings (unparse-unix-piece type)))
       (when (and (not (member version '(nil :newest :unspecific)))
