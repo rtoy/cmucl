@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.247 2005/10/05 13:07:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.248 2005/11/07 15:56:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1941,7 +1941,7 @@
 	   "CODE-DEBUG-INFO" "CODE-HEADER-REF" "CODE-HEADER-SET"
 	   "CODE-INSTRUCTIONS" "COMPLEX-DOUBLE-FLOAT-P" "COMPLEX-FLOAT-P"
 	   "COMPLEX-LONG-FLOAT-P" "COMPLEX-RATIONAL-P" "COMPLEX-SINGLE-FLOAT-P"
-	   "CONSED-SEQUENCE" "CONSTANT-TYPE"
+	   "CONSED-SEQUENCE" "CONSTANT-MODIFIED" "CONSTANT-TYPE"
 	   "CONSTANT-TYPE-P" "CONSTANT-TYPE-TYPE"
 	   "CONS-TYPE" "CONS-TYPE-CAR-TYPE" "CONS-TYPE-CDR-TYPE" "CONS-TYPE-P"
 	   "CONTAINING-INTEGER-TYPE"
