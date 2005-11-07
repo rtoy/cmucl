@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.66 2005/08/02 17:14:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.67 2005/11/07 17:44:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1230,6 +1230,14 @@
 		  (when (and d (zerop d)) (setq tpoint nil))
 		  (when w 
 		    (decf spaceleft flen)
+		    ;; See CLHS 22.3.3.2.  "If the parameter d is
+		    ;; omitted, ... [and] if the fraction to be
+		    ;; printed is zero then a single zero digit should
+		    ;; appear after the decimal point."  So we need to
+		    ;; subtract one from here because we're going to
+		    ;; add an extra 0 digit later.
+		    (when (and (zerop number) (null d))
+		      (decf spaceleft))
 		    (when lpoint
 		      (if (or (> spaceleft 0) tpoint)
 			  (decf spaceleft)
@@ -1247,6 +1255,10 @@
 			       (if atsign (write-char #\+ stream)))
 			   (when lpoint (write-char #\0 stream))
 			   (write-string fstr stream)
+			   (when (and (zerop number) (null d))
+			     ;; It's later and we're adding the zero
+			     ;; digit.
+			     (write-char #\0 stream))
 			   (write-char (if marker
 					   marker
 					   (format-exponent-marker number))
