@@ -20,6 +20,7 @@
      :random-mt19937			; MT-19937 generator
      :cmu				; Announce this is CMUCL
      :cmu19 :cmu19a			; Current version identifier
+     :modular-arith			; Modular arithmetic
      )
    ;; Features to remove from current *features* here
    '(:sparc-v8 :sparc-v7		; Choose only one of :sparc-v7, :sparc-v8, :sparc-v9
