@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.35 2005/07/12 20:58:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.36 2005/11/07 00:58:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,12 +84,33 @@
 		       (new)))
       (new (car tail)))))
 
+#+nil
 (declaim (inline dotted-list-length))
+;;; FIXME: Remove this later!  This was left here to make
+;;; bootstrapping list-length-bounded-p easier.
 (defun dotted-list-length (list)
   ;; this is a workaround for spurious efficiency notes when compiling
   ;; DEFTYPE declarations in code under high optimization
   (declare (optimize (ext:inhibit-warnings 3)))
   (loop for tail on list until (atom tail) count t))
+
+
+(declaim (inline list-length-bounded-p))
+(defun list-length-bounded-p (list min &optional max)
+  ;; this is a workaround for spurious efficiency notes when compiling
+  ;; DEFTYPE declarations in code under high optimization
+  (declare (optimize (ext:inhibit-warnings 3)))
+  (let ((limit (if max max min)))
+    (do ((tail list (cdr tail))
+	 (count 0 (1+ count)))
+	((or (atom tail)
+	     (>= count limit))
+	 ;; If MAX was given, we better be at end of list and have
+	 ;; length at least MIN.  Otherwise, we just need to make sure
+	 ;; the length is at least MIN.
+	 (if max
+	     (and (atom tail) (<= min count))
+	     (<= min count))))))
 
 (defun parse-defmacro-lambda-list
        (lambda-list arg-list-name name error-kind error-fun
@@ -285,12 +306,12 @@
 		  (push-let-binding var nil nil))))
 	      (t
 	       (simple-program-error "Non-symbol in lambda-list - ~S." var)))))
-    (push `(unless (<= ,minimum
-		       (dotted-list-length (the list ,(if top-level
-							  `(cdr ,arg-list-name)
-							  arg-list-name)))
-		       ,@(unless restp
-			   (list maximum)))
+    (push `(unless (list-length-bounded-p (the list ,(if top-level
+							 `(cdr ,arg-list-name)
+							 arg-list-name))
+		                          ,minimum
+		                          ,@(unless restp
+					       (list maximum)))
 	     ,(let ((arg (if top-level
 			     `(cdr ,arg-list-name)
 			     arg-list-name)))
