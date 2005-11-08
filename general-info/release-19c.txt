@@ -1,7 +1,5 @@
 ========================== C M U C L  19 c =============================
 
-[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 19c.
 This is a major release which contains numerous enhancements and
 bugfixes from the 19b release.
