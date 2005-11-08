@@ -1,7 +1,5 @@
 ========================== C M U C L  19 c =============================
 
-[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 19c.
 This is a major release which contains numerous enhancements and
 bugfixes from the 19b release.
@@ -36,10 +34,6 @@ New in this release:
         the right position.
       - Add a restart for ENSURE-DIRECTORIES-EXIST to retry directory
         creation if necessary.
-      - Destructive functions like nreverse that modify constant args
-        will produce a warning.
-      - Destructive functions like nreverse whose results are not used
-        will produce a warning.
 
   * Numerous ANSI compliance fixes:
 
@@ -68,19 +62,7 @@ New in this release:
         pathname and the defaults have nothing in common.
       - PARSE-NAMESTRING will accept a string for the DEFAULTS
         parameter, as specified by ANSI.
-      - A reader-error is signaled if the number that is being read is
-        too small to be presented.  We used to silently return 0.
-      - WITH-INPUT-FROM-STRING no longer modifies the index if
-        WITH-INPUT-FROM-STRING is not exited normally.
-      - An error is signaled if a declaration is used as the name of a
-        deftype, condition, or defstruct, and vice versa.
-      - An error is signaled when trying to generate a namestring from
-        a pathname with just a version component (other than nil,
-        :newest, or :unspecific).  CMUCL cannot print that readably.
-      - FLET and LABELS functions will catch errors in keyword
-        parameters.  Previously, a keyword of NIL was silently
-        accepted. 
-
+        
   * Numerous bugfixes:
 
       - Regression in MRG32K3A benchmark fixed.
@@ -134,9 +116,6 @@ New in this release:
       - PROBE-FILE for a pathname that is actually a directory returns
         a pathname indicating that it is a directory.
       - LISTEN on DUAL-CHANNEL-SIMPLE-STREAM should work now.
-      - Some numerical issues with the two-arg log function have been
-        fixed.  (log 17 10f0), (log 17f0 10) and (log 17 10) all
-        return the same result now.
 
   * Other changes:
 
