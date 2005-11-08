@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.25 2005/04/28 20:32:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.26 2005/11/08 17:12:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -400,7 +400,11 @@
   (ignore-numarg sub-char numarg)
   (let ((namestring (read stream t nil t)))
     (unless *read-suppress*
-      (parse-namestring namestring))))
+      (if (listp namestring)
+	  ;; A CMUCL extension: #P(foo) treats foo as the args to
+	  ;; make-pathname
+	  (apply #'make-pathname namestring)
+	  (parse-namestring namestring)))))
 
 (make-dispatch-macro-character #\# t)
 (set-dispatch-macro-character #\# #\\ #'sharp-backslash)
