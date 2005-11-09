@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.30 2005/11/09 14:10:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.31 2005/11/09 16:01:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -442,21 +442,23 @@
                 (push (car list) result))))
           (setf indices (cdr indices)))))))
 
+(defun function-result-not-used-p (node)
+  ;; Is the result of the function used?
+  (null (continuation-dest (node-cont node))))
+
 (defun sort-result-not-used-p (node)
   (let* ((args (combination-args node))
 	 (seq-type (continuation-type (first args))))
     ;; Make sure we use the result of SORT if the sequence could be a
     ;; list.
-    (csubtypep (specifier-type 'list) seq-type)))
-
-(defun function-result-not-used-p (node)
-  ;; Is the result of the function used?
-  (null (continuation-dest (node-cont node))))
+    (when (csubtypep (specifier-type 'list) seq-type)
+      (function-result-not-used-p node))))
 
 (defun adjust-array-result-not-used-p (node)
   (let* ((args (combination-args node))
 	 (array-type (continuation-type (first args))))
     ;; Unless the array is known to be an adjustable array, we should
     ;; warn if we don't use the result of adjust-array.
-    (when (array-type-p array-type)
-      (not (eql (array-type-complexp array-type) t)))))
+    (when (and (array-type-p array-type)
+	       (not (eql (array-type-complexp array-type) t)))
+      (function-result-not-used-p node))))
