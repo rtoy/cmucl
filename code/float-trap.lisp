@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.25 2004/07/25 19:32:37 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.26 2005/11/09 18:26:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,6 +104,8 @@
 
    GET-FLOATING-POINT-MODES may be used to find the floating point modes
    currently in effect."
+  #-x86
+  (declare (ignore precision-control))
   (let ((modes (floating-point-modes)))
     (when traps-p
       (setf (ldb float-traps-byte modes) (float-trap-mask traps)))
