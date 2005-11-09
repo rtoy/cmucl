@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.29 2005/11/09 01:48:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.30 2005/11/09 14:10:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -453,16 +453,10 @@
   ;; Is the result of the function used?
   (null (continuation-dest (node-cont node))))
 
-(defun adjust-array-result-aux (node)
-  (let* ((args (combination-args node))
-	 (array-type (continuation-type (first args))))
-    ;; Unless the array is known to be an adjustable array, we should
-    ;; warn if we don't use the result of adjust-array.
-    (not (eql (array-type-complexp array-type) t))))
-
 (defun adjust-array-result-not-used-p (node)
   (let* ((args (combination-args node))
 	 (array-type (continuation-type (first args))))
     ;; Unless the array is known to be an adjustable array, we should
     ;; warn if we don't use the result of adjust-array.
-    (not (eql (array-type-complexp array-type) t))))
+    (when (array-type-p array-type)
+      (not (eql (array-type-complexp array-type) t)))))
