@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.28 2005/10/19 13:44:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.29 2005/11/09 01:48:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -81,10 +81,6 @@
   ;;
   ;; Safe to stack-allocate function args that are closures.
   dynamic-extent-closure-safe
-  ;; Return value is important and ignoring it is probably a mistake.
-  ;; This is for things like not using the result of nreverse.  This
-  ;; is only for warnings and has no effect on optimization.
-  important-result
   )
 
 (defstruct (function-info
@@ -135,9 +131,18 @@
   ;; call.  This function can only give up if there is a byte-annotate function
   ;; that arranged for the functional to be pushed onto the stack.
   (byte-compile nil :type (or function null))
-  ;; A function computing the constant or literal arguments which are
-  ;; destructively modified by the call.
+  ;;
+  ;; If non-null, use this function to determine if constant or
+  ;; literal arguments are destructively modified by the call.  A list
+  ;; of the Basic-combination-args for the node is passed to the
+  ;; function.
   (destroyed-constant-args nil :type (or function null))
+  ;;
+  ;; If non-null, use this function to determine if the result of the
+  ;; function is used or not.  This is used to detect if you used a
+  ;; destructive function but didn't use the result of the function.
+  ;; The Combination node is passed to the function.
+  (result-not-used nil :type (or function null))
   )
 
 (defprinter function-info
@@ -210,14 +215,16 @@
 ;;;    Make a function-info structure with the specified type, attributes and
 ;;; optimizers.
 ;;;
-(defun %defknown (names type attributes &key derive-type optimizer destroyed-constant-args)
+(defun %defknown (names type attributes &key derive-type optimizer
+		                             destroyed-constant-args result-not-used)
   (declare (list names type) (type attributes attributes)
 	   (type (or function null) derive-type optimizer))
   (let ((ctype (specifier-type type))
 	(info (make-function-info :attributes attributes
 				  :derive-type derive-type
 				  :optimizer optimizer
-				  :destroyed-constant-args destroyed-constant-args))
+				  :destroyed-constant-args destroyed-constant-args
+				  :result-not-used result-not-used))
 	(target-env (or (backend-info-environment *target-backend*)
 			*info-environment*)))
     (dolist (name names)
@@ -434,3 +441,28 @@
                           (typep value '(vector * 0)))
                 (push (car list) result))))
           (setf indices (cdr indices)))))))
+
+(defun sort-result-not-used-p (node)
+  (let* ((args (combination-args node))
+	 (seq-type (continuation-type (first args))))
+    ;; Make sure we use the result of SORT if the sequence could be a
+    ;; list.
+    (csubtypep (specifier-type 'list) seq-type)))
+
+(defun function-result-not-used-p (node)
+  ;; Is the result of the function used?
+  (null (continuation-dest (node-cont node))))
+
+(defun adjust-array-result-aux (node)
+  (let* ((args (combination-args node))
+	 (array-type (continuation-type (first args))))
+    ;; Unless the array is known to be an adjustable array, we should
+    ;; warn if we don't use the result of adjust-array.
+    (not (eql (array-type-complexp array-type) t))))
+
+(defun adjust-array-result-not-used-p (node)
+  (let* ((args (combination-args node))
+	 (array-type (continuation-type (first args))))
+    ;; Unless the array is known to be an adjustable array, we should
+    ;; warn if we don't use the result of adjust-array.
+    (not (eql (array-type-complexp array-type) t))))

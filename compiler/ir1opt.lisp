@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.84 2005/10/19 13:44:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.85 2005/11/09 01:48:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -754,15 +754,6 @@
 	    (dolist (merge (merges))
 	      (merge-tail-sets merge))))))))
 
-(defun check-important-result (node kind)
-  (let ((attr (function-info-attributes kind)))
-    (when (and attr
-	       (ir1-attributep attr important-result)
-	       (null (continuation-dest (node-cont node))))
-      (let ((*compiler-error-context* node))
-	(compiler-warning "The return value of ~A should not be discarded."
-			  (continuation-function-name (basic-combination-fun node)))))))
-
 
 ;;;; Combination IR1 optimization:
 
@@ -794,7 +785,13 @@
 	 (when arg
 	   (setf (continuation-reoptimize arg) nil)))
 
-       (check-important-result node kind)
+       (let ((fun (function-info-result-not-used kind)))
+	 (when fun
+	   (let ((unused-result (funcall fun node)))
+	     (when unused-result
+	       (let ((*compiler-error-context* node))
+		 (compiler-warning "The return value of ~A should not be discarded."
+				   (continuation-function-name (basic-combination-fun node))))))))
        
        (let ((fun (function-info-destroyed-constant-args kind)))
 	 (when fun
