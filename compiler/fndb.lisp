@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.134 2005/11/09 01:48:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.135 2005/11/09 19:08:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -404,7 +404,7 @@
 (defknown nreverse (sequence) sequence ()
   :derive-type #'result-type-first-arg/reverse
   :destroyed-constant-args (nth-constant-nonempty-sequence-args 1)
-  :result-not-used #'function-result-not-used-p)
+  :result-not-used (list-function-result-not-used 1))
 
 (defknown make-sequence (type-specifier index &key (:initial-element t)) consed-sequence
   (movable flushable unsafe)
@@ -491,7 +491,7 @@
   (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 2)
   :destroyed-constant-args (nth-constant-nonempty-sequence-args 2)
-  :result-not-used #'function-result-not-used-p)
+  :result-not-used (list-function-result-not-used 2))
 
 (defknown nsubstitute
   (t t sequence &key (:from-end t) (:test callable)
@@ -509,7 +509,7 @@
   (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 2)
   :destroyed-constant-args (nth-constant-nonempty-sequence-args 2)
-  :result-not-used #'function-result-not-used-p)
+  :result-not-used (list-function-result-not-used 2))
 
 (defknown (nsubstitute-if nsubstitute-if-not)
   (t callable sequence &key (:from-end t) (:start index) (:end sequence-end)
@@ -533,7 +533,7 @@
   (flushable call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 1)
   :destroyed-constant-args (nth-constant-nonempty-sequence-args 1)
-  :result-not-used #'function-result-not-used-p)
+  :result-not-used (list-function-result-not-used 1))
 
 (defknown find (t sequence &key (:test callable) (:test-not callable)
 		  (:start index) (:from-end t) (:end sequence-end) (:key callable))
@@ -582,7 +582,7 @@
   (call dynamic-extent-closure-safe)
   :derive-type (sequence-result-nth-arg 1)
   :destroyed-constant-args (nth-constant-nonempty-sequence-args 1)
-  :result-not-used #'sort-result-not-used-p)
+  :result-not-used (list-function-result-not-used 1))
 
 (defknown merge (type-specifier sequence sequence callable
 				&key (:key callable))
@@ -590,7 +590,9 @@
   (flushable call dynamic-extent-closure-safe)
   :derive-type (result-type-specifier-nth-arg 1)
   :destroyed-constant-args (nth-constant-nonempty-sequence-args 2 3)
-  :result-not-used #'function-result-not-used-p)
+  ;; FIXME!  This is a little complicated.  
+  ;;:result-not-used #'function-result-not-used-p
+  )
 
 (defknown read-sequence (sequence stream &key (:start index)
 					      (:end sequence-end)

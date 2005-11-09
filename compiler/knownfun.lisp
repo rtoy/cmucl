@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.31 2005/11/09 16:01:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.32 2005/11/09 19:08:06 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -443,16 +443,9 @@
           (setf indices (cdr indices)))))))
 
 (defun function-result-not-used-p (node)
-  ;; Is the result of the function used?
+  ;; Is the result of the function used?  Return non-NIL if result is
+  ;; not used.
   (null (continuation-dest (node-cont node))))
-
-(defun sort-result-not-used-p (node)
-  (let* ((args (combination-args node))
-	 (seq-type (continuation-type (first args))))
-    ;; Make sure we use the result of SORT if the sequence could be a
-    ;; list.
-    (when (csubtypep (specifier-type 'list) seq-type)
-      (function-result-not-used-p node))))
 
 (defun adjust-array-result-not-used-p (node)
   (let* ((args (combination-args node))
@@ -462,3 +455,12 @@
     (when (and (array-type-p array-type)
 	       (not (eql (array-type-complexp array-type) t)))
       (function-result-not-used-p node))))
+
+;; Create a function that checks to see if the List-arg'th arg could
+;; be a list.  If so, check to see if the result is used.
+(defun list-function-result-not-used (list-arg)
+  (lambda (node)
+    (let* ((arg (elt (combination-args node) (1- list-arg)))
+	   (arg-type (continuation-type arg)))
+      (when (csubtypep (specifier-type 'list) arg-type)
+	(function-result-not-used-p node)))))
