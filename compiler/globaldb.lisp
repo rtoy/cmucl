@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.51 2004/09/08 02:10:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.52 2005/11/10 17:43:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1140,6 +1140,7 @@
 
 (define-info-class typed-structure)
 (define-info-type typed-structure info t nil)
+(define-info-type typed-structure documentation (or string null))
 
 (define-info-class declaration)
 (define-info-type declaration recognized boolean)

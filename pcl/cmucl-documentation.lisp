@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.14 2005/07/13 13:43:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.15 2005/11/10 17:43:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,9 +97,18 @@
 	(when class
 	  (plist-value class 'documentation)))))
 
+#+nil
 (defmethod documentation ((x symbol) (doc-type (eql 'structure)))
   (when (eq (info type kind x) :instance)
     (values (info type documentation x))))
+
+(defmethod documentation ((x symbol) (doc-type (eql 'structure)))
+  (cond ((eq (info type kind x) :instance)
+	 (values (info type documentation x)))
+	((info typed-structure info x)
+	 (values (info typed-structure documentation x)))
+	(t
+	 (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))))
 
 (defmethod (setf documentation) (new-value (x kernel::structure-class) (doc-type (eql 't)))
   (setf (info type documentation (kernel:%class-name x)) new-value))
@@ -121,10 +130,19 @@
 	    (setf (plist-value class 'documentation) new-value)
 	    (setf (info type documentation x) new-value)))))
 
+#+nil
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
   (unless (eq (info type kind x) :instance)
     (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))
   (setf (info type documentation x) new-value))
+
+(defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
+  (cond ((eq (info type kind x) :instance)
+	 (setf (info type documentation x) new-value))
+	((info typed-structure info x)
+	 (setf (info typed-structure documentation x) new-value))
+	(t
+	 (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))))
 
 ;;; Variables.
 (defmethod documentation ((x symbol) (doc-type (eql 'variable)))
