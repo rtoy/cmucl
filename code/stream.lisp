@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.81 2005/07/01 14:54:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.82 2005/11/11 17:21:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -465,8 +465,8 @@
 ;;;                     (this will default to CHAR-VAR)
 (defmacro generalized-peeking-mechanism (peek-type eof-value char-var
 					 read-form read-eof unread-form
-					 &optional (skipped-char-form nil)
-						   (eof-detected-form nil))
+					 &key (skipped-char-form nil)
+					      (eof-detected-form nil))
   `(let ((,char-var ,read-form))
     (cond ((eql ,char-var ,read-eof) 
 	   ,(if eof-detected-form
@@ -530,19 +530,20 @@
 	   (read-char stream eof-errorp :eof)
 	   :eof
 	   (unread-char char stream)
-	   nil
-	   (eof-or-lose stream (or eof-errorp recursive-p) eof-value))
+	   :skipped-char-form nil
+	   :eof-detected-form (eof-or-lose stream (or eof-errorp recursive-p) eof-value))
 	  ;; fundamental-stream
 	  (generalized-peeking-mechanism
 	   peek-type :eof char
 	   (if (null peek-type)
 	       (stream-peek-char stream)
 	       (stream-read-char stream))
+	   :eof
 	   (if (null peek-type)
 	       ()
 	       (stream-unread-char stream char))
-	   ()
-	   (eof-or-lose stream eof-errorp eof-value))))))
+	   :skipped-char-form ()
+	   :eof-detected-form (eof-or-lose stream eof-errorp eof-value))))))
 
 (defun listen (&optional (stream *standard-input*) (width 1))
   "Returns T if a character is available on the given Stream."
@@ -1354,7 +1355,7 @@ output to Output-stream"
 	      (infn)
 	      :eof
 	      (unread-char char in)
-	      (outfn char))))))
+	      :skipped-char-form (outfn char))))))
       (:file-length
        (error 'type-error :datum stream :expected-type 'file-stream))
       (t
