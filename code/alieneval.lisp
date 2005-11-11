@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.63 2005/08/30 21:18:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.64 2005/11/11 22:30:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,6 +128,8 @@
   (let ((extra (rem offset alignment)))
     (if (zerop extra) offset (+ offset (- alignment extra)))))
 
+;; This guesses the alignment of some object, using the natural
+;; alignment.
 (defun guess-alignment (bits)
   (cond ((null bits) nil)
 	#-x86 ((> bits 32) 64)
@@ -135,6 +137,21 @@
 	((> bits 8) 16)
 	((> bits 1) 8)
 	(t 1)))
+
+;; This is mostly for ppc.  The first object in a structure gets the
+;; natural alignment, but all subsequent objects get an alignment of
+;; at most 4 bytes (32 bits).
+;;
+;; For more details, see the Power alignment mode in
+;; http://developer.apple.com/documentation/DeveloperTools/Conceptual/LowLevelABI/index.html
+;; for details.
+;; 
+(defun embedded-alignment (bits &optional firstp)
+  (let ((align (guess-alignment bits)))
+    (if firstp
+	align
+	(min align #+(and ppc darwin) 32
+	           #-(and ppc darwin) 64))))
 
 
 ;;;; Alien-type-info stuff.
@@ -1115,13 +1132,16 @@
 	   (type list fields))
   (let ((total-bits 0)
 	(overall-alignment 1)
-	(parsed-fields nil))
+	(parsed-fields nil)
+	(firstp t))
     (dolist (field fields)
       (destructuring-bind (var type &optional bits) field
 	(declare (ignore bits))
 	(let* ((field-type (parse-alien-type type))
 	       (bits (alien-type-bits field-type))
-	       (alignment (alien-type-alignment field-type))
+	       (natural-alignment (alien-type-alignment field-type))
+	       (alignment (embedded-alignment natural-alignment
+					      firstp))
 	       (parsed-field
 		(make-alien-record-field :type field-type
 					 :name var)))
@@ -1139,7 +1159,8 @@
 	       (setf (alien-record-field-offset parsed-field) offset)
 	       (setf total-bits (+ offset bits))))
 	    (:union
-	     (setf total-bits (max total-bits bits)))))))
+	     (setf total-bits (max total-bits bits))))))
+      (setf firstp nil))
     (let ((new (nreverse parsed-fields)))
       (setf (alien-record-type-fields result) new))
     (setf (alien-record-type-alignment result) overall-alignment)
