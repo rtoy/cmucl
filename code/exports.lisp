@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.248 2005/11/07 15:56:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.249 2005/11/13 19:27:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,6 +172,7 @@
   (:import-from "COMMON-LISP" "CHAR" "FLOAT")
   (:export "C-STRING" "CHAR" "DOUBLE" "FLOAT" "INT" "LONG" "SHORT"
 	   "UNSIGNED-CHAR" "UNSIGNED-INT" "UNSIGNED-LONG" "UNSIGNED-SHORT"
+	   "LONG-LONG" "UNSIGNED-LONG-LONG"
 	   "VOID"))
 
 (defpackage "INSPECT"

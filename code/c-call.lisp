@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.16 2002/01/16 15:08:07 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.17 2005/11/13 19:27:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,8 +17,8 @@
 (use-package "ALIEN-INTERNALS")
 (use-package "SYSTEM")
 
-(export '(char short int long unsigned-char unsigned-short unsigned-int
-	  unsigned-long float double c-string void))
+(export '(char short int long long-long unsigned-char unsigned-short unsigned-int
+	  unsigned-long unsigned-long-long float double c-string void))
 	       
 
 ;;;; Extra types.
@@ -27,11 +27,13 @@
 (def-alien-type short (integer 16))
 (def-alien-type int (integer 32))
 (def-alien-type long (integer #-alpha 32 #+alpha 64))
+(def-alien-type long-long (integer 64))
 
 (def-alien-type unsigned-char (unsigned 8))
 (def-alien-type unsigned-short (unsigned 16))
 (def-alien-type unsigned-int (unsigned 32))
 (def-alien-type unsigned-long (unsigned #-alpha 32 #+alpha 64))
+(def-alien-type unsigned-long-long (unsigned 64))
 
 (def-alien-type float single-float)
 (def-alien-type double double-float)
