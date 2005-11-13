@@ -46,6 +46,8 @@ New in this release:
         accepted. 
       - Printing a zero using ~E will now include a trailing zero
         after the decimal point, as required by CLHS, 22.3.3.2.
+      - DOCUMENTATION and (SETF DOCUMENTATION) now works for
+        structures of type list or vector. 
 
   * Numerous bugfixes:
 
@@ -55,6 +57,15 @@ New in this release:
         return the same result now.
       - DESTRUCTURING-BIND no longer causes an error when the list to
         be destructured is circular.
+      - PEEK-CHAR for Gray streams handles end of file correctly now.
+      - For the ppc port, the alignment of objects in alien structures
+        now matches the PowerOpen ABI for Mac OS X.
+      - For PPC, CMUCL was not following the ABI when calling out to C
+        varargs functions.  Now we always copy any float args to the
+        corresponding int regs (or stack) as required by the ABI.
+        This isn't necessary for non-varargs functions, but CMUCL
+        doesn't know which are varargs.  (There are still some issues
+        with vararg functions and float args.)
 
   * Other changes:
 
