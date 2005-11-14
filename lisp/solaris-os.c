@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.16 2005/09/15 18:26:52 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.17 2005/11/14 13:45:30 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -13,7 +13,6 @@
  *
  */
 
-#define DEBUG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,11 +33,6 @@
 #include "gencgc.h"
 #endif
 
-#define OS_PROTERR		SEGV_ACCERR
-#define OS_MAPERR		SEGV_MAPERR
-#define OS_HASERRNO(code)	((code)->si_errno != 0)
-#define OS_ERRNO(code)		((code)->si_errno)
-
 #include "os.h"
 
 #include "interrupt.h"
@@ -51,22 +45,11 @@
 /* For type_ListPointer and NIL */
 #include "internals.h"
 
-#define PROT_DEFAULT OS_VM_PROT_ALL
-
-#define OFFSET_NONE ((os_vm_offset_t)(~0))
-
 #define EMPTYFILE "/tmp/empty"
 #define ZEROFILE "/dev/zero"
 
-#define INITIAL_MAX_SEGS 32
-#define GROW_MAX_SEGS 16
-
-extern char *getenv();
-
-
 /* ---------------------------------------------------------------- */
 
-#define ADJ_OFFSET(off,adj) (((off)==OFFSET_NONE) ? OFFSET_NONE : ((off)+(adj)))
 
 long os_vm_page_size = (-1);
 static long os_real_page_size = (-1);
