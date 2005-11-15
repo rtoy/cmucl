@@ -37,25 +37,25 @@
    example using
 
       cd /usr/local
-      tar xzf /path/to/cmucl-18e-<platform>.tar.gz
+      tar xzf /path/to/cmucl-<ver>-<platform>.tar.gz
 
    or alternatively, install under a directory in /opt, for example
 
-      mkdir /opt/cmucl-18e
-      cd /opt/cmucl-18e
-      tar xzf /path/to/cmucl-18e-<platform>.tar.gz
+      mkdir /opt/cmucl-<ver>
+      cd /opt/cmucl-<ver>
+      tar xzf /path/to/cmucl-<ver>-<platform>.tar.gz
 
    You can now invoke CMUCL: this should display a banner then show a
    prompt (the default prompt is an asterisk).
 
       % lisp
-      CMU Common Lisp 18e, running on orion
-      With core: /prj/cmucl/release-18e/linux/lisp/lisp.core
+      CMU Common Lisp 19c, running on orion
+      With core: /prj/cmucl/release-19c/linux/lisp/lisp.core
       Dumped on: Thu, 2003-04-03 15:47:12+02:00 on orion
       See <http://www.cons.org/cmucl/> for support information.
       Loaded subsystems:
           Python 1.1, target Intel x86
-	 CLOS 18e (based on PCL September 16 92 PCL (f))
+	  CLOS based on Gerd's PCL 2004/04/14 03:32:47
       * (format t "~&Hello, world!~%")
       Hello, world!
       NIL
@@ -65,22 +65,10 @@
    -extra- tarball), just use REQUIRE:
 
       * (require :gray-streams)
+      * (require :simple-streams)
       * (require :clx)
       * (require :clm)
       * (require :hemlock)
-
-   DEFSYSTEM is not included with CMUCL, but can be obtained from
-   <URL:http://clocc.sf.net/>. It may be installed as a subsystem by
-   compiling it (using the function COMPILE-FILE), and moving the
-   resulting defsystem.FASL file to
-      /usr/local/lib/cmucl/lib/subsystems/defsystem-library.FASL
-   (where FASL is the file extension of compiled lisp files on your
-   system, for instance .sparcf or .x86f). You can then say
-
-      * (require :defsystem)
-
-   to load the DEFSYSTEM facility into your running lisp.
-
 
    You may wish to edit your site initialization file (in
    /usr/local/lib/cmucl/site-init.lisp).
@@ -92,11 +80,9 @@
    (also known respectively as Solaris 7 and Solaris 8), and should
    work on any later versions.
 
-   If you have an UltraSPARC processor you can get the v9 binaries,
-   which use instructions which are only present on SPARC-v9 (also called
-   v8plus for 32bit binaries) implementations; otherwise you should get
-   the binaries without v9 in the name of the tarball, which only require
-   a SPARC-v8 implementation.
+   Currently, only UltraSPARC binaries are provided, so you need an
+   UltraSPARC machine.  For older machines, you will need a special
+   build.  Please ask on the mailing lists if such builds are available.
 
    If you have an UltraSPARC the command uname -m will say sun4u, if you
    have an older machine such as a SparcStation it will probably say sun4m.
@@ -126,17 +112,18 @@
    4.x releases. 
 
 
-   +++ OpenBSD/x86
-   The release binaries should work with any i486 or better processor.
-   The binaries were built on OpenBSD 3.1.
+   +++ Mac OS X/ppc
+   The release binaries are built on a Mac OS X 10.4.x system.  They
+   are also known to work on 10.3.x.  They may not work on 10.2.x.
+   The binaries should work on any Power PC system, including G3, G4,
+   and G5's.
 
 
    +++ Other platforms
-   Binaries for other platforms supported by 18e sources might be made
+   Binaries for other platforms supported by 19c sources might be made
    available by contributors at later dates, the details of which were
-   not available at release time.  Especially binaries for Irix/MIPS
-   and Linux/Alpha are likely to be available.  Please see the README
-   file distributed with those binaries for details on platform-specific
+   not available at release time.  Please see the README file
+   distributed with those binaries for details on platform-specific
    notes for those platforms.
 
 
@@ -151,4 +138,4 @@
    Enjoy using CMUCL!
 
 
-2003-04-08
+2005-11-15
