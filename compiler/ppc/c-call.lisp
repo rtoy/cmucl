@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.14 2005/11/12 19:21:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.15 2005/11/15 03:20:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,8 +109,12 @@
 	   ;;
 	   ;; Yes, it does -- me :)
 	   (incf (arg-state-fpr-args state))
-	   (incf (arg-state-stack-frame-size state))
-	   (my-make-wired-tn 'single-float 'single-reg (1+ fprs)))
+	   (progn
+	     (incf (arg-state-stack-frame-size state))
+	     (my-make-wired-tn 'single-float 'single-reg (1+ fprs)))
+	   #+nil
+	   (list (my-make-wired-tn 'single-float 'single-reg (1+ fprs))
+		 (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)))
 	  (t
 	   ;; Pass on stack only
 	   (let ((stack-offset (arg-state-stack-frame-size state)))
@@ -164,9 +168,13 @@
 	   ;; According to PowerOpen ABI, we need to pass those both in the
 	   ;; FPRs _and_ the stack.  However empiric testing on OS X/gcc
 	   ;; shows they are only passed in FPRs, AFAICT.
-	   (incf (arg-state-stack-frame-size state) 2)
-	   (incf (arg-state-fpr-args state))
-	   (my-make-wired-tn 'double-float 'double-reg (1+ fprs)))
+	   (progn
+	     (incf (arg-state-stack-frame-size state) 2)
+	     (incf (arg-state-fpr-args state)))
+	   #+nil
+	   (list (my-make-wired-tn 'double-float 'double-reg (1+ fprs))
+		 (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)
+		 (int-arg state 'unsigned-byte-32 'unsigned-reg 'unsigned-stack)))
 	  (t
 	   ;; Pass on stack only
 	   (let ((stack-offset (arg-state-stack-frame-size state)))
