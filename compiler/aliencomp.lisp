@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.30 2005/11/12 19:21:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.31 2005/11/17 03:33:45 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -687,7 +687,9 @@
       (vop alloc-number-stack-space call block stack-frame-size nsp)
       (dolist (tn arg-tns)
 	;; On PPC, TN might be a list.  This is used to indicate
-	;; something special needs to happen.
+	;; something special needs to happen.  See below.
+	;;
+	;; FIXME: We should implement something better than this.
 	(let* ((first-tn (if (listp tn) (car tn) tn))
 	       (arg (pop args))
 	       (sc (tn-sc first-tn))
@@ -702,17 +704,19 @@
 	  (emit-move call block (continuation-tn call block arg) temp-tn)
 	  (emit-move-arg-template call block (first move-arg-vops)
 				  temp-tn nsp first-tn)
+	  #+(and ppc darwin)
 	  (when (listp tn)
 	    ;; This means that we have a float arg that we need to
-	    ;; also copy to some int regs.
+	    ;; also copy to some int regs.  The list contains the TN
+	    ;; for the float as well as the TNs to use for the int
+	    ;; arg.
 	    (destructuring-bind (float-tn i1-tn &optional i2-tn)
 		tn
 	      (if i2-tn
-		  (vop double-float-bits call block
+		  (vop ppc::move-double-to-int-arg call block
 		       float-tn i1-tn i2-tn)
-		  (vop single-float-bits call block
-		       float-tn i1-tn))))
-	  ))
+		  (vop ppc::move-single-to-int-arg call block
+		       float-tn i1-tn))))))
       (assert (null args))
       (unless (listp result-tns)
 	(setf result-tns (list result-tns)))

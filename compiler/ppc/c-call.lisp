@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.15 2005/11/15 03:20:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.16 2005/11/17 03:33:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,14 +100,7 @@
 	   (list (my-make-wired-tn 'single-float 'single-reg (1+ fprs))
 		 (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)))
 	  ((< fprs 13)
-	   ;; According to PowerOpen ABI, we need to pass those both in the
-	   ;; FPRs _and_ the stack.  However empiric testing on OS X/gcc
-	   ;; shows they are only passed in FPRs, AFAICT.
-	   ;;
-	   ;; "I" in "AFAICT" probably refers to PRM.  -- CSR, still
-	   ;; reverse-engineering comments in 2003 :-)
-	   ;;
-	   ;; Yes, it does -- me :)
+	   ;; See comments below for double-float.
 	   (incf (arg-state-fpr-args state))
 	   (progn
 	     (incf (arg-state-stack-frame-size state))
@@ -142,7 +135,6 @@
   (let ((fprs (arg-state-fpr-args state))
 	(gprs (arg-state-gpr-args state)))
     (cond ((< gprs 8) ; and by implication also (< fprs 13)
-	   ;; Corresponding GPRs are also kept empty
 	   #+nil
 	   (progn
 	     (incf (arg-state-gpr-args state) 2)
@@ -153,11 +145,11 @@
 	   (incf (arg-state-fpr-args state))
 	   ;; Assign outgoing FPRs starting at FP1.
 	   ;;
-	   ;; The ABI says float values are stored in float regs.  But
-	   ;; if we're calling a varargs function, we also need to put
-	   ;; the float into some gprs.  We indicate this to
-	   ;; %alien-funcall ir2-convert by making a list of the TNs
-	   ;; for the float reg and for the int regs.
+	   ;; The PowerOpen ABI says float values are stored in float
+	   ;; regs.  But if we're calling a varargs function, we also
+	   ;; need to put the float into some gprs.  We indicate this
+	   ;; to %alien-funcall ir2-convert by making a list of the
+	   ;; TNs for the float reg and for the int regs.
 	   ;;
 	   ;; We really only need this for vararg functions, but we
 	   ;; currently don't know that, so we do it always.
@@ -165,16 +157,17 @@
 		 (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)
 		 (int-arg state 'unsigned-byte-32 'unsigned-reg 'unsigned-stack)))
 	  ((< fprs 13)
-	   ;; According to PowerOpen ABI, we need to pass those both in the
-	   ;; FPRs _and_ the stack.  However empiric testing on OS X/gcc
-	   ;; shows they are only passed in FPRs, AFAICT.
+	   ;; As above, we also need to put the float on the stack.
+	   #+nil
 	   (progn
 	     (incf (arg-state-stack-frame-size state) 2)
-	     (incf (arg-state-fpr-args state)))
-	   #+nil
-	   (list (my-make-wired-tn 'double-float 'double-reg (1+ fprs))
-		 (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)
-		 (int-arg state 'unsigned-byte-32 'unsigned-reg 'unsigned-stack)))
+	     (incf (arg-state-fpr-args state))
+	     (my-make-wired-tn 'double-float 'double-reg (1+ fprs)))
+	   (progn
+	     (incf (arg-state-fpr-args state))
+	     (list (my-make-wired-tn 'double-float 'double-reg (1+ fprs))
+		   (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)
+		   (int-arg state 'unsigned-byte-32 'unsigned-reg 'unsigned-stack))))
 	  (t
 	   ;; Pass on stack only
 	   (let ((stack-offset (arg-state-stack-frame-size state)))
