@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.107 2005/10/21 17:56:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.108 2005/11/18 19:36:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1623,17 +1623,41 @@
 
 ;;;; Iteration macros:
 
+;;; Make sure we iterate the given number of times, independent of
+;;; what the body might do to the index variable.  We do this by
+;;; repeatedly binding the var in the body and also in the result
+;;; form.  We also spuriously reference the var in case the body or
+;;; result form don't reference the var either.  (Mostly modeled on
+;;; the dolist macro below.)
 (defmacro dotimes ((var count &optional (result nil)) &body body)
-  (cond ((numberp count)
-         `(do ((,var 0 (1+ ,var)))
-              ((>= ,var ,count) ,result)
-	    (declare (type (integer 0 ,count) ,var))
-            ,@body))
-        (t (let ((v1 (gensym)))
-             `(do ((,var 0 (1+ ,var)) (,v1 ,count))
-                  ((>= ,var ,v1) ,result)
-		(declare (type unsigned-byte ,var))
-                ,@body)))))
+  (let ((count-var (gensym "CTR-")))
+    (multiple-value-bind (forms decls)
+	(parse-body body nil nil)
+      (cond ((numberp count)
+	     `(do ((,count-var 0 (1+ ,count-var)))
+		  ((>= ,count-var ,count)
+		   (let ((,var ,count-var))
+		     ,var
+		     ,result))
+		(declare (type (integer 0 ,count) ,count-var))
+		(let ((,var ,count-var))
+		  ,@decls
+		  ,var
+		  (tagbody
+		     ,@forms))))
+	    (t (let ((v1 (gensym)))
+		 `(do ((,count-var 0 (1+ ,count-var))
+		       (,v1 ,count))
+		      ((>= ,count-var ,v1)
+		       (let ((,var ,count-var))
+			 ,var
+			 ,result))
+		    (declare (type unsigned-byte ,count-var))
+		    (let ((,var ,count-var))
+		      ,@decls
+		      ,var
+		      (tagbody
+			 ,@forms)))))))))
 
 
 ;;; We repeatedly bind the var instead of setting it so that we never give the
