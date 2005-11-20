@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.16 2005/11/17 03:33:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.17 2005/11/20 03:17:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -496,11 +496,14 @@ a pointer to the arguments."
 				      linkage-area-size)))
 		       (cond
 			 (integerp
-			  (loop repeat words
-			    for gpr = (pop gprs)
-			    when gpr do
-			    (inst stw gpr sp offset)
-			    do (incf words-processed)))
+			  (dotimes (k words)
+			    (let ((gpr (pop gprs)))
+			      (cond (gpr
+				     (inst stw gpr sp offset)
+				     (incf words-processed)
+				     (incf offset vm:word-bytes))
+				    (t
+				     (error "Out of integer arg registers!?!?"))))))
 			 ;; The handling of floats is a little ugly because we
 			 ;; hard-code the number of words for single- and
 			 ;; double-floats.
@@ -537,7 +540,7 @@ a pointer to the arguments."
 	      (inst li arg2 (fixnumize index))
 	      (inst addi arg3 sp linkage-area-size)
 	      (inst addi arg4 sp (- (* return-area-size vm:word-bytes)))
-	      ;; FIXME!
+
 	      ;; Save sp, setup the frame
 	      (inst mflr r0)
 	      (inst stw r0 sp (* 2 vm:word-bytes))
@@ -558,7 +561,8 @@ a pointer to the arguments."
 		 (loop repeat return-area-size
 		   with gprs = (mapcar #'make-gpr '(3 4))
 		   for gpr = (pop gprs)
-		   for offset downfrom (- vm:word-bytes) by vm:word-bytes
+		   for offset from (- (* return-area-size vm:word-bytes))
+		              by vm:word-bytes
 		   do (inst lwz gpr sp offset)))
 		(alien::single$
 		 ;; Get the FP value into F1
