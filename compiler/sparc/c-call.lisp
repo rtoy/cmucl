@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.26 2005/09/29 14:43:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.27 2005/11/29 17:02:53 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -331,7 +331,9 @@
       (alien::integer-64$
        ;; Same as for double, above
        `(let ((hi (alien:deref (sap-alien (sys:sap+ ,sp ,offset)
-					  (* c-call:int))))
+					  ,(if (alien-integer-type-signed parsed-type)
+					       '(* c-call:int)
+					       '(* c-call:unsigned-int)))))
 	      (lo (alien:deref (sap-alien (sys:sap+ ,sp
 						    (+ ,offset vm:word-bytes))
 					  (* c-call:unsigned-int)))))
