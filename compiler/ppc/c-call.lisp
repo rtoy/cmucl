@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.18 2005/11/29 14:25:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.19 2005/11/30 01:46:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,13 +387,13 @@
       (alien::integer-64$
        ;; Get both words of a 64-bit integer and combine together, in
        ;; a big-endian fashion.
-       `(let* ((hi (alien:deref (sap-alien (sys:sap+ ,sp ,offset)
-					   ,(if (alien-integer-type-signed parsed-type)
-						'(* c-call:int)
-						'(* c-call:unsigned-int)))))
-	       (lo (alien:deref (sap-alien (sys:sap+ ,sp
-						     (+ ,offset vm:word-bytes))
-					   (* c-call:unsigned-int)))))
+       `(let ((hi (alien:deref (sap-alien (sys:sap+ ,sp ,offset)
+					  ,(if (alien-integer-type-signed parsed-type)
+					       '(* c-call:int)
+					       '(* c-call:unsigned-int)))))
+	      (lo (alien:deref (sap-alien (sys:sap+ ,sp
+						    (+ ,offset vm:word-bytes))
+					  (* c-call:unsigned-int)))))
 	     (+ (ash hi vm:word-bits) lo)))
       (alien::integer$
        ;; We can access machine integers directly, but we need to get
