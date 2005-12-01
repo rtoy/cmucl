@@ -29,6 +29,8 @@ New in this release:
         now be printed using the CMUCL extension #P(...).  However,
         there are still cases where CMUCL cannot print pathnames
         readably, but these involve search-lists and patterns.
+      - LONG-LONG and UNSIGNED-LONG-LONG are recognized types in the
+        C-CALL package for signed and unsigned 64-bit integers.
 
   * Numerous ANSI compliance fixes:
 
@@ -48,6 +50,8 @@ New in this release:
         after the decimal point, as required by CLHS, 22.3.3.2.
       - DOCUMENTATION and (SETF DOCUMENTATION) now works for
         structures of type list or vector. 
+      - DOTIMES will execute the loop the specified number of times,
+        independent of what the loop might do to the loop counter.
 
   * Numerous bugfixes:
 
@@ -60,12 +64,13 @@ New in this release:
       - PEEK-CHAR for Gray streams handles end of file correctly now.
       - For the ppc port, the alignment of objects in alien structures
         now matches the PowerOpen ABI for Mac OS X.
-      - For PPC, CMUCL was not following the ABI when calling out to C
-        varargs functions.  Now we always copy any float args to the
-        corresponding int regs (or stack) as required by the ABI.
-        This isn't necessary for non-varargs functions, but CMUCL
-        doesn't know which are varargs.  (There are still some issues
-        with vararg functions and float args.)
+      - For Darwin/ppc, CMUCL was not following the ABI when calling
+        out to C varargs functions.  Now we always copy any float args
+        to the corresponding int regs (or stack) as required by the
+        ABI.  This isn't necessary for non-varargs functions, but
+        CMUCL doesn't know functions which are varargs functions.
+      - Callbacks with long-long args or results should work correctly
+        now for Darwin/ppc.
 
   * Other changes:
 
