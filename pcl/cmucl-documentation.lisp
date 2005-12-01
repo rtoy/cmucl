@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.15 2005/11/10 17:43:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.16 2005/12/01 17:08:26 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -108,7 +108,7 @@
 	((info typed-structure info x)
 	 (values (info typed-structure documentation x)))
 	(t
-	 (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))))
+	 nil)))
 
 (defmethod (setf documentation) (new-value (x kernel::structure-class) (doc-type (eql 't)))
   (setf (info type documentation (kernel:%class-name x)) new-value))
