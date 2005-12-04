@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.98 2005/11/07 00:42:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.99 2005/12/04 15:49:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -494,7 +494,8 @@
 	  (when (find #\/ name)
 	    (error "Cannot specify a directory separator in a pathname name: ~S" name))
 	  (when (and (not type-supplied)
-		     (find #\. name))
+		     (find #\. name :start 1))
+	    ;; A single leading dot is ok.
 	    (error "Cannot specify a dot in a pathname name without a pathname type: ~S" name))
 	  (when (or (string= ".." name)
 		    (string= "." name))
