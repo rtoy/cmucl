@@ -4,7 +4,7 @@
 
 The CMUCL project is pleased to announce the release of CMUCL 19d.
 This is a major release which contains numerous enhancements and
-bugfixes from the 19d release.
+bugfixes from the 19c release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
@@ -86,7 +86,7 @@ New in this release:
         the default version of gcc.
 
 This release is not binary compatible with code compiled using CMUCL
-19d; you will need to recompile FASL files. 
+19c; you will need to recompile FASL files. 
 
 See <URL:http://www.cons.org/cmucl/> for download information,
 guidelines on reporting bugs, and mailing list details.
