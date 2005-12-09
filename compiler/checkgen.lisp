@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.33 2003/05/08 14:52:04 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.34 2005/12/09 15:50:20 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -329,8 +329,9 @@
 	    ((and (mv-combination-p dest)
 		  (eq (basic-combination-kind dest) :local))
 	     (assert (values-type-p atype))
-	     (assert (null (args-type-required atype)))
-	     (maybe-negate-check cont (args-type-optional atype) force-hairy))
+	     (maybe-negate-check cont (append (args-type-required atype)
+					      (args-type-optional atype))
+				 force-hairy))
 	    ((or (exit-p dest) (return-p dest) (mv-combination-p dest))
 	     (values :too-hairy nil))
 	    (t
