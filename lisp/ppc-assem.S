@@ -197,16 +197,12 @@ x:
 	li reg_A3,0
 	li reg_L0,0
 	li reg_L1,0
-/*	li reg_L2,0*/
 	li reg_LIP,0
 	lis reg_NULL,hi16(NIL)
 	ori reg_NULL,reg_NULL,lo16(NIL)
 
 	/* Turn on pseudo-atomic */
 
-#if 0	
-	li reg_NL3,-4
-#endif	
 	li reg_ALLOC,4
 	store(reg_ZERO,reg_NL4,_foreign_function_call_active)
 	load(reg_NL4,_current_dynamic_space_free_pointer)
@@ -306,9 +302,6 @@ lra:
 	mr reg_NARGS,reg_NL3
 	
 	/* Turn on pseudo-atomic */
-#if 0	
-	li reg_NL3,-4
-#endif	
 	la reg_ALLOC,4(reg_ALLOC)
 
 	/* Convert the return address to an offset and save it on the stack. */
@@ -362,7 +355,6 @@ lra:
 	li reg_A3,0
 	li reg_L0,0
 	li reg_L1,0
-/*	li reg_L2,0*/
 	li reg_LIP,0
 
 	/* Atomic ... */
@@ -408,16 +400,6 @@ lra:
 
 	GFUNCDEF(xundefined_tramp)
 	.globl _undefined_tramp
-#if 0	
-	.byte 0,0,0,type_FunctionHeader	/* Header */
-
-	.long _undefined_tramp	/* self slot */
-	.long NIL		/* next slot */
-	.long NIL		/* name slot */
-	.long NIL		/* arglist slot */
-	.long NIL		/* type slot */
-_undefined_tramp:	
-#else
 	.byte 0
 _undefined_tramp:	
 	.byte 0, 0, type_FunctionHeader
@@ -426,7 +408,7 @@ _undefined_tramp:
 	.long NIL		/* name slot */
 	.long NIL		/* arglist slot */
 	.long NIL		/* type slot */
-#endif	
+
 	twllei reg_ZERO,trap_Cerror
         /* Number of argument bytes */
 	.byte 4
@@ -453,15 +435,6 @@ _undefined_tramp:
 
 	GFUNCDEF(xclosure_tramp)
 	.globl _closure_tramp
-#if 0
-	.byte 0,0,0,type_FunctionHeader	/* Header */
-	.long _closure_tramp
-	.long NIL 
-	.long NIL
-	.long NIL
-	.long NIL
-_closure_tramp:
-#else
 	.byte 0
 _closure_tramp:
 	.byte 0,0,type_FunctionHeader	/* Header */
@@ -470,7 +443,7 @@ _closure_tramp:
 	.long NIL
 	.long NIL
 	.long NIL
-#endif		
+
 	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_FDEFN)
 	lwz reg_CODE,CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
 	la reg_LIP,FUNCTION_CODE_OFFSET(reg_CODE)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.6 2005/12/11 18:30:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.7 2005/12/11 20:30:46 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -140,10 +140,6 @@
     (let ((normal-fn (gen-label)))
       (load-type type function (- function-pointer-type))
       (inst cmpwi type function-header-type)
-      #+nil
-      (inst addi lip function
-                 (- (ash vm:function-code-offset vm:word-shift)
-		    function-pointer-type))
       (move lip function)
       (inst beq normal-fn)
       ;; For the linkage-table stuff, we need to look up the address
