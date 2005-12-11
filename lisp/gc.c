@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.23 2005/09/15 18:26:51 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.24 2005/12/11 18:30:48 rtoy Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1152,7 +1152,7 @@ size_boxed(lispobj * where)
 
 /* Note: on the sparc we don't have to do anything special for fdefns, */
 /* cause the raw-addr has a function lowtag. */
-#ifndef sparc
+#if !(defined(sparc) || defined(DARWIN))
 static int
 scav_fdefn(lispobj * where, lispobj object)
 {
@@ -2047,7 +2047,7 @@ gc_init(void)
     scavtab[type_UnboundMarker] = scav_immediate;
     scavtab[type_WeakPointer] = scav_weak_pointer;
     scavtab[type_InstanceHeader] = scav_boxed;
-#ifndef sparc
+#if !(defined(sparc) || defined(DARWIN))
     scavtab[type_Fdefn] = scav_fdefn;
 #else
     scavtab[type_Fdefn] = scav_boxed;

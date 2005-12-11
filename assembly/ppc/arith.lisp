@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.5 2005/04/08 04:11:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.6 2005/12/11 18:30:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,7 +62,8 @@
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip 0)
+  ;; (inst j lip 0)
+  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
 
   DONE
   (move res temp))
@@ -110,7 +111,8 @@
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip 0)
+  ;;(inst j lip 0)
+  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
 
   DONE
   (move res temp))
@@ -187,8 +189,9 @@
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip 0)
-
+  ;;(inst j lip 0)
+  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
+  
   LOW-FITS-IN-FIXNUM
   (move res lo))
 
@@ -319,7 +322,9 @@
 	  (inst li nargs (fixnumize 2))
 	  (inst mr ocfp cfp-tn)
 	  (inst mr cfp-tn csp-tn)
-	  (inst j lip 0)
+	  ;;(inst j lip 0)
+	  (inst j lip
+	        (- (* function-code-offset word-bytes) function-pointer-type)) 
 	  
 	  DO-COMPARE
 	  (load-symbol res t)
@@ -364,7 +369,8 @@
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip 0)
+  ;;(inst j lip 0)
+  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
 
   RETURN-T
   (load-symbol res t))
@@ -400,7 +406,8 @@
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip 0)
+  ;;(inst j lip 0)
+  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
 
   RETURN-T
   (load-symbol res t))
@@ -433,8 +440,9 @@
   (inst lwz lip null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
-  (inst j lip 0)
+  ;;(inst j lip 0)
   (inst mr cfp-tn csp-tn)
+  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
 
   RETURN-NIL
   (inst mr res null-tn))

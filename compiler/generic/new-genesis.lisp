@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.75 2005/02/06 19:43:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.76 2005/12/11 18:30:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -910,7 +910,7 @@
 		     (#.vm:function-header-type
 		      (if (or (c:backend-featurep :sparc)
 			      (and (c:backend-featurep :ppc)
-			           (c:backend-featurep :ppc-fun-hack)))
+			           #+nil (c:backend-featurep :ppc-fun-hack)))
 			  defn
 			  (make-random-descriptor
 			   (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)

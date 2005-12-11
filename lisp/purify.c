@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.34 2005/09/15 18:26:52 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.35 2005/12/11 18:30:51 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -86,7 +86,7 @@ static int later_count = 0;
 #define CEILING(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
 #define NWORDS(x,y) (CEILING((x),(y)) / (y))
 
-#ifdef sparc
+#if defined(sparc) || defined(DARWIN)
 #define RAW_ADDR_OFFSET 0
 #else
 #define RAW_ADDR_OFFSET (6*sizeof(lispobj) - type_FunctionPointer)

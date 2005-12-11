@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.7 2005/04/08 04:11:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.8 2005/12/11 18:30:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -806,8 +806,11 @@ default-value-8
 		      (loadw name-pass code-tn (tn-offset name)
 			     vm:other-pointer-type)
 		      (do-next-filler)))
-		   (loadw entry-point name-pass fdefn-raw-addr-slot
-			  other-pointer-type)
+		   (loadw function name-pass fdefn-raw-addr-slot
+		          other-pointer-type)
+		   (inst addi entry-point function
+		         (- (ash vm:function-code-offset vm:word-shift)
+			    vm:function-pointer-type))
 		   (do-next-filler))
 		 `((sc-case arg-fun
 		     (descriptor-reg (move lexenv arg-fun))

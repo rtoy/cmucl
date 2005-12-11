@@ -408,6 +408,7 @@ lra:
 
 	GFUNCDEF(xundefined_tramp)
 	.globl _undefined_tramp
+#if 0	
 	.byte 0,0,0,type_FunctionHeader	/* Header */
 
 	.long _undefined_tramp	/* self slot */
@@ -416,6 +417,16 @@ lra:
 	.long NIL		/* arglist slot */
 	.long NIL		/* type slot */
 _undefined_tramp:	
+#else
+	.byte 0
+_undefined_tramp:	
+	.byte 0, 0, type_FunctionHeader
+	.long _undefined_tramp	/* self slot */
+	.long NIL		/* next slot */
+	.long NIL		/* name slot */
+	.long NIL		/* arglist slot */
+	.long NIL		/* type slot */
+#endif	
 	twllei reg_ZERO,trap_Cerror
         /* Number of argument bytes */
 	.byte 4
@@ -442,6 +453,7 @@ _undefined_tramp:
 
 	GFUNCDEF(xclosure_tramp)
 	.globl _closure_tramp
+#if 0
 	.byte 0,0,0,type_FunctionHeader	/* Header */
 	.long _closure_tramp
 	.long NIL 
@@ -449,6 +461,16 @@ _undefined_tramp:
 	.long NIL
 	.long NIL
 _closure_tramp:
+#else
+	.byte 0
+_closure_tramp:
+	.byte 0,0,type_FunctionHeader	/* Header */
+	.long _closure_tramp
+	.long NIL 
+	.long NIL
+	.long NIL
+	.long NIL
+#endif		
 	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_FDEFN)
 	lwz reg_CODE,CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
 	la reg_LIP,FUNCTION_CODE_OFFSET(reg_CODE)
