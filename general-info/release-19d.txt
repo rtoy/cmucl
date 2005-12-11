@@ -1,0 +1,96 @@
+========================== C M U C L  19 d =============================
+
+[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
+
+The CMUCL project is pleased to announce the release of CMUCL 19d.
+This is a major release which contains numerous enhancements and
+bugfixes from the 19c release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multimethods and a metaobject protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+
+
+  * Feature enhancements:
+
+      - Destructive functions like nreverse that modify constant args
+        will produce a warning.
+      - Destructive functions like nreverse whose results are not used
+        will produce a warning.
+      - Pathnames that cannot be printed readably using #p"..." will
+        now be printed using the CMUCL extension #P(...).  However,
+        there are still cases where CMUCL cannot print pathnames
+        readably, but these involve search-lists and patterns.
+      - LONG-LONG and UNSIGNED-LONG-LONG are recognized types in the
+        C-CALL package for signed and unsigned 64-bit integers.
+
+  * Numerous ANSI compliance fixes:
+
+      - A reader-error is signaled if the number that is being read is
+        too small to be presented.  We used to silently return 0.
+      - WITH-INPUT-FROM-STRING no longer modifies the index if
+        WITH-INPUT-FROM-STRING is not exited normally.
+      - An error is signaled if a declaration is used as the name of a
+        deftype, condition, or defstruct, and vice versa.
+      - An error is signaled when trying to generate a namestring from
+        a pathname with just a version component (other than nil,
+        :newest, or :unspecific).  CMUCL cannot print that readably.
+      - FLET and LABELS functions will catch errors in keyword
+        parameters.  Previously, a keyword of NIL was silently
+        accepted. 
+      - Printing a zero using ~E will now include a trailing zero
+        after the decimal point, as required by CLHS, 22.3.3.2.
+      - DOCUMENTATION and (SETF DOCUMENTATION) now works for
+        structures of type list or vector. 
+      - DOTIMES will execute the loop the specified number of times,
+        independent of what the loop might do to the loop counter.
+
+  * Numerous bugfixes:
+
+      - LISTEN on DUAL-CHANNEL-SIMPLE-STREAM should work now.
+      - Some numerical issues with the two-arg log function have been
+        fixed.  (log 17 10f0), (log 17f0 10) and (log 17 10) all
+        return the same result now.
+      - DESTRUCTURING-BIND no longer causes an error when the list to
+        be destructured is circular.
+      - PEEK-CHAR for Gray streams handles end of file correctly now.
+      - For the ppc port, the alignment of objects in alien structures
+        now matches the PowerOpen ABI for Mac OS X.
+      - For Darwin/ppc, CMUCL was not following the ABI when calling
+        out to C varargs functions.  Now we always copy any float args
+        to the corresponding int regs (or stack) as required by the
+        ABI.  This isn't necessary for non-varargs functions, but
+        CMUCL doesn't know functions which are varargs functions.
+      - Callbacks with long-long args or results should work correctly
+        now for Darwin/ppc.
+
+  * Other changes:
+
+      - CMUCL catches more cases where it cannot print a pathname
+        readably.  In particular when the pathname name contains "/"
+        or ".", or when the pathname type contains a ".".
+  
+  * Improvements to the PCL implementation of CLOS:
+
+  * Changes to rebuilding procedure:
+      - Build scripts should recognize FreeBSD automatically.
+      - Should be able to build on either Mac OS X 10.2 or 10.4 using
+        the default version of gcc.
+
+This release is not binary compatible with code compiled using CMUCL
+19c; you will need to recompile FASL files. 
+
+See <URL:http://www.cons.org/cmucl/> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!
+
