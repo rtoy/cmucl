@@ -25,7 +25,7 @@
 #define reg_NL4       REG(7)
 #define reg_NL5       REG(8)
 #define reg_NL6       REG(9)
-#define reg_FDEFN     REG(10)	/* Last (8th) FF param */
+#define reg_NL7       REG(10)	/* Last (8th) FF param */
 #define reg_NARGS     REG(11)
 #define reg_CFUNC     REG(12)	/* Silly to blow a reg on FF-name */
 #define reg_NFP       REG(13)	/* Lisp may save around FF-call */
@@ -45,7 +45,7 @@
 #define reg_A3        REG(27)	/* Last of (only) 4 arg regs */
 #define reg_L0	      REG(28)	/* Tagged temp regs */
 #define reg_L1        REG(29)
-#define reg_L2        REG(30)	/* Last lisp temp reg */
+#define reg_FDEFN     REG(30)
 #define reg_LIP       REG(31)	/* Lisp Interior Pointer, e.g., locative */
 
 /*
@@ -63,7 +63,7 @@
 #define reg_NL4_NUM       7
 #define reg_NL5_NUM       8
 #define reg_NL6_NUM       9
-#define reg_FDEFN_NUM     10	/* Last (8th) FF param */
+#define reg_NL7_NUM       10	/* Last (8th) FF param */
 #define reg_NARGS_NUM     11
 #define reg_CFUNC_NUM     12	/* Silly to blow a reg on FF-name */
 #define reg_NFP_NUM       13	/* Lisp may save around FF-call */
@@ -83,23 +83,23 @@
 #define reg_A3_NUM        27	/* Last of (only) 4 arg regs */
 #define reg_L0_NUM	  28	/* Tagged temp regs */
 #define reg_L1_NUM        29
-#define reg_L2_NUM        30	/* Last lisp temp reg */
+#define reg_FDEFN_NUM     30
 #define reg_LIP_NUM       31	/* Lisp Interior Pointer, e.g., locative */
 
 #define REGNAMES \
         "ZERO",		"NSP",	        "POLL",		"NL0", \
 	"NL1",		"NL2",		"NL3P",		"NL4", \
-        "NL5",		"NL6",		"FDEFN",	"NARGS", \
+        "NL5",		"NL6",		"NL7",		"NARGS", \
         "CFUNC",	"NFP"		"BSP",		"CFP", \
         "CSP",		"ALLOC",	"NULL",		"CODE", \
         "CNAME",	"LEXENV",	"OCFP",		"LRA", \
         "A0",	        "A1",	        "A2",		"A3", \
-        "L0",		"L1",		"L2",		"LIP"
+        "L0",		"L1",		"FDEFN",	"LIP"
 
 #define BOXED_REGISTERS { \
     reg_FDEFN, reg_CODE, reg_CNAME, reg_LEXENV, reg_OCFP, reg_LRA, \
     reg_A0, reg_A1, reg_A2, reg_A3, \
-    reg_L0, reg_L1, reg_L2 \
+    reg_L0, reg_L1 \
 }
 
 #ifndef LANGUAGE_ASSEMBLY

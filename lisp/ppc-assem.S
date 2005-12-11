@@ -197,7 +197,7 @@ x:
 	li reg_A3,0
 	li reg_L0,0
 	li reg_L1,0
-	li reg_L2,0
+/*	li reg_L2,0*/
 	li reg_LIP,0
 	lis reg_NULL,hi16(NIL)
 	ori reg_NULL,reg_NULL,lo16(NIL)
@@ -362,7 +362,7 @@ lra:
 	li reg_A3,0
 	li reg_L0,0
 	li reg_L1,0
-	li reg_L2,0
+/*	li reg_L2,0*/
 	li reg_LIP,0
 
 	/* Atomic ... */
