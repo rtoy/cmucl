@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.7 2005/12/11 20:30:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.8 2005/12/12 00:46:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,11 +58,12 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
-  (inst lwz lip null-tn (static-function-offset 'two-arg-+))
+  (inst lwz code-tn null-tn (static-function-offset 'two-arg-+))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
+  (inst j code-tn
+	(- (* function-code-offset word-bytes) function-pointer-type))
 
   DONE
   (move res temp))
@@ -106,11 +107,12 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
-  (inst lwz lip null-tn (static-function-offset 'two-arg--))
+  (inst lwz code-tn null-tn (static-function-offset 'two-arg--))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
+  (inst j code-tn
+	(- (* function-code-offset word-bytes) function-pointer-type))
 
   DONE
   (move res temp))
@@ -183,11 +185,12 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
-  (inst lwz lip null-tn (static-function-offset 'two-arg-*))
+  (inst lwz code-tn null-tn (static-function-offset 'two-arg-*))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
+  (inst j code-tn
+	(- (* function-code-offset word-bytes) function-pointer-type))
   
   LOW-FITS-IN-FIXNUM
   (move res lo))
@@ -315,11 +318,11 @@
           (inst beq DO-COMPARE)
 	  
 	  DO-STATIC-FN
-	  (inst lwz lip null-tn (static-function-offset ',static-fn))
+	  (inst lwz code-tn null-tn (static-function-offset ',static-fn))
 	  (inst li nargs (fixnumize 2))
 	  (inst mr ocfp cfp-tn)
 	  (inst mr cfp-tn csp-tn)
-	  (inst j lip
+	  (inst j code-tn
 	        (- (* function-code-offset word-bytes) function-pointer-type)) 
 	  
 	  DO-COMPARE
@@ -361,11 +364,11 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
-  (inst lwz lip null-tn (static-function-offset 'eql))
+  (inst lwz code-tn null-tn (static-function-offset 'eql))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
+  (inst j code-tn (- (* function-code-offset word-bytes) function-pointer-type))
 
   RETURN-T
   (load-symbol res t))
@@ -397,11 +400,12 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
-  (inst lwz lip null-tn (static-function-offset 'two-arg-=))
+  (inst lwz code-tn null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
+  (inst j code-tn
+	(- (* function-code-offset word-bytes) function-pointer-type))
 
   RETURN-T
   (load-symbol res t))
@@ -431,11 +435,12 @@
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
-  (inst lwz lip null-tn (static-function-offset 'two-arg-=))
+  (inst lwz code-tn null-tn (static-function-offset 'two-arg-=))
   (inst li nargs (fixnumize 2))
   (inst mr ocfp cfp-tn)
   (inst mr cfp-tn csp-tn)
-  (inst j lip (- (* function-code-offset word-bytes) function-pointer-type))
+  (inst j code-tn
+	(- (* function-code-offset word-bytes) function-pointer-type))
 
   RETURN-NIL
   (inst mr res null-tn))
