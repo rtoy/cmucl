@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.8 2005/12/11 18:30:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.9 2005/12/12 00:52:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -834,12 +834,8 @@ default-value-8
 	   
 	   (note-this-location vop :call-site)
 	   (inst mtctr entry-point)
+	   (move code-tn function)
 	   (inst bctr)
-	   #|
-	   (inst j function
-		 (- (ash vm:function-code-offset vm:word-shift)
-		    vm:function-pointer-type))
-	   |#)
 
 	 ,@(ecase return
 	     (:fixed
