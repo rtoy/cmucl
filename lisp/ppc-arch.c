@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.5 2005/09/15 18:26:52 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.6 2005/12/17 16:29:13 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -236,6 +236,13 @@ sigill_handler(HANDLER_ARGS)
 	      break;
 
 	  case trap_AfterBreakpoint:
+#if 0
+	      fprintf(stderr, "trap_AfterBreakpoint: break_addr = %p\n",
+		      skipped_break_addr);
+	      fprintf(stderr, " CSP  = %p\n", (void*) SC_REG(context, reg_CSP));
+	      fprintf(stderr, " CFP  = %p\n", (void*) SC_REG(context, reg_CFP));
+	      fprintf(stderr, " OCFP = %p\n", (void*) SC_REG(context, reg_OCFP));
+#endif	      
 	      /* Put our breakpoint instruction back in */
 	      *skipped_break_addr = TWLLEI_R0(trap_Breakpoint);
 	      skipped_break_addr = NULL;
