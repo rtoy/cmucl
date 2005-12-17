@@ -462,6 +462,8 @@ _closure_tramp:
 _function_end_breakpoint_guts:	
 	.long	type_ReturnPcHeader
 	b	1f
+	/* This NOP is necessary for the return convention, I think */
+	nop	
 	/*
 	 * Are these really necessary? I'm cargo-culting from the sparc port 
 	 */
