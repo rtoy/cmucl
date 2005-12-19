@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.29 2004/08/03 00:12:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.29.2.1 2005/12/19 01:09:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -683,27 +683,47 @@
 	(cont (node-cont call))
 	(args args))
     (multiple-value-bind (nsp stack-frame-size arg-tns result-tns)
-			 (make-call-out-tns type)
+	(make-call-out-tns type)
       (vop alloc-number-stack-space call block stack-frame-size nsp)
       (dolist (tn arg-tns)
-	(let* ((arg (pop args))
-	       (sc (tn-sc tn))
+	;; On PPC, TN might be a list.  This is used to indicate
+	;; something special needs to happen.  See below.
+	;;
+	;; FIXME: We should implement something better than this.
+	(let* ((first-tn (if (listp tn) (car tn) tn))
+	       (arg (pop args))
+	       (sc (tn-sc first-tn))
 	       (scn (sc-number sc))
-	       (temp-tn (make-representation-tn (tn-primitive-type tn) scn))
+	       (temp-tn (make-representation-tn (tn-primitive-type first-tn) scn))
 	       (move-arg-vops (svref (sc-move-arg-vops sc) scn)))
 	  (assert arg)
 	  (assert (= (length move-arg-vops) 1) ()
 		  "No unique move-arg-vop for moves in SC ~S."
 		  (sc-name sc))
+	  
 	  (emit-move call block (continuation-tn call block arg) temp-tn)
 	  (emit-move-arg-template call block (first move-arg-vops)
-				  temp-tn nsp tn)))
+				  temp-tn nsp first-tn)
+	  #+(and ppc darwin)
+	  (when (listp tn)
+	    ;; This means that we have a float arg that we need to
+	    ;; also copy to some int regs.  The list contains the TN
+	    ;; for the float as well as the TNs to use for the int
+	    ;; arg.
+	    (destructuring-bind (float-tn i1-tn &optional i2-tn)
+		tn
+	      (if i2-tn
+		  (vop ppc::move-double-to-int-arg call block
+		       float-tn i1-tn i2-tn)
+		  (vop ppc::move-single-to-int-arg call block
+		       float-tn i1-tn))))))
       (assert (null args))
       (unless (listp result-tns)
 	(setf result-tns (list result-tns)))
-      (vop* call-out call block
-	    ((continuation-tn call block function)
-	     (reference-tn-list arg-tns nil))
-	    ((reference-tn-list result-tns t)))
+      (let ((arg-tns (flatten-list arg-tns)))
+	(vop* call-out call block
+	      ((continuation-tn call block function)
+	       (reference-tn-list arg-tns nil))
+	      ((reference-tn-list result-tns t))))
       (vop dealloc-number-stack-space call block stack-frame-size)
       (move-continuation-result call block result-tns cont))))

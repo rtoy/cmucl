@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.9.2.2 2005/05/15 20:01:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.9.2.3 2005/12/19 01:10:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,7 +156,7 @@
     (let ((size (+ length closure-info-offset)))
       (pseudo-atomic (pa-flag)
      
-	(allocation result (pad-data-block size) function-pointer-type
+	(allocation result (pad-data-block size) function-pointer-type 
 		    :temp-tn temp :flag-tn pa-flag)
 	(inst lr temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
@@ -171,8 +171,8 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 10
     (with-fixed-allocation
-	(result pa-flag temp value-cell-header-type value-cell-size))
-    (storew value result value-cell-value-slot other-pointer-type)))
+     (result pa-flag temp value-cell-header-type value-cell-size)
+     (storew value result value-cell-value-slot other-pointer-type))))
 
 
 
@@ -192,12 +192,8 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
   (:generator 4
-    ;; Could this be replaced with with-fixed-allocation?
-    (pseudo-atomic (pa-flag)
-      (allocation result (pad-data-block words) lowtag :temp-tn temp :flag-tn pa-flag)
-      (when type
-	(inst lr temp (logior (ash (1- words) type-bits) type))
-	(storew temp result 0 lowtag)))))
+    (with-fixed-allocation (result pa-flag temp type words :lowtag lowtag)
+      )))
 
 (define-vop (var-alloc)
   (:args (extra :scs (any-reg)))

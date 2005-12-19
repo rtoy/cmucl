@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.79 2004/03/26 18:22:54 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.79.6.1 2005/12/19 01:09:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,9 @@
 (export '(layout-invalid condition-function-name simple-control-error
 	  simple-file-error simple-program-error simple-parse-error
           simple-style-warning simple-undefined-function
-	  stack-overflow heap-overflow))
+	  constant-modified
+          #+stack-checking stack-overflow
+          #+heap-overflow-check heap-overflow))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -690,6 +692,8 @@
 		    (condition-writer-function x nv slot)))))))
 
 (defun %define-condition (name slots documentation report default-initargs)
+  (when (info declaration recognized name)
+    (error "Condition already names a declaration: ~S." name))
   (let ((class (kernel::find-class name)))
     (setf (slot-class-print-function class) #'%print-condition)
     (setf (condition-class-slots class) slots)
@@ -1045,6 +1049,13 @@
 (define-condition simple-undefined-function (simple-condition
 					     undefined-function) ())
 
+(define-condition constant-modified (warning)
+  ((function-name :initarg :function-name :reader constant-modified-function-name))
+  (:report (lambda (c s)
+             (format s "~@<Destructive function ~S called on ~
+                         constant data.~@:>"
+                     (constant-modified-function-name c)))))
+  
 (define-condition arithmetic-error (error)
   ((operation :reader arithmetic-error-operation :initarg :operation
 	      :initform nil)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.12 2004/05/15 18:30:47 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.12.2.1 2005/12/19 01:10:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,8 +202,8 @@
   (:node-var node)
   (:generator 10
     (with-fixed-allocation
-	(result value-cell-header-type value-cell-size node))
-    (storew value result value-cell-value-slot other-pointer-type)))
+	(result value-cell-header-type value-cell-size node)
+      (storew value result value-cell-value-slot other-pointer-type))))
 
 
 

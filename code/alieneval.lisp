@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.62 2004/12/24 15:05:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.62.2.1 2005/12/19 01:09:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,6 +128,8 @@
   (let ((extra (rem offset alignment)))
     (if (zerop extra) offset (+ offset (- alignment extra)))))
 
+;; This guesses the alignment of some object, using the natural
+;; alignment.
 (defun guess-alignment (bits)
   (cond ((null bits) nil)
 	#-x86 ((> bits 32) 64)
@@ -135,6 +137,21 @@
 	((> bits 8) 16)
 	((> bits 1) 8)
 	(t 1)))
+
+;; This is mostly for ppc.  The first object in a structure gets the
+;; natural alignment, but all subsequent objects get an alignment of
+;; at most 4 bytes (32 bits).
+;;
+;; For more details, see the Power alignment mode in
+;; http://developer.apple.com/documentation/DeveloperTools/Conceptual/LowLevelABI/index.html
+;; for details.
+;; 
+(defun embedded-alignment (bits &optional firstp)
+  (let ((align (guess-alignment bits)))
+    (if firstp
+	align
+	(min align #+(and ppc darwin) 32
+	           #-(and ppc darwin) 64))))
 
 
 ;;;; Alien-type-info stuff.
@@ -708,13 +725,27 @@
   (cond (mappings
 	 (let ((result (parse-enum name mappings)))
 	   (when name
-	     (multiple-value-bind
-		 (old old-p)
+	     (multiple-value-bind (old old-p)
 		 (auxiliary-alien-type :enum name)
 	       (when old-p
 		 (unless (alien-type-= result old)
-		   (warn "Redefining alien enum ~S" name))))
-	     (setf (auxiliary-alien-type :enum name) result))
+		   (warn "Redefining alien enum ~S" name)))
+	       ;; I (rtoy) am not 100% sure about this.  But compare
+	       ;; what this does with what PARSE-ALIEN-RECORD-TYPE
+	       ;; does.  So, if we've seen this type before and it's
+	       ;; the same type, we don't need to setf
+	       ;; auxiliary-alien-type.  This gets around the problem
+	       ;; noted by Nicolas Neuss on cmucl-help, 2004/11/09
+	       ;; where he had something like
+	       ;;
+	       ;; (def-alien-type yes-no-t (enum yes-no-t :no :yes))
+	       ;; (def-alien-type nil
+	       ;;    (struct foo
+	       ;;      (arg1 yes-no-t)
+	       ;;      (arg2 yes-no-t)))
+	       (when (or (not old-p)
+			 (not (alien-type-= result old)))
+		 (setf (auxiliary-alien-type :enum name) result))))
 	   result))
 	(name
 	 (multiple-value-bind
@@ -1101,13 +1132,16 @@
 	   (type list fields))
   (let ((total-bits 0)
 	(overall-alignment 1)
-	(parsed-fields nil))
+	(parsed-fields nil)
+	(firstp t))
     (dolist (field fields)
       (destructuring-bind (var type &optional bits) field
 	(declare (ignore bits))
 	(let* ((field-type (parse-alien-type type))
 	       (bits (alien-type-bits field-type))
-	       (alignment (alien-type-alignment field-type))
+	       (natural-alignment (alien-type-alignment field-type))
+	       (alignment (embedded-alignment natural-alignment
+					      firstp))
 	       (parsed-field
 		(make-alien-record-field :type field-type
 					 :name var)))
@@ -1125,7 +1159,8 @@
 	       (setf (alien-record-field-offset parsed-field) offset)
 	       (setf total-bits (+ offset bits))))
 	    (:union
-	     (setf total-bits (max total-bits bits)))))))
+	     (setf total-bits (max total-bits bits))))))
+      (setf firstp nil))
     (let ((new (nreverse parsed-fields)))
       (setf (alien-record-type-fields result) new))
     (setf (alien-record-type-alignment result) overall-alignment)

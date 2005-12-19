@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.42 2003/09/25 02:40:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.42.6.1 2005/12/19 01:09:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -808,7 +808,7 @@
   "Return a list of all the live processes."
   *all-processes*)
 
-(declaim (type (or null process) *intial-process*))
+(declaim (type (or null process) *initial-process*))
 (defvar *initial-process* nil)
 
 ;;; Without-scheduling  --  Public

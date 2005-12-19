@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.57 2003/10/11 11:57:55 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.57.6.1 2005/12/19 01:09:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -611,7 +611,11 @@
 			   (progn
 			     (ignores dummy val)
 			     (unless (eq name :allow-other-keys)
-			       (setq loser name))))
+			       ;; Listify the name in case the keyword
+			       ;; name is nil, so we can distinguish
+			       ;; between NIL as a keyword and loser
+			       ;; being empty.
+			       (setq loser (list name)))))
 		(let ((info (lambda-var-arg-info var)))
 		  (when (eq (arg-info-keyword info) name)
 		    (ignores dummy)
@@ -620,7 +624,7 @@
 	
 	(when (and loser (not (optional-dispatch-allowp fun)) (not allowp))
 	  (compiler-warning "Function called with unknown argument keyword ~S."
-			    loser)
+			    (car loser))
 	  (setf (basic-combination-kind call) :error)
 	  (return-from convert-more-call)))
 

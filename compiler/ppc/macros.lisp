@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.3 2005/05/15 20:01:27 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.4 2005/12/19 01:10:02 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -180,7 +180,7 @@
       
       ;; Get the end of the current allocation region.
       (load-symbol-value ,flag-tn *current-region-end-addr*)
-      ;; The object starts exactly where alloc-tn is, minus any tag
+      ;; The object starts exactly where alloc-tn is, minus an tag
       ;; bits, etc.
 
       ;; CAUTION: The C code depends on the exact order of
@@ -212,13 +212,13 @@
   Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
   by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
   initializes the object."
-  (once-only ((result-tn result-tn) (temp-tn temp-tn) (flag-tn flag-tn)
+  (once-only ((result-tn result-tn) (temp-tn temp-tn)
 	      (type-code type-code) (size size)
-	      (lowtag lowtag))
+	      (lowtag lowtag) (flag-tn flag-tn))
     `(pseudo-atomic (,flag-tn)
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
 		   :temp-tn ,temp-tn
-		   :flag-tn ,flag-tn)
+	           :flag-tn ,flag-tn)
        (when ,type-code
 	 (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
 	 (storew ,temp-tn ,result-tn 0 ,lowtag))
@@ -499,9 +499,9 @@
 ;;; extra register to hold the interrupted bit.)
 (defmacro pseudo-atomic ((flag-tn &key (extra 0)) &rest forms)
   (let ((n-extra (gensym)))
-    ;; We're depending on extra being zero here and, currently, no
-    ;; sets extra.  We should enforce it later on.
     `(let ((,n-extra ,extra))
+      ;; We're depending on extra being zero here and, currently, no
+      ;; sets extra.  We should enforce it later on.
        (without-scheduling ()
 	;; Extra debugging stuff:
 	#+debug
@@ -511,10 +511,10 @@
 	(inst addi alloc-tn alloc-tn 4))
       ,@forms
       (without-scheduling ()
-       ;; Grab PA interrupted bit from alloc-tn
-       (inst andi. ,flag-tn alloc-tn 1)
        ;; Remove PA bit			  
-       (inst subi alloc-tn alloc-tn 4)			  
+       (inst subi alloc-tn alloc-tn 4)
+       ;; Now test to see if the pseudo-atomic interrupted bit is set.
+       (inst andi. ,flag-tn alloc-tn 1)
        (inst twi :ne ,flag-tn 0))
       #+debug
       (progn

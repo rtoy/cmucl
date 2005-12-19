@@ -7,7 +7,7 @@
 #if defined DARWIN
 #define FUNCDEF(x)	.text @ \
 			.align 3 @ \
-_##x:
+_/**/x:
 #define GFUNCDEF(x)	.globl _/**/x @ \
 	FUNCDEF(x)
 #else
@@ -56,9 +56,10 @@ x:
 #if defined DARWIN
 #define FRAME_SIZE(first_g,first_f,out_arg_words,savecr) \
 (NFPR_SAVE_BYTES(first_f)+ NGPR_SAVE_BYTES(first_g)+ FRAME_ARG_BYTES(out_arg_words))
-#define SAVE_FPR(n) stfd f##n,-8*(32- n)(r11)
-#define SAVE_GPR(n) stw r##n,-4*(32- n)(r11)
-#define FULL_FRAME_SIZE FRAME_SIZE(FIRST_SAVE_GPR,FIRST_SAVE_FPR,8,1)
+#define SAVE_FPR(n) stfd f/**/n,-8*(32- n)(r11)
+#define SAVE_GPR(n) stw r/**/n,-4*(32- n)(r11)
+/* Make sure FULL_FRAME_SIZE is on a 16-byte boundary */
+#define FULL_FRAME_SIZE ((FRAME_SIZE(FIRST_SAVE_GPR,FIRST_SAVE_FPR,8,1) + 15) & ~15)
 #else
 #define FRAME_SIZE(first_g,first_f,out_arg_words,savecr) \
 (NFPR_SAVE_BYTES(first_f)+ NGPR_SAVE_BYTES(first_g)+ FRAME_ARG_BYTES(out_arg_words+savecr))
@@ -68,8 +69,8 @@ x:
 #endif
 	
 #if defined DARWIN
-#define RESTORE_FPR(n) lfd f##n,-8*(32- n)(r11)
-#define RESTORE_GPR(n) lwz r##n,-4*(32- n)(r11)
+#define RESTORE_FPR(n) lfd f/**/n,-8*(32- n)(r11)
+#define RESTORE_GPR(n) lwz r/**/n,-4*(32- n)(r11)
 #else
 #define RESTORE_FPR(n) lfd f##n,-8*(32-(r##n))(r11)
 #define RESTORE_GPR(n) lwz r##n,-4*(32-(r##n))(r11)
@@ -196,16 +197,12 @@ x:
 	li reg_A3,0
 	li reg_L0,0
 	li reg_L1,0
-	li reg_L2,0
 	li reg_LIP,0
 	lis reg_NULL,hi16(NIL)
 	ori reg_NULL,reg_NULL,lo16(NIL)
 
 	/* Turn on pseudo-atomic */
 
-#if 0	
-	li reg_NL3,-4
-#endif	
 	li reg_ALLOC,4
 	store(reg_ZERO,reg_NL4,_foreign_function_call_active)
 	load(reg_NL4,_current_dynamic_space_free_pointer)
@@ -305,9 +302,6 @@ lra:
 	mr reg_NARGS,reg_NL3
 	
 	/* Turn on pseudo-atomic */
-#if 0	
-	li reg_NL3,-4
-#endif	
 	la reg_ALLOC,4(reg_ALLOC)
 
 	/* Convert the return address to an offset and save it on the stack. */
@@ -361,7 +355,6 @@ lra:
 	li reg_A3,0
 	li reg_L0,0
 	li reg_L1,0
-	li reg_L2,0
 	li reg_LIP,0
 
 	/* Atomic ... */
@@ -407,14 +400,15 @@ lra:
 
 	GFUNCDEF(xundefined_tramp)
 	.globl _undefined_tramp
-	.byte 0,0,0,type_FunctionHeader	/* Header */
-
+	.byte 0
+_undefined_tramp:	
+	.byte 0, 0, type_FunctionHeader
 	.long _undefined_tramp	/* self slot */
 	.long NIL		/* next slot */
 	.long NIL		/* name slot */
 	.long NIL		/* arglist slot */
 	.long NIL		/* type slot */
-_undefined_tramp:	
+
 	twllei reg_ZERO,trap_Cerror
         /* Number of argument bytes */
 	.byte 4
@@ -441,13 +435,15 @@ _undefined_tramp:
 
 	GFUNCDEF(xclosure_tramp)
 	.globl _closure_tramp
-	.byte 0,0,0,type_FunctionHeader	/* Header */
+	.byte 0
+_closure_tramp:
+	.byte 0,0,type_FunctionHeader	/* Header */
 	.long _closure_tramp
 	.long NIL 
 	.long NIL
 	.long NIL
 	.long NIL
-_closure_tramp:
+
 	lwz reg_LEXENV,FDEFN_FUNCTION_OFFSET(reg_FDEFN)
 	lwz reg_CODE,CLOSURE_FUNCTION_OFFSET(reg_LEXENV)
 	la reg_LIP,FUNCTION_CODE_OFFSET(reg_CODE)
@@ -466,6 +462,8 @@ _closure_tramp:
 _function_end_breakpoint_guts:	
 	.long	type_ReturnPcHeader
 	b	1f
+	/* This NOP is necessary for the return convention, I think */
+	nop	
 	/*
 	 * Are these really necessary? I'm cargo-culting from the sparc port 
 	 */
@@ -494,7 +492,8 @@ _function_end_breakpoint_end:
 	SET_SIZE(ppc_flush_cache_line)
 
 	GFUNCDEF(do_pending_interrupt)
-	.long 0
+	twllei	reg_ZERO, trap_PendingInterrupt
+	blr
 	SET_SIZE(do_pending_interrupt)
 	
 #ifdef LINKAGE_TABLE
@@ -646,4 +645,79 @@ _function_end_breakpoint_end:
 	.byte	SC_OFFSET_HI(sc_DescriptorReg, reg_A0_NUM)
 	.align	4
 					
+#endif	
+
+#ifdef GENCGC	
+	.globl _fpu_save
+	GFUNCDEF(fpu_save)
+	stfd	f1, 0(r3)
+	stfd	f2, 8(r3)
+	stfd	f3, 16(r3)
+	stfd	f4, 24(r3)
+	stfd	f5, 32(r3)
+	stfd	f6, 40(r3)
+	stfd	f7, 48(r3)
+	stfd	f8, 56(r3)
+	stfd	f9, 64(r3)
+	stfd	f10, 72(r3)
+	stfd	f11, 80(r3)
+	stfd	f12, 88(r3)
+	stfd	f13, 96(r3)
+	stfd	f14, 104(r3)
+	stfd	f15, 112(r3)
+	stfd	f16, 120(r3)
+	stfd	f17, 128(r3)
+	stfd	f18, 136(r3)
+	stfd	f19, 144(r3)
+	stfd	f20, 152(r3)
+	stfd	f21, 160(r3)
+	stfd	f22, 168(r3)
+	stfd	f23, 176(r3)
+	stfd	f24, 184(r3)
+	stfd	f25, 192(r3)
+	stfd	f26, 200(r3)
+	stfd	f27, 208(r3)
+	stfd	f28, 216(r3)
+	stfd	f29, 224(r3)
+	stfd	f30, 232(r3)
+	stfd	f31, 240(r3)
+	blr
+	SET_SIZE(fpu_save)
+	
+	.globl	_fpu_restore
+	GFUNCDEF(fpu_restore)
+	lfd	f1, 0(r3)
+	lfd	f2, 8(r3)
+	lfd	f3, 16(r3)
+	lfd	f4, 24(r3)
+	lfd	f5, 32(r3)
+	lfd	f6, 40(r3)
+	lfd	f7, 48(r3)
+	lfd	f8, 56(r3)
+	lfd	f9, 64(r3)
+	lfd	f10, 72(r3)
+	lfd	f11, 80(r3)
+	lfd	f12, 88(r3)
+	lfd	f13, 96(r3)
+	lfd	f14, 104(r3)
+	lfd	f15, 112(r3)
+	lfd	f16, 120(r3)
+	lfd	f17, 128(r3)
+	lfd	f18, 136(r3)
+	lfd	f19, 144(r3)
+	lfd	f20, 152(r3)
+	lfd	f21, 160(r3)
+	lfd	f22, 168(r3)
+	lfd	f23, 176(r3)
+	lfd	f24, 184(r3)
+	lfd	f25, 192(r3)
+	lfd	f26, 200(r3)
+	lfd	f27, 208(r3)
+	lfd	f28, 216(r3)
+	lfd	f29, 224(r3)
+	lfd	f30, 232(r3)
+	lfd	f31, 240(r3)
+	
+	SET_SIZE(fpu_restore)
+	
 #endif	

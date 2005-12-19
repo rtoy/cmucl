@@ -1,9 +1,8 @@
 # -*- Mode: makefile -*-
 PATH1 = ../../src/lisp
-PATH2 = ../../p86/lisp
-vpath %.h $(PATH2):$(PATH1)
-vpath %.c $(PATH2):$(PATH1)
-vpath %.S $(PATH2):$(PATH1)
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
 CC = gcc
 LD = ld
 CPP = cpp
@@ -21,7 +20,7 @@ endif
 
 RUNTIME = $(GENCGC) $(LINKAGE)
 # __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
-CPPFLAGS = -D__NO_CTYPE -I. -I$(PATH2) -I$(PATH1) -I- -I/usr/X11R6/include $(RUNTIME)
+CPPFLAGS = -D__NO_CTYPE -I. -I$(PATH1) -I- -I/usr/X11R6/include $(RUNTIME)
 CFLAGS = -rdynamic -Wstrict-prototypes -Wall -g $(RUNTIME)
 ASFLAGS = -g -DGENCGC -DLINKAGE_TABLE
 NM = $(PATH1)/linux-nm

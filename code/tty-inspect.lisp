@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.23 2003/05/12 19:46:12 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.23.12.1 2005/12/19 01:09:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,18 +146,25 @@
 ;;;; DESCRIBE-PARTS
 
 (defun describe-parts (object)
-  (typecase object
-    (symbol (describe-symbol-parts object))
-    (standard-object (describe-standard-object-parts object))
-    (instance (describe-instance-parts object :structure))
-    (function
-     (if (kernel:funcallable-instance-p object)
-	 (describe-instance-parts object :funcallable-instance)
-	 (describe-function-parts object)))
-    (vector (describe-vector-parts object))
-    (array (describe-array-parts object))
-    (cons (describe-cons-parts object))
-    (t (describe-atomic-parts object))))
+  (cond ((typep object 'symbol)
+	 (describe-symbol-parts object))
+	((and (kernel::find-class 'standard-object nil)
+	      (typep object 'standard-object))
+	 (describe-standard-object-parts object))
+	((typep object 'instance)
+	 (describe-instance-parts object :structure))
+	((typep object 'function)
+	 (if (kernel:funcallable-instance-p object)
+	     (describe-instance-parts object :funcallable-instance)
+	     (describe-function-parts object)))
+	((typep object 'vector)
+	 (describe-vector-parts object))
+	((typep object 'array)
+	 (describe-array-parts object))
+	((typep object 'cons)
+	 (describe-cons-parts object))
+	(t
+	 (describe-atomic-parts object))))
 
 (defun describe-symbol-parts (object)
   (list (format nil "~s is a symbol.~%" object) t

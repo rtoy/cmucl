@@ -1,10 +1,14 @@
-# -*- Mode: makefile -*-
 PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
 CPPFLAGS = -I. -I$(PATH1) -I/usr/X11R6/include
-CC = gcc3
+# For Mac OS X 10.2, gcc3 is appropriate.  For 10.4, gcc (gcc 4.0) is ok.  But
+# this means -traditional is needed because gcc 4 seems to handle '##'
+# differently from gcc-3.3.  I (rtoy) don't know which is right, but I
+# think gcc 4 is wrong.  However, to work around this, we use /**/ to 
+# concatenate tokens which reguires the -traditional flag.
+CC = gcc
 LD = ld
 NM = $(PATH1)/darwin-nm
 CPP = cpp -no-cpp-precomp
@@ -12,14 +16,15 @@ DEPEND = $(CC) -MM
 ifdef FEATURE_LINKAGE_TABLE
 LINKAGE = -DLINKAGE_TABLE
 endif
+
 # Enable support for generational GC
 ifdef FEATURE_GENCGC
 GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-CFLAGS = -g -O -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
-ASFLAGS = -g -O -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
+CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
+ASFLAGS = -traditional -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S

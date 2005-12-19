@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.103 2004/12/15 16:21:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.103.2.1 2005/12/19 01:09:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -235,6 +235,8 @@
 		   ,@(when doc `(,doc)))))))
 ;;;
 (defun %deftype (name expander &optional doc)
+  (when (info declaration recognized name)
+    (error "Deftype already names a declaration: ~S." name))
   (ecase (info type kind name)
     (:primitive
      (when *type-system-initialized*
@@ -544,7 +546,9 @@
 (defmacro multiple-value-setq (varlist value-form)
   (unless (and (listp varlist) (every #'symbolp varlist))
     (simple-program-error "Varlist is not a list of symbols: ~S." varlist))
-  `(values (setf (values ,@varlist) ,value-form)))
+  (if varlist
+      `(values (setf (values ,@varlist) ,value-form))
+      `(values ,value-form)))
 
 ;;;
 (defmacro multiple-value-bind (varlist value-form &body body)
@@ -1510,15 +1514,15 @@
 (defun check-type-error (place place-value type type-string)
   (let ((cond (if type-string
 		  (make-condition 'simple-type-error
-				  :datum place :expected-type type
+				  :datum place-value :expected-type type
 				  :format-control
 				  "The value of ~S is ~S, which is not ~A."
 				  :format-arguments
 				  (list place place-value type-string))
 		  (make-condition 'simple-type-error
-				  :datum place :expected-type type
+				  :datum place-value :expected-type type
 				  :format-control
-			  "The value of ~S is ~S, which is not of type ~S."
+				  "The value of ~S is ~S, which is not of type ~S."
 				  :format-arguments
 				  (list place place-value type)))))
     (restart-case (error cond)
@@ -1590,9 +1594,11 @@
 		    `(make-string-input-stream ,string ,(or start 0) ,end)))))
        ,@decls
        (unwind-protect
-	   (progn ,@forms)
-	 (close ,var)
-	 ,@(if index `((setf ,index (string-input-stream-current ,var))))))))
+	    (multiple-value-prog1
+		(progn ,@forms)
+	      ,@(when index
+		   `((setf ,index (string-input-stream-current ,var)))))
+	 (close ,var)))))
 
 
 (defmacro with-output-to-string ((var &optional string &key element-type)
@@ -1617,17 +1623,41 @@
 
 ;;;; Iteration macros:
 
+;;; Make sure we iterate the given number of times, independent of
+;;; what the body might do to the index variable.  We do this by
+;;; repeatedly binding the var in the body and also in the result
+;;; form.  We also spuriously reference the var in case the body or
+;;; result form don't reference the var either.  (Mostly modeled on
+;;; the dolist macro below.)
 (defmacro dotimes ((var count &optional (result nil)) &body body)
-  (cond ((numberp count)
-         `(do ((,var 0 (1+ ,var)))
-              ((>= ,var ,count) ,result)
-	    (declare (type (integer 0 ,count) ,var))
-            ,@body))
-        (t (let ((v1 (gensym)))
-             `(do ((,var 0 (1+ ,var)) (,v1 ,count))
-                  ((>= ,var ,v1) ,result)
-		(declare (type unsigned-byte ,var))
-                ,@body)))))
+  (let ((count-var (gensym "CTR-")))
+    (multiple-value-bind (forms decls)
+	(parse-body body nil nil)
+      (cond ((numberp count)
+	     `(do ((,count-var 0 (1+ ,count-var)))
+		  ((>= ,count-var ,count)
+		   (let ((,var ,count-var))
+		     ,var
+		     ,result))
+		(declare (type (integer 0 ,count) ,count-var))
+		(let ((,var ,count-var))
+		  ,@decls
+		  ,var
+		  (tagbody
+		     ,@forms))))
+	    (t (let ((v1 (gensym)))
+		 `(do ((,count-var 0 (1+ ,count-var))
+		       (,v1 ,count))
+		      ((>= ,count-var ,v1)
+		       (let ((,var ,count-var))
+			 ,var
+			 ,result))
+		    (declare (type unsigned-byte ,count-var))
+		    (let ((,var ,count-var))
+		      ,@decls
+		      ,var
+		      (tagbody
+			 ,@forms)))))))))
 
 
 ;;; We repeatedly bind the var instead of setting it so that we never give the

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.26.8.1 2005/05/15 20:01:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.26.8.2 2005/12/19 01:09:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,7 +80,8 @@
   explicit-check
   ;;
   ;; Safe to stack-allocate function args that are closures.
-  dynamic-extent-closure-safe)
+  dynamic-extent-closure-safe
+  )
 
 (defstruct (function-info
 	    (:print-function %print-function-info)
@@ -129,7 +130,20 @@
   ;; If non-null, use this function to generate the byte code for this known
   ;; call.  This function can only give up if there is a byte-annotate function
   ;; that arranged for the functional to be pushed onto the stack.
-  (byte-compile nil :type (or function null)))
+  (byte-compile nil :type (or function null))
+  ;;
+  ;; If non-null, use this function to determine if constant or
+  ;; literal arguments are destructively modified by the call.  A list
+  ;; of the Basic-combination-args for the node is passed to the
+  ;; function.
+  (destroyed-constant-args nil :type (or function null))
+  ;;
+  ;; If non-null, use this function to determine if the result of the
+  ;; function is used or not.  This is used to detect if you used a
+  ;; destructive function but didn't use the result of the function.
+  ;; The Combination node is passed to the function.
+  (result-not-used nil :type (or function null))
+  )
 
 (defprinter function-info
   (transforms :test transforms)
@@ -201,13 +215,16 @@
 ;;;    Make a function-info structure with the specified type, attributes and
 ;;; optimizers.
 ;;;
-(defun %defknown (names type attributes &key derive-type optimizer)
+(defun %defknown (names type attributes &key derive-type optimizer
+		                             destroyed-constant-args result-not-used)
   (declare (list names type) (type attributes attributes)
 	   (type (or function null) derive-type optimizer))
   (let ((ctype (specifier-type type))
 	(info (make-function-info :attributes attributes
 				  :derive-type derive-type
-				  :optimizer optimizer))
+				  :optimizer optimizer
+				  :destroyed-constant-args destroyed-constant-args
+				  :result-not-used result-not-used))
 	(target-env (or (backend-info-environment *target-backend*)
 			*info-environment*)))
     (dolist (name names)
@@ -383,3 +400,67 @@
 	    (eq if-does-not-exist nil))
       (specifier-type `(or null ,class))
       (specifier-type class))))
+
+(defun remove-non-constants-and-nils (fun)
+  (lambda (list)
+    (remove-if-not #'continuation-value
+                   (remove-if-not #'constant-continuation-p (funcall fun list)))))
+
+;;; FIXME: bad name (first because it uses 1-based indexing; second
+;;; because it doesn't get the nth constant arguments)
+(defun nth-constant-args (&rest indices)
+  (lambda (list)
+    (let (result)
+      (do ((i 1 (1+ i))
+           (list list (cdr list))
+           (indices indices))
+          ((null indices) (nreverse result))
+        (when (= i (car indices))
+          (when (constant-continuation-p (car list))
+            (push (car list) result))
+          (setf indices (cdr indices)))))))
+
+;;; FIXME: a number of the sequence functions not only do not destroy
+;;; their argument if it is empty, but also leave it alone if :start
+;;; and :end bound a null sequence, or if :count is 0.  This test is a
+;;; bit complicated to implement, verging on the impossible, but for
+;;; extra points (fill #\1 "abc" :start 0 :end 0) should not cause a
+;;; warning.
+(defun nth-constant-nonempty-sequence-args (&rest indices)
+  (lambda (list)
+    (let (result)
+      (do ((i 1 (1+ i))
+           (list list (cdr list))
+           (indices indices))
+          ((null indices)
+	   (nreverse result))
+        (when (= i (car indices))
+          (when (constant-continuation-p (car list))
+            (let ((value (continuation-value (car list))))
+              (unless (or (typep value 'null)
+                          (typep value '(vector * 0)))
+                (push (car list) result))))
+          (setf indices (cdr indices)))))))
+
+(defun function-result-not-used-p (node)
+  ;; Is the result of the function used?  Return non-NIL if result is
+  ;; not used.
+  (null (continuation-dest (node-cont node))))
+
+(defun adjust-array-result-not-used-p (node)
+  (let* ((args (combination-args node))
+	 (array-type (continuation-type (first args))))
+    ;; Unless the array is known to be an adjustable array, we should
+    ;; warn if we don't use the result of adjust-array.
+    (when (and (array-type-p array-type)
+	       (not (eql (array-type-complexp array-type) t)))
+      (function-result-not-used-p node))))
+
+;; Create a function that checks to see if the List-arg'th arg could
+;; be a list.  If so, check to see if the result is used.
+(defun list-function-result-not-used (list-arg)
+  (lambda (node)
+    (let* ((arg (elt (combination-args node) (1- list-arg)))
+	   (arg-type (continuation-type arg)))
+      (when (csubtypep (specifier-type 'list) arg-type)
+	(function-result-not-used-p node)))))

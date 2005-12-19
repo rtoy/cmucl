@@ -7,7 +7,7 @@
 #ifndef _CGC_H_
 #define _CGC_H_
 
-void*cgc_alloc(int);
+void *cgc_alloc(int);
 void cgc_free_heap(void);
 
 #endif /* _CGC_H_ */

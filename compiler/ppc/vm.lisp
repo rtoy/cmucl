@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.3.2.1 2005/12/19 01:10:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,6 +45,8 @@
 (defreg zero 0)
 (defreg nsp 1)
 (defreg rtoc 2)                         ; May be "NULL" someday.
+;; r3-r10 are used for the C calling convention.  They should be
+;; non-descriptors.
 (defreg nl0 3)
 (defreg nl1 4)
 (defreg nl2 5)
@@ -52,7 +54,7 @@
 (defreg nl4 7)
 (defreg nl5 8)
 (defreg nl6 9)
-(defreg fdefn 10)
+(defreg nl7 10)
 (defreg nargs 11)
 ;;; The following two registers were originally reversed in the PPC Linux
 ;;; port.  Putting the address of the called function in GPR12 is however
@@ -78,14 +80,14 @@
 (defreg a3 27)
 (defreg l0 28)
 (defreg l1 29)
-(defreg l2 30)
+(defreg fdefn 30)
 (defreg lip 31)
 
 (defregset non-descriptor-regs
-  nl0 nl1 nl2 nl3 nl4 nl5 nl6 cfunc nargs nfp)
+  nl0 nl1 nl2 nl3 nl4 nl5 nl6 nl7 cfunc nargs nfp)
 
 (defregset descriptor-regs
-  fdefn a0 a1 a2 a3  ocfp lra cname lexenv l0 l1 l2 )
+  fdefn a0 a1 a2 a3  ocfp lra cname lexenv l0 l1 )
 
 (defregset register-arg-offsets
   a0 a1 a2 a3)

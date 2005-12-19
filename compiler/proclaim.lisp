@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.42 2004/09/11 19:18:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.42.2.1 2005/12/19 01:10:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -452,6 +452,8 @@
        (dolist (decl args)
 	 (unless (symbolp decl)
 	   (error "Declaration to be RECOGNIZED is not a symbol: ~S." decl))
+	 (when (info type kind decl)
+	   (error "Declaration already names a type: ~S." decl))
 	 (setf (info declaration recognized decl) t)))
       ((start-block end-block)) ; ignore.
       (t

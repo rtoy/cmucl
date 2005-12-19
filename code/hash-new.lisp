@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.33 2004/09/08 02:10:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.33.2.1 2005/12/19 01:09:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -205,8 +205,7 @@
 	   (type index size) (type (member t nil) weak-p))
   (let ((rehash-size (if (integerp rehash-size)
 			 rehash-size
-			 (float rehash-size 1.0)))
-	(rehash-threshold (float rehash-threshold 1.0)))
+			 (float rehash-size 1.0))))
     (multiple-value-bind
 	(test test-fun hash-fun)
 	(cond ((or (eq test #'eq) (eq test 'eq))
@@ -232,7 +231,7 @@
 	     ;; Don't let rehash-threshold get too small to cause
 	     ;; overflows or division by zero.  It's a hint, not a
 	     ;; requirement, anyway.
-	     (rehash-threshold (max 0.1 (float rehash-threshold 1.0)))
+	     (rehash-threshold (float (max 0.1 rehash-threshold) 1.0))
 	     (scaled-size (round (/ (float size+1) rehash-threshold)))
 	     (length (if (<= scaled-size 37) 37 (almost-primify scaled-size))))
 	(declare (type index size+1 scaled-size length))
@@ -916,6 +915,18 @@
     (cons (sxhash-list s-expr depth))
     (fixnum (ldb sxhash-bits-byte s-expr))
     (character (char-code (char-upcase s-expr)))
+    (pathname
+     ;; Pathnames are EQUAL if all the components are EQUAL, so we
+     ;; hash all of the components of a pathname together.
+     (let ((hash (internal-sxhash (%pathname-host s-expr) depth)))
+       (sxmash hash (internal-sxhash (%pathname-device s-expr) depth))
+       (sxmash hash (internal-sxhash (%pathname-directory s-expr) depth))
+       (sxmash hash (internal-sxhash (%pathname-name s-expr) depth))
+       (sxmash hash (internal-sxhash (%pathname-type s-expr) depth))
+       ;; Hash :newest the same as NIL because EQUAL for pathnames
+       ;; assumes that :newest and nil are equal.
+       (let ((version (%pathname-version s-expr)))
+	 (sxmash hash (internal-sxhash (if (eql version :newest) nil version) depth)))))
     (instance
      (if (or (typep s-expr 'structure-object)
 	     (typep s-expr 'condition))

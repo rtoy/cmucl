@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.35 2005/01/27 15:23:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.35.2.1 2005/12/19 01:09:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3483,6 +3483,9 @@ in at a time in poll.")
 			 (setf len (length pending))
 			 (setf name-start 0)))
 		      ((= name-end len)
+		       (when (eq kind :directory)
+			 (setf (schar result new-fill-ptr) #\/)
+			 (incf new-fill-ptr))
 		       (return (subseq result 0 new-fill-ptr)))
 		      ((eq kind :directory)
 		       (setf (schar result new-fill-ptr) #\/)

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.5.2.1 2005/04/05 03:41:10 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.5.2.2 2005/12/19 01:10:14 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -28,7 +28,7 @@
  * long).  Hope that's enough!  Make sure this doesn't overlap the
  * READ_ONLY_SPACE_START!
  */
-#define FOREIGN_LINKAGE_SPACE_SIZE  (0x00800000) /* 8 MB */
+#define FOREIGN_LINKAGE_SPACE_SIZE  (0x00800000)	/* 8 MB */
 #endif
 
 /* 
@@ -38,17 +38,17 @@
  * used to jump to assembly routines.)
  */
 #define READ_ONLY_SPACE_START	(0x01000000)
-#define READ_ONLY_SPACE_SIZE	(0x06ff8000) /* 128 MB, almost */
-  
+#define READ_ONLY_SPACE_SIZE	(0x07ff8000)	/* 128 MB, almost */
+
 #define STATIC_SPACE_START  	(0x10000000)
-#define STATIC_SPACE_SIZE   	(0x07ff8000) /* 128 MB, almost */
+#define STATIC_SPACE_SIZE   	(0x07ff8000)	/* 128 MB, almost */
 
 #define CONTROL_STACK_START 	(0x30000000)
-#define CONTROL_STACK_SIZE  	(0x07ff8000) /* 128 MB, almost */
+#define CONTROL_STACK_SIZE  	(0x07ff8000)	/* 128 MB, almost */
 #define CONTROL_STACK_END       (CONTROL_STACK_START + CONTROL_STACK_SIZE)
 
 #define BINDING_STACK_START 	(0x38000000)
-#define BINDING_STACK_SIZE  	(0x07ff8000) /* 128 MB, almost */
+#define BINDING_STACK_SIZE  	(0x07ff8000)	/* 128 MB, almost */
 
 #if 0
 #define DYNAMIC_0_SPACE_START	(0x40000000)
@@ -65,7 +65,7 @@
 #define DEFAULT_DYNAMIC_SPACE_SIZE (0x08000000)	/* 128 MB */
 #define DYNAMIC_0_SPACE_START	(0x40000000)
 #define DYNAMIC_1_SPACE_START	(0x60000000)
-#define DYNAMIC_SPACE_SIZE  	(0x1fff0000) /* 512 MB, almost */
+#define DYNAMIC_SPACE_SIZE  	(0x1fff0000)	/* 512 MB, almost */
 
 #if 0
 #define HOLES {0x04ff8000, 0x06ff8000, 0x0aff8000, 0x1fff8000}

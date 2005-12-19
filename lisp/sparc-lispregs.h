@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.8.2.1 2005/05/15 20:01:31 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.8.2.2 2005/12/19 01:10:15 rtoy Exp $ */
 
 #ifndef _SPARC_LISPREGS_H_
 #define _SPARC_LISPREGS_H_
@@ -129,7 +129,7 @@
 
 #include <ucontext.h>
 
-extern int * solaris_register_address(struct ucontext *, int);
+extern int *solaris_register_address(struct ucontext *, int);
 
 #define SC_REG(sc, reg) (*solaris_register_address(sc,reg))
 

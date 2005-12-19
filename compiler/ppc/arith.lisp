@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.9 2005/02/11 05:42:19 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.9.2.1 2005/12/19 01:10:01 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -238,6 +238,33 @@
 (define-const-logop logand 2 andi.)
 (define-const-logop logior 2 ori)
 (define-const-logop logxor 2 xori)
+
+
+;;; Special logand cases: (logand signed unsigned) => unsigned
+
+(define-vop (fast-logand/signed-unsigned=>unsigned
+	     fast-logand/unsigned=>unsigned)
+    (:args (x :scs (signed-reg))
+	   (y :target r :scs (unsigned-reg)))
+  (:arg-types signed-num unsigned-num))
+
+(define-vop (fast-logand/unsigned-signed=>unsigned
+	     fast-logand/unsigned=>unsigned)
+    (:args (x :target r :scs (unsigned-reg))
+	   (y :scs (signed-reg)))
+  (:arg-types unsigned-num signed-num))
+
+(define-vop (fast-logand-c/signed-unsigned=>unsigned fast-unsigned-binop-c)
+  (:args (x :scs (signed-reg)))
+  (:translate logand)
+  (:arg-types signed-num
+	      (:constant (or (and (unsigned-byte 15) (not (integer 0 0)))
+			     (integer #xffffffff #xffffffff))))
+  (:generator 1				; Needs to be low to give this vop a chance.
+    (cond ((= y #xffffffff)
+	   (move r x))
+	  ((typep y '(unsigned-byte 15))
+	   (inst andi. r x y)))))
 
 
 ;;; Special case fixnum + and - that trap on overflow.  Useful when we

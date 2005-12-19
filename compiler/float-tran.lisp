@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.100.2.1 2005/05/15 20:01:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.100.2.2 2005/12/19 01:09:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -117,14 +117,42 @@
   (or single-float double-float)
   (movable foldable flushable))
 
+#+sparc
+(defoptimizer (fast-unary-ftruncate derive-type) ((f))
+  (one-arg-derive-type f
+		       #'(lambda (n)
+			   (ftruncate-derive-type-quot-aux n
+							   (specifier-type '(integer 1 1))
+							   nil))
+		       #'ftruncate))
+
 ;; Convert %unary-ftruncate to unary-ftruncate/{single,double}-float
-;; if x is known to be of the right type.  Note that we used to do a
-;; range-check here to see if we could use the FP conversion
-;; instructions, but that loses when we have signed zeroes.
+;; if x is known to be of the right type.  Also, if the result is
+;; known to fit in the same range as a (signed-byte 32), convert this
+;; to %unary-truncate, which might be a single instruction, and float
+;; the result.  However, for sparc, we have a vop to do this so call
+;; that, and for Sparc V9, we can actually handle a 64-bit integer
+;; range.
 
 (macrolet ((frob (ftype func)
 	     `(deftransform %unary-ftruncate ((x) (,ftype))
-		'(,func x))))
+	       (let* ((x-type (continuation-type x))
+		      (lo (bound-value (numeric-type-low x-type)))
+		      (hi (bound-value (numeric-type-high x-type)))
+		      (limit-lo (- (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
+		      (limit-hi (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
+		 (if (and (numberp lo) (numberp hi)
+			  (< limit-lo lo)
+			  (< hi limit-hi))
+		     #-sparc '(let ((result (coerce (%unary-truncate x) ',ftype)))
+			        (if (zerop result)
+				    (* result x)
+				    result))
+		     #+sparc '(let ((result (fast-unary-ftruncate x)))
+			        (if (zerop result)
+				    (* result x)
+				    result))
+		     '(,func x))))))
   (frob single-float %unary-ftruncate/single-float)
   (frob double-float %unary-ftruncate/double-float))
 
@@ -221,7 +249,7 @@
 (defknown double-float-low-bits (double-float) (unsigned-byte 32)
   (movable foldable flushable))
 
-#+sparc
+#+(or sparc ppc)
 (defknown double-float-bits (double-float)
   (values (signed-byte 32) (unsigned-byte 32))
   (movable foldable flushable))

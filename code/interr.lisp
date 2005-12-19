@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.43 2003/10/24 02:56:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.43.6.1 2005/12/19 01:09:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,8 +18,9 @@
 (in-package "KERNEL")
 
 (export '(infinite-error-protect find-caller-name *maximum-error-depth*
-	  red-zone-hit yellow-zone-hit
-	  dynamic-space-overflow-error-hit dynamic-space-overflow-warning-hit))
+	  #+stack-checking red-zone-hit #+stack-checking yellow-zone-hit
+          #+heap-overflow-check dynamic-space-overflow-error-hit
+          #+heap-overflow-check dynamic-space-overflow-warning-hit))
 
 
 

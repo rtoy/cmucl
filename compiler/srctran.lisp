@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.155.2.1 2005/05/15 20:01:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.155.2.2 2005/12/19 01:10:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -305,11 +305,14 @@
 	 ;; With these traps masked, we might get things like infinity or
 	 ;; negative infinity returned.  Check for this and return NIL to
 	 ;; indicate unbounded.
-	 (let ((y (funcall f (bound-value x))))
+	 ;;
+	 ;; We also ignore any errors that funcall might cause and
+	 ;; return NIL instead to indicate infinity.
+	 (let ((y (ignore-errors (funcall f (bound-value x)))))
 	   (if (and (floatp y)
 		    (float-infinity-p y))
 	       nil
-	       (set-bound (funcall f (bound-value x)) (consp x)))))))
+	       (set-bound y (consp x)))))))
 
 ;;; Apply a binary operator OP to two bounds X and Y.  The result is NIL if
 ;;; either is NIL.  Otherwise bound is computed and the result is open if
@@ -1681,6 +1684,11 @@
   ;; The bounds are the same as for truncate.  However, the first
   ;; result is a float of some type.  We need to determine what that
   ;; type is.  Basically it's the more contagious of the two types.
+  ;;
+  ;; FIXME: Now that ftruncate returns signed zeroes, we should do
+  ;; something better than calling truncate-derive-type-quot to figure
+  ;; out the result and massaging that to get the correct float
+  ;; result.
   (let* ((q-type (truncate-derive-type-quot number-type divisor-type))
 	 (res-type (numeric-contagion number-type divisor-type))
 	 (res-format (numeric-type-format res-type)))
@@ -1693,10 +1701,35 @@
 	     (if (numberp x)
 		 (coerce x (or res-format 'float))
 		 x)))
-      (make-numeric-type :class 'float
-			 :format res-format
-			 :low (floatify-bound (numeric-type-low q-type))
-			 :high (floatify-bound (numeric-type-high q-type))))))
+      (let ((q-lo (floatify-bound (numeric-type-low q-type)))
+	    (q-hi (floatify-bound (numeric-type-high q-type))))
+	;; We need to be careful if q-type contains zero.  Why?
+	;; Because ftruncate returns signed zeroes.  See GCL
+	;; ansi-tests misc.558 for an example:
+	;;
+	;; (defun misc-558 (p1)
+	;;   (declare (optimize (speed 1) (safety 2) (debug 2)
+	;;                      (space 3))
+	;; 	   (type (eql -39466.56) p1))
+	;;   (ffloor p1 305598613))
+	;; 
+	(when (csubtypep (specifier-type '(integer 0 0)) q-type)
+	  ;; The quotient contains 0.  We really only have a problem
+	  ;; if one of the end points is zero.  
+	  (cond ((and q-lo (zerop q-lo))
+		 ;; We should only include -0.0 if the result really
+		 ;; could be -0.0, but we're lazy right now and just
+		 ;; force it.  The interval is very slightly larger
+		 ;; than the true interval.
+		 (setq q-lo (float -0d0 q-lo)))
+		((and q-hi (zerop q-hi))
+		 ;; This probably isn't needed because 0 is converted
+		 ;; to +0.0, which is the upper bound we want.
+		 (setq q-hi (float 0d0 q-hi)))))
+	(make-numeric-type :class 'float
+			   :format res-format
+			   :low q-lo
+			   :high q-hi)))))
 
 (defun ftruncate-derive-type-quot-aux (n d same-arg)
   (declare (ignore same-arg))
@@ -3207,7 +3240,7 @@
 ;;;    If y is not constant, not zerop, or is contagious, or a negative
 ;;; float -0.0 then give up because (- -0.0 -0.0) is 0.0, not -0.0.
 ;;;
-(deftransform - ((x y) (t (constant-argument t)) * :when :both)
+(deftransform - ((x y) (t (constant-argument number)) * :when :both)
   "fold zero arg"
   (let ((val (continuation-value y)))
     (unless (and (zerop val)
@@ -3944,6 +3977,12 @@
               nil		 ; After fixing above, replace with T.
               )))))))
 
+(defvar *enable-modular-arithmetic* t
+  "When non-NIL, the compiler will generate code utilizing modular
+  arithmetic.  Set to NIL to disable this, if you don't want modular
+  arithmetic in some cases.")
+
 #+modular-arith
 (defoptimizer (logand optimizer) ((x y) node)
-  (logand-defopt-helper x y node))
+  (when *enable-modular-arithmetic*
+    (logand-defopt-helper x y node)))

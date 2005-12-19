@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.34 2004/07/16 09:07:19 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.34.2.1 2005/12/19 01:09:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,12 +84,33 @@
 		       (new)))
       (new (car tail)))))
 
+#+nil
 (declaim (inline dotted-list-length))
+;;; FIXME: Remove this later!  This was left here to make
+;;; bootstrapping list-length-bounded-p easier.
 (defun dotted-list-length (list)
   ;; this is a workaround for spurious efficiency notes when compiling
   ;; DEFTYPE declarations in code under high optimization
   (declare (optimize (ext:inhibit-warnings 3)))
   (loop for tail on list until (atom tail) count t))
+
+
+(declaim (inline list-length-bounded-p))
+(defun list-length-bounded-p (list min &optional max)
+  ;; this is a workaround for spurious efficiency notes when compiling
+  ;; DEFTYPE declarations in code under high optimization
+  (declare (optimize (ext:inhibit-warnings 3)))
+  (let ((limit (if max max min)))
+    (do ((tail list (cdr tail))
+	 (count 0 (1+ count)))
+	((or (atom tail)
+	     (>= count limit))
+	 ;; If MAX was given, we better be at end of list and have
+	 ;; length at least MIN.  Otherwise, we just need to make sure
+	 ;; the length is at least MIN.
+	 (if max
+	     (and (atom tail) (<= min count))
+	     (<= min count))))))
 
 (defun parse-defmacro-lambda-list
        (lambda-list arg-list-name name error-kind error-fun
@@ -272,19 +293,25 @@
 		  (setf path `(cdr ,path)))
 		 (:keywords
 		  (let ((key (make-keyword var)))
-		    (push-let-binding var `(lookup-keyword ,key ,rest-name)
+		    ;; For deftype, the default value for a keyword is
+		    ;; '*, not NIL.  This hack uses ERROR-KIND to
+		    ;; figure out if we're defining a new type or not.
+		    (push-let-binding var
+				      (if (eq error-kind 'deftype)
+					  `(or (lookup-keyword ,key ,rest-name) ,*default-default*)
+					  `(lookup-keyword ,key ,rest-name))
 				      nil)
 		    (push key keys)))
 		 (:auxs
 		  (push-let-binding var nil nil))))
 	      (t
 	       (simple-program-error "Non-symbol in lambda-list - ~S." var)))))
-    (push `(unless (<= ,minimum
-		       (dotted-list-length (the list ,(if top-level
-							  `(cdr ,arg-list-name)
-							  arg-list-name)))
-		       ,@(unless restp
-			   (list maximum)))
+    (push `(unless (list-length-bounded-p (the list ,(if top-level
+							 `(cdr ,arg-list-name)
+							 arg-list-name))
+		                          ,minimum
+		                          ,@(unless restp
+					       (list maximum)))
 	     ,(let ((arg (if top-level
 			     `(cdr ,arg-list-name)
 			     arg-list-name)))

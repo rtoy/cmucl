@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.241.2.1 2005/05/15 20:01:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.241.2.2 2005/12/19 01:09:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,6 +172,7 @@
   (:import-from "COMMON-LISP" "CHAR" "FLOAT")
   (:export "C-STRING" "CHAR" "DOUBLE" "FLOAT" "INT" "LONG" "SHORT"
 	   "UNSIGNED-CHAR" "UNSIGNED-INT" "UNSIGNED-LONG" "UNSIGNED-SHORT"
+	   "LONG-LONG" "UNSIGNED-LONG-LONG"
 	   "VOID"))
 
 (defpackage "INSPECT"
@@ -1180,7 +1181,7 @@
   (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"  "BINARY-TEXT-STREAM")
   (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
 	     "DEBUG"
-	     "FLOATING-POINT-INEXACT"
+	     "FLOATING-POINT-INEXACT" "FLOAT-ACCURACY"
 	     "*ALL-MODIFIER-NAMES*" "*ANSI-DEFSTRUCT-OPTIONS-P*"
 	     "*AUTOLOAD-TRANSLATIONS*"
 	     "*BACKUP-EXTENSION*" "*BEFORE-GC-HOOKS*"
@@ -1243,7 +1244,7 @@
              "GET-COMMAND-LINE-SWITCH" "GET-DATA-POINTER"
              "GET-FLOATING-POINT-MODES" "GET-PEER-HOST-AND-PORT"
 	     "GET-SOCKET-HOST-AND-PORT"
-	     "GET-STREAM-COMMAND" "GRINDEF"
+	     "GET-STREAM-COMMAND"
              "HOST-ENTRY" "HOST-ENTRY-ADDR" "HOST-ENTRY-ADDR-LIST"
              "HOST-ENTRY-ALIASES" "HOST-ENTRY-NAME" "HTONL" "HTONS"
              "INADDR-ANY" "INDENTING-FURTHER" "INFO"
@@ -1650,7 +1651,9 @@
            "MAKE-XREF-CONTEXT"
            "XREF-CONTEXT-NAME"
            "XREF-CONTEXT-FILE"
-           "XREF-CONTEXT-SOURCE-PATH"))
+           "XREF-CONTEXT-SOURCE-PATH"
+	   "INVALIDATE-XREFS-FOR-NAMESTRING"
+	   "FIND-XREFS-FOR-PATHNAME"))
 
 (defpackage "WIRE"
   (:export "*CURRENT-WIRE*" "CONNECT-TO-REMOTE-SERVER"
@@ -1939,7 +1942,7 @@
 	   "CODE-DEBUG-INFO" "CODE-HEADER-REF" "CODE-HEADER-SET"
 	   "CODE-INSTRUCTIONS" "COMPLEX-DOUBLE-FLOAT-P" "COMPLEX-FLOAT-P"
 	   "COMPLEX-LONG-FLOAT-P" "COMPLEX-RATIONAL-P" "COMPLEX-SINGLE-FLOAT-P"
-	   "CONSED-SEQUENCE" "CONSTANT-TYPE"
+	   "CONSED-SEQUENCE" "CONSTANT-MODIFIED" "CONSTANT-TYPE"
 	   "CONSTANT-TYPE-P" "CONSTANT-TYPE-TYPE"
 	   "CONS-TYPE" "CONS-TYPE-CAR-TYPE" "CONS-TYPE-CDR-TYPE" "CONS-TYPE-P"
 	   "CONTAINING-INTEGER-TYPE"

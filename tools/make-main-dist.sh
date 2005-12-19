@@ -91,12 +91,12 @@ sync ; sleep 1 ; sync ; sleep 1 ; sync
 echo Tarring main components
 if [ -n "$ENABLE_GZIP" ]; then
     echo "  Compressing with gzip"
-    ( cd $DESTDIR ; tar cf - bin doc lib man ) | \
+    ( cd $DESTDIR >/dev/null ; tar cf - bin doc lib man ) | \
 	gzip -c > cmucl-$VERSION-$ARCH-$OS.tar.gz
 fi
 if [ -n "$ENABLE_BZIP" ]; then
     echo "  Compressing with bzip"
-    ( cd $DESTDIR ; tar cf - bin doc lib man ) | \
+    ( cd $DESTDIR >/dev/null ; tar cf - bin doc lib man ) | \
 	bzip2 > cmucl-$VERSION-$ARCH-$OS.tar.bz2
 fi
 

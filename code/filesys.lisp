@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.86 2005/02/10 15:57:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.86.2.1 2005/12/19 01:09:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -180,18 +180,21 @@
 	 ;; Look for something like "~*~" at the end of the
 	 ;; namestring, where * can be #\* or some digits.  This
 	 ;; denotes a version.
+	 ;;(format t "explicit-version ~S ~A ~A~%" namestr start end)
 	 (cond ((or (< (- end start) 4)
 		    (and (char/= (schar namestr (1- end)) #\~)
 			 (char/= (schar namestr (1- end)) #\*)))
 		;; No explicit version given, so return NIL to
 		;; indicate we don't want file versions, unless
 		;; requested in other ways.
+		;;(format t "case 1: ~A ~A~%" nil end)
 		(values nil end))
 	       ((and (not *ignore-wildcards*)
 		     (char= (schar namestr (- end 2)) #\*)
 		     (char= (schar namestr (- end 3)) #\~)
 		     (char= (schar namestr (- end 4)) #\.))
 		;; Found "~*~", so it's a wild version
+		;;(format t "case 2: ~A ~A~%" :wild (- end 4))
 		(values :wild (- end 4)))
 	       (t
 		;; Look for a version number.  Start at the end, just
@@ -200,7 +203,9 @@
 		;; get it.  If not, we didn't find a version number,
 		;; so we call it :newest
 		(do ((i (- end 2) (1- i)))
-		    ((< i (+ start 1)) (values :newest end))
+		    ((< i (+ start 1))
+		     ;;(format t "case 3: ~A ~A~%" :newest end)
+		     (values :newest end))
 		  (let ((char (schar namestr i)))
 		    (when (eql char #\~)
 		      (return (if (char= (schar namestr (1- i)) #\.)
@@ -209,7 +214,10 @@
 					  (1- i))
 				  (values :newest end))))
 		    (unless (char<= #\0 char #\9)
-		      (return (values :newest end))))))))
+		      ;; It's not a digit.  Give up, and say the
+		      ;; version is NIL.
+		      ;;(format t "case 3 return: ~A ~A~%" nil end)
+		      (return (values nil end))))))))
        (any-version (namestr start end)
 	 ;; process end of string looking for a version candidate.
 	 (multiple-value-bind (version where)
@@ -298,17 +306,35 @@
 		     (maybe-extract-search-list namestr
 						(car first) (cdr first))
 		   (when search-list
+		     ;; Lose if this search-list is already defined as
+		     ;; a logical host.  Since the syntax for
+		     ;; search-lists and logical pathnames are the
+		     ;; same, we can't allow the creation of one when
+		     ;; the other is defined.
+		     (when (find-logical-host search-list nil)
+		       (error "~A already names a logical host" search-list))
 		     (setf absolute t)
 		     (setf (car first) new-start))
 		   search-list)))))
-      (multiple-value-bind
-	  (name type version)
+      (multiple-value-bind (name type version)
 	  (let* ((tail (car (last pieces)))
 		 (tail-start (car tail))
 		 (tail-end (cdr tail)))
 	    (unless (= tail-start tail-end)
 	      (setf pieces (butlast pieces))
-	      (extract-name-type-and-version namestr tail-start tail-end)))
+	      (cond ((string= namestr ".." :start1 tail-start :end1 tail-end)
+		     ;; ".." is a directory.  Add this piece to the
+		     ;; list of pieces, and make the name/type/version
+		     ;; nil.
+		     (setf pieces (append pieces (list (cons tail-start tail-end))))
+		     (values nil nil nil))
+		    ((not (find-if-not #'(lambda (c)
+					   (char= c #\.))
+				       namestr :start tail-start :end tail-end))
+		     ;; Got a bunch of dots.  Make it a file of the same name, and type nil.
+		     (values (subseq namestr tail-start tail-end) nil nil))
+		    (t
+		     (extract-name-type-and-version namestr tail-start tail-end)))))
 	;; PVE: Make sure there are no illegal characters in the name
 	;; such as #\Null and #\/.
 	(when (and (stringp name)
@@ -339,10 +365,21 @@
 		  (cond (absolute
 			 (cons :absolute (dirs)))
 			((dirs)
-			 (cons :relative (dirs)))
+			 ;; "." in a :relative directory is the same
+			 ;; as if it weren't there, so remove them.
+			 (cons :relative (delete "." (dirs) :test #'equal)))
 			(t
-			 nil)))
-		name
+			 ;; If there is no directory and the name is
+			 ;; ".", we really got directory ".", so make it so.
+			 (if (equal name ".")
+			     (list :relative)
+			 nil))))
+		;; A file with name "." can't be the name of file on
+		;; Unix because it's a directory.  This was handled
+		;; above, so we can just set the name to nil.
+		(if (equal name ".")
+		    nil
+		    name)
 		type
 		version)))))
 
@@ -415,7 +452,9 @@
 	       (t
 		(pieces "/"))))
 	(:relative
-	 ;; Nothing special.
+	 ;; Nothing special, except if we were given '(:relative).
+	 (unless directory
+	   (pieces "./"))
 	 ))
       (dolist (dir directory)
 	(typecase dir
@@ -444,25 +483,43 @@
 	   (type-supplied (not (or (null type) (eq type :unspecific))))
 	   (logical-p (logical-pathname-p pathname))
 	   (version (%pathname-version pathname))
+	   ;; Preserve version :newest for logical pathnames.
 	   (version-supplied (not (or (null version)
-				      (member version '(:newest
-							:unspecific))))))
+				      (member version (if logical-p
+							  '(:unspecific)
+							  '(:newest
+							    :unspecific)))))))
       (when name
+	(when (stringp name)
+	  (when (find #\/ name)
+	    (error "Cannot specify a directory separator in a pathname name: ~S" name))
+	  (when (and (not type-supplied)
+		     (find #\. name :start 1))
+	    ;; A single leading dot is ok.
+	    (error "Cannot specify a dot in a pathname name without a pathname type: ~S" name))
+	  (when (or (string= ".." name)
+		    (string= "." name))
+	    (error "Invalid value for a pathname name: ~S" name)))
 	(strings (unparse-unix-piece name)))
       (when type-supplied
 	(unless name
 	  (error "Cannot specify the type without a file: ~S" pathname))
+	(when (stringp type)
+	  (when (find #\/ type)
+	    (error "Cannot specify a directory separator in a pathname type: ~S" type))
+	  (when (find #\. type)
+	    (error "Cannot specify a dot in a pathname type: ~S" type)))
 	(strings ".")
 	(strings (unparse-unix-piece type)))
-      #+(or)
-      (when (and version (not name))
+      (when (and (not (member version '(nil :newest :unspecific)))
+		 (not name))
 	;; We don't want version without a name, because when we try
 	;; to read #p".~*~" back, the name is "", not NIL.
 	(error "Cannot specify a version without a file: ~S" pathname))
       (when version-supplied
 	(strings (if (eq version :wild)
 		     (if logical-p ".*" ".~*~")
-		     (format nil (if logical-p ".~D" ".~~~D~~")
+		     (format nil (if logical-p ".~A" ".~~~D~~")
 			     version)))))
     (and (strings) (apply #'concatenate 'simple-string (strings)))))
 
@@ -477,62 +534,81 @@
   (flet ((lose ()
 	   (error "~S cannot be represented relative to ~S"
 		  pathname defaults)))
-    (collect ((strings))
-      (let* ((pathname-directory (%pathname-directory pathname))
-	     (defaults-directory (%pathname-directory defaults))
-	     (prefix-len (length defaults-directory))
-	     (result-dir
-	      (cond ((null pathname-directory)
-		     ;; No directory, so relative to default.
-		     (list :relative))
-		    ((eq (first pathname-directory) :relative)
-		     ;; Relative directory so relative to default.
-		     pathname-directory)
-		    ((and (> prefix-len 1)
+    ;; Only the first path in a search-list is considered.
+    (enumerate-search-list (pathname pathname)
+      (enumerate-search-list (defaults defaults)
+	(collect ((strings))
+	  (let* ((pathname-directory (%pathname-directory pathname))
+		 (defaults-directory (%pathname-directory defaults))
+		 (prefix-len (length defaults-directory))
+		 (result-dir
+		  (cond ((null pathname-directory)
+			 ;; No directory, so relative to default.  But
+			 ;; if we're relative to default, NIL is as
+			 ;; good as '(:relative) and it results in a
+			 ;; shorter namestring.
+			 #+nil (list :relative)
+			 nil)
+			((and (>= prefix-len 1)
 			      (>= (length pathname-directory) prefix-len)
 			      (compare-component (subseq pathname-directory
 							 0 prefix-len)
 						 defaults-directory))
-		     ;; Pathname starts with a prefix of default.  So just
-		     ;; use a relative directory from then on out.
-		     (cons :relative (nthcdr prefix-len pathname-directory)))
-		    ((eq (car pathname-directory) :absolute)
-		     ;; We are an absolute pathname, so we can just use it.
-		     pathname-directory)
-		    (t
-		     ;; We are a relative directory.  So we lose.
-		     (lose)))))
-	(strings (unparse-unix-directory-list result-dir)))
-      (let* ((pathname-version (%pathname-version pathname))
-	     (version-needed (and pathname-version
-				  (not (eq pathname-version :newest))))
-	     (pathname-type (%pathname-type pathname))
-	     (type-needed (or version-needed
-			      (and pathname-type
-				   (not (eq pathname-type :unspecific)))))
-	     (pathname-name (%pathname-name pathname))
-	     (name-needed (or type-needed
-			      (and pathname-name
-				   (not (compare-component pathname-name
-							   (%pathname-name
-							    defaults)))))))
-	(when name-needed
-	  (unless pathname-name (lose))
-	  (strings (unparse-unix-piece pathname-name)))
-	(when type-needed
-	  (when (or (null pathname-type) (eq pathname-type :unspecific))
-	    (lose))
-	  (strings ".")
-	  (strings (unparse-unix-piece pathname-type)))
-	(when version-needed
-	  (typecase pathname-version
-	    ((member :wild)
-	     (strings ".~*~"))
-	    (integer
-	     (strings (format nil ".~~~D~~" pathname-version)))
-	    (t
-	     (lose)))))
-      (apply #'concatenate 'simple-string (strings)))))
+			 ;; Pathname starts with a prefix of default,
+			 ;; which also means both are either :relative
+			 ;; or :absolute directories.  So just use a
+			 ;; relative directory from then on out.
+			 (let ((dir-tail (nthcdr prefix-len pathname-directory)))
+			   ;; If both directories are identical, don't
+			   ;; return just :relative.  Returning NIL
+			   ;; results in a shorter string.
+			   (if dir-tail
+			       (cons :relative dir-tail)
+			       nil)))
+			((and (eq (car pathname-directory) :relative)
+			      (not (eq (car defaults-directory) :absolute)))
+			 ;; Can't represent a relative directory
+			 ;; relative to an absolute directory.  But
+			 ;; there's no problem if both are relative;
+			 ;; we just return our path.
+			 pathname-directory)
+			((eq (car pathname-directory) :absolute)
+			 ;; We are an absolute pathname, so we can just use it.
+			 pathname-directory)
+			(t
+			 ;; We are a relative directory.  So we lose.
+			 (lose)))))
+	    (strings (unparse-unix-directory-list result-dir)))
+	  (let* ((pathname-version (%pathname-version pathname))
+		 (version-needed (and pathname-version
+				      (not (eq pathname-version :newest))))
+		 (pathname-type (%pathname-type pathname))
+		 (type-needed (or version-needed
+				  (and pathname-type
+				       (not (eq pathname-type :unspecific)))))
+		 (pathname-name (%pathname-name pathname))
+		 (name-needed (or type-needed
+				  (and pathname-name
+				       (not (compare-component pathname-name
+							       (%pathname-name
+								defaults)))))))
+	    (when name-needed
+	      (unless pathname-name (lose))
+	      (strings (unparse-unix-piece pathname-name)))
+	    (when type-needed
+	      (when (or (null pathname-type) (eq pathname-type :unspecific))
+		(lose))
+	      (strings ".")
+	      (strings (unparse-unix-piece pathname-type)))
+	    (when version-needed
+	      (typecase pathname-version
+		((member :wild)
+		 (strings ".~*~"))
+		(integer
+		 (strings (format nil ".~~~D~~" pathname-version)))
+		(t
+		 (lose)))))
+	  (return-from unparse-unix-enough (apply #'concatenate 'simple-string (strings))))))))
 
 
 (defstruct (unix-host
@@ -1328,17 +1404,22 @@ optionally keeping some of the most recent old versions."
 				  :host (pathname-host pathname)
 				  :device (pathname-device pathname)
 				  :directory (subseq dir 0 i))))
-		    (unless (probe-file newpath)
-		      (let ((namestring (namestring newpath)))
-			(when verbose
-			  (format *standard-output* "~&Creating directory: ~A~%"
-				  namestring))
-			(unix:unix-mkdir namestring mode)
-			(unless (probe-file namestring)
-			  (error 'simple-file-error
-				 :pathname pathspec
-				 :format-control "Can't create directory ~A."
-				 :format-arguments (list namestring)))
-			(setf created-p t)))))
+		    (tagbody
+		     retry
+		       (restart-case
+			   (unless (probe-file newpath)
+			     (let ((namestring (namestring newpath)))
+			       (when verbose
+				 (format *standard-output* "~&Creating directory: ~A~%"
+					 namestring))
+			       (unix:unix-mkdir namestring mode)
+			       (unless (probe-file namestring)
+				 (error 'simple-file-error
+					:pathname pathspec
+					:format-control "Can't create directory ~A."
+					:format-arguments (list namestring)))
+			       (setf created-p t)))
+			 (retry () :report "Try to create the directory again"
+				(go retry))))))
 	 ;; Only the first path in a search-list is considered.
 	 (return (values pathname created-p))))))

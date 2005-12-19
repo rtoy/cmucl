@@ -1,4 +1,4 @@
-;;; -*- Mode: lisp; Package PRETTY-PRINT -*-
+;;; -*- Mode: lisp; Package: PRETTY-PRINT -*-
 ;;; Pretty printer for loop and various other utilities.
 ;;; This is taken from Dick Water's XP.  The license contained therein says:
 ;;;

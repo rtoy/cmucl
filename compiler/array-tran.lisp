@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.37.2.1 2005/05/15 20:01:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.37.2.2 2005/12/19 01:09:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -644,7 +644,7 @@
 		     '(bit-vector bit-vector &optional null) '*
 		     :eval-name t  :policy (>= speed space))
     `(,fun bit-array-1 bit-array-2
-	   (make-array (length bit-array-1) :element-type 'bit)))
+	   (make-array (array-dimension bit-array-1 0) :element-type 'bit)))
   ;;
   ;; If result its T, make it the first arg.
   (deftransform fun ((bit-array-1 bit-array-2 result-bit-array)

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.75 2005/01/27 14:45:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.75.2.1 2005/12/19 01:10:22 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -402,7 +402,9 @@
 	 (supplied-meta   (getf initargs :metaclass unsupplied))
 	 (supplied-supers (getf initargs :direct-superclasses unsupplied))
 	 (meta (cond ((neq supplied-meta unsupplied)
-		      (find-class supplied-meta))
+		      (if (classp supplied-meta)
+			  supplied-meta
+			  (find-class supplied-meta)))
 		     ((or (null class)
 			  (forward-referenced-class-p class))
 		      *the-class-standard-class*)
@@ -997,23 +999,46 @@
 
 (defmethod compute-slots ((class standard-class))
   (call-next-method))
-  
+
 (defmethod compute-slots :around ((class standard-class))
-  (loop with slotds = (call-next-method) and location = -1
-	for slot in slotds do
-	  (setf (slot-definition-location slot)
-		(case (slot-definition-allocation slot)
-		  (:instance
-		   (incf location))
-		  (:class
-		   (let* ((name (slot-definition-name slot))
-			  (from-class (slot-definition-allocation-class slot))
-			  (cell (assq name (class-slot-cells from-class))))
-		     (assert (consp cell))
-		     cell))))
-	  (initialize-internal-slot-functions slot)
-	finally
-	  (return slotds)))
+  (let ((eslotds (call-next-method))
+	(location -1)
+	(slot-names ()))
+    (dolist (eslotd eslotds eslotds)
+      (let ((allocation (slot-definition-allocation eslotd))
+	    (name (slot-definition-name eslotd)))
+	;;
+	;; Users are free to override COMPUTE-SLOTS, and they are
+	;; arguably free to MAKE-INSTANCE effective slot definition
+	;; metaobjects.  Such objects won't be initialized completely,
+	;; from the standpoint of PCL, so we have to fix them.
+	;;
+	;; If such an effective slot definition has the same name as
+	;; another slot, we certainly lose, at least if it's a class
+	;; slot.  I'm deliberately ignoring that for now.
+	;;
+	;; Note that COMPUTE-SLOTS can be called multiple times.
+	;; We don't want to create a new class slot cell every time
+	;; around.
+	(when (null (slot-definition-class eslotd))
+	  (setf (slot-definition-class eslotd) class)
+	  (when (eq allocation :class)
+	    (unless (assq name (class-slot-cells class))
+	      (push (cons name +slot-unbound+)
+		    (plist-value class 'class-slot-cells)))
+	    (setf (slot-definition-allocation-class eslotd) class)))
+	;;
+	;; Assign slot locations.
+	(setf (slot-definition-location eslotd)
+	    (case allocation
+	      (:instance
+	       (incf location))
+	      (:class
+	       (let* ((from-class (slot-definition-allocation-class eslotd))
+		      (cell (assq name (class-slot-cells from-class))))
+		 (assert (consp cell))
+		 cell))))
+	(initialize-internal-slot-functions eslotd)))))
 
 (defmethod compute-slots ((class funcallable-standard-class))
   (call-next-method))
@@ -1316,7 +1341,14 @@
 	(with-pcl-lock
 	  (update-lisp-class-layout class nwrapper)
 	  (setf (slot-value class 'wrapper) nwrapper)
-	  (invalidate-wrapper owrapper :flush nwrapper))))))
+	  (flet ((obsolete-super-p ()
+		   (some (lambda (layout)
+			   (eq (car-safe (kernel:layout-invalid layout))
+			       :obsolete))
+			 (kernel:layout-inherits owrapper))))
+	    (invalidate-wrapper owrapper
+				(if (obsolete-super-p) :obsolete :flush)
+				nwrapper)))))))
 
 (defun flush-cache-trap (owrapper nwrapper instance)
   (declare (ignore owrapper))
@@ -1411,6 +1443,14 @@
 	     (added ())
 	     (discarded ())
 	     (plist ()))
+        ;;
+        ;; Collect inherited class slots.  Note that LAYOUT-INHERITS is
+        ;; ordered from most general to most specific.
+        (loop for layout across (reverse (kernel:layout-inherits owrapper))
+              when (typep layout 'wrapper) do
+                (loop for slot in (wrapper-class-slots layout) do
+                        (pushnew slot oclass-slots :key #'car)))
+        ;;
 	;; local  --> local        transfer 
 	;; local  --> shared       discard
 	;; local  -->  --          discard
@@ -1596,6 +1636,9 @@
 (defmethod map-dependents ((metaobject dependent-update-mixin) function)
   (dolist (dependent (plist-value metaobject 'dependents))
     (funcall function dependent)))
+
+(defmethod update-dependent (metaobject dependent &rest initargs)
+  (declare (ignore initargs)))
 
 
 ;;;

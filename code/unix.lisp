@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.103 2005/02/10 15:32:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.103.2.1 2005/12/19 01:09:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,7 +174,9 @@
           unix-getpwnam unix-getpwuid unix-getgrnam unix-getgrgid
           user-info user-info-name user-info-password user-info-uid
           user-info-gid user-info-gecos user-info-dir user-info-shell
-          group-info group-info-name group-info-gid group-info-members))
+          group-info group-info-name group-info-gid group-info-members
+
+	  unix-uname))
 
 (pushnew :unix *features*)
 
@@ -2694,6 +2696,9 @@
 			 (setf len (length pending))
 			 (setf name-start 0)))
 		      ((= name-end len)
+		       (when (eq kind :directory)
+			 (setf (schar result new-fill-ptr) #\/)
+			 (incf new-fill-ptr))
 		       (return (subseq result 0 new-fill-ptr)))
 		      ((eq kind :directory)
 		       (setf (schar result new-fill-ptr) #\/)
@@ -3296,5 +3301,42 @@
 	 :comment (string (cast (slot result 'pw-comment) c-call:c-string))
 	 :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
-	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))  
+	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
+
+;; From sys/utsname.h
+#+(or solaris darwin freebsd netbsd)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant +sys-namelen+
+    #+solaris 257
+    #+darwin 256
+    #+freebsd 32
+    #+netbsd 256))
+
+#+(or solaris darwin freebsd netbsd)
+(progn
+(def-alien-type nil
+    (struct utsname
+	    (sysname (array char #.+sys-namelen+))
+	    (nodename (array char #.+sys-namelen+))
+	    (release (array char #.+sys-namelen+))
+	    (version (array char #.+sys-namelen+))
+	    (machine (array char #.+sys-namelen+))))
+
+
+(defun unix-uname ()
+  (with-alien ((names (struct utsname)))
+    (let ((result
+	   (alien-funcall
+	    (extern-alien "uname"
+			  (function int
+				    (* (struct utsname))))
+	    (addr names))))
+      (when (>= result 0)
+	(values (cast (slot names 'sysname) c-string)
+		(cast (slot names 'nodename) c-string)
+		(cast (slot names 'release) c-string)
+		(cast (slot names 'version) c-string)
+		(cast (slot names 'machine) c-string))))))
+)
+
 ;; EOF

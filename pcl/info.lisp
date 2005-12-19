@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.10 2005/01/27 14:45:58 rtoy Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.10.2.1 2005/12/19 01:10:21 rtoy Exp $")
 
 (in-package "PCL")
 
@@ -227,7 +227,9 @@
       (let* ((class (if (symbolp class-or-name)
 			(find-class class-or-name nil)
 			class-or-name))
-	     (slotd (when class
+	     (slotd (when (if (eq *boot-state* 'complete)
+			      (std-class-p class)
+			      class)
 		      (find-slot-definition class slot-name))))
 	(when slotd
 	  (slot-definition-type slotd)))))

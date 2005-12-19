@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.7.2.1 2005/05/15 20:01:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.7.2.2 2005/12/19 01:10:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,11 +208,17 @@ about function addresses and register values.")
 	  (cond ((and (= d 4)
 		      (= rt alloc-offset)
 		      (not *pseudo-atomic-set*))
-		 ;; "ADD $ALLOC, $ALLOC, 4" sets the PA flag
+		 ;; "ADDI $ALLOC, $ALLOC, 4" sets the PA flag
 		 (disassem:note "Set pseudo-atomic flag" dstate)
 		 (setf *pseudo-atomic-set*
 		       (sys:sap+ (disassem:dstate-segment-sap dstate)
 				 (disassem:dstate-cur-offs dstate))))
+		((and (= d (ldb (byte 16 0) -4))
+		      (= rt alloc-offset)
+		      *pseudo-atomic-set*)
+		 ;; "ADDI $ALLOC, $ALLOC, -4" resets the PA flag
+		 (disassem:note "Reset pseudo-atomic flag" dstate)
+		 (setf *pseudo-atomic-set* nil))
 		((and (= rt alloc-offset)
 		      *pseudo-atomic-set*
 		      (not (sys:sap= *pseudo-atomic-set*
@@ -230,6 +236,7 @@ about function addresses and register values.")
 	      (disassem:note (format nil "Header word ~A, size ~D?" type size)
 			     dstate)))))))))
 
+#+nil
 (defun handle-add-inst (reg word dstate)
   (let ((rt (ldb (byte 5 21) word))
 	(ra (ldb (byte 5 16) word)))
@@ -272,10 +279,12 @@ about function addresses and register values.")
 	       (= 24 opcode))
 	   ;; An ADDI or ORI instruction.
 	   (handle-addi-inst reg word dstate))
+	  #+nil
 	  ((and (= 31 opcode)
 		(= 266 (ldb (byte 9 1) word)))
 	   ;; An ADD instruction
-	   (handle-add-inst reg word dstate)))
+	   (handle-add-inst reg word dstate))
+	  )
     (update-addis-notes word)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -469,12 +478,14 @@ about function addresses and register values.")
 				     aa-bit lk-bit)))
 	       t)))
        #'(lambda (segment posn)
+	   (declare (ignore posn))
 	   (let ((bo (logxor 8 bo))) ;; invert the test
 	     (emit-b-form-inst segment 16 bo bi
 			       2 ; skip over next instruction
 			       0 0)
 	     (emit-back-patch segment 4
 			      #'(lambda (segment posn)
+				  (declare (ignore posn))
 				  (emit-i-form-branch segment target lk-p)))))
        ))))
 	     
@@ -561,6 +572,11 @@ about function addresses and register values.")
       (rt :field ,(ppc-byte 6 10) :type 'reg)
       (sh :field ,(ppc-byte 16 20) :sign-extend nil)
       (si :field ,(ppc-byte 16 31) :sign-extend t)
+      ;; FIXME?  The spr field is really a split field of length 10.
+      ;; An spr value is encoded as 2 5-bit fields, swapped.  Should
+      ;; we make this explicit and define spr-hi and spr-lo to make it
+      ;; easier?  Or maybe make the register field smarter so we swap
+      ;; the 5 bits automatically?  Or something else entirely?
       (spr :field ,(ppc-byte 11 20) :type 'spr)
       (to :field ,(ppc-byte 6 10) :type 'to-field)
       (u :field ,(ppc-byte 16 19) :sign-extend nil)
@@ -1171,7 +1187,7 @@ about function addresses and register values.")
        (:printer a-tac ((op ,op) (xo ,xo) (rc ,rc)))
        (:cost ,cost)
        (:delay 1)
-       (:dependencies (reads fra) (reads frb) ,@other-reads
+       (:dependencies (reads fra) (reads frc) ,@other-reads
                       (writes frt) ,@other-writes)
        (:emitter
         (emit-a-form-inst segment 
@@ -1265,7 +1281,6 @@ about function addresses and register values.")
 					(disassem:dstate-cur-offs dstate)
 					vm:word-bytes
 					(disassem::dstate-byte-order dstate)))
-	   (si (ldb (byte 0 16) word))
 	   (rd (ldb (byte 5 21) word)))
       (disassem:note (format nil "0x~x = ~D" shifted shifted)
 		     dstate)
@@ -1280,6 +1295,7 @@ about function addresses and register values.")
 (define-instruction bc (segment bo bi target)
   (:declare (type label target))
   (:printer b ((op 16) (aa 0) (lk 0)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr))
   (:emitter
@@ -1288,14 +1304,16 @@ about function addresses and register values.")
 (define-instruction bcl (segment bo bi target)
   (:declare (type label target))
   (:printer b ((op 16) (aa 0) (lk 1)))
+  (:attributes branch)
   (:delay 1)
-  (:dependencies (reads :ccr))
+  (:dependencies (reads :ccr) (writes :lr))
   (:emitter
    (emit-conditional-branch segment bo bi target nil t)))
 
 (define-instruction bca (segment bo bi target)
   (:declare (type label target))
   (:printer b ((op 16) (aa 1) (lk 0)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr))
   (:emitter
@@ -1304,8 +1322,9 @@ about function addresses and register values.")
 (define-instruction bcla (segment bo bi target)
   (:declare (type label target))
   (:printer b ((op 16) (aa 1) (lk 1)))
+  (:attributes branch)
   (:delay 1)
-  (:dependencies (reads :ccr))
+  (:dependencies (reads :ccr) (writes :lr))
   (:emitter
    (emit-conditional-branch segment bo bi target t t)))
 
@@ -1316,6 +1335,7 @@ about function addresses and register values.")
   (:declare (type label target))
   (:printer b ((op 16) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (aa 0) (lk 0)) 
             '(:name :tab bd))
+  (:attributes branch)
   (:delay 1)
   (:emitter
    (emit-conditional-branch segment #.(valid-bo-encoding :bo-u) 0 target nil nil)))
@@ -1324,6 +1344,8 @@ about function addresses and register values.")
 (define-instruction bt (segment bi  target)
   (:printer b ((op 16) (bo #.(valid-bo-encoding :bo-t)) (aa 0) (lk 0))
             '(:name :tab bi ", " bd))
+  (:attributes branch)
+  (:dependencies (reads :ccr))
   (:delay 1)
   (:emitter
    (emit-conditional-branch segment #.(valid-bo-encoding :bo-t) bi target nil nil)))
@@ -1331,12 +1353,16 @@ about function addresses and register values.")
 (define-instruction bf (segment bi  target)
   (:printer b ((op 16) (bo #.(valid-bo-encoding :bo-f)) (aa 0) (lk 0))
             '(:name :tab bi ", " bd))
+  (:attributes branch)
+  (:dependencies (reads :ccr))
   (:delay 1)
   (:emitter
    (emit-conditional-branch segment #.(valid-bo-encoding :bo-f) bi target nil nil)))
 
 (define-instruction b? (segment cr-field-name cr-name  &optional (target nil target-p))
   (:delay 1)
+  (:attributes branch)
+  (:dependencies (reads :ccr))
   (:emitter 
    (unless target-p
      (setq target cr-name cr-name cr-field-name cr-field-name :cr0))
@@ -1357,12 +1383,14 @@ about function addresses and register values.")
 
 (define-instruction b (segment target)
   (:printer i ((op 18) (aa 0) (lk 0)))
+  (:attributes branch)
   (:delay 1)
   (:emitter
    (emit-i-form-branch segment target nil)))
 
 (define-instruction ba (segment target)
   (:printer i-abs ((op 18) (aa 1) (lk 0)))
+  (:attributes branch)
   (:delay 1)
   (:emitter
    (when (typep target 'fixup)
@@ -1373,13 +1401,17 @@ about function addresses and register values.")
 
 (define-instruction bl (segment target)
   (:printer i ((op 18) (aa 0) (lk 1)))
+  (:attributes branch)
   (:delay 1)
+  (:dependencies (writes :lr))
   (:emitter
    (emit-i-form-branch segment target t)))
 
 (define-instruction bla (segment target)
   (:printer i-abs ((op 18) (aa 1) (lk 1)))
+  (:attributes branch)
   (:delay 1)
+  (:dependencies (writes :lr))
   (:emitter
    (when (typep target 'fixup)
      (note-fixup segment :ba target)
@@ -1388,6 +1420,7 @@ about function addresses and register values.")
 
 (define-instruction blr (segment)
   (:printer xl-bo-bi ((op 19) (xo 16) (bo #.(valid-bo-encoding :bo-u))(bi 0) (lk 0))  '(:name))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
@@ -1395,6 +1428,7 @@ about function addresses and register values.")
 
 (define-instruction bclr (segment bo bi)
   (:printer xl-bo-bi ((op 19) (xo 16)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :lr))
   (:emitter
@@ -1402,8 +1436,9 @@ about function addresses and register values.")
 
 (define-instruction bclrl (segment bo bi)
   (:printer xl-bo-bi ((op 19) (xo 16) (lk 1)))
+  (:attributes branch)
   (:delay 1)
-  (:dependencies (reads :ccr) (reads :lr))
+  (:dependencies (reads :ccr) (reads :lr) (write :lr))
   (:emitter
    (emit-x-form-inst segment 19 (valid-bo-encoding bo) (valid-bi-encoding bi) 0 16 1)))
 
@@ -1424,6 +1459,7 @@ about function addresses and register values.")
 
 (define-instruction bcctr (segment bo bi)
   (:printer xl-bo-bi ((op 19) (xo 528)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
@@ -1431,20 +1467,33 @@ about function addresses and register values.")
 
 (define-instruction bcctrl (segment bo bi)
   (:printer xl-bo-bi ((op 19) (xo 528) (lk 1)))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr) (writes :lr))
   (:emitter
    (emit-x-form-inst segment 19 (valid-bo-encoding bo) (valid-bi-encoding bi) 0 528 1)))
 
+;; Really a bcctr inst
 (define-instruction bctr (segment)
   (:printer xl-bo-bi ((op 19) (xo 528) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (lk 0))  '(:name))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
    (emit-x-form-inst segment 19 #.(valid-bo-encoding :bo-u) 0 0  528 0)))
 
+;; Really a bclrl inst
+(define-instruction blrl (segment)
+  (:printer xl-bo-bi ((op 19) (xo 16) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (lk 1))  '(:name))
+  (:attributes branch)
+  (:delay 1)
+  (:dependencies (reads :ccr) (reads :ctr))
+  (:emitter
+   (emit-x-form-inst segment 19 #.(valid-bo-encoding :bo-u) 0 0  16 1)))
+
 (define-instruction bctrl (segment)
   (:printer xl-bo-bi ((op 19) (xo 528) (bo #.(valid-bo-encoding :bo-u)) (bi 0) (lk 1))  '(:name))
+  (:attributes branch)
   (:delay 1)
   (:dependencies (reads :ccr) (reads :ctr))
   (:emitter
@@ -1659,6 +1708,9 @@ about function addresses and register values.")
 (define-x-instruction lhzux 31 311 :other-dependencies ((writes ra)))
 (define-2-x-5-instructions xor 31 316)
 
+;; FIXME: Note that the spr field is split, so we need to convert the
+;; spr value into two 5-bit pieces and swap them to get the right
+;; instruction encoding, and the write printer.
 (define-instruction mfmq (segment rt)
   (:printer xfx ((op 31) (xo 339) (spr 0)) '(:name :tab rt))
   (:delay 1)
@@ -1666,19 +1718,19 @@ about function addresses and register values.")
   (:emitter (emit-xfx-form-inst segment 31 (reg-tn-encoding rt) (ash 0 5) 339 0)))
 
 (define-instruction mfxer (segment rt)
-  (:printer xfx ((op 31) (xo 339) (spr 1)) '(:name :tab rt))
+  (:printer xfx ((op 31) (xo 339) (spr (ash 1 5))) '(:name :tab rt))
   (:delay 1)
   (:dependencies (reads :xer) (writes rt))
   (:emitter (emit-xfx-form-inst segment 31 (reg-tn-encoding rt) (ash 1 5) 339 0)))
 
 (define-instruction mflr (segment rt)
-  (:printer xfx ((op 31) (xo 339) (spr 8)) '(:name :tab rt))
+  (:printer xfx ((op 31) (xo 339) (spr (ash 8 5))) '(:name :tab rt))
   (:delay 1)
   (:dependencies (reads :lr) (writes rt))
   (:emitter (emit-xfx-form-inst segment 31 (reg-tn-encoding rt) (ash 8 5) 339 0)))
 
 (define-instruction mfctr (segment rt)
-  (:printer xfx ((op 31) (xo 339) (spr 9)) '(:name :tab rt))
+  (:printer xfx ((op 31) (xo 339) (spr (ash 9 5))) '(:name :tab rt))
   (:delay 1)
   (:dependencies (reads rt) (reads :ctr))
   (:emitter (emit-xfx-form-inst segment 31 (reg-tn-encoding rt) (ash 9 5) 339 0)))
@@ -2197,10 +2249,6 @@ about function addresses and register values.")
   `(inst bcla :bo-u 0 ,target))
 
 |#
-
-(define-instruction-macro blrl ()
-  `(inst bclrl :bo-u 0))
-
 
 
 ;;; Some more macros 

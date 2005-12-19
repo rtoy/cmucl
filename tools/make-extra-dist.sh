@@ -76,12 +76,12 @@ sync ; sleep 1 ; sync ; sleep 1 ; sync
 echo Tarring extra components
 if [ -n "$ENABLE_GZIP" ]; then
     echo "  Compressing with gzip"
-    ( cd $DESTDIR ; tar cf - lib ) | \
+    ( cd $DESTDIR >/dev/null ; tar cf - lib ) | \
 	gzip -c > cmucl-$VERSION-$ARCH-$OS.extra.tar.gz
 fi
 if [ -n "$ENABLE_BZIP" ]; then
     echo "  Compressing with bzip"
-    ( cd $DESTDIR ; tar cf - lib ) | \
+    ( cd $DESTDIR >/dev/null ; tar cf - lib ) | \
 	bzip2 > cmucl-$VERSION-$ARCH-$OS.extra.tar.bz2
 fi
 

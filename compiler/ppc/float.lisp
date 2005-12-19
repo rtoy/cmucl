@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.3.2.1 2005/12/19 01:10:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -670,6 +670,101 @@
       (descriptor-reg
        (loadw lo-bits float (1+ vm:double-float-value-slot)
 	      vm:other-pointer-type)))))
+
+(define-vop (double-float-bits)
+  (:args (float :scs (double-reg descriptor-reg)
+		:load-if (not (sc-is float double-stack))))
+  (:results (hi-bits :scs (signed-reg))
+	    (lo-bits :scs (unsigned-reg)))
+  (:temporary (:scs (double-stack)) stack-temp)
+  (:arg-types double-float)
+  (:result-types signed-num unsigned-num)
+  (:translate kernel::double-float-bits)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 5
+    (sc-case float
+      (double-reg
+       (inst stfd float (current-nfp-tn vop)
+	     (* (tn-offset stack-temp) vm:word-bytes))
+       (inst lwz hi-bits (current-nfp-tn vop)
+	     (* (tn-offset stack-temp) vm:word-bytes))
+       (inst lwz lo-bits (current-nfp-tn vop)
+	     (* (1+ (tn-offset stack-temp)) vm:word-bytes)))
+      (double-stack
+       (inst lwz hi-bits (current-nfp-tn vop)
+	     (* (tn-offset float) vm:word-bytes))
+       (inst lwz lo-bits (current-nfp-tn vop)
+	     (* (1+ (tn-offset float)) vm:word-bytes)))
+      (descriptor-reg
+       (loadw hi-bits float vm:double-float-value-slot
+	      vm:other-pointer-type)
+       (loadw lo-bits float (1+ vm:double-float-value-slot)
+	      vm:other-pointer-type)))))
+
+;; This vop and the next are intended to be used only for moving a
+;; float to an integer arg location (register or stack) for C callout.
+;; See %alien-funcall ir2convert in aliencomp.lisp.
+
+#+darwin
+(define-vop (move-double-to-int-arg)
+  (:args (float :scs (double-reg)))
+  (:results (hi-bits :scs (signed-reg signed-stack))
+	    (lo-bits :scs (unsigned-reg unsigned-stack)))
+  (:temporary (:scs (double-stack)) stack-temp)
+  (:temporary (:scs (signed-reg)) temp)
+  (:arg-types double-float)
+  (:result-types signed-num unsigned-num)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 5
+    (sc-case float
+      (double-reg
+       (inst stfd float (current-nfp-tn vop)
+	     (* (tn-offset stack-temp) vm:word-bytes))
+       (sc-case hi-bits
+         (signed-reg		
+	  (inst lwz hi-bits (current-nfp-tn vop)
+		(* (tn-offset stack-temp) vm:word-bytes)))
+	 (signed-stack
+	  (inst lwz temp (current-nfp-tn vop)
+		(* (tn-offset stack-temp) vm:word-bytes))
+	  (inst stw temp nsp-tn
+		(* (tn-offset hi-bits) vm:word-bytes))))
+       (sc-case lo-bits
+         (unsigned-reg		
+	  (inst lwz lo-bits (current-nfp-tn vop)
+		(* (1+ (tn-offset stack-temp)) vm:word-bytes)))
+	 (unsigned-stack
+	  (inst lwz temp (current-nfp-tn vop)
+		(* (1+ (tn-offset stack-temp)) vm:word-bytes))
+	  (inst stw temp nsp-tn
+		(* (tn-offset lo-bits) vm:word-bytes))))))))
+
+#+darwin
+(define-vop (move-single-to-int-arg)
+  (:args (float :scs (single-reg)))
+  (:results (bits :scs (signed-reg signed-stack)))
+  (:temporary (:scs (double-stack)) stack-temp)
+  (:temporary (:scs (signed-reg)) temp)
+  (:arg-types single-float)
+  (:result-types signed-num)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 5
+    (sc-case float
+      (single-reg
+       (inst stfs float (current-nfp-tn vop)
+	     (* (tn-offset stack-temp) vm:word-bytes))
+       (sc-case bits
+         (signed-reg		
+	  (inst lwz bits (current-nfp-tn vop)
+		(* (tn-offset stack-temp) vm:word-bytes)))
+	 (signed-stack
+	  (inst lwz temp (current-nfp-tn vop)
+		(* (tn-offset stack-temp) vm:word-bytes))
+	  (inst stw temp nsp-tn
+		(* (tn-offset bits) vm:word-bytes))))))))
 
 
 ;;;; Float mode hackery:

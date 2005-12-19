@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.33 2003/07/16 15:43:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.33.12.1 2005/12/19 01:09:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -226,11 +226,28 @@
     (declare (type index count))))
 
 
+;; Test if LIST is a proper list.  If so, the length of the list is
+;; returned.
+(defun proper-list-p (list)
+  ;; Basically the same as LIST-LENGTH, but with a few extra checks.
+  (do ((n 0 (+ n 2))
+       (y list (cddr y))
+       (z list (cdr z)))
+      (nil)
+    (declare (fixnum n) (list y z))
+    (unless (listp y)
+      (return nil))
+    (when (endp y) (return n))
+    (unless (listp (cdr y))
+      (return nil))
+    (when (endp (cdr y)) (return (+ n 1)))
+    (when (and (eq y z) (> n 0)) (return nil))))
+
 ;; Signal a simple-type-error that LIST is not a proper list.
 (defun not-proper-list-error (list)
   (error 'simple-type-error
 	 :datum list
-	 :expected-type 'list
+	 :expected-type '(satisfies proper-list-p)
 	 :format-control "~S is not a proper list"
 	 :format-arguments (list list)))
 
@@ -376,8 +393,12 @@
        (3rd y 2nd))		;3rd follows 2nd down the list.
       ((atom 2nd)
        (if 2nd
+	   ;; KLUDGE.  The datum here is wrong.  We really want X, but
+	   ;; we've already trashed it by the time we get here.  So
+	   ;; use 2nd.  (We could check X before doing anything, but
+	   ;; that makes this more expensive, so we don't.)
 	   (error 'simple-type-error
-		  :datum x
+		  :datum 2nd
 		  :expected-type 'list
 		  :format-control "First argument is not a proper list."
 		  :format-arguments nil)

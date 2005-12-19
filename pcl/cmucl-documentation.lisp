@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.13 2003/07/20 13:55:11 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.13.12.1 2005/12/19 01:10:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,6 +52,12 @@
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'function)))
   (setf (info function documentation x) new-value))
 
+(defmethod (setf documentation) (new-value (x function) (doc-type (eql 'function)))
+  (setf (info function documentation x) new-value))
+
+(defmethod (setf documentation) (new-value (x function) (doc-type (eql 't)))
+  (setf (info function documentation x) new-value))
+
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'setf)))
   (setf (info setf documentation x) new-value))
 
@@ -91,9 +97,18 @@
 	(when class
 	  (plist-value class 'documentation)))))
 
+#+nil
 (defmethod documentation ((x symbol) (doc-type (eql 'structure)))
   (when (eq (info type kind x) :instance)
     (values (info type documentation x))))
+
+(defmethod documentation ((x symbol) (doc-type (eql 'structure)))
+  (cond ((eq (info type kind x) :instance)
+	 (values (info type documentation x)))
+	((info typed-structure info x)
+	 (values (info typed-structure documentation x)))
+	(t
+	 nil)))
 
 (defmethod (setf documentation) (new-value (x kernel::structure-class) (doc-type (eql 't)))
   (setf (info type documentation (kernel:%class-name x)) new-value))
@@ -115,10 +130,19 @@
 	    (setf (plist-value class 'documentation) new-value)
 	    (setf (info type documentation x) new-value)))))
 
+#+nil
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
   (unless (eq (info type kind x) :instance)
     (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))
   (setf (info type documentation x) new-value))
+
+(defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
+  (cond ((eq (info type kind x) :instance)
+	 (setf (info type documentation x) new-value))
+	((info typed-structure info x)
+	 (setf (info typed-structure documentation x) new-value))
+	(t
+	 (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))))
 
 ;;; Variables.
 (defmethod documentation ((x symbol) (doc-type (eql 'variable)))
@@ -126,6 +150,20 @@
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'variable)))
   (setf (info variable documentation x) new-value))
+
+;;; Compiler macros
+(defmethod documentation ((x list) (doc-type (eql 'compiler-macro)))
+  (when (valid-function-name-p x)
+    (if (eq (car x) 'setf)
+	(cdr (assoc doc-type (values (info random-documentation stuff (cadr x)))))
+	(cdr (assoc doc-type (values (info random-documentation stuff x)))))))
+
+(defmethod (setf documentation) (new-value (x list) (doc-type (eql 'compiler-macro)))
+  (when (valid-function-name-p x)
+    (if (eq (car x) 'setf)
+	(set-random-documentation (cadr x) doc-type new-value)
+	(set-random-documentation x doc-type new-value)))
+  new-value)
 
 ;;; CMUCL random documentation. Compiler-macro documentation is stored
 ;;; as random-documentation and handled here.

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.72 2004/12/23 16:22:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.72.2.1 2005/12/19 01:09:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,6 +59,11 @@
   (declare (ignore depth))
   (print-unreadable-object (host stream :type t)))
 
+(defun %print-logical-host (host stream depth)
+  (declare (ignore depth))
+  (print-unreadable-object (host stream :type t :identity t)
+    (write (logical-host-name host) :stream stream)))
+
 (defstruct (logical-host
 	    (:include host
 		      (:parse #'parse-logical-namestring)
@@ -69,6 +74,7 @@
 		      (:unparse-file #'unparse-unix-file)
 		      (:unparse-enough #'unparse-enough-namestring)
 		      (:customary-case :upper))
+	    (:print-function %print-logical-host)
 	    (:make-load-form-fun make-logical-host-load-form-fun))
   (name "" :type simple-base-string)
   (translations nil :type list)
@@ -119,18 +125,57 @@
 	   (if (or *print-escape* *print-readably*)
 	       (format stream "#P~S" namestring)
 	       (format stream "~A" namestring)))
-	  (*print-readably*
-	   (error 'print-not-readable :object pathname))
 	  (t
-	   (funcall (formatter "#<Unprintable pathname, Host=~S, Device=~S, ~
-				Directory=~S, Name=~S, Type=~S, Version=~S>")
-		    stream
-		    (%pathname-host pathname)
-		    (%pathname-device pathname)
-		    (%pathname-directory pathname)
-		    (%pathname-name pathname)
-		    (%pathname-type pathname)
-		    (%pathname-version pathname))))))
+	   (let ((host (%pathname-host pathname))
+		 (device (%pathname-device pathname))
+		 (directory (%pathname-directory pathname))
+		 (name (%pathname-name pathname))
+		 (type (%pathname-type pathname))
+		 (version (%pathname-version pathname)))
+	     (cond ((every #'(lambda (d)
+			       (or (stringp d)
+				   (symbolp d)))
+			   (cdr directory))
+		    ;; A CMUCL extension.  If we have an unprintable
+		    ;; pathname, convert it to a form that would be
+		    ;; suitable as args to MAKE-PATHNAME to recreate
+		    ;; the pathname.
+		    ;;
+		    ;; We don't handle search-lists because we don't
+		    ;; currently have a readable syntax for
+		    ;; search-lists.
+		    (collect ((result))
+		      (unless (eq host *unix-host*)
+			(result :host)
+			(result (pathname-host pathname)))
+		      (when device
+			(result :device)
+			(result device))
+		      (when directory
+			(result :directory)
+			(result directory))
+		      (when name
+			(result :name)
+			(result name))
+		      (when type
+			(result :type)
+			(result type))
+		      (when version
+			(result :version)
+			(result version))
+		      (format stream "#P~S" (result))))
+		   (*print-readably*
+		    (error 'print-not-readable :object pathname))
+		   (t
+		    (funcall (formatter "#<Unprintable pathname,~:_ Host=~S,~:_ Device=~S,~:_ ~
+				Directory=~S,~:_ Name=~S,~:_ Type=~S,~:_ Version=~S>")
+			     stream
+			     (%pathname-host pathname)
+			     (%pathname-device pathname)
+			     (%pathname-directory pathname)
+			     (%pathname-name pathname)
+			     (%pathname-type pathname)
+			     (%pathname-version pathname)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -233,8 +278,12 @@
 ;;; PATH-DESIGNATOR -- internal type
 ;;;
 (deftype path-designator ()
-  "A path specification, either a string, stream or pathname."
-  '(or string stream pathname))
+  "A path specification, either a string, file-stream or pathname."
+  ;; This used to be stream, not file-stream, but ANSI CL says a
+  ;; pathname designator is a string, a pathname or a stream
+  ;; associated with a file.  In the places we use path-designator, we
+  ;; are really talking about ANSI pathname designators.
+  '(or string file-stream pathname))
 
 
 ;;;; Patterns
@@ -413,6 +462,12 @@
 	      (compare-component (car this) (car that))
 	      (compare-component (cdr this) (cdr that)))))))
 
+;; Compare the version component.  We treat NIL to be EQUAL to
+;; :NEWEST.
+(defun compare-version-component (this that)
+  (or (eql this that)
+      (and (null this) (eq that :newest))
+      (and (null that) (eq this :newest))))
 
 ;;;; Pathname functions.
 
@@ -435,8 +490,8 @@
 			  (%pathname-name pathname2))
        (compare-component (%pathname-type pathname1)
 			  (%pathname-type pathname2))
-       (compare-component (%pathname-version pathname1)
-			  (%pathname-version pathname2))))
+       (compare-version-component (%pathname-version pathname1)
+				  (%pathname-version pathname2))))
 
 ;;; WITH-PATHNAME -- Internal
 ;;;   Converts the expr, a pathname designator (a pathname, or string, or 
@@ -724,15 +779,48 @@ a host-structure or string."
 		     (warn "Silly argument for a unix ~A: ~S"
 			   name-or-type name)))))))
       (check-component-validity name :pathname-name)
-      (check-component-validity type :pathname-type))
+      (check-component-validity type :pathname-type)
+      (mapc #'(lambda (d)
+		(check-component-validity d :directory))
+	    (cdr dir))
+      (when (and (stringp name)
+		 (or (string= name "..") (string= name ".")))
+	(warn "Silly argument for a unix PATHNAME-NAME: ~S" name)))
 
+    ;; More sanity checking
+    (when dir
+      ;; Try to canonicalize the directory component.  :absolute
+      ;; followed by a bunch of "/" deletes the leading "/"'s.
+      ;; :relative followed by "."  anywhere gets them all deleted.
+      (ecase (first dir)
+	(:absolute
+	 (do ((p (cdr dir) (cdr p)))
+	    ((or (null p)
+		 (not (equal "/" (car p))))
+	     (setf (cdr dir) p))))
+	(:relative
+	 (setf (cdr dir) (delete "." (cdr dir) :test #'equal)))))
     ;; CLHS 19.2.2.4.3 says :absolute or :wild-inferiors immediately
     ;; followed by :up or :back signals a file-error.
 
     (let ((d (or (member :wild-inferiors dir)
 		 (member :absolute dir))))
       (when (and d (rest d) (member (second d) '(:up :back)))
-	(error 'file-error)))
+	;; What should we put in the for pathname part of file-error?
+	;; I'm just going to use the directory but removing the
+	;; offending :up or :back.  Or would just (make-pathname) be
+	;; enough?
+	;;
+	;; Or instead of checking here, we could check whenever we
+	;; "use" the file system (CLHS 19.2.2.4.3).  But that's a lot
+	;; harder to do.
+	(error 'simple-file-error
+	       :pathname (make-pathname :directory (remove-if #'(lambda (x)
+								  (member x '(:up :back)))
+							      dir))
+	       :format-control "Illegal pathname: ~
+                                Directory with ~S immediately followed by ~S"
+	       :format-arguments (list (first d) (second d)))))
     
     (macrolet ((pick (var varp field)
 		 `(cond ((or (simple-string-p ,var)
@@ -912,7 +1000,7 @@ a host-structure or string."
    a physical host structure or host namestring."
   (declare (type path-designator thing)
 	   (type (or list string host (member :unspecific)) host)
-	   (type pathname defaults)
+	   (type path-designator defaults)
 	   (type index start)
 	   (type (or index null) end))
   ;; Generally, redundant specification of information in software,
@@ -967,27 +1055,28 @@ a host-structure or string."
 		(host
 		 host))))
     (declare (type (or null host) host))
-    (etypecase thing
-      (simple-string
-       (%parse-namestring thing host defaults start end junk-allowed))
-      (string
-       (%parse-namestring (coerce thing 'simple-string)
-			  host defaults start end junk-allowed))
-      (pathname
-       (let ((host (if host host (%pathname-host defaults))))
-	 (unless (eq host (%pathname-host thing))
-	   (error "Hosts do not match: ~S and ~S."
-		  host (%pathname-host thing))))
-       (values thing start))
-      (stream
-       (let ((name (file-name thing)))
-	 (unless name
-	   (error 'simple-type-error
-		  :datum thing
-		  :expected-type 'pathname
-		  :format-control "Can't figure out the file associated with stream:~%  ~S"
-		  :format-arguments (list thing)))
-	 (values name nil))))))
+    (with-pathname (defaults defaults)
+      (etypecase thing
+	(simple-string
+	 (%parse-namestring thing host defaults start end junk-allowed))
+	(string
+	 (%parse-namestring (coerce thing 'simple-string)
+			    host defaults start end junk-allowed))
+	(pathname
+	 (let ((host (if host host (%pathname-host defaults))))
+	   (unless (eq host (%pathname-host thing))
+	     (error "Hosts do not match: ~S and ~S."
+		    host (%pathname-host thing))))
+	 (values thing start))
+	(stream
+	 (let ((name (file-name thing)))
+	   (unless name
+	     (error 'simple-type-error
+		    :datum thing
+		    :expected-type 'pathname
+		    :format-control "Can't figure out the file associated with stream:~%  ~S"
+		    :format-arguments (list thing)))
+	   (values name nil)))))))
 
 
 ;;; NAMESTRING -- Interface
@@ -998,7 +1087,13 @@ a host-structure or string."
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
     (when pathname
-      (let ((host (%pathname-host pathname)))
+      (let ((host (or (%pathname-host pathname)
+		      ;; Is this what we really want?  Does a NIL host
+		      ;; really mean to get it from *d-p-d* and, if
+		      ;; that's NIL, use *unix-host*?
+		      (%pathname-host *default-pathname-defaults*)
+		      *unix-host*)
+		      ))
 	(unless host
 	  (error "Cannot determine the namestring for pathnames with no ~
 		  host:~%  ~S" pathname))
@@ -1053,12 +1148,17 @@ a host-structure or string."
 			  &optional (defaults *default-pathname-defaults*))
   "Returns an abbreviated pathname sufficent to identify the pathname relative
    to the defaults."
-  (declare (type path-designator pathname))
+  (declare (type path-designator pathname defaults))
   (with-pathname (pathname pathname)
     (let ((host (%pathname-host pathname)))
       (if host
 	  (with-pathname (defaults defaults)
-	    (funcall (host-unparse-enough host) pathname defaults))
+	    ;; Give up if the hosts are different.  I (rtoy) don't
+	    ;; think it makes sense to do anything if the hosts are
+	    ;; different.
+	    (if (equal host (%pathname-host defaults))
+		(funcall (host-unparse-enough host) pathname defaults)
+		(namestring pathname)))
 	  (error
 	   "Cannot determine the namestring for pathnames with no host:~%  ~S"
 	   pathname)))))
@@ -1096,7 +1196,10 @@ a host-structure or string."
 ;;;
 (defun pathname-match-p (in-pathname in-wildname)
   "Pathname matches the wildname template?"
-  (declare (type path-designator in-pathname))
+  (declare (type path-designator in-pathname)
+	   ;; Not path-designator because a file-stream can't have a
+	   ;; wild pathname.
+	   (type (or string pathname) in-wildname))
   (with-pathname (pathname in-pathname)
     (with-pathname (wildname in-wildname)
       (macrolet ((frob (field &optional (op 'components-match ))
@@ -1346,6 +1449,8 @@ a host-structure or string."
   (with-pathname (source source)
     (with-pathname (from from-wildname)
       (with-pathname (to to-wildname)
+	  (unless (pathname-match-p source from)
+	    (didnt-match-error source from))
 	  (let* ((source-host (%pathname-host source))
 		 (to-host (%pathname-host to))
 		 (diddle-case 
@@ -1820,6 +1925,17 @@ a host-structure or string."
 ;;; Can't defvar here because not all host methods are loaded yet.
 (declaim (special *logical-pathname-defaults*))
 
+(defun logical-pathname-namestring-p (pathspec)
+  ;; Checks to see if pathspec is a logical pathname or not.
+  (let ((res (parse-namestring pathspec nil *logical-pathname-defaults*)))
+    ;; Even though *logical-pathname-defaults* has a host with name
+    ;; BOGUS, the user can still use BOGUS as a logical host because
+    ;; we compare with EQ here, so the users BOGUS host is never our
+    ;; BOGUS host.
+    (values (not (eq (%pathname-host res)
+		     (%pathname-host *logical-pathname-defaults*)))
+	    res)))
+
 ;;; LOGICAL-PATHNAME -- Public
 ;;;
 (defun logical-pathname (pathspec)
@@ -1828,9 +1944,9 @@ a host-structure or string."
 	   (values logical-pathname))
   (if (typep pathspec 'logical-pathname)
       pathspec
-      (let ((res (parse-namestring pathspec nil *logical-pathname-defaults*)))
-	(when (eq (%pathname-host res)
-		  (%pathname-host *logical-pathname-defaults*))
+      (multiple-value-bind (logical-p res)
+	  (logical-pathname-namestring-p pathspec)
+	(unless logical-p
 	  (error
 	   'simple-type-error
 	   :format-control "Logical namestring does not specify a host:~%  ~S"
@@ -1892,32 +2008,37 @@ a host-structure or string."
 ;;;
 (defun unparse-enough-namestring (pathname defaults)
   (let* ((path-dir (pathname-directory pathname))
-        (def-dir (pathname-directory defaults))
-        (enough-dir
-         ;; Go down the directory lists to see what matches.  What's
-         ;; left is what we want, more or less.
-         (cond ((and (eq (first path-dir) (first def-dir))
-                     (eq (first path-dir) :absolute))
-                ;; Both paths are :absolute, so find where the common
-                ;; parts end and return what's left
-                (do* ((p (rest path-dir) (rest p))
-                      (d (rest def-dir) (rest d)))
-                     ((or (endp p) (endp d)
-                          (not (equal (first p) (first d))))
-                      `(:relative ,@p))))
-               (t
-                ;; At least one path is :relative, so just return the
-                ;; original path.  If the original path is :relative,
-                ;; then that's the right one.  If PATH-DIR is
-                ;; :absolute, we want to return that except when
-                ;; DEF-DIR is :absolute, as handled above. so return
-                ;; the original directory.
-                path-dir))))
-    (make-pathname :host (%pathname-host pathname)
-                  :directory enough-dir
-                  :name (pathname-name pathname)
-                  :type (pathname-type pathname)
-                  :version (pathname-version pathname))))
+	 (def-dir (pathname-directory defaults))
+	 (enough-dir
+	  ;; Go down the directory lists to see what matches.  What's
+	  ;; left is what we want, more or less.  But there has to be
+	  ;; something in common.
+	  (cond ((and (eq (first path-dir) (first def-dir))
+		      (eq (first path-dir) :absolute)
+		      (second path-dir)
+		      (second def-dir)
+		      (equal (second path-dir) (second def-dir)))
+		 ;; Both paths are :absolute, so find where the common
+		 ;; parts end and return what's left
+		 (do* ((p (rest path-dir) (rest p))
+		       (d (rest def-dir) (rest d)))
+		      ((or (endp p) (endp d)
+			   (not (equal (first p) (first d))))
+		       `(:relative ,@p))))
+		(t
+		 ;; Both paths are absolute, but there's nothing in
+		 ;; common, so return the original.  Or one path is
+		 ;; :relative, so just return the original path.  If
+		 ;; the original path is :relative, then that's the
+		 ;; right one.  If PATH-DIR is :absolute, we want to
+		 ;; return that except when DEF-DIR is :absolute, as
+		 ;; handled above. so return the original directory.
+		 path-dir))))
+    (namestring (make-pathname :host (%pathname-host pathname)
+			       :directory enough-dir
+			       :name (pathname-name pathname)
+			       :type (pathname-type pathname)
+			       :version (pathname-version pathname)))))
 
 ;;; UNPARSE-LOGICAL-NAMESTRING -- Internal
 ;;;

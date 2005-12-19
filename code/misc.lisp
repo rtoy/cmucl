@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.33 2003/09/25 14:08:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.33.6.1 2005/12/19 01:09:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,7 +157,7 @@
 
 (defun lisp-implementation-version ()
   "Returns a string describing the implementation version."
-  *lisp-implementation-version*)
+  (format nil "~A (~X)" *lisp-implementation-version* c:byte-fasl-file-version))
 
 (defun machine-instance ()
   "Returns a string giving the name of the local machine."
@@ -232,4 +232,9 @@
 	   (setf *standard-input* (second old-streams))
 	   (setf *standard-output* (third old-streams))
 	   (setf *error-output* (fourth old-streams)))))
+  (values))
+
+(defun ed (&optional x)
+  "Default implementation of ed.  This does nothing.  If hemlock is
+  loaded, ed can be used to edit a file"
   (values))

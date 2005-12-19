@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.6 2005/02/06 19:43:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.6.2.1 2005/12/19 01:10:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,22 +91,23 @@
 	 (gprs (arg-state-gpr-args state)))
     (cond ((< gprs 8) ; and by implication also (< fprs 13)
 	   ;; Corresponding GPR is kept empty for functions with fixed args
+	   #+nil
 	   (incf (arg-state-gpr-args state))
+	   
 	   (incf (arg-state-fpr-args state))
-	   ;; Assign outgoing FPRs starting at FP1
-	   (my-make-wired-tn 'single-float 'single-reg (1+ fprs)))
+	   ;; Assign outgoing FPRs starting at FP1.  See comments
+	   ;; below for double-float.
+	   (list (my-make-wired-tn 'single-float 'single-reg (1+ fprs))
+		 (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)))
 	  ((< fprs 13)
-	   ;; According to PowerOpen ABI, we need to pass those both in the
-	   ;; FPRs _and_ the stack.  However empiric testing on OS X/gcc
-	   ;; shows they are only passed in FPRs, AFAICT.
-	   ;;
-	   ;; "I" in "AFAICT" probably refers to PRM.  -- CSR, still
-	   ;; reverse-engineering comments in 2003 :-)
-	   ;;
-	   ;; Yes, it does -- me :)
+	   ;; See comments below for double-float.
 	   (incf (arg-state-fpr-args state))
-	   (incf (arg-state-stack-frame-size state))
-	   (my-make-wired-tn 'single-float 'single-reg (1+ fprs)))
+	   (progn
+	     (incf (arg-state-stack-frame-size state))
+	     (my-make-wired-tn 'single-float 'single-reg (1+ fprs)))
+	   #+nil
+	   (list (my-make-wired-tn 'single-float 'single-reg (1+ fprs))
+		 (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)))
 	  (t
 	   ;; Pass on stack only
 	   (let ((stack-offset (arg-state-stack-frame-size state)))
@@ -134,22 +135,39 @@
   (let ((fprs (arg-state-fpr-args state))
 	(gprs (arg-state-gpr-args state)))
     (cond ((< gprs 8) ; and by implication also (< fprs 13)
-	   ;; Corresponding GPRs are also kept empty
-	   (incf (arg-state-gpr-args state) 2)
-	   (when (> (arg-state-gpr-args state) 8)
-	     ;; Spill one word to stack
-	     (decf (arg-state-gpr-args state))
-	     (incf (arg-state-stack-frame-size state)))
+	   #+nil
+	   (progn
+	     (incf (arg-state-gpr-args state) 2)
+	     (when (> (arg-state-gpr-args state) 8)
+	       ;; Spill one word to stack
+	       (decf (arg-state-gpr-args state))
+	       (incf (arg-state-stack-frame-size state))))
 	   (incf (arg-state-fpr-args state))
-	   ;; Assign outgoing FPRs starting at FP1
-	   (my-make-wired-tn 'double-float 'double-reg (1+ fprs)))
+	   ;; Assign outgoing FPRs starting at FP1.
+	   ;;
+	   ;; The PowerOpen ABI says float values are stored in float
+	   ;; regs.  But if we're calling a varargs function, we also
+	   ;; need to put the float into some gprs.  We indicate this
+	   ;; to %alien-funcall ir2-convert by making a list of the
+	   ;; TNs for the float reg and for the int regs.
+	   ;;
+	   ;; We really only need this for vararg functions, but we
+	   ;; currently don't know that, so we do it always.
+	   (list (my-make-wired-tn 'double-float 'double-reg (1+ fprs))
+		 (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)
+		 (int-arg state 'unsigned-byte-32 'unsigned-reg 'unsigned-stack)))
 	  ((< fprs 13)
-	   ;; According to PowerOpen ABI, we need to pass those both in the
-	   ;; FPRs _and_ the stack.  However empiric testing on OS X/gcc
-	   ;; shows they are only passed in FPRs, AFAICT.
-	   (incf (arg-state-stack-frame-size state) 2)
-	   (incf (arg-state-fpr-args state))
-	   (my-make-wired-tn 'double-float 'double-reg (1+ fprs)))
+	   ;; As above, we also need to put the float on the stack.
+	   #+nil
+	   (progn
+	     (incf (arg-state-stack-frame-size state) 2)
+	     (incf (arg-state-fpr-args state))
+	     (my-make-wired-tn 'double-float 'double-reg (1+ fprs)))
+	   (progn
+	     (incf (arg-state-fpr-args state))
+	     (list (my-make-wired-tn 'double-float 'double-reg (1+ fprs))
+		   (int-arg state 'signed-byte-32 'signed-reg 'signed-stack)
+		   (int-arg state 'unsigned-byte-32 'unsigned-reg 'unsigned-stack))))
 	  (t
 	   ;; Pass on stack only
 	   (let ((stack-offset (arg-state-stack-frame-size state)))
@@ -364,8 +382,33 @@
 	  compatible-function-types-p))
 
 (defun callback-accessor-form (type sp offset)
-  ;; Unaligned access is slower, but possible, so this is nice and simple.
-  `(deref (sap-alien (sap+ ,sp ,offset) (* ,type))))
+  (let ((parsed-type (alien::parse-alien-type type)))
+    (typecase parsed-type
+      (alien::integer-64$
+       ;; Get both words of a 64-bit integer and combine together, in
+       ;; a big-endian fashion.
+       `(let ((hi (alien:deref (sap-alien (sys:sap+ ,sp ,offset)
+					  ,(if (alien-integer-type-signed parsed-type)
+					       '(* c-call:int)
+					       '(* c-call:unsigned-int)))))
+	      (lo (alien:deref (sap-alien (sys:sap+ ,sp
+						    (+ ,offset vm:word-bytes))
+					  (* c-call:unsigned-int)))))
+	     (+ (ash hi vm:word-bits) lo)))
+      (alien::integer$
+       ;; We can access machine integers directly, but we need to get
+       ;; the offset right, since the offset we're given is the start
+       ;; of the object, and we're a big-endian machine.
+       (let ((byte-offset
+	      (- vm:word-bytes
+		 (ceiling (alien::alien-integer-type-bits parsed-type)
+			  vm:byte-bits))))
+	 `(deref (sap-alien (sys:sap+ ,sp ,(+ byte-offset offset))
+			    (* ,type)))))
+      (t
+       ;; This should work for everything else.
+       `(deref (sap-alien (sys:sap+ ,sp ,offset)
+			  (* ,type)))))))
 
 (defun compatible-function-types-p (fun-type1 fun-type2)
   (labels ((type-words (type)
@@ -395,10 +438,15 @@
 a pointer to the arguments."
   (declare (type (unsigned-byte 16) index)
 	   (optimize (debug 3)))
-  (labels ((make-gpr (n)
-	     (make-random-tn :kind :normal :sc (sc-or-lose 'any-reg) :offset n))
-	   (make-fpr (n)
-	     (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg) :offset n)))
+  (flet ((make-gpr (n)
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'any-reg) :offset n))
+	 (make-fpr (n)
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset n))
+	 (round-up-16 (n)
+	   ;; Round up to a multiple of 16.  Darwin wants that for the
+	   ;; stack pointer.
+	   (* 16 (ceiling n 16))))
 
     ;; The "Mach-O Runtime Conventions" document for OS X almost specifies
     ;; the calling convention (it neglects to mention that the linkage area
@@ -410,98 +458,141 @@ a pointer to the arguments."
 	  (linkage-area-size 24))
       (assemble (segment)
 
-	;; To save our arguments, we follow the algorithm sketched in the
-	;; "PowerPC Calling Conventions" section of that document.
-	(let ((words-processed 0)
-	      (gprs (mapcar #'make-gpr '(3 4 5 6 7 8 9 10)))
-	      (fprs (mapcar #'make-fpr '(1 2 3 4 5 6 7 8 9 10 11 12 13)))
-	      (stack-pointer (make-gpr 1)))
-	  (labels ((handle-arg (type words)
+	(let ((sp (make-gpr 1))
+	      (save-gprs (mapcar #'make-gpr '(13 24))))
+	  
+	  ;; Save the non-volatile (callee-saved) registers.  The
+	  ;; registers used below are all caller-saved, so there's
+	  ;; nothing to do there.  However, when we call funcall3, the
+	  ;; linkage table entry is used, which unconditionally uses
+	  ;; r13 and r24.  (See lisp/ppc-arch.c.)  So these need to be
+	  ;; saved.  funcall3, which calls call_into_lisp, will take
+	  ;; care of saving all the remaining registers that could be
+	  ;; used.
+	  (let ((save-offset 0))
+	    ;; Adjust stack pointer by a multiple of 16, to preserve
+	    ;; requirement that the stack pointer remains aligned to a
+	    ;; 16-byte boundary.  (Yes, we waste some stack space
+	    ;; here.)
+	    (inst addi sp sp (- (round-up-16 (* (length save-gprs)
+						vm:word-bytes))))
+	    (dolist (r save-gprs)
+	      (inst stw r sp save-offset)
+	      (incf save-offset vm:word-bytes)))
+
+	  ;; Make a new stack frame for us to hold our data.  This is
+	  ;; maximum needed: 8 32-bit registers and 13 double-float
+	  ;; registers.
+	  (inst addi sp sp (- (round-up-16 (+ (* (+ 8 (* 2 13))
+						 vm:word-bytes)
+					      linkage-area-size))))
+	  
+	  ;; To save our arguments, we follow the algorithm sketched in the
+	  ;; "PowerPC Calling Conventions" section of that document.
+	  (let ((words-processed 0)
+		(gprs (mapcar #'make-gpr '(3 4 5 6 7 8 9 10)))
+		(fprs (mapcar #'make-fpr '(1 2 3 4 5 6 7 8 9 10 11 12 13))))
+	    (flet ((handle-arg (type words)
 		     (let ((integerp (not (alien-float-type-p type)))
 			   (offset (+ (* words-processed vm:word-bytes)
 				      linkage-area-size)))
 		       (cond
 			 (integerp
-			  (loop repeat words
-				for gpr = (pop gprs)
-				when gpr do
-				  (inst stw gpr stack-pointer offset)
-				do (incf words-processed)))
+			  (dotimes (k words)
+			    (let ((gpr (pop gprs)))
+			      (cond (gpr
+				     (inst stw gpr sp offset)
+				     (incf words-processed)
+				     (incf offset vm:word-bytes))
+				    (t
+				     (error "Out of integer arg registers!?!?"))))))
 			 ;; The handling of floats is a little ugly because we
 			 ;; hard-code the number of words for single- and
 			 ;; double-floats.
 			 ((alien-single-float-type-p type)
 			  (pop gprs)
 			  (let ((fpr (pop fprs)))
-			    (inst stfs fpr stack-pointer offset))
+			    (inst stfs fpr sp offset))
 			  (incf words-processed))
 			 ((alien-double-float-type-p type)
 			  (setf gprs (cddr gprs))
 			  (let ((fpr (pop fprs)))
-			    (inst stfd fpr stack-pointer offset))
+			    (inst stfd fpr sp offset))
 			  (incf words-processed 2))))))
-	    (mapc #'handle-arg argument-types argument-words)))
+	      (mapc #'handle-arg argument-types argument-words)))
 	
-	;; Set aside room for the return area just below sp, then acutally call
-	;; funcall3: funcall3 (call-callback, index, args, return-area)
-	;;
-	;; INDEX is fixnumized, ARGS and RETURN-AREA don't need to be because
-	;; they're word-aligned.  Kinda gross, but hey ...
-	(let* ((return-area-size (ceiling (alien-type-bits return-type)
-					  vm:word-bits))
-	       (args-size (* 3 vm:word-bytes))
-	       (frame-size (+ linkage-area-size
-			      (* return-area-size vm:word-bytes)
-			      args-size)))
-	  (destructuring-bind (sp r0 arg1 arg2 arg3 arg4)
-	      (mapcar #'make-gpr '(1 0 3 4 5 6))
-	    (labels ((load-address-into (reg addr)
-		       (let ((high (ldb (byte 16 16) addr))
-			     (low (ldb (byte 16 0) addr)))
-			 (inst li reg high)
-			 (inst slwi reg reg 16)
-			 (inst ori reg reg low))))
+	  ;; Set aside room for the return area just below sp, then
+	  ;; actually call funcall3: funcall3 (call-callback, index,
+	  ;; args, return-area)
+	  ;;
+	  ;; INDEX is fixnumized, ARGS and RETURN-AREA don't need to
+	  ;; be because they're word-aligned.  Kinda gross, but hey
+	  ;; ...
+	  (let* ((return-area-size (ceiling (or (alien-type-bits return-type)
+						0)
+					    vm:word-bits))
+		 (args-size (* 3 vm:word-bytes))
+		 (frame-size (round-up-16 (+ linkage-area-size
+					     (* return-area-size vm:word-bytes)
+					     args-size))))
+	    (destructuring-bind (r0 arg1 arg2 arg3 arg4)
+		(mapcar #'make-gpr '(0 3 4 5 6))
 	      ;; Setup the args
-	      (load-address-into arg1 (alien::address-of-call-callback))
+	      (inst lr arg1 (alien::address-of-call-callback))
 	      (inst li arg2 (fixnumize index))
 	      (inst addi arg3 sp linkage-area-size)
 	      (inst addi arg4 sp (- (* return-area-size vm:word-bytes)))
-	      ;; FIXME!
+
 	      ;; Save sp, setup the frame
 	      (inst mflr r0)
 	      (inst stw r0 sp (* 2 vm:word-bytes))
 	      (inst stwu sp sp (- frame-size))
 	      ;; Make the call
-	      (load-address-into r0 (alien::address-of-funcall3))
+	      (inst lr r0 (alien::address-of-funcall3))
 	      (inst mtlr r0)
-	      (inst blrl))
+	      (inst blrl)
 	  
-	    ;; We're back!  Restore sp and lr, load the return value from just
-	    ;; under sp, and return.
-	    (inst lwz sp sp 0)
-	    (inst lwz r0 sp (* 2 vm:word-bytes))
-	    (inst mtlr r0)
-	    (etypecase return-type
-	      ((or alien::integer$ alien::pointer$ alien::sap$
-		   alien::integer-64$)
-	       (loop repeat ;;(ceiling return-area-size vm:word-bytes)
-		 return-area-size
-		 with gprs = (mapcar #'make-gpr '(3 4))
-		 for gpr = (pop gprs)
-		 for offset downfrom (- vm:word-bytes) by vm:word-bytes
-		 do (inst lwz gpr sp offset)))
-	      (alien::single$
-	       ;; Get the FP value into F1
-	       (let ((f1 (make-fpr 1)))
-		 (inst lfs f1 sp (- (* return-area-size vm:word-bytes))))
-	       )
-	      (alien::double$
-	       ;; Get the FP value into F1
-	       (let ((f1 (make-fpr 1)))
-		 (inst lfd f1 sp (- (* return-area-size vm:word-bytes)))))
-	      (alien::void$
-	       ))
-	    (inst blr))))
+	      ;; We're back!  Restore sp and lr, load the return value
+	      ;; from just under sp, and return.
+	      (inst lwz sp sp 0)
+	      (inst lwz r0 sp (* 2 vm:word-bytes))
+	      (inst mtlr r0)
+	      (etypecase return-type
+		((or alien::integer$ alien::pointer$ alien::sap$
+		     alien::integer-64$)
+		 (loop repeat return-area-size
+		   with gprs = (mapcar #'make-gpr '(3 4))
+		   for gpr = (pop gprs)
+		   for offset from (- (* return-area-size vm:word-bytes))
+		              by vm:word-bytes
+		   do (inst lwz gpr sp offset)))
+		(alien::single$
+		 ;; Get the FP value into F1
+		 (let ((f1 (make-fpr 1)))
+		   (inst lfs f1 sp (- (* return-area-size vm:word-bytes)))))
+		(alien::double$
+		 ;; Get the FP value into F1
+		 (let ((f1 (make-fpr 1)))
+		   (inst lfd f1 sp (- (* return-area-size vm:word-bytes)))))
+		(alien::void$
+		 ;; Nothing to do
+		 ))
+	      
+	      ;; Remove the extra stack frame and restore the GPRS we
+	      ;; saved.
+	      (inst addi sp sp (round-up-16 (+ (* (+ 8 (* 2 13))
+						  vm:word-bytes)
+					       linkage-area-size)))
+	      
+	      (let ((save-offset 0))
+		(dolist (r save-gprs)
+		  (inst lwz r sp save-offset)
+		  (incf save-offset vm:word-bytes))
+		(inst addi sp sp (round-up-16 (* (length save-gprs)
+						 vm:word-bytes))))
+
+	      ;; And back we go!
+	      (inst blr)))))
 
       (let ((length (finalize-segment segment)))
 	(prog1 (alien::segment-to-trampoline segment length)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.129.2.1 2005/05/15 20:01:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.129.2.2 2005/12/19 01:09:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -402,7 +402,9 @@
   :derive-type #'result-type-first-arg/reverse)
 
 (defknown nreverse (sequence) sequence ()
-  :derive-type #'result-type-first-arg/reverse)
+  :derive-type #'result-type-first-arg/reverse
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1)
+  :result-not-used (list-function-result-not-used 1))
 
 (defknown make-sequence (type-specifier index &key (:initial-element t)) consed-sequence
   (movable flushable unsafe)
@@ -424,7 +426,8 @@
 (defknown map-into (sequence callable &rest sequence)
   sequence
   (call dynamic-extent-closure-safe)
-  :derive-type #'result-type-first-arg)
+  :derive-type #'result-type-first-arg
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1))
 
 ;;; Returns predicate result... 
 (defknown some (callable sequence &rest sequence) t
@@ -441,12 +444,14 @@
 
 (defknown fill (sequence t &key (:start index) (:end sequence-end)) sequence
   (unsafe)
-  :derive-type #'result-type-first-arg)
+  :derive-type #'result-type-first-arg
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1))
 
 (defknown replace (sequence sequence &key (:start1 index) (:end1 sequence-end)
 			    (:start2 index) (:end2 sequence-end))
   sequence ()
-  :derive-type #'result-type-first-arg)
+  :derive-type #'result-type-first-arg
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1))
 
 (defknown remove
   (t sequence &key (:from-end t) (:test callable)
@@ -484,7 +489,9 @@
      (:count sequence-count) (:key callable))
   sequence
   (flushable call dynamic-extent-closure-safe)
-  :derive-type (sequence-result-nth-arg 2))
+  :derive-type (sequence-result-nth-arg 2)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 2)
+  :result-not-used (list-function-result-not-used 2))
 
 (defknown nsubstitute
   (t t sequence &key (:from-end t) (:test callable)
@@ -492,21 +499,25 @@
      (:count sequence-count) (:key callable))
   sequence
   (flushable call dynamic-extent-closure-safe)
-  :derive-type (sequence-result-nth-arg 3))
+  :derive-type (sequence-result-nth-arg 3)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 3))
 
 (defknown (delete-if delete-if-not)
   (callable sequence &key (:from-end t) (:start index) (:end sequence-end)
 	    (:count sequence-count) (:key callable))
   sequence
   (flushable call dynamic-extent-closure-safe)
-  :derive-type (sequence-result-nth-arg 2))
+  :derive-type (sequence-result-nth-arg 2)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 2)
+  :result-not-used (list-function-result-not-used 2))
 
 (defknown (nsubstitute-if nsubstitute-if-not)
   (t callable sequence &key (:from-end t) (:start index) (:end sequence-end)
      (:count sequence-count) (:key callable))
   sequence
   (flushable call dynamic-extent-closure-safe)
-  :derive-type (sequence-result-nth-arg 3))
+  :derive-type (sequence-result-nth-arg 3)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 3))
 
 (defknown remove-duplicates
   (sequence &key (:test callable) (:test-not callable) (:start index) (:from-end t)
@@ -520,7 +531,9 @@
 	    (:end sequence-end) (:key callable))
   sequence
   (flushable call dynamic-extent-closure-safe)
-  :derive-type (sequence-result-nth-arg 1))
+  :derive-type (sequence-result-nth-arg 1)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1)
+  :result-not-used (list-function-result-not-used 1))
 
 (defknown find (t sequence &key (:test callable) (:test-not callable)
 		  (:start index) (:from-end t) (:end sequence-end) (:key callable))
@@ -567,13 +580,19 @@
 ;;; Not flushable, since vector sort guaranteed in-place...
 (defknown (stable-sort sort) (sequence callable &key (:key callable)) sequence
   (call dynamic-extent-closure-safe)
-  :derive-type (sequence-result-nth-arg 1))
+  :derive-type (sequence-result-nth-arg 1)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1)
+  :result-not-used (list-function-result-not-used 1))
 
 (defknown merge (type-specifier sequence sequence callable
 				&key (:key callable))
   sequence
   (flushable call dynamic-extent-closure-safe)
-  :derive-type (result-type-specifier-nth-arg 1))
+  :derive-type (result-type-specifier-nth-arg 1)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 2 3)
+  ;; FIXME!  This is a little complicated.  
+  ;;:result-not-used #'function-result-not-used-p
+  )
 
 (defknown read-sequence (sequence stream &key (:start index)
 					      (:end sequence-end)
@@ -616,24 +635,40 @@
 (defknown copy-alist (list) list (flushable))
 (defknown copy-tree (t) t (flushable))
 (defknown revappend (list t) t (flushable))
-(defknown nconc (&rest t) t ())
-(defknown nreconc (list t) list ())
+(defknown nconc (&rest t) t ()
+  :destroyed-constant-args (remove-non-constants-and-nils #'butlast))
+(defknown nreconc (list t) list ()
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1)
+  :result-not-used #'function-result-not-used-p)
 (defknown butlast (list &optional unsigned-byte) list (flushable))
-(defknown nbutlast (list &optional unsigned-byte) list ())
+(defknown nbutlast (list &optional unsigned-byte) list ()
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1))
 (defknown ldiff (list t) list (flushable))
-(defknown (rplaca rplacd) (cons t) list (unsafe))
+(defknown (rplaca rplacd) (cons t) list (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
 
-(defknown (nsubst subst) (t t t &key (:key callable) (:test callable)
+(defknown subst (t t t &key (:key callable) (:test callable)
+                   (:test-not callable))
+  t (flushable unsafe call))
+
+(defknown (nsubst) (t t t &key (:key callable) (:test callable)
 			    (:test-not callable))
-  list (flushable unsafe call dynamic-extent-closure-safe))
+  list (flushable unsafe call dynamic-extent-closure-safe)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 3))
 
 (defknown (subst-if subst-if-not nsubst-if nsubst-if-not)
 	  (t t t &key (:key callable))
-  list (flushable unsafe call dynamic-extent-closure-safe))
+  list (flushable unsafe call dynamic-extent-closure-safe)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 3))
 
-(defknown (sublis nsublis) (list t &key (:key callable) (:test callable)
+(defknown (sublis) (list t &key (:key callable) (:test callable)
 				 (:test-not callable))
   list (flushable unsafe call dynamic-extent-closure-safe))
+
+(defknown nsublis (list t &key (:key callable) (:test callable)
+                        (:test-not callable))
+  t (flushable unsafe call)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 2))
 
 (defknown member (t list &key (:key callable) (:test callable)
 		    (:test-not callable))
@@ -655,7 +690,9 @@
 (defknown (nunion nintersection nset-difference nset-exclusive-or)
 	  (list list &key (:key callable) (:test callable) (:test-not callable))
   list
-  (foldable flushable call dynamic-extent-closure-safe))
+  (foldable flushable call dynamic-extent-closure-safe)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1 2)
+  :result-not-used #'function-result-not-used-p)
 
 (defknown subsetp (list list &key (:key callable) (:test callable)
 			(:test-not callable))
@@ -673,7 +710,8 @@
 	  (foldable flushable call dynamic-extent-closure-safe))
 
 (defknown (memq assq) (t list) list (foldable flushable unsafe))
-(defknown delq (t list) list (flushable unsafe))
+(defknown delq (t list) list (flushable unsafe)
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 2))
   
 
 ;;;; In the "Hash Tables" chapter:
@@ -688,11 +726,14 @@
 (defknown hash-table-p (t) boolean (movable foldable flushable))
 (defknown gethash (t hash-table &optional t) (values t boolean)
   (foldable flushable unsafe))
-(defknown %puthash (t hash-table t) t (unsafe))
-(defknown remhash (t hash-table) boolean ())
+(defknown %puthash (t hash-table t) t (unsafe)
+  :destroyed-constant-args (nth-constant-args 2))
+(defknown remhash (t hash-table) boolean ()
+  :destroyed-constant-args (nth-constant-args 2))
 (defknown maphash (callable hash-table) null
   (foldable flushable call dynamic-extent-closure-safe))
-(defknown clrhash (hash-table) hash-table ())
+(defknown clrhash (hash-table) hash-table ()
+  :destroyed-constant-args (nth-constant-args 1))
 (defknown hash-table-count (hash-table) index (foldable flushable))
 (defknown hash-table-rehash-size (hash-table) (or (integer 1) (float (1.0)))
   (foldable flushable))
@@ -732,6 +773,7 @@
 (defknown bit ((array bit) &rest index) bit (foldable flushable))
 (defknown sbit ((simple-array bit) &rest index) bit (foldable flushable))
 
+;;; FIXME: :DESTROYED-CONSTANT-ARGS for these is complicated.
 (defknown (bit-and bit-ior bit-xor bit-eqv bit-nand bit-nor bit-andc1 bit-andc2
 		   bit-orc1 bit-orc2)
   ((array bit) (array bit) &optional (or (array bit) (member nil t)))
@@ -746,16 +788,23 @@
 
 (defknown array-has-fill-pointer-p (array) boolean (movable foldable flushable))
 (defknown fill-pointer (vector) index (foldable flushable))
-(defknown vector-push (t vector) (or index null) ())
-(defknown vector-push-extend (t vector &optional index) index ())
-(defknown vector-pop (vector) t ())
+(defknown vector-push (t vector) (or index null) ()
+  :destroyed-constant-args (nth-constant-args 2))
+(defknown vector-push-extend (t vector &optional index) index ()
+  :destroyed-constant-args (nth-constant-args 2))
+(defknown vector-pop (vector) t ()
+  :destroyed-constant-args (nth-constant-args 1))
 
+;;; FIXME: complicated :DESTROYED-CONSTANT-ARGS
+;;; Also, an important-result warning could be provided if the array
+;;; is known to be not expressly adjustable.
 (defknown adjust-array
   (array (or index list) &key (:element-type type-specifier)
 	 (:initial-element t) (:initial-contents t)
 	 (:fill-pointer t) (:displaced-to (or array null))
 	 (:displaced-index-offset index))
-  array (unsafe))
+  array (unsafe)
+  :result-not-used #'adjust-array-result-not-used-p)
 ;  :derive-type 'result-type-arg1) Not even close...
 
 
@@ -793,7 +842,8 @@
 
 (defknown (nstring-upcase nstring-downcase nstring-capitalize)
   (string &key (:start index) (:end sequence-end))
-  string ())
+  string ()
+  :destroyed-constant-args (nth-constant-nonempty-sequence-args 1))
 
 (defknown string (stringable) string
   (flushable explicit-check))
@@ -939,6 +989,7 @@
 (defknown write-byte (integer stream) integer
   (explicit-check))
 
+;;; FIXME: complicated :DESTROYED-CONSTANT-ARGS
 (defknown format ((or streamlike string) (or string function) &rest t)
   (or string null)
   (explicit-check))
@@ -1080,7 +1131,8 @@
    (:block-compile (member t nil :specified))
    (:entry-points list)
    (:byte-compile (member t nil :maybe))
-   (:external-format (member :default)))
+   (:external-format (member :default))
+   (:xref t))
   (values (or pathname null) boolean boolean))
 
 (defknown disassemble ((or callable cons)
@@ -1200,25 +1252,36 @@
 
 ;;;; Setf inverses:
 
-(defknown %aset (array &rest t) t (unsafe))
-(defknown %set-row-major-aref (array index t) t (unsafe))
-(defknown %rplaca (cons t) t (unsafe))
+(defknown %aset (array &rest t) t (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
+(defknown %set-row-major-aref (array index t) t (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
+(defknown %rplaca (cons t) t (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
 (defknown %rplacd (cons t) t (unsafe))
 (defknown %put (symbol t t) t (unsafe))
-(defknown %setelt (sequence index t) t (unsafe))
-(defknown %svset (simple-vector index t) t (unsafe))
-(defknown %bitset ((array bit) &rest index) bit (unsafe))
-(defknown %sbitset ((simple-array bit) &rest index) bit (unsafe))
-(defknown %charset (string index character) character (unsafe))
-(defknown %scharset (simple-string index character) character (unsafe))
+(defknown %setelt (sequence index t) t (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
+(defknown %svset (simple-vector index t) t (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
+(defknown %bitset ((array bit) &rest index) bit (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
+(defknown %sbitset ((simple-array bit) &rest index) bit (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
+(defknown %charset (string index character) character (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
+(defknown %scharset (simple-string index character) character (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
 (defknown %set-symbol-value (symbol t) t (unsafe))
 (defknown fset (symbol function) function (unsafe))
 (defknown %set-symbol-plist (symbol t) t (unsafe))
 (defknown (setf documentation) ((or string null) t symbol)
   (or string null)
   ())
-(defknown %setnth (index list t) t (unsafe))
-(defknown %set-fill-pointer (vector index) index (unsafe))
+(defknown %setnth (index list t) t (unsafe)
+  :destroyed-constant-args (nth-constant-args 2))
+(defknown %set-fill-pointer (vector index) index (unsafe)
+  :destroyed-constant-args (nth-constant-args 1))
 
 
 ;;;; Internal type predicates:

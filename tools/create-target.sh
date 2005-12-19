@@ -29,6 +29,7 @@ if [ $# = 1 ]; then
     SunOS) LISP_VARIANT=sun4_solaris_gcc ;;
     Linux) LISP_VARIANT=linux_gencgc ;;
     Darwin) LISP_VARIANT=ppc_darwin ;;
+    FreeBSD) LISP_VARIANT=FreeBSD_gencgc ;;
     # Please fill in some other common systems
     *) echo "Sorry, please specify the desired Lisp variant." 
        exit 1 ;;
@@ -115,6 +116,13 @@ case $LISP_VARIANT in
 	*) gcname=":cgc" ;;
       esac
       sed "s;@@gcname@@;$gcname;" $SETENV/openbsd-features.lisp >> $TARGET/setenv.lisp
+      ;;
+  *FreeBSD*)
+      case $LISP_VARIANT in
+        *_gencgc*) gcname=":gencgc" ;;
+	*) gcname=":cgc" ;;
+      esac
+      sed "s;@@gcname@@;$gcname;" $SETENV/freebsd-features.lisp >> $TARGET/setenv.lisp
       ;;
   *solaris*)
       cat $SETENV/solaris-features.lisp >> $TARGET/setenv.lisp

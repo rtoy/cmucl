@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.52 2004/12/21 18:00:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.52.2.1 2005/12/19 01:09:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,7 +109,10 @@
   ;;
   ;; Block-start queue entries in effect at the queue head.
   (pending-blocks nil :type list)
-  )
+  ;; 
+  ;; Queue of annotations to the buffer
+  (annotations-tail nil :type list)
+  (annotations-head nil :type list))
 
 (defun %print-pretty-stream (pstream stream depth)
   (declare (ignore depth))
@@ -489,6 +492,119 @@
 	  (replace new-buffer buffer :end1 end :end2 end))))))
 
 
+;;;; Annotations support.
+
+(defstruct (annotation (:include queued-op))
+  (handler (constantly nil) :type function)
+  (record))
+
+(defun enqueue-annotation (stream handler record)
+  "Insert an annotation into the pretty-printing stream STREAM.
+HANDLER is a function, and RECORD is an arbitrary datum.  The
+pretty-printing stream conceptionally queues annotations in sequence
+with the characters that are printed to the stream, until the stream
+has decided on the concrete layout.  When the characters are forwarded
+to the target stream, annotations are invoked at the right position.
+An annotation is invoked by calling the function HANDLER with the
+three arguments RECORD, TARGET-STREAM, and TRUNCATEP.  The argument
+TRUNCATEP is true if the text surrounding the annotation is suppressed
+due to line abbreviation (see *PRINT-LINES*).
+If STREAM is not a pretty-printing stream, simply call HANDLER
+with the arguments RECORD, STREAM and nil."
+  (enqueue stream annotation :handler handler
+	   :record record))
+
+(defun re-enqueue-annotation (stream annotation)
+  "Insert ANNOTATION into the queue of annotations in STREAM."
+  (let* ((annotation-cons (list annotation))
+	 (head (pretty-stream-annotations-head stream)))
+    (if head
+	(setf (cdr head) annotation-cons)
+	(setf (pretty-stream-annotations-tail stream) annotation-cons))
+    (setf (pretty-stream-annotations-head stream) annotation-cons)))
+
+(defun re-enqueue-annotations (stream end)
+  "Insert all annotations in STREAM from the queue of pending
+operations into the queue of annotations.  When END is non-nil, 
+stop before reaching the queued-op END."
+  #-(and)
+  (loop for tail = (pretty-stream-queue-tail stream) then (cdr tail)
+     while (and tail (not (eql (car tail) end)))
+     when (annotation-p (car tail)) 
+     do (re-enqueue-annotation stream (car tail)))
+  #+(and)
+  (do ((tail (pretty-stream-queue-tail stream) (cdr tail)))
+      ((not (and tail (not (eql (car tail) end)))))
+    (when (annotation-p (car tail))
+      (re-enqueue-annotation stream (car tail)))))
+
+(defun dequeue-annotation (stream &key end-posn)
+  "Dequeue the next annotation from the queue of annotations of STREAM
+and return it.  Return nil if there are no more annotations.  When
+:END-POSN is given and the next annotation has a posn greater than
+this, also return nil."
+  (let ((next-annotation (car (pretty-stream-annotations-tail stream))))
+    (when next-annotation
+      (when (or (not end-posn)
+		(<= (annotation-posn next-annotation) end-posn))
+	(pop (pretty-stream-annotations-tail stream))
+	(unless (pretty-stream-annotations-tail stream)
+	  (setf (pretty-stream-annotations-head stream) nil))
+	next-annotation))))
+
+(defun invoke-annotation (stream annotation truncatep)
+  (let ((target (pretty-stream-target stream)))
+    (funcall (annotation-handler annotation)
+	     (annotation-record annotation)
+	     target
+	     truncatep)))
+
+(defun output-buffer-with-annotations (stream end)
+  "Output the buffer of STREAM up to (excluding) the buffer index END.
+When annotations are present, invoke them at the right positions."
+  (let ((target (pretty-stream-target stream))
+	(buffer (pretty-stream-buffer stream))
+	(end-posn (index-posn end stream))
+	(start 0))
+    #-(and)
+    (loop
+       for annotation = (dequeue-annotation stream :end-posn end-posn)
+       while annotation
+       do
+	 (let ((annotation-index (posn-index (annotation-posn annotation)
+					     stream)))
+	   (write-string buffer target :start start 
+			 :end annotation-index)
+	   (invoke-annotation stream annotation nil)
+	   (setf start annotation-index)))
+    #+(and)
+    (do ((annotation (dequeue-annotation stream :end-posn end-posn)
+		     (dequeue-annotation stream :end-posn end-posn)))
+	((not annotation))
+      (let ((annotation-index (posn-index (annotation-posn annotation)
+					     stream)))
+	   (write-string buffer target :start start 
+			 :end annotation-index)
+	   (invoke-annotation stream annotation nil)
+	   (setf start annotation-index)))
+    (write-string buffer target :start start :end end)))
+
+(defun flush-annotations (stream end truncatep)
+  "Invoke all annotations in STREAM up to (including) the buffer index END."
+  (let ((end-posn (index-posn end stream)))
+    #-(and)
+    (loop
+       for annotation = (dequeue-annotation stream :end-posn end-posn)
+       while annotation
+       do (invoke-annotation stream annotation truncatep))
+    #+(and)
+    (do ((annotation (dequeue-annotation stream :end-posn end-posn)
+		     (dequeue-annotation stream :end-posn end-posn)))
+	((not annotation))
+      (invoke-annotation stream annotation truncatep))
+    ))
+
+
 ;;;; Stuff to do the actual outputting.
 
 (defun assure-space-in-buffer (stream want)
@@ -558,9 +674,10 @@
 				  force-newlines-p)
 	     ((t)
 	      ;; Just nuke the whole logical block and make it look like one
-	      ;; nice long literal.
+	      ;; nice long literal.  (But don't nuke annotations.)
 	      (let ((end (block-start-block-end next)))
 		(expand-tabs stream end)
+		(re-enqueue-annotations stream end)
 		(setf tail (cdr (member end tail)))))
 	     ((nil)
 	      (really-start-logical-block
@@ -573,7 +690,9 @@
 	  (block-end
 	   (really-end-logical-block stream))
 	  (tab
-	   (expand-tabs stream next))))
+	   (expand-tabs stream next))
+	  (annotation
+	   (re-enqueue-annotation stream next))))
       (setf (pretty-stream-queue-tail stream) tail))
     output-anything))
 
@@ -617,12 +736,16 @@
 		(if last-non-blank
 		    (1+ last-non-blank)
 		    0)))))
-    (write-string buffer target :end amount-to-print)
+    (output-buffer-with-annotations stream amount-to-print)
+    (flush-annotations stream amount-to-consume nil)
     (let ((line-number (pretty-stream-line-number stream)))
       (incf line-number)
       (when (and (not *print-readably*)
 		 *print-lines* (>= line-number *print-lines*))
 	(write-string " .." target)
+	(flush-annotations stream 
+			   (pretty-stream-buffer-fill-pointer stream)
+			   t)
 	(let ((suffix-length (logical-block-suffix-length
 			      (car (pretty-stream-blocks stream)))))
 	  (unless (zerop suffix-length)
@@ -674,8 +797,7 @@
 	 (buffer (pretty-stream-buffer stream)))
     (when (zerop count)
       (error "Output-partial-line called when nothing can be output."))
-    (write-string buffer (pretty-stream-target stream)
-		  :start 0 :end count)
+    (output-buffer-with-annotations stream count)
     (incf (pretty-stream-buffer-start-column stream) count)
     (replace buffer buffer :end1 new-fill-ptr :start2 count :end2 fill-ptr)
     (setf (pretty-stream-buffer-fill-pointer stream) new-fill-ptr)
@@ -684,9 +806,9 @@
 (defun force-pretty-output (stream)
   (maybe-output stream nil)
   (expand-tabs stream nil)
-  (write-string (pretty-stream-buffer stream)
-		(pretty-stream-target stream)
-		:end (pretty-stream-buffer-fill-pointer stream)))
+  (re-enqueue-annotations stream nil)
+  (output-buffer-with-annotations stream 
+				  (pretty-stream-buffer-fill-pointer stream)))
 
 
 ;;;; Utilities.
@@ -1392,6 +1514,42 @@
   (funcall (formatter "~:<~W~^~1I~:@_~@{~:<~^~W~^~:@_~@{~W~^~:@_~}~:>~^~:@_~}~:>")
 	   stream list))
 
+(defun pprint-declare (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; Output "declare"
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-newline :miser stream)
+    (write-char #\space stream)
+    (pprint-indent :current 0 stream)
+    ;; Print out each spec.
+    (loop
+       (let ((spec (pprint-pop)))
+	 ;; If the spec begins with TYPE, we indent it so that vars
+	 ;; are lined up after the actual type.  Otherwise, we just
+	 ;; make them all line up after the first symbol of the
+	 ;; spec.
+	 (pprint-logical-block (stream spec :prefix "(" :suffix ")")
+	   (when (eq (car spec) 'type)
+	     (output-object (pprint-pop) stream)
+	     (pprint-exit-if-list-exhausted)
+	     (pprint-newline :miser stream)
+	     (write-char #\space stream))
+	   (output-object (pprint-pop) stream)
+	   (pprint-exit-if-list-exhausted)
+	   (pprint-newline :miser stream)
+	   (write-char #\space stream)
+	   (pprint-indent :current 0 stream)
+	   (loop
+	      (output-object (pprint-pop) stream)
+	      (pprint-exit-if-list-exhausted)
+	      (write-char #\space stream)
+	      (pprint-newline :fill stream))))
+       (pprint-exit-if-list-exhausted)
+       (write-char #\space stream)
+       (pprint-newline :linear stream))))
+
 (defun pprint-defun (stream list &rest noise)
   (declare (ignore noise))
   (funcall (formatter
@@ -1696,6 +1854,7 @@
     (tagbody pprint-tagbody)
     (throw pprint-block)
     (unwind-protect pprint-block)
+    (declare pprint-declare)
     
     ;; Macros.
     (case pprint-case)

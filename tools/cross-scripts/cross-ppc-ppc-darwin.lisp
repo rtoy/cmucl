@@ -13,7 +13,7 @@
      :hash-new
      :random-mt19937
      :darwin :bsd
-     :cmu :cmu19 :cmu19a
+     :cmu :cmu19 :cmu19c
      :relative-package-names		; Relative package names from Allegro
      :linkage-table
      :modular-arith
@@ -182,3 +182,17 @@
 (let ((ht (c::backend-sc-names c::*target-backend*)))
   (setf (gethash 'old-ppc::any-reg ht)
 	(gethash 'ppc::any-reg ht)))
+
+;; A hack for ppc.  Make sure the vop, move-double-to-int-arg, is
+;; available in both the OLD-PPC and new PPC package.  (I don't know
+;; why this is needed, but it seems to be.)
+(let ((ht (c::backend-template-names c::*target-backend*)))
+  (dolist (syms '((old-ppc::move-double-to-int-arg
+		   ppc::move-double-to-int-arg)
+		  (old-ppc::move-single-to-int-arg
+		   ppc::move-single-to-int-arg)))
+    (destructuring-bind (old new)
+	syms
+      (setf (gethash old
+		     ht)
+	    (gethash new ht)))))

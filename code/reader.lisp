@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.50.2.1 2005/05/15 20:01:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.50.2.2 2005/12/19 01:09:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -655,7 +655,9 @@
 	    (let ((nextchar (read-char stream t)))
 	      (cond ((token-delimiterp nextchar)
 		     (cond ((eq listtail thelist)
-			    (%reader-error stream "Nothing appears before . in list."))
+			    (if *read-suppress*
+				(return-from read-list nil)
+				(%reader-error stream "Nothing appears before . in list.")))
 			   ((whitespacep nextchar)
 			    (setq nextchar (flush-whitespace stream))))
 		     (rplacd listtail
@@ -1536,8 +1538,17 @@ the end of the stream."
 	  (t (error "Internal error in floating point reader.")))))
 
 (defun make-float-aux (number divisor float-format stream)
-  (handler-case 
-      (coerce (/ number divisor) float-format)
+  (handler-case
+      (with-float-traps-masked (:underflow)
+	(let ((result (coerce (/ number divisor) float-format)))
+	  (when (and (zerop result) (not (zerop number)))
+	    ;; With underflow traps disabled, reading any number
+	    ;; smaller than least-positive-foo-float will return zero.
+	    ;; But we really want to indicate that we can't read it.
+	    ;; So if we converted the number to zero, but the number
+	    ;; wasn't actually zero, throw an error.
+	    (error "Underflow"))
+	  result))
     (error ()
 	   (%reader-error stream "Floating-point number not representable"))))
 
