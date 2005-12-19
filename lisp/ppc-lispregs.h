@@ -88,9 +88,9 @@
 
 #define REGNAMES \
         "ZERO",		"NSP",	        "POLL",		"NL0", \
-	"NL1",		"NL2",		"NL3P",		"NL4", \
+	"NL1",		"NL2",		"NL3",		"NL4", \
         "NL5",		"NL6",		"NL7",		"NARGS", \
-        "CFUNC",	"NFP"		"BSP",		"CFP", \
+        "CFUNC",	"NFP",		"BSP",		"CFP",	 \
         "CSP",		"ALLOC",	"NULL",		"CODE", \
         "CNAME",	"LEXENV",	"OCFP",		"LRA", \
         "A0",	        "A1",	        "A2",		"A3", \
