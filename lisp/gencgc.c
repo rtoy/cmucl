@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.2 2005/12/19 01:10:12 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.3 2005/12/21 19:09:26 rtoy Exp $
  *
  */
 
@@ -25,6 +25,7 @@
 #include "lispregs.h"
 #include "interr.h"
 #include "gencgc.h"
+
 
 #define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__)
@@ -252,7 +253,7 @@ int verify_gens = NUM_GENERATIONS;
  * makes GC very, very slow, so don't enable this unless you really
  * need it!)
  */
-boolean pre_verify_gen_0 = TRUE;
+boolean pre_verify_gen_0 = FALSE;
 
 /*
  * Enable checking for bad pointers after gc_free_heap called from purify.
@@ -2844,7 +2845,7 @@ trans_code(struct code *code)
     unsigned long displacement;
     lispobj fheaderl, *prev_pointer;
 
-#if 1
+#if 0
     fprintf(stderr, "\nTransporting code object located at 0x%08x.\n",
 	    (unsigned long) code);
 #endif
@@ -2874,7 +2875,7 @@ trans_code(struct code *code)
 
     displacement = l_new_code - l_code;
 
-#if 1
+#if 0
     fprintf(stderr, "Old code object at 0x%08x, new code object at 0x%08x.\n",
 	    (unsigned long) code, (unsigned long) new_code);
     fprintf(stderr, "Code object is %d words long.\n", nwords);
@@ -3852,7 +3853,7 @@ scav_hash_vector(lispobj * where, lispobj object)
      * true.  It appears that it just happens not to be true when we're
      * scavenging the hash vector.  I don't know why.
      */
-#if defined(DARWIN) || (0 && defined(sparc))
+#if (0 && defined(sparc))
     if (where != (lispobj *) PTR(hash_table->table)) {
 	fprintf(stderr, "Hash table invariant failed during scavenging!\n");
 	fprintf(stderr, " *** where = %lx\n", where);
@@ -3862,7 +3863,7 @@ scav_hash_vector(lispobj * where, lispobj object)
     }
 #endif
 
-#ifndef sparc
+#if !(defined(sparc) || defined(DARWIN))
     gc_assert(where == (lispobj *) PTR(hash_table->table));
 #endif
     gc_assert(TypeOf(hash_table->instance_header) == type_InstanceHeader);
@@ -5767,7 +5768,7 @@ scavenge_newspace_generation(int generation)
     /* Grab new_areas_index */
     current_new_areas_index = new_areas_index;
 
-#if 1
+#if 0
     fprintf(stderr, "First scan finished; current_new_areas_index=%d\n",
 	    current_new_areas_index);
 #endif
@@ -5828,7 +5829,7 @@ scavenge_newspace_generation(int generation)
 
 		gc_assert((*previous_new_areas)[i].size % 4 == 0);
 
-#if 1
+#if 0
 		fprintf(stderr, "*S page %d offset %d size %d\n", page, offset,
 			size * sizeof(lispobj));
 #endif
@@ -5843,7 +5844,7 @@ scavenge_newspace_generation(int generation)
 	/* Grab new_areas_index */
 	current_new_areas_index = new_areas_index;
 
-#if 1
+#if 0
 	fprintf(stderr, "Re-scan finished; current_new_areas_index=%d\n",
 		current_new_areas_index);
 #endif
