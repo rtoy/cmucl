@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.3 2005/12/21 19:09:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.4 2005/12/21 21:20:29 rtoy Exp $
  *
  */
 
@@ -143,7 +143,7 @@
 
 /* Define for activating assertions.  */
 
-#if 1
+#if defined(DARWIN)
 #define GC_ASSERTIONS 1
 #endif
 
