@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.2.2.4 2005/12/21 21:04:53 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.2.2.5 2005/12/21 21:49:47 rtoy Exp $
  *
  */
 
@@ -304,48 +304,6 @@ valid_addr(os_vm_address_t addr)
     return FALSE;
 }
 
-
-static void
-sigsegv_handler(HANDLER_ARGS)
-{
-#if defined GENCGC
-    caddr_t fault_addr = code->si_addr;
-    int page_index = find_page_index((void *) fault_addr);
-
-#endif
-    
-    SAVE_CONTEXT();
-
-#if defined(GENCGC)
-#if SIGSEGV_VERBOSE
-    fprintf(stderr, "Signal %d, fault_addr=%x, page_index=%d:\n",
-	    signal, fault_addr, page_index);
-#endif
-
-    /* Check if the fault is within the dynamic space. */
-    if (page_index != -1) {
-	/* Un-protect the page */
-
-	/* The page should have been marked write protected */
-	if (!PAGE_WRITE_PROTECTED(page_index))
-	    fprintf(stderr,
-		    "*** Sigsegv in page not marked as write protected\n");
-
-	os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
-	return;
-    }
-#endif
-
-    DPRINTF(1, (stderr, "sigsegv:\n"));
-    if (!interrupt_maybe_gc(signal, code, context))
-	interrupt_handle_now(signal, code, context);
-
-    /* Work around G5 bug; fix courtesy gbyers via chandler */
-    sigreturn(context);
-}
 
 static void
 sigbus_handler(HANDLER_ARGS)
