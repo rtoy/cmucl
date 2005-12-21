@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.11.2.2 2005/12/19 01:10:13 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.11.2.3 2005/12/21 21:04:53 rtoy Exp $
  *
  */
 
@@ -129,7 +129,7 @@ struct page {
 #elif defined(SPARC)
 /*
  * For sparc, the minimum page size (physical page size) is 8K.
- * However, some experimments indicate that this gives worse
+ * However, some experiments indicate that this gives worse
  * performance in some cases than the non-gencgc version.  By upping
  * the page size to 32K, we are as good as before, so let us use a 32K
  * page size.  (I'm assuming the gain is because we do the kernel
@@ -137,7 +137,13 @@ struct page {
  */
 #define PAGE_SIZE (4*8192)
 #elif defined(DARWIN)
-#define PAGE_SIZE 4096
+/*
+ * The physical page size is 4K.  Like sparc, this appears to be
+ * somewhat slow (but need to verify that), so let's make the page
+ * size 32K so we hit the allocation trap less often.
+ */
+/*#define PAGE_SIZE 4096*/
+#define PAGE_SIZE (8*4096)
 #endif
 
 extern unsigned dynamic_space_pages;

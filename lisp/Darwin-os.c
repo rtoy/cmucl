@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.2.2.3 2005/12/21 19:07:02 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.2.2.4 2005/12/21 21:04:53 rtoy Exp $
  *
  */
 
@@ -381,7 +381,7 @@ sigbus_handler(HANDLER_ARGS)
 	    fprintf(stderr,
 		    "*** Sigsegv in page not marked as write protected\n");
 
-	os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
+	os_protect(page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
 	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
