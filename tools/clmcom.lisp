@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.20 2003/06/18 09:23:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.21 2005/12/23 14:14:20 pwerkowski Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,6 +27,10 @@
   #-gencgc (ext:purify))
 
 (pushnew :motif *features*)
+
+;;; Set this pesky bit ON - see note in clxcom.lisp
+(when (boundp 'conditions::*make-condition-accessor-methods*)
+  (setq conditions::*make-condition-accessor-methods* t))
 
 (defparameter tk-internals-files 
   '("target:motif/lisp/initial"
