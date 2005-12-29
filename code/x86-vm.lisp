@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.22 2004/07/07 15:03:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.23 2005/12/29 10:23:12 rswindells Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,7 +190,7 @@
       (mc-ss	unsigned-long)))
 
 #+netbsd
-(def-alien-type ucontext
+(def-alien-type sigcontext
   (struct nil
 	  (uc-flags	unsigned-long)
 	  (uc-link	unsigned-long)
@@ -396,8 +396,7 @@
 
 #+netbsd
 (defun internal-error-arguments (ucp)
-  (declare (type (alien (* ucontext)) ucp))
-  (%primitive print "internal-error-arguments")
+  (declare (type (alien (* sigcontext)) ucp))
   (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
     (let ((pc (int-sap (slot mcp 'mc-eip))))
       (declare (type system-area-pointer pc))
@@ -431,7 +430,7 @@
 
 #+netbsd
 (defun sigcontext-program-counter (ucp)
-  (declare (type (alien (* ucontext)) ucp))
+  (declare (type (alien (* sigcontext)) ucp))
   (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
     (int-sap (slot mcp 'sc-eip))))
 
@@ -472,7 +471,7 @@
 
 #+netbsd
 (defun sigcontext-register (ucp index)
-  (declare (type (alien (* ucontext)) ucp))
+  (declare (type (alien (* sigcontext)) ucp))
   (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
     (case index				; ugly -- I know.
       (#.eax-offset (slot mcp 'mc-eax))
@@ -486,7 +485,7 @@
 
 #+netbsd
 (defun %set-sigcontext-register (ucp index new)
-  (declare (type (alien (* ucontext)) ucp))
+  (declare (type (alien (* sigcontext)) ucp))
   (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
     (case index
       (#.eax-offset (setf (slot mcp 'mc-eax) new))
@@ -559,7 +558,7 @@
   
 #+netbsd
 (defun sigcontext-floating-point-modes (ucp)
-  (declare (type (alien (* ucontext)) ucp)
+  (declare (type (alien (* sigcontext)) ucp)
 	   (ignore ucp))
   (floating-point-modes))
   
