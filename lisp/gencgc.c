@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.4 2005/12/21 21:20:29 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.5 2006/01/02 17:05:36 rtoy Exp $
  *
  */
 
@@ -258,7 +258,11 @@ boolean pre_verify_gen_0 = FALSE;
 /*
  * Enable checking for bad pointers after gc_free_heap called from purify.
  */
+#if defined(DARWIN)
 boolean verify_after_free_heap = TRUE;
+#else
+boolean verify_after_free_heap = FALSE;
+#endif
 
 /*
  * Enable the printing of a note when code objects are found in the
@@ -286,15 +290,23 @@ boolean gencgc_unmap_zero = TRUE;
 /*
  * Enable checking that newly allocated regions are zero filled.
  */
+#if defined(DARWIN)
 boolean gencgc_zero_check = TRUE;
-
 boolean gencgc_enable_verify_zero_fill = TRUE;
+#else
+boolean gencgc_zero_check = FALSE;
+boolean gencgc_enable_verify_zero_fill = FALSE;
+#endif
 
 /*
  * Enable checking that free pages are zero filled during gc_free_heap
  * called after purify.
  */
+#if defined(DARWIN)
 boolean gencgc_zero_check_during_free_heap = TRUE;
+#else
+boolean gencgc_zero_check_during_free_heap = FALSE;
+#endif
 
 /*
  * The minimum size for a large object.
@@ -4562,8 +4574,8 @@ gc_init_tables(void)
     scavtab[type_WeakPointer] = scav_weak_pointer;
     scavtab[type_InstanceHeader] = scav_boxed;
     /*
-     * Note: on the sparc we don't have to do anything special for
-     * fdefns, cause the raw-addr has a function lowtag.
+     * Note: for sparc and ppc we don't have to do anything special
+     * for fdefns, cause the raw-addr has a function lowtag.
      */
 #if !(defined(sparc) || defined(DARWIN))
     scavtab[type_Fdefn] = scav_fdefn;
@@ -4827,7 +4839,7 @@ search_dynamic_space(lispobj * pointer)
     return search_space(start, pointer + 2 - start, pointer);
 }
 
-#if 1 || defined(i386) || defined(__x86_64)
+#if defined(i386) || defined(__x86_64)
 static int
 valid_dynamic_space_pointer(lispobj * pointer)
 {
@@ -5185,7 +5197,7 @@ maybe_adjust_large_object(lispobj * where)
  * tables updated.
  *
  * Only needed on x86 because GC is conservative there.  Not needed on
- * sparc because GC is precise, not conservative.
+ * sparc or ppc because GC is precise, not conservative.
  */
 #if (defined(i386) || defined(__x86_64))
 static void
@@ -6075,7 +6087,7 @@ verify_space(lispobj * start, size_t words)
 		 * Does it point to a plausible object? This check slows it
 		 * down a lot.
 		 */
-#if 1
+#if defined(DARWIN)
 		if (!valid_dynamic_space_pointer((lispobj *) thing)) {
 		    fprintf(stderr, "*** Ptr %x to invalid object %x\n", thing,
 			    start);
@@ -6847,9 +6859,9 @@ collect_garbage(unsigned last_gen)
     gc_assert(boxed_region.free_pointer - boxed_region.start_addr == 0);
     gc_alloc_generation = 0;
 
-    /* Sparc doesn't need this because the dynamic space free pointer is
-       the same as the current region free pointer, which is updated by
-       the allocation routines appropriately. */
+    /* Sparc and ppc don't need this because the dynamic space free
+       pointer is the same as the current region free pointer, which
+       is updated by the allocation routines appropriately. */
 #if !(defined(sparc) || defined(DARWIN))
     update_dynamic_space_free_pointer();
 #endif
@@ -6867,7 +6879,7 @@ collect_garbage(unsigned last_gen)
 	    struct scavenger_hook *sh_next =
 		(struct scavenger_hook *) PTR((size_t) sh->next);
 
-#if 1
+#if 0
 	    fprintf(stderr, "Scav hook %x; next %x; calling scav hook fn %x\n",
 		    sh, sh_next, sh->function);
 #endif
