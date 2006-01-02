@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.29.2.3 2005/12/19 01:10:15 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.29.2.4 2006/01/02 16:33:58 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -31,7 +31,7 @@
 #include "gencgc.h"
 #endif
 
-#define PRINTNOISE
+#undef PRINTNOISE
 
 #if (defined(i386) || defined(__x86_64))
 static lispobj *current_dynamic_space_free_pointer;
