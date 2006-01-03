@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.107 2005/10/10 18:46:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.108 2006/01/03 17:58:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3337,6 +3337,29 @@
 		(cast (slot names 'release) c-string)
 		(cast (slot names 'version) c-string)
 		(cast (slot names 'machine) c-string))))))
+)
+
+#+(and solaris svr4)
+(progn
+(def-alien-routine sysinfo long
+  (command int)
+  (buf c-string)
+  (count long))
+
+;; From sys/systeminfo.h.  We don't list the set values here.
+(def-enum + 1
+  si-sysname si-hostname si-release si-version si-machine
+  si-architecture si-hw-serial si-hw-provider si-srpc-domain)
+
+(def-enum + 513
+  si-platform si-isalist si-dhcp-cache)
+
+(defun unix-sysinfo (command)
+  (let* ((count 2048)			; Hope this is long enough!
+	 (buf (make-string count))
+	 (result (sysinfo command buf count)))
+    (when (>= result 0)
+      (subseq buf 0 (1- result)))))
 )
 
 ;; EOF

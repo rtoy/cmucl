@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.7 2003/08/22 13:20:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.8 2006/01/03 17:58:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,13 +127,11 @@
 
 (defun machine-type ()
   "Returns a string describing the type of the local machine."
-  #-sparc-v9 "SPARCstation"
-  #+sparc-v9 "Ultrasparc")
+  (unix:unix-sysinfo unix:si-machine))
 
 (defun machine-version ()
   "Returns a string describing the version of the local machine."
-  #-sparc-v9 "SPARCstation"
-  #+sparc-v9 "Ultrasparc")
+  (unix:unix-sysinfo unix:si-platform))
 
 
 
