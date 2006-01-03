@@ -31,6 +31,8 @@ New in this release:
         readably, but these involve search-lists and patterns.
       - LONG-LONG and UNSIGNED-LONG-LONG are recognized types in the
         C-CALL package for signed and unsigned 64-bit integers.
+      - A port of gencgc to Darwin/ppc has been made.  This still
+        needs work, and is known to have some issues.
 
   * Numerous ANSI compliance fixes:
 
@@ -71,6 +73,12 @@ New in this release:
         CMUCL doesn't know functions which are varargs functions.
       - Callbacks with long-long args or results should work correctly
         now for Darwin/ppc.
+      - DESCRIBE no longer depends on having PCL loaded.
+      - Tracing with no encapsulation appears to be working now for
+        ppc.
+      - A simple interface to sysinfo(2) has been added for sparc.
+        This is used to provide better values for MACHINE-TYPE and
+        MACHINE-VERSION.
 
   * Other changes:
 
