@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.84 2005/10/21 17:56:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.85 2006/01/03 18:09:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1001,6 +1001,54 @@
 (define-condition stream-error  (error)
   ((stream :reader stream-error-stream :initarg :stream)))
 
+(defun print-reference (reference stream)
+  (ecase (car reference)
+    (:amop
+     (format stream "AMOP")
+     (format stream ", ")
+     (destructuring-bind (type data) (cdr reference)
+       (ecase type
+         (:generic-function (format stream "Generic Function ~S" data))
+         (:section (format stream "Section ~{~D~^.~}" data)))))
+    (:ansi-cl
+     (format stream "The ANSI Standard")
+     (format stream ", ")
+     (destructuring-bind (type data) (cdr reference)
+       (ecase type
+         (:function (format stream "Function ~S" data))
+         (:special-operator (format stream "Special Operator ~S" data))
+         (:macro (format stream "Macro ~S" data))
+         (:section (format stream "Section ~{~D~^.~}" data))
+         (:glossary (format stream "Glossary entry for ~S" data))
+         (:issue (format stream "writeup for Issue ~A" data)))))
+    #+nil
+    (:cmucl
+     (format stream "The CMUCL Manual")
+     (format stream ", ")
+     (destructuring-bind (type data) (cdr reference)
+       (ecase type
+         (:node (format stream "Node ~S" data))
+         (:variable (format stream "Variable ~S" data))
+         (:function (format stream "Function ~S" data)))))
+    ;; FIXME: other documents (e.g. CLIM, Franz documentation :-)
+    ))
+
+(defun print-references (refs stream)
+  (unless (or *print-escape* *print-readably*)
+    (when refs
+      (format stream "~&See also:~%")
+      (pprint-logical-block (stream refs :per-line-prefix "  ")
+	(do* ((rs refs (cdr rs))
+	      (r (car rs) (car rs)))
+	     ((null rs))
+	  (print-reference r stream)
+	  (unless (null (cdr rs))
+	    (terpri stream)))))))
+
+(define-condition reference-condition ()
+  ((references :initarg :references
+	       :reader reference-condition-references)))
+
 (define-condition end-of-file (stream-error) ()
   (:report
    (lambda (condition stream)
@@ -1049,12 +1097,14 @@
 (define-condition simple-undefined-function (simple-condition
 					     undefined-function) ())
 
-(define-condition constant-modified (warning)
+(define-condition constant-modified (reference-condition warning)
   ((function-name :initarg :function-name :reader constant-modified-function-name))
   (:report (lambda (c s)
              (format s "~@<Destructive function ~S called on ~
                          constant data.~@:>"
-                     (constant-modified-function-name c)))))
+                     (constant-modified-function-name c))
+	     (print-references (reference-condition-references c) s)))
+  (:default-initargs :references (list '(:ansi-cl :section (3 2 2 3)))))
   
 (define-condition arithmetic-error (error)
   ((operation :reader arithmetic-error-operation :initarg :operation
