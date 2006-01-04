@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.13 2005/06/01 12:08:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.14 2006/01/04 21:54:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -447,7 +447,9 @@
 	  (prev-char (if (= string-index start)
 			 nil
 			 (char string (1- string-index)))))
-      (cond ((member next-char date-time-dividers :test #'char=)
+      (cond ((and (/= string-index start)
+		  (member next-char date-time-dividers :test #'char=))
+	     ;; A date-time-divider can't be at the start of the string.
 	     (push (cons 'date-time-divider next-char) parts-list)
 	     (incf string-index))
 	    ((alpha-char-p next-char)
