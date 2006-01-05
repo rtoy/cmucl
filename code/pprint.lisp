@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.57 2005/09/13 14:40:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.58 2006/01/05 16:13:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1920,8 +1920,8 @@ When annotations are present, invoke them at the right positions."
     (defclass pprint-defclass)
     (defmethod pprint-defmethod)
     (defgeneric pprint-defgeneric)
-    (with-slots pprint-with-like)
-    (with-accessors pprint-with-like)
+    (with-slots pprint-multiple-value-bind)
+    (with-accessors pprint-multiple-value-bind)
     
 
     ;; Other things in CMUCL that we ought to try to print out nicely.
