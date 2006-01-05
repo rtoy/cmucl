@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.4 2005/12/19 01:10:02 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.5 2006/01/05 03:27:42 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -201,7 +201,7 @@
       ;; At this point, result-tn points at the end of the object.
       ;; Adjust to point to the beginning.
       (inst sub ,result-tn ,result-tn ,temp-tn)
-      ;; Mak
+      ;; Set the lowtag appropriately
       (inst ori ,result-tn ,result-tn ,lowtag))))
   
 (defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size
@@ -508,14 +508,15 @@
 	(progn
 	  (inst andi. ,flag-tn alloc-tn 7)
 	  (inst twi :ne ,flag-tn 0))
-	(inst addi alloc-tn alloc-tn 4))
+	(inst ori alloc-tn alloc-tn 4))
       ,@forms
       (without-scheduling ()
-       ;; Remove PA bit			  
-       (inst subi alloc-tn alloc-tn 4)
-       ;; Now test to see if the pseudo-atomic interrupted bit is set.
-       (inst andi. ,flag-tn alloc-tn 1)
-       (inst twi :ne ,flag-tn 0))
+	;; Remove PA bit
+	(inst li ,flag-tn -5)
+	(inst and alloc-tn alloc-tn ,flag-tn)
+	;; Now test to see if the pseudo-atomic interrupted bit is set.
+	(inst andi. ,flag-tn alloc-tn 1)
+	(inst twi :ne ,flag-tn 0))
       #+debug
       (progn
 	(inst andi. ,flag-tn alloc-tn 7)

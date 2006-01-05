@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.2.2.4 2005/12/19 01:10:14 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.2.2.5 2006/01/05 03:27:43 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -424,13 +424,13 @@ sigill_handler(HANDLER_ARGS)
 
   /* Is this an allocation trap? */
 #ifdef GENCGC
-  if (allocation_trap_p(context))
-    {
+    if (allocation_trap_p(context)) {
       handle_allocation_trap(context);
       arch_skip_instruction(context);
 #ifdef DARWIN
       sigreturn(context);
-#endif      
+#endif
+      return;
     }
 #endif
 

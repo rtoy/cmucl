@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.5 2006/01/02 17:05:36 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63.2.6 2006/01/05 03:27:43 rtoy Exp $
  *
  */
 
@@ -4839,7 +4839,7 @@ search_dynamic_space(lispobj * pointer)
     return search_space(start, pointer + 2 - start, pointer);
 }
 
-#if defined(i386) || defined(__x86_64)
+#if defined(DARWIN) || defined(i386) || defined(__x86_64)
 static int
 valid_dynamic_space_pointer(lispobj * pointer)
 {

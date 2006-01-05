@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.11.2.3 2005/12/21 21:04:53 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.11.2.4 2006/01/05 03:27:43 rtoy Exp $
  *
  */
 
@@ -143,7 +143,9 @@ struct page {
  * size 32K so we hit the allocation trap less often.
  */
 /*#define PAGE_SIZE 4096*/
-#define PAGE_SIZE (8*4096)
+/*#define PAGE_SIZE (2*4096)*/
+#define PAGE_SIZE (4*4096)
+/*#define PAGE_SIZE (8*4096)*/
 #endif
 
 extern unsigned dynamic_space_pages;
