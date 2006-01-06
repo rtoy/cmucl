@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.7.2.2 2005/12/19 01:10:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.7.2.3 2006/01/06 03:25:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -695,8 +695,8 @@ about function addresses and register values.")
 (def-ppc-iformat (x-20 '(:name :tab frt ", " ra ", " rb))
   frt ra rb (xo xo21-30))
 
-(def-ppc-iformat (x-21 '(:name :tab frt ", " rb))
-  frt rb (xo xo21-30) rc)
+(def-ppc-iformat (x-21 '(:name :tab frt ", " frb))
+  frt frb (xo xo21-30) rc)
 
 (def-ppc-iformat (x-22 '(:name :tab frt))
   frt (xo xo21-30) rc)
