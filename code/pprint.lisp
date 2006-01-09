@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.58 2006/01/05 16:13:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.59 2006/01/09 15:35:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1432,7 +1432,7 @@ When annotations are present, invoke them at the right positions."
 
 (defun pprint-multiple-value-bind (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~:<~^~W~^~5I ~:_~W~3I ~:@_~W~1I~@{ ~:@_~W~}~:>")
+  (funcall (formatter "~:<~^~W~^~5I ~:_~W~^~3I ~:@_~W~1I~@{ ~:@_~W~}~:>")
 	   stream list))
 
 (defun pprint-handler-bind (stream list &rest noise)
