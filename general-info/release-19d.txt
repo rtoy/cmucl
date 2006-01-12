@@ -79,12 +79,19 @@ New in this release:
       - A simple interface to sysinfo(2) has been added for sparc.
         This is used to provide better values for MACHINE-TYPE and
         MACHINE-VERSION.
+      - PARSE-TIME can parse times like "Tue Sep 7 18:56:57 UTC 2004"
+        again.
+      - The pretty-printer for MULTIPLE-VALUE-BIND can handle
+        mal-formed MULTIPLE-VALUE-BIND forms now, instead of producing
+        an error.
 
   * Other changes:
 
       - CMUCL catches more cases where it cannot print a pathname
         readably.  In particular when the pathname name contains "/"
         or ".", or when the pathname type contains a ".".
+      - WITH-SLOTS and WITH-ACCESSORS are now pprinted like
+        MULTIPLE-VALUE-BIND instead of like WITH-OPEN-FILE.
   
   * Improvements to the PCL implementation of CLOS:
 
