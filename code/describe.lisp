@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.44 2005/05/09 13:09:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.45 2006/01/17 19:20:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,7 +164,7 @@
 	   (format t "~%Its dimensions are ~S." (array-dimensions x))))
     (unless (eq t element-type)
       (format t "~&Its element type is specialized to ~S." element-type))
-    (unless (adjustable-array-p x)
+    (when (adjustable-array-p x)
       (format t "~&It is adjustable."))))
 
 (defun describe-fixnum (x)
