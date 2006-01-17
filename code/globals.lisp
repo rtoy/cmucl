@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.18 2002/07/10 16:15:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.19 2006/01/17 22:32:08 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,7 @@
 (declaim (ftype (function * *)
 		disable-clx-event-handling
 		extensions::call-display-event-handler
-		xlib::display-input-stream xlib:event-listen
+		xlib::display-input-stream xlib::event-listen
 		flush-display-events))
 
 #-hemlock
