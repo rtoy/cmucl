@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.160 2005/07/26 12:34:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.161 2006/01/17 18:00:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -666,8 +666,10 @@
 	     (x-hi (copy-interval-limit (interval-high x)))
 	     (y-lo (copy-interval-limit (interval-low y)))
 	     (y-hi (copy-interval-limit (interval-high y))))
-	(make-interval :low (select-bound x-lo y-lo #'< #'>)
-		       :high (select-bound x-hi y-hi #'> #'<))))))
+	(make-interval :low (select-bound x-lo y-lo
+					  #'signed-zero-< #'signed-zero->)
+		       :high (select-bound x-hi y-hi
+					   #'signed-zero-> #'signed-zero-<))))))
 
 ;; Wrap a handler-case around BODY so that any errors in the body
 ;; will return a doubly-infinite interval.
