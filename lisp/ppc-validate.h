@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.6 2005/09/15 18:26:52 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.7 2006/01/18 15:21:26 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -45,6 +45,7 @@
 
 #define CONTROL_STACK_START 	(0x30000000)
 #define CONTROL_STACK_SIZE  	(0x07ff8000)	/* 128 MB, almost */
+#define CONTROL_STACK_END       (CONTROL_STACK_START + CONTROL_STACK_SIZE)
 
 #define BINDING_STACK_START 	(0x38000000)
 #define BINDING_STACK_SIZE  	(0x07ff8000)	/* 128 MB, almost */
@@ -63,8 +64,19 @@
 
 #define DEFAULT_DYNAMIC_SPACE_SIZE (0x08000000)	/* 128 MB */
 #define DYNAMIC_0_SPACE_START	(0x40000000)
+/* This isn't used with GENCGC */
 #define DYNAMIC_1_SPACE_START	(0x60000000)
+
+/* The maximum dynamic space we can allocate */
+#ifndef GENCGC
 #define DYNAMIC_SPACE_SIZE  	(0x1fff0000)	/* 512 MB, almost */
+#else
+/*
+ * For GENCGC, we can use both dynamic spaces (because they are
+ * contiguous) so we get double the heap size.
+ */
+#define DYNAMIC_SPACE_SIZE	(0x3fff0000)	/* 1GB, almost */
+#endif
 
 #if 0
 #define HOLES {0x04ff8000, 0x06ff8000, 0x0aff8000, 0x1fff8000}

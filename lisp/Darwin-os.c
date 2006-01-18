@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.5 2005/09/15 18:26:50 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.6 2006/01/18 15:21:26 rtoy Exp $
  *
  */
 
@@ -29,6 +29,9 @@
 #include "interrupt.h"
 #include "lispregs.h"
 #include "internals.h"
+#ifdef GENCGC
+#include "gencgc.h"
+#endif
 
 #include <sys/types.h>
 #include <signal.h>
@@ -292,7 +295,9 @@ valid_addr(os_vm_address_t addr)
     if (in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
 	|| in_range_p(addr, STATIC_SPACE_START, STATIC_SPACE_SIZE)
 	|| in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size)
+#ifndef GENCGC
 	|| in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size)
+#endif
 	|| in_range_p(addr, CONTROL_STACK_START, CONTROL_STACK_SIZE)
 	|| in_range_p(addr, BINDING_STACK_START, BINDING_STACK_SIZE))
 	return TRUE;
@@ -301,17 +306,30 @@ valid_addr(os_vm_address_t addr)
 
 
 static void
-sigsegv_handler(HANDLER_ARGS)
+sigbus_handler(HANDLER_ARGS)
 {
-#if defined GENCGC
+#if defined(GENCGC)
     caddr_t fault_addr = code->si_addr;
     int page_index = find_page_index((void *) fault_addr);
+#endif
+    
+    SAVE_CONTEXT();
 
-#if SIGSEGV_VERBOSE
+    DPRINTF(0, (stderr, "sigbus:\n"));
+    DPRINTF(0, (stderr, " PC       = %p\n", SC_PC(context)));
+    DPRINTF(0, (stderr, " ALLOC-TN = %p\n", SC_REG(context, reg_ALLOC)));
+    DPRINTF(0, (stderr, " CODE-TN  = %p\n", SC_REG(context, reg_CODE)));
+    DPRINTF(0, (stderr, " LRA-TN   = %p\n", SC_REG(context, reg_LRA)));
+    DPRINTF(0, (stderr, " CFP-TN   = %p\n", SC_REG(context, reg_CFP)));
+    DPRINTF(0, (stderr, " FDEFN-TN = %p\n", SC_REG(context, reg_FDEFN)));
+    DPRINTF(0, (stderr, " foreign_function_call = %d\n", foreign_function_call_active));
+    
+#if defined(GENCGC)
+#if defined(SIGSEGV_VERBOSE)
     fprintf(stderr, "Signal %d, fault_addr=%x, page_index=%d:\n",
 	    signal, fault_addr, page_index);
 #endif
-
+    
     /* Check if the fault is within the dynamic space. */
     if (page_index != -1) {
 	/* Un-protect the page */
@@ -321,7 +339,7 @@ sigsegv_handler(HANDLER_ARGS)
 	    fprintf(stderr,
 		    "*** Sigsegv in page not marked as write protected\n");
 
-	os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
+	os_protect(page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
 	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
@@ -329,24 +347,9 @@ sigsegv_handler(HANDLER_ARGS)
     }
 #endif
 
-    SAVE_CONTEXT();
-
-    DPRINTF(0, (stderr, "sigsegv:\n"));
-    if (!interrupt_maybe_gc(signal, code, context))
+    if (!interrupt_maybe_gc(signal, code, context)) {
 	interrupt_handle_now(signal, code, context);
-
-    /* Work around G5 bug; fix courtesy gbyers via chandler */
-    sigreturn(context);
-}
-
-static void
-sigbus_handler(HANDLER_ARGS)
-{
-    SAVE_CONTEXT();
-
-    DPRINTF(0, (stderr, "sigbus:\n"));
-    if (!interrupt_maybe_gc(signal, code, context))
-	interrupt_handle_now(signal, code, context);
+    }
 
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);

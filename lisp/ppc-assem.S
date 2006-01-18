@@ -491,6 +491,11 @@ _function_end_breakpoint_end:
 	blr
 	SET_SIZE(ppc_flush_cache_line)
 
+	GFUNCDEF(do_pending_interrupt)
+	twllei	reg_ZERO, trap_PendingInterrupt
+	blr
+	SET_SIZE(do_pending_interrupt)
+	
 #ifdef LINKAGE_TABLE
 /*
  * Call into C code to resolve a linkage entry.
@@ -640,4 +645,79 @@ _function_end_breakpoint_end:
 	.byte	SC_OFFSET_HI(sc_DescriptorReg, reg_A0_NUM)
 	.align	4
 					
+#endif	
+
+#ifdef GENCGC	
+	.globl _fpu_save
+	GFUNCDEF(fpu_save)
+	stfd	f1, 0(r3)
+	stfd	f2, 8(r3)
+	stfd	f3, 16(r3)
+	stfd	f4, 24(r3)
+	stfd	f5, 32(r3)
+	stfd	f6, 40(r3)
+	stfd	f7, 48(r3)
+	stfd	f8, 56(r3)
+	stfd	f9, 64(r3)
+	stfd	f10, 72(r3)
+	stfd	f11, 80(r3)
+	stfd	f12, 88(r3)
+	stfd	f13, 96(r3)
+	stfd	f14, 104(r3)
+	stfd	f15, 112(r3)
+	stfd	f16, 120(r3)
+	stfd	f17, 128(r3)
+	stfd	f18, 136(r3)
+	stfd	f19, 144(r3)
+	stfd	f20, 152(r3)
+	stfd	f21, 160(r3)
+	stfd	f22, 168(r3)
+	stfd	f23, 176(r3)
+	stfd	f24, 184(r3)
+	stfd	f25, 192(r3)
+	stfd	f26, 200(r3)
+	stfd	f27, 208(r3)
+	stfd	f28, 216(r3)
+	stfd	f29, 224(r3)
+	stfd	f30, 232(r3)
+	stfd	f31, 240(r3)
+	blr
+	SET_SIZE(fpu_save)
+	
+	.globl	_fpu_restore
+	GFUNCDEF(fpu_restore)
+	lfd	f1, 0(r3)
+	lfd	f2, 8(r3)
+	lfd	f3, 16(r3)
+	lfd	f4, 24(r3)
+	lfd	f5, 32(r3)
+	lfd	f6, 40(r3)
+	lfd	f7, 48(r3)
+	lfd	f8, 56(r3)
+	lfd	f9, 64(r3)
+	lfd	f10, 72(r3)
+	lfd	f11, 80(r3)
+	lfd	f12, 88(r3)
+	lfd	f13, 96(r3)
+	lfd	f14, 104(r3)
+	lfd	f15, 112(r3)
+	lfd	f16, 120(r3)
+	lfd	f17, 128(r3)
+	lfd	f18, 136(r3)
+	lfd	f19, 144(r3)
+	lfd	f20, 152(r3)
+	lfd	f21, 160(r3)
+	lfd	f22, 168(r3)
+	lfd	f23, 176(r3)
+	lfd	f24, 184(r3)
+	lfd	f25, 192(r3)
+	lfd	f26, 200(r3)
+	lfd	f27, 208(r3)
+	lfd	f28, 216(r3)
+	lfd	f29, 224(r3)
+	lfd	f30, 232(r3)
+	lfd	f31, 240(r3)
+	
+	SET_SIZE(fpu_restore)
+	
 #endif	

@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.35 2005/12/11 18:30:51 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36 2006/01/18 15:21:26 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -1705,7 +1705,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
     SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj) read_only_free);
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj) static_free);
 
-#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !(defined(sparc) && defined(GENCGC))
+#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !((defined(sparc) || defined(DARWIN)) && defined(GENCGC))
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)

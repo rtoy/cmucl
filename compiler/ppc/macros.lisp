@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.10 2005/06/19 02:46:02 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.11 2006/01/18 15:21:26 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -153,9 +153,13 @@
 ;; applied.  The amount of space to be allocated is SIZE bytes (which
 ;; must be a multiple of the lisp object size).
 ;;
-(defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
-  (declare (ignore stack-p temp-tn))
+(defmacro allocation (result-tn size lowtag &key stack-p temp-tn flag-tn)
+  (declare (ignore stack-p)
+	   #-gencgc
+	   (ignore temp-tn flag-tn))
   (let ((alloc-size (gensym)))
+    #-gencgc
+    (progn
     `(let ((,alloc-size ,size))
        (if (logbitp (1- lowtag-bits) ,lowtag)
 	   (progn
@@ -165,7 +169,40 @@
 	     (inst ori ,result-tn ,result-tn ,lowtag)))
        (if (numberp ,alloc-size)
 	   (inst addi alloc-tn alloc-tn ,alloc-size)
-	   (inst add alloc-tn alloc-tn ,alloc-size)))))
+	   (inst add alloc-tn alloc-tn ,alloc-size))))
+    #+gencgc
+    `(progn
+      ;; Make temp-tn be the size
+      (cond ((numberp ,size)
+	     (inst lr ,temp-tn ,size))
+	    (t
+	     (move ,temp-tn ,size)))
+      
+      ;; Get the end of the current allocation region.
+      (load-symbol-value ,flag-tn *current-region-end-addr*)
+      ;; The object starts exactly where alloc-tn is, minus an tag
+      ;; bits, etc.
+
+      ;; CAUTION: The C code depends on the exact order of
+      ;; instructions here.  In particular, one instructions before
+      ;; the TW instruction must be an ADD or ADDI instruction, so it
+      ;; can figure out the size of the desired allocation.
+      (without-scheduling ()
+        ;; Now make result-tn point at the end of the object, to
+        ;; figure out if we overflowed the current region.
+	(inst add alloc-tn alloc-tn ,temp-tn)
+	(inst clrrwi ,result-tn alloc-tn lowtag-bits)
+	;; result-tn points to the new end of the region.  Did we go past
+	;; the actual end of the region?  If so, we need a full alloc.
+	;; The C code depends on this exact form of instruction.  If
+	;; either changes, you have to change the other appropriately!
+	(inst tw :lge ,result-tn ,flag-tn))
+
+      ;; At this point, result-tn points at the end of the object.
+      ;; Adjust to point to the beginning.
+      (inst sub ,result-tn ,result-tn ,temp-tn)
+      ;; Set the lowtag appropriately
+      (inst ori ,result-tn ,result-tn ,lowtag))))
   
 (defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size
 					    &key (lowtag other-pointer-type))
@@ -180,7 +217,8 @@
 	      (lowtag lowtag) (flag-tn flag-tn))
     `(pseudo-atomic (,flag-tn)
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
-		   :temp-tn temp-tn)
+		   :temp-tn ,temp-tn
+	           :flag-tn ,flag-tn)
        (when ,type-code
 	 (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
 	 (storew ,temp-tn ,result-tn 0 ,lowtag))
@@ -462,20 +500,23 @@
 (defmacro pseudo-atomic ((flag-tn &key (extra 0)) &rest forms)
   (let ((n-extra (gensym)))
     `(let ((,n-extra ,extra))
+      ;; We're depending on extra being zero here and, currently, no
+      ;; sets extra.  We should enforce it later on.
        (without-scheduling ()
 	;; Extra debugging stuff:
 	#+debug
 	(progn
 	  (inst andi. ,flag-tn alloc-tn 7)
 	  (inst twi :ne ,flag-tn 0))
-	(inst addi alloc-tn alloc-tn 4))
+	(inst ori alloc-tn alloc-tn 4))
       ,@forms
       (without-scheduling ()
-       ;; Remove PA bit			  
-       (inst subi alloc-tn alloc-tn 4)
-       ;; Now test to see if the pseudo-atomic interrupted bit is set.
-       (inst andi. ,flag-tn alloc-tn 1)
-       (inst twi :ne ,flag-tn 0))
+	;; Remove PA bit
+	(inst li ,flag-tn -5)
+	(inst and alloc-tn alloc-tn ,flag-tn)
+	;; Now test to see if the pseudo-atomic interrupted bit is set.
+	(inst andi. ,flag-tn alloc-tn 1)
+	(inst twi :ne ,flag-tn 0))
       #+debug
       (progn
 	(inst andi. ,flag-tn alloc-tn 7)
