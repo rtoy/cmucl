@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.7 2006/01/18 15:21:26 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.8 2006/01/19 04:53:14 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -415,15 +415,15 @@ sigill_handler(HANDLER_ARGS)
 	return;
     }
 
-  /* Is this an allocation trap? */
+    /* Is this an allocation trap? */
 #ifdef GENCGC
     if (allocation_trap_p(context)) {
-      handle_allocation_trap(context);
-      arch_skip_instruction(context);
+	handle_allocation_trap(context);
+	arch_skip_instruction(context);
 #ifdef DARWIN
-      sigreturn(context);
+	sigreturn(context);
 #endif
-      return;
+	return;
     }
 #endif
 
@@ -473,10 +473,13 @@ sigill_handler(HANDLER_ARGS)
 #if 0
 	      fprintf(stderr, "trap_AfterBreakpoint: break_addr = %p\n",
 		      skipped_break_addr);
-	      fprintf(stderr, " CSP  = %p\n", (void*) SC_REG(context, reg_CSP));
-	      fprintf(stderr, " CFP  = %p\n", (void*) SC_REG(context, reg_CFP));
-	      fprintf(stderr, " OCFP = %p\n", (void*) SC_REG(context, reg_OCFP));
-#endif	      
+	      fprintf(stderr, " CSP  = %p\n",
+		      (void *) SC_REG(context, reg_CSP));
+	      fprintf(stderr, " CFP  = %p\n",
+		      (void *) SC_REG(context, reg_CFP));
+	      fprintf(stderr, " OCFP = %p\n",
+		      (void *) SC_REG(context, reg_OCFP));
+#endif
 	      /* Put our breakpoint instruction back in */
 	      *skipped_break_addr = TWLLEI_R0(trap_Breakpoint);
 	      skipped_break_addr = NULL;
@@ -484,7 +487,6 @@ sigill_handler(HANDLER_ARGS)
 	      context->uc_sigmask = orig_sigmask;
 
 	      os_flush_icache((os_vm_address_t) SC_PC(context),
-
 			      sizeof(unsigned long));
 	      break;
 
