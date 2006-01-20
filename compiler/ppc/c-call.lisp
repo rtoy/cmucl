@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.19 2005/11/30 01:46:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.20 2006/01/20 04:38:20 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -451,41 +451,16 @@ a pointer to the arguments."
     ;; The "Mach-O Runtime Conventions" document for OS X almost specifies
     ;; the calling convention (it neglects to mention that the linkage area
     ;; is 24 bytes).
-    (let ((segment (make-segment))
-	  (argument-words
-	   (mapcar (lambda (arg) (ceiling (alien-type-bits arg) vm:word-bits))
-		   argument-types))
-	  (linkage-area-size 24))
+    (let* ((segment (make-segment))
+	   (save-gprs (mapcar #'make-gpr '(13 24)))
+	   
+	   (argument-words
+	    (mapcar (lambda (arg) (ceiling (alien-type-bits arg) vm:word-bits))
+		    argument-types))
+	   (linkage-area-size 24))
       (assemble (segment)
 
-	(let ((sp (make-gpr 1))
-	      (save-gprs (mapcar #'make-gpr '(13 24))))
-	  
-	  ;; Save the non-volatile (callee-saved) registers.  The
-	  ;; registers used below are all caller-saved, so there's
-	  ;; nothing to do there.  However, when we call funcall3, the
-	  ;; linkage table entry is used, which unconditionally uses
-	  ;; r13 and r24.  (See lisp/ppc-arch.c.)  So these need to be
-	  ;; saved.  funcall3, which calls call_into_lisp, will take
-	  ;; care of saving all the remaining registers that could be
-	  ;; used.
-	  (let ((save-offset 0))
-	    ;; Adjust stack pointer by a multiple of 16, to preserve
-	    ;; requirement that the stack pointer remains aligned to a
-	    ;; 16-byte boundary.  (Yes, we waste some stack space
-	    ;; here.)
-	    (inst addi sp sp (- (round-up-16 (* (length save-gprs)
-						vm:word-bytes))))
-	    (dolist (r save-gprs)
-	      (inst stw r sp save-offset)
-	      (incf save-offset vm:word-bytes)))
-
-	  ;; Make a new stack frame for us to hold our data.  This is
-	  ;; maximum needed: 8 32-bit registers and 13 double-float
-	  ;; registers.
-	  (inst addi sp sp (- (round-up-16 (+ (* (+ 8 (* 2 13))
-						 vm:word-bytes)
-					      linkage-area-size))))
+	(let ((sp (make-gpr 1)))
 	  
 	  ;; To save our arguments, we follow the algorithm sketched in the
 	  ;; "PowerPC Calling Conventions" section of that document.
@@ -500,12 +475,10 @@ a pointer to the arguments."
 			 (integerp
 			  (dotimes (k words)
 			    (let ((gpr (pop gprs)))
-			      (cond (gpr
+			      (when gpr
 				     (inst stw gpr sp offset)
 				     (incf words-processed)
-				     (incf offset vm:word-bytes))
-				    (t
-				     (error "Out of integer arg registers!?!?"))))))
+				     (incf offset vm:word-bytes)))))
 			 ;; The handling of floats is a little ugly because we
 			 ;; hard-code the number of words for single- and
 			 ;; double-floats.
@@ -520,77 +493,130 @@ a pointer to the arguments."
 			    (inst stfd fpr sp offset))
 			  (incf words-processed 2))))))
 	      (mapc #'handle-arg argument-types argument-words)))
-	
-	  ;; Set aside room for the return area just below sp, then
-	  ;; actually call funcall3: funcall3 (call-callback, index,
-	  ;; args, return-area)
+
+	  ;; The args have been saved to memory.
 	  ;;
-	  ;; INDEX is fixnumized, ARGS and RETURN-AREA don't need to
-	  ;; be because they're word-aligned.  Kinda gross, but hey
+	  ;; The stack frame is something like this:
+	  ;;
+	  ;; stack arg n
 	  ;; ...
-	  (let* ((return-area-size (ceiling (or (alien-type-bits return-type)
+	  ;; stack arg 1
+	  ;; stack arg 0
+	  ;; save arg 7
+	  ;; save arg 6
+	  ;; save arg 5
+	  ;; save arg 4
+	  ;; save arg 3
+	  ;; save arg 2
+	  ;; save arg 1
+	  ;; save arg 0
+	  ;; 24 bytes for linkage area
+	  ;; -> sp points to the bottom of the linkage area
+	  ;;
+	  ;; Set aside space for our stack frame.  We need enough room
+	  ;; for the callback return area, some space to save the
+	  ;; non-volatile (callee-saved) registers, space to save the
+	  ;; args for the function we're calling, and the linkage
+	  ;; area.  The space is rounded up to a multiple of 16 bytes
+	  ;; because the stack should be aligned to a multiple of 16
+	  ;; bytes.
+	  ;;
+	  ;; Our stack frame will look something like this now:
+	  ;;
+	  ;; Offset    Value
+	  ;; 64        Caller's frame (see above)
+	  ;; 56/60     return area (1 or 2 words) 
+	  ;; 48        filler (unused)
+	  ;; 44        save r24
+	  ;; 40        save r13
+	  ;; 36        save arg 3
+	  ;; 32        save arg 2
+	  ;; 28        save arg 1
+	  ;; 24        save arg 0
+	  ;; 0         linkage area (24 bytes)
+	  ;;
+	  ;;
+	  ;; The return area is allocated at the top of the frame.
+	  ;; When we call funcall3, the linkage table entry is used,
+	  ;; which unconditionally uses r13 and r24.  (See
+	  ;; lisp/ppc-arch.c.)  So these need to be saved.  funcall3,
+	  ;; which calls call_into_lisp, will take care of saving all
+	  ;; the remaining registers that could be used.
+
+	  ;; INDEX is fixnumized, ARGS and RETURN-AREA don't need to
+	  ;; be because they're word-aligned.  Kinda gross, but
+	  ;; hey....
+	  
+	  (let* ((return-area-words (ceiling (or (alien-type-bits return-type)
 						0)
 					    vm:word-bits))
-		 (args-size (* 3 vm:word-bytes))
-		 (frame-size (round-up-16 (+ linkage-area-size
-					     (* return-area-size vm:word-bytes)
-					     args-size))))
+		 (save-words (length save-gprs))
+		 (args-size (* 4 vm:word-bytes))
+		 (frame-size
+		  (round-up-16 (+ linkage-area-size
+				  (* return-area-words vm:word-bytes)
+				  (* save-words vm:word-bytes)
+				  args-size))))
 	    (destructuring-bind (r0 arg1 arg2 arg3 arg4)
 		(mapcar #'make-gpr '(0 3 4 5 6))
-	      ;; Setup the args
+	      ;; Setup the args for the call.  We call
+	      ;; funcall3(call-callback, index, arg-pointer,
+	      ;; return-area-address)
 	      (inst lr arg1 (alien::address-of-call-callback))
 	      (inst li arg2 (fixnumize index))
 	      (inst addi arg3 sp linkage-area-size)
-	      (inst addi arg4 sp (- (* return-area-size vm:word-bytes)))
+	      (inst addi arg4 sp (- (* return-area-words vm:word-bytes)))
 
 	      ;; Save sp, setup the frame
 	      (inst mflr r0)
 	      (inst stw r0 sp (* 2 vm:word-bytes))
 	      (inst stwu sp sp (- frame-size))
+
+	      ;; Save the caller-saved registers that the linkage
+	      ;; table trampoline clobbers.
+	      (let ((save-offset (+ linkage-area-size args-size)))
+		(dolist (r save-gprs)
+		  (inst stw r sp save-offset)
+		  (incf save-offset vm:word-bytes)))
+	      
 	      ;; Make the call
 	      (inst lr r0 (alien::address-of-funcall3))
 	      (inst mtlr r0)
 	      (inst blrl)
-	  
-	      ;; We're back!  Restore sp and lr, load the return value
-	      ;; from just under sp, and return.
-	      (inst lwz sp sp 0)
-	      (inst lwz r0 sp (* 2 vm:word-bytes))
-	      (inst mtlr r0)
-	      (etypecase return-type
-		((or alien::integer$ alien::pointer$ alien::sap$
-		     alien::integer-64$)
-		 (loop repeat return-area-size
-		   with gprs = (mapcar #'make-gpr '(3 4))
-		   for gpr = (pop gprs)
-		   for offset from (- (* return-area-size vm:word-bytes))
-		              by vm:word-bytes
-		   do (inst lwz gpr sp offset)))
-		(alien::single$
-		 ;; Get the FP value into F1
-		 (let ((f1 (make-fpr 1)))
-		   (inst lfs f1 sp (- (* return-area-size vm:word-bytes)))))
-		(alien::double$
-		 ;; Get the FP value into F1
-		 (let ((f1 (make-fpr 1)))
-		   (inst lfd f1 sp (- (* return-area-size vm:word-bytes)))))
-		(alien::void$
-		 ;; Nothing to do
-		 ))
+
+	      (let ((return-offset (- frame-size
+				      (* return-area-words vm:word-bytes))))
+		(etypecase return-type
+		  ((or alien::integer$ alien::pointer$ alien::sap$
+		       alien::integer-64$)
+		   (loop repeat return-area-words
+		         with gprs = (mapcar #'make-gpr '(3 4))
+		         for gpr = (pop gprs)
+		         for offset from return-offset by vm:word-bytes
+			 do (inst lwz gpr sp offset)))
+		  (alien::single$
+		   ;; Get the FP value into F1
+		   (let ((f1 (make-fpr 1)))
+		     (inst lfs f1 sp return-offset)))
+		  (alien::double$
+		   ;; Get the FP value into F1
+		   (let ((f1 (make-fpr 1)))
+		     (inst lfd f1 sp return-offset)))
+		  (alien::void$
+		   ;; Nothing to do
+		   )))
 	      
-	      ;; Remove the extra stack frame and restore the GPRS we
-	      ;; saved.
-	      (inst addi sp sp (round-up-16 (+ (* (+ 8 (* 2 13))
-						  vm:word-bytes)
-					       linkage-area-size)))
-	      
-	      (let ((save-offset 0))
+	      ;; Restore the GPRS we saved.
+	      (let ((save-offset (+ linkage-area-size args-size)))
 		(dolist (r save-gprs)
 		  (inst lwz r sp save-offset)
-		  (incf save-offset vm:word-bytes))
-		(inst addi sp sp (round-up-16 (* (length save-gprs)
-						 vm:word-bytes))))
+		  (incf save-offset vm:word-bytes)))
 
+	      ;; All done.  Restore sp and lr and return.
+	      (inst lwz r0 sp (+ frame-size (* 2 vm:word-bytes)))
+	      (inst mtlr r0)
+	      (inst addic sp sp frame-size)
+	      
 	      ;; And back we go!
 	      (inst blr)))))
 
