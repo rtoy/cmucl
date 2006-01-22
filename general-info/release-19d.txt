@@ -84,6 +84,9 @@ New in this release:
       - The pretty-printer for MULTIPLE-VALUE-BIND can handle
         mal-formed MULTIPLE-VALUE-BIND forms now, instead of producing
         an error.
+      - Callbacks on Darwin/ppc with a large number of args (more than
+        8 integer args) should work correctly now.  (Previous versions
+        would signal an error.)
 
   * Other changes:
 
