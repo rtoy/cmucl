@@ -85,11 +85,16 @@ New in this release:
       - PARSE-TIME can parse times like "Tue Sep 7 18:56:57 UTC 2004"
         again.
       - The pretty-printer for MULTIPLE-VALUE-BIND can handle
-        mal-formed MULTIPLE-VALUE-BIND forms now, instead of producing
+        malformed MULTIPLE-VALUE-BIND forms now, instead of producing
         an error.
       - Callbacks on Darwin/ppc with a large number of args (more than
         8 integer args) should work correctly now.  (Previous versions
         would signal an error.)
+      - DESCRIBE no longer says arrays are adjustable when they are
+        not, and vice versa.
+      - Disassembly of some floating-point instructions on ppc has
+        been corrected to display floating-point registers instead of
+        integer registers.
 
   * Other changes:
 
