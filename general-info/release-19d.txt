@@ -33,6 +33,9 @@ New in this release:
         C-CALL package for signed and unsigned 64-bit integers.
       - A port of gencgc to Darwin/ppc has been made.  This still
         needs work, and is known to have some issues.
+      - TRACE supports tracing of FLET/LABELS functions.  Use (trace
+        (labels foo bar)) to trace the labels function FOO in the
+        function BAR.  This is currently experimental.
 
   * Numerous ANSI compliance fixes:
 
