@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.59 2006/01/09 15:35:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.60 2006/01/23 02:25:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1407,10 +1407,17 @@ When annotations are present, invoke them at the right positions."
 
 (defun pprint-flet (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter
-	    "~:<~^~W~^ ~@_~:<~@{~:<~^~W~^~3I ~:_~/PP:PPRINT-LAMBDA-LIST/~1I~:@_~@{~W~^ ~_~}~:>~^ ~_~}~:>~1I~@:_~@{~W~^ ~_~}~:>")
-	   stream
-	   list))
+  ;; If the second element of the list is not a list, then we don't
+  ;; really have a flet/labels form, so let's just print it as a
+  ;; list. (This happens when the list is the name an flet/labels in a
+  ;; function.
+  (if (listp (second list))
+      (funcall (formatter
+		"~:<~^~W~^ ~@_~:<~@{~:<~^~W~^~3I ~:_~/PP:PPRINT-LAMBDA-LIST/~1I~:@_~@{~W~^ ~_~}~:>~^ ~_~}~:>~1I~@:_~@{~W~^ ~_~}~:>")
+	       stream
+	       list)
+      (funcall (formatter "~@:<~{~W~^ ~@_~}~:>")
+	       stream list)))
 
 (defun pprint-let (stream list &rest noise)
   (declare (ignore noise))
