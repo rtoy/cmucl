@@ -660,6 +660,8 @@ same file system, via NFS or something else.
    kernel.core.  As above, PCL has not been compiled, so select
    restart 3 (return nil from pclload) to create lisp.core
 
+        src/tools/load-world.sh x86-target "new x86"
+
 At this point, you will have a shiny new lisp on the new platform.
 Since it's missing PCL, you will need to do at least one normal build
 to get PCL included.  This is also a good check to see if everything
