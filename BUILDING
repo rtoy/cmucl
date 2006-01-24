@@ -635,7 +635,11 @@ same file system, via NFS or something else.
    x86/linux is in src/tools/cross-scripts/cross-ppc-x86.lisp.
 
 3. Build the cross compiler and target, as above, using the specified
-   cross-compile script.
+   cross-compile script:
+
+        src/tools/cross-build-world.sh x86-target x86-cross cross.lisp [ppc binary]
+
+   where cross.lisp is the cross-compile script from 2) above.
 
 4. Everything has now been compiled for the x86/linux target.  We need
    to compile the C code for x86 and create a lisp.core from the
