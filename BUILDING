@@ -613,3 +613,49 @@ again.  Just follow the directions for a normal build, and use
 xtarget/lisp/lisp as your compiler.  Be sure to use create-target.sh
 to create a new directory where the result can go.
 
+Cross-Platform Cross-Compile
+----------------------------
+
+A cross-platform cross-compile is very similar to a normal
+cross-compile, and the basic steps are the same.  For the sake of
+concreteness, assume we are on ppc/darwin and want to cross-compile
+to x86/linux.
+
+To simplify things, we assume that both platforms have access to the
+same file system, via NFS or something else.
+
+1. As above, we need to create directories for the cross-compiler and
+   compiled target.  We assume we are on ppc/darwin.  So, when running
+   create-target.sh we need to specify the target.
+
+2. Adjust the cross-compilation script.  An example for ppc/darwin to
+   x86/linux is in src/tools/cross-scripts/cross-ppc-x86.lisp.
+
+3. Build the cross compiler and target, as above, using the specified
+   cross-compile script.
+
+4. Everything has now been compiled for the x86/linux target.  We need
+   to compile the C code for x86 and create a lisp.core from the
+   kernel.core.  This is where it's useful to have both platforms be
+   able to access the same file system.  If not, you will need to copy
+   all of the generated files from ppc/darwin to x86/linux.  Basically
+   everything in xtarget needs to be copied.
+
+   Note carefully that you may have to edit lisp/internals.h and/or
+   lisp/internals.inc to have the correct features.  This is a known
+   bug in the generation of these files during cross-compilation.
+   
+
+5. Now run load-world.sh to create the desired lisp.core from lisp and
+   kernel.core.  As above, PCL has not been compiled, so select
+   restart 3 (return nil from pclload) to create lisp.core
+
+At this point, you will have a shiny new lisp on the new platform.
+Since it's missing PCL, you will need to do at least one normal build
+to get PCL included.  This is also a good check to see if everything
+was compiled properly.  A full set of builds via build.sh might be
+good at this point too.
+
+
+
+
