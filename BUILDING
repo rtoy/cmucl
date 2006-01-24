@@ -651,7 +651,10 @@ same file system, via NFS or something else.
    Note carefully that you may have to edit lisp/internals.h and/or
    lisp/internals.inc to have the correct features.  This is a known
    bug in the generation of these files during cross-compilation.
-   
+
+   Compile the lisp code:
+
+        src/tools/rebuild-lisp.sh x86-target   
 
 5. Now run load-world.sh to create the desired lisp.core from lisp and
    kernel.core.  As above, PCL has not been compiled, so select
