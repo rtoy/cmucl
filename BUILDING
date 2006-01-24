@@ -626,7 +626,10 @@ same file system, via NFS or something else.
 
 1. As above, we need to create directories for the cross-compiler and
    compiled target.  We assume we are on ppc/darwin.  So, when running
-   create-target.sh we need to specify the target.
+   create-target.sh we need to specify the target:
+
+        src/tools/create-target.sh x86-cross x86
+        src/tools/create-target.sh x86-target x86
 
 2. Adjust the cross-compilation script.  An example for ppc/darwin to
    x86/linux is in src/tools/cross-scripts/cross-ppc-x86.lisp.
