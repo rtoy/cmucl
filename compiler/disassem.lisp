@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.49 2005/05/11 13:43:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.50 2006/01/25 13:55:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3004,6 +3004,9 @@
 	  (kernel:get-header-data code)) ; i.e code header length
        vm:word-bytes)))
 
+(defvar *disassemble-flets* t
+  "If non-NIL, disassemble flets/labels too")
+
 (defun get-function-segments (function)
   "Returns a list of the segments of memory containing machine code
   instructions for FUNCTION."
@@ -3039,7 +3042,8 @@
 		     (kind (c::compiled-debug-function-kind fmap-entry)))
 		 #+nil
 		 (format t ";;; SAW ~s ~s ~s,~s ~d,~d [~d]~%"
-			 name kind first-block-seen-p nil-block-seen-p
+			 (c::compiled-debug-function-name fmap-entry)
+			 kind first-block-seen-p nil-block-seen-p
 			 last-offset start-pc header-pc)
 		 (cond ((and (<= last-offset header-pc start-pc)
 			     (not first-block-seen-p))
@@ -3048,7 +3052,12 @@
 			(when first-block-seen-p
 			  (return)))
 		       ((eq kind nil)
-			(when nil-block-seen-p
+			;; FIXME: Why do we return when we have a nil
+			;; block and have already seen a nil block?
+			;; At the very least this prevents the
+			;; disassembler from diassembling labels and
+			;; flets in a function.
+			(when (and nil-block-seen-p (not *disassemble-flets*))
 			  (return))
 			(when first-block-seen-p
 			  (setf nil-block-seen-p t))))
