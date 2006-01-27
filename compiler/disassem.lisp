@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.50 2006/01/25 13:55:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.51 2006/01/27 20:55:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2425,8 +2425,8 @@
 (defmacro with-print-restrictions (&rest body)
   `(let ((*print-pretty* t)
 	 (*print-lines* 2)
-	 (*print-length* 4)
-	 (*print-level* 3))
+	 (*print-length* 5)
+	 (*print-level* 5))
      ,@body))
 
 (defun print-notes-and-newline (stream dstate)
@@ -2948,9 +2948,10 @@
 				(when stream
 				  (unless at-block-begin
 				    (terpri stream))
-				  (format stream ";;; [~d] "
-					  (di:code-location-form-number loc))
-				  (prin1-short form stream)
+				  (pprint-logical-block (stream nil :per-line-prefix ";;; ")
+				    (format stream "[~D] "
+					    (di:code-location-form-number loc))
+				    (prin1-short form stream))
 				  (terpri stream)
 				  (terpri stream)))
 			    t)))))
