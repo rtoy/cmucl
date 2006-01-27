@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.33 2006/01/23 14:11:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.34 2006/01/27 20:52:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,7 +167,7 @@
 	(list
 	 ;; An extended function name for flets/labels.  Should we
 	 ;; make this check?
-	 (values x nil))
+	 (values x t))
 	(t (values (fdefinition x) t)))
     (if (eval:interpreted-function-p res)
 	(values res named-p (if (eval:interpreted-function-closure res)
@@ -469,6 +469,9 @@
        (encapsulated
 	(unless named
 	  (error "Can't use encapsulation to trace anonymous function ~S."
+		 fun))
+	(when (listp fun)
+	  (error "Can't use encapsulation to trace local flet/labels function ~S."
 		 fun))
 	(fwrap function-or-name #'trace-fwrapper :type 'trace
 	       :user-data info))
