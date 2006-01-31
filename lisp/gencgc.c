@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.68 2006/01/31 03:16:39 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.69 2006/01/31 13:58:36 rtoy Exp $
  *
  */
 
@@ -2277,6 +2277,7 @@ static void
 scavenge_interrupt_context(os_context_t * context)
 {
     int i;
+    unsigned long pc_code_offset;
 
 #ifdef reg_LIP
     unsigned long lip;
@@ -2289,8 +2290,6 @@ scavenge_interrupt_context(os_context_t * context)
 #ifdef reg_CTR    
     unsigned long ctr_code_offset;
 #endif
-    unsigned long pc_code_offset;
-
 #ifdef SC_NPC
     unsigned long npc_code_offset;
 #endif
@@ -2324,8 +2323,10 @@ scavenge_interrupt_context(os_context_t * context)
     }
 #endif /* reg_LIP */
 
-    /* Compute the PC's offset from the start of the CODE */
-    /* register. */
+    /*
+     * Compute the PC's offset from the start of the CODE 
+     * register.
+     */
     pc_code_offset = SC_PC(context) - SC_REG(context, reg_CODE);
 #ifdef SC_NPC
     npc_code_offset = SC_NPC(context) - SC_REG(context, reg_CODE);
@@ -2369,23 +2370,23 @@ scavenge_interrupt_context(os_context_t * context)
 #endif /* reg_LIP */
 
     /* Fix the PC if it was in from space */
-    if (from_space_p(SC_PC(context)))
-	SC_PC(context) = SC_REG(context, reg_CODE) + pc_code_offset;
+    if (from_space_p(SC_PC(context))) {
+        SC_PC(context) = SC_REG(context, reg_CODE) + pc_code_offset;
+    }
 #ifdef SC_NPC
-    if (from_space_p(SC_NPC(context)))
+    if (from_space_p(SC_NPC(context))) {
 	SC_NPC(context) = SC_REG(context, reg_CODE) + npc_code_offset;
+    }
 #endif /* SC_NPC */
 
 #ifdef reg_LR
-    if (from_space_p(SC_REG(context, reg_LR)) {
-        SC_REG(context, reg_LR) = SC_REG(context, reg_CODE)
-                                  + lr_code_offset;
+    if (from_space_p(SC_REG(context, reg_LR))) {
+        SC_REG(context, reg_LR) = SC_REG(context, reg_CODE) + lr_code_offset;
     }
 #endif	
 #ifdef reg_CTR
-    if (from_space_p(SC_REG(context, reg_CTR)) {
-        SC_REG(context, reg_CTR) = SC_REG(context, reg_CODE)
-                                    + ctr_code_offset;
+    if (from_space_p(SC_REG(context, reg_CTR))) {
+      SC_REG(context, reg_CTR) = SC_REG(context, reg_CODE) + ctr_code_offset;
     }
 #endif	
 }
