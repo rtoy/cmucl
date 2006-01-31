@@ -32,7 +32,8 @@ New in this release:
       - LONG-LONG and UNSIGNED-LONG-LONG are recognized types in the
         C-CALL package for signed and unsigned 64-bit integers.
       - A port of gencgc to Darwin/ppc has been made.  This still
-        needs work, and is known to have some issues.
+        needs work, and is known to have some issues, but it compiles
+        CMUCL without problems and runs maxima just fine.
       - TRACE supports tracing of FLET/LABELS functions.  Use (trace
         (labels foo bar)) to trace the labels function FOO in the
         function BAR.  This is currently experimental.
