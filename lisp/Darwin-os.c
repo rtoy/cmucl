@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.6 2006/01/18 15:21:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.7 2006/01/31 03:16:39 rtoy Exp $
  *
  */
 
@@ -190,6 +190,14 @@ sc_reg(os_context_t * context, int offset)
 	  return &state->r30;
       case 31:
 	  return &state->r31;
+      case 34:
+	  /*
+	   * Not sure if this is really defined anywhere, but after
+	   * r31 is cr, xer, lr, and ctr.  So we let 34 be lr.
+	   */
+	  return &state->lr;
+      case 35:
+	  return &state->ctr;
       case 41:
 	  return &context->uc_mcontext->es.dar;
       case 42:

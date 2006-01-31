@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.67 2006/01/18 15:21:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.68 2006/01/31 03:16:39 rtoy Exp $
  *
  */
 
@@ -2283,6 +2283,12 @@ scavenge_interrupt_context(os_context_t * context)
     unsigned long lip_offset;
     int lip_register_pair;
 #endif
+#ifdef reg_LR
+    unsigned long lr_code_offset;
+#endif
+#ifdef reg_CTR    
+    unsigned long ctr_code_offset;
+#endif
     unsigned long pc_code_offset;
 
 #ifdef SC_NPC
@@ -2325,6 +2331,13 @@ scavenge_interrupt_context(os_context_t * context)
     npc_code_offset = SC_NPC(context) - SC_REG(context, reg_CODE);
 #endif /* SC_NPC */
 
+#ifdef reg_LR
+    lr_code_offset = SC_REG(context, reg_LR) - SC_REG(context, reg_CODE);
+#endif    
+#ifdef reg_CTR
+    ctr_code_offset = SC_REG(context, reg_CTR) - SC_REG(context, reg_CODE);
+#endif    
+    
     /* Scanvenge all boxed registers in the context. */
     for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
 	int index;
@@ -2362,6 +2375,19 @@ scavenge_interrupt_context(os_context_t * context)
     if (from_space_p(SC_NPC(context)))
 	SC_NPC(context) = SC_REG(context, reg_CODE) + npc_code_offset;
 #endif /* SC_NPC */
+
+#ifdef reg_LR
+    if (from_space_p(SC_REG(context, reg_LR)) {
+        SC_REG(context, reg_LR) = SC_REG(context, reg_CODE)
+                                  + lr_code_offset;
+    }
+#endif	
+#ifdef reg_CTR
+    if (from_space_p(SC_REG(context, reg_CTR)) {
+        SC_REG(context, reg_CTR) = SC_REG(context, reg_CODE)
+                                    + ctr_code_offset;
+    }
+#endif	
 }
 
 void

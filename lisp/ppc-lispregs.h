@@ -86,6 +86,8 @@
 #define reg_FDEFN_NUM     30
 #define reg_LIP_NUM       31	/* Lisp Interior Pointer, e.g., locative */
 
+#define reg_LR		  34    /* LR register.  See Darwin-os.c */
+#define reg_CTR           35    /* CTR register.  See Darwin-os.c */
 #define REGNAMES \
         "ZERO",		"NSP",	        "POLL",		"NL0", \
 	"NL1",		"NL2",		"NL3",		"NL4", \
