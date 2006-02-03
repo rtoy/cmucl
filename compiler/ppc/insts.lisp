@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.16 2006/01/18 15:21:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.17 2006/02/03 15:54:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1819,6 +1819,12 @@ about function addresses and register values.")
 
 (define-2-x-5-instructions nand 31 476)
 (define-4-xo-instructions divw 31 491 :cost 36)
+
+;; This instruction runs very slowly on a G5 (emulated?), so we don't
+;; want to use this.  Comment this instruction out so we don't use it
+;; by accident, but leave it here so the next person doesn't have to
+;; define it from scratch.  Use mtxer zero-tn instead.
+#+nil
 (define-instruction mcrxr (segment crf)
   (:printer x-18 ((op 31) (xo 512)))
   (:delay 1)
