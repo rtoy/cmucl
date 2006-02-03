@@ -37,6 +37,9 @@ New in this release:
       - TRACE supports tracing of FLET/LABELS functions.  Use (trace
         (labels foo bar)) to trace the labels function FOO in the
         function BAR.  This is currently experimental.
+      - DISASSEMBLE will disassemble flets/labels functions when
+        disassembling a function.  Set disassem::*disassemble-flets*
+        to NIL to turn this off.
 
   * Numerous ANSI compliance fixes:
 
@@ -96,6 +99,12 @@ New in this release:
       - Disassembly of some floating-point instructions on ppc has
         been corrected to display floating-point registers instead of
         integer registers.
+      - (read (make-array 5)) doesn't cause a segfault anymore on
+        x86/linux.  An error is now signaled saying the object isn't
+        one of the possible stream types.
+      - The PPC port no longer runs very slowly on some tests on a G5.
+        This was caused by using an instruction (mcrxr) that is
+        emulated on a G5 but not earlier.
 
   * Other changes:
 
