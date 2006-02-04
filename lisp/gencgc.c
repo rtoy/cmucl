@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.69 2006/01/31 13:58:36 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70 2006/02/04 03:32:31 rtoy Exp $
  *
  */
 
@@ -258,7 +258,7 @@ boolean pre_verify_gen_0 = FALSE;
 /*
  * Enable checking for bad pointers after gc_free_heap called from purify.
  */
-#if defined(DARWIN)
+#if 0 && defined(DARWIN)
 boolean verify_after_free_heap = TRUE;
 #else
 boolean verify_after_free_heap = FALSE;
@@ -290,7 +290,7 @@ boolean gencgc_unmap_zero = TRUE;
 /*
  * Enable checking that newly allocated regions are zero filled.
  */
-#if defined(DARWIN)
+#if 0 && defined(DARWIN)
 boolean gencgc_zero_check = TRUE;
 boolean gencgc_enable_verify_zero_fill = TRUE;
 #else
@@ -302,7 +302,7 @@ boolean gencgc_enable_verify_zero_fill = FALSE;
  * Enable checking that free pages are zero filled during gc_free_heap
  * called after purify.
  */
-#if defined(DARWIN)
+#if 0 && defined(DARWIN)
 boolean gencgc_zero_check_during_free_heap = TRUE;
 #else
 boolean gencgc_zero_check_during_free_heap = FALSE;
@@ -4866,7 +4866,7 @@ search_dynamic_space(lispobj * pointer)
     return search_space(start, pointer + 2 - start, pointer);
 }
 
-#if defined(DARWIN) || defined(i386) || defined(__x86_64)
+#if defined(i386) || defined(__x86_64)
 static int
 valid_dynamic_space_pointer(lispobj * pointer)
 {
@@ -6114,7 +6114,7 @@ verify_space(lispobj * start, size_t words)
 		 * Does it point to a plausible object? This check slows it
 		 * down a lot.
 		 */
-#if defined(DARWIN)
+#if 0
 		if (!valid_dynamic_space_pointer((lispobj *) thing)) {
 		    fprintf(stderr, "*** Ptr %x to invalid object %x\n", thing,
 			    start);
@@ -6886,12 +6886,7 @@ collect_garbage(unsigned last_gen)
     gc_assert(boxed_region.free_pointer - boxed_region.start_addr == 0);
     gc_alloc_generation = 0;
 
-    /* Sparc and ppc don't need this because the dynamic space free
-       pointer is the same as the current region free pointer, which
-       is updated by the allocation routines appropriately. */
-#if !(defined(sparc) || defined(DARWIN))
     update_dynamic_space_free_pointer();
-#endif
 
     set_current_region_free((lispobj) boxed_region.free_pointer);
     set_current_region_end((lispobj) boxed_region.end_addr);
