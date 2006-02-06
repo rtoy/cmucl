@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.46 2005/02/07 00:47:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.47 2006/02/06 20:00:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -343,13 +343,18 @@ struct in_addr {
       (when (minusp (unix:unix-connect socket
 				       (alien-sap sockaddr)
 				       (alien-size inet-sockaddr :bytes)))
-	(unix:unix-close socket)
-	(error "Error connecting socket to [~A:~A]: ~A"
-	       (if (stringp host)
-		   host
-		 (ip-string addr))
-	       port
-	       (unix:get-unix-error-msg)))
+        ;; unix-close may affect errno; save the current value(s)
+        (let ((errno (unix:unix-errno))
+              (errmsg (unix:get-unix-error-msg)))
+          (unix:unix-close socket)
+          (error 'socket-error
+                 :format-control "Error connecting socket to [~A:~A]: ~A"
+                 :format-arguments (list (if (stringp host)
+                                             host
+                                           (ip-string addr))
+                                         port
+                                         (unix:get-unix-error-msg))
+                 :errno errno)))
       socket)))
 
 ;; An attempt to rewrite connect-to-inet-socket in such a way that
@@ -405,9 +410,11 @@ struct in_addr {
                           (ldb (byte 8 8) naddr)
                           (ldb (byte 8 16) naddr)
                           (ldb (byte 8 24) naddr))))
-              (connect-error (addr reason)
-                (error "Error connecting socket to [~A:~A]: ~A"
-                       addr port reason)))
+              (connect-error (addr reason errno)
+                (error 'socket-error
+                       :format-control "Error connecting socket to [~A:~A]: ~A"
+                       :format-arguments (list addr port reason)
+                       :errno errno)))
        (set-blocking socket)
        (with-alien ((sockaddr inet-sockaddr)
                     (length (alien:array unsigned 1)))
@@ -419,9 +426,11 @@ struct in_addr {
                                           (alien-size inet-sockaddr :bytes))))
            (cond ((< retval -1)
                   ;; connect failed
-                  (let ((reason (unix:get-unix-error-msg)))
+                  (let ((reason (unix:get-unix-error-msg))
+			(errno (unix:unix-errno)))
                     (unix:unix-close socket)
-                    (connect-error (if (stringp host) host (dotted-quad addr)) reason)))
+                    (connect-error (if (stringp host) host (dotted-quad addr))
+				   reason errno)))
                  ((= retval -1)
                   ;; connect is in progress
                   (system:wait-until-fd-usable socket :output)
@@ -434,7 +443,8 @@ struct in_addr {
                     ;; It didn't, so let's find out why
                     (unix:unix-read socket (alien-sap length) 1)
                     (connect-error (if (stringp host) host (dotted-quad addr))
-                                   (unix:get-unix-error-msg)))
+                                   (unix:get-unix-error-msg)
+                                   (unix:unix-errno)))
                   socket)
                  (t
                   ;; connect succeeded
@@ -478,7 +488,8 @@ struct in_addr {
 		  (host-entry-addr (or (lookup-host-entry host)
 				       (error 'socket-error
 					      :format-control "Unknown host: ~S."
-					      :format-arguments (list host))))
+					      :format-arguments (list host)
+                                              :errno (unix:unix-errno))))
 		  host)))
     (when reuse-address
       (multiple-value-bind (optval errno)
