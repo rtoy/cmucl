@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.250 2006/01/03 17:58:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251 2006/02/07 01:16:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -347,7 +347,9 @@
 	   "USER-INFO-UID"
 	   "USER-INFO-DIR"
 	   "USER-INFO-GID"
-	   "GROUP-INFO-GID")
+	   "GROUP-INFO-GID"
+	   "UNIX-GETGRNAM"
+	   "UNIX-GETGRGID")
   #+(and solaris svr4)
   (:export "UNIX-SYSINFO"
 	   "SI-SYSNAME" "SI-HOSTNAME" "SI-RELEASE" "SI-VERSION" "SI-MACHINE"
