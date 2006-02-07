@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.61 2006/01/23 22:00:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.62 2006/02/07 16:42:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1691,7 +1691,7 @@ When annotations are present, invoke them at the right positions."
     (pprint-indent :block 1 stream)
     (pprint-newline :mandatory stream)
     ;; Output slots.  We try to output keyword and value on one line together
-    (funcall (formatter "~:<~^~@{~:<~^~W~^ ~:I~@{~W ~W~^~@:_~}~:>~^~@:_~}~:>")
+    (funcall (formatter "~:<~^~@{~:<~^~W~^ ~:I~@{~W~^ ~W~^~@:_~}~:>~^~@:_~}~:>")
 		  stream (pprint-pop))
     ;; Output options
     (loop
