@@ -717,7 +717,7 @@ _function_end_breakpoint_end:
 	lfd	f29, 224(r3)
 	lfd	f30, 232(r3)
 	lfd	f31, 240(r3)
-	
+	blr
 	SET_SIZE(fpu_restore)
 	
-#endif	
+#endif
