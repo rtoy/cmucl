@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.47 2006/02/06 20:00:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.48 2006/02/08 18:52:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -199,6 +199,8 @@ struct in_addr {
   (len int)
   (type int))
 
+(def-alien-variable "h_errno" c-call:int)
+
 (defun lookup-host-entry (host)
   "Return a host-entry for the given host. The host may be an address
   string or an IP address in host order."
@@ -213,35 +215,38 @@ struct in_addr {
 		       (gethostbyname host))
 		      ((unsigned-byte 32)
 		       (gethostbyaddr (htonl host) 4 af-inet)))))
-	(unless (zerop (sap-int (alien-sap hostent)))
-	  (make-host-entry
-	   :name (slot hostent 'name)
-	   :aliases
-	   (collect ((results))
-	     (iterate repeat ((index 0))
-	       (declare (type kernel:index index))
-	       (cond ((or (zerop (sap-int (alien-sap (slot hostent 'aliases))))
-			  (zerop (deref (cast (slot hostent 'aliases)
-					      (* (unsigned #-alpha 32
-							   #+alpha 64)))
-					index)))
-		      (results))
-		     (t
-		      (results (deref (slot hostent 'aliases) index))
-		      (repeat (1+ index))))))
-	   :addr-type (slot hostent 'addrtype)
-	   :addr-list
-	   (collect ((results))
-	     (iterate repeat ((index 0))
-	       (declare (type kernel:index index))
-	       (cond ((zerop (deref (cast (slot hostent 'addr-list)
-					  (* (unsigned #-alpha 32 #+alpha 64)))
-				    index))
-		      (results))
-		     (t
-		      (results 
-		       (ntohl (deref (deref (slot hostent 'addr-list) index))))
-		      (repeat (1+ index)))))))))))
+	(if (zerop (sap-int (alien-sap hostent)))
+	    (values nil h-errno)
+	    (values
+	     (make-host-entry
+	      :name (slot hostent 'name)
+	      :aliases
+	      (collect ((results))
+		(iterate repeat ((index 0))
+		  (declare (type kernel:index index))
+		  (cond ((or (zerop (sap-int (alien-sap (slot hostent 'aliases))))
+			     (zerop (deref (cast (slot hostent 'aliases)
+						 (* (unsigned #-alpha 32
+							      #+alpha 64)))
+					   index)))
+			 (results))
+			(t
+			 (results (deref (slot hostent 'aliases) index))
+			 (repeat (1+ index))))))
+	      :addr-type (slot hostent 'addrtype)
+	      :addr-list
+	      (collect ((results))
+		(iterate repeat ((index 0))
+		  (declare (type kernel:index index))
+		  (cond ((zerop (deref (cast (slot hostent 'addr-list)
+					     (* (unsigned #-alpha 32 #+alpha 64)))
+				       index))
+			 (results))
+			(t
+			 (results 
+			  (ntohl (deref (deref (slot hostent 'addr-list) index))))
+			 (repeat (1+ index)))))))
+	     t)))))
 
 (defun ip-string (addr)
   (format nil "~D.~D.~D.~D"
