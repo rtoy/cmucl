@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.11 2006/01/18 15:21:26 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.12 2006/02/08 01:32:58 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -83,8 +83,8 @@
   `(progn
      (inst addi ,lip ,function (- (* vm:word-bytes vm:function-code-offset)
                                   vm:function-pointer-type))
-     (inst mtctr ,lip)
      (move code-tn ,function)
+     (inst mtctr ,lip)
      (inst bctr)))
 
 (defmacro lisp-return (return-pc lip &key (offset 0) (frob-code t))
