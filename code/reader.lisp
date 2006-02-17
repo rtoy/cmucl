@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.57 2005/10/21 13:11:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.58 2006/02/17 21:27:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,13 +318,33 @@
     ;;from char is a constituent you don't copy non-movable secondary
     ;;attributes (constituent types), and that said attributes magically
     ;;appear if you transform a non-constituent to a constituent.
-    (let ((att (get-cat-entry from-char from-readtable)))
+    (let ((att (get-cat-entry from-char from-readtable))
+	  (mac (get-cmt-entry from-char from-readtable))
+	  (from-dpair (find from-char (dispatch-tables from-readtable)
+			    :test #'char= :key #'car))
+	  (to-dpair (find to-char (dispatch-tables to-readtable)
+			  :test #'char= :key #'car)))
       (if (constituentp from-char from-readtable)
 	  (setq att (get-secondary-attribute to-char)))
       (set-cat-entry to-char att to-readtable)
       (set-cmt-entry to-char
-		     (get-cmt-entry from-char from-readtable)
-		     to-readtable)))
+		     mac
+		     to-readtable)
+      ;; Copy the reader macro functions too if from-char is a
+      ;; dispatching macro character.
+      (when from-dpair
+	(cond (to-dpair
+	       ;; The to-readtable already has a dispatching table for
+	       ;; this character.  Replace it with a copy of the
+	       ;; dispatching table from from-readtable.
+	       (setf (cdr to-dpair) (copy-seq (cdr from-dpair))))
+	      (t
+	       ;; The to-readtable doesn't have such an entry.  Add a
+	       ;; copy of dispatch table from from-readtable to the
+	       ;; dispatch table of the to-readtable.
+	       (let ((pair (cons to-char (copy-seq (cdr from-dpair)))))
+		 (setf (dispatch-tables to-readtable)
+		       (push pair (dispatch-tables to-readtable)))))))))
   t)
 
 (defun set-macro-character (char function &optional
