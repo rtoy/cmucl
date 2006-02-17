@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.63 2006/02/15 19:39:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.64 2006/02/17 15:45:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -880,7 +880,9 @@ When annotations are present, invoke them at the right positions."
 				`((when (and ,object-var
 					     (plusp ,count-name)
 					     (check-for-circularity
-					      ,object-var))
+					      ,object-var
+					      nil
+					      :logical-block))
 				    (write-string ". " ,stream-var)
 				    (output-object ,object-var ,stream-var)
 				    (return-from ,block-name nil))))
@@ -904,7 +906,8 @@ When annotations are present, invoke them at the right positions."
 	(setf body
 	      `(let ((,object-var ,object))
 		 (if (listp ,object-var)
-		     ,body
+		     (with-circularity-detection (,object-var ,stream-var)
+		       ,body)
 		     (output-object ,object-var ,stream-var)))))
       `(with-pretty-stream (,stream-var ,stream-expression)
 	 ,body))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.107 2005/08/02 17:14:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.108 2006/02/17 15:45:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -327,7 +327,7 @@
 
 ;;; CHECK-FOR-CIRCULARITY -- interface.
 ;;;
-(defun check-for-circularity (object &optional assign)
+(defun check-for-circularity (object &optional assign (mode t))
   "Check to see if OBJECT is a circular reference, and return something non-NIL
    if it is.  If ASSIGN is T, then the number to use in the #n= and #n# noise
    is assigned at this time.  Note: CHECK-FOR-CIRCULARITY must be called
@@ -338,35 +338,69 @@
 	 ;; Don't bother, nobody cares.
 	 nil)
 	((null *circularity-hash-table*)
-	 :initiate)
+	 (values nil :initiate))
 	((null *circularity-counter*)
 	 (ecase (gethash object *circularity-hash-table*)
 	   ((nil)
 	    ;; First encounter.
-	    (setf (gethash object *circularity-hash-table*) t)
+	    (setf (gethash object *circularity-hash-table*) mode)
 	    ;; We need to keep looking.
 	    nil)
-	   ((t)
-	    ;; Second encounter.
-	    (setf (gethash object *circularity-hash-table*) 0)
-	    ;; It's a circular reference.
+	   ((:logical-block)
+            (setf (gethash object *circularity-hash-table*)
+                  :logical-block-circular)
 	    t)
-	   (0
+	   ((t)
+	    (cond ((eq mode :logical-block)
+                   ;; We've seen the object before in output-object, and now
+                   ;; a second time in a PPRINT-LOGICAL-BLOCK (for example
+                   ;; via pprint-dispatch). Don't mark it as circular yet.
+                   (setf (gethash object *circularity-hash-table*)
+                         :logical-block)
+                   nil)
+		  (t
+		   ;; Second encounter.
+		   (setf (gethash object *circularity-hash-table*) 0)
+		   ;; It's a circular reference.
+		   t)))
+	   ((0 :logical-block-circular)
 	    ;; It's a circular reference.
 	    t)))
 	(t
 	 (let ((value (gethash object *circularity-hash-table*)))
 	   (case value
-	     ((nil t)
-	      ;; If NIL, we found an object that wasn't there the first time
-	      ;; around.  If T, exactly one occurance of this object appears.
-	      ;; Either way, just print the thing without any special
-	      ;; processing.  Note: you might argue that finding a new object
-	      ;; means that something is broken, but this can happen.  If
-	      ;; someone uses the ~@<...~:> format directive, it conses a
-	      ;; new list each time though format (i.e. the &REST list), so
-	      ;; we will have different cdrs.
+	     ((nil t :logical-block)
+	      ;; If NIL, we found an object that wasn't there the
+	      ;; first time around.  If T or :LOGICAL-BLOCK, exactly
+	      ;; one occurance of this object appears.  Either way,
+	      ;; just print the thing without any special processing.
+	      ;; Note: you might argue that finding a new object means
+	      ;; that something is broken, but this can happen.  If
+	      ;; someone uses the ~@<...~:> format directive, it
+	      ;; conses a new list each time though format (i.e. the
+	      ;; &REST list), so we will have different cdrs.
 	      nil)
+             (:logical-block-circular
+	      ;; A circular reference to something that will be printed
+	      ;; as a logical block. Wait until we're called from
+	      ;; PPRINT-LOGICAL-BLOCK with ASSIGN true before assigning the
+	      ;; number.
+	      ;;
+	      ;; If mode is :LOGICAL-BLOCK and assign is false, return true
+	      ;; to indicate that this object is circular, but don't assign
+	      ;; it a number yet. This is neccessary for cases like
+	      ;; #1=(#2=(#2# . #3=(#1# . #3#))))).
+              (cond ((and (not assign)
+                          (eq mode :logical-block))
+                     t)
+                    ((and assign
+                          (eq mode :logical-block))
+                     (let ((value (incf *circularity-counter*)))
+                       ;; first occurrence of this object: Set the counter.
+                       (setf (gethash object *circularity-hash-table*) value)
+                       value))
+                    (t
+                     nil)))
 	     (0
 	      (if assign
 		  (let ((value (incf *circularity-counter*)))
@@ -390,7 +424,7 @@
      (let ((*print-circle* nil))
        (error "Attempt to use CHECK-FOR-CIRCULARITY when circularity ~
 	       checking has not been initiated.")))
-    ((t)
+    ((t :logical-block)
      ;; It's a second (or later) reference to the object while we are
      ;; just looking.  So don't bother groveling it again.
      nil)
@@ -406,6 +440,28 @@
 	      (write-char #\= stream)
 	      t))))))
 
+(defmacro with-circularity-detection ((object stream) &body body)
+  (let ((marker (gensym "WITH-CIRCULARITY-DETECTION-"))
+        (body-name (gensym "WITH-CIRCULARITY-DETECTION-BODY-")))
+    `(labels ((,body-name ()
+               ,@body))
+      (cond ((not *print-circle*)
+            (,body-name))
+            (*circularity-hash-table*
+             (let ((,marker (check-for-circularity ,object t :logical-block)))
+               (if ,marker
+                   (when (handle-circularity ,marker ,stream)
+                    (,body-name))
+                  (,body-name))))
+            (t
+             (let ((*circularity-hash-table* (make-hash-table :test 'eq)))
+               (output-object ,object (make-broadcast-stream))
+               (let ((*circularity-counter* 0))
+                 (let ((,marker (check-for-circularity ,object t
+                                                       :logical-block)))
+                   (when ,marker
+                     (handle-circularity ,marker ,stream)))
+                (,body-name))))))))
 
 ;;;; Level and Length abbreviations.
 
@@ -464,19 +520,18 @@
 		       (output-ugly-object object stream)))
 		 (output-ugly-object object stream)))
 	   (check-it (stream)
-	     (let ((marker (check-for-circularity object t)))
-	       (case marker
-		 (:initiate
-		  (let ((*circularity-hash-table*
-			 (make-hash-table :test #'eq)))
-		    (check-it (make-broadcast-stream))
-		    (let ((*circularity-counter* 0))
-		      (check-it stream))))
-		 ((nil)
-		  (print-it stream))
-		 (t
-		  (when (handle-circularity marker stream)
-		    (print-it stream)))))))
+	     (multiple-value-bind (marker initiate)
+		 (check-for-circularity object t)
+	       (if (eq initiate :initiate)
+		   (let ((*circularity-hash-table*
+                          (make-hash-table :test 'eq)))
+                     (check-it (make-broadcast-stream))
+                     (let ((*circularity-counter* 0))
+                       (check-it stream)))
+		   (if marker
+                       (when (handle-circularity marker stream)
+                         (print-it stream))
+                       (print-it stream))))))
     (cond ((or (not *print-circle*)
 	       (numberp object)
 	       (characterp object)
