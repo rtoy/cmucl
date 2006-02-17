@@ -40,6 +40,8 @@ New in this release:
       - DISASSEMBLE will disassemble flets/labels functions when
         disassembling a function.  Set disassem::*disassemble-flets*
         to NIL to turn this off.
+      - Simple errors in socket handling code have been converted to
+        socket-error's to allow easier distinction of the errors.
 
   * Numerous ANSI compliance fixes:
 
@@ -61,6 +63,8 @@ New in this release:
         structures of type list or vector. 
       - DOTIMES will execute the loop the specified number of times,
         independent of what the loop might do to the loop counter.
+      - Printing of circular objects using logical-blocks is handled
+        better. 
 
   * Numerous bugfixes:
 
@@ -105,6 +109,8 @@ New in this release:
       - The PPC port no longer runs very slowly on some tests on a G5.
         This was caused by using an instruction (mcrxr) that is
         emulated on a G5 but not earlier.
+      - The pretty printer no longer causes an error on badly formed
+        slots in defclass forms.
 
   * Other changes:
 
@@ -113,6 +119,9 @@ New in this release:
         or ".", or when the pathname type contains a ".".
       - WITH-SLOTS and WITH-ACCESSORS are now pprinted like
         MULTIPLE-VALUE-BIND instead of like WITH-OPEN-FILE.
+      - LOOKUP-HOST-ENTRY now returns a second value.  If
+        LOOKUP-HOST-ENTRY succeeds, the second value is T; otherwise,
+        the value of h_errno is returned.
   
   * Improvements to the PCL implementation of CLOS:
 
