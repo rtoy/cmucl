@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.58 2006/02/17 21:27:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.59 2006/02/18 18:51:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -324,6 +324,7 @@
 			    :test #'char= :key #'car))
 	  (to-dpair (find to-char (dispatch-tables to-readtable)
 			  :test #'char= :key #'car)))
+      #+nil
       (if (constituentp from-char from-readtable)
 	  (setq att (get-secondary-attribute to-char)))
       (set-cat-entry to-char att to-readtable)
@@ -332,6 +333,7 @@
 		     to-readtable)
       ;; Copy the reader macro functions too if from-char is a
       ;; dispatching macro character.
+      ;;(format t "from-dpair = ~A~%" from-dpair)
       (when from-dpair
 	(cond (to-dpair
 	       ;; The to-readtable already has a dispatching table for
@@ -820,10 +822,15 @@
      (declare (fixnum att))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
-	   ((= att #.constituent-invalid)
-	    (%reader-error stream "invalid constituent"))
+	   ((or (< att constituent)
+		(= att multiple-escape))
+	    att)
 	   (t
-	    att))))
+	    (setf att (get-secondary-attribute ,char))
+	    (cond ((= att #.constituent-invalid)
+		   (%reader-error stream "invalid constituent"))
+		  (t
+		   att))))))
 
 ;;; return the character class for a char which might be part of a rational
 ;;; number
@@ -833,14 +840,19 @@
      (declare (fixnum att))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
-	   ((digit-char-p ,char *read-base*)
-	    constituent-digit)
-	   ((= att constituent-digit)
-	    constituent)
-	   ((= att constituent-invalid)
-	    (%reader-error stream "invalid constituent"))
+	   ((or (< att constituent)
+		(= att multiple-escape))
+	    att)
 	   (t
-	    att))))
+	    (setf att (get-secondary-attribute ,char))
+	    (cond ((digit-char-p ,char *read-base*)
+		   constituent-digit)
+		  ((= att constituent-digit)
+		   constituent)
+		  ((= att constituent-invalid)
+		   (%reader-error stream "invalid constituent"))
+		  (t
+		   att))))))
 
 ;;; return the character class for a char which might be part of a rational or
 ;;; floating number (assume that it is a digit if it could be)
@@ -848,26 +860,31 @@
 (defmacro char-class3 (char attable)
   `(let ((att (aref ,attable (char-code ,char))))
      (declare (fixnum att))
-     (if possibly-rational
-	 (setq possibly-rational
-	       (or (digit-char-p ,char *read-base*)
-		   (= att constituent-slash))))
-     (if possibly-float
-	 (setq possibly-float
-	       (or (digit-char-p ,char 10)
-		   (= att constituent-dot))))
      (cond ((<= att #.terminating-macro)
 	    #.delimiter)
-	   ((digit-char-p ,char (max *read-base* 10))
-	     (if (digit-char-p ,char *read-base*)
-		 (if (= att #.constituent-expt)
-		     constituent-digit-or-expt
-		     constituent-digit)
-		 constituent-decimal-digit))
-	   ((= att constituent-invalid)
-	    (%reader-error stream "invalid constituent"))
+	   ((or (< att constituent)
+		(= att multiple-escape))
+	    att)
 	   (t
-	    att))))
+	    (setf att (get-secondary-attribute ,char))
+	    (when possibly-rational
+	      (setq possibly-rational
+		    (or (digit-char-p ,char *read-base*)
+			(= att constituent-slash))))
+	    (when possibly-float
+	      (setq possibly-float
+		    (or (digit-char-p ,char 10)
+			(= att constituent-dot))))
+	    (cond ((digit-char-p ,char (max *read-base* 10))
+		   (if (digit-char-p ,char *read-base*)
+		       (if (= att #.constituent-expt)
+			   constituent-digit-or-expt
+			   constituent-digit)
+		       constituent-decimal-digit))
+		  ((= att constituent-invalid)
+		   (%reader-error stream "invalid constituent"))
+		  (t
+		   att))))))
 
 
 
