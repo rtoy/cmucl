@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.8 2006/01/19 04:53:14 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.9 2006/02/19 22:56:35 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -59,20 +59,7 @@ arch_init(void)
 
 os_vm_address_t arch_get_bad_addr(HANDLER_ARGS)
 {
-    unsigned long badinstr, pc = SC_PC(context);
-    int instclass;
     os_vm_address_t addr;
-
-
-    /* Make sure it's not the pc thats bogus, and that it was lisp code */
-    /* that caused the fault. */
-    if ((pc & 3) != 0 ||
-	((pc < READ_ONLY_SPACE_START ||
-	  pc >= READ_ONLY_SPACE_START + READ_ONLY_SPACE_SIZE) &&
-	 ((lispobj *) pc < current_dynamic_space &&
-	  (lispobj *) pc >= current_dynamic_space + DYNAMIC_SPACE_SIZE)))
-	return 0;
-
 
     addr = (os_vm_address_t) SC_REG(context, PT_DAR);
     return addr;
