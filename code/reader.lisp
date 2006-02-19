@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.59 2006/02/18 18:51:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.60 2006/02/19 19:33:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -222,7 +222,7 @@
   (test-attribute char whitespace rt))
 
 (defmacro constituentp (char &optional (rt '*readtable*))
-  `(>= (get-cat-entry ,char ,rt) #.constituent))
+  `(test-attribute ,char #.constituent ,rt))
 
 (defmacro terminating-macrop (char &optional (rt '*readtable*))
   `(test-attribute ,char #.terminating-macro ,rt))
@@ -257,7 +257,7 @@
 	(make-array char-code-limit :element-type '(unsigned-byte 8)
 		    :initial-element #.constituent))
   (set-secondary-attribute #\: #.package-delimiter)
-  (set-secondary-attribute #\| #.multiple-escape)	; |) [For EMACS]
+  ;;(set-secondary-attribute #\| #.multiple-escape)	; |) [For EMACS]
   (set-secondary-attribute #\. #.constituent-dot)
   (set-secondary-attribute #\+ #.constituent-sign)
   (set-secondary-attribute #\- #.constituent-sign)
@@ -426,6 +426,7 @@
     (set-cat-entry #\page #.whitespace)
     (set-cat-entry #\return #.whitespace)
     (set-cat-entry #\\ #.escape)
+    (set-cat-entry #\| #.multiple-escape)
     (set-cmt-entry #\\ #'read-token)
     (set-cmt-entry #\: #'read-token)
     (set-cmt-entry #\| #'read-token)
