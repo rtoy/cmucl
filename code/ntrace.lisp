@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.34 2006/01/27 20:52:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.35 2006/02/20 00:57:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,9 +164,8 @@
 	       (t
 		(values (fdefinition x) t))))
 	(function x)
-	(list
-	 ;; An extended function name for flets/labels.  Should we
-	 ;; make this check?
+	((cons (member flet labels))
+	 ;; An extended function name for flet/labels functions.
 	 (values x t))
 	(t (values (fdefinition x) t)))
     (if (eval:interpreted-function-p res)
