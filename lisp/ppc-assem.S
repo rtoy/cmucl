@@ -634,7 +634,7 @@ _function_end_breakpoint_end:
 	/* And reg_ZERO */
 	li reg_ZERO,0
 
-	mr	reg_NL0, reg_A0			
+	mr	reg_A0, reg_NL0
 	twllei	reg_ZERO, trap_Error
 	.byte	4	/* Number of argument bytes */
 	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR
