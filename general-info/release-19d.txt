@@ -65,6 +65,13 @@ New in this release:
         independent of what the loop might do to the loop counter.
       - Printing of circular objects using logical-blocks is handled
         better. 
+      - SET-SYNTAX-FROM-CHAR copies the entire dispatch table of
+        reader macro functions if necessary.
+      - SET-SYNTAX-FROM-CHAR handles single-escape, multiple-escape
+        and # characters correctly now.
+      - When CLOSE'ing a file with :ABORT, don't delete the file,
+        unless we renamed it.  This preserves any and all changes to
+        the file, instead of deleting it.
 
   * Numerous bugfixes:
 
