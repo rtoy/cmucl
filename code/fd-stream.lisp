@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.83 2005/04/04 14:33:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.84 2006/02/27 16:06:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1098,22 +1098,18 @@
 
 ;;; REVERT-FILE -- internal
 ;;;
-;;;   Revert a file, if possible; otherwise just delete it.  Used during
+;;;   Revert a file, if possible; otherwise do nothing.  Used during
 ;;; CLOSE when the abort flag is set.
 ;;;
 (defun revert-file (filename original)
   (declare (type simple-base-string filename)
 	   (type (or simple-base-string null) original))
-  (if original
-      (multiple-value-bind (okay err) (unix:unix-rename original filename)
-	(unless okay
+  (when original
+    (multiple-value-bind (okay err)
+	(unix:unix-rename original filename)
+      (unless okay
 	  (cerror "Go on as if nothing bad happened."
 		  "Could not restore ~S to its original contents: ~A"
-		  filename (unix:get-unix-error-msg err))))
-      (multiple-value-bind (okay err) (unix:unix-unlink filename)
-	(unless okay
-	  (cerror "Go on as if nothing bad happened."
-		  "Could not remove ~S: ~A"
 		  filename (unix:get-unix-error-msg err))))))
 
 ;;; DELETE-ORIGINAL -- internal
