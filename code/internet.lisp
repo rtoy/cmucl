@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.49 2006/03/14 02:18:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.50 2006/03/14 15:22:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -366,9 +366,9 @@ struct in_addr {
                  :format-control "Error connecting socket to [~A:~A]: ~A"
                  :format-arguments (list (if (stringp host)
                                              host
-                                           (ip-string addr))
+					     (ip-string addr))
                                          port
-                                         (unix:get-unix-error-msg))
+                                         errmsg)
                  :errno errno)))
       socket)))
 
@@ -419,7 +419,7 @@ struct in_addr {
                                  (logandc2 (unix:unix-fcntl socket unix:f-getfl 0)
                                            unix:fndelay)))
               (dotted-quad (ipaddr)
-                (let ((naddr (htonl addr)))
+                (let ((naddr (htonl ipaddr)))
                   (format nil "~D.~D.~D.~D"
                           (ldb (byte 8 0) naddr)
                           (ldb (byte 8 8) naddr)
