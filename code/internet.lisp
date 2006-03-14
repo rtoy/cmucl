@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.48 2006/02/08 18:52:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.49 2006/03/14 02:18:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -199,7 +199,17 @@ struct in_addr {
   (len int)
   (type int))
 
-(def-alien-variable "h_errno" c-call:int)
+#+(and x86 linux)
+(progn
+  (def-alien-routine ("__h_errno_location" h-errno-location) (* c-call:int))
+  (defun get-h-errno ()
+    (alien:deref (h-errno-location) 0)))
+
+#-(and x86 linux)
+(progn
+  (def-alien-variable "h_errno" c-call:int)
+  (defun get-h-errno ()
+    h-errno))
 
 (defun lookup-host-entry (host)
   "Return a host-entry for the given host. The host may be an address
@@ -216,7 +226,7 @@ struct in_addr {
 		      ((unsigned-byte 32)
 		       (gethostbyaddr (htonl host) 4 af-inet)))))
 	(if (zerop (sap-int (alien-sap hostent)))
-	    (values nil h-errno)
+	    (values nil (get-h-errno))
 	    (values
 	     (make-host-entry
 	      :name (slot hostent 'name)
