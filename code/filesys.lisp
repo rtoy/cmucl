@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.99 2005/12/04 15:49:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.100 2006/03/14 15:19:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,7 +97,12 @@
 	     :offset (1- end)))
     (shrink-vector result dst)))
 
-(defvar *ignore-wildcards* nil)
+(defvar *ignore-wildcards* nil
+  "If non-NIL, Unix shell-style wildcards are ignored when parsing
+  pathname namestrings.  They are also ignored when computing
+  namestrings for pathname objects.  Thus, *, ?, etc. are not
+  wildcards when parsing a namestring, and are not escaped when
+  printing pathnames.")
 
 (defun maybe-make-pattern (namestr start end)
   (declare (type simple-base-string namestr)
@@ -399,23 +404,25 @@
      ;; cause the component not to appear in the namestring."
      "")
     (simple-string
-     (let* ((srclen (length thing))
-	    (dstlen srclen))
-       (dotimes (i srclen)
-	 (case (schar thing i)
-	   ((#\* #\? #\[)
-	    (incf dstlen))))
-       (let ((result (make-string dstlen))
-	     (dst 0))
-	 (dotimes (src srclen)
-	   (let ((char (schar thing src)))
-	     (case char
+     (if *ignore-wildcards*
+	 thing
+	 (let* ((srclen (length thing))
+		(dstlen srclen))
+	   (dotimes (i srclen)
+	     (case (schar thing i)
 	       ((#\* #\? #\[)
-		(setf (schar result dst) #\\)
-		(incf dst)))
-	     (setf (schar result dst) char)
-	     (incf dst)))
-	 result)))
+		(incf dstlen))))
+	   (let ((result (make-string dstlen))
+		 (dst 0))
+	     (dotimes (src srclen)
+	       (let ((char (schar thing src)))
+		 (case char
+		   ((#\* #\? #\[)
+		    (setf (schar result dst) #\\)
+		    (incf dst)))
+		 (setf (schar result dst) char)
+		 (incf dst)))
+	     result))))
     (pattern
      (collect ((strings))
        (dolist (piece (pattern-pieces thing))
