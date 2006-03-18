@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.17 2006/02/03 15:54:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.18 2006/03/18 05:17:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -236,18 +236,17 @@ about function addresses and register values.")
 	      (disassem:note (format nil "Header word ~A, size ~D?" type size)
 			     dstate)))))))))
 
-#+nil
-(defun handle-add-inst (reg word dstate)
-  (let ((rt (ldb (byte 5 21) word))
+(defun handle-and-inst (reg word dstate)
+  (let ((rs (ldb (byte 5 21) word))
 	(ra (ldb (byte 5 16) word)))
     (when (and (= reg 6)
-	       (= rt alloc-offset)
+	       (= rs alloc-offset)
 	       (= ra alloc-offset))
-      ;; We have "ADD $ALLOC, $ALLOC, $NL3".  This turns off
+      ;; We have "and $ALLOC, $ALLOC, $NL3".  This turns off
       ;; pseudo-atomic.  (See the pseudo-atomic macro.)
       (disassem:note "Reset pseudo-atomic flag" dstate)
       (setf *pseudo-atomic-set* nil))))
-  
+
 (defun update-addis-notes (word)
   ;; If this instruction writes to register that was the target of an
   ;; ADDIS instruction, we should remove it from *note-addis-inst* so
@@ -279,11 +278,10 @@ about function addresses and register values.")
 	       (= 24 opcode))
 	   ;; An ADDI or ORI instruction.
 	   (handle-addi-inst reg word dstate))
-	  #+nil
 	  ((and (= 31 opcode)
-		(= 266 (ldb (byte 9 1) word)))
-	   ;; An ADD instruction
-	   (handle-add-inst reg word dstate))
+		(= 28 (ldb (byte 10 1) word)))
+	   ;; An AND instruction
+	   (handle-and-inst reg word dstate))
 	  )
     (update-addis-notes word)))
 
