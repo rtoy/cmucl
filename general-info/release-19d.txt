@@ -118,6 +118,9 @@ New in this release:
         emulated on a G5 but not earlier.
       - The pretty printer no longer causes an error on badly formed
         slots in defclass forms.
+      - Document LISP::*IGNORE-WILDCARDS*.  When set, namestrings will
+        not have pathnames with wildcards escaped when parsing
+        namestrings or when creating namestrings.
 
   * Other changes:
 
