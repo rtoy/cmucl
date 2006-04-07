@@ -12,6 +12,7 @@
 
 (defpackage "FEEBS"
   (:use "COMMON-LISP")
+  (:shadow position)
   ;; Export everything we want the players to get their hands on.
   (:export *single-step* *delay* *number-of-feebs* *game-length*
 	   *points-for-killing* *points-for-dying* *maze-i-size*
