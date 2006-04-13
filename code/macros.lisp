@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.108 2005/11/18 19:36:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.109 2006/04/13 13:48:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1623,6 +1623,39 @@
 
 ;;;; Iteration macros:
 
+;; Helper for dotimes.  Extract any declarations for the dotimes
+;; counter and create a similar declaration for our dummy loop
+;; counter.  Skip over special declarations, though, because we don't
+;; want to make the dummy counter special.
+;;
+;; Returns two values:
+;; 1.  Set of declarations for the dotimes loop counter that would be
+;;     suitable for use in the result-form of the loop,
+;; 2.  Declarations suitable for the dummy loop counter.
+(defun dotimes-extract-var-decls (var counter count decls)
+  (let (var-decls counter-decls)
+    (dolist (decl decls)
+      (dolist (d (cdr decl))
+	(when (member var (cdr d))
+	  (cond ((eq (car d) 'type)
+		 (push `(type ,(second d) ,var) var-decls)
+		 (push `(type ,(second d) ,counter) counter-decls))
+		((eq (car d) 'special)
+		 ;; Declare var special, but not the counter
+		 (push `(,(car d) ,var) var-decls))
+		(t
+		 (push `(,(car d) ,var) var-decls)
+		 (push `(,(car d) ,counter) counter-decls))))))
+    (unless counter-decls
+      (setf counter-decls (if (numberp count)
+			      `((type (integer 0 ,count) ,counter))
+			      `((type unsigned-byte ,counter)))))
+    (values (if var-decls
+		`((declare ,@(nreverse var-decls)))
+		nil)
+	    `((declare ,@(nreverse counter-decls))))))
+	      
+
 ;;; Make sure we iterate the given number of times, independent of
 ;;; what the body might do to the index variable.  We do this by
 ;;; repeatedly binding the var in the body and also in the result
@@ -1633,31 +1666,35 @@
   (let ((count-var (gensym "CTR-")))
     (multiple-value-bind (forms decls)
 	(parse-body body nil nil)
-      (cond ((numberp count)
-	     `(do ((,count-var 0 (1+ ,count-var)))
-		  ((>= ,count-var ,count)
-		   (let ((,var ,count-var))
-		     ,var
-		     ,result))
-		(declare (type (integer 0 ,count) ,count-var))
-		(let ((,var ,count-var))
-		  ,@decls
-		  ,var
-		  (tagbody
-		     ,@forms))))
-	    (t (let ((v1 (gensym)))
-		 `(do ((,count-var 0 (1+ ,count-var))
-		       (,v1 ,count))
-		      ((>= ,count-var ,v1)
-		       (let ((,var ,count-var))
-			 ,var
-			 ,result))
-		    (declare (type unsigned-byte ,count-var))
-		    (let ((,var ,count-var))
-		      ,@decls
-		      ,var
-		      (tagbody
-			 ,@forms)))))))))
+      (multiple-value-bind (var-decls ctr-decls)
+	  (dotimes-extract-var-decls var count-var count decls)
+	(cond ((numberp count)
+	       `(do ((,count-var 0 (1+ ,count-var)))
+		    ((>= ,count-var ,count)
+		     (let ((,var ,count-var))
+		       ,@var-decls
+		       ,var
+		       ,result))
+		  ,@ctr-decls
+		  (let ((,var ,count-var))
+		    ,@decls
+		    ,var
+		    (tagbody
+		       ,@forms))))
+	      (t (let ((v1 (gensym)))
+		   `(do ((,count-var 0 (1+ ,count-var))
+			 (,v1 ,count))
+			((>= ,count-var ,v1)
+			 (let ((,var ,count-var))
+			   ,@var-decls
+			   ,var
+			   ,result))
+		      ,@ctr-decls
+		      (let ((,var ,count-var))
+			,@decls
+			,var
+			(tagbody
+			   ,@forms))))))))))
 
 
 ;;; We repeatedly bind the var instead of setting it so that we never give the
