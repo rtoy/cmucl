@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.53 2005/09/21 11:32:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.54 2006/04/26 20:49:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -728,13 +728,25 @@ to skip undefined symbols which don't have an address."
     (when (zerop (system:sap-int (caar *global-table*)))
       (error "Can't open global symbol table: ~S" (dlerror)))))
 
-(defun load-object-file (file)
+(defun convert-object-file-path (path)
+  ;; Convert path to something that dlopen might like, which means
+  ;; translating logical pathnames and converting search-lists to the
+  ;; first path that exists.
+  (cond ((lisp::logical-pathname-p (pathname path))
+	 (translate-logical-pathname path))
+	((ignore-errors (ext:search-list-defined-p (pathname path)))
+	 (ext:enumerate-search-list (s (pathname path)
+				       path)
+	   (when (probe-file s)
+	     (return s))))
+	(t
+	 path)))
+
+(defun load-object-file (file &optional (recordp t))
   (ensure-lisp-table-opened)
   ; rtld global: so it can find all the symbols previously loaded
   ; rtld now: that way dlopen will fail if not all symbols are defined.
-  (let* ((filename (namestring (if (lisp::logical-pathname-p (pathname file))
-				   (translate-logical-pathname file)
-				   file)))
+  (let* ((filename (namestring (convert-object-file-path file)))
 	 (sap (dlopen filename (logior rtld-now rtld-global))))
     (cond ((zerop (sap-int sap))
 	   (let ((err-string (dlerror))
@@ -742,11 +754,14 @@ to skip undefined symbols which don't have an address."
 	     ;; For some reason dlerror always seems to return NIL,
 	     ;; which isn't very informative.
 	     (when (zerop (sap-int sap))
-	       (error "Can't open object ~S: ~S" file err-string))
+	       (return-from load-object-file
+		 (values nil (format nil  "Can't open object ~S: ~S" file err-string))))
 	     (dlclose sap)
-	     (error "LOAD-OBJECT-FILE: Unresolved symbols in file ~S: ~S"
-		    file err-string)))
-	  ((null (assoc sap *global-table* :test #'sap=))
+	     (return-from load-object-file
+	       (values nil
+		       (format nil "LOAD-OBJECT-FILE: Unresolved symbols in file ~S: ~S"
+			       file err-string)))))
+	  ((and recordp (null (assoc sap *global-table* :test #'sap=)))
 	   (setf *global-table* (acons sap file *global-table*)))
 	  (t nil))))
 
@@ -769,12 +784,30 @@ to skip undefined symbols which don't have an address."
   (loop for lib-entry in (reverse *global-table*)
 	for (sap . lib-path) = lib-entry
 	when lib-path
-	do (let ((new-sap (dlopen (namestring lib-path)
-				  (logior rtld-now rtld-global))))
-	     (when (zerop (sap-int new-sap))
-	       ;; We're going down
-	       (error "Couldn't open library ~S: ~S" lib-path (dlerror)))
-	     (setf (car lib-entry) new-sap)))
+     do
+       (loop
+	  (restart-case 
+	      (let ((new-sap (dlopen (namestring (convert-object-file-path lib-path))
+				     (logior rtld-now rtld-global))))
+		(cond ((zerop (sap-int new-sap))
+		       ;; We're going down
+		       (error "Couldn't open library ~S: ~S" lib-path (dlerror)))
+		      (t
+		       (format t "Reloaded library ~S~%" lib-path)
+		       (force-output)))
+
+		(setf (car lib-entry) new-sap)
+		(return))
+	    (continue ()
+	      :report "Ignore library and continue"
+	      (return))
+	    (try-again ()
+	      :report "Try reloading again"
+	      )
+	    (new-library ()
+	      :report "Choose new library path"
+	      (format *query-io* "Enter new library path: ")
+	      (setf lib-path (read))))))
   (alien:alien-funcall (alien:extern-alien "os_resolve_data_linkage"
                                            (alien:function c-call:void))))
 
@@ -809,72 +842,85 @@ environment passed to Lisp."
   (declare (ignore base-file))
   ;; if passed a single shared object that can be loaded directly via
   ;; dlopen(), do that instead of using the linker
-  (cond ((and (atom files)
-              (probe-file files)
-              (file-shared-library-p files))
-         (when verbose
-           (format t ";;; Opening shared library ~A ...~%" files))
-         (load-object-file files)
-         (when verbose
-           (format t ";;; Done.~%")))
-        (t
-         (let ((output-file (pick-temporary-file-name
-                             (concatenate 'string "/tmp/~D~C" (string (gensym)))))
-               (error-output (make-string-output-stream)))
- 
-           (when verbose
-             (format t ";;; Running ~A...~%" *dso-linker*)
-             (force-output))
-    
-           (let ((proc (ext:run-program
-                        *dso-linker*
-                        (list*
-                         #+(or solaris linux FreeBSD4) "-G"
-                         #+(or OpenBSD NetBSD irix) "-shared"
-			 #+darwin "-dylib"
-                         "-o"
-                         output-file
-                         ;; Cause all specified libs to be loaded in full
-                         #+(or OpenBSD linux FreeBSD4 NetBSD) "--whole-archive"
-                         #+solaris "-z" #+solaris "allextract"
-			 #+darwin "-all_load"
-                         (append (mapcar
-                                  #'(lambda (name)
-                                      (or (unix-namestring name)
-                                          (error 'simple-file-error
-                                                 :pathname name
-                                                 :format-control
-                                                 "File does not exist: ~A."
-                                                 :format-arguments
-                                                 (list name))))
-                                  (if (atom files)
-                                      (list files)
-                                      files))
-                                 ;; Return to default ld behaviour for libs
-                                 (list
-                                  #+(or OpenBSD linux FreeBSD4 NetBSD)
-                                  "--no-whole-archive"
-                                  #+solaris "-z" #+solaris "defaultextract")
-                                 libraries))
-                        ;; on Linux/AMD64, we need to tell the platform linker to use the 32-bit
-                        ;; linking mode instead of the default 64-bit mode. This can be done either
-                        ;; via the LDEMULATION environment variable, or via the "-m" command-line
-                        ;; option. Here we assume that LDEMULATION will be ignored by the platform
-                        ;; linker on Linux/i386 platforms. 
-                        :env `(#+(and x86 linux) (:ldemulation . "elf_i386") ,@env)
-                        :input nil
-                        :output error-output
-                        :error :output)))
-             (unless proc
-               (error "Could not run ~A" *dso-linker*))
-             (unless (zerop (ext:process-exit-code proc))
-               (system:serve-all-events 0)
-               (error "~A failed:~%~A" *dso-linker*
-                      (get-output-stream-string error-output)))
-             (load-object-file output-file)
-             (unix:unix-unlink output-file)))
-         (when verbose
-           (format t ";;; Done.~%")
-           (force-output)))))
+  (when (atom files)
+    (when verbose
+      (format t ";;; Opening as shared library ~A ...~%" files))
+    (multiple-value-bind (ok &optional error-string)
+	(load-object-file files)
+      (cond (ok
+	     (when verbose
+	       (format t ";;; Done.~%")
+	       (force-output))
+	     (return-from load-foreign))
+	    (error-string
+	     (format t "~A~%" error-string)
+	     (force-output))))
 
+    ;; If we get here, we couldn't open the file as a shared library.
+    ;; Try again assuming it's an object file.
+    (when verbose
+      (format t ";;; Trying as object file ~A...~%" files)))
+  
+  
+  (let ((output-file (pick-temporary-file-name
+		      (concatenate 'string "/tmp/~D~C" (string (gensym)))))
+	(error-output (make-string-output-stream)))
+ 
+    (when verbose
+      (format t ";;; Running ~A...~%" *dso-linker*)
+      (force-output))
+    
+    (let ((proc (ext:run-program
+		 *dso-linker*
+		 (list*
+		  #+(or solaris linux FreeBSD4) "-G"
+		  #+(or OpenBSD NetBSD irix) "-shared"
+		  #+darwin "-dylib"
+		  "-o"
+		  output-file
+		  ;; Cause all specified libs to be loaded in full
+		  #+(or OpenBSD linux FreeBSD4 NetBSD) "--whole-archive"
+		  #+solaris "-z" #+solaris "allextract"
+		  #+darwin "-all_load"
+		  (append (mapcar
+			   #'(lambda (name)
+			       (or (unix-namestring name)
+				   (error 'simple-file-error
+					  :pathname name
+					  :format-control
+					  "File does not exist: ~A."
+					  :format-arguments
+					  (list name))))
+			   (if (atom files)
+			       (list files)
+			       files))
+			  ;; Return to default ld behaviour for libs
+			  (list
+			   #+(or OpenBSD linux FreeBSD4 NetBSD)
+			   "--no-whole-archive"
+			   #+solaris "-z" #+solaris "defaultextract")
+			  libraries))
+		 ;; on Linux/AMD64, we need to tell the platform linker to use the 32-bit
+		 ;; linking mode instead of the default 64-bit mode. This can be done either
+		 ;; via the LDEMULATION environment variable, or via the "-m" command-line
+		 ;; option. Here we assume that LDEMULATION will be ignored by the platform
+		 ;; linker on Linux/i386 platforms. 
+		 :env `(#+(and x86 linux) (:ldemulation . "elf_i386") ,@env)
+		 :input nil
+		 :output error-output
+		 :error :output)))
+      (unless proc
+	(error "Could not run ~A" *dso-linker*))
+      (unless (zerop (ext:process-exit-code proc))
+	(system:serve-all-events 0)
+	(error "~A failed:~%~A" *dso-linker*
+	       (get-output-stream-string error-output)))
+      (load-object-file output-file nil)
+      (unix:unix-unlink output-file))
+    (when verbose
+      (format t ";;; Done.~%")
+      (force-output))))
+
+#+linkage-table
+(pushnew #'reinitialize-global-table ext:*after-save-initializations*)
 ) ;; #+(or linux bsd solaris irix)
