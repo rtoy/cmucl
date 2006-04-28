@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.108 2006/02/17 15:45:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.109 2006/04/28 20:51:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1883,9 +1883,8 @@ radix-R.  If you have a power-list then pass it in as PL."
        (write-string string stream :end 1)
        (write-char #\. stream)
        (write-string string stream :start 1)
-       ;; Why this special case?  This makes it inconsistent with how
-       ;; ~E prints out floats like 1d23.
-       #+(or)
+       ;; CLHS 22.1.3.1.3 says at least one digit must be printed
+       ;; after the decimal point.
        (when (= (length string) 1)
 	 (write-char #\0 stream))
        (print-float-exponent x (1- e) stream)))))
