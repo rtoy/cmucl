@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.67 2005/11/07 17:44:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.68 2006/04/28 20:58:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1212,7 +1212,8 @@
 	  (lisp::scale-exponent (abs number))
 	(let* ((expt (- expt k))
 	       (estr (decimal-string (abs expt)))
-	       (elen (if e (max (length estr) e) (length estr))))
+	       (elen (if e (max (length estr) e) (length estr)))
+	       (add-zero-p nil))
 	  (if (and w ovf e (> elen e)) ;exponent overflow
 	      (dotimes (i w)
 		(write-char ovf stream))
@@ -1236,7 +1237,8 @@
 		    ;; appear after the decimal point."  So we need to
 		    ;; subtract one from here because we're going to
 		    ;; add an extra 0 digit later.
-		    (when (and (zerop number) (null d))
+		    (when (and (null d) (char= (aref fstr (1- flen)) #\.))
+		      (setf add-zero-p t)
 		      (decf spaceleft))
 		    (when lpoint
 		      (if (or (> spaceleft 0) tpoint)
@@ -1255,7 +1257,7 @@
 			       (if atsign (write-char #\+ stream)))
 			   (when lpoint (write-char #\0 stream))
 			   (write-string fstr stream)
-			   (when (and (zerop number) (null d))
+			   (when add-zero-p
 			     ;; It's later and we're adding the zero
 			     ;; digit.
 			     (write-char #\0 stream))
