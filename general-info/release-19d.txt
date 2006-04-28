@@ -42,6 +42,16 @@ New in this release:
         to NIL to turn this off.
       - Simple errors in socket handling code have been converted to
         socket-error's to allow easier distinction of the errors.
+      - EXT:LOAD-FOREIGN will use dlopen to try to open a shared
+        library, so if dlopen searches in certain places, LOAD-FOREIGN
+        will find the shared object.
+      - A new search-list "ld-library-path:" has been created and
+        contains the value of the environment variable
+        LD_LIBRARY_PATH.  This is analogous to the "path:"
+        search-list.
+      - When a core file is started, any shared libraries that were
+        loaded when the core was made will be reloaded on startup.  If
+        the library cannot be found, several restarts are available.
 
   * Numerous ANSI compliance fixes:
 
@@ -121,7 +131,11 @@ New in this release:
       - Document LISP::*IGNORE-WILDCARDS*.  When set, namestrings will
         not have pathnames with wildcards escaped when parsing
         namestrings or when creating namestrings.
-
+      - As specified by CLHS 22.1.3.1.3, PRIN1 and friends now produce
+        a trailing zero if necessary.
+      - As specified by CLHS 22.3.3.2, ~E will produce a single zero
+        for the fractional part, if necessary.
+        
   * Other changes:
 
       - CMUCL catches more cases where it cannot print a pathname
