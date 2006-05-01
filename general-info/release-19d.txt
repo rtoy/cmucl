@@ -135,7 +135,9 @@ New in this release:
         a trailing zero if necessary.
       - As specified by CLHS 22.3.3.2, ~E will produce a single zero
         for the fractional part, if necessary.
-        
+      - (FORMAT NIL "~,2F" 0.001) produces "0.00" instead of "0.001".
+        Thus, we actually honor the d field now.
+
   * Other changes:
 
       - CMUCL catches more cases where it cannot print a pathname
