@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.109 2006/04/28 20:51:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110 2006/05/01 16:10:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1539,7 +1539,13 @@ radix-R.  If you have a power-list then pass it in as PL."
 		   (write-string "." stream)
 		   (dotimes (i (- e))
 		     (write-char #\0 stream))
-		   (write-string string stream)
+		   ;; If we're out of room (because fdigits is too
+		   ;; small), don't print out our string.  This fixes
+		   ;; things like (format nil "~,2f" 0.001).  We should
+		   ;; print ".00", not ".001".
+		   (when (or (null fdigits)
+			     (plusp (+ e fdigits)))
+		     (write-string string stream))
 		   (when fdigits
 		     (dotimes (i (+ fdigits e (- (length string))))
 		       (write-char #\0 stream)))))

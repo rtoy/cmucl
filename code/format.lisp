@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.68 2006/04/28 20:58:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.69 2006/05/01 16:10:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1257,7 +1257,16 @@
 			       (if atsign (write-char #\+ stream)))
 			   (when lpoint (write-char #\0 stream))
 			   (write-string fstr stream)
-			   (when add-zero-p
+			   ;; Add a zero if we need it.  Which means
+			   ;; we figured out we need one above, or
+			   ;; another condition.  Basically, append a
+			   ;; zero if there are no width constraints
+			   ;; and if the last char to print was a
+			   ;; decimal (so the trailing fraction is
+			   ;; zero.)
+			   (when (or add-zero-p
+				     (and (null w)
+					  (char= (aref fstr (1- flen)) #\.)))
 			     ;; It's later and we're adding the zero
 			     ;; digit.
 			     (write-char #\0 stream))
