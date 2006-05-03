@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.43 2005/10/20 12:32:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.44 2006/05/03 19:39:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,6 +153,17 @@
 	     (values double-float))
     (%log1p x))
   ) ; progn
+
+
+;; As above for x86.  It also seems to be needed to handle
+;; constant-folding in the compiler.
+#+sparc
+(progn
+  (defun %sqrt (x)
+    (declare (double-float x)
+	     (values double-float))
+    (%sqrt x))
+  )
 
 
 ;;;; Power functions.
