@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.10 2005/11/04 04:29:46 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.11 2006/05/07 23:50:00 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -270,6 +270,8 @@
 ;;; Special case fixnum + and - that trap on overflow.  Useful when we
 ;;; don't know that the output type is a fixnum.
 ;;;
+#+nil
+(progn
 (define-vop (+/fixnum fast-+/fixnum=>fixnum)
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
@@ -298,6 +300,7 @@
       (inst unimp (logior (ash (reg-tn-encoding r) 5)
 			  fixnum-additive-overflow-trap))
       (emit-label no-overflow))))
+)
 
 (define-vop (fast-*/fixnum=>fixnum fast-fixnum-binop)
   (:temporary (:scs (non-descriptor-reg)) temp)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.10 2006/01/18 15:21:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.11 2006/05/07 23:50:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,8 +173,7 @@
   cerror
   breakpoint
   function-end-breakpoint
-  after-breakpoint
-  fixnum-additive-overflow)
+  after-breakpoint)
 
 (defenum (:prefix object-not- :suffix -trap :start 16)
   list
