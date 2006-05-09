@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.51 2006/01/27 20:55:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.52 2006/05/09 13:12:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3050,8 +3050,18 @@
 			     (not first-block-seen-p))
 			(setf first-block-seen-p t))
 		       ((eq kind :external)
-			(when first-block-seen-p
-			  (return)))
+			(let* ((name (c::compiled-debug-function-name fmap-entry))
+			       (flet-p (and (list name)
+					    (member (car name) '(flet labels)))))
+			  ;; Don't return from loop if this external
+			  ;; entry is an flet or labels entry.  We
+			  ;; want to continue the disassembly, if
+			  ;; enabled.
+			  (when (and first-block-seen-p
+				     (if *disassemble-flets*
+					 (not flet-p)
+					 t))
+			    (return))))
 		       ((eq kind nil)
 			;; FIXME: Why do we return when we have a nil
 			;; block and have already seen a nil block?
