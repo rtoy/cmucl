@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.74 2005/04/22 15:01:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.75 2006/05/11 17:07:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,8 +174,12 @@
 
 (defmacro without-package-locks (&body body)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
-    (let ((*enable-package-locked-errors* nil))
-      ,@body)))
+     (let ((*enable-package-locked-errors* nil))
+       ;; Tell the compiler about disabled locks too.  This is a
+       ;; workaround for the case of defmacro of a symbol in a locked
+       ;; package.
+       (ext:compiler-let ((*enable-package-locked-errors* nil))
+	 ,@body))))
 
 
 ;; trap attempts to redefine a function in a locked package, and
