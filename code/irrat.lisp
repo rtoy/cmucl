@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.44 2006/05/03 19:39:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45 2006/05/15 23:56:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,6 +186,12 @@
 ;;; of power are calculated as positive integers, and inverted if negative.
 ;;;
 (defun intexp (base power)
+  ;; Handle the special case of 1^power.  Maxima sometimes does this,
+  ;; and there's no need to cause a continuable error in this case.
+  ;; Should we also handle (-1)^power?
+  (when (eql base 1)
+    (return-from intexp base))
+  
   (when (> (abs power) *intexp-maximum-exponent*)
     (cerror "Continue with calculation."
 	    "The absolute value of ~S exceeds ~S."
