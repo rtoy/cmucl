@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.52 2006/05/09 13:12:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.53 2006/05/18 17:04:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3051,7 +3051,7 @@
 			(setf first-block-seen-p t))
 		       ((eq kind :external)
 			(let* ((name (c::compiled-debug-function-name fmap-entry))
-			       (flet-p (and (list name)
+			       (flet-p (and (listp name)
 					    (member (car name) '(flet labels)))))
 			  ;; Don't return from loop if this external
 			  ;; entry is an flet or labels entry.  We
