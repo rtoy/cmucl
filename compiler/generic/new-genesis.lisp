@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.77 2005/12/11 20:30:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.78 2006/05/20 01:48:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2219,6 +2219,9 @@
  		 (l (ldb (byte 16 0) value)))
  	    (setf (sap-ref-16 sap 2)
  		  (maybe-byte-swap-short
+		   ;; This takes care of the fact that the low part is
+		   ;; signed extended by addi when we add in the low
+		   ;; part to the high part.
 		   (if (logbitp 15 l) (ldb (byte 16 0) (1+ h)) h)))))
  	 (:l
   	  (setf (sap-ref-16 sap 2)
