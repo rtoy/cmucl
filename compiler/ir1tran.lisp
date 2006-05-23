@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.172 2005/05/06 16:42:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.173 2006/05/23 20:35:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1311,7 +1311,14 @@
 	    (compiler-note "Ignoring free ignore declaration for ~S." name)
 	    (compiler-warning "Ignore declaration for unknown variable ~S."
 			      name)))
-       ((and (consp var) (consp (cdr var)) (eq (car var) 'macro))
+       ((and (consp var)
+	     (eq (car var) 'macro)
+	     ;; Var is '(macro foo). Why must foo be a cons?  This
+	     ;; causes (symbol-macrolet ((a 42)) (declare (ignorable
+	     ;; a)) ...) to get a type error from a test below because
+	     ;; var is '(macro . 42) in this case.
+	     #+nil
+	     (consp (cdr var)))
 	;; Just ignore the ignore decl.
 	)
        ((functional-p var)
