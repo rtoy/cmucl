@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.8 2005/09/15 18:26:50 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.9 2006/05/30 22:42:14 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -11,9 +11,15 @@
 #define _FREEBSD_OS_H_
 
 #include <osreldate.h>
-#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/uio.h>
 #include <sys/mman.h>
 #include <sys/signal.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define MAP_ANONYMOUS MAP_ANON
 #define MAP_VARIABLE 0
@@ -47,5 +53,6 @@ void os_save_context(void);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
 
+#undef PAGE_SIZE
 
 #endif /* _FREEBSD_OS_H_ */
