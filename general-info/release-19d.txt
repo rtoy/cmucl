@@ -82,6 +82,12 @@ New in this release:
       - When CLOSE'ing a file with :ABORT, don't delete the file,
         unless we renamed it.  This preserves any and all changes to
         the file, instead of deleting it.
+      - As specified by CLHS 22.1.3.1.3, PRIN1 and friends now produce
+        a trailing zero if necessary.
+      - As specified by CLHS 22.3.3.2, ~E will produce a single zero
+        for the fractional part, if necessary.
+      - (FORMAT NIL "~,2F" 0.001) produces "0.00" instead of "0.001".
+        Thus, we actually honor the d field now.
 
   * Numerous bugfixes:
 
@@ -131,12 +137,16 @@ New in this release:
       - Document LISP::*IGNORE-WILDCARDS*.  When set, namestrings will
         not have pathnames with wildcards escaped when parsing
         namestrings or when creating namestrings.
-      - As specified by CLHS 22.1.3.1.3, PRIN1 and friends now produce
-        a trailing zero if necessary.
-      - As specified by CLHS 22.3.3.2, ~E will produce a single zero
-        for the fractional part, if necessary.
-      - (FORMAT NIL "~,2F" 0.001) produces "0.00" instead of "0.001".
-        Thus, we actually honor the d field now.
+      - Fix PPC bug in fixnum arithmetic that caused overflow.  A trap
+        would be triggered, but there's no C support for the trap.
+      - Some flet/labels functions were not disassembled at all.
+      - DEFMACRO within a WITHOUT-PACKAGE-LOCKS now actually disables
+        the package lock.
+      - (expt 1 <big number>) doesn't trigger a continuable error
+        anymore and returns 1 immediately.
+      - Disassembling methods doesn't produce a type error anymore.
+      - IGNOREing a symbol in a SYMBOL-MACROLET doesn't cause a type
+        error anymore.
 
   * Other changes:
 
