@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31 2005/08/25 21:25:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.1 2006/06/09 16:04:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,7 +240,8 @@
      (and (zerop (ldb vm:long-float-exponent-byte (long-float-exp-bits x)))
 	  (not (zerop x))))))
 
-(macrolet ((frob (name doc single double #+(and long-float x86) long)
+(macrolet ((frob (name doc single double #+(and long-float x86) long
+		       #+double-double double-double)
 	     `(defun ,name (x)
 		,doc
 		(number-dispatch ((x float))
@@ -264,7 +265,10 @@
 		     (declare (ignorable lo))
 		     (and (> (ldb vm:long-float-exponent-byte exp)
 			     vm:long-float-normal-exponent-max)
-			  ,long)))))))
+			  ,long)))
+		  #+double-double
+		  ((double-double-float)
+		   ,double-double)))))
 
   (frob float-infinity-p "Return true if the float X is an infinity (+ or -)."
     (zerop (ldb vm:single-float-significand-byte bits))
@@ -272,7 +276,9 @@
 	 (zerop lo))
     #+(and long-float x86)
     (and (zerop (ldb vm:long-float-significand-byte hi))
-	 (zerop lo)))
+	 (zerop lo))
+    #+double-double
+    (float-infinity-p (double-double-hi x)))
 
   (frob float-nan-p "Return true if the float X is a NaN (Not a Number)."
     (not (zerop (ldb vm:single-float-significand-byte bits)))
@@ -280,7 +286,9 @@
 	(not (zerop lo)))
     #+(and long-float x86)
     (or (not (zerop (ldb vm:long-float-significand-byte hi)))
-	(not (zerop lo))))
+	(not (zerop lo)))
+    #+double-double
+    (float-nan-p (double-double-hi x)))
 
   (frob float-trapping-nan-p
     "Return true if the float X is a trapping NaN (Not a Number)."
@@ -290,7 +298,9 @@
 		   vm:double-float-trapping-nan-bit))
     #+(and long-float x86)
     (zerop (logand (ldb vm:long-float-significand-byte hi)
-		   vm:long-float-trapping-nan-bit))))
+		   vm:long-float-trapping-nan-bit))
+    #+double-double
+    (float-trapping-nan-p (double-double-hi x))))
 
 
 ;;; FLOAT-PRECISION  --  Public
@@ -335,7 +345,9 @@
 	   (single-float (minusp (single-float-bits float1)))
 	   (double-float (minusp (double-float-high-bits float1)))
 	   #+long-float
-	   (long-float (minusp (long-float-exp-bits float1))))
+	   (long-float (minusp (long-float-exp-bits float1)))
+	   #+double-double
+	   (double-double-float (minusp (double-double-hi float1))))
 	 (float -1 float1)
 	 (float 1 float1))
      (abs float2)))
@@ -345,7 +357,9 @@
     ((short-float single-float) vm:single-float-digits)
     ((double-float #-long-float long-float) vm:double-float-digits)
     #+long-float
-    (long-float vm:long-float-digits)))
+    (long-float vm:long-float-digits)
+    #+double-double
+    (double-double-float vm:double-double-float-digits)))
 
 (declaim (inline float-digits float-radix))
 
@@ -357,7 +371,9 @@
     ((single-float) vm:single-float-digits)
     ((double-float) vm:double-float-digits)
     #+long-float
-    ((long-float) vm:long-float-digits)))
+    ((long-float) vm:long-float-digits)
+    #+double-double
+    ((double-double-float) vm:double-double-float-digits)))
 
 (defun float-radix (f)
   "Returns (as an integer) the radix b of its floating-point
@@ -515,6 +531,17 @@
 		  (truly-the fixnum (- biased extra-bias))
 		  sign)))))
 
+#+double-double
+(defun integer-decode-double-double-float (x)
+  (declare (type double-double-float x))
+  (multiple-value-bind (hi-int hi-exp sign)
+      (integer-decode-float (double-double-hi x))
+    (multiple-value-bind (lo-int lo-exp)
+	(integer-decode-float (double-double-lo x))
+      (values (+ lo-int
+		 (ash hi-int (- hi-exp lo-exp)))
+	      lo-exp
+	      sign))))
 
 ;;; INTEGER-DECODE-LONG-FLOAT  --  Internal
 ;;;
@@ -557,7 +584,10 @@
      (integer-decode-double-float x))
     #+long-float
     ((long-float)
-     (integer-decode-long-float x))))
+     (integer-decode-long-float x))
+    #+double-double
+    ((double-double-float)
+     (integer-decode-double-double-float x))))
 
 
 (declaim (maybe-inline decode-single-float decode-double-float))
@@ -846,8 +876,10 @@
   result is the same float format as OTHER."
   (if otherp
       (number-dispatch ((number real) (other float))
-	(((foreach rational single-float double-float #+long-float long-float)
-	  (foreach single-float double-float #+long-float long-float))
+	(((foreach rational single-float double-float #+long-float long-float
+		   #+double-double double-double-float)
+	  (foreach single-float double-float #+long-float long-float
+		   #+double-double double-double-float))
 	 (coerce number '(dispatch-type other))))
       (if (floatp number)
 	  number
@@ -860,6 +892,9 @@
 		  (((foreach single-float double-float #+long-float long-float
 			     fixnum))
 		   (coerce x ',type))
+		  #+double-double
+		  ((double-double-float)
+		   (kernel:double-double-hi x))
 		  ((bignum)
 		   (bignum-to-float x ',type))
 		  ((ratio)
@@ -867,7 +902,9 @@
   (frob %single-float single-float)
   (frob %double-float double-float)
   #+long-float
-  (frob %long-float long-float))
+  (frob %long-float long-float)
+  #+double-double
+  (frob %double-double-float double-double-float))
 
 
 ;;; FLOAT-RATIO  --  Internal
@@ -1030,7 +1067,15 @@ rounding modes & do ieee round-to-integer.
 	   (let ((res (ash bits exp)))
 	     (if (minusp number)
 		 (- res)
-		 res)))))))
+		 res)))))
+    #+double-double
+    ((double-double-float)
+     (multiple-value-bind (bits exp)
+	 (integer-decode-double-double-float number)
+       (let ((res (ash bits exp)))
+	 (if (minusp number)
+	     (- res)
+	     res))))))
 
 
 ;;; %UNARY-ROUND  --  Interface
@@ -1188,7 +1233,8 @@ rounding modes & do ieee round-to-integer.
   more efficient than RATIONALIZE, but it assumes that floating-point is
   completely accurate, giving a result that isn't as pretty."
   (number-dispatch ((x real))
-    (((foreach single-float double-float #+long-float long-float))
+    (((foreach single-float double-float #+long-float long-float
+	       #+double-double double-double-float))
      (multiple-value-bind (bits exp)
 			  (integer-decode-float x)
        (if (eql bits 0)

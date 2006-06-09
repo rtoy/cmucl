@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104 2005/06/26 17:21:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.1 2006/06/09 16:05:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,12 +37,38 @@
 (deftransform %double-float ((n) (double-float) * :when :both)
   'n)
 
+#+double-double
+(progn
+(defknown %double-double-float (real)
+  double-double-float
+  (movable foldable flushable))
+
+(deftransform float ((n prototype) (* double-double-float) * :when :both)
+  '(%double-double-float n))
+
+(deftransform %double-float ((n prototype) (double-double-float double-float) * :when :both)
+  '(double-double-hi n))
+
+(deftransform %single-float ((n prototype) (double-double-float single-float) * :when :both)
+  '(float (double-double-hi n) 1f0))
+
+(deftransform %double-double-float ((n) (double-double-float) * :when :both)
+  'n)
+
+(defun %double-double-float (n)
+  (make-double-double-float (float n 1d0) 0d0))
+
+); progn
+
 (deftransform coerce ((n type) (* *) * :when :both)
   (unless (constant-continuation-p type)
     (give-up))
   `(the ,(continuation-value type)
 	,(let ( (tspec (specifier-type (continuation-value type))) )
-	   (cond ((csubtypep tspec (specifier-type 'double-float))	
+	   (cond #+double-double
+		 ((csubtypep tspec (specifier-type 'double-double-float))
+		  '(%double-double-float n))
+		 ((csubtypep tspec (specifier-type 'double-float))	
 		  '(%double-float n))	
 		 ((csubtypep tspec (specifier-type 'float))
 		  '(%single-float n))
@@ -254,6 +280,25 @@
   (values (signed-byte 32) (unsigned-byte 32))
   (movable foldable flushable))
 
+#+double-double
+(progn
+(defknown double-double-float-p (t)
+  boolean
+  (movable foldable flushable))
+
+(defknown make-double-double-float (double-float double-float)
+  double-double-float
+  (movable foldable flushable))
+
+(defknown double-double-hi (double-double-float)
+  double-float
+  (movable foldable flushable))
+
+(defknown double-double-lo (double-double-float)
+  double-float
+  (movable foldable flushable))
+
+) ; progn
 
 (deftransform float-sign ((float &optional float2)
 			  (single-float &optional single-float) *)
@@ -1487,3 +1532,321 @@
 	 (specifier-type `(complex ,(or (numeric-type-format arg) 'float))))
      #'cis))
 
+
+;;; Support for double-double floats
+#+double-double
+(progn
+  
+(declaim (inline quick-two-sum))
+(defun quick-two-sum (a b)
+  "Computes fl(a+b) and err(a+b), assuming |a| >= |b|"
+  (declare (double-float a b))
+  (let* ((s (+ a b))
+	 (e (- b (- s a))))
+    (values s e)))
+
+(declaim (inline two-sum))
+(defun two-sum (a b)
+  "Computes fl(a+b) and err(a+b)"
+  (declare (double-float a b))
+  (let* ((s (+ a b))
+	 (v (- s a))
+	 (e (+ (- a (- s v))
+	       (- b v))))
+    (values s e)))
+
+(declaim (inline add-dd))
+(defun add-dd (a0 a1 b0 b1)
+  "Add the double-double A0,A1 to the double-double B0,B1"
+  (declare (double-float a0 a1 b0 b1)
+	   (optimize (speed 3)))
+  (multiple-value-bind (s1 s2)
+      (two-sum a0 b0)
+    (declare (double-float s1 s2))
+    (multiple-value-bind (t1 t2)
+	(two-sum a1 b1)
+      (declare (double-float t1 t2))
+      (incf s2 t1)
+      (multiple-value-bind (s1 s2)
+	  (quick-two-sum s1 s2)
+	(declare (double-float s1 s2))
+	(incf s2 t2)
+	(quick-two-sum s1 s2)))))
+
+(deftransform + ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+      (add-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
+	      (kernel:double-double-hi b) (kernel:double-double-lo b))
+    (kernel:make-double-double-float hi lo)))
+
+(declaim (inline quick-two-diff))
+(defun quick-two-diff (a b)
+  "Compute fl(a-b) and err(a-b), assuming |a| >= |b|"
+  (declare (double-float a b))
+  (let ((s (- a b)))
+    (values s (- (- a s) b))))
+
+(declaim (inline two-diff))
+(defun two-diff (a b)
+  "Compute fl(a-b) and err(a-b)"
+  (declare (double-float a b))
+  (let* ((s (- a b))
+	 (v (- s a))
+	 (e (- (- a (- s v))
+	       (+ b v))))
+    (values s e)))
+
+(declaim (inline sub-dd))
+(defun sub-dd (a0 a1 b0 b1)
+  "Subtract the double-double B0,B1 from A0,A1"
+  (declare (double-float a0 a1 b0 b1)
+	   (optimize (speed 3)))
+  (multiple-value-bind (s1 s2)
+      (two-diff a0 b0)
+    (declare (double-float s2))
+    (multiple-value-bind (t1 t2)
+	(two-diff a1 b1)
+      (incf s2 t1)
+      (multiple-value-bind (s1 s2)
+	  (quick-two-sum s1 s2)
+	(declare (double-float s2))
+	(incf s2 t2)
+	(quick-two-sum s1 s2)))))
+
+(deftransform - ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+      (sub-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
+	      (kernel:double-double-hi b) (kernel:double-double-lo b))
+    (kernel:make-double-double-float hi lo)))
+
+(declaim (inline two-prod))
+(defun two-prod (a b)
+  "Compute fl(a*b) and err(a*b)"
+  (declare (double-float a b))
+  (let ((p (* a b)))
+    (multiple-value-bind (a-hi a-lo)
+	(split a)
+      ;;(format t "a-hi, a-lo = ~S ~S~%" a-hi a-lo)
+      (multiple-value-bind (b-hi b-lo)
+	  (split b)
+	;;(format t "b-hi, b-lo = ~S ~S~%" b-hi b-lo)
+	(let ((e (+ (+ (- (* a-hi b-hi) p)
+		       (* a-hi b-lo)
+		       (* a-lo b-hi))
+		    (* a-lo b-lo))))
+	  (values p e))))))
+
+(declaim (inline split))
+(defun split (a)
+  "Split the double-float number a into a-hi and a-lo such that a =
+  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
+  a-lo contains the lower 26 bits."
+  (declare (double-float a))
+  (let* ((tmp (* a (+ 1 (expt 2 27))))
+	 (a-hi (- tmp (- tmp a)))
+	 (a-lo (- a a-hi)))
+    (values a-hi a-lo)))
+
+(declaim (inline two-prod))
+(defun two-prod (a b)
+  "Compute fl(a*b) and err(a*b)"
+  (declare (double-float a b))
+  (let ((p (* a b)))
+    (multiple-value-bind (a-hi a-lo)
+	(split a)
+      ;;(format t "a-hi, a-lo = ~S ~S~%" a-hi a-lo)
+      (multiple-value-bind (b-hi b-lo)
+	  (split b)
+	;;(format t "b-hi, b-lo = ~S ~S~%" b-hi b-lo)
+	(let ((e (+ (+ (- (* a-hi b-hi) p)
+		       (* a-hi b-lo)
+		       (* a-lo b-hi))
+		    (* a-lo b-lo))))
+	  (values p e))))))
+
+(declaim (inline two-sqr))
+(defun two-sqr (a)
+  "Compute fl(a*a) and err(a*b).  This is a more efficient
+  implementation of two-prod"
+  (declare (double-float a))
+  (let ((q (* a a)))
+    (multiple-value-bind (a-hi a-lo)
+	(split a)
+      (values q (+ (+ (- (* a-hi a-hi) q)
+		      (* 2 a-hi a-lo))
+		   (* a-lo a-lo))))))
+
+(declaim (inline mul-dd-d))
+(defun mul-dd-d (a0 a1 b)
+  (declare (double-float a0 a1 b)
+	   (optimize (speed 3)))
+  (multiple-value-bind (p1 p2)
+      (two-prod a0 b)
+    (declare (double-float p2))
+    (incf p2 (* a1 b))
+    (quick-two-sum p1 p2)))
+
+(declaim (maybe-inline mul-dd))
+(defun mul-dd (a0 a1 b0 b1)
+  "Multiply the double-double A0,A1 with B0,B1"
+  (declare (double-float a0 a1 b0 b1)
+	   (optimize (speed 3)))
+  (multiple-value-bind (p1 p2)
+      (two-prod a0 b0)
+    (declare (double-float p1 p2))
+    (incf p2 (* a0 b1))
+    (incf p2 (* a1 b0))
+    (multiple-value-bind (p1 p2)
+	(quick-two-sum p1 p2)
+      (values p1 p2))))
+
+(declaim (inline add-dd-d))
+(defun add-dd-d (a0 a1 b)
+  "Add the double-double A0,A1 to the double B"
+  (declare (double-float a0 a1 b)
+	   (optimize (speed 3)))
+  (multiple-value-bind (s1 s2)
+      (two-sum a0 b)
+    (declare (double-float s1 s2))
+    (incf s2 a1)
+    (quick-two-sum s1 s2)))
+
+
+(deftransform * ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+      (sub-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
+	      (kernel:double-double-hi b) (kernel:double-double-lo b))
+    (kernel:make-double-double-float hi lo)))
+
+(declaim (inline div-dd))
+(defun div-dd (a0 a1 b0 b1)
+  "Divide the double-double A0,A1 by B0,B1"
+  (declare (double-float a0 a1 b0 b1)
+	   (optimize (speed 3))
+	   (inline sub-dd))
+  (let ((q1 (/ a0 b0)))
+    ;; (q1b0, q1b1) = q1*(b0,b1)
+    (multiple-value-bind (q1b0 q1b1)
+	(mul-dd-d b0 b1 q1)
+      (multiple-value-bind (r0 r1)
+	  ;; r = a - q1 * b
+	  (sub-dd a0 a1 q1b0 q1b1)
+	(let ((q2 (/ r0 b0)))
+	  (multiple-value-bind (q2b0 q2b1)
+	      (mul-dd-d b0 b1 q2)
+	    (multiple-value-bind (r0 r1)
+		;; r = r - (q2*b)
+		(sub-dd r0 r1 q2b0 q2b1)
+	      (declare (ignore r1))
+	      (let ((q3 (/ r0 b0)))
+		(multiple-value-bind (q1 q2)
+		    (quick-two-sum q1 q2)
+		  (add-dd-d q1 q2 q3))))))))))
+
+(deftransform / ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+      (div-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
+	      (kernel:double-double-hi b) (kernel:double-double-lo b))
+    (kernel:make-double-double-float hi lo)))
+
+(declaim (inline sqr-d))
+(defun sqr-d (a)
+  "Square"
+  (declare (double-float a)
+	   (optimize (speed 3)))
+  (two-sqr a))
+
+(declaim (inline mul-d-d))
+(defun mul-d-d (a b)
+  (two-prod a b))
+
+(defun sqrt-dd (a0 a1)
+  (declare (type (double-float 0d0) a0 a1)
+	   (optimize (speed 3)))
+  ;; Strategy: Use Karp's trick: if x is an approximation to sqrt(a),
+  ;; then
+  ;;
+  ;; y = a*x + (a-(a*x)^2)*x/2
+  ;;
+  ;; is an approximation that is accurate to twice the accuracy of x.
+  ;; Also, the multiplication (a*x) and [-]*x can be done with only
+  ;; half the precision.
+  (if (and (zerop a0) (zerop a1))
+      (values a0 a1)
+      (let* ((x (/ (sqrt a0)))
+	     (ax (* a0 x)))
+	(multiple-value-bind (s0 s1)
+	    (sqr-d ax)
+	  (multiple-value-bind (s2)
+	      (sub-dd a0 a1 s0 s1)
+	    (multiple-value-bind (p0 p1)
+		(mul-d-d s2 (* x 0.5d0))
+	      (add-dd-d p0 p1 ax)))))))
+
+(deftransform sqrt ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+      (sqrt-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
+    (kernel:make-double-double-float hi lo)))
+
+(declaim (inline neg-dd))
+(defun neg-dd (a0 a1)
+  (declare (double-float a0 a1)
+	   (optimize (speed 3)))
+  (values (- a0) (- a1)))
+
+(declaim (inline abs-dd))
+(defun abs-dd (a0 a1)
+  (declare (double-float a0 a1)
+	   (optimize (speed 3)))
+  (if (minusp a0)
+      (neg-dd a0 a1)
+      (values a0 a1)))
+
+(deftransform abs ((a) (vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+       (abs-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
+     (kernel:make-double-double-float hi lo)))
+
+(deftransform %negate ((a) (vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+       (neg-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
+     (kernel:make-double-double-float hi lo)))
+
+(declaim (inline dd=))
+(defun dd= (a0 a1 b0 b1)
+  (and (= a0 b0)
+       (= a1 b1)))
+  
+(declaim (inline dd<))
+(defun dd< (a0 a1 b0 b1)
+  (or (< a0 b0)
+       (and (= a0 b0)
+	    (< a1 b1))))
+
+(declaim (inline dd>))
+(defun dd> (a0 a1 b0 b1)
+  (or (> a0 b0)
+       (and (= a0 b0)
+	    (> a1 b1))))
+  
+(deftransform = ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(dd= (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
+
+(deftransform < ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(dd< (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
+
+(deftransform > ((a b) (vm::double-double-float vm::double-double-float) *)
+  `(dd> (kernel:double-double-hi a)
+	(kernel:double-double-lo a)
+	(kernel:double-double-hi b)
+	(kernel:double-double-lo b)))
+
+) ; progn double-double

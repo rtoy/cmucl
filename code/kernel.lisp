@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.15 2005/06/19 02:48:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.15.4.1 2006/06/09 16:04:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,6 +141,17 @@
 #+long-float
 (defun make-long-float (exp hi #+sparc mid lo)
   (make-long-float exp hi #+sparc mid lo))
+
+#+double-double
+(defun make-double-double-float (hi lo)
+  (make-double-double-float hi lo))
+#+double-double
+(defun double-double-hi (x)
+  (double-double-hi x))
+#+double-double
+(defun double-double-lo (x)
+  (double-double-lo x))
+
 (defun single-float-bits (x) (single-float-bits x))
 (defun double-float-high-bits (x) (double-float-high-bits x))
 (defun double-float-low-bits (x) (double-float-low-bits x))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.50 2004/01/09 04:52:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.50.12.1 2006/06/09 16:05:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,6 +77,8 @@
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
 
+#+double-double
+(export '(double-double-float-digits))
 	  
 
 (eval-when (compile load eval)
@@ -148,6 +150,12 @@
 
 (defconstant long-float-digits
   (+ (byte-size long-float-significand-byte) word-bits 1))
+
+;; What is the right value for double-double floats?  I (rtoy)
+;; subtract 1 because the hidden bit in the low float doesn't count.
+#+double-double
+(defconstant double-double-float-digits
+  (1- (* 2 double-float-digits)))
 
 (defconstant float-inexact-trap-bit (ash 1 0))
 (defconstant float-divide-by-zero-trap-bit (ash 1 1))

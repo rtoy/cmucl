@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45 2006/05/15 23:56:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45.2.1 2006/06/09 16:04:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,13 @@
   `((((foreach fixnum single-float bignum ratio))
      (coerce (,function (coerce ,var 'double-float)) 'single-float))
     ((double-float)
-     (,function ,var))))
+     (,function ,var))
+    #+double-double
+    ((double-double-float)
+     ;; A hack until we write double-double-float versions of these
+     ;; special functions.
+     (kernel:make-double-double-float (,function (kernel:double-double-hi ,var))
+				      0d0))))
 
 ); eval-when (compile load eval)
 
@@ -481,6 +487,15 @@
 	     (complex (log (- number)) (coerce pi '(dispatch-type number)))
 	     (coerce (%log (coerce number 'double-float))
 		     '(dispatch-type number))))
+	#+double-double
+	((double-double-float)
+	 ;; Hack!
+	 (let ((hi (kernel:double-double-hi number)))
+	   (if (< (float-sign hi)
+		  (coerce 0 '(dispatch-type number)))
+	       (complex (coerce (log (- hi)) 'kernel:double-double-float)
+			(coerce pi '(dispatch-type number)))
+	       (coerce (%log hi) '(dispatch-type number)))))
 	((complex)
 	 (complex-log number)))))
 
@@ -496,8 +511,13 @@
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float))
 		 '(dispatch-type number))))
-     ((complex)
-      (complex-sqrt number))))
+    #+double-double
+    ((double-double-float)
+     (multiple-value-bind (hi lo)
+	 (c::sqrt-dd (kernel:double-double-hi number) (kernel:double-double-lo number))
+       (kernel:make-double-double-float hi lo)))
+    ((complex)
+     (complex-sqrt number))))
 
 
 ;;;; Trigonometic and Related Functions
@@ -507,6 +527,22 @@
   (number-dispatch ((number number))
     (((foreach single-float double-float fixnum rational))
      (abs number))
+    #+(and nil double-double)
+    ((double-double-float)
+     ;; This is a hack until abs deftransform is working
+     (multiple-value-bind (hi lo)
+	 (c::abs-dd (kernel:double-double-hi number) (kernel:double-double-lo number))
+       (kernel:make-double-double-float hi lo)))
+    #+double-double
+    ((double-double-float)
+     ;; This is a hack until abs deftransform is working
+     (let ((hi (kernel:double-double-hi number))
+	   (lo (kernel:double-double-lo number)))
+       (declare (double-float hi lo))
+       (when (minusp hi)
+	 (setf hi (- hi))
+	 (setf lo (- lo)))
+       (kernel:make-double-double-float hi lo)))
     ((complex)
      (let ((rx (realpart number))
 	   (ix (imagpart number)))
@@ -518,7 +554,10 @@
 			  (coerce ix 'double-float))
 		  'single-float))
 	 (double-float
-	  (%hypot rx ix)))))))
+	  (%hypot rx ix))
+	 #+double-double
+	 (double-double-float
+	  (error "abs complex double-double-float not implemented!")))))))
 
 (defun phase (number)
   "Returns the angle part of the polar representation of a complex number.
@@ -538,6 +577,11 @@
      (if (minusp (float-sign number))
 	 (coerce pi 'double-float)
 	 0.0d0))
+    #+double-double
+    (double-double-float
+     (if (minusp (float-sign number))
+	 (coerce pi 'double-double-float)
+	 (kernel:make-double-double-float 0d0 0d0)))
     (complex
      (atan (imagpart number) (realpart number)))))
 

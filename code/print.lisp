@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110 2006/05/01 16:10:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110.2.1 2006/06/09 16:04:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1712,6 +1712,13 @@ radix-R.  If you have a power-list then pass it in as PL."
     (output-float-infinity x stream))
    ((float-nan-p x)
     (output-float-nan x stream))
+   #+double-double
+   ((typep x 'double-double-float)
+    ;; This is a temporary hack until we get more double-double float
+    ;; stuff in place so that we don't need this.  And being able to
+    ;; print double-double's now is quite handy while we debug the
+    ;; rest of the code.
+    (output-double-double-float x stream))
    (t
     (let ((x (cond ((minusp (float-sign x))
 		    (write-char #\- stream)
@@ -1726,6 +1733,59 @@ radix-R.  If you have a power-list then pass it in as PL."
 	(output-float-aux x stream
 			  output-float-free-format-exponent-min
 			  output-float-free-format-exponent-max)))))))
+
+#+double-double
+(defun output-double-double-float (x stream)
+  (dd->string (kernel:double-double-hi x)
+	      (kernel:double-double-lo x)
+	      stream))
+
+;;; The code below for printing double-double's was written by Richard
+;;; Fateman.  Used with permission.
+
+#+double-double
+(defvar *dd-digits-to-show* 33)
+
+#+double-double
+(defun dd->lisp (a0 a1)
+  "Convert a DD number to a lisp rational"
+  (declare (double-float a0 a1))
+  (+ (rational a0) (rational a1)))
+
+#+double-double
+;; r rational number >=0
+;; n number of digits
+(defun decimalize (r n &optional (base 10))
+  (let* ((expon (if (= r 0)
+		    0
+		    (floor (cl::log (cl::abs r) base))))
+	 (frac (round (* (cl::abs r)
+			 (expt base (- n expon))))))
+    (values (signum r)
+	    frac
+	    (if (= frac 0)
+		0
+		(cl::1+ expon)))))
+
+#+double-double
+(defun dd->string (x0 x1 stream)
+  "Print out a double-double to a string"
+  (cond ((and (zerop x0) (zerop x1))
+	 (format stream "0.dd0"))
+	(t
+	 (multiple-value-bind (s r e h)
+	     (decimalize (dd->lisp x0 x1) *dd-digits-to-show* 10)
+	   ;; This is slightly modified from Richard Fateman's version to
+	   ;; print numbers in the format x.xxddee instead of 0.xxddee.
+	   (let ((out (string-right-trim "0"
+					 (subseq (setf h (format nil "~A~%" r))
+						 0
+						 (min (length h) *dd-digits-to-show*)))))
+	     (format stream "~A~A.~Add~S"
+		     (if (< s 0) "-" "")
+		     (aref out 0)
+		     (subseq out 1)
+		     (1- e)))))))
 
 
 ;; Smallest possible (unbiased) exponents

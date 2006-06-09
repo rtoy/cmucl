@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70 2006/02/04 03:32:31 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1 2006/06/09 16:05:19 rtoy Exp $
  *
  */
 
@@ -4523,6 +4523,9 @@ gc_init_tables(void)
 #ifdef type_LongFloat
     scavtab[type_LongFloat] = scav_unboxed;
 #endif
+#ifdef type_DoubleDoubleFloat
+    scavtab[type_DoubleDoubleFloat] = scav_unboxed;
+#endif    
     scavtab[type_Complex] = scav_boxed;
 #ifdef type_ComplexSingleFloat
     scavtab[type_ComplexSingleFloat] = scav_unboxed;
@@ -4623,6 +4626,9 @@ gc_init_tables(void)
 #ifdef type_LongFloat
     transother[type_LongFloat] = trans_unboxed;
 #endif
+#ifdef type_DoubleDoubleFloat
+    transother[type_DoubleDoubleFloat] = trans_unboxed;
+#endif
     transother[type_Complex] = trans_boxed;
 #ifdef type_ComplexSingleFloat
     transother[type_ComplexSingleFloat] = trans_unboxed;
@@ -4715,6 +4721,9 @@ gc_init_tables(void)
     sizetab[type_DoubleFloat] = size_unboxed;
 #ifdef type_LongFloat
     sizetab[type_LongFloat] = size_unboxed;
+#endif
+#ifdef type_DoubleDoubleFloat
+    sizetab[type_DoubleDoubleFloat] = size_unboxed;
 #endif
     sizetab[type_Complex] = size_boxed;
 #ifdef type_ComplexSingleFloat
@@ -4995,6 +5004,9 @@ valid_dynamic_space_pointer(lispobj * pointer)
 	    case type_DoubleFloat:
 #ifdef type_LongFloat
 	    case type_LongFloat:
+#endif
+#ifdef type_DoubleDoubleFloat
+	    case type_DoubleDoubleFloat:
 #endif
 	    case type_SimpleString:
 	    case type_SimpleBitVector:

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.81 2005/02/15 18:15:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.81.6.1 2006/06/09 16:05:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1092,6 +1092,16 @@
 	   (dump-var-signed exp-bits 4 file))
 	  (t
 	   (error "Unable to dump long-float")))))
+
+#+double-double
+(defun dump-double-double-float (float file)
+  ;; Dump out 2 double-floats
+  (flet ((dump-double (x)
+	   (declare (double-float x))
+	   (dump-unsigned-32 (double-float-low-bits x) file)
+	   (dump-var-signed (double-float-high-bits x) 4 file)))
+    (dump-double (kernel:double-double-hi float))
+    (dump-double (kernel:double-double-lo float))))
 	   
 ;;; Or a complex...
 
@@ -1153,7 +1163,11 @@
     #+long-float
     (long-float
      (dump-fop 'lisp::fop-long-float file)
-     (dump-long-float x file))))
+     (dump-long-float x file))
+    #+double-double
+    (double-double-float
+     (dump-fop 'lisp::fop-double-double-float file)
+     (dump-double-double-float x file))))
 
 
 ;;;; Symbol Dumping:
