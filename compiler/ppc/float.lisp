@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.1 2006/06/10 00:24:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2 2006/06/10 13:07:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -952,7 +952,7 @@
     (let ((hi-tn (double-double-reg-hi-tn y)))
       (inst lfd hi-tn nfp offset))
     (let ((lo-tn (double-double-reg-lo-tn y)))
-      (inst lfd lo-tn nfp (+ offset vm:word-bytes)))))
+      (inst lfd lo-tn nfp (+ offset (* 2 vm:word-bytes))))))
 
 (define-move-function (store-double-double 4) (vop x y)
   ((double-double-reg) (double-double-stack))
@@ -1084,8 +1084,9 @@
 	   (inst stfd hi nfp offset))
 	 (inst stfd lo nfp (+ offset (* 2 vm:word-bytes))))))))
 
-(define-vop (double-double-value)
-  (:args (x :scs (double-double-reg)))
+(define-vop (double-double-float-value)
+  (:args (x :scs (double-double-reg) :target r
+	    :load-if (not (sc-is x double-double-stack))))
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
@@ -1093,22 +1094,28 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
-    (let ((value-tn (ecase slot
-		      (:hi (double-double-reg-hi-tn x))
-		      (:lo (double-double-reg-lo-tn x)))))
-      (unless (location= value-tn r)
-	(inst fmr r value-tn)))))
+    (sc-case x
+      (double-double-reg
+       (let ((value-tn (ecase slot
+			 (:hi (double-double-reg-hi-tn x))
+			 (:lo (double-double-reg-lo-tn x)))))
+	 (unless (location= value-tn r)
+	   (inst fmr r value-tn))))
+      (double-double-stack
+       (inst lfd r (current-nfp-tn vop) (* (+ (ecase slot
+						(:hi 0)
+						(:lo 2))
+					      (tn-offset x))
+					   vm:word-bytes))))))
 
-
-(define-vop (hi/double-double-value double-double-value)
+(define-vop (hi/double-double-float double-double-float-value)
   (:translate kernel::double-double-hi)
-  (:note "double-double high part")
+  (:note "double-double float high part")
   (:variant :hi))
 
-(define-vop (lo/double-double-value double-double-value)
+(define-vop (lo/double-double-float double-double-float-value)
   (:translate kernel::double-double-lo)
-  (:note "double-double low part")
+  (:note "double-double float low part")
   (:variant :lo))
-
 
 ); progn
