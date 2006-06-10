@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.11 2006/05/07 23:50:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.11.2.1 2006/06/10 00:24:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,6 +60,8 @@
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
 
+#+double-double
+(export '(double-double-float-digits))
 
 
 	  
@@ -103,6 +105,11 @@
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
 
+;; What is the right value for double-double floats?  I (rtoy)
+;; subtract 1 because the hidden bit in the low float doesn't count.
+#+double-double
+(defconstant double-double-float-digits
+  (+ double-float-digits (- double-float-digits 1)))
 
 (defconstant float-inexact-trap-bit (ash 1 0))
 (defconstant float-divide-by-zero-trap-bit (ash 1 1))
