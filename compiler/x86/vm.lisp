@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.10 1998/07/24 17:22:44 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.10.24.1 2006/06/10 03:29:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,6 +174,8 @@
   (sap-stack stack)			; System area pointers.
   (single-stack stack)			; single-floats
   (double-stack stack :element-size 2)	; double-floats.
+  #+double-double
+  (double-double-stack stack :element-size 4)	; double-double-float
   #+long-float
   (long-stack stack :element-size 3)	; long-floats.
   (complex-single-stack stack :element-size 2)	; complex-single-floats
@@ -280,6 +282,14 @@
 	    :save-p t
 	    :alternate-scs (long-stack))
 
+  #+double-double
+  (double-double-reg float-registers
+		     :locations (0 2 4 6)
+		     :element-size 2
+		     :constant-scs ()
+		     :save-p t
+		     :alternate-scs (double-double-stack))
+  
   (complex-single-reg float-registers
 		      :locations (0 2 4 6)
 		      :element-size 2
