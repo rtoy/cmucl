@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.2 2006/06/09 19:00:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3 2006/06/11 04:52:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,9 +55,24 @@
 (deftransform %double-double-float ((n) (double-double-float) * :when :both)
   'n)
 
+#+nil
 (defun %double-double-float (n)
   (make-double-double-float (float n 1d0) 0d0))
 
+(defun %double-double-float (n)
+  (typecase n
+    (fixnum
+     (make-double-double-float (float n 1d0) 0d0))
+    (single-float
+     (make-double-double-float (float n 1d0) 0d0))
+    (double-float
+     (make-double-double-float (float n 1d0) 0d0))
+    (double-double-float
+     n)
+    (bignum
+     (bignum:bignum-to-float n 'double-double-float))
+    (ratio
+     (kernel::float-ratio n 'double-double-float))))
 ); progn
 
 (deftransform coerce ((n type) (* *) * :when :both)
@@ -417,10 +432,17 @@
 	   ;; that might occur.  We can ignore underflows which become
 	   ;; zeros.
 	   (set-bound
-	    (handler-case
-	     (scale-float (bound-value x) n)
-	     (floating-point-overflow ()
-		nil))
+	    (let ((value (handler-case
+			     (scale-float (bound-value x) n)
+			   (floating-point-overflow ()
+			     nil))))
+	      ;; This check is necessary for ppc because the current
+	      ;; implementation on ppc doesn't signal floating-point
+	      ;; overflow.  (How many other places do we need to check
+	      ;; for this?)
+	      (if (and (floatp value) (float-infinity-p value))
+		  nil
+		  value))
 	    (consp x))))
     (when (and (numeric-type-p f) (numeric-type-p ex))
       (let ((f-lo (numeric-type-low f))
@@ -440,7 +462,8 @@
 	;; might get bounds like 0 and fh*2^nh < 0.  Our bounds are
 	;; backwards.  Thus, swap the bounds to get the correct
 	;; bounds.
-	(when (and new-lo new-hi (< new-hi new-lo))
+	(when (and new-lo new-hi (< (bound-value new-hi)
+				    (bound-value new-lo)))
 	  (rotatef new-lo new-hi))
 	(make-numeric-type :class (numeric-type-class f)
 			   :format (numeric-type-format f)
