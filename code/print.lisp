@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110.2.1.2.1 2006/06/11 20:11:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110.2.1.2.2 2006/06/11 20:48:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1658,7 +1658,9 @@ radix-R.  If you have a power-list then pass it in as PL."
     (single-float "SINGLE-FLOAT")
     (double-float "DOUBLE-FLOAT")
     (short-float "SHORT-FLOAT")
-    (long-float "LONG-FLOAT")))
+    (long-float "LONG-FLOAT")
+    #+double-double
+    (double-double-float "DOUBLE-DOUBLE-FLOAT")))
 
 
 ;;; OUTPUT-FLOAT-INFINITY  --  Internal
