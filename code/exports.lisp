@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251.2.1 2006/06/09 16:04:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251.2.1.2.1 2006/06/11 20:41:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1376,7 +1376,7 @@
 	     "BINARY-TEXT-STREAM" "READ-VECTOR" "WRITE-VECTOR"
 
 	     "INVALID-FASL")
-  #+nil
+  #+double-double
   (:export "DOUBLE-DOUBLE-FLOAT"))
 
 (defpackage "STREAM"
