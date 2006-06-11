@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3 2006/06/11 04:52:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.1 2006/06/11 19:48:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,10 +46,10 @@
 (deftransform float ((n prototype) (* double-double-float) * :when :both)
   '(%double-double-float n))
 
-(deftransform %double-float ((n prototype) (double-double-float double-float) * :when :both)
+(deftransform %double-float ((n) (double-double-float) * :when :both)
   '(double-double-hi n))
 
-(deftransform %single-float ((n prototype) (double-double-float single-float) * :when :both)
+(deftransform %single-float ((n) (double-double-float) * :when :both)
   '(float (double-double-hi n) 1f0))
 
 (deftransform %double-double-float ((n) (double-double-float) * :when :both)
