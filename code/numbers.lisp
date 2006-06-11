@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60.8.1 2006/06/09 16:04:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60.8.1.2.1 2006/06/11 20:11:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -223,9 +223,11 @@
 (defun float-contagion (op x y &optional (rat-types '(fixnum bignum ratio)))
   `(((single-float single-float) (,op ,x ,y))
     (((foreach ,@rat-types)
-      (foreach single-float double-float #+long-float long-float))
+      (foreach single-float double-float #+long-float long-float
+	       #+double-double double-double-float))
      (,op (coerce ,x '(dispatch-type ,y)) ,y))
-    (((foreach single-float double-float #+long-float long-float)
+    (((foreach single-float double-float #+long-float long-float
+	       #+double-double double-double-float)
       (foreach ,@rat-types))
      (,op ,x (coerce ,y '(dispatch-type ,x))))
     #+long-float
@@ -498,7 +500,9 @@
 			   (,op (imagpart x) (imagpart y))))
        
        (((foreach bignum fixnum ratio single-float double-float
-		  #+long-float long-float) complex)
+		  #+long-float long-float
+		  #+double-double double-double-float)
+	 complex)
 	(complex (,op x (realpart y)) (,op 0 (imagpart y))))
 		   
        ((complex (or rational float))
@@ -569,7 +573,8 @@
 	      (iy (imagpart y)))
 	 (canonical-complex (- (* rx ry) (* ix iy)) (+ (* rx iy) (* ix ry)))))
       (((foreach bignum fixnum ratio single-float double-float
-		 #+long-float long-float)
+		 #+long-float long-float
+		 #+double-double double-double-float)
 	complex)
        (complex*real y x))
       ((complex (or rational float))
@@ -1097,7 +1102,9 @@
      (and (= (realpart x) (realpart y))
 	  (= (imagpart x) (imagpart y))))
     (((foreach fixnum bignum ratio single-float double-float
-	       #+long-float long-float) complex)
+	       #+long-float long-float
+	       #+double-double double-double-float)
+      complex)
      (and (= x (realpart y))
 	  (zerop (imagpart y))))
     ((complex (or float rational))

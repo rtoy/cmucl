@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2 2006/06/11 04:49:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.1 2006/06/11 20:11:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,6 +80,19 @@
 			  (dpb (ash sig -32) vm:double-float-significand-byte
 			       (if (zerop sign) 0 -1)))
 		     (ldb (byte 32 0) sig)))
+
+#+double-double
+(defun double-double-from-bits (sign exp sig)
+  (declare (type bit sign) (type (unsigned-byte 105) sig)
+	   (type (unsigned-byte 11) exp))
+  (let ((lo (ldb (byte 52 0) sig))
+	(hi (ldb (byte 53 52) sig)))
+    ;; We can't return a double-double because exp might be very
+    ;; small, and the low part of the double-double would get scaled
+    ;; to 0.  So we return both parts and expect the caller to figure
+    ;; out what to do.
+    (values (scale-float (float (* hi (- 1 (* 2 sign))) 1d0) -53)
+	    (scale-float (float lo 1d0) -52))))
 ;;;
 #+(and long-float x86)
 (defun long-from-bits (sign exp sig)
@@ -534,14 +547,14 @@
 #+double-double
 (defun integer-decode-double-double-float (x)
   (declare (type double-double-float x))
+  (let* ((r (numerator (+ (rational (double-double-hi x))
+			  (rational (double-double-lo x)))))
+	 (len (integer-length r)))
   (multiple-value-bind (hi-int hi-exp sign)
       (integer-decode-float (double-double-hi x))
-    (multiple-value-bind (lo-int lo-exp)
-	(integer-decode-float (double-double-lo x))
-      (values (+ lo-int
-		 (ash hi-int (- hi-exp lo-exp)))
-	      lo-exp
-	      sign))))
+    (values (ash r (- 105 len))
+	    (- hi-exp 52)
+	    sign))))
 
 ;;; INTEGER-DECODE-LONG-FLOAT  --  Internal
 ;;;
@@ -715,6 +728,20 @@
 		    lo)
 		   biased sign)))))
 
+;;; DECODE-DOUBLE-DOUBLE-FLOAT -- Public
+#+double-double
+(defun decode-double-double-float (x)
+  (declare (type double-double-float x))
+  (multiple-value-bind (hi-frac hi-exp sign)
+      (decode-float (double-double-hi x))
+    (multiple-value-bind (lo-frac lo-exp)
+	(decode-float (double-double-lo x))
+      (multiple-value-bind (s e)
+	  (c::two-sum hi-frac
+		      (scale-float lo-frac (- lo-exp hi-exp)))
+	(values (make-double-double-float s e)
+		hi-exp
+		(coerce sign 'double-double-float))))))
 
 ;;; DECODE-FLOAT  --  Public
 ;;;
@@ -733,7 +760,10 @@
      (decode-double-float f))
     #+long-float
     ((long-float)
-     (decode-long-float f))))
+     (decode-long-float f))
+    #+double-double
+    ((double-double-float)
+     (decode-double-double-float f))))
 
 
 ;;;; SCALE-FLOAT:
@@ -851,6 +881,14 @@
   (declare (long-float x) (fixnum exp))
   (scale-float x exp))
 
+#+double-double
+(defun scale-double-double-float (x exp)
+  (declare (type double-double-float x) (fixnum exp))
+  (let ((hi (double-double-hi x))
+	(lo (double-double-lo x)))
+    (make-double-double-float (scale-double-float hi exp)
+			      (scale-double-float lo exp))))
+
 ;;; SCALE-FLOAT  --  Public
 ;;;
 ;;;    Dispatch to the correct type-specific scale-float function.
@@ -865,7 +903,10 @@
      (scale-double-float f ex))
     #+long-float
     ((long-float)
-     (scale-long-float f ex))))
+     (scale-long-float f ex))
+    #+double-double
+    ((double-double-float)
+     (scale-double-double-float f ex))))
 
 
 ;;;; Converting to/from floats:
@@ -889,12 +930,11 @@
 (macrolet ((frob (name type)
 	     `(defun ,name (x)
 		(number-dispatch ((x real))
-		  (((foreach single-float double-float #+long-float long-float
+		  (((foreach single-float double-float
+			     #+long-float long-float
+			     #+double-double double-double-float
 			     fixnum))
 		   (coerce x ',type))
-		  #+double-double
-		  ((double-double-float)
-		   (kernel:double-double-hi x))
 		  ((bignum)
 		   (bignum-to-float x ',type))
 		  ((ratio)
@@ -945,9 +985,30 @@
 			(len (integer-length bits)))
 		   (cond ((> len digits)
 			  (assert (= len (the fixnum (1+ digits))))
-			  (scale-float (floatit (ash bits -1)) (1+ scale)))
+			  (multiple-value-bind (f0 f1)
+			      (floatit (ash bits -1))
+			    #||
+			    (format t "1: f0, f1 = ~A ~A~%" f0 f1)
+			    (format t "   scale = ~A~%" (1+ scale))
+			    ||#
+			    (if f1
+				(make-double-double-float (scale-float f0 (1+ scale))
+							  (scale-float f1 (+ 1 scale -53)))
+				(scale-float f0 (1+ scale)))))
 			 (t
-			  (scale-float (floatit bits) scale)))))
+			  (multiple-value-bind (f0 f1)
+			      (floatit bits)
+			    #||
+			    (format t "2: f0, f1 = ~A ~A~%" f0 f1)
+			    (format t "   scale = ~A~%" scale)
+			    (format t "scale-float f0 = ~A~%" (scale-float f0 scale))
+			    (when f1
+			      (format t "scale-flaot f1 = ~A~%" (scale-float f1 (- scale 53))))
+			    ||#
+			    (if f1
+				(make-double-double-float (scale-float f0 scale)
+							  (scale-float f1 (- scale 53)))
+				(scale-float f0 scale)))))))
 	       (floatit (bits)
 		 (let ((sign (if plusp 0 1)))
 		   (case format
@@ -957,7 +1018,10 @@
 		      (double-from-bits sign vm:double-float-bias bits))
 		     #+long-float
 		     (long-float
-		      (long-from-bits sign vm:long-float-bias bits))))))
+		      (long-from-bits sign vm:long-float-bias bits))
+		     #+double-double
+		     (double-double-float
+		      (double-double-from-bits sign vm:double-float-bias bits))))))
 	(loop
 	  (multiple-value-bind (fraction-and-guard rem)
 			       (truncate shifted-num den)

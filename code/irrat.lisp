@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45.2.1 2006/06/09 16:04:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45.2.1.2.1 2006/06/11 20:11:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -525,7 +525,8 @@
 (defun abs (number)
   "Returns the absolute value of the number."
   (number-dispatch ((number number))
-    (((foreach single-float double-float fixnum rational))
+    (((foreach single-float double-float fixnum rational
+	       #+double-double double-double-float))
      (abs number))
     #+(and nil double-double)
     ((double-double-float)
@@ -533,7 +534,7 @@
      (multiple-value-bind (hi lo)
 	 (c::abs-dd (kernel:double-double-hi number) (kernel:double-double-lo number))
        (kernel:make-double-double-float hi lo)))
-    #+double-double
+    #+(and nil double-double)
     ((double-double-float)
      ;; This is a hack until abs deftransform is working
      (let ((hi (kernel:double-double-hi number))

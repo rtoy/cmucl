@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110.2.1 2006/06/09 16:04:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110.2.1.2.1 2006/06/11 20:11:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1642,7 +1642,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 		  (single-float #\f)
 		  (double-float #\d)
 		  (short-float #\s)
-		  (long-float #\L))
+		  (long-float #\L)
+		  #+double-double
+		  (double-double-float #\w))
 		exp))))
 
 
@@ -1712,7 +1714,7 @@ radix-R.  If you have a power-list then pass it in as PL."
     (output-float-infinity x stream))
    ((float-nan-p x)
     (output-float-nan x stream))
-   #+double-double
+   #+(and nil double-double)
    ((typep x 'double-double-float)
     ;; This is a temporary hack until we get more double-double float
     ;; stuff in place so that we don't need this.  And being able to
@@ -1781,7 +1783,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 					 (subseq (setf h (format nil "~A~%" r))
 						 0
 						 (min (length h) *dd-digits-to-show*)))))
-	     (format stream "~A~A.~Add~S"
+	     (format stream "~A~A.~Aw~S"
 		     (if (< s 0) "-" "")
 		     (aref out 0)
 		     (subseq out 1)
@@ -1793,6 +1795,8 @@ radix-R.  If you have a power-list then pass it in as PL."
   (nth-value 1 (decode-float least-positive-double-float)))
 (defconstant single-float-min-e
   (nth-value 1 (decode-float least-positive-single-float)))
+#+double-double
+(defconstant double-double-float-min-e double-float-min-e)
 
 ;;; Implementation of Figure 1 from "Printing Floating-Point Numbers
 ;;; Quickly and Accurately", by Burger and Dybvig, 1996.  As the
@@ -1818,7 +1822,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 	(min-e
 	 (etypecase v
 	   (single-float single-float-min-e)
-	   (double-float double-float-min-e))))
+	   (double-float double-float-min-e)
+	   #+double-double
+	   (double-double-float double-double-float-min-e))))
     (multiple-value-bind (f e)
 	(integer-decode-float v)
       (let ( ;; FIXME: these even tests assume normal IEEE rounding
