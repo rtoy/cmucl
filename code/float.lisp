@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.1 2006/06/09 16:04:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2 2006/06/11 04:49:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -903,7 +903,7 @@
   (frob %double-float double-float)
   #+long-float
   (frob %long-float long-float)
-  #+double-double
+  #+(and nil double-double)
   (frob %double-double-float double-double-float))
 
 
