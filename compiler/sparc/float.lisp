@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.3 2006/06/12 17:21:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.4 2006/06/12 21:43:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2911,8 +2911,9 @@
 	   (inst stdf hi nfp offset))
 	 (inst stdf lo nfp (+ offset (* 2 vm:word-bytes))))))))
 
-(define-vop (double-double-value)
-  (:args (x :scs (double-double-reg)))
+(define-vop (double-double-float-value)
+  (:args (x :scs (double-double-reg) :target r
+	    :load-if (not (sc-is x double-double-stack))))
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
@@ -2920,19 +2921,24 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:generator 3
-    (let ((value-tn (ecase slot
-		      (:hi (double-double-reg-hi-tn x))
-		      (:lo (double-double-reg-lo-tn x)))))
-      (unless (location= value-tn r)
-	(move-double-reg r value-tn)))))
+    (sc-case x
+      (double-double-reg
+       (let ((value-tn (ecase slot
+			 (:hi (double-double-reg-hi-tn x))
+			 (:lo (double-double-reg-lo-tn x)))))
+	 (unless (location= value-tn r)
+	   (move-double-reg r value-tn))))
+      (double-double-stack
+       (inst lddf r (current-nfp-tn vop) (* (+ (ecase slot (:hi 0) (:lo 2))
+					       (tn-offset x))
+					    vm:word-bytes))))))
 
-
-(define-vop (hi/double-double-value double-double-value)
+(define-vop (hi/double-double-value double-double-float-value)
   (:translate kernel::double-double-hi)
   (:note "double-double high part")
   (:variant :hi))
 
-(define-vop (lo/double-double-value double-double-value)
+(define-vop (lo/double-double-value double-double-float-value)
   (:translate kernel::double-double-lo)
   (:note "double-double low part")
   (:variant :lo))
