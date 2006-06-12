@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.3 2006/06/12 02:55:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.4 2006/06/12 03:01:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1557,6 +1557,11 @@
 
 
 ;;; Support for double-double floats
+;;;
+;;; The algorithms contained herein are based on the code written by
+;;; Yozo Hida.  See http://www.cs.berkeley.edu/~yozo/ for more
+;;; information.
+
 #+double-double
 (progn
   
@@ -1660,6 +1665,9 @@
 	  (values p e))))))
 
 (declaim (inline split))
+;; This algorithm is the version given by Yozo Hida.  It has problems
+;; with overflow because we multiply by 1+2^27.
+#+nil
 (defun split (a)
   "Split the double-float number a into a-hi and a-lo such that a =
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
@@ -1669,6 +1677,24 @@
 	 (a-hi (- tmp (- tmp a)))
 	 (a-lo (- a a-hi)))
     (values a-hi a-lo)))
+
+;; A revised algorithm using internal CMUCL functions that shouldn't
+;; have problems with overflow.  This should still be fast
+(defun split (a)
+  "Split the double-float number a into a-hi and a-lo such that a =
+  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
+  a-lo contains the lower 26 bits."
+  (declare (double-float a))
+  (multiple-value-bind (hi lo)
+      (double-float-bits a)
+    ;; Ok, HI contains the sign and exponent and the top 20 bits of
+    ;; the fraction and LO contains the remaining 32 bits.  We want to
+    ;; make a-hi contain the top 26 bits, so grab the high 6 bits of
+    ;; LO and make a new double-float with that.  Then subtract this
+    ;; new number from a to get the desired low part.
+    (let ((a-hi (make-double-float hi (logandc2 lo (1- (ash 1 26))))))
+      (values a-hi (- a a-hi)))))
+	  
 
 (declaim (inline two-prod))
 (defun two-prod (a b)
