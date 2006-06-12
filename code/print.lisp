@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110.2.1.2.2 2006/06/11 20:48:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110.2.1.2.3 2006/06/12 03:05:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1570,7 +1570,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;; out a large factor, since there is more negative exponent range than
 ;;; positive range.
 ;;;
-(defun scale-exponent (original-x)
+(defun scale-exponent-double (original-x)
   (let* ((x (coerce original-x 'long-float)))
     (multiple-value-bind (sig exponent)
 			 (decode-float x)
@@ -1596,6 +1596,44 @@ radix-R.  If you have a power-list then pass it in as PL."
 		     ((>= z 0.1l0)
 		      (values (float z original-x) ex))))))))))
 
+;; Like scale-exponent-double but for double-double-float.
+(defun scale-exponent-double-double (original-x)
+  (let* ((x original-x))
+    (multiple-value-bind (sig exponent)
+	(decode-float x)
+      (declare (ignore sig))
+      (if (= x 0)
+	  (values (float 0 original-x) 1)
+	  (let* ((ex (round (* exponent (log 2l0 10))))
+		 (x (if (minusp ex)
+			(if (float-denormalized-p x)
+			    #-long-float
+			    (* x (expt 10 16) (expt 10 (- (- ex) 16)))
+			    #+long-float
+			    (* x 1.0l18 (expt 10.0l0 (- (- ex) 18)))
+			    (* x 10 (expt 10 (- (- ex) 1))))
+			(/ x 10 (expt 10 (1- ex))))))
+	    (do ((d 10 (* d 10))
+		 (y x (/ x d))
+		 (ex ex (1+ ex)))
+		((< y 1)
+		 (do ((m 10 (* m 10))
+		      (z y (* y m))
+		      (ex ex (1- ex)))
+		     ((>= (* 10 z) 1)
+		      (values (float z original-x) ex))))))))))
+
+#-double-double
+(defun scale-exponent (original-x)
+  (scale-exponent-double original-x))
+
+#+double-double
+(defun scale-exponent (original-x)
+  ;; We split this into two types because we don't want
+  ;; double-double-float to slow down printing double-floats.
+  (if (typep original-x 'double-double-float)
+      (scale-exponent-double-double original-x)
+      (scale-exponent-double original-x)))
 
 ;;;; Entry point for the float printer.
 
