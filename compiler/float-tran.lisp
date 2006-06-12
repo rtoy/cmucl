@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.6 2006/06/12 20:02:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.7 2006/06/12 20:34:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1642,11 +1642,45 @@
 	(incf s2 t2)
 	(quick-two-sum s1 s2)))))
 
+(declaim (inline sub-d-dd))
+(defun sub-d-dd (a b0 b1)
+  "Compute double-double = double - double-double"
+  (declare (double-float a b0 b1)
+	   (optimize (speed 3) (safety 0)))
+  (multiple-value-bind (s1 s2)
+      (two-diff a b0)
+    (declare (double-float s2))
+    (decf s2 b1)
+    (quick-two-sum s1 s2)))
+
+(declaim (inline sub-dd-d))
+(defun sub-dd-d (a0 a1 b)
+  "Subtract the double B from the double-double A0,A1"
+  (declare (double-float a0 a1 b)
+	   (optimize (speed 3) (safety 0)))
+  (multiple-value-bind (s1 s2)
+      (two-diff a0 b)
+    (declare (double-float s2))
+    (incf s2 a1)
+    (quick-two-sum s1 s2)))
+
 (deftransform - ((a b) (vm::double-double-float vm::double-double-float) *)
   `(multiple-value-bind (hi lo)
       (sub-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-    (kernel:%make-double-double-float hi lo)))
+     (kernel:%make-double-double-float hi lo)))
+
+(deftransform - ((a b) (double-float vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+      (sub-d-dd a
+		(kernel:double-double-hi b) (kernel:double-double-lo b))
+     (kernel:%make-double-double-float hi lo)))
+
+(deftransform - ((a b) (vm::double-double-float double-float) *)
+  `(multiple-value-bind (hi lo)
+      (sub-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
+		b)
+     (kernel:%make-double-double-float hi lo)))
 
 (declaim (inline two-prod))
 (defun two-prod (a b)
