@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.1 2006/06/12 00:04:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.2 2006/06/12 03:26:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2891,7 +2891,7 @@
 		 :load-if (not (sc-is res double-double-stack))))
   (:arg-types double-float double-float)
   (:result-types double-double-float)
-  (:translate kernel::%make-double-double-float)
+  (:translate kernel::make-double-double-float)
   (:note "inline double-double-float creation")
   (:policy :fast-safe)
   (:vop-var vop)
