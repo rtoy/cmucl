@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.15.4.1.2.3 2006/06/12 17:21:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/kernel.lisp,v 1.15.4.1.2.4 2006/06/12 20:02:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -151,6 +151,7 @@
 #+double-double
 (defun make-double-double-float (hi lo)
   ;; Make sure the parts make sense for a double-double
+  (declare (inline float-infinity-p float-nan-p))
   (if (or (float-infinity-p hi) (float-nan-p hi))
       (%make-double-double-float hi lo)
       (multiple-value-bind (s e)

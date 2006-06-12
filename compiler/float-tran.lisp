@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.5 2006/06/12 17:21:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.6 2006/06/12 20:02:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1606,7 +1606,7 @@
   `(multiple-value-bind (hi lo)
       (add-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-    (kernel:make-double-double-float hi lo)))
+    (kernel:%make-double-double-float hi lo)))
 
 (declaim (inline quick-two-diff))
 (defun quick-two-diff (a b)
@@ -1646,7 +1646,7 @@
   `(multiple-value-bind (hi lo)
       (sub-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-    (kernel:make-double-double-float hi lo)))
+    (kernel:%make-double-double-float hi lo)))
 
 (declaim (inline two-prod))
 (defun two-prod (a b)
@@ -1736,7 +1736,7 @@
     (incf p2 (* a1 b))
     (quick-two-sum p1 p2)))
 
-(declaim (maybe-inline mul-dd))
+(declaim (inline mul-dd))
 (defun mul-dd (a0 a1 b0 b1)
   "Multiply the double-double A0,A1 with B0,B1"
   (declare (double-float a0 a1 b0 b1)
@@ -1761,12 +1761,35 @@
     (incf s2 a1)
     (quick-two-sum s1 s2)))
 
+(deftransform + ((a b) (vm::double-double-float (or integer single-float double-float)) *)
+  `(multiple-value-bind (hi lo)
+      (add-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
+		(float b 1d0))
+     (kernel:%make-double-double-float hi lo)))
+
+(deftransform + ((a b) ((or integer single-float double-float) vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+      (add-dd-d (kernel:double-double-hi b) (kernel:double-double-lo b)
+		(float a 1d0))
+     (kernel:%make-double-double-float hi lo)))
 
 (deftransform * ((a b) (vm::double-double-float vm::double-double-float) *)
   `(multiple-value-bind (hi lo)
       (mul-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-    (kernel:make-double-double-float hi lo)))
+     (kernel:%make-double-double-float hi lo)))
+
+(deftransform * ((a b) (vm::double-double-float (or integer single-float double-float)) *)
+  `(multiple-value-bind (hi lo)
+       (mul-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
+		 (float b 1d0))
+     (kernel:%make-double-double-float hi lo)))
+
+(deftransform * ((a b) ((or integer single-float double-float) vm::double-double-float) *)
+  `(multiple-value-bind (hi lo)
+       (mul-dd-d (kernel:double-double-hi b) (kernel:double-double-lo b)
+		 (float a 1d0))
+     (kernel:%make-double-double-float hi lo)))
 
 (declaim (inline div-dd))
 (defun div-dd (a0 a1 b0 b1)
@@ -1793,11 +1816,35 @@
 		    (quick-two-sum q1 q2)
 		  (add-dd-d q1 q2 q3))))))))))
 
+(declaim (inline div-dd-d))
+(defun div-dd-d (a0 a1 b)
+  (declare (double-float a0 a1 b)
+	   (optimize (speed 3)))
+  (let ((q1 (/ a0 b)))
+    ;; q1 = approx quotient
+    ;; Now compute a - q1 * b
+    (multiple-value-bind (p1 p2)
+	(two-prod q1 b)
+      (multiple-value-bind (s e)
+	  (two-diff a0 p1)
+	(declare (double-float e))
+	(incf e a1)
+	(decf e p2)
+	;; Next approx
+	(let ((q2 (/ (+ s e) b)))
+	  (quick-two-sum q1 q2))))))
+
 (deftransform / ((a b) (vm::double-double-float vm::double-double-float) *)
   `(multiple-value-bind (hi lo)
       (div-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-    (kernel:make-double-double-float hi lo)))
+     (kernel:%make-double-double-float hi lo)))
+
+(deftransform / ((a b) (vm::double-double-float (or integer single-float double-float)) *)
+  `(multiple-value-bind (hi lo)
+       (div-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
+		 (float b 1d0))
+     (kernel:%make-double-double-float hi lo)))
 
 (declaim (inline sqr-d))
 (defun sqr-d (a)
@@ -1810,6 +1857,7 @@
 (defun mul-d-d (a b)
   (two-prod a b))
 
+(declaim (inline sqrt-dd))
 (defun sqrt-dd (a0 a1)
   (declare (type (double-float 0d0) a0 a1)
 	   (optimize (speed 3)))
@@ -1833,10 +1881,10 @@
 		(mul-d-d s2 (* x 0.5d0))
 	      (add-dd-d p0 p1 ax)))))))
 
-(deftransform sqrt ((a b) (vm::double-double-float vm::double-double-float) *)
+(deftransform sqrt ((a) (vm::double-double-float) *)
   `(multiple-value-bind (hi lo)
       (sqrt-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-    (kernel:make-double-double-float hi lo)))
+    (kernel:%make-double-double-float hi lo)))
 
 (declaim (inline neg-dd))
 (defun neg-dd (a0 a1)
@@ -1855,12 +1903,12 @@
 (deftransform abs ((a) (vm::double-double-float) *)
   `(multiple-value-bind (hi lo)
        (abs-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-     (kernel:make-double-double-float hi lo)))
+     (kernel:%make-double-double-float hi lo)))
 
 (deftransform %negate ((a) (vm::double-double-float) *)
   `(multiple-value-bind (hi lo)
        (neg-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-     (kernel:make-double-double-float hi lo)))
+     (kernel:%make-double-double-float hi lo)))
 
 (declaim (inline dd=))
 (defun dd= (a0 a1 b0 b1)
