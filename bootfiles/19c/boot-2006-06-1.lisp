@@ -11,10 +11,12 @@
 ;;; work.  For some reason, the cross-compile makes these known
 ;;; functions be infinite loops, but if we compile them here and setf
 ;;; fdefinition we get workingness.  
-(defun foo (x y)
+(defun %foo (x y)
   (declare (double-float x y))
-  (kernel:make-double-double-float x y))
-(compile 'foo)
+  (kernel:%make-double-double-float x y))
+(compile '%foo)
+
+
 
 (defun foo-hi (x)
   (declare (type kernel:double-double-float x))
@@ -24,13 +26,22 @@
   (declare (type kernel:double-double-float x))
   (kernel:double-double-lo x))
 (compile 'foo-lo)
-(defun %foo (x)
+(defun %coerce-foo (x)
   (if (typep x 'kernel:double-double-float)
       x
       (kernel:make-double-double-float (float x 1d0) 0d0)))
 (compile '%foo)
 
-(setf (fdefinition 'kernel::make-double-double-float) #'foo)
+(setf (fdefinition 'kernel::%make-double-double-float) #'%foo)
 (setf (fdefinition 'kernel::double-double-hi) #'foo-hi)
 (setf (fdefinition 'kernel::double-double-lo) #'foo-lo)
-(setf (fdefinition 'kernel::%double-double-float) #'%foo)
+(setf (fdefinition 'kernel::%double-double-float) #'%coerce-foo)
+
+(in-package "KERNEL")
+(defun make-double-double-float (hi lo)
+  ;; Make sure the parts make sense for a double-double
+  (if (or (float-infinity-p hi) (float-nan-p hi))
+      (%make-double-double-float hi lo)
+      (multiple-value-bind (s e)
+	  (c::two-sum hi lo)
+	(%make-double-double-float s e))))

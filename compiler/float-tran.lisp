@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.4 2006/06/12 03:01:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.5 2006/06/12 17:21:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,9 +301,10 @@
   boolean
   (movable foldable flushable))
 
-(defknown make-double-double-float (double-float double-float)
+(defknown %make-double-double-float (double-float double-float)
   double-double-float
   (movable foldable flushable))
+
 
 (defknown double-double-hi (double-double-float)
   double-float
