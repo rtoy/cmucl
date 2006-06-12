@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.41.18.1 2006/06/10 03:29:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.41.18.1.2.1 2006/06/12 00:04:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -4805,7 +4805,7 @@
 	       :load-if (not (sc-is r double-double-stack))))
   (:arg-types double-float double-float)
   (:result-types double-double-float)
-  (:translate kernel::make-double-double-float)
+  (:translate kernel::%make-double-double-float)
   (:note "inline double-double-float creation")
   (:policy :fast-safe)
   (:vop-var vop)
