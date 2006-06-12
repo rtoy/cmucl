@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.1 2006/06/11 20:11:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.2 2006/06/12 02:59:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -734,14 +734,10 @@
   (declare (type double-double-float x))
   (multiple-value-bind (hi-frac hi-exp sign)
       (decode-float (double-double-hi x))
-    (multiple-value-bind (lo-frac lo-exp)
-	(decode-float (double-double-lo x))
-      (multiple-value-bind (s e)
-	  (c::two-sum hi-frac
-		      (scale-float lo-frac (- lo-exp hi-exp)))
-	(values (make-double-double-float s e)
-		hi-exp
-		(coerce sign 'double-double-float))))))
+    (values (make-double-double-float hi-frac
+				      (scale-float (double-double-lo x) (- hi-exp)))
+	    hi-exp
+	    (coerce sign 'double-double-float))))
 
 ;;; DECODE-FLOAT  --  Public
 ;;;
