@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.7 2006/06/12 20:34:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.8 2006/06/13 19:54:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1702,7 +1702,19 @@
 (declaim (inline split))
 ;; This algorithm is the version given by Yozo Hida.  It has problems
 ;; with overflow because we multiply by 1+2^27.
-#+nil
+;;
+;; But be very careful about replacing this with a new algorithm.  The
+;; values computed here are very important to get the rounding right.
+;; If you change this, the rounding may be different, which will
+;; affect other parts of the algorithm.
+;;
+;; I (rtoy) tried a different algorithm that split the number in two
+;; as described, but without overflow.  However, that caused
+;; -9.4294948327242751340284975915175w0/1w14 to return a value that
+;; wasn't really close to -9.4294948327242751340284975915175w-14.
+;;
+;; This also means we can't print numbers like 1w308 with the current
+;; printing algorithm, or even divide 1w308 by 10.
 (defun split (a)
   "Split the double-float number a into a-hi and a-lo such that a =
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
@@ -1713,23 +1725,6 @@
 	 (a-lo (- a a-hi)))
     (values a-hi a-lo)))
 
-;; A revised algorithm using internal CMUCL functions that shouldn't
-;; have problems with overflow.  This should still be fast
-(defun split (a)
-  "Split the double-float number a into a-hi and a-lo such that a =
-  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
-  a-lo contains the lower 26 bits."
-  (declare (double-float a))
-  (multiple-value-bind (hi lo)
-      (double-float-bits a)
-    ;; Ok, HI contains the sign and exponent and the top 20 bits of
-    ;; the fraction and LO contains the remaining 32 bits.  We want to
-    ;; make a-hi contain the top 26 bits, so grab the high 6 bits of
-    ;; LO and make a new double-float with that.  Then subtract this
-    ;; new number from a to get the desired low part.
-    (let ((a-hi (make-double-float hi (logandc2 lo (1- (ash 1 26))))))
-      (values a-hi (- a a-hi)))))
-	  
 
 (declaim (inline two-prod))
 (defun two-prod (a b)
@@ -1767,7 +1762,9 @@
   (multiple-value-bind (p1 p2)
       (two-prod a0 b)
     (declare (double-float p2))
+    ;;(format t "mul-dd-d p1,p2 = ~A ~A~%" p1 p2)
     (incf p2 (* a1 b))
+    ;;(format t "mul-dd-d p2 = ~A~%" p2)
     (quick-two-sum p1 p2)))
 
 (declaim (inline mul-dd))
@@ -1833,11 +1830,14 @@
 	   (inline sub-dd))
   (let ((q1 (/ a0 b0)))
     ;; (q1b0, q1b1) = q1*(b0,b1)
+    ;;(format t "q1 = ~A~%" q1)
     (multiple-value-bind (q1b0 q1b1)
 	(mul-dd-d b0 b1 q1)
+      ;;(format t "q1*b = ~A ~A~%" q1b0 q1b1)
       (multiple-value-bind (r0 r1)
 	  ;; r = a - q1 * b
 	  (sub-dd a0 a1 q1b0 q1b1)
+	;;(format t "r = ~A ~A~%" r0 r1)
 	(let ((q2 (/ r0 b0)))
 	  (multiple-value-bind (q2b0 q2b1)
 	      (mul-dd-d b0 b1 q2)
