@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.40.10.1 2006/06/11 20:11:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.40.10.2 2006/06/13 19:58:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1881,12 +1881,12 @@ down to individual words.")
   ;; double-float, and the remaining bits go to the high double-float.
   ;; That's a total of 4 words.
   (let* ((bits (ash bits -32))
-	 (lo (ldb (byte 52 0) bits))
-	 (hi (ldb (byte 53 52) bits))
+	 (lo (ldb (byte vm:double-float-digits 0) bits))
+	 (hi (ldb (byte vm:double-float-digits vm:double-float-digits) bits))
 	 (exp (- exp vm:double-float-bias)))
     (kernel:make-double-double-float
-     (scale-float (float hi 1d0) (+ exp 52 -105))
-     (scale-float (float lo 1d0) (- exp 105)))))
+     (scale-float (float hi 1d0) (+ exp 53 -106))
+     (scale-float (float lo 1d0) (- exp 106)))))
     
 
 ;;; BIGNUM-TO-FLOAT   --  Interface
