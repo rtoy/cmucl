@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.50.12.1 2006/06/09 16:05:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.50.12.1.2.1 2006/06/13 19:46:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -151,11 +151,9 @@
 (defconstant long-float-digits
   (+ (byte-size long-float-significand-byte) word-bits 1))
 
-;; What is the right value for double-double floats?  I (rtoy)
-;; subtract 1 because the hidden bit in the low float doesn't count.
 #+double-double
 (defconstant double-double-float-digits
-  (1- (* 2 double-float-digits)))
+  (* 2 double-float-digits))
 
 (defconstant float-inexact-trap-bit (ash 1 0))
 (defconstant float-divide-by-zero-trap-bit (ash 1 1))
