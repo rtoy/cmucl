@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.59 2003/06/06 12:22:33 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.59.18.1 2006/06/09 16:04:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,10 @@
 
 (in-package "KERNEL")
 (export '(%instancep instance fixnump bignump bitp ratiop weak-pointer-p
-		     %typep class-cell-typep))
+	  %typep class-cell-typep))
+
+#+double-double
+(export '(double-double-float-p))
 
 (in-package "SYSTEM")
 (export '(system-area-pointer system-area-pointer-p))
@@ -59,6 +62,7 @@
       #+long-float complex-long-float-p
       complex-rational-p
       complex-single-float-p
+      #+double-double double-double-float-p
       double-float-p
       fdefn-p
       fixnump
@@ -223,6 +227,7 @@
 		 (single-float (typep num 'single-float))
 		 (double-float (typep num 'double-float))
 		 (long-float (typep num 'long-float))
+		 (double-double-float (typep num 'double-double-float))
 		 ((nil) (floatp num))))
 	      ((nil) t)))
 	  (flet ((bound-test (val)

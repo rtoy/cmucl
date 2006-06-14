@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.90 2005/04/14 20:52:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.90.6.1 2006/06/09 16:04:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -872,6 +872,19 @@
 	      (hi (fast-read-u-integer 4))
 	      (exp (fast-read-s-integer #+x86 2 #+sparc 4)))
 	  (make-long-float exp hi #+sparc mid lo))
+      (done-with-fast-read-byte))))
+
+#+double-double
+(define-fop (fop-double-double-float 67)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let ((hi-lo (fast-read-u-integer 4))
+	      (hi-hi (fast-read-s-integer 4))
+	      (lo-lo (fast-read-u-integer 4))
+	      (lo-hi (fast-read-s-integer 4)))
+	  (kernel::make-double-double-float
+	   (make-double-float hi-hi hi-lo)
+	   (make-double-float lo-hi lo-lo)))
       (done-with-fast-read-byte))))
 
 

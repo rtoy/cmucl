@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.4 2005/12/11 03:45:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.4.2.1 2006/06/10 00:24:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,6 +150,8 @@
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
+  #+double-double
+  (double-double-stack non-descriptor-stack :element-size 4 :alignment 2)
   (complex-single-stack non-descriptor-stack :element-size 2)
   (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
@@ -226,6 +228,15 @@
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
+
+  ;; Non-descriptor double-double floats
+  #+double-double
+  (double-double-reg float-registers
+   :locations #.(loop for i from 0 to 30 by 2 collect i)
+   :element-size 2 :alignment 2
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (double-double-stack))
 
   (complex-single-reg float-registers
    :locations #.(loop for i from 0 to 30 by 2 collect i)

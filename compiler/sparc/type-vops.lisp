@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.24 2005/02/07 23:23:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.24.8.1 2006/06/09 16:05:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -117,6 +117,11 @@
 (def-type-vops long-float-p check-long-float long-float
   object-not-long-float-error vm:long-float-type)
 
+#+double-double
+(def-type-vops double-double-float-p check-double-double-float
+  double-double-float object-not-double-double-float-error
+  vm:double-double-float-type)
+	       
 (def-type-vops simple-string-p check-simple-string simple-string
   object-not-simple-string-error vm:simple-string-type)
 
@@ -294,6 +299,7 @@
 (def-type-vops numberp check-number nil object-not-number-error
   vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type vm:ratio-type
   vm:single-float-type vm:double-float-type #+long-float vm:long-float-type
+  #+double-double vm:double-double-float-type
   vm:complex-type vm:complex-single-float-type vm:complex-double-float-type
   #+long-float vm:complex-long-float-type)
 
@@ -304,11 +310,13 @@
   vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type)
 
 (def-type-vops floatp check-float nil object-not-float-error
-  vm:single-float-type vm:double-float-type #+long-float vm:long-float-type)
+  vm:single-float-type vm:double-float-type #+long-float vm:long-float-type
+  #+double-double vm:double-double-float-type)
 
 (def-type-vops realp check-real nil object-not-real-error
   vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type
-  vm:single-float-type vm:double-float-type #+long-float vm:long-float-type)
+  vm:single-float-type vm:double-float-type #+long-float vm:long-float-type
+  #+double-double vm:double-double-float-type)
 
 
 ;;;; Other integer ranges.

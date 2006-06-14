@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.60 2006/02/19 19:33:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.60.4.1 2006/06/11 20:11:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,6 +275,10 @@
   (set-secondary-attribute #\d #.constituent-expt)
   (set-secondary-attribute #\s #.constituent-expt)
   (set-secondary-attribute #\l #.constituent-expt)
+  #+double-double
+  (progn
+    (set-secondary-attribute #\W #.constituent-expt)
+    (set-secondary-attribute #\w #.constituent-expt))
   ;; See CLHS 2.1.4.2 for the list of constituent characters that are
   ;; invalid constituent characters.
   (set-secondary-attribute #\Space #.constituent-invalid)
@@ -1374,7 +1378,9 @@
 ;;;; Number reading functions.
 
 (defmacro exponent-letterp (letter)
-  `(memq ,letter '(#\E #\S #\F #\L #\D #\e #\s #\f #\l #\d)))
+  `(memq ,letter '(#\E #\S #\F #\L #\D #\e #\s #\f #\l #\d
+		   #+double-double #\w
+		   #+double-double #\W)))
 
 
 (defvar *integer-reader-safe-digits*
@@ -1565,7 +1571,9 @@ the end of the stream."
                                   (#\S 'short-float)
                                   (#\F 'single-float)
                                   (#\D 'double-float)
-                                  (#\L 'long-float)))
+                                  (#\L 'long-float)
+				  #+double-double
+				  (#\W 'kernel:double-double-float)))
                   num)
 	     (setq num (make-float-aux (* (expt 10 exponent) number) divisor
 				       float-format stream))

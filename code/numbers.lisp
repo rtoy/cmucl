@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60 2004/09/08 16:09:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60.8.1.2.1 2006/06/11 20:11:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,7 +76,8 @@
 ;;; probable first.)
 ;;;
 (defconstant type-test-ordering
-  '(fixnum single-float double-float integer #+long-float long-float bignum
+  '(fixnum single-float double-float integer #+long-float long-float
+    #+double-double double-double-float bignum
     complex ratio))
 
 ;;; Type-Test-Order  --  Internal
@@ -167,7 +168,53 @@
 
 ;;;; Binary operation dispatching utilities:
 
+;; These are helper functions to get two-arg arithmetic working.
+#+double-double
+(progn
+(defun dd-+ (a b)
+  (multiple-value-bind (x y)
+      (c::add-dd (kernel:double-double-hi a)
+		 (kernel:double-double-lo a)
+		 (kernel:double-double-hi b)
+		 (kernel:double-double-lo b))
+    (make-double-double-float x y)))
+
+(defun dd-- (a b)
+  (multiple-value-bind (x y)
+      (c::sub-dd (kernel:double-double-hi a)
+		 (kernel:double-double-lo a)
+		 (kernel:double-double-hi b)
+		 (kernel:double-double-lo b))
+    (make-double-double-float x y)))
+
+(defun dd-* (a b)
+  (multiple-value-bind (x y)
+      (c::mul-dd (kernel:double-double-hi a)
+		 (kernel:double-double-lo a)
+		 (kernel:double-double-hi b)
+		 (kernel:double-double-lo b))
+    (make-double-double-float x y)))
+  
+(defun dd-/ (a b)
+  (multiple-value-bind (x y)
+      (c::div-dd (kernel:double-double-hi a)
+		 (kernel:double-double-lo a)
+		 (kernel:double-double-hi b)
+		 (kernel:double-double-lo b))
+    (make-double-double-float x y)))
+)
+
+
 (eval-when (compile eval)
+
+#+double-double
+(defun dd-contagion (op)  
+  (case op
+    (+ 'dd-+)
+    (- 'dd--)
+    (* 'dd-*)
+    (/ 'dd-/)
+    (otherwise op)))
 
 ;;; FLOAT-CONTAGION  --  Internal
 ;;;
@@ -176,9 +223,11 @@
 (defun float-contagion (op x y &optional (rat-types '(fixnum bignum ratio)))
   `(((single-float single-float) (,op ,x ,y))
     (((foreach ,@rat-types)
-      (foreach single-float double-float #+long-float long-float))
+      (foreach single-float double-float #+long-float long-float
+	       #+double-double double-double-float))
      (,op (coerce ,x '(dispatch-type ,y)) ,y))
-    (((foreach single-float double-float #+long-float long-float)
+    (((foreach single-float double-float #+long-float long-float
+	       #+double-double double-double-float)
       (foreach ,@rat-types))
      (,op ,x (coerce ,y '(dispatch-type ,x))))
     #+long-float
@@ -187,6 +236,12 @@
     #+long-float
     ((long-float (foreach single-float double-float))
      (,op ,x (coerce ,y 'long-float)))
+    #+double-double
+    (((foreach single-float double-float double-double-float) double-double-float)
+     (,(dd-contagion op) (coerce ,x 'double-double-float) ,y))
+    #+double-double
+    ((double-double-float (foreach single-float double-float))
+     (,(dd-contagion op) ,x (coerce ,y 'double-double-float)))
     (((foreach single-float double-float) double-float)
      (,op (coerce ,x 'double-float) ,y))
     ((double-float single-float)
@@ -445,7 +500,9 @@
 			   (,op (imagpart x) (imagpart y))))
        
        (((foreach bignum fixnum ratio single-float double-float
-		  #+long-float long-float) complex)
+		  #+long-float long-float
+		  #+double-double double-double-float)
+	 complex)
 	(complex (,op x (realpart y)) (,op 0 (imagpart y))))
 		   
        ((complex (or rational float))
@@ -516,7 +573,8 @@
 	      (iy (imagpart y)))
 	 (canonical-complex (- (* rx ry) (* ix iy)) (+ (* rx iy) (* ix ry)))))
       (((foreach bignum fixnum ratio single-float double-float
-		 #+long-float long-float)
+		 #+long-float long-float
+		 #+double-double double-double-float)
 	complex)
        (complex*real y x))
       ((complex (or rational float))
@@ -630,6 +688,11 @@
   (number-dispatch ((n number))
     (((foreach fixnum single-float double-float #+long-float long-float))
      (%negate n))
+    #+double-double
+    ((double-double-float)
+     (multiple-value-bind (hi lo)
+	 (c::neg-dd (kernel:double-double-hi n) (kernel:double-double-lo n))
+       (kernel:make-double-double-float hi lo)))
     ((bignum)
      (negate-bignum n))
     ((ratio)
@@ -666,7 +729,8 @@
       ((bignum bignum)
        (bignum-truncate number divisor))
       
-      (((foreach single-float double-float #+long-float long-float)
+      (((foreach single-float double-float #+long-float long-float
+		 #+double-double double-double-float)
 	(or rational single-float))
        (if (eql divisor 1)
 	   (let ((res (%unary-truncate number)))
@@ -678,6 +742,12 @@
       #+long-float
       (((foreach double-float single-float) long-float)
        (truncate-float long-float))
+      #+double-double
+      ((double-double-float (or single-float double-float))
+       (truncate-float double-double-float))
+      #+double-double
+      (((foreach single-float double-float) double-double-float)
+       (truncate-float double-double-float))
       ((double-float (or single-float double-float))
        (truncate-float double-float))
       ((single-float double-float)
@@ -910,8 +980,39 @@
      (declare (list nlist))
      (if (< (car nlist) result) (setq result (car nlist)))))
 
+;; These are helper functions to get two-arg comparison working
+#+double-double
+(progn
+(defun dd-< (a b)
+  (c::dd< (kernel:double-double-hi a)
+	       (kernel:double-double-lo a)
+	       (kernel:double-double-hi b)
+	       (kernel:double-double-lo b)))
+(defun dd-> (a b)
+  (c::dd> (kernel:double-double-hi a)
+	       (kernel:double-double-lo a)
+	       (kernel:double-double-hi b)
+	       (kernel:double-double-lo b)))
+(defun dd-= (a b)
+  (c::dd= (kernel:double-double-hi a)
+	       (kernel:double-double-lo a)
+	       (kernel:double-double-hi b)
+	       (kernel:double-double-lo b)))
+)
+
 (eval-when (compile eval)
 
+;; This is a hack to get two-arg comparison functions going.  Convert
+;; the op to equivalent dd op.  Once the deftransforms are in place,
+;; these should go away.
+(defun dd-op (op)
+  (case op
+    (< 'dd-<)
+    (> 'dd->)
+    (= 'dd-=)
+    (otherwise op)))
+
+  
 (defun basic-compare (op)
   `(((fixnum fixnum) (,op x y))
 
@@ -922,11 +1023,19 @@
     #+long-float
     ((long-float (foreach single-float double-float))
      (,op x (coerce y 'long-float)))
+    #+double-double
+    (((foreach single-float double-float double-double-float) double-double-float)
+     (,(dd-op op) (coerce x 'double-double-float) y))
+    #+double-double
+    ((double-double-float (foreach single-float double-float))
+     (,(dd-op op) x (coerce y 'double-double-float)))
     (((foreach single-float double-float) double-float)
      (,op (coerce x 'double-float) y))
     ((double-float single-float)
      (,op x (coerce y 'double-float)))
-    (((foreach single-float double-float #+long-float long-float) rational)
+    (((foreach single-float double-float #+long-float long-float
+	       #+double-double double-double-float)
+      rational)
      ;; Comparing infinity against any rational produces the same
      ;; answer as comparing infinity against 0.  Comparison against
      ;; zero is quite common, so add a special case for that.
@@ -993,7 +1102,9 @@
      (and (= (realpart x) (realpart y))
 	  (= (imagpart x) (imagpart y))))
     (((foreach fixnum bignum ratio single-float double-float
-	       #+long-float long-float) complex)
+	       #+long-float long-float
+	       #+double-double double-double-float)
+      complex)
      (and (= x (realpart y))
 	  (zerop (imagpart y))))
     ((complex (or float rational))

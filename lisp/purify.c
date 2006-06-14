@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36 2006/01/18 15:21:26 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36.2.1 2006/06/09 16:05:19 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -143,6 +143,9 @@ maybe_can_move_p(lispobj thing)
 	      case type_DoubleFloat:
 #ifdef type_LongFloat
 	      case type_LongFloat:
+#endif
+#ifdef type_DoubleDoubleFloat
+	      case type_DoubleDoubleFloat:
 #endif
 	      case type_Sap:
 	      case type_SimpleVector:
@@ -383,6 +386,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 	    case type_DoubleFloat:
 #ifdef type_LongFloat
 	    case type_LongFloat:
+#endif
+#ifdef type_DoubleDoubleFloat
+	    case type_DoubleDoubleFloat:
 #endif
 	    case type_SimpleString:
 	    case type_SimpleBitVector:
@@ -1025,6 +1031,9 @@ ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 #ifdef type_LongFloat
       case type_LongFloat:
 #endif
+#ifdef type_DoubleDoubleFloat
+      case type_DoubleDoubleFloat:
+#endif
 #ifdef type_ComplexSingleFloat
       case type_ComplexSingleFloat:
 #endif
@@ -1293,6 +1302,9 @@ pscav(lispobj * addr, int nwords, boolean constant)
 	      case type_DoubleFloat:
 #ifdef type_LongFloat
 	      case type_LongFloat:
+#endif
+#ifdef type_DoubleDoubleFloat
+	      case type_DoubleDoubleFloat:
 #endif
 	      case type_Sap:
 		  /* It's an unboxed simple object. */

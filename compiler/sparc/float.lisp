@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44 2004/03/29 18:47:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.4 2006/06/12 21:43:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -597,7 +597,7 @@
 
 
 (define-move-vop move-argument :move-argument
-  (single-reg double-reg #+long-float long-reg
+  (single-reg double-reg #+long-float long-reg #+double-double double-double-reg
    complex-single-reg complex-double-reg #+long-float complex-long-reg)
   (descriptor-reg))
 
@@ -839,6 +839,11 @@
 	(= (long-float-mid-bits x) (long-float-mid-bits y))
 	(= (long-float-high-bits x) (long-float-high-bits y))
 	(= (long-float-exp-bits x) (long-float-exp-bits y))))
+
+#+double-double
+(deftransform eql ((x y) (double-double-float double-double-float))
+  '(and (eql (double-double-hi x) (double-double-hi y))
+	(eql (double-double-lo x) (double-double-lo y))))
 
 
 ;;;; Conversion:
@@ -2755,3 +2760,188 @@
     (let ((fs1 (and fop rs1 (sigcontext-float-register scp rs1 format)))
 	  (fs2 (and fop rs2 (sigcontext-float-register scp rs2 format))))
       (values fop (remove nil (list fs1 fs2))))))
+
+;;; Support for double-double floats
+
+(defun double-double-reg-hi-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (tn-offset x)))
+
+(defun double-double-reg-lo-tn (x)
+  ;; The low tn is 2 more than the offset because double regs are
+  ;; even.
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (+ 2 (tn-offset x))))
+
+(define-move-function (load-double-double 4) (vop x y)
+  ((double-double-stack) (double-double-reg))
+  (let ((nfp (current-nfp-tn vop))
+	(offset (* (tn-offset x) vm:word-bytes)))
+    (let ((hi-tn (double-double-reg-hi-tn y)))
+      (inst lddf hi-tn nfp offset))
+    (let ((lo-tn (double-double-reg-lo-tn y)))
+      (inst lddf lo-tn nfp (+ offset (* 2 vm:word-bytes))))))
+
+(define-move-function (store-double-double 4) (vop x y)
+  ((double-double-reg) (double-double-stack))
+  (let ((nfp (current-nfp-tn vop))
+	(offset (* (tn-offset y) vm:word-bytes)))
+    (let ((hi-tn (double-double-reg-hi-tn x)))
+      (inst stdf hi-tn nfp offset))
+    (let ((lo-tn (double-double-reg-lo-tn x)))
+      (inst stdf lo-tn nfp (+ offset (* 2 vm:word-bytes))))))
+
+;;; Double-double float register to register moves
+
+(define-vop (double-double-move)
+  (:args (x :scs (double-double-reg)
+	    :target y :load-if (not (location= x y))))
+  (:results (y :scs (double-double-reg) :load-if (not (location= x y))))
+  (:note "double-double float move")
+  (:generator 0
+     (unless (location= x y)
+       ;; Note the double-float-regs are aligned to every second
+       ;; float register so there is not need to worry about overlap.
+       (let ((x-hi (double-double-reg-hi-tn x))
+	     (y-hi (double-double-reg-hi-tn y)))
+	 (move-double-reg y-hi x-hi))
+       (let ((x-lo (double-double-reg-lo-tn x))
+	     (y-lo (double-double-reg-lo-tn y)))
+	 (move-double-reg y-lo x-lo)))))
+;;;
+(define-move-vop double-double-move :move
+  (double-double-reg) (double-double-reg))
+
+;;; Move from a complex float to a descriptor register allocating a
+;;; new complex float object in the process.
+
+(define-vop (move-from-double-double)
+  (:args (x :scs (double-double-reg) :to :save))
+  (:results (y :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:note "double double float to pointer coercion")
+  (:generator 13
+     (with-fixed-allocation (y ndescr vm::double-double-float-type
+			       vm::double-double-float-size))
+     (let ((hi-tn (double-double-reg-hi-tn x)))
+       (inst stdf hi-tn y (- (* vm::double-double-float-hi-slot
+				  vm:word-bytes)
+			       vm:other-pointer-type)))
+     (let ((lo-tn (double-double-reg-lo-tn x)))
+       (inst stdf lo-tn y (- (* vm::double-double-float-lo-slot
+				  vm:word-bytes)
+			       vm:other-pointer-type)))))
+;;;
+(define-move-vop move-from-double-double :move
+  (double-double-reg) (descriptor-reg))
+
+;;; Move from a descriptor to a double-double float register
+
+(define-vop (move-to-double-double)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (double-double-reg)))
+  (:note "pointer to double float coercion")
+  (:generator 2
+    (let ((hi-tn (double-double-reg-hi-tn y)))
+      (inst lddf hi-tn x (- (* double-double-float-hi-slot word-bytes)
+			     other-pointer-type)))
+    (let ((lo-tn (double-double-reg-lo-tn y)))
+      (inst lddf lo-tn x (- (* double-double-float-lo-slot word-bytes)
+			   other-pointer-type)))))
+
+(define-move-vop move-to-double-double :move
+  (descriptor-reg) (double-double-reg))
+
+;;; double-double float move-argument vop
+
+(define-vop (move-double-double-float-argument)
+  (:args (x :scs (double-double-reg) :target y)
+	 (nfp :scs (any-reg) :load-if (not (sc-is y double-double-reg))))
+  (:results (y))
+  (:note "double double-float argument move")
+  (:generator 2
+    (sc-case y
+      (double-double-reg
+       (unless (location= x y)
+	 (let ((x-hi (double-double-reg-hi-tn x))
+	       (y-hi (double-double-reg-hi-tn y)))
+	   (move-double-reg y-hi x-hi))
+	 (let ((x-lo (double-double-reg-lo-tn x))
+	       (y-lo (double-double-reg-lo-tn y)))
+	   (move-double-reg y-lo x-lo))))
+      (double-double-stack
+       (let ((offset (* (tn-offset y) word-bytes)))
+	 (let ((hi-tn (double-double-reg-hi-tn x)))
+	   (inst stdf hi-tn nfp offset))
+	 (let ((lo-tn (double-double-reg-lo-tn x)))
+	   (inst stdf lo-tn nfp (+ offset (* 2 word-bytes)))))))))
+
+(define-move-vop move-double-double-float-argument :move-argument
+  (double-double-reg descriptor-reg) (double-double-reg))
+
+
+#+double-double
+(progn
+
+(define-vop (make/double-double-float)
+  (:args (hi :scs (double-reg) :target res
+	     :load-if (not (location= hi res)))
+	 (lo :scs (double-reg)))
+  (:results (res :scs (double-double-reg) :from (:argument 0)
+		 :load-if (not (sc-is res double-double-stack))))
+  (:arg-types double-float double-float)
+  (:result-types double-double-float)
+  (:translate kernel::%make-double-double-float)
+  (:note "inline double-double-float creation")
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 5
+    (sc-case res
+      (double-double-reg
+       (let ((res-hi (double-double-reg-hi-tn res)))
+	 (unless (location= res-hi hi)
+	   (move-double-reg res-hi hi)))
+       (let ((res-lo (double-double-reg-lo-tn res)))
+	 (unless (location= res-lo lo)
+	   (move-double-reg res-lo lo))))
+      (double-double-stack
+       (let ((nfp (current-nfp-tn vop))
+	     (offset (* (tn-offset res) vm:word-bytes)))
+	 (unless (location= hi res)
+	   (inst stdf hi nfp offset))
+	 (inst stdf lo nfp (+ offset (* 2 vm:word-bytes))))))))
+
+(define-vop (double-double-float-value)
+  (:args (x :scs (double-double-reg) :target r
+	    :load-if (not (sc-is x double-double-stack))))
+  (:arg-types double-double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:variant-vars slot)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 3
+    (sc-case x
+      (double-double-reg
+       (let ((value-tn (ecase slot
+			 (:hi (double-double-reg-hi-tn x))
+			 (:lo (double-double-reg-lo-tn x)))))
+	 (unless (location= value-tn r)
+	   (move-double-reg r value-tn))))
+      (double-double-stack
+       (inst lddf r (current-nfp-tn vop) (* (+ (ecase slot (:hi 0) (:lo 2))
+					       (tn-offset x))
+					    vm:word-bytes))))))
+
+(define-vop (hi/double-double-value double-double-float-value)
+  (:translate kernel::double-double-hi)
+  (:note "double-double high part")
+  (:variant :hi))
+
+(define-vop (lo/double-double-value double-double-float-value)
+  (:translate kernel::double-double-lo)
+  (:note "double-double low part")
+  (:variant :lo))
+
+
+); progn

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.12 1998/07/24 17:22:43 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.12.24.1 2006/06/10 03:29:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -387,6 +387,11 @@
 (def-type-vops long-float-p check-long-float long-float
   object-not-long-float-error long-float-type)
 
+#+double-double
+(def-type-vops double-double-float-p check-double-double-float
+  double-double-float object-not-double-double-float-error
+  vm:double-double-float-type)
+	       
 (def-type-vops simple-string-p check-simple-string simple-string
   object-not-simple-string-error simple-string-type)
 
@@ -564,7 +569,9 @@
 
 (def-type-vops numberp check-number nil object-not-number-error
   even-fixnum-type odd-fixnum-type bignum-type ratio-type
-  single-float-type double-float-type #+long-float long-float-type complex-type
+  single-float-type double-float-type #+long-float long-float-type
+  #+double-double vm:double-double-float-type
+  complex-type
   complex-single-float-type complex-double-float-type
   #+long-float complex-long-float-type)
 
@@ -575,11 +582,13 @@
   even-fixnum-type odd-fixnum-type bignum-type)
 
 (def-type-vops floatp check-float nil object-not-float-error
-  single-float-type double-float-type #+long-float long-float-type)
+  single-float-type double-float-type #+long-float long-float-type
+  #+double-double vm:double-double-float-type)
 
 (def-type-vops realp check-real nil object-not-real-error
   even-fixnum-type odd-fixnum-type ratio-type bignum-type
-  single-float-type double-float-type #+long-float long-float-type)
+  single-float-type double-float-type #+long-float long-float-type
+  #+double-double vm:double-double-float-type)
 
 
 ;;;; Other integer ranges.

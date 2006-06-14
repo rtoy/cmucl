@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.78 2006/05/20 01:48:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.78.2.1 2006/06/09 16:05:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -482,6 +482,29 @@
 	  (write-indexed des (+ 2 vm:long-float-value-slot) exp-bits))
 	 (:big-endian
 	  (error "Long-Float not supported")))
+       des))
+    #+double-double
+    (double-double-float
+     (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					  (1- vm:double-double-float-size)
+					  vm:double-double-float-type))
+	    (hi (kernel:double-double-hi num))
+	    (lo (kernel:double-double-lo num))
+	    (hi-high-bits (make-random-descriptor (double-float-high-bits hi)))
+	    (hi-low-bits (make-random-descriptor (double-float-low-bits hi)))
+	    (lo-high-bits  (make-random-descriptor (double-float-high-bits lo)))
+	    (lo-low-bits (make-random-descriptor (double-float-low-bits lo))))
+       (ecase (c:backend-byte-order c:*backend*)
+	 (:little-endian
+	  (write-indexed des vm:double-double-float-lo-slot lo-low-bits)
+	  (write-indexed des (+ 1 vm:double-double-float-lo-slot) lo-high-bits)
+	  (write-indexed des vm:double-double-float-hi-slot hi-low-bits)
+	  (write-indexed des (+ 1 vm:double-double-float-hi-slot) hi-high-bits))
+	 (:big-endian
+	  (write-indexed des vm:double-double-float-hi-slot hi-high-bits)
+	  (write-indexed des (+ 1 vm:double-double-float-hi-slot) hi-low-bits)
+	  (write-indexed des vm:double-double-float-lo-slot lo-high-bits)
+	  (write-indexed des (1+ vm:double-double-float-lo-slot) lo-low-bits)))
        des))))
 
 (defun complex-single-float-to-core (num)
@@ -1554,6 +1577,24 @@
 	 (write-indexed des (+ 3 vm:complex-long-float-real-slot)
 			imag-low-bits)
 	 des)))))
+
+#+double-double
+(define-cold-fop (fop-double-double-float)
+    ;; Double-double format
+    (prepare-for-fast-read-byte *fasl-file*
+      (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					   (1- vm:double-double-float-size)
+					   vm:double-double-float-type))
+	     (hi-high-bits (make-random-descriptor (fast-read-s-integer 4)))
+	     (hi-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	     (lo-high-bits (make-random-descriptor (fast-read-s-integer 4)))
+	     (lo-low-bits (make-random-descriptor (fast-read-s-integer 4))))
+	(done-with-fast-read-byte)
+	(write-indexed des vm:double-double-float-hi-slot hi-high-bits)
+	(write-indexed des (1+ vm:double-double-float-hi-slot) hi-low-bits)
+	(write-indexed des vm:double-double-float-lo-slot lo-high-bits)
+	(write-indexed des (1+ vm:double-double-float-lo-slot) lo-low-bits)
+	des)))
 
 (define-cold-fop (fop-ratio)
   (let ((den (pop-stack)))

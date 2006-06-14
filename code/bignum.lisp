@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.40 2004/08/31 00:19:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.40.10.2 2006/06/13 19:58:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1872,6 +1872,22 @@ down to individual words.")
    (%bignum-ref bits 2)
    (%bignum-ref bits 1)))
 
+;;;
+#+double-double
+(defun double-double-from-bits (bits exp plusp)
+  (declare (fixnum exp)
+	   (optimize (ext:inhibit-warnings 3)))
+  ;; Extract the 105 bits we want.  The low 52 goes to the low
+  ;; double-float, and the remaining bits go to the high double-float.
+  ;; That's a total of 4 words.
+  (let* ((bits (ash bits -32))
+	 (lo (ldb (byte vm:double-float-digits 0) bits))
+	 (hi (ldb (byte vm:double-float-digits vm:double-float-digits) bits))
+	 (exp (- exp vm:double-float-bias)))
+    (kernel:make-double-double-float
+     (scale-float (float hi 1d0) (+ exp 53 -106))
+     (scale-float (float lo 1d0) (- exp 106)))))
+    
 
 ;;; BIGNUM-TO-FLOAT   --  Interface
 ;;;
@@ -1918,6 +1934,13 @@ down to individual words.")
 		   bits
 		   (check-exponent len vm:long-float-bias
 		                   vm:long-float-normal-exponent-max)
+		   plusp))
+		 #+double-double
+		 (double-double-float
+		  (double-double-from-bits
+		   bits
+		   (check-exponent len vm:double-float-bias
+				   vm:double-float-normal-exponent-max)
 		   plusp))))
 	     (check-exponent (exp bias max)
 	       (declare (type bignum-index len))

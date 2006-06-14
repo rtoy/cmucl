@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.28 2004/07/07 15:03:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.28.8.1.2.1 2006/06/14 03:24:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,6 +85,8 @@
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
 
+#+double-double
+(export '(double-double-float-digits))
 	  
 
 (eval-when (compile load eval)
@@ -142,6 +144,10 @@
 
 (defconstant long-float-digits
   (+ (byte-size long-float-significand-byte) word-bits 1))
+
+#+double-double
+(defconstant double-double-float-digits
+  (* 2 double-float-digits))
 
 ;;; pfw -- from i486 microprocessor programmers reference manual
 (defconstant float-invalid-trap-bit        (ash 1 0))

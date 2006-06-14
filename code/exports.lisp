@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251 2006/02/07 01:16:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251.2.1.2.3 2006/06/12 17:21:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -887,7 +887,9 @@
 (dolist
     (name
      '("%SP-SET-DEFINITION" "%SP-SET-PLIST" "ARRAY-HEADER-P" "BASE-CHAR-P"
-       "DOUBLE-FLOAT-P" "LONG-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
+       "DOUBLE-FLOAT-P" "LONG-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"
+       "DOUBLE-DOUBLE-FLOAT-P"
+       "DOUBLE-DOUBLE-FLOAT"))
   (intern name "KERNEL"))
 
 (defpackage #+pmax "PMAX"
@@ -1092,7 +1094,16 @@
   #+heap-overflow-check
   (:export "DYNAMIC-SPACE-OVERFLOW-ERROR-TRAP"
 	   "DYNAMIC-SPACE-OVERFLOW-WARNING-TRAP")
-  )
+  ;;#+double-double
+  (:export "DOUBLE-DOUBLE-FLOAT-TYPE"
+	   "DOUBLE-DOUBLE-FLOAT-HI-SLOT"
+	   "DOUBLE-DOUBLE-FLOAT-LO-SLOT"
+	   "DOUBLE-DOUBLE-FLOAT-FILLER-SLOT"
+	   "DOUBLE-DOUBLE-FLOAT-SIZE"
+	   "DOUBLE-DOUBLE-REG-SC-NUMBER"
+	   "DOUBLE-DOUBLE-STACK-SC-NUMBER"
+	   "DOUBLE-DOUBLE-FLOAT-DIGITS"
+	   ))
 
 (defpackage "CONDITIONS")
 (intern "DISASSEMBLE" "LISP")
@@ -1186,6 +1197,8 @@
   (:import-from "LISP" "GET-SETF-METHOD")
   (:import-from "KERNEL" "*ANSI-DEFSTRUCT-OPTIONS-P*")
   (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"  "BINARY-TEXT-STREAM")
+  #+double-double
+  (:import-from "KERNEL" "DOUBLE-DOUBLE-FLOAT")
   (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
 	     "DEBUG"
 	     "FLOATING-POINT-INEXACT" "FLOAT-ACCURACY"
@@ -1362,7 +1375,9 @@
 
 	     "BINARY-TEXT-STREAM" "READ-VECTOR" "WRITE-VECTOR"
 
-	     "INVALID-FASL"))
+	     "INVALID-FASL")
+  #+double-double
+  (:export "DOUBLE-DOUBLE-FLOAT"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
@@ -1739,7 +1754,8 @@
 (dolist
     (name
      '("*" "ARRAY" "BOOLEAN" "DOUBLE-FLOAT" "FUNCTION" "INTEGER" "LONG-FLOAT"
-       "SINGLE-FLOAT" "UNION" "VALUES"))
+       "SINGLE-FLOAT" "UNION" "VALUES"
+       ))
   (intern name "LISP"))
 
 (defpackage "ALIEN"
@@ -2158,7 +2174,16 @@
            "SET-SYMBOL-VALUE-CONDITIONAL"
            "ATOMIC-POP-SYMBOL-VALUE"
            "ATOMIC-PUSHA"
-           "ATOMIC-PUSHD"))
+           "ATOMIC-PUSHD")
+  ;;#+double-double
+  (:export "DOUBLE-DOUBLE-FLOAT"
+	   "DOUBLE-DOUBLE-FLOAT-P"
+	   "DOUBLE-DOUBLE-HI"
+	   "DOUBLE-DOUBLE-LO"
+	   "MAKE-DOUBLE-DOUBLE-FLOAT"
+	   "%MAKE-DOUBLE-DOUBLE-FLOAT"
+	   "%DOUBLE-DOUBLE-FLOAT"
+	   "OBJECT-NOT-DOUBLE-DOUBLE-FLOAT-ERROR"))
 
 (dolist
     (name

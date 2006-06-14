@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.36 2005/10/21 13:09:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.36.2.1 2006/06/09 16:04:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -973,6 +973,11 @@
 		       (ash hi (- sxmash-rotate-bits)) hi
 		       (ldb sxhash-bits-byte
 			    (logxor (ash exp (- sxmash-rotate-bits)) exp))))))
+       #+double-double
+       (double-double-float
+	;; Is this good enough?
+	(logxor (internal-sxhash (kernel:double-double-hi s-expr) depth)
+		(internal-sxhash (kernel:double-double-lo s-expr) depth)))
        (ratio (logxor (internal-sxhash (numerator s-expr) 0)
 		      (internal-sxhash (denominator s-expr) 0)))
        (complex (logxor (internal-sxhash (realpart s-expr) 0)

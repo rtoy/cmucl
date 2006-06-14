@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31 2005/08/25 21:25:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.3 2006/06/13 19:58:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,6 +80,19 @@
 			  (dpb (ash sig -32) vm:double-float-significand-byte
 			       (if (zerop sign) 0 -1)))
 		     (ldb (byte 32 0) sig)))
+
+#+double-double
+(defun double-double-from-bits (sign exp sig)
+  (declare (type bit sign) (type (unsigned-byte #.vm:double-double-float-digits) sig)
+	   (type (unsigned-byte 11) exp))
+  (let ((lo (ldb (byte vm:double-float-digits 0) sig))
+	(hi (ldb (byte vm:double-float-digits vm:double-float-digits) sig)))
+    ;; We can't return a double-double because exp might be very
+    ;; small, and the low part of the double-double would get scaled
+    ;; to 0.  So we return both parts and expect the caller to figure
+    ;; out what to do.
+    (values (scale-float (float (* hi (- 1 (* 2 sign))) 1d0) #.(- vm:double-float-digits))
+	    (scale-float (float lo 1d0) #.(- vm:double-float-digits)))))
 ;;;
 #+(and long-float x86)
 (defun long-from-bits (sign exp sig)
@@ -240,7 +253,8 @@
      (and (zerop (ldb vm:long-float-exponent-byte (long-float-exp-bits x)))
 	  (not (zerop x))))))
 
-(macrolet ((frob (name doc single double #+(and long-float x86) long)
+(macrolet ((frob (name doc single double #+(and long-float x86) long
+		       #+double-double double-double)
 	     `(defun ,name (x)
 		,doc
 		(number-dispatch ((x float))
@@ -264,7 +278,10 @@
 		     (declare (ignorable lo))
 		     (and (> (ldb vm:long-float-exponent-byte exp)
 			     vm:long-float-normal-exponent-max)
-			  ,long)))))))
+			  ,long)))
+		  #+double-double
+		  ((double-double-float)
+		   ,double-double)))))
 
   (frob float-infinity-p "Return true if the float X is an infinity (+ or -)."
     (zerop (ldb vm:single-float-significand-byte bits))
@@ -272,7 +289,9 @@
 	 (zerop lo))
     #+(and long-float x86)
     (and (zerop (ldb vm:long-float-significand-byte hi))
-	 (zerop lo)))
+	 (zerop lo))
+    #+double-double
+    (float-infinity-p (double-double-hi x)))
 
   (frob float-nan-p "Return true if the float X is a NaN (Not a Number)."
     (not (zerop (ldb vm:single-float-significand-byte bits)))
@@ -280,7 +299,9 @@
 	(not (zerop lo)))
     #+(and long-float x86)
     (or (not (zerop (ldb vm:long-float-significand-byte hi)))
-	(not (zerop lo))))
+	(not (zerop lo)))
+    #+double-double
+    (float-nan-p (double-double-hi x)))
 
   (frob float-trapping-nan-p
     "Return true if the float X is a trapping NaN (Not a Number)."
@@ -290,7 +311,9 @@
 		   vm:double-float-trapping-nan-bit))
     #+(and long-float x86)
     (zerop (logand (ldb vm:long-float-significand-byte hi)
-		   vm:long-float-trapping-nan-bit))))
+		   vm:long-float-trapping-nan-bit))
+    #+double-double
+    (float-trapping-nan-p (double-double-hi x))))
 
 
 ;;; FLOAT-PRECISION  --  Public
@@ -335,7 +358,9 @@
 	   (single-float (minusp (single-float-bits float1)))
 	   (double-float (minusp (double-float-high-bits float1)))
 	   #+long-float
-	   (long-float (minusp (long-float-exp-bits float1))))
+	   (long-float (minusp (long-float-exp-bits float1)))
+	   #+double-double
+	   (double-double-float (minusp (double-double-hi float1))))
 	 (float -1 float1)
 	 (float 1 float1))
      (abs float2)))
@@ -345,7 +370,9 @@
     ((short-float single-float) vm:single-float-digits)
     ((double-float #-long-float long-float) vm:double-float-digits)
     #+long-float
-    (long-float vm:long-float-digits)))
+    (long-float vm:long-float-digits)
+    #+double-double
+    (double-double-float vm:double-double-float-digits)))
 
 (declaim (inline float-digits float-radix))
 
@@ -357,7 +384,9 @@
     ((single-float) vm:single-float-digits)
     ((double-float) vm:double-float-digits)
     #+long-float
-    ((long-float) vm:long-float-digits)))
+    ((long-float) vm:long-float-digits)
+    #+double-double
+    ((double-double-float) vm:double-double-float-digits)))
 
 (defun float-radix (f)
   "Returns (as an integer) the radix b of its floating-point
@@ -515,6 +544,17 @@
 		  (truly-the fixnum (- biased extra-bias))
 		  sign)))))
 
+#+double-double
+(defun integer-decode-double-double-float (x)
+  (declare (type double-double-float x))
+  (let* ((r (numerator (+ (rational (double-double-hi x))
+			  (rational (double-double-lo x)))))
+	 (len (integer-length r)))
+  (multiple-value-bind (hi-int hi-exp sign)
+      (integer-decode-float (double-double-hi x))
+    (values (ash (abs r) (- 106 len))
+	    (- hi-exp 53)
+	    sign))))
 
 ;;; INTEGER-DECODE-LONG-FLOAT  --  Internal
 ;;;
@@ -557,7 +597,10 @@
      (integer-decode-double-float x))
     #+long-float
     ((long-float)
-     (integer-decode-long-float x))))
+     (integer-decode-long-float x))
+    #+double-double
+    ((double-double-float)
+     (integer-decode-double-double-float x))))
 
 
 (declaim (maybe-inline decode-single-float decode-double-float))
@@ -685,6 +728,16 @@
 		    lo)
 		   biased sign)))))
 
+;;; DECODE-DOUBLE-DOUBLE-FLOAT -- Public
+#+double-double
+(defun decode-double-double-float (x)
+  (declare (type double-double-float x))
+  (multiple-value-bind (hi-frac hi-exp sign)
+      (decode-float (double-double-hi x))
+    (values (make-double-double-float hi-frac
+				      (scale-float (double-double-lo x) (- hi-exp)))
+	    hi-exp
+	    (coerce sign 'double-double-float))))
 
 ;;; DECODE-FLOAT  --  Public
 ;;;
@@ -703,7 +756,10 @@
      (decode-double-float f))
     #+long-float
     ((long-float)
-     (decode-long-float f))))
+     (decode-long-float f))
+    #+double-double
+    ((double-double-float)
+     (decode-double-double-float f))))
 
 
 ;;;; SCALE-FLOAT:
@@ -821,6 +877,14 @@
   (declare (long-float x) (fixnum exp))
   (scale-float x exp))
 
+#+double-double
+(defun scale-double-double-float (x exp)
+  (declare (type double-double-float x) (fixnum exp))
+  (let ((hi (double-double-hi x))
+	(lo (double-double-lo x)))
+    (make-double-double-float (scale-double-float hi exp)
+			      (scale-double-float lo exp))))
+
 ;;; SCALE-FLOAT  --  Public
 ;;;
 ;;;    Dispatch to the correct type-specific scale-float function.
@@ -835,7 +899,10 @@
      (scale-double-float f ex))
     #+long-float
     ((long-float)
-     (scale-long-float f ex))))
+     (scale-long-float f ex))
+    #+double-double
+    ((double-double-float)
+     (scale-double-double-float f ex))))
 
 
 ;;;; Converting to/from floats:
@@ -846,8 +913,10 @@
   result is the same float format as OTHER."
   (if otherp
       (number-dispatch ((number real) (other float))
-	(((foreach rational single-float double-float #+long-float long-float)
-	  (foreach single-float double-float #+long-float long-float))
+	(((foreach rational single-float double-float #+long-float long-float
+		   #+double-double double-double-float)
+	  (foreach single-float double-float #+long-float long-float
+		   #+double-double double-double-float))
 	 (coerce number '(dispatch-type other))))
       (if (floatp number)
 	  number
@@ -857,7 +926,9 @@
 (macrolet ((frob (name type)
 	     `(defun ,name (x)
 		(number-dispatch ((x real))
-		  (((foreach single-float double-float #+long-float long-float
+		  (((foreach single-float double-float
+			     #+long-float long-float
+			     #+double-double double-double-float
 			     fixnum))
 		   (coerce x ',type))
 		  ((bignum)
@@ -867,7 +938,9 @@
   (frob %single-float single-float)
   (frob %double-float double-float)
   #+long-float
-  (frob %long-float long-float))
+  (frob %long-float long-float)
+  #+(and nil double-double)
+  (frob %double-double-float double-double-float))
 
 
 ;;; FLOAT-RATIO  --  Internal
@@ -908,9 +981,32 @@
 			(len (integer-length bits)))
 		   (cond ((> len digits)
 			  (assert (= len (the fixnum (1+ digits))))
-			  (scale-float (floatit (ash bits -1)) (1+ scale)))
+			  (multiple-value-bind (f0 f1)
+			      (floatit (ash bits -1))
+			    #||
+			    (format t "1: f0, f1 = ~A ~A~%" f0 f1)
+			    (format t "   scale = ~A~%" (1+ scale))
+			    ||#
+			    (if f1
+				(make-double-double-float
+				 (scale-float f0 (1+ scale))
+				 (scale-float f1 (+ 1 scale #.(- vm:double-float-digits))))
+				(scale-float f0 (1+ scale)))))
 			 (t
-			  (scale-float (floatit bits) scale)))))
+			  (multiple-value-bind (f0 f1)
+			      (floatit bits)
+			    #||
+			    (format t "2: f0, f1 = ~A ~A~%" f0 f1)
+			    (format t "   scale = ~A~%" scale)
+			    (format t "scale-float f0 = ~A~%" (scale-float f0 scale))
+			    (when f1
+			      (format t "scale-float f1 = ~A~%" (scale-float f1 (- scale 53))))
+			    ||#
+			    (if f1
+				(make-double-double-float
+				 (scale-float f0 scale)
+				 (scale-float f1 (- scale #.vm:double-float-digits)))
+				(scale-float f0 scale)))))))
 	       (floatit (bits)
 		 (let ((sign (if plusp 0 1)))
 		   (case format
@@ -920,7 +1016,10 @@
 		      (double-from-bits sign vm:double-float-bias bits))
 		     #+long-float
 		     (long-float
-		      (long-from-bits sign vm:long-float-bias bits))))))
+		      (long-from-bits sign vm:long-float-bias bits))
+		     #+double-double
+		     (double-double-float
+		      (double-double-from-bits sign vm:double-float-bias bits))))))
 	(loop
 	  (multiple-value-bind (fraction-and-guard rem)
 			       (truncate shifted-num den)
@@ -1030,7 +1129,15 @@ rounding modes & do ieee round-to-integer.
 	   (let ((res (ash bits exp)))
 	     (if (minusp number)
 		 (- res)
-		 res)))))))
+		 res)))))
+    #+double-double
+    ((double-double-float)
+     (multiple-value-bind (bits exp)
+	 (integer-decode-double-double-float number)
+       (let ((res (ash bits exp)))
+	 (if (minusp number)
+	     (- res)
+	     res))))))
 
 
 ;;; %UNARY-ROUND  --  Interface
@@ -1061,7 +1168,20 @@ rounding modes & do ieee round-to-integer.
 			       shifted)))
 	     (if (minusp number)
 		 (- rounded)
-		 rounded)))))))
+		 rounded)))))
+    #+double-double
+    ((double-double-float)
+     (multiple-value-bind (bits exp)
+	     (integer-decode-float number)
+	   (let* ((shifted (ash bits exp))
+		  (rounded (if (and (minusp exp)
+				    (not (zerop (logand bits
+							(ash 1 (- -1 exp))))))
+			       (1+ shifted)
+			       shifted)))
+	     (if (minusp number)
+		 (- rounded)
+		 rounded))))))
 
 (declaim (maybe-inline %unary-ftruncate/single-float
 		       %unary-ftruncate/double-float))
@@ -1188,7 +1308,8 @@ rounding modes & do ieee round-to-integer.
   more efficient than RATIONALIZE, but it assumes that floating-point is
   completely accurate, giving a result that isn't as pretty."
   (number-dispatch ((x real))
-    (((foreach single-float double-float #+long-float long-float))
+    (((foreach single-float double-float #+long-float long-float
+	       #+double-double double-double-float))
      (multiple-value-bind (bits exp)
 			  (integer-decode-float x)
        (if (eql bits 0)
