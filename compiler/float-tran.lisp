@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.8 2006/06/13 19:54:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.9 2006/06/14 15:40:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1715,6 +1715,7 @@
 ;;
 ;; This also means we can't print numbers like 1w308 with the current
 ;; printing algorithm, or even divide 1w308 by 10.
+#+nil
 (defun split (a)
   "Split the double-float number a into a-hi and a-lo such that a =
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
@@ -1724,6 +1725,39 @@
 	 (a-hi (- tmp (- tmp a)))
 	 (a-lo (- a a-hi)))
     (values a-hi a-lo)))
+
+
+(defun split (a)
+  "Split the double-float number a into a-hi and a-lo such that a =
+  a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
+  a-lo contains the lower 26 bits."
+  (declare (double-float a)
+	   (optimize (speed 3)))
+  ;; This splits the number a into 2 halves of 26 bits each, but the
+  ;; halves are, I think, supposed to be properly rounded in an IEEE
+  ;; fashion.
+  ;;
+  ;; For numbers that are very large, we use a different algorithm.
+  ;; For smaller numbers, we can use the original algorithm of Yozo
+  ;; Hida.
+  (if (> (abs a) (scale-float 1d0 (- 1023 27)))
+      ;; I've tested this algorithm against Yozo's method for 1
+      ;; billion randomly generated double-floats between 2^(-995) and
+      ;; 2^996, and identical results are obtained.  For numbers that
+      ;; are very small, this algorithm produces different numbers
+      ;; because of underflow.  For very large numbers, we, of course
+      ;; produce different results because Yozo's method causes
+      ;; overflow.
+      (let* ((tmp (* a (+ 1 (scale-float 1d0 -27))))
+	     (as (* a (scale-float 1d0 -27)))
+	     (a-hi (* (- tmp (- tmp as)) (expt 2 27)))
+	     (a-lo (- a a-hi)))
+	(values a-hi a-lo))
+      ;; Yozo's algorithm.
+      (let* ((tmp (* a (+ 1 (expt 2 27))))
+	     (a-hi (- tmp (- tmp a)))
+	     (a-lo (- a a-hi)))
+	(values a-hi a-lo))))
 
 
 (declaim (inline two-prod))
