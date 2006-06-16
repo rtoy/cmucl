@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.65.8.1 2006/06/09 16:05:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.65.8.1.4.1 2006/06/16 03:46:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,6 +48,7 @@
 
 (defknown (fixnump bignump ratiop
 	   short-float-p single-float-p double-float-p long-float-p
+	   #+double-double double-double-float-p
 	   complex-rational-p complex-float-p complex-single-float-p
 	   complex-double-float-p #+long-float complex-long-float-p
 	   base-char-p %standard-char-p %instancep
@@ -64,7 +65,8 @@
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
 	   weak-pointer-p scavenger-hook-p code-component-p lra-p
 	   funcallable-instance-p
-	   #+double-double double-double-float-p)
+	   #+double-double double-double-float-p
+	   #+double-double simple-array-double-double-float-p)
   (t) boolean (movable foldable flushable))
 
 

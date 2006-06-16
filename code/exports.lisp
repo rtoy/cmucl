@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251.2.1.2.3 2006/06/12 17:21:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251.2.1.2.3.2.1 2006/06/16 03:46:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1103,6 +1103,7 @@
 	   "DOUBLE-DOUBLE-REG-SC-NUMBER"
 	   "DOUBLE-DOUBLE-STACK-SC-NUMBER"
 	   "DOUBLE-DOUBLE-FLOAT-DIGITS"
+	   "SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE"
 	   ))
 
 (defpackage "CONDITIONS")
@@ -2183,7 +2184,9 @@
 	   "MAKE-DOUBLE-DOUBLE-FLOAT"
 	   "%MAKE-DOUBLE-DOUBLE-FLOAT"
 	   "%DOUBLE-DOUBLE-FLOAT"
-	   "OBJECT-NOT-DOUBLE-DOUBLE-FLOAT-ERROR"))
+	   "OBJECT-NOT-DOUBLE-DOUBLE-FLOAT-ERROR"
+	   "SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-P"
+	   "OBJECT-NOT-SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-ERROR"))
 
 (dolist
     (name

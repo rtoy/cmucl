@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.39 2005/04/13 11:59:23 pwerkowski Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.39.10.1 2006/06/16 03:46:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,6 +137,9 @@
     #+long-float
     (long-float
      (values #.vm:simple-array-long-float-type #+x86 96 #+sparc 128))
+    #+double-double
+    (double-double-float
+     (values #.vm::simple-array-double-double-float-type 128))
     ((complex single-float)
      (values #.vm:simple-array-complex-single-float-type 64))
     ((complex double-float)
@@ -339,6 +342,7 @@
        single-float
        double-float
        #+long-float long-float
+       #+double-double double-double-float
        (complex single-float)
        (complex double-float)
        #+long-float (complex long-float)))))
@@ -372,6 +376,7 @@
        single-float
        double-float
        #+long-float long-float
+       #+double-double double-double-float
        (complex single-float)
        (complex double-float)
        #+long-float (complex long-float)))))
@@ -535,6 +540,8 @@
        (vm:simple-array-double-float-type 'double-float)
        #+long-float
        (vm:simple-array-long-float-type 'long-float)
+       #+double-double
+       (vm::simple-array-double-double-float-type 'double-double-float)
        (vm:simple-array-complex-single-float-type '(complex single-float))
        (vm:simple-array-complex-double-float-type '(complex double-float))
        #+long-float

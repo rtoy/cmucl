@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.59.18.1 2006/06/09 16:04:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.59.18.1.4.1 2006/06/16 03:46:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,6 +105,7 @@
       simple-array-single-float-p
       simple-array-double-float-p
       #+long-float simple-array-long-float-p
+      #+double-double simple-array-double-double-float-p
       simple-array-complex-single-float-p
       simple-array-complex-double-float-p
       #+long-float simple-array-complex-long-float-p

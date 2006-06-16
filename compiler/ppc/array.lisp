@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.6 2006/01/18 15:21:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.6.6.1 2006/06/16 03:46:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -614,3 +614,54 @@
   (:results (result :scs (signed-reg)))
   (:result-types tagged-num))
 
+
+#+double-double
+(progn
+(define-vop (data-vector-ref/simple-array-double-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg)))
+  (:arg-types vm::simple-array-double-double-float positive-fixnum)
+  (:results (value :scs (double-double-reg)))
+  (:result-types double-double-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 7
+    (let ((real-tn (double-double-reg-hi-tn value)))
+      (inst slwi offset index 2)
+      (inst addi offset offset (- (* vm:vector-data-offset vm:word-bytes)
+				  vm:other-pointer-type))
+      (inst lfdx real-tn object offset))
+    (let ((imag-tn (double-double-reg-lo-tn value)))
+      (inst addi offset offset (* 2 vm:word-bytes))
+      (inst lfdx imag-tn object offset))))
+
+(define-vop (data-vector-set/simple-array-double-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg))
+	 (value :scs (double-double-reg) :target result))
+  (:arg-types vm::simple-array-double-double-float positive-fixnum
+	      double-double-float)
+  (:results (result :scs (double-double-reg)))
+  (:result-types double-double-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 20
+    (let ((value-real (double-double-reg-hi-tn value))
+	  (result-real (double-double-reg-hi-tn result)))
+      (inst slwi offset index 2)
+      (inst addi offset offset (- (* vm:vector-data-offset vm:word-bytes)
+				  vm:other-pointer-type))
+      (inst stfdx value-real object offset)
+      (unless (location= result-real value-real)
+	(inst fmr result-real value-real)))
+    (let ((value-imag (double-double-reg-lo-tn value))
+	  (result-imag (double-double-reg-lo-tn result)))
+      (inst addi offset offset (* 2 vm:word-bytes))
+      (inst stfdx value-imag object offset)
+      (unless (location= result-imag value-imag)
+	(inst fmr result-imag value-imag)))))
+)
