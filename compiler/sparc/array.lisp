@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.32 2003/11/05 15:14:53 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.32.16.1 2006/06/16 16:04:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -948,3 +948,118 @@
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:variant 0 vm:other-pointer-type))
+
+
+#+double-double
+(progn
+(define-vop (data-vector-ref/simple-array-double-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-double-double-float positive-fixnum)
+  (:results (value :scs (double-double-reg)))
+  (:result-types double-double-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 7
+    (let ((hi-tn (double-double-reg-hi-tn value)))
+      (inst slln offset index 2)
+      (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))
+      (inst lddf hi-tn object offset))
+    (let ((lo-tn (double-double-reg-lo-tn value)))
+      (inst add offset (* 2 vm:word-bytes))
+      (inst lddf lo-tn object offset))))
+
+(define-vop (data-vector-ref-c/simple-array-double-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result))
+  (:arg-types simple-array-double-double-float (:constant index))
+  (:info index)
+  (:results (value :scs (double-double-reg)))
+  (:result-types double-double-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 5
+    (let ((offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type)))
+	  (hi-tn (double-double-reg-hi-tn value))
+	  (lo-tn (double-double-reg-lo-tn value)))
+      (cond ((typep (+ offset 8) '(signed-byte 13))
+	     (inst lddf hi-tn object offset)
+	     (inst lddf lo-tn object (+ offset 8)))
+	    (t
+	     (inst li temp offset)
+	     (inst lddf hi-tn object temp)
+	     (inst add temp (* 2 vm:word-bytes))
+	     (inst lddf lo-tn object temp))))))
+
+(define-vop (data-vector-set/simple-array-double-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg))
+	 (value :scs (double-double-reg) :target result))
+  (:arg-types simple-array-double-double-float positive-fixnum
+	      double-double-float)
+  (:results (result :scs (double-double-reg)))
+  (:result-types double-double-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 20
+    (let ((value-hi (double-double-reg-hi-tn value))
+	  (result-hi (double-double-reg-hi-tn result)))
+      (inst slln offset index 2)
+      (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))
+      (inst stdf value-hi object offset)
+      (unless (location= result-hi value-hi)
+	(move-double-reg result-hi value-hi)))
+    (let ((value-lo (double-double-reg-lo-tn value))
+	  (result-lo (double-double-reg-lo-tn result)))
+      (inst add offset (* 2 vm:word-bytes))
+      (inst stdf value-lo object offset)
+      (unless (location= result-lo value-lo)
+	(move-double-reg result-lo value-lo)))))
+
+(define-vop (data-vector-set-c/simple-array-double-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (value :scs (double-double-reg) :target result))
+  (:arg-types simple-array-double-double-float
+	      (:constant index)
+	      double-double-float)
+  (:info index)
+  (:results (result :scs (double-double-reg)))
+  (:result-types double-double-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 15
+    (let ((value-hi (double-double-reg-hi-tn value))
+	  (result-hi (double-double-reg-hi-tn result))
+	  (value-lo (double-double-reg-lo-tn value))
+	  (result-lo (double-double-reg-lo-tn result))
+	  (offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))))
+      ;; There's a possible optimization here if the offset for the
+      ;; real part fits in a signed-byte 13 but the imag part doesn't.
+      ;; We don't do this because it can't happen with the current
+      ;; values of vm:other-pointer-type and vm:vector-data-offset.
+      (cond ((typep (+ offset 8) '(signed-byte 13))
+	     (inst stdf value-hi object offset)
+	     (inst stdf value-lo object (+ offset 8)))
+	    (t
+	     (inst li temp offset)
+	     (inst stdf value-hi object temp)
+	     (inst add temp 8)
+	     (inst stdf value-lo object temp)))
+      (unless (location= result-hi value-hi)
+	(move-double-reg result-hi value-hi))
+      (unless (location= result-lo value-lo)
+	(move-double-reg result-lo value-lo)))))
+)
