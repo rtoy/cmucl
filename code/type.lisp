@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.71.6.1 2006/06/09 16:04:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.71.6.1.4.1 2006/06/17 02:59:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2214,6 +2214,8 @@
 	       (double-float (specifier-type '(complex double-float)))
 	       #+long-float
 	       (long-float (specifier-type '(complex long-float)))
+	       #+double-double
+	       (double-double-float (specifier-type '(complex double-double-float)))
 	       (rational (specifier-type '(complex rational)))
 	       (t (specifier-type '(complex real))))))
     (let ((ctype (specifier-type typespec)))

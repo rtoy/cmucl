@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.59.6.1.4.1 2006/06/16 03:46:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.59.6.1.4.2 2006/06/17 02:59:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,6 +123,7 @@
   complex-single-float
   complex-double-float
   #+long-float complex-long-float
+  #+double-double complex-double-double-float
   
   simple-array
   simple-string
@@ -542,3 +543,13 @@
   (filler)
   (hi :c-type "double" :length 2)
   (lo :c-type "double" :length 2))
+
+#+double-double
+(define-primitive-object (complex-double-double-float
+			  :lowtag other-pointer-type
+			  :header complex-double-double-float-type)
+  (filler)
+  (real-hi :c-type "double" :length 2)
+  (real-lo :c-type "double" :length 2)
+  (imag-hi :c-type "double" :length 2)
+  (imag-lo :c-type "double" :length 2))

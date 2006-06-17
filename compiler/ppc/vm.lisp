@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.4.2.1 2006/06/10 00:24:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.4.2.1.4.1 2006/06/17 02:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -155,6 +155,8 @@
   (complex-single-stack non-descriptor-stack :element-size 2)
   (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
+  #+double-double
+  (complex-double-double-stack non-descriptor-stack :element-size 8 :alignment 4)
 
   ;; **** Things that can go in the integer registers.
 
@@ -240,17 +242,25 @@
 
   (complex-single-reg float-registers
    :locations #.(loop for i from 0 to 30 by 2 collect i)
-   :element-size 2
+   :element-size 2 :alignment 2
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-single-stack))
 
   (complex-double-reg float-registers
    :locations #.(loop for i from 0 to 30 by 2 collect i)
-   :element-size 2
+   :element-size 2 :alignment 2
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-double-stack))
+
+  #+double-double
+  (complex-double-double-reg float-registers
+   :locations #.(loop for i from 0 to 30 by 4 collect i)
+   :element-size 4 :alignment 4
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-double-stack))
 
   ;; A catch or unwind block.
   (catch-block control-stack :element-size vm:catch-block-size))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45.2.1.2.1 2006/06/11 20:11:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45.2.1.2.1.2.1 2006/06/17 02:59:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -582,7 +582,7 @@
     (double-double-float
      (if (minusp (float-sign number))
 	 (coerce pi 'double-double-float)
-	 (kernel:make-double-double-float 0d0 0d0)))
+	 0w0))
     (complex
      (atan (imagpart number) (realpart number)))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251.2.1.2.3.2.1 2006/06/16 03:46:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.251.2.1.2.3.2.2 2006/06/17 02:59:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1104,6 +1104,16 @@
 	   "DOUBLE-DOUBLE-STACK-SC-NUMBER"
 	   "DOUBLE-DOUBLE-FLOAT-DIGITS"
 	   "SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE"
+
+	   "COMPLEX-DOUBLE-DOUBLE-FLOAT-TYPE"
+	   "COMPLEX-DOUBLE-DOUBLE-FLOAT-FILLER-SLOT"
+	   "COMPLEX-DOUBLE-DOUBLE-FLOAT-REAL-HI-SLOT"
+	   "COMPLEX-DOUBLE-DOUBLE-FLOAT-REAL-LO-SLOT"
+	   "COMPLEX-DOUBLE-DOUBLE-FLOAT-IMAG-HI-SLOT"
+	   "COMPLEX-DOUBLE-DOUBLE-FLOAT-IMAG-LO-SLOT"
+	   "COMPLEX-DOUBLE-DOUBLE-FLOAT-SIZE"
+	   "COMPLEX-DOUBLE-DOUBLE-REG-SC-NUMBER"
+	   "COMPLEX-DOUBLE-DOUBLE-STACK-SC-NUMBER"
 	   ))
 
 (defpackage "CONDITIONS")
@@ -2186,7 +2196,9 @@
 	   "%DOUBLE-DOUBLE-FLOAT"
 	   "OBJECT-NOT-DOUBLE-DOUBLE-FLOAT-ERROR"
 	   "SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-P"
-	   "OBJECT-NOT-SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-ERROR"))
+	   "OBJECT-NOT-SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-ERROR"
+	   "COMPLEX-DOUBLE-DOUBLE-FLOAT-P"
+	   "OBJECT-NOT-COMPLEX-DOUBLE-DOUBLE-FLOAT-ERROR"))
 
 (dolist
     (name

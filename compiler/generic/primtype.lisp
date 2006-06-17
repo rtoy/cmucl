@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.24.8.1.4.1 2006/06/16 03:46:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.24.8.1.4.2 2006/06/17 02:59:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,6 +116,9 @@
 #+long-float
 (def-primitive-type complex-long-float (complex-long-reg descriptor-reg)
   :type (complex long-float))
+#+double-double
+(def-primitive-type complex-double-double-float (complex-double-double-reg descriptor-reg)
+  :type (complex double-double-float))
 
 ;;; Primitive other-pointer array types.
 ;;; 
@@ -376,6 +379,11 @@
 		      #+long-float
 		      (long-float
 		       (values (primitive-type-or-lose 'complex-long-float
+						       *backend*)
+			       exact))
+		      #+double-double
+		      (double-double-float
+		       (values (primitive-type-or-lose 'complex-double-double-float
 						       *backend*)
 			       exact))
 		      (t

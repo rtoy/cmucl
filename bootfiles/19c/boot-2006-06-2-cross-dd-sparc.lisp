@@ -84,6 +84,13 @@
   boolean
   (movable foldable flushable))
 
+(defknown complex-double-double-float-p (t)
+  boolean
+  (movable foldable flushable))
+(in-package "KERNEL")
+(defun complex-double-double-float-p (x)
+  nil)
+
 ;; End changes for double-double
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :cl-user)

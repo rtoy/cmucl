@@ -54,7 +54,11 @@
 (c:defknown simple-array-double-double-float-p (t)
   boolean
   (c:movable c:foldable c:flushable))
+(c::defknown complex-double-double-float-p (t)
+  boolean
+  (c::movable c::foldable c::flushable))
 )
+
 
 ;; End changes for double-double
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

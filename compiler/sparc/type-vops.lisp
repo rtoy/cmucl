@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.24.8.1.4.1 2006/06/16 03:46:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.24.8.1.4.2 2006/06/17 02:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -84,7 +84,8 @@
 
 (def-type-vops complexp check-complex complex object-not-complex-error
   vm:complex-type vm:complex-single-float-type
-  vm:complex-double-float-type #+long-float vm:complex-long-float-type)
+  vm:complex-double-float-type #+long-float vm:complex-long-float-type
+  #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops complex-rational-p check-complex-rational nil
   object-not-complex-rational-error vm:complex-type)
@@ -92,7 +93,8 @@
 (def-type-vops complex-float-p check-complex-float nil
   object-not-complex-float-error
   vm:complex-single-float-type vm:complex-double-float-type
-  #+long-float vm:complex-long-float-type)
+  #+long-float vm:complex-long-float-type
+  #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops complex-single-float-p check-complex-single-float
   complex-single-float object-not-complex-single-float-error
@@ -106,6 +108,11 @@
 (def-type-vops complex-long-float-p check-complex-long-float
   complex-long-float object-not-complex-long-float-error
   vm:complex-long-float-type)
+
+#+double-double
+(def-type-vops complex-double-double-float-p check-complex-double-double-float
+  complex-double-double-float object-not-complex-double-double-float-error
+  vm::complex-double-double-float-type)
 
 (def-type-vops single-float-p check-single-float single-float
   object-not-single-float-error vm:single-float-type)
@@ -309,7 +316,8 @@
   vm:single-float-type vm:double-float-type #+long-float vm:long-float-type
   #+double-double vm:double-double-float-type
   vm:complex-type vm:complex-single-float-type vm:complex-double-float-type
-  #+long-float vm:complex-long-float-type)
+  #+long-float vm:complex-long-float-type
+  #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops rationalp check-rational nil object-not-rational-error
   vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type)

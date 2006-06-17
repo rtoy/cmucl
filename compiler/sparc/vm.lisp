@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.25.8.1 2006/06/09 16:05:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.25.8.1.4.1 2006/06/17 02:59:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -193,6 +193,9 @@
   ;; complex-long-floats.
   (complex-long-stack non-descriptor-stack :element-size 8 :alignment 4)
 
+  #+double-double
+  (complex-double-double-stack non-descriptor-stack :element-size 8 :alignment 4)
+  
   ;; **** Things that can go in the integer registers.
 
   ;; Immediate descriptor objects.  Don't have to be seen by GC, but nothing
@@ -339,6 +342,15 @@
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-long-stack))
+
+  #+double-double
+  (complex-double-double-reg float-registers
+   :locations #.(loop for i from 0 below #-sparc-v9 32 #+sparc-v9 64
+		      by 8 collect i)
+   :element-size 8 :alignment 8
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-double-stack))
 
 
   ;; A catch or unwind block.

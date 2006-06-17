@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.16.24.1.4.1 2006/06/16 03:46:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.16.24.1.4.2 2006/06/17 02:59:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,8 @@
 (define-type-predicate complex-single-float-p (complex single-float))
 #+long-float
 (define-type-predicate complex-long-float-p (complex long-float))
+#+double-double
+(define-type-predicate complex-double-double-float-p (complex double-double-float))
 (define-type-predicate double-float-p double-float)
 (define-type-predicate fixnump fixnum)
 (define-type-predicate long-float-p long-float)
