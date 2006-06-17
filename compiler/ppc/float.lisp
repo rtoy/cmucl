@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.1 2006/06/17 02:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.2 2006/06/17 03:28:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,13 +148,13 @@
 		  :offset (tn-offset x)))
 (defun complex-double-double-reg-real-lo-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
-		  :offset (+ 2 (tn-offset x))))
+		  :offset (+ 1 (tn-offset x))))
 (defun complex-double-double-reg-imag-hi-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
-		  :offset (+ 4 (tn-offset x))))
+		  :offset (+ 2 (tn-offset x))))
 (defun complex-double-double-reg-imag-lo-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
-		  :offset (+ 6 (tn-offset x))))
+		  :offset (+ 3 (tn-offset x))))
 )
 
 (define-move-function (load-complex-single 2) (vop x y)
