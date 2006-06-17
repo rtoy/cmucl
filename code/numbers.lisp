@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60.8.1.2.1 2006/06/11 20:11:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60.8.1.2.1.2.1 2006/06/17 04:00:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -216,6 +216,11 @@
     (/ 'dd-/)
     (otherwise op)))
 
+#+double-double
+(defun dd-contagion (op)  
+  op)
+
+
 ;;; FLOAT-CONTAGION  --  Internal
 ;;;
 ;;;    Return NUMBER-DISPATCH forms for rational X float.
@@ -280,6 +285,10 @@
 	    ((and (typep realpart 'long-float)
 		  (typep imagpart 'long-float))
 	     (truly-the (complex long-float) (complex realpart imagpart)))
+	    #+double-double
+	    ((and (typep realpart 'double-double-float)
+		  (typep imagpart 'double-double-float))
+	     (truly-the (complex double-double-float) (complex realpart imagpart)))
 	    ((and (typep realpart 'double-float)
 		  (typep imagpart 'double-float))
 	     (truly-the (complex double-float) (complex realpart imagpart)))
@@ -336,6 +345,9 @@
 	#+long-float
 	((subtypep spec 'long-float)
 	 'long-float)
+	#+double-double
+	((subtypep spec 'double-double-float)
+	 'double-double-float)
 	((subtypep spec 'rational)
 	 'rational)
 	((subtypep spec 'real)
@@ -365,6 +377,11 @@
 		       (typep imagpart 'long-float))
 		  (truly-the (complex long-float)
 			     (complex realpart imagpart)))
+		 #+double-double
+		 ((and (typep realpart 'double-double-float)
+		       (typep imagpart 'double-double-float))
+		  (truly-the (complex double-double-float)
+			     (complex realpart imagpart)))
 		 ((and (typep realpart 'double-float)
 		       (typep imagpart 'double-float))
 		  (truly-the (complex double-float)
@@ -386,6 +403,9 @@
     #+long-float
     ((complex long-float)
      (truly-the long-float (realpart number)))
+    #+double-double
+    ((complex double-double-float)
+     (truly-the double-double-float (realpart number)))
     ((complex double-float)
      (truly-the double-float (realpart number)))
     ((complex single-float)
@@ -401,6 +421,9 @@
     #+long-float
     ((complex long-float)
      (truly-the long-float (imagpart number)))
+    #+double-double
+    ((complex double-double-float)
+     (truly-the double-double-float (imagpart number)))
     ((complex double-float)
      (truly-the double-float (imagpart number)))
     ((complex single-float)
@@ -1005,6 +1028,7 @@
 ;; This is a hack to get two-arg comparison functions going.  Convert
 ;; the op to equivalent dd op.  Once the deftransforms are in place,
 ;; these should go away.
+#+nil
 (defun dd-op (op)
   (case op
     (< 'dd-<)
@@ -1012,6 +1036,8 @@
     (= 'dd-=)
     (otherwise op)))
 
+(defun dd-op (op)
+  op)
   
 (defun basic-compare (op)
   `(((fixnum fixnum) (,op x y))
