@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.1 2006/06/16 03:46:59 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.2 2006/06/19 02:15:00 rtoy Exp $
  *
  */
 
@@ -4565,6 +4565,9 @@ gc_init_tables(void)
 #ifdef type_ComplexLongFloat
     scavtab[type_ComplexLongFloat] = scav_unboxed;
 #endif
+#ifdef type_ComplexDoubleDoubleFloat
+    scavtab[type_ComplexDoubleDoubleFloat] = scav_unboxed;
+#endif
     scavtab[type_SimpleArray] = scav_boxed;
     scavtab[type_SimpleString] = scav_string;
     scavtab[type_SimpleBitVector] = scav_vector_bit;
@@ -4671,6 +4674,9 @@ gc_init_tables(void)
 #ifdef type_ComplexLongFloat
     transother[type_ComplexLongFloat] = trans_unboxed;
 #endif
+#ifdef type_ComplexDoubleDoubleFloat
+    transother[type_ComplexDoubleDoubleFloat] = trans_unboxed;
+#endif
     transother[type_SimpleArray] = trans_boxed_large;
     transother[type_SimpleString] = trans_string;
     transother[type_SimpleBitVector] = trans_vector_bit;
@@ -4769,6 +4775,9 @@ gc_init_tables(void)
 #endif
 #ifdef type_ComplexLongFloat
     sizetab[type_ComplexLongFloat] = size_unboxed;
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
+    sizetab[type_ComplexDoubleDoubleFloat] = size_unboxed;
 #endif
     sizetab[type_SimpleArray] = size_boxed;
     sizetab[type_SimpleString] = size_string;
@@ -5027,6 +5036,9 @@ valid_dynamic_space_pointer(lispobj * pointer)
 #endif
 #ifdef type_ComplexLongFloat
 	    case type_ComplexLongFloat:
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
+	    case type_ComplexDoubleDoubleFloat:
 #endif
 	    case type_SimpleArray:
 	    case type_ComplexString:
@@ -6293,6 +6305,9 @@ verify_space(lispobj * start, size_t words)
 #endif
 #ifdef type_ComplexLongFloat
 	      case type_ComplexLongFloat:
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
+	      case type_ComplexDoubleDoubleFloat:
 #endif
 	      case type_SimpleString:
 	      case type_SimpleBitVector:

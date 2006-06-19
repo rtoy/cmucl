@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36.2.1.4.1 2006/06/16 03:46:59 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36.2.1.4.2 2006/06/19 02:15:00 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -374,6 +374,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 #endif
 #ifdef type_ComplexLongFloat
 	    case type_ComplexLongFloat:
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
+	    case type_ComplexDoubleDoubleFloat:
 #endif
 	    case type_SimpleArray:
 	    case type_ComplexString:
@@ -1048,6 +1051,9 @@ ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 #endif
 #ifdef type_ComplexLongFloat
       case type_ComplexLongFloat:
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
+      case type_ComplexDoubleDoubleFloat:
 #endif
       case type_Sap:
 	  return ptrans_unboxed(thing, header);
