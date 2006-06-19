@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.4.2.1 2006/06/17 02:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.4.2.2 2006/06/19 12:28:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3119,7 +3119,7 @@
       (complex-double-double-reg
        (let ((r-real (complex-double-double-reg-real-hi-tn r))
 	     (real-hi (double-double-reg-hi-tn real)))
-	 (move-double-reg r-real real))
+	 (move-double-reg r-real real-hi))
        (let ((r-real (complex-double-double-reg-real-lo-tn r))
 	     (real-lo (double-double-reg-lo-tn real)))
 	 (move-double-reg r-real real-lo))
