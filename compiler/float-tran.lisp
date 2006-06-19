@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.9 2006/06/14 15:40:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.9.2.1 2006/06/19 02:17:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1360,7 +1360,7 @@
 ;;; Define some transforms for complex operations.  We do this in lieu
 ;;; of complex operation VOPs.  Some architectures have vops, though.
 ;;;
-#-complex-fp-vops
+#-(and (not double-double) complex-fp-vops)
 (macrolet ((frob (type)
 	     `(progn
 	       ;; Negation
@@ -1446,9 +1446,11 @@
 	       )))
 
   (frob single-float)
-  (frob double-float))
+  (frob double-float)
+  #+double-double
+  (frob double-double-float))
 
-#+complex-fp-vops
+#+(and (not double-double) complex-fp-vops)
 (macrolet
     ((frob (type)
        `(progn
