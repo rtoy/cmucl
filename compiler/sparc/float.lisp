@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.4.2.2 2006/06/19 12:28:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.4.2.3 2006/06/19 14:34:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,13 +292,13 @@
 		  :offset (tn-offset x)))
 (defun complex-double-double-reg-real-lo-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
-		  :offset (+ 4 (tn-offset x))))
+		  :offset (+ 2 (tn-offset x))))
 (defun complex-double-double-reg-imag-hi-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
-		  :offset (+ 8 (tn-offset x))))
+		  :offset (+ 4 (tn-offset x))))
 (defun complex-double-double-reg-imag-lo-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
-		  :offset (+ 12 (tn-offset x))))
+		  :offset (+ 6 (tn-offset x))))
 )
 
 (define-move-function (load-complex-single 2) (vop x y)
@@ -3140,6 +3140,45 @@
 	   (inst stdf r-imag nfp (+ offset (* 4 vm:word-bytes))))
 	 (let ((r-imag (complex-double-double-reg-imag-lo-tn r)))
 	   (inst stdf r-imag nfp (+ offset (* 6 vm:word-bytes)))))))))
+
+(define-vop (complex-double-double-float-value)
+  (:args (x :scs (complex-double-double-reg) :target r
+	    :load-if (not (sc-is x complex-double-double-stack))))
+  (:arg-types complex-double-double-float)
+  (:results (r :scs (double-double-reg)))
+  (:result-types double-double-float)
+  (:variant-vars slot)
+  (:policy :fast-safe)
+  (:vop-var vop)
+  (:generator 3
+    (sc-case x
+      (complex-double-double-reg
+       (let ((value-tn (ecase slot
+			 (:real (complex-double-double-reg-real-hi-tn x))
+			 (:imag (complex-double-double-reg-imag-hi-tn x))))
+	     (r-hi (double-double-reg-hi-tn r)))
+	 (unless (location= value-tn r-hi)
+	   (move-double-reg r-hi value-tn)))
+       (let ((value-tn (ecase slot
+			 (:real (complex-double-double-reg-real-lo-tn x))
+			 (:imag (complex-double-double-reg-imag-lo-tn x))))
+	     (r-lo (double-double-reg-lo-tn r)))
+	 (unless (location= value-tn r-lo)
+	   (move-double-reg r-lo value-tn))))
+      (complex-double-double-stack
+       (inst lddf r (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 2))
+					      (tn-offset x))
+					   vm:word-bytes))))))
+
+(define-vop (realpart/complex-double-double-float complex-double-double-float-value)
+  (:translate realpart)
+  (:note "complex double float realpart")
+  (:variant :real))
+
+(define-vop (imagpart/complex-double-double-float complex-double-double-float-value)
+  (:translate imagpart)
+  (:note "complex double float imagpart")
+  (:variant :imag))
 
 ); progn
 
