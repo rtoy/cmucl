@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.20 2005/09/15 18:26:52 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.20.8.1 2006/06/20 14:50:19 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -40,6 +40,9 @@ char *subtype_Names[] = {
 #ifdef type_LongFloat
     "long float",
 #endif
+#ifdef type_DoubleDoubleFloat
+    "double-double float",
+#endif    
     "complex",
 #ifdef type_ComplexSingleFloat
     "complex single float",
@@ -49,6 +52,9 @@ char *subtype_Names[] = {
 #endif
 #ifdef type_ComplexLongFloat
     "complex long float",
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
+    "complex double-double float",
 #endif
     "simple-array",
     "simple-string",
@@ -76,6 +82,9 @@ char *subtype_Names[] = {
 #ifdef type_SimpleArrayLongFloat
     "(simple-array long-float (*))",
 #endif
+#ifdef type_SimpleArrayDoubleDoubleFloat
+    "(simple-array double-double-float (*))",
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
     "(simple-array (complex single-float) (*))",
 #endif
@@ -84,6 +93,9 @@ char *subtype_Names[] = {
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
     "(simple-array (complex long-float) (*))",
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+    "(simple-array (complex double-double-float) (*))",
 #endif
     "complex-string",
     "complex-bit-vector",
