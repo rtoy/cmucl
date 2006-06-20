@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.2 2006/06/17 03:28:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.3 2006/06/20 10:50:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1294,7 +1294,7 @@
       (complex-double-double-reg
        (let ((r-real (complex-double-double-reg-real-hi-tn r))
 	     (real-hi (double-double-reg-hi-tn real)))
-	 (inst fmr r-real real))
+	 (inst fmr r-real real-hi))
        (let ((r-real (complex-double-double-reg-real-lo-tn r))
 	     (real-lo (double-double-reg-lo-tn real)))
 	 (inst fmr r-real real-lo))
