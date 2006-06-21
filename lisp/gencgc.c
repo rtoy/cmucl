@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.2 2006/06/19 02:15:00 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.3 2006/06/21 18:38:45 rtoy Exp $
  *
  */
 
@@ -4370,6 +4370,38 @@ trans_vector_complex_long_float(lispobj object)
 								    (object)));
 }
 #endif
+
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+static int
+size_vector_complex_double_double_float(lispobj * where)
+{
+    struct vector *vector;
+    int length, nwords;
+
+    vector = (struct vector *) where;
+    length = fixnum_value(vector->length);
+    nwords = length * 8 + 2;
+
+    return nwords;
+}
+
+static int
+scav_vector_complex_double_double_float(lispobj * where, lispobj object)
+{
+    return size_vector_complex_double_double_float(where);
+}
+
+static lispobj
+trans_vector_complex_double_double_float(lispobj object)
+{
+    gc_assert(Pointerp(object));
+    return copy_large_unboxed_object(object,
+				     size_vector_complex_double_double_float((lispobj *)
+									     PTR
+									     (object)));
+}
+#endif
+
 
 
 /* Weak Pointers */

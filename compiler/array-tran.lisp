@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.40.10.2 2006/06/17 02:59:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.40.10.3 2006/06/21 18:38:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -265,6 +265,9 @@
     #+long-float
     ((complex long-float) #C(0.0l0 0.0l0) #+x86 192 #+sparc 256
      vm:simple-array-complex-long-float-type)
+    #+double-double
+    ((complex double-double-float) #C(0.0w0 0.0w0) 256
+     vm::simple-array-complex-double-double-float-type)
     (t 0 32 vm:simple-vector-type)))
 
 ;;; MAKE-ARRAY  --  source-transform.

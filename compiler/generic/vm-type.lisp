@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.43.12.1.4.1 2006/06/16 03:46:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.43.12.1.4.2 2006/06/21 18:38:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,6 +97,7 @@
     (signed-byte 8) (signed-byte 16) (signed-byte 30) (signed-byte 32)
     (complex single-float) (complex double-float)
     #+long-float (complex long-float)
+    #+double-double (complex double-double-float)
     base-char single-float double-float
     #+long-float long-float
     #+double-double double-double-float))

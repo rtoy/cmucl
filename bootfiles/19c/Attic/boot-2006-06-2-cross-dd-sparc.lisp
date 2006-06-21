@@ -1,15 +1,19 @@
-;;;; This is the cross-compile script for adding the
-;;;; double-double-float type for sparc.
+;;;; This is the cross-compile script for adding the (complex
+;;;; double-double-float), (simple-array double-double-float (*)), and
+;;;; (simple-array (complex double-double-float) (*)) types for sparc.
 ;;;;
 ;;;; Use the standard src/tools/cross-build-world.sh script with this
 ;;;; cross-compile script to generate a double-double-float build.
 ;;;; Something like
 ;;;;
-;;;;   src/tools/cross-build-world.sh xtarget xcross <this-file> <19c binary>
+;;;;   src/tools/cross-build-world.sh xtarget xcross <this-file> <dd-reader>
+;;;;
+;;;; I think this has to be built using a version that has reader
+;;;; support for double-double-float.  I didn't try it any othe way.
 ;;;;
 ;;;; Once that has been done, you still need to do a full set of
-;;;; builds to get one with double-double-float integrated in.  Use
-;;;; the boot-2006-06-1.lisp bootstrap file for that.  Something like:
+;;;; builds to get these new types completely integrated in.  Don't
+;;;; need any special bootstrap files for this, so
 ;;;;
 ;;;;   src/tools/build.sh -C "sun4_solaris_sunc" -o "xtarget/lisp/lisp -noinit"
 ;;;;
@@ -87,9 +91,11 @@
 (defknown complex-double-double-float-p (t)
   boolean
   (movable foldable flushable))
-(in-package "KERNEL")
-(defun complex-double-double-float-p (x)
-  nil)
+
+(defknown simple-array-complex-double-double-float-p (t)
+  boolean
+  (movable foldable flushable))
+
 
 ;; End changes for double-double
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -208,6 +214,10 @@
 	OLD-SPARC:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
 	OLD-SPARC:SINGLE-FLOAT-SIGNIFICAND-BYTE
 	))
+
+;; Modular arith hacks
+(setf (fdefinition 'vm::ash-left-mod32) #'old-sparc::ash-left-mod32)
+(setf (fdefinition 'vm::lognot-mod32) #'old-sparc::lognot-mod32)
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
   (let ((*info-environment* (c:backend-info-environment c:*target-backend*)))

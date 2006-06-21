@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.59.6.1.4.2 2006/06/17 02:59:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.59.6.1.4.3 2006/06/21 18:38:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,6 +145,7 @@
   simple-array-complex-single-float
   simple-array-complex-double-float
   #+long-float simple-array-complex-long-float
+  #+double-double simple-array-complex-double-double-float
   complex-string
   complex-bit-vector
   complex-vector

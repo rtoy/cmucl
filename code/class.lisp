@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.58.8.1.4.2 2006/06/17 02:59:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.58.8.1.4.3 2006/06/21 18:38:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -799,6 +799,14 @@
 	  (simple-array-complex-long-float
 	   :translation (simple-array (complex long-float) (*))
 	   :codes (#.vm:simple-array-complex-long-float-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
+	  #+double-double
+	  (simple-array-complex-double-double-float
+	   :translation (simple-array (complex double-double-float) (*))
+	   :codes (#.vm::simple-array-complex-double-double-float-type)
 	   :direct-superclasses (vector simple-array)
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection

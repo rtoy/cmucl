@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.59.18.1.4.2 2006/06/17 02:59:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.59.18.1.4.3 2006/06/21 18:38:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,6 +110,7 @@
       simple-array-complex-single-float-p
       simple-array-complex-double-float-p
       #+long-float simple-array-complex-long-float-p
+      #+double-double simple-array-complex-double-double-float-p
       )))
 
 (macrolet

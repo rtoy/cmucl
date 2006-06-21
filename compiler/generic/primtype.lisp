@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.24.8.1.4.2 2006/06/17 02:59:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.24.8.1.4.3 2006/06/21 18:38:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,6 +162,9 @@
 #+long-float
 (def-primitive-type simple-array-complex-long-float (descriptor-reg)
   :type (simple-array (complex long-float) (*)))
+#+double-double
+(def-primitive-type simple-array-complex-double-double-float (descriptor-reg)
+  :type (simple-array (complex double-double-float) (*)))
 
 ;;; Note: The complex array types are not inclueded, 'cause it is pointless to
 ;;; restrict VOPs to them.
@@ -214,6 +217,7 @@
     ((complex double-float) . simple-array-complex-double-float)
     #+long-float
     ((complex long-float) . simple-array-complex-long-float)
+    #+double-double ((complex double-double-float) . simple-array-complex-double-double-float)
     (t . simple-vector))
   "An a-list for mapping simple array element types to their
   corresponding primitive types.")

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.24.8.1.4.2 2006/06/17 02:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.24.8.1.4.3 2006/06/21 18:38:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -229,6 +229,13 @@
   object-not-simple-array-complex-long-float-error
   vm:simple-array-complex-long-float-type)
 
+#+double-double
+(def-type-vops simple-array-complex-double-double-float-p
+  check-simple-array-complex-double-double-float
+  simple-array-complex-double-double-float
+  object-not-simple-array-complex-double-double-float-error
+  vm::simple-array-complex-double-double-float-type)
+
 (def-type-vops base-char-p check-base-char base-char
   object-not-base-char-error vm:base-char-type)
 
@@ -279,6 +286,7 @@
   vm:simple-array-complex-single-float-type
   vm:simple-array-complex-double-float-type
   #+long-float vm:simple-array-complex-long-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type
   vm:complex-string-type vm:complex-bit-vector-type vm:complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
@@ -293,7 +301,9 @@
   #+double-double vm::simple-array-double-double-float-type
   vm:simple-array-complex-single-float-type
   vm:simple-array-complex-double-float-type
-  #+long-float vm:simple-array-complex-long-float-type)
+  #+long-float vm:simple-array-complex-long-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type
+  )
 
 (def-type-vops arrayp check-array nil object-not-array-error
   vm:simple-array-type vm:simple-string-type vm:simple-bit-vector-type
@@ -308,6 +318,7 @@
   vm:simple-array-complex-single-float-type
   vm:simple-array-complex-double-float-type
   #+long-float vm:simple-array-complex-long-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type
   vm:complex-string-type vm:complex-bit-vector-type vm:complex-vector-type
   vm:complex-array-type)
 

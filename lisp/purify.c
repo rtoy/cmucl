@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36.2.1.4.2 2006/06/19 02:15:00 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36.2.1.4.3 2006/06/21 18:38:45 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -184,6 +184,9 @@ maybe_can_move_p(lispobj thing)
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
 	      case type_SimpleArrayComplexLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	      case type_SimpleArrayComplexDoubleDoubleFloat:
 #endif
 	      case type_CodeHeader:
 	      case type_FunctionHeader:
@@ -431,6 +434,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
 	    case type_SimpleArrayComplexLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	    case type_SimpleArrayComplexDoubleDoubleFloat:
 #endif
 	    case type_Sap:
 	    case type_WeakPointer:
@@ -1157,6 +1163,12 @@ ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 #endif
 #endif
 
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+      case type_SimpleArrayComplexDoubleDoubleFloat:
+	  return ptrans_vector(thing, 256, 0, FALSE, constant);
+#endif
+
+          
       case type_CodeHeader:
 	  return ptrans_code(thing);
 
@@ -1485,6 +1497,13 @@ pscav(lispobj * addr, int nwords, boolean constant)
 #ifdef sparc
 		  count = fixnum_value(vector->length) * 8 + 2;
 #endif
+		  break;
+#endif
+
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	      case type_SimpleArrayComplexDoubleDoubleFloat:
+		  vector = (struct vector *) addr;
+		  count = fixnum_value(vector->length) * 8 + 2;
 		  break;
 #endif
 
