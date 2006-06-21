@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.12.24.1.4.2 2006/06/17 02:59:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.12.24.1.4.3 2006/06/21 21:34:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,6 +158,9 @@
   #+long-float
   (object-not-simple-array-long-float
    "Object is not of type (SIMPLE-ARRAY LONG-FLOAT (*)).")
+  #+double-double
+  (object-not-simple-array-double-double-float
+   "Object is not of type (SIMPLE-ARRAY DOUBLE-DOUBLE-FLOAT (*)).")
   (object-not-simple-array-complex-single-float
    "Object is not of type (SIMPLE-ARRAY (COMPLEX SINGLE-FLOAT) (*)).")
   (object-not-simple-array-complex-double-float
@@ -166,8 +169,8 @@
   (object-not-simple-array-complex-long-float
    "Object is not of type (SIMPLE-ARRAY (COMPLEX LONG-FLOAT) (*)).")
   #+double-double
-  (object-not-simple-array-double-double-float
-   "Object is not of type (SIMPLE-ARRAY DOUBLE-DOUBLE-FLOAT (*)).")
+  (object-not-simple-array-complex-double-double-float
+   "Object is not of type (SIMPLE-ARRAY (COMPLEX DOUBLE-DOUBLE-FLOAT) (*)).")
   (object-not-complex
    "Object is not of type COMPLEX.")
   (object-not-complex-rational
