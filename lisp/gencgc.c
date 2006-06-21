@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.3 2006/06/21 18:38:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.4 2006/06/21 20:15:59 rtoy Exp $
  *
  */
 
@@ -4655,13 +4655,17 @@ gc_init_tables(void)
     scavtab[type_FuncallableInstanceHeader] = scav_closure_header;
     scavtab[type_ByteCodeFunction] = scav_closure_header;
     scavtab[type_ByteCodeClosure] = scav_closure_header;
+#ifdef type_DylanFunctionHeader
     scavtab[type_DylanFunctionHeader] = scav_closure_header;
+#endif
 #else
     scavtab[type_ClosureHeader] = scav_boxed;
     scavtab[type_FuncallableInstanceHeader] = scav_boxed;
     scavtab[type_ByteCodeFunction] = scav_boxed;
     scavtab[type_ByteCodeClosure] = scav_boxed;
+#ifdef type_DylanFunctionHeader
     scavtab[type_DylanFunctionHeader] = scav_boxed;
+#endif
 #endif
     scavtab[type_ValueCellHeader] = scav_boxed;
     scavtab[type_SymbolHeader] = scav_boxed;
@@ -4997,7 +5001,9 @@ valid_dynamic_space_pointer(lispobj * pointer)
 	    case type_FuncallableInstanceHeader:
 	    case type_ByteCodeFunction:
 	    case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	    case type_DylanFunctionHeader:
+#endif
 		if ((size_t) pointer !=
 		    (size_t) start_addr + type_FunctionPointer) {
 		    return FALSE;
@@ -5050,7 +5056,9 @@ valid_dynamic_space_pointer(lispobj * pointer)
 	    case type_FuncallableInstanceHeader:
 	    case type_ByteCodeFunction:
 	    case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	    case type_DylanFunctionHeader:
+#endif
 		return FALSE;
 
 	    case type_InstanceHeader:
@@ -6263,7 +6271,9 @@ verify_space(lispobj * start, size_t words)
 	      case type_FuncallableInstanceHeader:
 	      case type_ByteCodeFunction:
 	      case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	      case type_DylanFunctionHeader:
+#endif
 	      case type_ValueCellHeader:
 	      case type_SymbolHeader:
 	      case type_BaseChar:

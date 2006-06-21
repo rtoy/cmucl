@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.52 2005/03/17 22:12:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.52.10.1 2006/06/21 20:15:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,10 +158,12 @@ about function addresses and register values.")
 	single-float
 	double-float
 	#+long-float long-float
+	#+double-double double-double-float
 	complex
 	complex-single-float
 	complex-double-float
 	#+long-float complex-long-float
+	#+double-double complex-double-double-float
   
 	simple-array
 	simple-string
@@ -179,9 +181,11 @@ about function addresses and register values.")
 	simple-array-single-float
 	simple-array-double-float
 	#+long-float simple-array-long-float
+	#+double-double simple-array-double-double-float
 	simple-array-complex-single-float
 	simple-array-complex-double-float
 	#+long-float simple-array-complex-long-float
+	#+double-double simple-array-complex-double-double-float
 	complex-string
 	complex-bit-vector
 	complex-vector
@@ -193,7 +197,6 @@ about function addresses and register values.")
 	funcallable-instance-header
 	byte-code-function
 	byte-code-closure
-	dylan-function-header
 	closure-function-header
 	#-gengc return-pc-header
 	#+gengc forwarding-pointer

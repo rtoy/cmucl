@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36.2.1.4.3 2006/06/21 18:38:45 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36.2.1.4.4 2006/06/21 20:16:02 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -198,7 +198,9 @@ maybe_can_move_p(lispobj thing)
 	      case type_ValueCellHeader:
 	      case type_ByteCodeFunction:
 	      case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	      case type_DylanFunctionHeader:
+#endif
 	      case type_WeakPointer:
 	      case type_Fdefn:
 #ifdef type_ScavengerHook
@@ -274,7 +276,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 	    case type_FuncallableInstanceHeader:
 	    case type_ByteCodeFunction:
 	    case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	    case type_DylanFunctionHeader:
+#endif
 		if ((int) pointer != ((int) start_addr + type_FunctionPointer)) {
 		    if (pointer_filter_verbose)
 			fprintf(stderr, "*Wf2: %p %p %lx\n", pointer,
@@ -353,7 +357,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 	    case type_FuncallableInstanceHeader:
 	    case type_ByteCodeFunction:
 	    case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	    case type_DylanFunctionHeader:
+#endif
 		if (pointer_filter_verbose)
 		    fprintf(stderr, "*Wo4: %p %p %lx\n", pointer, start_addr,
 			    *start_addr);
@@ -1531,7 +1537,9 @@ pscav(lispobj * addr, int nwords, boolean constant)
 	      case type_FuncallableInstanceHeader:
 	      case type_ByteCodeFunction:
 	      case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	      case type_DylanFunctionHeader:
+#endif
 		  /* The function self pointer needs special care on the
 		     x86 because it is the real entry point. */
 		  {

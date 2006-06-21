@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.59.6.1.4.3 2006/06/21 18:38:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.59.6.1.4.4 2006/06/21 20:15:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,6 @@
 	  code-header-type function-header-type closure-header-type
 	  closure-function-header-type return-pc-header-type
 	  byte-code-function-type byte-code-closure-type
-	  dylan-function-header-type
 	  value-cell-header-type symbol-header-type base-char-type
 	  sap-type unbound-marker-type weak-pointer-type
 	  instance-header-type funcallable-instance-header-type
@@ -157,7 +156,6 @@
   funcallable-instance-header
   byte-code-function
   byte-code-closure
-  dylan-function-header
   closure-function-header
   #-gengc return-pc-header
   #+gengc forwarding-pointer
