@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.18 2006/03/18 05:17:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.18.6.1 2006/06/22 01:46:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,10 +104,12 @@
 	single-float
 	double-float
 	#+long-float long-float
+	#+double-double double-double-float
 	complex
 	complex-single-float
 	complex-double-float
 	#+long-float complex-long-float
+	#+double-double complex-double-double-float
   
 	simple-array
 	simple-string
@@ -125,9 +127,11 @@
 	simple-array-single-float
 	simple-array-double-float
 	#+long-float simple-array-long-float
+	#+double-double simple-array-double-double-float
 	simple-array-complex-single-float
 	simple-array-complex-double-float
 	#+long-float simple-array-complex-long-float
+	#+double-double simple-array-complex-double-double-float
 	complex-string
 	complex-bit-vector
 	complex-vector
@@ -139,7 +143,6 @@
 	funcallable-instance-header
 	byte-code-function
 	byte-code-closure
-	dylan-function-header
 	closure-function-header
 	#-gengc return-pc-header
 	#+gengc forwarding-pointer

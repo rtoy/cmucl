@@ -48,20 +48,24 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Things needed to cross-compile double-double changes.
-(in-package "KERNEL")
+(in-package "C")
 
 (eval-when (compile load eval)
-(c:defknown simple-array-double-double-float-p (t)
+(defknown simple-array-double-double-float-p (t)
   boolean
-  (c:movable c:foldable c:flushable))
-(c::defknown complex-double-double-float-p (t)
+  (movable foldable flushable))
+(defknown complex-double-double-float-p (t)
   boolean
-  (c::movable c::foldable c::flushable))
+  (movable foldable flushable))
+(defknown simple-array-complex-double-double-float-p (t)
+  boolean
+  (movable foldable flushable))
 )
 
 
 ;; End changes for double-double
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(in-package "CL-USER")
 
 ;;; Compile the new backend.
 (pushnew :bootstrap *features*)
@@ -172,6 +176,10 @@
 	OLD-PPC:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
 	OLD-PPC:SINGLE-FLOAT-SIGNIFICAND-BYTE
 	))
+
+;; Modular arith hacks
+(setf (fdefinition 'vm::ash-left-mod32) #'old-ppc::ash-left-mod32)
+(setf (fdefinition 'vm::lognot-mod32) #'old-ppc::lognot-mod32)
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
   (let ((*info-environment* (c:backend-info-environment c:*target-backend*)))

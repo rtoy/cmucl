@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/type-vops.lisp,v 1.2.24.1.4.2 2006/06/17 02:59:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/type-vops.lisp,v 1.2.24.1.4.3 2006/06/22 01:46:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -238,6 +238,13 @@
   object-not-simple-array-complex-double-float-error
   simple-array-complex-double-float-type)
 
+#+double-double
+(def-type-vops simple-array-complex-double-double-float-p
+  check-simple-array-complex-double-double-float
+  simple-array-complex-double-double-float
+  object-not-simple-array-complex-double-double-float-error
+  vm::simple-array-complex-double-double-float-type)
+
 (def-type-vops base-char-p check-base-char base-char
   object-not-base-char-error vm:base-char-type)
 
@@ -286,6 +293,7 @@
   #+double-double vm::simple-array-double-double-float-type
   simple-array-complex-single-float-type
   simple-array-complex-double-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type
   complex-string-type complex-bit-vector-type complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
@@ -298,7 +306,8 @@
   simple-array-single-float-type simple-array-double-float-type
   #+double-double vm::simple-array-double-double-float-type
   simple-array-complex-single-float-type
-  simple-array-complex-double-float-type)
+  simple-array-complex-double-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
   simple-array-type simple-string-type simple-bit-vector-type
@@ -311,6 +320,7 @@
   #+double-double vm::simple-array-double-double-float-type
   simple-array-complex-single-float-type
   simple-array-complex-double-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type
   complex-string-type complex-bit-vector-type complex-vector-type
   complex-array-type)
 
