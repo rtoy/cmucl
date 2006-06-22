@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.4.2.3 2006/06/19 14:34:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44.12.2.2.4.2.4 2006/06/22 15:04:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3166,9 +3166,14 @@
 	 (unless (location= value-tn r-lo)
 	   (move-double-reg r-lo value-tn))))
       (complex-double-double-stack
-       (inst lddf r (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 2))
-					      (tn-offset x))
-					   vm:word-bytes))))))
+       (let ((r-hi (double-double-reg-hi-tn r)))
+	 (inst lddf r-hi (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 4))
+						    (tn-offset x))
+						 vm:word-bytes)))
+       (let ((r-lo (double-double-reg-lo-tn r)))
+	 (inst lddf r-lo (current-nfp-tn vop) (* (+ (ecase slot (:real 2) (:imag 6))
+						    (tn-offset x))
+						 vm:word-bytes)))))))
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
