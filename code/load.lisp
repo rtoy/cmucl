@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.90.6.1 2006/06/09 16:04:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.90.6.1.4.1 2006/06/22 13:58:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -887,6 +887,40 @@
 	   (make-double-float lo-hi lo-lo)))
       (done-with-fast-read-byte))))
 
+#+double-double
+(define-fop (fop-double-double-float-vector 88)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type 'double-double-float)))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 4))
+    result))
+
+#+double-double
+(define-fop (fop-complex-double-double-float 89)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let* ((real-hi-lo (fast-read-u-integer 4))
+	       (real-hi-hi (fast-read-s-integer 4))
+	       (real-lo-lo (fast-read-u-integer 4))
+	       (real-lo-hi (fast-read-s-integer 4))
+	       (re (kernel::make-double-double-float
+		    (make-double-float real-hi-hi real-hi-lo)
+		    (make-double-float real-lo-hi real-lo-lo)))
+	       (imag-hi-lo (fast-read-u-integer 4))
+	       (imag-hi-hi (fast-read-s-integer 4))
+	       (imag-lo-lo (fast-read-u-integer 4))
+	       (imag-lo-hi (fast-read-s-integer 4))
+	       (im (kernel::make-double-double-float
+		    (make-double-float imag-hi-hi imag-hi-lo)
+		    (make-double-float imag-lo-hi imag-lo-lo))))
+	  (complex re im)) 
+      (done-with-fast-read-byte))))
+
+#+double-double
+(define-fop (fop-complex-double-double-float-vector 90)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex double-double-float))))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 8))
+    result))
 
 ;;;; Loading lists:
 
