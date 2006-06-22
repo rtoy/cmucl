@@ -96,6 +96,41 @@
   boolean
   (movable foldable flushable))
 
+(in-package "LISP")
+#+double-double
+(define-fop (fop-double-double-float-vector 88)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type 'double-double-float)))
+    (read-n-bytes *fasl-file* result 0 (* length 4 4))
+    result))
+
+#+double-double
+(define-fop (fop-complex-double-double-float 89)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let* ((real-hi-lo (fast-read-u-integer 4))
+	       (real-hi-hi (fast-read-s-integer 4))
+	       (real-lo-lo (fast-read-u-integer 4))
+	       (real-lo-hi (fast-read-s-integer 4))
+	       (re (kernel::make-double-double-float
+		    (make-double-float real-hi-hi real-hi-lo)
+		    (make-double-float real-lo-hi real-lo-lo)))
+	       (imag-hi-lo (fast-read-u-integer 4))
+	       (imag-hi-hi (fast-read-s-integer 4))
+	       (imag-lo-lo (fast-read-u-integer 4))
+	       (imag-lo-hi (fast-read-s-integer 4))
+	       (im (kernel::make-double-double-float
+		    (make-double-float imag-hi-hi imag-hi-lo)
+		    (make-double-float imag-lo-hi imag-lo-lo))))
+	  (complex re im)) 
+      (done-with-fast-read-byte))))
+
+#+double-double
+(define-fop (fop-complex-double-double-float-vector 90)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex double-double-float))))
+    (read-n-bytes *fasl-file* result 0 (* length 4 8))
+    result))
 
 ;; End changes for double-double
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
