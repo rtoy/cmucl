@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.4 2006/06/21 20:15:59 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.5 2006/06/22 20:41:17 rtoy Exp $
  *
  */
 
@@ -4640,6 +4640,10 @@ gc_init_tables(void)
 #ifdef type_SimpleArrayComplexLongFloat
     scavtab[type_SimpleArrayComplexLongFloat] = scav_vector_complex_long_float;
 #endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+    scavtab[type_SimpleArrayComplexDoubleDoubleFloat] =
+	scav_vector_complex_double_double_float;
+#endif
     scavtab[type_ComplexString] = scav_boxed;
     scavtab[type_ComplexBitVector] = scav_boxed;
     scavtab[type_ComplexVector] = scav_boxed;
@@ -4754,6 +4758,10 @@ gc_init_tables(void)
     transother[type_SimpleArrayComplexLongFloat] =
 	trans_vector_complex_long_float;
 #endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+    transother[type_SimpleArrayComplexDoubleDoubleFloat] =
+	trans_vector_complex_double_double_float;
+#endif
     transother[type_ComplexString] = trans_boxed;
     transother[type_ComplexBitVector] = trans_boxed;
     transother[type_ComplexVector] = trans_boxed;
@@ -4854,6 +4862,10 @@ gc_init_tables(void)
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
     sizetab[type_SimpleArrayComplexLongFloat] = size_vector_complex_long_float;
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+    sizetab[type_SimpleArrayComplexDoubleDoubleFloat] =
+	size_vector_complex_double_double_float;
 #endif
     sizetab[type_ComplexString] = size_boxed;
     sizetab[type_ComplexBitVector] = size_boxed;
@@ -5134,6 +5146,9 @@ valid_dynamic_space_pointer(lispobj * pointer)
 #ifdef type_SimpleArrayComplexLongFloat
 	    case type_SimpleArrayComplexLongFloat:
 #endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	    case type_SimpleArrayComplexDoubleDoubleFloat:
+#endif
 	    case type_Sap:
 	    case type_WeakPointer:
 	    case type_ScavengerHook:
@@ -5215,6 +5230,9 @@ maybe_adjust_large_object(lispobj * where)
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
       case type_SimpleArrayComplexLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+      case type_SimpleArrayComplexDoubleDoubleFloat:
 #endif
 	  unboxed = TRUE;
 	  break;
@@ -6386,6 +6404,9 @@ verify_space(lispobj * start, size_t words)
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
 	      case type_SimpleArrayComplexLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	      case type_SimpleArrayComplexDoubleDoubleFloat:
 #endif
 	      case type_Sap:
 	      case type_WeakPointer:
