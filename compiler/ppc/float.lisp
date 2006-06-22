@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.3 2006/06/20 10:50:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.4 2006/06/22 23:57:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1341,9 +1341,14 @@
 	 (unless (location= value-tn r-lo)
 	   (inst fmr r-lo value-tn))))
       (complex-double-double-stack
-       (inst lfd r (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 2))
-					      (tn-offset x))
-					   vm:word-bytes))))))
+       (let ((r-hi (double-double-reg-hi-tn r)))
+	 (inst lfd r-hi (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 4))
+						   (tn-offset x))
+						vm:word-bytes)))
+       (let ((r-lo (double-double-reg-lo-tn r)))
+	 (inst lfd r-lo (current-nfp-tn vop) (* (+ (ecase slot (:real 2) (:imag 6))
+						   (tn-offset x))
+						vm:word-bytes)))))))
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
