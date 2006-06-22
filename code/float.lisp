@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.3 2006/06/13 19:58:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.3.2.1 2006/06/22 18:06:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -549,7 +549,7 @@
   (declare (type double-double-float x))
   (let* ((r (numerator (+ (rational (double-double-hi x))
 			  (rational (double-double-lo x)))))
-	 (len (integer-length r)))
+	 (len (integer-length (abs r))))
   (multiple-value-bind (hi-int hi-exp sign)
       (integer-decode-float (double-double-hi x))
     (values (ash (abs r) (- 106 len))
