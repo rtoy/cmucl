@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.3.2.1 2006/06/22 18:06:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.3.2.2 2006/06/22 20:39:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1276,6 +1276,11 @@ rounding modes & do ieee round-to-integer.
 		    (setf hi (logandc2 hi (- (ash 1 (- frac-bits 32)) 1)))))
 	     (kernel:make-double-float hi lo))))))
 
+#+double-double
+(defun %unary-ftruncate/double-double-float (x)
+  ;; We should do something like what we do for double-double-float,
+  ;; but I'm lazy right now.
+  (coerce (truncate x) 'double-double-float))
 
 ;;; %UNARY-FTRUNCATE  --  Interface
 ;;;
@@ -1299,7 +1304,10 @@ rounding modes & do ieee round-to-integer.
     ((single-float)
      (%unary-ftruncate/single-float number))
     ((double-float)
-     (%unary-ftruncate/double-float number))))
+     (%unary-ftruncate/double-float number))
+    #+double-double
+    ((double-double-float)
+     (%unary-ftruncate/double-double-float number))))
 	     
 
 

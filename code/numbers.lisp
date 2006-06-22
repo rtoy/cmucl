@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60.8.1.2.1.2.1 2006/06/17 04:00:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.60.8.1.2.1.2.2 2006/06/22 20:39:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -877,7 +877,7 @@
        (multiple-value-bind (q r)
 	   (truncate number divisor)
 	 (values (float q) r)))
-      (((foreach single-float double-float)
+      (((foreach single-float double-float #+double-double double-double-float)
 	(or rational single-float))
        (if (eql divisor 1)
 	   (let ((res (%unary-ftruncate number)))
@@ -888,8 +888,15 @@
       ((single-float double-float)
        (truncate-float double-float))
       (((foreach fixnum bignum ratio)
-	(foreach single-float double-float))
-       (truncate-float (dispatch-type divisor))))))
+	(foreach single-float double-float #+double-double double-double-float))
+       (truncate-float (dispatch-type divisor)))
+      #+double-double
+      ((double-double-float (or single-float double-float double-double-float))
+       (truncate-float double-double-float))
+      #+double-double
+      (((foreach single-float double-float)
+	double-double-float)
+       (truncate-float double-double-float)))))
 
 
 (defun ffloor (number &optional (divisor 1))
