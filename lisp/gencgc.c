@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.5 2006/06/22 20:41:17 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.70.2.1.4.6 2006/06/23 03:31:02 rtoy Exp $
  *
  */
 
@@ -5135,7 +5135,7 @@ valid_dynamic_space_pointer(lispobj * pointer)
 	    case type_SimpleArrayLongFloat:
 #endif
 #ifdef type_SimpleArrayDoubleDoubleFloat
-	    case type_SimpleArrayDoubleFloat:
+	    case type_SimpleArrayDoubleDoubleFloat:
 #endif
 #ifdef type_SimpleArrayComplexSingleFloat
 	    case type_SimpleArrayComplexSingleFloat:
