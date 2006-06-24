@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.52.6.1 2006/06/09 16:04:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.52.6.1.4.1 2006/06/24 19:40:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1029,6 +1029,10 @@
 		  ((csubtypep type (specifier-type '(complex long-float)))
 		   (complex (%long-float (realpart object))
 			    (%long-float (imagpart object))))
+		  #+double-double
+		  ((csubtypep type (specifier-type '(complex double-double-float)))
+		   (complex (%double-double-float (realpart object))
+			    (%double-double-float (imagpart object))))
 		  ((csubtypep type (specifier-type '(complex float)))
 		   (complex (%single-float (realpart object))
 			    (%single-float (imagpart object))))
