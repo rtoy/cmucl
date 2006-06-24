@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.10.24.1 2006/06/10 03:29:20 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.10.24.1.4.1 2006/06/24 19:34:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -182,7 +182,9 @@
   (complex-double-stack stack :element-size 4)	; complex-double-floats
   #+long-float
   (complex-long-stack stack :element-size 6)	; complex-long-floats
-
+  #+double-double
+  (complex-double-double-stack stack :element-size 8)	; complex-double-double-floats
+  
   ;; **** Magic SCs.
 
   (ignore-me noise)
@@ -311,6 +313,13 @@
 		    :constant-scs ()
 		    :save-p t
 		    :alternate-scs (complex-long-stack))
+  #+double-double
+  (complex-double-double-reg float-registers
+		      :locations (0 4)
+		      :element-size 4
+		      :constant-scs ()
+		      :save-p t
+		      :alternate-scs (complex-double-double-stack))
 
   ;; A catch or unwind block.
   (catch-block stack :element-size vm:catch-block-size)
