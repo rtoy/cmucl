@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.4 2006/06/22 23:57:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.5 2006/06/24 19:37:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -411,11 +411,11 @@
     (let ((real-tn (complex-double-double-reg-real-hi-tn y)))
       (inst lfd real-tn x (- (* complex-double-double-float-real-hi-slot word-bytes)
 			      other-pointer-type)))
-    (let ((imag-tn (complex-double-double-reg-imag-hi-tn y)))
-      (inst lfd imag-tn x (- (* complex-double-double-float-imag-hi-slot word-bytes)
-			      other-pointer-type)))
     (let ((real-tn (complex-double-double-reg-real-lo-tn y)))
       (inst lfd real-tn x (- (* complex-double-double-float-real-lo-slot word-bytes)
+			      other-pointer-type)))
+    (let ((imag-tn (complex-double-double-reg-imag-hi-tn y)))
+      (inst lfd imag-tn x (- (* complex-double-double-float-imag-hi-slot word-bytes)
 			      other-pointer-type)))
     (let ((imag-tn (complex-double-double-reg-imag-lo-tn y)))
       (inst lfd imag-tn x (- (* complex-double-double-float-imag-lo-slot word-bytes)
