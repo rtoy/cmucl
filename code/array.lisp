@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.39.10.2 2006/06/21 18:38:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.39.10.3 2006/06/24 19:44:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -878,13 +878,19 @@
 	((simple-array double-float (*)) (coerce 0 'double-float))
 	#+long-float
 	((simple-array long-float (*)) (coerce 0 'long-float))
+	#+double-double
+	((simple-array double-double-float (*))
+	 (coerce 0 'double-double-float))
 	((simple-array (complex single-float) (*))
 	 (coerce 0 '(complex single-float)))
 	((simple-array (complex double-float) (*))
 	 (coerce 0 '(complex double-float)))
 	#+long-float
 	((simple-array (complex long-float) (*))
-	 (coerce 0 '(complex long-float))))))
+	 (coerce 0 '(complex long-float)))
+	#+double-double
+	((simple-array (complex double-double-float) (*))
+	 (coerce 0 '(complex double-double-float))))))
   ;; Only arrays have fill-pointers, but vectors have their length parameter
   ;; in the same place.
   (setf (%array-fill-pointer vector) new-size)
