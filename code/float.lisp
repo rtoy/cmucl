@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.3.2.2 2006/06/22 20:39:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.31.4.2.2.3.2.3 2006/06/26 03:17:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -547,14 +547,18 @@
 #+double-double
 (defun integer-decode-double-double-float (x)
   (declare (type double-double-float x))
-  (let* ((r (numerator (+ (rational (double-double-hi x))
-			  (rational (double-double-lo x)))))
-	 (len (integer-length (abs r))))
   (multiple-value-bind (hi-int hi-exp sign)
       (integer-decode-float (double-double-hi x))
-    (values (ash (abs r) (- 106 len))
-	    (- hi-exp 53)
-	    sign))))
+    (if (zerop (double-double-lo x))
+	(values (ash hi-int 53) (- hi-exp 53) sign)
+	(multiple-value-bind (lo-int lo-exp lo-sign)
+	    (integer-decode-float (double-double-lo x))
+	  ;; We have x = 2^e1*i1 + 2^e2*i2
+	  ;;           = 2^e2*(2^(e1-e2)*i1 + i2)
+	  (values (+ (* lo-sign lo-int)
+		     (ash hi-int (- hi-exp lo-exp)))
+		  lo-exp
+		  sign)))))
 
 ;;; INTEGER-DECODE-LONG-FLOAT  --  Internal
 ;;;
