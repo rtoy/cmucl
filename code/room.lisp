@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.34.12.1 2006/06/23 01:09:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.34.12.2 2006/06/26 15:09:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -525,7 +525,10 @@
 	       #.symbol-header-type
 	       #.sap-type
 	       #.weak-pointer-type
-	       #.instance-header-type)
+	       #.instance-header-type
+	       #.fdefn-type
+	       #+gencgc
+	       #.scavenger-hook-type)
 	      (incf descriptor-words (truncate size word-bytes)))
 	     (t
 	      (error "Bogus type: ~D" type))))
