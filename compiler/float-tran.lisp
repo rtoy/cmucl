@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.9.2.1 2006/06/19 02:17:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.9.2.2 2006/06/26 18:43:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1929,7 +1929,8 @@
 
 (declaim (inline sqrt-dd))
 (defun sqrt-dd (a0 a1)
-  (declare (type (double-float 0d0) a0 a1)
+  (declare (type (double-float 0d0) a0)
+	   (double-float a1)
 	   (optimize (speed 3)))
   ;; Strategy: Use Karp's trick: if x is an approximation to sqrt(a),
   ;; then
