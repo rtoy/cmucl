@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.33.12.1 2006/06/21 20:15:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.33.12.2 2006/06/27 20:02:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.33.12.1 2006/06/21 20:15:48 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.33.12.2 2006/06/27 20:02:32 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -454,7 +454,8 @@
   (list base-char-type unbound-marker-type))
 
 (defconstant function-subtypes
-  (list funcallable-instance-header-type 
+  (list funcallable-instance-header-type
+	#-double-double dylan-function-header-type
 	function-header-type closure-function-header-type
 	closure-header-type))
 

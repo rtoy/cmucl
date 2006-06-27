@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.71.6.1.4.1 2006/06/17 02:59:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.71.6.1.4.2 2006/06/27 20:02:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1894,7 +1894,8 @@
 ;;;
 (eval-when (compile load eval)
   (defconstant float-formats
-    '(double-double-float long-float double-float single-float short-float)))
+    '(#+double-double double-double-float
+      long-float double-float single-float short-float)))
 
 ;;; The type of a float format.
 ;;;
@@ -2424,6 +2425,7 @@
 (define-float-format single-float)
 (define-float-format double-float)
 (define-float-format long-float)
+#+double-double
 (define-float-format double-double-float)
 
 (defun numeric-types-intersect (type1 type2)

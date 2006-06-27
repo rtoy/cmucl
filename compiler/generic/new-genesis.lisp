@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.78.2.1.4.1 2006/06/22 15:19:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.78.2.1.4.2 2006/06/27 20:02:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1542,6 +1542,7 @@
 (cold-number fop-byte-integer)
 (cold-number fop-complex-single-float)
 (cold-number fop-complex-double-float)
+#+double-double
 (cold-number fop-complex-double-double-float)
 
 #+long-float

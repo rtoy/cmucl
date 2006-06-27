@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.52.10.1 2006/06/21 20:15:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.52.10.2 2006/06/27 20:02:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -197,6 +197,7 @@ about function addresses and register values.")
 	funcallable-instance-header
 	byte-code-function
 	byte-code-closure
+	#-double-double dylan-function-header
 	closure-function-header
 	#-gengc return-pc-header
 	#+gengc forwarding-pointer

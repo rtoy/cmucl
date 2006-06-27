@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.18.6.1 2006/06/22 01:46:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.18.6.2 2006/06/27 20:02:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,6 +143,7 @@
 	funcallable-instance-header
 	byte-code-function
 	byte-code-closure
+	#-double-double dylan-function-header
 	closure-function-header
 	#-gengc return-pc-header
 	#+gengc forwarding-pointer
