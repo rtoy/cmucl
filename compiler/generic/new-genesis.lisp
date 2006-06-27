@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.78.2.1.4.2 2006/06/27 20:02:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.78.2.1.4.3 2006/06/27 20:05:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1459,6 +1459,7 @@
 (not-cold-fop fop-complex-double-float-vector)
 #+long-float (not-cold-fop fop-complex-long-float-vector)
 ;; Why is this not-cold-fop?  I'm just cargo-culting this.
+#+double-double (not-cold-fop fop-double-double-float-vector)
 #+double-double (not-cold-fop fop-complex-double-double-float-vector)
 
 (define-cold-fop (fop-array)
@@ -1536,6 +1537,8 @@
 
 (cold-number fop-single-float)
 (cold-number fop-double-float)
+#+double-double
+(cold-number fop-double-double-float)
 (cold-number fop-integer)
 (cold-number fop-small-integer)
 (cold-number fop-word-integer)
@@ -1633,7 +1636,7 @@
 			imag-low-bits)
 	 des)))))
 
-#+double-double
+#+(and nil double-double)
 (define-cold-fop (fop-double-double-float)
     ;; Double-double format
     (prepare-for-fast-read-byte *fasl-file*
