@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.5 2006/06/24 19:37:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.5.2.2.2.3.2.6 2006/06/27 23:15:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1092,6 +1092,8 @@
 
 ;;; Support for double-double floats
 
+#+double-double
+(progn
 (deftransform eql ((x y) (double-double-float double-double-float))
   '(and (eql (double-double-hi x) (double-double-hi y))
      	(eql (double-double-lo x) (double-double-lo y))))
@@ -1211,9 +1213,6 @@
 (define-move-vop move-double-double-float-argument :move-argument
   (double-double-reg descriptor-reg) (double-double-reg))
 
-
-#+double-double
-(progn
 
 (define-vop (make/double-double-float)
   (:args (hi :scs (double-reg) :target r
