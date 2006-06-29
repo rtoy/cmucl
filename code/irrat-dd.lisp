@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.1.2.4 2006/06/29 14:50:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.1.2.5 2006/06/29 20:49:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -517,13 +517,16 @@
   ;; Theoretical peak relative error = 5.3e-37,
   ;; relative peak error spread = 2.3e-14
   (defun dd-%log1p (xm1)
-    (declare (type double-double-float x))
+    (declare (type double-double-float xm1))
     (let ((x (+ xm1 1))
 	  (z 0w0)
 	  (y 0w0))
-      (declare (type double-double-float x y z))
+      (declare (type double-double-float x y z)
+	       (optimize (speed 3)))
       (multiple-value-bind (x e)
 	  (decode-float x)
+	(declare (type double-double-float x)
+		 (type double-float-exponent e))
 	(cond ((or (> e 2)
 		   (< e -2))
 	       ;; Log using log(x) = z + z^3*P(z^2)/Q(z^2)
@@ -1023,7 +1026,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 (defun dd-%sin (x)
   (declare (type double-double-float x))
   (when (minusp x)
-    (return-from dd-%sin (- (dd-%sin (- x)))))
+    (return-from dd-%sin (- (the double-double-float (dd-%sin (- x))))))
   ;; y = integer part of x/(pi/4).  
   (let* ((y (float (floor (/ x dd-pi/4)) 1w0))
 	 (z (scale-float y -4)))
@@ -1071,6 +1074,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
     (let ((i (truncate z))
 	  (j 0)
 	  (sign 1))
+      (declare (type (integer 0 7) j)
+	       (type (integer -1 1) sign))
       (unless (zerop (logand i 1))
 	(incf i)
 	(incf y))
@@ -1082,7 +1087,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
       (when (> j 1)
 	(setf sign (- sign)))
 
-      ;; Extended precision modular arithmetic
+      ;; Extended precision modular arithmetic.  This is basically
+      ;; computing x - y*(pi/4) accurately so that |z| < pi/4.
       (setf z (- (- (- x (* y dp1))
 		    (* y dp2))
 		 (* y dp3)))
@@ -1091,7 +1097,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		(= j 2))
 	    (setf y (+ z (* z (* zz (poly-eval zz sincof)))))
 	    (setf y (+ (- 1 (scale-float zz -1))
-		       (* zz zz (poly-eval zz coscof)))))
+		       (* zz (poly-eval zz coscof) zz))))
 	(if (< sign 0)
 	    (- y)
 	    y)))))
@@ -1387,6 +1393,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		(t
 		 (setf y x)))
 	  (let ((w x))
+	    (declare (type double-double-float w))
 	    (setf n (ash n -1))
 	    (loop while (not (zerop n))
 	       do
@@ -1426,7 +1433,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	    (t
 	     (when (/= w y)
 	       ;; noninteger power of negative number
-	       (let ((p (dd-real-pow (abs x) y))
+	       (let ((p (the double-double-float (dd-real-pow (abs x) y)))
 		     (y*pi (* y dd-pi)))
 		 (return-from dd-real-pow (complex (* p (dd-%cos y*pi))
 						   (* p (dd-%sin y*pi))))))
@@ -1451,6 +1458,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
   (dd-real-pow x y))
 
 
+;; These are essentially the same as in irrat.lisp, but very slightly
+;; modified to operate on double-double-floats.
 (defun dd-cssqs (z)
   ;; Compute |(x+i*y)/2^k|^2 scaled to avoid over/underflow. The
   ;; result is r + i*k, where k is an integer.
