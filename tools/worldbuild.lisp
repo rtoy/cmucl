@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.52 2004/07/25 18:29:10 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.52.12.1 2006/06/29 01:28:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,6 +102,8 @@
     "target:code/float"
     "target:code/float-trap"
     "target:code/irrat"
+    ,@(when (c::backend-featurep :double-double)
+	'("target:code/irrat-dd"))
     "target:code/bignum"
     "target:code/list"
     "target:code/hash-new"
