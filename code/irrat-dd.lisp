@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.1.2.1 2006/06/29 01:28:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.1.2.2 2006/06/29 01:30:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1633,9 +1633,6 @@ Z may be any number, but the result is always a complex."
 					  (- (* (- 1.0d0 x)
 						(+ 1.0d0 x))
 					     (square t1))))))))
-	  (format t "beta = ~A~%" beta)
-	  (format t "eta  = ~A~%" eta)
-	  (format t "nu   = ~A~%" nu)
 	  (complex (* beta eta)
 		   (- (* beta nu)))))))
 
