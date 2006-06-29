@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.44 2003/08/27 16:09:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.44.18.1 2006/06/29 14:47:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -408,7 +408,7 @@
 ;;;; Inlines.
 
 (eval-when (compile eval)
-  (setq ext:*inline-expansion-limit* 100))
+  (setq ext:*inline-expansion-limit* 400))
 
 (defmacro expand-into-inlines ()
   (declare (optimize (inhibit-warnings 3)))

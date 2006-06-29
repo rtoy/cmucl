@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.109 2004/12/16 21:55:37 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.109.12.1 2006/06/29 14:47:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1615,7 +1615,7 @@
   (ref-leaf (continuation-use (basic-combination-fun call))))
 
 
-(defvar *inline-expansion-limit* 200
+(defvar *inline-expansion-limit* 400
   "An upper limit on the number of inline function calls that will be expanded
    in any given code object (single function or block compilation.)")
 
