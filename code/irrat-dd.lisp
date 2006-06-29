@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.1.2.3 2006/06/29 01:55:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.1.2.4 2006/06/29 14:50:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -927,7 +927,7 @@
 	(if (zerop (logand code 2))
 	    0w0
 	    dd-pi)))
-    (setf w (case code
+    (setf w (ecase code
 	      (0 0w0)
 	      (1 0w0)
 	      (2 dd-pi)
@@ -1403,9 +1403,6 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	  y)))))
 	
 
-(defun dd-complex-pow (x y)
-  (error "Not implemented yet"))
-  
 ;;; dd-real-pow
 ;;; x^y, for x and y real, and real result.
 
@@ -1429,7 +1426,10 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	    (t
 	     (when (/= w y)
 	       ;; noninteger power of negative number
-	       (return-from dd-real-pow (dd-complex-pow x y)))
+	       (let ((p (dd-real-pow (abs x) y))
+		     (y*pi (* y dd-pi)))
+		 (return-from dd-real-pow (complex (* p (dd-%cos y*pi))
+						   (* p (dd-%sin y*pi))))))
 
 	     ;; For negative x, find out if the integer exponent is odd or even.
 	     (let ((w (scale-float y -1)))

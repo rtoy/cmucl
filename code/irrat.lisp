@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45.2.1.2.1.2.2 2006/06/29 01:28:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45.2.1.2.1.2.3 2006/06/29 14:50:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -375,13 +375,14 @@
 	(((foreach (complex rational) (complex float)) rational)
 	 (* (expt (abs base) power)
 	    (cis (* power (phase base)))))
-	(((foreach fixnum (or bignum ratio) single-float double-float)
+	(((foreach fixnum (or bignum ratio) single-float double-float
+		   #+double-double double-double-float)
 	  complex)
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
 	     (exp (* power (log base)))))
 	(((foreach (complex float) (complex rational))
-	  (foreach complex double-float single-float))
+	  (foreach complex double-float single-float #+double-double double-double-float))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
 	     (exp (* power (log base)))))))))
@@ -433,6 +434,14 @@
 	       (((foreach single-float fixnum bignum ratio)
 		 double-float)
 		(/ (log (coerce number 'double-float)) (log base)))
+	       #+double-double
+	       ((double-double-float
+		 (foreach double-double-float double-float single-float fixnum bignum ratio))
+		(/ (log number) (log (coerce base 'double-double-float))))
+	       #+double-double
+	       (((foreach double-float single-float fixnum bignum ratio)
+		 double-double-float)
+		(/ (log (coerce number 'double-double-float)) (log base)))
 	       (((foreach single-float fixnum bignum ratio)
 		 (foreach single-float fixnum bignum ratio))
 		;; Converting everything to double-float helps the
@@ -494,7 +503,6 @@
 		     '(dispatch-type number))))
 	#+double-double
 	((double-double-float)
-	 ;; Hack!
 	 (let ((hi (kernel:double-double-hi number)))
 	   (if (< (float-sign hi) 0d0)
 	       (complex (dd-%log (- number)) dd-pi)
