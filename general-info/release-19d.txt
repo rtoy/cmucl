@@ -52,6 +52,56 @@ New in this release:
       - When a core file is started, any shared libraries that were
         loaded when the core was made will be reloaded on startup.  If
         the library cannot be found, several restarts are available.
+      - Support for the new float type EXT:DOUBLE-DOUBLE-FLOAT.  This
+        includes support for complex numbers with this component type
+        and simple arrays for this type and complex numbers of this
+        type.
+
+        A DOUBLE-DOUBLE-FLOAT uses two DOUBLE-FLOAT's to represent a
+        number with >= 106 bits of precision (about 33 digits).  Known
+        issues:
+
+	* If you are expecting IEEE-style behavior, you don't get it:
+	  - signed zeroes aren't really available.  
+	  - overflows don't return infinity but return NaN instead.
+	  - rounding might not be quite the same as IEEE
+	  - SQRT is not accurate to the last bit, as required by IEEE.
+	* Multiplying by a number very close to
+	  most-positive-double-float will produce an error even if the
+	  result does not overflow.  (This is an artifact of how
+	  multiplication is done.  I don't have a solution to this.)
+	* Read/write consistency is not working.  (Because conversion
+	  from a bignum to a double-double-float doesn't really
+	  understand the internal double-double-float format.)
+	* INTEGER-DECODE-FLOAT and SCALE-FLOAT aren't "inverses".
+	  That is, you can't take the result of integer-decode-float
+	  and use scale-float to produce exactly the same number.
+	  This is because of how bignums are converted to
+	  double-doubles.
+	* FLOAT-DIGITS always returns 106 even though there could be
+	  more bits.  (Consider the double-double (1d0,1d-200)).  This
+	  will show up in PRINT where the printed result will have way
+	  more than the normal 33 digits or so.  But reading such a
+	  number back won't give the same value.
+	* There is probably more consing than is necessary in many of
+	  the standard Common Lisp functions like floor, ffloor, etc.
+	* The special functions are not fully tested.  I did a few
+	  random spot checks for each function and compared the
+	  results with maxima to verify them.
+	* The branch cuts for the special functions very likely will
+	  not match the double-float versions, mostly because we don't
+	  have working signed zeroes.
+	* Type derivation for double-double-floats might not be
+	  working quite right.
+	* PI is still a double-float.  If you want a double-double
+	  version of pi, it's KERNEL:DD-PI.  (Soon to be EXT:DD-PI.)
+	* All double-double operations are inlined by default (unless
+	  *INLINE-EXPANSION-LIMIT* is reached), so functions will tend
+	  to be very large.  (Each basic double-double operation takes
+	  some 20 FP instructions).
+	* There are probably still many bugs where double-double-float
+	  support was overlooked.
+
 
   * Numerous ANSI compliance fixes:
 
