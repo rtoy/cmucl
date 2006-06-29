@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.1.2.2 2006/06/29 01:30:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.1.2.3 2006/06/29 01:55:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1725,24 +1725,46 @@ Z may be any number, but the result is always a complex."
       (complex-acos (complex z -0f0))
       (let ((sqrt-1+z (complex-sqrt (1+z z)))
 	    (sqrt-1-z (complex-sqrt (1-z z))))
-	(with-float-traps-masked (:divide-by-zero)
-	  (complex (* 2 (atan (/ (realpart sqrt-1-z)
-				 (realpart sqrt-1+z))))
-		   (asinh (imagpart (* (conjugate sqrt-1+z)
-				       sqrt-1-z))))))))
+	(cond ((zerop (realpart sqrt-1+z))
+	       ;; Same as below, but we compute atan ourselves (because we
+	       ;; have atan +/- infinity).
+	       (complex 
+			(if (minusp (float-sign (* (realpart sqrt-1-z)
+						   (realpart sqrt-1+z))))
+			    (- dd-pi)
+			    dd-pi)
+			(asinh (imagpart (* (conjugate sqrt-1+z)
+					    sqrt-1-z)))))
+	      (t
+	       (complex (* 2 (atan (/ (realpart sqrt-1-z)
+				      (realpart sqrt-1+z))))
+			(asinh (imagpart (* (conjugate sqrt-1+z)
+					    sqrt-1-z)))))))))
 
 (defun dd-complex-acosh (z)
   "Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
-  (let ((sqrt-z-1 (complex-sqrt (z-1 z)))
-	(sqrt-z+1 (complex-sqrt (z+1 z))))
-    (with-float-traps-masked (:divide-by-zero)
-      (complex (asinh (realpart (* (conjugate sqrt-z-1)
-				   sqrt-z+1)))
-	       (* 2 (atan (/ (imagpart sqrt-z-1)
-			     (realpart sqrt-z+1))))))))
+  (let* ((sqrt-z-1 (complex-sqrt (z-1 z)))
+	 (sqrt-z+1 (complex-sqrt (z+1 z))))
+    ;; We need to handle the case where real part of sqrt-z+1 is zero,
+    ;; because division by zero with double-double-floats doesn't
+    ;; produce infinity.
+    (cond ((zerop (realpart sqrt-z+1))
+	   ;; Same as below, but we compute atan ourselves (because we
+	   ;; have atan +/- infinity).
+	   (complex (asinh (realpart (* (conjugate sqrt-z-1)
+					sqrt-z+1)))
+		    (if (minusp (float-sign (* (imagpart sqrt-z-1)
+					       (realpart sqrt-z+1))))
+			(- dd-pi)
+			dd-pi)))
+	  (t
+	   (complex (asinh (realpart (* (conjugate sqrt-z-1)
+					sqrt-z+1)))
+		    (* 2 (atan (/ (imagpart sqrt-z-1)
+				  (realpart sqrt-z+1)))))))))
 
 
 (defun dd-complex-asin (z)
@@ -1753,14 +1775,23 @@ Z may be any number, but the result is always a complex."
   (if (and (realp z) (> z 1))
       ;; asin is continuous in quadrant IV in this case.
       (dd-complex-asin (complex z -0f0))
-      (let ((sqrt-1-z (complex-sqrt (1-z z)))
-	    (sqrt-1+z (complex-sqrt (1+z z))))
-	(with-float-traps-masked (:divide-by-zero)
-	  ;; We get a invalid operation here when z is real and |z| > 1.
-	  (complex (atan (/ (realpart z)
-			    (realpart (* sqrt-1-z sqrt-1+z))))
+      (let* ((sqrt-1-z (complex-sqrt (1-z z)))
+	     (sqrt-1+z (complex-sqrt (1+z z)))
+	     (den (realpart (* sqrt-1-z sqrt-1+z))))
+	(cond ((zerop den)
+	       ;; Like below but we handle atan part ourselves.
+	       (complex (if (minusp (float-sign den))
+			    (- dd-pi/2)
+			    dd-pi/2)
 		   (asinh (imagpart (* (conjugate sqrt-1-z)
-				       sqrt-1+z))))))))
+				       sqrt-1+z)))))
+	      (t
+	       (with-float-traps-masked (:divide-by-zero)
+		 ;; We get a invalid operation here when z is real and |z| > 1.
+		 (complex (atan (/ (realpart z)
+				   (realpart (* sqrt-1-z sqrt-1+z))))
+			  (asinh (imagpart (* (conjugate sqrt-1-z)
+					      sqrt-1+z))))))))))
 
 (defun dd-complex-asinh (z)
   "Compute asinh z = log(z + sqrt(1 + z*z))
