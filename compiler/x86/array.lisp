@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.18 2003/08/03 11:27:45 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.19 2006/06/30 18:41:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1578,3 +1578,363 @@
 (define-vop (get-vector-subtype get-header-data))
 (define-vop (set-vector-subtype set-header-data))
 
+
+#+double-double
+(progn
+(define-vop (data-vector-ref/simple-array-double-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-double-double-float positive-fixnum)
+  (:results (value :scs (double-double-reg)))
+  (:result-types double-double-float)
+;;  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 7
+    (let ((hi-tn (double-double-reg-hi-tn value)))
+      (with-empty-tn@fp-top (hi-tn)
+	(inst fldd (make-ea :dword :base object :index index :scale 4
+			    :disp (- (* vm:vector-data-offset vm:word-bytes)
+				     vm:other-pointer-type)))))
+    (let ((lo-tn (double-double-reg-lo-tn value)))
+      (with-empty-tn@fp-top (lo-tn)
+	(inst fldd (make-ea :dword :base object :index index :scale 4
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					8)
+				     vm:other-pointer-type)))))))
+
+#+nil
+(define-vop (data-vector-ref-c/simple-array-double-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result))
+  (:arg-types simple-array-double-double-float (:constant index))
+  (:info index)
+  (:results (value :scs (double-double-reg)))
+  (:result-types double-double-float)
+;;  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 5
+    (let ((offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type)))
+	  (hi-tn (double-double-reg-hi-tn value))
+	  (lo-tn (double-double-reg-lo-tn value)))
+      (cond ((typep (+ offset 8) '(signed-byte 13))
+	     (inst lddf hi-tn object offset)
+	     (inst lddf lo-tn object (+ offset 8)))
+	    (t
+	     (inst li temp offset)
+	     (inst lddf hi-tn object temp)
+	     (inst add temp (* 2 vm:word-bytes))
+	     (inst lddf lo-tn object temp))))))
+
+(define-vop (data-vector-set/simple-array-double-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg))
+	 (value :scs (double-double-reg) :target result))
+  (:arg-types simple-array-double-double-float positive-fixnum
+	      double-double-float)
+  (:results (result :scs (double-double-reg)))
+  (:result-types double-double-float)
+;;  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 20
+    (let ((value-real (double-double-reg-hi-tn value))
+	  (result-real (double-double-reg-hi-tn result)))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (inst fstd (make-ea :dword :base object :index index :scale 4
+				 :disp (- (* vm:vector-data-offset
+					     vm:word-bytes)
+					  vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fstd result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (inst fstd (make-ea :dword :base object :index index :scale 4
+				 :disp (- (* vm:vector-data-offset
+					     vm:word-bytes)
+					  vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fstd value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fstd result-real))
+		    (inst fxch value-real))))))
+    (let ((value-imag (double-double-reg-lo-tn value))
+	  (result-imag (double-double-reg-lo-tn result)))
+      (inst fxch value-imag)
+      (inst fstd (make-ea :dword :base object :index index :scale 4
+			  :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				      8)
+				   vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fstd result-imag))
+      (inst fxch value-imag))))
+
+#+nil
+(define-vop (data-vector-set-c/simple-array-double-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (value :scs (double-double-reg) :target result))
+  (:arg-types simple-array-double-double-float
+	      (:constant index)
+	      double-double-float)
+  (:info index)
+  (:results (result :scs (double-double-reg)))
+  (:result-types double-double-float)
+;;  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 15
+    (let ((value-hi (double-double-reg-hi-tn value))
+	  (result-hi (double-double-reg-hi-tn result))
+	  (value-lo (double-double-reg-lo-tn value))
+	  (result-lo (double-double-reg-lo-tn result))
+	  (offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))))
+      ;; There's a possible optimization here if the offset for the
+      ;; real part fits in a signed-byte 13 but the imag part doesn't.
+      ;; We don't do this because it can't happen with the current
+      ;; values of vm:other-pointer-type and vm:vector-data-offset.
+      (cond ((typep (+ offset 8) '(signed-byte 13))
+	     (inst stdf value-hi object offset)
+	     (inst stdf value-lo object (+ offset 8)))
+	    (t
+	     (inst li temp offset)
+	     (inst stdf value-hi object temp)
+	     (inst add temp 8)
+	     (inst stdf value-lo object temp)))
+      (unless (location= result-hi value-hi)
+	(move-double-reg result-hi value-hi))
+      (unless (location= result-lo value-lo)
+	(move-double-reg result-lo value-lo)))))
+
+(define-vop (data-vector-ref/simple-array-complex-double-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-double-double-float positive-fixnum)
+  (:results (value :scs (complex-double-double-reg)))
+  (:result-types complex-double-double-float)
+;;  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 7
+    (let ((real-tn (complex-double-double-reg-real-hi-tn value)))
+      (with-empty-tn@fp-top (real-tn)
+	(inst fldd (make-ea :dword :base object :index index :scale 8
+			    :disp (- (* vm:vector-data-offset vm:word-bytes)
+				     vm:other-pointer-type)))))
+    (let ((real-tn (complex-double-double-reg-real-lo-tn value)))
+      (with-empty-tn@fp-top (real-tn)
+	(inst fldd (make-ea :dword :base object :index index :scale 8
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					8)
+				     vm:other-pointer-type)))))
+    (let ((imag-tn (complex-double-double-reg-imag-hi-tn value)))
+      (with-empty-tn@fp-top (imag-tn)
+	(inst fldd (make-ea :dword :base object :index index :scale 8
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					16)
+				     vm:other-pointer-type)))))
+    (let ((imag-tn (complex-double-double-reg-imag-lo-tn value)))
+      (with-empty-tn@fp-top (imag-tn)
+	(inst fldd (make-ea :dword :base object :index index :scale 8
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					24)
+				     vm:other-pointer-type)))))))
+
+#+nil
+(define-vop (data-vector-ref-c/simple-array-complex-double-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result))
+  (:arg-types simple-array-complex-double-double-float (:constant index))
+  (:info index)
+  (:results (value :scs (complex-double-double-reg)))
+  (:result-types complex-double-double-float)
+;;  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 5
+    (let ((offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type)))
+	  (real-hi-tn (complex-double-double-reg-real-hi-tn value))
+	  (imag-hi-tn (complex-double-double-reg-imag-hi-tn value))
+	  (real-lo-tn (complex-double-double-reg-real-lo-tn value))
+	  (imag-lo-tn (complex-double-double-reg-imag-lo-tn value)))
+      (cond ((typep (+ offset 8) '(signed-byte 13))
+	     (inst lddf real-hi-tn object offset)
+	     (inst lddf imag-hi-tn object (+ offset (* 2 vm:word-bytes)))
+	     (inst lddf real-lo-tn object (+ offset (* 4 vm:word-bytes)))
+	     (inst lddf real-lo-tn object (+ offset (* 6 vm:word-bytes))))
+	    (t
+	     (inst li temp offset)
+	     (inst lddf real-hi-tn object temp)
+	     (inst add temp (* 2 vm:word-bytes))
+	     (inst lddf imag-hi-tn object temp)
+	     (inst lddf real-lo-tn object temp)
+	     (inst add temp (* 2 vm:word-bytes))
+	     (inst lddf imag-lo-tn object temp))))))
+
+(define-vop (data-vector-set/simple-array-complex-double-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg))
+	 (value :scs (complex-double-double-reg) :target result))
+  (:arg-types simple-array-complex-double-double-float positive-fixnum
+	      complex-double-double-float)
+  (:results (result :scs (complex-double-double-reg)))
+  (:result-types complex-double-double-float)
+;;  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 20
+    (let ((value-real (complex-double-double-reg-real-hi-tn value))
+	  (result-real (complex-double-double-reg-real-hi-tn result)))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (inst fstd (make-ea :dword :base object :index index :scale 8
+				 :disp (- (* vm:vector-data-offset
+					     vm:word-bytes)
+					  vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fstd result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (inst fstd (make-ea :dword :base object :index index :scale 8
+				 :disp (- (* vm:vector-data-offset
+					     vm:word-bytes)
+					  vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fstd value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fstd result-real))
+		    (inst fxch value-real))))))
+    (let ((value-real (complex-double-double-reg-real-lo-tn value))
+	  (result-real (complex-double-double-reg-real-lo-tn result)))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (inst fstd (make-ea :dword :base object :index index :scale 8
+				 :disp (- (+ (* vm:vector-data-offset
+						vm:word-bytes)
+					     8)
+					  vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fstd result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (inst fstd (make-ea :dword :base object :index index :scale 8
+				 :disp (- (+ (* vm:vector-data-offset
+						vm:word-bytes)
+					     8)
+					  vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fstd value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fstd result-real))
+		    (inst fxch value-real))))))
+    (let ((value-imag (complex-double-double-reg-imag-hi-tn value))
+	  (result-imag (complex-double-double-reg-imag-hi-tn result)))
+      (inst fxch value-imag)
+      (inst fstd (make-ea :dword :base object :index index :scale 8
+			  :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				      16)
+				   vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fstd result-imag))
+      (inst fxch value-imag))
+    (let ((value-imag (complex-double-double-reg-imag-lo-tn value))
+	  (result-imag (complex-double-double-reg-imag-lo-tn result)))
+      (inst fxch value-imag)
+      (inst fstd (make-ea :dword :base object :index index :scale 8
+			  :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				      24)
+				   vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fstd result-imag))
+      (inst fxch value-imag))))
+
+#+nil
+(define-vop (data-vector-set-c/simple-array-complex-double-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (value :scs (complex-double-double-reg) :target result))
+  (:arg-types simple-array-complex-double-double-float
+	      (:constant index)
+	      complex-double-double-float)
+  (:info index)
+  (:results (result :scs (complex-double-double-reg)))
+  (:result-types complex-double-double-float)
+;;  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) temp)
+  (:generator 15
+    (let ((value-real (complex-double-double-reg-real-hi-tn value))
+	  (result-real (complex-double-double-reg-real-hi-tn result))
+	  (value-imag (complex-double-double-reg-imag-hi-tn value))
+	  (result-imag (complex-double-double-reg-imag-hi-tn result))
+	  (offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))))
+      ;; There's a possible optimization here if the offset for the
+      ;; real part fits in a signed-byte 13 but the imag part doesn't.
+      ;; We don't do this because it can't happen with the current
+      ;; values of vm:other-pointer-type and vm:vector-data-offset.
+      (cond ((typep (+ offset 8) '(signed-byte 13))
+	     (inst stdf value-real object offset)
+	     (inst stdf value-imag object (+ offset 8)))
+	    (t
+	     (inst li temp offset)
+	     (inst stdf value-real object temp)
+	     (inst add temp 8)
+	     (inst stdf value-imag object temp)))
+      (unless (location= result-real value-real)
+	(move-double-reg result-real value-real))
+      (unless (location= result-imag value-imag)
+	(move-double-reg result-imag value-imag)))
+    (let ((value-real (complex-double-double-reg-real-lo-tn value))
+	  (result-real (complex-double-double-reg-real-lo-tn result))
+	  (value-imag (complex-double-double-reg-imag-lo-tn value))
+	  (result-imag (complex-double-double-reg-imag-lo-tn result))
+	  (offset (+ (* index 16)
+		     (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))))
+      ;; There's a possible optimization here if the offset for the
+      ;; real part fits in a signed-byte 13 but the imag part doesn't.
+      ;; We don't do this because it can't happen with the current
+      ;; values of vm:other-pointer-type and vm:vector-data-offset.
+      (cond ((typep (+ offset (* 6 vm:word-bytes)) '(signed-byte 13))
+	     (inst stdf value-real object (+ offset (* 4 vm:word-bytes)))
+	     (inst stdf value-imag object (+ offset (* 6 vm:word-bytes))))
+	    (t
+	     (inst add temp 8)
+	     (inst stdf value-real object temp)
+	     (inst add temp 8)
+	     (inst stdf value-imag object temp)))
+      (unless (location= result-real value-real)
+	(move-double-reg result-real value-real))
+      (unless (location= result-imag value-imag)
+	(move-double-reg result-imag value-imag)))))
+
+)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.90 2005/04/14 20:52:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.91 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -874,6 +874,53 @@
 	  (make-long-float exp hi #+sparc mid lo))
       (done-with-fast-read-byte))))
 
+#+double-double
+(define-fop (fop-double-double-float 67)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let ((hi-lo (fast-read-u-integer 4))
+	      (hi-hi (fast-read-s-integer 4))
+	      (lo-lo (fast-read-u-integer 4))
+	      (lo-hi (fast-read-s-integer 4)))
+	  (kernel::make-double-double-float
+	   (make-double-float hi-hi hi-lo)
+	   (make-double-float lo-hi lo-lo)))
+      (done-with-fast-read-byte))))
+
+#+double-double
+(define-fop (fop-double-double-float-vector 88)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type 'double-double-float)))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 4))
+    result))
+
+#+double-double
+(define-fop (fop-complex-double-double-float 89)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let* ((real-hi-lo (fast-read-u-integer 4))
+	       (real-hi-hi (fast-read-s-integer 4))
+	       (real-lo-lo (fast-read-u-integer 4))
+	       (real-lo-hi (fast-read-s-integer 4))
+	       (re (kernel::make-double-double-float
+		    (make-double-float real-hi-hi real-hi-lo)
+		    (make-double-float real-lo-hi real-lo-lo)))
+	       (imag-hi-lo (fast-read-u-integer 4))
+	       (imag-hi-hi (fast-read-s-integer 4))
+	       (imag-lo-lo (fast-read-u-integer 4))
+	       (imag-lo-hi (fast-read-s-integer 4))
+	       (im (kernel::make-double-double-float
+		    (make-double-float imag-hi-hi imag-hi-lo)
+		    (make-double-float imag-lo-hi imag-lo-lo))))
+	  (complex re im)) 
+      (done-with-fast-read-byte))))
+
+#+double-double
+(define-fop (fop-complex-double-double-float-vector 90)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex double-double-float))))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 8))
+    result))
 
 ;;;; Loading lists:
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.43 2003/10/13 11:24:14 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.44 2006/06/30 18:41:23 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,8 +97,10 @@
     (signed-byte 8) (signed-byte 16) (signed-byte 30) (signed-byte 32)
     (complex single-float) (complex double-float)
     #+long-float (complex long-float)
+    #+double-double (complex double-double-float)
     base-char single-float double-float
-    #+long-float long-float))
+    #+long-float long-float
+    #+double-double double-double-float))
 
 (deftype unboxed-array (&optional dims)
   (collect ((types (list 'or)))
@@ -120,11 +122,12 @@
 ;;;    Return the symbol that describes the format of Float.
 ;;;
 (defun float-format-name (x)
-  (declare (float x) (values symbol))
+  (declare #+nil(float x) (values symbol))
   (etypecase x
     (single-float 'single-float)
     (double-float 'double-float)
-    #+long-float (long-float 'long-float)))
+    #+long-float (long-float 'long-float)
+    #+double-double (double-double-float 'double-double-float)))
 
 ;;; Specialize-Array-Type  --  Internal
 ;;;

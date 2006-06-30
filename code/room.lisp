@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.34 2004/10/19 20:12:45 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.35 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,7 +91,12 @@
 		 (simple-array-single-float-type . 2)
 		 (simple-array-double-float-type . 3)
 		 (simple-array-complex-single-float-type . 3)
-		 (simple-array-complex-double-float-type . 4)))
+		 (simple-array-complex-double-float-type . 4)
+		 #+double-double
+		 (simple-array-double-double-float-type . 4)
+		 #+double-double
+		 (simple-array-complex-double-double-float-type . 5)
+		 ))
   (let ((name (car stuff))
 	(size (cdr stuff)))
     (setf (svref *meta-room-info* (symbol-value name))
@@ -477,6 +482,12 @@
 	     ((#.bignum-type
 	       #.single-float-type
 	       #.double-float-type
+	       #+double-double
+	       #.double-double-float-type
+	       #.complex-single-float-type
+	       #.complex-double-float-type
+	       #+double-double
+	       #.complex-double-double-float-type
 	       #.simple-string-type
 	       #.simple-bit-vector-type
 	       #.simple-array-unsigned-byte-2-type
@@ -490,8 +501,12 @@
 	       #.simple-array-signed-byte-32-type
 	       #.simple-array-single-float-type
 	       #.simple-array-double-float-type
+	       #+double-double
+	       #.simple-array-double-double-float-type
 	       #.simple-array-complex-single-float-type
-	       #.simple-array-complex-double-float-type)
+	       #.simple-array-complex-double-float-type
+	       #+double-double
+	       #.simple-array-complex-double-double-float-type)
 	      (incf non-descriptor-headers)
 	      (incf non-descriptor-bytes (- size word-bytes)))
 	     ((#.list-pointer-type
@@ -510,7 +525,10 @@
 	       #.symbol-header-type
 	       #.sap-type
 	       #.weak-pointer-type
-	       #.instance-header-type)
+	       #.instance-header-type
+	       #.fdefn-type
+	       #+gencgc
+	       #.scavenger-hook-type)
 	      (incf descriptor-words (truncate size word-bytes)))
 	     (t
 	      (error "Bogus type: ~D" type))))

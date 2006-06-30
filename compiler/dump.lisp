@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.81 2005/02/15 18:15:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82 2006/06/30 18:41:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1092,6 +1092,22 @@
 	   (dump-var-signed exp-bits 4 file))
 	  (t
 	   (error "Unable to dump long-float")))))
+
+#+double-double
+(defun dump-double-double-float (float file)
+  ;; Dump out 2 double-floats
+  (flet ((dump-double (x)
+	   (declare (double-float x))
+	   (dump-unsigned-32 (double-float-low-bits x) file)
+	   (dump-var-signed (double-float-high-bits x) 4 file)))
+    (dump-double (kernel:double-double-hi float))
+    (dump-double (kernel:double-double-lo float))))
+
+#+double-double
+(defun dump-complex-double-double-float (z file)
+  ;; Dump out 2 double-double-floats
+  (dump-double-double-float (realpart z) file)
+  (dump-double-double-float (imagpart z) file))
 	   
 ;;; Or a complex...
 
@@ -1116,6 +1132,10 @@
      (dump-fop 'lisp::fop-complex-long-float file)
      (dump-long-float (realpart x) file)
      (dump-long-float (imagpart x) file))
+    #+double-double
+    ((complex double-double-float)
+     (dump-fop 'lisp::fop-complex-double-double-float file)
+     (dump-complex-double-double-float x file))
     (t
      (sub-dump-object (realpart x) file)
      (sub-dump-object (imagpart x) file)
@@ -1153,7 +1173,11 @@
     #+long-float
     (long-float
      (dump-fop 'lisp::fop-long-float file)
-     (dump-long-float x file))))
+     (dump-long-float x file))
+    #+double-double
+    (double-double-float
+     (dump-fop 'lisp::fop-double-double-float file)
+     (dump-double-double-float x file))))
 
 
 ;;;; Symbol Dumping:
@@ -1372,6 +1396,10 @@
       ((simple-array long-float (*))
        (dump-long-float-vector simple-version file)
        (eq-save-object x file))
+      #+double-double
+      ((simple-array double-double-float (*))
+       (dump-double-double-float-vector simple-version file)
+       (eq-save-object x file))
       ((simple-array (complex single-float) (*))
        (dump-complex-single-float-vector simple-version file)
        (eq-save-object x file))
@@ -1381,6 +1409,10 @@
       #+long-float
       ((simple-array (complex long-float) (*))
        (dump-complex-long-float-vector simple-version file)
+       (eq-save-object x file))
+      #+double-double
+      ((simple-array (complex double-double-float) (*))
+       (dump-complex-double-double-float-vector simple-version file)
        (eq-save-object x file))
       (t
        (dump-i-vector simple-version file)
@@ -1494,6 +1526,15 @@
      vec (* length vm:word-bytes #+x86 3 #+sparc 4)
      (* vm:word-bytes #+x86 3 #+sparc 4) file)))
 
+#+double-double
+(defun dump-double-double-float-vector (vec file)
+  (let* ((length (length vec))
+	 (element-size (* 4 vm:word-bytes))
+	 (bytes (* length element-size)))
+    (dump-fop 'lisp::fop-double-double-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping vec bytes element-size file)))
+
 ;;; DUMP-COMPLEX-SINGLE-FLOAT-VECTOR  --  internal.
 ;;; 
 (defun dump-complex-single-float-vector (vec file)
@@ -1511,6 +1552,15 @@
     (dump-unsigned-32 length file)
     (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2 2)
 				   (* vm:word-bytes 2) file)))
+
+#+double-double
+(defun dump-complex-double-double-float-vector (vec file)
+  (let* ((length (length vec))
+	 (element-size (* 8 vm:word-bytes))
+	 (bytes (* length element-size)))
+    (dump-fop 'lisp::fop-complex-double-double-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping vec bytes element-size file)))
 
 ;;; DUMP-COMPLEX-LONG-FLOAT-VECTOR  --  internal.
 ;;; 

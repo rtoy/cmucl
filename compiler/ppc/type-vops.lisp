@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/type-vops.lisp,v 1.2 2001/02/11 16:43:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/type-vops.lisp,v 1.3 2006/06/30 18:41:24 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -114,14 +114,16 @@
 
 (def-type-vops complexp check-complex complex
   object-not-complex-error vm:complex-type
-  complex-single-float-type complex-double-float-type)
+  complex-single-float-type complex-double-float-type
+  #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops complex-rational-p check-complex-rational nil
   object-not-complex-rational-error complex-type)
 
 (def-type-vops complex-float-p check-complex-float nil
   object-not-complex-float-error
-  complex-single-float-type complex-double-float-type)
+  complex-single-float-type complex-double-float-type
+  #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops complex-single-float-p check-complex-single-float
   complex-single-float object-not-complex-single-float-error
@@ -131,11 +133,22 @@
   complex-double-float object-not-complex-double-float-error
   complex-double-float-type)
 
+#+double-double
+(def-type-vops complex-double-double-float-p check-complex-double-double-float
+  complex-double-double-float object-not-complex-double-double-float-error
+  vm::complex-double-double-float-type)
+
+
 (def-type-vops single-float-p check-single-float single-float
   object-not-single-float-error vm:single-float-type)
 
 (def-type-vops double-float-p check-double-float double-float
   object-not-double-float-error vm:double-float-type)
+
+#+double-double
+(def-type-vops double-double-float-p check-double-double-float
+  double-double-float object-not-double-double-float-error
+  vm:double-double-float-type)
 
 (def-type-vops simple-string-p check-simple-string simple-string
   object-not-simple-string-error vm:simple-string-type)
@@ -208,6 +221,11 @@
   simple-array-double-float object-not-simple-array-double-float-error
   vm:simple-array-double-float-type)
 
+#+double-double
+(def-type-vops simple-array-double-double-float-p check-simple-array-double-double-float
+  simple-array-double-double-float object-not-simple-array-double-double-float-error
+  vm::simple-array-double-double-float-type)
+
 (def-type-vops simple-array-complex-single-float-p
   check-simple-array-complex-single-float
   simple-array-complex-single-float
@@ -219,6 +237,13 @@
   simple-array-complex-double-float
   object-not-simple-array-complex-double-float-error
   simple-array-complex-double-float-type)
+
+#+double-double
+(def-type-vops simple-array-complex-double-double-float-p
+  check-simple-array-complex-double-double-float
+  simple-array-complex-double-double-float
+  object-not-simple-array-complex-double-double-float-error
+  vm::simple-array-complex-double-double-float-type)
 
 (def-type-vops base-char-p check-base-char base-char
   object-not-base-char-error vm:base-char-type)
@@ -265,8 +290,10 @@
   simple-array-signed-byte-8-type simple-array-signed-byte-16-type
   simple-array-signed-byte-30-type simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+double-double vm::simple-array-double-double-float-type
   simple-array-complex-single-float-type
   simple-array-complex-double-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type
   complex-string-type complex-bit-vector-type complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
@@ -277,8 +304,10 @@
   simple-array-signed-byte-8-type simple-array-signed-byte-16-type
   simple-array-signed-byte-30-type simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+double-double vm::simple-array-double-double-float-type
   simple-array-complex-single-float-type
-  simple-array-complex-double-float-type)
+  simple-array-complex-double-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
   simple-array-type simple-string-type simple-bit-vector-type
@@ -288,15 +317,20 @@
   simple-array-signed-byte-8-type simple-array-signed-byte-16-type
   simple-array-signed-byte-30-type simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+double-double vm::simple-array-double-double-float-type
   simple-array-complex-single-float-type
   simple-array-complex-double-float-type
+  #+double-double vm::simple-array-complex-double-double-float-type
   complex-string-type complex-bit-vector-type complex-vector-type
   complex-array-type)
 
 (def-type-vops numberp check-number nil object-not-number-error
   even-fixnum-type odd-fixnum-type bignum-type ratio-type
-  single-float-type double-float-type complex-type
-  complex-single-float-type complex-double-float-type)
+  single-float-type double-float-type
+  #+double-double vm:double-double-float-type
+  complex-type
+  complex-single-float-type complex-double-float-type
+  #+double-double vm::complex-double-double-float-type)
 
 (def-type-vops rationalp check-rational nil object-not-rational-error
   vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type)
@@ -305,11 +339,13 @@
   vm:even-fixnum-type vm:odd-fixnum-type vm:bignum-type)
 
 (def-type-vops floatp check-float nil object-not-float-error
-  vm:single-float-type vm:double-float-type)
+  vm:single-float-type vm:double-float-type
+  #+double-double vm:double-double-float-type)
 
 (def-type-vops realp check-real nil object-not-real-error
   vm:even-fixnum-type vm:odd-fixnum-type vm:ratio-type vm:bignum-type
-  vm:single-float-type vm:double-float-type)
+  vm:single-float-type vm:double-float-type
+  #+double-double vm:double-double-float-type)
 
 
 ;;;; Other integer ranges.

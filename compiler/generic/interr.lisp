@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.12 2002/08/28 13:29:27 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.13 2006/06/30 18:41:23 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,6 +61,9 @@
   #+long-float
   (object-not-long-float
    "Object is not of type LONG-FLOAT.")
+  #+double-double
+  (object-not-double-double-float
+   "Object is not of type DOUBLE-DOUBLE-FLOAT.")
   (object-not-simple-string
    "Object is not of type SIMPLE-STRING.")
   (object-not-simple-bit-vector
@@ -155,6 +158,9 @@
   #+long-float
   (object-not-simple-array-long-float
    "Object is not of type (SIMPLE-ARRAY LONG-FLOAT (*)).")
+  #+double-double
+  (object-not-simple-array-double-double-float
+   "Object is not of type (SIMPLE-ARRAY DOUBLE-DOUBLE-FLOAT (*)).")
   (object-not-simple-array-complex-single-float
    "Object is not of type (SIMPLE-ARRAY (COMPLEX SINGLE-FLOAT) (*)).")
   (object-not-simple-array-complex-double-float
@@ -162,6 +168,9 @@
   #+long-float
   (object-not-simple-array-complex-long-float
    "Object is not of type (SIMPLE-ARRAY (COMPLEX LONG-FLOAT) (*)).")
+  #+double-double
+  (object-not-simple-array-complex-double-double-float
+   "Object is not of type (SIMPLE-ARRAY (COMPLEX DOUBLE-DOUBLE-FLOAT) (*)).")
   (object-not-complex
    "Object is not of type COMPLEX.")
   (object-not-complex-rational
@@ -175,6 +184,9 @@
   #+long-float
   (object-not-complex-long-float
    "Object is not of type (COMPLEX LONG-FLOAT).")
+  #+double-double
+  (object-not-complex-double-double-float
+   "Object is not of type (COMPLEX DOUBLE-DOUBLE-FLOAT)")
   (object-not-weak-pointer
    "Object is not a WEAK-POINTER.")
   (object-not-instance

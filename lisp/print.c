@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.20 2005/09/15 18:26:52 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.21 2006/06/30 18:41:32 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -40,6 +40,9 @@ char *subtype_Names[] = {
 #ifdef type_LongFloat
     "long float",
 #endif
+#ifdef type_DoubleDoubleFloat
+    "double-double float",
+#endif    
     "complex",
 #ifdef type_ComplexSingleFloat
     "complex single float",
@@ -49,6 +52,9 @@ char *subtype_Names[] = {
 #endif
 #ifdef type_ComplexLongFloat
     "complex long float",
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
+    "complex double-double float",
 #endif
     "simple-array",
     "simple-string",
@@ -76,6 +82,9 @@ char *subtype_Names[] = {
 #ifdef type_SimpleArrayLongFloat
     "(simple-array long-float (*))",
 #endif
+#ifdef type_SimpleArrayDoubleDoubleFloat
+    "(simple-array double-double-float (*))",
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
     "(simple-array (complex single-float) (*))",
 #endif
@@ -84,6 +93,9 @@ char *subtype_Names[] = {
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
     "(simple-array (complex long-float) (*))",
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+    "(simple-array (complex double-double-float) (*))",
 #endif
     "complex-string",
     "complex-bit-vector",
@@ -529,6 +541,14 @@ print_otherptr(lispobj obj)
 	      break;
 #endif
 
+#ifdef type_DoubleDoubleFloat
+          case type_DoubleDoubleFloat:
+              NEWLINE;
+              printf("%g %g", ((struct double_double_float *) PTR(obj))->hi,
+                     ((struct double_double_float *) PTR(obj))->lo);
+              break;
+#endif              
+
 #ifdef type_ComplexSingleFloat
 	  case type_ComplexSingleFloat:
 	      NEWLINE;
@@ -555,6 +575,18 @@ print_otherptr(lispobj obj)
 	      printf("%Lg", ((struct complex_long_float *) PTR(obj))->imag);
 	      break;
 #endif
+
+#ifdef type_ComplexDoubleDoubleFloat
+	  case type_ComplexDoubleDoubleFloat:
+	      NEWLINE;
+	      printf("%g %g", ((struct complex_double_double_float *) PTR(obj))->real_hi,
+                     ((struct complex_double_double_float *) PTR(obj))->real_lo);
+	      NEWLINE;
+	      printf("%g %g", ((struct complex_double_double_float *) PTR(obj))->imag_hi,
+                     ((struct complex_double_double_float *) PTR(obj))->imag_lo);
+	      break;
+#endif
+
 
 	  case type_SimpleString:
 	      NEWLINE;
@@ -610,6 +642,9 @@ print_otherptr(lispobj obj)
 #ifdef type_SimpleArrayLongFloat
 	  case type_SimpleArrayLongFloat:
 #endif
+#ifdef type_SimpleArrayDoubleDoubleFloat
+	  case type_SimpleArrayDoubleDoubleFloat:
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
 	  case type_SimpleArrayComplexSingleFloat:
 #endif
@@ -618,6 +653,9 @@ print_otherptr(lispobj obj)
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
 	  case type_SimpleArrayComplexLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	  case type_SimpleArrayComplexDoubleDoubleFloat:
 #endif
 	  case type_ComplexString:
 	  case type_ComplexBitVector:

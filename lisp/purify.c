@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.36 2006/01/18 15:21:26 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.37 2006/06/30 18:41:32 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -144,6 +144,9 @@ maybe_can_move_p(lispobj thing)
 #ifdef type_LongFloat
 	      case type_LongFloat:
 #endif
+#ifdef type_DoubleDoubleFloat
+	      case type_DoubleDoubleFloat:
+#endif
 	      case type_Sap:
 	      case type_SimpleVector:
 	      case type_SimpleString:
@@ -170,6 +173,9 @@ maybe_can_move_p(lispobj thing)
 #ifdef type_SimpleArrayLongFloat
 	      case type_SimpleArrayLongFloat:
 #endif
+#ifdef type_SimpleArrayDoubleDoubleFloat
+	      case type_SimpleArrayDoubleDoubleFloat:
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
 	      case type_SimpleArrayComplexSingleFloat:
 #endif
@@ -178,6 +184,9 @@ maybe_can_move_p(lispobj thing)
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
 	      case type_SimpleArrayComplexLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	      case type_SimpleArrayComplexDoubleDoubleFloat:
 #endif
 	      case type_CodeHeader:
 	      case type_FunctionHeader:
@@ -189,7 +198,9 @@ maybe_can_move_p(lispobj thing)
 	      case type_ValueCellHeader:
 	      case type_ByteCodeFunction:
 	      case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	      case type_DylanFunctionHeader:
+#endif
 	      case type_WeakPointer:
 	      case type_Fdefn:
 #ifdef type_ScavengerHook
@@ -265,7 +276,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 	    case type_FuncallableInstanceHeader:
 	    case type_ByteCodeFunction:
 	    case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	    case type_DylanFunctionHeader:
+#endif
 		if ((int) pointer != ((int) start_addr + type_FunctionPointer)) {
 		    if (pointer_filter_verbose)
 			fprintf(stderr, "*Wf2: %p %p %lx\n", pointer,
@@ -344,7 +357,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 	    case type_FuncallableInstanceHeader:
 	    case type_ByteCodeFunction:
 	    case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	    case type_DylanFunctionHeader:
+#endif
 		if (pointer_filter_verbose)
 		    fprintf(stderr, "*Wo4: %p %p %lx\n", pointer, start_addr,
 			    *start_addr);
@@ -369,6 +384,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 #ifdef type_ComplexLongFloat
 	    case type_ComplexLongFloat:
 #endif
+#ifdef type_ComplexDoubleDoubleFloat
+	    case type_ComplexDoubleDoubleFloat:
+#endif
 	    case type_SimpleArray:
 	    case type_ComplexString:
 	    case type_ComplexBitVector:
@@ -383,6 +401,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 	    case type_DoubleFloat:
 #ifdef type_LongFloat
 	    case type_LongFloat:
+#endif
+#ifdef type_DoubleDoubleFloat
+	    case type_DoubleDoubleFloat:
 #endif
 	    case type_SimpleString:
 	    case type_SimpleBitVector:
@@ -408,6 +429,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 #ifdef type_SimpleArrayLongFloat
 	    case type_SimpleArrayLongFloat:
 #endif
+#ifdef type_SimpleArrayDoubleDoubleFloat
+	    case type_SimpleArrayDoubleDoubleFloat:
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
 	    case type_SimpleArrayComplexSingleFloat:
 #endif
@@ -416,6 +440,9 @@ valid_dynamic_space_pointer(lispobj * pointer, lispobj * start_addr)
 #endif
 #ifdef type_SimpleArrayComplexLongFloat
 	    case type_SimpleArrayComplexLongFloat:
+#endif
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	    case type_SimpleArrayComplexDoubleDoubleFloat:
 #endif
 	    case type_Sap:
 	    case type_WeakPointer:
@@ -1025,6 +1052,9 @@ ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 #ifdef type_LongFloat
       case type_LongFloat:
 #endif
+#ifdef type_DoubleDoubleFloat
+      case type_DoubleDoubleFloat:
+#endif
 #ifdef type_ComplexSingleFloat
       case type_ComplexSingleFloat:
 #endif
@@ -1033,6 +1063,9 @@ ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 #endif
 #ifdef type_ComplexLongFloat
       case type_ComplexLongFloat:
+#endif
+#ifdef type_ComplexDoubleDoubleFloat
+      case type_ComplexDoubleDoubleFloat:
 #endif
       case type_Sap:
 	  return ptrans_unboxed(thing, header);
@@ -1111,6 +1144,11 @@ ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 #endif
 #endif
 
+#ifdef type_SimpleArrayDoubleDoubleFloat
+    case type_SimpleArrayDoubleDoubleFloat:
+      return ptrans_vector(thing, 128, 0, FALSE, constant);
+#endif
+      
 #ifdef type_SimpleArrayComplexSingleFloat
       case type_SimpleArrayComplexSingleFloat:
 	  return ptrans_vector(thing, 64, 0, FALSE, constant);
@@ -1131,6 +1169,12 @@ ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 #endif
 #endif
 
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+      case type_SimpleArrayComplexDoubleDoubleFloat:
+	  return ptrans_vector(thing, 256, 0, FALSE, constant);
+#endif
+
+          
       case type_CodeHeader:
 	  return ptrans_code(thing);
 
@@ -1293,6 +1337,9 @@ pscav(lispobj * addr, int nwords, boolean constant)
 	      case type_DoubleFloat:
 #ifdef type_LongFloat
 	      case type_LongFloat:
+#endif
+#ifdef type_DoubleDoubleFloat
+	      case type_DoubleDoubleFloat:
 #endif
 	      case type_Sap:
 		  /* It's an unboxed simple object. */
@@ -1459,6 +1506,13 @@ pscav(lispobj * addr, int nwords, boolean constant)
 		  break;
 #endif
 
+#ifdef type_SimpleArrayComplexDoubleDoubleFloat
+	      case type_SimpleArrayComplexDoubleDoubleFloat:
+		  vector = (struct vector *) addr;
+		  count = fixnum_value(vector->length) * 8 + 2;
+		  break;
+#endif
+
 	      case type_CodeHeader:
 #if !(defined(i386) || defined(__x86_64))
 		  gc_abort();	/* No code headers in static space */
@@ -1483,7 +1537,9 @@ pscav(lispobj * addr, int nwords, boolean constant)
 	      case type_FuncallableInstanceHeader:
 	      case type_ByteCodeFunction:
 	      case type_ByteCodeClosure:
+#ifdef type_DylanFunctionHeader
 	      case type_DylanFunctionHeader:
+#endif
 		  /* The function self pointer needs special care on the
 		     x86 because it is the real entry point. */
 		  {

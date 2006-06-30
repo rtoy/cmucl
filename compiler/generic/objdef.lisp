@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.59 2005/04/08 04:11:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.60 2006/06/30 18:41:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,6 @@
 	  code-header-type function-header-type closure-header-type
 	  closure-function-header-type return-pc-header-type
 	  byte-code-function-type byte-code-closure-type
-	  dylan-function-header-type
 	  value-cell-header-type symbol-header-type base-char-type
 	  sap-type unbound-marker-type weak-pointer-type
 	  instance-header-type funcallable-instance-header-type
@@ -46,6 +45,9 @@
 	  simple-array-complex-single-float-type
 	  simple-array-complex-double-float-type
 	  simple-array-complex-long-float-type))
+
+#+double-double
+(export '(double-double-float double-double-float-type))
 
 (in-package "KERNEL")
 (export '(%make-funcallable-instance
@@ -115,10 +117,12 @@
   single-float
   double-float
   #+long-float long-float
+  #+double-double double-double-float
   complex
   complex-single-float
   complex-double-float
   #+long-float complex-long-float
+  #+double-double complex-double-double-float
   
   simple-array
   simple-string
@@ -136,9 +140,11 @@
   simple-array-single-float
   simple-array-double-float
   #+long-float simple-array-long-float
+  #+double-double simple-array-double-double-float
   simple-array-complex-single-float
   simple-array-complex-double-float
   #+long-float simple-array-complex-long-float
+  #+double-double simple-array-complex-double-double-float
   complex-string
   complex-bit-vector
   complex-vector
@@ -150,7 +156,7 @@
   funcallable-instance-header
   byte-code-function
   byte-code-closure
-  dylan-function-header
+  #-double-double dylan-function-header
   closure-function-header
   #-gengc return-pc-header
   #+gengc forwarding-pointer
@@ -529,3 +535,21 @@
   #+sparc (filler)
   (real :c-type "long double" :length #+x86 3 #+sparc 4)
   (imag :c-type "long double" :length #+x86 3 #+sparc 4))
+
+#+double-double
+(define-primitive-object (double-double-float
+			  :lowtag other-pointer-type
+			  :header double-double-float-type)
+  (filler)
+  (hi :c-type "double" :length 2)
+  (lo :c-type "double" :length 2))
+
+#+double-double
+(define-primitive-object (complex-double-double-float
+			  :lowtag other-pointer-type
+			  :header complex-double-double-float-type)
+  (filler)
+  (real-hi :c-type "double" :length 2)
+  (real-lo :c-type "double" :length 2)
+  (imag-hi :c-type "double" :length 2)
+  (imag-lo :c-type "double" :length 2))

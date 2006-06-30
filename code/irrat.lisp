@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.45 2006/05/15 23:56:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.46 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,10 @@
   `((((foreach fixnum single-float bignum ratio))
      (coerce (,function (coerce ,var 'double-float)) 'single-float))
     ((double-float)
-     (,function ,var))))
+     (,function ,var))
+    #+double-double
+    ((double-double-float)
+     (,(symbolicate "DD-" function) ,var))))
 
 ); eval-when (compile load eval)
 
@@ -361,16 +364,25 @@
 	 (real-expt base power 'double-float))
 	((double-float single-float)
 	 (real-expt base power 'double-float))
+	#+double-double
+	(((foreach fixnum (or bignum ratio) single-float double-float double-double-float)
+	  double-double-float)
+	 (dd-%pow (coerce base 'double-double-float) power))
+	#+double-double
+	((double-double-float
+	  (foreach fixnum (or bignum ratio) single-float double-float))
+	 (dd-%pow base (coerce power 'double-double-float)))
 	(((foreach (complex rational) (complex float)) rational)
 	 (* (expt (abs base) power)
 	    (cis (* power (phase base)))))
-	(((foreach fixnum (or bignum ratio) single-float double-float)
+	(((foreach fixnum (or bignum ratio) single-float double-float
+		   #+double-double double-double-float)
 	  complex)
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
 	     (exp (* power (log base)))))
 	(((foreach (complex float) (complex rational))
-	  (foreach complex double-float single-float))
+	  (foreach complex double-float single-float #+double-double double-double-float))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
 	     (exp (* power (log base)))))))))
@@ -422,6 +434,14 @@
 	       (((foreach single-float fixnum bignum ratio)
 		 double-float)
 		(/ (log (coerce number 'double-float)) (log base)))
+	       #+double-double
+	       ((double-double-float
+		 (foreach double-double-float double-float single-float fixnum bignum ratio))
+		(/ (log number) (log (coerce base 'double-double-float))))
+	       #+double-double
+	       (((foreach double-float single-float fixnum bignum ratio)
+		 double-double-float)
+		(/ (log (coerce number 'double-double-float)) (log base)))
 	       (((foreach single-float fixnum bignum ratio)
 		 (foreach single-float fixnum bignum ratio))
 		;; Converting everything to double-float helps the
@@ -481,6 +501,12 @@
 	     (complex (log (- number)) (coerce pi '(dispatch-type number)))
 	     (coerce (%log (coerce number 'double-float))
 		     '(dispatch-type number))))
+	#+double-double
+	((double-double-float)
+	 (let ((hi (kernel:double-double-hi number)))
+	   (if (< (float-sign hi) 0d0)
+	       (complex (dd-%log (- number)) dd-pi)
+	       (dd-%log number))))
 	((complex)
 	 (complex-log number)))))
 
@@ -496,8 +522,15 @@
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float))
 		 '(dispatch-type number))))
-     ((complex)
-      (complex-sqrt number))))
+    #+double-double
+    ((double-double-float)
+     (if (minusp number)
+	 (dd-complex-sqrt number)
+	 (multiple-value-bind (hi lo)
+	     (c::sqrt-dd (kernel:double-double-hi number) (kernel:double-double-lo number))
+	   (kernel:make-double-double-float hi lo))))
+    ((complex)
+     (complex-sqrt number))))
 
 
 ;;;; Trigonometic and Related Functions
@@ -505,8 +538,25 @@
 (defun abs (number)
   "Returns the absolute value of the number."
   (number-dispatch ((number number))
-    (((foreach single-float double-float fixnum rational))
+    (((foreach single-float double-float fixnum rational
+	       #+double-double double-double-float))
      (abs number))
+    #+(and nil double-double)
+    ((double-double-float)
+     ;; This is a hack until abs deftransform is working
+     (multiple-value-bind (hi lo)
+	 (c::abs-dd (kernel:double-double-hi number) (kernel:double-double-lo number))
+       (kernel:make-double-double-float hi lo)))
+    #+(and nil double-double)
+    ((double-double-float)
+     ;; This is a hack until abs deftransform is working
+     (let ((hi (kernel:double-double-hi number))
+	   (lo (kernel:double-double-lo number)))
+       (declare (double-float hi lo))
+       (when (minusp hi)
+	 (setf hi (- hi))
+	 (setf lo (- lo)))
+       (kernel:make-double-double-float hi lo)))
     ((complex)
      (let ((rx (realpart number))
 	   (ix (imagpart number)))
@@ -518,7 +568,10 @@
 			  (coerce ix 'double-float))
 		  'single-float))
 	 (double-float
-	  (%hypot rx ix)))))))
+	  (%hypot rx ix))
+	 #+double-double
+	 (double-double-float
+	  (error "abs complex double-double-float not implemented!")))))))
 
 (defun phase (number)
   "Returns the angle part of the polar representation of a complex number.
@@ -538,6 +591,11 @@
      (if (minusp (float-sign number))
 	 (coerce pi 'double-float)
 	 0.0d0))
+    #+double-double
+    (double-double-float
+     (if (minusp (float-sign number))
+	 dd-pi
+	 0w0))
     (complex
      (atan (imagpart number) (realpart number)))))
 
@@ -588,7 +646,14 @@
 		  (>= number (coerce -1 '(dispatch-type number)))))
 	 (coerce (%asin (coerce number 'double-float))
 		 '(dispatch-type number))
-	 	 (complex-asin number)))
+	 (complex-asin number)))
+    #+double-double
+    ((double-double-float)
+     (if (or (float-nan-p number)
+	     (and (<= number 1w0)
+		  (>= number -1w0)))
+	 (dd-%asin number)
+	 (dd-complex-asin number)))
     ((complex)
      (complex-asin number))))
 
@@ -605,7 +670,14 @@
 		  (>= number (coerce -1 '(dispatch-type number)))))
 	 (coerce (%acos (coerce number 'double-float))
 		 '(dispatch-type number))
-	 	 (complex-acos number)))
+	 (complex-acos number)))
+    #+double-double
+    ((double-double-float)
+     (if (or (float-nan-p number)
+	     (and (<= number 1w0)
+		  (>= number -1w0)))
+	 (dd-%acos number)
+	 (complex-acos number)))
     ((complex)
      (complex-acos number))))
 
@@ -634,7 +706,15 @@
 	  (((foreach single-float fixnum bignum ratio)
 	    (foreach single-float fixnum bignum ratio))
 	   (coerce (atan2 (coerce y 'double-float) (coerce x 'double-float))
-		   'single-float))))
+		   'single-float))
+	  #+double-double
+	  ((double-double-float
+	    (foreach double-double-float double-float single-float fixnum bignum ratio))
+	   (dd-%atan2 y (coerce x 'double-double-float)))
+	  #+double-double
+	  (((foreach double-float single-float fixnum bignum ratio)
+	    double-double-float)
+	   (dd-%atan2 (coerce y 'double-double-float) x))))
       (number-dispatch ((y number))
 	(handle-reals %atan y)
 	((complex)
@@ -687,6 +767,11 @@
 	 (complex-acosh number)
 	 (coerce (%acosh (coerce number 'double-float))
 		 '(dispatch-type number))))
+    #+double-double
+    ((double-double-float)
+     (if (< number 1w0)
+	 (complex-acosh number)
+	 (dd-%acosh number)))
     ((complex)
      (complex-acosh number))))
 
@@ -704,6 +789,12 @@
 	 (complex-atanh number)
 	 (coerce (%atanh (coerce number 'double-float))
 		 '(dispatch-type number))))
+    #+double-double
+    ((double-double-float)
+     (if (or (> number 1w0)
+	     (< number -1w0))
+	 (complex-atanh number)
+	 (dd-%atanh (coerce number 'double-double-float))))
     ((complex)
      (complex-atanh number))))
 
@@ -773,7 +864,7 @@
 
 (declaim (inline square))
 (defun square (x)
-  (declare (double-float x))
+  (declare (float x))
   (* x x))
 
 ;; If you have these functions in libm, perhaps they should be used
@@ -784,7 +875,7 @@
 (defun scalb (x n)
   "Compute 2^N * X without compute 2^N first (use properties of the
 underlying floating-point format"
-  (declare (type double-float x)
+  (declare (type float x)
 	   (type double-float-exponent n))
   (scale-float x n))
 
@@ -792,7 +883,7 @@ underlying floating-point format"
 (defun logb-finite (x)
   "Same as logb but X is not infinity and non-zero and not a NaN, so
 that we can always return an integer"
-  (declare (type double-float x))
+  (declare (type float x))
   (multiple-value-bind (signif expon sign)
       (decode-float x)
     (declare (ignore signif sign))
@@ -809,7 +900,7 @@ For the special cases, the following values are used:
    +/- infinity   +infinity
    0              -infinity
 "
-  (declare (type double-float x))
+  (declare (type float x))
   (cond ((float-nan-p x)
 	 x)
 	((float-infinity-p x)
@@ -817,7 +908,7 @@ For the special cases, the following values are used:
 	((zerop x)
 	 ;; The answer is negative infinity, but we are supposed to
 	 ;; signal divide-by-zero, so do the actual division
-	 (/ -1.0d0 x)
+	 (/ -1 x)
 	 )
 	(t
 	 (logb-finite x))))
@@ -884,6 +975,9 @@ and Y are coerced to single-float."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-sqrt (dd-complex-sqrt z)))
   (multiple-value-bind (rho k)
       (cssqs z)
     (declare (type (or (member 0d0) (double-float 0d0)) rho)
@@ -960,6 +1054,9 @@ This is for use with J /= 0 only when |z| is huge."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-log (dd-complex-log-scaled z 0)))
   (complex-log-scaled z 0))
 	       
 ;; Let us note the following "strange" behavior.  atanh 1.0d0 is
@@ -970,6 +1067,10 @@ Z may be any number, but the result is always a complex."
 (defun complex-atanh (z)
   "Compute atanh z = (log(1+z) - log(1-z))/2"
   (declare (number z))
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-atanh (dd-complex-atanh z)))
+  
   (if (and (realp z) (< z -1))
       ;; atanh is continuous in quadrant III in this case.
       (complex-atanh (complex z -0f0))
@@ -1030,6 +1131,10 @@ Z may be any number, but the result is always a complex."
 (defun complex-tanh (z)
   "Compute tanh z = sinh z / cosh z"
   (declare (number z))
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-tanh (dd-complex-tanh z)))
+  
   (let ((x (float (realpart z) 1.0d0))
 	(y (float (imagpart z) 1.0d0)))
     (locally
@@ -1113,6 +1218,9 @@ Z may be any number, but the result is always a complex."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-acos (dd-complex-acos z)))
   (if (and (realp z) (> z 1))
       ;; acos is continuous in quadrant IV in this case.
       (complex-acos (complex z -0f0))
@@ -1143,6 +1251,9 @@ Z may be any number, but the result is always a complex."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-asin (dd-complex-asin z)))
   (if (and (realp z) (> z 1))
       ;; asin is continuous in quadrant IV in this case.
       (complex-asin (complex z -0f0))
@@ -1160,6 +1271,9 @@ Z may be any number, but the result is always a complex."
 Z may be any number, but the result is always a complex."
   (declare (number z))
   ;; asinh z = -i * asin (i*z)
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-asinh (dd-complex-asinh z)))
   (let* ((iz (complex (- (imagpart z)) (realpart z)))
 	 (result (complex-asin iz)))
     (complex (imagpart result)
@@ -1171,6 +1285,9 @@ Z may be any number, but the result is always a complex."
 Z may be any number, but the result is always a complex."
   (declare (number z))
   ;; atan z = -i * atanh (i*z)
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-atan (dd-complex-atan z)))
   (let* ((iz (complex (- (imagpart z)) (realpart z)))
 	 (result (complex-atanh iz)))
     (complex (imagpart result)
@@ -1182,6 +1299,9 @@ Z may be any number, but the result is always a complex."
 Z may be any number, but the result is always a complex."
   (declare (number z))
   ;; tan z = -i * tanh(i*z)
+  #+double-double
+  (when (typep z '(or double-double-float (complex double-double-float)))
+    (return-from complex-tan (dd-complex-tan z)))
   (let* ((iz (complex (- (imagpart z)) (realpart z)))
 	 (result (complex-tanh iz)))
     (complex (imagpart result)

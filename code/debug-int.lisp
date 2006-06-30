@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.122 2006/01/23 14:11:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.123 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3150,6 +3150,16 @@ The result is a symbol or nil if the routine cannot be found."
       #+long-float
       (#.vm:long-reg-sc-number
        (escaped-float-value long-float))
+      #+double-double
+      (#.vm:double-double-reg-sc-number
+       (if escaped
+	   (kernel:%make-double-double-float
+	    (vm:sigcontext-float-register
+	     escaped (c:sc-offset-offset sc-offset) 'double-float)
+	    (vm:sigcontext-float-register
+	     escaped (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
+	     'double-float))
+	   :invalid-value-for-unescaped-register-storage))
       (#.vm:complex-single-reg-sc-number
        (if escaped
 	   (complex
@@ -3177,6 +3187,24 @@ The result is a symbol or nil if the routine cannot be found."
 	     escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4)
 	     'long-float))
 	   :invalid-value-for-unescaped-register-storage))
+      #+double-double
+      (#.vm:complex-double-double-reg-sc-number
+       (if escaped
+	   (complex
+	    (kernel:%make-double-double-float
+	     (vm:sigcontext-float-register
+	      escaped (c:sc-offset-offset sc-offset) 'double-float)
+	     (vm:sigcontext-float-register
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
+	      'double-float))
+	    (kernel:%make-double-double-float
+	     (vm:sigcontext-float-register
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4 #+sparc 1)
+	      'double-float)
+	     (vm:sigcontext-float-register
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 6 #-sparc 3)
+	      'double-float)))
+	   :invalid-value-for-unescaped-register-storage))
       (#.vm:single-stack-sc-number
        (with-nfp (nfp)
 	 (system:sap-ref-single nfp (* (c:sc-offset-offset sc-offset)
@@ -3190,6 +3218,15 @@ The result is a symbol or nil if the routine cannot be found."
        (with-nfp (nfp)
 	 (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
 				     vm:word-bytes))))
+      #+double-double
+      ((#.vm:double-double-stack-sc-number
+	(with-nfp (nfp)
+	  (kernel:%make-double-double-float
+	   (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
+					 vm:word-bytes))
+	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
+					    2)
+					 vm:word-bytes))))))
       (#.vm:complex-single-stack-sc-number
        (with-nfp (nfp)
 	 (complex
@@ -3307,6 +3344,16 @@ The result is a symbol or nil if the routine cannot be found."
       #+long-float
       (#.vm:long-reg-sc-number
        (escaped-float-value long-float))
+      #+double-double
+      (#.vm:double-double-reg-sc-number
+       (if escaped
+	   (kernel:%make-double-double-float
+	    (vm:sigcontext-float-register
+	     escaped (c:sc-offset-offset sc-offset) 'double-float)
+	    (vm:sigcontext-float-register
+	     escaped (+ (c:sc-offset-offset sc-offset) 1)
+	     'double-float))
+	   :invalid-value-for-unescaped-register-storage))
       (#.vm:complex-single-reg-sc-number
        (escaped-complex-float-value single-float))
       (#.vm:complex-double-reg-sc-number
@@ -3324,6 +3371,24 @@ The result is a symbol or nil if the routine cannot be found."
       (#.vm:long-stack-sc-number
        (system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
 				     vm:word-bytes))))
+      #+double-double
+      (#.vm:complex-double-double-reg-sc-number
+       (if escaped
+	   (complex
+	    (kernel:%make-double-double-float
+	     (vm:sigcontext-float-register
+	      escaped (c:sc-offset-offset sc-offset) 'double-float)
+	     (vm:sigcontext-float-register
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
+	      'double-float))
+	    (kernel:%make-double-double-float
+	     (vm:sigcontext-float-register
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4 #+sparc 1)
+	      'double-float)
+	     (vm:sigcontext-float-register
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 6 #-sparc 3)
+	      'double-float)))
+	   :invalid-value-for-unescaped-register-storage))
       (#.vm:complex-single-stack-sc-number
        (complex
 	(system:sap-ref-single fp (- (* (1+ (c:sc-offset-offset sc-offset))
@@ -3343,6 +3408,15 @@ The result is a symbol or nil if the routine cannot be found."
 				      vm:word-bytes)))
 	(system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 6)
 				      vm:word-bytes)))))
+      #+double-double
+      ((#.vm:double-double-stack-sc-number
+	(with-nfp (nfp)
+	  (kernel:%make-double-double-float
+	   (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
+					 vm:word-bytes))
+	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
+					    2)
+					 vm:word-bytes))))))
       (#.vm:control-stack-sc-number
        (kernel:stack-ref fp (c:sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number

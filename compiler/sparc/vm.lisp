@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.25 2005/02/11 14:45:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.26 2006/06/30 18:41:32 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -183,6 +183,8 @@
 		:element-size 2 :alignment 2) ; double floats.
   #+long-float
   (long-stack non-descriptor-stack :element-size 4 :alignment 4) ; long floats.
+  #+double-double
+  (double-double-stack non-descriptor-stack :element-size 4 :alignment 2)
   ;; complex-single-floats
   (complex-single-stack non-descriptor-stack :element-size 2)
   ;; complex-double-floats.
@@ -191,6 +193,9 @@
   ;; complex-long-floats.
   (complex-long-stack non-descriptor-stack :element-size 8 :alignment 4)
 
+  #+double-double
+  (complex-double-double-stack non-descriptor-stack :element-size 8 :alignment 4)
+  
   ;; **** Things that can go in the integer registers.
 
   ;; Immediate descriptor objects.  Don't have to be seen by GC, but nothing
@@ -302,6 +307,16 @@
    :save-p t
    :alternate-scs (long-stack))
 
+  ;; Non-descriptor double-double floats
+  #+double-double
+  (double-double-reg float-registers
+   :locations #.(loop for i from 0 below #-sparc-v9 32 #+sparc-v9 64
+		   by 4 collect i)
+   :element-size 4 :alignment 4
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (double-double-stack))
+  
   (complex-single-reg float-registers
    :locations #.(loop for i from 0 to 31 by 2 collect i)
    :element-size 2 :alignment 2
@@ -327,6 +342,15 @@
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-long-stack))
+
+  #+double-double
+  (complex-double-double-reg float-registers
+   :locations #.(loop for i from 0 below #-sparc-v9 32 #+sparc-v9 64
+		      by 8 collect i)
+   :element-size 8 :alignment 8
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-double-stack))
 
 
   ;; A catch or unwind block.

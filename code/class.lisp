@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.58 2004/10/12 16:53:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.59 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -773,6 +773,14 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
+	  #+double-double
+	  (simple-array-double-double-float
+	   :translation (simple-array double-double-float (*))
+	   :codes (#.vm::simple-array-double-double-float-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
 	  (simple-array-complex-single-float
 	   :translation (simple-array (complex single-float) (*))
 	   :codes (#.vm:simple-array-complex-single-float-type)
@@ -791,6 +799,14 @@
 	  (simple-array-complex-long-float
 	   :translation (simple-array (complex long-float) (*))
 	   :codes (#.vm:simple-array-complex-long-float-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
+	  #+double-double
+	  (simple-array-complex-double-double-float
+	   :translation (simple-array (complex double-double-float) (*))
+	   :codes (#.vm::simple-array-complex-double-double-float-type)
 	   :direct-superclasses (vector simple-array)
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
@@ -829,6 +845,10 @@
 	   :translation (complex long-float)
 	   :inherits (complex number generic-number)
 	   :codes (#.vm:complex-long-float-type))
+	  #+double-double
+	  (complex-double-double-float
+	   :translation (complex double-double-float)
+	   :inherits (complex number generic-number))
 	  (real :translation real :inherits (number generic-number))
 	  (float :translation float :inherits (real number generic-number))
 	  (single-float
@@ -844,6 +864,11 @@
 	   :translation long-float
 	   :inherits (float real number generic-number)
 	   :codes (#.vm:long-float-type))
+	  #+double-double
+	  (double-double-float
+	   :translation double-double-float
+	   :inherits (float real number generic-number)
+	   :codes (#.vm::double-double-float-type))
 	  (rational
 	   :translation rational
 	   :inherits (real number generic-number))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.71 2005/05/09 15:56:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.72 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1894,7 +1894,8 @@
 ;;;
 (eval-when (compile load eval)
   (defconstant float-formats
-    '(long-float double-float single-float short-float)))
+    '(#+double-double double-double-float
+      long-float double-float single-float short-float)))
 
 ;;; The type of a float format.
 ;;;
@@ -2214,6 +2215,8 @@
 	       (double-float (specifier-type '(complex double-float)))
 	       #+long-float
 	       (long-float (specifier-type '(complex long-float)))
+	       #+double-double
+	       (double-double-float (specifier-type '(complex double-double-float)))
 	       (rational (specifier-type '(complex rational)))
 	       (t (specifier-type '(complex real))))))
     (let ((ctype (specifier-type typespec)))
@@ -2411,7 +2414,9 @@
 		      ,(coerced-float-bound high 'single-float))
 	(double-float ,(coerced-float-bound  low 'double-float)
 		      ,(coerced-float-bound high 'double-float))
-	#+long-float ,(error "stub: no long float support yet"))))
+	#+long-float ,(error "stub: no long float support yet")
+	;; This needs to be fixed so that we can compute the bounds
+	#+double-double (double-double-float * *))))
 
 (defmacro define-float-format (f)
   `(def-bounded-type ,f float ,f))
@@ -2420,6 +2425,8 @@
 (define-float-format single-float)
 (define-float-format double-float)
 (define-float-format long-float)
+#+double-double
+(define-float-format double-double-float)
 
 (defun numeric-types-intersect (type1 type2)
   (declare (type numeric-type type1 type2))
@@ -2589,12 +2596,15 @@
 			  ((nil)
 			   ;; A double-float with any real number is a
 			   ;; double-float.
-			   #-long-float
+			   #-(and long-float (not double-double))
 			   (if (eq format1 'double-float) 'double-float nil)
 			   ;; A long-float with any real number is a
 			   ;; long-float.
-			   #+long-float
-			   (if (eq format1 'long-float) 'long-float nil)))
+			   #+(and long-float (not double-double))
+			   (if (eq format1 'long-float) 'long-float nil)
+			   #+(and (not long-float) double-double)
+			   (if (eq format1 'double-double-float) 'double-double-float nil)
+			   ))
 		:complexp (if (or (eq complexp1 :complex)
 				  (eq complexp2 :complex))
 			      :complex

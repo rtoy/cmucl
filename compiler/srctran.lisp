@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.161 2006/01/17 18:00:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.162 2006/06/30 18:41:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -405,10 +405,11 @@
 		  (zerop (bound-value lo))
 		  (= (bound-value lo) (bound-value hi)))
 	     ;; At this point lo = hi = +/- 0.0.
-	     (cond ((eql (bound-value lo) (bound-value hi))
-		    ;; Both bounds are the same kind of signed 0.  The
-		    ;; sign of the zero tells us the sign of the
-		    ;; interval.
+	     (cond ((or (eql (bound-value lo) (bound-value hi))
+			(integerp (bound-value hi)))
+		    ;; Both bounds are the same kind of signed 0.  Or
+		    ;; the high bound is an exact 0.  The sign of the
+		    ;; zero tells us the sign of the interval.
 		    (if (= (float-sign (bound-value lo)) -1)
 			'-
 			'+))
@@ -1143,6 +1144,12 @@
     (when (null (set-difference '(-0l0 0l0) members))
       (push (specifier-type '(long-float 0l0 0l0)) misc-types)
       (setf members (set-difference members '(-0l0 0l0))))
+    #+double-double-2
+    (let ((pzero (kernel:make-double-double-float 0d0 0d0))
+	  (nzero (kernel:make-double-double-float -0d0 0d0)))
+      (when (null (set-difference (list pzero nzero) members))
+	(push (specifier-type (list 'kernel:double-double-float pzero pzero)) misc-types)
+	(setf members (set-difference members (list nzero pzero)))))
     (when (null (set-difference '(-0d0 0d0) members))
       (push (specifier-type '(double-float 0d0 0d0)) misc-types)
       (setf members (set-difference members '(-0d0 0d0))))
@@ -1643,14 +1650,16 @@
 		  (values 'integer nil))
 		 (rational
 		  (values 'rational nil))
-		 ((or single-float double-float #+long-float long-float)
+		 ((or single-float double-float #+long-float long-float
+		      #+double-double double-double-float)
 		  (values 'float rem-type))
 		 (float
 		  (values 'float nil))
 		 (real
 		  (values nil nil)))
 	     (when (member rem-type '(float single-float double-float
-				      	    #+long-float long-float))
+				      #+long-float long-float
+				      #+double-double double-double-float))
 	       (setf rem (interval-func #'(lambda (x)
 					    (coerce x rem-type))
 					rem)))
@@ -1806,7 +1815,8 @@
 		    (rem (,r-name divisor-interval))
 		    (result-type (rem-result-type number-type divisor-type)))
 	       (when (member result-type '(float single-float double-float
-					   #+long-float long-float))
+					   #+long-float long-float
+					   #+double-double double-double-float))
 		 ;; Make sure the limits on the interval have the right type.
 		 (setf rem (interval-func #'(lambda (x)
 					      (coerce x result-type))
@@ -3226,12 +3236,14 @@
 			 (member format1 '(short-float single-float)))
 			#-long-float
 			((double-float long-float) 'T)
-			#+long-float
+			#+(or long-float double-double)
 			(double-float
 			 (member format1 '(short-float single-float
 					   double-float)))
 			#+long-float
-			(long-float 'T))))
+			(long-float 'T)
+			#+double-double
+			(double-double-float 't))))
 		((and (eq class1 'float) (member class2 '(integer rational)))
 		 Nil)
 		(t

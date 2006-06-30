@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.75 2004/10/19 20:13:30 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.76 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,6 +40,9 @@
 
 #+heap-overflow-check
 (sys:register-lisp-runtime-feature :heap-overflow-check)
+
+#+double-double
+(sys:register-lisp-feature :double-double)
 
 ;;; Make the error system enable interrupts.
 

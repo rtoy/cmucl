@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.96 2005/09/08 20:49:57 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.97 2006/06/30 18:41:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,6 +201,8 @@
 (comf "target:code/float-trap")
 (comf "target:code/float")
 (comf "target:code/irrat")
+#+double-double
+(comf "target:code/irrat-dd")
 
 (comf "target:code/type-boot")
 

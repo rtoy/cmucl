@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.39 2005/04/13 11:59:23 pwerkowski Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.40 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,6 +137,9 @@
     #+long-float
     (long-float
      (values #.vm:simple-array-long-float-type #+x86 96 #+sparc 128))
+    #+double-double
+    (double-double-float
+     (values #.vm::simple-array-double-double-float-type 128))
     ((complex single-float)
      (values #.vm:simple-array-complex-single-float-type 64))
     ((complex double-float)
@@ -144,6 +147,9 @@
     #+long-float
     ((complex long-float)
      (values #.vm:simple-array-complex-long-float-type #+x86 192 #+sparc 256))
+    #+double-double
+    ((complex double-double-float)
+     (values #.vm::simple-array-complex-double-double-float-type 256))
     (t (values #.vm:simple-vector-type #.vm:word-bits))))
 
 (defun %complex-vector-type-code (type)
@@ -339,9 +345,11 @@
        single-float
        double-float
        #+long-float long-float
+       #+double-double double-double-float
        (complex single-float)
        (complex double-float)
-       #+long-float (complex long-float)))))
+       #+long-float (complex long-float)
+       #+double-double (complex double-double-float)))))
 
 (defun data-vector-set (array index new-value)
   (with-array-data ((vector array) (index index) (end))
@@ -372,9 +380,11 @@
        single-float
        double-float
        #+long-float long-float
+       #+double-double double-double-float
        (complex single-float)
        (complex double-float)
-       #+long-float (complex long-float)))))
+       #+long-float (complex long-float)
+       #+double-double (complex double-double-float)))))
 
 
 
@@ -535,10 +545,14 @@
        (vm:simple-array-double-float-type 'double-float)
        #+long-float
        (vm:simple-array-long-float-type 'long-float)
+       #+double-double
+       (vm::simple-array-double-double-float-type 'double-double-float)
        (vm:simple-array-complex-single-float-type '(complex single-float))
        (vm:simple-array-complex-double-float-type '(complex double-float))
        #+long-float
        (vm:simple-array-complex-long-float-type '(complex long-float))
+       #+double-double
+       (vm::simple-array-complex-double-double-float-type '(complex double-double-float))
        ((vm:simple-array-type vm:complex-vector-type vm:complex-array-type)
 	(with-array-data ((array array) (start) (end))
 	  (declare (ignore start end))
@@ -864,13 +878,19 @@
 	((simple-array double-float (*)) (coerce 0 'double-float))
 	#+long-float
 	((simple-array long-float (*)) (coerce 0 'long-float))
+	#+double-double
+	((simple-array double-double-float (*))
+	 (coerce 0 'double-double-float))
 	((simple-array (complex single-float) (*))
 	 (coerce 0 '(complex single-float)))
 	((simple-array (complex double-float) (*))
 	 (coerce 0 '(complex double-float)))
 	#+long-float
 	((simple-array (complex long-float) (*))
-	 (coerce 0 '(complex long-float))))))
+	 (coerce 0 '(complex long-float)))
+	#+double-double
+	((simple-array (complex double-double-float) (*))
+	 (coerce 0 '(complex double-double-float))))))
   ;; Only arrays have fill-pointers, but vectors have their length parameter
   ;; in the same place.
   (setf (%array-fill-pointer vector) new-size)

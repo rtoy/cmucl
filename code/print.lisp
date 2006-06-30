@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.110 2006/05/01 16:10:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.111 2006/06/30 18:41:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1570,7 +1570,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;; out a large factor, since there is more negative exponent range than
 ;;; positive range.
 ;;;
-(defun scale-exponent (original-x)
+(defun scale-exponent-double (original-x)
   (let* ((x (coerce original-x 'long-float)))
     (multiple-value-bind (sig exponent)
 			 (decode-float x)
@@ -1596,6 +1596,44 @@ radix-R.  If you have a power-list then pass it in as PL."
 		     ((>= z 0.1l0)
 		      (values (float z original-x) ex))))))))))
 
+;; Like scale-exponent-double but for double-double-float.
+(defun scale-exponent-double-double (original-x)
+  (let* ((x original-x))
+    (multiple-value-bind (sig exponent)
+	(decode-float x)
+      (declare (ignore sig))
+      (if (= x 0)
+	  (values (float 0 original-x) 1)
+	  (let* ((ex (round (* exponent (log 2l0 10))))
+		 (x (if (minusp ex)
+			(if (float-denormalized-p x)
+			    #-long-float
+			    (* x (expt 10 16) (expt 10 (- (- ex) 16)))
+			    #+long-float
+			    (* x 1.0l18 (expt 10.0l0 (- (- ex) 18)))
+			    (* x 10 (expt 10 (- (- ex) 1))))
+			(/ x 10 (expt 10 (1- ex))))))
+	    (do ((d 10 (* d 10))
+		 (y x (/ x d))
+		 (ex ex (1+ ex)))
+		((< y 1)
+		 (do ((m 10 (* m 10))
+		      (z y (* y m))
+		      (ex ex (1- ex)))
+		     ((>= (* 10 z) 1)
+		      (values (float z original-x) ex))))))))))
+
+#-double-double
+(defun scale-exponent (original-x)
+  (scale-exponent-double original-x))
+
+#+double-double
+(defun scale-exponent (original-x)
+  ;; We split this into two types because we don't want
+  ;; double-double-float to slow down printing double-floats.
+  (if (typep original-x 'double-double-float)
+      (scale-exponent-double-double original-x)
+      (scale-exponent-double original-x)))
 
 ;;;; Entry point for the float printer.
 
@@ -1642,7 +1680,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 		  (single-float #\f)
 		  (double-float #\d)
 		  (short-float #\s)
-		  (long-float #\L))
+		  (long-float #\L)
+		  #+double-double
+		  (double-double-float #\w))
 		exp))))
 
 
@@ -1656,7 +1696,9 @@ radix-R.  If you have a power-list then pass it in as PL."
     (single-float "SINGLE-FLOAT")
     (double-float "DOUBLE-FLOAT")
     (short-float "SHORT-FLOAT")
-    (long-float "LONG-FLOAT")))
+    (long-float "LONG-FLOAT")
+    #+double-double
+    (double-double-float "DOUBLE-DOUBLE-FLOAT")))
 
 
 ;;; OUTPUT-FLOAT-INFINITY  --  Internal
@@ -1712,6 +1754,13 @@ radix-R.  If you have a power-list then pass it in as PL."
     (output-float-infinity x stream))
    ((float-nan-p x)
     (output-float-nan x stream))
+   #+(and nil double-double)
+   ((typep x 'double-double-float)
+    ;; This is a temporary hack until we get more double-double float
+    ;; stuff in place so that we don't need this.  And being able to
+    ;; print double-double's now is quite handy while we debug the
+    ;; rest of the code.
+    (output-double-double-float x stream))
    (t
     (let ((x (cond ((minusp (float-sign x))
 		    (write-char #\- stream)
@@ -1727,12 +1776,67 @@ radix-R.  If you have a power-list then pass it in as PL."
 			  output-float-free-format-exponent-min
 			  output-float-free-format-exponent-max)))))))
 
+#+double-double
+(defun output-double-double-float (x stream)
+  (dd->string (kernel:double-double-hi x)
+	      (kernel:double-double-lo x)
+	      stream))
+
+;;; The code below for printing double-double's was written by Richard
+;;; Fateman.  Used with permission.
+
+#+double-double
+(defvar *dd-digits-to-show* 33)
+
+#+double-double
+(defun dd->lisp (a0 a1)
+  "Convert a DD number to a lisp rational"
+  (declare (double-float a0 a1))
+  (+ (rational a0) (rational a1)))
+
+#+double-double
+;; r rational number >=0
+;; n number of digits
+(defun decimalize (r n &optional (base 10))
+  (let* ((expon (if (= r 0)
+		    0
+		    (floor (cl::log (cl::abs r) base))))
+	 (frac (round (* (cl::abs r)
+			 (expt base (- n expon))))))
+    (values (signum r)
+	    frac
+	    (if (= frac 0)
+		0
+		(cl::1+ expon)))))
+
+#+double-double
+(defun dd->string (x0 x1 stream)
+  "Print out a double-double to a string"
+  (cond ((and (zerop x0) (zerop x1))
+	 (format stream "0.dd0"))
+	(t
+	 (multiple-value-bind (s r e h)
+	     (decimalize (dd->lisp x0 x1) *dd-digits-to-show* 10)
+	   ;; This is slightly modified from Richard Fateman's version to
+	   ;; print numbers in the format x.xxddee instead of 0.xxddee.
+	   (let ((out (string-right-trim "0"
+					 (subseq (setf h (format nil "~A~%" r))
+						 0
+						 (min (length h) *dd-digits-to-show*)))))
+	     (format stream "~A~A.~Aw~S"
+		     (if (< s 0) "-" "")
+		     (aref out 0)
+		     (subseq out 1)
+		     (1- e)))))))
+
 
 ;; Smallest possible (unbiased) exponents
 (defconstant double-float-min-e
   (nth-value 1 (decode-float least-positive-double-float)))
 (defconstant single-float-min-e
   (nth-value 1 (decode-float least-positive-single-float)))
+#+double-double
+(defconstant double-double-float-min-e double-float-min-e)
 
 ;;; Implementation of Figure 1 from "Printing Floating-Point Numbers
 ;;; Quickly and Accurately", by Burger and Dybvig, 1996.  As the
@@ -1758,7 +1862,9 @@ radix-R.  If you have a power-list then pass it in as PL."
 	(min-e
 	 (etypecase v
 	   (single-float single-float-min-e)
-	   (double-float double-float-min-e))))
+	   (double-float double-float-min-e)
+	   #+double-double
+	   (double-double-float double-double-float-min-e))))
     (multiple-value-bind (f e)
 	(integer-decode-float v)
       (let ( ;; FIXME: these even tests assume normal IEEE rounding

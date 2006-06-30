@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.4 2005/12/11 03:45:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/vm.lisp,v 1.5 2006/06/30 18:41:24 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,9 +150,13 @@
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
+  #+double-double
+  (double-double-stack non-descriptor-stack :element-size 4 :alignment 2)
   (complex-single-stack non-descriptor-stack :element-size 2)
   (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
+  #+double-double
+  (complex-double-double-stack non-descriptor-stack :element-size 8 :alignment 4)
 
   ;; **** Things that can go in the integer registers.
 
@@ -227,19 +231,36 @@
    :save-p t
    :alternate-scs (double-stack))
 
+  ;; Non-descriptor double-double floats
+  #+double-double
+  (double-double-reg float-registers
+   :locations #.(loop for i from 0 to 30 by 2 collect i)
+   :element-size 2 :alignment 2
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (double-double-stack))
+
   (complex-single-reg float-registers
    :locations #.(loop for i from 0 to 30 by 2 collect i)
-   :element-size 2
+   :element-size 2 :alignment 2
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-single-stack))
 
   (complex-double-reg float-registers
    :locations #.(loop for i from 0 to 30 by 2 collect i)
-   :element-size 2
+   :element-size 2 :alignment 2
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-double-stack))
+
+  #+double-double
+  (complex-double-double-reg float-registers
+   :locations #.(loop for i from 0 to 30 by 4 collect i)
+   :element-size 4 :alignment 4
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-double-stack))
 
   ;; A catch or unwind block.
   (catch-block control-stack :element-size vm:catch-block-size))

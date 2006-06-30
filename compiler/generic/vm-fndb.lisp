@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.65 2004/05/24 23:20:47 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.66 2006/06/30 18:41:23 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,8 +48,11 @@
 
 (defknown (fixnump bignump ratiop
 	   short-float-p single-float-p double-float-p long-float-p
+	   #+double-double double-double-float-p
 	   complex-rational-p complex-float-p complex-single-float-p
 	   complex-double-float-p #+long-float complex-long-float-p
+	   #+double-double
+	   complex-double-double-float-p
 	   base-char-p %standard-char-p %instancep
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
@@ -61,9 +64,13 @@
 	   simple-array-complex-single-float-p
 	   simple-array-complex-double-float-p
 	   #+long-float simple-array-complex-long-float-p
+	   #+double-double simple-array-double-double-float-p
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
 	   weak-pointer-p scavenger-hook-p code-component-p lra-p
-	   funcallable-instance-p)
+	   funcallable-instance-p
+	   #+double-double double-double-float-p
+	   #+double-double simple-array-double-double-float-p
+	   #+double-double simple-array-complex-double-double-float-p)
   (t) boolean (movable foldable flushable))
 
 

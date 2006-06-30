@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.24 2004/05/24 23:15:31 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.25 2006/06/30 18:41:23 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -105,6 +105,10 @@
 (def-primitive-type double-float (double-reg descriptor-reg))
 #+long-float
 (def-primitive-type long-float (long-reg descriptor-reg))
+
+#+double-double
+(def-primitive-type double-double-float (double-double-reg descriptor-reg))
+
 (def-primitive-type complex-single-float (complex-single-reg descriptor-reg)
   :type (complex single-float))
 (def-primitive-type complex-double-float (complex-double-reg descriptor-reg)
@@ -112,6 +116,9 @@
 #+long-float
 (def-primitive-type complex-long-float (complex-long-reg descriptor-reg)
   :type (complex long-float))
+#+double-double
+(def-primitive-type complex-double-double-float (complex-double-double-reg descriptor-reg)
+  :type (complex double-double-float))
 
 ;;; Primitive other-pointer array types.
 ;;; 
@@ -142,6 +149,9 @@
   :type (simple-array single-float (*)))
 (def-primitive-type simple-array-double-float (descriptor-reg)
   :type (simple-array double-float (*)))
+#+double-double
+(def-primitive-type simple-array-double-double-float (descriptor-reg)
+  :type (simple-array double-double-float (*)))
 #+long-float
 (def-primitive-type simple-array-long-float (descriptor-reg)
   :type (simple-array long-float (*)))
@@ -152,6 +162,9 @@
 #+long-float
 (def-primitive-type simple-array-complex-long-float (descriptor-reg)
   :type (simple-array (complex long-float) (*)))
+#+double-double
+(def-primitive-type simple-array-complex-double-double-float (descriptor-reg)
+  :type (simple-array (complex double-double-float) (*)))
 
 ;;; Note: The complex array types are not inclueded, 'cause it is pointless to
 ;;; restrict VOPs to them.
@@ -198,10 +211,13 @@
     (single-float . simple-array-single-float)
     (double-float . simple-array-double-float)
     #+long-float (long-float . simple-array-long-float)
+    #+double-double
+    (double-double-float . simple-array-double-double-float)
     ((complex single-float) . simple-array-complex-single-float)
     ((complex double-float) . simple-array-complex-double-float)
     #+long-float
     ((complex long-float) . simple-array-complex-long-float)
+    #+double-double ((complex double-double-float) . simple-array-complex-double-double-float)
     (t . simple-vector))
   "An a-list for mapping simple array element types to their
   corresponding primitive types.")
@@ -344,6 +360,10 @@
 		     (long-float
 		      (values (primitive-type-or-lose 'long-float *backend*)
 			      exact))
+		     #+double-double
+		     (double-double-float
+		      (values (primitive-type-or-lose 'double-double-float *backend*)
+			      exact))
 		     (t
 		      (any)))))
 		(t
@@ -363,6 +383,11 @@
 		      #+long-float
 		      (long-float
 		       (values (primitive-type-or-lose 'complex-long-float
+						       *backend*)
+			       exact))
+		      #+double-double
+		      (double-double-float
+		       (values (primitive-type-or-lose 'complex-double-double-float
 						       *backend*)
 			       exact))
 		      (t

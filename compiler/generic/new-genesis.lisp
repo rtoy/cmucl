@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.78 2006/05/20 01:48:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.79 2006/06/30 18:41:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -482,6 +482,29 @@
 	  (write-indexed des (+ 2 vm:long-float-value-slot) exp-bits))
 	 (:big-endian
 	  (error "Long-Float not supported")))
+       des))
+    #+double-double
+    (double-double-float
+     (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					  (1- vm:double-double-float-size)
+					  vm:double-double-float-type))
+	    (hi (kernel:double-double-hi num))
+	    (lo (kernel:double-double-lo num))
+	    (hi-high-bits (make-random-descriptor (double-float-high-bits hi)))
+	    (hi-low-bits (make-random-descriptor (double-float-low-bits hi)))
+	    (lo-high-bits  (make-random-descriptor (double-float-high-bits lo)))
+	    (lo-low-bits (make-random-descriptor (double-float-low-bits lo))))
+       (ecase (c:backend-byte-order c:*backend*)
+	 (:little-endian
+	  (write-indexed des vm:double-double-float-lo-slot lo-low-bits)
+	  (write-indexed des (+ 1 vm:double-double-float-lo-slot) lo-high-bits)
+	  (write-indexed des vm:double-double-float-hi-slot hi-low-bits)
+	  (write-indexed des (+ 1 vm:double-double-float-hi-slot) hi-high-bits))
+	 (:big-endian
+	  (write-indexed des vm:double-double-float-hi-slot hi-high-bits)
+	  (write-indexed des (+ 1 vm:double-double-float-hi-slot) hi-low-bits)
+	  (write-indexed des vm:double-double-float-lo-slot lo-high-bits)
+	  (write-indexed des (1+ vm:double-double-float-lo-slot) lo-low-bits)))
        des))))
 
 (defun complex-single-float-to-core (num)
@@ -522,6 +545,55 @@
 	 (write-indexed des (1+ vm:complex-double-float-imag-slot) low-bits))))
     des))
 
+#+double-double
+(defun complex-double-double-float-to-core (num)
+  (declare (type (complex double-double-float) num))
+  (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
+				      (1- vm::complex-double-double-float-size)
+				      vm::complex-double-double-float-type)))
+    (let* ((real (kernel:double-double-hi (realpart num)))
+	   (high-bits (make-random-descriptor (double-float-high-bits real)))
+	   (low-bits (make-random-descriptor (double-float-low-bits real))))
+      (ecase (c:backend-byte-order c:*backend*)
+	(:little-endian
+	 (write-indexed des vm:complex-double-double-float-real-hi-slot low-bits)
+	 (write-indexed des (1+ vm:complex-double-double-float-real-hi-slot) high-bits))
+	(:big-endian
+	 (write-indexed des vm:complex-double-double-float-real-hi-slot high-bits)
+	 (write-indexed des (1+ vm:complex-double-double-float-real-hi-slot) low-bits))))
+    (let* ((real (kernel:double-double-lo (realpart num)))
+	   (high-bits (make-random-descriptor (double-float-high-bits real)))
+	   (low-bits (make-random-descriptor (double-float-low-bits real))))
+      (ecase (c:backend-byte-order c:*backend*)
+	(:little-endian
+	 (write-indexed des vm:complex-double-double-float-real-lo-slot low-bits)
+	 (write-indexed des (1+ vm:complex-double-double-float-real-lo-slot) high-bits))
+	(:big-endian
+	 (write-indexed des vm:complex-double-double-float-real-lo-slot high-bits)
+	 (write-indexed des (1+ vm:complex-double-double-float-real-lo-slot) low-bits))))
+    (let* ((imag (kernel:double-double-hi (imagpart num)))
+	   (high-bits (make-random-descriptor (double-float-high-bits imag)))
+	   (low-bits (make-random-descriptor (double-float-low-bits imag))))
+      (ecase (c:backend-byte-order c:*backend*)
+	(:little-endian
+	 (write-indexed des vm:complex-double-double-float-imag-hi-slot low-bits)
+	 (write-indexed des (1+ vm:complex-double-double-float-imag-hi-slot) high-bits))
+	(:big-endian
+	 (write-indexed des vm:complex-double-double-float-imag-hi-slot high-bits)
+	 (write-indexed des (1+ vm:complex-double-double-float-imag-hi-slot) low-bits))))
+    (let* ((imag (kernel:double-double-lo (imagpart num)))
+	   (high-bits (make-random-descriptor (double-float-high-bits imag)))
+	   (low-bits (make-random-descriptor (double-float-low-bits imag))))
+      (ecase (c:backend-byte-order c:*backend*)
+	(:little-endian
+	 (write-indexed des vm:complex-double-double-float-imag-lo-slot low-bits)
+	 (write-indexed des (1+ vm:complex-double-double-float-imag-lo-slot) high-bits))
+	(:big-endian
+	 (write-indexed des vm:complex-double-double-float-imag-lo-slot high-bits)
+	 (write-indexed des (1+ vm:complex-double-double-float-imag-lo-slot) low-bits))))
+    des))
+  
+
 (defun number-to-core (number)
   "Copy the given number to the core, or flame out if we can't deal with it."
   (typecase number
@@ -536,6 +608,8 @@
     #+long-float
     ((complex long-float)
      (error "~S isn't a cold-loadable number at all!" number))
+    #+double-double
+    ((complex double-double-float) (complex-double-double-float-to-core number))
     (complex (number-pair-to-core (number-to-core (realpart number))
 				  (number-to-core (imagpart number))
 				  vm:complex-type))
@@ -1384,6 +1458,9 @@
 (not-cold-fop fop-complex-single-float-vector)
 (not-cold-fop fop-complex-double-float-vector)
 #+long-float (not-cold-fop fop-complex-long-float-vector)
+;; Why is this not-cold-fop?  I'm just cargo-culting this.
+#+double-double (not-cold-fop fop-double-double-float-vector)
+#+double-double (not-cold-fop fop-complex-double-double-float-vector)
 
 (define-cold-fop (fop-array)
   (let* ((rank (read-arg 4))
@@ -1460,12 +1537,16 @@
 
 (cold-number fop-single-float)
 (cold-number fop-double-float)
+#+double-double
+(cold-number fop-double-double-float)
 (cold-number fop-integer)
 (cold-number fop-small-integer)
 (cold-number fop-word-integer)
 (cold-number fop-byte-integer)
 (cold-number fop-complex-single-float)
 (cold-number fop-complex-double-float)
+#+double-double
+(cold-number fop-complex-double-double-float)
 
 #+long-float
 (define-cold-fop (fop-long-float)
@@ -1554,6 +1635,24 @@
 	 (write-indexed des (+ 3 vm:complex-long-float-real-slot)
 			imag-low-bits)
 	 des)))))
+
+#+(and nil double-double)
+(define-cold-fop (fop-double-double-float)
+    ;; Double-double format
+    (prepare-for-fast-read-byte *fasl-file*
+      (let* ((des (allocate-unboxed-object *dynamic* vm:word-bits
+					   (1- vm:double-double-float-size)
+					   vm:double-double-float-type))
+	     (hi-high-bits (make-random-descriptor (fast-read-s-integer 4)))
+	     (hi-low-bits (make-random-descriptor (fast-read-u-integer 4)))
+	     (lo-high-bits (make-random-descriptor (fast-read-s-integer 4)))
+	     (lo-low-bits (make-random-descriptor (fast-read-s-integer 4))))
+	(done-with-fast-read-byte)
+	(write-indexed des vm:double-double-float-hi-slot hi-high-bits)
+	(write-indexed des (1+ vm:double-double-float-hi-slot) hi-low-bits)
+	(write-indexed des vm:double-double-float-lo-slot lo-high-bits)
+	(write-indexed des (1+ vm:double-double-float-lo-slot) lo-low-bits)
+	des)))
 
 (define-cold-fop (fop-ratio)
   (let ((den (pop-stack)))
