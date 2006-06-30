@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.9.2.2 2006/06/26 18:43:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.104.4.3.2.9.2.3 2006/06/30 17:01:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1828,6 +1828,22 @@
     (incf s2 a1)
     (quick-two-sum s1 s2)))
 
+(declaim (inline sqr-dd))
+(defun sqr-dd (a0 a1)
+  (declare (double-float a0 a1)
+	   (optimize (speed 3)))
+  (multiple-value-bind (p1 p2)
+      (two-sqr a0)
+    (declare (double-float p1 p2))
+    (incf p2 (* 2 a0 a1))
+    ;; Hida's version of sqr (qd-2.1.210) has the following line for
+    ;; the sqr function.  But if you compare this with mul-dd, this
+    ;; doesn't exist there, and if you leave it in, it produces
+    ;; results that are different from using mul-dd to square a value.
+    #+nil
+    (incf p2 (* a1 a1))
+    (quick-two-sum p1 p2)))
+
 (deftransform + ((a b) (vm::double-double-float (or integer single-float double-float)) *)
   `(multiple-value-bind (hi lo)
       (add-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
@@ -1840,11 +1856,37 @@
 		(float a 1d0))
      (kernel:%make-double-double-float hi lo)))
 
+#+nil
 (deftransform * ((a b) (vm::double-double-float vm::double-double-float) *)
   `(multiple-value-bind (hi lo)
       (mul-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 	      (kernel:double-double-hi b) (kernel:double-double-lo b))
      (kernel:%make-double-double-float hi lo)))
+
+(deftransform * ((a b) (vm::double-double-float vm::double-double-float) * :node node)
+  ;; non-const-same-leaf-ref-p is stolen from two-arg-derive-type.
+  (flet ((non-const-same-leaf-ref-p (x y)
+	   ;; Just like same-leaf-ref-p, but we don't care if the
+	   ;; value of the leaf is constant or not.
+	   (declare (type continuation x y))
+	   (let ((x-use (continuation-use x))
+		 (y-use (continuation-use y)))
+	     (and (ref-p x-use)
+		  (ref-p y-use)
+		  (eq (ref-leaf x-use) (ref-leaf y-use))))))
+    (destructuring-bind (arg1 arg2)
+	(combination-args node)
+      ;; If the two args to * are the same, we square the number
+      ;; instead of multiply.  Squaring is simpler than a full
+      ;; multiply.
+      (if (non-const-same-leaf-ref-p arg1 arg2)
+	  `(multiple-value-bind (hi lo)
+	       (sqr-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
+	     (kernel:%make-double-double-float hi lo))
+	  `(multiple-value-bind (hi lo)
+	       (mul-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
+		       (kernel:double-double-hi b) (kernel:double-double-lo b))
+	     (kernel:%make-double-double-float hi lo))))))
 
 (deftransform * ((a b) (vm::double-double-float (or integer single-float double-float)) *)
   `(multiple-value-bind (hi lo)
