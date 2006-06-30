@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.41.18.1.2.3.2.1 2006/06/24 19:34:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.41.18.1.2.3.2.2 2006/06/30 02:27:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -4999,14 +4999,6 @@
 (define-move-vop move-to-complex-double-double :move
   (descriptor-reg) (complex-double-double-reg))
 
-(define-vop (move-complex-double-double-float-argument)
-  (:args (x :scs (complex-double-double-reg) :target y)
-	 (nfp :scs (any-reg) :load-if (not (sc-is y complex-double-double-reg))))
-  (:results (y))
-  (:note "complex double-double-float argument move")
-  (:generator 2
-	      ))
-
 
 (define-vop (make/double-double-float)
   (:args (hi :scs (double-reg) :target r
@@ -5122,42 +5114,46 @@
   (:generator 5
     (sc-case r
       (complex-double-double-reg
-       (let ((r-real (complex-double-double-reg-real-hi-tn r)))
-	 (unless (location= real r-real)
+       (let ((r-real (complex-double-double-reg-real-hi-tn r))
+	     (a-real (double-double-reg-hi-tn real)))
+	 (unless (location= a-real r-real)
 	   (cond ((zerop (tn-offset r-real))
-		  (copy-fp-reg-to-fr0 real))
-		 ((zerop (tn-offset real))
+		  (copy-fp-reg-to-fr0 a-real))
+		 ((zerop (tn-offset a-real))
 		  (inst fstd r-real))
 		 (t
-		  (inst fxch real)
+		  (inst fxch a-real)
 		  (inst fstd r-real)
-		  (inst fxch real)))))
-       (let ((r-real (complex-double-double-reg-real-lo-tn r)))
-	 (unless (location= real r-real)
+		  (inst fxch a-real)))))
+       (let ((r-real (complex-double-double-reg-real-lo-tn r))
+	     (a-real (double-double-reg-lo-tn real)))
+	 (unless (location= a-real r-real)
 	   (cond ((zerop (tn-offset r-real))
-		  (copy-fp-reg-to-fr0 real))
-		 ((zerop (tn-offset real))
+		  (copy-fp-reg-to-fr0 a-real))
+		 ((zerop (tn-offset a-real))
 		  (inst fstd r-real))
 		 (t
-		  (inst fxch real)
+		  (inst fxch a-real)
 		  (inst fstd r-real)
-		  (inst fxch real)))))
-       (let ((r-imag (complex-double-double-reg-imag-hi-tn r)))
-	 (unless (location= imag r-imag)
-	   (cond ((zerop (tn-offset imag))
+		  (inst fxch a-real)))))
+       (let ((r-imag (complex-double-double-reg-imag-hi-tn r))
+	     (a-imag (double-double-reg-hi-tn imag)))
+	 (unless (location= a-imag r-imag)
+	   (cond ((zerop (tn-offset a-imag))
 		  (inst fstd r-imag))
 		 (t
-		  (inst fxch imag)
+		  (inst fxch a-imag)
 		  (inst fstd r-imag)
-		  (inst fxch imag)))))
-       (let ((r-imag (complex-double-double-reg-imag-lo-tn r)))
-	 (unless (location= imag r-imag)
-	   (cond ((zerop (tn-offset imag))
+		  (inst fxch a-imag)))))
+       (let ((r-imag (complex-double-double-reg-imag-lo-tn r))
+	     (a-imag (double-double-reg-lo-tn imag)))
+	 (unless (location= a-imag r-imag)
+	   (cond ((zerop (tn-offset a-imag))
 		  (inst fstd r-imag))
 		 (t
-		  (inst fxch imag)
+		  (inst fxch a-imag)
 		  (inst fstd r-imag)
-		  (inst fxch imag))))))
+		  (inst fxch a-imag))))))
       (complex-double-double-stack
        (unless (location= real r)
 	 (cond ((zerop (tn-offset real))
