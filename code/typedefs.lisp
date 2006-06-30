@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.13 2003/04/23 15:19:41 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.13.22.1 2006/06/30 02:30:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,8 @@
     hash-table integer keyword list long-float nil null number package
     pathname random-state ratio rational real readtable sequence
     short-float simple-array simple-bit-vector simple-string simple-vector
-    single-float standard-char stream string base-char symbol t vector))
+    single-float standard-char stream string base-char symbol t vector
+    #+double-double double-double-float))
 
 
 ;;; Def-Type-Translator  --  Interface
