@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.45 2006/06/30 18:41:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.46 2006/07/01 13:52:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -717,6 +717,10 @@
 	 (let ((imag-tn (complex-long-reg-imag-tn x)))
 	   (store-long-reg imag-tn nfp (+ offset (* 4 word-bytes)))))))))
 
+#+long-float
+(define-move-vop move-complex-long-float-argument :move-argument
+  (complex-long-reg descriptor-reg) (complex-long-reg))
+
 #+double-double
 (define-vop (move-complex-double-double-float-argument)
   (:args (x :scs (complex-double-double-reg) :target y)
@@ -749,10 +753,10 @@
 	   (store-long-reg imag-tn nfp (+ offset (* 4 word-bytes))))
 	 (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
 	   (store-long-reg imag-tn nfp (+ offset (* 6 word-bytes)))))))))
-#+long-float
-(define-move-vop move-complex-long-float-argument :move-argument
-  (complex-long-reg descriptor-reg) (complex-long-reg))
 
+#+double-double
+(define-move-vop move-complex-double-double-float-argument :move-argument
+  (complex-double-double-reg descriptor-reg) (complex-double-double-reg))
 
 (define-move-vop move-argument :move-argument
   (single-reg double-reg #+long-float long-reg #+double-double double-double-reg

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.6 2006/06/30 18:41:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.7 2006/07/01 13:52:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -506,6 +506,10 @@
 	   (inst stfd imag-tn nfp (+ offset (* 4 word-bytes))))
 	 (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
 	   (inst stfd imag-tn nfp (+ offset (* 6 word-bytes)))))))))
+
+#+double-double
+(define-move-vop move-complex-double-double-float-argument :move-argument
+  (complex-double-double-reg descriptor-reg) (complex-double-double-reg))
 
 #+long-float
 (define-move-vop move-complex-long-float-argument :move-argument

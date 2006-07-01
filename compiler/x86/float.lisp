@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.42 2006/06/30 18:41:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.43 2006/07/01 13:52:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -653,7 +653,7 @@
   (:args (x :scs (complex-double-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
   (:node-var node)
-  (:note "complex double float to pointer coercion")
+  (:note "complex double-double float to pointer coercion")
   (:generator 13
      (with-fixed-allocation (y vm::complex-double-double-float-type
 			       vm::complex-double-double-float-size node)
@@ -904,6 +904,10 @@
 	 (inst fstd (ea-for-cddf-imag-lo-stack y))
 	 (inst fxch imag-tn))))
     ))
+
+#+double-double
+(define-move-vop move-complex-double-double-float-argument :move-argument
+  (complex-double-double-reg descriptor-reg) (complex-double-double-reg))
 
 (define-move-vop move-argument :move-argument
   (single-reg double-reg #+long-float long-reg
