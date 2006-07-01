@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.13 2003/11/12 22:49:53 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.14 2006/07/01 18:12:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -388,6 +388,21 @@
 	 (lisp::long-float-exp-bits 1l0)	; X needs more work
 	 (random-chunk state) (random-chunk state) (random-chunk state))
 	1l0)))
+#+double-double
+(defun %random-double-double-float (arg state)
+  (declare (type (double-double-float (0w0)) arg)
+	   (type random-state state))
+  ;; Generate a 31-bit integer, scale it and sum them up
+  (let* ((r 0w0)
+	 (scale (scale-float 1d0 -31))
+	 (mult scale))
+    (declare (double-float mult)
+	     (type double-double-float r)
+	     (optimize (speed 3)))
+    (dotimes (k 4)
+      (setf r (+ r (* mult (ldb (byte 31 0) (random-chunk state)))))
+      (setf mult (* mult scale)))
+    (* arg r)))
 
 
 ;;;; Random integers:
@@ -437,6 +452,9 @@
     #+long-float
     ((and (typep arg 'long-float) (> arg 0.0L0))
      (%random-long-float arg state))
+    #+double-double
+    ((and (typep arg 'double-double-float) (> arg 0.0w0))
+     (%random-double-double-float arg state))
     ((and (integerp arg) (> arg 0))
      (%random-integer arg state))
     (t
