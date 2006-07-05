@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.252 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.253 2006/07/05 16:58:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1327,7 +1327,7 @@
              "SET-SYMBOL-FUNCTION-CAREFULLY" "SHORT-FLOAT-NEGATIVE-INFINITY"
              "SHORT-FLOAT-POSITIVE-INFINITY" "SHORT-FLOATP"
              "SINGLE-FLOAT-NEGATIVE-INFINITY" "SINGLE-FLOAT-POSITIVE-INFINITY"
-             "SINGLE-FLOATP" "START-BLOCK" "STREAM-COMMAND"
+             "SINGLE-FLOATP" "SOCKET-ERROR" "START-BLOCK" "STREAM-COMMAND"
              "STREAM-COMMAND-ARGS" "STREAM-COMMAND-NAME" "STREAM-COMMAND-P"
 	     "INSTANCEP" "SYMBOLICATE" "TRANSLATE-CHARACTER"
              "TRANSLATE-KEY-EVENT" "TRANSLATE-MOUSE-CHARACTER"
