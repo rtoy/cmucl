@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.45 2006/01/17 19:20:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.46 2006/07/07 18:23:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -111,6 +111,8 @@
     (instance (describe-instance x))
     (array (describe-array x))
     (fixnum (describe-fixnum x))
+    #+double-double
+    (double-double-float (describe-double-double-float x))
     (cons
      (if (and (valid-function-name-p x)
 	      (fboundp x))
@@ -173,6 +175,12 @@
 	 (format t "~&It is a prime number."))
 	(t
 	 (format t "~&It is a composite number."))))
+
+#+double-double
+(defun describe-double-double-float (x)
+  (format t "~&~S is a ~S." x (type-of x))
+  (format t "~&Its components are ~S and ~S."
+	  (kernel:double-double-hi x) (kernel:double-double-lo x)))
 
 (defun describe-hash-table (x)
   (format t "~&~S is an ~A hash table." x (hash-table-test x))
