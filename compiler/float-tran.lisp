@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.105 2006/06/30 18:41:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.106 2006/07/07 15:11:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1994,7 +1994,7 @@
 		(mul-d-d s2 (* x 0.5d0))
 	      (add-dd-d p0 p1 ax)))))))
 
-(deftransform sqrt ((a) (vm::double-double-float) *)
+(deftransform sqrt ((a) ((vm::double-double-float 0w0)) *)
   `(multiple-value-bind (hi lo)
       (sqrt-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
     (kernel:%make-double-double-float hi lo)))
