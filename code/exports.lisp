@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.253 2006/07/05 16:58:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.254 2006/07/07 18:22:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1211,7 +1211,7 @@
   (:import-from "KERNEL" "*ANSI-DEFSTRUCT-OPTIONS-P*")
   (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"  "BINARY-TEXT-STREAM")
   #+double-double
-  (:import-from "KERNEL" "DOUBLE-DOUBLE-FLOAT")
+  (:import-from "KERNEL" "DOUBLE-DOUBLE-FLOAT" "DD-PI")
   (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
 	     "DEBUG"
 	     "FLOATING-POINT-INEXACT" "FLOAT-ACCURACY"
@@ -1390,7 +1390,7 @@
 
 	     "INVALID-FASL")
   #+double-double
-  (:export "DOUBLE-DOUBLE-FLOAT"))
+  (:export "DOUBLE-DOUBLE-FLOAT" "DD-PI"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
@@ -2203,7 +2203,8 @@
 	   "OBJECT-NOT-COMPLEX-DOUBLE-DOUBLE-FLOAT-ERROR"
 
 	   "SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-P"
-	   "OBJECT-NOT-SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-ERROR"))
+	   "OBJECT-NOT-SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-ERROR"
+	   "DD-PI"))
 
 (dolist
     (name
