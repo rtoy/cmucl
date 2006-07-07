@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.72 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.73 2006/07/07 14:04:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2415,8 +2415,9 @@
 	(double-float ,(coerced-float-bound  low 'double-float)
 		      ,(coerced-float-bound high 'double-float))
 	#+long-float ,(error "stub: no long float support yet")
-	;; This needs to be fixed so that we can compute the bounds
-	#+double-double (double-double-float * *))))
+	#+double-double
+	(double-double-float ,(coerced-float-bound  low 'double-double-float)
+			     ,(coerced-float-bound high 'double-double-float)))))
 
 (defmacro define-float-format (f)
   `(def-bounded-type ,f float ,f))
