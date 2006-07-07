@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.106 2006/07/07 15:11:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.107 2006/07/07 18:26:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1586,7 +1586,7 @@
 	       (- b v))))
     (values s e)))
 
-(declaim (inline add-dd))
+(declaim (maybe-inline add-dd))
 (defun add-dd (a0 a1 b0 b1)
   "Add the double-double A0,A1 to the double-double B0,B1"
   (declare (double-float a0 a1 b0 b1)
@@ -1791,7 +1791,7 @@
 		      (* 2 a-hi a-lo))
 		   (* a-lo a-lo))))))
 
-(declaim (inline mul-dd-d))
+(declaim (maybe-inline mul-dd-d))
 (defun mul-dd-d (a0 a1 b)
   (declare (double-float a0 a1 b)
 	   (optimize (speed 3)))
@@ -1803,7 +1803,7 @@
     ;;(format t "mul-dd-d p2 = ~A~%" p2)
     (quick-two-sum p1 p2)))
 
-(declaim (inline mul-dd))
+(declaim (maybe-inline mul-dd))
 (defun mul-dd (a0 a1 b0 b1)
   "Multiply the double-double A0,A1 with B0,B1"
   (declare (double-float a0 a1 b0 b1)
@@ -1817,7 +1817,7 @@
 	(quick-two-sum p1 p2)
       (values p1 p2))))
 
-(declaim (inline add-dd-d))
+(declaim (maybe-inline add-dd-d))
 (defun add-dd-d (a0 a1 b)
   "Add the double-double A0,A1 to the double B"
   (declare (double-float a0 a1 b)
@@ -1828,7 +1828,7 @@
     (incf s2 a1)
     (quick-two-sum s1 s2)))
 
-(declaim (inline sqr-dd))
+(declaim (maybe-inline sqr-dd))
 (defun sqr-dd (a0 a1)
   (declare (double-float a0 a1)
 	   (optimize (speed 3)))
@@ -1900,7 +1900,7 @@
 		 (float a 1d0))
      (kernel:%make-double-double-float hi lo)))
 
-(declaim (inline div-dd))
+(declaim (maybe-inline div-dd))
 (defun div-dd (a0 a1 b0 b1)
   "Divide the double-double A0,A1 by B0,B1"
   (declare (double-float a0 a1 b0 b1)
@@ -1928,7 +1928,7 @@
 		    (quick-two-sum q1 q2)
 		  (add-dd-d q1 q2 q3))))))))))
 
-(declaim (inline div-dd-d))
+(declaim (maybe-inline div-dd-d))
 (defun div-dd-d (a0 a1 b)
   (declare (double-float a0 a1 b)
 	   (optimize (speed 3)))
@@ -1969,7 +1969,7 @@
 (defun mul-d-d (a b)
   (two-prod a b))
 
-(declaim (inline sqrt-dd))
+(declaim (maybe-inline sqrt-dd))
 (defun sqrt-dd (a0 a1)
   (declare (type (double-float 0d0) a0)
 	   (double-float a1)
