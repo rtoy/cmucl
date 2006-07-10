@@ -95,13 +95,11 @@ New in this release:
 	  working quite right.
 	* PI is still a double-float.  If you want a double-double
 	  version of pi, it's KERNEL:DD-PI.  (Soon to be EXT:DD-PI.)
-	* All double-double operations are inlined by default (unless
-	  *INLINE-EXPANSION-LIMIT* is reached), so functions will tend
-	  to be very large.  (Each basic double-double operation takes
-	  some 20 FP instructions).
 	* There are probably still many bugs where double-double-float
 	  support was overlooked.
-
+        * The double-double arithmetic operations can be inlined by
+          specifying (SPACE 0).  Otherwise, they are not inlined.
+          (Each double-double operation is about 20 FP instructions.)
 
   * Numerous ANSI compliance fixes:
 
@@ -197,6 +195,8 @@ New in this release:
       - Disassembling methods doesn't produce a type error anymore.
       - IGNOREing a symbol in a SYMBOL-MACROLET doesn't cause a type
         error anymore.
+      - The unknown condition type 'LISP:SOCKET-ERROR has been fixed.
+        It properly signals the EXT:SOCKET-ERROR condition now.
 
   * Other changes:
 
