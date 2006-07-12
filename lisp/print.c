@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.21 2006/06/30 18:41:32 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.22 2006/07/12 18:42:40 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -105,9 +105,9 @@ char *subtype_Names[] = {
     "function header",
     "closure header",
     "funcallable-instance header",
-    "unused function header 1",
-    "unused function header 2",
-    "unused function header 3",
+    "byte code function",
+    "byte code closure",
+/*    "unused function header 3",*/
     "closure function header",
     "return PC header",
     "value cell header",
