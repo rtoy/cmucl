@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.3 2006/07/07 18:26:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.4 2006/07/13 19:54:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1483,7 +1483,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 			(float-infinity-p rho))
 		    (or (float-infinity-p (abs x))
 			(float-infinity-p (abs y))))
-	       (values (%make-double-double-float ext:double-float-positive-infinity 0w0)
+	       (values (%make-double-double-float ext:double-float-positive-infinity 0d0)
 		       0))
 	      ((let ((threshold #.(/ least-positive-double-float
 				     double-float-epsilon))
