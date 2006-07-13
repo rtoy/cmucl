@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.111 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.112 2006/07/13 16:38:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2032,7 +2032,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defun output-weak-pointer (weak-pointer stream)
   (declare (type weak-pointer weak-pointer))
-  (print-unreadable-object (weak-pointer stream)
+  (print-unreadable-object (weak-pointer stream :identity t)
     (multiple-value-bind
 	(value validp)
 	(weak-pointer-value weak-pointer)
