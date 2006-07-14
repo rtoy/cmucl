@@ -171,7 +171,11 @@
 	OLD-SPARC:SINGLE-FLOAT-EXPONENT-BYTE
 	OLD-SPARC:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
 	OLD-SPARC:SINGLE-FLOAT-SIGNIFICAND-BYTE
-	))
+	)
+  #+double-double
+  (frob OLD-SPARC:SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-TYPE
+	OLD-SPARC:SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE)
+  )
 
 ;; Modular arith hacks.  When cross-compiling, the compiler wants to
 ;; constant-fold some stuff, and it needs the following functions to
