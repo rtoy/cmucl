@@ -12,15 +12,17 @@
      :complex-fp-vops			; Some slightly faster FP vops on complex numbers
      :linkage-table
      :stack-checking			; Throw error if we run out of stack
-     :heap-overflow-check		; Throw error if we run out of heap
+     :heap-overflow-check		; Throw error if we run out of
+					; heap (This requires gencgc!)
      :gencgc				; Generational GC
      :relative-package-names		; Relative package names from Allegro
      :conservative-float-type
      :hash-new
      :random-mt19937			; MT-19937 generator
      :cmu				; Announce this is CMUCL
-     :cmu19 :cmu19a			; Current version identifier
+     :cmu19 :cmu19c			; Current version identifier
      :modular-arith			; Modular arithmetic
+     :double-double			; Double-double float support
      )
    ;; Features to remove from current *features* here
    '(:sparc-v8 :sparc-v7		; Choose only one of :sparc-v7, :sparc-v8, :sparc-v9
@@ -161,7 +163,22 @@
 	OLD-SPARC:SIMPLE-BIT-VECTOR-TYPE
 	OLD-SPARC:SIMPLE-STRING-TYPE OLD-SPARC:SIMPLE-VECTOR-TYPE 
 	OLD-SPARC:SIMPLE-ARRAY-TYPE OLD-SPARC:VECTOR-DATA-OFFSET
+	OLD-SPARC:DOUBLE-FLOAT-DIGITS
+	old-sparc:single-float-digits
+	OLD-SPARC:DOUBLE-FLOAT-EXPONENT-BYTE
+	OLD-SPARC:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-SPARC:DOUBLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-SPARC:SINGLE-FLOAT-EXPONENT-BYTE
+	OLD-SPARC:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-SPARC:SINGLE-FLOAT-SIGNIFICAND-BYTE
 	))
+
+;; Modular arith hacks.  When cross-compiling, the compiler wants to
+;; constant-fold some stuff, and it needs the following functions to
+;; do so.  This just gets rid of the hundreds of errors that happen.
+(setf (fdefinition 'vm::ash-left-mod32) #'old-sparc::ash-left-mod32)
+(setf (fdefinition 'vm::lognot-mod32) #'old-sparc::lognot-mod32)
+;; End modular arith hacks
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
   (let ((*info-environment* (c:backend-info-environment c:*target-backend*)))
