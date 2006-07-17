@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.17 2005/11/14 13:45:30 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.18 2006/07/17 15:50:52 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -265,7 +265,7 @@ segv_handler(HANDLER_ARGS)
 			"\nsegv_handler:  C stack overflow.  Try increasing stack limit (%ld).\n",
 			rlimit.rlim_cur);
 
-		interrupt_handle_now(signal, code, context);
+		segv_handle_now(signal, code, context);
 	    }
 	} else {
 	    perror("getrlimit");
