@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.71 2006/06/30 18:41:32 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.72 2006/07/18 23:28:48 rtoy Exp $
  *
  */
 
@@ -6356,6 +6356,9 @@ verify_space(lispobj * start, size_t words)
 	      case type_DoubleFloat:
 #ifdef type_ComplexLongFloat
 	      case type_LongFloat:
+#endif
+#ifdef type_DoubleDoubleFloat
+	      case type_DoubleDoubleFloat:
 #endif
 #ifdef type_ComplexSingleFloat
 	      case type_ComplexSingleFloat:
