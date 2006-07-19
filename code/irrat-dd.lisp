@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.4 2006/07/13 19:54:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.5 2006/07/19 15:02:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1027,11 +1027,11 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 (defconstant dp4
   (scale-float (float #b0111101111100101010001100110110011110011010011101001000011000110110011000000101011000010100110110111110010 1w0) (* 4 -106)))
 
-(defun dd-%sin (x)
+(defun dd-%%sin (x)
   (declare (type double-double-float x)
 	   (optimize (speed 3) (space 0)))
   (when (minusp x)
-    (return-from dd-%sin (- (the double-double-float (dd-%sin (- x))))))
+    (return-from dd-%%sin (- (the double-double-float (dd-%%sin (- x))))))
   ;; y = integer part of x/(pi/4).  
   (let* ((y (float (floor (/ x dd-pi/4)) 1w0))
 	 (z (scale-float y -4)))
@@ -1064,11 +1064,11 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	    (- y)
 	    y)))))
 
-(defun dd-%cos (x)
+(defun dd-%%cos (x)
   (declare (type double-double-float x)
 	   (optimize (speed 3) (space 0)))
   (when (minusp x)
-    (return-from dd-%cos (dd-%cos (- x))))
+    (return-from dd-%%cos (dd-%%cos (- x))))
   ;; y = integer part of x/(pi/4).  
   (let* ((y (float (floor (/ x dd-pi/4)) 1w0))
 	 (z (scale-float y -4)))
@@ -1173,9 +1173,113 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	      (- y)
 	      y))))))
 
-(defun dd-%tan (x)
+(defun dd-%%tan (x)
   (declare (type double-double-float x))
   (dd-tancot x nil))
+
+(declaim (inline %kernel-rem-pi/2))
+(alien:def-alien-routine ("__kernel_rem_pio2" %kernel-rem-pi/2) c-call:int
+  (x (* double-float))
+  (y (* double-float))
+  (e0 c-call:int)
+  (nx c-call:int)
+  (prec c-call:int)
+  (ipio2 (* c-call:int)))
+
+;; This is taken from two_over_pi in fdlibm's e_rem_pio2.c.  We do
+;; this here so that the Sparc version doesn't have to compile in
+;; e_rem_pio2, which we don't need.  (But x86 and ppc do.)
+(defconstant two-over-pi
+  (make-array 66 :element-type '(unsigned-byte 32)
+	      :initial-contents
+	      '(#xA2F983 #x6E4E44 #x1529FC #x2757D1 #xF534DD #xC0DB62 
+		#x95993C #x439041 #xFE5163 #xABDEBB #xC561B7 #x246E3A 
+		#x424DD2 #xE00649 #x2EEA09 #xD1921C #xFE1DEB #x1CB129 
+		#xA73EE8 #x8235F5 #x2EBB44 #x84E99C #x7026B4 #x5F7E41 
+		#x3991D6 #x398353 #x39F49C #x845F8B #xBDF928 #x3B1FF8 
+		#x97FFDE #x05980F #xEF2F11 #x8B5A0A #x6D1F6D #x367ECF 
+		#x27CB09 #xB74F46 #x3F669E #x5FEA2D #x7527BA #xC7EBE5 
+		#xF17B3D #x0739F7 #x8A5292 #xEA6BFB #x5FB11F #x8D5D08 
+		#x560330 #x46FC7B #x6BABF0 #xCFBC20 #x9AF436 #x1DA9E3 
+		#x91615E #xE61B08 #x659985 #x5F14A0 #x68408D #xFFD880 
+		#x4D7327 #x310606 #x1556CA #x73A8C9 #x60E27B #xC08C6B 
+		))
+  "396 (hex) digits of 2/pi")
+
+
+(let ((y (make-array 3 :element-type 'double-float))
+      (parts (make-array 5 :element-type 'double-float)))
+  (declare (type (simple-array double-float (3)) y)
+	   (type (simple-array double-float (5)) parts))
+  ;; Take the double-double-float number and break it into 24-bit
+  ;; chunks.  Each chunk is an integer, which is coerced to a
+  ;; double-float and stored in PARTS.
+  (defun dd-expand (x)
+    (declare (double-double-float x)
+	     (optimize (speed 3) (space 0)))
+    (multiple-value-bind (frac exp)
+	(decode-float x)
+      (declare (double-double-float frac)
+	       (type (signed-byte 16) exp))
+      (setf frac (scale-float frac 24))
+      (decf exp 24)
+      (dotimes (k 5)
+	(setf (aref parts k) (coerce (ffloor frac) 'double-float))
+	(setf frac (scale-float (- frac (aref parts k)) 24)))
+      exp))
+  (defun reduce-arg (x)
+    (declare (double-double-float x)
+	     (optimize (speed 3)))
+    (let* ((e0 (dd-expand x))
+	   (n (sys:without-gcing
+	       (%kernel-rem-pi/2 (vector-sap parts)
+				 (vector-sap y)
+				 e0
+				 (length parts)
+				 3
+				 (vector-sap two-over-pi))))
+	   (sum (+ (coerce (aref y 2) 'double-double-float)
+		   (coerce (aref y 1) 'double-double-float)
+		   (coerce (aref y 0) 'double-double-float))))
+      (values n sum))))
+			       
+
+(defun dd-%sin (x)
+  (declare (double-double-float x))
+  (if (< (abs x) (/ pi 4))
+      (dd-%%sin x)
+      ;; Argument reduction needed
+      (multiple-value-bind (n reduced)
+	  (reduce-arg x)
+	(case (logand n 3)
+	  (0 (dd-%%sin reduced))
+	  (1 (dd-%%cos reduced))
+	  (2 (- (dd-%%sin reduced)))
+	  (3 (- (dd-%%cos reduced)))))))
+
+(defun dd-%cos (x)
+  (declare (double-double-float x))
+  (if (< (abs x) (/ pi 4))
+      (dd-%%cos x)
+      ;; Argument reduction needed
+      (multiple-value-bind (n reduced)
+	  (reduce-arg x)
+	(case (logand n 3)
+	  (0 (dd-%%cos reduced))
+	  (1 (- (dd-%%sin reduced)))
+	  (2 (- (dd-%%cos reduced)))
+	  (3 (dd-%%sin reduced))))))
+
+(defun dd-%tan (x)
+  (declare (double-double-float x))
+  (if (< (abs x) (/ pi 4))
+      (dd-%%tan x)
+      ;; Argument reduction needed
+      (multiple-value-bind (n reduced)
+	  (reduce-arg x)
+	(if (evenp n)
+	    (dd-%%tan reduced)
+	    (- (/ (dd-%%tan reduced)))))))
 
 ;;; dd-%log2
 ;;; Base 2 logarithm.
@@ -1476,7 +1580,12 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
     ;; catch the overflow or underflow signal?  For now, we turn all
     ;; traps off and look at the accrued exceptions to see if any
     ;; signal would have been raised.
-    (with-float-traps-masked (:underflow :overflow)
+    ;;
+    ;; Actually, for double-double-floats, we should probably
+    ;; explicitly check for overflow instead of disabling the traps.
+    ;; Why?  Because instead of overflow, double-double signals
+    ;; invalid operation.
+    (with-float-traps-masked (:underflow :overflow :invalid)
       (let ((rho (+ (square x) (square y))))
 	(declare (optimize (speed 3) (space 0)))
 	(cond ((and (or (float-nan-p rho)
