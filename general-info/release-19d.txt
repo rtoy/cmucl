@@ -197,6 +197,10 @@ New in this release:
         error anymore.
       - The unknown condition type 'LISP:SOCKET-ERROR has been fixed.
         It properly signals the EXT:SOCKET-ERROR condition now.
+      - The accuracy of the trig functions (sin, cos, tan) for large
+        arguments has been improved for x86 and ppc.  Sparc already
+        had accurate versions.  Thus, (cos 1d120) is
+        -0.8278608682708728d0. 
 
   * Other changes:
 
