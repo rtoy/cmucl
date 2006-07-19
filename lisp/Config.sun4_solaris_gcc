@@ -50,6 +50,7 @@ CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -D
 # the CC variable appropriately, if necessary.
 
 CC = gcc -O -Wall
+#CC = /apps/gnu/solaris2.8/gcc-3.3.3/bin/gcc -O1 -Wall
 CPP = gcc -E
 CFLAGS = -g $(AS_V8PLUS)
 
@@ -65,6 +66,6 @@ ARCH_SRC = sparc-arch.c
 # This has been checked out on Solaris 2.7 (aka 7) without problems.
 # The resulting binaries work ok on 2.5.
 
-OS_SRC = solaris-os.c os-common.c undefineds.c elf.c
+OS_SRC = solaris-os.c os-common.c undefineds.c elf.c k_rem_pio2.c
 OS_LINK_FLAGS=
 OS_LIBS= -lsocket -lnsl -ldl
