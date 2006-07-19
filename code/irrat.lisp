@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.48 2006/07/19 03:52:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.49 2006/07/19 13:02:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,9 +171,23 @@
     (%sqrt x))
   )
 
+;;; The standard libm routines for sin, cos, and tan on x86 (Linux)
+;;; and ppc are not very accurate for large arguments when compared to
+;;; sparc (and maxima).  This is basically caused by the fact that
+;;; those libraries do not do an accurate argument reduction.  The
+;;; following functions use some routines Sun's free fdlibm library to
+;;; do accurate reduction.  Then we call the standard C functions (or
+;;; vops for x86) on the reduced argument.  This produces much more
+;;; accurate values.
+
 #+(or ppc x86)
 (progn
-(declaim (inline %ieee754-rem-pi/2))  
+(declaim (inline %ieee754-rem-pi/2))
+;; Basic argument reduction routine.  It returns two values: n and y
+;; such that (n + 8*k)*pi/2+y = x where |y|<pi/4 and n indicates in
+;; which octant the arg lies.  Y is actually computed in two parts,
+;; y[0] and y[1] such that the sum is y, for accuracy.
+
 (alien:def-alien-routine ("__ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
   (x double-float)
   (y (* double-float)))
@@ -194,6 +208,15 @@
 (macrolet
     ((frob (sin cos tan)
        `(let ((y (make-array 2 :element-type 'double-float)))
+	  ;; The array y holds the result for %ieee754-rem-pi/2
+	  ;;
+	  ;; In all of the routines below, we just compute the sum of
+	  ;; y[0] and y[1] and use that as the (reduced) argument for
+	  ;; the trig functions.  This is slightly less accurate than
+	  ;; what fdlibm does, which calls special functions using
+	  ;; y[0] and y[1] separately, for greater accuracy.  This
+	  ;; isn't implemented, and some spot checks indicate that
+	  ;; what we have here is accurate.
 	  (defun %sin (x)
 	    (declare (double-float x))
 	    (if (< (abs x) (/ pi 4))
