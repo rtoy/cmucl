@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.49 2006/07/19 13:02:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.50 2006/07/19 14:58:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -617,7 +617,7 @@
 	 (dd-complex-sqrt number)
 	 (multiple-value-bind (hi lo)
 	     (c::sqrt-dd (kernel:double-double-hi number) (kernel:double-double-lo number))
-	   (kernel:make-double-double-float hi lo))))
+	   (kernel:%make-double-double-float hi lo))))
     ((complex)
      (complex-sqrt number))))
 
@@ -630,22 +630,6 @@
     (((foreach single-float double-float fixnum rational
 	       #+double-double double-double-float))
      (abs number))
-    #+(and nil double-double)
-    ((double-double-float)
-     ;; This is a hack until abs deftransform is working
-     (multiple-value-bind (hi lo)
-	 (c::abs-dd (kernel:double-double-hi number) (kernel:double-double-lo number))
-       (kernel:make-double-double-float hi lo)))
-    #+(and nil double-double)
-    ((double-double-float)
-     ;; This is a hack until abs deftransform is working
-     (let ((hi (kernel:double-double-hi number))
-	   (lo (kernel:double-double-lo number)))
-       (declare (double-float hi lo))
-       (when (minusp hi)
-	 (setf hi (- hi))
-	 (setf lo (- lo)))
-       (kernel:make-double-double-float hi lo)))
     ((complex)
      (let ((rx (realpart number))
 	   (ix (imagpart number)))
@@ -660,7 +644,9 @@
 	  (%hypot rx ix))
 	 #+double-double
 	 (double-double-float
-	  (error "abs complex double-double-float not implemented!")))))))
+	  (multiple-value-bind (abs^2 scale)
+	      (dd-cssqs number)
+	    (scale-float (sqrt abs^2) scale))))))))
 
 (defun phase (number)
   "Returns the angle part of the polar representation of a complex number.
