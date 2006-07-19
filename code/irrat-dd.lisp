@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.5 2006/07/19 15:02:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.6 2006/07/19 15:29:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1246,40 +1246,49 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 (defun dd-%sin (x)
   (declare (double-double-float x))
-  (if (< (abs x) (/ pi 4))
-      (dd-%%sin x)
-      ;; Argument reduction needed
-      (multiple-value-bind (n reduced)
-	  (reduce-arg x)
-	(case (logand n 3)
-	  (0 (dd-%%sin reduced))
-	  (1 (dd-%%cos reduced))
-	  (2 (- (dd-%%sin reduced)))
-	  (3 (- (dd-%%cos reduced)))))))
+  (cond ((minusp x)
+	 (- (dd-%sin (- x))))
+	((< (abs x) (/ pi 4))
+	 (dd-%%sin x))
+	(t
+	 ;; Argument reduction needed
+	 (multiple-value-bind (n reduced)
+	     (reduce-arg x)
+	   (case (logand n 3)
+	     (0 (dd-%%sin reduced))
+	     (1 (dd-%%cos reduced))
+	     (2 (- (dd-%%sin reduced)))
+	     (3 (- (dd-%%cos reduced))))))))
 
 (defun dd-%cos (x)
   (declare (double-double-float x))
-  (if (< (abs x) (/ pi 4))
-      (dd-%%cos x)
-      ;; Argument reduction needed
-      (multiple-value-bind (n reduced)
-	  (reduce-arg x)
-	(case (logand n 3)
-	  (0 (dd-%%cos reduced))
-	  (1 (- (dd-%%sin reduced)))
-	  (2 (- (dd-%%cos reduced)))
-	  (3 (dd-%%sin reduced))))))
+  (cond ((minusp x)
+	 (dd-%cos (- x)))
+	((< (abs x) (/ pi 4))
+	 (dd-%%cos x))
+	(t
+	 ;; Argument reduction needed
+	 (multiple-value-bind (n reduced)
+	     (reduce-arg x)
+	   (case (logand n 3)
+	     (0 (dd-%%cos reduced))
+	     (1 (- (dd-%%sin reduced)))
+	     (2 (- (dd-%%cos reduced)))
+	     (3 (dd-%%sin reduced)))))))
 
 (defun dd-%tan (x)
   (declare (double-double-float x))
-  (if (< (abs x) (/ pi 4))
-      (dd-%%tan x)
-      ;; Argument reduction needed
-      (multiple-value-bind (n reduced)
-	  (reduce-arg x)
-	(if (evenp n)
-	    (dd-%%tan reduced)
-	    (- (/ (dd-%%tan reduced)))))))
+  (cond ((minusp x)
+	 (- (dd-%tan (- x))))
+	((< (abs x) (/ pi 4))
+	 (dd-%%tan x))
+	(t
+	 ;; Argument reduction needed
+	 (multiple-value-bind (n reduced)
+	     (reduce-arg x)
+	   (if (evenp n)
+	       (dd-%%tan reduced)
+	       (- (/ (dd-%%tan reduced))))))))
 
 ;;; dd-%log2
 ;;; Base 2 logarithm.
