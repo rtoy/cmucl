@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.47 2006/07/19 02:54:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.48 2006/07/19 03:52:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,48 +171,68 @@
     (%sqrt x))
   )
 
-#+x86
+#+(or ppc x86)
 (progn
+(declaim (inline %ieee754-rem-pi/2))  
 (alien:def-alien-routine ("__ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
   (x double-float)
   (y (* double-float)))
-
-(let ((y (make-array 2 :element-type 'double-float)))
-  (defun %sin (x)
-    (declare (double-float x))
-    (if (< (abs x) (/ pi 4))
-	(%sin-quick x)
-	;; Argument reduction needed
-	(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
-	       (reduced (+ (aref y 0) (aref y 1))))
-	  (case (logand n 3)
-	    (0 (%sin-quick reduced))
-	    (1 (%cos-quick reduced))
-	    (2 (- (%sin-quick reduced)))
-	    (3 (- (%cos-quick reduced)))))))
-  (defun %cos (x)
-    (declare (double-float x))
-    (if (< (abs x) (/ pi 4))
-	(%cos-quick x)
-	;; Argument reduction needed
-	(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
-	       (reduced (+ (aref y 0) (aref y 1))))
-	  (case (logand n 3)
-	    (0 (%cos-quick reduced))
-	    (1 (- (%sin-quick reduced)))
-	    (2 (- (%cos-quick reduced)))
-	    (3 (%sin-quick reduced))))))
-  (defun %tan (x)
-    (declare (double-float x))
-    (if (< (abs x) (/ pi 4))
-	(%tan-quick x)
-	;; Argument reduction needed
-	(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
-	       (reduced (+ (aref y 0) (aref y 1))))
-	  (if (evenp n)
-	      (%tan-quick reduced)
-	      (- (/ (%tan-quick reduced))))))))
 )
+
+#+ppc
+(progn
+(declaim (inline %%sin %%cos %%tan))
+(macrolet ((frob (alien-name lisp-name)
+	     `(alien:def-alien-routine (,alien-name ,lisp-name) double-float
+		(x double-float))))
+  (frob "sin" %%sin)
+  (frob "cos" %%cos)
+  (frob "tan" %%tan))
+)
+
+#+(or ppc x86)
+(macrolet
+    ((frob (sin cos tan)
+       `(let ((y (make-array 2 :element-type 'double-float)))
+	  (defun %sin (x)
+	    (declare (double-float x))
+	    (if (< (abs x) (/ pi 4))
+		(,sin x)
+		;; Argument reduction needed
+		(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
+		       (reduced (+ (aref y 0) (aref y 1))))
+		  (case (logand n 3)
+		    (0 (,sin reduced))
+		    (1 (,cos reduced))
+		    (2 (- (,sin reduced)))
+		    (3 (- (,cos reduced)))))))
+	  (defun %cos (x)
+	    (declare (double-float x))
+	    (if (< (abs x) (/ pi 4))
+		(,cos x)
+		;; Argument reduction needed
+		(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
+		       (reduced (+ (aref y 0) (aref y 1))))
+		  (case (logand n 3)
+		    (0 (,cos reduced))
+		    (1 (- (,sin reduced)))
+		    (2 (- (,cos reduced)))
+		    (3 (,sin reduced))))))
+	  (defun %tan (x)
+	    (declare (double-float x))
+	    (if (< (abs x) (/ pi 4))
+		(,tan x)
+		;; Argument reduction needed
+		(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
+		       (reduced (+ (aref y 0) (aref y 1))))
+		  (if (evenp n)
+		      (,tan reduced)
+		      (- (/ (,tan reduced))))))))))
+  #+x86
+  (frob %sin-quick %cos-quick %tan-quick)
+  #+ppc
+  (frob %%sin %%cos %%tan))
+
 
 
 ;;;; Power functions.

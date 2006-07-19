@@ -29,7 +29,7 @@ ASFLAGS = -traditional -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S
 ARCH_SRC = ppc-arch.c
-OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c
+OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c e_rem_pio2.c k_rem_pio2.c
 
 # I (rtoy) am not exactly sure what these values are, but it seems
 # that the segaddr for CMUCLRO should be the READ_ONLY_SPACE_START.
