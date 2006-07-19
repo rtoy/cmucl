@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.46 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.47 2006/07/19 02:54:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,6 +84,7 @@
 
 #+x86 ;; These are needed for use by byte-compiled files.
 (progn
+  #+nil
   (defun %sin (x)
     (declare (double-float x)
 	     (values double-float))
@@ -92,6 +93,7 @@
     (declare (double-float x)
 	     (values double-float))
     (%sin-quick x))
+  #+nil
   (defun %cos (x)
     (declare (double-float x)
 	     (values double-float))
@@ -100,6 +102,7 @@
     (declare (double-float x)
 	     (values double-float))
     (%cos-quick x))
+  #+nil
   (defun %tan (x)
     (declare (double-float x)
 	     (values double-float))
@@ -167,6 +170,49 @@
 	     (values double-float))
     (%sqrt x))
   )
+
+#+x86
+(progn
+(alien:def-alien-routine ("__ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
+  (x double-float)
+  (y (* double-float)))
+
+(let ((y (make-array 2 :element-type 'double-float)))
+  (defun %sin (x)
+    (declare (double-float x))
+    (if (< (abs x) (/ pi 4))
+	(%sin-quick x)
+	;; Argument reduction needed
+	(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
+	       (reduced (+ (aref y 0) (aref y 1))))
+	  (case (logand n 3)
+	    (0 (%sin-quick reduced))
+	    (1 (%cos-quick reduced))
+	    (2 (- (%sin-quick reduced)))
+	    (3 (- (%cos-quick reduced)))))))
+  (defun %cos (x)
+    (declare (double-float x))
+    (if (< (abs x) (/ pi 4))
+	(%cos-quick x)
+	;; Argument reduction needed
+	(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
+	       (reduced (+ (aref y 0) (aref y 1))))
+	  (case (logand n 3)
+	    (0 (%cos-quick reduced))
+	    (1 (- (%sin-quick reduced)))
+	    (2 (- (%cos-quick reduced)))
+	    (3 (%sin-quick reduced))))))
+  (defun %tan (x)
+    (declare (double-float x))
+    (if (< (abs x) (/ pi 4))
+	(%tan-quick x)
+	;; Argument reduction needed
+	(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
+	       (reduced (+ (aref y 0) (aref y 1))))
+	  (if (evenp n)
+	      (%tan-quick reduced)
+	      (- (/ (%tan-quick reduced))))))))
+)
 
 
 ;;;; Power functions.

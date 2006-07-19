@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.43 2006/07/01 13:52:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.44 2006/07/19 02:54:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2511,6 +2511,7 @@
 ;;; These versions of fsin, fcos, and ftan simply load a 0.0 result if
 ;;; the argument is out of range 2^63 and would thus be hopelessly
 ;;; inaccurate.
+#+nil
 (macrolet ((frob (func trans op)
 	     `(define-vop (,func)
 		(:translate ,trans)
@@ -2546,6 +2547,7 @@
 	  (frob fsin  %sin fsin)
 	  (frob fcos  %cos fcos))
 	     
+#+nil
 (define-vop (ftan)
   (:translate %tan)
   (:args (x :scs (double-reg) :target fr0))
@@ -3656,6 +3658,7 @@
 ;;; These versions of fsin, fcos, and ftan simply load a 0.0 result if
 ;;; the argument is out of range 2^63 and would thus be hopelessly
 ;;; inaccurate.
+#+nil
 (macrolet ((frob (func trans op)
 	     `(define-vop (,func)
 		(:translate ,trans)
