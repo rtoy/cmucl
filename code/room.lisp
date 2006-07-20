@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.35 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.36 2006/07/20 16:19:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,6 +123,17 @@
 (declaim (type fixnum *static-space-free-pointer*
 	       *read-only-space-free-pointer* ))
 
+#+gencgc
+(eval-when (compile load eval)
+  ;; This had better match the value in gencgc.h!!!!
+  (defconstant gencgc-page-size
+    #+sparc (* 4 8192)
+    #+ppc (* 4 4096)
+    #-(or sparc ppc) 4096))
+
+#+gencgc
+(def-alien-variable last-free-page c-call:unsigned-int)
+    
 (defun space-bounds (space)
   (declare (type spaces space))
   (ecase space
@@ -133,7 +144,17 @@
      (values (int-sap (read-only-space-start))
 	     (int-sap (* *read-only-space-free-pointer* word-bytes))))
     (:dynamic
+     ;; DYNAMIC-SPACE-FREE-POINTER isn't quite right here for sparc
+     ;; and ppc with gencgc.  We really want the last free page, which
+     ;; is stored in *allocation-pointer* on x86, but sparc and ppc
+     ;; don't have *allocation-pointer*, so grab the value directly
+     ;; from last-free-page.
      (values (int-sap (current-dynamic-space-start))
+	     #+(and gencgc (or sparc ppc))
+	     (int-sap (truly-the (unsigned-byte 32)
+				 (+ (current-dynamic-space-start)
+				    (the (unsigned-byte 32) (* gencgc-page-size last-free-page)))))
+	     #-(and gencgc (or sparc ppc))
 	     (dynamic-space-free-pointer)))))
 
 ;;; SPACE-BYTES  --  Internal
@@ -181,6 +202,18 @@
 		      shift)
 		 (ash len shift)))))))
 
+;;; Access to the GENCGC page table for better precision in
+;;; MAP-ALLOCATED-OBJECTS.
+#+gencgc
+(progn
+  (declaim (inline find-page-index get-page-table-info))
+  (def-alien-routine "find_page_index" c-call:int
+    (addr c-call:long))
+  (def-alien-routine get-page-table-info c-call:void
+    (page c-call:int)
+    (flags c-call:int :out)
+    (bytes c-call:int :out))
+  )
 
 ;;; MAP-ALLOCATED-OBJECTS  --  Interface
 ;;;
@@ -189,6 +222,7 @@
 ;;; including any header and padding.
 ;;;
 (declaim (maybe-inline map-allocated-objects))
+#+nil
 (defun map-allocated-objects (fun space)
   (declare (type function fun) (type spaces space))
   (without-gcing
@@ -272,6 +306,122 @@
 
 	#+nil
 	prev))))
+
+(defun map-allocated-objects (fun space)
+  (declare (type function fun) (type spaces space))
+  (without-gcing
+   (multiple-value-bind (start end)
+       (space-bounds space)
+     (declare (type system-area-pointer start end))
+     (declare (optimize (speed 3) (safety 0)))
+     (let ((skip-tests-until-addr 0)
+	   (current start))
+       (declare (type (unsigned-byte 31) skip-tests-until-addr))
+       (labels
+	   ((maybe-finish-mapping ()
+	      (unless (sap< current end)
+		(return-from map-allocated-objects)))
+	    ;; GENCGC doesn't allocate linearly, which means that the
+	    ;; dynamic space can contain large blocks of zeros that
+	    ;; get accounted as conses in ROOM (and slow down other
+	    ;; applications of MAP-ALLOCATED-OBJECTS). To fix this
+	    ;; check the GC page structure for the current address.
+	    ;; If the page is free or the address is beyond the page-
+	    ;; internal allocation offset (bytes-used) skip to the
+	    ;; next page immediately.
+	    (maybe-skip-page ()
+	      #+gencgc
+	      (when (eq space :dynamic)
+		(let ((tested (>= (sap-int current) skip-tests-until-addr)))
+		  (loop with page-mask = (1- gencgc-page-size)
+		     for addr of-type (unsigned-byte 32) = (sap-int current)
+		     while (>= addr skip-tests-until-addr)
+		     do
+		     (multiple-value-bind (ret flags bytes-used)
+			 (get-page-table-info (find-page-index addr))
+		       (declare (ignore ret))
+		       (let ((alloc-flag (logand flags #x40)))
+			 ;; If the page is not free and the current
+			 ;; pointer is still below the allocation
+			 ;; offset of the page
+			 (when (and (not (zerop alloc-flag))
+				    (<= (logand page-mask addr)
+					bytes-used))
+			   ;; Don't bother testing again until we get
+			   ;; past that allocation offset
+			   (setf skip-tests-until-addr
+				 (+ (logandc2 addr page-mask)
+				    (the fixnum bytes-used)))
+			   ;; And then continue with the scheduled mapping
+			   (return-from maybe-skip-page))
+			 ;; Move CURRENT to start of next page
+			 (setf current (int-sap (+ (logandc2 addr page-mask)
+						   gencgc-page-size)))
+			 (maybe-finish-mapping)))))))
+	    (next (size)
+	      (let ((c (etypecase size
+			 (fixnum (sap+ current size))
+			 (memory-size (sap+ current size)))))
+		(setf current c))))
+	 (declare (inline next))
+	 (loop
+	    (maybe-finish-mapping)
+	    (maybe-skip-page)
+	    (let* ((header (sap-ref-32 current 0))
+		   (header-type (logand header #xFF))
+		   (info (svref *room-info* header-type)))
+	      (cond
+		((or (not info)
+		     (eq (room-info-kind info) :lowtag))
+		 (let ((size (* cons-size word-bytes)))
+		   (funcall fun
+			    (make-lisp-obj (logior (sap-int current)
+						   list-pointer-type))
+			    list-pointer-type
+			    size)
+		   (next size)))
+		((eql header-type closure-header-type)
+		 (let* ((obj (make-lisp-obj (logior (sap-int current)
+						    function-pointer-type)))
+			(size (round-to-dualword
+			       (* (the fixnum (1+ (get-closure-length obj)))
+				  word-bytes))))
+		   (funcall fun obj header-type size)
+		   (next size)))
+		((eq (room-info-kind info) :instance)
+		 (let* ((obj (make-lisp-obj
+			      (logior (sap-int current) instance-pointer-type)))
+			(size (round-to-dualword
+			       (* (+ (%instance-length obj) 1) word-bytes))))
+		   (declare (type memory-size size))
+		   (funcall fun obj header-type size)
+		   (assert (zerop (logand size lowtag-mask)))
+		   (next size)))
+		(t
+		 (let* ((obj (make-lisp-obj
+			      (logior (sap-int current) other-pointer-type)))
+			(size (ecase (room-info-kind info)
+				(:fixed
+				 (assert (or (eql (room-info-length info)
+						  (1+ (get-header-data obj)))
+					     (floatp obj)))
+				 (round-to-dualword
+				  (* (room-info-length info) word-bytes)))
+				((:vector :string)
+				 (vector-total-size obj info))
+				(:header
+				 (round-to-dualword
+				  (* (1+ (get-header-data obj)) word-bytes)))
+				(:code
+				 (+ (the fixnum
+				      (* (get-header-data obj) word-bytes))
+				    (round-to-dualword
+				     (* (the fixnum (%code-code-size obj))
+					word-bytes)))))))
+		   (declare (type memory-size size))
+		   (funcall fun obj header-type size)
+		   (assert (zerop (logand size lowtag-mask)))
+		   (next size)))))))))))
 
 
 ;;;; MEMORY-USAGE:

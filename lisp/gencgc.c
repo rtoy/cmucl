@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.72 2006/07/18 23:28:48 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.73 2006/07/20 16:19:35 rtoy Exp $
  *
  */
 
@@ -505,8 +505,11 @@ unsigned int gencgc_oldest_gen_to_gc = NUM_GENERATIONS - 1;
  * ALLOCATION_POINTER which is used by the room function to limit its
  * search of the heap. XX Gencgc obviously needs to be better
  * integrated with the lisp code.
+ *
+ * Except on sparc and ppc, there's no ALLOCATION_POINTER, so it's
+ * never updated.  So make this available (non-static).
  */
-static int last_free_page;
+int last_free_page;
 
 
 
@@ -7494,4 +7497,15 @@ print_bytes_allocated_sum(void)
        ,get_bytes_consed_upper(), get_bytes_consed_lower());
      */
 #endif
+}
+
+/*
+ * Let Lisp get at the page table entry and return the flags and the
+ * bytes used
+ */
+void
+get_page_table_info(int page, int* flags, int* bytes)
+{
+    *flags = page_table[page].flags;
+    *bytes = page_table[page].bytes_used;
 }
