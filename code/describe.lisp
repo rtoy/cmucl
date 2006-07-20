@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.46 2006/07/07 18:23:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.47 2006/07/20 18:30:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,7 +189,8 @@
   (format t "~&Its rehash-threshold is ~S."
 	  (hash-table-rehash-threshold x))
   (format t "~&It currently holds ~d entries."
-	  (hash-table-number-entries x)))
+	  (hash-table-number-entries x))
+  (format t "~&It is ~:[not a~;a~] weak table." (hash-table-weak-p x)))
 
 (defun describe-package (x)
   (describe-instance x)
