@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.37 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.38 2006/07/21 17:39:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -356,13 +356,14 @@
     (setf (hash-table-needing-rehash table) 0)
     ;; Rehash all the entries; last to first so that after the pushes
     ;; the chains are first to last.
-    (do ((i (1- new-size) (1- i)))
+    (do ((i (1- new-size) (1- i))
+	 (empty (aref new-kv-vector 1)))
 	((zerop i))
       (let ((key (aref new-kv-vector (* 2 i)))
 	    (value (aref new-kv-vector (1+ (* 2 i)))))
-	;; Use Key and Value of :empty to indicate an empty slot. X
-	;; Most certainly not valid.
-	(cond ((and (eq key :empty) (eq value :empty))
+	;; A slot is empty if both the key and the value are "empty",
+	;; which is indicated by the value of kv_vector[1].
+	(cond ((and (eq key empty) (eq value empty))
 	       ;; Push this slot onto the free list.
 	       (setf (aref new-next-vector i)
 		     (hash-table-next-free-kv table))
@@ -429,13 +430,14 @@
       (setf (aref next-vector i) 0))
     (dotimes (i length)
       (setf (aref index-vector i) 0))
-    (do ((i (1- size) (1- i)))
+    (do ((i (1- size) (1- i))
+	 (empty (aref kv-vector 1)))
 	((zerop i))
       (let ((key (aref kv-vector (* 2 i)))
 	    (value (aref kv-vector (1+ (* 2 i)))))
-	;; Use Key and Value of :empty to indicate an empty slot. X
-	;; Most certainly not valid.
-	(cond ((and (eq key :empty) (eq value :empty))
+	;; A slot is empty if both the key and the value are "empty",
+	;; which is indicated by the value of kv_vector[1].
+	(cond ((and (eq key empty) (eq value empty))
 	       ;; Push this slot onto the free list.
 	       (setf (aref next-vector i) (hash-table-next-free-kv table))
 	       (setf (hash-table-next-free-kv table) i))
@@ -634,7 +636,8 @@
 	    (table (hash-table-table hash-table))
 	    (next-vector (hash-table-next-vector hash-table))
 	    (hash-vector (hash-table-hash-vector hash-table))
-	    (test-fun (hash-table-test-fun hash-table)))
+	    (test-fun (hash-table-test-fun hash-table))
+	    (empty (aref table 1)))
        (declare (type index index next))
        (cond ((zerop next)
 	      nil)
@@ -642,9 +645,10 @@
 		  (eq key (aref table (* 2 next)))
 		  (and (= hashing (aref hash-vector next))
 		       (funcall test-fun key (aref table (* 2 next)))))
-	      ;; :empty out Key and Value.
-	      (setf (aref table (* 2 next)) :empty)
-	      (setf (aref table (1+ (* 2 next))) :empty)
+	      ;; Empty out Key and Value, by using the empty value in
+	      ;; kv-vector[1].
+	      (setf (aref table (* 2 next)) empty)
+	      (setf (aref table (1+ (* 2 next))) empty)
 	      ;; Update the index-vector pointer.
 	      (setf (aref index-vector index) (aref next-vector next))
 	      ;; Push KV slot onto free chain.
@@ -663,9 +667,10 @@
 		  ((zerop next) nil)
 		(declare (type index next))
 		(when (eq key (aref table (* 2 next)))
-		  ;; :empty out Key and Value.
-		  (setf (aref table (* 2 next)) :empty)
-		  (setf (aref table (1+ (* 2 next))) :empty)
+		  ;; Empty out Key and Value by using the empty value
+		  ;; in kv_vector[1].
+		  (setf (aref table (* 2 next)) empty)
+		  (setf (aref table (1+ (* 2 next))) empty)
 		  ;; Update the prior pointer in the chain to skip this.
 		  (setf (aref next-vector prior) (aref next-vector next))
 		  ;; Push KV slot onto free chain.
@@ -684,9 +689,10 @@
 		(declare (type index next))
 		(when (and (= hashing (aref hash-vector next))
 			   (funcall test-fun key (aref table (* 2 next))))
-		  ;; :empty out Key and Value.
-		  (setf (aref table (* 2 next)) :empty)
-		  (setf (aref table (1+ (* 2 next))) :empty)
+		  ;; Empty out Key and Value by using the empty value
+		  ;; in kv_vector[1].
+		  (setf (aref table (* 2 next)) empty)
+		  (setf (aref table (1+ (* 2 next))) empty)
 		  ;; Update the prior pointer in the chain to skip this.
 		  (setf (aref next-vector prior) (aref next-vector next))
 		  ;; Push KV slot onto free chain.
@@ -712,10 +718,12 @@
 	 (length (length index-vector)))
     ;; Disable GC tricks.
     (set-header-data kv-vector vm:vector-normal-subtype)
-    ;; :empty out the Keys and Values.
-    (do ((i 2 (1+ i)))
+    ;; Empty out the Keys and Values by using the empty value in
+    ;; kv_vector[1].
+    (do ((i 2 (1+ i))
+	 (empty (aref kv-vector 1)))
 	((>= i kv-length))
-      (setf (aref kv-vector i) :empty))
+      (setf (aref kv-vector i) empty))
     (assert (eq (aref kv-vector 0) hash-table))
     ;; Setup the free list, all free.
     (do ((i 1 (1+ i)))
@@ -794,16 +802,17 @@
 		map-function)
 	       (symbol
 		(symbol-function map-function))))
-	(size (length (hash-table-next-vector hash-table))))
+	(size (length (hash-table-next-vector hash-table)))
+	(kv-vector (hash-table-table hash-table)))
     (declare (type function fun))
-    (do ((i 1 (1+ i)))
+    (do ((i 1 (1+ i))
+	 (empty (aref kv-vector 1)))
 	((>= i size))
       (declare (type index i))
-      (let* ((kv-vector (hash-table-table hash-table))
-	     (key (aref kv-vector (* 2 i)))
+      (let* ((key (aref kv-vector (* 2 i)))
 	     (value (aref kv-vector (1+ (* 2 i)))))
 	;; X hack
-	(unless (and (eq key :empty) (eq value :empty))
+	(unless (and (eq key empty) (eq value empty))
 	  (funcall fun key value))))))
 
 (defmacro with-hash-table-iterator ((function hash-table) &body body)
@@ -824,12 +833,12 @@
 		     ;; Grab the table again on each iteration just
 		     ;; in case it was rehashed by a PUTHASH.
 		     (let ((kv-vector (hash-table-table table)))
-		       (do ()
+		       (do ((empty (aref kv-vector 1)))
 			   ((>= index length) (values nil))
 			 (let ((key (aref kv-vector (* 2 index)))
 			       (value (aref kv-vector (1+ (* 2 index)))))
 			   (incf index)
-			   (unless (and (eq key :empty) (eq value :empty))
+			   (unless (and (eq key empty) (eq value empty))
 			     (return (values t key value))))))))
 		#',function))))
       (macrolet ((,function () '(funcall ,n-function)))
