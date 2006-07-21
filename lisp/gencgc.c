@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.73 2006/07/20 16:19:35 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.74 2006/07/21 17:36:10 rtoy Exp $
  *
  */
 
@@ -3679,11 +3679,25 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 
     if (free_p) {
 	unsigned count = fixnum_value(hash_table->number_entries);
+        lispobj* kv_vector = (lispobj *) PTR(hash_table->table);
+        lispobj empty_symbol;
+        
 
 	gc_assert(count > 0);
 	hash_table->number_entries = make_fixnum(count - 1);
 	next_vector[kv_index] = fixnum_value(hash_table->next_free_kv);
 	hash_table->next_free_kv = make_fixnum(kv_index);
+        /*
+         * I (rtoy) think we also need to clear out the key and value
+         * in the kv-vector.  If we don't, maphash and
+         * with-hash-table-iterator thinks this entry is not empty.
+         */
+        
+        kv_vector += 2;         /* Skip over vector header and length slots */
+        empty_symbol = kv_vector[1];
+
+        kv_vector[2 * kv_index] = empty_symbol;
+        kv_vector[2 * kv_index + 1] = empty_symbol;
     }
 }
 
