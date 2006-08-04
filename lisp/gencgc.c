@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.74 2006/07/21 17:36:10 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.75 2006/08/04 16:41:18 rtoy Exp $
  *
  */
 
@@ -2341,7 +2341,7 @@ scavenge_interrupt_context(os_context_t * context)
 #ifdef reg_CTR
     ctr_code_offset = SC_REG(context, reg_CTR) - SC_REG(context, reg_CODE);
 #endif    
-    
+
     /* Scanvenge all boxed registers in the context. */
     for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
 	int index;
@@ -3608,7 +3608,7 @@ struct hash_table {
 
 /* List of weak hash tables chained through their WEAK-P slot.  Set to
    NIL at the start of a collection.
-   
+
    This is not optimal because, when a table is tenured, it won't be
    processed automatically; only the yougest generation is GC'd by
    default.  On the other hand, all applications will need an
@@ -3682,7 +3682,6 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
         lispobj* kv_vector = (lispobj *) PTR(hash_table->table);
         lispobj empty_symbol;
         
-
 	gc_assert(count > 0);
 	hash_table->number_entries = make_fixnum(count - 1);
 	next_vector[kv_index] = fixnum_value(hash_table->next_free_kv);
@@ -3778,9 +3777,22 @@ scav_hash_entries(struct hash_table *hash_table, int weak)
 	    free_hash_entry(hash_table, old_index, i);
 	else {
 	    /* If the key is EQ-hashed and moves, schedule it for rehashing. */
+#if 0
+            if ((i < 4) && (hash_table >= (void*)0x40000000)) {
+                fprintf(stderr, "scav_hash_entries: %p: %d\n", hash_table, i);
+                fprintf(stderr, "  key = %p\n", kv_vector[2*i]);
+                fprintf(stderr, "  val = %p\n", kv_vector[2*i+1]);
+            }
+#endif
 	    scavenge(&kv_vector[2 * i], 2);
 	    new_key = kv_vector[2 * i];
 	    new_index = EQ_HASH(new_key) % length;
+#if 0
+            if ((i < 4) && (hash_table >= (void*)0x40000000)) {
+                fprintf(stderr, "  new key = %p\n", kv_vector[2*i]);
+                fprintf(stderr, "  new val = %p\n", kv_vector[2*i+1]);
+            }
+#endif
 
 	    if (old_index != new_index
 		&& index_vector[old_index] != 0
@@ -3824,7 +3836,15 @@ scav_weak_entries(struct hash_table *hash_table)
 	    && index_vector[old_index] != 0
 	    && (hash_vector == 0 || hash_vector[old_index] == 0x80000000)
 	    && !survives_gc(kv_vector[2 * i + 1])) {
+#if 0
+            lispobj old_val;
+            old_val = kv_vector[2*i+1];
+#endif
 	    scavenge(&kv_vector[2 * i + 1], 1);
+#if 0
+            fprintf(stderr, "scav_weak_entries:  kv_vector[entry = %d] from %p to %p\n",
+                    i, old_val, kv_vector[2*i+1]);
+#endif
 	    scavenged = 1;
 	}
     }
@@ -3927,13 +3947,23 @@ scav_hash_vector(lispobj * where, lispobj object)
 
     /* Scavenging the hash table which fix the positions of the other
        needed objects.  */
+#if 0
+    if (hash_table >= (void*) 0x40000000) {
+        fprintf(stderr, "scav_hash_vector: scavenge table %p\n", hash_table);
+    }
+#endif
+
     scavenge((lispobj *) hash_table, HASH_TABLE_SIZE);
 
     /* Testing for T here instead of NIL automatially makes sure we
        don't add the same table twice to the list of weak tables, should
        this function ever be called twice for the same object.  */
+
     if (hash_table->weak_p == T) {
 	hash_table->weak_p = weak_hash_tables;
+#if 0
+        fprintf(stderr, "  adding %p to weak_hash_tables\n", hash_table);
+#endif
 	weak_hash_tables = hash_table_obj;
     } else
 	scav_hash_entries(hash_table, 0);
@@ -4450,8 +4480,14 @@ scav_weak_pointer(lispobj * where, lispobj object)
 static lispobj
 trans_weak_pointer(lispobj object)
 {
+    lispobj copy;
+
     gc_assert(Pointerp(object));
-    return copy_object(object, WEAK_POINTER_NWORDS);
+    copy = copy_object(object, WEAK_POINTER_NWORDS);
+#if 0
+    fprintf(stderr, "Transport weak pointer %p to %p\n", object, copy);
+#endif
+    return copy;
 }
 
 static int
@@ -5900,6 +5936,22 @@ scavenge_newspace_generation_one_scan(int generation)
 	    i = last_page;
 	}
     }
+#if 0
+    fprintf(stderr, "Finished one full scan of newspace generation %d\n",
+	    generation);
+#endif
+}
+
+/* Scan all weak objects and reset weak object lists */
+static void
+scan_weak_objects()
+{
+    scan_weak_pointers();
+    scan_weak_tables();
+
+    /* Re-initialise the weak pointer and weak tables lists. */
+    weak_pointers = NULL;
+    weak_hash_tables = NIL;
 }
 
 /* Do a complete scavenge of the newspace generation */
@@ -5915,6 +5967,10 @@ scavenge_newspace_generation(int generation)
     /* The new_areas created but the previous scavenge cycle */
     struct new_area (*previous_new_areas)[] = NULL;
     int previous_new_areas_index;
+
+#if 0
+    fprintf(stderr, "Start scavenge_newspace_generation %d\n", generation);
+#endif
 
 #define SC_NS_GEN_CK 0
 #if SC_NS_GEN_CK
@@ -5953,6 +6009,9 @@ scavenge_newspace_generation(int generation)
 #if 0
     fprintf(stderr, "First scan finished; current_new_areas_index=%d\n",
 	    current_new_areas_index);
+    if (current_new_areas_index > 0) {
+        fprintf(stderr, "Start rescans\n");
+    }
 #endif
 
     while (current_new_areas_index > 0) {
@@ -5994,7 +6053,20 @@ scavenge_newspace_generation(int generation)
 	     */
 	    record_new_objects = 1;
 
+#if 0
+            fprintf(stderr, " Rescan generation %d\n", generation);
+#endif            
 	    scavenge_newspace_generation_one_scan(generation);
+
+            /*
+             * Not sure this call is needed, but I (rtoy) am putting
+             * this here anyway on the assumption that since we do it
+             * below after scavenging some stuff, we should do it here
+             * also because scavenge_newspace_generation_one_scan
+             * scavenges stuff too.
+             */
+            
+            scan_weak_objects();
 
 	    /* Record all new areas now. */
 	    record_new_objects = 2;
@@ -6014,10 +6086,24 @@ scavenge_newspace_generation(int generation)
 #if 0
 		fprintf(stderr, "*S page %d offset %d size %d\n", page, offset,
 			size * sizeof(lispobj));
+                fprintf(stderr, "  scavenge(%p, %d)\n", page_address(page) + offset, size);
 #endif
 		scavenge(page_address(page) + offset, size);
 	    }
 
+            /*
+             * I (rtoy) am not sure this is 100% correct.  But if we
+             * don't scan the weak pointers and tables here (or
+             * somewhere near here, perhaps), we get problems like
+             * live weak pointers that haven't been transported out of
+             * oldspace.  Then anything referring to this pointer
+             * causes a crash when GC happens later on.
+             *
+             * This fixes a bug with weak hash tables, reported by
+             * Lynn Quam, cmucl-imp, 2006-07-04.
+             */ 
+            scan_weak_objects();
+            
 	    /* Flush the current regions updating the tables. */
 	    gc_alloc_update_page_tables(0, &boxed_region);
 	    gc_alloc_update_page_tables(1, &unboxed_region);
@@ -6031,6 +6117,10 @@ scavenge_newspace_generation(int generation)
 		current_new_areas_index);
 #endif
     }
+
+#if 0
+    fprintf(stderr, "All rescans finished\n");
+#endif
 
     /* Turn off recording of areas allocated by gc_alloc */
     record_new_objects = 0;
@@ -6048,6 +6138,9 @@ scavenge_newspace_generation(int generation)
 	    fprintf(stderr,
 		    "*** scav.new.gen. %d: write protected page %d written to? dont_move=%d\n",
 		    generation, i, PAGE_DONT_MOVE(i));
+#endif
+#if 0
+    fprintf(stderr, "Finished scavenge_newspace_generation %d\n", generation);
 #endif
 }
 
@@ -6817,6 +6910,9 @@ garbage_collect_generation(int generation, int raise)
      */
     scavenge_newspace_generation(new_space);
 
+    /* I think we should do this *before* the rescan check */
+    scan_weak_objects();
+
 #define RESCAN_CHECK 0
 #if RESCAN_CHECK
     /*
@@ -6844,9 +6940,6 @@ garbage_collect_generation(int generation, int raise)
 		    bytes_allocated_diff, old_bytes_allocated, bytes_allocated);
     }
 #endif
-
-    scan_weak_pointers();
-    scan_weak_tables();
 
     /* Flush the current regions, updating the tables. */
     gc_alloc_update_page_tables(0, &boxed_region);
