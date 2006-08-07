@@ -201,7 +201,19 @@ New in this release:
         arguments has been improved for x86 and ppc.  Sparc already
         had accurate versions.  Thus, (cos 1d120) is
         -0.8278608682708728d0. 
-
+      - ROOM works a bit better with GENCGC's allocation because
+        unallocated pages ended up looking like pages of conses.
+      - DESCRIBE will indicate if a hash-table is a weak (key)
+        hash-table or not.
+      - When an entry is freed in a weak hash-table, the entry is
+        actually marked as free now.  Previously, MAPHASH and
+        WITH-HASH-TABLE-ITERATOR would still display (potentially
+        incorrect) entry for it.
+      - Some issues with GC of weak pointers and weak hash-tables have
+        been fixed.  (CMUCL would sometimes crash to ldb about weird,
+        invalid objects.)  There are, however, still issues with weak
+        pointers.
+      
   * Other changes:
 
       - CMUCL catches more cases where it cannot print a pathname
