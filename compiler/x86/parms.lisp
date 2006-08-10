@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.29 2006/06/30 18:41:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.30 2006/08/10 23:13:41 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,11 +190,11 @@
   #+FreeBSD #x28F00000
   #-FreeBSD #x28000000)
 (defconstant target-dynamic-space-start
-  #+linux #x58000000
+  #+linux #x58100000
   #+(or FreeBSD OpenBSD) #x48000000
   #+NetBSD #x48800000)
 (defconstant target-foreign-linkage-space-start
-  #+linux #xBE000000
+  #+linux #x58000000
   #-linux #xB0000000)
 (defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
