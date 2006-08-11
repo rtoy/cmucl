@@ -193,7 +193,7 @@ data field of the header for ratio and complex numbers is two, one word each
 for the numerator and denominator or for the real and imaginary parts.
 
 For vectors and data-blocks representing Lisp objects stored like vectors, the
-system ignores the data portion of the header-word:
+system (usually) ignores the data portion of the header-word:
 \begin{verbatim}
 ----------------------------------------------------------------
 | Unused Data (24 bits)   | Type (8 bits with low-tag) | 0 1 0 |
@@ -208,6 +208,12 @@ the header for complex arrays and vectors has a second word, following the
 header-word, the system uses for the fill pointer, so computing the length of
 any array is the same code sequence.
 
+For normal Lisp vectors, the data portion MUST be zero.  For hash
+tables, a vector is used to store information about the hash key and
+value, and the data portion is non-zero to indicate to GC that this is
+the key/value vector for the hash table.  GENCGC uses this to
+determine scavenge the key/value pairs correctly.  Cheney GC also uses
+this to determine if rehashing (for EQ hash tables) is needed.
 
 
 \section{Data-Blocks and Other-immediates Typing}
