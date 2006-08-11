@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.76 2006/08/11 00:16:15 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.77 2006/08/11 13:10:32 rtoy Exp $
  *
  */
 
@@ -5996,6 +5996,15 @@ scavenge_newspace_generation(int generation)
     /* Start with a full scavenge */
     scavenge_newspace_generation_one_scan(generation);
 
+    /*
+     * XXX: Do we need to scan weak tables here, before the region is
+     * updated?  We do it in the code below for other cases before the
+     * regions are updated, so it seems to make sense to do it here as
+     * well.
+     */
+    scan_weak_tables();
+
+    
     /* Record all new areas now. */
     record_new_objects = 2;
 
@@ -6067,8 +6076,6 @@ scavenge_newspace_generation(int generation)
              */
             
             scan_weak_tables();
-	    weak_hash_tables = NIL;
-
 
 	    /* Record all new areas now. */
 	    record_new_objects = 2;
@@ -6095,18 +6102,16 @@ scavenge_newspace_generation(int generation)
 
             /*
              * I (rtoy) am not sure this is 100% correct.  But if we
-             * don't scan the weak pointers and tables here (or
-             * somewhere near here, perhaps), we get problems like
-             * live weak pointers that haven't been transported out of
-             * oldspace.  Then anything referring to this pointer
-             * causes a crash when GC happens later on.
+             * don't scan the weak tables here (or somewhere near
+             * here, perhaps), we get problems like live weak pointers
+             * that haven't been transported out of oldspace.  Then
+             * anything referring to this pointer causes a crash when
+             * GC happens later on.
              *
              * This fixes a bug with weak hash tables, reported by
              * Lynn Quam, cmucl-imp, 2006-07-04.
              */ 
             scan_weak_tables();
-	    weak_hash_tables = NIL;
-
             
 	    /* Flush the current regions updating the tables. */
 	    gc_alloc_update_page_tables(0, &boxed_region);
