@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.75 2006/08/04 16:41:18 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.76 2006/08/11 00:16:15 rtoy Exp $
  *
  */
 
@@ -6066,7 +6066,9 @@ scavenge_newspace_generation(int generation)
              * scavenges stuff too.
              */
             
-            scan_weak_objects();
+            scan_weak_tables();
+	    weak_hash_tables = NIL;
+
 
 	    /* Record all new areas now. */
 	    record_new_objects = 2;
@@ -6102,7 +6104,9 @@ scavenge_newspace_generation(int generation)
              * This fixes a bug with weak hash tables, reported by
              * Lynn Quam, cmucl-imp, 2006-07-04.
              */ 
-            scan_weak_objects();
+            scan_weak_tables();
+	    weak_hash_tables = NIL;
+
             
 	    /* Flush the current regions updating the tables. */
 	    gc_alloc_update_page_tables(0, &boxed_region);
