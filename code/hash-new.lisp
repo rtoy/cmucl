@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.38 2006/07/21 17:39:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.39 2006/08/11 18:20:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -244,7 +244,7 @@
 	       ;; Needs to be the same length as the KV vector
 	       (next-vector 
 		(make-array size+1 :element-type '(unsigned-byte 32)))
-	       (kv-vector (make-array (* 2 size+1) :initial-element :empty))
+	       (kv-vector (make-array (* 2 size+1) :initial-element 'empty-hash-entry))
 	       (table
 		(%make-hash-table
 		 :test test
@@ -321,7 +321,7 @@
 	       (+ rehash-size old-size))
 	      (float
 	       (the (values index t) (round (* rehash-size old-size)))))))
-	 (new-kv-vector (make-array (* 2 new-size) :initial-element :empty))
+	 (new-kv-vector (make-array (* 2 new-size) :initial-element 'empty-hash-entry))
 	 (new-next-vector (make-array new-size
 				      :element-type '(unsigned-byte 32)
 				      :initial-element 0))
@@ -752,7 +752,7 @@
 	 (old-next-vector (hash-table-next-vector hash-table))
 	 (old-hash-vector (hash-table-hash-vector hash-table))
 	 (new-size 37)
-	 (new-kv-vector (make-array (* 2 new-size) :initial-element :empty))
+	 (new-kv-vector (make-array (* 2 new-size) :initial-element 'empty-hash-entry))
 	 (new-next-vector (make-array new-size
 				      :element-type '(unsigned-byte 32)
 				      :initial-element 0))
