@@ -16,7 +16,8 @@
      :conservative-float-type
      :hash-new :random-mt19937
      :linux :glibc2 :glibc2.1
-     :cmu :cmu19 :cmu19a
+     :cmu :cmu19 :cmu19c
+     :double-double
      )
    ;; Features to remove from current *features* here
    '(:x86-bootstrap :alpha :osf1 :mips
@@ -123,7 +124,18 @@
 	OLD-X86:SIMPLE-BIT-VECTOR-TYPE
 	OLD-X86:SIMPLE-STRING-TYPE OLD-X86:SIMPLE-VECTOR-TYPE 
 	OLD-X86:SIMPLE-ARRAY-TYPE OLD-X86:VECTOR-DATA-OFFSET
+	OLD-X86:DOUBLE-FLOAT-EXPONENT-BYTE
+	OLD-X86:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX 
+	OLD-X86:DOUBLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-X86:SINGLE-FLOAT-EXPONENT-BYTE
+	OLD-X86:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-X86:SINGLE-FLOAT-SIGNIFICAND-BYTE
 	))
+
+;; Modular arith hacks
+(setf (fdefinition 'vm::ash-left-mod32) #'old-x86::ash-left-mod32)
+(setf (fdefinition 'vm::lognot-mod32) #'old-x86::lognot-mod32)
+;; End arith hacks
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
   (let ((*info-environment* (c:backend-info-environment c:*target-backend*)))
