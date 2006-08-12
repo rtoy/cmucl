@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.77 2006/08/11 13:10:32 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.78 2006/08/12 12:26:44 rtoy Exp $
  *
  */
 
@@ -5946,8 +5946,8 @@ scavenge_newspace_generation_one_scan(int generation)
 static void
 scan_weak_objects()
 {
-    scan_weak_pointers();
     scan_weak_tables();
+    scan_weak_pointers();
 
     /* Re-initialise the weak pointer and weak tables lists. */
     weak_pointers = NULL;
