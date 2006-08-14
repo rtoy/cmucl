@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.39 2006/08/11 18:20:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.40 2006/08/14 14:37:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,7 +107,8 @@
 (defun %print-hash-table (ht stream depth)
   (declare (ignore depth) (stream stream))
   (print-unreadable-object (ht stream :identity t)
-    (format stream "~A hash table, ~D entr~@:P"
+    (format stream "~:[~;Weak ~]~A hash table, ~D entr~@:P"
+	    (hash-table-weak-p ht)
 	    (symbol-name (hash-table-test ht))
 	    (hash-table-number-entries ht))))
 
@@ -238,6 +239,15 @@
 	#-gencgc
 	(when weak-p
 	  (format *debug-io* ";; Creating unsupported weak-p hash table~%"))
+	#+gencgc
+	(when (and weak-p (not (eq test 'eq)))
+	  ;; I (rtoy) think the current GENCGC code really expects the
+	  ;; test to be EQ, but doesn't enforce it in any way.  Let's
+	  ;; warn about it for now.
+	  ;;
+	  ;; XXX: Either fix GC to work with other tests, or change
+	  ;; this warning into an error.
+	  (warn "Creating weak key hashtable with unsupported test: ~S" test))
 	(let* ((index-vector
 		(make-array length :element-type '(unsigned-byte 32)
 			    :initial-element 0))
