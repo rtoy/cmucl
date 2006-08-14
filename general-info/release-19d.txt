@@ -213,7 +213,9 @@ New in this release:
         been fixed.  (CMUCL would sometimes crash to ldb about weird,
         invalid objects.)  There are, however, still issues with weak
         pointers.
-      
+      - Hash table entries with a key and value of :EMTPY now work as
+        expected.
+
   * Other changes:
 
       - CMUCL catches more cases where it cannot print a pathname
@@ -224,6 +226,8 @@ New in this release:
       - LOOKUP-HOST-ENTRY now returns a second value.  If
         LOOKUP-HOST-ENTRY succeeds, the second value is T; otherwise,
         the value of h_errno is returned.
+      - A warning is printed when creating a weak key hash table with
+        a test different from EQ.
   
   * Improvements to the PCL implementation of CLOS:
 
