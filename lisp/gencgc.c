@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.78 2006/08/12 12:26:44 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.79 2006/08/16 16:19:09 rtoy Exp $
  *
  */
 
@@ -3595,6 +3595,7 @@ struct hash_table {
     lispobj index_vector;
     lispobj next_vector;
     lispobj hash_vector;	/* 15 */
+    lispobj next_weak_table;
 };
 
 /* The size of a hash-table in Lisp objects.  */
@@ -3742,7 +3743,7 @@ record_for_rehashing(struct hash_table *hash_table, int hash_index,
    scheduled for rehashing or removed.  */
 
 static void
-scav_hash_entries(struct hash_table *hash_table, int weak)
+scav_hash_entries(struct hash_table *hash_table, int weak, int removep)
 {
     unsigned kv_length;
     lispobj *kv_vector;
@@ -3773,9 +3774,11 @@ scav_hash_entries(struct hash_table *hash_table, int weak)
 
 	if (weak && !survives_gc(old_key)
 	    && index_vector[old_index] != 0
-	    && (hash_vector == 0 || hash_vector[i] == 0x80000000))
-	    free_hash_entry(hash_table, old_index, i);
-	else {
+	    && (hash_vector == 0 || hash_vector[i] == 0x80000000)) {
+            if (removep) {
+                free_hash_entry(hash_table, old_index, i);
+            }
+        } else {
 	    /* If the key is EQ-hashed and moves, schedule it for rehashing. */
 #if 0
             if ((i < 4) && (hash_table >= (void*)0x40000000)) {
@@ -3852,10 +3855,8 @@ scav_weak_entries(struct hash_table *hash_table)
     return scavenged;
 }
 
-/* Process weak hash-tables at the end of a GC.  */
-
 static void
-scan_weak_tables(void)
+scav_weak_tables(void)
 {
     lispobj table, next;
     int more_scavenged;
@@ -3869,7 +3870,7 @@ scan_weak_tables(void)
 	for (table = weak_hash_tables; table != NIL; table = next) {
 	    struct hash_table *ht = (struct hash_table *) PTR(table);
 
-	    next = ht->weak_p;
+	    next = ht->next_weak_table;
 	    if (scav_weak_entries(ht))
 		more_scavenged = 1;
 	}
@@ -3879,9 +3880,31 @@ scan_weak_tables(void)
     for (table = weak_hash_tables; table != NIL; table = next) {
 	struct hash_table *ht = (struct hash_table *) PTR(table);
 
-	next = ht->weak_p;
-	ht->weak_p = T;
-	scav_hash_entries(ht, 1);
+	next = ht->next_weak_table;
+	scav_hash_entries(ht, 1, 0);
+    }
+}
+
+    
+/* Process weak hash-tables at the end of a GC.  */
+
+static void
+scan_weak_tables(void)
+{
+    lispobj table, next;
+    int more_scavenged;
+
+    for (table = weak_hash_tables; table != NIL; table = next) {
+	struct hash_table *ht = (struct hash_table *) PTR(table);
+
+	next = ht->next_weak_table;
+        /* We're done with the table, so reset the link! */
+	ht->next_weak_table = NIL;
+        /*
+         * Remove the entries in the table.  (This probably does too
+         * much work!)
+         */
+	scav_hash_entries(ht, 1, 1);
     }
 
     weak_hash_tables = NIL;
@@ -3955,19 +3978,17 @@ scav_hash_vector(lispobj * where, lispobj object)
 
     scavenge((lispobj *) hash_table, HASH_TABLE_SIZE);
 
-    /* Testing for T here instead of NIL automatially makes sure we
-       don't add the same table twice to the list of weak tables, should
-       this function ever be called twice for the same object.  */
-
-    if (hash_table->weak_p == T) {
-	hash_table->weak_p = weak_hash_tables;
-#if 0
-        fprintf(stderr, "  adding %p to weak_hash_tables\n", hash_table);
-#endif
-	weak_hash_tables = hash_table_obj;
-    } else
-	scav_hash_entries(hash_table, 0);
-
+    if (hash_table->weak_p == NIL) {
+        scav_hash_entries(hash_table, 0, 1);
+    } else if (hash_table->next_weak_table == NIL) {
+        /*
+         * Make sure we only add the table once, which means
+         * next_weak_table is NIL if it isn't already on the list.
+         */
+        hash_table->next_weak_table = weak_hash_tables;
+        weak_hash_tables = hash_table_obj;
+    }
+      
     return CEILING(kv_length + 2, 2);
 }
 
@@ -6002,7 +6023,7 @@ scavenge_newspace_generation(int generation)
      * regions are updated, so it seems to make sense to do it here as
      * well.
      */
-    scan_weak_tables();
+    scav_weak_tables();
 
     
     /* Record all new areas now. */
@@ -6075,7 +6096,7 @@ scavenge_newspace_generation(int generation)
              * scavenges stuff too.
              */
             
-            scan_weak_tables();
+            scav_weak_tables();
 
 	    /* Record all new areas now. */
 	    record_new_objects = 2;
@@ -6111,7 +6132,7 @@ scavenge_newspace_generation(int generation)
              * This fixes a bug with weak hash tables, reported by
              * Lynn Quam, cmucl-imp, 2006-07-04.
              */ 
-            scan_weak_tables();
+            scav_weak_tables();
             
 	    /* Flush the current regions updating the tables. */
 	    gc_alloc_update_page_tables(0, &boxed_region);

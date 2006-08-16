@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.40 2006/08/14 14:37:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.41 2006/08/16 16:19:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,9 +100,15 @@
   ;; This table parallels the KV table, and can be used to store the
   ;; hash associated with the key, saving recalculation. Could be
   ;; useful for EQL, and EQUAL hash tables. This table is not needed
-  ;; for EQ hash tables, and when present the value of #x8000000
-  ;; represents EQ-based hashing on the respective Key.
-  (hash-vector nil :type (or null (simple-array (unsigned-byte 32) (*)))))
+  ;; for EQ hash tables (an is NIL in that case), and when present the
+  ;; value of #x8000000 represents EQ-based hashing on the respective
+  ;; Key.
+  (hash-vector nil :type (or null (simple-array (unsigned-byte 32) (*))))
+  ;;
+  ;; This is used by GC to chain the list of weak hash tables
+  ;; together.  It should otherwise always be NIL.
+  (next-weak-table nil :type (or null hash-table)))
+
 ;;;
 (defun %print-hash-table (ht stream depth)
   (declare (ignore depth) (stream stream))
