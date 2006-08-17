@@ -16,14 +16,16 @@
      :cmu :cmu19 :cmu19c
      :relative-package-names		; Relative package names from Allegro
      :linkage-table
-     :modular-arith
+     :modular-arith			; Modular arithmetic
+     :double-double			; Double-double floats
+     :gencgc				; Generational GC
      )
    ;; Features to remove from current *features* here
    '(:x86-bootstrap :alpha :osf1 :mips :x86 :i486 :pentium :ppro
      :propagate-fun-type :propagate-float-type :constrain-float-type
      :openbsd :freebsd :glibc2 :linux :pentium :elf :mp
      :stack-checking :heap-overflow-check
-     :gencgc :cgc :long-float :new-random :small))
+     :cgc :long-float :new-random :small))
 
 ;;; Extern-alien-name for the new backend.
 (in-package :vm)
@@ -133,7 +135,17 @@
 	OLD-PPC:SIMPLE-BIT-VECTOR-TYPE
 	OLD-PPC:SIMPLE-STRING-TYPE OLD-PPC:SIMPLE-VECTOR-TYPE 
 	OLD-PPC:SIMPLE-ARRAY-TYPE OLD-PPC:VECTOR-DATA-OFFSET
+	OLD-PPC:DOUBLE-FLOAT-EXPONENT-BYTE
+	OLD-PPC:DOUBLE-FLOAT-NORMAL-EXPONENT-MAX 
+	OLD-PPC:DOUBLE-FLOAT-SIGNIFICAND-BYTE
+	OLD-PPC:SINGLE-FLOAT-EXPONENT-BYTE
+	OLD-PPC:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
+	OLD-PPC:SINGLE-FLOAT-SIGNIFICAND-BYTE
 	))
+
+;; Modular arith hacks
+(setf (fdefinition 'vm::ash-left-mod32) #'old-ppc::ash-left-mod32)
+(setf (fdefinition 'vm::lognot-mod32) #'old-ppc::lognot-mod32)
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
   (let ((*info-environment* (c:backend-info-environment c:*target-backend*)))
