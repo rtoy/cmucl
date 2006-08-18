@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.30 2006/08/10 23:13:41 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.31 2006/08/18 02:29:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -327,6 +327,12 @@
       ;; These are filled in the C run-time.
       lisp::*cmucl-lib*
       lisp::*cmucl-core-path*
+
+      ;; Weak hash table support
+      :key
+      :value
+      :key-and-value
+      :key-or-value
       
       ;; Spare symbols.  Rename these when you need to add some static
       ;; symbols and don't want to do a cross-compile.
