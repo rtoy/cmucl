@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.80 2006/08/18 02:26:29 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.81 2006/08/18 13:19:05 rtoy Exp $
  *
  */
 
@@ -26,6 +26,12 @@
 #include "interr.h"
 #include "gencgc.h"
 
+/*
+ * This value in a hash table hash-vector means that the key uses
+ * EQ-based hashing.  That is, the key might be using EQ or EQL for
+ * the test.  This MUST match the value used in hash-new.lisp!
+ */
+#define EQ_BASED_HASH_VALUE     0x80000000
 
 #define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__)
@@ -3698,6 +3704,9 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 
         kv_vector[2 * kv_index] = empty_symbol;
         kv_vector[2 * kv_index + 1] = empty_symbol;
+        if (hash_vector) {
+            hash_vector[kv_index] = EQ_BASED_HASH_VALUE;
+        }
     }
 }
 
@@ -3739,7 +3748,7 @@ record_for_rehashing(struct hash_table *hash_table, int hash_index,
 static inline boolean
 eq_based_hash_vector(unsigned int* hash_vector, unsigned int index)
 {
-    return (hash_vector == 0) || (hash_vector[index] = 0x80000000);
+    return (hash_vector == 0) || (hash_vector[index] = EQ_BASED_HASH_VALUE);
 }
 
 static inline boolean

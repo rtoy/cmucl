@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.42 2006/08/18 02:26:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.43 2006/08/18 13:19:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,9 +73,13 @@
   ;; The Key-Value pair vector.
   (table (required-argument) :type simple-vector)
   ;;
-  ;; True if this is a weak hash table, meaning that key->value mappings will
-  ;; disappear if there are no other references to the key.  Note: this only
-  ;; matters if the hash function indicates that the hashing is EQ based.
+  ;; Non-nil if this is a weak hash table.  Four separate types of
+  ;; weakness are supported: :key, :value, :key-and-value,
+  ;; :key-or-value.  The entry in the table is retained if the key,
+  ;; (respectively, value, key and value, key or value) is alive
+  ;; because it is referenced elsewhere.  If the condition does not
+  ;; hold, the entry is removed.  For tables with a weak key, EQL or
+  ;; EQ must be used as the test.
   (weak-p nil :type (member nil
 			    :key
 			    :value
@@ -129,6 +133,10 @@
 
 (deftype hash ()
   `(integer 0 ,max-hash))
+
+;; This value in the hash-vector indicates the the key uses EQ-based
+;; hashing (i.e., either EQ or EQL).
+(defconstant +eq-based-hash-value+ #x80000000)
 
 
 ;;;; Utility functions.
@@ -295,7 +303,7 @@
 		 :hash-vector (unless (eq test 'eq)
 				(make-array size+1
 					    :element-type '(unsigned-byte 32)
-					    :initial-element #x80000000)))))
+					    :initial-element +eq-based-hash-value+)))))
 	  ;; Setup the free list, all free. These lists are 0
 	  ;; terminated.
 	  (do ((i 1 (1+ i)))
@@ -363,7 +371,7 @@
 	 (new-hash-vector (when old-hash-vector
 			    (make-array new-size
 					:element-type '(unsigned-byte 32)
-					:initial-element #x80000000)))
+					:initial-element +eq-based-hash-value+)))
 	 (old-index-vector (hash-table-index-vector table))
 	 (new-length (almost-primify
 		      (round (/ (float new-size)
@@ -404,7 +412,7 @@
 		     (hash-table-next-free-kv table))
 	       (setf (hash-table-next-free-kv table) i))
 	      ((and new-hash-vector
-		    (not (= (aref new-hash-vector i) #x80000000)))
+		    (not (= (aref new-hash-vector i) +eq-based-hash-value+)))
 	       ;; Can use the existing hash value (not EQ based)
 	       (let* ((hashing (aref new-hash-vector i))
 		      (index (rem hashing new-length))
@@ -476,7 +484,7 @@
 	       ;; Push this slot onto the free list.
 	       (setf (aref next-vector i) (hash-table-next-free-kv table))
 	       (setf (hash-table-next-free-kv table) i))
-	      ((and hash-vector (not (= (aref hash-vector i) #x80000000)))
+	      ((and hash-vector (not (= (aref hash-vector i) +eq-based-hash-value+)))
 	       ;; Can use the existing hash value (not EQ based)
 	       (let* ((hashing (aref hash-vector i))
 		      (index (rem hashing length))
@@ -637,7 +645,7 @@
 	 (when hash-vector
 	   (if (not eq-based)
 	       (setf (aref hash-vector free-kv-slot) hashing)
-	       (assert (= (aref hash-vector free-kv-slot) #x80000000))))
+	       (assert (= (aref hash-vector free-kv-slot) +eq-based-hash-value+))))
 
 	 ;; Push this slot into the next chain.
 	 (setf (aref next-vector free-kv-slot) next)
@@ -691,7 +699,7 @@
 		    (hash-table-next-free-kv hash-table))
 	      (setf (hash-table-next-free-kv hash-table) next)
 	      (when hash-vector
-		(setf (aref hash-vector next) #x80000000))
+		(setf (aref hash-vector next) +eq-based-hash-value+))
 	      (decf (hash-table-number-entries hash-table))
 	      t)
 	     ;; Search next-vector chain for a matching key.
@@ -713,7 +721,7 @@
 			(hash-table-next-free-kv hash-table))
 		  (setf (hash-table-next-free-kv hash-table) next)
 		  (when hash-vector
-		    (setf (aref hash-vector next) #x80000000))
+		    (setf (aref hash-vector next) +eq-based-hash-value+))
 		  (decf (hash-table-number-entries hash-table))
 		  (return t))))
 	     (t
@@ -735,7 +743,7 @@
 			(hash-table-next-free-kv hash-table))
 		  (setf (hash-table-next-free-kv hash-table) next)
 		  (when hash-vector
-		    (setf (aref hash-vector next) #x80000000))
+		    (setf (aref hash-vector next) +eq-based-hash-value+))
 		  (decf (hash-table-number-entries hash-table))
 		  (return t)))))))))
 
@@ -773,7 +781,7 @@
     ;; Clear the hash-vector
     (when hash-vector
       (dotimes (i size)
-	(setf (aref hash-vector i) #x80000000))))
+	(setf (aref hash-vector i) +eq-based-hash-value+))))
   (setf (hash-table-number-entries hash-table) 0)
   hash-table)
 
@@ -794,7 +802,7 @@
 	 (new-hash-vector
 	  (when old-hash-vector
 	    (make-array new-size :element-type '(unsigned-byte 32)
-			:initial-element #x80000000)))
+			:initial-element +eq-based-hash-value+)))
 	 (new-length 37)
 	 (new-index-vector (make-array new-length
 				       :element-type '(unsigned-byte 32)
@@ -1153,7 +1161,8 @@
    `(make-hash-table
      :test ',(hash-table-test table) :size ',(hash-table-size table)
      :rehash-size ',(hash-table-rehash-size table)
-     :rehash-threshold ',(hash-table-rehash-threshold table))
+     :rehash-threshold ',(hash-table-rehash-threshold table)
+     :weak-p (hash-table-weak-p table))
    (let ((values nil))
      (declare (inline maphash))
      (maphash #'(lambda (key value)
