@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.82 2006/08/18 16:48:22 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.83 2006/08/18 16:58:53 rtoy Exp $
  *
  */
 
@@ -3662,7 +3662,8 @@ u32_vector(lispobj obj, unsigned *length)
 static inline void
 free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 {
-    unsigned *index_vector = u32_vector(hash_table->index_vector, 0);
+    unsigned length;
+    unsigned *index_vector = u32_vector(hash_table->index_vector, &length);
     unsigned *next_vector = u32_vector(hash_table->next_vector, 0);
     int free_p = 1;
 
@@ -3688,6 +3689,7 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 	unsigned count = fixnum_value(hash_table->number_entries);
         lispobj* kv_vector = (lispobj *) PTR(hash_table->table);
         unsigned *hash_vector = u32_vector(hash_table->hash_vector, 0);
+        unsigned hash_index;
         lispobj empty_symbol;
         
 	gc_assert(count > 0);
@@ -3703,10 +3705,12 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
         kv_vector += 2;         /* Skip over vector header and length slots */
         empty_symbol = kv_vector[1];
 
+        hash_index = EQ_HASH(kv_vector[2 * kv_index]) % length;
+        
         kv_vector[2 * kv_index] = empty_symbol;
         kv_vector[2 * kv_index + 1] = empty_symbol;
         if (hash_vector) {
-            hash_vector[kv_index] = EQ_BASED_HASH_VALUE;
+            hash_vector[hash_index] = EQ_BASED_HASH_VALUE;
         }
     }
 }
