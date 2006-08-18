@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.81 2006/08/18 13:19:05 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.82 2006/08/18 16:48:22 rtoy Exp $
  *
  */
 
@@ -3687,6 +3687,7 @@ free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
     if (free_p) {
 	unsigned count = fixnum_value(hash_table->number_entries);
         lispobj* kv_vector = (lispobj *) PTR(hash_table->table);
+        unsigned *hash_vector = u32_vector(hash_table->hash_vector, 0);
         lispobj empty_symbol;
         
 	gc_assert(count > 0);
