@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.12 2006/06/30 18:41:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.13 2006/08/18 02:26:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -250,6 +250,12 @@
     *current-region-end-addr*
     #+gencgc
     *scavenge-read-only-space*
+
+    ;; Weak hash table support
+    :key
+    :value
+    :key-and-value
+    :key-or-value
     
     ;; Spare symbols.  Rename these when you need to add some static
     ;; symbols and don't want to do a cross-compile.

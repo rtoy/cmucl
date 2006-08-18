@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.41 2006/08/16 16:19:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.42 2006/08/18 02:26:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,7 +76,11 @@
   ;; True if this is a weak hash table, meaning that key->value mappings will
   ;; disappear if there are no other references to the key.  Note: this only
   ;; matters if the hash function indicates that the hashing is EQ based.
-  (weak-p nil :type (member t nil))
+  (weak-p nil :type (member nil
+			    :key
+			    :value
+			    :key-and-value
+			    :key-or-value))
   ;;
   ;; Index into the next-vector, chaining together buckets that need
   ;; to be rehashed because their hashing is EQ based and the key has
@@ -112,10 +116,13 @@
 ;;;
 (defun %print-hash-table (ht stream depth)
   (declare (ignore depth) (stream stream))
-  (print-unreadable-object (ht stream :identity t)
-    (format stream "~:[~;Weak ~]~A hash table, ~D entr~@:P"
+  (print-unreadable-object (ht stream :type t :identity t)
+    (format stream "~S ~S ~S ~S ~S ~D"
+	    :test
+	    (hash-table-test ht)
+	    :weak-p
 	    (hash-table-weak-p ht)
-	    (symbol-name (hash-table-test ht))
+	    :count
 	    (hash-table-number-entries ht))))
 
 (defconstant max-hash most-positive-fixnum)
@@ -206,13 +213,24 @@
        approaching zero as the threshold approaches 0.  Density 1 means an
        average of one entry per bucket.
    CMUCL Extension:
-     :WEAK-P -- If T, don't keep entries if the key would otherwise be
-       garbage."
+     :WEAK-P -- Weak hash table.  An entry in the table is remains if the
+                condition holds:
+                
+                :KEY            -- key is referenced elsewhere
+                :VALUE          -- value is referenced elsewhere
+                :KEY-AND-VALUE  -- key and value are referenced elsewhere
+                :KEY-OR-VALUE   -- key or value is referenced elsewhere
+
+                If the condition does not hold, the entry is removed.  For
+                backward compatibility, a value of T is the same as :KEY."
   (declare (type (or function symbol) test)
-	   (type index size) (type (member t nil) weak-p))
+	   (type index size)
+	   (type (member t nil :key :value :key-and-value :key-or-value) weak-p))
   (let ((rehash-size (if (integerp rehash-size)
 			 rehash-size
 			 (float rehash-size 1.0))))
+    (when (eq weak-p t)
+      (setf weak-p :key))
     (multiple-value-bind
 	(test test-fun hash-fun)
 	(cond ((or (eq test #'eq) (eq test 'eq))
@@ -246,14 +264,15 @@
 	(when weak-p
 	  (format *debug-io* ";; Creating unsupported weak-p hash table~%"))
 	#+gencgc
-	(when (and weak-p (not (eq test 'eq)))
+	(when (and (member weak-p '(t :key :key-and-value :key-or-value))
+		   (not (member test '(eq eql))))
 	  ;; I (rtoy) think the current GENCGC code really expects the
 	  ;; test to be EQ, but doesn't enforce it in any way.  Let's
 	  ;; warn about it for now.
 	  ;;
 	  ;; XXX: Either fix GC to work with other tests, or change
 	  ;; this warning into an error.
-	  (warn "Creating weak key hashtable with unsupported test: ~S" test))
+	  (error "Cannot make a weak ~A hashtable with test: ~S" weak-p test))
 	(let* ((index-vector
 		(make-array length :element-type '(unsigned-byte 32)
 			    :initial-element 0))

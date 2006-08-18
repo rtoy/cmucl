@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.51 2006/06/30 18:41:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.52 2006/08/18 02:26:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -315,6 +315,12 @@
     #+gencgc
     *scavenge-read-only-space*
 
+    ;; Types of weak hash tables
+    :key
+    :value
+    :key-and-value
+    :key-or-value
+    
     ;; Some spare static symbols.  Useful for adding another static
     ;; symbol without having to do a cross-compile.  Just rename one
     ;; of these to the desired name.

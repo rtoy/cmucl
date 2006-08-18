@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.79 2006/08/16 16:19:09 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.80 2006/08/18 02:26:29 rtoy Exp $
  *
  */
 
@@ -3736,6 +3736,98 @@ record_for_rehashing(struct hash_table *hash_table, int hash_index,
     }
 }
 
+static inline boolean
+eq_based_hash_vector(unsigned int* hash_vector, unsigned int index)
+{
+    return (hash_vector == 0) || (hash_vector[index] = 0x80000000);
+}
+
+static inline boolean
+removable_weak_key(lispobj old_key, unsigned int index_value, boolean eq_hash_p)
+{
+  return (!survives_gc(old_key)
+          && eq_hash_p
+          && (index_value != 0));
+}
+
+static inline boolean
+removable_weak_value(lispobj value, unsigned int index_value)
+{
+    /*
+     * The entry can be removed if the value can be GCed.
+     */
+    return (!survives_gc(value)
+            && (index_value != 0));
+}
+
+static inline boolean
+removable_weak_key_and_value(lispobj old_key, lispobj value, unsigned int index_value,
+                             boolean eq_hash_p)
+{
+  boolean removable_key;
+  boolean removable_val;
+  
+  removable_key = (!survives_gc(old_key)
+                   && eq_hash_p
+                   && (index_value != 0));
+  removable_val = (!survives_gc(value)
+                   && (index_value != 0));
+
+  /*
+   * The entry must stay if the key and value are alive.  In other
+   * words, the entry can be removed if the key or value can be GCed.
+   */
+  return removable_key || removable_val;
+}
+
+static inline boolean
+removable_weak_key_or_value(lispobj old_key, lispobj value, unsigned int index_value,
+                            boolean eq_hash_p)
+{
+  boolean removable_key;
+  boolean removable_val;
+  
+  removable_key = (!survives_gc(old_key)
+                   && eq_hash_p
+                   && (index_value != 0));
+  removable_val = (!survives_gc(value)
+                   && (index_value != 0));
+
+  /*
+   * The entry must be kept if either the key or value is alive.  In
+   * other words, the entry can be removed only if both the key and
+   * value can be GCed.
+   */
+  return (removable_key && removable_val);
+}
+
+static void
+maybe_record_for_rehashing(struct hash_table *hash_table, lispobj* kv_vector,
+                           unsigned int length,
+                           unsigned int old_index,
+                           unsigned int i,
+                           boolean eq_hash_p,
+                           unsigned int index_value)
+{
+    lispobj new_key;
+    unsigned int new_index;
+    lispobj empty_symbol;
+    lispobj value;
+    
+    new_key = kv_vector[2 * i];
+    value = kv_vector[2 * i + 1];
+    new_index = EQ_HASH(new_key) % length;
+    empty_symbol = kv_vector[1];
+
+    if (old_index != new_index
+        && eq_hash_p
+        && index_value != 0
+        && (new_key != empty_symbol
+            || (value != empty_symbol))) {
+        record_for_rehashing(hash_table, old_index, i);
+    }
+}
+
 /* Scavenge the keys and values of hash-table HASH_TABLE.  WEAK
    non-zero means this function is called for a weak hash-table at the
    end of a GC.  WEAK zero means this function is called for
@@ -3743,7 +3835,7 @@ record_for_rehashing(struct hash_table *hash_table, int hash_index,
    scheduled for rehashing or removed.  */
 
 static void
-scav_hash_entries(struct hash_table *hash_table, int weak, int removep)
+scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
 {
     unsigned kv_length;
     lispobj *kv_vector;
@@ -3768,43 +3860,56 @@ scav_hash_entries(struct hash_table *hash_table, int weak, int removep)
 
     for (i = 1; i < next_vector_length; i++) {
 	lispobj old_key = kv_vector[2 * i];
+        lispobj value = kv_vector[2 * i + 1];
 	unsigned int old_index = EQ_HASH(old_key) % length;
-	lispobj new_key;
-	unsigned int new_index;
+        boolean eq_hash_p = eq_based_hash_vector(hash_vector, i);
+        unsigned int index_value = index_vector[old_index];
 
-	if (weak && !survives_gc(old_key)
-	    && index_vector[old_index] != 0
-	    && (hash_vector == 0 || hash_vector[i] == 0x80000000)) {
+	if (((weak == KEY)
+             && removable_weak_key(old_key, index_value,
+                                   eq_hash_p))
+            || ((weak == VALUE)
+                && removable_weak_value(value, index_value))
+            || ((weak == KEY_AND_VALUE)
+                && removable_weak_key_and_value(old_key, value, index_value, eq_hash_p))
+            || ((weak == KEY_OR_VALUE)
+                && removable_weak_key_or_value(old_key, value, index_value, eq_hash_p))) {
             if (removep) {
                 free_hash_entry(hash_table, old_index, i);
             }
         } else {
 	    /* If the key is EQ-hashed and moves, schedule it for rehashing. */
-#if 0
-            if ((i < 4) && (hash_table >= (void*)0x40000000)) {
-                fprintf(stderr, "scav_hash_entries: %p: %d\n", hash_table, i);
-                fprintf(stderr, "  key = %p\n", kv_vector[2*i]);
-                fprintf(stderr, "  val = %p\n", kv_vector[2*i+1]);
-            }
-#endif
 	    scavenge(&kv_vector[2 * i], 2);
+#if 0
 	    new_key = kv_vector[2 * i];
 	    new_index = EQ_HASH(new_key) % length;
-#if 0
-            if ((i < 4) && (hash_table >= (void*)0x40000000)) {
-                fprintf(stderr, "  new key = %p\n", kv_vector[2*i]);
-                fprintf(stderr, "  new val = %p\n", kv_vector[2*i+1]);
-            }
-#endif
 
 	    if (old_index != new_index
-		&& index_vector[old_index] != 0
-		&& (hash_vector == 0 || hash_vector[i] == 0x80000000)
+		&& eq_hash_p
+		&& index_value != 0
 		&& (new_key != empty_symbol
-		    || kv_vector[2 * i + 1] != empty_symbol))
-		    record_for_rehashing(hash_table, old_index, i);
+		    || (value != empty_symbol))) {
+                record_for_rehashing(hash_table, old_index, i);
+            }
+#endif
+            maybe_record_for_rehashing(hash_table, kv_vector, length, old_index, i, eq_hash_p,
+                                       index_value);
 	}
     }
+}
+
+static inline boolean
+weak_key_survives(lispobj old_key, unsigned index_value, unsigned int eq_hash_p)
+{
+    return (survives_gc(old_key)
+	    && index_value != 0
+	    && eq_hash_p);
+}
+
+static inline boolean
+weak_value_survives(lispobj value)
+{
+    return (survives_gc(value));
 }
 
 /* Scavenge entries of the weak hash-table HASH_TABLE that haven't
@@ -3828,27 +3933,55 @@ scav_weak_entries(struct hash_table *hash_table)
 
     for (i = 1; i < next_vector_length; i++) {
 	lispobj old_key = kv_vector[2 * i];
+        lispobj value = kv_vector[2 * i + 1];
 	unsigned int old_index = EQ_HASH(old_key) % length;
+        boolean eq_hash_p = eq_based_hash_vector(hash_vector, i);
+	boolean key_survives = weak_key_survives(old_key, 
+                                                 index_vector[old_index], eq_hash_p);
+	boolean value_survives = weak_value_survives(value);
 
-	/* If the key survives, scavenge its value, for the case that
-	   the only reference to a key in a weak table is a value in
-	   another weak table.  Don't scavenge the value twice;
-	   scan_weak_tables calls this function more than once for the
-	   same hash table.  */
-	if (survives_gc(old_key)
-	    && index_vector[old_index] != 0
-	    && (hash_vector == 0 || hash_vector[old_index] == 0x80000000)
-	    && !survives_gc(kv_vector[2 * i + 1])) {
-#if 0
-            lispobj old_val;
-            old_val = kv_vector[2*i+1];
-#endif
+
+	if ((hash_table->weak_p == KEY)
+	    && key_survives
+            && !survives_gc(value)) {
+	    /*
+	     * For a weak key hash table, if the key survives,
+	     * scavenge its value, for the case that the only
+	     * reference to a key in a weak table is a value in
+	     * another weak table.  Don't scavenge the value twice;
+	     * scan_weak_tables calls this function more than once for
+	     * the same hash table.
+	     */
 	    scavenge(&kv_vector[2 * i + 1], 1);
-#if 0
-            fprintf(stderr, "scav_weak_entries:  kv_vector[entry = %d] from %p to %p\n",
-                    i, old_val, kv_vector[2*i+1]);
-#endif
 	    scavenged = 1;
+	} else if ((hash_table->weak_p == VALUE)
+                   && value_survives
+                   && !survives_gc(old_key)) {
+	    /*
+	     * For a weak value hash table, scavenge the key, if the
+	     * value survives gc.
+	     */
+	    scavenge(&kv_vector[2 * i], 1);
+            maybe_record_for_rehashing(hash_table, kv_vector, length, old_index, i, eq_hash_p,
+                                       index_vector[old_index]);
+	    scavenged = 1;
+        } else if ((hash_table->weak_p == KEY_AND_VALUE)
+                   && key_survives && value_survives) {
+            /* There's nothing to do for key-and-value.  Both are already alive */
+        } else if ((hash_table->weak_p == KEY_OR_VALUE)
+                   && (key_survives || value_survives)) {
+            /* For key-or-value, make sure the other is scavenged */
+            if (key_survives && !survives_gc(value)) {
+                scavenge(&kv_vector[2 * i + 1], 1);
+                scavenged = 1;
+            }
+            if (value_survives && !survives_gc(old_key)) {
+                scavenge(&kv_vector[2 * i], 1);
+                maybe_record_for_rehashing(hash_table, kv_vector, length, old_index, i,
+                                           eq_hash_p,
+                                           index_vector[old_index]);
+                scavenged = 1;
+            }
 	}
     }
 
@@ -3881,7 +4014,7 @@ scav_weak_tables(void)
 	struct hash_table *ht = (struct hash_table *) PTR(table);
 
 	next = ht->next_weak_table;
-	scav_hash_entries(ht, 1, 0);
+	scav_hash_entries(ht, ht->weak_p, 0);
     }
 }
 
@@ -3904,7 +4037,7 @@ scan_weak_tables(void)
          * Remove the entries in the table.  (This probably does too
          * much work!)
          */
-	scav_hash_entries(ht, 1, 1);
+	scav_hash_entries(ht, ht->weak_p, 1);
     }
 
     weak_hash_tables = NIL;
@@ -3979,7 +4112,7 @@ scav_hash_vector(lispobj * where, lispobj object)
     scavenge((lispobj *) hash_table, HASH_TABLE_SIZE);
 
     if (hash_table->weak_p == NIL) {
-        scav_hash_entries(hash_table, 0, 1);
+        scav_hash_entries(hash_table, hash_table->weak_p, 1);
     } else if (hash_table->next_weak_table == NIL) {
         /*
          * Make sure we only add the table once, which means
