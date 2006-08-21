@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.82 2005/11/11 17:21:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83 2006/08/21 15:12:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2261,7 +2261,11 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 ;;; buffers.
 
 (defparameter *read-into-simple-array-recognized-types*
-  '((unsigned-byte 8)
+  '(base-char				; Character types are needed
+					; to support simple-stream
+					; semantics for read-vector
+    character
+    (unsigned-byte 8)
     (unsigned-byte 16)
     (unsigned-byte 32)
     (signed-byte 8)
@@ -2310,8 +2314,9 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	  ((not (member stream-et
 			*read-into-simple-array-recognized-types*
 			:test #'equal))
-	   ;; (format t ">>> Reading vector from binary stream of type ~S~%"
-	   ;;         stream-et)
+	   #+nil
+	   (format t ">>> Reading vector from binary stream of type ~S~%"
+		   stream-et)
 	   
 	   ;; We resort to the READ-BYTE based operation.
 	   (read-into-vector s stream start end))
