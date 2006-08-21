@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.107 2006/07/07 18:26:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.108 2006/08/21 16:39:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,11 +62,11 @@
 (defun %double-double-float (n)
   (typecase n
     (fixnum
-     (make-double-double-float (float n 1d0) 0d0))
+     (%make-double-double-float (float n 1d0) 0d0))
     (single-float
-     (make-double-double-float (float n 1d0) 0d0))
+     (%make-double-double-float (float n 1d0) 0d0))
     (double-float
-     (make-double-double-float (float n 1d0) 0d0))
+     (%make-double-double-float (float n 1d0) 0d0))
     (double-double-float
      n)
     (bignum
@@ -332,6 +332,17 @@
 	  (if (minusp (double-float-high-bits float)) (- ,temp) ,temp)))
       '(if (minusp (double-float-high-bits float)) -1d0 1d0)))
 
+(deftransform float-sign ((float &optional float2)
+			  (double-double-float &optional double-double-float) *)
+  (if float2
+      (let ((temp (gensym)))
+	`(let ((,temp (abs float2)))
+	   (if (minusp (float-sign (double-double-hi float)))
+	       (- ,temp)
+	       ,temp)))
+      '(if (minusp (float-sign (double-double-hi float))) -1w0 1w0)))
+
+  
 
 ;;;; DECODE-FLOAT, INTEGER-DECODE-FLOAT, SCALE-FLOAT:
 ;;;

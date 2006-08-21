@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.32 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.33 2006/08/21 16:39:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -349,6 +349,7 @@
 	 integer-decode-long-denorm)))))
 
 
+#+nil
 (defun float-sign (float1 &optional (float2 (float 1 float1)))
   "Returns a floating-point number that has the same sign as
    float1 and, if float2 is given, has the same absolute value
@@ -364,6 +365,30 @@
 	 (float -1 float1)
 	 (float 1 float1))
      (abs float2)))
+
+(defun float-sign (float1 &optional float2)
+  "Returns a floating-point number that has the same sign as
+   float1 and, if float2 is given, has the same absolute value
+   as float2."
+  (declare (float float1)
+	   (type (or null float) float2))
+  (let ((f1-sign (if (etypecase float1
+		       (single-float (minusp (single-float-bits float1)))
+		       (double-float (minusp (double-float-high-bits float1)))
+		       #+long-float
+		       (long-float (minusp (long-float-exp-bits float1)))
+		       #+double-double
+		       (double-double-float (minusp (float-sign (double-double-hi float1)))))
+		     (float -1 float1)
+		     (float 1 float1))))
+    ;; Multiplication of double-double-float's doesn't preserve the
+    ;; sign of signed-zeroes, so we split the case of float2 this way
+    ;; so we can get the right sign.
+    (if float2
+	(if (minusp f1-sign)
+	    (- (abs float2))
+	    (abs float2))
+	f1-sign)))
 
 (defun float-format-digits (format)
   (ecase format
@@ -992,7 +1017,7 @@
 			    (format t "   scale = ~A~%" (1+ scale))
 			    ||#
 			    (if f1
-				(make-double-double-float
+				(%make-double-double-float
 				 (scale-float f0 (1+ scale))
 				 (scale-float f1 (+ 1 scale #.(- vm:double-float-digits))))
 				(scale-float f0 (1+ scale)))))
