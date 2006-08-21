@@ -100,6 +100,25 @@ New in this release:
         * The double-double arithmetic operations can be inlined by
           specifying (SPACE 0).  Otherwise, they are not inlined.
           (Each double-double operation is about 20 FP instructions.)
+      - Hash tables now support weak value, weak key-and-value, and
+        weak key-or-value tables.  The :WEAK-P keyword argument can
+        take the following values with the given meanings:
+
+            T
+                For backward compatibility.  It is the same as :KEY.
+	    :KEY
+		The entry exists as long as the key is not
+		garbage-collected.
+            :VALUE
+		The entry exists as long as the value is not
+		garbage-collected.
+            :KEY-AND-VALUE
+		The entry exists as long as the key and the value are
+		alive.
+            :KEY-OR-VALUE
+	        The entry exists as long as the key or the value are alive.
+        
+        These tables are currently experimental, but appear to work.
 
   * Numerous ANSI compliance fixes:
 
@@ -188,13 +207,9 @@ New in this release:
       - Fix PPC bug in fixnum arithmetic that caused overflow.  A trap
         would be triggered, but there's no C support for the trap.
       - Some flet/labels functions were not disassembled at all.
-      - DEFMACRO within a WITHOUT-PACKAGE-LOCKS now actually disables
-        the package lock.
       - (expt 1 <big number>) doesn't trigger a continuable error
         anymore and returns 1 immediately.
       - Disassembling methods doesn't produce a type error anymore.
-      - IGNOREing a symbol in a SYMBOL-MACROLET doesn't cause a type
-        error anymore.
       - The unknown condition type 'LISP:SOCKET-ERROR has been fixed.
         It properly signals the EXT:SOCKET-ERROR condition now.
       - The accuracy of the trig functions (sin, cos, tan) for large
@@ -205,16 +220,35 @@ New in this release:
         unallocated pages ended up looking like pages of conses.
       - DESCRIBE will indicate if a hash-table is a weak (key)
         hash-table or not.
-      - When an entry is freed in a weak hash-table, the entry is
-        actually marked as free now.  Previously, MAPHASH and
-        WITH-HASH-TABLE-ITERATOR would still display (potentially
-        incorrect) entry for it.
       - Some issues with GC of weak pointers and weak hash-tables have
         been fixed.  (CMUCL would sometimes crash to ldb about weird,
         invalid objects.)  There are, however, still issues with weak
         pointers.
       - Hash table entries with a key and value of :EMTPY now work as
         expected.
+      - EXT:READ-VECTOR can read binary data from streams with element
+        type BASE-CHAR or CHARACTER. 
+
+  * Trac Tickets
+      3. without-package-locks doesn't work with defmacro
+         - DEFMACRO within a WITHOUT-PACKAGE-LOCKS now actually
+           disables the package lock.
+      4. symbol-macrolet + ignorable causes internal compiler error
+         - IGNOREing a symbol in a SYMBOL-MACROLET doesn't cause a
+           type error anymore.
+      5. Hash table entry with key and value of :EMPTY is treated as
+         an empty entry.
+         - :EMPTY is allowed now and works as expected.
+      6. GCed items in weak hash tables are still accessible (with
+         random junk)
+	 - When an entry is freed in a weak hash-table, the entry is
+	   actually marked as free now.  Previously, MAPHASH and
+	   WITH-HASH-TABLE-ITERATOR would still display (potentially
+	   incorrect) entry for it.
+      7. Bug in ext:read-vector
+         - Fixed so that EXT:READ-VECTOR can read binary data from
+           streams with element type BASE-CHAR and CHARACTER.  This
+           matches the behavior of STREAMS:READ-VECTOR.
 
   * Other changes:
 
