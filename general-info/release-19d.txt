@@ -119,6 +119,10 @@ New in this release:
 	        The entry exists as long as the key or the value are alive.
         
         These tables are currently experimental, but appear to work.
+      - TRACE supports an extra option, :WHEREIN-ONLY.  This is
+        similar to the :WHEREIN option, except :WHEREIN-ONLY only
+        traces the function if the immediate caller is the specified
+        function(s).
 
   * Numerous ANSI compliance fixes:
 

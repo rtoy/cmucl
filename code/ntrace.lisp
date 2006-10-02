@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.35 2006/02/20 00:57:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.36 2006/10/02 13:40:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,9 @@
   ;;
   ;; The list of function names for wherein.  NIL means unspecified.
   (wherein nil :type list)
+  ;;
+  ;; Like wherein, but only if the caller is in the list.
+  (wherein-only nil :type list)
   ;;
   ;; The following slots represent the forms that we are supposed to evaluate
   ;; on each iteration.  Each form is represented by a cons (Form . Function),
@@ -255,6 +258,16 @@
       (when (member frame-name names :test #'equal)
 	(return t)))))
 
+;;; TRACE-WHEREIN-ONLY-P -- Internal
+;;;
+;;;    Like, TRACE-WHEREIN-ONLY-P, except true only if the last stack
+;;;    frame Frame has the given name.
+(defun trace-wherein-only-p (frame name)
+  (let ((caller-frame (di::frame-down frame)))
+    (when caller-frame
+      (let ((frame-name (di:debug-function-name (di:frame-debug-function caller-frame))))
+	(member frame-name name :test #'equal)))))
+
 ;;; TRACE-PRINT  --  Internal
 ;;;
 ;;;    Handle print and print-after options.
@@ -308,13 +321,16 @@
 	 (declare (ignore bpt))
 	 (discard-invalid-entries frame)
 	 (let ((condition (trace-info-condition info))
-	       (wherein (trace-info-wherein info)))
+	       (wherein (trace-info-wherein info))
+	       (wherein-only (trace-info-wherein-only info)))
 	   (setq conditionp
 		 (and (not *in-trace*)
 		      (or (not condition)
 			  (funcall (cdr condition) frame))
 		      (or (not wherein)
-			  (trace-wherein-p frame wherein)))))
+			  (trace-wherein-p frame wherein))
+		      (or (not wherein-only)
+			  (trace-wherein-only-p frame wherein-only)))))
 	 
 	 (when conditionp
 	   (let ((*print-length* (or *debug-print-length* *print-length*))
@@ -447,6 +463,7 @@
 		  :named named
 		  :encapsulated encapsulated
 		  :wherein (trace-info-wherein info)
+		  :wherein-only (trace-info-wherein-only info)
 		  :condition (coerce-form (trace-info-condition info) loc)
 		  :break (coerce-form (trace-info-break info) loc)
 		  :print (coerce-form-list (trace-info-print info) loc)
@@ -456,13 +473,17 @@
 		  :print-after
 		  (coerce-form-list (trace-info-print-after info) nil))))
 
-      (dolist (wherein (trace-info-wherein info))
-	(multiple-value-bind (validp block-name)
-	    (ext:valid-function-name-p wherein)
-	(unless (or (stringp block-name)
-		    (fboundp block-name))
-	  (warn ":WHEREIN name is not a defined global function: ~S"
-		wherein))))
+      (flet ((verify-wherein (wherein type)
+	       (dolist (wherein (trace-info-wherein info))
+		 (multiple-value-bind (validp block-name)
+		     (ext:valid-function-name-p wherein)
+		   (unless (or (stringp block-name)
+			       (fboundp block-name))
+		     (warn "~S name is not a defined global function: ~S"
+			   type wherein))))))
+	(verify-wherein (trace-info-wherein info) :wherein)
+	(verify-wherein (trace-info-wherein-only info) :wherein-only))
+      
 
       (cond
        (encapsulated
@@ -522,63 +543,67 @@
 ;;;
 (defun parse-trace-options (specs info)
   (let ((current specs))
-    (loop
-      (when (endp current) (return))
-      (let ((option (first current))
-	    (value (cons (second current) nil)))
-	(case option
-	  (:condition (setf (trace-info-condition info) value))
-	  (:condition-after
-	   (setf (trace-info-condition info) (cons nil nil))
-	   (setf (trace-info-condition-after info) value))
-	  (:condition-all
-	   (setf (trace-info-condition info) value)
-	   (setf (trace-info-condition-after info) value))
-	  (:wherein
-	   (collect ((new-names))
-	     (dolist (name (if (listp (car value)) (car value) value))
-	       (cond ((and (consp name) (eq (car name) 'method)
-			   (ext:valid-function-name-p name))
-		      ;; This needs to be coordinated with how the
-		      ;; debugger prints method names.  So this is
-		      ;; what this code does.  Any method qualifiers
-		      ;; appear as a list in the debugger.  No
-		      ;; qualifiers show up as NIL.  We also take the
-		      ;; method and add a pcl::fast-method in case the
-		      ;; method wasn't compiled.  (Do we need to do this?)
-		      (let ((method (cond ((atom (third name))
-					   `(,(second name) (,(third name)) ,@(cdddr name)))
-					  (t
-					   `(,(second name) nil ,@(cddr name))))))
-			(new-names `(pcl::fast-method ,@method))
-			(new-names `(method ,@method))))
-		     (t
-		      (new-names name))))
-	     (setf (trace-info-wherein info) (new-names))))
-	  (:encapsulate
-	   (setf (trace-info-encapsulated info) (car value)))
-	  (:break (setf (trace-info-break info) value))
-	  (:break-after (setf (trace-info-break-after info) value))
-	  (:break-all
-	   (setf (trace-info-break info) value)
-	   (setf (trace-info-break-after info) value))
-	  (:print
-	   (setf (trace-info-print info)
-		 (append (trace-info-print info) (list value))))
-	  (:print-after
-	   (setf (trace-info-print-after info)
-		 (append (trace-info-print-after info) (list value))))
-	  (:print-all
-	   (setf (trace-info-print info)
-		 (append (trace-info-print info) (list value)))
-	   (setf (trace-info-print-after info)
-		 (append (trace-info-print-after info) (list value))))
-	  (t (return)))
-	(pop current)
-	(unless current
-	  (error "Missing argument to ~S TRACE option." option))
-	(pop current)))
-    current))
+    (flet ((collect-names (value)
+	     (collect ((new-names))
+	       (dolist (name (if (listp (car value)) (car value) value))
+		 (cond ((and (consp name) (eq (car name) 'method)
+			     (ext:valid-function-name-p name))
+			;; This needs to be coordinated with how the
+			;; debugger prints method names.  So this is
+			;; what this code does.  Any method qualifiers
+			;; appear as a list in the debugger.  No
+			;; qualifiers show up as NIL.  We also take the
+			;; method and add a pcl::fast-method in case the
+			;; method wasn't compiled.  (Do we need to do this?)
+			(let ((method (cond ((atom (third name))
+					     `(,(second name) (,(third name)) ,@(cdddr name)))
+					    (t
+					     `(,(second name) nil ,@(cddr name))))))
+			  (new-names `(pcl::fast-method ,@method))
+			  (new-names `(method ,@method))))
+		       (t
+			(new-names name))))
+	       (new-names))))
+      (loop
+	 (when (endp current) (return))
+	 (let ((option (first current))
+	       (value (cons (second current) nil)))
+	   (case option
+	     (:condition (setf (trace-info-condition info) value))
+	     (:condition-after
+	      (setf (trace-info-condition info) (cons nil nil))
+	      (setf (trace-info-condition-after info) value))
+	     (:condition-all
+	      (setf (trace-info-condition info) value)
+	      (setf (trace-info-condition-after info) value))
+	     (:wherein
+	      (setf (trace-info-wherein info) (collect-names value)))
+	     (:wherein-only
+	      (setf (trace-info-wherein-only info) (collect-names value)))
+	     (:encapsulate
+	      (setf (trace-info-encapsulated info) (car value)))
+	     (:break (setf (trace-info-break info) value))
+	     (:break-after (setf (trace-info-break-after info) value))
+	     (:break-all
+	      (setf (trace-info-break info) value)
+	      (setf (trace-info-break-after info) value))
+	     (:print
+	      (setf (trace-info-print info)
+		    (append (trace-info-print info) (list value))))
+	     (:print-after
+	      (setf (trace-info-print-after info)
+		    (append (trace-info-print-after info) (list value))))
+	     (:print-all
+	      (setf (trace-info-print info)
+		    (append (trace-info-print info) (list value)))
+	      (setf (trace-info-print-after info)
+		    (append (trace-info-print-after info) (list value))))
+	     (t (return)))
+	   (pop current)
+	   (unless current
+	     (error "Missing argument to ~S TRACE option." option))
+	   (pop current)))
+      current)))
 
 
 ;;; EXPAND-TRACE  --  Internal
@@ -673,6 +698,9 @@
        nothing unless a call to one of those functions encloses the call to
        this function (i.e. it would appear in a backtrace.)  Anonymous
        functions have string names like \"DEFUN FOO\".
+   :WHEREIN-ONLY Names
+       Like :WHEREIN, but only if the immediate caller is one of Names,
+       instead of being any where in a backtrace.
 
    :BREAK Form
    :BREAK-AFTER Form
