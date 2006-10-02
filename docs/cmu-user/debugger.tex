@@ -1013,7 +1013,12 @@ function entry or exit.
   printed at the beginning of each line of output.  Printing verbosity
   of arguments and return values is controlled by
   \vindexed{debug-print-level} and \vindexed{debug-print-length}.
-  
+
+  Local functions defined by \code{flet} and \code{labels} can be
+  traced using the syntax \code{(flet f f1 f2 ...)} or \code{(labels f
+    f1 f2 ...)} where \code{f} is the \code{flet} or \code{labels}
+  function we want to trace and \code{f1}, \code{f2}, are the
+  functions containing the local function \code{f}.
   Invidiual methods can also be traced using the syntax \code{(method
     <name> <qualifiers> <specializers>)}.
   See~\ref{sec:method-tracing} for more information.
@@ -1045,7 +1050,12 @@ function entry or exit.
     function (i.e. it would appear in a backtrace.)  Anonymous
     functions have string names like \code{"DEFUN FOO"}.  Individual
     methods can also be traced.  See section~\ref{sec:method-tracing}.
-  
+
+  \item[\kwd{wherein-only} \var{names}] If specified, this is just
+    like \kwd{wherein}, but trace produces output only if the
+    immediate caller of the traced function is one of the functions
+    listed in \var{names}.
+    
   \item[\kwd{break} \var{form}, \kwd{break-after} \var{form},
     \kwd{break-all} \var{form}] If specified, and \var{form} evaluates
     to true, then the debugger is invoked at the start of the
