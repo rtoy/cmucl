@@ -85,6 +85,12 @@ all: cmu-user.ps
 %.ps : %.ps1
 	psset -d -o $@ $<
 
+# Tar up the html files
+cmu-user-html.tgz : cmu-user.html
+	mkdir cmu-user
+	cp *.html *.gif cmu-user
+	tar cf - cmu-user | gzip > cmu-user-html.tgz
+
 # generate Postscript for letter format, instead of for A4 paper
 .INTERMEDIATE: cmu-user-letter.tex
 cmu-user-letter.tex: cmu-user.tex
