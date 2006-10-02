@@ -1,7 +1,5 @@
 ========================== C M U C L  19 d =============================
 
-[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 19d.
 This is a major release which contains numerous enhancements and
 bugfixes from the 19c release.
@@ -21,10 +19,10 @@ New in this release:
 
   * Feature enhancements:
 
-      - Destructive functions like nreverse that modify constant args
-        will produce a warning.
-      - Destructive functions like nreverse whose results are not used
-        will produce a warning.
+      - Destructive functions like NREVERSE that modify constant args
+        will produce a compile-time warning.
+      - Destructive functions like NREVERSE whose results are not used
+        will produce a compile-time warning.
       - Pathnames that cannot be printed readably using #p"..." will
         now be printed using the CMUCL extension #P(...).  However,
         there are still cases where CMUCL cannot print pathnames
