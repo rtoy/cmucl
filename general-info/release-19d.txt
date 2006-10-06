@@ -59,23 +59,23 @@ New in this release:
         number with >= 106 bits of precision (about 33 digits).  Known
         issues:
 
-	* If you are expecting IEEE-style behavior, you don't get it:
-	  - signed zeroes aren't really available.  
+	* IEEE-style floating point behavior is not supported:
+	  - signed zeroes exist but arithmetic operations may not
+	    produce the correct signed zeroes.
 	  - overflows don't return infinity but return NaN instead.
-	  - rounding might not be quite the same as IEEE
+	  - rounding might not be quite the same as IEEE.
 	  - SQRT is not accurate to the last bit, as required by IEEE.
 	* Multiplying by a number very close to
 	  most-positive-double-float will produce an error even if the
 	  result does not overflow.  (This is an artifact of how
-	  multiplication is done.  I don't have a solution to this.)
+	  multiplication is done.)
 	* Read/write consistency is not working.  (Because conversion
 	  from a bignum to a double-double-float doesn't really
 	  understand the internal double-double-float format.)
 	* INTEGER-DECODE-FLOAT and SCALE-FLOAT aren't "inverses".
-	  That is, you can't take the result of integer-decode-float
-	  and use scale-float to produce exactly the same number.
-	  This is because of how bignums are converted to
-	  double-doubles.
+	  That is, applying the result of integer-decode-float to
+	  scale-float does not produce exactly the same number.  This
+	  is because of how bignums are converted to double-doubles.
 	* FLOAT-DIGITS always returns 106 even though there could be
 	  more bits.  (Consider the double-double (1d0,1d-200)).  This
 	  will show up in PRINT where the printed result will have way
@@ -83,18 +83,18 @@ New in this release:
 	  number back won't give the same value.
 	* There is probably more consing than is necessary in many of
 	  the standard Common Lisp functions like floor, ffloor, etc.
-	* The special functions are not fully tested.  I did a few
-	  random spot checks for each function and compared the
-	  results with maxima to verify them.
+	* The special functions are not fully tested.  A few random
+	  spot checks were done for each function and maxima was used
+	  to verify the results.
 	* The branch cuts for the special functions very likely will
 	  not match the double-float versions, mostly because we don't
 	  have working signed zeroes.
 	* Type derivation for double-double-floats might not be
 	  working quite right.
-	* PI is still a double-float.  If you want a double-double
-	  version of pi, it's KERNEL:DD-PI.  (Soon to be EXT:DD-PI.)
-	* There are probably still many bugs where double-double-float
-	  support was overlooked.
+	* PI is still a double-float.  The double-double version of pi
+	  is EXT:DD-PI.
+	* There may be bugs where double-double-float support was
+	  overlooked.
         * The double-double arithmetic operations can be inlined by
           specifying (SPACE 0).  Otherwise, they are not inlined.
           (Each double-double operation is about 20 FP instructions.)
@@ -131,8 +131,8 @@ New in this release:
       - An error is signaled if a declaration is used as the name of a
         deftype, condition, or defstruct, and vice versa.
       - An error is signaled when trying to generate a namestring from
-        a pathname with just a version component (other than nil,
-        :newest, or :unspecific).  CMUCL cannot print that readably.
+        a pathname with just a version component (other than NIL,
+        :NEWEST, or :UNSPECIFIC).  CMUCL cannot print that readably.
       - FLET and LABELS functions will catch errors in keyword
         parameters.  Previously, a keyword of NIL was silently
         accepted. 
@@ -173,11 +173,11 @@ New in this release:
         out to C varargs functions.  Now we always copy any float args
         to the corresponding int regs (or stack) as required by the
         ABI.  This isn't necessary for non-varargs functions, but
-        CMUCL doesn't know functions which are varargs functions.
+        CMUCL doesn't know which functions are varargs functions.
       - Callbacks with long-long args or results should work correctly
         now for Darwin/ppc.
       - DESCRIBE no longer depends on having PCL loaded.
-      - Tracing with no encapsulation appears to be working now for
+      - Tracing without encapsulation appears to be working now for
         ppc.
       - A simple interface to sysinfo(2) has been added for sparc.
         This is used to provide better values for MACHINE-TYPE and
@@ -212,7 +212,7 @@ New in this release:
       - (expt 1 <big number>) doesn't trigger a continuable error
         anymore and returns 1 immediately.
       - Disassembling methods doesn't produce a type error anymore.
-      - The unknown condition type 'LISP:SOCKET-ERROR has been fixed.
+      - The unknown condition type LISP:SOCKET-ERROR has been fixed.
         It properly signals the EXT:SOCKET-ERROR condition now.
       - The accuracy of the trig functions (sin, cos, tan) for large
         arguments has been improved for x86 and ppc.  Sparc already
@@ -226,10 +226,6 @@ New in this release:
         been fixed.  (CMUCL would sometimes crash to ldb about weird,
         invalid objects.)  There are, however, still issues with weak
         pointers.
-      - Hash table entries with a key and value of :EMTPY now work as
-        expected.
-      - EXT:READ-VECTOR can read binary data from streams with element
-        type BASE-CHAR or CHARACTER. 
 
   * Trac Tickets
       3. without-package-locks doesn't work with defmacro
@@ -264,7 +260,10 @@ New in this release:
         the value of h_errno is returned.
       - A warning is printed when creating a weak key hash table with
         a test different from EQ.
-  
+      - An SCM and project management system is now available at
+        http://trac.common-lisp.net/cmucl.  Please use this to submit
+        tickets, documentation, project requests, etc.
+
   * Improvements to the PCL implementation of CLOS:
 
   * Changes to rebuilding procedure:
