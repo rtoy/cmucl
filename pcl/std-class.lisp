@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.80 2005/07/07 16:44:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.81 2006/10/30 01:54:28 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -816,6 +816,8 @@
   (when (and (not (or finalizep (class-finalized-p class)))
 	     (not (class-has-a-forward-referenced-superclass-p class)))
     (finalize-inheritance class)
+    (dolist (sub (class-direct-subclasses class))
+      (update-class sub nil))
     (return-from update-class))
   ;;
   (when (or finalizep
