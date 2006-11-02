@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.7 2006/01/18 15:21:26 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.8 2006/11/02 01:53:17 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -37,7 +37,7 @@
  * fixed, the read-only space can be moved.  (The BA instruction is
  * used to jump to assembly routines.)
  */
-#define READ_ONLY_SPACE_START	(0x01000000)
+#define READ_ONLY_SPACE_START	(0x04000000)
 #define READ_ONLY_SPACE_SIZE	(0x07ff8000)	/* 128 MB, almost */
 
 #define STATIC_SPACE_START  	(0x10000000)

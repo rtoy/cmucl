@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/support.lisp,v 1.3 2005/04/08 04:11:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/support.lisp,v 1.4 2006/11/02 01:53:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,9 +16,17 @@
 (def-vm-support-routine generate-call-sequence (name style vop)
   (ecase style
     (:raw
-     (values 
-      `((inst bla (make-fixup ',name :assembly-routine)))
-      `()))
+     (let ((temp (make-symbol "TEMP")))
+       #+nil
+       (values 
+	`((inst bla (make-fixup ',name :assembly-routine)))
+	`())
+       (values 
+	`((inst lr ,temp (make-fixup ',name :assembly-routine))
+	  (inst mtctr ,temp)
+	  (inst bctrl))
+	`((:temporary (:scs (non-descriptor-reg) :from (:eval 0) :to (:eval 1))
+	              ,temp)))))
     (:full-call
      (let ((temp (make-symbol "TEMP"))
 	   (nfp-save (make-symbol "NFP-SAVE"))
@@ -30,7 +38,12 @@
 	      (store-stack-tn ,nfp-save cur-nfp))
 	    (inst compute-lra-from-code ,lra code-tn lra-label ,temp)
 	    (note-next-instruction ,vop :call-site)
+	    #+nil
             (inst ba (make-fixup ',name :assembly-routine))
+	    (progn
+	      (inst lr ,temp (make-fixup ',name :assembly-routine))
+	      (inst mtctr ,temp)
+	      (inst bctr))
 	    (emit-return-pc lra-label)
 	    (note-this-location ,vop :single-value-return)
 	    (without-scheduling ()
@@ -49,9 +62,17 @@
 	   ,nfp-save)
 	  (:save-p :compute-only)))))
     (:none
-     (values 
-      `((inst ba  (make-fixup ',name :assembly-routine)))
-      `()))))
+     (let ((temp (make-symbol "TEMP")))
+       #+nil
+       (values 
+	`((inst ba  (make-fixup ',name :assembly-routine)))
+	`())
+       (values
+	`((inst lr ,temp (make-fixup ',name :assembly-routine))
+	  (inst mtctr ,temp)
+	  (inst bctr))
+	`((:temporary (:scs (non-descriptor-reg) :from (:eval 0) :to (:eval 1))
+		      ,temp)))))))
 
 (def-vm-support-routine generate-return-sequence (style)
   (ecase style

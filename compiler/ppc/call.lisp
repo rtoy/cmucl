@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.12 2006/02/08 01:32:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.13 2006/11/02 01:53:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -881,6 +881,7 @@ default-value-8
   (:temporary (:sc any-reg :offset ocfp-offset :from (:argument 2)) old-fp)
   (:temporary (:sc any-reg :offset lra-offset :from (:argument 3)) lra)
 
+  (:temporary (:scs (any-reg) :from :eval) temp)
 
   (:vop-var vop)
 
@@ -901,7 +902,12 @@ default-value-8
 		 number-stack-displacement))))
 
    
-    (inst ba (make-fixup 'tail-call-variable :assembly-routine))))
+    #+nil
+    (inst ba (make-fixup 'tail-call-variable :assembly-routine))
+    (progn
+      (inst lr temp (make-fixup 'tail-call-variable :assembly-routine))
+      (inst mtctr temp)
+      (inst bctr))))
 
 
 ;;;; Unknown values return:
@@ -1008,6 +1014,7 @@ default-value-8
   (:temporary (:sc descriptor-reg :offset a0-offset) a0)
   (:temporary (:scs (interior-reg)) lip)
 
+  (:temporary (:scs (any-reg) :from (:eval 1)) temp)
 
   (:vop-var vop)
 
@@ -1037,7 +1044,12 @@ default-value-8
       (move lra lra-arg)
       (move vals vals-arg)
       (move nvals nvals-arg)
-      (inst ba (make-fixup 'return-multiple :assembly-routine)))
+      #+nil
+      (inst ba (make-fixup 'return-multiple :assembly-routine))
+      (progn
+	(inst lr temp (make-fixup 'return-multiple :assembly-routine))
+	(inst mtctr temp)
+	(inst bctr)))
     (trace-table-entry trace-table-normal)))
 
 

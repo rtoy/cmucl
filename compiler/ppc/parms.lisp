@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.13 2006/08/18 02:26:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.14 2006/11/02 01:53:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,7 +150,7 @@
 
 ;;; Where to put the different spaces.
 ;;; 
-(defparameter target-read-only-space-start #x01000000)
+(defparameter target-read-only-space-start #x04000000)
 (defparameter target-static-space-start    #x10000000)
 (defparameter target-dynamic-space-start   #x40000000)
 ;; We're sticking this at the end of the static space for now for the
