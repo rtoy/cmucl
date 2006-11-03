@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.13 2006/11/02 01:53:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.14 2006/11/03 03:29:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -902,12 +902,9 @@ default-value-8
 		 number-stack-displacement))))
 
    
-    #+nil
-    (inst ba (make-fixup 'tail-call-variable :assembly-routine))
-    (progn
-      (inst lr temp (make-fixup 'tail-call-variable :assembly-routine))
-      (inst mtctr temp)
-      (inst bctr))))
+    (inst lr temp (make-fixup 'tail-call-variable :assembly-routine))
+    (inst mtctr temp)
+    (inst bctr)))
 
 
 ;;;; Unknown values return:
@@ -1044,12 +1041,9 @@ default-value-8
       (move lra lra-arg)
       (move vals vals-arg)
       (move nvals nvals-arg)
-      #+nil
-      (inst ba (make-fixup 'return-multiple :assembly-routine))
-      (progn
-	(inst lr temp (make-fixup 'return-multiple :assembly-routine))
-	(inst mtctr temp)
-	(inst bctr)))
+      (inst lr temp (make-fixup 'return-multiple :assembly-routine))
+      (inst mtctr temp)
+      (inst bctr))
     (trace-table-entry trace-table-normal)))
 
 

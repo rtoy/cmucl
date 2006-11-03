@@ -38,10 +38,10 @@ OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c e_rem_pio2.c k_rem_pio2.c
 
 # OS_LINK_FLAGS = -g -dynamic -Wl,-sectcreate,CMUCLRO,core,/dev/null -Wl,-segaddr,CMUCLRO,0x01000000 -Wl,-seg1addr,0x1a000000
 OS_LIBS = -lSystem -lc -lm
-all: adjustlisp
+#all: adjustlisp
 #adjustlisp: lisp darwin-lispadjuster
 #	./darwin-lispadjuster lisp
-adjustlisp: lisp darwin-lispadjuster
-	true
+#adjustlisp: lisp darwin-lispadjuster
+#	true
 
-darwin-lispadjuster: darwin-lispadjuster.c
+#darwin-lispadjuster: darwin-lispadjuster.c

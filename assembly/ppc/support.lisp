@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/support.lisp,v 1.4 2006/11/02 01:53:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/support.lisp,v 1.5 2006/11/03 03:29:34 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,10 +17,6 @@
   (ecase style
     (:raw
      (let ((temp (make-symbol "TEMP")))
-       #+nil
-       (values 
-	`((inst bla (make-fixup ',name :assembly-routine)))
-	`())
        (values 
 	`((inst lr ,temp (make-fixup ',name :assembly-routine))
 	  (inst mtctr ,temp)
@@ -38,12 +34,9 @@
 	      (store-stack-tn ,nfp-save cur-nfp))
 	    (inst compute-lra-from-code ,lra code-tn lra-label ,temp)
 	    (note-next-instruction ,vop :call-site)
-	    #+nil
-            (inst ba (make-fixup ',name :assembly-routine))
-	    (progn
-	      (inst lr ,temp (make-fixup ',name :assembly-routine))
-	      (inst mtctr ,temp)
-	      (inst bctr))
+	    (inst lr ,temp (make-fixup ',name :assembly-routine))
+	    (inst mtctr ,temp)
+	    (inst bctr)
 	    (emit-return-pc lra-label)
 	    (note-this-location ,vop :single-value-return)
 	    (without-scheduling ()
@@ -63,10 +56,6 @@
 	  (:save-p :compute-only)))))
     (:none
      (let ((temp (make-symbol "TEMP")))
-       #+nil
-       (values 
-	`((inst ba  (make-fixup ',name :assembly-routine)))
-	`())
        (values
 	`((inst lr ,temp (make-fixup ',name :assembly-routine))
 	  (inst mtctr ,temp)

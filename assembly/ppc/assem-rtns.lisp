@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/assem-rtns.lisp,v 1.5 2006/11/02 01:53:17 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/assem-rtns.lisp,v 1.6 2006/11/03 03:29:34 rtoy Rel $
 ;;;
 ;;;
 (in-package "PPC")
@@ -196,8 +196,7 @@
 			  (:arg start any-reg ocfp-offset)
 			  (:arg count any-reg nargs-offset)
 			  (:temp catch any-reg a1-offset)
-			  (:temp tag descriptor-reg a2-offset)
-			  (:temp temp non-descriptor-reg nl0-offset))
+			  (:temp tag descriptor-reg a2-offset))
   
   (declare (ignore start count))
 
@@ -218,13 +217,10 @@
   exit
   
   (move target catch)
-  #+nil
-  (inst ba (make-fixup 'unwind :assembly-routine))
-
-  (progn
-    (inst lr temp (make-fixup 'unwind :assembly-routine))
-    (inst mtctr temp)
-    (inst bctr)))
+  ;; Recycle catch as a temp
+  (inst lr catch (make-fixup 'unwind :assembly-routine))
+  (inst mtctr catch)
+  (inst bctr))
 
 
 
