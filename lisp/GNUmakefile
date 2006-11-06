@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.22 2003/08/20 16:53:59 gerd Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.23 2006/11/06 07:44:51 cshapiro Exp $
 
 all: lisp.nm
 
@@ -59,4 +59,4 @@ Depends: ${SRCS}
 	$(DEPEND) ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $^ > ,depends
 	mv ,depends Depends
 
-include Depends
+-include Depends
