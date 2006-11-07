@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.20 2005/09/15 18:26:52 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.21 2006/11/07 11:24:12 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -449,22 +449,10 @@ os_control_stack_overflow(void *fault_addr, os_context_t * context)
 	else
 	    error = SymbolFunction(YELLOW_ZONE_HIT);
 
-#ifdef i386
-	/* ECX is the argument count.  */
+#if defined(i386) || defined(__x86_64)
 	SC_PC(context) = (int) ((struct function *) PTR(error))->code;
-#if USE_SA_SIGINFO
-	context->uc_mcontext.__gregs[_REG_ECX] == 0;
-#else
-	context->sc_ecx = 0;
-#endif
-#else
-#ifdef __x86_64
-	/* RCX is the argument count.  */
-	context->sc_rip =
-	    (unsigned long) ((struct function *) PTR(error))->code;
-	context->sc_rcx = 0;
-#else
-#ifdef sparc
+	SC_REG(context, reg_NARGS) = 0;
+#elif defined(sparc)
 	/* This part should be common to all non-x86 ports */
 	SC_PC(context) = (long) ((struct function *) PTR(error))->code;
 	SC_NPC(context) = SC_PC(context) + 4;
@@ -476,8 +464,6 @@ os_control_stack_overflow(void *fault_addr, os_context_t * context)
 	SC_REG(context, reg_CODE) = ((long) PTR(error)) + type_FunctionPointer;
 #else
 #error os_control_stack_overflow not implemented for this system
-#endif
-#endif
 #endif
 	return 1;
     }

@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.4 2005/01/13 19:55:01 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.5 2006/11/07 11:24:12 cshapiro Exp $
  */
 
 #ifndef _X86_LISPREGS_H_
@@ -30,6 +30,7 @@
 
 #define reg_SP reg_ESP
 #define reg_FP reg_EBP
+#define reg_NARGS reg_ECX
 
 #define REGNAMES "EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI"
 
@@ -43,7 +44,7 @@
  * xxx-os.c handle it.
  */
 
-#define SC_REG(sc, n) sc_reg(sc,n)
+#define SC_REG(sc, n) (*sc_reg(sc,n))
 
 #ifdef __NetBSD__
 #define SC_PC(uc) ((uc)->uc_mcontext.__gregs[_REG_EIP])

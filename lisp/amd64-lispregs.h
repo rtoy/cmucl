@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.3 2005/01/13 19:55:00 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.4 2006/11/07 11:24:12 cshapiro Rel $
  */
 
 /* These register names and offsets correspond to definitions
@@ -38,6 +38,7 @@
 
 #define reg_SP reg_RSP
 #define reg_FP reg_RBP
+#define reg_NARGS reg_RCX
 
 #define REGNAMES "RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"
 
@@ -51,7 +52,7 @@
  * xxx-os.c handle it.
  */
 
-#define SC_REG(sc, n) sc_reg(sc,n)
+#define SC_REG(sc, n) (*sc_reg(sc,n))
 #define SC_PC(sc) ((sc)->sc_pc)
 
 #endif /* _AMD64_LISPREGS_H_ */

@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.12 2006/05/30 22:42:05 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.13 2006/11/07 11:24:12 cshapiro Exp $
  *
  */
 
@@ -52,29 +52,29 @@ os_init(void)
     os_vm_page_size = getpagesize();
 }
 
-int
+int *
 sc_reg(struct sigcontext *c, int offset)
 {
     switch (offset) {
       case 0:
-	  return c->sc_eax;
+	  return &c->sc_eax;
       case 2:
-	  return c->sc_ecx;
+	  return &c->sc_ecx;
       case 4:
-	  return c->sc_edx;
+	  return &c->sc_edx;
       case 6:
-	  return c->sc_ebx;
+	  return &c->sc_ebx;
       case 8:
-	  return c->sc_esp;
+	  return &c->sc_esp;
       case 10:
-	  return c->sc_ebp;
+	  return &c->sc_ebp;
       case 12:
-	  return c->sc_esi;
+	  return &c->sc_esi;
       case 14:
-	  return c->sc_edi;
+	  return &c->sc_edi;
     }
 
-    return 0;
+    return (int *) 0;
 }
 
 void

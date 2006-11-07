@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.43 2005/09/15 18:26:51 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.44 2006/11/07 11:24:12 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -680,23 +680,10 @@ install_handler(int signal, void handler(HANDLER_ARGS))
 void
 interrupt_handle_space_overflow(lispobj error, os_context_t * context)
 {
-#ifdef i386
-    /* ECX is the argument count.  */
-#if USE_SA_SIGINFO
-    context->uc_mcontext.__gregs[_REG_EIP] ==
-	(int) ((struct function *) PTR(error))->code;
-    context->uc_mcontext.__gregs[_REG_ECX] == 0;
-#else
+#if defined(i386) || defined(__x86_64)
     SC_PC(context) = (int) ((struct function *) PTR(error))->code;
-    context->sc_ecx = 0;
-#endif
-#else
-#ifdef __x86_64
-    /* RCX is the argument count.  */
-    context->sc_rip = (unsigned long) ((struct function *) PTR(error))->code;
-    context->sc_rcx = 0;
-#else
-#ifdef sparc
+    SC_REG(context, reg_NARGS) = 0;
+#elif defined(sparc)
     build_fake_control_stack_frame(context);
     /* This part should be common to all non-x86 ports */
     SC_PC(context) = (long) ((struct function *) PTR(error))->code;
@@ -708,8 +695,6 @@ interrupt_handle_space_overflow(lispobj error, os_context_t * context)
     SC_REG(context, reg_CODE) = ((long) PTR(error)) + type_FunctionPointer;
 #else
 #error interrupt_handle_space_overflow not implemented for this system
-#endif
-#endif
 #endif
 }
 #endif /* FEATURE_HEAP_OVERFLOW_CHECK */

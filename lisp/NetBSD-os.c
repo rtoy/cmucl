@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.3 2005/09/15 18:26:50 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.4 2006/11/07 11:24:12 cshapiro Exp $
  *
  */
 
@@ -53,51 +53,51 @@ os_init(void)
     os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
 }
 
-int
+int *
 sc_reg(os_context_t * c, int offset)
 {
 #ifdef i386
 #if USE_SA_SIGINFO
     switch (offset) {
       case 0:
-	  return c->uc_mcontext.__gregs[_REG_EAX];
+	  return &c->uc_mcontext.__gregs[_REG_EAX];
       case 2:
-	  return c->uc_mcontext.__gregs[_REG_ECX];
+	  return &c->uc_mcontext.__gregs[_REG_ECX];
       case 4:
-	  return c->uc_mcontext.__gregs[_REG_EDX];
+	  return &c->uc_mcontext.__gregs[_REG_EDX];
       case 6:
-	  return c->uc_mcontext.__gregs[_REG_EBX];
+	  return &c->uc_mcontext.__gregs[_REG_EBX];
       case 8:
-	  return c->uc_mcontext.__gregs[_REG_ESP];
+	  return &c->uc_mcontext.__gregs[_REG_ESP];
       case 10:
-	  return c->uc_mcontext.__gregs[_REG_EBP];
+	  return &c->uc_mcontext.__gregs[_REG_EBP];
       case 12:
-	  return c->uc_mcontext.__gregs[_REG_ESI];
+	  return &c->uc_mcontext.__gregs[_REG_ESI];
       case 14:
-	  return c->uc_mcontext.__gregs[_REG_EDI];
+	  return &c->uc_mcontext.__gregs[_REG_EDI];
     }
 #else
     switch (offset) {
       case 0:
-	  return c->sc_eax;
+	  return &c->sc_eax;
       case 2:
-	  return c->sc_ecx;
+	  return &c->sc_ecx;
       case 4:
-	  return c->sc_edx;
+	  return &c->sc_edx;
       case 6:
-	  return c->sc_ebx;
+	  return &c->sc_ebx;
       case 8:
-	  return c->sc_esp;
+	  return &c->sc_esp;
       case 10:
-	  return c->sc_ebp;
+	  return &c->sc_ebp;
       case 12:
-	  return c->sc_esi;
+	  return &c->sc_esi;
       case 14:
-	  return c->sc_edi;
+	  return &c->sc_edi;
     }
 #endif
 #endif
-    return 0;
+    return (int *) 0;
 }
 
 void

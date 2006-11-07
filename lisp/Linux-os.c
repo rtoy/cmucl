@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.26 2006/03/17 02:56:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.27 2006/11/07 11:24:12 cshapiro Exp $
  *
  */
 
@@ -100,75 +100,74 @@ os_init(void)
 }
 
 #ifdef i386
+int *
 #if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
-int
 sc_reg(struct sigcontext *c, int offset)
 #else
-int
 sc_reg(struct sigcontext_struct *c, int offset)
 #endif
 {
     switch (offset) {
       case 0:
-	  return c->eax;
+	  return &c->eax;
       case 2:
-	  return c->ecx;
+	  return &c->ecx;
       case 4:
-	  return c->edx;
+	  return &c->edx;
       case 6:
-	  return c->ebx;
+	  return &c->ebx;
       case 8:
-	  return c->esp;
+	  return &c->esp;
       case 10:
-	  return c->ebp;
+	  return &c->ebp;
       case 12:
-	  return c->esi;
+	  return &c->esi;
       case 14:
-	  return c->edi;
+	  return &c->edi;
     }
-    return 0;
+    return (int *) 0;
 }
 #endif
 
 #ifdef __x86_64
-int
+int *
 sc_reg(struct sigcontext *c, int offset)
 {
     switch (offset) {
       case 0:
-	  return c->rax;
+	  return &c->rax;
       case 2:
-	  return c->rcx;
+	  return &c->rcx;
       case 4:
-	  return c->rdx;
+	  return &c->rdx;
       case 6:
-	  return c->rbx;
+	  return &c->rbx;
       case 8:
-	  return c->rsp;
+	  return &c->rsp;
       case 10:
-	  return c->rbp;
+	  return &c->rbp;
       case 12:
-	  return c->rsi;
+	  return &c->rsi;
       case 14:
-	  return c->rdi;
+	  return &c->rdi;
       case 16:
-	  return c->r8;
+	  return &c->r8;
       case 18:
-	  return c->r9;
+	  return &c->r9;
       case 20:
-	  return c->r10;
+	  return &c->r10;
       case 22:
-	  return c->r11;
+	  return &c->r11;
       case 24:
-	  return c->r12;
+	  return &c->r12;
       case 26:
-	  return c->r13;
+	  return &c->r13;
       case 28:
-	  return c->r14;
+	  return &c->r14;
       case 30:
-	  return c->r15;
+	  return &c->r15;
     }
-    return 0;
+    return (int *) 0;
 }
 #endif
 
