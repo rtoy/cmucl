@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.45 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.46 2006/11/08 22:09:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -682,8 +682,8 @@
 #+stack-checking
 (defun red-zone-hit ()
   (format *error-output*
-	  "~2&~@<Fatal control stack overflow.  You have entered ~
-           the red control stack guard zone while debugging.  ~
+	  "~2&~@<Fatal control stack overflow.  You have entered~%~
+           the red control stack guard zone while debugging.~%~
            Returning to Top-Level.~@:>~2%")
   (throw 'lisp::top-level-catcher nil))
 
@@ -693,9 +693,9 @@
     ;; Don't reserve any more pages
     (setf lisp::reserved-heap-pages 0)
     (format *error-output*
-	    "~2&~@<Imminent dynamic space overflow has occurred:  ~
-            Only a small amount of dynamic space is available now. ~
-            Please note that you will be returned to the Top-Level without ~
+	    "~2&~@<Imminent dynamic space overflow has occurred:~%~
+            Only a small amount of dynamic space is available now.~%~
+            Please note that you will be returned to the Top-Level without~%~
             warning if you run out of space while debugging.~@:>~%")
     (infinite-error-protect (error 'heap-overflow))))
 
