@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.44 2006/11/07 11:24:12 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.45 2006/11/08 22:12:52 rtoy Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -693,6 +693,12 @@ interrupt_handle_space_overflow(lispobj error, os_context_t * context)
     SC_REG(context, reg_CFP) = (long) current_control_frame_pointer;
     /* This is sparc specific */
     SC_REG(context, reg_CODE) = ((long) PTR(error)) + type_FunctionPointer;
+    /*
+     * Restore important Lisp regs.  Are there others we need to
+     * restore?
+     */
+    SC_REG(context, reg_ALLOC) = current_dynamic_space_free_pointer;
+    SC_REG(context, reg_NIL) = NIL;
 #else
 #error interrupt_handle_space_overflow not implemented for this system
 #endif
