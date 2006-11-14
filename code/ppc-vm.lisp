@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.7 2006/11/14 02:41:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.8 2006/11/14 04:47:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -251,7 +251,7 @@
   (with-alien ((scp (* sigcontext) scp))
     (let ((sap (alien-sap (slot (slot scp 'sc-regs) 'fpregs))))
       (ecase format
-	(single-float (float (system:sap-ref-double sap (* index 2 ppc:word-bytes)) 0.0d0))
+	(single-float (float (system:sap-ref-double sap (* index 2 ppc:word-bytes)) 0.0f0))
 	(double-float (system:sap-ref-double sap (* index 2 ppc:word-bytes)))))))
 ;;;
 (defun %set-sigcontext-float-register (scp index format new-value)
