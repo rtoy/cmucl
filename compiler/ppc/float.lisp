@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.7 2006/07/01 13:52:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.8 2006/11/14 04:49:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1364,3 +1364,54 @@
   (:variant :imag))
 
 ); progn
+
+
+(in-package "VM")
+(export 'get-fp-operands)
+
+(defun get-fp-operation (scp)
+  (declare (type (alien (* sigcontext)) scp))
+  ;; Get the offending FP instruction from the context.  We return the
+  ;; operation associated with the FP instruction, the precision of
+  ;; the operation, and the operands of the instruction.
+  (let* ((pc (sigcontext-program-counter scp))
+	 ;; The trap seems to happen at the offending FP instruction.
+	 (opcode (sap-ref-32 pc 0))
+	 (format (ldb (byte 6 26) opcode))
+	 (ra (ldb (byte 5 16) opcode))
+	 (op (ldb (byte 5 1) opcode)))
+    #+nil
+    (progn
+      (format t "pc     = ~A~%" pc)
+      (format t "opcode = #x~8,'0x~%" opcode)
+      (format t "format = ~D~%" format)
+      (format t "ra     = ~D~%" ra)
+      (format t "op     = ~D~%" op))
+    ;; Handle only the ones we know about.
+    (unless (and (member format '(59 63))
+		 (member op '(21 18 25 20)))
+      (return-from get-fp-operation (values nil nil nil nil)))
+    (multiple-value-bind (fop rb)
+	(case op
+	  (21
+	   (values '+ (ldb (byte 5 11) opcode)))
+	  (20
+	   (values '- (ldb (byte 5 11) opcode)))
+	  (25
+	   (values '* (ldb (byte 5 6) opcode)))
+	  (18
+	   (values '/ (ldb (byte 5 11) opcode))))
+      (let ((format (case format
+		      (59 'single-float)
+		      (63 'double-float))))
+	(values fop format ra rb)))))
+
+(defun get-fp-operands (scp)
+  (declare (type (alien (* sigcontext)) scp))
+  ;; From the offending FP instruction, get the operation and
+  ;; operands, if we can.
+  (multiple-value-bind (fop format rs1 rs2)
+      (get-fp-operation scp)
+    (let ((fs1 (and fop rs1 (sigcontext-float-register scp rs1 format)))
+	  (fs2 (and fop rs2 (sigcontext-float-register scp rs2 format))))
+      (values fop (remove nil (list fs1 fs2))))))
