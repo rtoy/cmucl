@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.6 2006/01/18 15:21:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.7 2006/11/14 02:41:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,6 +278,13 @@
   (with-alien ((scp (* sigcontext) scp))
     (slot (slot scp 'sc-regs) 'fpscr)))
 
+(defun %set-sigcontext-floating-point-modes (scp new-value)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext) scp))
+    (setf (slot (slot scp 'sc-regs) 'fpscr) new-value)))
+
+(defsetf sigcontext-floating-point-modes %set-sigcontext-floating-point-modes)
+  
 
 
 ;;; EXTERN-ALIEN-NAME -- interface.

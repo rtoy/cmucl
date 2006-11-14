@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.14 2006/11/02 01:53:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.15 2006/11/14 02:41:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -120,12 +120,19 @@
 (defconstant float-round-to-positive 2)
 (defconstant float-round-to-negative 3)
 
-(defconstant float-rounding-mode (byte 2 0))	  ; RD 
+(defconstant float-rounding-mode (byte 2 0))	  ; RD
+;; Accrued exceptions.
 (defconstant float-sticky-bits (byte 5 25))
-(defconstant float-traps-byte (byte 5 3))	  ; 
-(defconstant float-exceptions-byte (byte 5 25))	  ; cexc
-
-(defconstant float-fast-bit 2)		; Non-IEEE mode
+;; Exception enable
+(defconstant float-traps-byte (byte 5 3))
+;; Current exceptions.  It seems that PPC doesn't actually have a
+;; separate field for current exceptions, so we make this the same as
+;; the (sticky) accrued exceptions.
+(defconstant float-exceptions-byte (byte 5 25))
+;; Various sticky invalid operation bits
+(defconstant float-invalid-op-1-byte (byte 6 19))
+(defconstant float-invalid-op-2-byte (byte 3 8))
+(defconstant float-fast-bit (ash 1 2))	; Non-IEEE mode
 
 ); eval-when
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.26 2005/11/09 18:26:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.27 2006/11/14 02:41:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,8 +132,6 @@
     (when precision-control-p
       (warn "Precision control only available for x86"))
     
-    ;; Temporarily disabled on darwin due to strange breakage
-    #-darwin
     (setf (floating-point-modes) modes))
     
   (values))
@@ -240,6 +238,23 @@
 		 (alien:sap-alien scp (* unix:sigcontext))))
 	 (traps (logand (ldb float-exceptions-byte modes)
 			(ldb float-traps-byte modes))))
+    #+darwin
+    (let ((new-modes modes))
+      ;; Clear out all exceptions and save them to the context.
+      ;;
+      ;; XXX: Should we just clear out the bits for the traps that are
+      ;; enabled?  If we did that then the accrued exceptions would be
+      ;; correct.
+      (setf (ldb float-sticky-bits new-modes) 0)
+      ;; Clear out the various sticky invalid operation bits too.
+      ;;
+      ;; XXX: Should we only do that if the invalid trap is enabled?
+      (setf (ldb float-invalid-op-1-byte new-modes) 0)
+      (setf (ldb float-invalid-op-2-byte new-modes) 0)
+      (setf (floating-point-modes) new-modes)
+      (setf (sigcontext-floating-point-modes
+	     (alien:sap-alien scp (* unix:sigcontext)))
+	    new-modes))
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
 	  (if (fboundp sym)
