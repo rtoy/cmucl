@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.46 2006/07/01 13:52:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.47 2006/11/16 15:37:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2914,8 +2914,9 @@
 			(ash (ldb (byte 4 1) index) 1))))))
 	(values fop format (fix-up-reg-index rs1) (fix-up-reg-index rs2))))))
 
-(defun get-fp-operands (scp)
-  (declare (type (alien (* sigcontext)) scp))
+(defun get-fp-operands (scp modes)
+  (declare (type (alien (* sigcontext)) scp)
+	   (ignore modes))
   ;; From the offending FP instruction, get the operation and
   ;; operands, if we can.
   (multiple-value-bind (fop format rs1 rs2)
