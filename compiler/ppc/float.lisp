@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.8 2006/11/14 04:49:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.9 2006/11/16 04:34:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1378,6 +1378,7 @@
 	 ;; The trap seems to happen at the offending FP instruction.
 	 (opcode (sap-ref-32 pc 0))
 	 (format (ldb (byte 6 26) opcode))
+	 (rd (ldb (byte 5 21) opcode))
 	 (ra (ldb (byte 5 16) opcode))
 	 (op (ldb (byte 5 1) opcode)))
     #+nil
@@ -1404,14 +1405,28 @@
       (let ((format (case format
 		      (59 'single-float)
 		      (63 'double-float))))
-	(values fop format ra rb)))))
+	(values fop format rd ra rb)))))
 
-(defun get-fp-operands (scp)
+(defun get-fp-operands (scp modes)
   (declare (type (alien (* sigcontext)) scp))
   ;; From the offending FP instruction, get the operation and
   ;; operands, if we can.
-  (multiple-value-bind (fop format rs1 rs2)
+  (multiple-value-bind (fop format rd rs1 rs2)
       (get-fp-operation scp)
-    (let ((fs1 (and fop rs1 (sigcontext-float-register scp rs1 format)))
+    (let ((traps (logand (ldb float-exceptions-byte modes)
+			 (ldb float-traps-byte modes)))
+	  (fs1 (and fop rs1 (sigcontext-float-register scp rs1 format)))
 	  (fs2 (and fop rs2 (sigcontext-float-register scp rs2 format))))
-      (values fop (remove nil (list fs1 fs2))))))
+      ;; Note: If destination register is the same as one of the
+      ;; source registers, the source has been overwritten with the
+      ;; result.  We can't really recover the operand, anymore
+      ;; (round-off) so, just set the value to nil.  This is an issue
+      ;; if we get an overflow or underflow.  I think for the other
+      ;; exceptions, the source is not destroyed.
+      (unless (and (zerop (logand float-overflow-trap-bit traps))
+		   (zerop (logand float-underflow-trap-bit traps)))
+	(when (= rd rs1)
+	  (setf fs1 nil))
+	(when (= rd rs2)
+	  (setf fs2 nil)))
+      (values fop (list fs1 fs2)))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.27 2006/11/14 02:41:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.28 2006/11/16 04:34:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -258,7 +258,7 @@
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
 	  (if (fboundp sym)
-	      (funcall sym (alien:sap-alien scp (* unix:sigcontext)))
+	      (funcall sym (alien:sap-alien scp (* unix:sigcontext)) modes)
 	      (values nil nil)))
       (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))
 	     (error 'division-by-zero
