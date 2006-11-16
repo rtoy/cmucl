@@ -24,12 +24,15 @@ New in this release:
   * ANSI compliance fixes:
 
   * Bugfixes:
+    - Floating-point traps are now handled on ppc.  Previously, no
+      traps were signalled and SET-FLOATING-POINT-MODES did nothing.
 
   * Trac Tickets:
 
   * Other changes:
 
   * Improvements to the PCL implementation of CLOS:
+    - Forward-referenced classes are allowed.
 
   * Changes to rebuilding procedure:
 
