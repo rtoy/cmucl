@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.11 2006/05/07 23:50:00 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.12 2006/11/30 02:56:17 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -458,6 +458,7 @@
     (inst slwi shift shift 2)
     (inst subfic res  shift (fixnumize 32))))
 
+#+nil
 (define-vop (unsigned-byte-32-count)
   (:translate logcount)
   (:note "inline (unsigned-byte 32) logcount")
@@ -481,6 +482,30 @@
       (inst bne loop)
 
       (emit-label done))))
+
+(define-vop (unsigned-byte-32-count)
+  (:translate logcount)
+  (:note "inline (unsigned-byte 32) logcount")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) mask temp)
+  (:generator 35
+      (move res arg)
+
+      (dolist (stuff '((1 #x55555555) (2 #x33333333) (4 #x0f0f0f0f)
+		       (8 #x00ff00ff) (16 #x0000ffff)))
+	(destructuring-bind (shift bit-mask)
+	    stuff
+	  ;; Set mask
+	  (inst lr mask bit-mask)
+
+	  (inst and temp res mask)
+	  (inst srwi res res shift)
+	  (inst and res res mask)
+	  (inst add res res temp)))))
 
 
 ;;;; Binary conditional VOPs:
