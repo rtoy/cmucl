@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.81 2006/10/30 01:54:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.82 2006/11/30 15:49:30 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -824,7 +824,9 @@
 	    (class-finalized-p class)
 	    (not (class-has-a-forward-referenced-superclass-p class)))
     (setf (find-class (class-name class)) class)
-    (update-cpl class (compute-class-precedence-list class))
+    (let ((*allow-forward-referenced-classes-in-cpl-p*
+	   (class-has-a-forward-referenced-superclass-p class)))
+      (update-cpl class (compute-class-precedence-list class)))
     (update-slots class (compute-slots class))
     (update-gfs-of-class class)
     (update-inits class (compute-default-initargs class))
