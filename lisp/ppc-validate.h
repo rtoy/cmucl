@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.8 2006/11/02 01:53:17 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.9 2006/11/30 02:34:24 rtoy Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -62,7 +62,7 @@
 #define BINDING_STACK_SIZE  	(0x00ff0000)
 #endif
 
-#define DEFAULT_DYNAMIC_SPACE_SIZE (0x08000000)	/* 128 MB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE (0x10000000)	/* 256 MB */
 #define DYNAMIC_0_SPACE_START	(0x40000000)
 /* This isn't used with GENCGC */
 #define DYNAMIC_1_SPACE_START	(0x60000000)
