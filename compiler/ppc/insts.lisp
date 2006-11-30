@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.20 2006/11/30 00:44:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.21 2006/11/30 03:17:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -192,11 +192,12 @@ about function addresses and register values.")
 	  ;; 32-bit address or value.  Make a note about this usage as
 	  ;; a Lisp assembly routine or a foreign routine.  If note,
 	  ;; just note the final value.
-	  (let ((addr (+ d (ldb (byte 32 0) (ash (cdr addis) 16)))))
+	  (let* ((value (+ d (ash (cdr addis) 16)))
+		 (addr (ldb (byte 32 0) value)))
 	    (or (disassem::note-code-constant-absolute addr dstate)
 		(disassem::maybe-note-assembler-routine addr t dstate)
 		(disassem::note (format nil "~A = #x~8,'0X"
-					(get-reg-name rt) addr)
+					(get-reg-name rt) value)
 				dstate)))
 	  ;; We're done with this ADDIS/ADDI instruction combination.
 	  ;; Remove ADDIS.
