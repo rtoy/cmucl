@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.15 2006/11/14 02:41:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.16 2006/12/02 15:22:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,7 +58,8 @@
 
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
-	  float-divide-by-zero-trap-bit))
+	  float-divide-by-zero-trap-bit
+	  float-invalid-op-1-byte))
 
 #+double-double
 (export '(double-double-float-digits))
@@ -129,8 +130,13 @@
 ;; separate field for current exceptions, so we make this the same as
 ;; the (sticky) accrued exceptions.
 (defconstant float-exceptions-byte (byte 5 25))
-;; Various sticky invalid operation bits
+;; Sticky invalid operation bits that indicates what kind of invalid
+;; exception occurred, like SNaN, inf - inf, inf / inf, 0/0, or an
+;; invalid compare.
 (defconstant float-invalid-op-1-byte (byte 6 19))
+;; Sticky invalid operation bits that indicates some kind of invalid
+;; operation such as some software request, invalid square root, or
+;; invalid integer convert.
 (defconstant float-invalid-op-2-byte (byte 3 8))
 (defconstant float-fast-bit (ash 1 2))	; Non-IEEE mode
 

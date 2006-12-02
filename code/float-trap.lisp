@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.28 2006/11/16 04:34:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.29 2006/12/02 15:22:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,10 +115,19 @@
 		(error "Unknown rounding mode: ~S." rounding-mode))))
     (when current-x-p
       (setf (ldb float-exceptions-byte modes)
-	    (float-trap-mask current-exceptions)))
+	    (float-trap-mask current-exceptions))
+      #+darwin
+      (when (member :invalid current-exceptions)
+ 	;; Clear out the bits for the detected invalid operation
+ 	(setf (ldb vm:float-invalid-op-1-byte modes) 0)))
+
     (when accrued-x-p
       (setf (ldb float-sticky-bits modes)
-	    (float-trap-mask accrued-exceptions)))
+	    (float-trap-mask accrued-exceptions))
+      #+darwin
+      (when (member :invalid current-exceptions)
+ 	;; Clear out the bits for the detected invalid operation
+ 	(setf (ldb vm:float-invalid-op-1-byte modes) 0)))
     (when fast-mode-p
       (if fast-mode
 	  (setq modes (logior float-fast-bit modes))
@@ -304,6 +313,15 @@
 			float-traps-byte #xffffffff))
 	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
 			     float-sticky-bits #xffffffff))
+	;; On ppc if we are masking the invalid trap, we need to make
+	;; sure we wipe out the various individual sticky bits
+	;; representing the invalid operation.  Otherwise, if we
+	;; enable the invalid trap later, these sticky bits will cause
+	;; an exception.
+	#+ppc
+	(invalid-mask (if (member :invalid traps)
+			  (dpb 0 vm:float-invalid-op-1-byte #xffffffff)
+			  #xffffffff))
 	(orig-modes (gensym)))
     `(let ((,orig-modes (floating-point-modes)))
       (unwind-protect
@@ -316,4 +334,6 @@
 	      (logior (logand ,orig-modes ,(logior traps exceptions))
 		      (logand (floating-point-modes)
 			      ,(logand trap-mask exception-mask)
+			      #+ppc
+			      ,invalid-mask
 		       #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))
