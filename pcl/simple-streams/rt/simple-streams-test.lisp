@@ -416,7 +416,7 @@
 ;;; FILE-POSITION returns the wrong value.
 
 (deftest file-position-6
-    ;; Test the file-position is write.
+    ;; Test the file-position is right.
     (with-open-file (st1 "/etc/passwd" :class 'stream:file-simple-stream)
       (with-open-file (st2 "/etc/passwd" :element-type '(unsigned-byte 8))
 	(let* ((buf1 (make-array 100 :element-type '(unsigned-byte 8)))
@@ -428,3 +428,19 @@
   (100 100 100 100)
   )
 
+;;; From Madhu, cmucl-imp, 2006-12-16
+(deftest file-position-7
+    (with-open-file (st1 "/etc/passwd" :mapped t :class 'stream:file-simple-stream)
+      (let* ((posn1 (file-position st1))
+	     (line1 (read-line st1))
+	     (posn2 (file-position st1)))
+	(list posn1 (= posn2 (1+ (length line1))))))
+  (0 t))
+
+(deftest file-position-8
+    (with-open-file (st1 "/etc/passwd" :mapped t :class 'stream:file-simple-stream)
+      (let* ((posn1 (file-position st1))
+	     (c1 (read-char st1))
+	     (posn2 (file-position st1)))
+	(list posn1 posn2)))
+  (0 1))

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.9 2004/07/11 04:34:16 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.10 2006/12/21 17:53:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -210,7 +210,7 @@
 	   (ef (sm external-format stream))
 	   (state (sm oc-state stream)))
       (flet ((input ()
-	       (when (>= buffpos (sm buffer-ptr stream))
+	       (when (>= buffpos (sm buf-len stream))
 		 (return-from read-char
                    (lisp::eof-or-lose stream eof-error-p eof-value)))
 	       (incf (sm last-char-read-size stream))
@@ -319,7 +319,7 @@
     ;; if stream is single-channel and mode == 3, flush buffer (if dirty)
     (do ((buffer (sm buffer stream))
          (buffpos (sm buffpos stream))
-         (buffer-ptr (sm buffer-ptr stream))
+         (buf-len (sm buf-len stream))
 	 (lcrs 0)
 	 (ctrl (sm control-in stream))
 	 (ef (sm external-format stream))
@@ -331,9 +331,9 @@
 	       (sm last-char-read-size stream) lcrs
 	       (sm oc-state stream) state)
 	 (values count nil))
-      (declare (type lisp::index buffpos buffer-ptr posn count))
+      (declare (type lisp::index buffpos buf-len posn count))
       (flet ((input ()
-	       (when (>= buffpos buffer-ptr)
+	       (when (>= buffpos buf-len)
                  (return (values count :eof)))
 	       (prog1 (bref buffer buffpos)
 		 (incf buffpos)

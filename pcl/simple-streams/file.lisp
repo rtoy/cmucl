@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/file.lisp,v 1.4 2003/06/26 13:27:42 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/file.lisp,v 1.5 2006/12/21 17:53:28 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -193,7 +193,7 @@
 	      (error "Unable to map file."))
 	    (setf (sm buffer stream) buffer
 		  (sm buffpos stream) 0
-		  (sm buffer-ptr stream) size
+		  (sm buffer-ptr stream) 0
 		  (sm buf-len stream) size)
 	    (when (any-stream-instance-flags stream :output)
 	      (setf (sm control-out stream) *std-control-out-table*))
