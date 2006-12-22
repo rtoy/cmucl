@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.96 2005/10/21 17:56:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.97 2006/12/22 17:39:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -878,12 +878,12 @@
 ;;; 4] funcallable structures are weird.
 ;;;
 (defun create-vector-constructor
-       (defstruct cons-name arglist vars types values) 
+       (defstruct cons-name arglist vars aux-vars types values) 
   (let ((temp (gensym))
 	(etype (dd-element-type defstruct)))
     `(defun ,cons-name ,arglist
        (declare ,@(mapcar #'(lambda (var type) `(type (and ,type ,etype) ,var))
-			  vars types))
+			  (append vars aux-vars) types))
        (let ((,temp (make-array ,(dd-length defstruct)
 				:element-type ',(dd-element-type defstruct))))
 	 ,@(mapcar #'(lambda (x)
@@ -895,7 +895,7 @@
 	 ,temp))))
 ;;;
 (defun create-list-constructor
-       (defstruct cons-name arglist vars types values) 
+       (defstruct cons-name arglist vars aux-vars types values) 
   (let ((vals (make-list (dd-length defstruct) :initial-element nil)))
     (dolist (x (find-name-indices defstruct))
       (setf (elt vals (cdr x)) `',(car x)))
@@ -904,17 +904,21 @@
 
     `(defun ,cons-name ,arglist
        (declare ,@(mapcar #'(lambda (var type) `(type ,type ,var))
-			  vars types))
+			  (append vars aux-vars) types))
        (list ,@vals))))
 ;;;
 (defun create-structure-constructor
-       (defstruct cons-name arglist vars types values)
+       (defstruct cons-name arglist vars aux-vars types values)
   (let* ((temp (gensym))
 	 (raw-index (dd-raw-index defstruct))
 	 (n-raw-data (when raw-index (gensym))))
     `(defun ,cons-name ,arglist
-       (declare ,@(mapcar #'(lambda (var type) `(type ,type ,var))
-			  vars types))
+       (declare ,@(remove nil
+			  (mapcar #'(lambda (var type)
+				      (unless (member var aux-vars)
+					`(type ,type ,var)))
+				  vars types)))
+       
        (let ((,temp (truly-the ,(dd-name defstruct)
 			       (%make-instance ,(dd-length defstruct))))
 	     ,@(when n-raw-data
@@ -929,17 +933,21 @@
 		       (multiple-value-bind
 			   (accessor index data)
 			   (slot-accessor-form defstruct dsd temp n-raw-data)
-			 `(setf (,accessor ,data ,index) ,value)))
+			 (let* ((res (dsd-type dsd))
+				(type (if res
+					  `(the ,res ,value)
+					  value)))
+			 `(setf (,accessor ,data ,index) ,type))))
 		   (dd-slots defstruct)
 		   values)
 	 ,temp))))
 ;;;
 (defun create-fin-constructor
-       (defstruct cons-name arglist vars types values) 
+       (defstruct cons-name arglist vars aux-vars types values) 
   (let ((temp (gensym)))
     `(defun ,cons-name ,arglist
        (declare ,@(mapcar #'(lambda (var type) `(type ,type ,var))
-			  vars types))
+			  (append vars aux-vars) types))
        (let ((,temp (truly-the
 		     ,(dd-name defstruct)
 		     (%make-funcallable-instance
@@ -970,7 +978,7 @@
 	(vals dum)))
     (funcall creator
 	     defstruct (dd-default-constructor defstruct)
-	     (arglist) (vals) (types) (vals))))
+	     (arglist) (vals) nil (types) (vals))))
 
 
 ;;; CREATE-BOA-CONSTRUCTOR  --  Internal
@@ -983,6 +991,7 @@
 		       (kernel:parse-lambda-list (second boa))
     (collect ((arglist)
 	      (vars)
+	      (aux-vars)
 	      (types))
       (labels ((get-slot (name)
 		 (let ((res (find name (dd-slots defstruct) :test #'string=
@@ -1050,14 +1059,19 @@
 	    (let* ((arg (if (consp arg) arg (list arg)))
 		   (var (first arg)))
 	      (arglist arg)
-	      (vars var)
+	      (aux-vars var)
 	      (types (get-slot var))))))
 
       (funcall creator defstruct (first boa)
-	       (arglist) (vars) (types)
+	       (arglist) (vars) (aux-vars) (types)
 	       (mapcar #'(lambda (slot)
-			   (or (find (dsd-name slot) (vars) :test #'string=)
-			       (dsd-default slot)))
+			   (let ((v (find (dsd-name slot) (vars) :test #'string=)))
+			     (if v
+				 v
+				 (let ((aux (find (dsd-name slot) (aux-vars) :test #'string=)))
+				   (if aux
+				       `(or ,aux ,(dsd-default slot))
+				       (dsd-default slot))))))
 		       (dd-slots defstruct))))))
 
 
