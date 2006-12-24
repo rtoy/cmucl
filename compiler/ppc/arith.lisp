@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.12 2006/11/30 02:56:17 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.13 2006/12/24 01:41:36 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -266,6 +266,21 @@
 	  ((typep y '(unsigned-byte 15))
 	   (inst andi. r x y)))))
 
+(define-vop (fast-abs/signed fast-safe-arith-op)
+  (:args (x :scs (signed-reg)))
+  (:arg-types signed-num)
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate abs)
+  (:note "inline 32-bit abs")
+  (:temporary (:scs (signed-reg)) y)
+  (:generator 1
+    ;; From Hacker's Delight
+    ;;
+    ;; abs(x) = (x ^ y) - y, where y = x >> 31 (signed shift)
+    (inst srawi y x (1- vm:word-bits))
+    (inst xor r y x)
+    (inst sub r r y)))
 
 ;;; Special case fixnum + and - that trap on overflow.  Useful when we
 ;;; don't know that the output type is a fixnum.

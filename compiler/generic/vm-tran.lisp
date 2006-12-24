@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.58 2005/01/29 22:39:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.59 2006/12/24 01:41:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,8 +29,16 @@
 (def-source-transform char-int (x)
   `(char-code ,x))
 
+#-(or sparc ppc)
 (deftransform abs ((x) (rational))
   '(if (< x 0) (- x) x))
+
+#+(or sparc ppc)
+(deftransform abs ((x) (rational))
+  (let ((x-type (continuation-type x)))
+    (if (csubtypep x-type (specifier-type '(signed-byte #.vm:word-bits)))
+	(give-up)
+	'(if (< x 0) (- x) x))))
 
 ;;; For now, the layout is stored in slot 0.
 ;;;
