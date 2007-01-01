@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.8 2005/09/15 18:26:50 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.9 2007/01/01 11:53:02 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -117,11 +117,7 @@ arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 
 static unsigned int *skipped_break_addr, displaced_after_inst, after_breakpoint;
 
-#ifdef POSIX_SIGS
 static sigset_t orig_sigmask;
-#else
-static int orig_sigmask;
-#endif
 
 unsigned int
 emulate_branch(struct sigcontext *scp, unsigned long orig_inst)
@@ -219,7 +215,6 @@ arch_do_displaced_inst(struct sigcontext *scp, unsigned long orig_inst)
     unsigned int next_inst;
     int op = orig_inst >> 26;;
 
-#ifdef POSIX_SIGS
 #if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
     orig_sigmask = context->uc_sigmask;
     FILLBLOCKSET(&context->uc_sigmask);
@@ -234,10 +229,6 @@ arch_do_displaced_inst(struct sigcontext *scp, unsigned long orig_inst)
 
 	scp->uc_sigmask = temp.__val[0];
     }
-#endif
-#else
-    orig_sigmask = scp->sc_mask;
-    scp->sc_mask = BLOCKABLE;
 #endif
 
     /* Figure out where the displaced inst is going */
@@ -313,14 +304,10 @@ sigtrap_handler(int signal, int code, struct sigcontext *scp)
 	  *(unsigned int *) scp->sc_pc = displaced_after_inst;
 	  os_flush_icache((os_vm_address_t) scp->sc_pc, sizeof(unsigned long));
 
-#ifdef POSIX_SIGS
 #if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	  scp->sc_mask = orig_sigmask;
 #else
 	  scp->sc_mask = orig_sigmask.__val[0];
-#endif
-#else
-	  scp->sc_mask = orig_sigmask;
 #endif
 	  after_breakpoint = NULL;
 	  break;

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.16 2005/09/15 18:26:52 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.17 2007/01/01 11:53:03 cshapiro Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -68,10 +68,8 @@
 
 /* Some OSes have their reasons not to use SA_SIGINFO. */
 
-#ifdef POSIX_SIGS
 #if !defined(USE_SA_SIGINFO)
 #define USE_SA_SIGINFO SA_SIGINFO
-#endif
 #endif
 
 #define OS_VM_PROT_ALL (OS_VM_PROT_READ|OS_VM_PROT_WRITE|OS_VM_PROT_EXECUTE)

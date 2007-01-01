@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.7 2005/09/15 18:26:52 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.8 2007/01/01 11:53:03 cshapiro Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -735,11 +735,7 @@ maybe_gc(HANDLER_ARGS)
 
     SAVE_CONTEXT();
 
-#ifdef POSIX_SIGS
     sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
-#else
-    sigsetmask(context->sc_mask);
-#endif
 
     already_trying = TRUE;
     did_gc = interrupt_maybe_gc(signal, code, context);

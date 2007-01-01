@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.25 2006/07/14 13:18:48 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.26 2007/01/01 11:53:03 cshapiro Rel $
  * 
  * Written by Christopher Hoover.
  */
@@ -186,11 +186,7 @@ collect_garbage(void)
     unsigned long static_space_size;
     unsigned long control_stack_size, binding_stack_size;
 
-#ifdef POSIX_SIGS
     sigset_t tmp, old;
-#else
-    int oldmask;
-#endif
 
     SAVE_CONTEXT();
 
@@ -201,13 +197,9 @@ collect_garbage(void)
     gettimeofday(&start_tv, (struct timezone *) 0);
 #endif
 
-#ifdef POSIX_SIGS
     sigemptyset(&tmp);
     FILLBLOCKSET(&tmp);
     sigprocmask(SIG_BLOCK, &tmp, &old);
-#else
-    oldmask = sigblock(BLOCKABLE);
-#endif
 
     current_static_space_free_pointer =
 	(lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER);
@@ -321,11 +313,7 @@ collect_garbage(void)
 #endif
     zero_stack();
 
-#ifdef POSIX_SIGS
     sigprocmask(SIG_SETMASK, &old, 0);
-#else
-    (void) sigsetmask(oldmask);
-#endif
 
 
 #ifdef PRINTNOISE

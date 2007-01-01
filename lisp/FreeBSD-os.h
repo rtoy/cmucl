@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.10 2006/11/07 11:24:12 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.11 2007/01/01 11:53:02 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -41,7 +41,6 @@ void os_save_context(void);
 /* I *think* this is when things became incompatible with old
    signals.  */
 #if __FreeBSD_version > 400010
-#define POSIX_SIGS
 /* If we used SA_SIGINFO in sigaction() the third argument to signal
    handlers would be a struct ucontext_t.  (The manpage for
    sigaction(2) is wrong!)  Sigcontext and ucontext_t are

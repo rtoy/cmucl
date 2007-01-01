@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.8 2005/09/15 18:26:52 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.9 2007/01/01 11:53:03 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -29,8 +29,6 @@
 #ifdef SOLARIS
 #include <ucontext.h>
 #define sigcontext ucontext
-
-#define POSIX_SIGS
 
 #endif /* SOLARIS */
 

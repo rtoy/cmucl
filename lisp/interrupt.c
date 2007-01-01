@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.45 2006/11/08 22:12:52 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.46 2007/01/01 11:53:03 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -44,11 +44,7 @@ static int pending_code = 0;
 #define DEREFCODE(code) (code)
 #endif
 
-#ifdef POSIX_SIGS
 static sigset_t pending_mask;
-#else
-static int pending_mask = 0;
-#endif
 static boolean maybe_gc_pending = FALSE;
 
 
@@ -142,15 +138,11 @@ void
 undo_fake_foreign_function_call(os_context_t * context)
 {
     /* Block all blockable signals */
-#ifdef POSIX_SIGS
     sigset_t block;
 
     sigemptyset(&block);
     FILLBLOCKSET(&block);
     sigprocmask(SIG_BLOCK, &block, 0);
-#else
-    sigblock(BLOCKABLE);
-#endif
 
     /* Going back into lisp. */
     foreign_function_call_active = 0;
@@ -180,7 +172,6 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
     if (internal_errors_enabled)
 	context_sap = alloc_sap(context);
 
-#ifdef POSIX_SIGS
 #if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
     sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
 #else
@@ -192,9 +183,6 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 	sigprocmask(SIG_SETMASK, &temp, 0);
     }
 #endif
-#else
-    sigsetmask(context->sc_mask);
-#endif /* POSIX_SIGS */
 
     if (internal_errors_enabled)
 	funcall2(SymbolFunction(INTERNAL_ERROR), context_sap,
@@ -225,17 +213,12 @@ interrupt_handle_pending(os_context_t * context)
 #endif
 	    undo_fake_foreign_function_call(context);
     }
-#ifdef POSIX_SIGS
 #if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
     context->uc_sigmask = pending_mask;
 #else
     context->uc_sigmask = pending_mask.__val[0];
 #endif
     sigemptyset(&pending_mask);
-#else
-    context->sc_mask = pending_mask;
-    pending_mask = 0;
-#endif /* POSIX_SIGS */
 
     if (pending_signal) {
 	int signal;
@@ -326,7 +309,6 @@ interrupt_handle_now(HANDLER_ARGS)
 	lispobj context_sap = alloc_sap(context);
 
 	/* Allow signals again. */
-#ifdef POSIX_SIGS
 #if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
 #else
@@ -338,9 +320,6 @@ interrupt_handle_now(HANDLER_ARGS)
 	    sigprocmask(SIG_SETMASK, &temp, 0);
 	}
 #endif
-#else
-	sigsetmask(context->sc_mask);
-#endif /* POSIX_SIGS */
 
 #if 1
 	funcall3(handler.lisp, make_fixnum(signal), make_fixnum(CODE(code)),
@@ -351,7 +330,6 @@ interrupt_handle_now(HANDLER_ARGS)
 #endif
     } else {
 	/* Allow signals again. */
-#ifdef POSIX_SIGS
 #if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
 #else
@@ -363,9 +341,6 @@ interrupt_handle_now(HANDLER_ARGS)
 	    sigprocmask(SIG_SETMASK, &temp, 0);
 	}
 #endif
-#else
-	sigsetmask(context->sc_mask);
-#endif /* POSIX_SIGS */
 
 #if ( defined( __linux__ ) && ( defined( i386 ) || defined ( __x86_64 ) ) )
 	(*handler.c) (signal, contextstruct);
@@ -390,7 +365,6 @@ maybe_now_maybe_later(HANDLER_ARGS)
     /**/ if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
 	pending_signal = signal;
 	pending_code = DEREFCODE(code);
-#ifdef POSIX_SIGS
 #if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
@@ -407,10 +381,6 @@ maybe_now_maybe_later(HANDLER_ARGS)
 	}
 #endif
 
-#else
-	pending_mask = context->sc_mask;
-	context->sc_mask |= BLOCKABLE;
-#endif /* POSIX_SIGS */
 
 	SetSymbolValue(INTERRUPT_PENDING, T);
     } else if (
@@ -420,7 +390,6 @@ maybe_now_maybe_later(HANDLER_ARGS)
 		  arch_pseudo_atomic_atomic(context)) {
 	pending_signal = signal;
 	pending_code = DEREFCODE(code);
-#ifdef POSIX_SIGS
 #if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
@@ -435,10 +404,6 @@ maybe_now_maybe_later(HANDLER_ARGS)
 	    context->uc_sigmask = temp.__val[0];
 	}
 #endif
-#else
-	pending_mask = context->sc_mask;
-	context->sc_mask |= BLOCKABLE;
-#endif /* POSIX_SIGS */
 
 	arch_set_pseudo_atomic_interrupted(context);
     } else {
@@ -512,7 +477,6 @@ interrupt_maybe_gc(HANDLER_ARGS)
 	if (arch_pseudo_atomic_atomic(context)) {
 	    maybe_gc_pending = TRUE;
 	    if (pending_signal == 0) {
-#ifdef POSIX_SIGS
 #if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 		pending_mask = context->uc_sigmask;
 		FILLBLOCKSET(&context->uc_sigmask);
@@ -528,10 +492,6 @@ interrupt_maybe_gc(HANDLER_ARGS)
 		    context->uc_sigmask = temp.__val[0];
 		}
 #endif
-#else
-		pending_mask = context->sc_mask;
-		context->sc_mask |= BLOCKABLE;
-#endif /* POSIX_SIGS */
 	    }
 	    arch_set_pseudo_atomic_interrupted(context);
 	} else {
@@ -558,7 +518,6 @@ static char altstack[SIGNAL_STACK_SIZE];
 void
 interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
 {
-#ifdef POSIX_SIGS
     struct sigaction sa;
 
     sa.sa_sigaction = handler;
@@ -592,14 +551,6 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
 
     sigaction(signal, &sa, NULL);
 
-#else /* not POSIX_SIGNALS */
-    struct sigvec sv;
-
-    sv.sv_handler = handler;
-    sv.sv_mask = BLOCKABLE;
-    sv.sv_flags = 0;
-    sigvec(signal, &sv, NULL);
-#endif /* not POSIX_SIGNALS */
 
     if (handler == (void (*)(HANDLER_ARGS)) SIG_DFL)
 	interrupt_low_level_handlers[signal] = 0;
@@ -609,7 +560,6 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
 
 unsigned long
 install_handler(int signal, void handler(HANDLER_ARGS))
-#ifdef POSIX_SIGS
 {
     struct sigaction sa;
     sigset_t old, new;
@@ -645,36 +595,6 @@ install_handler(int signal, void handler(HANDLER_ARGS))
 
     return (unsigned long) oldhandler.lisp;
 }
-#else
-{
-    struct sigvec sv;
-    int oldmask;
-    union interrupt_handler oldhandler;
-
-    oldmask = sigblock(sigmask(signal));
-
-    if (interrupt_low_level_handlers[signal] == 0) {
-	if (handler == (void (*)(HANDLER_ARGS)) SIG_DFL
-	    || handler == (void (*)(HANDLER_ARGS)) SIG_IGN)
-	    sv.sv_handler = handler;
-	else if (sigmask(signal) & BLOCKABLE)
-	    sv.sv_handler = maybe_now_maybe_later;
-	else
-	    sv.sv_handler = interrupt_handle_now_handler;
-
-	sv.sv_mask = BLOCKABLE;
-	sv.sv_flags = 0;
-	sigvec(signal, &sv, NULL);
-    }
-
-    oldhandler = interrupt_handlers[signal];
-    interrupt_handlers[signal].c = handler;
-
-    sigsetmask(oldmask);
-
-    return (unsigned long) oldhandler.lisp;
-}
-#endif
 
 #ifdef FEATURE_HEAP_OVERFLOW_CHECK
 void

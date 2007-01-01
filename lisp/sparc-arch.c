@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.27 2005/09/15 18:26:52 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.28 2007/01/01 11:53:03 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -123,11 +123,7 @@ arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 
 static unsigned int *skipped_break_addr, displaced_after_inst;
 
-#ifdef POSIX_SIGS
 static sigset_t orig_sigmask;
-#else
-static int orig_sigmask;
-#endif
 
 void
 arch_do_displaced_inst(struct sigcontext *scp, unsigned long orig_inst)
@@ -135,14 +131,9 @@ arch_do_displaced_inst(struct sigcontext *scp, unsigned long orig_inst)
     unsigned int *pc = (unsigned int *) SC_PC(scp);
     unsigned int *npc = (unsigned int *) SC_NPC(scp);
 
-#ifdef POSIX_SIGS
     orig_sigmask = scp->uc_sigmask;
     sigemptyset(&scp->uc_sigmask);
     FILLBLOCKSET(&scp->uc_sigmask);
-#else
-    orig_sigmask = scp->sc_mask;
-    scp->sc_mask = BLOCKABLE;
-#endif
 
     *pc = orig_inst;
     os_flush_icache((os_vm_address_t) pc, sizeof(unsigned int));
@@ -436,7 +427,6 @@ sigill_handler(HANDLER_ARGS)
 {
     SAVE_CONTEXT();
 
-#ifdef POSIX_SIGS
     /*
      * Do we really want to have the same signals as in the context?
      * This would typically enable all signals, I think.  But there
@@ -452,9 +442,6 @@ sigill_handler(HANDLER_ARGS)
      */
 #if 0
     sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
-#endif
-#else
-    sigsetmask(context->sc_mask);
 #endif
 
     if (CODE(code) == ILLTRAP_INST) {
@@ -499,11 +486,7 @@ sigill_handler(HANDLER_ARGS)
 	      *skipped_break_addr = trap_Breakpoint;
 	      skipped_break_addr = NULL;
 	      *(unsigned long *) SC_PC(context) = displaced_after_inst;
-#ifdef POSIX_SIGS
 	      context->uc_sigmask = orig_sigmask;
-#else
-	      context->sc_mask = orig_sigmask;
-#endif
 	      os_flush_icache((os_vm_address_t) SC_PC(context),
 
 			      sizeof(unsigned long));

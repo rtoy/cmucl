@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.19 2006/11/07 11:24:12 cshapiro Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.20 2007/01/01 11:53:02 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -59,8 +59,6 @@ typedef struct sigcontext sigcontext;
 typedef struct sigcontext_struct sigcontext;
 #endif
 
-#define POSIX_SIGS
-
 /* Don't want the SIGINFO flag on linux as it causes the creation
    of real-time interrupt frames.
 */
@@ -83,13 +81,6 @@ typedef struct sigcontext_struct sigcontext;
 #include <fpu_control.h>
 #define setfpucw(cw) {fpu_control_t cw_tmp=cw;_FPU_SETCW(cw_tmp);} 
 
-#define sigvec          sigaction
-#define sv_mask         sa_mask
-#define sv_flags        sa_flags
-#define sv_handler      sa_handler
-#if (__GNU_LIBRARY__ < 6)
-#define sv_onstack      sa_mask	/* ouch, this one really hurts */
-#endif
 #define uc_sigmask 	oldmask
 #if defined (__x86_64)
 #define sc_pc		rip

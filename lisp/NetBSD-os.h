@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.h,v 1.5 2006/11/07 11:24:12 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.h,v 1.6 2007/01/01 11:53:02 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -29,7 +29,6 @@ typedef int os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
-#define POSIX_SIGS
 #define HANDLER_ARGS int signal, siginfo_t *code, ucontext_t *context
 #define CODE(code)  ((code) ? code->si_code : 0)
 #define os_context_t ucontext_t

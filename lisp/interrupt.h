@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.10 2005/09/15 18:26:51 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.11 2007/01/01 11:53:03 cshapiro Rel $ */
 
 #ifndef _INTERRUPT_H_
 #define _INTERRUPT_H_
@@ -42,7 +42,6 @@ extern union interrupt_handler interrupt_handlers[NSIG];
 		   sigmask(SIGPROF) | sigmask(SIGWINCH) | \
 		   sigmask(SIGUSR1) | sigmask(SIGUSR2))
 #else
-#ifdef POSIX_SIGS
 #define FILLBLOCKSET(s) (sigaddset(s,SIGHUP), sigaddset(s,SIGINT), \
 		   sigaddset(s,SIGQUIT), sigaddset(s,SIGPIPE), \
 		   sigaddset(s,SIGALRM), sigaddset(s,SIGURG), \
@@ -51,16 +50,6 @@ extern union interrupt_handler interrupt_handlers[NSIG];
                    sigaddset(s,SIGXFSZ), sigaddset(s,SIGVTALRM), \
 		   sigaddset(s,SIGPROF), sigaddset(s,SIGWINCH), \
 		   sigaddset(s,SIGUSR1), sigaddset(s,SIGUSR2))
-#else
-#define BLOCKABLE (sigmask(SIGHUP) | sigmask(SIGINT) | \
-		   sigmask(SIGQUIT) | sigmask(SIGPIPE) | \
-		   sigmask(SIGALRM) | sigmask(SIGURG) | \
-		   sigmask(SIGTSTP) | sigmask(SIGCHLD) | \
-		   sigmask(SIGIO) | sigmask(SIGXCPU) | \
-                   sigmask(SIGXFSZ) | sigmask(SIGVTALRM) | \
-		   sigmask(SIGPROF) | sigmask(SIGWINCH) | \
-		   sigmask(SIGUSR1) | sigmask(SIGUSR2))
-#endif
 #endif
 
 #endif /* _INTERRUPT_H_ */

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.h,v 1.3 2005/09/15 18:26:50 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.h,v 1.4 2007/01/01 11:53:02 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -31,7 +31,6 @@ typedef int os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
-#define POSIX_SIGS
 #define HANDLER_ARGS int signal, siginfo_t *code, os_context_t *context
 #define CODE(code)  ((code) ? code->si_code : 0)
 #define HANDLER_GET_CONTEXT
