@@ -22,10 +22,13 @@ New in this release:
   * Feature enhancements:
 
   * ANSI compliance fixes:
+    - BOA constructors with &AUX variables are handled better now.
 
   * Bugfixes:
     - Floating-point traps are now handled on ppc.  Previously, no
       traps were signalled and SET-FLOATING-POINT-MODES did nothing.
+    - FILE-POSITION no longer returns negative values for mapped
+      file-simple-stream's.
 
   * Trac Tickets:
 
