@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.41 2007/01/11 22:11:08 fgilham Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.42 2007/01/13 01:16:30 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -670,7 +670,7 @@
   (let ((fill-pointer (fill-pointer array)))
     (declare (fixnum fill-pointer))
     (when (= fill-pointer (%array-available-elements array))
-      (setf array (adjust-array array (+ fill-pointer extension))))
+      (adjust-array array (+ fill-pointer extension)))
     (setf (aref array fill-pointer) new-el)
     (setf (%array-fill-pointer array) (1+ fill-pointer))
     fill-pointer))
