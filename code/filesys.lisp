@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.100 2006/03/14 15:19:10 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.101 2007/01/16 17:28:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,7 @@
 ;;; search-list := [^:/]*:
 ;;; file := [^/]*
 ;;; type := "." [^/.]*
-;;; version := ".*" | ".~" ([0-9]+ | "*") "~"
+;;; version := ".*" | ".~" ([1-9]+[0-9]* | "*") "~"
 ;;;
 ;;; Note: this grammar is ambiguous.  The string foo.bar.~5~ can be parsed
 ;;; as either just the file specified or as specifying the file, type, and
@@ -204,9 +204,10 @@
 	       (t
 		;; Look for a version number.  Start at the end, just
 		;; before the ~ and keep looking for digits.  If the
-		;; first non-digit is ~, we have a version number, so
-		;; get it.  If not, we didn't find a version number,
-		;; so we call it :newest
+		;; first non-digit is ~, and the leading character is
+		;; a non-zero digit, we have a version number, so get
+		;; it.  If not, we didn't find a version number, so we
+		;; call it :newest
 		(do ((i (- end 2) (1- i)))
 		    ((< i (+ start 1))
 		     ;;(format t "case 3: ~A ~A~%" :newest end)
@@ -214,9 +215,11 @@
 		  (let ((char (schar namestr i)))
 		    (when (eql char #\~)
 		      (return (if (char= (schar namestr (1- i)) #\.)
-				  (values (parse-integer namestr :start (1+ i)
-							 :end (1- end))
-					  (1- i))
+				  (if (char= (schar namestr (1+ i)) #\0)
+				      (values nil end)
+				      (values (parse-integer namestr :start (1+ i)
+							     :end (1- end))
+					      (1- i)))
 				  (values :newest end))))
 		    (unless (char<= #\0 char #\9)
 		      ;; It's not a digit.  Give up, and say the
