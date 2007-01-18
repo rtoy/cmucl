@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.33 2006/08/21 16:39:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.34 2007/01/18 15:35:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,15 +84,17 @@
 #+double-double
 (defun double-double-from-bits (sign exp sig)
   (declare (type bit sign) (type (unsigned-byte #.vm:double-double-float-digits) sig)
-	   (type (unsigned-byte 11) exp))
+	   (type (unsigned-byte 11) exp)
+	   (ignore exp))
   (let ((lo (ldb (byte vm:double-float-digits 0) sig))
-	(hi (ldb (byte vm:double-float-digits vm:double-float-digits) sig)))
+	(hi (ldb (byte vm:double-float-digits vm:double-float-digits) sig))
+	(fsign (- 1 (* 2 sign))))
     ;; We can't return a double-double because exp might be very
     ;; small, and the low part of the double-double would get scaled
     ;; to 0.  So we return both parts and expect the caller to figure
     ;; out what to do.
-    (values (scale-float (float (* hi (- 1 (* 2 sign))) 1d0) #.(- vm:double-float-digits))
-	    (scale-float (float lo 1d0) #.(- vm:double-float-digits)))))
+    (values (scale-float (* fsign (float hi 1d0)) #.(- vm:double-float-digits))
+	    (scale-float (* fsign (float lo 1d0)) #.(- vm:double-float-digits)))))
 ;;;
 #+(and long-float x86)
 (defun long-from-bits (sign exp sig)
@@ -1012,10 +1014,11 @@
 			  (assert (= len (the fixnum (1+ digits))))
 			  (multiple-value-bind (f0 f1)
 			      (floatit (ash bits -1))
-			    #||
-			    (format t "1: f0, f1 = ~A ~A~%" f0 f1)
-			    (format t "   scale = ~A~%" (1+ scale))
-			    ||#
+			    #+nil
+			    (progn
+			      (format t "1: f0, f1 = ~A ~A~%" f0 f1)
+			      (format t "   scale = ~A~%" (1+ scale)))
+			    
 			    (if f1
 				(%make-double-double-float
 				 (scale-float f0 (1+ scale))
@@ -1024,13 +1027,15 @@
 			 (t
 			  (multiple-value-bind (f0 f1)
 			      (floatit bits)
-			    #||
-			    (format t "2: f0, f1 = ~A ~A~%" f0 f1)
-			    (format t "   scale = ~A~%" scale)
-			    (format t "scale-float f0 = ~A~%" (scale-float f0 scale))
-			    (when f1
-			      (format t "scale-float f1 = ~A~%" (scale-float f1 (- scale 53))))
-			    ||#
+			    #+nil
+			    (progn
+			      (format t "2: f0, f1 = ~A ~A~%" f0 f1)
+			      (format t "   scale = ~A~%" scale)
+			      (format t "scale-float f0 = ~A~%" (scale-float f0 scale))
+			      (when f1
+				(format t "scale-float f1 = ~A~%"
+					(scale-float f1 (- scale 53)))))
+			    
 			    (if f1
 				(make-double-double-float
 				 (scale-float f0 scale)
