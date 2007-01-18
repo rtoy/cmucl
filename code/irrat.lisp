@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.50 2006/07/19 14:58:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.51 2007/01/18 16:16:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -476,21 +476,119 @@
 	     (* base power)
 	     (exp (* power (log base)))))))))
 
-;; Compute the base 2 log of an integer
+;; Log base 2 of a real number.  The result is a double-precision
+;; number (real or complex, as appropriate)
 (defun log2 (x)
-  ;; Write x = 2^n*f where 1/2 < f <= 1.  Then log2(x) = n + log2(f).
-  ;;
-  ;; So we grab the top few bits of x and scale that appropriately,
-  ;; take the log of it and add it to n.
-  (let ((n (integer-length x)))
-    (if (< n vm:double-float-digits)
-	(log (coerce x 'double-float) 2d0)
-	(let ((exp (min vm:double-float-digits n))
-	      (f (ldb (byte vm:double-float-digits
-			    (max 0 (- n vm:double-float-digits)))
-		      x)))
-	  (+ n (log (scale-float (float f 1d0) (- exp))
-		    2d0))))))
+  (labels ((log2-bignum (bignum)
+	     ;; Write x = 2^n*f where 1/2 < f <= 1.  Then log2(x) = n
+	     ;; + log2(f).
+	     ;;
+	     ;; So we grab the top few bits of x and scale that
+	     ;; appropriately, take the log of it and add it to n.
+	     ;;
+	     ;; Return n and log2(f) separately.
+	     (if (minusp bignum)
+		 (multiple-value-bind (n frac)
+		     (log2-bignum (abs bignum))
+		   (values n (complex frac #.(/ pi (log 2d0)))))
+		 (let ((n (integer-length bignum)))
+		   (if (< n vm:double-float-digits)
+		       (values 0 (log (coerce bignum 'double-float) 2d0))
+		       (let ((exp (min vm:double-float-digits n))
+			     (f (ldb (byte vm:double-float-digits
+					   (max 0 (- n vm:double-float-digits)))
+				     bignum)))
+			 (values n (log (scale-float (float f 1d0) (- exp))
+					2d0))))))))
+    (etypecase x
+      (float
+       (/ (log (float x 1d0)) #.(log 2d0)))
+      (ratio
+       (let ((top (numerator x))
+	     (bot (denominator x)))
+	 ;; If the number of bits in the numerator and
+	 ;; denominator are different, just use the fact
+	 ;; log(x/y) = log(x) - log(y).  But to preserve
+	 ;; accuracy, we actually do
+	 ;; (log2(x)-log2(y))/log2(e)).
+	 ;;
+	 ;; However, if the numerator and denominator have the
+	 ;; same number of bits, implying the quotient is near
+	 ;; one, we use log1p(x) = log(1+x). Since the number is
+	 ;; rational, we don't lose precision subtracting 1 from
+	 ;; it, and converting it to double-float is accurate.
+	 (if (= (integer-length top)
+		(integer-length bot))
+	     (/ (%log1p (coerce (- x 1) 'double-float))
+		#.(log 2d0))
+	     (multiple-value-bind (top-n top-frac)
+		 (log2-bignum top)
+	       (multiple-value-bind (bot-n bot-frac)
+		   (log2-bignum bot)
+		 (+ (- top-n bot-n)
+		    (- top-frac bot-frac)))))))
+      (integer
+       (multiple-value-bind (n frac)
+	   (log2-bignum x)
+	 (+ n frac))))))
+
+;; Same as above, except we return double-double-float.
+;;
+;; FIXME:  Can this be merged with the above?  OAOO.
+#+double-double
+(defun log2-dd (x)
+  (labels ((log2-bignum (bignum)
+	     ;; Write x = 2^n*f where 1/2 < f <= 1.  Then log2(x) = n
+	     ;; + log2(f).
+	     ;;
+	     ;; So we grab the top few bits of x and scale that
+	     ;; appropriately, take the log of it and add it to n.
+	     ;;
+	     ;; Return n and log2(f) separately.
+	     (if (minusp bignum)
+		 (multiple-value-bind (n frac)
+		     (log2-bignum (abs bignum))
+		   (values n (complex frac #.(/ dd-pi (log 2w0)))))
+		 (let ((n (integer-length bignum)))
+		   (if (< n vm:double-double-float-digits)
+		       (values 0 (log (coerce bignum 'double-double-float) 2w0))
+		       (let ((exp (min vm:double-double-float-digits n))
+			     (f (ldb (byte vm:double-double-float-digits
+					   (max 0 (- n vm:double-double-float-digits)))
+				     bignum)))
+			 (values n (log (scale-float (float f 1w0) (- exp))
+					2w0))))))))
+    (etypecase x
+      (float
+       (/ (log (float x 1w0)) #.(log 2w0)))
+      (ratio
+       (let ((top (numerator x))
+	     (bot (denominator x)))
+	 ;; If the number of bits in the numerator and
+	 ;; denominator are different, just use the fact
+	 ;; log(x/y) = log(x) - log(y).  But to preserve
+	 ;; accuracy, we actually do
+	 ;; (log2(x)-log2(y))/log2(e)).
+	 ;;
+	 ;; However, if the numerator and denominator have the
+	 ;; same number of bits, implying the quotient is near
+	 ;; one, we use log1p(x) = log(1+x). Since the number is
+	 ;; rational, we don't lose precision subtracting 1 from
+	 ;; it, and converting it to double-float is accurate.
+	 (if (= (integer-length top)
+		(integer-length bot))
+	     (/ (dd-%log1p (float (- x 1) 1w0))
+		#.(log 2w0))
+	     (multiple-value-bind (top-n top-frac)
+		 (log2-bignum top)
+	       (multiple-value-bind (bot-n bot-frac)
+		   (log2-bignum bot)
+		 (+ (- top-n bot-n)
+		    (- top-frac bot-frac)))))))
+      (integer
+       (multiple-value-bind (n frac)
+	   (log2-bignum x)
+	 (+ n frac))))))
 
 (defun log (number &optional (base nil base-p))
   "Return the logarithm of NUMBER in the base BASE, which defaults to e."
@@ -498,12 +596,6 @@
       (cond ((zerop base)
 	     ;; ANSI spec
 	     base)
-	    ((and (integerp number) (integerp base)
-		  (plusp number) (plusp base))
-	     ;; Let's try to do something nice when both the number
-	     ;; and the base are positive integers.  Use the rule that
-	     ;; log_b(x) = log_2(x)/log_2(b)
-	     (coerce (/ (log2 number) (log2 base)) 'single-float))
 	    ((and (realp number) (realp base))
 	     ;; CLHS 12.1.4.1 says
 	     ;;
@@ -518,21 +610,48 @@
 	     ;; This makes (log 17 10.0) = (log 17.0 10) and so on.
 	     (number-dispatch ((number real) (base real))
 	       ((double-float
-		 (foreach double-float single-float fixnum bignum ratio))
-		(/ (log number) (log (coerce base 'double-float))))
-	       (((foreach single-float fixnum bignum ratio)
+		 (foreach double-float single-float))
+		(/ (log2 number) (log2 base)))
+	       (((foreach fixnum bignum ratio)
+		 (foreach fixnum bignum ratio single-float))
+		(let* ((result (/ (log2 number) (log2 base))))
+		  ;; Figure out the right result type
+		  (if (realp result)
+		      (coerce result 'single-float)
+		      (coerce result '(complex single-float)))))
+	       (((foreach fixnum bignum ratio)
 		 double-float)
+		(/ (log2 number) (log2 base)))
+	       ((single-float
+		 (foreach fixnum bignum ratio))
+		(let* ((result (/ (log2 number) (log2 base))))
+		  ;; Figure out the right result type
+		  (if (realp result)
+		      (coerce result 'single-float)
+		      (coerce result '(complex single-float)))))
+	       ((double-float
+		 (foreach fixnum bignum ratio))
+		(/ (log2 number) (log2 base)))
+	       ((single-float double-float)
 		(/ (log (coerce number 'double-float)) (log base)))
 	       #+double-double
 	       ((double-double-float
-		 (foreach double-double-float double-float single-float fixnum bignum ratio))
+		 (foreach fixnum bignum ratio))
+		(/ (log2-dd number) (log2-dd base)))
+	       #+double-double
+	       ((double-double-float
+		 (foreach double-double-float double-float single-float))
 		(/ (log number) (log (coerce base 'double-double-float))))
 	       #+double-double
-	       (((foreach double-float single-float fixnum bignum ratio)
+	       (((foreach fixnum bignum ratio)
+		 double-double-float)
+		(/ (log2-dd number) (log2-dd base)))
+	       #+double-double
+	       (((foreach double-float single-float)
 		 double-double-float)
 		(/ (log (coerce number 'double-double-float)) (log base)))
-	       (((foreach single-float fixnum bignum ratio)
-		 (foreach single-float fixnum bignum ratio))
+	       (((foreach single-float)
+		 (foreach single-float))
 		;; Converting everything to double-float helps the
 		;; cases like (log 17 10) = (/ (log 17) (log 10)).
 		;; This is usually handled above, but if we compute (/
