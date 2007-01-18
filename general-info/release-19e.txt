@@ -29,8 +29,15 @@ New in this release:
       traps were signalled and SET-FLOATING-POINT-MODES did nothing.
     - FILE-POSITION no longer returns negative values for mapped
       file-simple-stream's.
-
+    - Potential Version numbers that start with a leading 0 are not
+      treated as version numbers.  Hence, "foo.~1~" has name "foo",
+      type nil, and version 1, but "foo.~01~" has type "~01~" and
+      version :NEWEST.
+    - Converting negative rationals to double-double-float's doesn't
+      produce wrong answers anymore.
   * Trac Tickets:
+    - #8 fixed so logs of bignums and ratios that won't fit into a
+      float can be computed, instead of signalling an error.
 
   * Other changes:
 
