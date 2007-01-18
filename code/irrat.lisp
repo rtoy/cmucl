@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.51 2007/01/18 16:16:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.52 2007/01/18 17:36:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -476,68 +476,36 @@
 	     (* base power)
 	     (exp (* power (log base)))))))))
 
-;; Log base 2 of a real number.  The result is a double-precision
-;; number (real or complex, as appropriate)
-(defun log2 (x)
-  (labels ((log2-bignum (bignum)
-	     ;; Write x = 2^n*f where 1/2 < f <= 1.  Then log2(x) = n
-	     ;; + log2(f).
-	     ;;
-	     ;; So we grab the top few bits of x and scale that
-	     ;; appropriately, take the log of it and add it to n.
-	     ;;
-	     ;; Return n and log2(f) separately.
-	     (if (minusp bignum)
-		 (multiple-value-bind (n frac)
-		     (log2-bignum (abs bignum))
-		   (values n (complex frac #.(/ pi (log 2d0)))))
-		 (let ((n (integer-length bignum)))
-		   (if (< n vm:double-float-digits)
-		       (values 0 (log (coerce bignum 'double-float) 2d0))
-		       (let ((exp (min vm:double-float-digits n))
-			     (f (ldb (byte vm:double-float-digits
-					   (max 0 (- n vm:double-float-digits)))
-				     bignum)))
-			 (values n (log (scale-float (float f 1d0) (- exp))
-					2d0))))))))
-    (etypecase x
-      (float
-       (/ (log (float x 1d0)) #.(log 2d0)))
-      (ratio
-       (let ((top (numerator x))
-	     (bot (denominator x)))
-	 ;; If the number of bits in the numerator and
-	 ;; denominator are different, just use the fact
-	 ;; log(x/y) = log(x) - log(y).  But to preserve
-	 ;; accuracy, we actually do
-	 ;; (log2(x)-log2(y))/log2(e)).
-	 ;;
-	 ;; However, if the numerator and denominator have the
-	 ;; same number of bits, implying the quotient is near
-	 ;; one, we use log1p(x) = log(1+x). Since the number is
-	 ;; rational, we don't lose precision subtracting 1 from
-	 ;; it, and converting it to double-float is accurate.
-	 (if (= (integer-length top)
-		(integer-length bot))
-	     (/ (%log1p (coerce (- x 1) 'double-float))
+;; Log base 2 of a real number.  The result is a either a double-float
+;; or double-double-float number (real or complex, as appropriate),
+;; depending on the type of FLOAT-TYPE.
+(defun log2 (x &optional (float-type 1d0))
+  (labels ((log-of-2 (f)
+	     ;; log(2), with the precision specified by the type of F
+	     (number-dispatch ((f real))
+	       ((double-float)
 		#.(log 2d0))
-	     (multiple-value-bind (top-n top-frac)
-		 (log2-bignum top)
-	       (multiple-value-bind (bot-n bot-frac)
-		   (log2-bignum bot)
-		 (+ (- top-n bot-n)
-		    (- top-frac bot-frac)))))))
-      (integer
-       (multiple-value-bind (n frac)
-	   (log2-bignum x)
-	 (+ n frac))))))
-
-;; Same as above, except we return double-double-float.
-;;
-;; FIXME:  Can this be merged with the above?  OAOO.
-#+double-double
-(defun log2-dd (x)
-  (labels ((log2-bignum (bignum)
+	       #+double-double
+	       ((double-double-float)
+		#.(log 2w0))))
+	   (log-2-pi (f)
+	     ;; log(pi), with the precision specified by the type of F
+	     (number-dispatch ((f real))
+	       ((double-float)
+		#.(/ pi (log 2d0)))
+	       #+double-double
+	       ((double-double-float)
+		#.(/ dd-pi (log 2w0)))))
+	   (log1p (x)
+	     ;; log(1+x), with the precision specified by the type of
+	     ;; X
+	     (number-dispatch ((x real))
+	       (((foreach single-float double-float))
+		(%log1p (float x 1d0)))
+	       #+double-double
+	       ((double-double-float)
+		(dd-%log1p x))))
+	   (log2-bignum (bignum)
 	     ;; Write x = 2^n*f where 1/2 < f <= 1.  Then log2(x) = n
 	     ;; + log2(f).
 	     ;;
@@ -548,19 +516,21 @@
 	     (if (minusp bignum)
 		 (multiple-value-bind (n frac)
 		     (log2-bignum (abs bignum))
-		   (values n (complex frac #.(/ dd-pi (log 2w0)))))
-		 (let ((n (integer-length bignum)))
-		   (if (< n vm:double-double-float-digits)
-		       (values 0 (log (coerce bignum 'double-double-float) 2w0))
-		       (let ((exp (min vm:double-double-float-digits n))
-			     (f (ldb (byte vm:double-double-float-digits
-					   (max 0 (- n vm:double-double-float-digits)))
+		   (values n (complex frac (log-2-pi float-type))))
+		 (let ((n (integer-length bignum))
+		       (float-bits (float-digits float-type)))
+		   (if (< n float-bits)
+		       (values 0 (log (float bignum float-type)
+				      (float 2 float-type)))
+		       (let ((exp (min float-bits n))
+			     (f (ldb (byte float-bits
+					   (max 0 (- n float-bits)))
 				     bignum)))
-			 (values n (log (scale-float (float f 1w0) (- exp))
-					2w0))))))))
+			 (values n (log (scale-float (float f float-type) (- exp))
+					(float 2 float-type)))))))))
     (etypecase x
       (float
-       (/ (log (float x 1w0)) #.(log 2w0)))
+       (/ (log (float x float-type)) (log-of-2 float-type)))
       (ratio
        (let ((top (numerator x))
 	     (bot (denominator x)))
@@ -577,8 +547,8 @@
 	 ;; it, and converting it to double-float is accurate.
 	 (if (= (integer-length top)
 		(integer-length bot))
-	     (/ (dd-%log1p (float (- x 1) 1w0))
-		#.(log 2w0))
+	     (/ (log1p (float (- x 1) float-type))
+		(log-of-2 float-type))
 	     (multiple-value-bind (top-n top-frac)
 		 (log2-bignum top)
 	       (multiple-value-bind (bot-n bot-frac)
@@ -637,7 +607,7 @@
 	       #+double-double
 	       ((double-double-float
 		 (foreach fixnum bignum ratio))
-		(/ (log2-dd number) (log2-dd base)))
+		(/ (log2 number 1w0) (log2 base 1w0)))
 	       #+double-double
 	       ((double-double-float
 		 (foreach double-double-float double-float single-float))
@@ -645,7 +615,7 @@
 	       #+double-double
 	       (((foreach fixnum bignum ratio)
 		 double-double-float)
-		(/ (log2-dd number) (log2-dd base)))
+		(/ (log2 number 1w0) (log2 base 1w0)))
 	       #+double-double
 	       (((foreach double-float single-float)
 		 double-double-float)
