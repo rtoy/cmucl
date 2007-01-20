@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.101 2007/01/16 17:28:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.102 2007/01/20 02:01:48 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1353,6 +1353,37 @@ optionally keeping some of the most recent old versions."
 
 ;;; Default-Directory  --  Public
 ;;;
+#||
+(defun default-directory ()
+  "Returns the pathname for the default directory.  This is the place where
+  a file will be written if no directory is specified.  This may be changed
+  with setf."
+  (multiple-value-bind (gr dir-or-error)
+                       (unix:unix-current-directory)
+    (if gr
+        (let ((*ignore-wildcards* t))
+          (values
+           (parse-namestring (concatenate 'simple-string dir-or-error "/")
+                             *unix-host*)))
+        (error dir-or-error))))
+||#
+;;;
+;;; XXXX This code was modified by me (fmg) to avoid calling
+;;; concatenate.  The reason for this is that there have been
+;;; intermittent instabilities (segv on startup) when the function
+;;; environment-init (in save.lisp) is called.  Apparently the type
+;;; system is not completely sorted out at the time this function is
+;;; first called.  As a result, strange, not completely reproducable
+;;; things happen, related to something in the state of the
+;;; environment (e.g. the paths or the user environment variables or
+;;; something).  These errors occur in the course of calling
+;;; default-directory and the backtrace indicates they occur in the
+;;; context of the type system.  Since I haven't been able to figure
+;;; out why they happen, I decided to punt.
+;;;
+;;; Hopefully someone will really fix the problem someday.
+;;;
+
 (defun default-directory ()
   "Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
@@ -1360,11 +1391,14 @@ optionally keeping some of the most recent old versions."
   (multiple-value-bind (gr dir-or-error)
 		       (unix:unix-current-directory)
     (if gr
-	(let ((*ignore-wildcards* t))
+	(let ((*ignore-wildcards* t)
+	      (string (make-string (1+ (length dir-or-error)) :initial-element #\/)))
 	  (values
-	   (parse-namestring (concatenate 'simple-string dir-or-error "/")
-			     *unix-host*)))
+	   (parse-namestring (replace string dir-or-error) *unix-host*)))
 	(error dir-or-error))))
+
+
+
 
 ;;; %Set-Default-Directory  --  Internal
 ;;; 
