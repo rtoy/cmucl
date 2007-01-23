@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.61 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.62 2007/01/23 16:21:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,58 +168,7 @@
 
 ;;;; Binary operation dispatching utilities:
 
-;; These are helper functions to get two-arg arithmetic working.
-#+double-double
-(progn
-(defun dd-+ (a b)
-  (multiple-value-bind (x y)
-      (c::add-dd (kernel:double-double-hi a)
-		 (kernel:double-double-lo a)
-		 (kernel:double-double-hi b)
-		 (kernel:double-double-lo b))
-    (make-double-double-float x y)))
-
-(defun dd-- (a b)
-  (multiple-value-bind (x y)
-      (c::sub-dd (kernel:double-double-hi a)
-		 (kernel:double-double-lo a)
-		 (kernel:double-double-hi b)
-		 (kernel:double-double-lo b))
-    (make-double-double-float x y)))
-
-(defun dd-* (a b)
-  (multiple-value-bind (x y)
-      (c::mul-dd (kernel:double-double-hi a)
-		 (kernel:double-double-lo a)
-		 (kernel:double-double-hi b)
-		 (kernel:double-double-lo b))
-    (make-double-double-float x y)))
-  
-(defun dd-/ (a b)
-  (multiple-value-bind (x y)
-      (c::div-dd (kernel:double-double-hi a)
-		 (kernel:double-double-lo a)
-		 (kernel:double-double-hi b)
-		 (kernel:double-double-lo b))
-    (make-double-double-float x y)))
-)
-
-
 (eval-when (compile eval)
-
-#+double-double
-(defun dd-contagion (op)  
-  (case op
-    (+ 'dd-+)
-    (- 'dd--)
-    (* 'dd-*)
-    (/ 'dd-/)
-    (otherwise op)))
-
-#+double-double
-(defun dd-contagion (op)  
-  op)
-
 
 ;;; FLOAT-CONTAGION  --  Internal
 ;;;
@@ -243,10 +192,10 @@
      (,op ,x (coerce ,y 'long-float)))
     #+double-double
     (((foreach single-float double-float double-double-float) double-double-float)
-     (,(dd-contagion op) (coerce ,x 'double-double-float) ,y))
+     (,op (coerce ,x 'double-double-float) ,y))
     #+double-double
     ((double-double-float (foreach single-float double-float))
-     (,(dd-contagion op) ,x (coerce ,y 'double-double-float)))
+     (,op ,x (coerce ,y 'double-double-float)))
     (((foreach single-float double-float) double-float)
      (,op (coerce ,x 'double-float) ,y))
     ((double-float single-float)
@@ -1010,42 +959,8 @@
      (declare (list nlist))
      (if (< (car nlist) result) (setq result (car nlist)))))
 
-;; These are helper functions to get two-arg comparison working
-#+double-double
-(progn
-(defun dd-< (a b)
-  (c::dd< (kernel:double-double-hi a)
-	       (kernel:double-double-lo a)
-	       (kernel:double-double-hi b)
-	       (kernel:double-double-lo b)))
-(defun dd-> (a b)
-  (c::dd> (kernel:double-double-hi a)
-	       (kernel:double-double-lo a)
-	       (kernel:double-double-hi b)
-	       (kernel:double-double-lo b)))
-(defun dd-= (a b)
-  (c::dd= (kernel:double-double-hi a)
-	       (kernel:double-double-lo a)
-	       (kernel:double-double-hi b)
-	       (kernel:double-double-lo b)))
-)
-
 (eval-when (compile eval)
 
-;; This is a hack to get two-arg comparison functions going.  Convert
-;; the op to equivalent dd op.  Once the deftransforms are in place,
-;; these should go away.
-#+nil
-(defun dd-op (op)
-  (case op
-    (< 'dd-<)
-    (> 'dd->)
-    (= 'dd-=)
-    (otherwise op)))
-
-(defun dd-op (op)
-  op)
-  
 (defun basic-compare (op)
   `(((fixnum fixnum) (,op x y))
 
@@ -1058,10 +973,10 @@
      (,op x (coerce y 'long-float)))
     #+double-double
     (((foreach single-float double-float double-double-float) double-double-float)
-     (,(dd-op op) (coerce x 'double-double-float) y))
+     (,op (coerce x 'double-double-float) y))
     #+double-double
     ((double-double-float (foreach single-float double-float))
-     (,(dd-op op) x (coerce y 'double-double-float)))
+     (,op x (coerce y 'double-double-float)))
     (((foreach single-float double-float) double-float)
      (,op (coerce x 'double-float) y))
     ((double-float single-float)
