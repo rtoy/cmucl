@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.108 2006/08/21 16:39:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.109 2007/01/23 19:09:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -968,7 +968,15 @@
 			     (c::bound-value (c::interval-high y))))
 	      (hi (safe-expt (c::bound-value (c::interval-high x))
 			     (c::bound-value (c::interval-low y)))))
-	  (list (c::make-interval :low (or lo 0) :high (or hi 1)))))
+	  ;; If the low bound, LO, is NIL, that means the we have
+	  ;; +0.0^inf, which is +0.0, but NIL is returned by
+	  ;; SAFE-EXPT.  That means the result is includes +0.0.  Make
+	  ;; it so by returning a member type and an exclusive
+	  ;; interval.
+	  (if lo
+	      (list (c::make-interval :low lo :high (or hi 1)))
+	      (list (c::make-interval :low (list 0) :high (or hi 1))
+		    (c::make-member-type :members (list 0))))))
        ('-
 	;; Y is negative and log x <= 0.  The range of exp(y * log(x)) is
 	;; obviously [1, inf].
@@ -1053,8 +1061,7 @@
 	      res))
 	   (t
 	    ;; Positive integer to a number is a number (for now)
-	    (specifier-type 'number)))
-	 )
+	    (specifier-type 'number))))
 	((csubtypep x-type (specifier-type 'rational))
 	 ;; A rational to some power
 	 (case (numeric-type-class y-type)
@@ -1089,29 +1096,35 @@
 	      res))
 	   (t
 	    ;; Positive rational to a number is a number (for now)
-	    (specifier-type 'number)))
-	 )
+	    (specifier-type 'number))))
 	((csubtypep x-type (specifier-type 'float))
 	 ;; A float to some power
-	 (case (numeric-type-class y-type)
-	   ((or integer rational)
-	    ;; Positive float to an integer or rational power is always a float
-	    (make-numeric-type
-	     :class 'float
-	     :format (numeric-type-format x-type)
-	     :low (interval-low bnd)
-	     :high (interval-high bnd)))
-	   (float
-	    ;; Positive float to a float power is a float of the higher type
-	    (make-numeric-type
-	     :class 'float
-	     :format (float-format-max (numeric-type-format x-type)
-				       (numeric-type-format y-type))
-	     :low (interval-low bnd)
-	     :high (interval-high bnd)))
-	   (t
-	    ;; Positive float to a number is a number (for now)
-	    (specifier-type 'number))))
+	 (flet ((make-result (type)
+		  (let ((res-type (or type 'float)))
+		    (etypecase bnd
+		      (member-type
+		       ;; Coerce all elements to the appropriate float
+		       ;; type.
+		       (make-member-type :members (mapcar #'(lambda (x)
+							      (coerce x res-type))
+							  (member-type-members bnd))))
+		      (interval
+		       (make-numeric-type
+			:class 'float
+			:format type
+			:low (coerce-numeric-bound (interval-low bnd) res-type)
+			:high (coerce-numeric-bound (interval-high bnd) res-type)))))))
+	   (case (numeric-type-class y-type)
+	     ((or integer rational)
+	      ;; Positive float to an integer or rational power is always a float
+	      (make-result (numeric-type-format x-type)))
+	     (float
+	      ;; Positive float to a float power is a float of the higher type
+	      (make-result (float-format-max (numeric-type-format x-type)
+					     (numeric-type-format y-type))))
+	     (t
+	      ;; Positive float to a number is a number (for now)
+	      (specifier-type 'number)))))
 	(t
 	 ;; A number to some power is a number.
 	 (specifier-type 'number))))
