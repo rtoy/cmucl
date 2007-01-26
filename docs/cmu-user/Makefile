@@ -83,7 +83,7 @@ all: cmu-user.ps
 # convert the Postscript file to duplex (will print double-sided if
 # the printer supports it)
 %.ps : %.ps1
-	psset -d -o $@ $<
+	if [ -x psset ]; then psset -d -o $@ $<; else cp $< $@; fi
 
 # Tar up the html files
 cmu-user-html.tgz : cmu-user.html
