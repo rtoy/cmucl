@@ -35,6 +35,12 @@ New in this release:
       version :NEWEST.
     - Converting negative rationals to double-double-float's doesn't
       produce wrong answers anymore.
+    - A bug in type derivation for EXPT has been fixed.  (expt x y)
+      for x of type (double-float (0d0) 1d0) and y of type
+      (double-float (0d0)) now returns (or (member 0d0) (double-float
+      (0d0) 1d0)) instead of (double-float 0d0 1d0), i.e., -0d0 is not
+      in the range.
+
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
       float can be computed, instead of signalling an error.
