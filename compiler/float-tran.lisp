@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.109 2007/01/23 19:09:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.110 2007/02/03 22:10:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1022,112 +1022,124 @@
   (declare (ignore x-int))
   ;; Figure out what the return type should be, given the argument
   ;; types and bounds and the result type and bounds.
-  (cond ((csubtypep x-type (specifier-type 'integer))
-	 ;; An integer to some power.  Cases to consider:
-	 (case (numeric-type-class y-type)
-	   (integer
-	    ;; Positive integer to an integer power is either an
-	    ;; integer or a rational.
-	    (let ((lo (or (interval-low bnd) '*))
-		  (hi (or (interval-high bnd) '*)))
-	      (if (and (interval-low y-int)
-		       (>= (bound-value (interval-low y-int)) 0))
-		  (specifier-type `(integer ,lo ,hi))
-		  (specifier-type `(rational ,lo ,hi)))))
-	   (rational
-	    ;; Positive integer to rational power is either a rational
-	    ;; or a single-float.
-	    (let* ((lo (interval-low bnd))
-		   (hi (interval-high bnd))
-		   (int-lo (if lo
-			       (floor (bound-value lo))
-			       '*))
-		   (int-hi (if hi
-			       (ceiling (bound-value hi))
-			       '*))
-		   (f-lo (if lo
-			     (bound-func #'float lo)
-			     '*))
-		   (f-hi (if hi
-			     (bound-func #'float hi)
-			     '*)))
-	      (specifier-type `(or (rational ,int-lo ,int-hi)
-				(single-float ,f-lo, f-hi)))))
-	   (float
-	    ;; Positive integer to a float power is a float
-	    (let ((res (copy-numeric-type y-type)))
-	      (setf (numeric-type-low res) (interval-low bnd))
-	      (setf (numeric-type-high res) (interval-high bnd))
-	      res))
-	   (t
-	    ;; Positive integer to a number is a number (for now)
-	    (specifier-type 'number))))
-	((csubtypep x-type (specifier-type 'rational))
-	 ;; A rational to some power
-	 (case (numeric-type-class y-type)
-	   (integer
-	    ;; Positive rational to an integer power is always a rational
-	    (specifier-type `(rational ,(or (interval-low bnd) '*)
-				       ,(or (interval-high bnd) '*))))
-	   (rational
-	    ;; Positive rational to rational power is either a rational
-	    ;; or a single-float.
-	    (let* ((lo (interval-low bnd))
-		   (hi (interval-high bnd))
-		   (int-lo (if lo
-			       (floor (bound-value lo))
-			       '*))
-		   (int-hi (if hi
-			       (ceiling (bound-value hi))
-			       '*))
-		   (f-lo (if lo
-			     (bound-func #'float lo)
-			     '*))
-		   (f-hi (if hi
-			     (bound-func #'float hi)
-			     '*)))
-	      (specifier-type `(or (rational ,int-lo ,int-hi)
-				(single-float ,f-lo, f-hi)))))
-	   (float
-	    ;; Positive rational to a float power is a float
-	    (let ((res (copy-numeric-type y-type)))
-	      (setf (numeric-type-low res) (interval-low bnd))
-	      (setf (numeric-type-high res) (interval-high bnd))
-	      res))
-	   (t
-	    ;; Positive rational to a number is a number (for now)
-	    (specifier-type 'number))))
-	((csubtypep x-type (specifier-type 'float))
-	 ;; A float to some power
-	 (flet ((make-result (type)
-		  (let ((res-type (or type 'float)))
-		    (etypecase bnd
-		      (member-type
-		       ;; Coerce all elements to the appropriate float
-		       ;; type.
-		       (make-member-type :members (mapcar #'(lambda (x)
-							      (coerce x res-type))
-							  (member-type-members bnd))))
-		      (interval
-		       (make-numeric-type
-			:class 'float
-			:format type
-			:low (coerce-numeric-bound (interval-low bnd) res-type)
-			:high (coerce-numeric-bound (interval-high bnd) res-type)))))))
+  (flet ((low-bnd (b)
+	   (etypecase b
+	     (member-type
+	      (reduce #'min (member-type-members b)))
+	     (interval
+	      (interval-low b))))
+	 (hi-bnd (b)
+	   (etypecase b
+	     (member-type
+	      (reduce #'max (member-type-members b)))
+	     (interval
+	      (interval-high b)))))
+    (cond ((csubtypep x-type (specifier-type 'integer))
+	   ;; An integer to some power.  Cases to consider:
 	   (case (numeric-type-class y-type)
-	     ((or integer rational)
-	      ;; Positive float to an integer or rational power is always a float
-	      (make-result (numeric-type-format x-type)))
+	     (integer
+	      ;; Positive integer to an integer power is either an
+	      ;; integer or a rational.
+	      (let ((lo (or (low-bnd bnd) '*))
+		    (hi (or (hi-bnd bnd) '*)))
+		(if (and (interval-low y-int)
+			 (>= (bound-value (interval-low y-int)) 0))
+		    (specifier-type `(integer ,lo ,hi))
+		    (specifier-type `(rational ,lo ,hi)))))
+	     (rational
+	      ;; Positive integer to rational power is either a rational
+	      ;; or a single-float.
+	      (let* ((lo (low-bnd bnd))
+		     (hi (hi-bnd bnd))
+		     (int-lo (if lo
+				 (floor (bound-value lo))
+				 '*))
+		     (int-hi (if hi
+				 (ceiling (bound-value hi))
+				 '*))
+		     (f-lo (if lo
+			       (bound-func #'float lo)
+			       '*))
+		     (f-hi (if hi
+			       (bound-func #'float hi)
+			       '*)))
+		(specifier-type `(or (rational ,int-lo ,int-hi)
+				     (single-float ,f-lo, f-hi)))))
 	     (float
-	      ;; Positive float to a float power is a float of the higher type
-	      (make-result (float-format-max (numeric-type-format x-type)
-					     (numeric-type-format y-type))))
+	      ;; Positive integer to a float power is a float
+	      (let ((res (copy-numeric-type y-type)))
+		(setf (numeric-type-low res) (low-bnd bnd))
+		(setf (numeric-type-high res) (hi-bnd bnd))
+		res))
 	     (t
-	      ;; Positive float to a number is a number (for now)
-	      (specifier-type 'number)))))
-	(t
-	 ;; A number to some power is a number.
-	 (specifier-type 'number))))
+	      ;; Positive integer to a number is a number (for now)
+	      (specifier-type 'number))))
+	  ((csubtypep x-type (specifier-type 'rational))
+	   ;; A rational to some power
+	   (case (numeric-type-class y-type)
+	     (integer
+	      ;; Positive rational to an integer power is always a rational
+	      (specifier-type `(rational ,(or (low-bnd bnd) '*)
+					 ,(or (hi-bnd bnd) '*))))
+	     (rational
+	      ;; Positive rational to rational power is either a rational
+	      ;; or a single-float.
+	      (let* ((lo (low-bnd bnd))
+		     (hi (hi-bnd bnd))
+		     (int-lo (if lo
+				 (floor (bound-value lo))
+				 '*))
+		     (int-hi (if hi
+				 (ceiling (bound-value hi))
+				 '*))
+		     (f-lo (if lo
+			       (bound-func #'float lo)
+			       '*))
+		     (f-hi (if hi
+			       (bound-func #'float hi)
+			       '*)))
+		(specifier-type `(or (rational ,int-lo ,int-hi)
+				     (single-float ,f-lo, f-hi)))))
+	     (float
+	      ;; Positive rational to a float power is a float
+	      (let ((res (copy-numeric-type y-type)))
+		(setf (numeric-type-low res) (low-bnd bnd))
+		(setf (numeric-type-high res) (hi-bnd bnd))
+		res))
+	     (t
+	      ;; Positive rational to a number is a number (for now)
+	      (specifier-type 'number))))
+	  ((csubtypep x-type (specifier-type 'float))
+	   ;; A float to some power
+	   (flet ((make-result (type)
+		    (let ((res-type (or type 'float)))
+		      (etypecase bnd
+			(member-type
+			 ;; Coerce all elements to the appropriate float
+			 ;; type.
+			 (make-member-type :members (mapcar #'(lambda (x)
+								(coerce x res-type))
+							    (member-type-members bnd))))
+			(interval
+			 (make-numeric-type
+			  :class 'float
+			  :format type
+			  :low (coerce-numeric-bound (low-bnd bnd) res-type)
+			  :high (coerce-numeric-bound (hi-bnd bnd) res-type)))))))
+	     (case (numeric-type-class y-type)
+	       ((or integer rational)
+		;; Positive float to an integer or rational power is always a float
+		(make-result (numeric-type-format x-type)))
+	       (float
+		;; Positive float to a float power is a float of the higher type
+		(make-result (float-format-max (numeric-type-format x-type)
+					       (numeric-type-format y-type))))
+	       (t
+		;; Positive float to a number is a number (for now)
+		(specifier-type 'number)))))
+	  (t
+	   ;; A number to some power is a number.
+	   (specifier-type 'number)))))
   
 (defun merged-interval-expt (x y)
   (let* ((x-int (numeric-type->interval x))
