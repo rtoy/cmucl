@@ -5,7 +5,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.12 2003/07/28 14:13:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.13 2007/02/21 15:57:08 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -442,6 +442,7 @@
 
 ;; Announce ourselves to the world
 (pushnew :gray-streams *features*)
+(provide :gray-streams)
 
 (setf (getf *herald-items* :gray-streams)
       '("    Gray Streams Protocol Support"))
