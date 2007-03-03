@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.74 2003/08/25 20:51:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.75 2007/03/03 01:52:06 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,12 +23,12 @@
 			      funcallable-instance-lexenv))
 
 
-#+sparc
+#+(or sparc ppc)
 (defvar *always-clear-stack* nil
   "Always perform stack clearing if non-NIL, independent of the
 compilation policy")
 
-#+sparc
+#+(or sparc ppc)
 (defvar *enable-stack-clearing* t
   "If non-NIL and the compilation policy allows, stack clearing is enabled.")
 
@@ -840,7 +840,7 @@ compilation policy")
       (vop current-fp node block old-fp)
       (vop allocate-frame node block
 	   (environment-info (lambda-environment fun))
-	   #+sparc
+	   #+(or sparc ppc)
 	   (or *always-clear-stack*
 	       (and *enable-stack-clearing*
 		    (policy node (= speed 3) (>= space 2))))
@@ -1133,7 +1133,7 @@ compilation policy")
       (cond ((and (optional-dispatch-p ef) (optional-dispatch-more-entry ef))
 	     ;; Special case the xep-allocate-frame + copy-more-arg case.
 	     (vop xep-allocate-frame node block start-label t
-		  #+sparc
+		  #+(or sparc ppc)
 		  (or *always-clear-stack*
 		      (and *enable-stack-clearing*
 			   (policy node (= speed 3) (>= space 2)))))
@@ -1141,7 +1141,7 @@ compilation policy")
 	    (t
 	     ;; No more args, so normal entry.
 	     (vop xep-allocate-frame node block start-label nil
-		  #+sparc
+		  #+(or sparc ppc)
 		  (or *always-clear-stack*
 		      (and *enable-stack-clearing*
 			   (policy node (>= space 2) (= speed 3)))))))

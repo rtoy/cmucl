@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.14 2006/11/03 03:29:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/call.lisp,v 1.15 2007/03/03 01:52:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,7 +168,7 @@
 
 
 (define-vop (xep-allocate-frame)
-  (:info start-lab copy-more-arg-follows)
+  (:info start-lab copy-more-arg-follows clear-memory-p)
   (:ignore copy-more-arg-follows)
   (:vop-var vop)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -186,6 +186,30 @@
       (emit-label entry-label)
       ;; The start of the actual code.
       (inst compute-code-from-fn code-tn lip-tn entry-label temp))
+    ;; Rob says we should zero out the words that are allocated for
+    ;; the args that are passed in registers and also zero out the
+    ;; words from CSP to CFP+size.
+    (when clear-memory-p
+      
+      ;; Zero out the args that correspond to register args
+      (dotimes (k register-arg-count)
+	(inst stw zero-tn cfp-tn (* k vm:word-bytes)))
+	
+      ;; Zero out memory from CSP to CFP+size
+      (let ((zero-out-mem (gen-label))
+	    (loop-test (gen-label)))
+
+	(inst addi temp cfp-tn
+	      (* vm:word-bytes (1- (sb-allocated-size 'control-stack))))
+	(inst b loop-test)
+
+	(emit-label zero-out-mem)
+	(inst stw zero-tn csp-tn (- vm:word-bytes))
+	(emit-label loop-test)
+	(inst cmpw csp-tn temp)
+	(inst addi csp-tn csp-tn vm:word-bytes)
+	(inst blt zero-out-mem)))
+
     ;; Build our stack frames.
     (inst addi csp-tn cfp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
@@ -200,10 +224,28 @@
 (define-vop (allocate-frame)
   (:results (res :scs (any-reg))
 	    (nfp :scs (any-reg)))
-  (:info callee)
+  (:info callee clear-memory-p)
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) ptr)
   (:generator 2
     (trace-table-entry trace-table-function-prologue)
     (move res csp-tn)
+    (when clear-memory-p
+      ;; Rob Maclaclan says we should zero out this memory.
+      (let ((zero-out-loop (gen-label))
+	    (zero-out-test (gen-label)))
+	(inst li temp (* vm:word-bytes (sb-allocated-size 'control-stack)))
+	(move ptr csp-tn)
+	(inst b zero-out-test)
+      
+	(emit-label zero-out-loop)
+	(emit-label zero-out-test)
+	(inst addi ptr ptr vm:word-bytes)
+	(inst stw zero-tn ptr 0)
+	(inst addic. temp temp (- vm:word-bytes))
+	(inst bgt zero-out-loop)
+	))
+    
     (inst addi csp-tn csp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (when (ir2-environment-number-stack-p callee)
