@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.14 2006/01/18 15:21:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.15 2007/03/05 01:55:21 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,17 +21,35 @@
 
 ;;;; Dynamic-Extent (not implemented).
 
+;;;
+;;; Take an arg where to move the stack pointer instead of returning
+;;; it via :results, because the former generates a single move.
+;;;
 (define-vop (%dynamic-extent-start)
-  (:args (saved-stack-pointer :scs (any-reg)))
+  (:args (saved-stack-pointer :scs (any-reg control-stack)))
   (:results)
   (:policy :safe)
-  (:generator 0))
+  (:generator 0
+    (sc-case saved-stack-pointer
+      (control-stack
+       (let ((offset (tn-offset saved-stack-pointer)))
+	 (storew csp-tn cfp-tn offset)))
+      (any-reg
+       (move saved-stack-pointer csp-tn)))))
+
 
 (define-vop (%dynamic-extent-end)
-  (:args (saved-stack-pointer :scs (any-reg)))
+  (:args (saved-stack-pointer :scs (any-reg control-stack)))
   (:results)
   (:policy :safe)
-  (:generator 0))
+  (:generator 0
+    (sc-case saved-stack-pointer
+      (control-stack
+       (let ((offset (tn-offset saved-stack-pointer)))
+	 (loadw csp-tn cfp-tn offset)))
+      (any-reg
+       (move csp-tn saved-stack-pointer)))))
+
 
 
 ;;;; LIST and LIST*
@@ -67,7 +85,8 @@
 		    (alloc (* (pad-data-block cons-size) cons-cells)))
 	       (pseudo-atomic (pa-flag)
 		 (allocation res alloc list-pointer-type :temp-tn alloc-temp
-			     :flag-tn pa-flag)
+			     :flag-tn pa-flag
+			     :stack-p dynamic-extent)
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (storew (maybe-load (tn-ref-tn things)) ptr
@@ -151,13 +170,13 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
   (:results (result :scs (descriptor-reg)))
-  (:ignore dynamic-extent)
   (:generator 10
     (let ((size (+ length closure-info-offset)))
       (pseudo-atomic (pa-flag)
      
 	(allocation result (pad-data-block size) function-pointer-type 
-		    :temp-tn temp :flag-tn pa-flag)
+		    :temp-tn temp :flag-tn pa-flag
+		    :stack-p dynamic-extent)
 	(inst lr temp (logior (ash (1- size) type-bits) closure-header-type))
 	(storew temp result 0 function-pointer-type)))
     (storew function result closure-function-slot function-pointer-type)))
@@ -192,7 +211,8 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
   (:generator 4
-    (with-fixed-allocation (result pa-flag temp type words :lowtag lowtag)
+    (with-fixed-allocation (result pa-flag temp type words :lowtag lowtag
+				   :stack-p dynamic-extent)
       )))
 
 (define-vop (var-alloc)

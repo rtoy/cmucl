@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.12 2006/02/08 01:32:58 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.13 2007/03/05 01:55:22 rtoy Rel $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -153,6 +153,7 @@
 ;; applied.  The amount of space to be allocated is SIZE bytes (which
 ;; must be a multiple of the lisp object size).
 ;;
+#+nil
 (defmacro allocation (result-tn size lowtag &key stack-p temp-tn flag-tn)
   (declare (ignore stack-p)
 	   #-gencgc
@@ -203,9 +204,87 @@
       (inst sub ,result-tn ,result-tn ,temp-tn)
       ;; Set the lowtag appropriately
       (inst ori ,result-tn ,result-tn ,lowtag))))
+
+(defmacro allocation (result-tn size lowtag &key stack-p temp-tn flag-tn)
+  (declare #-gencgc
+	   (ignore temp-tn flag-tn))
+  (let ((alloc-size (gensym)))
+    `(cond (,stack-p
+	    ;; Stack allocation
+	    ;;
+	    ;; The control stack grows up, so round up CSP to a
+	    ;; multiple of 8 (lispobj size).  Use that as the
+	    ;; allocation pointer.  Then add SIZE bytes to the
+	    ;; allocation and set CSP to that, so we have the desired
+	    ;; space.
+
+	    ;; Make sure the temp-tn is a non-descriptor register!
+	    (assert (and ,temp-tn (sc-is ,temp-tn non-descriptor-reg)))
+
+	    ;; temp-tn is csp-tn rounded up to a multiple of 8 (lispobj size)
+	    (inst li ,flag-tn vm:lowtag-mask)
+	    (inst addi ,temp-tn csp-tn vm:lowtag-mask)
+	    (inst andc ,temp-tn ,temp-tn ,flag-tn)
+	    ;; Set the result to temp-tn, with appropriate lowtag
+	    (inst ori ,result-tn ,temp-tn ,lowtag)
+
+	    ;; Allocate the desired space on the stack.
+	    ;;
+	    ;; FIXME: Can't allocate on stack if SIZE is too large.
+	    ;; Need to rearrange this code.
+	    (if (tn-p ,size)
+		(inst add csp-tn ,temp-tn ,size)
+		(inst addi csp-tn ,temp-tn ,size))
+	    )
+           #-gencgc
+           (t
+	    (let ((,alloc-size ,size))
+	      (if (logbitp (1- lowtag-bits) ,lowtag)
+		  (progn
+		    (inst ori ,result-tn alloc-tn ,lowtag))
+		  (progn
+		    (inst clrrwi ,result-tn alloc-tn lowtag-bits)
+		    (inst ori ,result-tn ,result-tn ,lowtag)))
+	      (if (numberp ,alloc-size)
+		  (inst addi alloc-tn alloc-tn ,alloc-size)
+		  (inst add alloc-tn alloc-tn ,alloc-size))))
+           #+gencgc
+           (t
+	    ;; Make temp-tn be the size
+	    (cond ((numberp ,size)
+		   (inst lr ,temp-tn ,size))
+		  (t
+		   (move ,temp-tn ,size)))
+      
+	    ;; Get the end of the current allocation region.
+	    (load-symbol-value ,flag-tn *current-region-end-addr*)
+	    ;; The object starts exactly where alloc-tn is, minus an tag
+	    ;; bits, etc.
+
+	    ;; CAUTION: The C code depends on the exact order of
+	    ;; instructions here.  In particular, one instructions before
+	    ;; the TW instruction must be an ADD or ADDI instruction, so it
+	    ;; can figure out the size of the desired allocation.
+	    (without-scheduling ()
+	     ;; Now make result-tn point at the end of the object, to
+	     ;; figure out if we overflowed the current region.
+	     (inst add alloc-tn alloc-tn ,temp-tn)
+	     (inst clrrwi ,result-tn alloc-tn lowtag-bits)
+	     ;; result-tn points to the new end of the region.  Did we go past
+	     ;; the actual end of the region?  If so, we need a full alloc.
+	     ;; The C code depends on this exact form of instruction.  If
+	     ;; either changes, you have to change the other appropriately!
+	     (inst tw :lge ,result-tn ,flag-tn))
+
+	    ;; At this point, result-tn points at the end of the object.
+	    ;; Adjust to point to the beginning.
+	    (inst sub ,result-tn ,result-tn ,temp-tn)
+	    ;; Set the lowtag appropriately
+	    (inst ori ,result-tn ,result-tn ,lowtag)))))
   
 (defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size
-					    &key (lowtag other-pointer-type))
+					    &key (lowtag other-pointer-type)
+					    stack-p)
 				 &body body)
   "Do stuff to allocate an other-pointer object of fixed Size with a single
   word header having the specified Type-Code.  The result is placed in
@@ -218,7 +297,8 @@
     `(pseudo-atomic (,flag-tn)
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
 		   :temp-tn ,temp-tn
-	           :flag-tn ,flag-tn)
+	           :flag-tn ,flag-tn
+                   :stack-p ,stack-p)
        (when ,type-code
 	 (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
 	 (storew ,temp-tn ,result-tn 0 ,lowtag))
