@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.8 2006/01/03 17:58:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.9 2007/03/20 18:21:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,6 +61,13 @@
 
 ;; This means the XRS entry is valid.
 (defconstant +xrs-id-valid+ #x78727300)
+
+(def-alien-type fpq
+  (struct nil
+    ;; Address of faulting FP instruction
+    (fpq-addr system-area-pointer)
+    ;; The instruction itself
+    (fpq-inst c-call:unsigned-long)))
 
 ; In the include files (sys/ucontext.h) this structure consists of 3
 ; structures: struct ucontext, that includes struct mcontext which
