@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.36 2006/10/02 13:40:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.37 2007/03/20 18:16:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -671,6 +671,10 @@
 
    CLOS methods can be traced by specifying a name of the form
    (METHOD {Qualifier}* ({Specializer}*)).
+
+   Labels and Flet functions can be traced by specifying a name of the form
+   (LABELS <lfun> <fun>) or (FLET <lfun> <fun>) where <lfun> is the Labels/Flet
+   function in <fun>.
 
    TRACE causes a printout on *TRACE-OUTPUT* each time that one of the named
    functions is entered or returns (the Names are not evaluated.)  The output
