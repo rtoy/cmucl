@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.255 2006/12/02 15:22:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.256 2007/03/21 19:47:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1096,7 +1096,8 @@
   (:export "DYNAMIC-SPACE-OVERFLOW-ERROR-TRAP"
 	   "DYNAMIC-SPACE-OVERFLOW-WARNING-TRAP")
   ;;#+double-double
-  (:export "DOUBLE-DOUBLE-FLOAT-TYPE"
+  (:export "DOUBLE-DOUBLE-FLOAT"
+	   "DOUBLE-DOUBLE-FLOAT-TYPE"
 	   "DOUBLE-DOUBLE-FLOAT-HI-SLOT"
 	   "DOUBLE-DOUBLE-FLOAT-LO-SLOT"
 	   "DOUBLE-DOUBLE-FLOAT-FILLER-SLOT"
