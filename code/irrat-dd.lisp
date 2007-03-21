@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.6 2006/07/19 15:29:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.7 2007/03/21 18:08:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,14 +138,14 @@
       (q (make-array 8 :element-type 'double-double-float
 		     :initial-contents '(
 					 ;; 1.000000000000000000000000000000000000000w0
-					 1.766112549341972444333352727998584753865w9
-					 -7.848989743695296475743081255027098295771w8
-					 1.615869009634292424463780387327037251069w8
-					 -2.019684072836541751428967854947019415698w7
-					 1.682912729190313538934190635536631941751w6
-					 -9.615511549171441430850103489315371768998w4
+					 -8.802340681794263968892934703309274564037w1
 					 3.697714952261803935521187272204485251835w3
-					 -8.802340681794263968892934703309274564037w1)))
+					 -9.615511549171441430850103489315371768998w4
+					 1.682912729190313538934190635536631941751w6
+					 -2.019684072836541751428967854947019415698w7
+					 1.615869009634292424463780387327037251069w8
+					 -7.848989743695296475743081255027098295771w8
+					 1.766112549341972444333352727998584753865w9)))
       ;; ln 2^-114
       (minarg -7.9018778583833765273564461846232128760607w1))
   (declare (type double-double-float minarg))
@@ -173,7 +173,7 @@
 
     ;; Express x = ln(2)*(k+remainder), remainder not exceeding 1/2
     (let* ((xx (+ log2-c1 log2-c2))
-	   (k (floor (+ 1/2 (/ (the (double-double-float * 710w0) x) xx))))
+	   (k (floor (+ 0.5w0 (/ (the (double-double-float * 710w0) x) xx))))
 	   (px (coerce k 'double-double-float))
 	   (qx 0w0))
       (declare (type double-double-float xx px qx))
@@ -182,39 +182,7 @@
       (decf x (* px log2-c2))
 
       ;; Approximate exp(remainder*ln(2))
-      #+nil
-      (setf px (* x
-		  (+ p0
-		     (* x
-			(+ p1
-			   (* x
-			      (+ p2
-				 (* x
-				    (+ p3
-				       (* x
-					  (+ p4
-					     (* x
-						(+ p5
-						   (* x
-						      (+ p6
-							 (* x p7))))))))))))))))
-      #+nil
-      (setf qx (+ q0
-		  (* x
-		     (+ q1
-			(* x
-			   (+ q2
-			      (* x
-				 (+ q3
-				    (* x
-				       (+ q4
-					  (* x
-					     (+ q5
-						(* x
-						   (+ q6
-						      (* x
-							 (+ x q7))))))))))))))))
-      (setf px (poly-eval x p))
+      (setf px (* x (poly-eval x p)))
       (setf qx (poly-eval-1 x q))
       (setf xx (* x x))
       (setf qx (+ x (+ (* 0.5w0 xx)
