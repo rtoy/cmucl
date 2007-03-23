@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.41 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.42 2007/03/23 20:49:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1874,20 +1874,87 @@ down to individual words.")
 
 ;;;
 #+double-double
-(defun double-double-from-bits (bits exp plusp)
+(defun double-double-float-from-bits (bits exp plusp)
   (declare (fixnum exp)
 	   (optimize (ext:inhibit-warnings 3)))
-  ;; Extract the 105 bits we want.  The low 52 goes to the low
-  ;; double-float, and the remaining bits go to the high double-float.
-  ;; That's a total of 4 words.
-  (let* ((bits (ash bits -32))
-	 (lo (ldb (byte vm:double-float-digits 0) bits))
-	 (hi (ldb (byte vm:double-float-digits vm:double-float-digits) bits))
-	 (exp (- exp vm:double-float-bias)))
-    (kernel:make-double-double-float
-     (scale-float (float hi 1d0) (+ exp 53 -106))
-     (scale-float (float lo 1d0) (- exp 106)))))
-    
+  (let ((len (integer-length bits)))
+    (cond ((<= len 106)
+	   ;; Extract the 106 bits we want.  The low 53 goes to the low
+	   ;; double-float, and the remaining bits go to the high double-float.
+	   ;; That's a total of 4 words.
+	   (let* ((bits (ash bits -32))
+		  (lo (ldb (byte vm:double-float-digits 0) bits))
+		  (hi (ldb (byte vm:double-float-digits vm:double-float-digits)
+			   bits))
+		  (exp (- exp vm:double-float-bias)))
+	     (kernel:make-double-double-float
+	      (scale-float (float hi 1d0) (+ exp 53 -106))
+	      (scale-float (float lo 1d0) (- exp 106)))))
+	  (t
+	   ;; Grab the top 53 bits.  Skip over any zeroes, then grab
+	   ;; the next 53 bits.
+	   (let* ((part (ldb (byte (- len vm:double-float-digits) 0) bits))
+		  (part-len (integer-length part))
+		  (hi (ldb (byte vm:double-float-digits
+				 (- len vm:double-float-digits))
+			   bits))
+		  (lo (ldb (byte vm:double-float-digits
+				 (- part-len vm:double-float-digits))
+			   part))
+		  (exp (+ (- exp vm:double-float-bias)
+			  (- 53 106))))
+	     #+nil
+	     (progn
+	       (format t "b  = ~VB~%" len bits)
+	       (format t "p  = ~VB~%" len part)
+	       (format t "hi = ~B~%" hi)
+	       (format t "lo = ~B~%" lo)
+	       (format t "len      = ~A~%" len)
+	       (format t "part-len = ~A~%" part-len)
+	       (format t "hi-exp = ~A~%" exp)
+	       (format t "lo-exp = ~A~%" (+ exp (- part-len len)))
+	       (format t "hi = ~A~%" (scale-float (float hi 1d0) exp))
+	       (format t "lo = ~A~%" (scale-float (float lo 1d0) (+ exp (- part-len len)))))
+	     (if plusp
+		 (kernel:%make-double-double-float
+		  (scale-float (float hi 1d0) exp)
+		  (scale-float (float lo 1d0) (+ exp (- part-len len))))
+		 (kernel:%make-double-double-float
+		  (- (scale-float (float hi 1d0) exp))
+		  (- (scale-float (float lo 1d0) (+ exp (- part-len len)))))))))))
+
+(defun bignum-float-digits (format bignum)
+  ;; For float formats other than double-double-float, we can just use
+  ;; FLOAT-FORMAT-DIGITS.  For double-double-float, we need to be more
+  ;; careful.  This is needed because double-double-floats can
+  ;; actually have more 106 bits.  Consider two bignums, x and y, both
+  ;; 53 bits long.  Let z = x*2^n + y, where n > 53.  This bignum can
+  ;; be presented as a double-double-float by converting x and y to
+  ;; double-floats and combining them appropriately to make a
+  ;; double-double-float.  This also helps with read/write consistency
+  ;; for double-double-floats.
+  (if (not (eq format 'double-double-float))
+      (float-format-digits format)
+      (let ((len (integer-length bignum))
+	    (default-length (float-format-digits 'double-double-float)))
+	(cond ((> len default-length)
+	       ;; Look for the pattern <bits1> <zeroes> <bits2> where
+	       ;; <bits1> are the first 53 bits, <zeroes> is sequence of
+	       ;; zero bits, and <bits2> is the next 53 bits.  The desired
+	       ;; length is then 2*53 + the number of zeroes.
+	       (let* ((part (ldb (byte (- len 53) 0) bignum))
+		      (part-len (integer-length part)))
+		 ;; PART is the bignum with the 53 MSB removed.
+		 #+nil
+		 (progn
+		   (format t "bignum = ~VB~%" len bignum)
+		   (format t "part   = ~VB~%" len part)
+		   (format t "len    = ~A~%" len)
+		   (format t "part-l = ~A~%" part-len))
+		 (+ 106 (- len 53 part-len))))
+	      (t
+	       default-length)))))
+	   
 
 ;;; BIGNUM-TO-FLOAT   --  Interface
 ;;;
@@ -1898,7 +1965,7 @@ down to individual words.")
   (let* ((plusp (bignum-plus-p bignum))
 	 (x (if plusp bignum (negate-bignum bignum)))
 	 (len (bignum-integer-length x))
-	 (digits (float-format-digits format))
+	 (digits (bignum-float-digits format bignum))
 	 (keep (+ digits digit-size))
 	 (shift (- keep len))
 	 (shifted (if (minusp shift)
@@ -1937,8 +2004,8 @@ down to individual words.")
 		   plusp))
 		 #+double-double
 		 (double-double-float
-		  (double-double-from-bits
-		   bits
+		  (double-double-float-from-bits
+		   (abs bits)
 		   (check-exponent len vm:double-float-bias
 				   vm:double-float-normal-exponent-max)
 		   plusp))))
