@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.48 2007/03/20 18:21:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.49 2007/03/26 16:36:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3059,10 +3059,10 @@
 
 
 (define-vop (make/double-double-float)
-  (:args (hi :scs (double-reg) :target res
+  (:args (hi :scs (double-reg)
 	     :load-if (not (location= hi res)))
 	 (lo :scs (double-reg)))
-  (:results (res :scs (double-double-reg) :from (:argument 0)
+  (:results (res :scs (double-double-reg)
 		 :load-if (not (sc-is res double-double-stack))))
   (:arg-types double-float double-float)
   (:result-types double-double-float)
@@ -3121,11 +3121,11 @@
 
 (define-vop (make-complex-double-double-float)
   (:translate complex)
-  (:args (real :scs (double-double-reg) :target r
+  (:args (real :scs (double-double-reg)
 	       :load-if (not (location= real r)))
 	 (imag :scs (double-double-reg) :to :save))
   (:arg-types double-double-float double-double-float)
-  (:results (r :scs (complex-double-double-reg) :from (:argument 0)
+  (:results (r :scs (complex-double-double-reg)
 	       :load-if (not (sc-is r complex-double-double-stack))))
   (:result-types complex-double-double-float)
   (:note "inline complex double-double float creation")
@@ -3159,7 +3159,7 @@
 	   (inst stdf r-imag nfp (+ offset (* 6 vm:word-bytes)))))))))
 
 (define-vop (complex-double-double-float-value)
-  (:args (x :scs (complex-double-double-reg) :target r
+  (:args (x :scs (complex-double-double-reg)
 	    :load-if (not (sc-is x complex-double-double-stack))))
   (:arg-types complex-double-double-float)
   (:results (r :scs (double-double-reg)))
