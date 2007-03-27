@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.123 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.124 2007/03/27 00:58:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3199,7 +3199,7 @@ The result is a symbol or nil if the routine cannot be found."
 	      'double-float))
 	    (kernel:%make-double-double-float
 	     (vm:sigcontext-float-register
-	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4 #+sparc 1)
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4 #+sparc 2)
 	      'double-float)
 	     (vm:sigcontext-float-register
 	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 6 #-sparc 3)
@@ -3241,6 +3241,21 @@ The result is a symbol or nil if the routine cannot be found."
 					vm:word-bytes))
 	  (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))))
+      #+double-double
+      ((#.vm:complex-double-double-stack-sc-number
+	(with-nfp (nfp)
+	  (kernel:%make-double-double-float
+	   (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
+					 vm:word-bytes))
+	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
+					    2)
+					 vm:word-bytes))
+	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
+					    4)
+					 vm:word-bytes))
+	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
+					    6)
+					 vm:word-bytes))))))
       #+long-float
       (#.vm:complex-long-stack-sc-number
        (with-nfp (nfp)
