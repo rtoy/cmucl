@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.50 2007/03/27 14:13:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.51 2007/03/27 16:45:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3059,10 +3059,10 @@
 
 
 (define-vop (make/double-double-float)
-  (:args (hi :scs (double-reg)
+  (:args (hi :scs (double-reg) :target res
 	     :load-if (not (location= hi res)))
-	 (lo :scs (double-reg)))
-  (:results (res :scs (double-double-reg)
+	 (lo :scs (double-reg) :to :save))
+  (:results (res :scs (double-double-reg) :from (:argument 0)
 		 :load-if (not (sc-is res double-double-stack))))
   (:arg-types double-float double-float)
   (:result-types double-double-float)
