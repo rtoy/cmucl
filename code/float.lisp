@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.34 2007/01/18 15:35:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.35 2007/03/27 16:57:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -582,7 +582,11 @@
 	    (integer-decode-float (double-double-lo x))
 	  ;; We have x = 2^e1*i1 + 2^e2*i2
 	  ;;           = 2^e2*(2^(e1-e2)*i1 + i2)
-	  (values (+ (* lo-sign lo-int)
+	  ;;
+	  ;; NOTE: The hi and lo parts could actually have different
+	  ;; signs, so we need to add the two parts together with the
+	  ;; right sign!
+	  (values (+ (* (* sign lo-sign) lo-int)
 		     (ash hi-int (- hi-exp lo-exp)))
 		  lo-exp
 		  sign)))))
