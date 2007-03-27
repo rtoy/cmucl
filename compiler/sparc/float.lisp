@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.49 2007/03/26 16:36:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.50 2007/03/27 14:13:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3121,11 +3121,11 @@
 
 (define-vop (make-complex-double-double-float)
   (:translate complex)
-  (:args (real :scs (double-double-reg)
+  (:args (real :scs (double-double-reg) :target r
 	       :load-if (not (location= real r)))
 	 (imag :scs (double-double-reg) :to :save))
   (:arg-types double-double-float double-double-float)
-  (:results (r :scs (complex-double-double-reg)
+  (:results (r :scs (complex-double-double-reg) :from (:argument 0)
 	       :load-if (not (sc-is r complex-double-double-stack))))
   (:result-types complex-double-double-float)
   (:note "inline complex double-double float creation")
@@ -3149,13 +3149,13 @@
       (complex-double-double-stack
        (let ((nfp (current-nfp-tn vop))
 	     (offset (* (tn-offset r) vm:word-bytes)))
-	 (let ((r-real (complex-double-double-reg-real-hi-tn r)))
+	 (let ((r-real (double-double-reg-hi-tn real)))
 	   (inst stdf r-real nfp offset))
-	 (let ((r-real (complex-double-double-reg-real-lo-tn r)))
+	 (let ((r-real (double-double-reg-lo-tn real)))
 	   (inst stdf r-real nfp (+ offset (* 2 vm:word-bytes))))
-	 (let ((r-imag (complex-double-double-reg-imag-hi-tn r)))
+	 (let ((r-imag (double-double-reg-hi-tn imag)))
 	   (inst stdf r-imag nfp (+ offset (* 4 vm:word-bytes))))
-	 (let ((r-imag (complex-double-double-reg-imag-lo-tn r)))
+	 (let ((r-imag (double-double-reg-lo-tn imag)))
 	   (inst stdf r-imag nfp (+ offset (* 6 vm:word-bytes)))))))))
 
 (define-vop (complex-double-double-float-value)
