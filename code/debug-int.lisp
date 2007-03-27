@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.124 2007/03/27 00:58:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.125 2007/03/27 17:46:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3199,7 +3199,7 @@ The result is a symbol or nil if the routine cannot be found."
 	      'double-float))
 	    (kernel:%make-double-double-float
 	     (vm:sigcontext-float-register
-	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4 #+sparc 2)
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4 #-sparc 2)
 	      'double-float)
 	     (vm:sigcontext-float-register
 	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 6 #-sparc 3)
