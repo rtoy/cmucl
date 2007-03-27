@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.9 2006/11/16 04:34:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.10 2007/03/27 11:33:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1310,13 +1310,13 @@
       (complex-double-double-stack
        (let ((nfp (current-nfp-tn vop))
 	     (offset (* (tn-offset r) vm:word-bytes)))
-	 (let ((r-real (complex-double-double-reg-real-hi-tn r)))
+	 (let ((r-real (double-double-reg-hi-tn real)))
 	   (inst stfd r-real nfp offset))
-	 (let ((r-real (complex-double-double-reg-real-lo-tn r)))
+	 (let ((r-real (double-double-reg-lo-tn real)))
 	   (inst stfd r-real nfp (+ offset (* 2 vm:word-bytes))))
-	 (let ((r-imag (complex-double-double-reg-imag-hi-tn r)))
+	 (let ((r-imag (double-double-reg-hi-tn imag)))
 	   (inst stfd r-imag nfp (+ offset (* 4 vm:word-bytes))))
-	 (let ((r-imag (complex-double-double-reg-imag-lo-tn r)))
+	 (let ((r-imag (double-double-reg-lo-tn imag)))
 	   (inst stfd r-imag nfp (+ offset (* 6 vm:word-bytes)))))))))
 
 (define-vop (complex-double-double-float-value)
