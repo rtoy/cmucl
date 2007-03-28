@@ -23,6 +23,7 @@ New in this release:
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
+    - SHADOW accepts characters now.
 
   * Bugfixes:
     - Floating-point traps are now handled on ppc.  Previously, no
@@ -40,6 +41,23 @@ New in this release:
       (double-float (0d0)) now returns (or (member 0d0) (double-float
       (0d0) 1d0)) instead of (double-float 0d0 1d0), i.e., -0d0 is not
       in the range.
+    - On sparc, the decoding of a trapping FP instruction is correct
+      now.  Previously the wrong instruction was decoded, which
+      produced the wrong operation and operands in the arithmetic
+      error handler.
+    - Conversion of bignums to double-double-floats preserves more
+      bits of the bignum now.  This allows for read/print consistency
+      for this particular case.  (The general case is still broken.)
+    - (float <negative bignum> 1w0) no longer returns a positive
+      result.
+    - Some issues with creation of DOUBLE-DOUBLE-FLOAT and (COMPLEX
+      DOUBLE-DOUBLE-FLOAT) have been fixed on sparc and ppc.  Some
+      issues still exist on x86.
+    - (INTEGER-DECODE-FLOAT <double-double-float>) was sometimes
+      returning the wrong integer value because the two components had
+      the wrong sign.
+    - Some issues with debugger printing out DOUBLE-DOUBLE-FLOATs and
+      (COMPLEX DOUBLE-DOUBLE-FLOAT)'s have been fixed.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
