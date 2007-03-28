@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.135 2005/11/09 19:08:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.136 2007/03/28 15:56:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -210,7 +210,7 @@
 (defknown unintern (symbol &optional packagelike) boolean)
 (defknown unexport (symbols &optional packagelike) truth)
 (defknown shadowing-import (symbols &optional packagelike) truth)
-(defknown shadow ((or symbol string list) &optional packagelike) truth)
+(defknown shadow ((or symbol character string list) &optional packagelike) truth)
 (defknown (use-package unuse-package) ((or list packagelike) &optional packagelike) truth)
 (defknown find-all-symbols (stringable) list (flushable))
 
