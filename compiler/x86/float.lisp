@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.44 2006/07/19 02:54:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.45 2007/03/28 04:21:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -5110,11 +5110,17 @@
 (define-vop (make-complex-double-double-float)
   (:translate complex)
   (:args (real :scs (double-double-reg) :target r
-	       :load-if (not (location= real r)))
+	       :load-if (not (location= real r))
+	       )
 	 (imag :scs (double-double-reg) :to :save))
   (:arg-types double-double-float double-double-float)
+  ;; Enable the :load-if when the generator is fixed to handle the
+  ;; case where the arg result is on the stack.  If both the result
+  ;; and the args are on the stack, we lose, because the code below
+  ;; doesn't handle that.
   (:results (r :scs (complex-double-double-reg) :from (:argument 0)
-	       :load-if (not (sc-is r complex-double-double-stack))))
+	       ;;:load-if (not (sc-is r complex-double-double-stack))
+	       ))
   (:result-types complex-double-double-float)
   (:note "inline complex double-double-float creation")
   (:policy :fast-safe)
