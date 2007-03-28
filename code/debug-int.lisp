@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.125 2007/03/27 17:46:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.126 2007/03/28 03:54:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3219,14 +3219,14 @@ The result is a symbol or nil if the routine cannot be found."
 	 (system:sap-ref-long nfp (* (c:sc-offset-offset sc-offset)
 				     vm:word-bytes))))
       #+double-double
-      ((#.vm:double-double-stack-sc-number
-	(with-nfp (nfp)
-	  (kernel:%make-double-double-float
-	   (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
-					 vm:word-bytes))
-	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
-					    2)
-					 vm:word-bytes))))))
+      (#.vm:double-double-stack-sc-number
+       (with-nfp (nfp)
+	 (kernel:%make-double-double-float
+	  (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
+					vm:word-bytes))
+	  (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
+					   2)
+					vm:word-bytes)))))
       (#.vm:complex-single-stack-sc-number
        (with-nfp (nfp)
 	 (complex
@@ -3242,14 +3242,16 @@ The result is a symbol or nil if the routine cannot be found."
 	  (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))))
       #+double-double
-      ((#.vm:complex-double-double-stack-sc-number
-	(with-nfp (nfp)
+      (#.vm:complex-double-double-stack-sc-number
+       (with-nfp (nfp)
+	 (complex
 	  (kernel:%make-double-double-float
 	   (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
 					 vm:word-bytes))
 	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
 					    2)
-					 vm:word-bytes))
+					 vm:word-bytes)))
+	  (kernel:%make-double-double-float
 	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
 					    4)
 					 vm:word-bytes))
