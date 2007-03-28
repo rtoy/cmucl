@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.126 2007/03/28 03:54:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.127 2007/03/28 04:30:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3400,7 +3400,7 @@ The result is a symbol or nil if the routine cannot be found."
 	      'double-float))
 	    (kernel:%make-double-double-float
 	     (vm:sigcontext-float-register
-	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4 #+sparc 1)
+	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 4 #-sparc 2)
 	      'double-float)
 	     (vm:sigcontext-float-register
 	      escaped (+ (c:sc-offset-offset sc-offset) #+sparc 6 #-sparc 3)
@@ -3426,14 +3426,27 @@ The result is a symbol or nil if the routine cannot be found."
 	(system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 6)
 				      vm:word-bytes)))))
       #+double-double
-      ((#.vm:double-double-stack-sc-number
-	(with-nfp (nfp)
-	  (kernel:%make-double-double-float
-	   (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
-					 vm:word-bytes))
-	   (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset)
-					    2)
-					 vm:word-bytes))))))
+      (#.vm:complex-double-double-stack-sc-number
+       (if escaped
+	   (complex
+	    (kernel:%make-double-double-float
+	     (system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
+					     vm:word-bytes)))
+	     (system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 4)
+					     vm:word-bytes))))
+	    (kernel:%make-double-double-float
+	     (system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 6)
+					     vm:word-bytes)))
+	     (system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 8)
+					     vm:word-bytes)))))
+	   :invalid-value-for-unescaped-register-storage))
+      #+double-double
+      (#.vm:double-double-stack-sc-number
+       (kernel:%make-double-double-float
+	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
+					vm:word-bytes)))
+	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 4)
+					vm:word-bytes)))))
       (#.vm:control-stack-sc-number
        (kernel:stack-ref fp (c:sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
