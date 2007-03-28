@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.25 2005/09/15 18:26:53 rtoy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.26 2007/03/28 02:18:20 fgilham Exp $
  *
  */
 
@@ -82,7 +82,7 @@
 
 #define DYNAMIC_0_SPACE_START	(0x48000000)
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x40000000)	/* May be up to 2GB */
+#define DYNAMIC_SPACE_SIZE	(0x78000000)	/* May be up to 1.7 GB */
 #else
 #define DYNAMIC_SPACE_SIZE	(0x04000000)	/* 64MB */
 #endif
