@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.45 2007/03/28 04:21:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.46 2007/03/30 01:59:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -5230,12 +5230,12 @@
       (complex-double-double-stack
        (let ((r-hi (double-double-reg-hi-tn r)))
 	 (with-empty-tn@fp-top (r-hi)
-	   (inst fld (ecase slot
+	   (inst fldd (ecase slot
 		       (:real (ea-for-cddf-real-hi-stack x))
 		       (:imag (ea-for-cddf-imag-hi-stack x))))))
        (let ((r-lo (double-double-reg-lo-tn r)))
 	 (with-empty-tn@fp-top (r-lo)
-	   (inst fld (ecase slot
+	   (inst fldd (ecase slot
 		       (:real (ea-for-cddf-real-lo-stack x))
 		       (:imag (ea-for-cddf-imag-lo-stack x))))))))))
 
