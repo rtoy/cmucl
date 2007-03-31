@@ -51,8 +51,9 @@ New in this release:
     - (float <negative bignum> 1w0) no longer returns a positive
       result.
     - Some issues with creation of DOUBLE-DOUBLE-FLOAT and (COMPLEX
-      DOUBLE-DOUBLE-FLOAT) have been fixed on sparc and ppc.  Some
-      issues still exist on x86.
+      DOUBLE-DOUBLE-FLOAT) have been fixed on sparc, ppc, and x86.
+      These seem to work, except there appears to be some bugs on x86
+      when compiling at speed 3 and safety 0.
     - (INTEGER-DECODE-FLOAT <double-double-float>) was sometimes
       returning the wrong integer value because the two components had
       the wrong sign.
