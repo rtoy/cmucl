@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.46 2007/03/30 01:59:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.47 2007/03/31 01:44:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -5109,18 +5109,17 @@
 
 (define-vop (make-complex-double-double-float)
   (:translate complex)
+  ;; Enable the :load-if when the generator is fixed to handle the
+  ;; case where the arg is on the stack.  If both the result and
+  ;; the args are on the stack, we lose, because the code below
+  ;; doesn't handle that.
   (:args (real :scs (double-double-reg) :target r
-	       :load-if (not (location= real r))
+	       ;;:load-if (not (location= real r))
 	       )
 	 (imag :scs (double-double-reg) :to :save))
   (:arg-types double-double-float double-double-float)
-  ;; Enable the :load-if when the generator is fixed to handle the
-  ;; case where the arg result is on the stack.  If both the result
-  ;; and the args are on the stack, we lose, because the code below
-  ;; doesn't handle that.
   (:results (r :scs (complex-double-double-reg) :from (:argument 0)
-	       ;;:load-if (not (sc-is r complex-double-double-stack))
-	       ))
+	       :load-if (not (sc-is r complex-double-double-stack))))
   (:result-types complex-double-double-float)
   (:note "inline complex double-double-float creation")
   (:policy :fast-safe)
@@ -5175,17 +5174,18 @@
 		(inst fxch real)
 		(inst fstd (ea-for-cddf-real-hi-stack r))
 		(inst fxch real))))
-       (cond ((zerop (tn-offset real))
+       (let ((real-lo (double-double-reg-lo-tn real)))
+	 (cond ((zerop (tn-offset real-lo))
 		(inst fstd (ea-for-cddf-real-lo-stack r)))
 	       (t
-		(inst fxch real)
+		(inst fxch real-lo)
 		(inst fstd (ea-for-cddf-real-lo-stack r))
-		(inst fxch real)))
-       (let ((imag-val (complex-double-double-reg-imag-hi-tn imag)))
+		(inst fxch real-lo))))
+       (let ((imag-val (double-double-reg-hi-tn imag)))
 	 (inst fxch imag-val)
 	 (inst fstd (ea-for-cddf-imag-hi-stack r))
 	 (inst fxch imag-val))
-       (let ((imag-val (complex-double-double-reg-imag-lo-tn imag)))
+       (let ((imag-val (double-double-reg-lo-tn imag)))
 	 (inst fxch imag-val)
 	 (inst fstd (ea-for-cddf-imag-lo-stack r))
 	 (inst fxch imag-val))))))
