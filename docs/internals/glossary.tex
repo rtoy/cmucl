@@ -8,7 +8,7 @@
 In Python, all type checking is done via a general type assertion
 mechanism.  Explicit declarations and implicit assertions (e.g. the arg to
 + is a number) are recorded in the front-end (implicit continuation)
-representation.  Type assertions (and thus type-checking) are "unbundled"
+representation.  Type assertions (and thus type-checking) are ``unbundled''
 from the operations that are affected by the assertion.  This has two major
 advantages:
 \begin{itemize}
@@ -35,7 +35,7 @@ the Implicit Continuation Represenation.
 \item[IR2] The second intermediate representation, also known as {\it VMR}, or
 the Virtual Machine Representation.
 
-\item[basic block] A basic block (or simply "block") has the pretty much the
+\item[basic block] A basic block (or simply ``block'') has the pretty much the
 usual meaning of representing a straight-line sequence of code.  However, the
 code sequence ultimately generated for a block might contain internal branches
 that were hidden inside the implementation of a particular operation.  The type
@@ -71,8 +71,8 @@ or {\tt block} name that is closed over.  These two cases are mostly
 indistinguishable in {\it ICR}.
 
 \item[home] Home is a term used to describe various back-pointers.  A lambda
-variable's "home" is the lambda that the variable belongs to.  A lambda's "home
-environment" is the environment in which that lambda's variables are allocated.
+variable's ``home'' is the lambda that the variable belongs to.  A lambda's ``home
+environment'' is the environment in which that lambda's variables are allocated.
 
 \item[indirect value cell]
 Any closure variable that has assignments ({\tt setq}s) will be allocated in an
@@ -80,8 +80,8 @@ indirect value cell.  This is necessary to ensure that all references to
 the variable will see assigned values, since the compiler normally freely
 copies values when creating a closure.
 
-\item[set variable] Any variable that is assigned to is called a "set
-variable".  Several optimizations must special-case set variables, and set
+\item[set variable] Any variable that is assigned to is called a ``set
+variable''.  Several optimizations must special-case set variables, and set
 closure variables must have an {\it indirect value cell}.
 
 \item[code generator] The code generator for a {\it VOP} is a potentially
@@ -120,7 +120,7 @@ This is called a component because it represents a connected portion of the
 call graph.  Normally the blocks are in depth-first order ({\it DFO}).
 
 \item[component, initial] During ICR conversion, blocks are temporarily
-assigned to initial components.  The "flow graph canonicalization" phase
+assigned to initial components.  The ``flow graph canonicalization'' phase
 determines the true component structure.
 
 \item[component, head and tail]
@@ -191,7 +191,7 @@ allocated in a particular register.  If there is no variable-size data on the
 number stack, then the NFP will generally be identical to the NSP.
 
 \item[Lisp return address] The name of the {\it descriptor} encoding the
-"return pc" for a function call.
+``return pc'' for a function call.
 
 \item[LRA] See {\it lisp return address}.  Also, the name of the register where
 the LRA is passed.
@@ -313,7 +313,7 @@ effects.
 \item[full call]
 \item[function attribute]
 function
-        "real" (allocates environment)
+        ``real'' (allocates environment)
         meaning function-entry
         more vague (any lambda?)
 funny function

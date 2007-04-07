@@ -26,13 +26,13 @@ needed values in the calling environment.
 
 If the function that closes over values may be called in an environment where
 the closed over values are not available, then we must store the values in a
-``closure" so that they are always accessible.  Closures are called using the
-``full call" convention.  When a closure is called, control is transferred to
-the ``external entry point", which fetches the values out of the closure and
+``closure'' so that they are always accessible.  Closures are called using the
+``full call'' convention.  When a closure is called, control is transferred to
+the ``external entry point'', which fetches the values out of the closure and
 then does a local call to the real function, passing the closure values as
 implicit arguments.
 
-In this scheme there is no such thing as a ``heap closure variable" in code,
+In this scheme there is no such thing as a ``heap closure variable'' in code,
 since the closure values are moved into TNs by the external entry point.  There
 is some potential for pessimization here, since we may end up moving the values
 from the closure into a stack memory location, but the advantages are also
@@ -97,7 +97,7 @@ gratuitously using a non-standard convention when there is no reason to.
 local/global TN representations.  The really interesting stuff in this phase is
 operation selection, values representation selection, return strategy, etc.
 Maybe this phase should be conceptually lumped with GTN as ``implementation
-selection", since GTN determines call strategies and locations.]
+selection'', since GTN determines call strategies and locations.]
 
 \#|
 
@@ -115,7 +115,7 @@ passing locations, since in a TR call they are already in the right frame.
 
 In addition to directly indicating whether a call should be coded with a TR
 variant, the Tail-P annotation flags non-call nodes that can directly return
-the value (an "advanced return"), rather than moving the value to the result
+the value (an ``advanced return''), rather than moving the value to the result
 continuation and jumping to the return code.  Then (according to policy), we
 can decide to advance all possible returns.  If all uses of the result are
 Tail-P, then LTN can annotate the result continuation as :Unused, inhibiting
@@ -148,16 +148,16 @@ type check on the result.
 
     The semantics of result type restriction is that the result must be proven
     to be of that type *except* for safe generators, which are assumed to
-    verify the assertion.  That way ``is-fixnum" case can be a fast-safe
-    generator and the "should-be-fixnum" case is a safe generator.  We could
-    choose not to have a safe "should-be-fixnum" generator, and let the
+    verify the assertion.  That way ``is-fixnum'' case can be a fast-safe
+    generator and the ``should-be-fixnum'' case is a safe generator.  We could
+    choose not to have a safe ``should-be-fixnum'' generator, and let the
     unrestricted safe generator handle it.  We would then have to do an
     explicit type check on the result.
 
     In other words, for all template except Safe, a type restriction on either
-    an argument or result means "this must be true; if it is not the system may
-    break."  In contrast, in a Safe template, the restriction means "If this is
-    not true, I will signal an error."
+    an argument or result means ``this must be true; if it is not the system may
+    break.''  In contrast, in a Safe template, the restriction means ``If this is
+    not true, I will signal an error.''
 
     Since the node-derived-type only takes into consideration stuff that can be
     proved from the arguments, we can use the node-derived-type to select
@@ -197,7 +197,7 @@ implementations, some optimized for speed, some for space, etc.  Some of these
 VOPS might be open-coded and some not.
 
 We represent the implementation strategy for a call by either marking it as a
-full call or annotating it with a ``template" representing the open-coding
+full call or annotating it with a ``template'' representing the open-coding
 strategy.  Templates are selected using a two-way dispatch off of operand
 primitive-types and policy.  The general case of LTN is handled by the
 LTN-Annotate function in the function-info, but most functions are handled by a
@@ -376,7 +376,7 @@ components of VMR are Temporary Names (TNs) and Virtual OPerations (VOPs).  TNs
 represent the locations that hold values, and VOPs represent the operations
 performed on the values.
 
-A "primitive type" is a type meaningful at the VM level.  Examples are Fixnum,
+A ``primitive type'' is a type meaningful at the VM level.  Examples are Fixnum,
 String-Char, Short-Float.  During VMR conversion we use the primitive type of
 an expression to determine both where we can store the result of the expression
 and which type-specific implementations of an operation can be applied to the
@@ -389,7 +389,7 @@ Usually primitive types will be disjoint except for T, which represents all
 types.
 
 The primitive type T is special-cased.  Not only does it overlap with all the
-other types, but it implies a descriptor ("boxed" or "pointer") representation.
+other types, but it implies a descriptor (``boxed'' or ``pointer'') representation.
 For efficiency reasons, we sometimes want to use
 alternate representations for some objects such as numbers.  The majority of
 operations cannot exploit alternate representations, and would only be
@@ -474,7 +474,7 @@ We want to convince ourselves that values deallocation based on lifetime
 analysis actually works.  In particular, we need to be sure that it doesn't
 violate the required stack discipline.  It is clear that it is impossible to
 deallocate the values before they become dead, since later code may decide to
-use them.  So the only thing we need to ensure is that the "right" time isn't
+use them.  So the only thing we need to ensure is that the ``right'' time isn't
 later than the time that the continuation becomes dead.
 
 The only reason why we couldn't deallocate continuation A as soon as it becomes
@@ -512,7 +512,7 @@ continuations we believe are on the stack.  Starting with an empty stack, we:
     continuation), we pop that continuation.
  -- When we pop all continuations, we terminate our walk.
 
-[\#\#\# not quite right...  It seems we may run into "dead values" during the
+[\#\#\# not quite right...  It seems we may run into ``dead values'' during the
 graph walk too.  It seems that we have to check if the pushed continuation is
 on stack top, and if not, add it to the ending stack so that the post-pass will
 discard it.]

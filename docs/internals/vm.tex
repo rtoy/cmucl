@@ -141,13 +141,13 @@ fraction of the system sources.
 One current major problem with porting is that large pieces of functionality
 are entirely within the VM, and would need to be reimplemented for each port.
 A major goal for future work on the system is moving code out of the VM, both
-by supporting a "fast-call" convention that allows reasonable use of Lisp in
-the out of line implementation of VOPs, and by having a "bugout" mechanism that
+by supporting a ``fast-call'' convention that allows reasonable use of Lisp in
+the out of line implementation of VOPs, and by having a ``bugout'' mechanism that
 allows the VM to call Lisp functions to implement the hard cases in some VOPs.
 
 The VM is designed to support conventional, untagged, general register
 architectures.  Suitably lobotomized, it could be mapped to less flexible
-hardware such as "Lisp machines", but the compiler would have serious
+hardware such as ``Lisp machines'', but the compiler would have serious
 difficulties supporting stack architectures.
 
 The VM does not support concurrent lightweight processes.  Locking primitives
@@ -187,18 +187,18 @@ The names of VOPs that implement functions are based on the function name.
 Other VOPs may use any base that doesn't conflict with a function name.  There
 are some rules used to obtain the base name for related operations.
 
-To get the name of a setting operation, replace the string "{\tt ref}" in the name
-with "{\tt set}".  If "{\tt ref}" doesn't appear in the name, add the prefix "{\tt set-}" to the
+To get the name of a setting operation, replace the string ``{\tt ref}'' in the name
+with ``{\tt set}''.  If ``{\tt ref}'' doesn't appear in the name, add the prefix ``{\tt set-}'' to the
 base name.  For example, {\tt svref} becomes {\tt svset}, and {\tt symbol-value}
 becomes {\tt set-symbol-value}.
 
 To get the name of a conditional VOP from the name of a predicate, add the
-prefix "{\tt if-}" to the predicate name.  For example, {\tt eq} becomes {\tt if-eq}.
+prefix ``{\tt if-}'' to the predicate name.  For example, {\tt eq} becomes {\tt if-eq}.
 {\tt eq} by itself would be a VOP that returned true or false value.
 
 Some operations check for some error condition, magically signalling the error
 through an implicit control transfer.  These operations are prefixed with
-"{\tt check-}", as in {\tt check-fixnum} and {\tt check-bound}.
+``{\tt check-}'', as in {\tt check-fixnum} and {\tt check-bound}.
 
 
 
@@ -207,27 +207,27 @@ through an implicit control transfer.  These operations are prefixed with
 Prefixes and suffixes are added to the base to get the names of variant
 versions of the VOP.  The fully general VOP name looks like this:
 \begin{format}
-   {"{\tt small-}" | "{\tt fast-}"} {\it name}{"{\tt -c}" {\it info}}{"{\tt /}" {\it type}{"{\tt =>}" {\it result-type}}
+   {``{\tt small-}'' | ``{\tt fast-}''} {\it name}{``{\tt -c}'' {\it info}}{``{\tt /}'' {\it type}{``{\tt =>}'' {\it result-type}}
 \end{format}
-The "{\tt small-}" and "{\tt fast-}" prefixes indicates that the VOP does minimal
+The ``{\tt small-}'' and ``{\tt fast-}'' prefixes indicates that the VOP does minimal
 safety checking and is optimized for space or speed, respectively.  The absence
-of a prefix indicates the safest (or only) version.  Usually if the "{\tt small-}"
+of a prefix indicates the safest (or only) version.  Usually if the ``{\tt small-}''
 VOP exists, it will be a synonym for either the fast version or the safe
 version, depending on which is smaller.
 
-The "{\tt -c}" suffix indicates that the some info that is passed as a normal
+The ``{\tt -c}'' suffix indicates that the some info that is passed as a normal
 argument to the base version of the VOP is passed as Codegen-Info in this
 version.  A typical use would be for VOPs where it is important to use a
 different version when one of the arguments is a compile time constant.
-{\it info} is some (possibly null) string that indicates which "{\tt -c}" variant
+{\it info} is some (possibly null) string that indicates which ``{\tt -c}'' variant
 is involved.
 
-The "{\tt /}{\it type}" suffix asserts that all operands that could be of {\it type} are.
+The ``{\tt /}{\it type}'' suffix asserts that all operands that could be of {\it type} are.
 For example, {\tt +/fixnum} adds two fixnums returning a fixnum, while
 {\tt length/simple-vector} finds the length of a simple vector, but the result isn't
 a simple vector.
 
-The "{\tt =>}{\it result-type}" suffix supplies a result type assertion on the
+The ``{\tt =>}{\it result-type}'' suffix supplies a result type assertion on the
 operation.
 
 A not totally silly example of all these modifiers simultaneously is
@@ -248,7 +248,7 @@ A Lisp object is fixed-size data structure that is organized in a way mandated
 by the VM implementation.  The fixed format allows the VM to determine the type
 of the object.  \comment<Virtual type?  VM type?  Implementation type?
 ...provides the VM enough information about the type of the object for the VM
-to implement the VM-level semantics...  ...supports the "dynamic types"...>
+to implement the VM-level semantics...  ...supports the ``dynamic types''...>
 
 Lisp objects are stored in locations known as cells. 
 
@@ -272,7 +272,7 @@ Non-immediate types:
   pc (code vector)
   stack closure (control stack pointer)
 
-Non-immediate objects are allocated in "type spaces".  The type space of an
+Non-immediate objects are allocated in ``type spaces''.  The type space of an
 object is characterized by a small integer known as the type code.  Any two
 objects of one of the above boxed types will always have the same type code.
 {But not really...  Some types might be allocated in different type spaces at
@@ -822,7 +822,7 @@ The main idea is to globally allocate only those registers with global
 significance.
 
 We permanently dedicate the CONT register to point to the current control stack
-environment.  This is the "frame pointer" in standard terminology.  It isn't
+environment.  This is the ``frame pointer'' in standard terminology.  It isn't
 possible to get pack to allocate this register on an as-needed basis due to the
 classic phase-ordering problem.  We need to know if TNs are allocated on the
 stack before we can determine tell how badly we need a frame pointer register.
@@ -987,7 +987,7 @@ Aspects of function call:
 \section{Function Object Format}
 \label{Fn-Format}
 
-The old notion of a "function object" is now broken down into four different
+The old notion of a ``function object'' is now broken down into four different
 parts:
 \begin{description}
 Function entry\\A function entry is a structure that holds the information
@@ -1034,7 +1034,7 @@ information.
 depends on the amount of information available at compile time:
 \begin{description}
 Local\\Local call is used when the call and the called function are
-compiled at the same time.  Using the term "convention" to describe this
+compiled at the same time.  Using the term ``convention'' to describe this
 call mechanism is somewhat of a misnomer, since the compiler can do
 whatever it wants.
 
@@ -1086,7 +1086,7 @@ there is more than one instance of the same TN present simultaneously in the
 case where there are nested calls to the same function.
 
 It turns out that there isn't a problem with a simple self-call, because the TN
-in the called frame is really the "same" TN as the one in the current frame,
+in the called frame is really the ``same'' TN as the one in the current frame,
 due to the restricted way in which we use the passing TNs.
 
 We emit code for external entry points during IR2 conversion.  The external
@@ -1160,8 +1160,8 @@ the return point to the call point, ignoring the uses of the passing locations
 in the called function.  Similarly, we pretend that a block ending in a return
 has no successors.
 
-call-local (arg*) "fun" => value
-multiple-call-local (arg*) "fun" =$>$ start end val0 ... val$<$n$>$
+call-local (arg*) ``fun'' => value
+multiple-call-local (arg*) ``fun'' =$>$ start end val0 ... val$<$n$>$
     Call-Local is used for calls to local functions that are forced to use the
     unknown-values passing convention.  Value is the first return value
     register; we don't really do anything to it, but we specify it as a result
@@ -1171,7 +1171,7 @@ multiple-call-local (arg*) "fun" =$>$ start end val0 ... val$<$n$>$
     unknown-values convention.  Default-Values may be used to receive a
     specific number of values.
 
-known-call-local (arg*) "fun" =$>$ value*
+known-call-local (arg*) ``fun'' =$>$ value*
     This VOP is used for local calls to functions where we can determine at
     compile time that the number of values returned is always the same.  In
     this case, we don't need to indicate the number of values, and can pass
@@ -1179,7 +1179,7 @@ known-call-local (arg*) "fun" =$>$ value*
     don't really do anything to the return values; we just specify them as
     results to represent the assignment done by the called function.
 
-known-return (return-pc value*) "fun"
+known-return (return-pc value*) ``fun''
     This VOP is used for returning from local calls using the known return
     values convention.  The specified return Values are moved into the passing
     locations in the caller's frame.
@@ -1200,8 +1200,8 @@ Known values return causes no problems, since the callee knows how many values
 are wanted.  We store the values directly into the current frame, since it is
 also the caller's frame.
 
-known-call-simple () "fun" =$>$ return-pc
-known-return-simple (return-pc) "fun"
+known-call-simple () ``fun'' =$>$ return-pc
+known-return-simple (return-pc) ``fun''
     Similar to the non-simple VOPs, but don't allocate or deallocate frames,
     and assume that argument and value passing is done with explicit Move VOPs.
 
@@ -1265,25 +1265,25 @@ first $<$n$>$ values are passed in the standard argument registers.  The Old-Con
 register holds the Start of the values block and SP points to the End.
 
 
-{small, fast} call (function arg0 ... arg$<$n$>$) "nargs" =$>$ value
-{small, fast} call-named (arg0 ... arg$<$n$>$) "nargs" "name" =$>$ value
+{small, fast} call (function arg0 ... arg$<$n$>$) ``nargs'' =$>$ value
+{small, fast} call-named (arg0 ... arg$<$n$>$) ``nargs'' ``name'' =$>$ value
     Call-Closure calls Function with the specified register arguments,
-    returning the first value as the result.  "nargs" is the total number of
+    returning the first value as the result.  ``nargs'' is the total number of
     arguments passed.  Only the register arguments actually passed should be
     specified as operands.
 
     Call-Named is similar, but calls a global function specified at compile
-    time by "name".
+    time by ``name''.
 
-{small, fast} tail-call (function pc arg0 ... arg$<$n$>$) "nargs"
-{small, fast} tail-call-named (pc arg0 ... arg$<$n$>$) "nargs" "name"
+{small, fast} tail-call (function pc arg0 ... arg$<$n$>$) ``nargs''
+{small, fast} tail-call-named (pc arg0 ... arg$<$n$>$) ``nargs'' ``name''
     Similar to the standard call VOPs, but passes PC as the return PC, rather
     than returning to the call site.  These VOPs have no results since they
     don't return.
 
-{small, fast} multiple-call (function arg0 ... arg$<$n$>$) "nargs"
+{small, fast} multiple-call (function arg0 ... arg$<$n$>$) ``nargs''
                                     =$>$ start end val0 ... val$<$n$>$
-{small, fast} multiple-call-named (arg0 ... arg$<$n$>$) "nargs" "name"
+{small, fast} multiple-call-named (arg0 ... arg$<$n$>$) ``nargs'' ``name''
                                   =$>$ start end val0 ... val$<$n$>$
     These VOPs are similar to the standard call VOPs, but allow any number of 
     values to be received by returning all the value passing registers as
@@ -1295,7 +1295,7 @@ tail-call-unknown (function pc count arg0 ... arg$<$n$>$)
     Call a function with an unknown number of arguments.  Used for apply and
     hairy multiple-value-call.
 
-Function-Entry () "function" =$>$ env return-pc old-cont arg*
+Function-Entry () ``function'' =$>$ env return-pc old-cont arg*
     This marks the place where we jump into a component for an external
     entry point.  It represents whatever magic is necessary to do argument
     count checking and dispatching.  The external entry points for each
@@ -1308,8 +1308,8 @@ Function-Entry () "function" =$>$ env return-pc old-cont arg*
     specified as Args, including stack arguments.
    {\#\#\# Do we really need this?  If we do, then we probably also need similar
     entry markers for local functions.  The lifetimes don't really need to be
-    explicitly bounded, since an entry point is effectively "the end of the
-    world."}
+    explicitly bounded, since an entry point is effectively ``the end of the
+    world.''}
 
 
 \section(Returning from a Function Call)
@@ -1350,7 +1350,7 @@ any register saving since we never come back.
 \index{Catch frames}
 
 There is one aspect of the control stack format that is fixed, and which
-concerns us at this level.  This is the format of the "frames" which mark the
+concerns us at this level.  This is the format of the ``frames'' which mark the
 destination of non-local exits, such as for BLOCK and CATCH.  These frames are
 collectively known as unwind blocks.  The basic unwind block is used for
 lexical exists such as BLOCK, and for UNWIND-PROTECT.  Its format is the

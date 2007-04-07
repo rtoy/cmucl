@@ -185,7 +185,7 @@ cleverness.  It would be prohibitively expensive to represent the full conflict
 set for every TN with sparse sets, as is done at the block-level.  Although it
 wouldn't cause non-linear behavior, it would require a complex linked structure
 containing tens of elements to be created for every TN.  Fortunately we can
-improve on this if we take into account the fact that most TNs are "local" TNs:
+improve on this if we take into account the fact that most TNs are ``local'' TNs:
 TNs which have all their uses in one block.
 
 First, many global TNs will be either live or dead for the entire duration of a
@@ -304,10 +304,10 @@ will clog all registers with global TNs.
 If we pack a TN with a specified save location on the stack, pack in the
 specified location.
 
-Allow old-cont and return-pc to be kept in registers by adding a new "keep
-around" kind of TN.  These are kind of like environment live, but are only
+Allow old-cont and return-pc to be kept in registers by adding a new ``keep
+around'' kind of TN.  These are kind of like environment live, but are only
 always-live in blocks that they weren't referenced in.  Lifetime analysis does
-a post-pass adding always-live conflicts for each "keep around" TN to those
+a post-pass adding always-live conflicts for each ``keep around'' TN to those
 blocks with no conflict for that TN.  The distinction between always-live and
 keep-around allows us to successfully target old-cont and return-pc to passing
 locations.  MAKE-KEEP-AROUND-TN (ptype), PRE-PACK-SAVE-TN (tn scn offset).
@@ -352,7 +352,7 @@ preventing us from repacking TNs in unbounded SBs.  We can't repack in a finite
 SB, since there might have been load TNs packed in that SB which aren't
 represented in the original conflict structures.
 
-Is it permissible to "restrict" an operand to an unbounded SC?  Not impossible
+Is it permissible to ``restrict'' an operand to an unbounded SC?  Not impossible
 to satisfy as long as a finite SC is also allowed.  But in practice, no
 restriction would probably be as good.
 
@@ -437,35 +437,35 @@ Pack should:
 
 Subject to resource constraints:
  -- Minimize use costs
-     -- "Register allocation"
-         Allocate as many values as possible in scarce "good" locations,
+     -- ``Register allocation''
+         Allocate as many values as possible in scarce ``good'' locations,
          attempting to minimize the aggregate use cost for the entire program.
-     -- "Save optimization"
+     -- ``Save optimization''
          Don't allocate values in registers when the save/restore costs exceed
          the expected gain for keeping the value in a register.  (Similar to
-         "opening costs" in RAOC.)  [Really just a case of representation
+         ``opening costs'' in RAOC.)  [Really just a case of representation
          selection.]
 
  -- Minimize preference costs
     Eliminate as many moves as possible.
 
 
-"Register allocation" is basically an attempt to eliminate moves between
-registers and memory.  "Save optimization" counterbalances "register
-allocation" to prevent it from becoming a pessimization, since saves can
+``Register allocation'' is basically an attempt to eliminate moves between
+registers and memory.  ``Save optimization'' counterbalances ``register
+allocation'' to prevent it from becoming a pessimization, since saves can
 introduce register/memory moves.
 
 Preference optimization reduces the number of moves within an SC.  Doing a good
 job of honoring preferences is important to the success of the compiler, since
 we have assumed in many places that moves will usually be optimized away.
 
-The scarcity-oriented aspect of "register allocation" is handled by a greedy
-algorithm in pack.  We try to pack the "most important" TNs first, under the
+The scarcity-oriented aspect of ``register allocation'' is handled by a greedy
+algorithm in pack.  We try to pack the ``most important'' TNs first, under the
 theory that earlier packing is more likely to succeed due to fewer constraints.
 
 The drawback of greedy algorithms is their inability to look ahead.  Packing a
-TN may mess up later "register allocation" by precluding packing of TNs that
-are individually "less important", but more important in aggregate.  Packing a
+TN may mess up later ``register allocation'' by precluding packing of TNs that
+are individually ``less important,'' but more important in aggregate.  Packing a
 TN may also prevent preferences from being honored.
 
 
@@ -619,7 +619,7 @@ dependent, so we want to give them a clear interface.
 
 \begin{verbatim}
 open-fasl-file name => fasl-file
-    Returns a "fasl-file" object representing all state needed by the dumper.
+    Returns a ``fasl-file'' object representing all state needed by the dumper.
     We objectify the state, since the fasdumper should be reentrant.  (but
     could fail to be at first.)
 

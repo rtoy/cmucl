@@ -29,7 +29,7 @@ shall be relatively independent of such considerations as word
 length, number of type bits, and so on.  If two implementations
 interpret the same macrocode (compiled code format), then Fasload
 files should be completely compatible.  If they do not, then files
-not containing compiled code (so-called ``Fasdump" data files) should
+not containing compiled code (so-called ``Fasdump'' data files) should
 still be compatible.  While this may lead to a format which is not
 maximally efficient for a particular implementation, the sacrifice of
 a small amount of performance is deemed a worthwhile price to pay to
@@ -37,7 +37,7 @@ achieve portability.
 
 The primary assumption about data format compatibility is that all
 implementations can support I/O on finite streams of eight-bit bytes.
-By ``finite" we mean that a definite end-of-file point can be detected
+By ``finite'' we mean that a definite end-of-file point can be detected
 irrespective of the content of the data stream.  A Fasload file will
 be regarded as such a byte stream.
 
@@ -96,19 +96,19 @@ suggestions.
 \section{Fasload Language}
 
 Each operation in the binary Fasload language is an eight-bit
-(one-byte) opcode.  Each has a name beginning with "{\tt FOP-}".  In	
+(one-byte) opcode.  Each has a name beginning with ``{\tt FOP-}''.  In	
 the following descriptions, the name is followed by operand
 descriptors.  Each descriptor denotes operands that follow the opcode
 in the input stream.  A quantity in parentheses indicates the number
 of bytes of data from the stream making up the operand.  Operands
 which implicitly come from the stack are noted in the text.  The
-notation "$\Rightarrow$ stack" means that the result is pushed onto the
-stack; "$\Rightarrow$ table" similarly means that the result is added to the
-table.  A construction like "{\it n}(1) {\it value}({\it n})" means that
+notation ``$\Rightarrow$ stack'' means that the result is pushed onto the
+stack; ``$\Rightarrow$ table'' similarly means that the result is added to the
+table.  A construction like ``{\it n}(1) {\it value}({\it n})'' means that
 first a single byte {\it n} is read from the input stream, and this
 byte specifies how many bytes to read as the operand named {\it value}.
 All numeric values are unsigned binary integers unless otherwise
-specified.  Values described as "signed" are in two's-complement form
+specified.  Values described as ``signed'' are in two's-complement form
 unless otherwise specified.  When an integer read from the stream
 occupies more than one byte, the first byte read is the least
 significant byte, and the last byte read is the most significant (and
@@ -131,7 +131,7 @@ all implementations to support both formats in Fasload files.
 
 Measurements are to be made to determine which operation codes are
 worthwhile; little-used operations may be discarded and new ones
-added.  After a point the definition will be "frozen", meaning that
+added.  After a point the definition will be ``frozen'', meaning that
 existing operations may not be deleted (though new ones may be added;
 some operations codes will be reserved for that purpose).
 
@@ -233,7 +233,7 @@ operands to be popped from the stack.  These are made into a list
 of that length, and the list is pushed onto the stack.
 The first item popped from the stack becomes the last element of
 the list, and so on.  Hence an iterative loop can start with
-the empty list and perform "pop an item and cons it onto the list"
+the empty list and perform ``pop an item and cons it onto the list''
 {\it length} times.
 (Lists of length greater than 255 can be made by using {\tt FOP-LIST*}
 repeatedly.)
@@ -243,7 +243,7 @@ This is like {\tt FOP-LIST} except that the constructed list is terminated
 not by {\tt ()} (the empty list), but by an item popped from the stack
 before any others are.	Therefore {\it length}+1 items are popped in all.
 Hence an iterative loop can start with
-a popped item and perform "pop an item and cons it onto the list"
+a popped item and perform ``pop an item and cons it onto the list''
 {\it length}+1 times.
 
 \item[17-24:] \hspace{2em} {\tt FOP-LIST-1}, {\tt FOP-LIST-2}, ..., {\tt FOP-LIST-8} \\
@@ -390,7 +390,7 @@ A compiled function is constructed and pushed onto the stack.
 This object is in the format specified by the most recent
 occurrence of {\tt FOP-CODE-FORMAT}.
 The operand {\it nitems} specifies a number of items to pop off
-the stack to use in the "boxed storage" section.  The operand {\it code}
+the stack to use in the ``boxed storage'' section.  The operand {\it code}
 is a string of bytes constituting the compiled executable code.
 
 \item[59:] \hspace{2em} {\tt FOP-SMALL-CODE} \hspace{2em} {\it nitems}(1) \hspace{2em} {\it size}(2) \hspace{2em}
@@ -399,7 +399,7 @@ A compiled function is constructed and pushed onto the stack.
 This object is in the format specified by the most recent
 occurrence of {\tt FOP-CODE-FORMAT}.
 The operand {\it nitems} specifies a number of items to pop off
-the stack to use in the "boxed storage" section.  The operand {\it code}
+the stack to use in the ``boxed storage'' section.  The operand {\it code}
 is a string of bytes constituting the compiled executable code.
 
 \item[60-61:] Unused
@@ -421,7 +421,7 @@ end of every group, if not more often.
 \item[64:] \hspace{2em} {\tt FOP-END-GROUP} \\
 This is the last operation of a group.	If this is not the
 last byte of the file, then a new group follows; the next
-nine bytes must be "{\tt FASL FILE}".
+nine bytes must be ``{\tt FASL FILE}''.
 
 \item[65:] \hspace{2em} {\tt FOP-POP-FOR-EFFECT} \hspace{2em} stack \hspace{2em} $\Rightarrow$ \hspace{2em} \\
 One item is popped from the stack.

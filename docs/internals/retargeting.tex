@@ -34,7 +34,7 @@ Constant TNs: we count on being able to indirect to the leaf, and don't try to
 wedge the information into the offset.  We set the FSC to an appropriate
 immediate SC.
 
-    Allow "more operands" to VOPs in define-vop.  You can't do much with the
+    Allow ``more operands'' to VOPs in define-vop.  You can't do much with the
     more operands: define-vop just fills in the cost information according to
     the loading costs for a SC you specify.  You can't restrict more operands,
     and you can't make local preferences.  In the generator, the named variable
@@ -66,12 +66,12 @@ immediate SC.
 
 There are basically three levels of target dependence:
 
- -- Code in the "front end" (before VMR conversion) deals only with Lisp
+ -- Code in the ``front end'' (before VMR conversion) deals only with Lisp
     semantics, and is totally target independent.
 
  -- Code after VMR conversion and before code generation depends on the VM,
     but should work with little modification across a wide range of
-    "conventional" architectures.
+    ``conventional'' architectures.
 
  -- Code generation depends on the machine's instruction set and other
     implementation details, so it will have to be redone for each
@@ -98,7 +98,7 @@ Primitive types are used for two things:
 	Is this operand legal for this VOP?  When ptypes overlap in interesting
 	ways, there is a problem with allowing just a simple ptype restriction,
 	since we might want to allow multiple ptypes.  This could be handled
-	by allowing "union primitive types", or by allowing multiple primitive
+	by allowing ``union primitive types'', or by allowing multiple primitive
 	types to be specified (only in the operand restriction.)  The latter
 	would be along the lines of other more flexible VOP operand restriction
 	mechanisms, (constant, etc.)
@@ -114,11 +114,11 @@ need to represent the legal SCs for restricted TNs somehow, and also would have 
 come up with some other way for pack to keep track of which SCs we have already
 tried.
 
-An SC would have a list of "alternate" SCs and a boolean SAVE-P value that
+An SC would have a list of ``alternate'' SCs and a boolean SAVE-P value that
 indicates it needs to be saved across calls in some non-SAVE-P SC.  A TN is
-initially given its "best" SC.  The SC is annotated with VOPs that are used for
+initially given its ``best'' SC.  The SC is annotated with VOPs that are used for
 moving between the SC and its alternate SCs (load/save operand, save/restore
-register).  It is also annotated with the "move" VOPs used for moving between
+register).  It is also annotated with the ``move'' VOPs used for moving between
 this SC and all other SCs it is possible to move between.  We flush the idea
 that there is only c-to-t and c-from-t.
 
@@ -163,7 +163,7 @@ Some storage bases:
 
 A storage class is a potentially arbitrary set of the elements in a storage
 base.  Although conceptually there may be a hierarchy of storage classes such
-as "all registers", "boxed registers", "boxed scratch registers", this doesn't
+as ``all registers'', ``boxed registers'', ``boxed scratch registers'', this doesn't
 exist at the implementation level.  Such things can be done by specifying
 storage classes whose locations overlap.  A TN shouldn't have lots of
 overlapping SC's as legal SC's, since time would be wasted repeatedly
@@ -364,7 +364,7 @@ being used to tell whether a particular unsafe template might get emitted, we
 can also use it to give better efficiency notes:
  -- We can say what is wrong with the call types, rather than just saying we
     failed to open-code.
- -- We can tell whether any of the "better" templates could possibly apply,
+ -- We can tell whether any of the ``better'' templates could possibly apply,
     i.e. is the inapplicability of a template because of inadequate type
     information or because the type is just plain wrong.  We don't want to
     flame people when a template that couldn't possibly match doesn't match,
@@ -375,11 +375,11 @@ can also use it to give better efficiency notes:
 This is how we give better efficiency notes:
 
 The Template-Note is a short noun-like string without capitalization or
-punctuation that describes what the template ``does", i.e. we say
-"Unable to do ~A, doing ~A instead."
+punctuation that describes what the template ``does'', i.e. we say
+``Unable to do ~A, doing ~A instead.''
 
 The Cost is moved from the Vop-Info to the Template structure, and is used to
-determine the ``goodness" of possibly applicable templates.  [Could flush
+determine the ``goodness'' of possibly applicable templates.  [Could flush
 Template/Vop-Info distinction]  The cost is used to choose the best applicable
 template to emit, and also to determine what better templates we might have
 been able to use.
@@ -400,8 +400,8 @@ VOP writers expect:
 \item[MOVE]
       You write when you port the assembler.)
 \item[EMIT-LABEL]
-      Assembler interface like INST.  Takes a label you made and says "stick it
-      here."
+      Assembler interface like INST.  Takes a label you made and says ``stick it
+      here.''
    \item[GEN-LABEL]
       Returns a new label suitable for use with EMIT-LABEL exactly once and
       for referencing as often as necessary.
@@ -489,7 +489,7 @@ used for defining various kinds of frobs that need to take arbitrary arguments:
 \begin{itemize}
 \item Keyword arguments
 \item Interpreter stubs
-\item "Pass through" applications such as dispatch functions
+\item ``Pass through'' applications such as dispatch functions
 \end{itemize}
 Given the marginal importance of more args in local call, it seems unworth
 going to any implementation difficulty.  In fact, it seems that it would cause
@@ -873,7 +873,7 @@ DEFAULT-UNKNOWN-VALUES
 If returnee wants one value, it never does anything to deal with a shortage
 of return values.  However, if start at PC, then it has to adjust the stack
 pointer to dump extra values (move OCFP into CSP).  If it starts at PC+N,
-then it just goes along with the "want one value, got it" case.
+then it just goes along with the ``want one value, got it'' case.
 If the returnee wants multiple values, and there's a shortage of return
 values, there are two cases to handle.  One, if the returnee wants fewer
 values than there are return registers, and we start at PC+N, then it fills
@@ -889,7 +889,7 @@ an unknown number of values came back:
    A1..An get nil
    NARGS gets 1
    OCFP gets CSP, so general code described below can move OCFP into CSP
-If we start at PC, then branch down to the general "got k values, wanted n"
+If we start at PC, then branch down to the general ``got k values, wanted n''
 code which takes care of the following issues:
    If k < n, fill in stack return values of nil for shortage of return
       values and move OCFP into CSP

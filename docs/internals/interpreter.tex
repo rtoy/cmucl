@@ -4,7 +4,7 @@
 
 May be worth having a byte-code representation for interpreted code.  This way,
 an entire system could be compiled into byte-code for debugging (the
-"check-out" compiler?).
+``check-out'' compiler?).
 
 Given our current inclination for using a stack machine to interpret IR1, it
 would be straightforward to layer a byte-code interpreter on top of this.
@@ -70,9 +70,9 @@ optimizations that change user-visible function calls:
     another non-obvious transformation.
  -- Don't run source-transforms, IR1 transforms and IR1 optimizers.  This way,
     TRACE and BACKTRACE will show calls with the original arguments, rather
-    than the "optimized" form, etc.  Also, for the interpreter it will
+    than the ``optimized'' form, etc.  Also, for the interpreter it will
     actually be faster to call the original function (which is compiled) than
-    to "inline expand" it.  Also, this allows implementation-dependent
+    to ``inline expand'' it.  Also, this allows implementation-dependent
     transforms to expand into %PRIMITIVE uses.
 
 There are some problems with stepping, due to our non-syntactic IR1
@@ -98,7 +98,7 @@ any), then just print the next form to step.  In the rare case where we did
 unwind, the user should be able to figure it out.  
 
 [We can look at this as a side-effect of CPS: there isn't any difference
-between a "normal" return and a non-local one.]
+between a ``normal'' return and a non-local one.]
 
 [Note that in any control transfer (normal or otherwise), the stepper may need
 to unwind out of an arbitrary number of levels of stepping.  This is because a
@@ -124,7 +124,7 @@ macroexpansion.  This seems reasonable, since steppers are for weenies, and
 weenies don't define macros (hence don't debug them).  But there are probably
 some weenies who don't know that they shouldn't be writing macros.
 
-We could handle this by finding the "source paths" in the expansion of each
+We could handle this by finding the ``source paths'' in the expansion of each
 macro by sticking some special frob in the source path marking the place where
 the expansion happened.  When we hit code again that is in the source, then we
 revert to the normal source path.  Something along these lines might be a good
@@ -143,7 +143,7 @@ value delivered to a DEST whose source form is the current or an enclosing
 form.  Along with the value, you would print the source form for the node that
 is computing the value.
 
-The stepper can also have a "back" command that "unskips" or "unsteps".  This
+The stepper can also have a ``back'' command that ``unskips'' or ``unsteps''.  This
 would allow the evaluation of forms that are pure (modulo lexical variable
 setting) to be undone.  This is useful, since in stepping it is common that you
 skip a form that you shouldn't have, or get confused and want to restart at
@@ -151,26 +151,26 @@ some earlier point.
 
 What we would do is remember the current node and the values of all local
 variables.  heap before doing each step or skip action.  We can then back up
-the state of all lexical variables and the "program counter".  To make this
+the state of all lexical variables and the ``program counter''.  To make this
 work right with set closure variables, we would copy the cell's value, rather
 than the value cell itself.
 
 [To be fair, note that this could easily be done with our current interpreter:
 the stepper could copy the environment alists.]
 
-We can't back up the "program counter" when a control transfer leaves the
+We can't back up the ``program counter'' when a control transfer leaves the
 current function, since this state is implicitly represented in the
 interpreter's state, and is discarded when we exit.  We probably want to ask
-for confirmation before leaving the function to give users a chance to "unskip"
+for confirmation before leaving the function to give users a chance to ``unskip''
 the forms in a TR position.
 
 Another question is whether the conventional stepper is really a good thing to
 imitate...  How about an editor-based mouse-driven interface?  Instead of
-"skipping" and "stepping", you would just designate the next form that you
+``skipping'' and ``stepping'', you would just designate the next form that you
 wanted to stop at.  Instead of displaying return values, you replace the source
 text with the printed representation of the value.
 
-It would show the "program counter" by highlighting the *innermost* form that
+It would show the ``program counter'' by highlighting the *innermost* form that
 we are about to evaluate, i.e. the source form for the node that we are stopped
 at.  It would probably also be useful to display the start of the form that was
 used to designate the next stopping point, although I guess this could be
@@ -186,9 +186,9 @@ stepper to do this.]
 
 Note: \verb|%PRIMITIVE| can only be used in compiled code. It is a
 trapdoor into the compiler, not a general syntax for accessing
-"sub-primitives". It's main use is in implementation-dependent
-compiler transforms. It saves us the effort of defining a "phony
-function" (that is not really defined), and also allows direct
+``sub-primitives''. It's main use is in implementation-dependent
+compiler transforms. It saves us the effort of defining a ``phony
+function'' (that is not really defined), and also allows direct
 communication with the code generator through codegen-info arguments.
 
 Some primitives may be exported from the VM so that \verb|%PRIMITIVE|

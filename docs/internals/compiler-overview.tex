@@ -14,7 +14,7 @@ Two major intermediate representations are used in the compiler:
 semantics of the source code during the initial phases.  Partial evaluation and
 semantic analysis are done on this representation.  ICR is roughly equivalent
 to a subset of Common Lisp, but is represented as a flow-graph rather than a
-syntax tree.  Phases which only manipulate ICR comprise the "front end".  It
+syntax tree.  Phases which only manipulate ICR comprise the ``front end''.  It
 would be possible to use a different back end such as one that directly
 generated code for a stack machine.
 
@@ -154,8 +154,8 @@ makes flow analysis easy.  The full Common Lisp LAMBDA is implemented with a
 simple fixed-arg lambda, which greatly simplifies later code.
       
 The elimination of syntactic information eliminates the need for most of the
-``beta transformation" optimizations in Rabbit.  There are no progns, no
-tagbodys and no returns.  There are no ``close parens" which get in the way of
+``beta transformation'' optimizations in Rabbit.  There are no progns, no
+tagbodys and no returns.  There are no ``close parens'' which get in the way of
 determining which node receives a given value.
 
 In ICR, computation is represented by Nodes.  These are the node types:
@@ -218,7 +218,7 @@ represents only the destination for the result.
 It is very difficult to reconstruct anything resembling the original source
 from ICR, so we record the original source form in each node.  The location of
 the source form within the input is also recorded, allowing for interfaces such
-as "Edit Compiler Warnings".  See section \ref{source-paths}.
+as ``Edit Compiler Warnings''.  See section \ref{source-paths}.
 
 Forms such as special-bind and catch need to have cleanup code executed at all
 exit points from the form.  We represent this constraint in ICR by annotating
@@ -341,8 +341,8 @@ where the default is a constant, we don't have to special-bind at all, since
 the computation of the default is not affected by and cannot affect any special
 bindings.
 
-Keyword and rest args are both implemented using a LEXPR-like "more
-args" convention.  The More-Entry takes two arguments in addition to
+Keyword and rest args are both implemented using a LEXPR-like ``more
+args'' convention.  The More-Entry takes two arguments in addition to
 the fixed and optional arguments: the argument context and count.
 \verb+(ARG <context> <n>)+ accesses the N'th additional argument.  Keyword
 args are implemented directly using this mechanism.  Rest args are
@@ -451,7 +451,7 @@ special-cased by the back-end according to their KIND.
 
 \section{Block compilation}
 
-One of the properties of ICR is that it supports ``block compilation" by allowing
+One of the properties of ICR is that it supports ``block compilation'' by allowing
 arbitrarily large amounts of code to be converted at once, with actual
 compilation of the code being done at will.
 
@@ -468,7 +468,7 @@ known as a Cookie which contains the appropriate settings of the compiler
 policy switches.
 
 We actually convert each form in the file separately, creating a separate
-"initial component" for each one.  Later on, these components are merged as
+``initial component'' for each one.  Later on, these components are merged as
 needed.  The main reason for doing this is to cause EVAL-WHEN processing to be
 interleaved with reading. 
 
@@ -496,9 +496,9 @@ also supposed to be implementation independent.
 As a side-effect of finding which references to known functions can be
 converted to local calls, we find any references that cannot be converted.
 References that cannot be converted to a local call must evaluate to a
-"function object" (or function-entry) that can be called using the full call
+``function object'' (or function-entry) that can be called using the full call
 convention.  A function that can be called from outside the component is called
-an "entry-point".
+an ``entry-point''.
 
 Lots of stuff that happens at compile-time with local function calls must be
 done at run-time when an entry-point is called.

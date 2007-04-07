@@ -56,7 +56,7 @@ then it won't be propagated unless the VM also supplies type inference
 methods for its internal frobs (precluding the use of
 \verb|%PRIMITIVE|, since primitives don't have derive-type methods.)
 
-I guess one possibility would be to have the call still considered "known" even
+I guess one possibility would be to have the call still considered ``known'' even
 though it has been transformed.  But this doesn't work, since we start doing
 LET optimizations that trash the arglist once the call has been transformed
 (and indeed we want to.)
@@ -179,7 +179,7 @@ IF, since IF optimizations will flush unnecessary IFs in a predicate.
 \section{Inline functions}
 
 [\#\#\# Inline expansion is especially powerful in the presence of good lisp-level
-optimization ("partial evaluation").  Many "optimizations" usually done in Lisp
+optimization (``partial evaluation'').  Many ``optimizations'' usually done in Lisp
 compilers by special-case source-to-source transforms can be had simply by
 making the source of the general case function available for inline expansion.
 This is especially helpful in Common Lisp, which has many commonly used
@@ -205,7 +205,7 @@ functions inline even when they use the environment.  We just stash the source
 form and environments in the Functional for the local function.  When we
 convert a call to it, we just reconvert the source in the saved environment.
 
-An interesting alternative to the inline/full-call dichotomy is "semi-inline"
+An interesting alternative to the inline/full-call dichotomy is ``semi-inline''
 coding.  Whenever we have an inline expansion for a function, we can expand it
 only once per block compilation, and then use local call to call this copied
 version.  This should get most of the speed advantage of real inline coding
@@ -269,7 +269,7 @@ invoke local call analysis on the code that needs to be reanalyzed.
 [\#\#\# Let conversion.  What it means to be a let.  Argument type checking done
 by caller.  Significance of local call is that all callers are known, so
 special call conventions may be used.]
-A lambda called in only one place is called a "let" call, since a Let would
+A lambda called in only one place is called a ``let'' call, since a Let would
 turn into one.
 
 In addition to enabling various ICR optimizations, the let/non-let distinction
@@ -340,7 +340,7 @@ constant-continuation-p, etc.  Perhaps group by type in ICR description?}
 
 We are conservative about doing variable-for-variable substitution in ICR
 optimization, since if we substitute a variable with a less restrictive type,
-then we may prevent use of a "good" representation within the scope of the
+then we may prevent use of a ``good'' representation within the scope of the
 inner binding.
 
 Note that variable-variable substitutions aren't really crucial in ICR, since
@@ -583,7 +583,7 @@ functions that don't have a derive-type method.
 
 \subsection{ICR transformation}
 
-ICR transformation does ``source to source" transformations on known global
+ICR transformation does ``source to source'' transformations on known global
 functions, taking advantage of semantic information such as argument types and
 constant arguments.  Transformation is optional, but should be done if speed or
 space is more important than compilation speed.  Transformations which increase
@@ -911,7 +911,7 @@ the environment closes over.
 Each lambda points to the environment where its variables are allocated, and
 the environments point back.  We always allocate the environment at the Bind
 node for the sole non-let lambda in the environment, so there is a close
-relationship between environments and functions.  Each ``real function" (i.e.
+relationship between environments and functions.  Each ``real function'' (i.e.
 not a LET) has a corresponding environment.
 
 We attempt to share the same environment among as many lambdas as possible so
@@ -921,8 +921,8 @@ with no Return node) cannot need its own environment, since there is no way
 that it can return and discover that its old values have been clobbered.
 
 When the function is called, values from other environments may need to be made
-available in the function's environment.  These values are said to be "closed
-over".
+available in the function's environment.  These values are said to be ``closed
+over''.
 
 Even if a value is not referenced in a given environment, it may need to be
 closed over in that environment so that it can be passed to a called function
@@ -933,7 +933,7 @@ calls, since at other references we must have the values on hand so that we can
 build a closure.  This propagation must be applied recursively, since the value
 must also be available in *those* functions' callers.
 
-If a closure reference is known to be "safe" (not an upward funarg), then the
+If a closure reference is known to be ``safe'' (not an upward funarg), then the
 closure structure may be allocated on the stack.
 
 Closure analysis deals only with closures over values, while Common Lisp
@@ -941,9 +941,9 @@ requires closures over variables.  The difference only becomes significant when
 variables are set.  If a variable is not set, then we can freely make copies of
 it without keeping track of where they are.  When a variable is set, we must
 maintain a single value cell, or at least the illusion thereof.  We achieve
-this by creating a heap-allocated "value cell" structure for each set variable
+this by creating a heap-allocated ``value cell'' structure for each set variable
 that is closed over.  The pointer to this value cell is passed around as the
-"value" corresponding to that variable.  References to the variable must
+``value'' corresponding to that variable.  References to the variable must
 explicitly indirect through the value cell.
 
 When we are scanning over the lambdas in the component, we also check for bound

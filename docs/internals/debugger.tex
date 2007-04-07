@@ -103,7 +103,7 @@ course, the various \verb+<foo>-arch.c+ files.
 Although the compiler's great freedom in choice of function call conventions
 and variable representations has major efficiency advantages, it also has
 unfortunate consequences for the debugger.  The debug information that we need
-is even more elaborate than for conventional "compiled" languages, since we
+is even more elaborate than for conventional ``compiled'' languages, since we
 cannot even do a simple backtrace without some debug information.  However,
 once having gone this far, it is not that difficult to go the extra distance,
 and provide full source level debugging of compiled code.
@@ -146,7 +146,7 @@ build during a walk.]
 
 
 
-Instead of using source paths in the debug-info, use "form numbers".  The form
+Instead of using source paths in the debug-info, use ``form numbers''.  The form
 number of a form is the number of forms that we walk to reach that form when
 doing a pre-order walk of the source form.  [Might want to use a post-order
 walk, as that would more closely approximate evaluation order.]
@@ -199,8 +199,8 @@ start of the next compiled debug block in the blocks vector.
 
 [\#\#\# Actually, only need 2 bits for number of successors {0,1,2}.  We might
 want to use other bits in the first byte to indicate the kind of location.]
-[\#\#\# We could support local packing by having a general concept of "alternate
-locations" instead of just regular and save locations.  The location would have
+[\#\#\# We could support local packing by having a general concept of ``alternate
+locations'' instead of just regular and save locations.  The location would have
 a bit indicating that there are alternate locations, in which case we read the
 number of alternate locations and then that many more SC-OFFSETs.  In the
 debug-block, we would have a second bit mask with bits set for TNs that are in
@@ -212,7 +212,7 @@ being interpreted as an index into the Location's alternate locations.]
 It looks like using structures for the compiled-location-info is too bulky.
 Instead we need some packed binary representation.
 
-First, let's represent an SC/offset pair with an "SC-Offset", which is an
+First, let's represent an SC/offset pair with an ``SC-Offset'', which is an
 integer with the SC in the low 5 bits and the offset in the remaining bits:
 \begin{verbatim}
     ----------------------------------------------------
@@ -248,13 +248,13 @@ this, due to the one-to-many relationship between source and code locations.
 
 We might be able to get away with just storing the source locations for the
 beginnings of blocks and maintaining a mapping from code ranges to blocks.
-This would be fine both for the profiler and for the "where am I running now"
+This would be fine both for the profiler and for the ``where am I running now''
 indication.  Users might also be convinced that it was most interesting to
 break at block starts, but I don't really know how easily people could develop
 an understanding of basic blocks.
 
 It could also be a bit tricky to map an arbitrary user-designated source
-location to some "closest" source location actually in the debug info.
+location to some ``closest'' source location actually in the debug info.
 This problem probably exists to some degree even with a full source map, since
 some forms will never appear as the source of any node.  It seems you might
 have to negotiate with the user.  He would mouse something, and then you would
@@ -331,7 +331,7 @@ the error should look the same to the debugger (or at least similar).
 
 \subsection{Debugger Interface}
 
-How does the debugger interface to the "evaluator" (where the evaluator means
+How does the debugger interface to the ``evaluator'' (where the evaluator means
 all of native code, byte-code and interpreted IR1)?  It seems that it would be
 much more straightforward to have a consistent user interface to debugging
 all code representations if there was a uniform debugger interface to the
@@ -399,7 +399,7 @@ variable:
 \begin{itemize}
 
 \item[Name]
-	Although a lexical variable's name is "really" a symbol (package and
+	Although a lexical variable's name is ``really'' a symbol (package and
 	all), in practice it doesn't seem worthwhile to require all the symbols
 	for local variable names to be retained.  There is much less VM and GC
 	overhead for a constant string than for a symbol.  (Also it is useful
@@ -411,7 +411,7 @@ variable:
 	multiple variables with the same name in a given function.  The ID is
 	something that makes Name unique, probably a small integer.  When
 	variables aren't unique, we could make this be part of the name, e.g.
-	"FOO\#1", "FOO\#2".  But there are advantages to keeping this separate,
+	``FOO\#1'', ``FOO\#2''.  But there are advantages to keeping this separate,
 	since in many cases lifetime information can be used to disambiguate,
 	making qualification unnecessary.
 
@@ -591,11 +591,11 @@ example, when debuggability is important, we could make the TNs holding
 arguments live for the entire environment.  This would guarantee that a
 backtrace would always get the right value (modulo setqs).  
 
-Note that in this context, "environment" means the Environment structure (one
+Note that in this context, ``environment'' means the Environment structure (one
 per non-let function).  At least according to current plans, even when we do
 inter-routine register allocation, the different functions will have different
-environments: we just "equate" the environments.  So the number of live
-per-environment TNs is bounded by the size of a "function", and doesn't blow up
+environments: we just ``equate'' the environments.  So the number of live
+per-environment TNs is bounded by the size of a ``function'', and doesn't blow up
 in block compilation.
 
 The implementation is simple: per-environment TNs are flagged by the
@@ -605,30 +605,30 @@ stashed in a list in the IR2-Environment structure.  During the conflict
 analysis post-pass, we look at each block's environment, and make all the
 environment's TNs always-live in that block.
 
-We can implement the "fixed save location" concept needed for lazy frame
+We can implement the ``fixed save location'' concept needed for lazy frame
 creation by allocating the save TNs as wired TNs at IR2 conversion time.  We
-would use the new "environment lifetime" concept to specify the lifetimes of
+would use the new ``environment lifetime'' concept to specify the lifetimes of
 the save locations.  There isn't any run-time overhead if we never get around
 to using the save TNs.  [Pack would also have to notice TNs with pre-allocated
 save TNs, packing the original TN in the stack location if its FSC is the
 stack.]
 
 
-We want a standard (recognizable) format for an "escape" frame.  We must make
+We want a standard (recognizable) format for an ``escape'' frame.  We must make
 an escape frame whenever we start running another function without the current
 function getting a chance to save its registers.  This may be due either to a
-truly asynchronous event such as a software interrupt, or due to an "escape"
+truly asynchronous event such as a software interrupt, or due to an ``escape''
 from a miscop.  An escape frame marks a brief conversion to a callee-saves
 convention.
 
 Whenever a miscop saves registers, it should make an escape frame.  This
-ensures that the "current" register contents can always be located by the
+ensures that the ``current'' register contents can always be located by the
 debugger.  In this case, it may be desirable to be able to indicate that only
 partial saving has been done.  For example, we don't want to have to save all
 the FP registers just so that we can use a couple extra general registers.
 
 When the debugger see an escape frame, it knows that register values are
-located in the escape frame's "register save" area, rather than in the normal
+located in the escape frame's ``register save'' area, rather than in the normal
 save locations.
 
 It would be nice if there was a better solution to this internal error concept.
