@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.14 2006/01/04 21:54:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.15 2007/04/07 15:16:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -99,7 +99,7 @@
 ;;; enclosing them in parentheses.  Note that the order in which the
 ;;; patterns are specified below determines the order of search.
 
-;;; Choices of pattern symbols are: second, minute, hour, day, month,
+;;; Choices of pattern symbols are: secondp, minute, hour, day, month,
 ;;; year, time-divider, date-divider, am-pm, zone, izone, weekday,
 ;;; noon-midn, and any special symbol.
 
@@ -126,7 +126,12 @@
     (noon-midn)
     (hour (noon-midn))
 
-     ;; Time/date combined formats.
+    ;; Time/date combined formats.
+    
+    ;; This pattern is produced by ctime/asctime
+    (weekday month day
+	   hour (time-divider) minute (time-divider) secondp
+	   year)
     ((weekday) month (date-divider) day (date-divider) year
 	   hour (time-divider) (minute) (time-divider) (secondp)
 	   (am-pm) (date-divider) (zone))
