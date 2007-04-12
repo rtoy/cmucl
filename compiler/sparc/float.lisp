@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.52 2007/04/12 18:39:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.53 2007/04/12 19:15:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -746,13 +746,13 @@
       (complex-double-double-stack
        (let ((offset (* (tn-offset y) word-bytes)))
 	 (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
-	   (store-long-reg real-tn nfp offset))
+	   (inst stdf real-tn nfp offset))
 	 (let ((real-tn (complex-double-double-reg-real-lo-tn x)))
-	   (store-long-reg real-tn nfp (+ offset (* 2 word-bytes))))
+	   (inst stdf real-tn nfp (+ offset (* 2 word-bytes))))
 	 (let ((imag-tn (complex-double-double-reg-imag-hi-tn x)))
-	   (store-long-reg imag-tn nfp (+ offset (* 4 word-bytes))))
+	   (inst stdf imag-tn nfp (+ offset (* 4 word-bytes))))
 	 (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
-	   (store-long-reg imag-tn nfp (+ offset (* 6 word-bytes)))))))))
+	   (inst stdf imag-tn nfp (+ offset (* 6 word-bytes)))))))))
 
 #+double-double
 (define-move-vop move-complex-double-double-float-argument :move-argument
