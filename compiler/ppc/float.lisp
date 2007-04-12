@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.10 2007/03/27 11:33:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.11 2007/04/12 17:41:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1320,7 +1320,7 @@
 	   (inst stfd r-imag nfp (+ offset (* 6 vm:word-bytes)))))))))
 
 (define-vop (complex-double-double-float-value)
-  (:args (x :scs (complex-double-double-reg) :target r
+  (:args (x :scs (complex-double-double-reg descriptor-reg) :target r
 	    :load-if (not (sc-is x complex-double-double-stack))))
   (:arg-types complex-double-double-float)
   (:results (r :scs (double-double-reg)))
@@ -1351,7 +1351,20 @@
        (let ((r-lo (double-double-reg-lo-tn r)))
 	 (inst lfd r-lo (current-nfp-tn vop) (* (+ (ecase slot (:real 2) (:imag 6))
 						   (tn-offset x))
-						vm:word-bytes)))))))
+						vm:word-bytes))))
+      (descriptor-reg
+       (let ((r-hi (double-double-reg-hi-tn r)))
+	 (inst lfd r-hi x (- (* (ecase slot
+				  (:real vm::complex-double-double-float-real-hi-slot)
+				  (:imag vm::complex-double-double-float-imag-hi-slot))
+				vm:word-bytes)
+			     other-pointer-type)))
+       (let ((r-lo (double-double-reg-lo-tn r)))
+	 (inst lfd r-lo x (- (* (ecase slot
+				  (:real vm::complex-double-double-float-real-lo-slot)
+				  (:imag vm::complex-double-double-float-imag-lo-slot))
+				vm:word-bytes)
+			     other-pointer-type)))))))
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
