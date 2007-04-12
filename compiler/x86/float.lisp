@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.47 2007/03/31 01:44:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.48 2007/04/12 03:24:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -843,7 +843,7 @@
 #+double-double
 (define-vop (move-complex-double-double-float-argument)
   (:args (x :scs (complex-double-double-reg) :target y)
-	 (nfp :scs (any-reg) :load-if (not (sc-is y complex-double-double-reg))))
+	 (fp :scs (any-reg) :load-if (not (sc-is y complex-double-double-reg))))
   (:results (y))
   (:note "complex double-double-float argument move")
   (:generator 2
@@ -883,25 +883,25 @@
       (complex-double-double-stack
        (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
 	 (cond ((zerop (tn-offset real-tn))
-		(inst fstd (ea-for-cddf-real-hi-stack y)))
+		(inst fstd (ea-for-cddf-real-hi-stack y fp)))
 	       (t
 		(inst fxch real-tn)
-		(inst fstd (ea-for-cddf-real-hi-stack y))
+		(inst fstd (ea-for-cddf-real-hi-stack y fp))
 		(inst fxch real-tn))))
-       (let ((real-tn (complex-double-double-reg-real-hi-tn x)))
+       (let ((real-tn (complex-double-double-reg-real-lo-tn x)))
 	 (cond ((zerop (tn-offset real-tn))
-		(inst fstd (ea-for-cddf-real-lo-stack y)))
+		(inst fstd (ea-for-cddf-real-lo-stack y fp)))
 	       (t
 		(inst fxch real-tn)
-		(inst fstd (ea-for-cddf-real-lo-stack y))
+		(inst fstd (ea-for-cddf-real-lo-stack y fp))
 		(inst fxch real-tn))))
        (let ((imag-tn (complex-double-double-reg-imag-hi-tn x)))
 	 (inst fxch imag-tn)
-	 (inst fstd (ea-for-cddf-imag-hi-stack y))
+	 (inst fstd (ea-for-cddf-imag-hi-stack y fp))
 	 (inst fxch imag-tn))
        (let ((imag-tn (complex-double-double-reg-imag-lo-tn x)))
 	 (inst fxch imag-tn)
-	 (inst fstd (ea-for-cddf-imag-lo-stack y))
+	 (inst fstd (ea-for-cddf-imag-lo-stack y fp))
 	 (inst fxch imag-tn))))
     ))
 
