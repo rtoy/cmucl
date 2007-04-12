@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.51 2007/03/27 16:45:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.52 2007/04/12 18:39:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3159,8 +3159,8 @@
 	   (inst stdf r-imag nfp (+ offset (* 6 vm:word-bytes)))))))))
 
 (define-vop (complex-double-double-float-value)
-  (:args (x :scs (complex-double-double-reg)
-	    :load-if (not (sc-is x complex-double-double-stack))))
+  (:args (x :scs (complex-double-double-reg descriptor-reg)
+	    :load-if (not (or (sc-is x complex-double-double-stack)))))
   (:arg-types complex-double-double-float)
   (:results (r :scs (double-double-reg)))
   (:result-types double-double-float)
@@ -3190,7 +3190,20 @@
        (let ((r-lo (double-double-reg-lo-tn r)))
 	 (inst lddf r-lo (current-nfp-tn vop) (* (+ (ecase slot (:real 2) (:imag 6))
 						    (tn-offset x))
-						 vm:word-bytes)))))))
+						 vm:word-bytes))))
+      (descriptor-reg
+       (let ((r-hi (double-double-reg-hi-tn r)))
+	 (inst lddf r-hi x (- (* (ecase slot
+				   (:real vm::complex-double-double-float-real-hi-slot)
+				   (:imag vm::complex-double-double-float-imag-hi-slot))
+				 vm:word-bytes)
+			      vm:other-pointer-type))
+       (let ((r-lo (double-double-reg-lo-tn r)))
+	 (inst lddf r-lo x (- (* (ecase slot
+				 (:real vm::complex-double-double-float-real-lo-slot)
+				 (:imag vm::complex-double-double-float-imag-lo-slot))
+			       vm:word-bytes)
+			    vm:other-pointer-type))))))))
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
