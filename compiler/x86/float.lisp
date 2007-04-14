@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.48 2007/04/12 03:24:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.49 2007/04/14 14:10:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -5109,12 +5109,8 @@
 
 (define-vop (make-complex-double-double-float)
   (:translate complex)
-  ;; Enable the :load-if when the generator is fixed to handle the
-  ;; case where the arg is on the stack.  If both the result and
-  ;; the args are on the stack, we lose, because the code below
-  ;; doesn't handle that.
   (:args (real :scs (double-double-reg) :target r
-	       ;;:load-if (not (location= real r))
+	       :load-if (not (location= real r))
 	       )
 	 (imag :scs (double-double-reg) :to :save))
   (:arg-types double-double-float double-double-float)
@@ -5191,7 +5187,7 @@
 	 (inst fxch imag-val))))))
 
 (define-vop (complex-double-double-float-value)
-  (:args (x :scs (complex-double-double-reg) :target r
+  (:args (x :scs (complex-double-double-reg descriptor-reg) :target r
 	    :load-if (not (sc-is x complex-double-double-stack))))
   (:arg-types complex-double-double-float)
   (:results (r :scs (double-double-reg)))
@@ -5237,7 +5233,18 @@
 	 (with-empty-tn@fp-top (r-lo)
 	   (inst fldd (ecase slot
 		       (:real (ea-for-cddf-real-lo-stack x))
-		       (:imag (ea-for-cddf-imag-lo-stack x))))))))))
+		       (:imag (ea-for-cddf-imag-lo-stack x)))))))
+      (descriptor-reg
+       (let ((r-hi (double-double-reg-hi-tn r)))
+	 (with-empty-tn@fp-top (r-hi)
+	   (inst fldd (ecase slot
+		       (:real (ea-for-cddf-real-hi-desc x))
+		       (:imag (ea-for-cddf-imag-hi-desc x))))))
+       (let ((r-lo (double-double-reg-lo-tn r)))
+	 (with-empty-tn@fp-top (r-lo)
+	   (inst fldd (ecase slot
+		       (:real (ea-for-cddf-real-lo-desc x))
+		       (:imag (ea-for-cddf-imag-lo-desc x))))))))))
 
 (define-vop (realpart/complex-double-double-float complex-double-double-float-value)
   (:translate realpart)
