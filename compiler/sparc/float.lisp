@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.53 2007/04/12 19:15:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.54 2007/04/19 21:49:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1720,7 +1720,7 @@
 	 (store-long-reg imag nfp (+ offset (* 4 vm:word-bytes))))))))
 
 (define-vop (complex-single-float-value)
-  (:args (x :scs (complex-single-reg) :target r
+  (:args (x :scs (complex-single-reg descriptor-reg) :target r
 	    :load-if (not (sc-is x complex-single-stack))))
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
@@ -1739,7 +1739,13 @@
       (complex-single-stack
        (inst ldf r (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 1))
 					      (tn-offset x))
-					   vm:word-bytes))))))
+					   vm:word-bytes)))
+      (descriptor-reg
+       (inst ldf r x (- (* (ecase slot
+			     (:real vm::complex-single-float-real-slot)
+			     (:imag vm::complex-single-float-imag-slot))
+			   vm:word-bytes)
+			vm:other-pointer-type))))))
 
 (define-vop (realpart/complex-single-float complex-single-float-value)
   (:translate realpart)
@@ -1752,7 +1758,7 @@
   (:variant :imag))
 
 (define-vop (complex-double-float-value)
-  (:args (x :scs (complex-double-reg) :target r
+  (:args (x :scs (complex-double-reg descriptor-reg) :target r
 	    :load-if (not (sc-is x complex-double-stack))))
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
@@ -1771,7 +1777,13 @@
       (complex-double-stack
        (inst lddf r (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 2))
 					       (tn-offset x))
-					    vm:word-bytes))))))
+					    vm:word-bytes)))
+      (descriptor-reg
+       (inst lddf r x (- (* (ecase slot
+				 (:real vm::complex-double-float-real-slot)
+				 (:imag vm::complex-double-float-imag-slot))
+			       vm:word-bytes)
+			    vm:other-pointer-type))))))
 
 (define-vop (realpart/complex-double-float complex-double-float-value)
   (:translate realpart)
@@ -1964,7 +1976,7 @@
 ;; 0d0) but we get #c(0d0 -0d0) because of the negation of the
 ;; imaginary part.  For this to work, we need to get compute 0 -
 ;; imaginary part, but there's no floating-point zero we can use.
-#+ni
+#+nil
 (macrolet
     ((frob (size fop fneg cost)
        (let ((vop-name (symbolicate size "-FLOAT---COMPLEX-" size "-FLOAT"))
