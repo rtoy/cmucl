@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.11 2007/04/12 17:41:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.12 2007/04/20 01:55:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1030,7 +1030,7 @@
 
 
 (define-vop (complex-single-float-value)
-  (:args (x :scs (complex-single-reg) :target r
+  (:args (x :scs (complex-single-reg descriptor-reg) :target r
 	    :load-if (not (sc-is x complex-single-stack))))
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
@@ -1049,7 +1049,13 @@
       (complex-single-stack
        (inst lfs r (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 1))
 					      (tn-offset x))
-					   vm:word-bytes))))))
+					   vm:word-bytes)))
+      (descriptor-reg
+       (inst lfs r x (- (* (ecase slot
+			     (:real vm::complex-single-float-real-slot)
+			     (:imag vm::complex-single-float-imag-slot))
+			   vm:word-bytes)
+			other-pointer-type))))))
 
 (define-vop (realpart/complex-single-float complex-single-float-value)
   (:translate realpart)
@@ -1062,7 +1068,7 @@
   (:variant :imag))
 
 (define-vop (complex-double-float-value)
-  (:args (x :scs (complex-double-reg) :target r
+  (:args (x :scs (complex-double-reg descriptor-reg) :target r
 	    :load-if (not (sc-is x complex-double-stack))))
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
@@ -1081,7 +1087,13 @@
       (complex-double-stack
        (inst lfd r (current-nfp-tn vop) (* (+ (ecase slot (:real 0) (:imag 2))
 					      (tn-offset x))
-					   vm:word-bytes))))))
+					   vm:word-bytes)))
+      (descriptor-reg
+       (inst lfd r x (- (* (ecase slot
+			     (:real vm::complex-double-float-real-slot)
+			     (:imag vm::complex-double-float-imag-slot))
+			   vm:word-bytes)
+			other-pointer-type))))))
 
 (define-vop (realpart/complex-double-float complex-double-float-value)
   (:translate realpart)
