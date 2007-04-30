@@ -20,6 +20,12 @@ New in this release:
 
 
   * Feature enhancements:
+    - Support for dynamic-extent added for ppc.  However, it suffers
+      from the same problems with dynamic-extent as other platforms,
+      so it is disabled by default.  Tests indicate that it does work
+      in simple situations.
+    - PARSE-TIME recognizes the format produced by C asctime/ctime.
+      (This change may break some other less commonly used patterns.)
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
@@ -59,6 +65,8 @@ New in this release:
       the wrong sign.
     - Some issues with debugger printing out DOUBLE-DOUBLE-FLOATs and
       (COMPLEX DOUBLE-DOUBLE-FLOAT)'s have been fixed.
+    - Fix issue with UNIX:UNIX-MMAP handling of "large" addresses that
+      appeared to be negative numbers.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
