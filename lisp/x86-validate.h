@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.26 2007/03/28 02:18:20 fgilham Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.27 2007/05/01 15:35:09 rtoy Exp $
  *
  */
 
@@ -11,6 +11,8 @@
 #define _X86_VALIDATE_H_
 
 /*
+ * Also look in compiler/x86/parms.lisp for some of the parameters.
+ *
  * Address map:
  *
  *  FreeBSD:
@@ -56,8 +58,8 @@
  *	0x28000000->0x38000000  256M Static Space.
  *	0x38000000->0x40000000  128M Control stack growing down.
  *	0x40000000->0x48000000  128M Reserved for shared libraries.
- *	0x58000000->0xBE000000 1632M Dynamic Space.
- *      0xBE000000->0xBF000000   16M Foreign Linkage Table
+ *      0x58000000->0x58100000   16M Foreign Linkage Table
+ *	0x58100000->0xBE000000 1631M Dynamic Space.
  *      0xBFFF0000->0xC0000000       Unknown Linux mapping
  *
  *      (Note: 0x58000000 allows us to run on a Linux system on an AMD
