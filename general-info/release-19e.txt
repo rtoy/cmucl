@@ -30,18 +30,18 @@ New in this release:
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
     - SHADOW accepts characters now.
+    - Default initargs are now passed correctly to initialize-instance
+      and shared-initialize.
 
   * Bugfixes:
     - Floating-point traps are now handled on ppc.  Previously, no
       traps were signalled and SET-FLOATING-POINT-MODES did nothing.
     - FILE-POSITION no longer returns negative values for mapped
       file-simple-stream's.
-    - Potential Version numbers that start with a leading 0 are not
-      treated as version numbers.  Hence, "foo.~1~" has name "foo",
-      type nil, and version 1, but "foo.~01~" has type "~01~" and
-      version :NEWEST.
-    - Converting negative rationals to double-double-float's doesn't
-      produce wrong answers anymore.
+    - Potential Version numbers that start with a leading 0 are no
+      longer treated as version numbers.  Hence, "foo.~1~" has name
+      "foo", type nil, and version 1, but "foo.~01~" has type "~01~"
+      and version :NEWEST.
     - A bug in type derivation for EXPT has been fixed.  (expt x y)
       for x of type (double-float (0d0) 1d0) and y of type
       (double-float (0d0)) now returns (or (member 0d0) (double-float
@@ -51,26 +51,31 @@ New in this release:
       now.  Previously the wrong instruction was decoded, which
       produced the wrong operation and operands in the arithmetic
       error handler.
-    - Conversion of bignums to double-double-floats preserves more
-      bits of the bignum now.  This allows for read/print consistency
-      for this particular case.  (The general case is still broken.)
-    - (float <negative bignum> 1w0) no longer returns a positive
-      result.
-    - Some issues with creation of DOUBLE-DOUBLE-FLOAT and (COMPLEX
-      DOUBLE-DOUBLE-FLOAT) have been fixed on sparc, ppc, and x86.
-      These seem to work, except there appears to be some bugs on x86
-      when compiling at speed 3 and safety 0.
-    - (INTEGER-DECODE-FLOAT <double-double-float>) was sometimes
-      returning the wrong integer value because the two components had
-      the wrong sign.
-    - Some issues with debugger printing out DOUBLE-DOUBLE-FLOATs and
-      (COMPLEX DOUBLE-DOUBLE-FLOAT)'s have been fixed.
     - Fix issue with UNIX:UNIX-MMAP handling of "large" addresses that
       appeared to be negative numbers.
+    - DOUBLE-DOUBLE-FLOAT fixes:
+      o Converting negative rationals to double-double-float's doesn't
+	produce wrong answers anymore.
+      o Conversion of bignums to double-double-floats preserves more
+	bits of the bignum now.  This allows for read/print consistency
+	for this particular case.  (The general case is still broken.)
+      o (float <negative bignum> 1w0) no longer returns a positive
+	result.
+      o Some issues with creation of DOUBLE-DOUBLE-FLOAT and (COMPLEX
+	DOUBLE-DOUBLE-FLOAT) have been fixed on sparc, ppc, and x86.
+	These seem to work, except there appears to be some bugs on x86
+	when compiling at speed 3 and safety 0.
+      o (INTEGER-DECODE-FLOAT <double-double-float>) was sometimes
+	returning the wrong integer value because the two components had
+	the wrong sign.
+      o Some issues with debugger printing out DOUBLE-DOUBLE-FLOATs and
+	(COMPLEX DOUBLE-DOUBLE-FLOAT)'s have been fixed.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
       float can be computed, instead of signalling an error.
+    - #9 fixed.  An error is generated if the number of days doesn't
+      match the number of days in the given month.
 
   * Other changes:
 
