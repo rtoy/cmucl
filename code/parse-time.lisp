@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.15 2007/04/07 15:16:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.16 2007/05/02 12:47:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -599,6 +599,27 @@
       (truncate form-value 100)
     (setf (decoded-time-zone parsed-values) (- (+ hours (/ mins 60))))))
 
+(defun check-days-per-month (parsed-values)
+  (cond ((= (decoded-time-month parsed-values) 2)
+	 ;; February only has 28 days, except for leap years
+	 (flet ((leap-year-p (y)
+		  ;; Leap years are years divisible by 4.  Except if
+		  ;; it's divisible by 100, in which case, only if
+		  ;; it's divisible by 400.
+		  (let ((div-100 (mod y 100))
+			(div-4 (mod y 4)))
+		    (if (zerop div-100)
+			(zerop (mod y 400))
+			(zerop div-4)))))
+	   (<= (decoded-time-day parsed-values)
+	       (if (leap-year-p (decoded-time-year parsed-values))
+		   29 28))))
+	((member (decoded-time-month parsed-values) '(4 6 9 11))
+	 ;; These months only have 30 days
+	 (<= (decoded-time-day parsed-values) 30))
+	(t
+	 t)))
+
 ;;; Set-time-values uses the association list of symbols and values
 ;;; to set the time in the decoded-time structure.
 
@@ -620,7 +641,14 @@
 	(noon-midn (deal-with-noon-midn form-value parsed-values))
 	(date-time-divider 0)
 	(special (funcall form-value parsed-values))
-	(t (error "Unrecognized symbol in form list: ~A." form-type))))))
+	(t (error "Unrecognized symbol in form list: ~A." form-type)))))
+  ;; Some simple sanity checks, like does the given month have that
+  ;; many days?  Is it a leap year?
+  (unless (check-days-per-month parsed-values)
+    (error "Invalid number of days (~D) for month ~D in ~D"
+	   (decoded-time-day parsed-values)
+	   (decoded-time-month parsed-values)
+	   (decoded-time-year parsed-values))))
 
 (defun parse-time (time-string &key (start 0) (end (length time-string))
 			       (error-on-mismatch nil)
