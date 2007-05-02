@@ -28,10 +28,17 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/system.lisp,v 1.3 2003/06/13 21:08:22 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/system.lisp,v 1.4 2007/05/02 13:33:51 rtoy Rel $")
 
+#+nil
 (setf (logical-pathname-translations "pcl-test")
       `(("*.*.*" "/home/gerd/cmucl/src/pcl/rt/")))
+
+
+(setf (logical-pathname-translations "pcl-test")
+      (list (list "*.*.*"
+		  (merge-pathnames #p"*.*"
+				   *load-truename*))))
 
 (mk:defsystem :pcl-test
     :initially-do (progn )

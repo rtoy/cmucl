@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.17 2004/08/06 17:21:54 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.18 2007/05/02 13:33:46 rtoy Rel $")
 
 (in-package "PCL")
 
@@ -403,25 +403,35 @@
 	(standard-sort-methods si-methods)
       (declare (ignore si-primary))
       (assert (and (null ii-around) (null si-around)))
-      (let ((initargs (ctor-initargs ctor))
-	    (slot-inits (slot-init-forms ctor (or ii-before si-before))))
-	(flet ((method-calls (methods args)
-		 (loop for method in methods
-		       as fn = (method-function method)
-		       collect `(funcall (truly-the function ,fn) ,args ()))))
-	  (values
-	   `(let (,@(when (or ii-before ii-after)
-		    `((.ii-args.
-		       (list .instance. ,@(quote-plist-keys initargs)))))
-		  ,@(when (or si-before si-after)
-		    `((.si-args.
-		       (list .instance. t ,@(quote-plist-keys initargs))))))
-	      ,@(method-calls ii-before '.ii-args.)
-	      ,@(method-calls si-before '.si-args.)
-	      ,slot-inits
-	      ,@(method-calls si-after '.si-args.)
-	      ,@(method-calls ii-after '.ii-args.))
-	   (or ii-before si-before)))))))
+      (let ((initargs (ctor-initargs ctor)))
+	(multiple-value-bind (slot-inits defaulted-initargs)
+	    (slot-init-forms ctor (or ii-before si-before))
+	  (flet ((method-calls (methods args)
+		   (loop for method in methods
+			 as fn = (method-function method)
+			 collect `(funcall (truly-the function ,fn) ,args ()))))
+	    (let ((let (car slot-inits))
+		  (bindings (cadr slot-inits))
+		  (body (cddr slot-inits)))
+	      (assert (eq let 'let))
+	      (multiple-value-bind (slot-init-forms decls doc-string)
+		  (sys:parse-body body nil nil)
+		(declare (ignore doc-string))
+		(values
+		 `(let* (,@bindings
+			 ,@(when (or ii-before ii-after)
+		            `((.ii-args.
+			       (list .instance. ,@(quote-plist-keys initargs) ,@defaulted-initargs))))
+			 ,@(when (or si-before si-after)
+		            `((.si-args.
+			       (list .instance. t ,@(quote-plist-keys initargs) ,@defaulted-initargs)))))
+		    ,@decls
+		    ,@(method-calls ii-before '.ii-args.)
+		    ,@(method-calls si-before '.si-args.)
+		    ,@slot-init-forms
+		    ,@(method-calls si-after '.si-args.)
+		    ,@(method-calls ii-after '.ii-args.))
+		 (or ii-before si-before))))))))))
 
 ;;;
 ;;; Return four values from APPLICABLE-METHODS: around methods, before
@@ -467,6 +477,8 @@
 ;;; that we have to check if these before-methods have set slots.
 ;;; For structures the consequences are likewise.
 ;;;
+;;; madhu 061211 second return value is a list of default initargs.
+;;;
 (defun slot-init-forms (ctor before-method-p)
   (let* ((class (ctor-class ctor))
 	 (structure-p (structure-class-p class))
@@ -479,6 +491,7 @@
 	 (class-inits ())
 	 (structure-inits ())
 	 (default-inits ())
+	 (defaulted-initargs ())
 	 (default-initargs (class-default-initargs class))
 	 ;;
 	 ;; Note that the locations are actually defstruct slot
@@ -537,7 +550,13 @@
       ;; if not actually used for initializing a slot.
       (loop for (key initfn initform) in default-initargs and i from 0
 	    unless (memq key initkeys) do
-	      (let* ((type (if (constantp initform) 'constant 'var))
+	      (let* ((type (cond ((constantp initform)
+				  (push key defaulted-initargs)
+				  (push initform defaulted-initargs)
+				  'constant)
+				 (t (push key defaulted-initargs)
+				    (push (default-init-variable-name i) defaulted-initargs)
+				    'var)))
 		     (init (if (eq type 'var) initfn initform)))
 		(when (eq type 'var)
 		  (let ((init-var (default-init-variable-name i)))
@@ -610,10 +629,12 @@
 		  collect var into vars
 		  collect `(,var (funcall ,initfn)) into bindings
 		  finally (return (values vars bindings)))
-	  `(let ,bindings
-	     (declare (ignorable ,@vars) (optimize (safety 3)))
-	     ,@instance-init-forms
-	     ,@class-init-forms))))))
+	  (values
+	   `(let ,bindings
+	      (declare (ignorable ,@vars) (optimize (safety 3)))
+	      ,@instance-init-forms
+	      ,@class-init-forms)
+	   (nreverse defaulted-initargs)))))))
 
 ;;;
 ;;; Return an alist of lists (KEY LOCATION ...) telling, for each key

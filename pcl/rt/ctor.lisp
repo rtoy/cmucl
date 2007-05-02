@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.7 2003/10/23 10:29:33 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.8 2007/05/02 13:33:51 rtoy Exp $")
 
 (in-package "PCL-TEST")
 
@@ -399,3 +399,20 @@
 	      (slot-boundp instance 'b)))
   0 nil)
 
+;; Test for default-initargs bug.
+(defclass g2 ()
+  ((a :initarg :aa)))
+
+(defmethod initialize-instance :after ((f g2) &key aa)
+  (princ aa))
+
+(defclass g3 (g2)
+  ((b :initarg :b))
+  (:default-initargs :aa 5))
+
+(deftest defaulting-initargs.1
+    (with-output-to-string (*standard-output*)
+      (make-instance 'g3))
+  "5")
+
+  
