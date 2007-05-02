@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.84 2006/10/27 15:13:25 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.85 2007/05/02 16:51:59 rtoy Exp $
  *
  */
 
@@ -6460,16 +6460,14 @@ print_ptr(lispobj * addr)
 	    *(addr + 2), *(addr + 3), *(addr + 4));
 }
 
-#if defined(sparc)
-extern char closure_tramp;
-#elif defined(DARWIN)
+#if defined(sparc) || defined(DARWIN)
 extern char closure_tramp;
 extern char undefined_tramp;
 #else
 extern int undefined_tramp;
 #endif
 
-static void
+void
 verify_space(lispobj * start, size_t words)
 {
     int dynamic_space = (find_page_index((void *) start) != -1);
@@ -6537,9 +6535,7 @@ verify_space(lispobj * start, size_t words)
 	    } else {
 		/* Verify that it points to another valid space */
 		if (!to_readonly_space && !to_static_space &&
-#if defined(sparc)
-		    thing != (int) &closure_tramp
-#elif defined(DARWIN)
+#if defined(sparc) || defined(DARWIN)
 		    !((thing == (int) &closure_tramp) ||
 		      (thing == (int) &undefined_tramp))
 #else
@@ -6547,16 +6543,15 @@ verify_space(lispobj * start, size_t words)
 #endif
 		    ) {
 		    fprintf(stderr,
-			    "*** Ptr %lx @ %lx sees Junk (%s = %lx)\n",
+			    "*** Ptr %lx @ %lx sees Junk (undefined_tramp = %lx)",
 			    (unsigned long) thing, (unsigned long) start,
-#if defined(sparc)
-			    "closure_tramp",
-			    (unsigned long) &closure_tramp
-#else
-			    "undefined_tramp",
-			    (unsigned long) &undefined_tramp
+			    (unsigned long) &undefined_tramp);
+                    
+#if defined(sparc) || defined(DARWIN)
+                    fprintf(stderr, " (closure_tramp = %lx)",
+			    (unsigned long) &closure_tramp);
 #endif
-			);
+                    fprintf(stderr, "\n");
 		    print_ptr(start);
 		}
 	    }
