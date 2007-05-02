@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.37 2006/06/30 18:41:32 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.38 2007/05/02 16:50:12 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -1685,8 +1685,14 @@ purify(lispobj static_roots, lispobj read_only_roots)
 #endif
     clean = static_space;
     do {
-	while (clean != static_free)
-	    clean = pscav(clean, static_free - clean, FALSE);
+	while (clean < static_free)
+          clean = pscav(clean, static_free - clean, FALSE);
+        if (clean != static_free) {
+            fprintf(stderr, "*** clean (%x) != static_free (%x)\n",
+                    clean, static_free);
+            fprintf(stderr, "    Possible heap corruption?\n");
+        }
+        
 	laters = later_blocks;
 	count = later_count;
 	later_blocks = NULL;
@@ -1705,8 +1711,14 @@ purify(lispobj static_roots, lispobj read_only_roots)
 	    laters = next;
 	    count = LATERBLOCKSIZE;
 	}
-    } while (clean != static_free || later_blocks != NULL);
+    } while (clean < static_free || later_blocks != NULL);
 
+    if (clean != static_free) {
+        fprintf(stderr, "*** clean (%x) != static_free (%x)\n",
+                clean, static_free);
+        fprintf(stderr, "    Possible heap corruption?\n");
+    }
+        
 
 
 #ifdef PRINTNOISE
@@ -1761,6 +1773,15 @@ purify(lispobj static_roots, lispobj read_only_roots)
     SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj) read_only_free);
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj) static_free);
 
+#if 0
+    /*
+     * Test the static space for validity.  This was useful in
+     * catching some corruption problems on x86.  Should we enable
+     * this all the time?
+     */
+    verify_space((lispobj *) static_space, static_free - static_space);
+#endif
+    
 #if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !((defined(sparc) || defined(DARWIN)) && defined(GENCGC))
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
