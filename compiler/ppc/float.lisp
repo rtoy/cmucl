@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.12 2007/04/20 01:55:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.13 2007/05/09 03:18:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1455,3 +1455,37 @@
 	(when (= rd rs2)
 	  (setf fs2 nil)))
       (values fop (list fs1 fs2)))))
+
+
+(defknown (vm::fused-multiply-subtract vm::fused-multiply-add)
+    (double-float double-float double-float)
+  double-float
+  (movable flushable))
+
+(export '(fused-multiply-subtract fused-multiply-subtract))
+
+(define-vop (fused-multiply-subtract/double)
+  (:args (x :scs (double-reg))
+         (y :scs (double-reg))
+	 (z :scs (double-reg)))
+  (:results (r :scs (double-reg)))
+  (:arg-types double-float double-float double-float)
+  (:result-types double-float)
+  (:translate vm::fused-multiply-subtract)
+  (:policy :fast-safe)
+  (:generator 1
+    ;; r = x*y - z	       
+	      (inst fmsub r x y z)))
+
+(define-vop (fused-multiply-add/double)
+  (:args (x :scs (double-reg))
+         (y :scs (double-reg))
+	 (z :scs (double-reg)))
+  (:results (r :scs (double-reg)))
+  (:arg-types double-float double-float double-float)
+  (:result-types double-float)
+  (:translate vm::fused-multiply-add)
+  (:policy :fast-safe)
+  (:generator 1
+    ;; r = x*y + z
+    (inst fmadd r x y z)))

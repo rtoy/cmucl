@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.110 2007/02/03 22:10:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.111 2007/05/09 03:18:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1799,6 +1799,7 @@
 
 
 (declaim (inline two-prod))
+#-ppc
 (defun two-prod (a b)
   "Compute fl(a*b) and err(a*b)"
   (declare (double-float a b))
@@ -1815,7 +1816,18 @@
 		    (* a-lo b-lo))))
 	  (values p e))))))
 
+#+ppc
+(defun two-prod (a b)
+  "Compute fl(a*b) and err(a*b)"
+  (declare (double-float a b))
+  ;; PPC has a fused multiply-subtract instruction that can be used
+  ;; here, so use it.
+  (let* ((p (* a b))
+	 (err (vm::fused-multiply-subtract a b p)))
+    (values p err)))
+
 (declaim (inline two-sqr))
+#-ppc
 (defun two-sqr (a)
   "Compute fl(a*a) and err(a*b).  This is a more efficient
   implementation of two-prod"
@@ -1826,6 +1838,14 @@
       (values q (+ (+ (- (* a-hi a-hi) q)
 		      (* 2 a-hi a-lo))
 		   (* a-lo a-lo))))))
+
+#+ppc
+(defun two-sqr (a)
+  "Compute fl(a*a) and err(a*b).  This is a more efficient
+  implementation of two-prod"
+  (declare (double-float a))
+  (let ((q (* a a)))
+    (values q (vm::fused-multiply-subtract a a q))))
 
 (declaim (maybe-inline mul-dd-d))
 (defun mul-dd-d (a0 a1 b)
