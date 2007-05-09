@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.21 2006/11/30 03:17:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.22 2007/05/09 02:43:56 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;;
 ;;; Written by William Lott
 ;;;
+;;; A good reference for the PPC instructions can be found at
+;;; http://www.nersc.gov/vendor_docs/ibm/asm/mastertoc.htm#mtoc
 
 (in-package "PPC")
 
@@ -761,7 +763,7 @@ about function addresses and register values.")
 
 ;;;
 
-(def-ppc-iformat (a '(:name :tab frt ", " fra ", " frb ", " frc))
+(def-ppc-iformat (a '(:name :tab frt ", " fra ", " frc ", " frb))
   frt fra frb frc (xo xo26-30) rc)
 
 (def-ppc-iformat (a-tab '(:name :tab frt ", " fra ", " frb))
@@ -1139,7 +1141,7 @@ about function addresses and register values.")
       (emit-d-form-inst segment ,op (fp-reg-tn-encoding frs) (reg-tn-encoding ra) si)))))
 
 (defmacro define-a-instruction (name op xo rc &key (cost 1) other-dependencies)
-  `(define-instruction ,name (segment frt fra frb frc)
+  `(define-instruction ,name (segment frt fra frc frb)
      (:printer a ((op ,op) (xo ,xo) (rc ,rc)))
      (:cost ,cost)
      (:delay ,cost)
@@ -1150,7 +1152,7 @@ about function addresses and register values.")
                           (fp-reg-tn-encoding frt) 
                           (fp-reg-tn-encoding fra) 
                           (fp-reg-tn-encoding frb)
-                          (fp-reg-tn-encoding frb)
+                          (fp-reg-tn-encoding frc)
                           ,xo
                           ,rc))))
 
