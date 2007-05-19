@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.35 2007/03/27 16:57:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.36 2007/05/19 01:35:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1200,6 +1200,7 @@ rounding modes & do ieee round-to-integer.
 	     (integer-decode-float number)
 	   (let* ((shifted (ash bits exp))
 		  (rounded (if (and (minusp exp)
+				    (oddp shifted)
 				    (not (zerop (logand bits
 							(ash 1 (- -1 exp))))))
 			       (1+ shifted)
@@ -1210,16 +1211,17 @@ rounding modes & do ieee round-to-integer.
     #+double-double
     ((double-double-float)
      (multiple-value-bind (bits exp)
-	     (integer-decode-float number)
-	   (let* ((shifted (ash bits exp))
-		  (rounded (if (and (minusp exp)
-				    (not (zerop (logand bits
-							(ash 1 (- -1 exp))))))
-			       (1+ shifted)
-			       shifted)))
-	     (if (minusp number)
-		 (- rounded)
-		 rounded))))))
+	 (integer-decode-float number)
+       (let* ((shifted (ash bits exp))
+	      (rounded (if (and (minusp exp)
+				(oddp shifted)
+				(not (zerop (logand bits
+						    (ash 1 (- -1 exp))))))
+			   (1+ shifted)
+			   shifted)))
+	 (if (minusp number)
+	     (- rounded)
+	     rounded))))))
 
 (declaim (maybe-inline %unary-ftruncate/single-float
 		       %unary-ftruncate/double-float))
