@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.59 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.60 2007/05/22 17:35:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -848,7 +848,8 @@
 	  #+double-double
 	  (complex-double-double-float
 	   :translation (complex double-double-float)
-	   :inherits (complex number generic-number))
+	   :inherits (complex number generic-number)
+	   :codes (#.vm:complex-double-double-float-type))
 	  (real :translation real :inherits (number generic-number))
 	  (float :translation float :inherits (real number generic-number))
 	  (single-float
