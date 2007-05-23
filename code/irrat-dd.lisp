@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.7 2007/03/21 18:08:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.8 2007/05/23 13:16:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1872,26 +1872,43 @@ Z may be any number, but the result is always a complex."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
-  (if (and (realp z) (> z 1))
-      ;; asin is continuous in quadrant IV in this case.
-      (dd-complex-asin (complex z -0f0))
-      (let* ((sqrt-1-z (complex-sqrt (1-z z)))
-	     (sqrt-1+z (complex-sqrt (1+z z)))
-	     (den (realpart (* sqrt-1-z sqrt-1+z))))
-	(cond ((zerop den)
-	       ;; Like below but we handle atan part ourselves.
-	       (complex (if (minusp (float-sign den))
-			    (- dd-pi/2)
-			    dd-pi/2)
-		   (asinh (imagpart (* (conjugate sqrt-1-z)
-				       sqrt-1+z)))))
-	      (t
-	       (with-float-traps-masked (:divide-by-zero)
-		 ;; We get a invalid operation here when z is real and |z| > 1.
-		 (complex (atan (/ (realpart z)
-				   (realpart (* sqrt-1-z sqrt-1+z))))
-			  (asinh (imagpart (* (conjugate sqrt-1-z)
-					      sqrt-1+z))))))))))
+  (cond ((realp z)
+	 ;; Z is real, and |Z| > 1.
+	 ;;
+	 ;; Note that
+	 ;;
+	 ;;   sin(pi/2+i*y) = cosh(y)
+	 ;;
+	 ;; and
+	 ;;
+	 ;;   sin(-pi/2+i*y) = -cosh(y).
+	 ;;
+	 ;; Since cosh(y) >= 1 for all real y, we see that
+	 ;;
+	 ;;   asin(z) = pi/2*sign(z) + i*acosh(abs(z))
+	 ;;
+	 (complex (if (minusp z)
+		      (- dd-pi/2)
+		      dd-pi/2)
+		  (dd-%acosh (abs z))))
+	(t
+	 (let* ((sqrt-1-z (complex-sqrt (1-z z)))
+		(sqrt-1+z (complex-sqrt (1+z z)))
+		(den (realpart (* sqrt-1-z sqrt-1+z))))
+	   (cond ((zerop den)
+		  ;; Like below but we handle atan part ourselves.
+		  (complex (if (minusp (float-sign den))
+			       (- dd-pi/2)
+			       dd-pi/2)
+			   (asinh (imagpart (* (conjugate sqrt-1-z)
+					       sqrt-1+z)))))
+		 (t
+		  (with-float-traps-masked (:divide-by-zero)
+		    ;; We get a invalid operation here when z is real and |z| > 1.
+		    (complex (atan (/ (realpart z)
+				      den))
+			     (asinh (imagpart (* (conjugate sqrt-1-z)
+						 sqrt-1+z)))))))))))
 
 (defun dd-complex-asinh (z)
   "Compute asinh z = log(z + sqrt(1 + z*z))
