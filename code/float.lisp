@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.36 2007/05/19 01:35:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.37 2007/05/24 20:56:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -889,6 +889,7 @@
      (t
       (make-single-float (dpb new-exp vm:single-float-exponent-byte bits))))))
 ;;;
+(declaim (maybe-inline scale-double-float))
 (defun scale-double-float (x exp)
   (declare (double-float x) (fixnum exp))
   (let* ((hi (double-float-high-bits x))
