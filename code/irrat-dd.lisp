@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.9 2007/05/23 16:48:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.10 2007/05/24 19:13:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -884,31 +884,60 @@
   (declare (type double-double-float x y)
 	   (optimize (speed 3) (space 0)))
   (let ((code 0)
-	(w 0w0))
-    (declare (type (integer 0 3) code)
-	     (type double-double-float w))
-    (when (minusp x)
+	(neg-x (minusp (float-sign x)))
+	(neg-y (minusp (float-sign y))))
+    (declare (type (integer 0 3) code))
+    (when neg-x
       (setf code 2))
-    (when (minusp y)
+    (when neg-y
       (setf code (logior code 1)))
-    (when (zerop x)
-      (unless (zerop (logand code 1))
-	(return-from dd-%atan2 (- dd-pi/2)))
-      (when (zerop y)
-	(return-from dd-%atan2 0w0))
-      (return-from dd-%atan2 dd-pi/2))
-    (when (zerop y)
-      (return-from dd-%atan2
-	(if (zerop (logand code 2))
-	    0w0
-	    dd-pi)))
-    (setf w (ecase code
-	      (0 0w0)
-	      (1 0w0)
-	      (2 dd-pi)
-	      (3 (- dd-pi))))
+    ;; Handle the case where x or y is zero, taking into account the
+    ;; sign of the zero.
+    (cond ((zerop x)
+	   ;; x = 0.
+	   (cond ((zerop y)
+		  ;; x = 0, y = 0
+		  ;;
+		  ;; CLHS Figure 12-15 shows what the results should
+		  ;; be.
+		  (if neg-x
+		      (if neg-y
+			  (- dd-pi)
+			  dd-pi)
+		      (if neg-y
+			  -0w0
+			  0w0)))
+		 (t
+		  ;; x = 0, y /= 0
+		  (if neg-y
+		      (- dd-pi/2)
+		      dd-pi/2))))
+	  ((zerop y)
+	   ;; y = 0, x /= 0
+	   (cond (neg-x
+		  (if neg-y
+		      (- dd-pi)
+		      dd-pi))
+		 (t
+		  (if neg-y
+		      -0w0
+		      0w0))))
+	  (t
+	   (let ((w (ecase code
+		      (0
+		       ;; x > 0, y > 0
+		       0w0)
+		      (1
+		       ;; x > 0, y < 0
+		       -0w0)
+		      (2
+		       ;; x < 0, y > 0
+		       dd-pi)
+		      (3
+		       ;; x < 0, y < 0
+		       (- dd-pi)))))
 
-    (+ w (dd-%atan (/ y x)))))
+	     (+ w (dd-%atan (/ y x))))))))
        
 
 ;;
@@ -1723,6 +1752,15 @@ Z may be any number, but the result is always a complex."
 		(complex (* -0.5w0 (dd-%log1p (/ 2 (- (abs z) 1))))
 			 (- dd-pi/2)))))
 	(t
+	 (flet ((careful-mul (a b)
+		  ;; Carefully multiply a and b, taking care to handle
+		  ;; signed zeroes.  Only need to handle the case of b
+		  ;; being zero.
+		  (if (zerop b)
+		      (if (minusp (* (float-sign a) (float-sign b)))
+			  -0w0
+			  0w0)
+		      (* a b))))
 	 (let* ( ;; Constants
 		(theta (/ (sqrt most-positive-double-float) 4.0w0))
 		(rho (/ 4.0w0 (sqrt most-positive-double-float)))
@@ -1730,7 +1768,7 @@ Z may be any number, but the result is always a complex."
 		(rp (float (realpart z) 1.0w0))
 		(beta (float-sign rp 1.0w0))
 		(x (* beta rp))
-		(y (* beta (- (float (imagpart z) 1.0w0))))
+		(y (careful-mul beta (- (float (imagpart z) 1.0w0))))
 		(eta 0.0w0)
 		(nu 0.0w0))
 	   ;; Shouldn't need this declare.
@@ -1769,12 +1807,12 @@ Z may be any number, but the result is always a complex."
 						 (+ (square (- 1.0d0 x))
 						    (square t1))))))
 		      (setf nu (* 0.5d0
-				  (dd-%atan2 (* 2.0d0 y)
+				  (dd-%atan2 (careful-mul 2.0d0 y)
 					     (- (* (- 1.0d0 x)
 						   (+ 1.0d0 x))
 						(square t1))))))))
 	     (complex (* beta eta)
-		      (- (* beta nu))))))))
+		      (- (* beta nu)))))))))
 
 (defun dd-complex-tanh (z)
   "Compute tanh z = sinh z / cosh z"
