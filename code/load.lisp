@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.91 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92 2007/05/25 18:21:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -882,7 +882,7 @@
 	      (hi-hi (fast-read-s-integer 4))
 	      (lo-lo (fast-read-u-integer 4))
 	      (lo-hi (fast-read-s-integer 4)))
-	  (kernel::make-double-double-float
+	  (kernel::%make-double-double-float
 	   (make-double-float hi-hi hi-lo)
 	   (make-double-float lo-hi lo-lo)))
       (done-with-fast-read-byte))))
@@ -902,14 +902,14 @@
 	       (real-hi-hi (fast-read-s-integer 4))
 	       (real-lo-lo (fast-read-u-integer 4))
 	       (real-lo-hi (fast-read-s-integer 4))
-	       (re (kernel::make-double-double-float
+	       (re (kernel::%make-double-double-float
 		    (make-double-float real-hi-hi real-hi-lo)
 		    (make-double-float real-lo-hi real-lo-lo)))
 	       (imag-hi-lo (fast-read-u-integer 4))
 	       (imag-hi-hi (fast-read-s-integer 4))
 	       (imag-lo-lo (fast-read-u-integer 4))
 	       (imag-lo-hi (fast-read-s-integer 4))
-	       (im (kernel::make-double-double-float
+	       (im (kernel::%make-double-double-float
 		    (make-double-float imag-hi-hi imag-hi-lo)
 		    (make-double-float imag-lo-hi imag-lo-lo))))
 	  (complex re im)) 
