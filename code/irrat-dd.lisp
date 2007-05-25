@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.11 2007/05/25 17:11:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.12 2007/05/25 20:35:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1699,48 +1699,9 @@ Z may be any number, but the result is always a complex."
 (defun dd-complex-atanh (z)
   "Compute atanh z = (log(1+z) - log(1-z))/2"
   (declare (number z))
-  (cond ((realp z)
-	 ;; Look at the definition:
-	 ;;
-	 ;; atanh(z) = 1/2*(log(1+z)-log(1-z))
-	 ;;
-	 (cond ((> z 1)
-		;; Let x = z, x > 1.  Then
-		;;
-		;;   atanh(x) = 1/2*(log(1+x)-log(1-x))
-		;;
-		;; Only the term log(1-x) requires care since the
-		;; other term is purely real.  The CLHS says atanh for
-		;; x > 1 is continuous with quadrant I.  Assume x is
-		;; really x0 + i*eps, where eps > 0.  Then
-		;;
-		;;   log(1-x) = log(x0-1) - i*pi/2
-		;;
-		;; because arg(1-x) = arg(1-x0-i*eps) = -pi
-		;;
-		;; Thus
-		;;
-		;;   atanh(x) = 1/2*log((x+1)/(x-1)) + i*pi/2
-		;;            = 1/2*log(1+2/(x-1)) + i*pi/2
-		(complex (* 0.5w0 (dd-%log1p (/ 2 (- z 1))))
-			 dd-pi/2))
-	       (t
-		;; As above, but z = -x, x > 1.  Then
-		;;
-		;;   atanh(z) = 1/2*(log(1-x)-log(1+x))
-		;;
-		;; And log(1-x) is the interesting term.  The CLHS
-		;; says in this case atanh is continuous with quadrant
-		;; III.  Let x = x0-i*eps.  Then
-		;;
-		;;   log(1-x) = log(x0-1) + i*pi/2
-		;;
-		;; because arg(1-x) = arg(1-x0-i*eps) = pi.  Thus
-		;;
-		;;   atanh(z) = 1/2*log((x-1)/(x+1)) - i*pi/2
-		;;            = -1/2*log((x+1)/(x-1)) - i*pi/2
-		(complex (* -0.5w0 (dd-%log1p (/ 2 (- (abs z) 1))))
-			 (- dd-pi/2)))))
+  (cond ((and (realp z) (< z -1))
+	 ;; ATANH is continuous with quadrant III in this case.
+	 (dd-complex-atanh (complex z -0d0)))
 	(t
 	 (flet ((careful-mul (a b)
 		  ;; Carefully multiply a and b, taking care to handle
