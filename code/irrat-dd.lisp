@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.10 2007/05/24 19:13:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.11 2007/05/25 17:11:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,16 +20,6 @@
 (in-package "KERNEL")
 
 ;;;; Random constants, utility functions.
-
-#+nil
-(defconstant max-log
-  1.1356523406294143949491931077970764891253w4
-  "log(most-positive-double-double-float)")
-
-#+nil
-(defconstant min-log
-  -1.143276959615573793352782661133116431383730w4
-  "log(least-positive-double-double-float")
 
 (defconstant max-log
   7.0978271289338399678773454114191w2
@@ -74,7 +64,7 @@
 
 (defconstant sqrt-1/2
   0.7071067811865475244008443621048490392848w0
-  "Sqrt(2)")
+  "Sqrt(1/2)")
 
 ;; Evaluate polynomial
 (defun poly-eval (x coef)
@@ -1950,32 +1940,18 @@ Z may be any number, but the result is always a complex."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
-  (cond ((realp z)
-	 ;; Z is real, and |Z| > 1.
-	 ;;
-	 ;; Note that
-	 ;;
-	 ;;   sin(pi/2+i*y) = cosh(y)
-	 ;;
-	 ;; and
-	 ;;
-	 ;;   sin(-pi/2+i*y) = -cosh(y).
-	 ;;
-	 ;; Since cosh(y) >= 1 for all real y, we see that
-	 ;;
-	 ;;   asin(z) = pi/2*sign(z) + i*acosh(abs(z))
-	 ;;
-	 (complex (if (minusp z)
-		      (- dd-pi/2)
-		      dd-pi/2)
-		  (dd-%acosh (abs z))))
+  (cond ((and (realp z) (> z 1))
+	 (dd-complex-asin (complex z -0w0)))
 	(t
 	 (let* ((sqrt-1-z (complex-sqrt (1-z z)))
 		(sqrt-1+z (complex-sqrt (1+z z)))
 		(den (realpart (* sqrt-1-z sqrt-1+z))))
 	   (cond ((zerop den)
 		  ;; Like below but we handle atan part ourselves.
-		  (complex (if (minusp (float-sign den))
+		  ;; Must be sure to take into account the sign of
+		  ;; (realpart z) and den!
+		  (complex (if (minusp (* (float-sign (realpart z))
+					  (float-sign den)))
 			       (- dd-pi/2)
 			       dd-pi/2)
 			   (asinh (imagpart (* (conjugate sqrt-1-z)
