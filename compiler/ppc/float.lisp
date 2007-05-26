@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.13 2007/05/09 03:18:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.14 2007/05/26 03:17:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1462,7 +1462,7 @@
   double-float
   (movable flushable))
 
-(export '(fused-multiply-subtract fused-multiply-subtract))
+(export '(fused-multiply-subtract fused-multiply-add))
 
 (define-vop (fused-multiply-subtract/double)
   (:args (x :scs (double-reg))
@@ -1475,7 +1475,7 @@
   (:policy :fast-safe)
   (:generator 1
     ;; r = x*y - z	       
-	      (inst fmsub r x y z)))
+    (inst fmsub r x y z)))
 
 (define-vop (fused-multiply-add/double)
   (:args (x :scs (double-reg))
