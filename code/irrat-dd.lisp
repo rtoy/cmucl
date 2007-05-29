@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.12 2007/05/25 20:35:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.13 2007/05/29 16:28:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1233,7 +1233,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 (defun dd-%sin (x)
   (declare (double-double-float x))
-  (cond ((minusp x)
+  (cond ((minusp (float-sign x))
 	 (- (dd-%sin (- x))))
 	((< (abs x) (/ pi 4))
 	 (dd-%%sin x))
@@ -1265,7 +1265,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 (defun dd-%tan (x)
   (declare (double-double-float x))
-  (cond ((minusp x)
+  (cond ((minusp (float-sign x))
 	 (- (dd-%tan (- x))))
 	((< (abs x) (/ pi 4))
 	 (dd-%%tan x))
