@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.14 2007/05/26 03:17:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/float.lisp,v 1.15 2007/05/29 23:58:00 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1259,7 +1259,7 @@
 	 (inst stfd lo nfp (+ offset (* 2 vm:word-bytes))))))))
 
 (define-vop (double-double-float-value)
-  (:args (x :scs (double-double-reg) :target r
+  (:args (x :scs (double-double-reg descriptor-reg) :target r
 	    :load-if (not (sc-is x double-double-stack))))
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
@@ -1267,7 +1267,7 @@
   (:variant-vars slot)
   (:policy :fast-safe)
   (:vop-var vop)
-  (:generator 3
+  (:generator 2
     (sc-case x
       (double-double-reg
        (let ((value-tn (ecase slot
@@ -1280,7 +1280,14 @@
 						(:hi 0)
 						(:lo 2))
 					      (tn-offset x))
-					   vm:word-bytes))))))
+					   vm:word-bytes)))
+      (descriptor-reg
+       (inst lfd r x (- (* (ecase slot
+			     (:hi vm::double-double-float-hi-slot)
+			     (:lo vm::double-double-float-lo-slot))
+			   vm:word-bytes)
+			other-pointer-type))))))
+
 
 (define-vop (hi/double-double-float double-double-float-value)
   (:translate kernel::double-double-hi)
