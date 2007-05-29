@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.54 2007/04/19 21:49:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.55 2007/05/29 15:01:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3099,7 +3099,7 @@
 	 (inst stdf lo nfp (+ offset (* 2 vm:word-bytes))))))))
 
 (define-vop (double-double-float-value)
-  (:args (x :scs (double-double-reg) :target r
+  (:args (x :scs (double-double-reg descriptor-reg) :target r
 	    :load-if (not (sc-is x double-double-stack))))
   (:arg-types double-double-float)
   (:results (r :scs (double-reg)))
@@ -3118,7 +3118,13 @@
       (double-double-stack
        (inst lddf r (current-nfp-tn vop) (* (+ (ecase slot (:hi 0) (:lo 2))
 					       (tn-offset x))
-					    vm:word-bytes))))))
+					    vm:word-bytes)))
+      (descriptor-reg
+       (inst lddf r x (- (* vm:word-bytes
+			    (ecase slot
+			      (:hi vm:double-double-float-hi-slot)
+			      (:lo vm:double-double-float-lo-slot)))
+			 vm:other-pointer-type))))))
 
 (define-vop (hi/double-double-value double-double-float-value)
   (:translate kernel::double-double-hi)
