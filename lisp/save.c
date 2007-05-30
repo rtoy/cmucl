@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.13 2005/09/15 18:26:52 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.14 2007/05/30 17:52:08 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -78,6 +78,23 @@ output_space(FILE * file, int id, lispobj * addr, lispobj * end)
     putw((bytes + CORE_PAGESIZE - 1) / CORE_PAGESIZE, file);
 }
 
+#ifdef DEBUG_BAD_HEAP
+static void
+dump_region(struct alloc_region *alloc_region)
+{
+    fprintf(stderr, "free_pointer = %p\n", alloc_region->free_pointer);
+    fprintf(stderr, "end_addr     = %p\n", alloc_region->end_addr);
+    fprintf(stderr, "first_page   = %d\n", alloc_region->first_page);
+    fprintf(stderr, "last_page    = %d\n", alloc_region->last_page);
+    fprintf(stderr, "start_addr   = %p\n", alloc_region->start_addr);
+
+    fprintf(stderr, " page_table[%d]\n", alloc_region->first_page);
+    fprintf(stderr, "   flags     = %x\n", page_table[alloc_region->first_page].flags);
+    fprintf(stderr, "   offset    = %x\n", page_table[alloc_region->first_page].first_object_offset);
+    fprintf(stderr, "   used      = %x\n", page_table[alloc_region->first_page].bytes_used);
+}
+#endif
+
 boolean
 save(char *filename, lispobj init_function)
 {
@@ -138,9 +155,54 @@ save(char *filename, lispobj init_function)
 		 (lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER));
 #ifdef GENCGC
     /* Flush the current_region updating the tables. */
+#ifdef DEBUG_BAD_HEAP
+    fprintf(stderr, "before ALLOC_POINTER = %p\n", (lispobj *) SymbolValue(ALLOCATION_POINTER));
+    dump_region(&boxed_region);
+#endif    
     gc_alloc_update_page_tables(0, &boxed_region);
     gc_alloc_update_page_tables(1, &unboxed_region);
+#ifdef DEBUG_BAD_HEAP
+    fprintf(stderr, "boxed_region after update\n");
+    dump_region(&boxed_region);
+
+    print_ptr((lispobj*) 0x2805a184);
+#endif
+    
+#ifdef DEBUG_BAD_HEAP
+    /*
+     * For some reason x86 has a heap corruption problem.  I (rtoy)
+     * have not been able to figure out how that occurs, but what is
+     * happening is that when a core is loaded, there is some static
+     * object pointing to an object that is on a free page.  In normal
+     * usage, at startup there should be 4 objects in static space
+     * pointing to a free page, because these are newly allocated
+     * objects created by the C runtime.  However, there is an
+     * additional object.
+     *
+     * I do not know what this object should be or how it got there,
+     * but it will often cause CMUCL to fail to save a new core file.
+     *
+     * Disabling this call to update_dynamic_space_free_pointer is a
+     * work around.  What is happening is that u_d_s_f_p is resetting
+     * ALLOCATION_POINTER, but that weird object is in the current
+     * region, but after resetting the pointer, that object isn't
+     * saved to the core file.  By not resetting the pointer, the
+     * object (or at least enough of it) gets saved in the core file
+     * that we don't have problems when reloading.
+     *
+     * Note that on sparc and ppc, u_d_s_f_p doesn't actually do
+     * anything because the call to reset ALLOCATION_POINTER is a nop
+     * on sparc and ppc.  And sparc and ppc dont' have the heap
+     * corruption issue.  That's not conclusive evidence, though.
+     *
+     * This needs more work and investigation.
+     */
     update_dynamic_space_free_pointer();
+#endif
+
+#ifdef DEBUG_BAD_HEAP    
+    fprintf(stderr, "after ALLOC_POINTER = %p\n", (lispobj *) SymbolValue(ALLOCATION_POINTER));
+#endif    
 #endif
 
 #ifdef reg_ALLOC

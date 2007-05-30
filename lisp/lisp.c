@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.50 2005/09/15 18:26:52 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.51 2007/05/30 17:52:08 rtoy Exp $
  *
  */
 
@@ -694,6 +694,15 @@ main(int argc, char *argv[], char *envp[])
      */
     sigint_init();
 
+#ifdef DEBUG_BAD_HEAP
+    /*
+     * At this point, there should be exactly 4 objects in static
+     * space pointing to apparently free pages.  These 4 objects were
+     * just created above for *lisp-command-line-list*,
+     * *lisp-environment-list*, *cmucl-lib*, and *cmucl-core-path*.
+     */
+    verify_gc();
+#endif    
     if (monitor) {
 	while (1) {
 	    ldb_monitor();
