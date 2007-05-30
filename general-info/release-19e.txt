@@ -26,6 +26,10 @@ New in this release:
       in simple situations.
     - PARSE-TIME recognizes the format produced by C asctime/ctime.
       (This change may break some other less commonly used patterns.)
+    - PARSE-TIME recognizes and discards any microseconds.
+    - PARSE-TIME checks that a specified day of the week matches the
+      actual day of the week given in the date.  An error is signaled
+      if they are inconsistent. 
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
@@ -70,12 +74,26 @@ New in this release:
 	the wrong sign.
       o Some issues with debugger printing out DOUBLE-DOUBLE-FLOATs and
 	(COMPLEX DOUBLE-DOUBLE-FLOAT)'s have been fixed.
+      o CLOS now recognizes that (COMPLEX DOUBLE-DOUBLE-FLOAT) is a
+        valid built-in class instead of a random object.
+      o Branch cuts for ASIN and ATANH for double-double-float's
+        should match the branches for double-float's.
+      o ATAN2 should correctly handle signed double-double-float
+        zeroes.
+      o FASL files containing -0w0 are now converted to -0w0 instead
+        of 0w0.
+      o SIN and TAN return -0w0 when the argument is -0w0.
+        Previously, they returned 0w0.
+    - The assembler for ppc had some arguments for some instructions
+      in the wrong order, producing the wrong effect. 
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
       float can be computed, instead of signalling an error.
     - #9 fixed.  An error is generated if the number of days doesn't
       match the number of days in the given month.
+    - #10 fixed.  ROUND should now return correct answers for floats
+      bigger than most-positive-fixnum.
 
   * Other changes:
 
