@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.13 2006/11/07 11:24:12 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.14 2007/06/10 06:39:46 cshapiro Exp $
  *
  */
 
@@ -153,7 +153,6 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 
 boolean valid_addr(os_vm_address_t addr)
 {
-    int ret;
     os_vm_address_t newaddr;
 
     newaddr = os_trunc_to_page(addr);
