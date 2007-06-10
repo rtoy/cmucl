@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.38 2007/05/02 16:50:12 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.39 2007/06/10 05:03:09 cshapiro Exp $ 
 
    */
 #include <stdio.h>
@@ -1688,7 +1688,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
 	while (clean < static_free)
           clean = pscav(clean, static_free - clean, FALSE);
         if (clean != static_free) {
-            fprintf(stderr, "*** clean (%x) != static_free (%x)\n",
+            fprintf(stderr, "*** clean (%p) != static_free (%p)\n",
                     clean, static_free);
             fprintf(stderr, "    Possible heap corruption?\n");
         }
@@ -1714,7 +1714,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
     } while (clean < static_free || later_blocks != NULL);
 
     if (clean != static_free) {
-        fprintf(stderr, "*** clean (%x) != static_free (%x)\n",
+        fprintf(stderr, "*** clean (%p) != static_free (%p)\n",
                 clean, static_free);
         fprintf(stderr, "    Possible heap corruption?\n");
     }
