@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.13 2007/05/29 16:28:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.14 2007/06/11 19:01:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1703,15 +1703,6 @@ Z may be any number, but the result is always a complex."
 	 ;; ATANH is continuous with quadrant III in this case.
 	 (dd-complex-atanh (complex z -0d0)))
 	(t
-	 (flet ((careful-mul (a b)
-		  ;; Carefully multiply a and b, taking care to handle
-		  ;; signed zeroes.  Only need to handle the case of b
-		  ;; being zero.
-		  (if (zerop b)
-		      (if (minusp (* (float-sign a) (float-sign b)))
-			  -0w0
-			  0w0)
-		      (* a b))))
 	 (let* ( ;; Constants
 		(theta (/ (sqrt most-positive-double-float) 4.0w0))
 		(rho (/ 4.0w0 (sqrt most-positive-double-float)))
@@ -1719,7 +1710,7 @@ Z may be any number, but the result is always a complex."
 		(rp (float (realpart z) 1.0w0))
 		(beta (float-sign rp 1.0w0))
 		(x (* beta rp))
-		(y (careful-mul beta (- (float (imagpart z) 1.0w0))))
+		(y (* beta (- (float (imagpart z) 1.0w0))))
 		(eta 0.0w0)
 		(nu 0.0w0))
 	   ;; Shouldn't need this declare.
@@ -1758,7 +1749,7 @@ Z may be any number, but the result is always a complex."
 						 (+ (square (- 1.0d0 x))
 						    (square t1))))))
 		      (setf nu (* 0.5d0
-				  (dd-%atan2 (careful-mul 2.0d0 y)
+				  (dd-%atan2 (* 2.0d0 y)
 					     (- (* (- 1.0d0 x)
 						   (+ 1.0d0 x))
 						(square t1))))))))
