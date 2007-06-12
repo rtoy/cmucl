@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.25 2005/02/06 06:11:07 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.26 2007/06/12 02:58:27 cshapiro Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -18,19 +18,15 @@
 #include "internals.h"
 #include "lispregs.h"
 
-#if defined __FreeBSD__
-#include <osreldate.h>
-#endif
-
 /* Minimize conditionalization for different OS naming schemes */
-#if defined (__linux__) || (__FreeBSD_version >= 300000) || defined (__NetBSD__)
+#if defined (__linux__) || defined (__FreeBSD__) || defined (__NetBSD__)
 #define GNAME(var) var
 #else
 #define GNAME(var) _##var
 #endif
 
 /* Get the right type of alignment.  Linux wants alignment in bytes. */
-#if defined (__linux__) || (__FreeBSD_version >= 300000)
+#if defined (__linux__) || defined (__FreeBSD__)
 #define align_4byte   4
 #define       align_8byte     8
 #define       align_16byte    16

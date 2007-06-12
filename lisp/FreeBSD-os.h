@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.11 2007/01/01 11:53:02 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.12 2007/06/12 02:58:27 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -10,7 +10,6 @@
 #ifndef _FREEBSD_OS_H_
 #define _FREEBSD_OS_H_
 
-#include <osreldate.h>
 #include <sys/param.h>
 #include <sys/uio.h>
 #include <sys/mman.h>
@@ -38,9 +37,6 @@ typedef int os_vm_prot_t;
 int *sc_reg(struct sigcontext *, int);
 void os_save_context(void);
 
-/* I *think* this is when things became incompatible with old
-   signals.  */
-#if __FreeBSD_version > 400010
 /* If we used SA_SIGINFO in sigaction() the third argument to signal
    handlers would be a struct ucontext_t.  (The manpage for
    sigaction(2) is wrong!)  Sigcontext and ucontext_t are
@@ -48,7 +44,6 @@ void os_save_context(void);
    the uc_mcontext field, so we just won't bother.  */
 #define USE_SA_SIGINFO 0
 #define uc_sigmask sc_mask
-#endif
 
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
 
