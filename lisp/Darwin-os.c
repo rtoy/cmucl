@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.7 2006/01/31 03:16:39 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.8 2007/06/12 03:21:46 cshapiro Exp $
  *
  */
 
@@ -223,12 +223,10 @@ os_set_context(void)
 os_vm_address_t
 os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    int flags = MAP_PRIVATE | MAP_ANON;
 
     if (addr)
 	flags |= MAP_FIXED;
-    else
-	flags |= MAP_VARIABLE;
 
     DPRINTF(0, (stderr, "os_validate %x %d => ", addr, len));
 

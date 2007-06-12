@@ -13,7 +13,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.3 2006/11/07 11:24:12 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.4 2007/06/12 03:21:46 cshapiro Exp $
  *
  */
 
@@ -89,12 +89,10 @@ os_set_context(void)
 os_vm_address_t
 os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    int flags = MAP_PRIVATE | MAP_ANON;
 
     if (addr)
 	flags |= MAP_FIXED;
-    else
-	flags |= MAP_VARIABLE;
 
     DPRINTF(0, (stderr, "os_validate %x %d => ", addr, len));
 

@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.4 2006/11/07 11:24:12 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.5 2007/06/12 03:21:46 cshapiro Exp $
  *
  */
 
@@ -116,7 +116,7 @@ os_set_context(void)
 os_vm_address_t
 os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    int flags = MAP_PRIVATE | MAP_ANON;
 
     /*
      * NetBSD 1.5.2 seems to insist on each mmap being less than 128MB.
@@ -127,8 +127,6 @@ os_validate(os_vm_address_t addr, os_vm_size_t len)
 
     if (addr)
 	flags |= MAP_FIXED;
-    else
-	flags |= MAP_VARIABLE;
 
     DPRINTF(0, (stderr, "os_validate %p %d =>", addr, len));
 

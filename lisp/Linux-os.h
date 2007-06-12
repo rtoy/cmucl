@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.20 2007/01/01 11:53:02 cshapiro Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.21 2007/06/12 03:21:46 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -25,7 +25,6 @@
 #include <asm/unistd.h>
 #include <errno.h>
 #include <linux/version.h>
-#define MAP_VARIABLE 0
 
 #define linuxversion(a, b, c) (((a)<<16)+((b)<<8)+(c))
 

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.12 2007/06/12 02:58:27 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.13 2007/06/12 03:21:46 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -19,9 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#define MAP_ANONYMOUS MAP_ANON
-#define MAP_VARIABLE 0
 
 typedef caddr_t os_vm_address_t;
 typedef vm_size_t os_vm_size_t;

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.h,v 1.4 2007/01/01 11:53:02 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.h,v 1.5 2007/06/12 03:21:46 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -16,9 +16,6 @@
 #include <signal.h>
 #include <ucontext.h>
 #include <mach/vm_types.h>
-
-#define MAP_ANONYMOUS MAP_ANON
-#define MAP_VARIABLE 0
 
 typedef caddr_t os_vm_address_t;
 typedef vm_size_t os_vm_size_t;

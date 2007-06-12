@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.14 2007/06/10 06:39:46 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.15 2007/06/12 03:21:46 cshapiro Exp $
  *
  */
 
@@ -91,12 +91,10 @@ os_set_context(void)
 
 os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
 {
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    int flags = MAP_PRIVATE | MAP_ANON;
 
     if (addr)
 	flags |= MAP_FIXED;
-    else
-	flags |= MAP_VARIABLE;
 
     addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
 
