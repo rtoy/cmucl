@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.42 2007/01/13 01:16:30 fgilham Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.43 2007/06/20 17:33:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,8 +240,14 @@
 		 (when (or initial-element-p initial-contents-p)
 		   (error "Neither :initial-element nor :initial-contents ~
 		   can be specified along with :displaced-to"))
-		 (unless (subtypep element-type
-				   (array-element-type displaced-to))
+		 ;; The CLHS entry for MAKE-ARRAY says that if the
+		 ;; actual array element types are not type equivalent
+		 ;; (subtypes of each other), the consequences are
+		 ;; undefined.  Let's signal an error here.
+		 (unless (and (subtypep (upgraded-array-element-type element-type)
+					(array-element-type displaced-to))
+			      (subtypep (array-element-type displaced-to)
+					(upgraded-array-element-type element-type)))
 		   (error "One can't displace an array of type ~S into ~
                            another of type ~S."
 			  element-type (array-element-type displaced-to)))
