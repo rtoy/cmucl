@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.112 2007/06/11 19:01:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.113 2007/06/20 15:21:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1882,7 +1882,7 @@
       (two-prod a0 b)
     (declare (double-float p2))
     (when (float-infinity-p p1)
-      (return-from mul-dd (values p1 0d0)))
+      (return-from mul-dd-d (values p1 0d0)))
     ;;(format t "mul-dd-d p1,p2 = ~A ~A~%" p1 p2)
     (incf p2 (* a1 b))
     ;;(format t "mul-dd-d p2 = ~A~%" p2)
@@ -1920,7 +1920,7 @@
       (two-sum a0 b)
     (declare (double-float s1 s2))
     (when (float-infinity-p s1)
-      (return-from add-dd (values s1 0d0)))
+      (return-from add-dd-d (values s1 0d0)))
     (incf s2 a1)
     (multiple-value-bind (r1 r2)
 	(quick-two-sum s1 s2)
