@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.14 2007/06/11 19:01:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.15 2007/06/21 15:50:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1754,7 +1754,7 @@ Z may be any number, but the result is always a complex."
 						   (+ 1.0d0 x))
 						(square t1))))))))
 	     (complex (* beta eta)
-		      (- (* beta nu)))))))))
+		      (- (* beta nu))))))))
 
 (defun dd-complex-tanh (z)
   "Compute tanh z = sinh z / cosh z"
