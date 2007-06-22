@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.26 2005/11/08 17:12:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.27 2007/06/22 21:45:25 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,11 +243,14 @@
 ;; substitutes in arrays and structures as well as lists.  The first arg is an
 ;; alist of the things to be replaced assoc'd with the things to replace them.
 ;;
-(defun circle-subst (old-new-alist tree)
+(defun circle-subst (repl-table tree)
   (cond ((not (typep tree '(or cons (array t) structure-object
 			    standard-object)))
-	 (let ((entry (find tree old-new-alist :key #'second)))
-	   (if entry (third entry) tree)))
+	 (multiple-value-bind (value presentp)
+	     (gethash tree repl-table)
+	   (if presentp
+	       value
+	       tree)))
 	((null (gethash tree *sharp-equal-circle-table*))
 	 (setf (gethash tree *sharp-equal-circle-table*) t)
 	 (cond ((typep tree '(or structure-object standard-object))
@@ -255,7 +258,7 @@
 		     (end (%instance-length tree)))
 		    ((= i end))
 		  (let* ((old (%instance-ref tree i))
-			 (new (circle-subst old-new-alist old)))
+			 (new (circle-subst repl-table old)))
 		    (unless (eq old new)
 		      (setf (%instance-ref tree i) new)))))
 	       ((arrayp tree)
@@ -264,18 +267,29 @@
 		  (do ((i start (1+ i)))
 		      ((>= i end))
 		    (let* ((old (aref data i))
-			   (new (circle-subst old-new-alist old)))
+			   (new (circle-subst repl-table old)))
 		      (unless (eq old new)
 			(setf (aref data i) new))))))
 	       (t
-		(let ((a (circle-subst old-new-alist (car tree)))
-		      (d (circle-subst old-new-alist (cdr tree))))
+		(let ((a (circle-subst repl-table (car tree)))
+		      (d (circle-subst repl-table (cdr tree))))
 		  (unless (eq a (car tree))
 		    (rplaca tree a))
 		  (unless (eq d (cdr tree))
 		    (rplacd tree d)))))
 	 tree)
 	(t tree)))
+
+(defun maybe-create-tables ()
+  (unless *sharp-equal-final-table*
+    (setf *sharp-equal-final-table*
+	  (make-hash-table :size 40 :rehash-size 4000 :rehash-threshold 0.8 :test 'eql)))
+  (unless *sharp-equal-temp-table*
+    (setf *sharp-equal-temp-table*
+	  (make-hash-table :size 40 :rehash-size 4000 :rehash-threshold 0.8 :test 'eql)))
+  (unless *sharp-equal-repl-table*
+    (setf *sharp-equal-repl-table*
+	  (make-hash-table :size 40 :rehash-size 4000 :rehash-threshold 0.8 :test 'eq))))
 
 ;;; Sharp-equal works as follows.  When a label is assigned (ie when #= is
 ;;; called) we GENSYM a symbol is which is used as an unforgeable tag.
@@ -291,25 +305,27 @@
 ;;; for each entry in the *SHARP-SHARP-ALIST, the current object is searched
 ;;; and any uses of the gensysm token are replaced with the actual value.
 ;;;
-(defvar *sharp-sharp-alist* ())
+
 ;;;
 (defun sharp-equal (stream ignore label)
   (declare (ignore ignore))
   (when *read-suppress* (return-from sharp-equal (values)))
   (unless label
     (%reader-error stream "Missing label for #=." label))
-  (when (or (assoc label *sharp-sharp-alist*)
-	    (assoc label *sharp-equal-alist*))
+  (maybe-create-tables)
+  (when (or (nth-value 1 (gethash label *sharp-equal-final-table*))
+	    (nth-value 1 (gethash label *sharp-equal-temp-table*)))
     (%reader-error stream "Multiply defined label: #~D=" label))
-  (let* ((tag (gensym))
-	 (*sharp-sharp-alist* (acons label tag *sharp-sharp-alist*))
-	 (obj (read stream t nil t)))
-    (when (eq obj tag)
-      (%reader-error stream "Have to tag something more than just #~D#."
-		     label))
-    (push (list label tag obj) *sharp-equal-alist*)
-    (let ((*sharp-equal-circle-table* (make-hash-table :test #'eq :size 20)))
-      (circle-subst *sharp-equal-alist* obj))))
+  (let* ((tag (gensym)))
+    (setf (gethash label *sharp-equal-temp-table*) tag)
+    (let ((obj (read stream t nil t)))
+      (when (eq obj tag)
+	(%reader-error stream "Have to tag something more than just #~D#."
+		       label))
+      (setf (gethash tag *sharp-equal-repl-table*) obj)
+      (let ((*sharp-equal-circle-table* (make-hash-table :test #'eq :size 20)))
+	(circle-subst *sharp-equal-repl-table* obj))
+      (setf (gethash label *sharp-equal-final-table*) obj))))
 ;;;
 (defun sharp-sharp (stream ignore label)
   (declare (ignore ignore))
@@ -317,14 +333,19 @@
   (unless label
     (%reader-error stream "Missing label for ##." label))
 
-  (let ((entry (assoc label *sharp-equal-alist*)))
-    (if entry
-	(third entry)
-	(let ((pair (assoc label *sharp-sharp-alist*)))
-	  (unless pair
-	    (%reader-error stream "Object is not labelled #~S#" label))
-	  (cdr pair)))))
-
+  (maybe-create-tables)
+  ;; Don't read ANSI "2.4.8.15 Sharpsign Equal-Sign" and worry that it requires
+  ;; you to implement forward references, because forward references are
+  ;; disallowed in "2.4.8.16 Sharpsign Sharpsign".
+  (multiple-value-bind (finalized-object successp)
+      (gethash label *sharp-equal-final-table*)
+    (if successp
+	finalized-object
+	(multiple-value-bind (temporary-tag successp)
+	    (gethash label *sharp-equal-temp-table*)
+	  (if successp
+	      temporary-tag
+	      (%reader-error stream "reference to undefined label #~D#" label))))))
 
 ;;;; #+/-
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.61 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62 2007/06/22 21:45:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -563,12 +563,40 @@
 (defvar *ignore-extra-close-parentheses* t
   "If true, only warn when there is an extra close paren, otherwise error.")
 
-;; Alist for #=. Used to keep track of objects with labels assigned that have
-;; been completly read.  Entry is (integer-tag gensym-tag value).
-;;
-(defvar *sharp-equal-alist* ())
-
 (declaim (special *standard-input*))
+
+;;; The SHARP-EQUAL function introduces a label for an object, and the
+;;; SHARP-SHARP function allows us to refer to this label.  This is slightly
+;;; tricky because the object we are labelling can contain labels to itself in
+;;; order to create circular structures, e.g., #1=(cons 'hello #1#).
+;;;
+;;; The SHARP-EQUAL function is called when we are reading a stream and
+;;; encounter text of the form #<LABEL>=<OBJ>, where <LABEL> should be a number
+;;; and <OBJ> ought to be readable as an object.  Our first step is to use
+;;; gensym to create a new <TAG> for this label; we temporarily bind <LABEL> to
+;;; <TAG> and then read in <OBJ> using our <TAG> as a temporary binding for
+;;; <LABEL>.  Finally, we fix the <OBJ> by replacing any occurrences of <TAG>
+;;; with a pointer to <OBJ> itself, creating the circular structures.
+;;;
+;;; We now do this with a couple of data structures.
+;;;
+;;; 1.  *SHARP-EQUAL-FINAL-TABLE* is a hash table where "finished" associations
+;;;     are stored.  That is, it is a hash table from labels to objects, where
+;;;     the objects have already been patched and are tag-free.
+;;;
+;;; 2.  *SHARP-EQUAL-TEMP-TABLE* is a hash table where "unfinished"
+;;;     associations are stored.  That is, it is a hash table from labels to
+;;;     tags.
+;;;
+;;; 3.  *SHARP-EQUAL-REPL-TABLE* is a hash table that associates tags with
+;;;     their corrective pointers.  That is, this is the table we use to
+;;;     "patch" the objects.
+
+(defvar *sharp-equal-final-table*)
+(defvar *sharp-equal-temp-table*)
+(defvar *sharp-equal-repl-table*)
+
+
  
 ;;; READ-PRESERVING-WHITESPACE behaves just like read only it makes sure
 ;;; to leave terminating whitespace in the stream.
@@ -601,7 +629,9 @@
 					nil
 					(car result))))))))))
     (t
-     (let ((*sharp-equal-alist* nil))
+     (let ((*sharp-equal-final-table* nil)
+	   (*sharp-equal-temp-table* nil)
+	   (*sharp-equal-repl-table* nil))
        (read-preserving-whitespace-internal stream eof-errorp eof-value t)))))
 
 
