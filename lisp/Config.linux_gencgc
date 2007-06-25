@@ -3,7 +3,7 @@ PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
-CC = gcc
+CC = gcc -m32
 LD = ld
 CPP = cpp
 # Enable support for :linkage-table feature.
