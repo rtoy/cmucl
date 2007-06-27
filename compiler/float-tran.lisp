@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.114 2007/06/21 16:22:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.115 2007/06/27 16:35:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1620,13 +1620,16 @@
 	 (v (- s a))
 	 (e (+ (- a (- s v))
 	       (- b v))))
-    (values s e)))
+    (locally
+	(declare (optimize (inhibit-warnings 3)))
+      (values s e))))
 
 (declaim (maybe-inline add-dd))
 (defun add-dd (a0 a1 b0 b1)
   "Add the double-double A0,A1 to the double-double B0,B1"
   (declare (double-float a0 a1 b0 b1)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (multiple-value-bind (s1 s2)
       (two-sum a0 b0)
     (declare (double-float s1 s2))
@@ -1669,13 +1672,16 @@
 	 (v (- s a))
 	 (e (- (- a (- s v))
 	       (+ b v))))
-    (values s e)))
+    (locally
+	(declare (optimize (inhibit-warnings 3)))
+      (values s e))))
 
 (declaim (inline sub-dd))
 (defun sub-dd (a0 a1 b0 b1)
   "Subtract the double-double B0,B1 from A0,A1"
   (declare (double-float a0 a1 b0 b1)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (multiple-value-bind (s1 s2)
       (two-diff a0 b0)
     (declare (double-float s2))
@@ -1699,7 +1705,8 @@
 (defun sub-d-dd (a b0 b1)
   "Compute double-double = double - double-double"
   (declare (double-float a b0 b1)
-	   (optimize (speed 3) (safety 0)))
+	   (optimize (speed 3) (safety 0)
+		     (inhibit-warnings 3)))
   (multiple-value-bind (s1 s2)
       (two-diff a b0)
     (declare (double-float s2))
@@ -1716,7 +1723,8 @@
 (defun sub-dd-d (a0 a1 b)
   "Subtract the double B from the double-double A0,A1"
   (declare (double-float a0 a1 b)
-	   (optimize (speed 3) (safety 0)))
+	   (optimize (speed 3) (safety 0)
+		     (inhibit-warnings 3)))
   (multiple-value-bind (s1 s2)
       (two-diff a0 b)
     (declare (double-float s2))
@@ -1746,23 +1754,6 @@
       (sub-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
 		b)
      (kernel:%make-double-double-float hi lo)))
-
-(declaim (inline two-prod))
-(defun two-prod (a b)
-  "Compute fl(a*b) and err(a*b)"
-  (declare (double-float a b))
-  (let ((p (* a b)))
-    (multiple-value-bind (a-hi a-lo)
-	(split a)
-      ;;(format t "a-hi, a-lo = ~S ~S~%" a-hi a-lo)
-      (multiple-value-bind (b-hi b-lo)
-	  (split b)
-	;;(format t "b-hi, b-lo = ~S ~S~%" b-hi b-lo)
-	(let ((e (+ (+ (- (* a-hi b-hi) p)
-		       (* a-hi b-lo)
-		       (* a-lo b-hi))
-		    (* a-lo b-lo))))
-	  (values p e))))))
 
 (declaim (inline split))
 ;; This algorithm is the version given by Yozo Hida.  It has problems
@@ -1797,7 +1788,8 @@
   a-hi + a-lo and a-hi contains the upper 26 significant bits of a and
   a-lo contains the lower 26 bits."
   (declare (double-float a)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   ;; This splits the number a into 2 halves of 26 bits each, but the
   ;; halves are, I think, supposed to be properly rounded in an IEEE
   ;; fashion.
@@ -1841,7 +1833,9 @@
 		       (* a-hi b-lo)
 		       (* a-lo b-hi))
 		    (* a-lo b-lo))))
-	  (values p e))))))
+	  (locally 
+	      (declare (optimize (inhibit-warnings 3)))
+	    (values p e)))))))
 
 #+ppc
 (defun two-prod (a b)
@@ -1862,9 +1856,11 @@
   (let ((q (* a a)))
     (multiple-value-bind (a-hi a-lo)
 	(split a)
-      (values q (+ (+ (- (* a-hi a-hi) q)
-		      (* 2 a-hi a-lo))
-		   (* a-lo a-lo))))))
+      (locally
+	  (declare (optimize (inhibit-warnings 3)))
+	(values q (+ (+ (- (* a-hi a-hi) q)
+			(* 2 a-hi a-lo))
+		     (* a-lo a-lo)))))))
 
 #+ppc
 (defun two-sqr (a)
@@ -1877,7 +1873,8 @@
 (declaim (maybe-inline mul-dd-d))
 (defun mul-dd-d (a0 a1 b)
   (declare (double-float a0 a1 b)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (multiple-value-bind (p1 p2)
       (two-prod a0 b)
     (declare (double-float p2))
@@ -1897,7 +1894,8 @@
 (defun mul-dd (a0 a1 b0 b1)
   "Multiply the double-double A0,A1 with B0,B1"
   (declare (double-float a0 a1 b0 b1)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (multiple-value-bind (p1 p2)
       (two-prod a0 b0)
     (declare (double-float p1 p2))
@@ -1915,7 +1913,8 @@
 (defun add-dd-d (a0 a1 b)
   "Add the double-double A0,A1 to the double B"
   (declare (double-float a0 a1 b)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (multiple-value-bind (s1 s2)
       (two-sum a0 b)
     (declare (double-float s1 s2))
@@ -1931,7 +1930,8 @@
 (declaim (maybe-inline sqr-dd))
 (defun sqr-dd (a0 a1)
   (declare (double-float a0 a1)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (multiple-value-bind (p1 p2)
       (two-sqr a0)
     (declare (double-float p1 p2))
@@ -2004,7 +2004,8 @@
 (defun div-dd (a0 a1 b0 b1)
   "Divide the double-double A0,A1 by B0,B1"
   (declare (double-float a0 a1 b0 b1)
-	   (optimize (speed 3))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3))
 	   (inline sub-dd))
   (let ((q1 (/ a0 b0)))
     (when (float-infinity-p q1)
@@ -2033,7 +2034,8 @@
 (declaim (maybe-inline div-dd-d))
 (defun div-dd-d (a0 a1 b)
   (declare (double-float a0 a1 b)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (let ((q1 (/ a0 b)))
     ;; q1 = approx quotient
     ;; Now compute a - q1 * b
@@ -2064,7 +2066,8 @@
 (defun sqr-d (a)
   "Square"
   (declare (double-float a)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (two-sqr a))
 
 (declaim (inline mul-d-d))
@@ -2075,7 +2078,8 @@
 (defun sqrt-dd (a0 a1)
   (declare (type (double-float 0d0) a0)
 	   (double-float a1)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   ;; Strategy: Use Karp's trick: if x is an approximation to sqrt(a),
   ;; then
   ;;
@@ -2104,13 +2108,15 @@
 (declaim (inline neg-dd))
 (defun neg-dd (a0 a1)
   (declare (double-float a0 a1)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (values (- a0) (- a1)))
 
 (declaim (inline abs-dd))
 (defun abs-dd (a0 a1)
   (declare (double-float a0 a1)
-	   (optimize (speed 3)))
+	   (optimize (speed 3)
+		     (inhibit-warnings 3)))
   (if (minusp a0)
       (neg-dd a0 a1)
       (values a0 a1)))
