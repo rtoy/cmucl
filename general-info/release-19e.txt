@@ -84,9 +84,19 @@ New in this release:
         of 0w0.
       o SIN and TAN return -0w0 when the argument is -0w0.
         Previously, they returned 0w0.
+      o Signed zeroes are handled better for addition, subtraction,
+        and multiplication.  That is, the correct signed zero is
+        returned now.
+      o Overflow in addition, multiplication, and division returns
+        infinity if traps are disabled.
     - The assembler for ppc had some arguments for some instructions
       in the wrong order, producing the wrong effect. 
-
+    - When making displaced arrays, the element types are checked to
+      see if they are type equivalent.  If not, an error is signaled.
+    - The reader for #= and ## has been enhanced to be much faster for
+      cases with a large number of shared objects.  However, it is also
+      somewhat slower for simple cases.
+      
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
       float can be computed, instead of signalling an error.
