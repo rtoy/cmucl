@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.15 2007/06/21 15:50:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.16 2007/06/27 16:38:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,7 +70,7 @@
 (defun poly-eval (x coef)
   (declare (type double-double-float x)
 	   (type (simple-array double-double-float (*)) coef)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 3) (space 0) (inhibit-warnings 3)))
   ;; y = C0 + C1*x + C2*x^2 + ...
   ;;
   ;; But coefficients are stored in reverse (descending powers) order:
@@ -85,7 +85,7 @@
 (defun poly-eval-1 (x coef)
   (declare (type double-double-float x)
 	   (type (simple-array double-double-float (*)) coef)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 3) (space 0) (inhibit-warnings 3)))
   ;; Like poly-eval, except it assumes coef[N] = 1 and is omitted.
   (let ((y 1w0))
     (declare (type double-double-float y))
@@ -733,7 +733,7 @@
 					 3.190482951215438078279772140481195226621w7
 					 ))))
   (defun dd-%acosh (x)
-    (declare (type double-double-float x)
+    (declare (type (double-double-float 1w0) x)
 	     (optimize (speed 3) (space 0)))
     (cond ((> x 1w17)
 	   (+ loge2 (dd-%log x)))
@@ -745,6 +745,7 @@
 			  (poly-eval-1 z q))))
 		   (t
 		    (dd-%log (+ x (sqrt (* z (+ 1 x))))))))))))
+
 
 (let ((P (make-array 10 :element-type 'double-double-float
 		     :initial-contents '(
@@ -774,7 +775,7 @@
 					 7.122795760168575261226395089432959614179w4
 					 ))))
   (defun dd-%asin (x)
-    (declare (type double-double-float x)
+    (declare (type (double-double-float -1w0 1w0) x)
 	     (optimize (speed 3) (space 0)))
     (cond ((minusp x)
 	   (- (the double-double-float (dd-%asin (- x)))))
@@ -782,19 +783,15 @@
 	  ((< x 1w-8)
 	   x)
 	  (t
-	   (let ((flag nil)
-		 (z 0w0)
-		 (zz 0w0))
+	   (multiple-value-bind (flag z zz)
+	       (cond ((> x 0.5w0)
+		      (let* ((zz1 (- 0.5w0 x))
+			     (zz (scale-float (+ zz1 0.5w0) -1)))
+			(values t (sqrt zz) zz)))
+		     (t
+		      (values nil x (* x x))))
 	     (declare (type double-double-float z zz))
-	     (cond ((> x 0.5w0)
-		    (setf zz (- 0.5w0 x))
-		    (setf zz (scale-float (+ zz 0.5w0) -1))
-		    (setf z (sqrt zz))
-		    (setf flag t))
-		   (t
-		    (setf z x)
-		    (setf zz (* z z))
-		    (setf flag nil)))
+	     
 	     (let ((p (* zz (/ (poly-eval zz p)
 			       (poly-eval-1 zz q)))))
 	       (setf z (+ (* z p) z))
@@ -804,7 +801,7 @@
 	       z))))))
 
 (defun dd-%acos (x)
-  (declare (type double-double-float x)
+  (declare (type (double-double-float -1w0 1w0) x)
 	   (optimize (speed 3) (space 0)))
   (cond ((< x -0.5w0)
 	 (- dd-pi
@@ -1016,7 +1013,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 (defun dd-%%sin (x)
   (declare (type double-double-float x)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 2) (space 0)))
   (when (minusp x)
     (return-from dd-%%sin (- (the double-double-float (dd-%%sin (- x))))))
   ;; y = integer part of x/(pi/4).  
@@ -1028,6 +1025,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
     (let ((j (truncate z))
 	  (sign 1))
+      (declare (type (integer -1 1) sign))
       (unless (zerop (logand j 1))
 	(incf j)
 	(incf y))
@@ -1053,7 +1051,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 (defun dd-%%cos (x)
   (declare (type double-double-float x)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 2) (space 0)))
   (when (minusp x)
     (return-from dd-%%cos (dd-%%cos (- x))))
   ;; y = integer part of x/(pi/4).  
@@ -1117,7 +1115,7 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		       ))))
   (defun dd-tancot (xx cotflag)
     (declare (type double-double-float xx)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 2) (space 0)))
     (let ((x 0w0)
 	  (sign 1))
       (declare (type double-double-float x)
@@ -1231,6 +1229,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
       (values n sum))))
 			       
 
+(declaim (ftype (function (double-double-float) double-double-float)
+		dd-%sin))
 (defun dd-%sin (x)
   (declare (double-double-float x))
   (cond ((minusp (float-sign x))
@@ -1241,12 +1241,14 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	 ;; Argument reduction needed
 	 (multiple-value-bind (n reduced)
 	     (reduce-arg x)
-	   (case (logand n 3)
+	   (ecase (logand n 3)
 	     (0 (dd-%%sin reduced))
 	     (1 (dd-%%cos reduced))
 	     (2 (- (dd-%%sin reduced)))
 	     (3 (- (dd-%%cos reduced))))))))
 
+(declaim (ftype (function (double-double-float) double-double-float)
+		dd-%cos))
 (defun dd-%cos (x)
   (declare (double-double-float x))
   (cond ((minusp x)
@@ -1257,12 +1259,14 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 	 ;; Argument reduction needed
 	 (multiple-value-bind (n reduced)
 	     (reduce-arg x)
-	   (case (logand n 3)
+	   (ecase (logand n 3)
 	     (0 (dd-%%cos reduced))
 	     (1 (- (dd-%%sin reduced)))
 	     (2 (- (dd-%%cos reduced)))
 	     (3 (dd-%%sin reduced)))))))
 
+(declaim (ftype (function (double-double-float) double-double-float)
+		dd-%tan))
 (defun dd-%tan (x)
   (declare (double-double-float x))
   (cond ((minusp (float-sign x))
