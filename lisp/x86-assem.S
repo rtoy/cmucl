@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.26 2007/06/12 02:58:27 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.27 2007/06/27 10:25:02 cshapiro Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -28,16 +28,24 @@
 /* Get the right type of alignment.  Linux wants alignment in bytes. */
 #if defined (__linux__) || defined (__FreeBSD__)
 #define align_4byte   4
-#define       align_8byte     8
 #define       align_16byte    16
 #else
 #define	align_4byte	2
-#define	align_8byte	3
 #define	align_16byte	4	
 #endif			
 
+#define FUNCDEF(x) \
+	.text			; \
+	.balign 4,0x90		; \
+	.globl GNAME(x)		; \
+	.type x,@function	; \
+GNAME(x):			;
+
+#define ENDFUNC(x) \
+	.size GNAME(x),.-GNAME(x)
+
 	.text
-	.global	GNAME(foreign_function_call_active)
+	.globl	GNAME(foreign_function_call_active)
 	
 
 /*
@@ -49,11 +57,7 @@
  *
  * It should work for lisp calls C calls lisp calls C ..
  */
-	.text
-	.align	align_16byte,0x90
-	.global GNAME(call_into_c)
-	.type	GNAME(call_into_c),@function
-GNAME(call_into_c):
+FUNCDEF(call_into_c)
 	movl	$1,GNAME(foreign_function_call_active)
 
 /* Save the return lisp address in ebx */	
@@ -115,22 +119,15 @@ Lfp_rtn_value:
 	movl	$0,GNAME(foreign_function_call_active)
 /* Return */	
 	jmp	*%ebx
-
-	.size	GNAME(call_into_c), . - GNAME(call_into_c)
+ENDFUNC(call_into_c)
 
 
 
-	.text	
-	.global GNAME(call_into_lisp)
-	.type  GNAME(call_into_lisp),@function
-		
 /* The C conventions require that ebx, esi, edi, and ebp be preserved
 	across function calls. */
 /* The *alien-stack* pointer is setup on the first call_into_lisp when
    the stack changes. */
-	
-	.align	align_16byte,0x90
-GNAME(call_into_lisp):
+FUNCDEF(call_into_lisp)
 	pushl	%ebp		# save old frame pointer
 	movl	%esp,%ebp	# establish new frame
 
@@ -232,37 +229,26 @@ Ldone:
 	popl	%ebp		# c-sp
 	movl	%edx,%eax	# c-val
 	ret
-	.size	GNAME(call_into_lisp), . - GNAME(call_into_lisp)
+ENDFUNC(call_into_lisp)
 
 /* Support for saving and restoring the NPX state from C. */
-	.text
-	.global	GNAME(fpu_save)
-	.type	GNAME(fpu_save),@function
-	.align	2,0x90
-GNAME(fpu_save):
+FUNCDEF(fpu_save)
 	movl	4(%esp),%eax
 	fnsave	(%eax)		# Save the NPX state - Resets NPX
 	ret
-	.size	GNAME(fpu_save),.-GNAME(fpu_save)
+ENDFUNC(fpu_save)
 
-	.global	GNAME(fpu_restore)
-	.type	GNAME(fpu_restore),@function
-	.align	2,0x90
-GNAME(fpu_restore):
+FUNCDEF(fpu_restore)
 	movl	4(%esp),%eax
 	frstor	(%eax)		# Restore the NPX state.
 	ret
-	.size	GNAME(fpu_restore),.-GNAME(fpu_restore)
+ENDFUNC(fpu_restore)
 
 
 /*
  * The undefined-function trampoline.
  */
-	.text
-	.align	align_4byte,0x90
-	.global GNAME(undefined_tramp)
-	.type	GNAME(undefined_tramp),@function
-GNAME(undefined_tramp):
+FUNCDEF(undefined_tramp)
 	int3
 	.byte	trap_Error
         /* Number of argument bytes */
@@ -271,27 +257,20 @@ GNAME(undefined_tramp):
         /* SC_OFFSET(sc_DescriptorReg,reg_EAX) */
         .byte   SC_OFFSET(sc_DescriptorReg,0)
 	ret
-	.size	GNAME(undefined_tramp), .-GNAME(undefined_tramp)
+ENDFUNC(undefined_tramp)
 
 /*
  * The closure trampoline.
  */
-	.text
-	.align	align_4byte,0x90
-	.global GNAME(closure_tramp)
-	.type	GNAME(closure_tramp),@function
-GNAME(closure_tramp):
+FUNCDEF(closure_tramp)
 	movl	FDEFN_FUNCTION_OFFSET(%eax),%eax
 	jmp	*CLOSURE_FUNCTION_OFFSET(%eax)
-	.size	GNAME(closure_tramp), .-GNAME(closure_tramp)
+ENDFUNC(closure_tramp)
 
 /*
  * Function-end breakpoint magic.
  */
-	.text
-	.global	GNAME(function_end_breakpoint_guts)
-	.align	align_4byte
-GNAME(function_end_breakpoint_guts):
+FUNCDEF(function_end_breakpoint_guts)
 	/* Multiple Value return */
 	jmp	multiple_value_return
 	/* Single value return: The eventual return will now use the
@@ -305,45 +284,36 @@ GNAME(function_end_breakpoint_guts):
 		
 multiple_value_return:
 	
-	.global GNAME(function_end_breakpoint_trap)
+	.globl GNAME(function_end_breakpoint_trap)
 GNAME(function_end_breakpoint_trap):
 	int3
 	.byte 	trap_FunctionEndBreakpoint
 	hlt			# Should never return here.
 
-	.global GNAME(function_end_breakpoint_end)
+	.globl GNAME(function_end_breakpoint_end)
 GNAME(function_end_breakpoint_end):
 
 
-	.global	GNAME(do_pending_interrupt)
-	.type	GNAME(do_pending_interrupt),@function
-	.align	align_4byte,0x90
-GNAME(do_pending_interrupt):
+FUNCDEF(do_pending_interrupt)
 	int3
 	.byte 	trap_PendingInterrupt
 	ret
-	.size	GNAME(do_pending_interrupt),.-GNAME(do_pending_interrupt)
+ENDFUNC(do_pending_interrupt)
 	
 #ifdef trap_DynamicSpaceOverflowError
-	.global	GNAME(do_dynamic_space_overflow_error)
-	.type	GNAME(do_dynamic_space_overflow_error),@function
-	.align	align_4byte,0x90
-GNAME(do_dynamic_space_overflow_error):
+FUNCDEF(do_dynamic_space_overflow_error)
 	int3
 	.byte 	trap_DynamicSpaceOverflowError
 	ret
-	.size	GNAME(do_dynamic_space_overflow_error),.-GNAME(do_dynamic_space_overflow_error)
+ENDFUNC(do_dynamic_space_overflow_error)
 #endif				
 	
 #ifdef trap_DynamicSpaceOverflowWarning
-	.global	GNAME(do_dynamic_space_overflow_warning)
-	.type	GNAME(do_dynamic_space_overflow_warning),@function
-	.align	align_4byte,0x90
-GNAME(do_dynamic_space_overflow_warning):
+FUNCDEF(do_dynamic_space_overflow_warning)
 	int3
 	.byte 	trap_DynamicSpaceOverflowWarning
 	ret
-	.size	GNAME(do_dynamic_space_overflow_warning),.-GNAME(do_dynamic_space_overflow_warning)
+ENDFUNC(do_dynamic_space_overflow_warning)
 #endif				
 	
 
@@ -354,10 +324,7 @@ GNAME(do_dynamic_space_overflow_warning):
  * This code takes advantage of pairing in the Pentium as well
  * as the 128-bit cache line.
  */
-	.global	GNAME(fastcopy16)
-	.type	GNAME(fastcopy16),@function
-	.align align_4byte,0x90
-GNAME(fastcopy16):
+FUNCDEF(fastcopy16)
 	pushl	%ebp
 	movl	%esp,%ebp
 	movl	8(%ebp), %edx	# dst
@@ -401,7 +368,7 @@ Lend:
 	popl	%ebx
 	popl	%ebp
 	ret
-	.size	GNAME(fastcopy16),.-GNAME(fastcopy16)
+ENDFUNC(fastcopy16)
 #endif
 
 
@@ -415,10 +382,7 @@ Lend:
    The C conventions will preserve ebx, esi, edi, and ebp.
    So only eax, ecx, and edx need special care here. */
 		
-	.globl	GNAME(alloc_to_eax)
-	.type	GNAME(alloc_to_eax),@function
-	.align	align_4byte,0x90
-GNAME(alloc_to_eax):
+FUNCDEF(alloc_to_eax)
 	pushl	%ecx	# Save ecx and edx as C could destroy them.
 	pushl	%edx
 	pushl	%eax	# Push the size
@@ -427,12 +391,9 @@ GNAME(alloc_to_eax):
 	popl	%edx	# Restore ecx and edx.
 	popl	%ecx
 	ret
-	.size	GNAME(alloc_to_eax),.-GNAME(alloc_to_eax)
+ENDFUNC(alloc_to_eax)
 
-	.globl	GNAME(alloc_8_to_eax)
-	.type	GNAME(alloc_8_to_eax),@function
-	.align	align_4byte,0x90
-GNAME(alloc_8_to_eax):
+FUNCDEF(alloc_8_to_eax)
 	pushl	%ecx	# Save ecx and edx as C could destroy them.
 	pushl	%edx
 	pushl	$8	# Push the size
@@ -441,16 +402,9 @@ GNAME(alloc_8_to_eax):
 	popl	%edx	# Restore ecx and edx.
 	popl	%ecx
 	ret
-	.size	GNAME(alloc_8_to_eax),.-GNAME(alloc_8_to_eax)
+ENDFUNC(alloc_8_to_eax)
 
-	.globl	GNAME(alloc_8_to_eax)
-	.type	GNAME(alloc_8_to_eax),@function
-	.align	align_4byte,0x90
-
-	.globl	GNAME(alloc_16_to_eax)
-	.type	GNAME(alloc_16_to_eax),@function
-	.align	align_4byte,0x90
-GNAME(alloc_16_to_eax):
+FUNCDEF(alloc_16_to_eax)
 	pushl	%ecx	# Save ecx and edx as C could destroy them.
 	pushl	%edx
 	pushl	$16	# Push the size
@@ -459,13 +413,9 @@ GNAME(alloc_16_to_eax):
 	popl	%edx	# Restore ecx and edx.
 	popl	%ecx
 	ret
-	.size	GNAME(alloc_16_to_eax),.-GNAME(alloc_16_to_eax)
+ENDFUNC(alloc_16_to_eax)
 
-
-	.globl	GNAME(alloc_to_ecx)
-	.type	GNAME(alloc_to_ecx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_to_ecx):
+FUNCDEF(alloc_to_ecx)
 	pushl	%eax	# Save eax and edx as C could destroy them.
 	pushl	%edx
 	pushl	%ecx	# Push the size
@@ -475,12 +425,9 @@ GNAME(alloc_to_ecx):
 	popl	%edx	# Restore eax and edx.
 	popl	%eax
 	ret
-	.size	GNAME(alloc_to_ecx),.-GNAME(alloc_to_ecx)
+ENDFUNC(alloc_to_ecx)
 
-	.globl	GNAME(alloc_8_to_ecx)
-	.type	GNAME(alloc_8_to_ecx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_8_to_ecx):
+FUNCDEF(alloc_8_to_ecx)
 	pushl	%eax	# Save eax and edx as C could destroy them.
 	pushl	%edx
 	pushl	$8	# Push the size
@@ -490,12 +437,9 @@ GNAME(alloc_8_to_ecx):
 	popl	%edx	# Restore eax and edx.
 	popl	%eax
 	ret
-	.size	GNAME(alloc_8_to_ecx),.-GNAME(alloc_8_to_ecx)
+ENDFUNC(alloc_8_to_ecx)
 
-	.globl	GNAME(alloc_16_to_ecx)
-	.type	GNAME(alloc_16_to_ecx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_16_to_ecx):
+FUNCDEF(alloc_16_to_ecx)
 	pushl	%eax	# Save eax and edx as C could destroy them.
 	pushl	%edx
 	pushl	$16	# Push the size
@@ -505,13 +449,9 @@ GNAME(alloc_16_to_ecx):
 	popl	%edx	# Restore eax and edx.
 	popl	%eax
 	ret
-	.size	GNAME(alloc_16_to_ecx),.-GNAME(alloc_16_to_ecx)
+ENDFUNC(alloc_16_to_ecx)
 
-
-	.globl	GNAME(alloc_to_edx)
-	.type	GNAME(alloc_to_edx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_to_edx):
+FUNCDEF(alloc_to_edx)
 	pushl	%eax	# Save eax and ecx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx	# Push the size
@@ -521,12 +461,9 @@ GNAME(alloc_to_edx):
 	popl	%ecx	# Restore eax and ecx.
 	popl	%eax
 	ret
-	.size	GNAME(alloc_to_edx),.-GNAME(alloc_to_edx)
+ENDFUNC(alloc_to_edx)
 
-	.globl	GNAME(alloc_8_to_edx)
-	.type	GNAME(alloc_8_to_edx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_8_to_edx):
+FUNCDEF(alloc_8_to_edx)
 	pushl	%eax	# Save eax and ecx as C could destroy them.
 	pushl	%ecx
 	pushl	$8	# Push the size
@@ -536,12 +473,9 @@ GNAME(alloc_8_to_edx):
 	popl	%ecx	# Restore eax and ecx.
 	popl	%eax
 	ret
-	.size	GNAME(alloc_8_to_edx),.-GNAME(alloc_8_to_edx)
+ENDFUNC(alloc_8_to_edx)
 
-	.globl	GNAME(alloc_16_to_edx)
-	.type	GNAME(alloc_16_to_edx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_16_to_edx):
+FUNCDEF(alloc_16_to_edx)
 	pushl	%eax	# Save eax and ecx as C could destroy them.
 	pushl	%ecx
 	pushl	$16	# Push the size
@@ -551,14 +485,9 @@ GNAME(alloc_16_to_edx):
 	popl	%ecx	# Restore eax and ecx.
 	popl	%eax
 	ret
-	.size	GNAME(alloc_16_to_edx),.-GNAME(alloc_16_to_edx)
+ENDFUNC(alloc_16_to_edx)
 
-
-
-	.globl	GNAME(alloc_to_ebx)
-	.type	GNAME(alloc_to_ebx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_to_ebx):
+FUNCDEF(alloc_to_ebx)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -570,12 +499,9 @@ GNAME(alloc_to_ebx):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_to_ebx),.-GNAME(alloc_to_ebx)
+ENDFUNC(alloc_to_ebx)
 
-	.globl	GNAME(alloc_8_to_ebx)
-	.type	GNAME(alloc_8_to_ebx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_8_to_ebx):
+FUNCDEF(alloc_8_to_ebx)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -587,12 +513,9 @@ GNAME(alloc_8_to_ebx):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_8_to_ebx),.-GNAME(alloc_8_to_ebx)
+ENDFUNC(alloc_8_to_ebx)
 
-	.globl	GNAME(alloc_16_to_ebx)
-	.type	GNAME(alloc_16_to_ebx),@function
-	.align	align_4byte,0x90
-GNAME(alloc_16_to_ebx):
+FUNCDEF(alloc_16_to_ebx)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -604,14 +527,9 @@ GNAME(alloc_16_to_ebx):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_16_to_ebx),.-GNAME(alloc_16_to_ebx)
+ENDFUNC(alloc_16_to_ebx)
 
-
-
-	.globl	GNAME(alloc_to_esi)
-	.type	GNAME(alloc_to_esi),@function
-	.align	align_4byte,0x90
-GNAME(alloc_to_esi):
+FUNCDEF(alloc_to_esi)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -623,12 +541,9 @@ GNAME(alloc_to_esi):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_to_esi),.-GNAME(alloc_to_esi)
+ENDFUNC(alloc_to_esi)
 
-	.globl	GNAME(alloc_8_to_esi)
-	.type	GNAME(alloc_8_to_esi),@function
-	.align	align_4byte,0x90
-GNAME(alloc_8_to_esi):
+FUNCDEF(alloc_8_to_esi)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -640,12 +555,9 @@ GNAME(alloc_8_to_esi):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_8_to_esi),.-GNAME(alloc_8_to_esi)
+ENDFUNC(alloc_8_to_esi)
 
-	.globl	GNAME(alloc_16_to_esi)
-	.type	GNAME(alloc_16_to_esi),@function
-	.align	align_4byte,0x90
-GNAME(alloc_16_to_esi):
+FUNCDEF(alloc_16_to_esi)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -657,13 +569,9 @@ GNAME(alloc_16_to_esi):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_16_to_esi),.-GNAME(alloc_16_to_esi)
+ENDFUNC(alloc_16_to_esi)
 
-
-	.globl	GNAME(alloc_to_edi)
-	.type	GNAME(alloc_to_edi),@function
-	.align	align_4byte,0x90
-GNAME(alloc_to_edi):
+FUNCDEF(alloc_to_edi)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -675,12 +583,9 @@ GNAME(alloc_to_edi):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_to_edi),.-GNAME(alloc_to_edi)
+ENDFUNC(alloc_to_edi)
 
-	.globl	GNAME(alloc_8_to_edi)
-	.type	GNAME(alloc_8_to_edi),@function
-	.align	align_4byte,0x90
-GNAME(alloc_8_to_edi):
+FUNCDEF(alloc_8_to_edi)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -692,12 +597,9 @@ GNAME(alloc_8_to_edi):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_8_to_edi),.-GNAME(alloc_8_to_edi)
+ENDFUNC(alloc_8_to_edi)
 
-	.globl	GNAME(alloc_16_to_edi)
-	.type	GNAME(alloc_16_to_edi),@function
-	.align	align_4byte,0x90
-GNAME(alloc_16_to_edi):
+FUNCDEF(alloc_16_to_edi)
 	pushl	%eax	# Save eax, ecx, and edx as C could destroy them.
 	pushl	%ecx
 	pushl	%edx
@@ -709,8 +611,7 @@ GNAME(alloc_16_to_edi):
 	popl	%ecx
 	popl	%eax
 	ret
-	.size	GNAME(alloc_16_to_edi),.-GNAME(alloc_16_to_edi)
-		
+ENDFUNC(alloc_16_to_edi)
 
 
 #ifdef GENCGC
@@ -722,10 +623,7 @@ GNAME(alloc_16_to_edi):
 
 /* This routine handles an overflow with eax=crfp+size. So the
    size=eax-crfp. */
-	.align	align_4byte
-	.globl	GNAME(alloc_overflow_eax)
-	.type	GNAME(alloc_overflow_eax),@function
-GNAME(alloc_overflow_eax):
+FUNCDEF(alloc_overflow_eax)
 	pushl	%ecx		# Save ecx
 	pushl	%edx		# Save edx
 	/* Calculate the size for the allocation. */
@@ -737,14 +635,11 @@ GNAME(alloc_overflow_eax):
 	popl	%ecx	# Restore ecx.
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
-	.size	 GNAME(alloc_overflow_eax),.-GNAME(alloc_overflow_eax)
+ENDFUNC(alloc_overflow_eax)
 
 /* This routine handles an overflow with ecx=crfp+size. So the
    size=ecx-crfp. */
-	.align	align_4byte
-	.globl	GNAME(alloc_overflow_ecx)
-	.type	GNAME(alloc_overflow_ecx),@function
-GNAME(alloc_overflow_ecx):
+FUNCDEF(alloc_overflow_ecx)
 	pushl	%eax		# Save eax
 	pushl	%edx		# Save edx
 	/* Calculate the size for the allocation. */
@@ -757,14 +652,11 @@ GNAME(alloc_overflow_ecx):
 	popl	%eax	# Restore eax.
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
-	.size	 GNAME(alloc_overflow_ecx),.-GNAME(alloc_overflow_ecx)
+ENDFUNC(alloc_overflow_ecx)
 
 /* This routine handles an overflow with edx=crfp+size. So the
    size=edx-crfp. */
-	.align	align_4byte
-	.globl	GNAME(alloc_overflow_edx)
-	.type	GNAME(alloc_overflow_edx),@function
-GNAME(alloc_overflow_edx):
+FUNCDEF(alloc_overflow_edx)
 	pushl	%eax		# Save eax
 	pushl	%ecx		# Save ecx
 	/* Calculate the size for the allocation. */
@@ -777,14 +669,11 @@ GNAME(alloc_overflow_edx):
 	popl	%eax	# Restore eax.
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
-	.size	 GNAME(alloc_overflow_edx),.-GNAME(alloc_overflow_edx)
+ENDFUNC(alloc_overflow_edx)
 
 /* This routine handles an overflow with ebx=crfp+size. So the
    size=ebx-crfp. */
-	.align	align_4byte
-	.globl	GNAME(alloc_overflow_ebx)
-	.type	GNAME(alloc_overflow_ebx),@function
-GNAME(alloc_overflow_ebx):
+FUNCDEF(alloc_overflow_ebx)
 	pushl	%eax		# Save eax
 	pushl	%ecx		# Save ecx
 	pushl	%edx		# Save edx
@@ -799,14 +688,11 @@ GNAME(alloc_overflow_ebx):
 	popl	%eax	# Restore eax.
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
-	.size	 GNAME(alloc_overflow_ebx),.-GNAME(alloc_overflow_ebx)
+ENDFUNC(alloc_overflow_ebx)
 
 /* This routine handles an overflow with esi=crfp+size. So the
    size=esi-crfp. */
-	.align	align_4byte
-	.globl	GNAME(alloc_overflow_esi)
-	.type	GNAME(alloc_overflow_esi),@function
-GNAME(alloc_overflow_esi):
+FUNCDEF(alloc_overflow_esi)
 	pushl	%eax		# Save eax
 	pushl	%ecx		# Save ecx
 	pushl	%edx		# Save edx
@@ -821,14 +707,11 @@ GNAME(alloc_overflow_esi):
 	popl	%eax	# Restore eax.
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
-	.size	 GNAME(alloc_overflow_esi),.-GNAME(alloc_overflow_esi)
+ENDFUNC(alloc_overflow_esi)
 
 /* This routine handles an overflow with edi=crfp+size. So the
    size=edi-crfp. */
-	.align	align_4byte
-	.globl	GNAME(alloc_overflow_edi)
-	.type	GNAME(alloc_overflow_edi),@function
-GNAME(alloc_overflow_edi):
+FUNCDEF(alloc_overflow_edi)
 	pushl	%eax		# Save eax
 	pushl	%ecx		# Save ecx
 	pushl	%edx		# Save edx
@@ -843,7 +726,7 @@ GNAME(alloc_overflow_edi):
 	popl	%eax	# Restore eax.
 	addl	$6,(%esp) # Adjust the return address to skip the next inst.
 	ret
-	.size	 GNAME(alloc_overflow_edi),.-GNAME(alloc_overflow_edi)
+ENDFUNC(alloc_overflow_edi)
 
 #endif
 
@@ -856,10 +739,7 @@ GNAME(alloc_overflow_edi):
  * We could be called from raw Lisp code or from a foreign call site, so we 
  * have to save all the registers...
  */	
-	.align	align_4byte
-	.globl	GNAME(resolve_linkage_tramp)
-	.type	GNAME(resolve_linkage_tramp),@function
-GNAME(resolve_linkage_tramp):
+FUNCDEF(resolve_linkage_tramp)
 	pushl	%ebp		# save old frame pointer
 	movl	%esp,%ebp	# establish new frame
 	pushl	%eax
@@ -886,16 +766,12 @@ GNAME(resolve_linkage_tramp):
 	popl	%eax
 	popl	%ebp
 	ret			# jump to the real target
-	.size	 GNAME(resolve_linkage_tramp),.-GNAME(resolve_linkage_tramp)
+ENDFUNC(resolve_linkage_tramp)
 
 /*
  * The C-callable undefined-foreign-symbol trapping function.
  */
-	.text
-	.align	align_4byte,0x90
-	.global GNAME(undefined_foreign_symbol_trap)
-	.type	GNAME(undefined_foreign_symbol_trap),@function
-GNAME(undefined_foreign_symbol_trap):
+FUNCDEF(undefined_foreign_symbol_trap)
 	/* C Calling Convention, move one arg to EAX */
         pushl %ebp
         movl %esp,%ebp
@@ -914,7 +790,8 @@ GNAME(undefined_foreign_symbol_trap):
 	/* Doesn't matter here, but could if we'd use trap_Cerror */
 	leave
 	ret
-	.size	GNAME(undefined_foreign_symbol_trap), .-GNAME(undefined_foreign_symbol_trap)
-	.end
+ENDFUNC(undefined_foreign_symbol_trap)
 
 #endif /* LINKAGE_TABLE */
+
+	.end
