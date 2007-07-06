@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.8 2007/06/12 03:21:46 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.9 2007/07/06 08:04:39 cshapiro Exp $
  *
  */
 
@@ -22,7 +22,7 @@
 #include <sys/param.h>
 #include <sys/file.h>
 #include <errno.h>
-#include "./signal.h"
+#include <dlfcn.h>
 #include "os.h"
 #include "arch.h"
 #include "globals.h"
@@ -38,7 +38,6 @@
 /* #include <sys/sysinfo.h> */
 /* #include <sys/proc.h> */
 /* For timebase info */
-#include <sys/param.h>
 #include <sys/sysctl.h>
 
 
@@ -62,6 +61,7 @@ int cycles_per_tick = 1;
  * counter; we have to derive the relationship ourselves.
  */
 
+#ifdef __ppc__
 void
 timebase_init()
 {
@@ -97,13 +97,16 @@ timebase_init()
 
     cycles_per_tick = cpufrequency / tbfrequency;
 }
+#endif
 
 
 void
 os_init(void)
 {
     os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
+#ifdef __ppc__
     timebase_init();
+#endif
 }
 
 int
@@ -119,7 +122,7 @@ os_set_errno(int newvalue)
     return errno;
 }
 
-
+#if defined(__ppc__)
 int *
 sc_reg(os_context_t * context, int offset)
 {
@@ -206,6 +209,33 @@ sc_reg(os_context_t * context, int offset)
 
     return (int *) 0;
 }
+#elif defined(__i386__)
+int *
+sc_reg(os_context_t *context, int offset)
+{
+    struct i386_thread_state *ss = &context->uc_mcontext->ss;
+    switch (offset) {
+      case 0:
+	  return &ss->eax;
+      case 2:
+	  return &ss->ecx;
+      case 4:
+	  return &ss->edx;
+      case 6:
+	  return &ss->ebx;
+      case 8:
+	  return &ss->esp;
+      case 10:
+	  return &ss->ebp;
+      case 12:
+	  return &ss->esi;
+      case 14:
+	  return &ss->edi;
+    }
+
+    return (int *) 0;
+}
+#endif
 
 void
 os_save_context(void)
@@ -228,7 +258,7 @@ os_validate(os_vm_address_t addr, os_vm_size_t len)
     if (addr)
 	flags |= MAP_FIXED;
 
-    DPRINTF(0, (stderr, "os_validate %x %d => ", addr, len));
+    DPRINTF(0, (stderr, "os_validate %p %d => ", addr, len));
 
     addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
 
@@ -237,7 +267,7 @@ os_validate(os_vm_address_t addr, os_vm_size_t len)
 	return NULL;
     }
 
-    DPRINTF(0, (stderr, "%x\n", addr));
+    DPRINTF(0, (stderr, "%p\n", addr));
 
     return addr;
 }
@@ -245,7 +275,7 @@ os_validate(os_vm_address_t addr, os_vm_size_t len)
 void
 os_invalidate(os_vm_address_t addr, os_vm_size_t len)
 {
-    DPRINTF(0, (stderr, "os_invalidate %x %d\n", addr, len));
+    DPRINTF(0, (stderr, "os_invalidate %p %d\n", addr, len));
 
     if (munmap(addr, len) == -1)
 	perror("munmap");
@@ -267,8 +297,10 @@ os_map(int fd, int offset, os_vm_address_t addr, os_vm_size_t len)
 void
 os_flush_icache(os_vm_address_t address, os_vm_size_t length)
 {
+#ifdef __ppc__    
     /* see ppc-arch.c */
     ppc_flush_icache(address, length);
+#endif
 }
 
 void
@@ -293,7 +325,6 @@ in_range_p(os_vm_address_t a, lispobj sbeg, size_t slen)
 boolean
 valid_addr(os_vm_address_t addr)
 {
-    int ret;
     os_vm_address_t newaddr;
 
     newaddr = os_trunc_to_page(addr);
@@ -311,6 +342,7 @@ valid_addr(os_vm_address_t addr)
 }
 
 
+#ifdef __ppc__
 static void
 sigbus_handler(HANDLER_ARGS)
 {
@@ -360,25 +392,15 @@ sigbus_handler(HANDLER_ARGS)
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);
 }
+#endif
 
 void
 os_install_interrupt_handlers(void)
 {
-/*  interrupt_install_low_level_handler(SIGSEGV, sigsegv_handler); */
+#ifdef __ppc__
     interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
+#endif
 }
-
-void
-map_core_sections(char *exec_name)
-{
-    fprintf(stderr, "Linked cores not supported for Darwin!\n");
-    exit(1);
-}
-
-#define RTLD_LAZY 1
-#define RTLD_NOW 2
-#define RTLD_GLOBAL 0x100
-
 
 void *
 os_dlsym(const char *sym_name, lispobj lib_list)

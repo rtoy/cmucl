@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.46 2007/01/01 11:53:03 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.47 2007/07/06 08:04:39 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -170,7 +170,11 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 
     /* Allocate the SAP object while the interrupts are still disabled. */
     if (internal_errors_enabled)
+#if defined(DARWIN) && defined(__i386__)
+	context_sap = alloc_sap(&context->uc_mcontext);
+#else
 	context_sap = alloc_sap(context);
+#endif
 
 #if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
     sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
@@ -258,7 +262,7 @@ interrupt_handle_now_handler(HANDLER_ARGS)
     interrupt_handle_now(signal, code, context);
 #endif
 
-#ifdef DARWIN
+#if defined(DARWIN) && defined(__ppc__)
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);
 #endif
@@ -306,7 +310,11 @@ interrupt_handle_now(HANDLER_ARGS)
     else if (LowtagOf(handler.lisp) == type_FunctionPointer) {
 	/* Allocate the SAP object while the interrupts are still
 	   disabled. */
+#if defined(DARWIN) && defined(__i386__)
+	lispobj context_sap = alloc_sap(&context->uc_mcontext);
+#else
 	lispobj context_sap = alloc_sap(context);
+#endif
 
 	/* Allow signals again. */
 #if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
@@ -428,7 +436,7 @@ maybe_now_maybe_later(HANDLER_ARGS)
 
     }
 
-#ifdef DARWIN
+#if defined(DARWIN) && defined(__ppc__)
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);
 #endif

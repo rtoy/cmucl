@@ -1,12 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.10 2005/09/15 18:26:51 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.11 2007/07/06 08:04:39 cshapiro Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
 
-#if defined(irix) || defined(sparc)
 #include <fcntl.h>
 #include <stdlib.h>
-#endif
+#include <unistd.h>
 
 #include "os.h"
 #include "lisp.h"

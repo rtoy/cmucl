@@ -28,7 +28,11 @@ if [ $# = 1 ]; then
     case `uname -s` in
     SunOS) LISP_VARIANT=sun4_solaris_gcc ;;
     Linux) LISP_VARIANT=linux_gencgc ;;
-    Darwin) LISP_VARIANT=ppc_darwin ;;
+    Darwin) case `uname -m` in
+            ppc) LISP_VARIANT=ppc_darwin ;;
+	    i386) LISP_VARIANT=x86_darwin ;;
+	    esac
+	    ;;
     FreeBSD) LISP_VARIANT=FreeBSD_gencgc ;;
     # Please fill in some other common systems
     *) echo "Sorry, please specify the desired Lisp variant." 

@@ -1,0 +1,19 @@
+PATH1 = ../../src/lisp
+vpath %.h $(PATH1)
+vpath %.c $(PATH1)
+vpath %.S $(PATH1)
+INCLUDES = -iquote . -iquote $(PATH1) 
+CC = gcc
+LD = ld
+CPP = cpp
+CPPFLAGS = -Di386 -DDARWIN -DGENCGC -DLINKAGE_TABLE
+CFLAGS = -Wstrict-prototypes -Wall -g3 $(CPPFLAGS) $(INCLUDES)
+ASFLAGS = -g3 -DGENCGC -DLINKAGE_TABLE $(INCLUDES)
+NM = nm -gp
+UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
+ASSEM_SRC = x86-assem.S
+ARCH_SRC = x86-arch.c
+OS_SRC = Darwin-os.c os-common.c e_rem_pio2.c k_rem_pio2.c
+# OS_LINK_FLAGS = -dynamic -export-dynamic
+OS_LIBS =
+GC_SRC = gencgc.c

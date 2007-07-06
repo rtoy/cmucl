@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.27 2007/05/01 15:35:09 rtoy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.28 2007/07/06 08:04:39 cshapiro Rel $
  *
  */
 
@@ -121,7 +121,7 @@
 #define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000)	/* 512MB */
 #endif
 
-#ifdef __NetBSD__
+#if defined(__NetBSD__) || defined(DARWIN)
 #define READ_ONLY_SPACE_START   (0x10000000)
 #define READ_ONLY_SPACE_SIZE    (0x0ffff000)	/* 256MB - 1 page */
 
@@ -137,7 +137,7 @@
 #define SIGNAL_STACK_START	(0x47fd8000)
 #define SIGNAL_STACK_SIZE	SIGSTKSZ
 
-#define DYNAMIC_0_SPACE_START	(0x48800000)
+#define DYNAMIC_0_SPACE_START	(0x48000000)
 #ifdef GENCGC
 #define DYNAMIC_SPACE_SIZE	(0x67800000)	/* 1.656GB */
 #else
@@ -148,7 +148,7 @@
 #define FOREIGN_LINKAGE_SPACE_START (0xb0000000)
 #define FOREIGN_LINKAGE_SPACE_SIZE (0x100000)	/* 1MB */
 #endif
-#endif
+#endif /* __NetBSD__ || DARWIN */
 
 #ifdef __linux__
 #define READ_ONLY_SPACE_START   (SpaceStart_TargetReadOnly)

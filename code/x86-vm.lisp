@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.23 2005/12/29 10:23:12 rswindells Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.24 2007/07/06 08:04:39 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,6 +54,33 @@
         (datasel unsigned-long)
         (fpreg (array (struct fpreg) 8))
         (status unsigned-long)))
+
+#+darwin
+(def-alien-type sigcontext
+  (struct nil
+    ;; x86_exception_state32_t
+    (trapno unsigned-int)
+    (err unsigned-int)
+    (faultvaddr unsigned-int)
+    ;; x86_thread_state32_t
+    (sc-eax unsigned-int)
+    (sc-ebx unsigned-int)
+    (sc-ecx unsigned-int)
+    (sc-edx unsigned-int)
+    (sc-edi unsigned-int)
+    (sc-esi unsigned-int)
+    (sc-fp unsigned-int)
+    (sc-sp unsigned-int)
+    (ss unsigned-int)
+    (eflags unsigned-int)
+    (sc-pc unsigned-int)
+    (cs unsigned-int)
+    (ds unsigned-int)
+    (es unsigned-int)
+    (fs unsigned-int)
+    (gs unsigned-int)
+    ;; x86_float_state32_t
+    (fpstate (array char 512))))
 
 ;;; for FreeBSD
 #+(and freebsd (not freebsd4))
@@ -549,17 +576,11 @@
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 
-#+(or freebsd openbsd)
+#+bsd
 (defun sigcontext-floating-point-modes (scp)
   (declare (type (alien (* sigcontext)) scp)
 	   (ignore scp))
   ;; This is broken until some future release of FreeBSD/OpenBSD!!!
-  (floating-point-modes))
-  
-#+netbsd
-(defun sigcontext-floating-point-modes (ucp)
-  (declare (type (alien (* sigcontext)) ucp)
-	   (ignore ucp))
   (floating-point-modes))
   
 #+linux
@@ -582,10 +603,10 @@
 ;;;
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  #+(and bsd (not elf))
-  (concatenate 'string "_" name)
-  #-(and bsd (not elf))
-  name)
+  #+(or elf mach-o)
+  name
+  #-(or elf mach-o)
+  (concatenate 'string "_" name))
 
 #+(and (or linux (and freebsd elf)) (not linkage-table))
 (defun lisp::foreign-symbol-address-aux (name flavor)

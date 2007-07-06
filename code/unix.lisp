@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.109 2006/01/19 04:07:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.110 2007/07/06 08:04:39 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -489,7 +489,7 @@
     (st-blocks #-alpha long #+alpha int)
     (st-spare4 (array long 2))))
 
-#+(and :BSD (not :darwin))
+#+bsd
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
@@ -511,37 +511,6 @@
     (st-gen     unsigned-long)
     (st-lspare  long)
     (st-qspare (array long 4))))
-
-#+(and :BSD :darwin)
-(def-alien-type nil
-  (struct stat
-    (st-dev dev-t)
-    (st-ino ino-t)
-    (st-mode mode-t)
-    (st-nlink nlink-t)
-    (st-uid uid-t)
-    (st-gid gid-t)
-    (st-rdev dev-t)
-    (st-atime (struct timespec-t))
-    (st-mtime (struct timespec-t))
-    (st-ctime (struct timespec-t))
-    #+LONG-STAT
-    (st-size off-t)
-    #-LONG-STAT
-    (st-sizeh unsigned-long)
-    #-LONG-STAT
-    (st-size unsigned-long)
-    #+LONG-STAT
-    (st-blocks int64-t)
-    #-LONG-STAT
-    (st-blocksh unsigned-long)
-    #-LONG-STAT
-    (st-blocks unsigned-long)
-    (st-blksize unsigned-long)
-    (st-flags   unsigned-long)
-    (st-gen     unsigned-long)
-    (st-lspare  long)
-    (st-qspare (array long 4))))	; 2 quads
 
 #+(or linux svr4)
 (def-alien-type nil
@@ -1014,7 +983,7 @@
 	    (pw-dir (* char))           ; user's home directory
 	    (pw-shell (* char))))       ; user's login shell
 
-#+freebsd
+#+bsd
 (def-alien-type nil
     (struct passwd
 	    (pw-name (* char))          ; user's login name
@@ -1027,22 +996,8 @@
 	    (pw-dir (* char))           ; user's home directory
 	    (pw-shell (* char))         ; user's login shell
             (pw-expire int)             ; account expiration
-            (pw-fields int)))           ; internal
-
-#+(or netbsd darwin)
-(def-alien-type nil
-    (struct passwd
-	    (pw-name (* char))          ; user's login name
-	    (pw-passwd (* char))        ; no longer used
-	    (pw-uid uid-t)              ; user id
-	    (pw-gid gid-t)              ; group id
-            (pw-change time-t)          ; password change time
-            (pw-class (* char))         ; user access class
-	    (pw-gecos (* char))         ; typically user's full name
-	    (pw-dir (* char))           ; user's home directory
-	    (pw-shell (* char))         ; user's login shell
-            (pw-expire int)))           ; account expiration
-
+            #+(or freebsd darwin)
+	    (pw-fields int)))           ; internal
 
 ;; see <grp.h>
 (def-alien-type nil
@@ -3092,7 +3047,7 @@
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
-#+(or FreeBSD NetBSD darwin)
+#+bsd
 (defun unix-getpwnam (login)
   "Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
   (declare (type simple-string login))
@@ -3248,7 +3203,7 @@
 		        :until (zerop (sap-int (alien-sap member)))
 		        :collect (string (cast member c-call:c-string))))))))
 
-#+(or FreeBSD NetBSD (and ppc darwin))
+#+bsd
 (defun unix-getgrgid (gid)
   "Return a GROUP-INFO structure for the group identified by GID, or NIL if not found."
   (declare (type unix-gid gid))
@@ -3304,15 +3259,13 @@
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
 ;; From sys/utsname.h
-#+(or solaris darwin freebsd netbsd)
+#+(or solaris bsd)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant +sys-namelen+
     #+solaris 257
-    #+darwin 256
-    #+freebsd 32
-    #+netbsd 256))
+    #+bsd 256))
 
-#+(or solaris darwin freebsd netbsd)
+#+(or solaris bsd)
 (progn
 (def-alien-type nil
     (struct utsname

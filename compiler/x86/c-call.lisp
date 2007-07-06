@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.16 2004/10/24 16:58:55 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.17 2007/07/06 08:04:39 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -273,6 +273,7 @@
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub esp-tn delta)))
+    #+darwin (inst and esp-tn #xfffffff0)
     (move result esp-tn)))
 
 (define-vop (dealloc-number-stack-space)

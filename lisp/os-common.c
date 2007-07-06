@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.21 2006/11/07 11:24:12 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.22 2007/07/06 08:04:39 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -156,7 +156,7 @@ os_foreign_linkage_init(void)
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, &call_into_c, 1);
-#elif defined(DARWIN)
+#elif (defined(DARWIN) && defined(__ppc__))
 	    if (type != 1 || strcmp((char *) symbol_name->data, "_call_into_c")) {
 		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
 			(char *) symbol_name->data);

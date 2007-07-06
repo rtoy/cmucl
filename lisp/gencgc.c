@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.86 2007/05/30 17:52:08 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.87 2007/07/06 08:04:39 cshapiro Exp $
  *
  */
 
@@ -107,7 +107,7 @@
 #define set_current_region_end(value) \
   SetSymbolValue(CURRENT_REGION_END_ADDR, (value))
 
-#elif defined(DARWIN)
+#elif defined(DARWIN) && defined(__ppc__)
 #ifndef pseudo_atomic_InterruptedValue
 #define pseudo_atomic_InterruptedValue 1
 #endif
@@ -162,7 +162,7 @@ static void *invalid_stack_start, *invalid_stack_end;
 static inline void
 check_escaped_stack_object(lispobj * where, lispobj obj)
 {
-#ifndef DARWIN
+#if !defined(DARWIN) && !defined(__ppc__)
     void *p;
 
     if (Pointerp(obj)
@@ -246,7 +246,11 @@ unsigned counters_verbose = 0;
  * To enable the use of page protection to help avoid the scavenging
  * of pages that don't have pointers to younger generations.
  */
+#if defined(DARWIN) && defined(__i386__)
+boolean enable_page_protection = FALSE;
+#else
 boolean enable_page_protection = TRUE;
+#endif
 
 /*
  * Hunt for pointers to old-space, when GCing generations >= verify_gen.
@@ -518,6 +522,8 @@ unsigned int gencgc_oldest_gen_to_gc = NUM_GENERATIONS - 1;
 int last_free_page;
 
 
+static void scan_weak_tables(void);
+static void scan_weak_objects(void);
 
 /*
  * Misc. heap functions.
@@ -637,7 +643,7 @@ print_generation_stats(int verbose)
      */
 #define FPU_STATE_SIZE (((32 + 32 + 1) + 1)/2)
     long long fpu_state[FPU_STATE_SIZE];
-#elif defined(DARWIN)
+#elif defined(DARWIN) && defined(__ppc__)
 #define FPU_STATE_SIZE 32
     long long fpu_state[FPU_STATE_SIZE];
 #endif
@@ -1913,7 +1919,7 @@ copy_large_object(lispobj object, int nwords)
     gc_assert((nwords & 0x01) == 0);
 
     if (gencgc_verbose && nwords > 1024 * 1024)
-	fprintf(stderr, "** copy_large_object: %d\n", nwords * sizeof(lispobj));
+	fprintf(stderr, "** copy_large_object: %lu\n", nwords * sizeof(lispobj));
 
     /* Check if it's a large object. */
     first_page = find_page_index((void *) object);
@@ -2098,7 +2104,7 @@ copy_large_unboxed_object(lispobj object, int nwords)
     gc_assert((nwords & 0x01) == 0);
 
     if (gencgc_verbose && nwords > 1024 * 1024)
-	fprintf(stderr, "** copy_large_unboxed_object: %d\n",
+	fprintf(stderr, "** copy_large_unboxed_object: %lu\n",
 		nwords * sizeof(lispobj));
 
     /* Check if it's a large object. */
@@ -2429,7 +2435,7 @@ scavenge_interrupt_contexts(void)
  * Aargh!  Why is SPARC so different here?  What is the advantage of
  * making it different from all the other ports?
  */
-#if defined(sparc) || defined(DARWIN)
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
 #define RAW_ADDR_OFFSET 0
 #else
 #define RAW_ADDR_OFFSET (6 * sizeof(lispobj) - type_FunctionPointer)
@@ -3459,7 +3465,7 @@ size_boxed(lispobj * where)
 }
 
 /* Not needed on sparc and ppc because the raw_addr has a function lowtag */
-#if !(defined(sparc) || defined(DARWIN))
+#if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
 static int
 scav_fdefn(lispobj * where, lispobj object)
 {
@@ -4039,7 +4045,6 @@ static void
 scan_weak_tables(void)
 {
     lispobj table, next;
-    int more_scavenged;
 
     for (table = weak_hash_tables; table != NIL; table = next) {
 	struct hash_table *ht = (struct hash_table *) PTR(table);
@@ -4109,7 +4114,7 @@ scav_hash_vector(lispobj * where, lispobj object)
     }
 #endif
 
-#if !(defined(sparc) || defined(DARWIN))
+#if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
     gc_assert(where == (lispobj *) PTR(hash_table->table));
 #endif
     gc_assert(TypeOf(hash_table->instance_header) == type_InstanceHeader);
@@ -4903,7 +4908,7 @@ gc_init_tables(void)
      * Note: for sparc and ppc we don't have to do anything special
      * for fdefns, cause the raw-addr has a function lowtag.
      */
-#if !(defined(sparc) || defined(DARWIN))
+#if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
     scavtab[type_Fdefn] = scav_fdefn;
 #else
     scavtab[type_Fdefn] = scav_boxed;
@@ -6112,7 +6117,7 @@ scavenge_newspace_generation_one_scan(int generation)
 
 /* Scan all weak objects and reset weak object lists */
 static void
-scan_weak_objects()
+scan_weak_objects(void)
 {
     scan_weak_tables();
     scan_weak_pointers();
@@ -6460,7 +6465,7 @@ print_ptr(lispobj * addr)
 	    *(addr + 2), *(addr + 3), *(addr + 4));
 }
 
-#if defined(sparc) || defined(DARWIN)
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
 extern char closure_tramp;
 extern char undefined_tramp;
 #else
@@ -6535,7 +6540,7 @@ verify_space(lispobj * start, size_t words)
 	    } else {
 		/* Verify that it points to another valid space */
 		if (!to_readonly_space && !to_static_space &&
-#if defined(sparc) || defined(DARWIN)
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
 		    !((thing == (int) &closure_tramp) ||
 		      (thing == (int) &undefined_tramp))
 #else
@@ -6547,7 +6552,7 @@ verify_space(lispobj * start, size_t words)
 			    (unsigned long) thing, (unsigned long) start,
 			    (unsigned long) &undefined_tramp);
                     
-#if defined(sparc) || defined(DARWIN)
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
                     fprintf(stderr, " (closure_tramp = %lx)",
 			    (unsigned long) &closure_tramp);
 #endif
@@ -7573,7 +7578,7 @@ void do_pending_interrupt(void);
 char *
 alloc(int nbytes)
 {
-#if !(defined(sparc) || defined(DARWIN))
+#if !(defined(sparc) || (defined(DARWIN) && defined(__ppc__)))
     /*
      * *current-region-free-pointer* is the same as alloc-tn (=
      * current_dynamic_space_free_pointer) and therefore contains the
@@ -7715,7 +7720,7 @@ get_bytes_allocated_lower(void)
     }
 
     if (counters_verbose)
-	fprintf(stderr, ">%10d%10d%10d%10d%10d (max%d @0x%lX)\n", size,
+	fprintf(stderr, ">%10d%10d%10lu%10lu%10lu (max%lu @0x%lX)\n", size,
 		previous != -1 ? size - previous : -1,
 		(size_t) current_region_free_pointer -
 		(size_t) boxed_region.start_addr,

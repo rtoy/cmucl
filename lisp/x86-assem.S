@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.27 2007/06/27 10:25:02 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.28 2007/07/06 08:04:39 cshapiro Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -19,30 +19,32 @@
 #include "lispregs.h"
 
 /* Minimize conditionalization for different OS naming schemes */
-#if defined (__linux__) || defined (__FreeBSD__) || defined (__NetBSD__)
+#ifndef DARWIN	
 #define GNAME(var) var
-#else
-#define GNAME(var) _##var
-#endif
-
-/* Get the right type of alignment.  Linux wants alignment in bytes. */
-#if defined (__linux__) || defined (__FreeBSD__)
-#define align_4byte   4
-#define       align_16byte    16
-#else
-#define	align_4byte	2
-#define	align_16byte	4	
-#endif			
-
 #define FUNCDEF(x) \
 	.text			; \
 	.balign 4,0x90		; \
 	.globl GNAME(x)		; \
 	.type x,@function	; \
 GNAME(x):			;
-
 #define ENDFUNC(x) \
 	.size GNAME(x),.-GNAME(x)
+#else
+#define GNAME(var) _##var
+#define FUNCDEF(x) \
+	.text			; \
+	.align 2,0x90		; \
+	.globl GNAME(x)		; \
+GNAME(x):			;
+#define ENDFUNC(x)
+#endif
+
+/* Get the right type of alignment.  Linux wants alignment in bytes. */
+#if defined (__linux__) || defined (__FreeBSD__)
+#define align_16byte    16
+#else
+#define	align_16byte	4	
+#endif			
 
 	.text
 	.globl	GNAME(foreign_function_call_active)
@@ -742,29 +744,30 @@ ENDFUNC(alloc_overflow_edi)
 FUNCDEF(resolve_linkage_tramp)
 	pushl	%ebp		# save old frame pointer
 	movl	%esp,%ebp	# establish new frame
-	pushl	%eax
-	pushl	%ebx
-	pushl	%ecx
-	pushl	%edx
-	pushl	%edi
-	pushl	%esi
+	subl	$28, %esp
+	andl	$-16, %esp
+	movl	%eax, 24(%esp)
+	movl	%ecx, 20(%esp)
+	movl	%edx, 16(%esp)
+	movl	%ebx, 12(%esp)
+	movl	%esi, 8(%esp)	
+	movl	%edi, 4(%esp)
 	/* calling location (plus offset) was on top of stack */
 	movl	4(%ebp), %eax
-	pushl	%eax		# push for C function
+	movl	%eax, (%esp)	# push for C function
 	call	GNAME(lazy_resolve_linkage)
 	/* real address of target is in %eax.  Replace return address on stack
 	 * with it.  That way we can get out of here without trashing any 
 	 *registers!
 	 */
 	movl	%eax,4(%ebp)
-	addl	$4, %esp	# bump off argument to lazy_resolve_linkage
-	popl	%esi
-	popl	%edi
-	popl	%edx
-	popl	%ecx
-	popl	%ebx
-	popl	%eax
-	popl	%ebp
+	movl	4(%esp), %edi
+	movl	8(%esp), %esi
+	movl	12(%esp), %ebx
+	movl	16(%esp), %edx
+	movl	20(%esp), %ecx
+	movl	24(%esp), %eax
+	leave
 	ret			# jump to the real target
 ENDFUNC(resolve_linkage_tramp)
 
@@ -793,5 +796,3 @@ FUNCDEF(undefined_foreign_symbol_trap)
 ENDFUNC(undefined_foreign_symbol_trap)
 
 #endif /* LINKAGE_TABLE */
-
-	.end

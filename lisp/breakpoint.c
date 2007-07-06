@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.19 2007/01/01 11:53:02 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.20 2007/07/06 08:04:39 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -93,7 +93,7 @@ find_code(os_context_t * scp)
 static lispobj
 find_code(os_context_t * scp)
 {
-    lispobj *codeptr = component_ptr_from_pc(SC_PC(scp));
+    lispobj *codeptr = component_ptr_from_pc((lispobj *) SC_PC(scp));
 
     if (codeptr == NULL)
 	return NIL;
@@ -126,7 +126,7 @@ compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 
 	    if (offset >= codeptr->code_size) {
 		if (function_end) {
-#if defined(sparc) || defined(DARWIN)
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
 		    /*
 		     * We're in a function end breakpoint.  Compute the
 		     * offset from the (known) breakpoint location and the

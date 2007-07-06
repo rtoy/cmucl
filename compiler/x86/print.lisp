@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.4 1999/12/04 16:06:08 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/print.lisp,v 1.5 2007/07/06 08:04:39 cshapiro Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,11 +23,25 @@
   (:args (object :scs (descriptor-reg any-reg)))
   (:temporary (:sc unsigned-reg :offset eax-offset :target result
 		   :from :eval :to :result) eax)
+  #+darwin
+  (:temporary (:sc unsigned-reg) temp)
   (:results (result :scs (descriptor-reg)))
   (:save-p t)
+  #-darwin
   (:generator 100
     (inst push object)
     (inst lea eax (make-fixup (extern-alien-name "debug_print") :foreign))
     (inst call (make-fixup (extern-alien-name "call_into_c") :foreign))
     (inst add esp-tn word-bytes)
+    (move result eax))
+  #+darwin
+  (:generator 100
+    (inst mov temp esp-tn)
+    (inst sub esp-tn 8)
+    (inst and esp-tn #xfffffff0)
+    (inst mov (make-ea :dword :base esp-tn) object)
+    (inst mov (make-ea :dword :base esp-tn :disp 4) temp) 
+    (inst lea eax (make-fixup (extern-alien-name "debug_print") :foreign))
+    (inst call (make-fixup (extern-alien-name "call_into_c") :foreign))
+    (inst mov esp-tn (make-ea :dword :base esp-tn :disp 4))
     (move result eax)))

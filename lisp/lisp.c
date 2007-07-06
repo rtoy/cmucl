@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.51 2007/05/30 17:52:08 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.52 2007/07/06 08:04:39 cshapiro Exp $
  *
  */
 
@@ -12,6 +12,8 @@
 #include <sys/file.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "signal.h"
 
@@ -108,7 +110,7 @@ static int debug_lisp_search = FALSE;
  * default for CMUCLLIB
  */
 char *
-default_cmucllib(const char *argv0arg)
+default_cmucllib(char *argv0arg)
 {
     char *p;
     char *defpath;

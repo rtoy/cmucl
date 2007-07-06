@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.39 2007/06/10 05:03:09 cshapiro Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.40 2007/07/06 08:04:39 cshapiro Exp $ 
 
    */
 #include <stdio.h>
@@ -86,7 +86,7 @@ static int later_count = 0;
 #define CEILING(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
 #define NWORDS(x,y) (CEILING((x),(y)) / (y))
 
-#if defined(sparc) || defined(DARWIN)
+#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
 #define RAW_ADDR_OFFSET 0
 #else
 #define RAW_ADDR_OFFSET (6*sizeof(lispobj) - type_FunctionPointer)
@@ -1673,7 +1673,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
 	    (lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER) -
 
 	    read_only_space;
-	fprintf(stderr, "Scavenge read only space: %d bytes\n",
+	fprintf(stderr, "Scavenge read only space: %ld bytes\n",
 		read_only_space_size * sizeof(lispobj));
 	pscav(read_only_space, read_only_space_size, FALSE);
     }
@@ -1782,7 +1782,7 @@ purify(lispobj static_roots, lispobj read_only_roots)
     verify_space((lispobj *) static_space, static_free - static_space);
 #endif
     
-#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !((defined(sparc) || defined(DARWIN)) && defined(GENCGC))
+#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !((defined(sparc) || (defined(DARWIN) && defined(__ppc__))) && defined(GENCGC))
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)

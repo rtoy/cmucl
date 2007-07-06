@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.29 2006/12/02 15:22:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.30 2007/07/06 08:04:39 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,7 +116,7 @@
     (when current-x-p
       (setf (ldb float-exceptions-byte modes)
 	    (float-trap-mask current-exceptions))
-      #+darwin
+      #+(and darwin ppc)
       (when (member :invalid current-exceptions)
  	;; Clear out the bits for the detected invalid operation
  	(setf (ldb vm:float-invalid-op-1-byte modes) 0)))
@@ -124,7 +124,7 @@
     (when accrued-x-p
       (setf (ldb float-sticky-bits modes)
 	    (float-trap-mask accrued-exceptions))
-      #+darwin
+      #+(and darwin ppc)
       (when (member :invalid current-exceptions)
  	;; Clear out the bits for the detected invalid operation
  	(setf (ldb vm:float-invalid-op-1-byte modes) 0)))
@@ -247,7 +247,7 @@
 		 (alien:sap-alien scp (* unix:sigcontext))))
 	 (traps (logand (ldb float-exceptions-byte modes)
 			(ldb float-traps-byte modes))))
-    #+darwin
+    #+(and darwin ppc)
     (let ((new-modes modes))
       ;; Clear out all exceptions and save them to the context.
       ;;

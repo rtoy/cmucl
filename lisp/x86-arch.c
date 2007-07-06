@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.25 2005/10/06 21:52:53 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.26 2007/07/06 08:04:39 cshapiro Exp $ 
  *
  */
 
@@ -242,7 +242,7 @@ sigtrap_handler(HANDLER_ARGS)
 
       case trap_Halt:
 	  {
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#ifndef __linux__
 	      int fpu_state[27];
 
 	      fpu_save(fpu_state);
@@ -250,7 +250,7 @@ sigtrap_handler(HANDLER_ARGS)
 	      fake_foreign_function_call(context);
 	      lose("%%primitive halt called; the party is over.\n");
 	      undo_fake_foreign_function_call(context);
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#ifndef __linux__
 	      fpu_restore(fpu_state);
 #endif
 	      arch_skip_instruction(context);
@@ -259,7 +259,7 @@ sigtrap_handler(HANDLER_ARGS)
 
       case trap_Error:
       case trap_Cerror:
-	  DPRINTF(0, (stderr, "<trap Error %d>\n", code));
+	  DPRINTF(0, (stderr, "<trap Error %p>\n", code));
 #ifdef __linux__
 	  interrupt_internal_error(signal, contextstruct, code == trap_Cerror);
 #else
