@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.52 2007/07/06 08:04:39 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.53 2007/07/07 15:54:31 fgilham Exp $
  *
  */
 
@@ -35,6 +35,9 @@
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
+#ifdef EXECUTABLE
+#include "elf.h"
+#endif
 
 
 
@@ -432,26 +435,25 @@ main(int argc, char *argv[], char *envp[])
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
 	if (strcmp(arg, "-core") == 0) {
+#ifdef EXECUTABLE
 	    if (builtin_image_flag) {
-		fprintf(stderr,
-			"Cannot specify core file in executable image --- sorry about that.\n");
+		fprintf(stderr, "Cannot specify alternate core file with executable image.\n");
 		exit(1);
 	    }
+#endif
 	    if (core != NULL) {
 		fprintf(stderr, "can only specify one core file.\n");
 		exit(1);
 	    }
 	    core = *++argptr;
 	    if (core == NULL) {
-		fprintf(stderr,
-			"-core must be followed by the name of the core file to use.\n");
+		fprintf(stderr, "-core must be followed by the name of the core file to use.\n");
 		exit(1);
 	    }
 	} else if (strcmp(arg, "-lib") == 0) {
 	    lib = *++argptr;
 	    if (lib == NULL) {
-		fprintf(stderr,
-			"-lib must be followed by a string denoting the CMUCL library path.\n");
+		fprintf(stderr, "-lib must be followed by a string denoting the CMUCL library path.\n");
 		exit(1);
 	    }
 	} else if (strcmp(arg, "-dynamic-space-size") == 0) {
@@ -492,8 +494,7 @@ main(int argc, char *argv[], char *envp[])
 	    }
 #endif
 	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE) {
-		fprintf(stderr,
-			"-dynamic-space-size must be no greater than %d MBytes.\n",
+		fprintf(stderr, "-dynamic-space-size must be no greater than %d MBytes.\n",
 			DYNAMIC_SPACE_SIZE / (1024 * 1024));
 		exit(1);
 	    }
@@ -509,7 +510,7 @@ main(int argc, char *argv[], char *envp[])
 	default_core = "lisp.core";
 
     os_init();
-#if defined(__FreeBSD__) || defined(__linux__)
+#ifdef EXECUTABLE
     if (builtin_image_flag != 0)
 	map_core_sections(argv[0]);
 #endif
@@ -585,7 +586,9 @@ main(int argc, char *argv[], char *envp[])
 
 
     /* Only look for a core file if we're not using a built-in image. */
+#ifdef EXECUTABLE
     if (builtin_image_flag == 0) {
+#endif
 	/*
 	 * If no core file specified, search for it in CMUCLLIB
 	 */
@@ -612,19 +615,20 @@ main(int argc, char *argv[], char *envp[])
 		exit(1);
 	    }
 	}
+#ifdef EXECUTABLE
     } else {
-	/* The "core file" is the executable.  We have to do this
-	 * because this file actually gets checked for later."
+	/* The "core file" is the executable.  We have to save the
+	 * executable path because we operate on the executable file later.
 	 */
 	core = argv[0];
     }
-
+#endif
     globals_init();
 
+#ifdef EXECUTABLE
     if (builtin_image_flag != 0) {
 	extern int image_dynamic_space_size;
 	long allocation_pointer =
-
 	    (long) dynamic_0_space + (int) &image_dynamic_space_size;
 #if defined(i386) || defined(__x86_64)
 	SetSymbolValue(ALLOCATION_POINTER, (lispobj) allocation_pointer);
@@ -634,6 +638,9 @@ main(int argc, char *argv[], char *envp[])
     } else {
 	initial_function = load_core_file(core);
     }
+#else
+    initial_function = load_core_file(core);
+#endif
 
 #if defined LINKAGE_TABLE
     os_foreign_linkage_init();
