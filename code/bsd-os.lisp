@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.9 2007/07/06 08:04:38 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.10 2007/07/07 17:17:40 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,6 +37,9 @@
 (register-lisp-feature :elf)
 #+mach-o
 (register-lisp-feature :mach-o)
+
+#+freebsd
+(register-lisp-feature :executable)
 
 (setq *software-type* #+OpenBSD "OpenBSD"
                       #+NetBSD "NetBSD"

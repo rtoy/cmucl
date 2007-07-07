@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.53 2006/04/26 20:49:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.54 2007/07/07 17:17:40 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,6 +114,11 @@
   (file c-call:c-string)
   (initial-function (alien:unsigned #.vm:word-bits)))
 
+#+:executable
+(alien:def-alien-routine "save_executable" (alien:boolean)
+  (file c-call:c-string)
+  (initial-function (alien:unsigned #.vm:word-bits)))
+
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
@@ -123,6 +128,8 @@
 				 (site-init "library:site-init")
 				 (print-herald t)
 				 (process-command-line t)
+		                  #+:executable
+		                 (executable nil)
 				 (batch-mode nil))
   "Saves a CMU Common Lisp core image in the file of the specified name.  The
   following keywords are defined:
@@ -162,6 +169,12 @@
       If true (the default), process command-line switches via the normal
   mechanisms, otherwise ignore all switches (except those processed by the
   C startup code).
+
+  :executable
+      If nil (the default), save-lisp will save using the traditional
+   core-file format.  If true, save-lisp will create an executable
+   file that contains the lisp image built in. 
+   (Not all architectures support this yet.)
 
   :batch-mode
       If nil (the default), then the presence of the -batch command-line
@@ -251,9 +264,15 @@
     (setq *cmucl-core-dump-time* (get-universal-time))
     (setq *cmucl-core-dump-host* (machine-instance))
 
-    (let ((initial-function (get-lisp-obj-address #'restart-lisp)))
+    (let ((initial-function (get-lisp-obj-address #'restart-lisp))
+	  (core-name (unix-namestring core-file-name nil)))
       (without-gcing
-	(save (unix-namestring core-file-name nil) initial-function))))
+	  #+:executable
+	(if executable
+	    (save-executable core-name initial-function)
+	    (save core-name initial-function))
+	#-:executable
+	(save core-name initial-function))))
   nil)
 
 
