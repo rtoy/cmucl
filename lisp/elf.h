@@ -1,3 +1,9 @@
+/* $Id */
+
+/* This code was written by Fred Gilham and has been placed in the public domain.  It is
+   provided "AS-IS" and without warranty of any kind.
+*/
+
 #if !defined(_ELF_H_INCLUDED_)
 
 #define _ELF_H_INCLUDED_
