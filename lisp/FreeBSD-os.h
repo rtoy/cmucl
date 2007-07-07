@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.13 2007/06/12 03:21:46 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.14 2007/07/07 15:48:50 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -45,5 +45,7 @@ void os_save_context(void);
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
 
 #undef PAGE_SIZE
+
+#define EXECUTABLE 1
 
 #endif /* _FREEBSD_OS_H_ */
