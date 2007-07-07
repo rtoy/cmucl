@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.14 2007/05/30 17:52:08 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.15 2007/07/07 16:06:17 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -26,34 +26,38 @@
 #include "gencgc.h"
 #endif
 
+#ifdef EXECUTABLE
+#include "elf.h"
+#endif
+
 extern int version;
 
 static long
 write_bytes(FILE * file, char *addr, long bytes)
 {
-    long count, here, data;
+	 long count, here, data;
 
-    bytes = (bytes + CORE_PAGESIZE - 1) & ~(CORE_PAGESIZE - 1);
+	 bytes = (bytes + CORE_PAGESIZE - 1) & ~(CORE_PAGESIZE - 1);
 
-    fflush(file);
-    here = ftell(file);
-    fseek(file, 0, 2);
-    data = (ftell(file) + CORE_PAGESIZE - 1) & ~(CORE_PAGESIZE - 1);
-    fseek(file, data, 0);
+	 fflush(file);
+	 here = ftell(file);
+	 fseek(file, 0, 2);
+	 data = (ftell(file) + CORE_PAGESIZE - 1) & ~(CORE_PAGESIZE - 1);
+	 fseek(file, data, 0);
 
-    while (bytes > 0) {
-	count = fwrite(addr, 1, bytes, file);
-	if (count > 0) {
-	    bytes -= count;
-	    addr += count;
-	} else {
-	    perror("Error writing to save file");
-	    bytes = 0;
-	}
-    }
-    fflush(file);
-    fseek(file, here, 0);
-    return data / CORE_PAGESIZE - 1;
+	 while (bytes > 0) {
+		  count = fwrite(addr, 1, bytes, file);
+		  if (count > 0) {
+			   bytes -= count;
+			   addr += count;
+		  } else {
+			   perror("Error writing to save file");
+			   bytes = 0;
+		  }
+	 }
+	 fflush(file);
+	 fseek(file, here, 0);
+	 return data / CORE_PAGESIZE - 1;
 }
 
 static void
@@ -158,7 +162,7 @@ save(char *filename, lispobj init_function)
 #ifdef DEBUG_BAD_HEAP
     fprintf(stderr, "before ALLOC_POINTER = %p\n", (lispobj *) SymbolValue(ALLOCATION_POINTER));
     dump_region(&boxed_region);
-#endif    
+#endif
     gc_alloc_update_page_tables(0, &boxed_region);
     gc_alloc_update_page_tables(1, &unboxed_region);
 #ifdef DEBUG_BAD_HEAP
@@ -167,7 +171,6 @@ save(char *filename, lispobj init_function)
 
     print_ptr((lispobj*) 0x2805a184);
 #endif
-    
 #ifdef DEBUG_BAD_HEAP
     /*
      * For some reason x86 has a heap corruption problem.  I (rtoy)
@@ -224,3 +227,125 @@ save(char *filename, lispobj init_function)
 
     exit(0);
 }
+
+#ifdef EXECUTABLE
+boolean
+save_executable(char *filename, lispobj init_function)
+{
+
+#if defined WANT_CGC
+    volatile lispobj *func_ptr = &init_function;
+    char sbuf[128];
+
+    strcpy(sbuf, filename);
+    filename = sbuf;
+    /* Get rid of remnant stuff. This is a MUST so that
+     * the memory manager can get started correctly when
+     * we restart after this save. Purify is going to
+     * maybe move the args so we need to consider them volatile,
+     * especially if the gcc optimizer is working!!
+     */
+    purify(NIL, NIL);
+
+    init_function = *func_ptr;
+    /* Set dynamic space pointer to base value so we don't write out
+     * MBs of just cleared heap.
+     */
+    if(SymbolValue(X86_CGC_ACTIVE_P) != NIL)
+        SetSymbolValue(ALLOCATION_POINTER, DYNAMIC_0_SPACE_START);
+#endif
+    printf("[Undoing binding stack... ");
+    fflush(stdout);
+    unbind_to_here((lispobj *)BINDING_STACK_START);
+    SetSymbolValue(CURRENT_CATCH_BLOCK, 0);
+    SetSymbolValue(CURRENT_UNWIND_PROTECT_BLOCK, 0);
+    SetSymbolValue(EVAL_STACK_TOP, 0);
+    printf("done]\n");
+#if defined WANT_CGC && defined X86_CGC_ACTIVE_P
+    SetSymbolValue(X86_CGC_ACTIVE_P, T);
+#endif
+    printf("[Saving current lisp image as executable into \"%s\":\n", filename);
+
+    printf("\t[Writing core objects... ");
+    fflush(stdout);
+    printf("read-only... ");
+    fflush(stdout);
+    write_elf_object(dirname(filename), READ_ONLY_SPACE_ID, (os_vm_address_t)read_only_space,
+		     (os_vm_address_t)SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
+    printf("static... ");
+    fflush(stdout);
+    write_elf_object(dirname(filename), STATIC_SPACE_ID, (os_vm_address_t)static_space,
+		     (os_vm_address_t)SymbolValue(STATIC_SPACE_FREE_POINTER));
+#ifdef GENCGC
+    /* Flush the current_region updating the tables. */
+#ifdef DEBUG_BAD_HEAP
+    fprintf(stderr, "before ALLOC_POINTER = %p\n", (lispobj *) SymbolValue(ALLOCATION_POINTER));
+    dump_region(&boxed_region);
+#endif
+    gc_alloc_update_page_tables(0,&boxed_region);
+    gc_alloc_update_page_tables(1,&unboxed_region);
+#ifdef DEBUG_BAD_HEAP
+    fprintf(stderr, "boxed_region after update\n");
+    dump_region(&boxed_region);
+
+    print_ptr((lispobj*) 0x2805a184);
+#endif
+#ifdef DEBUG_BAD_HEAP
+    /*
+     * For some reason x86 has a heap corruption problem.  I (rtoy)
+     * have not been able to figure out how that occurs, but what is
+     * happening is that when a core is loaded, there is some static
+     * object pointing to an object that is on a free page.  In normal
+     * usage, at startup there should be 4 objects in static space
+     * pointing to a free page, because these are newly allocated
+     * objects created by the C runtime.  However, there is an
+     * additional object.
+     *
+     * I do not know what this object should be or how it got there,
+     * but it will often cause CMUCL to fail to save a new core file.
+     *
+     * Disabling this call to update_dynamic_space_free_pointer is a
+     * work around.  What is happening is that u_d_s_f_p is resetting
+     * ALLOCATION_POINTER, but that weird object is in the current
+     * region, but after resetting the pointer, that object isn't
+     * saved to the core file.  By not resetting the pointer, the
+     * object (or at least enough of it) gets saved in the core file
+     * that we don't have problems when reloading.
+     *
+     * Note that on sparc and ppc, u_d_s_f_p doesn't actually do
+     * anything because the call to reset ALLOCATION_POINTER is a nop
+     * on sparc and ppc.  And sparc and ppc dont' have the heap
+     * corruption issue.  That's not conclusive evidence, though.
+     *
+     * This needs more work and investigation.
+     */
+    update_dynamic_space_free_pointer();
+#endif
+
+#ifdef DEBUG_BAD_HEAP    
+    fprintf(stderr, "after ALLOC_POINTER = %p\n", (lispobj *) SymbolValue(ALLOCATION_POINTER));
+#endif    
+#endif
+
+    printf("dynamic... ");
+    fflush(stdout);
+#ifdef reg_ALLOC
+    write_elf_object(dirname(filename), DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
+		     (os_vm_address_t)current_dynamic_space_free_pointer);
+#else
+    write_elf_object(dirname(filename), DYNAMIC_SPACE_ID, (os_vm_address_t)current_dynamic_space,
+		     (os_vm_address_t)SymbolValue(ALLOCATION_POINTER));
+#endif
+
+    printf("done]\n");
+    fflush(stdout);
+    
+    printf("Linking executable...\n");
+    fflush(stdout);
+    elf_run_linker(init_function, filename);
+    elf_cleanup(dirname(filename));
+
+    printf("done.\n");
+    exit(0);
+}
+#endif
