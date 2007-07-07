@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.23 2006/11/06 07:44:51 cshapiro Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.24 2007/07/07 15:49:50 fgilham Exp $
 
 all: lisp.nm
 
@@ -25,7 +25,7 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 ### Don't look in RCS for the files, because we might not want the latest.
 %: RCS/%,v
 
-lisp.nm: lisp
+lisp.nm: lisp lisp.a
 	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
 	$(NM) lisp | grep -v " [F] " >> ,lisp.nm
 	mv ,lisp.nm lisp.nm
@@ -38,6 +38,9 @@ lisp: version.c ${OBJS} version
 		${OBJS} version.o \
 		${OS_LIBS} -lm
 	mv -f ,lisp lisp
+
+lisp.a:	version.o ${OBJS}
+	ar crs lisp.a version.o ${OBJS}
 
 version:
 	echo 0 > version
