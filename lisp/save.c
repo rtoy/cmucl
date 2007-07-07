@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.15 2007/07/07 16:06:17 fgilham Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.16 2007/07/07 17:25:10 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -26,7 +26,7 @@
 #include "gencgc.h"
 #endif
 
-#ifdef EXECUTABLE
+#ifdef FEATURE_EXECUTABLE
 #include "elf.h"
 #endif
 
@@ -228,7 +228,7 @@ save(char *filename, lispobj init_function)
     exit(0);
 }
 
-#ifdef EXECUTABLE
+#ifdef FEATURE_EXECUTABLE
 boolean
 save_executable(char *filename, lispobj init_function)
 {

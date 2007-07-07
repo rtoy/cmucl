@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.53 2007/07/07 15:54:31 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.54 2007/07/07 17:25:10 fgilham Exp $
  *
  */
 
@@ -35,7 +35,7 @@
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
-#ifdef EXECUTABLE
+#ifdef FEATUE_EXECUTABLE
 #include "elf.h"
 #endif
 
@@ -435,7 +435,7 @@ main(int argc, char *argv[], char *envp[])
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
 	if (strcmp(arg, "-core") == 0) {
-#ifdef EXECUTABLE
+#ifdef FEATURE_EXECUTABLE
 	    if (builtin_image_flag) {
 		fprintf(stderr, "Cannot specify alternate core file with executable image.\n");
 		exit(1);
@@ -510,7 +510,7 @@ main(int argc, char *argv[], char *envp[])
 	default_core = "lisp.core";
 
     os_init();
-#ifdef EXECUTABLE
+#ifdef FEATURE_EXECUTABLE
     if (builtin_image_flag != 0)
 	map_core_sections(argv[0]);
 #endif
@@ -586,7 +586,7 @@ main(int argc, char *argv[], char *envp[])
 
 
     /* Only look for a core file if we're not using a built-in image. */
-#ifdef EXECUTABLE
+#ifdef FEATURE_EXECUTABLE
     if (builtin_image_flag == 0) {
 #endif
 	/*
@@ -615,7 +615,7 @@ main(int argc, char *argv[], char *envp[])
 		exit(1);
 	    }
 	}
-#ifdef EXECUTABLE
+#ifdef FEATURE_EXECUTABLE
     } else {
 	/* The "core file" is the executable.  We have to save the
 	 * executable path because we operate on the executable file later.
@@ -625,7 +625,7 @@ main(int argc, char *argv[], char *envp[])
 #endif
     globals_init();
 
-#ifdef EXECUTABLE
+#ifdef FEATURE_EXECUTABLE
     if (builtin_image_flag != 0) {
 	extern int image_dynamic_space_size;
 	long allocation_pointer =

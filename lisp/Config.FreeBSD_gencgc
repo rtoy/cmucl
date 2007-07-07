@@ -2,7 +2,10 @@ PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
-CPPFLAGS = -I. -I$(PATH1) -I- -I/usr/X11R6/include
+ifdef FEATURE_EXECUTABLE
+EXE=-DFEATURE_EXECUTABLE
+endif
+CPPFLAGS = -I. -I$(PATH1) -I- -I/usr/X11R6/include $(EXE)
 CC = gcc
 LD = ld
 CPP = cpp
