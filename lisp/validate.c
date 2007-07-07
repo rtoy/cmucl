@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.23 2005/09/15 18:26:53 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.24 2007/07/07 15:56:24 fgilham Exp $
  *
  * Memory Validation
  */
@@ -39,54 +39,49 @@ ensure_space(lispobj * start, size_t size)
 }
 
 
-/* We use the linker symbol redefinition trick here to get the dynamic
-   space size when the core is built in to the executable.  Note that
-   builtin_image_flag is used as a flag indicating that the lisp image
-   is built into the executable.  FMG */
+/* builtin_image_flag is used as a flag indicating that the lisp image is
+   built into the executable.  The other variables are set to actual values
+   in elf.c when the core section is mapped. FMG
+*/
 extern int builtin_image_flag;
 long image_dynamic_space_size = 0;
+long image_read_only_space_size = 0;
+long image_static_space_size = 0;
 
 void
 validate(void)
 {
     void *dynamic_space_data = NULL;
 
-    /* Note: XXX use alloca here because it's not malloc.  I'm assuming
-       that anyone who wants to make this scheme work this will be using
-       GCC.  FMG */
-    if (builtin_image_flag != 0)
-	dynamic_space_data = alloca((int) (&image_dynamic_space_size));
-
     /* Read-Only Space */
     read_only_space = (lispobj *) READ_ONLY_SPACE_START;
-    /* Don't try to map this space if the executable contains the
-       image. */
-    if (builtin_image_flag == 0)
-	ensure_space(read_only_space, READ_ONLY_SPACE_SIZE);
+    /* Note that if the lisp core is not built into the image,
+       the below expression will be equal to this:
+       ensure_space(read_only_space, READ_ONLY_SPACE_SIZE);
+       FMG
+    */
+    ensure_space((lispobj *)((int)read_only_space + image_read_only_space_size),
+		 READ_ONLY_SPACE_SIZE - image_read_only_space_size);
 
     /* Static Space */
     static_space = (lispobj *) STATIC_SPACE_START;
-    /* Don't try to map this space if the executable contains the
-       image. */
-    if (builtin_image_flag == 0)
-	ensure_space(static_space, STATIC_SPACE_SIZE);
+    /* Note that if the lisp core is not built into the image,
+       the below expression will be equal to this:
+       ensure_space(static_space, STATIC_SPACE_SIZE);
+       FMG
+    */
+    ensure_space((lispobj *)((int)static_space + image_static_space_size),
+		 STATIC_SPACE_SIZE - image_static_space_size);
 
     /* Dynamic-0 Space */
     dynamic_0_space = (lispobj *) DYNAMIC_0_SPACE_START;
-    if (builtin_image_flag != 0) {
-	/* If the executable contains the lisp image, we want to copy the
-	   data in the dynamic space out of its segment, then map the
-	   dynamic space (which has the side effect of unmapping the
-	   dynamic space segment in the executable), then copy the data
-	   back into it.  This is necessary to make the data in the
-	   dynamic space segment available to the new lisp process.  */
-	memcpy(dynamic_space_data, dynamic_0_space,
-	       (int) &image_dynamic_space_size);
-	ensure_space(dynamic_0_space, dynamic_space_size);
-	memcpy(dynamic_0_space, dynamic_space_data,
-	       (int) &image_dynamic_space_size);
-    } else
-	ensure_space(dynamic_0_space, dynamic_space_size);
+    /* Note that if the lisp core is not built into the image,
+       the below expression will be equal to this:
+       ensure_space(dynamic_0_space, dynamic_space_size);
+       FMG
+    */
+    ensure_space((lispobj *)((int)dynamic_0_space + image_dynamic_space_size),
+		 dynamic_space_size - image_dynamic_space_size);
 
     current_dynamic_space = dynamic_0_space;
 
@@ -94,6 +89,14 @@ validate(void)
     /* Dynamic-1 Space */
     dynamic_1_space = (lispobj *) DYNAMIC_1_SPACE_START;
     ensure_space(dynamic_1_space, dynamic_space_size);
+    /* I'm not sure about the following, or if the lisp executable
+       stuff will work with a garbage collector other than gencgc.
+       FMG
+    */
+    /*
+      if (builtin_image_flag != 0)
+      dynamic_space_data = alloca((int) (&image_dynamic_space_size));
+    */
 #endif
 
     /* Control Stack */
