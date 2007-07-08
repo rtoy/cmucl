@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.16 2007/07/07 17:25:10 fgilham Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.17 2007/07/08 06:58:39 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -35,29 +35,29 @@ extern int version;
 static long
 write_bytes(FILE * file, char *addr, long bytes)
 {
-	 long count, here, data;
+    long count, here, data;
 
-	 bytes = (bytes + CORE_PAGESIZE - 1) & ~(CORE_PAGESIZE - 1);
+    bytes = (bytes + CORE_PAGESIZE - 1) & ~(CORE_PAGESIZE - 1);
 
-	 fflush(file);
-	 here = ftell(file);
-	 fseek(file, 0, 2);
-	 data = (ftell(file) + CORE_PAGESIZE - 1) & ~(CORE_PAGESIZE - 1);
-	 fseek(file, data, 0);
+    fflush(file);
+    here = ftell(file);
+    fseek(file, 0, 2);
+    data = (ftell(file) + CORE_PAGESIZE - 1) & ~(CORE_PAGESIZE - 1);
+    fseek(file, data, 0);
 
-	 while (bytes > 0) {
-		  count = fwrite(addr, 1, bytes, file);
-		  if (count > 0) {
-			   bytes -= count;
-			   addr += count;
-		  } else {
-			   perror("Error writing to save file");
-			   bytes = 0;
-		  }
-	 }
-	 fflush(file);
-	 fseek(file, here, 0);
-	 return data / CORE_PAGESIZE - 1;
+    while (bytes > 0) {
+	count = fwrite(addr, 1, bytes, file);
+	if (count > 0) {
+	    bytes -= count;
+	    addr += count;
+	} else {
+	    perror("Error writing to save file");
+	    bytes = 0;
+	}
+    }
+    fflush(file);
+    fseek(file, here, 0);
+    return data / CORE_PAGESIZE - 1;
 }
 
 static void
@@ -171,6 +171,7 @@ save(char *filename, lispobj init_function)
 
     print_ptr((lispobj*) 0x2805a184);
 #endif
+    
 #ifdef DEBUG_BAD_HEAP
     /*
      * For some reason x86 has a heap corruption problem.  I (rtoy)
@@ -227,6 +228,7 @@ save(char *filename, lispobj init_function)
 
     exit(0);
 }
+
 
 #ifdef FEATURE_EXECUTABLE
 boolean

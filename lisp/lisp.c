@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.54 2007/07/07 17:25:10 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.55 2007/07/08 06:58:34 fgilham Exp $
  *
  */
 
@@ -437,7 +437,8 @@ main(int argc, char *argv[], char *envp[])
 	if (strcmp(arg, "-core") == 0) {
 #ifdef FEATURE_EXECUTABLE
 	    if (builtin_image_flag) {
-		fprintf(stderr, "Cannot specify alternate core file with executable image.\n");
+		fprintf(stderr,
+			"Cannot specify core file in executable image --- sorry about that.\n");
 		exit(1);
 	    }
 #endif
@@ -447,13 +448,15 @@ main(int argc, char *argv[], char *envp[])
 	    }
 	    core = *++argptr;
 	    if (core == NULL) {
-		fprintf(stderr, "-core must be followed by the name of the core file to use.\n");
+		fprintf(stderr,
+			"-core must be followed by the name of the core file to use.\n");
 		exit(1);
 	    }
 	} else if (strcmp(arg, "-lib") == 0) {
 	    lib = *++argptr;
 	    if (lib == NULL) {
-		fprintf(stderr, "-lib must be followed by a string denoting the CMUCL library path.\n");
+		fprintf(stderr,
+			"-lib must be followed by a string denoting the CMUCL library path.\n");
 		exit(1);
 	    }
 	} else if (strcmp(arg, "-dynamic-space-size") == 0) {
@@ -494,7 +497,8 @@ main(int argc, char *argv[], char *envp[])
 	    }
 #endif
 	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE) {
-		fprintf(stderr, "-dynamic-space-size must be no greater than %d MBytes.\n",
+		fprintf(stderr,
+			"-dynamic-space-size must be no greater than %d MBytes.\n",
 			DYNAMIC_SPACE_SIZE / (1024 * 1024));
 		exit(1);
 	    }
@@ -623,12 +627,14 @@ main(int argc, char *argv[], char *envp[])
 	core = argv[0];
     }
 #endif
+
     globals_init();
 
 #ifdef FEATURE_EXECUTABLE
     if (builtin_image_flag != 0) {
 	extern int image_dynamic_space_size;
 	long allocation_pointer =
+
 	    (long) dynamic_0_space + (int) &image_dynamic_space_size;
 #if defined(i386) || defined(__x86_64)
 	SetSymbolValue(ALLOCATION_POINTER, (lispobj) allocation_pointer);
