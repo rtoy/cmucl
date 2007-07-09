@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.55 2007/07/08 06:58:34 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.56 2007/07/09 16:04:06 fgilham Exp $
  *
  */
 
@@ -35,7 +35,7 @@
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
-#ifdef FEATUE_EXECUTABLE
+#ifdef FEATURE_EXECUTABLE
 #include "elf.h"
 #endif
 

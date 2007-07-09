@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.21 2007/06/12 03:21:46 cshapiro Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.22 2007/07/09 16:03:51 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/signal.h>

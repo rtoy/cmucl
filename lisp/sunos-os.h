@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.9 2007/01/01 11:53:03 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.10 2007/07/09 16:04:09 fgilham Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -14,6 +14,7 @@
 #undef boolean
 #endif /* SOLARIS */
 
+#include <sys/param.h>
 #include <sys/types.h>
 #include <string.h>
 

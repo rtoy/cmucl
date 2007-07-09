@@ -8,13 +8,14 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.8 2007/07/07 15:47:19 fgilham Exp $
+ $Id: elf.c,v 1.9 2007/07/09 16:03:56 fgilham Exp $
 */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <elf.h>
 
 #include "os.h"
 #include "core.h"
@@ -123,7 +124,7 @@ write_elf_header(int fd)
     eh.e_shnum		= 3;		/* Number of lisp spaces. */
     eh.e_shstrndx	= 2;
 
-    return ewrite(fd, &eh, sizeof(Elf_Ehdr), __FUNCTION__);
+    return ewrite(fd, &eh, sizeof(Elf_Ehdr), "write_elf_header");
 }
 
 
@@ -142,7 +143,7 @@ write_zero_section_header(int fd)
     sh.sh_addralign	= 0;
     sh.sh_entsize	= 0;
 
-    return ewrite(fd, &sh, eh.e_shentsize, __FUNCTION__);
+    return ewrite(fd, &sh, eh.e_shentsize, "write_zero_section_header");
 }
 
 
@@ -172,7 +173,7 @@ write_object_section_header(int fd, long length, os_vm_address_t addr)
     sh.sh_addralign	= os_vm_page_size;	/* Must be page aligned. */
     sh.sh_entsize	= 0;
 
-    return ewrite(fd, &sh, eh.e_shentsize, __FUNCTION__);
+    return ewrite(fd, &sh, eh.e_shentsize, "write_object_section_header");
 }
 
 
@@ -196,7 +197,7 @@ write_string_section_header(int fd)
     sh.sh_addralign	= 0;
     sh.sh_entsize	= 0;
 
-    return ewrite(fd, &sh, eh.e_shentsize, __FUNCTION__);
+    return ewrite(fd, &sh, eh.e_shentsize, "write_string_section_header");
 }
 
 
@@ -221,7 +222,7 @@ write_string_section(int fd)
 	       strlen(object_name) + 1);
 	ret = ewrite(fd, buffer,
 		     1 + strlen(string_table_name) + 1 + strlen(object_name) + 1,
-		     __FUNCTION__);
+		     "write_string_section");
 	free(buffer);
     }
 
@@ -232,7 +233,7 @@ write_string_section(int fd)
 static int
 write_object_section(int fd, long length, os_vm_address_t real_addr)
 {
-    return ewrite(fd, (void *)real_addr, length, __FUNCTION__);
+    return ewrite(fd, (void *)real_addr, length, "write_object_section");
 }
 
 
@@ -246,7 +247,7 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
 				   ((end - start) % os_vm_page_size));
 
     if(id < 1 || id > 3) {
-	fprintf(stderr, "Invalid space id in %s: %d\n", __FUNCTION__, id);
+	fprintf(stderr, "Invalid space id in %s: %d\n", "write_elf_object", id);
 	fprintf(stderr, "Executable not built.\n");
 	ret = -1;
     }
@@ -332,7 +333,7 @@ elf_run_linker(long init_func_address, char *file)
 static void
 read_elf_header(int fd, Elf_Ehdr *ehp)
 {
-    eread(fd, ehp, sizeof(Elf_Ehdr), __FUNCTION__);
+    eread(fd, ehp, sizeof(Elf_Ehdr), "read_elf_header");
 
     if (strncmp(ehp->e_ident, elf_magic_string, 4)) {
 	fprintf(stderr,
@@ -346,7 +347,7 @@ read_elf_header(int fd, Elf_Ehdr *ehp)
 static void
 read_section_header_entry(int fd, Elf_Shdr *shp)
 {
-    eread(fd, shp, eh.e_shentsize, __FUNCTION__);
+    eread(fd, shp, eh.e_shentsize, "read_section_header_entry");
 }
 
 
@@ -381,19 +382,19 @@ map_core_sections(char *exec_name)
 
     /* Find the section name string section.	Save its file offset. */
     soff = eh.e_shoff + eh.e_shstrndx * eh.e_shentsize;
-    elseek(exec_fd, soff, __FUNCTION__);
+    elseek(exec_fd, soff, "map_core_sections");
     read_section_header_entry(exec_fd, &strsecent);
     strsecoff = strsecent.sh_offset;
 
     for (i = 0; i < eh.e_shnum && sections_remaining > 0; i++) {
 
 	/* Read an entry from the section header table. */
-	elseek(exec_fd, eh.e_shoff + i * eh.e_shentsize, __FUNCTION__);
+	elseek(exec_fd, eh.e_shoff + i * eh.e_shentsize, "map_core_sections");
 	read_section_header_entry(exec_fd, &sh);
 
 	/* Read the name from the string section. */
-	elseek(exec_fd, strsecoff + sh.sh_name, __FUNCTION__);
-	eread(exec_fd, nambuf, 6, __FUNCTION__);
+	elseek(exec_fd, strsecoff + sh.sh_name, "map_core_sections");
+	eread(exec_fd, nambuf, 6, "map_core_sections");
 
 	if (sh.sh_type == SHT_PROGBITS) {
 	    /* See if this section is one of the lisp core sections. */

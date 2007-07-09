@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.24 2007/07/07 15:56:24 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.25 2007/07/09 16:04:12 fgilham Rel $
  *
  * Memory Validation
  */
@@ -51,7 +51,7 @@ long image_static_space_size = 0;
 void
 validate(void)
 {
-    void *dynamic_space_data = NULL;
+    /* void *dynamic_space_data = NULL; */
 
     /* Read-Only Space */
     read_only_space = (lispobj *) READ_ONLY_SPACE_START;
