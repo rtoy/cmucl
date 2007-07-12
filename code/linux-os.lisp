@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.4 2004/06/13 09:53:09 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/linux-os.lisp,v 1.5 2007/07/12 04:58:08 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,9 @@
 (use-package "EXTENSIONS")
 (export '(get-system-info get-page-size os-init))
 
-(pushnew :linux *features*)
+(register-lisp-feature :linux)
+(register-lisp-feature :elf)
+(register-runtime-lisp-feature :executable)
 
 (setq *software-type* "Linux")
 
