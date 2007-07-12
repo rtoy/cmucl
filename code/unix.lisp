@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.110 2007/07/06 08:04:39 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.111 2007/07/12 06:56:44 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -502,10 +502,8 @@
     (st-atime (struct timespec-t))
     (st-mtime (struct timespec-t))
     (st-ctime (struct timespec-t))
-    (st-size    unsigned-long)		; really quad
-    (st-sizeh   unsigned-long)		;
-    (st-blocks  unsigned-long)		; really quad
-    (st-blocksh unsigned-long)
+    (st-size off-t)
+    (st-blocks off-t)
     (st-blksize unsigned-long)
     (st-flags   unsigned-long)
     (st-gen     unsigned-long)
