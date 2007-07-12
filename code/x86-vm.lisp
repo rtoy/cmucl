@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.24 2007/07/06 08:04:39 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.25 2007/07/12 06:38:28 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -603,10 +603,7 @@
 ;;;
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  #+(or elf mach-o)
-  name
-  #-(or elf mach-o)
-  (concatenate 'string "_" name))
+  name)
 
 #+(and (or linux (and freebsd elf)) (not linkage-table))
 (defun lisp::foreign-symbol-address-aux (name flavor)
