@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.22 2007/07/09 16:03:51 fgilham Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.23 2007/07/13 08:34:21 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -25,9 +25,6 @@
 #include <sys/syscall.h>
 #include <asm/unistd.h>
 #include <errno.h>
-#include <linux/version.h>
-
-#define linuxversion(a, b, c) (((a)<<16)+((b)<<8)+(c))
 
 typedef caddr_t os_vm_address_t;	/* like hpux */
 typedef size_t os_vm_size_t;	/* like hpux */
@@ -44,20 +41,12 @@ typedef int os_vm_prot_t;	/* like hpux */
 #define OS_VM_DEFAULT_PAGESIZE	8192	/* like hpux */
 #endif
 
-#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 int *sc_reg(struct sigcontext *, int);
-#else
-int *sc_reg(struct sigcontext_struct *, int);
-#endif
 void os_save_context(void);
 
 #define SAVE_CONTEXT os_save_context
 
-#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 typedef struct sigcontext sigcontext;
-#else
-typedef struct sigcontext_struct sigcontext;
-#endif
 
 /* Don't want the SIGINFO flag on linux as it causes the creation
    of real-time interrupt frames.
@@ -70,13 +59,8 @@ typedef struct sigcontext_struct sigcontext;
 */
 #if (defined(i386) || defined(__x86_64))
 
-#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define HANDLER_ARGS int signal, struct sigcontext contextstruct
 #define GET_CONTEXT int code=0; struct sigcontext *context=&contextstruct;
-#else
-#define HANDLER_ARGS int signal, struct sigcontext_struct contextstruct
-#define GET_CONTEXT int code=0; struct sigcontext_struct *context=&contextstruct;
-#endif
 
 #include <fpu_control.h>
 #define setfpucw(cw) {fpu_control_t cw_tmp=cw;_FPU_SETCW(cw_tmp);} 
@@ -90,11 +74,7 @@ typedef struct sigcontext_struct sigcontext;
 #define sc_sp		esp
 #endif
 #define sc_mask		oldmask
-#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 #define sigcontext	sigcontext
-#else
-#define sigcontext	sigcontext_struct
-#endif
 #define sc_efl		eflags
 
 #ifdef __x86_64

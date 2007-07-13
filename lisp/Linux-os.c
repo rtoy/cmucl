@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.28 2007/07/13 05:03:03 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.29 2007/07/13 08:34:21 cshapiro Exp $
  *
  */
 
@@ -56,17 +56,13 @@ size_t os_vm_page_size;
 #include "gencgc.h"
 #endif
 
-#if ((LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6))
 int PVE_stub_errno;
-#endif
 
-#if ((LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6))
 void
 update_errno(void)
 {
     PVE_stub_errno = errno;
 }
-#endif
 
 
 void
@@ -101,11 +97,7 @@ os_init(void)
 
 #ifdef i386
 int *
-#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 sc_reg(struct sigcontext *c, int offset)
-#else
-sc_reg(struct sigcontext_struct *c, int offset)
-#endif
 {
     switch (offset) {
       case 0:
@@ -288,11 +280,7 @@ void
 sigsegv_handler(HANDLER_ARGS)
 {
     GET_CONTEXT
-#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
     int fault_addr = ((struct sigcontext *) (&contextstruct))->cr2;
-#else
-    int fault_addr = ((struct sigcontext_struct *) (&contextstruct))->cr2;
-#endif
     int page_index = find_page_index((void *) fault_addr);
 
 #ifdef RED_ZONE_HIT
