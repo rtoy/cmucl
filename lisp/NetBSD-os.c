@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.5 2007/06/12 03:21:46 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.6 2007/07/15 21:33:14 cshapiro Exp $
  *
  */
 
@@ -98,19 +98,6 @@ sc_reg(os_context_t * c, int offset)
 #endif
 #endif
     return (int *) 0;
-}
-
-void
-os_save_context(void)
-{
-    /*
-     * Called from interrupt handlers so C stuff knows things set in Lisp.
-     */
-}
-
-void
-os_set_context(void)
-{
 }
 
 os_vm_address_t

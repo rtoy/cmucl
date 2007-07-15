@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.17 2007/07/15 09:24:57 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.18 2007/07/15 21:33:14 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -38,7 +38,6 @@ typedef int os_vm_prot_t;
 #define CODE(code)  ((code) ? code->si_code : 0)
 
 int *sc_reg(ucontext_t *, int);
-void os_save_context(void);
 
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
 

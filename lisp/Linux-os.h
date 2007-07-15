@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.23 2007/07/13 08:34:21 cshapiro Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.24 2007/07/15 21:33:14 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -42,9 +42,6 @@ typedef int os_vm_prot_t;	/* like hpux */
 #endif
 
 int *sc_reg(struct sigcontext *, int);
-void os_save_context(void);
-
-#define SAVE_CONTEXT os_save_context
 
 typedef struct sigcontext sigcontext;
 

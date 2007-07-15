@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.29 2007/07/13 08:34:21 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.30 2007/07/15 21:33:14 cshapiro Exp $
  *
  */
 
@@ -162,19 +162,6 @@ sc_reg(struct sigcontext *c, int offset)
     return (int *) 0;
 }
 #endif
-
-void
-os_save_context(void)
-{
-    /*
-     * Called from interrupt handlers so C stuff knows things set in Lisp.
-     */
-}
-
-void
-os_set_context(void)
-{
-}
 
 os_vm_address_t
 os_validate(os_vm_address_t addr, os_vm_size_t len)

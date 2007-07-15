@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.16 2007/07/15 09:24:57 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.17 2007/07/15 21:33:14 cshapiro Exp $
  *
  */
 
@@ -75,18 +75,6 @@ sc_reg(ucontext_t *context, int offset)
     }
 
     return (int *) 0;
-}
-
-void
-os_save_context(void)
-{
-    /* Called from interrupt handlers so C stuff knows things set in
-       Lisp.  */
-}
-
-void
-os_set_context(void)
-{
 }
 
 os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)

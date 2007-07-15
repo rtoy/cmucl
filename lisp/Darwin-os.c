@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.9 2007/07/06 08:04:39 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.10 2007/07/15 21:33:13 cshapiro Exp $
  *
  */
 
@@ -236,19 +236,6 @@ sc_reg(os_context_t *context, int offset)
     return (int *) 0;
 }
 #endif
-
-void
-os_save_context(void)
-{
-    /*
-     * Called from interrupt handlers so C stuff knows things set in Lisp.
-     */
-}
-
-void
-os_set_context(void)
-{
-}
 
 os_vm_address_t
 os_validate(os_vm_address_t addr, os_vm_size_t len)
