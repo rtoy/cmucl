@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.26 2007/07/06 08:04:39 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.27 2007/07/15 09:24:57 cshapiro Exp $ 
  *
  */
 
@@ -263,7 +263,7 @@ sigtrap_handler(HANDLER_ARGS)
 #ifdef __linux__
 	  interrupt_internal_error(signal, contextstruct, code == trap_Cerror);
 #else
-	  interrupt_internal_error(signal, code, context, code == trap_Cerror);
+	  interrupt_internal_error(signal, code, context, CODE(code) == trap_Cerror);
 #endif
 	  break;
 
@@ -301,7 +301,7 @@ sigtrap_handler(HANDLER_ARGS)
 #endif
       default:
 	  DPRINTF(0,
-		  (stderr, "[C--trap default %d %d %p]\n", signal, code,
+		  (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
 		   context));
 #ifdef __linux__
 	  interrupt_handle_now(signal, contextstruct);

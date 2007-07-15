@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.47 2007/07/06 08:04:39 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.48 2007/07/15 09:24:57 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -32,7 +32,7 @@ void (*interrupt_low_level_handlers[NSIG]) (HANDLER_ARGS) = {
 
 static int pending_signal = 0;
 
-#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__)
+#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__)
 static siginfo_t *pending_code;
 
 #define PASSCODE(code) ((code))
@@ -170,7 +170,7 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 
     /* Allocate the SAP object while the interrupts are still disabled. */
     if (internal_errors_enabled)
-#if defined(DARWIN) && defined(__i386__)
+#if (defined(DARWIN) || defined(__FreeBSD__)) && defined(__i386__)
 	context_sap = alloc_sap(&context->uc_mcontext);
 #else
 	context_sap = alloc_sap(context);
@@ -227,7 +227,7 @@ interrupt_handle_pending(os_context_t * context)
     if (pending_signal) {
 	int signal;
 
-#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__)
+#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__)
 	siginfo_t *code;
 #else
 	int code;
@@ -310,7 +310,7 @@ interrupt_handle_now(HANDLER_ARGS)
     else if (LowtagOf(handler.lisp) == type_FunctionPointer) {
 	/* Allocate the SAP object while the interrupts are still
 	   disabled. */
-#if defined(DARWIN) && defined(__i386__)
+#if (defined(DARWIN) || defined(__FreeBSD__)) && defined(__i386__)
 	lispobj context_sap = alloc_sap(&context->uc_mcontext);
 #else
 	lispobj context_sap = alloc_sap(context);

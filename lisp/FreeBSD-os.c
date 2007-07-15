@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.15 2007/06/12 03:21:46 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.16 2007/07/15 09:24:57 cshapiro Exp $
  *
  */
 
@@ -53,25 +53,25 @@ os_init(void)
 }
 
 int *
-sc_reg(struct sigcontext *c, int offset)
+sc_reg(ucontext_t *context, int offset)
 {
     switch (offset) {
       case 0:
-	  return &c->sc_eax;
+	  return &context->uc_mcontext.mc_eax;
       case 2:
-	  return &c->sc_ecx;
+	  return &context->uc_mcontext.mc_ecx;
       case 4:
-	  return &c->sc_edx;
+	  return &context->uc_mcontext.mc_edx;
       case 6:
-	  return &c->sc_ebx;
+	  return &context->uc_mcontext.mc_ebx;
       case 8:
-	  return &c->sc_esp;
+	  return &context->uc_mcontext.mc_esp;
       case 10:
-	  return &c->sc_ebp;
+	  return &context->uc_mcontext.mc_ebp;
       case 12:
-	  return &c->sc_esi;
+	  return &context->uc_mcontext.mc_esi;
       case 14:
-	  return &c->sc_edi;
+	  return &context->uc_mcontext.mc_edi;
     }
 
     return (int *) 0;
@@ -169,43 +169,44 @@ boolean valid_addr(os_vm_address_t addr)
 
 
 static void
-sigbus_handler(int signal, int code, struct sigcontext *context,
-	       void *fault_addr)
+sigbus_handler(int signal, siginfo_t *info, ucontext_t *context)
 {
     int page_index;
 
 #ifdef RED_ZONE_HIT
-    if (os_control_stack_overflow(fault_addr, context))
+    if (os_control_stack_overflow(info->si_addr, context))
 	return;
 #endif
 
 #if defined GENCGC
-    page_index = find_page_index(fault_addr);
+    if (info->si_code == BUS_PAGE_FAULT) {
+	page_index = find_page_index(info->si_addr);
 
-    /* Check if the fault is within the dynamic space. */
-    if (page_index != -1) {
-	/* Un-protect the page */
+	/* Check if the fault is within the dynamic space. */
+	if (page_index != -1) {
+	    /* Un-protect the page */
 
-	/* The page should have been marked write protected */
-	if (!PAGE_WRITE_PROTECTED(page_index))
-	    fprintf(stderr,
-		    "*** Sigbus in page not marked as write protected\n");
+	    /* The page should have been marked write protected */
+	    if (!PAGE_WRITE_PROTECTED(page_index))
+		fprintf(stderr,
+			"*** Sigbus in page not marked as write protected\n");
 
-	os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
+	    os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
+	    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
+	    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
 
-	return;
+	    return;
+	}
     }
 #endif /* GENCGC */
 
-    interrupt_handle_now(signal, code, context);
+    interrupt_handle_now(signal, info, context);
 }
 
 static void
-sigsegv_handler(int signal, int code, struct sigcontext *context)
+sigsegv_handler(int signal, siginfo_t *info, ucontext_t *context)
 {
-    interrupt_handle_now(signal, code, context);
+    interrupt_handle_now(signal, info, context);
 }
 
 void
