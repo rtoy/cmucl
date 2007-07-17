@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.2 2007/07/12 04:50:22 fgilham Exp $
+# $Id: linker.sh,v 1.3 2007/07/17 15:25:14 fgilham Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
@@ -15,48 +15,10 @@ if [ -z "$GCC" ]
     exit 1
 fi
 
-set_libroot()
-{
-    LIBROOT=`$GCC -v 2>&1 | \
-	grep 'Reading' | \
-	sed -e 's/Reading specs from //' | \
-	sed -e 's|/specs||'`
-
-    echo "LIBROOT is $LIBROOT"
-}
-
-
-find_libroot()
-{
-    LIBROOT=''
-    GCC_VERSION=`$GCC -v 2>&1 | \
-     grep 'gcc version' | \
-     sed -e 's/gcc version //' | \
-     sed -e 's/ .*//'`
-    if [ -z "$GCC_VERSION" ]; then
-	echo "Can't get the version from GCC.  Something is very wrong."
-	exit 1
-    fi
-
-    CRT_DIR=`find /usr/lib -name $GCC_VERSION -print`
-
-    if [ -f $CRT_DIR/crtbegin.o ] && [ -f $CRT_DIR/crtend.o ]; then
-	LIBROOT=$CRT_DIR
-    else
-	if [ -f /usr/lib/crtbegin.o ] && [ -f /usr/lib/crtend.o ]; then
-	    # I doubt that this is right.  After all, this is Linux.  You
-	    # don't expect to find things in reasonable places.
-	    LIBROOT=/usr/lib
-	fi
-    fi
-
-    if [ -z $LIBROOT ]; then
-	echo "Can't find the directory with the C runtime object files.  Exiting."
-	exit 1
-    fi
-
-    echo "LIBROOT is $LIBROOT"
-}
+# Uniform method for finding GCC C runtime object files suggested by Ray Toy
+CRTPATH=`$GCC -print-libgcc-file-name`
+LIBROOT=`dirname $CRTPATH`
+echo "LIBROOT is $LIBROOT"
 
 if [ $# -ne 2 ]
     then
@@ -70,21 +32,12 @@ VER=''
 # Set OS-specific variables.
 case "$OPSYS" in
     Linux )
-	# See if this is a version of Linux where GCC reports
-	# where it gets the specs from.  Extract the location of
-	# the C runtime object files from that.
-	set_libroot
-	if [ -z "$LIBROOT" ]; then
-	    # We have to do it the hard way.
-	    find_libroot
-	fi
 	DLINKER='-dynamic-linker /lib/ld-linux.so.2'
 	STARTCRT="$LIBROOT/../../../crt1.o $LIBROOT/../../../crti.o $LIBROOT/crtbegin.o"
 	ENDCRT="$LIBROOT/crtend.o $LIBROOT/../../../crtn.o"
 	LIBS="-L$LIBROOT -ldl -lm -lgcc -lc -lgcc"
 	;;
     FreeBSD )
-	LIBROOT=/usr/lib
 	DLINKER='-dynamic-linker /usr/libexec/ld-elf.so.1'
 	STARTCRT="$LIBROOT/crt1.o $LIBROOT/crti.o $LIBROOT/crtbegin.o"
 	ENDCRT="$LIBROOT/crtend.o $LIBROOT/crtn.o"
