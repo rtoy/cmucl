@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.9 2007/07/09 16:03:56 fgilham Exp $
+ $Id: elf.c,v 1.10 2007/07/19 00:12:06 fgilham Exp $
 */
 
 #include <stdio.h>
@@ -20,6 +20,7 @@
 #include "os.h"
 #include "core.h"
 #include "internals.h"
+#include "globals.h"
 #include "elf.h"
 
 static char elf_magic_string[] = {ELFMAG0, ELFMAG1, ELFMAG2, ELFMAG3};
@@ -368,6 +369,8 @@ map_core_sections(char *exec_name)
     int strsecoff;		/* File offset to string table section. */
     int sections_remaining = 3;
     int i, j;
+    lispobj *free_pointer;
+    os_vm_address_t addr;
     extern int
 	image_dynamic_space_size,
 	image_static_space_size,
@@ -401,14 +404,23 @@ map_core_sections(char *exec_name)
 	    for (j = 0; j < 3; j++) {
 		if (!strncmp(nambuf, section_names[j], 6)) {
 		    /* Found a core section. Map it! */
-		    if (os_map(exec_fd, sh.sh_offset,
-			       (os_vm_address_t) sh.sh_addr, sh.sh_size)
-			== (os_vm_address_t) -1) {
+		  if ((addr = (os_vm_address_t) os_map(exec_fd, sh.sh_offset,
+						       (os_vm_address_t) sh.sh_addr, sh.sh_size))
+		      == (os_vm_address_t) -1) {
 			fprintf(stderr, "Can't map section %s\n", section_names[j]);
 			exit(-1);
 		    }
+
+		    free_pointer = (lispobj *) addr + sh.sh_size;
+
 		    switch(j) {
 		    case 0: /* Dynamic space. */
+			current_dynamic_space = (lispobj *)addr;
+#if defined(ibmrt) || defined(i386) || defined(__x86_64)
+			SetSymbolValue(ALLOCATION_POINTER, (lispobj) free_pointer);
+#else
+			current_dynamic_space_free_pointer = free_pointer;
+#endif
 			image_dynamic_space_size = sh.sh_size;
 			break;
 		    case 1: /* Static space. */
