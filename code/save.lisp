@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.54 2007/07/07 17:17:40 fgilham Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.55 2007/07/20 02:38:19 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,6 +44,11 @@
 ;;; Filled in by the startup code.
 (defvar lisp-environment-list)
 (defvar *cmucl-lib*)		; Essentially the envvar CMUCLLIB, if available
+
+#+:executable                   ; A dumped executable image won't have
+(defvar *old-cmucl-lib*)	; any reasonable default library: search list.  Save
+				; the one from when it was dumped..
+
 (defvar *cmucl-core-path*)	; Path to where the Lisp core file was found.
 
 ;;; Filled in by the save code.
@@ -101,7 +106,7 @@
   (setf (search-list "library:")
 	(if (boundp '*cmucl-lib*)
 	    (parse-unix-search-path *cmucl-lib*)
-	    '("/usr/local/lib/cmucl/lib/")))
+	    (or #+:executable *old-cmucl-lib* '("/usr/local/lib/cmucl/lib/"))))
   (setf (search-list "modules:") '("library:subsystems/"))
   (setf (search-list "ld-library-path:")
 	(parse-unix-search-list :ld_library_path)))
@@ -191,6 +196,13 @@
     (eval:flush-interpreted-function-cache))
   (when (fboundp 'cancel-finalization)
     (cancel-finalization sys:*tty*))
+
+  #+:executable
+  (when executable 
+    ;; Only do this when dumping an executable Lisp.  Otherwise
+    ;; worldload will make us lose when it clears the search lists.
+    (setf *old-cmucl-lib* (search-list "library:")))
+  
   (if purify
       (purify :root-structures root-structures
 	      :environment-name environment-name)
