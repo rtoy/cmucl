@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.56 2007/07/09 16:04:06 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.57 2007/07/21 21:12:42 fgilham Exp $
  *
  */
 
@@ -35,7 +35,7 @@
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
-#ifdef FEATURE_EXECUTABLE
+#if defined FEATURE_EXECUTABLE
 #include "elf.h"
 #endif
 
@@ -435,7 +435,7 @@ main(int argc, char *argv[], char *envp[])
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
 	if (strcmp(arg, "-core") == 0) {
-#ifdef FEATURE_EXECUTABLE
+#if defined FEATURE_EXECUTABLE
 	    if (builtin_image_flag) {
 		fprintf(stderr,
 			"Cannot specify core file in executable image --- sorry about that.\n");
@@ -514,7 +514,7 @@ main(int argc, char *argv[], char *envp[])
 	default_core = "lisp.core";
 
     os_init();
-#ifdef FEATURE_EXECUTABLE
+#if defined FEATURE_EXECUTABLE
     if (builtin_image_flag != 0)
 	map_core_sections(argv[0]);
 #endif
@@ -565,7 +565,14 @@ main(int argc, char *argv[], char *envp[])
 	libvar = getenv("CMUCLLIB");
 	if (libvar != NULL) {
 	    cmucllib = strdup(libvar);
-	} else {
+	} else 
+#if defined FEATURE_EXECUTABLE
+	    /* The following doesn't make sense for executables.
+	       They need to use the saved library path from the
+	       lisp from which they were dumped. */
+	    if (builtin_image_flag == 0)
+#endif	    
+	{
 	    char *newlib = NULL;
 
 	    /*
@@ -590,7 +597,7 @@ main(int argc, char *argv[], char *envp[])
 
 
     /* Only look for a core file if we're not using a built-in image. */
-#ifdef FEATURE_EXECUTABLE
+#if defined FEATURE_EXECUTABLE
     if (builtin_image_flag == 0) {
 #endif
 	/*
@@ -619,7 +626,7 @@ main(int argc, char *argv[], char *envp[])
 		exit(1);
 	    }
 	}
-#ifdef FEATURE_EXECUTABLE
+#if defined FEATURE_EXECUTABLE
     } else {
 	/* The "core file" is the executable.  We have to save the
 	 * executable path because we operate on the executable file later.
@@ -630,7 +637,7 @@ main(int argc, char *argv[], char *envp[])
 
     globals_init();
 
-#ifdef FEATURE_EXECUTABLE
+#if defined FEATURE_EXECUTABLE
     if (builtin_image_flag != 0) {
 	extern int image_dynamic_space_size;
 	long allocation_pointer =
@@ -689,7 +696,14 @@ main(int argc, char *argv[], char *envp[])
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
 
     /* Set cmucllib and cmuclcore appropriately */
-    SetSymbolValue(CMUCL_LIB, alloc_string(cmucllib));
+#if defined FEATURE_EXECUTABLE
+    /* This test will preserve the library: search list dumped
+       with the executable unless the user specifically overrides
+       it with the -lib flag or by setting the CMUCLLIB environment
+       variable. */
+    if (cmucllib)
+#endif
+	SetSymbolValue(CMUCL_LIB, alloc_string(cmucllib));
     SetSymbolValue(CMUCL_CORE_PATH, alloc_string(core));
 
     /*
