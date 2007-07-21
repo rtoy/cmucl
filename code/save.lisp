@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.55 2007/07/20 02:38:19 fgilham Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.56 2007/07/21 21:12:18 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,9 +45,10 @@
 (defvar lisp-environment-list)
 (defvar *cmucl-lib*)		; Essentially the envvar CMUCLLIB, if available
 
-#+:executable                   ; A dumped executable image won't have
-(defvar *old-cmucl-lib*)	; any reasonable default library: search list.  Save
-				; the one from when it was dumped..
+#+:executable
+;; A dumped executable image won't have any reasonable default
+;; library: search list.  Save the one from when it was dumped.
+(defvar *old-cmucl-library-search-list*)
 
 (defvar *cmucl-core-path*)	; Path to where the Lisp core file was found.
 
@@ -106,7 +107,10 @@
   (setf (search-list "library:")
 	(if (boundp '*cmucl-lib*)
 	    (parse-unix-search-path *cmucl-lib*)
-	    (or #+:executable *old-cmucl-lib* '("/usr/local/lib/cmucl/lib/"))))
+	    (or
+	     #+:executable
+	     *old-cmucl-library-search-list*
+	     '("/usr/local/lib/cmucl/lib/"))))
   (setf (search-list "modules:") '("library:subsystems/"))
   (setf (search-list "ld-library-path:")
 	(parse-unix-search-list :ld_library_path)))
@@ -200,8 +204,12 @@
   #+:executable
   (when executable 
     ;; Only do this when dumping an executable Lisp.  Otherwise
-    ;; worldload will make us lose when it clears the search lists.
-    (setf *old-cmucl-lib* (search-list "library:")))
+    ;; worldload will make us lose because it clears the search lists.
+    ;; If we are dumping an executable lisp image, we want to keep
+    ;; track of the library search list across dumps because the
+    ;; normal way for figuring out the library paths from arg[0] is
+    ;; almost guaranteed to be wrong for executables.
+    (setf *old-cmucl-library-search-list* (search-list "library:")))
   
   (if purify
       (purify :root-structures root-structures
