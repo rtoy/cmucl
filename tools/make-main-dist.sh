@@ -1,5 +1,6 @@
 #!/bin/sh
 
+set -x
 while getopts "G:O:bgh?" arg
 do
     case $arg in
@@ -44,7 +45,14 @@ case $ARCH in
 esac
 
 case $OS in
-	FreeBSD*)	EXECUTABLE=true ;;
+	FreeBSD*)	
+	    EXECUTABLE=true
+	    SCRIPT=FreeBSD
+	    ;;
+	linux*)		
+	    EXECUTABLE=true
+	    SCRIPT=Linux
+	    ;;
         *)              EXECUTABLE=""   ;;
 esac
 
@@ -65,12 +73,12 @@ install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/man/man1
 install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/
-if [ "EXECUTABLE" = "true" ]
+if [ "$EXECUTABLE" = "true" ]
 then
     install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp.a $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/lib/cmucl/lib/
 # Add Linker directive scripts here as each architecture has them.
-    install ${GROUP} ${OWNER} -m 0755 src/tools/FreeBSD-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
+    install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
 fi
 install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.core $DESTDIR/lib/cmucl/lib/
 install ${GROUP} ${OWNER} -m 0755 src/tools/load-foreign.csh src/tools/config \
