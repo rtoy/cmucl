@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -x
+# set -x
 while getopts "G:O:bgh?" arg
 do
     case $arg in
