@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.58 2007/07/23 05:05:17 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.59 2007/07/24 19:09:14 rtoy Exp $
  *
  */
 
@@ -398,8 +398,8 @@ prepend_core_path(char *lib, char *corefile)
   will give the address of the initial function.
 */
 
-int builtin_image_flag = 0;
-long initial_function_addr = 0;
+extern int builtin_image_flag;
+extern long initial_function_addr;
 
 /* And here be main. */
 

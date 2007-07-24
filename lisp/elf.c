@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.11 2007/07/20 02:03:55 fgilham Exp $
+ $Id: elf.c,v 1.12 2007/07/24 19:09:13 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -33,6 +33,23 @@ static Elf_Shdr sh;
    the corresponding names found in the linker script.  */
 
 static char *section_names[] = {"CORDYN", "CORSTA", "CORRO"};
+
+#ifdef SOLARIS
+#include "sparc-validate.h"
+/*
+ * Starting address of the three ELF sections/spaces.  These must be
+ * in the same order as section_names above!
+ *
+ * XXX: Should we combine these into a structure?  Should we do this
+ * for all architectures?
+ */
+static os_vm_address_t section_addr[] =
+{
+    DYNAMIC_0_SPACE_START,
+    STATIC_SPACE_START,
+    READ_ONLY_SPACE_START
+};
+#endif  
 
 /* Note: write errors are not fatal. */
 static int
@@ -107,12 +124,32 @@ write_elf_header(int fd)
     eh.e_ident[EI_MAG3]		= ELFMAG3;
 
     eh.e_ident[EI_CLASS]	= ELFCLASS32;
+#ifdef SOLARIS
+    eh.e_ident[EI_DATA]		= ELFDATA2MSB;
+#else
     eh.e_ident[EI_DATA]		= ELFDATA2LSB;
+#endif
     eh.e_ident[EI_VERSION]	= EV_CURRENT;
+#ifdef SOLARIS
+    eh.e_ident[EI_OSABI]	= ELFOSABI_SOLARIS;
+#else
     eh.e_ident[EI_OSABI]	= ELFOSABI_FREEBSD;
+#endif
 
+#ifdef SOLARIS
+    eh.e_type		= ET_REL;	/* ???? */
+#else
     eh.e_type		= ET_NONE;	/* ???? */
-    eh.e_machine	= EM_386;	/*XXXXX what about sparc? */
+#endif
+#ifdef SOLARIS
+    /*
+     * We only support 32-bit code right now, and our binaries are
+     * v8plus binaries.
+     */
+    eh.e_machine	= EM_SPARC32PLUS;
+#else
+    eh.e_machine	= EM_386;
+#endif
     eh.e_version	= EV_CURRENT;
     eh.e_entry		= 0;
     eh.e_phoff		= 0;
@@ -339,7 +376,7 @@ read_elf_header(int fd, Elf_Ehdr *ehp)
     if (strncmp(ehp->e_ident, elf_magic_string, 4)) {
 	fprintf(stderr,
 		"Bad ELF magic number --- not an elf file.	Exiting in %s.\n",
-		__FUNCTION__);
+		__func__);
 	exit(-1);
     }
 }
@@ -401,9 +438,22 @@ map_core_sections(char *exec_name)
 	    /* See if this section is one of the lisp core sections. */
 	    for (j = 0; j < 3; j++) {
 		if (!strncmp(nambuf, section_names[j], 6)) {
+                  os_vm_address_t addr;
+
+#ifdef SOLARIS
+                  /*
+                   * On Solaris, the section header sets the addr
+                   * field to 0 because the linker script says the
+                   * sections are NOTE sections.  Hence, we need to
+                   * look up the section addresses ourselves.
+                   */
+                  addr = section_addr[j];
+#else
+                  addr = (os_vm_address_t) sh.sh_addr;
+#endif                  
 		    /* Found a core section. Map it! */
 		  if ((os_vm_address_t) os_map(exec_fd, sh.sh_offset,
-					       (os_vm_address_t) sh.sh_addr, sh.sh_size)
+					       addr, sh.sh_size)
 		      == (os_vm_address_t) -1) {
 			fprintf(stderr, "Can't map section %s\n", section_names[j]);
 			exit(-1);

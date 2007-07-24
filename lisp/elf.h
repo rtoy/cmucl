@@ -1,4 +1,4 @@
-/* $Id: elf.h,v 1.6 2007/07/09 16:04:00 fgilham Exp $ */
+/* $Id: elf.h,v 1.7 2007/07/24 19:09:14 rtoy Exp $ */
 
 /* This code was written by Fred Gilham and has been placed in the public domain.  It is
    provided "AS-IS" and without warranty of any kind.
@@ -10,7 +10,7 @@
 
 #define LINKER_SCRIPT "linker.sh"
 
-#if (defined sparc)
+#if defined(SOLARIS)
 #include <sys/elf.h>
 #else
 #include <elf.h>
@@ -22,7 +22,7 @@ int elf_run_linker(long, char *);
 
 void map_core_sections(char *);
 
-#if (defined sparc) || defined(linux)
+#if defined(SOLARIS) || defined(linux)
 typedef Elf32_Ehdr Elf_Ehdr;
 typedef Elf32_Shdr Elf_Shdr;
 typedef Elf32_Word Elf_Word;

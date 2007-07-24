@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.24 2007/07/07 15:49:50 fgilham Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.25 2007/07/24 19:09:13 rtoy Exp $
 
 all: lisp.nm
 
@@ -18,6 +18,7 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
 	socket.c runprog.c time.c \
+	exec-init.c \
 	${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
@@ -39,8 +40,14 @@ lisp: version.c ${OBJS} version
 		${OS_LIBS} -lm
 	mv -f ,lisp lisp
 
+# Create a library out of all the object files so we can build an
+# executable.  However, for Solaris, we need to remove exec-init.o
+# because the linker will add the write symbols in.
 lisp.a:	version.o ${OBJS}
 	ar crs lisp.a version.o ${OBJS}
+ifdef FEATURE_SOLARIS
+	ar d lisp.a exec-init.o
+endif
 
 version:
 	echo 0 > version
