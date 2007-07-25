@@ -30,6 +30,13 @@ New in this release:
     - PARSE-TIME checks that a specified day of the week matches the
       actual day of the week given in the date.  An error is signaled
       if they are inconsistent. 
+    - New option to SAVE-LISP allows creating executable Lisp images
+      that do not require a runtime loader.
+      Syntax: (save-lisp "filename" :executable t)
+      Currently supported on FreeBSD and Linux; work on a Solaris
+      version is underway.
+      Limitations: depends on files in "library:" to dump new
+      executable images.
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
