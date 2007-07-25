@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.12 2007/07/24 19:09:13 rtoy Exp $
+ $Id: elf.c,v 1.13 2007/07/25 15:35:32 fgilham Exp $
 */
 
 #include <stdio.h>
@@ -162,7 +162,7 @@ write_elf_header(int fd)
     eh.e_shnum		= 3;		/* Number of lisp spaces. */
     eh.e_shstrndx	= 2;
 
-    return ewrite(fd, &eh, sizeof(Elf_Ehdr), "write_elf_header");
+    return ewrite(fd, &eh, sizeof(Elf_Ehdr), __func__);
 }
 
 
@@ -181,7 +181,7 @@ write_zero_section_header(int fd)
     sh.sh_addralign	= 0;
     sh.sh_entsize	= 0;
 
-    return ewrite(fd, &sh, eh.e_shentsize, "write_zero_section_header");
+    return ewrite(fd, &sh, eh.e_shentsize, __func__);
 }
 
 
@@ -211,7 +211,7 @@ write_object_section_header(int fd, long length, os_vm_address_t addr)
     sh.sh_addralign	= os_vm_page_size;	/* Must be page aligned. */
     sh.sh_entsize	= 0;
 
-    return ewrite(fd, &sh, eh.e_shentsize, "write_object_section_header");
+    return ewrite(fd, &sh, eh.e_shentsize, __func__);
 }
 
 
@@ -235,7 +235,7 @@ write_string_section_header(int fd)
     sh.sh_addralign	= 0;
     sh.sh_entsize	= 0;
 
-    return ewrite(fd, &sh, eh.e_shentsize, "write_string_section_header");
+    return ewrite(fd, &sh, eh.e_shentsize, __func__);
 }
 
 
@@ -260,7 +260,7 @@ write_string_section(int fd)
 	       strlen(object_name) + 1);
 	ret = ewrite(fd, buffer,
 		     1 + strlen(string_table_name) + 1 + strlen(object_name) + 1,
-		     "write_string_section");
+		     __func__);
 	free(buffer);
     }
 
@@ -271,7 +271,7 @@ write_string_section(int fd)
 static int
 write_object_section(int fd, long length, os_vm_address_t real_addr)
 {
-    return ewrite(fd, (void *)real_addr, length, "write_object_section");
+    return ewrite(fd, (void *)real_addr, length, __func__);
 }
 
 
@@ -285,7 +285,7 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
 				   ((end - start) % os_vm_page_size));
 
     if(id < 1 || id > 3) {
-	fprintf(stderr, "Invalid space id in %s: %d\n", "write_elf_object", id);
+	fprintf(stderr, "Invalid space id in %s: %d\n", __func__, id);
 	fprintf(stderr, "Executable not built.\n");
 	ret = -1;
     }
@@ -360,7 +360,7 @@ elf_run_linker(long init_func_address, char *file)
     }
 
     fprintf(stderr,
-	    "Can't find linkit command in CMUCL library directory list.\n");
+	    "Can't find %s script in CMUCL library directory list.\n", LINKER_SCRIPT);
     free(paths);
     return -1;
 }
@@ -371,7 +371,7 @@ elf_run_linker(long init_func_address, char *file)
 static void
 read_elf_header(int fd, Elf_Ehdr *ehp)
 {
-    eread(fd, ehp, sizeof(Elf_Ehdr), "read_elf_header");
+    eread(fd, ehp, sizeof(Elf_Ehdr), __func__);
 
     if (strncmp(ehp->e_ident, elf_magic_string, 4)) {
 	fprintf(stderr,
@@ -385,7 +385,7 @@ read_elf_header(int fd, Elf_Ehdr *ehp)
 static void
 read_section_header_entry(int fd, Elf_Shdr *shp)
 {
-    eread(fd, shp, eh.e_shentsize, "read_section_header_entry");
+    eread(fd, shp, eh.e_shentsize, __func__);
 }
 
 
@@ -420,42 +420,42 @@ map_core_sections(char *exec_name)
 
     /* Find the section name string section.	Save its file offset. */
     soff = eh.e_shoff + eh.e_shstrndx * eh.e_shentsize;
-    elseek(exec_fd, soff, "map_core_sections");
+    elseek(exec_fd, soff, __func__);
     read_section_header_entry(exec_fd, &strsecent);
     strsecoff = strsecent.sh_offset;
 
     for (i = 0; i < eh.e_shnum && sections_remaining > 0; i++) {
 
 	/* Read an entry from the section header table. */
-	elseek(exec_fd, eh.e_shoff + i * eh.e_shentsize, "map_core_sections");
+	elseek(exec_fd, eh.e_shoff + i * eh.e_shentsize, __func__);
 	read_section_header_entry(exec_fd, &sh);
 
 	/* Read the name from the string section. */
-	elseek(exec_fd, strsecoff + sh.sh_name, "map_core_sections");
-	eread(exec_fd, nambuf, 6, "map_core_sections");
+	elseek(exec_fd, strsecoff + sh.sh_name, __func__);
+	eread(exec_fd, nambuf, 6, __func__);
 
 	if (sh.sh_type == SHT_PROGBITS) {
 	    /* See if this section is one of the lisp core sections. */
 	    for (j = 0; j < 3; j++) {
 		if (!strncmp(nambuf, section_names[j], 6)) {
-                  os_vm_address_t addr;
+		    os_vm_address_t addr;
 
 #ifdef SOLARIS
-                  /*
-                   * On Solaris, the section header sets the addr
-                   * field to 0 because the linker script says the
-                   * sections are NOTE sections.  Hence, we need to
-                   * look up the section addresses ourselves.
-                   */
-                  addr = section_addr[j];
+		    /*
+		     * On Solaris, the section header sets the addr
+		     * field to 0 because the linker script says the
+		     * sections are NOTE sections.  Hence, we need to
+		     * look up the section addresses ourselves.
+		     */
+		    addr = section_addr[j];
 #else
-                  addr = (os_vm_address_t) sh.sh_addr;
+		    addr = (os_vm_address_t) sh.sh_addr;
 #endif                  
 		    /* Found a core section. Map it! */
-		  if ((os_vm_address_t) os_map(exec_fd, sh.sh_offset,
-					       addr, sh.sh_size)
-		      == (os_vm_address_t) -1) {
-			fprintf(stderr, "Can't map section %s\n", section_names[j]);
+		    if ((os_vm_address_t) os_map(exec_fd, sh.sh_offset,
+						 addr, sh.sh_size)
+			== (os_vm_address_t) -1) {
+			fprintf(stderr, "%s: Can't map section %s\n", __func__, section_names[j]);
 			exit(-1);
 		    }
 		    switch(j) {
