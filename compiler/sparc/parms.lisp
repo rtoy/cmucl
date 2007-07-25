@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.52 2006/08/18 02:26:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.53 2007/07/25 16:06:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -310,6 +310,10 @@
     ;; here anyway.
     #+gencgc
     *current-region-free-pointer*
+    ;; current-region-end-addr is a 32-bit physical address, but when
+    ;; printed from Lisp, it's a fixnum, so it's too small by a factor
+    ;; of 4.  Remember to multiply by 4 to get the actual region end
+    ;; address.
     #+gencgc
     *current-region-end-addr*
     #+gencgc
