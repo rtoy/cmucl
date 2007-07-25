@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.27 2007/07/15 09:24:57 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.28 2007/07/25 10:23:54 cshapiro Exp $ 
  *
  */
 
@@ -142,7 +142,7 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
     *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
 
 #ifdef __linux__
-    context->eflags |= 0x100;
+    context->uc_mcontext.gregs[REG_EFL] |= 0x100;
 #else
 
     /*
@@ -171,13 +171,10 @@ sigtrap_handler(HANDLER_ARGS)
 {
     unsigned int trap;
 
-#ifdef __linux__
-    GET_CONTEXT
-#endif
 #if 0
 	fprintf(stderr, "x86sigtrap: %8x %x\n",
 		SC_PC(context), *(unsigned char *) (SC_PC(context) - 1));
-    fprintf(stderr, "sigtrap(%d %d %x)\n", signal, code, context);
+    fprintf(stderr, "sigtrap(%d %d %x)\n", signal, CODE(code), context);
 #endif
 
     if (single_stepping && (signal == SIGTRAP)) {
@@ -191,7 +188,7 @@ sigtrap_handler(HANDLER_ARGS)
 	*(single_stepping - 2) = single_step_save2;
 	*(single_stepping - 1) = single_step_save3;
 #else
-	context->eflags ^= 0x100;
+	context->uc_mcontext.gregs[REG_EFL] ^= 0x100;
 #endif
 
 	/*
@@ -214,15 +211,6 @@ sigtrap_handler(HANDLER_ARGS)
 
     /* This is just for info in case monitor wants to print an approx */
     current_control_stack_pointer = (unsigned long *) SC_SP(context);
-
-#if defined(__linux__) && defined(i386)
-    /*
-     * Restore the FPU control word, setting the rounding mode to nearest.
-     */
-
-    if (contextstruct.fpstate)
-	setfpucw(contextstruct.fpstate->cw & ~0xc00);
-#endif
 
     /*
      * On entry %eip points just after the INT3 byte and aims at the
@@ -259,12 +247,8 @@ sigtrap_handler(HANDLER_ARGS)
 
       case trap_Error:
       case trap_Cerror:
-	  DPRINTF(0, (stderr, "<trap Error %p>\n", code));
-#ifdef __linux__
-	  interrupt_internal_error(signal, contextstruct, code == trap_Cerror);
-#else
+	  DPRINTF(0, (stderr, "<trap Error %x>\n", CODE(code)));
 	  interrupt_internal_error(signal, code, context, CODE(code) == trap_Cerror);
-#endif
 	  break;
 
       case trap_Breakpoint:
@@ -273,7 +257,7 @@ sigtrap_handler(HANDLER_ARGS)
 #endif
 	  SC_PC(context) -= 1;
 
-	  handle_breakpoint(signal, code, context);
+	  handle_breakpoint(signal, CODE(code), context);
 #if 0
 	  fprintf(stderr, "*C break return\n");
 #endif
@@ -282,7 +266,7 @@ sigtrap_handler(HANDLER_ARGS)
       case trap_FunctionEndBreakpoint:
 	  SC_PC(context) -= 1;
 	  SC_PC(context) =
-	      (int) handle_function_end_breakpoint(signal, code, context);
+	      (int) handle_function_end_breakpoint(signal, CODE(code), context);
 	  break;
 
 #ifdef trap_DynamicSpaceOverflowWarning
@@ -303,11 +287,7 @@ sigtrap_handler(HANDLER_ARGS)
 	  DPRINTF(0,
 		  (stderr, "[C--trap default %d %d %p]\n", signal, CODE(code),
 		   context));
-#ifdef __linux__
-	  interrupt_handle_now(signal, contextstruct);
-#else
 	  interrupt_handle_now(signal, code, context);
-#endif
 	  break;
     }
 }

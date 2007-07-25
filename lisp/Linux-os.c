@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.30 2007/07/15 21:33:14 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.31 2007/07/25 10:23:54 cshapiro Exp $
  *
  */
 
@@ -97,25 +97,25 @@ os_init(void)
 
 #ifdef i386
 int *
-sc_reg(struct sigcontext *c, int offset)
+sc_reg(ucontext_t *context, int offset)
 {
     switch (offset) {
       case 0:
-	  return &c->eax;
+	  return &context->uc_mcontext.gregs[REG_EAX];
       case 2:
-	  return &c->ecx;
+	  return &context->uc_mcontext.gregs[REG_ECX];
       case 4:
-	  return &c->edx;
+	  return &context->uc_mcontext.gregs[REG_EDX];
       case 6:
-	  return &c->ebx;
+	  return &context->uc_mcontext.gregs[REG_EBX];
       case 8:
-	  return &c->esp;
+	  return &context->uc_mcontext.gregs[REG_ESP];
       case 10:
-	  return &c->ebp;
+	  return &context->uc_mcontext.gregs[REG_EBP];
       case 12:
-	  return &c->esi;
+	  return &context->uc_mcontext.gregs[REG_ESI];
       case 14:
-	  return &c->edi;
+	  return &context->uc_mcontext.gregs[REG_EDI];
     }
     return (int *) 0;
 }
@@ -250,28 +250,28 @@ valid_addr(os_vm_address_t addr)
 static void
 sigsegv_handle_now(HANDLER_ARGS)
 {
-    interrupt_handle_now(signal, contextstruct);
+    interrupt_handle_now(signal, code, context);
 }
 
 static int tramp_signal;
-static struct sigcontext tramp_contextstruct;
+static siginfo_t tramp_code;
+static ucontext_t tramp_context;
 
 static void
 sigsegv_handler_tramp(void)
 {
-    sigsegv_handle_now(tramp_signal, tramp_contextstruct);
+    sigsegv_handle_now(tramp_signal, &tramp_code, &tramp_context);
     assert(0);
 }
 
 void
 sigsegv_handler(HANDLER_ARGS)
 {
-    GET_CONTEXT
-    int fault_addr = ((struct sigcontext *) (&contextstruct))->cr2;
+    int fault_addr = context->uc_mcontext.cr2;
     int page_index = find_page_index((void *) fault_addr);
 
 #ifdef RED_ZONE_HIT
-    if (os_control_stack_overflow((void *) fault_addr, &contextstruct))
+    if (os_control_stack_overflow((void *) fault_addr, context))
 	return;
 #endif
 
@@ -292,7 +292,7 @@ sigsegv_handler(HANDLER_ARGS)
 #if defined(__x86_64)
     DPRINTF(0, (stderr, "sigsegv: rip: %p\n", context->rip));
 #else
-    DPRINTF(0, (stderr, "sigsegv: eip: %lx\n", context->eip));
+    DPRINTF(0, (stderr, "sigsegv: eip: %x\n", context->uc_mcontext.gregs[REG_EIP]));
 #endif
 
 #ifdef RED_ZONE_HIT
@@ -301,13 +301,14 @@ sigsegv_handler(HANDLER_ARGS)
 	   handler there.  Global variables are used to pass the context
 	   to the other stack. */
 	tramp_signal = signal;
-	tramp_contextstruct = contextstruct;
+	tramp_code = *code;
+	tramp_context = *context;
 	SC_PC(context) = sigsegv_handler_tramp;
 	return;
     }
 #endif
 
-    sigsegv_handle_now(signal, contextstruct);
+    sigsegv_handle_now(signal, code, context);
 }
 #else
 static void
@@ -315,10 +316,7 @@ sigsegv_handler(HANDLER_ARGS)
 {
     os_vm_address_t addr;
 
-#ifdef i386
-    GET_CONTEXT
-#endif
-	DPRINTF(0, (stderr, "sigsegv\n"));
+    DPRINTF(0, (stderr, "sigsegv\n"));
 #ifdef i386
     interrupt_handle_now(signal, contextstruct);
 #else
@@ -345,15 +343,8 @@ sigsegv_handler(HANDLER_ARGS)
 static void
 sigbus_handler(HANDLER_ARGS)
 {
-#if defined(i386) || defined(__x86_64)
-    GET_CONTEXT
-#endif
 	DPRINTF(1, (stderr, "sigbus:\n"));	/* there is no sigbus in linux??? */
-#if defined(i386) || defined(__x86_64)
-    interrupt_handle_now(signal, contextstruct);
-#else
     interrupt_handle_now(signal, code, context);
-#endif
 }
 
 void

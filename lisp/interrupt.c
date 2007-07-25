@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.48 2007/07/15 09:24:57 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.49 2007/07/25 10:23:54 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -32,11 +32,11 @@ void (*interrupt_low_level_handlers[NSIG]) (HANDLER_ARGS) = {
 
 static int pending_signal = 0;
 
-#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__)
-static siginfo_t *pending_code;
+#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__linux__)
+static siginfo_t pending_code = { 0 };
 
-#define PASSCODE(code) ((code))
-#define DEREFCODE(code) ((code))
+#define PASSCODE(code) (&(code))
+#define DEREFCODE(code) (*(code))
 #else
 static int pending_code = 0;
 
@@ -163,30 +163,17 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 {
     lispobj context_sap = NIL;
 
-#if ( defined( __linux__ ) && (defined( i386 ) || defined( __x86_64 ) ) )
-    GET_CONTEXT
-#endif
-	fake_foreign_function_call(context);
+    fake_foreign_function_call(context);
 
     /* Allocate the SAP object while the interrupts are still disabled. */
     if (internal_errors_enabled)
-#if (defined(DARWIN) || defined(__FreeBSD__)) && defined(__i386__)
+#if (defined(DARWIN) || defined(__FreeBSD__) || defined(__linux__)) && defined(i386)
 	context_sap = alloc_sap(&context->uc_mcontext);
 #else
 	context_sap = alloc_sap(context);
 #endif
 
-#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
     sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
-#else
-    {
-	sigset_t temp;
-
-	sigemptyset(&temp);
-	temp.__val[0] = context->uc_sigmask;
-	sigprocmask(SIG_SETMASK, &temp, 0);
-    }
-#endif
 
     if (internal_errors_enabled)
 	funcall2(SymbolFunction(INTERNAL_ERROR), context_sap,
@@ -217,18 +204,18 @@ interrupt_handle_pending(os_context_t * context)
 #endif
 	    undo_fake_foreign_function_call(context);
     }
-#if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
+#ifndef __linux__
     context->uc_sigmask = pending_mask;
 #else
-    context->uc_sigmask = pending_mask.__val[0];
+    memcpy(&context->uc_sigmask, &pending_mask, NSIG / LONG_BIT);
 #endif
     sigemptyset(&pending_mask);
 
     if (pending_signal) {
 	int signal;
 
-#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__)
-	siginfo_t *code;
+#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__linux__)
+	siginfo_t code;
 #else
 	int code;
 #endif
@@ -236,11 +223,7 @@ interrupt_handle_pending(os_context_t * context)
 	code = pending_code;
 	pending_signal = 0;
 	/* pending_code = 0; */
-#if ( defined( __linux__ ) && ( defined( i386 ) || defined ( __x86_64 ) ) )
-	interrupt_handle_now(signal, *context);
-#else
 	interrupt_handle_now(signal, PASSCODE(code), context);
-#endif
     }
 }
 
@@ -256,11 +239,7 @@ interrupt_handle_pending(os_context_t * context)
 void
 interrupt_handle_now_handler(HANDLER_ARGS)
 {
-#if defined(__linux__) && (defined(i386) || defined(__x86_64))
-    interrupt_handle_now(signal, contextstruct);
-#else
     interrupt_handle_now(signal, code, context);
-#endif
 
 #if defined(DARWIN) && defined(__ppc__)
     /* Work around G5 bug; fix courtesy gbyers via chandler */
@@ -271,24 +250,8 @@ interrupt_handle_now_handler(HANDLER_ARGS)
 void
 interrupt_handle_now(HANDLER_ARGS)
 {
-#if defined(__linux__) && (defined(i386) || defined(__x86_64))
-    GET_CONTEXT
-#endif
     int were_in_lisp;
     union interrupt_handler handler;
-
-#if defined(__linux__) && ( defined(i386) || defined(__x86_64) )
-    /*
-     * Restore the FPU control word, setting the rounding mode to nearest.
-     */
-
-    if (contextstruct.fpstate)
-#if defined(__x86_64)
-	setfpucw(contextstruct.fpstate->cwd & ~0xc00);
-#else
-	setfpucw(contextstruct.fpstate->cw & ~0xc00);
-#endif
-#endif
 
     handler = interrupt_handlers[signal];
 
@@ -310,24 +273,14 @@ interrupt_handle_now(HANDLER_ARGS)
     else if (LowtagOf(handler.lisp) == type_FunctionPointer) {
 	/* Allocate the SAP object while the interrupts are still
 	   disabled. */
-#if (defined(DARWIN) || defined(__FreeBSD__)) && defined(__i386__)
+#if (defined(DARWIN) || defined(__FreeBSD__) || defined(__linux__)) && defined(__i386__)
 	lispobj context_sap = alloc_sap(&context->uc_mcontext);
 #else
 	lispobj context_sap = alloc_sap(context);
 #endif
 
 	/* Allow signals again. */
-#if  !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
-#else
-	{
-	    sigset_t temp;
-
-	    sigemptyset(&temp);
-	    temp.__val[0] = context->uc_sigmask;
-	    sigprocmask(SIG_SETMASK, &temp, 0);
-	}
-#endif
 
 #if 1
 	funcall3(handler.lisp, make_fixnum(signal), make_fixnum(CODE(code)),
@@ -338,23 +291,9 @@ interrupt_handle_now(HANDLER_ARGS)
 #endif
     } else {
 	/* Allow signals again. */
-#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
-#else
-	{
-	    sigset_t temp;
 
-	    sigemptyset(&temp);
-	    temp.__val[0] = context->uc_sigmask;
-	    sigprocmask(SIG_SETMASK, &temp, 0);
-	}
-#endif
-
-#if ( defined( __linux__ ) && ( defined( i386 ) || defined ( __x86_64 ) ) )
-	(*handler.c) (signal, contextstruct);
-#else
 	(*handler.c) (signal, code, context);
-#endif
     }
 
 #if !(defined(i386) || defined(__x86_64))
@@ -366,30 +305,12 @@ interrupt_handle_now(HANDLER_ARGS)
 static void
 maybe_now_maybe_later(HANDLER_ARGS)
 {
-#if defined(__linux__) && (defined(i386) || defined(__x86_64))
-    GET_CONTEXT
-#endif
-	SAVE_CONTEXT();
+    SAVE_CONTEXT();
     /**/ if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
 	pending_signal = signal;
 	pending_code = DEREFCODE(code);
-#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
-#else
-	{
-	    sigset_t temp;
-
-	    sigemptyset(&temp);
-	    pending_mask.__val[0] = context->uc_sigmask;
-	    temp.__val[0] = context->uc_sigmask;
-	    FILLBLOCKSET(&temp);
-
-	    context->uc_sigmask = temp.__val[0];
-	}
-#endif
-
-
 	SetSymbolValue(INTERRUPT_PENDING, T);
     } else if (
 #if !(defined(i386) || defined(__x86_64))
@@ -398,42 +319,11 @@ maybe_now_maybe_later(HANDLER_ARGS)
 		  arch_pseudo_atomic_atomic(context)) {
 	pending_signal = signal;
 	pending_code = DEREFCODE(code);
-#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
 	pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
-#else
-	{
-	    sigset_t temp;
-
-	    sigemptyset(&temp);
-	    pending_mask.__val[0] = context->uc_sigmask;
-	    temp.__val[0] = context->uc_sigmask;
-	    FILLBLOCKSET(&temp);
-	    context->uc_sigmask = temp.__val[0];
-	}
-#endif
-
 	arch_set_pseudo_atomic_interrupted(context);
     } else {
-#if defined(__linux__) && (defined(i386) || defined(__x86_64))
-	/*
-	 * Restore the FPU control word, setting the rounding mode to nearest.
-	 */
-
-	if (contextstruct.fpstate)
-#if defined(__x86_64)
-	    setfpucw(contextstruct.fpstate->cwd & ~0xc00);
-#else
-	    setfpucw(contextstruct.fpstate->cw & ~0xc00);
-#endif
-#endif
-
-#if ( defined( __linux__ ) && ( defined( i386 ) || defined( __x86_64 ) ) )
-	interrupt_handle_now(signal, contextstruct);
-#else
 	interrupt_handle_now(signal, code, context);
-#endif
-
     }
 
 #if defined(DARWIN) && defined(__ppc__)
@@ -485,21 +375,12 @@ interrupt_maybe_gc(HANDLER_ARGS)
 	if (arch_pseudo_atomic_atomic(context)) {
 	    maybe_gc_pending = TRUE;
 	    if (pending_signal == 0) {
-#if !defined(__linux__) || (defined(__linux__) && (__GNU_LIBRARY__ < 6))
+#ifndef __linux__
 		pending_mask = context->uc_sigmask;
-		FILLBLOCKSET(&context->uc_sigmask);
 #else
-		{
-		    sigset_t temp;
-
-		    sigemptyset(&temp);
-		    pending_mask.__val[0] = context->uc_sigmask;
-		    temp.__val[0] = context->uc_sigmask;
-		    FILLBLOCKSET(&temp);
-
-		    context->uc_sigmask = temp.__val[0];
-		}
+		memcpy(&pending_mask, &context->uc_sigmask, NSIG / LONG_BIT);
 #endif
+		FILLBLOCKSET(&context->uc_sigmask);
 	    }
 	    arch_set_pseudo_atomic_interrupted(context);
 	} else {

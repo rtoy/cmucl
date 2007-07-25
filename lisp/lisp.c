@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.59 2007/07/24 19:09:14 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.60 2007/07/25 10:23:54 cshapiro Exp $
  *
  */
 
@@ -46,10 +46,7 @@
 static void
 sigint_handler(HANDLER_ARGS)
 {
-#if ( defined( __linux__ ) && ( defined( i386 ) || defined ( __x86_64 ) ) )
-    GET_CONTEXT
-#endif
-	SAVE_CONTEXT();
+    SAVE_CONTEXT();
 
     printf("\nSIGINT hit at 0x%08lX\n", (unsigned long) SC_PC(context));
     ldb_monitor();
