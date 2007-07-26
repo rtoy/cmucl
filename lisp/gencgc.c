@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.87 2007/07/06 08:04:39 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.88 2007/07/26 14:05:02 rtoy Exp $
  *
  */
 
@@ -6376,11 +6376,12 @@ free_oldspace(void)
 
     do {
 	/* Find a first page for the next region of pages. */
-	while (first_page < last_free_page && (!PAGE_ALLOCATED(first_page)
-					       || page_table[first_page].
-					       bytes_used == 0
-					       || PAGE_GENERATION(first_page) !=
-					       from_space)) first_page++;
+	while ((first_page < last_free_page)
+               && (!PAGE_ALLOCATED(first_page)
+                   || page_table[first_page].bytes_used == 0
+                   || PAGE_GENERATION(first_page) != from_space)) {
+            first_page++;
+        }
 
 	if (first_page >= last_free_page)
 	    break;
@@ -6466,8 +6467,12 @@ print_ptr(lispobj * addr)
 }
 
 #if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
-extern char closure_tramp;
-extern char undefined_tramp;
+/*
+ * The assembly code defines these as functions, so we make them
+ * functions.  We only care about their addresses anyway.
+ */
+extern char closure_tramp();
+extern char undefined_tramp();
 #else
 extern int undefined_tramp;
 #endif
