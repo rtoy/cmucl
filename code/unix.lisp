@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.111 2007/07/12 06:56:44 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.112 2007/07/30 06:44:19 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -912,12 +912,12 @@
 ;;; And now for something completely different ...
 (emit-unix-errors)
 
-#-darwin
+#-bsd
 (progn
 (def-alien-variable ("errno" unix-internal-errno) int)
 (defun unix-errno () unix-internal-errno)
 (defun (setf unix-errno) (newvalue) (setf unix-internal-errno newvalue)))
-#+darwin
+#+bsd
 (progn
 (def-alien-routine ("os_get_errno" unix-get-errno) int)
 (def-alien-routine ("os_set_errno" unix-set-errno) int (newvalue int))
