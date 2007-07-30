@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.88 2007/07/26 14:05:02 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.89 2007/07/30 16:19:25 rtoy Exp $
  *
  */
 
@@ -819,7 +819,7 @@ void *current_region_end_addr;
 #endif
 
 /* The generation currently being allocated to. X */
-static int gc_alloc_generation;
+static int gc_alloc_generation = 0;
 
 extern void do_dynamic_space_overflow_warning(void);
 extern void do_dynamic_space_overflow_error(void);
@@ -1093,7 +1093,7 @@ struct new_area {
     int size;
 };
 static struct new_area (*new_areas)[];
-static int new_areas_index;
+static int new_areas_index = 0;
 int max_new_areas;
 
 /* Add a new area to new_areas. */
@@ -7466,8 +7466,7 @@ gc_init(void)
     dynamic_space_pages = (dynamic_space_size + (PAGE_SIZE - 1)) / PAGE_SIZE;
 
     page_table =
-
-	(struct page *) malloc(dynamic_space_pages * sizeof(struct page));
+        (struct page *) malloc(dynamic_space_pages * sizeof(struct page));
     if (page_table == NULL) {
 	fprintf(stderr, "Unable to allocate page table.\n");
 	exit(1);
@@ -7477,6 +7476,7 @@ gc_init(void)
 
     for (i = 0; i < dynamic_space_pages; i++) {
 	/* Initial all pages as free. */
+        page_table[i].flags = 0;
 	page_table[i].flags &= ~PAGE_ALLOCATED_MASK;
 	page_table[i].bytes_used = 0;
 
