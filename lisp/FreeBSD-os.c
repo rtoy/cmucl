@@ -12,14 +12,13 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.18 2007/07/30 06:44:19 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.19 2007/07/30 07:24:46 cshapiro Exp $
  *
  */
 
 #include "os.h"
 #include <sys/file.h>
 #include <errno.h>
-#include "./signal.h"
 #include "arch.h"
 #include "globals.h"
 #include "interrupt.h"

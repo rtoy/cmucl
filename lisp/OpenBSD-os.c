@@ -13,7 +13,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.5 2007/07/15 21:33:14 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.6 2007/07/30 07:24:46 cshapiro Exp $
  *
  */
 
@@ -21,7 +21,6 @@
 #include <sys/param.h>
 #include <sys/file.h>
 #include <errno.h>
-#include "./signal.h"
 #include "os.h"
 #include "arch.h"
 #include "globals.h"

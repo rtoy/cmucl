@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-os.c,v 1.4 2005/09/15 18:26:52 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mach-os.c,v 1.5 2007/07/30 07:24:46 cshapiro Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <mach.h>
 #include <sys/file.h>
-#include "./signal.h"
+#include <signal.h>
 #include "os.h"
 #include "arch.h"
 #include "interrupt.h"

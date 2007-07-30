@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.31 2007/07/25 10:23:54 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.32 2007/07/30 07:24:46 cshapiro Exp $
  *
  */
 
@@ -23,7 +23,6 @@
 #include <sys/param.h>
 #include <sys/file.h>
 #include <errno.h>
-#include "./signal.h"
 #include "os.h"
 #include "arch.h"
 #include "globals.h"
