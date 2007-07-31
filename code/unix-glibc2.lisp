@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.37 2007/04/07 15:05:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.38 2007/07/31 10:08:47 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -324,13 +324,11 @@
 
 
 ;;;; System calls.
-(def-alien-variable ("errno" unix-internal-errno) int)
 
-;;; later...
-(defun unix-get-errno ())
-
-(defun unix-errno () (unix-get-errno) unix-internal-errno)
-(defun (setf unix-errno) (newvalue) (setf unix-internal-errno newvalue))
+(def-alien-routine ("os_get_errno" unix-get-errno) int)
+(def-alien-routine ("os_set_errno" unix-set-errno) int (newvalue int))
+(defun unix-errno () (unix-get-errno))
+(defun (setf unix-errno) (newvalue) (unix-set-errno newvalue))
 
 ;;; GET-UNIX-ERROR-MSG -- public.
 ;;; 
@@ -371,9 +369,6 @@
 (defmacro int-syscall ((name &rest arg-types) &rest args)
   `(syscall (,name ,@arg-types) (values result 0) ,@args))
 
-(defun unix-get-errno ()
-  "Get the unix errno value in errno..."
-  (void-syscall ("update_errno")))
 ;;; From stdio.h
 
 ;;; Unix-rename accepts two files names and renames the first to the second.

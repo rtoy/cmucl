@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.22 2007/07/06 08:04:39 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.23 2007/07/31 10:08:47 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -111,6 +111,18 @@ os_reallocate(os_vm_address_t addr, os_vm_size_t old_len, os_vm_size_t len)
 	}
 	return addr;
     }
+}
+
+int
+os_get_errno(void)
+{
+    return errno;
+}
+
+int
+os_set_errno(int value)
+{
+    return errno = value;
 }
 
 #ifdef LINKAGE_TABLE

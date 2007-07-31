@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.32 2007/07/30 07:24:46 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.33 2007/07/31 10:08:47 cshapiro Exp $
  *
  */
 
@@ -54,14 +54,6 @@ size_t os_vm_page_size;
 #if defined GENCGC
 #include "gencgc.h"
 #endif
-
-int PVE_stub_errno;
-
-void
-update_errno(void)
-{
-    PVE_stub_errno = errno;
-}
 
 
 void
