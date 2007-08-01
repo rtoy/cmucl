@@ -18,6 +18,8 @@ over the Internet, and is mostly in the public domain.
 
 New in this release:
 
+  * Supported system:
+    - Support for Mac OS X/Intel has been added.
 
   * Feature enhancements:
     - Support for dynamic-extent added for ppc.  However, it suffers
@@ -113,6 +115,8 @@ New in this release:
       bigger than most-positive-fixnum.
 
   * Other changes:
+    - UNIX:UNIX-ERRNO accesses errno value instead of the global errno
+      value
 
   * Improvements to the PCL implementation of CLOS:
     - Forward-referenced classes are allowed.
