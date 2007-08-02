@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.37 2007/03/20 18:16:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.38 2007/08/02 21:30:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -473,10 +473,11 @@
 		  :print-after
 		  (coerce-form-list (trace-info-print-after info) nil))))
 
-      (flet ((verify-wherein (wherein type)
-	       (dolist (wherein (trace-info-wherein info))
+      (flet ((verify-wherein (wherein-info type)
+	       (dolist (wherein wherein-info)
 		 (multiple-value-bind (validp block-name)
 		     (ext:valid-function-name-p wherein)
+		   (declare (ignore validp))
 		   (unless (or (stringp block-name)
 			       (fboundp block-name))
 		     (warn "~S name is not a defined global function: ~S"
