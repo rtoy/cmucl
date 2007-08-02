@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.14 2006/07/01 18:12:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.15 2007/08/02 18:18:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -398,7 +398,7 @@
 	 (mult scale))
     (declare (double-float mult)
 	     (type double-double-float r)
-	     (optimize (speed 3)))
+	     (optimize (speed 3) (inhibit-warnings 3)))
     (dotimes (k 4)
       (setf r (+ r (* mult (ldb (byte 31 0) (random-chunk state)))))
       (setf mult (* mult scale)))

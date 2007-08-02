@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.16 2007/06/27 16:38:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat-dd.lisp,v 1.17 2007/08/02 18:18:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,7 +145,8 @@
   (defun dd-%expm1 (x)
     "exp(x) - 1"
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     ;; Range reduction is accomplished by separating the argument
     ;; into an integer k and fraction f such that 
     ;;
@@ -242,7 +243,8 @@
   ;; relative error = 2.2e-37, relative peak error spread = 9.2e-38.
   (defun dd-%exp (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (when (> x max-log)
       (return-from dd-%exp
 	(kernel:%make-double-double-float #.ext:double-float-positive-infinity
@@ -354,7 +356,8 @@
   ;; 
   (defun dd-%log (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     ;; Separate mantissa from exponent
     (multiple-value-bind (x e)
 	(decode-float x)
@@ -483,7 +486,8 @@
 	  (z 0w0)
 	  (y 0w0))
       (declare (type double-double-float x y z)
-	       (optimize (speed 3)))
+	       (optimize (speed 3)
+			 (inhibit-warnings 3)))
       (multiple-value-bind (x e)
 	  (decode-float x)
 	(declare (type double-double-float x)
@@ -545,7 +549,8 @@
 					 3.889701475261939961851358705515223019890w14))))
   (defun dd-%sinh (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (let ((a (abs x)))
       (declare (type double-double-float a))
       (cond ((> a 1)
@@ -580,7 +585,8 @@
 
 (defun dd-%cosh (x)
   (declare (type double-double-float x)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 3) (space 0)
+		     (inhibit-warnings 3)))
   (let ((y (dd-%exp x)))
     (scale-float (+ y (/ y)) -1)))
 
@@ -602,7 +608,8 @@
 					 1.365413143842835040443257277862054198329w8))))
   (defun dd-%tanh (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (let ((z (abs x)))
       (declare (type double-double-float z))
       (cond ((> z (* 0.5w0 max-log))
@@ -652,7 +659,8 @@
 					 ))))
   (defun dd-%atanh (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (cond ((minusp x)
 	   (- (the double-double-float (dd-%atanh (- x)))))
 	  ((< x 1w-12)
@@ -692,7 +700,8 @@
 					 6.226145049170155830806967678679167550122w4))))
   (defun dd-%asinh (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (cond ((minusp x)
 	   (- (the double-double-float (dd-%asinh (- x)))))
 	  #+nil
@@ -734,7 +743,8 @@
 					 ))))
   (defun dd-%acosh (x)
     (declare (type (double-double-float 1w0) x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (cond ((> x 1w17)
 	   (+ loge2 (dd-%log x)))
 	  (t
@@ -776,7 +786,8 @@
 					 ))))
   (defun dd-%asin (x)
     (declare (type (double-double-float -1w0 1w0) x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (cond ((minusp x)
 	   (- (the double-double-float (dd-%asin (- x)))))
 	  #+nil
@@ -802,7 +813,8 @@
 
 (defun dd-%acos (x)
   (declare (type (double-double-float -1w0 1w0) x)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 3) (space 0)
+		     (inhibit-warnings 3)))
   (cond ((< x -0.5w0)
 	 (- dd-pi
 	    (* 2 (dd-%asin (sqrt (* 0.5w0 (+ 1 x)))))))
@@ -843,7 +855,8 @@
   (declare (type double-double-float t3p8 tp8))
   (defun dd-%atan (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (when (minusp x)
       (return-from dd-%atan (- (the double-double-float (dd-%atan (- x))))))
     ;; range reduction
@@ -869,7 +882,8 @@
 
 (defun dd-%atan2 (y x)
   (declare (type double-double-float x y)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 3) (space 0)
+		     (inhibit-warnings 3)))
   (let ((code 0)
 	(neg-x (minusp (float-sign x)))
 	(neg-y (minusp (float-sign y))))
@@ -1013,7 +1027,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 (defun dd-%%sin (x)
   (declare (type double-double-float x)
-	   (optimize (speed 2) (space 0)))
+	   (optimize (speed 2) (space 0)
+		     (inhibit-warnings 3)))
   (when (minusp x)
     (return-from dd-%%sin (- (the double-double-float (dd-%%sin (- x))))))
   ;; y = integer part of x/(pi/4).  
@@ -1051,7 +1066,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 (defun dd-%%cos (x)
   (declare (type double-double-float x)
-	   (optimize (speed 2) (space 0)))
+	   (optimize (speed 2) (space 0)
+		     (inhibit-warnings 3)))
   (when (minusp x)
     (return-from dd-%%cos (dd-%%cos (- x))))
   ;; y = integer part of x/(pi/4).  
@@ -1201,7 +1217,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
   ;; double-float and stored in PARTS.
   (defun dd-expand (x)
     (declare (double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (multiple-value-bind (frac exp)
 	(decode-float x)
       (declare (double-double-float frac)
@@ -1214,7 +1231,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
       exp))
   (defun reduce-arg (x)
     (declare (double-double-float x)
-	     (optimize (speed 3)))
+	     (optimize (speed 3)
+		       (inhibit-warnings 3)))
     (let* ((e0 (dd-expand x))
 	   (n (sys:without-gcing
 	       (%kernel-rem-pi/2 (vector-sap parts)
@@ -1346,7 +1364,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		       ))))
   (defun dd-%log2 (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (multiple-value-bind (x e)
 	(decode-float x)
       (declare (type double-double-float x)
@@ -1414,7 +1433,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 		       ))))
   (defun dd-%exp2 (x)
     (declare (type double-double-float x)
-	     (optimize (speed 3) (space 0)))
+	     (optimize (speed 3) (space 0)
+		       (inhibit-warnings 3)))
     (when (>= x 1024w0)
       (return-from dd-%exp2
 	(%make-double-double-float ext:double-float-positive-infinity
@@ -1436,7 +1456,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 (defun dd-%powil (x nn)
   (declare (type double-double-float x)
 	   (fixnum nn)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 3) (space 0)
+		     (inhibit-warnings 3)))
   (when (zerop x)
     (return-from dd-%powil
       (cond ((zerop nn)
@@ -1524,7 +1545,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
 
 (defun dd-real-pow (x y)
   (declare (type double-double-float x y)
-	   (optimize (speed 3) (space 0)))
+	   (optimize (speed 3) (space 0)
+		     (inhibit-warnings 3)))
   (let ((nflg 0)
 	(w (floor y)))
     ;; nflg = 1 if x < 0 raised to integer power
@@ -1587,7 +1609,8 @@ pi/4    11001001000011111101101010100010001000010110100011000 010001101001100010
     ;; invalid operation.
     (with-float-traps-masked (:underflow :overflow :invalid)
       (let ((rho (+ (square x) (square y))))
-	(declare (optimize (speed 3) (space 0)))
+	(declare (optimize (speed 3) (space 0)
+			   (inhibit-warnings 3)))
 	(cond ((and (or (float-nan-p rho)
 			(float-infinity-p rho))
 		    (or (float-infinity-p (abs x))
@@ -1630,7 +1653,8 @@ Z may be any number, but the result is always a complex."
 
       (locally
 	  ;; space 0 to get maybe-inline functions inlined.
-	  (declare (optimize (speed 3) (space 0)))
+	  (declare (optimize (speed 3) (space 0)
+			     (inhibit-warnings 3)))
 
 	(if (not (float-nan-p x))
 	    (setf rho (+ (scalb (abs x) (- k)) (sqrt rho))))
@@ -1673,7 +1697,8 @@ This is for use with J /= 0 only when |z| is huge."
 	(y (float (imagpart z) 1.0w0)))
     (multiple-value-bind (rho k)
 	(dd-cssqs z)
-      (declare (optimize (speed 3)))
+      (declare (optimize (speed 3)
+			 (inhibit-warnings 3)))
       (let ((beta (max (abs x) (abs y)))
 	    (theta (min (abs x) (abs y))))
 	(complex (if (and (zerop k)
@@ -1720,7 +1745,8 @@ Z may be any number, but the result is always a complex."
 	   ;; Shouldn't need this declare.
 	   (declare (double-double-float x y))
 	   (locally
-	       (declare (optimize (speed 3)))
+	       (declare (optimize (speed 3)
+				  (inhibit-warnings 3)))
 	     (cond ((or (> x theta)
 			(> (abs y) theta))
 		    ;; To avoid overflow...
@@ -1767,7 +1793,8 @@ Z may be any number, but the result is always a complex."
 	(y (float (imagpart z) 1.0w0)))
     (locally
 	;; space 0 to get maybe-inline functions inlined
-	(declare (optimize (speed 3) (space 0)))
+	(declare (optimize (speed 3) (space 0)
+			   (inhibit-warnings 3)))
       (cond ((> (abs x)
 		#-(or linux hpux) #.(/ (%asinh most-positive-double-float) 4d0)
 		;; This is more accurate under linux.
