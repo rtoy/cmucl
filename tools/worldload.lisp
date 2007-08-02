@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.106 2006/10/29 10:08:42 cshapiro Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.107 2007/08/02 16:11:17 rtoy Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -117,6 +117,8 @@
 (maybe-byte-load "code:dfixnum")
 #-(or gengc runtime) (maybe-byte-load "code:room")
 (maybe-byte-load "code:stream-vector-io")
+
+(maybe-byte-load "code:env-access")
 
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
 #-(or gengc cgc)	; x86/cgc has stuff in static space.

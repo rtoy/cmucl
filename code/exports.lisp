@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.258 2007/08/02 01:20:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.259 2007/08/02 16:11:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1210,6 +1210,7 @@
 	   "*DEFAULT-PRINT-FRAME-CALL-VERBOSITY*"))
 
 (intern "CHAR" "LISP")
+
 (defpackage "EXTENSIONS"
   (:nicknames "EXTENSIONS")
   (:import-from "LISP" "GET-SETF-METHOD")
@@ -1394,6 +1395,10 @@
 	     "BINARY-TEXT-STREAM" "READ-VECTOR" "WRITE-VECTOR"
 
 	     "INVALID-FASL")
+  (:export "VARIABLE-INFORMATION"
+	   "FUNCTION-INFORMATION"
+	   "DECLARATION-INFORMATION"
+	   "PARSE-MACRO")
   #+double-double
   (:export "DOUBLE-DOUBLE-FLOAT" "DD-PI"))
 
@@ -1532,6 +1537,11 @@
 		"STRING>*" "STRING>=*")
   (:import-from "SYSTEM" "FOREIGN-SYMBOL-ADDRESS" "FOREIGN-SYMBOL-CODE-ADDRESS"
 		"FOREIGN-SYMBOL-DATA-ADDRESS")
+  (:import-from "EXTENSIONS"
+		"VARIABLE-INFORMATION"
+		"FUNCTION-INFORMATION"
+		"DECLARATION-INFORMATION"
+		"PARSE-MACRO")
   (:shadowing-import-from "KERNEL" "CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS"
 			  "STRUCTURE-CLASS" "FIND-CLASS" "CLASS-OF")
   (:export "%ALIEN-FUNCALL" "%CATCH-BREAKUP" "%CONTINUE-UNWIND" "&MORE"

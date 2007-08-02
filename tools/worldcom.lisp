@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.97 2006/06/30 18:41:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.98 2007/08/02 16:11:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -212,6 +212,7 @@
 (comf "target:code/misc")
 (comf "target:code/extensions" :byte-compile t)
 (comf "target:code/commandline")
+(comf "target:code/env-access")
 
 (unless (c:backend-featurep :gengc)
   (comf "target:code/dfixnum")
