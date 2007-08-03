@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.52 2007/01/18 17:36:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.53 2007/08/03 14:28:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1156,7 +1156,8 @@ Z may be any number, but the result is always a complex."
 	  ;; space 0 to get maybe-inline functions inlined.
 	  (declare (optimize (speed 3) (space 0)))
 
-	(if (not (float-nan-p x))
+	(if (not (locally (declare (optimize (inhibit-warnings 3)))
+		   (float-nan-p x)))
 	    (setf rho (+ (scalb (abs x) (- k)) (sqrt rho))))
 
 	(cond ((oddp k)
