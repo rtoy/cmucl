@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.28 2005/04/15 01:40:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.29 2007/08/03 14:30:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -317,7 +317,7 @@
 ;;;    The guts of the TIME macro.  Compute overheads, run the (compiled)
 ;;; function, report the times.
 ;;;
-(defun %time (fun &optional get-time-p)
+(defun %time (fun)
   (let ((fun (massage-time-function fun))
 	old-run-utime
         new-run-utime
