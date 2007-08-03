@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.35 2005/07/13 12:43:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.36 2007/08/03 14:29:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,4 +237,5 @@
 (defun ed (&optional x)
   "Default implementation of ed.  This does nothing.  If hemlock is
   loaded, ed can be used to edit a file"
+  (declare (ignorable x))
   (values))
