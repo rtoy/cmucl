@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.102 2007/01/20 02:01:48 fgilham Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.103 2007/08/04 23:54:37 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1353,7 +1353,7 @@ optionally keeping some of the most recent old versions."
 
 ;;; Default-Directory  --  Public
 ;;;
-#||
+#+ (and)
 (defun default-directory ()
   "Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
@@ -1366,7 +1366,7 @@ optionally keeping some of the most recent old versions."
            (parse-namestring (concatenate 'simple-string dir-or-error "/")
                              *unix-host*)))
         (error dir-or-error))))
-||#
+
 ;;;
 ;;; XXXX This code was modified by me (fmg) to avoid calling
 ;;; concatenate.  The reason for this is that there have been
@@ -1383,7 +1383,8 @@ optionally keeping some of the most recent old versions."
 ;;;
 ;;; Hopefully someone will really fix the problem someday.
 ;;;
-
+;;; Seems like maybe it's fixed by changes made by Ray Toy to avoid heap corruption.
+#- (and)
 (defun default-directory ()
   "Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
