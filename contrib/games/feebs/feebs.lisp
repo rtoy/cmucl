@@ -7,8 +7,26 @@
 ;;; Modified by Scott Fahlman.
 ;;; Modified by Dan Kuokka.
 ;;; Modified by Jim Healy.
-
+;;;
 ;;; Graphics ported to X11 by Fred Gilham 8-FEB-1998.
+;;;
+;;; This code uses the CMUCL event-handling facility and so is
+;;; non-portable.  On the other hand, it's a good example of how
+;;; to use the CMUCL event-handling facility.
+;;;
+;;; To see a demo, compile and load feebs.lisp then type (feebs:feebs).
+;;;
+;;; $Id: feebs.lisp,v 1.5 2007/08/05 00:07:39 fgilham Exp $
+;;;
+
+(cl:in-package "COMMON-LISP")
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; If you are using a distribution of CMUCL, the "extras" tar file
+  ;; must be installed to get CLX.
+  (require :clx) 
+  )
+
+(declaim (optimize (speed 2) (safety 3) (debug 3)))
 
 (defpackage "FEEBS"
   (:use "COMMON-LISP")
@@ -32,8 +50,6 @@
 	   define-feeb feebs load-feebs north south east west))
 
 (in-package "FEEBS")
-
-(declaim (optimize (speed 3) (safety 1)))
 
 ;;; Macro for computing whether a random event has occurred, given the
 ;;; chance of occurrence as a ratio.
@@ -958,7 +974,7 @@
 
 
 (defun tini-graphics ()
-  (xlib::close-display *display*))
+  (xlib:close-display *display*))
 
 (defmacro create-window (x y width height)
   (declare (fixnum x y width height))
@@ -1183,7 +1199,7 @@
 ;;;
 ;;; The following converts a bitmap from the old representation that
 ;;; was compatible with x10 to the X11 representation that can be sent
-;;; to xlib::bitmap-image.  It's a little grody but it's easy and it
+;;; to xlib:bitmap-image.  It's a little grody but it's easy and it
 ;;; only has to be done once.
 
 ;;; Get one line from the bit array as an integer.
@@ -1205,7 +1221,7 @@
 
 (defun make-bitmap (bit-array width height)
   (declare (fixnum width height))
-  (apply #'xlib::bitmap-image (expand-bitmap bit-array width height)))
+  (apply #'xlib:bitmap-image (expand-bitmap bit-array width height)))
 
 ;;; Rotates the image in the bit-array to face in the
 ;;; specified direction relative to the current.
@@ -1797,9 +1813,9 @@
 
 ;;; It.
 
-(defun feebs (&key (layout default-layout)	
+(defun feebs (&key (layout default-layout)
 		   single-step
-		   delay
+		   (delay .1)
 		   files
 		   feep-dead-feebs)
   "This starts the simulation.  Takes some options as keyword arguments.
