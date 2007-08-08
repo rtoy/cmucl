@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.109 2006/04/13 13:48:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.110 2007/08/08 12:56:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -887,8 +887,8 @@
   "Creates a new read-modify-write macro like PUSH or INCF."
   (let ((other-args nil)
 	(rest-arg nil)
-	(env (gensym))
-	(reference (gensym)))
+	(env (gensym "ENV-"))
+	(reference (gensym "PLACE-")))
 	     
     ;; Parse out the variable names and rest arg from the lambda list.
     (do ((ll lambda-list (cdr ll))
