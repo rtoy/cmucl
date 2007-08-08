@@ -6,7 +6,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.1 2007/08/02 16:11:17 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.2 2007/08/08 12:59:59 rtoy Exp $")
 
 ;;;
 ;;; **********************************************************************
@@ -67,10 +67,10 @@ alist of declarations that apply to the apparent binding of VAR."
 			   (info variable type var)))))))))
 
 (defun declaration-information (declaration-name &optional env)
-  (let ((env (or env (make-null-environment))))
+  (let ((lexenv (or env (make-null-environment))))
     (case declaration-name
       (optimize
-       (let ((cookie (lexenv-cookie env)))
+       (let ((cookie (lexenv-cookie lexenv)))
 	 (list (list 'speed (cookie-speed cookie))
 	       (list 'safety (cookie-safety cookie))
 	       (list 'compilation-speed (cookie-cspeed cookie))
@@ -80,7 +80,7 @@ alist of declarations that apply to the apparent binding of VAR."
 	       (list 'float-accuracy (cookie-float-accuracy cookie)))
          ))
       (ext:optimize-interface
-       (let ((cookie (lexenv-interface-cookie env)))
+       (let ((cookie (lexenv-interface-cookie lexenv)))
 	 (list (list 'speed (cookie-speed cookie))
 	       (list 'safety (cookie-safety cookie))
 	       (list 'compilation-speed (cookie-cspeed cookie))
@@ -88,6 +88,32 @@ alist of declarations that apply to the apparent binding of VAR."
 	       (list 'debug (cookie-debug cookie))
 	       (list 'inhibit-warnings (cookie-brevity cookie))
 	       (list 'float-accuracy (cookie-float-accuracy cookie)))))
+      (declaration
+       (cond (env
+	      ;; What are we supposed to do if an environment is
+	      ;; given?
+	      nil)
+	     (t
+	      (let ((decls '()))
+		;; Do we want to run over the entire list of
+		;; environments in *info-environment*?
+		(dolist (env ext::*info-environment*)
+		  (do-info (env :name name :class class :type type :value value)
+		    (when (equal class "DECLARATION")
+		      (push name decls))))
+		(nreverse
+		 (delete-if #'(lambda (x)
+				;; Remove any symbols from EXT and
+				;; PCL.  I don't think we want to
+				;; return them because then I'd have
+				;; to figure out how to make
+				;; declaration-information support
+				;; those declaration-names.
+				(let ((name (symbol-name x)))
+				  (or
+				   (find-symbol name "EXT")
+				   (find-symbol name "PCL"))))
+			    decls))))))
       (t (error "Unsupported declaration ~S." declaration-name)))))
 
 (defun parse-macro (name lambda-list body &optional env)
