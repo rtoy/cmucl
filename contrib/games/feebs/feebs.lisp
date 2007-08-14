@@ -16,7 +16,7 @@
 ;;;
 ;;; To see a demo, compile and load feebs.lisp then type (feebs:feebs).
 ;;;
-;;; $Id: feebs.lisp,v 1.5 2007/08/05 00:07:39 fgilham Exp $
+;;; $Id: feebs.lisp,v 1.6 2007/08/14 16:49:44 fgilham Exp $
 ;;;
 
 (cl:in-package "COMMON-LISP")
@@ -26,7 +26,7 @@
   (require :clx) 
   )
 
-(declaim (optimize (speed 2) (safety 3) (debug 3)))
+(declaim (optimize (speed 2) (safety 3) (debug 3) (ext:inhibit-warnings 2)))
 
 (defpackage "FEEBS"
   (:use "COMMON-LISP")
@@ -50,6 +50,11 @@
 	   define-feeb feebs load-feebs north south east west))
 
 (in-package "FEEBS")
+
+;;; Global X stuff
+(defvar *display*)
+(defvar *screen*)
+(defvar *root*)
 
 ;;; Macro for computing whether a random event has occurred, given the
 ;;; chance of occurrence as a ratio.
@@ -853,11 +858,6 @@
 ;;; for a color display.
 
 ;;; Ported to X11.  Color added.
-
-;;; Global X stuff
-(defvar *display*)
-(defvar *screen*)
-(defvar *root*)
 
 (defvar *birds-eye-window*)
 (defvar *status-window*)
