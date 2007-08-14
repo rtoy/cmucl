@@ -1,30 +1,50 @@
 #!/bin/sh -x
 
-# $Id: linker.sh,v 1.6 2007/07/25 16:33:16 rtoy Exp $
+# $Id: linker.sh,v 1.7 2007/08/14 15:57:48 rtoy Exp $
 
 # This file was written by Fred Gilham and is placed in the public domain.
 # It comes without warranty of any kind.
 
-PATH=/bin:/usr/bin:/usr/local/bin
-
-GCC=`which gcc`
-
-if [ -z "$GCC" ]
+if [ $# -ne 3 ]
     then
-    echo 'Cannot find GCC.  How did you build lisp?'
+    echo "Usage: `basename $0` <c-compiler> <initial function address> <executable file>"
     exit 1
 fi
 
-# Uniform method for finding GCC C runtime object files suggested by Ray Toy
-CRTPATH=`$GCC -print-libgcc-file-name`
-LIBROOT=`dirname $CRTPATH`
+CCOMPILER=$1
+shift;
+
+if [ $CCOMPILER = "cc" ]; then
+    # Sun C compiler
+
+    # Can't set PATH because we don't really know where the compiler
+    # is.  The user has to have it in his path.
+
+    CC=`which cc`
+    if [ -z "$CC" ]; then
+	echo 'Cannot find Sun C.  Is it available and in $PATH?'
+	exit 1
+    fi
+    CRTPATH=`dirname $CC`/../prod
+    LIBROOT=$CRTPATH/lib
+
+else
+    # Gcc
+    PATH=/bin:/usr/bin:/usr/local/bin
+
+    GCC=`which gcc`
+
+    if [ -z "$GCC" ]; then
+	echo 'Cannot find GCC.  How did you build lisp?'
+	exit 1
+    fi
+
+    # Uniform method for finding GCC C runtime object files suggested by Ray Toy
+    CRTPATH=`$GCC -print-libgcc-file-name`
+    LIBROOT=`dirname $CRTPATH`
+fi
+
 echo "LIBROOT is $LIBROOT"
-
-if [ $# -ne 2 ]
-    then
-    echo "Usage: `basename $0` <initial function address> <executable file>"
-    exit 1
-fi
 
 OPSYS=`uname`
 VER=''
@@ -77,9 +97,17 @@ case "$OPSYS" in
 	LIBS='-lm -lgcc -lc -lgcc'
 	;;
     SunOS )
-	STARTCRT="$LIBROOT/crt1.o $LIBROOT/crti.o $LIBROOT/crtbegin.o"
-	ENDCRT="$LIBROOT/crtend.o $LIBROOT/crtn.o"
-	LIBS="-L$LIBROOT -lm -lgcc -lc -lgcc -lsocket -lnsl -ldl"
+	if [ $CCOMPILER = "cc" ]; then
+	    # These values were obtained by running cc -# hello.c and
+	    # looking at the linker command.
+	    STARTCRT="$LIBROOT/crti.o $LIBROOT/crt1.o $LIBROOT/misalign.o $LIBROOT/values-xa.o"
+	    ENDCRT="$LIBROOT/crtn.o"
+	    LIBS="-Y P,$LIBROOT/v8plus:$LIBROOT:/usr/ccs/lib:/lib:/usr/lib -Qy -lm -lc -lsocket -lnsl -ldl"
+	else
+	    STARTCRT="$LIBROOT/crt1.o $LIBROOT/crti.o $LIBROOT/crtbegin.o"
+	    ENDCRT="$LIBROOT/crtend.o $LIBROOT/crtn.o"
+	    LIBS="-L$LIBROOT -lm -lgcc -lc -lgcc -lsocket -lnsl -ldl"
+	fi
 	LINKER="/usr/ccs/bin/ld"
 	OBJS="-z allextract $CMUCLLIB/lisp.a CORRO.o CORSTA.o CORDYN.o -z defaultextract"
 	SCRIPT="$CMUCLLIB/$OPSYS$VER-cmucl-linker-script"

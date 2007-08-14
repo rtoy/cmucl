@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.13 2007/07/25 15:35:32 fgilham Exp $
+ $Id: elf.c,v 1.14 2007/08/14 15:57:47 rtoy Exp $
 */
 
 #include <stdio.h>
@@ -346,7 +346,8 @@ elf_run_linker(long init_func_address, char *file)
 	    free(paths);
 	    printf("\t[%s: linking %s... \n", command, file);
 	    fflush(stdout);
-	    sprintf(command_line, "%s 0x%lx %s", command, init_func_address, file);
+	    sprintf(command_line, "%s %s 0x%lx %s", command, C_COMPILER,
+                    init_func_address, file);
 	    ret = system(command_line);
 	    if(ret == -1) {
 		perror("Can't run link script");
