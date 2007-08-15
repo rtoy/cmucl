@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.17 2007/07/08 06:58:39 fgilham Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.18 2007/08/15 19:01:05 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -28,6 +28,10 @@
 
 #ifdef FEATURE_EXECUTABLE
 #include "elf.h"
+#endif
+
+#ifdef SOLARIS
+#include "libgen.h"
 #endif
 
 extern int version;
