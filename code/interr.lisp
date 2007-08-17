@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.46 2006/11/08 22:09:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.47 2007/08/17 14:02:12 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,9 +37,9 @@
 (defmacro deferr (name args &rest body)
   (let* ((rest-pos (position '&rest args))
 	 (required (if rest-pos (subseq args 0 rest-pos) args))
-	 (fp (gensym))
-	 (sigcontext (gensym))
-	 (sc-offsets (gensym))
+	 (fp (gensym "FP-"))
+	 (sigcontext (gensym "SIGCONTEXT-"))
+	 (sc-offsets (gensym "SC-OFFSETS-"))
 	 (temp (gensym))
 	 (fn-name (symbolicate name "-HANDLER")))
     `(progn
