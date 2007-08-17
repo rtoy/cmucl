@@ -6,7 +6,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.2 2007/08/08 12:59:59 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.3 2007/08/17 14:09:20 rtoy Exp $")
 
 ;;;
 ;;; **********************************************************************
@@ -94,26 +94,18 @@ alist of declarations that apply to the apparent binding of VAR."
 	      ;; given?
 	      nil)
 	     (t
-	      (let ((decls '()))
+	      (let ((decls (list 'special 'ftype 'function
+				 'inline 'notinline 'maybe-inline
+				 'ignore 'ignorable 'optimize 'optimize-interface
+				 'type
+				 'values)))
 		;; Do we want to run over the entire list of
 		;; environments in *info-environment*?
 		(dolist (env ext::*info-environment*)
 		  (do-info (env :name name :class class :type type :value value)
 		    (when (equal class "DECLARATION")
 		      (push name decls))))
-		(nreverse
-		 (delete-if #'(lambda (x)
-				;; Remove any symbols from EXT and
-				;; PCL.  I don't think we want to
-				;; return them because then I'd have
-				;; to figure out how to make
-				;; declaration-information support
-				;; those declaration-names.
-				(let ((name (symbol-name x)))
-				  (or
-				   (find-symbol name "EXT")
-				   (find-symbol name "PCL"))))
-			    decls))))))
+		decls))))
       (t (error "Unsupported declaration ~S." declaration-name)))))
 
 (defun parse-macro (name lambda-list body &optional env)
@@ -192,7 +184,9 @@ alist of declarations that apply to the apparent binding of VAR."
 			      (list `(ftype . ,type)))
 			  (inlinealist (defined-function-inlinep info ))))))))))
 
-#+(or)
+(defmacro env (&environment env)
+  `(quote ,env))
+
 (defun augment-environment (env &key variable symbol-macro function macro declare)
   (when (or macro symbol-macro)
     (setq env (copy-structure env)))
@@ -214,9 +208,10 @@ alist of declarations that apply to the apparent binding of VAR."
                       #'(lambda (c)
                           (declare (ignore c))
                           (invoke-restart 'muffle-warning))))
-        (eval-in-lexenv
+        (eval:internal-eval
          `(flet ,(loop for fn in function collect `(,fn ()))
             (let ,variable
               (declare ,@declare)
               (env)))
+	 t
          env))))

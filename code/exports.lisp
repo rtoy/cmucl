@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.259 2007/08/02 16:11:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.260 2007/08/17 14:09:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1398,7 +1398,8 @@
   (:export "VARIABLE-INFORMATION"
 	   "FUNCTION-INFORMATION"
 	   "DECLARATION-INFORMATION"
-	   "PARSE-MACRO")
+	   "PARSE-MACRO"
+	   "AUGMENT-ENVIRONMENT")
   #+double-double
   (:export "DOUBLE-DOUBLE-FLOAT" "DD-PI"))
 
@@ -1541,7 +1542,8 @@
 		"VARIABLE-INFORMATION"
 		"FUNCTION-INFORMATION"
 		"DECLARATION-INFORMATION"
-		"PARSE-MACRO")
+		"PARSE-MACRO"
+		"AUGMENT-ENVIRONMENT")
   (:shadowing-import-from "KERNEL" "CLASS" "BUILT-IN-CLASS" "STANDARD-CLASS"
 			  "STRUCTURE-CLASS" "FIND-CLASS" "CLASS-OF")
   (:export "%ALIEN-FUNCALL" "%CATCH-BREAKUP" "%CONTINUE-UNWIND" "&MORE"
