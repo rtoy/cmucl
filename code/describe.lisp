@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.48 2006/08/21 15:46:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.49 2007/08/17 14:02:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -353,7 +353,7 @@
     (:macro (format t "Macro-function: ~S" x))
     (:function (format t "Function: ~S" x))
     ((nil)
-     (format t "~S is function." x)))
+     (format t "~S is a function." x)))
   (case (get-type x)
     (#.vm:closure-header-type
      (describe-function-compiled (%closure-function x) kind name)
