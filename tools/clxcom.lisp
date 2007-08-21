@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.29 2004/03/23 12:16:48 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.30 2007/08/21 15:56:37 fgilham Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,8 +34,8 @@
     ("target:compile-clx.log"
      :optimize
      '(optimize (debug #-small 2 #+small .5) 
-		(speed 2) (inhibit-warnings 2)
-		(safety #-small 1 #+small 0))
+                (speed 2) (inhibit-warnings 2)
+                (safety #-small 1 #+small 0))
      :optimize-interface
      '(optimize-interface (debug .5))
      :context-declarations
@@ -46,7 +46,7 @@
        (:macro (declare (optimize (speed 0))))))
     (let ((c::*suppress-values-declaration* t))
       (comf "target:clx/package" :load t)
-      (comf "target:clx/defsystem" :load t)
+;      (comf "target:clx/defsystem" :load t)
       (comf "target:clx/depdefs" :load t)
       (comf "target:clx/clx" :load t)
       (comf "target:clx/dependent" :load t)
@@ -67,14 +67,22 @@
       (comf "target:clx/keysyms" :load t)
       (comf "target:clx/manager" :load t)
       (comf "target:clx/image" :load t)
-      (comf "target:clx/resource" :load t))
-  (comf "target:code/clx-ext")
-  (comf "target:hemlock/charmacs" :load t)
-  (comf "target:hemlock/key-event" :load t)
-  (comf "target:hemlock/keysym-defs" :load t)
+      (comf "target:clx/resource" :load t)
+      (comf "target:clx/shape" :load t)
+      (comf "target:clx/big-requests" :load t)
+      (comf "target:clx/xvidmode" :load t)
+      (comf "target:clx/xrender" :load t)
+      (comf "target:clx/glx" :load t)
+      (comf "target:clx/gl" :load t)
+      (comf "target:clx/dpms" :load t))
+    (comf "target:code/clx-ext")
+    (comf "target:hemlock/charmacs" :load t)
+    (comf "target:hemlock/key-event" :load t)
+    (comf "target:hemlock/keysym-defs" :load t)
+    (comf "target:clx/provide")
 
-  #+nil
-  (comf "target:code/inspect"))
+    #+nil
+    (comf "target:code/inspect"))
 
 (cat-if-anything-changed
  "target:clx/clx-library"
@@ -98,7 +106,15 @@
  "target:clx/manager"
  "target:clx/image"
  "target:clx/resource"
+ "target:clx/shape"
+ "target:clx/big-requests"
+ "target:clx/xvidmode"
+ "target:clx/xrender"
+ "target:clx/glx"
+ "target:clx/gl"
+ "target:clx/dpms"
  "target:code/clx-ext"
  "target:hemlock/charmacs"
  "target:hemlock/key-event"
- "target:hemlock/keysym-defs")
+ "target:hemlock/keysym-defs"
+ "target:clx/provide")
