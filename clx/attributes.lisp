@@ -17,9 +17,6 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
-#+cmu
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/attributes.lisp,v 1.6 1999/03/16 23:37:36 pw Exp $")
 
 ;;;	The special variable *window-attributes* is an alist containg:
 ;;;	(drawable attributes attribute-changes geometry geometry-changes)
@@ -43,12 +40,15 @@
 ;;;	All WITH-STATE has to do (re)bind *Window-attributes* to a list including
 ;;;	the new drawable.  The caches are initialized to NIL and allocated as needed.
 
+#+cmu
+(ext:file-comment "$Id: attributes.lisp,v 1.7 2007/08/21 15:49:27 fgilham Exp $")
+
 (in-package :xlib)
 
-(eval-when (compile load eval)			;needed by Franz Lisp
-(defconstant *attribute-size* 44)
-(defconstant *geometry-size* 24)
-(defconstant *context-size* (max *attribute-size* *geometry-size* (* 16 4))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant +attribute-size+ 44)
+  (defconstant +geometry-size+ 24)
+  (defconstant +context-size+ (max +attribute-size+ +geometry-size+ (* 16 4))))
 
 (defvar *window-attributes* nil) ;; Bound to an alist of (drawable . state) within WITH-STATE
 
@@ -57,7 +57,7 @@
 
 (defun allocate-context ()
   (or (threaded-atomic-pop *context-free-list* reply-next reply-buffer)
-      (make-reply-buffer *context-size*)))
+      (make-reply-buffer +context-size+)))
 
 (defun deallocate-context (context)
   (declare (type reply-buffer context))
@@ -69,12 +69,12 @@
 (defmacro state-geometry-changes (state) `(fifth ,state))
  
 (defmacro drawable-equal-function ()
-  (if (member 'drawable *clx-cached-types*)
+  (if (member 'drawable +clx-cached-types+)
       ''eq ;; Allows the compiler to use the microcoded ASSQ primitive on LISPM's
     ''drawable-equal))
 
 (defmacro window-equal-function ()
-  (if (member 'window *clx-cached-types*)
+  (if (member 'window +clx-cached-types+)
       ''eq
     ''drawable-equal))
 
@@ -158,7 +158,7 @@
 	  (setf (aref changes 0) (logior (aref changes 0) (ash 1 number))) ;; set mask bit
 	  (setf (aref changes (1+ number)) value))	;; save value
 						; Send change to the server
-      (with-buffer-request ((window-display window) *x-changewindowattributes*)
+      (with-buffer-request ((window-display window) +x-changewindowattributes+)
 	(window window)
 	(card32 (ash 1 number) value)))))
 ;;
@@ -185,7 +185,7 @@
 	  (setf (aref changes 0) (logior (aref changes 0) (ash 1 number))) ;; set mask bit
 	  (setf (aref changes (1+ number)) value))	;; save value
 						; Send change to the server
-      (with-buffer-request ((drawable-display drawable) *x-configurewindow*)
+      (with-buffer-request ((drawable-display drawable) +x-configurewindow+)
 	(drawable drawable)
 	(card16 (ash 1 number))
 	(card29 value)))))
@@ -207,7 +207,7 @@
 	      (deallocate-gcontext-state (state-attribute-changes state-entry))
 	      (setf (state-attribute-changes state-entry) nil))
 	    ;; Get window attributes
-	    (with-buffer-request-and-reply (display *x-getwindowattributes* size :sizes (8))
+	    (with-buffer-request-and-reply (display +x-getwindowattributes+ size :sizes (8))
 		 ((window window))
 	      (let ((repbuf (or (state-attributes state-entry) (allocate-context))))
 		(declare (type reply-buffer repbuf))
@@ -237,7 +237,7 @@
 	      (deallocate-gcontext-state (state-geometry-changes state-entry))
 	      (setf (state-geometry-changes state-entry) nil))
 	    ;; Get drawable attributes
-	    (with-buffer-request-and-reply (display *x-getgeometry* size :sizes (8))
+	    (with-buffer-request-and-reply (display +x-getgeometry+ size :sizes (8))
 		 ((drawable drawable))
 	      (let ((repbuf (or (state-geometry state-entry) (allocate-context))))
 		(declare (type reply-buffer repbuf))
@@ -255,7 +255,7 @@
 	 (mask (aref changes 0)))
     (declare (type display display)
 	     (type mask32 mask))
-    (with-buffer-request (display *x-changewindowattributes*)
+    (with-buffer-request (display +x-changewindowattributes+)
       (window window)
       (card32 mask)
       (progn ;; Insert a word in the request for each one bit in the mask
@@ -282,7 +282,7 @@
 	 (mask (aref changes 0)))
     (declare (type display display)
 	     (type mask16 mask))
-    (with-buffer-request (display *x-configurewindow*)
+    (with-buffer-request (display +x-configurewindow+)
       (window window)
       (card16 mask)
       (progn ;; Insert a word in the request for each one bit in the mask
@@ -352,6 +352,8 @@
 	(t (x-type-error background '(or (member :none :parent-relative) integer pixmap))))
   background)
 
+#+Genera (eval-when (compile) (compiler:function-defined 'window-background))
+
 (defsetf window-background set-window-background)
 
 (defun set-window-border (window border)
@@ -365,6 +367,8 @@
 	(t (x-type-error border '(or (member :copy) integer pixmap))))
   border)
 
+#+Genera (eval-when (compile) (compiler:function-defined 'window-border))
+
 (defsetf window-border set-window-border)
 
 (defun window-bit-gravity (window)
@@ -372,11 +376,11 @@
   (declare (type window window))
   (declare (clx-values bit-gravity))
   (with-attributes (window :sizes 8)
-    (member8-vector-get 14 *bit-gravity-vector*)))
+    (member8-vector-get 14 +bit-gravity-vector+)))
 
 (defun set-window-bit-gravity (window gravity)
   (change-window-attribute
-    window 4 (encode-type (member-vector *bit-gravity-vector*) gravity))
+    window 4 (encode-type (member-vector +bit-gravity-vector+) gravity))
   gravity)
 
 (defsetf window-bit-gravity set-window-bit-gravity)
@@ -386,11 +390,11 @@
   (declare (type window window))
   (declare (clx-values win-gravity))
   (with-attributes (window :sizes 8)
-    (member8-vector-get 15 *win-gravity-vector*)))
+    (member8-vector-get 15 +win-gravity-vector+)))
 
 (defun set-window-gravity (window gravity)
   (change-window-attribute
-    window 5 (encode-type (member-vector *win-gravity-vector*) gravity))
+    window 5 (encode-type (member-vector +win-gravity-vector+) gravity))
   gravity)
 
 (defsetf window-gravity set-window-gravity)
@@ -629,6 +633,8 @@
     (when sibling
       (change-drawable-geometry window 5 (encode-type window sibling))))
   mode)
+
+#+Genera (eval-when (compile) (compiler:function-defined 'window-priority))
 
 (defsetf window-priority (window &optional sibling) (mode)
   ;; A bit strange, but retains setf form.

@@ -18,6 +18,9 @@
 ;;; express or implied warranty.
 ;;;
 
+#+cmu
+(ext:file-comment "$Id")
+
 (in-package :xlib)
 
 (export '(draw-filled-trapezoids

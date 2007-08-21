@@ -18,20 +18,23 @@
 ;;; express or implied warranty.
 ;;;
 
+#+cmu
+(ext:file-comment "$Id: keytrans.lisp,v 1.2 2007/08/21 15:49:29 fgilham Exp $")
+
 (in-package :xlib)
 
 (defun list-missing-keysyms ()
   ;; Lists explorer characters which have no keysyms
   (dotimes (i 256)
-    (unless (character->keysyms (int-char i))
-      (format t "~%(define-keysym ~@c ~d)" (int-char i) i))))
+    (unless (character->keysyms (code-char i))
+      (format t "~%(define-keysym ~@c ~d)" (code-char i) i))))
 
 (defun list-multiple-keysyms ()
   ;; Lists characters with more than one keysym
   (dotimes (i 256)
-    (when (cdr (character->keysyms (int-char i)))
-      (format t "~%Character ~@c [~d] has keysyms" (int-char i) i)
-      (dolist (keysym (character->keysyms (int-char i)))
+    (when (cdr (character->keysyms (code-char i)))
+      (format t "~%Character ~@c [~d] has keysyms" (code-char i) i)
+      (dolist (keysym (character->keysyms (code-char i)))
 	(format t "  ~d ~d" (ldb (byte 8 8) keysym) (ldb (byte 8 0) keysym))))))
 
 (defun check-lowercase-keysyms ()
@@ -52,7 +55,7 @@
 				 char
 				 (and lowercase (ldb (byte 8 8) lowercase))
 				 (and lowercase (ldb (byte 8 0) lowercase))
-				 (int-char lowercase)
+				 (code-char lowercase)
 				 (ldb (byte 8 8) (char-int should-be))
 				 (ldb (byte 8 0) (char-int should-be))
 				 should-be)))

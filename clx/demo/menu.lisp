@@ -16,6 +16,9 @@
 ;;; express or implied warranty.  
 ;;;
 
+#+cmu
+(ext:file-comment "$Id")
+
 (in-package :xlib)
 
 
@@ -273,8 +276,8 @@
     ;; Make menu visible
     (MAP-WINDOW menu-window)))
 
-(defun just-say-lisp (host &optional (font-name "fixed"))
-  (let* ((display   (OPEN-DISPLAY host))
+(defun just-say-lisp (&optional (font-name "fixed"))
+  (let* ((display   (open-default-display))
 	 (screen    (first (DISPLAY-ROOTS display)))
 	 (fg-color  (SCREEN-BLACK-PIXEL screen))
 	 (bg-color  (SCREEN-WHITE-PIXEL screen))
@@ -303,7 +306,7 @@
 	 (parent-width 400)
 	 (parent-height 400)
 	 (parent    (CREATE-WINDOW :parent (SCREEN-ROOT screen)
-				   :override-redirect :on
+;;				   :override-redirect :on
 				   :x 100 :y 100
 				   :width parent-width :height parent-height
 				   :background bg-color

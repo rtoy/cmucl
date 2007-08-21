@@ -15,11 +15,8 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
-#+cmu
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/macros.lisp,v 1.6 1999/03/16 23:37:44 pw Exp $")
 
-;;; CLX basicly implements a very low overhead remote procedure call
+;;; CLX basically implements a very low overhead remote procedure call
 ;;; to the server.  This file contains macros which generate the code
 ;;; for both the client AND the server, given a specification of the
 ;;; interface. This was done to eliminate errors that may occur because
@@ -28,7 +25,16 @@
 
 ;;; This is built on top of BUFFER
 
+#+cmu
+(ext:file-comment "$Id: macros.lisp,v 1.7 2007/08/21 15:49:28 fgilham Exp $")
+
 (in-package :xlib)
+
+(defmacro type-check (value type)
+  value type
+  (when +type-check?+
+    `(unless (type? ,value ,type)
+       (x-type-error ,value ,type))))
 
 ;;; This variable is used by the required-arg macro just to satisfy compilers.
 (defvar *required-arg-dummy*)
@@ -66,14 +72,14 @@
 	(error "~s isn't a known field accessor" name)))
     increment))
 
-(eval-when (eval compile load)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defun getify (name)
   (xintern name '-get))
 
 (defun putify (name &optional predicate-p)
   (xintern name '-put (if predicate-p '-predicating "")))
 
-					;; Use &body so zmacs indents properly
+;;; Use &body so zmacs indents properly
 (defmacro define-accessor (name (width) &body get-put-macros)
   ;; The first body form defines the get macro
   ;; The second body form defines the put macro
@@ -93,7 +99,7 @@
 	 ,@(cdr get-macro))
        (defmacro ,(putify name) ,(car put-macro)
 	 ,@(cdr put-macro))
-       ,@(when *type-check?*
+       ,@(when +type-check?+
 	   (let ((predicating-put (third get-put-macros)))
 	     (when predicating-put
 	       `((setf (get ',name 'predicating-put) t)
@@ -225,12 +231,14 @@
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card8 ,index (position ,thing
-				  (the simple-vector ',(apply #'vector keywords))
+				  #+lispm ',keywords ;; Lispm's prefer lists
+				  #-lispm (the simple-vector ',(apply #'vector keywords))
 				  :test #'eq)))
   ((index thing &rest keywords)
    (let ((value (gensym)))
      `(let ((,value (position ,thing
-			      (the simple-vector ',(apply #'vector keywords))
+			      #+lispm ',keywords
+			      #-lispm (the simple-vector ',(apply #'vector keywords))
 			      :test #'eq)))
 	(and ,value (write-card8 ,index ,value))))))
 
@@ -243,12 +251,14 @@
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card16 ,index (position ,thing
-				   (the simple-vector ',(apply #'vector keywords))
+				   #+lispm ',keywords ;; Lispm's prefer lists
+				   #-lispm (the simple-vector ',(apply #'vector keywords))
 				   :test #'eq)))
   ((index thing &rest keywords)
    (let ((value (gensym)))
      `(let ((,value (position ,thing
-			      (the simple-vector ',(apply #'vector keywords))
+			      #+lispm ',keywords
+			      #-lispm (the simple-vector ',(apply #'vector keywords))
 			      :test #'eq)))
 	(and ,value (write-card16 ,index ,value))))))
 
@@ -261,13 +271,15 @@
 	(svref ',(apply #'vector keywords) ,value))))
   ((index thing &rest keywords)
    `(write-card29 ,index (position ,thing
-				   (the simple-vector ',(apply #'vector keywords))
+				   #+lispm ',keywords ;; Lispm's prefer lists
+				   #-lispm (the simple-vector ',(apply #'vector keywords))
 				   :test #'eq)))
   ((index thing &rest keywords)
    (if (cdr keywords) ;; IF more than one
        (let ((value (gensym)))
 	 `(let ((,value (position ,thing
-				  (the simple-vector ',(apply #'vector keywords))
+				  #+lispm ',keywords
+				  #-lispm (the simple-vector ',(apply #'vector keywords))
 				  :test #'eq)))
 	    (and ,value (write-card29 ,index ,value))))
        `(and (eq ,thing ,(car keywords)) (write-card29 ,index 0)))))
@@ -303,14 +315,14 @@
   ((index)
    (let ((value (gensym)))
      `(let ((,value (read-card29 ,index)))
-	(declare (type (integer 0 (,(length *boole-vector*))) ,value))
-	(type-check ,value '(integer 0 (,(length *boole-vector*))))
-	(svref *boole-vector* ,value))))
+	(declare (type (integer 0 (,(length +boole-vector+))) ,value))
+	(type-check ,value '(integer 0 (,(length +boole-vector+))))
+	(svref +boole-vector+ ,value))))
   ((index thing)
-   `(write-card29 ,index (position ,thing (the simple-vector *boole-vector*))))
+   `(write-card29 ,index (position ,thing (the simple-vector +boole-vector+))))
   ((index thing)
    (let ((value (gensym)))
-     `(let ((,value (position ,thing (the simple-vector *boole-vector*))))
+     `(let ((,value (position ,thing (the simple-vector +boole-vector+))))
 	(and ,value (write-card29 ,index ,value))))))
 
 (define-accessor null (32)
@@ -506,7 +518,7 @@
 	(result))
        ((endp types)
 	`(cond ,@(nreverse result)
-	       ,@(when *type-check?*
+	       ,@(when +type-check?+
 		   `((t (x-type-error ,value '(or ,@type-list)))))))
      (let* ((type (car types))
 	    (type-name type)
@@ -516,7 +528,7 @@
 	       type-name (car type)))
        (push
 	 `(,@(cond ((get type-name 'predicating-put) nil)
-		   ((or *type-check?* (cdr types)) `((type? ,value ',type)))
+		   ((or +type-check?+ (cdr types)) `((type? ,value ',type)))
 		   (t '(t)))
 	   (,(putify type-name (get type-name 'predicating-put)) ,index ,value ,@args))
 	 result)))))
@@ -531,7 +543,10 @@
 
 (defun mask-get (index type-values body-function)
   (declare (type function body-function)
-	   (dynamic-extent body-function))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent body-function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg body-function))
   ;; This is a function, because it must return more than one form (called by get-put-items)
   ;; Functions that use this must have a binding for %MASK
   (let* ((bit 0)
@@ -562,7 +577,10 @@
 
 (defun mask-put (index type-values body-function)
   (declare (type function body-function)
-	   (dynamic-extent body-function))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent body-function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg body-function))
   ;; The MASK type writes a 32 bit mask with 1 bits for each non-nil value in TYPE-VALUES
   ;; A 32 bit value follows for each non-nil value.
   `((let ((%mask 0)
@@ -596,11 +614,8 @@
 ;
 ; Wrapper macros, for use around the above
 ;
-(defmacro type-check (value type)
-  value type
-  (when *type-check?*
-    `(unless (type? ,value ,type)
-       (x-type-error ,value ,type))))
+
+;;; type-check was here, and has been moved up
 
 (defmacro check-put (index value type &rest args &environment env)
   (let* ((var (if (or (symbolp value) (constantp value)) value '.value.))
@@ -623,7 +638,10 @@
 
 (defun get-put-items (index type-args putp &optional body-function)
   (declare (type (or null function) body-function)
-	   (dynamic-extent body-function))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent body-function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg body-function))
   ;; Given a lists of the form (type item item ... item)
   ;; Calls body-function with four arguments, a function name,
   ;; index, item name, and optional arguments.
@@ -673,7 +691,7 @@
 	   &body type-args)
   (multiple-value-bind (code index item-sizes)
       (get-put-items 4 type-args t)
-    (let ((length (if length `(index+ ,length *requestsize*) '*requestsize*))
+    (let ((length (if length `(index+ ,length +requestsize+) '+requestsize+))
 	  (sizes (remove-duplicates (append '(8 16) item-sizes sizes))))
       `(with-buffer-output (,buffer :length ,length :sizes ,sizes)
 	 (setf (buffer-last-request ,buffer) buffer-boffset)
@@ -693,6 +711,7 @@
 		(declare (type display .display.))
 		(with-buffer-request-internal (.display. ,opcode ,@options)
 		  ,@type-args)))
+	 #+clx-ansi-common-lisp
 	 (declare (dynamic-extent #'.request-body.))
 	 (,(if (eq (car (macroexpand '(with-buffer (buffer)) env)) 'progn)
 	       'with-buffer-request-function-nolock
@@ -732,6 +751,7 @@
 			   (type reply-buffer .reply-buffer.))
 		  (progn .display. .reply-buffer. nil)
 		  ,reply-body))
+	   #+clx-ansi-common-lisp
 	   (declare (dynamic-extent #'.request-body. #'.reply-body.))
 	   (with-buffer-request-and-reply-function
 	     ,buffer ,multiple-reply #'.request-body. #'.reply-body.))
@@ -817,126 +837,126 @@
 ;;; Request codes
 ;;; 
 
-(defconstant *x-createwindow*                  1)
-(defconstant *x-changewindowattributes*        2)
-(defconstant *x-getwindowattributes*           3)
-(defconstant *x-destroywindow*                 4)
-(defconstant *x-destroysubwindows*             5)  
-(defconstant *x-changesaveset*                 6)
-(defconstant *x-reparentwindow*                7)
-(defconstant *x-mapwindow*                     8)
-(defconstant *x-mapsubwindows*                 9)
-(defconstant *x-unmapwindow*                  10)
-(defconstant *x-unmapsubwindows*              11) 
-(defconstant *x-configurewindow*              12)
-(defconstant *x-circulatewindow*              13)
-(defconstant *x-getgeometry*                  14)
-(defconstant *x-querytree*                    15)
-(defconstant *x-internatom*                   16)
-(defconstant *x-getatomname*                  17)
-(defconstant *x-changeproperty*               18)
-(defconstant *x-deleteproperty*               19)
-(defconstant *x-getproperty*                  20)
-(defconstant *x-listproperties*               21)
-(defconstant *x-setselectionowner*            22)  
-(defconstant *x-getselectionowner*            23) 
-(defconstant *x-convertselection*             24)
-(defconstant *x-sendevent*                    25)
-(defconstant *x-grabpointer*                  26)
-(defconstant *x-ungrabpointer*                27)
-(defconstant *x-grabbutton*                   28)
-(defconstant *x-ungrabbutton*                 29)
-(defconstant *x-changeactivepointergrab*      30)         
-(defconstant *x-grabkeyboard*                 31)
-(defconstant *x-ungrabkeyboard*               32)
-(defconstant *x-grabkey*                      33)
-(defconstant *x-ungrabkey*                    34)
-(defconstant *x-allowevents*                  35)
-(defconstant *x-grabserver*                   36)     
-(defconstant *x-ungrabserver*                 37)       
-(defconstant *x-querypointer*                 38)       
-(defconstant *x-getmotionevents*              39)          
-(defconstant *x-translatecoords*              40)               
-(defconstant *x-warppointer*                  41)      
-(defconstant *x-setinputfocus*                42)        
-(defconstant *x-getinputfocus*                43)        
-(defconstant *x-querykeymap*                  44)      
-(defconstant *x-openfont*                     45)   
-(defconstant *x-closefont*                    46)    
-(defconstant *x-queryfont*                    47)
-(defconstant *x-querytextextents*             48)    
-(defconstant *x-listfonts*                    49) 
-(defconstant *x-listfontswithinfo*    	      50)
-(defconstant *x-setfontpath*                  51)
-(defconstant *x-getfontpath*                  52)
-(defconstant *x-createpixmap*                 53)      
-(defconstant *x-freepixmap*                   54)   
-(defconstant *x-creategc*                     55)
-(defconstant *x-changegc*                     56)
-(defconstant *x-copygc*                       57)
-(defconstant *x-setdashes*                    58)  
-(defconstant *x-setcliprectangles*            59)         
-(defconstant *x-freegc*                       60)
-(defconstant *x-cleartobackground*            61)          
-(defconstant *x-copyarea*                     62)
-(defconstant *x-copyplane*                    63)
-(defconstant *x-polypoint*                    64)
-(defconstant *x-polyline*                     65)
-(defconstant *x-polysegment*                  66)  
-(defconstant *x-polyrectangle*                67)   
-(defconstant *x-polyarc*                      68)
-(defconstant *x-fillpoly*                     69)
-(defconstant *x-polyfillrectangle*            70)        
-(defconstant *x-polyfillarc*                  71) 
-(defconstant *x-putimage*                     72)
-(defconstant *x-getimage*                     73)
-(defconstant *x-polytext8*                    74)   
-(defconstant *x-polytext16*                   75)   
-(defconstant *x-imagetext8*                   76)  
-(defconstant *x-imagetext16*                  77)  
-(defconstant *x-createcolormap*               78)    
-(defconstant *x-freecolormap*                 79) 
-(defconstant *x-copycolormapandfree*          80)       
-(defconstant *x-installcolormap*              81)  
-(defconstant *x-uninstallcolormap*            82)   
-(defconstant *x-listinstalledcolormaps*       83)       
-(defconstant *x-alloccolor*                   84)
-(defconstant *x-allocnamedcolor*              85)    
-(defconstant *x-alloccolorcells*              86)   
-(defconstant *x-alloccolorplanes*             87)   
-(defconstant *x-freecolors*                   88)
-(defconstant *x-storecolors*                  89)
-(defconstant *x-storenamedcolor*              90)   
-(defconstant *x-querycolors*                  91)
-(defconstant *x-lookupcolor*                  92)
-(defconstant *x-createcursor*                 93)
-(defconstant *x-createglyphcursor*            94)    
-(defconstant *x-freecursor*                   95)
-(defconstant *x-recolorcursor*                96)  
-(defconstant *x-querybestsize*                97) 
-(defconstant *x-queryextension*               98) 
-(defconstant *x-listextensions*               99)
-(defconstant *x-setkeyboardmapping*           100)
-(defconstant *x-getkeyboardmapping*           101)
-(defconstant *x-changekeyboardcontrol*        102)               
-(defconstant *x-getkeyboardcontrol*           103)           
-(defconstant *x-bell*                         104)
-(defconstant *x-changepointercontrol*         105)
-(defconstant *x-getpointercontrol*            106)
-(defconstant *x-setscreensaver*               107)         
-(defconstant *x-getscreensaver*               108)        
-(defconstant *x-changehosts*                  109)    
-(defconstant *x-listhosts*                    110) 
-(defconstant *x-changeaccesscontrol*          111)          
-(defconstant *x-changeclosedownmode*          112)
-(defconstant *x-killclient*                   113)
-(defconstant *x-rotateproperties*	      114)
-(defconstant *x-forcescreensaver*	      115)
-(defconstant *x-setpointermapping*            116)
-(defconstant *x-getpointermapping*            117)
-(defconstant *x-setmodifiermapping*	      118)
-(defconstant *x-getmodifiermapping*	      119)
-(defconstant *x-nooperation*                  127)
+(defconstant +x-createwindow+                  1)
+(defconstant +x-changewindowattributes+        2)
+(defconstant +x-getwindowattributes+           3)
+(defconstant +x-destroywindow+                 4)
+(defconstant +x-destroysubwindows+             5)  
+(defconstant +x-changesaveset+                 6)
+(defconstant +x-reparentwindow+                7)
+(defconstant +x-mapwindow+                     8)
+(defconstant +x-mapsubwindows+                 9)
+(defconstant +x-unmapwindow+                  10)
+(defconstant +x-unmapsubwindows+              11) 
+(defconstant +x-configurewindow+              12)
+(defconstant +x-circulatewindow+              13)
+(defconstant +x-getgeometry+                  14)
+(defconstant +x-querytree+                    15)
+(defconstant +x-internatom+                   16)
+(defconstant +x-getatomname+                  17)
+(defconstant +x-changeproperty+               18)
+(defconstant +x-deleteproperty+               19)
+(defconstant +x-getproperty+                  20)
+(defconstant +x-listproperties+               21)
+(defconstant +x-setselectionowner+            22)  
+(defconstant +x-getselectionowner+            23) 
+(defconstant +x-convertselection+             24)
+(defconstant +x-sendevent+                    25)
+(defconstant +x-grabpointer+                  26)
+(defconstant +x-ungrabpointer+                27)
+(defconstant +x-grabbutton+                   28)
+(defconstant +x-ungrabbutton+                 29)
+(defconstant +x-changeactivepointergrab+      30)         
+(defconstant +x-grabkeyboard+                 31)
+(defconstant +x-ungrabkeyboard+               32)
+(defconstant +x-grabkey+                      33)
+(defconstant +x-ungrabkey+                    34)
+(defconstant +x-allowevents+                  35)
+(defconstant +x-grabserver+                   36)     
+(defconstant +x-ungrabserver+                 37)       
+(defconstant +x-querypointer+                 38)       
+(defconstant +x-getmotionevents+              39)          
+(defconstant +x-translatecoords+              40)               
+(defconstant +x-warppointer+                  41)      
+(defconstant +x-setinputfocus+                42)        
+(defconstant +x-getinputfocus+                43)        
+(defconstant +x-querykeymap+                  44)      
+(defconstant +x-openfont+                     45)   
+(defconstant +x-closefont+                    46)    
+(defconstant +x-queryfont+                    47)
+(defconstant +x-querytextextents+             48)    
+(defconstant +x-listfonts+                    49) 
+(defconstant +x-listfontswithinfo+    	      50)
+(defconstant +x-setfontpath+                  51)
+(defconstant +x-getfontpath+                  52)
+(defconstant +x-createpixmap+                 53)      
+(defconstant +x-freepixmap+                   54)   
+(defconstant +x-creategc+                     55)
+(defconstant +x-changegc+                     56)
+(defconstant +x-copygc+                       57)
+(defconstant +x-setdashes+                    58)  
+(defconstant +x-setcliprectangles+            59)         
+(defconstant +x-freegc+                       60)
+(defconstant +x-cleartobackground+            61)          
+(defconstant +x-copyarea+                     62)
+(defconstant +x-copyplane+                    63)
+(defconstant +x-polypoint+                    64)
+(defconstant +x-polyline+                     65)
+(defconstant +x-polysegment+                  66)  
+(defconstant +x-polyrectangle+                67)   
+(defconstant +x-polyarc+                      68)
+(defconstant +x-fillpoly+                     69)
+(defconstant +x-polyfillrectangle+            70)        
+(defconstant +x-polyfillarc+                  71) 
+(defconstant +x-putimage+                     72)
+(defconstant +x-getimage+                     73)
+(defconstant +x-polytext8+                    74)   
+(defconstant +x-polytext16+                   75)   
+(defconstant +x-imagetext8+                   76)  
+(defconstant +x-imagetext16+                  77)  
+(defconstant +x-createcolormap+               78)    
+(defconstant +x-freecolormap+                 79) 
+(defconstant +x-copycolormapandfree+          80)       
+(defconstant +x-installcolormap+              81)  
+(defconstant +x-uninstallcolormap+            82)   
+(defconstant +x-listinstalledcolormaps+       83)       
+(defconstant +x-alloccolor+                   84)
+(defconstant +x-allocnamedcolor+              85)    
+(defconstant +x-alloccolorcells+              86)   
+(defconstant +x-alloccolorplanes+             87)   
+(defconstant +x-freecolors+                   88)
+(defconstant +x-storecolors+                  89)
+(defconstant +x-storenamedcolor+              90)   
+(defconstant +x-querycolors+                  91)
+(defconstant +x-lookupcolor+                  92)
+(defconstant +x-createcursor+                 93)
+(defconstant +x-createglyphcursor+            94)    
+(defconstant +x-freecursor+                   95)
+(defconstant +x-recolorcursor+                96)  
+(defconstant +x-querybestsize+                97) 
+(defconstant +x-queryextension+               98) 
+(defconstant +x-listextensions+               99)
+(defconstant +x-setkeyboardmapping+           100)
+(defconstant +x-getkeyboardmapping+           101)
+(defconstant +x-changekeyboardcontrol+        102)               
+(defconstant +x-getkeyboardcontrol+           103)           
+(defconstant +x-bell+                         104)
+(defconstant +x-changepointercontrol+         105)
+(defconstant +x-getpointercontrol+            106)
+(defconstant +x-setscreensaver+               107)         
+(defconstant +x-getscreensaver+               108)        
+(defconstant +x-changehosts+                  109)    
+(defconstant +x-listhosts+                    110) 
+(defconstant +x-changeaccesscontrol+          111)          
+(defconstant +x-changeclosedownmode+          112)
+(defconstant +x-killclient+                   113)
+(defconstant +x-rotateproperties+	      114)
+(defconstant +x-forcescreensaver+	      115)
+(defconstant +x-setpointermapping+            116)
+(defconstant +x-getpointermapping+            117)
+(defconstant +x-setmodifiermapping+	      118)
+(defconstant +x-getmodifiermapping+	      119)
+(defconstant +x-nooperation+                  127)
 
 ;;; Some macros for threaded lists
 

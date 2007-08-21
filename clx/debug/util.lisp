@@ -20,6 +20,9 @@
 
 ;;; Created 04/09/87 14:30:41 by LaMott G. OREN
 
+#+cmu
+(ext:file-comment "$Id: util.lisp,v 1.2 2007/08/21 15:49:29 fgilham Exp $")
+
 (in-package :xlib)
 
 (export '(display-root
@@ -145,12 +148,13 @@
   ;; Returns a list of windows in the order that they are printed.
   (declare (arglist window)
 	   (type window window)
-	   (values (list window)))
+	   (clx-values (list window)))
   (let ((props (mapcar #'(lambda (prop)
 			   (multiple-value-bind (data type format)
 			       (get-property window prop)
 			     (case type
-			       (:string (setq data (coerce data 'string))))
+			       (:string (setq data (map 'string #'code-char data)))
+			       (:utf8_string (setq data (map 'string #'code-char data))))
 			     (list prop format type data)))
 		       (list-properties window)))
 	(result (list window)))

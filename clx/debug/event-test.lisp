@@ -1,6 +1,15 @@
 ;;; -*- Mode: LISP; Syntax: Common-lisp; Package: (XTEST (XLIB LISP)); Base: 10; Lowercase: Yes -*-
 
-(in-package :xtest :use '(:xlib :lisp))
+;;; This code was intended for CLUE.  --FMG
+
+#+cmu
+(ext:file-comment "$Id: event-test.lisp,v 1.2 2007/08/21 15:49:29 fgilham Exp $")
+
+(defpackage "XTEST"
+  (:use :xlib :common-lisp)
+  )
+
+(in-package "XTEST")
 
 (defstruct event
   key					   ; Event key

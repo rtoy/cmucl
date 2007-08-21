@@ -1,0 +1,30 @@
+$Id: README,v 1.1 2007/08/21 15:49:29 fgilham Rel $
+
+A brief description of the files in this directory, as best I (FMG) can figure.
+
+bezier.lisp: An example of how to define an extension.  As far as I know, there's no bezier
+extension in most X servers, so this won't do much.
+
+beziertest.lisp: An example of how to invoke the bezier extension.
+
+Both the above files are obsolete.
+
+clclock.lisp: Display a clock using Roman numerals.  Works.
+
+clipboard.lisp: Shows how to manage cut-and-paste (the X clipboard).  Works.
+
+clx-demos.lisp: Some old graphics demos.  Works.  Many of them have been updated in the cmucl
+src/contrib/demos directory.
+
+gl-test.lisp: A test and demonstration of the GL interface.  Seems to mostly work on my system.
+
+hello.lisp: A hello-world X program that gives a kind of skeleton for X programs.  Works.
+
+mandel.lisp: A Mandelbrot set generator that I couldn't get to work, even by hacking quite a
+bit on it.  There are some obvious problems in the code that I tried fixing and some less
+obvious ones that I couldn't fix.  The code here is as I originally found it.
+
+menu.lisp: An old menu demonstration program.  Works.
+
+zoid.lisp: Another program for interfacing with extensions.  Again this extension (the "zoid
+extension") doesn't exist in any X server I know of.  This is another obsolete file.

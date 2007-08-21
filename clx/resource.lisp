@@ -17,9 +17,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+
 #+cmu
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/resource.lisp,v 1.10 1999/03/16 23:37:48 pw Exp $")
+(ext:file-comment "$Id: resource.lisp,v 1.11 2007/08/21 15:49:28 fgilham Exp $")
 
 (in-package :xlib)
 
@@ -29,6 +29,7 @@
 (defstruct (resource-database (:copier nil) (:predicate nil)
 			      (:print-function print-resource-database)
 			      (:constructor make-resource-database-internal)
+			      #+explorer (:callable-constructors nil)
 			      )
   (name nil :type stringable :read-only t)
   (value nil)
@@ -110,7 +111,7 @@
 	  (kintern (symbol-name (the symbol stringable)))))
     (string
       (if *uppercase-resource-symbols*
-	  (setq stringable (string-upcase
+	  (setq stringable (#-allegro string-upcase #+allegro correct-case
 			    (the string stringable))))
       (kintern (the string stringable)))))
 
@@ -246,7 +247,7 @@
 
 (defun get-entry-lookup (table name names classes)
   (declare (type list table names classes)
-	   (type stringable name))
+	   (symbol name))
   (dolist (entry table)
     (declare (type resource-database entry))
     (when (stringable-equal name (resource-database-name entry))
@@ -264,7 +265,7 @@
   (declare (type list tight loose names classes))
   (let ((name (car names))
 	(class (car classes)))
-    (declare (type stringable name class))
+    (declare (type symbol name class))
     (cond ((and tight
 		(get-entry-lookup tight name names classes)))
 	  ((and loose
@@ -353,7 +354,7 @@
 
 (defun get-tables-lookup (dbase name names classes)
   (declare (type list dbase names classes)
-	   (type stringable name))
+	   (type symbol name))
   (declare (optimize speed))
   (dolist (entry dbase)
     (declare (type resource-database entry))
@@ -379,7 +380,7 @@
   (declare (type list tight loose names classes))
   (let ((name (car names))
 	(class (car classes)))
-    (declare (type stringable name class))
+    (declare (type symbol name class))
     (when tight
       (get-tables-lookup tight name names classes))
     (when loose
@@ -408,14 +409,20 @@
   ;; FUNCTION is called with arguments (name-list value . args)
   (declare (type resource-database database)
 	   (type (function (list t &rest t) t) function)
+	   #+clx-ansi-common-lisp
 	   (dynamic-extent function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg function)
 	   (dynamic-extent args))
   (declare (clx-values nil))
   (labels ((map-resource-internal (database function args name)
 	     (declare (type resource-database database)
 		      (type (function (list t &rest t) t) function)
 		      (type list name)
-		      (dynamic-extent function))		      
+		      #+clx-ansi-common-lisp
+		      (dynamic-extent function)
+		      #+(and lispm (not clx-ansi-common-lisp))
+		      (sys:downward-funarg function))		      
 	     (let ((tight (resource-database-tight database))
 		   (loose (resource-database-loose database)))
 	       (declare (type list tight loose))

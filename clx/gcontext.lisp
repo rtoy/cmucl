@@ -41,25 +41,24 @@
 ;;;	lisps will have problems.  Fortunately, most other lisps don't care,
 ;;;	because they don't run in a multi-processing shared-address space
 ;;;	environment.
+
 #+cmu
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/gcontext.lisp,v 1.7 2004/03/24 13:35:04 emarsden Exp $")
+(ext:file-comment "$Id: gcontext.lisp,v 1.8 2007/08/21 15:49:28 fgilham Exp $")
 
 (in-package :xlib)
 
 ;; GContext state accessors
 ;;	The state vector contains all card32s to speed server updating
 
-(eval-when (eval compile load)
-
-(defconstant *gcontext-fast-change-length* #.(length *gcontext-components*))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defconstant +gcontext-fast-change-length+ #.(length +gcontext-components+))
 
 (macrolet ((def-gc-internals (name &rest extras)
 	    (let ((macros nil)
 		  (indexes nil)
 		  (masks nil)
 		  (index 0))
-	      (dolist (name *gcontext-components*)
+	      (dolist (name +gcontext-components+)
 		(push `(defmacro ,(xintern 'gcontext-internal- name) (state)
 			 `(svref ,state ,,index))
 		      macros)
@@ -75,37 +74,40 @@
 		  (setf (getf indexes (or (second extra) (first extra))) index))
 		(push (logior (ash 1 index)
 			      (if (second extra)
-				  (ash 1 (position (second extra) *gcontext-components*))
+				  (ash 1 (position (second extra) +gcontext-components+))
 				  0))
 		      masks)
 		(incf index))
 	      `(within-definition (def-gc-internals ,name)
 		 ,@(nreverse macros)
-		 (eval-when (eval compile load)
-		   (defconstant *gcontext-data-length* ,index)
-		   (defconstant *gcontext-indexes* ',indexes)
-		   (defconstant *gcontext-masks*
-				',(coerce (nreverse masks) 'simple-vector)))))))
+		 (eval-when (:compile-toplevel :load-toplevel :execute)
+		   (defvar *gcontext-data-length* ,index)
+		   (defvar *gcontext-indexes* ',indexes)
+		   (defvar *gcontext-masks*
+		     ',(coerce (nreverse masks) 'simple-vector)
+		     ))))))
   (def-gc-internals ignore
     (:clip :clip-mask) (:dash :dashes) (:font-obj :font) (:timestamp)))
 
 ) ;; end EVAL-WHEN
 
-(deftype gcmask () '(unsigned-byte #.*gcontext-fast-change-length*))
+(deftype gcmask () '(unsigned-byte #.+gcontext-fast-change-length+))
 
 (deftype xgcmask () '(unsigned-byte #.*gcontext-data-length*))
 
 (defstruct (gcontext-extension (:type vector) (:copier nil)) ;; un-named
   (name nil :type symbol :read-only t)
   (default nil :type t :read-only t)
+  ;; FIXME: these used to have glorious, but wrong, type declarations.
+  ;; See if we can't return them to their former glory.
   (set-function #'(lambda (gcontext value)
 		    (declare (ignore gcontext))
 		    value)
-		:type (function (gcontext t) t) :read-only t)
+		:type (or function symbol) :read-only t)
   (copy-function #'(lambda (from-gc to-gc value)
 		     (declare (ignore from-gc to-gc))
 		     value)
-		 :type (function (gcontext gcontext t) t) :read-only t))
+		 :type (or function symbol) :read-only t))
 
 (defvar *gcontext-extensions* nil) ;; list of gcontext-extension
 
@@ -164,7 +166,7 @@
 ;; Generate all the accessors and defsetf's for GContext
 
 (defmacro xgcmask->gcmask (mask)
-  `(the gcmask (logand ,mask #.(1- (ash 1 *gcontext-fast-change-length*)))))
+  `(the gcmask (logand ,mask #.(1- (ash 1 +gcontext-fast-change-length+)))))
 
 (defmacro access-gcontext ((gcontext local-state) &body body)
   `(let ((,local-state (gcontext-local-state ,gcontext)))
@@ -321,15 +323,12 @@
   (declare (type gcontext gcontext)
 	   (type (or card8 sequence) dashes))
   (multiple-value-bind (dashes dash)
-      (cond ((type? dashes 'sequence)
-             (if (zerop (length dashes))
-                 (x-type-error dashes '(or card8 sequence) "non-empty sequence")
-                 (values nil (or (copy-seq dashes) (vector)))))
-            ((eql dashes 0)
-             (x-type-error dashes '(or card8 sequence) "non-zero card8"))
-            (t
-             (values (encode-type card8 dashes) nil)))
-   (modify-gcontext (gcontext local-state)
+      (if (type? dashes 'sequence)
+	  (if (zerop (length dashes))
+	      (x-type-error dashes '(or card8 sequence) "non-empty sequence")
+	    (values nil (or (copy-seq dashes) (vector))))
+	(values (encode-type card8 dashes) nil))
+    (modify-gcontext (gcontext local-state)
       (let ((server-state (gcontext-server-state gcontext)))
 	(declare (type gcontext-state server-state))
 	(without-interrupts
@@ -409,7 +408,7 @@
 
 	(block no-changes
 	  (let ((last-request (buffer-last-request display)))
-	    (with-buffer-request (display *x-changegc*)
+	    (with-buffer-request (display +x-changegc+)
 	      (gcontext gcontext)
 	      (progn
 		(do ((i 0 (index+ i 1))
@@ -417,7 +416,7 @@
 		     (nbyte 12)
 		     (mask 0)
 		     (local 0))
-		    ((index>= i *gcontext-fast-change-length*)
+		    ((index>= i +gcontext-fast-change-length+)
 		     (when (zerop mask)
 		       ;; If nothing changed, restore last-request and quit
 		       (setf (buffer-last-request display)
@@ -457,7 +456,7 @@
 	  (unless (equalp local-clip server-clip)
 	    (setf (gcontext-internal-clip server-state) nil)
 	    (unless (null local-clip)
-	      (with-buffer-request (display *x-setcliprectangles*)
+	      (with-buffer-request (display +x-setcliprectangles+)
 		(data (first local-clip))
 		(gcontext gcontext)
 		;; XXX treat nil correctly
@@ -475,7 +474,7 @@
 	  (unless (equalp local-dash server-dash)
 	    (setf (gcontext-internal-dash server-state) nil)
 	    (unless (null local-dash)
-	      (with-buffer-request (display *x-setdashes*)
+	      (with-buffer-request (display +x-setdashes+)
 		(gcontext gcontext)
 		;; XXX treat nil correctly
 		(card16 (or (gcontext-internal-dash-offset local-state) 0)
@@ -607,13 +606,13 @@
 		  (gcontext-server-state temp-gc) saved-state
 		  (gcontext-local-state temp-gc) saved-state)
 	    ;; Create a new (temporary) gcontext
-	    (with-buffer-request (display *x-creategc*)
+	    (with-buffer-request (display +x-creategc+)
 	      (gcontext temp-gc)
 	      (drawable (gcontext-drawable gcontext))
 	      (card29 0))
 	    ;; Copy changed components to the temporary gcontext
 	    (when (plusp temp-mask)
-	      (with-buffer-request (display *x-copygc*)
+	      (with-buffer-request (display +x-copygc+)
 		(gcontext gcontext)
 		(gcontext temp-gc)
 		(card29 (xgcmask->gcmask temp-mask))))
@@ -636,7 +635,7 @@
   (let ((display (gcontext-display gcontext)))
     (declare (type display display))
     (with-display (display)
-      (with-buffer-request (display *x-copygc*)
+      (with-buffer-request (display +x-copygc+)
 	(gcontext temp-gc)
 	(gcontext gcontext)
 	(card29 (xgcmask->gcmask temp-mask)))
@@ -649,7 +648,7 @@
 	(let ((copy-function (gcontext-extension-copy-function (car extensions))))
 	  (funcall copy-function temp-gc gcontext (svref local-state i))))
       ;; free gcontext
-      (with-buffer-request (display *x-freegc*)
+      (with-buffer-request (display +x-freegc+)
 	(gcontext temp-gc))
       (deallocate-resource-id display (gcontext-id temp-gc) 'gcontext)
       (deallocate-temp-gcontext temp-gc)
@@ -776,7 +775,7 @@
 	    ;; No, mark local state "unmodified"
 	    1))
     
-    (with-buffer-request (display *x-creategc*)
+    (with-buffer-request (display +x-creategc+)
       (resource-id gcontextid)
       (drawable drawable)
       (progn (do* ((i 0 (index+ i 1))
@@ -784,7 +783,7 @@
 		   (nbyte 16)
 		   (mask 0)
 		   (local (svref local-state i) (svref local-state i)))
-		 ((index>= i *gcontext-fast-change-length*)
+		 ((index>= i +gcontext-fast-change-length+)
 		  (card29-put 12 mask)
 		  (card16-put 2 (index-ash nbyte -2))
 		  (index-incf (buffer-boffset display) nbyte))
@@ -846,12 +845,11 @@
 	    (if i
 		(setq mask (the xgcmask (logior mask
 						(the xgcmask (svref *gcontext-masks* i)))))
-	      (multiple-value-bind (extension index)
-		  (find key *gcontext-extensions* :key #'gcontext-extension-name)
+	      (let ((extension (find key *gcontext-extensions* :key #'gcontext-extension-name)))
 		(if extension
 		    (funcall (gcontext-extension-copy-function extension)
 			     src dst (svref (gcontext-local-state src)
-					    (index+ index *gcontext-data-length*)))
+					    (index+ (position extension *gcontext-extensions*) *gcontext-data-length*)))
 		  (x-type-error key 'gcontext-key))))))
 	
 	(when (plusp mask)
@@ -869,14 +867,14 @@
 	    (when (oddp bit)
 	      (setf (svref dst-local-state i)
 		    (setf (svref dst-server-state i) (svref src-server-state i)))))
-	  (with-buffer-request (display *x-copygc*)
+	  (with-buffer-request (display +x-copygc+)
 	    (gcontext src dst)
 	    (card29 (xgcmask->gcmask mask))))))))
 
 (defun copy-gcontext (src dst)
   (declare (type gcontext src dst))
   ;; Copies all components.
-  (apply #'copy-gcontext-components src dst *gcontext-components*)
+  (apply #'copy-gcontext-components src dst +gcontext-components+)
   (do ((extensions *gcontext-extensions* (cdr extensions))
        (i *gcontext-data-length* (index+ i 1)))
       ((endp extensions))
@@ -886,7 +884,7 @@
 (defun free-gcontext (gcontext)
   (declare (type gcontext gcontext))
   (let ((display (gcontext-display gcontext)))
-    (with-buffer-request (display *x-freegc*)
+    (with-buffer-request (display +x-freegc+)
       (gcontext gcontext))
     (deallocate-resource-id display (gcontext-id gcontext) 'gcontext)
     (deallocate-gcontext-state (gcontext-server-state gcontext))
@@ -911,7 +909,7 @@
   (declare (type symbol name)
 	   (type t default)
 	   (type symbol set-function) ;; required
-	   (type symbol copy-function))
+	   (type (or symbol list) copy-function))
   (let* ((gc-name (intern (concatenate 'string
 				       (string 'gcontext-)
 				       (string name)))) ;; in current package
@@ -928,7 +926,7 @@
 		   (,set-function dst-gc value)
 		 (error "Can't copy unknown GContext component ~a" ',name)))))
     `(progn
-       (eval-when (compile load eval)
+       (eval-when (:compile-toplevel :load-toplevel :execute)
 	 (defparameter ,internal-state-index
 		       (add-gcontext-extension ',key-name ,default ',internal-set-function
 					       ',internal-copy-function))
@@ -964,8 +962,8 @@
 (defun add-gcontext-extension (name default-value set-function copy-function)
   (declare (type symbol name)
 	   (type t default-value)
-	   (type (function (gcontext t) t) set-function)
-	   (type (function (gcontext gcontext t) t) copy-function))
+	   (type (or function symbol) set-function)
+	   (type (or function symbol) copy-function))
   (let ((number (or (position name *gcontext-extensions* :key #'gcontext-extension-name)
 		    (prog1 (length *gcontext-extensions*)
 			   (push nil *gcontext-extensions*)))))

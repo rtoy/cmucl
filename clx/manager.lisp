@@ -17,9 +17,9 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
+
 #+cmu
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/manager.lisp,v 1.8 2004/10/06 16:54:07 emarsden Exp $")
+(ext:file-comment "$Id: manager.lisp,v 1.9 2007/08/21 15:49:28 fgilham Exp $")
 
 (in-package :xlib)
 
@@ -320,7 +320,7 @@
 		(wm-size-hints-base-height hints) (aref vector 16)))
 	(when (logbitp 9 flags)
 	  (setf (wm-size-hints-win-gravity hints)
-		(decode-type (member-vector *win-gravity-vector*) (aref vector 17)))))
+		(decode-type (member-vector +win-gravity-vector+) (aref vector 17)))))
       ;; Obsolete fields
       (when (or (logbitp 0 flags) (logbitp 2 flags))
 	(setf (wm-size-hints-x hints) (card32->int32 (aref vector 1))
@@ -375,7 +375,7 @@
     (when (wm-size-hints-win-gravity hints)
       (setf (ldb (byte 1 9) flags) 1
 	    (aref vector 17) (encode-type
-			       (member-vector *win-gravity-vector*)
+			       (member-vector +win-gravity-vector+)
 			       (wm-size-hints-win-gravity hints))))
     ;; Obsolete fields
     (when (and (wm-size-hints-x hints) (wm-size-hints-y hints)) 
@@ -730,7 +730,36 @@
     (get-property root property :type type :result-type result-type
 		  :start start :end end :transform transform)))
 
-(defun (setf cut-buffer)
+;; Implement the following:
+;; (defsetf cut-buffer (display &key (buffer 0) (type :string) (format 8)
+;;			        (transform #'char->card8) (start 0) end) (data)
+;; In order to avoid having to pass positional parameters to set-cut-buffer,
+;; We've got to do the following.  WHAT A PAIN...
+#-clx-ansi-common-lisp
+(define-setf-method cut-buffer (display &rest option-list)
+  (declare (dynamic-extent option-list))
+  (do* ((options (copy-list option-list))
+	(option options (cddr option))
+	(store (gensym))
+	(dtemp (gensym))
+	(temps (list dtemp))
+	(values (list display)))
+       ((endp option)
+	(values (nreverse temps)
+		(nreverse values)
+		(list store)
+		`(set-cut-buffer ,store ,dtemp ,@options)
+		`(cut-buffer ,@options)))
+    (unless (member (car option) '(:buffer :type :format :start :end :transform))
+      (error "Keyword arg ~s isn't recognized" (car option)))
+    (let ((x (gensym)))
+      (push x temps)
+      (push (cadr option) values)
+      (setf (cadr option) x))))
+
+(defun
+  #+clx-ansi-common-lisp (setf cut-buffer)
+  #-clx-ansi-common-lisp set-cut-buffer
   (data display &key (buffer 0) (type :STRING) (format 8)
 	(start 0) end (transform #'char->card8))
   (declare (type sequence data)

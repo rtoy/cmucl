@@ -15,9 +15,6 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
-#+cmu
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/clx.lisp,v 1.14 2003/08/08 07:35:56 emarsden Exp $")
 
 ;; Primary Interface Author:
 ;;	Robert W. Scheifler
@@ -79,6 +76,9 @@
 ;;; objects, and the additional functionality to match the C Xlib is still in
 ;;; progress.  Bug reports should be addressed to bug-clx@expo.lcs.mit.edu.
 
+#+cmu
+(ext:file-comment "$Id: clx.lisp,v 1.15 2007/08/21 15:49:27 fgilham Exp $")
+
 ;; Note: all of the following is in the package XLIB.
 
 (in-package :xlib)
@@ -86,11 +86,9 @@
 (pushnew :clx *features*)
 (pushnew :xlib *features*)
 
-(defparameter *version* "MIT R5.02")
+(defparameter *version* "Telent CLX 0.7.3 + CMUCL mods, based on MIT R5.02")
 (pushnew :clx-mit-r4 *features*)
 (pushnew :clx-mit-r5 *features*)
-
-(provide :clx)
 
 (defparameter *protocol-major-version* 11.)
 (defparameter *protocol-minor-version* 0)
@@ -163,6 +161,20 @@
 (deftype int8 () '(signed-byte 8))
 
 (deftype card4 () '(unsigned-byte 4))
+
+#-clx-ansi-common-lisp
+(deftype real (&optional (min '*) (max '*))
+  (labels ((convert (limit floatp)
+	     (typecase limit
+	       (number (if floatp (float limit 0s0) (rational limit)))
+	       (list (map 'list #'convert limit))
+	       (otherwise limit))))
+    `(or (float ,(convert min t) ,(convert max t))
+	 (rational ,(convert min nil) ,(convert max nil)))))
+
+#-clx-ansi-common-lisp
+(deftype base-char ()
+  'string-char)
 
 ; Note that we are explicitly using a different rgb representation than what
 ; is actually transmitted in the protocol.
@@ -334,12 +346,14 @@
   (atom-id-map (make-hash-table :test (resource-id-map-test)
 				:size *atom-cache-size*)
 	       :type hash-table)
+  (extended-max-request-length 0 :type card32)
   )
 
 (defun print-display-name (display stream)
   (declare (type (or null display) display))
   (cond (display
-	 (princ (display-host display) stream)
+	 #-allegro (princ (display-host display) stream)
+	 #+allegro (write-string (string (display-host display)) stream)
 	 (write-string ":" stream)
 	 (princ (display-display display) stream))
 	(t
@@ -371,7 +385,7 @@
   (print-unreadable-object (drawable stream :type t)
     (print-display-name (drawable-display drawable) stream)
     (write-string " " stream)
-    (prin1 (drawable-id drawable) stream)))
+    (let ((*print-base* 16)) (prin1 (drawable-id drawable) stream))))
 
 (def-clx-class (window (:include drawable) (:copier nil)
 		       (:print-function print-drawable))
@@ -441,27 +455,27 @@
 
 (deftype xatom () '(or string symbol))
 
-(defconstant *predefined-atoms*
-	     '#(nil :PRIMARY :SECONDARY :ARC :ATOM :BITMAP
-		    :CARDINAL :COLORMAP :CURSOR
-		    :CUT_BUFFER0 :CUT_BUFFER1 :CUT_BUFFER2 :CUT_BUFFER3
-		    :CUT_BUFFER4 :CUT_BUFFER5 :CUT_BUFFER6 :CUT_BUFFER7
-		    :DRAWABLE :FONT :INTEGER :PIXMAP :POINT :RECTANGLE
-		    :RESOURCE_MANAGER :RGB_COLOR_MAP :RGB_BEST_MAP
-		    :RGB_BLUE_MAP :RGB_DEFAULT_MAP
-		    :RGB_GRAY_MAP :RGB_GREEN_MAP :RGB_RED_MAP :STRING
-		    :VISUALID :WINDOW :WM_COMMAND :WM_HINTS
-		    :WM_CLIENT_MACHINE :WM_ICON_NAME :WM_ICON_SIZE
-		    :WM_NAME :WM_NORMAL_HINTS :WM_SIZE_HINTS
-		    :WM_ZOOM_HINTS :MIN_SPACE :NORM_SPACE :MAX_SPACE
-		    :END_SPACE :SUPERSCRIPT_X :SUPERSCRIPT_Y
-		    :SUBSCRIPT_X :SUBSCRIPT_Y
-		    :UNDERLINE_POSITION :UNDERLINE_THICKNESS
-		    :STRIKEOUT_ASCENT :STRIKEOUT_DESCENT
-		    :ITALIC_ANGLE :X_HEIGHT :QUAD_WIDTH :WEIGHT
-		    :POINT_SIZE :RESOLUTION :COPYRIGHT :NOTICE
-		    :FONT_NAME :FAMILY_NAME :FULL_NAME :CAP_HEIGHT
-		    :WM_CLASS :WM_TRANSIENT_FOR))
+(defconstant +predefined-atoms+
+ '#(nil :PRIMARY :SECONDARY :ARC :ATOM :BITMAP
+    :CARDINAL :COLORMAP :CURSOR
+    :CUT_BUFFER0 :CUT_BUFFER1 :CUT_BUFFER2 :CUT_BUFFER3
+    :CUT_BUFFER4 :CUT_BUFFER5 :CUT_BUFFER6 :CUT_BUFFER7
+    :DRAWABLE :FONT :INTEGER :PIXMAP :POINT :RECTANGLE
+    :RESOURCE_MANAGER :RGB_COLOR_MAP :RGB_BEST_MAP
+    :RGB_BLUE_MAP :RGB_DEFAULT_MAP
+    :RGB_GRAY_MAP :RGB_GREEN_MAP :RGB_RED_MAP :STRING
+    :VISUALID :WINDOW :WM_COMMAND :WM_HINTS
+    :WM_CLIENT_MACHINE :WM_ICON_NAME :WM_ICON_SIZE
+    :WM_NAME :WM_NORMAL_HINTS :WM_SIZE_HINTS
+    :WM_ZOOM_HINTS :MIN_SPACE :NORM_SPACE :MAX_SPACE
+    :END_SPACE :SUPERSCRIPT_X :SUPERSCRIPT_Y
+    :SUBSCRIPT_X :SUBSCRIPT_Y
+    :UNDERLINE_POSITION :UNDERLINE_THICKNESS
+    :STRIKEOUT_ASCENT :STRIKEOUT_DESCENT
+    :ITALIC_ANGLE :X_HEIGHT :QUAD_WIDTH :WEIGHT
+    :POINT_SIZE :RESOLUTION :COPYRIGHT :NOTICE
+    :FONT_NAME :FAMILY_NAME :FULL_NAME :CAP_HEIGHT
+    :WM_CLASS :WM_TRANSIENT_FOR))
 
 (deftype stringable () '(or string symbol))
 
@@ -471,19 +485,31 @@
 
 (deftype timestamp () '(or null card32))
 
-(defconstant *bit-gravity-vector*
-	     '#(:forget :north-west :north :north-east :west
-		:center :east :south-west :south
-		:south-east :static))
+(defconstant +bit-gravity-vector+
+ '#(:forget :north-west :north :north-east :west
+    :center :east :south-west :south
+    :south-east :static))
 
 (deftype bit-gravity ()
   '(member :forget :north-west :north :north-east :west
 	   :center :east :south-west :south :south-east :static))
 
-(defconstant *win-gravity-vector*
-	     '#(:unmap :north-west :north :north-east :west
-		:center :east :south-west :south :south-east
-		:static))
+(defconstant +win-gravity-vector+
+ '#(:unmap :north-west :north :north-east :west
+    :center :east :south-west :south :south-east
+    :static))
+
+(defparameter *protocol-families*
+  '(;; X11/X.h, Family*
+    (:internet . 0)
+    (:decnet . 1)
+    (:chaos . 2)
+    ;; X11/Xauth.h "not part of X standard"
+    (:Local . 256)
+    (:Wild . 65535)
+    (:Netname . 254)
+    (:Krb5Principal . 253)
+    (:LocalHost . 252)))
 
 (deftype win-gravity ()
   '(member :unmap :north-west :north :north-east :west
@@ -527,7 +553,7 @@
   (server-state (allocate-gcontext-state) :type gcontext-state)
   (local-state (allocate-gcontext-state) :type gcontext-state)
   (plist nil :type list)			; Extension hook
-  (next nil :type (or null gcontext))
+  (next nil #-explorer :type #-explorer (or null gcontext))
   )
 
 (defun print-gcontext (gcontext stream depth)
@@ -538,13 +564,13 @@
     (write-string " " stream)
     (prin1 (gcontext-id gcontext) stream)))
 
-(defconstant *event-mask-vector*
-	     '#(:key-press :key-release :button-press :button-release
-		:enter-window :leave-window :pointer-motion :pointer-motion-hint
-		:button-1-motion :button-2-motion :button-3-motion :button-4-motion
-		:button-5-motion :button-motion :keymap-state :exposure :visibility-change
-		:structure-notify :resize-redirect :substructure-notify :substructure-redirect
-		:focus-change :property-change :colormap-change :owner-grab-button))
+(defconstant +event-mask-vector+
+ '#(:key-press :key-release :button-press :button-release
+    :enter-window :leave-window :pointer-motion :pointer-motion-hint
+    :button-1-motion :button-2-motion :button-3-motion :button-4-motion
+    :button-5-motion :button-motion :keymap-state :exposure :visibility-change
+    :structure-notify :resize-redirect :substructure-notify :substructure-redirect
+    :focus-change :property-change :colormap-change :owner-grab-button))
 
 (deftype event-mask-class ()
   '(member :key-press :key-release :owner-grab-button :button-press :button-release
@@ -557,11 +583,14 @@
 (deftype event-mask ()
   '(or mask32 (clx-list event-mask-class)))
 
-(defconstant *pointer-event-mask-vector*
-	     '#(%error %error :button-press :button-release
-		:enter-window :leave-window :pointer-motion :pointer-motion-hint
-		:button-1-motion :button-2-motion :button-3-motion :button-4-motion
-		:button-5-motion :button-motion :keymap-state))
+(defconstant +pointer-event-mask-vector+
+  ;; the first two elements used to be '%error '%error (i.e. symbols, 
+  ;; and not keywords) but the vector is supposed to contain 
+  ;; keywords, so I renamed them -dan 2004.11.13
+  '#(:%error :%error :button-press :button-release
+     :enter-window :leave-window :pointer-motion :pointer-motion-hint
+     :button-1-motion :button-2-motion :button-3-motion :button-4-motion
+     :button-5-motion :button-motion :keymap-state))
 
 (deftype pointer-event-mask-class ()
   '(member :button-press :button-release
@@ -572,10 +601,10 @@
 (deftype pointer-event-mask ()
   '(or mask32 (clx-list pointer-event-mask-class)))
 
-(defconstant *device-event-mask-vector*
-	     '#(:key-press :key-release :button-press :button-release :pointer-motion
-		:button-1-motion :button-2-motion :button-3-motion :button-4-motion
-		:button-5-motion :button-motion))
+(defconstant +device-event-mask-vector+
+ '#(:key-press :key-release :button-press :button-release :pointer-motion
+    :button-1-motion :button-2-motion :button-3-motion :button-4-motion
+    :button-5-motion :button-motion))
 
 (deftype device-event-mask-class ()
   '(member :key-press :key-release :button-press :button-release :pointer-motion
@@ -585,9 +614,9 @@
 (deftype device-event-mask ()
   '(or mask32 (clx-list device-event-mask-class)))
 
-(defconstant *state-mask-vector*
-	     '#(:shift :lock :control :mod-1 :mod-2 :mod-3 :mod-4 :mod-5
-		:button-1 :button-2 :button-3 :button-4 :button-5))
+(defconstant +state-mask-vector+
+ '#(:shift :lock :control :mod-1 :mod-2 :mod-3 :mod-4 :mod-5
+    :button-1 :button-2 :button-3 :button-4 :button-5))
 
 (deftype modifier-key ()
   '(member :shift :lock :control :mod-1 :mod-2 :mod-3 :mod-4 :mod-5))
@@ -598,12 +627,12 @@
 (deftype state-mask-key ()
   '(or modifier-key (member :button-1 :button-2 :button-3 :button-4 :button-5)))
 
-(defconstant *gcontext-components*
-	     '(:function :plane-mask :foreground :background
-	       :line-width :line-style :cap-style :join-style :fill-style
-	       :fill-rule :tile :stipple :ts-x :ts-y :font :subwindow-mode
-	       :exposures :clip-x :clip-y :clip-mask :dash-offset :dashes
-	       :arc-mode))
+(defconstant +gcontext-components+
+ '(:function :plane-mask :foreground :background
+   :line-width :line-style :cap-style :join-style :fill-style
+   :fill-rule :tile :stipple :ts-x :ts-y :font :subwindow-mode
+   :exposures :clip-x :clip-y :clip-mask :dash-offset :dashes
+   :arc-mode))
 
 (deftype gcontext-key ()
   '(member :function :plane-mask :foreground :background
@@ -613,14 +642,16 @@
 	   :arc-mode))
 
 (deftype event-key ()
-  '(member :key-press :key-release :button-press :button-release :motion-notify
-	   :enter-notify :leave-notify :focus-in :focus-out :keymap-notify
-	   :exposure :graphics-exposure :no-exposure :visibility-notify
-	   :create-notify :destroy-notify :unmap-notify :map-notify :map-request
-	   :reparent-notify :configure-notify :gravity-notify :resize-request
-	   :configure-request :circulate-notify :circulate-request :property-notify
-	   :selection-clear :selection-request :selection-notify
-	   :colormap-notify :client-message :mapping-notify))
+  '(or (member :key-press :key-release :button-press :button-release 
+        :motion-notify :enter-notify :leave-notify :focus-in :focus-out 
+        :keymap-notify :exposure :graphics-exposure :no-exposure 
+        :visibility-notify :create-notify :destroy-notify :unmap-notify 
+        :map-notify :map-request :reparent-notify :configure-notify 
+        :gravity-notify :resize-request :configure-request :circulate-notify 
+        :circulate-request :property-notify :selection-clear 
+        :selection-request :selection-notify :colormap-notify :client-message 
+        :mapping-notify)
+       (satisfies extension-event-key-p)))
 
 (deftype error-key ()
   '(member :access :alloc :atom :colormap :cursor :drawable :font :gcontext :id-choice
@@ -629,11 +660,11 @@
 (deftype draw-direction ()
   '(member :left-to-right :right-to-left))
 
-(defconstant *boole-vector*
-	     '#(#.boole-clr #.boole-and #.boole-andc2 #.boole-1
-		#.boole-andc1 #.boole-2 #.boole-xor #.boole-ior
-		#.boole-nor #.boole-eqv #.boole-c2 #.boole-orc2
-		#.boole-c1 #.boole-orc1 #.boole-nand #.boole-set))
+(defconstant +boole-vector+
+ '#(#.boole-clr #.boole-and #.boole-andc2 #.boole-1
+    #.boole-andc1 #.boole-2 #.boole-xor #.boole-ior
+    #.boole-nor #.boole-eqv #.boole-c2 #.boole-orc2
+    #.boole-c1 #.boole-orc1 #.boole-nand #.boole-set))
 
 (deftype boole-constant ()
   `(member ,boole-clr ,boole-and ,boole-andc2 ,boole-1
@@ -802,7 +833,7 @@
 	     (let ((predicate (xintern type '-equal))
 		   (id (xintern type '-id))
 		   (dpy (xintern type '-display)))
-	       (if (member type *clx-cached-types*)
+	       (if (member type +clx-cached-types+)
 		   `(within-definition (,type make-mumble-equal)
 		      (declaim (inline ,predicate))
 		      (defun ,predicate (a b) (eq a b)))
@@ -824,10 +855,10 @@
 ;;;    Converts from keyword-lists to integer and back
 ;;;
 (defun encode-mask (key-vector key-list key-type)
-  ;; KEY-VECTOR is a vector containg bit-position keywords.  The position of the
-  ;; keyword in the vector indicates its bit position in the resulting mask
-  ;; KEY-LIST is either a mask or a list of KEY-TYPE
-  ;; Returns NIL when KEY-LIST is not a list or mask.
+  ;; KEY-VECTOR is a vector containg bit-position keywords.  The
+  ;; position of the keyword in the vector indicates its bit position
+  ;; in the resulting mask.  KEY-LIST is either a mask or a list of
+  ;; KEY-TYPE Returns NIL when KEY-LIST is not a list or mask.
   (declare (type (simple-array keyword (*)) key-vector)
 	   (type (or mask32 list) key-list))
   (declare (clx-values (or mask32 null)))
@@ -858,7 +889,7 @@
 (defun encode-event-mask (event-mask)
   (declare (type event-mask event-mask))
   (declare (clx-values mask32))
-  (or (encode-mask *event-mask-vector* event-mask 'event-mask-class)
+  (or (encode-mask +event-mask-vector+ event-mask 'event-mask-class)
       (x-type-error event-mask 'event-mask)))
 
 (defun make-event-mask (&rest keys)
@@ -866,18 +897,18 @@
   ;; Useful for constructing event-mask, pointer-event-mask, device-event-mask.
   (declare (type (clx-list event-mask-class) keys))
   (declare (clx-values mask32))
-  (encode-mask *event-mask-vector* keys 'event-mask-class))
+  (encode-mask +event-mask-vector+ keys 'event-mask-class))
 
 (defun make-event-keys (event-mask)
   ;; This is only defined for core events.
   (declare (type mask32 event-mask))
   (declare (clx-values (clx-list event-mask-class)))
-  (decode-mask *event-mask-vector* event-mask))
+  (decode-mask +event-mask-vector+ event-mask))
 
 (defun encode-device-event-mask (device-event-mask)
   (declare (type device-event-mask device-event-mask))
   (declare (clx-values mask32))
-  (or (encode-mask *device-event-mask-vector* device-event-mask
+  (or (encode-mask +device-event-mask-vector+ device-event-mask
 		   'device-event-mask-class)
       (x-type-error device-event-mask 'device-event-mask)))
 
@@ -885,29 +916,29 @@
   (declare (type modifier-mask modifier-mask))
   (declare (clx-values mask16))
   (or (and (eq modifier-mask :any) #x8000)
-      (encode-mask *state-mask-vector* modifier-mask 'modifier-key)
+      (encode-mask +state-mask-vector+ modifier-mask 'modifier-key)
       (x-type-error modifier-mask 'modifier-mask)))
 
 (defun encode-state-mask (state-mask)
   (declare (type (or mask16 (clx-list state-mask-key)) state-mask))
   (declare (clx-values mask16))
-  (or (encode-mask *state-mask-vector* state-mask 'state-mask-key)
+  (or (encode-mask +state-mask-vector+ state-mask 'state-mask-key)
       (x-type-error state-mask '(or mask16 (clx-list state-mask-key)))))
 
 (defun make-state-mask (&rest keys)
   ;; Useful for constructing modifier-mask, state-mask.
   (declare (type (clx-list state-mask-key) keys))
   (declare (clx-values mask16))
-  (encode-mask *state-mask-vector* keys 'state-mask-key))
+  (encode-mask +state-mask-vector+ keys 'state-mask-key))
 
 (defun make-state-keys (state-mask)
   (declare (type mask16 state-mask))
   (declare (clx-values (clx-list state-mask-key)))
-  (decode-mask *state-mask-vector* state-mask))
+  (decode-mask +state-mask-vector+ state-mask))
 
 (defun encode-pointer-event-mask (pointer-event-mask)
   (declare (type pointer-event-mask pointer-event-mask))
   (declare (clx-values mask32))
-  (or (encode-mask *pointer-event-mask-vector* pointer-event-mask
+  (or (encode-mask +pointer-event-mask-vector+ pointer-event-mask
 		   'pointer-event-mask-class)
       (x-type-error pointer-event-mask 'pointer-event-mask)))
