@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.25 2007/07/24 19:09:13 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.26 2007/08/21 18:57:51 fgilham Exp $
 
 all: lisp.nm
 
@@ -17,8 +17,7 @@ endif
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c globals.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
-	socket.c runprog.c time.c \
-	exec-init.c \
+	runprog.c time.c exec-init.c \
 	${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC} ${GC_SRC}
 
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
@@ -51,10 +50,6 @@ endif
 
 version:
 	echo 0 > version
-
-### Socket.c needs to be compiled with UNIXCONN defined.
-socket.o: socket.c
-	$(COMPILE.c) -DUNIXCONN $<
 
 internals.h internals.inc:
 	@echo "You must run genesis to create internals.h!"
