@@ -14,7 +14,7 @@
 ;;;;  provided ``as is'' without express or implied warranty.
 
 #+cmu
-(ext:file-comment "$Id")
+(ext:file-comment "$Id: dpms.lisp,v 1.2 2007/08/22 03:59:07 fgilham Exp $")
 
 (defpackage :dpms
   (:use :common-lisp)

@@ -18,6 +18,9 @@
 ;;; express or implied warranty.
 ;;;
 
+#+cmu
+(ext:file-comment "$Id: image.lisp,v 1.12 2007/08/22 03:59:16 fgilham Exp $")
+
 (in-package :xlib)
 
 (defmacro with-image-data-buffer ((buffer size) &body body)
