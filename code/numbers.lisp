@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.62 2007/01/23 16:21:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.63 2007/08/28 23:55:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1089,6 +1089,8 @@
 	       (lambda (x y)
 		 (and (eql (numerator x) (numerator y))
 		      (eql (denominator x) (denominator y)))))
+	      #+double-double
+	      (double-double-float eql)
 	      (complex
 	       (lambda (x y)
 		 (and (eql (realpart x) (realpart y))
