@@ -98,6 +98,7 @@ New in this release:
         returned now.
       o Overflow in addition, multiplication, and division returns
         infinity if traps are disabled.
+      o EQL supports DOUBLE-DOUBLE-FLOAT's now.
     - The assembler for ppc had some arguments for some instructions
       in the wrong order, producing the wrong effect. 
     - When making displaced arrays, the element types are checked to
@@ -113,6 +114,7 @@ New in this release:
       match the number of days in the given month.
     - #10 fixed.  ROUND should now return correct answers for floats
       bigger than most-positive-fixnum.
+    - #11 fixed.  EQL handles double-double-float's correctly now.
 
   * Other changes:
     - UNIX:UNIX-ERRNO accesses errno value instead of the global errno
