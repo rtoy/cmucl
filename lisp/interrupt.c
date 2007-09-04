@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.49 2007/07/25 10:23:54 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.50 2007/09/04 10:22:54 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -167,11 +167,7 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 
     /* Allocate the SAP object while the interrupts are still disabled. */
     if (internal_errors_enabled)
-#if (defined(DARWIN) || defined(__FreeBSD__) || defined(__linux__)) && defined(i386)
-	context_sap = alloc_sap(&context->uc_mcontext);
-#else
 	context_sap = alloc_sap(context);
-#endif
 
     sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
 
@@ -273,11 +269,7 @@ interrupt_handle_now(HANDLER_ARGS)
     else if (LowtagOf(handler.lisp) == type_FunctionPointer) {
 	/* Allocate the SAP object while the interrupts are still
 	   disabled. */
-#if (defined(DARWIN) || defined(__FreeBSD__) || defined(__linux__)) && defined(__i386__)
-	lispobj context_sap = alloc_sap(&context->uc_mcontext);
-#else
 	lispobj context_sap = alloc_sap(context);
-#endif
 
 	/* Allow signals again. */
 	sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);

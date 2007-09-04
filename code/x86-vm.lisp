@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.26 2007/07/22 05:39:39 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.27 2007/09/04 10:22:54 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,56 +56,69 @@
         (status unsigned-long)))
 
 #+darwin
-(def-alien-type sigcontext
+(def-alien-type sigcontext-regs
   (struct nil
-    ;; x86_exception_state32_t
     (trapno unsigned-int)
     (err unsigned-int)
     (faultvaddr unsigned-int)
-    ;; x86_thread_state32_t
-    (sc-eax unsigned-int)
-    (sc-ebx unsigned-int)
-    (sc-ecx unsigned-int)
-    (sc-edx unsigned-int)
-    (sc-edi unsigned-int)
-    (sc-esi unsigned-int)
-    (sc-fp unsigned-int)
-    (sc-sp unsigned-int)
+    (eax unsigned-int)
+    (ebx unsigned-int)
+    (ecx unsigned-int)
+    (edx unsigned-int)
+    (edi unsigned-int)
+    (esi unsigned-int)
+    (ebp unsigned-int)
+    (esp unsigned-int)
     (ss unsigned-int)
     (eflags unsigned-int)
-    (sc-pc unsigned-int)
+    (eip unsigned-int)
     (cs unsigned-int)
     (ds unsigned-int)
     (es unsigned-int)
     (fs unsigned-int)
     (gs unsigned-int)
-    ;; x86_float_state32_t
     (fpstate (array char 512))))
+
+#+darwin
+(def-alien-type sigcontext
+  (struct nil
+    (sc-onstack int)
+    (sc-sigmask unsigned-int)
+    (sc-stack (array unsigned-int 3))
+    (sc-link system-area-pointer)
+    (sc-mcsize unsigned-int)
+    (sc-mcontext (* sigcontext-regs))))
 
 ;;; for FreeBSD
 #+freebsd
+(def-alien-type sigcontext-regs
+  (struct nil
+    (onstack unsigned-int)
+    (gs unsigned-int)
+    (fs unsigned-int)
+    (es unsigned-int)
+    (ds unsigned-int)
+    (edi unsigned-int)
+    (esi unsigned-int)
+    (ebp unsigned-int)
+    (isp unsigned-int)
+    (ebx unsigned-int)
+    (edx unsigned-int)
+    (ecx unsigned-int)
+    (eax unsigned-int)
+    (trapno unsigned-int)
+    (err unsigned-int)
+    (eip unsigned-int)
+    (cs	unsigned-int)
+    (eflags unsigned-int)
+    (esp unsigned-int)
+    (ss unsigned-int)))
+
+#+freebsd
 (def-alien-type sigcontext
-    (struct nil
-	(sc-onstack unsigned-int)
-	(sc-gs      unsigned-int)
-	(sc-fs      unsigned-int)
-	(sc-es	    unsigned-int)
-	(sc-ds	    unsigned-int)
-	(sc-edi	    unsigned-int)
-	(sc-esi	    unsigned-int)
-	(sc-fp	    unsigned-int)
-	(sc-isp     unsigned-int)	
-	(sc-ebx	    unsigned-int)
-	(sc-edx	    unsigned-int)
-	(sc-ecx	    unsigned-int)
-	(sc-eax	    unsigned-int)
-	(trapno     unsigned-int)
-	(err        unsigned-int)
-	(sc-pc      unsigned-int)
-	(sc-cs	    unsigned-int)
-	(sc-efl     unsigned-int)		; sc_ps
-	(sc-sp      unsigned-int)	
-	(sc-ss	    unsigned-int)))
+  (struct nil
+    (sc-sigmask (array unsigned-int 4))
+    (sc-mcontext sigcontext-regs)))
 
 ;;; OpenBSD also have sigcontext structs that look more like Linux.
 #+openbsd
@@ -134,109 +147,72 @@
 	))
 
 ;; NetBSD
-
-#+netbsd1.6
-(def-alien-type sigcontext
-    (struct nil
-	(sc-gs      unsigned-int)
-	(sc-fs      unsigned-int)
-	(sc-es	    unsigned-int)
-	(sc-ds	    unsigned-int)
-	(sc-edi	    unsigned-int)
-	(sc-esi	    unsigned-int)
-	(sc-fp	    unsigned-int) ;; ebp
-	(sc-ebx	    unsigned-int)
-	(sc-edx	    unsigned-int)
-	(sc-ecx	    unsigned-int)
-	(sc-eax	    unsigned-int)
-	(sc-pc      unsigned-int)
-	(sc-cs	    unsigned-int)
-	(sc-efl     unsigned-int)		; sc_ps
-	(sc-sp      unsigned-int)	
-	(sc-ss	    unsigned-int)
-	(sc-onstack unsigned-int)
-	;; Old NetBSD 1.3 signal mask
-	(sc-oldmask unsigned-int)
-	(sc-trapno  unsigned-int)
-	(sc-err     unsigned-int)
-	;; New signal mask (post NetBSD 1.3)
-	(sc-mask    (array unsigned-int 4))
-	))
-
 #+netbsd
-(def-alien-type sigaltstack
+(def-alien-type sigcontext-regs
   (struct nil
-      (ss-sp	unsigned-int)
-      (ss-size	unsigned-int)
-      (ss-flags	unsigned-int)))
-
-#+netbsd
-(def-alien-type mcontext
-  (struct nil
-      (mc-gs	unsigned-long)
-      (mc-fs	unsigned-long)
-      (mc-es	unsigned-long)
-      (mc-ds	unsigned-long)
-      (mc-edi	unsigned-long)
-      (mc-esi	unsigned-long)
-      (mc-ebp	unsigned-long)
-      (mc-esp	unsigned-long)
-      (mc-ebx	unsigned-long)
-      (mc-edx	unsigned-long)
-      (mc-ecx	unsigned-long)
-      (mc-eax	unsigned-long)
-      (mc-trapno	unsigned-long)
-      (mc-err	unsigned-long)
-      (mc-eip	unsigned-long)
-      (mc-cs	unsigned-long)
-      (mc-efl	unsigned-long)
-      (mc-uesp	unsigned-long)
-      (mc-ss	unsigned-long)))
+    (gs unsigned-long)
+    (fs unsigned-long)
+    (es unsigned-long)
+    (ds unsigned-long)
+    (edi unsigned-long)
+    (esi unsigned-long)
+    (ebp unsigned-long)
+    (esp unsigned-long)
+    (ebx unsigned-long)
+    (edx unsigned-long)
+    (ecx unsigned-long)
+    (eax unsigned-long)
+    (trapno unsigned-long)
+    (err unsigned-long)
+    (eip unsigned-long)
+    (cs unsigned-long)
+    (efl unsigned-long)
+    (uesp unsigned-long)
+    (ss unsigned-long)))
 
 #+netbsd
 (def-alien-type sigcontext
   (struct nil
-	  (uc-flags	unsigned-long)
-	  (uc-link	unsigned-long)
-	  (uc-sigmask	(array unsigned-long 4))
-	  (uc-stack	sigaltstack)
-	  (uc-mcontext	mcontext)))
-	  
+    (sc-flags unsigned-long)
+    (sc-link system-area-pointer)
+    (sc-sigmask (array unsigned-long 4))
+    (sc-stack (array unsigned-long 3))
+    (sc-mcontext sigcontext-regs)))
 
 ;; For Linux...
 #+linux
-(def-alien-type sigcontext
-    (struct nil
-	(gs  unsigned-short)
-	(__gsh   unsigned-short)
-	(fs      unsigned-short)
-	(__fsh   unsigned-short)
-	(sc-es   unsigned-short)
-	(__esh   unsigned-short)
-	(sc-ds   unsigned-short)
-	(__dsh   unsigned-short)
-	(sc-edi  unsigned-long)
-	(sc-esi  unsigned-long)
-	(ebp     unsigned-long)
-	(sc-sp   unsigned-long)
-	(sc-ebx  unsigned-long)
-	(sc-edx  unsigned-long)
-	(sc-ecx  unsigned-long)
-	(sc-eax  unsigned-long)
-	(trapno  unsigned-long)
-	(err     unsigned-long)
-	(sc-pc   unsigned-long)
-	(sc-cs   unsigned-short)
-	(__csh   unsigned-short)
-	(sc-efl  unsigned-long)
-	(esp_at_signal   unsigned-long)
-	(sc-ss   unsigned-short)
-	(__ssh   unsigned-short)
-;       (fpstate   unsigned-long) ;; fpstate struct pointer
-	(fpstate (* (struct fpstate)))
-	(sc-mask unsigned-long)
-	(cr2     unsigned-long)))
+(def-alien-type sigcontext-regs
+  (struct nil
+    (gs unsigned-long)
+    (fs unsigned-long)
+    (es unsigned-long)
+    (ds unsigned-long)
+    (edi unsigned-long)
+    (esi unsigned-long)
+    (ebp unsigned-long)
+    (esp unsigned-long)
+    (ebx unsigned-long)
+    (edx unsigned-long)
+    (ecx unsigned-long)
+    (eax unsigned-long)
+    (trapno unsigned-long)
+    (err unsigned-long)
+    (eip unsigned-long)
+    (cs unsigned-long)
+    (eflags unsigned-long)
+    (esp_at_signal unsigned-long)
+    (ss unsigned-long)
+    (fpstate (* (struct ftpstate)))
+    (oldmask unsigned-long)
+    (cr2 unsigned-long)))
 
+#+linux
+(def-alien-type sigcontext
+  (struct nil
+    (sc-flags unsigned-long)
+    (sc-link system-area-pointer)
+    (sc-stack (array unsigned-long 3))
+    (sc-mcontext sigcontext-regs)))
 
 
 ;;;; MACHINE-TYPE and MACHINE-VERSION
@@ -374,11 +350,10 @@
 ;;; Given the sigcontext, extract the internal error arguments from the
 ;;; instruction stream.
 ;;; 
-#-netbsd
 (defun internal-error-arguments (scp)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (let ((pc (int-sap (slot scp 'sc-pc))))
+    (let ((pc (sigcontext-program-counter scp)))
       (declare (type system-area-pointer pc))
       ;; using INT3 the pc is .. INT3 <here> code length bytes...
       (let* ((length (sap-ref-8 pc 1))
@@ -398,108 +373,46 @@
 	      (sc-offsets (c::read-var-integer vector index)))
 	    (values error-number (sc-offsets))))))))
 
-#+netbsd
-(defun internal-error-arguments (ucp)
-  (declare (type (alien (* sigcontext)) ucp))
-  (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
-    (let ((pc (int-sap (slot mcp 'mc-eip))))
-      (declare (type system-area-pointer pc))
-      ;; using INT3 the pc is .. INT3 <here> code length bytes...
-      (let* ((length (sap-ref-8 pc 1))
-	     (vector (make-array length :element-type '(unsigned-byte 8))))
-	(declare (type (unsigned-byte 8) length)
-		 (type (simple-array (unsigned-byte 8) (*)) vector))
-	(copy-from-system-area pc (* vm:byte-bits 2)
-			       vector (* vm:word-bits
-					 vm:vector-data-offset)
-			       (* length vm:byte-bits))
-	(let* ((index 0)
-	       (error-number (c::read-var-integer vector index)))
-	  (collect ((sc-offsets))
-	    (loop
-	      (when (>= index length)
-		(return))
-	      (sc-offsets (c::read-var-integer vector index)))
-	    (values error-number (sc-offsets))))))))
 
 ;;;; Sigcontext access functions.
 
 ;;; SIGCONTEXT-PROGRAM-COUNTER -- Interface.
 ;;;
-#-netbsd
 (defun sigcontext-program-counter (scp)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (int-sap (slot scp 'sc-pc))))
-
-#+netbsd
-(defun sigcontext-program-counter (ucp)
-  (declare (type (alien (* sigcontext)) ucp))
-  (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
-    (int-sap (slot mcp 'sc-eip))))
+    (int-sap (slot (slot scp 'sc-mcontext) 'eip))))
 
 ;;; SIGCONTEXT-REGISTER -- Interface.
 ;;;
 ;;; An escape register saves the value of a register for a frame that someone
 ;;; interrupts.  
 ;;;
-
-#-netbsd
 (defun sigcontext-register (scp index)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (case index				; ugly -- I know.
-      (#.eax-offset (slot scp 'sc-eax))
-      (#.ecx-offset (slot scp 'sc-ecx))
-      (#.edx-offset (slot scp 'sc-edx))
-      (#.ebx-offset (slot scp 'sc-ebx))
-      (#.esp-offset (slot scp 'sc-sp))
-      (#.ebp-offset (slot scp #-linux 'sc-fp #+linux 'ebp))
-      (#.esi-offset (slot scp 'sc-esi))
-      (#.edi-offset (slot scp 'sc-edi)))))
+    (case index
+      (#.eax-offset (slot (slot scp 'sc-mcontext) 'eax))
+      (#.ecx-offset (slot (slot scp 'sc-mcontext) 'ecx))
+      (#.edx-offset (slot (slot scp 'sc-mcontext) 'edx))
+      (#.ebx-offset (slot (slot scp 'sc-mcontext) 'ebx))
+      (#.esp-offset (slot (slot scp 'sc-mcontext) 'esp))
+      (#.ebp-offset (slot (slot scp 'sc-mcontext) 'ebp))
+      (#.esi-offset (slot (slot scp 'sc-mcontext) 'esi))
+      (#.edi-offset (slot (slot scp 'sc-mcontext) 'edi)))))
 
-#-netbsd
 (defun %set-sigcontext-register (scp index new)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
     (case index
-      (#.eax-offset (setf (slot scp 'sc-eax) new))
-      (#.ecx-offset (setf (slot scp 'sc-ecx) new))
-      (#.edx-offset (setf (slot scp 'sc-edx) new))
-      (#.ebx-offset (setf (slot scp 'sc-ebx) new))
-      (#.esp-offset (setf (slot scp 'sc-sp)  new))
-      (#.ebp-offset (setf (slot scp #-linux 'sc-fp #+linux 'ebp)  new))
-      (#.esi-offset (setf (slot scp 'sc-esi) new))
-      (#.edi-offset (setf (slot scp 'sc-edi) new))))
-  new)
-
-#+netbsd
-(defun sigcontext-register (ucp index)
-  (declare (type (alien (* sigcontext)) ucp))
-  (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
-    (case index				; ugly -- I know.
-      (#.eax-offset (slot mcp 'mc-eax))
-      (#.ecx-offset (slot mcp 'mc-ecx))
-      (#.edx-offset (slot mcp 'mc-edx))
-      (#.ebx-offset (slot mcp 'mc-ebx))
-      (#.esp-offset (slot mcp 'mc-esp))
-      (#.ebp-offset (slot mcp 'mc-ebp))
-      (#.esi-offset (slot mcp 'mc-esi))
-      (#.edi-offset (slot mcp 'mc-edi)))))
-
-#+netbsd
-(defun %set-sigcontext-register (ucp index new)
-  (declare (type (alien (* sigcontext)) ucp))
-  (with-alien ((mcp (* mcontext) (slot ucp 'uc-mcontext)))
-    (case index
-      (#.eax-offset (setf (slot mcp 'mc-eax) new))
-      (#.ecx-offset (setf (slot mcp 'mc-ecx) new))
-      (#.edx-offset (setf (slot mcp 'mc-edx) new))
-      (#.ebx-offset (setf (slot mcp 'mc-ebx) new))
-      (#.esp-offset (setf (slot mcp 'mc-esp) new))
-      (#.ebp-offset (setf (slot mcp 'mc-ebp) new))
-      (#.esi-offset (setf (slot mcp 'mc-esi) new))
-      (#.edi-offset (setf (slot mcp 'mc-edi) new))))
+      (#.eax-offset (setf (slot (slot scp 'sc-mcontext) 'eax) new))
+      (#.ecx-offset (setf (slot (slot scp 'sc-mcontext) 'ecx) new))
+      (#.edx-offset (setf (slot (slot scp 'sc-mcontext) 'edx) new))
+      (#.ebx-offset (setf (slot (slot scp 'sc-mcontext) 'ebx) new))
+      (#.esp-offset (setf (slot (slot scp 'sc-mcontext) 'esp) new))
+      (#.ebp-offset (setf (slot (slot scp 'sc-mcontext) 'ebp) new))
+      (#.esi-offset (setf (slot (slot scp 'sc-mcontext) 'esi) new))
+      (#.edi-offset (setf (slot (slot scp 'sc-mcontext) 'edi) new))))
   new)
 
 (defsetf sigcontext-register %set-sigcontext-register)
