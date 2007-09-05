@@ -39,6 +39,7 @@ New in this release:
       version is underway.
       Limitations: depends on files in "library:" to dump new
       executable images.
+    - CMUCL's version of CLX has been replaced with telent CLX.
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
@@ -117,8 +118,8 @@ New in this release:
     - #11 fixed.  EQL handles double-double-float's correctly now.
 
   * Other changes:
-    - UNIX:UNIX-ERRNO accesses errno value instead of the global errno
-      value
+    - UNIX:UNIX-ERRNO accesses the thread errno value instead of the
+      global errno value.
 
   * Improvements to the PCL implementation of CLOS:
     - Forward-referenced classes are allowed.
