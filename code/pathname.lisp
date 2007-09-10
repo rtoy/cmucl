@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.84 2005/11/08 17:12:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.85 2007/09/10 16:25:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -784,7 +784,11 @@ a host-structure or string."
 		(check-component-validity d :directory))
 	    (cdr dir))
       (when (and (stringp name)
-		 (or (string= name "..") (string= name ".")))
+		 (or (and (string= name "..")
+			  (not type))
+		     (and (string= name ".")
+			  (not type))))
+	;; 
 	(warn "Silly argument for a unix PATHNAME-NAME: ~S" name)))
 
     ;; More sanity checking

@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.103 2007/08/04 23:54:37 fgilham Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104 2007/09/10 16:25:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -336,11 +336,16 @@
 		     ;; nil.
 		     (setf pieces (append pieces (list (cons tail-start tail-end))))
 		     (values nil nil nil))
+		    ((string= namestr "." :start1 tail-start :end1 tail-end)
+		     ;; "." is a directory as well.
+		     (setf pieces (append pieces (list (cons tail-start tail-end))))
+		     (values nil nil nil))
 		    ((not (find-if-not #'(lambda (c)
 					   (char= c #\.))
 				       namestr :start tail-start :end tail-end))
-		     ;; Got a bunch of dots.  Make it a file of the same name, and type nil.
-		     (values (subseq namestr tail-start tail-end) nil nil))
+		     ;; Got a bunch of dots.  Make it a file of the
+		     ;; same name, and type the empty string.
+		     (values (subseq namestr tail-start (1- tail-end)) "" nil))
 		    (t
 		     (extract-name-type-and-version namestr tail-start tail-end)))))
 	;; PVE: Make sure there are no illegal characters in the name
@@ -361,7 +366,7 @@
 			  (piece-end (cdr piece)))
 		      (unless (= piece-start piece-end)
 			(cond ((string= namestr ".." :start1 piece-start
-					:end1 piece-end)
+					     :end1 piece-end)
 			       (dirs :up))
 			      ((string= namestr "**" :start1 piece-start
 					:end1 piece-end)
@@ -378,14 +383,17 @@
 			 (cons :relative (delete "." (dirs) :test #'equal)))
 			(t
 			 ;; If there is no directory and the name is
-			 ;; ".", we really got directory ".", so make it so.
-			 (if (equal name ".")
+			 ;; "." and the type is NIL, we really got
+			 ;; directory ".", so make it so.
+			 (if (and (equal name ".")
+				  (null type))
 			     (list :relative)
 			 nil))))
-		;; A file with name "." can't be the name of file on
-		;; Unix because it's a directory.  This was handled
-		;; above, so we can just set the name to nil.
-		(if (equal name ".")
+		;; A file with name "." and type NIL can't be the name
+		;; of file on Unix because it's a directory.  This was
+		;; handled above, so we can just set the name to nil.
+		(if (and (equal name ".")
+			 (null type))
 		    nil
 		    name)
 		type
@@ -507,8 +515,11 @@
 		     (find #\. name :start 1))
 	    ;; A single leading dot is ok.
 	    (error "Cannot specify a dot in a pathname name without a pathname type: ~S" name))
-	  (when (or (string= ".." name)
-		    (string= "." name))
+	  (when (or (and (string= ".." name)
+			 (not type-supplied))
+		    (and (string= "." name)
+			 (not type-supplied)))
+	    ;; Can't have a name of ".." or "." without a type.
 	    (error "Invalid value for a pathname name: ~S" name)))
 	(strings (unparse-unix-piece name)))
       (when type-supplied
