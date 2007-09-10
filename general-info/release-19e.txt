@@ -107,7 +107,11 @@ New in this release:
     - The reader for #= and ## has been enhanced to be much faster for
       cases with a large number of shared objects.  However, it is also
       somewhat slower for simple cases.
-      
+    - #p"..." now has a namestring and is treated as a pathname with
+      name ".." and type "".
+    - #p"..a" erroneously had directory (:relative).  This has been
+      fixed so that directory = nil, name = ".", and type = "a".
+
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
       float can be computed, instead of signalling an error.
