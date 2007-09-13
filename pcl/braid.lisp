@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.49 2007/09/13 04:11:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.50 2007/09/13 13:27:25 rtoy Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -630,10 +630,6 @@
       (let ((name (class-name class)))
 	(setf (kernel::find-class name) kernel-class
 	      (kernel:%class-name kernel-class) name)))))
-
-#+nil
-(defun lisp::sxhash-instance (instance)
-  (get-hash instance))
 
 #-loadable-pcl
 (eval-when (:load-toplevel :execute)
