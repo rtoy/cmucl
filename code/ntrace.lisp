@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.38 2007/08/02 21:30:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.39 2007/09/13 04:11:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,7 +60,7 @@
 ;;; A hash-table that maps each traced function to the TRACE-INFO.  The entry
 ;;; for a closure is the shared function-entry object.
 ;;;
-(defvar *traced-functions* (make-hash-table :test #'eq))
+(defvar *traced-functions* (make-hash-table :test #'equal))
 
 ;;; The TRACE-INFO structure represents all the information we need to trace a
 ;;; given function.

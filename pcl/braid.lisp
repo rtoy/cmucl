@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.48 2003/08/25 20:10:41 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.49 2007/09/13 04:11:45 rtoy Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -631,6 +631,7 @@
 	(setf (kernel::find-class name) kernel-class
 	      (kernel:%class-name kernel-class) name)))))
 
+#+nil
 (defun lisp::sxhash-instance (instance)
   (get-hash instance))
 

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.33 2005/08/18 16:55:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.34 2007/09/13 04:11:45 rtoy Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -318,6 +318,9 @@ the compiler as completely as possible.  Currently this means that
   `(cond ((std-instance-p ,instance) (std-instance-hash ,instance))
 	 ((fsc-instance-p ,instance) (fsc-instance-hash ,instance))
 	 (t (internal-error "What kind of instance is this?"))))
+
+(defun lisp::sxhash-instance (instance)
+  (get-hash instance))
 
 (defmacro get-slots (inst)
   `(cond ((std-instance-p ,inst) (std-instance-slots ,inst))
