@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.43 2006/08/18 13:19:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.44 2007/09/28 17:07:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -845,16 +845,17 @@
 		map-function)
 	       (symbol
 		(symbol-function map-function))))
-	(size (length (hash-table-next-vector hash-table)))
-	(kv-vector (hash-table-table hash-table)))
+	(size (length (hash-table-next-vector hash-table))))
     (declare (type function fun))
     (do ((i 1 (1+ i))
-	 (empty (aref kv-vector 1)))
+	 (empty (aref (hash-table-table hash-table) 1)))
 	((>= i size))
       (declare (type index i))
-      (let* ((key (aref kv-vector (* 2 i)))
+      ;; Need to grab the kv-vector on each iteration in case it was
+      ;; rehashed by a PUTHASH
+      (let* ((kv-vector (hash-table-table hash-table))
+	     (key (aref kv-vector (* 2 i)))
 	     (value (aref kv-vector (1+ (* 2 i)))))
-	;; X hack
 	(unless (and (eq key empty) (eq value empty))
 	  (funcall fun key value))))))
 
