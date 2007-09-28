@@ -111,6 +111,12 @@ New in this release:
       name ".." and type "".
     - #p"..a" erroneously had directory (:relative).  This has been
       fixed so that directory = nil, name = ".", and type = "a".
+    - Untracing of flet/labels functions now work.
+    - Compiling code using SIGNUM no longer causes a compiler error.
+      The defoptimizer for SIGNUM was missing a case for
+      double-double-float. 
+    - MAPHASH no longer causes a type-error when the mapping function
+      calls (setf gethash) on the same table.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
