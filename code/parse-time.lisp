@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.17 2007/05/29 16:33:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.18 2007/10/01 13:51:33 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 
@@ -218,8 +218,9 @@
 ;;; The decoded-time structure holds the time/date values which are
 ;;; eventually passed to 'encode-universal-time' after parsing.
 
-;;; Note: Currently nothing is done with the day of the week.  It might
-;;; be appropriate to add a function to see if it matches the date.
+;;; Note: Currently PARSE-TIME defaults the day of the week to -1 (invalid) so
+;;; the CHECK-WEEKDAY function can set it correctly.  This is less than
+;;; optimal.
 
 (defstruct decoded-time
   (second 0    :type integer)    ; Value between 0 and 59.
@@ -229,7 +230,7 @@
   (month  1    :type integer)    ; Value between 1 and 12.
   (year   1900 :type integer)    ; Value above 1899 or between 0 and 99.
   (zone   0    :type rational)   ; Value between -24 and 24 inclusive.
-  (dotw   0    :type integer))   ; Value between 0 and 6.
+  (dotw   0    :type integer))   ; Value between 0 and 6. -1 if invalid.
 
 ;;; Make-default-time returns a decoded-time structure with the default
 ;;; time values already set.  The default time is currently 00:00 on
@@ -666,10 +667,13 @@
 			  (when (= v day)
 			    (return-from lookup-name k)))
 		      *weekday-strings*)))
-      (unless (= dotw (decoded-time-dotw parsed-values))
-	(error "Specified day (~@(~A~)) doesn't match actual day (~@(~A~))"
-	       (lookup-name (decoded-time-dotw parsed-values))
-	       (lookup-name dotw))))))
+      (if (< (decoded-time-dotw parsed-values) 0)
+	  (setf (decoded-time-dotw parsed-values) dotw)
+	  (unless (= dotw (decoded-time-dotw parsed-values))
+	    (cerror "Ignore."
+		    "Specified day (~@(~A~)) doesn't match actual day (~@(~A~))"
+		    (lookup-name (decoded-time-dotw parsed-values))
+		    (lookup-name dotw)))))))
 
 
 
@@ -708,7 +712,7 @@
 			       (default-seconds nil) (default-minutes nil)
 			       (default-hours nil) (default-day nil)
 			       (default-month nil) (default-year nil)
-			       (default-zone nil) (default-weekday nil))
+			       (default-zone nil) (default-weekday -1))
   "Tries very hard to make sense out of the argument time-string and
    returns a single integer representing the universal time if
    successful.  If not, it returns nil.  If the :error-on-mismatch
