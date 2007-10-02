@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.128 2007/07/06 08:04:39 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.129 2007/10/02 15:21:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1976,7 +1976,11 @@ The result is a symbol or nil if the routine cannot be found."
        (if res
 	   (make-compiled-debug-function res
 					 (kernel:function-code-header external))
-	   (error "No such function ~A~%" fun))))))
+	   (if (and (listp fun)
+		    (member (car fun) '(flet labels)))
+	       (error "No such function ~A.  ~
+                       Perhaps it has been inlined?~%" fun)
+	       (error "No such function ~A.~%" fun)))))))
 
 
 ;;; DEBUG-FUNCTION-KIND -- Public.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.58 2005/10/25 21:14:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.59 2007/10/02 15:21:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1049,6 +1049,8 @@
 ;;; -- There is a change in the cleanup between the call in the return, so we
 ;;;    might need to introduce cleanup code.
 ;;;
+;;;    If the the function is declared notinline, we don't convert the tail
+;;; call either, so that we can trace the local call, if desired.
 (defun maybe-convert-tail-local-call (call)
   (declare (type combination call))
   (let ((return (continuation-dest (node-cont call))))
@@ -1057,6 +1059,7 @@
 	       (immediately-used-p (return-result return) call)
 	       (not (eq (functional-kind (node-home-lambda call))
 			:external))
+	       (not (functional-inlinep (node-home-lambda call)))
 	       (only-harmless-cleanups (node-block call)
 				       (node-block return)))
       (node-ends-block call)
