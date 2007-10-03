@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.70 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.71 2007/10/03 20:59:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1196,7 +1196,7 @@
 ;;;Here we prevent the scale factor from shifting all significance out of
 ;;;a number to the right.  We allow insignificant zeroes to be shifted in
 ;;;to the left right, athough it is an error to specify k and d such that this
-;;;occurs.  Perhaps we should detect both these condtions and flag them as
+;;;occurs.  Perhaps we should detect both these conditions and flag them as
 ;;;errors.  As for now, we let the user get away with it, and merely guarantee
 ;;;that at least one significant digit will appear.
 
@@ -1212,6 +1212,7 @@
       (prin1 number stream)
       (multiple-value-bind (num expt)
 	  (lisp::scale-exponent (abs number))
+	(declare (ignore num))
 	(let* ((expt (- expt k))
 	       (estr (decimal-string (abs expt)))
 	       (elen (if e (max (length estr) e) (length estr)))
@@ -1219,17 +1220,44 @@
 	  (if (and w ovf e (> elen e)) ;exponent overflow
 	      (dotimes (i w)
 		(write-char ovf stream))
+	      ;; The hairy case
 	      (let* ((fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
-		     (fmin (if (minusp k)
-			       1
-			       fdig))
+		     (fmin (if (<= k 0)
+			       (if d (+ d k -1) (- k))
+			       nil))
 		     (spaceleft (if w
 				    (- w 2 elen
 				       (if (or atsign (minusp (float-sign number)))
 					   1 0))
 				    nil)))
+		#+(or)
+		(progn
+		  (format t "fdig = ~A~%" fdig)
+		  (format t "fmin = ~A~%" fmin)
+		  (format t "spaceleft = ~A~%" spaceleft)
+		  (format t "exp  = ~A~%" exp)
+		  (format t "expt = ~S~%" expt))
+
+		;; 1 extra for spaceleft so (format nil "~9,,,-1E" pi) will
+		;; produce ".03142d+2" instead of "0.0314d+2".
+		;;
+		;; For fdig, use the larger of fdig and expt so that we'll
+		;; always get at least one digit, even if the scale factor
+		;; would have shifted all significant bits out.
 		(multiple-value-bind (fstr flen lpoint tpoint)
-		    (lisp::flonum-to-string num spaceleft fdig k fmin)
+		    (lisp::flonum-to-string (abs number)
+					    (if spaceleft (1+ spaceleft))
+					    (if fdig
+						(max fdig expt))
+					    (- expt)
+					    fmin)
+		  #+(or)
+		  (progn
+		    (format t "fstr = ~S~%" fstr)
+		    (format t "flen = ~S~%" flen)
+		    (format t "lp   = ~S~%" lpoint)
+		    (format t "tp   = ~S~%" tpoint))
+
 		  (when (and d (zerop d)) (setq tpoint nil))
 		  (when w 
 		    (decf spaceleft flen)
@@ -1281,7 +1309,8 @@
 			     ;;zero-fill before exponent if necessary
 			     (dotimes (i (- e (length estr)))
 			       (write-char #\0 stream)))
-			   (write-string estr stream))))))))))
+			   (write-string estr stream)))))))))
+      (values)))
 
 (def-format-directive #\G (colonp atsignp params)
   (when colonp
