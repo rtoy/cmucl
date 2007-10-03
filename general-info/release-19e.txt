@@ -117,6 +117,9 @@ New in this release:
       double-double-float. 
     - MAPHASH no longer causes a type-error when the mapping function
       calls (setf gethash) on the same table.
+    - NOTINLINE declarations are honored for local functions even if
+      they only have only one use.  Previously, these would be inlined
+      anyway.  This allows tracing of such functions.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
