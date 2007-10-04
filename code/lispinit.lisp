@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.76 2006/06/30 18:41:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.77 2007/10/04 19:58:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -400,7 +400,8 @@
   (print-and-call kernel::signal-init)
   (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
 
-  (set-floating-point-modes :traps '(:overflow :invalid :divide-by-zero))
+  (set-floating-point-modes :traps '(:overflow :invalid :divide-by-zero)
+			    #+x86 :precision-control #+x86 :53-bit)
   ;; This is necessary because some of the initial top level forms might
   ;; have changed the compilation policy in strange ways.
   (print-and-call c::proclaim-init)

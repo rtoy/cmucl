@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.49 2007/04/14 14:10:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.50 2007/10/04 19:58:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2276,6 +2276,9 @@
 (defconstant npx-cw-offset 0)
 (defconstant npx-sw-offset 4)
 
+(defvar *fpu-precision*
+  (dpb float-precision-53-bit float-precision-control 0))
+
 (define-vop (floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
@@ -2309,6 +2312,12 @@
    (inst sub esp-tn npx-env-size)	; make space on stack
    (inst wait)                          ; Catch any pending FPE exceptions
    (inst fstenv (make-ea :dword :base esp-tn))
+   (inst mov eax new)
+   ;; Save precision bits so we can restore them properly
+   (inst and eax #x300)
+   (inst shl eax 2)			; Convert to fixnum
+   (store-symbol-value eax *fpu-precision*)
+   ;; Now set the desired mode
    (inst mov eax new)
    (inst xor eax #x3f)	    ; turn trap enable bits into exception mask
    (inst mov (make-ea :word :base esp-tn :disp npx-cw-offset) ax-tn)

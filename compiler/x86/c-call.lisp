@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.17 2007/07/06 08:04:39 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.18 2007/10/04 19:58:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -276,6 +276,7 @@
     #+darwin (inst and esp-tn #xfffffff0)
     (move result esp-tn)))
 
+#+nil
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:node-var node)
@@ -288,6 +289,34 @@
       (inst fnstcw (make-ea :word :base esp-tn))
       (inst wait)
       (inst and (make-ea :word :base esp-tn) #xfeff)
+      (inst fldcw (make-ea :word :base esp-tn))
+      (inst wait)
+      (inst add esp-tn 4))))
+
+(define-vop (dealloc-number-stack-space)
+  (:info amount)
+  (:node-var node)
+  (:temporary (:sc unsigned-reg) precision)
+  (:temporary (:sc word-reg) cw)
+  (:generator 0
+    (unless (zerop amount)
+      (let ((delta (logandc2 (+ amount 3) 3)))
+	(inst add esp-tn delta)))
+    ;; Reset the rounding precision to 53-bits
+    (when (policy node (= float-accuracy 3))
+      (inst fnstcw (make-ea :word :base esp-tn))
+      (load-symbol-value precision *fpu-precision*)
+      (inst sar precision 2)		; Remove fixnum tag bits
+      (inst wait)
+      ;; Clear the precision bits so we can fill them in with our
+      ;; desired precision value.
+      (inst mov cw (make-ea :word :base esp-tn))
+      (inst and cw #xfcff)
+      (inst or cw
+	    (make-random-tn :kind :normal
+			    :sc (sc-or-lose 'word-reg *backend*)
+			    :offset (tn-offset precision)))
+      (inst mov (make-ea :word :base esp-tn) cw)
       (inst fldcw (make-ea :word :base esp-tn))
       (inst wait)
       (inst add esp-tn 4))))

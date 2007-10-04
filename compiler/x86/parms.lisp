@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.32 2007/07/06 08:04:39 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.33 2007/10/04 19:58:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -332,10 +332,10 @@
       :value
       :key-and-value
       :key-or-value
-      
+
+      *fpu-precision*
       ;; Spare symbols.  Rename these when you need to add some static
       ;; symbols and don't want to do a cross-compile.
-      spare-9
       spare-8
       spare-7
       spare-6
