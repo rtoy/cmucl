@@ -41,7 +41,10 @@ EOF
 
 if [ "$MAKE" = "" ]
 then    
-        MAKE="`which gmake`" || MAKE="`which make`"
+    MAKE="`which gmake`"
+    if echo $MAKE | grep '^no' > /dev/null; then
+	MAKE="make"
+    fi
 fi
 
 export MAKE

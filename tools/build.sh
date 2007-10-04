@@ -48,7 +48,10 @@ SKIPUTILS=no
 
 # If gmake exists, assume it is GNU make and use it.
 if [ -z "$MAKE" ]; then
-    MAKE="`which gmake`" || MAKE="make"
+    MAKE="`which gmake`"
+    if echo $MAKE | grep '^no' > /dev/null; then
+	MAKE="make"
+    fi
 fi
 
 usage ()
