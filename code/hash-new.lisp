@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.44 2007/09/28 17:07:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.45 2007/10/08 15:35:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -960,6 +960,19 @@
 
 ); eval-when (compile eval)
 
+;; Taken from pcl/low.lisp, and manually macroexpanded.  This needs to
+;; be here so we can cross-compile.  (Due to tracing using an equal
+;; table now.)
+
+(defun sxhash-instance (instance)
+  (cond ((%instancep instance)
+	 (%instance-ref instance 2))
+	((funcallable-instance-p instance)
+	 (%funcallable-instance-info instance 2))
+	(t
+	 (error "What kind of instance is this?"))))
+
+;; End pcl/low.lisp
 
 (defun internal-sxhash (s-expr depth)
   (declare (type index depth) (values hash))
