@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.113 2007/10/09 16:11:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.114 2007/10/09 16:45:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1838,6 +1838,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 #+double-double
 (defconstant double-double-float-min-e double-float-min-e)
 
+;; Exact powers of ten.  Must be large enough to cover the range from
+;; least-positive-double-float to most-positive-double-float
 (declaim (type (simple-array integer (326)) *powers-of-ten*))
 (defparameter *powers-of-ten*
   (make-array 326
@@ -1881,18 +1883,30 @@ radix-R.  If you have a power-list then pass it in as PL."
 	    (low-ok (evenp f))
 	    (result (make-array 50 :element-type 'base-char
 				:fill-pointer 0 :adjustable t)))
-	(labels ((fixup (r s m+ m- k)
+	(labels ((flog (x)
+		   (declare (type (float (0.0)) x))
+		   (let ((xd (etypecase x
+			       (single-float
+				(float x 1d0))
+			       (double-float
+				x)
+			       #+double-double-float
+			       (double-double-float
+				(double-double-hi x)))))
+		     (ceiling (- (the (double-float -400d0 400d0) (log xd 10d0))
+				 1d-10))))
+		 (fixup (r s m+ m- k)
 		   (if (if high-ok
 			   (>= (+ r m+) s)
 			   (> (+ r m+) s))
 		       (values (+ k 1) (generate r (* s print-base) m+ m-))
 		       (values k (generate r s m+ m-))))
 		 (scale (r s m+ m-)
-		   (let ((est (ceiling (- (log v 10d0) 1d-10))))
+		   (let* ((est (flog v))
+			  (scale (the integer (aref lisp::*powers-of-ten* (abs est)))))
 		     (if (>= est 0)
-			 (fixup r (* s (aref *powers-of-ten* est)) m+ m- est)
-			 (let ((scale (aref *powers-of-ten* (- est))))
-			   (fixup (* r scale) s (* m+ scale) (* m- scale) est)))))
+			 (fixup r (* s scale) m+ m- est)
+			 (fixup (* r scale) s (* m+ scale) (* m- scale) est))))
 		 (generate (r s m+ m-)
 		   (multiple-value-bind (d r)
 		       (truncate (* r print-base) s)

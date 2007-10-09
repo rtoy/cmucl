@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.73 2007/10/09 16:11:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.74 2007/10/09 16:45:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1219,19 +1219,17 @@
 	    ;; This scale function is basically the same as the one in
 	    ;; FLONUM-TO-DIGITS, except we don't return the computed
 	    ;; digits.  We only want the exponent.
-	    (labels ((flog (v)
-		       (declare (optimize speed))
-		       ;; Compute (ceiling (- (log v 10d0) 1d-10))
-		       (ceiling (the (double-float -400d0 400d0)
-				  (- (log (the (double-float (0d0))
-					    (etypecase v
-					      (single-float
-					       (coerce v 'double-float))
-					      (double-float
-					       v)
-					      (double-double-float
-					       (double-double-hi v))))
-					  10d0)
+	    (labels ((flog (x)
+		       (declare (type (float (0.0)) x))
+		       (let ((xd (etypecase x
+				   (single-float
+				    (float x 1d0))
+				   (double-float
+				    x)
+				   #+double-double-float
+				   (double-double-float
+				    (double-double-hi x)))))
+			 (ceiling (- (the (double-float -400d0 400d0) (log xd 10d0))
 				     1d-10))))
 		     (fixup (r s m+ k)
 		       (if (if high-ok
@@ -1240,15 +1238,12 @@
 			   (+ k 1)
 			   k))
 		     (scale (r s m+)
-		       (declare (integer r s m+)
-				(optimize speed))
-		       (let ((est (flog v)))
+		       (let* ((est (flog v))
+			      (scale (the integer (aref lisp::*powers-of-ten* (abs est)))))
 			 (if (>= est 0)
-			     (fixup r (* s (the integer (aref lisp::*powers-of-ten* est))) m+ est)
-			     (let ((scale (the integer (aref lisp::*powers-of-ten* (- est)))))
-			       (fixup (* r scale) s (* m+ scale) est))))))
+			     (fixup r (* s scale) m+ est)
+			     (fixup (* r scale) s (* m+ scale) est)))))
 	      (let (r s m+)
-		(declare (optimize speed))
 		(if (>= e 0)
 		    (let* ((be (expt float-radix e))
 			   (be1 (* be float-radix)))
