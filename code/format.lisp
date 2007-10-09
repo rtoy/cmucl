@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.74 2007/10/09 16:45:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.75 2007/10/09 17:05:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1283,104 +1283,104 @@
       (prin1 number stream)
       ;;(multiple-value-bind (num expt)
       ;;  (lisp::scale-exponent (abs number))
-      (multiple-value-bind (expt)
-	  (accurate-scale-exponent (abs number))
-	(let* ((expt (- expt k))
-	       (estr (decimal-string (abs expt)))
-	       (elen (if e (max (length estr) e) (length estr)))
-	       (add-zero-p nil))
-	  (if (and w ovf e (> elen e)) ;exponent overflow
-	      (dotimes (i w)
-		(write-char ovf stream))
-	      ;; The hairy case
-	      (let* ((fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
-		     (fmin (if (<= k 0)
-			       (if d (+ d k -1) (- k))
-			       nil))
-		     (spaceleft (if w
-				    (- w 2 elen
-				       (if (or atsign (minusp (float-sign number)))
-					   1 0))
-				    nil)))
+      (let* ((expt (if (zerop number)
+		       0
+		       (- (accurate-scale-exponent (abs number)) k)))
+	     (estr (decimal-string (abs expt)))
+	     (elen (if e (max (length estr) e) (length estr)))
+	     (add-zero-p nil))
+	(if (and w ovf e (> elen e))	;exponent overflow
+	    (dotimes (i w)
+	      (write-char ovf stream))
+	    ;; The hairy case
+	    (let* ((fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
+		   (fmin (if (<= k 0)
+			     (if d (+ d k -1) (- k))
+			     nil))
+		   (spaceleft (if w
+				  (- w 2 elen
+				     (if (or atsign (minusp (float-sign number)))
+					 1 0))
+				  nil)))
+	      #+(or)
+	      (progn
+		(format t "fdig = ~A~%" fdig)
+		(format t "fmin = ~A~%" fmin)
+		(format t "spaceleft = ~A~%" spaceleft)
+		(format t "expt = ~S~%" expt))
+
+	      ;; 1 extra for spaceleft so (format nil "~9,,,-1E" pi) will
+	      ;; produce ".03142d+2" instead of "0.0314d+2".
+	      ;;
+	      ;; For fdig, use the larger of fdig and expt so that we'll
+	      ;; always get at least one digit, even if the scale factor
+	      ;; would have shifted all significant bits out.
+	      (multiple-value-bind (fstr flen lpoint tpoint)
+		  (lisp::flonum-to-string (abs number)
+					  (if spaceleft (1+ spaceleft))
+					  (if fdig
+					      (max fdig expt))
+					  (- expt)
+					  fmin)
 		#+(or)
 		(progn
-		  (format t "fdig = ~A~%" fdig)
-		  (format t "fmin = ~A~%" fmin)
-		  (format t "spaceleft = ~A~%" spaceleft)
-		  (format t "expt = ~S~%" expt))
+		  (format t "fstr = ~S~%" fstr)
+		  (format t "flen = ~S~%" flen)
+		  (format t "lp   = ~S~%" lpoint)
+		  (format t "tp   = ~S~%" tpoint))
 
-		;; 1 extra for spaceleft so (format nil "~9,,,-1E" pi) will
-		;; produce ".03142d+2" instead of "0.0314d+2".
-		;;
-		;; For fdig, use the larger of fdig and expt so that we'll
-		;; always get at least one digit, even if the scale factor
-		;; would have shifted all significant bits out.
-		(multiple-value-bind (fstr flen lpoint tpoint)
-		    (lisp::flonum-to-string (abs number)
-					    (if spaceleft (1+ spaceleft))
-					    (if fdig
-						(max fdig expt))
-					    (- expt)
-					    fmin)
-		  #+(or)
-		  (progn
-		    (format t "fstr = ~S~%" fstr)
-		    (format t "flen = ~S~%" flen)
-		    (format t "lp   = ~S~%" lpoint)
-		    (format t "tp   = ~S~%" tpoint))
-
-		  (when (and d (zerop d)) (setq tpoint nil))
-		  (when w 
-		    (decf spaceleft flen)
-		    ;; See CLHS 22.3.3.2.  "If the parameter d is
-		    ;; omitted, ... [and] if the fraction to be
-		    ;; printed is zero then a single zero digit should
-		    ;; appear after the decimal point."  So we need to
-		    ;; subtract one from here because we're going to
-		    ;; add an extra 0 digit later.
-		    (when (and (null d) (char= (aref fstr (1- flen)) #\.))
-		      (setf add-zero-p t)
-		      (decf spaceleft))
-		    (when lpoint
-		      (if (or (> spaceleft 0) tpoint)
-			  (decf spaceleft)
-			  (setq lpoint nil)))
-		    (when (and tpoint (<= spaceleft 0))
-		      (setq tpoint nil)))
-		  (cond ((and w (< spaceleft 0) ovf)
-			 ;;significand overflow
-			 (dotimes (i w) (write-char ovf stream)))
-			(t (when w
-			     (dotimes (i spaceleft)
-			       (write-char pad stream)))
-			   (if (minusp (float-sign number))
-			       (write-char #\- stream)
-			       (if atsign (write-char #\+ stream)))
-			   (when lpoint (write-char #\0 stream))
-			   (write-string fstr stream)
-			   ;; Add a zero if we need it.  Which means
-			   ;; we figured out we need one above, or
-			   ;; another condition.  Basically, append a
-			   ;; zero if there are no width constraints
-			   ;; and if the last char to print was a
-			   ;; decimal (so the trailing fraction is
-			   ;; zero.)
-			   (when (or add-zero-p
-				     (and (null w)
-					  (char= (aref fstr (1- flen)) #\.)))
-			     ;; It's later and we're adding the zero
-			     ;; digit.
-			     (write-char #\0 stream))
-			   (write-char (if marker
-					   marker
-					   (format-exponent-marker number))
-				       stream)
-			   (write-char (if (minusp expt) #\- #\+) stream)
-			   (when e 
-			     ;;zero-fill before exponent if necessary
-			     (dotimes (i (- e (length estr)))
-			       (write-char #\0 stream)))
-			   (write-string estr stream)))))))))
+		(when (and d (zerop d)) (setq tpoint nil))
+		(when w 
+		  (decf spaceleft flen)
+		  ;; See CLHS 22.3.3.2.  "If the parameter d is
+		  ;; omitted, ... [and] if the fraction to be
+		  ;; printed is zero then a single zero digit should
+		  ;; appear after the decimal point."  So we need to
+		  ;; subtract one from here because we're going to
+		  ;; add an extra 0 digit later.
+		  (when (and (null d) (char= (aref fstr (1- flen)) #\.))
+		    (setf add-zero-p t)
+		    (decf spaceleft))
+		  (when lpoint
+		    (if (or (> spaceleft 0) tpoint)
+			(decf spaceleft)
+			(setq lpoint nil)))
+		  (when (and tpoint (<= spaceleft 0))
+		    (setq tpoint nil)))
+		(cond ((and w (< spaceleft 0) ovf)
+		       ;;significand overflow
+		       (dotimes (i w) (write-char ovf stream)))
+		      (t (when w
+			   (dotimes (i spaceleft)
+			     (write-char pad stream)))
+			 (if (minusp (float-sign number))
+			     (write-char #\- stream)
+			     (if atsign (write-char #\+ stream)))
+			 (when lpoint (write-char #\0 stream))
+			 (write-string fstr stream)
+			 ;; Add a zero if we need it.  Which means
+			 ;; we figured out we need one above, or
+			 ;; another condition.  Basically, append a
+			 ;; zero if there are no width constraints
+			 ;; and if the last char to print was a
+			 ;; decimal (so the trailing fraction is
+			 ;; zero.)
+			 (when (or add-zero-p
+				   (and (null w)
+					(char= (aref fstr (1- flen)) #\.)))
+			   ;; It's later and we're adding the zero
+			   ;; digit.
+			   (write-char #\0 stream))
+			 (write-char (if marker
+					 marker
+					 (format-exponent-marker number))
+				     stream)
+			 (write-char (if (minusp expt) #\- #\+) stream)
+			 (when e 
+			   ;;zero-fill before exponent if necessary
+			   (dotimes (i (- e (length estr)))
+			     (write-char #\0 stream)))
+			 (write-string estr stream))))))))
   (values))
 
 (def-format-directive #\G (colonp atsignp params)
