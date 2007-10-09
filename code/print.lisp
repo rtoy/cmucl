@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.114 2007/10/09 16:45:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.115 2007/10/09 16:56:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1855,8 +1855,6 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;; PAPER!"  This is a more idiomatic Lisp translation by CSR of the
 ;;; scheme implementation in that paper.
 ;;;
-;;; FIXME: Figure 1 is the unoptimized algorithm, and is noticeably
-;;; slow at finding the exponent.  Figure 2 has an improved algorithm.
 (defun flonum-to-digits (v &optional position relativep)
   ;; V is the number to be printed.  If RELATIVEP is NIL, POSITION is
   ;; the number of digits to the left of the decimal point where we
