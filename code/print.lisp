@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.112 2006/07/13 16:38:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.113 2007/10/09 16:11:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1838,6 +1838,14 @@ radix-R.  If you have a power-list then pass it in as PL."
 #+double-double
 (defconstant double-double-float-min-e double-float-min-e)
 
+(declaim (type (simple-array integer (326)) *powers-of-ten*))
+(defparameter *powers-of-ten*
+  (make-array 326
+	      :initial-contents
+	      (let (p)
+		(dotimes (k 326 (nreverse p))
+		  (push (expt 10 k) p)))))
+
 ;;; Implementation of Figure 1 from "Printing Floating-Point Numbers
 ;;; Quickly and Accurately", by Burger and Dybvig, 1996.  As the
 ;;; implementation of the Dragon algorithm above says: "DO NOT EVEN
@@ -1873,23 +1881,18 @@ radix-R.  If you have a power-list then pass it in as PL."
 	    (low-ok (evenp f))
 	    (result (make-array 50 :element-type 'base-char
 				:fill-pointer 0 :adjustable t)))
-	(labels ((scale (r s m+ m-)
-		   ;; Keep increasing k until it's big enough
-		   (do ((k 0 (1+ k))
-			(s s (* s print-base)))
-		       ((not (let ((test (+ r m+)))
-			       (or (> test s)
-				   (and high-ok (= test s)))))
-			;; k is too big.  Decrease until
-			(do ((k k (1- k))
-			     (r r (* r print-base))
-			     (m+ m+ (* m+ print-base))
-			     (m- m- (* m- print-base)))
-			    ((not (let ((test (* (+ r m+) print-base)))
-				    (or (< test s)
-					(and (not high-ok) (= test s)))))
-			     ;; k is correct.  Generate the digits.
-			     (values k (generate r s m+ m-)))))))
+	(labels ((fixup (r s m+ m- k)
+		   (if (if high-ok
+			   (>= (+ r m+) s)
+			   (> (+ r m+) s))
+		       (values (+ k 1) (generate r (* s print-base) m+ m-))
+		       (values k (generate r s m+ m-))))
+		 (scale (r s m+ m-)
+		   (let ((est (ceiling (- (log v 10d0) 1d-10))))
+		     (if (>= est 0)
+			 (fixup r (* s (aref *powers-of-ten* est)) m+ m- est)
+			 (let ((scale (aref *powers-of-ten* (- est))))
+			   (fixup (* r scale) s (* m+ scale) (* m- scale) est)))))
 		 (generate (r s m+ m-)
 		   (multiple-value-bind (d r)
 		       (truncate (* r print-base) s)
@@ -1944,28 +1947,32 @@ radix-R.  If you have a power-list then pass it in as PL."
 			  m+ float-radix
 			  m- 1)))
 	    (when position
-	      (when relativep
-		;;(aver (> position 0))
-		(do ((k 0 (1+ k))
-		     ;; running out of letters here
-		     (l 1 (* l print-base)))
-		    ((>= (* s l) (+ r m+))
-		     ;; k is now \hat{k}
-		     (if (< (+ r (* s (/ (expt print-base (- k
-							     position)) 2)))
-			    (* s (expt print-base k)))
-			 (setf position (- k position))
-			 (setf position (- k position 1))))))
-	      (let ((low (max m- (/ (* s (expt print-base
-					       position)) 2)))
-		    (high (max m+ (/ (* s (expt print-base
-						position)) 2))))
-		(when (<= m- low)
-		  (setf m- low)
-		  (setf low-ok t))
-		(when (<= m+ high)
-		  (setf m+ high)
-		  (setf high-ok t))))
+	      (flet ((expt-ten (e)
+		       (if (minusp e)
+			   (/ (aref *powers-of-ten* (- e)))
+			   (aref *powers-of-ten* e))))
+		(when relativep
+		  (let ((r+m (+ r m+)))
+		    ;;(format t "r, s = ~A, ~A~%" r s)
+		    (do ((k 0 (1+ k))
+			 ;; running out of letters here
+			 (l 1 (* l print-base)))
+			((>= (* s l) r+m)
+			 ;; k is now \hat{k}
+			 ;;(format t "r>s, k = ~A~%" k)
+			 (if (< (+ r (* s (/ (expt-ten (- k position))
+					     2)))
+				(* s (expt-ten k)))
+			     (setf position (- k position))
+			     (setf position (- k position 1)))))))
+		(let ((low (max m- (/ (* s (expt-ten position)) 2)))
+		      (high (max m+ (/ (* s (expt-ten position)) 2))))
+		  (when (<= m- low)
+		    (setf m- low)
+		    (setf low-ok t))
+		  (when (<= m+ high)
+		    (setf m+ high)
+		    (setf high-ok t)))))
 	    (scale r s m+ m-)))))))
 
 

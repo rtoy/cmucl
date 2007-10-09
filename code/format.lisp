@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.72 2007/10/04 14:39:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.73 2007/10/09 16:11:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1193,6 +1193,82 @@
 	#+double-double
 	(double-double-float #\w))))
 
+;; This is a modified version of scale in FLONUM-TO-DIGITS.  We only
+;; want the exponent, so most things not needed for the computation of
+;; the exponent has been removed.  We also implemented the
+;; floating-point log approximation given in Burger and Dybvig.  This
+;; is very noticeably faster for large and small numbers.  It is
+;; slower for intermediate sized numbers.
+(defun accurate-scale-exponent (v)
+  (declare (type float v))
+  (if (zerop v)
+      1
+      (let ((float-radix 2)		; b
+	    (float-digits (float-digits v)) ; p
+	    (min-e
+	     (etypecase v
+	       (single-float lisp::single-float-min-e)
+	       (double-float lisp::double-float-min-e)
+	       #+double-double
+	       (double-double-float lisp::double-double-float-min-e))))
+	(multiple-value-bind (f e)
+	    (integer-decode-float v)
+	  (let ( ;; FIXME: these even tests assume normal IEEE rounding
+		;; mode.  I wonder if we should cater for non-normal?
+		(high-ok (evenp f)))
+	    ;; This scale function is basically the same as the one in
+	    ;; FLONUM-TO-DIGITS, except we don't return the computed
+	    ;; digits.  We only want the exponent.
+	    (labels ((flog (v)
+		       (declare (optimize speed))
+		       ;; Compute (ceiling (- (log v 10d0) 1d-10))
+		       (ceiling (the (double-float -400d0 400d0)
+				  (- (log (the (double-float (0d0))
+					    (etypecase v
+					      (single-float
+					       (coerce v 'double-float))
+					      (double-float
+					       v)
+					      (double-double-float
+					       (double-double-hi v))))
+					  10d0)
+				     1d-10))))
+		     (fixup (r s m+ k)
+		       (if (if high-ok
+			       (>= (+ r m+) s)
+			       (> (+ r m+) s))
+			   (+ k 1)
+			   k))
+		     (scale (r s m+)
+		       (declare (integer r s m+)
+				(optimize speed))
+		       (let ((est (flog v)))
+			 (if (>= est 0)
+			     (fixup r (* s (the integer (aref lisp::*powers-of-ten* est))) m+ est)
+			     (let ((scale (the integer (aref lisp::*powers-of-ten* (- est)))))
+			       (fixup (* r scale) s (* m+ scale) est))))))
+	      (let (r s m+)
+		(declare (optimize speed))
+		(if (>= e 0)
+		    (let* ((be (expt float-radix e))
+			   (be1 (* be float-radix)))
+		      (if (/= f (expt float-radix (1- float-digits)))
+			  (setf r (* f be 2)
+				s 2
+				m+ be)
+			  (setf r (* f be1 2)
+				s (* float-radix 2)
+				m+ be1)))
+		    (if (or (= e min-e) 
+			    (/= f (expt float-radix (1- float-digits))))
+			(setf r (* f 2)
+			      s (* (expt float-radix (- e)) 2)
+			      m+ 1)
+			(setf r (* f float-radix 2)
+			      s (* (expt float-radix (- 1 e)) 2)
+			      m+ float-radix)))
+		(scale r s m+))))))))
+
 ;;;Here we prevent the scale factor from shifting all significance out of
 ;;;a number to the right.  We allow insignificant zeroes to be shifted in
 ;;;to the left right, athough it is an error to specify k and d such that this
@@ -1210,9 +1286,10 @@
 	   (or (float-infinity-p number)
 	       (float-nan-p number)))
       (prin1 number stream)
-      (multiple-value-bind (num expt)
-	  (lisp::scale-exponent (abs number))
-	(declare (ignore num))
+      ;;(multiple-value-bind (num expt)
+      ;;  (lisp::scale-exponent (abs number))
+      (multiple-value-bind (expt)
+	  (accurate-scale-exponent (abs number))
 	(let* ((expt (- expt k))
 	       (estr (decimal-string (abs expt)))
 	       (elen (if e (max (length estr) e) (length estr)))
@@ -1235,7 +1312,6 @@
 		  (format t "fdig = ~A~%" fdig)
 		  (format t "fmin = ~A~%" fmin)
 		  (format t "spaceleft = ~A~%" spaceleft)
-		  (format t "exp  = ~A~%" exp)
 		  (format t "expt = ~S~%" expt))
 
 		;; 1 extra for spaceleft so (format nil "~9,,,-1E" pi) will
@@ -1310,7 +1386,7 @@
 			     (dotimes (i (- e (length estr)))
 			       (write-char #\0 stream)))
 			   (write-string estr stream)))))))))
-      (values))
+  (values))
 
 (def-format-directive #\G (colonp atsignp params)
   (when colonp
