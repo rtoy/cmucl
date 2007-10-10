@@ -100,6 +100,10 @@ New in this release:
       o Overflow in addition, multiplication, and division returns
         infinity if traps are disabled.
       o EQL supports DOUBLE-DOUBLE-FLOAT's now.
+      o The printer and reader should now be consistent for
+        double-double-floats. 
+      o Conversion of bignums and ratios to double-double-floats
+        should be more accurate.
     - The assembler for ppc had some arguments for some instructions
       in the wrong order, producing the wrong effect. 
     - When making displaced arrays, the element types are checked to
@@ -129,6 +133,9 @@ New in this release:
     - #10 fixed.  ROUND should now return correct answers for floats
       bigger than most-positive-fixnum.
     - #11 fixed.  EQL handles double-double-float's correctly now.
+    - #1 fixed.  prin1 and ~E should produce the same results.
+    - #12 fixed.  (format t "~10,1,2,0,'*,,'DE" 1d-6) prints "0.1D-05"
+      now.
 
   * Other changes:
     - UNIX:UNIX-ERRNO accesses the thread errno value instead of the
