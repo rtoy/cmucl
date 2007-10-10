@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.37 2007/05/24 20:56:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.38 2007/10/10 00:51:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -978,16 +978,24 @@
   #+(and nil double-double)
   (frob %double-double-float double-double-float))
 
+;; Convert rational to double-double-float.  The core algorithm is
+;; from Richard Fateman.  It was slightly modified to handle rationals
+;; instead of just bignums.
+(defun rational-to-dd (rat)
+  (declare (rational rat))
+  (let* ((p (coerce rat 'double-float))
+	 (ans (%make-double-double-float p 0d0))
+	 (remainder rat))
+    (declare (double-float p)
+	     (rational remainder)
+	     (type double-double-float ans))
+    ;; Once or twice?  I think once is enough.
+    (dotimes (k 1 ans)
+      (decf remainder (rational p))
+      (setf p (coerce remainder 'double-float))
+      (setf ans (+ ans p)))))
 
-;;; FLOAT-RATIO  --  Internal
-;;;
-;;;    Convert a ratio to a float.  We avoid any rounding error by doing an
-;;; integer division.  Accuracy is important to preserve read/print
-;;; consistency, since this is ultimately how the reader reads a float.  We
-;;; scale the numerator by a power of two until the division results in the
-;;; desired number of fraction bits, then do round-to-nearest.
-;;;
-(defun float-ratio (x format)
+(defun float-ratio-float (x format)
   (let* ((signed-num (numerator x))
 	 (plusp (plusp signed-num))
 	 (num (if plusp signed-num (- signed-num)))
@@ -1017,20 +1025,16 @@
 			(len (integer-length bits)))
 		   (cond ((> len digits)
 			  (assert (= len (the fixnum (1+ digits))))
-			  (multiple-value-bind (f0 f1)
+			  (multiple-value-bind (f0)
 			      (floatit (ash bits -1))
 			    #+nil
 			    (progn
 			      (format t "1: f0, f1 = ~A ~A~%" f0 f1)
 			      (format t "   scale = ~A~%" (1+ scale)))
 			    
-			    (if f1
-				(%make-double-double-float
-				 (scale-float f0 (1+ scale))
-				 (scale-float f1 (+ 1 scale #.(- vm:double-float-digits))))
-				(scale-float f0 (1+ scale)))))
+			    (scale-float f0 (1+ scale))))
 			 (t
-			  (multiple-value-bind (f0 f1)
+			  (multiple-value-bind (f0)
 			      (floatit bits)
 			    #+nil
 			    (progn
@@ -1041,11 +1045,7 @@
 				(format t "scale-float f1 = ~A~%"
 					(scale-float f1 (- scale 53)))))
 			    
-			    (if f1
-				(make-double-double-float
-				 (scale-float f0 scale)
-				 (scale-float f1 (- scale #.vm:double-float-digits)))
-				(scale-float f0 scale)))))))
+				(scale-float f0 scale))))))
 	       (floatit (bits)
 		 (let ((sign (if plusp 0 1)))
 		   (case format
@@ -1055,10 +1055,7 @@
 		      (double-from-bits sign vm:double-float-bias bits))
 		     #+long-float
 		     (long-float
-		      (long-from-bits sign vm:long-float-bias bits))
-		     #+double-double
-		     (double-double-float
-		      (double-double-from-bits sign vm:double-float-bias bits))))))
+		      (long-from-bits sign vm:long-float-bias bits))))))
 	(loop
 	  (multiple-value-bind (fraction-and-guard rem)
 			       (truncate shifted-num den)
@@ -1078,6 +1075,24 @@
 		     (return (float-and-scale fraction-and-guard)))))
 	    (setq shifted-num (ash shifted-num -1))
 	    (incf scale)))))))
+
+;;; FLOAT-RATIO  --  Internal
+;;;
+;;;    Convert a ratio to a float.  We avoid any rounding error by doing an
+;;; integer division.  Accuracy is important to preserve read/print
+;;; consistency, since this is ultimately how the reader reads a float.  We
+;;; scale the numerator by a power of two until the division results in the
+;;; desired number of fraction bits, then do round-to-nearest.
+;;;
+#+double-double
+(defun float-ratio (x format)
+  (if (eq format 'double-double-float)
+      (rational-to-dd x)
+      (float-ratio-float x format)))
+
+#-double-double
+(defun float-ratio (x format)
+  (float-ratio-float x format))
 
 #|
 These might be useful if we ever have a machine w/o float/integer conversion
