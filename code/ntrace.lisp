@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.39 2007/09/13 04:11:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.40 2007/10/18 22:26:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,7 +158,7 @@
 ;;; :FUNCALLABLE-INSTANCE.
 ;;;
 (defun trace-fdefinition (x)
-  (multiple-value-bind (res named-p)
+  (multiple-value-bind (res named-p local)
       (typecase x
 	(symbol
 	 (cond ((special-operator-p x)
@@ -169,7 +169,7 @@
 	(function x)
 	((cons (member flet labels))
 	 ;; An extended function name for flet/labels functions.
-	 (values x t))
+	 (values (fdefinition (car (last x))) t x))
 	(t (values (fdefinition x) t)))
     (if (eval:interpreted-function-p res)
 	(values res named-p (if (eval:interpreted-function-closure res)
@@ -179,7 +179,7 @@
 	   (values (kernel:%closure-function res) named-p :compiled-closure))
 	  (#.vm:funcallable-instance-header-type
 	   (values res named-p :funcallable-instance))
-	  (t (values res named-p :compiled))))))
+	  (t (values res named-p :compiled local))))))
 
 
 ;;; TRACE-REDEFINED-UPDATE  --  Internal
@@ -189,11 +189,26 @@
 ;;;
 (defun trace-redefined-update (fname new-value)
   (when (fboundp fname)
-    (let* ((fun (trace-fdefinition fname))
-	   (info (gethash fun *traced-functions*)))
-      (when (and info (trace-info-named info))
-	(untrace-1 fname)
-	(trace-1 fname info new-value)))))
+    (multiple-value-bind (fun named kind local)
+	(trace-fdefinition fname)
+      (let* ((fkey (or local fun))
+	     (info (gethash fkey *traced-functions*)))
+	(flet ((handle-local-funs ()
+		 ;; FIXME: This is gross.  We need to grovel over the
+		 ;; *traced-functions* to see if any flet/labels functions
+		 ;; have been traced in the function we're redefining.
+		 (maphash #'(lambda (key info)
+			      (when (and (listp key)
+					 (eq fname (car (last key))))
+				(when info
+				  (untrace-1 key)
+				  (trace-1 key info new-value))))
+			  *traced-functions*)))
+	  (when (and info (trace-info-named info))
+	    (untrace-1 fname)
+	    (trace-1 fname info new-value))
+	  (handle-local-funs))))))
+
 ;;;
 (push #'trace-redefined-update ext:*setf-fdefinition-hook*)
 
@@ -428,16 +443,24 @@
 ;;; automatically retracing; this 
 ;;;
 (defun trace-1 (function-or-name info &optional definition)
-  (multiple-value-bind (fun named kind)
-      (if definition
-	  (values definition t
-		  (nth-value 2 (trace-fdefinition definition)))
+  (multiple-value-bind (fun named kind local)
+    (if definition
+	;; Tracing a new definition.  If function-or-name looks like a
+	;; local function, we trace the new definition with the local
+	;; function.  Otherwise, we do what we used to do.
+	(if (and (valid-function-name-p function-or-name)
+		 (typep function-or-name '(cons (member flet labels))))
+	    (multiple-value-bind (fun named kind)
+		(trace-fdefinition definition)
+	      (values fun t kind function-or-name))
+	    (values definition t
+		    (nth-value 2 (trace-fdefinition definition))))
 	  (trace-fdefinition function-or-name))
-    (when (gethash fun *traced-functions*)
+    (when (gethash (or local fun) *traced-functions*)
       (warn "Function ~S already TRACE'd, retracing it." function-or-name)
       (untrace-1 fun))
     
-    (let* ((debug-fun (di:function-debug-function fun))
+    (let* ((debug-fun (di:function-debug-function fun :local-name local))
 	   (encapsulated
 	    (if (eq (trace-info-encapsulated info) :default)
 		(let ((encapsulate-p
@@ -517,7 +540,7 @@
 	    (di:activate-breakpoint start)
 	    (di:activate-breakpoint end)))))
 
-      (setf (gethash fun *traced-functions*) info)))
+      (setf (gethash (or local fun) *traced-functions*) info)))
 
   function-or-name)
 
@@ -756,18 +779,21 @@
 ;;;    Untrace one function.
 ;;;
 (defun untrace-1 (function-or-name)
-  (let* ((fun (trace-fdefinition function-or-name))
-	 (info (gethash fun *traced-functions*)))
-    (cond ((not info)
-	   (warn "Function is not TRACE'd -- ~S." function-or-name))
-	  (t
-	   (cond ((trace-info-encapsulated info)
-		  (funwrap (trace-info-what info) :type 'trace))
-		 (t
-		  (di:delete-breakpoint (trace-info-start-breakpoint info))
-		  (di:delete-breakpoint (trace-info-end-breakpoint info))))
-	   (setf (trace-info-untraced info) t)
-	   (remhash fun *traced-functions*)))))
+  (multiple-value-bind (fun named kind local)
+      (trace-fdefinition function-or-name)
+    (declare (ignore named kind))
+    (let* ((key (or local fun))
+	   (info (gethash key *traced-functions*)))
+      (cond ((not info)
+	     (warn "Function is not TRACE'd -- ~S." function-or-name))
+	    (t
+	     (cond ((trace-info-encapsulated info)
+		    (funwrap (trace-info-what info) :type 'trace))
+		   (t
+		    (di:delete-breakpoint (trace-info-start-breakpoint info))
+		    (di:delete-breakpoint (trace-info-end-breakpoint info))))
+	     (setf (trace-info-untraced info) t)
+	     (remhash key *traced-functions*))))))
 
 ;;; UNTRACE-ALL  --  Internal
 ;;;

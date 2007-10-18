@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.129 2007/10/02 15:21:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.130 2007/10/18 22:26:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1923,7 +1923,9 @@ The result is a symbol or nil if the routine cannot be found."
 
 ;;; FUNCTION-DEBUG-FUNCTION -- Public.
 ;;;
-(defun function-debug-function (fun)
+;;; If LOCAL-NAME is given, try to return the debug function for the
+;;; local function (labels or flet).
+(defun function-debug-function (fun &key local-name)
   "Returns a debug-function that represents debug information for function."
   (case (get-type fun)
     (#.vm:closure-header-type
@@ -1936,12 +1938,15 @@ The result is a symbol or nil if the routine cannot be found."
 	   (t
 	    (function-debug-function (funcallable-instance-function fun)))))
     ((#.vm:function-header-type #.vm:closure-function-header-type)
-      (let* ((name (kernel:%function-name fun))
+     (let* ((name (if (and local-name
+			   (valid-function-name-p local-name))
+		      local-name
+		      (kernel:%function-name fun)))
 	     (component (kernel:function-code-header fun))
 	     (res (find-if
 		   #'(lambda (x)
 		       (and (c::compiled-debug-function-p x)
-			    (eq (c::compiled-debug-function-name x) name)
+			    (equal (c::compiled-debug-function-name x) name)
 			    (eq (c::compiled-debug-function-kind x) nil)))
 		   (get-debug-info-function-map
 		    (kernel:%code-debug-info component)))))
@@ -1955,32 +1960,7 @@ The result is a symbol or nil if the routine cannot be found."
 	    (debug-function-from-pc component
 				    (* (- (kernel:function-word-offset fun)
 					  (kernel:get-header-data component))
-				       vm:word-bytes)))))
-    (#.vm:list-pointer-type
-     ;; FIXME: Kind of gross, but this is how we recognize LABELS/FLET
-     ;; functions: we're given a list of the function name.
-     (unless (valid-function-name-p fun)
-       (error "Invalid function name: ~A~%" fun))
-     (let* ((external (fdefinition (car (last fun))))
-	    (component (kernel:function-code-header external))
-	    (res 
-	     ;; Look through all the debug functions until we find one
-	     ;; that matches our name.
-	     (find-if
-	      #'(lambda (x)
-		  (and (c::compiled-debug-function-p x)
-		       (equal (c::compiled-debug-function-name x) fun)
-		       (eq (c::compiled-debug-function-kind x) nil)))
-	      (get-debug-info-function-map
-	       (kernel:%code-debug-info component)))))
-       (if res
-	   (make-compiled-debug-function res
-					 (kernel:function-code-header external))
-	   (if (and (listp fun)
-		    (member (car fun) '(flet labels)))
-	       (error "No such function ~A.  ~
-                       Perhaps it has been inlined?~%" fun)
-	       (error "No such function ~A.~%" fun)))))))
+				       vm:word-bytes)))))))
 
 
 ;;; DEBUG-FUNCTION-KIND -- Public.
