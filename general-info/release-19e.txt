@@ -104,6 +104,7 @@ New in this release:
         double-double-floats. 
       o Conversion of bignums and ratios to double-double-floats
         should be more accurate.
+      o Double-double-float's should have print/read consistency now.
     - The assembler for ppc had some arguments for some instructions
       in the wrong order, producing the wrong effect. 
     - When making displaced arrays, the element types are checked to
@@ -115,7 +116,6 @@ New in this release:
       name ".." and type "".
     - #p"..a" erroneously had directory (:relative).  This has been
       fixed so that directory = nil, name = ".", and type = "a".
-    - Untracing of flet/labels functions now work.
     - Compiling code using SIGNUM no longer causes a compiler error.
       The defoptimizer for SIGNUM was missing a case for
       double-double-float. 
@@ -124,6 +124,10 @@ New in this release:
     - NOTINLINE declarations are honored for local functions even if
       they only have only one use.  Previously, these would be inlined
       anyway.  This allows tracing of such functions.
+    - TRACE and UNTRACE should now work as expected for local
+      labels/flet functions.  Untracing should work.  Redefining a
+      function should automatically retrace the local functions if
+      they were traced previously.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
