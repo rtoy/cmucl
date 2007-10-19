@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/widgets.c,v 1.4 1997/08/22 20:49:38 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/widgets.c,v 1.5 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -29,7 +29,7 @@
 #include "tables.h"
 #include "requests.h"
 
-int RXtAppCreateShell(message_t message)
+void RXtAppCreateShell(message_t message)
 {
   Widget shell;
   ResourceList resources;
@@ -44,7 +44,7 @@ int RXtAppCreateShell(message_t message)
   reply_with_widget(message,shell);
 }
 
-int RXtRealizeWidget(message_t message)
+void RXtRealizeWidget(message_t message)
 {
   Widget widget;
 
@@ -52,7 +52,7 @@ int RXtRealizeWidget(message_t message)
   XtRealizeWidget(widget);
 }
 
-int RXtUnrealizeWidget(message_t message)
+void RXtUnrealizeWidget(message_t message)
 {
   Widget widget;
 
@@ -60,7 +60,7 @@ int RXtUnrealizeWidget(message_t message)
   XtUnrealizeWidget(widget);
 }
 
-int RXtMapWidget(message_t message)
+void RXtMapWidget(message_t message)
 {
   Widget widget;
 
@@ -68,7 +68,7 @@ int RXtMapWidget(message_t message)
   XtMapWidget(widget);
 }
 
-int RXtUnmapWidget(message_t message)
+void RXtUnmapWidget(message_t message)
 {
   Widget widget;
 
@@ -76,7 +76,7 @@ int RXtUnmapWidget(message_t message)
   XtUnmapWidget(widget);
 }
 
-int RXtSetSensitive(message_t message)
+void RXtSetSensitive(message_t message)
 {
   Widget widget;
   Boolean sensitivity;
@@ -86,7 +86,7 @@ int RXtSetSensitive(message_t message)
   XtSetSensitive(widget,sensitivity);
 }
 
-int RXtCreateWidget(message_t message)
+void RXtCreateWidget(message_t message)
 {
   String name;
   WidgetClass class;
@@ -106,7 +106,7 @@ int RXtCreateWidget(message_t message)
   reply_with_widget(message,w);
 }
 
-int RXtCreateManagedWidget(message_t message)
+void RXtCreateManagedWidget(message_t message)
 {
   String name;
   WidgetClass class;
@@ -126,7 +126,7 @@ int RXtCreateManagedWidget(message_t message)
   reply_with_widget(message,w);
 }
 
-int RXtDestroyWidget(message_t message)
+void RXtDestroyWidget(message_t message)
 {
   Widget widget;
 
@@ -134,9 +134,8 @@ int RXtDestroyWidget(message_t message)
   XtDestroyWidget(widget);
 }
 
-int RXtCreatePopupShell(message_t message)
+void RXtCreatePopupShell(message_t message)
 {
-  message_t reply;
   String name;
   WidgetClass class;
   Widget parent,widget;
@@ -156,7 +155,7 @@ int RXtCreatePopupShell(message_t message)
   reply_with_widget(message,widget);
 }
 
-int RXtPopup(message_t message)
+void RXtPopup(message_t message)
 {
   Widget widget;
   XtGrabKind grab_kind;
@@ -166,7 +165,7 @@ int RXtPopup(message_t message)
   XtPopup(widget,grab_kind);
 }
 
-int RXtPopdown(message_t message)
+void RXtPopdown(message_t message)
 {
   Widget widget;
 
@@ -174,7 +173,7 @@ int RXtPopdown(message_t message)
   XtPopdown(widget);
 }
 
-int RXtManageChild(message_t message)
+void RXtManageChild(message_t message)
 {
   Widget widget;
 
@@ -182,7 +181,7 @@ int RXtManageChild(message_t message)
   XtManageChild(widget);
 }
 
-int RXtUnmanageChild(message_t message)
+void RXtUnmanageChild(message_t message)
 {
   Widget widget;
 
@@ -190,7 +189,7 @@ int RXtUnmanageChild(message_t message)
   XtUnmanageChild(widget);
 }
 
-int RXtManageChildren(message_t message)
+void RXtManageChildren(message_t message)
 {
   MyWidgetList list;
 
@@ -198,7 +197,7 @@ int RXtManageChildren(message_t message)
   XtManageChildren(list.widgets,list.length);
 }
 
-int RXtUnmanageChildren(message_t message)
+void RXtUnmanageChildren(message_t message)
 {
   MyWidgetList list;
 
@@ -206,7 +205,7 @@ int RXtUnmanageChildren(message_t message)
   XtUnmanageChildren(list.widgets,list.length);
 }
 
-int RXtIsManaged(message_t message)
+void RXtIsManaged(message_t message)
 {
   Widget w;
 
@@ -214,7 +213,7 @@ int RXtIsManaged(message_t message)
   reply_with_boolean(message,XtIsManaged(w));
 }
 
-int RXtPopupSpringLoaded(message_t message)
+void RXtPopupSpringLoaded(message_t message)
 {
   Widget w;
 
@@ -222,7 +221,7 @@ int RXtPopupSpringLoaded(message_t message)
   XtPopupSpringLoaded(w);
 }
 
-int RXtIsRealized(message_t message)
+void RXtIsRealized(message_t message)
 {
   Widget w;
 
@@ -230,7 +229,7 @@ int RXtIsRealized(message_t message)
   reply_with_boolean(message,XtIsRealized(w));
 }
 
-int RXtWindow(message_t message)
+void RXtWindow(message_t message)
 {
   Widget w;
   message_t reply=prepare_reply(message);
@@ -242,7 +241,7 @@ int RXtWindow(message_t message)
   must_confirm=False;
 }
 
-int RXtName(message_t message)
+void RXtName(message_t message)
 {
   Widget w;
 
@@ -250,7 +249,7 @@ int RXtName(message_t message)
   reply_with_string(message,XtName(w));
 }
 
-int RXtIsSensitive(message_t message)
+void RXtIsSensitive(message_t message)
 {
   Widget w;
 
@@ -259,7 +258,7 @@ int RXtIsSensitive(message_t message)
 }
 
 #define XT_IS_REQUEST(WHAT) \
-int RXtIs##WHAT(message_t message) \
+void RXtIs##WHAT(message_t message) \
 {\
     Widget w;\
     toolkit_read_value(message, &w, XtRWidget);\
@@ -278,7 +277,7 @@ XT_IS_REQUEST(TransientShell)
 XT_IS_REQUEST(VendorShell)
 XT_IS_REQUEST(WMShell)
 
-int RXtNameToWidget(message_t message)
+void RXtNameToWidget(message_t message)
 {
    String name;
    Widget reference;
@@ -289,14 +288,14 @@ int RXtNameToWidget(message_t message)
    reply_with_widget(message, XtNameToWidget(reference, name));
    }
 
-int RXtParent(message_t message)
+void RXtParent(message_t message)
 {
    Widget widget;
    toolkit_read_value(message, &widget, XtRWidget);
    reply_with_widget(message, XtParent(widget));
    }
 
-int RXtTranslateCoords(message_t message)
+void RXtTranslateCoords(message_t message)
 {
   Widget w;
   int x,y,root_x,root_y;
@@ -318,7 +317,7 @@ int RXtTranslateCoords(message_t message)
 
 
 
-int RXmCreateMenuBar(message_t message)
+void RXmCreateMenuBar(message_t message)
 {
   String name;
   Widget widget,parent;
@@ -335,7 +334,7 @@ int RXmCreateMenuBar(message_t message)
   reply_with_widget(message,widget);
 }
 
-int RXmCreateOptionMenu(message_t message)
+void RXmCreateOptionMenu(message_t message)
 {
   String name;
   Widget widget,parent;
@@ -352,7 +351,7 @@ int RXmCreateOptionMenu(message_t message)
   reply_with_widget(message,widget);
 }
 
-int RXmCreateRadioBox(message_t message)
+void RXmCreateRadioBox(message_t message)
 {
   String name;
   Widget widget,parent;
@@ -387,77 +386,77 @@ void dialog_maker(message_t message,Widget (*buildfunc)(),WidgetClass class)
   reply_with_widgets(message,this,shell);
 }
 
-int RXmCreateWarningDialog(message_t message)
+void RXmCreateWarningDialog(message_t message)
 {
   dialog_maker(message,XmCreateWarningDialog,xmMessageBoxWidgetClass);
 }
 
-int RXmCreateBulletinBoardDialog(message_t message)
+void RXmCreateBulletinBoardDialog(message_t message)
 {
   dialog_maker(message,XmCreateBulletinBoardDialog,xmBulletinBoardWidgetClass);
 }
 
-int RXmCreateErrorDialog(message_t message)
+void RXmCreateErrorDialog(message_t message)
 {
   dialog_maker(message,XmCreateErrorDialog,xmMessageBoxWidgetClass);
 }
 
-int RXmCreateFileSelectionDialog(message_t message)
+void RXmCreateFileSelectionDialog(message_t message)
 {
   dialog_maker(message,XmCreateFileSelectionDialog,xmFileSelectionBoxWidgetClass);
 }
 
-int RXmCreateFormDialog(message_t message)
+void RXmCreateFormDialog(message_t message)
 {
   dialog_maker(message,XmCreateFormDialog,xmFormWidgetClass);
 }
 
-int RXmCreateInformationDialog(message_t message)
+void RXmCreateInformationDialog(message_t message)
 {
   dialog_maker(message,XmCreateInformationDialog,xmMessageBoxWidgetClass);
 }
 
-int RXmCreateMessageDialog(message_t message)
+void RXmCreateMessageDialog(message_t message)
 {
   dialog_maker(message,XmCreateMessageDialog,xmMessageBoxWidgetClass);
 }
 
-int RXmCreatePopupMenu(message_t message)
+void RXmCreatePopupMenu(message_t message)
 {
   dialog_maker(message,XmCreatePopupMenu,xmRowColumnWidgetClass);
 }
 
-int RXmCreatePromptDialog(message_t message)
+void RXmCreatePromptDialog(message_t message)
 {
   dialog_maker(message,XmCreatePromptDialog,xmSelectionBoxWidgetClass);
 }
 
-int RXmCreatePulldownMenu(message_t message)
+void RXmCreatePulldownMenu(message_t message)
 {
   dialog_maker(message,XmCreatePulldownMenu,xmRowColumnWidgetClass);
 }
 
-int RXmCreateQuestionDialog(message_t message)
+void RXmCreateQuestionDialog(message_t message)
 {
   dialog_maker(message,XmCreateQuestionDialog,xmMessageBoxWidgetClass);
 }
 
-int RXmCreateScrolledList(message_t message)
+void RXmCreateScrolledList(message_t message)
 {
   dialog_maker(message,XmCreateScrolledList,xmListWidgetClass);
 }
 
-int RXmCreateScrolledText(message_t message)
+void RXmCreateScrolledText(message_t message)
 {
   dialog_maker(message,XmCreateScrolledText,xmTextWidgetClass);
 }
 
-int RXmCreateSelectionDialog(message_t message)
+void RXmCreateSelectionDialog(message_t message)
 {
   dialog_maker(message,XmCreateSelectionDialog,xmSelectionBoxWidgetClass);
 }
 
-int RXmCreateWorkingDialog(message_t message)
+void RXmCreateWorkingDialog(message_t message)
 {
   dialog_maker(message,XmCreateWorkingDialog,xmMessageBoxWidgetClass);
 }
@@ -466,7 +465,7 @@ int RXmCreateWorkingDialog(message_t message)
 
 /* Some random functions */
 
-int RXCreateFontCursor(message_t message)
+void RXCreateFontCursor(message_t message)
 {
   int shape;
   Cursor crs;

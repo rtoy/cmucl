@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/events.c,v 1.3 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/events.c,v 1.4 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -378,7 +378,7 @@ void write_event(message_t reply,XEvent *event)
 
 
 
-int RTransportEvent(message_t message)
+void RTransportEvent(message_t message)
 {
   XEvent *event;
   message_t reply = prepare_reply(message);
@@ -394,7 +394,7 @@ int RTransportEvent(message_t message)
 
 
 
-int RXtAddEventHandler(message_t message)
+void RXtAddEventHandler(message_t message)
 {
   Widget widget;
   int mask,non_maskable;
@@ -409,10 +409,10 @@ int RXtAddEventHandler(message_t message)
   else
     f = EventHandler;
 
-  XtAddEventHandler(widget,mask,non_maskable,f,mask);
+  XtAddEventHandler(widget,mask,non_maskable,f,(XtPointer)mask);
 }
 
-int RXtRemoveEventHandler(message_t message)
+void RXtRemoveEventHandler(message_t message)
 {
   Widget widget;
   int mask,non_maskable;
@@ -427,7 +427,7 @@ int RXtRemoveEventHandler(message_t message)
   else
     f = EventHandler;
 
-  XtRemoveEventHandler(widget,mask,non_maskable,f,mask);
+  XtRemoveEventHandler(widget,mask,non_maskable,f,(XtPointer)mask);
 }
 
 void CoreEventHandler(Widget widget,int mask,int nonmaskable,XEvent *event)

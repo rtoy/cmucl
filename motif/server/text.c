@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/text.c,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/text.c,v 1.3 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -23,7 +23,7 @@
 
 /* Functions for using the XmText widgets */
 
-int RXmTextClearSelection(message_t message)
+void RXmTextClearSelection(message_t message)
 {
   Widget w;
   Time t;
@@ -33,7 +33,7 @@ int RXmTextClearSelection(message_t message)
   XmTextClearSelection(w,t);
 }
 
-int RXmTextCopy(message_t message)
+void RXmTextCopy(message_t message)
 {
   Widget w;
   Time t;
@@ -43,7 +43,7 @@ int RXmTextCopy(message_t message)
   reply_with_boolean(message,XmTextCopy(w,t));
 }
 
-int RXmTextCut(message_t message)
+void RXmTextCut(message_t message)
 {
   Widget w;
   Time t;
@@ -59,37 +59,37 @@ int RXmTextCut(message_t message)
   toolkit_read_value(message,&w,XtRWidget);      \
   reply_func(message,query_func(w))
 
-int RXmTextGetBaseline(message_t message)
+void RXmTextGetBaseline(message_t message)
 {
   DEFINE_TEXT_QUERY(XmTextGetBaseline,reply_with_integer);
 }
 
-int RXmTextGetEditable(message_t message)
+void RXmTextGetEditable(message_t message)
 {
   DEFINE_TEXT_QUERY(XmTextGetEditable,reply_with_boolean);
 }
 
-int RXmTextGetInsertionPosition(message_t message)
+void RXmTextGetInsertionPosition(message_t message)
 {
   DEFINE_TEXT_QUERY(XmTextGetInsertionPosition,reply_with_integer);
 }
 
-int RXmTextGetLastPosition(message_t message)
+void RXmTextGetLastPosition(message_t message)
 {
   DEFINE_TEXT_QUERY(XmTextGetLastPosition,reply_with_integer);
 }
 
-int RXmTextGetMaxLength(message_t message)
+void RXmTextGetMaxLength(message_t message)
 {
   DEFINE_TEXT_QUERY(XmTextGetMaxLength,reply_with_integer);
 }
 
-int RXmTextGetTopCharacter(message_t message)
+void RXmTextGetTopCharacter(message_t message)
 {
   DEFINE_TEXT_QUERY(XmTextGetTopCharacter,reply_with_integer);
 }
 
-int RXmTextGetSelection(message_t message)
+void RXmTextGetSelection(message_t message)
 {
   Widget w;
   char *sel;
@@ -100,7 +100,7 @@ int RXmTextGetSelection(message_t message)
   register_garbage(sel,GarbageData);
 }
 
-int RXmTextGetSelectionPosition(message_t message)
+void RXmTextGetSelectionPosition(message_t message)
 {
   Widget w;
   Boolean result;
@@ -118,7 +118,7 @@ int RXmTextGetSelectionPosition(message_t message)
   must_confirm=False;
 }
 
-int RXmTextGetString(message_t message)
+void RXmTextGetString(message_t message)
 {
   Widget w;
   char *s;
@@ -129,7 +129,7 @@ int RXmTextGetString(message_t message)
   register_garbage(s,GarbageData);
 }
 
-int RXmTextInsert(message_t message)
+void RXmTextInsert(message_t message)
 {
   Widget w;
   XmTextPosition pos;
@@ -142,17 +142,17 @@ int RXmTextInsert(message_t message)
 }
 
 /* These aren't really query functions, but they fit the model of one */
-int RXmTextPaste(message_t message)
+void RXmTextPaste(message_t message)
 {
   DEFINE_TEXT_QUERY(XmTextPaste,reply_with_boolean);
 }
 
-int RXmTextRemove(message_t message)
+void RXmTextRemove(message_t message)
 {
   DEFINE_TEXT_QUERY(XmTextRemove,reply_with_boolean);
 }
 
-int RXmTextPosToXY(message_t message)
+void RXmTextPosToXY(message_t message)
 {
   Widget w;
   XmTextPosition pos;
@@ -172,7 +172,7 @@ int RXmTextPosToXY(message_t message)
   must_confirm=False;
 }
 
-int RXmTextReplace(message_t message)
+void RXmTextReplace(message_t message)
 {
   Widget w;
   XmTextPosition from,to;
@@ -193,47 +193,47 @@ int RXmTextReplace(message_t message)
   toolkit_read_value(message,&value,reptype); \
   setter(w,value)
 
-int RXmTextScroll(message_t message)
+void RXmTextScroll(message_t message)
 {
   DEFINE_TEXT_SET(XmTextScroll,int,XtRInt);
 }
 
-int RXmTextSetAddMode(message_t message)
+void RXmTextSetAddMode(message_t message)
 {
   DEFINE_TEXT_SET(XmTextSetAddMode,int,XtRBoolean);
 }
 
-int RXmTextSetEditable(message_t message)
+void RXmTextSetEditable(message_t message)
 {
   DEFINE_TEXT_SET(XmTextSetEditable,int,XtRBoolean);
 }
 
-int RXmTextSetInsertionPosition(message_t message)
+void RXmTextSetInsertionPosition(message_t message)
 {
   DEFINE_TEXT_SET(XmTextSetInsertionPosition,XmTextPosition,XtRInt);
 }
 
-int RXmTextSetMaxLength(message_t message)
+void RXmTextSetMaxLength(message_t message)
 {
   DEFINE_TEXT_SET(XmTextSetMaxLength,int,XtRInt);
 }
 
-int RXmTextSetString(message_t message)
+void RXmTextSetString(message_t message)
 {
   DEFINE_TEXT_SET(XmTextSetString,String,XtRString);
 }
 
-int RXmTextSetTopCharacter(message_t message)
+void RXmTextSetTopCharacter(message_t message)
 {
   DEFINE_TEXT_SET(XmTextSetTopCharacter,XmTextPosition,XtRInt);
 }
 
-int RXmTextShowPosition(message_t message)
+void RXmTextShowPosition(message_t message)
 {
   DEFINE_TEXT_SET(XmTextShowPosition,XmTextPosition,XtRInt);
 }
 
-int RXmTextSetHighlight(message_t message)
+void RXmTextSetHighlight(message_t message)
 {
   Widget w;
   XmTextPosition left,right;
@@ -246,7 +246,7 @@ int RXmTextSetHighlight(message_t message)
   XmTextSetHighlight(w,left,right,mode);
 }
 
-int RXmTextSetSelection(message_t message)
+void RXmTextSetSelection(message_t message)
 {
   Widget w;
   XmTextPosition first,last;
@@ -259,7 +259,7 @@ int RXmTextSetSelection(message_t message)
   XmTextSetSelection(w,first,last,t);
 }
 
-int RXmTextXYToPos(message_t message)
+void RXmTextXYToPos(message_t message)
 {
   Widget w;
   Position x,y;

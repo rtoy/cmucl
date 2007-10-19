@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/list.c,v 1.3 1997/08/22 20:49:34 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/list.c,v 1.4 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -44,7 +44,7 @@ void find_items_resources(Widget w, String *items, String *count)
     *items = *count = NULL;
 }
 
-int RSetItems(message_t message)
+void RSetItems(message_t message)
 {
   Widget w;
   StringTable items;
@@ -57,7 +57,7 @@ int RSetItems(message_t message)
   find_items_resources(w,&items_name,&count_name);
   if( !items_name ) {
     XtWarning("Invalid widget class in SET-ITEMS.  Ignoring request.");
-    return NULL;
+    return;
   }
 
   XtSetArg(args[0], items_name, items.data);
@@ -65,7 +65,7 @@ int RSetItems(message_t message)
   XtSetValues(w, args, 2);
 }
 
-int RGetItems(message_t message)
+void RGetItems(message_t message)
 {
   Widget w;
   StringTable items;
@@ -78,7 +78,7 @@ int RGetItems(message_t message)
   find_items_resources(w,&items_name,&count_name);
   if( !items_name ) {
     XtWarning("Invalid widget class in GET-ITEMS.  Ignoring request.");
-    return NULL;
+    return;
   }
 
   XtSetArg(args[0], items_name, &items.data);
@@ -91,7 +91,7 @@ int RGetItems(message_t message)
   must_confirm = False;
 }
 
-int RXmListAddItem(message_t message)
+void RXmListAddItem(message_t message)
 {
   Widget w;
   XmString item;
@@ -103,7 +103,7 @@ int RXmListAddItem(message_t message)
   XmListAddItem(w,item,pos);
 }
 
-int RXmListAddItemUnselected(message_t message)
+void RXmListAddItemUnselected(message_t message)
 {
   Widget w;
   XmString item;
@@ -115,7 +115,7 @@ int RXmListAddItemUnselected(message_t message)
   XmListAddItemUnselected(w,item,pos);
 }
 
-int RXmListDeleteItem(message_t message)
+void RXmListDeleteItem(message_t message)
 {
   Widget w;
   XmString item;
@@ -126,7 +126,7 @@ int RXmListDeleteItem(message_t message)
 }
 
 
-int RXmListDeletePos(message_t message)
+void RXmListDeletePos(message_t message)
 {
   Widget w;
   int pos;
@@ -136,7 +136,7 @@ int RXmListDeletePos(message_t message)
   XmListDeletePos(w,pos);
 }
 
-int RXmListDeselectAllItems(message_t message)
+void RXmListDeselectAllItems(message_t message)
 {
   Widget w;
 
@@ -144,7 +144,7 @@ int RXmListDeselectAllItems(message_t message)
   XmListDeselectAllItems(w);
 }
 
-int RXmListDeselectItem(message_t message)
+void RXmListDeselectItem(message_t message)
 {
   Widget w;
   XmString item;
@@ -154,7 +154,7 @@ int RXmListDeselectItem(message_t message)
   XmListDeselectItem(w,item);
 }
 
-int RXmListDeselectPos(message_t message)
+void RXmListDeselectPos(message_t message)
 {
   Widget w;
   int pos;
@@ -164,7 +164,7 @@ int RXmListDeselectPos(message_t message)
   XmListDeselectPos(w,pos);
 }
 
-int RXmListSelectItem(message_t message)
+void RXmListSelectItem(message_t message)
 {
   Widget w;
   XmString item;
@@ -176,7 +176,7 @@ int RXmListSelectItem(message_t message)
   XmListSelectItem(w,item,notify);
 }
 
-int RXmListSelectPos(message_t message)
+void RXmListSelectPos(message_t message)
 {
   Widget w;
   int pos;
@@ -188,7 +188,7 @@ int RXmListSelectPos(message_t message)
   XmListSelectPos(w,pos,notify);
 }
 
-int RXmListSetBottomItem(message_t message)
+void RXmListSetBottomItem(message_t message)
 {
   Widget w;
   XmString item;
@@ -198,7 +198,7 @@ int RXmListSetBottomItem(message_t message)
   XmListSetBottomItem(w,item);
 }
 
-int RXmListSetBottomPos(message_t message)
+void RXmListSetBottomPos(message_t message)
 {
   Widget w;
   int pos;
@@ -208,7 +208,7 @@ int RXmListSetBottomPos(message_t message)
   XmListSetBottomPos(w,pos);
 }
 
-int RXmListSetHorizPos(message_t message)
+void RXmListSetHorizPos(message_t message)
 {
   Widget w;
   int pos;
@@ -218,7 +218,7 @@ int RXmListSetHorizPos(message_t message)
   XmListSetHorizPos(w,pos);
 }
 
-int RXmListSetItem(message_t message)
+void RXmListSetItem(message_t message)
 {
   Widget w;
   XmString item;
@@ -228,7 +228,7 @@ int RXmListSetItem(message_t message)
   XmListSetItem(w,item);
 }
 
-int RXmListSetPos(message_t message)
+void RXmListSetPos(message_t message)
 {
   Widget w;
   int pos;
@@ -238,7 +238,7 @@ int RXmListSetPos(message_t message)
   XmListSetPos(w,pos);
 }
 
-int RXmListAddItems(message_t message)
+void RXmListAddItems(message_t message)
 {
   Widget w;
   StringTable items;
@@ -250,7 +250,7 @@ int RXmListAddItems(message_t message)
   XmListAddItems(w,(XmString *)items.data,items.length,pos);
 }
 
-int RXmListDeleteAllItems(message_t message)
+void RXmListDeleteAllItems(message_t message)
 {
   Widget w;
 
@@ -258,7 +258,7 @@ int RXmListDeleteAllItems(message_t message)
   XmListDeleteAllItems(w);
 }
 
-int RXmListDeleteItems(message_t message)
+void RXmListDeleteItems(message_t message)
 {
   Widget w;
   StringTable items;
@@ -268,7 +268,7 @@ int RXmListDeleteItems(message_t message)
   XmListDeleteItems(w,(XmString *)items.data,items.length);
 }
 
-int RXmListDeleteItemsPos(message_t message)
+void RXmListDeleteItemsPos(message_t message)
 {
   Widget w;
   int count,pos;
@@ -279,7 +279,7 @@ int RXmListDeleteItemsPos(message_t message)
   XmListDeleteItemsPos(w,count,pos);
 }
 
-int RXmListItemExists(message_t message)
+void RXmListItemExists(message_t message)
 {
   Widget w;
   XmString item;
@@ -289,7 +289,7 @@ int RXmListItemExists(message_t message)
   reply_with_boolean(message,XmListItemExists(w,item));
 }
 
-int RXmListItemPos(message_t message)
+void RXmListItemPos(message_t message)
 {
   Widget w;
   XmString item;
@@ -299,7 +299,7 @@ int RXmListItemPos(message_t message)
   reply_with_integer(message,XmListItemPos(w,item));
 }
 
-int RXmListReplaceItems(message_t message)
+void RXmListReplaceItems(message_t message)
 {
   Widget w;
   StringTable old,new;
@@ -310,7 +310,7 @@ int RXmListReplaceItems(message_t message)
   XmListReplaceItems(w,(XmString *)old.data,old.length,(XmString *)new.data);
 }
 
-int RXmListReplaceItemsPos(message_t message)
+void RXmListReplaceItemsPos(message_t message)
 {
   Widget w;
   StringTable new;
@@ -322,7 +322,7 @@ int RXmListReplaceItemsPos(message_t message)
   XmListReplaceItemsPos(w,(XmString *)new.data,new.length,pos);
 }
 
-int RXmListSetAddMode(message_t message)
+void RXmListSetAddMode(message_t message)
 {
   Widget w;
   Boolean state;
@@ -332,7 +332,7 @@ int RXmListSetAddMode(message_t message)
   XmListSetAddMode(w,state);
 }
 
-int RXmListGetSelectedPos(message_t message)
+void RXmListGetSelectedPos(message_t message)
 {
   Widget w;
   IntList pos;

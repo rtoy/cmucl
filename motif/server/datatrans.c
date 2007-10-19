@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.8 2000/02/15 11:59:25 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.9 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -153,7 +153,7 @@ void message_write_resource_list(message_t message,ResourceList *list,int tag)
     else {
        int size;
        long type_tag = find_type_entry(type);
-       unsigned long val;
+       unsigned long val = 0;
        if( type_tag < 0 ) {
           fprintf(stderr,"Choked on type %s\n",type);
           fflush(stderr);
@@ -527,7 +527,7 @@ void toolkit_write_value(message_t message, caddr_t value, String type)
 
 void toolkit_read_value(message_t message,char *dest,String type)
 {
-  int tag,data,stuff;
+  int tag,data;
   type_reader read_value;
 
   data = message_get_dblword(message);

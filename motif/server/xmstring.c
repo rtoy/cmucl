@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/xmstring.c,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/xmstring.c,v 1.3 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -22,7 +22,7 @@
 
 /* Functions for building XmFontLists */
 
-int RXmFontListAdd(message_t message)
+void RXmFontListAdd(message_t message)
 {
   XmFontList oldlist,newlist;
   XFontStruct *fstruct;
@@ -40,7 +40,7 @@ int RXmFontListAdd(message_t message)
 
 #define BOLD_FONT "-*-helvetica-bold-r-normal--11-*"
 
-int RXmFontListCreate(message_t message)
+void RXmFontListCreate(message_t message)
 {
   XFontStruct *fstruct;
   Font font;
@@ -56,7 +56,7 @@ int RXmFontListCreate(message_t message)
   reply_with_font_list(message,flist);
 }
 
-int RXmFontListFree(message_t message)
+void RXmFontListFree(message_t message)
 {
   XmFontList flist;
 
@@ -68,7 +68,7 @@ int RXmFontListFree(message_t message)
 
 /* Functions for using XmStrings */
 
-int RXmStringBaseline(message_t message)
+void RXmStringBaseline(message_t message)
 {
   XmFontList flist;
   XmString xs;
@@ -78,7 +78,7 @@ int RXmStringBaseline(message_t message)
   reply_with_integer(message,XmStringBaseline(flist,xs));
 }
 
-int RXmStringByteCompare(message_t message)
+void RXmStringByteCompare(message_t message)
 {
   XmString s1,s2;
 
@@ -87,7 +87,7 @@ int RXmStringByteCompare(message_t message)
   reply_with_boolean(message,XmStringByteCompare(s1,s2));
 }
 
-int RXmStringCompare(message_t message)
+void RXmStringCompare(message_t message)
 {
   XmString s1,s2;
 
@@ -96,7 +96,7 @@ int RXmStringCompare(message_t message)
   reply_with_boolean(message,XmStringCompare(s1,s2));
 }
 
-int RXmStringConcat(message_t message)
+void RXmStringConcat(message_t message)
 {
   XmString s1,s2;
   
@@ -105,7 +105,7 @@ int RXmStringConcat(message_t message)
   reply_with_xmstring(message,XmStringConcat(s1,s2));
 }
 
-int RXmStringCopy(message_t message)
+void RXmStringCopy(message_t message)
 {
   XmString s;
 
@@ -113,7 +113,7 @@ int RXmStringCopy(message_t message)
   reply_with_xmstring(message,XmStringCopy(s));
 }
 
-int RXmStringCreate(message_t message)
+void RXmStringCreate(message_t message)
 {
   String s,charset;
 
@@ -122,7 +122,7 @@ int RXmStringCreate(message_t message)
   reply_with_xmstring(message,XmStringCreate(s,charset));
 }
 
-int RXmStringCreateLtoR(message_t message)
+void RXmStringCreateLtoR(message_t message)
 {
   String s,charset;
 
@@ -131,7 +131,7 @@ int RXmStringCreateLtoR(message_t message)
   reply_with_xmstring(message,XmStringCreateLtoR(s,charset));
 }
 
-int RXmStringGetLtoR(message_t message)
+void RXmStringGetLtoR(message_t message)
 {
   XmString xs;
   String text,charset;
@@ -151,7 +151,7 @@ int RXmStringGetLtoR(message_t message)
   must_confirm = False;
 }
 
-int RXmStringCreateSimple(message_t message)
+void RXmStringCreateSimple(message_t message)
 {
   String s;
 
@@ -159,7 +159,7 @@ int RXmStringCreateSimple(message_t message)
   reply_with_xmstring(message,XmStringCreateSimple(s));
 }
 
-int RXmStringEmpty(message_t message)
+void RXmStringEmpty(message_t message)
 {
   XmString s;
 
@@ -167,7 +167,7 @@ int RXmStringEmpty(message_t message)
   reply_with_boolean(message,XmStringEmpty(s));
 }
 
-int RXmStringExtent(message_t message)
+void RXmStringExtent(message_t message)
 {
   XmFontList flist;
   XmString s;
@@ -184,7 +184,7 @@ int RXmStringExtent(message_t message)
   must_confirm=False;
 }
 
-int RXmStringFree(message_t message)
+void RXmStringFree(message_t message)
 {
   XmString s;
 
@@ -192,7 +192,7 @@ int RXmStringFree(message_t message)
   XmStringFree(s);
 }
 
-int RXmStringHasSubstring(message_t message)
+void RXmStringHasSubstring(message_t message)
 {
   XmString s,subs;
 
@@ -201,7 +201,7 @@ int RXmStringHasSubstring(message_t message)
   reply_with_boolean(message,XmStringHasSubstring(s,subs));
 }
 
-int RXmStringHeight(message_t message)
+void RXmStringHeight(message_t message)
 {
   XmFontList flist;
   XmString s;
@@ -211,7 +211,7 @@ int RXmStringHeight(message_t message)
   reply_with_integer(message,XmStringHeight(flist,s));
 }
 
-int RXmStringLength(message_t message)
+void RXmStringLength(message_t message)
 {
   XmString s;
 
@@ -219,7 +219,7 @@ int RXmStringLength(message_t message)
   reply_with_integer(message,XmStringLength(s));
 }
 
-int RXmStringLineCount(message_t message)
+void RXmStringLineCount(message_t message)
 {
   XmString s;
 
@@ -227,7 +227,7 @@ int RXmStringLineCount(message_t message)
   reply_with_integer(message,XmStringLineCount(s));
 }
 
-int RXmStringNConcat(message_t message)
+void RXmStringNConcat(message_t message)
 {
   XmString s1,s2;
   int bytes;
@@ -238,7 +238,7 @@ int RXmStringNConcat(message_t message)
   reply_with_xmstring(message,XmStringNConcat(s1,s2,bytes));
 }
 
-int RXmStringNCopy(message_t message)
+void RXmStringNCopy(message_t message)
 {
   XmString s;
   int bytes;
@@ -248,12 +248,12 @@ int RXmStringNCopy(message_t message)
   reply_with_xmstring(message,XmStringNCopy(s,bytes));
 }
 
-int RXmStringSeparatorCreate(message_t message)
+void RXmStringSeparatorCreate(message_t message)
 {
   reply_with_xmstring(message,XmStringSeparatorCreate());
 }
 
-int RXmStringWidth(message_t message)
+void RXmStringWidth(message_t message)
 {
   XmFontList flist;
   XmString s;

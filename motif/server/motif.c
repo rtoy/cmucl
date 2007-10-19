@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/motif.c,v 1.4 2001/03/08 00:08:50 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/motif.c,v 1.5 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -16,6 +16,11 @@
 #include <Xm/MessageB.h>
 #include <Xm/FileSB.h>
 #include <Xm/SelectioB.h>
+#include <Xm/Scale.h>
+#include <Xm/ScrolledW.h>
+#include <Xm/RowColumn.h>
+#include <Xm/ToggleB.h>
+#include <Xm/ScrollBar.h>
 
 #include "global.h"
 #include "datatrans.h"
@@ -23,7 +28,7 @@
 #include "tables.h"
 #include "requests.h"
 
-int RXmUpdateDisplay(message_t message)
+void RXmUpdateDisplay(message_t message)
 {
   Widget w;
 
@@ -31,7 +36,7 @@ int RXmUpdateDisplay(message_t message)
   XmUpdateDisplay(w);
 }
 
-int RXmIsMotifWMRunning(message_t message)
+void RXmIsMotifWMRunning(message_t message)
 {
   Widget w;
 
@@ -39,7 +44,7 @@ int RXmIsMotifWMRunning(message_t message)
   reply_with_boolean(message,XmIsMotifWMRunning(w));
 }
 
-int RXmScrolledWindowSetAreas(message_t message)
+void RXmScrolledWindowSetAreas(message_t message)
 {
   Widget w;
   Widget hscroll,vscroll,work_region;
@@ -51,7 +56,7 @@ int RXmScrolledWindowSetAreas(message_t message)
   XmScrolledWindowSetAreas(w,hscroll,vscroll,work_region);
 }
 
-int RXmTrackingLocate(message_t message)
+void RXmTrackingLocate(message_t message)
 {
   Widget w;
   Cursor cursor;
@@ -63,7 +68,7 @@ int RXmTrackingLocate(message_t message)
   XmTrackingLocate(w,cursor,confine_to);
 }
 
-int RXmMenuPosition(message_t message)
+void RXmMenuPosition(message_t message)
 {
   Widget w;
   XButtonPressedEvent *event;
@@ -78,7 +83,7 @@ int RXmMenuPosition(message_t message)
 
 /* Functions for accessing XmCommand widgets */
 
-int RXmCommandAppendValue(message_t message)
+void RXmCommandAppendValue(message_t message)
 {
   Widget widget;
   XmString command;
@@ -88,7 +93,7 @@ int RXmCommandAppendValue(message_t message)
   XmCommandAppendValue(widget,command);
 }
 
-int RXmCommandError(message_t message)
+void RXmCommandError(message_t message)
 {
   Widget widget;
   XmString error;
@@ -98,7 +103,7 @@ int RXmCommandError(message_t message)
   XmCommandError(widget,error);
 }
 
-int RXmCommandSetValue(message_t message)
+void RXmCommandSetValue(message_t message)
 {
   Widget w;
   XmString value;
@@ -112,7 +117,7 @@ int RXmCommandSetValue(message_t message)
 
 /* Functions for dealing with XmScale widgets */
 
-int RXmScaleGetValue(message_t message)
+void RXmScaleGetValue(message_t message)
 {
   Widget widget;
   int value;
@@ -122,7 +127,7 @@ int RXmScaleGetValue(message_t message)
   reply_with_integer(message,value);
 }
 
-int RXmScaleSetValue(message_t message)
+void RXmScaleSetValue(message_t message)
 {
   Widget widget;
   int value;
@@ -136,7 +141,7 @@ int RXmScaleSetValue(message_t message)
 
 /* Functions for dealing with XmToggleButton widgets */
 
-int RXmToggleButtonGetState(message_t message)
+void RXmToggleButtonGetState(message_t message)
 {
   Widget w;
   int state;
@@ -146,7 +151,7 @@ int RXmToggleButtonGetState(message_t message)
   reply_with_boolean(message,state);
 }
 
-int RXmToggleButtonSetState(message_t message)
+void RXmToggleButtonSetState(message_t message)
 {
   Widget w;
   Boolean state,notify;
@@ -161,7 +166,7 @@ int RXmToggleButtonSetState(message_t message)
 
 /* Functions for using Tab groups */
 
-int RXmAddTabGroup(message_t message)
+void RXmAddTabGroup(message_t message)
 {
   Widget w;
 
@@ -169,7 +174,7 @@ int RXmAddTabGroup(message_t message)
   XmAddTabGroup(w);
 }
 
-int RXmRemoveTabGroup(message_t message)
+void RXmRemoveTabGroup(message_t message)
 {
   Widget w;
 
@@ -177,7 +182,7 @@ int RXmRemoveTabGroup(message_t message)
   XmRemoveTabGroup(w);
 }
 
-int RXmProcessTraversal(message_t message)
+void RXmProcessTraversal(message_t message)
 {
   Widget w;
   int direction;
@@ -199,22 +204,22 @@ int RXmProcessTraversal(message_t message)
   toolkit_read_value(message,&which_child,XtREnum);    \
   reply_with_widget(message,query_func(w,which_child))
 
-int RXmMessageBoxGetChild(message_t message)
+void RXmMessageBoxGetChild(message_t message)
 {
   DEFINE_CHILD_QUERY(XmMessageBoxGetChild);
 }
 
-int RXmSelectionBoxGetChild(message_t message)
+void RXmSelectionBoxGetChild(message_t message)
 {
   DEFINE_CHILD_QUERY(XmSelectionBoxGetChild);
 }
 
-int RXmFileSelectionBoxGetChild(message_t message)
+void RXmFileSelectionBoxGetChild(message_t message)
 {
   DEFINE_CHILD_QUERY(XmFileSelectionBoxGetChild);
 }
 
-int RXmCommandGetChild(message_t message)
+void RXmCommandGetChild(message_t message)
 {
   DEFINE_CHILD_QUERY(XmCommandGetChild);
 }
@@ -223,7 +228,7 @@ int RXmCommandGetChild(message_t message)
 
 /* Functions for getting/setting values of XmScrollBar widgets */
 
-int RXmScrollBarGetValues(message_t message)
+void RXmScrollBarGetValues(message_t message)
 {
   Widget widget;
   int value,slider_size,increment,page_increment;
@@ -243,7 +248,7 @@ int RXmScrollBarGetValues(message_t message)
   must_confirm = False;
 }
 
-int RXmScrollBarSetValues(message_t message)
+void RXmScrollBarSetValues(message_t message)
 {
   Widget w;
   int value,slider_size,increment,page_increment;

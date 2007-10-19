@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/packet.c,v 1.3 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/packet.c,v 1.4 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -8,6 +8,7 @@
 */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <X11/Intrinsic.h>
 
 #include "global.h"
@@ -124,8 +125,8 @@ void packet_send(int socket, packet_t packet) {
 
   if( global_will_trace ) {
     printf("packet_send:  Sending packet --\n");
-    printf("packet_send:     serial = %u\n",packet->serial);
-    printf("packet_send:     length = %u\n",packet->length);
+    printf("packet_send:     serial = %ld\n",packet->serial);
+    printf("packet_send:     length = %ld\n",packet->length);
     printf("packet_send:     this is packet %d of %d\n",packet->current,
 	   packet->total);
     fflush(stdout);
@@ -165,8 +166,8 @@ void packet_read(int socket, packet_t packet) {
 
   if( global_will_trace ) {
     printf("packet_read:  Receiving packet --\n");
-    printf("packet_read:     serial = %u\n",packet->serial);
-    printf("packet_read:     length = %u\n",packet->length);
+    printf("packet_read:     serial = %ld\n",packet->serial);
+    printf("packet_read:     length = %ld\n",packet->length);
     printf("packet_read:     This is packet %d of %d\n",packet->current,
 	   packet->total);
     fflush(stdout);

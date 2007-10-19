@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/translations.c,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/translations.c,v 1.3 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -49,7 +49,7 @@ void LispActionProc(Widget w,XEvent *event,String *params,Cardinal *num_params)
 
 
 
-int RXtParseTranslationTable(message_t message)
+void RXtParseTranslationTable(message_t message)
 {
   String table;
   XtTranslations t;
@@ -63,7 +63,7 @@ int RXtParseTranslationTable(message_t message)
   must_confirm = False;
 }
 
-int RXtAugmentTranslations(message_t message)
+void RXtAugmentTranslations(message_t message)
 {
   Widget w;
   XtTranslations t;
@@ -74,7 +74,7 @@ int RXtAugmentTranslations(message_t message)
   XtAugmentTranslations(w,t);
 }
 
-int RXtOverrideTranslations(message_t message)
+void RXtOverrideTranslations(message_t message)
 {
   Widget w;
   XtTranslations t;
@@ -85,7 +85,7 @@ int RXtOverrideTranslations(message_t message)
   XtOverrideTranslations(w,t);
 }
 
-int RXtUninstallTranslations(message_t message)
+void RXtUninstallTranslations(message_t message)
 {
   Widget w;
 
@@ -93,7 +93,7 @@ int RXtUninstallTranslations(message_t message)
   XtUninstallTranslations(w);
 }
 
-int RXtParseAcceleratorTable(message_t message)
+void RXtParseAcceleratorTable(message_t message)
 {
   String table;
   XtAccelerators accel;
@@ -107,7 +107,7 @@ int RXtParseAcceleratorTable(message_t message)
   must_confirm = False;
 }
 
-int RXtInstallAccelerators(message_t message)
+void RXtInstallAccelerators(message_t message)
 {
   Widget dest,src;
 
@@ -116,7 +116,7 @@ int RXtInstallAccelerators(message_t message)
   XtInstallAccelerators(dest,src);
 }
 
-int RXtInstallAllAccelerators(message_t message)
+void RXtInstallAllAccelerators(message_t message)
 {
   Widget dest,src;
 

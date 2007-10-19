@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/tables.c,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/tables.c,v 1.3 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -8,6 +8,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/IntrinsicP.h>
@@ -104,7 +105,8 @@ void assure_class_initialized(WidgetClass class)
 void record_class_resources(WidgetClass class,class_resources *r)
 {
   XtResourceList resource_list,constraint_list;
-  int resource_count,constraint_count,index,extra=0;
+  Cardinal resource_count,constraint_count;
+  int index,extra=0;
 
   XtGetResourceList(class,&resource_list,&resource_count);
   XtGetConstraintResourceList(class,&constraint_list,&constraint_count);
@@ -180,9 +182,10 @@ void record_class_resources(WidgetClass class,class_resources *r)
       XtNewString(constraint_list[index].resource_type);
   }
 
-  qsort(r->resource_list,resource_count,sizeof(resource_entry),resource_cmp);
-  qsort(r->constraint_list,constraint_count,
-	sizeof(resource_entry),resource_cmp);
+  qsort(r->resource_list,resource_count,sizeof(resource_entry),
+	(int (*)(const void *,const void *))resource_cmp);
+  qsort(r->constraint_list,constraint_count,sizeof(resource_entry),
+	(int (*)(const void *,const void *))resource_cmp);
 
   r->resource_count = resource_count;
   r->constraint_count = constraint_count;

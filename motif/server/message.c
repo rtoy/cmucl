@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.6 2000/02/15 11:59:25 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.7 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -240,7 +240,7 @@ message_t message_read(int socket) {
       /* There is no client support for getting here yet! */
       kill_deferred_message(first->serial);
       if( global_will_trace ) {
-	printf("Got cancellation for serial %d\n",first->serial);
+	printf("Got cancellation for serial %ld\n",first->serial);
 	fflush(stdout);
 	continue;}
     }
@@ -250,7 +250,7 @@ message_t message_read(int socket) {
       new->packet_count = 1;
       return new;
     }
-    if(new = message_defer_packet(first)) /* intential assignment */
+    if( (new = message_defer_packet(first)) ) /* intentional assignment */
       return new;
   }
 }

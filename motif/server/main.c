@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.14 2001/03/08 00:08:50 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.15 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -18,6 +18,9 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <sys/wait.h>
 
@@ -59,7 +62,7 @@ struct sockaddr_un unixAddress;
 
 int global_argc;
 char **global_argv;
-int global_will_trace=NULL;
+int global_will_trace=0;
 int will_fork=1;
 int use_inet_socket=1;
 int use_unix_socket=1;
@@ -152,7 +155,7 @@ void establish_client(int s)
 {
   int pid=0,socket;
   struct sockaddr sa;
-  int sa_length = sizeof(struct sockaddr);
+  socklen_t sa_length = sizeof(struct sockaddr);
 
   socket = accept(s, &sa, &sa_length);
   if( socket < 0 )
@@ -182,7 +185,7 @@ void establish_client(int s)
   }
 }
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   fd_set rfds;
   int nfound,nfds,i;
@@ -211,9 +214,9 @@ main(int argc, char **argv)
     else if( !strcmp(argv[i],"-local") )
       socket_choice = Local;
     else if( !strcmp(argv[i],"-noinet") )
-      use_inet_socket = NULL;
+      use_inet_socket = 0;
     else if( !strcmp(argv[i],"-nounix") )
-      use_unix_socket = NULL;
+      use_unix_socket = 0;
   }
 
   switch( socket_choice ) {
@@ -225,7 +228,7 @@ main(int argc, char **argv)
     sprintf(socket_path,"/tmp/.motif_socket-u%d",getuid());
     break;
   case Local:
-    use_inet_socket = NULL;
+    use_inet_socket = 0;
     sprintf(socket_path,"/tmp/.motif_socket-p%d",getpid());
     break;
   }

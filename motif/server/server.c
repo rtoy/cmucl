@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/server.c,v 1.4 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/server.c,v 1.5 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -11,6 +11,8 @@
 #include <ctype.h>
 #include <errno.h>
 #include <setjmp.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -101,7 +103,7 @@ void get_input(caddr_t closure, int *socket, XtInputId *id)
 
 void greet_client(int socket) {
   short byte;
-  int result,pad;
+  int result;
   char *dpy_name,*app_class,*app_name;
   message_t first;
 

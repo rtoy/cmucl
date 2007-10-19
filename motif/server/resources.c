@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/resources.c,v 1.3 1997/12/31 18:57:58 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/resources.c,v 1.4 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -22,7 +22,7 @@
 extern message_t prepare_reply(message_t m);
 
 
-int RXtSetValues(message_t message)
+void RXtSetValues(message_t message)
 {
   Widget w;
   ResourceList resources;
@@ -35,7 +35,7 @@ int RXtSetValues(message_t message)
   XtSetValues(w,resources.args,resources.length);
 }
 
-int RXtGetValues(message_t message)
+void RXtGetValues(message_t message)
 {
   message_t reply;
   Widget w;

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/requests.c,v 1.5 1997/12/31 18:57:55 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/requests.c,v 1.6 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -8,6 +8,8 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -20,7 +22,7 @@
 #include "functions.h"
 #include "tables.h"
 
-typedef int (*request_f)(message_t);
+typedef void (*request_f)(message_t);
 Boolean must_confirm = False;
 int processing_depth = 0;
 Garbage garbage_list = NULL;
@@ -195,7 +197,7 @@ void process_request(message_t message,int socket)
   must_confirm = old_must_confirm;
 }
 
-int QuitServer(message_t message)
+void QuitServer(message_t message)
 {
   close(client_socket);
   if( !will_fork )

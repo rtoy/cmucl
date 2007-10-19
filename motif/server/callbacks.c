@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/callbacks.c,v 1.4 1997/08/22 20:49:31 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/callbacks.c,v 1.5 2007/10/19 09:57:22 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -45,6 +45,7 @@
 #include <Xm/MainW.h>
 #include <Xm/ScrolledW.h>
 #include <Xm/PanedW.h>
+#include <Xm/Protocols.h>
 
 #include "global.h"
 #include "datatrans.h"
@@ -67,13 +68,13 @@ XmAnyCallbackStruct *callback_info = NULL;
 
 
 
-int TerminateCallback(message_t message)
+void TerminateCallback(message_t message)
 {
   end_callback_loop--;
 }
 
 
-int RXtAddCallback(message_t message)
+void RXtAddCallback(message_t message)
 {
   Widget w;
   String callback_name;
@@ -86,7 +87,7 @@ int RXtAddCallback(message_t message)
   XtAddCallback(w,callback_name,CallbackHandler,(caddr_t)name_token);
 }
 
-int RXtRemoveCallback(message_t message)
+void RXtRemoveCallback(message_t message)
 {
   Widget w;
   int name_token;
@@ -98,7 +99,7 @@ int RXtRemoveCallback(message_t message)
 		   CallbackHandler,(caddr_t)name_token);
 }
 
-int RXmAddProtocolCallback(message_t message)
+void RXmAddProtocolCallback(message_t message)
 {
   Widget w;
   Atom prop,protocol;
@@ -116,11 +117,11 @@ int RXmAddProtocolCallback(message_t message)
   XmAddProtocolCallback(w,prop,protocol,ProtocolHandler,closure);
 }
 
-int RXmRemoveProtocolCallback(message_t message)
+void RXmRemoveProtocolCallback(message_t message)
 {
   Widget w;
   Atom prop,protocol;
-  ProtocolClosure *closure,*current;
+  ProtocolClosure *closure = NULL,*current;
   int found = False;
 
   toolkit_read_value(message,&w,XtRWidget);
@@ -151,7 +152,7 @@ int RXmRemoveProtocolCallback(message_t message)
 }
 
 
-int RReturnTextCallbackDoit(message_t message)
+void RReturnTextCallbackDoit(message_t message)
 {
   Boolean doit;
   XmTextVerifyPtr info = (XmTextVerifyPtr)callback_info;
@@ -261,7 +262,6 @@ void CallbackHandler(Widget *w, int name_token, XmAnyCallbackStruct *info)
 {
   WidgetClass class = XtClass(*w);
   int exit_value;
-  XEvent event;
   message_t reply = message_new(next_serial++);
   message_add_packet(reply);
 
@@ -316,6 +316,7 @@ void CallbackHandler(Widget *w, int name_token, XmAnyCallbackStruct *info)
    *** the callback_info mechanism for supporting modifications to the
    *** callback structure would no longer work if callbacks could be nested.
   while( exit_value<end_callback_loop ) {
+    XEvent event;
     XtAppNextEvent(app_context, &event);
     XtDispatchEvent(&event);
   }
@@ -329,7 +330,6 @@ void CallbackHandler(Widget *w, int name_token, XmAnyCallbackStruct *info)
 void ProtocolHandler(Widget *w, ProtocolClosure *c, XmAnyCallbackStruct *info)
 {
   int exit_value;
-  XEvent event;
   message_t reply = message_new(next_serial++);
   message_add_packet(reply);
 
@@ -348,7 +348,8 @@ void ProtocolHandler(Widget *w, ProtocolClosure *c, XmAnyCallbackStruct *info)
 
   /* **** The non-blocking version
   while( exit_value<end_callback_loop ) {
-    XtAppNextEvent(app_context, &event);
+   XEvent event;
+   XtAppNextEvent(app_context, &event);
     XtDispatchEvent(&event);
   }
   */
