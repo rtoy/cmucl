@@ -75,6 +75,7 @@ install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/doc/cmucl
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/subsystems
+install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/lib/cmucl/lib/ext-formats
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/man/man1
 install ${GROUP} ${OWNER} -m 0755 $TARGET/lisp/lisp $DESTDIR/bin/
 if [ "$EXECUTABLE" = "true" ]
@@ -94,11 +95,18 @@ install ${GROUP} ${OWNER} -m 0644 $TARGET/lisp/lisp.nm $TARGET/lisp/lisp.map \
 	$TARGET/lisp/internals.h $TARGET/lisp/internals.inc $DESTDIR/lib/cmucl/
 install ${GROUP} ${OWNER} -m 0755 src/tools/sample-wrapper $DESTDIR/lib/cmucl/
 
-for f in gray-streams gray-compat simple-streams iodefs
+for f in gray-streams gray-compat simple-streams iodefs external-formats
 do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/lib/cmucl/lib/subsystems/
 done
 
+set -x
+for f in src/pcl/simple-streams/external-formats/*.lisp
+do
+    install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
+done
+
+set +x
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
 	$DESTDIR/man/man1/
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \

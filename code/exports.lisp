@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.260 2007/08/17 14:09:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.261 2007/10/25 15:17:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1211,6 +1211,13 @@
 
 (intern "CHAR" "LISP")
 
+;; Make these STREAM symbols available
+(dolist
+    (name
+     '("STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
+       "ENCODE-STRING" "DECODE-STRING"))
+  (intern name "STREAM"))
+
 (defpackage "EXTENSIONS"
   (:nicknames "EXTENSIONS")
   (:import-from "LISP" "GET-SETF-METHOD")
@@ -1401,7 +1408,12 @@
 	   "PARSE-MACRO"
 	   "AUGMENT-ENVIRONMENT")
   #+double-double
-  (:export "DOUBLE-DOUBLE-FLOAT" "DD-PI"))
+  (:export "DOUBLE-DOUBLE-FLOAT" "DD-PI")
+  (:import-from "STREAM"
+		"STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
+		"ENCODE-STRING" "DECODE-STRING")
+  (:export "STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
+	   "ENCODE-STRING" "DECODE-STRING"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
@@ -1458,7 +1470,10 @@
            "WITH-OPEN-FILE" "WITH-OPEN-STREAM" "FORMAT" "PPRINT" "PRIN1"
            "PRIN1-TO-STRING" "PRINC" "PRINC-TO-STRING" "PRINT" "READ"
            "READ-DELIMITED-LIST" "READ-FROM-STRING" "WRITE" "WRITE-LINE"
-           "WRITE-TO-STRING" "READ-PRESERVING-WHITESPACE"))
+           "WRITE-TO-STRING" "READ-PRESERVING-WHITESPACE"
+	   
+	   "STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
+	   "ENCODE-STRING" "DECODE-STRING"))
 
 (defpackage "LOOP")
 (dolist

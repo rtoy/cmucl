@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.5 2003/06/27 15:12:47 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.6 2007/10/25 15:17:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,172 +89,9 @@
 
 
 
-(defvar *default-external-format* :iso8859-1)
-
-(defvar *external-formats* (make-hash-table))
-(defvar *external-format-aliases* (make-hash-table))
-
-(defstruct (external-format
-	     (:conc-name ef-)
-	     (:print-function %print-external-format)
-             (:constructor make-external-format (name octets-to-char
-                                                      char-to-octets)))
-  (name (ext:required-argument) :type keyword :read-only t)
-  (octets-to-char (ext:required-argument) :type function :read-only t)
-  (char-to-octets (ext:required-argument) :type function :read-only t))
-
-(defun %print-external-format (ef stream depth)
-  (declare (ignore depth))
-  (print-unreadable-object (ef stream :type t :identity t)
-    (princ (ef-name ef) stream)))
-
-(defmacro define-external-format (name octets-to-char char-to-octets)
-  `(macrolet ((octets-to-char ((state input unput) &body body)
-	        `(lambda (,state ,input ,unput)
-		   (declare (type (function () (unsigned-byte 8)) ,input)
-			    (type (function (lisp::index) t) ,unput)
-			    (ignorable ,state ,input ,unput)
-			    (values character lisp::index t))
-		   ,@body))
-	      (char-to-octets ((char state output) &body body)
-	        `(lambda (,char ,state ,output)
-		   (declare (type character ,char)
-			    (type (function ((unsigned-byte 8)) t) ,output)
-			    (ignorable state ,output)
-			    (values t))
-		   ,@body)))
-     (setf (gethash ,name *external-formats*)
-	   (make-external-format ,name ,octets-to-char ,char-to-octets))))
-
-(defun load-external-format-aliases ()
-  (let ((*package* (find-package "KEYWORD")))
-    (with-open-file (stm "ef:aliases" :if-does-not-exist nil)
-      (when stm
-	(do ((alias (read stm nil stm) (read stm nil stm))
-	     (value (read stm nil stm) (read stm nil stm)))
-	    ((or (eq alias stm) (eq value stm))
-	     (unless (eq alias stm)
-	       (warn "External-format aliases file ends early.")))
-	  (if (and (keywordp alias) (keywordp value))
-	      (setf (gethash alias *external-format-aliases*) value)
-	      (warn "Bad entry in external-format aliases file: ~S => ~S."
-		    alias value)))))))
-
-(defun find-external-format (name &optional (error-p t))
-  (when (external-format-p name)
-    (return-from find-external-format name))
-
-  (when (eq name :default)
-    (setq name *default-external-format*))
-
-  (unless (ext:search-list-defined-p "ef:")
-    (setf (ext:search-list "ef:") '("library:ef/")))
-
-  (when (zerop (hash-table-count *external-format-aliases*))
-    (setf (gethash :latin1 *external-format-aliases*) :iso8859-1)
-    (setf (gethash :latin-1 *external-format-aliases*) :iso8859-1)
-    (setf (gethash :iso-8859-1 *external-format-aliases*) :iso8859-1)
-    (load-external-format-aliases))
-
-  (do ((tmp (gethash name *external-format-aliases*)
-	    (gethash tmp *external-format-aliases*))
-       (cnt 0 (1+ cnt)))
-      ((or (null tmp) (= cnt 50))
-       (unless (null tmp)
-	 (error "External-format aliasing depth exceeded.")))
-    (setq name tmp))
-
-  (or (gethash name *external-formats*)
-      (and (let ((*package* (find-package "STREAM")))
-	     (load (format nil "ef:~(~A~)" name) :if-does-not-exist nil))
-	   (gethash name *external-formats*))
-      (if error-p (error "External format ~S not found." name) nil)))
-
-(define-condition void-external-format (error)
-  ()
-  (:report
-    (lambda (condition stream)
-      (declare (ignore condition))
-      (format stream "Attempting I/O through void external-format."))))
-
-(define-external-format :void
-    (octets-to-char (state input unput)
-      (declare (ignore state input unput))
-      (error 'void-external-format))
-  (char-to-octets (char state output)
-    (declare (ignore char state output))
-    (error 'void-external-format)))
-
-(define-external-format :iso8859-1
-    (octets-to-char (state input unput)
-      (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
-      (values (code-char (funcall input)) 1 state))
-  (char-to-octets (char state output)
-    (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
-    (let ((code (char-code char)))
-      #-(or)
-      (funcall output code)
-      #+(or)
-      (if (< code 256)
-	  (funcall output code)
-	  (funcall output (char-code #\?))))
-    state))
-
-(defmacro octets-to-char (external-format state count input unput)
-  (let ((tmp1 (gensym)) (tmp2 (gensym)) (tmp3 (gensym)))
-    `(multiple-value-bind (,tmp1 ,tmp2 ,tmp3)
-	 (funcall (ef-octets-to-char ,external-format) ,state ,input ,unput)
-       (setf ,state ,tmp3 ,count ,tmp2)
-       ,tmp1)))
-
-(defmacro char-to-octets (external-format char state output)
-  `(progn
-     (setf ,state (funcall (ef-char-to-octets ,external-format)
-			   ,char ,state ,output))
-     nil))
-
-(defun string-to-octets (string &key (start 0) end (external-format :default))
-  (declare (type string string)
-	   (type lisp::index start)
-	   (type (or null lisp::index) end))
-  (let ((ef (find-external-format external-format))
-	(buffer (make-array (length string) :element-type '(unsigned-byte 8)))
-	(ptr 0)
-	(state nil))
-    (flet ((out (b)
-	     (setf (aref buffer ptr) b)
-	     (when (= (incf ptr) (length buffer))
-	       (setq buffer (adjust-array buffer (* 2 ptr))))))
-      (dotimes (i (- (or end (length string)) start))
-	(declare (type lisp::index i))
-	(char-to-octets ef (char string (+ start i)) state #'out))
-      (lisp::shrink-vector buffer ptr))))
-
-(defun octets-to-string (octets &key (start 0) end (external-format :default))
-  (declare (type vector octets)
-	   (type lisp::index start)
-	   (type (or null lisp::index) end))
-  (let ((ef (find-external-format external-format))
-	(end (1- (or end (length octets))))
-	(string (make-string (length octets)))
-	(ptr (1- start))
-	(pos -1)
-	(count 0)
-	(state nil))
-    (flet ((input ()
-	     (aref octets (incf ptr)))
-	   (unput (n)
-	     (decf ptr n)))
-      (loop until (>= ptr end)
-	    do (setf (schar string (incf pos))
-		 (octets-to-char ef state count #'input #'unput))))
-    (lisp::shrink-vector string (1+ pos))))
-
-
-
 #-(or big-endian little-endian)
 (eval-when (:compile-toplevel)
-  (push (c::backend-byte-order c::*backend*) *features*))
+  (push (c::backend-byte-order c::*target-backend*) *features*))
 
 (defun vector-elt-width (vector)
   ;; Return octet-width of vector elements
