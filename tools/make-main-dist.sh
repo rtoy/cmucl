@@ -100,13 +100,11 @@ do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/lib/cmucl/lib/subsystems/
 done
 
-set -x
 for f in src/pcl/simple-streams/external-formats/*.lisp
 do
     install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
 done
 
-set +x
 install ${GROUP} ${OWNER} -m 0644 src/general-info/cmucl.1 \
 	$DESTDIR/man/man1/
 install ${GROUP} ${OWNER} -m 0644 src/general-info/lisp.1 \
