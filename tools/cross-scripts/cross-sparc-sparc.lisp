@@ -20,7 +20,7 @@
      :hash-new
      :random-mt19937			; MT-19937 generator
      :cmu				; Announce this is CMUCL
-     :cmu19 :cmu19c			; Current version identifier
+     :cmu19 :cmu19d			; Current version identifier
      :modular-arith			; Modular arithmetic
      :double-double			; Double-double float support
      )
