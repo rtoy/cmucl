@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.1 2007/10/25 15:17:07 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2 2007/10/31 14:37:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,8 +112,10 @@
     (setq name tmp))
 
   (or (gethash name *external-formats*)
-      (and (let ((*package* (find-package "STREAM")))
-             (load (format nil "library:ext-formats/~(~A~)" name) :if-does-not-exist nil))
+      (and (let ((*package* (find-package "STREAM"))
+		 (lisp::*enable-package-locked-errors* nil))
+             (load (format nil "library:ext-formats/~(~A~)" name)
+		   :if-does-not-exist nil))
            (gethash name *external-formats*))
       (if error-p (error "External format ~S not found." name) nil)))
 
@@ -169,13 +171,16 @@
 (defmacro char-to-octets (external-format char state output)
   `(codepoint-to-octets ,external-format (char-code ,char) ,state ,output))
 
-(defun string-to-octets (string &key (start 0) end (external-format :default))
+(defun string-to-octets (string &key (start 0) end (external-format :default)
+				     (buffer nil bufferp))
   (declare (type string string)
            (type lisp::index start)
            (type (or null lisp::index) end)
+	   (type (or null (simple-array (unsigned-byte 8) (*))) buffer)
 	   #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#)
   (let ((ef (find-external-format external-format))
-        (buffer (make-array (length string) :element-type '(unsigned-byte 8)))
+        (buffer (or buffer (make-array (length string)
+				       :element-type '(unsigned-byte 8))))
         (ptr 0)
         (state nil))
     (declare (type external-format ef)
@@ -188,34 +193,36 @@
       (dotimes (i (- (or end (length string)) start))
         (declare (type lisp::index i))
         (char-to-octets ef (char string (+ start i)) state #'out))
-      (lisp::shrink-vector buffer ptr))))
+      (values (if bufferp buffer (lisp::shrink-vector buffer ptr)) ptr))))
 
-(defun octets-to-string (octets &key (start 0) end (external-format :default))
+(defun octets-to-string (octets &key (start 0) end (external-format :default)
+				     (string nil stringp))
   (declare (type (simple-array (unsigned-byte 8) (*)) octets)
            (type lisp::index start)
            (type (or null lisp::index) end)
+	   (type (or null simple-string string))
 	   #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#)
   (let ((ef (find-external-format external-format))
         (end (1- (or end (length octets))))
-        (string (make-string (length octets)))
+        (string (or string (make-string (length octets))))
         (ptr (1- start))
-        (pos -1)
+        (pos 0)
         (count 0)
         (state nil))
     (declare (type external-format ef)
 	     (type lisp::index end count)
 	     (type (integer -1 (#.array-dimension-limit)) pos ptr)
-	     (type simple-base-string string))
+	     (type simple-string string))
     (flet ((input ()
              (aref octets (incf ptr)))
            (unput (n)
              (decf ptr (the lisp::index n))))
       (loop until (>= ptr end)
-	    ;; increasing size of string shouldn't ever be necessary, unless
-	    ;; someone implements an encoding smaller than the source string...
-            do (setf (schar string (incf pos))
+            do (when (= pos (length string))
+		 (setq string (adjust-array string (* 2 pos))))
+	       (setf (schar string (1- (incf pos)))
 		   (octets-to-char ef state count #'input #'unput))))
-    (lisp::shrink-vector string (1+ pos))))
+    (values (if stringp string (lisp::shrink-vector string pos)) pos)))
 
 
 
@@ -225,7 +232,7 @@
            (type (or null lisp::index) end)
 	   #|(optimize (speed 3) (safety 0) (space 0) (debug 0))|#)
   (let ((ef (find-external-format external-format))
-        (result (make-string (length string)))
+        (result (make-string (length string) :element-type 'base-char))
         (ptr 0)
         (state nil))
     (declare (type external-format ef)
@@ -255,7 +262,7 @@
     (declare (type external-format ef)
 	     (type lisp::index end count)
 	     (type (integer -1 (#.array-dimension-limit)) pos ptr)
-	     (type simple-base-string result))
+	     (type simple-string result))
     (flet ((input ()
              (char-code (char string (incf ptr))))
            (unput (n)
@@ -266,6 +273,3 @@
             do (setf (schar result (incf pos))
 		   (octets-to-char ef state count #'input #'unput))))
     (lisp::shrink-vector result (1+ pos))))
-
-
-(provide :external-formats)
