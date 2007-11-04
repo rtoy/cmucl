@@ -40,6 +40,9 @@ New in this release:
       Limitations: depends on files in "library:" to dump new
       executable images.
     - CMUCL's version of CLX has been replaced with telent CLX.
+    - Preliminary support for external formats.  Currently only
+      iso8859-1 and utf-8 are supported.  Utf-8 support is limited
+      since CMUCL only has 8-bit characters.
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
