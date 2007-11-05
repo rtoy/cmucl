@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.74 2006/07/18 18:31:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.75 2007/11/05 15:25:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3563,6 +3563,10 @@
 ;;;
 ;;; A valid argument to a stream function...
 (deftype streamlike () '(or stream (member nil t)))
+;;;
+;;; A stream buffer, for simple-streams and read/write-vector
+(deftype simple-stream-buffer ()
+  '(or sys:system-area-pointer (simple-unboxed-array (*))))
 ;;;
 ;;; A thing that can be passed to funcall & friends.
 (deftype callable () '(or function symbol))

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.5 2005/10/06 13:49:26 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.6 2007/11/05 15:25:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,8 +20,8 @@
 
 ;;;; Types for buffer and strategy functions
 
-(deftype simple-stream-buffer ()
-  '(or sys:system-area-pointer (kernel:simple-unboxed-array (*))))
+;;(deftype simple-stream-buffer ()
+;;  '(or sys:system-area-pointer (kernel:simple-unboxed-array (*))))
 
 (deftype blocking ()
   `(member t nil :bnb))
@@ -80,7 +80,7 @@
 	    :accessor stream-line-column)
    (record-end :initform nil :type (or null fixnum))
 
-   (buffer :initform nil :type (or simple-stream-buffer null))
+   (buffer :initform nil :type (or kernel:simple-stream-buffer null))
    (buffpos :initform 0 :type fixnum)
    (buffer-ptr :initform 0 :type fixnum)
    (buf-len :initform 0 :type fixnum)
@@ -92,7 +92,7 @@
   ((mode :initform 0 :type fixnum)))
 
 (def-stream-class dual-channel-simple-stream (simple-stream)
-  ((out-buffer :initform nil :type (or simple-stream-buffer null))
+  ((out-buffer :initform nil :type (or kernel:simple-stream-buffer null))
    (outpos :initform 0 :type fixnum)
    (max-out-pos :initform 0 :type fixnum)
    (mode :initform 0 :type fixnum)))

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.6 2007/10/25 15:17:07 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.7 2007/11/05 15:25:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,35 +13,7 @@
 
 (in-package "STREAM")
 
-(declaim (inline buffer-sap bref (setf bref) buffer-copy
-		 allocate-buffer free-buffer))
-
-(defun buffer-sap (thing &optional offset)
-  (declare (type simple-stream-buffer thing) (type (or fixnum null) offset)
-           (optimize (speed 3) (space 2) (debug 0) (safety 0)
-                     ;; Suppress the note about having to box up the return:
-                     (ext:inhibit-warnings 3)))
-  (let ((sap (if (vectorp thing) (sys:vector-sap thing) thing)))
-    (if offset (sys:sap+ sap offset) sap)))
-
-(defun bref (buffer index)
-  (declare (type simple-stream-buffer buffer)
-           (type (integer 0 #.most-positive-fixnum) index))
-  (sys:sap-ref-8 (buffer-sap buffer) index))
-
-(defun (setf bref) (octet buffer index)
-  (declare (type (unsigned-byte 8) octet)
-           (type simple-stream-buffer buffer)
-           (type (integer 0 #.most-positive-fixnum) index))
-  (setf (sys:sap-ref-8 (buffer-sap buffer) index) octet))
-
-(defun buffer-copy (src soff dst doff length)
-  (declare (type simple-stream-buffer src dst)
-           (type fixnum soff doff length))
-  (sys:without-gcing ;; is this necessary??
-   (kernel:system-area-copy (buffer-sap src) (* soff 8)
-                            (buffer-sap dst) (* doff 8)
-                            (* length 8))))
+(declaim (inline allocate-buffer free-buffer))
 
 (defun allocate-buffer (size)
   (if (= size lisp::bytes-per-buffer)
@@ -89,41 +61,6 @@
 
 
 
-#-(or big-endian little-endian)
-(eval-when (:compile-toplevel)
-  (push (c::backend-byte-order c::*target-backend*) *features*))
-
-(defun vector-elt-width (vector)
-  ;; Return octet-width of vector elements
-  (etypecase vector
-    ;; (simple-array fixnum (*)) not supported
-    ;; (simple-array base-char (*)) treated specially; don't call this
-    ((simple-array bit (*)) 1)
-    ((simple-array (unsigned-byte 2) (*)) 1)
-    ((simple-array (unsigned-byte 4) (*)) 1)
-    ((simple-array (signed-byte 8) (*)) 1)
-    ((simple-array (unsigned-byte 8) (*)) 1)
-    ((simple-array (signed-byte 16) (*)) 2)
-    ((simple-array (unsigned-byte 16) (*)) 2)
-    ((simple-array (signed-byte 32) (*)) 4)
-    ((simple-array (unsigned-byte 32) (*)) 4)
-    ((simple-array single-float (*)) 4)
-    ((simple-array double-float (*)) 8)
-    ((simple-array (complex single-float) (*)) 8)
-    ((simple-array (complex double-float) (*)) 16)))
-
-(defun endian-swap-value (vector endian-swap)
-  (case endian-swap
-    (:network-order #+big-endian 0
-		    #+little-endian (1- (vector-elt-width vector)))
-    (:byte-8 0)
-    (:byte-16 1)
-    (:byte-32 3)
-    (:byte-64 7)
-    (:byte-128 15)
-    (otherwise endian-swap)))
-
-
 #+(or)
 (defun %read-vector (vector stream start end endian-swap blocking)
   (declare (type (kernel:simple-unboxed-array (*)) vector)
@@ -138,7 +75,7 @@
 
 (defun read-octets (stream buffer start end blocking)
   (declare (type simple-stream stream)
-	   (type (or null simple-stream-buffer) buffer)
+	   (type (or null kernel:simple-stream-buffer) buffer)
 	   (type fixnum start)
 	   (type (or null fixnum) end)
 	   (optimize (speed 3) (space 2) (safety 0) (debug 0)))
@@ -196,7 +133,7 @@
 
 (defun write-octets (stream buffer start end blocking)
   (declare (type simple-stream stream)
-	   (type simple-stream-buffer buffer)
+	   (type kernel:simple-stream-buffer buffer)
 	   (type fixnum start)
 	   (type (or null fixnum) end))
   (with-stream-class (simple-stream stream)
@@ -250,7 +187,7 @@
 		 (start (second list))
 		 (end (third list))
 		 (len (- end start)))
-	    (declare (type simple-stream-buffer buffer)
+	    (declare (type kernel:simple-stream-buffer buffer)
 		     (type lisp::index start end len))
 	    (tagbody again
 	       (multiple-value-bind (bytes errno)
@@ -270,7 +207,7 @@
 (defun queue-write (stream buffer start end)
   ;; Queue a write; return T if buffer needs changing, NIL otherwise
   (declare (type simple-stream stream)
-	   (type simple-stream-buffer buffer)
+	   (type kernel:simple-stream-buffer buffer)
 	   (type lisp::index start end))
   (with-stream-class (simple-stream stream)
     (when (sm handler stream)

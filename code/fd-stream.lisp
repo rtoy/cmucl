@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.84 2006/02/27 16:06:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85 2007/11/05 15:25:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,83 @@
   (if *available-buffers*
       (pop *available-buffers*)
       (allocate-system-memory bytes-per-buffer)))
+
+(declaim (inline buffer-sap bref (setf bref) buffer-copy))
+
+(defun buffer-sap (thing &optional offset)
+  (declare (type simple-stream-buffer thing) (type (or fixnum null) offset)
+           (optimize (speed 3) (space 2) (debug 0) (safety 0)
+                     ;; Suppress the note about having to box up the return:
+                     (ext:inhibit-warnings 3)))
+  (let ((sap (if (vectorp thing) (sys:vector-sap thing) thing)))
+    (if offset (sys:sap+ sap offset) sap)))
+
+(defun bref (buffer index)
+  (declare (type simple-stream-buffer buffer)
+           (type (integer 0 #.most-positive-fixnum) index))
+  (sys:sap-ref-8 (buffer-sap buffer) index))
+
+(defun (setf bref) (octet buffer index)
+  (declare (type (unsigned-byte 8) octet)
+           (type simple-stream-buffer buffer)
+           (type (integer 0 #.most-positive-fixnum) index))
+  (setf (sys:sap-ref-8 (buffer-sap buffer) index) octet))
+
+(defun buffer-copy (src soff dst doff length)
+  (declare (type simple-stream-buffer src dst)
+           (type fixnum soff doff length))
+  (sys:without-gcing ;; is this necessary??
+   (kernel:system-area-copy (buffer-sap src) (* soff 8)
+                            (buffer-sap dst) (* doff 8)
+                            (* length 8))))
+
+#-(or big-endian little-endian)
+(eval-when (:compile-toplevel)
+  (push (c::backend-byte-order c::*target-backend*) *features*))
+
+(defun vector-elt-width (vector)
+  ;; Return octet-width of vector elements
+  (etypecase vector
+    ;; (simple-array fixnum (*)) not supported
+    ;; (simple-array base-char (*)) treated specially; don't call this
+    ((simple-array bit (*)) 1)
+    ((simple-array (unsigned-byte 2) (*)) 1)
+    ((simple-array (unsigned-byte 4) (*)) 1)
+    ((simple-array (signed-byte 8) (*)) 1)
+    ((simple-array (unsigned-byte 8) (*)) 1)
+    ((simple-array (signed-byte 16) (*)) 2)
+    ((simple-array (unsigned-byte 16) (*)) 2)
+    ((simple-array (signed-byte 32) (*)) 4)
+    ((simple-array (unsigned-byte 32) (*)) 4)
+    ((simple-array single-float (*)) 4)
+    ((simple-array double-float (*)) 8)
+    ((simple-array (complex single-float) (*)) 8)
+    ((simple-array (complex double-float) (*)) 16)
+    #+long-float
+    ((simple-array long-float (*)) 10)
+    #+long-float
+    ((simple-array (complex long-float) (*)) 20)
+    #+double-double
+    ((simple-array double-double-float (*)) 16)
+    #+double-double
+    ((simple-array (complex double-double-float) (*)) 32)))
+
+(defun endian-swap-value (vector endian-swap)
+  (case endian-swap
+    (:network-order #+big-endian 0
+		    #+little-endian (1- (vector-elt-width vector)))
+    (:byte-8 0)
+    (:byte-16 1)
+    (:byte-32 3)
+    (:byte-64 7)
+    (:byte-128 15)
+    ;; additions by Lynn Quam
+    (:machine-endian 0)
+    (:big-endian #+big-endian 0
+		 #+little-endian (1- (vector-elt-width vector)))
+    (:little-endian #+big-endian (1- (vector-elt-width vector))
+		    #+little-endian 0)
+    (otherwise endian-swap)))
 
 
 ;;;; The FD-STREAM structure.

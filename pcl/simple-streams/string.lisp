@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/string.lisp,v 1.3 2003/06/26 13:27:43 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/string.lisp,v 1.4 2007/11/05 15:25:04 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
   ())
 
 (def-stream-class string-output-simple-stream (string-simple-stream)
-  ((out-buffer :initform nil :type (or simple-stream-buffer null))
+  ((out-buffer :initform nil :type (or kernel:simple-stream-buffer null))
    (outpos :initform 0 :type fixnum)
    (max-out-pos :initform 0 :type fixnum)))
 
