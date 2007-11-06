@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.39 2007/11/06 06:04:56 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.40 2007/11/06 07:16:05 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,7 +246,7 @@
 (defconstant ms_invalidate 2)
 
 ;; The return value from mmap that means mmap failed.
-(defconstant map_failed -1)
+(defconstant map_failed (int-sap (1- (ash 1 vm:word-bits))))
 
 (defun unix-mmap (addr length prot flags fd offset)
   (declare (type (or null system-area-pointer) addr)
@@ -259,12 +259,13 @@
   ;; "negative".  Hence we explicitly check for mmap returning
   ;; MAP_FAILED.
   (let ((result
-	 (alien-funcall (extern-alien "mmap" (function int system-area-pointer
+	 (alien-funcall (extern-alien "mmap" (function system-area-pointer
+						       system-area-pointer
 						       size-t int int int off-t))
 			(or addr +null+) length prot flags (or fd -1) offset)))
-    (if (= result map_failed)
+    (if (sap= result map_failed)
 	(values nil (unix-errno))
-	(sys:int-sap result))))
+	(values result 0))))
 
 (defun unix-munmap (addr length)
   (declare (type system-area-pointer addr)
