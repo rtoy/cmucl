@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.113 2007/07/31 10:08:47 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.114 2007/11/06 06:04:56 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1902,7 +1902,7 @@
    information."
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) cmd))
-  (void-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
+  (int-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
 
 #+(or svr4 hpux bsd linux)
 (progn
