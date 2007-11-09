@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.40 2007/11/06 07:16:05 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.41 2007/11/09 19:24:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -81,7 +81,7 @@
 	  prot_read prot_write prot_exec prot_none
 	  map_shared map_private map_fixed map_anonymous
 	  ms_async ms_sync ms_invalidate
-	  unix-mmap unix-munmap unix-msync
+	  unix-mmap unix-munmap unix-msync unix-mprotect
 	  unix-pathname unix-file-mode unix-fd unix-pid unix-uid unix-gid
 	  unix-setitimer unix-getitimer
 	  unix-access r_ok w_ok x_ok f_ok unix-chdir unix-chmod setuidexec
@@ -278,6 +278,13 @@
 	   (type (signed-byte 32) flags))
   (syscall ("msync" system-area-pointer size-t int) t addr length flags))
 
+(defun unix-mprotect (addr length prot)
+  (declare (type system-area-pointer addr)
+	   (type (unsigned-byte 32) length)
+           (type (integer 1 7) prot))
+  (syscall ("mprotect" system-area-pointer size-t int)
+	   t addr length prot))
+  
 ;;;; Lisp types used by syscalls.
 
 (deftype unix-pathname () 'simple-string)

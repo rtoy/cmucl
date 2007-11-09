@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.262 2007/11/05 15:25:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.263 2007/11/09 19:24:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -211,7 +211,7 @@
 	   "PROT_READ" "PROT_WRITE" "PROT_EXEC" "PROT_NONE"
 	   "MAP_SHARED" "MAP_PRIVATE" "MAP_FIXED" "MAP_ANONYMOUS"
 	   "MS_ASYNC" "MS_SYNC" "MS_INVALIDATE"
-	   "UNIX-MMAP" "UNIX-MUNMAP" "UNIX-MSYNC"
+	   "UNIX-MMAP" "UNIX-MUNMAP" "UNIX-MSYNC" "UNIX-MPROTECT"
 	   "KBDCGET" "KBDCRESET" "KBDCRST" "KBDCSET"
 	   "KBDCSSTD" "KBDGCLICK" "KBDSCLICK" "KBDSGET" "L_INCR" "L_SET"
 	   "L_XTND" "OFF-T" "O_APPEND" "O_CREAT" "O_EXCL" "O_RDONLY" "O_RDWR"

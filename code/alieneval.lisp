@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.64 2005/11/11 22:30:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.65 2007/11/09 19:24:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2218,6 +2218,17 @@ type and arg types, so we can detect incompatible redefinitions."
 		(extern-alien "malloc" (function system-area-pointer unsigned))
 		length))
 	 (fill-pointer code))
+    ;; Make sure the malloc'ed area is executable.  
+    (let* ((page-size (get-page-size))
+	   ;; mprotect wants address on a page boundary, so round down
+	   ;; the address and round up the length
+	   (code-base (sys:int-sap (* page-size
+				      (floor (sys:sap-int code) page-size))))
+	   (len (* page-size (ceiling length page-size))))
+      (unless (unix::unix-mprotect code-base len
+				   (logior unix:prot_exec unix:prot_read unix:prot_write))
+	(warn "Unable to mprotect ~S bytes (~S) at ~S (~S).  Callbacks may not work."
+	      len length code-base code)))
     (new-assem:segment-map-output segment
       (lambda (sap length)
 	(kernel:system-area-copy sap 0 fill-pointer 0

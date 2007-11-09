@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.115 2007/11/06 07:16:05 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.116 2007/11/09 19:24:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,6 +39,7 @@
 	  map_shared map_private map_fixed map_anonymous
 	  ms_async ms_sync ms_invalidate
 	  unix-mmap unix-munmap unix-msync
+	  unix-mprotect
 
 	  unix-pathname unix-file-mode unix-fd unix-pid unix-uid unix-gid
 	  unix-setitimer unix-getitimer
@@ -1082,6 +1083,13 @@
 	   (type (unsigned-byte 32) length))
   (syscall ("munmap" system-area-pointer size-t) t addr length))
 
+(defun unix-mprotect (addr length prot)
+  (declare (type system-area-pointer addr)
+	   (type (unsigned-byte 32) length)
+           (type (integer 1 7) prot))
+  (syscall ("mprotect" system-area-pointer size-t int)
+	   t addr length prot))
+  
 (defun unix-setuid (uid)
   "Set the user ID of the calling process to UID.
    If the calling process is the super-user, set the real

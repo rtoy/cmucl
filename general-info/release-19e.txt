@@ -43,6 +43,7 @@ New in this release:
     - Preliminary support for external formats.  Currently only
       iso8859-1 and utf-8 are supported.  Utf-8 support is limited
       since CMUCL only has 8-bit characters.
+    - UNIX-MPROTECT added to access mprotect.
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
@@ -131,6 +132,8 @@ New in this release:
       labels/flet functions.  Untracing should work.  Redefining a
       function should automatically retrace the local functions if
       they were traced previously.
+    - Callbacks should now work on systems where malloc'ed space does
+      not normally allow execution of code.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
