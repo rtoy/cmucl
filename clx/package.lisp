@@ -12,7 +12,7 @@
 ;;; written prior permission.
 
 #+cmu
-(ext:file-comment "$Id: package.lisp,v 1.7 2007/08/21 15:49:28 fgilham Exp $")
+(ext:file-comment "$Id: package.lisp,v 1.8 2007/11/09 20:34:23 rtoy Exp $")
 
 ;;; The CLtL way
 
@@ -389,7 +389,108 @@
     wm-size-hints-user-specified-position-p wm-size-hints-user-specified-size-p
     wm-size-hints-width wm-size-hints-width-inc wm-size-hints-win-gravity
     wm-size-hints-x wm-size-hints-y wm-zoom-hints write-bitmap-file
-    write-resources xatom))
+    write-resources xatom)
+  ;; Exports from xvidmode.lisp
+  (:export mode-info
+	   mode-info-dotclock
+	   mode-info-hdisplay
+	   mode-info-hsyncstart
+	   mode-info-hsyncend
+	   mode-info-htotal
+	   mode-info-hskew
+	   mode-info-vdisplay
+	   mode-info-vsyncstart
+	   mode-info-vsyncend
+	   mode-info-vtotal
+	   mode-info-flags
+	   mode-info-privsize
+	   mode-info-private
+	   make-mode-info
 
+	   xfree86-vidmode-query-version
+	   xfree86-vidmode-set-client-version
+	   xfree86-vidmode-get-permissions
+	   xfree86-vidmode-mod-mode-line 
+	   xfree86-vidmode-get-mode-line 
+	   xfree86-vidmode-get-all-mode-lines
+	   xfree86-vidmode-add-mode-line
+	   xfree86-vidmode-delete-mode-line
+	   xfree86-vidmode-validate-mode-line
+	   xfree86-vidmode-get-gamma
+	   xfree86-vidmode-set-gamma
+	   xfree86-vidmode-get-gamma-ramp
+	   xfree86-vidmode-set-gamma-ramp     
+	   xfree86-vidmode-get-gamma-ramp-size
+	   xfree86-vidmode-lock-mode-switch
+	   xfree86-vidmode-switch-to-mode
+	   xfree86-vidmode-switch-mode
+	   xfree86-vidmode-select-next-mode
+	   xfree86-vidmode-select-prev-mode
+	   xfree86-vidmode-get-monitor
+	   xfree86-vidmode-get-viewport
+	   xfree86-vidmode-set-viewport
+	   xfree86-vidmode-get-dotclocks)
+  ;; xrender
+  (:export render-create-picture
+	   render-free-picture
+	  
+	   render-create-glyph-set
+	   render-reference-glyph-set
+	   render-free-glyph-set
+	  
+	   render-add-glyph
+	   render-add-glyph-from-picture
+	   render-free-glyph
+	   render-fill-rectangle
 
+	   picture-format-display 
+	   picture-format-id
+	   picture-format-type
+	   picture-format-depth
+	   picture-format-red-byte
+	   picture-format-green-byte
+	   picture-format-blue-byte
+	   picture-format-alpha-byte
+	   picture-format-colormap
 
+	   ;; picture object
+	   picture-repeat
+	   picture-alpha-map
+	   picture-alpha-x-origin
+	   picture-alpha-y-origin
+	   picture-clip-x-origin
+	   picture-clip-y-origin
+	   picture-clip-mask
+	   picture-graphics-exposures
+	   picture-subwindow-mode
+	   picture-poly-edge
+	   picture-poly-mode
+	   picture-dither
+	   picture-component-alpha
+	   picture-drawable
+
+	   find-matching-picture-formats
+	   find-window-picture-format
+	   render-free-picture
+	   render-free-glyph-set
+	   render-query-version
+	   ;; render-query-picture-formats
+	   render-fill-rectangle
+	   render-composite
+	   render-create-glyph-set
+	   render-reference-glyph-set
+	   render-composite-glyphs
+	   render-add-glyph
+	   render-add-glyph-from-picture
+	   render-free-glyphs
+	   render-combine)
+  ;; Shape extension
+  (:export shape-query-version
+	   shape-rectangles
+	   shape-mask
+	   shape-combine
+	   shape-offset
+	   shape-query-extents
+	   shape-select-input
+	   shape-input-selected-p
+	   shape-get-rectangles))
