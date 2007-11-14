@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.18 2007/10/04 19:58:20 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.19 2007/11/14 10:04:35 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -262,21 +262,20 @@
   (:node-var node)
   (:generator 0
     (assert (location= result esp-tn))
-    ;; Set the rounding precision to 64-bits when calling out to C.
-    (when (policy node (= float-accuracy 3))
+    #+(or darwin linux)
+    (progn
       (inst sub esp-tn 4)
       (inst fnstcw (make-ea :word :base esp-tn))
-      (inst wait)
+      (inst and (make-ea :word :base esp-tn) #xcff)
       (inst or (make-ea :word :base esp-tn) #x300)
       (inst fldcw (make-ea :word :base esp-tn))
-      (inst wait))
+      (inst add esp-tn 4))
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub esp-tn delta)))
     #+darwin (inst and esp-tn #xfffffff0)
     (move result esp-tn)))
 
-#+nil
 (define-vop (dealloc-number-stack-space)
   (:info amount)
   (:node-var node)
@@ -284,39 +283,12 @@
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst add esp-tn delta)))
-    ;; Reset the rounding precision to 53-bits
-    (when (policy node (= float-accuracy 3))
+    #+(or darwin linux)
+    (progn
+      (inst sub esp-tn 4)
       (inst fnstcw (make-ea :word :base esp-tn))
-      (inst wait)
-      (inst and (make-ea :word :base esp-tn) #xfeff)
-      (inst fldcw (make-ea :word :base esp-tn))
-      (inst wait)
-      (inst add esp-tn 4))))
-
-(define-vop (dealloc-number-stack-space)
-  (:info amount)
-  (:node-var node)
-  (:temporary (:sc unsigned-reg) precision)
-  (:temporary (:sc word-reg) cw)
-  (:generator 0
-    (unless (zerop amount)
-      (let ((delta (logandc2 (+ amount 3) 3)))
-	(inst add esp-tn delta)))
-    ;; Reset the rounding precision to 53-bits
-    (when (policy node (= float-accuracy 3))
-      (inst fnstcw (make-ea :word :base esp-tn))
-      (load-symbol-value precision *fpu-precision*)
-      (inst sar precision 2)		; Remove fixnum tag bits
-      (inst wait)
-      ;; Clear the precision bits so we can fill them in with our
-      ;; desired precision value.
-      (inst mov cw (make-ea :word :base esp-tn))
-      (inst and cw #xfcff)
-      (inst or cw
-	    (make-random-tn :kind :normal
-			    :sc (sc-or-lose 'word-reg *backend*)
-			    :offset (tn-offset precision)))
-      (inst mov (make-ea :word :base esp-tn) cw)
+      (inst and (make-ea :word :base esp-tn) #xcff)
+      (inst or (make-ea :word :base esp-tn) #x200)
       (inst fldcw (make-ea :word :base esp-tn))
       (inst wait)
       (inst add esp-tn 4))))

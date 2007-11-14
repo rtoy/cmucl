@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.55 2005/08/04 16:00:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.56 2007/11/14 10:04:34 cshapiro Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
 (defconstant policy-parameter-slots
   '((speed . cookie-speed) (space . cookie-space) (safety . cookie-safety)
     (cspeed . cookie-cspeed) (brevity . cookie-brevity)
-    (debug . cookie-debug) (float-accuracy . cookie-float-accuracy)))
+    (debug . cookie-debug)))
 
 ;;; Find-Used-Parameters  --  Internal
 ;;;

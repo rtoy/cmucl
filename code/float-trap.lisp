@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.30 2007/07/06 08:04:39 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.31 2007/11/14 10:04:33 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,12 +48,6 @@
 	(cons :zero float-round-to-zero)
 	(cons :positive-infinity float-round-to-positive)
 	(cons :negative-infinity float-round-to-negative)))
-
-#+x86
-(defconstant precision-control-alist
-  (list (cons :24-bit float-precision-24-bit)
-	(cons :53-bit float-precision-53-bit)
-	(cons :64-bit float-precision-64-bit)))
   
 ); Eval-When (Compile Load Eval)
 
@@ -70,8 +64,7 @@
 				      (rounding-mode nil round-p)
 				      (current-exceptions nil current-x-p)
 				      (accrued-exceptions nil accrued-x-p)
-				      (fast-mode nil fast-mode-p)
-				      (precision-control nil precision-control-p))
+				      (fast-mode nil fast-mode-p))
   "This function sets options controlling the floating-point hardware.  If a
   keyword is not supplied, then the current value is preserved.  Possible
   keywords:
@@ -97,15 +90,8 @@
        conformance or debuggability may be impaired.  Some machines may not
        have this feature, in which case the value is always NIL.
 
-   :PRECISION-CONTROL
-       On the x86 architecture, you can set the precision of the arithmetic
-       to :24-BIT, :53-BIT, or :64-BIT mode, corresponding to IEEE single
-       precision, double precision, and extended double precision.
-
    GET-FLOATING-POINT-MODES may be used to find the floating point modes
    currently in effect."
-  #-x86
-  (declare (ignore precision-control))
   (let ((modes (floating-point-modes)))
     (when traps-p
       (setf (ldb float-traps-byte modes) (float-trap-mask traps)))
@@ -132,15 +118,6 @@
       (if fast-mode
 	  (setq modes (logior float-fast-bit modes))
 	  (setq modes (logand (lognot float-fast-bit) modes))))
-    #+x86
-    (when precision-control-p
-      (setf (ldb float-precision-control modes)
-	    (or (cdr (assoc precision-control precision-control-alist))
-		(error "Unknown precision mode: ~S." precision-control))))
-    #-x86
-    (when precision-control-p
-      (warn "Precision control only available for x86"))
-    
     (setf (floating-point-modes) modes))
     
   (values))
@@ -170,13 +147,7 @@
 				     rounding-mode-alist))
 	:current-exceptions ,(exc-keys (ldb float-exceptions-byte modes))
 	:accrued-exceptions ,(exc-keys (ldb float-sticky-bits modes))
-	:fast-mode ,(logtest float-fast-bit modes)
-	#+x86
-	:precision-control
-	#+x86
-	,(car (rassoc (ldb float-precision-control modes)
-		      precision-control-alist))
-	))))
+	:fast-mode ,(logtest float-fast-bit modes)))))
 
   
 ;;; CURRENT-FLOAT-TRAP  --  Interface

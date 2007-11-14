@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.50 2007/10/04 19:58:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.51 2007/11/14 10:04:35 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2267,37 +2267,27 @@
 
 ;;;; Float mode hackery:
 
-(deftype float-modes () '(unsigned-byte 32)) ; really only 16
+(deftype float-modes () '(unsigned-byte 24))
 (defknown floating-point-modes () float-modes (flushable))
 (defknown ((setf floating-point-modes)) (float-modes)
   float-modes)
-
-(defconstant npx-env-size (* 7 vm:word-bytes))
-(defconstant npx-cw-offset 0)
-(defconstant npx-sw-offset 4)
-
-(defvar *fpu-precision*
-  (dpb float-precision-53-bit float-precision-control 0))
 
 (define-vop (floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:translate floating-point-modes)
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-reg :offset eax-offset :target res
-		   :to :result) eax)
+  (:temporary (:sc unsigned-stack) cw-stack)
+  (:temporary (:sc unsigned-reg :offset eax-offset) sw-reg)
   (:generator 8
-   (inst sub esp-tn npx-env-size)	; make space on stack
-   (inst wait)                          ; Catch any pending FPE exceptions
-   (inst fstenv (make-ea :dword :base esp-tn)) ; masks all exceptions
-   (inst fldenv (make-ea :dword :base esp-tn)) ; restore previous state
-   ;; Current status to high word
-   (inst mov eax (make-ea :dword :base esp-tn :disp (- npx-sw-offset 2)))
-   ;; Exception mask to low word
-   (inst mov ax-tn (make-ea :word :base esp-tn :disp npx-cw-offset))
-   (inst add esp-tn npx-env-size)	; Pop stack
-   (inst xor eax #x3f)	; Flip exception mask to trap enable bits
-   (move res eax)))
+   (inst fnstsw)
+   (inst fnstcw cw-stack)
+   (inst and sw-reg #xff)  ; mask exception flags
+   (inst shl sw-reg 16)
+   (inst byte #x66)  ; operand size prefix
+   (inst or sw-reg cw-stack)
+   (inst xor sw-reg #x3f)  ; invert exception mask
+   (move res sw-reg)))
 
 (define-vop (set-floating-point-modes)
   (:args (new :scs (unsigned-reg) :to :result :target res))
@@ -2306,25 +2296,24 @@
   (:result-types unsigned-num)
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
-  (:temporary (:sc unsigned-reg :offset eax-offset
-		   :from :eval :to :result) eax)
-  (:generator 3
-   (inst sub esp-tn npx-env-size)	; make space on stack
-   (inst wait)                          ; Catch any pending FPE exceptions
+  (:temporary (:sc unsigned-stack) cw-stack)
+  (:temporary (:sc byte-reg :offset al-offset) sw-reg)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) old)
+  (:generator 6
+   (inst mov cw-stack new)
+   (inst xor cw-stack #x3f)  ; invert exception mask
+   (inst fnstsw)
+   (inst fldcw cw-stack)  ; always update the control word
+   (inst mov old new)
+   (inst shr old 16)
+   (inst cmp cl-tn sw-reg)  ; compare exception flags
+   (inst jmp :z DONE)  ; skip updating the status word
+   (inst sub esp-tn 28)
    (inst fstenv (make-ea :dword :base esp-tn))
-   (inst mov eax new)
-   ;; Save precision bits so we can restore them properly
-   (inst and eax #x300)
-   (inst shl eax 2)			; Convert to fixnum
-   (store-symbol-value eax *fpu-precision*)
-   ;; Now set the desired mode
-   (inst mov eax new)
-   (inst xor eax #x3f)	    ; turn trap enable bits into exception mask
-   (inst mov (make-ea :word :base esp-tn :disp npx-cw-offset) ax-tn)
-   (inst shr eax 16)			; position status word
-   (inst mov (make-ea :word :base esp-tn :disp npx-sw-offset) ax-tn)
+   (inst mov (make-ea :byte :base esp-tn :disp 4) cl-tn)
    (inst fldenv (make-ea :dword :base esp-tn))
-   (inst add esp-tn npx-env-size)	; Pop stack
+   (inst add esp-tn 28)
+   DONE
    (move res new)))
 
 

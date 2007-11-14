@@ -6,7 +6,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.3 2007/08/17 14:09:20 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/env-access.lisp,v 1.4 2007/11/14 10:04:33 cshapiro Exp $")
 
 ;;;
 ;;; **********************************************************************
@@ -76,8 +76,7 @@ alist of declarations that apply to the apparent binding of VAR."
 	       (list 'compilation-speed (cookie-cspeed cookie))
 	       (list 'space (cookie-space cookie))
 	       (list 'debug (cookie-debug cookie))
-	       (list 'inhibit-warnings (cookie-brevity cookie))
-	       (list 'float-accuracy (cookie-float-accuracy cookie)))
+	       (list 'inhibit-warnings (cookie-brevity cookie)))
          ))
       (ext:optimize-interface
        (let ((cookie (lexenv-interface-cookie lexenv)))
@@ -86,8 +85,7 @@ alist of declarations that apply to the apparent binding of VAR."
 	       (list 'compilation-speed (cookie-cspeed cookie))
 	       (list 'space (cookie-space cookie))
 	       (list 'debug (cookie-debug cookie))
-	       (list 'inhibit-warnings (cookie-brevity cookie))
-	       (list 'float-accuracy (cookie-float-accuracy cookie)))))
+	       (list 'inhibit-warnings (cookie-brevity cookie)))))
       (declaration
        (cond (env
 	      ;; What are we supposed to do if an environment is

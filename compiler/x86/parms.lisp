@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.33 2007/10/04 19:58:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34 2007/11/14 10:04:35 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,15 +162,10 @@
 (defconstant float-round-to-positive 2)
 (defconstant float-round-to-zero     3)
 
-(defconstant float-precision-24-bit  0)
-(defconstant float-precision-53-bit  2)
-(defconstant float-precision-64-bit  3)
-
 (defconstant float-rounding-mode   (byte 2 10))
 (defconstant float-sticky-bits     (byte 6 16))
 (defconstant float-traps-byte      (byte 6  0))
 (defconstant float-exceptions-byte (byte 6 16))
-(defconstant float-precision-control (byte 2 8))
 (defconstant float-fast-bit 0) ; No fast mode on x86
 ); eval-when
 
@@ -333,7 +328,6 @@
       :key-and-value
       :key-or-value
 
-      *fpu-precision*
       ;; Spare symbols.  Rename these when you need to add some static
       ;; symbols and don't want to do a cross-compile.
       spare-8

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.43 2005/10/21 17:56:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.44 2007/11/14 10:04:35 cshapiro Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,8 +18,7 @@
 (in-package "C")
 
 (in-package "EXTENSIONS")
-(export '(inhibit-warnings freeze-type optimize-interface constant-function
-	  float-accuracy))
+(export '(inhibit-warnings freeze-type optimize-interface constant-function))
 (in-package "KERNEL")
 (export '(note-name-defined define-function-name undefine-function-name
 	  *type-system-initialized* %note-type-defined))
@@ -42,16 +41,7 @@
   (safety nil :type (or (rational 0 3) null))
   (cspeed nil :type (or (rational 0 3) null))
   (brevity nil :type (or (rational 0 3) null))
-  (debug nil :type (or (rational 0 3) null))
-  ;; float-accuracy is intended for x86 FPU.  It has no effect on
-  ;; other architectures. float-accuracy controls the rounding-mode.
-  ;; A value of 3 means that when calling out to C, we set the x86 FPU
-  ;; rounding mode to 64-bits.  Otherwise the rounding-mode is left
-  ;; unchanged.  By setting the rounding-mode to 53-bit,
-  ;; double-float-epsilon really is double-float-epsilon.  However
-  ;; calling out to C with 53-bit mode affects the accuracy of
-  ;; floating-point functions, which normally want 64-bit.
-  (float-accuracy 3 :type (or (rational 0 3) null)))
+  (debug nil :type (or (rational 0 3) null)))
 
 
 ;;; The *default-cookie* represents the current global compiler policy
@@ -73,8 +63,7 @@
 (defun proclaim-init ()
   (setf *default-cookie*
 	(make-cookie :safety 1 :speed 1 :space 1 :cspeed 1
-		     :brevity 1 :debug 2
-		     :float-accuracy 3))
+		     :brevity 1 :debug 2))
   (setf *default-interface-cookie*
 	(make-cookie)))
 ;;;
@@ -313,7 +302,6 @@
 		(compilation-speed (setf (cookie-cspeed res) value))
 		((inhibit-warnings brevity) (setf (cookie-brevity res) value))
 		((debug-info debug) (setf (cookie-debug res) value))
-		(float-accuracy (setf (cookie-float-accuracy res) value))
 		(t
 		 (compiler-warning "Unknown optimization quality ~S in ~S."
 				   (car quality) spec))))
