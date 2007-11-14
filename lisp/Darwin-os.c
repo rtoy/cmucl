@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.11 2007/07/31 10:08:47 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.12 2007/11/14 05:44:00 cshapiro Exp $
  *
  */
 
@@ -200,24 +200,23 @@ sc_reg(os_context_t * context, int offset)
 int *
 sc_reg(os_context_t *context, int offset)
 {
-    struct i386_thread_state *ss = &context->uc_mcontext->ss;
     switch (offset) {
       case 0:
-	  return &ss->eax;
+	  return (int *) &context->uc_mcontext->__ss.__eax;
       case 2:
-	  return &ss->ecx;
+	  return (int *) &context->uc_mcontext->__ss.__ecx;
       case 4:
-	  return &ss->edx;
+	  return (int *) &context->uc_mcontext->__ss.__edx;
       case 6:
-	  return &ss->ebx;
+	  return (int *) &context->uc_mcontext->__ss.__ebx;
       case 8:
-	  return &ss->esp;
+	  return (int *) &context->uc_mcontext->__ss.__esp;
       case 10:
-	  return &ss->ebp;
+	  return (int *) &context->uc_mcontext->__ss.__ebp;
       case 12:
-	  return &ss->esi;
+	  return (int *) &context->uc_mcontext->__ss.__esi;
       case 14:
-	  return &ss->edi;
+	  return (int *) &context->uc_mcontext->__ss.__edi;
     }
 
     return (int *) 0;
