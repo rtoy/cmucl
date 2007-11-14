@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.264 2007/11/14 17:28:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.265 2007/11/14 21:31:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1078,6 +1078,8 @@
 	   "FIXNUMIZE"
 	   "WEAK-POINTER-MARK-BIT-SLOT"
 	   )
+  #+x86
+  (:export "COMPATIBLE-FUNCTION-TYPES-P")
   #+sparc
   (:export "ALLOCATION-TRAP"
 	   "POSITIVE-FIXNUM-BITS"
