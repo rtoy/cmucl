@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.42 2007/11/14 10:04:33 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.43 2007/11/14 17:20:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -254,7 +254,7 @@
            (type (integer 1 7) prot)
 	   (type (unsigned-byte 32) flags)
 	   (type (or null unix-fd) fd)
-	   (type file-offset offset))
+	   (type (signed-byte 32) offset))
   ;; Can't use syscall, because the address that is returned could be
   ;; "negative".  Hence we explicitly check for mmap returning
   ;; MAP_FAILED.
