@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.27 2007/09/04 10:22:54 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.28 2007/11/14 17:44:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,7 +202,7 @@
     (eflags unsigned-long)
     (esp_at_signal unsigned-long)
     (ss unsigned-long)
-    (fpstate (* (struct ftpstate)))
+    (fpstate (* (struct fpstate)))
     (oldmask unsigned-long)
     (cr2 unsigned-long)))
 
@@ -427,7 +427,7 @@
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
+    (let ((reg-sap (alien-sap (deref (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0)
 					   'fpreg)
 				     index))))
       (coerce (sys:sap-ref-long reg-sap 0) format))))
@@ -443,7 +443,7 @@
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
+    (let ((reg-sap (alien-sap (deref (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0)
 					    'fpreg)
 				     index))))
       (declare (ignorable reg-sap))
@@ -476,12 +476,12 @@
 #+linux
 (defun sigcontext-floating-point-modes (scp)
   (declare (type (alien (* sigcontext)) scp))
-  (let ((cw (slot (deref (slot scp 'fpstate) 0) 'cw))
-	(sw (slot (deref (slot scp 'fpstate) 0) 'sw)))
+  (let ((cw (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0) 'cw))
+	(sw (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0) 'sw)))
     ;;(format t "cw = ~4x~%sw = ~4x~%" cw sw)
     ;; NOT TESTED -- clear sticky bits to clear interrupt condition
-    (setf (slot (deref (slot scp 'fpstate) 0) 'sw) (logandc2 sw #x3f))
-    ;;(format t "new sw = ~x~%" (slot (deref (slot scp 'fpstate) 0) 'sw))
+    (setf (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0) 'sw) (logandc2 sw #x3f))
+    ;;(format t "new sw = ~x~%" (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0) 'sw))
     ;; simulate floating-point-modes VOP
     (logior (ash (logand sw #xffff) 16) (logxor (logand cw #xffff) #x3f))))
 
