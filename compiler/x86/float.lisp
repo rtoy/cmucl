@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.51 2007/11/14 10:04:35 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.52 2007/11/15 22:48:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -962,6 +962,7 @@
 		     :to :eval))
 	   (:temporary (:sc single-reg :offset fr0-offset
 			    :from :eval :to :result) fr0)
+	   (:temporary (:sc single-stack) tmp)
 	   (:results (r :scs (single-reg single-stack)))
 	   (:arg-types single-float single-float)
 	   (:result-types single-float)
@@ -976,10 +977,14 @@
 	      ;; x, y, and r are the same register.
 	      ((and (sc-is x single-reg) (location= x r) (location= y r))
 	       (cond ((zerop (tn-offset r))
-		      (inst ,fop fr0))
+		      (inst ,fop fr0)
+		      (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
+			(inst fld (ea-for-sf-stack tmp))))
 		     (t
 		      (inst fxch r)
 		      (inst ,fop fr0)
+		      (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
+			(inst fld (ea-for-sf-stack tmp)))
 		      ;; XX the source register will not be valid.
 		      (note-next-instruction vop :internal-error)
 		      (inst fxch r))))
@@ -1009,6 +1014,12 @@
 			    (inst fld (ea-for-sf-desc y)))))
 		      ;; ST(i) = ST(i) op ST0
 		      (inst ,fop-sti r)))
+	       (unless (zerop (tn-offset r))
+		 (inst fxch r))
+	       (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
+		 (inst fld (ea-for-sf-stack tmp)))
+	       (unless (zerop (tn-offset r))
+		 (inst fxch r))
 	       (when (policy node (or (= debug 3) (> safety speed)))
 		     (note-next-instruction vop :internal-error)
 		     (inst wait)))
@@ -1037,6 +1048,13 @@
 			   (inst fld (ea-for-sf-desc x)))))
 		      ;; ST(i) = ST(0) op ST(i)
 		      (inst ,fopr-sti r)))
+
+	       (unless (zerop (tn-offset r))
+		 (inst fxch r))
+	       (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
+		 (inst fld (ea-for-sf-stack tmp)))
+	       (unless (zerop (tn-offset r))
+		 (inst fxch r))
 	       (when (policy node (or (= debug 3) (> safety speed)))
 		     (note-next-instruction vop :internal-error)
 		     (inst wait)))
@@ -1092,6 +1110,8 @@
 	       ;; Finally save the result
 	       (sc-case r
 	         (single-reg
+		  (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
+			(inst fld (ea-for-sf-stack tmp)))
 		  (cond ((zerop (tn-offset r))
 			 (when (policy node (or (= debug 3) (> safety speed)))
 			       (inst wait)))
