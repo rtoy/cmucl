@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.7 2007/07/30 07:24:46 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.8 2007/11/16 06:31:54 cshapiro Exp $
  *
  */
 
@@ -56,7 +56,6 @@ int *
 sc_reg(os_context_t * c, int offset)
 {
 #ifdef i386
-#if USE_SA_SIGINFO
     switch (offset) {
       case 0:
 	  return &c->uc_mcontext.__gregs[_REG_EAX];
@@ -75,26 +74,6 @@ sc_reg(os_context_t * c, int offset)
       case 14:
 	  return &c->uc_mcontext.__gregs[_REG_EDI];
     }
-#else
-    switch (offset) {
-      case 0:
-	  return &c->sc_eax;
-      case 2:
-	  return &c->sc_ecx;
-      case 4:
-	  return &c->sc_edx;
-      case 6:
-	  return &c->sc_ebx;
-      case 8:
-	  return &c->sc_esp;
-      case 10:
-	  return &c->sc_ebp;
-      case 12:
-	  return &c->sc_esi;
-      case 14:
-	  return &c->sc_edi;
-    }
-#endif
 #endif
     return (int *) 0;
 }

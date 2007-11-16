@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.18 2007/11/16 06:05:35 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.19 2007/11/16 06:31:55 cshapiro Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -61,12 +61,6 @@
 #endif
 #ifndef SAVE_CONTEXT
 #define SAVE_CONTEXT() do {} while(0)
-#endif
-
-/* Some OSes have their reasons not to use SA_SIGINFO. */
-
-#if !defined(USE_SA_SIGINFO)
-#define USE_SA_SIGINFO SA_SIGINFO
 #endif
 
 #define OS_VM_PROT_ALL (OS_VM_PROT_READ|OS_VM_PROT_WRITE|OS_VM_PROT_EXECUTE)

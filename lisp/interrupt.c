@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.50 2007/09/04 10:22:54 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.51 2007/11/16 06:31:55 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -404,7 +404,7 @@ interrupt_install_low_level_handler(int signal, void handler(HANDLER_ARGS))
     sa.sa_sigaction = handler;
     sigemptyset(&sa.sa_mask);
     FILLBLOCKSET(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | USE_SA_SIGINFO;
+    sa.sa_flags = SA_RESTART | SA_SIGINFO;
 
     /* Deliver protection violations on a dedicated signal stack,
        because, when we get that signal because of hitting a control
@@ -464,7 +464,7 @@ install_handler(int signal, void handler(HANDLER_ARGS))
 
 	sigemptyset(&sa.sa_mask);
 	FILLBLOCKSET(&sa.sa_mask);
-	sa.sa_flags = USE_SA_SIGINFO | SA_RESTART;
+	sa.sa_flags = SA_SIGINFO | SA_RESTART;
 
 	sigaction(signal, &sa, NULL);
     }
