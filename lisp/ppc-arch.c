@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.10 2007/07/15 06:53:34 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.11 2007/11/16 05:04:09 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -374,8 +374,6 @@ sigill_handler(HANDLER_ARGS)
 {
     int badinst;
     int opcode;
-
-    SAVE_CONTEXT();
 
     sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
     opcode = *((int *) SC_PC(context));

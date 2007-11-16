@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.28 2007/07/25 10:23:54 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.29 2007/11/16 05:04:09 cshapiro Exp $ 
  *
  */
 
@@ -206,8 +206,6 @@ sigtrap_handler(HANDLER_ARGS)
 	single_stepping = NULL;
 	return;
     }
-
-    SAVE_CONTEXT();
 
     /* This is just for info in case monitor wants to print an approx */
     current_control_stack_pointer = (unsigned long *) SC_SP(context);
