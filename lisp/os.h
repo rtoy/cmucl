@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.17 2007/01/01 11:53:03 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.18 2007/11/16 06:05:35 cshapiro Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -58,9 +58,6 @@
 #endif
 #ifndef CODE
 #define CODE(code)  code
-#endif
-#ifndef CTXT_SIGMASK
-#define CTXT_SIGMASK(context) context->sc_mask
 #endif
 #ifndef SAVE_CONTEXT
 #define SAVE_CONTEXT() do {} while(0)
