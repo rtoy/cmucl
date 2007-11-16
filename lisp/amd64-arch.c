@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.5 2007/11/16 05:04:09 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.6 2007/11/16 06:52:25 cshapiro Exp $ 
  *
  */
 
@@ -313,8 +313,6 @@ sigtrap_handler(HANDLER_ARGS)
 	  break;
     }
 }
-
-#define FIXNUM_VALUE(lispobj) (((int) lispobj) >> 2)
 
 void
 arch_install_interrupt_handlers()

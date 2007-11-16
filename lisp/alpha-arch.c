@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.9 2007/01/01 11:53:02 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.10 2007/11/16 06:52:25 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -317,8 +317,6 @@ sigtrap_handler(int signal, int code, struct sigcontext *scp)
 	  break;
     }
 }
-
-#define FIXNUM_VALUE(lispobj) (((int)lispobj)>>2)
 
 static void
 sigfpe_handler(int signal, int code, struct sigcontext *scp)

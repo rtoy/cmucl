@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-arch.c,v 1.10 2005/09/15 18:26:52 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-arch.c,v 1.11 2007/11/16 06:52:25 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -257,8 +257,6 @@ sigtrap_handler(int signal, int code, struct sigcontext *scp)
     }
 }
 
-#define FIXNUM_VALUE(lispobj) (((int)lispobj)>>2)
-
 static void
 sigfpe_handler(int signal, int code, struct sigcontext *scp)
 {
@@ -293,15 +291,15 @@ sigfpe_handler(int signal, int code, struct sigcontext *scp)
 		    return;
 		}
 		result =
-		    FIXNUM_VALUE(scp->sc_regs[rs]) +
-		    FIXNUM_VALUE(scp->sc_regs[rt]);
+		    fixnum_value(scp->sc_regs[rs]) +
+		    fixnum_value(scp->sc_regs[rt]);
 		dest = rd;
 		break;
 
 	    case 0x22:		/* SUB */
 		result =
-		    FIXNUM_VALUE(scp->sc_regs[rs]) -
-		    FIXNUM_VALUE(scp->sc_regs[rt]);
+		    fixnum_value(scp->sc_regs[rs]) -
+		    fixnum_value(scp->sc_regs[rt]);
 		dest = rd;
 		break;
 
@@ -312,7 +310,7 @@ sigfpe_handler(int signal, int code, struct sigcontext *scp)
 	  break;
 
       case 0x8:		/* ADDI */
-	  result = FIXNUM_VALUE(scp->sc_regs[rs]) + (immed >> 2);
+	  result = fixnum_value(scp->sc_regs[rs]) + (immed >> 2);
 	  dest = rt;
 	  break;
 
