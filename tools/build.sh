@@ -104,7 +104,6 @@ buildit ()
 
     if [ "$ENABLE" = "yes" ]; 
     then
-set -x
 	$TOOLDIR/clean-target.sh $TARGET
 	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT
 	(cd $TARGET/lisp; $MAKE)
