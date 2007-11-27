@@ -49,7 +49,15 @@ SKIPUTILS=no
 # If gmake exists, assume it is GNU make and use it.
 if [ -z "$MAKE" ]; then
     MAKE="`which gmake`"
-    if echo $MAKE | grep '^no' > /dev/null; then
+
+    # Some versions of which set an error code if it fails.  Others
+    # say "no foo in <path>".  In either of these cases, just assume
+    # make is GNU make.
+
+    if [ $? -ne 0 ]; then
+	MAKE="make"
+    fi
+    if echo "X$MAKE" | grep '^Xno' > /dev/null; then
 	MAKE="make"
     fi
 fi
@@ -96,6 +104,7 @@ buildit ()
 
     if [ "$ENABLE" = "yes" ]; 
     then
+set -x
 	$TOOLDIR/clean-target.sh $TARGET
 	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT
 	(cd $TARGET/lisp; $MAKE)
