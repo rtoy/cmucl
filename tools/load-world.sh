@@ -1,9 +1,27 @@
 #!/bin/sh
 
-if [ "$1" = "" -o "$2" = "" ]
-then
-	echo "Usage: $0 target-directory version"
-	exit 1
+usage()
+{
+    echo "load-world.sh [-?p] target-directory version-string"
+    echo "   -p    Skip loading of PCL (Mostly for cross-compiling)"
+    echo "   -?    This help"
+    exit 1
+}
+
+SKIP_PCL=
+NO_PCL_FEATURE=
+
+while getopts "p" arg
+do
+  case $arg in
+      p) SKIP_PCL="yes"
+         shift;;
+      \?) usage ;;
+  esac
+done
+
+if [ $# -ne 2 ]; then
+    usage
 fi
 
 if [ ! -d "$1" ]
@@ -13,6 +31,13 @@ then
 fi
 
 TARGET="`echo $1 | sed 's:/*$::'`"
+
+# If -p given, we want to skip loading of PCL.  Do this by pushing
+# :no-pcl onto *features*
+
+if [ -n "$SKIP_PCL" ]; then
+    NO_PCL_FEATURE="(pushnew :no-pcl *features*)"
+fi
 
 $TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
 (in-package :cl-user)
@@ -25,6 +50,7 @@ $TARGET/lisp/lisp -core $TARGET/lisp/kernel.core <<EOF
 (pushnew :no-clx *features*)
 (pushnew :no-clm *features*)
 (pushnew :no-hemlock *features*)
+$NO_PCL_FEATURE
 
 (load "target:tools/worldload")
 $2
