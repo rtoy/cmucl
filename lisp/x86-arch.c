@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.30 2007/11/16 06:52:25 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.31 2007/12/03 18:02:45 pwerkowski Exp $ 
  *
  */
 
@@ -161,7 +161,7 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
     single_stepping = (unsigned int *) pc;
 
 #ifndef __linux__
-    (unsigned int *) SC_PC(context) = (char *) pc - 9;
+    SC_PC(context) = (int)((char *) pc - 9);
 #endif
 }
 
