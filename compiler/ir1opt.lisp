@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.85 2005/11/09 01:48:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.86 2007/12/03 16:15:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1014,10 +1014,9 @@
 		(convert-call-if-possible
 		 (continuation-use (basic-combination-fun call))
 		 call))
-	       ((not leaf))
+	       ((not (and leaf info)))
 	       ((or (info function source-transform (leaf-name leaf))
-		    (and info
-			 (ir1-attributep (function-info-attributes info)
+		    (and (ir1-attributep (function-info-attributes info)
 					 predicate)
 			 (let ((dest (continuation-dest (node-cont call))))
 			   (and dest (not (if-p dest))))))
