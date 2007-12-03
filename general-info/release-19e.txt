@@ -134,6 +134,13 @@ New in this release:
       they were traced previously.
     - Callbacks should now work on systems where malloc'ed space does
       not normally allow execution of code.
+    - The FLOAT-ACCURACY declaration has been removed.  This should
+      have no affect on most user's code, unless they were using
+      this.  The default is 53-bit (double-float) precision for
+      everything and the compiler takes care of the precision for the
+      appropriate ABI.  It is the compiler's responsibility to make
+      sure single-precision floats are done correctly with
+      single-precision results.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
@@ -155,6 +162,10 @@ New in this release:
     - Forward-referenced classes are allowed.
 
   * Changes to rebuilding procedure:
+    - load-world.sh now supports a -p option to load the world without
+      PCL.  This is mostly for cross-compiling which doesn't want PCL
+      loaded because it's not build during a cross-compile.
+
 
 This release is not binary compatible with code compiled using CMUCL
 19d; you will need to recompile FASL files. 
