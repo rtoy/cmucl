@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.51 2007/11/16 06:31:55 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.52 2007/12/04 10:48:45 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -27,23 +27,10 @@ boolean internal_errors_enabled = 0;
 os_context_t *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
 union interrupt_handler interrupt_handlers[NSIG];
-void (*interrupt_low_level_handlers[NSIG]) (HANDLER_ARGS) = {
-0};
+void (*interrupt_low_level_handlers[NSIG])(HANDLER_ARGS) = {0};
 
 static int pending_signal = 0;
-
-#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__linux__)
-static siginfo_t pending_code = { 0 };
-
-#define PASSCODE(code) (&(code))
-#define DEREFCODE(code) (*(code))
-#else
-static int pending_code = 0;
-
-#define PASSCODE(code) (code)
-#define DEREFCODE(code) (code)
-#endif
-
+static siginfo_t pending_code = {0};
 static sigset_t pending_mask;
 static boolean maybe_gc_pending = FALSE;
 
@@ -209,17 +196,13 @@ interrupt_handle_pending(os_context_t * context)
 
     if (pending_signal) {
 	int signal;
-
-#if defined(SOLARIS) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__linux__)
 	siginfo_t code;
-#else
-	int code;
-#endif
+
 	signal = pending_signal;
 	code = pending_code;
 	pending_signal = 0;
 	/* pending_code = 0; */
-	interrupt_handle_now(signal, PASSCODE(code), context);
+	interrupt_handle_now(signal, &code, context);
     }
 }
 
@@ -300,7 +283,7 @@ maybe_now_maybe_later(HANDLER_ARGS)
     SAVE_CONTEXT();
     /**/ if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
 	pending_signal = signal;
-	pending_code = DEREFCODE(code);
+	pending_code = *code;
 	pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
 	SetSymbolValue(INTERRUPT_PENDING, T);
@@ -310,7 +293,7 @@ maybe_now_maybe_later(HANDLER_ARGS)
 #endif
 		  arch_pseudo_atomic_atomic(context)) {
 	pending_signal = signal;
-	pending_code = DEREFCODE(code);
+	pending_code = *code;
 	pending_mask = context->uc_sigmask;
 	FILLBLOCKSET(&context->uc_sigmask);
 	arch_set_pseudo_atomic_interrupted(context);
