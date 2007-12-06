@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.18 2007/07/15 21:33:14 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.19 2007/12/06 13:51:21 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -15,6 +15,7 @@
 #include <sys/mman.h>
 #include <sys/signal.h>
 
+#include <osreldate.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +40,13 @@ typedef int os_vm_prot_t;
 
 int *sc_reg(ucontext_t *, int);
 
+#if __FreeBSD_version < 700004
 #define PROTECTION_VIOLATION_SIGNAL SIGBUS
+#define PROTECTION_VIOLATION_CODE BUS_PAGE_FAULT
+#else
+#define PROTECTION_VIOLATION_SIGNAL SIGSEGV
+#define PROTECTION_VIOLATION_CODE SEGV_ACCERR
+#endif
 
 #undef PAGE_SIZE
 

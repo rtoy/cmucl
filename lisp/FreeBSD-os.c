@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.20 2007/07/31 10:08:47 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.21 2007/12/06 13:51:21 cshapiro Exp $
  *
  */
 
@@ -159,7 +159,7 @@ sigbus_handler(int signal, siginfo_t *info, ucontext_t *context)
 #endif
 
 #if defined GENCGC
-    if (info->si_code == BUS_PAGE_FAULT) {
+    if (info->si_code == PROTECTION_VIOLATION_CODE) {
 	page_index = find_page_index(info->si_addr);
 
 	/* Check if the fault is within the dynamic space. */
@@ -183,19 +183,11 @@ sigbus_handler(int signal, siginfo_t *info, ucontext_t *context)
     interrupt_handle_now(signal, info, context);
 }
 
-static void
-sigsegv_handler(int signal, siginfo_t *info, ucontext_t *context)
-{
-    interrupt_handle_now(signal, info, context);
-}
-
 void
 os_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler
-	(SIGSEGV, (void (*)(HANDLER_ARGS)) sigsegv_handler);
-    interrupt_install_low_level_handler
-	(SIGBUS, (void (*)(HANDLER_ARGS)) sigbus_handler);
+	(PROTECTION_VIOLATION_SIGNAL, sigbus_handler);
 }
 
 void *

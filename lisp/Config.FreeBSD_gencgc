@@ -2,10 +2,14 @@ PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
-CPPFLAGS = -I. -I$(PATH1) -I- -I/usr/X11R6/include
 CC = gcc
 LD = ld
 CPP = cpp
+ifneq (,$(filter 2% 3%, $(shell $(CC) -dumpversion)))
+CPPFLAGS = -I. -I$(PATH1) -I- -I/usr/X11R6/include
+else
+CPPFLAGS = -iquote . -iquote $(PATH1) -I/usr/X11R6/include
+endif
 CFLAGS = -Wstrict-prototypes -Wall -O2 -g -DGENCGC -DLINKAGE_TABLE
 ASFLAGS = -g -DGENCGC -DLINKAGE_TABLE
 NM = nm -gp
