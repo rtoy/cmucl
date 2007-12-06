@@ -42,7 +42,15 @@ EOF
 if [ "$MAKE" = "" ]
 then    
     MAKE="`which gmake`"
-    if echo $MAKE | grep '^no' > /dev/null; then
+
+    # Some versions of which set an error code if it fails.  Others
+    # say "no foo in <path>".  In either of these cases, just assume
+    # make is GNU make.
+
+    if [ $? -ne 0 ]; then
+	MAKE="make"
+    fi
+    if echo "X$MAKE" | grep '^Xno' > /dev/null; then
 	MAKE="make"
     fi
 fi
