@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.19 2007/12/06 13:51:21 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.20 2007/12/07 06:54:28 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -21,7 +21,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <ucontext.h>
-#include <libgen.h>
 
 typedef caddr_t os_vm_address_t;
 typedef vm_size_t os_vm_size_t;
