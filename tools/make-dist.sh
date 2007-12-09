@@ -55,9 +55,12 @@ else
 	  OS=linux
 	  ;;
       Darwin)
-	  ARCH=ppc
-	  OS=darwin
-	  ;;
+          OS=darwin
+          # x86 or ppc?
+          case `uname -m` in
+	      i386) ARCH=x86 ;;
+	      *) ARCH=ppc ;;
+	  esac
       esac
 
       if [ $# -eq 3 ]; then
@@ -90,9 +93,9 @@ VERSION=$2
 
 ROOT=`dirname $0`
 
-# If no compression options given, default to gzip
+# If no compression options given, default to bzip
 if [ -z "$ENABLE_GZIP" -a -z "$ENABLE_BZIP" ]; then
-    ENABLE_GZIP="-g"
+    ENABLE_BZIP="-b"
 fi
 
 OPTIONS="${GROUP:+ -G ${GROUP}} ${OWNER:+ -O ${OWNER}} $ENABLE_GZIP $ENABLE_BZIP"
