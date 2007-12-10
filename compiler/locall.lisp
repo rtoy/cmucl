@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.59 2007/10/02 15:21:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.60 2007/12/10 18:48:57 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1114,7 +1114,6 @@
 			   (return nil))
 			 (setq outside-non-tail-call dest)))))
 		 (ok-initial-convert-p fun))
-	(setf (functional-kind fun) :assignment)
         (cond (outside-call
 	       (setf (functional-kind fun) :assignment)
 	       (let-convert fun outside-call)
