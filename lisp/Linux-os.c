@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.33 2007/07/31 10:08:47 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.34 2007/12/14 08:06:50 cshapiro Exp $
  *
  */
 
@@ -114,41 +114,41 @@ sc_reg(ucontext_t *context, int offset)
 
 #ifdef __x86_64
 int *
-sc_reg(struct sigcontext *c, int offset)
+sc_reg(ucontext_t *c, int offset)
 {
     switch (offset) {
       case 0:
-	  return &c->rax;
+	  return &c->uc_mcontext.gregs[REG_RAX];
       case 2:
-	  return &c->rcx;
+	  return &c->uc_mcontext.gregs[REG_RCX];
       case 4:
-	  return &c->rdx;
+	  return &c->uc_mcontext.gregs[REG_RDX];
       case 6:
-	  return &c->rbx;
+	  return &c->uc_mcontext.gregs[REG_RBX];
       case 8:
-	  return &c->rsp;
+	  return &c->uc_mcontext.gregs[REG_RSP];
       case 10:
-	  return &c->rbp;
+	  return &c->uc_mcontext.gregs[REG_RBP];
       case 12:
-	  return &c->rsi;
+	  return &c->uc_mcontext.gregs[REG_RSI];
       case 14:
-	  return &c->rdi;
+	  return &c->uc_mcontext.gregs[REG_RDI];
       case 16:
-	  return &c->r8;
+	  return &c->uc_mcontext.gregs[REG_R8];
       case 18:
-	  return &c->r9;
+	  return &c->uc_mcontext.gregs[REG_R9];
       case 20:
-	  return &c->r10;
+	  return &c->uc_mcontext.gregs[REG_R10];
       case 22:
-	  return &c->r11;
+	  return &c->uc_mcontext.gregs[REG_R11];
       case 24:
-	  return &c->r12;
+	  return &c->uc_mcontext.gregs[REG_R12];
       case 26:
-	  return &c->r13;
+	  return &c->uc_mcontext.gregs[REG_R13];
       case 28:
-	  return &c->r14;
+	  return &c->uc_mcontext.gregs[REG_R14];
       case 30:
-	  return &c->r15;
+	  return &c->uc_mcontext.gregs[REG_R15];
     }
     return (int *) 0;
 }
@@ -281,7 +281,7 @@ sigsegv_handler(HANDLER_ARGS)
 	return;
     }
 #if defined(__x86_64)
-    DPRINTF(0, (stderr, "sigsegv: rip: %p\n", context->rip));
+    DPRINTF(0, (stderr, "sigsegv: rip: %p\n", context->uc_mcontext.gregs[REG_RIP]));
 #else
     DPRINTF(0, (stderr, "sigsegv: eip: %x\n", context->uc_mcontext.gregs[REG_EIP]));
 #endif

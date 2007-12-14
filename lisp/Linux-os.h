@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.25 2007/07/25 10:23:54 cshapiro Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.26 2007/12/14 08:06:50 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -51,23 +51,6 @@ int *sc_reg(ucontext_t *, int);
 
 #include <fpu_control.h>
 #define setfpucw(cw) {fpu_control_t cw_tmp=cw;_FPU_SETCW(cw_tmp);} 
-
-#if defined (__x86_64)
-#define sc_pc		rip
-#define sc_sp		rsp
-#endif
-
-#ifdef __x86_64
-#define sc_rax rax
-#define sc_rcx rcx
-#define sc_rdx rdx
-#define sc_rbx rbx
-#define sc_rsp rsp
-#define sc_rbp rbp
-#define sc_rsi rsi
-#define sc_rdi rdi
-#define sc_rip rip
-#endif
 
 #endif /* i386 */
 
