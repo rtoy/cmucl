@@ -8,11 +8,12 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.14 2007/08/14 15:57:47 rtoy Exp $
+ $Id: elf.c,v 1.15 2007/12/14 09:09:50 cshapiro Exp $
 */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -374,7 +375,7 @@ read_elf_header(int fd, Elf_Ehdr *ehp)
 {
     eread(fd, ehp, sizeof(Elf_Ehdr), __func__);
 
-    if (strncmp(ehp->e_ident, elf_magic_string, 4)) {
+    if (strncmp((const char *) ehp->e_ident, elf_magic_string, 4)) {
 	fprintf(stderr,
 		"Bad ELF magic number --- not an elf file.	Exiting in %s.\n",
 		__func__);
