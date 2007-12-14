@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.52 2007/12/04 10:48:45 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.53 2007/12/14 12:19:59 cshapiro Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -234,6 +234,8 @@ interrupt_handle_now(HANDLER_ARGS)
 
     handler = interrupt_handlers[signal];
 
+    RESTORE_FPU(context);
+    
     if (handler.c == (void (*)(HANDLER_ARGS)) SIG_IGN)
 	return;
 
@@ -298,6 +300,7 @@ maybe_now_maybe_later(HANDLER_ARGS)
 	FILLBLOCKSET(&context->uc_sigmask);
 	arch_set_pseudo_atomic_interrupted(context);
     } else {
+	RESTORE_FPU(context);
 	interrupt_handle_now(signal, code, context);
     }
 

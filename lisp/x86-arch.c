@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.31 2007/12/03 18:02:45 pwerkowski Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.32 2007/12/14 12:19:59 cshapiro Exp $ 
  *
  */
 
@@ -209,6 +209,8 @@ sigtrap_handler(HANDLER_ARGS)
 
     /* This is just for info in case monitor wants to print an approx */
     current_control_stack_pointer = (unsigned long *) SC_SP(context);
+
+    RESTORE_FPU(context);
 
     /*
      * On entry %eip points just after the INT3 byte and aims at the

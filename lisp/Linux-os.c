@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.34 2007/12/14 08:06:50 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.35 2007/12/14 12:19:58 cshapiro Exp $
  *
  */
 
@@ -43,7 +43,6 @@
 #include <netdb.h>
 #include <link.h>
 #include <dlfcn.h>
-#include <fpu_control.h>
 #include <assert.h>
 
 #include "validate.h"
@@ -71,19 +70,6 @@ os_init(void)
     }
 
     os_vm_page_size = getpagesize();
-
-#if defined(i386) || defined(__x86_64)
-#if 0
-    setfpucw(0x1272 | 4 | 8 | 16 | 32);	/* No interrupts */
-#else
-    /*
-     * Round to nearest, double-float precision (not extended!), disable
-     * interrupts for everything except invalid.
-     */
-    setfpucw(_FPU_RC_NEAREST | _FPU_DOUBLE | _FPU_MASK_PM | _FPU_MASK_UM |
-	     _FPU_MASK_OM | _FPU_MASK_ZM | _FPU_MASK_DM);
-#endif
-#endif
 }
 
 #ifdef i386
@@ -400,4 +386,13 @@ int
 get_h_errno()
 {
     return h_errno;
+}
+
+void
+restore_fpu(ucontext_t *context)
+{
+    if (context->uc_mcontext.fpregs) {
+	short cw = context->uc_mcontext.fpregs->cw;
+	__asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
+    }
 }

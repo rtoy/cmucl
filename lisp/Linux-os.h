@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.26 2007/12/14 08:06:50 cshapiro Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.27 2007/12/14 12:19:58 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -43,16 +43,11 @@ typedef int os_vm_prot_t;	/* like hpux */
 #endif
 
 int *sc_reg(ucontext_t *, int);
-
-#if (defined(i386) || defined(__x86_64))
+void restore_fpu(ucontext_t *);
 
 #define HANDLER_ARGS int signal, siginfo_t *code, ucontext_t *context
 #define CODE(code) ((code) ? code->si_code : 0)
-
-#include <fpu_control.h>
-#define setfpucw(cw) {fpu_control_t cw_tmp=cw;_FPU_SETCW(cw_tmp);} 
-
-#endif /* i386 */
+#define RESTORE_FPU(context) restore_fpu(context)
 
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
 

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.19 2007/11/16 06:31:55 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.20 2007/12/14 12:19:59 cshapiro Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -61,6 +61,9 @@
 #endif
 #ifndef SAVE_CONTEXT
 #define SAVE_CONTEXT() do {} while(0)
+#endif
+#ifndef RESTORE_FPU
+#define RESTORE_FPU(context) do {} while (0)
 #endif
 
 #define OS_VM_PROT_ALL (OS_VM_PROT_READ|OS_VM_PROT_WRITE|OS_VM_PROT_EXECUTE)
