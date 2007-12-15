@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.33 2007/12/15 14:47:28 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.34 2007/12/15 15:26:29 rtoy Exp $ 
  *
  */
 
@@ -141,12 +141,9 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
     *((char *) pc) = orig_inst & 0xff;
     *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
 
-#ifdef __linux__
+#ifdef SC_EFLAGS
     /* Enable single-stepping */
-    context->uc_mcontext.gregs[REG_EFL] |= 0x100;
-#elif defined(DARWIN)    
-    /* Enable single-stepping */
-    context->uc_mcontext->__ss.__eflags |= 0x100;
+    SC_EFLAGS(context) |= 0x100;
 #else
 
     /*
@@ -195,12 +192,9 @@ sigtrap_handler(HANDLER_ARGS)
 	fprintf(stderr, "* Single step trap %p\n", single_stepping);
 #endif
 
-#ifdef __linux__
+#ifdef SC_EFLAGS
 	/* Disable single-stepping */
-	context->uc_mcontext.gregs[REG_EFL] ^= 0x100;
-#elif defined(DARWIN)
-	/* Disable single-stepping */
-	context->uc_mcontext->__ss.__eflags ^= 0x100;
+	SC_EFLAGS(context) ^= 0x100;
 #else
 	/* Un-install single step helper instructions. */
 	*(single_stepping - 3) = single_step_save1;
