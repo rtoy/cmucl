@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.32 2007/12/14 12:19:59 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.33 2007/12/15 14:47:28 rtoy Exp $ 
  *
  */
 
@@ -142,12 +142,20 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
     *((char *) pc + 1) = (orig_inst & 0xff00) >> 8;
 
 #ifdef __linux__
+    /* Enable single-stepping */
     context->uc_mcontext.gregs[REG_EFL] |= 0x100;
+#elif defined(DARWIN)    
+    /* Enable single-stepping */
+    context->uc_mcontext->__ss.__eflags |= 0x100;
 #else
 
     /*
      * Install helper instructions for the single step:
-     *    pushf; or [esp],0x100; popf.
+     *    nop; nop; nop; pushf; or [esp],0x100; popf.
+     *
+     * The or instruction enables the trap flag which enables
+     * single-stepping.  So when the popf instruction is run, we start
+     * single-stepping and stop on the next instruction.
      */
 
     single_step_save1 = *(pc - 3);
@@ -160,7 +168,12 @@ arch_do_displaced_inst(os_context_t * context, unsigned long orig_inst)
 
     single_stepping = (unsigned int *) pc;
 
-#ifndef __linux__
+#if !(defined(__linux__) || defined(DARWIN))
+    /*
+     * pc - 9 points to the pushf instruction that we installed for
+     * the helper.
+     */
+    
     SC_PC(context) = (int)((char *) pc - 9);
 #endif
 }
@@ -179,16 +192,20 @@ sigtrap_handler(HANDLER_ARGS)
 
     if (single_stepping && (signal == SIGTRAP)) {
 #if 0
-	fprintf(stderr, "* Single step trap %x\n", single_stepping);
+	fprintf(stderr, "* Single step trap %p\n", single_stepping);
 #endif
 
-#ifndef __linux__
+#ifdef __linux__
+	/* Disable single-stepping */
+	context->uc_mcontext.gregs[REG_EFL] ^= 0x100;
+#elif defined(DARWIN)
+	/* Disable single-stepping */
+	context->uc_mcontext->__ss.__eflags ^= 0x100;
+#else
 	/* Un-install single step helper instructions. */
 	*(single_stepping - 3) = single_step_save1;
 	*(single_stepping - 2) = single_step_save2;
 	*(single_stepping - 1) = single_step_save3;
-#else
-	context->uc_mcontext.gregs[REG_EFL] ^= 0x100;
 #endif
 
 	/*

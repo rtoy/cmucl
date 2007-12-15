@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.130 2007/10/18 22:26:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.131 2007/12/15 14:47:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1421,8 +1421,18 @@ The result is a symbol or nil if the routine cannot be found."
     (alien:with-alien
 	((lisp-interrupt-contexts (array (* unix:sigcontext) nil) :extern))
       (let ((scp (alien:deref lisp-interrupt-contexts index)))
-	(when (= (system:sap-int frame-pointer)
-		 (vm:sigcontext-register scp vm::cfp-offset))
+	;; I (rtoy) don't know why, but on darwin, the mcontext slot
+	;; is sometimes a null pointer.  This seems always to happen
+	;; in a function end breakpoint.
+	;;
+	;; FIXME: Figure out why the mcontext slot is 0 in the
+	;; function end breakpoint on darwin.
+	(when (and
+	       #+darwin
+	       (not
+		(zerop (sys:sap-int (alien:alien-sap (alien:slot scp 'vm::sc-mcontext)))))
+	       (= (system:sap-int frame-pointer)
+		  (vm:sigcontext-register scp vm::cfp-offset)))
 	  (system:without-gcing
 	   (let* ((component-ptr
 		   (component-ptr-from-pc (vm:sigcontext-program-counter scp)))
