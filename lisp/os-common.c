@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.25 2007/12/10 21:14:16 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.26 2007/12/17 09:54:35 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -8,6 +8,7 @@
 */
 
 #include <errno.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -124,6 +125,12 @@ int
 os_set_errno(int value)
 {
     return errno = value;
+}
+
+int
+os_get_h_errno(void)
+{
+    return h_errno;
 }
 
 #ifdef LINKAGE_TABLE

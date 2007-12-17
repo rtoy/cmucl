@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.51 2006/03/17 02:56:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.52 2007/12/17 09:54:35 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -199,14 +199,7 @@ struct in_addr {
   (len int)
   (type int))
 
-#+(and x86 linux)
-(def-alien-routine get-h-errno c-call:int)
-
-#-(and x86 linux)
-(progn
-  (def-alien-variable "h_errno" c-call:int)
-  (defun get-h-errno ()
-    h-errno))
+(def-alien-routine ("os_get_h_errno" get-h-errno) int)
 
 (defun lookup-host-entry (host)
   "Return a host-entry for the given host. The host may be an address
