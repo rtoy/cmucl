@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.116 2007/11/09 19:24:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.117 2007/12/21 08:46:48 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3258,39 +3258,26 @@
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
-;; From sys/utsname.h
-#+(or solaris bsd)
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defconstant +sys-namelen+
-    #+solaris 257
-    #+bsd 256))
-
-#+(or solaris bsd)
-(progn
 (def-alien-type nil
-    (struct utsname
-	    (sysname (array char #.+sys-namelen+))
-	    (nodename (array char #.+sys-namelen+))
-	    (release (array char #.+sys-namelen+))
-	    (version (array char #.+sys-namelen+))
-	    (machine (array char #.+sys-namelen+))))
-
+  (struct utsname
+    (sysname (array char #+svr4 257 #+bsd 256))
+    (nodename (array char #+svr4 257 #+bsd 256))
+    (release (array char #+svr4 257 #+bsd 256))
+    (version (array char #+svr4 257 #+bsd 256))
+    (machine (array char #+svr4 257 #+bsd 256))))
 
 (defun unix-uname ()
   (with-alien ((names (struct utsname)))
-    (let ((result
-	   (alien-funcall
-	    (extern-alien "uname"
-			  (function int
-				    (* (struct utsname))))
-	    (addr names))))
-      (when (>= result 0)
-	(values (cast (slot names 'sysname) c-string)
-		(cast (slot names 'nodename) c-string)
-		(cast (slot names 'release) c-string)
-		(cast (slot names 'version) c-string)
-		(cast (slot names 'machine) c-string))))))
-)
+    (syscall* (#-freebsd "uname"
+	       #+freebsd "__xuname" #+freebsd int
+	       (* (struct utsname)))
+	      (values (cast (slot names 'sysname) c-string)
+		      (cast (slot names 'nodename) c-string)
+		      (cast (slot names 'release) c-string)
+		      (cast (slot names 'version) c-string)
+		      (cast (slot names 'machine) c-string))
+	      #+freebsd 256
+	      (addr names))))
 
 #+(and solaris svr4)
 (progn
