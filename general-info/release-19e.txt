@@ -166,6 +166,9 @@ New in this release:
   * Other changes:
     - UNIX:UNIX-ERRNO accesses the thread errno value instead of the
       global errno value.
+    - Floating point zero is now printed with an exponent of zero,
+      independent of any scale factor that might be used.  Thus, we
+      get results like "0.0D+00" instead of "0.0D-5".
 
   * Improvements to the PCL implementation of CLOS:
     - Forward-referenced classes are allowed.
