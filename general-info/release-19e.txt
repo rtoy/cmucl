@@ -141,6 +141,15 @@ New in this release:
       appropriate ABI.  It is the compiler's responsibility to make
       sure single-precision floats are done correctly with
       single-precision results.
+    - A compiler bug with type inferencing and deleting unsued
+      functions has been fixed.
+    - A compiler bug has been fixed where a source transformation was
+      applied because the local variable happens to have a function
+      type.
+    - On Darwin/x86, tracing with :encapsulate nil works better, and
+      tracing of labels/flets works better.  However, there are still
+      issues with tracing.  Returning to the repl after tracing
+      sometimes fails, and you must exit lisp completely.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
@@ -165,6 +174,7 @@ New in this release:
     - load-world.sh now supports a -p option to load the world without
       PCL.  This is mostly for cross-compiling which doesn't want PCL
       loaded because it's not build during a cross-compile.
+    - make-dist.sh now defaults to bzip compression instead of gzip.
 
 
 This release is not binary compatible with code compiled using CMUCL
