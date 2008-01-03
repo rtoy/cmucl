@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.11 2007/12/15 15:26:29 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-lispregs.h,v 1.12 2008/01/03 11:41:54 cshapiro Exp $
  */
 
 #ifndef _X86_LISPREGS_H_
@@ -44,21 +44,13 @@
  * xxx-os.c handle it.
  */
 
-#define SC_REG(sc, n) (*sc_reg(sc,n))
+#define SC_REG(scp, offset) (*os_sigcontext_reg(scp, offset))
+#define SC_PC(scp) (*os_sigcontext_pc(scp))
+#define SC_SP(scp) SC_REG(scp, reg_ESP)
 
-#if defined(__NetBSD__)
-#define SC_PC(uc) ((uc)->uc_mcontext.__gregs[_REG_EIP])
-#define SC_SP(uc) ((uc)->uc_mcontext.__gregs[_REG_ESP])
-#elif defined(DARWIN)
-#define SC_PC(sc) ((sc)->uc_mcontext->__ss.__eip)
-#define SC_SP(sc) SC_REG(sc, reg_ESP)
+#if defined(DARWIN)
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext->__ss.__eflags)
-#elif defined(__FreeBSD__)
-#define SC_PC(sc) ((sc)->uc_mcontext.mc_eip)
-#define SC_SP(sc) SC_REG(sc, reg_ESP)
 #elif defined(__linux__)
-#define SC_PC(sc) ((sc)->uc_mcontext.gregs[REG_EIP])
-#define SC_SP(sc) SC_REG(sc, reg_ESP)
 #define SC_EFLAGS(sc) ((sc)->uc_mcontext.gregs[REG_EFL])
 #endif
 

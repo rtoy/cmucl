@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.52 2007/11/15 22:48:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.53 2008/01/03 11:41:52 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,7 +161,6 @@
 ;;; The x86 can't store a long-float to memory without popping the
 ;;; stack and marking a register as empty, so it is necessary to
 ;;; restore the register from memory.
-#+long-float
 (defun store-long-float (ea)
    (inst fstpl ea)
    (inst fldl ea))

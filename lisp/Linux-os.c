@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.36 2007/12/17 09:54:35 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.37 2008/01/03 11:41:54 cshapiro Exp $
  *
  */
 
@@ -71,29 +71,65 @@ os_init(void)
     os_vm_page_size = getpagesize();
 }
 
-#ifdef i386
-int *
-sc_reg(ucontext_t *context, int offset)
+#ifdef __i386
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int offset)
 {
     switch (offset) {
-      case 0:
-	  return &context->uc_mcontext.gregs[REG_EAX];
-      case 2:
-	  return &context->uc_mcontext.gregs[REG_ECX];
-      case 4:
-	  return &context->uc_mcontext.gregs[REG_EDX];
-      case 6:
-	  return &context->uc_mcontext.gregs[REG_EBX];
-      case 8:
-	  return &context->uc_mcontext.gregs[REG_ESP];
-      case 10:
-	  return &context->uc_mcontext.gregs[REG_EBP];
-      case 12:
-	  return &context->uc_mcontext.gregs[REG_ESI];
-      case 14:
-	  return &context->uc_mcontext.gregs[REG_EDI];
+    case 0:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EAX];
+    case 2:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ECX];
+    case 4:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDX];
+    case 6:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBX];
+    case 8:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESP];
+    case 10:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EBP];
+    case 12:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_ESI];
+    case 14:
+	return (unsigned long *) &scp->uc_mcontext.gregs[REG_EDI];
     }
-    return (int *) 0;
+    return NULL;
+}
+
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+    return (unsigned long *) &scp->uc_mcontext.gregs[REG_EIP];
+}
+
+unsigned char *
+os_sigcontext_fpu_reg(ucontext_t *scp, int offset)
+{
+    fpregset_t fpregs = scp->uc_mcontext.fpregs;
+
+    if (fpregs == NULL) {
+	return NULL;
+    } else {
+	return (unsigned char *) &fpregs->_st[offset];
+    }
+}
+
+unsigned long
+os_sigcontext_fpu_modes(ucontext_t *scp)
+{
+    unsigned long modes;
+    unsigned short cw, sw;
+
+    if (scp->uc_mcontext.fpregs == NULL) {
+	cw = 0;
+	sw = 0x3f;
+    } else {
+	cw = scp->uc_mcontext.fpregs->cw & 0xffff;
+	sw = scp->uc_mcontext.fpregs->sw & 0xffff;
+    }
+    modes = (sw & 0xff) << 16 | cw;
+    modes ^= 0x3f;
+    return modes;
 }
 #endif
 

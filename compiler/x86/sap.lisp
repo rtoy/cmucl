@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.9 1999/09/15 15:13:31 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.10 2008/01/03 11:41:52 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -467,16 +467,16 @@
      (with-empty-tn@fp-top(result)
         (inst fldl (make-ea :dword :base sap :disp offset)))))
 
-#+long-float
 (define-vop (%set-sap-ref-long)
   (:translate %set-sap-ref-long)
   (:policy :fast-safe)
   (:args (sap :scs (sap-reg) :to (:eval 0))
 	 (offset :scs (signed-reg) :to (:eval 0))
-	 (value :scs (long-reg)))
-  (:arg-types system-area-pointer signed-num long-float)
-  (:results (result :scs (long-reg)))
-  (:result-types long-float)
+	 (value :scs (#+long-float long-reg #-long-float double-reg)))
+  (:arg-types system-area-pointer signed-num #+long-float long-float 
+					     #-long-float double-float)
+  (:results (result :scs (#+long-float long-reg #-long-float double-reg)))
+  (:result-types #+long-float long-float #-long-float double-float)
   (:generator 5
     (cond ((zerop (tn-offset value))
 	   ;; Value is in ST0

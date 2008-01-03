@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.132 2007/12/18 00:08:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.133 2008/01/03 11:41:51 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1426,14 +1426,14 @@ The result is a symbol or nil if the routine cannot be found."
 	;; This seems to gone now, but we leave this in for now to
 	;; catch this condition.  If this doesn't happen anymore, we
 	;; can remove this later.
-	#+darwin
+	#+ignore
 	(when (zerop (sys:sap-int (alien:alien-sap (alien:slot scp 'vm::sc-mcontext))))
 	  (cerror "Continue."
 		  "NULL mcontext found at index ~D, scp = ~S.  Please report this bug!"
 		  index
 		  (alien:alien-sap scp)))
 	(when (and
-	       #+darwin
+	       #+ignore
 	       (not
 		(zerop (sys:sap-int (alien:alien-sap (alien:slot scp 'vm::sc-mcontext)))))
 	       (= (system:sap-int frame-pointer)

@@ -12,12 +12,13 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.21 2007/12/06 13:51:21 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.22 2008/01/03 11:41:54 cshapiro Exp $
  *
  */
 
 #include "os.h"
 #include <sys/file.h>
+#include <machine/npx.h>
 #include <errno.h>
 #include "arch.h"
 #include "globals.h"
@@ -44,29 +45,78 @@ os_init(void)
     os_vm_page_size = getpagesize();
 }
 
-int *
-sc_reg(ucontext_t *context, int offset)
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int index)
 {
-    switch (offset) {
-      case 0:
-	  return &context->uc_mcontext.mc_eax;
-      case 2:
-	  return &context->uc_mcontext.mc_ecx;
-      case 4:
-	  return &context->uc_mcontext.mc_edx;
-      case 6:
-	  return &context->uc_mcontext.mc_ebx;
-      case 8:
-	  return &context->uc_mcontext.mc_esp;
-      case 10:
-	  return &context->uc_mcontext.mc_ebp;
-      case 12:
-	  return &context->uc_mcontext.mc_esi;
-      case 14:
-	  return &context->uc_mcontext.mc_edi;
+    switch (index) {
+    case 0:
+	return (unsigned long *) &scp->uc_mcontext.mc_eax;
+    case 2:
+	return (unsigned long *) &scp->uc_mcontext.mc_ecx;
+    case 4:
+	return (unsigned long *) &scp->uc_mcontext.mc_edx;
+    case 6:
+	return (unsigned long *) &scp->uc_mcontext.mc_ebx;
+    case 8:
+	return (unsigned long *) &scp->uc_mcontext.mc_esp;
+    case 10:
+	return (unsigned long *) &scp->uc_mcontext.mc_ebp;
+    case 12:
+	return (unsigned long *) &scp->uc_mcontext.mc_esi;
+    case 14:
+	return (unsigned long *) &scp->uc_mcontext.mc_edi;
     }
+    return NULL;
+}
 
-    return (int *) 0;
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+    return (unsigned long *) &scp->uc_mcontext.mc_eip;
+}
+
+unsigned char *
+os_sigcontext_fpu_reg(ucontext_t *scp, int index)
+{
+    union savefpu *sv = (union savefpu *) scp->uc_mcontext.mc_fpstate;
+    int fpformat = scp->uc_mcontext.mc_fpformat;
+    unsigned char *reg = NULL;
+
+    switch (fpformat) {
+    case _MC_FPFMT_XMM:
+	 reg = sv->sv_xmm.sv_fp[index].fp_acc.fp_bytes;
+	 break;
+    case _MC_FPFMT_387:
+	 reg = sv->sv_87.sv_ac[index].fp_bytes;
+	 break;
+    case _MC_FPFMT_NODEV:
+	 reg = NULL;
+	 break;
+    }
+    return reg;
+}
+
+unsigned long
+os_sigcontext_fpu_modes(ucontext_t *scp)
+{
+    union savefpu *sv = (union savefpu *) scp->uc_mcontext.mc_fpstate;
+    unsigned long modes;
+    int fpformat = scp->uc_mcontext.mc_fpformat;
+    unsigned short cw, sw;
+
+    if (fpformat == _MC_FPFMT_XMM) {
+	cw = sv->sv_xmm.sv_env.en_cw;
+	sw = sv->sv_xmm.sv_env.en_sw;
+    } else if (fpformat == _MC_FPFMT_387) {
+	cw = sv->sv_87.sv_env.en_cw & 0xffff;
+	sw = sv->sv_87.sv_env.en_sw & 0xffff;
+    } else {  /* _MC_FPFMT_NODEV */
+	cw = 0;
+	sw = 0x3f;
+    }
+    modes = (sw & 0xff) << 16 | cw;
+    modes ^= 0x3f;
+    return modes;
 }
 
 os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
@@ -183,11 +233,55 @@ sigbus_handler(int signal, siginfo_t *info, ucontext_t *context)
     interrupt_handle_now(signal, info, context);
 }
 
+/*
+ * Restore the exception flags cleared by the kernel.  These bits must
+ * be set for Lisp to determine which exception caused the signal.  At
+ * present, there is no way to distinguish underflow exceptions from
+ * denormalized operand exceptions.  An underflow exception is assumed
+ * if the subcode is FPE_FLTUND.
+ */
+static void
+sigfpe_handler(int signal, siginfo_t *info, ucontext_t *context)
+{
+     union savefpu *sv = (union savefpu *) context->uc_mcontext.mc_fpstate;
+     int fpformat = context->uc_mcontext.mc_fpformat;
+     int code = info->si_code;
+     unsigned char trap = 0;
+
+     switch (code) {
+     case FPE_FLTDIV:  /* ZE */
+	  trap = 0x04;
+	  break;
+     case FPE_FLTOVF:  /* OE */
+	  trap = 0x08;
+	  break;
+     case FPE_FLTUND:  /* DE or UE */
+	  trap = 0x10;
+	  break;
+     case FPE_FLTRES:  /* PE */
+	  trap = 0x20;
+	  break;
+     case FPE_FLTINV:  /* IE */
+	  trap = 0x01;
+	  break;
+     }
+     switch (fpformat) {
+     case _MC_FPFMT_XMM:
+	  sv->sv_xmm.sv_env.en_sw |= trap;
+	  break;
+     case _MC_FPFMT_387:
+	  sv->sv_87.sv_env.en_sw |= trap;
+	  break;
+     }
+     interrupt_handle_now(signal, info, context);
+}
+
 void
 os_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler
 	(PROTECTION_VIOLATION_SIGNAL, sigbus_handler);
+    interrupt_install_low_level_handler(SIGFPE, sigfpe_handler);
 }
 
 void *
@@ -208,4 +302,21 @@ os_dlsym(const char *sym_name, lispobj lib_list)
     }
 
     return dlsym(RTLD_DEFAULT, sym_name);
+}
+
+void
+restore_fpu(ucontext_t *scp)
+{
+    union savefpu *sv = (union savefpu *) scp->uc_mcontext.mc_fpstate;
+    int fpformat = scp->uc_mcontext.mc_fpformat;
+    unsigned short cw;
+
+    if (fpformat == _MC_FPFMT_XMM) {
+	cw = sv->sv_xmm.sv_env.en_cw;
+    } else if (fpformat == _MC_FPFMT_387) {
+	cw = sv->sv_87.sv_env.en_cw & 0xffff;
+    } else {  /* _MC_FPFMT_NODEV */
+	return;
+    }
+    __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
 }

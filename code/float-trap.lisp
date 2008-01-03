@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.31 2007/11/14 10:04:33 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32 2008/01/03 11:41:51 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,53 +164,6 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
-
-#+(and bsd (not freebsd))
-(define-condition floating-point-exception (arithmetic-error)
-  ((flags :initarg :traps
-	  :reader floating-point-exception-traps))
-  (:report (lambda (condition stream)
-	     (format stream "Arithmetic error ~S signalled.~%"
-		     (type-of condition))
-	     (let ((traps (floating-point-exception-traps condition)))
-	       (if traps
-		   (format stream
-			   "Trapping conditions are: ~%~{ ~s~^~}~%"
-			   traps)
-		   (write-line
-		    "No traps are enabled? How can this be?"
-		    stream))))))
-
-#+freebsd
-(progn
-(defconstant FPE_INTOVF	1)	; integer overflow
-(defconstant FPE_INTDIV	2)	; integer divide by zero
-(defconstant FPE_FLTDIV	3)	; floating point divide by zero
-(defconstant FPE_FLTOVF	4)	; floating point overflow
-(defconstant FPE_FLTUND	5)	; floating point underflow
-(defconstant FPE_FLTRES	6)	; floating point inexact result
-(defconstant FPE_FLTINV	7)	; invalid floating point operation
-(defconstant FPE_FLTSUB 8)	; subscript out of range
-)
-
-#+freebsd
-(defun sigfpe-handler (signal code scp)
-  (declare (ignore signal))
-  (let ((condition
-	 (ecase code
-	   ((#.FPE_INTDIV #.FPE_FLTDIV) 'division-by-zero)
-	   ((#.FPE_FLTINV #.FPE_FLTSUB) 'floating-point-invalid-operation)
-	   ((#.FPE_FLTOVF #.FPE_INTOVF) 'floating-point-overflow)
-	   (#.FPE_FLTUND 'floating-point-underflow)
-	   (#.FPE_FLTRES 'floating-point-inexact)))
-	fop operands
-	(sym (find-symbol "GET-FP-OPERANDS" "VM")))
-    (when (and sym (fboundp sym))
-      (multiple-value-setq (fop operands)
-	(funcall sym (alien:sap-alien scp (* unix:sigcontext)))))
-    (error condition :operation fop :operands operands)))
-
-#-freebsd
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal code)
 	   (type system-area-pointer scp))
@@ -260,11 +213,6 @@
 	     (error 'floating-point-inexact
 		    :operation fop
 		    :operands operands))
-	    #+BSD
-	    ((zerop (ldb float-exceptions-byte modes))
-	     ;; I can't tell what caused the exception!!
-	     (error 'floating-point-exception
-		    :traps (getf (get-floating-point-modes) :traps)))
 	    (t
 	     (error "SIGFPE with no exceptions currently enabled?"))))))
 

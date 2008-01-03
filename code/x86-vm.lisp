@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.28 2007/11/14 17:44:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.29 2008/01/03 11:41:52 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,188 +31,12 @@
 
 
 ;;;; The sigcontext structure.
+
+(def-alien-type sigcontext system-area-pointer)
+
 ;;;; Add machine specific features to *features*
 
 (pushnew :x86 *features*)
-
-
-
-#+linux
-(def-alien-type nil 
-  (struct fpreg
-          (significand (array unsigned-short 4))
-          (exponent unsigned-short)))
-#+linux
-(def-alien-type  nil
-   (struct fpstate
-        (cw  unsigned-long)
-        (sw  unsigned-long)
-        (tag  unsigned-long)
-        (ipoff  unsigned-long)
-        (cssel  unsigned-long)
-        (dataoff  unsigned-long)
-        (datasel unsigned-long)
-        (fpreg (array (struct fpreg) 8))
-        (status unsigned-long)))
-
-#+darwin
-(def-alien-type sigcontext-regs
-  (struct nil
-    (trapno unsigned-int)
-    (err unsigned-int)
-    (faultvaddr unsigned-int)
-    (eax unsigned-int)
-    (ebx unsigned-int)
-    (ecx unsigned-int)
-    (edx unsigned-int)
-    (edi unsigned-int)
-    (esi unsigned-int)
-    (ebp unsigned-int)
-    (esp unsigned-int)
-    (ss unsigned-int)
-    (eflags unsigned-int)
-    (eip unsigned-int)
-    (cs unsigned-int)
-    (ds unsigned-int)
-    (es unsigned-int)
-    (fs unsigned-int)
-    (gs unsigned-int)
-    (fpstate (array char 512))))
-
-#+darwin
-(def-alien-type sigcontext
-  (struct nil
-    (sc-onstack int)
-    (sc-sigmask unsigned-int)
-    (sc-stack (array unsigned-int 3))
-    (sc-link system-area-pointer)
-    (sc-mcsize unsigned-int)
-    (sc-mcontext (* sigcontext-regs))))
-
-;;; for FreeBSD
-#+freebsd
-(def-alien-type sigcontext-regs
-  (struct nil
-    (onstack unsigned-int)
-    (gs unsigned-int)
-    (fs unsigned-int)
-    (es unsigned-int)
-    (ds unsigned-int)
-    (edi unsigned-int)
-    (esi unsigned-int)
-    (ebp unsigned-int)
-    (isp unsigned-int)
-    (ebx unsigned-int)
-    (edx unsigned-int)
-    (ecx unsigned-int)
-    (eax unsigned-int)
-    (trapno unsigned-int)
-    (err unsigned-int)
-    (eip unsigned-int)
-    (cs	unsigned-int)
-    (eflags unsigned-int)
-    (esp unsigned-int)
-    (ss unsigned-int)))
-
-#+freebsd
-(def-alien-type sigcontext
-  (struct nil
-    (sc-sigmask (array unsigned-int 4))
-    (sc-mcontext sigcontext-regs)))
-
-;;; OpenBSD also have sigcontext structs that look more like Linux.
-#+openbsd
-(def-alien-type sigcontext
-    (struct nil
-	(sc-gs      unsigned-int)
-	(sc-fs      unsigned-int)
-	(sc-es	    unsigned-int)
-	(sc-ds	    unsigned-int)
-	(sc-edi	    unsigned-int)
-	(sc-esi	    unsigned-int)
-	(sc-fp	    unsigned-int) ;; ebp
-	(sc-ebx	    unsigned-int)
-	(sc-edx	    unsigned-int)
-	(sc-ecx	    unsigned-int)
-	(sc-eax	    unsigned-int)
-	(sc-pc      unsigned-int)
-	(sc-cs	    unsigned-int)
-	(sc-efl     unsigned-int)		; sc_ps
-	(sc-sp      unsigned-int)	
-	(sc-ss	    unsigned-int)
-	(sc-onstack unsigned-int)
-	(sc-mask    unsigned-int)
-	(sc-trapno  unsigned-int)
-	(sc-err     unsigned-int)
-	))
-
-;; NetBSD
-#+netbsd
-(def-alien-type sigcontext-regs
-  (struct nil
-    (gs unsigned-long)
-    (fs unsigned-long)
-    (es unsigned-long)
-    (ds unsigned-long)
-    (edi unsigned-long)
-    (esi unsigned-long)
-    (ebp unsigned-long)
-    (esp unsigned-long)
-    (ebx unsigned-long)
-    (edx unsigned-long)
-    (ecx unsigned-long)
-    (eax unsigned-long)
-    (trapno unsigned-long)
-    (err unsigned-long)
-    (eip unsigned-long)
-    (cs unsigned-long)
-    (efl unsigned-long)
-    (uesp unsigned-long)
-    (ss unsigned-long)))
-
-#+netbsd
-(def-alien-type sigcontext
-  (struct nil
-    (sc-flags unsigned-long)
-    (sc-link system-area-pointer)
-    (sc-sigmask (array unsigned-long 4))
-    (sc-stack (array unsigned-long 3))
-    (sc-mcontext sigcontext-regs)))
-
-;; For Linux...
-#+linux
-(def-alien-type sigcontext-regs
-  (struct nil
-    (gs unsigned-long)
-    (fs unsigned-long)
-    (es unsigned-long)
-    (ds unsigned-long)
-    (edi unsigned-long)
-    (esi unsigned-long)
-    (ebp unsigned-long)
-    (esp unsigned-long)
-    (ebx unsigned-long)
-    (edx unsigned-long)
-    (ecx unsigned-long)
-    (eax unsigned-long)
-    (trapno unsigned-long)
-    (err unsigned-long)
-    (eip unsigned-long)
-    (cs unsigned-long)
-    (eflags unsigned-long)
-    (esp_at_signal unsigned-long)
-    (ss unsigned-long)
-    (fpstate (* (struct fpstate)))
-    (oldmask unsigned-long)
-    (cr2 unsigned-long)))
-
-#+linux
-(def-alien-type sigcontext
-  (struct nil
-    (sc-flags unsigned-long)
-    (sc-link system-area-pointer)
-    (sc-stack (array unsigned-long 3))
-    (sc-mcontext sigcontext-regs)))
 
 
 ;;;; MACHINE-TYPE and MACHINE-VERSION
@@ -380,8 +204,10 @@
 ;;;
 (defun sigcontext-program-counter (scp)
   (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
-    (int-sap (slot (slot scp 'sc-mcontext) 'eip))))
+  (let ((fn (extern-alien "os_sigcontext_pc"
+			  (function system-area-pointer
+				    (* sigcontext)))))
+    (sap-ref-sap (alien-funcall fn scp) 0)))
 
 ;;; SIGCONTEXT-REGISTER -- Interface.
 ;;;
@@ -390,30 +216,19 @@
 ;;;
 (defun sigcontext-register (scp index)
   (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
-    (case index
-      (#.eax-offset (slot (slot scp 'sc-mcontext) 'eax))
-      (#.ecx-offset (slot (slot scp 'sc-mcontext) 'ecx))
-      (#.edx-offset (slot (slot scp 'sc-mcontext) 'edx))
-      (#.ebx-offset (slot (slot scp 'sc-mcontext) 'ebx))
-      (#.esp-offset (slot (slot scp 'sc-mcontext) 'esp))
-      (#.ebp-offset (slot (slot scp 'sc-mcontext) 'ebp))
-      (#.esi-offset (slot (slot scp 'sc-mcontext) 'esi))
-      (#.edi-offset (slot (slot scp 'sc-mcontext) 'edi)))))
+  (let ((fn (extern-alien "os_sigcontext_reg"
+			  (function system-area-pointer
+				    (* sigcontext)
+				    (integer 32)))))
+    (sap-ref-32 (alien-funcall fn scp index) 0)))
 
 (defun %set-sigcontext-register (scp index new)
   (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
-    (case index
-      (#.eax-offset (setf (slot (slot scp 'sc-mcontext) 'eax) new))
-      (#.ecx-offset (setf (slot (slot scp 'sc-mcontext) 'ecx) new))
-      (#.edx-offset (setf (slot (slot scp 'sc-mcontext) 'edx) new))
-      (#.ebx-offset (setf (slot (slot scp 'sc-mcontext) 'ebx) new))
-      (#.esp-offset (setf (slot (slot scp 'sc-mcontext) 'esp) new))
-      (#.ebp-offset (setf (slot (slot scp 'sc-mcontext) 'ebp) new))
-      (#.esi-offset (setf (slot (slot scp 'sc-mcontext) 'esi) new))
-      (#.edi-offset (setf (slot (slot scp 'sc-mcontext) 'edi) new))))
-  new)
+  (let ((fn (extern-alien "os_sigcontext_reg"
+			  (function system-area-pointer
+				    (* sigcontext)
+				    (integer 32)))))
+    (setf (sap-ref-32 (alien-funcall fn scp index) 0) new)))
 
 (defsetf sigcontext-register %set-sigcontext-register)
 
@@ -423,40 +238,23 @@
 ;;; Like SIGCONTEXT-REGISTER, but returns the value of a float register.
 ;;; Format is the type of float to return.
 ;;;
-#+linux
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
-    (let ((reg-sap (alien-sap (deref (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0)
-					   'fpreg)
-				     index))))
-      (coerce (sys:sap-ref-long reg-sap 0) format))))
-
-;;; Not supported on Free/OpenBSD because the floating point state is not
-;;; saved.  For now we assume this is true for all modern BSDs
-#+BSD
-(defun sigcontext-float-register (scp index format)
-  (declare (ignore scp index))
-  (coerce 0l0 format))
-
-#+linux
-(defun %set-sigcontext-float-register (scp index format new-value)
+  (let ((fn (extern-alien "os_sigcontext_fpu_reg"
+			  (function system-area-pointer
+				    (* sigcontext)
+				    (integer 32)))))
+    (coerce (sap-ref-long (alien-funcall fn scp index) 0) format)))
+;;;
+(defun %set-sigcontext-float-register (scp index format new)
   (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext) scp))
-    (let ((reg-sap (alien-sap (deref (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0)
-					    'fpreg)
-				     index))))
-      (declare (ignorable reg-sap))
-      #+not-yet
-      (setf (sys:sap-ref-long reg-sap 0) (coerce new-value 'long-float))
-      (coerce new-value format))))
-
-;;; Not supported on Free/OpenBSD.
-#+BSD
-(defun %set-sigcontext-float-register (scp index format new-value)
-  (declare (ignore scp index))
-  (coerce new-value format))
-
+  (let ((fn (extern-alien "os_sigcontext_fpu_reg"
+			  (function system-area-pointer
+				    (* sigcontext)
+				    (integer 32)))))
+    (let* ((sap (alien-funcall fn scp index))
+	   (result (setf (sap-ref-long sap 0) (coerce new 'long-float))))
+      (coerce result format))))
 ;;;
 (defsetf sigcontext-float-register %set-sigcontext-float-register)
 
@@ -465,25 +263,12 @@
 ;;;    Given a sigcontext pointer, return the floating point modes word in the
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
-
-#+bsd
-(defun sigcontext-floating-point-modes (scp)
-  (declare (type (alien (* sigcontext)) scp)
-	   (ignore scp))
-  ;; This is broken until some future release of FreeBSD/OpenBSD!!!
-  (floating-point-modes))
-  
-#+linux
 (defun sigcontext-floating-point-modes (scp)
   (declare (type (alien (* sigcontext)) scp))
-  (let ((cw (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0) 'cw))
-	(sw (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0) 'sw)))
-    ;;(format t "cw = ~4x~%sw = ~4x~%" cw sw)
-    ;; NOT TESTED -- clear sticky bits to clear interrupt condition
-    (setf (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0) 'sw) (logandc2 sw #x3f))
-    ;;(format t "new sw = ~x~%" (slot (deref (slot (slot scp 'sc-mcontext) 'fpstate) 0) 'sw))
-    ;; simulate floating-point-modes VOP
-    (logior (ash (logand sw #xffff) 16) (logxor (logand cw #xffff) #x3f))))
+  (let ((fn (extern-alien "os_sigcontext_fpu_modes"
+			  (function (integer 32)
+				    (* sigcontext)))))
+    (alien-funcall fn scp)))
 
 
 ;;; EXTERN-ALIEN-NAME -- interface.

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.27 2007/12/14 12:19:58 cshapiro Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.28 2008/01/03 11:41:54 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -42,7 +42,6 @@ typedef int os_vm_prot_t;	/* like hpux */
 #define OS_VM_DEFAULT_PAGESIZE	8192	/* like hpux */
 #endif
 
-int *sc_reg(ucontext_t *, int);
 void restore_fpu(ucontext_t *);
 
 #define HANDLER_ARGS int signal, siginfo_t *code, ucontext_t *context

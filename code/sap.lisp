@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.18 2003/10/15 13:16:37 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.19 2008/01/03 11:41:52 cshapiro Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -220,7 +220,7 @@
 	   (type double-float new-value))
   (setf (sap-ref-double sap offset) new-value))
 
-#+long-float
+#+(or x86 long-float)
 (defun %set-sap-ref-long (sap offset new-value)
   (declare (type system-area-pointer sap)
 	   (fixnum offset)

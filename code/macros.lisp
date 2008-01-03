@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.110 2007/08/08 12:56:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.111 2008/01/03 11:41:51 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1144,7 +1144,7 @@
 (defsetf sap-ref-sap %set-sap-ref-sap)
 (defsetf sap-ref-single %set-sap-ref-single)
 (defsetf sap-ref-double %set-sap-ref-double)
-#+long-float
+#+(or x86 long-float)
 (defsetf sap-ref-long %set-sap-ref-long)
 
 (define-setf-expander getf (place prop &optional default &environment env)

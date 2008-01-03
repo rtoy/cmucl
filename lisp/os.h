@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.20 2007/12/14 12:19:59 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os.h,v 1.21 2008/01/03 11:41:54 cshapiro Exp $
  *
  * Common interface for os-dependent functions.
  *
@@ -107,5 +107,10 @@ enum stack_zone_t { BOTH_ZONES, YELLOW_ZONE, RED_ZONE };
 extern int os_stack_grows_down(void);
 extern void os_guard_control_stack(int zone, int guard);
 extern int os_control_stack_overflow(void *, os_context_t *);
+
+unsigned long *os_sigcontext_reg(ucontext_t *, int);
+unsigned long *os_sigcontext_pc(ucontext_t *);
+unsigned char *os_sigcontext_fpu_reg(ucontext_t *, int);
+unsigned long os_sigcontext_fpu_modes(ucontext_t *);
 
 #endif /* _OS_H_ */

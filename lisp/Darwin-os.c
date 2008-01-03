@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.13 2007/11/16 05:04:09 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.14 2008/01/03 11:41:53 cshapiro Exp $
  *
  */
 
@@ -23,6 +23,7 @@
 #include <sys/file.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <string.h>
 #include "os.h"
 #include "arch.h"
 #include "globals.h"
@@ -197,29 +198,78 @@ sc_reg(os_context_t * context, int offset)
     return (int *) 0;
 }
 #elif defined(__i386__)
-int *
-sc_reg(os_context_t *context, int offset)
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int index)
 {
-    switch (offset) {
-      case 0:
-	  return (int *) &context->uc_mcontext->__ss.__eax;
-      case 2:
-	  return (int *) &context->uc_mcontext->__ss.__ecx;
-      case 4:
-	  return (int *) &context->uc_mcontext->__ss.__edx;
-      case 6:
-	  return (int *) &context->uc_mcontext->__ss.__ebx;
-      case 8:
-	  return (int *) &context->uc_mcontext->__ss.__esp;
-      case 10:
-	  return (int *) &context->uc_mcontext->__ss.__ebp;
-      case 12:
-	  return (int *) &context->uc_mcontext->__ss.__esi;
-      case 14:
-	  return (int *) &context->uc_mcontext->__ss.__edi;
+    switch (index) {
+    case 0:
+	return (unsigned long *) &scp->uc_mcontext->__ss.__eax;
+    case 2:
+	return (unsigned long *) &scp->uc_mcontext->__ss.__ecx;
+    case 4:
+	return (unsigned long *) &scp->uc_mcontext->__ss.__edx;
+    case 6:
+	return (unsigned long *) &scp->uc_mcontext->__ss.__ebx;
+    case 8:
+	return (unsigned long *) &scp->uc_mcontext->__ss.__esp;
+    case 10:
+	return (unsigned long *) &scp->uc_mcontext->__ss.__ebp;
+    case 12:
+	return (unsigned long *) &scp->uc_mcontext->__ss.__esi;
+    case 14:
+	return (unsigned long *) &scp->uc_mcontext->__ss.__edi;
     }
+    return NULL;
+}
 
-    return (int *) 0;
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+    return (unsigned long *) &scp->uc_mcontext->__ss.__eip;
+}
+
+unsigned char *
+os_sigcontext_fpu_reg(ucontext_t *scp, int index)
+{
+    switch (index) {
+    case 0:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm0;
+    case 1:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm1;
+    case 2:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm2;
+    case 3:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm3;
+    case 4:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm4;
+    case 5:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm5;
+    case 6:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm6;
+    case 7:
+	return (unsigned char *) &scp->uc_mcontext->__fs.__fpu_stmm7;
+    }
+    return NULL;
+}
+
+unsigned long
+os_sigcontext_fpu_modes(ucontext_t *scp)
+{
+    unsigned long modes;
+    unsigned short cw, sw;
+    memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
+    memcpy(&sw, &scp->uc_mcontext->__fs.__fpu_fsw, sizeof(sw));
+    modes = (sw & 0xff) << 16 | cw;
+    modes ^= 0x3f;
+    return modes;
+}
+
+void
+restore_fpu(ucontext_t *scp)
+{
+    unsigned short cw;
+    memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
+    __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
 }
 #endif
 
