@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.265 2007/11/14 21:31:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.266 2008/01/09 02:30:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -355,7 +355,14 @@
 	   "SI-SYSNAME" "SI-HOSTNAME" "SI-RELEASE" "SI-VERSION" "SI-MACHINE"
 	   "SI-ARCHITECTURE" "SI-HW-SERIAL" "SI-HW-PROVIDER" "SI-SRPC-DOMAIN"
 	   "SI-PLATFORM" "SI-ISALIST" "SI-DHCP-CACHE")
-  )
+  ;; Should this be conditionalized on glibc2?  These come from
+  ;; unix-glibc2.lisp.
+  #+(and darwin x86)
+  (:export  "GROUP-INFO" "UNIX-GETPWUID" "USER-INFO-DIR" "UNIX-GETPWNAM"
+	    "USER-INFO-SHELL" "USER-INFO-PASSWORD" "USER-INFO-UID"
+	    "GROUP-INFO-GID" "USER-INFO" "USER-INFO-NAME" "USER-INFO-GID"
+	    "GROUP-INFO-MEMBERS" "UNIX-GETGRGID" "USER-INFO-GECOS"
+	    "GROUP-INFO-NAME"))
   
 (defpackage "FORMAT")
 
