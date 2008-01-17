@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.14 2008/01/03 11:41:53 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.15 2008/01/17 14:13:15 rtoy Exp $
  *
  */
 
@@ -269,6 +269,7 @@ restore_fpu(ucontext_t *scp)
 {
     unsigned short cw;
     memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
+    __asm__ __volatile__ ("fclex");
     __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
 }
 #endif
