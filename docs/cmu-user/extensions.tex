@@ -17,6 +17,7 @@ number consing is rare.
 
 
 \subsection{Floats}
+\subsubsection{Standard Floats}
 \label{ieee-float}
 
 \cmucl{} supports two floating point formats: \tindexed{single-float}
@@ -32,7 +33,7 @@ Number consing is greatly reduced if programs are written to allow the
 use of non-descriptor representations (\pxlref{numeric-types}.)
 
 
-\subsubsection{IEEE Special Values}
+\paragraph{IEEE Special Values}
 
 \cmucl{} supports the IEEE infinity and NaN special values.  These
 non-numeric values will only be generated when trapping is disabled
@@ -68,14 +69,14 @@ values.
   float.
 \end{defun}
 
-\subsubsection{Negative Zero}
+\paragraph{Negative Zero}
 
 The IEEE float format provides for distinct positive and negative
 zeros.  To test the sign on zero (or any other float), use the
 \clisp{} \findexed{float-sign} function.  Negative zero prints as
 \code{-0.0f0} or \code{-0.0d0}.
 
-\subsubsection{Denormalized Floats}
+\paragraph{Denormalized Floats}
 
 \cmucl{} supports IEEE denormalized floats.  Denormalized floats
 provide a mechanism for gradual underflow.  The \clisp{}
@@ -94,7 +95,7 @@ denormalized.
 \end{defun}
 
 
-\subsubsection{Floating Point Exceptions}
+\paragraph{Floating Point Exceptions}
 \label{float-traps}
 
 The IEEE floating point standard defines several exceptions that occur
@@ -133,7 +134,7 @@ occurs.  These are the possible floating point exceptions:
   appropriate infinity is returned.
 \end{Lentry}
 
-\subsubsection{Floating Point Rounding Mode}
+\paragraph{Floating Point Rounding Mode}
 \label{float-rounding-modes}
 
 IEEE floating point specifies four possible rounding modes:
@@ -158,7 +159,7 @@ IEEE floating point specifies four possible rounding modes:
   \findexed{truncate} function.
 \end{Lentry}
 
-\paragraph{Warning:}
+\subparagraph{Warning:}
 
 Although the rounding mode can be changed with
 \code{set-floating-point-modes}, use of any value other than the
@@ -168,54 +169,54 @@ user code.  In particular, the unary \code{round} function will stop
 doing round-to-nearest on floats, and instead do the selected form of
 rounding.
 
-\subsubsection{Precision Control}
-\label{precision-control}
-
-The floating-point unit for the Intel IA-32 architecture supports a
-precision control mechanism.  The floating-point unit consists of an
-IEEE extended double-float unit and all operations are always done
-using his format, and this includes rounding.  However, by setting the
-precision control mode, the user can control how rounding is done for
-each basic arithmetic operation like addition, subtraction,
-multiplication, and division.  The extra instructions for
-trigonometric, exponential, and logarithmic operations are not
-affected.  We refer the reader to Intel documentation for more
-information. 
-
-The possible modes are:
-\begin{Lentry}
-  
-\item[\kwd{24-bit}] In this mode, all basic arithmetic operations like
-  addition, subtraction, multiplication, and division, are rounded
-  after each operation as if both the operands were IEEE single
-  precision numbers.  
-  
-\item[\kwd{53-bit}] In this mode, rounding is performed as if the
-  operands and results were IEEE double precision numbers.
-  
-\item[\kwd{64-bit}] In this mode, the default, rounding is performed
-  on the full IEEE extended double precision format.
-  
-\end{Lentry}
-
-\paragraph{Warning:}
-
-Although the precision mode can be changed with
-\code{set-floating-point-modes}, use of anything other than
-\kwd{64-bit} or \kwd{53-bit} can cause unexpected results, especially
-if external functions or libraries are called.  A setting of
-\kwd{64-bit} also causes \code{(= 1d0 (+ 1d0 double-float-epsilon))}
-to return \true{} instead of \false.
-
-
-\subsubsection{Accessing the Floating Point Modes}
+%% \paragraph{Precision Control}
+%% \label{precision-control}
+%% 
+%% The floating-point unit for the Intel IA-32 architecture supports a
+%% precision control mechanism.  The floating-point unit consists of an
+%% IEEE extended double-float unit and all operations are always done
+%% using his format, and this includes rounding.  However, by setting the
+%% precision control mode, the user can control how rounding is done for
+%% each basic arithmetic operation like addition, subtraction,
+%% multiplication, and division.  The extra instructions for
+%% trigonometric, exponential, and logarithmic operations are not
+%% affected.  We refer the reader to Intel documentation for more
+%% information. 
+%% 
+%% The possible modes are:
+%% \begin{Lentry}
+%%   
+%% \item[\kwd{24-bit}] In this mode, all basic arithmetic operations like
+%%   addition, subtraction, multiplication, and division, are rounded
+%%   after each operation as if both the operands were IEEE single
+%%   precision numbers.  
+%%   
+%% \item[\kwd{53-bit}] In this mode, rounding is performed as if the
+%%   operands and results were IEEE double precision numbers.
+%%   
+%% \item[\kwd{64-bit}] In this mode, the default, rounding is performed
+%%   on the full IEEE extended double precision format.
+%%   
+%% \end{Lentry}
+%% 
+%% \paragraph{Warning:}
+%% 
+%% Although the precision mode can be changed with
+%% \code{set-floating-point-modes}, use of anything other than
+%% \kwd{64-bit} or \kwd{53-bit} can cause unexpected results, especially
+%% if external functions or libraries are called.  A setting of
+%% \kwd{64-bit} also causes \code{(= 1d0 (+ 1d0 double-float-epsilon))}
+%% to return \true{} instead of \false.
+%% 
+%% 
+\paragraph{Accessing the Floating Point Modes}
 
 These functions can be used to modify or read the floating point modes:
 
 \begin{defun}{extensions:}{set-floating-point-modes}{%
     \keys{\kwd{traps} \kwd{rounding-mode}}
     \morekeys{\kwd{fast-mode} \kwd{accrued-exceptions}}
-    \yetmorekeys{\kwd{current-exceptions} \kwd{precision-control}}}
+    \yetmorekeys{\kwd{current-exceptions}}}
   \defunx[extensions:]{get-floating-point-modes}{}
   
   The keyword arguments to \code{set-floating-point-modes} set various
@@ -248,10 +249,6 @@ These functions can be used to modify or read the floating point modes:
     Some machines may not have this feature, in which case the value
     is always \false.  Sparc platforms support a fast mode where
     denormal numbers are silently truncated to zero.
-  \item[\kwd{precision-control}] On the x86 architecture, you can set
-    the precision of the arithmetic to \kwd{24-bit}, \kwd{53-bit}, or
-    \kwd{64-bit} mode, corresponding to IEEE single precision, double
-    precision, and extended double precision.
   \end{Lentry}
   If a keyword argument is not supplied, then the associated state is
   not changed.
@@ -336,6 +333,47 @@ macro is useful.
 
 \end{defmac}
 
+\subsubsection{Extended Floats}
+
+\cmucl{} also has an extension to support \code{double-double-float}
+type.  This float format provides extended precision of about 31
+decimal digits, with the same exponent range as \code{double-float}.
+It is completely integrated into \cmucl{}, and can be used just like
+any other floating-point object, including arrays, complex
+\code{double-double-float}'s, and special functions.  With appropriate
+declarations, no boxing is needed, just like \code{single-float} and
+\code{double-float}. 
+
+The exponent marker for a double-double float number is ``W'', so
+``1.234w0'' is a double-double float number.
+
+
+Note that there are a few shortcomings with
+\code{double-double-float}'s:
+\begin{itemize}
+ \item There are no equivalents to \code{most-positive-double-float},
+   \code{double-float-positive-infinity}, \textit{etc}.  This is because
+   these are not really well defined for \code{double-double-float}'s.
+ \item Underflow and overflow may be prematurely signaled.  This is
+   due to how \code{double-double-float}'s are implemented.
+ \item Basic arithmetic operations are inlined, so the code size is
+   fairly large.
+ \item \code{double-double-float} arithmetic is quite a bit slower
+   than \code{double-float} since there is no hardware support for
+   this type.
+ \item The constant \code{pi} is still a \code{double-float} instead
+   of a \code{double-double-float}.  Use \code{kernel:dd-pi} if you
+   want a \code{double-double-float} value for $\pi$.
+\end{itemize}
+
+\begin{deftp}{float}{ext:double-double-float}{}
+  The \code{double-double-float} type.  It is in the \code{EXTENSIONS}
+  package.
+\end{deftp}
+
+\begin{defconst}{kernel:}{dd-pi}
+  A \code{double-double-float} approximation to $\pi$.
+\end{defconst}
 
 \subsection{Characters}
 
