@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.23 2004/07/14 20:52:38 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.24 2008/01/18 15:52:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,8 +26,8 @@
 (defconstant unit-bits vm:word-bits
   "The number of bits to process at a time.")
 
-(defconstant max-bits (ash most-positive-fixnum -2)
-  "The maximum number of bits that can be delt with during a single call.")
+(defconstant max-bits (1- (ash 1 vm:word-bits))
+  "The maximum number of bits that can be dealt with during a single call.")
 
 
 (deftype unit ()
