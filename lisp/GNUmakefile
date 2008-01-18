@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.26 2007/08/21 18:57:51 fgilham Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.27 2008/01/18 01:44:18 rtoy Exp $
 
 all: lisp.nm
 
@@ -63,5 +63,20 @@ depend: Depends
 Depends: ${SRCS}
 	$(DEPEND) ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $^ > ,depends
 	mv ,depends Depends
+
+# For x86 architectures, these files need to be compiled with
+# -ffloat-store to make sure that we get double-float precision
+# instead of the default x86 80-bit extended precision.
+
+# gcc 4.2.1 on Suse 10.3 appears to mis-compile these files with -O2.
+# Hence, compile these with -O1, which appears to work.  To see this
+# failure, try computing (cos (expt 2d0 120)).  This should be near
+# -0.92587902285....
+
+e_rem_pio2.o : e_rem_pio2.c
+	$(CC) -c $(CFLAGS) -O1 -ffloat-store $(PATH1)/e_rem_pio2.c
+
+k_rem_pio2.o : k_rem_pio2.c
+	$(CC) -c $(CFLAGS) -O1 -ffloat-store $(PATH1)/k_rem_pio2.c
 
 -include Depends
