@@ -44,6 +44,10 @@ New in this release:
       iso8859-1 and utf-8 are supported.  Utf-8 support is limited
       since CMUCL only has 8-bit characters.
     - UNIX-MPROTECT added to access mprotect.
+    - EXT:DOUBLE-DOUBLE-FLOAT type added, which is an extended
+      precision number type with about 31 digits of precision.  It is
+      fully integrated with the FLOAT type.  The exponent marker is
+      "w".
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
@@ -140,12 +144,14 @@ New in this release:
       everything and the compiler takes care of the precision for the
       appropriate ABI.  It is the compiler's responsibility to make
       sure single-precision floats are done correctly with
-      single-precision results.
+      single-precision results.  (This may be buggy currently.)
+    - The :PRECISION-CONTROL keyword in SET-FLOATING-POINT-MODES has
+      been removed.
     - A compiler bug with type inferencing and deleting unsued
       functions has been fixed.
     - A compiler bug has been fixed where a source transformation was
-      applied because the local variable happens to have a function
-      type.
+      incorrectly applied because the local variable happens to have a
+      function type and has the same name as a known function.
     - On Darwin/x86, tracing with :encapsulate nil works better, and
       tracing of labels/flets works better.  However, there are still
       issues with tracing.  Returning to the repl after tracing
