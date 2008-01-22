@@ -966,8 +966,10 @@ possible using \code{malloc} or \code{make-alien} since we need about
     (n c-call:int :in))
     
   (defun test-dotprod ()
-    (let ((x (make-array 10000 :element-type 'double-float :initial-element 2d0))
-          (y (make-array 10000 :element-type 'double-float :initial-element 10d0)))
+    (let ((x (make-array 10000 :element-type 'double-float 
+                         :initial-element 2d0))
+          (y (make-array 10000 :element-type 'double-float
+                         :initial-element 10d0)))
         (sys:without-gcing
           (let ((x-addr (sys:vector-sap x))
                 (y-addr (sys:vector-sap y)))

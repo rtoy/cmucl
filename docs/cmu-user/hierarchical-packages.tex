@@ -56,7 +56,7 @@ modifications to the underlying \clisp{} implementation. Relative
 package names require only small and simple modifications.
 
 
-\subsection{Relative package names}
+\subsection{Relative Package Names}
 
 Relative package names are needed for the same reason as relative
 pathnames, for brevity and to reduce the brittleness of absolute
@@ -65,7 +65,7 @@ dots. A single dot means the current package, two dots mean the parent
 of the current package, and so on.
 
 Table~\ref{tbl:hierarchical-packages} presents a number of examples,
-assuming that packages named \verb|foo|, \verb|foo.bar|,
+assuming that the packages named \verb|foo|, \verb|foo.bar|,
 \verb|mypack|, \verb|mypack.foo|, \verb|mypack.foo.bar|,
 \verb|mypack.foo.baz|, \verb|mypack.bar|, and \verb|mypack.bar.baz|,
 have all been created.
@@ -113,7 +113,7 @@ Consider the following:
   
 When the current package (the value of the variable \code{*package*})
 is \code{common-lisp-user}, you might expect \verb|.foo| to refer to
-\verb|cl-user.foo|, but it does not. It refers to the non-existent
+\verb|cl-user.foo|, but it does not. It actually refers to the non-existent
 package \verb|common-lisp-user.foo|. Note that the purpose of
 nicknames is to provide shorter names in place of the longer names
 that are designed to be fully descriptive. The hope is that
@@ -172,7 +172,7 @@ proceeds as it does with a string argument.)
 Note that you should not use leading dots in package names when using
 hierarchical packages.
 
-\subsubsection{Using hierarchical packages without modifying cl:find-package}
+\subsubsection{Using Hierarchical Packages without Modifying cl:find-package}
 
 Even without the modifications to \code{cl:find-package}, authors need
 not avoid using relative package names, but the ability to reuse
@@ -181,8 +181,8 @@ relative package names is restricted. Consider for example a module
 \verb|my.foo.baz| packages. In the code for each of the these packages
 there are relative package references, \verb|..bar| and \verb|..baz|.
 
-Implementations that have the new \code{cl:find-package} would carry
-the keyword \verb|:relative-package-names| on their \code{*features*}
+Implementations that have the new \code{cl:find-package} would have
+\verb|:relative-package-names| on their \code{*features*}
 list (this is the case of \cmucl{} releases starting from 18d). Then,
 in the \textit{foo} module, there would be definitions of the
 \verb|my.foo.bar| and \verb|my.foo.baz| packages like so:

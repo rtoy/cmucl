@@ -151,7 +151,7 @@ descriptor as it's single argument.
       
   This macro executes the supplied forms with a handler installed
   using \var{fd}, \var{direction}, and \var{function}.  See
-  \code{system:add-fd-handler}.  The forms are wrapped in an
+  \code{system:add-fd-handler}.  The given forms are wrapped in an
   \code{unwind-protect};  the handler is removed (see
   \code{system:remove-fd-handler}) when done.
 \end{defmac}
