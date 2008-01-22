@@ -456,13 +456,32 @@ arbitrary equality (equivalence) predicate.
       internal.  
 \end{defun}
 
-% NOTE: This should be further updated with discussion of weak
-% hash-tables.  I've never used them, so haven't bothered to figure
-% them out, and am not qualified to write even the most rudimentary
-% docs. [2002/10/10:rpg]
+\cmucl{} also supports a number of weak hash tables.  These weak
+tables are created using the \kwd{weak-p} argument to
+\code{make-hash-table}.  Normally, a reference to an object as either
+the key or value of the hash-table will prevent that object from being
+garbage-collected.  However, in a weak table, if the only reference is
+the hash-table, the object can be collected.
 
+The possible values for \kwd{weak-p} are listed below.  An entry in
+the table remains if the condition holds
+\begin{Lentry}
+\item[\kwd{key}] The key is referenced elsewhere
+\item[\kwd{value}] The value is referenced elsewhere
+\item[\kwd{key-and-value}] Both the key and value are referenced elsewhere
+\item[\kwd{key-or-value}] Either the key or value are referenced elsewhere
+\item[T] For backward compatibility, this means the same as \kwd{key}.
+\end{Lentry}
+If the condition does not hold, the object can be removed from the
+hash table.  
 
+Weak hash tables can only be created if the test is \code{eq} or
+\code{eql}.  An error is signaled if this is not the case.
 
+\begin{defun}{}{make-hash-table}%
+  {\args{\keys{\kwd{test} \kwd{size} \kwd{rehash-size} \kwd{rehash-threshold} \kwd{weak-p}}}}
+  Creates a hash-table with the specified properties.
+\end{defun}
 \section{Default Interrupts for Lisp}
 
 \cmucl{} has several interrupt handlers defined when it starts up,
