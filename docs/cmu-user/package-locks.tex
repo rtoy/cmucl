@@ -1,4 +1,4 @@
-\section{Package locks}
+\section{Package Locks}
 \cindex{package locks}
 
 \cmucl{} provides two types of package locks, as an extension to the
@@ -33,6 +33,7 @@ attempting to redefine a standard macro in the \code{COMMON-LISP}
 package, or to redefine a function in one of \cmucl{}'s
 implementation-defined packages:
 
+{\small
 \begin{verbatim}
 CL-USER> (defmacro 1+ (x) (* x 2))
 Attempt to modify the locked package COMMON-LISP, by defining macro 1+
@@ -70,7 +71,7 @@ Restarts:
   2: [unlock-all    ] Unlock all packages, then continue
   3: [abort         ] Return to Top-Level.
 \end{verbatim}
-
+}
 
 The \code{COMMON-LISP} package and the \cmucl{}-specific
 implementation packages are locked on startup. Users can lock their
