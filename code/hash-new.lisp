@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.45 2007/10/08 15:35:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.46 2008/01/22 17:55:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,8 +221,8 @@
        approaching zero as the threshold approaches 0.  Density 1 means an
        average of one entry per bucket.
    CMUCL Extension:
-     :WEAK-P -- Weak hash table.  An entry in the table is remains if the
-                condition holds:
+     :WEAK-P -- Weak hash table.  Can only be used when the key is 'eq or 'eql.
+                An entry in the table is remains if the condition holds:
                 
                 :KEY            -- key is referenced elsewhere
                 :VALUE          -- value is referenced elsewhere
