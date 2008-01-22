@@ -17,15 +17,16 @@ number consing is rare.
 
 
 \subsection{Floats}
-\subsubsection{Standard Floats}
 \label{ieee-float}
 
-\cmucl{} supports two floating point formats: \tindexed{single-float}
-and \tindexed{double-float}.  These are implemented with IEEE single
-and double float arithmetic, respectively.  \code{short-float} is a
-synonym for \code{single-float}, and \code{long-float} is a synonym
-for \code{double-float}.  The initial value of
-\vindexed{read-default-float-format} is \code{single-float}.
+\cmucl{} supports three floating point formats:
+\tindexed{single-float}, \tindexed{double-float} and
+\tindexed{double-double-float}.  The first two are implemented with
+IEEE single and double float arithmetic, respectively.  The last is an
+extension; \pxlref{extended-float} for more information.
+\code{short-float} is a synonym for \code{single-float}, and
+\code{long-float} is a synonym for \code{double-float}.  The initial
+value of \vindexed{read-default-float-format} is \code{single-float}.
 
 Both \code{single-float} and \code{double-float} are represented with
 a pointer descriptor, so float operations can cause number consing.
@@ -33,7 +34,7 @@ Number consing is greatly reduced if programs are written to allow the
 use of non-descriptor representations (\pxlref{numeric-types}.)
 
 
-\paragraph{IEEE Special Values}
+\subsubsection{IEEE Special Values}
 
 \cmucl{} supports the IEEE infinity and NaN special values.  These
 non-numeric values will only be generated when trapping is disabled
@@ -69,14 +70,14 @@ values.
   float.
 \end{defun}
 
-\paragraph{Negative Zero}
+\subsubsection{Negative Zero}
 
 The IEEE float format provides for distinct positive and negative
 zeros.  To test the sign on zero (or any other float), use the
 \clisp{} \findexed{float-sign} function.  Negative zero prints as
 \code{-0.0f0} or \code{-0.0d0}.
 
-\paragraph{Denormalized Floats}
+\subsubsection{Denormalized Floats}
 
 \cmucl{} supports IEEE denormalized floats.  Denormalized floats
 provide a mechanism for gradual underflow.  The \clisp{}
@@ -95,7 +96,7 @@ denormalized.
 \end{defun}
 
 
-\paragraph{Floating Point Exceptions}
+\subsubsection{Floating Point Exceptions}
 \label{float-traps}
 
 The IEEE floating point standard defines several exceptions that occur
@@ -134,7 +135,7 @@ occurs.  These are the possible floating point exceptions:
   appropriate infinity is returned.
 \end{Lentry}
 
-\paragraph{Floating Point Rounding Mode}
+\subsubsection{Floating Point Rounding Mode}
 \label{float-rounding-modes}
 
 IEEE floating point specifies four possible rounding modes:
@@ -159,7 +160,7 @@ IEEE floating point specifies four possible rounding modes:
   \findexed{truncate} function.
 \end{Lentry}
 
-\subparagraph{Warning:}
+\paragraph{Warning:}
 
 Although the rounding mode can be changed with
 \code{set-floating-point-modes}, use of any value other than the
@@ -169,7 +170,7 @@ user code.  In particular, the unary \code{round} function will stop
 doing round-to-nearest on floats, and instead do the selected form of
 rounding.
 
-%% \paragraph{Precision Control}
+%% \subsubsection{Precision Control}
 %% \label{precision-control}
 %% 
 %% The floating-point unit for the Intel IA-32 architecture supports a
@@ -199,7 +200,7 @@ rounding.
 %%   
 %% \end{Lentry}
 %% 
-%% \paragraph{Warning:}
+%% \subsubsection{Warning:}
 %% 
 %% Although the precision mode can be changed with
 %% \code{set-floating-point-modes}, use of anything other than
@@ -209,7 +210,7 @@ rounding.
 %% to return \true{} instead of \false.
 %% 
 %% 
-\paragraph{Accessing the Floating Point Modes}
+\subsubsection{Accessing the Floating Point Modes}
 
 These functions can be used to modify or read the floating point modes:
 
@@ -333,7 +334,8 @@ macro is useful.
 
 \end{defmac}
 
-\subsubsection{Extended Floats}
+\subsection{Extended Floats}
+\label{extended-float}
 
 \cmucl{} also has an extension to support \code{double-double-float}
 type.  This float format provides extended precision of about 31
@@ -362,7 +364,7 @@ Note that there are a few shortcomings with
    than \code{double-float} since there is no hardware support for
    this type.
  \item The constant \code{pi} is still a \code{double-float} instead
-   of a \code{double-double-float}.  Use \code{kernel:dd-pi} if you
+   of a \code{double-double-float}.  Use \code{ext:dd-pi} if you
    want a \code{double-double-float} value for $\pi$.
 \end{itemize}
 
@@ -371,7 +373,7 @@ Note that there are a few shortcomings with
   package.
 \end{deftp}
 
-\begin{defconst}{kernel:}{dd-pi}
+\begin{defconst}{ext:}{dd-pi}
   A \code{double-double-float} approximation to $\pi$.
 \end{defconst}
 
