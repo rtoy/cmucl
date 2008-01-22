@@ -368,12 +368,12 @@ Note that there are a few shortcomings with
    want a \code{double-double-float} value for $\pi$.
 \end{itemize}
 
-\begin{deftp}{float}{ext:double-double-float}{}
+\begin{deftp}{float}{extensions:double-double-float}{}
   The \code{double-double-float} type.  It is in the \code{EXTENSIONS}
   package.
 \end{deftp}
 
-\begin{defconst}{ext:}{dd-pi}
+\begin{defconst}{extensions:}{dd-pi}
   A \code{double-double-float} approximation to $\pi$.
 \end{defconst}
 
@@ -513,7 +513,7 @@ then the interrupt will be processed.  \xlref{signal-handlers} to define
 your own signal handlers.
 
 
-\section{Implementation-specific Packages}
+\section{Implementation-Specific Packages}
 
 When \cmucl{} is first started up, the default package is the
 \code{common-lisp-user} package. The \code{common-lisp-user} package
