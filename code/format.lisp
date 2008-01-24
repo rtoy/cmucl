@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.75 2007/10/09 17:05:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.76 2008/01/24 02:20:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1283,9 +1283,10 @@
       (prin1 number stream)
       ;;(multiple-value-bind (num expt)
       ;;  (lisp::scale-exponent (abs number))
-      (let* ((expt (if (zerop number)
+      (let* ((num-expt (accurate-scale-exponent (abs number)))
+	     (expt (if (zerop number)
 		       0
-		       (- (accurate-scale-exponent (abs number)) k)))
+		       (- num-expt k)))
 	     (estr (decimal-string (abs expt)))
 	     (elen (if e (max (length estr) e) (length estr)))
 	     (add-zero-p nil))
@@ -1294,9 +1295,9 @@
 	      (write-char ovf stream))
 	    ;; The hairy case
 	    (let* ((fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
-		   (fmin (if (<= k 0)
-			     (if d (+ d k -1) (- k))
-			     nil))
+		   (fmin (if (minusp k)
+			     1
+			     fdig))
 		   (spaceleft (if w
 				  (- w 2 elen
 				     (if (or atsign (minusp (float-sign number)))
@@ -1309,19 +1310,18 @@
 		(format t "spaceleft = ~A~%" spaceleft)
 		(format t "expt = ~S~%" expt))
 
-	      ;; 1 extra for spaceleft so (format nil "~9,,,-1E" pi) will
-	      ;; produce ".03142d+2" instead of "0.0314d+2".
-	      ;;
 	      ;; For fdig, use the larger of fdig and expt so that we'll
 	      ;; always get at least one digit, even if the scale factor
 	      ;; would have shifted all significant bits out.
 	      (multiple-value-bind (fstr flen lpoint tpoint)
 		  (lisp::flonum-to-string (abs number)
-					  (if spaceleft (1+ spaceleft))
-					  (if fdig
-					      (max fdig expt))
-					  (- expt)
-					  fmin)
+					  spaceleft
+					  (if (and fdig k (minusp k))
+					      (max expt fdig)
+					      fdig)
+					  k
+					  fmin
+					  num-expt)
 		#+(or)
 		(progn
 		  (format t "fstr = ~S~%" fstr)
@@ -1423,9 +1423,9 @@
 	   (or (float-infinity-p number)
 	       (float-nan-p number)))
       (prin1 number stream)
-      (multiple-value-bind (ignore n) 
-	  (lisp::scale-exponent (abs number))
-	(declare (ignore ignore))
+      ;;(multiple-value-bind (ignore n) 
+      ;;  (lisp::scale-exponent (abs number))
+      (let* ((n (accurate-scale-exponent (abs number))))
 	;;Default d if omitted.  The procedure is taken directly
 	;;from the definition given in the manual, and is not
 	;;very efficient, since we generate the digits twice.
@@ -1439,6 +1439,12 @@
 	(let* ((ee (if e (+ e 2) 4))
 	       (ww (if w (- w ee) nil))
 	       (dd (- d n)))
+	  #+(or)
+	  (progn
+	    (format t "d = ~A~%" d)
+	    (format t "ee = ~A~%" ee)
+	    (format t "ww = ~A~%" ww)
+	    (format t "dd = ~A~%" dd))
 	  (cond ((<= 0 dd d)
 		 (let ((char (if (format-fixed-aux stream number ww dd nil
 						   ovf pad atsign)

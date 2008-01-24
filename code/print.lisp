@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.116 2007/10/09 21:23:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.117 2008/01/24 02:20:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1489,7 +1489,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defvar *digits* "0123456789")
 
-(defun flonum-to-string (x &optional width fdigits scale fmin)
+(defun flonum-to-string (x &optional width fdigits scale fmin (num-expt 0))
   (setf x (abs x))
   (cond ((zerop x)
 	 ;;zero is a special case which float-string cannot handle
@@ -1499,61 +1499,67 @@ radix-R.  If you have a power-list then pass it in as PL."
 	       (values s (length s) t (zerop fdigits) 0))
 	     (values "." 1 t t 0)))
 	(t
-	 (multiple-value-bind (e string)
-	     (if fdigits
-		 (flonum-to-digits x (min (- (+ fdigits (or scale 0)))
-					  (- (or fmin 0))))
-		 (if (and width (> width 1))
-		     (let ((w (multiple-value-list
-			       (flonum-to-digits x
-						 (max 0
-						      (+ (1- width)
-							 (if (and scale (minusp scale))
-							     scale 0)))
-						 t)))
-			   (f (multiple-value-list
-			       (flonum-to-digits x (- (+ (or fmin 0)
-							 (if scale scale 0)))))))
-		       (cond
-			 ((>= (length (cadr w)) (length (cadr f)))
-			  (values-list w))
-			 (t (values-list f))))
-		     (flonum-to-digits x)))
-	   (let ((e (+ e (or scale 0)))
-		 (stream (make-string-output-stream)))
-	     (if (plusp e)
-		 (progn
-		   (write-string string stream :end (min (length string)
-							 e))
-		   (dotimes (i (- e (length string)))
-		     (write-char #\0 stream))
-		   (write-char #\. stream)
-		   (write-string string stream :start (min (length string)
+	 (flet ((fixup-flonum-to-digits (x &optional (expt 0) position relativep)
+		  (multiple-value-bind (e s)
+		      (flonum-to-digits x position relativep)
+		    (values (- e expt) s))))
+	   (multiple-value-bind (e string)
+	       (if fdigits
+		   (fixup-flonum-to-digits x
+					   num-expt
+					   (+ (min (- (+ fdigits (or scale 0)))
+						   (- (or fmin 0)))
+					      num-expt))
+		   (if (and width (> width 1))
+		       (let ((w (multiple-value-list
+				 (let ((posn (- num-expt (1- width))))
+				   (fixup-flonum-to-digits x num-expt
+							    (if (minusp posn)
+								(1+ posn)
+								posn)))))
+			     (f (multiple-value-list
+				 (fixup-flonum-to-digits x num-expt
+							 (- num-expt (or fmin 0) 1)))))
+			 (cond
+			   ((>= (length (cadr w)) (length (cadr f)))
+			    (values-list w))
+			   (t (values-list f))))
+		       (fixup-flonum-to-digits x num-expt)))
+	     (let ((e (+ e (or scale 0)))
+		   (stream (make-string-output-stream)))
+	       (if (plusp e)
+		   (progn
+		     (write-string string stream :end (min (length string)
 							   e))
-		   (when fdigits
-		     (dotimes (i (- fdigits
-				    (- (length string) 
-				       (min (length string) e))))
-		       (write-char #\0 stream))))
-		 (progn
-		   (write-string "." stream)
-		   (dotimes (i (- e))
-		     (write-char #\0 stream))
-		   ;; If we're out of room (because fdigits is too
-		   ;; small), don't print out our string.  This fixes
-		   ;; things like (format nil "~,2f" 0.001).  We should
-		   ;; print ".00", not ".001".
-		   (when (or (null fdigits)
-			     (plusp (+ e fdigits)))
-		     (write-string string stream))
-		   (when fdigits
-		     (dotimes (i (+ fdigits e (- (length string))))
-		       (write-char #\0 stream)))))
-	     (let ((string (get-output-stream-string stream)))
-	       (values string (length string)
-		       (char= (char string 0) #\.)
-		       (char= (char string (1- (length string))) #\.)
-		       (position #\. string))))))))
+		     (dotimes (i (- e (length string)))
+		       (write-char #\0 stream))
+		     (write-char #\. stream)
+		     (write-string string stream :start (min (length string)
+							     e))
+		     (when fdigits
+		       (dotimes (i (- fdigits
+				      (- (length string) 
+					 (min (length string) e))))
+			 (write-char #\0 stream))))
+		   (progn
+		     (write-string "." stream)
+		     (dotimes (i (- e))
+		       (write-char #\0 stream))
+		     ;; If we're out of room (because fdigits is too
+		     ;; small), don't print out our string.  This fixes
+		     ;; things like (format nil "~,2f" 0.001).  We should
+		     ;; print ".00", not ".001".
+		     (when (or (null fdigits)
+			       (plusp (+ e fdigits)))
+		       (write-string string stream))
+		     (when fdigits
+		       (dotimes (i (+ fdigits e (- (length string))))
+			 (write-char #\0 stream)))))
+	       (let ((string (get-output-stream-string stream)))
+		 (values string (length string)
+			 (char= (char string 0) #\.)
+			 (char= (char string (1- (length string))) #\.)
+			 (position #\. string)))))))))
 
 
 ;;; SCALE-EXPONENT  --  Internal
