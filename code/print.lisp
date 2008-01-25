@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.117 2008/01/24 02:20:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.118 2008/01/25 19:16:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1512,11 +1512,13 @@ radix-R.  If you have a power-list then pass it in as PL."
 					      num-expt))
 		   (if (and width (> width 1))
 		       (let ((w (multiple-value-list
-				 (let ((posn (- num-expt (1- width))))
+				 (let ((ndigits (1- width))
+				       (scaled (+ num-expt (or scale 0))))
+				   (when (and scale (< scale 0))
+				     (setf ndigits (- ndigits scaled 1)))
 				   (fixup-flonum-to-digits x num-expt
-							    (if (minusp posn)
-								(1+ posn)
-								posn)))))
+							   ndigits
+							   t))))
 			     (f (multiple-value-list
 				 (fixup-flonum-to-digits x num-expt
 							 (- num-expt (or fmin 0) 1)))))
@@ -1546,11 +1548,13 @@ radix-R.  If you have a power-list then pass it in as PL."
 		     (dotimes (i (- e))
 		       (write-char #\0 stream))
 		     ;; If we're out of room (because fdigits is too
-		     ;; small), don't print out our string.  This fixes
-		     ;; things like (format nil "~,2f" 0.001).  We should
-		     ;; print ".00", not ".001".
+		     ;; small), don't print out our string.  This
+		     ;; fixes things like (format nil "~,2f" 0.001).
+		     ;; We should print ".00", not ".001".  But if
+		     ;; fmin is set, we want to print out something.
 		     (when (or (null fdigits)
-			       (plusp (+ e fdigits)))
+			       (plusp (+ e fdigits))
+			       fmin)
 		       (write-string string stream))
 		     (when fdigits
 		       (dotimes (i (+ fdigits e (- (length string))))
