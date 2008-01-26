@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.118 2008/01/25 19:16:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.119 2008/01/26 02:09:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1511,21 +1511,18 @@ radix-R.  If you have a power-list then pass it in as PL."
 						   (- (or fmin 0)))
 					      num-expt))
 		   (if (and width (> width 1))
-		       (let ((w (multiple-value-list
-				 (let ((ndigits (1- width))
-				       (scaled (+ num-expt (or scale 0))))
-				   (when (and scale (< scale 0))
-				     (setf ndigits (- ndigits scaled 1)))
-				   (fixup-flonum-to-digits x num-expt
-							   ndigits
-							   t))))
-			     (f (multiple-value-list
-				 (fixup-flonum-to-digits x num-expt
-							 (- num-expt (or fmin 0) 1)))))
-			 (cond
-			   ((>= (length (cadr w)) (length (cadr f)))
-			    (values-list w))
-			   (t (values-list f))))
+		       (let ((ndigits (1- width)))
+			 #+(or)
+			 (progn
+			   (format t "ndigits = ~A~%" ndigits)
+			   (format t "scale   = ~A~%" scale))
+			 (when (and scale (< scale 0))
+			   (setf ndigits (+ ndigits scale)))
+			 (when (minusp num-expt)
+			   (incf ndigits (- num-expt)))
+			 (fixup-flonum-to-digits x num-expt
+						 ndigits
+						 t))
 		       (fixup-flonum-to-digits x num-expt)))
 	     (let ((e (+ e (or scale 0)))
 		   (stream (make-string-output-stream)))
