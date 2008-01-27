@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.53 2008/01/03 11:41:52 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.54 2008/01/27 19:43:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1020,8 +1020,8 @@
 	       (unless (zerop (tn-offset r))
 		 (inst fxch r))
 	       (when (policy node (or (= debug 3) (> safety speed)))
-		     (note-next-instruction vop :internal-error)
-		     (inst wait)))
+		 (note-next-instruction vop :internal-error)
+		 (inst wait)))
 	      ;; y and r are the same register.
 	      ((and (sc-is y single-reg) (location= y r))
 	       (cond ((zerop (tn-offset r))
@@ -1055,8 +1055,8 @@
 	       (unless (zerop (tn-offset r))
 		 (inst fxch r))
 	       (when (policy node (or (= debug 3) (> safety speed)))
-		     (note-next-instruction vop :internal-error)
-		     (inst wait)))
+		 (note-next-instruction vop :internal-error)
+		 (inst wait)))
 	      ;; The default case
 	      (t
 	       ;; Get the result to ST0.
@@ -1877,10 +1877,39 @@
 		     (with-empty-tn@fp-top(y)
 		       (note-this-location vop :internal-error)
 		       (inst fild x))))))))
+  #+(or)
   (frob %single-float/signed %single-float single-reg single-float)
   (frob %double-float/signed %double-float double-reg double-float)
   #+long-float
   (frob %long-float/signed %long-float long-reg long-float))
+
+(define-vop (%single-float/signed)
+  (:args (x :scs (signed-stack signed-reg) :target temp))
+  (:temporary (:sc signed-stack) temp)
+  (:temporary (:sc single-stack) sf-temp)
+  (:results (y :scs (single-reg)))
+  (:arg-types signed-num)
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:note "inline float coercion")
+  (:translate %single-float)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 5
+    (sc-case x
+      (signed-reg
+       (inst mov temp x)
+       (with-empty-tn@fp-top(y)
+	 (note-this-location vop :internal-error)
+	 (inst fild temp)
+	 (inst fstp sf-temp)
+	 (inst fld sf-temp)))
+      (signed-stack
+       (with-empty-tn@fp-top(y)
+	 (note-this-location vop :internal-error)
+	 (inst fild x)
+	 (inst fstp sf-temp)
+	 (inst fld sf-temp))))))
 
 (macrolet ((frob (name translate to-sc to-type)
 	     `(define-vop (,name)
@@ -1904,6 +1933,27 @@
   (frob %double-float/unsigned %double-float double-reg double-float)
   #+long-float
   (frob %long-float/unsigned %long-float long-reg long-float))
+
+#+(or)
+(define-vop (%single-float/unsigned)
+  (:args (x :scs (unsigned-reg)))
+  (:results (y :scs (single-reg)))
+  (:arg-types unsigned-num)
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:note "inline float coercion")
+  (:translate %single-float)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 6
+    (inst push 0)
+    (inst push x)
+    (with-empty-tn@fp-top(y)
+      (note-this-location vop :internal-error)
+      (inst fildl (make-ea :dword :base esp-tn))
+      (inst fstp (make-ea :dword :base esp-tn))
+      (inst fld (make-ea :dword :base esp-tn)))
+    (inst add esp-tn 8)))
 
 ;;; These should be no-ops but the compiler might want to move
 ;;; some things around
@@ -1935,6 +1985,7 @@
 		    (inst fst  y)
 		    (inst fxch x))))))))
   
+  #+(or)
   (frob %single-float/double-float %single-float double-reg
 	double-float single-reg single-float)
   #+long-float
@@ -1952,7 +2003,54 @@
   (frob %long-float/double-float %long-float double-reg double-float
 	long-reg long-float))
 
+(define-vop (%single-float/double-float)
+  (:args (x :scs (double-reg) :target y))
+  (:results (y :scs (single-reg)))
+  (:arg-types double-float)
+  (:result-types single-float)
+  (:policy :fast-safe)
+  (:note "inline float coercion")
+  (:translate %single-float)
+  (:temporary (:sc single-stack) sf-temp)
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:generator 2
+    (note-this-location vop :internal-error)
+    (cond
+      ((zerop (tn-offset x))
+       (cond
+	 ((zerop (tn-offset y))
+	  ;; x is in ST0, y is also in ST0
+	  (inst fstp sf-temp)
+	  (inst fld sf-temp))
+	 (t
+	  ;; x is in ST0, y is in another reg. not ST0
+	  ;; Save st0 (x) to memory, swap, reload, then swap back.
+	  (inst fst sf-temp)
+	  (inst fxch y)
+	  (fp-pop)
+	  (inst fld sf-temp)
+	  (inst fxch y))))
+      ((zerop (tn-offset y))
+       ;; y is in ST0, x is in another reg. not ST0
+       ;; Swap, save x to memory, reload, swap back
+       (inst fxch x)
+       (inst fstp sf-temp)
+       (inst fld sf-temp)
+       (inst fxch x))
+      (t
+       ;; Neither x or y are in ST0, and they are not in
+       ;; the same reg.
 
+       ;; Get x to st0.  Store it away.  Swap back.  Get y to st0,
+       ;; load.  Swap back.
+       (inst fxch x)
+       (inst fst sf-temp)
+       (inst fxch x)
+       (inst fxch y)
+       (fp-pop)
+       (inst fld sf-temp)
+       (inst fxch y))))))
 
 (macrolet ((frob (trans from-sc from-type round-p)
 	     `(define-vop (,(symbolicate trans "/" from-type))
