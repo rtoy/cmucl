@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.76 2008/01/24 02:20:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.77 2008/01/28 22:58:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1226,7 +1226,7 @@
 				    (float x 1d0))
 				   (double-float
 				    x)
-				   #+double-double-float
+				   #+double-double
 				   (double-double-float
 				    (double-double-hi x)))))
 			 (ceiling (- (the (double-float -400d0 400d0) (log xd 10d0))
