@@ -41,7 +41,7 @@ OS_LIBS = -ldl
 # since we can't tell what compiler version we're using.
 
 e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c $(CFLAGS) -O1 $<
+	$(CC) -c $(CFLAGS) -O1 -ffloat-store $<
 
 k_rem_pio2.o : k_rem_pio2.c
-	$(CC) -c $(CFLAGS) -O1 $<
+	$(CC) -c $(CFLAGS) -O1 -ffloat-store $<

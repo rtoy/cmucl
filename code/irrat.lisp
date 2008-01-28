@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.53 2007/08/03 14:28:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.54 2008/01/28 18:21:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -182,15 +182,26 @@
 
 #+(or ppc x86)
 (progn
-(declaim (inline %ieee754-rem-pi/2))
+(declaim (inline %%ieee754-rem-pi/2))
 ;; Basic argument reduction routine.  It returns two values: n and y
 ;; such that (n + 8*k)*pi/2+y = x where |y|<pi/4 and n indicates in
 ;; which octant the arg lies.  Y is actually computed in two parts,
 ;; y[0] and y[1] such that the sum is y, for accuracy.
 
-(alien:def-alien-routine ("__ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
+(alien:def-alien-routine ("__ieee754_rem_pio2" %%ieee754-rem-pi/2) c-call:int
   (x double-float)
   (y (* double-float)))
+
+;; Same as above, but instead of needing to pass an array in, the
+;; output array is broken up into two output values instead.  This is
+;; easier for the user, and we don't have to wrap calls with
+;; without-gcing.
+(declaim (inline %ieee754-rem-pi/2))
+(alien:def-alien-routine ("ieee754_rem_pio2" %ieee754-rem-pi/2) c-call:int
+  (x double-float)
+  (y0 double-float :out)
+  (y1 double-float :out))
+
 )
 
 #+ppc
@@ -207,7 +218,7 @@
 #+(or ppc x86)
 (macrolet
     ((frob (sin cos tan)
-       `(let ((y (make-array 2 :element-type 'double-float)))
+       `(progn
 	  ;; The array y holds the result for %ieee754-rem-pi/2
 	  ;;
 	  ;; In all of the routines below, we just compute the sum of
@@ -222,35 +233,38 @@
 	    (if (< (abs x) (/ pi 4))
 		(,sin x)
 		;; Argument reduction needed
-		(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
-		       (reduced (+ (aref y 0) (aref y 1))))
-		  (case (logand n 3)
-		    (0 (,sin reduced))
-		    (1 (,cos reduced))
-		    (2 (- (,sin reduced)))
-		    (3 (- (,cos reduced)))))))
+		(multiple-value-bind (n y0 y1)
+		    (%ieee754-rem-pi/2 x)
+		  (let ((reduced (+ y0 y1)))
+		    (case (logand n 3)
+		      (0 (,sin reduced))
+		      (1 (,cos reduced))
+		      (2 (- (,sin reduced)))
+		      (3 (- (,cos reduced))))))))
 	  (defun %cos (x)
 	    (declare (double-float x))
 	    (if (< (abs x) (/ pi 4))
 		(,cos x)
 		;; Argument reduction needed
-		(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
-		       (reduced (+ (aref y 0) (aref y 1))))
-		  (case (logand n 3)
-		    (0 (,cos reduced))
-		    (1 (- (,sin reduced)))
-		    (2 (- (,cos reduced)))
-		    (3 (,sin reduced))))))
+		(multiple-value-bind (n y0 y1)
+		    (%ieee754-rem-pi/2 x)
+		  (let ((reduced (+ y0 y1)))
+		    (case (logand n 3)
+		      (0 (,cos reduced))
+		      (1 (- (,sin reduced)))
+		      (2 (- (,cos reduced)))
+		      (3 (,sin reduced)))))))
 	  (defun %tan (x)
 	    (declare (double-float x))
 	    (if (< (abs x) (/ pi 4))
 		(,tan x)
 		;; Argument reduction needed
-		(let* ((n (%ieee754-rem-pi/2 x (vector-sap y)))
-		       (reduced (+ (aref y 0) (aref y 1))))
-		  (if (evenp n)
-		      (,tan reduced)
-		      (- (/ (,tan reduced))))))))))
+		(multiple-value-bind (n y0 y1)
+		    (%ieee754-rem-pi/2 x)
+		  (let ((reduced (+ y0 y1)))
+		    (if (evenp n)
+			(,tan reduced)
+			(- (/ (,tan reduced)))))))))))
   #+x86
   (frob %sin-quick %cos-quick %tan-quick)
   #+ppc

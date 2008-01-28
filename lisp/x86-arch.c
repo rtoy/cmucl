@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.34 2007/12/15 15:26:29 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.35 2008/01/28 18:21:04 rtoy Exp $ 
  *
  */
 
@@ -424,3 +424,19 @@ arch_linkage_entry(unsigned long retaddr)
     return ((retaddr - 5) - FOREIGN_LINKAGE_SPACE_START) / LinkageEntrySize;
 }
 #endif /* LINKAGE_TABLE */
+
+int ieee754_rem_pio2(double x, double *y0, double *y1)
+{
+  extern int __ieee754_rem_pio2(double x, double *y);
+
+  double y[2];
+  int n;
+
+  n = __ieee754_rem_pio2(x, y);
+  *y0 = y[0];
+  *y1 = y[1];
+
+  return n;
+}
+
+  

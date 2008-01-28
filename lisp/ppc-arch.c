@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.11 2007/11/16 05:04:09 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.12 2008/01/28 18:21:04 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -723,3 +723,17 @@ arch_linkage_entry(unsigned long retaddr)
 	/ LinkageEntrySize;
 }
 #endif
+
+int ieee754_rem_pio2(double x, double *y0, double *y1)
+{
+  extern int __ieee754_rem_pio2(double x, double *y);
+
+  double y[2];
+  int n;
+
+  n = __ieee754_rem_pio2(x, y);
+  *y0 = y[0];
+  *y1 = y[1];
+
+  return n;
+}
