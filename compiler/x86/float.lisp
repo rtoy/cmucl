@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.54 2008/01/27 19:43:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.55 2008/01/28 02:33:50 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1929,12 +1929,13 @@
 		   (note-this-location vop :internal-error)
 		   (inst fildl (make-ea :dword :base esp-tn)))
 		 (inst add esp-tn 8)))))
+  #+(or)
   (frob %single-float/unsigned %single-float single-reg single-float)
   (frob %double-float/unsigned %double-float double-reg double-float)
   #+long-float
   (frob %long-float/unsigned %long-float long-reg long-float))
 
-#+(or)
+;;#+(or)
 (define-vop (%single-float/unsigned)
   (:args (x :scs (unsigned-reg)))
   (:results (y :scs (single-reg)))
