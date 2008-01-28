@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.63 2007/08/28 23:55:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.64 2008/01/28 22:41:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -715,7 +715,7 @@
       (((foreach double-float single-float) long-float)
        (truncate-float long-float))
       #+double-double
-      ((double-double-float (or single-float double-float))
+      ((double-double-float (or single-float double-float double-double-float))
        (truncate-float double-double-float))
       #+double-double
       (((foreach single-float double-float) double-double-float)
@@ -725,7 +725,9 @@
       ((single-float double-float)
        (truncate-float double-float))
       (((foreach fixnum bignum ratio)
-	(foreach single-float double-float #+long-float long-float))
+	(foreach single-float double-float
+		 #+double-double double-double-float
+		 #+long-float long-float))
        (truncate-float (dispatch-type divisor))))))
 
 
