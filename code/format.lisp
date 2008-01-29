@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.78 2008/01/29 19:24:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.79 2008/01/29 22:55:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1449,9 +1449,9 @@
 		 ;; so that we print as many fraction digits as
 		 ;; possible without exceeding the width constraint,
 		 ;; if any.
-		 (let* ((ndigits (max 0 (if ww
-					    (min dd (- ww 1 n))
-					    dd)))
+		 (let* ((ndigits (if ww
+				     (min dd (- ww 1 n))
+				     dd))
 			(char (if (format-fixed-aux stream number ww
 						    ndigits
 						    nil
