@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.77 2008/01/28 22:58:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.78 2008/01/29 19:24:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1310,15 +1310,10 @@
 		(format t "spaceleft = ~A~%" spaceleft)
 		(format t "expt = ~S~%" expt))
 
-	      ;; For fdig, use the larger of fdig and expt so that we'll
-	      ;; always get at least one digit, even if the scale factor
-	      ;; would have shifted all significant bits out.
 	      (multiple-value-bind (fstr flen lpoint tpoint)
 		  (lisp::flonum-to-string (abs number)
 					  spaceleft
-					  (if (and fdig k (minusp k))
-					      (max expt fdig)
-					      fdig)
+					  fdig
 					  k
 					  fmin
 					  num-expt)
@@ -1423,19 +1418,22 @@
 	   (or (float-infinity-p number)
 	       (float-nan-p number)))
       (prin1 number stream)
-      ;;(multiple-value-bind (ignore n) 
-      ;;  (lisp::scale-exponent (abs number))
-      (let* ((n (accurate-scale-exponent (abs number))))
-	;;Default d if omitted.  The procedure is taken directly
-	;;from the definition given in the manual, and is not
-	;;very efficient, since we generate the digits twice.
-	;;Future maintainers are encouraged to improve on this.
+      (let* ((n (accurate-scale-exponent (abs number)))
+	     (orig-d d))
+	;; Default d if omitted.  The procedure is taken directly from
+	;; the definition given in the manual (CLHS 22.3.3.3), and is
+	;; not very efficient, since we generate the digits twice.
+	;; Future maintainers are encouraged to improve on this.
+	;;
+	;; It's also not very clear whether q in the spec is the
+	;; number of significant digits or not.  I (rtoy) think it
+	;; makes more sense if q is the number of significant digits.
+	;; That way 1d300 isn't printed as 1 followed by 300 zeroes.
+	;; Exponential notation would be used instead.
+	
 	(unless d
-	  (multiple-value-bind (str len) 
-	      (lisp::flonum-to-string (abs number))
-	    (declare (ignore str))
-	    (let ((q (if (= len 1) 1 (1- len))))
-	      (setq d (max q (min n 7))))))
+	  (let* ((q (length (nth-value 1 (lisp::flonum-to-digits (abs number))))))
+	    (setq d (max q (min n 7)))))
 	(let* ((ee (if e (+ e 2) 4))
 	       (ww (if w (- w ee) nil))
 	       (dd (- d n)))
@@ -1446,13 +1444,25 @@
 	    (format t "ww = ~A~%" ww)
 	    (format t "dd = ~A~%" dd))
 	  (cond ((<= 0 dd d)
-		 (let ((char (if (format-fixed-aux stream number ww dd nil
-						   ovf pad atsign)
-				 ovf
-				 #\space)))
+		 ;; Figure out how many fraction digits we really want
+		 ;; to print.  If we can, use dd.  If not, adjust it
+		 ;; so that we print as many fraction digits as
+		 ;; possible without exceeding the width constraint,
+		 ;; if any.
+		 (let* ((ndigits (max 0 (if ww
+					    (min dd (- ww 1 n))
+					    dd)))
+			(char (if (format-fixed-aux stream number ww
+						    ndigits
+						    nil
+						    ovf pad atsign)
+				  ovf
+				  #\space)))
 		   (dotimes (i ee) (write-char char stream))))
 		(t
-		 (format-exp-aux stream number w d e (or k 1)
+		 (format-exp-aux stream number w
+				 orig-d
+				 e (or k 1)
 				 ovf pad marker atsign)))))))
 
 (def-format-directive #\$ (colonp atsignp params)
