@@ -21,7 +21,12 @@ endif
 RUNTIME = $(GENCGC) $(LINKAGE)
 # __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- -I/usr/X11R6/include $(RUNTIME)
-CFLAGS = -rdynamic -Wstrict-prototypes -Wall -O2 -g $(RUNTIME)
+
+# CFLAGS_NO_OPT should be all the C compiler flags we want, except for
+# the optimization flags.  Needed so we can compile e_rem_pio2 and
+# k_rem_pio2 with the right optimization flags.
+CFLAGS_NO_OPT = -rdynamic -Wstrict-prototypes -Wall -g $(RUNTIME)
+CFLAGS = -O2 $(CFLAGS_NO_OPT)
 ASFLAGS = -g -DGENCGC -DLINKAGE_TABLE
 NM = $(PATH1)/linux-nm
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
@@ -41,7 +46,7 @@ OS_LIBS = -ldl
 # since we can't tell what compiler version we're using.
 
 e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c $(CFLAGS) -O1 -ffloat-store $<
+	$(CC) -c $(CFLAGS_NO_OPT) -O1 -ffloat-store $<
 
 k_rem_pio2.o : k_rem_pio2.c
-	$(CC) -c $(CFLAGS) -O1 -ffloat-store $<
+	$(CC) -c $(CFLAGS_NO_OPT) -O1 -ffloat-store $<
