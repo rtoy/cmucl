@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.79 2008/01/29 22:55:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.80 2008/01/30 15:35:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1439,7 +1439,7 @@
 	       (dd (- d n)))
 	  #+(or)
 	  (progn
-	    (format t "d = ~A~%" d)
+	    (format t "d  = ~A~%" d)
 	    (format t "ee = ~A~%" ee)
 	    (format t "ww = ~A~%" ww)
 	    (format t "dd = ~A~%" dd))
@@ -1450,7 +1450,7 @@
 		 ;; possible without exceeding the width constraint,
 		 ;; if any.
 		 (let* ((ndigits (if ww
-				     (min dd (- ww 1 n))
+				     (max 0 (min dd (- ww 1 n)))
 				     dd))
 			(char (if (format-fixed-aux stream number ww
 						    ndigits
