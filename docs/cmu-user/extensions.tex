@@ -1372,6 +1372,15 @@ size of each saved Lisp image, typically at least 20 megabytes.
     the -batch command-line switch will invoke batch-mode processing
     upon resuming the saved core.  If non-NIL, the produced core will
     always be in batch-mode, regardless of any command-line switches.
+
+  \item[\kwd{executable}] If non-NIL, an executable image is created.
+    Normally, \cmucl{} consists of the C runtime along with a core
+    file image.  When \kwd{executable} is non-NIL, the core file is
+    incorporated into the C runtime, so one (large) executable is
+    created instead of a new separate core file.
+
+    This feature is only available on some platforms.  Currently only
+    x86 on Linux and FreeBSD support this.
   \end{Lentry}
 \end{defun}
 
