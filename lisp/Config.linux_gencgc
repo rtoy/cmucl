@@ -23,7 +23,7 @@ RUNTIME = $(GENCGC) $(LINKAGE)
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- -I/usr/X11R6/include $(RUNTIME)
 
 CFLAGS = -rdynamic -Wstrict-prototypes -Wall -O2 -g $(RUNTIME)
-ASFLAGS = -g -DGENCGC -DLINKAGE_TABLE
+ASFLAGS = -g $(GENCGC) $(LINKAGE_TABLE)
 NM = $(PATH1)/linux-nm
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S linux-stubs.S
