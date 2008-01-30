@@ -16,7 +16,7 @@
      :conservative-float-type
      :hash-new :random-mt19937
      :linux :glibc2 :glibc2.1
-     :cmu :cmu19 :cmu19c
+     :cmu :cmu19 :cmu19e
      :double-double
      )
    ;; Features to remove from current *features* here

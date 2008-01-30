@@ -13,7 +13,7 @@
      :hash-new
      :random-mt19937
      :darwin :bsd
-     :cmu :cmu19 :cmu19c
+     :cmu :cmu19 :cmu19e
      :relative-package-names		; Relative package names from Allegro
      :linkage-table
      :modular-arith			; Modular arithmetic
