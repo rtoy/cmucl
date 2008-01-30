@@ -22,11 +22,7 @@ RUNTIME = $(GENCGC) $(LINKAGE)
 # __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- -I/usr/X11R6/include $(RUNTIME)
 
-# CFLAGS_NO_OPT should be all the C compiler flags we want, except for
-# the optimization flags.  Needed so we can compile e_rem_pio2 and
-# k_rem_pio2 with the right optimization flags.
-CFLAGS_NO_OPT = -rdynamic -Wstrict-prototypes -Wall -g $(RUNTIME)
-CFLAGS = -O2 $(CFLAGS_NO_OPT)
+CFLAGS = -rdynamic -Wstrict-prototypes -Wall -O2 -g $(RUNTIME)
 ASFLAGS = -g -DGENCGC -DLINKAGE_TABLE
 NM = $(PATH1)/linux-nm
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
@@ -37,16 +33,13 @@ OS_LINK_FLAGS = -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
 OS_LIBS = -ldl
 #GC_SRC = gencgc.c
 
-# gcc 4.2.1 on Suse 10.3 appears to mis-compile these files with -O2.
-# Hence, compile these with -O1, which appears to work.  (Perhaps this
-# is an aliasing issue?)  To see this failure, try computing (cos
-# (expt 2d0 120)).  This should be near -0.92587902285....
+# e_rem_pio2.c has strict aliasing issues.  Compile this with
+# strict-aliasing rules turned off.  To see this failure, try
+# computing (cos (expt 2d0 120)).  This should be near
+# -0.92587902285....  If not, then e_rem_pio2 has been miscompiled.
 #
-# This appears to be ok with gcc 3.4.6, but we force -O1 everywhere
-# since we can't tell what compiler version we're using.
-
+# Use -ffloat-store to make sure we get double-float arithmetic
+# instead of extended.
 e_rem_pio2.o : e_rem_pio2.c
-	$(CC) -c $(CFLAGS_NO_OPT) -O1 -ffloat-store $<
+	$(CC) -c -fno-strict-aliasing -ffloat-store $(CFLAGS)  $<
 
-k_rem_pio2.o : k_rem_pio2.c
-	$(CC) -c $(CFLAGS_NO_OPT) -O1 -ffloat-store $<
