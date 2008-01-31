@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.80 2008/01/30 15:35:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.81 2008/01/31 18:24:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1444,16 +1444,11 @@
 	    (format t "ww = ~A~%" ww)
 	    (format t "dd = ~A~%" dd))
 	  (cond ((<= 0 dd d)
-		 ;; Figure out how many fraction digits we really want
-		 ;; to print.  If we can, use dd.  If not, adjust it
-		 ;; so that we print as many fraction digits as
-		 ;; possible without exceeding the width constraint,
-		 ;; if any.
-		 (let* ((ndigits (if ww
-				     (max 0 (min dd (- ww 1 n)))
-				     dd))
-			(char (if (format-fixed-aux stream number ww
-						    ndigits
+		 ;; Use dd fraction digits, even if that would cause
+		 ;; the width to be exceeded.  We choose accuracy over
+		 ;; width in this case.
+		 (let* ((char (if (format-fixed-aux stream number ww
+						    dd
 						    nil
 						    ovf pad atsign)
 				  ovf
