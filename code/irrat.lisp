@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.54 2008/01/28 18:21:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.55 2008/01/31 19:12:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,15 +219,16 @@
 (macrolet
     ((frob (sin cos tan)
        `(progn
-	  ;; The array y holds the result for %ieee754-rem-pi/2
-	  ;;
 	  ;; In all of the routines below, we just compute the sum of
-	  ;; y[0] and y[1] and use that as the (reduced) argument for
-	  ;; the trig functions.  This is slightly less accurate than
-	  ;; what fdlibm does, which calls special functions using
-	  ;; y[0] and y[1] separately, for greater accuracy.  This
-	  ;; isn't implemented, and some spot checks indicate that
-	  ;; what we have here is accurate.
+	  ;; y0 and y1 and use that as the (reduced) argument for the
+	  ;; trig functions.  This is slightly less accurate than what
+	  ;; fdlibm does, which calls special functions using y0 and
+	  ;; y1 separately, for greater accuracy.  This isn't
+	  ;; implemented, and some spot checks indicate that what we
+	  ;; have here is accurate.
+	  ;;
+	  ;; For x86 with an fsin/fcos/fptan instruction, the pi/4 is
+	  ;; probably too restrictive.
 	  (defun %sin (x)
 	    (declare (double-float x))
 	    (if (< (abs x) (/ pi 4))
