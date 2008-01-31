@@ -45,3 +45,7 @@ OS_LIBS = -lSystem -lc -lm
 #	true
 
 #darwin-lispadjuster: darwin-lispadjuster.c
+
+# This has aliasing problems, so turn off aliasing.
+e_rem_pio2.o : e_rem_pio2.c
+	$(CC) -c -fno-strict-aliasing -ffloat-store $(CFLAGS)  $<

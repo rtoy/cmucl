@@ -20,3 +20,7 @@ OS_SRC = FreeBSD-os.c os-common.c elf.c e_rem_pio2.c k_rem_pio2.c
 OS_LINK_FLAGS = -dynamic -export-dynamic
 OS_LIBS =
 GC_SRC = gencgc.c
+
+# This has aliasing problems, so turn off aliasing.
+e_rem_pio2.o : e_rem_pio2.c
+	$(CC) -c -fno-strict-aliasing -ffloat-store $(CFLAGS)  $<
