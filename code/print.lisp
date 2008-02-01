@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.119 2008/01/26 02:09:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.120 2008/02/01 14:54:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1542,7 +1542,15 @@ radix-R.  If you have a power-list then pass it in as PL."
 			 (write-char #\0 stream))))
 		   (progn
 		     (write-string "." stream)
-		     (dotimes (i (- e))
+		     ;; Write out the leading zeroes.  If fmin is set,
+		     ;; we need all of them.  But if fdigits is given
+		     ;; and is smaller than -e, we only want fdigits
+		     ;; to be output.  That way we don't print too
+		     ;; many leading zeroes if the number is too
+		     ;; small.
+		     (dotimes (i (if (or fmin (null fdigits))
+				     (- e)
+				     (min (- e) fdigits)))
 		       (write-char #\0 stream))
 		     ;; If we're out of room (because fdigits is too
 		     ;; small), don't print out our string.  This
