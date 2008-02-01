@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.115 2007/06/27 16:35:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.116 2008/02/01 22:14:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -642,37 +642,44 @@
 ;;; The argument range is limited on the x86 FP trig. functions. A
 ;;; post-test can detect a failure (and load a suitable result), but
 ;;; this test is avoided if possible.
-(dolist (stuff '((sin %sin %sin-quick)
-		 (cos %cos %cos-quick)
-		 (tan %tan %tan-quick)))
-  (destructuring-bind (name prim prim-quick) stuff
+;;;
+;;; Simple tests show that sin/cos produce numbers greater than 1 when
+;;; the arg >= 2^63.  tan produces floating-point invalid exceptions
+;;; for arg >= 2^62.  So limit these to that range.
+(dolist (stuff '((sin %sin %sin-quick 63)
+		 (cos %cos %cos-quick 63)
+		 (tan %tan %tan-quick 62)))
+  (destructuring-bind (name prim prim-quick limit)
+      stuff
     (deftransform name ((x) '(single-float) '* :eval-name t)
       (if (backend-featurep :x86)
 	  (cond ((csubtypep (continuation-type x)
-			    (specifier-type '(single-float
-					      (#.(- (expt 2f0 64)))
-					      (#.(expt 2f0 64)))))
+			    (specifier-type `(single-float
+					      (,(- (expt 2f0 limit)))
+					      (,(expt 2f0 limit)))))
 		 `(coerce (,prim-quick (coerce x 'double-float))
 		   'single-float))
 		(t 
 		 (compiler-note
 		  "Unable to avoid inline argument range check~@
-                      because the argument range (~s) was not within 2^64"
-		  (type-specifier (continuation-type x)))
+                      because the argument range (~s) was not within 2^~D"
+		  (type-specifier (continuation-type x))
+		  limit)
 		 `(coerce (,prim (coerce x 'double-float)) 'single-float)))
 	  `(coerce (,prim (coerce x 'double-float)) 'single-float)))
     (deftransform name ((x) '(double-float) '* :eval-name t :when :both)
       (if (backend-featurep :x86)
 	  (cond ((csubtypep (continuation-type x)
-			    (specifier-type '(double-float
-					      (#.(- (expt 2d0 64)))
-					      (#.(expt 2d0 64)))))
+			    (specifier-type `(double-float
+					      (,(- (expt 2d0 limit)))
+					      (,(expt 2d0 limit)))))
 		 `(,prim-quick x))
 		(t 
 		 (compiler-note
 		  "Unable to avoid inline argument range check~@
-                   because the argument range (~s) was not within 2^64"
-		  (type-specifier (continuation-type x)))
+                   because the argument range (~s) was not within 2^~D"
+		  (type-specifier (continuation-type x))
+		  limit)
 		 `(,prim x)))
 	  `(,prim x)))))
 
