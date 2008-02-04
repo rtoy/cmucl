@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.55 2008/01/28 02:33:50 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.56 2008/02/04 20:33:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -918,6 +918,14 @@
 
 ;;;; Arithmetic VOPs:
 
+
+;; Save the top-of-stack to memory and reload it.  This ensures that
+;; the stack top has the desired precision.
+(defmacro save-and-reload-tos (tmp)
+  `(progn
+     (inst fstp ,tmp)
+     (inst fld ,tmp)))
+
 ;;; dtc: The floating point arithmetic vops.
 ;;; 
 ;;; Note: Although these can accept x and y on the stack or pointed to
@@ -977,13 +985,11 @@
 	      ((and (sc-is x single-reg) (location= x r) (location= y r))
 	       (cond ((zerop (tn-offset r))
 		      (inst ,fop fr0)
-		      (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
-			(inst fld (ea-for-sf-stack tmp))))
+		      (save-and-reload-tos tmp))
 		     (t
 		      (inst fxch r)
 		      (inst ,fop fr0)
-		      (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
-			(inst fld (ea-for-sf-stack tmp)))
+		      (save-and-reload-tos tmp)
 		      ;; XX the source register will not be valid.
 		      (note-next-instruction vop :internal-error)
 		      (inst fxch r))))
@@ -1015,8 +1021,7 @@
 		      (inst ,fop-sti r)))
 	       (unless (zerop (tn-offset r))
 		 (inst fxch r))
-	       (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
-		 (inst fld (ea-for-sf-stack tmp)))
+	       (save-and-reload-tos tmp)
 	       (unless (zerop (tn-offset r))
 		 (inst fxch r))
 	       (when (policy node (or (= debug 3) (> safety speed)))
@@ -1050,8 +1055,7 @@
 
 	       (unless (zerop (tn-offset r))
 		 (inst fxch r))
-	       (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
-		 (inst fld (ea-for-sf-stack tmp)))
+	       (save-and-reload-tos tmp)
 	       (unless (zerop (tn-offset r))
 		 (inst fxch r))
 	       (when (policy node (or (= debug 3) (> safety speed)))
@@ -1109,8 +1113,7 @@
 	       ;; Finally save the result
 	       (sc-case r
 	         (single-reg
-		  (with-empty-tn@fp-top ((ea-for-sf-stack tmp))
-			(inst fld (ea-for-sf-stack tmp)))
+		  (save-and-reload-tos tmp)
 		  (cond ((zerop (tn-offset r))
 			 (when (policy node (or (= debug 3) (> safety speed)))
 			       (inst wait)))
@@ -2051,7 +2054,7 @@
        (inst fxch y)
        (fp-pop)
        (inst fld sf-temp)
-       (inst fxch y))))))
+       (inst fxch y)))))
 
 (macrolet ((frob (trans from-sc from-type round-p)
 	     `(define-vop (,(symbolicate trans "/" from-type))
