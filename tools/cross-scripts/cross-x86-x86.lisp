@@ -130,7 +130,10 @@
 	OLD-X86:SINGLE-FLOAT-EXPONENT-BYTE
 	OLD-X86:SINGLE-FLOAT-NORMAL-EXPONENT-MAX
 	OLD-X86:SINGLE-FLOAT-SIGNIFICAND-BYTE
-	))
+	)
+  #+double-double
+  (frob OLD-SPARC:SIMPLE-ARRAY-COMPLEX-DOUBLE-DOUBLE-FLOAT-TYPE
+	OLD-SPARC:SIMPLE-ARRAY-DOUBLE-DOUBLE-FLOAT-TYPE))
 
 ;; Modular arith hacks
 (setf (fdefinition 'vm::ash-left-mod32) #'old-x86::ash-left-mod32)
@@ -166,9 +169,6 @@
 (in-package :vm)
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  #+(and bsd (not elf))
-  (concatenate 'string "_" name)
-  #-(and bsd (not elf))
   name)
 (export 'extern-alien-name)
 (export 'fixup-code-object)
