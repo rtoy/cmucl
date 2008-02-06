@@ -20,7 +20,8 @@
 # generated using the Hevea tool, which is available from
 # <URL:http://pauillac.inria.fr/~maranget/hevea/>. The HTML files are
 # then split into sections using the hacha tool (distributed with
-# hevea), and cleaned up using tidy.
+# hevea), and cleaned up using tidy.  Note that hevea 1.10 produces
+# HTML that looks a bit weird.  However, hevea 1.06 works nicely.
 #
 # The generated DVI file should include clickable hyperlinks. The PDF
 # output should include a hyperlinked table of contents, hyperlinked
