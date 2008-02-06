@@ -44,10 +44,6 @@ New in this release:
       iso8859-1 and utf-8 are supported.  Utf-8 support is limited
       since CMUCL only has 8-bit characters.
     - UNIX-MPROTECT added to access mprotect.
-    - EXT:DOUBLE-DOUBLE-FLOAT type added, which is an extended
-      precision number type with about 31 digits of precision.  It is
-      fully integrated with the FLOAT type.  The exponent marker is
-      "w".
 
   * ANSI compliance fixes:
     - BOA constructors with &AUX variables are handled better now.
@@ -78,9 +74,6 @@ New in this release:
     - DOUBLE-DOUBLE-FLOAT fixes:
       o Converting negative rationals to double-double-float's doesn't
 	produce wrong answers anymore.
-      o Conversion of bignums to double-double-floats preserves more
-	bits of the bignum now.  This allows for read/print consistency
-	for this particular case.  (The general case is still broken.)
       o (float <negative bignum> 1w0) no longer returns a positive
 	result.
       o Some issues with creation of DOUBLE-DOUBLE-FLOAT and (COMPLEX
