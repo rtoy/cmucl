@@ -1,8 +1,12 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.37 2005/09/15 18:26:53 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.38 2008/02/08 21:17:57 rtoy Exp $ */
 
-#ifndef _UNDEFINEDS_H_
-#define _UNDEFINEDS_H_
+/*
+ * Do not wrap this inside an #ifndef/#endif!
+ *
+ * This file is intentionally included multiple times in undefineds.c
+ * and is expected to do something useful each time!
+ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -82,6 +86,7 @@ F(accept)
     F(mkdir)
     F(mknod)
     F(mmap)
+    F(mprotect)
     F(mount)
     F(msync)
     F(munmap)
@@ -281,6 +286,21 @@ F(accept)
     F(statfs64)
     F(lockf64)
 #endif
+#if defined(sparc)
+    F(dladdr)
+    F(open64)
+    F(creat64)
+    F(lseek64)
+    F(truncate64)
+    F(ftruncate64)
+    F(stat64)
+    F(fstat64)
+    F(lstat64)
+    F(readdir64)
+    F(sysinfo)
+    F(uname)
+    F(getpwent_r)
+#endif  
 #if defined(sparc) || defined(linux)
     F(getpwnam_r)
     F(getpwuid_r)
@@ -296,4 +316,3 @@ F(accept)
     F(setpwent)
     F(getpwent)
     F(endpwent)
-#endif /* _UNDEFINEDS_H_ */
