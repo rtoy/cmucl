@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.117 2007/12/21 08:46:48 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.118 2008/02/08 16:52:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3278,6 +3278,12 @@
 		      (cast (slot names 'machine) c-string))
 	      #+freebsd 256
 	      (addr names))))
+
+#+(and solaris svr4)
+(export '(unix-sysinfo
+	  si-sysname si-hostname si-release si-version si-machine
+	  si-architecture si-hw-serial si-hw-provider si-srpc-domain
+	  si-platform si-isalist si-dhcp-cache))
 
 #+(and solaris svr4)
 (progn
