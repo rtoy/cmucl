@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.79 2006/06/30 18:41:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80 2008/02/09 13:51:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2043,7 +2043,7 @@
 	   (when (and (numberp value) (zerop value))
 	     (warn "Not-really-defined foreign symbol: ~S" name))
 	   value)
-	 #+(or sparc ppc)
+	 #+(and linkage-table (or sparc ppc))
 	 (let ((address (lookup-sym name)))
 	   ;; If the link-type is :data, need to lookup and return the
 	   ;; value, not the address of NAME in the linkage table.
@@ -2076,6 +2076,7 @@
     (+ vm:target-foreign-linkage-space-start
        (* entry-num vm:target-foreign-linkage-entry-size))))
 
+#+linkage-table
 (defun init-foreign-linkage ()
   (setf (fill-pointer *cold-linkage-table*) 0)
   (clrhash *cold-foreign-hash*)
