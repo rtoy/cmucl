@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.38 2007/10/10 00:51:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.39 2008/02/13 15:03:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1493,7 +1493,8 @@ rounding modes & do ieee round-to-integer.
   their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:
       (= x (float (rationalize x) x))"
   (number-dispatch ((x real))
-    (((foreach single-float double-float #+long-float long-float))
+    (((foreach single-float double-float #+long-float long-float
+	       #+double-double double-double-float))
      ;; This is a fairly straigtforward implementation of the iterative
      ;; algorithm above.
      (multiple-value-bind (frac expo sign)
