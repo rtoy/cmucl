@@ -21,6 +21,12 @@ New in this release:
   * Supported system:
     - Support for Mac OS X/Intel has been added.
 
+  * Issues
+    - One some openSUSE systems, cmucl will fail to start because it
+      can't map enough memory.  This might be caused be a memory limit
+      that is set too low.  Use "ulimit -a" to see the limit on
+      virtual memory.  This can be adjusted with "ulimit -v <N>"
+
   * Feature enhancements:
     - Support for dynamic-extent added for ppc.  However, it suffers
       from the same problems with dynamic-extent as other platforms,
@@ -50,6 +56,17 @@ New in this release:
     - SHADOW accepts characters now.
     - Default initargs are now passed correctly to initialize-instance
       and shared-initialize.
+    - Several issues in formatted output of floats have been fixed:
+      o ~,dF won't print out extra digits if the number is too small. 
+      o ~E sometimes erroneously printed the overflow filler instead
+        of the number.
+      o ~G has changed so that ~E is chosen more often.  This is seen
+        when printing large numbers.  Instead of printing lots of
+        zeroes, ~E is used.  ~G now matches what Fortran would do.
+      o Inconsistencies between print and ~E are now gone.  (See Trac
+        ticket #1.)
+      o Some incorrectly printed results for ~E have been fixed.  (See
+        Trace ticket #12.)
 
   * Bugfixes:
     - Floating-point traps are now handled on ppc.  Previously, no
@@ -106,6 +123,8 @@ New in this release:
       o Conversion of bignums and ratios to double-double-floats
         should be more accurate.
       o Double-double-float's should have print/read consistency now.
+      o TRUNCATE works now when given a DOUBLE-DOUBLE-FLOAT divisor.
+      o FORMATted output of DOUBLE-DOUBLE-FLOAT's should work. 
     - The assembler for ppc had some arguments for some instructions
       in the wrong order, producing the wrong effect. 
     - When making displaced arrays, the element types are checked to
@@ -149,6 +168,13 @@ New in this release:
       tracing of labels/flets works better.  However, there are still
       issues with tracing.  Returning to the repl after tracing
       sometimes fails, and you must exit lisp completely.
+    - ~E should be faster now in some cases.
+    - The range over which sin/cos/tan would use the builtin
+      instruction on x86 has been reduced.  Previously, values near
+      the limit would either produce result greater than 1 in absolute
+      value or cause a floating-point exception.  Note that accuracy
+      is reduced when the builtin instructions are used for very large
+      arguments.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
