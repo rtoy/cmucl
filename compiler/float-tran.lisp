@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.116 2008/02/01 22:14:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.117 2008/02/14 21:06:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1789,6 +1789,14 @@
 	 (a-lo (- a a-hi)))
     (values a-hi a-lo)))
 
+;; +split-limit+ is the largest number for which Yozo's algorithm
+;; still works.  Basically we want a*(1+2^27) <=
+;; most-positive-double-float < 2^1024. Therefore, a < 2^1024/(1+2^27)
+;; If we calculate that, we get a = 1.3393857490036326d300.  A quick
+;; test shows that this would cause overflow, but previous float would
+;; not.  This is the value we want.
+(defconstant +split-limit+
+  (scale-float (/ (float (1+ (expt 2 27)) 1d0)) 1024))
 
 (defun split (a)
   "Split the double-float number a into a-hi and a-lo such that a =
@@ -1797,14 +1805,14 @@
   (declare (double-float a)
 	   (optimize (speed 3)
 		     (inhibit-warnings 3)))
-  ;; This splits the number a into 2 halves of 26 bits each, but the
-  ;; halves are, I think, supposed to be properly rounded in an IEEE
-  ;; fashion.
+  ;; This splits the number a into 2 parts of 27 and 26 bits each, but
+  ;; the parts are, I think, supposed to be properly rounded in an
+  ;; IEEE fashion.
   ;;
   ;; For numbers that are very large, we use a different algorithm.
   ;; For smaller numbers, we can use the original algorithm of Yozo
   ;; Hida.
-  (if (> (abs a) (scale-float 1d0 (- 1023 27)))
+  (if (>= (abs a) +split-limit+)
       ;; I've tested this algorithm against Yozo's method for 1
       ;; billion randomly generated double-floats between 2^(-995) and
       ;; 2^996, and identical results are obtained.  For numbers that
