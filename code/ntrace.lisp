@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.42 2007/12/15 14:47:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.42.2.1 2008/02/20 17:37:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,8 +34,10 @@
   "If the trace indentation exceeds this value, then indentation restarts at
    0.")
 
-;; Currently, only encapsulation works on x86/darwin,
-(defvar *trace-encapsulate-default* :default
+;; Currently, only encapsulation works reliably on x86/darwin,
+(defvar *trace-encapsulate-default*
+  #-(and x86 darwin) :default
+  #+(and x86 darwin) t
   "The default value for the :ENCAPSULATE option to trace.")
 
 (defvar *trace-encapsulate-package-names*
