@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.18 2006/07/17 15:50:52 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.18.4.1 2008/02/21 14:29:33 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -103,11 +103,12 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
     if (addr)
 	flags |= MAP_FIXED;
 
-    if (
-	(addr =
-	 (os_vm_address_t) mmap((void *) addr, len, OS_VM_PROT_ALL, flags,
-				zero_fd, 0)) == (os_vm_address_t) - 1)
+    addr = (os_vm_address_t) mmap((void *) addr, len, OS_VM_PROT_ALL, flags, zero_fd, 0);
+
+    if (addr == (os_vm_address_t) - 1) {
 	perror("mmap");
+        addr = NULL;
+    }
 
     return addr;
 }
