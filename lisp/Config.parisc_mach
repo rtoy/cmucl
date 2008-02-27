@@ -1,5 +1,5 @@
 CPPFLAGS = -Dparisc -Dhpux -DMACH \
-	-I. -I/usr/misc/.X11/include -I/usr/mach/include -Ihacks
+	-I. -I/usr/mach/include -Ihacks
 LINK.o = /usr/src/mach/bin/cc $(LDFLAGS) $(TARGET_ARCH)
 CC = /usr/src/mach/bin/cc
 NM = hacks/my-nm

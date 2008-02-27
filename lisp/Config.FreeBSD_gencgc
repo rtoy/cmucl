@@ -6,9 +6,9 @@ CC = gcc
 LD = ld
 CPP = cpp
 ifneq (,$(filter 2% 3%, $(shell $(CC) -dumpversion)))
-CPPFLAGS = -I. -I$(PATH1) -I- -I/usr/X11R6/include
+CPPFLAGS = -I. -I$(PATH1) -I-
 else
-CPPFLAGS = -iquote . -iquote $(PATH1) -I/usr/X11R6/include
+CPPFLAGS = -iquote . -iquote $(PATH1)
 endif
 CFLAGS = -Wstrict-prototypes -Wall -O2 -g -DGENCGC -DLINKAGE_TABLE
 ASFLAGS = -g -DGENCGC -DLINKAGE_TABLE

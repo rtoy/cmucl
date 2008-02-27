@@ -38,7 +38,7 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
+CPPFLAGS = -I. -I$(PATH1) -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
 
 # Note: If you want to be able to run gdb with cmucl, the only version
 # of gdb that still works for me (rtoy) on Solaris is 4.18.  Versions

@@ -2,7 +2,7 @@ PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
-CPPFLAGS = -I. -I$(PATH1) -I- -I/usr/X11R6/include
+CPPFLAGS = -I. -I$(PATH1) -I-
 CC = gcc
 LD = ld
 CPP = cpp

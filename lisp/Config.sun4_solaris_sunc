@@ -35,7 +35,7 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-CPPFLAGS = -Dinline= -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
+CPPFLAGS = -Dinline= -I. -I$(PATH1) -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
 
 
 CC = cc -O -xlibmieee

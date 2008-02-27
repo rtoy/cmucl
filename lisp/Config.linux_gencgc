@@ -20,7 +20,7 @@ endif
 
 RUNTIME = $(GENCGC) $(LINKAGE)
 # __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
-CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- -I/usr/X11R6/include $(RUNTIME)
+CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- $(RUNTIME)
 
 CFLAGS = -rdynamic -Wstrict-prototypes -Wall -O2 -g $(RUNTIME)
 ASFLAGS = -g $(GENCGC) $(LINKAGE_TABLE)

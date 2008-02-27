@@ -1,4 +1,4 @@
-CPPFLAGS = -I. -I/usr/misc/.X11/include
+CPPFLAGS = -I.
 CC = gcc # -Wall -Wstrict-prototypes -Wmissing-prototypes
 CPP = /usr/cs/lib/cpp
 CFLAGS = -g

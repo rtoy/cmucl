@@ -2,7 +2,7 @@ PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
-CPPFLAGS = -I. -I$(PATH1) -I/usr/X11R6/include
+CPPFLAGS = -I. -I$(PATH1)
 # For Mac OS X 10.2, gcc3 is appropriate.  For 10.4, gcc (gcc 4.0) is ok.  But
 # this means -traditional is needed because gcc 4 seems to handle '##'
 # differently from gcc-3.3.  I (rtoy) don't know which is right, but I
