@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.120 2008/02/01 14:54:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.121 2008/02/27 15:17:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1472,6 +1472,11 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;;                       decimal point.
 ;;;     POINT-POS       - The position of the digit preceding the decimal
 ;;;                       point.  Zero indicates point before first digit.
+;;;     ROUNDOFF        - True If, due to rounding, the exponent for the
+;;;                       printed result differs from the real
+;;;                       exponent of the number.  For example, .9999
+;;;                       has an exponent of -1, but the printed
+;;;                       result could be 1.000 with an exponent of 0.
 ;;;
 ;;; NOTE:  FLONUM-TO-STRING goes to a lot of trouble to guarantee accuracy.
 ;;; Specifically, the decimal number printed is the closest possible 
@@ -1489,7 +1494,7 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defvar *digits* "0123456789")
 
-(defun flonum-to-string (x &optional width fdigits scale fmin (num-expt 0))
+(defun flonum-to-string (x &optional width fdigits scale fmin (num-expt 0 num-expt-p))
   (setf x (abs x))
   (cond ((zerop x)
 	 ;;zero is a special case which float-string cannot handle
@@ -1502,8 +1507,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 (flet ((fixup-flonum-to-digits (x &optional (expt 0) position relativep)
 		  (multiple-value-bind (e s)
 		      (flonum-to-digits x position relativep)
-		    (values (- e expt) s))))
-	   (multiple-value-bind (e string)
+		    (values (- e expt) s e))))
+	   (multiple-value-bind (e string printed-e)
 	       (if fdigits
 		   (fixup-flonum-to-digits x
 					   num-expt
@@ -1524,8 +1529,19 @@ radix-R.  If you have a power-list then pass it in as PL."
 						 ndigits
 						 t))
 		       (fixup-flonum-to-digits x num-expt)))
-	     (let ((e (+ e (or scale 0)))
-		   (stream (make-string-output-stream)))
+	     (let ((stream (make-string-output-stream))
+		   (printed-roundoff-p (and num-expt-p (/= num-expt printed-e))))
+	       (when (and num-expt-p (/= num-expt printed-e))
+		 ;; The actual exponent of the number differs from the
+		 ;; printed exponent.  This happens for something like
+		 ;; (format nil "~11,3,2,0,'*,,'EE" .9999).  With only
+		 ;; 3 fraction digits, .9999 gets rounded to 1.000 But
+		 ;; the exponent for .9999 is -1, and the exponent for
+		 ;; the printed result is actually 1.  We need to
+		 ;; decrement e by 1 to account for this.
+		 (decf e))
+	       
+	       (incf e (or scale 0))
 	       (if (plusp e)
 		   (progn
 		     (write-string string stream :end (min (length string)
@@ -1568,7 +1584,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 		 (values string (length string)
 			 (char= (char string 0) #\.)
 			 (char= (char string (1- (length string))) #\.)
-			 (position #\. string)))))))))
+			 (position #\. string)
+			 printed-roundoff-p))))))))
 
 
 ;;; SCALE-EXPONENT  --  Internal

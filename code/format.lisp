@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.81 2008/01/31 18:24:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.82 2008/02/27 15:17:09 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1310,13 +1310,14 @@
 		(format t "spaceleft = ~A~%" spaceleft)
 		(format t "expt = ~S~%" expt))
 
-	      (multiple-value-bind (fstr flen lpoint tpoint)
+	      (multiple-value-bind (fstr flen lpoint tpoint point-pos roundoff)
 		  (lisp::flonum-to-string (abs number)
 					  spaceleft
 					  fdig
 					  k
 					  fmin
 					  num-expt)
+		(declare (ignore point-pos))
 		#+(or)
 		(progn
 		  (format t "fstr = ~S~%" fstr)
@@ -1370,6 +1371,12 @@
 					 marker
 					 (format-exponent-marker number))
 				     stream)
+			 (when roundoff
+			   ;; Printed result has rounded the number up
+			   ;; so that the exponent is one too small.
+			   ;; Increase our printed exponent.
+			   (incf expt)
+			   (setf estr (decimal-string (abs expt))))
 			 (write-char (if (minusp expt) #\- #\+) stream)
 			 (when e 
 			   ;;zero-fill before exponent if necessary
