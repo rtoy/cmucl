@@ -173,6 +173,10 @@ New in this release:
       value or cause a floating-point exception.  Note that accuracy
       is reduced when the builtin instructions are used for very large
       arguments.
+    - Issues with compact info environments should be fixed.  The
+      issue manifests itself when a new core is saved with lots of
+      functions (or other objects).  The resulting core executes the
+      wrong code for some of the functions.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
