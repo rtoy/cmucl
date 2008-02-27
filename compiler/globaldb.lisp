@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.52 2005/11/10 17:43:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.53 2008/02/27 17:08:33 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -518,8 +518,7 @@
 
 ;;; The upper limit on the size of the ENTRIES vector in a COMPACT-INFO-ENV.
 ;;;
-(defconstant compact-info-env-entries-bits 16)
-(deftype compact-info-entries-index () `(unsigned-byte ,compact-info-env-entries-bits))
+(deftype compact-info-entries-index () `(and unsigned-byte fixnum))
 
 
 ;;; Type of the values in COMPACT-INFO-ENTRIES-INFO.
