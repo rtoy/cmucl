@@ -1,7 +1,5 @@
 ========================== C M U C L  19 e =============================
 
-[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 19e.
 This is a major release which contains numerous enhancements and
 bugfixes from the 19d release.
@@ -26,6 +24,13 @@ New in this release:
       can't map enough memory.  This might be caused be a memory limit
       that is set too low.  Use "ulimit -a" to see the limit on
       virtual memory.  This can be adjusted with "ulimit -v <N>"
+    - Tracing on Mac OS X/Intel uses encapsulation, unlike other
+      platforms.  This means tracing recursive functions may not show
+      the recursive calls.  You can try setting
+      debug::*trace-encapsulate-default* to :default.  Be warned that
+      under some conditions, tracing will cause an error such that you
+      can not get back to the repl and must terminate the process in
+      some other way.
 
   * Feature enhancements:
     - Support for dynamic-extent added for ppc.  However, it suffers
@@ -175,6 +180,10 @@ New in this release:
       value or cause a floating-point exception.  Note that accuracy
       is reduced when the builtin instructions are used for very large
       arguments.
+    - Issues with compact info environments should be fixed.  The
+      issue manifests itself when a new core is saved with lots of
+      functions (or other objects).  The resulting core executes the
+      wrong code for some of the functions.
 
   * Trac Tickets:
     - #8 fixed so logs of bignums and ratios that won't fit into a
