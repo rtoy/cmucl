@@ -24,6 +24,13 @@ New in this release:
       can't map enough memory.  This might be caused be a memory limit
       that is set too low.  Use "ulimit -a" to see the limit on
       virtual memory.  This can be adjusted with "ulimit -v <N>"
+    - Tracing on Mac OS X/Intel uses encapsulation, unlike other
+      platforms.  This means tracing recursive functions may not show
+      the recursive calls.  You can try setting
+      debug::*trace-encapsulate-default* to :default.  Be warned that
+      under some conditions, tracing will cause an error such that you
+      can not get back to the repl and must terminate the process in
+      some other way.
 
   * Feature enhancements:
     - Support for dynamic-extent added for ppc.  However, it suffers
