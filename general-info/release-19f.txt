@@ -26,6 +26,8 @@ New in this release:
   * Bugfixes:
 
   * Trac Tickets:
+    - #13 fixed.  (format nil "~11,3,2,0,'*,,'EE" .9999) produce
+      0.100e+1 instead of 1.000e+0.
 
   * Other changes:
 
