@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.82 2008/02/27 15:17:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.83 2008/02/29 18:05:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1439,8 +1439,13 @@
 	;; Exponential notation would be used instead.
 	
 	(unless d
-	  (let* ((q (length (nth-value 1 (lisp::flonum-to-digits (abs number))))))
-	    (setq d (max q (min n 7)))))
+	  ;; flonum-to-digits doesn't like 0.0, so handle the special
+	  ;; case here.  Set d to n so that dd = 0 <= d to use ~F
+	  ;; format.
+	  (if (zerop number)
+	      (setq d n)
+	      (let* ((q (length (nth-value 1 (lisp::flonum-to-digits (abs number))))))
+		(setq d (max q (min n 7))))))
 	(let* ((ee (if e (+ e 2) 4))
 	       (ww (if w (- w ee) nil))
 	       (dd (- d n)))
@@ -1454,13 +1459,13 @@
 		 ;; Use dd fraction digits, even if that would cause
 		 ;; the width to be exceeded.  We choose accuracy over
 		 ;; width in this case.
-		 (let* ((char (if (format-fixed-aux stream number ww
-						    dd
-						    nil
-						    ovf pad atsign)
-				  ovf
-				  #\space)))
-		   (dotimes (i ee) (write-char char stream))))
+		 (let* ((fill-char (if (format-fixed-aux stream number ww
+							 dd
+							 nil
+							 ovf pad atsign)
+				       ovf
+				       #\space)))
+		   (dotimes (i ee) (write-char fill-char stream))))
 		(t
 		 (format-exp-aux stream number w
 				 orig-d
