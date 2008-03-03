@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.13 2004/07/02 16:29:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.14 2008/03/03 15:54:12 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -285,7 +285,17 @@
   (declare (ignore noise))
   (ecase (car form)
     (backq-comma
-     (write-char #\, stream))
+     (write-char #\, stream)
+     ;; We want to write ", @foo" and not ",@foo"!  The latter is
+     ;; wrong if the variable is @foo.  Same for ", .foo"; ",.foo"
+     ;; would be wrong if the symbol is .foo.  Do we need to check for
+     ;; the symbol-package?  If we don't we'll just put a space that
+     ;; isn't needed, so it seems harmless.
+     (when (symbolp (cadr form))
+       (let ((first-char (char (symbol-name (cadr form)) 0)))
+	 (when (or (char= #\@ first-char)
+		   (char= #\. first-char))
+	   (write-char #\space stream)))))
     (backq-comma-at
      (princ ",@" stream))
     (backq-comma-dot
