@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.41 2006/06/30 18:41:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.42 2008/03/05 14:31:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,7 +196,19 @@
 	      (t
 	       '*))
        ,(cond ((not simple)
-	       '*)
+	       ;; Can't derive the actual dimensions lest someone do
+	       ;; an ADJUST-ARRAY, but we can try to get the rank
+	       ;; correct.
+	       (cond ((constant-continuation-p dims)
+		      (let ((val (continuation-value dims)))
+			(if (listp val)
+			    (make-list (length val) :initial-element '*)
+			    '(*))))
+		     ((csubtypep (continuation-type dims)
+				 (specifier-type 'integer))
+		      '(*))
+		     (t
+		      '*)))
 	      ((constant-continuation-p dims)
 	       (let ((val (continuation-value dims)))
 		 (if (listp val) val (list val))))
