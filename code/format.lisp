@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.83 2008/02/29 18:05:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.84 2008/03/13 12:25:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1115,9 +1115,9 @@
     (let ((spaceleft w))
       (when (and w (or atsign (minusp (float-sign number))))
 	(decf spaceleft))
-      (multiple-value-bind 
-	  (str len lpoint tpoint)
-	  (lisp::flonum-to-string (abs number) spaceleft d k)
+      (multiple-value-bind (str len lpoint tpoint)
+	  (lisp::flonum-to-string (abs number) :width spaceleft :fdigits d
+				  :scale k :allow-overflow-p nil)
 	;;if caller specifically requested no fraction digits, suppress the
 	;;optional trailing zero
 	(when (and d (zerop d)) (setq tpoint nil))
@@ -1312,11 +1312,11 @@
 
 	      (multiple-value-bind (fstr flen lpoint tpoint point-pos roundoff)
 		  (lisp::flonum-to-string (abs number)
-					  spaceleft
-					  fdig
-					  k
-					  fmin
-					  num-expt)
+					  :width spaceleft
+					  :fdigits fdig
+					  :scale k
+					  :fmin fmin
+					  :num-expt num-expt)
 		(declare (ignore point-pos))
 		#+(or)
 		(progn

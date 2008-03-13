@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.121 2008/02/27 15:17:09 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.122 2008/03/13 12:25:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1459,6 +1459,15 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;;                the ~E format directive to prevent complete loss of
 ;;;                significance in the printed value due to a bogus choice of
 ;;;                scale factor.
+;;;     ALLOW-OVERFLOW-P -
+;;;                This parameter, defaulting to non-NIL, allows us to
+;;;                overflow any width constraint if necessary to
+;;;                produce a reasonable output.  If NIL, then we will
+;;;                not exceed the width constraint, even if that means
+;;;                we only print out leading zeroes.  Generally
+;;;                intended to be set by FIXED-FORMAT-AUX so we don't
+;;;                exceed the specified width when printing small
+;;;                numbers.
 ;;;
 ;;; Returns:
 ;;; (VALUES DIGIT-STRING DIGIT-LENGTH LEADING-POINT TRAILING-POINT DECPNT)
@@ -1494,7 +1503,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defvar *digits* "0123456789")
 
-(defun flonum-to-string (x &optional width fdigits scale fmin (num-expt 0 num-expt-p))
+(defun flonum-to-string (x &key width fdigits scale fmin (num-expt 0 num-expt-p)
+			        (allow-overflow-p t))
   (setf x (abs x))
   (cond ((zerop x)
 	 ;;zero is a special case which float-string cannot handle
@@ -1540,6 +1550,10 @@ radix-R.  If you have a power-list then pass it in as PL."
 		 ;; the printed result is actually 1.  We need to
 		 ;; decrement e by 1 to account for this.
 		 (decf e))
+	       #+(or)
+	       (progn
+		 (format t "e = ~S~%" e)
+		 (format t "roundoff = ~S~%" printed-roundoff-p))
 	       
 	       (incf e (or scale 0))
 	       (if (plusp e)
@@ -1564,22 +1578,44 @@ radix-R.  If you have a power-list then pass it in as PL."
 		     ;; to be output.  That way we don't print too
 		     ;; many leading zeroes if the number is too
 		     ;; small.
-		     (dotimes (i (if (or fmin (null fdigits))
-				     (- e)
-				     (min (- e) fdigits)))
-		       (write-char #\0 stream))
-		     ;; If we're out of room (because fdigits is too
-		     ;; small), don't print out our string.  This
-		     ;; fixes things like (format nil "~,2f" 0.001).
-		     ;; We should print ".00", not ".001".  But if
-		     ;; fmin is set, we want to print out something.
-		     (when (or (null fdigits)
-			       (plusp (+ e fdigits))
-			       fmin)
-		       (write-string string stream))
-		     (when fdigits
-		       (dotimes (i (+ fdigits e (- (length string))))
-			 (write-char #\0 stream)))))
+		     ;;
+		     ;; Also print them all out if :allow-overflow-p
+		     ;; is set or there's no width constraint.
+		     #+(or)
+		     (progn
+		       (format t "fmin = ~S~%" fmin)
+		       (format t "fdigits = ~S~%" fdigits)
+		       (format t "width = ~S~%" width)
+		       (when width
+			 (format t "min = ~S~%" (min (- e) width))))
+
+		     (let ((leading-zeros
+			    (if (or fmin (null fdigits))
+				(if (or allow-overflow-p (null width))
+				    (- e)
+				    (min (- e) (1- width)))
+				(min (- e) fdigits))))
+		       (dotimes (i leading-zeros)
+			 (write-char #\0 stream))
+		       ;; If we're out of room (because fdigits is too
+		       ;; small), don't print out our string.  This
+		       ;; fixes things like (format nil "~,2f" 0.001).
+		       ;; We should print ".00", not ".001".  But if
+		       ;; fmin is set, we want to print out something.
+		       (when (or (null fdigits)
+				 (plusp (+ e fdigits))
+				 fmin)
+			 ;; But only print the whole string if there's
+			 ;; no width constraint or if we're allowed to
+			 ;; exceed the width.
+			 (if (or allow-overflow-p (null width))
+			     (write-string string stream)
+			     (write-string string stream
+					   :end (min (- width leading-zeros 1)
+						     (length string)))))
+		       (when fdigits
+			 (dotimes (i (+ fdigits e (- (length string))))
+			   (write-char #\0 stream))))))
 	       (let ((string (get-output-stream-string stream)))
 		 (values string (length string)
 			 (char= (char string 0) #\.)
