@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.84 2008/03/13 12:25:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.85 2008/03/13 12:57:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -946,7 +946,7 @@
 
 (defun format-print-cardinal-aux (stream n period err)
   (multiple-value-bind (beyond here) (truncate n 1000)
-    (unless (<= period 20)
+    (unless (<= period 21)
       (error "Number too large to print in English: ~:D" err))
     (unless (zerop beyond)
       (format-print-cardinal-aux stream beyond (1+ period) err))
