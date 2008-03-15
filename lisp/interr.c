@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.8 2005/09/15 18:26:51 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.9 2008/03/15 15:00:06 agoncharov Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -121,13 +121,13 @@ internal_error(os_context_t * context)
 #ifdef sc_WordPointerReg
 	  case sc_WordPointerReg:
 #endif
-	      printf("\t0x%08x\n", SC_REG(context, offset));
+	      printf("\t0x%08lx\n", SC_REG(context, offset));
 	      break;
 	  case sc_SignedReg:
-	      printf("\t%d\n", SC_REG(context, offset));
+	      printf("\t%ld\n", SC_REG(context, offset));
 	      break;
 	  case sc_UnsignedReg:
-	      printf("\t%u\n", SC_REG(context, offset));
+	      printf("\t%lu\n", SC_REG(context, offset));
 	      break;
 #if 0				/* broken */
 #ifdef sc_SingleReg

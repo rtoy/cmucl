@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.53 2007/12/14 12:19:59 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.54 2008/03/15 15:00:09 agoncharov Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -171,7 +171,9 @@ interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 void
 interrupt_handle_pending(os_context_t * context)
 {
+#ifndef i386
     boolean were_in_lisp = !foreign_function_call_active;
+#endif
 
     SetSymbolValue(INTERRUPT_PENDING, NIL);
 

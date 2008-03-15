@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.89 2007/07/30 16:19:25 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.90 2008/03/15 15:00:02 agoncharov Exp $
  *
  */
 
@@ -1919,7 +1919,8 @@ copy_large_object(lispobj object, int nwords)
     gc_assert((nwords & 0x01) == 0);
 
     if (gencgc_verbose && nwords > 1024 * 1024)
-	fprintf(stderr, "** copy_large_object: %lu\n", nwords * sizeof(lispobj));
+	fprintf(stderr, "** copy_large_object: %lu\n",
+                (unsigned long) (nwords * sizeof(lispobj)));
 
     /* Check if it's a large object. */
     first_page = find_page_index((void *) object);
@@ -2105,7 +2106,7 @@ copy_large_unboxed_object(lispobj object, int nwords)
 
     if (gencgc_verbose && nwords > 1024 * 1024)
 	fprintf(stderr, "** copy_large_unboxed_object: %lu\n",
-		nwords * sizeof(lispobj));
+		(unsigned long) (nwords * sizeof(lispobj)));
 
     /* Check if it's a large object. */
     first_page = find_page_index((void *) object);
@@ -3668,10 +3669,12 @@ u32_vector(lispobj obj, unsigned *length)
 static inline void
 free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 {
-    unsigned length;
+    unsigned length = UINT_MAX;
     unsigned *index_vector = u32_vector(hash_table->index_vector, &length);
     unsigned *next_vector = u32_vector(hash_table->next_vector, 0);
     int free_p = 1;
+    
+    gc_assert(length != UINT_MAX);
 
     if (index_vector[hash_index] == kv_index)
 	/* The entry is the first in the collinion chain.
@@ -3859,10 +3862,10 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
 {
     unsigned kv_length;
     lispobj *kv_vector;
-    unsigned *index_vector, *next_vector, *hash_vector;
-    unsigned length;
     lispobj empty_symbol;
-    unsigned next_vector_length;
+    unsigned *index_vector, *next_vector, *hash_vector;
+    unsigned length = UINT_MAX;;
+    unsigned next_vector_length = UINT_MAX;;
     unsigned i;
 
     kv_vector = (lispobj *) PTR(hash_table->table);
@@ -3875,6 +3878,9 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
     next_vector = u32_vector(hash_table->next_vector, &next_vector_length);
     hash_vector = u32_vector(hash_table->hash_vector, 0);
 
+    gc_assert(length != UINT_MAX);
+    gc_assert(next_vector_length != UINT_MAX);
+    
     gc_assert(index_vector && next_vector);
     gc_assert(next_vector_length * 2 == kv_length);
 
@@ -3941,8 +3947,8 @@ scav_weak_entries(struct hash_table *hash_table)
 {
     lispobj *kv_vector;
     unsigned *index_vector, *hash_vector;
-    unsigned length;
-    unsigned next_vector_length;
+    unsigned length = UINT_MAX;
+    unsigned next_vector_length = UINT_MAX;
     unsigned i, scavenged = 0;
 
     kv_vector = (lispobj *) PTR(hash_table->table) + 2;
@@ -3951,6 +3957,9 @@ scav_weak_entries(struct hash_table *hash_table)
     u32_vector(hash_table->next_vector, &next_vector_length);
     hash_vector = u32_vector(hash_table->hash_vector, 0);
 
+    gc_assert(length != UINT_MAX);
+    gc_assert(next_vector_length != UINT_MAX);
+    
     for (i = 1; i < next_vector_length; i++) {
 	lispobj old_key = kv_vector[2 * i];
         lispobj value = kv_vector[2 * i + 1];
@@ -7727,14 +7736,14 @@ get_bytes_allocated_lower(void)
     if (counters_verbose)
 	fprintf(stderr, ">%10d%10d%10lu%10lu%10lu (max%lu @0x%lX)\n", size,
 		previous != -1 ? size - previous : -1,
-		(size_t) current_region_free_pointer -
-		(size_t) boxed_region.start_addr,
-		(size_t) boxed_region.free_pointer -
-		(size_t) boxed_region.start_addr,
-		(size_t) unboxed_region.free_pointer -
-		(size_t) unboxed_region.start_addr,
-		(size_t) boxed_region.end_addr -
-		(size_t) boxed_region.start_addr,
+		(unsigned long) ((size_t) current_region_free_pointer -
+                                 (size_t) boxed_region.start_addr),
+		(unsigned long) ((size_t) boxed_region.free_pointer -
+                                 (size_t) boxed_region.start_addr),
+		(unsigned long) ((size_t) unboxed_region.free_pointer -
+                                 (size_t) unboxed_region.start_addr),
+		(unsigned long) ((size_t) boxed_region.end_addr -
+                                 (size_t) boxed_region.start_addr),
 		(unsigned long) boxed_region.start_addr);
 
     previous = size;

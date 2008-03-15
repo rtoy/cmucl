@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.40 2007/07/06 08:04:39 cshapiro Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.41 2008/03/15 15:00:13 agoncharov Exp $ 
 
    */
 #include <stdio.h>
@@ -1673,8 +1673,8 @@ purify(lispobj static_roots, lispobj read_only_roots)
 	    (lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER) -
 
 	    read_only_space;
-	fprintf(stderr, "Scavenge read only space: %ld bytes\n",
-		read_only_space_size * sizeof(lispobj));
+	fprintf(stderr, "Scavenge read only space: %lu bytes\n",
+		(unsigned long) (read_only_space_size * sizeof(lispobj)));
 	pscav(read_only_space, read_only_space_size, FALSE);
     }
 #endif
