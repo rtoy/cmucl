@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.90 2008/03/15 15:00:02 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.91 2008/03/16 15:44:46 agoncharov Exp $
  *
  */
 
@@ -3669,7 +3669,7 @@ u32_vector(lispobj obj, unsigned *length)
 static inline void
 free_hash_entry(struct hash_table *hash_table, int hash_index, int kv_index)
 {
-    unsigned length = UINT_MAX;
+    unsigned length = UINT_MAX; // to compare to
     unsigned *index_vector = u32_vector(hash_table->index_vector, &length);
     unsigned *next_vector = u32_vector(hash_table->next_vector, 0);
     int free_p = 1;
