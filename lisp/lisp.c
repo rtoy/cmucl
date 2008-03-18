@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.60 2007/07/25 10:23:54 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.61 2008/03/18 08:47:48 cshapiro Exp $
  *
  */
 
@@ -152,8 +152,8 @@ default_cmucllib(char *argv0arg)
 	 * argv[0] is a relative path.  Get the current directory and
 	 * append argv[0], after stripping off the executable name.
 	 */
-	cwd = malloc(MAXPATHLEN + strlen(argv0_dir) + 100);
-	getcwd(cwd, MAXPATHLEN);
+	cwd = malloc(FILENAME_MAX + strlen(argv0_dir) + 100);
+	getcwd(cwd, FILENAME_MAX);
 	strcat(cwd, "/");
 	if (*argv0_dir != '\0') {
 	    strcat(cwd, argv0_dir);
@@ -175,7 +175,7 @@ default_cmucllib(char *argv0arg)
 	    fprintf(stderr, "User's PATH = %s\n", path ? path : "<NULL>");
 	}
 
-	cwd = malloc(MAXPATHLEN + strlen(argv0arg) + 100);
+	cwd = malloc(FILENAME_MAX + strlen(argv0arg) + 100);
 	cwd[0] = '\0';
 
 	if (path) {
@@ -343,7 +343,7 @@ search_core(const char *lib, const char *default_core)
 char *
 prepend_core_path(char *lib, char *corefile)
 {
-    char cwd[MAXPATHLEN];
+    char cwd[FILENAME_MAX];
     char *path;
     char *result;
     char *sep;
@@ -355,8 +355,8 @@ prepend_core_path(char *lib, char *corefile)
 	 * We have a relative path for the corefile.  Prepend our current
 	 * directory to get the full path.
 	 */
-	getcwd(cwd, MAXPATHLEN);
-	path = malloc(MAXPATHLEN + strlen(corefile) + 2);
+	getcwd(cwd, FILENAME_MAX);
+	path = malloc(FILENAME_MAX + strlen(corefile) + 2);
 	strcpy(path, cwd);
 	strcat(path, "/");
 	strcat(path, corefile);

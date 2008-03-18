@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.15 2007/12/14 09:09:50 cshapiro Exp $
+ $Id: elf.c,v 1.16 2008/03/18 08:47:48 cshapiro Exp $
 */
 
 #include <stdio.h>
@@ -96,12 +96,12 @@ elseek(int d, off_t o, const char *func)
 static int
 create_elf_file (const char *dir, int id)
 {
-    char outfilename[MAXPATHLEN + 1];
+    char outfilename[FILENAME_MAX + 1];
     int out;
 
     /* Note: the space id will be either 1, 2 or 3.  Subtract one to index
        the name array. */
-    snprintf(outfilename, MAXPATHLEN, "%s/%s.o", dir, section_names[id - 1]);
+    snprintf(outfilename, FILENAME_MAX, "%s/%s.o", dir, section_names[id - 1]);
     out = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
     if(!out) {
@@ -313,7 +313,7 @@ write_elf_object(const char *dir, int id, os_vm_address_t start, os_vm_address_t
 void
 elf_cleanup(const char *dirname)
 {
-    char filename[MAXPATHLEN];
+    char filename[FILENAME_MAX + 1];
     int i;
 
     /* Get rid of lisp space files. */
@@ -331,8 +331,8 @@ elf_run_linker(long init_func_address, char *file)
     lispobj libstring = SymbolValue(CMUCL_LIB);     /* Get library: */
     struct vector *vec = (struct vector *)PTR(libstring);
     char *paths = strdup((char *)vec->data);
-    char command[MAXPATHLEN + 1];
-    char command_line[MAXPATHLEN + MAXPATHLEN + 10];
+    char command[FILENAME_MAX + 1];
+    char command_line[FILENAME_MAX + FILENAME_MAX + 10];
     char *strptr;
     struct stat st;
     int ret;
