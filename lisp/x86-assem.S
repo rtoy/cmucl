@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.28 2007/07/06 08:04:39 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29 2008/03/18 04:08:49 cshapiro Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -81,7 +81,7 @@ FUNCDEF(call_into_c)
 
 /* Check for a return FP value */
 	fxam
-	fnstsw	%eax
+	fnstsw	%ax
 	andl	$0x4500,%eax
 	cmpl	$0x4100,%eax
 	jne	Lfp_rtn_value
