@@ -8,7 +8,7 @@
 
  Above changes put into main CVS branch. 05-Jul-2007.
 
- $Id: elf.c,v 1.16 2008/03/18 08:47:48 cshapiro Exp $
+ $Id: elf.c,v 1.17 2008/03/18 09:22:55 cshapiro Exp $
 */
 
 #include <stdio.h>
@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "os.h"
 #include "core.h"

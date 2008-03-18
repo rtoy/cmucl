@@ -1,16 +1,13 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.61 2008/03/18 08:47:48 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62 2008/03/18 09:22:55 cshapiro Exp $
  *
  */
 
 #include <stdio.h>
-#include <sys/types.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <sys/file.h>
-#include <sys/param.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>

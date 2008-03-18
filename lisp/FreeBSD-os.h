@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.21 2008/01/03 11:41:54 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.22 2008/03/18 09:22:55 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -10,20 +10,14 @@
 #ifndef _FREEBSD_OS_H_
 #define _FREEBSD_OS_H_
 
-#include <sys/param.h>
-#include <sys/uio.h>
 #include <sys/mman.h>
-#include <sys/signal.h>
 
 #include <osreldate.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <signal.h>
 #include <ucontext.h>
 
-typedef caddr_t os_vm_address_t;
-typedef vm_size_t os_vm_size_t;
+typedef void *os_vm_address_t;
+typedef size_t os_vm_size_t;
 typedef off_t os_vm_offset_t;
 typedef int os_vm_prot_t;
 #define os_context_t ucontext_t
@@ -47,7 +41,5 @@ void restore_fpu(ucontext_t *);
 #define PROTECTION_VIOLATION_SIGNAL SIGSEGV
 #define PROTECTION_VIOLATION_CODE SEGV_ACCERR
 #endif
-
-#undef PAGE_SIZE
 
 #endif /* _FREEBSD_OS_H_ */

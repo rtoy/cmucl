@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.22 2008/01/03 11:41:54 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.23 2008/03/18 09:22:55 cshapiro Exp $
  *
  */
 
@@ -27,10 +27,10 @@
 #include "internals.h"
 
 #include <signal.h>
-/* #include <sys/sysinfo.h> */
-#include <sys/proc.h>
 #include <dlfcn.h>
 #include "validate.h"
+#include <stdio.h>
+#include <unistd.h>
 
 #if defined GENCGC
 #include "gencgc.h"
