@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.12 2008/03/16 13:59:42 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.h,v 1.13 2008/03/18 03:58:45 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -23,8 +23,6 @@
 #include <signal.h>
 #include <unistd.h>
 #include <sys/fcntl.h>
-/* For UINT_MAX and friends */
-#include <limits.h>
 #endif /* SOLARIS */
 
 #include <sys/mman.h>
