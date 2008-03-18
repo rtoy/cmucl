@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.92 2008/03/18 03:58:45 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.93 2008/03/18 03:59:56 cshapiro Exp $
  *
  */
 
@@ -3865,8 +3865,8 @@ scav_hash_entries(struct hash_table *hash_table, lispobj weak, int removep)
     lispobj *kv_vector;
     lispobj empty_symbol;
     unsigned *index_vector, *next_vector, *hash_vector;
-    unsigned length = UINT_MAX;;
-    unsigned next_vector_length = UINT_MAX;;
+    unsigned length = UINT_MAX;
+    unsigned next_vector_length = UINT_MAX;
     unsigned i;
 
     kv_vector = (lispobj *) PTR(hash_table->table);
