@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.35 2008/01/28 18:21:04 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36 2008/03/19 09:17:13 cshapiro Exp $ 
  *
  */
 
@@ -304,7 +304,7 @@ sigtrap_handler(HANDLER_ARGS)
 }
 
 void
-arch_install_interrupt_handlers()
+arch_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGILL, sigtrap_handler);
     interrupt_install_low_level_handler(SIGTRAP, sigtrap_handler);

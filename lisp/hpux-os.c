@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.7 2005/09/15 18:26:51 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.8 2008/03/19 09:17:10 cshapiro Rel $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -53,7 +53,7 @@ static struct segment {
 } segments[MAX_SEGMENTS];
 
 void
-os_init()
+os_init(void)
 {
     int i;
 
@@ -239,7 +239,7 @@ sigbus_handler(int signal, int code, struct sigcontext *context)
 }
 
 void
-os_install_interrupt_handlers()
+os_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGSEGV, segv_handler);
     interrupt_install_low_level_handler(SIGBUS, sigbus_handler);

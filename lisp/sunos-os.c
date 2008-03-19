@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.8 2007/01/01 11:53:03 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.9 2008/03/19 09:17:13 cshapiro Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -91,7 +91,7 @@ os_init_bailout(arg)
 }
 
 void
-os_init()
+os_init(void)
 {
     char *empty_file = getenv("CMUCL_EMPTYFILE");
 
@@ -858,7 +858,7 @@ segv_handler(HANDLER_ARGS)
 }
 
 void
-os_install_interrupt_handlers()
+os_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGSEGV, segv_handler);
 }
@@ -971,7 +971,7 @@ getrusage(int who, struct rusage *rp)
 }
 
 int
-setreuid()
+setreuid(void)
 {
     fprintf(stderr, "setreuid unimplemented\n");
     errno = ENOSYS;
@@ -979,7 +979,7 @@ setreuid()
 }
 
 int
-setregid()
+setregid(void)
 {
     fprintf(stderr, "setregid unimplemented\n");
     errno = ENOSYS;
@@ -987,7 +987,7 @@ setregid()
 }
 
 int
-gethostid()
+gethostid(void)
 {
     fprintf(stderr, "gethostid unimplemented\n");
     errno = ENOSYS;

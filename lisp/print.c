@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.22 2006/07/12 18:42:40 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.23 2008/03/19 09:17:13 cshapiro Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -784,7 +784,7 @@ print_obj(char *prefix, lispobj obj)
 }
 
 void
-reset_printer()
+reset_printer(void)
 {
     cur_clock++;
     cur_lines = 0;

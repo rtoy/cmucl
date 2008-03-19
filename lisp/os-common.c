@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.26 2007/12/17 09:54:35 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.27 2008/03/19 09:17:13 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -27,9 +27,7 @@
    hpux-os.c for some useful restrictions on actual usage. */
 
 void
-os_zero(addr, length)
-     os_vm_address_t addr;
-     os_vm_size_t length;
+os_zero(os_vm_address_t addr, os_vm_size_t length)
 {
     os_vm_address_t block_start;
     os_vm_size_t block_size;
@@ -62,8 +60,7 @@ os_zero(addr, length)
 }
 
 os_vm_address_t
-os_allocate(len)
-     os_vm_size_t len;
+os_allocate(os_vm_size_t len)
 {
     return os_validate((os_vm_address_t) NULL, len);
 }
@@ -75,9 +72,7 @@ os_allocate_at(os_vm_address_t addr, os_vm_size_t len)
 }
 
 void
-os_deallocate(addr, len)
-     os_vm_address_t addr;
-     os_vm_size_t len;
+os_deallocate(os_vm_address_t addr, os_vm_size_t len)
 {
     os_invalidate(addr, len);
 }

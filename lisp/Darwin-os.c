@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.15 2008/01/17 14:13:15 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.16 2008/03/19 09:17:10 cshapiro Exp $
  *
  */
 
@@ -64,7 +64,7 @@ int cycles_per_tick = 1;
 
 #ifdef __ppc__
 void
-timebase_init()
+timebase_init(void)
 {
     int mib[2];
     int tbfrequency;

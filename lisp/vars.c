@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.6 2005/09/15 18:26:53 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.7 2008/03/19 09:17:13 cshapiro Rel $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -46,7 +46,7 @@ hash_obj(lispobj obj)
 
 
 void
-flush_vars()
+flush_vars(void)
 {
     int index;
     struct var *var, *next, *perm = NULL;
@@ -82,8 +82,7 @@ flush_vars()
 }
 
 struct var *
-lookup_by_name(name)
-     char *name;
+lookup_by_name(char *name)
 {
     struct var *var;
 
@@ -94,8 +93,7 @@ lookup_by_name(name)
 }
 
 struct var *
-lookup_by_obj(obj)
-     lispobj obj;
+lookup_by_obj(lispobj obj)
 {
     struct var *var;
 

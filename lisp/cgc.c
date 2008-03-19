@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.13 2005/09/15 18:26:51 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.14 2008/03/19 09:17:10 cshapiro Rel $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -188,7 +188,7 @@ print_space(struct space *s)
 }
 
 void
-print_spaces()
+print_spaces(void)
 {
     print_space(&space_0);
     print_space(&space_1);
@@ -205,7 +205,7 @@ print_cluster(struct cluster *cluster)
 }
 
 void
-print_clusters()
+print_clusters(void)
 {
     struct cluster *cluster;
 
@@ -375,7 +375,7 @@ compact_cluster(struct cluster *cluster)
 }
 
 static void
-compact_free_regions()
+compact_free_regions(void)
 {
     struct cluster *cluster;
 
@@ -460,7 +460,7 @@ alloc_large_region(int nchunks)
 }
 
 static struct region *
-alloc_small_region()
+alloc_small_region(void)
 {
     struct region *region = small_region_free_list;
 
@@ -803,7 +803,7 @@ sizeOfObject(obj_t obj)
 }
 
 static void
-init_osc()
+init_osc(void)
 {
     int i;
 
@@ -1519,7 +1519,7 @@ preserve_interrupt_contexts(void)
 
 
 static void
-flip_spaces()
+flip_spaces(void)
 {
     struct space *temp = oldspace;
 
@@ -1552,7 +1552,7 @@ preserve_pointer(void *ptr)
 }
 
 static void
-preserve_stack()
+preserve_stack(void)
 {
     void **addr;		/* auto var is current TOS */
 
@@ -1596,7 +1596,7 @@ scavenge_thread_stacks(void)
 #endif
 
 static void
-zero_stack()
+zero_stack(void)
 {
     /* This is a bit tricky because we don't want to zap any
      * stack frames between here and the call to mmap. For now,
@@ -1620,7 +1620,7 @@ zero_stack()
 #if defined STATIC_BLUE_BAG
 static int fast_static = 1;
 static void
-scavenge_static()
+scavenge_static(void)
 {
     /* Static space consists of alternating layers of
      * code objects that refer to read-only space (from purify),
@@ -1667,7 +1667,7 @@ scavenge_static()
 #endif
 
 static void
-scavenge_roots()
+scavenge_roots(void)
 {
     /* So what should go here?
      * When cgc starts up after purify/save all live objects
@@ -1714,7 +1714,7 @@ scavenge_roots()
 }
 
 static void
-scavenge_newspace()
+scavenge_newspace(void)
 {
     /* Scavenge is going to start at the beginning of newspace which
      * is presumed to have some "root" object pointers lying about due
@@ -1745,7 +1745,7 @@ scavenge_newspace()
 }
 
 static void
-free_oldspace()
+free_oldspace(void)
 {
     struct region *region, *next;
 
@@ -1837,7 +1837,7 @@ verify_space(lispobj * start, size_t words)
 
 /* For debug/test only. */
 static void
-verify_gc()
+verify_gc(void)
 {
     lispobj *rs0 = (lispobj *) READ_ONLY_SPACE_START;
     lispobj *rsz = (lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER);
@@ -1901,7 +1901,7 @@ post_purify_fixup(struct space *space)
 static int dolog = 0;		/* log copy ops to file */
 static int dover = 0;		/* hunt pointers to oldspace */
 void
-cgc_collect_garbage()
+cgc_collect_garbage(void)
 {
     unsigned long allocated = bytes_allocated;
 
@@ -1945,7 +1945,7 @@ cgc_collect_garbage()
 }
 
 void
-cgc_free_heap()
+cgc_free_heap(void)
 {
     /* Like above but just zap everything 'cause purify has
      * cleaned house!
@@ -1964,7 +1964,7 @@ cgc_free_heap()
 
 
 void
-cgc_init_collector()
+cgc_init_collector(void)
 {
     int max_blocks;
 
@@ -2074,7 +2074,7 @@ gc_init(void)
 }
 
 void
-collect_garbage()
+collect_garbage(void)
 {
     /* SUB-GC wraps without-interrupt around call, but this
      * is going to absolutely block SIGINT.

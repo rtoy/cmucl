@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.19 2008/02/27 21:54:42 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.20 2008/03/19 09:17:13 cshapiro Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -300,7 +300,7 @@ segv_handler(HANDLER_ARGS)
 #endif
 
 void
-os_install_interrupt_handlers()
+os_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGSEGV, segv_handler);
 }
@@ -384,7 +384,7 @@ getrusage(int who, struct rusage *rp)
 }
 
 int
-setreuid()
+setreuid(void)
 {
     fprintf(stderr, "setreuid unimplemented\n");
     errno = ENOSYS;
@@ -392,7 +392,7 @@ setreuid()
 }
 
 int
-setregid()
+setregid(void)
 {
     fprintf(stderr, "setregid unimplemented\n");
     errno = ENOSYS;
@@ -400,7 +400,7 @@ setregid()
 }
 
 int
-gethostid()
+gethostid(void)
 {
     fprintf(stderr, "gethostid unimplemented\n");
     errno = ENOSYS;

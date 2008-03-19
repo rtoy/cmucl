@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.11 2005/09/15 18:26:52 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.12 2008/03/19 09:17:13 cshapiro Rel $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -124,8 +124,7 @@ lookup_variable(char *name, lispobj * result)
 
 
 boolean
-more_p(ptr)
-     char **ptr;
+more_p(char **ptr)
 {
     skip_ws(ptr);
 
@@ -136,8 +135,7 @@ more_p(ptr)
 }
 
 char *
-parse_token(ptr)
-     char **ptr;
+parse_token(char **ptr)
 {
     char *token;
 
@@ -200,8 +198,7 @@ number_p(token)
 #endif
 
 long
-parse_number(ptr)
-     char **ptr;
+parse_number(char **ptr)
 {
     char *token = parse_token(ptr);
     long result;
@@ -219,8 +216,7 @@ parse_number(ptr)
 }
 
 char *
-parse_addr(ptr)
-     char **ptr;
+parse_addr(char **ptr)
 {
     char *token = parse_token(ptr);
     long result;
@@ -310,8 +306,7 @@ parse_regnum(char *s)
 }
 
 lispobj
-parse_lispobj(ptr)
-     char **ptr;
+parse_lispobj(char **ptr)
 {
     char *token = parse_token(ptr);
     long pointer;

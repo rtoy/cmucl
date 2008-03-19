@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/osf1-os.c,v 1.3 2007/07/30 07:24:46 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/osf1-os.c,v 1.4 2008/03/19 09:17:13 cshapiro Rel $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -26,7 +26,7 @@
 vm_size_t os_vm_page_size;
 
 void
-os_init()
+os_init(void)
 {
     int buf[2] = { SSIN_UACPROC, UAC_SIGBUS | UAC_NOPRINT };
     int error;

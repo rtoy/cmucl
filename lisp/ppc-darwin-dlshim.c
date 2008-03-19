@@ -188,7 +188,7 @@ dlopen(const char *filename, int flags)
 }
 
 const char *
-dlerror()
+dlerror(void)
 {
     static char *errbuf = NULL;
     NSLinkEditErrors a;

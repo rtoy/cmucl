@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-arch.c,v 1.11 2007/11/16 06:52:25 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-arch.c,v 1.12 2008/03/19 09:17:13 cshapiro Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -335,7 +335,7 @@ sigfpe_handler(int signal, int code, struct sigcontext *scp)
 }
 
 void
-arch_install_interrupt_handlers()
+arch_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGTRAP, sigtrap_handler);
     interrupt_install_low_level_handler(SIGFPE, sigfpe_handler);

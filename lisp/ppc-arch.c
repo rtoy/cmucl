@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.12 2008/01/28 18:21:04 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.13 2008/03/19 09:17:13 cshapiro Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -214,7 +214,7 @@ allocation_trap_p(os_context_t * context)
  * signal to perform allocation.
  */
 void
-enable_some_signals()
+enable_some_signals(void)
 {
     sigset_t sigs;
 
@@ -503,7 +503,7 @@ sigill_handler(HANDLER_ARGS)
 
 
 void
-arch_install_interrupt_handlers()
+arch_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGILL, sigill_handler);
     interrupt_install_low_level_handler(SIGTRAP, sigill_handler);

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.20 2005/09/15 18:26:52 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.21 2008/03/19 09:17:13 cshapiro Rel $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -502,7 +502,7 @@ sub_monitor(void)
 }
 
 void
-ldb_monitor()
+ldb_monitor(void)
 {
     jmp_buf oldbuf;
 
@@ -520,7 +520,7 @@ ldb_monitor()
 }
 
 void
-throw_to_monitor()
+throw_to_monitor(void)
 {
     longjmp(curbuf, 1);
 }

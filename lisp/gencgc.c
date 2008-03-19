@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.93 2008/03/18 03:59:56 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.94 2008/03/19 09:17:10 cshapiro Exp $
  *
  */
 
@@ -6906,7 +6906,7 @@ scavenge_interrupt_handlers(void)
 
 #if !(defined(i386) || defined(__x86_64))
 static void
-scavenge_control_stack()
+scavenge_control_stack(void)
 {
     unsigned long control_stack_size;
 
