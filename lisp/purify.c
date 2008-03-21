@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.41 2008/03/15 15:00:13 agoncharov Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.42 2008/03/21 09:36:42 cshapiro Exp $ 
 
    */
 #include <stdio.h>
@@ -807,7 +807,7 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
 
 	/* offset_vector still has 32-bit elements on amd64.
 	   Eventually we will make this consistent with internals.h */
-	unsigned int *offset_vector = fixups_vector->data;
+	unsigned int *offset_vector = (unsigned int *) fixups_vector->data;
 	int i;
 
 	for (i = 0; i < length; i++) {
