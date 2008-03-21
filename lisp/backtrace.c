@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.14 2005/09/15 18:26:51 rtoy Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.15 2008/03/21 10:41:43 cshapiro Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -257,12 +257,12 @@ stack_pointer_p(unsigned long p)
 }
 
 static int
-ra_pointer_p(unsigned ra)
+ra_pointer_p(unsigned long ra)
 {
     return ra > 4096 && !stack_pointer_p(ra);
 }
 
-static unsigned
+static unsigned long
 deref(unsigned long p, int offset)
 {
     return *((unsigned long *) p + offset);
@@ -329,9 +329,9 @@ print_entry_points(struct code *code)
 /* See also X86-CALL-CONTEXT in code:debug-int.  */
 
 static int
-x86_call_context(unsigned fp, unsigned *ra, unsigned *ocfp)
+x86_call_context(unsigned long fp, unsigned long *ra, unsigned long *ocfp)
 {
-    unsigned lisp_ocfp, lisp_ra, c_ocfp, c_ra;
+    unsigned long lisp_ocfp, lisp_ra, c_ocfp, c_ra;
     int lisp_valid_p, c_valid_p;
 
     if (!stack_pointer_p(fp))
@@ -348,7 +348,7 @@ x86_call_context(unsigned fp, unsigned *ra, unsigned *ocfp)
 		 && ra_pointer_p(c_ra));
 
     if (lisp_valid_p && c_valid_p) {
-	unsigned lisp_path_fp, c_path_fp, dummy;
+	unsigned long lisp_path_fp, c_path_fp, dummy;
 	int lisp_path_p = x86_call_context(lisp_ocfp, &lisp_path_fp, &dummy);
 	int c_path_p = x86_call_context(c_ocfp, &c_path_fp, &dummy);
 
@@ -413,8 +413,8 @@ array_of_type_p(lispobj obj, int type)
 struct compiled_debug_function *
 debug_function_from_pc(struct code *code, unsigned long pc)
 {
-    unsigned code_header_len = sizeof(lispobj) * HeaderValue(code->header);
-    unsigned offset = pc - (unsigned) code - code_header_len;
+    unsigned long code_header_len = sizeof(lispobj) * HeaderValue(code->header);
+    unsigned long offset = pc - (unsigned long) code - code_header_len;
 
     if (LowtagOf(code->debug_info) == type_InstancePointer) {
 	struct compiled_debug_info *di
@@ -423,7 +423,7 @@ debug_function_from_pc(struct code *code, unsigned long pc)
 
 	if (array_of_type_p(di->function_map, type_SimpleVector)) {
 	    struct vector *v = (struct vector *) PTR(di->function_map);
-	    int i, len = fixnum_value(v->length);
+	    long i, len = fixnum_value(v->length);
 	    struct compiled_debug_function *df
 		= (struct compiled_debug_function *) PTR(v->data[0]);
 
@@ -433,7 +433,7 @@ debug_function_from_pc(struct code *code, unsigned long pc)
 		int elsewhere_p = offset >= fixnum_value(df->elsewhere_pc);
 
 		for (i = 1;; i += 2) {
-		    unsigned next_pc;
+		    unsigned long next_pc;
 
 		    if (i == len)
 			return ((struct compiled_debug_function *)
@@ -467,15 +467,14 @@ debug_function_from_pc(struct code *code, unsigned long pc)
 void
 backtrace(int nframes)
 {
-    unsigned fp;
+    unsigned long fp;
     int i;
 
   asm("movl %%ebp,%0":"=g"(fp));
 
     for (i = 0; i < nframes; ++i) {
 	lispobj *p;
-	unsigned long ra;
-	unsigned next_fp;
+	unsigned long ra, next_fp;
 
 	if (!x86_call_context(fp, &ra, &next_fp))
 	    break;
@@ -495,7 +494,7 @@ backtrace(int nframes)
 	} else if (p)
 	    printf("<Not implemented, type = %d>", (int) TypeOf(*p));
 	else
-	    printf("Foreign fp = 0x%x, ra = 0x%lx", next_fp, ra);
+	    printf("Foreign fp = 0x%lx, ra = 0x%lx", next_fp, ra);
 
 	putchar('\n');
 	fp = next_fp;
