@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.28 2004/10/05 21:59:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.29 2008/03/25 15:05:54 rtoy Exp $")
 ;;;
 
 (in-package :pcl)
@@ -100,15 +100,34 @@
 	      new-value))
     new-value))
 
+;; Return T if X is can be used as a legal slot name.  If X is not
+;; legal, return two values: NIL and a string indicating why X is not
+;; legal.
+(defun legal-slot-name-p-internal (x)
+  (cond ((not (symbolp x))
+	 (values nil "is not a symbol and so cannot be bound"))
+	;;
+	;; Structure slots names can be any symbol.
+	(*allow-funny-slot-names*)
+	((keywordp x)
+	 (values nil "is a keyword and so cannot be bound"))
+	((memq x '(t nil))
+	 (values nil "cannot be bound"))
+	((constantp x)
+	 (values nil "is a constant and so cannot be bound"))
+	(t t)))
+
 (define-compiler-macro slot-value (&whole form object slot-name)
   (if (and (constantp slot-name)
-	   (interned-symbol-p (eval slot-name)))
+	   (interned-symbol-p (eval slot-name))
+	   (legal-slot-name-p-internal slot-name))
       `(accessor-slot-value ,object ,slot-name)
       form))
 
 (define-compiler-macro set-slot-value (&whole form object slot-name value)
   (if (and (constantp slot-name)
-	   (interned-symbol-p (eval slot-name)))
+	   (interned-symbol-p (eval slot-name))
+	   (legal-slot-name-p-internal slot-name))
       `(accessor-set-slot-value ,object ,slot-name ,value)
       form))
 
@@ -122,7 +141,8 @@
 
 (define-compiler-macro slot-boundp (&whole form object slot-name)
   (if (and (constantp slot-name)
-	   (interned-symbol-p (eval slot-name)))
+	   (interned-symbol-p (eval slot-name))
+	   (legal-slot-name-p-internal slot-name))
       `(accessor-slot-boundp ,object ,slot-name)
       form))
 
