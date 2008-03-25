@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.120 2008/02/01 14:54:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.120.2.1 2008/03/25 16:01:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1459,6 +1459,15 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;;                the ~E format directive to prevent complete loss of
 ;;;                significance in the printed value due to a bogus choice of
 ;;;                scale factor.
+;;;     ALLOW-OVERFLOW-P -
+;;;                This parameter, defaulting to non-NIL, allows us to
+;;;                overflow any width constraint if necessary to
+;;;                produce a reasonable output.  If NIL, then we will
+;;;                not exceed the width constraint, even if that means
+;;;                we only print out leading zeroes.  Generally
+;;;                intended to be set by FIXED-FORMAT-AUX so we don't
+;;;                exceed the specified width when printing small
+;;;                numbers.
 ;;;
 ;;; Returns:
 ;;; (VALUES DIGIT-STRING DIGIT-LENGTH LEADING-POINT TRAILING-POINT DECPNT)
@@ -1472,6 +1481,11 @@ radix-R.  If you have a power-list then pass it in as PL."
 ;;;                       decimal point.
 ;;;     POINT-POS       - The position of the digit preceding the decimal
 ;;;                       point.  Zero indicates point before first digit.
+;;;     ROUNDOFF        - True If, due to rounding, the exponent for the
+;;;                       printed result differs from the real
+;;;                       exponent of the number.  For example, .9999
+;;;                       has an exponent of -1, but the printed
+;;;                       result could be 1.000 with an exponent of 0.
 ;;;
 ;;; NOTE:  FLONUM-TO-STRING goes to a lot of trouble to guarantee accuracy.
 ;;; Specifically, the decimal number printed is the closest possible 
@@ -1489,7 +1503,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 
 (defvar *digits* "0123456789")
 
-(defun flonum-to-string (x &optional width fdigits scale fmin (num-expt 0))
+(defun flonum-to-string (x &key width fdigits scale fmin (num-expt 0 num-expt-p)
+			        (allow-overflow-p t))
   (setf x (abs x))
   (cond ((zerop x)
 	 ;;zero is a special case which float-string cannot handle
@@ -1502,8 +1517,8 @@ radix-R.  If you have a power-list then pass it in as PL."
 	 (flet ((fixup-flonum-to-digits (x &optional (expt 0) position relativep)
 		  (multiple-value-bind (e s)
 		      (flonum-to-digits x position relativep)
-		    (values (- e expt) s))))
-	   (multiple-value-bind (e string)
+		    (values (- e expt) s e))))
+	   (multiple-value-bind (e string printed-e)
 	       (if fdigits
 		   (fixup-flonum-to-digits x
 					   num-expt
@@ -1524,8 +1539,23 @@ radix-R.  If you have a power-list then pass it in as PL."
 						 ndigits
 						 t))
 		       (fixup-flonum-to-digits x num-expt)))
-	     (let ((e (+ e (or scale 0)))
-		   (stream (make-string-output-stream)))
+	     (let ((stream (make-string-output-stream))
+		   (printed-roundoff-p (and num-expt-p (/= num-expt printed-e))))
+	       (when (and num-expt-p (/= num-expt printed-e))
+		 ;; The actual exponent of the number differs from the
+		 ;; printed exponent.  This happens for something like
+		 ;; (format nil "~11,3,2,0,'*,,'EE" .9999).  With only
+		 ;; 3 fraction digits, .9999 gets rounded to 1.000 But
+		 ;; the exponent for .9999 is -1, and the exponent for
+		 ;; the printed result is actually 1.  We need to
+		 ;; decrement e by 1 to account for this.
+		 (decf e))
+	       #+(or)
+	       (progn
+		 (format t "e = ~S~%" e)
+		 (format t "roundoff = ~S~%" printed-roundoff-p))
+	       
+	       (incf e (or scale 0))
 	       (if (plusp e)
 		   (progn
 		     (write-string string stream :end (min (length string)
@@ -1548,27 +1578,50 @@ radix-R.  If you have a power-list then pass it in as PL."
 		     ;; to be output.  That way we don't print too
 		     ;; many leading zeroes if the number is too
 		     ;; small.
-		     (dotimes (i (if (or fmin (null fdigits))
-				     (- e)
-				     (min (- e) fdigits)))
-		       (write-char #\0 stream))
-		     ;; If we're out of room (because fdigits is too
-		     ;; small), don't print out our string.  This
-		     ;; fixes things like (format nil "~,2f" 0.001).
-		     ;; We should print ".00", not ".001".  But if
-		     ;; fmin is set, we want to print out something.
-		     (when (or (null fdigits)
-			       (plusp (+ e fdigits))
-			       fmin)
-		       (write-string string stream))
-		     (when fdigits
-		       (dotimes (i (+ fdigits e (- (length string))))
-			 (write-char #\0 stream)))))
+		     ;;
+		     ;; Also print them all out if :allow-overflow-p
+		     ;; is set or there's no width constraint.
+		     #+(or)
+		     (progn
+		       (format t "fmin = ~S~%" fmin)
+		       (format t "fdigits = ~S~%" fdigits)
+		       (format t "width = ~S~%" width)
+		       (when width
+			 (format t "min = ~S~%" (min (- e) width))))
+
+		     (let ((leading-zeros
+			    (if (or fmin (null fdigits))
+				(if (or allow-overflow-p (null width))
+				    (- e)
+				    (min (- e) (1- width)))
+				(min (- e) fdigits))))
+		       (dotimes (i leading-zeros)
+			 (write-char #\0 stream))
+		       ;; If we're out of room (because fdigits is too
+		       ;; small), don't print out our string.  This
+		       ;; fixes things like (format nil "~,2f" 0.001).
+		       ;; We should print ".00", not ".001".  But if
+		       ;; fmin is set, we want to print out something.
+		       (when (or (null fdigits)
+				 (plusp (+ e fdigits))
+				 fmin)
+			 ;; But only print the whole string if there's
+			 ;; no width constraint or if we're allowed to
+			 ;; exceed the width.
+			 (if (or allow-overflow-p (null width))
+			     (write-string string stream)
+			     (write-string string stream
+					   :end (min (- width leading-zeros 1)
+						     (length string)))))
+		       (when fdigits
+			 (dotimes (i (+ fdigits e (- (length string))))
+			   (write-char #\0 stream))))))
 	       (let ((string (get-output-stream-string stream)))
 		 (values string (length string)
 			 (char= (char string 0) #\.)
 			 (char= (char string (1- (length string))) #\.)
-			 (position #\. string)))))))))
+			 (position #\. string)
+			 printed-roundoff-p))))))))
 
 
 ;;; SCALE-EXPONENT  --  Internal
