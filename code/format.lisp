@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.85 2008/03/13 12:57:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.86 2008/03/26 16:43:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1487,7 +1487,7 @@
       (let* ((signstr (if (minusp (float-sign number)) "-" (if atsign "+" "")))
 	     (signlen (length signstr)))
 	(multiple-value-bind (str strlen ig2 ig3 pointplace)
-			     (lisp::flonum-to-string number nil d nil)
+	    (lisp::flonum-to-string number :width nil :fdigits d :scale nil)
 	  (declare (ignore ig2 ig3))
 	  (when colon (write-string signstr stream))
 	  (dotimes (i (- w signlen (max 0 (- n pointplace)) strlen))
