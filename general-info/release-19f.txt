@@ -22,21 +22,31 @@ New in this release:
   * Feature enhancements:
 
   * ANSI compliance fixes:
+    - Fix bug in backquote printer.  If the variable is @foo, we want
+      to print ", @foo" not ",@foo".  Similarly, for .foo, we want to
+      print ", .foo" instead of ",.foo".
 
   * Bugfixes:
+    - Compiler can now derive the rank of an array, even if the array
+      is not simple.
+    - Fix off-by-one bug in ~R which prevents printing numbers from
+      10^63 to 10^66-1.  10^63 is a vigintillion.
+    - The compiler and interpreter should now handle slot-value the
+      same.  Previously, different results were returned for things
+      like (slot-value foo :a).
 
   * Trac Tickets:
-    - #13 fixed.  (format nil "~11,3,2,0,'*,,'EE" .9999) produce
+    - #13 fixed.  (format nil "~11,3,2,0,'*,,'EE" .9999) produces
       0.100e+1 instead of 1.000e+0.
 
   * Other changes:
 
   * Improvements to the PCL implementation of CLOS:
 
-  * Changes to rebuilding procedure:
+  * Changes to building procedure:
 
 This release is not binary compatible with code compiled using CMUCL
-19d; you will need to recompile FASL files. 
+19e; you will need to recompile FASL files. 
 
 See <URL:http://www.cons.org/cmucl/> for download information,
 guidelines on reporting bugs, and mailing list details.
