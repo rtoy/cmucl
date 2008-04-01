@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.5 2003/08/03 11:27:45 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/values.lisp,v 1.6 2008/04/01 07:25:09 cshapiro Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,9 +125,9 @@
     
     (inst shr temp1 word-shift) ; convert the fixnum to a count.
     
-    (inst std) ; move down the stack as more value are copied to the bottom.
     LOOP
-    (inst lods temp)
+    (inst mov temp (make-ea :dword :base src))
+    (inst sub src 4)
     (inst push temp)
     (inst loop loop)
     

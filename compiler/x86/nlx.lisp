@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.15 2003/08/03 11:27:45 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.16 2008/04/01 07:25:09 cshapiro Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -244,6 +244,7 @@
     (inst std)
     (inst rep)
     (inst movs :dword)
+    (inst cld)
 
     DONE
     ;; Reset the CSP at last moved arg.
