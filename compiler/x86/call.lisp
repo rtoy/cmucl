@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.20 2004/10/04 02:39:18 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.20.16.1 2008/04/01 14:48:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -395,7 +395,6 @@
       ;; Load EAX with NIL so we can quickly store it, and set up stuff
       ;; for the loop.
       (inst mov eax-tn nil-value)
-      (inst std)
       (inst mov ecx-tn (- nvals register-arg-count))
       ;; Jump into the default loop.
       (inst jmp default-stack-vals)
@@ -431,6 +430,7 @@
       (inst std)
       (inst rep)
       (inst movs :dword)
+      (inst cld)
       ;; Restore ESI.
       (loadw esi-tn ebx-tn (- (1+ 2)))
       ;; Now we have to default the remaining args.  Find out how many.
@@ -444,8 +444,10 @@
       (inst mov eax-tn nil-value)
       ;; Do the store.
       (emit-label default-stack-vals)
+      (inst std)
       (inst rep)
       (inst stos eax-tn)
+      (inst cld)
       ;; Restore EDI, and reset the stack.
       (emit-label restore-edi)
       (loadw edi-tn ebx-tn (- (1+ 1)))
@@ -1271,7 +1273,6 @@
     
     (inst shr ecx-tn word-shift)	; make word count
     ;; And copy the args.
-    (inst cld)				; auto-inc ESI and EDI.
     (inst rep)
     (inst movs :dword)
     
@@ -1380,8 +1381,6 @@
 	 (inst lea dst (make-ea :byte :base dst :disp list-pointer-type))
 	 ;; Convert the count into a raw value, so we can use the LOOP inst.
 	 (inst shr ecx 2)
-	 ;; Set decrement mode (successive args at lower addresses)
-	 (inst std)
 	 ;; Set up the result.
 	 (move result dst)
 	 ;; Jump into the middle of the loop, 'cause that's were we want
@@ -1394,7 +1393,8 @@
 	 (storew dst dst -1 list-pointer-type)
 	 (emit-label enter)
 	 ;; Grab one value and stash it in the car of this cons.
-	 (inst lods eax)
+	 (inst mov eax (make-ea :dword :base src))
+	 (inst sub src 4)
 	 (storew eax dst 0 list-pointer-type)
 	 ;; Go back for more.
 	 (inst loop loop)

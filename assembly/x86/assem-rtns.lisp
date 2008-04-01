@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.6 2003/08/03 11:27:50 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.6.26.1 2008/04/01 14:48:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -59,11 +59,12 @@
   ;; to iterate from larger addresses to smaller addresses.
   ;; pfw-this says copy ecx words from esi to edi counting down.
   (inst shr ecx 2)			; fixnum to raw word count
-  (inst std)				; count down
   (inst sub esi 4)			; ?
   (inst lea edi (make-ea :dword :base ebx :disp (- word-bytes)))
+  (inst std)				; count down
   (inst rep)
   (inst movs :dword)
+  (inst cld)
 
   ;; Restore the count.
   (inst mov ecx edx)
@@ -153,11 +154,12 @@
   ;; Do the blit.  Because we are coping from smaller addresses to larger
   ;; addresses, we have to start at the largest pair and work our way down.
   (inst shr ecx 2)			; fixnum to raw words
-  (inst std)				; count down
   (inst lea edi (make-ea :dword :base ebp-tn :disp (- word-bytes)))
   (inst sub esi (fixnumize 1))
+  (inst std)				; count down
   (inst rep)
   (inst movs :dword)
+  (inst cld)
 
   ;; Load the register arguments carefully.
   (loadw edx ebp-tn -1)
