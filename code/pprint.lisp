@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.64 2006/02/17 15:45:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.65 2008/04/02 13:24:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1937,6 +1937,7 @@ When annotations are present, invoke them at the right positions."
     ;; Other things in CMUCL that we ought to try to print out nicely.
     (ext:collect pprint-with-like)
     (ansi-loop::with-loop-list-collection-head pprint-with-like)
+    (ansi-loop::loop-body pprint-progn)
     (lisp::descend-into pprint-with-like)
     (vm::pseudo-atomic pprint-with-like)
     (new-assem:without-scheduling pprint-with-like)
