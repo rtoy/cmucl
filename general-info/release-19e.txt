@@ -17,7 +17,8 @@ over the Internet, and is mostly in the public domain.
 New in this release:
 
   * Supported system:
-    - Support for Mac OS X/Intel has been added.
+    - Support for Mac OS X/Intel has been added for OSX 10.5 and
+      later. 
 
   * Issues
     - One some openSUSE systems, cmucl will fail to start because it
@@ -196,6 +197,8 @@ New in this release:
     - #1 fixed.  prin1 and ~E should produce the same results.
     - #12 fixed.  (format t "~10,1,2,0,'*,,'DE" 1d-6) prints "0.1D-05"
       now.
+    - #13 fixed.  (format nil "~11,3,2,0,'*,,'EE" .9999) produces
+      0.100e+1 instead of 1.000e+0.
 
   * Other changes:
     - UNIX:UNIX-ERRNO accesses the thread errno value instead of the
@@ -203,6 +206,7 @@ New in this release:
     - Floating point zero is now printed with an exponent of zero,
       independent of any scale factor that might be used.  Thus, we
       get results like "0.0D+00" instead of "0.0D-5".
+    - CMUCL should now build and run on Redhat Fedora Core 9.
 
   * Improvements to the PCL implementation of CLOS:
     - Forward-referenced classes are allowed.
