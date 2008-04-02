@@ -34,10 +34,9 @@ New in this release:
     - The compiler and interpreter should now handle slot-value the
       same.  Previously, different results were returned for things
       like (slot-value foo :a).
+    - UNIX-GETGRNAM is now defined for Darwin (x86 and ppc).
 
   * Trac Tickets:
-    - #13 fixed.  (format nil "~11,3,2,0,'*,,'EE" .9999) produces
-      0.100e+1 instead of 1.000e+0.
 
   * Other changes:
 
