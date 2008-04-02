@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.118 2008/02/08 16:52:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119 2008/04/02 13:28:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3098,7 +3098,7 @@
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
-#+(or FreeBSD NetBSD darwin)
+#+bsd
 (defun unix-getpwuid (uid)
   "Return a USER-INFO structure for the user identified by UID, or NIL if not found."
   (declare (type unix-uid uid))
@@ -3153,7 +3153,7 @@
                         :until (zerop (sap-int (alien-sap member)))
                         :collect (string (cast member c-call:c-string))))))))
 
-#+(or FreeBSD NetBSD (and ppc darwin))
+#+bsd
 (defun unix-getgrnam (name)
   "Return a GROUP-INFO structure for the group identified by NAME, or NIL if not found."
   (declare (type simple-string name))
