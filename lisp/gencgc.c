@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.83 2006/08/18 16:58:53 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.83.2.1 2006/10/27 15:12:45 rtoy Exp $
  *
  */
 
@@ -3753,7 +3753,7 @@ record_for_rehashing(struct hash_table *hash_table, int hash_index,
 static inline boolean
 eq_based_hash_vector(unsigned int* hash_vector, unsigned int index)
 {
-    return (hash_vector == 0) || (hash_vector[index] = EQ_BASED_HASH_VALUE);
+    return (hash_vector == 0) || (hash_vector[index] == EQ_BASED_HASH_VALUE);
 }
 
 static inline boolean

@@ -1,0 +1,229 @@
+========================== C M U C L  19 e =============================
+
+The CMUCL project is pleased to announce the release of CMUCL 19e.
+This is a major release which contains numerous enhancements and
+bugfixes from the 19d release.
+
+CMUCL is a free, high performance implementation of the Common Lisp
+programming language which runs on most major Unix platforms. It
+mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+sophisticated native code compiler; a powerful foreign function
+interface; an implementation of CLOS, the Common Lisp Object System,
+which includes multimethods and a metaobject protocol; a source-level
+debugger and code profiler; and an Emacs-like editor implemented in
+Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+over the Internet, and is mostly in the public domain.
+
+New in this release:
+
+  * Supported system:
+    - Support for Mac OS X/Intel has been added for OSX 10.5 and
+      later. 
+
+  * Issues
+    - One some openSUSE systems, cmucl will fail to start because it
+      can't map enough memory.  This might be caused be a memory limit
+      that is set too low.  Use "ulimit -a" to see the limit on
+      virtual memory.  This can be adjusted with "ulimit -v <N>"
+    - Tracing on Mac OS X/Intel uses encapsulation, unlike other
+      platforms.  This means tracing recursive functions may not show
+      the recursive calls.  You can try setting
+      debug::*trace-encapsulate-default* to :default.  Be warned that
+      under some conditions, tracing will cause an error such that you
+      can not get back to the repl and must terminate the process in
+      some other way.
+
+  * Feature enhancements:
+    - Support for dynamic-extent added for ppc.  However, it suffers
+      from the same problems with dynamic-extent as other platforms,
+      so it is disabled by default.  Tests indicate that it does work
+      in simple situations.
+    - PARSE-TIME recognizes the format produced by C asctime/ctime.
+      (This change may break some other less commonly used patterns.)
+    - PARSE-TIME recognizes and discards any microseconds.
+    - PARSE-TIME checks that a specified day of the week matches the
+      actual day of the week given in the date.  An error is signaled
+      if they are inconsistent. 
+    - New option to SAVE-LISP allows creating executable Lisp images
+      that do not require a runtime loader.
+      Syntax: (save-lisp "filename" :executable t)
+      Currently supported on FreeBSD and Linux; work on a Solaris
+      version is underway.
+      Limitations: depends on files in "library:" to dump new
+      executable images.
+    - CMUCL's version of CLX has been replaced with telent CLX.
+    - Preliminary support for external formats.  Currently only
+      iso8859-1 and utf-8 are supported.  Utf-8 support is limited
+      since CMUCL only has 8-bit characters.
+    - UNIX-MPROTECT added to access mprotect.
+
+  * ANSI compliance fixes:
+    - BOA constructors with &AUX variables are handled better now.
+    - SHADOW accepts characters now.
+    - Default initargs are now passed correctly to initialize-instance
+      and shared-initialize.
+    - Several issues in formatted output of floats have been fixed:
+      o ~,dF won't print out extra digits if the number is too small. 
+      o ~E sometimes erroneously printed the overflow filler instead
+        of the number.
+      o ~G has changed so that ~E is chosen more often.  This is seen
+        when printing large numbers.  Instead of printing lots of
+        zeroes, ~E is used.  ~G now matches what Fortran would do.
+      o Inconsistencies between print and ~E are now gone.  (See Trac
+        ticket #1.)
+      o Some incorrectly printed results for ~E have been fixed.  (See
+        Trace ticket #12.)
+
+  * Bugfixes:
+    - Floating-point traps are now handled on ppc.  Previously, no
+      traps were signalled and SET-FLOATING-POINT-MODES did nothing.
+    - FILE-POSITION no longer returns negative values for mapped
+      file-simple-stream's.
+    - Potential Version numbers that start with a leading 0 are no
+      longer treated as version numbers.  Hence, "foo.~1~" has name
+      "foo", type nil, and version 1, but "foo.~01~" has type "~01~"
+      and version :NEWEST.
+    - A bug in type derivation for EXPT has been fixed.  (expt x y)
+      for x of type (double-float (0d0) 1d0) and y of type
+      (double-float (0d0)) now returns (or (member 0d0) (double-float
+      (0d0) 1d0)) instead of (double-float 0d0 1d0), i.e., -0d0 is not
+      in the range.
+    - On sparc, the decoding of a trapping FP instruction is correct
+      now.  Previously the wrong instruction was decoded, which
+      produced the wrong operation and operands in the arithmetic
+      error handler.
+    - Fix issue with UNIX:UNIX-MMAP handling of "large" addresses that
+      appeared to be negative numbers.
+    - DOUBLE-DOUBLE-FLOAT fixes:
+      o Converting negative rationals to double-double-float's doesn't
+	produce wrong answers anymore.
+      o (float <negative bignum> 1w0) no longer returns a positive
+	result.
+      o Some issues with creation of DOUBLE-DOUBLE-FLOAT and (COMPLEX
+	DOUBLE-DOUBLE-FLOAT) have been fixed on sparc, ppc, and x86.
+	These seem to work, except there appears to be some bugs on x86
+	when compiling at speed 3 and safety 0.
+      o (INTEGER-DECODE-FLOAT <double-double-float>) was sometimes
+	returning the wrong integer value because the two components had
+	the wrong sign.
+      o Some issues with debugger printing out DOUBLE-DOUBLE-FLOATs and
+	(COMPLEX DOUBLE-DOUBLE-FLOAT)'s have been fixed.
+      o CLOS now recognizes that (COMPLEX DOUBLE-DOUBLE-FLOAT) is a
+        valid built-in class instead of a random object.
+      o Branch cuts for ASIN and ATANH for double-double-float's
+        should match the branches for double-float's.
+      o ATAN2 should correctly handle signed double-double-float
+        zeroes.
+      o FASL files containing -0w0 are now converted to -0w0 instead
+        of 0w0.
+      o SIN and TAN return -0w0 when the argument is -0w0.
+        Previously, they returned 0w0.
+      o Signed zeroes are handled better for addition, subtraction,
+        and multiplication.  That is, the correct signed zero is
+        returned now.
+      o Overflow in addition, multiplication, and division returns
+        infinity if traps are disabled.
+      o EQL supports DOUBLE-DOUBLE-FLOAT's now.
+      o The printer and reader should now be consistent for
+        double-double-floats. 
+      o Conversion of bignums and ratios to double-double-floats
+        should be more accurate.
+      o Double-double-float's should have print/read consistency now.
+      o TRUNCATE works now when given a DOUBLE-DOUBLE-FLOAT divisor.
+      o FORMATted output of DOUBLE-DOUBLE-FLOAT's should work. 
+    - The assembler for ppc had some arguments for some instructions
+      in the wrong order, producing the wrong effect. 
+    - When making displaced arrays, the element types are checked to
+      see if they are type equivalent.  If not, an error is signaled.
+    - The reader for #= and ## has been enhanced to be much faster for
+      cases with a large number of shared objects.  However, it is also
+      somewhat slower for simple cases.
+    - #p"..." now has a namestring and is treated as a pathname with
+      name ".." and type "".
+    - #p"..a" erroneously had directory (:relative).  This has been
+      fixed so that directory = nil, name = ".", and type = "a".
+    - Compiling code using SIGNUM no longer causes a compiler error.
+      The defoptimizer for SIGNUM was missing a case for
+      double-double-float. 
+    - MAPHASH no longer causes a type-error when the mapping function
+      calls (setf gethash) on the same table.
+    - NOTINLINE declarations are honored for local functions even if
+      they only have only one use.  Previously, these would be inlined
+      anyway.  This allows tracing of such functions.
+    - TRACE and UNTRACE should now work as expected for local
+      labels/flet functions.  Untracing should work.  Redefining a
+      function should automatically retrace the local functions if
+      they were traced previously.
+    - Callbacks should now work on systems where malloc'ed space does
+      not normally allow execution of code.
+    - The FLOAT-ACCURACY declaration has been removed.  This should
+      have no affect on most user's code, unless they were using
+      this.  The default is 53-bit (double-float) precision for
+      everything and the compiler takes care of the precision for the
+      appropriate ABI.  It is the compiler's responsibility to make
+      sure single-precision floats are done correctly with
+      single-precision results.  (This may be buggy currently.)
+    - The :PRECISION-CONTROL keyword in SET-FLOATING-POINT-MODES has
+      been removed.
+    - A compiler bug with type inferencing and deleting unsued
+      functions has been fixed.
+    - A compiler bug has been fixed where a source transformation was
+      incorrectly applied because the local variable happens to have a
+      function type and has the same name as a known function.
+    - On Darwin/x86, tracing with :encapsulate nil works better, and
+      tracing of labels/flets works better.  However, there are still
+      issues with tracing.  Returning to the repl after tracing
+      sometimes fails, and you must exit lisp completely.
+    - ~E should be faster now in some cases.
+    - The range over which sin/cos/tan would use the builtin
+      instruction on x86 has been reduced.  Previously, values near
+      the limit would either produce result greater than 1 in absolute
+      value or cause a floating-point exception.  Note that accuracy
+      is reduced when the builtin instructions are used for very large
+      arguments.
+    - Issues with compact info environments should be fixed.  The
+      issue manifests itself when a new core is saved with lots of
+      functions (or other objects).  The resulting core executes the
+      wrong code for some of the functions.
+
+  * Trac Tickets:
+    - #8 fixed so logs of bignums and ratios that won't fit into a
+      float can be computed, instead of signalling an error.
+    - #9 fixed.  An error is generated if the number of days doesn't
+      match the number of days in the given month.
+    - #10 fixed.  ROUND should now return correct answers for floats
+      bigger than most-positive-fixnum.
+    - #11 fixed.  EQL handles double-double-float's correctly now.
+    - #1 fixed.  prin1 and ~E should produce the same results.
+    - #12 fixed.  (format t "~10,1,2,0,'*,,'DE" 1d-6) prints "0.1D-05"
+      now.
+    - #13 fixed.  (format nil "~11,3,2,0,'*,,'EE" .9999) produces
+      0.100e+1 instead of 1.000e+0.
+
+  * Other changes:
+    - UNIX:UNIX-ERRNO accesses the thread errno value instead of the
+      global errno value.
+    - Floating point zero is now printed with an exponent of zero,
+      independent of any scale factor that might be used.  Thus, we
+      get results like "0.0D+00" instead of "0.0D-5".
+    - CMUCL should now build and run on Redhat Fedora Core 9.
+
+  * Improvements to the PCL implementation of CLOS:
+    - Forward-referenced classes are allowed.
+
+  * Changes to rebuilding procedure:
+    - load-world.sh now supports a -p option to load the world without
+      PCL.  This is mostly for cross-compiling which doesn't want PCL
+      loaded because it's not build during a cross-compile.
+    - make-dist.sh now defaults to bzip compression instead of gzip.
+
+
+This release is not binary compatible with code compiled using CMUCL
+19d; you will need to recompile FASL files. 
+
+See <URL:http://www.cons.org/cmucl/> for download information,
+guidelines on reporting bugs, and mailing list details.
+
+
+We hope you enjoy using this release of CMUCL!
+
