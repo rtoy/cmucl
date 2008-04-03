@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.117 2008/02/14 21:06:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.118 2008/04/03 15:10:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1073,10 +1073,19 @@
 		(specifier-type `(or (rational ,int-lo ,int-hi)
 				     (single-float ,f-lo, f-hi)))))
 	     (float
-	      ;; Positive integer to a float power is a float
-	      (let ((res (copy-numeric-type y-type)))
-		(setf (numeric-type-low res) (low-bnd bnd))
-		(setf (numeric-type-high res) (hi-bnd bnd))
+	      ;; Positive integer to a float power is a float of the
+	      ;; same type.
+	      (let* ((res (copy-numeric-type y-type))
+		     (lo (low-bnd bnd))
+		     (hi (hi-bnd bnd))
+		     (f-lo (if lo
+			       (coerce lo (numeric-type-format res))
+			       nil))
+		     (f-hi (if hi
+			       (coerce hi (numeric-type-format res))
+			       nil)))
+		(setf (numeric-type-low res) f-lo)
+		(setf (numeric-type-high res) f-hi)
 		res))
 	     (t
 	      ;; Positive integer to a number is a number (for now)
