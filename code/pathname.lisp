@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.85 2007/09/10 16:25:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.86 2008/04/04 15:11:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,15 +119,17 @@
 ;;;
 (defun %print-pathname (pathname stream depth)
   (declare (ignore depth))
-  (let ((namestring (handler-case (namestring pathname)
-		      (error nil))))
+  (let* ((host (%pathname-host pathname))
+	 (namestring (if host
+			 (handler-case (namestring pathname)
+			   (error nil))
+			 nil)))
     (cond (namestring
 	   (if (or *print-escape* *print-readably*)
 	       (format stream "#P~S" namestring)
 	       (format stream "~A" namestring)))
 	  (t
-	   (let ((host (%pathname-host pathname))
-		 (device (%pathname-device pathname))
+	   (let ((device (%pathname-device pathname))
 		 (directory (%pathname-directory pathname))
 		 (name (%pathname-name pathname))
 		 (type (%pathname-type pathname))
@@ -147,7 +149,9 @@
 		    (collect ((result))
 		      (unless (eq host *unix-host*)
 			(result :host)
-			(result (pathname-host pathname)))
+			(result (if host
+				    (pathname-host pathname)
+				    nil)))
 		      (when device
 			(result :device)
 			(result device))
@@ -760,10 +764,19 @@ a host-structure or string."
 			     (host-customary-case default-host)))))
 	 (dev (if devp device (if defaults (%pathname-device defaults))))
 	 (dir (import-directory directory diddle-args))
+	 ;; CLHS MERGE-PATHNAMES (via MAKE-PATHNAME) says
+	 ;;
+	 ;; If pathname does not specify a name, then the version, if
+	 ;; not provided, will come from default-pathname, just like
+	 ;; the other components. If pathname does specify a name,
+	 ;; then the version is not affected by default-pathname. If
+	 ;; this process leaves the version missing, the
+	 ;; default-version is used.
 	 (ver (cond
-	       (versionp version)
-	       (defaults (%pathname-version defaults))
-	       (t nil))))
+		(versionp version)
+		(namep version)
+		(defaults (%pathname-version defaults))
+		(t nil))))
     (when (and defaults (not dirp))
       (setf dir
 	    (merge-directories dir
