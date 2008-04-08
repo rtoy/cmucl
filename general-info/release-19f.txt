@@ -25,6 +25,9 @@ New in this release:
     - Fix bug in backquote printer.  If the variable is @foo, we want
       to print ", @foo" not ",@foo".  Similarly, for .foo, we want to
       print ", .foo" instead of ",.foo".
+    - Fix merging of version in MAKE-PATHNAME.  If the pathname name
+      is given, the version is not affected by the version in the
+      default pathname.
 
   * Bugfixes:
     - Compiler can now derive the rank of an array, even if the array
@@ -35,12 +38,26 @@ New in this release:
       same.  Previously, different results were returned for things
       like (slot-value foo :a).
     - UNIX-GETGRNAM is now defined for Darwin (x86 and ppc).
+    - UNIX-GETPWUID is defined for all BSD systems.
+    - Type-derivation for EXPT no longer causes errors in some
+      situations.  The computed bounds were of the wrong type for the
+      resulting type specifier.
+    - Pathname printer no longer produces an error for (MAKE-PATHNAME
+      :HOST NIL :TYPE "foo").  It returns #P(:HOST NIL :TYPE "foo")
+      now. 
+    - Type derivation for DOUBLE-DOUBLE-FLOAT arithmetic should be
+      working.  Previously, all arithmetic operations would just
+      return DOUBLE-DOUBLE-FLOAT even though the compiler should have
+      been able to figure out a tighter result.
 
   * Trac Tickets:
 
   * Other changes:
 
   * Improvements to the PCL implementation of CLOS:
+    - The compiler and interpreter should handle SLOT-VALUE the same
+      way.  Previously, (SLOT-VALUE obj :a) would behave differently
+      in the compiler and interpreter.
 
   * Changes to building procedure:
 
