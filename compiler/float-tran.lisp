@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.118 2008/04/03 15:10:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119 2008/04/08 14:15:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -332,6 +332,7 @@
 	  (if (minusp (double-float-high-bits float)) (- ,temp) ,temp)))
       '(if (minusp (double-float-high-bits float)) -1d0 1d0)))
 
+#+double-double
 (deftransform float-sign ((float &optional float2)
 			  (double-double-float &optional double-double-float) *)
   (if float2
@@ -1667,11 +1668,13 @@
 		      0d0)
 	      (values r1 r2)))))))
 
-(deftransform + ((a b) (vm::double-double-float vm::double-double-float) *)
+(deftransform + ((a b) (vm::double-double-float vm::double-double-float)
+		 * :node node)
   `(multiple-value-bind (hi lo)
-      (add-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
-	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-    (kernel:%make-double-double-float hi lo)))
+       (add-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
+	       (kernel:double-double-hi b) (kernel:double-double-lo b))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
 (declaim (inline quick-two-diff))
 (defun quick-two-diff (a b)
@@ -1753,23 +1756,29 @@
 	(values (float-sign (- a0 b) 0d0) 0d0)
 	(values r1 r2)))))
 
-(deftransform - ((a b) (vm::double-double-float vm::double-double-float) *)
+(deftransform - ((a b) (vm::double-double-float vm::double-double-float)
+		 * :node node)
   `(multiple-value-bind (hi lo)
       (sub-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-     (kernel:%make-double-double-float hi lo)))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
-(deftransform - ((a b) (double-float vm::double-double-float) *)
+(deftransform - ((a b) (double-float vm::double-double-float)
+		 * :node node)
   `(multiple-value-bind (hi lo)
-      (sub-d-dd a
-		(kernel:double-double-hi b) (kernel:double-double-lo b))
-     (kernel:%make-double-double-float hi lo)))
+       (sub-d-dd a
+		 (kernel:double-double-hi b) (kernel:double-double-lo b))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
-(deftransform - ((a b) (vm::double-double-float double-float) *)
+(deftransform - ((a b) (vm::double-double-float double-float)
+		 * :node node)
   `(multiple-value-bind (hi lo)
-      (sub-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
-		b)
-     (kernel:%make-double-double-float hi lo)))
+       (sub-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
+		 b)
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
 (declaim (inline split))
 ;; This algorithm is the version given by Yozo Hida.  It has problems
@@ -1968,26 +1977,24 @@
     (incf p2 (* a1 a1))
     (quick-two-sum p1 p2)))
 
-(deftransform + ((a b) (vm::double-double-float (or integer single-float double-float)) *)
+(deftransform + ((a b) (vm::double-double-float (or integer single-float double-float))
+		 * :node node)
   `(multiple-value-bind (hi lo)
-      (add-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
-		(float b 1d0))
-     (kernel:%make-double-double-float hi lo)))
+       (add-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
+		 (float b 1d0))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
-(deftransform + ((a b) ((or integer single-float double-float) vm::double-double-float) *)
+(deftransform + ((a b) ((or integer single-float double-float) vm::double-double-float)
+		 * :node node)
   `(multiple-value-bind (hi lo)
       (add-dd-d (kernel:double-double-hi b) (kernel:double-double-lo b)
 		(float a 1d0))
-     (kernel:%make-double-double-float hi lo)))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
-#+nil
-(deftransform * ((a b) (vm::double-double-float vm::double-double-float) *)
-  `(multiple-value-bind (hi lo)
-      (mul-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
-	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-     (kernel:%make-double-double-float hi lo)))
-
-(deftransform * ((a b) (vm::double-double-float vm::double-double-float) * :node node)
+(deftransform * ((a b) (vm::double-double-float vm::double-double-float)
+		 * :node node)
   ;; non-const-same-leaf-ref-p is stolen from two-arg-derive-type.
   (flet ((non-const-same-leaf-ref-p (x y)
 	   ;; Just like same-leaf-ref-p, but we don't care if the
@@ -2006,23 +2013,29 @@
       (if (non-const-same-leaf-ref-p arg1 arg2)
 	  `(multiple-value-bind (hi lo)
 	       (sqr-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-	     (kernel:%make-double-double-float hi lo))
+	     (truly-the ,(type-specifier (node-derived-type node))
+			(kernel:%make-double-double-float hi lo)))
 	  `(multiple-value-bind (hi lo)
 	       (mul-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 		       (kernel:double-double-hi b) (kernel:double-double-lo b))
-	     (kernel:%make-double-double-float hi lo))))))
+	     (truly-the ,(type-specifier (node-derived-type node))
+			(kernel:%make-double-double-float hi lo)))))))
 
-(deftransform * ((a b) (vm::double-double-float (or integer single-float double-float)) *)
+(deftransform * ((a b) (vm::double-double-float (or integer single-float double-float))
+		 * :node node)
   `(multiple-value-bind (hi lo)
        (mul-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
 		 (float b 1d0))
-     (kernel:%make-double-double-float hi lo)))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
-(deftransform * ((a b) ((or integer single-float double-float) vm::double-double-float) *)
+(deftransform * ((a b) ((or integer single-float double-float) vm::double-double-float)
+		 * :node node)
   `(multiple-value-bind (hi lo)
        (mul-dd-d (kernel:double-double-hi b) (kernel:double-double-lo b)
 		 (float a 1d0))
-     (kernel:%make-double-double-float hi lo)))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
 (declaim (maybe-inline div-dd))
 (defun div-dd (a0 a1 b0 b1)
@@ -2074,17 +2087,21 @@
 	(let ((q2 (/ (+ s e) b)))
 	  (quick-two-sum q1 q2))))))
 
-(deftransform / ((a b) (vm::double-double-float vm::double-double-float) *)
+(deftransform / ((a b) (vm::double-double-float vm::double-double-float)
+		 * :node node)
   `(multiple-value-bind (hi lo)
       (div-dd (kernel:double-double-hi a) (kernel:double-double-lo a)
 	      (kernel:double-double-hi b) (kernel:double-double-lo b))
-     (kernel:%make-double-double-float hi lo)))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
-(deftransform / ((a b) (vm::double-double-float (or integer single-float double-float)) *)
+(deftransform / ((a b) (vm::double-double-float (or integer single-float double-float))
+		 * :node node)
   `(multiple-value-bind (hi lo)
        (div-dd-d (kernel:double-double-hi a) (kernel:double-double-lo a)
 		 (float b 1d0))
-     (kernel:%make-double-double-float hi lo)))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
 (declaim (inline sqr-d))
 (defun sqr-d (a)
@@ -2124,10 +2141,12 @@
 		(mul-d-d s2 (* x 0.5d0))
 	      (add-dd-d p0 p1 ax)))))))
 
-(deftransform sqrt ((a) ((vm::double-double-float 0w0)) *)
+(deftransform sqrt ((a) ((vm::double-double-float 0w0))
+		    * :node node)
   `(multiple-value-bind (hi lo)
-      (sqrt-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-    (kernel:%make-double-double-float hi lo)))
+       (sqrt-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
 (declaim (inline neg-dd))
 (defun neg-dd (a0 a1)
@@ -2145,15 +2164,19 @@
       (neg-dd a0 a1)
       (values a0 a1)))
 
-(deftransform abs ((a) (vm::double-double-float) *)
+(deftransform abs ((a) (vm::double-double-float)
+		   * :node node)
   `(multiple-value-bind (hi lo)
        (abs-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-     (kernel:%make-double-double-float hi lo)))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
-(deftransform %negate ((a) (vm::double-double-float) *)
+(deftransform %negate ((a) (vm::double-double-float)
+		       * :node node)
   `(multiple-value-bind (hi lo)
        (neg-dd (kernel:double-double-hi a) (kernel:double-double-lo a))
-     (kernel:%make-double-double-float hi lo)))
+     (truly-the ,(type-specifier (node-derived-type node))
+		(kernel:%make-double-double-float hi lo))))
 
 (declaim (inline dd=))
 (defun dd= (a0 a1 b0 b1)
