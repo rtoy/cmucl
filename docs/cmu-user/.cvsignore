@@ -4,6 +4,7 @@
 *.dvi
 *.fdx
 *.fnd
+*.html
 *.idx
 *.ilg
 *.log
@@ -14,4 +15,4 @@
 *.toc
 *.vdx
 *.vnd
-*.html
+cmu-user-letter.ps
