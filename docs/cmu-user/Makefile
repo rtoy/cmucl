@@ -86,10 +86,12 @@ all: cmu-user.ps
 %.ps : %.ps1
 	if [ -x psset ]; then psset -d -o $@ $<; else cp $< $@; fi
 
-# Tar up the html files
+# Tar up the html files.  Note: cmucl.css is duplicated here, from the
+# cmucl-www repository.  Please remember to update cmucl.css here
+# whenever cmucl.css changes in cmucl-www.
 cmu-user-html.tgz : cmu-user.html
 	mkdir cmu-user
-	cp *.html *.gif cmu-user
+	cp cmucl.css *.html *.gif cmu-user
 	tar cf - cmu-user | gzip > cmu-user-html.tgz
 
 # generate Postscript for letter format, instead of for A4 paper
