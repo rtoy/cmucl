@@ -23,11 +23,7 @@
 /*
  * Table of constants for 2/pi, 396 Hex digits (476 decimal) of 2/pi 
  */
-#ifdef __STDC__
 static const int two_over_pi[] = {
-#else
-static int two_over_pi[] = {
-#endif
 0xA2F983, 0x6E4E44, 0x1529FC, 0x2757D1, 0xF534DD, 0xC0DB62, 
 0x95993C, 0x439041, 0xFE5163, 0xABDEBB, 0xC561B7, 0x246E3A, 
 0x424DD2, 0xE00649, 0x2EEA09, 0xD1921C, 0xFE1DEB, 0x1CB129, 
@@ -41,11 +37,7 @@ static int two_over_pi[] = {
 0x4D7327, 0x310606, 0x1556CA, 0x73A8C9, 0x60E27B, 0xC08C6B, 
 };
 
-#ifdef __STDC__
 static const int npio2_hw[] = {
-#else
-static int npio2_hw[] = {
-#endif
 0x3FF921FB, 0x400921FB, 0x4012D97C, 0x401921FB, 0x401F6A7A, 0x4022D97C,
 0x4025FDBB, 0x402921FB, 0x402C463A, 0x402F6A7A, 0x4031475C, 0x4032D97C,
 0x40346B9C, 0x4035FDBB, 0x40378FDB, 0x403921FB, 0x403AB41B, 0x403C463A,
@@ -64,11 +56,7 @@ static int npio2_hw[] = {
  * pio2_3t:  pi/2 - (pio2_1+pio2_2+pio2_3)
  */
 
-#ifdef __STDC__
 static const double 
-#else
-static double 
-#endif
 zero =  0.00000000000000000000e+00, /* 0x00000000, 0x00000000 */
 half =  5.00000000000000000000e-01, /* 0x3FE00000, 0x00000000 */
 two24 =  1.67772160000000000000e+07, /* 0x41700000, 0x00000000 */
@@ -80,18 +68,15 @@ pio2_2t =  2.02226624879595063154e-21, /* 0x3BA3198A, 0x2E037073 */
 pio2_3  =  2.02226624871116645580e-21, /* 0x3BA3198A, 0x2E000000 */
 pio2_3t =  8.47842766036889956997e-32; /* 0x397B839A, 0x252049C1 */
 
-#ifdef __STDC__
-	int __ieee754_rem_pio2(double x, double *y)
-#else
-	int __ieee754_rem_pio2(x,y)
-	double x,y[];
-#endif
+int __ieee754_rem_pio2(double x, double *y)
 {
 	double z,w,t,r,fn;
 	double tx[3];
 	int e0,i,j,nx,n,ix,hx;
+	union { int i[2]; double d; } ux,uy0,uz;
 
-	hx = __HI(x);		/* high word of x */
+	ux.d = x;
+	hx = ux.i[HIWORD];		/* high word of x */
 	ix = hx&0x7fffffff;
 	if(ix<=0x3fe921fb)   /* |x| ~<= pi/4 , no need for reduction */
 	    {y[0] = x; y[1] = 0; return 0;}
@@ -131,14 +116,16 @@ pio2_3t =  8.47842766036889956997e-32; /* 0x397B839A, 0x252049C1 */
 	    } else {
 	        j  = ix>>20;
 	        y[0] = r-w; 
-	        i = j-(((__HI(y[0]))>>20)&0x7ff);
+	        uy0.d = y[0];
+		i = j-((uy0.i[HIWORD]>>20)&0x7ff);
 	        if(i>16) {  /* 2nd iteration needed, good to 118 */
 		    t  = r;
 		    w  = fn*pio2_2;	
 		    r  = t-w;
 		    w  = fn*pio2_2t-((t-r)-w);	
 		    y[0] = r-w;
-		    i = j-(((__HI(y[0]))>>20)&0x7ff);
+		    uy0.d = y[0];
+		    i = j-((uy0.i[HIWORD]>>20)&0x7ff);
 		    if(i>49)  {	/* 3rd iteration need, 151 bits acc */
 		    	t  = r;	/* will cover all possible cases */
 		    	w  = fn*pio2_3;	
@@ -159,9 +146,11 @@ pio2_3t =  8.47842766036889956997e-32; /* 0x397B839A, 0x252049C1 */
 	    y[0]=y[1]=x-x; return 0;
 	}
     /* set z = scalbn(|x|,ilogb(x)-23) */
-	__LO(z) = __LO(x);
+	ux.d = x;
+	uz.i[LOWORD] = ux.i[LOWORD];
 	e0 	= (ix>>20)-1046;	/* e0 = ilogb(z)-23; */
-	__HI(z) = ix - (e0<<20);
+	uz.i[HIWORD] = ix - (e0<<20);
+	z = uz.d;
 	for(i=0;i<2;i++) {
 		tx[i] = (double)((int)(z));
 		z     = (z-tx[i])*two24;
