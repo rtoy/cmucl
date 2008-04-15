@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.53 2007/07/25 16:06:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.54 2008/04/15 14:33:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,12 +57,14 @@
 	  fixnum-tag-bits fixnum-tag-mask positive-fixnum-bits
 
 	  float-sign-shift
-	  
+
+	  single-float-bytes
 	  single-float-bias single-float-exponent-byte
 	  single-float-significand-byte single-float-normal-exponent-min
 	  single-float-normal-exponent-max single-float-hidden-bit
 	  single-float-trapping-nan-bit single-float-digits
 
+	  double-float-bytes
 	  double-float-bias double-float-exponent-byte
 	  double-float-significand-byte double-float-normal-exponent-min
 	  double-float-normal-exponent-max double-float-hidden-bit
@@ -116,6 +118,7 @@
 
 (defconstant float-sign-shift 31)
 
+(defconstant single-float-bytes 4)	; Bytes to hold a single-float
 (defconstant single-float-bias 126)
 (defconstant single-float-exponent-byte (byte 8 23))
 (defconstant single-float-significand-byte (byte 23 0))
@@ -124,6 +127,7 @@
 (defconstant single-float-hidden-bit (ash 1 23))
 (defconstant single-float-trapping-nan-bit (ash 1 22))
 
+(defconstant double-float-bytes 8)	; Bytes to hold a double-float
 (defconstant double-float-bias 1022)
 (defconstant double-float-exponent-byte (byte 11 20))
 (defconstant double-float-significand-byte (byte 20 0))
