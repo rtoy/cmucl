@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.39 2008/02/13 15:03:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.40 2008/04/15 15:34:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -828,7 +828,9 @@
 		 :operands (list x exp)))
 	(let ((shift (1- new-exp)))
 	  (if (< shift (- (1- digits)))
-	      (float-sign x 0.0)
+	      (etypecase x
+		(single-float (float-sign x 0f0))
+		(double-float (float-sign x 0d0)))
 	      (etypecase x
 		(single-float (single-from-bits sign 0 (ash sig shift)))
 		(double-float (double-from-bits sign 0 (ash sig shift)))))))
