@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.11 2006/06/30 18:41:32 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.12 2008/04/15 19:55:25 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,7 +202,6 @@
   (any-reg registers
 	   :locations #.dword-regs
 	   :element-size 2
-;	   :reserve-locations (#.eax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
 	   :alternate-scs (control-stack))
@@ -211,7 +210,6 @@
   (descriptor-reg registers
 		  :locations #.dword-regs
 		  :element-size 2
-;		  :reserve-locations (#.eax-offset)
 		  :constant-scs (constant immediate)
 		  :save-p t
 		  :alternate-scs (control-stack))
@@ -228,7 +226,6 @@
   (sap-reg registers
 	   :locations #.dword-regs
 	   :element-size 2
-;	   :reserve-locations (#.eax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
 	   :alternate-scs (sap-stack))
@@ -237,14 +234,12 @@
   (signed-reg registers
 	      :locations #.dword-regs
 	      :element-size 2
-;	      :reserve-locations (#.eax-offset)
 	      :constant-scs (immediate)
 	      :save-p t
 	      :alternate-scs (signed-stack))
   (unsigned-reg registers
 		:locations #.dword-regs
 		:element-size 2
-;		:reserve-locations (#.eax-offset)
 		:constant-scs (immediate)
 		:save-p t
 		:alternate-scs (unsigned-stack))
@@ -253,11 +248,9 @@
   (word-reg registers
 	    :locations #.word-regs
 	    :element-size 2
-;	    :reserve-locations (#.ax-offset)
 	    )
   (byte-reg registers
 	    :locations #.byte-regs
-;	    :reserve-locations (#.al-offset #.ah-offset)
 	    )
 
   ;; **** Things that can go in the floating point registers.
