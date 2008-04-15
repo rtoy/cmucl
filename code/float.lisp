@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.40 2008/04/15 15:34:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.41 2008/04/15 16:31:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -827,10 +827,13 @@
 	  (error 'floating-point-underflow :operation 'scale-float
 		 :operands (list x exp)))
 	(let ((shift (1- new-exp)))
+	  ;; Is it necessary to have this IF here?  Is there any case
+	  ;; where (ash sig shift) won't return 0 when
+	  ;; shift < -(digits-1)?
 	  (if (< shift (- (1- digits)))
 	      (etypecase x
-		(single-float (float-sign x 0f0))
-		(double-float (float-sign x 0d0)))
+		(single-float (single-from-bits sign 0 0))
+		(double-float (double-from-bits sign 0 0)))
 	      (etypecase x
 		(single-float (single-from-bits sign 0 (ash sig shift)))
 		(double-float (double-from-bits sign 0 (ash sig shift)))))))
