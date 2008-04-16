@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.21 2003/08/25 20:50:58 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.22 2008/04/16 09:06:41 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -452,6 +452,38 @@
 			    :disp (- (* (+ ,offset index) word-bytes) ,lowtag))
 	       value)
 	 (move result value)))))
+
+(defmacro define-partial-reffer (name type size signed offset lowtag scs
+				      el-type &optional translate)
+  (let ((scale (ecase size (:byte 1) (:word 2))))
+    `(progn
+       (define-vop (,name)
+	 ,@(when translate
+	     `((:translate ,translate)))
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg))
+		(index :scs (unsigned-reg)))
+	 (:arg-types ,type positive-fixnum)
+	 (:results (value :scs ,scs))
+	 (:result-types ,el-type)
+	 (:generator 5
+	   (inst ,(if signed 'movsx 'movzx) value
+		 (make-ea ,size :base object :index index :scale ,scale
+			  :disp (- (* ,offset word-bytes) ,lowtag)))))
+       (define-vop (,(symbolicate name "-C"))
+	 ,@(when translate
+	     `((:translate ,translate)))
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg)))
+	 (:info index)
+	 (:arg-types ,type (:constant (signed-byte 30)))
+	 (:results (value :scs ,scs))
+	 (:result-types ,el-type)
+	 (:generator 5
+	   (inst ,(if signed 'movsx 'movzx) value
+		 (make-ea ,size :base object
+			  :disp (- (+ (* ,offset word-bytes) (* ,scale index))
+				   ,lowtag))))))))
 
 (defmacro define-full-conditional-setter (name type offset lowtag scs el-type
 					  &optional translate)

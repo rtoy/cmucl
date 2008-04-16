@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.20 2008/04/15 03:24:21 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.21 2008/04/16 09:06:37 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,11 +128,32 @@
        vector-data-offset other-pointer-type ,scs ,element-type
        data-vector-set)))
 
+(defmacro def-partial-data-vector-frobs
+	  (type element-type size signed &rest scs)
+  `(progn
+     (define-partial-reffer ,(symbolicate "DATA-VECTOR-REF/" type) ,type
+       ,size ,signed vector-data-offset other-pointer-type ,scs
+       ,element-type data-vector-ref)))
+
 ); eval-when (compile eval)
 
 (def-full-data-vector-frobs simple-vector * descriptor-reg any-reg)
+
+(def-partial-data-vector-frobs simple-array-unsigned-byte-8 positive-fixnum
+  :byte nil unsigned-reg signed-reg)
+
+(def-partial-data-vector-frobs simple-array-unsigned-byte-16 positive-fixnum
+  :word nil unsigned-reg signed-reg)
+
 (def-full-data-vector-frobs simple-array-unsigned-byte-32 unsigned-num
   unsigned-reg)
+
+(def-partial-data-vector-frobs simple-array-signed-byte-8 tagged-num
+  :byte t signed-reg)
+
+(def-partial-data-vector-frobs simple-array-signed-byte-16 tagged-num
+  :word t signed-reg)
+
 (def-full-data-vector-frobs simple-array-signed-byte-30 tagged-num any-reg)
 (def-full-data-vector-frobs simple-array-signed-byte-32 signed-num signed-reg)
 
@@ -1062,36 +1083,6 @@
 
 ;;; unsigned-byte-8
 
-(define-vop (data-vector-ref/simple-array-unsigned-byte-8)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (unsigned-reg)))
-  (:arg-types simple-array-unsigned-byte-8 positive-fixnum)
-  (:results (value :scs (unsigned-reg signed-reg)))
-  (:result-types positive-fixnum)
-  (:generator 5
-    (inst movzx value
-	  (make-ea :byte :base object :index index :scale 1
-		   :disp (- (* vector-data-offset word-bytes)
-			    other-pointer-type)))))
-
-
-(define-vop (data-vector-ref-c/simple-array-unsigned-byte-8)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-array-unsigned-byte-8 (:constant (signed-byte 30)))
-  (:results (value :scs (unsigned-reg signed-reg)))
-  (:result-types positive-fixnum)
-  (:generator 4
-    (inst movzx value
-	  (make-ea :byte :base object
-		   :disp (- (+ (* vector-data-offset word-bytes) index)
-			    other-pointer-type)))))
-
-
 (define-vop (data-vector-set/simple-array-unsigned-byte-8)
   (:translate data-vector-set)
   (:policy :fast-safe)
@@ -1136,36 +1127,6 @@
 
 
 ;;; unsigned-byte-16
-
-(define-vop (data-vector-ref/simple-array-unsigned-byte-16)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (unsigned-reg)))
-  (:arg-types simple-array-unsigned-byte-16 positive-fixnum)
-  (:results (value :scs (unsigned-reg signed-reg)))
-  (:result-types positive-fixnum)
-  (:generator 5
-    (inst movzx value
-	  (make-ea :word :base object :index index :scale 2
-		   :disp (- (* vector-data-offset word-bytes)
-			    other-pointer-type)))))
-
-
-(define-vop (data-vector-ref-c/simple-array-unsigned-byte-16)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-array-unsigned-byte-16 (:constant (signed-byte 30)))
-  (:results (value :scs (unsigned-reg signed-reg)))
-  (:result-types positive-fixnum)
-  (:generator 4
-    (inst movzx value
-	  (make-ea :word :base object
-		   :disp (- (+ (* vector-data-offset word-bytes) (* 2 index))
-			    other-pointer-type)))))
-
 
 (define-vop (data-vector-set/simple-array-unsigned-byte-16)
   (:translate data-vector-set)
@@ -1290,34 +1251,6 @@
 
 ;;; signed-byte-8
 
-(define-vop (data-vector-ref/simple-array-signed-byte-8)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (unsigned-reg)))
-  (:arg-types simple-array-signed-byte-8 positive-fixnum)
-  (:results (value :scs (signed-reg)))
-  (:result-types tagged-num)
-  (:generator 5
-    (inst movsx value
-	  (make-ea :byte :base object :index index :scale 1
-		   :disp (- (* vector-data-offset word-bytes)
-			    other-pointer-type)))))
-
-(define-vop (data-vector-ref-c/simple-array-signed-byte-8)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-array-signed-byte-8 (:constant (signed-byte 30)))
-  (:results (value :scs (signed-reg)))
-  (:result-types tagged-num)
-  (:generator 4
-    (inst movsx value
-	  (make-ea :byte :base object
-		   :disp (- (+ (* vector-data-offset word-bytes) index)
-			    other-pointer-type)))))
-
 (define-vop (data-vector-set/simple-array-signed-byte-8)
   (:translate data-vector-set)
   (:policy :fast-safe)
@@ -1360,35 +1293,6 @@
     (move result eax)))
 
 ;;; signed-byte-16
-
-(define-vop (data-vector-ref/simple-array-signed-byte-16)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (unsigned-reg)))
-  (:arg-types simple-array-signed-byte-16 positive-fixnum)
-  (:results (value :scs (signed-reg)))
-  (:result-types tagged-num)
-  (:generator 5
-    (inst movsx value
-	  (make-ea :word :base object :index index :scale 2
-		   :disp (- (* vector-data-offset word-bytes)
-			    other-pointer-type)))))
-
-(define-vop (data-vector-ref-c/simple-array-signed-byte-16)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-array-signed-byte-16 (:constant (signed-byte 30)))
-  (:results (value :scs (signed-reg)))
-  (:result-types tagged-num)
-  (:generator 4
-    (inst movsx value
-	  (make-ea :word :base object
-		   :disp (- (+ (* vector-data-offset word-bytes)
-			       (* 2 index))
-			    other-pointer-type)))))
 
 (define-vop (data-vector-set/simple-array-signed-byte-16)
   (:translate data-vector-set)
