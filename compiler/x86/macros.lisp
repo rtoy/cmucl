@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.23 2008/04/17 08:59:49 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.24 2008/04/17 09:05:02 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -484,6 +484,50 @@
 		 (make-ea ,size :base object
 			  :disp (- (+ (* ,offset word-bytes) (* ,scale index))
 				   ,lowtag))))))))
+
+(defmacro define-partial-setter (name type size offset lowtag scs el-type
+				      &optional translate)
+  (let ((scale (ecase size (:byte 1) (:word 2))))
+    `(progn
+       (define-vop (,name)
+	 ,@(when translate
+	     `((:translate ,translate)))
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg) :to (:eval 0))
+		(index :scs (unsigned-reg) :to (:eval 0))
+		(value :scs ,scs :target eax))
+	 (:arg-types ,type positive-fixnum ,el-type)
+	 (:temporary (:sc unsigned-reg :offset eax-offset :target result
+			  :from (:argument 2) :to (:result 0))
+		     eax)
+	 (:results (result :scs ,scs))
+	 (:result-types ,el-type)
+	 (:generator 5
+	   (move eax value)
+	   (inst mov (make-ea ,size :base object :index index :scale ,scale
+			      :disp (- (* ,offset word-bytes) ,lowtag))
+		 ,(ecase size (:byte 'al-tn) (:word 'ax-tn)))
+	   (move result eax)))
+       (define-vop (,(symbolicate name "-C"))
+	 ,@(when translate
+	     `((:translate ,translate)))
+	 (:policy :fast-safe)
+	 (:args (object :scs (descriptor-reg) :to (:eval 0))
+		(value :scs ,scs :target eax))
+	 (:info index)
+	 (:arg-types ,type (:constant (signed-byte 30)) ,el-type)
+	 (:temporary (:sc unsigned-reg :offset eax-offset :target result
+			  :from (:argument 1) :to (:result 0))
+		     eax)
+	 (:results (result :scs ,scs))
+	 (:result-types ,el-type)
+	 (:generator 4
+	   (move eax value)
+	   (inst mov (make-ea ,size :base object
+			      :disp (- (+ (* ,offset word-bytes) (* ,scale index))
+				       ,lowtag))
+		 ,(ecase size (:byte 'al-tn) (:word 'ax-tn)))
+	   (move result eax))))))
 
 (defmacro define-full-conditional-setter (name type offset lowtag scs el-type
 					  &optional translate)
