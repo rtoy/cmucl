@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.22 2008/04/16 09:06:41 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.23 2008/04/17 08:59:49 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -479,7 +479,7 @@
 	 (:arg-types ,type (:constant (signed-byte 30)))
 	 (:results (value :scs ,scs))
 	 (:result-types ,el-type)
-	 (:generator 5
+	 (:generator 4
 	   (inst ,(if signed 'movsx 'movzx) value
 		 (make-ea ,size :base object
 			  :disp (- (+ (* ,offset word-bytes) (* ,scale index))
