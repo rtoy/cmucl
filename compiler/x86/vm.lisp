@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.12 2008/04/15 19:55:25 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.13 2008/04/21 23:59:12 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -216,8 +216,8 @@
 
   ;; Non-Descriptor characters
   (base-char-reg registers
-		 :locations #.byte-regs
-		 :reserve-locations (#.ah-offset #.al-offset)
+		 :locations #.dword-regs
+		 :element-size 2
 		 :constant-scs (immediate)
 		 :save-p t
 		 :alternate-scs (base-char-stack))
@@ -320,11 +320,12 @@
 
 (eval-when (compile load eval)
 
-(defconstant byte-sc-names '(base-char-reg byte-reg base-char-stack))
+(defconstant byte-sc-names '(byte-reg))
 (defconstant word-sc-names '(word-reg))
 (defconstant dword-sc-names
   '(any-reg descriptor-reg sap-reg signed-reg unsigned-reg control-stack
-    signed-stack unsigned-stack sap-stack single-stack constant))
+    signed-stack unsigned-stack sap-stack single-stack constant
+    base-char-reg base-char-stack))
 
 ;;;
 ;;; added by jrd.  I guess the right thing to do is to treat floats

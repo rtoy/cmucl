@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.7 2003/07/08 13:50:36 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.8 2008/04/21 23:59:12 cshapiro Rel $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -30,41 +30,31 @@
 ;;; Move a tagged char to an untagged representation.
 ;;;
 (define-vop (move-to-base-char)
-  (:args (x :scs (any-reg control-stack) :target al))
-  (:temporary (:sc byte-reg :offset al-offset
-		   :from (:argument 0) :to (:eval 0)) al)
-  (:ignore al)
-  (:temporary (:sc byte-reg :offset ah-offset :target y
-		   :from (:argument 0) :to (:result 0)) ah)
-  (:results (y :scs (base-char-reg base-char-stack)))
+  (:args (x :scs (any-reg control-stack) :target y))
+  (:results (y :scs (base-char-reg)))
   (:note "character untagging")
   (:generator 1
-    (move eax-tn x)
-    (move y ah)))
+    (move y x)
+    (inst shr y type-bits)))
 ;;;
 (define-move-vop move-to-base-char :move
-  (any-reg control-stack) (base-char-reg base-char-stack))
+  (any-reg control-stack) (base-char-reg))
 
 
 ;;; Move an untagged char to a tagged representation.
 ;;;
 (define-vop (move-from-base-char)
-  (:args (x :scs (base-char-reg base-char-stack) :target ah))
-  (:temporary (:sc byte-reg :offset al-offset :target y
-		   :from (:argument 0) :to (:result 0)) al)
-  (:temporary (:sc byte-reg :offset ah-offset
-		   :from (:argument 0) :to (:result 0)) ah)
-  (:results (y :scs (any-reg descriptor-reg control-stack)))
+  (:args (x :scs (base-char-reg base-char-stack) :target y))
+  (:results (y :scs (any-reg descriptor-reg)))
   (:note "character tagging")
   (:generator 1
-    (move ah x)				; maybe move char byte
-    (inst mov al base-char-type)	; #x86 to type bits
-    (inst and eax-tn #xffff)		; remove any junk bits
-    (move y eax-tn)))
+    (move y x)
+    (inst shl y type-bits)
+    (inst or y base-char-type)))
 
 ;;;
 (define-move-vop move-from-base-char :move
-  (base-char-reg base-char-stack) (any-reg descriptor-reg control-stack))
+  (base-char-reg base-char-stack) (any-reg descriptor-reg))
 
 ;;; Move untagged base-char values.
 ;;;
@@ -98,9 +88,7 @@
       (base-char-reg
        (move y x))
       (base-char-stack
-       (inst mov
-	     (make-ea :byte :base fp :disp (- (* (1+ (tn-offset y)) 4)))
-	     x)))))
+       (storew x fp (- (1+ (tn-offset y))))))))
 ;;;
 (define-move-vop move-base-char-argument :move-argument
   (any-reg base-char-reg) (base-char-reg))
@@ -119,26 +107,22 @@
 (define-vop (char-code)
   (:translate char-code)
   (:policy :fast-safe)
-  (:args (ch :scs (base-char-reg base-char-stack)))
+  (:args (ch :scs (base-char-reg base-char-stack) :target res))
   (:arg-types base-char)
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-    (inst movzx res ch)))
+    (move res ch)))
 
 (define-vop (code-char)
   (:translate code-char)
   (:policy :fast-safe)
-  (:args (code :scs (unsigned-reg unsigned-stack) :target eax))
+  (:args (code :scs (unsigned-reg control-stack) :target res))
   (:arg-types positive-fixnum)
-  (:temporary (:sc unsigned-reg :offset eax-offset :target res
-		   :from (:argument 0) :to (:result 0))
-	      eax)
   (:results (res :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 1
-    (move eax code)
-    (move res al-tn)))
+    (move res code)))
 
 
 ;;; Comparison of base-chars.

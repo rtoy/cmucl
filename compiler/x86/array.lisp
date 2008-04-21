@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.22 2008/04/17 09:05:02 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.23 2008/04/21 23:59:12 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,6 +141,9 @@
 ); eval-when (compile eval)
 
 (def-full-data-vector-frobs simple-vector * descriptor-reg any-reg)
+
+(def-partial-data-vector-frobs simple-string base-char :byte nil
+  base-char-reg)
 
 (def-partial-data-vector-frobs simple-array-unsigned-byte-8 positive-fixnum
   :byte nil unsigned-reg signed-reg)
@@ -1077,89 +1080,6 @@
       (unless (location= value-imag result-imag)
 	(inst fstd result-imag))
       (inst fxch value-imag))))
-
-
-;;;;
-;;;; dtc expanded and fixed the following:
-
-
-
-;;; simple-string
-
-(define-vop (data-vector-ref/simple-string)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (unsigned-reg)))
-  (:arg-types simple-string positive-fixnum)
-  (:temporary (:sc unsigned-reg ; byte-reg
-		   :offset eax-offset ; al-offset
-		   :target value
-		   :from (:eval 0) :to (:result 0))
-	      eax)
-  (:ignore eax)
-  (:results (value :scs (base-char-reg)))
-  (:result-types base-char)
-  (:generator 5
-    (inst mov al-tn
-	  (make-ea :byte :base object :index index :scale 1
-		   :disp (- (* vector-data-offset word-bytes)
-			    other-pointer-type)))
-    (move value al-tn)))
-
-(define-vop (data-vector-ref-c/simple-string)
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-string (:constant (signed-byte 30)))
-  (:temporary (:sc unsigned-reg :offset eax-offset :target value
-		   :from (:eval 0) :to (:result 0))
-	      eax)
-  (:ignore eax)
-  (:results (value :scs (base-char-reg)))
-  (:result-types base-char)
-  (:generator 4
-    (inst mov al-tn
-	  (make-ea :byte :base object
-		   :disp (- (+ (* vector-data-offset word-bytes) index)
-			    other-pointer-type)))
-    (move value al-tn)))
-
-
-(define-vop (data-vector-set/simple-string)
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg) :to (:eval 0))
-	 (index :scs (unsigned-reg) :to (:eval 0))
-	 (value :scs (base-char-reg)))
-  (:arg-types simple-string positive-fixnum base-char)
-  (:results (result :scs (base-char-reg)))
-  (:result-types base-char)
-  (:generator 5 
-    (inst mov (make-ea :byte :base object :index index :scale 1
-		       :disp (- (* vector-data-offset word-bytes)
-				other-pointer-type))
-	  value)
-    (move result value)))
-
-
-(define-vop (data-vector-set/simple-string-c)
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg) :to (:eval 0))
-	 (value :scs (base-char-reg)))
-  (:info index)
-  (:arg-types simple-string (:constant (signed-byte 30)) base-char)
-  (:results (result :scs (base-char-reg)))
-  (:result-types base-char)
-  (:generator 4
-   (inst mov (make-ea :byte :base object
-		      :disp (- (+ (* vector-data-offset word-bytes) index)
-			       other-pointer-type))
-	 value)
-   (move result value)))
-
 
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
