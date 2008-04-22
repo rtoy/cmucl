@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.55 2007/05/29 15:01:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.56 2008/04/22 20:18:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2877,77 +2877,8 @@
 
 
 
-
 (in-package "SPARC")
-(export 'get-fp-operands)
 
-
-(defun get-fp-fault-info (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  ;; The FPQ structure in the context has the faulting FP address and
-  ;; the faulting FP instruction.  Return both.
-  (let ((fpq (alien:sap-alien
-	      (with-alien ((scp (* sigcontext) scp))
-		(slot scp 'fpq))
-	      (* fpq))))
-    (with-alien ((fpq (* fpq) fpq))
-      (values (slot fpq 'fpq-addr)
-	      (slot fpq 'fpq-inst)))))
-    
-(defun get-fp-operation (scp)
-  (declare (type (alien (* sigcontext)) scp))
-  ;; Get the offending FP instruction from the context.  We return the
-  ;; operation associated with the FP instruction, the precision of
-  ;; the operation, and the operands of the instruction.
-  (multiple-value-bind (addr opcode)
-      (get-fp-fault-info scp)
-    (declare (ignore addr))
-    (let* ((format (ldb (byte 2 30) opcode))
-	   (op3 (ldb (byte 6 19) opcode))
-	   (rs1 (ldb (byte 5 14) opcode))
-	   (opf (ldb (byte 8  5) opcode))
-	   (rs2 (ldb (byte 5  0) opcode))
-	   )
-      ;; Handle only the ones we know about.
-      (unless (and (= format #b10) (= op3 #b110100))
-	(return-from get-fp-operation (values nil nil nil nil)))
-      (let ((fop (case (ldb (byte 6 2) opf)
-		   (#b0010000 '+)
-		   (#b0010001 '-)
-		   (#b0010010 '*)
-		   (#b0010011 '/)
-		   (#b0001010
-		    ;; The fsqrt instruction only uses the rs2 field.
-		    (setf rs1 nil)
-		    'sqrt)))
-	    (format (case (ldb (byte 2 0) opf)
-		      (#b01 'single-float)
-		      (#b10 'double-float)
-		      (#b11 'long-float))))
-	(flet ((fix-up-reg-index (index)
-		 (if (eq format 'single-float)
-		     index
-		     (when index
-		       ;; For double-float (and long-float), the
-		       ;; register is coded in a special way since the
-		       ;; register address must be even, but we only
-		       ;; have 5 bits to encode the register.  Hence the
-		       ;; LSB is used to indicate the upper 32
-		       ;; registers.
-		       (+ (ash (logand index 1) 5)
-			  (ash (ldb (byte 4 1) index) 1))))))
-	  (values fop format (fix-up-reg-index rs1) (fix-up-reg-index rs2)))))))
-
-(defun get-fp-operands (scp modes)
-  (declare (type (alien (* sigcontext)) scp)
-	   (ignore modes))
-  ;; From the offending FP instruction, get the operation and
-  ;; operands, if we can.
-  (multiple-value-bind (fop format rs1 rs2)
-      (get-fp-operation scp)
-    (let ((fs1 (and fop rs1 (sigcontext-float-register scp rs1 format)))
-	  (fs2 (and fop rs2 (sigcontext-float-register scp rs2 format))))
-      (values fop (remove nil (list fs1 fs2))))))
 
 ;;; Support for double-double floats
 
