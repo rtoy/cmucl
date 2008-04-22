@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.53 2006/05/18 17:04:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.54 2008/04/22 20:14:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,6 +121,9 @@
   `(integer 0 ,max-filtered-value-index))
 (deftype filtered-value-vector ()
   `(simple-array t (,max-filtered-value-index)))
+
+#+sparc
+(declaim (special vm::*note-sethi-inst* vm::*pseudo-atomic-set*))
 
 ;;; ----------------------------------------------------------------
 
