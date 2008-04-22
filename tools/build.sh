@@ -36,7 +36,7 @@ ENABLE2="yes"
 ENABLE3="yes"
 ENABLE4="yes"
 
-version=19d
+version=19e
 SRCDIR=src
 TOOLDIR=$SRCDIR/tools
 TIMER="time"
