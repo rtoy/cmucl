@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.31 2003/09/11 11:39:07 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32 2008/04/25 07:05:00 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -317,6 +317,16 @@
 		(error "Size mismatch: ~S is a ~S and ~S is a ~S"
 		       dst dst-size src src-size))
 	    dst-size)
+	(if src-size
+	    src-size
+	    (error "Can't tell the size of either ~S or ~S."
+		   dst src)))))
+
+(defun compatible-operand-size (dst src)
+  (let ((dst-size (operand-size dst))
+	(src-size (operand-size src)))
+    (if dst-size
+	dst-size
 	(if src-size
 	    src-size
 	    (error "Can't tell the size of either ~S or ~S."
@@ -918,7 +928,7 @@
   (:printer reg/mem-imm ((op '(#b1100011 #b000))))
 
   (:emitter
-   (let ((size (matching-operand-size dst src)))
+   (let ((size (compatible-operand-size dst src)))
      (maybe-emit-operand-size-prefix segment size)
      (cond ((register-p dst)
 	    (cond ((integerp src)

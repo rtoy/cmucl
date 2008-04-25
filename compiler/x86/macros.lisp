@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.24 2008/04/17 09:05:02 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.25 2008/04/25 07:05:17 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -495,39 +495,51 @@
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg) :to (:eval 0))
 		(index :scs (unsigned-reg) :to (:eval 0))
-		(value :scs ,scs :target eax))
+		(value :scs ,scs :target ,(ecase size
+					    (:byte 'temp)
+					    (:word 'result))))
 	 (:arg-types ,type positive-fixnum ,el-type)
-	 (:temporary (:sc unsigned-reg :offset eax-offset :target result
-			  :from (:argument 2) :to (:result 0))
-		     eax)
+	 ,@(when (eq size :byte)
+	     '((:temporary (:sc unsigned-reg :offset eax-offset :target result
+			    :from (:argument 2) :to (:result 0))
+			   temp)))
 	 (:results (result :scs ,scs))
 	 (:result-types ,el-type)
 	 (:generator 5
-	   (move eax value)
+	   ,@(when (eq size :byte)
+	       '((move temp value)))
 	   (inst mov (make-ea ,size :base object :index index :scale ,scale
 			      :disp (- (* ,offset word-bytes) ,lowtag))
-		 ,(ecase size (:byte 'al-tn) (:word 'ax-tn)))
-	   (move result eax)))
+		 ,(ecase size (:byte 'temp) (:word 'result)))
+	   ,(ecase size
+	      (:byte '(move result temp))
+	      (:word '(move result value)))))
        (define-vop (,(symbolicate name "-C"))
 	 ,@(when translate
 	     `((:translate ,translate)))
 	 (:policy :fast-safe)
 	 (:args (object :scs (descriptor-reg) :to (:eval 0))
-		(value :scs ,scs :target eax))
+		(value :scs ,scs :target ,(ecase size
+                                            (:byte 'temp)
+                                            (:word 'result))))
 	 (:info index)
 	 (:arg-types ,type (:constant (signed-byte 30)) ,el-type)
-	 (:temporary (:sc unsigned-reg :offset eax-offset :target result
-			  :from (:argument 1) :to (:result 0))
-		     eax)
+	 ,@(when (eq size :byte)
+	     '((:temporary (:sc unsigned-reg :offset eax-offset :target result
+			    :from (:argument 1) :to (:result 0))
+			   temp)))
 	 (:results (result :scs ,scs))
 	 (:result-types ,el-type)
 	 (:generator 4
-	   (move eax value)
+	   ,@(when (eq size :byte)
+	       '((move temp value)))
 	   (inst mov (make-ea ,size :base object
 			      :disp (- (+ (* ,offset word-bytes) (* ,scale index))
 				       ,lowtag))
-		 ,(ecase size (:byte 'al-tn) (:word 'ax-tn)))
-	   (move result eax))))))
+		 ,(ecase size (:byte 'temp) (:word 'value)))
+	   ,(ecase size
+	      (:byte '(move result temp))
+	      (:word '(move result value))))))))
 
 (defmacro define-full-conditional-setter (name type offset lowtag scs el-type
 					  &optional translate)
