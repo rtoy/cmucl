@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.46 2008/01/22 17:55:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.47 2008/04/29 13:07:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1176,7 +1176,7 @@
      :test ',(hash-table-test table) :size ',(hash-table-size table)
      :rehash-size ',(hash-table-rehash-size table)
      :rehash-threshold ',(hash-table-rehash-threshold table)
-     :weak-p (hash-table-weak-p table))
+     :weak-p ,(hash-table-weak-p table))
    (let ((values nil))
      (declare (inline maphash))
      (maphash #'(lambda (key value)
