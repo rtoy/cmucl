@@ -49,8 +49,12 @@ New in this release:
       working.  Previously, all arithmetic operations would just
       return DOUBLE-DOUBLE-FLOAT even though the compiler should have
       been able to figure out a tighter result.
+    - When SCALE-FLOAT would underflow, it would always return 0f0,
+      instead of a floating-point zero of the correct type.
 
   * Trac Tickets:
+    - #16: Read-time hash-table issue
+      Fixed.
 
   * Other changes:
 
