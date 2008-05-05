@@ -328,7 +328,8 @@ Each integer is {\it size} bits big, and is initialized to the value
 of the operand {\it value}.
 The constructed vector is pushed onto the stack.
 
-\item[45:] Unused
+\item[45:] \hspace{2em} {\tt FOP-LAYOUT} \hspace{2em} \\
+Pops the stack four times to get the name, length, inheritance and depth for a layout object. 
 
 \item[46:] \hspace{2em} {\tt FOP-SINGLE-FLOAT} \hspace{2em} {\it data}(4) \hspace{2em}
 $\Rightarrow$ \hspace{2em} stack \\
@@ -402,7 +403,12 @@ The operand {\it nitems} specifies a number of items to pop off
 the stack to use in the ``boxed storage'' section.  The operand {\it code}
 is a string of bytes constituting the compiled executable code.
 
-\item[60-61:] Unused
+\item[60] \hspace{2em} {\tt FOP-FDEFINITION} \hspace{2em} \\
+Pops the stack to get an fdefinition.
+
+\item[61] \hspace{2em} {\tt FOP-SANCTIFY-FOR-EXECUTION} \hspace{2em} \\
+A code component is popped from the stack, and the necessary magic is applied 
+to the code so that it can be executed.
 
 \item[62:] \hspace{2em} {\tt FOP-VERIFY-TABLE-SIZE} \hspace{2em} {\it size}(4) \\
 If the current size of the table is not equal to {\it size},
@@ -429,7 +435,8 @@ One item is popped from the stack.
 \item[66:] \hspace{2em} {\tt FOP-MISC-TRAP} \hspace{2em} $\Rightarrow$ \hspace{2em} stack \\
 A trap object is pushed onto the stack.
 
-\item[67:] Unused
+\item[67:] \hspace{2em} {\tt FOP-DOUBLE-DOUBLE-FLOAT} \hspace{2em} {\it double-double-float}(8) \hspace{2em} $\Rightarrow$ \hspace{2em} stack \\
+The next 8 bytes are read, and a double-double-float number is constructed.
 
 \item[68:] \hspace{2em} {\tt FOP-CHARACTER} \hspace{2em} {\it character}(3) \hspace{2em} $\Rightarrow$ \hspace{2em} stack \\
 The three bytes are read as an integer then converted to a character.  This FOP
@@ -448,7 +455,12 @@ The denominator is popped first, the numerator second.
 Creates a complex number from two numbers popped from the stack.
 The imaginary part is popped first, the real part second.
 
-\item[72-73:] Unused
+\item[72] \hspace{2em} {\tt FOP-COMPLEX-SINGLE-FLOAT} {\it real(4)} {\it imag(4)}\hspace{2em} $\Rightarrow$ \hspace{2em} stack \\
+Creates a complex single-float number from the following 8 bytes.
+
+\item[73] \hspace{2em} {\tt FOP-COMPLEX-DOUBLE-FLOAT} {\it real(8)} {\it imag(8)}\hspace{2em} $\Rightarrow$ \hspace{2em} stack \\
+Creates a complex double-float number from the following 16 bytes.
+
 
 \item[74:] \hspace{2em} {\tt FOP-FSET} \hspace{2em} \\
 Except in the cold loader (Genesis), this is a no-op with two stack arguments.
@@ -496,7 +508,35 @@ This operation creates a simple array header (used for simple-arrays with rank
 /= 1).  The data vector is popped off of the stack, and then {\it rank}
 dimensions are popped off of the stack (the highest dimensions is on top.)
 
-\item[84-139:] Unused
+\item[84:] \hspace{2em} {\tt FOP-SINGLE-FLOAT-VECTOR} \hspace{2em} {\it length}(4) {\it data}(n)
+ \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+Creates a {\it (simple-array single-float (*))} object.  The number of single-floats is {\it length}.
+
+\item[85:] \hspace{2em} {\tt FOP-DOUBLE-FLOAT-VECTOR} \hspace{2em} {\it length}(4) {\it data}(n)
+ \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+Creates a {\it (simple-array double-float (*))} object.  The number of double-floats is {\it length}.
+
+\item[86:] \hspace{2em} {\tt FOP-COMPLEX-SINGLE-FLOAT-VECTOR} \hspace{2em} {\it length}(4) {\it data}(n)
+ \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+Creates a {\it (simple-array (complex single-float) (*))} object.  The number of complex single-floats is {\it length}.
+
+\item[87:] \hspace{2em} {\tt FOP-COMPLEX-DOUBLE-FLOAT-VECTOR} \hspace{2em} {\it length}(4) {\it data}(n)
+ \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+Creates a {\it (simple-array (complex double-float) (*))} object.  The number of complex double-floats is {\it length}.
+
+\item[88:] \hspace{2em} {\tt FOP-DOUBLE-DOUBLE-FLOAT-VECTOR} \hspace{2em} {\it length}(4) {\it data}(n)
+ \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+Creates a {\it (simple-array double-double-float (*))} object.  The number of double-double-floats is {\it length}.
+
+\item[89:] \hspace{2em} {\tt FOP-COMPLEX-DOUBLE-DOUBLE-FLOAT} \hspace{2em} {\it data}(32)
+ \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+Creates a {\it (complex double-double-float)} object from the following 32 bytes of data.
+
+\item[90:] \hspace{2em} {\tt FOP-COMPLEX-DOUBLE-DOUBLE-FLOAT-VECTOR} \hspace{2em} {\it length}(4) {\it data}(n)
+ \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+Creates a {\it (simple-arra (complex double-double-float) (*))} object.  The number of complex double-double-floats is {\it length}.
+
+\item[91-139:] Unused
 
 \item[140:] \hspace{2em} {\tt FOP-ALTER-CODE} \hspace{2em} {\it index}(4)\\
 This operation modifies the constants part of a code object (necessary for
@@ -514,7 +554,8 @@ inside of the code object where the header should be plunked down.  The stack
 arguments to this operation are the code object, function name, function debug
 arglist and function type.
 
-\item[143:] Unused
+\item[143:] \hspace{2em} {\tt FOP-MAKE-BYTE-COMPILED-FUNCTION} \hspace{2em} {\it size}(1) \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+Create a byte-compiled function.  {\it FIXME:} describe what's on the stack.
 
 \item[144:] \hspace{2em} {\tt FOP-ASSEMBLER-CODE} \hspace{2em} {\it length}(4)
 \hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
@@ -552,7 +593,21 @@ target-dependent symbol indicating the instruction format of the patch target
 (at {\it offset} bytes from the start of the code area.)  The code object is
 left on stack top (allowing multiple uses of this FOP to be chained.)
 
-\item[149-199:] Unused
+\item[149:] \hspace{2em} {\tt FOP-CODE-OBJECT-FIXUP} 
+\hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+{\it FIXME:} Describe what this does!
+
+\item[150:] \hspace{2em} {\tt FOP-FOREIGN-DATA-FIXUP} 
+\hspace{2em} $\Rightarrow$ \hspace{2em} stack\\
+{\it FIXME:} Describe what this does!
+
+\item[151-156:] Unused
+
+\item[157:] \hspace{2em} {\tt FOP-LONG-CODE-FORMAT} \hspace{2em} {\it implementation}(1)
+\hspace{2em} {\it version}(4) \\
+Like FOP-CODE-FORMAT, except that the version is 32 bits long.
+
+\item[158-199:] Unused
 
 \item[200:] \hspace{2em} {\tt FOP-RPLACA} \hspace{2em} {\it table-idx}(4)
 \hspace{2em} {\it cdr-offset}(4)\\
@@ -579,6 +634,7 @@ Does {\tt nthcdr} on the top-of stack, leaving the result there.
 \hspace{2em} {\it vector-idx}(4)\\
 Like {\tt FOP-SVSET}, except it alters structure slots.
 
+\item[205-254:] Unused
 \item[255:] \hspace{2em} {\tt FOP-END-HEADER} \\ Indicates the end of a group header,
 as described above.
 \end{description}
