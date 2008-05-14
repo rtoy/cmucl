@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82 2006/06/30 18:41:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.1 2008/05/14 16:12:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -610,6 +610,8 @@
 	 (let ((len (length name)))
 	   (assert (< len 256))
 	   (dump-byte len file)
+	   ;; XXX: we only use 8-bit chars for foreign stuff!  Must
+	   ;; match FOP-FOREIGN-FIXUP in load.lisp!
 	   (dotimes (i len)
 	     (dump-byte (char-code (schar name i)) file))))
 	(:code-object
@@ -1244,7 +1246,13 @@
 		      lisp::fop-symbol-in-package-save file)
 	   (dump-unsigned-32 pname-length file)))
 
+    #-unicode
     (dump-bytes pname (length pname) file)
+    #+unicode
+    (dotimes (k pname-length)
+      (let ((code (char-code (aref pname k))))
+	(dump-byte (ldb (byte 8 8) code) file)
+	(dump-byte (ldb (byte 8 0) code) file)))
 
     (unless *cold-load-dump*
       (setf (gethash s (fasl-file-eq-table file)) (fasl-file-table-free file)))
@@ -1444,11 +1452,26 @@
 ;;;
 ;;;    Dump a SIMPLE-BASE-STRING.
 ;;;
+#-unicode
 (defun dump-simple-string (s file)
   (declare (type simple-base-string s))
   (let ((length (length s)))
     (dump-fop* length lisp::fop-small-string lisp::fop-string file)
     (dump-bytes s length file))
+  (undefined-value))
+
+#+unicode
+(defun dump-simple-string (s file)
+  (declare (type simple-base-string s))
+  (let ((length (length s)))
+    (dump-fop* length lisp::fop-small-string lisp::fop-string file)
+    #+nil
+    (dump-bytes s (* 2 length) file)
+
+    (dotimes (k length)
+      (let ((code (char-code (aref s k))))
+	(dump-byte (ldb (byte 8 8) code) file)
+	(dump-byte (ldb (byte 8 0) code) file))))
   (undefined-value))
 
 ;;; DUMP-I-VECTOR  --  Internal
@@ -1664,9 +1687,20 @@
 
 ;;; Dump a character.
 
+#-unicode
 (defun dump-character (ch file)
   (dump-fop 'lisp::fop-short-character file)
   (dump-byte (char-code ch) file))
+
+#+unicode
+(defun dump-character (ch file)
+  (dump-fop 'lisp::fop-short-character file)
+  (dump-byte (char-code ch) file)
+  ;; Little endian
+  #+nil
+  (let ((code (char-code ch)))
+    (dump-byte (ldb (byte 8 0) code) file)
+    (dump-byte (ldb (byte 8 8) code) file)))
 
 
 ;;; Dump a structure.

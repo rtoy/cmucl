@@ -18,7 +18,12 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-RUNTIME = $(GENCGC) $(LINKAGE)
+# Enable support for Unicode
+ifdef FEATURE_UNICODE
+UNICODE = -DUNICODE
+endif
+
+RUNTIME = $(GENCGC) $(LINKAGE) $(UNICODE)
 # __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
 ifneq (,$(filter 2% 3%, $(shell $(CC) -dumpversion)))
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -I. -I$(PATH1) -I- $(RUNTIME)
@@ -26,7 +31,7 @@ else
 CPPFLAGS = -D__NO_CTYPE -D_GNU_SOURCE -iquote. -iquote $(PATH1) $(RUNTIME)
 endif
 
-CFLAGS = -rdynamic -Wstrict-prototypes -Wall -O2 -g $(RUNTIME)
+CFLAGS = -rdynamic -Wstrict-prototypes -Wall -g $(RUNTIME)
 ASFLAGS = -g $(GENCGC) $(LINKAGE_TABLE)
 NM = $(PATH1)/linux-nm
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &

@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95 2008/04/11 08:00:53 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95.2.1 2008/05/14 16:12:06 rtoy Exp $
  *
  */
 
@@ -1834,6 +1834,7 @@ static int (*sizetab[256]) (lispobj * where);
 static struct weak_pointer *weak_pointers;
 static struct scavenger_hook *scavenger_hooks = (struct scavenger_hook *) NIL;
 
+/* Like (ceiling x y), but y is constrained to be a power of two */
 #define CEILING(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
 
 
@@ -3562,10 +3563,18 @@ size_string(lispobj * where)
 
     vector = (struct vector *) where;
     length = fixnum_value(vector->length) + 1;
+#ifndef UNICODE
 #ifdef __x86_64
     nwords = CEILING(NWORDS(length, 8) + 2, 2);
 #else
     nwords = CEILING(NWORDS(length, 4) + 2, 2);
+#endif
+#else
+    /*
+     * Strings are just like arrays with 16-bit elements, and contain
+     * one more element than the slot length indicates.
+     */
+    nwords = CEILING(NWORDS(length, 2) + 2, 2);
 #endif
     return nwords;
 }

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.15 2008/03/21 10:41:43 cshapiro Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.15.2.1 2008/05/14 16:12:06 rtoy Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -214,9 +214,16 @@ backtrace(int nframes)
 		    }
 		    if (TypeOf(*object) == type_SimpleString) {
 			struct vector *string;
-
+#ifdef UNICODE
+                        char c_string[1000];
+#endif                        
 			string = (struct vector *) object;
-			printf("%s, ", (char *) string->data);
+#ifdef UNICODE
+                        convert_lisp_string(c_string, string->data, string->length >> 2);
+			printf("%s, ", c_string);
+#else
+                        printf("%s, ", (char *) string->data);
+#endif
 		    } else
 			printf("(Not simple string??\?), ");
 		} else

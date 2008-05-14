@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.27 2008/03/19 09:17:13 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.27.2.1 2008/05/14 16:12:06 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -139,6 +139,27 @@ extern void call_into_c(void);
 #define LINKAGE_DATA_ENTRY_SIZE 3
 #endif
 
+#ifdef UNICODE
+/*
+ * FIXME:
+ * Unicode hack to convert Lisp 16-bit string to 8-bit string by lopping off the high bits.
+ */
+
+char*
+convert_lisp_string(char* c_string, void* lisp_string, int len)
+{
+    int k;
+    unsigned short int* wide_string = (unsigned short int*) lisp_string;
+
+    for (k = 0; k < len; ++k) {
+        c_string[k] = (wide_string[k]) & 0xff;
+    }
+    c_string[k] = 0;
+    
+    return c_string;
+}
+#endif
+
 void
 os_foreign_linkage_init(void)
 {
@@ -154,36 +175,39 @@ os_foreign_linkage_init(void)
     data_vector = (struct vector *) PTR(linkage_data->data);
     for (i = 0; i < table_size; i += LINKAGE_DATA_ENTRY_SIZE) {
 	struct vector *symbol_name
-
 	    = (struct vector *) PTR(data_vector->data[i]);
 	long type = fixnum_value(data_vector->data[i + 1]);
 	lispobj lib_list = data_vector->data[i + 2];
-
+        /* FIXME:  1000 may not be long enough.  Add checks to make sure it's ok!!!!*/
+        char c_symbol_name[1000];
 	/*
 	 * Verify the "known" entries.  This had better match what
 	 * init-foreign-linkage in new-genesis does!
 	 */
+
+        convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
+                            
 	if (i == 0) {
 #if defined(sparc)
-	    if (type != 1 || strcmp((char *) symbol_name->data, "call_into_c")) {
+	    if (type != 1 || strcmp(c_symbol_name, "call_into_c")) {
 		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
 			(char *) symbol_name->data);
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, (void*) call_into_c, 1);
 #elif (defined(DARWIN) && defined(__ppc__))
-	    if (type != 1 || strcmp((char *) symbol_name->data, "_call_into_c")) {
+	    if (type != 1 || strcmp(c_symbol_name, "_call_into_c")) {
 		fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
-			(char *) symbol_name->data);
+			(char *) c_symbol_name);
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, &call_into_c, 1);
 #else
-	    if (type != 1 || strcmp((char *) symbol_name->data,
+	    if (type != 1 || strcmp(c_symbol_name,
 				    "resolve_linkage_tramp")) {
 		fprintf(stderr,
 			"linkage_data is %s but expected resolve_linkage_tramp\n",
-			(char *) symbol_name->data);
+			(char *) c_symbol_name);
 		lose("First element of linkage_data is bogus.\n");
 	    }
 	    arch_make_linkage_entry(i, &resolve_linkage_tramp, 1);
@@ -191,10 +215,10 @@ os_foreign_linkage_init(void)
 	    continue;
 	}
 	if (type == 2 && lib_list == NIL) {
-	    void *target_addr = os_dlsym((char *) symbol_name->data, NIL);
+	    void *target_addr = os_dlsym(c_symbol_name, NIL);
 
 	    if (!target_addr) {
-		lose("%s is not defined.\n", (char *) symbol_name->data);
+		lose("%s is not defined.\n",  c_symbol_name);
 	    }
 	    arch_make_linkage_entry(i / LINKAGE_DATA_ENTRY_SIZE, target_addr,
 				    type);
@@ -225,16 +249,18 @@ os_resolve_data_linkage(void)
     data_vector = (struct vector *) PTR(linkage_data->data);
     for (i = 0; i < table_size; i += LINKAGE_DATA_ENTRY_SIZE) {
 	struct vector *symbol_name
-
 	    = (struct vector *) PTR(data_vector->data[i]);
 	long type = fixnum_value(data_vector->data[i + 1]);
 	lispobj lib_list = data_vector->data[i + 2];
+        char c_symbol_name[1000];
+
+        convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
 
 	if (type == 2 && lib_list != NIL) {
-	    void *target_addr = os_dlsym((char *) symbol_name->data, lib_list);
+	    void *target_addr = os_dlsym(c_symbol_name, lib_list);
 
 	    if (!target_addr) {
-		lose("%s is not defined.\n", (char *) symbol_name->data);
+		lose("%s is not defined.\n", c_symbol_name);
 	    }
 	    arch_make_linkage_entry(i / LINKAGE_DATA_ENTRY_SIZE, target_addr,
 				    type);
@@ -261,6 +287,8 @@ os_link_one_symbol(long entry)
     long type;
     void *target_addr;
     long table_index = entry * LINKAGE_DATA_ENTRY_SIZE;
+    char c_symbol_name[1000];
+    
 
     linkage_data = (struct array *) PTR(linkage_data_obj);
     table_size = fixnum_value(linkage_data->fill_pointer);
@@ -270,12 +298,15 @@ os_link_one_symbol(long entry)
     data_vector = (struct vector *) PTR(linkage_data->data);
     symbol_name = (struct vector *) PTR(data_vector->data[table_index]);
     type = fixnum_value(data_vector->data[table_index + 1]);
-    target_addr = os_dlsym((char *) symbol_name->data,
+
+    convert_lisp_string(c_symbol_name, symbol_name->data, (symbol_name->length >> 2));
+    
+    target_addr = os_dlsym(c_symbol_name,
 			   data_vector->data[table_index + 2]);
 #if 0
     fprintf(stderr, "Looked up %s symbol %s at %lx\n",
 	    type == 1 ? "code" : "data",
-	    (char *) symbol_name->data, (unsigned long) target_addr);
+	    c_symbol_name, (unsigned long) target_addr);
 #endif
     if (!target_addr) {
 	undefined_foreign_symbol_trap((lispobj) data_vector->data[table_index]);

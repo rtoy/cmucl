@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.27 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.27.36.1 2008/05/14 16:12:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,11 +100,24 @@
 ;;;    Read a packed string from Vec starting at Index, leaving advancing
 ;;; Index.
 ;;;
+#-unicode
 (defmacro read-var-string (vec index)
   (once-only ((len `(read-var-integer ,vec ,index)))
     (once-only ((res `(make-string ,len)))
       `(progn
 	 (%primitive byte-blt ,vec ,index ,res 0 ,len)
+	 (incf ,index ,len)
+	 ,res))))
+
+#+unicode
+(defmacro read-var-string (vec index)
+  (once-only ((len `(read-var-integer ,vec ,index)))
+    (once-only ((res `(make-string ,len))
+		(k 0))
+      `(progn
+	 (dotimes (,k ,len)
+	   (setf (aref ,res ,k)
+		 (code-char (logand #xff (aref ,vec (+ ,index ,k))))))
 	 (incf ,index ,len)
 	 ,res))))
 

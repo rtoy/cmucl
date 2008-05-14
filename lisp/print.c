@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.23 2008/03/19 09:17:13 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.23.2.1 2008/05/14 16:12:06 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -386,11 +386,23 @@ brief_otherptr(lispobj obj)
       case type_SimpleString:
 	  vector = (struct vector *) ptr;
 	  putchar('"');
+#ifndef UNICODE
 	  for (charptr = (char *) vector->data; *charptr != '\0'; charptr++) {
 	      if (*charptr == '"')
 		  putchar('\\');
 	      putchar(*charptr);
 	  }
+#else
+          /* FIXME:  Unicode hack! */
+          {
+              int len = (((struct vector *) ptr)->length) >> 2;
+              unsigned short int *wcharptr = (unsigned short int *) vector->data;
+              
+              while (len-- > 0) {
+                  putw(*wcharptr++, stdout);
+              }
+          }
+#endif
 	  putchar('"');
 	  break;
 
@@ -592,8 +604,13 @@ print_otherptr(lispobj obj)
 	      NEWLINE;
 	      cptr = (char *) (ptr + 1);
 	      putchar('\"');
-	      while (length-- > 0)
+	      while (length-- > 0) {
 		  putchar(*cptr++);
+#ifdef UNICODE
+                  /* FIXME:  Unicode Hack! */
+		  putchar(*cptr++);
+#endif
+              }
 	      putchar('\"');
 	      break;
 

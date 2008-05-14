@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.9 2008/03/15 15:00:06 agoncharov Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.9.2.1 2008/05/14 16:12:06 rtoy Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -161,10 +161,42 @@ internal_error(os_context_t * context)
 /* Utility routines used by random pieces of code. */
 
 lispobj
-debug_print(lispobj string)
+debug_print(lispobj object)
 {
+    
+#if 1
+    printf("obj @0x%lx: ", (unsigned long) object);
+#endif
+
+#ifndef UNICODE
     printf("%s\n", (char *) (((struct vector *) PTR(string))->data));
     fflush(stdout);
+#else    
+    if (Pointerp(object)) {
+        struct vector *lisp_string = (struct vector*) PTR(object);
+        
+        if ((unsigned long) lisp_string->header == 0x32) {
+            unsigned short int* lisp_chars;
+            int len;
+            int k;
 
+            len = lisp_string->length >> 2;
+            lisp_chars = (unsigned short int*) lisp_string->data;
+    
+            for (k = 0; k < len; ++k) {
+                putw(*lisp_chars, stdout);
+                ++lisp_chars;
+            }
+            putchar('\n');
+    
+            fflush(stdout);
+        } else {
+            print(object);
+        }
+    } else {
+        print(object);
+    }
+#endif            
     return NIL;
 }
+

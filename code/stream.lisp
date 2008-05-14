@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83 2006/08/21 15:12:16 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.1 2008/05/14 16:12:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1635,7 +1635,10 @@ output to Output-stream"
 	    (let* ((new-length (if (zerop current) 1 (* current 2)))
 		   (new-workspace (make-string new-length)))
 	      (declare (simple-string new-workspace))
+	      #-unicode
 	      (%primitive byte-blt workspace start new-workspace 0 current)
+	      #+unicode
+	      (replace new-workspace workspace)
 	      (setf workspace new-workspace)
 	      (setf offset-current current)
 	      (set-array-header buffer workspace new-length
@@ -1661,15 +1664,21 @@ output to Output-stream"
 	    (let* ((new-length (+ (the fixnum (* current 2)) string-len))
 		   (new-workspace (make-string new-length)))
 	      (declare (simple-string new-workspace))
+	      #-unicode
 	      (%primitive byte-blt workspace dst-start new-workspace 0 current)
+	      #+unicode
+	      (replace new-workspace workspace)
 	      (setf workspace new-workspace)
 	      (setf offset-current current)
 	      (setf offset-dst-end dst-end)
 	      (set-array-header buffer workspace new-length
 				dst-end 0 new-length nil))
 	    (setf (fill-pointer buffer) dst-end))
+	#-unicode
 	(%primitive byte-blt string start
-		    workspace offset-current offset-dst-end)))
+		    workspace offset-current offset-dst-end)
+	#+unicode
+	(replace workspace string :start1 current :start2 start :end2 end)))
     dst-end))
 
 

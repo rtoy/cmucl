@@ -1,5 +1,6 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.10 2005/09/15 18:26:50 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.10.14.1 2008/05/14 16:12:05 rtoy Exp $ */
 
+#include <stdio.h>
 #include <string.h>
 
 #include "lisp.h"
@@ -113,6 +114,7 @@ alloc_number(long n)
     }
 }
 
+#ifndef UNICODE
 lispobj
 alloc_string(char *str)
 {
@@ -122,9 +124,32 @@ alloc_string(char *str)
 
     vec->length = make_fixnum(len);
     strcpy((char *) vec->data, str);
-
     return result;
 }
+#else
+lispobj
+alloc_string(char *str)
+{
+    int k;
+    int len = strlen(str);
+    lispobj result = alloc_vector(type_SimpleString, len + 1, 16);
+    struct vector *vec = (struct vector *) PTR(result);
+    unsigned short int *wide_char_data;
+
+    vec->length = make_fixnum(len);
+    wide_char_data = (unsigned short int*) vec->data;
+    for (k = 0; k < len; ++k) {
+        wide_char_data[k] = str[k] & 0xff;
+    }
+
+#if 0
+    fprintf(stderr, "alloc-string: 0x%lx %d -> `%s'\n",
+            result, len, str);
+#endif
+    
+    return result;
+}
+#endif
 
 lispobj
 alloc_sap(void *ptr)

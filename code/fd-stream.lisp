@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85 2007/11/05 15:25:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1 2008/05/14 16:12:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,6 +379,7 @@
 				      (cdr buffering)))))))
 	  bufferings)))
 
+#-unicode
 (def-output-routines ("OUTPUT-CHAR-~A-BUFFERED"
 		      1
 		      (:none character)
@@ -389,6 +390,19 @@
       (incf (fd-stream-char-pos stream)))
   (setf (sap-ref-8 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	(char-code byte)))
+
+#+unicode
+(def-output-routines ("OUTPUT-CHAR-~A-BUFFERED"
+		      1
+		      (:none character)
+		      (:line character)
+		      (:full character))
+  (if (char= byte #\Newline)
+      (setf (fd-stream-char-pos stream) 0)
+      (incf (fd-stream-char-pos stream)))
+  ;; FIXME!  We only use the low 8 bits of a character!
+  (setf (sap-ref-8 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
+	(logand #xff (char-code byte))))
 
 (def-output-routines ("OUTPUT-UNSIGNED-BYTE-~A-BUFFERED"
 		      1
@@ -511,6 +525,7 @@
 ;;; than strings. Therefore, we must make sure we have a string before calling
 ;;; position on it.
 ;;; 
+#-unicode
 (defun fd-sout (stream thing start end)
   (let ((start (or start 0))
 	(end (or end (length (the vector thing)))))
@@ -541,6 +556,30 @@
 	   (output-raw-bytes stream thing start end))
 	  (:none
 	   (do-output stream thing start end nil))))))
+
+#+unicode
+(defun fd-sout (stream thing start end)
+  (declare (type string thing))
+  (let ((start (or start 0))
+	(end (or end (length (the vector thing)))))
+    (declare (type index start end))
+    (cond 
+      ((stringp thing)			; FIXME - remove this test
+       (let ((out (fd-stream-out stream)))
+	 (do ((index start (+ index 1)))
+	     ((>= index end))
+	   (funcall out stream (elt thing index))))))))
+
+#+unicode ; a lame sout hack to make external-format work quickly
+(defun fd-sout-each-character (stream thing start end)
+  (declare (type string thing))
+  (let ((start (or start 0))
+	(end (or end (length (the vector thing)))))
+    (declare (type index start end))
+    (let ((out (fd-stream-out stream)))
+      (do ((index start (+ index 1)))
+          ((>= index end))
+        (funcall out stream (aref thing index))))))
 
 (defmacro output-wrapper ((stream size buffering) &body body)
   (let ((stream-var (gensym)))
@@ -1144,7 +1183,12 @@
 		    #'ill-out)
 		(fd-stream-bout stream) routine))
 	(setf (fd-stream-sout stream)
-	      (if (eql size 1) #'fd-sout #'ill-out))
+	      #-unicode
+	      (if (eql size 1) #'fd-sout #'ill-out)
+	      #+unicode
+	      (if (eql size 1)
+		  #'fd-sout-each-character
+		  #'ill-out))
 	(setf (fd-stream-char-pos stream) 0)
 	(setf output-size size)
 	(setf output-type type)))

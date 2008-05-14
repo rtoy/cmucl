@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80 2008/02/09 13:51:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.1 2008/05/14 16:12:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -396,6 +396,7 @@
 
 ;;;; Routines to move simple objects into the core.
 
+#-unicode
 (defun string-to-core (string &optional (space *dynamic*))
   "Copy string into the CORE and return a descriptor to it."
   ;; Note: We allocate an extra byte and tweek the length back to make sure
@@ -416,6 +417,33 @@
 			 (descriptor-sap des)
 			 (* vm:vector-data-offset vm:word-bits)
 			 (* (1+ len) vm:byte-bits))
+    des))
+
+#+unicode
+(defun string-to-core (string &optional (space *dynamic*))
+  "Copy string into the CORE and return a descriptor to it."
+  ;; Note: We allocate an extra byte and tweek the length back to make sure
+  ;; there will be a null at the end of the string to aid in call-out to
+  ;; C.
+  (let* ((len (length string))
+	 (des (allocate-vector-object space (* 2 vm:byte-bits) (1+ len)
+				      vm:simple-string-type))
+	 (bytes (make-array (1+ len) :element-type '(unsigned-byte 16))))
+    (write-indexed des vm:vector-length-slot (make-fixnum-descriptor len))
+    ;;(format t "s-t-c: len = ~d, ~S~%" len string)
+    (dotimes (k len)
+      (setf (aref bytes k) (logand #xff (char-code (aref string k)))))
+    (copy-to-system-area bytes (* vm:vector-data-offset
+				   ;; the word size of the native backend which
+				   ;; may be different from the target backend
+				   (if (= (c:backend-fasl-file-implementation
+					   c::*native-backend*)
+					  #.c:amd64-fasl-file-implementation)
+				       64
+				       32))
+			 (descriptor-sap des)
+			 (* vm:vector-data-offset vm:word-bits)
+			 (* (1+ len) (* 2 vm:byte-bits)))
     des))
 
 (defun bignum-to-core (n)
@@ -1193,6 +1221,11 @@
 
 (define-cold-fop (fop-character)
   (make-character-descriptor (read-arg 3)))
+#-unicode
+(define-cold-fop (fop-short-character)
+  (make-character-descriptor (read-arg 1)))
+
+#+unicode
 (define-cold-fop (fop-short-character)
   (make-character-descriptor (read-arg 1)))
 
@@ -1270,9 +1303,21 @@
 ;;; Cold-Load-Symbol loads a symbol N characters long from the File and interns
 ;;; that symbol in the given Package.
 ;;;
+#-unicode
 (defun cold-load-symbol (size package)
   (let ((string (make-string size)))
     (read-n-bytes *fasl-file* string 0 size)
+    (cold-intern (intern string package) package)))
+
+#+unicode
+(defun cold-load-symbol (size package)
+  (let ((string (make-string size)))
+    #+nil
+    (read-n-bytes *fasl-file* string 0 (* 2 size))
+    (dotimes (k size)
+      (setf (aref string k)
+	    (code-char (+ (ash (read-byte *fasl-file*) 8)
+			  (read-byte *fasl-file*)))))
     (cold-intern (intern string package) package)))
 
 (clone-cold-fop (fop-symbol-save)
@@ -1298,11 +1343,26 @@
 		(fop-keyword-small-symbol-save)
   (push-table (cold-load-symbol (clone-arg) *keyword-package*)))
 
+#-unicode
 (clone-cold-fop (fop-uninterned-symbol-save)
 		(fop-uninterned-small-symbol-save)
   (let* ((size (clone-arg))
 	 (name (make-string size)))
     (read-n-bytes *fasl-file* name 0 size)
+    (let ((symbol (allocate-symbol name)))
+      (push-table symbol))))
+
+#+unicode
+(clone-cold-fop (fop-uninterned-symbol-save)
+		(fop-uninterned-small-symbol-save)
+  (let* ((size (clone-arg))
+	 (name (make-string size)))
+    #+nil
+    (read-n-bytes *fasl-file* name 0 size)
+    (dotimes (k size)
+      (setf (aref name k)
+	    (code-char (+ (ash (read-byte *fasl-file*) 8)
+			  (read-byte *fasl-file*)))))
     (let ((symbol (allocate-symbol name)))
       (push-table symbol))))
 
@@ -1356,11 +1416,25 @@
 
 ;;; Loading vectors...
 
+#-unicode
 (clone-cold-fop (fop-string)
 		(fop-small-string)
   (let* ((len (clone-arg))
 	 (string (make-string len)))
     (read-n-bytes *fasl-file* string 0 len)
+    (string-to-core string)))
+
+#+unicode
+(clone-cold-fop (fop-string)
+		(fop-small-string)
+  (let* ((len (clone-arg))
+	 (string (make-string len)))
+    #+nil
+    (read-n-bytes *fasl-file* string 0 (* 2 len))
+    (dotimes (k len)
+      (setf (aref string k)
+	    (code-char (+ (ash (read-byte *fasl-file*) 8)
+			  (read-byte *fasl-file*)))))
     (string-to-core string)))
 
 (clone-cold-fop (fop-vector)
@@ -1883,7 +1957,13 @@
 	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
+    #-unicode
     (read-n-bytes *fasl-file* sym 0 len)
+    #+unicode
+    (dotimes (k len)
+      ;; XXX: Only use 8-bit chars for foreign stuff!  Must match
+      ;; DUMP-FIXUPS in dump.lisp!
+      (setf (aref sym k) (code-char (read-arg 1))))
     (let ((offset (read-arg 4))
 	  (value #+linkage-table (cold-register-foreign-linkage sym :code)
 		 #-linkage-table (lookup-foreign-symbol sym)))
@@ -1898,7 +1978,13 @@
 	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
+    #-unicode
     (read-n-bytes *fasl-file* sym 0 len)
+    #+unicode
+    (dotimes (k len)
+      ;; XXX: Only use 8-bit chars for foreign stuff!  Must match
+      ;; DUMP-FIXUPS in dump.lisp!
+      (setf (aref sym k) (code-char (read-arg 1))))
     (let ((offset (read-arg 4))
 	  (value (cold-register-foreign-linkage sym :data)))
       (do-cold-fixup code-object offset value kind))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92 2007/05/25 18:21:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.1 2008/05/14 16:12:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -697,10 +697,22 @@
 (define-fop (fop-misc-trap 66)
 	    (%primitive make-other-immediate-type 0 vm:unbound-marker-type))
 
+;; Not used?
 (define-fop (fop-character 68)
   (code-char (read-arg 3)))
+
+#-unicode
 (define-fop (fop-short-character 69)
   (code-char (read-arg 1)))
+
+#+unicode
+(define-fop (fop-short-character 69)
+  (code-char (read-arg 1))
+  ;; Little endian
+  #+nil
+  (let ((code-lo (read-arg 1))
+	(code-hi (read-arg 1)))
+    (code-char (+ code-lo (ash code-hi 8)))))
 
 (clone-fop (fop-struct 48)
 	   (fop-small-struct 49)
@@ -746,9 +758,10 @@
 (declaim (type index *load-symbol-buffer-size*))
    
 (macrolet ((frob (name code name-size package)
-	     (let ((n-package (gensym))
-		   (n-size (gensym))
-		   (n-buffer (gensym)))
+	     (let ((n-package (gensym "PACKAGE-"))
+		   (n-size (gensym "SIZE-"))
+		   (n-buffer (gensym "BUFFER-"))
+		   (k (gensym "IDX-")))
 	       `(define-fop (,name ,code)
 		  (prepare-for-fast-read-byte *fasl-file*
 		    (let ((,n-package ,package)
@@ -759,7 +772,12 @@
 						 (* ,n-size 2)))))
 		      (done-with-fast-read-byte)
 		      (let ((,n-buffer *load-symbol-buffer*))
+			#-unicode
 			(read-n-bytes *fasl-file* ,n-buffer 0 ,n-size)
+			#+unicode
+			(dotimes (,k ,n-size)
+			  (setf (aref ,n-buffer ,k)
+				(code-char (+ (ash (read-arg 1) 8) (read-arg 1)))))
 			(push-table (intern* ,n-buffer ,n-size ,n-package)))))))))
   (frob fop-symbol-save 6 4 *package*)
   (frob fop-small-symbol-save 7 1 *package*)
@@ -781,7 +799,12 @@
 	   (fop-uninterned-small-symbol-save 13)
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
+    #-unicode
     (read-n-bytes *fasl-file* res 0 arg)
+    #+unicode
+    (dotimes (k arg)
+      (setf (aref res k)
+	    (code-char (+ (ash (read-arg 1) 8) (read-arg 1)))))
     (push-table (make-symbol res))))
 
 (define-fop (fop-package 14)
@@ -962,11 +985,27 @@
 ;;;; Loading arrays:
 ;;;
 
+#-unicode
 (clone-fop (fop-string 37)
 	   (fop-small-string 38)
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
     (read-n-bytes *fasl-file* res 0 arg)
+    res))
+
+#+unicode
+(clone-fop (fop-string 37)
+	   (fop-small-string 38)
+  (let* ((arg (clone-arg))
+	 (res (make-string arg)))
+    #+nil
+    (read-n-bytes *fasl-file* res 0 (* 2 arg))
+    
+    (dotimes (k arg)
+      (let ((c-hi (read-arg 1))
+	    (c-lo (read-arg 1)))
+	(setf (aref res k) (code-char (+ c-lo
+					 (ash c-hi 8))))))
     res))
 
 (clone-fop (fop-vector 39)
@@ -1432,7 +1471,13 @@
 	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
+    #-unicode
     (read-n-bytes *fasl-file* sym 0 len)
+    #+unicode
+    (dotimes (k len)
+      ;; XXX: Only use 8-bit chars for foreign stuff!  Must match
+      ;; DUMP-FIXUPS in dump.lisp!
+      (setf (aref sym k) (code-char (read-arg 1))))
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :code)
 			  kind)
@@ -1443,7 +1488,13 @@
 	 (code-object (pop-stack))
 	 (len (read-arg 1))
 	 (sym (make-string len)))
+    #-unicode
     (read-n-bytes *fasl-file* sym 0 len)
+    #+unicode
+    (dotimes (k len)
+      ;; XXX: Only use 8-bit chars for foreign stuff!  Must match
+      ;; DUMP-FIXUPS in dump.lisp!
+      (setf (aref sym k) (code-char (read-arg 1))))
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :data)
 			  kind)

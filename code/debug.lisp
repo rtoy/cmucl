@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.64 2004/08/30 14:55:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.64.18.1 2008/05/14 16:12:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -611,6 +611,7 @@ See the CMU Common Lisp User's Manual for more information.
       (prin1 (di:debug-function-kind d-fun))
       (write-char #\]))))
 
+#-unicode
 (defun ensure-printable-object (object)
   (handler-case
       (with-open-stream (out (make-broadcast-stream))
@@ -619,6 +620,16 @@ See the CMU Common Lisp User's Manual for more information.
     (error (cond)
       (declare (ignore cond))
       (make-unprintable-object "error printing object"))))
+
+(defun ensure-printable-object (object)
+  (handler-case
+      (with-open-stream (out (make-broadcast-stream))
+	(prin1 object out)
+	object)
+    (error (cond)
+      (declare (ignore cond))
+      (make-unprintable-object (format nil "error printing object {~X}"
+				       (kernel:get-lisp-obj-address object))))))
 
 (defun frame-call-arg (var location frame)
   (lambda-var-dispatch var location

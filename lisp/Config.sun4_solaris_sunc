@@ -35,10 +35,15 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-CPPFLAGS = -Dinline= -I. -I$(PATH1) -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
+# Enable support for Unicode
+ifdef FEATURE_UNICODE
+UNICODE = -DUNICODE
+endif
+
+CPPFLAGS = -Dinline= -I. -I$(PATH1) -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC) $(UNICODE)
 
 
-CC = cc -O -xlibmieee
+CC = cc -xlibmieee
 CPP = cc -E
 # -xs so we can use gdb
 CFLAGS = -g $(CC_V8PLUS)

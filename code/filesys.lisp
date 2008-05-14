@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104 2007/09/10 16:25:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.1 2008/05/14 16:12:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -302,6 +302,10 @@
 (defun parse-unix-namestring (namestr start end)
   (declare (type simple-base-string namestr)
 	   (type index start end))
+  #+nil
+  (progn
+    (lisp::%primitive lisp::print "parse-unix-namestring")
+    (lisp::%primitive lisp::print namestr))
   (multiple-value-bind
       (absolute pieces)
       (split-at-slashes namestr start end)
@@ -313,6 +317,10 @@
 		       (search-list new-start)
 		     (maybe-extract-search-list namestr
 						(car first) (cdr first))
+		   #+nil
+		   (progn
+		     (lisp::%primitive lisp::print "maybe search-list:")
+		     (lisp::%primitive lisp::print search-list))
 		   (when search-list
 		     ;; Lose if this search-list is already defined as
 		     ;; a logical host.  Since the syntax for
@@ -354,6 +362,10 @@
                    (find-if #'(lambda (x)
 				(or (char= x #\Null) (char= x #\/)))
 			    name))
+	  #+nil
+	  (progn
+	    (lisp::%primitive lisp::print "Parse error null/slash")
+	    (lisp::%primitive lisp::print name))
 	  (error 'parse-error))
 	;; Now we have everything we want.  So return it.
 	(values nil ; no host for unix namestrings.
@@ -1364,20 +1376,18 @@ optionally keeping some of the most recent old versions."
 
 ;;; Default-Directory  --  Public
 ;;;
-#+ (and)
 (defun default-directory ()
   "Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
   with setf."
   (multiple-value-bind (gr dir-or-error)
-                       (unix:unix-current-directory)
+      (unix:unix-current-directory)
     (if gr
         (let ((*ignore-wildcards* t))
           (values
            (parse-namestring (concatenate 'simple-string dir-or-error "/")
                              *unix-host*)))
         (error dir-or-error))))
-
 ;;;
 ;;; XXXX This code was modified by me (fmg) to avoid calling
 ;;; concatenate.  The reason for this is that there have been

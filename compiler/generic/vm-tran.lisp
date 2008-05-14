@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.59 2006/12/24 01:41:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.59.4.1 2008/05/14 16:12:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,6 +208,8 @@
 
 (defconstant vector-data-bit-offset (* vm:vector-data-offset vm:word-bits))
 
+;;#-unicode
+#+nil
 (deftransform subseq ((string start &optional (end nil))
 		      (simple-string t &optional t))
   '(let* ((len (length string))
@@ -218,14 +220,28 @@
      (declare (optimize (safety 0)))
      (bit-bash-copy string
 		    (the index
-			 (+ (the index (* start vm:byte-bits))
+			 (+ (the index (* start vm:byte-bits #+unicode 2))
 			    vector-data-bit-offset))
 		    result
 		    vector-data-bit-offset
-		    (the index (* size vm:byte-bits)))
-     result))
+		    (the index (* size vm:byte-bits #+unicode 2)))
+    result))
 
+#+unicode
+(deftransform subseq ((string start &optional (end nil))
+		      (simple-string t &optional t))
+  '(let* ((len (length string))
+	  (end (if end (min end len) len))
+	  (start (min start end))
+	  (size (- end start))
+	  (result (make-string size)))
+    (declare (optimize (safety 0)))
+    (dotimes (k size)
+      (setf (aref result k)
+	    (aref string (+ start k))))
+    result))
 
+#-unicode
 (deftransform copy-seq ((seq) (simple-string))
   '(let* ((len (length seq))
 	  (res (make-string len)))
@@ -234,29 +250,56 @@
 		    vector-data-bit-offset
 		    res
 		    vector-data-bit-offset
-		    (the index (* len vm:byte-bits)))
-     res))
+		    (the index (* len vm:byte-bits #+unicode 2)))
+    res))
 
+#+unicode
+(deftransform copy-seq ((seq) (simple-string))
+  '(let* ((len (length seq))
+	  (res (make-string len)))
+    (declare (optimize (safety 0)))
+    (dotimes (k len res)
+      (setf (aref res k) (aref seq k)))))
 
+;;#-unicode
+#+nil
 (deftransform replace ((string1 string2 &key (start1 0) (start2 0)
 				end1 end2)
 		       (simple-string simple-string &rest t))
   '(locally (declare (optimize (safety 0)))
      (bit-bash-copy string2
 		    (the index
-			 (+ (the index (* start2 vm:byte-bits))
+			 (+ (the index (* start2 vm:byte-bits #+unicode 2))
 			    vector-data-bit-offset))
 		    string1
 		    (the index
-			 (+ (the index (* start1 vm:byte-bits))
+			 (+ (the index (* start1 vm:byte-bits #+unicode 2))
 			    vector-data-bit-offset))
 		    (the index
 			 (* (min (the index (- (or end1 (length string1))
 					       start1))
 				 (the index (- (or end2 (length string2))
 					       start2)))
-			    vm:byte-bits)))
-     string1))
+			    vm:byte-bits
+			    #+unicode 2)))
+    string1))
+
+#+unicode
+(deftransform replace ((string1 string2 &key (start1 0) (start2 0)
+				end1 end2)
+		       (simple-string simple-string &rest t))
+  `(locally
+       (declare (optimize (safety 0)))
+     (do ((count (min (- (or end1 (length string1)) start1)
+		      (- (or end2 (length string2)) start2)))
+	  (k 0 (1+ k))
+	  (s1 start1 (1+ s1))
+	  (s2 start2 (1+ s2)))
+	 ((>= k count)
+	  string1)
+       (declare (type index k count))
+       (setf (aref string1 s1)
+	     (aref string2 s2)))))
 
 ;; The original version of this deftransform seemed to cause the
 ;; compiler to spend huge amounts of time deriving the type of the
@@ -264,6 +307,7 @@
 ;; the compiler from doing this analysis.  This only hides the
 ;; symptom.
 
+#+nil
 (deftransform concatenate ((rtype &rest sequences)
 			   (t &rest simple-string)
 			   simple-string
@@ -304,7 +348,6 @@
 		   ,@(nestify (forms)))
 		 res))))
 	result))))
-
 
 
 ;;;; Bit vector hackery:

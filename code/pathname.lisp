@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.86 2008/04/04 15:11:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.86.2.1 2008/05/14 16:12:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -962,6 +962,10 @@ a host-structure or string."
 	   (type pathname defaults)
 	   (type index start)
 	   (type (or index null) end))
+  #+nil
+  (progn
+    (lisp::%primitive lisp::print "%parse-namestring namestr")
+    (lisp::%primitive lisp::print namestr))
   (if junk-allowed
       (handler-case
 	  (%parse-namestring namestr host defaults start end nil)
@@ -1020,6 +1024,10 @@ a host-structure or string."
 	   (type path-designator defaults)
 	   (type index start)
 	   (type (or index null) end))
+  #+nil
+  (progn
+    (lisp::%primitive lisp::print "parse-namestring thing")
+    (lisp::%primitive lisp::print thing))
   ;; Generally, redundant specification of information in software,
   ;; whether in code or in comments, is bad. However, the ANSI spec
   ;; for this is messy enough that it's hard to hold in short-term
