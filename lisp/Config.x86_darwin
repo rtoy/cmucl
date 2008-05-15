@@ -1,3 +1,4 @@
+# -*- Mode: makefile -*-
 PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
@@ -6,7 +7,13 @@ INCLUDES = -iquote . -iquote $(PATH1)
 CC = gcc
 LD = ld
 CPP = cpp
-CPPFLAGS = -Di386 -DDARWIN -DGENCGC -DLINKAGE_TABLE
+
+# Enable support for Unicode
+ifdef FEATURE_UNICODE
+UNICODE = -DUNICODE
+endif
+
+CPPFLAGS = -Di386 -DDARWIN -DGENCGC -DLINKAGE_TABLE $(UNICODE)
 CFLAGS = -Wstrict-prototypes -Wall -g3 $(CPPFLAGS) $(INCLUDES)
 ASFLAGS = -g3 -DGENCGC -DLINKAGE_TABLE $(INCLUDES)
 NM = nm -gp
