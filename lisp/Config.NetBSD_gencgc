@@ -3,7 +3,7 @@ ARCH = $(shell uname -m)
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
 vpath %.S $(PATH1)
-CPPFLAGS = -I. -I$(PATH1) -I-
+CPPFLAGS = -iquote . -iquote $(PATH1)
 CC = gcc -pipe
 LD = ld
 CPP = cpp
