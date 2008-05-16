@@ -1,4 +1,4 @@
-/* $Id: elf.h,v 1.8 2007/08/14 15:57:47 rtoy Exp $ */
+/* $Id: elf.h,v 1.9 2008/05/16 13:30:22 rswindells Exp $ */
 
 /* This code was written by Fred Gilham and has been placed in the public domain.  It is
    provided "AS-IS" and without warranty of any kind.
@@ -33,7 +33,7 @@ int elf_run_linker(long, char *);
 
 void map_core_sections(char *);
 
-#if defined(SOLARIS) || defined(linux)
+#if defined(SOLARIS) || defined(linux) || defined(__NetBSD__)
 typedef Elf32_Ehdr Elf_Ehdr;
 typedef Elf32_Shdr Elf_Shdr;
 typedef Elf32_Word Elf_Word;
