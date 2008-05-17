@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.15.2.1 2008/05/14 16:12:06 rtoy Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.15.2.2 2008/05/17 13:21:31 rtoy Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -295,22 +295,42 @@ print_entry_name(lispobj name)
 	if (TypeOf(*object) == type_SymbolHeader) {
 	    struct symbol *symbol = (struct symbol *) object;
 	    struct vector *string;
+#ifdef UNICODE
+	    char c_string[1000];
+#endif
 
 	    if (symbol->package != NIL) {
 		struct instance *pkg = (struct instance *) PTR(symbol->package);
 		lispobj pkg_name = pkg->slots[2];
 
 		string = (struct vector *) PTR(pkg_name);
+#ifndef UNICODE
 		printf("%s::", (char *) string->data);
+#else
+		convert_lisp_string(c_string, string->data, string->length >> 2);
+		printf("%s:;", c_string);
+#endif
 	    }
 
 	    object = (lispobj *) PTR(symbol->name);
 	    string = (struct vector *) object;
+#ifndef UNICODE
 	    printf("%s", (char *) string->data);
+#else
+	    convert_lisp_string(c_string, string->data, string->length >> 2);
+	    printf("%s:;", c_string);
+#endif
 	} else if (TypeOf(*object) == type_SimpleString) {
 	    struct vector *string = (struct vector *) object;
-
+#ifdef UNICODE
+	    char c_string[1000];
+#endif
+#ifndef UNICODE
 	    printf("\"%s\"", (char *) string->data);
+#else
+	    convert_lisp_string(c_string, string->data, string->length >> 2);
+	    printf("\"%s\"", c_string);
+#endif
 	} else
 	    printf("<??? type %d>", (int) TypeOf(*object));
     } else
