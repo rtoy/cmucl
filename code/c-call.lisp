@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.17.12.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.17.12.2 2008/05/18 22:56:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,6 @@
 #-unicode
 (def-alien-type-method (c-string :deport-gen) (type value)
   (declare (ignore type))
-  (format t "c-string deport-gen~%")
   `(etypecase ,value
      (null (int-sap 0))
      ((alien (* char)) (alien-sap ,value))
@@ -96,7 +95,8 @@
 	;; 8-bit array and copy our characters (the low 8-bits of each
 	;; character!) to the 8-bit array.
 	(let* ((,len (length ,value))
-	       (,s (make-array-unsigned-byte-8 ,len)))
+	       (,s #+(and) (make-array ,len :element-type '(unsigned-byte 8))
+		   #-(and) (make-array-unsigned-byte-8 ,len)))
 	  ;;#+nil
 	  (progn
 	    (lisp::%primitive lisp::print "deport string")
