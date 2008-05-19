@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.25 2008/04/25 07:05:17 cshapiro Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.25.2.1 2008/05/19 15:13:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -510,7 +510,7 @@
 	       '((move temp value)))
 	   (inst mov (make-ea ,size :base object :index index :scale ,scale
 			      :disp (- (* ,offset word-bytes) ,lowtag))
-		 ,(ecase size (:byte 'temp) (:word 'result)))
+		 ,(ecase size (:byte 'temp) (:word 'value)))
 	   ,(ecase size
 	      (:byte '(move result temp))
 	      (:word '(move result value)))))
