@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.26 2003/02/25 17:22:06 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.26.32.1 2008/05/19 20:23:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -381,10 +381,15 @@
 	(let ((n (length s)))
 	  ;; 
 	  ;; Blast the string into place
+	  #-unicode
 	  (kernel:copy-to-system-area (the simple-string s)
 				      (* vm:vector-data-offset vm:word-bits)
 				      string-sap 0
 				      (* (1+ n) vm:byte-bits))
+	  #+unicode
+	  (dotimes (k n)
+	    (setf (sap-ref-8 string-sap k)
+		  (logand #xff (char-code (aref s k)))))
 	  ;; 
 	  ;; Blast the pointer to the string into place
 	  (setf (sap-ref-sap vec-sap i) string-sap)
