@@ -151,7 +151,7 @@
        ((alien (* char)) (alien-sap ,value))
        (simple-base-string
 	(let* ((,len (length ,value))
-	       (,s (make-array-unsigned-byte-8 ,len)))
+	       (,s (make-array-unsigned-byte-8 (1+ ,len))))
 	  #+nil
 	  (progn
 	    (lisp::%primitive lisp::print "deport string")
@@ -159,6 +159,7 @@
 	    (lisp::%primitive lisp::print ,s))
 	  (dotimes (,k ,len)
 	    (setf (aref ,s ,k) (logand #xff (char-code (aref ,value ,k)))))
+	  (setf (aref ,s ,len) 0)
 	  #+nil
 	  (lisp::%primitive lisp::print ,s)
 	  (vector-sap ,s))))))

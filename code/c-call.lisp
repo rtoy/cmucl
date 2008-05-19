@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.17.12.2 2008/05/18 22:56:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.17.12.3 2008/05/19 15:16:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,15 +95,16 @@
 	;; 8-bit array and copy our characters (the low 8-bits of each
 	;; character!) to the 8-bit array.
 	(let* ((,len (length ,value))
-	       (,s #+(and) (make-array ,len :element-type '(unsigned-byte 8))
+	       (,s #+(and) (make-array (1+ ,len) :element-type '(unsigned-byte 8))
 		   #-(and) (make-array-unsigned-byte-8 ,len)))
-	  ;;#+nil
+	  #+nil
 	  (progn
 	    (lisp::%primitive lisp::print "deport string")
 	    (lisp::%primitive lisp::print ,value)
 	    (lisp::%primitive lisp::print ,s))
 	  (dotimes (,k ,len)
 	    (setf (aref ,s ,k) (logand #xff (char-code (aref ,value ,k)))))
+	  (setf (aref ,s ,len) 0)
 	  #+nil
 	  (lisp::%primitive lisp::print ,s)
 	  (vector-sap ,s))))))
