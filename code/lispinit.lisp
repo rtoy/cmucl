@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78.4.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78.4.2 2008/05/19 16:55:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,7 +351,7 @@
 
   (let ((funs (nreverse *lisp-initialization-functions*)))
     (%primitive print "Calling top-level forms.")
-    (%primitive print (length funs))
+    #+nil (%primitive print (length funs))
     (dolist (fun funs)
       #+nil (%primitive print fun)
       (typecase fun

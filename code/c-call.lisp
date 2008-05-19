@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.17.12.3 2008/05/19 15:16:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.17.12.4 2008/05/19 16:55:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,7 +60,6 @@
 
 (def-alien-type-method (c-string :naturalize-gen) (type alien)
   (declare (ignore type))
-  (format t "c-string naturalize-gen~%")
   `(if (zerop (sap-int ,alien))
        nil
        (%naturalize-c-string ,alien)))
@@ -72,14 +71,6 @@
      (null (int-sap 0))
      ((alien (* char)) (alien-sap ,value))
      (simple-base-string (vector-sap ,value))))
-
-;; FIXME: Hack because make-array was not making an (unsigned-byte 8)
-;; array for some reason.  So have c-string deport-gen call this to
-;; make the appropriate object.
-(defun make-array-unsigned-byte-8 (n)
-  (declare (fixnum n)
-	   (optimize (speed 3) (safety 0)))
-  (make-array n :element-type '(unsigned-byte 8)))
 
 #+unicode
 (def-alien-type-method (c-string :deport-gen) (type value)
@@ -95,18 +86,10 @@
 	;; 8-bit array and copy our characters (the low 8-bits of each
 	;; character!) to the 8-bit array.
 	(let* ((,len (length ,value))
-	       (,s #+(and) (make-array (1+ ,len) :element-type '(unsigned-byte 8))
-		   #-(and) (make-array-unsigned-byte-8 ,len)))
-	  #+nil
-	  (progn
-	    (lisp::%primitive lisp::print "deport string")
-	    (lisp::%primitive lisp::print ,value)
-	    (lisp::%primitive lisp::print ,s))
+	       (,s (make-array (1+ ,len) :element-type '(unsigned-byte 8))))
 	  (dotimes (,k ,len)
 	    (setf (aref ,s ,k) (logand #xff (char-code (aref ,value ,k)))))
 	  (setf (aref ,s ,len) 0)
-	  #+nil
-	  (lisp::%primitive lisp::print ,s)
 	  (vector-sap ,s))))))
 
 #-unicode
@@ -131,22 +114,12 @@
 #+unicode
 (defun %naturalize-c-string (sap)
   (declare (type system-area-pointer sap))
-  (locally
-      ()
-    (let ((length (loop
-		      for offset of-type fixnum upfrom 0
-		      until (zerop (sap-ref-8 sap offset))
-		     finally (return offset))))
-      #+nil
-      (progn
-	(lisp::%primitive lisp::print "%naturalize-c-string")
-	(lisp::%primitive lisp::print length))
-      (let ((result (make-string length)))
-	(dotimes (k length)
-	  (setf (aref result k)
-		(code-char (sap-ref-8 sap k))))
-	#+t
-	(progn
-	  (lisp::%primitive lisp::print "%naturalize-c-string to")
-	  (lisp::%primitive lisp::Print result))
-	result))))
+  (let ((length (loop
+		   for offset of-type fixnum upfrom 0
+		   until (zerop (sap-ref-8 sap offset))
+		   finally (return offset))))
+    
+    (let ((result (make-string length)))
+      (dotimes (k length)
+	(setf (aref result k) (code-char (sap-ref-8 sap k))))
+      result)))

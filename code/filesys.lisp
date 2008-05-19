@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.2 2008/05/19 16:55:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -302,10 +302,6 @@
 (defun parse-unix-namestring (namestr start end)
   (declare (type simple-base-string namestr)
 	   (type index start end))
-  #+nil
-  (progn
-    (lisp::%primitive lisp::print "parse-unix-namestring")
-    (lisp::%primitive lisp::print namestr))
   (multiple-value-bind
       (absolute pieces)
       (split-at-slashes namestr start end)
@@ -317,10 +313,6 @@
 		       (search-list new-start)
 		     (maybe-extract-search-list namestr
 						(car first) (cdr first))
-		   #+nil
-		   (progn
-		     (lisp::%primitive lisp::print "maybe search-list:")
-		     (lisp::%primitive lisp::print search-list))
 		   (when search-list
 		     ;; Lose if this search-list is already defined as
 		     ;; a logical host.  Since the syntax for
@@ -362,10 +354,6 @@
                    (find-if #'(lambda (x)
 				(or (char= x #\Null) (char= x #\/)))
 			    name))
-	  #+nil
-	  (progn
-	    (lisp::%primitive lisp::print "Parse error null/slash")
-	    (lisp::%primitive lisp::print name))
 	  (error 'parse-error))
 	;; Now we have everything we want.  So return it.
 	(values nil ; no host for unix namestrings.
