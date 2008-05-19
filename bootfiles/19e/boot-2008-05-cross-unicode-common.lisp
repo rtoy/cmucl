@@ -132,15 +132,6 @@
 
 (in-package "C-CALL")
 
-;; For some reason (make-array n :element-type '(unsigned-byte 8))
-;; returns a simple-vector when compiled in c-string deport-gen.  So
-;; instead of that, call out to make-array-unsigned-byte-8 which seems
-;; to do the right thing.
-(defun make-array-unsigned-byte-8 (n)
-  (declare (fixnum n)
-	   (optimize (speed 3) (safety 0)))
-  (make-array n :element-type '(unsigned-byte 8)))
-
 (def-alien-type-method (c-string :deport-gen) (type value)
   (declare (ignore type))
   (let ((s (gensym "C-STRING-"))
@@ -151,15 +142,8 @@
        ((alien (* char)) (alien-sap ,value))
        (simple-base-string
 	(let* ((,len (length ,value))
-	       (,s (make-array-unsigned-byte-8 (1+ ,len))))
-	  #+nil
-	  (progn
-	    (lisp::%primitive lisp::print "deport string")
-	    (lisp::%primitive lisp::print ,value)
-	    (lisp::%primitive lisp::print ,s))
+	       (,s (make-array (1+ ,len) :element-type '(unsigned-byte 8))))
 	  (dotimes (,k ,len)
 	    (setf (aref ,s ,k) (logand #xff (char-code (aref ,value ,k)))))
 	  (setf (aref ,s ,len) 0)
-	  #+nil
-	  (lisp::%primitive lisp::print ,s)
 	  (vector-sap ,s))))))
