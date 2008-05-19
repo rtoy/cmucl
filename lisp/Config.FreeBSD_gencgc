@@ -1,3 +1,4 @@
+# -*- Mode: makefile -*-
 PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
@@ -10,7 +11,13 @@ CPPFLAGS = -I. -I$(PATH1) -I-
 else
 CPPFLAGS = -iquote . -iquote $(PATH1)
 endif
-CFLAGS = -Wstrict-prototypes -Wall -O2 -g -DGENCGC -DLINKAGE_TABLE
+
+# Enable support for Unicode
+ifdef FEATURE_UNICODE
+UNICODE = -DUNICODE
+endif
+
+CFLAGS = -Wstrict-prototypes -Wall -O2 -g -DGENCGC -DLINKAGE_TABLE $(UNICODE)
 ASFLAGS = -g -DGENCGC -DLINKAGE_TABLE
 NM = nm -gp
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
