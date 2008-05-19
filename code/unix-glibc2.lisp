@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.43.4.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.43.4.2 2008/05/19 21:16:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1990,18 +1990,7 @@ length LEN and type TYPE."
 		    5120)))
       
       (values (not (zerop (sap-int (alien-sap result))))
-	      (locally
-		  (declare (optimize (speed 3) (safety 0)))
-		(let* ((sap (alien-sap buf))
-		       (length (loop
-				  for offset of-type fixnum upfrom 0
-				  until (zerop (sap-ref-8 sap offset))
-				  finally (return offset))))
-		  (let ((cwd (make-string length)))
-		    (dotimes (k length)
-		      (setf (aref cwd k)
-			    (code-char (sap-ref-8 sap k))))
-		    cwd)))))))
+	      (cast buf c-call:c-string)))))
 
 
 ;;; Unix-dup returns a duplicate copy of the existing file-descriptor
@@ -3447,8 +3436,7 @@ in at a time in poll.")
     (declare (fixnum len) (simple-string pending))
     (if (zerop len)
 	pathname
-	(let ((result #-unicode (make-string 100 :initial-element (code-char 0))
-		      #+unicode (make-string 100))
+	(let ((result (make-string 100 :initial-element (code-char 0)))
 	      (fill-ptr 0)
 	      (name-start 0))
 	  (loop

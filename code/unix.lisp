@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.2 2008/05/19 21:16:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2540,7 +2540,6 @@
 ;; Use getcwd instead of getwd.  But what should we do if the path
 ;; won't fit?  Try again with a larger size?  We don't do that right
 ;; now.
-#-unicode
 (defun unix-current-directory ()
   ;; 5120 is some randomly selected maximum size for the buffer for getcwd.
   (with-alien ((buf (array c-call:char 5120)))
@@ -2555,66 +2554,6 @@
       (values (not (zerop
 		    (sap-int (alien-sap result))))
 	      (cast buf c-call:c-string)))))
-
-(defun unix-current-directory ()
-  ;; 5120 is some randomly selected maximum size for the buffer for getcwd.
-  (with-alien ((buf (array c-call:char 5120)))
-    (let ((result
-	   (alien-funcall 
-	    (extern-alien "getcwd"
-			  (function (* c-call:char)
-				    (* c-call:char) c-call:int))
-	    (cast buf (* c-call:char))
-	    5120)))
-	
-      (values (not (zerop
-		    (sap-int (alien-sap result))))
-	      (locally
-		  (declare (optimize (speed 3) (safety 0)))
-		(let* ((sap (alien-sap buf))
-		       (length (loop
-				  for offset of-type fixnum upfrom 0
-				  until (zerop (sap-ref-8 sap offset))
-				  finally (return offset))))
-		  (let ((cwd (make-string length)))
-		    (dotimes (k length)
-		      (setf (aref cwd k)
-			    (code-char (sap-ref-8 sap k))))
-		    cwd)))))))
-
-;;#+unicode
-#+nil
-(defun unix-current-directory ()
-  ;; 5120 is some randomly selected maximum size for the buffer for getcwd.
-  (with-alien ((buf (array c-call:char 5120)))
-    (let ((result
-	   (alien-funcall 
-	    (extern-alien "getcwd"
-			  (function (* c-call:char)
-				    (* c-call:char) c-call:int))
-	    (cast buf (* c-call:char))
-	    5120)))
-      (values (not (zerop
-		    (sap-int (alien-sap result))))
-	      (let* ((sap (alien-sap buf))
-		     (length (loop
-			       for offset of-type fixnum upfrom 0
-			       until (zerop (sap-ref-8 sap offset))
-				finally (return offset))))
-		(let ((result (make-string length)))
-		  (lisp::%primitive lisp::print "unix-current-directory")
-		  (lisp::%primitive lisp::print "sap:")
-		  (lisp::%primitive lisp::print sap)
-		  (lisp::%primitive lisp::print "len:")
-		  (lisp::%primitive lisp::print length)
-		  (lisp::%primitive lisp::print "characters:")
-		  (dotimes (k length)
-		    (lisp::%primitive lisp::print (sap-ref-8 sap k))
-		    (setf (aref result k)
-			  (code-char (sap-ref-8 sap k)))
-		    (lisp::%primitive lisp::print (aref result k)))
-		  (lisp::%primitive lisp::print result)
-		  result))))))
 
 
 
@@ -2656,8 +2595,7 @@
     (declare (fixnum len) (simple-string pending))
     (if (zerop len)
 	pathname
-	(let ((result #-unicode (make-string 100 :initial-element (code-char 0))
-		      #+unicode (make-string 100))
+	(let ((result (make-string 100 :initial-element (code-char 0)))
 	      (fill-ptr 0)
 	      (name-start 0))
 	  (loop
