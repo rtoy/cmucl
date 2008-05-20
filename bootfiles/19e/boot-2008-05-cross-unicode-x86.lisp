@@ -15,7 +15,8 @@
      :gencgc
      :conservative-float-type
      :hash-new :random-mt19937
-     :linux :glibc2 :glibc2.1
+     ;; Need to fix this in a better way.
+     #+linux :linux #+linux :glibc2 #+linux :glibc2.1
      :cmu :cmu19 :cmu19e
      :double-double
      :unicode
