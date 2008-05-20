@@ -18,17 +18,12 @@
      :gencgc
      :conservative-float-type
      :hash-new :random-mt19937
-     ;; Need to fix this in a better way.
-     #+linux :linux #+linux :glibc2 #+linux :glibc2.1
      :cmu :cmu19 :cmu19e
      :double-double
      :unicode
      )
    ;; Features to remove from current *features* here
-   '(:x86-bootstrap :alpha :osf1 :mips
-     :propagate-fun-type :propagate-float-type :constrain-float-type
-     :openbsd :freebsd :glibc2 :linux
-     :long-float :new-random :small))
+   '())
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Things needed to cross-compile unicode changes.
 
