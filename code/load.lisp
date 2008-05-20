@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.2 2008/05/20 14:33:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -707,9 +707,7 @@
 
 #+unicode
 (define-fop (fop-short-character 69)
-  (code-char (read-arg 1))
   ;; Little endian
-  #+nil
   (let ((code-lo (read-arg 1))
 	(code-hi (read-arg 1)))
     (code-char (+ code-lo (ash code-hi 8)))))

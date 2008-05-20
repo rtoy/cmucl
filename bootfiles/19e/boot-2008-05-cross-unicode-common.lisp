@@ -65,6 +65,13 @@
 
   (undefined-value))
 
+(defun dump-character (ch file)
+  (dump-fop 'lisp::fop-short-character file)
+  ;; Little endian
+  (let ((code (char-code ch)))
+    (dump-byte (ldb (byte 8 0) code) file)
+    (dump-byte (ldb (byte 8 8) code) file)))
+
 (in-package "LISP")
 
 ;; Needed to read in 16-bit strings.
@@ -81,6 +88,12 @@
 	(setf (aref res k) (code-char (+ c-lo
 					 (ash c-hi 8))))))
     res))
+
+(define-fop (fop-short-character 69)
+  ;; Little endian
+  (let ((code-lo (read-arg 1))
+	(code-hi (read-arg 1)))
+    (code-char (+ code-lo (ash code-hi 8)))))
 
 ;; Needed to read in 16-bit strings to create the symbols.
 (macrolet ((frob (name code name-size package)

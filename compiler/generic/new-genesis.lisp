@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.1 2008/05/14 16:12:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.2 2008/05/20 14:33:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1227,7 +1227,7 @@
 
 #+unicode
 (define-cold-fop (fop-short-character)
-  (make-character-descriptor (read-arg 1)))
+  (make-character-descriptor (+ (read-arg 1) (ash (read-arg 1) 8))))
 
 (define-cold-fop (fop-empty-list) *nil-descriptor*)
 (define-cold-fop (fop-truth) (cold-intern t))

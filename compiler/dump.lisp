@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.2 2008/05/20 14:33:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1695,9 +1695,7 @@
 #+unicode
 (defun dump-character (ch file)
   (dump-fop 'lisp::fop-short-character file)
-  (dump-byte (char-code ch) file)
   ;; Little endian
-  #+nil
   (let ((code (char-code ch)))
     (dump-byte (ldb (byte 8 0) code) file)
     (dump-byte (ldb (byte 8 8) code) file)))
