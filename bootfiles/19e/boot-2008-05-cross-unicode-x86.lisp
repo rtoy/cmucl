@@ -1,3 +1,6 @@
+;;; Cross-compile script to add 16-bit strings for Unicode support.
+;;; Use as the cross-compile script for cross-build-world.sh.
+
 (in-package :cl-user)
 
 ;;; Rename the X86 package and backend so that new-backend does the
@@ -64,11 +67,6 @@
      old-x86::simple-array-complex-double-double-float-type)
     (t 0 32 old-x86:simple-vector-type)))
 )
-
-;; Kill the any deftransforms
-(in-package "C")
-(dolist (f '(concatenate subseq replace copy-seq))
-  (setf (c::function-info-transforms (c::function-info-or-lose f)) nil))
 
 (load "target:bootfiles/19e/boot-2008-05-cross-unicode-common.lisp")
 

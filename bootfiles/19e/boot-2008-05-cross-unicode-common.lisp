@@ -1,3 +1,6 @@
+;;; Common part for cross-compiling 16-bit strings for Unicode.
+;;; This part is independent of the architecture.
+
 (pushnew :unicode *features*)
 (in-package "C")
 
