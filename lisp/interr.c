@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.9.2.1 2008/05/14 16:12:06 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.9.2.2 2008/05/20 03:48:14 rtoy Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -164,10 +164,6 @@ lispobj
 debug_print(lispobj object)
 {
     
-#if 1
-    printf("obj @0x%lx: ", (unsigned long) object);
-#endif
-
 #ifndef UNICODE
     printf("%s\n", (char *) (((struct vector *) PTR(string))->data));
     fflush(stdout);
@@ -184,6 +180,11 @@ debug_print(lispobj object)
             lisp_chars = (unsigned short int*) lisp_string->data;
     
             for (k = 0; k < len; ++k) {
+		/*
+		 * Do we really want to dump out 4 bytes?  Should we
+		 * just print out the low 8 bits of each Lisp
+		 * character? 
+		 */
                 putw(*lisp_chars, stdout);
                 ++lisp_chars;
             }
@@ -194,6 +195,9 @@ debug_print(lispobj object)
             print(object);
         }
     } else {
+#if 1
+	printf("obj @0x%lx: ", (unsigned long) object);
+#endif
         print(object);
     }
 #endif            
