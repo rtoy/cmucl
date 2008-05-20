@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.7 2006/06/30 18:41:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/array.lisp,v 1.7.6.1 2008/05/20 11:22:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,8 +136,13 @@
        (:results (result :scs ,scs))
        (:result-types ,element-type))))
 
+#-unicode
 (def-data-vector-frobs simple-string byte-index
   base-char base-char-reg)
+#+unicode
+(def-data-vector-frobs simple-string halfword-index
+  base-char base-char-reg)
+
 (def-data-vector-frobs simple-vector word-index
   * descriptor-reg any-reg)
 
