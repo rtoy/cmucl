@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.9.2.2 2008/05/20 03:48:14 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.9.2.3 2008/05/20 11:50:34 rtoy Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -165,13 +165,13 @@ debug_print(lispobj object)
 {
     
 #ifndef UNICODE
-    printf("%s\n", (char *) (((struct vector *) PTR(string))->data));
+    printf("%s\n", (char *) (((struct vector *) PTR(object))->data));
     fflush(stdout);
 #else    
     if (Pointerp(object)) {
         struct vector *lisp_string = (struct vector*) PTR(object);
         
-        if ((unsigned long) lisp_string->header == 0x32) {
+        if ((unsigned long) lisp_string->header == type_SimpleString) {
             unsigned short int* lisp_chars;
             int len;
             int k;
