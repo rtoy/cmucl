@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15 2004/08/27 12:28:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.1 2008/05/21 01:18:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,9 @@
 
 (declaim (maybe-inline digit-char-p digit-weight))
 
-(defconstant char-code-limit 256
+(defconstant char-code-limit
+  #-unicode 256
+  #+unicode 65536
   "The upper exclusive bound on values produced by CHAR-CODE.")
 
 (deftype char-code ()
