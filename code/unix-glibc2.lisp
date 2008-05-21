@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.43.4.2 2008/05/19 21:16:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.43.4.3 2008/05/21 23:08:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2192,10 +2192,15 @@ length LEN and type TYPE."
   (with-alien ((buf (array char 1024)))
     (syscall ("readlink" c-string (* char) int)
 	     (let ((string (make-string result)))
+	       #-unicode
 	       (kernel:copy-from-system-area
 		(alien-sap buf) 0
 		string (* vm:vector-data-offset vm:word-bits)
 		(* result vm:byte-bits))
+	       #+unicode
+	       (let ((sap (alien-sap buf)))
+		 (dotimes (k result)
+		   (setf (aref string k) (code-char (sap-ref-8 sap k)))))
 	       string)
 	     path (cast buf (* char)) 1024)))
 
@@ -3621,10 +3626,17 @@ in at a time in poll.")
 	(let ((n (length s)))
 	  ;; 
 	  ;; Blast the string into place
+	  #-unicode
 	  (kernel:copy-to-system-area (the simple-string s)
 				      (* vm:vector-data-offset vm:word-bits)
 				      string-sap 0
 				      (* (1+ n) vm:byte-bits))
+	  #+unicode
+	  (progn
+	    (dotimes (k n)
+	      (setf (sap-ref-8 string-sap k)
+		    (logand #xff (char-code (aref s k)))))
+	    (setf (sap-ref-8 string-sap n) 0))
 	  ;; 
 	  ;; Blast the pointer to the string into place
 	  (setf (sap-ref-sap vec-sap i) string-sap)
