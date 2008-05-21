@@ -5,7 +5,7 @@
 
 ;;; Rename the PPC package and backend so that new-backend does the
 ;;; right thing.
-(rename-package "PPC" "OLD-PPC")
+(rename-package "PPC" "OLD-PPC" '("OLD-VM"))
 (setf (c:backend-name c:*native-backend*) "OLD-PPC")
 
 (c::new-backend "PPC"

@@ -5,7 +5,7 @@
 
 ;;; Rename the SPARC package and backend so that new-backend does the
 ;;; right thing.
-(rename-package "SPARC" "OLD-SPARC")
+(rename-package "SPARC" "OLD-SPARC" '("OLD-VM"))
 (setf (c:backend-name c:*native-backend*) "OLD-SPARC")
 
 (c::new-backend "SPARC"

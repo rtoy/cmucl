@@ -5,7 +5,7 @@
 
 ;;; Rename the X86 package and backend so that new-backend does the
 ;;; right thing.
-(rename-package "X86" "OLD-X86")
+(rename-package "X86" "OLD-X86" '("OLD-VM"))
 (setf (c:backend-name c:*native-backend*) "OLD-X86")
 
 (c::new-backend "X86"
