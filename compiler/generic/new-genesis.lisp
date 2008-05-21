@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.2 2008/05/20 14:33:06 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.3 2008/05/21 16:40:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1961,9 +1961,8 @@
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
     (dotimes (k len)
-      ;; XXX: Only use 8-bit chars for foreign stuff!  Must match
-      ;; DUMP-FIXUPS in dump.lisp!
-      (setf (aref sym k) (code-char (read-arg 1))))
+      (setf (aref sym k) (code-char (+ (read-arg 1)
+				       (ash (read-arg 1) 8)))))
     (let ((offset (read-arg 4))
 	  (value #+linkage-table (cold-register-foreign-linkage sym :code)
 		 #-linkage-table (lookup-foreign-symbol sym)))
@@ -1982,9 +1981,8 @@
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
     (dotimes (k len)
-      ;; XXX: Only use 8-bit chars for foreign stuff!  Must match
-      ;; DUMP-FIXUPS in dump.lisp!
-      (setf (aref sym k) (code-char (read-arg 1))))
+      (setf (aref sym k) (code-char (+ (read-arg 1)
+				       (ash (read-arg 1) 8)))))
     (let ((offset (read-arg 4))
 	  (value (cold-register-foreign-linkage sym :data)))
       (do-cold-fixup code-object offset value kind))

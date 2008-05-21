@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.2 2008/05/20 14:33:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.3 2008/05/21 16:40:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -610,10 +610,11 @@
 	 (let ((len (length name)))
 	   (assert (< len 256))
 	   (dump-byte len file)
-	   ;; XXX: we only use 8-bit chars for foreign stuff!  Must
-	   ;; match FOP-FOREIGN-FIXUP in load.lisp!
 	   (dotimes (i len)
-	     (dump-byte (char-code (schar name i)) file))))
+	     (let ((c (char-code (schar name i))))
+	       (dump-byte (ldb (byte 8 0) c) file)
+	       #+unicode
+	       (dump-byte (ldb (byte 8 8) c) file)))))
 	(:code-object
 	 (dump-fop 'lisp::fop-code-object-fixup file)))
       (dump-unsigned-32 offset file)))

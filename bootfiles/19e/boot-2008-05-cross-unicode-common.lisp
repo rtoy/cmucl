@@ -10,9 +10,6 @@
   (declare (type simple-base-string s))
   (let ((length (length s)))
     (dump-fop* length lisp::fop-small-string lisp::fop-string file)
-    #+nil
-    (dump-bytes s (* 2 length) file)
-
     (dotimes (k length)
       (let ((code (char-code (aref s k))))
 	(dump-byte (ldb (byte 8 8) code) file)
@@ -72,6 +69,43 @@
     (dump-byte (ldb (byte 8 0) code) file)
     (dump-byte (ldb (byte 8 8) code) file)))
 
+(defun dump-fixups (fixups file)
+  (declare (list fixups) (type fasl-file file))
+  (dolist (info fixups)
+    (let* ((kind (first info))
+	   (fixup (second info))
+	   (name (fixup-name fixup))
+	   (flavor (fixup-flavor fixup))
+	   (offset (third info)))
+      (dump-fop 'lisp::fop-normal-load file)
+      (let ((*cold-load-dump* t))
+	(dump-object kind file))
+      (dump-fop 'lisp::fop-maybe-cold-load file)
+      (ecase flavor
+	(:assembly-routine
+	 (assert (symbolp name))
+	 (dump-fop 'lisp::fop-normal-load file)
+	 (let ((*cold-load-dump* t))
+	   (dump-object name file))
+	 (dump-fop 'lisp::fop-maybe-cold-load file)
+	 (dump-fop 'lisp::fop-assembler-fixup file))
+	((:foreign :foreign-data)
+	 (assert (stringp name))
+	 (if (eq flavor :foreign)
+	     (dump-fop 'lisp::fop-foreign-fixup file)
+	     (dump-fop 'lisp::fop-foreign-data-fixup file))
+	 (let ((len (length name)))
+	   (assert (< len 256))
+	   (dump-byte len file)
+	   (dotimes (i len)
+	     (let ((c (char-code (schar name i))))
+	       (dump-byte (ldb (byte 8 0) c) file)
+	       (dump-byte (ldb (byte 8 8) c) file)))))
+	(:code-object
+	 (dump-fop 'lisp::fop-code-object-fixup file)))
+      (dump-unsigned-32 offset file)))
+  (undefined-value))
+
 (in-package "LISP")
 
 ;; Needed to read in 16-bit strings.
@@ -79,9 +113,6 @@
 	   (fop-small-string 38)
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
-    #+nil
-    (read-n-bytes *fasl-file* res 0 (* 2 arg))
-    
     (dotimes (k arg)
       (let ((c-hi (read-arg 1))
 	    (c-lo (read-arg 1)))
@@ -139,6 +170,32 @@
       (setf (aref res k)
 	    (code-char (+ (ash (read-arg 1) 8) (read-arg 1)))))
     (push-table (make-symbol res))))
+
+(define-fop (fop-foreign-fixup 147)
+  (let* ((kind (pop-stack))
+	 (code-object (pop-stack))
+	 (len (read-arg 1))
+	 (sym (make-string len)))
+    (dotimes (k len)
+      (setf (aref sym k) (code-char (+ (read-arg 1)
+				       (ash (read-arg 1) 8)))))
+    (old-vm:fixup-code-object code-object (read-arg 4)
+			  (foreign-symbol-address-aux sym :code)
+			  kind)
+    code-object))
+
+(define-fop (fop-foreign-data-fixup 150)
+  (let* ((kind (pop-stack))
+	 (code-object (pop-stack))
+	 (len (read-arg 1))
+	 (sym (make-string len)))
+    (dotimes (k len)
+      (setf (aref sym k) (code-char (+ (read-arg 1)
+				       (ash (read-arg 1) 8)))))
+    (old-vm:fixup-code-object code-object (read-arg 4)
+			  (foreign-symbol-address-aux sym :data)
+			  kind)
+    code-object))
 
 ;; Kill the any deftransforms.  They get in the way because they
 ;; assume 8-bit strings.

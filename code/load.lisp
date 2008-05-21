@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.2 2008/05/20 14:33:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.3 2008/05/21 16:40:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1473,9 +1473,8 @@
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
     (dotimes (k len)
-      ;; XXX: Only use 8-bit chars for foreign stuff!  Must match
-      ;; DUMP-FIXUPS in dump.lisp!
-      (setf (aref sym k) (code-char (read-arg 1))))
+      (setf (aref sym k) (code-char (+ (read-arg 1)
+				       (ash (read-arg 1) 8)))))
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :code)
 			  kind)
@@ -1490,9 +1489,8 @@
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
     (dotimes (k len)
-      ;; XXX: Only use 8-bit chars for foreign stuff!  Must match
-      ;; DUMP-FIXUPS in dump.lisp!
-      (setf (aref sym k) (code-char (read-arg 1))))
+      (setf (aref sym k) (code-char (+ (read-arg 1)
+				       (ash (read-arg 1) 8)))))
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :data)
 			  kind)
