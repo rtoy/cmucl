@@ -51,6 +51,8 @@ New in this release:
       been able to figure out a tighter result.
     - When SCALE-FLOAT would underflow, it would always return 0f0,
       instead of a floating-point zero of the correct type.
+    - Fix some issues in creating the debug arglist string when the
+      arglist contains items that can't be printed readably.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
