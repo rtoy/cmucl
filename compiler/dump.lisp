@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.3 2008/05/21 16:40:29 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.4 2008/05/22 17:59:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -229,6 +229,20 @@
 				 (* n vm:byte-bits))
 		  (setf (fasl-file-buffer-index file) n))))))
   (undefined-value))
+
+;; Write a char-code to a fasl file in the correct order
+#+unicode
+(defun dump-char-code (code file)
+  ;; Do we want *native-backend* or *target-backend*?  Use
+  ;; *native-backend* because we're assuming we're cross-compiling
+  ;; from the same arch as the desired arch.
+  (ecase (c::backend-byte-order c::*native-backend*)
+    (:little-endian
+     (dump-byte (ldb (byte 8 0) code) file)
+     (dump-byte (ldb (byte 8 8) code) file))
+    (:big-endian
+     (dump-byte (ldb (byte 8 8) code) file)
+     (dump-byte (ldb (byte 8 0) code) file))))
 
 
 ;;; Dump-FOP  --  Internal
@@ -611,10 +625,7 @@
 	   (assert (< len 256))
 	   (dump-byte len file)
 	   (dotimes (i len)
-	     (let ((c (char-code (schar name i))))
-	       (dump-byte (ldb (byte 8 0) c) file)
-	       #+unicode
-	       (dump-byte (ldb (byte 8 8) c) file)))))
+	     (dump-char-code (char-code (schar name i)) file))))
 	(:code-object
 	 (dump-fop 'lisp::fop-code-object-fixup file)))
       (dump-unsigned-32 offset file)))
@@ -1251,9 +1262,7 @@
     (dump-bytes pname (length pname) file)
     #+unicode
     (dotimes (k pname-length)
-      (let ((code (char-code (aref pname k))))
-	(dump-byte (ldb (byte 8 8) code) file)
-	(dump-byte (ldb (byte 8 0) code) file)))
+      (dump-char-code (char-code (aref pname k)) file))
 
     (unless *cold-load-dump*
       (setf (gethash s (fasl-file-eq-table file)) (fasl-file-table-free file)))
@@ -1470,9 +1479,7 @@
     (dump-bytes s (* 2 length) file)
 
     (dotimes (k length)
-      (let ((code (char-code (aref s k))))
-	(dump-byte (ldb (byte 8 8) code) file)
-	(dump-byte (ldb (byte 8 0) code) file))))
+      (dump-char-code (char-code (aref s k)) file)))
   (undefined-value))
 
 ;;; DUMP-I-VECTOR  --  Internal
@@ -1696,10 +1703,7 @@
 #+unicode
 (defun dump-character (ch file)
   (dump-fop 'lisp::fop-short-character file)
-  ;; Little endian
-  (let ((code (char-code ch)))
-    (dump-byte (ldb (byte 8 0) code) file)
-    (dump-byte (ldb (byte 8 8) code) file)))
+  (dump-char-code (char-code ch) file))
 
 
 ;;; Dump a structure.
