@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.35 2002/12/07 18:19:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.36 2008/05/22 13:44:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1176,8 +1176,8 @@
     (pprint-newline :linear)
     (when (vop-codegen-info vop)
       (princ (with-output-to-string (stream)
-	       (let ((*print-level* 1)
-		     (*print-length* 3))
+	       (let ((*print-level* 2)
+		     (*print-length* 5))
 		 (format stream "{~{~S~^ ~}} " (vop-codegen-info vop)))))
       (pprint-newline :linear))
     (when (vop-results vop)

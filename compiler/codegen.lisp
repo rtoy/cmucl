@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.23 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.24 2008/05/22 13:44:25 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,7 +153,7 @@
       (:align
        (format t "~0,8T.align~0,8T~A~%" args))
       (t
-       (format t "~0,8T~A~@[~0,8T~{~A~^, ~}~]~%" inst args))))
+       (format t "~0,8T~A~@[~0,8T~{~S~^, ~}~]~%" inst args))))
   (undefined-value))
 
 
