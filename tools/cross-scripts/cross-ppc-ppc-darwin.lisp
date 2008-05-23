@@ -2,7 +2,7 @@
 
 ;;; Rename the X86 package and backend so that new-backend does the
 ;;; right thing.
-(rename-package "PPC" "OLD-PPC")
+(rename-package "PPC" "OLD-PPC" '("OLD-VM"))
 (setf (c:backend-name c:*native-backend*) "OLD-PPC")
 
 (c::new-backend "PPC"
@@ -146,6 +146,11 @@
 ;; Modular arith hacks
 (setf (fdefinition 'vm::ash-left-mod32) #'old-ppc::ash-left-mod32)
 (setf (fdefinition 'vm::lognot-mod32) #'old-ppc::lognot-mod32)
+
+;; Fused multiply hack.  Don't know why this is needed for a cross-compile
+(setf (fdefinition 'vm::fused-multiply-add) #'old-ppc::fused-multiply-add)
+(setf (fdefinition 'vm::fused-multiply-subtract) #'old-ppc::fused-multiply-subtract)
+;; end
 
 (let ((function (symbol-function 'kernel:error-number-or-lose)))
   (let ((*info-environment* (c:backend-info-environment c:*target-backend*)))
