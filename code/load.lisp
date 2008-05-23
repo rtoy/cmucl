@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.4 2008/05/22 17:59:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.5 2008/05/23 16:02:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -316,16 +316,6 @@
 	 (prog1
 	  (fast-read-u-integer ,n)
 	  (done-with-fast-read-byte)))))
-
-#+unicode
-(defmacro load-char-code ()
-  (ecase (c::backend-byte-order c::*native-backend*)
-    (:little-endian
-     `(code-char (+ (read-arg 1)
-		    (ash (read-arg 1) 8))))
-    (:big-endian
-     `(code-char (+ (ash (read-arg 1) 8)
-		    (read-arg 1))))))
 
 
 ;;; Fasload:
@@ -718,7 +708,9 @@
 
 #+unicode
 (define-fop (fop-short-character 69)
-  (load-char-code))
+  ;; Characters are always little-endian
+  (code-char (+ (read-arg 1)
+		(ash (read-arg 1) 8))))
 
 (clone-fop (fop-struct 48)
 	   (fop-small-struct 49)
@@ -781,8 +773,7 @@
 			#-unicode
 			(read-n-bytes *fasl-file* ,n-buffer 0 ,n-size)
 			#+unicode
-			(dotimes (,k ,n-size)
-			  (setf (aref ,n-buffer ,k) (load-char-code)))
+			(read-n-bytes *fasl-file* ,n-buffer 0 (* 2 ,n-size))
 			(push-table (intern* ,n-buffer ,n-size ,n-package)))))))))
   (frob fop-symbol-save 6 4 *package*)
   (frob fop-small-symbol-save 7 1 *package*)
@@ -807,8 +798,7 @@
     #-unicode
     (read-n-bytes *fasl-file* res 0 arg)
     #+unicode
-    (dotimes (k arg)
-      (setf (aref res k) (load-char-code)))
+    (read-n-bytes *fasl-file* res 0 (* 2 arg))
     (push-table (make-symbol res))))
 
 (define-fop (fop-package 14)
@@ -1002,12 +992,7 @@
 	   (fop-small-string 38)
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
-
-    #+nil
     (read-n-bytes *fasl-file* res 0 (* 2 arg))
-
-    (dotimes (k arg)
-      (setf (aref res k) (load-char-code)))
     res))
 
 (clone-fop (fop-vector 39)
@@ -1476,8 +1461,8 @@
     #-unicode
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
-    (dotimes (k len)
-      (setf (aref sym k) (load-char-code)))
+    (read-n-bytes *fasl-file* sym 0 (* 2 len))
+
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :code)
 			  kind)
@@ -1491,8 +1476,8 @@
     #-unicode
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
-    (dotimes (k len)
-      (setf (aref sym k) (load-char-code)))
+    (read-n-bytes *fasl-file* sym 0 (* 2 len))
+
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :data)
 			  kind)

@@ -4,8 +4,9 @@
 (pushnew :unicode *features*)
 (in-package "C")
 
-;; Write a char-code to a fasl file in the correct order
-(defun dump-char-code (code file)
+;; Dump a character of a string to a fasl file in the byte correct
+;; order.
+(defun dump-string-char (code file)
   ;; Do we want *native-backend* or *target-backend*?  Use
   ;; *native-backend* because we're assuming we're cross-compiling
   ;; from the same arch as the desired arch.
@@ -17,17 +18,18 @@
      (dump-byte (ldb (byte 8 8) code) file)
      (dump-byte (ldb (byte 8 0) code) file))))
 
-;; Not sure why dump-bytes doesn't work. So we explicitly dump the
-;; bytes ourselves.
+;; Dump a string one character at a time because in the
+;; cross-compiler, we're still using 8-bit strings, but want 16-bit
+;; strings in the resulting fasl file.
 (defun dump-simple-string (s file)
   (declare (type simple-base-string s))
   (let ((length (length s)))
     (dump-fop* length lisp::fop-small-string lisp::fop-string file)
     (dotimes (k length)
-      (dump-char-code (char-code (aref s k)) file)))
+      (dump-string-char (char-code (aref s k)) file)))
   (undefined-value))
 
-;; Like dump-simple-string, but dump the characters explicitly.
+;; Like dump-simple-string
 (defun dump-symbol (s file)
   (let* ((pname (symbol-name s))
 	 (pname-length (length pname))
@@ -62,7 +64,7 @@
 	   (dump-unsigned-32 pname-length file)))
 
     (dotimes (k pname-length)
-      (dump-char-code (char-code (aref pname k)) file))
+      (dump-string-char (char-code (aref pname k)) file))
 
     (unless *cold-load-dump*
       (setf (gethash s (fasl-file-eq-table file)) (fasl-file-table-free file)))
@@ -71,9 +73,13 @@
 
   (undefined-value))
 
+;; We always dump characters in little endian order, which seems to be
+;; the way most fops are done.
 (defun dump-character (ch file)
   (dump-fop 'lisp::fop-short-character file)
-  (dump-char-code (char-code ch) file))
+  (let ((code (char-code ch)))
+    (dump-byte (ldb (byte 8 0) code) file)
+    (dump-byte (ldb (byte 8 8) code) file)))
 
 (defun dump-fixups (fixups file)
   (declare (list fixups) (type fasl-file file))
@@ -104,7 +110,7 @@
 	   (assert (< len 256))
 	   (dump-byte len file)
 	   (dotimes (i len)
-	     (dump-char-code (char-code (schar name i)) file))))
+	     (dump-string-char (char-code (schar name i)) file))))
 	(:code-object
 	 (dump-fop 'lisp::fop-code-object-fixup file)))
       (dump-unsigned-32 offset file)))
@@ -112,8 +118,8 @@
 
 (in-package "LISP")
 
-;; Opposite of dump-char-code
-(defmacro load-char-code ()
+;; Opposite of dump-string-char.
+(defmacro load-string-char ()
   (ecase (c::backend-byte-order c::*native-backend*)
     (:little-endian
      `(code-char (+ (read-arg 1)
@@ -128,11 +134,13 @@
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
     (dotimes (k arg)
-      (setf (aref res k) (load-char-code)))
+      (setf (aref res k) (load-string-char)))
     res))
 
+;; Read in characters.  They're always dumped in little-endian order.
 (define-fop (fop-short-character 69)
-  (load-char-code))
+  (code-char (+ (read-arg 1)
+		(ash (read-arg 1) 8))))
 
 ;; Needed to read in 16-bit strings to create the symbols.
 (macrolet ((frob (name code name-size package)
@@ -151,7 +159,7 @@
 		      (done-with-fast-read-byte)
 		      (let ((,n-buffer *load-symbol-buffer*))
 			(dotimes (,k ,n-size)
-			  (setf (aref ,n-buffer ,k) (load-char-code)))
+			  (setf (aref ,n-buffer ,k) (load-string-char)))
 			(push-table (intern* ,n-buffer ,n-size ,n-package)))))))))
   (frob fop-symbol-save 6 4 *package*)
   (frob fop-small-symbol-save 7 1 *package*)
@@ -174,7 +182,7 @@
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
     (dotimes (k arg)
-      (setf (aref res k) (load-char-code)))
+      (setf (aref res k) (load-string-char)))
     (push-table (make-symbol res))))
 
 (define-fop (fop-foreign-fixup 147)
@@ -183,7 +191,7 @@
 	 (len (read-arg 1))
 	 (sym (make-string len)))
     (dotimes (k len)
-      (setf (aref sym k) (load-char-code)))
+      (setf (aref sym k) (load-string-char)))
     (old-vm:fixup-code-object code-object (read-arg 4)
 			      (foreign-symbol-address-aux sym :code)
 			      kind)
@@ -195,7 +203,7 @@
 	 (len (read-arg 1))
 	 (sym (make-string len)))
     (dotimes (k len)
-      (setf (aref sym k) (load-char-code)))
+      (setf (aref sym k) (load-string-char)))
     (old-vm:fixup-code-object code-object (read-arg 4)
 			      (foreign-symbol-address-aux sym :data)
 			      kind)

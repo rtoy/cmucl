@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.4 2008/05/22 17:59:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80.4.5 2008/05/23 16:02:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1227,7 +1227,9 @@
 
 #+unicode
 (define-cold-fop (fop-short-character)
-  (make-character-descriptor (char-code (lisp::load-char-code))))
+  (make-character-descriptor
+   (+ (read-arg 1)
+      (ash (read-arg 1) 8))))
 
 (define-cold-fop (fop-empty-list) *nil-descriptor*)
 (define-cold-fop (fop-truth) (cold-intern t))
@@ -1310,12 +1312,22 @@
     (cold-intern (intern string package) package)))
 
 #+unicode
+(defmacro load-char-code ()
+  (ecase (c::backend-byte-order c::*native-backend*)
+    (:little-endian
+     `(code-char (+ (read-arg 1)
+		    (ash (read-arg 1) 8))))
+    (:big-endian
+     `(code-char (+ (ash (read-arg 1) 8)
+		    (read-arg 1))))))
+
+#+unicode
 (defun cold-load-symbol (size package)
   (let ((string (make-string size)))
     #+nil
     (read-n-bytes *fasl-file* string 0 (* 2 size))
     (dotimes (k size)
-      (setf (aref string k) (lisp::load-char-code)))
+      (setf (aref string k) (load-char-code)))
     (cold-intern (intern string package) package)))
 
 (clone-cold-fop (fop-symbol-save)
@@ -1358,7 +1370,7 @@
     #+nil
     (read-n-bytes *fasl-file* name 0 size)
     (dotimes (k size)
-      (setf (aref name k) (lisp::load-char-code)))
+      (setf (aref name k) (load-char-code)))
     (let ((symbol (allocate-symbol name)))
       (push-table symbol))))
 
@@ -1428,7 +1440,7 @@
     #+nil
     (read-n-bytes *fasl-file* string 0 (* 2 len))
     (dotimes (k len)
-      (setf (aref string k) (lisp::load-char-code)))
+      (setf (aref string k) (load-char-code)))
     (string-to-core string)))
 
 (clone-cold-fop (fop-vector)
@@ -1955,7 +1967,7 @@
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
     (dotimes (k len)
-      (setf (aref sym k) (lisp::load-char-code)))
+      (setf (aref sym k) (load-char-code)))
     (let ((offset (read-arg 4))
 	  (value #+linkage-table (cold-register-foreign-linkage sym :code)
 		 #-linkage-table (lookup-foreign-symbol sym)))
@@ -1974,7 +1986,7 @@
     (read-n-bytes *fasl-file* sym 0 len)
     #+unicode
     (dotimes (k len)
-      (setf (aref sym k) (lisp::load-char-code)))
+      (setf (aref sym k) (load-char-code)))
     (let ((offset (read-arg 4))
 	  (value (cold-register-foreign-linkage sym :data)))
       (do-cold-fixup code-object offset value kind))
