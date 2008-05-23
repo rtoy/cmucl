@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.7 2006/01/18 15:21:26 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/array.lisp,v 1.7.12.1 2008/05/23 19:59:10 rtoy Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -137,6 +137,9 @@
 			  (:temp temp non-descriptor-reg nl2-offset)
 			  (:temp offset non-descriptor-reg nl3-offset))
   (emit-label sxhash-simple-substring-entry)
+
+  #+unicode
+  (inst slwi length length 1)		; Number of bytes = twice the length
 
   (inst li offset (- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
   (move accum zero-tn)
