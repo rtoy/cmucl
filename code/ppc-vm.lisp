@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.8 2006/11/14 04:47:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.9 2008/05/23 18:15:30 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -354,3 +354,17 @@
 
 ;;; Enable/Disable scavenging of the read-only space.
 (defvar *scavenge-read-only-space* nil)
+
+;; Not really necessary (AFAICT), but nice to have around.  The
+;; compiler will normally use vops to implement these functions.
+
+(defun fused-multiply-subtract (x y z)
+  "Compute x*y-z with only one rounding operation"
+  (declare (double-float x y z))
+  (fused-multiply-subtract x y z))
+
+(defun fused-multiply-add (x y z)
+  "Compute x*y+z with only one rounding operation"
+  (declare (double-float x y z))
+  (fused-multiply-add x y z))
+
