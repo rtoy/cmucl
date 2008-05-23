@@ -1,3 +1,4 @@
+# -*- Mode: makefile -*-
 PATH1 = ../../src/lisp
 vpath %.h $(PATH1)
 vpath %.c $(PATH1)
@@ -13,6 +14,7 @@ LD = ld
 NM = $(PATH1)/darwin-nm
 CPP = cpp -no-cpp-precomp
 DEPEND = $(CC) -MM
+
 ifdef FEATURE_LINKAGE_TABLE
 LINKAGE = -DLINKAGE_TABLE
 endif
@@ -23,7 +25,13 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
+# Enable support for Unicode
+ifdef FEATURE_UNICODE
+UNICODE = -DUNICODE
+GC_SRC = gencgc.c
+endif
+
+CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC) $(UNICODE)
 ASFLAGS = -traditional -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE) $(GENCGC)
 
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
