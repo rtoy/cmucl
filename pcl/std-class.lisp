@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.82 2006/11/30 15:49:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.83 2008/05/24 14:41:39 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -714,6 +714,7 @@
   (add-direct-subclasses class direct-superclasses)
   (setf (slot-value class 'class-precedence-list) 
 	(compute-class-precedence-list class))
+  (setf (slot-value class 'cpl-available-p) t)
   (setf (slot-value class 'slots) (compute-slots class))
   (let ((lclass (kernel::find-class (class-name class))))
     (setf (kernel:%class-pcl-class lclass) class)
@@ -860,8 +861,11 @@
 	;; Need to have the cpl setup before update-lisp-class-layout
 	;; is called on CMUCL.
 	(setf (slot-value class 'class-precedence-list) cpl)
+        (setf (slot-value class 'cpl-available-p) t)	
 	(force-cache-flushes class))
-      (setf (slot-value class 'class-precedence-list) cpl))
+      (progn
+	(setf (slot-value class 'class-precedence-list) cpl)
+	(setf (slot-value class 'cpl-available-p) t)))
   (update-class-can-precede-p cpl))
   
 (defun update-class-can-precede-p (cpl)
@@ -1655,7 +1659,8 @@
 				     &key direct-slots direct-superclasses)
   (declare (ignore slot-names))
   (let ((kernel-class (kernel::find-class (class-name class))))
-    (with-slots (wrapper class-precedence-list prototype predicate-name
+    (with-slots (wrapper class-precedence-list cpl-available-p
+			 prototype predicate-name
 			 (direct-supers direct-superclasses))
 	class
       (setf (slot-value class 'direct-slots)
@@ -1666,6 +1671,7 @@
       (setq direct-supers direct-superclasses)
       (setq wrapper (kernel:%class-layout kernel-class))
       (setq class-precedence-list (compute-class-precedence-list class))
+      (setq cpl-available-p t)
       (add-direct-subclasses class direct-superclasses)
       (setq predicate-name (make-class-predicate-name (class-name class)))
       (make-class-predicate class predicate-name)
