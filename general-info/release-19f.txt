@@ -53,6 +53,10 @@ New in this release:
       instead of a floating-point zero of the correct type.
     - Fix some issues in creating the debug arglist string when the
       arglist contains items that can't be printed readably.
+    - Some issues with get-accessor-method-function and
+      slot-value-using-class have been fixed.
+      Get-accessor-method-function was causing an error to be signaled
+      incorrectly.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
