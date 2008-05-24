@@ -1,3 +1,6 @@
+;; Basic cross-compile script for cross-compiling from x86 to x86.
+;; May require tweaking for more difficult cross-compiles.
+
 (in-package :cl-user)
 
 ;;; Rename the X86 package and backend so that new-backend does the
@@ -6,23 +9,28 @@
 (setf (c:backend-name c:*native-backend*) "OLD-X86")
 
 (c::new-backend "X86"
-   ;; Features to add here
+   ;; Features to add here.  These are just examples.  You may not
+   ;; need to list anything here.  We list them here anyway as a
+   ;; record of typical features for all x86 ports.
    '(:x86 :i486 :pentium
-     :stack-checking
-     :heap-overflow-check
-     :relative-package-names
-     :mp
-     :gencgc
+     :stack-checking			; Catches stack overflow
+     :heap-overflow-check		; Catches heap overflows
+     :relative-package-names		; relative package names
+     :mp				; multiprocessing
+     :gencgc				; Generational GC
      :conservative-float-type
-     :hash-new :random-mt19937
-     :linux :glibc2 :glibc2.1
-     :cmu :cmu19 :cmu19e
-     :double-double
+     :hash-new
+     :random-mt19937
+     :cmu :cmu19 :cmu19e		; Version features
+     :double-double			; double-double float support
      )
-   ;; Features to remove from current *features* here
-   '(:x86-bootstrap :alpha :osf1 :mips
+   ;; Features to remove from current *features* here.  Normally don't
+   ;; need to list anything here unless you are trying to remove a
+   ;; feature.
+   '(:x86-bootstrap
+     ;; :alpha :osf1 :mips
      :propagate-fun-type :propagate-float-type :constrain-float-type
-     :openbsd :freebsd :glibc2 :linux
+     ;; :openbsd :freebsd :glibc2 :linux
      :long-float :new-random :small))
 
 ;;; Compile the new backend.
