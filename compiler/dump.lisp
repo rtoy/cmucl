@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.5 2008/05/23 16:02:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.6 2008/05/25 13:54:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1449,19 +1449,13 @@
 ;;;
 ;;;    Dump a SIMPLE-BASE-STRING.
 ;;;
-#-unicode
 (defun dump-simple-string (s file)
   (declare (type simple-base-string s))
   (let ((length (length s)))
     (dump-fop* length lisp::fop-small-string lisp::fop-string file)
-    (dump-bytes s length file))
-  (undefined-value))
-
-#+unicode
-(defun dump-simple-string (s file)
-  (declare (type simple-base-string s))
-  (let ((length (length s)))
-    (dump-fop* length lisp::fop-small-string lisp::fop-string file)
+    #-unicode
+    (dump-bytes s length file)
+    #+unicode
     (dump-data-maybe-byte-swapping s (* 2 length) 16 file))
   (undefined-value))
 
