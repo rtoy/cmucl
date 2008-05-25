@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.26.32.1 2008/05/19 20:23:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.26.32.2 2008/05/25 13:57:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -387,9 +387,13 @@
 				      string-sap 0
 				      (* (1+ n) vm:byte-bits))
 	  #+unicode
-	  (dotimes (k n)
-	    (setf (sap-ref-8 string-sap k)
-		  (logand #xff (char-code (aref s k)))))
+	  (progn
+	    ;; FIXME: Do we need to apply some kind of transformation
+	    ;; to convert Lisp unicode strings to C strings?  Utf-8?
+	    (dotimes (k n)
+	      (setf (sap-ref-8 string-sap k)
+		    (logand #xff (char-code (aref s k)))))
+	    (setf (sap-ref-8 string-sap n) 0))
 	  ;; 
 	  ;; Blast the pointer to the string into place
 	  (setf (sap-ref-sap vec-sap i) string-sap)

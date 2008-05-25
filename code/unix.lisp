@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.3 2008/05/21 23:08:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.4 2008/05/25 13:57:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2833,6 +2833,8 @@
 				      (* (1+ n) vm:byte-bits))
 	  #+unicode
 	  (progn
+	    ;; FIXME: Do we need to apply some kind of transformation
+	    ;; to convert Lisp unicode strings to C strings?  Utf-8?
 	    (dotimes (k n)
 	      (setf (sap-ref-8 string-sap k)
 		    (logand #xff (char-code (aref s k)))))
