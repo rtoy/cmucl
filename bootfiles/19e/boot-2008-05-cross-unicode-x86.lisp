@@ -27,42 +27,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Things needed to cross-compile unicode changes.
 
-(in-package "C")
-(handler-bind ((error #'(lambda (c)
-                          (declare (ignore c))
-                          (invoke-restart 'kernel::continue))))
-(defconstant array-info
-  '((base-char #\NULL 16 old-x86:simple-string-type)
-    (single-float 0.0f0 32 old-x86:simple-array-single-float-type)
-    (double-float 0.0d0 64 old-x86:simple-array-double-float-type)
-    #+long-float (long-float 0.0l0 #+x86 96 #+sparc 128
-		  old-x86:simple-array-long-float-type)
-    #+double-double
-    (double-double-float 0w0 128
-		  old-x86::simple-array-double-double-float-type)
-    (bit 0 1 old-x86:simple-bit-vector-type)
-    ((unsigned-byte 2) 0 2 old-x86:simple-array-unsigned-byte-2-type)
-    ((unsigned-byte 4) 0 4 old-x86:simple-array-unsigned-byte-4-type)
-    ((unsigned-byte 8) 0 8 old-x86:simple-array-unsigned-byte-8-type)
-    ((unsigned-byte 16) 0 16 old-x86:simple-array-unsigned-byte-16-type)
-    ((unsigned-byte 32) 0 32 old-x86:simple-array-unsigned-byte-32-type)
-    ((signed-byte 8) 0 8 old-x86:simple-array-signed-byte-8-type)
-    ((signed-byte 16) 0 16 old-x86:simple-array-signed-byte-16-type)
-    ((signed-byte 30) 0 32 old-x86:simple-array-signed-byte-30-type)
-    ((signed-byte 32) 0 32 old-x86:simple-array-signed-byte-32-type)
-    ((complex single-float) #C(0.0f0 0.0f0) 64
-     old-x86:simple-array-complex-single-float-type)
-    ((complex double-float) #C(0.0d0 0.0d0) 128
-     old-x86:simple-array-complex-double-float-type)
-    #+long-float
-    ((complex long-float) #C(0.0l0 0.0l0) #+x86 192 #+sparc 256
-     old-x86:simple-array-complex-long-float-type)
-    #+double-double
-    ((complex double-double-float) #C(0.0w0 0.0w0) 256
-     old-x86::simple-array-complex-double-double-float-type)
-    (t 0 32 old-x86:simple-vector-type)))
-)
-
 (load "target:bootfiles/19e/boot-2008-05-cross-unicode-common.lisp")
 
 ;; Kill the any deftransforms
