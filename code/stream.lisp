@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.2 2008/05/29 23:50:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2112,6 +2112,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 	     (etypecase seq
 	       (list
 		(read-into-list seq stream start end))
+	       #-unicode
 	       (simple-string
 		(read-into-simple-string seq stream start end))
 	       (string
