@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267 2008/04/15 14:42:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.1 2008/05/30 15:51:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1084,6 +1084,7 @@
 	   "CALLBACK-ACCESSOR-FORM" "MAKE-CALLBACK-TRAMPOLINE"
 	   "FIXNUMIZE"
 	   "WEAK-POINTER-MARK-BIT-SLOT"
+	   "CHAR-BITS"
 	   )
   #+x86
   (:export "COMPATIBLE-FUNCTION-TYPES-P")
