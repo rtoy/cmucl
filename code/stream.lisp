@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.3 2008/05/30 13:27:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.4 2008/05/30 19:30:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1635,10 +1635,8 @@ output to Output-stream"
 	    (let* ((new-length (if (zerop current) 1 (* current 2)))
 		   (new-workspace (make-string new-length)))
 	      (declare (simple-string new-workspace))
-	      #-unicode
-	      (%primitive byte-blt workspace start new-workspace 0 current)
-	      #+unicode
-	      (%primitive byte-blt workspace (* 2 start) new-workspace 0 (* 2 current))
+	      (%primitive byte-blt workspace (* vm:char-bytes start)
+			  new-workspace 0 (* vm:char-bytes current))
 	      (setf workspace new-workspace)
 	      (setf offset-current current)
 	      (set-array-header buffer workspace new-length
@@ -1664,23 +1662,17 @@ output to Output-stream"
 	    (let* ((new-length (+ (the fixnum (* current 2)) string-len))
 		   (new-workspace (make-string new-length)))
 	      (declare (simple-string new-workspace))
-	      #-unicode
-	      (%primitive byte-blt workspace dst-start new-workspace 0 current)
-	      #+unicode
-	      (%primitive byte-blt workspace (* 2 dst-start)
-			  new-workspace 0 (* 2 current))
+	      (%primitive byte-blt workspace (* vm:char-bytes dst-start)
+			  new-workspace 0 (* vm:char-bytes current))
 	      (setf workspace new-workspace)
 	      (setf offset-current current)
 	      (setf offset-dst-end dst-end)
 	      (set-array-header buffer workspace new-length
 				dst-end 0 new-length nil))
 	    (setf (fill-pointer buffer) dst-end))
-	#-unicode
-	(%primitive byte-blt string start
-		    workspace offset-current offset-dst-end)
-	#+unicode
-	(%primitive byte-blt string (* 2 start)
-		    workspace (* 2 offset-current) (* 2 offset-dst-end))))
+	(%primitive byte-blt string (* vm:char-bytes start)
+		    workspace (* vm:char-bytes offset-current)
+		    (* vm:char-bytes offset-dst-end))))
     dst-end))
 
 
