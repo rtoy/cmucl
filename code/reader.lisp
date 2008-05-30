@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.1 2008/05/29 23:50:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.62.4.2 2008/05/30 14:52:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -444,13 +444,13 @@
     ;;* backquote
     ;;all constituents
     (do ((ichar 0 (1+ ichar))
-	 (len (length (character-attribute-table std-lisp-readtable)))
-	 (char))
+	 (len #+unicode-bootstrap #o200
+	      #-unicode-bootstrap (length (character-attribute-table std-lisp-readtable))))
 	((= ichar len))
-      (setq char (code-char ichar))
-      (when (constituentp char std-lisp-readtable)
-	    (set-cat-entry char (get-secondary-attribute char))
-	    (set-cmt-entry char #'read-token)))))
+      (let ((char (code-char ichar)))
+	(when (constituentp char std-lisp-readtable)
+	  (set-cat-entry char (get-secondary-attribute char))
+	  (set-cmt-entry char #'read-token))))))
 
 
 

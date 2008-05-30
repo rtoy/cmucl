@@ -2,6 +2,7 @@
 ;;; This part is independent of the architecture.
 
 (pushnew :unicode *features*)
+(pushnew :unicode-bootstrap *features*)
 (in-package "C")
 
 (handler-bind ((error #'(lambda (c)
