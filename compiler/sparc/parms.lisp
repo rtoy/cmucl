@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.54.2.1 2008/05/30 15:51:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.54.2.2 2008/05/30 16:40:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,7 @@
 
 ;;;; Machine Architecture parameters:
 
-(export '(word-bits byte-bits char-bits word-shift word-bytes 
+(export '(word-bits byte-bits char-bits word-shift word-bytes char-bytes
 	  fixnum-tag-bits fixnum-tag-mask positive-fixnum-bits
 
 	  float-sign-shift
@@ -93,6 +93,9 @@
 
 (defconstant char-bits #-unicode 8 #+unicode 16
   "Number of bits needed to represent a character")
+
+(defconstant char-bytes (truncate char-bits byte-bits)
+  "Number of bytes needed to represent a character")
 
 (defconstant word-shift (1- (integer-length (/ word-bits byte-bits)))
   "Number of bits to shift between word addresses and byte addresses.")
