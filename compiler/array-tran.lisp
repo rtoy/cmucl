@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.42.2.2 2008/05/18 22:55:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.42.2.3 2008/05/30 19:01:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,7 +252,7 @@
 	       :initial-element initial-element))
 
 (defconstant array-info
-  '((base-char #\NULL #-unicode 8 #+unicode 16 vm:simple-string-type)
+  '((base-char #\NULL #.vm:char-bits vm:simple-string-type)
     (single-float 0.0f0 32 vm:simple-array-single-float-type)
     (double-float 0.0d0 64 vm:simple-array-double-float-type)
     #+long-float (long-float 0.0l0 #+x86 96 #+sparc 128
