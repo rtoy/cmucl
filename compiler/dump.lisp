@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.6 2008/05/25 13:54:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.82.6.7 2008/05/30 20:47:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -613,7 +613,7 @@
 	   (dotimes (i len)
 	     (dump-byte (char-code (schar name i)) file))
 	   #+unicode
-	   (dump-data-maybe-byte-swapping name (* 2 len) 16 file)))
+	   (dump-data-maybe-byte-swapping name (* vm:char-bytes len) vm:char-bits file)))
 	(:code-object
 	 (dump-fop 'lisp::fop-code-object-fixup file)))
       (dump-unsigned-32 offset file)))
@@ -1249,7 +1249,7 @@
     #-unicode
     (dump-bytes pname (length pname) file)
     #+unicode
-    (dump-data-maybe-byte-swapping pname (* 2 (length pname)) 16 file)
+    (dump-data-maybe-byte-swapping pname (* vm:char-bytes (length pname)) vm:char-bits file)
 
     (unless *cold-load-dump*
       (setf (gethash s (fasl-file-eq-table file)) (fasl-file-table-free file)))
@@ -1456,7 +1456,7 @@
     #-unicode
     (dump-bytes s length file)
     #+unicode
-    (dump-data-maybe-byte-swapping s (* 2 length) 16 file))
+    (dump-data-maybe-byte-swapping s (* vm:char-bytes length) vm:char-bits file))
   (undefined-value))
 
 ;;; DUMP-I-VECTOR  --  Internal

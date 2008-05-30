@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.6 2008/05/25 13:54:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.92.4.7 2008/05/30 20:47:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -771,8 +771,7 @@
 		      (done-with-fast-read-byte)
 		      (let ((,n-buffer *load-symbol-buffer*))
 			(read-n-bytes *fasl-file* ,n-buffer 0
-				      #-unicode ,n-size
-				      #+unicode (* 2 ,n-size))
+				      (* vm:char-bytes ,n-size))
 			(push-table (intern* ,n-buffer ,n-size ,n-package)))))))))
   (frob fop-symbol-save 6 4 *package*)
   (frob fop-small-symbol-save 7 1 *package*)
@@ -795,8 +794,7 @@
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
     (read-n-bytes *fasl-file* res 0
-		  #-unicode arg
-		  #+unicode (* 2 arg))
+		  (* vm:char-bytes arg))
     (push-table (make-symbol res))))
 
 (define-fop (fop-package 14)
@@ -982,8 +980,7 @@
   (let* ((arg (clone-arg))
 	 (res (make-string arg)))
     (read-n-bytes *fasl-file* res 0
-		  #-unicode arg
-		  #+unicode (* 2 arg))
+		  (* vm:char-bytes arg))
     res))
 
 (clone-fop (fop-vector 39)
@@ -1450,8 +1447,7 @@
 	 (len (read-arg 1))
 	 (sym (make-string len)))
     (read-n-bytes *fasl-file* sym 0
-		  #-unicode len
-		  #+unicode (* 2 len))
+		  (* vm:char-bytes len))
 
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :code)
@@ -1464,8 +1460,7 @@
 	 (len (read-arg 1))
 	 (sym (make-string len)))
     (read-n-bytes *fasl-file* sym 0
-		  #-unicode len
-		  #+unicode (* 2 len))
+		  (* vm:char-bytes len))
 
     (vm:fixup-code-object code-object (read-arg 4)
 			  (foreign-symbol-address-aux sym :data)
