@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.2 2008/05/29 23:50:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.83.6.3 2008/05/30 13:27:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1638,7 +1638,7 @@ output to Output-stream"
 	      #-unicode
 	      (%primitive byte-blt workspace start new-workspace 0 current)
 	      #+unicode
-	      (replace new-workspace workspace)
+	      (%primitive byte-blt workspace (* 2 start) new-workspace 0 (* 2 current))
 	      (setf workspace new-workspace)
 	      (setf offset-current current)
 	      (set-array-header buffer workspace new-length
@@ -1667,7 +1667,8 @@ output to Output-stream"
 	      #-unicode
 	      (%primitive byte-blt workspace dst-start new-workspace 0 current)
 	      #+unicode
-	      (replace new-workspace workspace)
+	      (%primitive byte-blt workspace (* 2 dst-start)
+			  new-workspace 0 (* 2 current))
 	      (setf workspace new-workspace)
 	      (setf offset-current current)
 	      (setf offset-dst-end dst-end)
@@ -1678,7 +1679,8 @@ output to Output-stream"
 	(%primitive byte-blt string start
 		    workspace offset-current offset-dst-end)
 	#+unicode
-	(replace workspace string :start1 current :start2 start :end2 end)))
+	(%primitive byte-blt string (* 2 start)
+		    workspace (* 2 offset-current) (* 2 offset-dst-end))))
     dst-end))
 
 
