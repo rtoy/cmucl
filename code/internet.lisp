@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.52 2007/12/17 09:54:35 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.52.4.1 2008/05/31 18:56:39 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,11 +272,20 @@ struct in_addr {
   (let ((socket (create-unix-socket kind)))
     (with-alien ((sockaddr unix-sockaddr))
       (setf (slot sockaddr 'family) af-unix)
+      #-unicode
       (kernel:copy-to-system-area path
 				  (* vm:vector-data-offset vm:word-bits)
 				  (alien-sap (slot sockaddr 'path))
 				  0
 				  (* (1+ (length path)) vm:byte-bits))
+      #+unicode
+      (let ((sap (alien-sap (slot sockaddr 'path)))
+	    (len (length path)))
+	;; FIXME:  What should we do about this for unicode?
+	(dotimes (k len)
+	  (setf (sap-ref-8 sap k) (logand #xff (char-code (aref path k)))))
+	(setf (sap-ref-8 sap len) 0))
+
       (when (minusp (unix:unix-connect socket
 				       (alien-sap sockaddr)
 				       (alien-size unix-sockaddr :bytes)))
@@ -293,11 +302,20 @@ struct in_addr {
   (let ((socket (create-unix-socket kind)))
     (with-alien ((sockaddr unix-sockaddr)) ;; I'm here (MSM)
       (setf (slot sockaddr 'family) af-unix)
+      #-unicode
       (kernel:copy-to-system-area path
 				  (* vm:vector-data-offset vm:word-bits)
 				  (alien-sap (slot sockaddr 'path))
 				  0
 				  (* (1+ (length path)) vm:byte-bits))
+      #+unicode
+      (let ((sap (alien-sap (slot sockaddr 'path)))
+	    (len (length path)))
+	;; FIXME:  What should we do about this for unicode?
+	(dotimes (k len)
+	  (setf (sap-ref-8 sap k) (logand #xff (char-code (aref path k)))))
+	(setf (sap-ref-8 sap len) 0))
+      
       (when (minusp (unix:unix-bind socket
 				    (alien-sap sockaddr)
 				    (+ (alien-size inet-sockaddr :bytes)
