@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.4 2008/05/25 13:57:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.5 2008/05/31 02:20:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2528,10 +2528,16 @@
 	    (declare (type (unsigned-byte 8) nlen)
 		     (type (unsigned-byte 32) fino))
 	    (let ((string (make-string nlen)))
+	      #-unicode
 	      (kernel:copy-from-system-area
 	       (alien-sap (addr (slot direct 'd-name))) 0
 	       string (* vm:vector-data-offset vm:word-bits)
 	       (* nlen vm:byte-bits))
+	      #+unicode
+	      (let ((sap (alien-sap (addr (slot direct 'd-name)))))
+		(dotimes (k nlen)
+		  (setf (aref string k)
+			(code-char (sap-ref-8 sap k)))))
 	      (values string fino)))))))
 
 
