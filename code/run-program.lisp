@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.26.32.2 2008/05/25 13:57:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.26.32.3 2008/05/31 01:23:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -634,10 +634,16 @@
 			     (error "Could not read input from sub-process: ~A"
 				    (unix:get-unix-error-msg errno)))
 			    (t
+			     #-unicode
 			     (kernel:copy-from-system-area
 			      (alien-sap buf) 0
 			      string (* vm:vector-data-offset vm:word-bits)
 			      (* count vm:byte-bits))
+			     #+unicode
+			     (let ((sap (alien-sap buf)))
+			       (dotimes (k count)
+				 (setf (aref string k)
+				       (code-char (sap-ref-8 sap k)))))
 			     (write-string string stream
 					   :end count)))))))))))
 
