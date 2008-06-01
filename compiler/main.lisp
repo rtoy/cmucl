@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.146 2005/07/01 13:00:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.146.14.1 2008/06/01 03:08:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -712,14 +712,18 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
   ;;
   ;; The stream that we are using to read the Current-File.  Null if no stream
   ;; has been opened yet.
-  (stream nil :type (or stream null)))
+  (stream nil :type (or stream null))
+  ;;
+  ;; External format to use for the stream if the stream hasn't been opened
+  #+unicode
+  (external-format :default))
 
 
 ;;; Make-File-Source-Info  --  Internal
 ;;;
 ;;;    Given a list of pathnames, return a Source-Info structure.
 ;;;
-(defun make-file-source-info (files)
+(defun make-file-source-info (files external-format)
   (declare (list files))
   (let ((file-info
 	 (mapcar #'(lambda (x)
@@ -730,7 +734,9 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 		 files)))
 
     (make-source-info :files file-info
-		      :current-file file-info)))
+		      :current-file file-info
+		      #+unicode :external-format
+		      #+unicode external-format)))
 
 
 ;;; MAKE-LISP-SOURCE-INFO  --  Interface
@@ -869,7 +875,9 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	   (setq *compile-file-truename* name)
 	   (setq *compile-file-pathname* (file-info-untruename finfo))
 	   (setf (source-info-stream info)
-		 (open name :direction :input))))))
+		 (open name :direction :input
+		       #+unicode :external-format
+		       #+unicode (source-info-external-format info)))))))
 
 ;;; CLOSE-SOURCE-INFO  --  Internal
 ;;;
@@ -1781,8 +1789,9 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
       which is initially :MAYBE.
    :Xref
       If non-NIL, enable recording of cross-reference information.  The default
-      is the value of C:*RECORD-XREF-INFO*"
-  (declare (ignore external-format))
+      is the value of C:*RECORD-XREF-INFO*
+   :External-Format
+      The external format to use when opening the source file"
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
 	 (output-file-pathname nil)
@@ -1791,7 +1800,7 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 	 (compile-won nil)
 	 (error-severity nil)
 	 (source (verify-source-files source))
-	 (source-info (make-file-source-info source))
+	 (source-info (make-file-source-info source external-format))
 	 (default (pathname (first source))))
     (unwind-protect
 	(progn
