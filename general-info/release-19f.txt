@@ -28,6 +28,12 @@ New in this release:
     - Fix merging of version in MAKE-PATHNAME.  If the pathname name
       is given, the version is not affected by the version in the
       default pathname.
+    - RENAME-FILE now creates defaulted-new-name from merging new-name
+      with the original filespec.  This is an incompatible change from
+      the previous version which created defaulted-new-name from
+      merging the new-name with the truename of filespec.  Also, a
+      logical pathname should be returned if new-name is a logical
+      pathname. 
 
   * Bugfixes:
     - Compiler can now derive the rank of an array, even if the array
