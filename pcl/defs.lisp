@@ -482,6 +482,9 @@
 (defclass pcl-class (class)
   ((class-precedence-list
     :reader class-precedence-list)
+   (cpl-available-p
+    :reader cpl-available-p
+    :initform nil)
    (can-precede-list
     :initform ()
     :reader class-can-precede-list)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/entry.lisp,v 1.12 2005/01/25 15:40:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/entry.lisp,v 1.12.18.1 2008/06/19 03:30:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,6 +41,38 @@
   (undefined-value))
 
 
+;;; Simplify-Lambda-List  --  Internal
+;;;
+;;;    Remove complex init forms from the debug arglist LAMBDA-LIST so
+;;; that we can print it safely.
+;;;
+(defun simplify-lambda-list (lambda-list)
+  (labels ((simplify-lambda-arg (arg)
+	     (cond ((symbolp arg) arg)
+		   (t (destructuring-bind (name &optional init supplied) arg
+			(declare (ignore supplied))
+			(cond ((simple-init-form-p init 3) arg)
+			      ((consp name) (car name))
+			      (t name))))))
+	   (simple-init-form-p (form level)
+	     (and (> level 0)
+		  (typecase form
+		    ((or symbol number character) t)
+		    (cons (and (simple-init-form-p (car form) (1- level))
+			       (simple-init-form-p (cdr form) (1- level))))))))
+    (multiple-value-bind (required optional restp rest keyp keys
+				   other aux morep morectx morecount)
+	(c::parse-lambda-list lambda-list)
+      (declare (ignore aux))
+      `(,@required 
+	,@(if optional `(&optional . ,(mapcar #'simplify-lambda-arg optional)))
+	,@(if restp `(&rest ,rest))
+	,@(if keyp `(&key . ,(mapcar #'simplify-lambda-arg keys)))
+	,@(if other `(&allow-other-keys))
+	,@(if morep `(&more ,morectx ,morecount))))))
+
+
+
 ;;; Make-Arg-Names  --  Internal
 ;;;
 ;;;    Takes the list representation of the debug arglist and turns it into a
@@ -56,9 +88,15 @@
 	  (with-standard-io-syntax
 	    (let ((*package* package)
 		  (*print-pretty* t)
+		  (*print-circle* t)
 		  (*print-case* :downcase))
-	      (write-to-string args)))))))
-  
+	      ;; Just try to print it.  If we can't, simplify the
+	      ;; lambda-list and print again.  (See cmucl-imp mailing
+	      ;; list, 2008/04/14 for examples.)
+	      (handler-case
+		  (write-to-string args)
+		(print-not-readable ()
+		  (write-to-string (simplify-lambda-list args))))))))))
 
 ;;; Compute-Entry-Info  --  Internal
 ;;;

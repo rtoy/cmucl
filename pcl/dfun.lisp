@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.38 2005/08/18 16:55:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.38.14.1 2008/06/19 03:30:45 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -1291,7 +1291,7 @@ And so, we are saved.
 ;;;
 (defun cpl-or-nil (class)
   (if (eq *boot-state* 'complete)
-      (when (class-finalized-p class)
+      (when (cpl-available-p class)
 	(class-precedence-list class))
       (early-class-precedence-list class)))
 

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.50 2007/09/13 13:27:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.50.4.1 2008/06/19 03:30:45 rtoy Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -286,6 +286,7 @@
 				    class)
 		spec))
     (set-slot 'class-precedence-list (classes cpl))
+    (set-slot 'cpl-available-p t)
     (set-slot 'can-precede-list (classes (cdr cpl)))
     (set-slot 'incompatible-superclass-list nil)
     (set-slot 'direct-superclasses (classes direct-supers))

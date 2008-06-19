@@ -28,6 +28,12 @@ New in this release:
     - Fix merging of version in MAKE-PATHNAME.  If the pathname name
       is given, the version is not affected by the version in the
       default pathname.
+    - RENAME-FILE now creates defaulted-new-name from merging new-name
+      with the original filespec.  This is an incompatible change from
+      the previous version which created defaulted-new-name from
+      merging the new-name with the truename of filespec.  Also, a
+      logical pathname should be returned if new-name is a logical
+      pathname. 
 
   * Bugfixes:
     - Compiler can now derive the rank of an array, even if the array
@@ -51,6 +57,8 @@ New in this release:
       been able to figure out a tighter result.
     - When SCALE-FLOAT would underflow, it would always return 0f0,
       instead of a floating-point zero of the correct type.
+    - Fix some issues in creating the debug arglist string when the
+      arglist contains items that can't be printed readably.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
@@ -62,6 +70,10 @@ New in this release:
     - The compiler and interpreter should handle SLOT-VALUE the same
       way.  Previously, (SLOT-VALUE obj :a) would behave differently
       in the compiler and interpreter.
+    - Some issues with get-accessor-method-function and
+      slot-value-using-class have been fixed.
+      Get-accessor-method-function was causing an error to be signaled
+      incorrectly.
 
   * Changes to building procedure:
 

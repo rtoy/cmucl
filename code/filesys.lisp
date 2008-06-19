@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.2 2008/05/19 16:55:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.3 2008/06/19 03:30:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -929,7 +929,7 @@
   file, then the associated file is renamed."
   (let* ((original (truename file))
 	 (original-namestring (unix-namestring original t))
-	 (new-name (merge-pathnames new-name original))
+	 (new-name (merge-pathnames new-name file))
 	 (new-namestring (unix-namestring new-name nil)))
     (unless new-namestring
       (error 'simple-file-error

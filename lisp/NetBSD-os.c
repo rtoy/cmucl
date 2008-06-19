@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.8 2007/11/16 06:31:54 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.8.4.1 2008/06/19 03:30:44 rtoy Exp $
  *
  */
 
@@ -52,30 +52,38 @@ os_init(void)
     os_vm_page_size = OS_VM_DEFAULT_PAGESIZE;
 }
 
-int *
-sc_reg(os_context_t * c, int offset)
+unsigned long *
+os_sigcontext_reg(ucontext_t *scp, int index)
 {
 #ifdef i386
-    switch (offset) {
-      case 0:
-	  return &c->uc_mcontext.__gregs[_REG_EAX];
-      case 2:
-	  return &c->uc_mcontext.__gregs[_REG_ECX];
-      case 4:
-	  return &c->uc_mcontext.__gregs[_REG_EDX];
-      case 6:
-	  return &c->uc_mcontext.__gregs[_REG_EBX];
-      case 8:
-	  return &c->uc_mcontext.__gregs[_REG_ESP];
-      case 10:
-	  return &c->uc_mcontext.__gregs[_REG_EBP];
-      case 12:
-	  return &c->uc_mcontext.__gregs[_REG_ESI];
-      case 14:
-	  return &c->uc_mcontext.__gregs[_REG_EDI];
+    switch (index) {
+    case 0:
+	return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_EAX];
+    case 2:
+	return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_ECX];
+    case 4:
+	return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_EDX];
+    case 6:
+	return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_EBX];
+    case 8:
+	return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_ESP];
+    case 10:
+	return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_EBP];
+    case 12:
+	return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_ESI];
+    case 14:
+	return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_EDI];
     }
 #endif
-    return (int *) 0;
+    return NULL;
+}
+
+unsigned long *
+os_sigcontext_pc(ucontext_t *scp)
+{
+#ifdef i386
+    return (unsigned long *) &scp->uc_mcontext.__gregs[_REG_EIP];
+#endif
 }
 
 os_vm_address_t
@@ -85,9 +93,7 @@ os_validate(os_vm_address_t addr, os_vm_size_t len)
 
     /*
      * NetBSD 1.5.2 seems to insist on each mmap being less than 128MB.
-     * So we mmap in 64MB steps.  This is probably inefficient, but the
-     * missing CR2 reporting in signal handlers already ensures that
-     * NetBSD/x86 is not a suitable platform for CMU CL as it stands.
+     * So we mmap in 64MB steps.
      */
 
     if (addr)
