@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267 2008/04/15 14:42:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.268 2008/06/19 01:41:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1226,7 +1226,7 @@
 (dolist
     (name
      '("STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-       "ENCODE-STRING" "DECODE-STRING"))
+       "STRING-ENCODE" "STRING-DECODE"))
   (intern name "STREAM"))
 
 (defpackage "EXTENSIONS"
@@ -1422,9 +1422,9 @@
   (:export "DOUBLE-DOUBLE-FLOAT" "DD-PI")
   (:import-from "STREAM"
 		"STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-		"ENCODE-STRING" "DECODE-STRING")
+		"STRING-ENCODE" "STRING-DECODE")
   (:export "STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-	   "ENCODE-STRING" "DECODE-STRING"))
+	   "STRING-ENCODE" "STRING-DECODE"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
@@ -1484,7 +1484,7 @@
            "WRITE-TO-STRING" "READ-PRESERVING-WHITESPACE"
 	   
 	   "STRING-TO-OCTETS" "OCTETS-TO-STRING" "*DEFAULT-EXTERNAL-FORMAT*"
-	   "ENCODE-STRING" "DECODE-STRING"))
+	   "STRING-ENCODE" "STRING-DECODE"))
 
 (defpackage "LOOP")
 (dolist

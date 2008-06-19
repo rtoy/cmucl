@@ -3,19 +3,14 @@
 ;;; **********************************************************************
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
-;;; 
-(ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/void.lisp,v 1.1 2007/10/25 15:17:07 rtoy Exp $")
 ;;;
-;;; **********************************************************************
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/void.lisp,v 1.2 2008/06/19 01:41:34 rtoy Exp $")
 
-;; This is actually implemented internally.  It appears here only for
-;; reference, and will never get loaded.
+;; This is actually implemented in the external-formats code
+;; It appears here only for reference, and will never get loaded
 
 (define-external-format :void
   (octets-to-code (state input unput)
-    (declare (ignore input))
-    (error 'void-external-format))
+    `(error 'void-external-format))
   (code-to-octets (code state output)
-    (declare (ignore code))
-    (error 'void-external-format)))
+    `(error 'void-external-format)))

@@ -100,7 +100,7 @@ do
     install ${GROUP} ${OWNER} -m 0644 $TARGET/pcl/$f-library.$FASL $DESTDIR/lib/cmucl/lib/subsystems/
 done
 
-for f in src/pcl/simple-streams/external-formats/*.lisp
+for f in src/pcl/simple-streams/external-formats/*.lisp src/pcl/simple-streams/external-formats/aliases
 do
     install ${GROUP} ${OWNER} -m 0644 $f $DESTDIR/lib/cmucl/lib/ext-formats/
 done

@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.10 2006/12/21 17:53:28 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.11 2008/06/19 01:41:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,6 +127,99 @@
       (setf (sm last-char-read-size stream) 0)
       (bref (sm buffer stream) ptr))))
 
+;;;;
+(defconstant +ef-obs-oc+ 0)
+(defconstant +ef-obs-co+ 1)
+
+(defun ef-obs-oc-fn (extfmt)
+  (or (aref (ef-cache extfmt) +ef-obs-oc+)
+      (setf (aref (ef-cache extfmt) +ef-obs-oc+)
+         (compile nil
+          `(lambda (state count input unput)
+             (multiple-value-bind (code width)
+                 ,(octets-to-char extfmt state count (funcall input)
+				  (lambda (x) (funcall unput x)))
+               (values code width state)))))))
+
+(defmacro %octets-to-char (ef state count input unput)
+  (let ((tmp1 (gensym)) (tmp2 (gensym)) (tmp3 (gensym)))
+    `(multiple-value-bind (,tmp1 ,tmp2 ,tmp3)
+       (funcall (ef-obs-oc-fn ,ef) ,state ,count ,input ,unput)
+      (setf ,state ,tmp3 ,count ,tmp2)
+      ,tmp1)))
+
+(defun ef-obs-co-fn (extfmt)
+  (or (aref (ef-cache extfmt) +ef-obs-co+)
+      (setf (aref (ef-cache extfmt) +ef-obs-co+)
+         (compile nil
+          `(lambda (code state output)
+             ,(char-to-octets extfmt code state
+			      (lambda (x) (funcall output x)))
+             state)))))
+
+(defmacro %char-to-octets (ef char state output)
+  `(progn
+     (setf ,state (funcall (ef-obs-co-fn ,ef) ,char ,state ,output))
+     nil))
+
+
+
+(defconstant +ss-ef-rchar+ 0)
+(defconstant +ss-ef-rchars+ 1)
+(defconstant +ss-ef-wchar+ 2)
+(defconstant +ss-ef-wchars+ 3)
+(defconstant +ss-ef-max+ 4)
+
+(def-ef-macro %read-char-fn (ef simple-streams +ss-ef-max+ +ss-ef-rchar+)
+  `(lambda (stream refill)
+     (declare (type simple-stream stream)
+              (type function refill))
+     (with-stream-class (simple-stream stream)
+       ,(octets-to-char ef (sm oc-state stream)
+                        (sm last-char-read-size stream)
+                        (prog2
+                            (when (>= (sm buffpos stream) (sm buf-len stream))
+                              (funcall refill))
+                            (bref (sm buffer stream) (sm buffpos stream))
+                          (incf (sm buffpos stream))
+                          (incf (sm last-char-read-size stream)))
+                        (lambda (n) (decf (sm buffpos stream) n))))))
+
+(def-ef-macro %read-chars-fn (ef simple-streams +ss-ef-max+ +ss-ef-rchars+)
+  `(lambda (stream string search start end max refill)
+     (declare (type simple-stream stream)
+              (type string string)
+              (type (or null character) search)
+              (type fixnum start end)
+              (type lisp::index max)
+              (type function refill))
+     (do ((posn start (1+ posn))
+          (count 0 (1+ count)))
+         ((>= posn end) (values count nil))
+       (declare (type lisp::index posn count))
+       (let* ((char ,(octets-to-char ef (sm oc-state stream)
+                                     (sm last-char-read-size stream)
+                                     (prog2
+                                         (when (>= (sm buffpos stream) max)
+                                           (setq max (funcall refill count)))
+                                         (bref (sm buffer stream)
+					       (sm buffpos stream))
+                                       (incf (sm buffpos stream))
+                                       (incf (sm last-char-read-size stream)))
+                                     (lambda (n)
+                                       (decf (sm buffpos stream) n))))
+              (code (char-code char))
+              (ctrl (sm control-in stream)))
+         (when (and (< code 32) ctrl (svref ctrl code))
+           (setq char (funcall (the (or symbol function) (svref ctrl code))
+                               stream char)))
+         (cond ((null char)
+                (return (values count :eof)))
+               ((and search (char= char search))
+                (return (values count t)))
+               (t
+                (setf (char string posn) char)))))))
+
 
 ;;;; Single-Channel-Simple-Stream strategy functions
 
@@ -153,13 +246,37 @@
 		      (incf buffpos)))
 		  (unput (n)
 		    (decf buffpos n)))
-	     (setq char (octets-to-char (sm external-format stream)
+	     (setq char (%octets-to-char (sm external-format stream)
 					(sm oc-state stream)
 					cnt #'input #'unput))
 	     (characterp char))
 	(setf (sm last-char-read-size stream) lcrs)))))
 
 (declaim (ftype j-read-char-fn (sc read-char :ef)))
+#-(or)
+(defun (sc read-char :ef) (stream eof-error-p eof-value blocking)
+  #|(declare (optimize (speed 3) (space 2) (safety 0) (debug 0)))|#
+  (with-stream-class (simple-stream stream)
+    (flet ((refill ()
+             ;; if stream is single-channel and mode == 3,
+             ;; flush the buffer (if it's dirty)
+             (let ((bytes (refill-buffer stream blocking)))
+               (cond ((= bytes 0)
+                      (return-from read-char nil))
+                     ((minusp bytes)
+                      (return-from read-char
+                        (lisp::eof-or-lose stream eof-error-p eof-value)))))))
+      (let* ((char (funcall (%read-char-fn (sm external-format stream))
+			    stream #'refill))
+             (code (char-code char))
+             (ctrl (sm control-in stream)))
+        (when (and (< code 32) ctrl (svref ctrl code))
+          (setq char (funcall (the (or symbol function) (svref ctrl code))
+                              stream char)))
+        (if (null char)
+            (lisp::eof-or-lose stream eof-error-p eof-value)
+            char)))))
+#+(or)
 (defun (sc read-char :ef) (stream eof-error-p eof-value blocking)
   #|(declare (optimize (speed 3) (space 2) (safety 0) (debug 0)))|#
   (with-stream-class (simple-stream stream)
@@ -186,7 +303,7 @@
 	     (unput (n)
 	       (decf buffpos n)))
 	(let* ((cnt 0)
-	       (char (octets-to-char ef state cnt #'input #'unput))
+	       (char (%octets-to-char ef state cnt #'input #'unput))
 	       (code (char-code char)))
 	  (setf (sm buffpos stream) buffpos
 		(sm last-char-read-size stream) cnt
@@ -200,6 +317,25 @@
 
 
 (declaim (ftype j-read-char-fn (sc read-char :ef mapped)))
+#-(or)
+(defun (sc read-char :ef mapped) (stream eof-error-p eof-value blocking)
+  #|(declare (optimize (speed 3) (space 2) (safety 0) (debug 0)))|#
+  (declare (ignore blocking))
+  (with-stream-class (simple-stream stream)
+    (flet ((refill ()
+             (return-from read-char
+               (lisp::eof-or-lose stream eof-error-p eof-value))))
+      (let* ((char (funcall (%read-char-fn (sm external-format stream)
+					   stream #'refill)))
+             (code (char-code char))
+             (ctrl (sm control-in stream)))
+        (when (and (< code 32) ctrl (svref ctrl code))
+          (setq char (funcall (the (or symbol function) (svref ctrl code))
+                              stream char)))
+        (if (null char)
+            (lisp::eof-or-lose stream eof-error-p eof-value)
+            char)))))
+#+(or)
 (defun (sc read-char :ef mapped) (stream eof-error-p eof-value blocking)
   #|(declare (optimize (speed 3) (space 2) (safety 0) (debug 0)))|#
   (declare (ignore blocking))
@@ -219,7 +355,7 @@
 	     (unput (n)
 	       (decf buffpos n)))
 	(let* ((cnt 0)
-	       (char (octets-to-char ef state cnt #'input #'unput))
+	       (char (%octets-to-char ef state cnt #'input #'unput))
 	       (code (char-code char)))
 	  (setf (sm buffpos stream) buffpos
 		(sm last-char-read-size stream) cnt
@@ -281,7 +417,7 @@
 	     (unput (n)
 	       (decf buffpos n)))
 	(let* ((cnt 0)
-	       (char (octets-to-char ef state cnt #'input #'unput))
+	       (char (%octets-to-char ef state cnt #'input #'unput))
 	       (code (char-code char)))
 	  (setq lcrs cnt)
 	  (when (and (< code 32) ctrl (svref ctrl code))
@@ -341,7 +477,7 @@
 	     (unput (n)
 	       (decf buffpos n)))
 	(let* ((cnt 0)
-	       (char (octets-to-char ef state cnt #'input #'unput))
+	       (char (%octets-to-char ef state cnt #'input #'unput))
 	       (code (char-code char)))
 	  (setq lcrs cnt)
 	  (when (and (< code 32) ctrl (svref ctrl code))
@@ -389,7 +525,7 @@
 		   (setq buffpos (flush-buffer stream t)))
 		 (setf (bref buffer buffpos) byte)
 		 (incf buffpos)))
-	  (char-to-octets (sm external-format stream) character
+	  (%char-to-octets (sm external-format stream) character
 			  (sm co-state stream) #'output))
 	(setf (sm buffpos stream) buffpos)
 	(sc-set-dirty stream)
@@ -420,7 +556,7 @@
 		     (setq buffpos (flush-buffer stream t)))
 		   (setf (bref buffer buffpos) byte)
 		   (incf buffpos)))
-	    (char-to-octets ef char (sm co-state stream) #'output))
+	    (%char-to-octets ef char (sm co-state stream) #'output))
 	  (setf (sm buffpos stream) buffpos)
 	  (when (sm charpos stream)
 	    (incf (sm charpos stream)))
@@ -450,7 +586,7 @@
 		   (setq outpos (flush-out-buffer stream t)))
 		 (setf (bref out-buffer outpos) byte)
 		 (incf outpos)))
-	  (char-to-octets (sm external-format stream) character
+	  (%char-to-octets (sm external-format stream) character
 			  (sm co-state stream) #'output))
 	(setf (sm outpos stream) outpos)
 	(incf (sm charpos stream)))))
@@ -479,7 +615,7 @@
 		     (setq outpos (flush-out-buffer stream t)))
 		   (setf (bref buffer outpos) byte)
 		   (incf outpos)))
-	    (char-to-octets ef char (sm co-state stream) #'output))
+	    (%char-to-octets ef char (sm co-state stream) #'output))
 	  (setf (sm outpos stream) outpos)
 	  (incf (sm charpos stream)))))))
 

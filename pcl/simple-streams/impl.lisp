@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.7 2004/12/06 17:07:05 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.8 2008/06/19 01:41:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -181,13 +181,13 @@
 	(etypecase object
 	  (character
 	   (let ((x nil))
-	     (char-to-octets (sm external-format stream) object x #'fn)))
+	     (%char-to-octets (sm external-format stream) object x #'fn)))
 	  (string
 	   (let ((x nil)
 		 (ef (sm external-format stream)))
 	     (dotimes (i (length object))
 	       (declare (type lisp::index i))
-	       (char-to-octets ef (char object i) x #'fn))))))
+	       (%char-to-octets ef (char object i) x #'fn))))))
       count)))
 
 (defun %read-line (stream eof-error-p eof-value recursive-p)
