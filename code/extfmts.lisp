@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.4 2008/06/19 20:58:05 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.5 2008/06/20 13:16:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,20 +38,21 @@
   (declare (ignore a b c d))
   (error 'external-format-not-implemented))
 
+(defstruct efx
+  (octets-to-code #'%efni :type function :read-only t)
+  (code-to-octets #'%efni :type function :read-only t)
+  (cache nil :type (or null simple-vector)))
+
 (defstruct (external-format
              (:conc-name ef-)
              (:print-function %print-external-format)
-             (:constructor make-external-format (name composingp
-						 &optional slots slotd
-							   octets-to-code
-							   code-to-octets)))
+             (:constructor make-external-format (name efx composingp
+						 &optional slots slotd)))
   (name (ext:required-argument) :type (or keyword cons) :read-only t)
+  (efx (ext:required-argument) :type efx :read-only t)
   (composingp (ext:required-argument) :type boolean :read-only t)
   (slots #() :type simple-vector :read-only t)
-  (slotd nil :type list :read-only t)
-  (octets-to-code #'%efni :type function :read-only t)
-  (code-to-octets #'%efni :type function :read-only t)
-  (cache (make-array +ef-max+ :initial-element nil)))
+  (slotd nil :type list :read-only t))
 
 (defun %print-external-format (ef stream depth)
   (declare (ignore depth))
@@ -60,6 +61,17 @@
 
 (defun %whatsit (ef)
   (setf (gethash (ef-name ef) *external-formats*) ef))
+
+(declaim (inline ef-octets-to-code ef-code-to-octets ef-cache))
+
+(defun ef-octets-to-code (ef)
+  (efx-octets-to-code (ef-efx ef)))
+
+(defun ef-code-to-octets (ef)
+  (efx-code-to-octets (ef-efx ef)))
+
+(defun ef-cache (ef)
+  (efx-cache (ef-efx ef)))
 
 (defmacro define-external-format (name octets-to-code code-to-octets)
   (let ((tmp1 (gensym)) (tmp2 (gensym)))
@@ -81,8 +93,12 @@
 		       `(let ((,',code (the (unsigned-byte 31) ,,',tmp2)))
 			  (declare (ignorable ,',code))
 			  ,,body)))))
-       (%whatsit (make-external-format ,name nil #() '()
-				       ,octets-to-code ,code-to-octets)))))
+       (%whatsit (make-external-format ,name
+		  (make-efx :octets-to-code ,octets-to-code
+			    :code-to-octets ,code-to-octets
+			    :cache (make-array +ef-max+ :initial-element nil))
+		  nil
+		  #() '())))))
 
 (defmacro define-composing-external-format (name input output)
   (let ((tmp1 (gensym)) (tmp2 (gensym)))
@@ -106,8 +122,11 @@
 		       `(let ((,',code (the (unsigned-byte 31) ,,',tmp2)))
 			  (declare (ignorable ,',code))
 			  ,,body)))))
-       (%whatsit (make-external-format ,name t #() '()
-				       ,input ,output)))))
+       (%whatsit (make-external-format ,name
+		  (make-efx :octets-to-code ,input
+			    :code-to-octets ,output)
+		  t
+		  #() '())))))
 
 (defun load-external-format-aliases ()
   (let ((*package* (find-package "KEYWORD")))
@@ -153,25 +172,32 @@
     (error "~S is a Composing-External-Format." (ef-name a)))
   (unless (ef-composingp b)
     (error "~S is not a Composing-External-Format." (ef-name b)))
-  (make-external-format (or name (%composed-ef-name (ef-name a) (ef-name b)))
-			nil #() '()
-			(lambda (tmp state input unput)
-			  (declare (ignore tmp))
-			  (funcall (ef-octets-to-code b) b
-				   state
-				   (funcall (ef-octets-to-code a) a
-					    state
-					    input
-					    unput)
-				   unput))
-			(lambda (tmp code state output)
-			  (declare (ignore tmp))
-			  (funcall (ef-code-to-octets b) b
-				   code
-				   state
-				   `(lambda (x)
-				     ,(funcall (ef-code-to-octets a) a
-					       'x state output))))))
+  (when name
+    (setf (getf name *external-format-aliases*)
+	(%composed-ef-name (ef-name a) (ef-name b))))
+  (make-external-format
+   (%composed-ef-name (ef-name a) (ef-name b))
+   (make-efx
+    :octets-to-code (lambda (tmp state input unput)
+		      (declare (ignore tmp))
+		      (funcall (ef-octets-to-code b) (ef-slots b)
+			       state
+			       (funcall (ef-octets-to-code a) (ef-slots a)
+					state
+					input
+					unput)
+			       unput))
+    :code-to-octets (lambda (tmp code state output)
+		      (declare (ignore tmp))
+		      (funcall (ef-code-to-octets b) (ef-slots b)
+			       code
+			       state
+			       `(lambda (x)
+				 ,(funcall (ef-code-to-octets a)
+					   (ef-slots a)
+					   'x state output))))
+    :cache (make-array +ef-max+ :initial-element nil))
+   nil #() '()))
 
 (defun find-external-format (name &optional (error-p t))
   (when (external-format-p name)
@@ -217,14 +243,15 @@
 
 (defmacro octets-to-codepoint (external-format state count input unput)
   (let ((tmp1 (gensym)) (tmp2 (gensym)))
-    `(let ((body (funcall (ef-octets-to-code ,external-format) ,external-format
+    `(let ((body (funcall (ef-octets-to-code ,external-format)
+			  (ef-slots ,external-format)
 			  ',state ',input ',unput)))
        `(multiple-value-bind (,',tmp1 ,',tmp2) ,body
 	  (setf ,',count (the lisp::index ,',tmp2))
 	  (the (or (unsigned-byte 31) null) ,',tmp1)))))
 
 (defmacro codepoint-to-octets (external-format code state output)
-  `(funcall (ef-code-to-octets ,external-format) ,external-format
+  `(funcall (ef-code-to-octets ,external-format) (ef-slots ,external-format)
 	    ',code ',state ',output))
 
 
@@ -237,7 +264,7 @@
 		  (setf (getf *ef-extensions* id)
 		      (prog1 *ef-base* (incf *ef-base* reqd))))))
     (when (< (length (ef-cache ef)) (+ base reqd))
-      (setf (ef-cache ef)
+      (setf (efx-cache (ef-efx ef))
 	  (adjust-array (ef-cache ef) (+ base reqd) :initial-element nil)))
     base))
 
@@ -258,7 +285,7 @@
 				    ,state ,count ,input ,unput)))
      `(let ((code ,body))
         (declare (type (unsigned-byte 31) code))
-        (if (< code #x100) (code-char code) #\?))))
+        (if (< code char-code-limit) (code-char code) #\?))))
 
 (defmacro char-to-octets (external-format char state output)
   `(codepoint-to-octets ,external-format (char-code ,char) ,state ,output))
@@ -307,7 +334,7 @@
 	       ,(octets-to-char extfmt state count
 				(aref octets (incf ptr)) ;;@@ EOF??
 				(lambda (n) (decf ptr n))))
-	finally (return (values string pos)))))
+	finally (return (values string (1+ pos))))))
 
 (defun octets-to-string (octets &key (start 0) end (external-format :default)
 				     (string nil stringp))
@@ -365,11 +392,11 @@
 				    nil
 				    (char-code (char string (incf ptr))))
 				(lambda (n) (decf ptr n))))
-	finally (return (values result pos)))))
+	finally (return (values result (1+ pos))))))
 
 (defun string-decode (string external-format &optional (start 0) end)
   (multiple-value-bind (result pos)
       (lisp::with-array-data ((string string) (start start) (end end))
 	(funcall (ef-decode (find-external-format external-format))
 		 string (1- start) (1- end) (make-string (length string))))
-    (lisp::shrink-vector result (1+ pos))))
+    (lisp::shrink-vector result pos)))
