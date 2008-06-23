@@ -59,6 +59,8 @@ New in this release:
       instead of a floating-point zero of the correct type.
     - Fix some issues in creating the debug arglist string when the
       arglist contains items that can't be printed readably.
+    - DIRECTORY is now faster for directories with a large number of
+      files.  
 
   * Trac Tickets:
     - #16: Read-time hash-table issue

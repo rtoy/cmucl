@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.1 2008/05/21 01:18:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.2 2008/06/23 15:03:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,40 +60,40 @@
   "This is the alist of (character-name . character) for characters with
   long names.  The first name in this list for a given character is used
   on typeout and is the preferred form for input."))))
-  (frob ((#x00 ("Null" "^@" "Nul"))
-	 (#x01 ("^A" "Soh"))
-	 (#x02 ("^B" "Stx"))
-	 (#x03 ("^C" "Etx"))
-	 (#x04 ("^D" "Eot"))
-	 (#x05 ("^E" "Enq"))
-	 (#x06 ("^F" "Ack"))
-	 (#x07 ("Bell" "^g" "Bel"))
-	 (#x08 ("Backspace" "^h" "Bs"))
-	 (#x09 ("Tab" "^i" "Ht"))
-	 (#x0A ("Newline" "Linefeed" "^j" "Lf" "Nl" ))
-	 (#x0B ("Vt" "^k"))
-	 (#x0C ("Page" "^l" "Form" "Formfeed" "Ff" "Np"))
-	 (#x0D ("Return" "^m" "Cr"))
-	 (#x0E ("^N" "So"))
-	 (#x0F ("^O" "Si"))
-	 (#x10 ("^P" "Dle"))
-	 (#x11 ("^Q" "Dc1"))
-	 (#x12 ("^R" "Dc2"))
-	 (#x13 ("^S" "Dc3"))
-	 (#x14 ("^T" "Dc4"))
-	 (#x15 ("^U" "Nak"))
-	 (#x16 ("^V" "Syn"))
-	 (#x17 ("^W" "Etb"))
-	 (#x18 ("^X" "Can"))
-	 (#x19 ("^Y" "Em"))
-	 (#x1A ("^Z" "Sub"))
-	 (#x1B ("Escape" "^[" "Altmode" "Esc" "Alt"))
-	 (#x1C ("Fs" "^\\"))
-	 (#x1D ("Gs" "^]"))
-	 (#x1E ("Rs" "^^"))
-	 (#x1F ("Us" "^_"))
-	 (#x20 ("Space" "Sp"))
-	 (#x7f ("Rubout" "Delete" "Del")))))
+  (frob ((#x00 ("Null" "^@" "NUL"))
+	 (#x01 ("^A" "SOH"))
+	 (#x02 ("^B" "STX"))
+	 (#x03 ("^C" "ETX"))
+	 (#x04 ("^D" "EOT"))
+	 (#x05 ("^E" "ENQ"))
+	 (#x06 ("^F" "ACK"))
+	 (#x07 ("Bell" "^g" "BEL"))
+	 (#x08 ("Backspace" "^h" "BS"))
+	 (#x09 ("Tab" "^i" "HT"))
+	 (#x0A ("Newline" "Linefeed" "^j" "LF" "NL" ))
+	 (#x0B ("VT" "^k"))
+	 (#x0C ("Page" "^l" "Form" "Formfeed" "FF" "NP"))
+	 (#x0D ("Return" "^m" "RET" "CR"))
+	 (#x0E ("^N" "SO"))
+	 (#x0F ("^O" "SI"))
+	 (#x10 ("^P" "DLE"))
+	 (#x11 ("^Q" "DC1"))
+	 (#x12 ("^R" "DC2"))
+	 (#x13 ("^S" "DC3"))
+	 (#x14 ("^T" "DC4"))
+	 (#x15 ("^U" "NAK"))
+	 (#x16 ("^V" "SYN"))
+	 (#x17 ("^W" "ETB"))
+	 (#x18 ("^X" "CAN"))
+	 (#x19 ("^Y" "EM" "EOM"))
+	 (#x1A ("^Z" "SUB"))
+	 (#x1B ("Escape" "^[" "Altmode" "ESC" "Alt"))
+	 (#x1C ("IS4" "FS" "^\\"))
+	 (#x1D ("IS3" "GS" "^]"))
+	 (#x1E ("IS2" "RS" "^^"))
+	 (#x1F ("IS1" "US" "^_"))
+	 (#x20 ("Space" "SP" "SPC"))
+	 (#x7f ("Rubout" "Delete" "DEL")))))
 
 
 ;;;; Accessor functions:
@@ -304,7 +304,7 @@
 
 
 ;;; Equal-Char-Code is used by the following functions as a version of char-int
-;;;  which loses font, bits, and case info.
+;;; which loses case info.
 
 (defmacro equal-char-code (character)
   `(let ((ch (char-code ,character)))
@@ -314,7 +314,7 @@
 
 (defun char-equal (character &rest more-characters)
   "Returns T if all of its arguments are the same character.
-  Font, bits, and case are ignored."
+   Case is ignored."
   (do ((clist more-characters (cdr clist)))
       ((atom clist) T)
     (unless (= (equal-char-code (car clist))
@@ -324,7 +324,7 @@
 
 (defun char-not-equal (character &rest more-characters)
   "Returns T if no two of its arguments are the same character.
-   Font, bits, and case are ignored."
+   Case is ignored."
   (do* ((head character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -338,7 +338,7 @@
 
 (defun char-lessp (character &rest more-characters)
   "Returns T if its arguments are in strictly increasing alphabetic order.
-   Font, bits, and case are ignored."
+   Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -349,7 +349,7 @@
 
 (defun char-greaterp (character &rest more-characters)
   "Returns T if its arguments are in strictly decreasing alphabetic order.
-   Font, bits, and case are ignored."
+   Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -360,7 +360,7 @@
 
 (defun char-not-greaterp (character &rest more-characters)
   "Returns T if its arguments are in strictly non-decreasing alphabetic order.
-   Font, bits, and case are ignored."
+   Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -371,7 +371,7 @@
 
 (defun char-not-lessp (character &rest more-characters)
   "Returns T if its arguments are in strictly non-increasing alphabetic order.
-   Font, bits, and case are ignored."
+   Case is ignored."
   (do* ((c character (car list))
 	(list more-characters (cdr list)))
        ((atom list) T)
@@ -401,8 +401,7 @@
 (defun digit-char (weight &optional (radix 10))
   "All arguments must be integers.  Returns a character object that
   represents a digit of the given weight in the specified radix.  Returns
-  NIL if no such character exists.  The character will have the specified
-  font attributes."
+  NIL if no such character exists."
   (declare (type (integer 2 36) radix) (type unsigned-byte weight))
   (and (typep weight 'fixnum)
        (>= weight 0) (< weight radix) (< weight 36)

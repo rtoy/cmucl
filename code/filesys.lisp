@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.3 2008/06/19 03:30:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.4 2008/06/23 15:03:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1068,7 +1068,7 @@ optionally keeping some of the most recent old versions."
 ;;; DIRECTORY  --  public.
 ;;;
 (defun directory (pathname &key (all t) (check-for-subdirs t)
-			   (truenamep t) (follow-links t))
+		  (truenamep t) (follow-links t))
   "Returns a list of pathnames, one for each file that matches the given
    pathname.  Supplying :ALL as nil causes this to ignore Unix dot files.  This
    never includes Unix dot and dot-dot in the result.  If :TRUENAMEP is NIL,
@@ -1077,30 +1077,40 @@ optionally keeping some of the most recent old versions."
    defined to be the TRUENAME of the pathname (the truename of a link may well
    be in another directory).  If FOLLOW-LINKS is NIL then symbolic links are
    not followed."
-  (let ((results nil))
-    (enumerate-search-list
-	(pathname (merge-pathnames pathname
-				   (make-pathname :name :wild
-						  :type :wild
-						  :version :wild
-						  :defaults *default-pathname-defaults*)
-				   :wild))
-      (enumerate-matches (name pathname nil :follow-links follow-links)
-	(when (or all
-		  (let ((slash (position #\/ name :from-end t)))
-		    (or (null slash)
-			(= (1+ slash) (length name))
-			(char/= (schar name (1+ slash)) #\.))))
-	  (push name results))))
-    (let ((*ignore-wildcards* t))
-      (mapcar #'(lambda (name)
-		  (let ((name (if (and check-for-subdirs
-				       (eq (unix:unix-file-kind name)
-					   :directory))
-				  (concatenate 'string name "/")
-				  name)))
-		    (if truenamep (truename name) (pathname name))))
-	      (sort (delete-duplicates results :test #'string=) #'string<)))))
+  (flet ((ordered-strings-remove-duplicates (list)
+	   (let ((results '())
+		 (prev nil))
+	     (dolist (elem list)
+	       (when (or (null prev)
+			 (not (string= elem prev)))
+		 (push elem results))
+	       (setf prev elem))
+	     (nreverse results))))
+    (let ((results nil))
+      (enumerate-search-list
+	  (pathname (merge-pathnames pathname
+				     (make-pathname :name :wild
+						    :type :wild
+						    :version :wild
+						    :defaults *default-pathname-defaults*)
+				     :wild))
+	(enumerate-matches (name pathname nil :follow-links follow-links)
+	  (when (or all
+		    (let ((slash (position #\/ name :from-end t)))
+		      (or (null slash)
+			  (= (1+ slash) (length name))
+			  (char/= (schar name (1+ slash)) #\.))))
+	    (push name results))))
+      (let ((*ignore-wildcards* t))
+	(mapcar #'(lambda (name)
+		    (let ((name (if (and check-for-subdirs
+					 (eq (unix:unix-file-kind name)
+					     :directory))
+				    (concatenate 'string name "/")
+				    name)))
+		      (if truenamep (truename name) (pathname name))))
+		(ordered-strings-remove-duplicates (sort results #'string<)))))))
+
 
 
 ;;;; Printing directories.

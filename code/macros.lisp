@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.111 2008/01/03 11:41:51 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.111.4.1 2008/06/23 15:03:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1543,20 +1543,19 @@
 
 
 ;;;; With-XXX
-(defmacro with-open-file ((var &rest open-args) &parse-body (forms decls))
-  "Bindspec is of the form (Stream File-Name . Options).  The file whose
-   name is File-Name is opened using the Options and bound to the variable
-   Stream. If the call to open is unsuccessful, the forms are not
-   evaluated.  The Forms are executed, and when they 
-   terminate, normally or otherwise, the file is closed."
+(defmacro with-open-file ((var filespec &rest open-args) &parse-body (forms decls))
+  "The file whose name is Filespec is opened using the Open-args and
+  bound to the variable Var. If the call to open is unsuccessful, the
+  forms are not evaluated.  The Forms are executed, and when they
+  terminate, normally or otherwise, the file is closed."
   (let ((abortp (gensym)))
-    `(let ((,var (open ,@open-args))
+    `(let ((,var (open ,filespec ,@open-args))
 	   (,abortp t))
        ,@decls
        (unwind-protect
-	   (multiple-value-prog1
-	       (progn ,@forms)
-	     (setq ,abortp nil))
+	    (multiple-value-prog1
+		(progn ,@forms)
+	      (setq ,abortp nil))
 	 (when ,var
 	   (close ,var :abort ,abortp))))))
 
@@ -1571,7 +1570,7 @@
        ,@decls
        (unwind-protect
 	 (multiple-value-prog1
-	  (progn ,@forms)
+	    (progn ,@forms)
 	  (setq ,abortp nil))
 	 (when ,var
 	   (close ,var :abort ,abortp))))))
