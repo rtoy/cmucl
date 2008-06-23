@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.52 2007/12/17 09:54:35 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.53 2008/06/23 14:25:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,9 @@
 	  send-character-out-of-band
 
 	  inet-recvfrom inet-sendto inet-shutdown
-	  shut-rd shut-wr shut-rdwr))
+	  shut-rd shut-wr shut-rdwr
+
+	  open-network-stream accept-network-stream))
 
 
 #-svr4
@@ -739,3 +741,70 @@ can of course be negative, to indicate faults."
 	   :format-arguments (list (unix:get-unix-error-msg))
 	   :errno (unix:unix-errno))))
 
+
+;;; OPEN-NETWORK-STREAM -- public
+;;;
+;;;   Returns a stream connected to the specified Port on the given Host.
+(defun open-network-stream (host port &key (buffering :line) timeout)
+  "Return a network stream.  HOST may be an address string or an integer
+IP address."
+  (let (hostent hostaddr)
+    (cond ((stringp host)
+           (setf hostent (or (lookup-host-entry host)
+                             (error "Unknown host: ~S." host)))
+           (setf host (host-entry-addr hostent))
+           (setf hostaddr (format nil "~A:~D"
+                                  (host-entry-name hostent)
+                                  port)))
+          ((integerp host)
+           (setf hostaddr (format nil "~D.~D.~D.~D:~D"
+                                  (ldb (byte 8 24) host)
+                                  (ldb (byte 8 16) host)
+                                  (ldb (byte 8 8) host)
+                                  (ldb (byte 8 0) host)
+                                  port)))
+          (t (error "Unknown host format: ~S." host)))
+   (sys:make-fd-stream
+    (let ((socket (create-inet-socket :stream)))
+      (alien:with-alien ((sockaddr inet-sockaddr))
+	(setf (alien:slot sockaddr 'family) af-inet)
+	(setf (alien:slot sockaddr 'sys:port) (htons port))
+	(setf (alien:slot sockaddr 'alien:addr) (htonl host))
+	(when (minusp (unix:unix-connect socket
+					 (alien:alien-sap sockaddr)
+					 (alien:alien-size inet-sockaddr
+							   :bytes)))
+	  (unix:unix-close socket)
+	  (error "Error connecting socket to [~A]: ~A"
+		 hostaddr
+		 (unix:get-unix-error-msg)))
+	socket))
+    :input t :output t :buffering buffering :timeout timeout
+    :name (format nil "network connection to ~A" hostaddr)
+    :auto-close t)))
+
+;;; ACCEPT-NETWORK-STREAM -- public
+;;;
+;;;   Accept a connection from the specified Socket and returns a
+;;;   stream connected to that connection.
+(defun accept-network-stream (socket &key (buffering :line) timeout wait-max)
+  (declare (fixnum socket))
+  (when #+MP (mp:process-wait-until-fd-usable socket :input wait-max)
+        #-MP (sys:wait-until-fd-usable socket :input wait-max)
+    (with-alien ((sockaddr inet-sockaddr))
+      (let ((socket (unix:unix-accept socket
+                                      (alien-sap sockaddr)
+                                      (alien-size inet-sockaddr :bytes))))
+        (when (minusp socket)
+          (error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
+       (sys:make-fd-stream
+	socket :input t :output t :buffering buffering :timeout timeout
+	:name (let ((host (ntohl (slot sockaddr 'addr)))
+		    (port (ntohs (slot sockaddr 'port))))
+		(format nil "network connection from ~D.~D.~D.~D:~D"
+			(ldb (byte 8 24) host)
+			(ldb (byte 8 16) host)
+			(ldb (byte 8 8) host)
+			(ldb (byte 8 0) host)
+			port))
+	:auto-close t)))))
