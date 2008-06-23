@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.2 2008/06/23 15:03:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.15.18.3 2008/06/23 16:09:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,13 +142,28 @@
 (defun char-name (char)
   "Given a character object, char-name returns the name for that
   object (a symbol)."
-  (car (rassoc char char-name-alist)))
+  (let ((name (car (rassoc char char-name-alist))))
+    (if name
+	name
+	#-unicode nil
+	#+unicode
+	;; FIXME:
+	;; return the Unicode name of the character,
+	;;   or U+xxxx if it doesn't have a name
+	(format nil "U+~4,'0X" (char-code char)))))
 
 
 (defun name-char (name)
   "Given an argument acceptable to string, name-char returns a character
   object whose name is that symbol, if one exists.  Otherwise, () is returned."
-  (cdr (assoc (string name) char-name-alist :test #'string-equal)))
+  (if (and (stringp name) (> (length name) 2) (string-equal name "U+" :end1 2))
+      (code-char (parse-integer name :radix 16 :start 1))
+      (or (cdr (assoc (string name) char-name-alist :test #'string-equal))
+	  #-unicode nil
+	  #+unicode
+	  ;; FIXME:
+	  ;; See if it's a valid Unicode character name
+	  nil)))
 
 
 
