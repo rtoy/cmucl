@@ -65,13 +65,16 @@ New in this release:
       #xffffffff.  This is an incompatible change from previous
       releases because the numbers produced may be different from
       before.  
-    - The small bias in RANDOM should now be gone.
+    - The small bias in RANDOM for integer args should now be gone.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
       Fixed.
 
   * Other changes:
+    - IS1, IS2, IS3, and IS4 are recognized character names for the
+      ASCII control codes US, RS, GS, FS, respectively.
+    - Added OPEN-NETWORK-STREAM and ACCEPT-NETWORK-STREAM functions.
 
   * Improvements to the PCL implementation of CLOS:
     - The compiler and interpreter should handle SLOT-VALUE the same
