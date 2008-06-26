@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.16 2008/06/24 17:27:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.17 2008/06/26 21:00:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -444,15 +444,8 @@
 		   #+long-float %long-float))
   (cond
     ((typep arg '(integer 1 #x100000000))
-     ;; Basically, pretend (random-chunk) produces a 32-bit fractional
-     ;; number, multiply by arg, and take the integer part.
-     ;;
-     ;; WARNING: If you change this be sure to make the deftransform
-     ;; for RANDOM in float-tran.lisp does the same thing.
-     (if (= arg #x100000000)
-	 (random-chunk state))
-     (values (bignum::%multiply (random-chunk state)
-				arg)))
+     ;; Let the compiler deftransform take care of this case.
+     (random arg state))
     ((and (typep arg 'single-float) (> arg 0.0F0))
      (%random-single-float arg state))
     ((and (typep arg 'double-float) (> arg 0.0D0))

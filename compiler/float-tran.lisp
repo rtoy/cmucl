@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.120 2008/06/24 17:27:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121 2008/06/26 21:00:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,10 +255,6 @@
     ;; it were a 32-bit fraction between 0 and 1, exclusive.  Multiply
     ;; this by num-high to get a random number between 0 and num-high,
     ;; This should have no bias.
-    ;;
-    ;; WARNING: If you change this, be sure to look at the definition
-    ;; of RANDOM so that it produces the same value as the
-    ;; deftransform would produce.
     (cond ((constant-continuation-p num)
 	   (if (= num-high (expt 2 32))
 	       '(random-chunk (or state *random-state*))
