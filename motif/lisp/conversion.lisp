@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/conversion.lisp,v 1.5 2000/02/15 11:59:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/conversion.lisp,v 1.5.34.1 2008/06/27 13:05:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -143,6 +143,7 @@
 (defun packet-write-string (packet string start length)
   (declare (simple-string string)
 	   (fixnum start length))
+  #-unicode
   (kernel:copy-to-system-area string
 			      (+ (the fixnum (* start vm:byte-bits))
 				 (the fixnum
@@ -150,12 +151,20 @@
 			      (packet-head packet)
 			      (* (packet-fill packet) vm:byte-bits)
 			      (* length vm:byte-bits))
+  #+unicode
+  ;;@@ For now, just copy low octet of each char.  What should this do?
+  (let ((head (packet-head packet))
+	(fill (packet-fill packet)))
+    (dotimes (i length)
+      (setf (lisp:bref head (1- (incf fill)))
+	    (logand #xFF (char-code (schar string (+ i start)))))))
   (incf (packet-fill packet) length)
   (incf (packet-length packet) length))
 
 (defun packet-read-string (packet string start length)
   (declare (simple-string string)
 	   (fixnum start length))
+  #-unicode
   (kernel:copy-from-system-area (packet-head packet)
 				(* (packet-fill packet) vm:byte-bits)
 				string
@@ -163,6 +172,13 @@
 				   (the fixnum
 					(* vm:vector-data-offset vm:word-bits)))
 				(* length vm:byte-bits))
+  #+unicode
+  ;;@@ For now, directly convert each octet.  What should this do?
+  (let ((head (packet-head packet))
+	(fill (packet-fill packet)))
+    (dotimes (i length)
+      (setf (schar string (+ i start))
+	    (code-char (lisp:bref head (1- (incf fill)))))))
   (incf (packet-fill packet) length))
 
 (defun message-read-string (message length)
