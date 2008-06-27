@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119 2008/04/08 14:15:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.119.2.1 2008/06/27 17:24:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,29 +248,29 @@
 				  :key #'numeric-type-high))
 			 (t
 			  (give-up)))))
+    ;; Rather than doing (rem (random-chunk) num-high), we do,
+    ;; essentially, (rem (* num-high (random-chunk)) #x100000000).  I
+    ;; (rtoy) believe this approach doesn't have the bias issue with
+    ;; doing rem.  This method works by treating (random-chunk) as if
+    ;; it were a 32-bit fraction between 0 and 1, exclusive.  Multiply
+    ;; this by num-high to get a random number between 0 and num-high,
+    ;; This should have no bias.
     (cond ((constant-continuation-p num)
-	   ;; Check the worst case sum abs error for the random number
-	   ;; expectations.
-	   (let ((rem (rem (expt 2 32) num-high)))
-	     (unless (< (/ (* 2 rem (- num-high rem)) num-high (expt 2 32))
-			(expt 2 (- kernel::random-integer-extra-bits)))
-	       (give-up "The random number expectations are inaccurate."))
-	     (if (= num-high (expt 2 32))
-		 '(random-chunk (or state *random-state*))
-		 #-x86 '(rem (random-chunk (or state *random-state*)) num)
-		 #+x86
-		 ;; Use multiplication which is faster.
-		 '(values (bignum::%multiply 
-			   (random-chunk (or state *random-state*))
-			   num)))))
-	  ((> num-high random-fixnum-max)
-	   (give-up "The range is too large to assure an accurate result."))
-	  #+x86
+	   (if (= num-high (expt 2 32))
+	       '(random-chunk (or state *random-state*))
+	       '(values (bignum::%multiply 
+			 (random-chunk (or state *random-state*))
+			 num))))
 	  ((< num-high (expt 2 32))
 	   '(values (bignum::%multiply (random-chunk (or state *random-state*))
 		     num)))
+	  ((= num-high (expt 2 32))
+	   '(if (= num (expt 2 32))
+		(random-chunk (or state *random-state*))
+		(values (bignum::%multiply (random-chunk (or state *random-state*))
+					   num))))
 	  (t
-	   '(rem (random-chunk (or state *random-state*)) num)))))
+	   (error "Shouldn't happen")))))
 
 
 ;;;; Float accessors:
