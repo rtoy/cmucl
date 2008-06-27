@@ -20,7 +20,8 @@ New in this release:
 
 
   * Feature enhancements:
-
+    - ~R supports many more cardinal names.
+ 
   * ANSI compliance fixes:
     - Fix bug in backquote printer.  If the variable is @foo, we want
       to print ", @foo" not ",@foo".  Similarly, for .foo, we want to
@@ -61,11 +62,12 @@ New in this release:
       arglist contains items that can't be printed readably.
     - DIRECTORY is now faster for directories with a large number of
       files.  
-    - RANDOM is now much faster on all platforms for numbers near
+    - RANDOM is now much faster on all platforms for numbers upto
       #xffffffff.  This is an incompatible change from previous
       releases because the numbers produced may be different from
       before.  
-    - The small bias in RANDOM for integer args should now be gone.
+    - The small bias in RANDOM for integer args up to 32 bits long
+      should now be gone.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
