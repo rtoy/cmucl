@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78.4.2 2008/05/19 16:55:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78.4.2.2.1 2008/07/02 01:22:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,10 +68,11 @@
 	   #+x86 *pseudo-atomic-interrupted*
 	   unix::*interrupts-enabled*
 	   unix::*interrupt-pending*
-	   *type-system-initialized*)
+	   *type-system-initialized*
+	   unix::*filename-encoding*)
   #+gengc
   (special *gc-verbose* *before-gc-hooks* *after-gc-hooks*
-	   *type-system-initialized*))
+	   *type-system-initialized* unix::*filename-encoding*))
 
 
 ;;;; Random magic specials.
@@ -336,6 +337,7 @@
   #-gengc (setf unix::*interrupt-pending* nil)
   (setf *type-system-initialized* nil)
   (setf *break-on-signals* nil)
+  (setf unix::*filename-encoding* nil)
   #+gengc (setf conditions::*handler-clusters* nil)
 
   ;; Many top-level forms call INFO, (SETF INFO).

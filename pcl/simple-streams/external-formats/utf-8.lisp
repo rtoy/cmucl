@@ -4,9 +4,11 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1 2008/06/19 03:30:45 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.1 2008/07/02 01:22:10 rtoy Exp $")
 
-(define-external-format :utf-8
+(define-external-format :utf-8 (:min 1 :max 6)
+  ()
+
   (octets-to-code (state input unput c i j n)
     `(flet ((utf8 (,c ,i)
 	      (let ((,n (ash (ldb (byte (- 6 ,i) 0) ,c) (* 6 ,i))))

@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.4 2008/06/23 15:03:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.104.4.4.2.1 2008/07/02 01:22:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -405,6 +405,10 @@
   ;; this host designator needs to be recognized as a physical host in
   ;; PARSE-NAMESTRING. Until sbcl-0.7.3.x, we had "Unix" here, but
   ;; that's a valid Logical Hostname, so that's a bad choice. -- CSR,
+  ;; 
+  ;; No it isn't - in fact, I'm pretty sure "" is illegal here (and if
+  ;; it isn't, it should be - it ought to mean "the default host", from
+  ;; *default-pathname-defaults*)  -- P. Foley
   "")
 
 (defun unparse-unix-piece (thing)

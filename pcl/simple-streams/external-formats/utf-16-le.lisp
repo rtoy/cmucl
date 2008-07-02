@@ -4,7 +4,7 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.1.2.1 2008/06/19 03:30:45 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-16-le.lisp,v 1.1.2.1.2.1 2008/07/02 01:22:10 rtoy Exp $")
 
 ;; make state an integer:
 ;;  or (or state 0) to cope with NIL case
@@ -19,7 +19,9 @@
 ;; when writing: output BOM if (zerop state), if BOM-output selected
 ;; but state doesn't choose between big-endian and little-endian output
 
-(define-external-format :utf-16-le
+(define-external-format :utf-16-le (:size 2)
+  ()
+
   (octets-to-code (state input unput c1 c2 code wd next)
     `(block nil
        (when (null ,state) (setf ,state 0))

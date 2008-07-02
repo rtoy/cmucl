@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.3 2008/06/19 03:30:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.3.2.1 2008/07/02 01:22:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1268,7 +1268,7 @@
              "*TOP-LEVEL-AUTO-DECLARE*"
 	     "COMPILER-MACROEXPAND-1" "COMPILER-MACROEXPAND"
              "*UNDEFINED-WARNING-LIMIT*" "ACCEPT-TCP-CONNECTION"
-	     "ACCEPT-UNIX-CONNECTION"
+	     "ACCEPT-UNIX-CONNECTION" "ACCEPT-NETWORK-STREAM"
              "ADD-OOB-HANDLER" "AMBIGUOUS-FILES" "ARGUMENT-LIST" "ASSQ"
              "BASIC-DEFINITION" "BIGNUMP" "BITP" "CACHE-HASH-EQ"
              "CALL-USER-MISCOP" "CANCEL-FINALIZATION" "CAREFUL-SYMBOL-FUNCTION"
@@ -1281,7 +1281,7 @@
              "COMPLETE-FILE" "CONCAT-PNAMES" "CONNECT-TO-INET-SOCKET"
              "CONSTANT" "CONSTANT-ARGUMENT" "CONSTANT-FUNCTION"
              "CREATE-INET-LISTENER" "CREATE-INET-SOCKET" "CREATE-UNIX-LISTENER"
-	     "DEF-SOURCE-CONTEXT"
+	     "OPEN-NETWORK-STREAM" "DEF-SOURCE-CONTEXT"
              "DEFAULT-CLX-EVENT-HANDLER" "DEFAULT-DIRECTORY"
              "DEFINE-CLX-MODIFIER" "DEFINE-HASH-CACHE" "DEFINE-INFO-CLASS"
              "DEFINE-INFO-TYPE" "DEFINE-KEY-EVENT-MODIFIER"
@@ -1328,7 +1328,8 @@
              "PROCESS-CORE-DUMPED" "PROCESS-ERROR" "PROCESS-EXIT-CODE"
              "PROCESS-INPUT" "PROCESS-KILL" "PROCESS-OUTPUT" "PROCESS-P"
              "PROCESS-PID" "PROCESS-PLIST" "PROCESS-PTY" "PROCESS-STATUS"
-             "PROCESS-STATUS-HOOK" "PROCESS-WAIT" "PUTF" "PURGE-BACKUP-FILES" "QUIT" "RATIOP"
+             "PROCESS-STATUS-HOOK" "PROCESS-WAIT" "PUTF" "PURGE-BACKUP-FILES"
+	     "QUIT" "RATIOP"
              "READ-CHAR-NO-EDIT" "REALP" "REMOVE-ALL-OOB-HANDLERS"
              "REMOVE-OOB-HANDLER" "REQUIRED-ARGUMENT" "RESET-FOREIGN-POINTERS"
              "RUN-PROGRAM" "SAVE" "SAVE-LISP"

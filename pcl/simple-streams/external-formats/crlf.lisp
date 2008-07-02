@@ -4,9 +4,9 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/crlf.lisp,v 1.1.2.1 2008/06/19 03:30:45 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/crlf.lisp,v 1.1.2.1.2.1 2008/07/02 01:22:10 rtoy Exp $")
 
-(define-composing-external-format :crlf
+(define-composing-external-format :crlf (:max 2)
   (input (state input unput tmp1 tmp2 tmp3 tmp4)
     `(multiple-value-bind (,tmp1 ,tmp2) ,input
        (when (= ,tmp1 #x000D)
