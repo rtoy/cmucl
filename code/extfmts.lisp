@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.2 2008/07/02 01:27:09 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.3 2008/07/02 02:35:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -392,7 +392,7 @@
         (declare (type (unsigned-byte 31) code))
         (if (< code char-code-limit) (code-char code)
 	    #-unicode #\?
-	    #+unicode (code-char #xFFFD))))
+	    #+unicode (code-char #xFFFD)))))
 
 (defmacro char-to-octets (external-format char state output)
   `(codepoint-to-octets ,external-format (char-code ,char) ,state ,output))
