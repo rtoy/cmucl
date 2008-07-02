@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78.4.2.2.1 2008/07/02 01:22:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.78.4.2.2.2 2008/07/02 12:48:52 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -398,9 +398,15 @@
   ;; Note: sharpm and backq not yet loaded, so this is not the final RT.
   (setf *readtable* (copy-readtable std-lisp-readtable))
 
+  ;; FIXME: The unicode branch wants the keyword package in place
+  ;; before initializing streams.  Conditional on unicode for now, but
+  ;; we should make this consistent, if possible.
+  #-unicode
   (print-and-call stream-init)
   (print-and-call loader-init)
   (print-and-call package-init)
+  #+unicode
+  (print-and-call stream-init)
   (print-and-call kernel::signal-init)
   (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
 
