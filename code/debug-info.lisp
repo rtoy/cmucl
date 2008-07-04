@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.27.36.1 2008/05/14 16:12:04 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.27.36.2 2008/07/04 14:37:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,9 +116,11 @@
 		(k 0))
       `(progn
 	 (dotimes (,k ,len)
-	   (setf (aref ,res ,k)
-		 (code-char (logand #xff (aref ,vec (+ ,index ,k))))))
-	 (incf ,index ,len)
+	   (let ((lo (aref ,vec (+ ,index (* 2 ,k))))
+		 (hi (aref ,vec (+ ,index (+ (* 2 ,k) 1)))))
+	     (setf (aref ,res ,k)
+		   (code-char (+ lo (ash hi 8))))))
+	 (incf ,index (* 2 ,len))
 	 ,res))))
 
 
@@ -132,7 +134,9 @@
   (let ((len (length string)))
     (write-var-integer len vec)
     (dotimes (i len)
-      (vector-push-extend (char-code (schar string i)) vec)))
+      (vector-push-extend (ldb (byte 8 0) (char-code (schar string i))) vec)
+      #+unicode
+      (vector-push-extend (ldb (byte 8 8) (char-code (schar string i))) vec)))
   (undefined-value))
 
 
