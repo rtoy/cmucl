@@ -4,18 +4,21 @@
 ;;; This code was written by Paul Foley and has been placed in the public
 ;;; domain.
 ;;;
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.1 2008/07/02 01:22:10 rtoy Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/external-formats/utf-8.lisp,v 1.2.4.1.2.2 2008/07/05 12:41:22 rtoy Exp $")
 
 (define-external-format :utf-8 (:min 1 :max 6)
   ()
 
   (octets-to-code (state input unput c i j n)
     `(flet ((utf8 (,c ,i)
+	      (declare (type (unsigned-byte 8) ,c) (type (integer 1 5) ,i))
 	      (let ((,n (ash (ldb (byte (- 6 ,i) 0) ,c) (* 6 ,i))))
+		(declare (type (unsigned-byte 31) ,n))
 		(dotimes (,j ,i (values ,n (1+ ,i)))
 		  (setf (ldb (byte 6 (* 6 (- ,i ,j 1))) ,n)
 		      (ldb (byte 6 0) ,input))))))
        (let ((,c ,input))
+	 (declare (optimize (ext:inhibit-warnings 3)))
 	 (cond ((null ,c) (values nil 0))
 	       ((< ,c #b10000000) (values ,c 1))
 	       ((< ,c #b11000000) (error "UTF-8 desync"))
@@ -34,6 +37,7 @@
 		(dotimes (,i ,i)
 		  (decf ,p 6)
 		  (,output (logior 128 (ldb (byte 6 ,p) ,n)))))))
+       (declare (optimize (ext:inhibit-warnings 3)))
        (cond ((< ,code #x80) (,output ,code))
 	     ((< ,code #x800) (utf8 ,code 1))
 	     ((< ,code #x10000) (utf8 ,code 2))
