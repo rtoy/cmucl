@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.2 2008/07/02 14:53:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.3 2008/07/05 12:37:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -468,19 +468,19 @@
      (when (> (fd-stream-ibuf-tail stream)
 	      (fd-stream-ibuf-head stream))
        (file-position stream (file-position stream)))
-     (let* ((len (fd-stream-obuf-length stream))
+     (let* ((sap (fd-stream-obuf-sap stream))
+	    (len (fd-stream-obuf-length stream))
 	    (tail (fd-stream-obuf-tail stream)))
+       (declare (type sys:system-area-pointer sap) (type index len tail))
        ,(stream::char-to-octets extfmt
 				char
 				(fd-stream-co-state stream)
 				(lambda (byte)
 				  (when (= tail len)
-				    (do-output stream
-				      (fd-stream-obuf-sap stream) 0 tail t)
-				    (setq tail 0))
-				  (setf (bref (fd-stream-obuf-sap stream)
-					      (1- (incf tail)))
-				      byte)))
+				    (do-output stream sap 0 tail t)
+				    (setq sap (fd-stream-obuf-sap stream)
+					  tail 0))
+				  (setf (bref sap (1- (incf tail))) byte)))
        (setf (fd-stream-obuf-tail stream) tail))))
 
 #+(and unicode extfmts)
@@ -615,26 +615,28 @@
      (declare (type fd-stream stream)
 	      (type simple-string string)
 	      (type index start end)
-	      #|(optimize (speed 3) (space 0) (safety 0) (debug 0))|#)
+	      (optimize (speed 3) (space 0) (safety 0) (debug 0)))
      ;; If there is any input read from UNIX but not
      ;; supplied to the user of the stream, reposition
      ;; to the real file position as seen from Lisp.
+     ;; (maybe the caller should do this?)
      (when (> (fd-stream-ibuf-tail stream)
 	      (fd-stream-ibuf-head stream))
        (file-position stream (file-position stream)))
-     (let* ((len (fd-stream-obuf-length stream))
+     (let* ((sap (fd-stream-obuf-sap stream))
+	    (len (fd-stream-obuf-length stream))
 	    (tail (fd-stream-obuf-tail stream)))
+       (declare (type sys:system-area-pointer sap) (type index len tail))
        (dotimes (i (- end start))
 	 ,(stream::char-to-octets extfmt
 				  (schar string (+ i start))
 				  (fd-stream-co-state stream)
 				  (lambda (byte)
 				    (when (= tail len)
-				      (flush-output-buffer stream)
-				      (setq tail 0))
-				    (setf (bref (fd-stream-obuf-sap stream)
-						(1- (incf tail)))
-					byte))))
+				      (do-output stream sap 0 tail t)
+				      (setq sap (fd-stream-obuf-sap stream)
+					    tail 0))
+				    (setf (bref sap (1- (incf tail))) byte))))
        (setf (fd-stream-obuf-tail stream) tail))))
 
 #+(and unicode extfmts)
@@ -916,7 +918,7 @@
   (let ((stream-var (gensym))
 	(element-var (gensym)))
     `(let ((,stream-var ,stream))
-       (if (fd-stream-unread ,stream-var)
+       (if (fd-stream-unread ,stream-var) ;;@@
 	   (prog1
 	       ,(if (eq type 'character) 
 		    `(fd-stream-unread ,stream-var)
@@ -1027,6 +1029,7 @@
 					    (bref (fd-stream-ibuf-sap stream)
 						  (1- (incf head))))
 					  (lambda (n) (decf head n)))))
+	(declare (type index head))
 	(when ch
 	  (incf (fd-stream-ibuf-head stream)
 		(fd-stream-last-char-read-size stream))
@@ -1063,31 +1066,36 @@
 	      (type (or character null) char)
 	      (type index start end)
 	      (optimize (speed 3) (space 0) (debug 0) (safety 0)))
-     (let ((head (fd-stream-ibuf-head stream))
+     (let ((sap (fd-stream-ibuf-sap stream))
+	   (head (fd-stream-ibuf-head stream))
+	   (tail (fd-stream-ibuf-tail stream))
 	   (curr start))
-       (declare (type index head curr))
+       (declare (type sys:system-area-pointer sap)
+		(type index head tail curr))
        (loop
-	 (let ((ch (catch 'eof-input-catcher
-		     ,(stream::octets-to-char extfmt
-					      (fd-stream-oc-state stream)
-					      (fd-stream-last-char-read-size
-					       stream)
-					      ;;@@ EOF handling...
-					      (progn
-						(when (= head
-							 (fd-stream-ibuf-tail
-							  stream))
-						  (do-input stream)
-						  (setf head
-						      (fd-stream-ibuf-head
-						       stream)))
-						(bref (fd-stream-ibuf-sap stream)
-						      (1- (incf head))))
-					      (lambda (n) (decf head n))))))
+	 ;;@@ Fix EOF handling
+	 (let* ((sz 0)
+		(ch (catch 'eof-input-catcher
+		      ,(stream::octets-to-char extfmt
+					       (fd-stream-oc-state stream)
+					       sz
+					       (progn
+						 (when (= head tail)
+						   (do-input stream)
+						   (setq head
+						       (fd-stream-ibuf-head
+							stream)
+						       tail
+						       (fd-stream-ibuf-tail
+							stream)))
+						 (bref sap (1- (incf head))))
+					       (lambda (n) (decf head n))))))
+	   (declare (type index sz)
+		    (type (or null character) ch))
 	   (when (null ch)
 	     (return (values (- curr start) :eof)))
-	   (incf (fd-stream-ibuf-head stream)
-		 (fd-stream-last-char-read-size stream))
+	   (setf (fd-stream-last-char-read-size stream) sz)
+	   (incf (fd-stream-ibuf-head stream) sz)
 	   (when (and char (char= ch char))
 	     (return (values (- curr start) t)))
 	   (setf (schar string (1- (incf curr))) ch)
@@ -1231,7 +1239,7 @@
     ;;
     ;; If something has been unread, put that at buffer + start,
     ;; and read the rest to start + 1.
-    (when (fd-stream-unread stream)
+    (when (fd-stream-unread stream) ;;@@
       (etypecase buffer
 	(system-area-pointer
 	 (assert (= 1 (fd-stream-element-size stream)))
@@ -1505,7 +1513,10 @@
 					     0 0))
 		    1))))
     (:unread
-     (setf (fd-stream-unread stream) arg1)
+     (if (zerop (fd-stream-last-char-read-size stream))
+	 (setf (fd-stream-unread stream) arg1)
+	 (decf (fd-stream-ibuf-head stream)
+	       (fd-stream-last-char-read-size stream)))
      (setf (fd-stream-listen stream) t))
     (:close
      (cond (arg1
@@ -1532,7 +1543,8 @@
        (setf (fd-stream-ibuf-sap stream) nil))
      (lisp::set-closed-flame stream))
     (:clear-input
-     (setf (fd-stream-unread stream) nil)
+     (setf (fd-stream-unread stream) nil) ;;@@
+     (setf (fd-stream-last-char-read-size stream) 0)
      (setf (fd-stream-ibuf-head stream) 0)
      (setf (fd-stream-ibuf-tail stream) 0)
      (catch 'eof-input-catcher
@@ -1619,7 +1631,7 @@
 		 ;; unread stuff is still available.
 		 (decf posn (- (fd-stream-ibuf-tail stream)
 			       (fd-stream-ibuf-head stream)))
-		 (when (fd-stream-unread stream)
+		 (when (fd-stream-unread stream) ;;@@
 		   (decf posn))
 		 ;; Divide bytes by element size.
 		 (truncate posn (fd-stream-element-size stream)))
@@ -1642,7 +1654,8 @@
 	  (system:serve-all-events))
 	;; Clear out any pending input to force the next read to go to the
 	;; disk.
-	(setf (fd-stream-unread stream) nil)
+	(setf (fd-stream-unread stream) nil) ;;@@
+	(setf (fd-stream-last-char-read-size stream) 0)
 	(setf (fd-stream-ibuf-head stream) 0)
 	(setf (fd-stream-ibuf-tail stream) 0)
 	;; Trash cached value for listen, so that we check next time.

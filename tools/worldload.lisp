@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.108 2007/10/25 15:17:07 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.108.6.1 2008/07/05 12:37:42 rtoy Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,6 +158,10 @@
   (purify :root-structures (list c:*backend*)
 	  :environment-name (concatenate 'string (c:backend-name c:*backend*)
 					 " backend")))
+
+;; extfmts needs the compiler
+#-(or no-compiler runtime unicode-bootstrap)
+(maybe-byte-load "code:fd-stream-extfmt")
 
 ;;; PCL.
 ;;;

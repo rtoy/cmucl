@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.4 2008/07/02 14:53:44 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.5 2008/07/05 12:37:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -226,12 +226,17 @@
 		    alias value)))))))
 
 (defun %find-external-format (name)
-  (when (ext:search-list-defined-p "ext-formats:")
-    (when (zerop (hash-table-count *external-format-aliases*))
-      (setf (gethash :latin1 *external-format-aliases*) :iso8859-1)
-      (setf (gethash :latin-1 *external-format-aliases*) :iso8859-1)
-      (setf (gethash :iso-8859-1 *external-format-aliases*) :iso8859-1)
-      (load-external-format-aliases)))
+  ;; avoid loading files, etc., early in the boot sequence
+  (when (or (eq name :iso8859-1)
+	    (and (eq name :default) (eq *default-external-format* :iso8859-1)))
+    (return-from %find-external-format
+      (gethash :iso8859-1 *external-formats*)))
+
+  (when (zerop (hash-table-count *external-format-aliases*))
+    (setf (gethash :latin1 *external-format-aliases*) :iso8859-1)
+    (setf (gethash :latin-1 *external-format-aliases*) :iso8859-1)
+    (setf (gethash :iso-8859-1 *external-format-aliases*) :iso8859-1)
+    (load-external-format-aliases))
 
   (do ((tmp (gethash name *external-format-aliases*)
             (gethash tmp *external-format-aliases*))
@@ -297,21 +302,58 @@
   (when (and (consp name) (not (cdr name)))
     (setq name (car name)))
 
-  (if (consp name)
-      (let ((efs (mapcar #'%find-external-format name)))
-	(if (member nil efs)
-	    (if error-p (error "External format ~S not found." name) nil)
-	    (let ((name (reduce #'%composed-ef-name (mapcar #'ef-name efs))))
-	      (or (gethash name *external-formats*)
-		  (%intern-ef (reduce #'%compose-external-formats efs))))))
-      (or (%find-external-format name)
-	  (if error-p (error "External format ~S not found." name) nil))))
+  (flet ((not-found ()
+	   (when (equal *default-external-format* name)
+	     (setq *default-external-format* :iso8859-1))
+	   (if error-p (error "External format ~S not found." name) nil)))
+    (if (consp name)
+	(let ((efs (mapcar #'%find-external-format name)))
+	  (if (member nil efs)
+	      (not-found)
+	      (let ((name (reduce #'%composed-ef-name (mapcar #'ef-name efs))))
+		(or (gethash name *external-formats*)
+		    (%intern-ef (reduce #'%compose-external-formats efs))))))
+	(or (%find-external-format name) (not-found)))))
 
 (defun flush-external-formats ()
   (maphash (lambda (name ef)
 	     (declare (ignore name))
 	     (fill (ef-cache ef) nil))
 	   *external-formats*))
+
+(defvar *.table-inverse.* (make-hash-table :test 'eq :size 7))
+
+(defun invert-table (table)
+  (declare (type (or (simple-array (unsigned-byte 31) *)
+		     (simple-array (unsigned-byte 16) *))
+		 table)
+	   (optimize (speed 3) (space 0) (safety 0) (debug 0)
+		     (ext:inhibit-warnings 3)))
+  (or (gethash table *.table-inverse.*)
+      (let* ((result (make-hash-table))
+	     (width (array-dimension table 0))
+	     (power (1- (array-rank table)))
+	     (base (if (= width 94) 1 0)))
+	(assert (and (< power 3) (<= width 256)))
+	(dotimes (i (array-total-size table))
+	  (declare (type (integer 0 (#.array-dimension-limit)) i))
+	  (let ((tmp i) (val (row-major-aref table i)) (z 0))
+	    (declare (type (integer 0 (#.array-dimension-limit)) tmp)
+		     (type (unsigned-byte 32) z))
+	    (unless (or (= val #xFFFE) (gethash val result))
+	      (dotimes (j power)
+		;; j is only ever 0 in reality, since no n^3 tables are
+		;; defined; z was declared as 32-bit above, so that limits
+		;; us to 0 <= j <= 2   (see the ASSERT)
+		(declare (type (integer 0 2) j))
+		(multiple-value-bind (x y) (floor tmp width)
+		  (setq tmp x)
+		  (setq z (logior z (ash (the (integer 0 255) (+ y base))
+					 (the (integer 0 24)
+					   (* 8 (- power j))))))))
+	      (setf (gethash val result) (logior z (+ tmp base))))))
+	(setf (gethash table *.table-inverse.*) result))))
+
 
 (define-condition void-external-format (error)
   ()
