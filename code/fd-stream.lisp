@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.3 2008/07/05 12:37:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.4 2008/07/06 22:30:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,9 +198,13 @@
   ;; External formats
   ;; @@ I want to use :default here, but keyword pkg isn't set up yet at boot
   ;; so initialize to NIL and fix it in SET-ROUTINES
+  #+unicode
   (external-format nil :type (or null keyword cons))
+  #+unicode
   (oc-state nil)
+  #+unicode
   (co-state nil)
+  #+unicode
   (last-char-read-size 0 :type index))
 
 (defun %print-fd-stream (fd-stream stream depth)
@@ -832,7 +836,8 @@
 	(ibuf-sap (fd-stream-ibuf-sap stream))
 	(buflen (fd-stream-ibuf-length stream))
 	(head (fd-stream-ibuf-head stream))
-	(lcrs (fd-stream-last-char-read-size stream))
+	(lcrs #-unicode 0
+	      #+unicode (fd-stream-last-char-read-size stream))
 	(tail (fd-stream-ibuf-tail stream)))
     (declare (type index head lcrs tail))
     (unless (zerop head)
@@ -892,6 +897,7 @@
 	     (throw 'eof-input-catcher nil))
 	    (t
 	     (incf (fd-stream-ibuf-tail stream) count))))))
+
 
 ;;; INPUT-AT-LEAST -- internal
 ;;;
@@ -1370,6 +1376,7 @@
       (push (fd-stream-ibuf-sap stream) *available-buffers*)
       (setf (fd-stream-ibuf-sap stream) nil))
 
+    #+unicde
     (when (null (fd-stream-external-format stream))
       (setf (fd-stream-external-format stream) :default))
     
@@ -1513,6 +1520,9 @@
 					     0 0))
 		    1))))
     (:unread
+     #-unicode
+     (setf (fd-stream-unread stream) arg1)
+     #+unicode
      (if (zerop (fd-stream-last-char-read-size stream))
 	 (setf (fd-stream-unread stream) arg1)
 	 (decf (fd-stream-ibuf-head stream)
@@ -1544,7 +1554,7 @@
      (lisp::set-closed-flame stream))
     (:clear-input
      (setf (fd-stream-unread stream) nil) ;;@@
-     (setf (fd-stream-last-char-read-size stream) 0)
+     #+unicode (setf (fd-stream-last-char-read-size stream) 0)
      (setf (fd-stream-ibuf-head stream) 0)
      (setf (fd-stream-ibuf-tail stream) 0)
      (catch 'eof-input-catcher
@@ -1655,7 +1665,7 @@
 	;; Clear out any pending input to force the next read to go to the
 	;; disk.
 	(setf (fd-stream-unread stream) nil) ;;@@
-	(setf (fd-stream-last-char-read-size stream) 0)
+	#+unicode (setf (fd-stream-last-char-read-size stream) 0)
 	(setf (fd-stream-ibuf-head stream) 0)
 	(setf (fd-stream-ibuf-tail stream) 0)
 	;; Trash cached value for listen, so that we check next time.
@@ -1745,7 +1755,8 @@
 				     :timeout timeout))))
     (set-routines stream element-type input output input-buffer-p
 		  :binary-stream-p binary-stream-p)
-    #-unicode-bootstrap ; fails in stream-reinit otherwise
+    ;;#-unicode-bootstrap ; fails in stream-reinit otherwise
+    #+(and unicode (not unicode-bootstrap))
     (setf (stream-external-format stream) external-format)
     (when (and auto-close (fboundp 'finalize))
       (finalize stream

@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.108.6.1 2008/07/05 12:37:42 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.108.6.2 2008/07/06 22:30:19 rtoy Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,8 @@
 					 " backend")))
 
 ;; extfmts needs the compiler
-#-(or no-compiler runtime unicode-bootstrap)
+;;#-(or no-compiler runtime unicode-bootstrap)
+#+(and unicode (not (or unicode-bootstrap no-compiler runtime)))
 (maybe-byte-load "code:fd-stream-extfmt")
 
 ;;; PCL.
