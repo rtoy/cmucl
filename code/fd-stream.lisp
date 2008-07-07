@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.4 2008/07/06 22:30:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.5 2008/07/07 14:46:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1376,7 +1376,7 @@
       (push (fd-stream-ibuf-sap stream) *available-buffers*)
       (setf (fd-stream-ibuf-sap stream) nil))
 
-    #+unicde
+    #+unicode
     (when (null (fd-stream-external-format stream))
       (setf (fd-stream-external-format stream) :default))
     
