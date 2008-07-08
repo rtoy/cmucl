@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.5 2008/07/05 12:37:42 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.6 2008/07/08 16:09:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -419,7 +419,11 @@
 			`(+ (ensure-cache ,ef ',id ,reqd) ,idx))))
 	 (or (aref (ef-cache ,ef) ,tmp)
 	     (setf (aref (ef-cache ,ef) ,tmp)
-		 (let ((*compile-print* nil)) (compile nil ,body))))))))
+		   (let ((*compile-print* nil)
+			 (*compile-verbose* nil)
+			 (*compile-progress* nil)
+			 (*gc-verbose* nil))
+		     (compile nil ,body))))))))
 
 
 
