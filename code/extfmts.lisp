@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.6 2008/07/08 16:09:06 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.7 2008/07/09 15:52:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -420,9 +420,13 @@
 	 (or (aref (ef-cache ,ef) ,tmp)
 	     (setf (aref (ef-cache ,ef) ,tmp)
 		   (let ((*compile-print* nil)
-			 (*compile-verbose* nil)
-			 (*compile-progress* nil)
-			 (*gc-verbose* nil))
+			 ;; Set default format when we compile so we
+			 ;; can see compiler messages.  If we don't,
+			 ;; we run into the problem that we might be
+			 ;; changing the default format while we're
+			 ;; compiling, and we don't know how to output
+			 ;; the compiler messages.
+			 (*default-external-format* :iso8859-1))
 		     (compile nil ,body))))))))
 
 
