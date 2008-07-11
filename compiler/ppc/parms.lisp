@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.16.4.2 2008/05/30 16:40:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.16.4.2.2.1 2008/07/11 19:01:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,7 +79,7 @@
 (defconstant char-bits #-unicode 8 #+unicode 16
   "Number of bits needed to represent a character")
 
-(defconstant char-bytes (truncate char-bits char-bytes)
+(defconstant char-bytes (truncate char-bits byte-bits)
   "Number of bytes needed to represent a character")
 
 (defconstant word-shift (1- (integer-length (/ word-bits byte-bits)))
