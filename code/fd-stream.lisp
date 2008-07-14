@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.6 2008/07/14 14:01:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.7 2008/07/14 20:53:43 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1409,6 +1409,17 @@
 	 (setf (fd-stream-unread stream) arg1)
 	 (decf (fd-stream-ibuf-head stream)
 	       (fd-stream-last-char-read-size stream)))
+     ;; Paul says:
+     ;; 
+     ;; Not needed for unicode when unreading is implemented by backing up in
+     ;; the buffer (e.g., with last-char-read-size...)
+     ;;
+     ;; (AFAICS there's nothing wrong with setting it there, but it
+     ;; screws up read-interactive in my toplevel command thing -
+     ;; leaves it expecting to read arguments when it shouldn't,
+     ;; because LISTEN returns T when there's no input pending, but I
+     ;; don't understand why...)
+     #-unicode
      (setf (fd-stream-listen stream) t))
     (:close
      (cond (arg1
