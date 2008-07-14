@@ -72,6 +72,8 @@ New in this release:
   * Trac Tickets:
     - #16: Read-time hash-table issue
       Fixed.
+    - #17: LOOP NAMED NIL has no effect
+      Fixed.
 
   * Other changes:
     - IS1, IS2, IS3, and IS4 are recognized character names for the

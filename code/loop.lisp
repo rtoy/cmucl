@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.27 2004/10/21 02:31:08 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.28 2008/07/14 20:36:42 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1044,11 +1044,12 @@ collected result will be returned as the value of the LOOP."
 				    (*loop-destructuring-hooks* (first *loop-destructuring-hooks*))
 				    (t 'let))
 			     ,vars
-			     ,@(loop-build-destructuring-bindings crocks forms)))))))
-      (if *loop-names*
-	  (do () ((null (car *loop-names*)) answer)
-	    (setq answer `(block ,(pop *loop-names*) ,answer)))
-	  `(block nil ,answer)))))
+			      ,@(loop-build-destructuring-bindings crocks forms)))))))
+      (when *loop-names*
+	(do () (nil)
+	  (setq answer `(block ,(pop *loop-names*) ,answer))
+	  (unless *loop-names* (return nil))))
+      answer)))
 
 
 (defun loop-iteration-driver ()
@@ -1356,7 +1357,7 @@ collected result will be returned as the value of the LOOP."
     (when *loop-names*
       (loop-error "You may only use one NAMED clause in your loop: NAMED ~S ... NAMED ~S."
 		  (car *loop-names*) name))
-    (setq *loop-names* (list name nil))))
+    (setq *loop-names* (list name))))
 
 (defun loop-do-return ()
   (loop-pseudo-body (loop-construct-return (loop-get-form))))
