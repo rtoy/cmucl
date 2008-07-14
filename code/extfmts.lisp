@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.7 2008/07/09 15:52:12 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extfmts.lisp,v 1.2.4.3.2.8 2008/07/14 14:01:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -122,7 +122,7 @@
 				       &optional octets-to-code code-to-octets)
   (when (and (oddp (length args)) (not (= (length args) 1)))
     (warn "Nonsensical argument (~S) to DEFINE-EXTERNAL-FORMAT." args))
-  (let* ((tmp1 (gensym)) (tmp2 (gensym))
+  (let* ((tmp (gensym))
 	 (min (if (evenp (length args))
 		  (or (getf args :min) (getf args :size) 1)
 		  1))
@@ -136,26 +136,25 @@
 	 (slotd (%merge-slots bslotd slots))
 	 (slotb (loop for slot in slotd
 		  collect `(,(first slot)
-			    (the ,(fourth slot)
-			      (identity (svref ,tmp1 ,(second slot))))))))
+			    `(the ,',(fourth slot)
+			      ;; IDENTITY is here to protect against SETF
+			      (identity (svref %slots% ,',(second slot))))))))
     `(macrolet ((octets-to-code ((state input unput &rest vars) body)
-		  `(lambda (,',tmp1 ,state ,input ,unput)
-		     (declare (type simple-vector ,',tmp1)
-			      (ignorable ,state ,input ,unput)
+		  `(lambda (,state ,input ,unput)
+		     (declare (ignorable ,state ,input ,unput)
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let (,@',slotb
 			   (,input `(the (or (unsigned-byte 8) null) ,,input))
 			   ,@(loop for var in vars collect `(,var (gensym))))
 		       ,body)))
 		(code-to-octets ((code state output &rest vars) body)
-		  `(lambda (,',tmp1 ,',tmp2 ,state ,output)
-		     (declare (type simple-vector ,',tmp1)
-			      (ignorable ,state ,output)
+		  `(lambda (,',tmp ,state ,output)
+		     (declare (ignorable ,state ,output)
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let (,@',slotb
 			   (,code ',code)
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       `(let ((,',code (the (unsigned-byte 31) ,,',tmp2)))
+		       `(let ((,',code (the (unsigned-byte 31) ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body)))))
        (%intern-ef (make-external-format ,name
@@ -180,13 +179,12 @@
 ;;;
 (defmacro define-composing-external-format (name (&key min max size)
 						 input output)
-  (let ((tmp1 (gensym)) (tmp2 (gensym))
+  (let ((tmp (gensym))
 	(min (or min size 1))
 	(max (or max size 1)))
     `(macrolet ((input ((state input unput &rest vars) body)
-		  `(lambda (,',tmp1 ,state ,input ,unput)
-		     (declare (ignore ,',tmp1)
-			      (ignorable ,state ,input ,unput)
+		  `(lambda (,state ,input ,unput)
+		     (declare (ignorable ,state ,input ,unput)
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let ((,input `(the (values (or (unsigned-byte 31) null)
 						 kernel:index)
@@ -194,13 +192,12 @@
 			   ,@(loop for var in vars collect `(,var (gensym))))
 		       ,body)))
 		(output ((code state output &rest vars) body)
-		  `(lambda (,',tmp1 ,',tmp2 ,state ,output)
-		     (declare (ignore ,',tmp1)
-			      (ignorable ,state ,output)
+		  `(lambda (,',tmp ,state ,output)
+		     (declare (ignorable ,state ,output)
 			      (optimize (ext:inhibit-warnings 3)))
 		     (let ((,code ',code)
 			   ,@(loop for var in vars collect `(,var (gensym))))
-		       `(let ((,',code (the (unsigned-byte 31) ,,',tmp2)))
+		       `(let ((,',code (the (unsigned-byte 31) ,,',tmp)))
 			  (declare (ignorable ,',code))
 			  ,,body)))))
        (%intern-ef (make-external-format ,name
@@ -266,23 +263,15 @@
   (make-external-format
    (%composed-ef-name (ef-name a) (ef-name b))
    (make-efx
-    :octets-to-code (lambda (tmp state input unput)
-		      (declare (ignore tmp))
-		      (funcall (ef-octets-to-code b) (ef-slots b)
-			       state
-			       (funcall (ef-octets-to-code a) (ef-slots a)
-					state
-					input
-					unput)
+    :octets-to-code (lambda (state input unput)
+		      (funcall (ef-octets-to-code b) state
+			       (funcall (ef-octets-to-code a)
+					state input unput)
 			       unput))
-    :code-to-octets (lambda (tmp code state output)
-		      (declare (ignore tmp))
-		      (funcall (ef-code-to-octets b) (ef-slots b)
-			       code
-			       state
+    :code-to-octets (lambda (code state output)
+		      (funcall (ef-code-to-octets b) code state
 			       `(lambda (x)
 				 ,(funcall (ef-code-to-octets a)
-					   (ef-slots a)
 					   'x state output))))
     :cache (make-array +ef-max+ :initial-element nil)
     :min (* (ef-min-octets a) (ef-min-octets b))
@@ -382,17 +371,16 @@
 ;;; to read or write texts containing characters not supported by your Lisp,
 ;;; these macros can be used instead.
 (defmacro octets-to-codepoint (external-format state count input unput)
-  (let ((tmp1 (gensym)) (tmp2 (gensym)))
-    `(let ((body (funcall (ef-octets-to-code ,external-format)
-			  (ef-slots ,external-format)
-			  ',state ',input ',unput)))
-       `(multiple-value-bind (,',tmp1 ,',tmp2) ,body
-	  (setf ,',count (the kernel:index ,',tmp2))
-	  (the (or (unsigned-byte 31) null) ,',tmp1)))))
+  (let ((tmp1 (gensym)) (tmp2 (gensym))
+	(ef (find-external-format external-format)))
+    `(multiple-value-bind (,tmp1 ,tmp2)
+	 ,(funcall (ef-octets-to-code ef) state input unput)
+       (setf ,count (the kernel:index ,tmp2))
+       (the (or (unsigned-byte 31) null) ,tmp1))))
 
 (defmacro codepoint-to-octets (external-format code state output)
-  `(funcall (ef-code-to-octets ,external-format) (ef-slots ,external-format)
-	    ',code ',state ',output))
+  (let ((ef (find-external-format external-format)))
+    (funcall (ef-code-to-octets ef) code state output)))
 
 
 
@@ -412,22 +400,38 @@
 ;;;
 ;;; 
 (defmacro def-ef-macro (name (ef id reqd idx) body)
-  (let ((tmp (gensym)))
-    `(defun ,name (,ef)
-       (let ((,tmp ,(if (eq id 'lisp::lisp)
-			idx
-			`(+ (ensure-cache ,ef ',id ,reqd) ,idx))))
-	 (or (aref (ef-cache ,ef) ,tmp)
-	     (setf (aref (ef-cache ,ef) ,tmp)
-		   (let ((*compile-print* nil)
-			 ;; Set default format when we compile so we
-			 ;; can see compiler messages.  If we don't,
-			 ;; we run into the problem that we might be
-			 ;; changing the default format while we're
-			 ;; compiling, and we don't know how to output
-			 ;; the compiler messages.
-			 (*default-external-format* :iso8859-1))
-		     (compile nil ,body))))))))
+  (let ((tmp1 (gensym))
+	(tmp2 (gensym))
+	(%name (intern (format nil "%~A" name) (symbol-package name))))
+    `(progn
+       (defun ,%name (,ef)
+	 (let* ((,tmp1 (find-external-format ,ef))
+		(,tmp2 ,(if (eq id 'lisp::lisp)
+			    idx
+			    `(+ (ensure-cache ,tmp1 ',id ,reqd) ,idx))))
+	   (funcall (or (aref (ef-cache ,tmp1) ,tmp2)
+			(setf (aref (ef-cache ,tmp1) ,tmp2)
+			    (let ((*compile-print* nil)
+				  ;; Set default format when we compile so we
+				  ;; can see compiler messages.  if we don't,
+				  ;; we run into a problem that we might be
+				  ;; changing the default format while we're
+				  ;; compiling, and we don't know how to output
+				  ;; the compiler messages.
+				  (*default-external-format* :iso8859-1))
+			      (compile nil `(lambda (%slots%)
+					      (declare (ignorable %slots%))
+					      ,,body)))))
+		    (ef-slots ,tmp1))))
+       (declaim (inline ,name))
+       (defun ,name (,tmp1)
+	 (let ((,tmp2 (load-time-value (cons nil nil))))
+	   (when (eq ,tmp1 :default)
+	     (setq ,tmp1 *default-external-format*))
+	   (if (eq ,tmp1 (car ,tmp2))
+	       (cdr ,tmp2)
+	       (setf (car ,tmp2) ,tmp1
+		     (cdr ,tmp2) (,%name ,tmp1))))))))
 
 
 
@@ -436,13 +440,12 @@
 ;;; Read and write one character through an external-format
 ;;;
 (defmacro octets-to-char (external-format state count input unput)
-  `(let ((body (octets-to-codepoint ,external-format
+  `(let ((code (octets-to-codepoint ,external-format
 				    ,state ,count ,input ,unput)))
-     `(let ((code ,body))
-        (declare (type (unsigned-byte 31) code))
-        (if (< code char-code-limit) (code-char code)
-	    #-(and unicode (not unicode-bootstrap)) #\?
-	    #+(and unicode (not unicode-bootstrap)) #\U+FFFD))))
+     (declare (type (unsigned-byte 31) code))
+     (if (< code char-code-limit) (code-char code)
+	 #-(and unicode (not unicode-bootstrap)) #\?
+	 #+(and unicode (not unicode-bootstrap)) #\U+FFFD)))
 
 (defmacro char-to-octets (external-format char state output)
   `(codepoint-to-octets ,external-format (char-code ,char) ,state ,output))
@@ -457,11 +460,11 @@
 	      (ignorable state))
      (dotimes (i (- end start) (values buffer ptr))
        (declare (type kernel:index i))
-       ,(char-to-octets extfmt (schar string (+ start i)) state
-			(lambda (b)
-			  (when (= ptr (length buffer))
-			    (setq buffer (adjust-array buffer (* 2 ptr))))
-			  (setf (aref buffer (1- (incf ptr))) b))))))
+       (char-to-octets ,extfmt (schar string (+ start i)) state
+		       (lambda (b)
+			 (when (= ptr (length buffer))
+			   (setq buffer (adjust-array buffer (* 2 ptr))))
+			 (setf (aref buffer (1- (incf ptr))) b))))))
 
 (defun string-to-octets (string &key (start 0) end (external-format :default)
 				     (buffer nil bufferp))
@@ -473,7 +476,7 @@
 					:element-type '(unsigned-byte 8)))))
     (multiple-value-bind (buffer ptr)
 	(lisp::with-array-data ((string string) (start start) (end end))
-	  (funcall (ef-string-to-octets (find-external-format external-format))
+	  (funcall (ef-string-to-octets external-format)
 		   string start end buffer))
       (values (if bufferp buffer (lisp::shrink-vector buffer ptr)) ptr))))
 
@@ -489,9 +492,9 @@
 	do (when (= pos (length string))
 	     (setq string (adjust-array string (* 2 pos))))
 	   (setf (schar string (incf pos))
-	       ,(octets-to-char extfmt state count
-				(aref octets (incf ptr)) ;;@@ EOF??
-				(lambda (n) (decf ptr n))))
+	       (octets-to-char ,extfmt state count
+			       (aref octets (incf ptr)) ;;@@ EOF??
+			       (lambda (n) (decf ptr n))))
 	finally (return (values string (1+ pos))))))
 
 (defun octets-to-string (octets &key (start 0) end (external-format :default)
@@ -501,7 +504,7 @@
 	   (type (or kernel:index null) end)
 	   (type (or simple-string null) string))
   (multiple-value-bind (string pos)
-      (funcall (ef-octets-to-string (find-external-format external-format))
+      (funcall (ef-octets-to-string external-format)
 	       octets (1- start) (1- (or end (length octets)))
 	       (or string (make-string (length octets))))
     (values (if stringp string (lisp::shrink-vector string pos)) pos)))
@@ -517,18 +520,19 @@
 	      (ignorable state))
      (dotimes (i (- end start) (values result ptr))
        (declare (type kernel:index i))
-       ,(char-to-octets extfmt (schar string (+ start i)) state
-			(lambda (b)
-			  (when (= ptr (length result))
-			    (setq result (adjust-array result (* 2 ptr))))
-			  (setf (aref result (1- (incf ptr)))
-			      (code-char b)))))))
+       (char-to-octets ,extfmt (schar string (+ start i)) state
+		       (lambda (b)
+			 (when (= ptr (length result))
+			   (setq result (adjust-array result (* 2 ptr))))
+			 (setf (aref result (1- (incf ptr)))
+			     (code-char b)))))))
 
 (defun string-encode (string external-format &optional (start 0) end)
+  (when (zerop (length string))
+    (return-from string-encode string))
   (multiple-value-bind (result ptr)
       (lisp::with-array-data ((string string) (start start) (end end))
-	(funcall (ef-encode (find-external-format external-format))
-		 string start end
+	(funcall (ef-encode external-format) string start end
 		 (make-string (length string) :element-type 'base-char)))
     (lisp::shrink-vector result ptr)))
 
@@ -544,17 +548,19 @@
 	;; increasing size of result shouldn't ever be necessary, unless
 	;; someone implements an encoding smaller than the source string...
 	do (setf (schar result (incf pos))
-	       ,(octets-to-char extfmt state count
-				;; note the need to return NIL for EOF
-				(if (= (1+ ptr) (length string))
-				    nil
-				    (char-code (char string (incf ptr))))
-				(lambda (n) (decf ptr n))))
+	       (octets-to-char ,extfmt state count
+			       ;; note the need to return NIL for EOF
+			       (if (= (1+ ptr) (length string))
+				   nil
+				   (char-code (char string (incf ptr))))
+			       (lambda (n) (decf ptr n))))
 	finally (return (values result (1+ pos))))))
 
 (defun string-decode (string external-format &optional (start 0) end)
+  (when (zerop (length string))
+    (return-from string-decode string))
   (multiple-value-bind (result pos)
       (lisp::with-array-data ((string string) (start start) (end end))
-	(funcall (ef-decode (find-external-format external-format))
+	(funcall (ef-decode external-format)
 		 string (1- start) (1- end) (make-string (length string))))
     (lisp::shrink-vector result pos)))

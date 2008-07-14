@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.1.2.1 2008/07/05 12:37:42 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream-extfmt.lisp,v 1.1.2.2 2008/07/14 14:01:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,8 +14,7 @@
 (in-package "LISP")
 
 (defun output-char-none-buffered (stream char)
-  (funcall (ef-cout (stream::find-external-format
-		     (fd-stream-external-format stream)))
+  (funcall (ef-cout (fd-stream-external-format stream))
 	   stream char)
   (if (char= char #\Newline)
       (setf (fd-stream-char-pos stream) 0)
@@ -24,8 +23,7 @@
   (values))
 
 (defun output-char-line-buffered (stream char)
-  (funcall (ef-cout (stream::find-external-format
-		     (fd-stream-external-format stream)))
+  (funcall (ef-cout (fd-stream-external-format stream))
 	   stream char)
   (if (char= char #\Newline)
       (progn (setf (fd-stream-char-pos stream) 0)
@@ -34,8 +32,7 @@
   (values))
 
 (defun output-char-full-buffered (stream char)
-  (funcall (ef-cout (stream::find-external-format
-		     (fd-stream-external-format stream)))
+  (funcall (ef-cout (fd-stream-external-format stream))
 	   stream char)
   (if (char= char #\Newline)
       (setf (fd-stream-char-pos stream) 0)
@@ -54,8 +51,7 @@
 					   :from-end t
 					   :start start
 					   :end end))))
-	  (funcall (ef-sout (stream::find-external-format 
-			     (fd-stream-external-format stream)))
+	  (funcall (ef-sout (fd-stream-external-format stream))
 		   stream thing start end)
 	  (ecase (fd-stream-buffering stream)
 	    (:full #| do nothing |#)
@@ -84,8 +80,7 @@
       (prog1 (fd-stream-unread stream)
 	(setf (fd-stream-unread stream) nil)
 	(setf (fd-stream-listen stream) nil))
-      (let ((char (funcall (ef-cin (stream::find-external-format
-				    (fd-stream-external-format stream)))
+      (let ((char (funcall (ef-cin (fd-stream-external-format stream))
 			   stream)))
 	(if char
 	    char

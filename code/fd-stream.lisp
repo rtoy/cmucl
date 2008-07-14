@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.5 2008/07/07 14:46:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.85.4.1.2.6 2008/07/14 14:01:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -403,7 +403,7 @@
   (setf (sap-ref-8 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	(char-code byte)))
 
-#+(and unicode (not extfmts))
+#+unicode
 (def-output-routines ("OUTPUT-CHAR-~A-BUFFERED"
 		      1
 		      (:none character)
@@ -476,66 +476,16 @@
 	    (len (fd-stream-obuf-length stream))
 	    (tail (fd-stream-obuf-tail stream)))
        (declare (type sys:system-area-pointer sap) (type index len tail))
-       ,(stream::char-to-octets extfmt
-				char
-				(fd-stream-co-state stream)
-				(lambda (byte)
-				  (when (= tail len)
-				    (do-output stream sap 0 tail t)
-				    (setq sap (fd-stream-obuf-sap stream)
-					  tail 0))
-				  (setf (bref sap (1- (incf tail))) byte)))
+       (stream::char-to-octets ,extfmt
+			       char
+			       (fd-stream-co-state stream)
+			       (lambda (byte)
+				 (when (= tail len)
+				   (do-output stream sap 0 tail t)
+				   (setq sap (fd-stream-obuf-sap stream)
+					 tail 0))
+				 (setf (bref sap (1- (incf tail))) byte)))
        (setf (fd-stream-obuf-tail stream) tail))))
-
-#+(and unicode extfmts)
-(defun output-char-none-buffered (stream char)
-  (funcall (ef-cout (stream::find-external-format
-		     (fd-stream-external-format stream)))
-	   stream char)
-  (if (char= char #\Newline)
-      (setf (fd-stream-char-pos stream) 0)
-      (incf (fd-stream-char-pos stream)))
-  (flush-output-buffer stream)
-  (values))
-#+(and unicode extfmts)
-(setf *output-routines*
-    (nconc *output-routines*
-	   ;; check that using 1 here doesn't cause problems if the size
-	   ;; of a character is NOT actually 1 octet...
-	   (list (list 'character :none 'output-char-none-buffered 1))))
-
-#+(and unicode extfmts)
-(defun output-char-line-buffered (stream char)
-  (funcall (ef-cout (stream::find-external-format
-		     (fd-stream-external-format stream)))
-	   stream char)
-  (if (char= char #\Newline)
-      (progn (setf (fd-stream-char-pos stream) 0)
-	     (flush-output-buffer stream))
-      (incf (fd-stream-char-pos stream)))
-  (values))
-#+(and unicode extfmts)
-(setf *output-routines*
-    (nconc *output-routines*
-	   ;; check that using 1 here doesn't cause problems if the size
-	   ;; of a character is NOT actually 1 octet...
-	   (list (list 'character :line 'output-char-line-buffered 1))))
-
-#+(and unicode extfmts)
-(defun output-char-full-buffered (stream char)
-  (funcall (ef-cout (stream::find-external-format
-		     (fd-stream-external-format stream)))
-	   stream char)
-  (if (char= char #\Newline)
-      (setf (fd-stream-char-pos stream) 0)
-      (incf (fd-stream-char-pos stream)))
-  (values))
-#+(and unicode extfmts)
-(setf *output-routines*
-    (nconc *output-routines*
-	   ;; check that using 1 here doesn't cause problems if the size
-	   ;; of a character is NOT actually 1 octet...
-	   (list (list 'character :full 'output-char-full-buffered 1))))
 
 
 ;;; OUTPUT-RAW-BYTES -- public
@@ -632,50 +582,17 @@
 	    (tail (fd-stream-obuf-tail stream)))
        (declare (type sys:system-area-pointer sap) (type index len tail))
        (dotimes (i (- end start))
-	 ,(stream::char-to-octets extfmt
-				  (schar string (+ i start))
-				  (fd-stream-co-state stream)
-				  (lambda (byte)
-				    (when (= tail len)
-				      (do-output stream sap 0 tail t)
-				      (setq sap (fd-stream-obuf-sap stream)
-					    tail 0))
-				    (setf (bref sap (1- (incf tail))) byte))))
+	 (stream::char-to-octets ,extfmt
+				 (schar string (+ i start))
+				 (fd-stream-co-state stream)
+				 (lambda (byte)
+				   (when (= tail len)
+				     (do-output stream sap 0 tail t)
+				     (setq sap (fd-stream-obuf-sap stream)
+					   tail 0))
+				   (setf (bref sap (1- (incf tail))) byte))))
        (setf (fd-stream-obuf-tail stream) tail))))
 
-#+(and unicode extfmts)
-;; an fd-sout that works with external-formats; needs slots in fd-stream
-(defun fd-sout (stream thing start end)
-  (let ((start (or start 0))
-	(end (or end (length (the vector thing)))))
-    (declare (type index start end))
-    (if (stringp thing)
-	(let ((last-newline (and (find #\newline (the simple-string thing)
-				       :start start :end end)
-				 (position #\newline (the simple-string thing)
-					   :from-end t
-					   :start start
-					   :end end))))
-	  (funcall (ef-sout (stream::find-external-format 
-			     (fd-stream-external-format stream)))
-		   stream thing start end)
-	  (ecase (fd-stream-buffering stream)
-	    (:full #| do nothing |#)
-	    (:line
-	     (when last-newline
-	       (flush-output-buffer stream)))
-	    (:none
-	     (flush-output-buffer stream)))
-	  (if last-newline
-	      (setf (fd-stream-char-pos stream)
-		    (- end last-newline 1))
-	      (incf (fd-stream-char-pos stream)
-		    (- end start))))
-	(ecase (fd-stream-buffering stream)
-	  ((:line :full)
-	   (output-raw-bytes stream thing start end))
-	  (:none
-	   (do-output stream thing start end nil))))))
 
 #-unicode
 (defun fd-sout (stream thing start end)
@@ -709,7 +626,7 @@
 	  (:none
 	   (do-output stream thing start end nil))))))
 
-#+(and unicode (not extfmts))
+#+unicode
 (defun fd-sout (stream thing start end)
   (declare (type string thing))
   (let ((start (or start 0))
@@ -721,17 +638,6 @@
 	 (do ((index start (+ index 1)))
 	     ((>= index end))
 	   (funcall out stream (elt thing index))))))))
-
-#+(or) ; a lame sout hack to make external-format work quickly
-(defun fd-sout-each-character (stream thing start end)
-  (declare (type string thing))
-  (let ((start (or start 0))
-	(end (or end (length (the vector thing)))))
-    (declare (type index start end))
-    (let ((out (fd-stream-out stream)))
-      (do ((index start (+ index 1)))
-          ((>= index end))
-        (funcall out stream (aref thing index))))))
 
 (defmacro output-wrapper ((stream size buffering) &body body)
   (let ((stream-var (gensym)))
@@ -962,7 +868,6 @@
 ;;;
 ;;;   Routine to use in stream-in slot for reading string chars.
 ;;;
-#-(and unicode extfmts)
 (def-input-routine input-character
 		   (character 1 sap head)
   (code-char (sap-ref-8 sap head)))
@@ -1021,48 +926,25 @@
 	      (optimize (speed 3) (space 0) (debug 0) (safety 0)))
     (catch 'eof-input-catcher
       (let* ((head (fd-stream-ibuf-head stream))
-	     (ch ,(stream::octets-to-char extfmt
-					  (fd-stream-oc-state stream)
-					  (fd-stream-last-char-read-size stream)
-					  ;;@@ Note: need proper EOF handling...
-					  (progn
-					    (when (= head
-						     (fd-stream-ibuf-tail
-						      stream))
-					      (do-input stream)
-					      (setf head
-						  (fd-stream-ibuf-head stream)))
-					    (bref (fd-stream-ibuf-sap stream)
-						  (1- (incf head))))
-					  (lambda (n) (decf head n)))))
+	     (ch (stream::octets-to-char ,extfmt
+					 (fd-stream-oc-state stream)
+					 (fd-stream-last-char-read-size stream)
+					 ;;@@ Note: need proper EOF handling...
+					 (progn
+					   (when (= head
+						    (fd-stream-ibuf-tail
+						     stream))
+					     (do-input stream)
+					     (setf head
+						 (fd-stream-ibuf-head stream)))
+					   (bref (fd-stream-ibuf-sap stream)
+						 (1- (incf head))))
+					 (lambda (n) (decf head n)))))
 	(declare (type index head))
 	(when ch
 	  (incf (fd-stream-ibuf-head stream)
 		(fd-stream-last-char-read-size stream))
 	  ch)))))
-
-#+(and unicode extfmts)
-(defun input-character (stream eof-error eof-value)
-  ;; This needs to go away.  Unreading a character needs to be done by backing
-  ;; up the buffer head pointer, so that the external format will re-build the
-  ;; character - else changing extfmts won't work.  But until we get around
-  ;; to teaching UNREAD-CHAR to DTRT, keep this to maintain compatibility...
-  (if (fd-stream-unread stream)
-      (prog1 (fd-stream-unread stream)
-	(setf (fd-stream-unread stream) nil)
-	(setf (fd-stream-listen stream) nil))
-      (let ((char (funcall (ef-cin (stream::find-external-format
-				    (fd-stream-external-format stream)))
-			   stream)))
-	(if char
-	    char
-	    (eof-or-lose stream eof-error eof-value)))))
-#+(and unicode extfmts)
-(setf *input-routines*
-    (nconc *input-routines*
-	   ;; check that using 1 here doesn't cause problems if the size
-	   ;; of a character is NOT actually 1 octet...
-	   (list (list 'character 'input-character 1))))
 
 #+(or)
 (stream::def-ef-macro ef-sin (extfmt lisp stream::+ef-max+ stream::+ef-sin+)
@@ -1082,20 +964,20 @@
 	 ;;@@ Fix EOF handling
 	 (let* ((sz 0)
 		(ch (catch 'eof-input-catcher
-		      ,(stream::octets-to-char extfmt
-					       (fd-stream-oc-state stream)
-					       sz
-					       (progn
-						 (when (= head tail)
-						   (do-input stream)
-						   (setq head
-						       (fd-stream-ibuf-head
-							stream)
-						       tail
-						       (fd-stream-ibuf-tail
-							stream)))
-						 (bref sap (1- (incf head))))
-					       (lambda (n) (decf head n))))))
+		      (stream::octets-to-char ,extfmt
+					      (fd-stream-oc-state stream)
+					      sz
+					      (progn
+						(when (= head tail)
+						  (do-input stream)
+						  (setq head
+							(fd-stream-ibuf-head
+							 stream)
+							tail
+							(fd-stream-ibuf-tail
+							 stream)))
+						(bref sap (1- (incf head))))
+					      (lambda (n) (decf head n))))))
 	   (declare (type index sz)
 		    (type (or null character) ch))
 	   (when (null ch)
