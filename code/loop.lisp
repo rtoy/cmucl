@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.28 2008/07/14 20:36:42 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.29 2008/07/15 15:24:19 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1045,11 +1045,10 @@ collected result will be returned as the value of the LOOP."
 				    (t 'let))
 			     ,vars
 			      ,@(loop-build-destructuring-bindings crocks forms)))))))
-      (when *loop-names*
-	(do () (nil)
-	  (setq answer `(block ,(pop *loop-names*) ,answer))
-	  (unless *loop-names* (return nil))))
-      answer)))
+      (if *loop-names*
+	  (dolist (name *loop-names* answer)
+	    (setq answer `(block ,(pop *loop-names*) ,answer)))
+	  `(block nil ,answer)))))
 
 
 (defun loop-iteration-driver ()
