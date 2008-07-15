@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.268 2008/06/19 01:41:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.269 2008/07/15 16:13:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1407,7 +1407,10 @@
 
 	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"
 
+	     ;; From internet.lisp
+	     "ACCEPT-NETWORK-STREAM"
 	     "INET-RECVFROM" "INET-SENDTO" "INET-SHUTDOWN"
+	     "OPEN-NETWORK-STREAM"
 	     "SHUT-RD" "SHUT-WR" "SHUT-RDWR"
 
 	     "BINARY-TEXT-STREAM" "READ-VECTOR" "WRITE-VECTOR"
