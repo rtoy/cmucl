@@ -275,19 +275,21 @@ Finally, the function
 
 Datagram network is supported with the following functions.
 
-\begin{defun}{unix:}{inet-recvfrom}{%
+\begin{defun}{extensions:}{inet-recvfrom}{%
 	\args{\var{fd} \var{buffer} \var{size}}
 	\keys{\var{flags}}}
-   A simple interface to the Unix \code{recvfrom} function.
+   A simple interface to the Unix \code{recvfrom} function. Returns
+   three values: bytecount, source address as integer, and source
+   port. Bytecount can of course be negative, to indicate faults.
 \end{defun}
 
-\begin{defun}{unix:}{inet-sendto}{%
-	\args{\var{fd} \var{buffer} \var{size} \var{port}}
+\begin{defun}{extensions:}{inet-sendto}{%
+	\args{\var{fd} \var{buffer} \var{size} \var{addr} \var{port}}
 	\keys{\var{flags}}}
    A simple interface to the Unix \code{sendto} function.
 \end{defun}
 
-\begin{defun}{unix:}{inet-shutdown}{%
+\begin{defun}{extensions:}{inet-shutdown}{%
 	\args{\var{fd} \var{level}}}
 
    A simple interface to the Unix \code{shutdown} function.  For
