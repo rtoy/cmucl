@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.53 2008/06/23 14:25:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.54 2008/07/18 16:37:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -735,6 +735,7 @@ can of course be negative, to indicate faults."
 (defconstant shut-rdwr 2)
 
 (defun inet-shutdown (fd level)
+  "A packaging of the unix shutdown call.  An error is signaled if shutdown fails." 
   (when (minusp (unix:unix-shutdown fd level))
     (error 'socket-error
 	   :format-control "Error on shutdown of socket: ~A"
