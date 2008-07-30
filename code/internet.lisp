@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.54 2008/07/18 16:37:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.55 2008/07/30 15:20:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,8 @@
 
 (export '(htonl ntohl htons ntohs lookup-host-entry host-entry
 	  host-entry-name host-entry-aliases host-entry-addr-list
-	  host-entry-addr ip-string create-unix-socket connect-to-unix-socket
+	  host-entry-addr ip-string bind-inet-socket
+	  create-unix-socket connect-to-unix-socket
 	  create-unix-listener accept-unix-connection create-inet-socket
 	  connect-to-inet-socket create-inet-listener accept-tcp-connection
 	  close-socket ipproto-tcp ipproto-udp inaddr-any add-oob-handler
@@ -325,6 +326,27 @@ struct in_addr {
 	(error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
       (values connected (slot sockaddr 'path)))))
 
+(defun bind-inet-socket (socket host port)
+  "bind Socket to (local) Host and Port"
+  (let ((addr (if (stringp host)
+		  (host-entry-addr (or (lookup-host-entry host)
+				       (error "Unknown host: ~S." host)))
+		  host)))
+    (with-alien ((sockaddr inet-sockaddr))
+      (setf (slot sockaddr 'family) af-inet)
+      (setf (slot sockaddr 'port) (htons port))
+      (setf (slot sockaddr 'addr) (htonl addr))
+      (when (minusp (unix:unix-bind socket
+				    (alien-sap sockaddr)
+				    (alien-size inet-sockaddr :bytes)))
+	(let ((errno (unix:unix-errno)))
+	  (unix:unix-close socket)
+	  (error 'socket-error
+		 :format-control "Error binding socket to port ~A: ~A"
+		 :format-arguments (list port
+					 (unix:get-unix-error-msg))
+		 :errno errno))))))
+
 (defun create-inet-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
 		       (internet-protocol kind)
@@ -336,13 +358,17 @@ struct in_addr {
 	       :errno (unix:unix-errno)))
       socket)))
 
-(defun connect-to-inet-socket (host port &optional (kind :stream))
+(defun connect-to-inet-socket (host port &optional (kind :stream)
+			       &key local-host local-port)
   "The host may be an address string or an IP address in host order."
   (let* ((addr (if (stringp host)
 		   (host-entry-addr (or (lookup-host-entry host)
 					(error "Unknown host: ~S." host)))
 		   host))
 	 (socket (create-inet-socket kind)))
+    ;; bind to local-host/local-port if given
+    (when (and local-host local-port)
+      (bind-inet-socket socket local-addr local-port))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))

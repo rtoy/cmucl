@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.269 2008/07/15 16:13:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.270 2008/07/30 15:20:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1279,6 +1279,7 @@
              "COMPACT-INFO-ENVIRONMENT" "COMPILE-FROM-STREAM" "COMPILEDP"
              "COMPLETE-FILE" "CONCAT-PNAMES" "CONNECT-TO-INET-SOCKET"
              "CONSTANT" "CONSTANT-ARGUMENT" "CONSTANT-FUNCTION"
+	     "BIND-INET-SOCKET"
              "CREATE-INET-LISTENER" "CREATE-INET-SOCKET" "CREATE-UNIX-LISTENER"
 	     "DEF-SOURCE-CONTEXT"
              "DEFAULT-CLX-EVENT-HANDLER" "DEFAULT-DIRECTORY"

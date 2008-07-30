@@ -21,7 +21,14 @@ New in this release:
 
   * Feature enhancements:
     - ~R supports many more cardinal names.
- 
+    - Updated network support:
+      o Added BIND-INET-SOCKET to bind a socket to a local address.
+      o Added OPEN-NETWORK-STREAM to create a stream connected to a given host.
+      o Added ACCEPT-NETWORK-STREAM to create a stream connected to
+        the new network connection
+      o Updated CONNECT-TO-INET-SOCKET to allow binding the newly
+        created socket to a local address
+
   * ANSI compliance fixes:
     - Fix bug in backquote printer.  If the variable is @foo, we want
       to print ", @foo" not ",@foo".  Similarly, for .foo, we want to
