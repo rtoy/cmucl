@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.55 2008/07/30 15:20:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.56 2008/07/31 17:12:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -368,7 +368,7 @@ struct in_addr {
 	 (socket (create-inet-socket kind)))
     ;; bind to local-host/local-port if given
     (when (and local-host local-port)
-      (bind-inet-socket socket local-addr local-port))
+      (bind-inet-socket socket local-host local-port))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
