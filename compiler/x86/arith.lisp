@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.19 2008/08/12 13:37:16 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.20 2008/08/12 20:38:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1591,12 +1591,4 @@
 			(specifier-type '(unsigned-byte 5))))
     (cut-to-width integer width)
     'vm::ash-left-mod32))
-
-;; This should only get called when the ash modular function optimizer
-;; succeeds, which is for a count of 0-31, which is just right for
-;; %ashl.
-(declaim (inline vm::ash-left-mod32))
-(defun vm::ash-left-mod32 (integer count)
-  (bignum::%ashl (ldb (byte 32 0) integer) count))
-
 )
