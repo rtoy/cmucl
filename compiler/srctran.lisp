@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.163 2007/09/25 15:17:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.164 2008/08/12 21:00:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2853,9 +2853,19 @@
 		    (fixnum fixnum integer)
 		    (unsigned-byte #.vm:word-bits))
   "convert to inline logical ops"
-  `(logand (ash int (- posn))
-	   (ash ,(1- (ash 1 vm:word-bits))
-		(- size ,vm:word-bits))))
+  ;; Try to help out the compiler by precomputing things if SIZE or
+  ;; POSN are constants.  This helps out modular arithmetic in some
+  ;; cases.  (I think it's a deficiency in modular arithmetic it can't
+  ;; figure some things out for itself.)
+  (let ((posn-form (if (constant-continuation-p posn)
+		       (- (continuation-value posn))
+		       '(- posn)))
+	(size-form (if (constant-continuation-p size)
+		       (ash (1- (ash 1 vm:word-bits))
+			    (- (continuation-value size) vm:word-bits))
+		       `(ash ,(1- (ash 1 vm:word-bits))
+			     (- size vm:word-bits)))))
+    `(logand (ash int ,posn-form) ,size-form)))
 
 (deftransform %mask-field ((size posn int)
 			   (fixnum fixnum integer)
@@ -3986,8 +3996,17 @@
                    (numberp high)
                    (>= low 0))
           (let ((width (integer-length high)))
-            (when (some (lambda (x) (<= width x))
-                        *modular-funs-widths*)
+	    ;; If the result of LOGAND would fit in a fixnum, we don't
+	    ;; need to do anything.  This allows the any fixnum vops
+	    ;; to run.  However, if the result won't fit in a fixnum,
+	    ;; look to see if we can apply modular arithmetic.
+	    ;;
+	    ;; Is this right?
+            (when (and (< (integer-length most-positive-fixnum)
+			  width)
+		       (some (lambda (x)
+			       (<= width x))
+			     *modular-funs-widths*))
               ;; FIXME: This should be (CUT-TO-WIDTH NODE WIDTH).
               (cut-to-width x width)
               (cut-to-width y width)

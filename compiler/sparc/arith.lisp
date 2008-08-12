@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.44 2004/08/22 15:32:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.45 2008/08/12 21:00:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,7 +208,7 @@
   (:arg-types signed-num
 	      (:constant (or (and (unsigned-byte 12) (not (integer 0 0)))
 			     (integer #xfffff000 #xffffffff))))
-  (:generator 1				; Needs to be low to give this vop a chance.
+  (:generator 2				; Needs to be low to give this vop a chance.
     (cond ((= y #xffffffff)
 	   (move r x))
 	  ((typep y '(unsigned-byte 13))
@@ -2506,7 +2506,7 @@
 	     (cut-to-width integer width)
 	     'vm::ash-mod32)
 	    (t
-	     ;; Do nothing
+	     ;; Return NIL to say we can't do anything special.
 	     nil)))))
 
 ;;; If both arguments and the result are (unsigned-byte 32), try to come up
