@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.164 2008/08/12 21:00:17 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.165 2008/08/13 14:17:45 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2977,99 +2977,6 @@
     (if (minusp y)
 	`(- (ash x ,len))
 	`(ash x ,len))))
-
-;;; If both arguments and the result are (unsigned-byte 32), try to come up
-;;; with a ``better'' multiplication using multiplier recoding.  There are two
-;;; different ways the multiplier can be recoded.  The more obvious is to shift
-;;; X by the correct amount for each bit set in Y and to sum the results.  But
-;;; if there is a string of bits that are all set, you can add X shifted by
-;;; one more then the bit position of the first set bit and subtract X shifted
-;;; by the bit position of the last set bit.  We can't use this second method
-;;; when the high order bit is bit 31 because shifting by 32 doesn't work
-;;; too well.
-;;;
-
-;;; This is commented out because its uses of TRULY-THE for vop
-;;; selection lie to the compiler, leading to internal
-;;; inconsistencies, which in turn lead to incorrect code being
-;;; generated.  Example:
-;;;
-;;; (funcall (compile nil
-;;; 	'(lambda () (flet ((%f2 () 288213285))
-;;; 		      (+ (%f2) (* 13 (%f2)))))))
-;;;  => segmentation violation
-;;;
-;;;
-;;; Another useful test is
-;;;      (defun zot ()
-;;;	   (let ((v9 (labels ((%f13 () nil)) nil)))
-;;;	     (let ((v3 (logandc2 97 3)))
-;;;	       (* v3 (- 37391897 (logand v3 -66)))))
-;;;
-;;; The right fix for this is probably to port SBCL's modular
-;;; functions implementation.
-
-#+nil
-(deftransform * ((x y)
-		 ((unsigned-byte 32) (unsigned-byte 32))
-		 (unsigned-byte 32))
-  "recode as shift and add"
-  (unless (constant-continuation-p y)
-    (give-up))
-  (let ((y (continuation-value y))
-	(result nil)
-	(first-one nil)
-	(add-count 0)
-	(shift-count 0))
-    (labels ((tub32 (x) `(truly-the (unsigned-byte 32) ,x))
-	     (add (next-factor)
-	       (setf result
-		     (tub32
-		      (if result
-			  (progn
-			    (incf add-count)
-			    `(+ ,result ,(tub32 next-factor)))
-			  next-factor)))))
-      (declare (inline add))
-      (dotimes (bitpos 32)
-	(if first-one
-	    (when (not (logbitp bitpos y))
-	      (add (cond ((= (1+ first-one) bitpos)
-			  ;; There is only a single bit in the string.
-			  (incf shift-count)
-			  `(ash x ,first-one))
-			 (t
-			  ;; There are at least two.
-			  (incf add-count)
-			  (incf shift-count 2)
-			  `(- ,(tub32 `(ash x ,bitpos))
-			    ,(tub32 `(ash x ,first-one))))))
-	      (setf first-one nil))
-	    (when (logbitp bitpos y)
-	      (setf first-one bitpos))))
-      (when first-one
-	(cond ((= first-one 31))
-	      ((= first-one 30)
-	       (incf shift-count)
-	       (add '(ash x 30)))
-	      (t
-	       (incf shift-count 2)
-	       (add `(- ,(tub32 '(ash x 31)) ,(tub32 `(ash x ,first-one))))))
-	(add '(ash x 31)))
-      ;; See how many shifts and adds we had to do.  If there are too
-      ;; many, it's probably better to use the multiply instruction
-      ;; (for those architectures that have multiply instructions).
-      ;; Sparc-v7 doesn't have a mutiply instruction.
-      ;;
-      ;; Some simple tests on Solaris v9 indicates the about 9
-      ;; shift-adds is comparable to a multiply.  Use a threshold of
-      ;; 9.  Should this be architeucture specific?
-      #-sparc-v7
-      (when (> (+ add-count shift-count) 9)
-	(give-up))
-    
-      (or result 0))))
-
 
 ;;; If arg is a constant power of two, turn floor into a shift and
 ;;; mask. If ceiling, add in (1- (abs y)) and do floor, and correct
