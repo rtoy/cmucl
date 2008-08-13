@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.14 2008/08/13 04:15:17 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.15 2008/08/13 12:21:28 rtoy Rel $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -1037,22 +1037,34 @@
   (:translate bignum::%ashr)
   (:policy :fast-safe)
   (:args (digit :scs (unsigned-reg))
-	 (count :scs (unsigned-reg)))
+	 (count :scs (signed-reg unsigned-reg immediate)))
   (:arg-types unsigned-num positive-fixnum)
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
-    (inst sraw result digit count)))
+    (sc-case count
+      ((signed-reg unsigned-reg)
+       (inst sraw result digit count))
+      (immediate
+       (inst srawi result digit (tn-value count))))))
 
 (define-vop (digit-lshr digit-ashr)
   (:translate bignum::%digit-logical-shift-right)
   (:generator 1
-    (inst srw result digit count)))
+    (sc-case count
+      ((signed-reg unsigned-reg)
+       (inst srw result digit count))
+      (immediate
+       (inst srawi result digit (tn-value count))))))
 
 (define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
   (:generator 1
-    (inst slw result digit count)))
+    (sc-case count
+      ((signed-reg unsigned-reg)
+       (inst slw result digit count))
+      (immediate
+       (inst slwi result digit (tn-value count))))))
 
 
 ;;;; Static functions.
