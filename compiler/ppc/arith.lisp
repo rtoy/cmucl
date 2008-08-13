@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.13 2006/12/24 01:41:36 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.14 2008/08/13 04:15:17 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -260,7 +260,7 @@
   (:arg-types signed-num
 	      (:constant (or (and (unsigned-byte 15) (not (integer 0 0)))
 			     (integer #xffffffff #xffffffff))))
-  (:generator 1				; Needs to be low to give this vop a chance.
+  (:generator 2				; Needs to be low to give this vop a chance.
     (cond ((= y #xffffffff)
 	   (move r x))
 	  ((typep y '(unsigned-byte 15))
