@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.16 2008/06/23 13:47:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.17 2008/08/15 19:10:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,9 @@
   "This is the alist of (character-name . character) for characters with
   long names.  The first name in this list for a given character is used
   on typeout and is the preferred form for input."))))
+  ;; Note: the char-name listed here should be what string-capitalize
+  ;; would produce.  This is needed to match what format ~:C would
+  ;; produce.
   (frob ((#x00 ("Null" "^@" "NUL"))
 	 (#x01 ("^A" "SOH"))
 	 (#x02 ("^B" "STX"))
@@ -69,7 +72,7 @@
 	 (#x08 ("Backspace" "^h" "BS"))
 	 (#x09 ("Tab" "^i" "HT"))
 	 (#x0A ("Newline" "Linefeed" "^j" "LF" "NL" ))
-	 (#x0B ("VT" "^k"))
+	 (#x0B ("Vt" "^k"))
 	 (#x0C ("Page" "^l" "Form" "Formfeed" "FF" "NP"))
 	 (#x0D ("Return" "^m" "RET" "CR"))
 	 (#x0E ("^N" "SO"))
@@ -86,10 +89,10 @@
 	 (#x19 ("^Y" "EM" "EOM"))
 	 (#x1A ("^Z" "SUB"))
 	 (#x1B ("Escape" "^[" "Altmode" "ESC" "Alt"))
-	 (#x1C ("IS4" "FS" "^\\"))
-	 (#x1D ("IS3" "GS" "^]"))
-	 (#x1E ("IS2" "RS" "^^"))
-	 (#x1F ("IS1" "US" "^_"))
+	 (#x1C ("Is4" "FS" "^\\"))
+	 (#x1D ("Is3" "GS" "^]"))
+	 (#x1E ("Is2" "RS" "^^"))
+	 (#x1F ("Is1" "US" "^_"))
 	 (#x20 ("Space" "SP" "SPC"))
 	 (#x7f ("Rubout" "Delete" "DEL")))))
 
