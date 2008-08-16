@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.20 2008/08/12 20:38:23 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.21 2008/08/16 01:51:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1523,13 +1523,24 @@
     (move res x)
     (inst neg res)))
 
-(c::define-modular-fun logxor-mod32 (x y) logxor 32)
-(define-vop (fast-logxor-mod32/unsigned=>unsigned
-             fast-logxor/unsigned=>unsigned)
-  (:translate logxor-mod32))
-(define-vop (fast-logxor-mod32-c/unsigned=>unsigned
-             fast-logxor-c/unsigned=>unsigned)
-  (:translate logxor-mod32))
+(defmacro define-modular-backend (fun &optional constantp derived)
+  (let ((mfun-name (symbolicate fun '-mod32))
+	(modvop (symbolicate 'fast- fun '-mod32/unsigned=>unsigned))
+	(modcvop (symbolicate 'fast- fun '-mod32-c/unsigned=>unsigned))
+	(vop (symbolicate 'fast- (or derived fun) '/unsigned=>unsigned))
+	(cvop (symbolicate 'fast- (or derived fun) '-c/unsigned=>unsigned)))
+    `(progn
+       (c::define-modular-fun ,mfun-name (x y) ,fun 32)
+       (define-vop (,modvop ,vop)
+	 (:translate ,mfun-name))
+       ,@(when constantp
+	       `((define-vop (,modcvop ,cvop)
+		     (:translate ,mfun-name)))))))
+
+(define-modular-backend + t)
+(define-modular-backend - t)
+(define-modular-backend logxor t)
+(define-modular-backend *)
 
 (c::def-source-transform logeqv (&rest args)
   (if (oddp (length args))
@@ -1547,24 +1558,6 @@
   `(lognot (logior ,x ,y)))
 (c::def-source-transform lognand (x y)
   `(lognot (logand ,x ,y)))
-
-;;;; Modular functions
-
-(c::define-modular-fun +-mod32 (x y) + 32)
-(define-vop (fast-+-mod32/unsigned=>unsigned fast-+/unsigned=>unsigned)
-  (:translate +-mod32))
-(define-vop (fast-+-mod32-c/unsigned=>unsigned fast-+-c/unsigned=>unsigned)
-  (:translate +-mod32))
-(c::define-modular-fun --mod32 (x y) - 32)
-(define-vop (fast---mod32/unsigned=>unsigned fast--/unsigned=>unsigned)
-  (:translate --mod32))
-(define-vop (fast---mod32-c/unsigned=>unsigned fast---c/unsigned=>unsigned)
-  (:translate --mod32))
-
-(c::define-modular-fun *-mod32 (x y) * 32)
-(define-vop (fast-*-mod32/unsigned=>unsigned fast-*/unsigned=>unsigned)
-  (:translate *-mod32))
-;;; (no -C variant as x86 MUL instruction doesn't take an immediate)
 
 (defknown vm::ash-left-mod32 (integer (integer 0))
   (unsigned-byte 32)
