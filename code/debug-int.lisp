@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.133 2008/01/03 11:41:51 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.134 2008/08/16 01:43:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1179,7 +1179,7 @@
 	      frame)))))
 
 
-#+(or sparc (and (or x86 amd64) linux))
+#+(or sparc (and x86 darwin) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (address)
   "Return a string describing the foreign function near ADDRESS"
   (let ((addr (sys:sap-int address)))
@@ -1202,7 +1202,7 @@
 		       (alien:slot info 'filename)
 		       )))))))
 
-#-(or sparc (and (or x86 amd64) linux))
+#-(or sparc (and x86 darwin) (and (or x86 amd64) linux))
 (defun find-foreign-function-name (ra)
   (declare (ignore ra))
   "Foreign function call land")
