@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.165 2008/08/13 14:17:45 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.166 2008/08/18 20:38:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3903,14 +3903,17 @@
                    (numberp high)
                    (>= low 0))
           (let ((width (integer-length high)))
-	    ;; If the result of LOGAND would fit in a fixnum, we don't
-	    ;; need to do anything.  This allows the any fixnum vops
-	    ;; to run.  However, if the result won't fit in a fixnum,
-	    ;; look to see if we can apply modular arithmetic.
+	    ;; If both arguments of LOGAND would fit in a fixnum, we
+	    ;; don't need to do anything.  This allows the any fixnum
+	    ;; vops to run.  However, if the result won't fit in a
+	    ;; fixnum, look to see if we can apply modular arithmetic.
 	    ;;
 	    ;; Is this right?
-            (when (and (< (integer-length most-positive-fixnum)
-			  width)
+            (when (and (not
+			(and (csubtypep (continuation-type x)
+					(specifier-type 'fixnum))
+			     (csubtypep (continuation-type y)
+					(specifier-type 'fixnum))))
 		       (some (lambda (x)
 			       (<= width x))
 			     *modular-funs-widths*))
