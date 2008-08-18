@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.21 2008/08/16 01:51:56 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.22 2008/08/18 20:40:07 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1496,6 +1496,13 @@
     (move r x)
     (inst not r)))
 
+(define-vop (lognot-mod32/signed=>unsigned lognot-mod32/unsigned=>unsigned)
+  (:translate lognot-mod32)
+  (:args (x :scs (signed-reg signed-stack)
+	    :load-if (not (and (sc-is x signed-stack)
+			       (sc-is r unsigned-stack)))))
+  (:arg-types signed-num))
+
 ;; Handle (ldb (byte 32 0) (- x)).  The (- x) gets converted to
 ;; (%negate x), so we build modular functions for %negate.
 
@@ -1523,19 +1530,41 @@
     (move res x)
     (inst neg res)))
 
+(macrolet
+    ((frob (op)
+       (let ((name (symbolicate "FAST-" op "/SIGNED=>UNSIGNED"))
+	     (vop (symbolicate "FAST-" op "/SIGNED=>SIGNED"))
+	     (trans (symbolicate op "-MOD32")))
+	 `(progn
+	    (defknown ,trans ((signed-byte 32) (signed-byte 32))
+	      (unsigned-byte 32)
+	      (movable foldable flushable))
+	    (define-vop (,name ,vop)
+	    (:translate ,trans)
+	    (:results (r :scs (unsigned-reg)))
+	    (:result-types unsigned-num))))))
+  (frob +)
+  (frob -)
+  (frob logxor)
+  (frob *))
+
 (defmacro define-modular-backend (fun &optional constantp derived)
   (let ((mfun-name (symbolicate fun '-mod32))
 	(modvop (symbolicate 'fast- fun '-mod32/unsigned=>unsigned))
 	(modcvop (symbolicate 'fast- fun '-mod32-c/unsigned=>unsigned))
 	(vop (symbolicate 'fast- (or derived fun) '/unsigned=>unsigned))
-	(cvop (symbolicate 'fast- (or derived fun) '-c/unsigned=>unsigned)))
+	(cvop (symbolicate 'fast- (or derived fun) '-c/unsigned=>unsigned))
+	(smodvop (symbolicate 'fast- (or derived fun) '-mod32/signed=>unsigned))
+	(svop (symbolicate 'fast- (or derived fun) '/signed=>unsigned)))
     `(progn
        (c::define-modular-fun ,mfun-name (x y) ,fun 32)
        (define-vop (,modvop ,vop)
 	 (:translate ,mfun-name))
        ,@(when constantp
 	       `((define-vop (,modcvop ,cvop)
-		     (:translate ,mfun-name)))))))
+		   (:translate ,mfun-name))))
+       (define-vop (,smodvop ,svop)
+	 (:translate ,mfun-name)))))
 
 (define-modular-backend + t)
 (define-modular-backend - t)
