@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.166 2008/08/18 20:38:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.167 2008/08/20 17:07:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2424,9 +2424,17 @@
 	  ;; X must be positive.
 	  (if (not y-neg)
 	      ;; The must both be positive.
-	      (cond ((or (null x-len) (null y-len))
+	      (cond ((and (null x-len) (null y-len))
+		     ;; Both are unbounded, so result is unbounded.
 		     (specifier-type 'unsigned-byte))
+		    ((or (and x-len (null y-len))
+			 (and y-len (null x-len)))
+		     ;; One is bounded, so the result is bounded.
+		     ;; The computed length here is a bit loose.
+		     (specifier-type `(unsigned-byte ,(max (or x-len 0)
+							   (or y-len 0)))))
 		    ((or (zerop x-len) (zerop y-len))
+		     ;; One has zero length, so the result has zero length.
 		     (specifier-type '(integer 0 0)))
 		    ((and (<= x-len 32) (<= y-len 32))
 		     ;; If both args are unsigned 32-bit numbers, we
@@ -2855,17 +2863,19 @@
   "convert to inline logical ops"
   ;; Try to help out the compiler by precomputing things if SIZE or
   ;; POSN are constants.  This helps out modular arithmetic in some
-  ;; cases.  (I think it's a deficiency in modular arithmetic it can't
-  ;; figure some things out for itself.)
-  (let ((posn-form (if (constant-continuation-p posn)
-		       (- (continuation-value posn))
-		       '(- posn)))
-	(size-form (if (constant-continuation-p size)
+  ;; cases.  (I think it's a deficiency in modular arithmetic that it
+  ;; can't figure some things out for itself.)
+  (let ((shift-form (if (constant-continuation-p posn)
+		       (if (zerop (continuation-value posn))
+			   'int
+			   `(ash int ,(- (continuation-value posn))))
+		       '(ash int (- posn))))
+	(mask-form (if (constant-continuation-p size)
 		       (ash (1- (ash 1 vm:word-bits))
 			    (- (continuation-value size) vm:word-bits))
 		       `(ash ,(1- (ash 1 vm:word-bits))
 			     (- size vm:word-bits)))))
-    `(logand (ash int ,posn-form) ,size-form)))
+    `(logand ,shift-form ,mask-form)))
 
 (deftransform %mask-field ((size posn int)
 			   (fixnum fixnum integer)
