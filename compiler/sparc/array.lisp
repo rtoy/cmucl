@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.34 2008/04/15 14:33:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.35 2008/08/21 14:40:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -880,6 +880,23 @@
 (define-vop (raw-set-double data-vector-set/simple-array-double-float)
   (:translate %raw-set-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
+
+;; Versions with constant offsets
+(define-vop (raw-ref-single-c data-vector-ref-c/simple-array-single-float)
+  (:translate %raw-ref-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant index)))
+;;;
+(define-vop (raw-set-single-c data-vector-set-c/simple-array-single-float)
+  (:translate %raw-set-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant index) single-float))
+(define-vop (raw-ref-double-c data-vector-ref-c/simple-array-double-float)
+  (:translate %raw-ref-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant index)))
+
+(define-vop (raw-set-double-c data-vector-set-c/simple-array-double-float)
+  (:translate %raw-set-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant index) double-float))
+
 ;;;
 #+long-float
 (define-vop (raw-ref-long data-vector-ref/simple-array-long-float)
@@ -911,6 +928,28 @@
 	     data-vector-set/simple-array-complex-double-float)
   (:translate %raw-set-complex-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum
+	      complex-double-float))
+
+(define-vop (raw-ref-complex-single-c
+	     data-vector-ref-c/simple-array-complex-single-float)
+  (:translate %raw-ref-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant index)))
+;;;
+(define-vop (raw-set-complex-single-c
+	     data-vector-set-c/simple-array-complex-single-float)
+  (:translate %raw-set-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant index)
+	      complex-single-float))
+;;;
+(define-vop (raw-ref-complex-double-c
+	     data-vector-ref-c/simple-array-complex-double-float)
+  (:translate %raw-ref-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant index)))
+;;;
+(define-vop (raw-set-complex-double-c
+	     data-vector-set-c/simple-array-complex-double-float)
+  (:translate %raw-set-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant index)
 	      complex-double-float))
 ;;;
 #+long-float
