@@ -42,6 +42,8 @@ New in this release:
       merging the new-name with the truename of filespec.  Also, a
       logical pathname should be returned if new-name is a logical
       pathname. 
+    - Character names need to be a capital letter followed by lower
+      case.  Needed to match what ~:C does.  (Found via ansi-tests).
 
   * Bugfixes:
     - Compiler can now derive the rank of an array, even if the array
@@ -75,18 +77,31 @@ New in this release:
       before.  
     - The small bias in RANDOM for integer args up to 32 bits long
       should now be gone.
+    - Improved type derivation for LOGAND when one arg is bounded but
+      the other is not.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
       Fixed.
     - #17: LOOP NAMED NIL has no effect
       Fixed.
+    - #18: Modular arith bug 1
+      Fixed
+    - #19: Modular arith bug 2
+      Fixed by not doing modular arith if the args are known to be
+      fixnums.
+    - #20: Modular arith bug?
+      Workaround applied.
 
   * Other changes:
     - IS1, IS2, IS3, and IS4 are recognized character names for the
       ASCII control codes US, RS, GS, FS, respectively.
     - Added OPEN-NETWORK-STREAM and ACCEPT-NETWORK-STREAM functions.
-
+    - When initializing a random state, try to read 627 words from
+      /dev/urandom to initialize the entire state vector with random
+      bits.  Previously, only one word was read.
+    - A seed of 0 is allowed in KERNEL:INIT-RANDOM-STATE.
+ 
   * Improvements to the PCL implementation of CLOS:
     - The compiler and interpreter should handle SLOT-VALUE the same
       way.  Previously, (SLOT-VALUE obj :a) would behave differently
