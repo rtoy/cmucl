@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.167 2008/08/20 17:07:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.168 2008/09/02 04:23:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2427,15 +2427,16 @@
 	      (cond ((and (null x-len) (null y-len))
 		     ;; Both are unbounded, so result is unbounded.
 		     (specifier-type 'unsigned-byte))
+		    ((or (eql x-len 0)
+			 (eql y-len 0))
+		     ;; One has zero length, so the result has zero length.
+		     (specifier-type '(integer 0 0)))
 		    ((or (and x-len (null y-len))
 			 (and y-len (null x-len)))
 		     ;; One is bounded, so the result is bounded.
 		     ;; The computed length here is a bit loose.
 		     (specifier-type `(unsigned-byte ,(max (or x-len 0)
 							   (or y-len 0)))))
-		    ((or (zerop x-len) (zerop y-len))
-		     ;; One has zero length, so the result has zero length.
-		     (specifier-type '(integer 0 0)))
 		    ((and (<= x-len 32) (<= y-len 32))
 		     ;; If both args are unsigned 32-bit numbers, we
 		     ;; can compute better bounds, so we do.  But if
