@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.64 2008/01/28 22:41:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.64.4.1 2008/09/03 16:34:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1600,6 +1600,8 @@ significant bit of INTEGER is bit 0."
 ;; Not sure this is 100% right, but the defoptimizer for ash only
 ;; calls ash-left-mod32 when the COUNT is known to be a (UNSIGNED-BYTE
 ;; 5), which is what %ASHL wants.
+#+modular-arith
+(declaim (inline vm::ash-left-mod32))
 #+modular-arith
 (defun vm::ash-left-mod32 (integer count)
   (declare (type integer integer)

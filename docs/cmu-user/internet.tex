@@ -113,14 +113,15 @@ are documented.
 \end{defun}
 
 \begin{defun}{extensions:}{create-unix-listener}{%
-    \args{\var{path} \ampoptional{} \var{kind} \kwd{reuse-address}
-      \kwd{backlog}}}
+    \args{\var{path} \ampoptional{} \var{kind} \keys{
+      \kwd{backlog}}}}
   
   Creates a socket and binds it to the file name given by \var{path},
   prepared to receive connections of kind \var{kind} (which defaults
-  to \kwd{stream}), queuing up to \var{backlog} of them. If
-  \kwd{reuse-address} \var{T} is used, then the file given by
-  \var{path} is unlinked first.
+  to \kwd{stream}), queuing up to \var{backlog} of them.
+%  If
+%  \kwd{reuse-address} \var{T} is used, then the file given by
+%  \var{path} is unlinked first.
 
 \end{defun}
 
@@ -149,13 +150,21 @@ connections. This task is performed by the functions we document here.
 
 \end{defun}
 
+\begin{defun}{extensions:}{accept-network-stream}{%
+    \args{\var{socket} \keys{\kwd{buffering} \kwd{timeout} \kwd{wait-max}}}}
+
+  Accept a connect from the specified \var{socket} and returns a stream 
+  connected to connection.  
+\end{defun}
+
 \section{Connecting}
 
 The task performed by the functions we present next is connecting to
 remote hosts.
 
 \begin{defun}{extensions:}{connect-to-inet-socket}{%
-    \args{\var{host} \var{port} \ampoptional{} \var{kind}}}
+    \args{\var{host} \var{port} \ampoptional{} \var{kind}
+          \keys{\kwd{local-host} \kwd{local-port}}}}
   
   Tries to open a connection to the remote host \var{host} (which may
   be an IP address in host order, or a string with either a host name
@@ -163,17 +172,28 @@ remote hosts.
   file descriptor of the connection.  The optional parameter
   \var{kind} can be either \kwd{stream} (the default) or \kwd{datagram}.
 
+  If \var{local-host} and \var{local-port} are specified, the socket
+  that is created is also bound to the specified \var{local-host} and
+  \var{port}.
+
 \end{defun}
 
 \begin{defun}{extensions:}{connect-to-unix-socket}{%
     \args{\var{path} \ampoptional{} \var{kind}}}
   
-  Opens a connection to the unix ``adress'' given by \var{path}.
+  Opens a connection to the unix ``address'' given by \var{path}.
   Returns the file descriptor of the connection.  The type of
   connection is given by \var{kind}, which can be either \kwd{stream}
   (the default) or \kwd{datagram}.
 
 \end{defun}
+
+\begin{defun}{extensions:}{open-network-stream}{%
+    \args{\var{host} \var{port} \keys{\kwd{buffering} \kwd{timeout}}}}
+  
+   Return a stream connected to the specified \var{port} on the given \var{host}.
+\end{defun}
+
 
 \section{Out-of-Band Data}
 \label{internet-oob}
@@ -232,12 +252,25 @@ since connectors and listeners create their own.
 \end{defun}
 
 \begin{defun}{extensions:}{create-inet-socket}{%
-    \args{\ampoptional{} \var{type}}}
+    \args{\ampoptional{} \var{kind}}}
   
   Creates a unix socket for the internet address family, of type
   \var{:stream} and (on success) returns its file descriptor.
 
 \end{defun}
+\bigskip
+
+Once a socket is created, it is sometimes useful to bind the socket to a 
+local address using \code{bind-inet-socket}:
+
+\begin{defun}{extensions:}{bind-inet-socket}{%
+  \args{\var{socket} \var{host} \var{port}}}
+
+  Bind the \var{socket} to a local interface address specified
+  by \var{host} and \var{port}. 
+
+\end{defun}
+\bigskip
 
 Further, it is desirable to be able to change socket options. This is
 performed by the following two functions, which are essentially
@@ -257,6 +290,7 @@ wrappers for system calls to {\tt getsockopt} and {\tt setsockopt}.
   to the value \var{optval}.
 
 \end{defun}
+\bigskip
 
 For information on possible options and values we refer to the
 manpages of {\tt getsockopt} and {\tt setsockopt}, and to {\tt
@@ -275,19 +309,21 @@ Finally, the function
 
 Datagram network is supported with the following functions.
 
-\begin{defun}{unix:}{inet-recvfrom}{%
+\begin{defun}{extensions:}{inet-recvfrom}{%
 	\args{\var{fd} \var{buffer} \var{size}}
-	\keys{\var{flags}}}
-   A simple interface to the Unix \code{recvfrom} function.
+	\keys{\kwd{flags}}}
+   A simple interface to the Unix \code{recvfrom} function. Returns
+   three values: bytecount, source address as integer, and source
+   port. Bytecount can of course be negative, to indicate faults.
 \end{defun}
 
-\begin{defun}{unix:}{inet-sendto}{%
-	\args{\var{fd} \var{buffer} \var{size} \var{port}}
-	\keys{\var{flags}}}
+\begin{defun}{extensions:}{inet-sendto}{%
+	\args{\var{fd} \var{buffer} \var{size} \var{addr} \var{port}}
+	\keys{\kwd{flags}}}
    A simple interface to the Unix \code{sendto} function.
 \end{defun}
 
-\begin{defun}{unix:}{inet-shutdown}{%
+\begin{defun}{extensions:}{inet-shutdown}{%
 	\args{\var{fd} \var{level}}}
 
    A simple interface to the Unix \code{shutdown} function.  For
