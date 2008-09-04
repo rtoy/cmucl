@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.20 2007/07/06 08:04:39 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.21 2008/09/04 22:31:47 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -102,6 +102,90 @@ find_code(os_context_t * scp)
 }
 #endif
 
+#if defined(sparc) && defined(__GNUC__)
+/*
+ * For some unknown reason, if you compile this code with Sun C, CMUCL
+ * is unable to build itself anymore.  This is bizarre because this
+ * code is not called during a build since there are no breakpoints
+ * during a build.
+ *
+ * Hence, until this is figured out, we can't use this code with Sun
+ * C.  This also means we some known issues with tracing will manifest
+ * itself.
+ *
+ * During a function-end-breakpoint, the pc is sometimes less than the
+ * code address, which bypasses the function end stuff.  Then the
+ * offset is zero for a function-end-breakpoint, and we can't find the
+ * breakpoint data, causing an error during tracing.  But we know this
+ * is a function-end breakpoint, because function_end is set to true.
+ *
+ * (This condition of pc < code address seems to occur only if a GC
+ * happens during tracing.  I guess the function-end code object
+ * sometimes gets moved to a lower address than the corresponding
+ * code.)
+ *
+ * Hence this replacement looks at the function end flag first
+ * to see if it is a function-end breakpoint and does the function-end
+ * stuff anyway.  If not, we do the normal stuff.
+ */
+static int
+compute_offset(os_context_t * scp, lispobj code, boolean function_end)
+{
+    if (code == NIL)
+	return 0;
+    if (function_end) {
+        /*
+         * We're in a function end breakpoint.  Compute the
+         * offset from the (known) breakpoint location and the
+         * beginning of the breakpoint guts.  (See *-assem.S.)
+         *
+         * Then make the offset negative so the caller knows
+         * that the offset is not from the code object.
+         */
+        extern char function_end_breakpoint_trap;
+        extern char function_end_breakpoint_guts;
+        int offset;
+            
+        offset =
+            &function_end_breakpoint_trap -
+            &function_end_breakpoint_guts;
+#if 0
+        fprintf(stderr, "compute_offset\n");
+        fprintf(stderr, " function end offset  = %d\n", offset);
+#endif
+        return make_fixnum(-offset);
+    } else {
+	unsigned long code_start;
+	struct code *codeptr = (struct code *) PTR(code);
+	unsigned long pc = SC_PC(scp);
+
+	code_start = (unsigned long) codeptr
+	    + HeaderValue(codeptr->header) * sizeof(lispobj);
+#if 0
+        fprintf(stderr, "compute_offset\n");
+        fprintf(stderr, " pc = %d\n", pc);
+        fprintf(stderr, " code_start = %d\n", code_start);
+        fprintf(stderr, " function_end = %d\n", function_end);
+#endif
+        if (pc < code_start) {
+	    return 0;
+        } else {
+	    int offset = pc - code_start;
+
+#if 0
+            fprintf(stderr, " offset = %d\n", offset);
+            fprintf(stderr, " codeptr->code_size = %d\n", codeptr->code_size);
+            fprintf(stderr, " function_end = %d\n", function_end);
+#endif
+	    if (offset >= codeptr->code_size) {
+                return 0;
+	    } else {
+                return make_fixnum(offset);
+            }
+	}
+    }
+}
+#else
 static int
 compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 {
@@ -154,6 +238,7 @@ compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 	}
     }
 }
+#endif
 
 #ifndef i386
 void
@@ -165,6 +250,10 @@ handle_breakpoint(int signal, int subcode, os_context_t * scp)
 
     code = find_code(scp);
 
+#if 0
+    fprintf(stderr, "handle_breakpoint\n");
+    fprintf(stderr, " offset = %d\n", compute_offset(scp, code, 0));
+#endif    
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
 	     compute_offset(scp, code, 0), code, alloc_sap(scp));
 
