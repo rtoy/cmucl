@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.21 2008/09/04 22:31:47 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.22 2008/09/05 02:54:43 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -102,7 +102,7 @@ find_code(os_context_t * scp)
 }
 #endif
 
-#if defined(sparc) && defined(__GNUC__)
+#if (defined(DARWIN) && defined(__ppc__)) || (defined(sparc) && defined(__GNUC__))
 /*
  * For some unknown reason, if you compile this code with Sun C, CMUCL
  * is unable to build itself anymore.  This is bizarre because this
