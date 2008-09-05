@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.23 2008/09/05 13:12:03 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.24 2008/09/05 22:03:12 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -326,8 +326,6 @@ handle_function_end_breakpoint(int signal, int subcode, os_context_t * scp)
 #endif
     }
 
-    funcall3(SymbolFunction(HANDLE_BREAKPOINT), offset, code, alloc_sap(scp));
-
     /*
      * Breakpoint handling done, so get the real LRA where we're
      * supposed to return to so we can return there.
@@ -342,6 +340,21 @@ handle_function_end_breakpoint(int signal, int subcode, os_context_t * scp)
     if (codeptr->constants[KNOWN_RETURN_P_SLOT] == NIL)
 	SC_REG(scp, reg_CODE) = lra;
 #endif
+    
+    {
+        lispobj saved_gc_inhibit;
+
+#ifdef GC_INHIBIT
+        saved_gc_inhibit = SymbolValue(GC_INHIBIT);
+        SetSymbolValue(GC_INHIBIT, T);
+#endif        
+        funcall3(SymbolFunction(HANDLE_BREAKPOINT), offset, code, alloc_sap(scp));
+
+#ifdef GC_INHIBIT
+        SetSymbolValue(GC_INHIBIT, saved_gc_inhibit);
+#endif
+    }
+
     undo_fake_foreign_function_call(scp);
     return (void *) (lra - type_OtherPointer + sizeof(lispobj));
 }

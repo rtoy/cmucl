@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.16 2006/12/02 15:22:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.17 2008/09/05 22:03:12 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,9 +270,10 @@
     :key-and-value
     :key-or-value
     
+    lisp::*gc-inhibit*
+
     ;; Spare symbols.  Rename these when you need to add some static
     ;; symbols and don't want to do a cross-compile.
-    spare-9
     spare-8
     spare-7
     spare-6
