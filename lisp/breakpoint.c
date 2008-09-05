@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.22 2008/09/05 02:54:43 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.23 2008/09/05 13:12:03 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -102,17 +102,8 @@ find_code(os_context_t * scp)
 }
 #endif
 
-#if (defined(DARWIN) && defined(__ppc__)) || (defined(sparc) && defined(__GNUC__))
+#if (defined(DARWIN) && defined(__ppc__)) || (defined(sparc))
 /*
- * For some unknown reason, if you compile this code with Sun C, CMUCL
- * is unable to build itself anymore.  This is bizarre because this
- * code is not called during a build since there are no breakpoints
- * during a build.
- *
- * Hence, until this is figured out, we can't use this code with Sun
- * C.  This also means we some known issues with tracing will manifest
- * itself.
- *
  * During a function-end-breakpoint, the pc is sometimes less than the
  * code address, which bypasses the function end stuff.  Then the
  * offset is zero for a function-end-breakpoint, and we can't find the
