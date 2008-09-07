@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.20 2008/03/19 09:17:13 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.21 2008/09/07 07:07:50 cshapiro Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -331,93 +331,6 @@ solaris_register_address(struct ucontext *context, int reg)
 
 /* For now we put in some porting functions */
 
-#ifndef SOLARIS25
-int
-getdtablesize(void)
-{
-    return sysconf(_SC_OPEN_MAX);
-}
-
-char *
-getwd(char *path)
-{
-    return getcwd(path, MAXPATHLEN);
-}
-
-int
-getpagesize(void)
-{
-    return sysconf(_SC_PAGESIZE);
-}
-
-
-#include <sys/procfs.h>
-/* Old rusage definition */
-struct rusage {
-    struct timeval ru_utime;	/* user time used */
-    struct timeval ru_stime;	/* system time used */
-    long ru_maxrss;
-#define ru_first        ru_ixrss
-    long ru_ixrss;		/* XXX: 0 */
-    long ru_idrss;		/* XXX: sum of rm_asrss */
-    long ru_isrss;		/* XXX: 0 */
-    long ru_minflt;		/* any page faults not requiring I/O */
-    long ru_majflt;		/* any page faults requiring I/O */
-    long ru_nswap;		/* swaps */
-    long ru_inblock;		/* block input operations */
-    long ru_oublock;		/* block output operations */
-    long ru_msgsnd;		/* messages sent */
-    long ru_msgrcv;		/* messages received */
-    long ru_nsignals;		/* signals received */
-    long ru_nvcsw;		/* voluntary context switches */
-    long ru_nivcsw;		/* involuntary " */
-#define ru_last         ru_nivcsw
-};
-
-
-int
-getrusage(int who, struct rusage *rp)
-{
-    memset(rp, 0, sizeof(struct rusage));
-
-    return 0;
-}
-
-int
-setreuid(void)
-{
-    fprintf(stderr, "setreuid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-setregid(void)
-{
-    fprintf(stderr, "setregid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-gethostid(void)
-{
-    fprintf(stderr, "gethostid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-killpg(int pgrp, int sig)
-{
-    if (pgrp < 0) {
-	errno = ESRCH;
-	return -1;
-    }
-    return kill(-pgrp, sig);
-}
-#endif
-
 int
 sigblock(int mask)
 {
@@ -430,17 +343,6 @@ sigblock(int mask)
 
     return old.__sigbits[0];
 }
-
-#ifndef SOLARIS25
-int
-wait3(int *status, int options, struct rusage *rp)
-{
-    if (rp)
-	memset(rp, 0, sizeof(struct rusage));
-
-    return waitpid(-1, status, options);
-}
-#endif
 
 int
 sigsetmask(int mask)

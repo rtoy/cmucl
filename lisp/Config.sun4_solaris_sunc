@@ -35,7 +35,7 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-CPPFLAGS = -Dinline= -I. -I$(PATH1) -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
+CPPFLAGS = -Dinline= -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
 
 
 CC = cc -O -xlibmieee
@@ -51,10 +51,6 @@ ASFLAGS = $(AS_V8PLUS)
 NM = $(PATH1)/solaris-nm
 ASSEM_SRC = sparc-assem.S
 ARCH_SRC = sparc-arch.c
-
-# For Solaris, you may also use sunos-os.c instead of solaris-os.c.
-# This has been checked out on Solaris 2.7 (aka 7) without problems.
-# The resulting binaries work ok on 2.5.
 
 DEPEND=$(CC) 
 DEPEND_FLAGS = -xM
