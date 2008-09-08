@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.54 2008/03/15 15:00:09 agoncharov Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.55 2008/09/08 21:51:28 rtoy Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -282,24 +282,38 @@ interrupt_handle_now(HANDLER_ARGS)
 }
 
 static void
+setup_pending_signal(HANDLER_ARGS)
+{
+    pending_signal = signal;
+    /*
+     * Note: We used to set pending_code = *code.  This doesn't work
+     * very well on Solaris since code is sometimes NULL.  AFAICT, we
+     * only care about the si_code value, so just get the si_code
+     * value.  The CODE macro does something appropriate when code is
+     * NULL.
+     *
+     * A look at the Lisp handlers shows that the code value is
+     * ignored anyway.
+     *
+     */
+    pending_code.si_code = CODE(code);
+    pending_mask = context->uc_sigmask;
+    FILLBLOCKSET(&context->uc_sigmask);
+}
+
+static void
 maybe_now_maybe_later(HANDLER_ARGS)
 {
     SAVE_CONTEXT();
-    /**/ if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
-	pending_signal = signal;
-	pending_code = *code;
-	pending_mask = context->uc_sigmask;
-	FILLBLOCKSET(&context->uc_sigmask);
+    if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
+        setup_pending_signal(signal, code, context);
 	SetSymbolValue(INTERRUPT_PENDING, T);
     } else if (
 #if !(defined(i386) || defined(__x86_64))
 		  (!foreign_function_call_active) &&
 #endif
 		  arch_pseudo_atomic_atomic(context)) {
-	pending_signal = signal;
-	pending_code = *code;
-	pending_mask = context->uc_sigmask;
-	FILLBLOCKSET(&context->uc_sigmask);
+        setup_pending_signal(signal, code, context);
 	arch_set_pseudo_atomic_interrupted(context);
     } else {
 	RESTORE_FPU(context);
