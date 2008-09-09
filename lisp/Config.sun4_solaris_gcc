@@ -38,14 +38,15 @@ endif
 
 CPPFLAGS = -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
 
-# Note: If you want to be able to run gdb with cmucl, the only version
-# of gdb that still works for me (rtoy) on Solaris is 4.18.  Versions
-# 5.x and later (including 6.3) are incapable of passing signals
-# (SIGILL and SIGSEGV) to lisp properly.
+# Note: If you want to be able to use gdb with cmucl, you need to use
+# gdb 4.18 (or earlier?) or use gdb 6.8.  Versions 5.x and later
+# (including 6.3) appear to be incapable of passing signals (SIGILL
+# and SIGSEGV) to lisp properly.
 #
 # But, gcc 3.3.3 and later appear to produce executables that gdb 4.18
 # can't handle.  So, we should probably stick with gcc 3.3.2.  Adjust
-# the CC variable appropriately, if necessary.
+# the CC variable appropriately, if necessary.  But gdb 6.8 handles
+# 3.4.3 just fine.
 
 CC = gcc -O -Wall
 #CC = /apps/gnu/solaris2.8/gcc-3.3.3/bin/gcc -O1 -Wall
