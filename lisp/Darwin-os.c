@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.16 2008/03/19 09:17:10 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.17 2008/09/10 23:58:04 rtoy Exp $
  *
  */
 
@@ -402,15 +402,17 @@ sigbus_handler(HANDLER_ARGS)
 	os_protect(page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
 	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
 	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
-	return;
+    } else {
+	/* a *real* protection fault */
+	fprintf(stderr, "segv_handler: Real protection violation: %p\n", fault_addr);
+	interrupt_handle_now(signal, code, context);
     }
-#endif
+#else
 
     if (!interrupt_maybe_gc(signal, code, context)) {
 	interrupt_handle_now(signal, code, context);
     }
-
+#endif
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);
 }
