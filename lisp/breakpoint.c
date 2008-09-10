@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.24 2008/09/05 22:03:12 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.25 2008/09/10 13:46:43 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -24,8 +24,12 @@
 #endif
 
 /*
- * See MAKE-BOGUS-LRA in code/debug-int.lisp for these values.  (We
- * really should generate these from the Lisp code.)
+ * See MAKE-BOGUS-LRA in code/debug-int.lisp for these values.
+ *
+ * Note: In debug-int.lisp, real-lra-slot and known-return-p-slot are
+ * offsets from the start of the code object.  But in the C code here,
+ * it is the offset from the constants vector in the code object.  The
+ * difference between the two is vm:code-constants-offset.
  */
 #define REAL_LRA_SLOT 0
 #ifndef i386
@@ -200,29 +204,7 @@ compute_offset(os_context_t * scp, lispobj code, boolean function_end)
 	    int offset = pc - code_start;
 
 	    if (offset >= codeptr->code_size) {
-		if (function_end) {
-#if defined(sparc) || (defined(DARWIN) && defined(__ppc__))
-		    /*
-		     * We're in a function end breakpoint.  Compute the
-		     * offset from the (known) breakpoint location and the
-		     * beginning of the breakpoint guts.  (See *-assem.S.)
-		     *
-		     * Then make the offset negative so the caller knows
-		     * that the offset is not from the code object.
-		     */
-		    extern char function_end_breakpoint_trap;
-		    extern char function_end_breakpoint_guts;
-
-		    offset =
-			&function_end_breakpoint_trap -
-			&function_end_breakpoint_guts;
-		    return make_fixnum(-offset);
-#else
-		    return 0;
-#endif
-		} else {
-		    return 0;
-		}
+                return 0;
 	    } else {
 		return make_fixnum(offset);
 	    }
@@ -280,7 +262,8 @@ handle_function_end_breakpoint(int signal, int subcode, os_context_t * scp)
     lispobj code, lra;
     struct code *codeptr;
     int offset;
-
+    int known_return_p;
+    
     fake_foreign_function_call(scp);
 
     code = find_code(scp);
@@ -311,7 +294,8 @@ handle_function_end_breakpoint(int signal, int subcode, os_context_t * scp)
 	 * Some magic here.  pc points to the trap instruction.  The
 	 * offset gives us where the function_end_breakpoint_guts
 	 * begins.  But we need to back up some more to get to the
-	 * code-component object.  The magic 2 below is 
+	 * code-component object.  See MAKE-BOGUS-LRA in
+	 * debug-int.lisp
 	 */
 	code = pc - fixnum_value(offset);
 	code -= sizeof(struct code) + BOGUS_LRA_CONSTANTS * sizeof(lispobj);
@@ -326,32 +310,41 @@ handle_function_end_breakpoint(int signal, int subcode, os_context_t * scp)
 #endif
     }
 
-    /*
-     * Breakpoint handling done, so get the real LRA where we're
-     * supposed to return to so we can return there.
-     */
     lra = codeptr->constants[REAL_LRA_SLOT];
-#ifdef reg_CODE
-    /*
-     * With the known-return convention, we definitely do NOT want to
-     * mangle the CODE register because it isn't pointing to the bogus
-     * LRA but to the actual routine.
-     */
-    if (codeptr->constants[KNOWN_RETURN_P_SLOT] == NIL)
-	SC_REG(scp, reg_CODE) = lra;
-#endif
+
+    known_return_p = codeptr->constants[KNOWN_RETURN_P_SLOT] != NIL;
     
     {
-        lispobj saved_gc_inhibit;
+	lispobj *args = current_control_stack_pointer;
 
-#ifdef GC_INHIBIT
-        saved_gc_inhibit = SymbolValue(GC_INHIBIT);
-        SetSymbolValue(GC_INHIBIT, T);
-#endif        
+	/*
+	 * Because HANDLE_BREAKPOINT can GC, the LRA could move, and
+	 * we need to know where it went so we can return to the
+	 * correct place.  We do this by saving the LRA on the Lisp
+	 * stack.  If GC moves the LRA, the stack entry will get
+	 * updated appropriately too.
+	 */
+	current_control_stack_pointer += 1;
+	args[0] = lra;
+
         funcall3(SymbolFunction(HANDLE_BREAKPOINT), offset, code, alloc_sap(scp));
 
-#ifdef GC_INHIBIT
-        SetSymbolValue(GC_INHIBIT, saved_gc_inhibit);
+	/*
+	 * Breakpoint handling done.  Get the (possibly changed) LRA
+	 * value off the stack so we know where to return to.
+	 */
+	lra = args[0];
+	current_control_stack_pointer -= 1;
+
+#ifdef reg_CODE	
+	/*
+	 * With the known-return convention, we definitely do NOT want
+	 * to mangle the CODE register because it isn't pointing to
+	 * the bogus LRA but to the actual routine.
+	 */
+	if (!known_return_p) {
+	    SC_REG(scp, reg_CODE) = lra;
+	}
 #endif
     }
 
