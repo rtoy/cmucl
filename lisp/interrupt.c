@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.55 2008/09/08 21:51:28 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.56 2008/09/11 17:07:21 rtoy Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -353,7 +353,7 @@ gc_trigger_hit(HANDLER_ARGS)
 }
 #endif
 
-#if !(defined(i386) || defined(__x86_64))
+#if !(defined(i386) || defined(__x86_64) || defined(GENCGC))
 boolean
 interrupt_maybe_gc(HANDLER_ARGS)
 {
