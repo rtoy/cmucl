@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.17 2008/09/10 23:58:04 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.18 2008/09/11 00:15:28 rtoy Exp $
  *
  */
 
@@ -366,7 +366,6 @@ valid_addr(os_vm_address_t addr)
 }
 
 
-#ifdef __ppc__
 static void
 sigbus_handler(HANDLER_ARGS)
 {
@@ -375,6 +374,7 @@ sigbus_handler(HANDLER_ARGS)
     int page_index = find_page_index((void *) fault_addr);
 #endif
     
+#ifdef __ppc__
     DPRINTF(0, (stderr, "sigbus:\n"));
     DPRINTF(0, (stderr, " PC       = %p\n", SC_PC(context)));
     DPRINTF(0, (stderr, " ALLOC-TN = %p\n", SC_REG(context, reg_ALLOC)));
@@ -383,6 +383,7 @@ sigbus_handler(HANDLER_ARGS)
     DPRINTF(0, (stderr, " CFP-TN   = %p\n", SC_REG(context, reg_CFP)));
     DPRINTF(0, (stderr, " FDEFN-TN = %p\n", SC_REG(context, reg_FDEFN)));
     DPRINTF(0, (stderr, " foreign_function_call = %d\n", foreign_function_call_active));
+#endif
     
 #if defined(GENCGC)
 #if defined(SIGSEGV_VERBOSE)
@@ -413,17 +414,16 @@ sigbus_handler(HANDLER_ARGS)
 	interrupt_handle_now(signal, code, context);
     }
 #endif
+#ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);
-}
 #endif
+}
 
 void
 os_install_interrupt_handlers(void)
 {
-#ifdef __ppc__
     interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
-#endif
 }
 
 void *

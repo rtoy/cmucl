@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.95 2008/04/11 08:00:53 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.96 2008/09/11 00:15:28 rtoy Exp $
  *
  */
 
@@ -247,11 +247,7 @@ unsigned counters_verbose = 0;
  * To enable the use of page protection to help avoid the scavenging
  * of pages that don't have pointers to younger generations.
  */
-#if defined(DARWIN) && defined(__i386__)
-boolean enable_page_protection = FALSE;
-#else
 boolean enable_page_protection = TRUE;
-#endif
 
 /*
  * Hunt for pointers to old-space, when GCing generations >= verify_gen.
