@@ -88,6 +88,15 @@ usage ()
     exit 1
 }
 
+# Figure out if we need to run build-world twice
+case `uname -s` in
+  SunOS) BUILD_WORLD2=yes ;;
+  Darwin)
+      case `uname -m` in
+	ppc) BUILD_WORLD2=yes ;;
+      esac ;;
+esac
+
 buildit ()
 {
     if echo $INTERACTIVE_BUILD | grep $BUILD > /dev/null; then
@@ -107,7 +116,10 @@ buildit ()
 	$TOOLDIR/clean-target.sh $TARGET
 	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT
 	(cd $TARGET/lisp; $MAKE)
-	#$TOOLDIR/build-world.sh $TARGET $OLDLISP
+	if [ "$BUILD_WORLD2" = "yes" ];
+	then
+	    $TOOLDIR/build-world.sh $TARGET $OLDLISP
+	fi
 	$TOOLDIR/load-world.sh $TARGET "$VERSION"
 	if [ ! -f $TARGET/lisp/lisp.core ]; then
 	    echo "Failed to build $TARGET!"
