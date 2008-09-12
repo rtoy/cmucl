@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.81 2008/09/12 21:02:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.82 2008/09/12 21:09:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2442,6 +2442,16 @@
 		    (first const) (third const) (fourth const))
 	    (format t "#define ~A ~D~@[  /* ~A */~]~%"
 		    (first const) (third const) (fourth const))))))
+
+  ;; Write out the values of real-lra-slot and friend for breakpoint
+  ;; handling so we don't have to maintain it in the C code.
+
+  (format t "~%#define REAL_LRA_SLOT ~D~%"
+	  (- di::real-lra-slot vm::code-constants-offset))
+  (format t "#define KNOWN_RETURN_P_SLOT ~D~%"
+	  (- di::known-return-p-slot vm::code-constants-offset))
+  (format t "#define BOGUS_LRA_CONSTANTS ~D~%"
+	  di::bogus-lra-constants vm::code-constants-offset)
 
   ;; Write out internal error codes and error descriptions
   (terpri)

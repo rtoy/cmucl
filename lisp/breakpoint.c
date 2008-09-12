@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.25 2008/09/10 13:46:43 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.26 2008/09/12 21:09:07 rtoy Rel $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -26,19 +26,29 @@
 /*
  * See MAKE-BOGUS-LRA in code/debug-int.lisp for these values.
  *
- * Note: In debug-int.lisp, real-lra-slot and known-return-p-slot are
- * offsets from the start of the code object.  But in the C code here,
- * it is the offset from the constants vector in the code object.  The
- * difference between the two is vm:code-constants-offset.
+ * Ideally, internals.h should have the correct values.  We leave
+ * these defaults here for now.
  */
+#ifndef REAL_LRA_SLOT
 #define REAL_LRA_SLOT 0
+#endif
+
+#ifndef KNOWN_RETURN_P_SLOT
 #ifndef i386
 #define KNOWN_RETURN_P_SLOT 1
-#define BOGUS_LRA_CONSTANTS 2
 #else
 #define KNOWN_RETURN_P_SLOT 2
+#endif
+#endif
+
+#ifndef BOGUS_LRA_CONSTANTS
+#ifndef i386
+#define BOGUS_LRA_CONSTANTS 2
+#else
 #define BOGUS_LRA_CONSTANTS 3
 #endif
+#endif
+
 
 static void *
 compute_pc(lispobj code_obj, int pc_offset)
