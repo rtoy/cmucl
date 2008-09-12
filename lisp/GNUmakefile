@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.29 2008/09/05 15:21:24 rtoy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.30 2008/09/12 20:59:19 rtoy Exp $
 
 all: lisp.nm
 
@@ -59,6 +59,7 @@ internals.h internals.inc:
 
 clean:
 	rm -f Depends *.o lisp lisp.nm core
+	echo 'Map file for lisp version 0' > lisp.nm
 
 depend: Depends
 
