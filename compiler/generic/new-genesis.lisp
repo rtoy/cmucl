@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.80 2008/02/09 13:51:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.81 2008/09/12 21:02:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -956,6 +956,23 @@
      (or (gethash (descriptor-bits des) *cold-symbols*)
 	 (descriptor-bits des)))))
 
+;; Need to handle special symbols specially on sparc and ppc.  The
+;; special symbols are undefined_tramp and closure_tramp.  We need to
+;; use the current C values of these and not the values in the current
+;; running lisp.  Why?  Because new C code may have moved these
+;; addresses so we need to use the right values.  We get worldbuild
+;; issues if we use the old values that don't match.
+#-(and linkage-table (or sparc ppc))
+(defun lookup-special-symbol (name)
+  (lookup-foreign-symbol (vm::extern-alien-name name)
+			 #+(or sparc ppc) :data))
+
+#+(and linkage-table (or sparc ppc))
+(defun lookup-special-symbol (name &optional (link-type :code))
+  (or (gethash name *cold-foreign-symbol-table* nil)
+      (lookup-foreign-symbol (vm::extern-alien-name name)
+			     link-type)))
+  
 (defun cold-fdefinition-object (name &optional leave-fn-raw)
   (let ((hash (extract-fdefn-name name)))
     (or (gethash hash *fdefn-objects*)
@@ -970,9 +987,8 @@
 	    (write-indexed fdefn vm:fdefn-function-slot *nil-descriptor*)
 	    (write-indexed fdefn vm:fdefn-raw-addr-slot
 			   (make-random-descriptor
-			    (lookup-foreign-symbol
-			     (vm::extern-alien-name "undefined_tramp")
-			     #+(or sparc ppc) :data))))
+			    (lookup-special-symbol "undefined_tramp"
+						   #+(or sparc ppc) :data))))
 	  fdefn))))
   
 (defun cold-fset (name defn)
@@ -990,9 +1006,8 @@
 			      (ash vm:function-code-offset vm:word-shift)))))
 		     (#.vm:closure-header-type
 		      (make-random-descriptor
-		       (lookup-foreign-symbol
-		        (vm::extern-alien-name "closure_tramp")
-			#+(or sparc ppc) :data)))))
+		       (lookup-special-symbol "closure_tramp"
+					      #+(or sparc ppc) :data)))))
     fdefn))
 
 (defun initialize-static-fns ()
@@ -2582,7 +2597,9 @@
 			  (header-name *genesis-c-header-name*))
   "Builds a kernel Lisp image from the .FASL files specified in the given
   File-List and writes it to a file named by Core-Name."
-  (unless (or #+linkage-table t symbol-table)
+  (unless (or #+(and linkage-table (not (or sparc ppc))) t symbol-table)
+    ;; We need the symbol table for sparc and ppc, even with
+    ;; linkage-tables.
     (error "Can't genesis without a symbol-table."))
   (format t "~&Building ~S for the ~A~%"
 	  core-name (c:backend-version c:*backend*))
@@ -2594,12 +2611,17 @@
 	(progn
 	  (clrhash *fdefn-objects*)
 	  (clrhash *cold-symbols*)
-	  #-linkage-table (init-foreign-symbol-table)
+	  #+(and linkage-table (or sparc ppc))
+	  (init-foreign-symbol-table)
 	  #+linkage-table (init-foreign-linkage)
 	  (let ((version #-linkage-table (load-foreign-symbol-table
 					  symbol-table)
 			 #+linkage-table (symbol-table-version
 					  symbol-table)))
+	    ;; Need to do this so we can find undefined_tramp and
+	    ;; closure_tramp with the NEW lisp.
+	    #+(and linkage-table (or sparc ppc))
+	    (load-foreign-symbol-table symbol-table)
 	    (initialize-spaces)
 	    (initialize-symbols)
 	    (initialize-layouts)
