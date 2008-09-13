@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.82 2008/09/12 21:09:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.83 2008/09/13 02:26:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2450,8 +2450,7 @@
 	  (- di::real-lra-slot vm::code-constants-offset))
   (format t "#define KNOWN_RETURN_P_SLOT ~D~%"
 	  (- di::known-return-p-slot vm::code-constants-offset))
-  (format t "#define BOGUS_LRA_CONSTANTS ~D~%"
-	  di::bogus-lra-constants vm::code-constants-offset)
+  (format t "#define BOGUS_LRA_CONSTANTS ~D~%" di::bogus-lra-constants)
 
   ;; Write out internal error codes and error descriptions
   (terpri)
