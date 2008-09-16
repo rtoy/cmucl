@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.10 2008/04/22 20:18:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.11 2008/09/16 19:19:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -134,11 +134,19 @@
 
 (defun machine-type ()
   "Returns a string describing the type of the local machine."
-  (unix:unix-sysinfo unix:si-machine))
+  ;; Helps cross-compile from a different system that might not have
+  ;; unix:unix-sysinfo.
+  (if (fboundp (find-symbol "UNIX-SYSINFO" "UNIX"))
+      (funcall (find-symbol "UNIX-SYSINFO" "UNIX")
+	       (symbol-value (find-symbol "SI-MACHINE" "UNIX")))
+      "sun4"))
 
 (defun machine-version ()
   "Returns a string describing the version of the local machine."
-  (unix:unix-sysinfo unix:si-platform))
+  (if (fboundp (find-symbol "UNIX-SYSINFO" "UNIX"))
+      (funcall (find-symbol "UNIX-SYSINFO" "UNIX")
+	       (symbol-value (find-symbol "SI-PLATFORM" "UNIX")))
+      "unknown"))
 
 
 
