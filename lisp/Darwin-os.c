@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.19 2008/09/16 08:52:31 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20 2008/09/16 14:12:46 rtoy Exp $
  *
  */
 
@@ -395,6 +395,8 @@ sigbus_handler(HANDLER_ARGS)
     if (interrupt_maybe_gc(signal, code, context))
 	return;
 #endif
+    /* a *real* protection fault */
+    fprintf(stderr, "sigbus_handler: Real protection violation: %p\n", fault_addr);
     interrupt_handle_now(signal, code, context);
 #ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
