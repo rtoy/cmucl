@@ -35,10 +35,7 @@ GENCGC = -DGENCGC
 GC_SRC = gencgc.c
 endif
 
-# Sun Studio 11 can't inline the functions in gencgc.c.  See
-# <http://blogs.sun.com/dew/entry/c99_inline_function> for an
-# explanation.  Hence, we disable inline.
-CPPFLAGS = -Dinline= -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
+CPPFLAGS = -I. -I$(PATH1) -DSOLARIS -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
 
 
 CC = cc -O -xlibmieee
