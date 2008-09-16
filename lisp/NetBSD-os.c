@@ -15,7 +15,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for NetBSD by Pierre R. Mai, 2002.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.9 2008/05/16 13:30:21 rswindells Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/NetBSD-os.c,v 1.10 2008/09/16 08:52:31 cshapiro Exp $
  *
  */
 
@@ -213,28 +213,14 @@ sigsegv_handler(HANDLER_ARGS)
 {
 #if defined GENCGC
     caddr_t fault_addr = code ? code->si_addr : 0;
-    int page_index = find_page_index((void *) fault_addr);
 
 #if SIGSEGV_VERBOSE
     fprintf(stderr, "Signal %d, fault_addr=%p, page_index=%d:\n",
 	    signal, fault_addr, page_index);
 #endif
 
-    /* Check if the fault is within the dynamic space. */
-    if (page_index != -1) {
-	/* Un-protect the page */
-
-	/* The page should have been marked write protected */
-	if (!PAGE_WRITE_PROTECTED(page_index))
-	    fprintf(stderr,
-		    "*** Sigsegv in page not marked as write protected\n");
-
-	os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
+    if (gc_write_barrier(code->si_addr))
 	return;
-    }
 #endif
 
     SAVE_CONTEXT();

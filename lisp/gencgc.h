@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.13 2006/01/18 15:21:26 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.14 2008/09/16 08:52:32 cshapiro Rel $
  *
  */
 
@@ -15,8 +15,7 @@
 #define _GENCGC_H_
 
 void gc_free_heap(void);
-inline int find_page_index(void *);
-inline char *page_address(int);
+int gc_write_barrier(void *);
 
 
 

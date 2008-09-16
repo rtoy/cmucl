@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.23 2008/03/18 09:22:55 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.24 2008/09/16 08:52:31 cshapiro Exp $
  *
  */
 
@@ -201,8 +201,6 @@ boolean valid_addr(os_vm_address_t addr)
 static void
 sigbus_handler(int signal, siginfo_t *info, ucontext_t *context)
 {
-    int page_index;
-
 #ifdef RED_ZONE_HIT
     if (os_control_stack_overflow(info->si_addr, context))
 	return;
@@ -210,21 +208,7 @@ sigbus_handler(int signal, siginfo_t *info, ucontext_t *context)
 
 #if defined GENCGC
     if (info->si_code == PROTECTION_VIOLATION_CODE) {
-	page_index = find_page_index(info->si_addr);
-
-	/* Check if the fault is within the dynamic space. */
-	if (page_index != -1) {
-	    /* Un-protect the page */
-
-	    /* The page should have been marked write protected */
-	    if (!PAGE_WRITE_PROTECTED(page_index))
-		fprintf(stderr,
-			"*** Sigbus in page not marked as write protected\n");
-
-	    os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-	    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
+	if (gc_write_barrier(info->si_addr)) {
 	    return;
 	}
     }

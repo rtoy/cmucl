@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.21 2008/09/07 07:07:50 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.22 2008/09/16 08:52:32 cshapiro Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -211,32 +211,16 @@ void
 segv_handler(HANDLER_ARGS)
 {
     caddr_t addr = code->si_addr;
-    int page_index;
 
     SAVE_CONTEXT();
-
-    page_index = find_page_index((void *) addr);
 
 #ifdef RED_ZONE_HIT
     if (os_control_stack_overflow(addr, context))
 	return;
 #endif
 
-    /* check if the fault is within the dynamic space. */
-    if (page_index != -1) {
-	/* Un-protect the page */
-
-	/* The page should have been marked write protected */
-	if (!PAGE_WRITE_PROTECTED(page_index))
-	    fprintf(stderr,
-		    "*** Sigsegv in page not marked as write protected\n");
-	os_protect((os_vm_address_t) page_address(page_index), PAGE_SIZE,
-		   OS_VM_PROT_ALL);
-	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
-	return;
-    }
+    if (gc_write_barrier(code->si_addr))
+	 return;
 
     /*
      * Could be a C stack overflow.  Let's check
