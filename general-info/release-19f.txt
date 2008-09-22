@@ -79,6 +79,12 @@ New in this release:
       should now be gone.
     - Improved type derivation for LOGAND when one arg is bounded but
       the other is not.
+    - Some issues with tracing on sparc and ppc have been fixed.  This
+      usually manifests itself with a segfault just after the function
+      result is printed.
+    - Fixed bug on sparc where C-c sometimes causes a segfault.  We
+      now handle the case where siginfo_t is NULL, which can also
+      happen on other architectures.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
@@ -101,7 +107,10 @@ New in this release:
       /dev/urandom to initialize the entire state vector with random
       bits.  Previously, only one word was read.
     - A seed of 0 is allowed in KERNEL:INIT-RANDOM-STATE.
- 
+    - Updated User guide to include more examples of tracing.
+    - Enable gencgc page protection on x86/darwin.  This can speed up
+      GC a bit.  (Not measured.)
+
   * Improvements to the PCL implementation of CLOS:
     - The compiler and interpreter should handle SLOT-VALUE the same
       way.  Previously, (SLOT-VALUE obj :a) would behave differently
