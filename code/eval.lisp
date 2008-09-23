@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.43 2006/12/19 10:50:57 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.44 2008/09/23 16:39:21 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -230,6 +230,17 @@
 	      (dolist (x (butlast (rest exp)) (eval (car (last exp))))
 		(eval x))))
 	   ((eval-when)
+	    (when (plusp args)
+	      (let* ((situations (second exp))
+		     (bad-situations
+		      (if (listp situations)
+			  (set-difference situations
+					   '(compile load eval
+					     :compile-toplevel :load-toplevel :execute))
+			  situations)))
+		(when (or (not (listp situations))
+			  bad-situations)
+		  (warn "Bad Eval-When situation list: ~S." bad-situations))))
 	    (if (and (> args 0)
 		     (or (member 'eval (second exp))
 			 (member :execute (second exp))))
