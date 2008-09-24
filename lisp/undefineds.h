@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.39 2008/09/07 07:07:50 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.40 2008/09/24 09:42:33 cshapiro Exp $ */
 
 /*
  * Do not wrap this inside an #ifndef/#endif!
@@ -85,6 +85,7 @@ F(accept)
     F(msync)
     F(munmap)
     F(open)
+    F(openpty)
     F(pipe)
     F(profil)
     F(ptrace)

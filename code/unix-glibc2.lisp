@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.43 2007/11/14 17:20:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.44 2008/09/24 09:42:31 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,7 +185,7 @@
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
 	  unix-socket unix-connect unix-bind unix-listen unix-accept
 	  unix-recv unix-send unix-getpeername unix-getsockname
-	  unix-getsockopt unix-setsockopt
+	  unix-getsockopt unix-setsockopt unix-openpty
 
 	  unix-recvfrom unix-sendto unix-shutdown
 
@@ -1272,7 +1272,6 @@ length LEN and type TYPE."
 
 ;;; pty.h
 
-#+(or)
 (defun unix-openpty (amaster aslave name termp winp)
   "Create pseudo tty master slave pair with NAME and set terminal
    attributes according to TERMP and WINP and return handles for both

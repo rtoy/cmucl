@@ -32,9 +32,9 @@ NM = $(PATH1)/linux-nm
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = x86-assem.S linux-stubs.S
 ARCH_SRC = x86-arch.c
-OS_SRC = Linux-os.c os-common.c elf.c e_rem_pio2.c k_rem_pio2.c
+OS_SRC = Linux-os.c os-common.c elf.c e_rem_pio2.c k_rem_pio2.c undefineds.c
 OS_LINK_FLAGS = -rdynamic -Xlinker --export-dynamic -Xlinker -Map -Xlinker foo
-OS_LIBS = -ldl
+OS_LIBS = -ldl -lutil
 #GC_SRC = gencgc.c
 
 # e_rem_pio2.c has strict aliasing issues.  Compile this with

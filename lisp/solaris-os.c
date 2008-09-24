@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.22 2008/09/16 08:52:32 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.23 2008/09/24 09:42:33 cshapiro Rel $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -20,6 +20,8 @@
 #include <fcntl.h>
 #include <sys/file.h>
 
+#include <stropts.h>
+#include <termios.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/param.h>
@@ -340,6 +342,45 @@ sigsetmask(int mask)
 
     return old.__sigbits[0];
 
+}
+
+int
+openpty(int *amaster, int *aslave, char *name, struct termios *termp,
+        struct winsize *winp)
+{
+    char *slavename;
+    int masterfd, slavefd;
+
+    if ((masterfd = open("/dev/ptmx", O_RDWR)) == -1)
+	return -1;
+    if (grantpt(masterfd) == -1) {
+	close(masterfd);
+	return -1;
+    }
+    if (unlockpt(masterfd) == -1) {
+	close(masterfd);
+	return -1;
+    }
+    if ((slavename = ptsname(masterfd)) == NULL) {
+	close(masterfd);
+	return -1;
+    }
+    if ((slavefd = open(slavename, O_RDWR | O_NOCTTY)) == -1) {
+	close(masterfd);
+	return -1;
+    }
+    *amaster = masterfd;
+    *aslave = slavefd;
+    ioctl(*aslave, I_PUSH, "ptem");
+    ioctl(*aslave, I_PUSH, "ldterm");
+    ioctl(*aslave, I_PUSH, "ttcompat");
+    if (name)
+	strcpy(name, slavename);
+    if (termp)
+	tcsetattr(slavefd, TCSAFLUSH, termp);
+    if (winp)
+	ioctl(slavefd, TIOCSWINSZ, (char *) winp);
+    return 0;
 }
 
 os_vm_address_t round_up_sparse_size(os_vm_address_t addr)

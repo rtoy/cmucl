@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.26 2003/02/25 17:22:06 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.27 2008/09/24 09:42:25 cshapiro Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -268,36 +268,25 @@
 #-irix
 (defun find-a-pty ()
   "Returns the master fd, the slave fd, and the name of the tty"
-  (dolist (char '(#\p #\q))
-    (dotimes (digit 16)
-      (let* ((master-name (format nil "/dev/pty~C~X" char digit))
-	     (master-fd (unix:unix-open master-name
-					unix:o_rdwr
-					#o666)))
-	(when master-fd
-	  (let* ((slave-name (format nil "/dev/tty~C~X" char digit))
-		 (slave-fd (unix:unix-open slave-name
-					   unix:o_rdwr
-					   #o666)))
-	    (when slave-fd
-	      ; Maybe put a vhangup here?
-              #-glibc2
-	      (alien:with-alien ((stuff (alien:struct unix:sgttyb)))
-		(let ((sap (alien:alien-sap stuff)))
-		  (unix:unix-ioctl slave-fd unix:TIOCGETP sap)
-		  (setf (alien:slot stuff 'unix:sg-flags) #o300) ; EVENP|ODDP
-		  (unix:unix-ioctl slave-fd unix:TIOCSETP sap)
-		  (unix:unix-ioctl master-fd unix:TIOCGETP sap)
-		  (setf (alien:slot stuff 'unix:sg-flags)
-			(logand (alien:slot stuff 'unix:sg-flags)
-				(lognot 8))) ; ~ECHO
-		  (unix:unix-ioctl master-fd unix:TIOCSETP sap)))
-	      (return-from find-a-pty
-			   (values master-fd
-				   slave-fd
-				   slave-name)))
-	  (unix:unix-close master-fd))))))
-  (error "Could not find a pty."))
+  (multiple-value-bind (error master-fd slave-fd)
+      (unix:unix-openpty nil nil nil)
+    (when (zerop error)
+      #-glibc2
+      (alien:with-alien ((stuff (alien:struct unix:sgttyb)))
+	(let ((sap (alien:alien-sap stuff)))
+	  (unix:unix-ioctl slave-fd unix:TIOCGETP sap)
+	  (setf (alien:slot stuff 'unix:sg-flags) #o300) ; EVENP|ODDP
+	  (unix:unix-ioctl slave-fd unix:TIOCSETP sap)
+	  (unix:unix-ioctl master-fd unix:TIOCGETP sap)
+	  (setf (alien:slot stuff 'unix:sg-flags)
+		(logand (alien:slot stuff 'unix:sg-flags)
+			(lognot 8)))	; ~ECHO
+	  (unix:unix-ioctl master-fd unix:TIOCSETP sap)))
+      (return-from find-a-pty
+		   (values master-fd
+			   slave-fd
+			   (unix:unix-ttyname slave-fd))))
+    (error "Could not find a pty.")))
 
 #+irix
 (alien:def-alien-routine ("_getpty" c-getpty) c-call:c-string
