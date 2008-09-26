@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20 2008/09/16 14:12:46 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20.2.1 2008/09/26 18:56:43 rtoy Exp $
  *
  */
 
@@ -257,10 +257,39 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 {
     unsigned long modes;
     unsigned short cw, sw;
+
+    /*
+     * Get the status word and the control word.  The status word is
+     * in the high 16 bits and the control is in the low 16 bits.
+     */
     memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
     memcpy(&sw, &scp->uc_mcontext->__fs.__fpu_fsw, sizeof(sw));
     modes = (sw & 0xff) << 16 | cw;
+
+    fprintf(stderr, "FPU modes = %08x (sw =  %4x, cw = %4x)\n",
+	    modes, (unsigned int) sw, (unsigned int) cw);
+#ifdef FEATURE_SSE2
+    /*
+     * Add in the SSE2 part
+     */
+    {
+	unsigned long mxcsr;
+
+	mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
+	fprintf(stderr, "SSE2 modes = %08x\n", mxcsr);
+
+	/*
+	 * The low 6 bits are the status bits.  Grab them and or them
+	 * into the status part of the result.
+	 */
+	modes |= (mxcsr & 0x3f) << 16;
+    }
+#endif
+
+    fprintf(stderr, "modes mask = %08x\n", modes);
+    /* Convert exception mask to exception enable */
     modes ^= 0x3f;
+    fprintf(stderr, "Finale = %08x\n", modes);
     return modes;
 }
 

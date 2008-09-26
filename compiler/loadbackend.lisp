@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.9 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.9.40.1 2008/09/26 18:56:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 (if (target-featurep :rt)
     (load "vm:params")
     (load "vm:parms"))
+
 (load "vm:objdef")
 (load "vm:interr")
 (load "assem:support")
@@ -36,7 +37,12 @@
     (if (target-featurep :afpa)
 	(load "vm:afpa")
 	(load "vm:mc68881"))
-    (load "vm:float"))
+    (if (and t (target-featurep :sse2))
+	(load "vm:float-sse2")
+	(load "vm:float")))
+
+(when (and t (target-featurep :sse2))
+  (load "vm:sse2-sap"))
 
 (load "vm:memory")
 (load "vm:static-fn")
@@ -45,12 +51,16 @@
 (load "vm:subprim")
 (load "vm:debug")
 (load "vm:c-call")
+(when (and t (target-featurep :sse2))
+  (load "vm:sse2-c-call"))
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
 (load "vm:nlx")
 (load "vm:values")
 (load "vm:array")
+(when (and t (target-featurep :sse2))
+  (load "vm:sse2-array"))
 (load "vm:pred")
 (load "vm:type-vops")
 

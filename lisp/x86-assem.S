@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29 2008/03/18 04:08:49 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.1 2008/09/26 18:56:43 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -96,7 +96,6 @@ FUNCDEF(call_into_c)
 	fldz
 	fldz
 	fldz
-
 /* Restore the return value */
 	movl	%ecx,%eax	# maybe return value
 
@@ -116,6 +115,13 @@ Lfp_rtn_value:
 	fldz
 	fxch	%st(7)		# move the result back to st(0)
 
+#ifdef FEATURE_SSE2
+	/* Copy the result to XMM0 (as a double-float) */
+	sub	$8, %esp 		# Make room for a double-float
+	fstl	(%esp)		# Save st(0)
+	movsd	(%esp), %xmm0
+	add	$8, %esp
+#endif		
 /* Don't need to restore eax as the result is in st(0) */
 
 	movl	$0,GNAME(foreign_function_call_active)

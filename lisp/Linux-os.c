@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38 2008/09/16 08:52:31 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.1 2008/09/26 18:56:43 rtoy Exp $
  *
  */
 
@@ -44,6 +44,10 @@
 #include <dlfcn.h>
 #include <assert.h>
 
+#ifdef FEATURE_SSE2
+/* So we can get at mxcsr in a sigcontext */
+#include <asm/sigcontext.h>
+#endif
 #include "validate.h"
 size_t os_vm_page_size;
 
@@ -129,6 +133,29 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     }
     modes = (sw & 0xff) << 16 | cw;
     modes ^= 0x3f;
+#ifdef FEATURE_SSE2
+    /*
+     * Add in the SSE2 part
+     */
+    {
+        struct _fpstate *fpstate;
+	unsigned long mxcsr;
+
+        fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
+        if (fpstate->magic == 0xffff) {
+            mxcsr = 0;
+        } else {
+            mxcsr = fpstate->mxcsr;
+            fprintf(stderr, "SSE2 modes = %08x\n", mxcsr);
+        }
+
+	/*
+	 * The low 6 bits are the status bits.  Grab them and or them
+	 * into the status part of the result.
+	 */
+	modes |= (mxcsr & 0x3f) << 16;
+    }
+#endif
     return modes;
 }
 #endif

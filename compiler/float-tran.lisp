@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121 2008/06/26 21:00:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1 2008/09/26 18:56:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -420,6 +420,7 @@
 
 (deftransform scale-float ((f ex) (single-float *) * :when :both)
   (if (and (backend-featurep :x86)
+	   (not (backend-featurep :sse2))
 	   (csubtypep (continuation-type ex)
 		      (specifier-type '(signed-byte 32)))
 	   (not (byte-compiling)))
@@ -428,6 +429,7 @@
 
 (deftransform scale-float ((f ex) (double-float *) * :when :both)
   (if (and (backend-featurep :x86)
+	   (not (backend-featurep :sse2))
 	   (csubtypep (continuation-type ex)
 		      (specifier-type '(signed-byte 32))))
       '(%scalbn f ex)
@@ -653,7 +655,8 @@
   (destructuring-bind (name prim prim-quick limit)
       stuff
     (deftransform name ((x) '(single-float) '* :eval-name t)
-      (if (backend-featurep :x86)
+      (if (and (backend-featurep :x86)
+	       (not (backend-featurep :sse2)))
 	  (cond ((csubtypep (continuation-type x)
 			    (specifier-type `(single-float
 					      (,(- (expt 2f0 limit)))
@@ -669,7 +672,8 @@
 		 `(coerce (,prim (coerce x 'double-float)) 'single-float)))
 	  `(coerce (,prim (coerce x 'double-float)) 'single-float)))
     (deftransform name ((x) '(double-float) '* :eval-name t :when :both)
-      (if (backend-featurep :x86)
+      (if (and (backend-featurep :x86)
+	       (not (backend-featurep :sse2)))
 	  (cond ((csubtypep (continuation-type x)
 			    (specifier-type `(double-float
 					      (,(- (expt 2d0 limit)))

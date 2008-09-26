@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.56 2008/02/04 20:33:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.56.8.1 2008/09/26 18:56:41 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1718,6 +1718,7 @@
   (:save-p :compute-only)
   (:note "inline float comparison")
   (:ignore temp y)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 2
      (note-this-location vop :internal-error)
      (cond
@@ -1743,12 +1744,14 @@
 		  (:translate ,translate)
 		  (:args (x :scs (single-reg)))
 		  (:arg-types single-float (:constant (single-float 0f0 0f0)))
+		  (:guard (not (backend-featurep :sse2)))
 		  (:variant ,test))
 		(define-vop (,(symbolicate translate "0/DOUBLE-FLOAT")
 			      float-test)
 		  (:translate ,translate)
 		  (:args (x :scs (double-reg)))
 		  (:arg-types double-float (:constant (double-float 0d0 0d0)))
+		  (:guard (not (backend-featurep :sse2)))
 		  (:variant ,test))
 		#+long-float
 		(define-vop (,(symbolicate translate "0/LONG-FLOAT")
@@ -1914,6 +1917,7 @@
 	 (inst fstp sf-temp)
 	 (inst fld sf-temp))))))
 
+#-sse2
 (macrolet ((frob (name translate to-sc to-type)
 	     `(define-vop (,name)
 		(:args (x :scs (unsigned-reg)))
@@ -2119,6 +2123,7 @@
 	       (:note "inline float truncate")
 	       (:vop-var vop)
 	       (:save-p :compute-only)
+	       (:guard (not (backend-featurep :sse2)))
 	       (:generator 5
 		,@(unless round-p
 		   '((note-this-location vop :internal-error)
@@ -2477,7 +2482,9 @@
 
   ;; Quick versions of fsin and fcos that require the argument to be
   ;; within range 2^63.
+  #-sse2
   (frob fsin-quick %sin-quick fsin)
+  #-sse2
   (frob fcos-quick %cos-quick fcos)
   ;;
   (frob fsqrt %sqrt fsqrt))
@@ -2499,6 +2506,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
     (note-this-location vop :internal-error)
     (case (tn-offset x)
@@ -2786,6 +2794,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore temp)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (unless (zerop (tn-offset x))
@@ -2842,6 +2851,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore temp fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (unless (zerop (tn-offset x))
@@ -2897,6 +2907,7 @@
   (:note "inline log function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (sc-case x
@@ -2948,6 +2959,7 @@
   (:note "inline log10 function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (sc-case x
@@ -3002,6 +3014,7 @@
   (:note "inline pow function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr0 and y in fr1
@@ -3116,6 +3129,7 @@
   (:policy :fast-safe)
   (:note "inline scalbn function")
   (:ignore fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      ;; Setup x in fr0 and y in fr1
      (sc-case x
@@ -3183,6 +3197,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr0 and y in fr1
@@ -3284,7 +3299,8 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:guard (not (backend-featurep :pentium)))
+  (:guard (or (not (backend-featurep :pentium))
+	      (not (backend-featurep :sse2))))
   (:note "inline log1p function")
   (:ignore temp)
   (:generator 5
@@ -3338,7 +3354,8 @@
   (:arg-types double-float)
   (:result-types double-float)
   (:policy :fast-safe)
-  (:guard (backend-featurep :pentium))
+  (:guard (and (backend-featurep :pentium)
+	       (not (backend-featurep :sse2))))
   (:note "inline log1p with limited x range function")
   (:vop-var vop)
   (:save-p :compute-only)
@@ -3393,6 +3410,7 @@
   (:vop-var vop)
   (:save-p :compute-only)
   (:ignore fr0)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      (sc-case x
@@ -3439,6 +3457,7 @@
   (:note "inline atan function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr1 and 1.0 in fr0
@@ -3486,6 +3505,7 @@
   (:note "inline atan2 function")
   (:vop-var vop)
   (:save-p :compute-only)
+  (:guard (not (backend-featurep :sse2)))
   (:generator 5
      (note-this-location vop :internal-error)
      ;; Setup x in fr1 and y in fr0

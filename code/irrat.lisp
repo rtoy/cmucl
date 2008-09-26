@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.55 2008/01/31 19:12:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.55.8.1 2008/09/26 18:56:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,13 +59,18 @@
 ;;; Please refer to the Unix man pages for details about these routines.
 
 ;;; Trigonometric.
-#-x86 (def-math-rtn "sin" 1)
-#-x86 (def-math-rtn "cos" 1)
-#-x86 (def-math-rtn "tan" 1)
+#-(and x86 (not sse2))
+(def-math-rtn "sin" 1)
+#-(and x86 (not sse2))
+(def-math-rtn "cos" 1)
+#-(and x86 (not sse2))
+(def-math-rtn "tan" 1)
 (def-math-rtn "asin" 1)
 (def-math-rtn "acos" 1)
-#-x86 (def-math-rtn "atan" 1)
-#-x86 (def-math-rtn "atan2" 2)
+#-(and x86 (not sse2))
+(def-math-rtn "atan" 1)
+#-(and x86 (not sse2))
+(def-math-rtn "atan2" 2)
 (def-math-rtn "sinh" 1)
 (def-math-rtn "cosh" 1)
 (def-math-rtn "tanh" 1)
@@ -74,21 +79,27 @@
 (def-math-rtn "atanh" 1)
 
 ;;; Exponential and Logarithmic.
-#-x86 (def-math-rtn "exp" 1)
-#-x86 (def-math-rtn "log" 1)
-#-x86 (def-math-rtn "log10" 1)
+#-(and x86 (not sse2))
+(def-math-rtn "exp" 1)
+#-(and x86 (not sse2))
+(def-math-rtn "log" 1)
+#-(and x86 (not sse2))
+(def-math-rtn "log10" 1)
 (def-math-rtn "pow" 2)
-#-(or x86 sparc-v7 sparc-v8 sparc-v9) (def-math-rtn "sqrt" 1)
+#-(or x86 sparc-v7 sparc-v8 sparc-v9)
+(def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
-#-(or hpux x86) (def-math-rtn "log1p" 1)
+#-(or hpux (and x86 (not sse2)))
+(def-math-rtn "log1p" 1)
 
-#+x86 ;; These are needed for use by byte-compiled files.
+#+(and x86 (not sse2)) ;; These are needed for use by byte-compiled files.
 (progn
   #+nil
   (defun %sin (x)
     (declare (double-float x)
 	     (values double-float))
     (%sin x))
+  #-sse2
   (defun %sin-quick (x)
     (declare (double-float x)
 	     (values double-float))
@@ -98,6 +109,7 @@
     (declare (double-float x)
 	     (values double-float))
     (%cos x))
+  #-sse2
   (defun %cos-quick (x)
     (declare (double-float x)
 	     (values double-float))
@@ -107,22 +119,27 @@
     (declare (double-float x)
 	     (values double-float))
     (%tan x))
+  #-sse2
   (defun %tan-quick (x)
     (declare (double-float x)
 	     (values double-float))
     (%tan-quick x))
+  #-sse2
   (defun %atan (x)
     (declare (double-float x)
 	     (values double-float))
     (%atan x))
+  #-sse2
   (defun %atan2 (x y)
     (declare (double-float x y)
 	     (values double-float))
     (%atan2 x y))
+  #-sse2
   (defun %exp (x)
     (declare (double-float x)
 	     (values double-float))
     (%exp x))
+  #-sse2
   (defun %log (x)
     (declare (double-float x)
 	     (values double-float))
@@ -204,7 +221,7 @@
 
 )
 
-#+ppc
+#+(or ppc sse2)
 (progn
 (declaim (inline %%sin %%cos %%tan))
 (macrolet ((frob (alien-name lisp-name)
@@ -266,9 +283,9 @@
 		    (if (evenp n)
 			(,tan reduced)
 			(- (/ (,tan reduced)))))))))))
-  #+x86
-  (frob %sin-quick %cos-quick %tan-quick)
-  #+ppc
+  ;;#+(and x86 (not sse2))
+  ;;(frob %sin-quick %cos-quick %tan-quick)
+  #+(or ppc sse2)
   (frob %%sin %%cos %%tan))
 
 
