@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.9 2006/11/07 09:01:09 cshapiro Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.9.8.1 2008/09/26 21:47:09 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -13,7 +13,11 @@
 #include "os.h"
 #include "signal.h"
 
-extern char *arch_init(void);
+#ifdef i386
+extern char *arch_init(fpu_mode_t);
+#else
+extern char *arch_init(fpu_mode_t);
+#endif
 extern void arch_skip_instruction(os_context_t * scp);
 extern boolean arch_pseudo_atomic_atomic(os_context_t * scp);
 extern void arch_set_pseudo_atomic_interrupted(os_context_t * scp);

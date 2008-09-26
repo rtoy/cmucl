@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36 2008/03/19 09:17:13 cshapiro Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36.6.1 2008/09/26 21:47:09 rtoy Exp $ 
  *
  */
 
@@ -25,10 +25,34 @@
 
 unsigned long fast_random_state = 1;
 
+extern int os_support_sse2(void);
+
 char *
-arch_init(void)
+arch_init(fpu_mode_t mode)
 {
-    return "lisp.core";
+    extern int have_sse2;
+
+    have_sse2 = os_support_sse2();
+    
+    switch (mode) {
+      case AUTO:
+          if (have_sse2) {
+              return "lisp-sse2.core";
+          } else {
+              return "lisp-x87.core";
+          }
+          break;
+      case X87:
+          have_sse2 = 0;
+          return "lisp-x87.core";
+          break;
+      case SSE2:
+          have_sse2 = 1;
+          return "lisp-sse2.core";
+          break;
+      default:
+          abort();
+    }
 }
 
 

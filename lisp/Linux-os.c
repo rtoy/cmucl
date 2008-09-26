@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.1 2008/09/26 18:56:43 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.2 2008/09/26 21:47:09 rtoy Exp $
  *
  */
 
@@ -58,10 +58,28 @@ size_t os_vm_page_size;
 #endif
 
 
+#include <asm/processor.h>
+
+int
+os_support_sse2()
+{
+    int eax, ebx, ecx, edx;
+
+    /*
+     * We only care if SSE2 is supported.  This is bit 26 of the EDX
+     * register.
+     */
+    
+    cpuid(1, &eax, &ebx, &ecx, &edx);
+
+    return (edx & 0x4000000);
+}
+
 void
 os_init(void)
 {
     struct utsname name;
+    extern int have_sse2;
 
     uname(&name);
 
@@ -438,3 +456,4 @@ restore_fpu(ucontext_t *context)
 	__asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
     }
 }
+

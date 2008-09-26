@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.1 2008/09/26 18:56:43 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.2 2008/09/26 21:47:09 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -46,6 +46,13 @@ GNAME(x):			;
 #define	align_16byte	4	
 #endif			
 
+.globl have_sse2
+	.bss
+	.align 4
+	.size	have_sse2, 4
+have_sse2:
+	.zero	4
+		
 	.text
 	.globl	GNAME(foreign_function_call_active)
 	
@@ -74,7 +81,6 @@ FUNCDEF(call_into_c)
 	fstp	%st(0)
 	fstp	%st(0)
 	fstp	%st(0)
-
 	call	*%eax		# normal callout using Lisp stack
 
 	movl	%eax,%ecx	# remember integer return value
@@ -96,6 +102,7 @@ FUNCDEF(call_into_c)
 	fldz
 	fldz
 	fldz
+no_fldz:	
 /* Restore the return value */
 	movl	%ecx,%eax	# maybe return value
 
@@ -115,13 +122,16 @@ Lfp_rtn_value:
 	fldz
 	fxch	%st(7)		# move the result back to st(0)
 
-#ifdef FEATURE_SSE2
+	cmpl	$0, have_sse2
+	je	no_sse2		
+
 	/* Copy the result to XMM0 (as a double-float) */
 	sub	$8, %esp 		# Make room for a double-float
 	fstl	(%esp)		# Save st(0)
 	movsd	(%esp), %xmm0
 	add	$8, %esp
-#endif		
+
+no_sse2:	
 /* Don't need to restore eax as the result is in st(0) */
 
 	movl	$0,GNAME(foreign_function_call_active)
@@ -155,6 +165,8 @@ FUNCDEF(call_into_lisp)
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
 
+	cmpl	$0, have_sse2
+	jne	skip_fldz		
 	fldz			# insure no FP regs are empty
 	fldz
 	fldz
@@ -163,7 +175,8 @@ FUNCDEF(call_into_lisp)
 	fldz
 	fldz
 	fldz
-	
+skip_fldz:	
+			
 /* Save C regs: ebx esi edi */
 	pushl	%ebx
 	pushl	%esi

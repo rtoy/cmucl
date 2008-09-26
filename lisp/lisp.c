@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62 2008/03/18 09:22:55 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.1 2008/09/26 21:47:09 rtoy Exp $
  *
  */
 
@@ -395,6 +395,8 @@ prepend_core_path(char *lib, char *corefile)
 extern int builtin_image_flag;
 extern long initial_function_addr;
 
+fpu_mode_t fpu_mode = AUTO;
+
 /* And here be main. */
 
 int
@@ -500,13 +502,40 @@ main(int argc, char *argv[], char *envp[])
 	    monitor = TRUE;
 	} else if (strcmp(arg, "-debug-lisp-search") == 0) {
 	    debug_lisp_search = TRUE;
-	}
-    }
+        }
+#ifdef i386
+	else if (strcmp(arg, "-fpu") == 0) {
+	    char *str;
 
+	    str = *++argptr;
+            if (str == NULL) {
+                fprintf(stderr, "-fpu must be followed by the FPU type:  auto, x87, sse2\n");
+                exit(1);
+            }
+            
+            if (strcmp(str, "auto") == 0) {
+                fpu_mode = AUTO;
+            } else if (strcmp(str, "x87") == 0) {
+                fpu_mode = X87;
+            } else if (strcmp(str, "sse2") == 0) {
+                fpu_mode = SSE2;
+            } else {
+                fprintf(stderr, "Unknown fpu type: `%s'.  Using auto\n", str);
+            }
+        }
+#endif
+    }
+    
+#ifdef i386
+    default_core = arch_init(fpu_mode);
+#else    
     default_core = arch_init();
+#endif
     if (default_core == NULL)
 	default_core = "lisp.core";
 
+    printf("default core = %s\n", default_core);
+    
     os_init();
 #if defined FEATURE_EXECUTABLE
     if (builtin_image_flag != 0)
@@ -613,7 +642,7 @@ main(int argc, char *argv[], char *envp[])
 		/* Can't find it so print a message and exit */
 		fprintf(stderr, "Cannot find core file");
 		if (core != NULL) {
-		    fprintf(stderr, " %s", core);
+		    fprintf(stderr, ": `%s'", core);
 		}
 		fprintf(stderr, "\n");
 		fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
