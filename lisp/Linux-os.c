@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.3 2008/09/27 13:25:39 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.4 2008/09/27 20:15:30 rtoy Exp $
  *
  */
 
@@ -131,7 +131,6 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
 	sw = scp->uc_mcontext.fpregs->sw & 0xffff;
     }
     modes = (sw & 0xff) << 16 | cw;
-    modes ^= 0x3f;
 #ifdef FEATURE_SSE2
     /*
      * Add in the SSE2 part
@@ -145,16 +144,19 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
             mxcsr = 0;
         } else {
             mxcsr = fpstate->mxcsr;
-            fprintf(stderr, "SSE2 modes = %08lx\n", mxcsr);
+            DPRINTF(0, (stderr, "SSE2 modes = %08lx\n", mxcsr));
         }
 
 	/*
 	 * The low 6 bits are the status bits.  Grab them and or them
-	 * into the status part of the result.
+	 * into the status part of the result.  Do the same for
+	 * control (mask) part.
 	 */
 	modes |= (mxcsr & 0x3f) << 16;
+	modes |= (mxcsr >> 7) & 0x3f;
     }
 #endif
+    modes ^= 0x3f;
     return modes;
 }
 #endif

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.1 2008/09/26 18:56:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.2 2008/09/27 20:15:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1231,7 +1231,8 @@
   (:translate floating-point-modes)
   (:policy :fast-safe)
   (:temporary (:sc unsigned-stack) cw-stack)
-  (:temporary (:sc unsigned-reg :offset eax-offset) temp)
+  (:temporary (:sc unsigned-reg) temp)
+  (:temporary (:sc unsigned-reg :offset eax-offset) sw-reg)
   (:temporary (:sc unsigned-reg) temp2)
   (:generator 8
     (inst stmxcsr cw-stack)
@@ -1244,6 +1245,16 @@
     (inst shr temp 7)			; Move masks to low 16 bits
     (inst and temp #xff)
     (inst or temp temp2)		; Put them together
+
+    ;; Now get the x87 FPU bits
+    (inst fnstsw)
+    (inst fnstcw cw-stack)
+    (inst and sw-reg #xff)  ; mask exception flags
+    (inst shl sw-reg 16)
+    (inst byte #x66)  ; operand size prefix
+    (inst or sw-reg cw-stack)
+
+    (inst or temp sw-reg)
     (inst xor temp #x3f)		; Invert exception masks 
     (inst mov res temp)))
 
@@ -1255,8 +1266,9 @@
   (:translate (setf floating-point-modes))
   (:policy :fast-safe)
   (:temporary (:sc unsigned-stack) cw-stack)
-  (:temporary (:sc unsigned-reg) status)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) status)
   (:temporary (:sc unsigned-reg) flags)
+  (:temporary (:sc byte-reg :offset al-offset) sw-reg)
   (:generator 6
     ;; The high 16 bits contains the status bits, the low 16 bits
     ;; contains the exception enable bits.
@@ -1270,10 +1282,23 @@
     (inst or flags status)		; Combine with status
     (inst mov cw-stack flags)
     (inst ldmxcsr cw-stack)
+
+    (inst mov cw-stack new)
+    (inst xor cw-stack #x3f)  ; invert exception mask
+    (inst fnstsw)
+    (inst fldcw cw-stack)  ; always update the control word
+    (inst mov status new)
+    (inst shr status 16)
+    (inst cmp cl-tn sw-reg)  ; compare exception flags
+    (inst jmp :z DONE)  ; skip updating the status word
+    (inst sub esp-tn 28)
+    (inst fstenv (make-ea :dword :base esp-tn))
+    (inst mov (make-ea :byte :base esp-tn :disp 4) cl-tn)
+    (inst fldenv (make-ea :dword :base esp-tn))
+    (inst add esp-tn 28)
+    DONE
+   
     (move res new)))
-
-
-
 
 
 ;;;; Complex float VOPs
