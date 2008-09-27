@@ -181,7 +181,6 @@ BUILD=2
 BUILD_WORLD2=
 buildit
 
-set -x
 TARGET=$BASE-4
 OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE4
