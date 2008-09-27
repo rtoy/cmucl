@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.29 2008/01/03 11:41:52 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.29.8.1 2008/09/27 05:07:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,6 +28,12 @@
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
 	  extern-alien-name sanctify-for-execution))
+
+#+sse2
+(sys:register-lisp-runtime-feature :sse2)
+
+#+(or x87 (not :sse2))
+(sys:register-lisp-feature :x87)
 
 
 ;;;; The sigcontext structure.
