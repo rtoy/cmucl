@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.2 2008/09/26 21:47:09 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.3 2008/09/27 13:25:39 rtoy Exp $
  *
  */
 
@@ -46,7 +46,7 @@
 
 #ifdef FEATURE_SSE2
 /* So we can get at mxcsr in a sigcontext */
-#include <asm/sigcontext.h>
+/*#include <asm/sigcontext.h>*/
 #endif
 #include "validate.h"
 size_t os_vm_page_size;
@@ -57,29 +57,10 @@ size_t os_vm_page_size;
 #include "gencgc.h"
 #endif
 
-
-#include <asm/processor.h>
-
-int
-os_support_sse2()
-{
-    int eax, ebx, ecx, edx;
-
-    /*
-     * We only care if SSE2 is supported.  This is bit 26 of the EDX
-     * register.
-     */
-    
-    cpuid(1, &eax, &ebx, &ecx, &edx);
-
-    return (edx & 0x4000000);
-}
-
 void
 os_init(void)
 {
     struct utsname name;
-    extern int have_sse2;
 
     uname(&name);
 
@@ -164,7 +145,7 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
             mxcsr = 0;
         } else {
             mxcsr = fpstate->mxcsr;
-            fprintf(stderr, "SSE2 modes = %08x\n", mxcsr);
+            fprintf(stderr, "SSE2 modes = %08lx\n", mxcsr);
         }
 
 	/*

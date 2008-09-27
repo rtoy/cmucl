@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.2 2008/09/26 21:47:09 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.3 2008/09/27 13:25:39 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -46,12 +46,11 @@ GNAME(x):			;
 #define	align_16byte	4	
 #endif			
 
-.globl have_sse2
-	.bss
+	.globl GNAME(have_sse2)
+	.data
 	.align 4
-	.size	have_sse2, 4
-have_sse2:
-	.zero	4
+GNAME(have_sse2):
+	.long	0
 		
 	.text
 	.globl	GNAME(foreign_function_call_active)
@@ -122,7 +121,7 @@ Lfp_rtn_value:
 	fldz
 	fxch	%st(7)		# move the result back to st(0)
 
-	cmpl	$0, have_sse2
+	cmpl	$0, GNAME(have_sse2)
 	je	no_sse2		
 
 	/* Copy the result to XMM0 (as a double-float) */
@@ -165,8 +164,6 @@ FUNCDEF(call_into_lisp)
 	fldcw	(%esp)		# Recover modes
 	popl	%eax
 
-	cmpl	$0, have_sse2
-	jne	skip_fldz		
 	fldz			# insure no FP regs are empty
 	fldz
 	fldz
@@ -175,7 +172,6 @@ FUNCDEF(call_into_lisp)
 	fldz
 	fldz
 	fldz
-skip_fldz:	
 			
 /* Save C regs: ebx esi edi */
 	pushl	%ebx

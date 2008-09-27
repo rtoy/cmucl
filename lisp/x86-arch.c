@@ -1,10 +1,11 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36.6.1 2008/09/26 21:47:09 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36.6.2 2008/09/27 13:25:39 rtoy Exp $ 
  *
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "lisp.h"
 #include "globals.h"
@@ -25,14 +26,30 @@
 
 unsigned long fast_random_state = 1;
 
-extern int os_support_sse2(void);
+#define __cpuid(level, a, b, c, d)			\
+  __asm__ ("xchgl\t%%ebx, %1\n\t"			\
+	   "cpuid\n\t"					\
+	   "xchgl\t%%ebx, %1\n\t"			\
+	   : "=a" (a), "=r" (b), "=c" (c), "=d" (d)	\
+	   : "0" (level))
+
+int
+arch_support_sse2(void)
+{
+    unsigned int eax, ebx, ecx, edx;
+
+    __cpuid(1, eax, ebx, ecx, edx);
+
+    /* Return non-zero if SSE2 is supported */
+    return edx & 0x4000000;
+}
 
 char *
 arch_init(fpu_mode_t mode)
 {
     extern int have_sse2;
 
-    have_sse2 = os_support_sse2();
+    have_sse2 = arch_support_sse2();
     
     switch (mode) {
       case AUTO:
