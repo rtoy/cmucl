@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34 2007/11/14 10:04:35 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34.6.1 2008/09/28 12:48:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,8 @@
 
 (setf (backend-name *target-backend*) "X86")
 (setf (backend-version *target-backend*) "Intel x86")
-(setf (backend-fasl-file-type *target-backend*) "x86f")
+(setf (backend-fasl-file-type *target-backend*)
+      (if (backend-featurep :sse2) "sse2f" "x86f"))
 (setf (backend-fasl-file-implementation *target-backend*)
       x86-fasl-file-implementation)
 (setf (backend-fasl-file-version *target-backend*) byte-fasl-file-version)
