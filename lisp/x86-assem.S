@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.3 2008/09/27 13:25:39 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.4 2008/09/28 12:44:22 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -46,12 +46,6 @@ GNAME(x):			;
 #define	align_16byte	4	
 #endif			
 
-	.globl GNAME(have_sse2)
-	.data
-	.align 4
-GNAME(have_sse2):
-	.long	0
-		
 	.text
 	.globl	GNAME(foreign_function_call_active)
 	
@@ -121,16 +115,6 @@ Lfp_rtn_value:
 	fldz
 	fxch	%st(7)		# move the result back to st(0)
 
-	cmpl	$0, GNAME(have_sse2)
-	je	no_sse2		
-
-	/* Copy the result to XMM0 (as a double-float) */
-	sub	$8, %esp 		# Make room for a double-float
-	fstl	(%esp)		# Save st(0)
-	movsd	(%esp), %xmm0
-	add	$8, %esp
-
-no_sse2:	
 /* Don't need to restore eax as the result is in st(0) */
 
 	movl	$0,GNAME(foreign_function_call_active)

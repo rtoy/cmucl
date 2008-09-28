@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36.6.2 2008/09/27 13:25:39 rtoy Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.36.6.3 2008/09/28 12:44:22 rtoy Exp $ 
  *
  */
 
@@ -47,7 +47,7 @@ arch_support_sse2(void)
 char *
 arch_init(fpu_mode_t mode)
 {
-    extern int have_sse2;
+    int have_sse2;
 
     have_sse2 = arch_support_sse2();
     
@@ -60,11 +60,9 @@ arch_init(fpu_mode_t mode)
           }
           break;
       case X87:
-          have_sse2 = 0;
           return "lisp-x87.core";
           break;
       case SSE2:
-          have_sse2 = 1;
           return "lisp-sse2.core";
           break;
       default:
