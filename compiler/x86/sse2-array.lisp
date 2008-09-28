@@ -7,17 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-array.lisp,v 1.1.2.1 2008/09/26 18:56:41 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-array.lisp,v 1.1.2.2 2008/09/28 20:51:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains the x86 definitions for array operations.
 ;;;
-;;; Written by William Lott
-;;;
-;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998,1999.
-;;;
+
 (in-package :x86)
 
 (define-vop (data-vector-ref/simple-array-single-float)

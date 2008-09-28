@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57.22.2 2008/09/28 19:52:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57.22.3 2008/09/28 20:51:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,9 +201,16 @@
 (comf (vmdir "target:compiler/call"))
 (comf (vmdir "target:compiler/nlx") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/print") :byte-compile *byte-compile*)
+
+;; Must come before array.lisp because array.lisp wants to use some
+;; vops as templates.
+(comf (vmdir (if (c:target-featurep :sse2)
+		 "target:compiler/sse2-array"
+		 "target:compiler/x87-array"))
+      :byte-compile *byte-compile*)
+
 (comf (vmdir "target:compiler/array") :byte-compile *byte-compile*)
-(when (c:target-featurep :sse2)
-  (comf (vmdir "target:compiler/sse2-array") :byte-compile *byte-compile*))
+
 (comf (vmdir "target:compiler/pred"))
 (comf (vmdir "target:compiler/type-vops") :byte-compile *byte-compile*)
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.9.40.3 2008/09/28 19:52:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.9.40.4 2008/09/28 20:51:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,9 +59,12 @@
 (load "vm:call")
 (load "vm:nlx")
 (load "vm:values")
+;; These need to be loaded before array because array wants to use
+;; some vops as templates.
+(load (if (target-featurep :sse2)
+	  "vm:sse2-array"
+	  "vm:x87-array"))
 (load "vm:array")
-(when (target-featurep :sse2)
-  (load "vm:sse2-array"))
 (load "vm:pred")
 (load "vm:type-vops")
 
