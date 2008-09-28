@@ -44,7 +44,9 @@ find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" -o \
 	-name "*.ppcf" -o \
 	-name "*.sparcf" -o \
 	-name "*.x86f" -o \
-	-name "*.core" | xargs rm 2> /dev/null
+	-name "*.sse2f" | 
+grep -v '\(gray-streams\|gray-compat\|simple-streams\|iodefs\|external-formats\|clx\|hemlock\|clm\)-library' |
+xargs rm 2> /dev/null
 
 for d in $TARGET
 do
