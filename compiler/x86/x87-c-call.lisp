@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.1.2.3 2008/09/28 14:56:35 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/x87-c-call.lisp,v 1.1.2.1 2008/09/28 14:56:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,22 +33,14 @@
 		   :from :eval :to :result) ecx)
   (:temporary (:sc unsigned-reg :offset edx-offset
 		   :from :eval :to :result) edx)
-  (:temporary (:sc double-stack) temp)
   (:node-var node)
   (:vop-var vop)
   (:save-p t)
   (:ignore args ecx edx)
-  (:guard (backend-featurep :sse2))
   (:generator 0 
     (cond ((policy node (> space speed))
 	   (move eax function)
-	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign))
-	   (when (and results
-		      (location= (tn-ref-tn results) fr0-tn))
-	     ;; call_into_c as arranged for ST(0) to contain the result.
-	     ;; Move it to XMM0.
-	     (inst fstd (ea-for-df-stack temp))
-	     (inst movsd fr0-tn (ea-for-df-stack temp))))
+	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
 	  (t
 	   ;; Setup the NPX for C; all the FP registers need to be
 	   ;; empty; pop them all.
@@ -59,22 +51,16 @@
 	   ;; To give the debugger a clue. XX not really internal-error?
 	   (note-this-location vop :internal-error)
 
-	   ;; Restore the NPX for lisp; insure no regs are empty.  But
-	   ;; we only do 7 registers here.
+	   ;; Restore the NPX for lisp; insure no regs are empty.
 	   (dotimes (i 7)
 	     (inst fldz))
-	   
-	   (cond ((and results
-		       (location= (tn-ref-tn results) fr0-tn))
-		  ;; If there's a float result, it would have been returned
-		  ;; in fr0, which is now in fr7, thanks to the fldz's above.
-		  (inst fxch fr7-tn)	; move the result back to fr0
-		  ;; Move the result into xmm0.
-		  (inst fstd (ea-for-df-stack temp))
-		  (inst movsd fr0-tn (ea-for-df-stack temp)))
-		 (t
-		  ;; Fill up the last x87 register
-		  (inst fldz)))))))
+
+	   (if (and results
+		    (location= (tn-ref-tn results) fr0-tn))
+	       ;; The return result is in fr0.
+	       (inst fxch fr7-tn) ; move the result back to fr0
+	       (inst fldz)) ; insure no regs are empty
+	   ))))
 
 (define-vop (alloc-number-stack-space)
   (:info amount)
@@ -82,10 +68,8 @@
   (:node-var node)
   (:generator 0
     (assert (location= result esp-tn))
-
     #+(or darwin linux)
     (progn
-      ;; Is this needed with sse2?
       (inst sub esp-tn 4)
       (inst fnstcw (make-ea :word :base esp-tn))
       (inst and (make-ea :word :base esp-tn) #xcff)
@@ -107,7 +91,6 @@
 	(inst add esp-tn delta)))
     #+(or darwin linux)
     (progn
-      ;; Is this needed with sse2?
       (inst sub esp-tn 4)
       (inst fnstcw (make-ea :word :base esp-tn))
       (inst and (make-ea :word :base esp-tn) #xcff)
@@ -115,4 +98,3 @@
       (inst fldcw (make-ea :word :base esp-tn))
       (inst wait)
       (inst add esp-tn 4))))
-
