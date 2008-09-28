@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.9.40.2 2008/09/28 14:56:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.9.40.3 2008/09/28 19:52:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,9 @@
   (load "vm:primtype"))
 (load "vm:move")
 (load "vm:sap")
+(if (target-featurep :sse2)
+    (load "vm:sse2-sap")
+    (load "vm:x87-sap"))
 (load "vm:system")
 (load "vm:char")
 (if (target-featurep :rt)
@@ -40,9 +43,6 @@
     (if (target-featurep :sse2)
 	(load "vm:float-sse2")
 	(load "vm:float")))
-
-(when (target-featurep :sse2)
-  (load "vm:sse2-sap"))
 
 (load "vm:memory")
 (load "vm:static-fn")

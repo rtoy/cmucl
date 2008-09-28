@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57.22.1 2008/09/26 18:56:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57.22.2 2008/09/28 19:52:39 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,13 +173,15 @@
 (when *load-stuff*
   (load (vmdir "target:assembly/support")))
 (comf (vmdir "target:compiler/move"))
-(comf (vmdir "target:compiler/float") :byte-compile *byte-compile*)
-(when (c:target-featurep :sse2)
-  (comf	(vmdir "target:compiler/float-sse2")
-	:byte-compile *byte-compile*))
+(comf (if (c:target-featurep :sse2)
+	  (vmdir "target:compiler/float-sse2")
+	  (vmdir "target:compiler/float"))
+      :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/sap") :byte-compile *byte-compile*)
-(when (c:target-featurep :sse2)
-  (comf (vmdir "target:compiler/sse2-sap") :byte-compile *byte-compile*))
+(comf (if (c:target-featurep :sse2)
+	  (vmdir "target:compiler/sse2-sap")
+	  (vmdir "target:compiler/x87-sap"))
+      :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/system") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/char") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/memory"))
@@ -189,8 +191,10 @@
 
 (comf (vmdir "target:compiler/debug") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/c-call") :byte-compile *byte-compile*)
-(when (c:target-featurep :sse2)
-  (comf (vmdir "target:compiler/sse2-c-call") :byte-compile *byte-compile*))
+(comf (if (c:target-featurep :sse2)
+	  (vmdir "target:compiler/sse2-c-call")
+	  (vmdir "target:compiler/x87-c-call"))
+      :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/cell"))
 (comf (vmdir "target:compiler/values") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/alloc"))
