@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.2 2008/09/27 20:15:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.3 2008/09/29 15:21:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1243,7 +1243,7 @@
     (inst and temp2 #x3f)		; Get just the flags
     (inst shl temp2 16)			; Move flags to upper 16 bits
     (inst shr temp 7)			; Move masks to low 16 bits
-    (inst and temp #xff)
+    (inst and temp #x3f)
     (inst or temp temp2)		; Put them together
 
     ;; Now get the x87 FPU bits
@@ -1274,9 +1274,9 @@
     ;; contains the exception enable bits.
     (inst mov status new)
     (inst shr status 16)		; Move status bits to low 16
-    (inst and status #x7f)		; Keep just the status flags
+    (inst and status #x3f)		; Keep just the status flags
     (inst mov flags new)
-    (inst and flags #xff)		; Get just the exception bits
+    (inst and flags #x3f)		; Get just the exception bits
     (inst xor flags #x3f)		; Invert to get masks
     (inst shl flags 7)			; Put them in the right place
     (inst or flags status)		; Combine with status
@@ -1299,6 +1299,98 @@
     DONE
    
     (move res new)))
+
+(defknown sse2-floating-point-modes () float-modes (flushable))
+(defknown ((setf sse2-floating-point-modes)) (float-modes) float-modes)
+
+;; Returns exactly the mxcsr register
+(define-vop (sse2-floating-point-modes)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate sse2-floating-point-modes)
+  (:policy :fast-safe)
+  (:temporary (:sc unsigned-stack) cw-stack)
+  (:generator 8
+    (inst stmxcsr cw-stack)
+    (inst mov res cw-stack)))
+
+;; Set mxcsr exactly to whatever is given
+(define-vop (set-sse2-floating-point-modes)
+  (:args (new :scs (unsigned-reg) :to :result :target res))
+  (:arg-types unsigned-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate (setf sse2-floating-point-modes))
+  (:policy :fast-safe)
+  (:temporary (:sc unsigned-stack) cw-stack)
+  (:temporary (:sc unsigned-reg) temp)
+  (:generator 8
+    ;; The high 16 bits are reserved and will cause a segfault if set,
+    ;; so clear out those bits.
+    (inst mov temp new)
+    (inst and temp #xffff)
+    (inst mov cw-stack temp)
+    (inst ldmxcsr cw-stack)
+    (inst mov res new)))
+
+(defknown x87-floating-point-modes () float-modes (flushable))
+(defknown ((setf x87-floating-point-modes)) (float-modes)
+  float-modes)
+
+(define-vop (x87-floating-point-modes)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate x87-floating-point-modes)
+  (:policy :fast-safe)
+  (:temporary (:sc unsigned-stack) cw-stack)
+  (:temporary (:sc unsigned-reg :offset eax-offset) sw-reg)
+  (:generator 8
+   (inst fnstsw)
+   (inst fnstcw cw-stack)
+   (inst and sw-reg #xff)  ; mask exception flags
+   (inst shl sw-reg 16)
+   (inst byte #x66)  ; operand size prefix
+   (inst or sw-reg cw-stack)
+   (inst xor sw-reg #x3f)  ; invert exception mask
+   (move res sw-reg)))
+
+(define-vop (x87-set-floating-point-modes)
+  (:args (new :scs (unsigned-reg) :to :result :target res))
+  (:results (res :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:result-types unsigned-num)
+  (:translate (setf x87-floating-point-modes))
+  (:policy :fast-safe)
+  (:temporary (:sc unsigned-stack) cw-stack)
+  (:temporary (:sc byte-reg :offset al-offset) sw-reg)
+  (:temporary (:sc unsigned-reg :offset ecx-offset) old)
+  (:generator 6
+   (inst mov cw-stack new)
+   (inst xor cw-stack #x3f)  ; invert exception mask
+   (inst fnstsw)
+   (inst fldcw cw-stack)  ; always update the control word
+   (inst mov old new)
+   (inst shr old 16)
+   (inst cmp cl-tn sw-reg)  ; compare exception flags
+   (inst jmp :z DONE)  ; skip updating the status word
+   (inst sub esp-tn 28)
+   (inst fstenv (make-ea :dword :base esp-tn))
+   (inst mov (make-ea :byte :base esp-tn :disp 4) cl-tn)
+   (inst fldenv (make-ea :dword :base esp-tn))
+   (inst add esp-tn 28)
+   DONE
+   (move res new)))
+
+
+(defun sse2-floating-point-modes ()
+  (sse2-floating-point-modes))
+(defun (setf sse2-floating-point-modes) (new)
+  (setf (sse2-floating-point-modes) new))
+
+(defun x87-floating-point-modes ()
+  (x87-floating-point-modes))
+(defun (setf x87-floating-point-modes) (new)
+  (setf (x87-floating-point-modes) new))
 
 
 ;;;; Complex float VOPs
