@@ -72,12 +72,12 @@
 (load "vm:primtype")
 (load "vm:move")
 (load "vm:sap")
-(when (and t (target-featurep :sse2))
+(when (target-featurep :sse2)
   (load "vm:sse2-sap"))
 
 (load "vm:system")
 (load "vm:char")
-(if (and t (target-featurep :sse2))
+(if (target-featurep :sse2)
     (load "vm:float-sse2")
     (load "vm:float"))
 
@@ -88,16 +88,19 @@
 (load "vm:subprim")
 (load "vm:debug")
 (load "vm:c-call")
-(when (and t (target-featurep :sse2))
+(when (target-featurep :sse2)
   (load "vm:sse2-c-call"))
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
 (load "vm:nlx")
 (load "vm:values")
+;; These need to be loaded before array because array wants to use
+;; some vops as templates.
+(load (if (target-featurep :sse2)
+	  "vm:sse2-array"
+	  "vm:x87-array"))
 (load "vm:array")
-(when (and t (target-featurep :sse2))
-  (load "vm:sse2-array"))
 (load "vm:pred")
 (load "vm:type-vops")
 
