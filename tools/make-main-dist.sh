@@ -32,8 +32,11 @@ VERSION=$2
 ARCH=$3
 OS=$4
 
+# Core file to look for.  For x86, we have two core files to include.
+CORE=lisp.core
 case $ARCH in
-	x86*)		FASL=x86f ;;
+	x86*)		FASL=x86f
+                        CORE="lisp-*.core" ;;
 	sparc*)		FASL=sparcf ;;
 	alpha*)		FASL=axpf ;;
 	ppc*)		FASL=ppcf ;;
@@ -69,7 +72,7 @@ fi
 echo Cleaning $DESTDIR
 [ -d $DESTDIR ] && rm -rf $DESTDIR
 
-set -x
+# set -x
 echo Installing main components
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/bin
 install -d ${GROUP} ${OWNER} -m 0755 $DESTDIR/doc/cmucl
@@ -85,7 +88,7 @@ then
     install ${GROUP} ${OWNER} -m 0755 src/tools/linker.sh $DESTDIR/lib/cmucl/lib/
     install ${GROUP} ${OWNER} -m 0755 src/tools/$SCRIPT-cmucl-linker-script $DESTDIR/lib/cmucl/lib/
 fi
-for corefile in $TARGET/lisp/lisp*.core
+for corefile in $TARGET/lisp/$CORE
 do
   install ${GROUP} ${OWNER} -m 0644 $corefile $DESTDIR/lib/cmucl/lib/
 done
