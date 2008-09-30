@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.3 2008/09/29 15:21:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.4 2008/09/30 12:41:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1303,16 +1303,20 @@
 (defknown sse2-floating-point-modes () float-modes (flushable))
 (defknown ((setf sse2-floating-point-modes)) (float-modes) float-modes)
 
-;; Returns exactly the mxcsr register
+;; Returns exactly the mxcsr register, except the masks are flipped
+;; because we want exception enable flags, not masks.
 (define-vop (sse2-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:translate sse2-floating-point-modes)
   (:policy :fast-safe)
   (:temporary (:sc unsigned-stack) cw-stack)
+  (:temporary (:sc unsigned-reg) temp)
   (:generator 8
     (inst stmxcsr cw-stack)
-    (inst mov res cw-stack)))
+    (inst mov temp cw-stack)
+    (inst xor temp (ash #x3f 7))
+    (inst mov res temp)))
 
 ;; Set mxcsr exactly to whatever is given
 (define-vop (set-sse2-floating-point-modes)
@@ -1329,6 +1333,7 @@
     ;; so clear out those bits.
     (inst mov temp new)
     (inst and temp #xffff)
+    (inst xor temp (ash #x3f 7))	; Convert enables to masks
     (inst mov cw-stack temp)
     (inst ldmxcsr cw-stack)
     (inst mov res new)))
