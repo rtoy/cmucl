@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20.2.2 2008/09/27 20:15:30 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20.2.3 2008/09/30 15:12:15 rtoy Exp $
  *
  */
 
@@ -272,19 +272,19 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     /*
      * Add in the SSE2 part
      */
-    {
-	unsigned long mxcsr;
+    if (arch_support_sse2()) {
+        unsigned long mxcsr;
 
-	mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
-	DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
+        mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
+        DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
 
-	/*
-	 * The low 6 bits are the status bits.  Grab them and or them
-	 * into the status part of the result.  Do the same for the
-	 * conrol (mask) part.
-	 */
-	modes |= (mxcsr & 0x3f) << 16;
-	modes |= (mxcsr >> 7) & 0x3f;
+        /*
+         * The low 6 bits are the status bits.  Grab them and or them
+         * into the status part of the result.  Do the same for the
+         * conrol (mask) part.
+         */
+        modes |= (mxcsr & 0x3f) << 16;
+        modes |= (mxcsr >> 7) & 0x3f;
     }
 #endif
 

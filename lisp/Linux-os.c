@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.6 2008/09/30 15:00:29 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.7 2008/09/30 15:12:15 rtoy Exp $
  *
  */
 
@@ -44,10 +44,6 @@
 #include <dlfcn.h>
 #include <assert.h>
 
-#ifdef FEATURE_SSE2
-/* So we can get at mxcsr in a sigcontext */
-/*#include <asm/sigcontext.h>*/
-#endif
 #include "validate.h"
 size_t os_vm_page_size;
 
@@ -135,7 +131,7 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     /*
      * Add in the SSE2 part
      */
-    {
+    if (arch_support_sse2()) {
         struct _fpstate *fpstate;
 	unsigned long mxcsr;
 
@@ -177,7 +173,7 @@ os_set_sigcontext_fpu_modes(ucontext_t *scp, unsigned int modes)
         /*
          * Add in the SSE2 part
          */
-        {
+        if (arch_support_sse2()) {
             struct _fpstate *fpstate;
             unsigned long mxcsr;
 
@@ -476,7 +472,7 @@ restore_fpu(ucontext_t *context)
         DPRINTF(0, (stderr, "restore_fpu:  cw = %08x\n", cw));
 	__asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
 #ifdef FEATURE_SSE2
-        {
+        if (arch_support_sse2()) {
             struct _fpstate *fpstate;
             unsigned int mxcsr;
             
