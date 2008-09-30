@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.4 2008/09/27 20:15:30 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.38.2.5 2008/09/30 14:40:08 rtoy Exp $
  *
  */
 
@@ -157,6 +157,43 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     }
 #endif
     modes ^= 0x3f;
+    return modes;
+}
+unsigned long
+os_set_sigcontext_fpu_modes(ucontext_t *scp, unsigned int modes)
+{
+    unsigned short cw, sw;
+
+    DPRINTF(1, (stderr, "SET FPU modes: %08x\n", modes));
+    
+    cw = modes & 0xff;
+    sw = (modes >> 16) & 0xff;
+    
+    if (scp->uc_mcontext.fpregs != NULL) {
+        scp->uc_mcontext.fpregs->cw = cw ^ 0x3f;
+	scp->uc_mcontext.fpregs->sw = sw;
+
+#ifdef FEATURE_SSE2
+        /*
+         * Add in the SSE2 part
+         */
+        {
+            struct _fpstate *fpstate;
+            unsigned long mxcsr;
+
+            fpstate = (struct _fpstate*) scp->uc_mcontext.fpregs;
+            if (fpstate->magic != 0xffff) {
+                mxcsr = (cw & 0x3f) << 7;
+                mxcsr |= (sw & 0x3f);
+                DPRINTF(1, (stderr, "Set SSE2 modes = %08lx\n", mxcsr));
+                mxcsr ^= (0x3f << 7);
+                DPRINTF(1, (stderr, "Set SSE2 modes = %08lx (raw)\n", mxcsr));
+                fpstate->mxcsr = mxcsr;
+            }
+
+        }
+#endif
+    }
     return modes;
 }
 #endif
@@ -436,7 +473,21 @@ restore_fpu(ucontext_t *context)
 {
     if (context->uc_mcontext.fpregs) {
 	short cw = context->uc_mcontext.fpregs->cw;
+        DPRINTF(1, (stderr, "restore_fpu:  cw = %08x\n", cw));
 	__asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
+#ifdef FEATURE_SSE2
+        {
+            struct _fpstate *fpstate;
+            unsigned int mxcsr;
+            
+            fpstate = (struct _fpstate*) context->uc_mcontext.fpregs;
+            if (fpstate->magic != 0xffff) {
+                mxcsr = fpstate->mxcsr;
+                DPRINTF(1, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+                __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
+            }
+        }
+#endif        
     }
 }
 

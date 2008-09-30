@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32 2008/01/03 11:41:51 cshapiro Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.1 2008/09/30 14:40:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,6 +164,7 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
+#-sse2
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal code)
 	   (type system-area-pointer scp))
@@ -188,6 +189,58 @@
       (setf (sigcontext-floating-point-modes
 	     (alien:sap-alien scp (* unix:sigcontext)))
 	    new-modes))
+    (multiple-value-bind (fop operands)
+	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
+	  (if (fboundp sym)
+	      (funcall sym (alien:sap-alien scp (* unix:sigcontext)) modes)
+	      (values nil nil)))
+      (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))
+	     (error 'division-by-zero
+		    :operation fop
+		    :operands operands))
+	    ((not (zerop (logand float-invalid-trap-bit traps)))
+	     (error 'floating-point-invalid-operation
+		    :operation fop
+		    :operands operands))
+	    ((not (zerop (logand float-overflow-trap-bit traps)))
+	     (error 'floating-point-overflow
+		    :operation fop
+		    :operands operands))
+	    ((not (zerop (logand float-underflow-trap-bit traps)))
+	     (error 'floating-point-underflow
+		    :operation fop
+		    :operands operands))
+	    ((not (zerop (logand float-inexact-trap-bit traps)))
+	     (error 'floating-point-inexact
+		    :operation fop
+		    :operands operands))
+	    (t
+	     (error "SIGFPE with no exceptions currently enabled?"))))))
+
+#+sse2
+(defun sigfpe-handler (signal code scp)
+  (declare (ignore signal code)
+	   (type system-area-pointer scp))
+  (let* ((modes (sigcontext-floating-point-modes
+		 (alien:sap-alien scp (* unix:sigcontext))))
+	 (traps (logand (ldb float-exceptions-byte modes)
+			(ldb float-traps-byte modes))))
+    (format t "modes = ~8x~%" modes)
+    (format t "traps = ~8x~%" traps)
+
+    ;; Clear out the status for any enabled traps
+
+    (let* ((new-modes modes)
+	   (new-sticky-bits (logandc2 (ldb float-sticky-bits new-modes)
+				      traps)))
+      (format t "sticky = ~8x~%" (ldb float-sticky-bits new-modes))
+      (format t "new    = ~8x~%" new-sticky-bits)
+      (setf (ldb float-sticky-bits new-modes) new-sticky-bits)
+      (format t "new modes = ~8x~%" new-modes)
+      (setf (sigcontext-floating-point-modes
+	     (alien:sap-alien scp (* unix:sigcontext)))
+	    new-modes))
+    
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
 	  (if (fboundp sym)
