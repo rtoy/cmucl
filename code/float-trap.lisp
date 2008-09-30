@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.1 2008/09/30 14:40:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.2 2008/09/30 15:00:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -225,21 +225,18 @@
 		 (alien:sap-alien scp (* unix:sigcontext))))
 	 (traps (logand (ldb float-exceptions-byte modes)
 			(ldb float-traps-byte modes))))
-    (format t "modes = ~8x~%" modes)
-    (format t "traps = ~8x~%" traps)
-
-    ;; Clear out the status for any enabled traps
-
+    ;; Clear out the status for any enabled traps.  With SSE2, if the
+    ;; current exception is enabled, the next FP instruction will
+    ;; cause the exception to be enabled again.  Hence, we need to
+    ;; clear out the exceptions that we are handling here.
     (let* ((new-modes modes)
-	   (new-sticky-bits (logandc2 (ldb float-sticky-bits new-modes)
+	   (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
 				      traps)))
-      (format t "sticky = ~8x~%" (ldb float-sticky-bits new-modes))
-      (format t "new    = ~8x~%" new-sticky-bits)
-      (setf (ldb float-sticky-bits new-modes) new-sticky-bits)
-      (format t "new modes = ~8x~%" new-modes)
-      (setf (sigcontext-floating-point-modes
-	     (alien:sap-alien scp (* unix:sigcontext)))
-	    new-modes))
+      (setf (ldb float-exceptions-byte new-modes) new-exceptions)
+      ;; XXX: This seems not right.  Shouldn't we be setting the modes
+      ;; in the sigcontext instead?  This however seems to do what we
+      ;; want.
+      (setf (vm:floating-point-modes) new-modes))
     
     (multiple-value-bind (fop operands)
 	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
