@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.9.40.4 2008/09/28 20:51:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.9.40.5 2008/09/30 17:49:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,9 +31,10 @@
   (load "vm:primtype"))
 (load "vm:move")
 (load "vm:sap")
-(if (target-featurep :sse2)
-    (load "vm:sse2-sap")
-    (load "vm:x87-sap"))
+(when (target-featurep :x86)
+  (if (target-featurep :sse2)
+      (load "vm:sse2-sap")
+      (load "vm:x87-sap")))
 (load "vm:system")
 (load "vm:char")
 (if (target-featurep :rt)
@@ -51,9 +52,10 @@
 (load "vm:subprim")
 (load "vm:debug")
 (load "vm:c-call")
-(if (target-featurep :sse2)
-    (load "vm:sse2-c-call")
-    (load "vm:x87-c-call"))
+(when (target-featurep :x86)
+  (if (target-featurep :sse2)
+      (load "vm:sse2-c-call")
+      (load "vm:x87-c-call")))
 (load "vm:print")
 (load "vm:alloc")
 (load "vm:call")
@@ -61,9 +63,10 @@
 (load "vm:values")
 ;; These need to be loaded before array because array wants to use
 ;; some vops as templates.
-(load (if (target-featurep :sse2)
-	  "vm:sse2-array"
-	  "vm:x87-array"))
+(when (target-featurep :x86)
+  (load (if (target-featurep :sse2)
+	    "vm:sse2-array"
+	    "vm:x87-array")))
 (load "vm:array")
 (load "vm:pred")
 (load "vm:type-vops")

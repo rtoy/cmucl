@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57.22.3 2008/09/28 20:51:28 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.57.22.4 2008/09/30 17:49:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,10 +178,11 @@
 	  (vmdir "target:compiler/float"))
       :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/sap") :byte-compile *byte-compile*)
-(comf (if (c:target-featurep :sse2)
-	  (vmdir "target:compiler/sse2-sap")
-	  (vmdir "target:compiler/x87-sap"))
-      :byte-compile *byte-compile*)
+(when (c:target-featurep :x86)
+  (comf (if (c:target-featurep :sse2)
+	    (vmdir "target:compiler/sse2-sap")
+	    (vmdir "target:compiler/x87-sap"))
+	:byte-compile *byte-compile*))
 (comf (vmdir "target:compiler/system") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/char") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/memory"))
@@ -191,10 +192,11 @@
 
 (comf (vmdir "target:compiler/debug") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/c-call") :byte-compile *byte-compile*)
-(comf (if (c:target-featurep :sse2)
-	  (vmdir "target:compiler/sse2-c-call")
-	  (vmdir "target:compiler/x87-c-call"))
-      :byte-compile *byte-compile*)
+(when (c:target-featurep :x86)
+  (comf (if (c:target-featurep :sse2)
+	    (vmdir "target:compiler/sse2-c-call")
+	    (vmdir "target:compiler/x87-c-call"))
+	:byte-compile *byte-compile*))
 (comf (vmdir "target:compiler/cell"))
 (comf (vmdir "target:compiler/values") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/alloc"))
@@ -204,10 +206,11 @@
 
 ;; Must come before array.lisp because array.lisp wants to use some
 ;; vops as templates.
-(comf (vmdir (if (c:target-featurep :sse2)
-		 "target:compiler/sse2-array"
-		 "target:compiler/x87-array"))
-      :byte-compile *byte-compile*)
+(when (c:target-featurep :x86)
+  (comf (vmdir (if (c:target-featurep :sse2)
+		   "target:compiler/sse2-array"
+		   "target:compiler/x87-array"))
+	:byte-compile *byte-compile*))
 
 (comf (vmdir "target:compiler/array") :byte-compile *byte-compile*)
 
