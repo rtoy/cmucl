@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.1 2008/09/26 21:47:09 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.2 2008/09/30 17:50:11 rtoy Exp $
  *
  */
 
@@ -526,11 +526,8 @@ main(int argc, char *argv[], char *envp[])
 #endif
     }
     
-#ifdef i386
     default_core = arch_init(fpu_mode);
-#else    
-    default_core = arch_init();
-#endif
+
     if (default_core == NULL)
 	default_core = "lisp.core";
 
