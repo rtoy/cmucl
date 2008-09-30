@@ -114,7 +114,7 @@ buildit ()
 
     if [ "$ENABLE" = "yes" ]; 
     then
-	$TOOLDIR/clean-target.sh $TARGET
+	$TOOLDIR/clean-target.sh $CLEAN_FLAGS $TARGET
 	$TIMER $TOOLDIR/build-world.sh $TARGET $OLDLISP $BOOT
 	(cd $TARGET/lisp; $MAKE)
 	if [ "$BUILD_WORLD2" = "yes" ];
@@ -182,6 +182,7 @@ BUILD_WORLD2=
 buildit
 
 TARGET=$BASE-4
+CLEAN_FLAGS="-K all"
 OLDLISP="${BASE}-3/lisp/lisp -noinit $FPU_MODE"
 ENABLE=$ENABLE4
 
