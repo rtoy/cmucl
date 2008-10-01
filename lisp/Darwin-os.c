@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20.2.4 2008/10/01 03:47:36 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20.2.5 2008/10/01 11:54:35 rtoy Exp $
  *
  */
 
@@ -300,6 +300,7 @@ unsigned long
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
     unsigned long modes;
+    unsigned long mxcsr;
     unsigned short cw, sw;
 
     /*
@@ -313,25 +314,18 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
      * 6 bits, ignoring everything except the exception masks and the
      * exception flags.
      */
-    modes = ((cw & 0x3f) << 7) | (cw & 0x3f);
+    modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
     
     DPRINTF(0, (stderr, "FPU modes = %08x (sw =  %4x, cw = %4x)\n",
 		modes, (unsigned int) sw, (unsigned int) cw));
-#ifdef FEATURE_SSE2
-    /*
-     * Add in the SSE2 part
-     */
-    if (arch_support_sse2()) {
-        unsigned long mxcsr;
 
-        mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
-        DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
+    mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
+    DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
 
-        modes |= mxcsr;
-    }
-#endif
+    modes |= mxcsr;
 
     DPRINTF(0, (stderr, "modes pre mask = %08x\n", modes));
+
     /* Convert exception mask to exception enable */
     modes ^= (0x3f << 7);
     DPRINTF(0, (stderr, "Finale = %08x\n", modes));
@@ -343,9 +337,16 @@ void
 restore_fpu(ucontext_t *scp)
 {
     unsigned short cw;
+    unsigned int mxcsr;
+
     memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
+    DPRINTF(0, (stderr, "restore_fpu: FPU cw = 0x%x\n", cw));
     __asm__ __volatile__ ("fclex");
     __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
+            
+    mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
+    DPRINTF(0, (stderr, "restore_fpu:  mxcsr (raw) = %04x\n", mxcsr));
+    __asm__ __volatile__ ("ldmxcsr %0" :: "m" (*&mxcsr));
 }
 #endif
 
