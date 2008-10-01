@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20.2.5 2008/10/01 11:54:35 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.20.2.6 2008/10/01 23:24:23 rtoy Exp $
  *
  */
 
@@ -252,50 +252,6 @@ os_sigcontext_fpu_reg(ucontext_t *scp, int index)
     return NULL;
 }
 
-#if 0
-unsigned long
-os_sigcontext_fpu_modes(ucontext_t *scp)
-{
-    unsigned long modes;
-    unsigned short cw, sw;
-
-    /*
-     * Get the status word and the control word.  The status word is
-     * in the high 16 bits and the control is in the low 16 bits.
-     */
-    memcpy(&cw, &scp->uc_mcontext->__fs.__fpu_fcw, sizeof(cw));
-    memcpy(&sw, &scp->uc_mcontext->__fs.__fpu_fsw, sizeof(sw));
-    modes = (sw & 0xff) << 16 | cw;
-
-    DPRINTF(0, (stderr, "FPU modes = %08x (sw =  %4x, cw = %4x)\n",
-		modes, (unsigned int) sw, (unsigned int) cw));
-#ifdef FEATURE_SSE2
-    /*
-     * Add in the SSE2 part
-     */
-    if (arch_support_sse2()) {
-        unsigned long mxcsr;
-
-        mxcsr = scp->uc_mcontext->__fs.__fpu_mxcsr;
-        DPRINTF(0, (stderr, "SSE2 modes = %08x\n", mxcsr));
-
-        /*
-         * The low 6 bits are the status bits.  Grab them and or them
-         * into the status part of the result.  Do the same for the
-         * conrol (mask) part.
-         */
-        modes |= (mxcsr & 0x3f) << 16;
-        modes |= (mxcsr >> 7) & 0x3f;
-    }
-#endif
-
-    DPRINTF(0, (stderr, "modes pre mask = %08x\n", modes));
-    /* Convert exception mask to exception enable */
-    modes ^= 0x3f;
-    DPRINTF(0, (stderr, "Finale = %08x\n", modes));
-    return modes;
-}
-#else
 unsigned long
 os_sigcontext_fpu_modes(ucontext_t *scp)
 {
@@ -310,8 +266,8 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     memcpy(&sw, &scp->uc_mcontext->__fs.__fpu_fsw, sizeof(sw));
 
     /*
-     * Put the cw in the upper 8 bits and the status word in the lower
-     * 6 bits, ignoring everything except the exception masks and the
+     * Put the cw in the upper bits and the status word in the lower 6
+     * bits, ignoring everything except the exception masks and the
      * exception flags.
      */
     modes = ((cw & 0x3f) << 7) | (sw & 0x3f);
@@ -331,7 +287,6 @@ os_sigcontext_fpu_modes(ucontext_t *scp)
     DPRINTF(0, (stderr, "Finale = %08x\n", modes));
     return modes;
 }
-#endif
 
 void
 restore_fpu(ucontext_t *scp)
