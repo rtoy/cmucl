@@ -46,7 +46,6 @@ done
 GREP="cat"
 CORE='-o -name "*.core"'
 
-set -x
 if [ -n "$KEEP" ]; then
     case $KEEP in
       lib) GREP='grep -v \(gray-streams\|gray-compat\|simple-streams\|iodefs\|external-formats\|clx\|hemlock\|clm\)-library' ;;
