@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.85 2006/01/03 18:09:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.85.16.1 2008/10/01 20:05:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -908,7 +908,7 @@
      (multiple-value-prog1
       (progn ,@forms)
       ;; Wait for any float exceptions
-      #+x86 (float-wait))))
+      #+x87 (float-wait))))
 
 
 ;;;; Condition definitions.
@@ -1172,8 +1172,8 @@
 					    (go ,(car annotated-case)))))
 			       annotated-cases)
 		    (return-from ,tag
-		      #-x86 ,form
-		      #+x86 (multiple-value-prog1 ,form
+		      #-x87 ,form
+		      #+x87 (multiple-value-prog1 ,form
 			      ;; Need to catch FP errors here!
 			      (kernel::float-wait))))
 		  ,@(mapcan
