@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34.6.2 2008/10/01 03:47:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34.6.3 2008/10/01 17:20:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,11 +174,15 @@
 
 #+sse2
 (progn
+;; These contants match the format of the MXCSR register
 (defconstant float-rounding-mode     (byte 2 13))
 (defconstant float-sticky-bits       (byte 6  0))
 (defconstant float-traps-byte        (byte 6  7))
 (defconstant float-exceptions-byte   (byte 6  0))
-(defconstant float-fast-bit 0)
+;; SSE2 has a flush-to-zero flag, which we use as the fast bit.  Some
+;; versions of sse2 also have a denormals-are-zeros flag.  We don't
+;; currently use denormals-are-zeroes for anything.
+(defconstant float-fast-bit (ash 1 15))
 )
 ); eval-when
 
