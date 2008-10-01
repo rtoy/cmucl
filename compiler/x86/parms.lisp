@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34.6.1 2008/09/28 12:48:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.34.6.2 2008/10/01 03:47:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,11 +163,23 @@
 (defconstant float-round-to-positive 2)
 (defconstant float-round-to-zero     3)
 
+#-sse2
+(progn
 (defconstant float-rounding-mode   (byte 2 10))
 (defconstant float-sticky-bits     (byte 6 16))
 (defconstant float-traps-byte      (byte 6  0))
 (defconstant float-exceptions-byte (byte 6 16))
 (defconstant float-fast-bit 0) ; No fast mode on x86
+)
+
+#+sse2
+(progn
+(defconstant float-rounding-mode     (byte 2 13))
+(defconstant float-sticky-bits       (byte 6  0))
+(defconstant float-traps-byte        (byte 6  7))
+(defconstant float-exceptions-byte   (byte 6  0))
+(defconstant float-fast-bit 0)
+)
 ); eval-when
 
 

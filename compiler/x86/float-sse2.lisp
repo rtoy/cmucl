@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.4 2008/09/30 12:41:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.5 2008/10/01 03:47:36 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1228,7 +1228,7 @@
 (define-vop (floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
-  (:translate floating-point-modes)
+  #+nil (:translate floating-point-modes)
   (:policy :fast-safe)
   (:temporary (:sc unsigned-stack) cw-stack)
   (:temporary (:sc unsigned-reg) temp)
@@ -1263,7 +1263,7 @@
   (:results (res :scs (unsigned-reg)))
   (:arg-types unsigned-num)
   (:result-types unsigned-num)
-  (:translate (setf floating-point-modes))
+  #+nil (:translate (setf floating-point-modes))
   (:policy :fast-safe)
   (:temporary (:sc unsigned-stack) cw-stack)
   (:temporary (:sc unsigned-reg :offset ecx-offset) status)
@@ -1318,7 +1318,8 @@
     (inst xor temp (ash #x3f 7))
     (inst mov res temp)))
 
-;; Set mxcsr exactly to whatever is given
+;; Set mxcsr exactly to whatever is given, except we invert the
+;; exception enable flags to make them match the exception mask flags.
 (define-vop (set-sse2-floating-point-modes)
   (:args (new :scs (unsigned-reg) :to :result :target res))
   (:arg-types unsigned-num)
@@ -1342,6 +1343,8 @@
 (defknown ((setf x87-floating-point-modes)) (float-modes)
   float-modes)
 
+;; Extract the control and status words from the FPU.  The low 16 bits
+;; contain the control word, and the high 16 bits contain the status.
 (define-vop (x87-floating-point-modes)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
@@ -1359,6 +1362,8 @@
    (inst xor sw-reg #x3f)  ; invert exception mask
    (move res sw-reg)))
 
+;; Set the control and status words from the FPU.  The low 16 bits
+;; contain the control word, and the high 16 bits contain the status.
 (define-vop (x87-set-floating-point-modes)
   (:args (new :scs (unsigned-reg) :to :result :target res))
   (:results (res :scs (unsigned-reg)))
