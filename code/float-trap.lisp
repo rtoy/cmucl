@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.3 2008/10/01 03:47:35 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.4 2008/10/01 13:49:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,28 +63,25 @@
 #+sse2
 (progn
   (defun floating-point-modes ()
+    ;; Combine the modes from the FPU and SSE2 units.  Since the sse
+    ;; mode contains all of the common information we want, we massage
+    ;; the x87-modes to match, and then OR the x87 and sse2 modes
+    ;; together.  Note: We ignore the rounding control bits from the
+    ;; FPU and only use the SSE2 rounding control bits.
     (let* ((x87-modes (vm::x87-floating-point-modes))
 	   (sse-modes (vm::sse2-floating-point-modes))
 	   (final-mode (logior sse-modes
 			       (ash (logand #x3f x87-modes) 7) ; control
 			       (logand #x3f (ash x87-modes -16)))))
 
-      ;; Note: We ignore the rounding control bits from the FPU and
-      ;; only use the SSE2 rounding control bits.
-      (format t "GET: x87-mode:~15T#x~8X~%" x87-modes)
-      (format t "GET: sse-mode:~15T#x~8X~%" sse-modes)
-      (format t "GET: final:~15T#x~8X~%" final-mode)
-      ;; Combine the modes.  Since the sse mode contains all of the
-      ;; common information we want, we massage the x87-modes to
-      ;; match, and then or the x87 and sse2 modes together.
       final-mode))
   (defun (setf floating-point-modes) (new-mode)
+    ;; Set the floating point modes for both X87 and SSE2.  This
+    ;; include the rounding control bits.
     (let* ((rc (ldb float-rounding-mode new-mode))
 	   (x87-modes (logior (ash (logand #x3f new-mode) 16)
 			      (ash rc 8)
 			      (logand #x3f (ash new-mode -7)))))
-      (format t "SET: new-mode:~15T#x~8X~%" new-mode)
-      (format t "SET: x87-mode:~15T#x~8X~%" x87-modes)
       (setf (vm::sse2-floating-point-modes) new-mode)
       (setf (vm::x87-floating-point-modes) x87-modes))
     new-mode)
@@ -268,11 +265,6 @@
       ;; XXX: This seems not right.  Shouldn't we be setting the modes
       ;; in the sigcontext instead?  This however seems to do what we
       ;; want.
-      (format t "sigfpe:  modes = #X~8X~%" modes)
-      (format t "sigfpe:  excp  = #x~8X~%" (ldb float-exceptions-byte new-modes))
-      (format t "sigfpe:  traps = #X~8X~%" traps)
-      (format t "sigfpe:  new x = #X~8X~%" new-exceptions)
-      (format t "sigfpe:  new   = #X~8X~%" new-modes)
       (setf (vm:floating-point-modes) new-modes))
     
     (multiple-value-bind (fop operands)
