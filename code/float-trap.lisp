@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.4 2008/10/01 13:49:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.5 2008/10/01 16:27:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -193,7 +193,6 @@
 ;;;
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
-#-sse2
 (defun sigfpe-handler (signal code scp)
   (declare (ignore signal code)
 	   (type system-area-pointer scp))
@@ -218,49 +217,14 @@
       (setf (sigcontext-floating-point-modes
 	     (alien:sap-alien scp (* unix:sigcontext)))
 	    new-modes))
-    (multiple-value-bind (fop operands)
-	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
-	  (if (fboundp sym)
-	      (funcall sym (alien:sap-alien scp (* unix:sigcontext)) modes)
-	      (values nil nil)))
-      (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))
-	     (error 'division-by-zero
-		    :operation fop
-		    :operands operands))
-	    ((not (zerop (logand float-invalid-trap-bit traps)))
-	     (error 'floating-point-invalid-operation
-		    :operation fop
-		    :operands operands))
-	    ((not (zerop (logand float-overflow-trap-bit traps)))
-	     (error 'floating-point-overflow
-		    :operation fop
-		    :operands operands))
-	    ((not (zerop (logand float-underflow-trap-bit traps)))
-	     (error 'floating-point-underflow
-		    :operation fop
-		    :operands operands))
-	    ((not (zerop (logand float-inexact-trap-bit traps)))
-	     (error 'floating-point-inexact
-		    :operation fop
-		    :operands operands))
-	    (t
-	     (error "SIGFPE with no exceptions currently enabled?"))))))
-
-#+sse2
-(defun sigfpe-handler (signal code scp)
-  (declare (ignore signal code)
-	   (type system-area-pointer scp))
-  (let* ((modes (sigcontext-floating-point-modes
-		 (alien:sap-alien scp (* unix:sigcontext))))
-	 (traps (logand (ldb float-exceptions-byte modes)
-			(ldb float-traps-byte modes))))
-    ;; Clear out the status for any enabled traps.  With SSE2, if the
-    ;; current exception is enabled, the next FP instruction will
-    ;; cause the exception to be enabled again.  Hence, we need to
-    ;; clear out the exceptions that we are handling here.
+    #+sse2
     (let* ((new-modes modes)
 	   (new-exceptions (logandc2 (ldb float-exceptions-byte new-modes)
-				      traps)))
+				     traps)))
+      ;; Clear out the status for any enabled traps.  With SSE2, if
+      ;; the current exception is enabled, the next FP instruction
+      ;; will cause the exception to be signaled again.  Hence, we
+      ;; need to clear out the exceptions that we are handling here.
       (setf (ldb float-exceptions-byte new-modes) new-exceptions)
       ;; XXX: This seems not right.  Shouldn't we be setting the modes
       ;; in the sigcontext instead?  This however seems to do what we
@@ -294,7 +258,6 @@
 		    :operands operands))
 	    (t
 	     (error "SIGFPE with no exceptions currently enabled?"))))))
-
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.1 2008/09/26 18:56:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2 2008/10/01 16:27:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,7 @@
   :scheduler-p nil)
 
 (disassem:set-disassem-params :instruction-alignment 8
-			      :opcode-column-width #-sse2 8 #+sse2 10)
+			      :opcode-column-width 10)
 
 
 
@@ -553,8 +553,6 @@
 	  (t				; (= mod #b10)
 	   (list r/m (disassem:read-signed-suffix 32 dstate))))))
 
-;;; A register field that can be extended by REX.R.
-#+sse2
 (defun prefilter-reg-r (value dstate)
   (declare (type reg value)
            (type disassem:disassem-state dstate))
@@ -595,19 +593,16 @@
     (:double 64)))
 
 ;;; Return true if THING is an XMM register TN.
-#+sse2
 (defun xmm-register-p (thing)
   (and (tn-p thing)
        (eq (sb-name (sc-sb (tn-sc thing))) 'float-registers)))
 
-#+sse2
 (defun print-xmmreg (value stream dstate)
   (declare (type xmmreg value)
            (type stream stream)
            (ignore dstate))
   (format stream "XMM~d" value))
 
-#+sse2
 (defun print-xmmreg/mem (value stream dstate)
   (declare (type (or list xmmreg) value)
            (type stream stream)
@@ -618,7 +613,6 @@
 
 ;; Same as print-xmmreg/mem, but prints an explicit size indicator for
 ;; memory references.
-#+sse2
 (defun print-sized-xmmreg/mem (value stream dstate)
   (declare (type (or list xmmreg) value)
            (type stream stream)
@@ -3004,8 +2998,6 @@
    (emit-byte segment #b11101101)))
 
 
-#+sse2
-(progn
 ;;; The XMM registers XMM0 - XMM7.
 (deftype xmmreg () '(unsigned-byte 3))
 
@@ -3238,6 +3230,3 @@
    (emit-byte segment #x0f)
    (emit-byte segment #xae)
    (emit-ea segment dst 3)))
-
-
-) ; end sse2

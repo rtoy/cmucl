@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.5 2008/10/01 03:47:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.6 2008/10/01 16:27:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1218,87 +1218,6 @@
 ;;;; Float mode hackery:
 
 (deftype float-modes () '(unsigned-byte 24))
-(defknown floating-point-modes () float-modes (flushable))
-(defknown ((setf floating-point-modes)) (float-modes)
-  float-modes)
-
-;; We should check *both* the sse2 and x87 FPUs. While lisp code only
-;; uses the sse2 FPU, other code (such as libc) may use the x87 FPU.
-
-(define-vop (floating-point-modes)
-  (:results (res :scs (unsigned-reg)))
-  (:result-types unsigned-num)
-  #+nil (:translate floating-point-modes)
-  (:policy :fast-safe)
-  (:temporary (:sc unsigned-stack) cw-stack)
-  (:temporary (:sc unsigned-reg) temp)
-  (:temporary (:sc unsigned-reg :offset eax-offset) sw-reg)
-  (:temporary (:sc unsigned-reg) temp2)
-  (:generator 8
-    (inst stmxcsr cw-stack)
-    (inst mov temp cw-stack)
-    ;; The flags go to the high 16 bits of the result, and the masks
-    ;; go to the low 16 bits.
-    (inst mov temp2 temp)
-    (inst and temp2 #x3f)		; Get just the flags
-    (inst shl temp2 16)			; Move flags to upper 16 bits
-    (inst shr temp 7)			; Move masks to low 16 bits
-    (inst and temp #x3f)
-    (inst or temp temp2)		; Put them together
-
-    ;; Now get the x87 FPU bits
-    (inst fnstsw)
-    (inst fnstcw cw-stack)
-    (inst and sw-reg #xff)  ; mask exception flags
-    (inst shl sw-reg 16)
-    (inst byte #x66)  ; operand size prefix
-    (inst or sw-reg cw-stack)
-
-    (inst or temp sw-reg)
-    (inst xor temp #x3f)		; Invert exception masks 
-    (inst mov res temp)))
-
-(define-vop (set-floating-point-modes)
-  (:args (new :scs (unsigned-reg) :to :result :target res))
-  (:results (res :scs (unsigned-reg)))
-  (:arg-types unsigned-num)
-  (:result-types unsigned-num)
-  #+nil (:translate (setf floating-point-modes))
-  (:policy :fast-safe)
-  (:temporary (:sc unsigned-stack) cw-stack)
-  (:temporary (:sc unsigned-reg :offset ecx-offset) status)
-  (:temporary (:sc unsigned-reg) flags)
-  (:temporary (:sc byte-reg :offset al-offset) sw-reg)
-  (:generator 6
-    ;; The high 16 bits contains the status bits, the low 16 bits
-    ;; contains the exception enable bits.
-    (inst mov status new)
-    (inst shr status 16)		; Move status bits to low 16
-    (inst and status #x3f)		; Keep just the status flags
-    (inst mov flags new)
-    (inst and flags #x3f)		; Get just the exception bits
-    (inst xor flags #x3f)		; Invert to get masks
-    (inst shl flags 7)			; Put them in the right place
-    (inst or flags status)		; Combine with status
-    (inst mov cw-stack flags)
-    (inst ldmxcsr cw-stack)
-
-    (inst mov cw-stack new)
-    (inst xor cw-stack #x3f)  ; invert exception mask
-    (inst fnstsw)
-    (inst fldcw cw-stack)  ; always update the control word
-    (inst mov status new)
-    (inst shr status 16)
-    (inst cmp cl-tn sw-reg)  ; compare exception flags
-    (inst jmp :z DONE)  ; skip updating the status word
-    (inst sub esp-tn 28)
-    (inst fstenv (make-ea :dword :base esp-tn))
-    (inst mov (make-ea :byte :base esp-tn :disp 4) cl-tn)
-    (inst fldenv (make-ea :dword :base esp-tn))
-    (inst add esp-tn 28)
-    DONE
-   
-    (move res new)))
 
 (defknown sse2-floating-point-modes () float-modes (flushable))
 (defknown ((setf sse2-floating-point-modes)) (float-modes) float-modes)
@@ -1355,11 +1274,11 @@
   (:generator 8
    (inst fnstsw)
    (inst fnstcw cw-stack)
-   (inst and sw-reg #xff)  ; mask exception flags
+   (inst and sw-reg #xff)		; mask exception flags
    (inst shl sw-reg 16)
-   (inst byte #x66)  ; operand size prefix
+   (inst byte #x66)			; operand size prefix
    (inst or sw-reg cw-stack)
-   (inst xor sw-reg #x3f)  ; invert exception mask
+   (inst xor sw-reg #x3f)		; invert exception mask
    (move res sw-reg)))
 
 ;; Set the control and status words from the FPU.  The low 16 bits
