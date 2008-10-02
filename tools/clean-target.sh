@@ -55,7 +55,6 @@ if [ -n "$KEEP" ]; then
     esac
 fi
 	  
-echo GREP = $GREP
 find $TARGET -name "*.bytef" -o -name "*.lbytef" -o -name "*.assem" -o \
 	-name "*.axpf" -o \
 	-name "*.hpf" -o \
