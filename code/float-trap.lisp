@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.5 2008/10/01 16:27:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.6 2008/10/02 13:41:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,6 +76,7 @@
 
       final-mode))
   (defun (setf floating-point-modes) (new-mode)
+    (declare (type (unsigned-byte 24) new-mode))
     ;; Set the floating point modes for both X87 and SSE2.  This
     ;; include the rounding control bits.
     (let* ((rc (ldb float-rounding-mode new-mode))
