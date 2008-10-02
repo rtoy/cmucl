@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.6 2008/10/01 16:27:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.7 2008/10/02 16:11:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1219,6 +1219,27 @@
 
 (deftype float-modes () '(unsigned-byte 24))
 
+;; For the record, here is the format of the MXCSR register.
+;;
+;; Bit
+;; 31-16      Reserved
+;; 15         Flush to zero
+;; 14-13      Rounding control
+;; 12         precision mask (inexact)
+;; 11         underflow mask
+;; 10         overflow mask
+;;  9         divide-by-zero mask
+;;  8         denormal operation mask
+;;  7         invalid operation mask
+;;  6         denormals-are-zeros
+;;  5         precision flag (inexact)
+;;  4         underflow flag
+;;  3         overflow flag
+;;  2         divide-by-zero flag
+;;  1         denormal operation flag
+;;  0         invalid operation flag
+;;
+;; See below for rounding control
 (defknown sse2-floating-point-modes () float-modes (flushable))
 (defknown ((setf sse2-floating-point-modes)) (float-modes) float-modes)
 
@@ -1257,6 +1278,56 @@
     (inst mov cw-stack temp)
     (inst ldmxcsr cw-stack)
     (inst mov res new)))
+
+;; For the record here is the format of the x87 control and status
+;; words:
+;;
+;; Status word:
+;;
+;; Bit
+;; 15         FPU Busy
+;; 14         Condition code C3
+;; 13-11      top of stack
+;; 10         Condition code C2
+;;  9         Condition code C1
+;;  8         Condition code C0
+;;  7         Error summary status
+;;  6         Stack fault
+;;  5         precision flag (inexact)
+;;  4         underflow flag
+;;  3         overflow flag
+;;  2         divide-by-zero flag
+;;  1         denormal operation flag
+;;  0         invalid operation flag
+;;
+;; Control word
+;;
+;; Bit
+;; 15-13      Reserved
+;; 12         Infinity control
+;; 11-10      Rounding control
+;;  9-8       Precision control
+;;  7-6       Reserved
+;;  5         precision mask (inexact)
+;;  4         underflow mask
+;;  3         overflow mask
+;;  2         divide-by-zero mask
+;;  1         denormal operation mask
+;;  0         invalid operation mask
+;;
+;; Round control:
+;;
+;; 00   nearest
+;; 01   negative infinity
+;; 10   positive infinity
+;; 11   zero (truncate)
+;;
+;; Precision control
+;;
+;; 00   single precision (24 bits)
+;; 01   reserved
+;; 10   double precision (53 bits)
+;; 11   double extended precision (64 bits)
 
 (defknown x87-floating-point-modes () float-modes (flushable))
 (defknown ((setf x87-floating-point-modes)) (float-modes)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.6 2008/10/02 13:41:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.32.8.7 2008/10/02 16:11:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,9 +80,12 @@
     ;; Set the floating point modes for both X87 and SSE2.  This
     ;; include the rounding control bits.
     (let* ((rc (ldb float-rounding-mode new-mode))
-	   (x87-modes (logior (ash (logand #x3f new-mode) 16)
-			      (ash rc 8)
-			      (logand #x3f (ash new-mode -7)))))
+	   (x87-modes
+	    (logior (ash (logand #x3f new-mode) 16)
+		    (ash rc 10)
+		    (logand #x3f (ash new-mode -7))
+		    ;; Set precision control to be 64-bit, always.
+		    (ash 3 8))))
       (setf (vm::sse2-floating-point-modes) new-mode)
       (setf (vm::x87-floating-point-modes) x87-modes))
     new-mode)
