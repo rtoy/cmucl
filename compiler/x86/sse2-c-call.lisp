@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.1.2.3 2008/09/28 14:56:35 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.1.2.4 2008/10/03 00:54:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,7 +83,7 @@
   (:generator 0
     (assert (location= result esp-tn))
 
-    #+(or darwin linux)
+    #+(or linux)
     (progn
       ;; Is this needed with sse2?
       (inst sub esp-tn 4)
@@ -105,7 +105,7 @@
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst add esp-tn delta)))
-    #+(or darwin linux)
+    #+(or linux)
     (progn
       ;; Is this needed with sse2?
       (inst sub esp-tn 4)
