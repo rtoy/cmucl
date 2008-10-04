@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.11 2007/07/06 08:04:39 cshapiro Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.11.8.1 2008/10/04 14:27:51 rtoy Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -75,7 +75,7 @@ process_directory(int fd, long *ptr, int count)
 }
 
 lispobj
-load_core_file(char *file)
+load_core_file(char *file, int* fpu_type)
 {
     int fd = open(file, O_RDONLY), count;
 
@@ -124,6 +124,11 @@ load_core_file(char *file)
 		  fprintf(stderr,
 			  "WARNING: startup-code version (%d) different from core version (%ld).\nYou may lose big.\n",
 			  version, *ptr);
+	      }
+	      if (len == 4) {
+		  *fpu_type = ptr[1];
+	      } else {
+		  *fpu_type = 0;
 	      }
 	      break;
 

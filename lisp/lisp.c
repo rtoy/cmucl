@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.2 2008/09/30 17:50:11 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.3 2008/10/04 14:27:51 rtoy Exp $
  *
  */
 
@@ -37,6 +37,9 @@
 #endif
 
 
+#ifdef i386
+extern int use_sse2;
+#endif
 
 /* SIGINT handler that invokes the monitor. */
 
@@ -407,7 +410,7 @@ main(int argc, char *argv[], char *envp[])
     char *default_core;
     char *lib = NULL;
     char *cmucllib = NULL;
-
+    int fpu_type;
     boolean monitor;
     lispobj initial_function = 0;
 
@@ -512,7 +515,7 @@ main(int argc, char *argv[], char *envp[])
                 fprintf(stderr, "-fpu must be followed by the FPU type:  auto, x87, sse2\n");
                 exit(1);
             }
-            
+
             if (strcmp(str, "auto") == 0) {
                 fpu_mode = AUTO;
             } else if (strcmp(str, "x87") == 0) {
@@ -525,14 +528,14 @@ main(int argc, char *argv[], char *envp[])
         }
 #endif
     }
-    
+
     default_core = arch_init(fpu_mode);
 
     if (default_core == NULL)
 	default_core = "lisp.core";
 
     printf("default core = %s\n", default_core);
-    
+
     os_init();
 #if defined FEATURE_EXECUTABLE
     if (builtin_image_flag != 0)
@@ -585,13 +588,13 @@ main(int argc, char *argv[], char *envp[])
 	libvar = getenv("CMUCLLIB");
 	if (libvar != NULL) {
 	    cmucllib = strdup(libvar);
-	} else 
+	} else
 #if defined FEATURE_EXECUTABLE
 	    /* The following doesn't make sense for executables.
 	       They need to use the saved library path from the
 	       lisp from which they were dumped. */
 	    if (builtin_image_flag == 0)
-#endif	    
+#endif
 	{
 	    char *newlib = NULL;
 
@@ -668,10 +671,18 @@ main(int argc, char *argv[], char *envp[])
 	current_dynamic_space_free_pointer = (lispobj *) allocation_pointer;
 #endif
     } else {
-	initial_function = load_core_file(core);
+	initial_function = load_core_file(core, &fpu_type);
     }
 #else
-    initial_function = load_core_file(core);
+    initial_function = load_core_file(core, &fpu_type);
+#endif
+
+#ifdef i386
+    if ((fpu_type == 1) && !arch_support_sse2()) {
+	fprintf(stderr, "Core uses SSE2, but CPU doesn't support SSE2.  Exiting\n");
+	exit(1);
+    }
+    use_sse2 = fpu_type;
 #endif
 
 #if defined LINKAGE_TABLE
@@ -750,7 +761,7 @@ main(int argc, char *argv[], char *envp[])
      * *lisp-environment-list*, *cmucl-lib*, and *cmucl-core-path*.
      */
     verify_gc();
-#endif    
+#endif
     if (monitor) {
 	while (1) {
 	    ldb_monitor();

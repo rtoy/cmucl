@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.4 2008/09/28 12:44:22 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.29.6.5 2008/10/04 14:27:51 rtoy Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -46,6 +46,12 @@ GNAME(x):			;
 #define	align_16byte	4	
 #endif			
 
+	.globl GNAME(use_sse2)
+	.data
+	.align 4
+GNAME(use_sse2):
+	.long	0
+		
 	.text
 	.globl	GNAME(foreign_function_call_active)
 	
@@ -65,6 +71,8 @@ FUNCDEF(call_into_c)
 /* Save the return lisp address in ebx */	
 	popl	%ebx
 
+	cmp	$0, GNAME(use_sse2)
+	jne	skip_npx_setup
 /* Setup the NPX for C */
 	fstp	%st(0)
 	fstp	%st(0)
@@ -74,6 +82,8 @@ FUNCDEF(call_into_c)
 	fstp	%st(0)
 	fstp	%st(0)
 	fstp	%st(0)
+	
+skip_npx_setup:		
 	call	*%eax		# normal callout using Lisp stack
 
 	movl	%eax,%ecx	# remember integer return value
@@ -85,6 +95,8 @@ FUNCDEF(call_into_c)
 	cmpl	$0x4100,%eax
 	jne	Lfp_rtn_value
 
+	cmp	$0, GNAME(use_sse2)
+	jne	skip_fldz
 /* The return value is in eax, or eax,edx? */
 /* Setup the NPX stack for lisp */
 	fldz			# insure no regs are empty
@@ -95,7 +107,7 @@ FUNCDEF(call_into_c)
 	fldz
 	fldz
 	fldz
-no_fldz:	
+skip_fldz:	
 /* Restore the return value */
 	movl	%ecx,%eax	# maybe return value
 
@@ -104,6 +116,8 @@ no_fldz:
 	jmp	*%ebx
 
 Lfp_rtn_value:
+	cmp	$0, GNAME(use_sse2)
+	jne	skip_fldz_rtn
 /* The return result is in st(0) */
 /* Setup the NPX stack for lisp, placing the result in st(0) */
 	fldz			# insure no regs are empty
@@ -114,7 +128,8 @@ Lfp_rtn_value:
 	fldz
 	fldz
 	fxch	%st(7)		# move the result back to st(0)
-
+skip_fldz_rtn:
+	
 /* Don't need to restore eax as the result is in st(0) */
 
 	movl	$0,GNAME(foreign_function_call_active)
@@ -132,6 +147,8 @@ FUNCDEF(call_into_lisp)
 	pushl	%ebp		# save old frame pointer
 	movl	%esp,%ebp	# establish new frame
 
+	cmp	$0, GNAME(use_sse2)
+	jne	skip_npx_save
 /* Save the NPX state */
 	fwait			# Catch any pending NPX exceptions.
 	subl	$108,%esp	# Make room for the NPX state.
@@ -156,7 +173,7 @@ FUNCDEF(call_into_lisp)
 	fldz
 	fldz
 	fldz
-			
+skip_npx_save:				
 /* Save C regs: ebx esi edi */
 	pushl	%ebx
 	pushl	%esi
@@ -223,10 +240,13 @@ Ldone:
 	popl	%esi
 	popl	%ebx
 
+	cmp	$0, GNAME(use_sse2)
+	jne	skip_npx_restore
 /* Restore the NPX state */
 	frstor  (%esp)
 	addl	$108, %esp
-	
+skip_npx_restore:	
+		
 	popl	%ebp		# c-sp
 	movl	%edx,%eax	# c-val
 	ret
