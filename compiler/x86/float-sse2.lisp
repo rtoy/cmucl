@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.7 2008/10/02 16:11:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8 2008/10/04 02:48:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -589,10 +589,9 @@
 		       (if (= (tn-offset fp) esp-offset)
 			   (let* ((offset (* (tn-offset y) word-bytes))
 				  (ea (make-ea :dword :base fp :disp offset)))
-			     (with-tn@fp-top(x)
-				,@(ecase format
-					 (:single '((inst movss ea x)))
-					 (:double '((inst movsd ea x))))))
+			     ,@(ecase format
+				      (:single '((inst movss ea x)))
+				      (:double '((inst movsd ea x)))))
 			   (let ((ea (make-ea
 				      :dword :base fp
 				      :disp (- (* (+ (tn-offset y)
@@ -601,10 +600,9 @@
 							    (:double 2)
 							    (:long 3)))
 						  vm:word-bytes)))))
-			     (with-tn@fp-top(x)
-			       ,@(ecase format 
-				    (:single '((inst movss ea x)))
-				    (:double '((inst movsd ea x)))))))))))
+			     ,@(ecase format 
+				      (:single '((inst movss ea x)))
+				      (:double '((inst movsd ea x))))))))))
 		(define-move-vop ,name :move-argument
 		  (,sc descriptor-reg) (,sc)))))
   (frob move-single-float-argument single-reg single-stack :single)
