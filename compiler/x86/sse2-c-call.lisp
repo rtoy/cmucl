@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.1.2.5 2008/10/04 14:27:51 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.1.2.6 2008/10/05 03:14:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,26 +40,14 @@
   (:ignore args ecx edx)
   (:guard (backend-featurep :sse2))
   (:generator 0 
-    (cond ((policy node (> space speed))
-	   (move eax function)
-	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign))
-	   (when (and results
-		      (location= (tn-ref-tn results) fr0-tn))
-	     ;; call_into_c as arranged for ST(0) to contain the result.
-	     ;; Move it to XMM0.
-	     (inst fstpd (ea-for-df-stack temp))
-	     (inst movsd fr0-tn (ea-for-df-stack temp))))
-	  (t
-	   (inst call function)
-	   ;; To give the debugger a clue. XX not really internal-error?
-	   (note-this-location vop :internal-error)
-
-	   (when (and results
-		      (location= (tn-ref-tn results) fr0-tn))
-	     ;; If there's a float result, it would have been returned
-	     ;; in fr0.  Move the result into xmm0.
-	     (inst fstpd (ea-for-df-stack temp))
-	     (inst movsd fr0-tn (ea-for-df-stack temp)))))))
+    (inst call function)
+    ;; To give the debugger a clue. XX not really internal-error?
+    (note-this-location vop :internal-error)
+    (when (and results
+	       (location= (tn-ref-tn results) fr0-tn))
+      ;; The ABI says the float result is in ST(0). Move it to XMM0.
+      (inst fstpd (ea-for-df-stack temp))
+      (inst movsd fr0-tn (ea-for-df-stack temp)))))
 
 (define-vop (alloc-number-stack-space)
   (:info amount)
