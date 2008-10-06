@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.19.8.1 2008/10/04 14:27:51 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/save.c,v 1.19.8.2 2008/10/06 16:32:31 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -148,14 +148,20 @@ save(char *filename, lispobj init_function)
     putw(CORE_MAGIC, file);
 
     putw(CORE_VERSION, file);
+#ifdef i386
     putw(4, file);
+#else
+    putw(3, file);
+#endif
     putw(version, file);
+#ifdef i386
 #ifdef FEATURE_SSE2
     putw(1, file);
 #else
     putw(0, file);
 #endif    
-
+#endif
+    
     putw(CORE_NDIRECTORY, file);
     putw((5 * 3) + 2, file);
 
