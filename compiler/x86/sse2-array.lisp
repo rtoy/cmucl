@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-array.lisp,v 1.1.2.2 2008/09/28 20:51:28 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-array.lisp,v 1.1.2.2.2.1 2008/10/07 13:29:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -273,16 +273,21 @@
   (:result-types complex-double-float)
   (:guard (backend-featurep :sse2))
   (:generator 7
-    (let ((real-tn (complex-double-reg-real-tn value)))
-      (inst movsd real-tn (make-ea :dword :base object :index index :scale 4
+    #+(or)
+    (progn
+      (let ((real-tn (complex-double-reg-real-tn value)))
+	(inst movsd real-tn (make-ea :dword :base object :index index :scale 4
+				     :disp (- (* vm:vector-data-offset vm:word-bytes)
+					      vm:other-pointer-type))))
+      (let ((imag-tn (complex-double-reg-imag-tn value)))
+	(inst movsd imag-tn
+	      (make-ea :dword :base object :index index :scale 4
+		       :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				   8)
+				vm:other-pointer-type)))))
+    (inst movupd value (make-ea :dword :base object :index index :scale 4
 				   :disp (- (* vm:vector-data-offset vm:word-bytes)
-					    vm:other-pointer-type))))
-    (let ((imag-tn (complex-double-reg-imag-tn value)))
-      (inst movsd imag-tn
-	    (make-ea :dword :base object :index index :scale 4
-		     :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-				 8)
-			      vm:other-pointer-type))))))
+					    vm:other-pointer-type)))))
 
 (define-vop (data-vector-ref-c/simple-array-complex-double-float)
   (:note "inline array access")
@@ -295,18 +300,24 @@
   (:result-types complex-double-float)
   (:guard (backend-featurep :sse2))
   (:generator 6
-    (let ((real-tn (complex-double-reg-real-tn value)))
-      (inst movsd real-tn
-	    (make-ea :dword :base object
-		     :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-				 (* 16 index))
-			      vm:other-pointer-type))))
-    (let ((imag-tn (complex-double-reg-imag-tn value)))
-      (inst movsd imag-tn
-	    (make-ea :dword :base object
-		     :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-				 (* 16 index) 8)
-			      vm:other-pointer-type))))))
+    #+(or)
+    (progn
+      (let ((real-tn (complex-double-reg-real-tn value)))
+	(inst movsd real-tn
+	      (make-ea :dword :base object
+		       :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				   (* 16 index))
+				vm:other-pointer-type))))
+      (let ((imag-tn (complex-double-reg-imag-tn value)))
+	(inst movsd imag-tn
+	      (make-ea :dword :base object
+		       :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				   (* 16 index) 8)
+				vm:other-pointer-type)))))
+    (inst movupd value (make-ea :dword :base object
+				:disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					    (* 16 index))
+					 vm:other-pointer-type)))))
 
 (define-vop (data-vector-set/simple-array-complex-double-float)
   (:note "inline array store")
@@ -321,22 +332,30 @@
   (:result-types complex-double-float)
   (:guard (backend-featurep :sse2))
   (:generator 20
-    (let ((value-real (complex-double-reg-real-tn value))
-	  (result-real (complex-double-reg-real-tn result)))
-      (inst movsd (make-ea :dword :base object :index index :scale 4
-			   :disp (- (* vm:vector-data-offset
-				       vm:word-bytes)
-				    vm:other-pointer-type))
-	    value-real)
-      (inst movsd result-real value-real))
-    (let ((value-imag (complex-double-reg-imag-tn value))
-	  (result-imag (complex-double-reg-imag-tn result)))
-      (inst movsd (make-ea :dword :base object :index index :scale 4
-			   :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-				       8)
-				    vm:other-pointer-type))
-	    value-imag)
-      (inst movsd result-imag value-imag))))
+    #+(or)	      
+    (progn
+      (let ((value-real (complex-double-reg-real-tn value))
+	    (result-real (complex-double-reg-real-tn result)))
+	(inst movsd (make-ea :dword :base object :index index :scale 4
+			     :disp (- (* vm:vector-data-offset
+					 vm:word-bytes)
+				      vm:other-pointer-type))
+	      value-real)
+	(inst movsd result-real value-real))
+      (let ((value-imag (complex-double-reg-imag-tn value))
+	    (result-imag (complex-double-reg-imag-tn result)))
+	(inst movsd (make-ea :dword :base object :index index :scale 4
+			     :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					 8)
+				      vm:other-pointer-type))
+	      value-imag)
+	(inst movsd result-imag value-imag)))
+    (inst movupd (make-ea :dword :base object :index index :scale 4
+			     :disp (- (* vm:vector-data-offset
+					 vm:word-bytes)
+				      vm:other-pointer-type))
+	  value)
+    (inst movapd result value)))
 
 (define-vop (data-vector-set-c/simple-array-complex-double-float)
   (:note "inline array store")
@@ -351,23 +370,32 @@
   (:result-types complex-double-float)
   (:guard (backend-featurep :sse2))
   (:generator 19
-    (let ((value-real (complex-double-reg-real-tn value))
-	  (result-real (complex-double-reg-real-tn result)))
-      (inst movsd (make-ea :dword :base object
-			   :disp (- (+ (* vm:vector-data-offset
-					  vm:word-bytes)
-				       (* 16 index))
-				    vm:other-pointer-type))
-	    value-real)
-      (inst movsd result-real value-real))
-    (let ((value-imag (complex-double-reg-imag-tn value))
-	  (result-imag (complex-double-reg-imag-tn result)))
-      (inst movsd (make-ea :dword :base object
-			   :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-				       (* 16 index) 8)
-				    vm:other-pointer-type))
-	    value-imag)
-      (inst movsd result-imag value-imag))))
+    #+(or)	      
+    (progn
+      (let ((value-real (complex-double-reg-real-tn value))
+	    (result-real (complex-double-reg-real-tn result)))
+	(inst movsd (make-ea :dword :base object
+			     :disp (- (+ (* vm:vector-data-offset
+					    vm:word-bytes)
+					 (* 16 index))
+				      vm:other-pointer-type))
+	      value-real)
+	(inst movsd result-real value-real))
+      (let ((value-imag (complex-double-reg-imag-tn value))
+	    (result-imag (complex-double-reg-imag-tn result)))
+	(inst movsd (make-ea :dword :base object
+			     :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					 (* 16 index) 8)
+				      vm:other-pointer-type))
+	      value-imag)
+	(inst movsd result-imag value-imag)))
+    (inst movupd (make-ea :dword :base object
+			  :disp (- (+ (* vm:vector-data-offset
+					 vm:word-bytes)
+				      (* 16 index))
+				   vm:other-pointer-type))
+	  value)
+    (inst movapd result value)))
 
 
 #+double-double

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8 2008/10/04 02:48:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.1 2008/10/07 13:29:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,6 +240,7 @@
   (let ((imag-tn (complex-single-reg-imag-tn x)))
     (inst movss (ea-for-csf-imag-stack y) imag-tn)))
 
+#+(or)
 (define-move-function (load-complex-double 2) (vop x y)
   ((complex-double-stack) (complex-double-reg))
   (let ((real-tn (complex-double-reg-real-tn y)))
@@ -247,12 +248,21 @@
   (let ((imag-tn (complex-double-reg-imag-tn y)))
     (inst movsd imag-tn (ea-for-cdf-imag-stack x))))
 
+(define-move-function (load-complex-double 2) (vop x y)
+  ((complex-double-stack) (complex-double-reg))
+  (inst movupd (ea-for-cdf-real-stack x) y))
+
+#+(or)
 (define-move-function (store-complex-double 2) (vop x y)
   ((complex-double-reg) (complex-double-stack))
   (let ((real-tn (complex-double-reg-real-tn x)))
     (inst movsd (ea-for-cdf-real-stack y) real-tn))
   (let ((imag-tn (complex-double-reg-imag-tn x)))
     (inst movsd (ea-for-cdf-imag-stack y) imag-tn)))
+
+(define-move-function (store-complex-double 2) (vop x y)
+  ((complex-double-reg) (complex-double-stack))
+  (inst movupd (ea-for-cdf-real-stack y) x))
 
 #+long-float
 (define-move-function (load-complex-long 2) (vop x y)
@@ -362,13 +372,23 @@
 (define-move-vop complex-single-move :move
   (complex-single-reg) (complex-single-reg))
 
+#+(or)
 (define-vop (complex-double-move complex-float-move)
   (:args (x :scs (complex-double-reg)
 	    :target y :load-if (not (location= x y))))
   (:results (y :scs (complex-double-reg) :load-if (not (location= x y)))))
+(define-vop (complex-double-move complex-float-move)
+  (:args (x :scs (complex-double-reg)
+	    :target y :load-if (not (location= x y))))
+  (:results (y :scs (complex-double-reg) :load-if (not (location= x y))))
+  (:generator 0
+    (unless (location= x y)
+      (inst movapd y x))))
+
 (define-move-vop complex-double-move :move
   (complex-double-reg) (complex-double-reg))
 
+    
 #+long-float
 (define-vop (complex-long-move complex-float-move)
   (:args (x :scs (complex-long-reg)
@@ -483,6 +503,7 @@
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
 
+#+(or)
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
@@ -495,6 +516,16 @@
 	 (inst movsd (ea-for-cdf-real-desc y) real-tn))
        (let ((imag-tn (complex-double-reg-imag-tn x)))
 	 (inst movsd (ea-for-cdf-imag-desc y) imag-tn)))))
+(define-vop (move-from-complex-double)
+  (:args (x :scs (complex-double-reg) :to :save))
+  (:results (y :scs (descriptor-reg)))
+  (:node-var node)
+  (:note "complex float to pointer coercion")
+  (:generator 13
+     (with-fixed-allocation (y vm:complex-double-float-type
+			       vm:complex-double-float-size node)
+       (inst movupd (ea-for-cdf-real-desc y) x))))
+
 (define-move-vop move-from-complex-double :move
   (complex-double-reg) (descriptor-reg))
 
@@ -561,8 +592,19 @@
 			  #+long-float
 			  (:long '((inst fldl (ea-for-clf-imag-desc x))))))))
 		(define-move-vop ,name :move (descriptor-reg) (,sc)))))
-	  (frob move-to-complex-single complex-single-reg :single)
-	  (frob move-to-complex-double complex-double-reg :double))
+  (frob move-to-complex-single complex-single-reg :single)
+  #+(or)
+  (frob move-to-complex-double complex-double-reg :double))
+
+(define-vop (move-to-complex-double)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (complex-double-reg)))
+  (:note "pointer to complex float coercion")
+  (:generator 2
+    (inst movupd (ea-for-cdf-real-desc x) y)))
+
+(define-move-vop move-to-complex-double :move
+  (descriptor-reg) (complex-double-reg))
 
 
 ;;;
@@ -646,8 +688,26 @@
 		  (,sc descriptor-reg) (,sc)))))
   (frob move-complex-single-float-argument
 	complex-single-reg complex-single-stack :single)
+  #+(or)
   (frob move-complex-double-float-argument
 	complex-double-reg complex-double-stack :double))
+
+(define-vop (move-complex-double-float-argument)
+  (:args (x :scs (complex-double-reg) :target y)
+	 (fp :scs (any-reg)
+	     :load-if (not (sc-is y complex-double-reg))))
+  (:results (y))
+  (:note "complex float argument move")
+  (:generator 3
+    (sc-case y
+      (complex-double-reg
+       (unless (location= x y)
+	 (inst movapd y x)))
+      (complex-double-stack
+       (inst movupd (ea-for-csf-real-stack y fp) x)))))
+
+(define-move-vop move-complex-double-float-argument :move-argument
+  (complex-double-reg descriptor-reg) (complex-double-reg))
 
 #+double-double
 (define-vop (move-complex-double-double-float-argument)
@@ -1418,6 +1478,7 @@
 	 (inst movss (ea-for-csf-real-stack r) real))
        (inst movss (ea-for-csf-imag-stack r) imag)))))
 
+#+(or)
 (define-vop (make-complex-double-float)
   (:translate complex)
   (:args (real :scs (double-reg) :target r
@@ -1441,6 +1502,30 @@
       (complex-double-stack
        (unless (location= real r)
 	 (inst movsd (ea-for-cdf-real-stack r) real))
+       (inst movsd (ea-for-cdf-imag-stack r) imag)))))
+
+(define-vop (make-complex-double-float)
+  (:translate complex)
+  (:args (real :scs (double-reg)
+	       :load-if (not (location= real r)))
+	 (imag :scs (double-reg) :to :save))
+  (:arg-types double-float double-float)
+  (:results (r :scs (complex-double-reg) :from (:argument 0)
+	       :load-if (not (sc-is r complex-double-stack))))
+  (:result-types complex-double-float)
+  (:temporary (:sc complex-double-reg) temp)
+  (:note "inline complex double-float creation")
+  (:policy :fast-safe)
+  (:generator 5
+    (sc-case r
+      (complex-double-reg
+       ;; Move the imag part to both the low and high parts of temp
+       (inst movddup temp imag)
+       ;; Move the real part the low part of temp.  The high part is untouched.
+       (inst movsd temp real)
+       (inst movapd r temp))
+      (complex-double-stack
+       (inst movsd (ea-for-cdf-real-stack r) real)
        (inst movsd (ea-for-cdf-imag-stack r) imag)))))
 
 (define-vop (complex-float-value)
@@ -1492,6 +1577,7 @@
   (:note "complex float realpart")
   (:variant 0))
 
+#+(or)
 (define-vop (realpart/complex-double-float complex-float-value)
   (:translate realpart)
   (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)
@@ -1501,6 +1587,22 @@
   (:result-types double-float)
   (:note "complex float realpart")
   (:variant 0))
+(define-vop (realpart/complex-double-float)
+  (:translate realpart)
+  (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)))
+  (:arg-types complex-double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:note "complex float realpart")
+  (:generator 3
+    (sc-case x
+      (complex-double-reg
+       (inst movsd r x))
+      (complex-double-stack
+       (inst movsd r (ea-for-cdf-real-stack x)))
+      (descriptor-reg
+       (inst movsd r (ea-for-cdf-real-desc x))))))
 
 (define-vop (imagpart/complex-single-float complex-float-value)
   (:translate imagpart)
@@ -1512,6 +1614,7 @@
   (:note "complex float imagpart")
   (:variant 1))
 
+#+(or)
 (define-vop (imagpart/complex-double-float complex-float-value)
   (:translate imagpart)
   (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)
@@ -1522,6 +1625,27 @@
   (:note "complex float imagpart")
   (:variant 1))
 
+(define-vop (imagpart/complex-double-float)
+  (:translate imagpart)
+  (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)))
+  (:arg-types complex-double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:temporary (:sc complex-double-reg) temp)
+  (:policy :fast-safe)
+  (:note "complex float imagpart")
+  (:generator 3
+    (sc-case x
+      (complex-double-reg
+       (inst movapd temp x)
+       ;; Put the high part of x (the imaginary part) to the low part
+       ;; of r.  We ignore the high part of r.
+       (inst unpckhpd temp x)
+       (inst movsd r temp))
+      (complex-double-stack
+       (inst movsd r (ea-for-cdf-imag-stack x)))
+      (descriptor-reg
+       (inst movsd r (ea-for-cdf-imag-desc x))))))
 
 ;;; A hack dummy VOP to bias the representation selection of its
 ;;; argument towards a FP register which can help avoid consing at
@@ -1843,3 +1967,16 @@
   (:variant :imag))
 
 ); progn
+
+
+(define-vop (complex-double-float/add)
+  (:translate +)
+  (:args (x :scs (complex-double-reg))
+	 (y :scs (complex-double-reg)))
+  (:arg-types complex-double-float complex-double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:generator 1
+    (inst movapd r x)
+    (inst addpd r y)))
