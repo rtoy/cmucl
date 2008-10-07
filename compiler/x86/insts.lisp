@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2 2008/10/01 16:27:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.1 2008/10/07 13:11:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3081,6 +3081,12 @@
                                 :type 'sized-xmmreg/mem)
   (reg     :field (byte 3 27)   :type 'reg))
 
+(disassem:define-instruction-format
+    (ext-xmm-xmm/mem-imm 40
+			 :include 'ext-xmm-xmm/mem
+			 :default-printer '(:name :tab reg ", " reg/mem ", " imm))
+  (imm :field (byte 8 32) :type 'imm-data))
+
 
 (defun emit-sse-inst (segment dst src prefix opcode &key operand-size)
   (when prefix
@@ -3119,12 +3125,16 @@
   (define-regular-sse-inst comiss   nil  #x2f)
   ;; arithmetic
   (define-regular-sse-inst addsd    #xf2 #x58)
+  (define-regular-sse-inst addpd    #x66 #x58)
   (define-regular-sse-inst addss    #xf3 #x58)
   (define-regular-sse-inst divsd    #xf2 #x5e)
+  (define-regular-sse-inst divpd    #x66 #x5e)
   (define-regular-sse-inst divss    #xf3 #x5e)
   (define-regular-sse-inst mulsd    #xf2 #x59)
+  (define-regular-sse-inst mulpd    #x66 #x59)
   (define-regular-sse-inst mulss    #xf3 #x59)
   (define-regular-sse-inst subsd    #xf2 #x5c)
+  (define-regular-sse-inst subpd    #x66 #x5c)
   (define-regular-sse-inst subss    #xf3 #x5c)
   (define-regular-sse-inst sqrtsd   #xf2 #x51)
   (define-regular-sse-inst sqrtss   #xf3 #x51)
@@ -3135,20 +3145,27 @@
   (define-regular-sse-inst cvtdq2ps nil  #x5b))
 
 ;;; MOVSD, MOVSS
-(macrolet ((define-movsd/ss-sse-inst (name prefix)
+(macrolet ((define-movsd/ss-sse-inst (name prefix op dst-reg dst-mem)
              `(define-instruction ,name (segment dst src)
                 (:printer ext-xmm-xmm/mem-dir ((prefix ,prefix)
-                                               (op #b0001000)))
+                                               (op ,op)))
                 (:emitter
                  (cond ((xmm-register-p dst)
-                        (emit-sse-inst segment dst src ,prefix #x10
+                        (emit-sse-inst segment dst src ,prefix ,dst-reg
                                        :operand-size :do-not-set))
                        (t
                         (assert (xmm-register-p src))
-                        (emit-sse-inst segment src dst ,prefix #x11
+                        (emit-sse-inst segment src dst ,prefix ,dst-mem
                                        :operand-size :do-not-set)))))))
-  (define-movsd/ss-sse-inst movsd #xf2)
-  (define-movsd/ss-sse-inst movss #xf3))
+  (define-movsd/ss-sse-inst movsd #xf2 #b0001000 #x10 #x11)
+  (define-movsd/ss-sse-inst movss #xf3 #b0001000 #x10 #x11)
+  ;; We don't enforce it, but movupd should be used for moving to/from
+  ;; memory because we 128-bit objects aren't aligned on 128-bit
+  ;; boundaries.
+  (define-movsd/ss-sse-inst movupd #x66 #b0001000 #x10 #x11)
+  ;; This is useful for between xmm registers.  We don't have aligned
+  ;; 128-bit objects.
+  (define-movsd/ss-sse-inst movapd #x66 #b0010100 #x28 #x29))
 
 ;;; MOVQ
 (define-instruction movq (segment dst src)
@@ -3158,6 +3175,31 @@
   (:emitter
    (emit-sse-inst segment dst src #xf3 #x7e
                          :operand-size :do-not-set)))
+
+;;; MOVDDUP
+;;;
+;;; Like movsd, but the 64-bit low part is also duplicated to the high
+;;; part of the xmm register.
+(define-instruction movddup (segment dst src)
+  (:printer ext-xmm-xmm/mem ((prefix #xf2) (op #x12)))
+  (:emitter
+   (emit-sse-inst segment dst src #xf2 #x12
+		  :operand-size :do-not-set)))
+
+;;; UNPCKHPD
+(define-instruction unpckhpd (segment dst src)
+  (:printer ext-xmm-xmm/mem ((prefix #x66) (op #x15)))
+  (:emitter
+   (emit-sse-inst segment dst src #x66 #x15
+		  :operand-size :do-not-set)))
+
+(define-instruction shufpd (segment dst src imm)
+  (:printer ext-xmm-xmm/mem-imm ((prefix #x66) (op #xc6)
+				 (imm nil :type 'imm-data)))
+  (:emitter
+   (emit-sse-inst segment dst src #x66 #xc6
+		  :operand-size :do-not-set)
+   (emit-byte segment imm)))
 
 ;;; Instructions having an XMM register as the destination operand
 ;;; and a general-purpose register or a memory location as the source
@@ -3177,6 +3219,7 @@
          (t
           (assert (xmm-register-p src))
           (emit-sse-inst segment src dst #x66 #x7e)))))
+
 
 (macrolet ((define-integer-source-sse-inst (name prefix opcode)
              `(define-instruction ,name (segment dst src)
