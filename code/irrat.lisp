@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.55 2008/01/31 19:12:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.56 2008/10/08 17:03:07 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -455,10 +455,19 @@
 				   (coerce (* pow (%cos y*pi)) rtype)
 				   (coerce (* pow (%sin y*pi)) rtype)))))))))))))
       (declare (inline real-expt))
+      ;; This is really messy and should be cleaned up.  The easiest
+      ;; way to see if we're doing what we should is the macroexpand
+      ;; the number-dispatch and check each branch.
+      ;;
+      ;; We try to apply the rule of float precision contagion (CLHS
+      ;; 12.1.4.4): the result has the same precision has the most
+      ;; precise argument.
       (number-dispatch ((base number) (power number))
-        (((foreach fixnum (or bignum ratio) (complex rational)) integer)
+        (((foreach fixnum (or bignum ratio) (complex rational))
+	  integer)
 	 (intexp base power))
-	(((foreach single-float double-float) rational)
+	(((foreach single-float double-float)
+	  rational)
 	 (real-expt base power '(dispatch-type base)))
 	(((foreach fixnum (or bignum ratio) single-float)
 	  (foreach ratio single-float))
@@ -469,24 +478,81 @@
 	((double-float single-float)
 	 (real-expt base power 'double-float))
 	#+double-double
-	(((foreach fixnum (or bignum ratio) single-float double-float double-double-float)
+	(((foreach fixnum (or bignum ratio) single-float double-float
+		   double-double-float)
 	  double-double-float)
 	 (dd-%pow (coerce base 'double-double-float) power))
 	#+double-double
 	((double-double-float
 	  (foreach fixnum (or bignum ratio) single-float double-float))
 	 (dd-%pow base (coerce power 'double-double-float)))
-	(((foreach (complex rational) (complex float)) rational)
+	(((foreach (complex rational) (complex single-float) (complex double-float)
+		   #+double-double (complex double-double-float))
+	  rational)
 	 (* (expt (abs base) power)
 	    (cis (* power (phase base)))))
-	(((foreach fixnum (or bignum ratio) single-float double-float
-		   #+double-double double-double-float)
+	#+double-double
+	((double-double-float
 	  complex)
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
+	     (exp (* power (* (log2 base 1w0) (log 2w0))))))
+	(((foreach fixnum (or bignum ratio) single-float double-float)
+	  (foreach (complex double-float)))
+	 ;; Result should have double-float accuracy.  Use log2 in
+	 ;; case the base won't fit in a double-float.
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (* (log2 base) (log 2d0))))))
+	((double-float
+	  (foreach (complex rational) (complex single-float)))
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
 	     (exp (* power (log base)))))
-	(((foreach (complex float) (complex rational))
-	  (foreach complex double-float single-float #+double-double double-double-float))
+	#+double-double
+	(((foreach fixnum (or bignum ratio) single-float double-float)
+	  (foreach (complex double-double-float)))
+	 ;; Result should have double-double-float accuracy.  Use log2
+	 ;; in case the base won't fit in a double-float.
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (* (log2 base 1w0) (log 2w0))))))
+	(((foreach fixnum (or bignum ratio) single-float)
+	  (foreach (complex single-float)))
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (log base)))))
+	(((foreach (complex rational) (complex single-float))
+	  (foreach single-float (complex single-float)))
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (log base)))))
+	(((foreach (complex rational) (complex single-float))
+	  (foreach double-float (complex double-float)))
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (log (coerce base '(complex double-float)))))))
+	#+double-double
+	(((foreach (complex rational) (complex single-float))
+	  (foreach double-double-float (complex double-double-float)))
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (log (coerce base '(complex double-double-float)))))))
+	(((foreach (complex double-float))
+	  (foreach single-float double-float (complex single-float)
+		   (complex double-float)))
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (log base)))))
+	#+double-double
+	(((foreach (complex double-float))
+	  (foreach double-double-float (complex double-double-float)))
+	 (if (and (zerop base) (plusp (realpart power)))
+	     (* base power)
+	     (exp (* power (log (coerce base '(complex double-double-float)))))))
+	#+double-double
+	(((foreach (complex double-double-float))
+	  (foreach float (complex float)))
 	 (if (and (zerop base) (plusp (realpart power)))
 	     (* base power)
 	     (exp (* power (log base)))))))))
