@@ -85,6 +85,8 @@ New in this release:
     - Fixed bug on sparc where C-c sometimes causes a segfault.  We
       now handle the case where siginfo_t is NULL, which can also
       happen on other architectures.
+    - The interpreter catches invalid EVAL-WHEN situations just like
+      the compiler, instead of silently ignoring them.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
