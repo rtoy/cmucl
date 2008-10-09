@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.1 2008/10/07 13:11:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.2 2008/10/09 16:19:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3082,10 +3082,10 @@
   (reg     :field (byte 3 27)   :type 'reg))
 
 (disassem:define-instruction-format
-    (ext-xmm-xmm/mem-imm 40
+    (ext-xmm-xmm/mem-imm 32
 			 :include 'ext-xmm-xmm/mem
 			 :default-printer '(:name :tab reg ", " reg/mem ", " imm))
-  (imm :field (byte 8 32) :type 'imm-data))
+  (imm :type 'imm-data))
 
 
 (defun emit-sse-inst (segment dst src prefix opcode &key operand-size)
@@ -3138,6 +3138,9 @@
   (define-regular-sse-inst subss    #xf3 #x5c)
   (define-regular-sse-inst sqrtsd   #xf2 #x51)
   (define-regular-sse-inst sqrtss   #xf3 #x51)
+  #+sse3
+  (define-regular-sse-inst addsubpd #x66 #xd0)
+  
   ;; conversion
   (define-regular-sse-inst cvtsd2ss #xf2 #x5a)
   (define-regular-sse-inst cvtss2sd #xf3 #x5a)
@@ -3187,16 +3190,42 @@
 		  :operand-size :do-not-set)))
 
 ;;; UNPCKHPD
+;;;
+;;; Unpack and interleave
+;;;
+;;; dst[63:0] = dst[127:64];
+;;; dst[127:64] = src[127:64];
 (define-instruction unpckhpd (segment dst src)
   (:printer ext-xmm-xmm/mem ((prefix #x66) (op #x15)))
   (:emitter
+   (assert (xmm-register-p src))
    (emit-sse-inst segment dst src #x66 #x15
 		  :operand-size :do-not-set)))
 
+;;; SHUFPD
+;;;
+;;; Shuffle packed double floats.  Basically, the low part of dst is
+;;; from either the high or low part of dst.  The high part of dst is
+;;; from either the low or high part of src.
+;;;
+;;; if imm[0] = 0
+;;;   then dst[63:0] = dst[63:0]
+;;;   else dst[63:0] = dst[127:64]
+;;;
+;;; if imm[1] = 0
+;;;   then dst[127:64] = src[63:0];
+;;;   else dst[127:64] = src[127:64];
+;;;
+;;; To swap high and low parts, use shufpd r r 1.
 (define-instruction shufpd (segment dst src imm)
   (:printer ext-xmm-xmm/mem-imm ((prefix #x66) (op #xc6)
 				 (imm nil :type 'imm-data)))
   (:emitter
+   ;; Don't support 128-bit memory access
+   (assert (xmm-register-p src))
+   ;; The immediate value must be zero every except for the least two
+   ;; bits.
+   (assert (zerop (logandc2 imm #x3)))
    (emit-sse-inst segment dst src #x66 #xc6
 		  :operand-size :do-not-set)
    (emit-byte segment imm)))
