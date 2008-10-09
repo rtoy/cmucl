@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.3 2008/10/09 17:40:44 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.4 2008/10/09 19:10:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3147,7 +3147,19 @@
   (define-regular-sse-inst cvtsd2ss #xf2 #x5a)
   (define-regular-sse-inst cvtss2sd #xf3 #x5a)
   (define-regular-sse-inst cvtdq2pd #xf3 #xe6)
-  (define-regular-sse-inst cvtdq2ps nil  #x5b))
+  (define-regular-sse-inst cvtdq2ps nil  #x5b)
+
+  ;; Misc
+
+  ;; UNPCKHPD:
+  ;; dst[63:0] = dst[127:64];
+  ;; dst[127:64] = src[127:64];
+  (define-regular-sse-inst unpckhpd #x66 #x15 t)
+  ;; UNPCKLPD
+  ;; dst[63:0] = dst[63:0]
+  ;; dst[127:64] = src[63:0]
+  (define-regular-sse-inst unpcklpd #x66 #x14 t)
+  )
 
 ;;; MOVSD, MOVSS
 (macrolet ((define-movsd/ss-sse-inst (name prefix op)
@@ -3168,9 +3180,14 @@
   ;; memory because we 128-bit objects aren't aligned on 128-bit
   ;; boundaries.
   (define-movsd/ss-sse-inst movupd #x66 #b0001000)
-  ;; This is useful for between xmm registers.  We don't have aligned
-  ;; 128-bit objects.
-  (define-movsd/ss-sse-inst movapd #x66 #b0010100))
+  ;; This is useful for moving between xmm registers.  We don't have
+  ;; aligned 128-bit objects.
+  (define-movsd/ss-sse-inst movapd #x66 #b0010100)
+  ;; Load/store high part of packed double.  Low part untouched.
+  (define-movsd/ss-sse-inst movhpd #x66 #b0001011)
+  ;; Load/store low part of packed double.  High part untouched.
+  (define-movsd/ss-sse-inst movlpd #x66 #b0001001)
+  )
 
 ;;; MOVQ
 (define-instruction movq (segment dst src)
@@ -3185,23 +3202,11 @@
 ;;;
 ;;; Like movsd, but the 64-bit low part is also duplicated to the high
 ;;; part of the xmm register.
+#+sse3
 (define-instruction movddup (segment dst src)
   (:printer ext-xmm-xmm/mem ((prefix #xf2) (op #x12)))
   (:emitter
    (emit-sse-inst segment dst src #xf2 #x12
-		  :operand-size :do-not-set)))
-
-;;; UNPCKHPD
-;;;
-;;; Unpack and interleave
-;;;
-;;; dst[63:0] = dst[127:64];
-;;; dst[127:64] = src[127:64];
-(define-instruction unpckhpd (segment dst src)
-  (:printer ext-xmm-xmm/mem ((prefix #x66) (op #x15)))
-  (:emitter
-   (assert (xmm-register-p src))
-   (emit-sse-inst segment dst src #x66 #x15
 		  :operand-size :do-not-set)))
 
 ;;; SHUFPD
