@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.2 2008/10/09 16:19:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.3 2008/10/09 17:40:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3107,34 +3107,36 @@
 ;;; and an XMM register or a memory location as the source operand.
 ;;; The operand size is implicitly given by the instruction.
 
-(macrolet ((define-regular-sse-inst (name prefix opcode)
+(macrolet ((define-regular-sse-inst (name prefix opcode &optional register-only)
              `(define-instruction ,name (segment dst src)
                 ,@(if prefix
                       `((:printer ext-xmm-xmm/mem
                                   ((prefix ,prefix) (op ,opcode))))
                       `((:printer xmm-xmm/mem ((op ,opcode)))))
                 (:emitter
+		 ,(when register-only
+		    `(assert (xmm-register-p src)))	
                  (emit-regular-sse-inst segment dst src ,prefix ,opcode)))))
   ;; logical
-  (define-regular-sse-inst andpd    #x66 #x54)
+  (define-regular-sse-inst andpd    #x66 #x54 t)
   (define-regular-sse-inst andps    nil  #x54)
-  (define-regular-sse-inst xorpd    #x66 #x57)
+  (define-regular-sse-inst xorpd    #x66 #x57 t)
   (define-regular-sse-inst xorps    nil  #x57)
   ;; comparison
   (define-regular-sse-inst comisd   #x66 #x2f)
   (define-regular-sse-inst comiss   nil  #x2f)
   ;; arithmetic
   (define-regular-sse-inst addsd    #xf2 #x58)
-  (define-regular-sse-inst addpd    #x66 #x58)
+  (define-regular-sse-inst addpd    #x66 #x58 t)
   (define-regular-sse-inst addss    #xf3 #x58)
   (define-regular-sse-inst divsd    #xf2 #x5e)
-  (define-regular-sse-inst divpd    #x66 #x5e)
+  (define-regular-sse-inst divpd    #x66 #x5e t)
   (define-regular-sse-inst divss    #xf3 #x5e)
   (define-regular-sse-inst mulsd    #xf2 #x59)
-  (define-regular-sse-inst mulpd    #x66 #x59)
+  (define-regular-sse-inst mulpd    #x66 #x59 t)
   (define-regular-sse-inst mulss    #xf3 #x59)
   (define-regular-sse-inst subsd    #xf2 #x5c)
-  (define-regular-sse-inst subpd    #x66 #x5c)
+  (define-regular-sse-inst subpd    #x66 #x5c t)
   (define-regular-sse-inst subss    #xf3 #x5c)
   (define-regular-sse-inst sqrtsd   #xf2 #x51)
   (define-regular-sse-inst sqrtss   #xf3 #x51)
@@ -3148,27 +3150,27 @@
   (define-regular-sse-inst cvtdq2ps nil  #x5b))
 
 ;;; MOVSD, MOVSS
-(macrolet ((define-movsd/ss-sse-inst (name prefix op dst-reg dst-mem)
+(macrolet ((define-movsd/ss-sse-inst (name prefix op)
              `(define-instruction ,name (segment dst src)
                 (:printer ext-xmm-xmm/mem-dir ((prefix ,prefix)
                                                (op ,op)))
                 (:emitter
                  (cond ((xmm-register-p dst)
-                        (emit-sse-inst segment dst src ,prefix ,dst-reg
+                        (emit-sse-inst segment dst src ,prefix ,(ash op 1)
                                        :operand-size :do-not-set))
                        (t
                         (assert (xmm-register-p src))
-                        (emit-sse-inst segment src dst ,prefix ,dst-mem
+                        (emit-sse-inst segment src dst ,prefix ,(1+ (ash op 1))
                                        :operand-size :do-not-set)))))))
-  (define-movsd/ss-sse-inst movsd #xf2 #b0001000 #x10 #x11)
-  (define-movsd/ss-sse-inst movss #xf3 #b0001000 #x10 #x11)
+  (define-movsd/ss-sse-inst movsd #xf2 #b0001000)
+  (define-movsd/ss-sse-inst movss #xf3 #b0001000)
   ;; We don't enforce it, but movupd should be used for moving to/from
   ;; memory because we 128-bit objects aren't aligned on 128-bit
   ;; boundaries.
-  (define-movsd/ss-sse-inst movupd #x66 #b0001000 #x10 #x11)
+  (define-movsd/ss-sse-inst movupd #x66 #b0001000)
   ;; This is useful for between xmm registers.  We don't have aligned
   ;; 128-bit objects.
-  (define-movsd/ss-sse-inst movapd #x66 #b0010100 #x28 #x29))
+  (define-movsd/ss-sse-inst movapd #x66 #b0010100))
 
 ;;; MOVQ
 (define-instruction movq (segment dst src)
@@ -3219,7 +3221,7 @@
 ;;; To swap high and low parts, use shufpd r r 1.
 (define-instruction shufpd (segment dst src imm)
   (:printer ext-xmm-xmm/mem-imm ((prefix #x66) (op #xc6)
-				 (imm nil :type 'imm-data)))
+				 (imm nil :type 'signed-imm-byte)))
   (:emitter
    ;; Don't support 128-bit memory access
    (assert (xmm-register-p src))
