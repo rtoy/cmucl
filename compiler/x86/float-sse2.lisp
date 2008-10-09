@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.3 2008/10/09 19:10:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.4 2008/10/09 21:34:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2016,3 +2016,47 @@
     (inst addsubpd t1 t2)		; t2 = a*d+b*c|a*c-b*d
     (inst movapd r t1)))
 
+(define-vop (*/complex-double-float)
+  (:translate *)
+  (:args (x :scs (complex-double-reg))
+	 (y :scs (complex-double-reg)))
+  (:arg-types complex-double-float complex-double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-double-reg)) t0 t1 t2)
+  (:temporary (:scs (complex-double-stack)) stemp)
+  (:generator 1
+    ;; Basic algorithm from the paper "The Microarchitecture of the
+    ;; Intel Pentium 4 Processor on 90nm Technololgy"
+
+    ;; x = a+b*i = b|a
+    ;; y = c+d*i = d|c
+    ;; r = a*c-b*d + i*(a*d+b*c)
+    (inst movapd t0 x)			; t0 = b|a
+    (inst movapd t1 y)			; t1 = d|c
+    (inst movapd t2 y)			; t2 = d|c
+    (inst unpcklpd t1 t1)		; t1 = c|c
+    (inst unpckhpd t2 t2)		; t2 = d|d
+    (inst mulpd t1 t0)			; t1 = b*c|a*c
+    (inst mulpd t2 t0)			; t2 = b*d|a*d
+    ;; Set t0 to flip the sign of the high part.  This needs to be
+    ;; done better.  We basically store out #x8000000000000000 in
+    ;; memory and load it into t0.  Then move it to the high part.
+    ;; (Note that #x8000...0000 has the same bit pattern as -0d0.)
+    (inst mov (make-ea :dword :base ebp-tn
+		       :disp (- (* (+ (tn-offset stemp) 2)
+				   vm:word-bytes)))
+	  0)
+    (inst mov (make-ea :dword :base ebp-tn
+		       :disp (- (* (+ (tn-offset stemp) 1)
+				   vm:word-bytes)))
+	  #x80000000)
+    (inst movq t0 (make-ea :dword :base ebp-tn
+			   :disp (- (* (+ (tn-offset stemp) 2)
+				       vm:word-bytes))))
+    (inst shufpd t0 t0 1)
+    (inst xorpd t2 t0)			; t2 = -b*d|a*d
+    (inst shufpd t2 t2 1)		; t2 = a*d|-b*d
+    (inst addpd t2 t1)			; t2 = a*d+b*c | a*c-b*d
+    (inst movapd r t2)))
