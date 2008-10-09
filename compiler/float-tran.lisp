@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1 2008/09/26 18:56:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.1 2008/10/09 16:25:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1424,9 +1424,11 @@
 	       (deftransform %negate ((z) ((complex ,type)) *)
 		 '(complex (%negate (realpart z)) (%negate (imagpart z))))
 	       ;; Complex addition and subtraction
+	       #+nil
 	       (deftransform + ((w z) ((complex ,type) (complex ,type)) *)
 		 '(complex (+ (realpart w) (realpart z))
-			   (+ (imagpart w) (imagpart z))))
+		   (+ (imagpart w) (imagpart z))))
+	       #+nil
 	       (deftransform - ((w z) ((complex ,type) (complex ,type)) *)
 		 '(complex (- (realpart w) (realpart z))
 			   (- (imagpart w) (imagpart z))))
@@ -1443,6 +1445,7 @@
 		 ;; the correct signed zero.
 		 '(complex (- z (realpart w)) (- 0 (imagpart w))))
 	       ;; Multiply and divide two complex numbers
+	       #+nil
 	       (deftransform * ((x y) ((complex ,type) (complex ,type)) *)
 		 '(let* ((rx (realpart x))
 			 (ix (imagpart x))
@@ -1506,6 +1509,22 @@
   (frob double-float)
   #+double-double
   (frob double-double-float))
+
+(deftransform + ((w z) ((complex single-float) (complex single-float)) *)
+  `(complex (+ (realpart w) (realpart z))
+	    (+ (imagpart w) (imagpart z))))
+
+(deftransform - ((w z) ((complex single-float) (complex single-float)) *)
+  `(complex (- (realpart w) (realpart z))
+	    (- (imagpart w) (imagpart z))))
+
+(deftransform * ((x y) ((complex single-float) (complex single-float)) *)
+  `(let* ((rx (realpart x))
+	  (ix (imagpart x))
+	  (ry (realpart y))
+	  (iy (imagpart y)))
+     (complex (- (* rx ry) (* ix iy))
+	      (+ (* rx iy) (* ix ry)))))
 
 #+(and (not double-double) complex-fp-vops)
 (macrolet
