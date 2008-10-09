@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.1 2008/10/07 13:29:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.2 2008/10/09 16:24:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,11 +102,13 @@
     (ea-for-cxf-stack tn :single :real base))
   (defun ea-for-csf-imag-stack (tn &optional (base ebp-tn))
     (ea-for-cxf-stack tn :single :imag base))
-  ;;
+  ;;  WARNING: these are "backwards" because when we pack complex
+  ;;  doubles into an SSE2 register, the low (real) part goes at the
+  ;;  low address and the high (imag) part goes to the higher address.
   (defun ea-for-cdf-real-stack (tn &optional (base ebp-tn))
-    (ea-for-cxf-stack tn :double :real base))
-  (defun ea-for-cdf-imag-stack (tn &optional (base ebp-tn))
     (ea-for-cxf-stack tn :double :imag base))
+  (defun ea-for-cdf-imag-stack (tn &optional (base ebp-tn))
+    (ea-for-cxf-stack tn :double :real base))
   ;;
   #+long-float
   (defun ea-for-clf-real-stack (tn &optional (base ebp-tn))
@@ -250,7 +252,7 @@
 
 (define-move-function (load-complex-double 2) (vop x y)
   ((complex-double-stack) (complex-double-reg))
-  (inst movupd (ea-for-cdf-real-stack x) y))
+  (inst movupd y (ea-for-cdf-real-stack x)))
 
 #+(or)
 (define-move-function (store-complex-double 2) (vop x y)
@@ -601,7 +603,7 @@
   (:results (y :scs (complex-double-reg)))
   (:note "pointer to complex float coercion")
   (:generator 2
-    (inst movupd (ea-for-cdf-real-desc x) y)))
+    (inst movupd y (ea-for-cdf-real-desc x) )))
 
 (define-move-vop move-to-complex-double :move
   (descriptor-reg) (complex-double-reg))
@@ -1506,8 +1508,7 @@
 
 (define-vop (make-complex-double-float)
   (:translate complex)
-  (:args (real :scs (double-reg)
-	       :load-if (not (location= real r)))
+  (:args (real :scs (double-reg) :to :save)
 	 (imag :scs (double-reg) :to :save))
   (:arg-types double-float double-float)
   (:results (r :scs (complex-double-reg) :from (:argument 0)
@@ -1969,14 +1970,50 @@
 ); progn
 
 
-(define-vop (complex-double-float/add)
+(define-vop (+/complex-double-float)
   (:translate +)
-  (:args (x :scs (complex-double-reg))
+  (:args (x :scs (complex-double-reg) :target r)
 	 (y :scs (complex-double-reg)))
   (:arg-types complex-double-float complex-double-float)
   (:results (r :scs (complex-double-reg)))
   (:result-types complex-double-float)
   (:policy :fast-safe)
   (:generator 1
-    (inst movapd r x)
+    (unless (location= r x)
+      (inst movapd r x))
     (inst addpd r y)))
+
+(define-vop (-/complex-double-float)
+  (:translate -)
+  (:args (x :scs (complex-double-reg) :target r)
+	 (y :scs (complex-double-reg)))
+  (:arg-types complex-double-float complex-double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:generator 1
+    (unless (location= r x)
+      (inst movapd r x))
+    (inst subpd r y)))
+
+(define-vop (*/complex-double-float)
+  (:translate *)
+  (:args (x :scs (complex-double-reg))
+	 (y :scs (complex-double-reg)))
+  (:arg-types complex-double-float complex-double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-double-reg)) t1 t2)
+  (:generator 1
+    ;; x = a + b*i.  In sse2 reg we have: b|a
+    ;; y = c + d*i.  In sse2 reg we have: d|c
+    (inst movddup t1 x)			; t1 = a|a
+    (inst mulpd t1 y)			; t1 = a*d|a*c
+    (inst movapd t2 x)			; t2 = b|a
+    (inst unpckhpd t2 t2)		; t2 = b|b
+    (inst mulpd t2 y)			; t2 = b*d|b*c
+    (inst shufpd t2 t2 1)		; t2 = b*c|b*d
+    (inst addsubpd t1 t2)		; t2 = a*d+b*c|a*c-b*d
+    (inst movapd r t1)))
+
