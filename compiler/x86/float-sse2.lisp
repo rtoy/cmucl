@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.2 2008/10/09 16:24:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.3 2008/10/09 19:10:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1520,10 +1520,9 @@
   (:generator 5
     (sc-case r
       (complex-double-reg
-       ;; Move the imag part to both the low and high parts of temp
-       (inst movddup temp imag)
-       ;; Move the real part the low part of temp.  The high part is untouched.
-       (inst movsd temp real)
+       ;; x = a + b*i = b|a
+       (inst movsd temp real)		; temp = ?|a
+       (inst unpcklpd temp imag)	; temp = b|a
        (inst movapd r temp))
       (complex-double-stack
        (inst movsd (ea-for-cdf-real-stack r) real)
@@ -1638,10 +1637,9 @@
   (:generator 3
     (sc-case x
       (complex-double-reg
-       (inst movapd temp x)
-       ;; Put the high part of x (the imaginary part) to the low part
-       ;; of r.  We ignore the high part of r.
-       (inst unpckhpd temp x)
+       ;; x = a+b*i = b|a
+       (inst movapd temp x)		; temp = b|a
+       (inst unpckhpd temp temp)	; temp = b|b
        (inst movsd r temp))
       (complex-double-stack
        (inst movsd r (ea-for-cdf-imag-stack x)))
@@ -1996,6 +1994,7 @@
       (inst movapd r x))
     (inst subpd r y)))
 
+#+nil
 (define-vop (*/complex-double-float)
   (:translate *)
   (:args (x :scs (complex-double-reg))
