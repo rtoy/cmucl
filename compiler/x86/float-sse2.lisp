@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.5 2008/10/10 03:11:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.6 2008/10/10 04:08:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2047,3 +2047,19 @@
     (inst shufpd t2 t2 1)		; t2 = a*d|-b*d
     (inst addpd t2 t1)			; t2 = a*d+b*c | a*c-b*d
     (inst movapd r t2)))
+
+;; Divide a complex by a double-float
+(define-vop (//complex-double-float/double-float)
+  (:translate /)
+  (:args (x :scs (complex-double-reg))
+	 (y :scs (double-reg)))
+  (:arg-types complex-double-float double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-double-reg)) t0)
+  (:generator 1
+    (inst movq t0 y)			; t0 = 0|y
+    (inst unpcklpd t0 t0)		; t0 = y|y
+    (inst movapd r x)			; r = b|a (x = a+b*i)
+    (inst divpd r t0)))			; r = b/y|a/y

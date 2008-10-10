@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.1 2008/10/09 16:25:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.2 2008/10/10 04:08:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1452,7 +1452,8 @@
 			 (ry (realpart y))
 			 (iy (imagpart y)))
 		    (complex (- (* rx ry) (* ix iy))
-			     (+ (* rx iy) (* ix ry)))))
+		     (+ (* rx iy) (* ix ry)))))
+	       #+nil
 	       (deftransform / ((x y) ((complex ,type) (complex ,type)) *
 				:policy (> speed space))
 		 '(let* ((rx (realpart x))
@@ -1474,6 +1475,7 @@
 	       (deftransform * ((z w) (real (complex ,type)) *)
 		 '(complex (* (realpart w) z) (* (imagpart w) z)))
 	       ;; Divide a complex by a real
+	       #+nil
 	       (deftransform / ((w z) ((complex ,type) real) *)
 		 '(complex (/ (realpart w) z) (/ (imagpart w) z)))
 	       ;; Divide a real by a complex
@@ -1525,6 +1527,64 @@
 	  (iy (imagpart y)))
      (complex (- (* rx ry) (* ix iy))
 	      (+ (* rx iy) (* ix ry)))))
+
+(deftransform / ((x y) ((complex single-float) (complex single-float)) *
+		 :policy (> speed space))
+  '(let* ((rx (realpart x))
+	  (ix (imagpart x))
+	  (ry (realpart y))
+	  (iy (imagpart y)))
+    (if (> (abs ry) (abs iy))
+	(let* ((r (/ iy ry))
+	       (dn (+ ry (* r iy))))
+	  (complex (/ (+ rx (* ix r)) dn)
+		   (/ (- ix (* rx r)) dn)))
+	(let* ((r (/ ry iy))
+	       (dn (+ iy (* r ry))))
+	  (complex (/ (+ (* rx r) ix) dn)
+		   (/ (- (* ix r) rx) dn))))))
+
+(deftransform / ((x y) ((complex double-float) (complex double-float)) *
+		 :policy (> speed space))
+  ;; Divide a complex by a complex
+
+  ;; Here's how we do a complex division
+  ;;
+  ;; Compute (xr + i*xi)/(yr + i*yi)
+  ;;
+  ;; Assume |yi| < |yr|.  Then
+  ;;
+  ;; (xr + i*xi)      (xr + i*xi)
+  ;; ----------- = -----------------
+  ;; (yr + i*yi)   yr*(1 + i*(yi/yr))
+  ;;
+  ;;               (xr + i*xi)*(1 - i*(yi/yr))
+  ;;             = ---------------------------
+  ;;                   yr*(1 + (yi/yr)^2)
+  ;; We do the similar thing when |yi| > |yr|.  The result is
+  ;;
+  ;;     
+  ;; (xr + i*xi)      (xr + i*xi)
+  ;; ----------- = -----------------
+  ;; (yr + i*yi)   yi*((yr/yi) + i)
+  ;;
+  ;;               (xr + i*xi)*((yr/yi) - i)
+  ;;             = -------------------------
+  ;;                  yi*((yr/yi)^2 + 1)
+  '(let* ((ry (realpart y))
+	  (iy (imagpart y)))
+    (if (> (abs ry) (abs iy))
+	(let* ((r (/ iy ry))
+	       (dn (+ ry (* r iy))))
+	  (/ (* x (complex 1d0 r))
+	     dn))
+	(let* ((r (/ ry iy))
+	       (dn (+ iy (* r ry))))
+	  (/ (* x (complex r -1d0))
+	     dn)))))
+
+(deftransform / ((w z) ((complex single-float) real) *)
+  '(complex (/ (realpart w) z) (/ (imagpart w) z)))
 
 #+(and (not double-double) complex-fp-vops)
 (macrolet
