@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.4 2008/10/09 19:10:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.5 2008/10/10 03:08:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3087,6 +3087,11 @@
 			 :default-printer '(:name :tab reg ", " reg/mem ", " imm))
   (imm :type 'imm-data))
 
+(disassem:define-instruction-format
+    (xmm-xmm/mem-imm 24
+		     :include 'xmm-xmm/mem
+		     :default-printer '(:name :tab reg ", " reg/mem ", " imm))
+  (imm :type 'imm-data))
 
 (defun emit-sse-inst (segment dst src prefix opcode &key operand-size)
   (when prefix
@@ -3234,6 +3239,26 @@
    ;; bits.
    (assert (zerop (logandc2 imm #x3)))
    (emit-sse-inst segment dst src #x66 #xc6
+		  :operand-size :do-not-set)
+   (emit-byte segment imm)))
+
+;; SHUFPS
+;;
+;; dst[31:0] = imm[1:0] selects one 32-bit word of dst
+;; dst[63:32] = imm[3:2] selects one 32-bit word of dst
+;; dst[95:64] = imm[5:4] selects one 32-bit word of src
+;; dst[127:96] = imm[7:6] selects one 32-bit word of src
+
+(define-instruction shufps (segment dst src imm)
+  (:printer xmm-xmm/mem-imm ((op #xc6)
+			     (imm nil :type 'signed-imm-byte)))
+  (:emitter
+   ;; Don't support 128-bit memory access
+   (assert (xmm-register-p src))
+   ;; The immediate value must be zero every except for the least two
+   ;; bits.
+   (assert (typep imm '(unsigned-byte 8)))
+   (emit-sse-inst segment dst src nil #xc6
 		  :operand-size :do-not-set)
    (emit-byte segment imm)))
 
