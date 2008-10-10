@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.13.6.1.2.1 2008/10/07 13:29:53 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.13.6.1.2.2 2008/10/10 20:51:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -286,8 +286,8 @@
 		     :alternate-scs (double-double-stack))
   
   (complex-single-reg float-registers
-		      :locations (0 2 4 6)
-		      :element-size 2
+		      :locations #-sse2 (0 2 4 6) #+sse2 (0 1 2 3 4 5 6 7)
+		      :element-size #-sse2 2 #+sse2 1
 		      :constant-scs ()
 		      :save-p t
 		      :alternate-scs (complex-single-stack))
