@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.7 2008/10/10 20:38:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.8 2008/10/10 21:48:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3142,15 +3142,19 @@
   ;; arithmetic
   (define-regular-sse-inst addsd    #xf2 #x58)
   (define-regular-sse-inst addpd    #x66 #x58 t)
+  (define-regular-sse-inst addps    nil  #x58 t)
   (define-regular-sse-inst addss    #xf3 #x58)
   (define-regular-sse-inst divsd    #xf2 #x5e)
   (define-regular-sse-inst divpd    #x66 #x5e t)
+  (define-regular-sse-inst divps    nil  #x5e t)
   (define-regular-sse-inst divss    #xf3 #x5e)
   (define-regular-sse-inst mulsd    #xf2 #x59)
   (define-regular-sse-inst mulpd    #x66 #x59 t)
+  (define-regular-sse-inst mulps    nil  #x59 t)
   (define-regular-sse-inst mulss    #xf3 #x59)
   (define-regular-sse-inst subsd    #xf2 #x5c)
   (define-regular-sse-inst subpd    #x66 #x5c t)
+  (define-regular-sse-inst subps    nil  #x5c t)
   (define-regular-sse-inst subss    #xf3 #x5c)
   (define-regular-sse-inst sqrtsd   #xf2 #x51)
   (define-regular-sse-inst sqrtss   #xf3 #x51)
