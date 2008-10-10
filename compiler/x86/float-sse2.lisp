@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.6 2008/10/10 04:08:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.7 2008/10/10 18:09:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -896,6 +896,7 @@
         (inst movd xmm hex8)
         (inst andps y xmm)))
 
+#+nil
 (macrolet ((frob ((name translate type) &body body)
 	     (let ((sc (symbolicate type "-REG"))
 		   (float-type (symbolicate type "-FLOAT"))
@@ -949,6 +950,39 @@
 		   :disp 3)
 	      #x7f)))
 
+(macrolet ((frob ((name translate mov sc type) &body body)
+             `(define-vop (,name)
+	        (:args (x :scs (,sc)))
+                (:results (y :scs (,sc)))
+                (:translate ,translate)
+                (:policy :fast-safe)
+                (:arg-types ,type)
+                (:result-types ,type)
+                (:temporary (:sc ,sc) tmp)
+                (:note "inline float arithmetic")
+                (:vop-var vop)
+                (:save-p :compute-only)
+                (:generator 1
+		  (note-this-location vop :internal-error)
+		  (inst pcmpeqd tmp tmp)		; all 1's
+		  ;; we should be able to do this better.  what we
+		  ;; really would like to do is use the target as the
+		  ;; temp whenever it's not also the source
+		  (unless (location= x y)
+		    (inst ,mov y x))
+		  ,@body))))
+  (frob (%negate/double-float %negate movq double-reg double-float)
+	(inst psllq tmp 63)		; tmp = #x8000000000000000
+	(inst xorpd y tmp))
+  (frob (%negate/single-float %negate movd single-reg single-float)
+	(inst pslld tmp 31)		; tmp = #x80000000
+	(inst xorps y tmp))
+  (frob (abs/double-float abs  movq double-reg double-float)
+	(inst psrlq tmp 1)		; tmp = #x7fffffffffffffff
+	(inst andpd y tmp))
+  (frob (abs/single-float abs movd single-reg single-float)
+	(inst psrld tmp 1)		; tmp = #x7fffffff
+	(inst andps y tmp)))
 
 
 ;;;; Comparison:
