@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.9 2008/10/10 20:51:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.10 2008/10/10 21:52:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -375,10 +375,20 @@
 	     (y-imag (complex-double-reg-imag-tn y)))
 	 (inst movq y-imag x-imag)))))
 
+#+(or)
 (define-vop (complex-single-move complex-float-move)
   (:args (x :scs (complex-single-reg) :target y
 	    :load-if (not (location= x y))))
   (:results (y :scs (complex-single-reg) :load-if (not (location= x y)))))
+
+(define-vop (complex-single-move complex-float-move)
+  (:args (x :scs (complex-single-reg) :target y
+	    :load-if (not (location= x y))))
+  (:results (y :scs (complex-single-reg) :load-if (not (location= x y))))
+  (:generator 0
+    (unless (location= x y)
+      (inst movaps y x))))
+
 (define-move-vop complex-single-move :move
   (complex-single-reg) (complex-single-reg))
 
@@ -519,7 +529,7 @@
   (:generator 13
      (with-fixed-allocation (y vm:complex-single-float-type
 			       vm:complex-single-float-size node)
-       (inst movups (ea-for-csf-real-desc y) x))))
+       (inst movlps (ea-for-csf-real-desc y) x))))
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
 
@@ -616,12 +626,22 @@
   #+(or)
   (frob move-to-complex-double complex-double-reg :double))
 
+(define-vop (move-to-complex-single)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (complex-single-reg)))
+  (:note "pointer to complex float coercion")
+  (:generator 2
+    (inst movlps y (ea-for-csf-real-desc x))))
+
+(define-move-vop move-to-complex-single :move
+  (descriptor-reg) (complex-single-reg))
+
 (define-vop (move-to-complex-double)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (complex-double-reg)))
   (:note "pointer to complex float coercion")
   (:generator 2
-    (inst movupd y (ea-for-cdf-real-desc x) )))
+    (inst movupd y (ea-for-cdf-real-desc x))))
 
 (define-move-vop move-to-complex-double :move
   (descriptor-reg) (complex-double-reg))
@@ -2191,7 +2211,81 @@
   (:policy :fast-safe)
   (:temporary (:scs (complex-double-reg)) t0)
   (:generator 1
-    (inst movq t0 y)			; t0 = 0|y
+    (inst movsd t0 y)			; t0 = 0|y
     (inst unpcklpd t0 t0)		; t0 = y|y
     (inst movapd r x)			; r = b|a (x = a+b*i)
     (inst divpd r t0)))			; r = b/y|a/y
+
+(define-vop (+/complex-single-float)
+  (:translate +)
+  (:args (x :scs (complex-single-reg) :target r)
+	 (y :scs (complex-single-reg)))
+  (:arg-types complex-single-float complex-single-float)
+  (:results (r :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:policy :fast-safe)
+  (:generator 1
+    (unless (location= r x)
+      (inst movaps r x))
+    (inst addps r y)))
+
+(define-vop (-/complex-single-float)
+  (:translate -)
+  (:args (x :scs (complex-single-reg) :target r)
+	 (y :scs (complex-single-reg)))
+  (:arg-types complex-single-float complex-single-float)
+  (:results (r :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:policy :fast-safe)
+  (:generator 1
+    (unless (location= r x)
+      (inst movaps r x))
+    (inst subps r y)))
+
+(define-vop (*/complex-single-float)
+  (:translate *)
+  (:args (x :scs (complex-single-reg))
+	 (y :scs (complex-single-reg)))
+  (:arg-types complex-single-float complex-single-float)
+  (:results (r :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-single-reg)) t0 t1 t2)
+  (:temporary (:scs (unsigned-reg)) tmp)
+  (:generator 1
+    ;; Basic algorithm from the paper "The Microarchitecture of the
+    ;; Intel Pentium 4 Processor on 90nm Technololgy"
+
+    ;; x = a+b*i = b|a
+    ;; y = c+d*i = d|c
+    ;; r = a*c-b*d + i*(a*d+b*c)
+    (inst movaps t0 x)			; t0 = b|a
+    (inst movaps t1 y)			; t1 = d|c
+    (inst movaps t2 y)			; t2 = d|c
+    (inst shufps t1 t1 #b0000)		; t1 = c|c
+    (inst shufps t2 t2 #b0101)		; t2 = d|d
+    (inst mulps t1 t0)			; t1 = b*c|a*c
+    (inst mulps t2 t0)			; t2 = b*d|a*d
+    (inst mov tmp #x80000000)
+    (inst movd t0 tmp)			; t0 = 0|0|0|#x80000000
+    (inst shufps t0 t0 #b0001)		; t0 = 0|0|#x80000000|0
+    (inst xorps t2 t0)			; t2 = -b*d|a*d
+    (inst shufps t2 t2 1)		; t2 = a*d|-b*d
+    (inst addps t2 t1)			; t2 = a*d+b*c | a*c-b*d
+    (inst movaps r t2)))
+
+;; Divide a complex by a single-float
+(define-vop (//complex-single-float/single-float)
+  (:translate /)
+  (:args (x :scs (complex-single-reg))
+	 (y :scs (single-reg)))
+  (:arg-types complex-single-float single-float)
+  (:results (r :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-single-reg)) t0)
+  (:generator 1
+    (inst movss t0 y)			; t0 = 0|y
+    (inst shufps t0 t0 1)		; t0 = y|y
+    (inst movaps r x)			; r = b|a (x = a+b*i)
+    (inst divps r t0)))
