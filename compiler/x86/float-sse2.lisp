@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.7 2008/10/10 18:09:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.8 2008/10/10 18:32:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,8 +91,10 @@
 				   (:double 2)
 				   (:long 3))
 				 (ecase ,slot
-				   (:real 1)
-				   (:imag 2)
+				   ;; We want the real part to be at
+				   ;; the lower address!
+				   (:real 2)
+				   (:imag 1)
 				   (:real-hi 1)
 				   (:real-lo 2)
 				   (:imag-hi 3)
@@ -102,13 +104,10 @@
     (ea-for-cxf-stack tn :single :real base))
   (defun ea-for-csf-imag-stack (tn &optional (base ebp-tn))
     (ea-for-cxf-stack tn :single :imag base))
-  ;;  WARNING: these are "backwards" because when we pack complex
-  ;;  doubles into an SSE2 register, the low (real) part goes at the
-  ;;  low address and the high (imag) part goes to the higher address.
   (defun ea-for-cdf-real-stack (tn &optional (base ebp-tn))
-    (ea-for-cxf-stack tn :double :imag base))
-  (defun ea-for-cdf-imag-stack (tn &optional (base ebp-tn))
     (ea-for-cxf-stack tn :double :real base))
+  (defun ea-for-cdf-imag-stack (tn &optional (base ebp-tn))
+    (ea-for-cxf-stack tn :double :imag base))
   ;;
   #+long-float
   (defun ea-for-clf-real-stack (tn &optional (base ebp-tn))
