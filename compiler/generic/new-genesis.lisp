@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.84 2008/09/16 19:26:36 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.84.4.1 2008/10/10 18:36:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -956,17 +956,6 @@
      (or (gethash (descriptor-bits des) *cold-symbols*)
 	 (descriptor-bits des)))))
 
-;; Need to handle special symbols specially on sparc and ppc.  The
-;; special symbols are undefined_tramp and closure_tramp.  We need to
-;; use the current C values of these and not the values in the current
-;; running lisp.  Why?  Because new C code may have moved these
-;; addresses so we need to use the right values.  We get worldbuild
-;; issues if we use the old values that don't match.
-(defun lookup-special-symbol (name)
-  (or (gethash name *cold-foreign-symbol-table* nil)
-      (lookup-foreign-symbol (vm::extern-alien-name name)
-			     #+(or sparc ppc) :data)))
-  
 (defun cold-fdefinition-object (name &optional leave-fn-raw)
   (let ((hash (extract-fdefn-name name)))
     (or (gethash hash *fdefn-objects*)
@@ -2073,6 +2062,17 @@
 	(t
 	 (warn "Undefined foreign symbol: ~S" name)
 	 0)))))
+
+;; Need to handle special symbols specially on sparc and ppc.  The
+;; special symbols are undefined_tramp and closure_tramp.  We need to
+;; use the current C values of these and not the values in the current
+;; running lisp.  Why?  Because new C code may have moved these
+;; addresses so we need to use the right values.  We get worldbuild
+;; issues if we use the old values that don't match.
+(defun lookup-special-symbol (name)
+  (or (gethash name *cold-foreign-symbol-table* nil)
+      (lookup-foreign-symbol (vm::extern-alien-name name)
+			     #+(or sparc ppc) :data)))
 
 (defvar *cold-linkage-table* (make-array 8192 :adjustable t :fill-pointer 0))
 (defvar *cold-foreign-hash* (make-hash-table :test #'equal))
