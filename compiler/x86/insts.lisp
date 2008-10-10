@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.6 2008/10/10 18:07:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.7 2008/10/10 20:38:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3046,6 +3046,15 @@
 
 ;;; Same as xmm-xmm/mem etc., but with direction bit.
 
+(disassem:define-instruction-format (xmm-xmm/mem-dir 24
+				     :include 'xmm-xmm/mem
+                                     :default-printer
+                                     `(:name
+                                        :tab
+                                        ,(swap-if 'dir 'reg ", " 'reg/mem)))
+  (op      :field (byte 7 9))
+  (dir     :field (byte 1 16)))
+
 (disassem:define-instruction-format (ext-xmm-xmm/mem-dir 32
                                      :include 'ext-xmm-xmm/mem
                                      :default-printer
@@ -3164,13 +3173,16 @@
   ;; dst[63:0] = dst[63:0]
   ;; dst[127:64] = src[63:0]
   (define-regular-sse-inst unpcklpd #x66 #x14 t)
+  (define-regular-sse-inst unpcklps nil  #x14 t)
   )
 
 ;;; MOVSD, MOVSS
 (macrolet ((define-movsd/ss-sse-inst (name prefix op)
              `(define-instruction ,name (segment dst src)
-                (:printer ext-xmm-xmm/mem-dir ((prefix ,prefix)
-                                               (op ,op)))
+	        ,@(if prefix
+		      `((:printer ext-xmm-xmm/mem-dir ((prefix ,prefix)
+						       (op ,op))))
+		      `((:printer xmm-xmm/mem-dir ((op ,op)))))
                 (:emitter
                  (cond ((xmm-register-p dst)
                         (emit-sse-inst segment dst src ,prefix ,(ash op 1)
@@ -3185,13 +3197,16 @@
   ;; memory because we 128-bit objects aren't aligned on 128-bit
   ;; boundaries.
   (define-movsd/ss-sse-inst movupd #x66 #b0001000)
+  (define-movsd/ss-sse-inst movups nil  #b0001000)
   ;; This is useful for moving between xmm registers.  We don't have
   ;; aligned 128-bit objects.
   (define-movsd/ss-sse-inst movapd #x66 #b0010100)
+  (define-movsd/ss-sse-inst movaps nil  #b0010100)
   ;; Load/store high part of packed double.  Low part untouched.
   (define-movsd/ss-sse-inst movhpd #x66 #b0001011)
   ;; Load/store low part of packed double.  High part untouched.
   (define-movsd/ss-sse-inst movlpd #x66 #b0001001)
+  (define-movsd/ss-sse-inst movlps nil  #b0001001)
   )
 
 ;;; MOVQ
