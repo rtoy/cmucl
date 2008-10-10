@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.5 2008/10/10 03:08:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.6 2008/10/10 18:07:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3334,3 +3334,87 @@
    (emit-byte segment #x0f)
    (emit-byte segment #xae)
    (emit-ea segment dst 3)))
+
+(macrolet
+    ((packed-cmp (name opcode)
+       `(define-instruction ,name (segment dst src)
+	  (:printer ext-xmm-xmm/mem
+		    ((prefix #x66) (op ,opcode)))
+	  (:printer xmm-xmm/mem ((op ,opcode)))
+	  (:emitter
+	   ;; We don't support the case where the src is a 128-bit
+	   ;; memory operand.
+	   (let ((prefix (if (xmm-register-p src)
+			     #x66
+			     nil)))
+	     (emit-regular-sse-inst segment dst src prefix ,opcode))))))
+  (packed-cmp pcmpeqb #x74)
+  (packed-cmp pcmpeqw #x75)
+  (packed-cmp pcmpeqd #x76))
+
+(disassem:define-instruction-format (ext-ext-xmm-xmm/mem 40
+                                     :default-printer
+                                     '(:name :tab reg ", " reg/mem))
+  (prefix  :field (byte 8 0)  :value #x66)
+  (x0f     :field (byte 8 8)  :value #x0f)
+  (x38     :field (byte 8 16) :value #x38)
+  (op      :field (byte 8 24))
+  (reg/mem :fields (list (byte 2 38) (byte 3 32))
+                                :type 'xmmreg/mem)
+  (reg     :field (byte 3 35)   :type 'xmmreg))
+
+
+;; This might be an sse3 instruction?  In any case, an Opteron doesn't
+;; seem to have it.
+#+nil
+(define-instruction pcmpeqq (segment dst src)
+  (:printer ext-ext-xmm-xmm/mem ((prefix #x66)
+				 (x0f #x0f)
+				 (x38 #x38)
+				 (op #x29)))
+  (:emitter
+   (emit-byte segment #x66)
+   (emit-byte segment #x0f)
+   (emit-byte segment #x38)
+   (emit-byte segment #x29)
+   (emit-ea segment src (reg-tn-encoding dst))))
+
+(disassem:define-instruction-format (ext-xmm-mem 32
+                                     :default-printer
+                                     '(:name :tab reg ", " reg/mem))
+  (prefix  :field (byte 8 0)  :value #x66)
+  (x0f     :field (byte 8 8)  :value #x0f)
+  (op      :field (byte 8 16))
+  (reg/mem :fields (list (byte 2 30) (byte 3 24))
+	   :type 'xmmreg/mem)
+  (reg     :field (byte 3 27))
+  (imm))
+
+(macrolet
+    ((packed-shift (name imm-op reg-op reg)
+       ;; We don't support the MMX version.
+       `(define-instruction ,name (segment dst src)
+	  (:printer ext-xmm-mem ((prefix #x66) (op ,reg-op)))
+	  (:printer ext-xmm-mem ((prefix #x66) (op ,imm-op)
+				 (reg ,reg)
+				 (imm nil :type 'signed-imm-byte))
+		    '(:name :tab reg/mem ", " imm))
+	  (:emitter
+	   (cond ((fixnump src)
+		  (emit-byte segment #x66)
+		  (emit-byte segment #x0f)
+		  (emit-byte segment ,imm-op)
+		  (emit-mod-reg-r/m-byte segment #b11 ,reg (reg-tn-encoding dst))
+		  (emit-byte segment src))
+		 (t
+		  (assert (xmm-register-p src))
+		  (emit-regular-sse-inst segment dst src #x66 ,reg-op)))))))
+  (packed-shift psrlq #x73 #xd3 2)
+  (packed-shift psrld #x72 #xd2 2)
+  (packed-shift psrlw #x71 #xd1 2)
+  (packed-shift psllq #x73 #xf3 6)
+  (packed-shift pslld #x72 #xf2 6)
+  (packed-shift psllw #x71 #xf1 6)
+  (packed-shift psrad #x72 #xe2 4)
+  (packed-shift psraw #x71 #xe1 4))
+
