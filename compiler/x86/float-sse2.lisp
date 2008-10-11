@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.11 2008/10/11 01:04:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.12 2008/10/11 02:28:46 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1388,9 +1388,10 @@
     (sc-case x
       (complex-single-reg
        ;; x = a+b*i = b|a
-       (inst movaps temp x)		; temp = z|z|b|a
-       (inst shufps temp temp #b00000001) ; temp = z|z|z|b
-       (inst movss r temp))
+       (inst movaps r x)
+       ;; Get the imag part to the low part of r.  We don't care about
+       ;; the other parts of r.
+       (inst shufps r r #b01))
       (complex-single-stack
        (inst movss r (ea-for-csf-imag-stack x)))
       (descriptor-reg
@@ -1408,10 +1409,7 @@
   (:generator 3
     (sc-case x
       (complex-double-reg
-       ;; x = a+b*i = b|a
-       (inst movapd temp x)		; temp = b|a
-       (inst unpckhpd temp temp)	; temp = b|b
-       (inst movsd r temp))
+       (inst movhlps r x))
       (complex-double-stack
        (inst movsd r (ea-for-cdf-imag-stack x)))
       (descriptor-reg
