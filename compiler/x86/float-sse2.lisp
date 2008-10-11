@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.10 2008/10/10 21:52:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.11 2008/10/11 01:04:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -227,48 +227,17 @@
 		  :offset (+ 3 (tn-offset x))))
 )
 ;;; x is source, y is destination
-#+(or)
-(define-move-function (load-complex-single 2) (vop x y)
-  ((complex-single-stack) (complex-single-reg))
-  (let ((real-tn (complex-single-reg-real-tn y)))
-    (inst movss real-tn (ea-for-csf-real-stack x)))
-  (let ((imag-tn (complex-single-reg-imag-tn y)))
-    (inst movss imag-tn (ea-for-csf-imag-stack x))))
 (define-move-function (load-complex-single 2) (vop x y)
   ((complex-single-stack) (complex-single-reg))
   (inst movlps y (ea-for-csf-real-stack x)))
-
-#+(or)
-(define-move-function (store-complex-single 2) (vop x y)
-  ((complex-single-reg) (complex-single-stack))
-  (let ((real-tn (complex-single-reg-real-tn x)))
-    (inst movss (ea-for-csf-real-stack y) real-tn))
-  (let ((imag-tn (complex-single-reg-imag-tn x)))
-    (inst movss (ea-for-csf-imag-stack y) imag-tn)))
 
 (define-move-function (store-complex-single 2) (vop x y)
   ((complex-single-reg) (complex-single-stack))
   (inst movlps (ea-for-csf-real-stack y) x))
 
-#+(or)
-(define-move-function (load-complex-double 2) (vop x y)
-  ((complex-double-stack) (complex-double-reg))
-  (let ((real-tn (complex-double-reg-real-tn y)))
-    (inst movsd real-tn (ea-for-cdf-real-stack x)))
-  (let ((imag-tn (complex-double-reg-imag-tn y)))
-    (inst movsd imag-tn (ea-for-cdf-imag-stack x))))
-
 (define-move-function (load-complex-double 2) (vop x y)
   ((complex-double-stack) (complex-double-reg))
   (inst movupd y (ea-for-cdf-real-stack x)))
-
-#+(or)
-(define-move-function (store-complex-double 2) (vop x y)
-  ((complex-double-reg) (complex-double-stack))
-  (let ((real-tn (complex-double-reg-real-tn x)))
-    (inst movsd (ea-for-cdf-real-stack y) real-tn))
-  (let ((imag-tn (complex-double-reg-imag-tn x)))
-    (inst movsd (ea-for-cdf-imag-stack y) imag-tn)))
 
 (define-move-function (store-complex-double 2) (vop x y)
   ((complex-double-reg) (complex-double-stack))
@@ -360,28 +329,7 @@
 ;;;
 ;;; Complex float register to register moves.
 ;;;
-(define-vop (complex-float-move)
-  (:args (x :target y :load-if (not (location= x y))))
-  (:results (y :load-if (not (location= x y))))
-  (:note "complex float move")
-  (:generator 0
-     (unless (location= x y)
-       ;; Note the complex-float-regs are aligned to every second
-       ;; float register so there is not need to worry about overlap.
-       (let ((x-real (complex-double-reg-real-tn x))
-	     (y-real (complex-double-reg-real-tn y)))
-	 (inst movq y-real x-real))
-       (let ((x-imag (complex-double-reg-imag-tn x))
-	     (y-imag (complex-double-reg-imag-tn y)))
-	 (inst movq y-imag x-imag)))))
-
-#+(or)
-(define-vop (complex-single-move complex-float-move)
-  (:args (x :scs (complex-single-reg) :target y
-	    :load-if (not (location= x y))))
-  (:results (y :scs (complex-single-reg) :load-if (not (location= x y)))))
-
-(define-vop (complex-single-move complex-float-move)
+(define-vop (complex-single-move)
   (:args (x :scs (complex-single-reg) :target y
 	    :load-if (not (location= x y))))
   (:results (y :scs (complex-single-reg) :load-if (not (location= x y))))
@@ -392,12 +340,7 @@
 (define-move-vop complex-single-move :move
   (complex-single-reg) (complex-single-reg))
 
-#+(or)
-(define-vop (complex-double-move complex-float-move)
-  (:args (x :scs (complex-double-reg)
-	    :target y :load-if (not (location= x y))))
-  (:results (y :scs (complex-double-reg) :load-if (not (location= x y)))))
-(define-vop (complex-double-move complex-float-move)
+(define-vop (complex-double-move)
   (:args (x :scs (complex-double-reg)
 	    :target y :load-if (not (location= x y))))
   (:results (y :scs (complex-double-reg) :load-if (not (location= x y))))
@@ -508,19 +451,6 @@
 ;;; Move from complex float to a descriptor reg. allocating a new
 ;;; complex float object in the process.
 ;;;
-#+(or)
-(define-vop (move-from-complex-single)
-  (:args (x :scs (complex-single-reg) :to :save))
-  (:results (y :scs (descriptor-reg)))
-  (:node-var node)
-  (:note "complex float to pointer coercion")
-  (:generator 13
-     (with-fixed-allocation (y vm:complex-single-float-type
-			       vm:complex-single-float-size node)
-       (let ((real-tn (complex-single-reg-real-tn x)))
-	 (inst movss (ea-for-csf-real-desc y) real-tn))
-       (let ((imag-tn (complex-single-reg-imag-tn x)))
-	 (inst movss (ea-for-csf-imag-desc y) imag-tn)))))
 (define-vop (move-from-complex-single)
   (:args (x :scs (complex-single-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
@@ -533,19 +463,6 @@
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
 
-#+(or)
-(define-vop (move-from-complex-double)
-  (:args (x :scs (complex-double-reg) :to :save))
-  (:results (y :scs (descriptor-reg)))
-  (:node-var node)
-  (:note "complex float to pointer coercion")
-  (:generator 13
-     (with-fixed-allocation (y vm:complex-double-float-type
-			       vm:complex-double-float-size node)
-       (let ((real-tn (complex-double-reg-real-tn x)))
-	 (inst movsd (ea-for-cdf-real-desc y) real-tn))
-       (let ((imag-tn (complex-double-reg-imag-tn x)))
-	 (inst movsd (ea-for-cdf-imag-desc y) imag-tn)))))
 (define-vop (move-from-complex-double)
   (:args (x :scs (complex-double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
@@ -602,30 +519,6 @@
 ;;;
 ;;; Move from a descriptor to a complex float register
 ;;;
-(macrolet ((frob (name sc format)
-	     `(progn
-		(define-vop (,name)
-		  (:args (x :scs (descriptor-reg)))
-		  (:results (y :scs (,sc)))
-		  (:note "pointer to complex float coercion")
-		  (:generator 2
-		    (let ((real-tn (complex-double-reg-real-tn y)))
-		      ,@(ecase format
-			  (:single '((inst movss real-tn (ea-for-csf-real-desc x))))
-			  (:double '((inst movsd real-tn (ea-for-cdf-real-desc x))))
-			  #+long-float
-			  (:long '((inst fldl (ea-for-clf-real-desc x))))))
-		    (let ((imag-tn (complex-double-reg-imag-tn y)))
-		      ,@(ecase format
-			  (:single '((inst movss imag-tn (ea-for-csf-imag-desc x))))
-			  (:double '((inst movsd imag-tn (ea-for-cdf-imag-desc x))))
-			  #+long-float
-			  (:long '((inst fldl (ea-for-clf-imag-desc x))))))))
-		(define-move-vop ,name :move (descriptor-reg) (,sc)))))
-  (frob move-to-complex-single complex-single-reg :single)
-  #+(or)
-  (frob move-to-complex-double complex-double-reg :double))
-
 (define-vop (move-to-complex-single)
   (:args (x :scs (descriptor-reg)))
   (:results (y :scs (complex-single-reg)))
@@ -691,48 +584,6 @@
   (frob move-double-float-argument double-reg double-stack :double))
 
 ;;;; Complex float move-argument vop
-#+(or)
-(macrolet ((frob (name sc stack-sc format)
-	     `(progn
-		(define-vop (,name)
-		  (:args (x :scs (,sc) :target y)
-			 (fp :scs (any-reg)
-			     :load-if (not (sc-is y ,sc))))
-		  (:results (y))
-		  (:note "complex float argument move")
-		  (:generator ,(ecase format (:single 2) (:double 3) (:long 4))
-		    (sc-case y
-		      (,sc
-		       (unless (location= x y)
-			 (let ((x-real (complex-double-reg-real-tn x))
-			       (y-real (complex-double-reg-real-tn y)))
-			   (inst movsd y-real x-real))
-			 (let ((x-imag (complex-double-reg-imag-tn x))
-			       (y-imag (complex-double-reg-imag-tn y)))
-			   (inst movsd y-imag x-imag))))
-		      (,stack-sc
-		       (let ((real-tn (complex-double-reg-real-tn x)))
-			 ,@(ecase format
-			     (:single
-			      '((inst movss
-				 (ea-for-csf-real-stack y fp) real-tn)))
-			     (:double
-			      '((inst movsd
-				 (ea-for-cdf-real-stack y fp) real-tn)))))
-		       (let ((imag-tn (complex-double-reg-imag-tn x)))
-			 ,@(ecase format
-			     (:single
-			      '((inst movss (ea-for-csf-imag-stack y fp) imag-tn)))
-			     (:double
-			      '((inst movsd (ea-for-cdf-imag-stack y fp) imag-tn)))))))))
-		(define-move-vop ,name :move-argument
-		  (,sc descriptor-reg) (,sc)))))
-  (frob move-complex-single-float-argument
-	complex-single-reg complex-single-stack :single)
-  #+(or)
-  (frob move-complex-double-float-argument
-	complex-double-reg complex-double-stack :double))
-
 (define-vop (move-complex-single-float-argument)
   (:args (x :scs (complex-single-reg) :target y)
 	 (fp :scs (any-reg)
@@ -908,104 +759,6 @@
      (note-this-location vop :internal-error)
      (inst sqrtsd y x)))
 
-#+nil
-(macrolet ((frob ((name translate sc type) &body body)
-             `(define-vop (,name)
-                  (:args (x :scs (,sc)))
-                (:results (y :scs (,sc)))
-                (:translate ,translate)
-                (:policy :fast-safe)
-                (:arg-types ,type)
-                (:result-types ,type)
-                (:temporary (:sc any-reg) hex8)
-                (:temporary
-                 (:sc ,sc) xmm)
-                (:note "inline float arithmetic")
-                (:vop-var vop)
-                (:save-p :compute-only)
-                (:generator 1
-                            (note-this-location vop :internal-error)
-                            ;; we should be able to do this better.  what we
-                            ;; really would like to do is use the target as the
-                            ;; temp whenever it's not also the source
-                            (unless (location= x y)
-                              (inst movq y x))
-                            ,@body))))
-  (frob (%negate/double-float %negate double-reg double-float)
-        (inst mov hex8 1)
-        (inst ror hex8 1)               ; #x8000000000000000
-        (inst movd xmm hex8)
-        (inst xorpd y xmm))
-  (frob (%negate/single-float %negate single-reg single-float)
-        (inst lea hex8 (make-ea :qword :disp 1))
-        (inst rol hex8 31)
-        (inst movd xmm hex8)
-        (inst xorps y xmm))
-  (frob (abs/double-float abs  double-reg double-float)
-        (inst mov hex8 -1)
-        (inst shr hex8 1)
-        (inst movd xmm hex8)
-        (inst andpd y xmm))
-  (frob (abs/single-float abs  single-reg single-float)
-        (inst mov hex8 -1)
-        (inst shr hex8 33)
-        (inst movd xmm hex8)
-        (inst andps y xmm)))
-
-#+nil
-(macrolet ((frob ((name translate type) &body body)
-	     (let ((sc (symbolicate type "-REG"))
-		   (float-type (symbolicate type "-FLOAT"))
-		   (stack-sc (symbolicate type "-STACK"))
-		   (ea (ecase type
-			 (single
-			  'ea-for-sf-stack)
-			 (double
-			  'ea-for-df-stack)))
-		   (move (ecase type
-			   (single 'movss)
-			   (double 'movsd))))
-	       `(define-vop (,name)
-                  (:args (x :scs (,sc)))
-		  (:results (y :scs (,sc)))
-		  (:translate ,translate)
-		  (:policy :fast-safe)
-		  (:arg-types ,float-type)
-		  (:result-types ,float-type)
-		  (:temporary (:sc ,stack-sc) stack)
-		  (:temporary (:sc sap-reg) sp)
-		  (:note "inline float arithmetic")
-		  (:vop-var vop)
-		  (:save-p :compute-only)
-		  (:generator 1
-		    (note-this-location vop :internal-error)
-		    ;; Save number on stack.  Frob the stack value and reload.
-		    (inst ,move (,ea stack) x)
-		    (inst lea sp (,ea stack))
-		    ,@body
-		    (inst ,move y (,ea stack)))))))
-  (frob (%negate/double-float %negate double)
-	;; Flip the sign of the most significant bit of the most
-	;; significant byte which contains the sign bit.
-	(inst xor (make-ea :byte :base sp :disp 7)
-	      #x80))
-  (frob (%negate/single-float %negate single)
-	(inst xor (make-ea
-		   :byte :base sp
-		   :disp 3)
-	      #x80))
-  (frob (abs/double-float abs  double)
-	;; Clear the sign bit
-	(inst and (make-ea
-		   :byte :base sp
-		   :disp 7)
-	      #x7f))
-  (frob (abs/single-float abs  single)
-	(inst and (make-ea
-		   :byte :base sp
-		   :disp 3)
-	      #x7f)))
-
 (macrolet ((frob ((name translate mov sc type) &body body)
              `(define-vop (,name)
 	        (:args (x :scs (,sc)))
@@ -1544,33 +1297,6 @@
 
 
 ;;;; Complex float VOPs
-
-#+(or)
-(define-vop (make-complex-single-float)
-  (:translate complex)
-  (:args (real :scs (single-reg) :to :result :target r
-	       :load-if (not (location= real r)))
-	 (imag :scs (single-reg) :to :save))
-  (:arg-types single-float single-float)
-  (:results (r :scs (complex-single-reg) :from (:argument 0)
-	       :load-if (not (sc-is r complex-single-stack))))
-  (:result-types complex-single-float)
-  (:note "inline complex single-float creation")
-  (:policy :fast-safe)
-  (:generator 5
-    (sc-case r
-      (complex-single-reg
-       (let ((r-real (complex-double-reg-real-tn r)))
-	 (unless (location= real r-real)
-	   (inst movss r-real real)))
-       (let ((r-imag (complex-double-reg-imag-tn r)))
-	 (unless (location= imag r-imag)
-	   (inst movss r-imag imag))))
-      (complex-single-stack
-       (unless (location= real r)
-	 (inst movss (ea-for-csf-real-stack r) real))
-       (inst movss (ea-for-csf-imag-stack r) imag)))))
-
 (define-vop (make-complex-single-float)
   (:translate complex)
   (:args (real :scs (single-reg) :to :save)
@@ -1592,32 +1318,6 @@
       (complex-single-stack
        (inst movss (ea-for-csf-real-stack r) real)
        (inst movss (ea-for-csf-imag-stack r) imag)))))
-
-#+(or)
-(define-vop (make-complex-double-float)
-  (:translate complex)
-  (:args (real :scs (double-reg) :target r
-	       :load-if (not (location= real r)))
-	 (imag :scs (double-reg) :to :save))
-  (:arg-types double-float double-float)
-  (:results (r :scs (complex-double-reg) :from (:argument 0)
-	       :load-if (not (sc-is r complex-double-stack))))
-  (:result-types complex-double-float)
-  (:note "inline complex double-float creation")
-  (:policy :fast-safe)
-  (:generator 5
-    (sc-case r
-      (complex-double-reg
-       (let ((r-real (complex-double-reg-real-tn r)))
-	 (unless (location= real r-real)
-	   (inst movsd r-real real)))
-       (let ((r-imag (complex-double-reg-imag-tn r)))
-	 (unless (location= imag r-imag)
-	   (inst movsd r-imag imag))))
-      (complex-double-stack
-       (unless (location= real r)
-	 (inst movsd (ea-for-cdf-real-stack r) real))
-       (inst movsd (ea-for-cdf-imag-stack r) imag)))))
 
 (define-vop (make-complex-double-float)
   (:translate complex)
@@ -1641,56 +1341,6 @@
        (inst movsd (ea-for-cdf-real-stack r) real)
        (inst movsd (ea-for-cdf-imag-stack r) imag)))))
 
-(define-vop (complex-float-value)
-  (:args (x :target r))
-  (:results (r))
-  (:variant-vars offset)
-  (:policy :fast-safe)
-  (:generator 3
-    (cond ((sc-is x complex-single-reg complex-double-reg)
-	   (let ((value-tn
-		  (make-random-tn :kind :normal
-				  :sc (sc-or-lose 'double-reg *backend*)
-				  :offset (+ offset (tn-offset x)))))
-	     (unless (location= value-tn r)
-	       (if (sc-is x complex-single-reg)
-		   (inst movss r value-tn)
-		   (inst movsd r value-tn)))))
-	  ((sc-is r single-reg)
-	   (let ((ea (sc-case x
-		       (complex-single-stack
-			(ecase offset
-			  (0 (ea-for-csf-real-stack x))
-			  (1 (ea-for-csf-imag-stack x))))
-		       (descriptor-reg
-			(ecase offset
-			  (0 (ea-for-csf-real-desc x))
-			  (1 (ea-for-csf-imag-desc x)))))))
-	     (inst movss r ea)))
-	  ((sc-is r double-reg)
-	   (let ((ea (sc-case x
-		       (complex-double-stack
-			(ecase offset
-			  (0 (ea-for-cdf-real-stack x))
-			  (1 (ea-for-cdf-imag-stack x))))
-		       (descriptor-reg
-			(ecase offset
-			  (0 (ea-for-cdf-real-desc x))
-			  (1 (ea-for-cdf-imag-desc x)))))))
-	     (inst movsd r ea)))
-	  (t (error "Complex-float-value VOP failure")))))
-
-#+(or)
-(define-vop (realpart/complex-single-float complex-float-value)
-  (:translate realpart)
-  (:args (x :scs (complex-single-reg complex-single-stack descriptor-reg)
-	    :target r))
-  (:arg-types complex-single-float)
-  (:results (r :scs (single-reg)))
-  (:result-types single-float)
-  (:note "complex float realpart")
-  (:variant 0))
-
 (define-vop (realpart/complex-single-float)
   (:translate realpart)
   (:args (x :scs (complex-single-reg complex-single-stack descriptor-reg)))
@@ -1707,16 +1357,7 @@
        (inst movss r (ea-for-csf-real-stack x)))
       (descriptor-reg
        (inst movss r (ea-for-csf-real-desc x))))))
-#+(or)
-(define-vop (realpart/complex-double-float complex-float-value)
-  (:translate realpart)
-  (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)
-	    :target r))
-  (:arg-types complex-double-float)
-  (:results (r :scs (double-reg)))
-  (:result-types double-float)
-  (:note "complex float realpart")
-  (:variant 0))
+
 (define-vop (realpart/complex-double-float)
   (:translate realpart)
   (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)))
@@ -1733,17 +1374,6 @@
        (inst movsd r (ea-for-cdf-real-stack x)))
       (descriptor-reg
        (inst movsd r (ea-for-cdf-real-desc x))))))
-
-#+(or)
-(define-vop (imagpart/complex-single-float complex-float-value)
-  (:translate imagpart)
-  (:args (x :scs (complex-single-reg complex-single-stack descriptor-reg)
-	    :target r))
-  (:arg-types complex-single-float)
-  (:results (r :scs (single-reg)))
-  (:result-types single-float)
-  (:note "complex float imagpart")
-  (:variant 1))
 
 (define-vop (imagpart/complex-single-float)
   (:translate imagpart)
@@ -1765,17 +1395,6 @@
        (inst movss r (ea-for-csf-imag-stack x)))
       (descriptor-reg
        (inst movss r (ea-for-csf-imag-desc x))))))
-
-#+(or)
-(define-vop (imagpart/complex-double-float complex-float-value)
-  (:translate imagpart)
-  (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)
-	    :target r))
-  (:arg-types complex-double-float)
-  (:results (r :scs (double-reg)))
-  (:result-types double-float)
-  (:note "complex float imagpart")
-  (:variant 1))
 
 (define-vop (imagpart/complex-double-float)
   (:translate imagpart)
@@ -2199,6 +1818,7 @@
     (inst shufpd t2 t2 1)		; t2 = a*d|-b*d
     (inst addpd t2 t1)			; t2 = a*d+b*c | a*c-b*d
     (inst movapd r t2)))
+
 
 ;; Divide a complex by a double-float
 (define-vop (//complex-double-float/double-float)
