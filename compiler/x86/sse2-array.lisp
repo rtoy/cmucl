@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-array.lisp,v 1.1.2.2.2.3 2008/10/11 01:38:00 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-array.lisp,v 1.1.2.2.2.4 2008/10/11 03:20:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,289 +16,91 @@
 
 (in-package :x86)
 
-(define-vop (data-vector-ref/simple-array-single-float)
-  (:note "inline array access")
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg)))
-  (:arg-types simple-array-single-float positive-fixnum)
-  (:results (value :scs (single-reg)))
-  (:result-types single-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 5
-    (inst movss value (make-ea :dword :base object :index index :scale 1
+(macrolet
+    ((frob (type move copy scale)
+       (let ((ref-name (symbolicate "DATA-VECTOR-REF/SIMPLE-ARRAY-" type "-FLOAT"))
+	     (c-ref-name (symbolicate "DATA-VECTOR-REF-C/SIMPLE-ARRAY-" type "-FLOAT"))
+	     (set-name (symbolicate "DATA-VECTOR-SET/SIMPLE-ARRAY-" type "-FLOAT"))
+	     (c-set-name (symbolicate "DATA-VECTOR-SET-C/SIMPLE-ARRAY-" type "-FLOAT"))
+	     (result-sc (symbolicate type "-REG"))
+	     (result-type (symbolicate type "-FLOAT"))
+	     (array-sc (symbolicate "SIMPLE-ARRAY-" type "-FLOAT")))
+	 `(progn
+	    (define-vop (,ref-name)
+	      (:note "inline array access")
+	      (:translate data-vector-ref)
+	      (:policy :fast-safe)
+	      (:args (object :scs (descriptor-reg))
+		     (index :scs (any-reg)))
+	      (:arg-types ,array-sc positive-fixnum)
+	      (:results (value :scs (,result-sc)))
+	      (:result-types ,result-type)
+	      (:guard (backend-featurep :sse2))
+	      (:generator 5
+		(inst ,move value
+		      (make-ea :dword :base object :index index :scale ,scale
 			       :disp (- (* vm:vector-data-offset vm:word-bytes)
 					vm:other-pointer-type)))))
-
-(define-vop (data-vector-ref-c/simple-array-single-float)
-  (:note "inline array access")
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-array-single-float (:constant (signed-byte 30)))
-  (:results (value :scs (single-reg)))
-  (:result-types single-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 4
-    (inst movss value (make-ea :dword :base object
+	    (define-vop (,c-ref-name)
+	      (:note "inline array access")
+	      (:translate data-vector-ref)
+	      (:policy :fast-safe)
+	      (:args (object :scs (descriptor-reg)))
+	      (:info index)
+	      (:arg-types ,array-sc (:constant (signed-byte 30)))
+	      (:results (value :scs (,result-sc)))
+	      (:result-types ,result-type)
+	      (:guard (backend-featurep :sse2))
+	      (:generator 4
+		(inst ,move value
+		      (make-ea :dword :base object
 			       :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-					   (* 4 index))
+					   (* ,(* 4 scale) index))
 					vm:other-pointer-type)))))
+	    (define-vop (,set-name)
+	      (:note "inline array store")
+	      (:translate data-vector-set)
+	      (:policy :fast-safe)
+	      (:args (object :scs (descriptor-reg))
+		     (index :scs (any-reg))
+		     (value :scs (,result-sc) :target result))
+	      (:arg-types ,array-sc positive-fixnum ,result-type)
+	      (:results (result :scs (,result-sc)))
+	      (:result-types ,result-type)
+	      (:guard (backend-featurep :sse2))
+	      (:generator 5
+		(inst ,move (make-ea :dword :base object :index index :scale ,scale
+				     :disp (- (* vm:vector-data-offset vm:word-bytes)
+					      vm:other-pointer-type))
+		      value)
+		(unless (location= result value)
+		  (inst ,copy result value))))
 
-(define-vop (data-vector-set/simple-array-single-float)
-  (:note "inline array store")
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg))
-	 (value :scs (single-reg) :target result))
-  (:arg-types simple-array-single-float positive-fixnum single-float)
-  (:results (result :scs (single-reg)))
-  (:result-types single-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 5
-    (inst movss (make-ea :dword :base object :index index :scale 1
-			 :disp (- (* vm:vector-data-offset vm:word-bytes)
-				  vm:other-pointer-type))
-	  value)
-    (inst movss result value)))
-
-(define-vop (data-vector-set-c/simple-array-single-float)
-  (:note "inline array store")
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (value :scs (single-reg) :target result))
-  (:info index)
-  (:arg-types simple-array-single-float (:constant (signed-byte 30))
-	      single-float)
-  (:results (result :scs (single-reg)))
-  (:result-types single-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 4
-    (inst movss (make-ea :dword :base object
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 4 index))
-				  vm:other-pointer-type))
-	  value)
-    (inst movss result value)))
-
-(define-vop (data-vector-ref/simple-array-double-float)
-  (:note "inline array access")
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg)))
-  (:arg-types simple-array-double-float positive-fixnum)
-  (:results (value :scs (double-reg)))
-  (:result-types double-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 7
-    (inst movsd value (make-ea :dword :base object :index index :scale 2
-			       :disp (- (* vm:vector-data-offset vm:word-bytes)
-					vm:other-pointer-type)))))
-
-(define-vop (data-vector-ref-c/simple-array-double-float)
-  (:note "inline array access")
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-array-double-float (:constant (signed-byte 30)))
-  (:results (value :scs (double-reg)))
-  (:result-types double-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 6
-    (inst movsd value (make-ea :dword :base object
-			       :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-					   (* 8 index))
-					vm:other-pointer-type)))))
-
-(define-vop (data-vector-set/simple-array-double-float)
-  (:note "inline array store")
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg))
-	 (value :scs (double-reg) :target result))
-  (:arg-types simple-array-double-float positive-fixnum double-float)
-  (:results (result :scs (double-reg)))
-  (:result-types double-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 20
-    (inst movsd (make-ea :dword :base object :index index :scale 2
-			 :disp (- (* vm:vector-data-offset vm:word-bytes)
-				  vm:other-pointer-type))
-	  value)
-    (inst movsd result value)))
-
-(define-vop (data-vector-set-c/simple-array-double-float)
-  (:note "inline array store")
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (value :scs (double-reg) :target result))
-  (:info index)
-  (:arg-types simple-array-double-float (:constant (signed-byte 30))
-	      double-float)
-  (:results (result :scs (double-reg)))
-  (:result-types double-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 19
-    (inst movsd (make-ea :dword :base object
-			 :disp (- (+ (* vm:vector-data-offset
-					vm:word-bytes)
-				     (* 8 index))
-				  vm:other-pointer-type))
-	  value)
-    (inst movsd result value)))
-
-(define-vop (data-vector-ref/simple-array-complex-single-float)
-  (:note "inline array access")
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg)))
-  (:arg-types simple-array-complex-single-float positive-fixnum)
-  (:results (value :scs (complex-single-reg)))
-  (:result-types complex-single-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 5
-    (inst movlps value (make-ea :dword :base object :index index :scale 2
-				:disp (- (* vm:vector-data-offset vm:word-bytes)
-					 vm:other-pointer-type)))))
-
-(define-vop (data-vector-ref-c/simple-array-complex-single-float)
-  (:note "inline array access")
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-array-complex-single-float (:constant (signed-byte 30)))
-  (:results (value :scs (complex-single-reg)))
-  (:result-types complex-single-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 4
-    (inst movlps value (make-ea :dword :base object
-				:disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-					    (* 8 index))
-					 vm:other-pointer-type)))))
-
-(define-vop (data-vector-set/simple-array-complex-single-float)
-  (:note "inline array store")
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg))
-	 (value :scs (complex-single-reg) :target result))
-  (:arg-types simple-array-complex-single-float positive-fixnum
-	      complex-single-float)
-  (:results (result :scs (complex-single-reg)))
-  (:result-types complex-single-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 5
-    (inst movlps (make-ea :dword :base object :index index :scale 2
-			  :disp (- (* vm:vector-data-offset
-				      vm:word-bytes)
-				   vm:other-pointer-type))
-	  value)
-    (inst movaps result value)))
-
-(define-vop (data-vector-set-c/simple-array-complex-single-float)
-  (:note "inline array store")
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (value :scs (complex-single-reg) :target result))
-  (:info index)
-  (:arg-types simple-array-complex-single-float (:constant (signed-byte 30))
-	      complex-single-float)
-  (:results (result :scs (complex-single-reg)))
-  (:result-types complex-single-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 4
-    (inst movlps (make-ea :dword :base object
-			  :disp (- (+ (* vm:vector-data-offset
-					 vm:word-bytes)
-				      (* 8 index))
-				   vm:other-pointer-type))
-	  value)
-    (inst movaps result value)))
-
-(define-vop (data-vector-ref/simple-array-complex-double-float)
-  (:note "inline array access")
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg)))
-  (:arg-types simple-array-complex-double-float positive-fixnum)
-  (:results (value :scs (complex-double-reg)))
-  (:result-types complex-double-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 7
-    (inst movupd value (make-ea :dword :base object :index index :scale 4
-				   :disp (- (* vm:vector-data-offset vm:word-bytes)
-					    vm:other-pointer-type)))))
-
-(define-vop (data-vector-ref-c/simple-array-complex-double-float)
-  (:note "inline array access")
-  (:translate data-vector-ref)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg)))
-  (:info index)
-  (:arg-types simple-array-complex-double-float (:constant (signed-byte 30)))
-  (:results (value :scs (complex-double-reg)))
-  (:result-types complex-double-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 6
-    (inst movupd value (make-ea :dword :base object
-				:disp (- (+ (* vm:vector-data-offset vm:word-bytes)
-					    (* 16 index))
-					 vm:other-pointer-type)))))
-
-(define-vop (data-vector-set/simple-array-complex-double-float)
-  (:note "inline array store")
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg))
-	 (value :scs (complex-double-reg) :target result))
-  (:arg-types simple-array-complex-double-float positive-fixnum
-	      complex-double-float)
-  (:results (result :scs (complex-double-reg)))
-  (:result-types complex-double-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 20
-    (inst movupd (make-ea :dword :base object :index index :scale 4
-			     :disp (- (* vm:vector-data-offset
-					 vm:word-bytes)
-				      vm:other-pointer-type))
-	  value)
-    (inst movapd result value)))
-
-(define-vop (data-vector-set-c/simple-array-complex-double-float)
-  (:note "inline array store")
-  (:translate data-vector-set)
-  (:policy :fast-safe)
-  (:args (object :scs (descriptor-reg))
-	 (value :scs (complex-double-reg) :target result))
-  (:info index)
-  (:arg-types simple-array-complex-double-float (:constant (signed-byte 30))
-	      complex-double-float)
-  (:results (result :scs (complex-double-reg)))
-  (:result-types complex-double-float)
-  (:guard (backend-featurep :sse2))
-  (:generator 19
-    (inst movupd (make-ea :dword :base object
-			  :disp (- (+ (* vm:vector-data-offset
-					 vm:word-bytes)
-				      (* 16 index))
-				   vm:other-pointer-type))
-	  value)
-    (inst movapd result value)))
+	    (define-vop (,c-set-name)
+	      (:note "inline array store")
+	      (:translate data-vector-set)
+	      (:policy :fast-safe)
+	      (:args (object :scs (descriptor-reg))
+		     (value :scs (,result-sc) :target result))
+	      (:info index)
+	      (:arg-types ,array-sc (:constant (signed-byte 30))
+			  ,result-type)
+	      (:results (result :scs (,result-sc)))
+	      (:result-types ,result-type)
+	      (:guard (backend-featurep :sse2))
+	      (:generator 4
+		(inst ,move (make-ea :dword :base object
+				     :disp (- (+ (* vm:vector-data-offset
+						    vm:word-bytes)
+						 (* ,(* 4 scale) index))
+					      vm:other-pointer-type))
+		      value)
+		(unless (location= result value)
+		  (inst ,copy result value))))))))
+  (frob single movss movss 1)
+  (frob double movsd movsd 2)
+  (frob complex-single movlps movaps 2)
+  (frob complex-double movupd movapd 4))
 
 
 #+double-double
