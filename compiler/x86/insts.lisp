@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.8 2008/10/10 21:48:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.9 2008/10/11 15:22:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3178,6 +3178,7 @@
   ;; dst[127:64] = src[63:0]
   (define-regular-sse-inst unpcklpd #x66 #x14 t)
   (define-regular-sse-inst unpcklps nil  #x14 t)
+
   )
 
 ;;; MOVSD, MOVSS
@@ -3231,6 +3232,24 @@
   (:printer ext-xmm-xmm/mem ((prefix #xf2) (op #x12)))
   (:emitter
    (emit-sse-inst segment dst src #xf2 #x12
+		  :operand-size :do-not-set)))
+
+;;; MOVHLPS
+;;;
+;;; dst[63:0] = src[127:64]
+;;; dst[127:64] unchanged.
+(define-instruction movhlps (segment dst src)
+  (:printer xmm-xmm/mem ((op #x12)))
+  (:emitter
+   (assert (xmm-register-p src))
+   (emit-sse-inst segment dst src nil #x12
+		  :operand-size :do-not-set)))
+
+(define-instruction movlhps (segment dst src)
+  (:printer xmm-xmm/mem ((op #x16)))
+  (:emitter
+   (assert (xmm-register-p src))
+   (emit-sse-inst segment dst src nil #x16
 		  :operand-size :do-not-set)))
 
 ;;; SHUFPD
