@@ -23,6 +23,7 @@
      :cmu :cmu19 :cmu19e		; Version features
      :double-double			; double-double float support
      :sse2				; SSE2 support
+     :complex-fp-vops			; VOPs for complex arithmetic
      )
    ;; Features to remove from current *features* here.  Normally don't
    ;; need to list anything here unless you are trying to remove a
@@ -37,6 +38,7 @@
 (pushnew :bootstrap *features*)
 (pushnew :building-cross-compiler *features*)
 (pushnew :sse2 *features*)
+(pushnew :complex-fp-vops *features*)
 (load "target:tools/comcom")
 
 ;;; Load the new backend.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.11 2008/09/16 19:19:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.11.4.1 2008/10/12 04:09:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,8 @@
 	  sigcontext-float-register sigcontext-floating-point-modes
 	  extern-alien-name sanctify-for-execution))
 
+#+complex-fp-vops
+(sys:register-lisp-feature :complex-fp-vops)
 
 ;;;; The sigcontext structure.
 

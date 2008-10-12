@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.29.8.2 2008/09/30 14:40:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.29.8.2.2.1 2008/10/12 04:09:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,8 @@
 
 #+sse2
 (sys:register-lisp-runtime-feature :sse2)
+#+complex-fp-vops
+(sys:register-lisp-feature :complex-fp-vops)
 
 #+(or x87 (not :sse2))
 (sys:register-lisp-feature :x87)

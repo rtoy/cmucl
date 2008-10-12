@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.9 2008/10/11 15:22:49 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.10 2008/10/12 04:09:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3158,7 +3158,7 @@
   (define-regular-sse-inst subss    #xf3 #x5c)
   (define-regular-sse-inst sqrtsd   #xf2 #x51)
   (define-regular-sse-inst sqrtss   #xf3 #x51)
-  #+sse3
+  ;; SSE3
   (define-regular-sse-inst addsubpd #x66 #xd0)
   
   ;; conversion
@@ -3227,7 +3227,8 @@
 ;;;
 ;;; Like movsd, but the 64-bit low part is also duplicated to the high
 ;;; part of the xmm register.
-#+sse3
+
+;; SSE3
 (define-instruction movddup (segment dst src)
   (:printer ext-xmm-xmm/mem ((prefix #xf2) (op #x12)))
   (:emitter

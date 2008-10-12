@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.12 2008/10/11 02:28:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.13 2008/10/12 04:09:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1739,7 +1739,7 @@
 
 (define-vop (+/complex-double-float)
   (:translate +)
-  (:args (x :scs (complex-double-reg) :target r)
+  (:args (x :scs (complex-double-reg))
 	 (y :scs (complex-double-reg)))
   (:arg-types complex-double-float complex-double-float)
   (:results (r :scs (complex-double-reg)))
@@ -1749,6 +1749,22 @@
     (unless (location= r x)
       (inst movapd r x))
     (inst addpd r y)))
+
+(define-vop (+/complex-double-float/double-float)
+  (:translate +)
+  (:args (x :scs (complex-double-reg) :target r)
+	 (y :scs (double-reg) :to :save))
+  (:arg-types complex-double-float double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:sc complex-double-reg) tmp)
+  (:policy :fast-safe)
+  (:generator 1
+    (inst xorpd tmp tmp)
+    (inst movsd tmp y)
+    (unless (location= r x)
+      (inst movapd r x))
+    (inst addpd r tmp)))
 
 (define-vop (-/complex-double-float)
   (:translate -)
@@ -1763,7 +1779,22 @@
       (inst movapd r x))
     (inst subpd r y)))
 
-#+sse3
+(define-vop (-/complex-double-float/double-float)
+  (:translate -)
+  (:args (x :scs (complex-double-reg) :target r)
+	 (y :scs (double-reg) :to :save))
+  (:arg-types complex-double-float double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:temporary (:sc complex-double-reg) tmp)
+  (:generator 1
+    (inst xorpd tmp tmp)
+    (inst movsd tmp y)			; tmp = 0|y
+    (unless (location= r x)
+      (inst movapd r x))
+    (inst subpd r tmp)))
+
 (define-vop (*/complex-double-float)
   (:translate *)
   (:args (x :scs (complex-double-reg))
@@ -1773,6 +1804,7 @@
   (:result-types complex-double-float)
   (:policy :fast-safe)
   (:temporary (:scs (complex-double-reg)) t1 t2)
+  (:guard (backend-featurep :sse3))
   (:generator 1
     ;; x = a + b*i.  In sse2 reg we have: b|a
     ;; y = c + d*i.  In sse2 reg we have: d|c
@@ -1817,6 +1849,22 @@
     (inst addpd t2 t1)			; t2 = a*d+b*c | a*c-b*d
     (inst movapd r t2)))
 
+(define-vop (*/complex-double-float/double-float)
+  (:translate *)
+  (:args (x :scs (complex-double-reg))
+	 (y :scs (double-reg)))
+  (:arg-types complex-double-float double-float)
+  (:results (r :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-double-reg)) t0 t1 t2)
+  (:temporary (:scs (unsigned-reg)) tmp)
+  (:generator 1
+    (inst movapd t0 y)
+    (inst movlhps t0 t0)		; t0 = y|y
+    (inst movapd r x)
+    (inst mulpd r t0)))
+
 
 ;; Divide a complex by a double-float
 (define-vop (//complex-double-float/double-float)
@@ -1847,6 +1895,22 @@
       (inst movaps r x))
     (inst addps r y)))
 
+(define-vop (+/complex-single-float/single-float)
+  (:translate +)
+  (:args (x :scs (complex-single-reg) :target r)
+	 (y :scs (single-reg)))
+  (:arg-types complex-single-float single-float)
+  (:results (r :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:temporary (:sc complex-single-reg) tmp)
+  (:policy :fast-safe)
+  (:generator 1
+    (unless (location= r x)
+      (inst movaps r x))
+    (inst xorps tmp tmp)
+    (inst movss tmp y)
+    (inst addps r tmp)))
+
 (define-vop (-/complex-single-float)
   (:translate -)
   (:args (x :scs (complex-single-reg) :target r)
@@ -1859,6 +1923,22 @@
     (unless (location= r x)
       (inst movaps r x))
     (inst subps r y)))
+
+(define-vop (-/complex-single-float/single-float)
+  (:translate -)
+  (:args (x :scs (complex-single-reg) :target r)
+	 (y :scs (single-reg)))
+  (:arg-types complex-single-float single-float)
+  (:results (r :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:temporary (:sc complex-single-reg) tmp)
+  (:policy :fast-safe)
+  (:generator 1
+    (unless (location= r x)
+      (inst movaps r x))
+    (inst xorps tmp tmp)
+    (inst movss tmp y)
+    (inst subps r tmp)))
 
 (define-vop (*/complex-single-float)
   (:translate *)
@@ -1892,6 +1972,22 @@
     (inst addps t2 t1)			; t2 = a*d+b*c | a*c-b*d
     (inst movaps r t2)))
 
+(define-vop (*/complex-single-float/single-float)
+  (:translate *)
+  (:args (x :scs (complex-single-reg))
+	 (y :scs (single-reg)))
+  (:arg-types complex-single-float single-float)
+  (:results (r :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:policy :fast-safe)
+  (:temporary (:scs (complex-single-reg)) t0 t1 t2)
+  (:temporary (:scs (unsigned-reg)) tmp)
+  (:generator 1
+    (inst movaps t0 y)
+    (inst unpcklps t0 t0)
+    (inst movaps r x)
+    (inst mulpd r t0)))
+
 ;; Divide a complex by a single-float
 (define-vop (//complex-single-float/single-float)
   (:translate /)
@@ -1907,3 +2003,25 @@
     (inst shufps t0 t0 1)		; t0 = y|y
     (inst movaps r x)			; r = b|a (x = a+b*i)
     (inst divps r t0)))
+
+(macrolet
+    ((frob (type shift xor amount)
+       (let ((name (symbolicate "%NEGATE/COMPLEX-" type "-FLOAT"))
+	     (sc-type (symbolicate "COMPLEX-" type "-FLOAT"))
+	     (sc (symbolicate "COMPLEX-" type "-REG")))
+	 `(define-vop (,name)
+	    (:translate %negate)
+	    (:args (x :scs (,sc) :target r))
+	    (:arg-types ,sc-type)
+	    (:results (r :scs (,sc)))
+	    (:result-types ,sc-type)
+	    (:policy :fast-safe)
+	    (:temporary (:scs (,sc)) t0)
+	    (:generator 1
+	      (inst pcmpeqd t0 t0)	; all ones
+	      (inst ,shift t0 ,amount)	; #x8000...0000
+	      (unless (location= x r)
+		(inst movaps r x))
+	      (inst ,xor r t0))))))
+  (frob single pslld xorps 31)
+  (frob double psllq xorpd 63))
