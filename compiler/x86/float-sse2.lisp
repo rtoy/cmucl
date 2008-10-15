@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.13 2008/10/12 04:09:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.14 2008/10/15 14:08:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1834,18 +1834,17 @@
     ;; x = a+b*i = b|a
     ;; y = c+d*i = d|c
     ;; r = a*c-b*d + i*(a*d+b*c)
-    (inst movapd t0 x)			; t0 = b|a
     (inst movapd t1 y)			; t1 = d|c
     (inst movapd t2 y)			; t2 = d|c
     (inst unpcklpd t1 t1)		; t1 = c|c
     (inst unpckhpd t2 t2)		; t2 = d|d
-    (inst mulpd t1 t0)			; t1 = b*c|a*c
-    (inst mulpd t2 t0)			; t2 = b*d|a*d
+    (inst mulpd t1 x)			; t1 = b*c|a*c
+    (inst mulpd t2 x)			; t2 = b*d|a*d
+    (inst shufpd t2 t2 1)		; t2 = a*d|b*d
     (inst mov tmp #x80000000)
     (inst movd t0 tmp)			; t0 = 0|0|0|#x80000000
-    (inst shufps t0 t0 #b00010101)	; t0 = #x80000000|0|0|0
-    (inst xorpd t2 t0)			; t2 = -b*d|a*d
-    (inst shufpd t2 t2 1)		; t2 = a*d|-b*d
+    (inst psllq tmp 32)			; t0 = 0|#x80000000,00000000
+    (inst xorpd t2 t0)			; t2 = a*d|-b*d
     (inst addpd t2 t1)			; t2 = a*d+b*c | a*c-b*d
     (inst movapd r t2)))
 
