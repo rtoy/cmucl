@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.5 2008/10/16 03:07:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.6 2008/10/16 22:10:48 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1506,14 +1506,7 @@
 	    ;; Complex/real
 	    '(complex (/ (realpart w) z) (/ (imagpart w) z)))
 
-	  ;; Comparison
-	  (deftransform = ((w z) ((complex ,type) (complex ,type)) *)
-	    '(and (= (realpart w) (realpart z))
-	      (= (imagpart w) (imagpart z))))
-	  (deftransform = ((w z) ((complex ,type) real) *)
-	    '(and (= (realpart w) z) (zerop (imagpart w))))
-	  (deftransform = ((w z) (real (complex ,type)) *)
-	    '(and (= (realpart z) w) (zerop (imagpart z))))
+
 	  )))
 
   #-complex-fp-vops
@@ -1528,35 +1521,44 @@
        ;; These are functions for which we probably wouldn't want to
        ;; write vops for.
        `(progn
-	  (deftransform conjugate ((z) ((complex ,type)) *)
-	    ;; Conjugate of complex number
-	    '(complex (realpart z) (- (imagpart z))))
-	  (deftransform + ((z w) (real (complex ,type)) *)
-	    ;; Real + complex:  convert to complex + real
-	    '(+ w z))
-	  (deftransform - ((z w) (real (complex ,type)) *)
-	    ;; Real - complex.  The 0 for the imaginary part is
-	    ;; needed so we get the correct signed zero.
-	    '(complex (- z (realpart w)) (- 0 (imagpart w))))
-	  (deftransform * ((z w) (real (complex ,type)) *)
-	    ;; Real*complex.  Convert to complex*real
-	    '(* w z))
-	  (deftransform cis ((z) ((,type)) *)
-	    ;; Cis.
-	    '(complex (cos z) (sin z)))
-       	  (deftransform / ((rx y) (real (complex ,type)) *)
-	    ;; Real/complex
-	    '(let* ((ry (realpart y))
-		    (iy (imagpart y)))
-	      (if (> (abs ry) (abs iy))
-		  (let* ((r (/ iy ry))
-			 (dn (+ ry (* r iy))))
-		    (complex (/ rx dn)
-			     (/ (- (* rx r)) dn)))
-		  (let* ((r (/ ry iy))
-			 (dn (+ iy (* r ry))))
-		    (complex (/ (* rx r) dn)
-			     (/ (- rx) dn)))))))))
+	 (deftransform conjugate ((z) ((complex ,type)) *)
+	   ;; Conjugate of complex number
+	   '(complex (realpart z) (- (imagpart z))))
+	 (deftransform + ((z w) (real (complex ,type)) *)
+	   ;; Real + complex:  convert to complex + real
+	   '(+ w z))
+	 (deftransform - ((z w) (real (complex ,type)) *)
+	   ;; Real - complex.  The 0 for the imaginary part is
+	   ;; needed so we get the correct signed zero.
+	   '(complex (- z (realpart w)) (- 0 (imagpart w))))
+	 (deftransform * ((z w) (real (complex ,type)) *)
+	   ;; Real*complex.  Convert to complex*real
+	   '(* w z))
+	 (deftransform cis ((z) ((,type)) *)
+	   ;; Cis.
+	   '(complex (cos z) (sin z)))
+	 (deftransform / ((rx y) (real (complex ,type)) *)
+	   ;; Real/complex
+	   '(let* ((ry (realpart y))
+		   (iy (imagpart y)))
+	     (if (> (abs ry) (abs iy))
+		 (let* ((r (/ iy ry))
+			(dn (+ ry (* r iy))))
+		   (complex (/ rx dn)
+			    (/ (- (* rx r)) dn)))
+		 (let* ((r (/ ry iy))
+			(dn (+ iy (* r ry))))
+		   (complex (/ (* rx r) dn)
+			    (/ (- rx) dn))))))
+	 ;; Comparison
+	 (deftransform = ((w z) ((complex ,type) (complex ,type)) *)
+	   '(and (= (realpart w) (realpart z))
+	         (= (imagpart w) (imagpart z))))
+	 (deftransform = ((w z) ((complex ,type) ,type) *)
+	   '(and (= (realpart w) z) (zerop (imagpart w))))
+	 (deftransform = ((w z) (,type (complex ,type)) *)
+	   '(and (= (realpart z) w) (zerop (imagpart z))))
+	 )))
   (frob single-float)
   (frob double-float)
   #+double-double
@@ -1616,7 +1618,7 @@
   `(,(continuation-function-name (basic-combination-fun node))
     x (coerce y ',(type-specifier (continuation-type x)))))
 
-(dolist (x '(= < > + * / -))
+(dolist (x '(= + * / -))
   (%deftransform x '(function ((complex single-float) (complex double-float)) *)
 		 #'complex-contagion-arg1)
   (%deftransform x '(function ((complex double-float) (complex single-float)) *)
@@ -1625,26 +1627,52 @@
 ;;; COMPLEX-REAL-CONTAGION-ARG1, ARG2
 ;;;
 ;;;   Handles the case of mixed complex and real numbers.  We assume
-;;;   the real number doesn't cause complex number to increase in
-;;;   precision.
-(deftransform complex-real-arg1 ((x y) * * :defun-only t :node node)
+;;; the real number doesn't cause complex number to increase in
+;;; precision.
+(deftransform complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
   `(,(continuation-function-name (basic-combination-fun node))
      (coerce x ',(numeric-type-format (continuation-type y)))
      y))
 ;;;
-(deftransform complex-real-arg2 ((x y) * * :defun-only t :node node)
+(deftransform complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
   `(,(continuation-function-name (basic-combination-fun node))
      x
      (coerce y ',(numeric-type-format (continuation-type x)))))
 
 
-(dolist (x '(+ * / -))
+(dolist (x '(= + * / -))
   (%deftransform x '(function ((or rational single-float) (complex double-float)) *)
-		 #'complex-real-arg1)
-  (%deftransform x '(function (rational (complex single-float)) *)
-		 #'complex-real-arg1)
+		 #'complex-real-contagion-arg1)
   (%deftransform x '(function ((complex double-float) (or rational single-float)) *)
-		 #'complex-real-arg2))
+		 #'complex-real-contagion-arg2)
+  (%deftransform x '(function (rational (complex single-float)) *)
+		 #'complex-real-contagion-arg1)
+  (%deftransform x '(function ((complex single-float) rational) *)
+		 #'complex-real-contagion-arg2))
+
+;;; UPGRADED-COMPLEX-REAL-CONTAGION-ARG1, ARG2
+;;;
+;;;   Handles the case of mixed complex and real numbers.  We assume
+;;; the real number is more precise than the complex, so that the
+;;; complex number needs to be coerced to a more precise complex.
+(deftransform upgraded-complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
+  `(,(continuation-function-name (basic-combination-fun node))
+     (coerce x ',(type-specifier (continuation-type y)))
+     y))
+;;;
+(deftransform upgraded-complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
+  `(,(continuation-function-name (basic-combination-fun node))
+     x
+     (coerce y ',(type-specifier (continuation-type x)))))
+
+
+(dolist (x '(= + * / -))
+  (%deftransform x '(function ((or (complex single-float) (complex rational))
+			       double-float) *)
+		 #'upgraded-complex-real-contagion-arg1)
+  (%deftransform x '(function (double-float
+			       (or (complex single-float) (complex rational))) *)
+		 #'upgraded-complex-real-contagion-arg2))
 
 
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
