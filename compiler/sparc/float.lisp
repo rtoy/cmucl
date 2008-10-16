@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.58 2008/07/10 21:31:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.58.4.1 2008/10/16 22:00:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2693,6 +2693,22 @@
 		(inst nop)))))))
   (frob single fcmps)
   (frob double fcmpd))
+
+
+;; Instead of providing vops, we just transform these to the obvious
+;; implementation.  There are probably a few unnecessary moves.
+
+(macrolet
+    ((cvt (name prototype)
+       `(progn
+	 (deftransform ,name ((n) (real) * :when :both)
+	   '(complex (float n ,prototype)))
+	 (deftransform ,name ((n) (complex) * :when :both)
+	   '(complex (float (realpart n) ,prototype)
+	             (float (imagpart n) ,prototype))))))
+  (cvt %complex-single-float 1f0)
+  (cvt %complex-double-float 1d0))
+
 
 ) ; end progn complex-fp-vops
 

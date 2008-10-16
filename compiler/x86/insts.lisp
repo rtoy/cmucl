@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.10 2008/10/12 04:09:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.32.6.2.2.11 2008/10/16 22:00:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3163,7 +3163,9 @@
   
   ;; conversion
   (define-regular-sse-inst cvtsd2ss #xf2 #x5a)
+  (define-regular-sse-inst cvtpd2ps #x66 #x5a)
   (define-regular-sse-inst cvtss2sd #xf3 #x5a)
+  (define-regular-sse-inst cvtps2pd nil  #x5a)
   (define-regular-sse-inst cvtdq2pd #xf3 #xe6)
   (define-regular-sse-inst cvtdq2ps nil  #x5b)
 

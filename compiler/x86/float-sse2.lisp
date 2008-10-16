@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.16 2008/10/16 15:37:57 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.17 2008/10/16 22:00:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1763,6 +1763,59 @@
   (negate-complex single pslld xorps 31)
   (negate-complex double psllq xorpd 63))
 
+;; Convert various number types to complex double-floats
+(macrolet
+    ((convert-complex (trans op to from)
+       (let ((name (symbolicate to "/" from))
+	     (from-sc (symbolicate from "-REG"))
+	     (from-type (symbolicate from "-FLOAT"))
+	     (to-sc (symbolicate to "-REG"))
+	     (to-type (symbolicate to "-FLOAT")))
+	 `(define-vop (,name)
+	   (:translate ,trans)
+	   (:args (x :scs (,from-sc) :target r))
+	   (:arg-types ,from-type)
+	   (:results (r :scs (,to-sc)))
+	   (:result-types ,to-type)
+	   (:policy :fast-safe)
+	   (:generator 1
+	     ;; NOTE: We don't have 128-bit aligned objects, so we
+	     ;; can't use the stack or descriptors here.
+	     (inst ,op r x))))))
+  (convert-complex %complex-double-float cvtps2pd complex-double complex-single)
+  (convert-complex %complex-single-float cvtpd2ps complex-single complex-double))
+
+(macrolet
+    ((convert-complex (trans op base-ea to from)
+       (let ((name (symbolicate to "/" from))
+	     (from-sc (symbolicate from "-REG"))
+	     (from-sc-stack (symbolicate from "-STACK"))
+	     (from-type (symbolicate from "-FLOAT"))
+	     (to-sc (symbolicate to "-REG"))
+	     (to-type (symbolicate to "-FLOAT")))
+	 `(define-vop (,name)
+	   (:translate ,trans)
+	   (:args (x :scs (,from-sc ,from-sc-stack descriptor-reg)
+		   :target r))
+	   (:arg-types ,from-type)
+	   (:results (r :scs (,to-sc)))
+	   (:result-types ,to-type)
+	   (:policy :fast-safe)
+	   (:generator 1
+	     (sc-case x
+	       (,from-sc
+		;; Need to make sure the imaginary part is zero
+		(inst xorps r r)
+		(inst ,op r x))
+	       (,from-sc-stack
+		(inst xorps r r)
+		(inst ,op r (,(symbolicate "EA-FOR-" base-ea "-STACK") x)))
+	       (descriptor-reg
+		(inst xorps r r)
+		(inst ,op r (,(symbolicate "EA-FOR-" base-ea "-DESC") x)))))))))
+  (convert-complex %complex-double-float cvtss2sd sf complex-double single)
+  (convert-complex %complex-single-float cvtsd2ss df complex-single double))
+
 ;; Add and subtract for two complex arguments
 (macrolet
     ((generate (movinst opinst commutative)
@@ -1827,14 +1880,15 @@
 	     (ea-stack (symbolicate "EA-FOR-" base-ea "-STACK"))
 	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC")))
 	 `(define-vop (,vop-name)
-	      (:args (x :scs (,complex-reg))
-	             (y :scs (,real-reg ,r-stack descriptor-reg)))
+	    (:args (x :scs (,complex-reg))
+	           (y :scs (,real-reg ,r-stack descriptor-reg)))
 	    (:results (r :scs (,complex-reg)))
 	    (:arg-types ,c-type ,r-type)
 	    (:result-types ,c-type)
 	    (:policy :fast-safe)
 	    (:note "inline complex float/float arithmetic")
 	    (:translate ,op)
+	    (:temporary (:sc ,complex-reg) tmp)
 	    (:generator ,cost
 	      (sc-case y
 		(,real-reg
