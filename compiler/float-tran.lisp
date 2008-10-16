@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.4 2008/10/12 04:09:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.5 2008/10/16 03:07:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,6 +75,33 @@
      (kernel::float-ratio n 'double-double-float))))
 ); progn
 
+(defknown %complex-single-float (number) (complex single-float)
+  (movable foldable flushable))
+(defknown %complex-double-float (number) (complex double-float)
+  (movable foldable flushable))
+(defknown %complex-double-double-float (number) (complex double-float)
+  (movable foldable flushable))
+
+(macrolet
+    ((frob (type)
+       (let ((name (symbolicate "%COMPLEX-" type "-FLOAT"))
+	     (convert (symbolicate "%" type "-FLOAT")))
+	 `(progn
+	    (defun ,name (n)
+	      (typecase n
+		(real
+		 (complex (,convert n)))
+		(complex
+		 (complex (,convert (realpart n))
+			  (,convert (imagpart n))))))
+	    (deftransform ,name ((n) ((complex ,(symbolicate type "-FLOAT"))) * :when :both)
+	      'n)))))
+  (frob single)
+  (frob double)
+  #+double-double
+  (frob double-double))
+
+
 (deftransform coerce ((n type) (* *) * :when :both)
   (unless (constant-continuation-p type)
     (give-up))
@@ -87,6 +114,13 @@
 		  '(%double-float n))	
 		 ((csubtypep tspec (specifier-type 'float))
 		  '(%single-float n))
+		 #+double-double
+		 ((csubtypep tspec (specifier-type '(complex double-double-float)))
+		  '(%complex-double-double-float n))
+		 ((csubtypep tspec (specifier-type '(complex double-float)))
+		  '(%complex-double-float n))
+		 ((csubtypep tspec (specifier-type '(complex single-float)))
+		  '(%complex-single-float n))
 		 (t
 		  (give-up))))))
 
@@ -1569,6 +1603,50 @@
   (frob (complex single-float) 1f0)
   (frob (complex double-float) 1d0))
 
+;;;; Complex contagion:
+
+;;; COMPLEX-CONTAGION-ARG1, ARG2
+;;;
+;;;    Handles complex contagion of two complex numbers of different types.
+(deftransform complex-contagion-arg1 ((x y) * * :defun-only t :node node)
+  `(,(continuation-function-name (basic-combination-fun node))
+    (coerce x ',(type-specifier (continuation-type y))) y))
+;;;
+(deftransform complex-contagion-arg2 ((x y) * * :defun-only t :node node)
+  `(,(continuation-function-name (basic-combination-fun node))
+    x (coerce y ',(type-specifier (continuation-type x)))))
+
+(dolist (x '(= < > + * / -))
+  (%deftransform x '(function ((complex single-float) (complex double-float)) *)
+		 #'complex-contagion-arg1)
+  (%deftransform x '(function ((complex double-float) (complex single-float)) *)
+		 #'complex-contagion-arg2))
+
+;;; COMPLEX-REAL-CONTAGION-ARG1, ARG2
+;;;
+;;;   Handles the case of mixed complex and real numbers.  We assume
+;;;   the real number doesn't cause complex number to increase in
+;;;   precision.
+(deftransform complex-real-arg1 ((x y) * * :defun-only t :node node)
+  `(,(continuation-function-name (basic-combination-fun node))
+     (coerce x ',(numeric-type-format (continuation-type y)))
+     y))
+;;;
+(deftransform complex-real-arg2 ((x y) * * :defun-only t :node node)
+  `(,(continuation-function-name (basic-combination-fun node))
+     x
+     (coerce y ',(numeric-type-format (continuation-type x)))))
+
+
+(dolist (x '(+ * / -))
+  (%deftransform x '(function ((or rational single-float) (complex double-float)) *)
+		 #'complex-real-arg1)
+  (%deftransform x '(function (rational (complex single-float)) *)
+		 #'complex-real-arg1)
+  (%deftransform x '(function ((complex double-float) (or rational single-float)) *)
+		 #'complex-real-arg2))
+
+
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
 ;;; produce a minimal range for the result; the result is the widest
 ;;; possible answer.  This gets around the problem of doing range
