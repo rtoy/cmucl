@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.15 2008/10/15 18:27:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float-sse2.lisp,v 1.1.2.8.2.16 2008/10/16 15:37:57 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1782,6 +1782,9 @@
        (let* ((vop-name (symbolicate (symbol-name op) "/COMPLEX-" float-type "-FLOAT"))
 	      (c-type (symbolicate "COMPLEX-" float-type "-FLOAT"))
 	      (complex-reg (symbolicate "COMPLEX-" float-type "-REG")))
+	 ;; Note: It would probably improve things if we could use
+	 ;; memory operands, but we can't because the instructions
+	 ;; assumed 128-bit alignment, which we can't guarantee.
 	 `(define-vop (,vop-name)
 	   (:args (x :scs (,complex-reg) :target r)
 	          (y :scs (,complex-reg)))
@@ -1812,30 +1815,50 @@
 	  (inst ,movinst tmp x)
 	  (inst ,opinst tmp y)
 	  (inst ,movinst r tmp))))
-     (complex-op-float (size op fop cost)
+     (complex-op-float (size op fop base-ea cost)
        (let ((vop-name (symbolicate "COMPLEX-" size "-FLOAT-"
 				    op
 				    "-" size "-FLOAT"))
 	     (complex-reg (symbolicate "COMPLEX-" size "-REG"))
 	     (real-reg (symbolicate size "-REG"))
 	     (c-type (symbolicate "COMPLEX-" size "-FLOAT"))
-	     (r-type (symbolicate size "-FLOAT")))
+	     (r-type (symbolicate size "-FLOAT"))
+	     (r-stack (symbolicate size "-STACK"))
+	     (ea-stack (symbolicate "EA-FOR-" base-ea "-STACK"))
+	     (ea-desc (symbolicate "EA-FOR-" base-ea "-DESC")))
 	 `(define-vop (,vop-name)
 	      (:args (x :scs (,complex-reg))
-	             (y :scs (,real-reg)))
+	             (y :scs (,real-reg ,r-stack descriptor-reg)))
 	    (:results (r :scs (,complex-reg)))
 	    (:arg-types ,c-type ,r-type)
 	    (:result-types ,c-type)
 	    (:policy :fast-safe)
 	    (:note "inline complex float/float arithmetic")
 	    (:translate ,op)
-	    (:temporary (:scs (,complex-reg)) tmp)
 	    (:generator ,cost
-	      (generate movaps ,fop))))))
-  (complex-op-float single + addss 1)
-  (complex-op-float single - subss 1)
-  (complex-op-float double + addsd 1)
-  (complex-op-float double - subsd 1))
+	      (sc-case y
+		(,real-reg
+		 (generate movaps ,fop))
+		(,r-stack
+		 (let ((ea (,ea-stack y)))
+		   (cond
+		     ((location= x r)
+		      (inst ,fop x ea))
+		     (t
+		      (inst movaps r x)
+		      (inst ,fop r ea)))))
+		(descriptor-reg
+		 (let ((ea (,ea-desc y)))
+		   (cond
+		     ((location= x r)
+		      (inst ,fop x ea))
+		     (t
+		      (inst movaps r x)
+		      (inst ,fop r ea)))))))))))
+  (complex-op-float single + addss sf 1)
+  (complex-op-float single - subss sf 1)
+  (complex-op-float double + addsd df 1)
+  (complex-op-float double - subsd df 1))
 
 ;; Multiply a complex by a float.  The case of float * complex is
 ;; handled by a deftransform to convert it to the complex*float case.
