@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.6 2008/10/16 22:10:48 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.121.2.1.2.7 2008/10/17 16:21:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1657,13 +1657,13 @@
 ;;; complex number needs to be coerced to a more precise complex.
 (deftransform upgraded-complex-real-contagion-arg1 ((x y) * * :defun-only t :node node)
   `(,(continuation-function-name (basic-combination-fun node))
-     (coerce x ',(type-specifier (continuation-type y)))
+     (coerce x '(complex ,(type-specifier (continuation-type y))))
      y))
 ;;;
 (deftransform upgraded-complex-real-contagion-arg2 ((x y) * * :defun-only t :node node)
   `(,(continuation-function-name (basic-combination-fun node))
      x
-     (coerce y ',(type-specifier (continuation-type x)))))
+     (coerce y '(complex ,(type-specifier (continuation-type x))))))
 
 
 (dolist (x '(= + * / -))
