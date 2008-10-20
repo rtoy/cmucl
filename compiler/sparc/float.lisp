@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.58.4.1 2008/10/16 22:00:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.58.4.2 2008/10/20 14:38:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2403,7 +2403,7 @@
 
 ;; Divide a complex by a real
 (macrolet
-    ((frob (float-type fdiv cost)
+    ((frob (float-type fdiv fmov cost)
        (let* ((vop-name (symbolicate "COMPLEX-" float-type "-FLOAT-/-" float-type "-FLOAT"))
 	      (complex-sc-type (symbolicate "COMPLEX-" float-type "-REG"))
 	      (real-sc-type (symbolicate float-type "-REG"))
@@ -2419,16 +2419,22 @@
 	   (:policy :fast-safe)
 	   (:note "inline complex float arithmetic")
 	   (:translate /)
+	   (:temporary (:sc ,real-sc-type) tmp)
 	   (:generator ,cost
 	    (let ((xr (,real-part x))
 		  (xi (,imag-part x))
 		  (rr (,real-part r))
 		  (ri (,imag-part r)))
-	      (inst ,fdiv rr xr y)	; xr * y
-	      (inst ,fdiv ri xi y)	; xi * yi
-	      ))))))
-  (frob single fdivs 2)
-  (frob double fdivd 2))
+	      (cond ((location= r y)
+		     (inst ,fdiv tmp xr y)
+		     (inst ,fdiv ri xi y)
+		     (,@fmov rr tmp))
+		    (t
+		     (inst ,fdiv rr xr y) ; xr * y
+		     (inst ,fdiv ri xi y) ; xi * yi
+		     ))))))))
+  (frob single fdivs (inst fmovs) 2)
+  (frob double fdivd (move-double-reg) 2))
 
 ;; Divide a real by a complex
 
