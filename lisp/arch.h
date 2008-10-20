@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.9.8.2 2008/09/30 17:50:11 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.9.8.2.2.1 2008/10/20 18:11:52 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -37,5 +37,9 @@ extern void arch_make_linkage_entry(long, void *, long);
 extern long arch_linkage_entry(unsigned long);
 void arch_make_lazy_linkage(long linkage_entry);
 long arch_linkage_entry(unsigned long retaddr);
+
+#ifdef i386
+extern int arch_support_sse2(void);
+#endif
 
 #endif /* __ARCH_H__ */
