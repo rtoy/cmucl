@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.3 2008/10/04 14:27:51 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.3.2.1 2008/10/20 14:22:57 rtoy Exp $
  *
  */
 
@@ -533,8 +533,6 @@ main(int argc, char *argv[], char *envp[])
 
     if (default_core == NULL)
 	default_core = "lisp.core";
-
-    printf("default core = %s\n", default_core);
 
     os_init();
 #if defined FEATURE_EXECUTABLE
