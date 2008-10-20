@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.1.2.6 2008/10/05 03:14:49 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sse2-c-call.lisp,v 1.1.2.6.2.1 2008/10/20 18:09:49 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,14 +40,41 @@
   (:ignore args ecx edx)
   (:guard (backend-featurep :sse2))
   (:generator 0 
-    (inst call function)
-    ;; To give the debugger a clue. XX not really internal-error?
-    (note-this-location vop :internal-error)
-    (when (and results
-	       (location= (tn-ref-tn results) fr0-tn))
-      ;; The ABI says the float result is in ST(0). Move it to XMM0.
-      (inst fstpd (ea-for-df-stack temp))
-      (inst movsd fr0-tn (ea-for-df-stack temp)))))
+    (cond ((policy node (> space speed))
+	   (move eax function)
+	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign))
+	   (when (and results
+		      (location= (tn-ref-tn results) fr0-tn))
+	     ;; call_into_c as arranged for ST(0) to contain the result.
+	     ;; Move it to XMM0.
+	     (inst fstd (ea-for-df-stack temp))
+	     (inst movsd fr0-tn (ea-for-df-stack temp))))
+	  (t
+	   ;; Setup the NPX for C; all the FP registers need to be
+	   ;; empty; pop them all.
+	   (dotimes (i 8)
+	     (fp-pop))
+
+	   (inst call function)
+	   ;; To give the debugger a clue. XX not really internal-error?
+	   (note-this-location vop :internal-error)
+
+	   ;; Restore the NPX for lisp; insure no regs are empty.  But
+	   ;; we only do 7 registers here.
+	   (dotimes (i 7)
+	     (inst fldz))
+	   
+	   (cond ((and results
+		       (location= (tn-ref-tn results) fr0-tn))
+		  ;; If there's a float result, it would have been returned
+		  ;; in fr0, which is now in fr7, thanks to the fldz's above.
+		  (inst fxch fr7-tn)	; move the result back to fr0
+		  ;; Move the result into xmm0.
+		  (inst fstd (ea-for-df-stack temp))
+		  (inst movsd fr0-tn (ea-for-df-stack temp)))
+		 (t
+		  ;; Fill up the last x87 register
+		  (inst fldz)))))))
 
 (define-vop (alloc-number-stack-space)
   (:info amount)

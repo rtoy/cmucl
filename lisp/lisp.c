@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.3.2.1 2008/10/20 14:22:57 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.62.6.3.2.2 2008/10/20 18:09:50 rtoy Exp $
  *
  */
 
@@ -36,10 +36,6 @@
 #include "elf.h"
 #endif
 
-
-#ifdef i386
-extern int use_sse2;
-#endif
 
 /* SIGINT handler that invokes the monitor. */
 
@@ -410,7 +406,7 @@ main(int argc, char *argv[], char *envp[])
     char *default_core;
     char *lib = NULL;
     char *cmucllib = NULL;
-    int fpu_type;
+    fpu_mode_t fpu_type;
     boolean monitor;
     lispobj initial_function = 0;
 
@@ -676,11 +672,10 @@ main(int argc, char *argv[], char *envp[])
 #endif
 
 #ifdef i386
-    if ((fpu_type == 1) && !arch_support_sse2()) {
+    if ((fpu_type == SSE2) && !arch_support_sse2()) {
 	fprintf(stderr, "Core uses SSE2, but CPU doesn't support SSE2.  Exiting\n");
 	exit(1);
     }
-    use_sse2 = fpu_type;
 #endif
 
 #if defined LINKAGE_TABLE
