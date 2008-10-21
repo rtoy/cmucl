@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.44 2008/10/21 03:03:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.45 2008/10/21 17:35:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3097,8 +3097,8 @@ friends is working.
 
 ;;; TRY-BIGNUM-TRUNCATE-GUESS -- Internal.
 ;;;
-;;; This takes a digit guess, multiplies it by *truncate-y* for a result one
-;;; greater in length than len-y, and subtracts this result from *truncate-x*.
+;;; This takes a digit guess, multiplies it by truncate-y for a result one
+;;; greater in length than len-y, and subtracts this result from truncate-x.
 ;;; Low-x-digit is the first digit of x to start the subtraction, and we know x
 ;;; is long enough to subtract a len-y plus one length bignum from it.  Next we
 ;;; check the result of the subtraction, and if the high digit in x became
@@ -3158,12 +3158,12 @@ friends is working.
 
 ;;; DO-TRUNCATE -- Internal.
 ;;;
-;;; This divides *truncate-x* by *truncate-y*, and len-x and len-y tell us how
+;;; This divides truncate-x by truncate-y, and len-x and len-y tell us how
 ;;; much of the buffers we care about.  TRY-BIGNUM-TRUNCATE-GUESS modifies
-;;; *truncate-x* on each interation, and this buffer becomes our remainder.
+;;; truncate-x on each interation, and this buffer becomes our remainder.
 ;;;
-;;; *truncate-x* definitely has at least three digits, and it has one more than
-;;; *truncate-y*.  This keeps i, i-1, i-2, and low-x-digit happy.  Thanks to
+;;; truncate-x definitely has at least three digits, and it has one more than
+;;; truncate-y.  This keeps i, i-1, i-2, and low-x-digit happy.  Thanks to
 ;;; SHIFT-AND-STORE-TRUNCATE-BUFFERS.
 ;;;
 (defun do-truncate (len-x len-y truncate-x truncate-y)
@@ -3273,7 +3273,7 @@ friends is working.
 ;;;
 ;;; Stores two bignums into the truncation bignum buffers, shifting them on the
 ;;; way in.  This assumes x and y are positive and at least two in length, and
-;;; it assumes *truncate-x* and *truncate-y* are one digit longer than x and y.
+;;; it assumes truncate-x and truncate-y are one digit longer than x and y.
 ;;;
 (defun shift-and-store-truncate-buffers (x len-x y len-y shift truncate-x truncate-y)
   (declare (type bignum-index len-x len-y)
@@ -3368,6 +3368,7 @@ friends is working.
 ;;; %FLOOR for machines with a 32x32 divider.
 ;;;
 
+#+32x16-divide
 (declaim (inline 32x16-subtract-with-borrow 32x16-add-with-carry
 		 32x16-divide 32x16-multiply 32x16-multiply-split))
 
