@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.56 2008/10/08 17:03:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.57 2008/10/22 14:02:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -287,6 +287,14 @@
 
 (defparameter *intexp-maximum-exponent* 10000)
 
+(define-condition intexp-limit-error (error)
+  ((base :initarg :base :reader intexp-base)
+   (power :initarg :power :reader intexp-power))
+  (:report (lambda (condition stream)
+	     (format stream "The absolute value of ~S exceeds limit ~S."
+		     (intexp-power condition)
+		     *intexp-maximum-exponent*))))
+
 ;;; This function precisely calculates base raised to an integral power.  It
 ;;; separates the cases by the sign of power, for efficiency reasons, as powers
 ;;; can be calculated more efficiently if power is a positive integer.  Values
@@ -300,9 +308,17 @@
     (return-from intexp base))
   
   (when (> (abs power) *intexp-maximum-exponent*)
-    (cerror "Continue with calculation."
-	    "The absolute value of ~S exceeds ~S."
-	    power '*intexp-maximum-exponent* base power))
+    ;; Allow user the option to continue with calculation, possibly
+    ;; increasing the limit to the given power.
+    (restart-case
+	(error 'intexp-limit-error
+	       :base base
+	       :power power)
+      (continue ()
+	:report "Continue with calculation")
+      (new-limit ()
+	:report "Continue with calculation, update limit"
+	(setq *intexp-maximum-exponent* power))))
   (cond ((minusp power)
 	 (/ (intexp base (- power))))
 	((eql base 2)
