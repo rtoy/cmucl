@@ -28,6 +28,8 @@ New in this release:
         the new network connection
       o Updated CONNECT-TO-INET-SOCKET to allow binding the newly
         created socket to a local address
+    - Added UNIX:UNIX-OPENPTY, an interface to the openpty C library
+      function.
 
   * ANSI compliance fixes:
     - Fix bug in backquote printer.  If the variable is @foo, we want
