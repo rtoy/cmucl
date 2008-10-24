@@ -89,6 +89,7 @@ New in this release:
       happen on other architectures.
     - The interpreter catches invalid EVAL-WHEN situations just like
       the compiler, instead of silently ignoring them.
+    - FLOAT-PRECISION supports double-double floats.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue

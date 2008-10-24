@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.41 2008/04/15 16:31:58 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.42 2008/10/24 21:45:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -348,7 +348,31 @@
       #+long-float
       ((long-float)
        (frob vm:long-float-digits vm:long-float-bias
-	 integer-decode-long-denorm)))))
+	     integer-decode-long-denorm))
+      #+double-double
+      ((double-double-float)
+       ;; What exactly is the precision for a double-double?  We make
+       ;; it the sum of the precisions of the two components.
+       (let ((hi (double-double-hi f)))
+	 (cond ((zerop hi)
+		;; ANSI CL says the precision is 0
+		0)
+	       ((< (abs hi) (scale-float least-positive-normalized-double-float 53))
+		;; For every power of 2 below this, we lose a bit of
+		;; precision.  More or less.
+		(let ((cutoff
+		       (nth-value
+			1
+			(decode-float
+			 (scale-float least-positive-normalized-double-float 53)))))
+		  (multiple-value-bind (f exp)
+		      (decode-float hi)
+		    (declare (ignore f))
+		    (- 106 (- cutoff exp)))))
+	       (t
+		;; Normally we have 106 bits of precision (twice the
+		;; double-float precision)
+		106)))))))
 
 
 #+nil
