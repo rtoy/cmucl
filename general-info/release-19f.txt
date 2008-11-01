@@ -28,6 +28,8 @@ New in this release:
         the new network connection
       o Updated CONNECT-TO-INET-SOCKET to allow binding the newly
         created socket to a local address
+    - Added UNIX:UNIX-OPENPTY, an interface to the openpty C library
+      function.
 
   * ANSI compliance fixes:
     - Fix bug in backquote printer.  If the variable is @foo, we want
@@ -87,6 +89,7 @@ New in this release:
       happen on other architectures.
     - The interpreter catches invalid EVAL-WHEN situations just like
       the compiler, instead of silently ignoring them.
+    - FLOAT-PRECISION supports double-double floats.
 
   * Trac Tickets:
     - #16: Read-time hash-table issue
@@ -100,6 +103,9 @@ New in this release:
       fixnums.
     - #20: Modular arith bug?
       Workaround applied.
+    - #24: Float contagion for expt
+      Float contagion is applied to the arguments before computing
+      expt.
 
   * Other changes:
     - IS1, IS2, IS3, and IS4 are recognized character names for the
@@ -112,6 +118,12 @@ New in this release:
     - Updated User guide to include more examples of tracing.
     - Enable gencgc page protection on x86/darwin.  This can speed up
       GC a bit.  (Not measured.)
+    - Bignum truncate is significantly faster.  Some cl-bench
+      benchmarks are now almost twice as fast.
+    - The continuable error produced by raising an integer to a power
+      exceeding *intexp-maximum-exponent* is now a restart, giving the
+      user the option to continue and update the limit to the new
+      power.
 
   * Improvements to the PCL implementation of CLOS:
     - The compiler and interpreter should handle SLOT-VALUE the same
