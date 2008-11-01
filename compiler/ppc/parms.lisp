@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.16.4.3 2008/07/11 19:02:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.16.4.4 2008/11/01 22:40:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -279,7 +279,7 @@
     
     ;; Spare symbols.  Rename these when you need to add some static
     ;; symbols and don't want to do a cross-compile.
-    spare-9
+    sparc-9
     spare-8
     spare-7
     spare-6

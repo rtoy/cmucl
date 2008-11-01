@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.5 2008/05/31 02:20:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.119.2.6 2008/11/01 22:40:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,7 +168,7 @@
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
 	  unix-socket unix-connect unix-bind unix-listen unix-accept
 	  unix-recv unix-send unix-getpeername unix-getsockname
-	  unix-getsockopt unix-setsockopt
+	  unix-getsockopt unix-setsockopt unix-openpty
 
 	  unix-recvfrom unix-sendto unix-shutdown
 	  
@@ -2770,6 +2770,12 @@
 (def-alien-routine ("ttyname" unix-ttyname) c-string
   (fd int))
 
+(def-alien-routine ("openpty" unix-openpty) int
+  (amaster int :out)
+  (aslave int :out)
+  (name c-string)
+  (termp (* (struct termios)))
+  (winp (* (struct winsize))))
 
 
 

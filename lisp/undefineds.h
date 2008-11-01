@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.38 2008/02/08 21:17:57 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.38.4.1 2008/11/01 22:40:36 rtoy Exp $ */
 
 /*
  * Do not wrap this inside an #ifndef/#endif!
@@ -44,41 +44,35 @@ F(accept)
     F(fstat)
     F(fsync)
     F(ftruncate)
-#if !defined(hpux) && !defined(SVR4) || defined(SOLARIS25) || defined(irix)
+#if !defined(hpux) && !defined(SVR4) || defined(SOLARIS) || defined(irix)
     F(getdtablesize)
 #endif
     F(getegid)
     F(geteuid)
     F(getgid)
     F(getgroups)
-#if !defined (SOLARIS) || defined(SOLARIS25)
     F(gethostid)
-#endif
     F(gethostname)
     F(getitimer)
-#if !defined(hpux) && !defined(SVR4) || defined(SOLARIS25)
+#if !defined(hpux) && !defined(SVR4) || defined(SOLARIS)
     F(getpagesize)
 #endif
     F(getpeername)
     F(getpgrp)
     F(getpid)
     F(getppid)
-#if !defined(SVR4)  ||  defined(SOLARIS25)
+#if !defined(SVR4)  ||  defined(SOLARIS)
     F(getpriority)
 #endif
     F(getrlimit)
-#if !defined(SOLARIS) ||  defined(SOLARIS25)
     F(getrusage)
-#endif
     F(getsockname)
     F(getsockopt)
     F(gettimeofday)
     F(getuid)
     F(ioctl)
     F(kill)
-#if !defined(SOLARIS) || defined(SOLARIS25)
     F(killpg)
-#endif
     F(link)
     F(listen)
     F(lseek)
@@ -91,6 +85,7 @@ F(accept)
     F(msync)
     F(munmap)
     F(open)
+    F(openpty)
     F(pipe)
     F(profil)
     F(ptrace)
@@ -114,21 +109,21 @@ F(accept)
     F(sendmsg)
     F(sendto)
     F(setgroups)
-#if !defined(SUNOS) && !(defined(SOLARIS) ||  defined(SOLARIS25))
+#if !defined(SUNOS) && !defined(SOLARIS)
     F(sethostid)
 #endif
-#if !defined(SVR4) ||  defined(SOLARIS25)
+#if !defined(SVR4) ||  defined(SOLARIS)
     F(sethostname)
 #endif
     F(setitimer)
     F(setpgrp)
-#if !defined(SVR4) ||  defined(SOLARIS25)
+#if !defined(SVR4) ||  defined(SOLARIS)
     F(setpriority)
 #endif
 #if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(SUNOS) && !defined(osf1) && !defined(irix) && !defined(hpux) && !(defined(linux) && defined(alpha))
-    F(setquota)
+/*    F(setquota)*/
 #endif
-#if !defined(hpux) && !defined(SVR4) ||  defined(SOLARIS25)
+#if !defined(hpux) && !defined(SVR4) ||  defined(SOLARIS)
     F(setregid)
     F(setreuid)
 #endif
@@ -193,9 +188,7 @@ F(accept)
     F(vhangup)
 #endif
     F(wait)
-#if !defined(SOLARIS) ||  defined(SOLARIS25)
     F(wait3)
-#endif
     F(write)
     F(writev)
 

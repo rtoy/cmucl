@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.4 2008/09/03 16:34:31 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.267.2.5 2008/11/01 22:40:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -307,7 +307,8 @@
 	   #+(or svr4 bsd linux) "O_NDELAY"
 	   "CHECK"
 
-	   "UNIX-RECVFROM" "UNIX-SENDTO" "UNIX-SHUTDOWN")
+	   "UNIX-RECVFROM" "UNIX-SENDTO" "UNIX-SHUTDOWN"
+	   "UNIX-OPENPTY")
   #+(or svr4 linux)
   (:export "EADDRINUSE" "EADDRNOTAVAIL" "EADV" "EAFNOSUPPORT"
 	   "EALREADY" "EBADE" "EBADFD" "EBADMSG" "EBADR" "EBADRQC"
@@ -362,7 +363,8 @@
 	    "USER-INFO-SHELL" "USER-INFO-PASSWORD" "USER-INFO-UID"
 	    "GROUP-INFO-GID" "USER-INFO" "USER-INFO-NAME" "USER-INFO-GID"
 	    "GROUP-INFO-MEMBERS" "UNIX-GETGRGID" "USER-INFO-GECOS"
-	    "GROUP-INFO-NAME"))
+	    "GROUP-INFO-NAME"
+	    "UNIX-GETGRNAM"))
   
 (defpackage "FORMAT")
 

@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.16 2008/03/19 09:17:10 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.16.2.1 2008/11/01 22:40:36 rtoy Exp $
  *
  */
 
@@ -366,15 +366,14 @@ valid_addr(os_vm_address_t addr)
 }
 
 
-#ifdef __ppc__
 static void
 sigbus_handler(HANDLER_ARGS)
 {
 #if defined(GENCGC)
     caddr_t fault_addr = code->si_addr;
-    int page_index = find_page_index((void *) fault_addr);
 #endif
     
+#ifdef __ppc__
     DPRINTF(0, (stderr, "sigbus:\n"));
     DPRINTF(0, (stderr, " PC       = %p\n", SC_PC(context)));
     DPRINTF(0, (stderr, " ALLOC-TN = %p\n", SC_REG(context, reg_ALLOC)));
@@ -383,45 +382,32 @@ sigbus_handler(HANDLER_ARGS)
     DPRINTF(0, (stderr, " CFP-TN   = %p\n", SC_REG(context, reg_CFP)));
     DPRINTF(0, (stderr, " FDEFN-TN = %p\n", SC_REG(context, reg_FDEFN)));
     DPRINTF(0, (stderr, " foreign_function_call = %d\n", foreign_function_call_active));
+#endif
     
 #if defined(GENCGC)
 #if defined(SIGSEGV_VERBOSE)
     fprintf(stderr, "Signal %d, fault_addr=%x, page_index=%d:\n",
 	    signal, fault_addr, page_index);
 #endif
-    
-    /* Check if the fault is within the dynamic space. */
-    if (page_index != -1) {
-	/* Un-protect the page */
-
-	/* The page should have been marked write protected */
-	if (!PAGE_WRITE_PROTECTED(page_index))
-	    fprintf(stderr,
-		    "*** Sigsegv in page not marked as write protected\n");
-
-	os_protect(page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
-	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
+    if (gc_write_barrier(code->si_addr))
+	 return;
+#else
+    if (interrupt_maybe_gc(signal, code, context))
 	return;
-    }
 #endif
-
-    if (!interrupt_maybe_gc(signal, code, context)) {
-	interrupt_handle_now(signal, code, context);
-    }
-
+    /* a *real* protection fault */
+    fprintf(stderr, "sigbus_handler: Real protection violation: %p\n", fault_addr);
+    interrupt_handle_now(signal, code, context);
+#ifdef __ppc__
     /* Work around G5 bug; fix courtesy gbyers via chandler */
     sigreturn(context);
-}
 #endif
+}
 
 void
 os_install_interrupt_handlers(void)
 {
-#ifdef __ppc__
     interrupt_install_low_level_handler(SIGBUS, sigbus_handler);
-#endif
 }
 
 void *

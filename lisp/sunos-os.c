@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.9 2008/03/19 09:17:13 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sunos-os.c,v 1.9.2.1 2008/11/01 22:40:36 rtoy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -19,21 +19,11 @@
 #include <signal.h>
 #include <sys/file.h>
 
-#ifdef SOLARIS
-#include <unistd.h>
-#include <errno.h>
-#include <sys/param.h>
-#define OS_PROTERR		SEGV_ACCERR
-#define OS_MAPERR		SEGV_MAPERR
-#define OS_HASERRNO(code)	((code)->si_errno != 0)
-#define OS_ERRNO(code)		((code)->si_errno)
-#else
 #define OS_PROTERR		SEGV_PROT
 #define OS_MAPERR		SEGV_NOMAP
 #define OS_HASERRNO(code)	(SEGV_CODE(code)==SEGV_OBJERR)
 #define OS_ERRNO(code)		SEGV_ERRNO(code)
 extern int errno;
-#endif /* SOLARIS */
 
 #include "os.h"
 /* To get dynamic_0_space and friends */
@@ -107,12 +97,7 @@ os_init(void)
     if (zero_fd < 0)
 	os_init_bailout(ZEROFILE);
 
-
-#ifdef SOLARIS
-    os_vm_page_size = os_real_page_size = sysconf(_SC_PAGESIZE);
-#else
     os_vm_page_size = os_real_page_size = getpagesize();
-#endif
 
     max_segments = INITIAL_MAX_SEGS;
     segments = (struct segment *) malloc(sizeof(struct segment) * max_segments);
@@ -649,28 +634,6 @@ os_flush_icache(address, length)
     if (kr != KERN_SUCCESS)
 	mach_error("Could not flush the instruction cache", kr);
 #endif
-#ifdef SOLARIS			/* also SunOS ?? */
-    static int flushit = -1;
-
-    /*
-     * On some systems, iflush needs to be emulated in the kernel
-     * On those systems, it isn't necessary
-     * Call getenv() only once.
-     */
-    if (flushit == -1)
-	flushit = getenv("CMUCL_NO_SPARC_IFLUSH") == 0;
-
-    if (flushit) {
-	static int traceit = -1;
-
-	if (traceit == -1)
-	    traceit = getenv("CMUCL_TRACE_SPARC_IFLUSH") != 0;
-
-	if (traceit)
-	    fprintf(stderr, ";;;iflush %p - %x\n", address, length);
-	flush_icache(address, length);
-    }
-#endif
 }
 
 void
@@ -752,18 +715,9 @@ maybe_gc(HANDLER_ARGS)
  *
  * Running into the gc trigger page will also end up here...
  */
-#ifndef SOLARIS
 void
 segv_handler(HANDLER_ARGS, caddr_t addr)
-#else
-void
-segv_handler(HANDLER_ARGS)
-#endif				/* SOLARIS */
 {
-#ifdef SOLARIS
-    caddr_t addr = code->si_addr;
-#endif
-
     SAVE_CONTEXT();
 
     if (CODE(code) == OS_PROTERR) {	/* allow writes to this chunk */
@@ -862,188 +816,6 @@ os_install_interrupt_handlers(void)
 {
     interrupt_install_low_level_handler(SIGSEGV, segv_handler);
 }
-
-
-#ifdef SOLARIS
-
-
-/* function defintions for register lvalues */
-
-int *
-solaris_register_address(struct ucontext *context, int reg)
-{
-    if (reg == 0) {
-	static int zero;
-
-	zero = 0;
-
-	return &zero;
-    } else if (reg < 16) {
-	return &context->uc_mcontext.gregs[reg + 3];
-    } else if (reg < 32) {
-	int *sp = (int *) context->uc_mcontext.gregs[REG_SP];
-
-	return &sp[reg - 16];
-    } else
-	return 0;
-}
-
-/* function defintions for backward compatibilty and static linking */
-
-#if 0
-void *
-dlopen(const char *file, int flag)
-{
-    return 0;
-}
-
-void *
-dlsym(void *obj, const char *sym)
-{
-    return 0;
-}
-
-int
-dlclose(void *obj)
-{
-    return 0;
-}
-
-char *
-dlerror(void)
-{
-    return "no dynamic linking";
-}
-#endif
-
-/* For now we put in some porting functions */
-
-#ifndef SOLARIS25
-int
-getdtablesize(void)
-{
-    return sysconf(_SC_OPEN_MAX);
-}
-
-char *
-getwd(char *path)
-{
-    return getcwd(path, MAXPATHLEN);
-}
-
-int
-getpagesize(void)
-{
-    return sysconf(_SC_PAGESIZE);
-}
-
-
-#include <sys/procfs.h>
-/* Old rusage definition */
-struct rusage {
-    struct timeval ru_utime;	/* user time used */
-    struct timeval ru_stime;	/* system time used */
-    long ru_maxrss;
-#define ru_first        ru_ixrss
-    long ru_ixrss;		/* XXX: 0 */
-    long ru_idrss;		/* XXX: sum of rm_asrss */
-    long ru_isrss;		/* XXX: 0 */
-    long ru_minflt;		/* any page faults not requiring I/O */
-    long ru_majflt;		/* any page faults requiring I/O */
-    long ru_nswap;		/* swaps */
-    long ru_inblock;		/* block input operations */
-    long ru_oublock;		/* block output operations */
-    long ru_msgsnd;		/* messages sent */
-    long ru_msgrcv;		/* messages received */
-    long ru_nsignals;		/* signals received */
-    long ru_nvcsw;		/* voluntary context switches */
-    long ru_nivcsw;		/* involuntary " */
-#define ru_last         ru_nivcsw
-};
-
-
-int
-getrusage(int who, struct rusage *rp)
-{
-    memset(rp, 0, sizeof(struct rusage));
-
-    return 0;
-}
-
-int
-setreuid(void)
-{
-    fprintf(stderr, "setreuid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-setregid(void)
-{
-    fprintf(stderr, "setregid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-gethostid(void)
-{
-    fprintf(stderr, "gethostid unimplemented\n");
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-killpg(int pgrp, int sig)
-{
-    if (pgrp < 0) {
-	errno = ESRCH;
-	return -1;
-    }
-    return kill(-pgrp, sig);
-}
-#endif
-
-int
-sigblock(int mask)
-{
-    sigset_t old, new;
-
-    sigemptyset(&new);
-    new.__sigbits[0] = mask;
-
-    sigprocmask(SIG_BLOCK, &new, &old);
-
-    return old.__sigbits[0];
-}
-
-#ifndef SOLARIS25
-int
-wait3(int *status, int options, struct rusage *rp)
-{
-    if (rp)
-	memset(rp, 0, sizeof(struct rusage));
-
-    return waitpid(-1, status, options);
-}
-#endif
-
-int
-sigsetmask(int mask)
-{
-    sigset_t old, new;
-
-    sigemptyset(&new);
-    new.__sigbits[0] = mask;
-
-    sigprocmask(SIG_SETMASK, &new, &old);
-
-    return old.__sigbits[0];
-
-}
-
-#endif /* SOLARIS */
 
 os_vm_address_t round_up_sparse_size(os_vm_address_t addr)
 {

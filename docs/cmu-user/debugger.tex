@@ -1111,8 +1111,6 @@ function entry or exit.
   \cpsubindex{errors}{breakpoints}
   \cindex{function-end breakpoints}
   \cpsubindex{breakpoints}{function-end}
-    
-
   
   \kwd{condition}, \kwd{break} and \kwd{print} forms are evaluated in
   the lexical environment of the called function; \code{debug:var} and
@@ -1213,6 +1211,50 @@ only the most recent one can be undone.
   \var{type}.  Returns \nil{} otherwise.  \var{type} is compared with
   \code{eq}.
 \end{defun}
+
+\subsection{Tracing Examples}
+  Here is an example of tracing with some of the possible options.
+  For simplicity, this is the function:
+  \begin{example}
+    (defun fact (n)
+      (declare (double-float n) (optimize speed))
+      (if (zerop n)
+          1d0
+          (* n (fact (1- n)))))
+    (compile 'fact)
+  \end{example}
+
+  This example shows how to use the :condition option:
+  \begin{example}
+    (trace fact :condition (= 4d0 (debug:arg 0)))
+    (fact 10d0) ->
+      0: (FACT 4.0d0)
+      0: FACT returned 24.0d0
+    3628800.0d0
+  \end{example}
+  As we can see, we produced output when the condition was satisfied.
+
+  Here's another example:
+  \begin{example}
+    (untrace)
+    (trace fact :break (= 4d0 (debug:arg 0)))
+    (fact 10d0) ->
+      0: (FACT 5.0d0)
+        1: (FACT 4.0d0)
+
+
+    Breaking before traced call to FACT:
+       [Condition of type SIMPLE-CONDITION]
+
+    Restarts:
+      0: [CONTINUE] Return from BREAK.
+      1: [ABORT   ] Return to Top-Level.
+
+    Debug  (type H for help)
+  \end{example}
+  In this example, we see that normal tracing occurs until we the
+  argument reaches 4d0, at which point, we break into the debugger.
+
 
 % section{The Single Stepper}
 % 

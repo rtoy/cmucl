@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.43.4.4 2008/05/25 13:57:00 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.43.4.5 2008/11/01 22:40:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,7 +185,7 @@
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
 	  unix-socket unix-connect unix-bind unix-listen unix-accept
 	  unix-recv unix-send unix-getpeername unix-getsockname
-	  unix-getsockopt unix-setsockopt
+	  unix-getsockopt unix-setsockopt unix-openpty
 
 	  unix-recvfrom unix-sendto unix-shutdown
 
@@ -1272,14 +1272,17 @@ length LEN and type TYPE."
 
 ;;; pty.h
 
-#+(or)
-(defun unix-openpty (amaster aslave name termp winp)
+(defun unix-openpty (name termp winp)
   "Create pseudo tty master slave pair with NAME and set terminal
    attributes according to TERMP and WINP and return handles for both
    ends in AMASTER and ASLAVE."
-  (int-syscall ("openpty" (* int) (* int) c-string (* (struct termios))
-			  (* (struct winsize)))
-	       amaster aslave name termp winp))
+  (with-alien ((amaster int)
+	       (aslave int))
+    (values
+     (int-syscall ("openpty" (* int) (* int) c-string (* (struct termios))
+			     (* (struct winsize)))
+		  (addr amaster) (addr aslave) name termp winp)
+     amaster aslave)))
 
 #+(or)
 (defun unix-forkpty (amaster name termp winp)

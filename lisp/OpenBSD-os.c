@@ -13,7 +13,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.6 2007/07/30 07:24:46 cshapiro Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/OpenBSD-os.c,v 1.6.4.1 2008/11/01 22:40:36 rtoy Exp $
  *
  */
 
@@ -164,28 +164,14 @@ sigsegv_handler(HANDLER_ARGS)
 {
 #if defined GENCGC
     caddr_t fault_addr = code->si_addr;
-    int page_index = find_page_index((void *) fault_addr);
 
 #if SIGSEGV_VERBOSE
     fprintf(stderr, "Signal %d, fault_addr=%x, page_index=%d:\n",
 	    signal, fault_addr, page_index);
 #endif
 
-    /* Check if the fault is within the dynamic space. */
-    if (page_index != -1) {
-	/* Un-protect the page */
-
-	/* The page should have been marked write protected */
-	if (!PAGE_WRITE_PROTECTED(page_index))
-	    fprintf(stderr,
-		    "*** Sigsegv in page not marked as write protected\n");
-
-	os_protect(page_address(page_index), 4096, OS_VM_PROT_ALL);
-	page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
-	page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
-
+    if (gc_write_barrier(code->si_addr))
 	return;
-    }
 #endif
 
     SAVE_CONTEXT();
